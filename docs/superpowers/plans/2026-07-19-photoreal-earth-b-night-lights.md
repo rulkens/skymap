@@ -1,6 +1,6 @@
 # Photoreal Earth B — Night Lights Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Blend a NASA Black Marble (VIIRS) **night map** into Earth's surface fragment so city lights appear on the dark hemisphere and fade through the terminator, dimmed where clouds later cover them — the acceptance win is **city lights on the dark side** (spec §12 row B).
 
@@ -56,9 +56,9 @@ fn nightLights(nightColour: vec3<f32>, NoL: f32, cloudAlpha: f32) -> vec3<f32>;
 
 **Steps:**
 
-- [ ] Write `lib/nightLights.wesl` with `nightLights` + a `dayFactor` helper + a didactic header (emissive-not-lit, the `(1 − dayFactor)` night weight, the terminator `smoothstep` band, and the `cloudAlpha`-is-the-plan-D-seam note).
-- [ ] `npm run build` clean (the module links; no consumer yet — imported in Task 3).
-- [ ] Commit (`src/services/gpu/shaders/lib/nightLights.wesl`).
+- [x] Write `lib/nightLights.wesl` with `nightLights` + a `dayFactor` helper + a didactic header (emissive-not-lit, the `(1 − dayFactor)` night weight, the terminator `smoothstep` band, and the `cloudAlpha`-is-the-plan-D-seam note).
+- [x] `npm run build` clean (the module links; no consumer yet — imported in Task 3).
+- [x] Commit (`src/services/gpu/shaders/lib/nightLights.wesl`).
 
 ---
 
@@ -84,11 +84,11 @@ fn nightLights(nightColour: vec3<f32>, NoL: f32, cloudAlpha: f32) -> vec3<f32>;
 
 **Steps (TDD):**
 
-- [ ] Extend `bodyTextureFilename.test.ts`: `a non-surface sRGB kind stays JPG` → `bodyTextureFilename('earth','night','large') === 'earth-night-8192.jpg'` (fails if `night` were treated as linear → PNG → runtime 404). Keep the surface/ring/material cases green.
-- [ ] In `buildTextures.test.ts`: assert `textureBuildEntries` now contains `{ bodyId: 'earth', kind: 'night' }` (the plan-A drift test's set derives from `TEXTURE_SOURCES`; this pins that the new source row is picked up by the already-rewired iteration — the required one-line assertion, NOT a re-fix). If a writer-dispatch switch branch was added, assert `night` selects the sRGB (`writeBodyTier`) path — e.g. via the same predicate the filename uses (`!isLinearTextureKind('night')`).
-- [ ] Add the registry/source/kinds rows + the README provenance stub (URL, byte layout / dimensions, fetch-date placeholder filled in Task 4).
-- [ ] `npm test -- bodyTextureFilename buildTextures fetchTextures textureSources` green; `npx tsc --noEmit` + `npx tsc --noEmit -p tsconfig.tools.json` clean.
-- [ ] Commit (stage each path explicitly).
+- [x] Extend `bodyTextureFilename.test.ts`: `a non-surface sRGB kind stays JPG` → `bodyTextureFilename('earth','night','large') === 'earth-night-8192.jpg'` (fails if `night` were treated as linear → PNG → runtime 404). Keep the surface/ring/material cases green.
+- [x] In `buildTextures.test.ts`: assert `textureBuildEntries` now contains `{ bodyId: 'earth', kind: 'night' }` (the plan-A drift test's set derives from `TEXTURE_SOURCES`; this pins that the new source row is picked up by the already-rewired iteration — the required one-line assertion, NOT a re-fix). If a writer-dispatch switch branch was added, assert `night` selects the sRGB (`writeBodyTier`) path — e.g. via the same predicate the filename uses (`!isLinearTextureKind('night')`).
+- [x] Add the registry/source/kinds rows + the README provenance stub (URL, byte layout / dimensions, fetch-date placeholder filled in Task 4).
+- [x] `npm test -- bodyTextureFilename buildTextures fetchTextures textureSources` green; `npx tsc --noEmit` + `npx tsc --noEmit -p tsconfig.tools.json` clean.
+- [x] Commit (stage each path explicitly).
 
 ---
 
@@ -115,10 +115,10 @@ fn nightLights(nightColour: vec3<f32>, NoL: f32, cloudAlpha: f32) -> vec3<f32>;
 
 **Steps:**
 
-- [ ] Wire the renderer (binding 4, black placeholder, `night` `setMap` case), the fragment (bind + sample night, compose `nightLights` with `cloudAlpha = 0.0`), and the `EarthRenderer.d.ts` doc.
-- [ ] `npx tsc --noEmit` clean; `npm run build` clean (the WESL links — watch the iOS-strict traps: valid struct/binding layout, no `texture_1d`; use `createShaderModuleWithDevLog` output if it fails).
-- [ ] **Visual check (black placeholder, before Task 4 data):** ask the user to confirm on the already-running dev server (do not start/kill it) that Earth still renders exactly as after plan A — day PBR + ocean glint intact, dark side unchanged, **no** city lights yet (night map is the all-black placeholder), no crash.
-- [ ] Commit (stage each path explicitly).
+- [x] Wire the renderer (binding 4, black placeholder, `night` `setMap` case), the fragment (bind + sample night, compose `nightLights` with `cloudAlpha = 0.0`), and the `EarthRenderer.d.ts` doc.
+- [x] `npx tsc --noEmit` clean; `npm run build` clean (the WESL links — watch the iOS-strict traps: valid struct/binding layout, no `texture_1d`; use `createShaderModuleWithDevLog` output if it fails).
+- [x] **Visual check (black placeholder, before Task 4 data):** ask the user to confirm on the already-running dev server (do not start/kill it) that Earth still renders exactly as after plan A — day PBR + ocean glint intact, dark side unchanged, **no** city lights yet (night map is the all-black placeholder), no crash.
+- [x] Commit (stage each path explicitly).
 
 ---
 
@@ -126,11 +126,11 @@ fn nightLights(nightColour: vec3<f32>, NoL: f32, cloudAlpha: f32) -> vec3<f32>;
 
 **Files:** none (data + verification). Produces `data/raw/textures/<black-marble>` (gitignored) and `public/data/images/textures/earth-night-{…,8192}.jpg` (gitignored build artefacts).
 
-- [ ] **Announce the download** (announce-big-downloads): tell the user the NASA Black Marble source is ~10–20 MB, state the exact URL + size confirmed against `textures.earthNight`, and **get explicit go-ahead before fetching**. Do not fetch otherwise. Fill the verified URL + native dimensions back into the `textures.earthNight` registry row and the `data/raw/textures/README.md` provenance (fetch date, dimensions, licence/credit) if they differed from the Task 2 stub.
-- [ ] On go-ahead, fetch the night map (`npm run fetch-textures -- --confirm`, or a targeted single-source fetch) — it lands via `downloadGetOnly` into `data/raw/textures/` and upserts its `textures.sha256` line.
-- [ ] Build the night tiers: `npm run build-textures` emits `earth-night-8192.jpg` (+ smaller tiers) into `public/data/images/textures/` via the sRGB `writeBodyTier` path. Confirm the files exist and are JPG.
-- [ ] **Visual check (the acceptance win):** ask the user to fly to Earth's **night side** on the running dev server and confirm **city lights** glowing on the dark hemisphere, **fading smoothly through the terminator** into the day side, with no hard seam and no lights bleeding onto the sunlit face. Confirm the map loaded (network tab shows `earth-night-8192.jpg`, not a 404 to the placeholder).
-- [ ] No commit (all artefacts gitignored). Note for the merge: R2 sync of the new `earth-night-*.jpg` is a post-merge deploy step (spec §9.3 — the textures dir glob sweeps it automatically), not part of this PR.
+- [x] **Announce the download** (announce-big-downloads): tell the user the NASA Black Marble source is ~10–20 MB, state the exact URL + size confirmed against `textures.earthNight`, and **get explicit go-ahead before fetching**. Do not fetch otherwise. Fill the verified URL + native dimensions back into the `textures.earthNight` registry row and the `data/raw/textures/README.md` provenance (fetch date, dimensions, licence/credit) if they differed from the Task 2 stub.
+- [x] On go-ahead, fetch the night map (`npm run fetch-textures -- --confirm`, or a targeted single-source fetch) — it lands via `downloadGetOnly` into `data/raw/textures/` and upserts its `textures.sha256` line.
+- [x] Build the night tiers: `npm run build-textures` emits `earth-night-8192.jpg` (+ smaller tiers) into `public/data/images/textures/` via the sRGB `writeBodyTier` path. Confirm the files exist and are JPG.
+- [x] **Visual check (the acceptance win):** ask the user to fly to Earth's **night side** on the running dev server and confirm **city lights** glowing on the dark hemisphere, **fading smoothly through the terminator** into the day side, with no hard seam and no lights bleeding onto the sunlit face. Confirm the map loaded (network tab shows `earth-night-8192.jpg`, not a 404 to the placeholder).
+- [x] No commit (all artefacts gitignored). Note for the merge: R2 sync of the new `earth-night-*.jpg` is a post-merge deploy step (spec §9.3 — the textures dir glob sweeps it automatically), not part of this PR.
 
 ---
 
@@ -138,8 +138,8 @@ fn nightLights(nightColour: vec3<f32>, NoL: f32, cloudAlpha: f32) -> vec3<f32>;
 
 **Files:** none (review).
 
-- [ ] Run the `entanglement-radar` skill over the whole branch diff (house convention). Pay attention to: `isLinearTextureKind` remaining the single home for the sRGB-vs-linear axis (night correctly NOT in it — no parallel "is night sRGB" predicate); the night blend living only in `nightLights.wesl` (the terminator-fade shape not re-derived in the fragment); the `cloudAlpha` seam being a clean parameter (no half-bound cloud texture, no dead uniform field); and no accidental `EarthSurfaceUniforms` resize. Name any knot precisely and fix or file it before the final review.
-- [ ] Address findings (or record why deferred); keep the suite green.
+- [x] Run the `entanglement-radar` skill over the whole branch diff (house convention). Pay attention to: `isLinearTextureKind` remaining the single home for the sRGB-vs-linear axis (night correctly NOT in it — no parallel "is night sRGB" predicate); the night blend living only in `nightLights.wesl` (the terminator-fade shape not re-derived in the fragment); the `cloudAlpha` seam being a clean parameter (no half-bound cloud texture, no dead uniform field); and no accidental `EarthSurfaceUniforms` resize. Name any knot precisely and fix or file it before the final review.
+- [x] Address findings (or record why deferred); keep the suite green.
 
 ---
 
@@ -147,9 +147,9 @@ fn nightLights(nightColour: vec3<f32>, NoL: f32, cloudAlpha: f32) -> vec3<f32>;
 
 **Files:** none.
 
-- [ ] Run `npm test` (full suite green), `npm run typecheck` (both tsconfigs), `npm run build`.
-- [ ] Request code review (`superpowers:requesting-code-review`) covering the night `setMap`/binding path, the emissive `nightLights` composition, and the data-chain rows (registry/source/kinds/filename).
-- [ ] Confirm the DoD before marking the plan done (`/feature-done`), which sweeps the backlog + relocates spec/plan on merge.
+- [x] Run `npm test` (full suite green), `npm run typecheck` (both tsconfigs), `npm run build`.
+- [x] Request code review (`superpowers:requesting-code-review`) covering the night `setMap`/binding path, the emissive `nightLights` composition, and the data-chain rows (registry/source/kinds/filename).
+- [x] Confirm the DoD before marking the plan done (`/feature-done`), which sweeps the backlog + relocates spec/plan on merge.
 
 ---
 

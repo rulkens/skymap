@@ -56,10 +56,10 @@
 
 // Emissive scale into the HDR foreground target. The day term in that target
 // peaks around 'sunIrradiance = 3.0' (bright, but well inside HDR range before
-// tonemapping), so city lights need to be an order of magnitude dimmer than
-// full daylight to read as 'night' yet still be clearly visible against the
-// dark hemisphere. 1.0 is the starting point — lights near the day peak's ~1/3
-// so they glow without rivalling the sunlit side; the visual pass tunes it.
+// tonemapping), so city lights need to sit well below full daylight to read
+// as 'night' yet still be clearly visible against the dark hemisphere. 1.0 is
+// the starting point — lights at roughly 1/3 of the day peak so they glow
+// without rivalling the sunlit side; the visual pass tunes it.
 const NIGHT_BRIGHTNESS: f32 = 1.0;
 
 // The terminator 'smoothstep' band, in Lambert-cosine ('NoL') space. Lights are
