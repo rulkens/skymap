@@ -115,6 +115,16 @@ function makeState(earthRenderer: unknown, earth: EarthBody | null): EngineState
   return {
     gpu: { earthRenderer },
     data: { bodies: { earth } },
+    // earthLayer.draw reads the live night-side floor + ocean-glint roughness
+    // from settings.earth each frame; seed both from EARTH_SURFACE_PARAMS so the
+    // packed tail slots equal the authored defaults (a no-op override, exactly
+    // how the settings slice seeds them).
+    settings: {
+      earth: {
+        ambientLight: EARTH_SURFACE_PARAMS.ambientLight,
+        oceanRoughness: EARTH_SURFACE_PARAMS.oceanRoughness,
+      },
+    },
   } as unknown as EngineState;
 }
 
@@ -225,15 +235,15 @@ describe('earthLayer.draw', () => {
     // The body's baked orientation is forwarded as the model's rotation factor.
     expect(call[4]).toBe(SCENE_EARTH.orientation);
 
-    // The renderer receives the pass + the packed length-28 EarthSurfaceUniforms
+    // The renderer receives the pass + the packed length-32 EarthSurfaceUniforms
     // record (16 mvp + 3 sunDirLocal + roughnessBase + 3 camPosLocal + f0 +
-    // sunIrradiance + cloudShadowStrength + cloudShellRadius + 1 pad), not the
-    // bare 16-float MVP.
+    // sunIrradiance + cloudShadowStrength + cloudShellRadius + ambientLight +
+    // oceanRoughness + 3 pad), not the bare 16-float MVP.
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const [passArg, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
     expect(passArg).toBe(PASS_STUB);
     expect(uniforms).toBeInstanceOf(Float32Array);
-    expect(uniforms).toHaveLength(28);
+    expect(uniforms).toHaveLength(32);
   });
 
   it('packs sunDirLocal into the lit uniform', () => {
@@ -250,7 +260,7 @@ describe('earthLayer.draw', () => {
     earthLayer.draw(PASS_STUB, view, CTX_STUB, state);
 
     const [, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
-    expect(uniforms).toHaveLength(28);
+    expect(uniforms).toHaveLength(32);
     const expected = sunDirLocal(
       SCENE_EARTH.positionMpc,
       RENDER_ORIGIN_MPC,
@@ -277,7 +287,7 @@ describe('earthLayer.draw', () => {
     earthLayer.draw(PASS_STUB, view, CTX_STUB, state);
 
     const [, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
-    expect(uniforms).toHaveLength(28);
+    expect(uniforms).toHaveLength(32);
 
     // Independent recompute of the camera-in-local-frame vector. The fixture camera
     // sits 5 Mpc out while Earth's radius is ~2e-16 Mpc, so the local coords are
@@ -302,6 +312,13 @@ describe('earthLayer.draw', () => {
     // must be the real CLOUD_SHELL_PARAMS.radiusRatio, not the placeholder 1.0
     // this task replaced (the shadow geometry and the drawn deck share it).
     expect(uniforms[26]).toBeCloseTo(CLOUD_SHELL_PARAMS.radiusRatio);
+    // Slots 27..28 are the live settings overrides the layer now reads from
+    // state.settings.earth — the night-side ambient floor and the open-water GGX
+    // roughness. The fixture seeds both from EARTH_SURFACE_PARAMS (a no-op
+    // override), so the packed slots equal those authored defaults; a stray
+    // ambientLight ↔ oceanRoughness swap at the pack call lands as a failure here.
+    expect(uniforms[27]).toBeCloseTo(EARTH_SURFACE_PARAMS.ambientLight);
+    expect(uniforms[28]).toBeCloseTo(EARTH_SURFACE_PARAMS.oceanRoughness);
   });
 
   it('is a no-op when the earthRenderer handle is null (pre-bootstrap)', () => {
