@@ -214,6 +214,193 @@ struct RingUniforms {
   _pad2: f32,
 };
 
+// ── EarthSurfaceUniforms ─────────────────────────────────────────────
+//
+// The uniform layout for the photoreal-Earth surface pass. It is a SIBLING of
+// 'TexturedBodyUniforms', NOT an overload of 'LitBodyUniforms' -- planets,
+// moons and the ring bind those; only Earth's dedicated surface fragment binds
+// this. It carries the same MVP + body-local sun-direction prefix as
+// 'LitBodyUniforms' (so it reuses that packer for the shared 80-byte prefix and
+// the two layouts can never drift), then the physically-based shading params
+// the Earth fragment needs.
+//
+// Two vec3 tails are filled with REAL fields rather than padding, the same
+// trick 'RingUniforms.planetRadiusRatio' uses:
+//   - 'roughnessBase' fills 'sunDirLocal's trailing 4-byte slot (byte 76).
+//   - 'f0' fills 'camPosLocal's trailing slot (byte 92).
+//
+// 'camPosLocal' (the camera in the body's local frame) is the one field beyond
+// the design spec's literal list: GGX specular is view-dependent, and the lit
+// prefix carries no camera position, so the ocean glint is uncomputable without
+// this view vector.
+//
+// 'cloudShadowStrength' and 'cloudShellRadius' are the cloud-shell fields:
+// 'cloudShadowStrength' scales how darkly the shell shadows the surface, and
+// 'cloudShellRadius' is the unit-sphere local radius of the shell the surface
+// shadow fragment intersects. Both are bound but UNUSED in plan A -- present now
+// so plan D (cloud shell) reads the slots without reshaping the struct.
+//
+// 'ambientLight' fills what was the struct's original trailing pad (byte 108):
+// the night-side ambient floor lifting Earth's unlit hemisphere off pure black.
+// It is the user-tunable Earth-scoped override of the shared 'AMBIENT' const in
+// 'lib/bodyLighting.wesl' -- that const stays every OTHER lit body's floor, this
+// slot carries Earth's. So the fragment reads 'u.ambientLight', not the const.
+//
+// 'oceanRoughness' opens a fresh 16-byte row (byte 112): the GGX perceptual
+// roughness the material ocean mask selects wholesale for open water -- the dial
+// that sets how broad the sun glint reads. It is the user-tunable Earth-scoped
+// override of the 'OCEAN_ROUGHNESS' const in 'lib/pbr.wesl' -- that const stays
+// the seed / documentation home (and any future non-Earth water), this slot
+// carries Earth's. So the fragment reads 'u.oceanRoughness', not the const. The
+// row's remaining three slots ('_pad0'..'_pad2') round the struct to 128 bytes.
+//
+// ## Byte layout (uniform address space)
+//
+//   offset   0..63:  mvp                 (mat4x4<f32>, column-major, 64 bytes)
+//   offset  64..75:  sunDirLocal         (vec3<f32> -- 16-byte aligned at 64)
+//   offset  76..79:  roughnessBase       (f32 -- fills sunDirLocal's 4th slot)
+//   offset  80..91:  camPosLocal         (vec3<f32> -- 16-byte aligned at 80)
+//   offset  92..95:  f0                  (f32 -- fills camPosLocal's 4th slot)
+//   offset  96..99:  sunIrradiance       (f32)
+//   offset 100..103: cloudShadowStrength (f32 -- unused in plan A)
+//   offset 104..107: cloudShellRadius    (f32 -- unit-sphere shell radius; unused in A)
+//   offset 108..111: ambientLight        (f32 -- night-side floor; Earth-scoped)
+//   offset 112..115: oceanRoughness      (f32 -- open-water GGX roughness; Earth-scoped)
+//   offset 116..127: _pad0/1/2           (f32 x3 -- rounds the struct to 128 / 16-byte)
+//   total: 128 bytes.
+//
+// The CPU side uploads 32 f32s. The single source of truth for that packing is
+// 'utils/gpu/packEarthSurfaceUniforms.ts', which reuses 'packLitBodyUniforms'
+// for the shared 80-byte prefix.
+
+struct EarthSurfaceUniforms {
+  mvp: mat4x4<f32>,
+  sunDirLocal: vec3<f32>,
+  roughnessBase: f32,
+  camPosLocal: vec3<f32>,
+  f0: f32,
+  sunIrradiance: f32,
+  cloudShadowStrength: f32,
+  cloudShellRadius: f32,
+  ambientLight: f32,
+  oceanRoughness: f32,
+  _pad0: f32,
+  _pad1: f32,
+  _pad2: f32,
+};
+
+// ── CloudShellUniforms ───────────────────────────────────────────────
+//
+// The uniform layout for the translucent cloud shell drawn just above Earth's
+// surface. It is a SIBLING of 'RingUniforms' / 'TexturedBodyUniforms', NOT an
+// overload of 'LitBodyUniforms': a body-agnostic translucent shell lit by the
+// same body-local 'sunDirLocal' as the surface, reusing that packer for the
+// shared 80-byte prefix so the two layouts can never drift.
+//
+// It carries two fields beyond the lit prefix. The first, 'cloudOpacity', a
+// per-shell coverage-to-alpha multiplier, fills the vec3's trailing 4-byte slot
+// (byte 76). That makes it a REAL field, not a pad -- the same
+// 'RingUniforms.planetRadiusRatio' trick, so the sibling adds a real field
+// beyond the lit prefix rather than growing a dead tail.
+//
+// The second, 'sunIrradiance', opens a fresh 16-byte row because the vec3 tail is
+// already spent on 'cloudOpacity'. It is the SAME sun irradiance the surface
+// scales its direct term by ('EARTH_SURFACE_PARAMS.sunIrradiance'), passed at the
+// pack site -- NOT a second constant. Without it the shell's lit output topped out
+// at the raw Lambert term (peak ~1) while the surface beneath it was scaled ~3x,
+// so the brightest real feature -- cloud (albedo ~0.8) -- rendered dimmer than the
+// ground. The fragment scales the DIRECT (sun-lit) portion of the Lambert term by
+// it and leaves the ambient floor untouched, mirroring the surface, so the night
+// side is unchanged.
+//
+// 'ambientLight' fills the first of that row's trailing pads (byte 84): the SAME
+// night-side ambient floor the surface reads from 'EARTH_SURFACE_PARAMS.ambientLight'
+// (the user-tunable Earth-scoped override of the shared 'AMBIENT' const), so the
+// deck's night side dims in lockstep with the ground beneath it. The fragment
+// reads 'u.ambientLight' in place of the const.
+//
+// ## Byte layout (uniform address space)
+//
+//   offset  0..63: mvp           (mat4x4<f32>, column-major, 64 bytes)
+//   offset 64..75: sunDirLocal   (vec3<f32> -- 16-byte aligned at 64)
+//   offset 76..79: cloudOpacity  (f32 -- fills the vec3's 4th slot; a real field)
+//   offset 80..83: sunIrradiance (f32 -- new row; direct-term scale)
+//   offset 84..87: ambientLight  (f32 -- night-side floor; Earth-scoped)
+//   offset 88..95: _pad1/2       (f32 x2 -- rounds the struct to 96 / 16-byte)
+//   total: 96 bytes.
+//
+// The CPU side uploads 24 f32s. The single source of truth for that packing is
+// 'utils/gpu/packCloudShellUniforms.ts', which reuses 'packLitBodyUniforms' for
+// the shared 80-byte prefix. 'cloudOpacity' is sourced from
+// 'CLOUD_SHELL_PARAMS.opacity'; 'sunIrradiance' + 'ambientLight' from
+// 'EARTH_SURFACE_PARAMS'.
+
+struct CloudShellUniforms {
+  mvp: mat4x4<f32>,
+  sunDirLocal: vec3<f32>,
+  cloudOpacity: f32,
+  sunIrradiance: f32,
+  ambientLight: f32,
+  _pad1: f32,
+  _pad2: f32,
+};
+
+// ── AtmosphereUniforms ───────────────────────────────────────────────
+//
+// The uniform layout for the atmosphere in-scatter shell drawn just outside
+// Earth's cloud shell. It is a SIBLING of 'RingUniforms' / 'CloudShellUniforms',
+// NOT an overload of 'LitBodyUniforms': only Earth's dedicated atmosphere
+// fragment binds this. It carries the same MVP + body-local 'sunDirLocal'
+// prefix as 'LitBodyUniforms' (so it reuses that packer for the shared 80-byte
+// prefix and the two layouts can never drift), then the in-scatter params the
+// fragment needs.
+//
+// ## The atmosphere-top-unit-sphere convention
+//
+// The proxy sphere is scaled by 'composeBodyMvp' to the ATMOSPHERE-TOP radius,
+// so in the mesh's local frame the atmosphere top is the UNIT sphere
+// ('topRadius == 1', implicit -- no field) and the ground sphere has radius
+// 'bottomRadius' in (0, 1) -- the exact 'planetRadiusRatio' trick 'RingUniforms'
+// uses. The shell fragment maps its local altitude to the LUT radial axis via
+// 'bottomRadius' alone: normalized altitude
+// 'h = (r_local - bottomRadius) / (1 - bottomRadius)'.
+//
+// Two vec3 tails are filled with REAL fields rather than padding, the same
+// trick 'RingUniforms.planetRadiusRatio' uses:
+//   - 'bottomRadius'  fills 'sunDirLocal's trailing 4-byte slot (byte 76).
+//   - 'sunIrradiance' fills 'camPosLocal's trailing slot (byte 92).
+//
+// 'camPosLocal' (the camera in atmosphere-top-radius units, sphere centre at the
+// origin) is the view vector the in-scatter integral needs, which the lit prefix
+// does not carry.
+//
+// ## Byte layout (uniform address space)
+//
+//   offset   0..63:  mvp           (mat4x4<f32>, column-major, 64 bytes)
+//   offset  64..75:  sunDirLocal   (vec3<f32> -- 16-byte aligned at 64)
+//   offset  76..79:  bottomRadius  (f32 -- fills sunDirLocal's 4th slot)
+//   offset  80..91:  camPosLocal   (vec3<f32> -- 16-byte aligned at 80)
+//   offset  92..95:  sunIrradiance (f32 -- fills camPosLocal's 4th slot)
+//   offset  96..99:  exposure      (f32 -- in-scatter intensity scale)
+//   offset 100..111: _pad0/1/2     (f32 x3 -- rounds the struct to 112 / 16-byte)
+//   total: 112 bytes.
+//
+// The CPU side uploads 28 f32s. The single source of truth for that packing is
+// 'utils/gpu/packAtmosphereUniforms.ts', which reuses 'packLitBodyUniforms' for
+// the shared 80-byte prefix.
+
+struct AtmosphereUniforms {
+  mvp: mat4x4<f32>,
+  sunDirLocal: vec3<f32>,
+  bottomRadius: f32,
+  camPosLocal: vec3<f32>,
+  sunIrradiance: f32,
+  exposure: f32,
+  _pad0: f32,
+  _pad1: f32,
+  _pad2: f32,
+};
+
 // ── clip_from_local ──────────────────────────────────────────────────
 //
 // Transform a unit-sphere local-space position to homogeneous clip

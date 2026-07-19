@@ -26,11 +26,22 @@
 import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { BodyTextureReq } from '../../../@types/loading/BodyTextureReq';
 import { bodyTextureFilename } from '../../../utils/scene/bodyTextureFilename';
+import { isLinearTextureKind } from '../../../utils/scene/isLinearTextureKind';
 import { dataUrl } from '../fetchWithProgress';
 
 export const bodyTextureFetcher: Fetcher<ImageBitmap, BodyTextureReq> = async (req, signal) => {
   const url = dataUrl(`images/textures/${bodyTextureFilename(req.bodyId, req.kind, req.tier)}`);
   const res = await fetch(url, { signal });
   if (!res.ok) throw new Error(`bodyTexture: HTTP ${res.status} for ${url}`);
-  return createImageBitmap(await res.blob());
+  const blob = await res.blob();
+  // Linear-packed maps (material today, normal with plan C) carry NUMERIC channels
+  // — roughness, an ocean mask, a normal vector — not a picture. Decoding them with
+  // the default colour management would gamma-shift those numbers; `colorSpaceConversion:
+  // 'none'` hands back the raw bytes. sRGB colour maps (surface/night/clouds) take
+  // the default managed decode. `isLinearTextureKind` is the single home for that
+  // axis — the same predicate that picks the PNG extension and the GPU format.
+  if (isLinearTextureKind(req.kind)) {
+    return createImageBitmap(blob, { colorSpaceConversion: 'none' });
+  }
+  return createImageBitmap(blob);
 };

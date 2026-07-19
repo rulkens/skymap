@@ -30,6 +30,9 @@ import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
+import { camPosLocal } from '../../../../../src/utils/camera/camPosLocal';
+import { EARTH_SURFACE_PARAMS } from '../../../../../src/data/bodies/earthSurfaceParams';
+import { CLOUD_SHELL_PARAMS } from '../../../../../src/data/bodies/cloudShellParams';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
@@ -112,6 +115,16 @@ function makeState(earthRenderer: unknown, earth: EarthBody | null): EngineState
   return {
     gpu: { earthRenderer },
     data: { bodies: { earth } },
+    // earthLayer.draw reads the live night-side floor + ocean-glint roughness
+    // from settings.earth each frame; seed both from EARTH_SURFACE_PARAMS so the
+    // packed tail slots equal the authored defaults (a no-op override, exactly
+    // how the settings slice seeds them).
+    settings: {
+      earth: {
+        ambientLight: EARTH_SURFACE_PARAMS.ambientLight,
+        oceanRoughness: EARTH_SURFACE_PARAMS.oceanRoughness,
+      },
+    },
   } as unknown as EngineState;
 }
 
@@ -176,6 +189,12 @@ describe('the (foreground:0, NEAR0) render group above the foreground gate', () 
         // The ring shares this group; its null handle short-circuits enabled, so
         // it stays out of the group below and above the gate (like the siblings).
         ringRenderer: null,
+        // Earth's cloud shell also shares this group; same null-handle
+        // short-circuit keeps it out below and above the gate.
+        cloudShellRenderer: null,
+        // Earth's in-scatter atmosphere shares this group too (drawn last); same
+        // null-handle short-circuit keeps it out below and above the gate.
+        atmosphereShellRenderer: null,
       },
       data: { bodies: { earth: SCENE_EARTH } },
     } as unknown as EngineState;
@@ -216,13 +235,15 @@ describe('earthLayer.draw', () => {
     // The body's baked orientation is forwarded as the model's rotation factor.
     expect(call[4]).toBe(SCENE_EARTH.orientation);
 
-    // The renderer receives the pass + the packed length-20 LitBodyUniforms
-    // record (16 mvp + 3 sunDirLocal + 1 pad), not the bare 16-float MVP.
+    // The renderer receives the pass + the packed length-32 EarthSurfaceUniforms
+    // record (16 mvp + 3 sunDirLocal + roughnessBase + 3 camPosLocal + f0 +
+    // sunIrradiance + cloudShadowStrength + cloudShellRadius + ambientLight +
+    // oceanRoughness + 3 pad), not the bare 16-float MVP.
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const [passArg, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
     expect(passArg).toBe(PASS_STUB);
     expect(uniforms).toBeInstanceOf(Float32Array);
-    expect(uniforms).toHaveLength(20);
+    expect(uniforms).toHaveLength(32);
   });
 
   it('packs sunDirLocal into the lit uniform', () => {
@@ -239,11 +260,65 @@ describe('earthLayer.draw', () => {
     earthLayer.draw(PASS_STUB, view, CTX_STUB, state);
 
     const [, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
-    expect(uniforms).toHaveLength(20);
-    const expected = sunDirLocal(SCENE_EARTH.positionMpc, RENDER_ORIGIN_MPC, SCENE_EARTH.orientation);
+    expect(uniforms).toHaveLength(32);
+    const expected = sunDirLocal(
+      SCENE_EARTH.positionMpc,
+      RENDER_ORIGIN_MPC,
+      SCENE_EARTH.orientation,
+    );
     expect(uniforms[16]).toBeCloseTo(expected[0]);
     expect(uniforms[17]).toBeCloseTo(expected[1]);
     expect(uniforms[18]).toBeCloseTo(expected[2]);
+  });
+
+  it('packs camPosLocal and the PBR surface params into their tail slots', () => {
+    // The other view-dependent seam: the ocean glint needs the camera in Earth's
+    // local frame (slots 20..22), and the PBR + cloud dials fill the vec3 tails /
+    // trailing scalars — roughnessBase at 19, f0 at 23, sunIrradiance at 24,
+    // cloudShadowStrength at 25, cloudShellRadius at 26. Pinning the scalars by
+    // their named source makes an argument-order swap at the pack call (e.g.
+    // f0 ↔ roughnessBase, or the cloudShadowStrength ↔ cloudShellRadius wiring
+    // this task introduces) a failure here, not a visual-only regression.
+    composeMock.mockClear();
+    const drawSpy = vi.fn<(...args: unknown[]) => void>();
+    const view = makeNear0View();
+    const state = makeState({ draw: drawSpy }, SCENE_EARTH);
+
+    earthLayer.draw(PASS_STUB, view, CTX_STUB, state);
+
+    const [, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
+    expect(uniforms).toHaveLength(32);
+
+    // Independent recompute of the camera-in-local-frame vector. The fixture camera
+    // sits 5 Mpc out while Earth's radius is ~2e-16 Mpc, so the local coords are
+    // astronomically large (~1e16) — toBeCloseTo's absolute tolerance is meaningless
+    // there. The layer and this recompute call the SAME util with identical inputs,
+    // so the f32-narrowed slot equals Math.fround of the recomputed value exactly.
+    const expectedCam = camPosLocal(
+      view.camPos,
+      SCENE_EARTH.positionMpc,
+      SCENE_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC,
+      SCENE_EARTH.orientation,
+    );
+    expect(uniforms[20]).toBe(Math.fround(expectedCam[0]));
+    expect(uniforms[21]).toBe(Math.fround(expectedCam[1]));
+    expect(uniforms[22]).toBe(Math.fround(expectedCam[2]));
+
+    expect(uniforms[19]).toBeCloseTo(EARTH_SURFACE_PARAMS.roughnessBase);
+    expect(uniforms[23]).toBeCloseTo(EARTH_SURFACE_PARAMS.f0);
+    expect(uniforms[24]).toBeCloseTo(EARTH_SURFACE_PARAMS.sunIrradiance);
+    expect(uniforms[25]).toBeCloseTo(EARTH_SURFACE_PARAMS.cloudShadowStrength);
+    // Slot 26 is the cloud shell radius the surface shadow ray intersects — it
+    // must be the real CLOUD_SHELL_PARAMS.radiusRatio, not the placeholder 1.0
+    // this task replaced (the shadow geometry and the drawn deck share it).
+    expect(uniforms[26]).toBeCloseTo(CLOUD_SHELL_PARAMS.radiusRatio);
+    // Slots 27..28 are the live settings overrides the layer now reads from
+    // state.settings.earth — the night-side ambient floor and the open-water GGX
+    // roughness. The fixture seeds both from EARTH_SURFACE_PARAMS (a no-op
+    // override), so the packed slots equal those authored defaults; a stray
+    // ambientLight ↔ oceanRoughness swap at the pack call lands as a failure here.
+    expect(uniforms[27]).toBeCloseTo(EARTH_SURFACE_PARAMS.ambientLight);
+    expect(uniforms[28]).toBeCloseTo(EARTH_SURFACE_PARAMS.oceanRoughness);
   });
 
   it('is a no-op when the earthRenderer handle is null (pre-bootstrap)', () => {

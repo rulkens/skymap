@@ -277,6 +277,9 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         earthRenderer: null,
         starRenderer: null,
         planetRenderer: null,
+        // Near-field handle null → atmosphereShellLayer disabled AND the
+        // atmosphereSkyView compute step early-outs, so it bills no work.
+        atmosphereShellRenderer: null,
         starPointRenderer: null,
         orbitTrailRenderer: null,
         starCatalogRenderer: null,

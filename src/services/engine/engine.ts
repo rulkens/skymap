@@ -321,6 +321,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // last in the (foreground:0, NEAR0) group. null until initGpu; excluded
       // from isEngineReady, null-checked at use by ringsLayer.
       ringRenderer: null,
+      // Earth's translucent cloud shell — the thin deck drawn just above the
+      // opaque surface, immediately after earthLayer in the (foreground:0, NEAR0)
+      // group. null until initGpu; excluded from isEngineReady, null-checked at
+      // use by cloudShellLayer.
+      cloudShellRenderer: null,
+      // Earth's in-scatter atmosphere — the outermost translucent shell, drawn
+      // LAST in the (foreground:0, NEAR0) group. null until initGpu; excluded
+      // from isEngineReady, null-checked at use by atmosphereShellLayer and the
+      // atmosphereSkyView compute step.
+      atmosphereShellRenderer: null,
       starPointRenderer: null,
       // Sub-pixel bodies (the glints branch of the body partition) as
       // brightness-scaled additive points on the (hdr, NEAR0) step — the far
@@ -777,6 +787,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.texturedBodyRenderer = null;
     state.gpu.ringRenderer?.destroy();
     state.gpu.ringRenderer = null;
+    state.gpu.cloudShellRenderer?.destroy();
+    state.gpu.cloudShellRenderer = null;
+    state.gpu.atmosphereShellRenderer?.destroy();
+    state.gpu.atmosphereShellRenderer = null;
     state.gpu.starPointRenderer?.destroy();
     state.gpu.starPointRenderer = null;
     state.gpu.bodyGlintRenderer?.destroy();

@@ -65,7 +65,29 @@ export type TextureSourceEntry = {
 export const TEXTURE_SOURCES = {
   mercury: { surface: { native: 'textures.sssMercury8k', devFilename: '2k_mercury.jpg' } },
   venus: { surface: { native: 'textures.sssVenus4k', devFilename: '2k_venus_atmosphere.jpg' } },
-  earth: { surface: { native: 'textures.nasaBmng', devKey: 'textures.nasaBmngDev' } },
+  earth: {
+    surface: { native: 'textures.nasaBmng', devKey: 'textures.nasaBmngDev' },
+    // The night-lights (Black Marble) map. Full-pull only — no cheap dev variant,
+    // like `material` below — so `--dev` fetch/build skip it; the Task 4 visual
+    // check needs the full night source.
+    night: { native: 'textures.earthNight' },
+    // The material (roughness/ocean-mask) map derives from the NASA land/water
+    // mask. Full-pull only — no cheap dev variant, so the mask is fetched only
+    // on the real pull, never in the ~7 MB `--dev` subset.
+    material: { native: 'textures.earthWaterMask' },
+    // The normal (tangent-space relief) map. Its `native` names the ELEVATION
+    // heightfield input, not the normal map's own pixels — the build BAKES a
+    // Sobel gradient from the greyscale relief (see buildTextures' `normal`
+    // writer); the row shape is identical to `material`'s, only the build writer
+    // differs. Full-pull only — no cheap dev variant, like `material` — so a
+    // `--dev` fetch/build skips it.
+    normal: { native: 'textures.earthElevation' },
+    // The cloud shell (sRGB colour + luminance-derived alpha → PNG). The NASA
+    // Blue Marble cloud composite is white-cloud-on-black with no alpha; the
+    // build derives opacity from luminance (see buildTextures' `clouds` writer).
+    // Full-pull only — no cheap dev variant, like `material`/`normal`.
+    clouds: { native: 'textures.earthClouds' },
+  },
   mars: { surface: { native: 'textures.sssMars8k', devFilename: '2k_mars.jpg' } },
   jupiter: { surface: { native: 'textures.sssJupiter8k', devFilename: '2k_jupiter.jpg' } },
   saturn: { surface: { native: 'textures.sssSaturn8k', devFilename: '2k_saturn.jpg' } },
@@ -83,3 +105,19 @@ export const TEXTURE_SOURCES = {
   BodyTextureId | RingTextureId,
   Partial<Record<TextureKind, TextureSourceEntry>>
 >;
+
+/**
+ * One value of `TEXTURE_SOURCES`, with `native` / `devKey` kept as string
+ * LITERALS (not widened to `RawDataKey`) — the union of every authored entry
+ * across all bodies AND kinds. Derived from `typeof TEXTURE_SOURCES` rather than
+ * the `TextureSourceEntry` above, which is the WIDENED shape the table
+ * `satisfies` (its `native: RawDataKey` throws the literal away). The literal is
+ * load-bearing downstream: `RAW_DATA[entry.native]` then narrows to a texture
+ * row — all of which carry `upstream` — instead of the whole registry union,
+ * where `upstream` is optional. Both the fetch (`fetchTextures`) and build
+ * (`buildTextures`) import THIS one derived form, so there is no per-consumer
+ * twin alias to drift.
+ */
+export type TextureSourceRow = {
+  [Body in keyof typeof TEXTURE_SOURCES]: (typeof TEXTURE_SOURCES)[Body][keyof (typeof TEXTURE_SOURCES)[Body]];
+}[keyof typeof TEXTURE_SOURCES];

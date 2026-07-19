@@ -132,6 +132,25 @@ const settingsSlice = createSlice({
       settings.filaments.intensity = action.payload;
     },
 
+    // ── earth ───────────────────────────────────────────────────────────────
+    // Exposure scale on the atmosphere shell's HDR output — read live by
+    // `atmosphereShellLayer` each frame. Twin of `setFilamentIntensity`.
+    setAtmosphereExposure: (settings, action: PayloadAction<number>) => {
+      settings.earth.atmosphereExposure = action.payload;
+    },
+    // Night-side ambient floor on Earth's surface + cloud shell — read live by
+    // `earthLayer` / `cloudShellLayer` each frame. An Earth-scoped override of
+    // the shared `AMBIENT` const (which stays every other lit body's floor).
+    setAmbientLight: (settings, action: PayloadAction<number>) => {
+      settings.earth.ambientLight = action.payload;
+    },
+    // Open-water GGX roughness on Earth's surface — read live by `earthLayer`
+    // each frame. An Earth-scoped override of the `OCEAN_ROUGHNESS` const in
+    // `lib/pbr.wesl` (which stays the seed / documentation home).
+    setOceanRoughness: (settings, action: PayloadAction<number>) => {
+      settings.earth.oceanRoughness = action.payload;
+    },
+
     // ── star catalogs (fourth source-type cluster) ──────────────────────────
     // Master gate + per-catalog items, mirroring the galaxy-catalog cluster:
     // `setStarCatalogEnabled` writes the coarse "hide all star catalogs" gate,
@@ -392,6 +411,9 @@ export const {
   setFamousStarsEnabled,
   setFilamentsEnabled,
   setFilamentIntensity,
+  setAtmosphereExposure,
+  setAmbientLight,
+  setOceanRoughness,
   setStarCatalogEnabled,
   setStarCatalogSize,
   setStarCatalogBrightness,

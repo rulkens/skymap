@@ -8,11 +8,11 @@
  * The output name comes from the shared `bodyTextureFilename` helper — the SAME
  * helper the runtime fetcher (`bodyTextureFetcher`) calls to build its request
  * URL — so the emitted file and the requested URL can never drift onto different
- * names (a mismatch would 404 every body). Only the `surface` (day/albedo) kind
- * is built here; because `surface` is the helper's unsegmented default, the
- * emitted names are byte-identical to the historical `<bodyId>-<px>.jpg` /
- * `saturn-ring-<px>.png`, so re-running this tool needs no R2 re-sync. Non-surface
- * feature maps land with their own PRs.
+ * names (a mismatch would 404 every body). Each body builds one file per `kind`
+ * it declares in `BODY_TEXTURE_REGISTRY` (a `surface` albedo plus, for Earth,
+ * `night` / `material` / `normal` feature maps); `surface` is the helper's
+ * unsegmented default, so its names stay byte-identical to the historical
+ * `<bodyId>-<px>.jpg` / `saturn-ring-<px>.png`.
  *
  * ## Three source formats, one sharp path
  *
@@ -72,36 +72,59 @@ import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 
 import type { BodyTextureId } from '../../src/@types/data/BodyTextureId';
+import type { RingTextureId } from '../../src/@types/data/RingTextureId';
+import type { TextureKind } from '../../src/@types/data/TextureKind';
 import type { Vec3 } from '../../src/@types/math/Vec3';
 import { BODY_TEXTURE_REGISTRY } from '../../src/data/bodies/bodyTextureRegistry';
 import { tierToTexturePx } from '../../src/utils/math/tierToTexturePx';
 import { bodyTextureFilename } from '../../src/utils/scene/bodyTextureFilename';
 import { RAW_DATA, rawDataPath } from '../utils/io/rawDataRegistry';
-import { TEXTURE_SOURCES } from '../utils/io/textureSources';
+import { TEXTURE_SOURCES, type TextureSourceRow } from '../utils/io/textureSources';
+import { bakeNormalMap, DEFAULT_EXAGGERATION } from './bakeNormalMap';
 import { emittedTiersForBody } from './emittedTiersForBody';
 import { tiersFittingSourceWidth } from './tiersFittingSourceWidth';
+import { writeCloudTier } from './writeCloudTier';
+import { writeLinearTier } from './writeLinearTier';
 
 /** Output JPEG quality for the spherical body textures (spec §10, ~80). */
 const JPEG_QUALITY = 80;
 
 /**
- * The `surface` source of one textured body or ring, read from the single
- * `TEXTURE_SOURCES` table (`tools/utils/io/textureSources.ts`) — the same table
- * `fetchTextures` derives its download list from, so the built set can never
- * drift from what was fetched. Derived (not annotated) so each `native` /
- * `devKey` stays a string LITERAL for `rawDataPath`.
+ * The material map's R channel packs perceptual roughness in [0,1] (0 = a
+ * mirror, 1 = fully diffuse), ramped across the water mask: open ocean is a
+ * near-mirror glossy surface, land is rough. The ramp is linear in the mask's
+ * land fraction, so an antialiased coastline gets an in-between roughness rather
+ * than a hard specular seam.
+ *
+ * The shader's 'lib/pbr.wesl' `OCEAN_ROUGHNESS` overrides the ocean end via the
+ * G-mask mix on pure-ocean pixels, so this baked ramp value only shapes the
+ * coastline blend where the mask is fractional — tune glint tightness in the
+ * shader const, not here.
  */
-type SurfaceSource = (typeof TEXTURE_SOURCES)[keyof typeof TEXTURE_SOURCES]['surface'];
+const OCEAN_RAMP_ROUGHNESS = 0.3;
+const LAND_ROUGHNESS = 0.95;
 
 /**
- * Ordered candidate paths for a surface source, best (native full-res) first,
- * then the `--dev` variant if any. `devKey` is its own registry row (Earth's
- * BMNG sibling); `devFilename` is a loose 2 k file under `textures.dir` (the SSS
+ * `TEXTURE_SOURCES` viewed by the wide `(bodyId, kind)` key space the build loop
+ * ranges over. The const table's per-body key set is narrower than the whole
+ * `TextureKind` union (today just `surface`), so the variable-kind lookup needs
+ * this view; every `(bodyId, kind)` the build derives is populated, so the `!`
+ * holds.
+ */
+const SOURCE_TABLE = TEXTURE_SOURCES as Record<
+  BodyTextureId | RingTextureId,
+  Partial<Record<TextureKind, TextureSourceRow>>
+>;
+
+/**
+ * Ordered candidate paths for a source, best (native full-res) first, then the
+ * `--dev` variant if any. `devKey` is its own registry row (Earth's BMNG
+ * sibling); `devFilename` is a loose 2 k file under `textures.dir` (the SSS
  * bodies and the ring). Uranus/Neptune's `devFilename` resolves to the same
  * on-disk path as native (their native IS the 2 k file), so the extra candidate
  * is a harmless duplicate; the USGS moons carry neither.
  */
-function candidatePaths(entry: SurfaceSource): readonly string[] {
+function candidatePaths(entry: TextureSourceRow): readonly string[] {
   const paths = [rawDataPath(entry.native)];
   if ('devKey' in entry) {
     paths.push(rawDataPath(entry.devKey));
@@ -111,9 +134,9 @@ function candidatePaths(entry: SurfaceSource): readonly string[] {
   return paths;
 }
 
-/** Ordered candidate paths for a body's source, best (native) first. */
-function sourcePathsFor(id: BodyTextureId): readonly string[] {
-  return candidatePaths(TEXTURE_SOURCES[id].surface);
+/** Ordered candidate paths for a body's `(kind)` source, best (native) first. */
+function sourcePathsFor(id: BodyTextureId, kind: TextureKind): readonly string[] {
+  return candidatePaths(SOURCE_TABLE[id][kind]!);
 }
 
 /** Ordered candidate paths for the Saturn ring strip, best (full) first. */
@@ -191,6 +214,192 @@ async function writeBodyTier(
 }
 
 /**
+ * Compose Earth's material map from the NASA water mask and write one tier.
+ *
+ * The mask is a single-channel image where land = 255 and water = 0. We resize
+ * it to the tier width FIRST (keeping the working buffer small — the native mask
+ * is 21600×10800), read it raw, and pack a linear RGBA:
+ *
+ *  - **R** = roughness, ramped `OCEAN_RAMP_ROUGHNESS → LAND_ROUGHNESS` by the mask's
+ *    land fraction, so calm ocean is glossy and land is diffuse;
+ *  - **G** = ocean mask, `255` where the pixel is water (`255 - land`), so 1 = ocean;
+ *  - **B**, **A** = spare (0 / opaque) for a future plan to claim.
+ *
+ * The packed buffer goes through `writeLinearTier`, which encodes PNG with NO
+ * sRGB gamma — the channels are numeric fields, not colour, so a gamma curve
+ * would corrupt them. Resizing before packing means `writeLinearTier`'s own
+ * resize is an identity op here; it stays general for a source that hands it a
+ * full-res buffer to downsample.
+ */
+async function writeMaterialTier(srcPath: string, widthPx: number, outPath: string): Promise<void> {
+  const mask = await sharp(srcPath, { limitInputPixels: false })
+    .resize({ width: widthPx })
+    .toColourspace('b-w')
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const { width, height, channels } = mask.info;
+  const rgba = Buffer.allocUnsafe(width * height * 4);
+  for (let i = 0; i < width * height; i++) {
+    const land = mask.data[i * channels] ?? 0; // 0 = water, 255 = land
+    const landFraction = land / 255;
+    const roughness = OCEAN_RAMP_ROUGHNESS + (LAND_ROUGHNESS - OCEAN_RAMP_ROUGHNESS) * landFraction;
+    rgba[i * 4 + 0] = Math.round(roughness * 255);
+    rgba[i * 4 + 1] = 255 - land; // 255 where water — G's "1 = ocean"
+    rgba[i * 4 + 2] = 0; // B spare
+    rgba[i * 4 + 3] = 255; // A spare (opaque)
+  }
+
+  await writeLinearTier({ data: rgba, info: { width, height, channels: 4 } }, widthPx, outPath);
+}
+
+/**
+ * Per-source cache of the baked normal buffer. The bake is a pure JS Sobel loop,
+ * so it runs ONCE per elevation source and every tier is a resize of the shared
+ * result (a normal map downsamples cleanly). Keyed by source path; the build loop
+ * is sequential, but caching the Promise makes the memoisation correct even if it
+ * were not.
+ */
+const bakedNormalCache = new Map<
+  string,
+  Promise<{ data: Buffer; info: { width: number; height: number; channels: 4 } }>
+>();
+
+/**
+ * Bake `bodyId`'s elevation source into a tangent-space normal map ONCE, at a
+ * width capped to the widest tier the body emits for `normal`.
+ *
+ * The cap is load-bearing: the GEBCO relief is 21600×10800 (233 Mpx), so reading
+ * it raw would hold a ~930 MB workload and Sobel-loop it pointlessly when the
+ * widest tier we ship is 4 k. sharp resizes to the cap BEFORE `.raw()`, then we
+ * stride-extract a single greyscale channel — `.greyscale()` keeps three
+ * identical bands, so we read channel 0 by the reported stride, the same pattern
+ * `writeMaterialTier` uses for its mask — and hand that heightfield to
+ * `bakeNormalMap`. The result feeds `writeLinearTier` per tier. Upscaling is
+ * guarded off (`withoutEnlargement`), so a source narrower than the cap resizes
+ * down to itself rather than being blown up past its native detail.
+ */
+function bakeNormalOnce(
+  bodyId: BodyTextureId,
+  srcPath: string,
+): Promise<{ data: Buffer; info: { width: number; height: number; channels: 4 } }> {
+  let baked = bakedNormalCache.get(srcPath);
+  if (baked === undefined) {
+    const capPx = tierToTexturePx(emittedTiersForBody(bodyId, 'normal').at(-1)!);
+    baked = (async () => {
+      const grey = await sharp(srcPath, { limitInputPixels: false })
+        .resize({ width: capPx, withoutEnlargement: true })
+        .greyscale()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+      const { width, height, channels } = grey.info;
+      const single = new Uint8Array(width * height);
+      for (let i = 0; i < width * height; i++) single[i] = grey.data[i * channels]!;
+      return bakeNormalMap({ data: single, width, height }, DEFAULT_EXAGGERATION);
+    })();
+    bakedNormalCache.set(srcPath, baked);
+  }
+  return baked;
+}
+
+/** Bake (or reuse) the normal map and write one tier as a linear PNG. */
+async function writeNormalTier(
+  bodyId: BodyTextureId,
+  srcPath: string,
+  widthPx: number,
+  outPath: string,
+): Promise<void> {
+  const baked = await bakeNormalOnce(bodyId, srcPath);
+  await writeLinearTier(baked, widthPx, outPath);
+}
+
+/**
+ * The per-kind writer plus the log note that annotates its tier. `write` produces
+ * the file; `note` reads whatever the note depends on (only the sRGB writer's
+ * does — its tint) off the registry.
+ */
+type KindWriter = {
+  readonly write: (
+    bodyId: BodyTextureId,
+    srcPath: string,
+    widthPx: number,
+    outPath: string,
+  ) => Promise<void>;
+  readonly note: (bodyId: BodyTextureId) => string;
+};
+
+/**
+ * The sRGB (JPEG albedo) writer, shared by `surface` and `night`. The two differ
+ * only in whether a grayscale tint applies, and that tint is a per-BODY property
+ * (`grayscaleTint`), not a per-kind one: the mono USGS moons carry a `surface`
+ * tint, Earth's `surface` AND `night` carry none. So a single registry lookup
+ * serves both kinds — Europa's surface tints through the two-pass mono path,
+ * Earth's night passes `undefined` and encodes in one pass — and the '(tinted)'
+ * note derives from that same tint presence.
+ */
+const SRGB_WRITER: KindWriter = {
+  write: (bodyId, srcPath, widthPx, outPath) =>
+    writeBodyTier(srcPath, BODY_TEXTURE_REGISTRY[bodyId].grayscaleTint, widthPx, outPath),
+  note: (bodyId) => (BODY_TEXTURE_REGISTRY[bodyId].grayscaleTint ? '  (tinted)' : ''),
+};
+
+/**
+ * The build's kind→writer dispatch expressed AS DATA. Each `TextureKind` maps to
+ * how its tier is produced plus its log note, so a new kind is one row rather
+ * than another branch of an if-chain:
+ *
+ *  - **`surface` + `night`** → the shared `SRGB_WRITER` (JPEG albedo / night
+ *    lights), tint-parameterised off the registry.
+ *  - **`material`** → `writeMaterialTier`, packing a linear roughness/ocean-mask
+ *    PNG (Earth's PBR map).
+ *  - **`normal`** → `writeNormalTier`, baking a tangent-space normal map from the
+ *    elevation source.
+ *  - **`clouds`** → `writeCloudTier`, an sRGB-colour PNG whose alpha is derived
+ *    from the composite's luminance (white cloud → opaque, black sky → clear).
+ *
+ * A kind with no row is a loud build error at the dispatch below, never a silent
+ * skip that would leave a body's map unbuilt — so a `kinds` row and its writer
+ * row here MUST land together.
+ */
+const KIND_WRITERS: Partial<Record<TextureKind, KindWriter>> = {
+  surface: SRGB_WRITER,
+  night: SRGB_WRITER,
+  material: {
+    write: (_bodyId, srcPath, widthPx, outPath) => writeMaterialTier(srcPath, widthPx, outPath),
+    note: () => '  (material)',
+  },
+  normal: {
+    write: (bodyId, srcPath, widthPx, outPath) =>
+      writeNormalTier(bodyId, srcPath, widthPx, outPath),
+    note: () => '  (normal)',
+  },
+  clouds: {
+    write: (_bodyId, srcPath, widthPx, outPath) => writeCloudTier(srcPath, widthPx, outPath),
+    note: () => '  (clouds)',
+  },
+};
+
+/**
+ * Write one `(body, kind)` tier via the per-kind writer table and return its log
+ * note. A kind with no table row is a build error, never a silent skip that would
+ * leave a body's map unbuilt.
+ */
+async function writeBodyKindTier(
+  bodyId: BodyTextureId,
+  kind: TextureKind,
+  srcPath: string,
+  widthPx: number,
+  outPath: string,
+): Promise<string> {
+  const writer = KIND_WRITERS[kind];
+  if (writer === undefined) {
+    throw new Error(`buildTextures: no writer for texture kind '${kind}' (${bodyId})`);
+  }
+  await writer.write(bodyId, srcPath, widthPx, outPath);
+  return writer.note(bodyId);
+}
+
+/**
  * Downsample the ring strip to a tier and write the PNG. Width-only resize
  * preserves the radial aspect; PNG keeps the alpha channel intact (no flatten).
  */
@@ -201,29 +410,48 @@ async function writeRingTier(srcPath: string, widthPx: number, outPath: string):
     .toFile(outPath);
 }
 
+/**
+ * The build's per-`(body, kind)` work list — one entry per map every textured
+ * body declares in its registry `kinds`, in registry order. The ring is NOT here:
+ * it carries only `surface` and is not registry-driven (`emittedTiersForBody`
+ * indexes `BODY_TEXTURE_REGISTRY`, which has no ring row), so it rides its own
+ * loop below. Pure over the registry — the unit-testable spine the build loop
+ * consumes, and the guard (paired with the fetch drift test) that a new map kind
+ * on a body actually gets built rather than silently dropped.
+ */
+export function textureBuildEntries(): readonly { bodyId: BodyTextureId; kind: TextureKind }[] {
+  return (Object.keys(BODY_TEXTURE_REGISTRY) as BodyTextureId[]).flatMap((bodyId) =>
+    (Object.keys(BODY_TEXTURE_REGISTRY[bodyId].kinds) as TextureKind[]).map((kind) => ({
+      bodyId,
+      kind,
+    })),
+  );
+}
+
 /** Build every body + the ring into `outDir`, logging per-source progress. */
 export async function buildTextures(outDir: string): Promise<void> {
   mkdirSync(outDir, { recursive: true });
 
-  for (const id of Object.keys(BODY_TEXTURE_REGISTRY) as BodyTextureId[]) {
-    const srcPath = firstExisting(sourcePathsFor(id));
+  for (const { bodyId, kind } of textureBuildEntries()) {
+    const srcPath = firstExisting(sourcePathsFor(bodyId, kind));
     if (srcPath === null) {
-      process.stderr.write(`  skip ${id}: no source on disk\n`);
+      process.stderr.write(`  skip ${bodyId}:${kind}: no source on disk\n`);
       continue;
     }
     const width = await sourceWidth(srcPath);
     const fitting = tiersFittingSourceWidth(width);
-    const tiers = emittedTiersForBody(id, 'surface').filter((tier) => fitting.includes(tier));
-    const tint = BODY_TEXTURE_REGISTRY[id].grayscaleTint;
+    const tiers = emittedTiersForBody(bodyId, kind).filter((tier) => fitting.includes(tier));
     if (tiers.length === 0) {
-      process.stderr.write(`  warn ${id}: source ${width}px too small for any tier — skipping\n`);
+      process.stderr.write(
+        `  warn ${bodyId}:${kind}: source ${width}px too small for any tier — skipping\n`,
+      );
       continue;
     }
     for (const tier of tiers) {
       const px = tierToTexturePx(tier);
-      const filename = bodyTextureFilename(id, 'surface', tier);
-      await writeBodyTier(srcPath, tint, px, join(outDir, filename));
-      process.stderr.write(`  ok   ${filename}${tint ? '  (tinted)' : ''}\n`);
+      const filename = bodyTextureFilename(bodyId, kind, tier);
+      const note = await writeBodyKindTier(bodyId, kind, srcPath, px, join(outDir, filename));
+      process.stderr.write(`  ok   ${filename}${note}\n`);
     }
   }
 

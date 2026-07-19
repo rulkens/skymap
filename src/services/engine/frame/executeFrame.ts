@@ -66,20 +66,22 @@ import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingService';
 import { slabViewOf } from './slabs';
 import { encodeFlowCompute } from './encodeFlowCompute';
+import { encodeAtmosphereSkyView } from './encodeAtmosphereSkyView';
 import { TARGET_CLEAR_VALUES } from '../../gpu/renderTargets';
 
 /**
- * COMPUTE — the name→fn table a `'compute'` step dispatches through. One row
- * today (`'flow'`); a new compute pre-pass is a new row, not a new branch.
- * Every row takes the uniform `(encoder, ctx, state)` shape even though the
- * flow row ignores `ctx` — so a future compute step that needs the frame
- * context slots in without changing the call site.
+ * COMPUTE — the name→fn table a `'compute'` step dispatches through. Two rows
+ * today (`'flow'` and `'atmosphereSkyView'`); a new compute pre-pass is a new
+ * row, not a new branch. Every row takes the uniform `(encoder, ctx, state)`
+ * shape — `flow` ignores `ctx`, while `atmosphereSkyView` reads the rendered
+ * pose off it so its baked LUT matches what the shell fragment samples.
  */
 const COMPUTE: Record<
   string,
   (encoder: GPUCommandEncoder, ctx: ReadyFrameContext, state: EngineState) => void
 > = {
   flow: (encoder, _ctx, state) => encodeFlowCompute(encoder, state),
+  atmosphereSkyView: (encoder, ctx, state) => encodeAtmosphereSkyView(encoder, ctx, state),
 };
 
 /**

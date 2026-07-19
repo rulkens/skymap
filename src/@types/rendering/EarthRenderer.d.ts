@@ -2,15 +2,17 @@
  * EarthRenderer — handle for the true-scale, texture-mapped Earth drawn into
  * the opaque near-field foreground target.
  *
- * The Earth is the same UV-sphere mesh the star and planet renderers use
- * (`uvSphereMesh`), shaded by sampling an equirectangular Blue Marble bitmap
- * and attenuated by the shared sun-relative Lambert term. It shares
- * `lib/sphere.wesl`'s `LitBodyUniforms` (80-byte block: mat4x4<f32> MVP +
- * body-local sun direction + zeroed pad; the ambient floor is the shared
- * `AMBIENT` const in `lib/bodyLighting.wesl`, not a uniform field) and
- * `clip_from_local`, so the
- * CPU-side matrix layout and the GPU-side projection stay a single source of
- * truth across every sphere-shaped body.
+ * The Earth is a cube-sphere mesh (`cubeSphereMesh`), shaded by the shared
+ * physically-based microfacet core (`lib/pbr.wesl`'s `pbrDirect`): an
+ * equirectangular Blue Marble albedo plus a co-registered linear material map
+ * (roughness + ocean mask) that gives the ocean its sun glint, over the
+ * sun-relative light direction, with the shared `AMBIENT` floor. It binds
+ * `lib/sphere.wesl`'s `EarthSurfaceUniforms` (128-byte block: the 80-byte
+ * `LitBodyUniforms` prefix — mat4x4<f32> MVP + body-local sun direction — plus
+ * the camera in the body's local frame and the PBR params, including the
+ * user-tunable night-side ambient floor and open-water roughness) and
+ * `clip_from_local`, so the CPU-side matrix layout and the GPU-side projection
+ * stay a single source of truth across every sphere-shaped body.
  *
  * ### Texture lifecycle
  *
@@ -31,19 +33,31 @@ import type { TextureKind } from '../data/TextureKind';
 export type EarthRenderer = Renderer & {
   /**
    * Install a texture map by kind. The `'surface'` kind replaces the current
-   * day-map texture (initially a 1×1 mid-blue placeholder) with the supplied
-   * equirectangular bitmap: uploads via `copyExternalImageToTexture` into a fresh
-   * `rgba8unorm-srgb` texture sized to the bitmap, then rebuilds the fragment
-   * bind group so subsequent draws sample the real Earth. The other kinds
-   * (`night`/`clouds`/`material`/`normal`) land with the photoreal-Earth feature
-   * PRs and are inert until then — one `(bodyId, kind)` family feeds one setter.
+   * day-albedo texture (initially a 1×1 mid-blue placeholder) with the supplied
+   * equirectangular bitmap, `'material'` replaces the roughness/ocean-mask map
+   * (initially a 1×1 all-land placeholder), `'night'` replaces the Black Marble
+   * city-lights map (initially a 1×1 black placeholder → no emissive contribution,
+   * so the dark side is lit only by `AMBIENT` until it lands), and `'normal'`
+   * replaces the tangent-space relief map (initially a 1×1 flat-normal placeholder
+   * → shading normal equals the geometric normal, so no relief until it lands),
+   * and `'clouds'` replaces the cloud coverage map (initially a 1×1 transparent
+   * placeholder → cloud alpha reads 0, so the surface fragment's cloud ground
+   * shadow + city-light occlusion contribute nothing until it lands): each
+   * uploads via `copyExternalImageToTexture` into a fresh texture sized to the
+   * bitmap — format chosen by `isLinearTextureKind` (`rgba8unorm-srgb` for the
+   * sRGB surface + emissive night colour + cloud colour, linear `rgba8unorm` for
+   * the material + normal data) — generates mips, then rebuilds the fragment bind
+   * group so subsequent draws sample the real map. Every `TextureKind` is now
+   * wired — one `(bodyId, kind)` family feeds one setter, no inert kind remains.
    */
   setMap(kind: TextureKind, bitmap: ImageBitmap): void;
   /**
-   * Draw the Earth into the current pass. `uniforms` is a length-20 Float32Array
-   * (the 80-byte `LitBodyUniforms` record from `packLitBodyUniforms`): 16 f32
-   * column-major MVP + 3 f32 body-local sun direction + 1 f32 zeroed pad —
-   * written to the uniform buffer and drawn indexed.
+   * Draw the Earth into the current pass. `uniforms` is a length-32 Float32Array
+   * (the 128-byte `EarthSurfaceUniforms` record from `packEarthSurfaceUniforms`):
+   * 16 f32 column-major MVP + 3 f32 body-local sun direction + `roughnessBase` +
+   * 3 f32 camera-in-local-frame + `f0` + `sunIrradiance` + `cloudShadowStrength` +
+   * `cloudShellRadius` + `ambientLight` + `oceanRoughness` + 3 f32 pad — written to
+   * the uniform buffer and drawn indexed.
    */
   draw(pass: GPURenderPassEncoder, uniforms: Float32Array): void;
 };

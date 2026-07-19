@@ -1,0 +1,85 @@
+/**
+ * AtmosphereUniforms byte-layout guard.
+ *
+ * The WGSL `AtmosphereUniforms` struct in `shaders/lib/sphere.wesl` and the
+ * CPU-side `packAtmosphereUniforms` must agree byte-for-byte: a mismatch
+ * produces no GPU error, just a wrong (or, on iOS, silently dropped) frame.
+ * This is the `testing.md` keep-rule for uniform layouts — it fails on a real
+ * drift no compiler check catches.
+ *
+ * The test drives the real packer with distinct, non-round values in every
+ * slot (no two sentinels equal, so a swapped pair of fields is caught) and
+ * reads the returned `Float32Array` at the offsets the struct pins. In
+ * particular it pins `bottomRadius` at float index 19 — the slot the lit packer
+ * leaves a zeroed pad — so a packer that forgot to overwrite it (and left the
+ * lit pad in place) fails.
+ */
+
+import { describe, it, expect } from 'vitest';
+import {
+  packAtmosphereUniforms,
+  ATMOSPHERE_UNIFORM_FLOATS,
+} from '../../../src/utils/gpu/packAtmosphereUniforms';
+import { packLitBodyUniforms } from '../../../src/utils/gpu/packLitBodyUniforms';
+import type { Vec3 } from '../../../src/@types/math/Vec3';
+
+// A recognisable MVP: 1..16 so any transposition or off-by-one placement of a
+// later field into the matrix block shows up as a wrong value.
+const MVP = new Float32Array(16);
+for (let i = 0; i < 16; i++) MVP[i] = i + 1;
+
+// Distinct, non-unit vectors + scalars so a mis-mapped component perturbs a
+// byte the check would catch, and no two sentinels are equal (swap-proof).
+// Dyadic fractions — exactly representable in float32, so `toBe` stays exact
+// (swap-proof) rather than needing a tolerance, yet no two sentinels are equal.
+const SUN_DIR: Vec3 = [0.5, 0.25, 0.75];
+const CAM_POS: Vec3 = [1.5, 2.5, 3.5];
+const BOTTOM_RADIUS = 0.96875; // planetRadiusKm / atmosphereTopKm ∈ (0,1)
+const SUN_IRRADIANCE = 17.25;
+const EXPOSURE = 0.625;
+
+describe('AtmosphereUniforms byte offsets', () => {
+  it('packs a 112-byte / 28-f32 record with bottomRadius filling the vec3 tail @76', () => {
+    const rec = packAtmosphereUniforms(
+      MVP,
+      SUN_DIR,
+      CAM_POS,
+      BOTTOM_RADIUS,
+      SUN_IRRADIANCE,
+      EXPOSURE,
+    );
+    expect(rec.length).toBe(ATMOSPHERE_UNIFORM_FLOATS);
+    expect(rec.length).toBe(28); // 112 bytes
+    expect(rec.byteLength).toBe(112);
+
+    // mvp — all 16 floats verbatim at bytes 0..63.
+    for (let i = 0; i < 16; i++) expect(rec[i]).toBe(MVP[i]);
+
+    // sunDirLocal — vec3 at byte 64 (float index 16). The lit prefix is reused,
+    // so bytes 0..75 (float 0..18) match packLitBodyUniforms exactly.
+    const lit = packLitBodyUniforms(MVP, SUN_DIR);
+    for (let i = 0; i < 19; i++) expect(rec[i]).toBe(lit[i]);
+    expect(rec[16]).toBe(SUN_DIR[0]); // byte 64
+    expect(rec[17]).toBe(SUN_DIR[1]); // byte 68
+    expect(rec[18]).toBe(SUN_DIR[2]); // byte 72
+
+    // bottomRadius — float index 19 (byte 76), the vec3's trailing slot. A REAL
+    // field here (like RingUniforms.planetRadiusRatio), NOT the zeroed pad the
+    // lit packer leaves — so this fails if the override was dropped.
+    expect(rec[19]).toBe(BOTTOM_RADIUS); // byte 76
+
+    // camPosLocal — vec3 at byte 80 (float index 20), 16-byte aligned.
+    expect(rec[20]).toBe(CAM_POS[0]); // byte 80
+    expect(rec[21]).toBe(CAM_POS[1]); // byte 84
+    expect(rec[22]).toBe(CAM_POS[2]); // byte 88
+
+    // sunIrradiance fills camPosLocal's vec3 tail; exposure follows.
+    expect(rec[23]).toBe(SUN_IRRADIANCE); // byte 92
+    expect(rec[24]).toBe(EXPOSURE); // byte 96
+
+    // Trailing pads zeroed — round the struct to 112 / 16-byte alignment.
+    expect(rec[25]).toBe(0); // byte 100
+    expect(rec[26]).toBe(0); // byte 104
+    expect(rec[27]).toBe(0); // byte 108
+  });
+});

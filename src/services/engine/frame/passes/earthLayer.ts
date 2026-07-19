@@ -7,9 +7,12 @@
  * The single seeded `bodies.earth` record, composed as a unit sphere scaled to
  * the body's radius (`radiusKm` → Mpc via `SCALE_UNITS.KM_TO_MPC`) and
  * translated to its `positionMpc`, in the `RENDER_ORIGIN_MPC`-relative frame.
- * The layer packs the 80-byte `LitBodyUniforms` record (MVP + body-local sun
- * direction; the ambient floor is the shared `AMBIENT` const in
- * `bodyLighting.wesl`, not a uniform field); `earthRenderer.draw` writes it into its single
+ * The layer packs the 128-byte `EarthSurfaceUniforms` record (MVP + body-local
+ * sun direction + camera-in-local-frame + the PBR surface params, including the
+ * user-tunable night-side ambient floor `settings.earth.ambientLight` and the
+ * user-tunable open-water roughness `settings.earth.oceanRoughness` — both
+ * Earth-scoped overrides of the WESL consts other bodies read);
+ * `earthRenderer.draw` writes it into its single
  * (non-dynamic) uniform buffer and issues one indexed draw — so this row must
  * draw the Earth AT MOST once per frame (the renderer's own header spells out
  * the `writeBuffer`-vs-`submit` race a second same-frame draw would trigger).
@@ -56,7 +59,10 @@ import { Source } from '../../../../data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
-import { packLitBodyUniforms } from '../../../../utils/gpu/packLitBodyUniforms';
+import { camPosLocal } from '../../../../utils/camera/camPosLocal';
+import { packEarthSurfaceUniforms } from '../../../../utils/gpu/packEarthSurfaceUniforms';
+import { EARTH_SURFACE_PARAMS } from '../../../../data/bodies/earthSurfaceParams';
+import { CLOUD_SHELL_PARAMS } from '../../../../data/bodies/cloudShellParams';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from '../subPixelBodyCullPx';
@@ -113,11 +119,47 @@ export const earthLayer: ContentLayer = {
       earth.orientation,
     );
     // Rotate the sun direction into Earth's local frame (its baked orientation
-    // carries the axial tilt), so the fragment's Lambert term stays a plain dot
-    // product. Pack MVP + sunDirLocal into the 80-byte lit record; the ambient
-    // floor is the shared AMBIENT const in bodyLighting.wesl, not a uniform.
+    // carries the axial tilt), so the fragment's lighting stays a plain dot
+    // product. The night-side ambient floor rides the uniform below
+    // (`settings.earth.ambientLight`), an Earth-scoped override of the shared
+    // AMBIENT const other bodies read.
     const sun = sunDirLocal(earth.positionMpc, RENDER_ORIGIN_MPC, earth.orientation);
-    renderer.draw(pass, packLitBodyUniforms(mvp, sun));
+    // The camera in Earth's local frame (body-radii units) — the view vector the
+    // PBR fragment needs for the view-dependent ocean glint. `view.camPos` and
+    // `earth.positionMpc` are BOTH origin-relative (heliocentric) Mpc — the near
+    // slab is origin-relative — so their difference resolves cleanly in JS doubles
+    // before narrowing to f32 (the same precision posture as the f64 seam above).
+    const camLocal = camPosLocal(
+      view.camPos,
+      earth.positionMpc,
+      earth.radiusKm * SCALE_UNITS.KM_TO_MPC,
+      earth.orientation,
+    );
+    // Pack MVP + sunDirLocal + camPosLocal + the PBR surface params into the
+    // 128-byte EarthSurfaceUniforms record.
+    renderer.draw(
+      pass,
+      packEarthSurfaceUniforms(
+        mvp,
+        sun,
+        camLocal,
+        EARTH_SURFACE_PARAMS.roughnessBase,
+        EARTH_SURFACE_PARAMS.f0,
+        EARTH_SURFACE_PARAMS.sunIrradiance,
+        EARTH_SURFACE_PARAMS.cloudShadowStrength,
+        // The cloud deck's unit-sphere local radius — the surface shadow ray
+        // intersects this SAME shell the cloudShellLayer draws, so the cast
+        // shadow and the drawn deck agree by construction.
+        CLOUD_SHELL_PARAMS.radiusRatio,
+        // Night-side ambient floor — the live user setting, not the WESL const
+        // (seeded from EARTH_SURFACE_PARAMS.ambientLight so the default matches).
+        state.settings.earth.ambientLight,
+        // Open-water GGX roughness — the live user setting, not the pbr.wesl
+        // OCEAN_ROUGHNESS const (seeded from EARTH_SURFACE_PARAMS.oceanRoughness
+        // so the default matches).
+        state.settings.earth.oceanRoughness,
+      ),
+    );
   },
 
   // Pick aspect — stamps Earth's packed identity into the NEAR0 r32uint pick

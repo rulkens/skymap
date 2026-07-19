@@ -55,6 +55,7 @@ import FlowSectionContainer from '../containers/FlowSectionContainer';
 import StructuresSectionContainer from '../containers/StructuresSectionContainer';
 import LabelsSectionContainer from '../containers/LabelsSectionContainer';
 import DisplaySectionContainer from '../containers/DisplaySectionContainer';
+import EarthSectionContainer from '../containers/EarthSectionContainer';
 import styles from './SettingsPanel.module.css';
 
 // ── Props ──────────────────────────────────────────────────────────────────────
@@ -85,7 +86,9 @@ export const SettingsPanel = memo(function SettingsPanel({
       <FlowSectionContainer />
       <StructuresSectionContainer />
       <LabelsSectionContainer />
-      <DisplaySectionContainer />
+      <DisplaySectionContainer>
+        <EarthSectionContainer />
+      </DisplaySectionContainer>
       <div className={styles.panelDivider} role="separator" />
       <Button className={styles.resetButton} onClick={onResetCamera}>
         Reset camera

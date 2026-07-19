@@ -1,0 +1,80 @@
+/**
+ * packAtmosphereUniforms — pure packer for the 112-byte `AtmosphereUniforms`
+ * struct (`shaders/lib/sphere.wesl`).
+ *
+ * The atmosphere shell is a proxy sphere scaled by `composeBodyMvp` to the
+ * ATMOSPHERE-TOP radius, drawn just outside Earth's cloud shell. Its per-draw
+ * uniform buffer carries the lit-body prefix (MVP + body-local sun direction)
+ * plus the params its in-scatter fragment needs: the ground/atmosphere-top
+ * radius ratio, the camera position, the sun brightness, and an exposure scale.
+ * This is the single source of truth for that byte layout — the atmosphere
+ * renderer packs through here so the CPU write can never drift from the WGSL
+ * struct (a drift the GPU would not report; on iOS it would drop the frame
+ * silently).
+ *
+ * ## Reused lit prefix, then a real field in the vec3 tail
+ *
+ * The first 80 bytes are exactly `LitBodyUniforms`, so this reuses
+ * `packLitBodyUniforms` for [0..19] rather than re-deriving the layout — the
+ * two can never drift. It then OVERWRITES float index 19 (byte 76): the lit
+ * packer leaves that slot a zeroed `_pad` (the vec3's trailing 4 bytes), but
+ * here it is the REAL field `bottomRadius`, the same trick `packRingUniforms`
+ * uses to put `planetRadiusRatio` in that slot.
+ *
+ * ## The atmosphere-top-unit-sphere convention
+ *
+ * The proxy sphere is scaled to the atmosphere-top radius, so in the mesh's
+ * local frame the atmosphere top is the UNIT sphere (`topRadius == 1`, implicit,
+ * no field) and the ground sphere has radius `bottomRadius ∈ (0,1)`. The shell
+ * fragment maps its local altitude to the LUT radial axis via `bottomRadius`
+ * alone: normalized altitude `h = (r_local − bottomRadius) / (1 − bottomRadius)`.
+ * `camPosLocal` is expressed in those same atmosphere-top-radius units with the
+ * sphere centre at the origin — the view vector the in-scatter integral needs,
+ * which the lit prefix does not carry.
+ *
+ * ## Byte layout (uniform address space) — 112 bytes / 28 f32
+ *
+ *   f32 0..15  (byte   0..63):  mvp (column-major mat4x4)
+ *   f32 16..18 (byte  64..75):  sunDirLocal (vec3, 16-byte aligned)
+ *   f32 19     (byte  76..79):  bottomRadius (fills sunDirLocal's vec3 tail)
+ *   f32 20..22 (byte  80..91):  camPosLocal (vec3, 16-byte aligned)
+ *   f32 23     (byte  92..95):  sunIrradiance (fills camPosLocal's vec3 tail)
+ *   f32 24     (byte  96..99):  exposure
+ *   f32 25     (byte 100..103): _pad0 (zeroed)
+ *   f32 26     (byte 104..107): _pad1 (zeroed)
+ *   f32 27     (byte 108..111): _pad2 (zeroed; rounds struct to 112 / 16-byte)
+ *
+ * @param mvp           16-element column-major MVP (from `composeBodyMvp`).
+ * @param sunDirLocal   Sun direction in the body's local frame.
+ * @param camPosLocal   Camera position in atmosphere-top-radius units, centre at origin.
+ * @param bottomRadius  Ground/atmosphere-top radius ratio (`planetRadiusKm / atmosphereTopKm`), ∈ (0,1).
+ * @param sunIrradiance Sun brightness scale into HDR.
+ * @param exposure      In-scatter intensity scale.
+ */
+
+import type { Vec3 } from '../../@types/math/Vec3';
+import { packLitBodyUniforms } from './packLitBodyUniforms';
+
+/** f32 count of `AtmosphereUniforms` — 16 mvp + 4 (sun+bottom) + 4 (cam+irr) + exposure + 3 pad. */
+export const ATMOSPHERE_UNIFORM_FLOATS = 28;
+
+export function packAtmosphereUniforms(
+  mvp: Float32Array,
+  sunDirLocal: Readonly<Vec3>,
+  camPosLocal: Readonly<Vec3>,
+  bottomRadius: number, // = planetRadiusKm / atmosphereTopKm
+  sunIrradiance: number,
+  exposure: number,
+): Float32Array {
+  const out = new Float32Array(ATMOSPHERE_UNIFORM_FLOATS);
+  // Reuse the 80-byte lit prefix (mvp + sunDirLocal); no re-derivation.
+  out.set(packLitBodyUniforms(mvp, sunDirLocal), 0); // f32 0..19
+  out[19] = bottomRadius; // byte 76 — overwrite the lit pad with a real field
+  out[20] = camPosLocal[0]; // byte 80 — vec3, 16-byte aligned
+  out[21] = camPosLocal[1]; // byte 84
+  out[22] = camPosLocal[2]; // byte 88
+  out[23] = sunIrradiance; // byte 92 — fills camPosLocal's vec3 tail
+  out[24] = exposure; // byte 96
+  // out[25..27] (bytes 100..111) stay zero — pads rounding to 16-byte alignment.
+  return out;
+}

@@ -601,6 +601,50 @@ export const RAW_DATA = {
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
+  'textures.earthWaterMask': {
+    path: 'data/raw/textures/world.watermask.21600x10800.png',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "NASA Blue Marble Next Generation land/water mask, equirect PNG (land=255, water=0), subsampled to 21600x10800 (public domain, credit NASA Earth Observatory). Feeds Earth's material map. Verified live 2026-07-19 (4.3 MB, original NEO file preserved by the Internet Archive; NASA retired the NEO bluemarble archive and the relocated BMNG collection dropped the mask files).",
+    upstream:
+      'https://web.archive.org/web/20240509231512if_/https://neo.gsfc.nasa.gov/archive/bluemarble/bmng/landmask/world.watermask.21600x10800.png',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.earthNight': {
+    path: 'data/raw/textures/BlackMarble_2016_3km.jpg',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "NASA Black Marble 2016 night lights, 13500x6750 equirect JPG (public domain, credit NASA Earth Observatory / NASA's Goddard Space Flight Center, Suomi NPP VIIRS). Earth night-lights source — full pull only, no dev variant. Verified live 2026-07-19 (8,106,233 bytes, image/jpeg).",
+    upstream:
+      'https://eoimages.gsfc.nasa.gov/images/imagerecords/144000/144898/BlackMarble_2016_3km.jpg',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.earthElevation': {
+    path: 'data/raw/textures/gebco_08_rev_elev_21600x10800.png',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "NASA Visible Earth 'Topography' GEBCO_08-derived grayscale relief (land elevation + bathymetry shading), 21600x10800 equirect PNG (public domain, credit NASA Earth Observatory, imagery by Jesse Allen using GEBCO_08 grid data). Build-only bake input for Earth's normal map — never shipped as a runtime texture. Verified live 2026-07-19 (18,414,843 bytes, image/png).",
+    upstream:
+      'https://eoimages.gsfc.nasa.gov/images/imagerecords/73000/73934/gebco_08_rev_elev_21600x10800.png',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.earthClouds': {
+    path: 'data/raw/textures/cloud_combined_8192.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "NASA Visible Earth Blue Marble cloud composite, 8192x4096 equirect TIFF, white-cloud-on-black with no alpha (public domain, credit NASA Goddard Space Flight Center, Reto Stockli). Feeds Earth's cloud shell — build derives alpha from luminance. Full pull only, no dev variant. Verified live 2026-07-19 (35,870,468 bytes, image/tiff).",
+    upstream:
+      'https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57747/cloud_combined_8192.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
   'textures.usgsIo': {
     path: 'data/raw/textures/Io_GalileoSSI-Voyager_Global_Mosaic_ClrMerge_1km.tif',
     kind: 'file',

@@ -65,16 +65,19 @@ function fakeLayer(name: string, target: string, slab: number): ContentLayer {
 }
 
 describe('frameProgram', () => {
-  it('emits the ten-step main program', () => {
+  it('emits the eleven-step main program', () => {
     // The survey-star AGGREGATE render (into its own half-res offscreen) sits
     // BEFORE the hdr NEAR0 step, so the `star-upsample` layer inside that step
     // can composite it — the twin of the volume render preceding volume-upsample.
     // The (hdr, NEAR0) step then sits after the cosmological hdr render and
     // BEFORE the hdr→swap composite, so the stars accumulate into HDR and ride
     // the same tone-map as the galaxies (COSMO's 0.01 Mpc near plane would clip
-    // their parsec-scale anchors).
+    // their parsec-scale anchors). The compute prelude carries TWO steps — the
+    // flow integrate and the atmosphere sky-view LUT bake — both ahead of the
+    // foreground render so the atmosphere shell samples this frame's LUT.
     expect(frameProgram(TONE)).toEqual([
       { kind: 'compute', name: 'flow' },
+      { kind: 'compute', name: 'atmosphereSkyView' },
       { kind: 'render', target: 'volume', slab: COSMO },
       { kind: 'render', target: 'hdr', slab: COSMO },
       { kind: 'render', target: 'star-aggregates', slab: NEAR0 },
@@ -166,10 +169,12 @@ describe('timedSlotsOf', () => {
     // multiplicative dust never darkens the local starfield, and star-upsample
     // sits adjacent to the star-catalog leaf draw it composites), the tone-map
     // composite, the five swap overlays, then the near-field tail (the
-    // foreground:0 body render — one slot per body layer: earth, star-spheres,
-    // focused-field-star-sphere, planets, textured-bodies, then the translucent
-    // rings overlay last — the foreground:0→swap composite, and the (swap, NEAR0)
-    // render group → near0-selection-ring then foreground-labels), and pick last.
+    // foreground:0 body render — one slot per body layer: earth, then Earth's
+    // translucent cloud-shell overlay (drawn right after the opaque surface),
+    // star-spheres, focused-field-star-sphere, planets, textured-bodies, then the
+    // translucent rings overlay last — the foreground:0→swap composite, and the
+    // (swap, NEAR0) render group → near0-selection-ring then foreground-labels),
+    // and pick last.
     expect(timedSlotsOf(frameProgram(TONE), CONTENT_LAYERS)).toEqual([
       'scalar-volume',
       'point-sprites',
@@ -194,11 +199,16 @@ describe('timedSlotsOf', () => {
       'labels',
       'clip-path-debug',
       'earth',
+      'cloud-shell',
       'star-spheres',
       'focused-field-star-sphere',
       'planets',
       'textured-bodies',
       'rings',
+      // Earth's in-scatter atmosphere: the LAST foreground:0 layer in registry
+      // order, so its slot trails the ring's inside the foreground:0 render step
+      // (before the foreground:0→swap composite).
+      'atmosphere-shell',
       'foreground:0→swap',
       'near0-selection-ring',
       'foreground-labels',

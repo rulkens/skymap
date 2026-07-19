@@ -58,6 +58,8 @@ import {
   DEFAULT_PASS_BY_DIR,
 } from '../../services/engine/animation/pathDefaults';
 import { seedVolumeFields } from '../../data/volume/volumeFieldDefaults';
+import { ATMOSPHERE_SHELL_PARAMS } from '../../data/bodies/atmosphereShellParams';
+import { EARTH_SURFACE_PARAMS } from '../../data/bodies/earthSurfaceParams';
 import { STRUCTURE_IDS } from '../../data/structure/structureIds';
 import type { EngineSettingsState } from '../../@types/settings/EngineSettingsState';
 import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
@@ -117,6 +119,18 @@ export function buildInitialSettings(): EngineSettingsState {
     filaments: {
       enabled: SOURCE_REGISTRY[Source.Filaments].visible,
       intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
+    },
+    // Earth's per-body look dials. Each seeds from its authored data constant so
+    // that file stays the default's single source of truth (the same
+    // relationship the tonemap exposure default has to `DEFAULT_EXPOSURE`):
+    // `atmosphereExposure` from the atmosphere shell, `ambientLight` (Earth's
+    // night-side floor) + `oceanRoughness` (the ocean glint's GGX roughness) from
+    // the surface params — where each matches the shared WESL const it mirrors so
+    // these Earth-scoped overrides are no-ops at the default.
+    earth: {
+      atmosphereExposure: ATMOSPHERE_SHELL_PARAMS.exposure,
+      ambientLight: EARTH_SURFACE_PARAMS.ambientLight,
+      oceanRoughness: EARTH_SURFACE_PARAMS.oceanRoughness,
     },
     // Star-catalog layer: master gate on + one item row per star catalog. Rows
     // are DERIVED from the star-catalog registry entries (mirroring

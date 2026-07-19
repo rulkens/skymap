@@ -21,6 +21,9 @@ import reducer, {
   writeVolumeField,
   setFlowEnabled,
   setFlow,
+  setAtmosphereExposure,
+  setAmbientLight,
+  setOceanRoughness,
   setStarCatalogEnabled,
   setStarCatalogSize,
   setStarCatalogBrightness,
@@ -193,6 +196,23 @@ describe('settingsSlice — flow', () => {
     expect(next.flow.flowSpeed).toBe(9.5);
     // An untouched leaf is preserved.
     expect(next.flow.count).toBe(before.flow.count);
+  });
+});
+
+describe('settingsSlice — earth', () => {
+  it('setAtmosphereExposure writes the atmosphere-shell exposure', () => {
+    const next = reducer(base(), setAtmosphereExposure(2.5));
+    expect(next.earth.atmosphereExposure).toBe(2.5);
+  });
+
+  it('setAmbientLight writes the night-side ambient floor', () => {
+    const next = reducer(base(), setAmbientLight(0.15));
+    expect(next.earth.ambientLight).toBe(0.15);
+  });
+
+  it('setOceanRoughness writes the open-water GGX roughness', () => {
+    const next = reducer(base(), setOceanRoughness(0.4));
+    expect(next.earth.oceanRoughness).toBe(0.4);
   });
 });
 

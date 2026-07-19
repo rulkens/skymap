@@ -87,32 +87,49 @@
  *  21. earth               — true-scale Blue-Marble-textured Earth (f64 compose
  *                            seam), opaque (depth-tested) into the `foreground:0`
  *                            target
- *  22. star-spheres        — the resolved partition of the stars (the Sun +
+ *  22. cloud-shell         — Earth's translucent cloud deck, drawn right after
+ *                            the opaque surface so it depth-tests against it (far
+ *                            hemisphere occluded), writing no depth and blending
+ *                            straight-alpha OVER (like the ring — a blend
+ *                            exception in the otherwise opaque foreground group)
+ *  23. star-spheres        — the resolved partition of the stars (the Sun +
  *                            any star crossing STAR_RESOLVE_PX) as true-scale
  *                            flat-emissive spheres (f64 compose seam), opaque
  *                            into the same `foreground:0` target
- *  23. focused-field-star-sphere — the close-range sphere for the ONE focused
+ *  24. focused-field-star-sphere — the close-range sphere for the ONE focused
  *                            Gaia field star (selection-gated), reusing the same
  *                            star renderer + f64 compose seam, opaque into the
  *                            same target
- *  24. planets             — the flat branch of the body partition: resolved
+ *  25. planets             — the flat branch of the body partition: resolved
  *                            bodies without a resident surface texture, as
  *                            true-scale flat-lit albedo spheres (f64 compose
  *                            seam), opaque into the same target
- *  25. textured-bodies     — the textured branch of the body partition: resolved
+ *  26. textured-bodies     — the textured branch of the body partition: resolved
  *                            bodies whose surface texture is resident, as lit
  *                            surface-mapped spheres (Saturn's ring casts an
  *                            analytic on-planet shadow); opaque into the same
  *                            target (f64 compose seam)
- *  26. rings               — Saturn's translucent ring overlay, drawn LAST in the
+ *  27. rings               — Saturn's translucent ring overlay, drawn LAST in the
  *                            (foreground:0, NEAR0) group so it depth-tests against
  *                            the opaque spheres already stamped there (far ring
  *                            half occluded), writing no depth and blending
- *                            straight-alpha OVER — the one blend exception in the
- *                            otherwise opaque foreground group
- *  27. foreground-labels   — scene-body name captions, premultiplied-OVER onto
+ *                            straight-alpha OVER — like cloud-shell, a blend
+ *                            exception in the otherwise opaque foreground group
+ *  28. foreground-labels   — scene-body name captions, premultiplied-OVER onto
  *                            the swap chain post-tone-map (like the COSMO labels,
  *                            but anchored through the near0 vp)
+ *  29. atmosphere-shell    — Earth's physically-based in-scatter atmosphere,
+ *                            the LAST content-layer row (spec §8.3): a
+ *                            translucent proxy sphere at the atmosphere-top
+ *                            radius, drawn last in the (foreground:0, NEAR0)
+ *                            group so it depth-tests against every opaque
+ *                            sphere AND the rings/cloud-shell already stamped
+ *                            there — limb over space passes, over-disc is
+ *                            occluded — writing no depth and blending
+ *                            straight-alpha OVER (non-pickable). Its sky-view
+ *                            LUT is baked each frame by the atmosphereSkyView
+ *                            compute step in the compute prelude, so the shell
+ *                            samples this frame's table
  *
  * `textured-disks` is what remains of the briefly-split (and never-shipped)
  * `textured-quads` + `textured-disks` pair from 2026-05-18.  The quad
@@ -192,6 +209,7 @@ import { markerLinesLayer } from './markerLinesLayer';
 import { labelsLayer } from './labelsLayer';
 import { clipPathDebugLayer } from './clipPathDebugLayer';
 import { earthLayer } from './earthLayer';
+import { cloudShellLayer } from './cloudShellLayer';
 import { starSpheresLayer } from './starSpheresLayer';
 import { focusedFieldStarSphereLayer } from './focusedFieldStarSphereLayer';
 import { planetsLayer } from './planetsLayer';
@@ -204,6 +222,7 @@ import { starAggregatesLayer } from './starAggregatesLayer';
 import { starAggregateUpsampleLayer } from './starAggregateUpsampleLayer';
 import { orbitTrailsLayer } from './orbitTrailsLayer';
 import { foregroundLabelsLayer } from './foregroundLabelsLayer';
+import { atmosphereShellLayer } from './atmosphereShellLayer';
 
 /**
  * The flat content-layer registry, in deterministic draw order.  HDR
@@ -274,6 +293,11 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   // shares this (target, slab). Order within the group is depth-tested
   // opaque, so it's a listing choice, not a compositing one.
   earthLayer,
+  // Earth's translucent cloud deck: drawn immediately AFTER earth (so it
+  // depth-tests against the opaque surface, far hemisphere occluded) and BEFORE
+  // plan E's atmosphereShellLayer (which lands after this row, drawn last),
+  // writing no depth and blending straight-alpha OVER.
+  cloudShellLayer,
   starSpheresLayer,
   // The focused field star's close-range sphere: a thin selection-gated sibling
   // reusing the same star renderer + f64 compose seam as star-spheres, but
@@ -294,6 +318,15 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   // step drives it — the (swap, COSMO) step selects nothing here by
   // construction.
   foregroundLabelsLayer,
+  // Earth's in-scatter atmosphere: the LAST content-layer row (spec §8.3),
+  // drawn LAST within the (foreground:0, NEAR0) group so it depth-tests against
+  // every opaque sphere AND the rings/cloud-shell already stamped there (limb
+  // over space passes, over-disc occluded), writing no depth and blending
+  // straight-alpha OVER — the outermost translucent shell of the foreground
+  // group. Non-adjacent to the cloud-shell it sits outside of: the opaque
+  // spheres + rings draw between them. Its sky-view LUT is baked each frame by
+  // the atmosphereSkyView compute step (compute prelude), before this draw.
+  atmosphereShellLayer,
 ];
 
 export { scalarVolumeLayer } from './scalarVolumeLayer';
@@ -313,6 +346,7 @@ export { markerLinesLayer } from './markerLinesLayer';
 export { labelsLayer } from './labelsLayer';
 export { clipPathDebugLayer } from './clipPathDebugLayer';
 export { earthLayer } from './earthLayer';
+export { cloudShellLayer } from './cloudShellLayer';
 export { starSpheresLayer } from './starSpheresLayer';
 export { focusedFieldStarSphereLayer } from './focusedFieldStarSphereLayer';
 export { planetsLayer } from './planetsLayer';
@@ -325,3 +359,4 @@ export { starAggregatesLayer } from './starAggregatesLayer';
 export { starAggregateUpsampleLayer } from './starAggregateUpsampleLayer';
 export { orbitTrailsLayer } from './orbitTrailsLayer';
 export { foregroundLabelsLayer } from './foregroundLabelsLayer';
+export { atmosphereShellLayer } from './atmosphereShellLayer';

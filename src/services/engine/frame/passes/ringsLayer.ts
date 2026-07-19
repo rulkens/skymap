@@ -14,16 +14,15 @@
  *
  * ### Why it draws AFTER the opaque foreground bodies, OVER not opaque
  *
- * The ring is the sole translucent member of the `(foreground:0, NEAR0)` render
- * group. It is registered AFTER `earth` / `star-spheres` / `planets` /
- * `textured-bodies` so it draws once those opaque spheres have stamped their
- * depth: the ring pipeline depth-TESTS against the planet (`depthCompare: 'less'`)
- * so the far half is correctly occluded, but writes NO depth
- * (`depthWriteEnabled: false`) and blends straight-alpha OVER. That is the one
- * blend exception in the otherwise-opaque foreground group — the ring's row
- * carries `blend: 'over'` where its siblings carry `'opaque'`, and the ring
- * pipeline bakes exactly that profile (`foreground:0` formats, depth read / no
- * write, over blend).
+ * The ring is one of the translucent members of the `(foreground:0, NEAR0)`
+ * render group (the cloud shell is another). It is registered AFTER `earth` /
+ * `star-spheres` / `planets` / `textured-bodies` so it draws once those opaque
+ * spheres have stamped their depth: the ring pipeline depth-TESTS against the
+ * planet (`depthCompare: 'less'`) so the far half is correctly occluded, but
+ * writes NO depth (`depthWriteEnabled: false`) and blends straight-alpha OVER.
+ * Translucent rows in this group carry `blend: 'over'` where the opaque bodies
+ * carry `'opaque'`, and each such pipeline bakes exactly that profile
+ * (`foreground:0` formats, depth read / no write, over blend).
  *
  * ### The ring rides the host body's frame by construction
  *

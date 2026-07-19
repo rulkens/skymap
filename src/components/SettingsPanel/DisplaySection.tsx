@@ -3,9 +3,11 @@
  * DisplaySection — presentational component for the Display settings section
  * inside the SettingsPanel.
  *
- * Owns the Display thematic group UI: the tone-mapping curve dropdown. Isolating
- * this into its own component ensures a tone-curve change re-renders ONLY this
- * section rather than the entire HUD.
+ * Owns the Display thematic group UI: the tone-mapping curve dropdown. Nested
+ * subgroups (e.g. the Earth atmosphere-exposure disclosure) are passed in as
+ * `children` and rendered below the dropdown, so Display need not drill their
+ * props. Isolating this into its own component ensures a change here re-renders
+ * ONLY this section rather than the entire HUD.
  *
  * ### Props-driven, no internal state
  *
@@ -25,6 +27,7 @@
  */
 
 import { memo } from 'react';
+import type { ReactNode } from 'react';
 import type { ToneMapCurve as ToneMapCurveT } from '../../@types/data/ToneMapCurve';
 import { ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';
 import { CollapsibleSection } from './CollapsibleSection';
@@ -37,6 +40,8 @@ export type DisplaySectionProps = {
   toneMapCurve: ToneMapCurveT;
   /** Called with the newly selected curve when the dropdown changes. */
   onToneMapCurveChange: (curve: ToneMapCurveT) => void;
+  /** Nested subgroups rendered below the tone-curve dropdown (e.g. Earth). */
+  children?: ReactNode;
 };
 
 // ── DisplaySection ─────────────────────────────────────────────────────────────
@@ -46,7 +51,7 @@ export type DisplaySectionProps = {
  * power-user disclosure (default closed — explorer never sees tone-curve
  * jargon; tweaker opens one disclosure to find it).
  */
-function DisplaySection({ toneMapCurve, onToneMapCurveChange }: DisplaySectionProps) {
+function DisplaySection({ toneMapCurve, onToneMapCurveChange, children }: DisplaySectionProps) {
   return (
     <CollapsibleSection title="Display">
       <div className={styles.panelRow}>
@@ -64,6 +69,8 @@ function DisplaySection({ toneMapCurve, onToneMapCurveChange }: DisplaySectionPr
           ))}
         </select>
       </div>
+
+      {children}
     </CollapsibleSection>
   );
 }

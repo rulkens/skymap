@@ -4,13 +4,28 @@ import { BODY_TEXTURE_REGISTRY } from '../../../src/data/bodies/bodyTextureRegis
 import { SCENE_RINGS } from '../../../src/data/bodies/sceneRings';
 
 describe('ALL_BODY_TEXTURE_KEYS', () => {
-  it('enumerates one surface entry per textured body plus the ring', () => {
-    // Today every body carries only a `surface` map, so every enumerated entry
-    // is `surface` — a body that grew an extra kind without its registry row
-    // gaining it (or vice versa) would break this.
-    for (const entry of ALL_BODY_TEXTURE_KEYS) {
-      expect(entry.kind).toBe('surface');
+  it("enumerates each body's registry kinds plus one surface entry per ring", () => {
+    // Every non-ring entry must carry a kind that body actually declares in its
+    // registry `kinds` — a stray kind (or one dropped from the enumeration)
+    // breaks this. Rings are not registry-driven and carry only `surface`.
+    const registry = BODY_TEXTURE_REGISTRY as Record<
+      string,
+      { kinds: Record<string, unknown> } | undefined
+    >;
+    for (const { bodyId, kind } of ALL_BODY_TEXTURE_KEYS) {
+      const spec = registry[bodyId];
+      if (spec) {
+        expect(spec.kinds[kind]).toBeDefined();
+      } else {
+        expect(kind).toBe('surface');
+      }
     }
+
+    // Earth is the first body to carry a second kind — its `material` map must be
+    // enumerated alongside `surface`, not silently dropped from the slot family.
+    const earthKinds = ALL_BODY_TEXTURE_KEYS.filter((e) => e.bodyId === 'earth').map((e) => e.kind);
+    expect(earthKinds).toContain('surface');
+    expect(earthKinds).toContain('material');
 
     // Structural invariant: the enumerated bodyIds are exactly the registry keys
     // ∪ the ring texture ids. Catches a body dropped from (or wrongly added to)
