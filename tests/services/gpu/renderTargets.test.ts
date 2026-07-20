@@ -105,10 +105,13 @@ describe('createRenderTargets', () => {
     expect(fgColour.size).toEqual({ width: 800, height: 600 });
     expect(fgDepth.format).toBe('depth32float');
     expect(fgDepth.size).toEqual({ width: 800, height: 600 });
-    // Depth is never sampled downstream — RENDER_ATTACHMENT only, no
-    // TEXTURE_BINDING (contrast the colour attachment, which the compositor
-    // samples).
-    expect(fgDepth.usage).toBe(GPUTextureUsage.RENDER_ATTACHMENT);
+    // Depth carries RENDER_ATTACHMENT (feeds the depth-test) AND
+    // TEXTURE_BINDING — the near-field caption occlusion pass samples this
+    // depth (via lib/sceneDepth.wesl) to hide captions behind nearer bodies.
+    // Guards that the depth stays sampleable, which the occlusion feature relies on.
+    expect(fgDepth.usage).toBe(
+      GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+    );
 
     const depthCallsBefore = create.mock.calls.filter(
       (c) => c[0].label === 'render-target-foreground:0-depth',
