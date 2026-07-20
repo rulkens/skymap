@@ -81,7 +81,16 @@ function makeCtx(distance: number, nowMs?: number): ReadyFrameContext {
   } else {
     testClockMs = Math.max(testClockMs, nowMs);
   }
-  return { cam: { distance }, fovYRad: 1, nowMs } as unknown as ReadyFrameContext;
+  // The layer reads `ctx.renderTargets.depthViewOf('foreground:0')` to thread
+  // the scene depth view into both draws (caption/connector occlusion). A no-op
+  // stub keeps these tests — which assert on the rebase/fade seams, not
+  // occlusion — from throwing on that read.
+  return {
+    cam: { distance },
+    fovYRad: 1,
+    nowMs,
+    renderTargets: { depthViewOf: () => ({}) as GPUTextureView },
+  } as unknown as ReadyFrameContext;
 }
 
 // A foreground label renderer whose glyphCount is fixed per test. `setLabels`,

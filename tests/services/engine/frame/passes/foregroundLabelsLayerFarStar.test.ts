@@ -88,7 +88,15 @@ function makeCtx(): ReadyFrameContext {
   // (module state) settles exactly on its target — positions are pure geometry
   // regardless, but this keeps the emit set stable across frames.
   clockMs += 60_000;
-  return { cam: { distance: 1e-13 }, fovYRad: 1, nowMs: clockMs } as unknown as ReadyFrameContext;
+  // The layer reads `ctx.renderTargets.depthViewOf('foreground:0')` for the
+  // caption/connector occlusion pass; a no-op stub keeps these geometry tests
+  // from throwing on that seam.
+  return {
+    cam: { distance: 1e-13 },
+    fovYRad: 1,
+    nowMs: clockMs,
+    renderTargets: { depthViewOf: () => ({}) as GPUTextureView },
+  } as unknown as ReadyFrameContext;
 }
 
 /**
