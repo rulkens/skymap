@@ -360,23 +360,34 @@ export function createTexturedBodyRenderer(
     res.bindGroup = buildBindGroup(res);
   }
 
-  // ── clearTexture ──────────────────────────────────────────────────────────
+  // ── clearMap ──────────────────────────────────────────────────────────────
   //
-  // The eviction inverse of `setMap`: free ALL of a body's sphere maps and rebind
-  // the shared placeholders. The `bodyTextures` slot's onRelease calls this so a
-  // body leaving its proximity radius actually releases its (up to ~135 MB) GPU
-  // textures — the slot family's eviction premise, not a leak. The ring texture
-  // and the per-body uniform buffer are left intact: the ring rides its OWN slot
-  // key (freed by that slot's onRelease), and keeping the uniform buffer keeps
-  // the body drawable-but-plain without a realloc on re-approach.
+  // The eviction inverse of `setMap`: free ONE kind's sphere map and rebind that
+  // kind's shared placeholder. Per-KIND, not per-body, because the `bodyTextures`
+  // slots are per-(body,kind) and each releases independently: `surface` and
+  // `normal` have INDEPENDENT clamped tiers (e.g. the Moon's surface ceiling is
+  // `large` but its normal ceiling is `medium`), so a tier switch can evict the
+  // surface slot alone. A per-body clear would then destroy the sibling `normal`
+  // texture too — and because its clamped tier is unchanged the demand loop never
+  // re-fetches it, so the normal map vanishes until an unrelated tier change. Only
+  // freeing the named kind keeps every sibling's resident texture bound.
+  //
+  // The ring texture and the per-body uniform buffer are left intact: the ring
+  // rides its OWN slot key (freed by that slot's onRelease), and keeping the
+  // uniform buffer keeps the body drawable-but-plain without a realloc on
+  // re-approach. A proximity loss still frees every kind — each kind's slot
+  // releases and clears its own map, reaching the same end state with no sibling
+  // collateral on an independent per-kind eviction.
 
-  function clearTexture(bodyId: BodyTextureId): void {
+  function clearMap(bodyId: BodyTextureId, kind: TextureKind): void {
     const res = bodies.get(bodyId);
-    // A body with no resident maps (only ever drew the placeholders) has nothing
-    // to free — a no-op keeps onRelease honest without a residency check upstream.
-    if (res === undefined || res.maps.size === 0) return;
-    for (const texture of res.maps.values()) texture.destroy();
-    res.maps.clear();
+    if (res === undefined) return;
+    const texture = res.maps.get(kind);
+    // Kind not resident (only ever drew this kind's placeholder) → nothing to free.
+    // A no-op keeps onRelease honest without a residency check upstream.
+    if (texture === undefined) return;
+    texture.destroy();
+    res.maps.delete(kind);
     res.bindGroup = buildBindGroup(res);
   }
 
@@ -439,7 +450,7 @@ export function createTexturedBodyRenderer(
   const renderer: TexturedBodyRenderer = {
     label: 'texturedBodyRenderer',
     setMap,
-    clearTexture,
+    clearMap,
     setRingTexture,
     draw,
     destroy,

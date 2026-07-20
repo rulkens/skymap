@@ -27,9 +27,12 @@
  *    uses.
  *  - every other `BodyTextureId` (the twelve non-Earth textured bodies) routes to
  *    the shared `texturedBodyRenderer.setMap(bodyId, kind, …)`; its `onRelease`
- *    frees that body's GPU texture via `clearTexture(bodyId)` — the slot family's
- *    eviction premise, so a body leaving its proximity radius actually releases
- *    its (up to ~135 MB) surface texture rather than leaking it.
+ *    frees that (body, kind)'s GPU texture via `clearMap(bodyId, kind)` — the slot
+ *    family's eviction premise, so a slot leaving its proximity radius actually
+ *    releases its (up to ~135 MB) texture rather than leaking it. The clear is
+ *    per-KIND to match the per-(body,kind) slot granularity: `surface` and
+ *    `normal` have independent clamped tiers, so evicting one kind's slot must not
+ *    collaterally destroy the sibling kind's still-demanded texture.
  *  - the ring keys (`RingTextureId`, currently `'saturn-ring'`) route to the
  *    shared `texturedBodyRenderer.setRingTexture`, keyed on the ring's HOST body
  *    (`hostBodyId` resolves `'saturn-ring'` → `'saturn'`), so the strip lands on
@@ -115,12 +118,16 @@ function commitBodyTexture(state: EngineState, entry: BodyTextureKey, bitmap: Im
 /**
  * The inverse of commit: free the resident texture on eviction. Only the shared
  * textured bodies have a clear surface — Earth's renderer has none (its texture
- * lifecycle is a follow-up) and the ring ids share the host body's resources —
- * so a body id frees via `clearTexture` and every other entry is a no-op.
+ * lifecycle is a follow-up) and the ring ids share the host body's resources — so
+ * a body id frees via `clearMap(bodyId, kind)` and every other entry is a no-op.
+ * The clear passes `entry.kind`: the slots are per-(body,kind), so eviction is
+ * per-kind too. A proximity loss frees BOTH kinds because BOTH slots release, each
+ * clearing its own kind — same end state, but no sibling collateral when a tier
+ * switch evicts one kind's slot alone (`surface` and `normal` clamp independently).
  */
 function releaseBodyTexture(state: EngineState, entry: BodyTextureKey): void {
   if (isTexturedBodyKey(entry.bodyId)) {
-    state.gpu.texturedBodyRenderer?.clearTexture(entry.bodyId);
+    state.gpu.texturedBodyRenderer?.clearMap(entry.bodyId, entry.kind);
   }
 }
 

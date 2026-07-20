@@ -403,8 +403,8 @@ export type EngineGpuHandles = {
    * own uniform buffer + bind group + surface texture, so no shared uniform can
    * be clobbered mid-frame. `texturedBodiesLayer` draws the `textured` branch of
    * `partitionBodiesByPresentation` through it; the `bodyTextures` slot family's
-   * commit routes each non-Earth body's bitmap to `setTexture`, and its
-   * onRelease frees that body's texture via `clearTexture`. Same `foreground:0`
+   * commit routes each non-Earth body's bitmap to `setMap`, and its per-kind
+   * onRelease frees that (body, kind)'s texture via `clearMap`. Same `foreground:0`
    * ('rgba16float', 'depth32float') format invariant as `earthRenderer` /
    * `planetRenderer`. Excluded from `isEngineReady` and null-checked at use.
    * Null until `initGpu` constructs it; released and re-nulled by `destroy()`
