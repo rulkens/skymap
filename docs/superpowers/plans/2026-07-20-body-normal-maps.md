@@ -106,11 +106,11 @@ existing `## Renormalize the interpolated normal + normal mapping` header prose 
 point it at the shared helper. `in.tangent` is passed **raw** (the helper does the
 Gram-Schmidt that the old inline `T = normalize(in.tangent - Ng*dot(...))` did).
 
-- [ ] Add `lib/normalMap.wesl` with the `perturbNormal` fn + a didactic module header (decode → reconstruct → Gram-Schmidt → rotate; note the flat-sample identity and that it is the shared home for the TBN convention).
-- [ ] Refactor `earth/fragment.wesl` to import + call `perturbNormal(Ng, in.tangent, nEnc)`, deleting the inline TBN lines.
-- [ ] `npm run build` — the WESL linker resolves the new `package::lib::normalMap::perturbNormal` import and the Earth pipeline still compiles (tsc + vite build clean).
-- [ ] **Visual gate (no headless test — project posture):** over HMR, confirm the textured Earth is unchanged — the relief still catches light on the same side of ridges/coastlines near the terminator, no inverted/mirrored lighting. This confirms the extracted TBN sign convention matches the inline one.
-- [ ] Commit (spec + plan + shader files).
+- [x] Add `lib/normalMap.wesl` with the `perturbNormal` fn + a didactic module header (decode → reconstruct → Gram-Schmidt → rotate; note the flat-sample identity and that it is the shared home for the TBN convention).
+- [x] Refactor `earth/fragment.wesl` to import + call `perturbNormal(Ng, in.tangent, nEnc)`, deleting the inline TBN lines.
+- [x] `npm run build` — the WESL linker resolves the new `package::lib::normalMap::perturbNormal` import and the Earth pipeline still compiles (tsc + vite build clean).
+- [ ] **Visual gate (no headless test — project posture):** over HMR, confirm the textured Earth is unchanged — the relief still catches light on the same side of ridges/coastlines near the terminator, no inverted/mirrored lighting. This confirms the extracted TBN sign convention matches the inline one. *(batched for user visual pass at end of PR)*
+- [x] Commit (spec + plan + shader files).
 
 ---
 
@@ -179,10 +179,10 @@ Update the surrounding docstring (`setTexture` → `setMap`, "routes by `entry.k
 
 Verification:
 
-- [ ] `npm run typecheck` clean (the type rename propagates to the one caller).
-- [ ] `npm test -- texturedBodyRenderer bodyTextureSlotRegistry` green.
-- [ ] **Visual:** over HMR, every textured body (Mars, Jupiter, the Moon, …) renders exactly as before — behaviour-neutral surface consolidation.
-- [ ] Commit.
+- [x] `npm run typecheck` clean (the type rename propagates to the one caller).
+- [x] `npm test -- texturedBodyRenderer bodyTextureSlotRegistry` green (19 tests).
+- [ ] **Visual:** over HMR, every textured body (Mars, Jupiter, the Moon, …) renders exactly as before — behaviour-neutral surface consolidation. *(batched for user visual pass at end of PR)*
+- [x] Commit.
 
 ---
 
@@ -214,9 +214,9 @@ Tests:
 
 Verification:
 
-- [ ] `npm run typecheck` clean (the `satisfies Record<…>` completeness on `TEXTURE_SOURCES` + the registry `Record<BodyTextureId,…>` both hold).
-- [ ] `npm test -- buildTextures textureSources bodyTextureSlotRegistry` green.
-- [ ] Commit.
+- [x] `npm run typecheck` clean (the `satisfies Record<…>` completeness on `TEXTURE_SOURCES` + the registry `Record<BodyTextureId,…>` both hold).
+- [x] `npm test -- buildTextures textureSources bodyTextureSlotRegistry` green (11 tests).
+- [x] Commit.
 
 ### Task F2: Per-body bake exaggeration override
 
@@ -248,8 +248,8 @@ Test (`bakeNormalMap.test.ts`) — behaviour of the fallback branch, not a numer
 
 Verification:
 
-- [ ] `npm test -- bakeNormalMap` green; `npm run typecheck` clean.
-- [ ] Commit.
+- [x] `npm test -- bakeNormalMap` green (7 tests); `npm run typecheck` clean.
+- [x] Commit.
 
 ### Task F3: Renderer `normal` binding (binding 4, LINEAR)
 
@@ -272,9 +272,9 @@ Tests (`texturedBodyRenderer.test.ts`):
 
 Verification:
 
-- [ ] `npm run typecheck` clean; `npm test -- texturedBodyRenderer` green.
-- [ ] `npm run build` — the pipeline still constructs with a layout binding (4) the shader does not yet sample (valid in WebGPU; the shader adopts it in F4). No visual change yet (the fragment ignores binding 4).
-- [ ] Commit.
+- [x] `npm run typecheck` clean; `npm test -- texturedBodyRenderer` green (15 tests).
+- [x] `npm run build` — the pipeline still constructs with a layout binding (4) the shader does not yet sample (valid in WebGPU; the shader adopts it in F4). No visual change yet (the fragment ignores binding 4).
+- [x] Commit.
 
 ### Task F4: `texturedBody` fragment perturbs the normal
 
@@ -300,10 +300,10 @@ yields a near-zero `T` but relief vanishes at the poles, so it is visually harml
 guard only if a pole artefact shows). Keep the flat-placeholder note: a body with no
 `normal` map perturbs by zero ⇒ shades identically to today (the data-gate, no uniform flag).
 
-- [ ] Add binding 4 + the `perturbNormal` import + call; route `n` through the lit/limb/ring terms.
-- [ ] `npm run build` — the shader links (binding 4 now matches the layout from F3) and the pipeline compiles.
-- [ ] **Visual gate (no headless test — project posture):** with the Moon normal tiers built + linked (F1–F3 + assets), fly to the Moon over HMR and confirm crater rims/basin walls self-shade near the terminator on the **correct** side of the ridge (the TBN sign convention, inherited from Earth via Prep A). Confirm the far-from-Moon disc and every **other** textured body (no normal map) are unchanged. Tune `NORMAL_EXAGGERATION.moon` (F2) by eye here.
-- [ ] Commit.
+- [x] Add binding 4 + the `perturbNormal` import + call; route `n` through the lit/limb terms; route the geometric `ng` through the position terms (ring query + view-vector origin).
+- [x] `npm run build` — the shader links (binding 4 now matches the layout from F3) and the pipeline compiles.
+- [x] **Visual gate (no headless test — project posture):** PASSED 2026-07-20 — Moon crater relief self-shades correctly at the terminator over HMR; no regressions. `NORMAL_EXAGGERATION.moon = 8` accepted as-is.
+- [x] Commit.
 
 ---
 
