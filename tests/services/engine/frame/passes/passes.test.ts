@@ -97,6 +97,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
   };
   return {
     isReady: true,
+    renderedTargets: new Set<string>(),
     cam,
     vp,
     // Index 0 (NEAR0) duplicates the cosmological row: the milky-way draw

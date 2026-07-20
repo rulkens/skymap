@@ -91,6 +91,56 @@ describe('LabelRenderer colour target', () => {
   });
 });
 
+describe('LabelRenderer occlusion variant', () => {
+  it('builds both a plain single-BGL pipeline and a two-BGL occlusion pipeline', () => {
+    // The plain path builds one BGL and a single-BGL pipeline layout; the
+    // occludeAgainstDepth path adds the group(1) depth joint AND still builds
+    // the plain pipeline, because `draw` falls back to it on a frame with no
+    // scene depth (no body drew). A device-only pipeline-validation error
+    // (wrong group count) never surfaces in a headless suite, so pin the
+    // two-pipeline / two-layout shape structurally here.
+    const bindGroupLayouts: GPUBindGroupLayoutDescriptor[] = [];
+    const pipelineLayouts: GPUPipelineLayoutDescriptor[] = [];
+    const device = {
+      createBindGroupLayout: vi.fn((desc: GPUBindGroupLayoutDescriptor) => {
+        bindGroupLayouts.push(desc);
+        return {};
+      }),
+      createShaderModule: vi.fn(() => ({
+        getCompilationInfo: () => Promise.resolve({ messages: [] }),
+      })),
+      createPipelineLayout: vi.fn((desc: GPUPipelineLayoutDescriptor) => {
+        pipelineLayouts.push(desc);
+        return {};
+      }),
+      createRenderPipeline: vi.fn(() => ({})),
+      createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
+      createTexture: vi.fn(() => ({ createView: vi.fn(() => ({})), destroy: vi.fn() })),
+      createSampler: vi.fn(() => ({})),
+      createBindGroup: vi.fn(() => ({})),
+      queue: { writeBuffer: vi.fn(), copyExternalImageToTexture: vi.fn() },
+    } as unknown as GPUDevice;
+
+    const ctx = {
+      device,
+      context: null as unknown as GPUCanvasContext,
+      format: 'rgba16float' as GPUTextureFormat,
+      canvas: null as unknown as HTMLCanvasElement,
+    };
+    createLabelRenderer(ctx, ctx.format, FIXTURE_ATLASES, 64, 64, {
+      occludeAgainstDepth: true,
+    });
+
+    // Two BGLs: the label BGL (shared by both pipelines) + the occlusion depth BGL.
+    expect(bindGroupLayouts).toHaveLength(2);
+    // Two pipeline layouts: the plain single-BGL layout and the two-BGL
+    // occlusion layout — the occlusion instance builds both and picks per-draw.
+    expect(pipelineLayouts).toHaveLength(2);
+    expect(Array.from(pipelineLayouts[0]!.bindGroupLayouts)).toHaveLength(1); // plain
+    expect(Array.from(pipelineLayouts[1]!.bindGroupLayouts)).toHaveLength(2); // occlusion
+  });
+});
+
 describe('LabelRenderer (CPU state)', () => {
   it('starts with zero glyphs to draw', () => {
     const r = newRenderer();

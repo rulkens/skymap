@@ -575,6 +575,24 @@ export const foregroundLabelsLayer: ContentLayer = {
 
     renderer.setLabels(liftedLabels);
 
+    // The scene-body depth view for the current frame's foreground row. Handed
+    // as the 4th `sceneDepthView` arg to both draws so the captions and their
+    // connectors OCCLUDE per-pixel behind nearer bodies: the discard-gated
+    // fragment shaders sample this depth and drop any fragment a closer body
+    // covers. Both foreground renderers are the `occludeAgainstDepth` instances
+    // (see `initGpu.ts`); a non-occlusion renderer ignores this arg, so the
+    // COSMO labels — which never receive it — are unaffected.
+    //
+    // Occlude captions only when the body pass actually ran this frame — else
+    // the `foreground:0` depth is stale/uninitialised and would spuriously
+    // discard EVERY caption (the executor skips an empty render step, so the
+    // depth buffer is only valid when a body drew). Mirrors the composite
+    // step's `touched` guard. When undefined, the renderers fall back to their
+    // plain pipeline and draw the captions un-occluded.
+    const depthView = ctx.renderedTargets.has('foreground:0')
+      ? ctx.renderTargets.depthViewOf('foreground:0')
+      : undefined;
+
     // Draw the connectors BEFORE the captions so the glyphs composite OVER the
     // line where they meet — the same ordering `markerLinesLayer` keeps ahead
     // of `labelsLayer`. Both renderers target the swap chain, so the two draws
@@ -583,9 +601,9 @@ export const foregroundLabelsLayer: ContentLayer = {
     // just skips the connectors while the captions still draw.
     if (lineRenderer !== null) {
       lineRenderer.setLines(lines);
-      lineRenderer.draw(pass, rebasedVpF32, viewportPx);
+      lineRenderer.draw(pass, rebasedVpF32, viewportPx, depthView);
     }
-    renderer.draw(pass, rebasedVpF32, viewportPx);
+    renderer.draw(pass, rebasedVpF32, viewportPx, depthView);
 
     // Mid-ramp envelopes need another frame to keep easing under
     // render-on-demand — the same wake hook the label director uses while its
