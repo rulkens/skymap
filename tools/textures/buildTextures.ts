@@ -80,7 +80,7 @@ import { tierToTexturePx } from '../../src/utils/math/tierToTexturePx';
 import { bodyTextureFilename } from '../../src/utils/scene/bodyTextureFilename';
 import { RAW_DATA, rawDataPath } from '../utils/io/rawDataRegistry';
 import { TEXTURE_SOURCES, type TextureSourceRow } from '../utils/io/textureSources';
-import { bakeNormalMap, DEFAULT_EXAGGERATION } from './bakeNormalMap';
+import { bakeNormalMap, exaggerationFor } from './bakeNormalMap';
 import { emittedTiersForBody } from './emittedTiersForBody';
 import { tiersFittingSourceWidth } from './tiersFittingSourceWidth';
 import { writeCloudTier } from './writeCloudTier';
@@ -287,6 +287,9 @@ function bakeNormalOnce(
   if (baked === undefined) {
     const capPx = tierToTexturePx(emittedTiersForBody(bodyId, 'normal').at(-1)!);
     baked = (async () => {
+      // `.greyscale()` collapses the 16-bit elevation `.tif` to an 8-bit greyscale
+      // heightfield — the `Uint8Array` `bakeNormalMap` expects; 8-bit quantization
+      // is acceptable for v1 (Earth's normal bake already lives with it).
       const grey = await sharp(srcPath, { limitInputPixels: false })
         .resize({ width: capPx, withoutEnlargement: true })
         .greyscale()
@@ -295,7 +298,7 @@ function bakeNormalOnce(
       const { width, height, channels } = grey.info;
       const single = new Uint8Array(width * height);
       for (let i = 0; i < width * height; i++) single[i] = grey.data[i * channels]!;
-      return bakeNormalMap({ data: single, width, height }, DEFAULT_EXAGGERATION);
+      return bakeNormalMap({ data: single, width, height }, exaggerationFor(bodyId));
     })();
     bakedNormalCache.set(srcPath, baked);
   }

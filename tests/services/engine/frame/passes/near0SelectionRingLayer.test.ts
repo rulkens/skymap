@@ -125,6 +125,7 @@ function farClippingView(farMpc: number): SlabView {
       vp: new Float64Array(16),
       originRelative: true,
       precision: 'f64',
+      reversedZ: false,
     },
     vp: new Float32Array(16),
     camPos: [0, 0, 0],

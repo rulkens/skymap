@@ -66,11 +66,13 @@ function mockDevice(recorders?: {
 
 describe('createEarthRenderer', () => {
   it('construct does not throw under the mock device', () => {
-    expect(() => createEarthRenderer(mockDevice(), 'rgba16float', 'depth32float')).not.toThrow();
+    expect(() =>
+      createEarthRenderer(mockDevice(), 'rgba16float', 'depth32float', false),
+    ).not.toThrow();
   });
 
   it('satisfies Renderer — non-empty label + destroy function', () => {
-    const renderer = createEarthRenderer(mockDevice(), 'rgba16float', 'depth32float');
+    const renderer = createEarthRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
     renderer satisfies Renderer;
     expect(renderer.label.length).toBeGreaterThan(0);
     expect(typeof renderer.destroy).toBe('function');
@@ -78,7 +80,7 @@ describe('createEarthRenderer', () => {
   });
 
   it('setMap and draw are callable with the right arity', () => {
-    const renderer = createEarthRenderer(mockDevice(), 'rgba16float', 'depth32float');
+    const renderer = createEarthRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
 
     expect(typeof renderer.setMap).toBe('function');
     expect(renderer.setMap.length).toBe(2);
@@ -108,7 +110,7 @@ describe('createEarthRenderer', () => {
 
   it('bakes the given targetFormat into the pipeline colour target', () => {
     const renderPipelines: GPURenderPipelineDescriptor[] = [];
-    createEarthRenderer(mockDevice({ renderPipelines }), 'rgba16float', 'depth32float');
+    createEarthRenderer(mockDevice({ renderPipelines }), 'rgba16float', 'depth32float', false);
     expect(renderPipelines).toHaveLength(1);
     const target = Array.from(renderPipelines[0]!.fragment!.targets!)[0]!;
     expect(target!.format).toBe('rgba16float');
@@ -123,7 +125,7 @@ describe('createEarthRenderer', () => {
     const textures: GPUTextureDescriptor[] = [];
     const encoderCount = { n: 0 };
     const device = mockDevice({ textures, encoderCount });
-    const renderer = createEarthRenderer(device, 'rgba16float', 'depth32float');
+    const renderer = createEarthRenderer(device, 'rgba16float', 'depth32float', false);
     const bitmap = { width: 8, height: 4 } as unknown as ImageBitmap;
     renderer.setMap('surface', bitmap);
     const earthTex = textures.find((t) => Array.isArray(t.size) && t.size[0] === 8);

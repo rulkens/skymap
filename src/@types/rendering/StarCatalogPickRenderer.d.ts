@@ -24,8 +24,10 @@
  * The visual star pass is additive and depthless so overlapping glows brighten.
  * The pick pass instead wants a SINGLE claimant per pixel — the nearest star —
  * so its pipeline carries a `depth32float` (`NEAR0_DEPTH_FORMAT`) attachment
- * with `depthCompare: 'less'` + `depthWriteEnabled: true`. A bright star in
- * front of a dim one therefore wins the pixel, matching visual occlusion.
+ * with `depthCompare: 'greater'` + `depthWriteEnabled: true`. Under the NEAR0
+ * slab's reversed-Z convention (clear `0.0`, greater-z-wins) a nearer star writes
+ * a LARGER stored depth, so `greater` is what makes the star in front of a dim
+ * one win the pixel, matching visual occlusion.
  */
 
 import type { Renderer } from './Renderer';

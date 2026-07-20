@@ -12,7 +12,7 @@
 // The module carries TWO vertex entries that share the identical billboard
 // expansion and the one 'fsPick' fragment, differing ONLY in how they set depth:
 //
-//   - 'vs'      — the scene / famous stars. It MIN-CLAMPS true depth onto the
+//   - 'vs'      — the scene / famous stars. It MAX-CLAMPS true depth onto the
 //                 scene-star band, so a within-far star keeps its true depth and
 //                 the class sorts physically among itself while still beating every
 //                 survey star and the backdrop.
@@ -116,18 +116,19 @@ fn vs(
   out.clip = center + vec4<f32>(offset, 0.0, 0.0);
 
   // Clamp true depth onto the SCENE-STAR band (header 'lib/pickDepthBands'). A
-  // within-far scene star keeps its TRUE depth (min leaves it untouched), so
-  // scene stars sort physically among themselves and sit in front of every
-  // survey star and the backdrop. A BEYOND-far scene star (past the adaptive
-  // foreground far plane on a deep descent) lands exactly on the scene band
-  // 'z = w * (1 - PICK_BAND_SCENE_STAR_EPS)' — still the SHALLOWEST band, so it
-  // beats every survey star while staying pickable instead of being clipped
-  // away. This is the shared scene-star clamp value the survey pick stage names
-  // as its front band too, single-sourced so the two can never diverge. This
-  // 'vs' entry is scene-star ONLY; glints (planets, moons, the Earth stamp) use
-  // 'vsGlint' below, which forces its own shallower band instead of min-clamping
-  // true depth — see that entry's doc block for why.
-  out.clip.z = min(out.clip.z, out.clip.w * (1.0 - PICK_BAND_SCENE_STAR_EPS));
+  // within-far scene star keeps its TRUE depth (under reversed-Z nearer = LARGER
+  // z, so 'max' leaves the true depth untouched), so scene stars sort physically
+  // among themselves and sit in front of every survey star and the backdrop. A
+  // scene star whose true z/w has fallen below the band (closer to the 0.0 clear
+  // than the band, on a deep descent) is lifted exactly onto the scene band
+  // 'z = w * PICK_BAND_SCENE_STAR_EPS' — the HIGHEST-z of the three star/backdrop
+  // bands, so it beats every survey star while staying pickable instead of being
+  // driven down toward the clear. This is the shared scene-star clamp value the
+  // survey pick stage names as its front band too, single-sourced so the two can
+  // never diverge. This 'vs' entry is scene-star ONLY; glints (planets, moons,
+  // the Earth stamp) use 'vsGlint' below, which forces its own higher band
+  // instead of max-clamping true depth — see that entry's doc block for why.
+  out.clip.z = max(out.clip.z, out.clip.w * PICK_BAND_SCENE_STAR_EPS);
 
   out.uv = corner;
   out.packedId = packedId;
@@ -155,15 +156,15 @@ fn vsGlint(
   // importance-not-nearness is the whole point: a moon 1e-6 Mpc nearer than its
   // planet must not steal the click. Each glint carries its class (0 earth, 1
   // planet, 2 moon) as instance data, and the class selects its OWN band here.
-  // The three bands are separated by 5e-5 in z/w (hundreds of f32-resolvable steps
-  // near 1.0), so earth-over-planet-over-moon is an UNCONDITIONAL depth win — no
-  // draw order, no exact-depth tie to break (the older single-band design leaned
-  // on draw order and a ulp of rasterizer 'z / w' rounding defeated it). Larger
-  // eps = smaller z/w = wins under 'depthCompare: less', so EARTH (largest eps) is
-  // shallowest and out-picks a planet, which out-picks a moon; all three out-pick
-  // every scene star, survey star, and the backdrop. A resolved sphere nearer than
-  // ~orbitDistance/4 keeps a true z/w below these bands and correctly wins — a
-  // planet's own disk out-picks its glint stamp.
+  // The three bands are separated by 5e-5 in z/w (a vast number of f32-resolvable
+  // steps near the 0.0 clear), so earth-over-planet-over-moon is an UNCONDITIONAL
+  // depth win — no draw order, no exact-depth tie to break (the older single-band
+  // design leaned on draw order and a ulp of rasterizer 'z / w' rounding defeated
+  // it). Larger eps = larger z/w = wins under 'depthCompare: greater', so EARTH
+  // (largest eps) has the highest z and out-picks a planet, which out-picks a
+  // moon; all three out-pick every scene star, survey star, and the backdrop. A
+  // resolved sphere nearer than ~orbitDistance/4 keeps a true z/w above these
+  // bands and correctly wins — a planet's own disk out-picks its glint stamp.
   // The class integers are single-sourced in 'lib/pickDepthBands' (GLINT_CLASS_*)
   // and mirrored in TS 'glintBandClass.ts' under a parity test; MOON is the
   // fallthrough default, so only EARTH + PLANET are compared here.
@@ -173,7 +174,7 @@ fn vsGlint(
   } else if (bandClass == GLINT_CLASS_PLANET) {
     eps = PICK_BAND_PLANET_EPS;
   }
-  out.clip.z = out.clip.w * (1.0 - eps);
+  out.clip.z = out.clip.w * eps;
 
   out.uv = corner;
   out.packedId = packedId;

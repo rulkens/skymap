@@ -32,6 +32,7 @@ import { attachOrbitControls } from '../../camera/orbitControls';
 import { seedCameraFromBase } from '../../camera/seedCameraFromBase';
 import { createPickRenderer } from '../../gpu/renderers/galaxyCatalog/pickRenderer';
 import { createPickProgram } from '../frame/pickProgram';
+import { SLAB_REVERSED_Z, COSMO } from '../frame/slabs';
 import { CONTENT_LAYERS } from '../frame/passes';
 import { createClickResolver } from '../interaction/clickHandler';
 import { createHoverPickDriver } from '../interaction/hoverPickDriver';
@@ -80,6 +81,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // The live shared focus buffer — so the pick pass excludes non-members
     // of a focused structure from hit-testing (vertex shader culls them).
     state.gpu.focusUniform!.bindGroup,
+    SLAB_REVERSED_Z[COSMO]!,
   );
   state.gpu.pickRenderer = pickRenderer;
 

@@ -72,6 +72,7 @@ import {
 import { packSelection } from '../../../../data/selectionEncoding';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { writeCameraPrefix } from '../../lib/cameraUniforms';
+import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 
 type Init = {
   device: GPUDevice;
@@ -85,6 +86,13 @@ type Init = {
   canvas: HTMLCanvasElement;
   /** Shared cluster-focus layout, bound at @group(1) — see instancedQuadRenderer. */
   focusBgl: FocusUniformsBgl;
+  /**
+   * Selects the COSMO slab's depth convention (single-sourced in
+   * `SLAB_REVERSED_Z`): `false` ⇒ smaller-z-wins (`depthCompare: 'less'`),
+   * `true` ⇒ reversed-Z greater-wins. Applies to the pick pipeline's depth
+   * test, resolved through `resolveDepthCompare`.
+   */
+  reversedZ: boolean;
 };
 
 export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer {
@@ -198,7 +206,7 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
     depthStencil: {
       format: 'depth24plus',
       depthWriteEnabled: true,
-      depthCompare: 'less',
+      depthCompare: resolveDepthCompare('nearer', init.reversedZ),
     },
   });
 

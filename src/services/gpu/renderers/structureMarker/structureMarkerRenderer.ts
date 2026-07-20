@@ -62,6 +62,7 @@ import ringFsCode from '../../shaders/structureMarker/ring.wesl?static';
 import ringPickVsCode from '../../shaders/structureMarker/ring.wesl?static';
 import ringPickFsCode from '../../shaders/structureMarker/ringPick.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
 import { ADDITIVE_BLEND, PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
 import { createDummyFadeBindGroup } from '../../lib/dummyFade';
@@ -118,6 +119,13 @@ export function createStructureMarkerRenderer(
    * on `createFilamentRenderer`.
    */
   fadeBgl: FadeUniformsBgl,
+  /**
+   * Selects the COSMO slab's depth convention (single-sourced in
+   * `SLAB_REVERSED_Z`): `false` ⇒ smaller-z-wins (`depthCompare: 'less'`),
+   * `true` ⇒ reversed-Z greater-wins. Applies to the ring-pick pipeline's
+   * depth test, resolved through `resolveDepthCompare`.
+   */
+  reversedZ: boolean,
   initialCapacity = 64,
 ): StructureMarkerRenderer {
   const device = ctx.device as GPUDevice | null;
@@ -326,7 +334,7 @@ export function createStructureMarkerRenderer(
       depthStencil: {
         format: 'depth24plus',
         depthWriteEnabled: true,
-        depthCompare: 'less',
+        depthCompare: resolveDepthCompare('nearer', reversedZ),
       },
     });
 

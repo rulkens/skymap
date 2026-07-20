@@ -35,9 +35,13 @@
  * duty by `@builtin(front_facing)`: the NEAR (front) wall carries the over-disc
  * aerial perspective (haze on the lit disc), the FAR (back) wall carries the limb
  * + sky. Depth-testing EACH wall against the already-stamped opaque scene
- * (`depthCompare: 'less-equal'`, `depthWriteEnabled: false`) keeps cross-body
+ * (`depthCompare: 'greater-equal'`, `depthWriteEnabled: false`) keeps cross-body
  * occlusion for both — a nearer body occludes the disc haze via the near wall's
- * depth and the limb via the far wall's — with no branch. `cloudShellRenderer`
+ * depth and the limb via the far wall's — with no branch. Under the NEAR0 slab's
+ * reversed-Z convention (clear `0.0`, greater-z-wins) the compare is GREATER-equal,
+ * not less-equal: the EQUAL half lets the shell that hugs a body's own surface
+ * still pass against the depth that surface stamped, so the atmosphere is not
+ * culled by the very sphere it wraps. `cloudShellRenderer`
  * back-culls (`cullMode: 'back'`); this shell and `ringRenderer` share
  * `cullMode: 'none'`.
  *

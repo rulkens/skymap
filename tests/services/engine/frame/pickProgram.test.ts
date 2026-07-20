@@ -45,6 +45,7 @@ function makeCtx(): ReadyFrameContext {
     vp: new Float64Array(16),
     originRelative: false,
     precision: 'f32',
+    reversedZ: false,
   });
   return {
     isReady: true,

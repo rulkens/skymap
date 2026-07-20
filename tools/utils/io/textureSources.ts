@@ -93,7 +93,14 @@ export const TEXTURE_SOURCES = {
   saturn: { surface: { native: 'textures.sssSaturn8k', devFilename: '2k_saturn.jpg' } },
   uranus: { surface: { native: 'textures.sssUranus2k', devFilename: '2k_uranus.jpg' } },
   neptune: { surface: { native: 'textures.sssNeptune2k', devFilename: '2k_neptune.jpg' } },
-  moon: { surface: { native: 'textures.sssMoon8k', devFilename: '2k_moon.jpg' } },
+  moon: {
+    surface: { native: 'textures.sssMoon8k', devFilename: '2k_moon.jpg' },
+    // The normal (tangent-space relief) map. Like Earth's, its `native` names the
+    // ELEVATION heightfield input, not the normal map's own pixels — the build
+    // BAKES a Sobel gradient from the LOLA relief. Full-pull only — the Moon
+    // normal is not in the ~7 MB `--dev` subset, so a `--dev` fetch/build skips it.
+    normal: { native: 'textures.moonElevation' },
+  },
   io: { surface: { native: 'textures.usgsIo' } },
   europa: { surface: { native: 'textures.usgsEuropa' } },
   ganymede: { surface: { native: 'textures.usgsGanymede' } },

@@ -40,4 +40,6 @@ export type Slab = {
   originRelative: boolean;
   /** f64 ⇒ MVP is composed in double precision, then narrowed (composeBodyMvp path). */
   precision: 'f32' | 'f64';
+  /** true ⇒ this slab clears depth to 0, greater-wins, perspectiveReverseZ projection. */
+  reversedZ: boolean;
 };

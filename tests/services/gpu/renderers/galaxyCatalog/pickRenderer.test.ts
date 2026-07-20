@@ -93,6 +93,7 @@ describe('createPickRenderer', () => {
       makeStubSourceBgl(),
       makeStubFocusBgl(),
       {} as unknown as GPUBindGroup,
+      false,
     );
 
     expect(pickRenderer).toBeDefined();
@@ -116,6 +117,7 @@ describe('createPickRenderer', () => {
       makeStubSourceBgl(),
       makeStubFocusBgl(),
       {} as unknown as GPUBindGroup,
+      false,
     );
 
     const ownPickBuffer = getOwnPickBuffer();
@@ -173,6 +175,7 @@ describe('createPickRenderer', () => {
       makeStubSourceBgl(),
       makeStubFocusBgl(),
       {} as unknown as GPUBindGroup,
+      false,
     );
 
     const pickUniformBindGroup = createBindGroupByLabel.get('pick-uniform-bg');
@@ -200,6 +203,7 @@ describe('createPickRenderer', () => {
       makeStubSourceBgl(),
       makeStubFocusBgl(),
       {} as unknown as GPUBindGroup,
+      false,
     );
 
     const ownPickBuffer = getOwnPickBuffer();
@@ -279,6 +283,7 @@ describe('createPickRenderer', () => {
       canonicalSourceBgl,
       canonicalFocusBgl,
       {} as unknown as GPUBindGroup,
+      false,
     );
 
     const sourceBufA = { __source: 'A' } as unknown as GPUBuffer;

@@ -35,7 +35,8 @@
  * makes the vertex stage size each record as a floor-sized point (its box extent
  * is zeroed) rather than a box-filling glow. Unlike the depthless additive
  * visual star pass, the pick pipeline is DEPTH-tested (`depth32float` =
- * `NEAR0_DEPTH_FORMAT`, `depthCompare: 'less'`, `depthWriteEnabled: true`) so the
+ * `NEAR0_DEPTH_FORMAT`, `depthCompare: 'greater'` — the NEAR0 slab's reversed-Z
+ * convention, clear `0.0`, greater-z-wins — `depthWriteEnabled: true`) so the
  * nearest star wins the pixel — a bright star in front of a dim one claims the
  * pick, matching visual occlusion.
  *
@@ -53,6 +54,7 @@ import vsCode from '../../shaders/starCatalog/vertex.wesl?static';
 import pickFsCode from '../../shaders/starCatalog/pickFragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { writeCameraPrefix } from '../../lib/cameraUniforms';
+import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 // The NodeParams / StarUniforms byte layout lives in ONE home both star
 // renderers import — see starCatalogLayout.ts (the WESL structs in
 // shaders/starCatalog/io.wesl are the source of truth). This pick renderer is
@@ -90,6 +92,12 @@ export function createStarCatalogPickRenderer(
    * group the pick draw binds verbatim at @group(2).
    */
   resources: StarCatalogPickResources,
+  /**
+   * Selects the NEAR0 slab's depth convention (single-sourced in
+   * `SLAB_REVERSED_Z`): `false` ⇒ smaller-z-wins (`depthCompare: 'less'`),
+   * `true` ⇒ reversed-Z greater-wins. Resolved through `resolveDepthCompare`.
+   */
+  reversedZ: boolean,
 ): StarCatalogPickRenderer {
   const { cameraBgl, drawBgl, recordsBgl } = resources;
 
@@ -128,7 +136,7 @@ export function createStarCatalogPickRenderer(
     depthStencil: {
       format: 'depth32float',
       depthWriteEnabled: true,
-      depthCompare: 'less',
+      depthCompare: resolveDepthCompare('nearer', reversedZ),
     },
   });
 

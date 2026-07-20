@@ -56,6 +56,7 @@ import { UNIFORM_BYTES } from '../galaxyCatalog/pointVertexLayout';
 import vsCode from '../../shaders/milkyWayPick/vertex.wesl?static';
 import pickFsCode from '../../shaders/milkyWayPick/pick.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 
 /**
  * @group(2) MilkyWayPickUniforms — vec3 centreWorld (offset 0) + u32
@@ -80,6 +81,12 @@ export function createMilkyWayPickRenderer(
    * Mirrors the `fadeBgl` arg on `createStructureMarkerRenderer`.
    */
   fadeBgl: FadeUniformsBgl,
+  /**
+   * Selects the NEAR0 slab's depth convention (single-sourced in
+   * `SLAB_REVERSED_Z`): `false` ⇒ smaller-z-wins (`depthCompare: 'less'`),
+   * `true` ⇒ reversed-Z greater-wins. Resolved through `resolveDepthCompare`.
+   */
+  reversedZ: boolean,
 ): MilkyWayPickRenderer {
   const device = ctx.device as GPUDevice | null;
 
@@ -155,7 +162,7 @@ export function createMilkyWayPickRenderer(
       depthStencil: {
         format: 'depth32float',
         depthWriteEnabled: true,
-        depthCompare: 'less',
+        depthCompare: resolveDepthCompare('nearer', reversedZ),
       },
     });
 

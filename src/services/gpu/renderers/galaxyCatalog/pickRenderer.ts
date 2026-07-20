@@ -38,6 +38,7 @@ import type { FocusUniformsBgl } from '../../../../@types/rendering/FocusUniform
 import { createDummyFadeBindGroup } from '../../lib/dummyFade';
 import { POINT_STRIDE, POINT_VERTEX_ATTRIBUTES, UNIFORM_BYTES } from './pointVertexLayout';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
@@ -51,6 +52,10 @@ import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
  * buffer, written once per frame in renderFrame).  Bound at @group(3) so the
  * pick pass sees the same focus state the visual pass does and the shared
  * vertex shader can cull non-members of a focused structure from hit-testing.
+ *
+ * `reversedZ` selects the COSMO slab's depth convention (single-sourced in
+ * `SLAB_REVERSED_Z`): `false` ⇒ smaller-z-wins (`depthCompare: 'less'`),
+ * `true` ⇒ reversed-Z greater-wins. Resolved through `resolveDepthCompare`.
  */
 export function createPickRenderer(
   device: GPUDevice,
@@ -58,6 +63,7 @@ export function createPickRenderer(
   sourceBgl: SourceUniformsBgl,
   focusBgl: FocusUniformsBgl,
   focusBindGroup: GPUBindGroup,
+  reversedZ: boolean,
 ): PickRenderer {
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'pick.vertex');
   const fsModule = createShaderModuleWithDevLog(device, pickFsCode, 'pick.pickFragment');
@@ -137,7 +143,7 @@ export function createPickRenderer(
     depthStencil: {
       format: 'depth24plus',
       depthWriteEnabled: true,
-      depthCompare: 'less',
+      depthCompare: resolveDepthCompare('nearer', reversedZ),
     },
   });
 

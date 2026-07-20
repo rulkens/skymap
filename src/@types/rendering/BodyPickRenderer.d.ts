@@ -43,8 +43,10 @@
  * ### Depth-tested (the visual sibling passes vary)
  *
  * Every body pick pipeline declares the NEAR0 `depth32float` depth profile
- * (`depthCompare: 'less'`, `depthWriteEnabled: true`) so overlapping bodies —
+ * (`depthCompare: 'greater'`, `depthWriteEnabled: true`) so overlapping bodies —
  * a Moon in front of Earth — resolve nearest-wins, matching visual occlusion.
+ * Under the NEAR0 slab's reversed-Z convention (clear `0.0`, greater-z-wins) a
+ * nearer body writes a LARGER stored depth, so `greater` is what makes it win.
  */
 
 import type { Renderer } from './Renderer';

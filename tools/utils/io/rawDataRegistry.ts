@@ -634,6 +634,16 @@ export const RAW_DATA = {
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
+  'textures.moonElevation': {
+    path: 'data/raw/textures/ldem_16_uint.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "NASA SVS CGI Moon Kit LOLA elevation, 5760x2880 16-bit uint (half-metres, ref sphere 1737.4 km), centered 0 degrees longitude to match the SSS albedo; build-only bake input for the Moon's normal map, never shipped as a runtime texture; ~31.7 MB.",
+    upstream: 'https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/ldem_16_uint.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
   'textures.earthClouds': {
     path: 'data/raw/textures/cloud_combined_8192.tif',
     kind: 'file',

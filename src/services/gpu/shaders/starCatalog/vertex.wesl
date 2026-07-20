@@ -445,17 +445,17 @@ fn vs(
   // PICK pass: this stage IS depth tested, and the user wants IMPORTANCE order,
   // not distance order — a Gaia field star a parsec in front of a famous star
   // must NOT steal its click. So instead of the true-depth clamp we FORCE every
-  // survey star onto the survey band 'z = w * (1 - PICK_BAND_SURVEY_STAR_EPS)'.
-  // That band sits DEEPER than the scene-star band (smaller eps → larger z/w →
-  // loses 'less'), so survey stars always lose to scene/famous stars, glints and
-  // spheres, and DEEPER than nothing else — they stay ahead of only the Milky
-  // Way backdrop band. Consequence: two overlapping survey stars tie on this one
-  // constant depth, so the leaf-walk draw order decides between them — acceptable
-  // because 'nearest of two overlapping dots in a dense 7 px field' carries no
-  // user meaning, whereas 'famous star beats the field behind it' does.
+  // survey star onto the survey band 'z = w * PICK_BAND_SURVEY_STAR_EPS'.
+  // That band sits BELOW the scene-star band (smaller eps → smaller z/w →
+  // loses 'greater'), so survey stars always lose to scene/famous stars, glints
+  // and spheres, and sit above only the Milky Way backdrop band. Consequence: two
+  // overlapping survey stars tie on this one constant depth, so the leaf-walk draw
+  // order decides between them — acceptable because 'nearest of two overlapping
+  // dots in a dense 7 px field' carries no user meaning, whereas 'famous star
+  // beats the field behind it' does.
   out.clip.z = select(
     min(out.clip.z, out.clip.w * (1.0 - CLIP_Z_EPS)),
-    out.clip.w * (1.0 - PICK_BAND_SURVEY_STAR_EPS),
+    out.clip.w * PICK_BAND_SURVEY_STAR_EPS,
     u.pickPass == 1u
   );
 

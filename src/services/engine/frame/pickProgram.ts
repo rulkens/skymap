@@ -52,6 +52,7 @@ import type { PickResult } from '../../../@types/data/PickResult';
 import { pickFrameContext } from '../helpers/pickFrameContext';
 import { slabViewOf, COSMO } from './slabs';
 import { frontmostPick } from '../../../utils/picking/frontmostPick';
+import { depthClearValueFor } from '../../../utils/gpu/depthClearValueFor';
 import { unpackPick } from '../../../data/selectionEncoding';
 
 // The r32uint pick texture is written by the pass and read back a texel at a
@@ -199,7 +200,10 @@ export function createPickProgram(deps: {
       ],
       depthStencilAttachment: {
         view: target.depthTexture.createView(),
-        depthClearValue: 1.0,
+        // Clear to the far-plane depth for THIS slab's convention, single-sourced
+        // in depthClearValueFor so the clear and the depthCompare direction can
+        // never disagree (a mismatch fights every fragment of the first draw).
+        depthClearValue: depthClearValueFor(view.slab.reversedZ),
         depthLoadOp: 'clear',
         depthStoreOp: 'store',
       },
