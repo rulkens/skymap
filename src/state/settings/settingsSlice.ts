@@ -47,6 +47,7 @@ import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSettings';
 import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
 import type { SettingsSnapshot } from '../../@types/engine/settings/SettingsSnapshot';
+import type { RenderStrategy } from '../../@types/engine/frame/RenderStrategy';
 
 // The slice seeds the appearance knobs from `buildInitialSettings()`. The data
 // tier is NOT a settings field — it lives in its own root slice (seeded via the
@@ -269,6 +270,11 @@ const settingsSlice = createSlice({
       // Open-world membership record (any pass name): `[name] === true` disables.
       settings.debug.disabledPasses[action.payload.pass] = action.payload.disabled;
     },
+    // Override the frame's render-pass shape independently of GPU timing (Joint 1;
+    // see `resolveStrategy`). 'auto' restores the timing-derived default.
+    setRenderStrategy: (settings, action: PayloadAction<RenderStrategy | 'auto'>) => {
+      settings.debug.renderStrategy = action.payload;
+    },
     // Clip-path inspector: choose which clip to sample. The saga watches this
     // action to (re)compute the snapshot; the scrubber resets to the start.
     inspectClipPath: (settings, action: PayloadAction<ClipId>) => {
@@ -440,6 +446,7 @@ export const {
   setShowPickBuffer,
   setShowDiskRadiusRing,
   setPassDisabled,
+  setRenderStrategy,
   inspectClipPath,
   recalcClipPath,
   clearClipPath,

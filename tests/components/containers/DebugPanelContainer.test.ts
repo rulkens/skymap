@@ -64,6 +64,7 @@ function renderContainer(store: ReturnType<typeof createAppStore>['store']) {
     createElement(DebugPanelContainer, {
       slots: stubSlots,
       timingService: stubTimingService,
+      frameStats: () => ({ fps: 0, cpuMs: 0, idle: true }),
       passNames: PASS_NAMES,
     }),
     { wrapper: makeWrapper(store) },

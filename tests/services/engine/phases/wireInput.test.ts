@@ -119,6 +119,7 @@ function makeState(): EngineState {
         showPickBuffer: false,
         showDiskRadiusRing: false,
         disabledPasses: {},
+        renderStrategy: 'auto',
       },
     },
     bias: {} as never,

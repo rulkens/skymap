@@ -50,6 +50,7 @@ import type { RenderFrameInput } from '../../../@types/engine/frame/RenderFrameI
 import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy';
 import { executeFrame } from './executeFrame';
 import { frameProgram } from './frameProgram';
+import { resolveStrategy } from './resolveStrategy';
 import { CONTENT_LAYERS } from './passes';
 
 /**
@@ -71,11 +72,15 @@ export function renderFrame(input: RenderFrameInput): void {
   const swapView = context.getCurrentTexture().createView();
 
   const timingCtx = timingService.beginFrame();
-  // The ONLY frame-level branch: per-layer timed passes when timing is enabled
-  // (each carries its own `timestampWrites`), else the merged tile-local passes
-  // OVER blends need on Apple Silicon. `executeFrame` applies the strategy
-  // uniformly across every render step — see its module header.
-  const strategy: RenderStrategy = timingService.enabled ? 'perLayerTimed' : 'merged';
+  // The frame's pass shape: `settings.debug.renderStrategy` overrides it, defaulting
+  // to 'auto' — per-layer timed passes when timing is enabled (each carries its own
+  // `timestampWrites`), else the merged tile-local passes OVER blends need on Apple
+  // Silicon. `resolveStrategy` decouples that shape from the timing flag (Joint 1);
+  // `executeFrame` applies the result uniformly across every render step.
+  const strategy: RenderStrategy = resolveStrategy(
+    state.settings.debug.renderStrategy,
+    timingService.enabled,
+  );
   executeFrame({
     encoder,
     ctx,

@@ -10,18 +10,11 @@
  *
  * ### `ready` — a debounced predicate, not a first-true resolve
  *
- * "Capture-ready" is two facts already in the store: the engine reports
- * `status.kind === 'ready'` and the load-progress aggregate is `null` (its
- * "nothing in flight" convention). But `loadProgress` is ALSO null before the
- * first slot starts, so the naive "resolve the first time the predicate reads
- * true" would fire mid-bootstrap, in the gap between engine-ready and the
- * first fetch registering. Instead the installer subscribes to the store and
- * requires the predicate to HOLD for `READY_STABLE_MS` continuously: each
- * store change re-evaluates it, a true reading arms a timer, a false reading
- * disarms it, and only an undisturbed window resolves the promise. Polling
- * would also work but subscribe is edge-triggered and free. Over-waiting a
- * full second costs nothing — boot runs in real wall-clock time; the harness
- * only switches the page onto CDP virtual time AFTER awaiting `ready`.
+ * "Capture-ready" is the debounced stability window shared with the perf
+ * harness: `ready` is `whenStablyReady(store)` from `../lifecycle/whenStablyReady`,
+ * whose module header explains why a first-true resolve would fire mid-bootstrap
+ * (the load-progress aggregate is null before the first slot starts) and why the
+ * predicate must instead HOLD for `READY_STABLE_MS`.
  *
  * ### `startTour` — dispatch the existing action, observe the slice
  *
@@ -47,51 +40,14 @@
  */
 
 import { isCinemaMode } from '../../utils/url/isCinemaMode';
+import { whenStablyReady } from '../lifecycle/whenStablyReady';
 import { startTour } from '../tour/tourActions';
 import { selectTourActive } from '../tour/selectors';
-import { selectEngineStatus, selectLoadProgress } from '../engine/selectors';
 import type { AppStore } from '../../store/types';
 import type { SkymapRecorderHook } from '../../@types/recorder/SkymapRecorderHook';
 import type { RecorderWindow } from '../../@types/recorder/RecorderWindow';
 import type { TourId } from '../../@types/animation/tour/TourId';
 import type { BeatRange } from '../../@types/animation/tour/BeatRange';
-
-/**
- * How long the ready predicate must hold, uninterrupted, before `ready`
- * resolves. Exported so tests can advance fake timers by exactly this window.
- */
-export const READY_STABLE_MS = 1000;
-
-// Engine running + no load in flight. Momentarily true mid-bootstrap (see the
-// module header), hence the stability window around it.
-function isSettled(store: AppStore): boolean {
-  const state = store.getState();
-  return selectEngineStatus(state).kind === 'ready' && selectLoadProgress(state) === null;
-}
-
-// Resolve once `isSettled` has held for READY_STABLE_MS without a single
-// false reading in between. The timer is armed on the first true reading and
-// disarmed by any false one; the subscription is dropped once resolved.
-function whenStablyReady(store: AppStore): Promise<void> {
-  return new Promise((resolve) => {
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const check = (): void => {
-      if (isSettled(store)) {
-        timer ??= setTimeout(() => {
-          unsubscribe();
-          resolve();
-        }, READY_STABLE_MS);
-      } else if (timer !== null) {
-        clearTimeout(timer);
-        timer = null;
-      }
-    };
-    const unsubscribe = store.subscribe(check);
-    // The predicate may already be true at install time — evaluate once
-    // immediately rather than waiting for the next store change.
-    check();
-  });
-}
 
 // Dispatch the tour and resolve on the `tour.active` true → false transition.
 // Tracking "seen active" (instead of resolving on any false reading) makes

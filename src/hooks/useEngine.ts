@@ -51,6 +51,7 @@ import type { EngineHandle } from '../@types/engine/EngineHandle';
 import type { UseEngineReturn } from '../@types/engine/UseEngineReturn';
 import { useAppStore } from '../store/hooks';
 import { useSetSagaContext } from '../store/SagaContextProvider';
+import { installPerfHook } from '../state/perf/installPerfHook';
 
 export function useEngine(): UseEngineReturn {
   // The injected settings store — created in main.tsx, shared with React via
@@ -74,6 +75,11 @@ export function useEngine(): UseEngineReturn {
 
     const handle = createEngine(canvas, { store, setSagaContext });
     handleRef.current = handle;
+
+    // Perf harness seam — a no-op unless the page is in `?perf` mode. Installed
+    // here (not main.tsx) because it needs the live engine handle to reach the
+    // GPU timing service via `engine.debug.timingService`.
+    installPerfHook(store, handle);
 
     return () => {
       handle.destroy();

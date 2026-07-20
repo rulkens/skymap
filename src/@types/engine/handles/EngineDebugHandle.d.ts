@@ -2,10 +2,11 @@
  * EngineDebugHandle — the engine's observability sub-handle.
  *
  * Hosts debug/inspection surfaces the React shell reads.  Today's
- * inhabitants are `timingService` (GPU timing) and `passOverrides`
- * (read-only pass-name list); future additions (CPU-timing
- * breakdowns, render-stat counters, frame-timeline exports) cluster
- * here rather than sprawling across the top-level handle.
+ * inhabitants are `timingService` (GPU timing), `frameStats` (the
+ * always-on CPU-side fps + JS-frame-time readout), and `passOverrides`
+ * (read-only pass-name list); further additions (render-stat counters,
+ * frame-timeline exports) cluster here rather than sprawling across the
+ * top-level handle.
  *
  * ### Why a sub-handle for one field
  *
@@ -27,6 +28,7 @@
  */
 
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
+import type { FrameStats } from '../FrameStats';
 
 /**
  * `passOverrides` — read-only pass-name list for the DebugPanel's
@@ -56,6 +58,8 @@ export type EngineDebugHandle = {
    * in either case.
    */
   readonly timingService: GpuTimingService;
+  /** Rolling CPU-side frame stats (fps + JS-body ms + idle), always available — no GPU query. */
+  readonly frameStats: () => FrameStats;
   /**
    * Read-only pass-name list for the DebugPanel's renderer-toggle
    * section.  `allNames` is the source of truth for which passes
