@@ -44,8 +44,18 @@ export type LabelRenderer = {
    * called inside a `beginRenderPass` / `pass.end()` block by a `Pass`
    * implementation.  The pass's render target format must match the
    * `targetFormat` passed to `createLabelRenderer`.
+   *
+   * `sceneDepthView` is consumed only by an instance created with
+   * `occludeAgainstDepth: true`, where it feeds the group(1) depth joint so
+   * fragments behind a nearer solar-system body are discarded (per-pixel
+   * body occlusion).  A plain instance ignores it.
    */
-  draw(pass: GPURenderPassEncoder, viewProj: Float32Array, viewportSize: Vec2): void;
+  draw(
+    pass: GPURenderPassEncoder,
+    viewProj: Float32Array,
+    viewportSize: Vec2,
+    sceneDepthView?: GPUTextureView,
+  ): void;
   /** Total glyph count across all active labels. Used by tests + debug HUD. */
   glyphCount(): number;
   /** Number of labels last passed to setLabels. Used by tests + debug HUD. */
