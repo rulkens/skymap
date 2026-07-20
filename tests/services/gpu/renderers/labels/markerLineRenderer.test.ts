@@ -53,6 +53,47 @@ describe('MarkerLineRenderer colour target', () => {
   });
 });
 
+describe('MarkerLineRenderer occlusion variant', () => {
+  it('requests a second (depth) bind-group layout and a two-layout pipeline', () => {
+    // The plain path builds one BGL and a single-BGL pipeline layout; the
+    // occludeAgainstDepth path adds the group(1) depth joint. A device-only
+    // pipeline-validation error (wrong group count) never surfaces in a
+    // headless suite, so pin the two-layout shape structurally here.
+    const bindGroupLayouts: GPUBindGroupLayoutDescriptor[] = [];
+    const pipelineLayouts: GPUPipelineLayoutDescriptor[] = [];
+    const device = {
+      createBindGroupLayout: vi.fn((desc: GPUBindGroupLayoutDescriptor) => {
+        bindGroupLayouts.push(desc);
+        return {};
+      }),
+      createShaderModule: vi.fn(() => ({
+        getCompilationInfo: () => Promise.resolve({ messages: [] }),
+      })),
+      createPipelineLayout: vi.fn((desc: GPUPipelineLayoutDescriptor) => {
+        pipelineLayouts.push(desc);
+        return {};
+      }),
+      createRenderPipeline: vi.fn(() => ({})),
+      createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
+      createBindGroup: vi.fn(() => ({})),
+      queue: { writeBuffer: vi.fn() },
+    } as unknown as GPUDevice;
+
+    const ctx = {
+      device,
+      context: null as unknown as GPUCanvasContext,
+      format: 'rgba16float' as GPUTextureFormat,
+      canvas: null as unknown as HTMLCanvasElement,
+    };
+    createMarkerLineRenderer(ctx, ctx.format, 64, { occludeAgainstDepth: true });
+
+    // Two BGLs: the marker-line BGL + the occlusion depth BGL.
+    expect(bindGroupLayouts).toHaveLength(2);
+    expect(pipelineLayouts).toHaveLength(1);
+    expect(Array.from(pipelineLayouts[0]!.bindGroupLayouts)).toHaveLength(2);
+  });
+});
+
 describe('MarkerLineRenderer (CPU state)', () => {
   it('starts with zero lines', () => {
     const r = newRenderer();
