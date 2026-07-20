@@ -68,6 +68,7 @@ import { slabViewOf } from './slabs';
 import { encodeFlowCompute } from './encodeFlowCompute';
 import { encodeAtmosphereSkyView } from './encodeAtmosphereSkyView';
 import { TARGET_CLEAR_VALUES } from '../../gpu/renderTargets';
+import { depthClearValueFor } from '../../../utils/gpu/depthClearValueFor';
 
 /**
  * COMPUTE — the name→fn table a `'compute'` step dispatches through. Two rows
@@ -125,13 +126,17 @@ function depthAttachment(
   ctx: ReadyFrameContext,
   target: string,
   touched: boolean,
+  reversedZ: boolean,
 ): { depthStencilAttachment?: GPURenderPassDepthStencilAttachment } {
   const spec = ctx.renderTargets.specs.find((s) => s.id === target);
   if (!spec?.depth) return {};
   return {
     depthStencilAttachment: {
       view: ctx.renderTargets.depthViewOf(target),
-      depthClearValue: 1,
+      // Clear to the far-plane depth for THIS slab's convention, single-sourced
+      // in depthClearValueFor so the clear and the depthCompare direction can
+      // never disagree (a mismatch fights every fragment of the first draw).
+      depthClearValue: depthClearValueFor(reversedZ),
       depthLoadOp: touched ? 'load' : 'clear',
       depthStoreOp: 'store',
     },
@@ -257,7 +262,7 @@ function renderGroup(
     const pass = encoder.beginRenderPass({
       label: `render-${target}`,
       colorAttachments: [colorAttachment(target, targetView, alreadyTouched)],
-      ...depthAttachment(ctx, target, alreadyTouched),
+      ...depthAttachment(ctx, target, alreadyTouched, view.slab.reversedZ),
     });
     for (const layer of group) {
       layer.draw(pass, view, ctx, state);
@@ -276,7 +281,7 @@ function renderGroup(
     const pass = encoder.beginRenderPass({
       label: `render-${target}-${layer.name}`,
       colorAttachments: [colorAttachment(target, targetView, touchedBefore)],
-      ...depthAttachment(ctx, target, touchedBefore),
+      ...depthAttachment(ctx, target, touchedBefore, view.slab.reversedZ),
       ...timestampSpread(timing, layer.name),
     });
     layer.draw(pass, view, ctx, state);
