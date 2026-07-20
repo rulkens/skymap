@@ -37,9 +37,17 @@
  * `requestAnimationFrame` is the cheapest honest "the pose has been committed to
  * a frame" signal.
  *
- * ### `collectTimings` — warm up, subscribe, accumulate, unsubscribe
+ * ### `collectTimings` — reject-if-disabled, warm up, subscribe, accumulate, unsubscribe
  *
- * Subscribe to the live timing service; for each emitted `GpuTimingFrame`, flatten
+ * First guard: if the live timing service is a no-op STUB (`enabled === false`
+ * — the adapter lacks `timestamp-query`, or neither `?gpuTimings` nor `?perf`
+ * is set, see `initGpu`), reject IMMEDIATELY. The stub's `subscribe` never
+ * emits, so without this guard the Promise would never settle and the harness
+ * would hang forever inside `page.evaluate` with zero diagnostic. Converting the
+ * hang into an eager error is the honest failure mode: a benchmark on hardware
+ * that can't be timed should say so, not spin.
+ *
+ * Otherwise: subscribe to the live timing service; for each emitted `GpuTimingFrame`, flatten
  * its `perPassMs` map into `{ slot, ms }` samples; after `frames` MEASURED frames
  * have arrived, unsubscribe and resolve with the flat `PerfSample[]`. Auto-rotate
  * (armed by the preceding `setPose`) is an active driver holding the loop awake
@@ -120,6 +128,14 @@ function setPose(store: AppStore, pose: PerfPose): Promise<void> {
 // then flatten each measured frame's per-pass map into samples and resolve once
 // `frames` MEASURED frames have arrived.
 function collectTimings(engine: EngineHandle, frames: number): Promise<PerfSample[]> {
+  // Reject rather than subscribe when timing is a no-op stub: its `subscribe`
+  // never emits, so subscribing here would hang the harness forever with no
+  // diagnostic (see the module header). Fail loud and early instead.
+  if (!engine.debug.timingService.enabled) {
+    return Promise.reject(
+      new Error('perf: GPU timing service is disabled (no timestamp-query?) — cannot collect timings'),
+    );
+  }
   return new Promise<PerfSample[]>((resolve) => {
     const samples: PerfSample[] = [];
     let delivered = 0;

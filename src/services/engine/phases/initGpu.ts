@@ -403,10 +403,10 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
 
   // ── GPU timing service ────────────────────────────────────────────
   //
-  // Always-constructed: the factory returns a no-op stub when the URL
-  // gate is off OR the adapter lacks `timestamp-query`, so consumers gate
-  // behind one `state.gpu.timingService.enabled` check.  The no-op path
-  // allocates no GPU resources.
+  // Always-constructed: the factory returns a no-op stub when neither
+  // `?gpuTimings` nor `?perf` is set, OR the adapter lacks `timestamp-query`,
+  // so consumers gate behind one `state.gpu.timingService.enabled` check.  The
+  // no-op path allocates no GPU resources.
   state.gpu.timingService = createGpuTimingService(
     device,
     hasUrlGate('gpuTimings') || isPerfMode(),

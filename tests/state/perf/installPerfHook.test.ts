@@ -87,6 +87,30 @@ describe('installPerfHook', () => {
     expect(entries.some(([key, value]) => key !== value)).toBe(true);
   });
 
+  it('collectTimings rejects (instead of hanging) when the timing service is disabled', async () => {
+    vi.mocked(isPerfMode).mockReturnValue(true);
+
+    // On a GPU whose adapter lacks `timestamp-query`, `createGpuTimingService`
+    // hands back a no-op STUB whose `subscribe` never emits. Without the guard,
+    // `collectTimings` would subscribe and wait forever — the harness hangs
+    // inside `page.evaluate` with zero diagnostic. The guard converts that
+    // silent hang into an eager, legible rejection BEFORE subscribing.
+    const subscribe = vi.fn<(listener: (frame: GpuTimingFrame) => void) => () => void>(
+      () => () => {},
+    );
+    const engine = {
+      debug: { timingService: { enabled: false, subscribe } },
+    } as unknown as EngineHandle;
+
+    installPerfHook(buildStore(), engine);
+    const hook = getHook();
+    expect(hook).toBeDefined();
+
+    await expect(hook!.collectTimings(3)).rejects.toThrow(/disabled/);
+    // The guard returns before ever subscribing — no dangling listener.
+    expect(subscribe).not.toHaveBeenCalled();
+  });
+
   it('collectTimings discards the first PERF_WARMUP_FRAMES delivered frames', async () => {
     vi.mocked(isPerfMode).mockReturnValue(true);
 

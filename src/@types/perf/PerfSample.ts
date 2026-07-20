@@ -3,7 +3,7 @@
  * render slot cost on one measured frame.
  *
  * The harness collects these in bulk (`collectTimings(frames)` returns a flat
- * `PerfSample[]`) and aggregates downstream — median, p95, per-slot rollups —
+ * `PerfSample[]`) and aggregates downstream — median, p90, per-slot rollups —
  * so the wire shape stays deliberately atomic: no pre-bucketed maps, no frame
  * index baked in. Keeping each reading a bare `{ slot, ms }` pair lets the
  * consumer choose how to group without the producer having pre-committed to one
