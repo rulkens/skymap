@@ -582,7 +582,16 @@ export const foregroundLabelsLayer: ContentLayer = {
     // covers. Both foreground renderers are the `occludeAgainstDepth` instances
     // (see `initGpu.ts`); a non-occlusion renderer ignores this arg, so the
     // COSMO labels — which never receive it — are unaffected.
-    const depthView = ctx.renderTargets.depthViewOf('foreground:0');
+    //
+    // Occlude captions only when the body pass actually ran this frame — else
+    // the `foreground:0` depth is stale/uninitialised and would spuriously
+    // discard EVERY caption (the executor skips an empty render step, so the
+    // depth buffer is only valid when a body drew). Mirrors the composite
+    // step's `touched` guard. When undefined, the renderers fall back to their
+    // plain pipeline and draw the captions un-occluded.
+    const depthView = ctx.renderedTargets.has('foreground:0')
+      ? ctx.renderTargets.depthViewOf('foreground:0')
+      : undefined;
 
     // Draw the connectors BEFORE the captions so the glyphs composite OVER the
     // line where they meet — the same ordering `markerLinesLayer` keeps ahead

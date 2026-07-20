@@ -101,15 +101,21 @@ function makeNear0View(camPos: Vec3 = [2, 3, 5]): SlabView {
 }
 
 describe('foregroundLabelsLayer.draw — depth occlusion thread-through', () => {
-  it('passes the foreground:0 depth view to both the caption and leader-line draws', () => {
+  it('passes the foreground:0 depth view to both draws when the body pass ran this frame', () => {
     const renderer = makeRenderer(6);
     const lineRenderer = makeLineRenderer();
     const state = makeState(renderer, lineRenderer);
     const view = makeNear0View();
     const sentinelDepthView = {} as GPUTextureView;
     const depthViewOf = vi.fn<(id: string) => GPUTextureView>(() => sentinelDepthView);
-    // makeCtx returns a ReadyFrameContext; attach the renderTargets seam the layer reads.
-    const ctx = { ...makeCtx(5e-4), renderTargets: { depthViewOf } } as unknown as ReadyFrameContext;
+    // makeCtx returns a ReadyFrameContext; attach the renderTargets seam the
+    // layer reads AND the renderedTargets guard — `foreground:0` in the set
+    // means the body pass drew this frame, so the depth is valid to sample.
+    const ctx = {
+      ...makeCtx(5e-4),
+      renderTargets: { depthViewOf },
+      renderedTargets: new Set(['foreground:0']),
+    } as unknown as ReadyFrameContext;
 
     foregroundLabelsLayer.draw(PASS_STUB, view, ctx, state);
 
@@ -118,5 +124,32 @@ describe('foregroundLabelsLayer.draw — depth occlusion thread-through', () => 
     const lineDraw = lineRenderer.draw as unknown as ReturnType<typeof vi.fn>;
     expect(labelDraw.mock.calls[0]![3]).toBe(sentinelDepthView);
     expect(lineDraw.mock.calls[0]![3]).toBe(sentinelDepthView);
+  });
+
+  it('passes undefined depth to both draws when the body pass did NOT run this frame', () => {
+    // The stale-depth fix: when no foreground body rendered (the executor skips
+    // an empty render step), `foreground:0` is absent from `renderedTargets`, so
+    // its depth texture is uninitialised. Sampling it would spuriously discard
+    // EVERY caption. The layer must instead hand the renderers `undefined`, so
+    // they fall back to their plain pipeline and draw the captions un-occluded.
+    const renderer = makeRenderer(6);
+    const lineRenderer = makeLineRenderer();
+    const state = makeState(renderer, lineRenderer);
+    const view = makeNear0View();
+    const depthViewOf = vi.fn<(id: string) => GPUTextureView>(() => ({}) as GPUTextureView);
+    const ctx = {
+      ...makeCtx(5e-4),
+      renderTargets: { depthViewOf },
+      renderedTargets: new Set<string>(),
+    } as unknown as ReadyFrameContext;
+
+    foregroundLabelsLayer.draw(PASS_STUB, view, ctx, state);
+
+    // The stale depth is never even read.
+    expect(depthViewOf).not.toHaveBeenCalled();
+    const labelDraw = renderer.draw as unknown as ReturnType<typeof vi.fn>;
+    const lineDraw = lineRenderer.draw as unknown as ReturnType<typeof vi.fn>;
+    expect(labelDraw.mock.calls[0]![3]).toBeUndefined();
+    expect(lineDraw.mock.calls[0]![3]).toBeUndefined();
   });
 });

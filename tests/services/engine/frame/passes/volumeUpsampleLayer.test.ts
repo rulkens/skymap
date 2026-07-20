@@ -34,6 +34,7 @@ import type { Mat4 } from 'wgpu-matrix';
 function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFrameContext {
   return {
     isReady: true,
+    renderedTargets: new Set<string>(),
     cam: {} as never,
     vp: new Float32Array(16) as unknown as Mat4,
     slabs: [],

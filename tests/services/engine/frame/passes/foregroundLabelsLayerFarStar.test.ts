@@ -89,13 +89,15 @@ function makeCtx(): ReadyFrameContext {
   // regardless, but this keeps the emit set stable across frames.
   clockMs += 60_000;
   // The layer reads `ctx.renderTargets.depthViewOf('foreground:0')` for the
-  // caption/connector occlusion pass; a no-op stub keeps these geometry tests
-  // from throwing on that seam.
+  // caption/connector occlusion pass, gated on `renderedTargets.has('foreground:0')`
+  // (the body pass ran this frame); a no-op depth stub plus `foreground:0` in the
+  // rendered set keep these geometry tests from throwing on that seam.
   return {
     cam: { distance: 1e-13 },
     fovYRad: 1,
     nowMs: clockMs,
     renderTargets: { depthViewOf: () => ({}) as GPUTextureView },
+    renderedTargets: new Set(['foreground:0']),
   } as unknown as ReadyFrameContext;
 }
 
@@ -149,11 +151,8 @@ function farVisibleStar(): { id: string; worldPos: Vec3; distPc: number } {
       id: l.id,
       worldPos: [...l.worldPos] as Vec3,
       distPc:
-        Math.hypot(
-          l.worldPos[0] - cam[0],
-          l.worldPos[1] - cam[1],
-          l.worldPos[2] - cam[2],
-        ) / SCALE_UNITS.PC_TO_MPC,
+        Math.hypot(l.worldPos[0] - cam[0], l.worldPos[1] - cam[1], l.worldPos[2] - cam[2]) /
+        SCALE_UNITS.PC_TO_MPC,
     }))
     .filter((s) => s.distPc <= SCALE_FADE_BANDS.starCaption.fullAt);
   return stars.reduce((a, b) => (b.distPc > a.distPc ? b : a));

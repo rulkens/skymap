@@ -158,7 +158,13 @@ export function createMarkerLineRenderer(
   let currentLineCount = 0;
 
   // ── GPU resources (null when device is null) ─────────────────────────────
-  let pipeline: GPURenderPipeline | null = null;
+  //
+  // The occlusion instance builds BOTH pipelines and picks per-draw:
+  // `plainPipeline` (single BGL) whenever no scene depth is supplied this frame,
+  // `occludePipeline` (two BGLs, discard-gated fragment) when it is. A
+  // non-occlusion instance builds only `plainPipeline` and leaves the other null.
+  let plainPipeline: GPURenderPipeline | null = null;
+  let occludePipeline: GPURenderPipeline | null = null;
   let uniformBuffer: GPUBuffer | null = null;
   let gpuInstanceBuffer: GPUBuffer | null = null;
   let cornerBuffer: GPUBuffer | null = null;
@@ -196,67 +202,78 @@ export function createMarkerLineRenderer(
       occlusionDepthBGL = device.createBindGroupLayout(OCCLUSION_DEPTH_LAYOUT_DESC);
     }
 
-    // ── Pipeline ──────────────────────────────────────────────────────────
+    // ── Pipelines ─────────────────────────────────────────────────────────
+    //
+    // An occlusion instance builds BOTH pipelines and picks per-draw. `draw`
+    // selects `occludePipeline` only when handed a scene depth view THIS frame,
+    // and falls back to `plainPipeline` otherwise — so a frame in which no
+    // foreground body drew (hence no valid scene depth) still paints its
+    // connectors un-occluded through a VALID draw, rather than an occlusion
+    // draw with group(1) left unbound. A non-occlusion instance builds only
+    // the plain pipeline.
     const vsModule = createShaderModuleWithDevLog(device, vsCode, 'markerLines.vertex');
-    const fsModule = createShaderModuleWithDevLog(
-      device,
-      occludeAgainstDepth ? fsOccludeCode : fsCode,
-      occludeAgainstDepth ? 'markerLines.fragmentOcclude' : 'markerLines.fragment',
-    );
 
-    pipeline = device.createRenderPipeline({
+    // Both pipelines draw the identical geometry into the identical target;
+    // only the fragment entry and the group(1) depth binding differ, so the
+    // vertex-buffer + colour-target descriptors are shared.
+    const vertexBuffers: GPUVertexBufferLayout[] = [
+      // Buffer 0: unit-corner quad, 4 vertices, stepMode 'vertex'.
+      // Provides (x,y) unit-square corners to location 0 (`uv`).
+      // uv.x selects endpoint (from vs to); uv.y selects side (±half-width).
+      UNIT_QUAD_VERTEX_LAYOUT,
+      // Buffer 1: per-instance line data, stepMode 'instance'.
+      // Provides fromAndWidth, toAndAlpha, color to locations 1–3.
+      {
+        arrayStride: LINE_INSTANCE_BYTES, // 48 bytes = 3 × vec4
+        stepMode: 'instance',
+        attributes: [
+          { shaderLocation: 1, offset: 0, format: 'float32x4' }, // fromAndWidth
+          { shaderLocation: 2, offset: 16, format: 'float32x4' }, // toAndAlpha
+          { shaderLocation: 3, offset: 32, format: 'float32x4' }, // color
+        ],
+      },
+    ];
+    // Premultiplied-alpha OVER blend.  Marker lines are UI overlay, not
+    // emissive content: at alpha=0 they should be fully transparent against
+    // whatever's behind them, not additive.  'one-minus-src-alpha' for dst
+    // preserves the existing HDR content at line-free pixels while the line
+    // alpha fades.
+    const colorTargets: GPUColorTargetState[] = [{ format, blend: PREMULTIPLIED_OVER_BLEND }];
+
+    const fsPlainModule = createShaderModuleWithDevLog(device, fsCode, 'markerLines.fragment');
+    plainPipeline = device.createRenderPipeline({
       label: 'marker-line-pipeline',
       layout: device.createPipelineLayout({
         label: 'marker-line-pipeline-layout',
-        // group 0 = the marker-line BGL; group 1 (occlusion path only) = the
-        // shared depth joint.  Plain path stays a single-BGL layout.
-        bindGroupLayouts: occlusionDepthBGL
-          ? [bindGroupLayout, occlusionDepthBGL]
-          : [bindGroupLayout],
+        bindGroupLayouts: [bindGroupLayout],
       }),
-      vertex: {
-        module: vsModule,
-        entryPoint: 'vs',
-        buffers: [
-          // Buffer 0: unit-corner quad, 4 vertices, stepMode 'vertex'.
-          // Provides (x,y) unit-square corners to location 0 (`uv`).
-          // uv.x selects endpoint (from vs to); uv.y selects side (±half-width).
-          UNIT_QUAD_VERTEX_LAYOUT,
-          // Buffer 1: per-instance line data, stepMode 'instance'.
-          // Provides fromAndWidth, toAndAlpha, color to locations 1–3.
-          {
-            arrayStride: LINE_INSTANCE_BYTES, // 48 bytes = 3 × vec4
-            stepMode: 'instance',
-            attributes: [
-              { shaderLocation: 1, offset: 0, format: 'float32x4' }, // fromAndWidth
-              { shaderLocation: 2, offset: 16, format: 'float32x4' }, // toAndAlpha
-              { shaderLocation: 3, offset: 32, format: 'float32x4' }, // color
-            ],
-          },
-        ],
-      },
-      fragment: {
-        module: fsModule,
-        entryPoint: 'fs',
-        targets: [
-          {
-            format,
-            // Premultiplied-alpha OVER blend.  Marker lines are UI overlay,
-            // not emissive content: at alpha=0 they should be fully
-            // transparent against whatever's behind them, not additive.
-            // Using 'one-minus-src-alpha' for dst preserves the existing
-            // HDR content at line-free pixels while the line alpha fades.
-            blend: PREMULTIPLIED_OVER_BLEND,
-          },
-        ],
-      },
+      vertex: { module: vsModule, entryPoint: 'vs', buffers: vertexBuffers },
+      fragment: { module: fsPlainModule, entryPoint: 'fs', targets: colorTargets },
       // Triangle-strip topology — the four unit corners form two triangles
       // covering the line quad with just 4 vertices (no index buffer needed).
       primitive: { topology: 'triangle-strip' },
       // No depthStencil — marker lines are a pure UI overlay and do not
-      // participate in depth testing.  Enabling depth write would occlude
-      // geometry rendered after the line pass at zero cost benefit.
+      // participate in depth testing.
     });
+
+    if (occlusionDepthBGL) {
+      const fsOccludeModule = createShaderModuleWithDevLog(
+        device,
+        fsOccludeCode,
+        'markerLines.fragmentOcclude',
+      );
+      occludePipeline = device.createRenderPipeline({
+        label: 'marker-line-pipeline-occlude',
+        layout: device.createPipelineLayout({
+          label: 'marker-line-pipeline-occlude-layout',
+          // group 0 = the marker-line BGL; group 1 = the shared depth joint.
+          bindGroupLayouts: [bindGroupLayout, occlusionDepthBGL],
+        }),
+        vertex: { module: vsModule, entryPoint: 'vs', buffers: vertexBuffers },
+        fragment: { module: fsOccludeModule, entryPoint: 'fs', targets: colorTargets },
+        primitive: { topology: 'triangle-strip' },
+      });
+    }
 
     // ── Buffers ───────────────────────────────────────────────────────────
     uniformBuffer = device.createBuffer({
@@ -347,7 +364,7 @@ export function createMarkerLineRenderer(
   ): void {
     if (
       !device ||
-      !pipeline ||
+      !plainPipeline ||
       !bindGroup ||
       !uniformBuffer ||
       !cornerBuffer ||
@@ -364,19 +381,25 @@ export function createMarkerLineRenderer(
     writeCameraPrefix(uni, viewProj, viewportSize);
     device.queue.writeBuffer(uniformBuffer, 0, uni);
 
-    pass.setPipeline(pipeline);
-    pass.setBindGroup(0, bindGroup);
-    // Occlusion path only: rebuild + bind the group(1) depth joint from the
-    // frame's scene depth view.  A non-occlusion instance ignores any view
-    // handed to it (the plain pipeline has no group 1); a null view on the
-    // occlusion instance simply skips the bind (nothing to occlude against).
-    if (occlusionDepthBGL && sceneDepthView) {
+    // Pipeline selection: an occlusion instance draws through its occlusion
+    // pipeline only when a scene depth view is supplied THIS frame, binding the
+    // group(1) depth joint rebuilt from that view. With no depth view (e.g. no
+    // foreground body rendered this frame), it falls back to the plain pipeline
+    // and draws the connectors un-occluded — a valid draw, NOT an occlusion draw
+    // with group(1) left unbound. A non-occlusion instance (occludePipeline
+    // null) always takes the plain path.
+    if (occlusionDepthBGL && occludePipeline && sceneDepthView) {
+      pass.setPipeline(occludePipeline);
+      pass.setBindGroup(0, bindGroup);
       const depthBindGroup = createOcclusionDepthBindGroup(
         device,
         occlusionDepthBGL,
         sceneDepthView,
       );
       pass.setBindGroup(OCCLUSION_DEPTH_GROUP_INDEX, depthBindGroup);
+    } else {
+      pass.setPipeline(plainPipeline);
+      pass.setBindGroup(0, bindGroup);
     }
     // Buffer slot 0: static corner quad (4 vertices, broadcast across instances).
     pass.setVertexBuffer(0, cornerBuffer);

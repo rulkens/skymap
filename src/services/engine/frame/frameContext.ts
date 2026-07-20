@@ -187,6 +187,12 @@ export function deriveFrameContext(
     focus: ZERO_FOCUS,
     renderer,
     renderTargets,
+    // A fresh empty Set per frame — the executor populates it as it opens the
+    // first pass against each target, and a later pass sampling an earlier
+    // target's texture reads it to know whether that target actually rendered
+    // this frame. `deriveFrameContext` returns a fresh object each frame, so a
+    // new Set here can never leak state across frames.
+    renderedTargets: new Set<string>(),
     texturedDisks,
   };
 }

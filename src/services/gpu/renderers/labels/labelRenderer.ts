@@ -226,7 +226,13 @@ export function createLabelRenderer(
   let currentLabelCount = 0;
 
   // ── GPU resources (null when device is null) ─────────────────────────────
-  let pipeline: GPURenderPipeline | null = null;
+  //
+  // The occlusion instance builds BOTH pipelines and picks per-draw:
+  // `plainPipeline` (single BGL) whenever no scene depth is supplied this frame,
+  // `occludePipeline` (two BGLs, discard-gated fragment) when it is. A
+  // non-occlusion instance builds only `plainPipeline` and leaves the other null.
+  let plainPipeline: GPURenderPipeline | null = null;
+  let occludePipeline: GPURenderPipeline | null = null;
   let uniformBuffer: GPUBuffer | null = null;
   let storageBuffer: GPUBuffer | null = null;
   let instanceBuffer: GPUBuffer | null = null;
@@ -284,68 +290,78 @@ export function createLabelRenderer(
       occlusionDepthBGL = device.createBindGroupLayout(OCCLUSION_DEPTH_LAYOUT_DESC);
     }
 
-    // ── Pipeline ─────────────────────────────────────────────────────────
+    // ── Pipelines ────────────────────────────────────────────────────────
+    //
+    // An occlusion instance builds BOTH pipelines and picks per-draw. `draw`
+    // selects `occludePipeline` only when handed a scene depth view THIS frame,
+    // and falls back to `plainPipeline` otherwise — so a frame in which no
+    // foreground body drew (hence no valid scene depth) still paints its
+    // captions un-occluded through a VALID draw, rather than an occlusion draw
+    // with group(1) left unbound. A non-occlusion instance builds only the
+    // plain pipeline.
     const vsModule = createShaderModuleWithDevLog(device, vsCode, 'labels.vertex');
-    const fsModule = createShaderModuleWithDevLog(
-      device,
-      occludeAgainstDepth ? fsOccludeCode : fsCode,
-      occludeAgainstDepth ? 'labels.fragmentOcclude' : 'labels.fragment',
-    );
 
-    pipeline = device.createRenderPipeline({
+    // Both pipelines draw the identical geometry into the identical target;
+    // only the fragment entry and the group(1) depth binding differ, so the
+    // vertex-buffer + colour-target descriptors are shared.
+    const vertexBuffers: GPUVertexBufferLayout[] = [
+      // Buffer 0: unit-corner quad, 4 vertices, stepMode 'vertex'.
+      // Provides the (x,y) unit-square corners to location 0 (`corner`).
+      UNIT_QUAD_VERTEX_LAYOUT,
+      // Buffer 1: per-glyph instance data, stepMode 'instance'.
+      // Provides localOffset, localSize, uvRect, labelIndex to locations 1–4.
+      {
+        arrayStride: GLYPH_INSTANCE_BYTES,
+        stepMode: 'instance',
+        attributes: [
+          { shaderLocation: 1, offset: 0, format: 'float32x2' }, // localOffset
+          { shaderLocation: 2, offset: 8, format: 'float32x2' }, // localSize
+          { shaderLocation: 3, offset: 16, format: 'float32x4' }, // uvRect
+          { shaderLocation: 4, offset: 32, format: 'uint32' }, // labelIndex
+          { shaderLocation: 5, offset: 36, format: 'uint32' }, // fontIndex
+        ],
+      },
+    ];
+    // Premultiplied-alpha OVER blend.  Labels are UI overlay text, not emissive
+    // content: at alpha=0 they should be fully transparent against whatever's
+    // behind them, not additive.  'one-minus-src-alpha' for dst preserves the
+    // existing HDR content at label-free pixels while the label alpha fades.
+    const colorTargets: GPUColorTargetState[] = [{ format, blend: PREMULTIPLIED_OVER_BLEND }];
+
+    const fsPlainModule = createShaderModuleWithDevLog(device, fsCode, 'labels.fragment');
+    plainPipeline = device.createRenderPipeline({
       label: 'label-pipeline',
       layout: device.createPipelineLayout({
         label: 'label-pipeline-layout',
-        // group 0 = the label BGL; group 1 (occlusion path only) = the
-        // shared depth joint.  Plain path stays a single-BGL layout.
-        bindGroupLayouts: occlusionDepthBGL
-          ? [bindGroupLayout, occlusionDepthBGL]
-          : [bindGroupLayout],
+        bindGroupLayouts: [bindGroupLayout],
       }),
-      vertex: {
-        module: vsModule,
-        entryPoint: 'vs',
-        buffers: [
-          // Buffer 0: unit-corner quad, 4 vertices, stepMode 'vertex'.
-          // Provides the (x,y) unit-square corners to location 0 (`corner`).
-          UNIT_QUAD_VERTEX_LAYOUT,
-          // Buffer 1: per-glyph instance data, stepMode 'instance'.
-          // Provides localOffset, localSize, uvRect, labelIndex to locations 1–4.
-          {
-            arrayStride: GLYPH_INSTANCE_BYTES,
-            stepMode: 'instance',
-            attributes: [
-              { shaderLocation: 1, offset: 0, format: 'float32x2' }, // localOffset
-              { shaderLocation: 2, offset: 8, format: 'float32x2' }, // localSize
-              { shaderLocation: 3, offset: 16, format: 'float32x4' }, // uvRect
-              { shaderLocation: 4, offset: 32, format: 'uint32' }, // labelIndex
-              { shaderLocation: 5, offset: 36, format: 'uint32' }, // fontIndex
-            ],
-          },
-        ],
-      },
-      fragment: {
-        module: fsModule,
-        entryPoint: 'fs',
-        targets: [
-          {
-            format,
-            // Premultiplied-alpha OVER blend.  Labels are UI overlay text,
-            // not emissive content: at alpha=0 they should be fully
-            // transparent against whatever's behind them, not additive.
-            // Using 'one-minus-src-alpha' for dst preserves the existing
-            // HDR content at label-free pixels while the label alpha fades.
-            blend: PREMULTIPLIED_OVER_BLEND,
-          },
-        ],
-      },
+      vertex: { module: vsModule, entryPoint: 'vs', buffers: vertexBuffers },
+      fragment: { module: fsPlainModule, entryPoint: 'fs', targets: colorTargets },
       // Triangle-strip topology — the four unit corners form two triangles
       // covering the glyph quad with just 4 vertices (no index buffer needed).
       primitive: { topology: 'triangle-strip' },
       // No depthStencil — labels are a pure UI overlay and do not participate
-      // in depth testing.  Enabling depth write would occlude any geometry
-      // rendered later (e.g. a second label pass) at zero cost.
+      // in depth testing.
     });
+
+    if (occlusionDepthBGL) {
+      const fsOccludeModule = createShaderModuleWithDevLog(
+        device,
+        fsOccludeCode,
+        'labels.fragmentOcclude',
+      );
+      occludePipeline = device.createRenderPipeline({
+        label: 'label-pipeline-occlude',
+        layout: device.createPipelineLayout({
+          label: 'label-pipeline-occlude-layout',
+          // group 0 = the label BGL; group 1 = the shared depth joint.
+          bindGroupLayouts: [bindGroupLayout, occlusionDepthBGL],
+        }),
+        vertex: { module: vsModule, entryPoint: 'vs', buffers: vertexBuffers },
+        fragment: { module: fsOccludeModule, entryPoint: 'fs', targets: colorTargets },
+        primitive: { topology: 'triangle-strip' },
+      });
+    }
 
     // ── Buffers ──────────────────────────────────────────────────────────
     uniformBuffer = device.createBuffer({
@@ -573,7 +589,14 @@ export function createLabelRenderer(
     viewportSize: Vec2,
     sceneDepthView?: GPUTextureView,
   ): void {
-    if (!device || !pipeline || !bindGroup || !uniformBuffer || !cornerBuffer || !instanceBuffer) {
+    if (
+      !device ||
+      !plainPipeline ||
+      !bindGroup ||
+      !uniformBuffer ||
+      !cornerBuffer ||
+      !instanceBuffer
+    ) {
       return;
     }
     if (currentGlyphCount === 0) return;
@@ -585,19 +608,25 @@ export function createLabelRenderer(
     writeCameraPrefix(uni, viewProj, viewportSize);
     device.queue.writeBuffer(uniformBuffer, 0, uni);
 
-    pass.setPipeline(pipeline);
-    pass.setBindGroup(0, bindGroup);
-    // Occlusion path only: rebuild + bind the group(1) depth joint from the
-    // frame's scene depth view.  A non-occlusion instance ignores any view
-    // handed to it (the plain pipeline has no group 1); a null view on the
-    // occlusion instance simply skips the bind (nothing to occlude against).
-    if (occlusionDepthBGL && sceneDepthView) {
+    // Pipeline selection: an occlusion instance draws through its occlusion
+    // pipeline only when a scene depth view is supplied THIS frame, binding the
+    // group(1) depth joint rebuilt from that view. With no depth view (e.g. no
+    // foreground body rendered this frame), it falls back to the plain pipeline
+    // and draws the captions un-occluded — a valid draw, NOT an occlusion draw
+    // with group(1) left unbound. A non-occlusion instance (occludePipeline
+    // null) always takes the plain path.
+    if (occlusionDepthBGL && occludePipeline && sceneDepthView) {
+      pass.setPipeline(occludePipeline);
+      pass.setBindGroup(0, bindGroup);
       const depthBindGroup = createOcclusionDepthBindGroup(
         device,
         occlusionDepthBGL,
         sceneDepthView,
       );
       pass.setBindGroup(OCCLUSION_DEPTH_GROUP_INDEX, depthBindGroup);
+    } else {
+      pass.setPipeline(plainPipeline);
+      pass.setBindGroup(0, bindGroup);
     }
     // Buffer slot 0: static corner quad (4 vertices, broadcast across instances).
     pass.setVertexBuffer(0, cornerBuffer);

@@ -23,6 +23,9 @@ function makeCtx(): ReadyFrameContext {
   };
   return {
     isReady: true,
+    // The ready context carries the frame's rendered-target set (see
+    // ReadyFrameContext); a fresh empty Set satisfies the required field.
+    renderedTargets: new Set<string>(),
     cam: {} as never,
     vp,
     slabs: [cosmoSlab, cosmoSlab],

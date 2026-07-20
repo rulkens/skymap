@@ -147,6 +147,10 @@ function makeCtx(): ReadyFrameContext {
     slabs: [slab, slab],
     canvasSize: { width: 100, height: 50 },
     drawCamPos: [0, 0, 0] as Readonly<[number, number, number]>,
+    // The executor uses this as its first-touch `touched` set (the same object
+    // it exposes to layers as `renderedTargets`): a fresh empty Set per frame,
+    // populated as passes open. Mirrors `deriveFrameContext`.
+    renderedTargets: new Set<string>(),
     // Offscreen view resolution goes through the target table's viewOf —
     // the executor's viewFor keeps only the swap-vs-offscreen branch. `specs`
     // + `depthViewOf` let the executor discover which target rows declare a
