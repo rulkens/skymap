@@ -103,11 +103,11 @@ constants (unchanged), or the doc restatements (Task 5).
 
 **Steps:**
 
-- [ ] Add the regression test above to `computeForegroundViewProj.test.ts` — red under the current `SLAB_REVERSED_Z[NEAR0] === false`.
-- [ ] Flip `SLAB_REVERSED_Z[NEAR0]` to `true` in `slabs.ts`.
-- [ ] Update every NEAR0 pipeline/executor/pick test listed above to the reversed values; leave all COSMO assertions unchanged.
-- [ ] `npm test` green; `npm run typecheck` clean.
-- [ ] Commit (stage `slabs.ts` + the touched test files).
+- [x] Add the regression test above to `computeForegroundViewProj.test.ts` — red under the current `SLAB_REVERSED_Z[NEAR0] === false`.
+- [x] Flip `SLAB_REVERSED_Z[NEAR0]` to `true` in `slabs.ts`.
+- [x] Update every NEAR0 pipeline/executor/pick test listed above to the reversed values; leave all COSMO assertions unchanged.
+- [x] `npm test` green; `npm run typecheck` clean.
+- [x] Commit (stage `slabs.ts` + the touched test files).
 
 ---
 

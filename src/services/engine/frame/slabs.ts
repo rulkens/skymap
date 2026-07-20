@@ -50,20 +50,28 @@ export const SLAB_NAME: Readonly<Record<number, string>> = {
 /**
  * The single source of each slab's depth convention: `false` ⇒ the classic
  * smaller-z-wins / clear-`1.0` / `mat4d.perspective` set; `true` ⇒ reversed-Z
- * (greater-wins / clear-`0` / `mat4d.perspectiveReverseZ`). Both are `false`
- * today, which makes every GPU pipeline descriptor, depth clear, and
- * foreground projection byte-identical to the previous implicit global.
+ * (greater-wins / clear-`0` / `mat4d.perspectiveReverseZ`).
  *
- * Flipping `[NEAR0]` to `true` is the reversed-Z feature switch: that one edit
- * propagates to every pipeline `depthCompare`, both depth clears, and the
- * foreground projection builder, because all of those read this constant —
- * either directly at renderer construction, or via the `reversedZ` flag echoed
- * onto the runtime `Slab` by `deriveSlabs`. Single-sourcing the convention here
- * is what makes the flip one constant instead of ~14 scattered sites, and makes
- * a partial (half-reversed) flip impossible.
+ * NEAR0 is `true`: its foreground bracket spans a ~1e8 near/far ratio (Earth's
+ * surface out to Jupiter's orbit), and a finite non-reversed perspective
+ * crowds nearly all its depth resolution against the near plane — so a body at
+ * the far end (the Sun at 1 AU) quantizes onto the far plane and flickers.
+ * Infinite-far reversed-Z spreads reciprocal-depth precision near-uniformly and
+ * removes the far plane entirely, so the whole near-field scene resolves in one
+ * `depth32float` buffer. COSMO stays `false`: its fixed 10 kpc → 50 Gpc bracket
+ * is served fine by the classic convention, and its pick pipelines + clear must
+ * stay smaller-z-wins.
+ *
+ * This one constant is the reversed-Z feature switch: `[NEAR0]` propagates to
+ * every pipeline `depthCompare`, both depth clears, and the foreground
+ * projection builder, because all of those read this constant — either directly
+ * at renderer construction, or via the `reversedZ` flag echoed onto the runtime
+ * `Slab` by `deriveSlabs`. Single-sourcing the convention here is what makes the
+ * flip one constant instead of ~14 scattered sites, and makes a partial
+ * (half-reversed) flip impossible.
  */
 export const SLAB_REVERSED_Z: Readonly<Record<number, boolean>> = {
-  [NEAR0]: false,
+  [NEAR0]: true,
   [COSMO]: false,
 };
 
