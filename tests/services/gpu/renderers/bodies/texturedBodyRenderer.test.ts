@@ -251,27 +251,83 @@ describe('createTexturedBodyRenderer', () => {
     expect((stripTex!.usage & GPUTextureUsage.RENDER_ATTACHMENT) !== 0).toBe(true);
   });
 
-  it('clearTexture destroys the body surface texture and reverts to the placeholder', () => {
-    // clearTexture is the eviction inverse of setMap: releasing a body's
-    // bodyTextures slot must actually free its (up to ~135 MB) GPU texture, not
-    // leak it. Structural proof: after setMap the body owns a real texture
-    // whose `.destroy()` clearTexture calls; the bind group is then rebuilt.
+  it('clearMap frees a body kind and reverts it to the placeholder', () => {
+    // clearMap is the per-kind eviction inverse of setMap: releasing a body's
+    // (body,kind) bodyTextures slot must actually free its (up to ~135 MB) GPU
+    // texture, not leak it. Structural proof: after setMap the body owns a real
+    // texture whose `.destroy()` clearMap calls; the bind group is then rebuilt.
     const renderer = createTexturedBodyRenderer(mockDevice(), 'rgba16float', 'depth32float');
     const bitmap = { width: 8, height: 4 } as unknown as ImageBitmap;
     renderer.setMap('mars', 'surface', bitmap);
-    // Assert clearTexture is idempotent and non-throwing, and that a subsequent
-    // draw still works (the placeholder rebind succeeded) — a dangling destroyed
-    // view or a missing rebuild would throw here.
-    expect(() => renderer.clearTexture('mars')).not.toThrow();
-    // Idempotent: clearing an already-cleared (or never-textured) body is a no-op.
-    expect(() => renderer.clearTexture('mars')).not.toThrow();
-    expect(() => renderer.clearTexture('venus')).not.toThrow();
+    // Assert clearMap is idempotent and non-throwing, and that a subsequent draw
+    // still works (the placeholder rebind succeeded) — a dangling destroyed view
+    // or a missing rebuild would throw here.
+    expect(() => renderer.clearMap('mars', 'surface')).not.toThrow();
+    // Idempotent: clearing an already-cleared (or never-textured) kind is a no-op.
+    expect(() => renderer.clearMap('mars', 'surface')).not.toThrow();
+    expect(() => renderer.clearMap('venus', 'surface')).not.toThrow();
     // The body still draws after its texture is freed — the bind group reverted
     // to the shared placeholder rather than dangling at a destroyed view.
     expect(() => renderer.draw(stubPass(), 'mars', new Float32Array(24))).not.toThrow();
   });
 
-  it('clearTexture calls destroy on the body surface texture (no leak)', () => {
+  it('clearMap frees ONLY the named kind — a sibling kind survives and stays bound', () => {
+    // The regression for the tier-switch normal-map disappearance. The bodyTextures
+    // slots are per-(body,kind), so eviction of ONE kind must not collaterally
+    // destroy a sibling kind on the same body: surface and normal have independent
+    // clamped tiers, so a per-body clear that freed both left the normal map gone
+    // with no re-demand (its clamp was unchanged). clearMap must be per-kind.
+    const textures: Array<{
+      id: number;
+      destroy: ReturnType<typeof vi.fn>;
+      desc: GPUTextureDescriptor;
+    }> = [];
+    const bindGroups: GPUBindGroupDescriptor[] = [];
+    const device = {
+      ...(mockDevice() as unknown as Record<string, unknown>),
+      createTexture: vi.fn((desc: GPUTextureDescriptor) => {
+        const id = textures.length;
+        const destroy = vi.fn();
+        textures.push({ id, destroy, desc });
+        // A view tagged with its texture's id, so the bind group's binding-4
+        // resource can be traced back to the exact texture it points at.
+        return {
+          createView: () => ({ __textureId: id }),
+          destroy,
+          mipLevelCount: desc.mipLevelCount ?? 1,
+          format: desc.format,
+        };
+      }),
+      createBindGroup: vi.fn((desc: GPUBindGroupDescriptor) => {
+        bindGroups.push(desc);
+        return {};
+      }),
+    } as unknown as GPUDevice;
+    const renderer = createTexturedBodyRenderer(device, 'rgba16float', 'depth32float');
+    // Two resident kinds on one body — the Moon-at-a-tier-boundary repro shape.
+    renderer.setMap('mars', 'surface', { width: 8, height: 4 } as unknown as ImageBitmap);
+    renderer.setMap('mars', 'normal', { width: 16, height: 8 } as unknown as ImageBitmap);
+    const surface = textures.find((t) => Array.isArray(t.desc.size) && t.desc.size[0] === 8)!;
+    const normal = textures.find((t) => Array.isArray(t.desc.size) && t.desc.size[0] === 16)!;
+    expect(surface).toBeDefined();
+    expect(normal).toBeDefined();
+
+    renderer.clearMap('mars', 'surface');
+
+    // The evicted kind is freed exactly once…
+    expect(surface.destroy).toHaveBeenCalledTimes(1);
+    // …and the sibling kind is NOT destroyed — no collateral free on a per-kind evict.
+    expect(normal.destroy).not.toHaveBeenCalled();
+    // The rebuilt bind group still binds the resident normal texture at binding 4,
+    // not the flat-normal placeholder — the normal map survives a surface eviction.
+    const lastBg = bindGroups[bindGroups.length - 1]!;
+    const binding4 = Array.from(lastBg.entries).find((e) => e.binding === 4)!;
+    expect((binding4.resource as unknown as { __textureId: number }).__textureId).toBe(normal.id);
+    // The body still draws — the bind group is valid, no dangling destroyed view.
+    expect(() => renderer.draw(stubPass(), 'mars', new Float32Array(24))).not.toThrow();
+  });
+
+  it('clearMap calls destroy on the body surface texture (no leak)', () => {
     // Track the textures created so we can assert the surface texture's destroy
     // spy fires on clear — the concrete free the slot's onRelease relies on.
     const created: Array<{ destroy: ReturnType<typeof vi.fn>; desc: GPUTextureDescriptor }> = [];
@@ -293,7 +349,7 @@ describe('createTexturedBodyRenderer', () => {
     renderer.setMap('mars', 'surface', bitmap);
     const surface = created.find((t) => Array.isArray(t.desc.size) && t.desc.size[0] === 8)!;
     expect(surface).toBeDefined();
-    renderer.clearTexture('mars');
+    renderer.clearMap('mars', 'surface');
     expect(surface.destroy).toHaveBeenCalledTimes(1);
   });
 });

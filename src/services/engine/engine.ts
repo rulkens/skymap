@@ -315,7 +315,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Shared textured-sphere renderer for the twelve non-Earth textured bodies
       // (planets + Moon + Galilean moons). null until initGpu; excluded from
       // isEngineReady, null-checked at use by texturedBodiesLayer; the
-      // bodyTextures family's commit/onRelease call its setMap/clearTexture.
+      // bodyTextures family's commit/onRelease call its setMap/clearMap.
       texturedBodyRenderer: null,
       // Saturn's rings — the translucent overlay half of the ring system, drawn
       // last in the (foreground:0, NEAR0) group. null until initGpu; excluded

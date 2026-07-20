@@ -6,8 +6,9 @@
  * Behavioural: commit routes each entry to its resident renderer — `'earth'` to
  * `earthRenderer.setMap(kind, …)`, every other (non-ring) body to
  * `texturedBodyRenderer.setMap(bodyId, kind, …)` — and a non-Earth body's
- * onRelease frees its texture via `texturedBodyRenderer.clearTexture`. Driven
- * through the real slot machinery with a stubbed fetch + decode.
+ * onRelease frees its texture via `texturedBodyRenderer.clearMap(bodyId, kind)`,
+ * per-kind so the slot's `kind` flows through. Driven through the real slot
+ * machinery with a stubbed fetch + decode.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -24,7 +25,7 @@ type Gpu = {
   cloudShellRenderer: { setTexture: ReturnType<typeof vi.fn> };
   texturedBodyRenderer: {
     setMap: ReturnType<typeof vi.fn>;
-    clearTexture: ReturnType<typeof vi.fn>;
+    clearMap: ReturnType<typeof vi.fn>;
     setRingTexture: ReturnType<typeof vi.fn>;
   };
   atmosphereShellRenderer: { setRingTexture: ReturnType<typeof vi.fn> };
@@ -41,7 +42,7 @@ function makeGpu(): Gpu {
   return {
     earthRenderer: { setMap: vi.fn() },
     cloudShellRenderer: { setTexture: vi.fn() },
-    texturedBodyRenderer: { setMap: vi.fn(), clearTexture: vi.fn(), setRingTexture: vi.fn() },
+    texturedBodyRenderer: { setMap: vi.fn(), clearMap: vi.fn(), setRingTexture: vi.fn() },
     atmosphereShellRenderer: { setRingTexture: vi.fn() },
   };
 }
@@ -137,7 +138,7 @@ describe('wireBodyTextureSlots', () => {
     expect(gpu.earthRenderer.setMap).not.toHaveBeenCalled();
   });
 
-  it("a non-'earth' body slot's onRelease frees its texture via texturedBodyRenderer.clearTexture", async () => {
+  it("a non-'earth' body slot's onRelease frees its texture via texturedBodyRenderer.clearMap(bodyId, kind)", async () => {
     const gpu = makeGpu();
     const state = makeState(gpu);
     wireBodyTextureSlots(state);
@@ -145,10 +146,12 @@ describe('wireBodyTextureSlots', () => {
     const slot = state.assetSlots.bodyTextures.get('mars:surface')!;
     slot.load({ bodyId: 'mars', kind: 'surface', tier: 'small' });
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
-    // Eviction: releasing the slot must actually free Mars's GPU texture.
+    // Eviction: releasing the slot must actually free Mars's GPU texture — and
+    // per-KIND, so the slot's `kind` flows through. This fails the moment the
+    // release collapses to a per-body clear that would destroy a sibling kind.
     slot.release();
-    expect(gpu.texturedBodyRenderer.clearTexture).toHaveBeenCalledTimes(1);
-    expect(gpu.texturedBodyRenderer.clearTexture).toHaveBeenCalledWith('mars');
+    expect(gpu.texturedBodyRenderer.clearMap).toHaveBeenCalledTimes(1);
+    expect(gpu.texturedBodyRenderer.clearMap).toHaveBeenCalledWith('mars', 'surface');
   });
 
   it("the ring slot's commit dispatches to texturedBodyRenderer.setRingTexture(hostBody, …)", async () => {

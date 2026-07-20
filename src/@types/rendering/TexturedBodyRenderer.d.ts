@@ -53,16 +53,20 @@ export type TexturedBodyRenderer = Renderer & {
    */
   setMap(bodyId: BodyTextureId, kind: TextureKind, bitmap: ImageBitmap): void;
   /**
-   * Free a body's sphere maps and revert their bindings to the shared 1×1
-   * placeholders — the eviction inverse of `setMap`. Called from the
-   * `bodyTextures` slot's `onRelease` when the body leaves its proximity radius,
-   * so the (up to ~135 MB at 8 k) GPU textures are actually released rather than
-   * leaked. Destroys every resident sphere-map `GPUTexture`, rebuilds the bind
-   * group against the placeholders, and leaves the per-body uniform buffer + ring
-   * texture intact (cheap, and the body stays drawable-but-plain). A no-op for a
-   * body with no resident maps.
+   * Free ONE `TextureKind`'s sphere map for a body and revert that kind's binding
+   * to its shared 1×1 placeholder — the per-kind eviction inverse of `setMap`,
+   * matching `setMap`'s per-kind granularity. Called from the `bodyTextures`
+   * slot's `onRelease` when that (body, kind) slot leaves its proximity radius, so
+   * the (up to ~135 MB at 8 k) GPU texture is actually released rather than leaked.
+   * Per-kind is load-bearing: `surface` and `normal` have independent clamped
+   * tiers, so evicting one kind must NOT destroy the sibling's resident texture
+   * (which the demand loop would not re-fetch while its clamp is unchanged).
+   * Destroys the named kind's `GPUTexture`, rebuilds the bind group so that binding
+   * reverts to the placeholder while every other kind stays bound, and leaves the
+   * per-body uniform buffer + ring texture intact. A no-op if the kind is not
+   * resident.
    */
-  clearTexture(bodyId: BodyTextureId): void;
+  clearMap(bodyId: BodyTextureId, kind: TextureKind): void;
   /**
    * Swap a body's ring-alpha texture (binding 3) — Saturn's radial ring strip
    * for the ring-on-planet shadow. Every other body keeps the shared 1×1
