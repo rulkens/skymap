@@ -45,6 +45,7 @@
 
 import type { ScenarioReport, LayerStat } from '../../perf/scenarioReport';
 import type { Palette } from '../cli/ansiPalette';
+import { formatPageErrors } from './formatPageErrors';
 
 const ms = (value: number): string => value.toFixed(1);
 
@@ -52,8 +53,6 @@ const ms = (value: number): string => value.toFixed(1);
 const FRAME_BUDGET_MS = 16.7;
 /** Beyond ~30fps the frame is clearly over budget — escalate to red. */
 const HALF_BUDGET_MS = 33.3;
-/** Keep collapsed page-error messages to one readable line. */
-const MAX_ERROR_LEN = 160;
 
 /**
  * table — pad a grid of string cells into aligned columns. Each column's width
@@ -123,16 +122,9 @@ export function formatReport(report: ScenarioReport, palette: Palette): string {
   }
 
   // Page errors are collected during the run, not warned inline, so the report
-  // can collapse a storm of identical messages into one counted line each.
-  if (report.pageErrors.length > 0) {
-    const counts = new Map<string, number>();
-    for (const message of report.pageErrors) counts.set(message, (counts.get(message) ?? 0) + 1);
-    for (const [message, count] of counts) {
-      const oneLine = message.replace(/\s+/g, ' ');
-      const shown = oneLine.length > MAX_ERROR_LEN ? oneLine.slice(0, MAX_ERROR_LEN - 1) + '…' : oneLine;
-      lines.push('  ' + palette.yellow(`⚠ ${count} page error(s): ${shown}`));
-    }
-  }
+  // can collapse a storm of identical messages into one counted line each. The
+  // summary is shared with formatSweep, hence the extracted helper.
+  lines.push(...formatPageErrors(report.pageErrors, palette));
 
   return lines.join('\n');
 }

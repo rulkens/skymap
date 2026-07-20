@@ -45,21 +45,33 @@
  * ('npx playwright install chromium').
  */
 
-import { chromium, type Browser } from '@playwright/test';
+import { chromium, type Browser, type BrowserContext, type Page } from '@playwright/test';
 import { PERF_SCENARIOS, type PerfScenario } from './perfScenarios';
 import type { ScenarioReport, LayerStat } from './scenarioReport';
+import type { SweepReport, SweepScale, SweepPass } from './sweepReport';
 import { statsOf } from '../utils/perf/statsOf';
 import { floorsOf } from '../utils/perf/floorsOf';
 import { frameTotals } from '../utils/perf/frameTotals';
 import { median } from '../utils/perf/median';
 import { percentile } from '../utils/perf/percentile';
 import { formatReport } from '../utils/perf/formatReport';
+import { formatSweep } from '../utils/perf/formatSweep';
+import { scalingExponent } from '../utils/perf/scalingExponent';
+import { classifyBound } from '../utils/perf/classifyBound';
 import { ansiPalette } from '../utils/cli/ansiPalette';
 import type { PerfSample } from '../../src/@types/perf/PerfSample';
 
-// Fixed viewport for every run: pixel area is part of what determines pass cost,
-// so it stays constant across scenarios and only --dpr scales the backing store.
+// Fixed viewport for every non-sweep run: pixel area is part of what determines
+// pass cost, so it stays constant across scenarios and only --dpr scales the
+// backing store. --sweep deliberately varies the viewport (see SWEEP_SCALES).
 const VIEWPORT = { width: 1400, height: 900 };
+
+// The viewport multipliers --sweep measures each scenario at. Areas ≈
+// 0.25/1/2.25/4× span ~16×, enough spread for an honest log-log slope fit while
+// keeping the run to four contexts per scenario. dpr stays fixed at
+// options.dpr — the app clamps its backing store to min(dpr, 2), so viewport is
+// the only lever that raises pixel count without a ceiling (see sweepReport).
+const SWEEP_SCALES = [0.5, 1.0, 1.5, 2.0] as const;
 
 // The two encode strategies the hook can flip between. `merged` bills one
 // timing slot per render-step GROUP (the production shape); `perLayerTimed`
@@ -73,8 +85,11 @@ type PerfOptions = {
   dpr: number;
   frames: number;
   url: string;
-  /** Emit the raw `ScenarioReport[]` as JSON on stdout instead of pretty tables. */
+  /** Emit the raw report array as JSON on stdout instead of pretty tables. */
   json: boolean;
+  /** Sweep each scenario across SWEEP_SCALES and classify each pass fragment/
+   *  vertex-bound, instead of the single-viewport merged+per-layer run. */
+  sweep: boolean;
 };
 
 /**
@@ -89,12 +104,15 @@ function parseArgs(argv: readonly string[]): PerfOptions {
     frames: 30,
     url: 'http://localhost:5173',
     json: false,
+    sweep: false,
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === undefined) continue;
     if (arg === '--json') {
       options.json = true;
+    } else if (arg === '--sweep') {
+      options.sweep = true;
     } else if (arg === '--scenario' || arg === '--dpr' || arg === '--frames' || arg === '--url') {
       const value = argv[++i];
       if (value === undefined) throw new Error(`${arg} requires a value`);
@@ -116,7 +134,7 @@ function parseArgs(argv: readonly string[]): PerfOptions {
       if (arg === '--url') options.url = value.replace(/\/$/, '');
     } else {
       throw new Error(
-        `unknown flag '${arg}' (known: --scenario, --dpr, --frames, --url, --json)`,
+        `unknown flag '${arg}' (known: --scenario, --dpr, --frames, --url, --json, --sweep)`,
       );
     }
   }
@@ -144,9 +162,87 @@ async function launchChromium(): Promise<Browser> {
 }
 
 /**
- * Measure ONE scenario: boot the perf page in a fresh context, wait for the
- * hook + `ready`, read the slotGroups map, then sample both strategies and
- * assemble the report. The context is closed by the caller.
+ * bootPerfPage — open a page in `context`, wire the page-error collectors, wait
+ * for the `__skymapPerf` hook + its `ready` gate, and read the `slotGroups`
+ * map. Returns everything a measurement path needs to start sampling.
+ *
+ * Extracted so BOTH the single-viewport `measureScenario` and the multi-scale
+ * `measureSweep` boot identically — the sequence (handlers, `goto ?perf`, wait
+ * for hook, await `ready`, snapshot `slotGroups`) is the exact contract the app
+ * seam expects, and duplicating it invites the two paths to drift.
+ *
+ * Page errors are collected rather than warned inline: a noisy page would spam
+ * stderr and (in --json mode) risk leaking onto stdout. The formatters collapse
+ * them to a ⚠ summary; JSON mode surfaces them raw. Mirrors recordTour's
+ * handlers, but stores instead of printing. The returned `pageErrors` array is
+ * live — it keeps filling as the page runs, so callers read it AFTER sampling.
+ */
+async function bootPerfPage(
+  context: BrowserContext,
+  url: string,
+): Promise<{ page: Page; slotGroups: Record<string, string>; pageErrors: string[] }> {
+  const page = await context.newPage();
+  const pageErrors: string[] = [];
+  page.on('pageerror', (err) => pageErrors.push(`error: ${err.message}`));
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') pageErrors.push(`console.error: ${msg.text()}`);
+  });
+
+  await page.goto(`${url}/?perf`, { waitUntil: 'load' });
+  await page.waitForFunction(
+    () => (window as unknown as { __skymapPerf?: unknown }).__skymapPerf !== undefined,
+    undefined,
+    { polling: 100 },
+  );
+  // `ready` already debounces "engine ready + loads settled" over a ~1 s
+  // window, so awaiting it (no harness-side timeout) is the whole boot wait.
+  await page.evaluate(
+    () => (window as unknown as { __skymapPerf: { ready: Promise<void> } }).__skymapPerf.ready,
+  );
+  const slotGroups = (await page.evaluate(
+    () =>
+      (window as unknown as { __skymapPerf: { slotGroups: Record<string, string> } }).__skymapPerf
+        .slotGroups,
+  )) as Record<string, string>;
+  return { page, slotGroups, pageErrors };
+}
+
+/**
+ * sampleStrategy — flip the encode strategy, hard-cut to `pose`, and collect
+ * `frames` frames of per-pass timings. The evaluate body is the app-seam
+ * protocol: setStrategy (next-frame flip) → setPose (hard-cut + arm auto-rotate,
+ * resolves on the next rAF) → collectTimings (subscribe, accumulate, resolve).
+ * Auto-rotate keeps the render-on-demand loop awake for the whole sampling
+ * window with no manual pump. Shared by both measurement paths.
+ */
+async function sampleStrategy(
+  page: Page,
+  strategy: string,
+  pose: PerfScenario['pose'],
+  frames: number,
+): Promise<PerfSample[]> {
+  return (await page.evaluate(
+    async (args) => {
+      const hook = (
+        window as unknown as {
+          __skymapPerf: {
+            setStrategy: (s: string) => void;
+            setPose: (p: typeof args.pose) => Promise<void>;
+            collectTimings: (n: number) => Promise<{ slot: string; ms: number }[]>;
+          };
+        }
+      ).__skymapPerf;
+      hook.setStrategy(args.strategy);
+      await hook.setPose(args.pose);
+      return hook.collectTimings(args.frames);
+    },
+    { strategy, pose, frames },
+  )) as PerfSample[];
+}
+
+/**
+ * Measure ONE scenario: boot the perf page in a fresh context, sample both
+ * strategies, and assemble the report. The context is closed by the caller.
  */
 async function measureScenario(
   browser: Browser,
@@ -158,33 +254,7 @@ async function measureScenario(
     deviceScaleFactor: options.dpr,
   });
   try {
-    const page = await context.newPage();
-    // Collect page errors rather than warning inline: a noisy page would spam
-    // stderr and (in --json mode) risk leaking onto stdout. formatReport
-    // collapses them to a ⚠ summary; JSON mode surfaces them raw. Mirrors
-    // recordTour's handlers, but stores instead of printing.
-    const pageErrors: string[] = [];
-    page.on('pageerror', (err) => pageErrors.push(`error: ${err.message}`));
-    page.on('console', (msg) => {
-      if (msg.type() === 'error') pageErrors.push(`console.error: ${msg.text()}`);
-    });
-
-    await page.goto(`${options.url}/?perf`, { waitUntil: 'load' });
-    await page.waitForFunction(
-      () => (window as unknown as { __skymapPerf?: unknown }).__skymapPerf !== undefined,
-      undefined,
-      { polling: 100 },
-    );
-    // `ready` already debounces "engine ready + loads settled" over a ~1 s
-    // window, so awaiting it (no harness-side timeout) is the whole boot wait.
-    await page.evaluate(
-      () => (window as unknown as { __skymapPerf: { ready: Promise<void> } }).__skymapPerf.ready,
-    );
-    const slotGroups = (await page.evaluate(
-      () =>
-        (window as unknown as { __skymapPerf: { slotGroups: Record<string, string> } }).__skymapPerf
-          .slotGroups,
-    )) as Record<string, string>;
+    const { page, slotGroups, pageErrors } = await bootPerfPage(context, options.url);
 
     const statsByStrategy: Record<string, LayerStat[]> = {};
     // Per-frame totals per strategy: the sum of every slot on a frame, then the
@@ -193,27 +263,7 @@ async function measureScenario(
     // mixes frames and inflates (see frameTotals). Empty samples → zeroed.
     const totalsByStrategy: Record<string, { median: number; p90: number }> = {};
     for (const strategy of STRATEGIES) {
-      // setStrategy (next-frame flip) → setPose (hard-cut + arm auto-rotate,
-      // resolves on the next rAF) → collectTimings (subscribe, accumulate
-      // `frames` frames, resolve). Auto-rotate keeps the render-on-demand loop
-      // awake for the whole sampling window with no manual pump.
-      const samples = (await page.evaluate(
-        async (args) => {
-          const hook = (
-            window as unknown as {
-              __skymapPerf: {
-                setStrategy: (s: string) => void;
-                setPose: (p: typeof args.pose) => Promise<void>;
-                collectTimings: (n: number) => Promise<{ slot: string; ms: number }[]>;
-              };
-            }
-          ).__skymapPerf;
-          hook.setStrategy(args.strategy);
-          await hook.setPose(args.pose);
-          return hook.collectTimings(args.frames);
-        },
-        { strategy, pose: scenario.pose, frames: options.frames },
-      )) as PerfSample[];
+      const samples = await sampleStrategy(page, strategy, scenario.pose, options.frames);
       statsByStrategy[strategy] = statsOf(samples);
       const t = frameTotals(samples);
       totalsByStrategy[strategy] =
@@ -242,6 +292,93 @@ async function measureScenario(
   }
 }
 
+/**
+ * measureSweep — measure ONE scenario at every SWEEP_SCALES viewport and fit
+ * each merged pass's GPU-time-vs-pixels slope, so it can be labelled
+ * fragment/fill-bound vs vertex/CPU-bound (see scalingExponent + classifyBound).
+ *
+ * Runs the MERGED strategy ONLY: it is the production pass shape, and sampling
+ * one strategy per scale keeps the sweep to |scales| contexts rather than
+ * |scales|×|strategies|. Each scale is a fresh context at the scaled viewport
+ * (dpr held at options.dpr — viewport, not dpr, is the pixel-count lever the app
+ * doesn't clamp). Per scale we keep each group's median ms and the whole-frame
+ * total median; the slope is fitted over `{ x: pixels, y: median ms }`.
+ */
+async function measureSweep(
+  browser: Browser,
+  scenario: PerfScenario,
+  options: PerfOptions,
+): Promise<SweepReport> {
+  const scales: SweepScale[] = [];
+  const pageErrors: string[] = [];
+  // Per scale, index-aligned to `scales`: the merged per-group stats and the
+  // whole-frame total median.
+  const mergedByScale: LayerStat[][] = [];
+  const totalMedianByScale: number[] = [];
+
+  for (const scale of SWEEP_SCALES) {
+    const width = Math.round(VIEWPORT.width * scale);
+    const height = Math.round(VIEWPORT.height * scale);
+    // Backing-store pixels: the app renders client size × clamped dpr, and dpr is
+    // held fixed here, so pixel count is client area × dpr² (see sweepReport).
+    const pixels = width * height * options.dpr * options.dpr;
+    scales.push({ scale, width, height, pixels });
+
+    const context = await browser.newContext({
+      viewport: { width, height },
+      deviceScaleFactor: options.dpr,
+    });
+    try {
+      const boot = await bootPerfPage(context, options.url);
+      const samples = await sampleStrategy(boot.page, 'merged', scenario.pose, options.frames);
+      mergedByScale.push(statsOf(samples));
+      const t = frameTotals(samples);
+      totalMedianByScale.push(t.length === 0 ? 0 : median(t));
+      pageErrors.push(...boot.pageErrors);
+    } finally {
+      await context.close();
+    }
+  }
+
+  // Union of group slots across scales, in first-seen order — a slot absent at
+  // one scale reads 0 ms there (filtered out of the fit by scalingExponent).
+  const slotOrder: string[] = [];
+  const seen = new Set<string>();
+  for (const stats of mergedByScale) {
+    for (const stat of stats) {
+      if (!seen.has(stat.slot)) {
+        seen.add(stat.slot);
+        slotOrder.push(stat.slot);
+      }
+    }
+  }
+
+  const passes: SweepPass[] = slotOrder.map((slot) => {
+    const perScaleMs = mergedByScale.map(
+      (stats) => stats.find((stat) => stat.slot === slot)?.median ?? 0,
+    );
+    const exponent = scalingExponent(scales.map((sc, i) => ({ x: sc.pixels, y: perScaleMs[i]! })));
+    return { slot, perScaleMs, exponent, label: classifyBound(exponent) };
+  });
+
+  const totalExponent = scalingExponent(
+    scales.map((sc, i) => ({ x: sc.pixels, y: totalMedianByScale[i]! })),
+  );
+  return {
+    scenario: scenario.name,
+    dpr: options.dpr,
+    frames: options.frames,
+    scales,
+    passes,
+    total: {
+      perScaleMs: totalMedianByScale,
+      exponent: totalExponent,
+      label: classifyBound(totalExponent),
+    },
+    pageErrors,
+  };
+}
+
 async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
 
@@ -268,17 +405,25 @@ async function main(): Promise<void> {
   // redirect stays parseable; a scenario that fails is simply absent from the
   // array (its error is logged to stderr).
   const reports: ScenarioReport[] = [];
+  const sweeps: SweepReport[] = [];
   try {
     // Isolate each scenario: a dev-server hiccup or page crash on one vantage
     // shouldn't abort the whole sweep. Log it, mark the run failed, move on.
     for (const scenario of selected) {
       // Progress → stderr always, so it never contaminates JSON stdout and
       // interleaves cleanly with the pretty tables on a terminal.
-      console.error(`\nmeasuring '${scenario.name}' (${options.frames} frames @ dpr ${options.dpr}) ...`);
+      const mode = options.sweep ? `sweep ${SWEEP_SCALES.join('/')}×` : `${options.frames} frames`;
+      console.error(`\nmeasuring '${scenario.name}' (${mode} @ dpr ${options.dpr}) ...`);
       try {
-        const report = await measureScenario(browser, scenario, options);
-        if (options.json) reports.push(report);
-        else console.log(formatReport(report, palette));
+        if (options.sweep) {
+          const report = await measureSweep(browser, scenario, options);
+          if (options.json) sweeps.push(report);
+          else console.log(formatSweep(report, palette));
+        } else {
+          const report = await measureScenario(browser, scenario, options);
+          if (options.json) reports.push(report);
+          else console.log(formatReport(report, palette));
+        }
       } catch (err) {
         console.error(
           `scenario '${scenario.name}' failed: ${err instanceof Error ? err.message : String(err)}`,
@@ -286,7 +431,7 @@ async function main(): Promise<void> {
         process.exitCode = 1;
       }
     }
-    if (options.json) console.log(JSON.stringify(reports, null, 2));
+    if (options.json) console.log(JSON.stringify(options.sweep ? sweeps : reports, null, 2));
   } finally {
     await browser.close();
   }
