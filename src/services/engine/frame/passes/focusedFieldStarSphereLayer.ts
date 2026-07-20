@@ -91,6 +91,8 @@
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { EngineState } from '../../../../@types/engine/state/EngineState';
+import type { SelectionRow } from '../../../../@types/engine/SelectionRow';
 import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
@@ -104,12 +106,40 @@ import { resolvesToSphere } from '../../../../utils/scene/resolvesToSphere';
 import { starTintFromBpRp } from '../../../../utils/color/starTintFromBpRp';
 import { drawFlooredSpherePick } from '../../helpers/drawFlooredSpherePick';
 
+/** The narrowed star arm of `SelectionRow` — the only arm this layer draws. */
+type StarSelectionRow = Extract<SelectionRow, { type: 'star' }>;
+
 /**
- * The focused-star sphere resolves iff the current `select` row is a `star`
- * whose solar-radius sphere clears `STAR_RESOLVE_PX` at the camera-to-star
- * distance. Returns the resolvedness given the camera position — shared by
- * `enabled` (reads `ctx.drawCamPos`, the absolute frame) and could be reused by
- * `draw` (which coincides because `RENDER_ORIGIN_MPC` is the origin).
+ * The star row this layer draws a sphere for: the `select` slot's row if it is a
+ * star, else the `focus` slot's row if it is a star, else null.
+ *
+ * Why the fallback exists: the `#focus=star-<recordIdx>` URL-restore path
+ * dispatches `updateSelectionFocus`, filling ONLY the `focus` slot and leaving
+ * `select` null — so reading `select` alone lands the deep link on an invisible
+ * star, because the Gaia point sprite is distance-retired in-shader at this range
+ * (spec constraint 3) and nothing else draws the body. Both slots hold the same
+ * resolved `SelectionRow` shape, so a `focus` star row carries the same
+ * positionMpc/radiusKm/bpRp/index the sphere reads.
+ *
+ * Why the star-check is PER SLOT, not a raw `select ?? focus`: a non-star row
+ * lingering in `select` (e.g. a galaxy selected while a star `focus` persists)
+ * must not suppress a star sitting in `focus`. Each slot is tested for star-ness
+ * independently; `select` wins only when `select` ITSELF is a star.
+ */
+function focusedStarRow(state: EngineState): StarSelectionRow | null {
+  const { select, focus } = state.selectionRows;
+  if (select !== null && select.type === 'star') return select;
+  if (focus !== null && focus.type === 'star') return focus;
+  return null;
+}
+
+/**
+ * The focused-star sphere resolves iff the resolved `focusedStarRow` (the
+ * `select` star, else the `focus` star) has a solar-radius sphere clearing
+ * `STAR_RESOLVE_PX` at the camera-to-star distance. Returns the resolvedness
+ * given the camera position — shared by `enabled` (reads `ctx.drawCamPos`, the
+ * absolute frame) and could be reused by `draw` (which coincides because
+ * `RENDER_ORIGIN_MPC` is the origin).
  */
 function starResolves(
   row: { positionMpc: Readonly<[number, number, number]>; radiusKm: number },
@@ -143,16 +173,16 @@ export const focusedFieldStarSphereLayer: ContentLayer = {
     // Handle first (pre-bootstrap fixtures carry null handles + bare ctx), then
     // the row kind, then the camera-to-star resolve gate.
     if (state.gpu.starRenderer === null) return false;
-    const row = state.selectionRows.select;
-    if (row === null || row.type !== 'star') return false;
+    const row = focusedStarRow(state);
+    if (row === null) return false;
     return starResolves(row, ctx.drawCamPos, ctx.canvasSize.height, ctx.fovYRad);
   },
 
   draw(pass, view, _ctx, state) {
     const renderer = state.gpu.starRenderer;
     if (renderer === null) return;
-    const row = state.selectionRows.select;
-    if (row === null || row.type !== 'star') return;
+    const row = focusedStarRow(state);
+    if (row === null) return;
 
     // Compose from the slab's f64 vp — see the module header's f64 seam. Radius
     // is the stamped solar radius resolved into Mpc. A field star is a flat-
@@ -184,8 +214,8 @@ export const focusedFieldStarSphereLayer: ContentLayer = {
   drawPick(pass, view, ctx, state) {
     const pickRenderer = state.gpu.bodyPickRenderer;
     if (pickRenderer === null) return;
-    const row = state.selectionRows.select;
-    if (row === null || row.type !== 'star') return;
+    const row = focusedStarRow(state);
+    if (row === null) return;
 
     // Floor the PICK radius to the shared min footprint (visual sphere untouched)
     // via the shared `drawFlooredSpherePick` recipe: the descent gates this sphere

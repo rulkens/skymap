@@ -144,6 +144,25 @@ function pickStateWith(
   } as unknown as EngineState;
 }
 
+/**
+ * State with BOTH slots set explicitly. The select-only `stateWith` /
+ * `pickStateWith` can't express the fallback the URL-restore path exercises:
+ * `#focus=star-<id>` fills only `focus`, leaving `select` null, so the layer
+ * resolves its row as "the `select` star, else the `focus` star". `gpu` carries
+ * whichever renderer the method under test reads (starRenderer for `draw`,
+ * bodyPickRenderer for `drawPick`).
+ */
+function slotState(
+  select: SelectionRow | null,
+  focus: SelectionRow | null,
+  gpu: Record<string, unknown> = { starRenderer: { draw: vi.fn() } },
+): EngineState {
+  return {
+    gpu,
+    selectionRows: { select, focus, hover: null },
+  } as unknown as EngineState;
+}
+
 describe('focusedFieldStarSphereLayer.enabled', () => {
   it('enables only for a star row within sphere-resolve range', () => {
     // A star row with the camera half an AU off it: the sphere clears
@@ -170,6 +189,28 @@ describe('focusedFieldStarSphereLayer.enabled', () => {
     ).toBe(false);
   });
 
+  it('falls back to the focus slot when select is empty — the URL-restore path', () => {
+    // `#focus=star-<recordIdx>` dispatches updateSelectionFocus, filling ONLY
+    // the focus slot; select stays null. The sphere must still resolve, else the
+    // deep link arrives at an invisible star (the Gaia sprite is distance-retired
+    // in-shader at this range). A gate reading select alone returns false here.
+    expect(
+      focusedFieldStarSphereLayer.enabled(slotState(null, STAR_ROW), makeCtx(halfAuFrom(STAR_POS))),
+    ).toBe(true);
+  });
+
+  it('a non-star select does not suppress a star focus — the star-check is per-slot', () => {
+    // A galaxy lingering in select while a star occupies focus: the fallback is
+    // "select IF it is a star, else focus IF it is a star", checked per slot — NOT
+    // a raw `select ?? focus` (which would pick the galaxy and return false).
+    expect(
+      focusedFieldStarSphereLayer.enabled(
+        slotState(GALAXY_ROW, STAR_ROW),
+        makeCtx(halfAuFrom(STAR_POS)),
+      ),
+    ).toBe(true);
+  });
+
   it('is false while the starRenderer is null (pre-bootstrap), even for a resolvable star', () => {
     // Handle first: a null renderer disables before any ctx / row read, so a
     // bare ctx never trips it (renderFrame fixtures carry null handles).
@@ -179,6 +220,23 @@ describe('focusedFieldStarSphereLayer.enabled', () => {
         {} as unknown as ReadyFrameContext,
       ),
     ).toBe(false);
+  });
+});
+
+describe('focusedFieldStarSphereLayer.draw', () => {
+  it('draws the focus-slot star when select is empty (fallback reaches the draw site)', () => {
+    // draw is a distinct call site from enabled: even with enabled true, a draw
+    // that read select alone would find null and early-return, leaving the URL-
+    // restored sphere absent. The select-else-focus fallback must reach here too.
+    const CAM = halfAuFrom(STAR_POS);
+    const drawSpy = vi.fn();
+    focusedFieldStarSphereLayer.draw(
+      PASS_STUB,
+      makeNear0View(CAM),
+      makeCtx(CAM),
+      slotState(null, STAR_ROW, { starRenderer: { draw: drawSpy } }),
+    );
+    expect(drawSpy).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -244,6 +302,20 @@ describe('focusedFieldStarSphereLayer.drawPick', () => {
     // The pick basis is strictly larger than the visual basis (floor active here) —
     // this is what a missing floor would fail (the two would be equal).
     expect(Math.abs(pickMvp[0]!)).toBeGreaterThan(Math.abs(drawMvp[0]!));
+  });
+
+  it('picks the focus-slot star when select is empty (fallback reaches the pick site)', () => {
+    // The URL-restore path fills only focus; drawPick is a THIRD call site (after
+    // enabled + draw) that must apply the same select-else-focus fallback, else the
+    // deep-linked star sphere renders but is unclickable.
+    const drawSphereSpy = vi.fn();
+    focusedFieldStarSphereLayer.drawPick!(
+      PASS_STUB,
+      makeNear0View(CAM),
+      makeCtx(CAM),
+      slotState(null, STAR_ROW, { bodyPickRenderer: { drawSphere: drawSphereSpy } }),
+    );
+    expect(drawSphereSpy).toHaveBeenCalledTimes(1);
   });
 
   it('no-ops for a non-star row and while the bodyPickRenderer is null (gate parity with draw)', () => {

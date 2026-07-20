@@ -42,7 +42,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Rendering
 
-- [ ] **Field-star body braided to `select` slot** `ready` **important** — `#focus=star-<id>` arrives at an invisible star and deselect-at-close-range blinks the body out; sphere gates on `select` while URL fills `focus` and the sprite is distance-retired in-shader. → [details](backlog/2026-07-21-star-body-selection-braid.md)
+- [ ] **Field-star body presence-by-proximity** `needs-design` — un-braid the sphere layer's row from selection so deselecting at close range no longer blinks the star out. → [details](backlog/2026-07-21-star-body-presence-by-proximity.md)
 - [ ] **Saturn ring brightness** `ready` — the ring reads too dim next to the new limb-darkened disc; retune ring albedo/exposure (surfaced in the planet-atmospherics per-body visual pass).
 - [ ] **Photoreal-Earth follow-ups** `deferred` — drift traps + fidelity gaps from plans A–E (equirect-uv mirror, setMap kind table, shared proxy-sphere idiom). → [details](backlog/2026-07-19-photoreal-earth-followups.md)
 - [ ] **Titan atmosphere** `needs-design` — minimal params-row-over-flat-sphere vs full Venus-style cloud-as-surface + limb treatment (needs a texture through the fetch/build pipeline). → [details](backlog/2026-07-19-titan-atmosphere.md)
