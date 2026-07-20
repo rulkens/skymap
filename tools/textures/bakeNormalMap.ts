@@ -75,6 +75,31 @@
 export const DEFAULT_EXAGGERATION = 4;
 
 /**
+ * Per-body gradient-gain override for the normal bake. A body ABSENT from this
+ * table bakes at DEFAULT_EXAGGERATION — the data-gate shape of LIMB_DARKENING_PARAMS
+ * (absent row ⇒ default behaviour, no branch). The Moon's low-contrast LOLA relief
+ * wants a stronger gain than Earth's coastlines; the seed here is eye-tuned in the
+ * F4 shader visual pass, not a fixed contract.
+ *
+ * Keyed by `string`, not `BodyTextureId`, so this module stays PURE (no `src/`
+ * import) — the same reason `bakeNormalMap` takes plain typed arrays. The build's
+ * caller passes its `BodyTextureId`, which structurally satisfies `string`, and a
+ * `tools/` test drift-catches every key against the real body registry.
+ */
+export const NORMAL_EXAGGERATION: Readonly<Record<string, number>> = {
+  moon: 8, // seed — stronger than DEFAULT_EXAGGERATION (4); tuned by eye at the terminator in F4
+};
+
+/**
+ * Resolve a body's bake exaggeration: its override if the table names it, else
+ * DEFAULT_EXAGGERATION. The `??` is the whole data-gate — an absent body is not a
+ * branch, it is the default.
+ */
+export function exaggerationFor(bodyId: string): number {
+  return NORMAL_EXAGGERATION[bodyId] ?? DEFAULT_EXAGGERATION;
+}
+
+/**
  * Sample the heightfield with equirect addressing: wrap the column (longitude
  * seam) and clamp the row (poles). Returns the byte value at the resolved texel.
  */

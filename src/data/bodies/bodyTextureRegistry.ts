@@ -79,7 +79,10 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
   // Uranus / Neptune are near-featureless discs — small is the highest useful tier.
   uranus: { bodyId: 'uranus', kinds: { surface: 'small' }, provenance: 'sss' },
   neptune: { bodyId: 'neptune', kinds: { surface: 'small' }, provenance: 'sss' },
-  moon: { bodyId: 'moon', kinds: { surface: 'large' }, provenance: 'sss' },
+  // The Moon carries a `normal` (tangent-space relief) map beyond its albedo:
+  // BAKED from the LOLA elevation heightfield, capped at `medium` (4k) like
+  // Earth's — a normal map downsamples cleanly, so 4k is the useful ceiling.
+  moon: { bodyId: 'moon', kinds: { surface: 'large', normal: 'medium' }, provenance: 'sss' },
   io: { bodyId: 'io', kinds: { surface: 'large' }, provenance: 'usgs' },
   // Europa + Callisto: USGS mono maps — tinted at build time to restore hue.
   europa: {

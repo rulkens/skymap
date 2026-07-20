@@ -5,7 +5,7 @@
  *
  * ### One pipeline, per-body resources
  *
- * All these bodies share one UV-sphere mesh, one pipeline, and one four-binding
+ * All these bodies share one UV-sphere mesh, one pipeline, and one five-binding
  * layout — they differ only in their surface texture and their per-frame MVP +
  * lighting uniforms. The renderer therefore holds a `Map<BodyTextureId, …>` of
  * per-body GPU resources: each body id owns its OWN uniform buffer + bind group
@@ -18,35 +18,49 @@
  *
  * ### Placeholder posture
  *
- * A body is drawable before its bitmap lands: at first reference it binds a 1×1
- * mid-grey placeholder surface texture and a 1×1 transparent placeholder ring
- * texture, so the geometry is visible-but-plain rather than absent. `setTexture`
- * swaps in the real surface texture (sized + full-mip-chained); `setRingTexture`
- * swaps binding 3 with Saturn's ring-alpha strip. The ring binding is a real
- * texture on every body so ONE pipeline serves ringed and ringless bodies —
- * `ringOuterRatio == 0` short-circuits any ring sampling in the fragment.
+ * A body is drawable before its bitmaps land: at first reference each of its
+ * sphere-map bindings holds a 1×1 placeholder (mid-grey for `surface`) and a 1×1
+ * transparent placeholder ring texture, so the geometry is visible-but-plain
+ * rather than absent. `setMap(bodyId, kind, …)` swaps in the real map for one
+ * `TextureKind`; `setRingTexture` swaps binding 3 with Saturn's ring-alpha strip.
+ * The ring binding is a real texture on every body so ONE pipeline serves ringed
+ * and ringless bodies — `ringOuterRatio == 0` short-circuits any ring sampling in
+ * the fragment.
+ *
+ * ### Per-kind sphere maps
+ *
+ * The sphere-map bindings are driven by a per-kind config table inside the
+ * renderer, so a new map role is added as ONE config row rather than a fresh
+ * method + binding branch. Two kinds today: `surface` (binding 2, sRGB colour)
+ * and `normal` (binding 4, LINEAR `rgba8unorm` tangent-space relief — the RG
+ * channels are slope data, so it must never be an sRGB format). `setMap` is the
+ * single upload entry keyed by `TextureKind`.
  */
 
 import type { Renderer } from './Renderer';
 import type { BodyTextureId } from '../data/BodyTextureId';
+import type { TextureKind } from '../data/TextureKind';
 
 export type TexturedBodyRenderer = Renderer & {
   /**
-   * Replace a body's surface texture (initially a 1×1 mid-grey placeholder) with
-   * the supplied equirectangular bitmap. Creates a fresh `rgba8unorm-srgb`
-   * texture sized to the bitmap with a full mip chain (`mipLevelCount` levels +
-   * `RENDER_ATTACHMENT` usage), uploads level 0, runs `generateMipChain`, then
-   * rebuilds that body's bind group.
+   * Replace a body's map for one `TextureKind` (initially a 1×1 placeholder) with
+   * the supplied equirectangular bitmap. Creates a fresh texture in the kind's
+   * configured format sized to the bitmap with a full mip chain (`mipLevelCount`
+   * levels + `RENDER_ATTACHMENT` usage), uploads level 0 with `flipY`, runs
+   * `generateMipChain`, then rebuilds that body's bind group so subsequent draws
+   * sample the real map. The kind's binding + format come from the renderer's
+   * per-kind config, so adding a map role is one config row, not a new method.
    */
-  setTexture(bodyId: BodyTextureId, bitmap: ImageBitmap): void;
+  setMap(bodyId: BodyTextureId, kind: TextureKind, bitmap: ImageBitmap): void;
   /**
-   * Free a body's surface texture and revert its binding to the shared 1×1
-   * placeholder — the eviction inverse of `setTexture`. Called from the
+   * Free a body's sphere maps and revert their bindings to the shared 1×1
+   * placeholders — the eviction inverse of `setMap`. Called from the
    * `bodyTextures` slot's `onRelease` when the body leaves its proximity radius,
-   * so the (up to ~135 MB at 8 k) GPU texture is actually released rather than
-   * leaked. Destroys the body's `GPUTexture`, rebuilds its bind group against the
-   * placeholder, and leaves the per-body uniform buffer intact (cheap, and the
-   * body stays drawable-but-plain). A no-op for a body that was never textured.
+   * so the (up to ~135 MB at 8 k) GPU textures are actually released rather than
+   * leaked. Destroys every resident sphere-map `GPUTexture`, rebuilds the bind
+   * group against the placeholders, and leaves the per-body uniform buffer + ring
+   * texture intact (cheap, and the body stays drawable-but-plain). A no-op for a
+   * body with no resident maps.
    */
   clearTexture(bodyId: BodyTextureId): void;
   /**

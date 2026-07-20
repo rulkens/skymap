@@ -16,6 +16,27 @@
 // and band the terminator. 'normalize' restores unit length before the dot --
 // the standard per-fragment normal fix for smooth-shaded spheres.
 //
+// ## Tangent-space relief (normal mapping, binding 4)
+//
+// The geometric normal 'ng' is perturbed by a tangent-space relief map (binding 4,
+// LINEAR RG -- 'bakeNormalMap.ts' stores nx along +u=east in R, ny along +v=north
+// in G; nz is always positive and reconstructed) via the shared
+// 'lib/normalMap.wesl' 'perturbNormal', so airless bodies like the Moon catch the
+// sun on their craters at the terminator. It needs an east tangent 'T', but rather
+// than carry a tangent varying (which would touch io.wesl + vertex.wesl) we build
+// it in the fragment as 'cross(+z, ng)': the uvSphereMesh pole is +z, so that
+// cross is the surface east direction. At the poles ('ng ~ +-z') 'T -> 0', but
+// relief vanishes at the poles anyway, so the degeneracy is visually harmless.
+// 'perturbNormal' Gram-Schmidt-re-orthonormalizes 'T' against 'ng' before use, so
+// the raw cross need not be exactly perpendicular. The perturbed 'n' then feeds
+// EVERY downstream lighting term (litShade, the Minnaert noL/noV, the view vector,
+// and the ring-shadow solve) in place of 'ng'.
+//
+// The effect is fully DATA-gated: a body with no 'normal' map binds the shared
+// 1x1 flat placeholder '(128,128,255)', which decodes to '(0,0,1)' -- a zero
+// perturbation -- so 'perturbNormal' returns 'ng' unchanged and that body shades
+// identically to the un-perturbed geometric-normal path. No uniform flag needed.
+//
 // ## Ring-on-planet shadow (analytic, no shadow maps)
 //
 // A ringed body ('u.ringOuterRatio > 0') casts its ring's shadow onto the
@@ -67,6 +88,7 @@ import package::bodies::texturedBody::io::VSOut;
 import package::lib::sphere::TexturedBodyUniforms;
 import package::lib::bodyLighting::litShade;
 import package::lib::limbDarkening::limbDarkening;
+import package::lib::normalMap::perturbNormal;
 
 @group(0) @binding(0) var<uniform> u: TexturedBodyUniforms;
 @group(0) @binding(1) var bodySampler: sampler;
@@ -77,6 +99,12 @@ import package::lib::limbDarkening::limbDarkening;
 // all); sampled only inside the ring-shadow branch, which every ringless body
 // short-circuits before it runs.
 @group(0) @binding(3) var ringTexture: texture_2d<f32>;
+// Tangent-space relief map -- LINEAR 'rgba8unorm' RG slope (see the '## Tangent-
+// space relief' header). A real baked map on a body with a 'normal' row (the
+// Moon), the shared 1x1 flat placeholder '(128,128,255)' -> '(0,0,1)' on every
+// body without one. The placeholder decodes to a zero perturbation, so those
+// bodies shade exactly as the un-perturbed geometric-normal path (the data-gate).
+@group(0) @binding(4) var normalTexture: texture_2d<f32>;
 
 // Fraction of direct sunlight reaching surface point 'p' after the body's own
 // ring passes in front of the sun -- 1.0 when unshadowed. 'p' is the unit-sphere
@@ -121,12 +149,29 @@ fn ringSunVisibility(p: vec3<f32>, sunDir: vec3<f32>, innerRatio: f32, outerRati
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
-  let n = normalize(in.normalLocal);
+  // Geometric normal (renormalized -- interpolation across a face shortens it).
+  let ng = normalize(in.normalLocal);
+  // In-shader east tangent: cross(+z pole, ng). The uvSphereMesh pole is +z (its
+  // module header: 'z = sin(lat), north pole = +z'), so this cross is the surface
+  // east direction (+u). At the poles (ng ~ +-z) T -> 0, but relief vanishes at
+  // the poles anyway, so it is visually harmless (guard only if a pole artefact
+  // shows). Computing T here avoids a tangent VBO + varying, so io.wesl and
+  // vertex.wesl stay unchanged. 'perturbNormal' Gram-Schmidt-re-orthonormalizes T
+  // against ng and rebuilds the TBN, so a non-perpendicular T is corrected there.
+  let T = normalize(cross(vec3<f32>(0.0, 0.0, 1.0), ng));
+  // Perturbed shading normal. The LINEAR RG sample decodes to a tangent-space
+  // tilt; the flat placeholder '(0.5,0.5)' decodes to a zero perturbation, so a
+  // body with no baked map gets 'n == ng' exactly (the data-gate). Every
+  // downstream lighting term below reads this perturbed 'n', not 'ng'.
+  let n = perturbNormal(ng, T, textureSample(normalTexture, bodySampler, in.uv).rg);
   let albedo = textureSample(bodyTexture, bodySampler, in.uv).rgb;
   // Ring-on-planet shadow: the body's own ring can occult the sun for this
   // surface point. 'sunVis' is 1.0 when unshadowed (including every ringless
   // body, where 'ringOuterRatio == 0' short-circuits the whole computation).
-  let sunVis = ringSunVisibility(n, u.sunDirLocal, u.ringInnerRatio, u.ringOuterRatio);
+  // The solve uses the geometric position 'ng' (where the fragment sits on the
+  // unit sphere), NOT the perturbed shading normal 'n' -- perturbing the
+  // position would skew the ring-plane-crossing solve.
+  let sunVis = ringSunVisibility(ng, u.sunDirLocal, u.ringInnerRatio, u.ringOuterRatio);
   // Attenuate ONLY the direct (Lambert) term while the ambient floor rides
   // through untouched: scaling the unit sun direction by the non-negative 'sunVis'
   // scales the Lambert dot by the same factor ('max' preserves a non-negative
@@ -135,12 +180,13 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // ('sunVis == 0') leaves exactly the ambient floor.
   let shade = litShade(n, u.sunDirLocal * sunVis);
   // Minnaert limb darkening: dims the disc toward its edge. 'noL' is the sun
-  // cosine (as Lambert), 'noV' the emission cosine toward the viewer -- V is
-  // 'camPosLocal - n' since the unit-sphere surface point IS the normal 'n'.
-  // 'u.limbStrength == 0' (every body without a param row) returns 1.0, so this
-  // is a no-op for them.
+  // cosine (as Lambert), 'noV' the emission cosine toward the viewer. The
+  // surface POSITION is 'ng' (the geometric unit-sphere point where the fragment
+  // sits), so 'V = camPosLocal - ng'; the emission cosine 'noV = dot(n, V)' then
+  // uses the perturbed shading normal 'n'. 'u.limbStrength == 0' (every body
+  // without a param row) returns 1.0, so this is a no-op for them.
   let noL = max(dot(n, u.sunDirLocal), 0.0);
-  let v = normalize(u.camPosLocal - n);
+  let v = normalize(u.camPosLocal - ng);
   let noV = max(dot(n, v), 0.0);
   let limb = limbDarkening(noL, noV, u.limbStrength, u.limbExponent);
   let colour = albedo * shade * limb;
