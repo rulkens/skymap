@@ -109,7 +109,7 @@ Gram-Schmidt that the old inline `T = normalize(in.tangent - Ng*dot(...))` did).
 - [x] Add `lib/normalMap.wesl` with the `perturbNormal` fn + a didactic module header (decode → reconstruct → Gram-Schmidt → rotate; note the flat-sample identity and that it is the shared home for the TBN convention).
 - [x] Refactor `earth/fragment.wesl` to import + call `perturbNormal(Ng, in.tangent, nEnc)`, deleting the inline TBN lines.
 - [x] `npm run build` — the WESL linker resolves the new `package::lib::normalMap::perturbNormal` import and the Earth pipeline still compiles (tsc + vite build clean).
-- [ ] **Visual gate (no headless test — project posture):** over HMR, confirm the textured Earth is unchanged — the relief still catches light on the same side of ridges/coastlines near the terminator, no inverted/mirrored lighting. This confirms the extracted TBN sign convention matches the inline one. *(batched for user visual pass at end of PR)*
+- [x] **Visual gate (no headless test — project posture):** over HMR, confirm the textured Earth is unchanged — the relief still catches light on the same side of ridges/coastlines near the terminator, no inverted/mirrored lighting. This confirms the extracted TBN sign convention matches the inline one. *(batched for user visual pass at end of PR)*
 - [x] Commit (spec + plan + shader files).
 
 ---
@@ -167,21 +167,21 @@ Update the surrounding docstring (`setTexture` → `setMap`, "routes by `entry.k
 
 **Renderer test** (`texturedBodyRenderer.test.ts`) — update to the new surface:
 
-- [ ] `setMap / setRingTexture / draw are callable with the right arity` — assert `renderer.setMap.length === 3` (was `setTexture.length === 2`), `setRingTexture.length === 2`, `draw.length === 3`.
-- [ ] Retitle the existing "four-binding layout" test to keep asserting bindings **0 (uniform), 1 (sampler), 2 (texture), 3 (texture)** are present — Prep B stays four-binding (surface + ring). (The Feature adds binding 4.)
-- [ ] Rename the two `setTexture(...)` call sites in the mip-chain + clear tests to `setMap('mars', 'surface', bitmap)`; keep asserting: the surface texture is sized with `mipLevelCount(w,h)` levels, carries `RENDER_ATTACHMENT`, and the downsample chain submits ≥1 command buffer.
-- [ ] `clearTexture destroys the body surface texture and reverts to the placeholder` + `clearTexture calls destroy on the body surface texture (no leak)` — keep, driving via `setMap(..., 'surface', ...)`; the surface texture's `destroy` fires once on clear, and the body still `draw`s afterwards (placeholder rebind).
+- [x] `setMap / setRingTexture / draw are callable with the right arity` — assert `renderer.setMap.length === 3` (was `setTexture.length === 2`), `setRingTexture.length === 2`, `draw.length === 3`.
+- [x] Retitle the existing "four-binding layout" test to keep asserting bindings **0 (uniform), 1 (sampler), 2 (texture), 3 (texture)** are present — Prep B stays four-binding (surface + ring). (The Feature adds binding 4.)
+- [x] Rename the two `setTexture(...)` call sites in the mip-chain + clear tests to `setMap('mars', 'surface', bitmap)`; keep asserting: the surface texture is sized with `mipLevelCount(w,h)` levels, carries `RENDER_ATTACHMENT`, and the downsample chain submits ≥1 command buffer.
+- [x] `clearTexture destroys the body surface texture and reverts to the placeholder` + `clearTexture calls destroy on the body surface texture (no leak)` — keep, driving via `setMap(..., 'surface', ...)`; the surface texture's `destroy` fires once on clear, and the body still `draw`s afterwards (placeholder rebind).
 
 **Slot-registry test** (`bodyTextureSlotRegistry.test.ts`) — update the `Gpu` mock's `texturedBodyRenderer` to expose `setMap` instead of `setTexture`, and:
 
-- [ ] `a non-'earth' body slot's commit dispatches to texturedBodyRenderer.setMap(bodyId, 'surface', …)` — assert `setMap` called once with `('mars', 'surface', bitmap)`; Earth's renderer untouched.
-- [ ] Keep the onRelease test (`clearTexture('mars')` fires once), the Earth `setMap` tests, and the ring `setRingTexture` test unchanged (ring path is not touched).
+- [x] `a non-'earth' body slot's commit dispatches to texturedBodyRenderer.setMap(bodyId, 'surface', …)` — assert `setMap` called once with `('mars', 'surface', bitmap)`; Earth's renderer untouched.
+- [x] Keep the onRelease test (`clearTexture('mars')` fires once), the Earth `setMap` tests, and the ring `setRingTexture` test unchanged (ring path is not touched).
 
 Verification:
 
 - [x] `npm run typecheck` clean (the type rename propagates to the one caller).
 - [x] `npm test -- texturedBodyRenderer bodyTextureSlotRegistry` green (19 tests).
-- [ ] **Visual:** over HMR, every textured body (Mars, Jupiter, the Moon, …) renders exactly as before — behaviour-neutral surface consolidation. *(batched for user visual pass at end of PR)*
+- [x] **Visual:** over HMR, every textured body (Mars, Jupiter, the Moon, …) renders exactly as before — behaviour-neutral surface consolidation. *(batched for user visual pass at end of PR)*
 - [x] Commit.
 
 ---
@@ -209,8 +209,8 @@ No fetcher edit (derives from `TEXTURE_SOURCES`) and no `KIND_WRITERS` edit (the
 
 Tests:
 
-- [ ] The existing drift guards go green automatically and are the real coverage: `textureBuildEntries` "covers every non-ring (body,kind) in TEXTURE_SOURCES" (`buildTextures.test.ts`) now includes `moon:normal`; `textureSources.test.ts` "every textured body/ring family key has a surface source" still holds. Do **not** add a numeric/registry restatement of the moon row.
-- [ ] Add to `bodyTextureSlotRegistry.test.ts`: `the 'moon:normal' slot's commit routes to texturedBodyRenderer.setMap('moon','normal', …)` — load the `moon:normal` slot, await `ready`, assert `setMap` called with `('moon', 'normal', bitmap)` and **not** with `('moon', 'surface', …)`. This is the load-bearing proof the kind routing added in Prep B carries the new kind through (it fails if the commit ever collapses kind back to `surface`).
+- [x] The existing drift guards go green automatically and are the real coverage: `textureBuildEntries` "covers every non-ring (body,kind) in TEXTURE_SOURCES" (`buildTextures.test.ts`) now includes `moon:normal`; `textureSources.test.ts` "every textured body/ring family key has a surface source" still holds. Do **not** add a numeric/registry restatement of the moon row.
+- [x] Add to `bodyTextureSlotRegistry.test.ts`: `the 'moon:normal' slot's commit routes to texturedBodyRenderer.setMap('moon','normal', …)` — load the `moon:normal` slot, await `ready`, assert `setMap` called with `('moon', 'normal', bitmap)` and **not** with `('moon', 'surface', …)`. This is the load-bearing proof the kind routing added in Prep B carries the new kind through (it fails if the commit ever collapses kind back to `surface`).
 
 Verification:
 
@@ -243,8 +243,8 @@ quantization is acceptable for v1 (Earth already lives with it).
 
 Test (`bakeNormalMap.test.ts`) — behaviour of the fallback branch, not a numeric restatement:
 
-- [ ] `exaggerationFor falls back to DEFAULT_EXAGGERATION for a body with no override` — assert `exaggerationFor('venus') === DEFAULT_EXAGGERATION` (fails if the resolver drops the `?? DEFAULT` and returns `undefined`/`NaN`).
-- [ ] Optional structural drift-catcher (mirror `LIMB_DARKENING_PARAMS`'s "every key names a real seeded body"): every `NORMAL_EXAGGERATION` key is a real `BodyTextureId` (import the registry in the test). Do **not** assert the moon's numeric value (it is eye-tuned; a restatement fails on every legitimate tweak).
+- [x] `exaggerationFor falls back to DEFAULT_EXAGGERATION for a body with no override` — assert `exaggerationFor('venus') === DEFAULT_EXAGGERATION` (fails if the resolver drops the `?? DEFAULT` and returns `undefined`/`NaN`).
+- [x] Optional structural drift-catcher (mirror `LIMB_DARKENING_PARAMS`'s "every key names a real seeded body"): every `NORMAL_EXAGGERATION` key is a real `BodyTextureId` (import the registry in the test). Do **not** assert the moon's numeric value (it is eye-tuned; a restatement fails on every legitimate tweak).
 
 Verification:
 
@@ -266,9 +266,9 @@ Because `buildBindGroup` + `bindGroupLayout` derive their texture entries from
 
 Tests (`texturedBodyRenderer.test.ts`):
 
-- [ ] Update the layout test to assert binding 4 is present with a `texture` entry (now a **five**-binding layout: uniform, sampler, surface, ring, normal).
-- [ ] `setMap('moon','normal', …) creates a LINEAR rgba8unorm normal texture` — assert the created normal texture's `format === 'rgba8unorm'` (NOT `-srgb`) and it carries `RENDER_ATTACHMENT` (the mip chain needs it). Load-bearing: an `-srgb` format silently corrupts the slope data — a runtime rule no compiler catches.
-- [ ] `the normal placeholder is the linear flat-normal texel` — find the 1×1 `rgba8unorm` placeholder and assert its `writeTexture` payload is `[128,128,255,255]` (decodes to `(0,0,1)` ⇒ the `perturbNormal` identity ⇒ a normal-less body shades as today).
+- [x] Update the layout test to assert binding 4 is present with a `texture` entry (now a **five**-binding layout: uniform, sampler, surface, ring, normal).
+- [x] `setMap('moon','normal', …) creates a LINEAR rgba8unorm normal texture` — assert the created normal texture's `format === 'rgba8unorm'` (NOT `-srgb`) and it carries `RENDER_ATTACHMENT` (the mip chain needs it). Load-bearing: an `-srgb` format silently corrupts the slope data — a runtime rule no compiler catches.
+- [x] `the normal placeholder is the linear flat-normal texel` — find the 1×1 `rgba8unorm` placeholder and assert its `writeTexture` payload is `[128,128,255,255]` (decodes to `(0,0,1)` ⇒ the `perturbNormal` identity ⇒ a normal-less body shades as today).
 
 Verification:
 
