@@ -194,7 +194,7 @@ export function walkStarOctreeCut(
   // The load-time index: flat child links + box geometry + scalar node fields,
   // all in typed arrays (built once per catalog, memoised). The hot loop below
   // reads only these arrays — no Map, no object property chains.
-  const { childIndex, firstRecord, recordCount, boxOriginPc, boxEdgePc } =
+  const { childIndex, childMask, firstRecord, recordCount, boxOriginPc, boxEdgePc } =
     starOctreeIndex(catalog);
   const [camX, camY, camZ] = camPosPc;
 
@@ -225,15 +225,7 @@ export function walkStarOctreeCut(
   // commits immediately (it can never refine — see the header's commit-at-push);
   // only a childful, above-threshold refine CANDIDATE enters the heap.
   const pushOrCommit = (i: number): void => {
-    const cbase = i * 8;
-    let hasChild = false;
-    for (let k = 0; k < 8; k++) {
-      if (childIndex[cbase + k]! >= 0) {
-        hasChild = true;
-        break;
-      }
-    }
-    if (!hasChild) {
+    if (childMask[i] === 0) {
       commit(i); // leaf (level-0 cell OR fat leaf) — records are real stars
       return;
     }
@@ -280,7 +272,12 @@ export function walkStarOctreeCut(
     }
   }
 
-  return { count: cutCount, nodeIndex: cutNodeIndex, firstRecord: cutFirstRecord, recordCount: cutRecordCount };
+  return {
+    count: cutCount,
+    nodeIndex: cutNodeIndex,
+    firstRecord: cutFirstRecord,
+    recordCount: cutRecordCount,
+  };
 }
 
 /**
@@ -354,7 +351,12 @@ function growCut(min: number): void {
 /** The empty cut (no nodes) — a view over the current scratch with `count` 0. */
 function emptySnapshot(): StarCutSnapshot {
   cutCount = 0;
-  return { count: 0, nodeIndex: cutNodeIndex, firstRecord: cutFirstRecord, recordCount: cutRecordCount };
+  return {
+    count: 0,
+    nodeIndex: cutNodeIndex,
+    firstRecord: cutFirstRecord,
+    recordCount: cutRecordCount,
+  };
 }
 
 /**
