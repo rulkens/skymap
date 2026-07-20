@@ -85,6 +85,7 @@ const foregroundVp = computeForegroundViewProj({
   aspect,
   near,
   far,
+  reversedZ: false,
 });
 
 // The surface vertex: unit-sphere +X face in body-local space.
@@ -218,6 +219,7 @@ describe('composeBodyMvp', () => {
       aspect: 1,
       near: radiusMpc * 0.1,
       far: radiusMpc * 100,
+      reversedZ: false,
     });
 
     // ── f64 ground truth at parsec scale ──────────────────────────────────────

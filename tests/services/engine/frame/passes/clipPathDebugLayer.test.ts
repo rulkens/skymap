@@ -20,6 +20,7 @@ function makeCtx(): ReadyFrameContext {
     vp: Float64Array.from(vp),
     originRelative: false,
     precision: 'f32',
+    reversedZ: false,
   };
   return {
     isReady: true,

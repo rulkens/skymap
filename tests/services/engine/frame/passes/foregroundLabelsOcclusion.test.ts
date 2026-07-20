@@ -91,6 +91,7 @@ function makeNear0View(camPos: Vec3 = [2, 3, 5]): SlabView {
     vp: Float64Array.from({ length: 16 }, (_, i) => i + 0.5),
     originRelative: true,
     precision: 'f64',
+    reversedZ: false,
   };
   return {
     slab,

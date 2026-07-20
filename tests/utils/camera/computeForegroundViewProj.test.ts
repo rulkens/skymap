@@ -34,6 +34,7 @@ describe('computeForegroundViewProj', () => {
       aspect: cam.aspect,
       near: cam.near,
       far: cam.far,
+      reversedZ: false,
     });
 
     const narrowed = narrowMat4(vpF64);
@@ -68,6 +69,7 @@ describe('computeForegroundViewProj', () => {
       aspect: 1,
       near: auInMpc * 0.01,
       far: auInMpc * 10,
+      reversedZ: false,
     });
 
     // Every element must be a finite number — NaN or Infinity means the

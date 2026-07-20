@@ -56,6 +56,7 @@ const vpF64 = computeForegroundViewProj({
   aspect: 1,
   near,
   far,
+  reversedZ: false,
 });
 
 // ── Projection helpers ──────────────────────────────────────────────────────

@@ -47,6 +47,26 @@ export const SLAB_NAME: Readonly<Record<number, string>> = {
   [COSMO]: 'COSMO',
 };
 
+/**
+ * The single source of each slab's depth convention: `false` ⇒ the classic
+ * smaller-z-wins / clear-`1.0` / `mat4d.perspective` set; `true` ⇒ reversed-Z
+ * (greater-wins / clear-`0` / `mat4d.perspectiveReverseZ`). Both are `false`
+ * today, which makes every GPU pipeline descriptor, depth clear, and
+ * foreground projection byte-identical to the previous implicit global.
+ *
+ * Flipping `[NEAR0]` to `true` is the reversed-Z feature switch: that one edit
+ * propagates to every pipeline `depthCompare`, both depth clears, and the
+ * foreground projection builder, because all of those read this constant —
+ * either directly at renderer construction, or via the `reversedZ` flag echoed
+ * onto the runtime `Slab` by `deriveSlabs`. Single-sourcing the convention here
+ * is what makes the flip one constant instead of ~14 scattered sites, and makes
+ * a partial (half-reversed) flip impossible.
+ */
+export const SLAB_REVERSED_Z: Readonly<Record<number, boolean>> = {
+  [NEAR0]: false,
+  [COSMO]: false,
+};
+
 // The near-field lookAt uses world +Y as the image-plane up. Roll parity with
 // the cosmological slab's `computeViewProj` is deferred alongside the
 // zoom-to-earth series.
@@ -97,6 +117,7 @@ export function deriveSlabs(cam: OrbitCamera, cosmoVp: Mat4): readonly Slab[] {
     aspect: cam.aspect,
     near: nearMpc,
     far: farMpc,
+    reversedZ: SLAB_REVERSED_Z[NEAR0]!,
   });
 
   const near0: Slab = {
@@ -112,6 +133,7 @@ export function deriveSlabs(cam: OrbitCamera, cosmoVp: Mat4): readonly Slab[] {
     // `camPos` in `slabViewOf`.
     originRelative: true,
     precision: 'f64',
+    reversedZ: SLAB_REVERSED_Z[NEAR0]!,
   };
   const cosmo: Slab = {
     index: COSMO,
@@ -120,6 +142,7 @@ export function deriveSlabs(cam: OrbitCamera, cosmoVp: Mat4): readonly Slab[] {
     vp: Float64Array.from(cosmoVp),
     originRelative: false,
     precision: 'f32',
+    reversedZ: SLAB_REVERSED_Z[COSMO]!,
   };
   return [near0, cosmo];
 }

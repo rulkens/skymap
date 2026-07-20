@@ -130,6 +130,7 @@ function makeNear0View(camPos: Vec3): SlabView {
     vp: Float64Array.from({ length: 16 }, (_, i) => i + 0.5),
     originRelative: true,
     precision: 'f64',
+    reversedZ: false,
   };
   return { slab, vp: new Float32Array(16), camPos, viewportPx: [1280, 720] };
 }
