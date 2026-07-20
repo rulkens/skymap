@@ -571,8 +571,8 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // group + surface texture inside the renderer's per-body Map. Same
   // ('rgba16float', 'depth32float') `foreground:0` format invariant as the Earth
   // + sphere-body renderers above. The bodyTextures slot family (minted just
-  // below) routes each non-Earth body's committed bitmap to `setTexture` and its
-  // eviction to `clearTexture`.
+  // below) routes each non-Earth body's committed bitmap to `setMap` and its
+  // per-kind eviction to `clearMap`.
   state.gpu.texturedBodyRenderer = createTexturedBodyRenderer(
     device,
     'rgba16float',

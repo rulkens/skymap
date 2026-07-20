@@ -22,7 +22,13 @@
 
 import { expect, it } from 'vitest';
 
-import { bakeNormalMap, DEFAULT_EXAGGERATION } from '../../../tools/textures/bakeNormalMap';
+import { BODY_TEXTURE_REGISTRY } from '../../../src/data/bodies/bodyTextureRegistry';
+import {
+  bakeNormalMap,
+  DEFAULT_EXAGGERATION,
+  exaggerationFor,
+  NORMAL_EXAGGERATION,
+} from '../../../tools/textures/bakeNormalMap';
 
 type Rgba = { r: number; g: number; b: number; a: number };
 
@@ -114,6 +120,23 @@ it('scales the tilt monotonically with exaggeration', () => {
   const at1 = px(bakeNormalMap(ramp, 1), 2, 1);
   const at2 = px(bakeNormalMap(ramp, 2), 2, 1);
   expect(Math.abs(at2.r - 128)).toBeGreaterThan(Math.abs(at1.r - 128));
+});
+
+it('exaggerationFor falls back to DEFAULT_EXAGGERATION for a body with no override', () => {
+  // The data-gate: a body genuinely absent from NORMAL_EXAGGERATION (venus) bakes
+  // at the default gain. Fails if the resolver drops the `?? DEFAULT` and returns
+  // undefined/NaN — the whole point of keying by presence rather than branching.
+  expect(exaggerationFor('venus')).toBe(DEFAULT_EXAGGERATION);
+});
+
+it('every NORMAL_EXAGGERATION key names a real textured body', () => {
+  // The one thing a test CAN catch on eye-tuned data: a key that names no real
+  // body — a typo or renamed seed that would silently bake a body the author
+  // meant to override at the default. Mirrors LIMB_DARKENING_PARAMS's drift-catcher.
+  // The Moon's numeric seed carries NO test (a restatement fails on every tweak).
+  for (const id of Object.keys(NORMAL_EXAGGERATION)) {
+    expect(id in BODY_TEXTURE_REGISTRY).toBe(true);
+  }
 });
 
 it('does not fabricate a gradient across the longitude seam', () => {

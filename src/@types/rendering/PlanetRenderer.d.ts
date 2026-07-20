@@ -7,7 +7,7 @@
  * sun direction (rotated into the body's local frame) plus a small ambient
  * floor (see `planet/fragment.wesl` and the shared `lib/bodyLighting.wesl`).
  * No texture: the per-instance albedo is enough for the descent's fly-past
- * distances; per-planet texturing would follow the Earth's `setTexture`
+ * distances; per-planet texturing would follow the Earth's `setMap`
  * pattern when a body earns it.
  *
  * ONE instanced draw paints every seeded planet: each body's MVP + albedo +
