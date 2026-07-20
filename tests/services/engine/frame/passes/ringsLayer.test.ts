@@ -24,6 +24,7 @@ import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { SCENE_RINGS } from '../../../../../src/data/bodies/sceneRings';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
+import { camPosLocal } from '../../../../../src/utils/camera/camPosLocal';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
@@ -171,7 +172,7 @@ describe('ringsLayer.draw', () => {
     expect(call[4]).toBe(saturn.orientation);
   });
 
-  it('packs the host sun, planetRadiusRatio@19 and innerRatio@20 into a 24-float record', () => {
+  it('packs the host sun, planetRadiusRatio@19, camPosLocal@20 and innerRatio@23 into a 24-float record', () => {
     const renderer = makeRendererSpy();
     const view = makeNear0View();
     const saturn = saturnBody();
@@ -191,9 +192,22 @@ describe('ringsLayer.draw', () => {
     expect(u[16]).toBeCloseTo(expectedSun[0]);
     expect(u[17]).toBeCloseTo(expectedSun[1]);
     expect(u[18]).toBeCloseTo(expectedSun[2]);
-    // planetRadiusRatio = planet / ring outer; innerRatio = ring inner / outer.
+    // planetRadiusRatio = planet / ring outer at float 19.
     expect(u[19]).toBeCloseTo(saturn.radiusKm / SATURN_RING.outerRadiusKm);
-    expect(u[20]).toBeCloseTo(SATURN_RING.innerRadiusKm / SATURN_RING.outerRadiusKm);
+    // camPosLocal at floats 20..22 (recomputed independently — a rotate/pack
+    // drift lands here, as with the sun above).
+    const radiusMpc = saturn.radiusKm * SCALE_UNITS.KM_TO_MPC;
+    const expectedCam = camPosLocal(
+      NEAR_CTX.drawCamPos,
+      saturn.positionMpc,
+      radiusMpc,
+      saturn.orientation,
+    );
+    expect(u[20]).toBeCloseTo(expectedCam[0]);
+    expect(u[21]).toBeCloseTo(expectedCam[1]);
+    expect(u[22]).toBeCloseTo(expectedCam[2]);
+    // innerRatio = ring inner / outer at float 23 (fills camPosLocal's vec3 tail).
+    expect(u[23]).toBeCloseTo(SATURN_RING.innerRadiusKm / SATURN_RING.outerRadiusKm);
   });
 
   it('is a no-op when the ringRenderer handle is null (pre-bootstrap)', () => {

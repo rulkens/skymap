@@ -96,11 +96,24 @@ export type AtmosphereShellRenderer = Renderer & {
   encodeSkyView(encoder: GPUCommandEncoder, bodyId: string, skyViewUniforms: Float32Array): void;
 
   /**
+   * Upload the host body's ring-alpha strip and rebind it at the shell's
+   * binding 4, replacing the shared 1×1 transparent placeholder. The shell
+   * fragment samples it to keep a ring that sits IN FRONT of the atmosphere
+   * from being darkened by the shell's over-blend (the strip alpha scales the
+   * shell's in-scatter + opacity down where the ring blocks it). A `bodyId`
+   * with no atmosphere bundle is a graceful NO-OP — the ring→atmosphere link is
+   * optional by data (a ring host without an `ATMOSPHERE_PARAMS` row has no
+   * shell to occlude), unlike `draw`'s programming-error throw. Mirrors
+   * `TexturedBodyRenderer.setRingTexture` (same strip, same host-body keying).
+   */
+  setRingTexture(bodyId: string, bitmap: ImageBitmap): void;
+
+  /**
    * Draw body `bodyId`'s atmosphere-top proxy sphere (both walls) into the open
    * foreground pass. `uniforms` is the 112-byte `AtmosphereUniforms` record from
    * `packAtmosphereUniforms` (MVP + body-local sun dir + bottomRadius +
-   * camPosLocal + sunIrradiance + exposure). THROWS on an unknown `bodyId` (a
-   * programming error — callers only pass `atmosphereDrawList` ids).
+   * camPosLocal + sunIrradiance + exposure + ring ratios). THROWS on an unknown
+   * `bodyId` (a programming error — callers only pass `atmosphereDrawList` ids).
    */
   draw(pass: GPURenderPassEncoder, bodyId: string, uniforms: Float32Array): void;
 };

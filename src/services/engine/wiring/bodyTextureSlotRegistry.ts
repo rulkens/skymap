@@ -98,13 +98,17 @@ function commitBodyTexture(state: EngineState, entry: BodyTextureKey, bitmap: Im
   } else if (isTexturedBodyKey(entry.bodyId)) {
     state.gpu.texturedBodyRenderer?.setTexture(entry.bodyId, bitmap);
   } else {
-    // A ring id (no BODY_TEXTURE_REGISTRY row) feeds BOTH halves of the ring
-    // system from one commit: the ring-on-planet SHADOW (binding 3 of the host
-    // body's sphere, via setRingTexture — hostBodyId keeps the ring→host link in
-    // one authored home, SCENE_RINGS) and the translucent ring OVERLAY itself
-    // (the ringRenderer's radial strip). One asset, two resident consumers.
+    // A ring id (no BODY_TEXTURE_REGISTRY row) feeds every resident half of the
+    // ring system from one commit: the ring-on-planet SHADOW (binding 3 of the
+    // host body's sphere, via setRingTexture — hostBodyId keeps the ring→host
+    // link in one authored home, SCENE_RINGS), the translucent ring OVERLAY
+    // itself (the ringRenderer's radial strip), and the atmosphere shell's
+    // ring-in-front occlusion (binding 4 — so the shell's over-blend does not
+    // darken a ring between the camera and the atmosphere). One asset, three
+    // resident consumers.
     state.gpu.texturedBodyRenderer?.setRingTexture(hostBodyId(entry.bodyId), bitmap);
     state.gpu.ringRenderer?.setTexture(bitmap);
+    state.gpu.atmosphereShellRenderer?.setRingTexture(hostBodyId(entry.bodyId), bitmap);
   }
 }
 

@@ -209,6 +209,14 @@ struct TexturedBodyUniforms {
 //     radii exceed 1 -- the frame the planet-on-ring shadow ray-sphere test runs
 //     in. It fills the vec3's trailing 4-byte slot, so it is a REAL field, not a
 //     pad (contrast 'LitBodyUniforms._pad').
+//   - 'camPosLocal' = the camera in the host body's local frame, in PLANET-radius
+//     units (planet = unit sphere) -- the same frame/units the annulus point
+//     lands in after '/ planetRadiusRatio'. The fragment casts a view ray from it
+//     through each ring point to ask 'does this ring point sit in FRONT of the
+//     planet's disc?', which gates the albedo floor (a ring in front of the
+//     planet keeps its own lit brightness; a translucent ring over open space
+//     does not). It fills 'camPosLocal's own vec3 -- the trailing slot below is
+//     the real 'innerRatio', the 'planetRadiusRatio' trick again.
 //   - 'innerRatio' = ring inner radius / ring OUTER radius (in (0, 1)). The ring
 //     geometry is a ring-agnostic disc; this punches the hole per-draw (the
 //     fragment discards radii below it) and normalizes the radius for the strip
@@ -218,9 +226,9 @@ struct TexturedBodyUniforms {
 //
 //   offset  0..63: mvp               (mat4x4<f32>, column-major, 64 bytes)
 //   offset 64..75: sunDirLocal       (vec3<f32> -- 16-byte aligned at 64)
-//   offset 76..79: planetRadiusRatio (f32 -- fills the vec3's 4th slot)
-//   offset 80..83: innerRatio        (f32)
-//   offset 84..95: _pad0/1/2         (f32 x3 -- rounds the struct to 96 / 16-byte)
+//   offset 76..79: planetRadiusRatio (f32 -- fills sunDirLocal's 4th slot)
+//   offset 80..91: camPosLocal       (vec3<f32> -- 16-byte aligned at 80)
+//   offset 92..95: innerRatio        (f32 -- fills camPosLocal's 4th slot)
 //   total: 96 bytes.
 //
 // The CPU side uploads 24 f32s. The single source of truth for that packing is
@@ -230,10 +238,8 @@ struct RingUniforms {
   mvp: mat4x4<f32>,
   sunDirLocal: vec3<f32>,
   planetRadiusRatio: f32,
+  camPosLocal: vec3<f32>,
   innerRatio: f32,
-  _pad0: f32,
-  _pad1: f32,
-  _pad2: f32,
 };
 
 // ── EarthSurfaceUniforms ─────────────────────────────────────────────
@@ -403,9 +409,17 @@ struct CloudShellUniforms {
 //   offset  76..79:  bottomRadius  (f32 -- fills sunDirLocal's 4th slot)
 //   offset  80..91:  camPosLocal   (vec3<f32> -- 16-byte aligned at 80)
 //   offset  92..95:  sunIrradiance (f32 -- fills camPosLocal's 4th slot)
-//   offset  96..99:  exposure      (f32 -- in-scatter intensity scale)
-//   offset 100..111: _pad0/1/2     (f32 x3 -- rounds the struct to 112 / 16-byte)
+//   offset  96..99:  exposure       (f32 -- in-scatter intensity scale)
+//   offset 100..103: ringInnerRatio (f32 -- ring inner / atmosphere top; 0 = none)
+//   offset 104..107: ringOuterRatio (f32 -- ring outer / atmosphere top; 0 = none)
+//   offset 108..111: _pad0          (f32 -- rounds the struct to 112 / 16-byte)
 //   total: 112 bytes.
+//
+// The ring ratios express the host body's ring annulus in this mesh's LOCAL
+// units (atmosphere top == 1), so the shell fragment can ask 'does the ring
+// block this fragment's view of the atmosphere?' with a plane test in its own
+// frame. 'ringOuterRatio == 0' is the no-ring sentinel -- the same data-gate
+// 'TexturedBodyUniforms' uses -- so every ringless body short-circuits.
 //
 // The CPU side uploads 28 f32s. The single source of truth for that packing is
 // 'utils/gpu/packAtmosphereUniforms.ts', which reuses 'packLitBodyUniforms' for
@@ -418,9 +432,9 @@ struct AtmosphereUniforms {
   camPosLocal: vec3<f32>,
   sunIrradiance: f32,
   exposure: f32,
+  ringInnerRatio: f32,
+  ringOuterRatio: f32,
   _pad0: f32,
-  _pad1: f32,
-  _pad2: f32,
 };
 
 // ── clip_from_local ──────────────────────────────────────────────────

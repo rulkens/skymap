@@ -37,6 +37,8 @@ const CAM_POS: Vec3 = [1.5, 2.5, 3.5];
 const BOTTOM_RADIUS = 0.96875; // planetRadiusKm / atmosphereTopKm ∈ (0,1)
 const SUN_IRRADIANCE = 17.25;
 const EXPOSURE = 0.625;
+const RING_INNER = 1.203125; // ring inner / atmosphere top (> 1: outside the shell)
+const RING_OUTER = 2.28125; // ring outer / atmosphere top
 
 describe('AtmosphereUniforms byte offsets', () => {
   it('packs a 112-byte / 28-f32 record with bottomRadius filling the vec3 tail @76', () => {
@@ -47,6 +49,8 @@ describe('AtmosphereUniforms byte offsets', () => {
       BOTTOM_RADIUS,
       SUN_IRRADIANCE,
       EXPOSURE,
+      RING_INNER,
+      RING_OUTER,
     );
     expect(rec.length).toBe(ATMOSPHERE_UNIFORM_FLOATS);
     expect(rec.length).toBe(28); // 112 bytes
@@ -77,9 +81,12 @@ describe('AtmosphereUniforms byte offsets', () => {
     expect(rec[23]).toBe(SUN_IRRADIANCE); // byte 92
     expect(rec[24]).toBe(EXPOSURE); // byte 96
 
-    // Trailing pads zeroed — round the struct to 112 / 16-byte alignment.
-    expect(rec[25]).toBe(0); // byte 100
-    expect(rec[26]).toBe(0); // byte 104
+    // Ring ratios — the host's ring annulus in atmosphere-top units (0 = no
+    // ring), for the shell's ring-in-front occlusion.
+    expect(rec[25]).toBe(RING_INNER); // byte 100
+    expect(rec[26]).toBe(RING_OUTER); // byte 104
+
+    // Trailing pad zeroed — rounds the struct to 112 / 16-byte alignment.
     expect(rec[27]).toBe(0); // byte 108
   });
 });

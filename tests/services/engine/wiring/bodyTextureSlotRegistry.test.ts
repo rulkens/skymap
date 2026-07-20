@@ -27,6 +27,7 @@ type Gpu = {
     clearTexture: ReturnType<typeof vi.fn>;
     setRingTexture: ReturnType<typeof vi.fn>;
   };
+  atmosphereShellRenderer: { setRingTexture: ReturnType<typeof vi.fn> };
 };
 
 function makeState(gpu: Gpu): EngineState {
@@ -41,6 +42,7 @@ function makeGpu(): Gpu {
     earthRenderer: { setMap: vi.fn() },
     cloudShellRenderer: { setTexture: vi.fn() },
     texturedBodyRenderer: { setTexture: vi.fn(), clearTexture: vi.fn(), setRingTexture: vi.fn() },
+    atmosphereShellRenderer: { setRingTexture: vi.fn() },
   };
 }
 
@@ -144,6 +146,10 @@ describe('wireBodyTextureSlots', () => {
     // sphere setTexture path is untouched, and Earth's renderer stays clear.
     expect(gpu.texturedBodyRenderer.setRingTexture).toHaveBeenCalledTimes(1);
     expect(gpu.texturedBodyRenderer.setRingTexture).toHaveBeenCalledWith('saturn', bitmap);
+    // …and fans out to the atmosphere shell's ring-in-front occlusion binding,
+    // keyed on the same host body.
+    expect(gpu.atmosphereShellRenderer.setRingTexture).toHaveBeenCalledTimes(1);
+    expect(gpu.atmosphereShellRenderer.setRingTexture).toHaveBeenCalledWith('saturn', bitmap);
     expect(gpu.texturedBodyRenderer.setTexture).not.toHaveBeenCalled();
     expect(gpu.earthRenderer.setMap).not.toHaveBeenCalled();
   });
