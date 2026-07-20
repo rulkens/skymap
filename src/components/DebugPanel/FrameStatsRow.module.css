@@ -1,0 +1,10 @@
+/*
+ * FrameStatsRow — the always-on fps + CPU-frame-time line. One compact row, so
+ * it borrows only the shared `readout` opacity from the debugSection vocabulary;
+ * `.root` is the predictable outer hook (no chrome of its own — it isn't a
+ * collapsible section).
+ */
+
+.root {
+  composes: readout from './debugSection.module.css';
+}

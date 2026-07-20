@@ -31,9 +31,11 @@
 
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
+import type { FrameStats } from '../../@types/engine/FrameStats';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
 import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
 import { AssetLoadingSection } from './AssetLoadingSection';
+import { FrameStatsRow } from './FrameStatsRow';
 import { GpuTimingsSection } from './GpuTimingsSection';
 import { RenderTogglesSection } from './RenderTogglesSection';
 import { FlowTuningSection } from './FlowTuningSection';
@@ -44,6 +46,8 @@ import ClipPathInspectorSectionContainer from '../containers/ClipPathInspectorSe
 export type DebugPanelProps = {
   slots: ReadonlyMap<string, AssetSlot<unknown, unknown>>;
   timingService: GpuTimingService;
+  /** Always-on CPU-side fps + JS-body-ms getter, polled by `FrameStatsRow` (no GPU query). */
+  frameStats: () => FrameStats;
   /** Pass names in draw order, sourced from the engine handle's `passOverrides.allNames`. */
   passNames: readonly string[];
   /**
@@ -92,6 +96,7 @@ export type DebugPanelProps = {
 export function DebugPanel({
   slots,
   timingService,
+  frameStats,
   passNames,
   disabledPasses,
   highlightFallback,
@@ -124,6 +129,10 @@ export function DebugPanel({
     >
       <div style={{ fontWeight: 'bold', marginBottom: 6, opacity: 0.8 }}>Skymap Debug</div>
       <AssetLoadingSection slots={slots} />
+      <div style={{ marginTop: 6 }} />
+      {/* Always shown — its numbers need no GPU query, so it sits above the
+          GPU timings section, which is dark without `?gpuTimings`. */}
+      <FrameStatsRow frameStats={frameStats} />
       <div style={{ marginTop: 6 }} />
       <GpuTimingsSection service={timingService} />
       <div style={{ marginTop: 6 }} />

@@ -39,17 +39,20 @@ import {
 } from '../../state/settings/settingsSlice';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
+import type { FrameStats } from '../../@types/engine/FrameStats';
 import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
 
 export type DebugPanelContainerProps = {
   slots: ReadonlyMap<string, AssetSlot<unknown, unknown>>;
   timingService: GpuTimingService;
+  frameStats: () => FrameStats;
   passNames: readonly string[];
 };
 
 function DebugPanelContainer({
   slots,
   timingService,
+  frameStats,
   passNames,
 }: DebugPanelContainerProps): React.ReactElement {
   const dispatch = useAppDispatch();
@@ -97,6 +100,7 @@ function DebugPanelContainer({
     <DebugPanel
       slots={slots}
       timingService={timingService}
+      frameStats={frameStats}
       passNames={passNames}
       disabledPasses={disabledPasses}
       highlightFallback={highlightFallback}
