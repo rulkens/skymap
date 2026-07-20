@@ -13,15 +13,16 @@ import type { PerfSample } from '../../../../src/@types/perf/PerfSample';
 
 describe('statsOf', () => {
   it('rolls a two-slot sample stream into per-slot median + p90', () => {
-    // Interleaved so the rollup can't rely on samples arriving grouped.
+    // Interleaved so the rollup can't rely on samples arriving grouped. `frame`
+    // is required on PerfSample but the per-slot rollup ignores it.
     const samples: PerfSample[] = [
-      { slot: 'x', ms: 1 },
-      { slot: 'y', ms: 10 },
-      { slot: 'x', ms: 2 },
-      { slot: 'x', ms: 3 },
-      { slot: 'y', ms: 20 },
-      { slot: 'x', ms: 4 },
-      { slot: 'x', ms: 5 },
+      { slot: 'x', ms: 1, frame: 0 },
+      { slot: 'y', ms: 10, frame: 0 },
+      { slot: 'x', ms: 2, frame: 1 },
+      { slot: 'x', ms: 3, frame: 2 },
+      { slot: 'y', ms: 20, frame: 1 },
+      { slot: 'x', ms: 4, frame: 3 },
+      { slot: 'x', ms: 5, frame: 4 },
     ];
 
     const stats = statsOf(samples);

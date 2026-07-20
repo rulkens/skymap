@@ -167,5 +167,11 @@ describe('installPerfHook', () => {
     const expectedMs = Array.from({ length: FRAMES }, (_, i) => PERF_WARMUP_FRAMES + i);
     expect(samples).toHaveLength(FRAMES);
     expect(samples.map((s) => s.ms)).toEqual(expectedMs);
+
+    // Each sample carries its 0-based MEASURED-frame ordinal (post-warmup): the
+    // Nth measured frame's samples all read `frame: N`. Here one slot per frame,
+    // so the frame tags run 0…FRAMES-1 in arrival order.
+    const expectedFrames = Array.from({ length: FRAMES }, (_, i) => i);
+    expect(samples.map((s) => s.frame)).toEqual(expectedFrames);
   });
 });

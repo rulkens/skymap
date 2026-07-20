@@ -47,9 +47,13 @@
  * hang into an eager error is the honest failure mode: a benchmark on hardware
  * that can't be timed should say so, not spin.
  *
- * Otherwise: subscribe to the live timing service; for each emitted `GpuTimingFrame`, flatten
- * its `perPassMs` map into `{ slot, ms }` samples; after `frames` MEASURED frames
- * have arrived, unsubscribe and resolve with the flat `PerfSample[]`. Auto-rotate
+ * Otherwise: subscribe to the live timing service; for each emitted
+ * `GpuTimingFrame`, flatten its `perPassMs` map into `{ slot, ms, frame }`
+ * samples — `frame` is the 0-based MEASURED-frame ordinal (assigned AFTER the
+ * warmup discard), so every slot on the Nth measured frame carries `frame: N`.
+ * That tag is what lets `frameTotals` reconstruct per-frame GPU cost downstream.
+ * After `frames` MEASURED frames have arrived, unsubscribe and resolve with the
+ * flat `PerfSample[]`. Auto-rotate
  * (armed by the preceding `setPose`) is an active driver holding the loop awake
  * for the whole window, so no manual render pump is needed.
  *
@@ -143,8 +147,10 @@ function collectTimings(engine: EngineHandle, frames: number): Promise<PerfSampl
     const unsubscribe = engine.debug.timingService.subscribe((frame) => {
       delivered += 1;
       if (delivered <= PERF_WARMUP_FRAMES) return;
+      // `measured` is the 0-based ordinal of THIS (post-warmup) frame — tag it
+      // onto every slot so `frameTotals` can group by frame. Incremented after.
       for (const [slot, ms] of frame.perPassMs) {
-        samples.push({ slot, ms });
+        samples.push({ slot, ms, frame: measured });
       }
       measured += 1;
       if (measured >= frames) {

@@ -28,6 +28,12 @@ export type ScenarioReport = {
   viewport: { width: number; height: number };
   dpr: number;
   frames: number;
+  /** Per-frame total GPU pass time (median+p90 ms) for each strategy: merged is the
+   *  production-shape number; perLayer is instrumented (inflated by per-pass overhead). */
+  totals: {
+    merged: { median: number; p90: number };
+    perLayer: { median: number; p90: number };
+  };
   /** Per-group rows (`hdr·NEAR0`, …) from the merged run. */
   merged: readonly LayerStat[];
   /** Per-layer rows (`orbit-trails`, …) from the perLayerTimed run. */

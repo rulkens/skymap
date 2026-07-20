@@ -50,6 +50,9 @@ import { PERF_SCENARIOS, type PerfScenario } from './perfScenarios';
 import type { ScenarioReport, LayerStat } from './scenarioReport';
 import { statsOf } from '../utils/perf/statsOf';
 import { floorsOf } from '../utils/perf/floorsOf';
+import { frameTotals } from '../utils/perf/frameTotals';
+import { median } from '../utils/perf/median';
+import { percentile } from '../utils/perf/percentile';
 import { formatReport } from '../utils/perf/formatReport';
 import type { PerfSample } from '../../src/@types/perf/PerfSample';
 
@@ -168,6 +171,11 @@ async function measureScenario(
     )) as Record<string, string>;
 
     const statsByStrategy: Record<string, LayerStat[]> = {};
+    // Per-frame totals per strategy: the sum of every slot on a frame, then the
+    // median/p90 OF those per-frame sums — the honest "GPU cost per frame". Kept
+    // separate from `statsByStrategy` (per-slot) because summing per-slot medians
+    // mixes frames and inflates (see frameTotals). Empty samples → zeroed.
+    const totalsByStrategy: Record<string, { median: number; p90: number }> = {};
     for (const strategy of STRATEGIES) {
       // setStrategy (next-frame flip) → setPose (hard-cut + arm auto-rotate,
       // resolves on the next rAF) → collectTimings (subscribe, accumulate
@@ -191,15 +199,23 @@ async function measureScenario(
         { strategy, pose: scenario.pose, frames: options.frames },
       )) as PerfSample[];
       statsByStrategy[strategy] = statsOf(samples);
+      const t = frameTotals(samples);
+      totalsByStrategy[strategy] =
+        t.length === 0 ? { median: 0, p90: 0 } : { median: median(t), p90: percentile(t, 90) };
     }
 
     const merged = statsByStrategy['merged'] ?? [];
     const perLayer = statsByStrategy['perLayerTimed'] ?? [];
+    const zeroTotal = { median: 0, p90: 0 };
     return {
       scenario: scenario.name,
       viewport: VIEWPORT,
       dpr: options.dpr,
       frames: options.frames,
+      totals: {
+        merged: totalsByStrategy['merged'] ?? zeroTotal,
+        perLayer: totalsByStrategy['perLayerTimed'] ?? zeroTotal,
+      },
       merged,
       perLayer,
       floors: floorsOf(merged, perLayer, slotGroups),
