@@ -157,13 +157,15 @@ import package::labels::fragment::shadeMsdf;
 import package::lib::sceneDepth::occludedByScene;
 
 @fragment
-fn fs(@builtin(position) pos: vec4<f32>, input: VsOut) -> @location(0) vec4<f32> {
-  if (occludedByScene(pos.xy, pos.z)) { discard; }
+fn fs(input: VsOut) -> @location(0) vec4<f32> {
+  if (occludedByScene(input.pos.xy, input.pos.z)) { discard; }
   return shadeMsdf(input);
 }
 ```
 
-Comment (single quotes, no backticks): all four glyph-quad corners share the anchor's clip-z (the vertex stage writes one 'clampedClipZ' for the anchor — see labels/vertex.wesl), so 'pos.z' is the anchor's window depth for the whole glyph — the caption is occluded or not as a unit, which is what we want (a caption is hidden where a nearer body covers it, not sliced mid-glyph by the body's curved depth).
+IMPORTANT: `VsOut` ALREADY declares `@builtin(position) pos` as its first member, so the variant must NOT add a second `@builtin(position)` parameter (WGSL rejects a duplicate builtin at `createShaderModule` — a runtime error the WESL linker + `vite build` never catch). Read the window position from the existing `input.pos` field instead (in a fragment shader that struct member holds the framebuffer position: `.xy` = window pixels, `.z` = window-space depth).
+
+Comment (single quotes, no backticks): all four glyph-quad corners share the anchor's clip-z (the vertex stage writes one 'clampedClipZ' for the anchor — see labels/vertex.wesl), so 'input.pos.z' is the anchor's window depth for the whole glyph — the caption is occluded or not as a unit, which is what we want (a caption is hidden where a nearer body covers it, not sliced mid-glyph by the body's curved depth).
 
 **Verification: build + visual only — no CPU unit test (honest note).** This is shader math verified by the [V1]/[V2]/[V5] visual pass; there is no meaningful red-green unit test for a `discard` (GPU behaviour, `conventions/testing.md`). `npm run build` links + type-checks the WESL; a mislink surfaces there or (worst case) on iOS as a dropped frame ([V6]).
 
@@ -243,16 +245,18 @@ import package::markerLines::fragment::shadeLine;
 import package::lib::sceneDepth::occludedByScene;
 
 @fragment
-fn fs(@builtin(position) pos: vec4<f32>, input: VsOut) -> @location(0) vec4<f32> {
-  if (occludedByScene(pos.xy, pos.z)) { discard; }
+fn fs(input: VsOut) -> @location(0) vec4<f32> {
+  if (occludedByScene(input.pos.xy, input.pos.z)) { discard; }
   return shadeLine(input);
 }
 ```
 
+(Same as the label variant: `VsOut` already declares `@builtin(position) pos`, so read `input.pos` rather than adding a second `@builtin(position)` parameter — a duplicate builtin fails only at runtime `createShaderModule`.)
+
 - Modify `src/services/gpu/renderers/labels/markerLineRenderer.ts` — add the same `opts?: { occludeAgainstDepth?: boolean }` param to `createMarkerLineRenderer(ctx, targetFormat, maxLines?, opts?)`; on the occlusion path use `bindGroupLayouts: [bindGroupLayout, occlusionDepthBGL]` (group 0 = the existing uniform BGL, group 1 = depth) and the `fragmentOcclude.wesl` module; widen `draw` with the optional `sceneDepthView?: GPUTextureView` 4th arg and build/set the group(1) bind group per-frame when present. Non-occlusion path unchanged.
 - Modify `src/@types/rendering/MarkerLineRenderer.d.ts` — widen the `draw` signature to `draw(pass, viewProj, viewportSize, sceneDepthView?: GPUTextureView): void;` with the same docstring note.
 
-Note the leader-line vertex stage clamps clip-z the same way the label one does (`markerLines/vertex.wesl`, referenced in the `foregroundLabelsLayer` header § "Why the overlay shaders clamp clip-z"), so `pos.z` is a well-defined window depth for the connector quad.
+Note the leader-line vertex stage clamps clip-z the same way the label one does (`markerLines/vertex.wesl`, referenced in the `foregroundLabelsLayer` header § "Why the overlay shaders clamp clip-z"), so `input.pos.z` is a well-defined window depth for the connector quad.
 
 **Verification: build + visual (honest note)** — same rationale as Tasks 3 + 4: no CPU unit test for the shader discard or the GPU pipeline; the existing CPU-only `markerLineRenderer` test (null device) is unaffected. Verify typecheck + build + existing tests green; behaviour via Task 6 + [V1] visual.
 
