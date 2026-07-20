@@ -51,7 +51,10 @@ const exp = (value: number): string => (Number.isNaN(value) ? 'n/a' : value.toFi
  * joining, without the escape bytes disturbing column widths. Callers join a row
  * with `'  '`; every joined row is the same length.
  */
-function table(rows: readonly (readonly string[])[], align: readonly ('left' | 'right')[]): string[][] {
+function table(
+  rows: readonly (readonly string[])[],
+  align: readonly ('left' | 'right')[],
+): string[][] {
   const widths = align.map((_, c) => Math.max(0, ...rows.map((row) => (row[c] ?? '').length)));
   return rows.map((row) =>
     align.map((a, c) =>

@@ -81,7 +81,10 @@ const SHARE_BAR_WIDTH = 15;
  * width math. Callers join a row with `'  '`; every joined row is the same
  * length, so the header can be ruled with `'─'.repeat(row.length)`.
  */
-function table(rows: readonly (readonly string[])[], align: readonly ('left' | 'right')[]): string[][] {
+function table(
+  rows: readonly (readonly string[])[],
+  align: readonly ('left' | 'right')[],
+): string[][] {
   const widths = align.map((_, c) => Math.max(0, ...rows.map((row) => (row[c] ?? '').length)));
   return rows.map((row) =>
     align.map((a, c) =>
@@ -96,7 +99,9 @@ export function formatReport(report: ScenarioReport, palette: Palette): string {
 
   lines.push(
     `${scenario}  ` +
-      palette.dim(`(${viewport.width}×${viewport.height} @dpr${dpr}, ${frames} frames, median ms | p90)`),
+      palette.dim(
+        `(${viewport.width}×${viewport.height} @dpr${dpr}, ${frames} frames, median ms | p90)`,
+      ),
   );
 
   const { merged: mergedTotal, perLayer: perLayerTotal } = report.totals;
@@ -129,7 +134,9 @@ export function formatReport(report: ScenarioReport, palette: Palette): string {
   );
 
   for (const group of report.floors) {
-    lines.push('  ' + palette.bold(`EST. PER-PASS FLOOR ≈ ${ms(group.floor)} ms  (${group.groupKey})`));
+    lines.push(
+      '  ' + palette.bold(`EST. PER-PASS FLOOR ≈ ${ms(group.floor)} ms  (${group.groupKey})`),
+    );
     for (const real of group.reals) {
       lines.push(`    → ${real.slot} ≈ ${ms(real.real)} ms real`);
     }
@@ -213,9 +220,13 @@ function pushSummary(lines: string[], palette: Palette, report: ScenarioReport):
       // 16.7 ms is the 60fps frame budget (budgetTone's green boundary); the
       // literal rides along in the display string, so it's spelled inline here.
       const headroom = Math.round((1 - median / 16.7) * 100);
-      verdict = palette.green(`✓ Fits the 60fps budget with ${headroom}% headroom (${ms(median)} of 16.7 ms).`);
+      verdict = palette.green(
+        `✓ Fits the 60fps budget with ${headroom}% headroom (${ms(median)} of 16.7 ms).`,
+      );
     } else if (tone === 'yellow') {
-      verdict = palette.yellow(`⚠ Over the 60fps budget (${ms(median)} of 16.7 ms — ~${fps} fps ceiling).`);
+      verdict = palette.yellow(
+        `⚠ Over the 60fps budget (${ms(median)} of 16.7 ms — ~${fps} fps ceiling).`,
+      );
     } else {
       verdict = palette.red(`✗ Over the 30fps budget (${ms(median)} ms — ~${fps} fps ceiling).`);
     }
@@ -226,7 +237,10 @@ function pushSummary(lines: string[], palette: Palette, report: ScenarioReport):
     const hottest = report.merged.reduce((max, stat) => (stat.median > max.median ? stat : max));
     const sectionSum = report.merged.reduce((sum, stat) => sum + stat.median, 0);
     const pct = sectionSum === 0 ? 0 : Math.round((hottest.median / sectionSum) * 100);
-    lines.push('    ' + `Hottest pass: ${hottest.slot} — ${ms(hottest.median)} ms, ${pct}% of MERGED GPU time.`);
+    lines.push(
+      '    ' +
+        `Hottest pass: ${hottest.slot} — ${ms(hottest.median)} ms, ${pct}% of MERGED GPU time.`,
+    );
   }
 
   if (report.floors.length > 0) {

@@ -40,7 +40,10 @@ const ms = (value: number): string => value.toFixed(1);
  * right-aligned (numbers) `padStart`. Returning cells lets the caller colorize
  * one padded cell before joining without the escape bytes disturbing widths.
  */
-function table(rows: readonly (readonly string[])[], align: readonly ('left' | 'right')[]): string[][] {
+function table(
+  rows: readonly (readonly string[])[],
+  align: readonly ('left' | 'right')[],
+): string[][] {
   const widths = align.map((_, c) => Math.max(0, ...rows.map((row) => (row[c] ?? '').length)));
   return rows.map((row) =>
     align.map((a, c) =>
@@ -63,8 +66,7 @@ function reportRow(report: ScenarioReport, palette: Palette): Row {
   }
   const fps = String(Math.round(1000 / median));
   const tone = budgetTone(median);
-  const verdict =
-    tone === 'green' ? '✓ 60fps' : tone === 'yellow' ? '⚠ 30–60fps' : '✗ <30fps';
+  const verdict = tone === 'green' ? '✓ 60fps' : tone === 'yellow' ? '⚠ 30–60fps' : '✗ <30fps';
   return { cells: [report.scenario, ms(median), fps, verdict], verdictColor: palette[tone] };
 }
 
@@ -87,7 +89,10 @@ export function formatRunSummary(
     })),
   ];
 
-  const cells = table([header, ...dataRows.map((row) => row.cells)], ['left', 'right', 'right', 'left']);
+  const cells = table(
+    [header, ...dataRows.map((row) => row.cells)],
+    ['left', 'right', 'right', 'left'],
+  );
 
   const lines: string[] = [];
   lines.push('  ALL SCENARIOS (merged median ms | fps ceiling)');
