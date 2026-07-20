@@ -119,6 +119,24 @@ describe('wireBodyTextureSlots', () => {
     expect(gpu.earthRenderer.setMap).not.toHaveBeenCalled();
   });
 
+  it("the 'moon:normal' slot's commit routes to texturedBodyRenderer.setMap('moon','normal', …)", async () => {
+    const gpu = makeGpu();
+    const state = makeState(gpu);
+    wireBodyTextureSlots(state);
+
+    const slot = state.assetSlots.bodyTextures.get('moon:normal')!;
+    slot.load({ bodyId: 'moon', kind: 'normal', tier: 'small' });
+    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+
+    // The Prep-B kind routing must carry the NEW `normal` kind through verbatim —
+    // this fails the moment the commit collapses `kind` back to `'surface'`.
+    expect(gpu.texturedBodyRenderer.setMap).toHaveBeenCalledTimes(1);
+    expect(gpu.texturedBodyRenderer.setMap).toHaveBeenCalledWith('moon', 'normal', bitmap);
+    expect(gpu.texturedBodyRenderer.setMap).not.toHaveBeenCalledWith('moon', 'surface', bitmap);
+    // The Moon is not Earth's — Earth's renderer stays untouched.
+    expect(gpu.earthRenderer.setMap).not.toHaveBeenCalled();
+  });
+
   it("a non-'earth' body slot's onRelease frees its texture via texturedBodyRenderer.clearTexture", async () => {
     const gpu = makeGpu();
     const state = makeState(gpu);
@@ -143,7 +161,7 @@ describe('wireBodyTextureSlots', () => {
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
 
     // The ring strip binds to its HOST body (saturn) via setRingTexture — the
-    // sphere setTexture path is untouched, and Earth's renderer stays clear.
+    // sphere setMap path is untouched, and Earth's renderer stays clear.
     expect(gpu.texturedBodyRenderer.setRingTexture).toHaveBeenCalledTimes(1);
     expect(gpu.texturedBodyRenderer.setRingTexture).toHaveBeenCalledWith('saturn', bitmap);
     // …and fans out to the atmosphere shell's ring-in-front occlusion binding,
