@@ -180,11 +180,15 @@ export function createRingRenderer(
       targets: [
         {
           format: targetFormat,
-          // Straight-alpha OVER: the ring is a translucent overlay blended over
-          // the opaque spheres already in the foreground target.
+          // Premultiplied OVER: the ring is a translucent overlay blended over
+          // the opaque spheres already in the foreground target. The fragment
+          // premultiplies its reflected colour by coverage itself (so it can lift
+          // that term to full albedo where it occults the planet without also
+          // scaling the transmitted planet behind it — see the fragment header),
+          // hence 'src' colour factor 'one', not 'src-alpha'.
           blend: {
             color: {
-              srcFactor: 'src-alpha',
+              srcFactor: 'one',
               dstFactor: 'one-minus-src-alpha',
               operation: 'add',
             },
