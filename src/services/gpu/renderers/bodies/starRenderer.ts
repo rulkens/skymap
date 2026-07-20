@@ -4,7 +4,8 @@
  *
  * Same skeleton as `earthRenderer`: the shared `uvSphereMesh` geometry, an
  * explicit bind-group layout, an opaque depth-tested pipeline profile
- * (depth write + 'less', CCW front face, back-face cull, no blend) against
+ * (depth write + reversed-Z 'greater' — the NEAR0 slab clears `0.0`, greater-z-wins
+ * — CCW front face, back-face cull, no blend) against
  * the caller's foreground `targetFormat` / `depthFormat`. Two deltas:
  *
  *   1. No texture machinery — a star is flat emissive, so there is no
@@ -34,6 +35,7 @@ import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { StarRenderer } from '../../../../@types/rendering/StarRenderer';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
+import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import vsCode from '../../shaders/bodies/star/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/star/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
@@ -51,10 +53,16 @@ const RINGS = 24;
  */
 const UNIFORM_BUFFER_SIZE = 80;
 
+/**
+ * @param reversedZ selects this slab's depth convention (single-sourced in
+ *   `SLAB_REVERSED_Z`): `false` ⇒ smaller-z-wins (`depthCompare: 'less'`),
+ *   `true` ⇒ reversed-Z greater-wins. Resolved through `resolveDepthCompare`.
+ */
 export function createStarRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat,
   depthFormat: GPUTextureFormat,
+  reversedZ: boolean,
 ): StarRenderer {
   // ── Geometry upload (positions + indices; no uvs — see module header) ────
   const mesh = uvSphereMesh(SEGMENTS, RINGS);
@@ -145,7 +153,7 @@ export function createStarRenderer(
     depthStencil: {
       format: depthFormat,
       depthWriteEnabled: true,
-      depthCompare: 'less',
+      depthCompare: resolveDepthCompare('nearer', reversedZ),
     },
   });
 

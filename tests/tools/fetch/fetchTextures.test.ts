@@ -54,6 +54,7 @@ describe('textureSourcesFor', () => {
         'world.topo.bathy.200412.3x21600x10800.jpg',
         'world.watermask.21600x10800.png',
         'gebco_08_rev_elev_21600x10800.png',
+        'ldem_16_uint.tif',
         'BlackMarble_2016_3km.jpg',
         'cloud_combined_8192.tif',
         'Io_GalileoSSI-Voyager_Global_Mosaic_ClrMerge_1km.tif',

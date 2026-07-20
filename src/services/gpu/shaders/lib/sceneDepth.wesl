@@ -8,12 +8,14 @@
 // CPU, we sample the body pass's depth buffer at the caption fragment and
 // discard where a nearer body already owns the pixel.
 //
-// ## Why 'less' means occluded
+// ## Why 'greater' means occluded
 //
-// The body depth attachment is 'depthCompare: less' cleared to 1.0 (the far
-// plane), so a nearer body writes a SMALLER depth. A stored sample strictly
-// less than this fragment's own depth therefore means a NEARER body already
-// covers this pixel — the caption is behind it and must discard.
+// The body depth attachment is 'depthCompare: greater' cleared to 0.0 (the far
+// value under reversed-Z), so a nearer body writes a LARGER depth. A stored
+// sample strictly greater than this fragment's own depth therefore means a
+// NEARER body already covers this pixel — the caption is behind it and must
+// discard. Empty sky reads the 0.0 clear, which is never greater than a
+// fragment's depth, so captions over empty sky are kept.
 //
 // ## Why textureLoad, no sampler
 //
@@ -27,5 +29,5 @@
 @group(1) @binding(0) var sceneDepthTex: texture_depth_2d;
 
 fn occludedByScene(fragXY: vec2f, fragDepth: f32) -> bool {
-  return textureLoad(sceneDepthTex, vec2i(fragXY), 0) < fragDepth;
+  return textureLoad(sceneDepthTex, vec2i(fragXY), 0) > fragDepth;
 }

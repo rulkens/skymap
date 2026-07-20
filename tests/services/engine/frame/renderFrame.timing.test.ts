@@ -215,6 +215,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     vp: Float64Array.from(viewProj as unknown as Float32Array),
     originRelative: false,
     precision: 'f32',
+    reversedZ: false,
   };
 
   const ctx = {

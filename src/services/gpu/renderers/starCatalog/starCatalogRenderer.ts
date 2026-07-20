@@ -378,7 +378,9 @@ export function createStarCatalogRenderer(
       stream,
       vp,
       viewportPx,
-      nodeDraws,
+      drawCount,
+      firstRecord,
+      recordCount,
       originRelCamMpc,
       cellScaleMpc,
       isAggregate,
@@ -390,7 +392,6 @@ export function createStarCatalogRenderer(
       aggregateIntensityCap,
     } = args;
     const entry = sources.get(source);
-    const drawCount = nodeDraws.length;
     if (!entry || drawCount === 0) return;
     const buffers = entry.streams[stream];
 
@@ -417,21 +418,27 @@ export function createStarCatalogRenderer(
     let totalInstances = 0;
     for (let i = 0; i < drawCount; i++) {
       // Per-node opacity = source crossfade × this node's LOD fade (see the
-      // draw-args docblock). All per-node arrays are parallel to `nodeDraws`, so
-      // index `i` throughout. `writeStarNodeParams` owns the byte offsets.
-      writeStarNodeParams(nodeScratchView, i * NODE_PARAMS_BYTES, {
-        originRelCamMpc: originRelCamMpc[i]!,
-        cellScaleMpc: cellScaleMpc[i]!,
-        firstRecord: nodeDraws[i]!.firstRecord,
-        opacity: opacity[i]!,
-        isAggregate: isAggregate[i]!,
-        subtreeStarCount: subtreeStarCount[i]!,
-      });
+      // draw-args docblock). All per-node arrays are the star cut's reused flat
+      // typed arrays, `drawCount` valid entries: the scalar fields index `i`, the
+      // origin vec3 indexes `3*i`. `writeStarNodeParams` owns the byte offsets.
+      const o = i * 3;
+      writeStarNodeParams(
+        nodeScratchView,
+        i * NODE_PARAMS_BYTES,
+        originRelCamMpc[o]!,
+        originRelCamMpc[o + 1]!,
+        originRelCamMpc[o + 2]!,
+        cellScaleMpc[i]!,
+        firstRecord[i]!,
+        opacity[i]!,
+        isAggregate[i]!,
+        subtreeStarCount[i]!,
+      );
       // Exclusive prefix: this draw's first global instance index is the sum of
       // all earlier draws' record counts. Strictly increasing (every draw has
       // ≥ 1 record), so the shader's binary search resolves a unique slot.
       prefixScratch[i] = totalInstances;
-      totalInstances += nodeDraws[i]!.recordCount;
+      totalInstances += recordCount[i]!;
     }
 
     ensureDrawBuffers(buffers, stream, drawCount);

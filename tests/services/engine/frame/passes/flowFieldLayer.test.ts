@@ -51,6 +51,7 @@ function makeView(): SlabView {
       vp: new Float64Array(16),
       originRelative: false,
       precision: 'f32',
+      reversedZ: false,
     },
     vp: new Float32Array(16),
     camPos: [0, 0, 5],

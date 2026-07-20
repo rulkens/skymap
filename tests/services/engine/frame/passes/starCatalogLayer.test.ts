@@ -130,6 +130,7 @@ function makeNear0View(camPos: Vec3): SlabView {
     vp: Float64Array.from({ length: 16 }, (_, i) => i + 0.5),
     originRelative: true,
     precision: 'f64',
+    reversedZ: false,
   };
   return { slab, vp: new Float32Array(16), camPos, viewportPx: [1280, 720] };
 }
@@ -174,8 +175,9 @@ describe('starCatalogLayer.draw', () => {
     const call1 = renderer.draw.mock.calls[1]![1];
 
     // Every leaf draw is tagged 'leaf' and carries only leaf nodes (isAggregate 0).
+    // The flat arrays are reused grow-only buffers, so scan only `[0, drawCount)`.
     expect(call0.stream).toBe('leaf');
-    expect(call0.isAggregate.every((v) => v === 0)).toBe(true);
+    expect(call0.isAggregate.subarray(0, call0.drawCount).every((v) => v === 0)).toBe(true);
 
     // Same rebased-vp REFERENCE to both draws, and it is the f32 narrow of the
     // f64 rebase off the slab vp — not the raw pre-narrowed view.vp.
@@ -184,14 +186,13 @@ describe('starCatalogLayer.draw', () => {
     expect(call0.vp).not.toBe(view.vp);
     expect(call0.vp).toEqual(expectedVp);
 
-    // Per-node opacity is parallel to nodeDraws; the single-leaf fixture's one
+    // Per-node opacity is parallel to the flat cut; the single-leaf fixture's one
     // node snaps to full on its first frame, so opacity is the pure crossfade.
     const camDistPc = Math.hypot(...camPos) / SCALE_UNITS.PC_TO_MPC;
     const expectedOpacity = fadeBand({ fullAt: inner, goneAt: outer }, camDistPc);
-    expect(call0.opacity.length).toBe(call0.nodeDraws.length);
+    expect(call0.drawCount).toBe(1);
     expect(call0.opacity[0]).toBeCloseTo(expectedOpacity, 10);
     expect(call0.source).toBe(Source.GaiaStars);
-    expect(call0.nodeDraws.length).toBe(1);
   });
 
   it('forwards the live size / brightness-ramp / glow-overlap / fog-cap scalars to every leaf draw', () => {

@@ -7,7 +7,7 @@
 // in a depthless OVER composite. A connector anchored behind a planet would
 // otherwise paint over the body that sits in front of it. This variant tests
 // the body pass's depth buffer at the fragment and discards where a nearer
-// body already owns the pixel — see lib/sceneDepth.wesl for the 'less means
+// body already owns the pixel — see lib/sceneDepth.wesl for the 'greater means
 // occluded' rule. This is the leader-line mirror of labels/fragmentOcclude.wesl.
 //
 // The shading itself is identical to the plain 'fs' entry: we reuse

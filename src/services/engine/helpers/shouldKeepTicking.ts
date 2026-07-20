@@ -16,6 +16,16 @@
  * path decide whether to keep ticking — is what froze the flow field whenever
  * the cursor stopped moving or left the canvas. The signature keeps them apart.
  *
+ * Every term except the last is read off `(state, s, nowMs)` — the signature is
+ * the proof the predicate depends on nothing else. The one exception is `anim`,
+ * an explicit bag of IN-FRAME animation votes derived by planners that runFrame
+ * has already run this frame (today: the star LOD-fade `anyNodeFading`, computed
+ * by `prepareStarCut`). It is threaded as a PARAMETER rather than read off
+ * EngineState precisely because it is a per-frame derivation, not stored state:
+ * passing it in keeps the predicate a pure function of its inputs, and keeps the
+ * one wake authority here — the star pass computes the vote, this predicate
+ * decides. New in-frame animators extend the bag, never a hidden state read.
+ *
  * Predicate breakdown:
  *   - camera active: `selectCameraActive(s)` — the continuation predicate
  *     (design §4), true while a drag is held, a focus tween is in flight, or
@@ -46,12 +56,18 @@ import { selectCameraActive } from '../../../state/camera/selectors';
 import { isEngineReady } from './engineReady';
 import { slotReady } from '../../loading/slotReady';
 
-export function shouldKeepTicking(state: EngineState, s: RootState, nowMs: number): boolean {
+export function shouldKeepTicking(
+  state: EngineState,
+  s: RootState,
+  nowMs: number,
+  anim: { starFadeAnimating: boolean },
+): boolean {
   return (
     selectCameraActive(s) ||
     (isEngineReady(state) && state.subsystems.texturedDisks.hasInFlightWork()) ||
     state.subsystems.fades.isAnyAnimating(nowMs) ||
     state.subsystems.structureFocus.isAwake(nowMs) ||
-    (state.settings.flow.enabled && slotReady(state.assetSlots.flow))
+    (state.settings.flow.enabled && slotReady(state.assetSlots.flow)) ||
+    anim.starFadeAnimating
   );
 }

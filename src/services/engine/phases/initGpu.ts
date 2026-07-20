@@ -81,6 +81,7 @@ import { createOrbitTrailRenderer } from '../../gpu/renderers/bodies/orbitTrailR
 import { sceneBodyLabels, FOREGROUND_LABEL_CAPACITY } from '../presentation/sceneBodyLabels';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
 import { TIMED_SLOTS } from '../frame/frameProgram';
+import { SLAB_REVERSED_Z, NEAR0, COSMO } from '../frame/slabs';
 import { loadFontAtlases } from '../../gpu/labelLayout/loadFontAtlases';
 import { hasUrlGate } from '../../../utils/url/hasUrlGate';
 import { isPerfMode } from '../../../utils/url/isPerfMode';
@@ -227,12 +228,17 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     uiCtx,
     'rgba16float',
     state.gpu.fadeBgl!,
+    SLAB_REVERSED_Z[COSMO]!,
   );
   // Invisible Milky-Way pick billboard — writes into the r32uint pick
   // texture (NOT the HDR target), so it takes no format param.  Built
   // here alongside the other pick providers; `wireInput` threads it into
   // `createPickRenderer` along with the disk-visibility gate.
-  state.gpu.milkyWayPickRenderer = createMilkyWayPickRenderer(uiCtx, state.gpu.fadeBgl!);
+  state.gpu.milkyWayPickRenderer = createMilkyWayPickRenderer(
+    uiCtx,
+    state.gpu.fadeBgl!,
+    SLAB_REVERSED_Z[NEAR0]!,
+  );
 
   // Wire the freshly-constructed renderers into the label director, which
   // was built eagerly in the engine state literal with no renderers yet.
@@ -295,6 +301,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     targetFormat: 'rgba16float',
     canvas,
     focusBgl: state.gpu.focusBgl!,
+    reversedZ: SLAB_REVERSED_Z[COSMO]!,
   });
   // Observable-universe horizon shell — translucent sphere at the
   // comoving particle-horizon radius (~14.3 Gpc).  Single uniform
@@ -429,8 +436,18 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // instanced draw: each body's MVP + albedo rides in a per-instance vertex
   // record (planetsLayer packs the batch), so the matrices survive to submit
   // without a per-body bind or a mid-frame uniform.
-  state.gpu.starRenderer = createStarRenderer(device, 'rgba16float', 'depth32float');
-  state.gpu.planetRenderer = createPlanetRenderer(device, 'rgba16float', 'depth32float');
+  state.gpu.starRenderer = createStarRenderer(
+    device,
+    'rgba16float',
+    'depth32float',
+    SLAB_REVERSED_Z[NEAR0]!,
+  );
+  state.gpu.planetRenderer = createPlanetRenderer(
+    device,
+    'rgba16float',
+    'depth32float',
+    SLAB_REVERSED_Z[NEAR0]!,
+  );
 
   // starPointRenderer draws the unresolved-partition stars as additive
   // points into the depthless HDR target — no depth format, unlike the
@@ -471,6 +488,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   state.gpu.starCatalogPickRenderer = createStarCatalogPickRenderer(
     device,
     state.gpu.starCatalogRenderer.pickResources(),
+    SLAB_REVERSED_Z[NEAR0]!,
   );
 
   // bodyPickRenderer is the pick provider for the NEAR0 foreground bodies (Earth
@@ -481,7 +499,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // writeBuffer/submit race) + point instance buffer, so it needs no other
   // renderer's resources. The body layers' `drawPick` rows (Task 11) drive it; a
   // no-op until a pick pass records into it.
-  state.gpu.bodyPickRenderer = createBodyPickRenderer(device);
+  state.gpu.bodyPickRenderer = createBodyPickRenderer(device, SLAB_REVERSED_Z[NEAR0]!);
 
   // orbitTrailRenderer draws the accurate Keplerian orbit trails (Earth /
   // Jupiter / Moon) as additive screen-space conics into the same depthless
@@ -544,7 +562,12 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // `format` / `depth` in `renderTargets.ts` — the same target↔renderer-
   // profile invariant the sphere bodies above carry, matched by convention
   // + this comment rather than an import.
-  state.gpu.earthRenderer = createEarthRenderer(device, 'rgba16float', 'depth32float');
+  state.gpu.earthRenderer = createEarthRenderer(
+    device,
+    'rgba16float',
+    'depth32float',
+    SLAB_REVERSED_Z[NEAR0]!,
+  );
 
   // ── Textured bodies (Plan 02 — the twelve non-Earth textured bodies) ─
   //
@@ -553,12 +576,13 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // group + surface texture inside the renderer's per-body Map. Same
   // ('rgba16float', 'depth32float') `foreground:0` format invariant as the Earth
   // + sphere-body renderers above. The bodyTextures slot family (minted just
-  // below) routes each non-Earth body's committed bitmap to `setTexture` and its
-  // eviction to `clearTexture`.
+  // below) routes each non-Earth body's committed bitmap to `setMap` and its
+  // per-kind eviction to `clearMap`.
   state.gpu.texturedBodyRenderer = createTexturedBodyRenderer(
     device,
     'rgba16float',
     'depth32float',
+    SLAB_REVERSED_Z[NEAR0]!,
   );
 
   // ── Saturn's rings (Plan 02 — the translucent overlay half) ──────────
@@ -569,7 +593,12 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // (`cullMode: 'none'`), depth-tested but no depth write — so it overlays the
   // opaque spheres already in the target. The `saturn-ring` bodyTextures slot
   // (minted just below) routes the radial strip to `setTexture`.
-  state.gpu.ringRenderer = createRingRenderer(device, 'rgba16float', 'depth32float');
+  state.gpu.ringRenderer = createRingRenderer(
+    device,
+    'rgba16float',
+    'depth32float',
+    SLAB_REVERSED_Z[NEAR0]!,
+  );
 
   // ── Earth's cloud shell (Plan D — the translucent deck above the surface) ──
   //
@@ -580,7 +609,12 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // depth write — so it overlays the opaque surface already in the target. The
   // `earth:clouds` bodyTextures slot routes the cloud map to `setTexture`; until
   // then a 1×1 transparent placeholder keeps the shell invisible.
-  state.gpu.cloudShellRenderer = createCloudShellRenderer(device, 'rgba16float', 'depth32float');
+  state.gpu.cloudShellRenderer = createCloudShellRenderer(
+    device,
+    'rgba16float',
+    'depth32float',
+    SLAB_REVERSED_Z[NEAR0]!,
+  );
 
   // ── Earth's atmosphere shell (Plan E — the in-scatter halo) ──────────
   //
@@ -598,6 +632,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     device,
     'rgba16float',
     'depth32float',
+    SLAB_REVERSED_Z[NEAR0]!,
     ATMOSPHERE_PARAMS,
   );
 

@@ -71,11 +71,13 @@ function stubPass(): GPURenderPassEncoder & { drawIndexed: ReturnType<typeof vi.
 
 describe('createRingRenderer', () => {
   it('construct does not throw under the mock device', () => {
-    expect(() => createRingRenderer(mockDevice(), 'rgba16float', 'depth32float')).not.toThrow();
+    expect(() =>
+      createRingRenderer(mockDevice(), 'rgba16float', 'depth32float', false),
+    ).not.toThrow();
   });
 
   it('satisfies Renderer — non-empty label + destroy function', () => {
-    const renderer = createRingRenderer(mockDevice(), 'rgba16float', 'depth32float');
+    const renderer = createRingRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
     renderer satisfies Renderer;
     expect(renderer.label.length).toBeGreaterThan(0);
     expect(typeof renderer.destroy).toBe('function');
@@ -83,7 +85,7 @@ describe('createRingRenderer', () => {
   });
 
   it('setTexture / draw are callable with the right arity', () => {
-    const renderer = createRingRenderer(mockDevice(), 'rgba16float', 'depth32float');
+    const renderer = createRingRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
     expect(typeof renderer.setTexture).toBe('function');
     expect(renderer.setTexture.length).toBe(1);
     expect(typeof renderer.draw).toBe('function');
@@ -103,7 +105,12 @@ describe('createRingRenderer', () => {
     // omitting it makes Dawn reject the upload and the ring samples a zeroed
     // strip. This asserts the flag is present on the upload target.
     const textures: GPUTextureDescriptor[] = [];
-    const renderer = createRingRenderer(mockDevice({ textures }), 'rgba16float', 'depth32float');
+    const renderer = createRingRenderer(
+      mockDevice({ textures }),
+      'rgba16float',
+      'depth32float',
+      false,
+    );
     renderer.setTexture({ width: 512, height: 1 } as unknown as ImageBitmap);
     const stripTex = textures.find((t) => Array.isArray(t.size) && t.size[0] === 512);
     expect(stripTex).toBeDefined();
@@ -112,7 +119,7 @@ describe('createRingRenderer', () => {
 
   it('bakes the foreground profile: over blend, two-sided, depth read / no write', () => {
     const renderPipelines: GPURenderPipelineDescriptor[] = [];
-    createRingRenderer(mockDevice({ renderPipelines }), 'rgba16float', 'depth32float');
+    createRingRenderer(mockDevice({ renderPipelines }), 'rgba16float', 'depth32float', false);
     expect(renderPipelines).toHaveLength(1);
     const pipeline = renderPipelines[0]!;
     const target = Array.from(pipeline.fragment!.targets!)[0]!;
@@ -132,7 +139,7 @@ describe('createRingRenderer', () => {
 
   it('declares a three-binding layout: uniform, sampler, ring strip', () => {
     const bindGroupLayouts: GPUBindGroupLayoutDescriptor[] = [];
-    createRingRenderer(mockDevice({ bindGroupLayouts }), 'rgba16float', 'depth32float');
+    createRingRenderer(mockDevice({ bindGroupLayouts }), 'rgba16float', 'depth32float', false);
     const entries = Array.from(bindGroupLayouts[0]!.entries);
     const byBinding = new Map(entries.map((e) => [e.binding, e]));
     expect(byBinding.get(0)!.buffer!.type).toBe('uniform');

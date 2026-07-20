@@ -323,6 +323,7 @@ describe('renderFrame visual baseline', () => {
       vp: Float64Array.from(viewProj as unknown as Float32Array),
       originRelative: false,
       precision: 'f32',
+      reversedZ: false,
     };
 
     // Subsystems with non-empty lastOutput so the LOD-1 / LOD-2 passes'

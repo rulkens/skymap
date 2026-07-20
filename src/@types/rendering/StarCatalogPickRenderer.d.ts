@@ -24,26 +24,29 @@
  * The visual star pass is additive and depthless so overlapping glows brighten.
  * The pick pass instead wants a SINGLE claimant per pixel — the nearest star —
  * so its pipeline carries a `depth32float` (`NEAR0_DEPTH_FORMAT`) attachment
- * with `depthCompare: 'less'` + `depthWriteEnabled: true`. A bright star in
- * front of a dim one therefore wins the pixel, matching visual occlusion.
+ * with `depthCompare: 'greater'` + `depthWriteEnabled: true`. Under the NEAR0
+ * slab's reversed-Z convention (clear `0.0`, greater-z-wins) a nearer star writes
+ * a LARGER stored depth, so `greater` is what makes the star in front of a dim
+ * one win the pixel, matching visual occlusion.
  */
 
 import type { Renderer } from './Renderer';
 import type { Vec2 } from '../math/Vec2';
-import type { Vec3 } from '../math/Vec3';
 import type { SourceType } from '../data/SourceType';
-import type { StarNodeDraw } from '../../services/gpu/renderers/starCatalog/walkStarOctreeCut';
 
 /**
  * One source's per-frame LEAF cut, as the pick pass draws it — a subset of the
  * visual `StarCatalogDrawArgs`. Only the leaf stream is pickable (a picked star
  * is always a real-star record; an aggregate glow stands in for a whole
  * subtree), so there is no `stream` field and `isAggregate` is packed 0 for
- * every draw. The per-node arrays are parallel: index `i` of `originRelCamMpc` /
- * `cellScaleMpc` describes `nodeDraws[i]` — the node box origin + edge that
- * reconstruct each record's true world position (the same reconstruction the
- * visual pass and `resolveStarRecord` use, so the pick lands exactly where the
- * sprite drew).
+ * every draw. The per-node arrays are flat + parallel, `drawCount` valid entries:
+ * scalar arrays index `i`, the origin vec3 indexes `[3*i]` — the node box origin
+ * + edge that reconstruct each record's true world position (the same
+ * reconstruction the visual pass and `resolveStarRecord` use, so the pick lands
+ * exactly where the sprite drew). Unlike the visual `StarNodeStream`, these are
+ * FRESH compacted arrays `starPickLeafDraws` allocates per pick (opacity-0 leaves
+ * filtered out): a pick is event-driven, not per-frame, so the allocation is
+ * off the hot path.
  */
 export type StarCatalogPickDrawArgs = {
   /** Which loaded catalog's records buffer to bind (its shared records bind group). */
@@ -52,12 +55,19 @@ export type StarCatalogPickDrawArgs = {
   readonly vp: Float32Array;
   /** Viewport size in physical pixels — feeds the pixel-size-to-clip conversion. */
   readonly viewportPx: Vec2;
-  /** The chosen leaf octree nodes to draw (from `walkStarOctreeCut`, opacity > 0). */
-  readonly nodeDraws: readonly StarNodeDraw[];
-  /** Per-node box origin, camera-relative Mpc (parallel to `nodeDraws`). */
-  readonly originRelCamMpc: readonly Vec3[];
-  /** Per-node box edge in Mpc, the in-cell offset unit (parallel to `nodeDraws`). */
-  readonly cellScaleMpc: readonly number[];
+  /** How many leaf nodes this pick draws — valid entries in each flat array below. */
+  readonly drawCount: number;
+  /** Per-node record-slice base (`node.firstRecord`) — a flat `Uint32Array`. */
+  readonly firstRecord: Uint32Array;
+  /** Per-node instance count (leaf → N real stars) — a flat `Uint32Array`. */
+  readonly recordCount: Uint32Array;
+  /**
+   * Per-node box origin, camera-relative Mpc — a flat `Float32Array` of THREE
+   * f32 per node (node `i` at `[3*i]`, `[3*i+1]`, `[3*i+2]`).
+   */
+  readonly originRelCamMpc: Float32Array;
+  /** Per-node box edge in Mpc, the in-cell offset unit — a flat `Float32Array`. */
+  readonly cellScaleMpc: Float32Array;
   /**
    * User's base star-dot size in px (`settings.starCatalogs.sizePx`). The pick
    * billboard is sized by the same leaf legibility ramp as the visual dot so the

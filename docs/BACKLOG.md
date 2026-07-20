@@ -42,6 +42,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Rendering
 
+- [ ] **Field-star body braided to `select` slot** `ready` **important** — `#focus=star-<id>` arrives at an invisible star and deselect-at-close-range blinks the body out; sphere gates on `select` while URL fills `focus` and the sprite is distance-retired in-shader. → [details](backlog/2026-07-21-star-body-selection-braid.md)
 - [ ] **Saturn ring brightness** `ready` — the ring reads too dim next to the new limb-darkened disc; retune ring albedo/exposure (surfaced in the planet-atmospherics per-body visual pass).
 - [ ] **Photoreal-Earth follow-ups** `deferred` — drift traps + fidelity gaps from plans A–E (equirect-uv mirror, setMap kind table, shared proxy-sphere idiom). → [details](backlog/2026-07-19-photoreal-earth-followups.md)
 - [ ] **Titan atmosphere** `needs-design` — minimal params-row-over-flat-sphere vs full Venus-style cloud-as-surface + limb treatment (needs a texture through the fetch/build pipeline). → [details](backlog/2026-07-19-titan-atmosphere.md)
@@ -57,7 +58,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Orbit-trail residual speckle (edge-on pose)** `deferred` — gradient-minors hoist shipped (#448) but per-pixel stipple survives on hardware; remaining suspects ranked (q.z horizon noise, Newton-refine flicker, hard-discard binarization). → [details](backlog/2026-07-18-orbit-trail-residual-speckle.md)
 - [ ] **Star-picking deferred edges** `ready` — star deep link waits forever with Gaia disabled; ring collapses on a degenerate sizePx=0 frame; both small guards. → [details](backlog/2026-07-18-star-picking-deferred-edges.md)
 - [ ] **bodyTextureFetcher content-type guard** `ready` — Vite's SPA fallback serves index.html for missing texture files; the fetcher hands it to createImageBitmap and fails as "source image could not be decoded" — check the response content-type and fail loudly with the real 404 path instead.
-- [ ] **Sun z-fighting / clip issues at Earth zoom** `needs-design` — user-observed 2026-07-18; the Sun (1 AU ≈ 4.9e-12 Mpc) sits near the NEAR0 adaptive far floor (3e-11) across a ~6-decade depth bracket at Earth zoom; diagnose first — plausibly the same NEAR0 depth-bracket family the star-slab item would restructure.
 - [ ] **Milliquas AGN colormap** `needs-design` — AGN reuse the galaxy B−R ramp and misread as blue star-forming; give them their own encoding. Only the kPerZ=0 clamp shipped (#282). → [details](backlog/2026-06-29-milliquas-agn-colormap.md)
 - [ ] **Supercluster/wall shape in focus** `needs-design` — membership is a sphere, so sheets like the Hydra Wall get swallowed; try an ellipsoid fit or density-field membership. → [details](backlog/2026-06-29-supercluster-shape-focus.md)
 - [ ] **In-scene thumbnail quality (SDSS/DSS)** `needs-design` — the auto-fetched atlas-quad path still uses fixed cutout sizes; mask / sky-sub / per-galaxy size / DESI / brightness-norm. (InfoCard path already got sizing + DSS color.) → [details](backlog/2026-06-29-thumbnail-quality-sdss-dss.md)

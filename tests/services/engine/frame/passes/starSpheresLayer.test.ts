@@ -115,6 +115,7 @@ function makeNear0View(camPos: Vec3): SlabView {
     vp: f64Vp,
     originRelative: true,
     precision: 'f64',
+    reversedZ: false,
   };
   return {
     slab,

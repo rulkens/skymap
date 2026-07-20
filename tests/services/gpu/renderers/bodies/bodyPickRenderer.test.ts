@@ -69,7 +69,7 @@ const VIEWPORT: Vec2 = [1920, 1080];
 
 describe('createBodyPickRenderer', () => {
   it('satisfies Renderer and destroys cleanly', () => {
-    const renderer = createBodyPickRenderer(mockDevice());
+    const renderer = createBodyPickRenderer(mockDevice(), false);
     renderer satisfies Renderer;
     expect(renderer.label.length).toBeGreaterThan(0);
     expect(() => renderer.destroy()).not.toThrow();
@@ -79,7 +79,7 @@ describe('createBodyPickRenderer', () => {
 describe('bodyPickRenderer.drawPoints — multi-caller-per-pass', () => {
   it('two same-pass calls bind DIFFERENT instance buffers + bind groups (no last-write-wins clobber)', () => {
     const device = mockDevice();
-    const renderer = createBodyPickRenderer(device);
+    const renderer = createBodyPickRenderer(device, false);
     const pass = mockPass();
 
     // Caller A: one point (the scene stars). Caller B: two points (the glints).
@@ -123,7 +123,7 @@ describe('bodyPickRenderer.drawPoints — multi-caller-per-pass', () => {
 
   it('a fresh pass resets the cursor — slot 0 is reused, not reallocated', () => {
     const device = mockDevice();
-    const renderer = createBodyPickRenderer(device);
+    const renderer = createBodyPickRenderer(device, false);
 
     const passOne = mockPass();
     renderer.drawPoints(passOne, { vp: VP, viewportPx: VIEWPORT, points: [pt(100, 1)] });
@@ -142,7 +142,7 @@ describe('bodyPickRenderer.drawPoints — multi-caller-per-pass', () => {
 
   it('selects the glint pipeline for variant "glint", the scene-star pipeline by default', () => {
     const device = mockDevice();
-    const renderer = createBodyPickRenderer(device);
+    const renderer = createBodyPickRenderer(device, false);
     const pass = mockPass();
 
     // Default variant → scene-star point pipeline (clamps true depth).
@@ -175,7 +175,7 @@ describe('bodyPickRenderer.drawPoints — multi-caller-per-pass', () => {
     // WebGPU validation error that silently drops the whole pick pass). A
     // byte-aware capacity must reallocate on the stride change.
     const device = mockDevice();
-    const renderer = createBodyPickRenderer(device);
+    const renderer = createBodyPickRenderer(device, false);
     const N = 2;
 
     // Pass 1: the scene-star variant claims slot 0 at 16 bytes/instance (32 total).
@@ -217,7 +217,7 @@ describe('bodyPickRenderer.drawPoints — multi-caller-per-pass', () => {
     // vsGlint maps to its pick-depth band. A default-variant call (16 bytes) would
     // leave no room for the class and the priority would collapse.
     const device = mockDevice();
-    const renderer = createBodyPickRenderer(device);
+    const renderer = createBodyPickRenderer(device, false);
     const pass = mockPass();
 
     const points: BodyGlintPick[] = [
@@ -252,7 +252,7 @@ describe('bodyPickRenderer.drawPoints — multi-caller-per-pass', () => {
     // point → a 16-byte buffer, not 20. Guards against the glint stride leaking
     // into the scene-star path (which would misalign every famous-star pick).
     const device = mockDevice();
-    const renderer = createBodyPickRenderer(device);
+    const renderer = createBodyPickRenderer(device, false);
     const pass = mockPass();
 
     renderer.drawPoints(pass, { vp: VP, viewportPx: VIEWPORT, points: [pt(7, 1)] });
@@ -266,7 +266,7 @@ describe('bodyPickRenderer.drawPoints — multi-caller-per-pass', () => {
 
   it('an empty batch is a no-op that costs no slot', () => {
     const device = mockDevice();
-    const renderer = createBodyPickRenderer(device);
+    const renderer = createBodyPickRenderer(device, false);
     const pass = mockPass();
 
     // Empty first call must NOT advance the cursor, so the following non-empty

@@ -35,7 +35,8 @@
  * makes the vertex stage size each record as a floor-sized point (its box extent
  * is zeroed) rather than a box-filling glow. Unlike the depthless additive
  * visual star pass, the pick pipeline is DEPTH-tested (`depth32float` =
- * `NEAR0_DEPTH_FORMAT`, `depthCompare: 'less'`, `depthWriteEnabled: true`) so the
+ * `NEAR0_DEPTH_FORMAT`, `depthCompare: 'greater'` — the NEAR0 slab's reversed-Z
+ * convention, clear `0.0`, greater-z-wins — `depthWriteEnabled: true`) so the
  * nearest star wins the pixel — a bright star in front of a dim one claims the
  * pick, matching visual occlusion.
  *
@@ -53,6 +54,7 @@ import vsCode from '../../shaders/starCatalog/vertex.wesl?static';
 import pickFsCode from '../../shaders/starCatalog/pickFragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { writeCameraPrefix } from '../../lib/cameraUniforms';
+import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 // The NodeParams / StarUniforms byte layout lives in ONE home both star
 // renderers import — see starCatalogLayout.ts (the WESL structs in
 // shaders/starCatalog/io.wesl are the source of truth). This pick renderer is
@@ -90,6 +92,12 @@ export function createStarCatalogPickRenderer(
    * group the pick draw binds verbatim at @group(2).
    */
   resources: StarCatalogPickResources,
+  /**
+   * Selects the NEAR0 slab's depth convention (single-sourced in
+   * `SLAB_REVERSED_Z`): `false` ⇒ smaller-z-wins (`depthCompare: 'less'`),
+   * `true` ⇒ reversed-Z greater-wins. Resolved through `resolveDepthCompare`.
+   */
+  reversedZ: boolean,
 ): StarCatalogPickRenderer {
   const { cameraBgl, drawBgl, recordsBgl } = resources;
 
@@ -128,7 +136,7 @@ export function createStarCatalogPickRenderer(
     depthStencil: {
       format: 'depth32float',
       depthWriteEnabled: true,
-      depthCompare: 'less',
+      depthCompare: resolveDepthCompare('nearer', reversedZ),
     },
   });
 
@@ -210,9 +218,18 @@ export function createStarCatalogPickRenderer(
   }
 
   function draw(pass: GPURenderPassEncoder, args: StarCatalogPickDrawArgs): void {
-    const { source, vp, viewportPx, nodeDraws, originRelCamMpc, cellScaleMpc, sizePx } = args;
+    const {
+      source,
+      vp,
+      viewportPx,
+      drawCount,
+      firstRecord,
+      recordCount,
+      originRelCamMpc,
+      cellScaleMpc,
+      sizePx,
+    } = args;
     const recordsBindGroup = resources.recordsBindGroup(source);
-    const drawCount = nodeDraws.length;
     if (!recordsBindGroup || drawCount === 0) return;
 
     // Own uniform: camera prefix + sizePx + the already-set pickPass = 1 /
@@ -232,18 +249,24 @@ export function createStarCatalogPickRenderer(
     for (let i = 0; i < drawCount; i++) {
       // Same byte layout as the visual packer, with pick-fixed fields: opacity 1
       // (ignored by the pick fragment), isAggregate 0 (point-source leaf),
-      // subtreeStarCount 1 (one star per leaf record). `writeStarNodeParams`
-      // owns the offsets.
-      writeStarNodeParams(nodeScratchView, i * NODE_PARAMS_BYTES, {
-        originRelCamMpc: originRelCamMpc[i]!,
-        cellScaleMpc: cellScaleMpc[i]!,
-        firstRecord: nodeDraws[i]!.firstRecord,
-        opacity: 1.0,
-        isAggregate: 0,
-        subtreeStarCount: 1.0,
-      });
+      // subtreeStarCount 1 (one star per leaf record). The per-node arrays are
+      // the leaf draw-list's compacted flat typed arrays — scalars index `i`, the
+      // origin vec3 indexes `3*i`. `writeStarNodeParams` owns the offsets.
+      const o = i * 3;
+      writeStarNodeParams(
+        nodeScratchView,
+        i * NODE_PARAMS_BYTES,
+        originRelCamMpc[o]!,
+        originRelCamMpc[o + 1]!,
+        originRelCamMpc[o + 2]!,
+        cellScaleMpc[i]!,
+        firstRecord[i]!,
+        1.0,
+        0,
+        1.0,
+      );
       prefixScratch[i] = totalInstances;
-      totalInstances += nodeDraws[i]!.recordCount;
+      totalInstances += recordCount[i]!;
     }
 
     const buffers = ensureDrawBuffers(source, drawCount);

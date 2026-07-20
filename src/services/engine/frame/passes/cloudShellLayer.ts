@@ -19,8 +19,10 @@
  * The shell is the second translucent member of the `(foreground:0, NEAR0)` render
  * group (the ring is the other). It is registered immediately AFTER `earthLayer`
  * so it draws once the opaque globe has stamped its depth: the shell pipeline
- * depth-TESTS against the surface (`depthCompare: 'less'`) so the far hemisphere
- * is correctly occluded, but writes NO depth (`depthWriteEnabled: false`) and
+ * depth-TESTS against the surface (`depthCompare: 'greater'`, the NEAR0 slab's
+ * reversed-Z convention — clear `0.0`, greater-z-wins, so a nearer surface stamps
+ * a LARGER depth) so the far hemisphere is correctly occluded, but writes NO depth
+ * (`depthWriteEnabled: false`) and
  * blends straight-alpha OVER. That is why this row carries `blend: 'over'` where
  * the opaque body siblings carry `'opaque'`, and the shell pipeline bakes exactly
  * that profile. Plan E's `atmosphereShellLayer` lands AFTER this row (drawn last),

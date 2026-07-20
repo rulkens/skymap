@@ -88,6 +88,7 @@ function makeNear0View(camPos: Vec3): SlabView {
     vp: Float64Array.from({ length: 16 }, (_, i) => i + 0.5),
     originRelative: true,
     precision: 'f64',
+    reversedZ: false,
   };
   return { slab, vp: new Float32Array(16), camPos, viewportPx: [1280, 720] };
 }
@@ -102,13 +103,19 @@ describe('starAggregatesLayer', () => {
   it('records the AGGREGATE stream (stream tag, isAggregate all 1) into its pass', () => {
     const renderer = makeRenderer([{ source: Source.GaiaStars, catalog: makeAggregateCatalog() }]);
     const camPos = camAtPcVec(FAR_PC);
-    starAggregatesLayer.draw(PASS_STUB, makeNear0View(camPos), makeCtx(camPos), makeState(renderer));
+    starAggregatesLayer.draw(
+      PASS_STUB,
+      makeNear0View(camPos),
+      makeCtx(camPos),
+      makeState(renderer),
+    );
 
     expect(renderer.draw).toHaveBeenCalledTimes(1);
     const args = renderer.draw.mock.calls[0]![1];
     expect(args.stream).toBe('aggregate');
-    expect(args.nodeDraws.length).toBeGreaterThan(0);
-    expect(args.isAggregate.every((v) => v === 1)).toBe(true);
+    expect(args.drawCount).toBeGreaterThan(0);
+    // The flat arrays are reused grow-only buffers, so scan only `[0, drawCount)`.
+    expect(args.isAggregate.subarray(0, args.drawCount).every((v) => v === 1)).toBe(true);
   });
 
   it('is a no-op when the renderer handle is null (pre-bootstrap)', () => {

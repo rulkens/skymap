@@ -319,7 +319,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       diskRadiusRing: null,
       // True-scale textured Earth (Plan 02 — zoom-to-Earth). null until initGpu
       // constructs it + mints its 'earth' texture slot in the bodyTextures
-      // family (proximity-demanded, commits via setTexture); excluded from
+      // family (proximity-demanded, commits via setMap); excluded from
       // isEngineReady, null-checked at use by earthLayer.
       earthRenderer: null,
       // Anchor renderers (Plan 02 — zoom-to-Earth): the resolved near star
@@ -331,7 +331,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Shared textured-sphere renderer for the twelve non-Earth textured bodies
       // (planets + Moon + Galilean moons). null until initGpu; excluded from
       // isEngineReady, null-checked at use by texturedBodiesLayer; the
-      // bodyTextures family's commit/onRelease call its setTexture/clearTexture.
+      // bodyTextures family's commit/onRelease call its setMap/clearMap.
       texturedBodyRenderer: null,
       // Saturn's rings — the translucent overlay half of the ring system, drawn
       // last in the (foreground:0, NEAR0) group. null until initGpu; excluded

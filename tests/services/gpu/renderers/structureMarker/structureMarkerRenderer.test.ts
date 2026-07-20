@@ -15,6 +15,7 @@ const newRenderer = (initialCapacity?: number) => {
     ctx,
     'rgba16float',
     null as unknown as FadeUniformsBgl,
+    false,
     initialCapacity,
   );
 };
@@ -120,7 +121,7 @@ describe('StructureMarkerRenderer colour target', () => {
       format: 'bgra8unorm' as GPUTextureFormat,
       canvas: null as unknown as HTMLCanvasElement,
     };
-    createStructureMarkerRenderer(ctx, 'rgba16float', {} as unknown as FadeUniformsBgl);
+    createStructureMarkerRenderer(ctx, 'rgba16float', {} as unknown as FadeUniformsBgl, false);
 
     const formatByLabel = new Map(
       captured.map((p) => [p.label, Array.from(p.fragment!.targets!)[0]!.format]),
