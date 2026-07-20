@@ -72,12 +72,15 @@
  * draws OPAQUE geometry (Earth, Moon, Sun) that must occlude the background
  * by depth-test, and WebGPU runs a depth-test only against a bound depth
  * attachment — so a row that declares depth gets a second texture allocated
- * and resized in lockstep with its colour texture. The depth texture is
- * `RENDER_ATTACHMENT` ONLY (never `TEXTURE_BINDING`): its values feed the
- * depth-test during the pass and are never sampled by a downstream shader,
- * unlike the colour texture the compositor reads back. It renders at full
- * resolution (`scale: 1`) because opaque geometry has hard edges that the
- * bilinear upsample used for the low-frequency volume row would smear.
+ * and resized in lockstep with its colour texture. The depth texture carries
+ * `RENDER_ATTACHMENT` (it feeds the depth-test as the pass draws) AND
+ * `TEXTURE_BINDING`, because it is ALSO sampled downstream: the near-field
+ * caption occlusion pass (`foregroundLabelsLayer`, via `lib/sceneDepth.wesl`)
+ * reads this depth to hide a planet's name behind a nearer body. It renders
+ * at full resolution (`scale: 1`) because opaque geometry has hard edges that
+ * the bilinear upsample used for the low-frequency volume row would smear —
+ * and full-res is also what lets a swap-pass fragment index the depth texel
+ * 1:1 (spec invariant: `foreground:0` and `swap` both render at `scale: 1`).
  *
  * ### Why the swap row has a spec but no texture
  *
@@ -201,10 +204,13 @@ export function createRenderTargets(
         label: `render-target-${spec.id}-depth`,
         format: spec.depth,
         size: { width, height },
-        // RENDER_ATTACHMENT ONLY — depth values serve the depth-test during
-        // the pass and are never sampled by a downstream shader, so (unlike
-        // the colour target above) no TEXTURE_BINDING.
-        usage: GPUTextureUsage.RENDER_ATTACHMENT,
+        // Both flags: RENDER_ATTACHMENT feeds the depth-test while the
+        // foreground pass draws opaque geometry; TEXTURE_BINDING lets the
+        // near-field caption occlusion fragment shaders sample this same depth
+        // afterwards (via lib/sceneDepth.wesl) to hide captions behind nearer
+        // bodies. WebGPU descriptors can't re-tag usage after creation, so a
+        // texture that is later sampled must be born with TEXTURE_BINDING.
+        usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
       });
       depthTextures.set(spec.id, depthTexture);
       depthViews.set(spec.id, depthTexture.createView());
