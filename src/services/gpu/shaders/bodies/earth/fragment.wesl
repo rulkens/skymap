@@ -63,15 +63,16 @@
 //
 // The geometric normal 'Ng' is then perturbed by the tangent-space normal map
 // (binding 5, LINEAR RG -- 'bakeNormalMap.ts' stores nx along +u=east in R and
-// ny along +v=north in G; nz is always positive and reconstructed here). A TBN
-// basis is built per-fragment: 'T' is the interpolated +u (east) tangent,
-// Gram-Schmidt-re-orthonormalized against 'Ng' (interpolation skews it off
-// perpendicular), and the bitangent 'Bt = cross(Ng, T)' points +v = NORTH --
-// which matches the bake's G axis (see the inline equator check + bakeNormalMap's
-// row/sign section, the shared contract). The perturbed 'n' feeds 'pbrDirect' in
-// place of 'Ng' so relief catches the sun. The flat-normal placeholder encodes
-// (0,0,1), so before the real map arrives 'n == Ng' and the shading is identical
-// to the un-perturbed path.
+// ny along +v=north in G; nz is always positive and reconstructed). The shared
+// 'lib/normalMap.wesl' 'perturbNormal' owns the TBN maths: it takes 'Ng', the RAW
+// interpolated +u (east) tangent, and the encoded RG, then Gram-Schmidt-
+// re-orthonormalizes the tangent against 'Ng' (interpolation skews it off
+// perpendicular) and rotates the tangent-space vector into local space. Its
+// bitangent 'cross(Ng, Tn)' points +v = NORTH -- matching the bake's G axis (see
+// bakeNormalMap's row/sign section, the shared contract). The perturbed 'n' feeds
+// 'pbrDirect' in place of 'Ng' so relief catches the sun. The flat-normal
+// placeholder encodes (0,0,1), so before the real map arrives 'perturbNormal'
+// returns 'Ng' unchanged and the shading is identical to the un-perturbed path.
 //
 // ## uv / v-orientation
 //
@@ -119,6 +120,7 @@ import package::lib::sphere::EarthSurfaceUniforms;
 import package::lib::pbr::pbrDirect;
 import package::lib::pbr::MIN_ROUGHNESS;
 import package::lib::nightLights::nightLights;
+import package::lib::normalMap::perturbNormal;
 import package::lib::util::raySphere;
 import package::lib::math::PI;
 import package::lib::math::TAU;
@@ -165,24 +167,17 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
 
   // Tangent-space normal perturbation (see the '## Renormalize the interpolated
   // normal + normal mapping' header). The baked map stores nx (R) along +u=east
-  // and ny (G) along +v=north; the shader reconstructs the always-positive nz.
-  // We build a per-fragment TBN from the
-  // interpolated geometric normal + east tangent, then rotate the tangent-space
-  // vector into local space. Before the real map lands the placeholder encodes
-  // (0,0,1) -> n == Ng, so the shading is identical to the geometric-normal path.
+  // and ny (G) along +v=north; 'perturbNormal' reconstructs the always-positive
+  // nz, builds a per-fragment TBN from Ng + the raw east tangent, and rotates the
+  // tangent-space vector into local space. Before the real map lands the
+  // placeholder encodes (0,0,1) -> n == Ng, identical to the geometric-normal path.
   let nEnc = textureSample(normalTexture, earthSampler, in.uv).rg; // LINEAR RG
-  let nxy = nEnc * 2.0 - 1.0;
-  let nz = sqrt(max(0.0, 1.0 - dot(nxy, nxy))); // reconstruct Z (always +)
   // Geometric normal (renormalized -- interpolation across a face shortens it).
   let Ng = normalize(in.normalLocal);
-  // Gram-Schmidt: re-orthonormalize the interpolated east tangent against Ng.
-  let T = normalize(in.tangent - Ng * dot(Ng, in.tangent));
-  // Bitangent = cross(Ng, T) points +v = NORTH, matching the bake's G axis: at
-  // the equator (lon=0) Ng=(1,0,0), T=(0,1,0) -> cross=(0,0,1)=celestial north,
-  // the direction of increasing latitude. So nxy.y (G, +v=north) rides Bt with
-  // the sign the bake encoded (bakeNormalMap's row/sign section is the contract).
-  let Bt = cross(Ng, T);
-  let n = normalize(T * nxy.x + Bt * nxy.y + Ng * nz); // perturbed shading normal
+  // Perturb Ng by the tangent-space map. 'lib/normalMap.wesl' owns the TBN maths
+  // (decode -> reconstruct nz -> Gram-Schmidt the raw east tangent against Ng ->
+  // rotate) and the +v=north bitangent sign that pairs with bakeNormalMap.ts.
+  let n = perturbNormal(Ng, in.tangent, nEnc); // perturbed shading normal
   // View vector: camera minus surface point, both in the body's local frame.
   // 'normalLocal' doubles as the unit-sphere surface POSITION here, and
   // 'u.camPosLocal' is the camera in that same frame (body-radii units), so their
