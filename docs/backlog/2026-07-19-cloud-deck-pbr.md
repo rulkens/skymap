@@ -83,3 +83,28 @@ Start with tier 3 (proxy phase term — free, isolated to `fragment.wesl`) and s
 if it looks wrong before investing in a real τ channel (tier 2) or live coverage
 (tier 1). Live coverage is independently valuable and pipeline-cheap, so it's a
 reasonable standalone pickup regardless.
+
+## Night-side visibility (user-observed 2026-07-19)
+
+On the dark side of Earth the cloud deck currently reads as fully invisible, even
+though `cloudShell/fragment.wesl` already carries an `u.ambientLight` (0.08)
+floor: the floor is crushed by the display transform while the city lights punch
+straight through, so the night hemisphere shows lit cities under an apparently
+cloudless sky. Real night imagery is the opposite — decks are faintly visible and
+cities glow *through* thinner cloud, occluded by thicker cloud.
+
+Two candidate fixes, composable (either alone helps; together they give the
+ISS-photo look):
+
+- **(a) A decoupled night floor for the deck.** One cloud-specific uniform, a
+  higher night-side ambient than the shared `ambientLight` floor, applied where
+  `N·L` has gone dark. Cheapest possible — a single float, no new bind. Buys "the
+  deck is faintly there at night" without touching the light source.
+- **(b) City-light illumination of the cloud undersides.** Sample the night-lights
+  equirect at the cloud UV and tint that emission into the deck, modulated by
+  coverage (thick cloud catches more underlighting, and in turn occludes the city
+  glow). This is the physically-right look — cities lighting the cloud bases from
+  below, the way they read from orbit. Costs one extra texture bind on the cloud
+  pipeline (the night-lights map the surface pass already loads).
+
+Both are isolated to the cloud shell; (a) is a warm-up, (b) is the real fix.

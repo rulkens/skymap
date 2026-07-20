@@ -326,6 +326,7 @@ function makeInput(
   };
   const ctx = {
     isReady: true as const,
+    renderedTargets: new Set<string>(),
     cam,
     vp: viewProj,
     slabs: [cosmoSlab, cosmoSlab],

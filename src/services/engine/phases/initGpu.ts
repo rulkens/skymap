@@ -504,11 +504,18 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // 64-label default: setLabels clamps at maxLabels, so the default would
   // silently drop captions once the seed table outgrew it (the roster already
   // exceeds 64 and climbs toward ~130). The derived capacity tracks the roster.
+  // `{ occludeAgainstDepth: true }` opts this near-field caption instance into
+  // per-pixel occlusion behind nearer solar-system bodies — `foregroundLabelsLayer`
+  // hands its `draw` the `foreground:0` scene depth view each frame. The COSMO
+  // `labelRenderer` above stays non-occluding (no opts). `maxGlyphsPerLabel`
+  // defaults via `undefined` to reach the trailing opts slot.
   state.gpu.foregroundLabelRenderer = createLabelRenderer(
     uiCtx,
     format,
     fontAtlases,
     FOREGROUND_LABEL_CAPACITY,
+    undefined,
+    { occludeAgainstDepth: true },
   );
   state.gpu.foregroundLabelRenderer.setLabels(sceneBodyLabels());
 
@@ -523,7 +530,12 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // origin-distance cancellation dodge it applies to the caption anchors. No
   // bootstrap seed: the connectors are geometry derived per frame from the
   // caption anchors, not a static set.
-  state.gpu.foregroundMarkerLineRenderer = createMarkerLineRenderer(uiCtx, format);
+  // Same occlusion opt-in as the caption sibling above: the leader lines occlude
+  // behind nearer bodies too. `maxLines` defaults via `undefined` to reach the
+  // trailing opts slot. The COSMO `markerLineRenderer` stays non-occluding.
+  state.gpu.foregroundMarkerLineRenderer = createMarkerLineRenderer(uiCtx, format, undefined, {
+    occludeAgainstDepth: true,
+  });
 
   // ── Earth (Plan 02 — zoom-to-Earth) ──────────────────────────────────
   //
@@ -575,18 +587,18 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // The atmosphere renderer draws the translucent proxy sphere at the
   // atmosphere-top radius, LAST in the (foreground:0, NEAR0) group. Its pipeline
   // bakes the `foreground:0` format invariant AND the shell profile: straight-alpha
-  // OVER, front-culled (only the far wall rasterises), depth-tested but no depth
-  // write — so its limb passes over space and is occluded over the opaque disc.
-  // It bakes ITS `AtmosphereParams` set (Earth today) at construction — the
-  // view-independent transmittance + multi-scatter LUTs — while the sky-view LUT
-  // is re-baked each frame by the `atmosphereSkyView` compute step. A second
-  // atmosphere body would want a second instance with its own params row; the
-  // factory takes the params so that stays a construction-site choice.
+  // OVER, two-sided (`cullMode: 'none'`, the fragment splits duty by front_facing),
+  // depth-tested but no depth write — so its limb passes over space and is occluded
+  // over the opaque disc. It bakes ONE bundle per `ATMOSPHERE_PARAMS` row (Earth
+  // + six planets) at construction — the view-independent transmittance + multi-scatter
+  // LUTs — while each body's sky-view LUT is re-baked per frame by the
+  // `atmosphereSkyView` compute step. The factory takes the whole table, so a
+  // second atmosphere body is a new params row, no wiring change here.
   state.gpu.atmosphereShellRenderer = createAtmosphereShellRenderer(
     device,
     'rgba16float',
     'depth32float',
-    ATMOSPHERE_PARAMS['earth']!,
+    ATMOSPHERE_PARAMS,
   );
 
   // ── Body-surface texture slot family ─────────────────────────────────

@@ -25,6 +25,7 @@ function makeCtx(): ReadyFrameContext {
   const cam = makeCam();
   return {
     isReady: true,
+    renderedTargets: new Set<string>(),
     cam,
     vp: new Float32Array(16) as unknown as Mat4,
     slabs: [],

@@ -6,19 +6,19 @@
  *
  * ### What it draws — the blue limb, reddened terminator, and over-disc haze
  *
- * For the seeded `bodies.earth` (the only atmosphere body today), this layer
- * draws the atmosphere-top proxy sphere through the shared `atmosphereShellRenderer`.
- * The renderer's shell pipeline draws BOTH walls (no cull) and the fragment splits
- * duty by facing: the NEAR wall carries the over-disc aerial perspective (haze on
- * the lit disc), the FAR wall the limb + sky. Depth-testing each wall against the
- * already-stamped opaque scene keeps cross-body occlusion for both — a nearer body
- * occludes the disc haze via the near wall's depth and the limb via the far
- * wall's. The fragment samples this frame's sky-view LUT (baked by the
- * `atmosphereSkyView` compute step, in the compute prelude) to compose the
- * in-scattered radiance: a blue limb over the day side, a reddened arc along the
- * terminator/sunset, and haze greying the disc with distance. Per-pixel
- * scene-depth-aware aerial perspective (arbitrary occluder depth, in-atmosphere
- * descent) is the deferred froxel upgrade.
+ * For each atmosphere body resolved this frame (only the seeded `bodies.earth`
+ * today), this layer draws its atmosphere-top proxy sphere through the shared
+ * `atmosphereShellRenderer`. The renderer's shell pipeline draws BOTH walls (no
+ * cull) and the fragment splits duty by facing: the NEAR wall carries the
+ * over-disc aerial perspective (haze on the lit disc), the FAR wall the limb +
+ * sky. Depth-testing each wall against the already-stamped opaque scene keeps
+ * cross-body occlusion for both — a nearer body occludes the disc haze via the
+ * near wall's depth and the limb via the far wall's. The fragment samples this
+ * frame's sky-view LUT (baked by the `atmosphereSkyView` compute step, in the
+ * compute prelude) to compose the in-scattered radiance: a blue limb over the day
+ * side, a reddened arc along the terminator/sunset, and haze greying the disc with
+ * distance. Per-pixel scene-depth-aware aerial perspective (arbitrary occluder
+ * depth, in-atmosphere descent) is the deferred froxel upgrade.
  *
  * ### Why it draws LAST, OVER not opaque (spec §8.3)
  *
@@ -43,70 +43,27 @@
  *
  * ### When it draws
  *
- * `enabled` gates on the `atmosphereShellRenderer` handle (null pre-bootstrap), the
- * shared near-field distance gate (`FOREGROUND_MAX_DISTANCE_MPC`), the seeded
- * `bodies.earth` record, that body having an `ATMOSPHERE_PARAMS` row (Moon / gas
- * giants have none — the same data-gate the ring table uses), and the shared
- * sub-pixel cull. Both `enabled` and `draw` read ONE `atmosphereShellDraw`
- * derivation, so the gate and the loop can never disagree. The per-frame sky-view
- * bake (`encodeAtmosphereSkyView`) gates on a strict SUPERSET of this predicate,
- * so a frame never draws the shell without having baked this frame's LUT.
+ * Both `enabled` and `draw` iterate the ONE shared `atmosphereDrawList` — the
+ * per-frame derivation of which seeded bodies have a live atmosphere shell: a body
+ * with an `ATMOSPHERE_PARAMS` row (Moon / gas giants have none — the same data-gate
+ * the ring table uses), inside the shared near-field distance edge
+ * (`FOREGROUND_MAX_DISTANCE_MPC`), and above the shared sub-pixel disc cull.
+ * `enabled` additionally requires the renderer handle. Because the sky-view bake
+ * (`encodeAtmosphereSkyView`) reads the SAME list, bake↔draw is equality by
+ * construction — the shell bakes this frame's LUT iff it draws it — so a frame can
+ * never draw the shell against a LUT it skipped baking.
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
-import type { EngineState } from '../../../../@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
-import type { EarthBody } from '../../../../@types/scene/EarthBody';
-import type { AtmosphereParams } from '../../../../@types/scene/AtmosphereParams';
 import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
-import { ATMOSPHERE_PARAMS } from '../../../../data/bodies/atmosphereParams';
-import { ATMOSPHERE_SHELL_PARAMS } from '../../../../data/bodies/atmosphereShellParams';
+import { SCENE_RINGS } from '../../../../data/bodies/sceneRings';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { camPosLocal } from '../../../../utils/camera/camPosLocal';
 import { packAtmosphereUniforms } from '../../../../utils/gpu/packAtmosphereUniforms';
-import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
-import { SUB_PIXEL_BODY_CULL_PX } from '../subPixelBodyCullPx';
-
-/**
- * The Earth record + its atmosphere params to draw the shell for this frame, or
- * `null` if the shell should not render — the body is unseeded, has no atmosphere
- * row, or resolves to sub-pixel. ONE derivation feeds both `enabled` and `draw`,
- * so the gate and the loop can never disagree. Mirrors `cloudShellLayer`'s
- * near-field derivation.
- */
-function atmosphereShellDraw(
-  state: EngineState,
-  ctx: ReadyFrameContext,
-): { earth: EarthBody; params: AtmosphereParams } | null {
-  const earth = state.data.bodies.earth;
-  if (earth === null) return null;
-  const params = ATMOSPHERE_PARAMS[earth.id];
-  if (params === undefined) return null;
-  // Sub-pixel cull on Earth's SURFACE diameter — the shared body gate, matching
-  // the surface / cloud-shell rows so the limb appears exactly when the disc
-  // does. (The alternative — culling on the atmosphere-TOP diameter — would keep
-  // the limb visible a hair longer as the disc shrinks; a tunable, deliberately
-  // NOT taken here for consistency with the opaque body it haloes.) A zero
-  // camera-to-centre distance means the camera is INSIDE the body —
-  // apparentSizePx defensively returns 0 there, which would read as sub-pixel, so
-  // treat it as resolved.
-  const dx = earth.positionMpc[0] - ctx.drawCamPos[0];
-  const dy = earth.positionMpc[1] - ctx.drawCamPos[1];
-  const dz = earth.positionMpc[2] - ctx.drawCamPos[2];
-  const distanceMpc = Math.hypot(dx, dy, dz);
-  if (distanceMpc === 0) return { earth, params };
-  const diameterPx = apparentSizePx({
-    diameterKpc: (2 * earth.radiusKm * SCALE_UNITS.KM_TO_MPC) / SCALE_UNITS.KPC_TO_MPC,
-    distanceMpc,
-    viewportHeightPx: ctx.canvasSize.height,
-    fovYRad: ctx.fovYRad,
-  });
-  return diameterPx >= SUB_PIXEL_BODY_CULL_PX ? { earth, params } : null;
-}
+import { atmosphereDrawList } from '../atmosphereDrawList';
 
 export const atmosphereShellLayer: ContentLayer = {
   name: 'atmosphere-shell',
@@ -116,65 +73,75 @@ export const atmosphereShellLayer: ContentLayer = {
 
   enabled(state, ctx) {
     // Handle first: the check short-circuits so pre-bootstrap fixtures (null
-    // renderer, bare ctx) never touch ctx or the body inputs.
+    // renderer, bare ctx) never touch the body inputs.
     if (state.gpu.atmosphereShellRenderer === null) return false;
-    if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
-    // A row that would draw nothing (unseeded / no atmosphere row / sub-pixel)
-    // must leave the pass plan: mirror draw's branch with the SAME derivation.
-    return atmosphereShellDraw(state, ctx) !== null;
+    return atmosphereDrawList(state, ctx).length > 0;
   },
 
   draw(pass, view, ctx, state) {
     const renderer = state.gpu.atmosphereShellRenderer;
     if (renderer === null) return;
-    const drawn = atmosphereShellDraw(state, ctx);
-    if (drawn === null) return;
-    const { earth, params } = drawn;
 
-    // Scale the unit proxy sphere to the ATMOSPHERE-TOP radius (the shell's outer
-    // extent) from the slab's f64 vp (the f64 seam), folding in Earth's baked
-    // orientation so the sky-view frame co-registers with the surface.
-    const atmosphereTopMpc = params.atmosphereTopKm * SCALE_UNITS.KM_TO_MPC;
-    const mvp = composeBodyMvp(
-      view.slab.vp,
-      earth.positionMpc,
-      RENDER_ORIGIN_MPC,
-      atmosphereTopMpc,
-      earth.orientation,
-    );
-    // Sun rotated into Earth's local frame (its baked orientation carries the
-    // axial tilt), co-framed with the in-scatter integral's sun direction.
-    const sun = sunDirLocal(earth.positionMpc, RENDER_ORIGIN_MPC, earth.orientation);
-    // The camera in atmosphere-top-radius units — the view vector the in-scatter
-    // fragment marches along. `view.camPos` is a copy of `ctx.drawCamPos` (the
-    // rendered pose), the SAME vector `encodeAtmosphereSkyView` bakes the sky-view
-    // LUT from. Scaling by the atmosphere-top radius (NOT the surface radius) is
-    // what that SAME-radius LUT bake expects, so the baked view height and the
-    // fragment altitude agree (the bake packs |camPosLocal| × atmosphereTopKm from
-    // the same pose).
-    const camLocal = camPosLocal(
-      view.camPos,
-      earth.positionMpc,
-      atmosphereTopMpc,
-      earth.orientation,
-    );
-    // Ground/atmosphere-top radius ratio ∈ (0,1): in the proxy's local frame the
-    // atmosphere top is the unit sphere and the ground sphere has this radius.
-    const bottomRadius = params.planetRadiusKm / params.atmosphereTopKm;
-    // Exposure is the live Settings → Display → Earth knob (seeded from
-    // `ATMOSPHERE_SHELL_PARAMS.exposure`); `EngineState.settings` is a live store
-    // getter, so this reads the current value every frame. sunIrradiance stays a
-    // static data-file constant (fragment-unused today).
-    renderer.draw(
-      pass,
-      packAtmosphereUniforms(
-        mvp,
-        sun,
-        camLocal,
-        bottomRadius,
-        ATMOSPHERE_SHELL_PARAMS.sunIrradiance,
-        state.settings.earth.atmosphereExposure,
-      ),
-    );
+    for (const { body, params } of atmosphereDrawList(state, ctx)) {
+      // Scale the unit proxy sphere to the ATMOSPHERE-TOP radius (the shell's
+      // outer extent) from the slab's f64 vp (the f64 seam), folding in the body's
+      // baked orientation so the sky-view frame co-registers with the surface.
+      const atmosphereTopMpc = params.atmosphereTopKm * SCALE_UNITS.KM_TO_MPC;
+      const mvp = composeBodyMvp(
+        view.slab.vp,
+        body.positionMpc,
+        RENDER_ORIGIN_MPC,
+        atmosphereTopMpc,
+        body.orientation,
+      );
+      // Sun rotated into the body's local frame (its baked orientation carries the
+      // axial tilt), co-framed with the in-scatter integral's sun direction.
+      const sun = sunDirLocal(body.positionMpc, RENDER_ORIGIN_MPC, body.orientation);
+      // The camera in atmosphere-top-radius units — the view vector the in-scatter
+      // fragment marches along. `view.camPos` is a copy of `ctx.drawCamPos` (the
+      // rendered pose), the SAME vector `encodeAtmosphereSkyView` bakes the sky-view
+      // LUT from. Scaling by the atmosphere-top radius (NOT the surface radius) is
+      // what that SAME-radius LUT bake expects, so the baked view height and the
+      // fragment altitude agree (the bake packs |camPosLocal| × atmosphereTopKm from
+      // the same pose).
+      const camLocal = camPosLocal(
+        view.camPos,
+        body.positionMpc,
+        atmosphereTopMpc,
+        body.orientation,
+      );
+      // Ground/atmosphere-top radius ratio ∈ (0,1): in the proxy's local frame the
+      // atmosphere top is the unit sphere and the ground sphere has this radius.
+      const bottomRadius = params.planetRadiusKm / params.atmosphereTopKm;
+      // Exposure resolution — the one Earth-keyed branch: Earth alone carries a
+      // live Settings → Display → Earth slider (seeded from
+      // `ATMOSPHERE_PARAMS.earth.exposure`), so it reads the store value each frame
+      // (`EngineState.settings` is a live getter — a drag overrides the limb
+      // without a reload); every other body reads its own params-row `exposure`.
+      // sunIrradiance is the per-body params dial (fragment-unused today).
+      const exposure =
+        body.id === 'earth' ? state.settings.earth.atmosphereExposure : params.exposure;
+      // The host's ring annulus in the proxy's LOCAL units (atmosphere top = 1),
+      // so the fragment can keep a ring in FRONT of the atmosphere from being
+      // darkened by the shell's over-blend. No `SCENE_RINGS` row ⇒ both ratios 0
+      // (the no-ring sentinel) — the same data-gate the ring-shadow path uses.
+      const ring = SCENE_RINGS.find((r) => r.bodyId === body.id);
+      const ringInnerRatio = ring === undefined ? 0 : ring.innerRadiusKm / params.atmosphereTopKm;
+      const ringOuterRatio = ring === undefined ? 0 : ring.outerRadiusKm / params.atmosphereTopKm;
+      renderer.draw(
+        pass,
+        body.id,
+        packAtmosphereUniforms(
+          mvp,
+          sun,
+          camLocal,
+          bottomRadius,
+          params.sunIrradiance,
+          exposure,
+          ringInnerRatio,
+          ringOuterRatio,
+        ),
+      );
+    }
   },
 };

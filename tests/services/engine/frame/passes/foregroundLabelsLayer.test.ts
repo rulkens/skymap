@@ -81,7 +81,18 @@ function makeCtx(distance: number, nowMs?: number): ReadyFrameContext {
   } else {
     testClockMs = Math.max(testClockMs, nowMs);
   }
-  return { cam: { distance }, fovYRad: 1, nowMs } as unknown as ReadyFrameContext;
+  // The layer reads `ctx.renderTargets.depthViewOf('foreground:0')` to thread
+  // the scene depth view into both draws (caption/connector occlusion), gated on
+  // `ctx.renderedTargets.has('foreground:0')` (the body pass ran this frame). A
+  // no-op depth stub plus `foreground:0` in the rendered set keep these tests —
+  // which assert on the rebase/fade seams, not occlusion — on the occluding path.
+  return {
+    cam: { distance },
+    fovYRad: 1,
+    nowMs,
+    renderTargets: { depthViewOf: () => ({}) as GPUTextureView },
+    renderedTargets: new Set(['foreground:0']),
+  } as unknown as ReadyFrameContext;
 }
 
 // A foreground label renderer whose glyphCount is fixed per test. `setLabels`,
@@ -342,7 +353,9 @@ describe('foregroundLabelsLayer.draw', () => {
     );
     const onSpy = onRenderer.setLabels as unknown as ReturnType<typeof vi.fn>;
     const onLabels = onSpy.mock.calls[0]![0] as readonly Label[];
-    expect(onLabels.some((l) => SCENE_STAR_LABEL_IDS.has(l.id) && l.id !== SUN_LABEL_ID)).toBe(true);
+    expect(onLabels.some((l) => SCENE_STAR_LABEL_IDS.has(l.id) && l.id !== SUN_LABEL_ID)).toBe(
+      true,
+    );
 
     // Gate OFF (famousStars): no non-Sun star caption, but the Sun + Earth still show.
     rebaseMock.mockReturnValueOnce(makeSpreadVp());

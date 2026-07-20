@@ -152,8 +152,12 @@ export function executeFrame(args: ExecuteFrameArgs): void {
 
   // Per-`executeFrame` first-touch bookkeeping: a target id enters this set the
   // first time a pass is opened against it, flipping subsequent passes from
-  // 'clear' to 'load'.
-  const touched = new Set<string>();
+  // 'clear' to 'load'. This is the SAME object exposed on the ready context as
+  // `renderedTargets`: the public type is `ReadonlySet` (the consumer surface),
+  // but the concrete object `deriveFrameContext` builds is a real `Set`, so the
+  // executor populates it here and later layers read which targets rendered this
+  // frame via `ctx.renderedTargets`.
+  const touched = ctx.renderedTargets as Set<string>;
 
   for (const step of program) {
     switch (step.kind) {

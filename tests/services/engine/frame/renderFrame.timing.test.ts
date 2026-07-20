@@ -219,6 +219,8 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
 
   const ctx = {
     isReady: true as const,
+    // executor populates this as targets render; a later pass reads which rendered this frame.
+    renderedTargets: new Set<string>(),
     cam,
     vp: viewProj,
     slabs: [cosmoSlab, cosmoSlab],

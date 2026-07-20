@@ -92,8 +92,12 @@ const EXTINCTION_EPS: f32 = 1e-7;
 //   offset 64..67 : planetRadiusKm        (f32 — ground / atmosphere bottom)
 //   offset 68..71 : atmosphereTopKm       (f32 — top-of-atmosphere radius)
 //   offset 72..75 : _pad0                 (f32 — rounds struct to 80 / 16-byte)
-//   offset 76..79 : _pad1                 (f32)
+//   offset 76..79 : _pad1                 (f32 — rounds struct to 80 / 16-byte)
 //   total: 80 bytes / 20 f32.
+//
+// The twilight knob rides the per-frame 'SkyViewParams' (skyViewLut.wesl), NOT
+// this construction-written buffer, so it can be tuned live; the two tail slots
+// here are inert pad again.
 //
 // 'planetRadiusKm' and 'atmosphereTopKm' ride here (not only on
 // 'AtmosphereUniforms') because the bakes need the ABSOLUTE km radii to

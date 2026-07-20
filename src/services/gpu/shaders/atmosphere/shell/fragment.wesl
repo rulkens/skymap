@@ -95,6 +95,11 @@ import package::atmosphere::scattering::skyViewLutParamsToUv;
 @group(0) @binding(1) var lutSamp: sampler;
 @group(0) @binding(2) var skyViewLut: texture_2d<f32>;
 @group(0) @binding(3) var transmittanceLut: texture_2d<f32>;
+// Ring-alpha strip -- a 1x1 transparent placeholder on every ringless body,
+// Saturn's radial strip once its bitmap commits. Sampled only inside the
+// ring-in-front branch, which 'ringOuterRatio == 0' short-circuits (the same
+// every-body-binds pattern 'texturedBody/fragment.wesl' binding 3 uses).
+@group(0) @binding(4) var ringTexture: texture_2d<f32>;
 
 // The atmosphere top is the unit sphere in this mesh's local frame.
 const TOP_RADIUS: f32 = 1.0;
@@ -203,7 +208,37 @@ fn fs(in: FsIn) -> @location(0) vec4<f32> {
   }
   let opacity = 1.0 - dot(segTransmittance, LUMINANCE);
 
+  // ── Ring-in-front occlusion ─────────────────────────────────────────
+  //
+  // The ring draws BEFORE this shell and writes no depth, so ring pixels are in
+  // dst and a plain premultiplied-OVER would attenuate them by (1 - opacity) --
+  // haze darkening a ring that is physically in FRONT of the atmosphere. The
+  // annulus never intersects the shell (Saturn's ring inner edge sits well
+  // outside the atmosphere top), so along any view ray the ring-plane crossing
+  // is either wholly in front of the segment ('tRing < tNear') or wholly behind
+  // it. When in front, the ring blocks a 'ringBlock' fraction (its strip alpha)
+  // of this fragment's view of the atmosphere: scale BOTH the emitted in-scatter
+  // and the opacity by the complement. An opaque band in front fully masks the
+  // shell (dst rides through untouched); a gap ('alpha ~ 0') leaves the haze
+  // intact; a ring BEHIND the segment keeps full haze over it, as it should.
+  // 'ringOuterRatio == 0' (every ringless body) short-circuits.
+  var ringBlock = 0.0;
+  if (u.ringOuterRatio > 0.0 && abs(dir.z) > 1e-6) {
+    let tRing = -ro.z / dir.z;
+    if (tRing > 0.0 && tRing < tNear) {
+      let rHit = length((ro + dir * tRing).xy);
+      if (rHit >= u.ringInnerRatio && rHit <= u.ringOuterRatio) {
+        let uCoord = (rHit - u.ringInnerRatio) / (u.ringOuterRatio - u.ringInnerRatio);
+        // 'textureSampleLevel': non-uniform control flow, mip-less strip.
+        ringBlock = textureSampleLevel(ringTexture, lutSamp, vec2<f32>(uCoord, 0.5), 0.0).a;
+      }
+    }
+  }
+  let ringVis = 1.0 - ringBlock;
+
   // Premultiplied-OVER: rgb is the added in-scatter, alpha attenuates the
-  // background (space behind the limb).
-  return vec4<f32>(inScatter * u.exposure, opacity);
+  // background (space behind the limb) -- both scaled by the ring-in-front
+  // visibility so a ring band between the camera and the atmosphere keeps its
+  // own brightness.
+  return vec4<f32>(inScatter * u.exposure * ringVis, opacity * ringVis);
 }

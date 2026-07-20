@@ -6,18 +6,6 @@ whole-plan reviews as **backlog, not blockers**. Everything here is
 agree-by-construction or dead-code-safe today; each item removes a
 hand-synchronized mirror before it can drift.
 
-## 1. Shared per-frame atmosphere-pose derivation (E7-A, med-high)
-
-`encodeAtmosphereSkyView.ts` (compute prelude) and `atmosphereShellLayer.ts`
-(draw) each derive `camLocal`, `sunDirLocal`, and the atmosphere-top scale from
-the same inputs (`ctx.drawCamPos`, `bodies.earth`, `ATMOSPHERE_PARAMS`), and
-correctness depends on the two derivations agreeing — the coupling is enforced
-only by prose ("MUST equal", `AtmosphereShellRenderer.d.ts`). The plan already
-solved this shape one level down (`atmosphereShellDraw` is one derivation
-feeding both `enabled` and `draw`); extend it: compute the atmosphere pose once
-per frame off `ctx` and feed both the bake and the draw. Only the encode side's
-camera source is currently test-guarded; the draw-site packing has no guard.
-
 ## 2. Equirect dir→uv convention has two homes (D9-l1, low)
 
 `cubeSphereMesh.ts` (TS bake of vertex uvs) and `dirToEquirectUv` in
@@ -35,17 +23,6 @@ build side got the equivalent consolidation (`KIND_WRITERS` table, plan C); the
 renderer side didn't. A per-kind record table (`slot`, `format-axis`, `label`)
 is the renderer twin of that fix. Trigger: the next kind, or the next time the
 file is open for surgery.
-
-## 4. Venus/Titan atmosphere = more than a params row (E7-E context)
-
-`ATMOSPHERE_PARAMS` is data-not-code and `atmosphereShellRenderer` is genuinely
-body-agnostic, but `initGpu` constructs one Earth-bound renderer instance and
-the layer/encode are Earth-scoped. A second atmosphere body needs: per-params
-renderer instances (LUT cache keyed by params), a layer that iterates
-atmosphere-bearing bodies, and the encode gating per body. Same shape applies
-to `cloudShellLayer` (Venus cloud deck). Recorded so the "just add a row"
-docstring shortcut doesn't mislead a future implementer — the honest wording
-fix landed in the plan-E close commit.
 
 ## 5. Three sphere-proxy meshes each hand-tuning their own margin (low-med)
 

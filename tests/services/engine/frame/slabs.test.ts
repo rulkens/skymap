@@ -110,6 +110,7 @@ describe('slabViewOf', () => {
     const slabs = deriveSlabs(cam, cosmoVp);
     return {
       isReady: true,
+      renderedTargets: new Set<string>(),
       cam,
       vp: cosmoVp,
       canvasSize: { width: 1920, height: 1080 },

@@ -30,8 +30,18 @@ export type MarkerLineRenderer = {
    * called inside a `beginRenderPass` / `pass.end()` block by a `Pass`
    * implementation.  The pass's render target format must match the
    * `targetFormat` passed to `createMarkerLineRenderer`.
+   *
+   * `sceneDepthView` is consumed only by an instance created with
+   * `occludeAgainstDepth: true`, where it feeds the group(1) depth joint so
+   * fragments behind a nearer solar-system body are discarded (per-pixel
+   * body occlusion).  A plain instance ignores it.
    */
-  draw(pass: GPURenderPassEncoder, viewProj: Float32Array, viewportSize: Vec2): void;
+  draw(
+    pass: GPURenderPassEncoder,
+    viewProj: Float32Array,
+    viewportSize: Vec2,
+    sceneDepthView?: GPUTextureView,
+  ): void;
   /** Number of lines last passed to setLines. Used by tests + debug HUD. */
   lineCount(): number;
   /** Release all GPU resources. No-op if constructed with a null device. */

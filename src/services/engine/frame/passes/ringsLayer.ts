@@ -64,6 +64,7 @@ import { SCENE_RINGS } from '../../../../data/bodies/sceneRings';
 import { bodyTextureSlotKey } from '../../../../utils/scene/bodyTextureSlotKey';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
+import { camPosLocal } from '../../../../utils/camera/camPosLocal';
 import { packRingUniforms } from '../../../../utils/gpu/packRingUniforms';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
@@ -148,11 +149,16 @@ export const ringsLayer: ContentLayer = {
       // axial tilt), so the fragment's two-sided Lambert + shadow ray stay
       // co-framed.
       const sun = sunDirLocal(body.positionMpc, RENDER_ORIGIN_MPC, body.orientation);
+      // Camera in the body's local frame, in planet radii (planet = unit sphere)
+      // — the frame the fragment's in-front-of-planet view-ray test runs in, so
+      // the ring keeps its own lit brightness where it occults the disc.
+      const radiusMpc = body.radiusKm * SCALE_UNITS.KM_TO_MPC;
+      const cam = camPosLocal(ctx.drawCamPos, body.positionMpc, radiusMpc, body.orientation);
       // Ring-shape scalars, both relative to the OUTER radius (the disc's unit
       // radius): the planet's size in disc units, and the hole's inner edge.
       const planetRadiusRatio = body.radiusKm / ring.outerRadiusKm;
       const innerRatio = ring.innerRadiusKm / ring.outerRadiusKm;
-      renderer.draw(pass, packRingUniforms(mvp, sun, planetRadiusRatio, innerRatio));
+      renderer.draw(pass, packRingUniforms(mvp, sun, planetRadiusRatio, cam, innerRatio));
     }
   },
 };

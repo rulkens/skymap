@@ -106,5 +106,14 @@ export type ReadyFrameContext = {
    * (`ctx.renderTargets.viewOf('volume')`) never reach back into `state`.
    */
   renderTargets: RenderTargets;
+  /**
+   * The set of render-target ids drawn into so far THIS frame. A later pass
+   * that samples an earlier target's texture guards on this — mirroring the
+   * executor's composite step, which skips compositing a source that was never
+   * rendered this frame. The near-field caption occlusion reads it to avoid
+   * sampling the `foreground:0` depth on a frame where no body drew (the
+   * executor skips an empty render step, leaving that depth stale/uninitialised).
+   */
+  renderedTargets: ReadonlySet<string>;
   texturedDisks: TexturedDiskSubsystem;
 };

@@ -1,8 +1,9 @@
 /**
- * atmosphereShellRenderer — Earth's physically-based in-scatter atmosphere shell
- * (spec §8). The renderer that finally LINKS the six Task-E4 WESL modules: three
- * LUT bakes (`transmittanceLut`, `multiScatterLut`, `skyViewLut`) + the shell
- * vertex/fragment, sharing the `atmosphere/scattering.wesl` core.
+ * atmosphereShellRenderer — the physically-based in-scatter atmosphere shell
+ * (spec §8), one bundle per atmosphere body. The renderer that LINKS the six
+ * Task-E4 WESL modules: three LUT bakes (`transmittanceLut`, `multiScatterLut`,
+ * `skyViewLut`) + the shell vertex/fragment, sharing the
+ * `atmosphere/scattering.wesl` core.
  *
  * ## Three LUTs, two baked once, one per frame
  *
@@ -15,13 +16,34 @@
  *   - `skyViewLut`       (192×108) — re-baked EVERY frame in `encodeSkyView`
  *     (camera altitude + sun direction change frame to frame).
  *
+ * ## Per-body bundles, shared program (the single-uniform-clobber fix)
+ *
+ * Each atmosphere body (a row in `paramsById`) owns a bundle: its three LUT
+ * textures, its `ScatteringParams`/`SkyViewParams`/`AtmosphereUniforms` buffers,
+ * and its four bind groups. Only the LUT `sampler`, the proxy-sphere geometry,
+ * and the four pipelines + their bind-group layouts are shared — one program
+ * serves every body.
+ *
+ * The bundle split is the WebGPU `queue.writeBuffer` ordering trap defused by
+ * construction: `encodeSkyView`/`draw` rewrite a body's `SkyViewParams` /
+ * `AtmosphereUniforms` buffer immediately before that body's own dispatch/draw,
+ * and interleaving `writeBuffer` with `submit` in one frame does NOT preserve
+ * order. Giving each body its OWN buffers means a later body writes a DIFFERENT
+ * buffer — there is no shared per-frame state for the race to corrupt. The cost
+ * is a handful of small textures + buffers per body, and today Earth is the sole
+ * row, so it is one bundle.
+ *
  * ## On-device startup bake (transmittance → multi-scatter, ONE encoder)
  *
- * The two view-independent LUTs bake at construction into ONE command encoder and
- * one `queue.submit`. The multi-scatter pass reads the transmittance LUT, and the
- * pass boundary IS the barrier — WebGPU inserts a storage barrier between two
- * compute passes in the same encoder (the ordering `flowFieldRenderer`'s
- * seed→integrate two-pass encoder documents). No out-of-band per-pass submit.
+ * The two view-independent LUTs bake at construction. Every body's transmittance
+ * pass then multi-scatter pass records into ONE shared command encoder, followed
+ * by ONE `queue.submit` after the loop — never a per-body submit. The
+ * multi-scatter pass reads that body's transmittance LUT, and the compute-pass
+ * boundary IS the barrier: WebGPU inserts a storage barrier between two compute
+ * passes in the same encoder (the ordering `flowFieldRenderer`'s seed→integrate
+ * two-pass encoder documents). The loop simply repeats that pass pair per body
+ * inside the one encoder. The sky-view LUT is NOT baked here — it depends on the
+ * per-frame camera + sun state (`encodeSkyView`).
  *
  * ## First `texture_storage_2d<rgba16float, write>` in the repo
  *
@@ -38,7 +60,9 @@
  * Every pipeline is built off an explicit `GPUBindGroupLayout` + pipeline layout
  * (`feedback_webgpu_auto_layout_trap`). The bindings below mirror each E4
  * module's `@group(0)` declarations exactly (a mismatch is a silent mis-index the
- * GPU would not report — on iOS it drops the frame).
+ * GPU would not report — on iOS it drops the frame). Sharing ONE layout per
+ * pipeline across every body's bind groups is what lets a single pipeline serve
+ * the whole set.
  *
  * ## Shell pipeline profile (the `ringRenderer` model with two deltas)
  *
@@ -111,35 +135,35 @@ function dispatchCount(px: number): number {
   return Math.ceil(px / WORKGROUP_SIZE);
 }
 
+/** One atmosphere body's private GPU resources: its three LUT textures, its three
+ *  uniform buffers, and the four bind groups wiring them to the SHARED pipelines.
+ *  The bind groups reference the shared sampler + layouts but this body's own
+ *  textures/buffers, so no per-frame write to one body's buffers can clobber
+ *  another's. */
+type AtmosphereBundle = {
+  transmittanceTex: GPUTexture;
+  multiScatterTex: GPUTexture;
+  skyViewTex: GPUTexture;
+  /** The host body's ring-alpha strip — `null` while the body binds the shared
+   *  1×1 transparent placeholder (every ringless body, and Saturn until its
+   *  strip bitmap commits via `setRingTexture`). */
+  ringTexture: GPUTexture | null;
+  scatteringBuffer: GPUBuffer;
+  skyViewParamsBuffer: GPUBuffer;
+  shellUniformBuffer: GPUBuffer;
+  transmittanceBindGroup: GPUBindGroup;
+  multiScatterBindGroup: GPUBindGroup;
+  skyViewBindGroup: GPUBindGroup;
+  shellBindGroup: GPUBindGroup;
+};
+
 export function createAtmosphereShellRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat, // 'rgba16float' (foreground:0)
   depthFormat: GPUTextureFormat, // 'depth32float' (foreground:0)
-  params: AtmosphereParams, // Earth today — bakes ITS transmittance + multi-scatter set
+  paramsById: Readonly<Record<string, AtmosphereParams>>, // one bundle per row (Earth + six planets)
 ): AtmosphereShellRenderer {
-  // ── The three LUT textures (rgba16float, STORAGE + TEXTURE binding) ─────────
-  //
-  // STORAGE_BINDING lets the bake compute pass write via `textureStore`;
-  // TEXTURE_BINDING lets downstream passes + the shell fragment SAMPLE. The
-  // sky-view LUT needs both every frame (written by `encodeSkyView`, sampled by
-  // the shell draw the same frame).
-  function createLut(label: string, size: readonly [number, number]): GPUTexture {
-    return device.createTexture({
-      label,
-      size: [size[0], size[1], 1],
-      format: LUT_FORMAT,
-      usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
-    });
-  }
-  const transmittanceTex = createLut('atmosphere-transmittance-lut', TRANSMITTANCE_LUT_SIZE);
-  const multiScatterTex = createLut('atmosphere-multiscatter-lut', MULTI_SCATTER_LUT_SIZE);
-  const skyViewTex = createLut('atmosphere-skyview-lut', SKY_VIEW_LUT_SIZE);
-
-  const transmittanceView = transmittanceTex.createView();
-  const multiScatterView = multiScatterTex.createView();
-  const skyViewView = skyViewTex.createView();
-
-  // ── Sampler: linear + clamp-to-edge both axes ──────────────────────────────
+  // ── Sampler: linear + clamp-to-edge both axes (SHARED across bodies) ────────
   //
   // The LUT parametrisations assume clamped edges (no sub-uv edge correction is
   // applied — a deliberate v1 simplification), and the tables are smooth, so
@@ -152,38 +176,13 @@ export function createAtmosphereShellRenderer(
     addressModeV: 'clamp-to-edge',
   });
 
-  // ── Uniform buffers ────────────────────────────────────────────────────────
-  //
-  // ScatteringParams: written once here (the baked constants never change).
-  // SkyViewParams: rewritten per frame in `encodeSkyView`. AtmosphereUniforms:
-  // rewritten per draw. Each is a single record (Earth is the sole atmosphere
-  // body → at most one bake set + one draw per frame, so a single non-dynamic
-  // buffer each is race-free — the same precondition every single-buffer body
-  // renderer holds).
-  const scatteringBuffer = device.createBuffer({
-    label: 'atmosphere-scattering-params',
-    size: SCATTERING_PARAMS_FLOATS * 4,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-  device.queue.writeBuffer(scatteringBuffer, 0, packScatteringParams(params));
-
-  const skyViewParamsBuffer = device.createBuffer({
-    label: 'atmosphere-skyview-params',
-    size: SKY_VIEW_PARAMS_BYTES,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-
-  const shellUniformBuffer = device.createBuffer({
-    label: 'atmosphere-shell-uniform',
-    size: ATMOSPHERE_UNIFORM_BYTES,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-
   // ── Proxy sphere geometry (positions only — the vertex reads @location(0)) ──
   //
   // `composeBodyMvp` scales this unit sphere to the atmosphere-top radius, so the
   // atmosphere top is the UNIT sphere in the mesh's local frame. The mesh also
   // emits uvs; the shell samples no surface texture, so only positions upload.
+  // Shared: the geometry is body-agnostic — bodies differ only in LUT contents +
+  // per-frame uniforms.
   const mesh = uvSphereMesh(SEGMENTS, RINGS);
   const indexCount = mesh.indices.length;
 
@@ -201,7 +200,7 @@ export function createAtmosphereShellRenderer(
   });
   device.queue.writeBuffer(indexBuffer, 0, mesh.indices);
 
-  // ── Shader modules ─────────────────────────────────────────────────────────
+  // ── Shader modules (SHARED) ────────────────────────────────────────────────
   //
   // Every module linked here through `createShaderModuleWithDevLog` — the FIRST
   // real link of the six E4 modules (nothing imported them before). A missing
@@ -229,7 +228,7 @@ export function createAtmosphereShellRenderer(
     'atmosphere.shell.fragment',
   );
 
-  // ── Transmittance bake pipeline ────────────────────────────────────────────
+  // ── Transmittance bake pipeline (SHARED) ───────────────────────────────────
   // group 0: [0] ScatteringParams uniform, [1] storage tex (write).
   const transmittanceBgl = device.createBindGroupLayout({
     label: 'atmosphere-transmittance-bgl',
@@ -250,16 +249,8 @@ export function createAtmosphereShellRenderer(
     }),
     compute: { module: transmittanceModule, entryPoint: 'cs' },
   });
-  const transmittanceBindGroup = device.createBindGroup({
-    label: 'atmosphere-transmittance-bg',
-    layout: transmittanceBgl,
-    entries: [
-      { binding: 0, resource: { buffer: scatteringBuffer } },
-      { binding: 1, resource: transmittanceView },
-    ],
-  });
 
-  // ── Multi-scatter bake pipeline ────────────────────────────────────────────
+  // ── Multi-scatter bake pipeline (SHARED) ───────────────────────────────────
   // group 0: [0] ScatteringParams, [1] transmittance tex, [2] sampler,
   //          [3] storage tex (write).
   const multiScatterBgl = device.createBindGroupLayout({
@@ -283,18 +274,8 @@ export function createAtmosphereShellRenderer(
     }),
     compute: { module: multiScatterModule, entryPoint: 'cs' },
   });
-  const multiScatterBindGroup = device.createBindGroup({
-    label: 'atmosphere-multiscatter-bg',
-    layout: multiScatterBgl,
-    entries: [
-      { binding: 0, resource: { buffer: scatteringBuffer } },
-      { binding: 1, resource: transmittanceView },
-      { binding: 2, resource: sampler },
-      { binding: 3, resource: multiScatterView },
-    ],
-  });
 
-  // ── Sky-view bake pipeline (per frame) ─────────────────────────────────────
+  // ── Sky-view bake pipeline (SHARED, dispatched per frame) ──────────────────
   // group 0: [0] ScatteringParams, [1] SkyViewParams, [2] transmittance tex,
   //          [3] multiScatter tex, [4] sampler, [5] storage tex (write).
   const skyViewBgl = device.createBindGroupLayout({
@@ -320,22 +301,11 @@ export function createAtmosphereShellRenderer(
     }),
     compute: { module: skyViewModule, entryPoint: 'cs' },
   });
-  const skyViewBindGroup = device.createBindGroup({
-    label: 'atmosphere-skyview-bg',
-    layout: skyViewBgl,
-    entries: [
-      { binding: 0, resource: { buffer: scatteringBuffer } },
-      { binding: 1, resource: { buffer: skyViewParamsBuffer } },
-      { binding: 2, resource: transmittanceView },
-      { binding: 3, resource: multiScatterView },
-      { binding: 4, resource: sampler },
-      { binding: 5, resource: skyViewView },
-    ],
-  });
 
-  // ── Shell render pipeline ──────────────────────────────────────────────────
+  // ── Shell render pipeline (SHARED) ─────────────────────────────────────────
   // group 0: [0] AtmosphereUniforms (VERTEX+FRAGMENT), [1] sampler,
-  //          [2] skyView tex, [3] transmittance tex.
+  //          [2] skyView tex, [3] transmittance tex, [4] ring-alpha strip
+  //          (1×1 transparent placeholder on every ringless body).
   const shellBgl = device.createBindGroupLayout({
     label: 'atmosphere-shell-bgl',
     entries: [
@@ -347,18 +317,27 @@ export function createAtmosphereShellRenderer(
       { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
       { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
       { binding: 3, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+      { binding: 4, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
     ],
   });
-  const shellBindGroup = device.createBindGroup({
-    label: 'atmosphere-shell-bg',
-    layout: shellBgl,
-    entries: [
-      { binding: 0, resource: { buffer: shellUniformBuffer } },
-      { binding: 1, resource: sampler },
-      { binding: 2, resource: skyViewView },
-      { binding: 3, resource: transmittanceView },
-    ],
+
+  // Shared 1×1 TRANSPARENT ring placeholder — bound at binding 4 for every body
+  // whose ring strip has not committed (all ringless bodies, forever). Binding a
+  // real texture on all bodies keeps ONE bind-group layout for the whole set; the
+  // fragment's 'ringOuterRatio == 0' data-gate means the placeholder is never
+  // sampled (the 'texturedBodyRenderer' binding-3 pattern).
+  const placeholderRing = device.createTexture({
+    label: 'atmosphere-placeholder-ring',
+    size: [1, 1, 1],
+    format: 'rgba8unorm',
+    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
   });
+  device.queue.writeTexture(
+    { texture: placeholderRing },
+    new Uint8Array([0, 0, 0, 0]),
+    { bytesPerRow: 4 },
+    [1, 1, 1],
+  );
 
   const shellPipeline = device.createRenderPipeline({
     label: 'atmosphere-shell-pipeline',
@@ -419,48 +398,208 @@ export function createAtmosphereShellRenderer(
     },
   });
 
-  // ── Startup bake: transmittance THEN multi-scatter, ONE encoder ────────────
+  // ── Per-body bundles ───────────────────────────────────────────────────────
   //
-  // Both view-independent LUTs bake here in a single construction-time encoder +
-  // one submit. The multi-scatter pass samples the transmittance LUT, and the
-  // compute-pass boundary is the barrier WebGPU inserts between the two passes —
-  // so the ordering holds with no out-of-band submit (the two-pass encoder
-  // lesson `flowFieldRenderer` documents). The sky-view LUT is NOT baked here —
-  // it depends on the per-frame camera + sun state (`encodeSkyView`).
+  // For each atmosphere body: its three LUT textures (rgba16float, STORAGE +
+  // TEXTURE binding — STORAGE lets the bake compute pass write via `textureStore`,
+  // TEXTURE lets downstream passes + the shell fragment SAMPLE), its three uniform
+  // buffers (ScatteringParams written once from the body's params; SkyViewParams
+  // rewritten per frame; AtmosphereUniforms rewritten per draw), and the four bind
+  // groups wiring those to the shared pipelines. Built here, stored by id.
+  const bundles = new Map<string, AtmosphereBundle>();
+
+  function createLut(label: string, size: readonly [number, number]): GPUTexture {
+    return device.createTexture({
+      label,
+      size: [size[0], size[1], 1],
+      format: LUT_FORMAT,
+      usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
+    });
+  }
+
+  function createBundle(bodyId: string, params: AtmosphereParams): AtmosphereBundle {
+    const transmittanceTex = createLut(
+      `atmosphere-transmittance-lut-${bodyId}`,
+      TRANSMITTANCE_LUT_SIZE,
+    );
+    const multiScatterTex = createLut(
+      `atmosphere-multiscatter-lut-${bodyId}`,
+      MULTI_SCATTER_LUT_SIZE,
+    );
+    const skyViewTex = createLut(`atmosphere-skyview-lut-${bodyId}`, SKY_VIEW_LUT_SIZE);
+
+    const transmittanceView = transmittanceTex.createView();
+    const multiScatterView = multiScatterTex.createView();
+    const skyViewView = skyViewTex.createView();
+
+    // ScatteringParams: written once (the baked constants never change).
+    const scatteringBuffer = device.createBuffer({
+      label: `atmosphere-scattering-params-${bodyId}`,
+      size: SCATTERING_PARAMS_FLOATS * 4,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    device.queue.writeBuffer(scatteringBuffer, 0, packScatteringParams(params));
+
+    const skyViewParamsBuffer = device.createBuffer({
+      label: `atmosphere-skyview-params-${bodyId}`,
+      size: SKY_VIEW_PARAMS_BYTES,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+
+    const shellUniformBuffer = device.createBuffer({
+      label: `atmosphere-shell-uniform-${bodyId}`,
+      size: ATMOSPHERE_UNIFORM_BYTES,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+
+    const transmittanceBindGroup = device.createBindGroup({
+      label: `atmosphere-transmittance-bg-${bodyId}`,
+      layout: transmittanceBgl,
+      entries: [
+        { binding: 0, resource: { buffer: scatteringBuffer } },
+        { binding: 1, resource: transmittanceView },
+      ],
+    });
+
+    const multiScatterBindGroup = device.createBindGroup({
+      label: `atmosphere-multiscatter-bg-${bodyId}`,
+      layout: multiScatterBgl,
+      entries: [
+        { binding: 0, resource: { buffer: scatteringBuffer } },
+        { binding: 1, resource: transmittanceView },
+        { binding: 2, resource: sampler },
+        { binding: 3, resource: multiScatterView },
+      ],
+    });
+
+    const skyViewBindGroup = device.createBindGroup({
+      label: `atmosphere-skyview-bg-${bodyId}`,
+      layout: skyViewBgl,
+      entries: [
+        { binding: 0, resource: { buffer: scatteringBuffer } },
+        { binding: 1, resource: { buffer: skyViewParamsBuffer } },
+        { binding: 2, resource: transmittanceView },
+        { binding: 3, resource: multiScatterView },
+        { binding: 4, resource: sampler },
+        { binding: 5, resource: skyViewView },
+      ],
+    });
+
+    const shellBindGroup = buildShellBindGroup(bodyId, {
+      shellUniformBuffer,
+      skyViewTex,
+      transmittanceTex,
+      ringTexture: null,
+    });
+
+    return {
+      transmittanceTex,
+      multiScatterTex,
+      skyViewTex,
+      ringTexture: null,
+      scatteringBuffer,
+      skyViewParamsBuffer,
+      shellUniformBuffer,
+      transmittanceBindGroup,
+      multiScatterBindGroup,
+      skyViewBindGroup,
+      shellBindGroup,
+    };
+  }
+
+  /** (Re)build a body's shell bind group. Split out so `setRingTexture` can swap
+   *  the binding-4 strip in without re-deriving the rest — `ringTexture: null`
+   *  binds the shared transparent placeholder (the `texturedBodyRenderer`
+   *  `buildBindGroup` pattern). */
+  function buildShellBindGroup(
+    bodyId: string,
+    res: Pick<AtmosphereBundle, 'shellUniformBuffer' | 'skyViewTex' | 'transmittanceTex'> & {
+      ringTexture: GPUTexture | null;
+    },
+  ): GPUBindGroup {
+    return device.createBindGroup({
+      label: `atmosphere-shell-bg-${bodyId}`,
+      layout: shellBgl,
+      entries: [
+        { binding: 0, resource: { buffer: res.shellUniformBuffer } },
+        { binding: 1, resource: sampler },
+        { binding: 2, resource: res.skyViewTex.createView() },
+        { binding: 3, resource: res.transmittanceTex.createView() },
+        { binding: 4, resource: (res.ringTexture ?? placeholderRing).createView() },
+      ],
+    });
+  }
+
+  for (const [bodyId, params] of Object.entries(paramsById)) {
+    bundles.set(bodyId, createBundle(bodyId, params));
+  }
+
+  // ── Startup bake: transmittance THEN multi-scatter, per body, ONE encoder ──
+  //
+  // Every body's two view-independent LUTs bake here into a SINGLE construction-
+  // time encoder + one submit. Per body, the multi-scatter pass samples that
+  // body's transmittance LUT, and the compute-pass boundary is the barrier WebGPU
+  // inserts between the two passes — so the ordering holds with no out-of-band
+  // submit (the two-pass encoder lesson `flowFieldRenderer` documents). The loop
+  // repeats the pair per body inside the same encoder; do NOT submit per body. The
+  // sky-view LUT is NOT baked here — it depends on the per-frame camera + sun state
+  // (`encodeSkyView`).
   {
     const encoder = device.createCommandEncoder({ label: 'atmosphere-startup-bake' });
 
-    const transmittancePass = encoder.beginComputePass({ label: 'atmosphere-transmittance-pass' });
-    transmittancePass.setPipeline(transmittancePipeline);
-    transmittancePass.setBindGroup(0, transmittanceBindGroup);
-    transmittancePass.dispatchWorkgroups(
-      dispatchCount(TRANSMITTANCE_LUT_SIZE[0]),
-      dispatchCount(TRANSMITTANCE_LUT_SIZE[1]),
-    );
-    transmittancePass.end();
+    for (const bundle of bundles.values()) {
+      const transmittancePass = encoder.beginComputePass({
+        label: 'atmosphere-transmittance-pass',
+      });
+      transmittancePass.setPipeline(transmittancePipeline);
+      transmittancePass.setBindGroup(0, bundle.transmittanceBindGroup);
+      transmittancePass.dispatchWorkgroups(
+        dispatchCount(TRANSMITTANCE_LUT_SIZE[0]),
+        dispatchCount(TRANSMITTANCE_LUT_SIZE[1]),
+      );
+      transmittancePass.end();
 
-    const multiScatterPass = encoder.beginComputePass({ label: 'atmosphere-multiscatter-pass' });
-    multiScatterPass.setPipeline(multiScatterPipeline);
-    multiScatterPass.setBindGroup(0, multiScatterBindGroup);
-    multiScatterPass.dispatchWorkgroups(
-      dispatchCount(MULTI_SCATTER_LUT_SIZE[0]),
-      dispatchCount(MULTI_SCATTER_LUT_SIZE[1]),
-    );
-    multiScatterPass.end();
+      const multiScatterPass = encoder.beginComputePass({
+        label: 'atmosphere-multiscatter-pass',
+      });
+      multiScatterPass.setPipeline(multiScatterPipeline);
+      multiScatterPass.setBindGroup(0, bundle.multiScatterBindGroup);
+      multiScatterPass.dispatchWorkgroups(
+        dispatchCount(MULTI_SCATTER_LUT_SIZE[0]),
+        dispatchCount(MULTI_SCATTER_LUT_SIZE[1]),
+      );
+      multiScatterPass.end();
+    }
 
     device.queue.submit([encoder.finish()]);
   }
 
+  /** Look up a body's bundle. An unknown id is a programming error: callers only
+   *  ever pass `atmosphereDrawList` ids, which come from the same `paramsById`
+   *  table this renderer bundles — so a miss means the two drifted. */
+  function bundleFor(bodyId: string): AtmosphereBundle {
+    const bundle = bundles.get(bodyId);
+    if (bundle === undefined) {
+      throw new Error(`atmosphereShellRenderer: unknown body id '${bodyId}'`);
+    }
+    return bundle;
+  }
+
   // ── encodeSkyView (per frame) ──────────────────────────────────────────────
 
-  function encodeSkyView(encoder: GPUCommandEncoder, skyViewUniforms: Float32Array): void {
-    // Write the per-frame camera + sun state, then dispatch the sky-view bake
-    // into `encoder` (the same frame encoder, submitted downstream). One write +
-    // one dispatch per frame → no writeBuffer/submit race (the flow precedent).
-    device.queue.writeBuffer(skyViewParamsBuffer, 0, skyViewUniforms);
+  function encodeSkyView(
+    encoder: GPUCommandEncoder,
+    bodyId: string,
+    skyViewUniforms: Float32Array,
+  ): void {
+    // Write THIS body's per-frame camera + sun state, then dispatch the sky-view
+    // bake into `encoder` (the same frame encoder, submitted downstream). One write
+    // + one dispatch per body → no writeBuffer/submit race (the flow precedent).
+    const bundle = bundleFor(bodyId);
+    device.queue.writeBuffer(bundle.skyViewParamsBuffer, 0, skyViewUniforms);
     const pass = encoder.beginComputePass({ label: 'atmosphere-skyview-pass' });
     pass.setPipeline(skyViewPipeline);
-    pass.setBindGroup(0, skyViewBindGroup);
+    pass.setBindGroup(0, bundle.skyViewBindGroup);
     pass.dispatchWorkgroups(
       dispatchCount(SKY_VIEW_LUT_SIZE[0]),
       dispatchCount(SKY_VIEW_LUT_SIZE[1]),
@@ -468,12 +607,44 @@ export function createAtmosphereShellRenderer(
     pass.end();
   }
 
+  // ── setRingTexture ─────────────────────────────────────────────────────────
+
+  function setRingTexture(bodyId: string, bitmap: ImageBitmap): void {
+    // A ring host without an atmosphere row has no bundle — nothing to occlude,
+    // so a miss is a graceful no-op (unlike `bundleFor`'s draw-path throw: the
+    // ring→atmosphere link is optional by data, not an invariant).
+    const bundle = bundles.get(bodyId);
+    if (bundle === undefined) return;
+    bundle.ringTexture?.destroy();
+    const texture = device.createTexture({
+      label: `atmosphere-ring-${bodyId}`,
+      size: [bitmap.width, bitmap.height, 1],
+      format: 'rgba8unorm-srgb',
+      // RENDER_ATTACHMENT is required by copyExternalImageToTexture even though
+      // we never render INTO the strip — Dawn rejects the upload without it.
+      usage:
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.COPY_DST |
+        GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+    device.queue.copyExternalImageToTexture({ source: bitmap }, { texture }, [
+      bitmap.width,
+      bitmap.height,
+      1,
+    ]);
+    bundle.ringTexture = texture;
+    bundle.shellBindGroup = buildShellBindGroup(bodyId, bundle);
+  }
+
   // ── draw ───────────────────────────────────────────────────────────────────
 
-  function draw(pass: GPURenderPassEncoder, uniforms: Float32Array): void {
-    device.queue.writeBuffer(shellUniformBuffer, 0, uniforms);
+  function draw(pass: GPURenderPassEncoder, bodyId: string, uniforms: Float32Array): void {
+    // Write THIS body's own shell uniform buffer immediately before its draw — no
+    // shared buffer for a later body's write to race (see the module header).
+    const bundle = bundleFor(bodyId);
+    device.queue.writeBuffer(bundle.shellUniformBuffer, 0, uniforms);
     pass.setPipeline(shellPipeline);
-    pass.setBindGroup(0, shellBindGroup);
+    pass.setBindGroup(0, bundle.shellBindGroup);
     pass.setVertexBuffer(0, positionBuffer);
     pass.setIndexBuffer(indexBuffer, 'uint16');
     pass.drawIndexed(indexCount);
@@ -482,12 +653,17 @@ export function createAtmosphereShellRenderer(
   // ── destroy ────────────────────────────────────────────────────────────────
 
   function destroy(): void {
-    transmittanceTex.destroy();
-    multiScatterTex.destroy();
-    skyViewTex.destroy();
-    scatteringBuffer.destroy();
-    skyViewParamsBuffer.destroy();
-    shellUniformBuffer.destroy();
+    for (const bundle of bundles.values()) {
+      bundle.transmittanceTex.destroy();
+      bundle.multiScatterTex.destroy();
+      bundle.skyViewTex.destroy();
+      bundle.ringTexture?.destroy();
+      bundle.scatteringBuffer.destroy();
+      bundle.skyViewParamsBuffer.destroy();
+      bundle.shellUniformBuffer.destroy();
+    }
+    bundles.clear();
+    placeholderRing.destroy();
     positionBuffer.destroy();
     indexBuffer.destroy();
   }
@@ -495,6 +671,7 @@ export function createAtmosphereShellRenderer(
   const renderer: AtmosphereShellRenderer = {
     label: 'atmosphereShellRenderer',
     encodeSkyView,
+    setRingTexture,
     draw,
     destroy,
   };

@@ -40,22 +40,32 @@
  *   f32 20..22 (byte  80..91):  camPosLocal (vec3, 16-byte aligned)
  *   f32 23     (byte  92..95):  sunIrradiance (fills camPosLocal's vec3 tail)
  *   f32 24     (byte  96..99):  exposure
- *   f32 25     (byte 100..103): _pad0 (zeroed)
- *   f32 26     (byte 104..107): _pad1 (zeroed)
- *   f32 27     (byte 108..111): _pad2 (zeroed; rounds struct to 112 / 16-byte)
+ *   f32 25     (byte 100..103): ringInnerRatio (ring inner / atmosphere top; 0 = none)
+ *   f32 26     (byte 104..107): ringOuterRatio (ring outer / atmosphere top; 0 = none)
+ *   f32 27     (byte 108..111): _pad0 (zeroed; rounds struct to 112 / 16-byte)
  *
- * @param mvp           16-element column-major MVP (from `composeBodyMvp`).
- * @param sunDirLocal   Sun direction in the body's local frame.
- * @param camPosLocal   Camera position in atmosphere-top-radius units, centre at origin.
- * @param bottomRadius  Ground/atmosphere-top radius ratio (`planetRadiusKm / atmosphereTopKm`), ∈ (0,1).
- * @param sunIrradiance Sun brightness scale into HDR.
- * @param exposure      In-scatter intensity scale.
+ * The ring ratios express the host body's ring annulus in the proxy's LOCAL
+ * units (atmosphere top = 1), so the shell fragment can test whether the ring
+ * blocks a fragment's view of the atmosphere segment (a ring in FRONT of the
+ * atmosphere must keep its own brightness — the shell scales its in-scatter +
+ * opacity by the ring's blocking alpha). `ringOuterRatio == 0` is the no-ring
+ * sentinel — the same data-gate `packTexturedBodyUniforms` uses.
+ *
+ * @param mvp            16-element column-major MVP (from `composeBodyMvp`).
+ * @param sunDirLocal    Sun direction in the body's local frame.
+ * @param camPosLocal    Camera position in atmosphere-top-radius units, centre at origin.
+ * @param bottomRadius   Ground/atmosphere-top radius ratio (`planetRadiusKm / atmosphereTopKm`), ∈ (0,1).
+ * @param sunIrradiance  Sun brightness scale into HDR.
+ * @param exposure       In-scatter intensity scale.
+ * @param ringInnerRatio Ring inner radius / atmosphere-top radius (0 when no ring).
+ * @param ringOuterRatio Ring outer radius / atmosphere-top radius; 0 ⇒ no ring.
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
 import { packLitBodyUniforms } from './packLitBodyUniforms';
 
-/** f32 count of `AtmosphereUniforms` — 16 mvp + 4 (sun+bottom) + 4 (cam+irr) + exposure + 3 pad. */
+/** f32 count of `AtmosphereUniforms` — 16 mvp + 4 (sun+bottom) + 4 (cam+irr) +
+ *  exposure + 2 ring ratios + 1 pad. */
 export const ATMOSPHERE_UNIFORM_FLOATS = 28;
 
 export function packAtmosphereUniforms(
@@ -65,6 +75,8 @@ export function packAtmosphereUniforms(
   bottomRadius: number, // = planetRadiusKm / atmosphereTopKm
   sunIrradiance: number,
   exposure: number,
+  ringInnerRatio: number,
+  ringOuterRatio: number,
 ): Float32Array {
   const out = new Float32Array(ATMOSPHERE_UNIFORM_FLOATS);
   // Reuse the 80-byte lit prefix (mvp + sunDirLocal); no re-derivation.
@@ -75,6 +87,8 @@ export function packAtmosphereUniforms(
   out[22] = camPosLocal[2]; // byte 88
   out[23] = sunIrradiance; // byte 92 — fills camPosLocal's vec3 tail
   out[24] = exposure; // byte 96
-  // out[25..27] (bytes 100..111) stay zero — pads rounding to 16-byte alignment.
+  out[25] = ringInnerRatio; // byte 100
+  out[26] = ringOuterRatio; // byte 104
+  // out[27] (bytes 108..111) stays zero — the tail pad rounding to 112.
   return out;
 }

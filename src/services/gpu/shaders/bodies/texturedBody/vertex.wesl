@@ -8,7 +8,7 @@
 //
 // ## Bindings
 //
-// '@group(0) @binding(0)' holds 'TexturedBodyUniforms' (96 bytes), visible in
+// '@group(0) @binding(0)' holds 'TexturedBodyUniforms' (112 bytes), visible in
 // BOTH stages: the vertex reads 'u.mvp', the fragment reads 'u.sunDirLocal' and
 // the ring ratios. The sampler + two textures live at bindings 1..3 for the
 // fragment stage (declared in the fragment module).
