@@ -54,6 +54,7 @@ import { frameTotals } from '../utils/perf/frameTotals';
 import { median } from '../utils/perf/median';
 import { percentile } from '../utils/perf/percentile';
 import { formatReport } from '../utils/perf/formatReport';
+import { ansiPalette } from '../utils/cli/ansiPalette';
 import type { PerfSample } from '../../src/@types/perf/PerfSample';
 
 // Fixed viewport for every run: pixel area is part of what determines pass cost,
@@ -72,6 +73,8 @@ type PerfOptions = {
   dpr: number;
   frames: number;
   url: string;
+  /** Emit the raw `ScenarioReport[]` as JSON on stdout instead of pretty tables. */
+  json: boolean;
 };
 
 /**
@@ -80,11 +83,19 @@ type PerfOptions = {
  * handling. `--scenario` is repeatable (each occurrence appends a filter).
  */
 function parseArgs(argv: readonly string[]): PerfOptions {
-  const options: PerfOptions = { scenarios: [], dpr: 2, frames: 30, url: 'http://localhost:5173' };
+  const options: PerfOptions = {
+    scenarios: [],
+    dpr: 2,
+    frames: 30,
+    url: 'http://localhost:5173',
+    json: false,
+  };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === undefined) continue;
-    if (arg === '--scenario' || arg === '--dpr' || arg === '--frames' || arg === '--url') {
+    if (arg === '--json') {
+      options.json = true;
+    } else if (arg === '--scenario' || arg === '--dpr' || arg === '--frames' || arg === '--url') {
       const value = argv[++i];
       if (value === undefined) throw new Error(`${arg} requires a value`);
       if (arg === '--scenario') options.scenarios.push(value);
@@ -105,7 +116,7 @@ function parseArgs(argv: readonly string[]): PerfOptions {
       if (arg === '--url') options.url = value.replace(/\/$/, '');
     } else {
       throw new Error(
-        `unknown flag '${arg}' (known: --scenario, --dpr, --frames, --url)`,
+        `unknown flag '${arg}' (known: --scenario, --dpr, --frames, --url, --json)`,
       );
     }
   }
@@ -148,9 +159,14 @@ async function measureScenario(
   });
   try {
     const page = await context.newPage();
-    page.on('pageerror', (err) => console.warn(`[page] error: ${err.message}`));
+    // Collect page errors rather than warning inline: a noisy page would spam
+    // stderr and (in --json mode) risk leaking onto stdout. formatReport
+    // collapses them to a ⚠ summary; JSON mode surfaces them raw. Mirrors
+    // recordTour's handlers, but stores instead of printing.
+    const pageErrors: string[] = [];
+    page.on('pageerror', (err) => pageErrors.push(`error: ${err.message}`));
     page.on('console', (msg) => {
-      if (msg.type() === 'error') console.warn(`[page] console.error: ${msg.text()}`);
+      if (msg.type() === 'error') pageErrors.push(`console.error: ${msg.text()}`);
     });
 
     await page.goto(`${options.url}/?perf`, { waitUntil: 'load' });
@@ -219,6 +235,7 @@ async function measureScenario(
       merged,
       perLayer,
       floors: floorsOf(merged, perLayer, slotGroups),
+      pageErrors,
     };
   } finally {
     await context.close();
@@ -238,15 +255,30 @@ async function main(): Promise<void> {
     );
   }
 
+  // Color is a terminal-only affordance: never in JSON mode (stdout must be
+  // pure JSON), never when piped (stdout isn't a TTY), never when NO_COLOR asks
+  // us to abstain. This is the ONE place TTY/env is read — formatReport stays
+  // pure by taking the resulting palette as data.
+  const color = process.stdout.isTTY === true && !process.env.NO_COLOR && !options.json;
+  const palette = ansiPalette(color);
+
   const browser = await launchChromium();
+  // In JSON mode stdout carries exactly one thing — the full report array,
+  // stringified at the very end. Progress goes to stderr so a `> out.json`
+  // redirect stays parseable; a scenario that fails is simply absent from the
+  // array (its error is logged to stderr).
+  const reports: ScenarioReport[] = [];
   try {
     // Isolate each scenario: a dev-server hiccup or page crash on one vantage
     // shouldn't abort the whole sweep. Log it, mark the run failed, move on.
     for (const scenario of selected) {
-      console.log(`\nmeasuring '${scenario.name}' (${options.frames} frames @ dpr ${options.dpr}) ...`);
+      // Progress → stderr always, so it never contaminates JSON stdout and
+      // interleaves cleanly with the pretty tables on a terminal.
+      console.error(`\nmeasuring '${scenario.name}' (${options.frames} frames @ dpr ${options.dpr}) ...`);
       try {
         const report = await measureScenario(browser, scenario, options);
-        console.log(formatReport(report));
+        if (options.json) reports.push(report);
+        else console.log(formatReport(report, palette));
       } catch (err) {
         console.error(
           `scenario '${scenario.name}' failed: ${err instanceof Error ? err.message : String(err)}`,
@@ -254,6 +286,7 @@ async function main(): Promise<void> {
         process.exitCode = 1;
       }
     }
+    if (options.json) console.log(JSON.stringify(reports, null, 2));
   } finally {
     await browser.close();
   }

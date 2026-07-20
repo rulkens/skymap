@@ -44,4 +44,8 @@ export type ScenarioReport = {
     floor: number;
     reals: readonly { slot: TimingSlotName; real: number }[];
   }[];
+  /** Raw page console.error / pageerror messages captured during the run, in
+   *  arrival order. Human mode collapses them to a ⚠ summary; JSON mode surfaces
+   *  them raw. */
+  pageErrors: readonly string[];
 };
