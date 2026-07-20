@@ -54,6 +54,7 @@ import { isPerfMode } from '../../utils/url/isPerfMode';
 import { whenStablyReady } from '../lifecycle/whenStablyReady';
 import { cancelCameraTween, commitCameraPose, setAutoRotate } from '../camera/cameraSlice';
 import { setRenderStrategy } from '../settings/settingsSlice';
+import { TIMED_SLOT_GROUPS } from '../../services/engine/frame/frameProgram';
 import type { AppStore } from '../../store/types';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { SkymapPerfHook } from '../../@types/perf/SkymapPerfHook';
@@ -67,6 +68,18 @@ import type { RenderStrategy } from '../../@types/engine/frame/RenderStrategy';
 // export it, and importing the engine here would couple state→engine the wrong
 // way (the slice's own comment). A scenario's `pose.rate` overrides this.
 const PERF_AUTO_ROTATE_RATE = 0.000873;
+
+// Slot/layer name → render-step groupKey, flattened once from the same walk the
+// DebugPanel groups on. Handed across the `window.__skymapPerf` seam so the Node
+// harness can bucket its per-layer timings into groups (for the floor estimate)
+// WITHOUT importing `frameProgram` — its transitive `.wesl?static` shader
+// imports only resolve under Vite, so a `tsx` process would throw on them. Safe
+// to reference here: this is a Vite-built src module. Group-key rows map to
+// themselves (`'hdr·NEAR0' → 'hdr·NEAR0'`), so a merged-run group slot resolves
+// through the same table as its per-layer children.
+const SLOT_GROUPS: Readonly<Record<string, string>> = Object.fromEntries(
+  TIMED_SLOT_GROUPS.flatMap((group) => group.rows.map((row) => [row.name, row.groupKey])),
+);
 
 // Hard-cut the camera to `pose` and resolve once the next frame has been
 // scheduled. No tween: a benchmark wants an exact vantage, not choreography.
@@ -110,6 +123,7 @@ export function installPerfHook(store: AppStore, engine: EngineHandle): void {
     setPose: (pose: PerfPose) => setPose(store, pose),
     setStrategy: (s: RenderStrategy) => store.dispatch(setRenderStrategy(s)),
     collectTimings: (frames: number) => collectTimings(engine, frames),
+    slotGroups: SLOT_GROUPS,
   };
   (window as PerfWindow).__skymapPerf = hook;
 }

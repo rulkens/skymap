@@ -17,10 +17,20 @@
 import type { PerfPose } from './PerfPose';
 import type { PerfSample } from './PerfSample';
 import type { RenderStrategy } from '../engine/frame/RenderStrategy';
+import type { TimingSlotName } from '../gpu/timing/TimingSlotName';
 
 export type SkymapPerfHook = {
   readonly ready: Promise<void>;
   readonly setPose: (pose: PerfPose) => Promise<void>;
   readonly setStrategy: (s: RenderStrategy) => void;
   readonly collectTimings: (frames: number) => Promise<PerfSample[]>;
+  /**
+   * Slot/layer name → its render-step groupKey (`'orbit-trails' → 'hdr·NEAR0'`;
+   * a group-key row maps to itself). The Node harness can't import
+   * `frameProgram`/`CONTENT_LAYERS` — their transitive `.wesl?static` shader
+   * imports only resolve under Vite — so this snapshot carries the map across
+   * the seam: the harness buckets its per-layer measurements into groups (for
+   * the floor estimate) without ever loading a renderer module.
+   */
+  readonly slotGroups: Readonly<Record<TimingSlotName, string>>;
 };
