@@ -156,28 +156,28 @@ production + `?gpuTimings` are byte-identical.
 - Consumes: `RenderStrategy` (`@types/engine/frame/RenderStrategy`).
 
 **Steps**
-- [ ] Write `tests/services/engine/frame/resolveStrategy.test.ts` — four hand-specified
+- [x] Write `tests/services/engine/frame/resolveStrategy.test.ts` — four hand-specified
   input→output pairs of the genuine branch (acceptance criteria of the decouple; a real
   branch classifier, not a clamp/mirror):
   - `resolveStrategy('auto', true) → 'perLayerTimed'`
   - `resolveStrategy('auto', false) → 'merged'`
   - `resolveStrategy('merged', true) → 'merged'` (explicit override beats timing-on)
   - `resolveStrategy('perLayerTimed', false) → 'perLayerTimed'`
-- [ ] `npm test -- resolveStrategy` → fails (module missing).
-- [ ] Add `renderStrategy: RenderStrategy | 'auto';` to the `debug` block after
+- [x] `npm test -- resolveStrategy` → fails (module missing).
+- [x] Add `renderStrategy: RenderStrategy | 'auto';` to the `debug` block after
   `disabledPasses` (`EngineSettingsState.d.ts:326`) + `import type { RenderStrategy }` at
   the top of that file.
-- [ ] Add `renderStrategy: 'auto',` to the `debug` object in `initialState.ts` (after
+- [x] Add `renderStrategy: 'auto',` to the `debug` object in `initialState.ts` (after
   `disabledPasses: {}`, `:189`).
-- [ ] Add the `setRenderStrategy` reducer in the `// ── debug ──` group
+- [x] Add the `setRenderStrategy` reducer in the `// ── debug ──` group
   (`settingsSlice.ts:262`) and its name to the export block (`:440`).
-- [ ] Create `resolveStrategy.ts` implementing the contract (didactic header: Joint 1 — one
+- [x] Create `resolveStrategy.ts` implementing the contract (didactic header: Joint 1 — one
   boolean fused two independent axes; `'auto'` preserves the old derivation).
-- [ ] Wire `renderFrame.ts:78`:
+- [x] Wire `renderFrame.ts:78`:
   `const strategy: RenderStrategy = resolveStrategy(state.settings.debug.renderStrategy, timingService.enabled);`
   (`state` is already destructured at `:62`).
-- [ ] `npm test -- resolveStrategy` → pass; `npm run typecheck`.
-- [ ] Commit.
+- [x] `npm test -- resolveStrategy` → pass; `npm run typecheck`.
+- [x] Commit.
 
 _No test for `setRenderStrategy` — a one-line Immer draft assignment is a constant/registry
 restatement (testing.md); the branch that matters is `resolveStrategy`, which IS tested._
@@ -203,26 +203,26 @@ simply absent per frame (no timing-service change needed).
 (hence `TIMED_SLOTS`) now contains the group keys in addition to the layer names.
 
 **Steps**
-- [ ] Write `tests/services/engine/frame/timedSlotsGroupKeys.test.ts` — an independent-property
+- [x] Write `tests/services/engine/frame/timedSlotsGroupKeys.test.ts` — an independent-property
   assertion hand-checked against the render steps in `frameProgram()` (`:59-100`). Derive
   `timedSlotsOf(frameProgram({ exposure: 1, curve: 0 }), CONTENT_LAYERS)` and assert it
   **includes** the group keys `'hdr·NEAR0'`, `'hdr·COSMO'`, and `'foreground:0·NEAR0'`
   **and still includes** at least one known per-layer slot name (i.e. the group rows are
   added, not substituted). Load-bearing: this is Joint 2's whole point, and it fails if the
   push is dropped or the key format drifts. (Derived from the walk → not a constant restatement.)
-- [ ] `npm test -- timedSlotsGroupKeys` → fails.
-- [ ] `frameProgram.ts`: in `timedSlotRowsOf`, render-step branch, **after** the
+- [x] `npm test -- timedSlotsGroupKeys` → fails.
+- [x] `frameProgram.ts`: in `timedSlotRowsOf`, render-step branch, **after** the
   `for (const layer of layers)` loop, push `{ name: groupKey, groupKey }` (`:184-188`).
-- [ ] `executeFrame.ts`: add `SLAB_NAME` to the `import { slabViewOf } from './slabs'`
+- [x] `executeFrame.ts`: add `SLAB_NAME` to the `import { slabViewOf } from './slabs'`
   line (`:67`); in the `'render'` case compute
   `const groupKey = \`${step.target}·${SLAB_NAME[step.slab] ?? String(step.slab)}\`;`
   and pass `groupKey` into the `renderGroup` arg bag (`:186-196`); add `groupKey: string`
   to the `p` param type (`:234-246`); in the `merged` branch's `beginRenderPass` add
   `...timestampSpread(timing, p.groupKey)` (`:253-257`). Leave the `perLayerTimed` branch
   (`timestampSpread(timing, layer.name)`, `:276`) unchanged.
-- [ ] `npm test -- timedSlotsGroupKeys` → pass; `npm run typecheck`; run the frame test
+- [x] `npm test -- timedSlotsGroupKeys` → pass; `npm run typecheck`; run the frame test
   neighbourhood (`npm test -- frameProgram executeFrame`) to catch any group-list snapshot.
-- [ ] Commit.
+- [x] Commit.
 
 **Manual GPU verification (deferred to Task 8 — not vitest):** running the harness in
 `merged` mode must show the group rows (`hdr·NEAR0`, …) with nonzero ms while per-layer
@@ -242,11 +242,11 @@ slots are absent; `perLayerTimed` shows the reverse. This is the correctness che
 **Interfaces** — consumes `isPerfMode()` (Task 4).
 
 **Steps**
-- [ ] `initGpu.ts:409`: change `hasUrlGate('gpuTimings')` → `hasUrlGate('gpuTimings') || isPerfMode()`;
+- [x] `initGpu.ts:409`: change `hasUrlGate('gpuTimings')` → `hasUrlGate('gpuTimings') || isPerfMode()`;
   add `import { isPerfMode } from '../../../utils/url/isPerfMode';` (verify the relative depth
   against the file's existing imports).
-- [ ] `npm run typecheck`.
-- [ ] Commit.
+- [x] `npm run typecheck`.
+- [x] Commit.
 
 _Not unit-tested: `initGpu` needs a GPUDevice, and a boolean-OR of two existing gates has no
 isolated assertion surface a real bug trips. Verified live in Task 8 (timings collect under
@@ -269,19 +269,19 @@ Mirrors `?cinema` one-for-one.
   Mirror `isCinemaMode.ts`.
 
 **Steps**
-- [ ] Write `tests/utils/url/isPerfSearch.test.ts` (mirror `isCinemaSearch.test.ts`), hand-checked
+- [x] Write `tests/utils/url/isPerfSearch.test.ts` (mirror `isCinemaSearch.test.ts`), hand-checked
   against `searchHasGate`'s `URLSearchParams.has` (presence-not-value, exact key):
   - `isPerfSearch('?perf') === true`
   - `isPerfSearch('?perf=1') === true` (valued form also counts)
   - `isPerfSearch('') === false`
   - `isPerfSearch('?cinema') === false`
   - `isPerfSearch('?performance') === false` (exact-key: `performance` ≠ `perf`)
-- [ ] `npm test -- isPerfSearch` → fails.
-- [ ] Create `isPerfSearch.ts` (didactic header mirroring `isCinemaSearch.ts` — pins the flag
+- [x] `npm test -- isPerfSearch` → fails.
+- [x] Create `isPerfSearch.ts` (didactic header mirroring `isCinemaSearch.ts` — pins the flag
   spelling only, parse lives in `searchHasGate`).
-- [ ] Create `isPerfMode.ts` (didactic header mirroring `isCinemaMode.ts` — window guard).
-- [ ] `npm test -- isPerfSearch` → pass; `npm run typecheck`.
-- [ ] Commit.
+- [x] Create `isPerfMode.ts` (didactic header mirroring `isCinemaMode.ts` — window guard).
+- [x] `npm test -- isPerfSearch` → pass; `npm run typecheck`.
+- [x] Commit.
 
 _`isPerfMode` gets no separate test: a thin `window.location` wrapper over the tested pure
 core would be a mirror of `isCinemaMode`'s wrapper — the codebase tests the pure core
@@ -325,12 +325,12 @@ export type PerfWindow = Window & { __skymapPerf?: SkymapPerfHook };
 ```
 
 **Steps**
-- [ ] Create the four files with the shapes above + didactic headers (`PerfWindow.ts`'s
+- [x] Create the four files with the shapes above + didactic headers (`PerfWindow.ts`'s
   header mirrors `RecorderWindow.ts:1-16` — named intersection over `declare global` because
   the house style bans `interface` and the only readers are the installer's test + the
   harness's untyped `page.evaluate`).
-- [ ] `npm run typecheck`.
-- [ ] Commit.
+- [x] `npm run typecheck`.
+- [x] Commit.
 
 _No tests: type declarations are proven by `tsc` (testing.md — no runtime type tests)._
 
@@ -380,15 +380,15 @@ wiring above.
     for the whole window, so no manual render pump is needed.)
 
 **Steps**
-- [ ] **(A) Extract.** Create `src/state/lifecycle/whenStablyReady.ts` with the
+- [x] **(A) Extract.** Create `src/state/lifecycle/whenStablyReady.ts` with the
   `isSettled` (private) + `whenStablyReady` + `READY_STABLE_MS` bodies moved verbatim from
   `installRecorderHook.ts:63-94` (carry the didactic header explaining the stability window).
   Update `installRecorderHook.ts` to `import { whenStablyReady, READY_STABLE_MS } from '../lifecycle/whenStablyReady'`
   and delete the local copies; `ready: whenStablyReady(store)` at `:125` stays. Update the
   recorder test import at `:29-32` to the new path.
-- [ ] `npm test -- installRecorderHook` → still green (extraction is behaviour-preserving).
+- [x] `npm test -- installRecorderHook` → still green (extraction is behaviour-preserving).
   `npm run typecheck`. Commit this extraction as its own commit (green recorder before new work).
-- [ ] **(B) Gate test first.** Write `tests/state/perf/installPerfHook.test.ts`, mirroring
+- [x] **(B) Gate test first.** Write `tests/state/perf/installPerfHook.test.ts`, mirroring
   the recorder gate tests (`installRecorderHook.test.ts:66-94`): `vi.mock` `isPerfMode`; pass
   a minimal fake engine handle whose `debug.timingService.subscribe` is `vi.fn<...>()`. Two
   assertions:
@@ -397,17 +397,17 @@ wiring above.
   - `installPerfHook exposes the hook under ?perf` — `isPerfMode` true → `window.__skymapPerf`
     defined, `.ready instanceof Promise`, and `setPose` / `setStrategy` / `collectTimings`
     are functions.
-- [ ] `npm test -- installPerfHook` → fails (module missing).
-- [ ] Create `src/state/perf/installPerfHook.ts` per the Interfaces above (didactic header:
+- [x] `npm test -- installPerfHook` → fails (module missing).
+- [x] Create `src/state/perf/installPerfHook.ts` per the Interfaces above (didactic header:
   mirror `installRecorderHook.ts:1-47`, plus the resolved-wiring note — why it takes the
   engine handle and installs from `useEngine`, not `main.tsx`).
-- [ ] `npm test -- installPerfHook` → the two gate assertions pass; `npm run typecheck`.
-- [ ] **(C) Wire.** In `useEngine.ts`, after `handleRef.current = handle` (`:76`), add
+- [x] `npm test -- installPerfHook` → the two gate assertions pass; `npm run typecheck`.
+- [x] **(C) Wire.** In `useEngine.ts`, after `handleRef.current = handle` (`:76`), add
   `installPerfHook(store, handle);` and its import. (`store` is `useAppStore()` at `:59`,
   typed `AppStore`; `handle` is the `EngineHandle`.)
-- [ ] `npm run typecheck` + full `npm test` (there is **no** `useEngine` test to update —
+- [x] `npm run typecheck` + full `npm test` (there is **no** `useEngine` test to update —
   confirmed absent).
-- [ ] Commit.
+- [x] Commit.
 
 _Not unit-tested: `setPose` / `setStrategy` / `collectTimings` end-to-end behaviour needs a
 live engine + GPU (no assertion surface the pure pieces + the gate test don't already cover).
@@ -442,26 +442,26 @@ here. No median/percentile-value helper exists. Create the ones below.
   floor line).
 
 **Steps**
-- [ ] `percentile.test.ts` — hand-computed (independent of the impl):
+- [x] `percentile.test.ts` — hand-computed (independent of the impl):
   - `percentile([1,2,3,4], 50) === 2.5`
   - `percentile([1,2,3,4,5], 50) === 3`
   - `percentile([1,2,3,4,5,6,7,8,9,10], 90)` → `r=8.1, lo=8 → 9 + 0.1*(10-9) = 9.1`
     (`toBeCloseTo(9.1, 6)`)
-- [ ] `median.test.ts` — one even-length case exercising the interpolation branch:
+- [x] `median.test.ts` — one even-length case exercising the interpolation branch:
   `median([1,2,3,4]) === 2.5` (hand-computed; not a mirror — the expectation is worked out,
   not produced by calling `percentile`).
-- [ ] `groupSamplesBySlot.test.ts` — grouping/round-trip: input
+- [x] `groupSamplesBySlot.test.ts` — grouping/round-trip: input
   `[{slot:'a',ms:1},{slot:'b',ms:2},{slot:'a',ms:3}]` → `Map` with `a → [1,3]`, `b → [2]`.
-- [ ] `estimateFloor.test.ts` — hand-computed, all three branches:
+- [x] `estimateFloor.test.ts` — hand-computed, all three branches:
   - `estimateFloor([3.6,3.1,3.4], 4.2)` → `(10.1 - 4.2)/3 = 1.9667` (`toBeCloseTo(1.9667, 3)`)
   - clamp-at-0: `estimateFloor([1,1], 5)` → `(2-5)/2 = -1.5` → `0`
   - single-layer skip: `estimateFloor([3.4], 3.0)` → `0` (length < 2)
-- [ ] `npm test -- tools/utils/perf` → all fail (modules missing).
-- [ ] Implement the four helpers (didactic headers; `estimateFloor`'s header carries the
+- [x] `npm test -- tools/utils/perf` → all fail (modules missing).
+- [x] Implement the four helpers (didactic headers; `estimateFloor`'s header carries the
   spec's `(Σ Lᵢ − G)/n` intuition — merged pays the load/store round-trip once, perLayer
   pays it `n` times).
-- [ ] `npm test -- tools/utils/perf` → pass; `npm run typecheck`.
-- [ ] Commit.
+- [x] `npm test -- tools/utils/perf` → pass; `npm run typecheck`.
+- [x] Commit.
 
 ---
 
@@ -525,22 +525,22 @@ Then a dedicated **live-capture step** flies to each regime in the running app, 
 data-capture step; do not fabricate numbers in the plan or the initial commit.
 
 **Steps**
-- [ ] Create `scenarioReport.ts` (the two types above).
-- [ ] Create `perfScenarios.ts` with the six named placeholder entries.
-- [ ] Create `measurePerf.ts` per the flow above (didactic header mirroring `recordTour.ts:1-75`,
+- [x] Create `scenarioReport.ts` (the two types above).
+- [x] Create `perfScenarios.ts` with the six named placeholder entries.
+- [x] Create `measurePerf.ts` per the flow above (didactic header mirroring `recordTour.ts:1-75`,
   minus virtual time — the "Determinism" spec §: real GPU wall-time, medians/p90, no
   thresholds). Add the `"perf"` script to `package.json`.
-- [ ] `npm run typecheck` (tools tsconfig).
-- [ ] **Manual verification (not vitest):** with `npm run dev` running, execute
+- [x] `npm run typecheck` (tools tsconfig).
+- [x] **Manual verification (not vitest):** with `npm run dev` running, execute
   `npm run perf -- --scenario solar-system --frames 10`. Confirm: a table prints; the
   `MERGED` block shows group rows (`hdr·NEAR0`, …) with nonzero ms; the `PER-LAYER` block
   shows layer rows (`orbit-trails`, …); the two strategies produce their respective slot
   sets (this is also the deferred GPU verification for Task 2 and the enable-gate check for
   Task 3 — timings collect under `?perf` with no `?gpuTimings`).
-- [ ] **Live-capture step:** fly to each of the six regimes, read `logState`, replace each
+- [x] **Live-capture step:** fly to each of the six regimes, read `logState`, replace each
   placeholder pose in `perfScenarios.ts`. Re-run `npm run perf -- --scenario <name> --frames 10`
   per scenario to confirm the pose lands where intended.
-- [ ] Commit (harness + captured poses).
+- [x] Commit (harness + captured poses).
 
 ---
 
@@ -562,7 +562,7 @@ it IS unit-testable.
   `EST. PER-PASS FLOOR ≈ <floor> ms` line with `→ <slot> ≈ <real> ms real` entries.
 
 **Steps**
-- [ ] Write `tests/tools/utils/perf/formatReport.test.ts` — **targeted branch assertions**,
+- [x] Write `tests/tools/utils/perf/formatReport.test.ts` — **targeted branch assertions**,
   NOT a full golden snapshot (testing.md: full-object snapshots train blind re-blessing).
   Build one `ScenarioReport` fixture by hand and assert the output string:
   - contains the header with `1400×900`, `dpr2`, and `30 frames`;
@@ -572,13 +572,13 @@ it IS unit-testable.
   - contains a floor line with the group's floor value when `floors` has a ≥2-layer entry;
   - **omits** any floor line for a report whose `floors` is empty (single-layer scenario) —
     a second fixture asserting the absence.
-- [ ] `npm test -- formatReport` → fails.
-- [ ] Implement `formatReport.ts` (didactic header: pure printer, so the harness's output
+- [x] `npm test -- formatReport` → fails.
+- [x] Implement `formatReport.ts` (didactic header: pure printer, so the harness's output
   format is testable without a browser). Fix numeric formatting to 1 decimal (`toFixed(1)`).
-- [ ] `npm test -- formatReport` → pass; `npm run typecheck`.
-- [ ] Wire `measurePerf.ts` to call `formatReport` for each scenario (if not already) and
+- [x] `npm test -- formatReport` → pass; `npm run typecheck`.
+- [x] Wire `measurePerf.ts` to call `formatReport` for each scenario (if not already) and
   confirm via a `npm run perf -- --scenario solar-system --frames 10` spot-run.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
