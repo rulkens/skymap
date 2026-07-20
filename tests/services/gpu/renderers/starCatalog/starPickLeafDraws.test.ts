@@ -15,36 +15,38 @@ import type {
   StarNodeStream,
 } from '../../../../../src/services/engine/frame/passes/starCatalogLayer';
 import type { StarNodeDraw } from '../../../../../src/services/gpu/renderers/starCatalog/walkStarOctreeCut';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { Source } from '../../../../../src/data/sources';
 
-/** Build a one-node stream fixture at a given opacity + aggregate flag. */
+/** Build a one-node flat stream fixture at a given opacity + aggregate flag. */
 function streamOf(draw: StarNodeDraw, opacity: number, isAggregate: number): StarNodeStream {
-  const origin: Vec3 = [draw.nodeIndex, 0, 0];
   return {
-    nodeDraws: [draw],
-    originRelCamMpc: [origin],
-    cellScaleMpc: [0.001],
-    isAggregate: [isAggregate],
-    subtreeStarCount: [1],
-    opacity: [opacity],
+    count: 1,
+    nodeIndex: new Int32Array([draw.nodeIndex]),
+    firstRecord: new Uint32Array([draw.firstRecord]),
+    recordCount: new Uint32Array([draw.recordCount]),
+    originRelCamMpc: new Float32Array([draw.nodeIndex, 0, 0]),
+    cellScaleMpc: new Float32Array([0.001]),
+    isAggregate: new Uint8Array([isAggregate]),
+    subtreeStarCount: new Float32Array([1]),
+    opacity: new Float32Array([opacity]),
   };
 }
 
-/** Concatenate two single-node streams into one leaf stream fixture. */
+/** Concatenate two single-node leaf streams into one flat leaf stream fixture. */
 function leafStream(
   a: { draw: StarNodeDraw; opacity: number },
   b: { draw: StarNodeDraw; opacity: number },
 ): StarNodeStream {
-  const sa = streamOf(a.draw, a.opacity, 0);
-  const sb = streamOf(b.draw, b.opacity, 0);
   return {
-    nodeDraws: [...sa.nodeDraws, ...sb.nodeDraws],
-    originRelCamMpc: [...sa.originRelCamMpc, ...sb.originRelCamMpc],
-    cellScaleMpc: [...sa.cellScaleMpc, ...sb.cellScaleMpc],
-    isAggregate: [...sa.isAggregate, ...sb.isAggregate],
-    subtreeStarCount: [...sa.subtreeStarCount, ...sb.subtreeStarCount],
-    opacity: [...sa.opacity, ...sb.opacity],
+    count: 2,
+    nodeIndex: new Int32Array([a.draw.nodeIndex, b.draw.nodeIndex]),
+    firstRecord: new Uint32Array([a.draw.firstRecord, b.draw.firstRecord]),
+    recordCount: new Uint32Array([a.draw.recordCount, b.draw.recordCount]),
+    originRelCamMpc: new Float32Array([a.draw.nodeIndex, 0, 0, b.draw.nodeIndex, 0, 0]),
+    cellScaleMpc: new Float32Array([0.001, 0.001]),
+    isAggregate: new Uint8Array([0, 0]),
+    subtreeStarCount: new Float32Array([1, 1]),
+    opacity: new Float32Array([a.opacity, b.opacity]),
   };
 }
 
@@ -68,15 +70,20 @@ describe('starPickLeafDraws', () => {
       brightness: 1,
       glowOverlap: 1,
       aggregateIntensityCap: 0.06,
+      anyNodeFading: false,
     };
 
     const draws = starPickLeafDraws(prep);
 
-    // Only source (c) survives: one source, one node, the live leaf.
+    // Only source (c) survives: one source, one node, the live leaf. The
+    // aggregate stream is dropped wholesale and the opacity-0 leaf is filtered,
+    // leaving just liveLeaf's compacted flat entry (firstRecord 20, recordCount 7).
     expect(draws).toHaveLength(1);
     expect(draws[0]!.source).toBe(Source.GaiaStars);
-    expect(draws[0]!.nodeDraws).toEqual([liveLeaf]);
-    expect(draws[0]!.originRelCamMpc).toEqual([[3, 0, 0]]);
-    expect(draws[0]!.cellScaleMpc).toEqual([0.001]);
+    expect(draws[0]!.drawCount).toBe(1);
+    expect(draws[0]!.firstRecord).toEqual(new Uint32Array([20]));
+    expect(draws[0]!.recordCount).toEqual(new Uint32Array([7]));
+    expect(draws[0]!.originRelCamMpc).toEqual(new Float32Array([3, 0, 0]));
+    expect(draws[0]!.cellScaleMpc).toEqual(new Float32Array([0.001]));
   });
 });

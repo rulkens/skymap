@@ -39,38 +39,64 @@
  */
 
 import type { SourceType } from '../../../../@types/data/SourceType';
-import type { Vec3 } from '../../../../@types/math/Vec3';
-import type { StarNodeDraw } from './walkStarOctreeCut';
 import type { PreparedStarCut } from '../../../engine/frame/passes/starCatalogLayer';
 
-export function starPickLeafDraws(prep: PreparedStarCut): readonly {
+/**
+ * One source's pick draw: the compacted flat leaf arrays the pick renderer packs
+ * verbatim. `drawCount` valid entries; the scalar arrays index `[i]`, the origin
+ * vec3 indexes `[3*i]` — the same flat shape the visual `StarNodeStream` carries,
+ * so the pick renderer's pack loop is identical to the visual one.
+ */
+export type StarPickLeafDraw = {
   source: SourceType;
-  nodeDraws: StarNodeDraw[];
-  originRelCamMpc: Vec3[];
-  cellScaleMpc: number[];
-}[] {
-  const draws: {
-    source: SourceType;
-    nodeDraws: StarNodeDraw[];
-    originRelCamMpc: Vec3[];
-    cellScaleMpc: number[];
-  }[] = [];
+  drawCount: number;
+  firstRecord: Uint32Array;
+  recordCount: Uint32Array;
+  originRelCamMpc: Float32Array;
+  cellScaleMpc: Float32Array;
+};
+
+export function starPickLeafDraws(prep: PreparedStarCut): readonly StarPickLeafDraw[] {
+  const draws: StarPickLeafDraw[] = [];
 
   for (const s of prep.sources) {
     const leaf = s.leaf;
-    const nodeDraws: StarNodeDraw[] = [];
-    const originRelCamMpc: Vec3[] = [];
-    const cellScaleMpc: number[] = [];
 
-    for (let i = 0; i < leaf.nodeDraws.length; i++) {
+    // Count the visible leaves first so the compacted arrays are exact-sized.
+    // These are FRESH allocations (not the reused stream), which is fine: a pick
+    // is event-driven, so this is off the per-frame hot path — and it must not
+    // alias the persistent stream a following frame will overwrite.
+    let visible = 0;
+    for (let i = 0; i < leaf.count; i++) if (leaf.opacity[i]! > 0) visible++;
+    if (visible === 0) continue; // omit a source with no visible leaves
+
+    const firstRecord = new Uint32Array(visible);
+    const recordCount = new Uint32Array(visible);
+    const originRelCamMpc = new Float32Array(visible * 3);
+    const cellScaleMpc = new Float32Array(visible);
+
+    let j = 0;
+    for (let i = 0; i < leaf.count; i++) {
       if (leaf.opacity[i]! <= 0) continue; // invisible newcomer / fully-faded leaf
-      nodeDraws.push(leaf.nodeDraws[i]!);
-      originRelCamMpc.push(leaf.originRelCamMpc[i]!);
-      cellScaleMpc.push(leaf.cellScaleMpc[i]!);
+      firstRecord[j] = leaf.firstRecord[i]!;
+      recordCount[j] = leaf.recordCount[i]!;
+      const oi = i * 3;
+      const oj = j * 3;
+      originRelCamMpc[oj] = leaf.originRelCamMpc[oi]!;
+      originRelCamMpc[oj + 1] = leaf.originRelCamMpc[oi + 1]!;
+      originRelCamMpc[oj + 2] = leaf.originRelCamMpc[oi + 2]!;
+      cellScaleMpc[j] = leaf.cellScaleMpc[i]!;
+      j++;
     }
 
-    if (nodeDraws.length > 0)
-      draws.push({ source: s.source, nodeDraws, originRelCamMpc, cellScaleMpc });
+    draws.push({
+      source: s.source,
+      drawCount: visible,
+      firstRecord,
+      recordCount,
+      originRelCamMpc,
+      cellScaleMpc,
+    });
   }
 
   return draws;

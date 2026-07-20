@@ -24,7 +24,6 @@
  * @module
  */
 
-import type { Vec3 } from '../../../../@types/math/Vec3';
 import { CAMERA_UNIFORM_BYTES } from '../../lib/cameraUniforms';
 
 /**
@@ -99,42 +98,39 @@ export const PICK_PASS_U32_INDEX = (CAMERA_UNIFORM_BYTES + 12) / 4;
 export const AGG_INTENSITY_CAP_FLOAT_INDEX = (CAMERA_UNIFORM_BYTES + 16) / 4;
 
 /**
- * One drawn octree node's `NodeParams` field values, the shape both renderers'
- * pack loops feed `writeStarNodeParams`. The visual renderer sources these from
- * its per-frame draw args; the pick renderer fixes `isAggregate = 0`,
- * `subtreeStarCount = 1`, `opacity = 1` (leaf-only, point-source, pick fragment
- * ignores opacity).
- */
-export type StarNodeParams = {
-  /** Node box origin, camera-relative Mpc. */
-  readonly originRelCamMpc: Readonly<Vec3>;
-  /** Node box edge in Mpc (the in-cell offset unit = /1024). */
-  readonly cellScaleMpc: number;
-  /** Base index into the records blob for this node's slice. */
-  readonly firstRecord: number;
-  /** Per-node draw opacity (crossfade alpha × node LOD fade). */
-  readonly opacity: number;
-  /** 0 = leaf (point source), 1 = aggregate (box-filling glow). */
-  readonly isAggregate: number;
-  /** Real stars this record stands in for (1 for a leaf). */
-  readonly subtreeStarCount: number;
-};
-
-/**
  * Pack one `NodeParams` block at byte `base` of `view`, in the field order the
  * WESL `struct NodeParams` declares. Both star renderers call this once per
  * drawn node into their OWN contiguous scratch (index = draw slot). The offsets
  * here are the single CPU statement of the layout; a WESL struct change without
  * a matching move here is caught by `nodeParamsLayout.test.ts`.
+ *
+ * The fields arrive as loose SCALARS (`ox`/`oy`/`oz` for the origin vec3, then
+ * the rest) rather than a `StarNodeParams` object on purpose: the callers pull
+ * them straight out of the star cut's reused flat typed arrays (indexing
+ * `originRelCamMpc[3*i + k]`), so a per-node object literal here would
+ * reintroduce exactly the per-drawn-node allocation the flat-array cut exists to
+ * kill. The visual renderer sources these from its per-frame draw args; the pick
+ * renderer fixes `opacity = 1`, `isAggregate = 0`, `subtreeStarCount = 1`
+ * (leaf-only, point-source, and the pick fragment ignores opacity).
  */
-export function writeStarNodeParams(view: DataView, base: number, params: StarNodeParams): void {
-  const o = params.originRelCamMpc;
-  view.setFloat32(base + 0, o[0], true);
-  view.setFloat32(base + 4, o[1], true);
-  view.setFloat32(base + 8, o[2], true);
-  view.setFloat32(base + 12, params.cellScaleMpc, true);
-  view.setUint32(base + 16, params.firstRecord >>> 0, true);
-  view.setFloat32(base + 20, params.opacity, true);
-  view.setUint32(base + 24, params.isAggregate >>> 0, true);
-  view.setFloat32(base + 28, params.subtreeStarCount, true);
+export function writeStarNodeParams(
+  view: DataView,
+  base: number,
+  ox: number,
+  oy: number,
+  oz: number,
+  cellScaleMpc: number,
+  firstRecord: number,
+  opacity: number,
+  isAggregate: number,
+  subtreeStarCount: number,
+): void {
+  view.setFloat32(base + 0, ox, true);
+  view.setFloat32(base + 4, oy, true);
+  view.setFloat32(base + 8, oz, true);
+  view.setFloat32(base + 12, cellScaleMpc, true);
+  view.setUint32(base + 16, firstRecord >>> 0, true);
+  view.setFloat32(base + 20, opacity, true);
+  view.setUint32(base + 24, isAggregate >>> 0, true);
+  view.setFloat32(base + 28, subtreeStarCount, true);
 }

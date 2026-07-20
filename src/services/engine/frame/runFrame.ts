@@ -58,6 +58,7 @@ import { resizeCanvasToDisplay } from '../../gpu/device';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
 import { produceStructureMarkers } from '../presentation/produceStructureMarkers';
 import { deriveFrameContext } from './frameContext';
+import { prepareStarCut } from './passes/starCatalogLayer';
 import { deriveSourceMasks } from './deriveSourceMasks';
 import { renderFrame } from './renderFrame';
 import { drawPickDebugOverlay } from './drawPickDebugOverlay';
@@ -364,6 +365,22 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // completes.
   state.subsystems.labelDirector.runFrame(state, ctx);
 
+  // ── Star-cut planner (primes the per-ctx memo, surfaces the wake vote) ────
+  //
+  // Run the survey-star octree walk + LOD-fade advance ONCE here, as a planner
+  // peer of the disk/label planners above. Two reasons it lives at frame-body
+  // level rather than only inside the star draw:
+  //   1. The three star layers (leaf / aggregate / upsample) hit the per-ctx
+  //      memo during the GPU dispatch, so this call primes it — the walk still
+  //      runs exactly once for the frame.
+  //   2. It surfaces `anyNodeFading` for the keep-ticking predicate below. The
+  //      wake vote used to fire from inside the pass (a `requestRender` scattered
+  //      away from the single authority); now the pass computes the vote and
+  //      `shouldKeepTicking` decides.
+  // `prepareStarCut` is a no-op returning null when the star pass isn't live
+  // (renderer null / master off) — that maps to `starFadeAnimating: false` below.
+  const starCut = prepareStarCut(state, ctx);
+
   // ── Per-frame marker upload ───────────────────────────────────────────────
   //
   // Like the label flush above: produceStructureMarkers walks the structure
@@ -415,7 +432,9 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // fade-out in galaxy-catalog visibility changes and tier-swap commits would
   // hang forever.
   state.subsystems.fades.tick(nowMs);
-  const keepTicking = shouldKeepTicking(state, rootState, nowMs);
+  const keepTicking = shouldKeepTicking(state, rootState, nowMs, {
+    starFadeAnimating: starCut?.anyNodeFading ?? false,
+  });
 
   if (keepTicking) {
     state.subsystems.scheduler.requestRender();

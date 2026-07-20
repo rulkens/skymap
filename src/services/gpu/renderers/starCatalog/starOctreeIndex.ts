@@ -69,6 +69,16 @@ export type StarOctreeIndex = {
    * leaf-vs-aggregate test (see `buildStarOctree`).
    */
   readonly level: Uint8Array;
+  /**
+   * Per-node `childMask` (an 8-bit octant occupancy, one byte per node), lifted
+   * so neither the walk nor the layer's partition loop touches the node objects
+   * per frame. It is the leaf-vs-aggregate discriminant: `0 ⇒ leaf` (a childless
+   * node whose records are real stars — a fat leaf lives at `level > 0` yet is a
+   * leaf), `!== 0 ⇒ aggregate` (an interior flux-mip standing in for a subtree).
+   * The walk classifies with `childMask[i] === 0` instead of scanning
+   * `childIndex`'s 8 octant slots; the layer partitions with `childMask[idx] !== 0`.
+   */
+  readonly childMask: Uint8Array;
   /** Per-node record-slice base (`node.firstRecord`). */
   readonly firstRecord: Uint32Array;
   /** Per-node record-slice length (`node.recordCount`). */
@@ -114,6 +124,7 @@ export function starOctreeIndex(catalog: StarCatalog): StarOctreeIndex {
 
   const childIndex = new Int32Array(n * 8).fill(-1);
   const level = new Uint8Array(n);
+  const childMask = new Uint8Array(n);
   const firstRecord = new Uint32Array(n);
   const recordCount = new Uint32Array(n);
   const boxOriginPc = new Float64Array(n * 3);
@@ -136,6 +147,7 @@ export function starOctreeIndex(catalog: StarCatalog): StarOctreeIndex {
     const node = nodes[i]!;
     const lvl = node.level;
     level[i] = lvl;
+    childMask[i] = node.childMask;
     firstRecord[i] = node.firstRecord;
     recordCount[i] = node.recordCount;
 
@@ -172,6 +184,7 @@ export function starOctreeIndex(catalog: StarCatalog): StarOctreeIndex {
   const index: StarOctreeIndex = {
     childIndex,
     level,
+    childMask,
     firstRecord,
     recordCount,
     boxOriginPc,

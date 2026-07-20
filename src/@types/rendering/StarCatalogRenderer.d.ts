@@ -35,20 +35,9 @@
 
 import type { Renderer } from './Renderer';
 import type { Vec2 } from '../math/Vec2';
-import type { Vec3 } from '../math/Vec3';
 import type { SourceType } from '../data/SourceType';
 import type { StarCatalog } from '../data/starCatalog/StarCatalog';
-import type { StarNodeDraw } from '../../services/gpu/renderers/starCatalog/walkStarOctreeCut';
 
-/**
- * One source's per-frame octree cut, as the layer assembles it. The per-node
- * arrays are parallel — index `i` of `originRelCamMpc` / `cellScaleMpc` /
- * `isAggregate` describes `nodeDraws[i]`: the first two are the node origin +
- * box scale from `starNodeOriginRelCamMpc`, and `isAggregate` is the
- * leaf-vs-aggregate flag (0 = leaf, 1 = aggregate), which the flux-glow vertex
- * stage needs to size a point-source leaf differently from a box-filling
- * aggregate.
- */
 /**
  * Which of the two star draw streams a `draw` call records. The survey stars
  * split at the octree cut: `'leaf'` nodes (childless, real point-source stars)
@@ -75,26 +64,49 @@ export type StarCatalogDrawArgs = {
   readonly vp: Float32Array;
   /** Viewport size in physical pixels — feeds the pixel-size-to-clip conversion. */
   readonly viewportPx: Vec2;
-  /** The chosen octree nodes to draw this frame (from `walkStarOctreeCut`). */
-  readonly nodeDraws: readonly StarNodeDraw[];
-  /** Per-node box origin, camera-relative Mpc (parallel to `nodeDraws`). */
-  readonly originRelCamMpc: readonly Vec3[];
-  /** Per-node box edge in Mpc, the in-cell offset unit (parallel to `nodeDraws`). */
-  readonly cellScaleMpc: readonly number[];
   /**
-   * Per-node flux-reconstruction multiplier (parallel to `nodeDraws`): the
-   * number of real stars each of the node's records stands in for. A leaf's
-   * records are individual stars, so it is `1`; an aggregate's single record
-   * stands in for its whole subtree, so it is that subtree's star count. The
-   * vertex stage multiplies the record's dequantized *mean*-star flux by this to
-   * recover the subtree's summed light (aggregate records store the mean, never
-   * the sum — the 7-bit magnitude LUT would clamp a summed encode; see
-   * `mergeFluxAggregate`). `1` for a leaf makes the multiply a branchless
-   * identity there.
+   * How many drawn nodes this stream carries — the count of valid entries in
+   * every flat per-node array below. Those arrays are the star cut's REUSED
+   * grow-only buffers (see `StarNodeStream`), so their `.length` is the grow-only
+   * capacity, NOT the live draw count: read only `[0, drawCount)`.
    */
-  readonly subtreeStarCount: readonly number[];
+  readonly drawCount: number;
   /**
-   * Per-node leaf-vs-aggregate flag (parallel to `nodeDraws`): 0 = leaf (a
+   * Per-node record-slice base (`node.firstRecord`) — a flat `Uint32Array`, one
+   * `u32` per drawn node, `drawCount` valid entries. The renderer needs only the
+   * record base and count off each node, so the cut hands them as two parallel
+   * typed arrays with no per-node object (the allocation the flat cut removes).
+   */
+  readonly firstRecord: Uint32Array;
+  /**
+   * Per-node instance count (leaf → N real stars in the cell; aggregate → 1) — a
+   * flat `Uint32Array` parallel to `firstRecord`. The renderer sums these into
+   * the exclusive prefix that routes each instance to its draw slot.
+   */
+  readonly recordCount: Uint32Array;
+  /**
+   * Per-node box origin, camera-relative Mpc — a flat `Float32Array` of THREE
+   * f32 per node (node `i` at `[3*i]`, `[3*i+1]`, `[3*i+2]`), `3*drawCount` valid
+   * entries. The f64 large-minus-large camera subtraction happened in the cut
+   * before narrowing to these f32 (the precision seam), so the renderer stays a
+   * dumb f32 pipeline.
+   */
+  readonly originRelCamMpc: Float32Array;
+  /** Per-node box edge in Mpc, the in-cell offset unit — a flat `Float32Array`. */
+  readonly cellScaleMpc: Float32Array;
+  /**
+   * Per-node flux-reconstruction multiplier — a flat `Float32Array`: the number
+   * of real stars each of the node's records stands in for. A leaf's records are
+   * individual stars, so it is `1`; an aggregate's single record stands in for
+   * its whole subtree, so it is that subtree's star count. The vertex stage
+   * multiplies the record's dequantized *mean*-star flux by this to recover the
+   * subtree's summed light (aggregate records store the mean, never the sum — the
+   * 7-bit magnitude LUT would clamp a summed encode; see `mergeFluxAggregate`).
+   * `1` for a leaf makes the multiply a branchless identity there.
+   */
+  readonly subtreeStarCount: Float32Array;
+  /**
+   * Per-node leaf-vs-aggregate flag — a flat `Uint8Array`: 0 = leaf (a
    * point-source star), 1 = aggregate (a subtree collapsed to its flux mip).
    * The vertex stage fills an aggregate's box footprint with its glow but draws
    * a leaf as a floor-sized point — the leaf/aggregate discriminant the record
@@ -102,21 +114,21 @@ export type StarCatalogDrawArgs = {
    * `childMask` (`0 ⇒ leaf`), NOT its `level`: a fat leaf lives at `level > 0`
    * yet is a leaf, so level would misclassify it as an aggregate.
    */
-  readonly isAggregate: readonly number[];
+  readonly isAggregate: Uint8Array;
   /**
-   * Per-node draw opacity (parallel to `nodeDraws`): the product of the
-   * source crossfade alpha (Task 11's recede band to the procedural Milky-Way
-   * cloud, identical for every node this frame) and the node's own LOD fade
-   * (0→1 as it enters the octree cut, 1→0 as it leaves). Per node rather than
-   * one scalar because the temporal LOD fade is what dissolves the box-pop when
-   * the best-first cut swaps a parent aggregate for its children: during the
+   * Per-node draw opacity — a flat `Float32Array`: the product of the source
+   * crossfade alpha (Task 11's recede band to the procedural Milky-Way cloud,
+   * identical for every node this frame) and the node's own LOD fade (0→1 as it
+   * enters the octree cut, 1→0 as it leaves). Per node rather than one scalar
+   * because the temporal LOD fade is what dissolves the box-pop when the
+   * best-first cut swaps a parent aggregate for its children: during the
    * transition BOTH draw, at complementary opacities. The vertex stage forwards
    * `node.opacity` and the fragment multiplies the Gaussian by it, so a node at
    * opacity 0 deposits no light (additive) — the layer keeps a fading-out node
    * in the draw list until it reaches 0. The renderer writes `opacity[i]` into
    * node `i`'s `NodeParams` block.
    */
-  readonly opacity: readonly number[];
+  readonly opacity: Float32Array;
   /**
    * User's base star-dot size in px (`settings.starCatalogs.sizePx`, default
    * 2.5) — the twin of the galaxy points' `pointSizePx`. Source-independent
@@ -197,10 +209,10 @@ export type StarCatalogRenderer = Renderer & {
    */
   loadedCatalogs(): Iterable<{ source: SourceType; catalog: StarCatalog }>;
   /**
-   * Draw one source's per-frame cut: a per-node instanced billboard draw over
-   * the walked `nodeDraws`. No-op if the source has no committed catalog or
-   * the cut is empty. The layer gates visibility/opacity before calling — an
-   * additive pass drawing nothing is correctly invisible.
+   * Draw one source's per-frame cut: one instanced billboard draw over the
+   * `drawCount` walked nodes in the flat per-node arrays. No-op if the source has
+   * no committed catalog or the cut is empty. The layer gates visibility/opacity
+   * before calling — an additive pass drawing nothing is correctly invisible.
    */
   draw(pass: GPURenderPassEncoder, args: StarCatalogDrawArgs): void;
   /**
