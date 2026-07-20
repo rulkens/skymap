@@ -58,7 +58,10 @@ function makeRenderer(loaded: readonly { source: number; catalog: StarCatalog }[
   };
 }
 
-function makeState(renderer: unknown, opts: { master?: boolean; item?: boolean } = {}): EngineState {
+function makeState(
+  renderer: unknown,
+  opts: { master?: boolean; item?: boolean } = {},
+): EngineState {
   const { master = true, item = true } = opts;
   return {
     gpu: { starCatalogRenderer: renderer },
@@ -143,14 +146,23 @@ function makeAggregateCatalog(): StarCatalog {
   };
 }
 
+/** Index of a node in a stream's flat arrays (scan `[0, count)`), or -1. */
+function indexInStream(stream: StarNodeStream, nodeIndex: number): number {
+  for (let i = 0; i < stream.count; i++) if (stream.nodeIndex[i] === nodeIndex) return i;
+  return -1;
+}
+
 /** The opacity of a node in a stream, or undefined if it is not in that stream. */
 function opacityInStream(stream: StarNodeStream, nodeIndex: number): number | undefined {
-  const i = stream.nodeDraws.findIndex((d) => d.nodeIndex === nodeIndex);
+  const i = indexInStream(stream, nodeIndex);
   return i === -1 ? undefined : stream.opacity[i];
 }
 
 /** The single source's streams of a non-null prepared cut. */
-function onlySource(prep: PreparedStarCut | null): { leaf: StarNodeStream; aggregate: StarNodeStream } {
+function onlySource(prep: PreparedStarCut | null): {
+  leaf: StarNodeStream;
+  aggregate: StarNodeStream;
+} {
   expect(prep).not.toBeNull();
   expect(prep!.sources).toHaveLength(1);
   return prep!.sources[0]!;
@@ -165,7 +177,9 @@ describe('prepareStarCut liveness', () => {
   it('returns null when the renderer is null or the master gate is off', () => {
     expect(prepareStarCut(makeState(null), makeCtx(camAtPc(inner)))).toBeNull();
     const renderer = makeRenderer([{ source: Source.GaiaStars, catalog: makeCatalog() }]);
-    expect(prepareStarCut(makeState(renderer, { master: false }), makeCtx(camAtPc(inner)))).toBeNull();
+    expect(
+      prepareStarCut(makeState(renderer, { master: false }), makeCtx(camAtPc(inner))),
+    ).toBeNull();
   });
 
   it('memoises on the ctx object so the walk + fade advance run once per frame', () => {
@@ -182,7 +196,10 @@ describe('prepareStarCut liveness', () => {
 
   it('forwards the source-independent shader scalars', () => {
     const renderer = makeRenderer([{ source: Source.GaiaStars, catalog: makeCatalog() }]);
-    const prep = prepareStarCut(makeState(renderer), makeCtx(camAtPc(inner + (outer - inner) * 0.5)));
+    const prep = prepareStarCut(
+      makeState(renderer),
+      makeCtx(camAtPc(inner + (outer - inner) * 0.5)),
+    );
     expect(prep!.sizePx).toBe(2.5);
     expect(prep!.glowOverlap).toBe(1.0);
     expect(prep!.aggregateIntensityCap).toBe(0.06);
@@ -197,10 +214,10 @@ describe('prepareStarCut partition', () => {
     const { leaf, aggregate } = onlySource(
       prepareStarCut(makeState(renderer), makeCtx(camAtPc(inner + (outer - inner) * 0.5))),
     );
-    expect(leaf.nodeDraws).toHaveLength(1);
-    expect(aggregate.nodeDraws).toHaveLength(0);
-    expect(leaf.isAggregate).toEqual([0]);
-    expect(leaf.subtreeStarCount).toEqual([1]);
+    expect(leaf.count).toBe(1);
+    expect(aggregate.count).toBe(0);
+    expect(leaf.isAggregate[0]).toBe(0);
+    expect(leaf.subtreeStarCount[0]).toBe(1);
   });
 
   it('routes a fat leaf (level > 0, childMask 0) to the leaf stream, not aggregate', () => {
@@ -208,8 +225,8 @@ describe('prepareStarCut partition', () => {
     const { leaf, aggregate } = onlySource(
       prepareStarCut(makeState(renderer), makeCtx(camAtPc(inner + (outer - inner) * 0.5))),
     );
-    expect(aggregate.nodeDraws).toHaveLength(0);
-    const i = leaf.nodeDraws.findIndex((d) => d.nodeIndex === 0);
+    expect(aggregate.count).toBe(0);
+    const i = indexInStream(leaf, 0);
     expect(i).toBeGreaterThanOrEqual(0);
     expect(leaf.isAggregate[i]).toBe(0);
     expect(leaf.subtreeStarCount[i]).toBe(1);
@@ -220,8 +237,8 @@ describe('prepareStarCut partition', () => {
     const { leaf, aggregate } = onlySource(
       prepareStarCut(makeState(renderer), makeCtx(camAtPcVec(FAR_PC), 0)),
     );
-    expect(leaf.nodeDraws).toHaveLength(0);
-    const i = aggregate.nodeDraws.findIndex((d) => d.nodeIndex === ROOT_INDEX);
+    expect(leaf.count).toBe(0);
+    const i = indexInStream(aggregate, ROOT_INDEX);
     expect(i).toBeGreaterThanOrEqual(0);
     expect(aggregate.isAggregate[i]).toBe(1);
     expect(aggregate.subtreeStarCount[i]).toBe(3);

@@ -40,11 +40,13 @@
  * point anchors, each octree node's box origin is a parsec-scale coordinate
  * near-equal to the NEAR0 view translation during the local-map approach: an
  * f32 subtraction cancels catastrophically and jitters the sprites. So the
- * walk rebases in f64 before narrowing — the node origins via
- * `starNodeOriginRelCamMpc` (each box origin re-expressed camera-relative,
- * keyed on `ctx.drawCamPos` which equals the NEAR0 view origin) — and each
- * layer narrows the vp via `narrowMat4(rebaseViewProj(view.slab.vp, camPos))`.
- * The renderer stays a dumb f32 pipeline; the precision seam lives here.
+ * walk rebases in f64 before narrowing — each box origin re-expressed
+ * camera-relative (`computeStarCut` inlines that seam allocation-free, keyed on
+ * `ctx.drawCamPos` which equals the NEAR0 view origin; the math mirrors
+ * `starNodeOriginRelCamMpc`, still the standalone home `resolveStarRecord`
+ * reuses) — and each layer narrows the vp via
+ * `narrowMat4(rebaseViewProj(view.slab.vp, camPos))`. The renderer stays a dumb
+ * f32 pipeline; the precision seam lives here.
  *
  * ### The shared-vp invariant (load-bearing)
  *
@@ -112,7 +114,6 @@ import type { SourceType } from '../../../../@types/data/SourceType';
 import type { StarCatalog } from '../../../../@types/data/starCatalog/StarCatalog';
 import type { StarCatalogSourceEntry } from '../../../../@types/data/starCatalog/StarCatalogSourceEntry';
 import type { StarDrawStream } from '../../../../@types/rendering/StarCatalogRenderer';
-import type { StarNodeDraw } from '../../../gpu/renderers/starCatalog/walkStarOctreeCut';
 import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../@types/engine/state/EngineState';
 import type { SlabView } from '../../../../@types/engine/frame/SlabView';
@@ -121,9 +122,9 @@ import { NEAR0 } from '../slabs';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { fadeBand } from '../../../../utils/math/fadeBand';
+import { mortonDecodeAxis } from '../../../../utils/math/mortonDecodeAxis';
 import { walkStarOctreeCut } from '../../../gpu/renderers/starCatalog/walkStarOctreeCut';
 import { starPickLeafDraws } from '../../../gpu/renderers/starCatalog/starPickLeafDraws';
-import { starNodeOriginRelCamMpc } from '../../../gpu/renderers/starCatalog/starNodeOriginRelCamMpc';
 import { starExposureRamp } from '../../../gpu/renderers/starCatalog/starExposureRamp';
 import { subtreeStarCounts } from '../../../gpu/renderers/starCatalog/subtreeStarCounts';
 import { SOURCE_REGISTRY } from '../../../../data/sources';
@@ -144,8 +145,17 @@ const MPC_TO_PC = 1 / SCALE_UNITS.PC_TO_MPC;
  */
 const NODE_FADE_MS = 250;
 
-/** One octree node's temporal LOD-fade state: current opacity + where it heads. */
-type NodeFade = { opacity: number; target: number };
+/**
+ * One octree node's temporal LOD-fade state: its current opacity plus the frame
+ * it was last `seen` in the cut. The fade TARGET is derived from `seen`, not
+ * stored: a node whose `seen` equals the frame counter is in this frame's cut
+ * (target 1), any other is not (target 0). That per-node frame stamp replaces
+ * the old `Set<number>` of in-cut indices plus a full second pass to zero the
+ * ones that left — the walk stamps each present node, and the single advance
+ * pass reads the stamp. `seen` uses the catalog's own monotonic frame counter,
+ * so a value can never collide across frames the way a wall-clock ms could.
+ */
+type NodeFade = { opacity: number; seen: number };
 
 /**
  * A catalog's per-node LOD-fade state, persisted across frames. The best-first
@@ -170,13 +180,13 @@ type NodeFade = { opacity: number; target: number };
  * the star bubble's first paint is its steady state, and only later membership
  * CHANGES animate — the same first-frame rule `foregroundLabelsLayer` uses.
  */
-type StarFadeState = { fades: Map<number, NodeFade>; clockMs: number | null };
+type StarFadeState = { fades: Map<number, NodeFade>; clockMs: number | null; frame: number };
 const fadeStateByCatalog = new WeakMap<StarCatalog, StarFadeState>();
 
 function fadeStateFor(catalog: StarCatalog): StarFadeState {
   let state = fadeStateByCatalog.get(catalog);
   if (state === undefined) {
-    state = { fades: new Map(), clockMs: null };
+    state = { fades: new Map(), clockMs: null, frame: 0 };
     fadeStateByCatalog.set(catalog, state);
   }
   return state;
@@ -217,19 +227,54 @@ export function starCatalogVisible(state: EngineState, ctx: ReadyFrameContext): 
 }
 
 /**
- * One draw stream's per-source node arrays, parallel to `nodeDraws`. The leaf
- * stream carries only childless (real-star) nodes with `isAggregate` all 0; the
- * aggregate stream only interior flux-mip nodes with `isAggregate` all 1. Each
- * layer assembles `StarCatalogDrawArgs` from one of these plus the per-frame
- * shared scalars.
+ * One draw stream's per-source node data, as REUSED grow-only flat typed arrays.
+ * The leaf stream carries only childless (real-star) nodes with `isAggregate`
+ * all 0; the aggregate stream only interior flux-mip nodes with `isAggregate`
+ * all 1. Each layer assembles `StarCatalogDrawArgs` from one of these plus the
+ * per-frame shared scalars.
+ *
+ * ── Flat typed arrays, not arrays-of-objects (the allocation fix) ───────────
+ *
+ * At star-field zoom the cut draws tens of thousands of nodes EVERY frame. The
+ * old shape allocated a `{ nodeIndex, firstRecord, recordCount }` object, a
+ * `Vec3` origin, and pushed onto six growing JS arrays PER node — ~5 short-lived
+ * objects per drawn node, a measured 10-12 ms/frame of GC churn during
+ * navigation. This mirrors the trick `walkStarOctreeCut`'s own snapshot already
+ * uses: `count` valid entries indexed into module-persistent typed arrays that
+ * GROW BY DOUBLING but never shrink or reallocate steady-state. The scalar
+ * fields index `[i]`; the origin packs THREE f32 per node, indexed `[3*i + k]`.
+ *
+ * ── Reused across frames, INVALIDATED by the next `computeStarCut` (non-reentrant) ─
+ *
+ * These arrays PERSIST per catalog (see `streamsByCatalog`) and are `reset` +
+ * refilled each frame rather than reallocated. So a `PreparedStarCut` is a VIEW
+ * over them, invalidated by the next `computeStarCut` call — the same contract
+ * `walkStarOctreeCut`'s snapshot already carries. It is safe because the leaf and
+ * aggregate layers both consume within the SAME frame's `ctx` (memoised, so the
+ * walk runs once and both read one cached result before the next frame recomputes),
+ * and the pick path recomputes on its own fresh `ctx` AFTER the visual frame drew.
+ * Leaf and aggregate are SEPARATE stream objects, so both coexist for the whole
+ * frame; a consumer that must hold two frames' data at once copies out first.
  */
 export type StarNodeStream = {
-  nodeDraws: StarNodeDraw[];
-  originRelCamMpc: Vec3[];
-  cellScaleMpc: number[];
-  isAggregate: number[];
-  subtreeStarCount: number[];
-  opacity: number[];
+  /** Number of valid drawn nodes — read only `[0, count)` of every array below. */
+  count: number;
+  /** Per-node `catalog.nodes` slot (parallel; used by `starPickLeafDraws` + debug). */
+  nodeIndex: Int32Array;
+  /** Per-node record-slice base (`node.firstRecord`). */
+  firstRecord: Uint32Array;
+  /** Per-node instance count (leaf → N stars; aggregate → 1). */
+  recordCount: Uint32Array;
+  /** Per-node box origin, camera-relative Mpc — THREE f32 per node (`[3*i + k]`). */
+  originRelCamMpc: Float32Array;
+  /** Per-node box edge in Mpc (the in-cell offset unit = /1024). */
+  cellScaleMpc: Float32Array;
+  /** Per-node leaf-vs-aggregate flag: 0 = leaf, 1 = aggregate. */
+  isAggregate: Uint8Array;
+  /** Per-node flux-reconstruction multiplier (1 for a leaf; subtree count for an aggregate). */
+  subtreeStarCount: Float32Array;
+  /** Per-node draw opacity (source crossfade × node LOD fade). */
+  opacity: Float32Array;
 };
 
 /** One source's partitioned cut: the leaf stream and the aggregate stream. */
@@ -254,15 +299,110 @@ export type PreparedStarCut = {
   aggregateIntensityCap: number;
 };
 
-function emptyStream(): StarNodeStream {
+/** A fresh stream with backing arrays at `cap` node capacity (grown as needed). */
+function createStream(cap: number): StarNodeStream {
   return {
-    nodeDraws: [],
-    originRelCamMpc: [],
-    cellScaleMpc: [],
-    isAggregate: [],
-    subtreeStarCount: [],
-    opacity: [],
+    count: 0,
+    nodeIndex: new Int32Array(cap),
+    firstRecord: new Uint32Array(cap),
+    recordCount: new Uint32Array(cap),
+    originRelCamMpc: new Float32Array(cap * 3),
+    cellScaleMpc: new Float32Array(cap),
+    isAggregate: new Uint8Array(cap),
+    subtreeStarCount: new Float32Array(cap),
+    opacity: new Float32Array(cap),
   };
+}
+
+/** Reset a stream for a new frame — keep the backing arrays, drop the contents. */
+function resetStream(stream: StarNodeStream): void {
+  stream.count = 0;
+}
+
+/**
+ * Grow every backing array of `stream` to at least `min` node capacity by
+ * DOUBLING (allocate new, copy live contents, swap) — the same grow-only trick
+ * `walkStarOctreeCut`'s `growCut` uses. Called only when a push hits capacity, so
+ * steady-state frames never reallocate.
+ */
+function growStream(stream: StarNodeStream, min: number): void {
+  let cap = stream.nodeIndex.length;
+  while (cap < min) cap *= 2;
+  const nodeIndex = new Int32Array(cap);
+  nodeIndex.set(stream.nodeIndex);
+  stream.nodeIndex = nodeIndex;
+  const firstRecord = new Uint32Array(cap);
+  firstRecord.set(stream.firstRecord);
+  stream.firstRecord = firstRecord;
+  const recordCount = new Uint32Array(cap);
+  recordCount.set(stream.recordCount);
+  stream.recordCount = recordCount;
+  const originRelCamMpc = new Float32Array(cap * 3);
+  originRelCamMpc.set(stream.originRelCamMpc);
+  stream.originRelCamMpc = originRelCamMpc;
+  const cellScaleMpc = new Float32Array(cap);
+  cellScaleMpc.set(stream.cellScaleMpc);
+  stream.cellScaleMpc = cellScaleMpc;
+  const isAggregate = new Uint8Array(cap);
+  isAggregate.set(stream.isAggregate);
+  stream.isAggregate = isAggregate;
+  const subtreeStarCount = new Float32Array(cap);
+  subtreeStarCount.set(stream.subtreeStarCount);
+  stream.subtreeStarCount = subtreeStarCount;
+  const opacity = new Float32Array(cap);
+  opacity.set(stream.opacity);
+  stream.opacity = opacity;
+}
+
+/** Append one drawn node to `stream`, growing the backing arrays if full. */
+function pushStreamNode(
+  stream: StarNodeStream,
+  nodeIndex: number,
+  firstRecord: number,
+  recordCount: number,
+  ox: number,
+  oy: number,
+  oz: number,
+  cellScaleMpc: number,
+  isAggregate: number,
+  subtreeStarCount: number,
+  opacity: number,
+): void {
+  const i = stream.count;
+  if (i >= stream.nodeIndex.length) growStream(stream, i + 1);
+  stream.nodeIndex[i] = nodeIndex;
+  stream.firstRecord[i] = firstRecord;
+  stream.recordCount[i] = recordCount;
+  const o = i * 3;
+  stream.originRelCamMpc[o] = ox;
+  stream.originRelCamMpc[o + 1] = oy;
+  stream.originRelCamMpc[o + 2] = oz;
+  stream.cellScaleMpc[i] = cellScaleMpc;
+  stream.isAggregate[i] = isAggregate;
+  stream.subtreeStarCount[i] = subtreeStarCount;
+  stream.opacity[i] = opacity;
+  stream.count = i + 1;
+}
+
+/**
+ * The two draw streams (leaf + aggregate) PERSIST per catalog across frames and
+ * are reset+refilled each frame — never freshly allocated. Keyed by the CATALOG
+ * object exactly like `fadeStateByCatalog`, for the same two free properties: a
+ * replaced catalog (tier swap) is a new object, so it starts with fresh streams
+ * and the old pair is GC'd with the WeakMap; and per-catalog IS per-source since
+ * the renderer holds one catalog per source. The pair is what makes a
+ * `PreparedStarCut` a reused view — see `StarNodeStream`'s non-reentrancy note.
+ */
+type CatalogStreams = { leaf: StarNodeStream; aggregate: StarNodeStream };
+const streamsByCatalog = new WeakMap<StarCatalog, CatalogStreams>();
+
+function streamsFor(catalog: StarCatalog): CatalogStreams {
+  let streams = streamsByCatalog.get(catalog);
+  if (streams === undefined) {
+    streams = { leaf: createStream(1024), aggregate: createStream(1024) };
+    streamsByCatalog.set(catalog, streams);
+  }
+  return streams;
 }
 
 /**
@@ -351,21 +491,44 @@ function computeStarCut(state: EngineState, ctx: ReadyFrameContext): PreparedSta
     fadeState.clockMs = nowMs;
     const step = Math.min(1, dtMs / NODE_FADE_MS);
     const fades = fadeState.fades;
+    // This frame's stamp. A node whose `seen` reaches it is in the cut (target
+    // 1); every other fade entry has left (target 0). This replaces the old
+    // `new Set(cut.nodeIndex)` plus a full second pass zeroing the out-of-cut
+    // targets — the walk stamps each present node below, the single advance pass
+    // reads the stamp. A monotonic counter (never a wall-clock ms) so two frames
+    // can never share a stamp.
+    const frame = ++fadeState.frame;
 
-    // Retarget: nodes in the cut head to full (seeding newcomers at 0), nodes
-    // that left the cut head to 0. The cut is a reused SoA snapshot (invalidated
-    // by the next walk), so its indices are copied here before the next source.
-    const inCut = new Set<number>();
+    // Stamp every node in the cut as seen this frame, seeding a NEWCOMER at
+    // opacity 0. The cut is a reused SoA snapshot (invalidated by the next
+    // walk), so its indices are consumed here before the next source walks.
     for (let i = 0; i < cut.count; i++) {
       const nodeIndex = cut.nodeIndex[i]!;
-      inCut.add(nodeIndex);
       const f = fades.get(nodeIndex);
-      if (f === undefined) fades.set(nodeIndex, { opacity: 0, target: 1 });
-      else f.target = 1;
+      if (f === undefined) fades.set(nodeIndex, { opacity: 0, seen: frame });
+      else f.seen = frame;
     }
-    for (const [idx, f] of fades) if (!inCut.has(idx)) f.target = 0;
 
     const counts = subtreeStarCounts(catalog);
+
+    // Reuse this catalog's persistent stream pair (reset, then refilled) rather
+    // than allocating fresh arrays — the allocation fix. Both streams coexist for
+    // the whole frame (leaf into HDR, aggregate into the half-res offscreen).
+    const { leaf, aggregate } = streamsFor(catalog);
+    resetStream(leaf);
+    resetStream(aggregate);
+
+    // The node-origin precision seam, inlined ALLOCATION-FREE. This is exactly
+    // `starNodeOriginRelCamMpc`'s math (kept in lockstep with it and
+    // `resolveStarRecord`): the large-minus-large camera subtraction stays in
+    // f64 (JS number) and narrows to f32 only on the array write in
+    // `pushStreamNode`, so a node origin near-equal to the NEAR0 view origin
+    // keeps every significant bit the f32 upload needs. Hoisted per-catalog
+    // constants below; `boxEdgePc = cellEdgePc · 2^level` folds leaf (level 0)
+    // and aggregate into one expression.
+    const pcToMpc = SCALE_UNITS.PC_TO_MPC;
+    const [gx, gy, gz] = catalog.gridOrigin;
+    const cellEdgePc = catalog.cellEdgePc;
 
     // Advance + prune + PARTITION in ONE pass over the fade map. A node routes
     // to the leaf or aggregate stream by its `childMask` (0 ⇒ leaf, records are
@@ -374,15 +537,14 @@ function computeStarCut(state: EngineState, ctx: ReadyFrameContext): PreparedSta
     // node draws BEYOND the walk's budget for a few frames; that overdraw is
     // bounded by cut churn and accepted rather than capped (capping would
     // reintroduce the box-pop the fade exists to remove).
-    const leaf = emptyStream();
-    const aggregate = emptyStream();
     for (const [idx, f] of fades) {
-      if (f.opacity < f.target) f.opacity = Math.min(f.target, f.opacity + step);
-      else if (f.opacity > f.target) f.opacity = Math.max(f.target, f.opacity - step);
-      if (f.opacity !== f.target) anyNodeFading = true;
+      const target = f.seen === frame ? 1 : 0;
+      if (f.opacity < target) f.opacity = Math.min(target, f.opacity + step);
+      else if (f.opacity > target) f.opacity = Math.max(target, f.opacity - step);
+      if (f.opacity !== target) anyNodeFading = true;
 
       // Fully faded out: drop it from the map (and it draws in neither stream).
-      if (f.opacity <= 0 && f.target === 0) {
+      if (f.opacity <= 0 && target === 0) {
         fades.delete(idx);
         continue;
       }
@@ -398,19 +560,29 @@ function computeStarCut(state: EngineState, ctx: ReadyFrameContext): PreparedSta
 
       const isAgg = node.childMask !== 0;
       const stream = isAgg ? aggregate : leaf;
-      const seam = starNodeOriginRelCamMpc(catalog, node, camPos);
-      stream.nodeDraws.push({
-        nodeIndex: idx,
-        firstRecord: node.firstRecord,
-        recordCount: node.recordCount,
-      });
-      stream.originRelCamMpc.push(seam.originRelCamMpc);
-      stream.cellScaleMpc.push(seam.cellScaleMpc);
-      stream.isAggregate.push(isAgg ? 1 : 0);
-      // Flux-reconstruction multiplier: a leaf record is one real star (1); an
-      // aggregate record stands in for its whole subtree (its star count).
-      stream.subtreeStarCount.push(isAgg ? counts[idx]! : 1);
-      stream.opacity.push(sourceCrossfade * f.opacity);
+
+      const boxEdgePc = cellEdgePc * 2 ** node.level;
+      const morton = node.mortonIndex;
+      const ox = (gx + mortonDecodeAxis(morton, 0) * boxEdgePc) * pcToMpc - camPos[0];
+      const oy = (gy + mortonDecodeAxis(morton, 1) * boxEdgePc) * pcToMpc - camPos[1];
+      const oz = (gz + mortonDecodeAxis(morton, 2) * boxEdgePc) * pcToMpc - camPos[2];
+      const cellScaleMpc = boxEdgePc * pcToMpc;
+
+      pushStreamNode(
+        stream,
+        idx,
+        node.firstRecord,
+        node.recordCount,
+        ox,
+        oy,
+        oz,
+        cellScaleMpc,
+        isAgg ? 1 : 0,
+        // Flux-reconstruction multiplier: a leaf record is one real star (1); an
+        // aggregate record stands in for its whole subtree (its star count).
+        isAgg ? counts[idx]! : 1,
+        sourceCrossfade * f.opacity,
+      );
     }
 
     sources.push({ source, leaf, aggregate });
@@ -438,13 +610,15 @@ function drawStream(
   const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, view.camPos));
   for (const s of prep.sources) {
     const nodes = s[stream];
-    if (nodes.nodeDraws.length === 0) continue;
+    if (nodes.count === 0) continue;
     renderer.draw(pass, {
       source: s.source,
       stream,
       vp: rebasedVp,
       viewportPx: view.viewportPx,
-      nodeDraws: nodes.nodeDraws,
+      drawCount: nodes.count,
+      firstRecord: nodes.firstRecord,
+      recordCount: nodes.recordCount,
       originRelCamMpc: nodes.originRelCamMpc,
       cellScaleMpc: nodes.cellScaleMpc,
       isAggregate: nodes.isAggregate,
@@ -519,7 +693,9 @@ export const starCatalogLayer: ContentLayer = {
         source: d.source,
         vp: rebasedVp,
         viewportPx: view.viewportPx,
-        nodeDraws: d.nodeDraws,
+        drawCount: d.drawCount,
+        firstRecord: d.firstRecord,
+        recordCount: d.recordCount,
         originRelCamMpc: d.originRelCamMpc,
         cellScaleMpc: d.cellScaleMpc,
         sizePx: prep.sizePx,

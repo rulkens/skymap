@@ -210,9 +210,18 @@ export function createStarCatalogPickRenderer(
   }
 
   function draw(pass: GPURenderPassEncoder, args: StarCatalogPickDrawArgs): void {
-    const { source, vp, viewportPx, nodeDraws, originRelCamMpc, cellScaleMpc, sizePx } = args;
+    const {
+      source,
+      vp,
+      viewportPx,
+      drawCount,
+      firstRecord,
+      recordCount,
+      originRelCamMpc,
+      cellScaleMpc,
+      sizePx,
+    } = args;
     const recordsBindGroup = resources.recordsBindGroup(source);
-    const drawCount = nodeDraws.length;
     if (!recordsBindGroup || drawCount === 0) return;
 
     // Own uniform: camera prefix + sizePx + the already-set pickPass = 1 /
@@ -232,18 +241,24 @@ export function createStarCatalogPickRenderer(
     for (let i = 0; i < drawCount; i++) {
       // Same byte layout as the visual packer, with pick-fixed fields: opacity 1
       // (ignored by the pick fragment), isAggregate 0 (point-source leaf),
-      // subtreeStarCount 1 (one star per leaf record). `writeStarNodeParams`
-      // owns the offsets.
-      writeStarNodeParams(nodeScratchView, i * NODE_PARAMS_BYTES, {
-        originRelCamMpc: originRelCamMpc[i]!,
-        cellScaleMpc: cellScaleMpc[i]!,
-        firstRecord: nodeDraws[i]!.firstRecord,
-        opacity: 1.0,
-        isAggregate: 0,
-        subtreeStarCount: 1.0,
-      });
+      // subtreeStarCount 1 (one star per leaf record). The per-node arrays are
+      // the leaf draw-list's compacted flat typed arrays — scalars index `i`, the
+      // origin vec3 indexes `3*i`. `writeStarNodeParams` owns the offsets.
+      const o = i * 3;
+      writeStarNodeParams(
+        nodeScratchView,
+        i * NODE_PARAMS_BYTES,
+        originRelCamMpc[o]!,
+        originRelCamMpc[o + 1]!,
+        originRelCamMpc[o + 2]!,
+        cellScaleMpc[i]!,
+        firstRecord[i]!,
+        1.0,
+        0,
+        1.0,
+      );
       prefixScratch[i] = totalInstances;
-      totalInstances += nodeDraws[i]!.recordCount;
+      totalInstances += recordCount[i]!;
     }
 
     const buffers = ensureDrawBuffers(source, drawCount);

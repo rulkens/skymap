@@ -128,7 +128,7 @@ function structLayout(fields: Array<{ name: string; type: string }>): {
  * exactly the deliberate-update the parity guard demands.
  */
 function fieldForExpr(expr: string): string {
-  if (/\bo\[[012]\]/.test(expr)) return 'originRelCamMpc';
+  if (/\bo[xyz]\b/.test(expr)) return 'originRelCamMpc';
   if (/cellScaleMpc/.test(expr)) return 'cellScaleMpc';
   if (/firstRecord/.test(expr)) return 'firstRecord';
   if (/opacity/.test(expr)) return 'opacity';
