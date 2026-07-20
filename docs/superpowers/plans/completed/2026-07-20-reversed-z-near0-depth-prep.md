@@ -249,7 +249,7 @@ COSMO (receive `SLAB_REVERSED_Z[COSMO]` from `initGpu`):
 - [x] `npm run typecheck` — both tsconfigs clean.
 - [x] `npm run build` — `tsc --noEmit` + `vite build` clean.
 - [x] Confirm the no-op guard list (Global constraints) shows **zero diffs** to those test files in this branch — proof prep changed no descriptor.
-- [ ] Proceed to `2026-07-20-reversed-z-near0-depth-feature.md` Task 1 on the same branch.
+- [x] Proceed to `2026-07-20-reversed-z-near0-depth-feature.md` Task 1 on the same branch.
 
 ## Task order dependencies
 

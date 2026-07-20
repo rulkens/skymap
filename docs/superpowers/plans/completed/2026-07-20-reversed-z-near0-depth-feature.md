@@ -228,7 +228,7 @@ Update any test assertion that pins the `(1 - eps)` mapping (grep `1.0 - PICK_BA
 - [x] Update the per-site rationale comments + the `pickDepthBands.wesl` header (greater-wins, bands above the 0.0 clear); constants untouched.
 - [x] Grep `tests/` for any `(1 - eps)` / `1.0 - PICK_BAND` assertion; update if present.
 - [x] `npm run build` clean; `npm run typecheck` clean; `npm test` green.
-- [ ] Commit (stage the four `.wesl` paths + any touched test).
+- [x] Commit (stage the four `.wesl` paths + any touched test).
 
 ---
 
@@ -280,7 +280,7 @@ are in scope. Per `testing.md`, no test guards a doc restatement.
 - [x] Reword the three `.d.ts` `depthCompare` restatements to `'greater'` / `'greater-equal'`.
 - [x] Grep the three pass headers for NEAR0 depth prose (`less`, clear `1.0`, far-plane) and reword to reversed-Z; leave unrelated prose alone.
 - [x] `npm run typecheck` clean (comment-only, but confirm nothing structural slipped).
-- [ ] Commit (stage the touched paths).
+- [x] Commit (stage the touched paths).
 
 ---
 
