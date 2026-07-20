@@ -27,8 +27,10 @@
  * rings, AND Earth's cloud shell (which are NON-adjacent to it: the opaque spheres
  * and rings sit between the cloud shell and this shell) — so it draws once every
  * opaque sphere has stamped its depth. Its pipeline depth-TESTS against them
- * (`depthCompare: 'less-equal'`) but writes NO depth and blends straight-alpha
- * OVER, so this row carries `blend: 'over'` where the opaque bodies carry
+ * (`depthCompare: 'greater-equal'`, the NEAR0 slab's reversed-Z convention — clear
+ * `0.0`, greater-z-wins; the EQUAL half lets the shell hugging a body's own surface
+ * still pass against the depth that surface stamped) but writes NO depth and blends
+ * straight-alpha OVER, so this row carries `blend: 'over'` where the opaque bodies carry
  * `'opaque'`. It is non-pickable (a translucent halo has no clickable silhouette;
  * clicking Earth hits the opaque surface `earthLayer` stamps into the pick pass),
  * so it declares no `drawPick`.

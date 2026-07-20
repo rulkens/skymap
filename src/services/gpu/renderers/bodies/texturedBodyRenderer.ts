@@ -46,7 +46,8 @@
  * ## Pipeline state
  *
  * Matches `earthRenderer` / the `foreground:0` row: `rgba16float` colour +
- * `depth32float` depth (`depthWriteEnabled`, `depthCompare: 'less'`), opaque
+ * `depth32float` depth (`depthWriteEnabled`, `depthCompare: 'greater'` — the NEAR0
+ * slab's reversed-Z convention, clear `0.0`, greater-z-wins), opaque
  * replace, CCW front face + back-cull (matches `uvSphereMesh`'s outward
  * winding). Explicit bind-group layout (not `'auto'`) so texture swaps rebuild
  * bind groups against a stable layout — the `feedback_webgpu_auto_layout_trap`.

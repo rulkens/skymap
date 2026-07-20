@@ -35,7 +35,8 @@
  * makes the vertex stage size each record as a floor-sized point (its box extent
  * is zeroed) rather than a box-filling glow. Unlike the depthless additive
  * visual star pass, the pick pipeline is DEPTH-tested (`depth32float` =
- * `NEAR0_DEPTH_FORMAT`, `depthCompare: 'less'`, `depthWriteEnabled: true`) so the
+ * `NEAR0_DEPTH_FORMAT`, `depthCompare: 'greater'` — the NEAR0 slab's reversed-Z
+ * convention, clear `0.0`, greater-z-wins — `depthWriteEnabled: true`) so the
  * nearest star wins the pixel — a bright star in front of a dim one claims the
  * pick, matching visual occlusion.
  *

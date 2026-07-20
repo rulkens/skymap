@@ -277,9 +277,9 @@ are in scope. Per `testing.md`, no test guards a doc restatement.
 
 **Steps:**
 
-- [ ] Reword the three `.d.ts` `depthCompare` restatements to `'greater'` / `'greater-equal'`.
-- [ ] Grep the three pass headers for NEAR0 depth prose (`less`, clear `1.0`, far-plane) and reword to reversed-Z; leave unrelated prose alone.
-- [ ] `npm run typecheck` clean (comment-only, but confirm nothing structural slipped).
+- [x] Reword the three `.d.ts` `depthCompare` restatements to `'greater'` / `'greater-equal'`.
+- [x] Grep the three pass headers for NEAR0 depth prose (`less`, clear `1.0`, far-plane) and reword to reversed-Z; leave unrelated prose alone.
+- [x] `npm run typecheck` clean (comment-only, but confirm nothing structural slipped).
 - [ ] Commit (stage the touched paths).
 
 ---

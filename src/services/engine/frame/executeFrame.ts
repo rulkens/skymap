@@ -50,7 +50,8 @@
  *
  * The same `touched` fact drives depth: a render step whose target row declares
  * `depth` (only `foreground:0` today) attaches a depth texture whose load-op is
- * `'clear'` (to the far plane, 1.0) on first touch and `'load'` after — one
+ * `'clear'` (to this slab's far-plane depth via `depthClearValueFor` — `0.0` under
+ * the NEAR0 `foreground:0` row's reversed-Z convention) on first touch and `'load'` after — one
  * first-touch fact, two attachments — so a second render step or a
  * `perLayerTimed` pass reloads the depth already written and inter-layer
  * occlusion is preserved. Composite steps never attach depth (their dest rows

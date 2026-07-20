@@ -68,8 +68,10 @@
  *
  * Colour: `targetFormat` with premultiplied OVER (`srcFactor: 'one'`,
  * `dstFactor: 'one-minus-src-alpha'` — the fragment emits premultiplied rgb).
- * Depth: `depthFormat`, `depthWriteEnabled: false`, `depthCompare: 'less-equal'`
- * (depth-TESTED against the opaque planet, writes no z). `cullMode: 'none'` —
+ * Depth: `depthFormat`, `depthWriteEnabled: false`, `depthCompare: 'greater-equal'`
+ * (the NEAR0 slab's reversed-Z convention — clear `0.0`, greater-z-wins; the EQUAL
+ * half lets the shell pass against the coplanar surface it shares a radius with;
+ * depth-TESTED against the opaque planet, writes no z). `cullMode: 'none'` —
  * BOTH walls of the atmosphere-top proxy rasterise, and the fragment splits duty
  * by `@builtin(front_facing)`: the NEAR wall carries the over-disc aerial
  * perspective (haze on the lit disc), the FAR wall carries the limb + sky.
@@ -401,8 +403,8 @@ export function createAtmosphereShellRenderer(
     },
     depthStencil: {
       format: depthFormat,
-      // Depth-TESTED against the opaque planet ('less-equal') but writes NO depth
-      // — a translucent overlay must not stamp z.
+      // Depth-TESTED against the opaque planet (reversed-Z 'greater-equal') but
+      // writes NO depth — a translucent overlay must not stamp z.
       depthWriteEnabled: false,
       depthCompare: resolveDepthCompare('nearer-or-equal', reversedZ),
     },

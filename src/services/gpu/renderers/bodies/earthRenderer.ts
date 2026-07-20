@@ -83,7 +83,8 @@
  *
  * Colour target: the caller's `targetFormat` (the foreground:0 row's
  * `rgba16float`). Depth: the caller's `depthFormat` (`depth32float`) with
- * `depthWriteEnabled: true` + `depthCompare: 'less'` so the Earth occludes /
+ * `depthWriteEnabled: true` + `depthCompare: 'greater'` (the NEAR0 slab's reversed-Z
+ * convention — clear `0.0`, greater-z-wins) so the Earth occludes /
  * is occluded correctly. Front face CCW + `cull: 'back'` matches
  * `cubeSphereMesh`'s outward winding. No blend descriptor = opaque replace; the
  * fragment emits alpha=1 and the foreground composite handles layer blending.

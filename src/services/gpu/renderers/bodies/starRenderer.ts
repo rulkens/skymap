@@ -4,7 +4,8 @@
  *
  * Same skeleton as `earthRenderer`: the shared `uvSphereMesh` geometry, an
  * explicit bind-group layout, an opaque depth-tested pipeline profile
- * (depth write + 'less', CCW front face, back-face cull, no blend) against
+ * (depth write + reversed-Z 'greater' — the NEAR0 slab clears `0.0`, greater-z-wins
+ * — CCW front face, back-face cull, no blend) against
  * the caller's foreground `targetFormat` / `depthFormat`. Two deltas:
  *
  *   1. No texture machinery — a star is flat emissive, so there is no

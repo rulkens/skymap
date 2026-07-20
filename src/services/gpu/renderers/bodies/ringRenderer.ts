@@ -33,7 +33,9 @@
  * Colour: the caller's `targetFormat` (the `foreground:0` row's `rgba16float`)
  * with straight-alpha OVER blending — the ring is the sole translucent overlay
  * in the opaque foreground group, drawn AFTER the spheres. Depth: the caller's
- * `depthFormat` (`depth32float`) with `depthCompare: 'less'` but
+ * `depthFormat` (`depth32float`) with `depthCompare: 'greater'` (the NEAR0 slab's
+ * reversed-Z convention — clear `0.0`, greater-z-wins, so a nearer body stamps a
+ * LARGER depth) but
  * `depthWriteEnabled: false` — the ring is depth-TESTED against the opaque
  * planet (so the far half is correctly occluded) but writes no depth (a
  * translucent overlay must not stamp z). `cullMode: 'none'` makes the annulus

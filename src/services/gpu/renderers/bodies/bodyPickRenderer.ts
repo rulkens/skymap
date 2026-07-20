@@ -87,7 +87,8 @@
  * ### Depth-tested, r32uint, no blend
  *
  * Both pipelines carry the NEAR0 `depth32float` depth profile
- * (`depthCompare: 'less'`, `depthWriteEnabled: true`) so overlapping bodies — a
+ * (`depthCompare: 'greater'`, `depthWriteEnabled: true`, the NEAR0 slab's reversed-Z
+ * convention — clear `0.0`, greater-z-wins) so overlapping bodies — a
  * Moon in front of Earth — resolve nearest-wins, matching visual occlusion. The
  * colour target is `r32uint` (integer formats cannot blend; depth resolves
  * overlaps instead), matching the pick program's NEAR0 attachment formats.
