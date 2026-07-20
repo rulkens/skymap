@@ -409,9 +409,17 @@ struct CloudShellUniforms {
 //   offset  76..79:  bottomRadius  (f32 -- fills sunDirLocal's 4th slot)
 //   offset  80..91:  camPosLocal   (vec3<f32> -- 16-byte aligned at 80)
 //   offset  92..95:  sunIrradiance (f32 -- fills camPosLocal's 4th slot)
-//   offset  96..99:  exposure      (f32 -- in-scatter intensity scale)
-//   offset 100..111: _pad0/1/2     (f32 x3 -- rounds the struct to 112 / 16-byte)
+//   offset  96..99:  exposure       (f32 -- in-scatter intensity scale)
+//   offset 100..103: ringInnerRatio (f32 -- ring inner / atmosphere top; 0 = none)
+//   offset 104..107: ringOuterRatio (f32 -- ring outer / atmosphere top; 0 = none)
+//   offset 108..111: _pad0          (f32 -- rounds the struct to 112 / 16-byte)
 //   total: 112 bytes.
+//
+// The ring ratios express the host body's ring annulus in this mesh's LOCAL
+// units (atmosphere top == 1), so the shell fragment can ask 'does the ring
+// block this fragment's view of the atmosphere?' with a plane test in its own
+// frame. 'ringOuterRatio == 0' is the no-ring sentinel -- the same data-gate
+// 'TexturedBodyUniforms' uses -- so every ringless body short-circuits.
 //
 // The CPU side uploads 28 f32s. The single source of truth for that packing is
 // 'utils/gpu/packAtmosphereUniforms.ts', which reuses 'packLitBodyUniforms' for
@@ -424,9 +432,9 @@ struct AtmosphereUniforms {
   camPosLocal: vec3<f32>,
   sunIrradiance: f32,
   exposure: f32,
+  ringInnerRatio: f32,
+  ringOuterRatio: f32,
   _pad0: f32,
-  _pad1: f32,
-  _pad2: f32,
 };
 
 // ── clip_from_local ──────────────────────────────────────────────────

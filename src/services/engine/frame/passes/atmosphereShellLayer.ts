@@ -58,6 +58,7 @@ import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer'
 import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
+import { SCENE_RINGS } from '../../../../data/bodies/sceneRings';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { camPosLocal } from '../../../../utils/camera/camPosLocal';
@@ -120,10 +121,26 @@ export const atmosphereShellLayer: ContentLayer = {
       // sunIrradiance is the per-body params dial (fragment-unused today).
       const exposure =
         body.id === 'earth' ? state.settings.earth.atmosphereExposure : params.exposure;
+      // The host's ring annulus in the proxy's LOCAL units (atmosphere top = 1),
+      // so the fragment can keep a ring in FRONT of the atmosphere from being
+      // darkened by the shell's over-blend. No `SCENE_RINGS` row ⇒ both ratios 0
+      // (the no-ring sentinel) — the same data-gate the ring-shadow path uses.
+      const ring = SCENE_RINGS.find((r) => r.bodyId === body.id);
+      const ringInnerRatio = ring === undefined ? 0 : ring.innerRadiusKm / params.atmosphereTopKm;
+      const ringOuterRatio = ring === undefined ? 0 : ring.outerRadiusKm / params.atmosphereTopKm;
       renderer.draw(
         pass,
         body.id,
-        packAtmosphereUniforms(mvp, sun, camLocal, bottomRadius, params.sunIrradiance, exposure),
+        packAtmosphereUniforms(
+          mvp,
+          sun,
+          camLocal,
+          bottomRadius,
+          params.sunIrradiance,
+          exposure,
+          ringInnerRatio,
+          ringOuterRatio,
+        ),
       );
     }
   },

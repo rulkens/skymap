@@ -144,6 +144,10 @@ type AtmosphereBundle = {
   transmittanceTex: GPUTexture;
   multiScatterTex: GPUTexture;
   skyViewTex: GPUTexture;
+  /** The host body's ring-alpha strip — `null` while the body binds the shared
+   *  1×1 transparent placeholder (every ringless body, and Saturn until its
+   *  strip bitmap commits via `setRingTexture`). */
+  ringTexture: GPUTexture | null;
   scatteringBuffer: GPUBuffer;
   skyViewParamsBuffer: GPUBuffer;
   shellUniformBuffer: GPUBuffer;
@@ -300,7 +304,8 @@ export function createAtmosphereShellRenderer(
 
   // ── Shell render pipeline (SHARED) ─────────────────────────────────────────
   // group 0: [0] AtmosphereUniforms (VERTEX+FRAGMENT), [1] sampler,
-  //          [2] skyView tex, [3] transmittance tex.
+  //          [2] skyView tex, [3] transmittance tex, [4] ring-alpha strip
+  //          (1×1 transparent placeholder on every ringless body).
   const shellBgl = device.createBindGroupLayout({
     label: 'atmosphere-shell-bgl',
     entries: [
@@ -312,8 +317,27 @@ export function createAtmosphereShellRenderer(
       { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
       { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
       { binding: 3, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+      { binding: 4, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
     ],
   });
+
+  // Shared 1×1 TRANSPARENT ring placeholder — bound at binding 4 for every body
+  // whose ring strip has not committed (all ringless bodies, forever). Binding a
+  // real texture on all bodies keeps ONE bind-group layout for the whole set; the
+  // fragment's 'ringOuterRatio == 0' data-gate means the placeholder is never
+  // sampled (the 'texturedBodyRenderer' binding-3 pattern).
+  const placeholderRing = device.createTexture({
+    label: 'atmosphere-placeholder-ring',
+    size: [1, 1, 1],
+    format: 'rgba8unorm',
+    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+  });
+  device.queue.writeTexture(
+    { texture: placeholderRing },
+    new Uint8Array([0, 0, 0, 0]),
+    { bytesPerRow: 4 },
+    [1, 1, 1],
+  );
 
   const shellPipeline = device.createRenderPipeline({
     label: 'atmosphere-shell-pipeline',
@@ -461,21 +485,18 @@ export function createAtmosphereShellRenderer(
       ],
     });
 
-    const shellBindGroup = device.createBindGroup({
-      label: `atmosphere-shell-bg-${bodyId}`,
-      layout: shellBgl,
-      entries: [
-        { binding: 0, resource: { buffer: shellUniformBuffer } },
-        { binding: 1, resource: sampler },
-        { binding: 2, resource: skyViewView },
-        { binding: 3, resource: transmittanceView },
-      ],
+    const shellBindGroup = buildShellBindGroup(bodyId, {
+      shellUniformBuffer,
+      skyViewTex,
+      transmittanceTex,
+      ringTexture: null,
     });
 
     return {
       transmittanceTex,
       multiScatterTex,
       skyViewTex,
+      ringTexture: null,
       scatteringBuffer,
       skyViewParamsBuffer,
       shellUniformBuffer,
@@ -484,6 +505,29 @@ export function createAtmosphereShellRenderer(
       skyViewBindGroup,
       shellBindGroup,
     };
+  }
+
+  /** (Re)build a body's shell bind group. Split out so `setRingTexture` can swap
+   *  the binding-4 strip in without re-deriving the rest — `ringTexture: null`
+   *  binds the shared transparent placeholder (the `texturedBodyRenderer`
+   *  `buildBindGroup` pattern). */
+  function buildShellBindGroup(
+    bodyId: string,
+    res: Pick<AtmosphereBundle, 'shellUniformBuffer' | 'skyViewTex' | 'transmittanceTex'> & {
+      ringTexture: GPUTexture | null;
+    },
+  ): GPUBindGroup {
+    return device.createBindGroup({
+      label: `atmosphere-shell-bg-${bodyId}`,
+      layout: shellBgl,
+      entries: [
+        { binding: 0, resource: { buffer: res.shellUniformBuffer } },
+        { binding: 1, resource: sampler },
+        { binding: 2, resource: res.skyViewTex.createView() },
+        { binding: 3, resource: res.transmittanceTex.createView() },
+        { binding: 4, resource: (res.ringTexture ?? placeholderRing).createView() },
+      ],
+    });
   }
 
   for (const [bodyId, params] of Object.entries(paramsById)) {
@@ -563,6 +607,35 @@ export function createAtmosphereShellRenderer(
     pass.end();
   }
 
+  // ── setRingTexture ─────────────────────────────────────────────────────────
+
+  function setRingTexture(bodyId: string, bitmap: ImageBitmap): void {
+    // A ring host without an atmosphere row has no bundle — nothing to occlude,
+    // so a miss is a graceful no-op (unlike `bundleFor`'s draw-path throw: the
+    // ring→atmosphere link is optional by data, not an invariant).
+    const bundle = bundles.get(bodyId);
+    if (bundle === undefined) return;
+    bundle.ringTexture?.destroy();
+    const texture = device.createTexture({
+      label: `atmosphere-ring-${bodyId}`,
+      size: [bitmap.width, bitmap.height, 1],
+      format: 'rgba8unorm-srgb',
+      // RENDER_ATTACHMENT is required by copyExternalImageToTexture even though
+      // we never render INTO the strip — Dawn rejects the upload without it.
+      usage:
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.COPY_DST |
+        GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+    device.queue.copyExternalImageToTexture({ source: bitmap }, { texture }, [
+      bitmap.width,
+      bitmap.height,
+      1,
+    ]);
+    bundle.ringTexture = texture;
+    bundle.shellBindGroup = buildShellBindGroup(bodyId, bundle);
+  }
+
   // ── draw ───────────────────────────────────────────────────────────────────
 
   function draw(pass: GPURenderPassEncoder, bodyId: string, uniforms: Float32Array): void {
@@ -584,11 +657,13 @@ export function createAtmosphereShellRenderer(
       bundle.transmittanceTex.destroy();
       bundle.multiScatterTex.destroy();
       bundle.skyViewTex.destroy();
+      bundle.ringTexture?.destroy();
       bundle.scatteringBuffer.destroy();
       bundle.skyViewParamsBuffer.destroy();
       bundle.shellUniformBuffer.destroy();
     }
     bundles.clear();
+    placeholderRing.destroy();
     positionBuffer.destroy();
     indexBuffer.destroy();
   }
@@ -596,6 +671,7 @@ export function createAtmosphereShellRenderer(
   const renderer: AtmosphereShellRenderer = {
     label: 'atmosphereShellRenderer',
     encodeSkyView,
+    setRingTexture,
     draw,
     destroy,
   };
