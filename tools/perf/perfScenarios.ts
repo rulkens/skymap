@@ -8,27 +8,37 @@
  * of WHERE the camera is (how much geometry projects, how much fill each pass
  * touches), so a fixed pose per regime is what makes a run reproducible.
  *
- * ### Poses are PLACEHOLDERS awaiting live capture
+ * ### Poses captured live via logState
  *
- * The six `pose` values below are compiling placeholders, NOT real coordinates.
- * The honest way to get a pose is to fly the running app to each regime and
- * read the `l`-key `logState` dump — physical coordinates invented at a desk
- * would put the camera nowhere meaningful. So each entry ships a trivially-valid
- * pose marked for replacement; the live-capture step pastes the real vantage in.
+ * The six `pose` values below were captured by flying the running app to each
+ * regime and reading the `l`-key `logState` one-liner — physical coordinates
+ * invented at a desk would put the camera nowhere meaningful. Every capture kept
+ * Earth as the orbit target while dollying out, so all six share the SAME
+ * look-at point (`EARTH_TARGET` — Earth's J2000 heliocentric position, ~1 AU off
+ * the origin) and differ only in `distance` plus a little yaw/pitch framing:
+ * from Earth's surface (`8.9e-16` Mpc) out to the full survey (`12372` Mpc), the
+ * ~30 scale-decades of the powers-of-ten descent. From `milky-way` outward the
+ * camera is so far back that Earth's 1 AU offset from the Sun is far below one
+ * pixel, so the shared Earth target is indistinguishable from the origin there.
+ * `fovYRad` from the dump is the 60° default and not part of `PerfPose`, dropped.
  */
 
 import type { PerfPose } from '../../src/@types/perf/PerfPose';
+import type { Vec3 } from '../../src/@types/math/Vec3';
 
 export type PerfScenario = { readonly name: string; readonly pose: PerfPose };
 
-// PLACEHOLDER — replace via logState live capture
-const PLACEHOLDER_POSE: PerfPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 };
+// The shared look-at point for every scenario: Earth (its J2000 heliocentric
+// position, matching SCENE_EARTH.positionMpc — verified equal at capture time).
+// Factored out so the six poses differ only in the axes that actually vary
+// (distance/yaw/pitch) and the target can never drift between them.
+const EARTH_TARGET: Vec3 = [-8.5895045e-13, 4.3022234e-12, 1.865304e-12];
 
 export const PERF_SCENARIOS: readonly PerfScenario[] = [
-  { name: 'earth-surface', pose: PLACEHOLDER_POSE }, // PLACEHOLDER — replace via logState live capture
-  { name: 'solar-system', pose: PLACEHOLDER_POSE }, // PLACEHOLDER — replace via logState live capture
-  { name: 'star-field', pose: PLACEHOLDER_POSE }, // PLACEHOLDER — replace via logState live capture
-  { name: 'milky-way', pose: PLACEHOLDER_POSE }, // PLACEHOLDER — replace via logState live capture
-  { name: 'local-group', pose: PLACEHOLDER_POSE }, // PLACEHOLDER — replace via logState live capture
-  { name: 'full-survey', pose: PLACEHOLDER_POSE }, // PLACEHOLDER — replace via logState live capture
+  { name: 'earth-surface', pose: { target: EARTH_TARGET, distance: 8.9404154e-16, yaw: 1.3857, pitch: 0.7126 } },
+  { name: 'solar-system', pose: { target: EARTH_TARGET, distance: 1.1343633e-10, yaw: 3.7281, pitch: 0.6638 } },
+  { name: 'star-field', pose: { target: EARTH_TARGET, distance: 0.000089186628, yaw: 3.7281, pitch: 0.6638 } },
+  { name: 'milky-way', pose: { target: EARTH_TARGET, distance: 0.011100341, yaw: 5.9423, pitch: 0.7802 } },
+  { name: 'local-group', pose: { target: EARTH_TARGET, distance: 21.268361, yaw: 8.2811, pitch: 0.5612 } },
+  { name: 'full-survey', pose: { target: EARTH_TARGET, distance: 12372.364, yaw: 5.8964, pitch: 0.0552 } },
 ];
