@@ -52,10 +52,10 @@ Reword the two places that currently assert the opposite so the module no longer
 
 **Steps:**
 
-- [ ] Add `| GPUTextureUsage.TEXTURE_BINDING` to the depth-texture usage in `allocate`.
-- [ ] Reword the "### Why the foreground row carries a depth texture" docblock paragraph and the inline depth-usage comment so neither still claims "never TEXTURE_BINDING".
-- [ ] `npm run typecheck` clean (both tsconfigs); `npm run build` clean.
-- [ ] Commit (stage `src/services/gpu/renderTargets.ts`).
+- [x] Add `| GPUTextureUsage.TEXTURE_BINDING` to the depth-texture usage in `allocate`.
+- [x] Reword the "### Why the foreground row carries a depth texture" docblock paragraph and the inline depth-usage comment so neither still claims "never TEXTURE_BINDING".
+- [x] `npm run typecheck` clean (both tsconfigs); `npm run build` clean.
+- [x] Commit (stage `src/services/gpu/renderTargets.ts`).
 
 ---
 
@@ -117,11 +117,11 @@ Do NOT unit-test `createOcclusionDepthBindGroup` (needs a device — its correct
 
 **Steps:**
 
-- [ ] Load the `wesl-shaders` skill. Create `lib/sceneDepth.wesl` with the header + binding + `occludedByScene` above.
-- [ ] Write `occlusionDepthGroup.test.ts` with the assertion above (red — the module does not exist yet).
-- [ ] Create `occlusionDepthGroup.ts` with the three exports; implement `createOcclusionDepthBindGroup` against the `volumeUpsample.ts:92-104` per-frame-bind-group shape. Green.
-- [ ] `npm test -- occlusionDepthGroup` green; `npm run typecheck` clean; `npm run build` clean (the new `.wesl` links only once imported in Task 3, but the build must stay green).
-- [ ] Commit (stage the three new paths).
+- [x] Load the `wesl-shaders` skill. Create `lib/sceneDepth.wesl` with the header + binding + `occludedByScene` above.
+- [x] Write `occlusionDepthGroup.test.ts` with the assertion above (red — the module does not exist yet).
+- [x] Create `occlusionDepthGroup.ts` with the three exports; implement `createOcclusionDepthBindGroup` against the `volumeUpsample.ts:92-104` per-frame-bind-group shape. Green.
+- [x] `npm test -- occlusionDepthGroup` green; `npm run typecheck` clean; `npm run build` clean (the new `.wesl` links only once imported in Task 3, but the build must stay green).
+- [x] Commit (stage the three new paths).
 
 ---
 
@@ -171,11 +171,11 @@ Comment (single quotes, no backticks): all four glyph-quad corners share the anc
 
 **Steps:**
 
-- [ ] Load the `wesl-shaders` skill.
-- [ ] Extract `shadeMsdf(input: VsOut) -> vec4<f32>` in `fragment.wesl`; reduce `fs` to `return shadeMsdf(input);`.
-- [ ] Create `fragmentOcclude.wesl` importing `shadeMsdf` + `occludedByScene`, with the `@builtin(position)` discard wrapper above.
-- [ ] `npm run build` clean (WESL links; watch iOS-strict traps — valid module, no `texture_1d`). `npm run typecheck` clean.
-- [ ] Commit (stage both `.wesl` paths). Behaviour-neutral on its own — no renderer uses `fragmentOcclude.wesl` until Task 4.
+- [x] Load the `wesl-shaders` skill.
+- [x] Extract `shadeMsdf(input: VsOut) -> vec4<f32>` in `fragment.wesl`; reduce `fs` to `return shadeMsdf(input);`.
+- [x] Create `fragmentOcclude.wesl` importing `shadeMsdf` + `occludedByScene`, with the `@builtin(position)` discard wrapper above.
+- [x] `npm run build` clean (WESL links; watch iOS-strict traps — valid module, no `texture_1d`). `npm run typecheck` clean.
+- [x] Commit (stage both `.wesl` paths). Behaviour-neutral on its own — no renderer uses `fragmentOcclude.wesl` until Task 4.
 
 ---
 
@@ -221,12 +221,12 @@ When occlusion is enabled AND `sceneDepthView` is present, build the group(1) bi
 
 **Steps:**
 
-- [ ] Add the `opts` param + the `occludeAgainstDepth` branch (two-BGL layout, `fragmentOcclude.wesl` module, retained `occlusionDepthBGL`) to `createLabelRenderer`; import `fragmentOcclude.wesl?static` + the three `occlusionDepthGroup.ts` symbols.
-- [ ] Widen `draw` to accept `sceneDepthView?`; on the occlusion path build + set the group(1) bind group per frame; leave the non-occlusion path unchanged.
-- [ ] Update `LabelRenderer.d.ts` `draw` signature + docstring.
-- [ ] (Optional, only if a `mockDevice` is trivially mirrorable) add the two-BGL construction assertion.
-- [ ] `npm run typecheck` clean; `npm test -- labelRenderer` green (existing CPU tests unaffected); `npm run build` clean.
-- [ ] Commit (stage the two paths).
+- [x] Add the `opts` param + the `occludeAgainstDepth` branch (two-BGL layout, `fragmentOcclude.wesl` module, retained `occlusionDepthBGL`) to `createLabelRenderer`; import `fragmentOcclude.wesl?static` + the three `occlusionDepthGroup.ts` symbols.
+- [x] Widen `draw` to accept `sceneDepthView?`; on the occlusion path build + set the group(1) bind group per frame; leave the non-occlusion path unchanged.
+- [x] Update `LabelRenderer.d.ts` `draw` signature + docstring.
+- [x] (Optional, only if a `mockDevice` is trivially mirrorable) add the two-BGL construction assertion.
+- [x] `npm run typecheck` clean; `npm test -- labelRenderer` green (existing CPU tests unaffected); `npm run build` clean.
+- [x] Commit (stage the two paths).
 
 ---
 
@@ -262,12 +262,12 @@ Note the leader-line vertex stage clamps clip-z the same way the label one does 
 
 **Steps:**
 
-- [ ] Load the `wesl-shaders` skill. Extract `shadeLine(input: VsOut) -> vec4<f32>` in `markerLines/fragment.wesl`; reduce `fs` to `return shadeLine(input);`.
-- [ ] Create `markerLines/fragmentOcclude.wesl` with the discard wrapper above.
-- [ ] Add the `opts` param + occlusion branch (two-BGL layout, `fragmentOcclude.wesl` module, retained `occlusionDepthBGL`) to `createMarkerLineRenderer`; widen `draw` with `sceneDepthView?` + the per-frame group(1) build.
-- [ ] Update `MarkerLineRenderer.d.ts` `draw` signature + docstring.
-- [ ] `npm run typecheck` clean; `npm test -- markerLineRenderer` green; `npm run build` clean.
-- [ ] Commit (stage the four paths).
+- [x] Load the `wesl-shaders` skill. Extract `shadeLine(input: VsOut) -> vec4<f32>` in `markerLines/fragment.wesl`; reduce `fs` to `return shadeLine(input);`.
+- [x] Create `markerLines/fragmentOcclude.wesl` with the discard wrapper above.
+- [x] Add the `opts` param + occlusion branch (two-BGL layout, `fragmentOcclude.wesl` module, retained `occlusionDepthBGL`) to `createMarkerLineRenderer`; widen `draw` with `sceneDepthView?` + the per-frame group(1) build.
+- [x] Update `MarkerLineRenderer.d.ts` `draw` signature + docstring.
+- [x] `npm run typecheck` clean; `npm test -- markerLineRenderer` green; `npm run build` clean.
+- [x] Commit (stage the four paths).
 
 ---
 
@@ -335,12 +335,12 @@ it('passes the foreground:0 depth view to both the caption and leader-line draws
 
 **Steps:**
 
-- [ ] Write `foregroundLabelsOcclusion.test.ts` with the sentinel-depth-view assertion above (red — the layer does not read `depthViewOf` yet, and the draws receive only 3 args).
-- [ ] Thread `depthView = ctx.renderTargets.depthViewOf('foreground:0')` into both `draw` calls in `foregroundLabelsLayer.ts`. Green.
-- [ ] Extend the existing `foregroundLabelsLayer.test.ts` `makeCtx` to attach a `renderTargets.depthViewOf` (no-op returning a stub view) so its draws don't throw on the new read; confirm that file stays green.
-- [ ] Construct the two foreground instances in `initGpu.ts` with `{ occludeAgainstDepth: true }`; leave the COSMO instances at `:213-214` unchanged.
-- [ ] `npm test -- foregroundLabels` green (both files); `npm run typecheck` clean; `npm run build` clean.
-- [ ] Commit (stage the three paths).
+- [x] Write `foregroundLabelsOcclusion.test.ts` with the sentinel-depth-view assertion above (red — the layer does not read `depthViewOf` yet, and the draws receive only 3 args).
+- [x] Thread `depthView = ctx.renderTargets.depthViewOf('foreground:0')` into both `draw` calls in `foregroundLabelsLayer.ts`. Green.
+- [x] Extend the existing `foregroundLabelsLayer.test.ts` `makeCtx` to attach a `renderTargets.depthViewOf` (no-op returning a stub view) so its draws don't throw on the new read; confirm that file stays green.
+- [x] Construct the two foreground instances in `initGpu.ts` with `{ occludeAgainstDepth: true }`; leave the COSMO instances at `:213-214` unchanged.
+- [x] `npm test -- foregroundLabels` green (both files); `npm run typecheck` clean; `npm run build` clean.
+- [x] Commit (stage the three paths).
 
 ---
 
