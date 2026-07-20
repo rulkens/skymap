@@ -4,14 +4,14 @@
  * Vitest runs in Node without a WebGPU surface, so every `create*` call the
  * renderer issues returns a plausibly-shaped stand-in (mirrors
  * `earthRenderer.test.ts`). These tests pin the `Renderer` contract (non-empty
- * `label`, `destroy`), the method surface (`setTexture` / `setRingTexture` /
+ * `label`, `destroy`), the method surface (`setMap` / `setRingTexture` /
  * `draw` callable with the right arity), the per-body resource posture (each
  * body id gets its OWN uniform buffer + bind group so no shared mid-frame
- * uniform can be clobbered), and the explicit four-binding bind-group layout.
- * The mip-count contract is checked structurally: `setTexture` sizes the body
- * texture with `mipLevelCount(w,h)` levels and runs the downsample chain (a
- * command encoder is submitted). "Round, correctly-lit body" is the VISUAL gate
- * deferred to Task 11.
+ * uniform can be clobbered), and the explicit four-binding bind-group layout
+ * (surface + ring — Prep B stays four-binding). The mip-count contract is checked
+ * structurally: `setMap(id, 'surface', …)` sizes the body texture with
+ * `mipLevelCount(w,h)` levels and runs the downsample chain (a command encoder is
+ * submitted). "Round, correctly-lit body" is the VISUAL gate deferred to Task 11.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -92,9 +92,9 @@ describe('createTexturedBodyRenderer', () => {
     expect(() => renderer.destroy()).not.toThrow();
   });
 
-  it('setTexture / setRingTexture / draw are callable with the right arity', () => {
+  it('setMap / setRingTexture / draw are callable with the right arity', () => {
     const renderer = createTexturedBodyRenderer(mockDevice(), 'rgba16float', 'depth32float');
-    expect(renderer.setTexture.length).toBe(2);
+    expect(renderer.setMap.length).toBe(3);
     expect(renderer.setRingTexture.length).toBe(2);
     expect(renderer.draw.length).toBe(3);
   });
@@ -108,7 +108,7 @@ describe('createTexturedBodyRenderer', () => {
     expect(renderPipelines[0]!.depthStencil!.format).toBe('depth32float');
   });
 
-  it('declares an explicit four-binding layout: uniform, sampler, body + ring textures', () => {
+  it('declares an explicit four-binding layout: uniform, sampler, surface + ring textures', () => {
     const bindGroupLayouts: GPUBindGroupLayoutDescriptor[] = [];
     createTexturedBodyRenderer(mockDevice({ bindGroupLayouts }), 'rgba16float', 'depth32float');
     const entries = Array.from(bindGroupLayouts[0]!.entries);
@@ -159,7 +159,7 @@ describe('createTexturedBodyRenderer', () => {
     expect(pass.drawIndexed).toHaveBeenCalledTimes(1);
   });
 
-  it('setTexture sizes the body texture with a full mip chain and runs the downsample passes', () => {
+  it('setMap sizes the body surface texture with a full mip chain and runs the downsample passes', () => {
     const textures: GPUTextureDescriptor[] = [];
     const encoderCount = { n: 0 };
     const renderer = createTexturedBodyRenderer(
@@ -168,7 +168,7 @@ describe('createTexturedBodyRenderer', () => {
       'depth32float',
     );
     const bitmap = { width: 8, height: 4 } as unknown as ImageBitmap;
-    renderer.setTexture('mars', bitmap);
+    renderer.setMap('mars', 'surface', bitmap);
     const bodyTex = textures.find((t) => Array.isArray(t.size) && t.size[0] === 8);
     expect(bodyTex).toBeDefined();
     expect(bodyTex!.mipLevelCount).toBe(mipLevelCount(8, 4));
@@ -208,7 +208,7 @@ describe('createTexturedBodyRenderer', () => {
     // whose `.destroy()` clearTexture calls; the bind group is then rebuilt.
     const renderer = createTexturedBodyRenderer(mockDevice(), 'rgba16float', 'depth32float');
     const bitmap = { width: 8, height: 4 } as unknown as ImageBitmap;
-    renderer.setTexture('mars', bitmap);
+    renderer.setMap('mars', 'surface', bitmap);
     // Assert clearTexture is idempotent and non-throwing, and that a subsequent
     // draw still works (the placeholder rebind succeeded) — a dangling destroyed
     // view or a missing rebuild would throw here.
@@ -240,7 +240,7 @@ describe('createTexturedBodyRenderer', () => {
     } as unknown as GPUDevice;
     const renderer = createTexturedBodyRenderer(device, 'rgba16float', 'depth32float');
     const bitmap = { width: 8, height: 4 } as unknown as ImageBitmap;
-    renderer.setTexture('mars', bitmap);
+    renderer.setMap('mars', 'surface', bitmap);
     const surface = created.find((t) => Array.isArray(t.desc.size) && t.desc.size[0] === 8)!;
     expect(surface).toBeDefined();
     renderer.clearTexture('mars');

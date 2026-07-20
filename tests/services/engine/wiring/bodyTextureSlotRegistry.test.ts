@@ -5,7 +5,7 @@
  * Structural: every family key gets a slot in `state.assetSlots.bodyTextures`.
  * Behavioural: commit routes each entry to its resident renderer — `'earth'` to
  * `earthRenderer.setMap(kind, …)`, every other (non-ring) body to
- * `texturedBodyRenderer.setTexture(bodyId, …)` — and a non-Earth body's
+ * `texturedBodyRenderer.setMap(bodyId, kind, …)` — and a non-Earth body's
  * onRelease frees its texture via `texturedBodyRenderer.clearTexture`. Driven
  * through the real slot machinery with a stubbed fetch + decode.
  */
@@ -23,7 +23,7 @@ type Gpu = {
   earthRenderer: { setMap: ReturnType<typeof vi.fn> };
   cloudShellRenderer: { setTexture: ReturnType<typeof vi.fn> };
   texturedBodyRenderer: {
-    setTexture: ReturnType<typeof vi.fn>;
+    setMap: ReturnType<typeof vi.fn>;
     clearTexture: ReturnType<typeof vi.fn>;
     setRingTexture: ReturnType<typeof vi.fn>;
   };
@@ -41,7 +41,7 @@ function makeGpu(): Gpu {
   return {
     earthRenderer: { setMap: vi.fn() },
     cloudShellRenderer: { setTexture: vi.fn() },
-    texturedBodyRenderer: { setTexture: vi.fn(), clearTexture: vi.fn(), setRingTexture: vi.fn() },
+    texturedBodyRenderer: { setMap: vi.fn(), clearTexture: vi.fn(), setRingTexture: vi.fn() },
     atmosphereShellRenderer: { setRingTexture: vi.fn() },
   };
 }
@@ -82,7 +82,7 @@ describe('wireBodyTextureSlots', () => {
     expect(gpu.earthRenderer.setMap).toHaveBeenCalledTimes(1);
     expect(gpu.earthRenderer.setMap).toHaveBeenCalledWith('surface', bitmap);
     // Earth keeps its own renderer — the shared textured renderer is untouched.
-    expect(gpu.texturedBodyRenderer.setTexture).not.toHaveBeenCalled();
+    expect(gpu.texturedBodyRenderer.setMap).not.toHaveBeenCalled();
     // The surface kind is NOT a cloud map — the shell stays clear.
     expect(gpu.cloudShellRenderer.setTexture).not.toHaveBeenCalled();
   });
@@ -104,7 +104,7 @@ describe('wireBodyTextureSlots', () => {
     expect(gpu.cloudShellRenderer.setTexture).toHaveBeenCalledWith(bitmap);
   });
 
-  it("a non-'earth' body slot's commit dispatches to texturedBodyRenderer.setTexture(bodyId, …)", async () => {
+  it("a non-'earth' body slot's commit dispatches to texturedBodyRenderer.setMap(bodyId, 'surface', …)", async () => {
     const gpu = makeGpu();
     const state = makeState(gpu);
     wireBodyTextureSlots(state);
@@ -113,8 +113,8 @@ describe('wireBodyTextureSlots', () => {
     slot.load({ bodyId: 'mars', kind: 'surface', tier: 'small' });
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
 
-    expect(gpu.texturedBodyRenderer.setTexture).toHaveBeenCalledTimes(1);
-    expect(gpu.texturedBodyRenderer.setTexture).toHaveBeenCalledWith('mars', bitmap);
+    expect(gpu.texturedBodyRenderer.setMap).toHaveBeenCalledTimes(1);
+    expect(gpu.texturedBodyRenderer.setMap).toHaveBeenCalledWith('mars', 'surface', bitmap);
     // Mars is not Earth's — Earth's renderer stays untouched.
     expect(gpu.earthRenderer.setMap).not.toHaveBeenCalled();
   });
@@ -150,7 +150,7 @@ describe('wireBodyTextureSlots', () => {
     // keyed on the same host body.
     expect(gpu.atmosphereShellRenderer.setRingTexture).toHaveBeenCalledTimes(1);
     expect(gpu.atmosphereShellRenderer.setRingTexture).toHaveBeenCalledWith('saturn', bitmap);
-    expect(gpu.texturedBodyRenderer.setTexture).not.toHaveBeenCalled();
+    expect(gpu.texturedBodyRenderer.setMap).not.toHaveBeenCalled();
     expect(gpu.earthRenderer.setMap).not.toHaveBeenCalled();
   });
 });
