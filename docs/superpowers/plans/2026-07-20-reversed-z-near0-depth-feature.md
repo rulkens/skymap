@@ -140,10 +140,10 @@ scale-1 texel-indexing paragraphs unchanged.
 
 **Steps:**
 
-- [ ] Load the `wesl-shaders` skill. Flip `<` → `>` in `occludedByScene`.
-- [ ] Reword the "why occluded" header block to the reversed (greater-means-occluded, clear 0.0) rationale.
-- [ ] `npm run build` clean (WESL links); `npm run typecheck` clean.
-- [ ] Commit (stage `sceneDepth.wesl`).
+- [x] Load the `wesl-shaders` skill. Flip `<` → `>` in `occludedByScene`.
+- [x] Reword the "why occluded" header block to the reversed (greater-means-occluded, clear 0.0) rationale.
+- [x] `npm run build` clean (WESL links); `npm run typecheck` clean.
+- [x] Commit (stage `sceneDepth.wesl`).
 
 ---
 
