@@ -11,8 +11,9 @@
  *      `subtreeStarCount` match its species.
  *   2. The per-node LOD fade — a node fades in over ~250 ms as it enters the
  *      cut and out as it leaves, its opacity the crossfade × its own fade, and
- *      a mid-fade frame wakes the render loop. The walk runs once per frame
- *      (memoised on ctx).
+ *      a mid-fade frame reports `anyNodeFading` (the keep-ticking vote runFrame
+ *      forwards to `shouldKeepTicking`). The walk runs once per frame (memoised
+ *      on ctx).
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -31,7 +32,6 @@ import type { EngineState } from '../../../../../src/@types/engine/state/EngineS
 import type { StarCatalog } from '../../../../../src/@types/data/starCatalog/StarCatalog';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
-const MPC_TO_PC = 1 / SCALE_UNITS.PC_TO_MPC;
 const PC_TO_MPC = SCALE_UNITS.PC_TO_MPC;
 const { inner, outer } = GAIA_STARS_ENTRY.crossfadePc;
 
@@ -274,18 +274,18 @@ describe('prepareStarCut per-node LOD fades', () => {
     expect(opacityInStream(f3.aggregate, ROOT_INDEX)).toBeUndefined();
   });
 
-  it('wakes the render loop while a node fade is in flight', () => {
+  it('reports anyNodeFading while a node fade is in flight (the keep-ticking vote)', () => {
     const catalog = makeTwoLevelCatalog();
     const renderer = makeRenderer([{ source: Source.GaiaStars, catalog }]);
     const state = makeState(renderer);
-    const requestRender = vi.mocked(state.subsystems.scheduler.requestRender);
 
-    // Frame 1: snap (first paint) — nothing mid-fade, so no wake.
-    prepareStarCut(state, makeCtx(camAtPcVec(FAR_PC), 0));
-    expect(requestRender).not.toHaveBeenCalled();
+    // Frame 1: snap (first paint) — nothing mid-fade, so the vote is false.
+    const f1 = prepareStarCut(state, makeCtx(camAtPcVec(FAR_PC), 0));
+    expect(f1!.anyNodeFading).toBe(false);
 
-    // Frame 2: the cut flips → nodes mid-fade → the loop must keep ticking.
-    prepareStarCut(state, makeCtx(camAtPcVec(CLOSE_PC), 50));
-    expect(requestRender).toHaveBeenCalled();
+    // Frame 2: the cut flips → nodes mid-fade → the vote is true, so runFrame's
+    // shouldKeepTicking keeps the loop ticking to finish the dissolve.
+    const f2 = prepareStarCut(state, makeCtx(camAtPcVec(CLOSE_PC), 50));
+    expect(f2!.anyNodeFading).toBe(true);
   });
 });

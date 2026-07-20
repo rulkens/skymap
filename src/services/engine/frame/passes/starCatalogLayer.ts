@@ -79,7 +79,13 @@
  * 0→1 as it enters the cut and 1→0 as it leaves, holding a leaving node in the
  * draw list until it reaches 0. The per-node draw opacity handed to the renderer
  * is `sourceCrossfade × nodeFade`. A split crossfades exactly (see `NODE_FADE_MS`
- * on why linear conserves flux). Mid-ramp frames wake the loop below.
+ * on why linear conserves flux). A mid-ramp frame must keep the loop ticking so
+ * the dissolve finishes; `computeStarCut` surfaces that as the `anyNodeFading`
+ * flag on its result rather than firing a wake itself. runFrame runs
+ * `prepareStarCut` as a per-frame planner and forwards the flag to
+ * `shouldKeepTicking` — the SINGLE authority on must-the-loop-tick. That is the
+ * same gate-at-one-place discipline this pass already follows for the DRAW
+ * decision via `starCatalogVisible`: the vote is computed here, decided there.
  *
  * ### When it draws (house rule: gate at `enabled`, opacity 0 ⇒ no render)
  *
@@ -346,6 +352,13 @@ export type PreparedStarSource = {
  * (base dot size, exposure-ramped brightness trim, aggregate glow spread,
  * aggregate peak ceiling) — each computed once and forwarded identically to
  * every source's draw.
+ *
+ * `anyNodeFading` is the render-on-demand wake VOTE, surfaced as data rather
+ * than fired here: true while any node's LOD ramp is mid-flight this frame, so
+ * the loop must schedule another frame to finish the dissolve. It is read by
+ * `shouldKeepTicking` (via runFrame's planner step) — the single authority on
+ * must-the-loop-tick, the same gate-at-one-place discipline `starCatalogVisible`
+ * already follows for the draw decision. See the module header.
  */
 export type PreparedStarCut = {
   sources: PreparedStarSource[];
@@ -353,6 +366,7 @@ export type PreparedStarCut = {
   brightness: number;
   glowOverlap: number;
   aggregateIntensityCap: number;
+  anyNodeFading: boolean;
 };
 
 /** A fresh stream with backing arrays at `cap` node capacity (grown as needed). */
@@ -475,10 +489,11 @@ const preparedByCtx = new WeakMap<ReadyFrameContext, PreparedStarCut | null>();
  * Walk every loaded catalog's octree, advance its per-node LOD fades, and
  * PARTITION the resulting cut into a leaf stream (childless real-star nodes)
  * and an aggregate stream (interior flux-mip nodes) by `childMask`. Returns the
- * per-source streams plus the shared shader scalars, or `null` when the star
- * pass is not live (no renderer, master off). Memoised on `ctx` (see
- * `preparedByCtx`); the fade advance and the render-on-demand wake fire on the
- * first call for a frame only.
+ * per-source streams plus the shared shader scalars and the `anyNodeFading`
+ * wake vote, or `null` when the star pass is not live (no renderer, master
+ * off). Memoised on `ctx` (see `preparedByCtx`); the fade advance runs on the
+ * first call for a frame only. The wake vote is DATA on the result — runFrame
+ * forwards it to `shouldKeepTicking`, the single authority (see module header).
  */
 export function prepareStarCut(state: EngineState, ctx: ReadyFrameContext): PreparedStarCut | null {
   if (preparedByCtx.has(ctx)) return preparedByCtx.get(ctx)!;
@@ -523,9 +538,10 @@ function computeStarCut(state: EngineState, ctx: ReadyFrameContext): PreparedSta
   const aggregateIntensityCap = state.settings.starCatalogs.aggregateIntensityCap;
 
   const sources: PreparedStarSource[] = [];
-  // Tracks whether ANY node is mid-fade across ALL sources this frame, to keep
-  // the render-on-demand loop ticking. One flag per frame — a single request
-  // wakes the whole loop.
+  // Tracks whether ANY node is mid-fade across ALL sources this frame. Surfaced
+  // on the returned `PreparedStarCut` as the render-on-demand wake vote — the
+  // wake decision itself lives in `shouldKeepTicking`, not here (see the
+  // module header). One flag per frame.
   let anyNodeFading = false;
 
   for (const { source, catalog } of renderer.loadedCatalogs()) {
@@ -668,9 +684,7 @@ function computeStarCut(state: EngineState, ctx: ReadyFrameContext): PreparedSta
     sources.push({ source, leaf, aggregate });
   }
 
-  if (anyNodeFading) state.subsystems.scheduler.requestRender();
-
-  return { sources, sizePx, brightness, glowOverlap, aggregateIntensityCap };
+  return { sources, sizePx, brightness, glowOverlap, aggregateIntensityCap, anyNodeFading };
 }
 
 /**
