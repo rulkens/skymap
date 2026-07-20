@@ -70,13 +70,14 @@ fn vs(@builtin(vertex_index) vi: u32) -> VsOut {
   // The impostor is the ULTIMATE pick fallback (header 'lib/pickDepthBands'):
   // its true depth would let it beat a forced-far survey star, but by IMPORTANCE
   // the galaxy backdrop must sit behind everything. So instead of passing depth
-  // through we FORCE the deepest band, 'z = w * (1 - PICK_BAND_BACKDROP_EPS)'.
-  // That band has the SMALLEST eps of the three, hence the LARGEST z/w, so it
-  // LOSES the 'less' test to every star band — an overlapping resolvable Gaia
-  // dot now wins the click over the galaxy. It still stays just inside the far
-  // plane so the billboard survives the clip test. Only X/Y take the billboard
-  // offset; w passes through so the perspective divide lands the band correctly.
-  let bandZ = centerClip.w * (1.0 - PICK_BAND_BACKDROP_EPS);
+  // through we FORCE the lowest band, 'z = w * PICK_BAND_BACKDROP_EPS'.
+  // That band has the SMALLEST eps of the three, hence the SMALLEST z/w, so it
+  // LOSES the 'greater' test to every star band — an overlapping resolvable Gaia
+  // dot now wins the click over the galaxy. It still stays just above the 0.0
+  // clear (positive z/w) so the billboard survives the clip test. Only X/Y take
+  // the billboard offset; w passes through so the perspective divide lands the
+  // band correctly.
+  let bandZ = centerClip.w * PICK_BAND_BACKDROP_EPS;
   out.pos = vec4<f32>(centerClip.xy + offset, bandZ, centerClip.w);
   out.uv = corner;
   // MW localIdx is always 0; add PICK_SENTINEL_OFFSET here — the

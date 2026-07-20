@@ -221,13 +221,13 @@ Update any test assertion that pins the `(1 - eps)` mapping (grep `1.0 - PICK_BA
 
 **Steps:**
 
-- [ ] Load the `wesl-shaders` skill.
-- [ ] Invert the three forced-band sites (form A) to `eps` (`starPointPick::vsGlint`, `milkyWayPick`, `starCatalog` pick branch — the select's SECOND arg only).
-- [ ] Invert the ONE min-clamp site (form B) to `max(…, w*eps)` — `starPointPick::vs` scene-star clamp; verify it is a `min` today and becomes `max`.
-- [ ] Confirm the `starCatalog` VISUAL branch (`CLIP_Z_EPS` min-clamp, select's FIRST arg) and the six visual clip-survival clamps are LEFT UNCHANGED (infinite-far makes them harmless; two are COSMO-shared).
-- [ ] Update the per-site rationale comments + the `pickDepthBands.wesl` header (greater-wins, bands above the 0.0 clear); constants untouched.
-- [ ] Grep `tests/` for any `(1 - eps)` / `1.0 - PICK_BAND` assertion; update if present.
-- [ ] `npm run build` clean; `npm run typecheck` clean; `npm test` green.
+- [x] Load the `wesl-shaders` skill.
+- [x] Invert the three forced-band sites (form A) to `eps` (`starPointPick::vsGlint`, `milkyWayPick`, `starCatalog` pick branch — the select's SECOND arg only).
+- [x] Invert the ONE min-clamp site (form B) to `max(…, w*eps)` — `starPointPick::vs` scene-star clamp; verify it is a `min` today and becomes `max`.
+- [x] Confirm the `starCatalog` VISUAL branch (`CLIP_Z_EPS` min-clamp, select's FIRST arg) and the six visual clip-survival clamps are LEFT UNCHANGED (infinite-far makes them harmless; two are COSMO-shared).
+- [x] Update the per-site rationale comments + the `pickDepthBands.wesl` header (greater-wins, bands above the 0.0 clear); constants untouched.
+- [x] Grep `tests/` for any `(1 - eps)` / `1.0 - PICK_BAND` assertion; update if present.
+- [x] `npm run build` clean; `npm run typecheck` clean; `npm test` green.
 - [ ] Commit (stage the four `.wesl` paths + any touched test).
 
 ---
@@ -254,8 +254,8 @@ Do not commit the choice until [V3] confirms it. Update the comment to match whi
 
 **Steps:**
 
-- [ ] Delete `depthBias` + `depthBiasSlopeScale` and the sign-rationale paragraph.
-- [ ] `npm run build` + `npm run typecheck` clean; ask the user to run [V3].
+- [x] Delete `depthBias` + `depthBiasSlopeScale` and the sign-rationale paragraph.
+- [x] `npm run build` + `npm run typecheck` clean; ask the user to run [V3].
 - [ ] If [V3] shows shell z-fighting: restore the bias with `+4` / `+2` and the flipped rationale; re-confirm [V3]. Else keep it deleted.
 - [ ] Commit (stage `cloudShellRenderer.ts`).
 
