@@ -9,7 +9,7 @@
  * vantage, and `collectTimings` resolves with the accumulated samples after the
  * requested frame count. `setStrategy` is the lone synchronous method — it just
  * flips which encode path the executor takes on the *next* frame, with nothing
- * to await. Confining the whole harness/app coupling surface to these five
+ * to await. Confining the whole harness/app coupling surface to this handful of
  * members keeps `page.evaluate` from reaching into the store or the engine's
  * internals, exactly as the recorder seam does.
  */

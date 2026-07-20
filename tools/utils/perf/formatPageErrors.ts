@@ -5,10 +5,11 @@
  * Page errors are collected during a run rather than warned inline (a noisy page
  * would spam stderr and, in --json mode, risk leaking onto stdout), so the
  * printers get to collapse a storm of identical messages into one counted line
- * each. That summary now serves BOTH report printers — `formatReport` (single
- * scenario) and `formatSweep` (viewport sweep) — so per the "second use →
- * consolidate" rule it lives here as one shared, PURE helper rather than being
- * copied into each. Colour is injected: the caller hands in a `Palette`, so with
+ * each. That summary now serves every report printer — `formatReport` (single
+ * scenario), `formatSweep` (viewport sweep), and `formatTierCompare` (tier
+ * comparison) — so per the "second use → consolidate" rule it lives here as one
+ * shared, PURE helper rather than being copied into each. Colour is injected:
+ * the caller hands in a `Palette`, so with
  * `ansiPalette(false)` the lines carry no escape bytes.
  *
  * Returns the lines (each already indented + yellow-wrapped) so a caller can
@@ -28,7 +29,8 @@ export function formatPageErrors(errors: readonly string[], palette: Palette): s
   const lines: string[] = [];
   for (const [message, count] of counts) {
     const oneLine = message.replace(/\s+/g, ' ');
-    const shown = oneLine.length > MAX_ERROR_LEN ? oneLine.slice(0, MAX_ERROR_LEN - 1) + '…' : oneLine;
+    const shown =
+      oneLine.length > MAX_ERROR_LEN ? oneLine.slice(0, MAX_ERROR_LEN - 1) + '…' : oneLine;
     lines.push('  ' + palette.yellow(`⚠ ${count} page error(s): ${shown}`));
   }
   return lines;
