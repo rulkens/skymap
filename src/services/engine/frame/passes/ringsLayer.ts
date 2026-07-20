@@ -18,8 +18,10 @@
  * render group (the cloud shell is another). It is registered AFTER `earth` /
  * `star-spheres` / `planets` / `textured-bodies` so it draws once those opaque
  * spheres have stamped their depth: the ring pipeline depth-TESTS against the
- * planet (`depthCompare: 'less'`) so the far half is correctly occluded, but
- * writes NO depth (`depthWriteEnabled: false`) and blends straight-alpha OVER.
+ * planet (`depthCompare: 'greater'`, the NEAR0 slab's reversed-Z convention —
+ * clear `0.0`, greater-z-wins, so a nearer body stamps a LARGER depth) so the far
+ * half is correctly occluded, but writes NO depth (`depthWriteEnabled: false`) and
+ * blends straight-alpha OVER.
  * Translucent rows in this group carry `blend: 'over'` where the opaque bodies
  * carry `'opaque'`, and each such pipeline bakes exactly that profile
  * (`foreground:0` formats, depth read / no write, over blend).

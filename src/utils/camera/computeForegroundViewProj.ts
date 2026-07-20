@@ -35,11 +35,24 @@
  * with `up` as the image-plane up direction.  The result transforms
  * origin-relative world coordinates into camera space.
  *
- * ### Projection matrix — `mat4d.perspective`
+ * ### Projection matrix — `mat4d.perspective` / `mat4d.perspectiveReverseZ`
  *
- * `mat4d.perspective` maps the view frustum to clip-space depth **[0, 1]** by
- * default — the WebGPU Zero-to-One convention.  This is identical to
- * `mat4.perspective` in the f32 path; no separate ZO call is needed.
+ * Non-reversed (the default, `reversedZ === false`): `mat4d.perspective` maps
+ * the view frustum to clip-space depth **[0, 1]** — the WebGPU Zero-to-One
+ * convention. This is identical to `mat4.perspective` in the f32 path; no
+ * separate ZO call is needed.
+ *
+ * Reversed (`reversedZ === true`): `mat4d.perspectiveReverseZ` builds an
+ * **infinite-far** reversed-Z projection — `zFar` is omitted, so the near
+ * plane maps to depth **1** and infinity maps to depth **0**. Two properties
+ * make this the right shape for a near-field slab. First, with no far plane
+ * no geometry is ever *beyond* far, so the far-plane clip-survival clamps
+ * elsewhere in the pipeline become inert — nothing can vanish for being too
+ * distant. Second, mapping the reciprocal-depth so that 1/z is distributed
+ * near-linearly across [0, 1] gives near-uniform depth precision across the
+ * whole slab, instead of crowding all the precision against the near plane.
+ * The reversed branch **ignores the `far` input** (there is no finite far
+ * plane); `far` is used only by the non-reversed branch.
  *
  * ### Multiplication order — `proj * view`
  *
@@ -83,7 +96,10 @@ import type { Vec3 } from '../../@types/math/Vec3';
  * @param input.fovYRad       Vertical field of view in radians.
  * @param input.aspect        Viewport width / height ratio.
  * @param input.near          Near clip plane distance in Mpc.
- * @param input.far           Far clip plane distance in Mpc.
+ * @param input.far           Far clip plane distance in Mpc (finite branch only).
+ * @param input.reversedZ     When true, build an infinite-far reversed-Z
+ *                            projection (near→1, ∞→0) and ignore `far`;
+ *                            otherwise the finite ZO-depth `mat4d.perspective`.
  * @returns  A `Float64Array` of 16 values (column-major) representing the
  *           combined proj·view transform.  Narrow via `narrowMat4` before
  *           writing to a GPU uniform buffer.
@@ -97,9 +113,9 @@ export function computeForegroundViewProj(input: {
   readonly aspect: number;
   readonly near: number;
   readonly far: number;
+  readonly reversedZ: boolean;
 }): Float64Array {
-  const { eyeMpc, targetMpc, up, renderOrigin, fovYRad, aspect, near, far } =
-    input;
+  const { eyeMpc, targetMpc, up, renderOrigin, fovYRad, aspect, near, far, reversedZ } = input;
 
   // Subtract renderOrigin from eye and target in f64 before lookAt.
   // This keeps the view-matrix translation small regardless of where the
@@ -122,8 +138,12 @@ export function computeForegroundViewProj(input: {
   const view = mat4d.lookAt(eyeRel, targetRel, up);
 
   // ── Projection matrix ────────────────────────────────────────────────────
-  // ZO depth [0, 1] by default — matches the f32 path and WebGPU's NDC range.
-  const proj = mat4d.perspective(fovYRad, aspect, near, far);
+  // Non-reversed: finite ZO depth [0, 1] — matches the f32 path and WebGPU's
+  // NDC range. Reversed: infinite-far reversed-Z (zFar omitted; near→1, ∞→0),
+  // which ignores `far`. See the '### Projection matrix' docblock section.
+  const proj = reversedZ
+    ? mat4d.perspectiveReverseZ(fovYRad, aspect, near)
+    : mat4d.perspective(fovYRad, aspect, near, far);
 
   // ── Combined view-projection ─────────────────────────────────────────────
   // mat4d.multiply(a, b) computes a * b (column-major: view applied first).

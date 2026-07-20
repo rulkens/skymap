@@ -119,9 +119,10 @@ import type { Size } from '../../@types/rendering/Size';
  * `star-aggregates` clears to a=0 for the same reason `volume` does — its
  * upsample composite adds nothing where no aggregate glow landed.
  *
- * The paired depth clear (`1.0`, the far plane) is NOT table data here — it
- * is the same constant for every depth-bearing row, so the executor supplies
- * it inline when it opens the pass. See `executeFrame`.
+ * The paired depth clear (the far-plane depth — `0.0` under the NEAR0
+ * `foreground:0` row's reversed-Z convention) is NOT table data here — the
+ * executor supplies each depth-bearing row's value via `depthClearValueFor`
+ * when it opens the pass. See `executeFrame`.
  */
 export const TARGET_CLEAR_VALUES: Readonly<Record<string, GPUColor>> = {
   hdr: { r: 0, g: 0, b: 0, a: 1 },

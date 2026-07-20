@@ -83,7 +83,8 @@
  *
  * Colour target: the caller's `targetFormat` (the foreground:0 row's
  * `rgba16float`). Depth: the caller's `depthFormat` (`depth32float`) with
- * `depthWriteEnabled: true` + `depthCompare: 'less'` so the Earth occludes /
+ * `depthWriteEnabled: true` + `depthCompare: 'greater'` (the NEAR0 slab's reversed-Z
+ * convention — clear `0.0`, greater-z-wins) so the Earth occludes /
  * is occluded correctly. Front face CCW + `cull: 'back'` matches
  * `cubeSphereMesh`'s outward winding. No blend descriptor = opaque replace; the
  * fragment emits alpha=1 and the foreground composite handles layer blending.
@@ -120,6 +121,7 @@ import { cubeSphereMesh } from '../../../../utils/math/cubeSphereMesh';
 import { generateMipChain, mipLevelCount } from '../../lib/generateMipChain';
 import { isLinearTextureKind } from '../../../../utils/scene/isLinearTextureKind';
 import { EARTH_SURFACE_UNIFORM_FLOATS } from '../../../../utils/gpu/packEarthSurfaceUniforms';
+import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import vsCode from '../../shaders/bodies/earth/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/earth/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
@@ -201,10 +203,16 @@ function concatCubeSphereFaces(resolution: number): {
   return { positions, uvs, tangents, indices };
 }
 
+/**
+ * @param reversedZ selects this slab's depth convention (single-sourced in
+ *   `SLAB_REVERSED_Z`): `false` ⇒ smaller-z-wins (`depthCompare: 'less'`),
+ *   `true` ⇒ reversed-Z greater-wins. Resolved through `resolveDepthCompare`.
+ */
 export function createEarthRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat,
   depthFormat: GPUTextureFormat,
+  reversedZ: boolean,
 ): EarthRenderer {
   // ── Geometry upload ───────────────────────────────────────────────────────
   //
@@ -462,7 +470,7 @@ export function createEarthRenderer(
     depthStencil: {
       format: depthFormat,
       depthWriteEnabled: true,
-      depthCompare: 'less',
+      depthCompare: resolveDepthCompare('nearer', reversedZ),
     },
   });
 

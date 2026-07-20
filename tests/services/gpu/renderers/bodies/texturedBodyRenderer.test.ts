@@ -80,12 +80,12 @@ function mockDevice(recorders?: {
 describe('createTexturedBodyRenderer', () => {
   it('construct does not throw under the mock device', () => {
     expect(() =>
-      createTexturedBodyRenderer(mockDevice(), 'rgba16float', 'depth32float'),
+      createTexturedBodyRenderer(mockDevice(), 'rgba16float', 'depth32float', false),
     ).not.toThrow();
   });
 
   it('satisfies Renderer — non-empty label + destroy function', () => {
-    const renderer = createTexturedBodyRenderer(mockDevice(), 'rgba16float', 'depth32float');
+    const renderer = createTexturedBodyRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
     renderer satisfies Renderer;
     expect(renderer.label.length).toBeGreaterThan(0);
     expect(typeof renderer.destroy).toBe('function');
@@ -93,7 +93,7 @@ describe('createTexturedBodyRenderer', () => {
   });
 
   it('setMap / setRingTexture / draw are callable with the right arity', () => {
-    const renderer = createTexturedBodyRenderer(mockDevice(), 'rgba16float', 'depth32float');
+    const renderer = createTexturedBodyRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
     expect(renderer.setMap.length).toBe(3);
     expect(renderer.setRingTexture.length).toBe(2);
     expect(renderer.draw.length).toBe(3);
@@ -101,7 +101,12 @@ describe('createTexturedBodyRenderer', () => {
 
   it('bakes the given targetFormat + depthFormat into the pipeline', () => {
     const renderPipelines: GPURenderPipelineDescriptor[] = [];
-    createTexturedBodyRenderer(mockDevice({ renderPipelines }), 'rgba16float', 'depth32float');
+    createTexturedBodyRenderer(
+      mockDevice({ renderPipelines }),
+      'rgba16float',
+      'depth32float',
+      false,
+    );
     expect(renderPipelines).toHaveLength(1);
     const target = Array.from(renderPipelines[0]!.fragment!.targets!)[0]!;
     expect(target!.format).toBe('rgba16float');
@@ -110,7 +115,12 @@ describe('createTexturedBodyRenderer', () => {
 
   it('declares an explicit five-binding layout: uniform, sampler, surface + ring + normal textures', () => {
     const bindGroupLayouts: GPUBindGroupLayoutDescriptor[] = [];
-    createTexturedBodyRenderer(mockDevice({ bindGroupLayouts }), 'rgba16float', 'depth32float');
+    createTexturedBodyRenderer(
+      mockDevice({ bindGroupLayouts }),
+      'rgba16float',
+      'depth32float',
+      false,
+    );
     const entries = Array.from(bindGroupLayouts[0]!.entries);
     const byBinding = new Map(entries.map((e) => [e.binding, e]));
     expect(byBinding.get(0)!.buffer!.type).toBe('uniform');
@@ -124,7 +134,7 @@ describe('createTexturedBodyRenderer', () => {
 
   it('uses a mip-consuming sampler (mipmapFilter linear, repeat-U / clamp-V)', () => {
     const device = mockDevice();
-    createTexturedBodyRenderer(device, 'rgba16float', 'depth32float');
+    createTexturedBodyRenderer(device, 'rgba16float', 'depth32float', false);
     const samplerCalls = (device.createSampler as unknown as { mock: { calls: unknown[][] } }).mock
       .calls;
     const bodySampler = samplerCalls
@@ -141,6 +151,7 @@ describe('createTexturedBodyRenderer', () => {
       mockDevice({ uniformBufferCount }),
       'rgba16float',
       'depth32float',
+      false,
     );
     const pass = stubPass();
     const uniforms = new Float32Array(24);
@@ -155,7 +166,7 @@ describe('createTexturedBodyRenderer', () => {
 
   it('draw writes that body uniform buffer and records one indexed draw', () => {
     const device = mockDevice();
-    const renderer = createTexturedBodyRenderer(device, 'rgba16float', 'depth32float');
+    const renderer = createTexturedBodyRenderer(device, 'rgba16float', 'depth32float', false);
     const pass = stubPass();
     renderer.draw(pass, 'saturn', new Float32Array(24));
     expect(device.queue.writeBuffer).toHaveBeenCalled();
@@ -169,6 +180,7 @@ describe('createTexturedBodyRenderer', () => {
       mockDevice({ textures, encoderCount }),
       'rgba16float',
       'depth32float',
+      false,
     );
     const bitmap = { width: 8, height: 4 } as unknown as ImageBitmap;
     renderer.setMap('mars', 'surface', bitmap);
@@ -187,6 +199,7 @@ describe('createTexturedBodyRenderer', () => {
       mockDevice({ textures }),
       'rgba16float',
       'depth32float',
+      false,
     );
     const bitmap = { width: 16, height: 8 } as unknown as ImageBitmap;
     renderer.setMap('moon', 'normal', bitmap);
@@ -209,7 +222,7 @@ describe('createTexturedBodyRenderer', () => {
     // body with no normal map shades exactly as it does today. An sRGB format
     // would corrupt that identity, so the write must target an rgba8unorm texture.
     const device = mockDevice();
-    createTexturedBodyRenderer(device, 'rgba16float', 'depth32float');
+    createTexturedBodyRenderer(device, 'rgba16float', 'depth32float', false);
     const writeCalls = (device.queue.writeTexture as unknown as { mock: { calls: unknown[][] } })
       .mock.calls;
     const flatNormalWrite = writeCalls.find((c) => {
@@ -229,7 +242,7 @@ describe('createTexturedBodyRenderer', () => {
   });
 
   it('setRingTexture does not throw and rebuilds that body bind group', () => {
-    const renderer = createTexturedBodyRenderer(mockDevice(), 'rgba16float', 'depth32float');
+    const renderer = createTexturedBodyRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
     const strip = { width: 512, height: 1 } as unknown as ImageBitmap;
     expect(() => renderer.setRingTexture('saturn', strip)).not.toThrow();
   });
@@ -244,6 +257,7 @@ describe('createTexturedBodyRenderer', () => {
       mockDevice({ textures }),
       'rgba16float',
       'depth32float',
+      false,
     );
     renderer.setRingTexture('saturn', { width: 512, height: 1 } as unknown as ImageBitmap);
     const stripTex = textures.find((t) => Array.isArray(t.size) && t.size[0] === 512);
@@ -256,7 +270,7 @@ describe('createTexturedBodyRenderer', () => {
     // (body,kind) bodyTextures slot must actually free its (up to ~135 MB) GPU
     // texture, not leak it. Structural proof: after setMap the body owns a real
     // texture whose `.destroy()` clearMap calls; the bind group is then rebuilt.
-    const renderer = createTexturedBodyRenderer(mockDevice(), 'rgba16float', 'depth32float');
+    const renderer = createTexturedBodyRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
     const bitmap = { width: 8, height: 4 } as unknown as ImageBitmap;
     renderer.setMap('mars', 'surface', bitmap);
     // Assert clearMap is idempotent and non-throwing, and that a subsequent draw
@@ -303,7 +317,7 @@ describe('createTexturedBodyRenderer', () => {
         return {};
       }),
     } as unknown as GPUDevice;
-    const renderer = createTexturedBodyRenderer(device, 'rgba16float', 'depth32float');
+    const renderer = createTexturedBodyRenderer(device, 'rgba16float', 'depth32float', false);
     // Two resident kinds on one body — the Moon-at-a-tier-boundary repro shape.
     renderer.setMap('mars', 'surface', { width: 8, height: 4 } as unknown as ImageBitmap);
     renderer.setMap('mars', 'normal', { width: 16, height: 8 } as unknown as ImageBitmap);
@@ -344,7 +358,7 @@ describe('createTexturedBodyRenderer', () => {
         };
       }),
     } as unknown as GPUDevice;
-    const renderer = createTexturedBodyRenderer(device, 'rgba16float', 'depth32float');
+    const renderer = createTexturedBodyRenderer(device, 'rgba16float', 'depth32float', false);
     const bitmap = { width: 8, height: 4 } as unknown as ImageBitmap;
     renderer.setMap('mars', 'surface', bitmap);
     const surface = created.find((t) => Array.isArray(t.desc.size) && t.desc.size[0] === 8)!;

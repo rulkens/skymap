@@ -63,6 +63,7 @@ function makeView(ctx: ReadyFrameContext): SlabView {
       vp: new Float64Array(16),
       originRelative: false,
       precision: 'f32',
+      reversedZ: false,
     },
     vp: ctx.vp as unknown as Float32Array,
     camPos: [ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]],

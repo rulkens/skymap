@@ -77,6 +77,7 @@ function makeStubInit() {
       canvas: null as unknown as HTMLCanvasElement,
       focusBgl:
         {} as unknown as import('../../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl,
+      reversedZ: false,
     },
     writeBufferCalls,
     renderPipelines,

@@ -56,7 +56,8 @@
  * ## Pipeline state
  *
  * Matches `earthRenderer` / the `foreground:0` row: `rgba16float` colour +
- * `depth32float` depth (`depthWriteEnabled`, `depthCompare: 'less'`), opaque
+ * `depth32float` depth (`depthWriteEnabled`, `depthCompare: 'greater'` — the NEAR0
+ * slab's reversed-Z convention, clear `0.0`, greater-z-wins), opaque
  * replace, CCW front face + back-cull (matches `uvSphereMesh`'s outward
  * winding). Explicit bind-group layout (not `'auto'`) so texture swaps rebuild
  * bind groups against a stable layout — the `feedback_webgpu_auto_layout_trap`.
@@ -70,6 +71,7 @@ import type { BodyTextureId } from '../../../../@types/data/BodyTextureId';
 import type { TextureKind } from '../../../../@types/data/TextureKind';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
 import { generateMipChain, mipLevelCount } from '../../lib/generateMipChain';
+import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import vsCode from '../../shaders/bodies/texturedBody/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/texturedBody/fragment.wesl?static';
@@ -123,10 +125,16 @@ type BodyResources = {
   bindGroup: GPUBindGroup;
 };
 
+/**
+ * @param reversedZ selects this slab's depth convention (single-sourced in
+ *   `SLAB_REVERSED_Z`): `false` ⇒ smaller-z-wins (`depthCompare: 'less'`),
+ *   `true` ⇒ reversed-Z greater-wins. Resolved through `resolveDepthCompare`.
+ */
 export function createTexturedBodyRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat,
   depthFormat: GPUTextureFormat,
+  reversedZ: boolean,
 ): TexturedBodyRenderer {
   // ── Geometry upload (positions + uvs, like earthRenderer) ─────────────────
   const mesh = uvSphereMesh(SEGMENTS, RINGS);
@@ -270,7 +278,7 @@ export function createTexturedBodyRenderer(
     depthStencil: {
       format: depthFormat,
       depthWriteEnabled: true,
-      depthCompare: 'less',
+      depthCompare: resolveDepthCompare('nearer', reversedZ),
     },
   });
 

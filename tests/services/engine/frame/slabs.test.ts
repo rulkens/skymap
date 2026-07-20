@@ -57,8 +57,10 @@ describe('deriveSlabs', () => {
     const slabs = deriveSlabs(makeCam(100), makeCosmoVp());
     expect(slabs[0]?.originRelative).toBe(true);
     expect(slabs[0]?.precision).toBe('f64');
+    expect(slabs[0]?.reversedZ).toBe(true);
     expect(slabs[1]?.originRelative).toBe(false);
     expect(slabs[1]?.precision).toBe('f32');
+    expect(slabs[1]?.reversedZ).toBe(false);
   });
 
   it.each([250, 5000])(
@@ -89,6 +91,10 @@ describe('deriveSlabs', () => {
       aspect: cam.aspect,
       near,
       far,
+      // NEAR0 is reversed-Z (`SLAB_REVERSED_Z[NEAR0] === true`), so the derived
+      // vp must be the infinite-far reversed projection — pin the util with the
+      // same flag deriveSlabs passes, else this equality drifts.
+      reversedZ: true,
     });
     expect(slabs[0]?.vp).toBeInstanceOf(Float64Array);
     expect(Array.from(slabs[0]!.vp)).toEqual(Array.from(expected));

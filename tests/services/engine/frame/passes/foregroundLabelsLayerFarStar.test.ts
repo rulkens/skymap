@@ -119,6 +119,7 @@ function makeRealNear0View(eye: Vec3, target: Vec3): SlabView {
     aspect: 1280 / 720,
     near,
     far,
+    reversedZ: false,
   });
   const slab: Slab = {
     index: NEAR0,
@@ -127,6 +128,7 @@ function makeRealNear0View(eye: Vec3, target: Vec3): SlabView {
     vp,
     originRelative: true,
     precision: 'f64',
+    reversedZ: false,
   };
   return {
     slab,

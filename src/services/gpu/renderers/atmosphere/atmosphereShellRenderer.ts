@@ -68,8 +68,10 @@
  *
  * Colour: `targetFormat` with premultiplied OVER (`srcFactor: 'one'`,
  * `dstFactor: 'one-minus-src-alpha'` — the fragment emits premultiplied rgb).
- * Depth: `depthFormat`, `depthWriteEnabled: false`, `depthCompare: 'less-equal'`
- * (depth-TESTED against the opaque planet, writes no z). `cullMode: 'none'` —
+ * Depth: `depthFormat`, `depthWriteEnabled: false`, `depthCompare: 'greater-equal'`
+ * (the NEAR0 slab's reversed-Z convention — clear `0.0`, greater-z-wins; the EQUAL
+ * half lets the shell pass against the coplanar surface it shares a radius with;
+ * depth-TESTED against the opaque planet, writes no z). `cullMode: 'none'` —
  * BOTH walls of the atmosphere-top proxy rasterise, and the fragment splits duty
  * by `@builtin(front_facing)`: the NEAR wall carries the over-disc aerial
  * perspective (haze on the lit disc), the FAR wall carries the limb + sky.
@@ -85,6 +87,7 @@ import type { AtmosphereShellRenderer } from '../../../../@types/rendering/Atmos
 import type { AtmosphereParams } from '../../../../@types/scene/AtmosphereParams';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
 import { ATMOSPHERE_UNIFORM_FLOATS } from '../../../../utils/gpu/packAtmosphereUniforms';
+import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import {
   packScatteringParams,
   SCATTERING_PARAMS_FLOATS,
@@ -157,10 +160,19 @@ type AtmosphereBundle = {
   shellBindGroup: GPUBindGroup;
 };
 
+/**
+ * @param reversedZ selects this slab's depth convention (single-sourced in
+ *   `SLAB_REVERSED_Z`): `false` ⇒ smaller-z-wins
+ *   (`depthCompare: 'less-equal'`), `true` ⇒ reversed-Z greater-wins. The shell
+ *   wants the nearer-OR-tied fragment (`'nearer-or-equal'`) so it can draw over
+ *   the coplanar body surface it shares a radius with; `resolveDepthCompare`
+ *   resolves that intent against the convention.
+ */
 export function createAtmosphereShellRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat, // 'rgba16float' (foreground:0)
   depthFormat: GPUTextureFormat, // 'depth32float' (foreground:0)
+  reversedZ: boolean,
   paramsById: Readonly<Record<string, AtmosphereParams>>, // one bundle per row (Earth + six planets)
 ): AtmosphereShellRenderer {
   // ── Sampler: linear + clamp-to-edge both axes (SHARED across bodies) ────────
@@ -391,10 +403,10 @@ export function createAtmosphereShellRenderer(
     },
     depthStencil: {
       format: depthFormat,
-      // Depth-TESTED against the opaque planet ('less-equal') but writes NO depth
-      // — a translucent overlay must not stamp z.
+      // Depth-TESTED against the opaque planet (reversed-Z 'greater-equal') but
+      // writes NO depth — a translucent overlay must not stamp z.
       depthWriteEnabled: false,
-      depthCompare: 'less-equal',
+      depthCompare: resolveDepthCompare('nearer-or-equal', reversedZ),
     },
   });
 

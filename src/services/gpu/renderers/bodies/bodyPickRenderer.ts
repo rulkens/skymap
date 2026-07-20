@@ -87,7 +87,8 @@
  * ### Depth-tested, r32uint, no blend
  *
  * Both pipelines carry the NEAR0 `depth32float` depth profile
- * (`depthCompare: 'less'`, `depthWriteEnabled: true`) so overlapping bodies — a
+ * (`depthCompare: 'greater'`, `depthWriteEnabled: true`, the NEAR0 slab's reversed-Z
+ * convention — clear `0.0`, greater-z-wins) so overlapping bodies — a
  * Moon in front of Earth — resolve nearest-wins, matching visual occlusion. The
  * colour target is `r32uint` (integer formats cannot blend; depth resolves
  * overlaps instead), matching the pick program's NEAR0 attachment formats.
@@ -102,6 +103,7 @@ import type {
   BodyPointPickArgs,
 } from '../../../../@types/rendering/BodyPickRenderer';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
+import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import spherePickCode from '../../shaders/bodies/spherePick.wesl?static';
 import starPointPickCode from '../../shaders/bodies/starPointPick.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
@@ -156,7 +158,13 @@ const POINT_INSTANCE_WORDS_GLINT = 5;
 /** u32 word index of `bandClass` in a glint instance (byte 16 / 4). */
 const GLINT_BAND_CLASS_WORD = 4;
 
-export function createBodyPickRenderer(device: GPUDevice): BodyPickRenderer {
+/**
+ * @param reversedZ selects the NEAR0 slab's depth convention (single-sourced in
+ *   `SLAB_REVERSED_Z`): `false` ⇒ smaller-z-wins (`depthCompare: 'less'`),
+ *   `true` ⇒ reversed-Z greater-wins. The one flag covers BOTH pick pipelines
+ *   (sphere + points), resolved through `resolveDepthCompare`.
+ */
+export function createBodyPickRenderer(device: GPUDevice, reversedZ: boolean): BodyPickRenderer {
   // ── Shared sphere geometry (positions + indices; no uvs — the pick fragment
   //    samples nothing) ────────────────────────────────────────────────────
   const mesh = uvSphereMesh(SEGMENTS, RINGS);
@@ -251,7 +259,7 @@ export function createBodyPickRenderer(device: GPUDevice): BodyPickRenderer {
     depthStencil: {
       format: 'depth32float',
       depthWriteEnabled: true,
-      depthCompare: 'less',
+      depthCompare: resolveDepthCompare('nearer', reversedZ),
     },
   });
 
@@ -307,7 +315,7 @@ export function createBodyPickRenderer(device: GPUDevice): BodyPickRenderer {
       depthStencil: {
         format: 'depth32float',
         depthWriteEnabled: true,
-        depthCompare: 'less',
+        depthCompare: resolveDepthCompare('nearer', reversedZ),
       },
     });
   }
