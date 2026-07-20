@@ -92,6 +92,11 @@ import { awaitSlotReady } from '../loading/awaitSlotReady';
 import { runBootstrapPhases } from './phases/bootstrap';
 import type { BootstrapDeps } from '../../@types/engine/BootstrapDeps';
 import { createDisabledGpuTimingService } from '../gpu/timing/gpuTimingService';
+import {
+  updateFrameStats,
+  IDLE_GAP_MS,
+} from '../../utils/perf/updateFrameStats';
+import type { FrameStats } from '../../@types/engine/FrameStats';
 import { addVolumeField } from './handles/addVolumeField';
 import { removeVolumeField } from './handles/removeVolumeField';
 import { listVolumeFields } from './handles/listVolumeFields';
@@ -170,6 +175,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       /* stub until startLoop assigns the real body */
     },
   };
+
+  // ── Always-on CPU-side frame stats ────────────────────────────────────────
+  //
+  // A mutable tracker the render scheduler's `onFrame` chokepoint folds into
+  // every frame, exposed read-only through `handle.debug.frameStats()`.  Unlike
+  // the GPU timing service this needs no `?gpuTimings` gate and no device — it
+  // times the JS frame body with `performance.now()`, so the DebugPanel can show
+  // an fps + CPU-frame-time line at all times.  `lastStartMs === 0` doubles as
+  // the "no frame has run yet" sentinel that seeds the first interval to 0 (the
+  // idle-gap guard in `updateFrameStats` skips that fold — see its header).
+  const frameStats = { fps: 0, cpuMs: 0, lastStartMs: 0 };
 
   // ── Live camera Resources (cameraRuntime) ────────────────────────────────
   //
@@ -415,7 +431,24 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // body before any rAF fires.  Anyone capturing the scheduler gets the
       // live one — a deferred shim by reference would break hover-pick on
       // first frames.
-      scheduler: createRenderScheduler({ onFrame: () => frameRef.current() }),
+      // `onFrame` is the single per-frame chokepoint — every rAF the scheduler
+      // fires runs the real body here.  Timing wraps this one site (loop entry →
+      // after the body returns, which is post-submit) so the frame stats stay a
+      // pure measurement: the body is invoked exactly as before, unmodified.
+      scheduler: createRenderScheduler({
+        onFrame: () => {
+          const start = performance.now();
+          const intervalMs = frameStats.lastStartMs === 0 ? 0 : start - frameStats.lastStartMs;
+          frameStats.lastStartMs = start;
+          frameRef.current();
+          const next = updateFrameStats(frameStats, {
+            intervalMs,
+            cpuMs: performance.now() - start,
+          });
+          frameStats.fps = next.fps;
+          frameStats.cpuMs = next.cpuMs;
+        },
+      }),
 
       // ── Fade registry ──────────────────────────────────────────
       // Eager so initGpu can register handles without a null-check. Pure
@@ -858,6 +891,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       get timingService() {
         return state.gpu.timingService;
       },
+      // Snapshot the rolling CPU-side frame stats. `fps` is rounded for display;
+      // `idle` is derived here (not stored) from the wall-clock gap since the
+      // last frame, so a sleeping render-on-demand loop reads "idle" rather than
+      // a stale fps. `lastStartMs === 0` means no frame has run yet.
+      frameStats: (): FrameStats => ({
+        fps: Math.round(frameStats.fps),
+        cpuMs: frameStats.cpuMs,
+        idle:
+          frameStats.lastStartMs === 0 ||
+          performance.now() - frameStats.lastStartMs > IDLE_GAP_MS,
+      }),
       passOverrides: {
         allNames: CONTENT_LAYERS.filter((l) => l.target !== 'volume').map((p) => p.name),
       },

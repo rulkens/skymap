@@ -26,10 +26,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { configureStore, type Middleware, type UnknownAction } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
-import {
-  installRecorderHook,
-  READY_STABLE_MS,
-} from '../../../src/state/recorder/installRecorderHook';
+import { installRecorderHook } from '../../../src/state/recorder/installRecorderHook';
+import { READY_STABLE_MS } from '../../../src/state/lifecycle/whenStablyReady';
 import { startTour } from '../../../src/state/tour/tourActions';
 import { tourStarted, tourEnded } from '../../../src/state/tour/tourSlice';
 import {

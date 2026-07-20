@@ -281,6 +281,7 @@ export function App(): React.ReactElement {
           <DebugPanelContainer
             slots={handleRef.current.assetSlots}
             timingService={handleRef.current.debug.timingService}
+            frameStats={handleRef.current.debug.frameStats}
             passNames={handleRef.current.debug.passOverrides.allNames}
           />
         )}

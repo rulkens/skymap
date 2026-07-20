@@ -72,6 +72,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "move-files": "tsx tools/dev/moveFiles.ts",
+    "perf": "tsx tools/perf/measurePerf.ts",
     "preview": "vite preview",
     "r2-cors": "npx wrangler r2 bucket cors set skymap-data --file tools/deploy/r2Cors.json",
     "record-tour": "tsx tools/record/recordTour.ts",

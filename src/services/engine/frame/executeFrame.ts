@@ -65,7 +65,7 @@ import type { ContentLayer } from '../../../@types/engine/frame/ContentLayer';
 import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingService';
-import { slabViewOf } from './slabs';
+import { slabViewOf, groupKeyOf } from './slabs';
 import { encodeFlowCompute } from './encodeFlowCompute';
 import { encodeAtmosphereSkyView } from './encodeAtmosphereSkyView';
 import { TARGET_CLEAR_VALUES } from '../../gpu/renderTargets';
@@ -193,6 +193,11 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // The frame's ONLY slab resolution — one SlabView per render step,
         // threaded into every layer in the group.
         const view = slabViewOf(ctx, step.slab);
+        // The merged pass bills its whole group against this one slot. The key
+        // comes from the shared `groupKeyOf` helper (slabs.ts) — the same
+        // definition `timedSlotRowsOf` allocates the slot under — so
+        // `descriptorFor(groupKey)` resolves exactly that slot.
+        const groupKey = groupKeyOf(step.target, step.slab);
         renderGroup(strategy, {
           encoder,
           ctx,
@@ -202,6 +207,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
           target: step.target,
           group,
           view,
+          groupKey,
           alreadyTouched: touched.has(step.target),
         });
         touched.add(step.target);
@@ -251,10 +257,12 @@ function renderGroup(
     target: string;
     group: readonly ContentLayer[];
     view: SlabView;
+    groupKey: string;
     alreadyTouched: boolean;
   },
 ): void {
-  const { encoder, ctx, state, timing, swapView, target, group, view, alreadyTouched } = p;
+  const { encoder, ctx, state, timing, swapView, target, group, view, groupKey, alreadyTouched } =
+    p;
   const targetView = viewFor(target, ctx, swapView);
 
   if (strategy === 'merged') {
@@ -264,6 +272,11 @@ function renderGroup(
       label: `render-${target}`,
       colorAttachments: [colorAttachment(target, targetView, alreadyTouched)],
       ...depthAttachment(ctx, target, alreadyTouched, view.slab.reversedZ),
+      // Bill the whole group against its per-step group slot — the one honest
+      // timing a single-pass shape can give (per-layer slots are the
+      // `perLayerTimed` path's alone). A no-op timing service returns undefined,
+      // so this spreads to nothing in production merged frames.
+      ...timestampSpread(timing, groupKey),
     });
     for (const layer of group) {
       layer.draw(pass, view, ctx, state);

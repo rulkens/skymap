@@ -48,6 +48,20 @@ export const SLAB_NAME: Readonly<Record<number, string>> = {
 };
 
 /**
+ * The ONE definition of a merged group-timing slot key — the string a render
+ * step's whole layer group is billed against. `timedSlotRowsOf` (frameProgram)
+ * allocates the slot under this key; `executeFrame`'s merged pass resolves it
+ * via `descriptorFor(groupKey)`. The two sites must produce byte-identical
+ * keys, so the format lives here rather than as twin inline templates that
+ * could silently drift. The middle-dot separator (U+00B7) and the
+ * `?? String(slab)` fallback (which keeps the key stable for a slab index
+ * `SLAB_NAME` doesn't cover) are part of that wire format — do not vary them.
+ */
+export function groupKeyOf(target: string, slab: number): string {
+  return `${target}·${SLAB_NAME[slab] ?? String(slab)}`;
+}
+
+/**
  * The single source of each slab's depth convention: `false` ⇒ the classic
  * smaller-z-wins / clear-`1.0` / `mat4d.perspective` set; `true` ⇒ reversed-Z
  * (greater-wins / clear-`0` / `mat4d.perspectiveReverseZ`).

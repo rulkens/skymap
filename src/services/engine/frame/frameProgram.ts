@@ -45,7 +45,7 @@
 import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
 import type { ContentLayer } from '../../../@types/engine/frame/ContentLayer';
 import type { ToneMap } from '../../../@types/rendering/ToneMap';
-import { COSMO, NEAR0, SLAB_NAME } from './slabs';
+import { COSMO, NEAR0, groupKeyOf } from './slabs';
 import { CONTENT_LAYERS } from './passes';
 
 /**
@@ -178,14 +178,27 @@ function timedSlotRowsOf(
   for (const step of program) {
     if (step.kind === 'render') {
       // Every layer matched by this step shares the step's `(target, slab)`, so
-      // one groupKey covers the whole run. `?? String(step.slab)` keeps the key
-      // stable if a step ever references a slab index `SLAB_NAME` doesn't cover.
-      const groupKey = `${step.target}·${SLAB_NAME[step.slab] ?? String(step.slab)}`;
+      // one groupKey covers the whole run. The key comes from the shared
+      // `groupKeyOf` helper (slabs.ts) — the same definition the merged executor
+      // resolves against, so the two can't drift.
+      const groupKey = groupKeyOf(step.target, step.slab);
       for (const layer of layers) {
         if (layer.target === step.target && layer.slab === step.slab) {
           rows.push({ name: layer.name, groupKey });
         }
       }
+      // One extra slot per render STEP whose NAME is the groupKey itself, so
+      // the `merged` executor — which draws the whole group in one pass — has a
+      // slot to attach `timestampWrites` to (a merged pass can't bill the
+      // per-layer slots; those exist only for the `perLayerTimed` shape). Pushed
+      // AFTER the layer loop so the group total trails its layers in draw order.
+      // Emitted unconditionally for shape-stability; simply unused when the
+      // group is empty (the executor's `if (group.length === 0) break;` opens no
+      // pass, so no timing is billed against it). `groupKey` is
+      // unique per step (each has a distinct `(target, slab)`) and never
+      // collides with a layer name, so it earns its own timing slot and, in the
+      // DebugPanel's grouped lists, its own row under the step's group title.
+      rows.push({ name: groupKey, groupKey });
     } else if (step.kind === 'composite') {
       // A composite merges whole textures rather than projecting geometry — it
       // belongs to no slab, and all composites share the one infra group.

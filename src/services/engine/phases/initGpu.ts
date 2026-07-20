@@ -84,6 +84,7 @@ import { TIMED_SLOTS } from '../frame/frameProgram';
 import { SLAB_REVERSED_Z, NEAR0, COSMO } from '../frame/slabs';
 import { loadFontAtlases } from '../../gpu/labelLayout/loadFontAtlases';
 import { hasUrlGate } from '../../../utils/url/hasUrlGate';
+import { isPerfMode } from '../../../utils/url/isPerfMode';
 import {
   GALAXY_CATALOG_SOURCE_REGISTRY,
   wireGalaxyCatalogSourceSlot,
@@ -409,11 +410,15 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
 
   // ── GPU timing service ────────────────────────────────────────────
   //
-  // Always-constructed: the factory returns a no-op stub when the URL
-  // gate is off OR the adapter lacks `timestamp-query`, so consumers gate
-  // behind one `state.gpu.timingService.enabled` check.  The no-op path
-  // allocates no GPU resources.
-  state.gpu.timingService = createGpuTimingService(device, hasUrlGate('gpuTimings'), TIMED_SLOTS);
+  // Always-constructed: the factory returns a no-op stub when neither
+  // `?gpuTimings` nor `?perf` is set, OR the adapter lacks `timestamp-query`,
+  // so consumers gate behind one `state.gpu.timingService.enabled` check.  The
+  // no-op path allocates no GPU resources.
+  state.gpu.timingService = createGpuTimingService(
+    device,
+    hasUrlGate('gpuTimings') || isPerfMode(),
+    TIMED_SLOTS,
+  );
 
   // ── Foreground / anchor renderers (Plans 01+02 — zoom-to-Earth) ──────
   //
