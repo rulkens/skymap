@@ -256,8 +256,8 @@ Do not commit the choice until [V3] confirms it. Update the comment to match whi
 
 - [x] Delete `depthBias` + `depthBiasSlopeScale` and the sign-rationale paragraph.
 - [x] `npm run build` + `npm run typecheck` clean; ask the user to run [V3].
-- [ ] If [V3] shows shell z-fighting: restore the bias with `+4` / `+2` and the flipped rationale; re-confirm [V3]. Else keep it deleted.
-- [ ] Commit (stage `cloudShellRenderer.ts`).
+- [x] If [V3] shows shell z-fighting: restore the bias with `+4` / `+2` and the flipped rationale; re-confirm [V3]. Else keep it deleted.
+- [x] Commit (stage `cloudShellRenderer.ts`).
 
 ---
 
