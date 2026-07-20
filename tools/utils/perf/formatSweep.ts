@@ -15,39 +15,48 @@
  *
  * The per-scale medians grow left→right as the viewport (hence pixel count)
  * grows; a pass whose numbers roughly quadruple as area quadruples is
- * fill-bound, one whose numbers barely move is resolution-independent. The
+ * fill-bound, one whose numbers barely move is resolution-independent. Each
+ * per-scale ms cell is HEAT-colored PER CELL (not per row) by `heatColor`,
+ * because each scale is its own measurement: a pass that goes green→red across
+ * scales is exactly the fill-bound signature the colour should surface. The
  * `exp` column is the honest quantity behind the label — the slope of ms vs
  * pixels in log-log space (see scalingExponent). The label is coloured by
  * severity: red fill-bound (the passes worth optimising for resolution), yellow
  * mixed, dim vertex/CPU-bound and n/a.
  *
- * ### Alignment
+ * ### Alignment (why colorize AFTER padding)
  *
- * The numeric columns are padded through a private `table()` aligner (the same
- * approach `formatReport` uses; kept private here per the brief rather than
- * shared, since the column shapes differ). The label is appended AFTER the
- * aligned block and coloured, so its variable-length colour escapes never
- * disturb the numeric columns' alignment.
+ * The numeric columns are padded through a private `table()` aligner that
+ * returns the PADDED CELLS (the same approach `formatReport` uses; kept private
+ * here per the brief rather than shared, since the column shapes differ). Cells
+ * are padded FIRST, then the heat colorizer wraps each padded ms cell — an ANSI
+ * escape counts toward `.length`, so colorizing before padding would corrupt the
+ * width math. The label is appended AFTER the aligned block and coloured, so its
+ * variable-length colour escapes likewise never disturb the numeric columns.
  */
 
 import type { SweepReport } from '../../perf/sweepReport';
 import type { Palette } from '../cli/ansiPalette';
 import { formatPageErrors } from './formatPageErrors';
+import { heatColor } from './heatColor';
 
 const ms = (value: number): string => value.toFixed(1);
 const exp = (value: number): string => (Number.isNaN(value) ? 'n/a' : value.toFixed(2));
 
 /**
- * table — pad a grid of string cells into aligned columns: each column's width
- * is its widest cell, left-aligned columns `padEnd`, right-aligned (numbers)
- * `padStart`. Returns one joined string per row, all the same length.
+ * table — pad a grid of string cells into aligned columns and return the PADDED
+ * CELLS (not pre-joined rows): each column's width is its widest cell,
+ * left-aligned columns `padEnd`, right-aligned (numbers) `padStart`. Returning
+ * cells lets the caller heat-colorize an individual padded ms cell before
+ * joining, without the escape bytes disturbing column widths. Callers join a row
+ * with `'  '`; every joined row is the same length.
  */
-function table(rows: readonly (readonly string[])[], align: readonly ('left' | 'right')[]): string[] {
+function table(rows: readonly (readonly string[])[], align: readonly ('left' | 'right')[]): string[][] {
   const widths = align.map((_, c) => Math.max(0, ...rows.map((row) => (row[c] ?? '').length)));
   return rows.map((row) =>
-    align
-      .map((a, c) => (a === 'right' ? (row[c] ?? '').padStart(widths[c]!) : (row[c] ?? '').padEnd(widths[c]!)))
-      .join('  '),
+    align.map((a, c) =>
+      a === 'right' ? (row[c] ?? '').padStart(widths[c]!) : (row[c] ?? '').padEnd(widths[c]!),
+    ),
   );
 }
 
@@ -85,18 +94,26 @@ export function formatSweep(report: SweepReport, palette: Palette): string {
 
   const align: ('left' | 'right')[] = ['left', ...scales.map(() => 'right' as const), 'right'];
   const grid = table(gridRows, align);
+  // The scale ms cells occupy grid columns 1..scaleCount (col 0 is the slot,
+  // the last column is exp) — the range the per-cell heat wraps.
+  const scaleCount = scales.length;
 
   // Header + rule (label header is plain — nothing to classify).
-  const headerLine = `  ${grid[0]!}  ${rowLabels[0]!}`;
+  const headerLine = `  ${grid[0]!.join('  ')}  ${rowLabels[0]!}`;
   lines.push(headerLine);
   lines.push('  ' + '─'.repeat(headerLine.length - 2));
 
-  // One row per pass, then the bold TOTAL row (last grid entry).
+  // One row per pass, then the bold TOTAL row (last grid entry). Each pass row's
+  // per-scale ms cell is heat-colored by that scale's own median (per cell).
   for (let i = 0; i < report.passes.length; i++) {
-    lines.push(`  ${grid[i + 1]!}  ${colorLabel(rowLabels[i + 1]!)}`);
+    const pass = report.passes[i]!;
+    const row = grid[i + 1]!.map((cell, c) =>
+      c >= 1 && c <= scaleCount ? heatColor(pass.perScaleMs[c - 1]!, palette)(cell) : cell,
+    );
+    lines.push(`  ${row.join('  ')}  ${colorLabel(pass.label)}`);
   }
   const totalIdx = grid.length - 1;
-  lines.push(`  ${palette.bold(grid[totalIdx]!)}  ${colorLabel(rowLabels[totalIdx]!)}`);
+  lines.push(`  ${palette.bold(grid[totalIdx]!.join('  '))}  ${colorLabel(rowLabels[totalIdx]!)}`);
 
   lines.push(...formatPageErrors(report.pageErrors, palette));
 

@@ -55,6 +55,7 @@ import { frameTotals } from '../utils/perf/frameTotals';
 import { median } from '../utils/perf/median';
 import { percentile } from '../utils/perf/percentile';
 import { formatReport } from '../utils/perf/formatReport';
+import { formatRunSummary } from '../utils/perf/formatRunSummary';
 import { formatSweep } from '../utils/perf/formatSweep';
 import { scalingExponent } from '../utils/perf/scalingExponent';
 import { classifyBound } from '../utils/perf/classifyBound';
@@ -406,6 +407,12 @@ async function main(): Promise<void> {
   // array (its error is logged to stderr).
   const reports: ScenarioReport[] = [];
   const sweeps: SweepReport[] = [];
+  // Human non-sweep roll-up accumulators: the successfully measured reports and
+  // the names of scenarios that crashed. Kept separate from the JSON `reports`
+  // (which stays untouched output) so the terminal roll-up can name failures the
+  // JSON array simply omits.
+  const humanReports: ScenarioReport[] = [];
+  const failedScenarios: string[] = [];
   try {
     // Isolate each scenario: a dev-server hiccup or page crash on one vantage
     // shouldn't abort the whole sweep. Log it, mark the run failed, move on.
@@ -422,16 +429,26 @@ async function main(): Promise<void> {
         } else {
           const report = await measureScenario(browser, scenario, options);
           if (options.json) reports.push(report);
-          else console.log(formatReport(report, palette));
+          else {
+            console.log(formatReport(report, palette));
+            humanReports.push(report);
+          }
         }
       } catch (err) {
         console.error(
           `scenario '${scenario.name}' failed: ${err instanceof Error ? err.message : String(err)}`,
         );
         process.exitCode = 1;
+        failedScenarios.push(scenario.name);
       }
     }
     if (options.json) console.log(JSON.stringify(options.sweep ? sweeps : reports, null, 2));
+    // Cross-scenario roll-up: only the human, non-sweep path, and only when more
+    // than one scenario ran — a single-scenario run would just duplicate its one
+    // TOTAL. formatRunSummary itself no-ops on an empty pair.
+    else if (!options.sweep && selected.length > 1) {
+      console.log(formatRunSummary(humanReports, failedScenarios, palette));
+    }
   } finally {
     await browser.close();
   }

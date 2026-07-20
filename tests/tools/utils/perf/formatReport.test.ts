@@ -170,4 +170,98 @@ describe('formatReport', () => {
     const out = formatReport(withFloors, plain);
     expect(out).not.toContain('⚠');
   });
+
+  // ── Fix 4: sorted rows + share column + heat colors ──────────────────────
+
+  it('sorts a table body by median descending (biggest cost first)', () => {
+    const unsorted: ScenarioReport = {
+      ...withFloors,
+      merged: [
+        { slot: 'small', median: 1.0, p90: 1.2 },
+        { slot: 'big', median: 3.0, p90: 3.4 },
+        { slot: 'mid', median: 2.0, p90: 2.3 },
+      ],
+    };
+    const out = formatReport(unsorted, plain);
+    const lines = out.split('\n');
+    const idx = (slot: string): number => lines.findIndex((l) => l.includes(slot));
+    // Descending median → big before mid before small in the rendered order.
+    expect(idx('big')).toBeLessThan(idx('mid'));
+    expect(idx('mid')).toBeLessThan(idx('small'));
+  });
+
+  it('renders a share % per row that sums to ~100 across a section', () => {
+    const twoRow: ScenarioReport = {
+      ...withFloors,
+      merged: [
+        { slot: 'big', median: 3.0, p90: 3.4 },
+        { slot: 'small', median: 1.0, p90: 1.2 },
+      ],
+      floors: [],
+    };
+    const out = formatReport(twoRow, plain);
+    // 3.0 / 4.0 = 75%, 1.0 / 4.0 = 25% — the section shares sum to 100.
+    expect(out).toMatch(/big[^\n]*75%/);
+    expect(out).toMatch(/small[^\n]*25%/);
+  });
+
+  it('draws a bar glyph for a nonzero share', () => {
+    const out = formatReport(withFloors, plain);
+    expect(out).toContain('█');
+  });
+
+  // ── Fix 5: SUMMARY block ─────────────────────────────────────────────────
+
+  it('summarises a within-budget run with a ✓ and hand-computed headroom', () => {
+    const out = formatReport(withFloors, plain);
+    // merged median 14.8 → (1 - 14.8/16.7) = 0.1138 → round(11.38) = 11% headroom.
+    expect(out).toContain('SUMMARY');
+    expect(out).toMatch(/✓ Fits the 60fps budget with 11% headroom \(14\.8 of 16\.7 ms\)/);
+  });
+
+  it('names the hottest MERGED pass with its section share in the SUMMARY', () => {
+    const out = formatReport(withFloors, plain);
+    // hdr·NEAR0 is the max-median merged row (4.2 of 4.2+1.1=5.3 → 79%).
+    expect(out).toMatch(/Hottest pass: hdr·NEAR0 — 4\.2 ms, 79% of MERGED GPU time/);
+  });
+
+  it('summarises an over-60fps run with a ⚠ verdict', () => {
+    const overBudget: ScenarioReport = {
+      ...withFloors,
+      totals: { merged: { median: 21.4, p90: 24.0 }, perLayer: { median: 30.0, p90: 33.0 } },
+    };
+    const out = formatReport(overBudget, plain);
+    // 21.4 is between the 16.7 and 33.3 budgets → yellow ⚠, fps ceiling round(1000/21.4)=47.
+    expect(out).toMatch(/⚠ Over the 60fps budget \(21\.4 of 16\.7 ms — ~47 fps ceiling\)/);
+  });
+
+  it('summarises an over-30fps run with a ✗ verdict', () => {
+    const wayOver: ScenarioReport = {
+      ...withFloors,
+      totals: { merged: { median: 40.0, p90: 44.0 }, perLayer: { median: 50.0, p90: 55.0 } },
+    };
+    const out = formatReport(wayOver, plain);
+    // 40 ≥ 33.3 → red ✗, fps ceiling round(1000/40)=25.
+    expect(out).toMatch(/✗ Over the 30fps budget \(40\.0 ms — ~25 fps ceiling\)/);
+  });
+
+  it('summarises a 0-median run with the dim no-work line and does not crash', () => {
+    const degenerate: ScenarioReport = {
+      ...withFloors,
+      totals: { merged: { median: 0, p90: 0 }, perLayer: { median: 0, p90: 0 } },
+    };
+    const out = formatReport(degenerate, plain);
+    expect(out).toContain('— no timed GPU work sampled.');
+    expect(out).not.toContain('✓');
+  });
+
+  it('omits the floor caveat line when floors is empty', () => {
+    const single: ScenarioReport = {
+      ...withFloors,
+      merged: [{ slot: 'hdr·NEAR0', median: 2.0, p90: 2.2 }],
+      floors: [],
+    };
+    const out = formatReport(single, plain);
+    expect(out).not.toContain('Per-pass floor ≈');
+  });
 });
