@@ -41,6 +41,7 @@ function makeCtx(focusBlend: number): ReadyFrameContext {
   };
   return {
     isReady: true,
+    renderedTargets: new Set<string>(),
     cam: {} as never,
     vp,
     slabs: [cosmoSlab, cosmoSlab],

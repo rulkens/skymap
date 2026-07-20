@@ -499,11 +499,18 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // 64-label default: setLabels clamps at maxLabels, so the default would
   // silently drop captions once the seed table outgrew it (the roster already
   // exceeds 64 and climbs toward ~130). The derived capacity tracks the roster.
+  // `{ occludeAgainstDepth: true }` opts this near-field caption instance into
+  // per-pixel occlusion behind nearer solar-system bodies — `foregroundLabelsLayer`
+  // hands its `draw` the `foreground:0` scene depth view each frame. The COSMO
+  // `labelRenderer` above stays non-occluding (no opts). `maxGlyphsPerLabel`
+  // defaults via `undefined` to reach the trailing opts slot.
   state.gpu.foregroundLabelRenderer = createLabelRenderer(
     uiCtx,
     format,
     fontAtlases,
     FOREGROUND_LABEL_CAPACITY,
+    undefined,
+    { occludeAgainstDepth: true },
   );
   state.gpu.foregroundLabelRenderer.setLabels(sceneBodyLabels());
 
@@ -518,7 +525,12 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // origin-distance cancellation dodge it applies to the caption anchors. No
   // bootstrap seed: the connectors are geometry derived per frame from the
   // caption anchors, not a static set.
-  state.gpu.foregroundMarkerLineRenderer = createMarkerLineRenderer(uiCtx, format);
+  // Same occlusion opt-in as the caption sibling above: the leader lines occlude
+  // behind nearer bodies too. `maxLines` defaults via `undefined` to reach the
+  // trailing opts slot. The COSMO `markerLineRenderer` stays non-occluding.
+  state.gpu.foregroundMarkerLineRenderer = createMarkerLineRenderer(uiCtx, format, undefined, {
+    occludeAgainstDepth: true,
+  });
 
   // ── Earth (Plan 02 — zoom-to-Earth) ──────────────────────────────────
   //
