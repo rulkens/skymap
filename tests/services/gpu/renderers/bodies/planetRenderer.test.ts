@@ -58,11 +58,13 @@ function mockPass(): GPURenderPassEncoder {
 
 describe('createPlanetRenderer', () => {
   it('construct does not throw under the mock device', () => {
-    expect(() => createPlanetRenderer(mockDevice(), 'rgba16float', 'depth32float')).not.toThrow();
+    expect(() =>
+      createPlanetRenderer(mockDevice(), 'rgba16float', 'depth32float', false),
+    ).not.toThrow();
   });
 
   it('satisfies Renderer — non-empty label + destroy function', () => {
-    const renderer = createPlanetRenderer(mockDevice(), 'rgba16float', 'depth32float');
+    const renderer = createPlanetRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
     renderer satisfies Renderer;
     expect(renderer.label.length).toBeGreaterThan(0);
     expect(typeof renderer.destroy).toBe('function');
@@ -71,7 +73,7 @@ describe('createPlanetRenderer', () => {
 
   it('allocates an instance buffer sized MAX_PLANETS × 96 bytes', () => {
     const buffers: BufferDesc[] = [];
-    createPlanetRenderer(mockDevice({ buffers }), 'rgba16float', 'depth32float');
+    createPlanetRenderer(mockDevice({ buffers }), 'rgba16float', 'depth32float', false);
     const instance = buffers.find((b) => b.label === 'planet-instance-vbo');
     expect(instance).toBeDefined();
     expect(INSTANCE_STRIDE).toBe(96);
@@ -79,7 +81,7 @@ describe('createPlanetRenderer', () => {
   });
 
   it('draw is callable with (pass, instances, count) and records ONE indexed draw', () => {
-    const renderer = createPlanetRenderer(mockDevice(), 'rgba16float', 'depth32float');
+    const renderer = createPlanetRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
     expect(typeof renderer.draw).toBe('function');
     expect(renderer.draw.length).toBe(3);
 
@@ -93,7 +95,7 @@ describe('createPlanetRenderer', () => {
 
   it('draw does exactly one writeBuffer of the caller`s array with count × 24 float elements', () => {
     const device = mockDevice();
-    const renderer = createPlanetRenderer(device, 'rgba16float', 'depth32float');
+    const renderer = createPlanetRenderer(device, 'rgba16float', 'depth32float', false);
     const pass = mockPass();
     const instances = new Float32Array(MAX_PLANETS * INSTANCE_FLOATS);
 
@@ -119,7 +121,7 @@ describe('createPlanetRenderer', () => {
 
   it('clamps an over-count to MAX_PLANETS and no-ops a zero count', () => {
     const device = mockDevice();
-    const renderer = createPlanetRenderer(device, 'rgba16float', 'depth32float');
+    const renderer = createPlanetRenderer(device, 'rgba16float', 'depth32float', false);
     const pass = mockPass();
     const instances = new Float32Array(MAX_PLANETS * INSTANCE_FLOATS);
     const writeMock = device.queue.writeBuffer as ReturnType<typeof vi.fn>;
@@ -140,7 +142,7 @@ describe('createPlanetRenderer', () => {
 
   it('bakes the opaque foreground profile — targetFormat colour target + depth state', () => {
     const renderPipelines: GPURenderPipelineDescriptor[] = [];
-    createPlanetRenderer(mockDevice({ renderPipelines }), 'rgba16float', 'depth32float');
+    createPlanetRenderer(mockDevice({ renderPipelines }), 'rgba16float', 'depth32float', false);
     expect(renderPipelines).toHaveLength(1);
     const desc = renderPipelines[0]!;
     const target = Array.from(desc.fragment!.targets!)[0]!;

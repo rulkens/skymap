@@ -59,6 +59,7 @@ import type { TexturedBodyRenderer } from '../../../../@types/rendering/Textured
 import type { BodyTextureId } from '../../../../@types/data/BodyTextureId';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
 import { generateMipChain, mipLevelCount } from '../../lib/generateMipChain';
+import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import vsCode from '../../shaders/bodies/texturedBody/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/texturedBody/fragment.wesl?static';
@@ -83,10 +84,16 @@ type BodyResources = {
   bindGroup: GPUBindGroup;
 };
 
+/**
+ * @param reversedZ selects this slab's depth convention (single-sourced in
+ *   `SLAB_REVERSED_Z`): `false` ⇒ smaller-z-wins (`depthCompare: 'less'`),
+ *   `true` ⇒ reversed-Z greater-wins. Resolved through `resolveDepthCompare`.
+ */
 export function createTexturedBodyRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat,
   depthFormat: GPUTextureFormat,
+  reversedZ: boolean,
 ): TexturedBodyRenderer {
   // ── Geometry upload (positions + uvs, like earthRenderer) ─────────────────
   const mesh = uvSphereMesh(SEGMENTS, RINGS);
@@ -218,7 +225,7 @@ export function createTexturedBodyRenderer(
     depthStencil: {
       format: depthFormat,
       depthWriteEnabled: true,
-      depthCompare: 'less',
+      depthCompare: resolveDepthCompare('nearer', reversedZ),
     },
   });
 

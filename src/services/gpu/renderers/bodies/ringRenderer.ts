@@ -47,6 +47,7 @@
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { RingRenderer } from '../../../../@types/rendering/RingRenderer';
 import { annulusMesh } from '../../../../utils/math/annulusMesh';
+import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import vsCode from '../../shaders/bodies/ring/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/ring/fragment.wesl?static';
@@ -60,10 +61,16 @@ const SEGMENTS = 128;
  *  `packRingUniforms`. */
 const UNIFORM_BUFFER_SIZE = 96;
 
+/**
+ * @param reversedZ selects this slab's depth convention (single-sourced in
+ *   `SLAB_REVERSED_Z`): `false` ⇒ smaller-z-wins (`depthCompare: 'less'`),
+ *   `true` ⇒ reversed-Z greater-wins. Resolved through `resolveDepthCompare`.
+ */
 export function createRingRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat,
   depthFormat: GPUTextureFormat,
+  reversedZ: boolean,
 ): RingRenderer {
   // ── Geometry: a unit disc (inner radius 0) ────────────────────────────────
   //
@@ -211,7 +218,7 @@ export function createRingRenderer(
       // Depth-TESTED against the opaque planet (far ring half occluded) but
       // writes NO depth — a translucent overlay must not stamp z.
       depthWriteEnabled: false,
-      depthCompare: 'less',
+      depthCompare: resolveDepthCompare('nearer', reversedZ),
     },
   });
 

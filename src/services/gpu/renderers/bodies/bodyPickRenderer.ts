@@ -102,6 +102,7 @@ import type {
   BodyPointPickArgs,
 } from '../../../../@types/rendering/BodyPickRenderer';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
+import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import spherePickCode from '../../shaders/bodies/spherePick.wesl?static';
 import starPointPickCode from '../../shaders/bodies/starPointPick.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
@@ -156,7 +157,13 @@ const POINT_INSTANCE_WORDS_GLINT = 5;
 /** u32 word index of `bandClass` in a glint instance (byte 16 / 4). */
 const GLINT_BAND_CLASS_WORD = 4;
 
-export function createBodyPickRenderer(device: GPUDevice): BodyPickRenderer {
+/**
+ * @param reversedZ selects the NEAR0 slab's depth convention (single-sourced in
+ *   `SLAB_REVERSED_Z`): `false` ⇒ smaller-z-wins (`depthCompare: 'less'`),
+ *   `true` ⇒ reversed-Z greater-wins. The one flag covers BOTH pick pipelines
+ *   (sphere + points), resolved through `resolveDepthCompare`.
+ */
+export function createBodyPickRenderer(device: GPUDevice, reversedZ: boolean): BodyPickRenderer {
   // ── Shared sphere geometry (positions + indices; no uvs — the pick fragment
   //    samples nothing) ────────────────────────────────────────────────────
   const mesh = uvSphereMesh(SEGMENTS, RINGS);
@@ -251,7 +258,7 @@ export function createBodyPickRenderer(device: GPUDevice): BodyPickRenderer {
     depthStencil: {
       format: 'depth32float',
       depthWriteEnabled: true,
-      depthCompare: 'less',
+      depthCompare: resolveDepthCompare('nearer', reversedZ),
     },
   });
 
@@ -307,7 +314,7 @@ export function createBodyPickRenderer(device: GPUDevice): BodyPickRenderer {
       depthStencil: {
         format: 'depth32float',
         depthWriteEnabled: true,
-        depthCompare: 'less',
+        depthCompare: resolveDepthCompare('nearer', reversedZ),
       },
     });
   }

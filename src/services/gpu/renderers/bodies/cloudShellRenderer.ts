@@ -61,6 +61,7 @@ import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { CloudShellRenderer } from '../../../../@types/rendering/CloudShellRenderer';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
 import { CLOUD_SHELL_UNIFORM_FLOATS } from '../../../../utils/gpu/packCloudShellUniforms';
+import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { generateMipChain, mipLevelCount } from '../../lib/generateMipChain';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import vsCode from '../../shaders/bodies/cloudShell/vertex.wesl?static';
@@ -86,10 +87,18 @@ const RINGS = 64;
  *  `earthRenderer` follows. */
 const UNIFORM_BUFFER_SIZE = CLOUD_SHELL_UNIFORM_FLOATS * 4;
 
+/**
+ * @param reversedZ selects this slab's depth convention (single-sourced in
+ *   `SLAB_REVERSED_Z`): `false` ⇒ smaller-z-wins (`depthCompare: 'less'`),
+ *   `true` ⇒ reversed-Z greater-wins. Resolved through `resolveDepthCompare`.
+ *   (The `depthBias` sign, which also depends on the convention, is left to the
+ *   reversed-Z feature PR.)
+ */
 export function createCloudShellRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat,
   depthFormat: GPUTextureFormat,
+  reversedZ: boolean,
 ): CloudShellRenderer {
   // ── Geometry: a closed unit sphere (positions + uvs) ──────────────────────
   const mesh = uvSphereMesh(SEGMENTS, RINGS);
@@ -247,7 +256,7 @@ export function createCloudShellRenderer(
       // Depth-TESTED against the opaque planet (far shell half occluded) but
       // writes NO depth — a translucent overlay must not stamp z.
       depthWriteEnabled: false,
-      depthCompare: 'less',
+      depthCompare: resolveDepthCompare('nearer', reversedZ),
       // A rasterizer depth bias nudges the shell's depth toward the camera so it
       // never z-fights the surface it hovers over.
       //

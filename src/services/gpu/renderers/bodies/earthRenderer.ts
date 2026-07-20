@@ -120,6 +120,7 @@ import { cubeSphereMesh } from '../../../../utils/math/cubeSphereMesh';
 import { generateMipChain, mipLevelCount } from '../../lib/generateMipChain';
 import { isLinearTextureKind } from '../../../../utils/scene/isLinearTextureKind';
 import { EARTH_SURFACE_UNIFORM_FLOATS } from '../../../../utils/gpu/packEarthSurfaceUniforms';
+import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import vsCode from '../../shaders/bodies/earth/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/earth/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
@@ -201,10 +202,16 @@ function concatCubeSphereFaces(resolution: number): {
   return { positions, uvs, tangents, indices };
 }
 
+/**
+ * @param reversedZ selects this slab's depth convention (single-sourced in
+ *   `SLAB_REVERSED_Z`): `false` ⇒ smaller-z-wins (`depthCompare: 'less'`),
+ *   `true` ⇒ reversed-Z greater-wins. Resolved through `resolveDepthCompare`.
+ */
 export function createEarthRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat,
   depthFormat: GPUTextureFormat,
+  reversedZ: boolean,
 ): EarthRenderer {
   // ── Geometry upload ───────────────────────────────────────────────────────
   //
@@ -462,7 +469,7 @@ export function createEarthRenderer(
     depthStencil: {
       format: depthFormat,
       depthWriteEnabled: true,
-      depthCompare: 'less',
+      depthCompare: resolveDepthCompare('nearer', reversedZ),
     },
   });
 

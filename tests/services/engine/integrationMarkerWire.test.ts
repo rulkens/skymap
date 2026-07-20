@@ -46,6 +46,7 @@ describe('produceStructureMarkers → structureMarkerRenderer.setMarkers', () =>
       },
       'rgba16float',
       null as unknown as FadeUniformsBgl,
+      false,
     );
 
     const data = createEngineData();
