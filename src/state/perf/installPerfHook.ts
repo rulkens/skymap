@@ -37,13 +37,23 @@
  * `requestAnimationFrame` is the cheapest honest "the pose has been committed to
  * a frame" signal.
  *
- * ### `collectTimings` — subscribe, accumulate, unsubscribe
+ * ### `collectTimings` — warm up, subscribe, accumulate, unsubscribe
  *
  * Subscribe to the live timing service; for each emitted `GpuTimingFrame`, flatten
- * its `perPassMs` map into `{ slot, ms }` samples; after `frames` frames have
- * arrived, unsubscribe and resolve with the flat `PerfSample[]`. Auto-rotate
+ * its `perPassMs` map into `{ slot, ms }` samples; after `frames` MEASURED frames
+ * have arrived, unsubscribe and resolve with the flat `PerfSample[]`. Auto-rotate
  * (armed by the preceding `setPose`) is an active driver holding the loop awake
  * for the whole window, so no manual render pump is needed.
+ *
+ * The first `PERF_WARMUP_FRAMES` delivered frames are DISCARDED, not measured:
+ * GPU timestamp readback lands 1–2 frames behind the render (the staging buffer
+ * is double-buffered — see `GpuTimingFrame`), so right after a `setStrategy` /
+ * `setPose` flip the first delivered frames still describe the PRIOR state. A
+ * merged-strategy frame bills one slot per render-step GROUP (`hdr·NEAR0`, …);
+ * a perLayerTimed frame bills one slot per LAYER (`orbit-trails`, …). Without
+ * the warmup a stale group-key slot leaks into a per-layer sample (and vice
+ * versa), corrupting the floor estimate. Skipping a small fixed count is the
+ * cheapest honest fence — no attempt to correlate frame indices across the flip.
  *
  * The `window` write goes through the `PerfWindow` cast instead of a
  * `declare global` `interface Window` augmentation — the house style bans
@@ -68,6 +78,14 @@ import type { RenderStrategy } from '../../@types/engine/frame/RenderStrategy';
 // export it, and importing the engine here would couple state→engine the wrong
 // way (the slice's own comment). A scenario's `pose.rate` overrides this.
 const PERF_AUTO_ROTATE_RATE = 0.000873;
+
+// Delivered timing frames to discard before measuring. GPU timestamp readback
+// lags the render by 1–2 frames (double-buffered staging), so right after a
+// strategy/pose flip the first few delivered frames still describe the PRIOR
+// state — a stale group-key vs. per-layer-key slot leaking into the wrong
+// strategy's samples. Three covers the worst-case readback lag with margin;
+// exported so `installPerfHook.test.ts` can drive the exact warmup count.
+export const PERF_WARMUP_FRAMES = 3;
 
 // Slot/layer name → render-step groupKey, flattened once from the same walk the
 // DebugPanel groups on. Handed across the `window.__skymapPerf` seam so the Node
@@ -97,18 +115,23 @@ function setPose(store: AppStore, pose: PerfPose): Promise<void> {
   return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 }
 
-// Subscribe to the live GPU timing service, flatten each frame's per-pass map
-// into samples, and resolve once `frames` frames have arrived.
+// Subscribe to the live GPU timing service, discard the first
+// `PERF_WARMUP_FRAMES` delivered frames (readback lag — see the module header),
+// then flatten each measured frame's per-pass map into samples and resolve once
+// `frames` MEASURED frames have arrived.
 function collectTimings(engine: EngineHandle, frames: number): Promise<PerfSample[]> {
   return new Promise<PerfSample[]>((resolve) => {
     const samples: PerfSample[] = [];
-    let seen = 0;
+    let delivered = 0;
+    let measured = 0;
     const unsubscribe = engine.debug.timingService.subscribe((frame) => {
+      delivered += 1;
+      if (delivered <= PERF_WARMUP_FRAMES) return;
       for (const [slot, ms] of frame.perPassMs) {
         samples.push({ slot, ms });
       }
-      seen += 1;
-      if (seen >= frames) {
+      measured += 1;
+      if (measured >= frames) {
         unsubscribe();
         resolve(samples);
       }

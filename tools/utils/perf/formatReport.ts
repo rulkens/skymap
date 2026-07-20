@@ -38,7 +38,7 @@ export function formatReport(report: ScenarioReport): string {
   lines.push('  MERGED (production pass shape)');
   for (const stat of report.merged) lines.push(statRow(stat));
 
-  lines.push('  PER-LAYER (attribution; each row includes ~floor pass overhead)');
+  lines.push('  PER-LAYER (attribution; each row includes ~FLOOR pass overhead)');
   for (const stat of report.perLayer) lines.push(statRow(stat));
 
   for (const group of report.floors) {

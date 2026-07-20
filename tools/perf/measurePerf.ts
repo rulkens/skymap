@@ -48,10 +48,8 @@
 import { chromium, type Browser } from '@playwright/test';
 import { PERF_SCENARIOS, type PerfScenario } from './perfScenarios';
 import type { ScenarioReport, LayerStat } from './scenarioReport';
-import { groupSamplesBySlot } from '../utils/perf/groupSamplesBySlot';
-import { median } from '../utils/perf/median';
-import { percentile } from '../utils/perf/percentile';
-import { estimateFloor } from '../utils/perf/estimateFloor';
+import { statsOf } from '../utils/perf/statsOf';
+import { floorsOf } from '../utils/perf/floorsOf';
 import { formatReport } from '../utils/perf/formatReport';
 import type { PerfSample } from '../../src/@types/perf/PerfSample';
 
@@ -89,8 +87,10 @@ function parseArgs(argv: readonly string[]): PerfOptions {
       if (arg === '--scenario') options.scenarios.push(value);
       if (arg === '--dpr') {
         options.dpr = Number(value);
-        if (!Number.isInteger(options.dpr) || options.dpr < 1) {
-          throw new Error(`--dpr must be a positive integer, got '${value}'`);
+        if (options.dpr !== 1 && options.dpr !== 2) {
+          throw new Error(
+            '--dpr must be 1 or 2 — the app clamps its backing store to min(devicePixelRatio, 2); see device.ts',
+          );
         }
       }
       if (arg === '--frames') {
@@ -127,57 +127,6 @@ async function launchChromium(): Promise<Browser> {
     );
     return chromium.launch({ args: ['--enable-unsafe-webgpu', '--use-angle=metal'] });
   }
-}
-
-/** Roll a flat sample stream up into one median+p90 stat per slot. */
-function statsOf(samples: readonly PerfSample[]): LayerStat[] {
-  const stats: LayerStat[] = [];
-  for (const [slot, msList] of groupSamplesBySlot(samples)) {
-    stats.push({ slot, median: median(msList), p90: percentile(msList, 90) });
-  }
-  return stats;
-}
-
-/**
- * Attribute per-layer costs to their render-step groups. For each group the
- * `slotGroups` map buckets the perLayer stats into, and that ALSO appears as a
- * merged group slot (slot === groupKey), estimate the shared per-pass floor
- * from `(Σ Lᵢ − G)/n` and each layer's floor-subtracted real cost. Groups with
- * a single layer are skipped (no merged-vs-split gap to separate) — matching
- * `estimateFloor`'s own n<2 guard, so `floors` only ever carries attributable
- * multi-layer groups.
- */
-function floorsOf(
-  merged: readonly LayerStat[],
-  perLayer: readonly LayerStat[],
-  slotGroups: Readonly<Record<string, string>>,
-): ScenarioReport['floors'] {
-  const mergedMedianByGroup = new Map<string, number>();
-  for (const stat of merged) mergedMedianByGroup.set(stat.slot, stat.median);
-
-  const buckets = new Map<string, LayerStat[]>();
-  for (const stat of perLayer) {
-    const groupKey = slotGroups[stat.slot] ?? stat.slot;
-    const bucket = buckets.get(groupKey);
-    if (bucket) bucket.push(stat);
-    else buckets.set(groupKey, [stat]);
-  }
-
-  const floors: ScenarioReport['floors'][number][] = [];
-  for (const [groupKey, layerStats] of buckets) {
-    const mergedMedian = mergedMedianByGroup.get(groupKey);
-    if (mergedMedian === undefined || layerStats.length < 2) continue;
-    const floor = estimateFloor(
-      layerStats.map((stat) => stat.median),
-      mergedMedian,
-    );
-    floors.push({
-      groupKey,
-      floor,
-      reals: layerStats.map((stat) => ({ slot: stat.slot, real: stat.median - floor })),
-    });
-  }
-  return floors;
 }
 
 /**
@@ -275,10 +224,19 @@ async function main(): Promise<void> {
 
   const browser = await launchChromium();
   try {
+    // Isolate each scenario: a dev-server hiccup or page crash on one vantage
+    // shouldn't abort the whole sweep. Log it, mark the run failed, move on.
     for (const scenario of selected) {
       console.log(`\nmeasuring '${scenario.name}' (${options.frames} frames @ dpr ${options.dpr}) ...`);
-      const report = await measureScenario(browser, scenario, options);
-      console.log(formatReport(report));
+      try {
+        const report = await measureScenario(browser, scenario, options);
+        console.log(formatReport(report));
+      } catch (err) {
+        console.error(
+          `scenario '${scenario.name}' failed: ${err instanceof Error ? err.message : String(err)}`,
+        );
+        process.exitCode = 1;
+      }
     }
   } finally {
     await browser.close();
