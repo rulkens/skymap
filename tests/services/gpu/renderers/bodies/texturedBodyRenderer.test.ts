@@ -7,8 +7,8 @@
  * `label`, `destroy`), the method surface (`setMap` / `setRingTexture` /
  * `draw` callable with the right arity), the per-body resource posture (each
  * body id gets its OWN uniform buffer + bind group so no shared mid-frame
- * uniform can be clobbered), and the explicit four-binding bind-group layout
- * (surface + ring — Prep B stays four-binding). The mip-count contract is checked
+ * uniform can be clobbered), and the explicit five-binding bind-group layout
+ * (surface + ring + normal). The mip-count contract is checked
  * structurally: `setMap(id, 'surface', …)` sizes the body texture with
  * `mipLevelCount(w,h)` levels and runs the downsample chain (a command encoder is
  * submitted). "Round, correctly-lit body" is the VISUAL gate deferred to Task 11.
@@ -108,7 +108,7 @@ describe('createTexturedBodyRenderer', () => {
     expect(renderPipelines[0]!.depthStencil!.format).toBe('depth32float');
   });
 
-  it('declares an explicit four-binding layout: uniform, sampler, surface + ring textures', () => {
+  it('declares an explicit five-binding layout: uniform, sampler, surface + ring + normal textures', () => {
     const bindGroupLayouts: GPUBindGroupLayoutDescriptor[] = [];
     createTexturedBodyRenderer(mockDevice({ bindGroupLayouts }), 'rgba16float', 'depth32float');
     const entries = Array.from(bindGroupLayouts[0]!.entries);
@@ -117,6 +117,9 @@ describe('createTexturedBodyRenderer', () => {
     expect(byBinding.get(1)!.sampler).toBeDefined();
     expect(byBinding.get(2)!.texture).toBeDefined();
     expect(byBinding.get(3)!.texture).toBeDefined();
+    // Binding 4 is the LINEAR tangent-space normal map — added by its KIND_CFG row
+    // alongside surface, so the layout grows without touching the layout builder.
+    expect(byBinding.get(4)!.texture).toBeDefined();
   });
 
   it('uses a mip-consuming sampler (mipmapFilter linear, repeat-U / clamp-V)', () => {
@@ -178,6 +181,53 @@ describe('createTexturedBodyRenderer', () => {
     expect(encoderCount.n).toBeGreaterThan(0);
   });
 
+  it("setMap('moon','normal', …) creates a LINEAR rgba8unorm normal texture", () => {
+    const textures: GPUTextureDescriptor[] = [];
+    const renderer = createTexturedBodyRenderer(
+      mockDevice({ textures }),
+      'rgba16float',
+      'depth32float',
+    );
+    const bitmap = { width: 16, height: 8 } as unknown as ImageBitmap;
+    renderer.setMap('moon', 'normal', bitmap);
+    // The sized (non-placeholder) normal texture — 16 wide, distinct from the 1×1
+    // flat-normal placeholder.
+    const normalTex = textures.find((t) => Array.isArray(t.size) && t.size[0] === 16);
+    expect(normalTex).toBeDefined();
+    // LINEAR, never `-srgb`: the RG channels carry tangent-space slope data and an
+    // sRGB decode would silently bend every surface normal — a runtime rule no
+    // compiler check catches.
+    expect(normalTex!.format).toBe('rgba8unorm');
+    // RENDER_ATTACHMENT is required by generateMipChain's per-level render passes.
+    expect((normalTex!.usage & GPUTextureUsage.RENDER_ATTACHMENT) !== 0).toBe(true);
+  });
+
+  it('the normal placeholder is the linear flat-normal texel', () => {
+    // The per-kind placeholders are 1×1 textures written via queue.writeTexture at
+    // construction. The normal placeholder's texel is [128,128,255,255], which in
+    // LINEAR rgba8unorm decodes to (0,0,1) — the `perturbNormal` identity — so a
+    // body with no normal map shades exactly as it does today. An sRGB format
+    // would corrupt that identity, so the write must target an rgba8unorm texture.
+    const device = mockDevice();
+    createTexturedBodyRenderer(device, 'rgba16float', 'depth32float');
+    const writeCalls = (device.queue.writeTexture as unknown as { mock: { calls: unknown[][] } })
+      .mock.calls;
+    const flatNormalWrite = writeCalls.find((c) => {
+      const payload = Array.from(c[1] as Uint8Array);
+      return (
+        payload.length === 4 &&
+        payload[0] === 128 &&
+        payload[1] === 128 &&
+        payload[2] === 255 &&
+        payload[3] === 255
+      );
+    });
+    expect(flatNormalWrite).toBeDefined();
+    // The flat-normal texel lands on a LINEAR rgba8unorm placeholder, never -srgb.
+    const target = (flatNormalWrite![0] as { texture: { format: GPUTextureFormat } }).texture;
+    expect(target.format).toBe('rgba8unorm');
+  });
+
   it('setRingTexture does not throw and rebuilds that body bind group', () => {
     const renderer = createTexturedBodyRenderer(mockDevice(), 'rgba16float', 'depth32float');
     const strip = { width: 512, height: 1 } as unknown as ImageBitmap;
@@ -202,9 +252,9 @@ describe('createTexturedBodyRenderer', () => {
   });
 
   it('clearTexture destroys the body surface texture and reverts to the placeholder', () => {
-    // clearTexture is the eviction inverse of setTexture: releasing a body's
+    // clearTexture is the eviction inverse of setMap: releasing a body's
     // bodyTextures slot must actually free its (up to ~135 MB) GPU texture, not
-    // leak it. Structural proof: after setTexture the body owns a real texture
+    // leak it. Structural proof: after setMap the body owns a real texture
     // whose `.destroy()` clearTexture calls; the bind group is then rebuilt.
     const renderer = createTexturedBodyRenderer(mockDevice(), 'rgba16float', 'depth32float');
     const bitmap = { width: 8, height: 4 } as unknown as ImageBitmap;

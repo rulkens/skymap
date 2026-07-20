@@ -29,12 +29,12 @@
  * ## Per-kind sphere maps = the extension point (KIND_CFG)
  *
  * The sphere-map bindings are not hardcoded — they are derived from a `KIND_CFG`
- * table keyed by `TextureKind`. Today it holds ONE row (`surface` at binding 2),
- * so the layout, placeholders, and bind group are byte-identical to a hardcoded
- * single map. A later feature (an airless-body tangent-space `normal` map) adds
- * ONE row to that table and both the bind-group layout and every body's bind
- * group pick it up automatically — no second hardcoded branch. `setMap(id, kind,
- * bmp)` is the single per-kind upload entry.
+ * table keyed by `TextureKind`. It holds a `surface` row (binding 2, sRGB) and a
+ * `normal` row (binding 4, LINEAR tangent-space relief for airless bodies); the
+ * layout, placeholders, and every body's bind group are all derived by iterating
+ * those rows. Adding a further map role is ONE more row — the whole path picks it
+ * up automatically, no second hardcoded branch. `setMap(id, kind, bmp)` is the
+ * single per-kind upload entry.
  *
  * ## The ring binding is a real texture on every body (branch on data, not code)
  *
@@ -88,16 +88,18 @@ const UNIFORM_BUFFER_SIZE = 112;
  * Per-kind sphere-map config — THE EXTENSION POINT. Each row names a
  * `TextureKind`'s bind-group binding, GPU texture format, and 1×1 placeholder
  * texel; the bind-group layout, the per-kind placeholder textures, and every
- * body's bind group are all derived by iterating these rows. Today it holds ONE
- * row (`surface`), so the output is byte-identical to a hardcoded single surface
- * map at binding 2. A later feature adds e.g. a `normal` row and the whole path
- * — layout, placeholders, bind group, `setMap` — extends with no new branch.
+ * body's bind group are all derived by iterating these rows. Two rows today:
+ * `surface` (binding 2, sRGB colour) and `normal` (binding 4, LINEAR
+ * `rgba8unorm` — the RG channels carry slope data, so an sRGB decode would
+ * corrupt them). A further map role is one more row and the whole path — layout,
+ * placeholders, bind group, `setMap` — extends with no new branch.
  *
  * Bindings 0 (uniform), 1 (sampler), and 3 (ring) are fixed and hand-written;
  * only the sphere-map bindings live here.
  */
 const KIND_CFG = {
   surface: { binding: 2, format: 'rgba8unorm-srgb', placeholder: [128, 128, 128, 255] },
+  normal: { binding: 4, format: 'rgba8unorm', placeholder: [128, 128, 255, 255] }, // LINEAR — RG are slope data, never -srgb; [128,128,255] decodes to (0,0,1) = flat
 } as const satisfies Partial<
   Record<
     TextureKind,
@@ -208,8 +210,8 @@ export function createTexturedBodyRenderer(
   //
   // Binding 0: `TexturedBodyUniforms`, VERTEX (mvp) + FRAGMENT (sunDirLocal +
   //            ring ratios). Binding 1: sampler. Sphere-map bindings (binding 2 =
-  //            surface today) are derived from KIND_CFG. Binding 3: ring-alpha
-  //            strip (real placeholder if none).
+  //            surface, binding 4 = normal) are derived from KIND_CFG. Binding 3:
+  //            ring-alpha strip (real placeholder if none).
   const bindGroupLayout = device.createBindGroupLayout({
     label: 'texturedBody-bgl',
     entries: [

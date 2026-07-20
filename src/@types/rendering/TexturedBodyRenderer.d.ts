@@ -5,7 +5,7 @@
  *
  * ### One pipeline, per-body resources
  *
- * All these bodies share one UV-sphere mesh, one pipeline, and one four-binding
+ * All these bodies share one UV-sphere mesh, one pipeline, and one five-binding
  * layout — they differ only in their surface texture and their per-frame MVP +
  * lighting uniforms. The renderer therefore holds a `Map<BodyTextureId, …>` of
  * per-body GPU resources: each body id owns its OWN uniform buffer + bind group
@@ -30,9 +30,11 @@
  * ### Per-kind sphere maps
  *
  * The sphere-map bindings are driven by a per-kind config table inside the
- * renderer, so a new map role (e.g. a tangent-space `normal`) is added as ONE
- * config row rather than a fresh method + binding branch. `setMap` is the single
- * upload entry keyed by `TextureKind`.
+ * renderer, so a new map role is added as ONE config row rather than a fresh
+ * method + binding branch. Two kinds today: `surface` (binding 2, sRGB colour)
+ * and `normal` (binding 4, LINEAR `rgba8unorm` tangent-space relief — the RG
+ * channels are slope data, so it must never be an sRGB format). `setMap` is the
+ * single upload entry keyed by `TextureKind`.
  */
 
 import type { Renderer } from './Renderer';
