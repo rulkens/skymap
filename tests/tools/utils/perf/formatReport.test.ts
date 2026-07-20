@@ -30,6 +30,7 @@ const withFloors: ScenarioReport = {
   viewport: { width: 1400, height: 900 },
   dpr: 2,
   frames: 30,
+  tier: 'medium',
   totals: {
     merged: { median: 14.8, p90: 17.2 },
     perLayer: { median: 22.5, p90: 26.0 },
@@ -58,11 +59,12 @@ const withFloors: ScenarioReport = {
 };
 
 describe('formatReport', () => {
-  it('renders the header with viewport, dpr, and frame count', () => {
+  it('renders the header with viewport, dpr, tier, and frame count', () => {
     const out = formatReport(withFloors, plain);
     expect(out).toContain('solar-system');
     expect(out).toContain('1400×900');
     expect(out).toContain('dpr2');
+    expect(out).toContain('tier medium');
     expect(out).toContain('30 frames');
   });
 
@@ -118,6 +120,7 @@ describe('formatReport', () => {
       viewport: { width: 1400, height: 900 },
       dpr: 2,
       frames: 30,
+      tier: 'medium',
       totals: {
         merged: { median: 2.0, p90: 2.2 },
         perLayer: { median: 2.0, p90: 2.2 },

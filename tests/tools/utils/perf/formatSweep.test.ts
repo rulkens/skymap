@@ -19,6 +19,7 @@ const report: SweepReport = {
   scenario: 'solar-system',
   dpr: 2,
   frames: 30,
+  tier: 'medium',
   scales: [
     { scale: 0.5, width: 700, height: 450, pixels: 700 * 450 * 4 },
     { scale: 1.0, width: 1400, height: 900, pixels: 1400 * 900 * 4 },
@@ -45,8 +46,12 @@ const report: SweepReport = {
 describe('formatSweep', () => {
   it('renders each pass with its per-scale medians, exponent, and label', () => {
     const out = formatSweep(report, plain);
-    expect(out).toMatch(/hdr·NEAR0[^\n]*1\.2[^\n]*4\.8[^\n]*19\.2[^\n]*1\.00[^\n]*fragment\/fill-bound/);
-    expect(out).toMatch(/orbit-trails[^\n]*3\.0[^\n]*3\.1[^\n]*3\.0[^\n]*0\.00[^\n]*vertex\/CPU-bound/);
+    expect(out).toMatch(
+      /hdr·NEAR0[^\n]*1\.2[^\n]*4\.8[^\n]*19\.2[^\n]*1\.00[^\n]*fragment\/fill-bound/,
+    );
+    expect(out).toMatch(
+      /orbit-trails[^\n]*3\.0[^\n]*3\.1[^\n]*3\.0[^\n]*0\.00[^\n]*vertex\/CPU-bound/,
+    );
   });
 
   it('renders a TOTAL row with the whole-frame per-scale medians and exponent', () => {
@@ -58,6 +63,7 @@ describe('formatSweep', () => {
     const out = formatSweep(report, plain);
     expect(out).toContain('solar-system');
     expect(out).toContain('sweep');
+    expect(out).toContain('tier medium');
     expect(out).toContain('700×450');
     expect(out).toContain(String(1400 * 900 * 4));
   });

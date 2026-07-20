@@ -76,6 +76,8 @@ import { isPerfMode } from '../../utils/url/isPerfMode';
 import { whenStablyReady } from '../lifecycle/whenStablyReady';
 import { cancelCameraTween, commitCameraPose, setAutoRotate } from '../camera/cameraSlice';
 import { setRenderStrategy } from '../settings/settingsSlice';
+import { requestTier } from '../tier/requestTier';
+import { selectTier } from '../tier/selectors';
 import { TIMED_SLOT_GROUPS } from '../../services/engine/frame/frameProgram';
 import type { AppStore } from '../../store/types';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
@@ -84,6 +86,7 @@ import type { PerfWindow } from '../../@types/perf/PerfWindow';
 import type { PerfPose } from '../../@types/perf/PerfPose';
 import type { PerfSample } from '../../@types/perf/PerfSample';
 import type { RenderStrategy } from '../../@types/engine/frame/RenderStrategy';
+import type { Tier } from '../../@types/data/Tier';
 
 // Default per-frame yaw advance for a "slow orbit while sampling" pose. Mirrors
 // the camera slice's inline `initialState.autoRotate.rate` — the slice does not
@@ -137,7 +140,9 @@ function collectTimings(engine: EngineHandle, frames: number): Promise<PerfSampl
   // diagnostic (see the module header). Fail loud and early instead.
   if (!engine.debug.timingService.enabled) {
     return Promise.reject(
-      new Error('perf: GPU timing service is disabled (no timestamp-query?) — cannot collect timings'),
+      new Error(
+        'perf: GPU timing service is disabled (no timestamp-query?) — cannot collect timings',
+      ),
     );
   }
   return new Promise<PerfSample[]>((resolve) => {
@@ -161,6 +166,18 @@ function collectTimings(engine: EngineHandle, frames: number): Promise<PerfSampl
   });
 }
 
+// Ask for a tier change (the COMMAND — the saga owns the `setTier` write and
+// the eviction/reload), then resolve once the new tier's bins are loaded and
+// committed. Awaiting a FRESH `whenStablyReady` reuses the boot-ready predicate
+// rather than inventing a per-source wait (recordTour precedent): the same
+// engine-ready + loads-settled debounce that gates boot also detects a tier
+// reload completing. A same-tier request no-ops in the saga; the fresh wait then
+// just resolves after the stability window — correct behaviour, no special case.
+function setTier(store: AppStore, tier: Tier): Promise<void> {
+  store.dispatch(requestTier(tier));
+  return whenStablyReady(store);
+}
+
 export function installPerfHook(store: AppStore, engine: EngineHandle): void {
   if (!isPerfMode()) return;
   const hook: SkymapPerfHook = {
@@ -168,6 +185,9 @@ export function installPerfHook(store: AppStore, engine: EngineHandle): void {
     setPose: (pose: PerfPose) => setPose(store, pose),
     setStrategy: (s: RenderStrategy) => store.dispatch(setRenderStrategy(s)),
     collectTimings: (frames: number) => collectTimings(engine, frames),
+    setTier: (tier: Tier) => setTier(store, tier),
+    // The store's current tier — reports carry the ACTUAL tier, not a boot default.
+    getTier: () => selectTier(store.getState()),
     slotGroups: SLOT_GROUPS,
   };
   (window as PerfWindow).__skymapPerf = hook;

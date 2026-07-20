@@ -41,6 +41,9 @@ export type SweepReport = {
   scenario: string;
   dpr: number;
   frames: number;
+  /** The ACTUAL catalog tier read back from the store via `getTier()` after any
+   *  `--tier` switch — plain `string`, mirroring `ScenarioReport.tier`. */
+  tier: string;
   scales: readonly SweepScale[];
   passes: readonly SweepPass[];
   /** The whole-frame total, classified the same way as an individual pass. */

@@ -94,13 +94,13 @@ function table(
 }
 
 export function formatReport(report: ScenarioReport, palette: Palette): string {
-  const { scenario, viewport, dpr, frames } = report;
+  const { scenario, viewport, dpr, frames, tier } = report;
   const lines: string[] = [];
 
   lines.push(
     `${scenario}  ` +
       palette.dim(
-        `(${viewport.width}×${viewport.height} @dpr${dpr}, ${frames} frames, median ms | p90)`,
+        `(${viewport.width}×${viewport.height} @dpr${dpr}, tier ${tier}, ${frames} frames, median ms | p90)`,
       ),
   );
 

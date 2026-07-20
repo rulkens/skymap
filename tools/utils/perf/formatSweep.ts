@@ -74,11 +74,11 @@ function labelColorizer(palette: Palette): (label: string) => string {
 }
 
 export function formatSweep(report: SweepReport, palette: Palette): string {
-  const { scenario, dpr, frames, scales } = report;
+  const { scenario, dpr, frames, tier, scales } = report;
   const lines: string[] = [];
   const colorLabel = labelColorizer(palette);
 
-  lines.push(`${scenario}  ${palette.bold('sweep')}  dpr${dpr} · ${frames} frames`);
+  lines.push(`${scenario}  ${palette.bold('sweep')}  dpr${dpr} · tier ${tier} · ${frames} frames`);
   lines.push(
     palette.dim('  ' + scales.map((sc) => `${sc.width}×${sc.height} (${sc.pixels}px)`).join('  ')),
   );

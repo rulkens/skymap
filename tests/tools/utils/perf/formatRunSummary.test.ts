@@ -20,6 +20,7 @@ const reportWith = (scenario: string, median: number): ScenarioReport => ({
   viewport: { width: 1400, height: 900 },
   dpr: 2,
   frames: 30,
+  tier: 'medium',
   totals: { merged: { median, p90: median }, perLayer: { median, p90: median } },
   merged: [],
   perLayer: [],

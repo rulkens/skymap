@@ -28,6 +28,11 @@ export type ScenarioReport = {
   viewport: { width: number; height: number };
   dpr: number;
   frames: number;
+  /** The ACTUAL catalog tier read back from the store via `getTier()` after any
+   *  `--tier` switch — NOT the flag value, so a report never lies about what was
+   *  measured. Plain `string` keeps tools/ from importing the src `Tier` type
+   *  here; the harness supplies values from the typed hook. */
+  tier: string;
   /** Per-frame total GPU pass time (median+p90 ms) for each strategy: merged is the
    *  production-shape number; perLayer is instrumented (inflated by per-pass overhead). */
   totals: {

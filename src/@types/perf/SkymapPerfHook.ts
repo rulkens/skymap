@@ -18,12 +18,28 @@ import type { PerfPose } from './PerfPose';
 import type { PerfSample } from './PerfSample';
 import type { RenderStrategy } from '../engine/frame/RenderStrategy';
 import type { TimingSlotName } from '../gpu/timing/TimingSlotName';
+import type { Tier } from '../data/Tier';
 
 export type SkymapPerfHook = {
   readonly ready: Promise<void>;
   readonly setPose: (pose: PerfPose) => Promise<void>;
   readonly setStrategy: (s: RenderStrategy) => void;
   readonly collectTimings: (frames: number) => Promise<PerfSample[]>;
+  /**
+   * Hot-swap the catalog tier and resolve only once the new tier's bins are
+   * loaded and committed. Promise-shaped like `setPose`: it dispatches the
+   * `requestTier` COMMAND (never `setTier` directly — the saga owns the write)
+   * and awaits a FRESH `whenStablyReady`, the same debounced boot predicate, so
+   * the harness measures a settled scene rather than one mid-reload. A same-tier
+   * request no-ops in the saga and the wait just resolves after the debounce.
+   */
+  readonly setTier: (tier: Tier) => Promise<void>;
+  /**
+   * The tier the store is CURRENTLY on. The harness reads it back after any
+   * `--tier` switch so a report carries the ACTUAL measured tier, never an
+   * assumed boot default.
+   */
+  readonly getTier: () => Tier;
   /**
    * Slot/layer name → its render-step groupKey (`'orbit-trails' → 'hdr·NEAR0'`;
    * a group-key row maps to itself). The Node harness can't import

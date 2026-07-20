@@ -16,12 +16,17 @@
  * `whenStablyReady`.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { installPerfHook, PERF_WARMUP_FRAMES } from '../../../src/state/perf/installPerfHook';
 import { isPerfMode } from '../../../src/utils/url/isPerfMode';
+import { requestTier } from '../../../src/state/tier/requestTier';
+import { setTier } from '../../../src/state/tier/tierSlice';
+import { engineStatusChanged } from '../../../src/state/engine/engineSlice';
+import { READY_STABLE_MS } from '../../../src/state/lifecycle/whenStablyReady';
+import { Source } from '../../../src/data/sources';
 import type { EngineHandle } from '../../../src/@types/engine/EngineHandle';
 import type { SkymapPerfHook } from '../../../src/@types/perf/SkymapPerfHook';
 import type { PerfWindow } from '../../../src/@types/perf/PerfWindow';
@@ -53,6 +58,10 @@ describe('installPerfHook', () => {
     delete (window as PerfWindow).__skymapPerf;
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('installPerfHook is a no-op outside perf mode', () => {
     vi.mocked(isPerfMode).mockReturnValue(false);
 
@@ -72,6 +81,8 @@ describe('installPerfHook', () => {
     expect(typeof hook?.setPose).toBe('function');
     expect(typeof hook?.setStrategy).toBe('function');
     expect(typeof hook?.collectTimings).toBe('function');
+    expect(typeof hook?.setTier).toBe('function');
+    expect(typeof hook?.getTier).toBe('function');
 
     // slotGroups is the name→groupKey seam the Node harness buckets its
     // per-layer timings through. Pin it as a non-empty plain object of
@@ -85,6 +96,51 @@ describe('installPerfHook', () => {
     expect(entries.length).toBeGreaterThan(0);
     expect(entries.every(([, value]) => typeof value === 'string')).toBe(true);
     expect(entries.some(([key, value]) => key !== value)).toBe(true);
+  });
+
+  it('getTier reports the current tier held by the store', () => {
+    vi.mocked(isPerfMode).mockReturnValue(true);
+
+    const store = buildStore();
+    installPerfHook(store, fakeEngine());
+    const hook = getHook();
+
+    // The boot default seeded by the tier slice.
+    expect(hook!.getTier()).toBe('medium');
+    // A write to the tier slice is reflected — the hook reads live, not a snapshot.
+    store.dispatch(setTier('large'));
+    expect(hook!.getTier()).toBe('large');
+  });
+
+  it('setTier dispatches the requestTier command and resolves once the ready predicate holds', async () => {
+    vi.useFakeTimers();
+    vi.mocked(isPerfMode).mockReturnValue(true);
+
+    const store = buildStore();
+    // Spy on dispatch to capture the COMMAND — requestTier has no reducer, so
+    // the tier slice itself won't change without the saga (absent in this store).
+    const dispatchSpy = vi.spyOn(store, 'dispatch');
+    installPerfHook(store, fakeEngine());
+    const hook = getHook();
+
+    let resolved = false;
+    const promise = hook!.setTier('large').then(() => {
+      resolved = true;
+    });
+
+    // The COMMAND is what a UI control / tour step would dispatch — never setTier.
+    expect(dispatchSpy).toHaveBeenCalledWith(requestTier('large'));
+
+    // Drive the store to the "settled" reading (engine ready + no load in
+    // flight) so the fresh whenStablyReady arms its stability timer.
+    store.dispatch(engineStatusChanged({ kind: 'ready', count: 100, source: Source.SDSS }));
+    // Not yet: the predicate must HOLD for the full stability window first.
+    await Promise.resolve();
+    expect(resolved).toBe(false);
+
+    vi.advanceTimersByTime(READY_STABLE_MS);
+    await promise;
+    expect(resolved).toBe(true);
   });
 
   it('collectTimings rejects (instead of hanging) when the timing service is disabled', async () => {
