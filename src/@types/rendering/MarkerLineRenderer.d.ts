@@ -32,9 +32,11 @@ export type MarkerLineRenderer = {
    * `targetFormat` passed to `createMarkerLineRenderer`.
    *
    * `sceneDepthView` is consumed only by an instance created with
-   * `occludeAgainstDepth: true`, where it feeds the group(1) depth joint so
-   * fragments behind a nearer solar-system body are discarded (per-pixel
-   * body occlusion).  A plain instance ignores it.
+   * `occludeAgainstDepth: 'compare' | 'coverage'`, where it feeds the group(1)
+   * depth joint so fragments behind a nearer solar-system body are discarded
+   * (per-pixel body occlusion).  The mode picks the occluder — `'compare'` for
+   * same-slab NEAR0 connectors, `'coverage'` for cross-slab COSMO overlays.  A
+   * plain instance ignores it.
    */
   draw(
     pass: GPURenderPassEncoder,

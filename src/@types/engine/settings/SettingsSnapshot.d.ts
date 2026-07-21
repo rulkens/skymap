@@ -16,7 +16,7 @@
  *   - `flow`           — CF4++ flow-field overlay gate + look/motion knobs.
  *   - `labels`         — cross-cutting label-presentation mode (focusedOnly).
  *
- * The remaining clusters (`tonemap`, `camera`, `bias`, `thumbnails`,
+ * The remaining clusters (`tonemap`, `bloom`, `camera`, `bias`, `thumbnails`,
  * `debug`) are deliberately excluded: the tour neither drives nor restores
  * them, so capturing them would invite a restore that stomps a value the
  * tour never meant to own.

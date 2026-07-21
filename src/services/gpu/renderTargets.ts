@@ -103,6 +103,7 @@
 import type { RenderTargets } from '../../@types/rendering/RenderTargets';
 import type { RenderTargetSpec } from '../../@types/engine/frame/RenderTargetSpec';
 import type { Size } from '../../@types/rendering/Size';
+import { BLOOM_LEVELS } from '../../data/bloomConstants';
 
 /**
  * Per-target first-touch clear values, consumed by the executor: the first
@@ -129,6 +130,16 @@ export const TARGET_CLEAR_VALUES: Readonly<Record<string, GPUColor>> = {
   volume: { r: 0, g: 0, b: 0, a: 0 },
   'star-aggregates': { r: 0, g: 0, b: 0, a: 0 },
   'foreground:0': { r: 0, g: 0, b: 0, a: 0 },
+  // Bloom pyramid mips clear transparent (a=0) — the pyramid accumulates
+  // additively (the upsample fold uses one/one blend), so an untouched texel
+  // must contribute nothing. The bright pass overwrites bloom0 outright, but
+  // the upsample folds add onto bloom0..3, and any level the fold does not
+  // cover has to start from zero coverage. Generated from BLOOM_LEVELS (the
+  // shared pyramid-depth home) so the clear table can never fall out of step
+  // with the `bloomN` spec rows below.
+  ...Object.fromEntries(
+    Array.from({ length: BLOOM_LEVELS }, (_unused, n) => [`bloom${n}`, { r: 0, g: 0, b: 0, a: 0 }]),
+  ),
   swap: { r: 0, g: 0, b: 0, a: 1 },
 };
 
@@ -153,6 +164,22 @@ function buildSpecs(swapFormat: GPUTextureFormat): readonly RenderTargetSpec[] {
     { id: 'volume', format: 'rgba16float', depth: null, scale: 3 },
     { id: 'star-aggregates', format: 'rgba16float', depth: null, scale: STAR_AGGREGATE_DIVISOR },
     { id: 'foreground:0', format: 'rgba16float', depth: 'depth32float', scale: 1 },
+    // Bloom mip pyramid: level 0 at half-res, each further level halving again
+    // (scale 2/4/8/16/32 — that is 2**(n+1)) — an ever-wider glow. rgba16float
+    // mirrors the HDR precision so the additive fold keeps its dynamic range. No
+    // depth: these are fullscreen post passes, not depth-tested geometry. The
+    // rows are generated from BLOOM_LEVELS (the shared pyramid-depth home) so
+    // adding a level is a one-line edit that stays consistent with the uniform
+    // arrays and pass loops that derive from the same number.
+    ...Array.from(
+      { length: BLOOM_LEVELS },
+      (_unused, n): RenderTargetSpec => ({
+        id: `bloom${n}`,
+        format: 'rgba16float',
+        depth: null,
+        scale: 2 ** (n + 1),
+      }),
+    ),
     { id: 'swap', format: swapFormat, depth: null, scale: 1 },
   ];
 }

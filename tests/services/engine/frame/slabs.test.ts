@@ -1,8 +1,8 @@
 /**
  * slabs — unit tests for `deriveSlabs` and `slabViewOf`.
  *
- * `deriveSlabs` instantiates the spec's two-row slab table (near-field
- * bodies + cosmological scene) from the live camera and the already-computed
+ * `deriveSlabs` instantiates the two-row slab table (near-field bodies and the
+ * cosmological scene) from the live camera and the already-computed
  * cosmological view-proj. `slabViewOf` is the executor-side lookup that
  * resolves a `slab: number` index (as named by a `FrameStep`) into the
  * `SlabView` a layer's `draw` actually consumes.
@@ -48,8 +48,8 @@ describe('deriveSlabs', () => {
 
   it.each([5, 5000])('every slab has nearMpc < farMpc (cam.distance = %d)', (distance) => {
     const slabs = deriveSlabs(makeCam(distance), makeCosmoVp());
-    for (const slab of slabs) {
-      expect(slab.nearMpc).toBeLessThan(slab.farMpc);
+    for (const index of [NEAR0, COSMO]) {
+      expect(slabs[index]!.nearMpc).toBeLessThan(slabs[index]!.farMpc);
     }
   });
 

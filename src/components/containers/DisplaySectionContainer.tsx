@@ -22,8 +22,18 @@ import { memo, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import DisplaySection from '../SettingsPanel/DisplaySection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { selectToneMapCurve } from '../../state/settings/selectors';
-import { setToneMapCurve } from '../../state/settings/settingsSlice';
+import {
+  selectToneMapCurve,
+  selectBloomEnabled,
+  selectBloomStrength,
+  selectBloomThreshold,
+} from '../../state/settings/selectors';
+import {
+  setToneMapCurve,
+  setBloomEnabled,
+  setBloomStrength,
+  setBloomThreshold,
+} from '../../state/settings/settingsSlice';
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 
 type DisplaySectionContainerProps = {
@@ -34,14 +44,38 @@ type DisplaySectionContainerProps = {
 function DisplaySectionContainer({ children }: DisplaySectionContainerProps): React.ReactElement {
   const dispatch = useAppDispatch();
   const toneMapCurve = useAppSelector(selectToneMapCurve);
+  const bloomEnabled = useAppSelector(selectBloomEnabled);
+  const bloomStrength = useAppSelector(selectBloomStrength);
+  const bloomThreshold = useAppSelector(selectBloomThreshold);
 
   const onToneMapCurveChange = useCallback(
     (curve: ToneMapCurve) => dispatch(setToneMapCurve(curve)),
     [dispatch],
   );
+  const onBloomEnabledChange = useCallback(
+    (next: boolean) => dispatch(setBloomEnabled(next)),
+    [dispatch],
+  );
+  const onBloomStrengthChange = useCallback(
+    (next: number) => dispatch(setBloomStrength(next)),
+    [dispatch],
+  );
+  const onBloomThresholdChange = useCallback(
+    (next: number) => dispatch(setBloomThreshold(next)),
+    [dispatch],
+  );
 
   return (
-    <DisplaySection toneMapCurve={toneMapCurve} onToneMapCurveChange={onToneMapCurveChange}>
+    <DisplaySection
+      toneMapCurve={toneMapCurve}
+      onToneMapCurveChange={onToneMapCurveChange}
+      bloomEnabled={bloomEnabled}
+      onBloomEnabledChange={onBloomEnabledChange}
+      bloomStrength={bloomStrength}
+      onBloomStrengthChange={onBloomStrengthChange}
+      bloomThreshold={bloomThreshold}
+      onBloomThresholdChange={onBloomThresholdChange}
+    >
       {children}
     </DisplaySection>
   );

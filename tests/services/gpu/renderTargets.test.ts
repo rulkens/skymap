@@ -40,10 +40,11 @@ describe('createRenderTargets', () => {
     const targets = createRenderTargets(device, SWAP_FORMAT, { width: 900, height: 600 });
 
     // Construction allocated the offscreen rows: hdr @ scale 1 (colour),
-    // volume @ scale 3 (colour), star-aggregates @ scale 2 (colour), and
-    // foreground:0 @ scale 1 (colour + depth) → 5 textures. hdr at full size,
-    // volume at floor(size/3), star-aggregates at floor(size/2).
-    expect(create.mock.calls).toHaveLength(5);
+    // volume @ scale 3 (colour), star-aggregates @ scale 2 (colour),
+    // foreground:0 @ scale 1 (colour + depth), and the five bloom-pyramid mips
+    // bloom0..bloom4 @ scale 2/4/8/16/32 (colour only) → 10 textures. hdr at
+    // full size, volume at floor(size/3), star-aggregates at floor(size/2).
+    expect(create.mock.calls).toHaveLength(10);
     const hdrDesc = create.mock.calls.find((c) => c[0].label === 'render-target-hdr')![0];
     const volDesc = create.mock.calls.find((c) => c[0].label === 'render-target-volume')![0];
     const aggDesc = create.mock.calls.find(
@@ -61,8 +62,8 @@ describe('createRenderTargets', () => {
     const aggViewBefore = targets.viewOf('star-aggregates');
     targets.resize({ width: 1200, height: 900 });
 
-    // Each offscreen row reallocated at the new size/scale → 5 more textures.
-    expect(create.mock.calls).toHaveLength(10);
+    // Each offscreen row reallocated at the new size/scale → 10 more textures.
+    expect(create.mock.calls).toHaveLength(20);
     const hdrResized = create.mock.calls
       .filter((c) => c[0].label === 'render-target-hdr')
       .at(-1)![0];
@@ -109,9 +110,7 @@ describe('createRenderTargets', () => {
     // TEXTURE_BINDING — the near-field caption occlusion pass samples this
     // depth (via lib/sceneDepth.wesl) to hide captions behind nearer bodies.
     // Guards that the depth stays sampleable, which the occlusion feature relies on.
-    expect(fgDepth.usage).toBe(
-      GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
-    );
+    expect(fgDepth.usage).toBe(GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING);
 
     const depthCallsBefore = create.mock.calls.filter(
       (c) => c[0].label === 'render-target-foreground:0-depth',

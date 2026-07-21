@@ -253,6 +253,35 @@ export const DEFAULT_TONE_MAP_CURVE: ToneMapCurveT = ToneMapCurve.Reinhard;
  */
 export const DEFAULT_EXPOSURE = 3.0;
 
+// ── Screen-space bloom ───────────────────────────────────────────────────────
+
+/**
+ * Screen-space bloom defaults ON — the mip-pyramid glow around near-saturated
+ * highlights (the Sun's core, bright star bins) is part of the baseline HDR
+ * look, so the effect is live from first paint. Off is a debug/perf escape
+ * hatch. Seeds `settings.bloom.enabled`.
+ */
+export const DEFAULT_BLOOM_ENABLED = true;
+
+/**
+ * Default bloom strength — the scale on the blurred mip pyramid composited back
+ * over the HDR frame. Seeds `settings.bloom.strength`. 0.85 is an eye-tuned
+ * starting point: strong enough to read as a soft halo around saturated cores,
+ * shy of a full 1.0 that would smear the whole highlight field. A post-build
+ * tuning target (spec §4/§6).
+ */
+export const DEFAULT_BLOOM_STRENGTH = 0.85;
+
+/**
+ * Default bloom threshold — the HDR luminance above which a pixel contributes to
+ * the bloom pyramid. Seeds `settings.bloom.threshold`. 7.0 is the low end of the
+ * bloom-seeding ordering invariant `DEFAULT_BLOOM_THRESHOLD < STAR_KNEE <=
+ * STAR_EMISSIVE` (see `starRenderConstants.ts` for the single statement of it):
+ * sitting under `STAR_KNEE` means only near-saturated cores bleed into the glow
+ * rather than the whole bright field. A post-build tuning target (spec §4/§6).
+ */
+export const DEFAULT_BLOOM_THRESHOLD = 7.0;
+
 // ── Malmquist-bias correction ────────────────────────────────────────────────
 
 /**

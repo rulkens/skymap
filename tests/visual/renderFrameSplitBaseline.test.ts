@@ -454,6 +454,8 @@ describe('renderFrame visual baseline', () => {
             depthFade: settings.depthFadeEnabled,
           },
           tonemap: { exposure: settings.exposure, curve: settings.toneMapCurve },
+          // Bloom off: the split baseline captures the non-bloom program.
+          bloom: { enabled: false, strength: 1, threshold: 1 },
           bias: { mode: settings.biasMode, absMagLimit: settings.absMagLimit },
           thumbnails: { enabled: settings.galaxyTexturesEnabled },
           milkyWay: { enabled: settings.milkyWayEnabled },
@@ -534,15 +536,15 @@ describe('renderFrame visual baseline', () => {
           "renderer": "milky-way",
         },
         {
-          "argShape": "pass,object,string,object",
+          "argShape": "pass,object,string,object,string",
           "renderer": "compositor",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2]",
+          "argShape": "pass,Float32Array[16],Array[2],undefined",
           "renderer": "marker-lines",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2]",
+          "argShape": "pass,Float32Array[16],Array[2],undefined",
           "renderer": "labels",
         },
       ]

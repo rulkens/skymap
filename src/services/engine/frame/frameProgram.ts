@@ -2,13 +2,13 @@
  * frameProgram — the FRAME as data, and the timing slots derived from it.
  *
  * A frame is an ordered sequence of steps: the compute prelude (the flow
- * integrate + the atmosphere sky-view LUT bake), a volume render,
- * an HDR render, a half-res survey-star-aggregate render into its own
- * offscreen, a near-field star-point render into that same HDR accumulation
- * (which also composites the aggregate offscreen back in), a tone-mapping
- * composite, the cosmological swap-chain overlay render, then the near-field
- * tail — the foreground bodies, their composite onto the swap chain, and the
- * near-field captions. Pre-unification that
+ * integrate + the atmosphere sky-view LUT bake), a volume render, an HDR
+ * render, a half-res survey-star-aggregate render into its own offscreen, a
+ * near-field star-point render into that same HDR accumulation (which also
+ * composites the aggregate offscreen back in), a near-field foreground-body
+ * render, that body composite OVER the HDR accumulator in linear space, the
+ * single tone-mapping composite, then the swap-chain overlay renders (the
+ * cosmological overlays, then the near-field captions). Pre-unification that
  * sequence lived as an imperative call chain spread across `renderFrame` and
  * two hand-wired HDR encoders — the order was implicit in which function
  * called which, and untestable without a GPU device. `frameProgram` returns
@@ -18,28 +18,32 @@
  * (`docs/superpowers/specs/2026-06-29-renderer-unification-design.md`) for the
  * essential/accidental split this data model rests on.
  *
- * The near-field tail (the zoom-to-earth fold) is now wired: a
- * `foreground:0` render draws the true-scale bodies (Sun, Earth) through the
- * NEAR0 slab into the depth-bearing foreground target, a `foreground:0→swap`
- * composite lays them over the tonemapped scene, then a NEAR0 swap render
- * draws the Sun/Earth captions. The tail's step order is the visible
- * "captions over bodies, bodies over cosmological labels" decision: the
- * near-field swap render (captions) follows the foreground composite so
- * captions land on top of the bodies, and that composite follows the
- * cosmological swap render so the opaque bodies occlude the cosmological
- * labels behind them — an ordering choice now readable in the program rather
- * than buried in an `encodeForegroundOver`-after-`encodeUiOverlay` convention.
+ * The near-field foreground bodies (the zoom-to-earth fold) accumulate into
+ * HDR before tone-mapping: a `foreground:0` render draws the true-scale bodies
+ * (Sun, Earth) through the NEAR0 slab into the depth-bearing foreground target,
+ * then a `foreground:0→hdr` composite lays them OVER the HDR accumulator in
+ * LINEAR space (`tone: null`). Because their pixels join HDR before the single
+ * tone-map, the bodies ride the SAME tone curve as the stars and galaxies —
+ * there is one tone curve across the whole frame, and no seam where the Sun's
+ * limb meets the cosmological scene. The lone `hdr→swap` replace-composite that
+ * follows is the frame's ONLY tone-map.
+ *
+ * The swap-chain overlays draw AFTER that single tone-map, on top of the
+ * tonemapped scene: the cosmological overlays (labels, marker-lines,
+ * selection-ring) first, then the near-field captions. The opaque Sun/Earth
+ * still occlude the cosmological labels behind them, but that occlusion is now
+ * carried by the Prep A COVERAGE test (the COSMO overlays test against the
+ * `foreground:0` depth) rather than by draw order — the foreground bodies no
+ * longer composite after the cosmological swap render, so `frameProgram` no
+ * longer depends on step order for that. The near-field captions still render
+ * last so they land on top of the bodies.
  *
  * There is no `volume→hdr` composite — the volume offscreen is merged into
  * HDR by the `volume-upsample` *layer* inside the HDR render step, not a
  * separate whole-texture composite (plan-time decision 3). The
  * `star-aggregates` offscreen is merged the same way — by the `star-upsample`
  * layer inside the hdr NEAR0 render step, adjacent to the `star-catalog` leaf
- * draw — so there is no `star-aggregates→hdr` composite step either. The two composites
- * in the program share one `tone` object by reference: the tone-map `hdr→swap`
- * (where the HDR scene is compressed to display range before the overlay
- * layers draw on top) and the `foreground:0→swap` OVER, so the tone curve is
- * identical across the Sun's limb.
+ * draw — so there is no `star-aggregates→hdr` composite step either.
  */
 
 import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
@@ -49,14 +53,24 @@ import { COSMO, NEAR0, groupKeyOf } from './slabs';
 import { CONTENT_LAYERS } from './passes';
 
 /**
- * Build this frame's step program. `tone` is threaded into BOTH composites —
- * the same object reference — so the tone-map curve is identical where the
- * foreground bodies meet the tonemapped cosmological scene. The cosmological
- * body (compute → volume → hdr → tone-map → swap) projects through the COSMO
- * slab; the near-field star points and the near-field tail (foreground
- * bodies, their composite, captions) project through the NEAR0 slab.
+ * Build this frame's step program. `tone` is threaded into the LONE tone-map —
+ * the `hdr→swap` replace-composite — which is the only place the HDR scene is
+ * compressed to display range. The foreground-body composite runs in linear
+ * space (`tone: null`) and rides that same single curve because it merges into
+ * HDR before the tone-map, not after. The cosmological body (compute → volume
+ * → hdr → tone-map → swap) projects through the COSMO slab; the near-field star
+ * points and the near-field bodies + captions project through the NEAR0 slab.
+ *
+ * `bloomEnabled` (the `settings.bloom.enabled` master toggle) is the ONLY bloom
+ * value that shapes the program: it decides whether the bloom step is emitted
+ * between the linear body composite and the tone-map. The look knobs
+ * (`strength`/`threshold`) are NOT threaded here — `runBloom` reads them live
+ * from `state.settings.bloom` each draw, exactly as `earth`/`starCatalogs` knobs
+ * do, because the step carries no uniform payload (unlike the `tone` a
+ * `'composite'` step carries). So only `enabled` can change the step LIST;
+ * strength/threshold change pixels without changing the frame's shape.
  */
-export function frameProgram(tone: ToneMap): readonly FrameStep[] {
+export function frameProgram(tone: ToneMap, bloomEnabled: boolean): readonly FrameStep[] {
   return [
     { kind: 'compute', name: 'flow' },
     // Atmosphere sky-view LUT bake — folds in this frame's camera altitude + sun
@@ -83,18 +97,37 @@ export function frameProgram(tone: ToneMap): readonly FrameStep[] {
     // tone curve for stars and galaxies. The hdr target is already touched
     // by the COSMO step above, so this pass loads rather than clears.
     { kind: 'render', target: 'hdr', slab: NEAR0 },
-    { kind: 'composite', step: { source: 'hdr', dest: 'swap', blend: 'replace', tone } },
-    { kind: 'render', target: 'swap', slab: COSMO },
-    // Near-field tail (zoom-to-earth fold). The step ORDER is the visible
-    // "captions over bodies, bodies over cosmological labels" decision:
-    //   - the foreground bodies composite (OVER) after the cosmological swap
-    //     render, so the opaque Sun/Earth occlude the cosmological labels;
-    //   - the near-field captions render AFTER that composite, so they land on
-    //     top of the bodies.
-    // The `tone` here is the SAME object the hdr→swap composite carries, which
-    // is how the shared tone curve across the Sun's limb is enforced.
+    // Near-field foreground bodies (zoom-to-earth fold). Rendered into their
+    // depth-bearing foreground target, then composited OVER hdr in LINEAR
+    // space (tone: null) so the Sun/Earth pixels join the HDR accumulator
+    // BEFORE tone-mapping and ride the SAME single tone curve as the stars and
+    // galaxies. No second tone-map: the lone hdr→swap replace-composite below
+    // is the frame's only tone-map, so there is one tone curve across the
+    // whole frame — no seam where the Sun's limb meets the cosmological scene.
     { kind: 'render', target: 'foreground:0', slab: NEAR0 },
-    { kind: 'composite', step: { source: 'foreground:0', dest: 'swap', blend: 'over', tone } },
+    { kind: 'composite', step: { source: 'foreground:0', dest: 'hdr', blend: 'over', tone: null } },
+    // Screen-space bloom, gated on the master toggle. ONE step, not N render
+    // steps: `runBloom` opens the pyramid's ten passes (bright prefilter
+    // hdr → bloom0, a DESCENDING downsample chain bloom0 → bloom4, an ASCENDING
+    // additive upsample fold bloom4 → bloom0, and the strength-scaled fold back
+    // into HDR) in strict order. A ping-pong mip pyramid writes the same target
+    // twice with different ops (a downsample that clears, then an additive
+    // upsample that loads), which the executor's `(target, slab)` render-step
+    // model cannot express: it re-fires every layer matching a step's group, so
+    // a reused-target upsample would fire at its downsample step and read a
+    // stale, last-frame level. The single sequential step sidesteps that — see
+    // runBloom for the strict-order rationale. Placed after the foreground:0→hdr
+    // composite (the bright prefilter samples the composited HDR scene) and
+    // before the lone hdr→swap tone-map (the fold rides that one curve).
+    ...(bloomEnabled ? ([{ kind: 'bloom' }] as const) : []),
+    { kind: 'composite', step: { source: 'hdr', dest: 'swap', blend: 'replace', tone } },
+    // Cosmological + near-field swap overlays now draw AFTER the tone-map, on
+    // top of the tonemapped scene. The COSMO overlays (labels, marker-lines,
+    // selection-ring) occlude against the foreground bodies via the Prep A
+    // coverage test — frameProgram no longer relies on draw order to keep the
+    // opaque Sun/Earth in front of the cosmological labels. The NEAR0 swap
+    // render (Sun/Earth captions) follows so captions land on top of the bodies.
+    { kind: 'render', target: 'swap', slab: COSMO },
     { kind: 'render', target: 'swap', slab: NEAR0 },
   ];
 }
@@ -107,6 +140,7 @@ export function frameProgram(tone: ToneMap): readonly FrameStep[] {
  *     `slab`), in registry order — one timing slot billed per layer.
  *   - `'composite'`→ a single `'<source>→<dest>'` slot (the unicode arrow),
  *     e.g. the tone-map's `'hdr→swap'`.
+ *   - `'bloom'`    → a single `'bloom'` slot spanning the whole sub-pipeline.
  *   - `'compute'`  → nothing; compute dispatches aren't timed as content slots.
  *
  * `'pick'` (the parallel r32uint pick pass) is appended last, matching the
@@ -157,6 +191,10 @@ export const PASS_GROUP_TITLES: Readonly<Record<string, string>> = {
   'hdr·COSMO': 'Cosmos · HDR',
   'hdr·NEAR0': 'Near field · HDR',
   'foreground:0·NEAR0': 'Foreground bodies · depth',
+  // The bloom sub-pipeline bills one `'bloom'` slot (the whole bright →
+  // downsample → upsample → fold span), placed after Foreground and before
+  // Overlays so the group renders in that slot.
+  bloom: 'Bloom',
   'swap·COSMO': 'Overlays',
   'swap·NEAR0': 'Overlays',
   composite: 'Composites & pick',
@@ -180,7 +218,9 @@ function timedSlotRowsOf(
       // Every layer matched by this step shares the step's `(target, slab)`, so
       // one groupKey covers the whole run. The key comes from the shared
       // `groupKeyOf` helper (slabs.ts) — the same definition the merged executor
-      // resolves against, so the two can't drift.
+      // resolves against, so the two can't drift. Every render step now has a
+      // distinct `(target, slab)` (the pyramid's reused-target repeats moved into
+      // the single `'bloom'` step), so no dedup is needed here.
       const groupKey = groupKeyOf(step.target, step.slab);
       for (const layer of layers) {
         if (layer.target === step.target && layer.slab === step.slab) {
@@ -203,6 +243,11 @@ function timedSlotRowsOf(
       // A composite merges whole textures rather than projecting geometry — it
       // belongs to no slab, and all composites share the one infra group.
       rows.push({ name: `${step.step.source}→${step.step.dest}`, groupKey: 'composite' });
+    } else if (step.kind === 'bloom') {
+      // The bloom sub-pipeline bills one slot spanning its whole pass sequence
+      // (see runBloom) — the same name the fold + bright passes write the shared
+      // query pair under.
+      rows.push({ name: 'bloom', groupKey: 'bloom' });
     }
     // 'compute' steps contribute no timing slot.
   }
@@ -272,9 +317,14 @@ export function timedSlotGroupsOf(
  * `(target, slab)` — the composite's `tone` never affects a slot NAME — so a
  * fixed `{ exposure: 1, curve: 0 }` yields the same list every real frame's
  * `frameProgram(tone)` would.
+ *
+ * `bloomEnabled = true` so the query-set allocation always includes the `'bloom'`
+ * slot. It costs nothing on frames where bloom is off — the master toggle omits
+ * the `'bloom'` step, and `runBloom` also no-ops on a null `bloomPyramid`, so the
+ * pre-allocated slot simply goes unused, like any empty group's slot.
  */
 export const TIMED_SLOTS: readonly string[] = timedSlotsOf(
-  frameProgram({ exposure: 1, curve: 0 }),
+  frameProgram({ exposure: 1, curve: 0 }, true),
   CONTENT_LAYERS,
 );
 
@@ -284,7 +334,7 @@ export const TIMED_SLOTS: readonly string[] = timedSlotsOf(
  * `CONTENT_LAYERS` gets a grouped row here with zero DebugPanel edits.
  */
 export const TIMED_SLOT_GROUPS: readonly TimedSlotGroup[] = timedSlotGroupsOf(
-  frameProgram({ exposure: 1, curve: 0 }),
+  frameProgram({ exposure: 1, curve: 0 }, true),
   CONTENT_LAYERS,
 );
 
@@ -295,7 +345,7 @@ export const TIMED_SLOT_GROUPS: readonly TimedSlotGroup[] = timedSlotGroupsOf(
  * walk, so the two lists stay positionally aligned.
  */
 const PASS_GROUP_KEYS: ReadonlyMap<string, string> = new Map(
-  timedSlotRowsOf(frameProgram({ exposure: 1, curve: 0 }), CONTENT_LAYERS).map((row) => [
+  timedSlotRowsOf(frameProgram({ exposure: 1, curve: 0 }, true), CONTENT_LAYERS).map((row) => [
     row.name,
     row.groupKey,
   ]),

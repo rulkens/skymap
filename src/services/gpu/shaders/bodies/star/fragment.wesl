@@ -12,10 +12,12 @@
 // HDR territory. The foreground target is rgba16float and the tone-map
 // pass compresses highlights, so values above 1.0 are not clipped —
 // they read as 'brighter than any reflective surface', which is exactly
-// what a star next to a lambert-lit planet should do. 4.0 is an
+// what a star next to a lambert-lit planet should do. 12.0 is an
 // aesthetic constant (comfortably above the ~1.0 ceiling of lit albedo,
-// well inside f16 range), not photometry; real luminance-derived
-// brightness is plan-03 LOD work.
+// and above the screen-space bloom bright-pass threshold so the resolved
+// disc seeds the glow rather than being prefiltered away, well inside f16
+// range), not photometry; real luminance-derived brightness is plan-03
+// LOD work.
 //
 // ## Bindings / blend target
 //
@@ -29,7 +31,11 @@ import package::lib::sphere::TintedSphereUniforms;
 
 @group(0) @binding(0) var<uniform> u: TintedSphereUniforms;
 
-const EMISSIVE: f32 = 4.0;
+// MIRRORS 'STAR_EMISSIVE' in 'src/data/starRenderConstants.ts' (the
+// authoritative TS home, which also names the bloom-seeding ordering
+// invariant). Kept in sync by a parity test, not the linker: '?static' WESL
+// linking has no value injection, so this literal is a hand-written copy.
+const EMISSIVE: f32 = 12.0;
 
 @fragment
 fn fs() -> @location(0) vec4<f32> {

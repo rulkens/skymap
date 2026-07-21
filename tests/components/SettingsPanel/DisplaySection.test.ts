@@ -36,6 +36,12 @@ function baseProps(overrides?: Partial<DisplaySectionProps>): DisplaySectionProp
   return {
     toneMapCurve: ToneMapCurve.Reinhard as ToneMapCurveT,
     onToneMapCurveChange: vi.fn<(curve: ToneMapCurveT) => void>(),
+    bloomEnabled: true,
+    onBloomEnabledChange: vi.fn<(next: boolean) => void>(),
+    bloomStrength: 0.85,
+    onBloomStrengthChange: vi.fn<(next: number) => void>(),
+    bloomThreshold: 7.0,
+    onBloomThresholdChange: vi.fn<(next: number) => void>(),
     ...overrides,
   };
 }
@@ -105,6 +111,32 @@ describe('DisplaySection', () => {
       fireEvent.change(select, { target: { value: String(ToneMapCurve.Aces) } });
       expect(onToneMapCurveChange).toHaveBeenCalledOnce();
       expect(onToneMapCurveChange).toHaveBeenCalledWith(ToneMapCurve.Aces);
+    });
+  });
+
+  describe('bloom controls', () => {
+    // Controlled checkbox: fireEvent.click (not .change) flips it and fires the
+    // handler with the toggled boolean — testing.md controlled-checkbox gotcha.
+    it('toggles bloomEnabled off via click when currently on', () => {
+      const onBloomEnabledChange = vi.fn<(next: boolean) => void>();
+      const { getByRole, getByLabelText } = render(
+        createElement(DisplaySection, baseProps({ bloomEnabled: true, onBloomEnabledChange })),
+      );
+      fireEvent.click(getByRole('button', { name: /display/i }));
+      fireEvent.click(getByLabelText('Bloom'));
+      expect(onBloomEnabledChange).toHaveBeenCalledOnce();
+      expect(onBloomEnabledChange).toHaveBeenCalledWith(false);
+    });
+
+    it('calls onBloomStrengthChange with the parsed number on slider change', () => {
+      const onBloomStrengthChange = vi.fn<(next: number) => void>();
+      const { getByRole, getByLabelText } = render(
+        createElement(DisplaySection, baseProps({ bloomStrength: 0.85, onBloomStrengthChange })),
+      );
+      fireEvent.click(getByRole('button', { name: /display/i }));
+      fireEvent.change(getByLabelText('Strength'), { target: { value: '1.25' } });
+      expect(onBloomStrengthChange).toHaveBeenCalledOnce();
+      expect(onBloomStrengthChange).toHaveBeenCalledWith(1.25);
     });
   });
 });
