@@ -277,11 +277,12 @@ convention — the vertex fn is per-family duplicated, see `shaders/compositor/v
 - Produces: `bloom/{io,bright,downsample,upsample}.wesl` — `vs`/`fs` entry points, one
   `@group(0)` (sampler @0, texture @1, `u: vec4<f32>` uniform @2).
 
-- [ ] Port all four files; adapt every `import package::lib::fullscreenTri::…` to
+- [x] Port all four files; adapt every `import package::lib::fullscreenTri::…` to
       `import package::bloom::io::…` (or inline the struct/fn per the compositor pattern).
-- [ ] Verify each links (`?static`) — a WESL/WGSL error is a build-time failure; run
-      `npm run build` after and eyeball no shader-compile errors.
-- [ ] Commit.
+- [x] Verify each links (`?static`) — a WESL/WGSL error is a build-time failure; run
+      `npm run build` after and eyeball no shader-compile errors. (Note: unreferenced .wesl
+      files aren't linked until T9 imports them; build passes, real link check is T9.)
+- [x] Commit.
 
 ### Task 9: bloom render targets + `bloomPyramid` pass factory
 
