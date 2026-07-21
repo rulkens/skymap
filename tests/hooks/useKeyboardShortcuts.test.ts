@@ -27,6 +27,8 @@ import {
 } from '../../src/state/ui/selectors';
 import { setPaletteOpen, toggleUiHidden, toggleDebugPanelOpen } from '../../src/state/ui/uiSlice';
 import { exitTour } from '../../src/state/tour/tourActions';
+import { selectTimeState } from '../../src/state/time/selectors';
+import { RATE_LADDER } from '../../src/data/time/rateLadder';
 
 /** Fire a keydown on window with the given init options. */
 function fireKey(init: KeyboardEventInit): void {
@@ -168,6 +170,87 @@ describe('useKeyboardShortcuts — integration (real store)', () => {
 
   // The tour navigation keys (→/←/Space) moved to `watchTourKeyboardSaga`,
   // which binds them only while a tour runs. The hook no longer handles them.
+
+  it('[ and ] step the rate down and up by one detent', () => {
+    const input = makeInput(store);
+    renderHook(() => useKeyboardShortcuts(input), {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        createElement(Provider, { store, children }),
+    });
+
+    // Seed anchor: the slice starts at rateIndex 3 (see timeSlice initial state).
+    const start = selectTimeState(store.getState()).rateIndex;
+
+    act(() => fireKey({ key: ']' }));
+    expect(selectTimeState(store.getState()).rateIndex).toBe(start + 1);
+
+    act(() => fireKey({ key: '[' }));
+    expect(selectTimeState(store.getState()).rateIndex).toBe(start);
+  });
+
+  it('[ and ] clamp at the ladder ends (no wrap past the last detent)', () => {
+    const input = makeInput(store);
+    renderHook(() => useKeyboardShortcuts(input), {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        createElement(Provider, { store, children }),
+    });
+
+    // Press ] past the top detent; the index must saturate, not overflow.
+    for (let i = 0; i < RATE_LADDER.length + 2; i++) act(() => fireKey({ key: ']' }));
+    expect(selectTimeState(store.getState()).rateIndex).toBe(RATE_LADDER.length - 1);
+  });
+
+  it('\\ toggles play/pause (paused false → true → false)', () => {
+    const input = makeInput(store);
+    renderHook(() => useKeyboardShortcuts(input), {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        createElement(Provider, { store, children }),
+    });
+
+    expect(selectTimeState(store.getState()).paused).toBe(false);
+
+    act(() => fireKey({ key: '\\' }));
+    expect(selectTimeState(store.getState()).paused).toBe(true);
+
+    act(() => fireKey({ key: '\\' }));
+    expect(selectTimeState(store.getState()).paused).toBe(false);
+  });
+
+  it('Shift+N goes live (mode returns to live after a manual step)', () => {
+    const input = makeInput(store);
+    renderHook(() => useKeyboardShortcuts(input), {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        createElement(Provider, { store, children }),
+    });
+
+    // Any rate step switches the clock to manual mode…
+    act(() => fireKey({ key: ']' }));
+    expect(selectTimeState(store.getState()).mode).toBe('manual');
+
+    // …and Shift+N snaps it back to live.
+    act(() => fireKey({ key: 'N', shiftKey: true }));
+    expect(selectTimeState(store.getState()).mode).toBe('live');
+  });
+
+  it('time keys are ignored while a form field is focused', () => {
+    const input = makeInput(store);
+    renderHook(() => useKeyboardShortcuts(input), {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        createElement(Provider, { store, children }),
+    });
+
+    const inputEl = document.createElement('input');
+    document.body.appendChild(inputEl);
+    inputEl.focus();
+
+    // `\` would toggle pause if the guard let it through.
+    const event = new KeyboardEvent('keydown', { key: '\\', bubbles: true, cancelable: true });
+    Object.defineProperty(event, 'target', { value: inputEl, configurable: true });
+    act(() => window.dispatchEvent(event));
+
+    expect(selectTimeState(store.getState()).paused).toBe(false);
+    inputEl.remove();
+  });
 
   it('keys inside an INPUT element are ignored', () => {
     const input = makeInput(store);
