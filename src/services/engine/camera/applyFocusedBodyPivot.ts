@@ -26,7 +26,7 @@
  * defensive copy of the snapshot position is needed.
  */
 
-import { focusedBodyPosition } from './focusedBodyPosition';
+import { liveBodyPosition } from './liveBodyPosition';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { Vec3 } from '../../../@types/math/Vec3';
@@ -39,7 +39,7 @@ export function applyFocusedBodyPivot(
   panOffset: Vec3,
 ): CameraPose {
   if (!pivotsOnFocusedBody) return pose;
-  const pivot = focusedBodyPosition(focusRow, simDays);
+  const pivot = liveBodyPosition(focusRow, simDays);
   if (pivot === null) return pose;
   return {
     target: [pivot[0] + panOffset[0], pivot[1] + panOffset[1], pivot[2] + panOffset[2]],

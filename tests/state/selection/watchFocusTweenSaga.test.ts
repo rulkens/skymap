@@ -191,12 +191,12 @@ describe('watchFocusTweenSaga', () => {
   // Regression: famous stars are scene BODIES (star-body presence) but are absent
   // from the orbital body-state snapshot the follow driver activates on — and they
   // do not move — so they must TWEEN, not be swallowed by the body no-op. The saga
-  // now gates on the follow driver's actual membership (focusedBodyPosition), so a
+  // now gates on the follow driver's actual membership (liveBodyPosition), so a
   // star body falls through to the tween. The PLANET-body-no-tween half is the
   // 'earth' case above (earth IS in the snapshot).
   it('a famous-star body focus DOES plant a tween (falls through the follow-membership gate)', async () => {
     // 'sirius' is a StarBody in SCENE_BODIES, absent from deriveBodyStates, so
-    // focusedBodyPosition returns null and the saga builds the tween. Its `to` is
+    // liveBodyPosition returns null and the saga builds the tween. Its `to` is
     // framed on the star's fixed world position (stars don't move → a tween is right).
     store.dispatch(updateSelectionFocus({ type: 'body', id: 'sirius' }));
     await flush();

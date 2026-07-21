@@ -66,7 +66,7 @@ import { evaluateClip } from './evaluateClip';
 import { bodyFocusDistance } from './bodyFocusDistance';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { FOCUS_TWEEN_MS } from './focusTweenDuration';
-import { focusedBodyPosition } from './focusedBodyPosition';
+import { liveBodyPosition } from './liveBodyPosition';
 import { easeOutCubic } from '../../../utils/math/easeOutCubic';
 import { lerp } from '../../../utils/math/lerp';
 
@@ -179,7 +179,7 @@ export function runCameraDrivers(
  *
  *   - `followBody` (10) — a focus on a moving scene body. Active while
  *     `s.selectionRows.focus` is a body present in this frame's body snapshot
- *     (resolved via the shared `focusedBodyPosition` site). Sits BELOW autoRotate
+ *     (resolved via the shared `liveBodyPosition` site). Sits BELOW autoRotate
  *     so it only wins when the scene is otherwise idle: its remaining job is the
  *     initial approach ease + the steady hold. On activation it eases the distance
  *     from the captured on-screen pose into the `bodyFocusDistance` framing
@@ -253,7 +253,7 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
       // driver rather than special-casing followBody out of it).
       pivotsOnFocusedBody: true,
       // Active when the focus resolves to a scene body present in THIS frame's
-      // body snapshot (resolved through the shared `focusedBodyPosition` site).
+      // body snapshot (resolved through the shared `liveBodyPosition` site).
       // The snapshot is the memoized `deriveBodyStates` map at the instant
       // `runFrame` derived this frame's bodies (`lastRenderedSimDays.current`,
       // written before produce) — a same-instant call returns the cached Map for
@@ -268,7 +268,7 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
       isActive: (s) => {
         const focus = s.selectionRows.focus;
         if (focus === null || focus.type !== 'body') return false;
-        return focusedBodyPosition(focus, state.cameraRuntime.lastRenderedSimDays.current) !== null;
+        return liveBodyPosition(focus, state.cameraRuntime.lastRenderedSimDays.current) !== null;
       },
       // The follow pose. `elapsed` is ms since the approach started (from
       // `followElapsed`, keyed on the focus row reference). The target term is
@@ -288,8 +288,8 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
         // Defensive: pose only runs for the winner, so isActive already proved a
         // body focus present in the snapshot this same frame — but a null-guard
         // keeps the arm total, falling back to the resting pose. Resolved through
-        // the shared `focusedBodyPosition` site (same call `isActive` uses).
-        const livePos = focusedBodyPosition(focus, state.cameraRuntime.lastRenderedSimDays.current);
+        // the shared `liveBodyPosition` site (same call `isActive` uses).
+        const livePos = liveBodyPosition(focus, state.cameraRuntime.lastRenderedSimDays.current);
         if (focus === null || focus.type !== 'body' || livePos === null) return s.camera.base;
 
         // Capture the `from` pose ONCE per activation. `followElapsed` nulls it

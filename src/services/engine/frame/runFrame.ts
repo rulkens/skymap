@@ -58,7 +58,7 @@ import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 import { runCameraDrivers } from '../camera/cameraDrivers';
 import { activeDriverId } from '../camera/activeDriverId';
 import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
-import { focusedBodyPosition } from '../camera/focusedBodyPosition';
+import { liveBodyPosition } from '../camera/liveBodyPosition';
 import { tweenElapsed, accumulateFollowPan } from '../camera/cameraClock';
 import { resizeCanvasToDisplay } from '../../gpu/device';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
@@ -325,7 +325,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // mirror for the structure-focus / time-report sections.
   const pivotFocus = rootState.selectionRows.focus;
   const clock = state.cameraRuntime.clock;
-  const followingBody = focusedBodyPosition(pivotFocus, simDays) !== null;
+  const followingBody = liveBodyPosition(pivotFocus, simDays) !== null;
   if (state.cam) {
     accumulateFollowPan(clock, activeId === 'orbitDrag' && followingBody, state.cam.target);
   } else {
