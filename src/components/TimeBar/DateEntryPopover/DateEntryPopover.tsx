@@ -85,6 +85,16 @@ function DateEntryPopover({ initial, onCommit, onCancel }: DateEntryPopoverProps
     if (parsed) onCommit(parsed);
   }
 
+  // Fill the field with the current wall-clock instant, but don't commit. The
+  // TimeBar's own "Now" returns the clock to LIVE mode; this is only a fill
+  // affordance so the user can jump near now (or tweak from now) without typing
+  // today's date. Keeping it fill-only preserves the popover's single commit
+  // path (Set / Enter). `new Date()` is the real wall instant, not a sim-clock
+  // derivation.
+  function fillNow(): void {
+    setValue(toDatetimeLocalUtc(new Date()));
+  }
+
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
     if (event.key === 'Enter') {
       event.preventDefault();
@@ -111,6 +121,13 @@ function DateEntryPopover({ initial, onCommit, onCancel }: DateEntryPopoverProps
         onChange={(event) => setValue(event.target.value)}
         aria-label="Date and time (UTC)"
       />
+      <Button
+        className={styles.now}
+        onClick={fillNow}
+        aria-label="Fill with current time"
+      >
+        Now
+      </Button>
       <Button className={styles.set} variant="primary" onClick={commit}>
         Set
       </Button>

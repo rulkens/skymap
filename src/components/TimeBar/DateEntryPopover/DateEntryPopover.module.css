@@ -40,7 +40,8 @@
   outline-offset: 2px;
 }
 
-.set {
+.set,
+.now {
   padding: var(--space-2) var(--space-4);
   line-height: 1;
 }

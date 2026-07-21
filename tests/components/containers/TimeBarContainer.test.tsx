@@ -174,7 +174,10 @@ describe('TimeBarContainer', () => {
     // The popover reads the field as UTC, matching the readout + `t=` param.
     fireEvent.change(input, { target: { value: '2030-06-15T12:30' } });
 
-    const set = popover(container)?.querySelector<HTMLButtonElement>('button');
+    // The popover now leads with a fill-only "Now" button before "Set", so select
+    // the commit button by its accessible text rather than by first-child position.
+    const buttons = popover(container)?.querySelectorAll<HTMLButtonElement>('button');
+    const set = buttons && Array.from(buttons).find((b) => b.textContent === 'Set');
     if (!set) throw new Error('no Set button');
     fireEvent.click(set);
 

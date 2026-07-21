@@ -62,6 +62,24 @@ describe('DateEntryPopover', () => {
     expect(props.onCancel).not.toHaveBeenCalled();
   });
 
+  it('fills the input with the current instant (UTC) without committing', () => {
+    // A fixed wall clock lets us assert the exact filled string. If the fill
+    // formatted from local getters or grabbed the wrong instant this would drift.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(Date.UTC(2027, 2, 14, 9, 26)));
+    try {
+      const props = renderPopover();
+      const input = screen.getByLabelText(/date and time \(utc\)/i) as HTMLInputElement;
+
+      fireEvent.click(screen.getByRole('button', { name: /fill with current time/i }));
+
+      expect(input.value).toBe('2027-03-14T09:26');
+      expect(props.onCommit).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('cancels on Esc', () => {
     const props = renderPopover();
     const input = screen.getByLabelText(/date and time \(utc\)/i);
