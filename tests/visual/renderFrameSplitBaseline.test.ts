@@ -534,15 +534,15 @@ describe('renderFrame visual baseline', () => {
           "renderer": "milky-way",
         },
         {
-          "argShape": "pass,object,string,object",
+          "argShape": "pass,object,string,object,string",
           "renderer": "compositor",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2]",
+          "argShape": "pass,Float32Array[16],Array[2],undefined",
           "renderer": "marker-lines",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2]",
+          "argShape": "pass,Float32Array[16],Array[2],undefined",
           "renderer": "labels",
         },
       ]
