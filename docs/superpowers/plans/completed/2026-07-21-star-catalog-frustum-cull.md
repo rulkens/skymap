@@ -97,21 +97,21 @@ Writes into `out` when supplied (allocation-free per-frame reuse) and returns it
 allocates a fresh `Float32Array(24)` otherwise. Didactic module header (why
 column-major row extraction, why normalize, the `w ± row` sign convention).
 
-- [ ] Test `extracts six planes from an identity vp` — hand-derive that with
+- [x] Test `extracts six planes from an identity vp` — hand-derive that with
       `vp = identity` the six planes are the unit cube faces (e.g. left plane
       normal `(1,0,0)` d `1`, right `(-1,0,0)` d `1`), asserting a couple of
       components to a tolerance (NOT all 24 — pick the load-bearing ones).
-- [ ] Test `normals are unit length` — for a real perspective vp (build with
+- [x] Test `normals are unit length` — for a real perspective vp (build with
       wgpu-matrix `mat4.perspective` × a look-at view, dst arg last per project
       convention), assert `hypot(nx,ny,nz) ≈ 1` for all six planes.
-- [ ] Test `a point known in front has positive signed distance to the near plane`
+- [x] Test `a point known in front has positive signed distance to the near plane`
       — hand-place a point clearly inside a known perspective frustum and assert
       `nx·x+ny·y+nz·z+d > 0` for every plane (inside ⇒ positive on all six).
-- [ ] Test `writes into the out array and returns it` — pass a pre-made
+- [x] Test `writes into the out array and returns it` — pass a pre-made
       `Float32Array(24)`, assert the returned reference IS that array (the
       allocation-free contract), not a value-equality mirror.
-- [ ] `npm test -- frustumPlanesFromViewProj` → green.
-- [ ] Commit: `src/utils/camera/frustumPlanesFromViewProj.ts`,
+- [x] `npm test -- frustumPlanesFromViewProj` → green.
+- [x] Commit: `src/utils/camera/frustumPlanesFromViewProj.ts`,
       `tests/utils/camera/frustumPlanesFromViewProj.test.ts`.
 
 ### Task 2: `sphereOutsideFrustum` util
@@ -130,20 +130,20 @@ Build the `planes` fixtures for these tests with `frustumPlanesFromViewProj` fro
 a **real perspective vp** (Task 1 is already trusted) — assert against
 hand-reasoned in/out verdicts, never against a recomputed distance (no mirror).
 
-- [ ] Test `sphere fully inside is not outside` — small sphere at a point centred
+- [x] Test `sphere fully inside is not outside` — small sphere at a point centred
       in the frustum → `false`.
-- [ ] Test `sphere behind the near plane is outside` — centre behind the camera →
+- [x] Test `sphere behind the near plane is outside` — centre behind the camera →
       `true`.
-- [ ] Test `sphere far to the left / right / above / below is outside` — four
+- [x] Test `sphere far to the left / right / above / below is outside` — four
       cases, one per lateral plane → `true`.
-- [ ] Test `sphere straddling a plane is not outside` — centre just outside a
+- [x] Test `sphere straddling a plane is not outside` — centre just outside a
       plane but `radius` large enough to cross it → `false` (the conservative
       keep).
-- [ ] Test `camera-at-origin: a sphere at the origin is never outside` — the
+- [x] Test `camera-at-origin: a sphere at the origin is never outside` — the
       rebased frame puts the camera AT the origin, so a node there is always kept
       regardless of orientation → `false`.
-- [ ] `npm test -- sphereOutsideFrustum` → green.
-- [ ] Commit: `src/utils/camera/sphereOutsideFrustum.ts`,
+- [x] `npm test -- sphereOutsideFrustum` → green.
+- [x] Commit: `src/utils/camera/sphereOutsideFrustum.ts`,
       `tests/utils/camera/sphereOutsideFrustum.test.ts`.
 
 ### Task 3: visual renderer node cull
@@ -171,18 +171,18 @@ SURVIVOR count. Before the writeBuffer/bind/`pass.draw` block (444-474): if zero
 nodes survive, return without any GPU work. The cull decision stays
 allocation-free (no per-node object/array).
 
-- [ ] Test `culls a node whose sphere is fully outside the frustum` — mockDevice +
+- [x] Test `culls a node whose sphere is fully outside the frustum` — mockDevice +
       mockPass; upload a tiny 2-node catalog (one node placed in front of the
       camera, one far behind); draw with real `frustumPlanes`; assert `pass.draw`
       is called ONCE with instance count = the in-front node's `recordCount`
       (the behind node's records excluded).
-- [ ] Test `null frustumPlanes draws every node` — same catalog, `frustumPlanes:
+- [x] Test `null frustumPlanes draws every node` — same catalog, `frustumPlanes:
       null`; assert `pass.draw` instance count = sum of both nodes' record counts
       (backward-compat).
-- [ ] Test `skips the draw entirely when all nodes are culled` — planes excluding
+- [x] Test `skips the draw entirely when all nodes are culled` — planes excluding
       every node; assert `pass.draw` is NEVER called (and no params writeBuffer).
-- [ ] `npm test -- starCatalogRenderer.frustumCull` → green.
-- [ ] Commit: the three files above.
+- [x] `npm test -- starCatalogRenderer.frustumCull` → green.
+- [x] Commit: the three files above.
 
 ### Task 4: pick renderer node cull
 
@@ -202,14 +202,14 @@ on-screen by definition.
 cursor, survivor-sized buffers/bind group/writeBuffer, skip the draw if zero
 survive.
 
-- [ ] Test `culls a leaf node outside the frustum` — mockDevice + mockPass; two
+- [x] Test `culls a leaf node outside the frustum` — mockDevice + mockPass; two
       leaf draws (one in front, one behind); assert `pass.draw` instance count =
       the in-front node's records only.
-- [ ] Test `null frustumPlanes picks every node` — assert full instance count.
-- [ ] Test `skips the pick draw when all nodes are culled` — assert `pass.draw`
+- [x] Test `null frustumPlanes picks every node` — assert full instance count.
+- [x] Test `skips the pick draw when all nodes are culled` — assert `pass.draw`
       never called.
-- [ ] `npm test -- starCatalogPickRenderer.frustumCull` → green.
-- [ ] Commit: the three files above.
+- [x] `npm test -- starCatalogPickRenderer.frustumCull` → green.
+- [x] Commit: the three files above.
 
 ### Task 5: layer wiring (extract planes + derive margin, once per frame)
 
@@ -248,14 +248,14 @@ survive.
 **Test** (inject a fake renderer object capturing the draw args; build a minimal
 `SlabView` + `PreparedStarCut` with one source that has ≥1 leaf node, and a mock
 pass): the load-bearing wiring regression is "planes/margin not plumbed."
-- [ ] Test `drawStream forwards extracted frustum planes and a positive margin` —
+- [x] Test `drawStream forwards extracted frustum planes and a positive margin` —
       assert the captured `frustumPlanes` is non-null with `.length === 24` and
       `glowMarginAngleRad > 0`. (Structural/positivity, NOT a recomputed-plane
       mirror and NOT the exact margin value — margin retuning must not break it.)
-- [ ] Test `drawPick forwards the same planes and margin` — same assertion via a
+- [x] Test `drawPick forwards the same planes and margin` — same assertion via a
       fake pick renderer.
-- [ ] `npm test -- starCatalogLayer.frustumCull` → green.
-- [ ] Commit: the two files above.
+- [x] `npm test -- starCatalogLayer.frustumCull` → green.
+- [x] Commit: the two files above.
 
 ### Task 6: perf + visual verification
 
@@ -264,15 +264,15 @@ pass): the load-bearing wiring regression is "planes/margin not plumbed."
 The dev server stays running (HMR) — do not kill it; in a worktree pass
 `--url http://localhost:<port>` from your server's `Local:` line.
 
-- [ ] Run `npm run perf -- --scenario star-field --frames 30` and
+- [x] Run `npm run perf -- --scenario star-field --frames 30` and
       `npm run perf -- --scenario milky-way --frames 30`; quote **MERGED** totals
       ONLY (per-layer numbers carry pass-overhead — see `tools/perf/README.md`).
-- [ ] Compare against baseline: `hdr·NEAR0` was 10.3 / 9.6 ms → expect ~3–4 ms;
+- [x] Compare against baseline: `hdr·NEAR0` was 10.3 / 9.6 ms → expect ~3–4 ms;
       TOTAL ~12.8–14.3 ms → expect ≤ ~7 ms. Report the deltas.
-- [ ] Ask the USER to visually verify: pan/orbit at star-field zoom watching the
+- [x] Ask the USER to visually verify: pan/orbit at star-field zoom watching the
       SCREEN EDGES for glow pop-in (the margin tuning point), and hover-pick a
       star near a viewport edge (pick cull must not drop an on-screen star).
-- [ ] Report results; if edge pop-in appears, the margin (Task 5) is the single
+- [x] Report results; if edge pop-in appears, the margin (Task 5) is the single
       tuning knob — widen `glowMarginAngleRad`.
 
 ---
