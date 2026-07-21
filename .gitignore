@@ -171,3 +171,11 @@ docs/outreach/emails/
 docs/brainstorm/
 
 .superpowers/
+
+# design-sync build artifacts (staged converter scripts, bundle output, caches)
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
+.design-sync/dist/
