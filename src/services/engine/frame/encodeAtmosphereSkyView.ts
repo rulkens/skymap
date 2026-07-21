@@ -76,7 +76,7 @@ export function encodeAtmosphereSkyView(
   const renderer = state.gpu.atmosphereShellRenderer;
   if (renderer === null) return;
 
-  for (const { body, params } of atmosphereDrawList(state, ctx)) {
+  for (const { body, params, positionMpc, orientation } of atmosphereDrawList(state, ctx)) {
     // Bake from the RENDERED pose (`ctx.drawCamPos`), NOT `state.cam.position`. The
     // latter is the drag register, re-seeded only on pointer-down and so stale
     // between gestures (scroll-zoom, tweens, tours) — baking the LUT for that
@@ -89,11 +89,11 @@ export function encodeAtmosphereSkyView(
     // view height and the fragment's local altitude cannot disagree.
     const camLocal = camPosLocal(
       camPosMpc,
-      body.positionMpc,
+      positionMpc,
       params.atmosphereTopKm * SCALE_UNITS.KM_TO_MPC,
-      body.orientation,
+      orientation,
     );
-    const sun = sunDirLocal(body.positionMpc, RENDER_ORIGIN_MPC, body.orientation);
+    const sun = sunDirLocal(positionMpc, RENDER_ORIGIN_MPC, orientation);
 
     const radius = Math.hypot(camLocal[0], camLocal[1], camLocal[2]);
     // |camPosLocal| × atmosphereTopKm recovers the camera radius in km (camLocal is

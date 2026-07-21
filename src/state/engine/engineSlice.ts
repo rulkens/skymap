@@ -47,6 +47,7 @@ const INITIAL_SCALE: ScaleInfo = { label: '…', widthPx: 100 };
 const initialState: EngineSliceState = {
   status: { kind: 'initializing' },
   scale: INITIAL_SCALE,
+  focusedBodyDistanceMpc: null,
   sourceCounts: {},
   structureCounts: {},
   loadProgress: null,
@@ -100,6 +101,19 @@ const engineSlice = createSlice({
         state.scale = action.payload;
       }
     },
+
+    // ── focused-body distance ─────────────────────────────────────────────────
+    // DEDUP-ON-WRITE, same rationale as engineScaleChanged: the engine gates
+    // this dispatch behind a throttleByTime(~250 ms) in runFrame, but even a few
+    // Hz would re-fire the InfoCard subscriber when the reported distance is
+    // unchanged (a focused body at rest, or no focus). Skipping the mutation
+    // when the value matches returns the same slice reference, so the selector
+    // does not re-fire.
+    engineBodyDistanceReported: (state, action: PayloadAction<number | null>) => {
+      if (state.focusedBodyDistanceMpc !== action.payload) {
+        state.focusedBodyDistanceMpc = action.payload;
+      }
+    },
   },
 });
 
@@ -109,6 +123,7 @@ export const {
   engineStructureCountsChanged,
   engineLoadProgressChanged,
   engineScaleChanged,
+  engineBodyDistanceReported,
 } = engineSlice.actions;
 
 export default engineSlice.reducer;

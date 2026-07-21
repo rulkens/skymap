@@ -51,5 +51,11 @@ export function buildDemandCtx(state: EngineState): DemandCtx {
       state.cameraRuntime.lastPose.current,
       state.cameraRuntime.projection,
     ).position,
+    // The instant the last frame derived its bodies at — the single-writer live
+    // clock position (`runFrame` writes it just before produce). The body-texture
+    // proximity gate derives host positions at this instant, exactly parallel to
+    // reading `cameraPosMpc` from the last pose, so demand-time body positions
+    // match the frame that drew them.
+    simDays: state.cameraRuntime.lastRenderedSimDays.current,
   };
 }

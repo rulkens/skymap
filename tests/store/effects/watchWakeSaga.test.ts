@@ -1,7 +1,7 @@
 /**
- * watchWakeSaga tests — verifies that a write to a WAKE_ROUTE (settings or
- * camera) pokes the passive render-on-demand scheduler via requestRender, and
- * that a write to a non-wake route (tier) does not.
+ * watchWakeSaga tests — verifies that a write to a WAKE_ROUTE (settings,
+ * camera, or the sim clock) pokes the passive render-on-demand scheduler via
+ * requestRender, and that a write to a non-wake route (tier) does not.
  *
  * Runs under the shared reconcileSagaHarness (all four reconcile watchers), so
  * settings writes that also drive other effects still behave faithfully.
@@ -13,6 +13,7 @@ import { buildStore, type ReconcileSpies } from './reconcileSagaHarness';
 import { setGalaxyCatalogSize } from '../../../src/state/settings/settingsSlice';
 import { beginDrag, setAutoRotate } from '../../../src/state/camera/cameraSlice';
 import { setTier } from '../../../src/state/tier/tierSlice';
+import { pause, resume } from '../../../src/state/time/timeSlice';
 
 describe('watchWakeSaga', () => {
   let store: ReturnType<typeof buildStore>['store'];
@@ -53,5 +54,23 @@ describe('watchWakeSaga', () => {
     store.dispatch(setTier('large'));
 
     expect(reconcile.requestRender).not.toHaveBeenCalled();
+  });
+
+  // ── time slice writes wake the loop ─────────────────────────────────────────
+  // A clock intent (play/pause/rate/scrub) seen while the scene is at rest must
+  // poke the passive scheduler so the first playing frame — and each paused
+  // single-step redraw — appears at once instead of waiting for a coincidental
+  // live-idle tick. Fails if `timeRoute` is dropped from WAKE_ROUTES.
+
+  it('a time slice write (pause) wakes the loop', () => {
+    store.dispatch(pause({ nowMs: 0 }));
+
+    expect(reconcile.requestRender).toHaveBeenCalledTimes(1);
+  });
+
+  it('a time slice write (resume) wakes the loop', () => {
+    store.dispatch(resume({ nowMs: 0 }));
+
+    expect(reconcile.requestRender).toHaveBeenCalledTimes(1);
   });
 });

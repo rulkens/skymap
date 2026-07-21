@@ -110,6 +110,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     drawCamPos,
     drawPxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
     nowMs: 0,
+    simDays: 0,
     fovYRad: (60 * Math.PI) / 180,
     focusBlend: 0,
     visibleSourceMask: 0xffffffff,

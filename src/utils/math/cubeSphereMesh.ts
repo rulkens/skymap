@@ -27,12 +27,16 @@
  * Positions live in the SAME equatorial J2000 frame the galaxy catalogs and the
  * UV sphere use: +x = (RA 0°, Dec 0°), +y = (RA 90°), +z = celestial north.
  * lon = atan2(y, x) is Right Ascension, lat = asin(z) is Declination, and the
- * texture map is the same equirectangular convention:
+ * texture map is the equirectangular convention, with the prime meridian at the
+ * image CENTRE (u=0.5) to match how standard planetary maps are authored:
  *
- *   u = lon / (2π)      → west-to-east
- *   v = lat /  π + 0.5   → south-to-north
+ *   u = lon / (2π) + 0.5  → west-to-east, lon 0 (prime meridian) at u=0.5
+ *   v = lat /  π + 0.5     → south-to-north
  *
- * so the Blue Marble bitmap and the renderer's `flipY:true` / CCW /
+ * The +0.5 registers the map's centre (geographic longitude 0) onto the local +x
+ * axis the IAU rotation aims a body's prime meridian at, so the painted geography
+ * sits under the physically-lit hemisphere (see the per-vertex note below). The
+ * Blue Marble bitmap and the renderer's `flipY:true` / CCW /
  * `cullMode:'back'` all stay unchanged from the UV-sphere era. Each face's two
  * in-plane axes are chosen so `sAxis × tAxis = outwardNormal`; with that, the
  * (i,j)→(i+1,j)→(i,j+1) triangle order is automatically CCW-outward on every
@@ -68,6 +72,7 @@
 
 import type { CubeSphereMesh } from '../../@types/math/CubeSphereMesh';
 import type { Vec3 } from '../../@types/math/Vec3';
+import { EARTH_TEXTURE_PRIME_MERIDIAN_U } from '../../data/bodies/earthTexturePrimeMeridianU';
 
 // Six cube faces (index 0..5 = +x, -x, +y, -y, +z, -z). Each carries its outward
 // normal and two in-plane axes chosen so sAxis × tAxis = normal — which makes the
@@ -143,9 +148,20 @@ export function cubeSphereMesh(
 
       const lon = Math.atan2(y, x); // Right Ascension,  (-π, π]
       const lat = Math.asin(Math.max(-1, Math.min(1, z))); // Declination, [-π/2, π/2]
-      // Base u in [0,1) matching uvSphereMesh; per-triangle shifts restore
-      // continuity across the seam below.
-      let u = lon / (2 * Math.PI);
+      // Base u in [0,1); per-triangle shifts restore continuity across the seam
+      // below. EARTH_TEXTURE_PRIME_MERIDIAN_U puts the PRIME MERIDIAN (lon 0, the
+      // local +x the IAU rotation orients Earth's Greenwich to) at u=0.5 — the
+      // image CENTRE, where every standard equirectangular planetary map (Blue
+      // Marble and the rest) paints geographic longitude 0. Without it a raw
+      // u=lon/2π lands the map's ANTIMERIDIAN on +x, rotating the whole surface
+      // 180° about the pole: the continents ride the wrong hemisphere and Earth's
+      // day/night terminator reads inverted against a live clock (mid-afternoon
+      // Europe shown in night). The seam (u wrap) moves to lon=±π accordingly;
+      // windowShifts re-continuizes it per triangle wherever it lands, and the
+      // +u=east tangent below is unchanged. The two shader sites that re-encode
+      // this same offset (they can't import a TS constant) are named in the
+      // constant's docblock.
+      let u = lon / (2 * Math.PI) + EARTH_TEXTURE_PRIME_MERIDIAN_U;
       u = u - Math.floor(u);
       const v = lat / Math.PI + 0.5;
       uvs.push(u, v);

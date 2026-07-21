@@ -55,18 +55,24 @@
 
 import { useEffect } from 'react';
 import type { FocusableTarget } from '../@types/engine/FocusableTarget';
-import { URL_HASH_FOR } from './urlHashFor';
+import type { TimeState } from '../@types/time/TimeState';
+import { HASH_PARAM_SOURCES } from './hashParamSources';
+import { parseHashParams } from '../utils/url/parseHashParams';
+import { composeHashParams } from '../utils/url/composeHashParams';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { selectFocusedFocusable } from '../state/selection/selectors';
-import { clearSelection } from '../state/selection/selectionSlice';
-import { requestFocus } from '../state/selection/requestFocus';
-import { requestSelect } from '../state/selection/requestSelect';
+import { selectTimeState } from '../state/time/selectors';
 
 // ── Pure helpers (re-exported for unit tests) ──────────────────────────────
 
 export type DesiredHashInput = {
   focused: FocusableTarget | null;
   currentHash: string;
+  // The sim-clock intent, read by the `t` source's write to serialize a manual
+  // instant. Optional so focus-only callers (and the existing focus tests) that
+  // carry no clock still typecheck: a missing `time` means "no manual instant to
+  // put on the URL", which the `t` source treats identically to live mode.
+  time?: TimeState;
 };
 
 export type DesiredHashOutput = {
@@ -78,26 +84,27 @@ export type DesiredHashOutput = {
  * Pure decision: given the current focus target and the URL's current
  * hash, what should the URL's hash *body* be, and does it already agree?
  *
- * Body shape (one row per `URL_HASH_FOR` arm of the FocusableTarget union):
- *   1. focused is a galaxy    → `focus=<id>` (or `''` if non-encodable,
- *      e.g. Synthetic source).
- *   2. focused is a structure → `focus=<id>`.
- *   3. focused is the Milky Way → `focus=milkyWay` (the fixed deep-link
- *      literal).
- *   4. focused is a scene body (a star) → `focus=body-<id>`.
- *   5. focused is null        → `''`.
+ * The body is composed over `HASH_PARAM_SOURCES`: each source's `write` derives
+ * its value from the input (or `null` to omit its param), and `composeHashParams`
+ * joins the non-null values in table order. Only `focus` exists today, so the
+ * body is `focus=<id>` for an encodable target and `''` otherwise — byte-identical
+ * to the pre-seam single-param output. The feature adds `t` as a second row,
+ * which composes as `focus=<id>&t=<iso>` for free.
+ *
+ * `focus`'s own row (`hashParamSources.ts`) yields the id via `URL_HASH_FOR`:
+ * a galaxy runs the codec ladder (null when non-encodable, e.g. Synthetic), a
+ * structure/body/star yields its own id token, the Milky Way the fixed literal.
  *
  * `matches` is the strip-leading-#-and-compare result, used by the write
  * effect to skip no-op `pushState` calls.
  */
 export function computeDesiredHash(input: DesiredHashInput): DesiredHashOutput {
-  let desiredHashBody = '';
-  if (input.focused !== null) {
-    // Table dispatch on the union tag: galaxy ids run the codec ladder
-    // (null when non-encodable), structures yield their own id.
-    const id = URL_HASH_FOR[input.focused.type](input.focused);
-    if (id) desiredHashBody = `focus=${id}`;
+  const params = new Map<string, string>();
+  for (const source of HASH_PARAM_SOURCES) {
+    const value = source.write(input);
+    if (value !== null) params.set(source.key, value);
   }
+  const desiredHashBody = composeHashParams(params);
   const currentBody = input.currentHash.startsWith('#')
     ? input.currentHash.slice(1)
     : input.currentHash;
@@ -109,6 +116,7 @@ export function computeDesiredHash(input: DesiredHashInput): DesiredHashOutput {
 export function useUrlSync(): void {
   const dispatch = useAppDispatch();
   const focused = useAppSelector(selectFocusedFocusable);
+  const time = useAppSelector(selectTimeState);
 
   // ── Effect A: hash READ → dispatch ───────────────────────────────────
   // Parse the URL once on mount and on every subsequent hashchange.
@@ -123,11 +131,12 @@ export function useUrlSync(): void {
     const apply = (isInitial: boolean) => {
       const h = window.location.hash;
       const body = h.startsWith('#') ? h.slice(1) : h;
-      const m = /^focus=(.+)$/.exec(body);
-      if (m) {
-        dispatch(requestSelect(m[1]!));
-        dispatch(requestFocus(m[1]!));
-      } else if (!isInitial) dispatch(clearSelection());
+      const params = parseHashParams(body);
+      // Hand each source its value (or `undefined` when absent) plus the
+      // mount-vs-hashchange flag; the source owns its own dispatch decision.
+      for (const source of HASH_PARAM_SOURCES) {
+        source.read({ value: params.get(source.key), isInitial, dispatch });
+      }
     };
     apply(true);
     const onHashChange = () => apply(false);
@@ -145,11 +154,16 @@ export function useUrlSync(): void {
     if (typeof window === 'undefined') return;
     const { desiredHashBody, matches } = computeDesiredHash({
       focused,
+      time,
       currentHash: window.location.hash,
     });
     if (matches) return;
     const base = window.location.pathname + window.location.search;
     const next = desiredHashBody ? `${base}#${desiredHashBody}` : base;
     window.history.pushState(null, '', next);
-  }, [focused]);
+    // `time` is a dependency because the `t` source serializes the manual
+    // instant: a re-anchor (pause, scrub, rate/direction change) produces a new
+    // anchor object, so the write re-runs and crystallizes the new moment. Live
+    // mode composes no `t`, so a live clock's coarse idle ticks cause no writes.
+  }, [focused, time]);
 }

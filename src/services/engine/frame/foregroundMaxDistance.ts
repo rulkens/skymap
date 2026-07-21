@@ -16,14 +16,21 @@
  * wholesale skip for free — no `beginRenderPass`, no star partition, no
  * composite, and no executor change.
  *
- * ### Why DERIVED from SCENE_BODIES, not hand-tuned
+ * ### Why DERIVED from the body snapshot + star records, not hand-tuned
  *
- * The gate is `max |positionMpc|` over the seeded bodies times a margin, so
- * moving or adding a body seed carries the gate automatically — the same
- * single-source-of-truth rule the whole `bodies/` folder observes (see
- * `sceneOrbits.ts`, which derives ring radii from the body seeds for exactly
- * this reason). A hand-typed Mpc literal would silently strand a future
- * farther seed outside its own render gate.
+ * The gate is the `max` distance-from-origin over the orbital-body snapshot
+ * (`deriveBodyStates(CONST_J2000)` — Earth + planets + moons) and the static
+ * `SCENE_STARS` records, times a margin, so moving or adding a seed carries the
+ * gate automatically — the same single-source-of-truth rule the whole `bodies/`
+ * folder observes (see `sceneOrbits.ts`, which derives ring radii from the body
+ * seeds for exactly this reason). A hand-typed Mpc literal would silently strand
+ * a future farther seed outside its own render gate.
+ *
+ * The snapshot is rate-less at prep, and the gate is dominated by the deep
+ * static stars — Eta Carinae at ~2300 pc dwarfs Neptune's ~30 AU — so the gate
+ * is effectively time-invariant: even once a clock moves the planets, the star
+ * that sets the bound does not move, and the ×100 margin swallows the sub-parsec
+ * orbital wander regardless.
  *
  * The `FARTHEST_BODY_MPC` extent is exported because it is the ONE derivation
  * source for the whole descent's near-field edges: this gate (×100), the
@@ -61,25 +68,45 @@
  * would have dimmed it there.
  */
 
-import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
-import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
+import { SCENE_STARS } from '../../../data/bodies/sceneStars';
+import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
+import { CONST_J2000 } from '../../../data/time/constJ2000';
+import { distanceMpc } from '../../../utils/math/distanceMpc';
+import { deriveBodyStates } from './deriveBodyStates';
 
-// The farthest seeded foreground element from the heliocentric render origin.
-// `positionMpc` is authored origin-relative, so |positionMpc| IS the distance.
-export const FARTHEST_BODY_MPC = Math.max(
-  ...SCENE_BODIES.map((body) =>
-    Math.hypot(body.positionMpc[0], body.positionMpc[1], body.positionMpc[2]),
-  ),
+// The J2000 orbital-body snapshot (Earth + planets + moons), derived ONCE at
+// module load — the same construction-time direct-derive `assetWiring` reads.
+// The bounds below take each body's distance from the render origin from this
+// snapshot rather than a baked record field. The derive is rate-less at prep, so
+// at CONST_J2000 it reproduces the bodies' J2000 world positions; the feature
+// swaps the epoch for the frame's sim-day once a clock moves them.
+const BODY_STATES_J2000 = deriveBodyStates(CONST_J2000);
+
+// Distance from the heliocentric render origin, one per body. Every position is
+// authored with the origin at the Sun (`RENDER_ORIGIN_MPC = [0, 0, 0]`), so the
+// distance IS the position's magnitude — the orbital bodies come from the
+// snapshot, the stars from their own unchanged records.
+const ORBITAL_BODY_DISTANCES_MPC = [...BODY_STATES_J2000.values()].map((state) =>
+  distanceMpc(RENDER_ORIGIN_MPC, state.positionMpc),
+);
+const STAR_DISTANCES_MPC = SCENE_STARS.map((star) =>
+  distanceMpc(RENDER_ORIGIN_MPC, star.positionMpc),
 );
 
-// The farthest seeded PLANET-roster body from the heliocentric origin — Neptune
-// at ~30 AU (~1.5e-10 Mpc). Derived from `SCENE_PLANETS` the same single-source-
-// of-truth way `FARTHEST_BODY_MPC` is derived from `SCENE_BODIES`: the max over
-// the roster, so adding or moving a planet/moon seed carries this edge in
-// lockstep. The whole roster is scanned rather than filtered to the heliocentric
-// planets because the geocentric moons ride their parent no farther than Saturn's
-// ~9.5 AU, comfortably inside Neptune's 30 AU — so the max lands on Neptune with
-// no need to discriminate body kind.
+// The farthest seeded foreground element from the render origin — the deep stars
+// dominate (Eta Carinae at ~2300 pc), so this bound is set by a static,
+// non-orbital seed and stays effectively time-invariant under the clock.
+export const FARTHEST_BODY_MPC = Math.max(...ORBITAL_BODY_DISTANCES_MPC, ...STAR_DISTANCES_MPC);
+
+// The farthest orbital-body seed from the heliocentric origin — Neptune at ~30
+// AU (~1.5e-10 Mpc). Derived from the same `deriveBodyStates` snapshot as
+// `FARTHEST_BODY_MPC`, the same single-source-of-truth way `sceneOrbits.ts`
+// derives ring radii: the max over the snapshot, so adding or moving a body seed
+// carries this edge in lockstep. The whole snapshot (Earth + planets + moons) is
+// scanned rather than filtered because the geocentric moons ride their parent no
+// farther than Saturn's ~9.5 AU, comfortably inside Neptune's 30 AU, and Earth
+// sits at ~1 AU — so the max lands on Neptune with no need to discriminate body
+// kind.
 //
 // This is the SOLAR-SYSTEM analogue of `FARTHEST_BODY_MPC`: where that scales the
 // star-neighbourhood edges (the shared gate, the caption gate, the star fade
@@ -88,11 +115,7 @@ export const FARTHEST_BODY_MPC = Math.max(
 // which fades the sub-pixel planet/moon glints out as the camera pulls back from
 // the solar system, so they stop mattering long before Milky-Way framing rather
 // than riding full-brightness to the coarse ×100 foreground gate.
-export const FARTHEST_PLANET_MPC = Math.max(
-  ...SCENE_PLANETS.map((body) =>
-    Math.hypot(body.positionMpc[0], body.positionMpc[1], body.positionMpc[2]),
-  ),
-);
+export const FARTHEST_PLANET_MPC = Math.max(...ORBITAL_BODY_DISTANCES_MPC);
 
 // ×100 enclosure headroom over the farthest seed — see the module header's
 // margin rationale. Kept small (down from ×1000) now that the roster carries

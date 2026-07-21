@@ -15,13 +15,19 @@ import { describe, it, expect } from 'vitest';
 
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/services/engine/frame/foregroundMaxDistance';
 import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
+import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
+import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 
 describe('FOREGROUND_MAX_DISTANCE_MPC', () => {
   it('encloses the farthest seeded body and stays far below galaxy scale', () => {
+    // A body's world position comes from the derived snapshot for orbital bodies
+    // and off the record for stars (which alone keep a baked `positionMpc`).
+    const states = deriveBodyStates(CONST_J2000);
     const farthestMpc = Math.max(
-      ...SCENE_BODIES.map((body) =>
-        Math.hypot(body.positionMpc[0], body.positionMpc[1], body.positionMpc[2]),
-      ),
+      ...SCENE_BODIES.map((body) => {
+        const p = states.get(body.id)?.positionMpc ?? ('positionMpc' in body ? body.positionMpc : [0, 0, 0]);
+        return Math.hypot(p[0], p[1], p[2]);
+      }),
     );
 
     // Nothing seeded may sit outside its own render gate — and the margin

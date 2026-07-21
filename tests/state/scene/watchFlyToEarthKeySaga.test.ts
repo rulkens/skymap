@@ -42,7 +42,11 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { watchFlyToEarthKeySaga } from '../../../src/state/scene/watchFlyToEarthKeySaga';
 import { earthSurfaceFraming } from '../../../src/utils/camera/earthSurfaceFraming';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
-import { cameraRoute } from '../../../src/store/constants';
+import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
+import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
+import { setSimDays, pause } from '../../../src/state/time/timeSlice';
+import { CONST_J2000 } from '../../../src/data/time/constJ2000';
+import { cameraRoute, timeRoute } from '../../../src/store/constants';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { EarthBody } from '../../../src/@types/scene/EarthBody';
 import type { FocusCameraRuntime } from '../../../src/store/types';
@@ -74,9 +78,18 @@ describe('watchFlyToEarthKeySaga', () => {
     store = build();
   });
 
-  it('watchFlyToEarthKeySaga dispatches startCameraTween framing Earth on the key', async () => {
+  it('watchFlyToEarthKeySaga frames Earth from the LIVE sim instant on the key', async () => {
     await flush(); // let the saga bind the channel
     expect(h.keys).toBe('e');
+
+    // Freeze the clock at a clearly non-J2000 instant so the derived Earth
+    // position is deterministic (a paused clock ignores the wall clock) AND
+    // proves the saga reads the live instant, not a hardcoded epoch. The same
+    // `nowMs` on both actions gives zero elapsed, so the anchor lands exactly on
+    // the chosen instant.
+    const now = performance.now();
+    store.dispatch(setSimDays({ simDays: CONST_J2000 + 300, nowMs: now }));
+    store.dispatch(pause({ nowMs: now }));
 
     h.emit!('e');
     await flush();
@@ -84,7 +97,11 @@ describe('watchFlyToEarthKeySaga', () => {
     const tween = store.getState()[cameraRoute].tween;
     expect(tween).not.toBeNull();
     expect(tween!.from).toEqual(FROM);
-    const framing = earthSurfaceFraming(SCENE_EARTH);
+    // The saga derives Earth's position at the frozen instant (paused ⇒ any nowMs
+    // yields the same value), then frames off it + the record radius.
+    const simDays = deriveSimDays(store.getState()[timeRoute], performance.now());
+    const earthPos = deriveBodyStates(simDays).get('earth')!.positionMpc;
+    const framing = earthSurfaceFraming(earthPos, SCENE_EARTH.radiusKm);
     expect(tween!.to.target).toEqual(framing.target);
     expect(tween!.to.distance).toBe(framing.distance);
     expect(tween!.to.yaw).toBe(FROM.yaw);

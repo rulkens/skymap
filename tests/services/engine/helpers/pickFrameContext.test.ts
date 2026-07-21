@@ -19,6 +19,8 @@ import { describe, it, expect } from 'vitest';
 import { pickFrameContext } from '../../../../src/services/engine/helpers/pickFrameContext';
 import { deriveFrameContext } from '../../../../src/services/engine/frame/frameContext';
 import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
+import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
+import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { GALAXY_CATALOG_SOURCES } from '../../../../src/data/sources';
 import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -30,6 +32,9 @@ import type { FadeId } from '../../../../src/@types/animation/FadeId';
 
 const LAST_POSE: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 50 };
 const PROJECTION: CameraProjection = { fovYRad: 1.2, aspect: 16 / 9, near: 0.1, far: 10000 };
+// A distinct non-J2000 instant so the pick's epoch is observable on `ctx.simDays`
+// and separable from the J2000 seed a construction-time derive would poison with.
+const LAST_SIM_DAYS = 2460000.0;
 
 /**
  * Build an `EngineState`-shaped fixture with every bootstrap-gate handle
@@ -88,6 +93,7 @@ function makeState(
     cameraRuntime: {
       lastPose: { current: LAST_POSE },
       projection: PROJECTION,
+      lastRenderedSimDays: { current: LAST_SIM_DAYS },
     },
   } as unknown as EngineState;
 }
@@ -121,10 +127,30 @@ describe('pickFrameContext', () => {
       state.cameraRuntime.projection,
       deriveSourceMasks(state).pick,
       0,
+      // simDays does not affect the view-projection this test compares; any
+      // valid epoch reproduces the same vp.
+      0,
     );
     expect(expected.isReady).toBe(true);
     if (!expected.isReady) return;
     expect(Array.from(ctx.vp)).toEqual(Array.from(expected.vp));
+  });
+
+  it('derives at the last FRAME instant even after a between-frames J2000 derive', () => {
+    // The poison scenario: a construction-time / selection-time caller runs
+    // `deriveBodyStates(CONST_J2000)` in the gap between the last frame and this
+    // pick (e.g. `extractSelectionRow`). If the pick read the derive memo's
+    // cached key it would re-derive pickable bodies at J2000 while the screen
+    // still shows LAST_SIM_DAYS — a pick/draw epoch desync. Single-writer state
+    // (`cameraRuntime.lastRenderedSimDays`, written only by runFrame) is immune:
+    // the memo write does not touch it, so the pick stays at the frame instant.
+    const state = makeState();
+    deriveBodyStates(CONST_J2000);
+    const ctx = pickFrameContext(state, makeCanvas());
+    expect(ctx).not.toBeNull();
+    if (ctx === null) return;
+    expect(ctx.simDays).toBe(LAST_SIM_DAYS);
+    expect(ctx.simDays).not.toBe(CONST_J2000);
   });
 
   it('carries the pick mask as visibleSourceMask', () => {

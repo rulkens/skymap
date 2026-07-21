@@ -48,6 +48,7 @@ import { ATMOSPHERE_PARAMS } from '../../../data/bodies/atmosphereParams';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { FOREGROUND_MAX_DISTANCE_MPC } from './foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from './subPixelBodyCullPx';
+import { sceneBodyStates } from './sceneBodyStates';
 
 export function atmosphereDrawList(
   state: EngineState,
@@ -61,20 +62,32 @@ export function atmosphereDrawList(
   const candidates =
     earth === null ? state.data.bodies.planets : [earth, ...state.data.bodies.planets];
 
+  // Live position + orientation from the per-frame snapshot (keyed by id),
+  // resolved ONCE for the whole candidate walk — not the baked record fields.
+  // Each surviving entry captures its resolved pairing so the two consumers (the
+  // sky-view bake and the shell draw) read one position and cannot diverge.
+  const states = sceneBodyStates(state, ctx);
+
   const entries: AtmosphereDrawEntry[] = [];
   for (const body of candidates) {
     const params = ATMOSPHERE_PARAMS[body.id];
     if (params === undefined) continue; // the data-gate
 
+    const bodyState = states.get(body.id)!;
     // Sub-pixel cull on the body's SURFACE diameter. A zero camera-to-centre
     // distance means the camera is INSIDE the body — apparentSizePx defensively
     // returns 0 there, which would read as sub-pixel, so treat it as resolved.
-    const dx = body.positionMpc[0] - ctx.drawCamPos[0];
-    const dy = body.positionMpc[1] - ctx.drawCamPos[1];
-    const dz = body.positionMpc[2] - ctx.drawCamPos[2];
+    const dx = bodyState.positionMpc[0] - ctx.drawCamPos[0];
+    const dy = bodyState.positionMpc[1] - ctx.drawCamPos[1];
+    const dz = bodyState.positionMpc[2] - ctx.drawCamPos[2];
     const distanceMpc = Math.hypot(dx, dy, dz);
     if (distanceMpc === 0) {
-      entries.push({ body, params });
+      entries.push({
+        body,
+        params,
+        positionMpc: bodyState.positionMpc,
+        orientation: bodyState.orientation,
+      });
       continue;
     }
     const diameterPx = apparentSizePx({
@@ -83,7 +96,13 @@ export function atmosphereDrawList(
       viewportHeightPx: ctx.canvasSize.height,
       fovYRad: ctx.fovYRad,
     });
-    if (diameterPx >= SUB_PIXEL_BODY_CULL_PX) entries.push({ body, params });
+    if (diameterPx >= SUB_PIXEL_BODY_CULL_PX)
+      entries.push({
+        body,
+        params,
+        positionMpc: bodyState.positionMpc,
+        orientation: bodyState.orientation,
+      });
   }
   return entries;
 }

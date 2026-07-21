@@ -20,6 +20,7 @@ import reducer, {
   engineStructureCountsChanged,
   engineLoadProgressChanged,
   engineScaleChanged,
+  engineBodyDistanceReported,
 } from '../../../src/state/engine/engineSlice';
 import type { EngineSliceState } from '../../../src/@types/store/EngineSliceState';
 import { Source } from '../../../src/data/source';
@@ -27,6 +28,7 @@ import { Source } from '../../../src/data/source';
 const base = (): EngineSliceState => ({
   status: { kind: 'initializing' },
   scale: { label: '…', widthPx: 100 },
+  focusedBodyDistanceMpc: null,
   sourceCounts: {},
   structureCounts: {},
   loadProgress: null,
@@ -101,5 +103,21 @@ describe('engineSlice — engineScaleChanged', () => {
     const s: EngineSliceState = { ...base(), scale: { label: '500 Mpc', widthPx: 120 } };
     const next = reducer(s, engineScaleChanged({ label: '1 Gpc', widthPx: 120 }));
     expect(next.scale.label).toBe('1 Gpc');
+  });
+});
+
+describe('engineSlice — engineBodyDistanceReported', () => {
+  it('engineBodyDistanceReported returns the same state reference when the distance is unchanged', () => {
+    const s: EngineSliceState = { ...base(), focusedBodyDistanceMpc: 1.2e-6 };
+    // A republished-but-identical distance must be deduped away so the
+    // InfoCard subscriber does not re-fire a few Hz on a body at rest.
+    const next = reducer(s, engineBodyDistanceReported(1.2e-6));
+    expect(next).toBe(s);
+  });
+
+  it('engineBodyDistanceReported writes when the focused-body distance changes', () => {
+    const s: EngineSliceState = { ...base(), focusedBodyDistanceMpc: null };
+    const next = reducer(s, engineBodyDistanceReported(3.4e-6));
+    expect(next.focusedBodyDistanceMpc).toBe(3.4e-6);
   });
 });

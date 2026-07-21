@@ -40,6 +40,10 @@
  *      must bake their saturated pose into base on deactivation. `orbitDrag`
  *      and `resting` are excluded (orbitDrag commits via `onGestureEnd`;
  *      resting's pose IS `base`).
+ *   3b. PIVOT-PIN: while a scene body is focused, overwrite the winning driver's
+ *      target with the live body position (for drivers that declare
+ *      `pivotsOnFocusedBody`). The body owns the pivot; the driver owns the orbit
+ *      terms — so a drag / auto-rotate orbits AROUND the moving body.
  *   4. UPDATE Resources: `prevActiveId.current = activeId`,
  *      `lastPose.current = pose`.
  *
@@ -53,11 +57,15 @@ import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 
 import { runCameraDrivers } from '../camera/cameraDrivers';
 import { activeDriverId } from '../camera/activeDriverId';
-import { tweenElapsed } from '../camera/cameraClock';
+import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
+import { liveBodyPosition } from '../camera/liveBodyPosition';
+import { tweenElapsed, accumulateFollowPan } from '../camera/cameraClock';
 import { resizeCanvasToDisplay } from '../../gpu/device';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
 import { produceStructureMarkers } from '../presentation/produceStructureMarkers';
 import { deriveFrameContext } from './frameContext';
+import { deriveBodyStates } from './deriveBodyStates';
+import { sceneBodyStates } from './sceneBodyStates';
 import { prepareStarCut } from './passes/starCatalogLayer';
 import { deriveSourceMasks } from './deriveSourceMasks';
 import { renderFrame } from './renderFrame';
@@ -65,16 +73,54 @@ import { drawPickDebugOverlay } from './drawPickDebugOverlay';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
 import { commitCameraPose, cancelCameraTween } from '../../../state/camera/cameraSlice';
 import { computeScaleInfo } from '../helpers/scaleBar';
-import { engineScaleChanged } from '../../../state/engine/engineSlice';
+import { engineScaleChanged, engineBodyDistanceReported } from '../../../state/engine/engineSlice';
+import { deriveSimDays } from '../../../utils/time/deriveSimDays';
+import { selectTimeState, selectIsLiveTicking } from '../../../state/time/selectors';
+import { throttleByTime } from '../../../utils/throttle/throttleByTime';
+import { distanceMpc } from '../../../utils/math/distanceMpc';
 
 /**
  * Desired scale-bar width in CSS pixels. The engine computes this per-frame
  * and dispatches the result to the store, so every consumer (ScaleBar, tour
  * sagas) reads a consistent value without a React-side computation callback.
- * 150 px is the design choice: wide enough to read, narrow enough to never
- * collide with the InfoCard.
+ * Capped by the ScaleBar panel's content box: that panel now hugs the TimeBar
+ * pill's mono readout (~145 px content width; see ScaleBar.module.css), so the
+ * legend must stay comfortably under it to avoid clamping. 120 px reads clearly
+ * and leaves margin against the ~145 px box; if that panel width changes, this
+ * ceiling follows.
  */
-const SCALE_TARGET_PX = 150;
+const SCALE_TARGET_PX = 120;
+
+/**
+ * Rate-limit the `engineBodyDistanceReported` publication to ~4 Hz. The store
+ * field it writes feeds the InfoCard's live distance row, which does not need
+ * a 60 Hz firehose — a per-frame dispatch would churn React for a value humans
+ * read at reading speed. The gate is created ONCE at module scope (not per
+ * frame): a fresh `throttleByTime(250)` every call would reset its closure
+ * state and defeat the throttle. It pairs with the reducer's dedup-on-write,
+ * so an unchanged report inside an open window still costs nothing downstream.
+ */
+const publishBodyDistanceGate = throttleByTime(250);
+
+/**
+ * Idle-tick cadence for a LIVE sim clock, in milliseconds. Live time advances
+ * at the real-time rate (one sim day per real day), so the Sun barely moves —
+ * the Earth terminator creeps by a fraction of a pixel per second. Pinning the
+ * render loop at 60 fps to redraw that would burn the GPU for no visible gain,
+ * so live mode is deliberately kept OUT of `shouldKeepTicking`. Instead we ask
+ * the scheduler for ONE frame every few seconds: a coarse heartbeat that keeps
+ * the terminator honest while letting the loop sleep in between. A few seconds
+ * is well below the threshold where terminator drift becomes noticeable, and
+ * far above the per-frame cost we are avoiding. The React TimeBar readout runs
+ * its own timer, so this heartbeat serves only the 3D scene.
+ *
+ * A `setInterval` would be the wrong tool: it fires unconditionally, fighting
+ * render-on-demand and double-scheduling whenever a real wake (drag, fade) is
+ * already driving the loop. The scheduler's `requestIdleFrame` instead arms a
+ * single one-shot that self-cancels once fired and is ignored while a rAF frame
+ * is already queued — so it only ever supplies the frames the busy loop didn't.
+ */
+const LIVE_IDLE_TICK_MS = 3_000;
 
 /**
  * Run one frame of the render loop. Called every rAF tick by the scheduler in
@@ -149,6 +195,31 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // run before `deriveFrameContext` so a camera-only-ready frame still makes
   // motion progress before we early-return for missing GPU handles.
   const rootState = deps.cb.store.getState();
+
+  // ── Sim-clock instant for this frame (derived ONCE, before produce) ───────
+  //
+  // `deriveSimDays` resolves the sim clock from the time-intent slice plus this
+  // frame's wall-clock sample — pure, no accumulator. We compute it here, above
+  // the camera produce step, for two reasons:
+  //   1. A body-following camera driver (a later feature) runs INSIDE the
+  //      produce step and must aim at where the body is THIS frame, so the body
+  //      snapshot has to exist before `runCameraDrivers` is called.
+  //   2. `deriveFrameContext` stamps `simDays` onto `ctx` (below) so every
+  //      per-frame body reader shares one epoch via `sceneBodyStates(state, ctx)`.
+  //
+  // `deriveBodyStates(simDays)` primes the one-deep memo at this instant so the
+  // pre-produce driver and every post-ready pass reader hit the SAME cached map
+  // by reference — one Kepler solve per frame, not one per reader. The result is
+  // intentionally discarded here; the memo IS the shared snapshot.
+  const simDays = deriveSimDays(selectTimeState(rootState), nowMs);
+  deriveBodyStates(simDays);
+
+  // Record the frame's instant as single-writer state, the exact analogue of
+  // `lastPose.current` for the pose (updated in step 4 below). The pick path
+  // reads THIS — not the derive memo's cached key — so a between-frames
+  // `deriveBodyStates(CONST_J2000)` (extractSelectionRow, construction-time
+  // consts) cannot repoint the epoch the pick sees. runFrame is the only writer.
+  state.cameraRuntime.lastRenderedSimDays.current = simDays;
 
   // ── (1) PRODUCE the pose from the driver table ────────────────────────────
   //
@@ -233,6 +304,45 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     renderPose = lastPose.current;
   }
 
+  // ── (3b) PIVOT-PIN: re-centre the pose on a focused body ──────────────────
+  //
+  // Body focus is un-braided into two concerns: the focused body owns the PIVOT
+  // (target), whichever driver won owns the ORBIT terms (yaw/pitch/distance).
+  // Here we apply the body pivot to the winning driver's pose in ONE place, so a
+  // drag orbits around the moving body (no drift), the autoRotate button spins
+  // around it, and the idle follow holds it — without followBody having to win
+  // the whole pose. Only drivers that declare `pivotsOnFocusedBody` are pinned
+  // (clip / tween keyframe a full path including target and opt out). The pin is
+  // absolute (SETS the target), so baking `renderPose` into `base` on the next
+  // commit-on-edge can never double-apply the body translation.
+  //
+  // A right-drag STRAFE while following is folded into the clock's world-frame
+  // `followPanOffset` FIRST (a follow-drag frame is orbitDrag winning over a body
+  // focus), then the pin resolves the pivot to `bodyPosition + followPanOffset`.
+  // The offset — not `cam.target`, which the pin overwrites — is the strafe's home,
+  // so the shifted pivot still translate-follows the body and a fresh focus zeroes
+  // it (in `followElapsed`).
+  // Read the pivot focus off `rootState` (the SAME store snapshot the drivers
+  // resolved against this frame), so the pin and the winner never disagree on
+  // what is focused. A separate `focusRow` local below reads the EngineState
+  // mirror for the structure-focus / time-report sections.
+  const pivotFocus = rootState.selectionRows.focus;
+  const clock = state.cameraRuntime.clock;
+  const followingBody = liveBodyPosition(pivotFocus, simDays) !== null;
+  if (state.cam) {
+    accumulateFollowPan(clock, activeId === 'orbitDrag' && followingBody, state.cam.target);
+  } else {
+    // Pre-bootstrap: no cam, no drag possible — keep the delta chain reset.
+    clock.lastPanTarget = null;
+  }
+  renderPose = applyFocusedBodyPivot(
+    renderPose,
+    deps.drivers.find((d) => d.id === activeId)?.pivotsOnFocusedBody ?? false,
+    pivotFocus,
+    simDays,
+    clock.followPanOffset,
+  );
+
   // ── (4) UPDATE Resources for next frame ───────────────────────────────────
   //
   // `prevActiveId` and `lastPose` are updated AFTER the commit-on-edge so the
@@ -276,6 +386,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     state.cameraRuntime.projection,
     masks.draw,
     nowMs,
+    simDays,
   );
   if (!ctx.isReady) {
     // Essential wake: bootstrap populates cam/GPU handles without waking any
@@ -311,6 +422,28 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const focusUniforms = state.subsystems.structureFocus.produceFocusUniforms(nowMs);
   ctx.focusBlend = focusUniforms.blend;
   ctx.focus = focusUniforms;
+
+  // ── Focused-body distance publication (throttled) ─────────────────────────
+  //
+  // Publish the camera→focused-body distance to the store so the InfoCard
+  // reads it off `state.engine.focusedBodyDistanceMpc` without ever touching
+  // the engine snapshot (the store-boundary rule). The ~4 Hz gate keeps this
+  // off the per-frame React path; the reducer dedups an unchanged report.
+  // The distance is from the RENDERED camera position to the focused scene
+  // body's position IN THIS FRAME'S SNAPSHOT — so it tracks the body as the
+  // clock moves it — and is null unless an orbital body (present in the
+  // snapshot) is the current focus. A star or structure focus, or no focus,
+  // reports null.
+  if (publishBodyDistanceGate(nowMs)) {
+    let focusedBodyDistanceMpc: number | null = null;
+    if (focusRow !== null && focusRow.type === 'body') {
+      const bodyState = sceneBodyStates(state, ctx).get(focusRow.id);
+      if (bodyState !== undefined) {
+        focusedBodyDistanceMpc = distanceMpc(ctx.drawCamPos, bodyState.positionMpc);
+      }
+    }
+    deps.cb.store.dispatch(engineBodyDistanceReported(focusedBodyDistanceMpc));
+  }
 
   // ── Per-frame impostor planners ───────────────────────────────────────────
   //
@@ -438,5 +571,11 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   if (keepTicking) {
     state.subsystems.scheduler.requestRender();
+  } else if (selectIsLiveTicking(rootState)) {
+    // The scene is otherwise at rest, but a live sim clock is advancing. Arm a
+    // coarse heartbeat (see LIVE_IDLE_TICK_MS) so the terminator stays honest
+    // without pinning the loop — the scheduler ignores this while a frame is
+    // already queued and never stacks timers, so it can't fight the wake path.
+    state.subsystems.scheduler.requestIdleFrame(LIVE_IDLE_TICK_MS);
   }
 }

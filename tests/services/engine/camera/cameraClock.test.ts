@@ -12,7 +12,10 @@ import {
   tweenElapsed,
   autoRotateElapsed,
   clipElapsed,
+  followElapsed,
+  accumulateFollowPan,
 } from '../../../../src/services/engine/camera/cameraClock';
+import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { CameraTweenDescriptor } from '../../../../src/@types/camera/CameraTweenDescriptor';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
@@ -227,5 +230,57 @@ describe('clipElapsed', () => {
     const clipB = makeClipRef();
     expect(clipElapsed(clock, clipB, 3000)).toBe(0); // arrival frame → 0
     expect(clipElapsed(clock, clipB, 3500)).toBeCloseTo(0.5); // grows from new start
+  });
+});
+
+// ── follow-body pan (strafe) offset ──────────────────────────────────────────
+
+describe('accumulateFollowPan', () => {
+  it('folds the frame-to-frame cam.target delta into the offset while follow-dragging', () => {
+    const clock = createCameraClock();
+    // First follow-drag frame only seeds the delta chain (offset unchanged) — the
+    // absolute seeded cam.target must NOT leak into the offset.
+    accumulateFollowPan(clock, true, [0, 0, 0]);
+    expect(clock.followPanOffset).toEqual([0, 0, 0]);
+    accumulateFollowPan(clock, true, [5, 0, 0]); // +[5,0,0]
+    accumulateFollowPan(clock, true, [5, 3, 0]); // +[0,3,0]
+    expect(clock.followPanOffset).toEqual([5, 3, 0]);
+  });
+
+  it('holds the offset and drops the delta chain on non-drag frames', () => {
+    const clock = createCameraClock();
+    accumulateFollowPan(clock, true, [0, 0, 0]);
+    accumulateFollowPan(clock, true, [4, 0, 0]);
+    expect(clock.followPanOffset).toEqual([4, 0, 0]);
+
+    // A non-drag frame must NOT accumulate, and must reset lastPanTarget so the
+    // NEXT grab starts a fresh delta chain rather than jumping the offset by the gap.
+    accumulateFollowPan(clock, false, [999, 999, 999]);
+    expect(clock.followPanOffset).toEqual([4, 0, 0]);
+    expect(clock.lastPanTarget).toBeNull();
+
+    // Next grab: first frame seeds (offset unchanged), then accumulates the delta.
+    accumulateFollowPan(clock, true, [100, 0, 0]);
+    expect(clock.followPanOffset).toEqual([4, 0, 0]);
+    accumulateFollowPan(clock, true, [102, 0, 0]);
+    expect(clock.followPanOffset).toEqual([6, 0, 0]);
+  });
+});
+
+describe('followElapsed — pan offset reset', () => {
+  it('zeroes followPanOffset and drops the delta chain on a focus ref change', () => {
+    const clock = createCameraClock();
+    const rowA = { type: 'body', id: 'earth' } as unknown as SelectionRow;
+    followElapsed(clock, rowA, 1000); // install rowA as the current focus ref
+
+    // Simulate an accumulated strafe under that steady focus.
+    clock.followPanOffset = [1, 2, 3];
+    clock.lastPanTarget = [1, 2, 3];
+
+    // A NEW focus ref is a fresh target: the offset must zero and the chain drop.
+    const rowB = { type: 'body', id: 'mars' } as unknown as SelectionRow;
+    followElapsed(clock, rowB, 2000);
+    expect(clock.followPanOffset).toEqual([0, 0, 0]);
+    expect(clock.lastPanTarget).toBeNull();
   });
 });

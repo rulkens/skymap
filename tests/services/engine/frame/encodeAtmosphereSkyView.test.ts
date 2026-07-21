@@ -30,6 +30,8 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { encodeAtmosphereSkyView } from '../../../../src/services/engine/frame/encodeAtmosphereSkyView';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
+import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
+import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { ATMOSPHERE_PARAMS } from '../../../../src/data/bodies/atmosphereParams';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
@@ -39,7 +41,45 @@ import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/services/engine/fra
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EarthBody } from '../../../../src/@types/scene/EarthBody';
+import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
+import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+
+// The bake resolves each body's live position/orientation from the per-frame
+// body-state snapshot (keyed by id, via `atmosphereDrawList`). Stub it to a map
+// built from the SeededBody fixtures, REUSING each fixture's own positionMpc/
+// orientation refs — so the bake reads the exact fixture values (identity-equal),
+// keeping the SkyViewParams recompute below bit-for-bit while the reads move off
+// the baked record fields.
+vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
+  sceneBodyStates: vi.fn((state: EngineState): ReadonlyMap<string, BodyState> => {
+    const m = new Map<string, BodyState>();
+    for (const b of (state.data.bodies.planets ?? []) as readonly SeededPlanet[]) {
+      m.set(b.id, { positionMpc: b.positionMpc, orientation: b.orientation, meanAnomalyRad: 0 });
+    }
+    const earth = state.data.bodies.earth as SeededEarth | null;
+    if (earth)
+      m.set(earth.id, {
+        positionMpc: earth.positionMpc,
+        orientation: earth.orientation,
+        meanAnomalyRad: 0,
+      });
+    return m;
+  }),
+}));
+
+// Test fixtures pairing the identity records with the J2000 state the snapshot
+// carries — position + orientation were lifted off the record onto the derive, so
+// the fixtures supply them here (Earth's sourced from the derive so the values are
+// the real J2000 ones; refs stay stable across the mock + the recompute).
+type SeededEarth = EarthBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
+type SeededPlanet = PlanetBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
+const EARTH_STATE = deriveBodyStates(CONST_J2000).get('earth')!;
+const SEEDED_EARTH: SeededEarth = {
+  ...SCENE_EARTH,
+  positionMpc: EARTH_STATE.positionMpc,
+  orientation: EARTH_STATE.orientation,
+};
 
 const encoder = {} as unknown as GPUCommandEncoder;
 
@@ -65,7 +105,7 @@ function makeState(init: {
   return {
     gpu: { atmosphereShellRenderer: init.renderer },
     data: {
-      bodies: { earth: 'earth' in init ? (init.earth ?? null) : SCENE_EARTH, planets: [] },
+      bodies: { earth: 'earth' in init ? (init.earth ?? null) : SEEDED_EARTH, planets: [] },
     },
     cam,
   } as unknown as EngineState;
@@ -93,18 +133,18 @@ function makeCtx(drawCamPos: Vec3, camDistance = 0): ReadyFrameContext {
 // centre, along +x from Earth's position, so camPosLocal has a clear non-zero
 // radius the packing can be checked against.
 const CAM_POS_RENDERED: Vec3 = [
-  SCENE_EARTH.positionMpc[0] + 5 * SCENE_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC,
-  SCENE_EARTH.positionMpc[1],
-  SCENE_EARTH.positionMpc[2],
+  SEEDED_EARTH.positionMpc[0] + 5 * SEEDED_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC,
+  SEEDED_EARTH.positionMpc[1],
+  SEEDED_EARTH.positionMpc[2],
 ];
 
 // The STALE drag register on `state.cam.position` — a DIFFERENT altitude (20
 // Earth radii out, along +z). If the bake regressed to reading this, both the
 // packed viewHeightKm and sunZenithCos would differ from the recompute below.
 const CAM_POS_STALE: Vec3 = [
-  SCENE_EARTH.positionMpc[0],
-  SCENE_EARTH.positionMpc[1],
-  SCENE_EARTH.positionMpc[2] + 20 * SCENE_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC,
+  SEEDED_EARTH.positionMpc[0],
+  SEEDED_EARTH.positionMpc[1],
+  SEEDED_EARTH.positionMpc[2] + 20 * SEEDED_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC,
 ];
 
 describe('encodeAtmosphereSkyView', () => {
@@ -155,7 +195,7 @@ describe('encodeAtmosphereSkyView', () => {
       Float32Array,
     ];
     expect(encoderArg).toBe(encoder);
-    expect(bodyIdArg).toBe(SCENE_EARTH.id);
+    expect(bodyIdArg).toBe(SEEDED_EARTH.id);
     expect(uniforms).toBeInstanceOf(Float32Array);
     expect(uniforms).toHaveLength(4);
 
@@ -166,12 +206,12 @@ describe('encodeAtmosphereSkyView', () => {
     const atmosphereTopMpc = params.atmosphereTopKm * SCALE_UNITS.KM_TO_MPC;
     const camLocal = camPosLocal(
       CAM_POS_RENDERED,
-      SCENE_EARTH.positionMpc,
+      SEEDED_EARTH.positionMpc,
       atmosphereTopMpc,
-      SCENE_EARTH.orientation,
+      SEEDED_EARTH.orientation,
     );
     const radius = Math.hypot(camLocal[0], camLocal[1], camLocal[2]);
-    const sun = sunDirLocal(SCENE_EARTH.positionMpc, RENDER_ORIGIN_MPC, SCENE_EARTH.orientation);
+    const sun = sunDirLocal(SEEDED_EARTH.positionMpc, RENDER_ORIGIN_MPC, SEEDED_EARTH.orientation);
     const expectedViewHeightKm = radius * params.atmosphereTopKm;
     const expectedSunZenithCos =
       (camLocal[0] * sun[0] + camLocal[1] * sun[1] + camLocal[2] * sun[2]) / radius;
@@ -188,9 +228,9 @@ describe('encodeAtmosphereSkyView', () => {
     // value tracks the rendered pose and NOT the stale register.
     const staleLocal = camPosLocal(
       CAM_POS_STALE,
-      SCENE_EARTH.positionMpc,
+      SEEDED_EARTH.positionMpc,
       atmosphereTopMpc,
-      SCENE_EARTH.orientation,
+      SEEDED_EARTH.orientation,
     );
     const staleViewHeightKm =
       Math.hypot(staleLocal[0], staleLocal[1], staleLocal[2]) * params.atmosphereTopKm;

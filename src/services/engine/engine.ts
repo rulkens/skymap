@@ -70,6 +70,7 @@ import type { EngineState } from '../../@types/engine/state/EngineState';
 
 import { createCameraClock } from './camera/cameraClock';
 import type { CameraRuntime } from '../../@types/engine/state/CameraRuntime';
+import { CONST_J2000 } from '../../data/time/constJ2000';
 import { createEngineData } from './data/createEngineData';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
@@ -207,6 +208,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       current: { ...cb.store.getState().camera.base },
     },
     prevActiveId: { current: 'resting' },
+    // Seeded at J2000, a plausible epoch before the first frame runs. No frame
+    // has run pre-bootstrap, so no pick can fire against it; `runFrame` overwrites
+    // it with the real frame instant before the first pick is possible.
+    lastRenderedSimDays: { current: CONST_J2000 },
   };
 
   // ── Settings — the injected Redux store ──────────────────────────

@@ -290,6 +290,13 @@
   /** Distance from the viewport edge for fixed corner overlays. */
   --corner-offset: 16px;
 
+  /**
+   * Height of the TimeBar's collapsed pill. A token because two files need it:
+   * the pill sets it directly, and the ScaleBar (plus the date popover) lift
+   * off the corner by this height so they stack directly above the toolbar.
+   */
+  --time-toolbar-height: 2.5rem;
+
   /** Collapsed-peek height of the mobile info-card bottom sheet.
    *  Single source for the sheet's peek snap AND the scale-bar lift. */
   --mobile-sheet-peek: 96px;

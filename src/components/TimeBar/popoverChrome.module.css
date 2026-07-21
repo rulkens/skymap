@@ -1,0 +1,23 @@
+/*
+ * popoverChrome.module.css — shared glass-panel vocabulary for the TimeBar
+ * popover family (date entry, rate selector).
+ *
+ * Concept-named, not component-named: it owns no eponymous .tsx and no `.root`
+ * — it is a vocabulary, not a component. It holds only the genuinely shared
+ * chrome (the frosted surface, card border, radius, shadow, and the panel
+ * padding), so both popovers read as the same instrument. Each popover composes
+ * `panel` into its own `.root` and adds only what varies (layout direction,
+ * typography). `composes` over `:global` keeps the dependency a real, greppable
+ * import the build resolves rather than an invisible cross-file string handshake.
+ */
+
+.panel {
+  padding: var(--space-3) var(--space-4);
+
+  background: var(--surface-card-soft);
+  -webkit-backdrop-filter: blur(var(--blur-card));
+  backdrop-filter: blur(var(--blur-card));
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}

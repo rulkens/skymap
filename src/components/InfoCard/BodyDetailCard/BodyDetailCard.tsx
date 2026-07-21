@@ -20,6 +20,14 @@
  *     planetary fact sheet (radius first, then mass, gravity, day, year, …);
  *     without one it falls back to the lean panel (radius alone).
  *
+ * The non-star body's **camera distance** is time-dependent (it swings as the
+ * body orbits), so it is NOT baked into the identity `BodyInfo`; it arrives as
+ * the `distanceMpc` prop, which `BodyDetailCardContainer` reads live off the
+ * throttled `engineBodyDistanceReported` pub. This card stays presentational:
+ * it renders whatever distance it is handed and never derives the value
+ * itself (the store-boundary rule forbids a card reaching into the engine
+ * snapshot).
+ *
  * Both branches end with a "Learn more" Wikipedia link: the body's explicit
  * `wikiTitle`, or a famous star's primary name (via `starWikipediaTitle`, which
  * overrides only the disambiguation-collision handful).
@@ -53,6 +61,11 @@ export type BodyDetailCardProps = {
   target: BodyInfo;
   pinned?: boolean;
   chrome?: boolean;
+  /**
+   * Live camera→body distance in Mpc off the throttled time pub, or null when no
+   * distance is published. Rendered as a row on the non-star body branch only.
+   */
+  distanceMpc?: number | null;
   onFocus?: (target: FocusableTarget) => void;
   onClose?: () => void;
 };
@@ -61,6 +74,7 @@ function BodyDetailCard({
   target,
   pinned = false,
   chrome = true,
+  distanceMpc = null,
   onFocus,
   onClose,
 }: BodyDetailCardProps): ReactNode {
@@ -91,7 +105,9 @@ function BodyDetailCard({
 
       {/*
         Non-star body (Earth, a planet, a moon): the physical radius straight off
-        the BodyInfo, then — when a fact-sheet entry exists — the full planetary
+        the BodyInfo, then the live camera-distance row (time-dependent, off the
+        pub; dropped when no distance is published, e.g. the initial null
+        report), then — when a fact-sheet entry exists — the full planetary
         card.  With no entry this stays the lean panel (radius alone).  The
         distance / orbital-period rows relabel for a moon (`facts.parent`), which
         orbits its planet rather than the Sun.
@@ -103,6 +119,9 @@ function BodyDetailCard({
               label={<InfoTip {...TIPS.bodyRadius!}>Radius</InfoTip>}
               value={`${target.radiusKm.toLocaleString()} km`}
             />
+            {distanceMpc != null && (
+              <CardRow label="Distance" value={formatDistance(distanceMpc)} />
+            )}
             {facts?.mass && (
               <CardRow label={<InfoTip {...TIPS.bodyMass!}>Mass</InfoTip>} value={facts.mass} />
             )}

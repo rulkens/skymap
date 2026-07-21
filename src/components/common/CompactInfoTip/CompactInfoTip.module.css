@@ -1,0 +1,58 @@
+/* src/components/common/CompactInfoTip/CompactInfoTip.module.css */
+/*
+ * Plain absolute-inside-relative label. Reveal is entirely self-contained —
+ * `.root:hover .tip` / `.root:focus-within .tip` — so a consumer adds no
+ * reveal selectors of its own, only the wrapper.
+ */
+
+.root {
+  position: relative;
+  display: inline-flex;
+}
+
+.tip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + var(--space-2));
+  transform: translateX(-50%);
+  z-index: 10;
+
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+
+  background: var(--surface-card-strong);
+  -webkit-backdrop-filter: blur(var(--blur-card));
+  backdrop-filter: blur(var(--blur-card));
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-2) var(--space-4);
+
+  /* Own font-family, no inheritance: the tip span sits OUTSIDE the wrapped
+   * button, so in a font-less region (the top-bar pills) it would fall through
+   * to the browser's default serif. Mono matches the rest of the HUD chrome
+   * (InfoTip cards, ScaleBar, TimeBar). */
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-tight);
+  color: var(--color-fg-muted);
+
+  transition: opacity var(--duration-fast) ease-out;
+}
+
+.root:hover .tip,
+.root:focus-within .tip {
+  opacity: 1;
+}
+
+.tipBottom {
+  bottom: auto;
+  top: calc(100% + var(--space-2));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tip {
+    transition-duration: 0s;
+  }
+}

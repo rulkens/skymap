@@ -9,6 +9,9 @@
  *   - Tab                    → toggle "hide UI" mode (clean visual)
  *   - l                      → debug: log live camera state
  *   - d / D                  → toggle the asset-loading dev panel
+ *   - [ / ]                  → sim clock: step the rate one detent slower / faster
+ *   - \                      → sim clock: play/pause (toggle)
+ *   - Shift+N                → sim clock: snap to "now" (live wall-clock time)
  *
  * Why a hook?  The handler closes over `selected` and `paletteOpen`,
  * so we need a re-bind whenever those change.  Wrapping it in a hook
@@ -25,10 +28,14 @@
  */
 
 import { useEffect } from 'react';
-import { useAppDispatch } from '../store/hooks';
+import { useAppDispatch, useAppStore } from '../store/hooks';
 import { clearSelection, updateSelectionFocus } from '../state/selection/selectionSlice';
 import { exitTour } from '../state/tour/tourActions';
 import { refOf } from '../services/engine/helpers/refOf';
+import { setRate, pause, resume, goLive } from '../state/time/timeSlice';
+import { selectTimeState } from '../state/time/selectors';
+import { RATE_LADDER } from '../data/time/rateLadder';
+import { unixMsToJulianDays } from '../utils/time/unixMsToJulianDays';
 import type { UseKeyboardShortcutsInput } from '../@types/engine/UseKeyboardShortcutsInput';
 
 export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
@@ -42,6 +49,7 @@ export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
   } = input;
 
   const dispatch = useAppDispatch();
+  const store = useAppStore();
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -130,6 +138,45 @@ export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
         toggleDebugPanelOpen();
         return;
       }
+
+      // ── Sim-clock controls ─────────────────────────────────────
+      // Every time-intent action re-anchors to the current sim instant
+      // (see timeSlice), so each carries `nowMs = performance.now()` for
+      // the reducer to pin the anchor's real-time base. The current
+      // rate/pause state is read from the store at keypress time rather
+      // than closed over, so the handler never goes stale and the deps
+      // array stays free of the time slice.
+
+      // `[` / `]` step the playback rate one detent slower / faster,
+      // clamped to the ladder ends. `setRate` also switches the clock to
+      // manual mode, so a step is how you leave live-follow.
+      if (e.key === '[' || e.key === ']') {
+        const delta = e.key === ']' ? 1 : -1;
+        const current = selectTimeState(store.getState()).rateIndex;
+        const next = Math.min(Math.max(current + delta, 0), RATE_LADDER.length - 1);
+        dispatch(setRate({ rateIndex: next, nowMs: performance.now() }));
+        return;
+      }
+
+      // `\` toggles play/pause. Read the live `paused` flag so the toggle
+      // is against actual state, not a captured snapshot.
+      if (e.key === '\\') {
+        const isPaused = selectTimeState(store.getState()).paused;
+        dispatch(
+          isPaused
+            ? resume({ nowMs: performance.now() })
+            : pause({ nowMs: performance.now() }),
+        );
+        return;
+      }
+
+      // `Shift+N` snaps the clock to "now" — the live wall-clock JD,
+      // mirroring the engine's bootstrap goLive. Shift is required so a
+      // bare `n` stays free for a future binding.
+      if (e.shiftKey && e.key.toLowerCase() === 'n') {
+        dispatch(goLive({ simDays: unixMsToJulianDays(Date.now()), nowMs: performance.now() }));
+        return;
+      }
     };
 
     window.addEventListener('keydown', onKeyDown);
@@ -138,12 +185,13 @@ export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
     selected,
     paletteOpen,
     dispatch,
+    store,
     engineHandleRef,
     setPaletteOpen,
     toggleUiHidden,
     toggleDebugPanelOpen,
   ]);
-  // dispatch is stable (redux store identity); engineHandleRef (ref object),
+  // dispatch and store are stable (redux store identity); engineHandleRef (ref object),
   // setPaletteOpen, toggleUiHidden, toggleDebugPanelOpen are stable useCallback
   // wrappers — listed for exhaustive-deps but never trigger re-binds.
 }

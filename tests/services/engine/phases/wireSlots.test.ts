@@ -44,6 +44,7 @@ import { createAppStore } from '../../../../src/store/createAppStore';
 import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { seedVolumeFields } from '../../../../src/data/volume/volumeFieldDefaults';
+import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import {
   engineStatusChanged,
   engineStructureCountsChanged,
@@ -419,6 +420,7 @@ function makeState(
     cameraRuntime: {
       lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity } },
       projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
+      lastRenderedSimDays: { current: CONST_J2000 },
     },
     assetSlots: {
       points: points as Map<SourceType, never>,

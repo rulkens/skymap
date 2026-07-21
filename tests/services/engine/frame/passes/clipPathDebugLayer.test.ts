@@ -34,6 +34,7 @@ function makeCtx(): ReadyFrameContext {
     drawCamPos: [0, 0, 0] as Readonly<[number, number, number]>,
     drawPxPerRad: 720,
     nowMs: 0,
+    simDays: 0,
     fovYRad: (60 * Math.PI) / 180,
     focusBlend: 0,
     visibleSourceMask: 0xffffffff,

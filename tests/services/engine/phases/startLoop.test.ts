@@ -52,6 +52,7 @@ vi.mock('../../../../src/services/engine/frame/runFrame', () => ({
 
 // Imported AFTER the mocks so startLoop picks them up.
 import { startLoop } from '../../../../src/services/engine/phases/startLoop';
+import { goLive } from '../../../../src/state/time/timeSlice';
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -95,7 +96,9 @@ function makeState({ cloudCount = 1 } = {}): EngineState {
 function makeDeps(): BootstrapDeps {
   return {
     canvas: { width: 800, height: 600 } as HTMLCanvasElement,
-    cb: {} as never,
+    // `startLoop` dispatches the bootstrap `goLive` through this store — a
+    // spy so the clock-snap can be asserted without a real reducer.
+    cb: { store: { dispatch: vi.fn() } } as never,
     frameRef: { current: () => {} },
     detachControlsRef: { current: null },
     handleRef: { current: null },
@@ -162,6 +165,28 @@ describe('startLoop', () => {
 
     expect(state.subsystems.scheduler.requestRender).toHaveBeenCalledTimes(1);
     expect(deps.frameRef.current).not.toBe(originalFrameBody);
+  });
+
+  it('dispatches goLive exactly once to snap the sim clock to the real instant on load', async () => {
+    // A bare load must show the sky as it is right now. The time slice seeds at
+    // J2000 as a deterministic static anchor; this single bootstrap dispatch is
+    // what overwrites it with the wall-clock JD. It runs once (startLoop is the
+    // terminal boot phase), so no re-fire guard is needed.
+    const state = makeState({ cloudCount: 1 });
+    const deps = makeDeps();
+
+    await startLoop(state, deps);
+
+    const dispatch = deps.cb.store.dispatch as unknown as ReturnType<typeof vi.fn>;
+    const goLiveCalls = dispatch.mock.calls.filter(
+      (call) => (call[0] as { type?: string }).type === goLive.type,
+    );
+    expect(goLiveCalls).toHaveLength(1);
+    const payload = (goLiveCalls[0]![0] as ReturnType<typeof goLive>).payload;
+    // A plausible present-day Julian day (well past J2000's 2451545) and a
+    // finite performance.now() anchor.
+    expect(payload.simDays).toBeGreaterThan(2451545);
+    expect(Number.isFinite(payload.nowMs)).toBe(true);
   });
 
   it('throws a clear error when a required GPU renderer is null', async () => {

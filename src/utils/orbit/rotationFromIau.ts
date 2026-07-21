@@ -17,12 +17,14 @@
  * orientation — its third column is the pole direction (cos δ cos α, cos δ sin α,
  * sin δ), so a body already at the equatorial north pole (δ = 90°) needs no tilt.
  *
- * ### Why a baked `Mat3`
+ * ### Why a single `Mat3`
  *
- * The scene is static, so a body's orientation is constant — composed once here
- * and stored, rather than rebuilt per frame or per vertex. The renderer then
- * folds this `R` between the translate and scale of its model matrix and the
- * shader stays a plain matrix multiply, with no trig on the hot path.
+ * The pole (α₀, δ₀) is fixed but the prime meridian W turns with the scene clock,
+ * so `orientationForBody` recomposes this `Mat3` per derived instant from the
+ * resolved W (the optional second argument; it defaults to the epoch W₀ so a
+ * caller with no clock still gets the J2000 facing). Folding the whole
+ * orientation into one matrix lets the renderer stay a plain matrix multiply,
+ * with the trig confined to this compose step rather than the per-vertex path.
  */
 
 import type { Mat3 } from '../../@types/math/Mat3';
@@ -45,8 +47,11 @@ function rotX(rad: number): Mat3 {
   return [1, 0, 0, 0, c, s, 0, -s, c];
 }
 
-export function rotationFromIau(el: RotationElements): Mat3 {
-  const spinAboutPole = rotZ(degToRad(el.primeMeridianDeg));
+export function rotationFromIau(
+  el: RotationElements,
+  primeMeridianDeg: number = el.primeMeridianDeg,
+): Mat3 {
+  const spinAboutPole = rotZ(degToRad(primeMeridianDeg));
   const tipToDec = rotX(degToRad(90 - el.poleDecDeg));
   const swingToRa = rotZ(degToRad(90 + el.poleRaDeg));
 

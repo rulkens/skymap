@@ -100,4 +100,14 @@ export type DemandCtx = {
    * demand-time proximity and draw-time position agree.
    */
   cameraPosMpc: Readonly<Vec3>;
+  /**
+   * The sim instant (Julian days) the last frame derived its bodies at — the
+   * clock's live position, read from `cameraRuntime.lastRenderedSimDays`. The
+   * proximity gate needs it because a host body MOVES: its world position is
+   * `deriveBodyStates(simDays)`, not a fixed epoch, so the body-texture family's
+   * `distanceMpc(cameraPosMpc, bodyPos)` must measure against where the body sits
+   * NOW. Paired with `cameraPosMpc` (the same last-frame origin) so demand-time
+   * proximity reads the same body positions the frame drew.
+   */
+  simDays: number;
 };

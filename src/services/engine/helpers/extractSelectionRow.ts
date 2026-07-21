@@ -5,8 +5,9 @@
  * index (null if the cloud isn't loaded yet — a deep link or a mid-flight tier
  * swap); the structure arm resolves the durable id to its already-serializable
  * record; the Milky Way arm is the static tag; the body arm resolves its seed
- * id against the static SCENE_BODIES table — no deps needed, the seeds are a
- * compile-time import, so a miss is a garbage id rather than "not loaded yet".
+ * id against the static SCENE_BODIES table (an orbital body's position from the
+ * J2000 body-state snapshot, a star's from its record) — no deps needed, both
+ * are compile-time imports, so a miss is a garbage id rather than "not loaded yet".
  *
  * This is the ONE engine-side step in the selection read path — the reconciler
  * saga calls it via getContext('resolveDeps'). Everything downstream
@@ -16,6 +17,8 @@ import { extractGalaxyRow } from './extractGalaxyRow';
 import { resolveStarRecord } from './resolveStarRecord';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { SOLAR_RADIUS_KM } from '../../../data/bodies/solarRadiusKm';
+import { CONST_J2000 } from '../../../data/time/constJ2000';
+import { deriveBodyStates } from '../frame/deriveBodyStates';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { ResolveDeps } from '../../../@types/engine/ResolveDeps';
@@ -30,17 +33,37 @@ const EXTRACT_ROW: {
     extractGalaxyRow(deps.catalogs.get(ref.source), ref.index, ref.source, deps.famousMeta),
   structure: (ref, deps) => deps.structures.byId(ref.id),
   milkyWay: () => ({ type: 'milkyWay' as const }),
-  // The position is copied (not aliased) because the row lands in the RTK
-  // store, whose immutability middleware freezes state — freezing the shared
+  // An orbital body (planet, Earth, moon) reads its world position from the
+  // J2000 body-state snapshot — the same derive the render layers read — so a
+  // selected planet's stored position tracks the one it is drawn at rather than
+  // a separately-baked seed field. Stars (incl. the Sun) carry no orbital
+  // element, so they fall back to their authored record position: the same
+  // star/orbital split sceneBodyLabels makes. The snapshot is derived DIRECTLY
+  // at the fixed epoch because this resolver runs OFF the frame path (the
+  // reconciler / focus-tween sagas and clip-foci resolution), with no
+  // (state, ctx) to route through the per-frame `sceneBodyStates` seam — the
+  // construction/resolve-time twin, value-identical to the baked seed. The
+  // position is copied (not aliased) because the row lands in the RTK store,
+  // whose immutability middleware freezes state — freezing the shared
   // SCENE_BODIES seed would poison every other consumer of the constant.
   body: (ref) => {
     const body = SCENE_BODIES.find((b) => b.id === ref.id);
     if (!body) return null;
+    // Orbital bodies (planets, Earth, moons) resolve from the snapshot; stars
+    // (incl. the Sun) are not in it and keep their record `positionMpc` — only
+    // `StarBody` carries that field, so `'positionMpc' in body` narrows the arm.
+    const state = deriveBodyStates(CONST_J2000).get(body.id);
+    const p = state
+      ? state.positionMpc
+      : 'positionMpc' in body
+        ? body.positionMpc
+        : null;
+    if (!p) return null;
     return {
       type: 'body' as const,
       id: body.id,
       label: body.label,
-      positionMpc: [body.positionMpc[0], body.positionMpc[1], body.positionMpc[2]],
+      positionMpc: [p[0], p[1], p[2]],
       radiusKm: body.radiusKm,
     };
   },

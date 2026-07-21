@@ -59,6 +59,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
 import { Source } from '../../../../src/data/sources';
 import { seedVolumeFields } from '../../../../src/data/volume/volumeFieldDefaults';
+import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
@@ -265,6 +266,7 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     cameraRuntime: {
       lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity } },
       projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
+      lastRenderedSimDays: { current: CONST_J2000 },
     },
     assetSlots: {
       points,

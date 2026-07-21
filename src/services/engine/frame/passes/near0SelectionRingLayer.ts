@@ -65,12 +65,27 @@
  * `bodyApparentDiameterPx`), so the ring meets the sphere at the resolve
  * handoff. `camDist` is the camera-relative centre's length — the target's
  * distance from the eye in the origin-relative NEAR0 frame.
+ *
+ * ## Live-body centre — the ring tracks the animated body, not its pick pose
+ *
+ * A body's `selectionHalo` position is a SNAPSHOT stamped on the SelectionRow at
+ * selection time, but the sim clock keeps moving planets and moons along their
+ * orbits every frame. Centring on the stale snapshot leaves the ring where the
+ * body WAS when picked while the sphere drifts away. So a body row re-resolves
+ * its position at THIS frame's `ctx.simDays` through `liveBodyPosition` — the
+ * single live-body resolution site (it reads the same one-deep-memoized
+ * `deriveBodyStates(simDays)` map the body draw pass already built this frame, so
+ * the re-read is free and the ring shares the bodies' exact epoch). It returns
+ * null for a non-body row AND for a body-typed row absent from the orbital
+ * snapshot (a famous star — static, so its baked row position is already
+ * correct); the `?? worldPos` fallback is right for both, not defensive.
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { NEAR0 } from '../slabs';
 import { selectionHalo } from '../../helpers/selectionHaloTable';
+import { liveBodyPosition } from '../../camera/liveBodyPosition';
 import { near0RingRadiusPx } from '../../helpers/near0RingRadiusPx';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
@@ -100,15 +115,21 @@ export const near0SelectionRingLayer: ContentLayer = {
     if (halo === null) return;
     const { radiusMpc, worldPos } = halo;
 
+    // Re-resolve a body row's LIVE position at this frame's sim epoch so the ring
+    // tracks the animated planet/moon instead of its stale pick-time snapshot
+    // (see the module header). Null for a non-body row or a static famous star,
+    // where the baked `worldPos` is already correct — hence the fallback.
+    const centreWorld = liveBodyPosition(row, ctx.simDays) ?? worldPos;
+
     // Re-express the ring centre as a small camera-relative vector in f64
     // BEFORE the renderer narrows to f32 — see the module header's rebase seam.
     // `view.camPos` is the origin-relative eye, the frame `view.slab.vp` and the
     // star anchor are built in, so this subtraction zeroes the view translation
     // `rebaseViewProj` folds into the vp.
     const centre: Vec3 = [
-      worldPos[0] - view.camPos[0],
-      worldPos[1] - view.camPos[1],
-      worldPos[2] - view.camPos[2],
+      centreWorld[0] - view.camPos[0],
+      centreWorld[1] - view.camPos[1],
+      centreWorld[2] - view.camPos[2],
     ];
     const camDist = Math.hypot(centre[0], centre[1], centre[2]);
     const ringRadiusPx = near0RingRadiusPx(

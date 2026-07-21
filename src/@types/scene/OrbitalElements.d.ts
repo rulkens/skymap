@@ -1,12 +1,16 @@
 /**
- * OrbitalElements — one body's classical Keplerian elements at the scene epoch
+ * OrbitalElements — one body's classical Keplerian elements at the epoch
  * (J2000), the single source of truth for both its rendered position AND its
  * orbit trail.
  *
- * The scene is static at a single epoch (no clock, no time propagation), so
- * only the epoch column of the J2000 mean elements is stored — the element
- * rates recorded in the spec's provenance table are deliberately omitted
- * (YAGNI: a future animated ephemeris is the named extension point).
+ * Each classical field pairs with an OPTIONAL per-Julian-century rate, the six
+ * `*RatePerCty` fields below, so `propagateElements` can advance the body to any
+ * simulated instant as one affine map `field(T) = field₀ + rate·T`. The rates
+ * are optional because a static body — one with no rates — must propagate to
+ * itself: a missing rate reads as zero drift. Every animated row (planet or
+ * moon) carries the SAME six rate fields, so the propagator never learns
+ * "planet vs moon" — a satellite maker converts JPL's period/precession columns
+ * into these same rate fields, keeping one linear propagation path for all.
  *
  * Elements are referenced to the plane named by `plane`, defaulting to the
  * **ecliptic** J2000 frame (the plane the planets and Earth's Moon orbit near);
@@ -40,8 +44,20 @@ export type OrbitalElements = {
   readonly ascendingNodeRad: number;
   /** Argument of periapsis ω = ϖ − Ω, in radians. */
   readonly argPeriapsisRad: number;
-  /** Mean anomaly M at the scene epoch (J2000) = L − ϖ, in radians. */
+  /** Mean anomaly M at the epoch (J2000) = L − ϖ, in radians. */
   readonly meanAnomalyRad: number;
+  /** da/dt: semi-major-axis rate, in Mpc per Julian century. */
+  readonly semiMajorRateMpcPerCty?: number;
+  /** de/dt: eccentricity rate, per Julian century. */
+  readonly eccentricityRatePerCty?: number;
+  /** di/dt: inclination rate, in radians per Julian century. */
+  readonly inclinationRateRadPerCty?: number;
+  /** dΩ/dt: ascending-node rate, in radians per Julian century. */
+  readonly ascendingNodeRateRadPerCty?: number;
+  /** dω/dt = dϖ/dt − dΩ/dt: argument-of-periapsis rate, rad per Julian century. */
+  readonly argPeriapsisRateRadPerCty?: number;
+  /** dM/dt = dL/dt − dϖ/dt: mean-anomaly (mean-motion) rate, rad per Julian century. */
+  readonly meanAnomalyRateRadPerCty?: number;
   /** Dim linear-RGB tint for the additive HDR draw. */
   readonly color: Vec3;
   /**

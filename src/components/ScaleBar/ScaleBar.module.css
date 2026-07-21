@@ -7,12 +7,28 @@
  * `src/styles/global.css`.
  */
 
-/* Outer container: glassmorphic panel fixed to the bottom-right corner */
+/*
+ * Outer container: glassmorphic panel fixed to the bottom-right corner,
+ * raised to sit directly above the TimeBar toolbar so the two share one
+ * right-side rail. Width reproduces the collapsed TimeBar pill's outer width so
+ * the two glass boxes read as one column. The pill hugs its mono UTC readout,
+ * whose width is deterministic: 20 monospace chars ('YYYY-MM-DD HH:MM UTC')
+ * plus the readout's letter-spacing, wrapped by 17px of inset per side (readout
+ * 6px pad + pill 10px pad + pill 1px border) = 34px. This panel uses the SAME
+ * mono font + font-size, so `ch` and `em` here resolve to identical glyph
+ * metrics — the two boxes match by construction (border-box, so the panel's own
+ * padding + border stay inside this width). If the clock format, the
+ * readout/pill padding, or the readout letter-spacing changes, this calc
+ * follows. The inline-width scaleLine reads in real px within the box; see the
+ * SCALE_TARGET_PX coupling comment in runFrame.ts for why ≤120 px fits here.
+ */
 .scaleBar {
   position: fixed;
-  bottom: var(--corner-offset);
+  bottom: calc(var(--corner-offset) + var(--time-toolbar-height) + var(--space-3));
   right: var(--corner-offset);
   z-index: 10;
+  width: calc(20ch + 20 * var(--letter-spacing-tight) + 34px);
+  box-sizing: border-box;
   padding: var(--space-4) var(--space-6) var(--space-5);
 
   background: var(--surface-soft);
@@ -27,7 +43,10 @@
    * promoted to a token because it's the only consumer.
    */
   border: 1px solid rgba(160, 200, 255, 0.14);
-  border-radius: var(--radius-xl);
+  /* Same corner curvature as the TimeBar pill below: its 999px full-round on a
+   * --time-toolbar-height box renders as a half-height radius, so the rail's two
+   * chromes read as one family without turning this taller panel into a stadium. */
+  border-radius: calc(var(--time-toolbar-height) / 2);
 
   color: var(--color-fg-base);
   font: var(--font-size-md) / var(--line-height-tight) var(--font-family-mono);

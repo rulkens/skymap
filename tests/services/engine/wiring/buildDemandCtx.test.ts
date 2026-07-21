@@ -32,6 +32,7 @@ function makeState(
     points?: Map<SourceType, AssetSlot<unknown, unknown>>;
     famousMetaState?: LoadState<unknown>['kind'];
     pose?: { target: [number, number, number]; yaw: number; pitch: number; distance: number };
+    simDays?: number;
   } = {},
 ): EngineState {
   const famousMeta =
@@ -61,6 +62,7 @@ function makeState(
     cameraRuntime: {
       lastPose: { current: pose },
       projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
+      lastRenderedSimDays: { current: opts.simDays ?? 0 },
     },
   } as unknown as EngineState;
 }
@@ -106,5 +108,13 @@ describe('buildDemandCtx', () => {
     expect(ctx.cameraPosMpc[0]).toBeCloseTo(1);
     expect(ctx.cameraPosMpc[1]).toBeCloseTo(2);
     expect(ctx.cameraPosMpc[2]).toBeCloseTo(13);
+  });
+
+  it('carries the live sim instant from cameraRuntime.lastRenderedSimDays', () => {
+    // The proximity gate derives host body positions at this instant, so the
+    // builder must forward the clock's last-rendered value verbatim (not the
+    // epoch). A wiring that hard-coded J2000 here would fail.
+    const ctx = buildDemandCtx(makeState({ simDays: 8000 }));
+    expect(ctx.simDays).toBe(8000);
   });
 });

@@ -85,21 +85,31 @@ describe('cubeSphereMesh', () => {
     }
   });
 
-  it('equirect uv matches the J2000 convention at face centres', () => {
-    // +x face centre ≈ (1,0,0): lon 0 → u 0, lat 0 → v 0.5
+  it('registers the prime meridian on the map centre so texture geography matches the lit hemisphere', () => {
+    // The bug this pins: standard equirectangular planetary maps (the Blue Marble
+    // asset, verified by inspecting earth-2048.jpg) paint geographic longitude 0 —
+    // the prime meridian — at the image CENTRE (u=0.5), NOT the left edge. The IAU
+    // rotation (rotationFromIau) aims Earth's prime meridian at the mesh's local +x
+    // axis (lon 0). So the mesh MUST emit u=0.5 at the +x equatorial vertex, or the
+    // map's antimeridian lands on +x, every continent rides 180° off its true
+    // longitude, and Earth's day/night terminator reads inverted against a live
+    // clock (mid-afternoon Europe shown in night). A raw u=lon/2π emits u=0 here —
+    // the pre-fix value this test would catch.
+    //
+    // +x face centre ≈ (1,0,0): lon 0 (prime meridian) → u 0.5, lat 0 → v 0.5.
     const px = cubeSphereMesh(0, 0, 0, 0, 8);
     const cxi = nearestVertex(px, [1, 0, 0]);
     expect(pos(px, cxi)[0]).toBeCloseTo(1);
-    expect(px.uvs[cxi * 2] as number).toBeCloseTo(0);
+    expect(px.uvs[cxi * 2] as number).toBeCloseTo(0.5);
     expect(px.uvs[cxi * 2 + 1] as number).toBeCloseTo(0.5);
 
-    // +y face centre ≈ (0,1,0): lon 90° → u 0.25
+    // +y face centre ≈ (0,1,0): lon 90°E → u 0.25 + 0.5 = 0.75 (east of centre).
     const py = cubeSphereMesh(2, 0, 0, 0, 8);
     const cyi = nearestVertex(py, [0, 1, 0]);
     expect(pos(py, cyi)[1]).toBeCloseTo(1);
-    expect(py.uvs[cyi * 2] as number).toBeCloseTo(0.25);
+    expect(py.uvs[cyi * 2] as number).toBeCloseTo(0.75);
 
-    // +z face centre ≈ (0,0,1): lat +90° → v 1
+    // +z face centre ≈ (0,0,1): lat +90° → v 1 (pole, u origin irrelevant).
     const pz = cubeSphereMesh(4, 0, 0, 0, 8);
     const czi = nearestVertex(pz, [0, 0, 1]);
     expect(pos(pz, czi)[2]).toBeCloseTo(1);
