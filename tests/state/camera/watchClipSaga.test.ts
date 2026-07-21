@@ -12,7 +12,7 @@
  * contract (resolve + run on play, cancel on stop / re-play), not the clip player.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import createSagaMiddleware from 'redux-saga';
 import { configureStore } from '@reduxjs/toolkit';
 import { CANCEL } from '@redux-saga/core';
@@ -20,6 +20,8 @@ import { CANCEL } from '@redux-saga/core';
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchClipSaga } from '../../../src/state/camera/watchClipSaga';
 import { startClip, stopClip } from '../../../src/state/camera/clipActions';
+import { setRate, setSimDays, goLive } from '../../../src/state/time/timeSlice';
+import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { clipRegistry } from '../../../src/data/animation/clips/clipRegistry';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
@@ -79,6 +81,11 @@ function buildHarness(seam: PlayClipStub, resolveDeps: ResolveDeps = EMPTY_DEPS)
 describe('watchClipSaga', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    // Tear down the `performance.now` spy the clock-freeze tests install.
+    vi.restoreAllMocks();
   });
 
   it('resolves the id and runs the playClip seam with the clip data on a startClip action', async () => {
@@ -181,5 +188,70 @@ describe('watchClipSaga', () => {
     // takeLatest cancelled the first run (one [CANCEL]); both runs called the seam.
     expect(cancelCount).toBe(1);
     expect(seam).toHaveBeenCalledTimes(2);
+  });
+
+  it('pauses the sim clock on clip start, freezing the pre-clip instant', async () => {
+    // A blocking seam keeps the clip "playing", so the clock stays frozen for
+    // the assertion (no restore fires while the run arm is still pending).
+    const seam = blockingSeam(() => {});
+    const { store } = buildHarness(seam);
+
+    // A manual clock advancing at the default '1 day/s' detent from a known anchor.
+    const T0 = 1000;
+    store.dispatch(setSimDays({ simDays: 2451545, nowMs: T0 }));
+
+    // Freeze the wall clock so the saga's `pause` nowMs is deterministic.
+    const T1 = 4000; // 3 real seconds later
+    vi.spyOn(performance, 'now').mockReturnValue(T1);
+
+    const preClip = store.getState().time;
+    const frozenAt = deriveSimDays(preClip, T1);
+
+    store.dispatch(startClip(CLIP_ID));
+    await flush();
+
+    const after = store.getState().time;
+    expect(after.paused).toBe(true);
+    // Re-anchored from the pre-clip derived instant: the clock holds exactly the
+    // sim time it read the moment the clip began, and no later nowMs moves it.
+    expect(deriveSimDays(after, 999_999)).toBe(frozenAt);
+  });
+
+  it('restores live mode after a clip that started from live', async () => {
+    const seam = vi.fn<(clip: ClipData) => Promise<void>>().mockResolvedValue(undefined);
+    const { store } = buildHarness(seam);
+
+    store.dispatch(goLive({ simDays: 2451545, nowMs: 100 }));
+    expect(store.getState().time.mode).toBe('live');
+
+    store.dispatch(startClip(CLIP_ID));
+    await flush();
+    await flush();
+
+    const after = store.getState().time;
+    expect(after.mode).toBe('live');
+    expect(after.paused).toBe(false);
+  });
+
+  it('restores manual playback after a clip, including the cancel path', async () => {
+    // Blocking seam so the clip only ends via the explicit stopClip below.
+    const seam = blockingSeam(() => {});
+    const { store } = buildHarness(seam);
+
+    // A manual clock, actively playing (not paused).
+    store.dispatch(setRate({ rateIndex: 2, nowMs: 100 }));
+    expect(store.getState().time).toMatchObject({ mode: 'manual', paused: false });
+
+    store.dispatch(startClip(CLIP_ID));
+    await flush();
+    expect(store.getState().time.paused).toBe(true); // frozen for the clip
+
+    // Cancel via stopClip — the finally restore must still run on this path.
+    store.dispatch(stopClip());
+    await flush();
+
+    const after = store.getState().time;
+    expect(after.mode).toBe('manual');
+    expect(after.paused).toBe(false);
   });
 });

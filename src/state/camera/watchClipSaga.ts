@@ -40,15 +40,31 @@
  * crashes at the first frame. We mirror that step verbatim so both entry points
  * hand the seam a fully-resolved clip. (Focus-free clips like `flyout` pass
  * through `resolveClipFoci` as a structural no-op.)
+ *
+ * ### A clip freezes the sim clock and restores it on the way out
+ *
+ * A clip is a scripted camera move; the scene must not drift underneath it while
+ * it plays (choreography and `record-tour` both depend on nothing else moving).
+ * So before the run starts we capture the clock's prior `mode` and dispatch the
+ * ordinary `pause` — the same re-anchor primitive user-pause uses, so the freeze
+ * is continuous (the clock holds exactly the pre-clip derived instant, no jump).
+ * When the clip ends OR is cancelled we restore the prior mode: `goLive` to a
+ * fresh wall-clock JD if it was live, else `resume` if it was manual. The restore
+ * sits in a `finally` so it runs on every exit route this saga has — the `run`
+ * arm resolving (natural end), the `stop` arm winning (`stopClip`), and
+ * `takeLatest` cancelling the task for a re-play. No new clock plumbing: the clip
+ * player *sets* the clock through the existing time-slice actions.
  */
-import { call, race, take, takeLatest, getContext } from 'typed-redux-saga';
+import { call, race, take, takeLatest, getContext, put, select } from 'typed-redux-saga';
 
 import { startClip, stopClip } from './clipActions';
 import { clipRegistry } from '../../data/animation/clips/clipRegistry';
 import { resolveClipFoci } from '../../services/engine/animation/resolveClipFoci';
 import { clipFociReady } from '../tour/clipFociReady';
 import { waitUntil } from '../tour/waitUntil';
-import type { SagaContext } from '../../store/types';
+import { pause, resume, goLive } from '../time/timeSlice';
+import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
+import type { RootState, SagaContext } from '../../store/types';
 
 export function* watchClipSaga() {
   yield* takeLatest(startClip, function* (action) {
@@ -56,19 +72,36 @@ export function* watchClipSaga() {
     const resolveDeps = yield* getContext<SagaContext['resolveDeps']>('resolveDeps');
     const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
     const clip = clipRegistry[action.payload];
-    yield* race({
-      run: call(function* () {
-        // Block until every id-bearing cue resolves AND the camera runtime
-        // (which carries the FOV resolveClipFoci needs) exists.
-        yield* call(
-          waitUntil,
-          () => clipFociReady(clip.data, resolveDeps()) && cameraRuntime() !== null,
-        );
-        const rt = cameraRuntime()!;
-        const resolved = resolveClipFoci(clip.data, resolveDeps(), rt.fovYRad, rt.from);
-        yield* call(playClipSeam, resolved);
-      }),
-      stop: take(stopClip),
-    });
+
+    // Freeze the sim clock for the clip's duration, remembering the mode to
+    // return to. `pause` re-anchors from the current derived instant, so the
+    // clock holds the pre-clip sim time verbatim while the scripted move plays.
+    const priorMode = yield* select((state: RootState) => state.time.mode);
+    yield* put(pause({ nowMs: performance.now() }));
+    try {
+      yield* race({
+        run: call(function* () {
+          // Block until every id-bearing cue resolves AND the camera runtime
+          // (which carries the FOV resolveClipFoci needs) exists.
+          yield* call(
+            waitUntil,
+            () => clipFociReady(clip.data, resolveDeps()) && cameraRuntime() !== null,
+          );
+          const rt = cameraRuntime()!;
+          const resolved = resolveClipFoci(clip.data, resolveDeps(), rt.fovYRad, rt.from);
+          yield* call(playClipSeam, resolved);
+        }),
+        stop: take(stopClip),
+      });
+    } finally {
+      // Runs on natural end, `stopClip`, AND `takeLatest` cancellation. Restore
+      // the mode the clip interrupted: live re-snaps to the wall-clock JD now
+      // (so "live" is still true after the frozen interval), manual just resumes.
+      if (priorMode === 'live') {
+        yield* put(goLive({ simDays: unixMsToJulianDays(Date.now()), nowMs: performance.now() }));
+      } else {
+        yield* put(resume({ nowMs: performance.now() }));
+      }
+    }
   });
 }
