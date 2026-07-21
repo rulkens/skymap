@@ -1,0 +1,46 @@
+/*
+ * DateEntryPopover.module.css — the exact date-entry popover.
+ *
+ * A small glass panel anchored above the TimeBar readout. Shares the HUD's
+ * surface vocabulary (soft glass, card border, blur) so it reads as part of the
+ * same instrument. Positioning is left to the container's placement wrapper; the
+ * root only owns its own chrome and internal layout.
+ */
+
+.root {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+
+  background: var(--surface-card-soft);
+  -webkit-backdrop-filter: blur(var(--blur-card));
+  backdrop-filter: blur(var(--blur-card));
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+
+  color: var(--color-fg-base);
+  font: var(--font-size-md) / var(--line-height-tight) var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.input {
+  font: inherit;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  background: var(--surface-control);
+  color: var(--color-fg);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.set {
+  padding: var(--space-2) var(--space-4);
+  line-height: 1;
+}
