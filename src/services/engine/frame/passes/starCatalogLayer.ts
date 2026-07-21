@@ -722,6 +722,10 @@ function drawStream(
       brightness: prep.brightness,
       glowOverlap: prep.glowOverlap,
       aggregateIntensityCap: prep.aggregateIntensityCap,
+      // Culling stays off until Task 5 wires real per-frame planes from the
+      // slab view; `null` packs every walked node exactly as before.
+      frustumPlanes: null,
+      glowMarginAngleRad: 0,
     });
   }
 }
