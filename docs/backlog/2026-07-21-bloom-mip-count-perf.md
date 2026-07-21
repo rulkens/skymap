@@ -19,21 +19,29 @@ not help.**
 
 ## Options
 
-1. **Fewer mip levels (5 → 3).** Sheds ~4 render passes (bright + 2 down + 2 up + fold = 6
-   passes vs 10), ~half the cost → ~2.5 ms, likely restoring solar-system to 60 fps. Now a
-   one-line change: `BLOOM_LEVELS` in `src/data/bloomConstants.ts` is the single home the
-   render targets, pyramid uniform arrays, and `runBloom` pass loops all derive from. Trade-off:
-   a 3-level pyramid gives a narrower glow falloff (less wide, soft bloom) — a quality/perf dial.
+1. ~~**Fewer mip levels (5 → 3).**~~ **Measured dead (spike 2026-07-22).** `BLOOM_LEVELS = 3`
+   saves nothing: a same-session 80-frame A/B on `solar-system` gave bloom 5.4 ms / 23.5 ms
+   total in both configs; `milky-way` was flat too. The cost model in "Why the obvious lever
+   does NOT apply" was wrong about which passes are expensive — the 4 passes that 5 → 3 removes
+   all operate on the *smallest* mips (`bloom2`→`bloom3`→`bloom4`, 1/8 down to 1/32 res), the
+   cheapest in the pyramid (well under 0.5 ms each). Bloom's real cost is the finest, largest
+   mips (`bloom0` half-res, `bloom1` quarter-res), which a 3-level pyramid keeps. So the pass
+   count is not the lever; a 3-level pyramid pays a narrower glow for zero speedup.
 2. **Merge downsample/upsample passes.** Fold adjacent pyramid steps into a single pass to cut
-   pass count without losing levels. More work; keeps the wide falloff.
+   pass count without losing levels. More work; keeps the wide falloff. Same caveat as option 1
+   applies — the removable overhead is on the cheap small mips, so measure the *large*-mip passes
+   before assuming a win.
 3. **Gate bloom off below a scale threshold / on a perf-tier.** Skip bloom on the cheapest tiers
    or when the frame is already over budget.
+4. **Shrink the finest mips (the actual cost).** Bloom cost tracks the largest mips, so a
+   `bloom0` at 1/3 or 1/4 res (instead of 1/2) is the fill lever the pass count is not.
+   Trade-off: coarser near-glow. Not yet measured.
 
 ## Suggested first step
 
-Try option 1 (`BLOOM_LEVELS = 3`) behind a visual check — it is a one-constant experiment now
-that the depth is single-sourced. If the narrower falloff reads acceptably, it is the cheapest
-win. Otherwise option 2.
+Option 1 is measured-dead (above). The cost is fill on the finest mips, so the live levers are
+option 4 (shrink `bloom0`/`bloom1` scale) and option 3 (gate). Measure a `bloom0` scale bump
+before committing to option 2's pass-merge work.
 
 ## Provenance
 
