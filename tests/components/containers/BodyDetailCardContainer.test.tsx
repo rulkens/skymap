@@ -91,7 +91,6 @@ describe('BodyDetailCardContainer', () => {
     expect(screen.getByText(formatDistance(FAR_DISTANCE_MPC))).toBeInTheDocument();
     expect(screen.queryByText(formatDistance(NEAR_DISTANCE_MPC))).not.toBeInTheDocument();
     expect(screen.getByText('Jupiter')).toBeInTheDocument();
-    expect(screen.getByText('Radius')).toBeInTheDocument();
     expect(screen.getByText('69,911 km')).toBeInTheDocument();
   });
 
@@ -121,7 +120,6 @@ describe('BodyDetailCardContainer', () => {
 
     expect(mockCardRenderProbe.count).toBe(rendersBeforeTick);
     expect(screen.getByText('Jupiter')).toBeInTheDocument();
-    expect(screen.getByText('Radius')).toBeInTheDocument();
     expect(screen.getByText('69,911 km')).toBeInTheDocument();
     expect(screen.getByText(formatDistance(NEAR_DISTANCE_MPC))).toBeInTheDocument();
   });
@@ -129,12 +127,14 @@ describe('BodyDetailCardContainer', () => {
   it('drops the distance row when no body distance is published', () => {
     const { store } = createAppStore();
     // Initial store report has focusedBodyDistanceMpc = null (no focus yet).
-    const { container } = render(
-      createElement(BodyDetailCardContainer, { target: jupiter, pinned: true }),
-      { wrapper: makeWrapper(store) },
-    );
+    render(createElement(BodyDetailCardContainer, { target: jupiter, pinned: true }), {
+      wrapper: makeWrapper(store),
+    });
 
-    expect(screen.getByText('Radius')).toBeInTheDocument();
-    expect(container.textContent).not.toMatch(/Distance/);
+    expect(screen.getByText('69,911 km')).toBeInTheDocument();
+    // The live camera-distance row is labelled exactly 'Distance' (the facts card's
+    // 'Distance from Sun' is a different row and must NOT satisfy this guard). With a
+    // null pub the live row is dropped, so an exact-match query finds nothing.
+    expect(screen.queryByText('Distance')).toBeNull();
   });
 });
