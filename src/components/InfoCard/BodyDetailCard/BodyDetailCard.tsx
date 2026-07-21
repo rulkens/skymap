@@ -165,6 +165,11 @@ function BodyDetailCard({
               <WikipediaRow title={facts.wikiTitle} />
             </div>
           )}
+          {facts?.description && (
+            <div className={styles.cardSection}>
+              <DescriptionBlock text={facts.description} />
+            </div>
+          )}
         </>
       )}
 

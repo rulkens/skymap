@@ -32,6 +32,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { format, resolveConfig } from 'prettier';
+
 import { parsePlanetFactsSeed, type PlanetFactsEntry } from '../parsers/planetFactsSeed';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 
@@ -41,7 +43,8 @@ const GENERATED_BANNER =
   '// Regenerate with:  npm run build-planet-facts\n' +
   '// Source of truth:  data/seeds/planet_facts.seed.json\n';
 
-/** Quote a string as a single-quoted TS literal (prettier's `singleQuote` style). */
+/** Quote a string as a single-quoted TS literal; the final prettier pass in
+ * `main` normalises quote style and long-string wrapping. */
 function quote(s: string): string {
   return `'${s.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
 }
@@ -50,8 +53,10 @@ function quote(s: string): string {
  * Emit the generated `.ts` module text: the `BODY_FACTS` record rebuilt from
  * the seed array, each entry keyed by its `id` with the remaining fields as its
  * `BodyFacts` value.  Field order follows the seed's own key order so the file
- * is deterministic.  Formatting targets prettier's repo config so the committed
- * file survives a `prettier --write` unchanged.
+ * is deterministic.  The output is near-prettier; `main` runs it through
+ * prettier before writing (Record keys and long `description` blurbs need the
+ * real formatter for quote style + line wrapping), so the committed file is
+ * canonical and a rebuild produces no diff.
  */
 export function serializeGeneratedTable(entries: readonly PlanetFactsEntry[]): string {
   const rowsText = entries
@@ -69,22 +74,25 @@ export function serializeGeneratedTable(entries: readonly PlanetFactsEntry[]): s
   );
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const seedPath = rawDataPath('planet-facts.seed');
   const entries = parsePlanetFactsSeed(JSON.parse(readFileSync(seedPath, 'utf8')));
   process.stderr.write(`loaded ${entries.length} planet-fact entries from seed\n`);
 
   const generatedPath = resolve('src/data/bodies/bodyFacts.generated.ts');
-  writeFileSync(generatedPath, serializeGeneratedTable(entries));
+  const prettierConfig = await resolveConfig(generatedPath);
+  const formatted = await format(serializeGeneratedTable(entries), {
+    ...prettierConfig,
+    parser: 'typescript',
+  });
+  writeFileSync(generatedPath, formatted);
   process.stderr.write(`wrote ${entries.length} rows to bodyFacts.generated.ts\n`);
 }
 
 // Allow the script to be both executed (CLI) and imported (tests).
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  try {
-    main();
-  } catch (err: unknown) {
+  main().catch((err: unknown) => {
     process.stderr.write(`error: ${err instanceof Error ? err.message : String(err)}\n`);
     process.exit(1);
-  }
+  });
 }

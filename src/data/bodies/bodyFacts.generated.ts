@@ -16,6 +16,8 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     axialTilt: '0.03°',
     atmosphere: 'None (trace Na, O)',
     wikiTitle: 'Mercury_(planet)',
+    description:
+      'The smallest planet and the closest to the Sun, Mercury has almost no atmosphere to hold heat, so its surface swings from about 430 °C in daylight to −180 °C at night. A year there lasts only 88 Earth days, yet one full day-night cycle takes 176.',
   },
   venus: {
     mass: '0.815 M⊕',
@@ -28,6 +30,8 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     axialTilt: '177.4°',
     atmosphere: 'CO₂ (96%)',
     wikiTitle: 'Venus',
+    description:
+      'A thick carbon-dioxide atmosphere traps heat so effectively that Venus reaches about 464 °C, making it the hottest planet even though Mercury sits closer to the Sun. It also spins backwards, and so slowly that a Venusian day outlasts its year.',
   },
   earth: {
     mass: '1.0 M⊕',
@@ -40,6 +44,8 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     axialTilt: '23.4°',
     atmosphere: 'N₂ (78%), O₂ (21%)',
     wikiTitle: 'Earth',
+    description:
+      'The only world known to carry life, Earth orbits in the narrow zone where water stays liquid. Its tilted axis gives us the seasons, and a large Moon keeps that tilt steady over long stretches of time.',
   },
   mars: {
     mass: '0.107 M⊕',
@@ -52,6 +58,8 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     axialTilt: '25.2°',
     atmosphere: 'CO₂ (95%)',
     wikiTitle: 'Mars',
+    description:
+      'Iron oxide dust gives Mars its rusty colour. It once ran with rivers and lakes, and it still holds the tallest volcano and one of the deepest canyons in the Solar System, all under an atmosphere far too thin to keep the surface warm.',
   },
   jupiter: {
     mass: '317.8 M⊕',
@@ -64,6 +72,8 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     axialTilt: '3.1°',
     atmosphere: 'H₂, He',
     wikiTitle: 'Jupiter',
+    description:
+      'Jupiter is the giant of the Solar System, holding more than twice the mass of every other planet combined. Its Great Red Spot is a storm wider than Earth that has churned for centuries, and its rings and dozens of moons form a system in miniature.',
   },
   saturn: {
     mass: '95.2 M⊕',
@@ -76,6 +86,8 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     axialTilt: '26.7°',
     atmosphere: 'H₂, He',
     wikiTitle: 'Saturn',
+    description:
+      'Saturn is circled by the brightest, broadest rings of any planet, built from countless chunks of ice and rock. It is also the least dense world we know, light enough that it would float if you could find an ocean large enough to hold it.',
   },
   uranus: {
     mass: '14.5 M⊕',
@@ -88,6 +100,8 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     axialTilt: '97.8°',
     atmosphere: 'H₂, He, CH₄',
     wikiTitle: 'Uranus',
+    description:
+      'Uranus travels around the Sun tipped almost completely on its side, most likely knocked over by a massive collision early in its history. Methane in its air absorbs red light and leaves the planet a pale blue-green.',
   },
   neptune: {
     mass: '17.1 M⊕',
@@ -100,6 +114,8 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     axialTilt: '28.3°',
     atmosphere: 'H₂, He, CH₄',
     wikiTitle: 'Neptune',
+    description:
+      'The most distant planet, Neptune is a deep blue world lashed by the fastest winds in the Solar System, over 2,000 kilometres per hour. It was found through mathematics first, predicted from the way its gravity tugged on Uranus before anyone saw it.',
   },
   moon: {
     mass: '7.35 × 10²² kg',
@@ -112,6 +128,8 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     axialTilt: '6.7°',
     atmosphere: 'None',
     wikiTitle: 'Moon',
+    description:
+      "Earth's constant companion, the Moon always keeps the same face turned toward us as it orbits. Its pull raises the ocean tides, and its cratered surface preserves a record of impacts going back billions of years.",
   },
   phobos: {
     mass: '1.06 × 10¹⁶ kg',
@@ -122,6 +140,8 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     parent: 'Mars',
     atmosphere: 'None',
     wikiTitle: 'Phobos_(moon)',
+    description:
+      "Phobos is the larger and closer of Mars's two small moons, orbiting so low that it races across the Martian sky several times a day. Its orbit is slowly shrinking, and in the far future it will break apart or strike the planet.",
   },
   deimos: {
     mass: '1.48 × 10¹⁵ kg',
@@ -132,6 +152,8 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     parent: 'Mars',
     atmosphere: 'None',
     wikiTitle: 'Deimos_(moon)',
+    description:
+      'Deimos is the smaller, outer moon of Mars, a lump of dark rock only about 12 kilometres wide. Seen from the Martian surface it would shine like a bright star rather than show a disc.',
   },
   io: {
     mass: '8.93 × 10²² kg',
@@ -143,6 +165,8 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     meanTemp: '−130 °C',
     atmosphere: 'Thin SO₂',
     wikiTitle: 'Io_(moon)',
+    description:
+      "Io is the most volcanic body in the Solar System, kneaded and heated by Jupiter's gravity until hundreds of volcanoes erupt across it. Sulphur compounds coat the surface in vivid yellows, oranges, and reds.",
   },
   europa: {
     mass: '4.80 × 10²² kg',
@@ -154,6 +178,8 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     meanTemp: '−160 °C',
     atmosphere: 'Thin O₂',
     wikiTitle: 'Europa_(moon)',
+    description:
+      "Under its cracked shell of ice, Europa hides a salty ocean that may hold more water than all of Earth's seas combined. That buried ocean makes it one of the most promising places to search for life beyond Earth.",
   },
   ganymede: {
     mass: '1.48 × 10²³ kg',
@@ -165,6 +191,8 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     meanTemp: '−160 °C',
     atmosphere: 'Thin O₂',
     wikiTitle: 'Ganymede_(moon)',
+    description:
+      'Ganymede is the largest moon in the Solar System, bigger even than the planet Mercury, and the only moon known to make its own magnetic field. Like Europa, it probably conceals an ocean of liquid water deep below its surface.',
   },
   callisto: {
     mass: '1.08 × 10²³ kg',
@@ -176,6 +204,8 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     meanTemp: '−140 °C',
     atmosphere: 'Thin CO₂',
     wikiTitle: 'Callisto_(moon)',
+    description:
+      "Callisto is the outermost of Jupiter's four big moons and one of the most cratered worlds ever seen, its ancient face almost unchanged for billions of years. It orbits far enough out to escape the harshest of Jupiter's radiation.",
   },
   mimas: {
     mass: '3.75 × 10¹⁹ kg',
@@ -187,6 +217,8 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     meanTemp: '−200 °C',
     atmosphere: 'None',
     wikiTitle: 'Mimas_(moon)',
+    description:
+      'Mimas is a small icy moon of Saturn marked by one giant crater that gives it an uncanny resemblance to the Death Star. The impact that carved it came close to shattering the whole moon.',
   },
   enceladus: {
     mass: '1.08 × 10²⁰ kg',
@@ -198,6 +230,8 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     meanTemp: '−200 °C',
     atmosphere: 'Thin H₂O (plumes)',
     wikiTitle: 'Enceladus',
+    description:
+      "Enceladus is a brilliant white moon of Saturn that jets water vapour and ice into space through cracks near its south pole. Those plumes rise from a hidden ocean and feed one of Saturn's faint rings.",
   },
   tethys: {
     mass: '6.17 × 10²⁰ kg',
@@ -209,6 +243,8 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     meanTemp: '−187 °C',
     atmosphere: 'None',
     wikiTitle: 'Tethys_(moon)',
+    description:
+      'Tethys is a moon of Saturn made almost entirely of water ice, scored by a huge crater and a canyon that runs most of the way around it. Its clean surface reflects sunlight so well that it ranks among the brightest objects in the Solar System.',
   },
   dione: {
     mass: '1.10 × 10²¹ kg',
@@ -220,6 +256,8 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     meanTemp: '−186 °C',
     atmosphere: 'Trace O₂',
     wikiTitle: 'Dione_(moon)',
+    description:
+      'Dione is an icy moon of Saturn laced with bright streaks that turned out to be towering cliffs of fractured ice. Measurements hint that it may hold a small liquid layer far beneath the crust.',
   },
   rhea: {
     mass: '2.31 × 10²¹ kg',
@@ -231,6 +269,8 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     meanTemp: '−174 °C',
     atmosphere: 'Trace O₂, CO₂',
     wikiTitle: 'Rhea_(moon)',
+    description:
+      "Rhea is Saturn's second largest moon, a frozen mix of ice and rock wrapped in the faintest trace of oxygen and carbon dioxide. Scientists once suspected it had a thin ring of its own, though the evidence never held up.",
   },
   titan: {
     mass: '1.35 × 10²³ kg',
@@ -242,6 +282,8 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     meanTemp: '−179 °C',
     atmosphere: 'N₂ (95%), CH₄',
     wikiTitle: 'Titan_(moon)',
+    description:
+      "Titan is Saturn's largest moon and the only moon with a thick atmosphere, dense enough to hide its surface under an orange haze. Beneath it lie rivers, lakes, and rainfall of liquid methane, the only place besides Earth with stable liquid on its surface.",
   },
   iapetus: {
     mass: '1.81 × 10²¹ kg',
@@ -253,5 +295,7 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     meanTemp: '−143 °C',
     atmosphere: 'None',
     wikiTitle: 'Iapetus_(moon)',
+    description:
+      'One side of Iapetus is dark as coal while the other gleams like fresh snow, a split so sharp it can be seen from Earth through a small telescope. A ridge of mountains runs along its equator, giving this moon of Saturn the outline of a walnut.',
   },
 };

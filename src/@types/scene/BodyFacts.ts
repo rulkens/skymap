@@ -48,4 +48,6 @@ export type BodyFacts = {
   readonly atmosphere?: string;
   /** Explicit Wikipedia article title, e.g. 'Mercury_(planet)'. */
   readonly wikiTitle: string;
+  /** One-or-two-sentence narrative blurb, rendered as the card's DescriptionBlock. */
+  readonly description?: string;
 };
