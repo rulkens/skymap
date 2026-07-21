@@ -61,7 +61,6 @@ import { createStarCatalogSlot } from '../../loading/slots/starCatalogSlot';
 import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
 import { BODY_TEXTURE_REGISTRY } from '../../../data/bodies/bodyTextureRegistry';
-import { CONST_J2000 } from '../../../data/time/constJ2000';
 import { clampTier } from '../../../utils/math/clampTier';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { hostBodyId } from '../../../utils/scene/hostBodyId';
@@ -155,31 +154,18 @@ function starCatalogRow(source: SourceType): AssetWiringRow {
 }
 
 /**
- * The J2000 body-state snapshot, derived ONCE at module load. The texture
+ * The host body's world position at the frame's LIVE sim instant. The texture
  * proximity gates read a host body's world position; every host is an orbital
- * body, so its position comes from `deriveBodyStates` — the same source the
- * render layers read — rather than a baked record field.
- *
- * ### Why still a fixed epoch (02-core Task 8b: NOT yet live here)
- *
- * The demand table is pure over `DemandCtx`, whose surfaces (settings, request,
- * slotState, cameraPosMpc) carry NO sim instant. The single-writer instant lives
- * at `state.cameraRuntime.lastRenderedSimDays.current`, reachable only where
- * `EngineState` flows — a demand predicate never sees it. Making the proximity
- * read live therefore requires threading that instant onto `DemandCtx` (a new
- * surface built in `buildDemandCtx` from `state.cameraRuntime`, exactly as
- * `cameraPosMpc` is), which is outside this task's fenced file surface. Until
- * that thread lands the gate stays J2000-anchored; a body's texture loads on
- * proximity to where it sat at the epoch. For the inner system this is ~1 AU
- * off at most — well inside Earth's ~0.4 AU load radius only briefly — so the
- * gate is imperfect but not broken. See the report's concerns.
+ * body that MOVES, so its position comes from `deriveBodyStates(simDays)` — the
+ * same memoized source the render layers read — evaluated at the instant carried
+ * on `DemandCtx.simDays` (the last frame's `cameraRuntime.lastRenderedSimDays`),
+ * not a baked epoch. A paused clock re-reads the same memoized snapshot for free;
+ * a tick re-derives the ~22 Kepler solves once and every proximity row shares it.
+ * The ring rides its host body's position.
  */
-const BODY_STATES_J2000 = deriveBodyStates(CONST_J2000);
-
-/** The body's world position (the ring rides its host body's). */
-function bodyPosOf(id: BodyTextureId | RingTextureId): Readonly<Vec3> {
+function bodyPosOf(id: BodyTextureId | RingTextureId, simDays: number): Readonly<Vec3> {
   const hostId = hostBodyId(id);
-  const state = BODY_STATES_J2000.get(hostId);
+  const state = deriveBodyStates(simDays).get(hostId);
   if (state === undefined) {
     throw new Error(`bodyPosOf: texture host '${hostId}' has no derived body state`);
   }
@@ -221,9 +207,11 @@ function bodyTextureRow(entry: BodyTextureKey): AssetWiringRow {
       tier: clampTier(tier, ceilingOf(entry.bodyId, entry.kind)),
     }),
     demand: (ctx) =>
-      distanceMpc(ctx.cameraPosMpc, bodyPosOf(entry.bodyId)) < loadRadiusMpc(entry.bodyId),
+      distanceMpc(ctx.cameraPosMpc, bodyPosOf(entry.bodyId, ctx.simDays)) <
+      loadRadiusMpc(entry.bodyId),
     release: (ctx) =>
-      distanceMpc(ctx.cameraPosMpc, bodyPosOf(entry.bodyId)) > 2 * loadRadiusMpc(entry.bodyId),
+      distanceMpc(ctx.cameraPosMpc, bodyPosOf(entry.bodyId, ctx.simDays)) >
+      2 * loadRadiusMpc(entry.bodyId),
   };
 }
 

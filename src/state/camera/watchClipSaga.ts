@@ -3,12 +3,14 @@
  * the engine's clip-player seam.
  *
  * The UI dispatches `startClip(id)` instead of reaching an engine handle. This
- * watcher resolves the id against `clipRegistry` and runs the hoisted `playClip`
- * seam read from saga context — the same Promise + `[CANCEL]` runner the guided
- * tour awaits — so all of the live-pose resolution, two-frame completion, and
- * cancellation machinery is reused verbatim. The registry lookup lives here, at
- * the action boundary; the seam stays the single internal entry and still takes
- * a resolved `ClipData`.
+ * watcher resolves the id against `clipFactories` — building the clip at the
+ * frozen clip-start instant (see the clock-freeze section) so an
+ * instant-dependent clip opens on the bodies the frozen frame draws — and runs
+ * the hoisted `playClip` seam read from saga context — the same Promise +
+ * `[CANCEL]` runner the guided tour awaits — so all of the live-pose resolution,
+ * two-frame completion, and cancellation machinery is reused verbatim. The
+ * factory lookup lives here, at the action boundary; the seam stays the single
+ * internal entry and still takes a resolved `ClipData`.
  *
  * ### Why `takeLatest` + an inner `race(stop)`
  *
@@ -64,11 +66,12 @@
 import { call, race, take, takeLatest, getContext, put, select } from 'typed-redux-saga';
 
 import { startClip, stopClip } from './clipActions';
-import { clipRegistry } from '../../data/animation/clips/clipRegistry';
+import { clipFactories } from '../../data/animation/clips/clipRegistry';
 import { resolveClipFoci } from '../../services/engine/animation/resolveClipFoci';
 import { clipFociReady } from '../tour/clipFociReady';
 import { waitUntil } from '../tour/waitUntil';
 import { pause, resume, goLive } from '../time/timeSlice';
+import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import type { RootState, SagaContext } from '../../store/types';
 
@@ -77,16 +80,23 @@ export function* watchClipSaga() {
     const playClipSeam = yield* getContext<SagaContext['playClip']>('playClip');
     const resolveDeps = yield* getContext<SagaContext['resolveDeps']>('resolveDeps');
     const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
-    const clip = clipRegistry[action.payload];
 
     // Freeze the sim clock for the clip's duration, remembering both the mode
     // AND the paused flag to return to. `pause` re-anchors from the current
     // derived instant, so the clock holds the pre-clip sim time verbatim while
     // the scripted move plays.
-    const { mode: priorMode, paused: priorPaused } = yield* select(
-      (state: RootState) => state.time,
-    );
-    yield* put(pause({ nowMs: performance.now() }));
+    const nowMs = performance.now();
+    const priorTime = yield* select((state: RootState) => state.time);
+    const { mode: priorMode, paused: priorPaused } = priorTime;
+
+    // The frozen clip-start instant. Derive it from the pre-clip time intent at
+    // the SAME `nowMs` the `pause` below re-anchors from, so it equals the sim
+    // time the clock holds for the whole clip. The clip factory is resolved at
+    // this instant: an instant-dependent clip (`earthFlyout`) opens on the body
+    // positions the frozen frame draws; static clips ignore the argument.
+    const frozenSimDays = deriveSimDays(priorTime, nowMs);
+    const clip = clipFactories[action.payload](frozenSimDays);
+    yield* put(pause({ nowMs }));
     try {
       yield* race({
         run: call(function* () {

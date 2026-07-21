@@ -19,6 +19,7 @@ import { ASSET_WIRING } from '../../../../src/services/engine/wiring/assetWiring
 import { Source } from '../../../../src/data/sources';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../../src/data/bodies/bodyTextureKeys';
 import { loadRadiusMpc } from '../../../../src/services/engine/frame/bodyTextureLoadRadius';
+import { distanceMpc } from '../../../../src/utils/math/distanceMpc';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { hostBodyId } from '../../../../src/utils/scene/hostBodyId';
@@ -49,6 +50,7 @@ function makeCtx(over: {
   requests?: Set<RequestKey>;
   slotStates?: Partial<Record<AssetKey, LoadState<unknown>['kind']>>;
   cameraPosMpc?: Vec3;
+  simDays?: number;
 }): DemandCtx {
   return {
     settings: (over.settings ?? {}) as Readonly<EngineSettingsState>,
@@ -57,17 +59,21 @@ function makeCtx(over: {
     // The body-texture rows read the eye position; a far-away default keeps the
     // surface present without demanding any body texture.
     cameraPosMpc: over.cameraPosMpc ?? [Infinity, Infinity, Infinity],
+    // The proximity gate derives host positions at this instant; default to the
+    // epoch so `bodyPosOf` below (also J2000) and the gate agree unless a test
+    // moves the clock.
+    simDays: over.simDays ?? CONST_J2000,
   };
 }
 
 /**
- * The world position a body-texture key's proximity gate is measured from. Host
- * bodies are all orbital (textured planets / Earth / moons), so their position
- * comes from the derived J2000 snapshot — the same source the wiring reads.
+ * The world position a body-texture key's proximity gate is measured from at a
+ * given sim instant. Host bodies are all orbital (textured planets / Earth /
+ * moons) and MOVE, so their position comes from the derived snapshot at
+ * `simDays` — the same source the wiring reads.
  */
-const BODY_STATES = deriveBodyStates(CONST_J2000);
-function bodyPosOf(id: string): Readonly<Vec3> {
-  return BODY_STATES.get(hostBodyId(id as never))!.positionMpc;
+function bodyPosOf(id: string, simDays: number = CONST_J2000): Readonly<Vec3> {
+  return deriveBodyStates(simDays).get(hostBodyId(id as never))!.positionMpc;
 }
 
 describe('ASSET_WIRING membership', () => {
@@ -296,6 +302,30 @@ describe('ASSET_WIRING demand predicates', () => {
     const beyond = makeCtx({ cameraPosMpc: at(2.5 * r) });
     expect(earth.demand(beyond)).toBe(false);
     expect(earth.release!(beyond)).toBe(true);
+  });
+
+  it('body-texture proximity gate reflects the LIVE snapshot position, not J2000', () => {
+    // A host body moves with the clock, so the gate must measure against where
+    // the body sits at `ctx.simDays`, not the epoch. Pick an instant far enough
+    // from J2000 that Earth has swung a good fraction of its orbit, so its
+    // position differs by more than a load radius. Place the camera exactly at
+    // the LIVE Earth position: the gate must demand there and NOT at the (now
+    // distant) J2000 position — a gate still reading J2000 would fail both arms.
+    const earth = rowFor('earth:surface');
+    const simDays = CONST_J2000 + 120; // ~1/3 of an Earth year on
+    const livePos = bodyPosOf('earth', simDays);
+    const j2000Pos = bodyPosOf('earth', CONST_J2000);
+    const r = loadRadiusMpc('earth');
+
+    // Sanity: the two epochs are more than a load radius apart, else the test
+    // proves nothing.
+    expect(distanceMpc(livePos, j2000Pos)).toBeGreaterThan(r);
+
+    // Camera at the live position, clock at the live instant ⇒ demanded.
+    expect(earth.demand(makeCtx({ cameraPosMpc: [...livePos] as Vec3, simDays }))).toBe(true);
+    // Same camera, but the gate reading J2000 would place the body a full orbit
+    // arc away ⇒ NOT demanded. Passing the live simDays is what makes it fire.
+    expect(earth.demand(makeCtx({ cameraPosMpc: [...j2000Pos] as Vec3, simDays }))).toBe(false);
   });
 
   it('pgcAlias demands only when the paletteOpened request is set', () => {

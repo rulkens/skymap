@@ -22,6 +22,8 @@ import { watchClipSaga } from '../../../src/state/camera/watchClipSaga';
 import { startClip, stopClip } from '../../../src/state/camera/clipActions';
 import { setRate, setSimDays, goLive, pause, resume } from '../../../src/state/time/timeSlice';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
+import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
+import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { clipRegistry } from '../../../src/data/animation/clips/clipRegistry';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
@@ -215,6 +217,42 @@ describe('watchClipSaga', () => {
     // Re-anchored from the pre-clip derived instant: the clock holds exactly the
     // sim time it read the moment the clip began, and no later nowMs moves it.
     expect(deriveSimDays(after, 999_999)).toBe(frozenAt);
+  });
+
+  it('resolves an instant-dependent clip at the frozen clip-start instant', async () => {
+    // `earthFlyout` opens on Earth's LIVE position. The play site freezes the
+    // clock at clip start and must build the clip at THAT instant, so the shot
+    // opens where Earth is drawn — not at the J2000 epoch the static registry
+    // bakes. Drive the clock to a non-J2000 instant, start the clip, and assert
+    // the seam receives a start target equal to that instant's Earth position
+    // and DIFFERENT from J2000's.
+    const seam = vi.fn<(clip: ClipData) => Promise<void>>().mockResolvedValue(undefined);
+    const { store } = buildHarness(seam);
+
+    // A paused manual clock at a non-J2000 instant makes the frozen instant
+    // deterministic regardless of nowMs (paused ⇒ anchor.simDays verbatim).
+    const SIM = CONST_J2000 + 200; // ~200 days along Earth's orbit
+    store.dispatch(setSimDays({ simDays: SIM, nowMs: 1000 }));
+    store.dispatch(pause({ nowMs: 1000 }));
+
+    store.dispatch(startClip('earthFlyout'));
+    await flush();
+
+    expect(seam).toHaveBeenCalledTimes(1);
+    const handed = seam.mock.calls[0]![0];
+    // earthFlyout bakes a concrete start pose (not a 'live' capture).
+    const start = handed.start;
+    if (start === undefined || start === 'live') throw new Error('expected a baked start pose');
+    const liveEarth = deriveBodyStates(SIM).get('earth')!.positionMpc;
+    const j2000Earth = deriveBodyStates(CONST_J2000).get('earth')!.positionMpc;
+
+    // Opened on the live instant's Earth, to sub-Mpc precision.
+    expect(start.target[0]).toBeCloseTo(liveEarth[0]);
+    expect(start.target[1]).toBeCloseTo(liveEarth[1]);
+    expect(start.target[2]).toBeCloseTo(liveEarth[2]);
+    // And NOT the J2000 pose the static registry would have baked — the whole
+    // point of resolving at the frozen instant.
+    expect(start.target).not.toEqual([j2000Earth[0], j2000Earth[1], j2000Earth[2]]);
   });
 
   it('restores live mode after a clip that started from live', async () => {
