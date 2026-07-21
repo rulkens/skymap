@@ -8,18 +8,19 @@ import {
   decodeStarCatalog,
 } from '../../../../src/data/starCatalog/starCatalogFormat';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
+import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
 import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { Source } from '../../../../src/data/sources';
-
-// Earth's row position comes from the derived J2000 snapshot — the same source
-// the resolver's `body` arm reads (identity id/label/radius stay off the record).
-const EARTH_POS = deriveBodyStates(CONST_J2000).get('earth')!.positionMpc;
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { ResolveDeps } from '../../../../src/@types/engine/ResolveDeps';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import type { StarCatalog } from '../../../../src/@types/data/starCatalog/StarCatalog';
+
+// Earth's row position comes from the derived J2000 snapshot — the same source
+// the resolver's `body` arm reads (identity id/label/radius stay off the record).
+const EARTH_POS = deriveBodyStates(CONST_J2000).get('earth')!.positionMpc;
 
 function makeCloud(): GalaxyCatalog {
   return {
@@ -105,12 +106,17 @@ describe('extractSelectionRow', () => {
     });
   });
 
-  it('body row position is copied, not aliased to the shared derived state', () => {
-    // The row lands in the RTK store, whose immutability middleware freezes
-    // state — an aliased Vec3 would freeze the shared snapshot's positionMpc for
-    // every other consumer of the derive.
-    const row = extractSelectionRow({ type: 'body', id: 'earth' }, deps);
-    expect(row !== null && row.type === 'body' && row.positionMpc).not.toBe(EARTH_POS);
+  it('star body row position is copied, not aliased to the shared SCENE_BODIES seed', () => {
+    // Stars (unlike planets/Earth) are not in the derived J2000 snapshot, so the
+    // body arm falls back to the star's authored SCENE_BODIES `positionMpc`. That
+    // fallback must COPY the Vec3: the row lands in the RTK store, whose
+    // immutability middleware freezes state — an aliased Vec3 would freeze the
+    // shared star seed in place, poisoning every other consumer of the constant.
+    const seed = SCENE_BODIES.find((b) => b.id === 'sirius');
+    if (!seed || !('positionMpc' in seed)) throw new Error('expected a sirius star seed');
+    const row = extractSelectionRow({ type: 'body', id: 'sirius' }, deps);
+    expect(row !== null && row.type === 'body' && row.positionMpc).toEqual(seed.positionMpc);
+    expect(row !== null && row.type === 'body' && row.positionMpc).not.toBe(seed.positionMpc);
   });
 
   it('body ref with an unknown seed id → null (garbage, not "loading")', () => {
