@@ -113,6 +113,12 @@ export type TimeBarProps = {
   readonly onReadoutClick: () => void; // open the date-entry popover
   readonly onRateLabelClick: () => void; // open the rate-selector popover
   readonly hidden?: boolean; // App-layout gate, mirrors other HUD pills
+  // Force the same expanded state :hover/:focus-within produce. A popover is
+  // rendered at document level and CSS-anchored to a button inside the
+  // collapsing strip; the moment the popover takes focus, :focus-within no
+  // longer holds (focus left the pill), the strip collapses, and the anchor
+  // moves out from under the open popover mid-interaction.
+  readonly holdControlsOpen?: boolean;
 };
 
 function TimeBar({
@@ -129,6 +135,7 @@ function TimeBar({
   onReadoutClick,
   onRateLabelClick,
   hidden = false,
+  holdControlsOpen = false,
 }: TimeBarProps): ReactNode {
   const slowerHold = useHoldRepeat(onSlower, slowerDisabled);
   const fasterHold = useHoldRepeat(onFaster, fasterDisabled);
@@ -141,7 +148,12 @@ function TimeBar({
     // the reveal. The visible chrome lives on the inner .pill (row-reverse),
     // which holds the readout on the right and grows leftward on hover.
     <div
-      className={cx(styles.root, styles[mode], hidden && styles.hidden)}
+      className={cx(
+        styles.root,
+        styles[mode],
+        hidden && styles.hidden,
+        holdControlsOpen && styles.holdOpen,
+      )}
       aria-hidden={hidden || undefined}
       role="toolbar"
       aria-label="Time controls"
@@ -193,6 +205,10 @@ function TimeBar({
               className={styles.rate}
               onClick={onRateLabelClick}
               aria-label="Change speed"
+              // Marks this button as the rate popover's own trigger — see
+              // RateSelectorPopover's outside-mousedown handler, which must
+              // not treat a re-click of this button as an "outside" dismiss.
+              data-rate-trigger=""
             >
               {rateLabel}
               <span className={styles.tooltip} aria-hidden="true">

@@ -295,6 +295,27 @@ describe('TimeBarContainer', () => {
     expect(popover(container)?.textContent).toContain('1 day/s');
   });
 
+  it('mousedown+click on the rate label closes an open rate selector (not reopen)', () => {
+    // fireEvent.click alone doesn't reproduce the browser sequence: a real click
+    // fires mousedown before click. Without excluding the trigger button from
+    // the popover's outside-mousedown dismiss, that mousedown would close the
+    // popover first and the same click's onClick toggle would then reopen it —
+    // net effect, clicking the trigger again never closes anything.
+    const { store } = createAppStore();
+    const { container } = render(createElement(TimeBarContainer, { hidden: false }), {
+      wrapper: makeWrapper(store),
+    });
+
+    const rateTrigger = button(container, 'Change speed');
+    fireEvent.click(rateTrigger);
+    expect(dialogCount(container)).toBe(1);
+
+    fireEvent.mouseDown(rateTrigger);
+    fireEvent.click(rateTrigger);
+
+    expect(dialogCount(container)).toBe(0);
+  });
+
   it('closes the rate selector on Esc without dispatching', () => {
     // The rate selector implements its own Esc handler (a mirror of the date
     // popover's), so it earns its own guard: Esc closes, nothing dispatches.

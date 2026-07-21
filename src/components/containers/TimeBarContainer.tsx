@@ -177,6 +177,10 @@ function TimeBarContainer({ hidden }: TimeBarContainerProps): ReactNode {
         onReadoutClick={onReadoutClick}
         onRateLabelClick={onRateLabelClick}
         hidden={hidden}
+        // Either popover is anchored to (or triggered from) a button inside the
+        // collapsing controls strip; hold it expanded for the duration so the
+        // rate popover's CSS anchor doesn't move out from under an open click.
+        holdControlsOpen={openPopover !== 'none'}
       />
       {openPopover === 'date' && !hidden && (
         <div style={POPOVER_PLACEMENT}>

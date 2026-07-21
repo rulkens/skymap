@@ -146,11 +146,17 @@
  * Live mode is pinned to wall-time, so the transport collapses away and the
  * readout stands alone. Hovering or keyboard-focusing anywhere on the bar
  * (including the reserved hit area) reveals the controls. Manual mode overrides
- * this — the controls are always open.
+ * this — the controls are always open. `.holdOpen` is a third way in: a popover
+ * anchored to a button inside this strip is rendered outside the pill's DOM, so
+ * once it takes focus, :focus-within no longer holds — the strip would collapse
+ * and drag the popover's anchor out from under an open interaction. The
+ * container drives `.holdOpen` from "is any popover open", independent of
+ * hover/focus.
  */
 .live:hover .controls,
 .live:focus-within .controls,
-.manual .controls {
+.manual .controls,
+.holdOpen .controls {
   grid-template-columns: 1fr;
   opacity: 1;
   pointer-events: auto;
