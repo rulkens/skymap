@@ -353,18 +353,18 @@ drag its test mirror (reuse `expandTestMirrors` + `applyMoves` for the file
 move); `--no-file-rename` sets `renameFile: false`. Fail loudly (via
 `resolveSymbol`) before mutating on an unresolvable address.
 
-- [ ] Test `renames the identifier across importers` — in-memory graph with an
+- [x] Test `renames the identifier across importers` — in-memory graph with an
       importer + a call site; assert both reference the new name after
       `planRename`.
-- [ ] Test `renames the file and its test mirror when filename tracks the symbol`
+- [x] Test `renames the file and its test mirror when filename tracks the symbol`
       — seed `src/utils/x/foo.ts#foo` + `tests/utils/x/foo.test.ts`; rename to
       `bar` with `renameFile: true`; assert the source file is now `bar.ts` and
       the mirror is `bar.test.ts`.
-- [ ] Test `leaves the file name when renameFile is false` — same seed; assert
+- [x] Test `leaves the file name when renameFile is false` — same seed; assert
       the identifier changes but `foo.ts` stays `foo.ts`.
-- [ ] Wire the handler (`--no-file-rename` → `renameFile: false`).
-- [ ] `npm test -- planRename` → green.
-- [ ] Commit: the three files above.
+- [x] Wire the handler (`--no-file-rename` → `renameFile: false`).
+- [x] `npm test -- planRename` → green.
+- [x] Commit: the three files above.
 
 ### Task 6: `delete`
 

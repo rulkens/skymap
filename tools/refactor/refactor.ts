@@ -45,6 +45,7 @@ import { parseFlags } from '../utils/cli/args';
 import { collectRefs } from '../utils/refactor/collectRefs';
 import { loadRefactorProject } from '../utils/refactor/loadRefactorProject';
 import { parseSymbolAddress } from '../utils/refactor/parseSymbolAddress';
+import { planRename } from '../utils/refactor/planRename';
 import { readManifest } from '../utils/refactor/readManifest';
 import { renderRefReport } from '../utils/refactor/renderRefReport';
 import { resolveSymbol } from '../utils/refactor/resolveSymbol';
@@ -101,6 +102,22 @@ function runOp(
       // special-casing needed here.
       const report = collectRefs(project, resolveSymbol(project, parsed));
       process.stdout.write(`${renderRefReport(report, flags['--json'])}\n`);
+      return;
+    }
+
+    if (sub === 'rename') {
+      const newName = positionals[1];
+      if (newName === undefined) {
+        throw new Error('refactor rename: expected a <file>#<symbol> address and a <newName>.');
+      }
+      const resolved = resolveSymbol(project, parsed);
+      // Print the blast radius from the PRE-rename symbol, so the report reflects
+      // the references as they stand before the mutation. The shared reporter is
+      // every mutating subcommand's preview; --dry stops at this report.
+      const report = collectRefs(project, resolved);
+      process.stdout.write(`${renderRefReport(report, flags['--json'])}\n`);
+      // File rename is the default; --no-file-rename opts out (see planRename).
+      planRename(project, resolved, newName, !flags['--no-file-rename']);
       return;
     }
   } else if (positionals.length !== 2) {
