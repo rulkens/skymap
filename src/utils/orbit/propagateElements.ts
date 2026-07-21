@@ -34,14 +34,14 @@
  */
 
 import type { OrbitalElements } from '../../@types/scene/OrbitalElements';
+import { CONST_J2000 } from '../../data/time/constJ2000';
 
-// J2000.0 epoch as a Julian Date, and the length of a Julian century in days —
-// the two constants that turn a Julian Date into "centuries since J2000".
-const J2000_JD = 2_451_545.0;
+// The length of a Julian century in days — with `CONST_J2000` (the J2000.0
+// epoch), the pair that turns a Julian Date into "centuries since J2000".
 const DAYS_PER_JULIAN_CENTURY = 36_525;
 
 export function propagateElements(elements: OrbitalElements, simDays: number): OrbitalElements {
-  const centuriesSinceEpoch = (simDays - J2000_JD) / DAYS_PER_JULIAN_CENTURY;
+  const centuriesSinceEpoch = (simDays - CONST_J2000) / DAYS_PER_JULIAN_CENTURY;
 
   // A missing rate contributes no drift, so a static body propagates to itself.
   const advance = (value: number, ratePerCty: number | undefined): number =>

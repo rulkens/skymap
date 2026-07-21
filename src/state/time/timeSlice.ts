@@ -38,14 +38,13 @@ import { createSlice, type PayloadAction, type Draft } from '@reduxjs/toolkit';
 import { timeRoute } from '../../store/constants';
 import type { TimeState } from '../../@types/time/TimeState';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
-
-// J2000.0 as a Julian Day number — the static seed anchor. Overwritten by the
-// engine's bootstrap `goLive` before the first frame the user sees.
-const J2000_JD = 2451545.0;
+import { CONST_J2000 } from '../../data/time/constJ2000';
 
 const initialState: TimeState = {
   mode: 'live',
-  anchor: { simDays: J2000_JD, realMs: 0 },
+  // J2000.0 as a Julian Day number — the static seed anchor. Overwritten by the
+  // engine's bootstrap `goLive` before the first frame the user sees.
+  anchor: { simDays: CONST_J2000, realMs: 0 },
   // '1 day/s' — a legible default scrub speed when the clock first goes manual.
   // Ignored while `mode === 'live'`, so it only bites the first manual play.
   rateIndex: 3,

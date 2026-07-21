@@ -31,6 +31,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { engineRoute } from '../../store/constants';
+import { CONST_J2000 } from '../../data/time/constJ2000';
 import type { EngineSliceState } from '../../@types/store/EngineSliceState';
 import type { EngineStatus } from '../../@types/engine/EngineStatus';
 import type { ScaleInfo } from '../../@types/engine/ScaleInfo';
@@ -50,7 +51,7 @@ const INITIAL_SCALE: ScaleInfo = { label: '…', widthPx: 100 };
  * `simDays` is the J2000 epoch (matching the `time` slice's seed anchor) and no
  * body is focused yet.
  */
-const INITIAL_TIME_REPORT: TimeReport = { simDays: 2451545.0, focusedBodyDistanceMpc: null };
+const INITIAL_TIME_REPORT: TimeReport = { simDays: CONST_J2000, focusedBodyDistanceMpc: null };
 
 const initialState: EngineSliceState = {
   status: { kind: 'initializing' },
