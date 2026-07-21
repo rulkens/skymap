@@ -39,10 +39,12 @@ source resolution; this one cuts the *composite*, whose cost is
 destination-resolution-bound (one sample per hdr pixel regardless of source
 size). The two compose.
 
-The `2026-07-21-bloom-mip-count-perf.md` item lands the SAME tonemap pass: the
+The `2026-07-21-bloom-mip-count-perf.md` item targets the SAME tonemap pass: the
 bloom fold (`bloom0 → hdr`) is also a full-viewport composite that fuses into
-`hdr→swap`. The two folds are not symmetric, and the asymmetry is exactly the
-design question above: the bloom fold is the LAST hdr write so it moves cleanly,
-but this star-upsample fold is gated on bloom's bright prefilter still seeing the
-star glow (bloom reads `hdr` before tonemap). Land the bloom fold first, then
-resolve whether star-upsample moves into tonemap or must also feed bloom's input.
+`hdr→swap`. The two folds are not symmetric — the bloom fold is the LAST hdr write
+so it moves cleanly, but this star-upsample fold is gated on bloom's bright
+prefilter still seeing the star glow (bloom reads `hdr` before tonemap). Note the
+bloom fold was spiked 2026-07-22 and came back **marginal** (~0.7 ms, no 60 fps),
+so the shared-tonemap fusion only pays if BOTH folds ride it together; measure
+this star-upsample fold's own delta on a quiet machine before committing to the
+shared-pass rework.
