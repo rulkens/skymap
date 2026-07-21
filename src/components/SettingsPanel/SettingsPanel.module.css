@@ -264,12 +264,6 @@
   color: var(--color-fg);
 }
 
-/* Horizontal rule between the sliders and the reset button */
-.panelDivider {
-  margin: var(--space-4) 0 var(--space-3);
-  border-top: 1px solid var(--border-divider);
-}
-
 /*
  * LOD mode indicator — a tiny status line under the Auto-LOD checkbox that
  * tells the user whether the engine is in "auto (by zoom)" or "manual
@@ -285,12 +279,3 @@
 
 /* Per-field row layout for the Volumes section moved to
    `VolumeFieldRow.module.css` alongside the component. */
-
-/*
- * Action buttons inside the panel body (Reset camera) use the shared
- * Button primitive.  This class is the per-panel override
- * for full-width layout — Button itself ships content-width.
- */
-.resetButton {
-  width: 100%;
-}

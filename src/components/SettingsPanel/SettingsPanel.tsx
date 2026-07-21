@@ -21,11 +21,9 @@
  *
  * ### Props
  *
- * Only two props remain — both are beyond the Redux store's reach:
+ * One prop remains, beyond the Redux store's reach:
  *
  *   - `defaultOpen` — initial Panel open/closed state (false on mobile viewports).
- *   - `onResetCamera` — called when the user clicks "Reset camera"; wired in App
- *     to a focus on the Milky Way ("home").
  *
  * Engine counts (`sourceCounts`, `structureCounts`) are now read directly in
  * `GalaxiesSectionContainer` and `StructuresSectionContainer` via the engine
@@ -46,7 +44,6 @@
 import { memo } from 'react';
 import type { ReactNode } from 'react';
 import { Panel } from '../common/Panel/Panel';
-import Button from '../common/Button/Button';
 import TierChipContainer from '../containers/TierChipContainer';
 import GalaxiesSectionContainer from '../containers/GalaxiesSectionContainer';
 import StarsSectionContainer from '../containers/StarsSectionContainer';
@@ -56,22 +53,18 @@ import StructuresSectionContainer from '../containers/StructuresSectionContainer
 import LabelsSectionContainer from '../containers/LabelsSectionContainer';
 import DisplaySectionContainer from '../containers/DisplaySectionContainer';
 import EarthSectionContainer from '../containers/EarthSectionContainer';
-import styles from './SettingsPanel.module.css';
 
 // ── Props ──────────────────────────────────────────────────────────────────────
 
 type SettingsPanelProps = {
   /** Initial Panel open/closed state. App passes `false` on mobile viewports. */
   defaultOpen?: boolean;
-  /** Called when the user clicks "Reset camera". App wires it to a Milky-Way focus. */
-  onResetCamera: () => void;
 };
 
 // ── SettingsPanel ──────────────────────────────────────────────────────────────
 
 export const SettingsPanel = memo(function SettingsPanel({
   defaultOpen,
-  onResetCamera,
 }: SettingsPanelProps): ReactNode {
   return (
     <Panel
@@ -89,10 +82,6 @@ export const SettingsPanel = memo(function SettingsPanel({
       <DisplaySectionContainer>
         <EarthSectionContainer />
       </DisplaySectionContainer>
-      <div className={styles.panelDivider} role="separator" />
-      <Button className={styles.resetButton} onClick={onResetCamera}>
-        Reset camera
-      </Button>
     </Panel>
   );
 });
