@@ -42,7 +42,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Rendering
 
-- [ ] **Field-star body presence-by-proximity** `needs-design` — un-braid the sphere layer's row from selection so deselecting at close range no longer blinks the star out. → [details](backlog/2026-07-21-star-body-presence-by-proximity.md)
 - [ ] **Saturn ring brightness** `ready` — the ring reads too dim next to the new limb-darkened disc; retune ring albedo/exposure (surfaced in the planet-atmospherics per-body visual pass).
 - [ ] **Photoreal-Earth follow-ups** `deferred` — drift traps + fidelity gaps from plans A–E (equirect-uv mirror, setMap kind table, shared proxy-sphere idiom). → [details](backlog/2026-07-19-photoreal-earth-followups.md)
 - [ ] **Titan atmosphere** `needs-design` — minimal params-row-over-flat-sphere vs full Venus-style cloud-as-surface + limb treatment (needs a texture through the fetch/build pipeline). → [details](backlog/2026-07-19-titan-atmosphere.md)
@@ -51,7 +50,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Perf-harness findings: measured hotspots** `needs-design` — large tier ≈ 3× medium (blows 60fps alone), small slower than medium (unexplained), solar-system 16.9 ms with vertex-bound hdr·NEAR0 at 60%. → [details](backlog/2026-07-21-perf-harness-findings.md)
 - [ ] **Lower-res offscreen star-aggregate pass** `ready` — try `STAR_AGGREGATE_DIVISOR` 2 → 4 (`renderTargets.ts`); ~4× further fill cut if the upsampled glow field survives visually.
 - [ ] **Bright star clump at ~5.9 kpc** `deferred` — flux verified conserved; residual over-exposure is display policy (mid-anchor slider + summed knee shipped; retune or tone-map shoulder next). → [details](backlog/2026-07-17-star-clump-brightness-5-9kpc.md)
-- [ ] **Field-star resolve predicate duplicated** `ready` — `starResolves` (focusedFieldStarSphereLayer) restates partitionStarsByResolution's per-star diameter+resolve rule; extract a shared `starResolvesToSphere` util both call.
 - [ ] **Foreground body draw/drawPick share a per-frame resolved set** `deferred` — mirrored partition/cull invocations can desync under future edits; star partition runs up to 4×/frame at deep zoom. → [details](backlog/2026-07-17-foreground-body-resolved-set.md)
 - [ ] **Star drawBudget small-tier mobile cap + iOS device pass** `deferred` — lower `hardCap` for `tier === 'small'` in `gaia-stars.ts`, tuned on a real device; verify the new vertex-stage storage bindings under WebKit's stricter WebGPU in the same pass.
 - [ ] **Star field → own slab** `needs-design` — the depthless star map (points/captions/connectors) inherits NEAR0's Earth-scale depth bracket; a STARS slab row deletes the three clip-z clamps + far-plane coupling. → [details](backlog/2026-07-13-star-field-own-slab.md)
