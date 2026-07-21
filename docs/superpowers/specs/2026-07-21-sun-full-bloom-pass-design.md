@@ -172,8 +172,10 @@ and the DebugPanel bucket the chain under a single heading.
 
 `settings.bloom: { enabled: boolean; strength: number; threshold: number }`, mirroring
 the `tonemap` group file-for-file: `EngineSettingsState.d.ts`, `initialState.ts`,
-`settingsSlice.ts` reducers, `selectors.ts`, a SettingsPanel section (container +
-presentational, per the create-component conventions), and **exclusion** from
+`settingsSlice.ts` reducers, `selectors.ts`, a **Bloom sub-section inside the existing
+Settings → Display section** (extend `DisplaySectionContainer` + the presentational
+`DisplaySection` with the three controls — enabled toggle, strength slider, threshold
+slider — per the create-component conventions), and **exclusion** from
 `SettingsSnapshot.d.ts` (§1.2). `renderFrame.ts` threads the three values into
 `frameProgram(...)` exactly as `tonemap.exposure`/`curve` are threaded today. Defaults:
 `enabled: true`, `strength ≈ 0.85`, `threshold` from the tuning phase.
