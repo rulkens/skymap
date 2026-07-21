@@ -164,6 +164,31 @@ export type StarCatalogDrawArgs = {
    * shared camera uniform beside `sizePx` / `brightness` / `glowOverlap`.
    */
   readonly aggregateIntensityCap: number;
+  /**
+   * The six packed frustum planes for THIS frame's rebased view-projection
+   * (`frustumPlanesFromViewProj` — 24 floats, six unit-normalized `(nx,ny,nz,d)`
+   * quads), or `null` to disable culling. When non-null the pack loop drops any
+   * node whose conservative bounding sphere is provably outside the frustum, so
+   * off-screen subtrees cost no vertex work; `null` packs every walked node — the
+   * backward-compatible path for callers (and tests) that have no view to build
+   * planes from. The planes live in the SAME camera-relative frame as the node
+   * origins: the rebase puts the camera at the frame origin, so a node's distance
+   * from the eye is simply `length(center)`.
+   */
+  readonly frustumPlanes: Float32Array | null;
+  /**
+   * Angular slack in radians per unit camera distance, added to a LEAF node's
+   * cull radius. A leaf draws as a fixed-PIXEL dot, so its on-screen footprint
+   * spills a world span proportional to how far the node sits (a fixed angular
+   * size subtends more world distance the farther away it is). Widening the cull
+   * sphere by `length(center) * glowMarginAngleRad` keeps a node whose CENTRE has
+   * just crossed a clip plane but whose dot still paints on-screen pixels — the
+   * conservative keep that forbids a visible star winking out. The layer derives
+   * it from the dot's pixel size and the vertical FOV (Task 5); `0` (the
+   * null-planes default) makes the leaf cull radius the bare box half-diagonal.
+   * Ignored for aggregate nodes, whose glow spills a world (not angular) slack.
+   */
+  readonly glowMarginAngleRad: number;
 };
 
 /**

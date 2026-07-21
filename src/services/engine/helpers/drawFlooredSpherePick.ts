@@ -5,7 +5,7 @@
  * ### Why a helper
  *
  * Four NEAR0 sphere-body layers — `earthLayer`, `planetsLayer`,
- * `starSpheresLayer`, `focusedFieldStarSphereLayer` — each ended their `drawPick`
+ * `starSpheresLayer`, `fieldStarSphereLayer` — each ended their `drawPick`
  * with the SAME recipe: measure the camera-to-body distance, floor the pick
  * radius to `minPickRadiusMpc` (so a far-edge sphere that projects to a couple of
  * pixels still has a clickable footprint), compose the body MVP in f64 from the
@@ -62,11 +62,7 @@ export function drawFlooredSpherePick(
   const dx = args.positionMpc[0] - args.camPosMpc[0];
   const dy = args.positionMpc[1] - args.camPosMpc[1];
   const dz = args.positionMpc[2] - args.camPosMpc[2];
-  const pickRadiusMpc = minPickRadiusMpc(
-    args.radiusMpc,
-    Math.hypot(dx, dy, dz),
-    args.drawPxPerRad,
-  );
+  const pickRadiusMpc = minPickRadiusMpc(args.radiusMpc, Math.hypot(dx, dy, dz), args.drawPxPerRad);
   const mvp = composeBodyMvp(
     args.vp,
     args.positionMpc,

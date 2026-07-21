@@ -233,8 +233,8 @@ const STAR_PICK_MIN_RADIUS_PX: f32 = 3.5; // 7 px diameter
 // 'vs'). Close to a star, the f32 reconstruction 'originRelCamMpc + offset *
 // cellScaleMpc' is a near-cancellation whose ulp error is AU-scale for
 // parsec-scale cells, so at solar-radius framing distance the sprite visibly
-// SWIMS by screen-widths. The focused star gets a true-scale sphere composed
-// in f64 instead (focusedFieldStarSphereLayer), so the near sprite must
+// SWIMS by screen-widths. The nearest resolvable star gets a true-scale sphere
+// composed in f64 instead (fieldStarSphereLayer), so the near sprite must
 // dissolve as that sphere resolves. The fade keys on the star's WOULD-BE
 // solar-diameter sphere size in px -- the same apparent-size quantity the
 // sphere layer gates on ('apparentSizePx' vs 'STAR_RESOLVE_PX') -- so the

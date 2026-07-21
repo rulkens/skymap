@@ -96,10 +96,11 @@
  *                            any star crossing STAR_RESOLVE_PX) as true-scale
  *                            flat-emissive spheres (f64 compose seam), opaque
  *                            into the same `foreground:0` target
- *  24. focused-field-star-sphere — the close-range sphere for the ONE focused
- *                            Gaia field star (selection-gated), reusing the same
- *                            star renderer + f64 compose seam, opaque into the
- *                            same target
+ *  24. field-star-sphere  — the close-range sphere for the ONE nearest
+ *                            resolvable Gaia field star (presence derived from
+ *                            proximity, not selection), reusing the same star
+ *                            renderer + f64 compose seam, opaque into the same
+ *                            target
  *  25. planets             — the flat branch of the body partition: resolved
  *                            bodies without a resident surface texture, as
  *                            true-scale flat-lit albedo spheres (f64 compose
@@ -211,7 +212,7 @@ import { clipPathDebugLayer } from './clipPathDebugLayer';
 import { earthLayer } from './earthLayer';
 import { cloudShellLayer } from './cloudShellLayer';
 import { starSpheresLayer } from './starSpheresLayer';
-import { focusedFieldStarSphereLayer } from './focusedFieldStarSphereLayer';
+import { fieldStarSphereLayer } from './fieldStarSphereLayer';
 import { planetsLayer } from './planetsLayer';
 import { texturedBodiesLayer } from './texturedBodiesLayer';
 import { ringsLayer } from './ringsLayer';
@@ -299,12 +300,13 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   // writing no depth and blending straight-alpha OVER.
   cloudShellLayer,
   starSpheresLayer,
-  // The focused field star's close-range sphere: a thin selection-gated sibling
+  // The near field star's close-range sphere: a thin proximity-driven sibling
   // reusing the same star renderer + f64 compose seam as star-spheres, but
-  // scoped to the ONE picked Gaia star at close range (a runtime-selection
-  // layer, not an authored scene body). Order within this opaque depth-tested
-  // group is a listing choice — placed right after star-spheres for legibility.
-  focusedFieldStarSphereLayer,
+  // scoped to the ONE nearest resolvable Gaia star at close range (its presence
+  // is derived from where the camera is, not from selection). Order within this
+  // opaque depth-tested group is a listing choice — placed right after
+  // star-spheres for legibility.
+  fieldStarSphereLayer,
   planetsLayer,
   texturedBodiesLayer,
   // Saturn's rings: the translucent overlay half of the ring system, drawn LAST
@@ -348,7 +350,7 @@ export { clipPathDebugLayer } from './clipPathDebugLayer';
 export { earthLayer } from './earthLayer';
 export { cloudShellLayer } from './cloudShellLayer';
 export { starSpheresLayer } from './starSpheresLayer';
-export { focusedFieldStarSphereLayer } from './focusedFieldStarSphereLayer';
+export { fieldStarSphereLayer } from './fieldStarSphereLayer';
 export { planetsLayer } from './planetsLayer';
 export { texturedBodiesLayer } from './texturedBodiesLayer';
 export { ringsLayer } from './ringsLayer';
