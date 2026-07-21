@@ -35,7 +35,12 @@
  */
 
 import { Node } from 'ts-morph';
-import type { FunctionDeclaration, ParameterDeclaration, VariableDeclaration } from 'ts-morph';
+import type {
+  ExportSpecifier,
+  FunctionDeclaration,
+  ParameterDeclaration,
+  VariableDeclaration,
+} from 'ts-morph';
 import type { ResolvedSymbol } from './resolveSymbol';
 
 export type PassthroughTarget = {
@@ -62,13 +67,32 @@ export function detectPassthrough(resolved: ResolvedSymbol): PassthroughTarget |
 function detectReExport(resolved: ResolvedSymbol): PassthroughTarget | null {
   for (const exportDecl of resolved.sourceFile.getExportDeclarations()) {
     for (const spec of exportDecl.getNamedExports()) {
-      const exportedName = spec.getAliasNode()?.getText() ?? spec.getNameNode().getText();
-      if (exportedName === resolved.name) {
-        return { kind: 're-export', underlying: spec.getNameNode().getText() };
-      }
+      const aliasNode = spec.getAliasNode();
+      const exportedName = aliasNode?.getText() ?? spec.getNameNode().getText();
+      if (exportedName !== resolved.name) continue;
+
+      // A bare `export { foo }` that re-states a declaration living in THIS file is
+      // an export marker for a local symbol, not a proxy forwarding to another one:
+      // its underlying would equal its exported name, and removing the clause would
+      // orphan importers of a symbol that is still declared here. Only a genuine
+      // forward — an alias, or a name resolving to another file — is a passthrough.
+      if (aliasNode === undefined && resolvesToSameFile(resolved, spec)) return null;
+
+      return { kind: 're-export', underlying: spec.getNameNode().getText() };
     }
   }
   return null;
+}
+
+// True when an un-aliased export specifier's name binds to a declaration in the
+// same file (a local `export { foo }`), as opposed to a name pulled in from another
+// module (`export { bar } from './bar'`, or an `import`-then-`export` re-export).
+function resolvesToSameFile(resolved: ResolvedSymbol, spec: ExportSpecifier): boolean {
+  const symbol = spec.getNameNode().getSymbol();
+  const target = symbol?.getAliasedSymbol() ?? symbol;
+  return (
+    target?.getDeclarations().some((decl) => decl.getSourceFile() === resolved.sourceFile) ?? false
+  );
 }
 
 // `export const foo = bar` — an alias only when the initializer is a bare

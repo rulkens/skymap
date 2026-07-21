@@ -36,6 +36,14 @@ describe('detectPassthrough', () => {
     expect(detectPassthrough(resolved)).toEqual({ kind: 're-export', underlying: 'bar' });
   });
 
+  it('returns null for a bare same-name export of a local declaration', () => {
+    // `export { foo }` re-states a local declaration; underlying === exported name.
+    // Treating it as a re-export would let inline delete the clause and orphan
+    // importers of a symbol that is still declared right here.
+    const resolved = resolvedFoo('function foo() {}\nexport { foo };');
+    expect(detectPassthrough(resolved)).toBeNull();
+  });
+
   it('returns null for a wrapper that reorders args and one with extra logic', () => {
     const reordered = resolvedFoo(
       'export function bar(a: number, b: number) { return a; }\n' +

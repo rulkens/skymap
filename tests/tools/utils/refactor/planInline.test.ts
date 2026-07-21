@@ -35,6 +35,25 @@ describe('planInline', () => {
     expect(project.getSourceFile('/src/wrapper.ts')).toBeUndefined();
   });
 
+  it('inlines an aliased re-export and repoints importers at the underlying file', () => {
+    const project = projectWith({
+      '/src/bar.ts': 'export function bar() { return 1; }',
+      '/src/wrapper.ts': "export { bar as foo } from './bar';",
+      '/src/user.ts': "import { foo } from './wrapper';\nexport const y = foo();",
+    });
+    const resolved = resolveSymbol(project, { file: '/src/wrapper.ts', symbol: 'foo' });
+
+    planInline(project, resolved);
+
+    // The importer now names `bar` from bar's own file, and the one-symbol
+    // re-export husk is gone.
+    const user = project.getSourceFileOrThrow('/src/user.ts').getText();
+    expect(user).toContain('bar()');
+    expect(user).toMatch(/from '\.\/bar'/);
+    expect(user).not.toContain('foo');
+    expect(project.getSourceFile('/src/wrapper.ts')).toBeUndefined();
+  });
+
   it('throws with the reference list on a non-passthrough', () => {
     const project = projectWith({
       '/src/wrapper.ts': 'export function foo(x: number) { return x * 2; }',
