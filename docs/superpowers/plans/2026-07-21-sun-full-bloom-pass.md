@@ -244,11 +244,11 @@ the overlay occlusion that draw order used to.
 Baseline **before** any feature commit, on this worktree's dev-server port (read the port
 from the running server's `Local:` line — Vite auto-increments past 5173).
 
-- [ ] Run `npm run -s perf -- --scenario solar-system --scenario star-field --scenario
+- [x] Run `npm run -s perf -- --scenario solar-system --scenario star-field --scenario
       milky-way --url http://localhost:<port> --json` and also without `--json` for the
       human table; quote **MERGED** TOTALs (per-layer numbers carry ~1-3 ms pass overhead
       and must not be quoted as real costs — `tools/perf/README.md`).
-- [ ] Record the three MERGED TOTAL medians in the **Perf** section at the bottom of this
+- [x] Record the three MERGED TOTAL medians in the **Perf** section at the bottom of this
       plan file (edit this file; that is the only file this task touches). No commit needed;
       it rides the next commit or stands alone if the user prefers.
 
@@ -594,11 +594,18 @@ group.
 
 _(Task 7 fills the baseline; Task 14 fills after + delta. MERGED TOTAL medians only.)_
 
+Baseline measured 2026-07-21 post-prep (single tone-map), tier medium, 1400×900 @dpr2,
+30 frames, port 5174. MERGED TOTAL medians:
+
 | scenario | baseline (ms) | after (ms) | delta |
 | --- | --- | --- | --- |
-| solar-system | | | |
-| star-field | | | |
-| milky-way | | | |
+| solar-system | 14.8 (68 fps ✓) | | |
+| star-field | 11.7 (86 fps ✓) | | |
+| milky-way | 21.0 (48 fps ⚠) | | |
+
+Note: `milky-way` was already over the 16.7 ms budget before bloom (hdr·NEAR0 5.8 ms +
+hdr→swap 4.7 + swap·COSMO 4.6 dominate). Bloom adds a 5-mip pyramid + fold; T14 measures the
+delta and the `--sweep` classifier, and perf tuning is deferred to post-build (user call).
 
 ## Deferred / out of scope (spec §1.2)
 
