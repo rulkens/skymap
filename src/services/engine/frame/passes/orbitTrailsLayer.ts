@@ -45,6 +45,8 @@ import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer'
 import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCENE_ORBIT_CONICS } from '../../../../data/bodies/sceneOrbitConics';
+import { ORBITAL_ELEMENTS, elementsById } from '../../../../data/bodies/orbitalElements';
+import type { OrbitalElements } from '../../../../@types/scene/OrbitalElements';
 import { composeOrbitConic } from '../../../../utils/camera/composeOrbitConic';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { MAX_ORBITS, INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/orbitTrailRenderer';
@@ -65,16 +67,29 @@ const FULL_PX = 20;
 const staging = new Float32Array(MAX_ORBITS * INSTANCE_FLOATS);
 
 // The system's reach from the heliocentric origin: the farthest any orbit
-// extends is its centre offset plus its semi-major axis. Precomputed once
-// (the conic table is static) so `enabled` can bound EVERY orbit's apparent
-// size with one comparison instead of walking the table per frame.
-const MAX_ORBIT_EXTENT_MPC = Math.max(
-  ...SCENE_ORBIT_CONICS.map(
-    (conic) =>
-      Math.hypot(conic.centerMpc[0], conic.centerMpc[1], conic.centerMpc[2]) +
-      Math.hypot(conic.semiMajorMpc[0], conic.semiMajorMpc[1], conic.semiMajorMpc[2]),
-  ),
-);
+// point can lie from the origin, over ALL clock times — a TIME-INVARIANT outer
+// envelope. A bound orbit's farthest point from its focus is its apoapsis
+// a·(1+e); a heliocentric orbit's focus IS the origin, so its reach is a·(1+e).
+// A moon's focus rides its parent, whose world position never exceeds the
+// parent's own heliocentric apoapsis, so the moon's reach is bounded by
+// (parent apoapsis + moon apoapsis) — a value the moon orbit stays inside for
+// every t (worst case: both bodies at apoapsis, aligned through the origin).
+// Sourced from the static ORBITAL_ELEMENTS a/e, NOT the conic CENTRES: once a
+// clock animates the trails a moon centre rides its moving parent, so a
+// centre-derived bound would go stale, whereas this element-derived envelope
+// holds for every t. Precomputed once so `enabled` bounds EVERY orbit's
+// apparent size with one comparison instead of walking the table per frame.
+// The bound is conservative (never drops a visible orbit) and only ever ≥ the
+// old centre-based value — the intended slight extra slack for moving centres.
+function apoapsisMpc(elements: OrbitalElements): number {
+  return elements.semiMajorMpc * (1 + elements.eccentricity);
+}
+function maxHeliocentricReachMpc(elements: OrbitalElements): number {
+  const own = apoapsisMpc(elements);
+  // Every moon parent is itself heliocentric, so one hop resolves the focus.
+  return elements.parentId === null ? own : apoapsisMpc(elementsById(elements.parentId)) + own;
+}
+const MAX_ORBIT_EXTENT_MPC = Math.max(...ORBITAL_ELEMENTS.map(maxHeliocentricReachMpc));
 
 export const orbitTrailsLayer: ContentLayer = {
   name: 'orbit-trails',
