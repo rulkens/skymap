@@ -11,7 +11,7 @@
 // here — only the logic that jsdom can see.
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, act } from '@testing-library/react';
 import { fireEvent } from '@testing-library/dom';
 import TimeBar, { type TimeBarProps } from '../../../src/components/TimeBar/TimeBar';
 
@@ -33,13 +33,15 @@ function renderBar(overrides: Partial<TimeBarProps> = {}) {
 }
 
 describe('TimeBar', () => {
-  it('fires onFaster/onSlower/onPlayPause on the step buttons', () => {
+  it('fires onFaster/onSlower on pointer-down and onPlayPause on click', () => {
+    // Slower/Faster step through the pointer path (they also auto-repeat on
+    // hold); play/pause is a plain click.
     const props = renderBar();
 
-    fireEvent.click(screen.getByRole('button', { name: /slower/i }));
+    fireEvent.pointerDown(screen.getByRole('button', { name: /slower/i }));
     expect(props.onSlower).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(screen.getByRole('button', { name: /faster/i }));
+    fireEvent.pointerDown(screen.getByRole('button', { name: /faster/i }));
     expect(props.onFaster).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole('button', { name: /pause/i }));
@@ -47,8 +49,10 @@ describe('TimeBar', () => {
   });
 
   it('disables the step buttons at the ladder ends so they cannot fire', () => {
-    // Native `disabled` blocks the click — the guard against re-dispatching a
-    // clamped step (which silently re-anchored a live clock into manual mode).
+    // The disabled guard against re-dispatching a clamped step (which silently
+    // re-anchored a live clock into manual mode). React does not suppress pointer
+    // events on a disabled button the way it does clicks, so the hold hook's own
+    // `disabled` check is what keeps a pointer-down inert here.
     const props = renderBar({ slowerDisabled: true, fasterDisabled: true });
 
     const slower = screen.getByRole('button', { name: /slower/i });
@@ -56,8 +60,8 @@ describe('TimeBar', () => {
     expect(slower).toBeDisabled();
     expect(faster).toBeDisabled();
 
-    fireEvent.click(slower);
-    fireEvent.click(faster);
+    fireEvent.pointerDown(slower);
+    fireEvent.pointerDown(faster);
     expect(props.onSlower).not.toHaveBeenCalled();
     expect(props.onFaster).not.toHaveBeenCalled();
   });
@@ -90,6 +94,34 @@ describe('TimeBar', () => {
     const readout = screen.getByRole('button', { name: /2026-11-03 18:00 UTC/i });
     fireEvent.click(readout);
     expect(props.onReadoutClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('press-and-hold on a step button auto-repeats, and release stops it', () => {
+    // The stepper steps on pointer-down and auto-repeats while held. This pins
+    // the whole hold contract in one shot: the immediate step (so a quick click
+    // still steps once), the delayed repeat kicking in, and release cutting it
+    // dead. It fails on the real wiring bugs — no repeat at all, or a runaway
+    // timer that keeps firing after the finger lifts.
+    vi.useFakeTimers();
+    try {
+      const props = renderBar();
+      const faster = screen.getByRole('button', { name: /faster/i });
+
+      // Pointer-down fires exactly one step immediately (the quick-click path).
+      fireEvent.pointerDown(faster);
+      expect(props.onFaster).toHaveBeenCalledTimes(1);
+
+      // Holding past the ~400 ms delay engages repeat; two ~150 ms ticks add two.
+      act(() => vi.advanceTimersByTime(400 + 150 * 2));
+      expect(props.onFaster).toHaveBeenCalledTimes(3);
+
+      // Release stops the repeat — no further steps however long we wait.
+      fireEvent.pointerUp(faster);
+      act(() => vi.advanceTimersByTime(150 * 5));
+      expect(props.onFaster).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('reflects paused state on the play/pause control', () => {

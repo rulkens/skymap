@@ -73,11 +73,11 @@ describe('TimeBarContainer', () => {
 
     const { store } = createAppStore();
     // Manual + playing (paused stays false), direction +1. Explicitly pin the
-    // '1 day/s' detent (index 3) rather than leaning on the boot default (now
+    // '1 day/s' detent (index 6) rather than leaning on the boot default (now
     // '1 s/s') — the guard wants a fast rate so 10 real seconds diverge the two
     // clock bases by +10 sim days, not a mere +10 sim seconds. setSimDays then
     // overwrites the anchor cleanly and leaves rateIndex untouched.
-    store.dispatch(setRate({ rateIndex: 3, nowMs: ANCHOR_REAL_MS }));
+    store.dispatch(setRate({ rateIndex: 6, nowMs: ANCHOR_REAL_MS }));
     store.dispatch(
       setSimDays({ simDays: unixMsToJulianDays(Date.UTC(2030, 0, 1)), nowMs: ANCHOR_REAL_MS }),
     );
@@ -137,7 +137,7 @@ describe('TimeBarContainer', () => {
 
     // A different detent maps to a different label — proving it's a real lookup,
     // not a baked-in string.
-    store.dispatch(setRate({ rateIndex: 3, nowMs: 0 }));
+    store.dispatch(setRate({ rateIndex: 6, nowMs: 0 }));
     rerender(createElement(TimeBarContainer, { hidden: false }));
     expect(container.textContent).toContain('1 day/s');
     expect(container.textContent).not.toContain('1 s/s');
@@ -151,7 +151,8 @@ describe('TimeBarContainer', () => {
       wrapper: makeWrapper(store),
     });
 
-    fireEvent.click(button(container, 'Slower'));
+    // Slower/Faster step on pointer-down (the hold path), not click.
+    fireEvent.pointerDown(button(container, 'Slower'));
 
     expect(selectTimeState(store.getState()).rateIndex).toBe(2);
   });
@@ -169,7 +170,7 @@ describe('TimeBarContainer', () => {
       wrapper: makeWrapper(store),
     });
 
-    fireEvent.click(button(container, 'Slower'));
+    fireEvent.pointerDown(button(container, 'Slower'));
 
     const time = selectTimeState(store.getState());
     expect(time.mode).toBe('live');
@@ -187,7 +188,7 @@ describe('TimeBarContainer', () => {
       wrapper: makeWrapper(store),
     });
 
-    fireEvent.click(button(container, 'Faster'));
+    fireEvent.pointerDown(button(container, 'Faster'));
 
     expect(selectTimeState(store.getState()).rateIndex).toBe(top);
   });

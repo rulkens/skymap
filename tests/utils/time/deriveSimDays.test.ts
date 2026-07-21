@@ -40,9 +40,9 @@ describe('deriveSimDays', () => {
   it('slopes by simSecPerRealSec·direction in manual mode (forward)', () => {
     const time: TimeState = {
       mode: 'manual',
-      // rateIndex 2 = '1 hr/s' (simSecPerRealSec 3600).
+      // rateIndex 4 = '1 hr/s' (simSecPerRealSec 3600).
       anchor: { simDays: 100, realMs: 0 },
-      rateIndex: 2,
+      rateIndex: 4,
       direction: 1,
       paused: false,
     };
@@ -53,8 +53,9 @@ describe('deriveSimDays', () => {
   it('runs sim time backwards when direction is -1', () => {
     const time: TimeState = {
       mode: 'manual',
+      // rateIndex 4 = '1 hr/s' (simSecPerRealSec 3600).
       anchor: { simDays: 100, realMs: 0 },
-      rateIndex: 2,
+      rateIndex: 4,
       direction: -1,
       paused: false,
     };
