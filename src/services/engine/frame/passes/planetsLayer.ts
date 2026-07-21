@@ -64,6 +64,7 @@ import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionE
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { sceneBodyPartition } from '../sceneBodyPartition';
+import { sceneBodyStates } from '../sceneBodyStates';
 import { MAX_PLANETS, INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/planetRenderer';
 import { seedIndexOfBody } from './seedIndexOfBody';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
@@ -115,6 +116,9 @@ export const planetsLayer: ContentLayer = {
     const renderer = state.gpu.planetRenderer;
     if (renderer === null) return;
     const flat = sceneBodyPartition(state, ctx).flat;
+    // Live position + orientation from the per-frame snapshot (keyed by id),
+    // resolved ONCE for the whole pack loop — not the baked record fields.
+    const states = sceneBodyStates(state, ctx);
     const limit = Math.min(flat.length, MAX_PLANETS);
 
     // Pack one 24-float instance record per FLAT planet: floats 0..15 the MVP
@@ -126,17 +130,18 @@ export const planetsLayer: ContentLayer = {
     // per-body test of its own.
     for (let i = 0; i < limit; i++) {
       const planet = flat[i]!;
+      const bodyState = states.get(planet.id)!;
       const mvp = composeBodyMvp(
         view.slab.vp,
-        planet.positionMpc,
+        bodyState.positionMpc,
         RENDER_ORIGIN_MPC,
         planet.radiusKm * SCALE_UNITS.KM_TO_MPC,
-        planet.orientation,
+        bodyState.orientation,
       );
-      // Rotate the sun direction into the body's local frame (its baked
-      // orientation carries any axial tilt) so the fragment's Lambert term
-      // stays a plain co-framed dot product — same rotate earthLayer does.
-      const sun = sunDirLocal(planet.positionMpc, RENDER_ORIGIN_MPC, planet.orientation);
+      // Rotate the sun direction into the body's local frame (its orientation
+      // carries any axial tilt) so the fragment's Lambert term stays a plain
+      // co-framed dot product — same rotate earthLayer does.
+      const sun = sunDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation);
       const base = i * INSTANCE_FLOATS;
       staging.set(mvp, base);
       staging[base + 16] = planet.albedo[0];
@@ -178,22 +183,26 @@ export const planetsLayer: ContentLayer = {
     if (pickRenderer === null) return;
 
     const { flat, textured } = sceneBodyPartition(state, ctx);
+    // Live position + orientation from the per-frame snapshot (keyed by id),
+    // resolved ONCE for the whole pick loop — not the baked record fields.
+    const states = sceneBodyStates(state, ctx);
 
     for (const planet of [...flat, ...textured]) {
       const seedIndex = seedIndexOfBody(planet.id, SCENE_PLANETS);
       if (seedIndex < 0) continue; // unknown id: a packed id from −1 would alias body 0.
+      const bodyState = states.get(planet.id)!;
       // Floor the PICK radius to the shared min footprint (visual sphere
       // untouched) via the shared `drawFlooredSpherePick` recipe: a resolved-but-
       // small planet near the foreground far edge can project to a couple of
-      // pixels, too small to click. Each body folds its baked orientation and its
-      // stable seed-index identity.
+      // pixels, too small to click. Each body folds its snapshot orientation and
+      // its stable seed-index identity.
       drawFlooredSpherePick(pickRenderer, pass, {
         vp: view.slab.vp,
-        positionMpc: planet.positionMpc,
+        positionMpc: bodyState.positionMpc,
         radiusMpc: planet.radiusKm * SCALE_UNITS.KM_TO_MPC,
         camPosMpc: view.camPos,
         drawPxPerRad: ctx.drawPxPerRad,
-        orientation: planet.orientation,
+        orientation: bodyState.orientation,
         packedId: packSelection(Source.Planet, seedIndex + PICK_SENTINEL_OFFSET),
       });
     }

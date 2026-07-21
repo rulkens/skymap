@@ -39,6 +39,7 @@ import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { EarthBody } from '../../../../../src/@types/scene/EarthBody';
+import type { BodyState } from '../../../../../src/@types/scene/BodyState';
 
 // Mock composeBodyMvp so the test can (a) assert which vp it consumed by
 // object identity and (b) hand the renderer a recognisable Float32Array. The
@@ -47,6 +48,25 @@ vi.mock('../../../../../src/utils/camera/composeBodyMvp', () => ({
   composeBodyMvp: vi.fn<() => Float32Array>(() => new Float32Array(16)),
 }));
 import { composeBodyMvp } from '../../../../../src/utils/camera/composeBodyMvp';
+
+// The layer reads Earth's live position/orientation from the per-frame body-state
+// snapshot (keyed by id). Stub it to a map holding the seeded Earth, REUSING the
+// record's own positionMpc/orientation refs — so the layer sees the exact fixture
+// values (identity-equal), keeping the `toBe(...)` assertions below intact while
+// the reads move off the baked record fields.
+vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
+  sceneBodyStates: vi.fn((state: EngineState): ReadonlyMap<string, BodyState> => {
+    const m = new Map<string, BodyState>();
+    const earth = state.data.bodies.earth;
+    if (earth)
+      m.set(earth.id, {
+        positionMpc: earth.positionMpc,
+        orientation: earth.orientation,
+        meanAnomalyRad: 0,
+      });
+    return m;
+  }),
+}));
 
 const composeMock = composeBodyMvp as unknown as ReturnType<typeof vi.fn>;
 

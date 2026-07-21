@@ -21,6 +21,7 @@ import { describe, it, expect } from 'vitest';
 import { partitionBodiesByPresentation } from '../../../../src/services/engine/frame/partitionBodiesByPresentation';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
+import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 const VIEWPORT_HEIGHT_PX = 720;
@@ -47,8 +48,18 @@ const CLOSE = (radiusKm: number) => radiusKm * 5; // resolved (~hundreds of px)
 const AU_KM = SCALE_UNITS.AU_TO_MPC / SCALE_UNITS.KM_TO_MPC; // 1 AU in km → deep sub-pixel
 
 function partition(bodies: readonly PlanetBody[], resident: (id: string) => boolean) {
+  // The apparent-size test reads each body's position from the per-frame snapshot
+  // (keyed by id), not a baked record field — build it from the fixture bodies'
+  // own positions so the split sees the same values it always has.
+  const bodyStates = new Map<string, BodyState>(
+    bodies.map((b) => [
+      b.id,
+      { positionMpc: b.positionMpc, orientation: b.orientation, meanAnomalyRad: 0 },
+    ]),
+  );
   return partitionBodiesByPresentation({
     bodies,
+    bodyStates,
     camPosMpc: CAM,
     viewportHeightPx: VIEWPORT_HEIGHT_PX,
     fovYRad: FOV_Y_RAD,
