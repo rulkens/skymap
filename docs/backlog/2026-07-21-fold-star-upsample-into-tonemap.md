@@ -45,6 +45,8 @@ bloom fold (`bloom0 → hdr`) is also a full-viewport composite that fuses into
 so it moves cleanly, but this star-upsample fold is gated on bloom's bright
 prefilter still seeing the star glow (bloom reads `hdr` before tonemap). Note the
 bloom fold was spiked 2026-07-22 and came back **marginal** (~0.7 ms, no 60 fps),
-so the shared-tonemap fusion only pays if BOTH folds ride it together; measure
-this star-upsample fold's own delta on a quiet machine before committing to the
-shared-pass rework.
+the bloom fold alone was measured a **wash** on a clean interleaved A/B (its
+read-modify-write relocates 1:1 into tonemap rather than disappearing). So the
+shared-tonemap fusion only conceivably pays if BOTH folds ride one pass and two
+fullscreen passes collapse to zero; measure this star-upsample fold's own delta
+(interleaved, quiet machine) before committing to the shared-pass rework.
