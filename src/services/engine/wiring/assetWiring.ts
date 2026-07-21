@@ -158,11 +158,21 @@ function starCatalogRow(source: SourceType): AssetWiringRow {
  * The J2000 body-state snapshot, derived ONCE at module load. The texture
  * proximity gates read a host body's world position; every host is an orbital
  * body, so its position comes from `deriveBodyStates` — the same source the
- * render layers read — rather than a baked record field. This is a direct
- * construction-time derive (not the per-frame `sceneBodyStates` seam): the
- * demand table is pure over `DemandCtx` and carries no clock, so a fixed-epoch
- * snapshot is the construction-time twin. The feature (02-core Task 8b) makes
- * the proximity read live by threading the frame's states through `DemandCtx`.
+ * render layers read — rather than a baked record field.
+ *
+ * ### Why still a fixed epoch (02-core Task 8b: NOT yet live here)
+ *
+ * The demand table is pure over `DemandCtx`, whose surfaces (settings, request,
+ * slotState, cameraPosMpc) carry NO sim instant. The single-writer instant lives
+ * at `state.cameraRuntime.lastRenderedSimDays.current`, reachable only where
+ * `EngineState` flows — a demand predicate never sees it. Making the proximity
+ * read live therefore requires threading that instant onto `DemandCtx` (a new
+ * surface built in `buildDemandCtx` from `state.cameraRuntime`, exactly as
+ * `cameraPosMpc` is), which is outside this task's fenced file surface. Until
+ * that thread lands the gate stays J2000-anchored; a body's texture loads on
+ * proximity to where it sat at the epoch. For the inner system this is ~1 AU
+ * off at most — well inside Earth's ~0.4 AU load radius only briefly — so the
+ * gate is imperfect but not broken. See the report's concerns.
  */
 const BODY_STATES_J2000 = deriveBodyStates(CONST_J2000);
 

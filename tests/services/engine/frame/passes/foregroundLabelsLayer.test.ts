@@ -31,6 +31,14 @@ import {
 } from '../../../../../src/services/engine/presentation/sceneBodyLabels';
 import { SCALE_FADE_BANDS } from '../../../../../src/services/engine/presentation/scaleFadeBands';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
+import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
+import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
+
+// The layer derives its caption set from the frame's body snapshot
+// (`sceneBodyStates(state, ctx)` → `deriveBodyStates(ctx.simDays)`). These tests
+// pin `ctx.simDays` at J2000, so `sceneBodyLabels(J2000_STATES)` reproduces the
+// exact anchors the layer builds (the memo returns the same map by reference).
+const J2000_STATES = deriveBodyStates(CONST_J2000);
 
 // The Sun's caption id — its own file no longer exports one (the layer routes
 // the caption by `kind === 'sun'`, and the Sun now rides a fade band rather
@@ -90,6 +98,9 @@ function makeCtx(distance: number, nowMs?: number): ReadyFrameContext {
     cam: { distance },
     fovYRad: 1,
     nowMs,
+    // The layer binds its caption epoch to ctx.simDays via sceneBodyStates; pin
+    // it at J2000 so the anchors match J2000_STATES.
+    simDays: CONST_J2000,
     renderTargets: { depthViewOf: () => ({}) as GPUTextureView },
     renderedTargets: new Set(['foreground:0']),
   } as unknown as ReadyFrameContext;
@@ -231,7 +242,7 @@ describe('foregroundLabelsLayer.draw', () => {
     const setSpy = renderer.setLabels as unknown as ReturnType<typeof vi.fn>;
     expect(setSpy).toHaveBeenCalledTimes(1);
     const rebasedLabels = setSpy.mock.calls[0]![0] as readonly Label[];
-    const base = sceneBodyLabels();
+    const base = sceneBodyLabels(J2000_STATES);
     expect(rebasedLabels.length).toBeGreaterThan(0);
     for (const emitted of rebasedLabels) {
       const src = base.find((l) => l.id === emitted.id)!;
@@ -278,7 +289,7 @@ describe('foregroundLabelsLayer.draw', () => {
     const setLinesSpy = lineRenderer.setLines as unknown as ReturnType<typeof vi.fn>;
     expect(setLinesSpy).toHaveBeenCalledTimes(1);
     const lines = setLinesSpy.mock.calls[0]![0] as MarkerLine[];
-    const base = sceneBodyLabels();
+    const base = sceneBodyLabels(J2000_STATES);
     expect(lines.length).toBeGreaterThan(0);
     for (const line of lines) {
       const src = base.find((l) => `${l.id}-anchor` === line.id)!;
@@ -306,7 +317,7 @@ describe('foregroundLabelsLayer.draw', () => {
     // Park the camera ~1e-12 Mpc from Proxima — deep inside the neighbourhood,
     // so its caption is at full alpha and WOULD show — the toggle-off must drop
     // it anyway, while Earth/planets keep showing.
-    const base = sceneBodyLabels();
+    const base = sceneBodyLabels(J2000_STATES);
     const proxima = base.find((l) => l.id === sceneBodyLabelId('proxima-centauri'))!;
     const camPos: Vec3 = [proxima.worldPos[0] - 1e-12, proxima.worldPos[1], proxima.worldPos[2]];
 
@@ -338,7 +349,7 @@ describe('foregroundLabelsLayer.draw', () => {
     // mute switch: with it off the seeded star map drops — but the Sun (its own
     // `sunCaption` band) and Earth still show. This is the caption twin of the
     // point/sphere layers falling back to the Sun alone.
-    const base = sceneBodyLabels();
+    const base = sceneBodyLabels(J2000_STATES);
     const earthId = sceneBodyLabelId('earth');
     const earth = base.find((l) => l.id === earthId)!;
     const camPos: Vec3 = [...earth.worldPos] as Vec3;
@@ -381,7 +392,7 @@ describe('foregroundLabelsLayer.draw', () => {
     // with the planet toggle ON the Earth caption emits; with it OFF the Earth
     // + planet set drops while the star map keeps showing. The two mute switches
     // are independent.
-    const base = sceneBodyLabels();
+    const base = sceneBodyLabels(J2000_STATES);
     const earthId = sceneBodyLabelId('earth');
     const earth = base.find((l) => l.id === earthId)!;
     const camPos: Vec3 = [...earth.worldPos] as Vec3;
@@ -415,7 +426,7 @@ describe('foregroundLabelsLayer.draw', () => {
   });
 
   it('shows the local neighbourhood at full alpha from Earth and none beyond the neighbourhood', () => {
-    const base = sceneBodyLabels();
+    const base = sceneBodyLabels(J2000_STATES);
     const starLabels = (labels: readonly Label[]) =>
       labels.filter((l) => SCENE_STAR_LABEL_IDS.has(l.id));
 
@@ -522,7 +533,7 @@ describe('foregroundLabelsLayer.draw', () => {
     // point, and the pile's survivor is the SUN: the kind tier (sun 40 >
     // earth 30 > planet 20 > star 10) dominates the composed declutter score;
     // apparent size only breaks ties within a tier.
-    const base = sceneBodyLabels();
+    const base = sceneBodyLabels(J2000_STATES);
     const proxima = base.find((l) => l.id === sceneBodyLabelId('proxima-centauri'))!;
     const camPos: Vec3 = [proxima.worldPos[0] - 1e-12, proxima.worldPos[1], proxima.worldPos[2]];
     const renderer = makeRenderer(6);
@@ -539,7 +550,7 @@ describe('foregroundLabelsLayer.draw', () => {
   });
 
   it('eases a declutter flip instead of popping, then settles and goes quiet', () => {
-    const base = sceneBodyLabels();
+    const base = sceneBodyLabels(J2000_STATES);
     const proxima = base.find((l) => l.id === sceneBodyLabelId('proxima-centauri'))!;
     const camPos: Vec3 = [proxima.worldPos[0] - 1e-12, proxima.worldPos[1], proxima.worldPos[2]];
     const renderer = makeRenderer(6);

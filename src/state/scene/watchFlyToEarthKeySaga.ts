@@ -36,15 +36,15 @@
  * getContext is read INSIDE the loop (per keypress), like the sibling sagas,
  * because the engine registers its saga context AFTER the root saga forks.
  */
-import { call, take, getContext, put } from 'typed-redux-saga';
+import { call, take, getContext, put, select } from 'typed-redux-saga';
 
 import { createKeyboardListener } from '../../services/input/createKeyboardListener';
 import { startCameraTween } from '../camera/cameraSlice';
 import { earthSurfaceFraming } from '../../utils/camera/earthSurfaceFraming';
 import { deriveBodyStates } from '../../services/engine/frame/deriveBodyStates';
-import { CONST_J2000 } from '../../data/time/constJ2000';
+import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { FOCUS_TWEEN_MS } from '../../services/engine/camera/focusTweenDuration';
-import type { SagaContext } from '../../store/types';
+import type { RootState, SagaContext } from '../../store/types';
 
 export function* watchFlyToEarthKeySaga() {
   const channel = yield* call(createKeyboardListener, 'e');
@@ -60,11 +60,14 @@ export function* watchFlyToEarthKeySaga() {
     const earth = earthBody();
     if (earth === null) continue;
 
-    // Framing position comes from the clock derive (frozen at J2000 here), not
-    // the baked seed, so the fly-to lands where Earth IS once a clock can move
-    // the bodies; radius is authored identity, read straight off the body. The
-    // core-feature task repoints CONST_J2000 to the live sim instant.
-    const earthPositionMpc = deriveBodyStates(CONST_J2000).get('earth')!.positionMpc;
+    // Framing position comes from the LIVE sim instant, derived canonically from
+    // the time-intent slice (`deriveSimDays(state.time, now)` — the same
+    // derivation `runFrame` performs each frame), so the fly-to lands where Earth
+    // IS now, not at a fixed epoch; radius is authored identity, read straight off
+    // the body.
+    const time = yield* select((state: RootState) => state.time);
+    const simDays = deriveSimDays(time, performance.now());
+    const earthPositionMpc = deriveBodyStates(simDays).get('earth')!.positionMpc;
 
     yield* put(
       startCameraTween({

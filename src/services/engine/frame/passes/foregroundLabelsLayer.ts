@@ -174,9 +174,11 @@ import type { Label } from '../../../../@types/rendering/Label';
 import type { MarkerLine } from '../../../../@types/rendering/MarkerLine';
 import type { Vec2 } from '../../../../@types/math/Vec2';
 import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { BodyState } from '../../../../@types/scene/BodyState';
 import { NEAR0 } from '../slabs';
 import type { SceneBodyLabel } from '../../presentation/sceneBodyLabels';
 import { sceneBodyLabels } from '../../presentation/sceneBodyLabels';
+import { sceneBodyStates } from '../sceneBodyStates';
 import { CAPTION_PRIORITY, CAPTION_TIER_SCALE } from '../../presentation/captionPriority';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
@@ -231,19 +233,35 @@ const captionAlpha = new Map<string, number>();
 let captionClockMs: number | null = null;
 
 /**
- * The render-origin-relative caption set, built once. `sceneBodyLabels` reads
- * only static seed data, so the anchors never change frame-to-frame — `draw`
- * only rebases them into the current camera-relative frame. Cached at module
- * load rather than rebuilt per frame because the base positions are constant.
+ * The render-origin-relative caption set, MEMOIZED on the body-state snapshot.
+ * `sceneBodyLabels` reads the frame's body positions, so Earth + the planets
+ * move as the sim clock advances — but only when it actually does:
+ * `deriveBodyStates` returns the SAME snapshot Map by reference while `simDays`
+ * is unchanged (a paused clock, or the repeated reads within one frame), so an
+ * identity check on that map is a free change-detector. A real clock tick
+ * rebuilds the handful of captions; a paused clock never rebuilds. The star
+ * anchors in the set are static (stars carry no orbital element), so only the
+ * Earth/planet anchors actually shift. `draw` then rebases whichever set is
+ * current into the camera-relative frame.
+ *
  * The narrowed `SceneBodyLabel` element type carries the producer's guarantee
  * that colour / em / clamps are always authored, so the loop below hands them
  * to `liftedLabelPlacement` (which requires plain numbers) without defensive
  * fallbacks.
  */
-const BASE_LABELS: readonly SceneBodyLabel[] = sceneBodyLabels();
+let cachedStates: ReadonlyMap<string, BodyState> | undefined;
+let cachedLabels: readonly SceneBodyLabel[] = [];
+/** The caption-id universe (for the envelope prune), tracking `cachedLabels`. */
+let cachedLabelIds: ReadonlySet<string> = new Set();
 
-/** The caption-id universe, for the envelope prune. */
-const BASE_LABEL_IDS: ReadonlySet<string> = new Set(BASE_LABELS.map((l) => l.id));
+function baseLabelsFor(bodyStates: ReadonlyMap<string, BodyState>): readonly SceneBodyLabel[] {
+  if (bodyStates !== cachedStates) {
+    cachedLabels = sceneBodyLabels(bodyStates);
+    cachedLabelIds = new Set(cachedLabels.map((l) => l.id));
+    cachedStates = bodyStates;
+  }
+  return cachedLabels;
+}
 
 /**
  * Project a camera-relative anchor through the rebased vp to backing-store
@@ -290,6 +308,12 @@ export const foregroundLabelsLayer: ContentLayer = {
     const renderer = state.gpu.foregroundLabelRenderer;
     if (renderer === null) return;
     const lineRenderer = state.gpu.foregroundMarkerLineRenderer;
+
+    // The caption set for this frame's sim instant. `sceneBodyStates` binds the
+    // epoch to `ctx.simDays` (the ONE per-frame body snapshot every scene layer
+    // shares), and `baseLabelsFor` rebuilds the captions only when that snapshot
+    // changes — free while paused, a handful of rebuilds on a clock tick.
+    const BASE_LABELS = baseLabelsFor(sceneBodyStates(state, ctx));
 
     // Rebase into the camera-relative frame in f64 so the f32 upload carries no
     // catastrophic cancellation — see the module header's "f64 seam" note.
@@ -449,7 +473,7 @@ export const foregroundLabelsLayer: ContentLayer = {
     // the leak guard that keeps the map honest if the seed list ever becomes
     // dynamic.
     for (const id of captionAlpha.keys()) {
-      if (!BASE_LABEL_IDS.has(id)) captionAlpha.delete(id);
+      if (!cachedLabelIds.has(id)) captionAlpha.delete(id);
     }
 
     // ── Pass 2: lift each survivor and emit its caption + connector ──

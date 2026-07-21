@@ -40,11 +40,10 @@ import type { CaptionKind } from './captionPriority';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import { SCENE_STARS } from '../../../data/bodies/sceneStars';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
+import type { BodyState } from '../../../@types/scene/BodyState';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { CONST_J2000 } from '../../../data/time/constJ2000';
-import { deriveBodyStates } from '../frame/deriveBodyStates';
 import { FAMOUS_LABEL_STYLE } from './famousLabelStyle';
 
 /**
@@ -174,17 +173,15 @@ function bodyLabel(
  * Build one name label per seeded scene body, positioned relative to
  * `RENDER_ORIGIN_MPC` for the foreground view-projection.
  *
- * Earth + planets read their position from the J2000 body-state snapshot,
- * derived here DIRECTLY (`deriveBodyStates(CONST_J2000)`) — not through the
- * per-frame `sceneBodyStates` seam. Captions are built ONCE at construction and
- * have no `(state, ctx)`, so faking a frame context to route through the seam
- * would be wrong; deriving at the fixed epoch is the construction-time twin, and
- * reproduces the baked positions exactly. The feature (02-core Task 8b)
- * re-plumbs labels to follow the bodies per frame, at which point they move to
- * the seam. Stars are not orbital bodies, so they keep their record position.
+ * Earth + planets read their position from the caller's `bodyStates` snapshot
+ * (the per-frame `deriveBodyStates(simDays)` map), so their captions FOLLOW the
+ * bodies as the sim clock advances. The caller re-invokes this only when the
+ * snapshot actually changes — a paused clock returns the same map by reference,
+ * so a fresh instant is the only thing that rebuilds the handful of captions
+ * (see `foregroundLabelsLayer`'s memo). Stars are not orbital bodies, so they
+ * keep their authored record position regardless of the instant.
  */
-export function sceneBodyLabels(): SceneBodyLabel[] {
-  const bodyStates = deriveBodyStates(CONST_J2000);
+export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): SceneBodyLabel[] {
   return [
     bodyLabel(SCENE_EARTH, bodyStates.get(SCENE_EARTH.id)!.positionMpc, EARTH_TINT, 'earth'),
     // The Sun rides the star seed table but is its own caption kind — it must
