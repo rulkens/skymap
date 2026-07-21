@@ -435,19 +435,19 @@ into `exclusive` (reachable ONLY through the target) vs `shared` (also
 referenced by code that stays in the file). This is the core of the Q4 decision
 and the single hardest piece to get right.
 
-- [ ] Test `classifies a local helper used only by the target as exclusive` —
+- [x] Test `classifies a local helper used only by the target as exclusive` —
       seed `export A` → local `h` (used by nothing else); assert `h ∈ exclusive`,
       `shared` empty.
-- [ ] Test `classifies a local helper shared with remaining code as shared` —
+- [x] Test `classifies a local helper shared with remaining code as shared` —
       local `h` used by `A` AND by another exported `B`; assert `h ∈ shared`.
-- [ ] Test `follows the transitive chain` — `A` → local `h` → local `g`, neither
+- [x] Test `follows the transitive chain` — `A` → local `h` → local `g`, neither
       used elsewhere; assert both `h` and `g` are `exclusive`. (Model on the real
       `superGalacticTransform.ts` chain cited in Q4.)
-- [ ] Test `a mid-chain symbol shared by remaining code lands in shared` —
+- [x] Test `a mid-chain symbol shared by remaining code lands in shared` —
       `A` → `h` → `g`, where `g` is also used by staying code; assert `g ∈ shared`
       (and the extract will therefore block on it).
-- [ ] `npm test -- classifyLocalDeps` → green.
-- [ ] Commit: the two files above.
+- [x] `npm test -- classifyLocalDeps` → green.
+- [x] Commit: the two files above.
 
 ### Task 9: `extract`
 
