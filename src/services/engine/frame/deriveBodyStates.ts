@@ -16,15 +16,15 @@
  * `orientationForBody` gate. `deriveBodyStates(CONST_J2000)` therefore
  * reproduces the current baked values bit-for-bit (the prep zero-change proof).
  *
- * ### `simDays` is the seam, unread at prep
+ * ### `simDays` drives orientation; positions do not yet propagate
  *
- * The signature takes a sim-day scalar because the feature (§3) fills it with
- * rate propagation — advancing each body's mean anomaly from the epoch. At prep
- * there is no propagation: every body is evaluated at its tabulated J2000 mean
- * elements regardless of `simDays`, so the parameter is deliberately unread here.
- * It exists now so consumers can be repointed onto the final signature and the
- * later task only has to fill the body, not thread a new argument through ~10
- * call sites.
+ * The sim-day scalar drives each body's orientation (its spin phase) through
+ * `orientationForBody`, so at `CONST_J2000` the derived spin matches the baked
+ * J2000 value and later instants rotate the body. Position, by contrast, is
+ * still evaluated at the tabulated epoch elements only — the derive does not yet
+ * propagate mean anomaly, so a body's world position is fixed at its J2000 place
+ * regardless of `simDays`. The elements table carries the rates for that
+ * propagation step; once the derive reads them, `simDays` will move positions too.
  *
  * ### Planets first, then moons — one parent hop
  *
@@ -44,10 +44,10 @@ import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { keplerianPositionMpc } from '../../../utils/orbit/keplerianPositionMpc';
 import { addVec3 } from '../../../utils/math/addVec3';
 
-// `simDays` is the prep seam: rate propagation (§3) will read it to advance each
-// body's mean anomaly from the epoch. The rate-less derive evaluates the
-// tabulated J2000 mean elements regardless, so the parameter is intentionally
-// unread here — it exists now so consumers bind to the final signature.
+// `simDays` drives orientation (spin phase) via `orientationForBody`. Position
+// propagation still evaluates the tabulated epoch elements only, so a body's
+// world position is unaffected by `simDays` until the derive reads the element
+// table's rates to advance mean anomaly.
 export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState> {
   const states = new Map<string, BodyState>();
 
