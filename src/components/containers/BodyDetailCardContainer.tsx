@@ -3,7 +3,7 @@
  * BodyDetailCardContainer — store boundary for the focused-body detail card.
  *
  * Owns the single read the presentational `BodyDetailCard` cannot do itself: the
- * live camera→body distance off the throttled `engineTimeReported` pub
+ * live camera→body distance off the throttled `engineBodyDistanceReported` pub
  * (`selectFocusedBodyDistanceMpc`). The card renders its identity rows (label,
  * radius, aliases, the whole famous-star sidecar branch) from its props and stays
  * pure; only the time-dependent distance row flows through here.

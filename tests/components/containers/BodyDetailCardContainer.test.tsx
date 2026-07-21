@@ -3,12 +3,12 @@
 // BodyDetailCardContainer — store-boundary coverage for the focused-body card's
 // live distance row.
 //
-// The container's whole job is to read the throttled `engineTimeReported` pub's
-// `focusedBodyDistanceMpc` and hand it to the pure card as the `distanceMpc`
-// prop. These tests drive a real store (createAppStore + <Provider>), dispatch
-// `engineTimeReported`, and assert the rendered distance row tracks the pub while
-// the identity rows (Radius, label) stay put. Asserting on rendered text keeps
-// the contract stable against CSS-modules class mangling.
+// The container's whole job is to read the throttled `engineBodyDistanceReported`
+// pub and hand it to the pure card as the `distanceMpc` prop. These tests drive a
+// real store (createAppStore + <Provider>), dispatch `engineBodyDistanceReported`,
+// and assert the rendered distance row tracks the pub while the identity rows
+// (Radius, label) stay put. Asserting on rendered text keeps the contract stable
+// against CSS-modules class mangling.
 //
 // The famous-stars hook is mocked so the non-star (planet) branch is exercised
 // without a sidecar fetch — Jupiter's id misses FAMOUS_STAR_IDS regardless, but
@@ -20,8 +20,7 @@ import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import BodyDetailCardContainer from '../../../src/components/containers/BodyDetailCardContainer';
 import { createAppStore } from '../../../src/store/createAppStore';
-import { engineTimeReported } from '../../../src/state/engine/engineSlice';
-import { CONST_J2000 } from '../../../src/data/time/constJ2000';
+import { engineBodyDistanceReported } from '../../../src/state/engine/engineSlice';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { formatDistance } from '../../../src/utils/format/formatDistance';
 import type { BodyInfo } from '../../../src/@types/engine/BodyInfo';
@@ -67,11 +66,9 @@ function makeWrapper(store: ReturnType<typeof createAppStore>['store']) {
 }
 
 describe('BodyDetailCardContainer', () => {
-  it('distance row updates from the time-status pub', () => {
+  it('distance row updates from the body-distance pub', () => {
     const { store } = createAppStore();
-    store.dispatch(
-      engineTimeReported({ simDays: CONST_J2000, focusedBodyDistanceMpc: NEAR_DISTANCE_MPC }),
-    );
+    store.dispatch(engineBodyDistanceReported(NEAR_DISTANCE_MPC));
 
     render(createElement(BodyDetailCardContainer, { target: jupiter, pinned: true }), {
       wrapper: makeWrapper(store),
@@ -83,9 +80,7 @@ describe('BodyDetailCardContainer', () => {
     // old value is gone, and the identity rows are untouched. `act` flushes the
     // react-redux useSyncExternalStore subscription the post-mount dispatch fires.
     act(() => {
-      store.dispatch(
-        engineTimeReported({ simDays: CONST_J2000 + 30, focusedBodyDistanceMpc: FAR_DISTANCE_MPC }),
-      );
+      store.dispatch(engineBodyDistanceReported(FAR_DISTANCE_MPC));
     });
 
     expect(screen.getByText(formatDistance(FAR_DISTANCE_MPC))).toBeInTheDocument();
@@ -96,9 +91,7 @@ describe('BodyDetailCardContainer', () => {
 
   it('identity rows do not change when the pub ticks without moving the body', () => {
     const { store } = createAppStore();
-    store.dispatch(
-      engineTimeReported({ simDays: CONST_J2000, focusedBodyDistanceMpc: NEAR_DISTANCE_MPC }),
-    );
+    store.dispatch(engineBodyDistanceReported(NEAR_DISTANCE_MPC));
 
     render(createElement(BodyDetailCardContainer, { target: jupiter, pinned: true }), {
       wrapper: makeWrapper(store),
@@ -106,16 +99,11 @@ describe('BodyDetailCardContainer', () => {
 
     const rendersBeforeTick = mockCardRenderProbe.count;
 
-    // The clock advances but the body's distance is unchanged. The selector reads a
-    // primitive, so react-redux bails the container out — the card is never re-rendered
-    // and the identity rows stay exactly as they were.
+    // A republished pub with the same distance. The selector reads a primitive, so
+    // react-redux bails the container out — the card is never re-rendered and the
+    // identity rows stay exactly as they were.
     act(() => {
-      store.dispatch(
-        engineTimeReported({
-          simDays: CONST_J2000 + 100,
-          focusedBodyDistanceMpc: NEAR_DISTANCE_MPC,
-        }),
-      );
+      store.dispatch(engineBodyDistanceReported(NEAR_DISTANCE_MPC));
     });
 
     expect(mockCardRenderProbe.count).toBe(rendersBeforeTick);

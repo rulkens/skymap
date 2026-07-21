@@ -7,9 +7,9 @@
  *
  * Holds the observable runtime state the engine reports to the store:
  * lifecycle status, per-source galaxy counts, per-structure counts, load
- * progress, and the current scale-bar descriptor. Each field is written
- * by a single action creator in `engineSlice`; nothing in this type is
- * computed or derived — derivation is the selector's job.
+ * progress, the current scale-bar descriptor, and the focused-body distance.
+ * Each field is written by a single action creator in `engineSlice`; nothing
+ * in this type is computed or derived — derivation is the selector's job.
  *
  * `sourceCounts` is a sparse record (Partial) because the engine reports
  * counts one source at a time via `engineSourceCountReported`; not every
@@ -27,7 +27,6 @@
 
 import type { EngineStatus } from '../engine/EngineStatus';
 import type { ScaleInfo } from '../engine/ScaleInfo';
-import type { TimeReport } from '../engine/TimeReport';
 import type { SourceType } from '../data/SourceType';
 import type { StructureId } from '../data/structure/StructureId';
 import type { LoadProgressState } from '../loading/LoadProgressState';
@@ -36,12 +35,13 @@ export type EngineSliceState = {
   status: EngineStatus;
   scale: ScaleInfo;
   /**
-   * The engine's throttled sim-clock + focused-body-distance snapshot, written
-   * by `engineTimeReported`. Dispatched a few Hz (not per-frame) behind a
-   * `throttleByTime` gate, with dedup-on-write so a stable instant does not
-   * re-fire the TimeBar / InfoCard subscribers.
+   * Live distance (Mpc) from the camera to the focused scene body, or null
+   * when no body is focused. Written by `engineBodyDistanceReported`,
+   * dispatched a few Hz (not per-frame) behind a `throttleByTime` gate, with
+   * dedup-on-write so a stable distance does not re-fire the InfoCard
+   * subscriber.
    */
-  timeReport: TimeReport;
+  focusedBodyDistanceMpc: number | null;
   sourceCounts: Partial<Record<SourceType, number>>;
   structureCounts: Partial<Record<StructureId, number>>;
   loadProgress: LoadProgressState | null;

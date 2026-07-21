@@ -31,11 +31,9 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { engineRoute } from '../../store/constants';
-import { CONST_J2000 } from '../../data/time/constJ2000';
 import type { EngineSliceState } from '../../@types/store/EngineSliceState';
 import type { EngineStatus } from '../../@types/engine/EngineStatus';
 import type { ScaleInfo } from '../../@types/engine/ScaleInfo';
-import type { TimeReport } from '../../@types/engine/TimeReport';
 import type { SourceType } from '../../@types/data/SourceType';
 import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { LoadProgressState } from '../../@types/loading/LoadProgressState';
@@ -46,17 +44,10 @@ import type { LoadProgressState } from '../../@types/loading/LoadProgressState';
  */
 const INITIAL_SCALE: ScaleInfo = { label: '…', widthPx: 100 };
 
-/**
- * Initial time report before the engine fires its first `engineTimeReported`.
- * `simDays` is the J2000 epoch (matching the `time` slice's seed anchor) and no
- * body is focused yet.
- */
-const INITIAL_TIME_REPORT: TimeReport = { simDays: CONST_J2000, focusedBodyDistanceMpc: null };
-
 const initialState: EngineSliceState = {
   status: { kind: 'initializing' },
   scale: INITIAL_SCALE,
-  timeReport: INITIAL_TIME_REPORT,
+  focusedBodyDistanceMpc: null,
   sourceCounts: {},
   structureCounts: {},
   loadProgress: null,
@@ -111,19 +102,16 @@ const engineSlice = createSlice({
       }
     },
 
-    // ── sim clock + focused-body distance ────────────────────────────────────
+    // ── focused-body distance ─────────────────────────────────────────────────
     // DEDUP-ON-WRITE, same rationale as engineScaleChanged: the engine gates
     // this dispatch behind a throttleByTime(~250 ms) in runFrame, but even a few
-    // Hz would re-fire the TimeBar / InfoCard subscribers when the reported
-    // values are unchanged (a paused/live-idle clock). Skipping the mutation
-    // when both fields match returns the same slice reference, so the selector
+    // Hz would re-fire the InfoCard subscriber when the reported distance is
+    // unchanged (a focused body at rest, or no focus). Skipping the mutation
+    // when the value matches returns the same slice reference, so the selector
     // does not re-fire.
-    engineTimeReported: (state, action: PayloadAction<TimeReport>) => {
-      if (
-        state.timeReport.simDays !== action.payload.simDays ||
-        state.timeReport.focusedBodyDistanceMpc !== action.payload.focusedBodyDistanceMpc
-      ) {
-        state.timeReport = action.payload;
+    engineBodyDistanceReported: (state, action: PayloadAction<number | null>) => {
+      if (state.focusedBodyDistanceMpc !== action.payload) {
+        state.focusedBodyDistanceMpc = action.payload;
       }
     },
   },
@@ -135,7 +123,7 @@ export const {
   engineStructureCountsChanged,
   engineLoadProgressChanged,
   engineScaleChanged,
-  engineTimeReported,
+  engineBodyDistanceReported,
 } = engineSlice.actions;
 
 export default engineSlice.reducer;

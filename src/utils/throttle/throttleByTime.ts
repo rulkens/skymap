@@ -3,14 +3,14 @@
  * `minIntervalMs`, keyed on a caller-supplied `nowMs` timestamp.
  *
  * The engine's per-frame loop wants to publish derived observable state (the
- * sim-clock instant, the focused body's live distance) to the Redux store so
- * React can render it — but dispatching every frame would re-render the TimeBar
- * and InfoCard at the render loop's rate (tens of Hz) for a value humans read a
- * few times a second. This gate lets `runFrame` guard that dispatch:
+ * focused body's live distance) to the Redux store so React can render it —
+ * but dispatching every frame would re-render the InfoCard at the render
+ * loop's rate (tens of Hz) for a value humans read a few times a second. This
+ * gate lets `runFrame` guard that dispatch:
  *
  *     const publishGate = throttleByTime(250);
  *     // ...each frame:
- *     if (publishGate(nowMs)) store.dispatch(engineTimeReported(report));
+ *     if (publishGate(nowMs)) store.dispatch(engineBodyDistanceReported(distance));
  *
  * so the store updates a few Hz regardless of frame rate.
  *

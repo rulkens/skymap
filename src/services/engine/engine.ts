@@ -208,7 +208,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       current: { ...cb.store.getState().camera.base },
     },
     prevActiveId: { current: 'resting' },
-    // Seeded at J2000 to match the store's initial `timeReport` epoch. No frame
+    // Seeded at J2000, a plausible epoch before the first frame runs. No frame
     // has run pre-bootstrap, so no pick can fire against it; `runFrame` overwrites
     // it with the real frame instant before the first pick is possible.
     lastRenderedSimDays: { current: CONST_J2000 },

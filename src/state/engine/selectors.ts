@@ -49,9 +49,9 @@ export const selectLoadProgress = (state: RootState): LoadProgressState | null =
 /**
  * Live distance (Mpc) from the camera to the focused scene body, or null when no
  * body is focused. A primitive read, so `useSelector`'s reference-equality check
- * bails when the throttled `engineTimeReported` pub republishes an unchanged
- * distance — the InfoCard live-distance row re-renders only when the number
- * actually moves.
+ * bails when the throttled `engineBodyDistanceReported` pub republishes an
+ * unchanged distance — the InfoCard live-distance row re-renders only when the
+ * number actually moves.
  */
 export const selectFocusedBodyDistanceMpc = (state: RootState): number | null =>
-  selectEngine(state).timeReport.focusedBodyDistanceMpc;
+  selectEngine(state).focusedBodyDistanceMpc;

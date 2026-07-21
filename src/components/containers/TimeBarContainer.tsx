@@ -8,13 +8,14 @@
  * mirroring the keyboard shortcuts in `useKeyboardShortcuts`. `memo` localizes an
  * intent change's re-render to this leaf instead of cascading from App.
  *
- * ### The readout ticks locally, not off the engine pub
+ * ### The readout ticks locally, not off an engine pub
  *
- * The engine republishes `simDays` through the throttled `engineTimeReported`
- * pub, but that pub only refreshes every few seconds while the clock is
- * live-idle — subscribing it would leave the readout visibly frozen between
- * ticks. So `useTimeReadout` runs its own 1 Hz interval that re-derives the
- * instant from the slice anchor with `deriveSimDays(time, performance.now())`.
+ * The engine's throttled `engineBodyDistanceReported` pub only carries the
+ * focused-body distance, not the sim clock, and only refreshes every few
+ * seconds while the clock is live-idle — subscribing it would leave the
+ * readout visibly frozen between ticks. So `useTimeReadout` runs its own 1 Hz
+ * interval that re-derives the instant from the slice anchor with
+ * `deriveSimDays(time, performance.now())`.
  *
  * The time base MUST be `performance.now()`: `anchor.realMs` is itself a
  * `performance.now()` stamp (the intent reducers pin it that way), so a

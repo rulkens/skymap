@@ -34,9 +34,9 @@ import type { ReconcileEffects } from './ReconcileEffects';
 // single new frame it implies. Unlike selection, the clock has no hover-style
 // sub-action with no GPU consequence, so route-level membership is the right
 // granularity here — every `time/` write moves the rendered instant. The
-// throttled engine→store time report is dispatched on the *engine* route
-// (`engine/engineTimeReported`), not `time/`, so it does not re-enter this wake
-// path — no feedback loop between the render report and this trigger.
+// throttled engine→store distance report is dispatched on the *engine* route
+// (`engine/engineBodyDistanceReported`), not `time/`, so it does not re-enter
+// this wake path — no feedback loop between the render report and this trigger.
 //
 // Selection is deliberately NOT a wake route: it has its own dedicated
 // `watchSelectionWakeSaga` (src/state/selection/) that wakes on select / focus

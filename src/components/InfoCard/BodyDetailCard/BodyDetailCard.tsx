@@ -23,9 +23,10 @@
  * The non-star body's **camera distance** is time-dependent (it swings as the
  * body orbits), so it is NOT baked into the identity `BodyInfo`; it arrives as
  * the `distanceMpc` prop, which `BodyDetailCardContainer` reads live off the
- * throttled `engineTimeReported` pub. This card stays presentational: it renders
- * whatever distance it is handed and never derives the value itself (the
- * store-boundary rule forbids a card reaching into the engine snapshot).
+ * throttled `engineBodyDistanceReported` pub. This card stays presentational:
+ * it renders whatever distance it is handed and never derives the value
+ * itself (the store-boundary rule forbids a card reaching into the engine
+ * snapshot).
  *
  * Both branches end with a "Learn more" Wikipedia link: the body's explicit
  * `wikiTitle`, or a famous star's primary name (via `starWikipediaTitle`, which

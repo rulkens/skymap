@@ -73,7 +73,7 @@ import { drawPickDebugOverlay } from './drawPickDebugOverlay';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
 import { commitCameraPose, cancelCameraTween } from '../../../state/camera/cameraSlice';
 import { computeScaleInfo } from '../helpers/scaleBar';
-import { engineScaleChanged, engineTimeReported } from '../../../state/engine/engineSlice';
+import { engineScaleChanged, engineBodyDistanceReported } from '../../../state/engine/engineSlice';
 import { deriveSimDays } from '../../../utils/time/deriveSimDays';
 import { selectTimeState, selectIsLiveTicking } from '../../../state/time/selectors';
 import { throttleByTime } from '../../../utils/throttle/throttleByTime';
@@ -92,15 +92,15 @@ import { distanceMpc } from '../../../utils/math/distanceMpc';
 const SCALE_TARGET_PX = 120;
 
 /**
- * Rate-limit the `engineTimeReported` publication to ~4 Hz. The store field it
- * writes feeds presentational time/distance cards, which do not need a 60 Hz
- * firehose — a per-frame dispatch would churn React for a value humans read at
- * reading speed. The gate is created ONCE at module scope (not per frame): a
- * fresh `throttleByTime(250)` every call would reset its closure state and
- * defeat the throttle. It pairs with the reducer's dedup-on-write, so an
- * unchanged report inside an open window still costs nothing downstream.
+ * Rate-limit the `engineBodyDistanceReported` publication to ~4 Hz. The store
+ * field it writes feeds the InfoCard's live distance row, which does not need
+ * a 60 Hz firehose — a per-frame dispatch would churn React for a value humans
+ * read at reading speed. The gate is created ONCE at module scope (not per
+ * frame): a fresh `throttleByTime(250)` every call would reset its closure
+ * state and defeat the throttle. It pairs with the reducer's dedup-on-write,
+ * so an unchanged report inside an open window still costs nothing downstream.
  */
-const publishTimeReportGate = throttleByTime(250);
+const publishBodyDistanceGate = throttleByTime(250);
 
 /**
  * Idle-tick cadence for a LIVE sim clock, in milliseconds. Live time advances
@@ -423,18 +423,18 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   ctx.focusBlend = focusUniforms.blend;
   ctx.focus = focusUniforms;
 
-  // ── Time-status publication (throttled) ───────────────────────────────────
+  // ── Focused-body distance publication (throttled) ─────────────────────────
   //
-  // Publish the frame's sim instant + the camera→focused-body distance to the
-  // store so presentational cards read them off `state.engine.timeReport`
-  // without ever touching the engine snapshot (the store-boundary rule). The
-  // ~4 Hz gate keeps this off the per-frame React path; the reducer dedups an
-  // unchanged report. `focusedBodyDistanceMpc` is the distance from the RENDERED
-  // camera position to the focused scene body's position IN THIS FRAME'S
-  // SNAPSHOT — so it tracks the body as the clock moves it — and is null unless
-  // an orbital body (present in the snapshot) is the current focus. A star or
-  // structure focus, or no focus, reports null.
-  if (publishTimeReportGate(nowMs)) {
+  // Publish the camera→focused-body distance to the store so the InfoCard
+  // reads it off `state.engine.focusedBodyDistanceMpc` without ever touching
+  // the engine snapshot (the store-boundary rule). The ~4 Hz gate keeps this
+  // off the per-frame React path; the reducer dedups an unchanged report.
+  // The distance is from the RENDERED camera position to the focused scene
+  // body's position IN THIS FRAME'S SNAPSHOT — so it tracks the body as the
+  // clock moves it — and is null unless an orbital body (present in the
+  // snapshot) is the current focus. A star or structure focus, or no focus,
+  // reports null.
+  if (publishBodyDistanceGate(nowMs)) {
     let focusedBodyDistanceMpc: number | null = null;
     if (focusRow !== null && focusRow.type === 'body') {
       const bodyState = sceneBodyStates(state, ctx).get(focusRow.id);
@@ -442,7 +442,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
         focusedBodyDistanceMpc = distanceMpc(ctx.drawCamPos, bodyState.positionMpc);
       }
     }
-    deps.cb.store.dispatch(engineTimeReported({ simDays, focusedBodyDistanceMpc }));
+    deps.cb.store.dispatch(engineBodyDistanceReported(focusedBodyDistanceMpc));
   }
 
   // ── Per-frame impostor planners ───────────────────────────────────────────
