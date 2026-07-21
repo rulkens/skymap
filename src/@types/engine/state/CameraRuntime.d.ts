@@ -38,6 +38,17 @@
  *                    the current winner to detect a driver transition exactly once
  *                    per transition frame.
  *
+ *   `lastRenderedSimDays` — the sim instant (Julian days) the last frame derived
+ *                    its bodies at, boxed for the same in-place-update reason as
+ *                    `lastPose`. The pick path pairs it with `lastPose.current` to
+ *                    re-derive the pickable bodies at the exact epoch the frame
+ *                    drew them, keeping a pick target welded to its on-screen
+ *                    sprite. `runFrame` is the SINGLE writer — it writes this once
+ *                    per frame beside the body-snapshot prime; no other caller may
+ *                    touch it, so a construction-time `deriveBodyStates(CONST_J2000)`
+ *                    can never poison the pick epoch (the value-and-place braid the
+ *                    old module-level memo accessor carried).
+ *
  * Constructed in `engine.ts` alongside `frameRef`, this bag is the single source
  * of truth for all four Resources: `wireInput`, `startLoop`, `runFrame`, and the
  * focus handlers all read from `state.cameraRuntime`, so there is no duplication
@@ -57,4 +68,9 @@ export type CameraRuntime = {
   lastPose: { current: CameraPose };
   /** Winning driver id from the previous frame; boxed for the same reason. */
   prevActiveId: { current: string };
+  /**
+   * Sim instant (Julian days) the last frame derived its bodies at; boxed so the
+   * pick path reads the live value. Single-writer: only `runFrame` writes it.
+   */
+  lastRenderedSimDays: { current: number };
 };

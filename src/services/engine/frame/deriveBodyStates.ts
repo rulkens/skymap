@@ -57,7 +57,6 @@ import type { BodyState } from '../../../@types/scene/BodyState';
 import { ORBITAL_ELEMENTS } from '../../../data/bodies/orbitalElements';
 import { orientationForBody } from '../../../data/bodies/orientationForBody';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
-import { CONST_J2000 } from '../../../data/time/constJ2000';
 import { propagateElements } from '../../../utils/orbit/propagateElements';
 import { keplerianPositionMpc } from '../../../utils/orbit/keplerianPositionMpc';
 import { addVec3 } from '../../../utils/math/addVec3';
@@ -112,17 +111,4 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
   cachedSimDays = simDays;
   cachedStates = states;
   return states;
-}
-
-/**
- * The instant the body snapshot was last derived at (Julian days). This is the
- * frame's `simDays` — `runFrame` primes the memo at the top of every frame — so
- * a between-frames reader (the pick pass, which re-derives the camera off the
- * last RENDERED pose) can evaluate the bodies at the same instant the frame drew
- * them, keeping the pick target welded to the on-screen sprite. Falls back to
- * `CONST_J2000` before the first frame has run (no frame → no pick, so this is a
- * belt-and-suspenders default rather than a reachable value).
- */
-export function lastDerivedSimDays(): number {
-  return cachedSimDays ?? CONST_J2000;
 }

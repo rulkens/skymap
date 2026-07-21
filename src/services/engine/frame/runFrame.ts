@@ -185,6 +185,13 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const simDays = deriveSimDays(selectTimeState(rootState), nowMs);
   deriveBodyStates(simDays);
 
+  // Record the frame's instant as single-writer state, the exact analogue of
+  // `lastPose.current` for the pose (updated in step 4 below). The pick path
+  // reads THIS — not the derive memo's cached key — so a between-frames
+  // `deriveBodyStates(CONST_J2000)` (extractSelectionRow, construction-time
+  // consts) cannot repoint the epoch the pick sees. runFrame is the only writer.
+  state.cameraRuntime.lastRenderedSimDays.current = simDays;
+
   // ── (1) PRODUCE the pose from the driver table ────────────────────────────
   //
   // One call to `runCameraDrivers` per frame. `pickWinner` is called inside

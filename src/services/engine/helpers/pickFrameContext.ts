@@ -51,7 +51,6 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import { deriveFrameContext } from '../frame/frameContext';
 import { deriveSourceMasks } from '../frame/deriveSourceMasks';
-import { lastDerivedSimDays } from '../frame/deriveBodyStates';
 
 export function pickFrameContext(
   state: EngineState,
@@ -73,8 +72,10 @@ export function pickFrameContext(
     performance.now(),
     // Sim instant: the one the last frame derived its bodies at, so pickable
     // body sprites are re-derived exactly where they were drawn — the time
-    // analogue of reading `lastPose.current` for the pose.
-    lastDerivedSimDays(),
+    // analogue of reading `lastPose.current` for the pose. Single-writer state
+    // (`runFrame` only), so an unrelated `deriveBodyStates(CONST_J2000)` between
+    // frames cannot repoint the epoch the pick sees.
+    state.cameraRuntime.lastRenderedSimDays.current,
   );
   return ctx.isReady ? ctx : null;
 }
