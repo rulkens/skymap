@@ -15,19 +15,19 @@
  * making the column read like a vertical slider where up = faster. That matches
  * the toolbar's ‹ › stepper, where right steps toward a faster rate.
  *
- * ## Dismissal mirrors DateEntryPopover, plus a trigger exclusion
+ * ## Dismissal via useDismissablePopover
  *
- * Esc and a document-level mousedown outside the panel close it — the same
- * mechanism its sibling popover implements, kept as a mirrored copy rather than
- * a second invented one so the family behaves identically. This popover also
- * excludes its own trigger button from "outside" (see the mousedown handler);
- * DateEntryPopover's readout trigger doesn't have that exclusion yet and can
- * exhibit the same close-then-reopen toggle glitch on a re-click.
+ * Esc and a document-level mousedown outside the panel close it, including
+ * the trigger-exclusion guard (`[data-rate-trigger]`) that stops the rate
+ * label's own re-click from closing-then-reopening the popover. Shared with
+ * DateEntryPopover via `useDismissablePopover` so the family behaves
+ * identically instead of maintaining two mirrored copies.
  */
 
-import { useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import cx from 'classnames';
 import { RATE_LADDER } from '../../../data/time/rateLadder';
+import { useDismissablePopover } from '../../../hooks/useDismissablePopover';
 import styles from './RateSelectorPopover.module.css';
 
 export type RateSelectorPopoverProps = {
@@ -41,33 +41,10 @@ function RateSelectorPopover({
   onSelect,
   onClose,
 }: RateSelectorPopoverProps): ReactNode {
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  // Click-outside dismiss. A document-level mousedown keeps this a true popover
-  // (the rest of the HUD stays interactive) rather than a modal backdrop.
-  //
-  // The trigger button itself is deliberately excluded from "outside": mousedown
-  // fires before click, so without this guard, re-clicking the rate label while
-  // open would close the popover on mousedown and the same click's onClick would
-  // then toggle it straight back open — the trigger would appear to never close.
-  // Leaving the toggle handler as the sole closer for its own button avoids that.
-  useEffect(() => {
-    function onDocumentMouseDown(event: MouseEvent) {
-      const target = event.target as Element | null;
-      if (target && target.closest('[data-rate-trigger]')) return;
-      const panel = panelRef.current;
-      if (panel && !panel.contains(event.target as Node)) onClose();
-    }
-    document.addEventListener('mousedown', onDocumentMouseDown);
-    return () => document.removeEventListener('mousedown', onDocumentMouseDown);
-  }, [onClose]);
-
-  function onKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      onClose();
-    }
-  }
+  const { panelRef, onKeyDown } = useDismissablePopover({
+    onClose,
+    triggerSelector: '[data-rate-trigger]',
+  });
 
   // Reversed view of the ascending ladder — fastest row first — while each row
   // keeps its true RATE_LADDER index so onSelect reports the real detent.

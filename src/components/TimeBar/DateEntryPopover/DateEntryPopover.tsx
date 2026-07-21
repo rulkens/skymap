@@ -21,10 +21,20 @@
  * A single `datetime-local` field covers date + time with the platform's own
  * picker; the codebase has no date-picker primitive and this doesn't warrant
  * building one. Enter or the Set button commits; Esc or a click outside cancels.
+ *
+ * ## Dismissal via useDismissablePopover
+ *
+ * Esc-to-close and outside-mousedown-to-close are shared with
+ * RateSelectorPopover through `useDismissablePopover`, including the
+ * trigger-exclusion guard (`[data-date-trigger]`) that stops the readout
+ * button's own re-click from closing-then-reopening the popover. Enter-to-commit
+ * is specific to this popover, so it's handled locally and composed with the
+ * hook's Esc handling in `onKeyDown`.
  */
 
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import Button from '../../common/Button/Button';
+import { useDismissablePopover } from '../../../hooks/useDismissablePopover';
 import styles from './DateEntryPopover.module.css';
 
 export type DateEntryPopoverProps = {
@@ -61,24 +71,16 @@ function parseDatetimeLocalUtc(value: string): Date | null {
 
 function DateEntryPopover({ initial, onCommit, onCancel }: DateEntryPopoverProps): ReactNode {
   const [value, setValue] = useState(() => toDatetimeLocalUtc(initial));
-  const panelRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { panelRef, onKeyDown: onDismissKeyDown } = useDismissablePopover({
+    onClose: onCancel,
+    triggerSelector: '[data-date-trigger]',
+  });
 
   // Focus the input on open so the user can type immediately.
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
-
-  // Click-outside dismiss. A document-level mousedown keeps the popover a true
-  // popover (the rest of the HUD stays interactive) rather than a modal backdrop.
-  useEffect(() => {
-    function onDocumentMouseDown(event: MouseEvent) {
-      const panel = panelRef.current;
-      if (panel && !panel.contains(event.target as Node)) onCancel();
-    }
-    document.addEventListener('mousedown', onDocumentMouseDown);
-    return () => document.removeEventListener('mousedown', onDocumentMouseDown);
-  }, [onCancel]);
 
   function commit(): void {
     const parsed = parseDatetimeLocalUtc(value);
@@ -99,10 +101,9 @@ function DateEntryPopover({ initial, onCommit, onCancel }: DateEntryPopoverProps
     if (event.key === 'Enter') {
       event.preventDefault();
       commit();
-    } else if (event.key === 'Escape') {
-      event.preventDefault();
-      onCancel();
+      return;
     }
+    onDismissKeyDown(event);
   }
 
   return (

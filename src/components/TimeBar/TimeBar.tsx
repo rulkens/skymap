@@ -164,6 +164,10 @@ function TimeBar({
           className={styles.readout}
           onClick={onReadoutClick}
           aria-label={`Set date and time (currently ${readout})`}
+          // Marks this button as the date popover's own trigger — see
+          // DateEntryPopover's outside-mousedown handler, which must not
+          // treat a re-click of this button as an "outside" dismiss.
+          data-date-trigger=""
         >
           {readout}
           <span className={styles.tooltip} aria-hidden="true">

@@ -316,6 +316,25 @@ describe('TimeBarContainer', () => {
     expect(dialogCount(container)).toBe(0);
   });
 
+  it('mousedown+click on the readout trigger closes an open date popover (not reopen)', () => {
+    // Mirrors the rate-trigger guard above: without excluding the readout
+    // button from the date popover's outside-mousedown dismiss, a re-click
+    // would close-then-reopen instead of closing.
+    const { store } = createAppStore();
+    const { container } = render(createElement(TimeBarContainer, { hidden: false }), {
+      wrapper: makeWrapper(store),
+    });
+
+    const trigger = readoutTrigger(container);
+    fireEvent.click(trigger);
+    expect(dialogCount(container)).toBe(1);
+
+    fireEvent.mouseDown(trigger);
+    fireEvent.click(trigger);
+
+    expect(dialogCount(container)).toBe(0);
+  });
+
   it('closes the rate selector on Esc without dispatching', () => {
     // The rate selector implements its own Esc handler (a mirror of the date
     // popover's), so it earns its own guard: Esc closes, nothing dispatches.
