@@ -40,6 +40,10 @@
  *      must bake their saturated pose into base on deactivation. `orbitDrag`
  *      and `resting` are excluded (orbitDrag commits via `onGestureEnd`;
  *      resting's pose IS `base`).
+ *   3b. PIVOT-PIN: while a scene body is focused, overwrite the winning driver's
+ *      target with the live body position (for drivers that declare
+ *      `pivotsOnFocusedBody`). The body owns the pivot; the driver owns the orbit
+ *      terms — so a drag / auto-rotate orbits AROUND the moving body.
  *   4. UPDATE Resources: `prevActiveId.current = activeId`,
  *      `lastPose.current = pose`.
  *
@@ -53,6 +57,7 @@ import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 
 import { runCameraDrivers } from '../camera/cameraDrivers';
 import { activeDriverId } from '../camera/activeDriverId';
+import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
 import { tweenElapsed } from '../camera/cameraClock';
 import { resizeCanvasToDisplay } from '../../gpu/device';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
@@ -294,6 +299,24 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     // and the value we just baked into `base`, so render THAT this frame instead.
     renderPose = lastPose.current;
   }
+
+  // ── (3b) PIVOT-PIN: re-centre the pose on a focused body ──────────────────
+  //
+  // Body focus is un-braided into two concerns: the focused body owns the PIVOT
+  // (target), whichever driver won owns the ORBIT terms (yaw/pitch/distance).
+  // Here we apply the body pivot to the winning driver's pose in ONE place, so a
+  // drag orbits around the moving body (no drift), the autoRotate button spins
+  // around it, and the idle follow holds it — without followBody having to win
+  // the whole pose. Only drivers that declare `pivotsOnFocusedBody` are pinned
+  // (clip / tween keyframe a full path including target and opt out). The pin is
+  // absolute (SETS the target), so baking `renderPose` into `base` on the next
+  // commit-on-edge can never double-apply the body translation.
+  renderPose = applyFocusedBodyPivot(
+    renderPose,
+    deps.drivers.find((d) => d.id === activeId)?.pivotsOnFocusedBody ?? false,
+    rootState.selectionRows.focus,
+    simDays,
+  );
 
   // ── (4) UPDATE Resources for next frame ───────────────────────────────────
   //

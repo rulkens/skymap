@@ -527,9 +527,7 @@ describe('buildCameraDrivers — followBody', () => {
 
     // Monotone convergence: sampling forward in time moves strictly toward the
     // framing distance (Earth's framing distance is tiny, so distance decreases).
-    const samples = [0, 150, 300, 450, 600].map(
-      (ms) => follow.pose(s, CAM_STUB, ms).distance,
-    );
+    const samples = [0, 150, 300, 450, 600].map((ms) => follow.pose(s, CAM_STUB, ms).distance);
     for (let i = 1; i < samples.length; i++) {
       expect(samples[i]!).toBeLessThan(samples[i - 1]!);
     }
@@ -582,5 +580,56 @@ describe('buildCameraDrivers — followBody', () => {
     // Guard the snap-back regression explicitly: the framing distance is tiny, so
     // 'equals framing' would be a hard failure the old code produced.
     expect(result.distance).not.toBeCloseTo(framingDistance, 3);
+  });
+});
+
+// ── followBody sits BELOW autoRotate: the pivot un-braid ─────────────────────
+//
+// followBody no longer competes for the WHOLE pose. A focused body pins the
+// pivot (via the frame-loop pivot-pin); the ORBIT terms go to whoever wins the
+// table. autoRotate (20) therefore outranks followBody (10) — the auto-rotate
+// button spins AROUND a focused body instead of being blocked by follow. This
+// was the third live symptom.
+
+describe('buildCameraDrivers — followBody priority under body focus', () => {
+  it('autoRotate outranks followBody while a body is focused (button not blocked)', () => {
+    const store = makeStore();
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
+    store.dispatch(setAutoRotate({ active: true, rate: 0.001 }));
+    const s = store.getState() as unknown as RootState;
+
+    const engineState = makeFollowEngineState({
+      simDays: FOLLOW_SIM_DAYS,
+      fovYRad: FOLLOW_FOV,
+      lastPose: BASE_POSE,
+    });
+    const drivers = buildCameraDrivers(engineState);
+
+    // Both are active; the winner is autoRotate (20) over followBody (10).
+    // Pre-fix followBody@70 blocked autoRotate — this assertion is the regression.
+    expect(drivers.find((d) => d.id === 'followBody')!.isActive(s)).toBe(true);
+    expect(pickWinner(drivers, s).id).toBe('autoRotate');
+  });
+
+  it('yaw advances over frames while auto-rotating a focused body', () => {
+    const store = makeStore();
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
+    store.dispatch(commitCameraPose(BASE_POSE));
+    store.dispatch(setAutoRotate({ active: true, rate: 0.001 }));
+    const s = store.getState() as unknown as RootState;
+
+    const engineState = makeFollowEngineState({
+      simDays: FOLLOW_SIM_DAYS,
+      fovYRad: FOLLOW_FOV,
+      lastPose: BASE_POSE,
+    });
+    const drivers = buildCameraDrivers(engineState);
+    const clock = createCameraClock();
+
+    const p0 = runCameraDrivers(drivers, s, CAM_STUB, clock, 1000);
+    const p1 = runCameraDrivers(drivers, s, CAM_STUB, clock, 1500);
+    // autoRotate is authoring (not blocked by follow) → yaw advances with elapsed.
+    expect(p0.yaw).toBeCloseTo(BASE_POSE.yaw, 9); // elapsed 0 on the arrival frame
+    expect(p1.yaw).not.toBe(p0.yaw);
   });
 });
