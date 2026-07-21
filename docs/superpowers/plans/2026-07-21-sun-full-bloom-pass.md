@@ -209,23 +209,23 @@ the overlay occlusion that draw order used to.
 - Consumes: `ToneMap` (`tone`), `COSMO`/`NEAR0`, `CompositeStep`.
 - Produces: the reordered `frameProgram(tone)` (unchanged signature this task).
 
-- [ ] Rewrite the `frameProgram` return literal to the order above.
-- [ ] Replace the test `emits the eleven-step main program` literal with the new
+- [x] Rewrite the `frameProgram` return literal to the order above.
+- [x] Replace the test `emits the eleven-step main program` literal with the new
       (still 11-step: two computes, four cosmo/near renders, the moved foreground render,
       **two** composites — `foreground:0→hdr` over/tone:null and `hdr→swap` replace/tone —
       then the two swap overlay renders).
-- [ ] Replace `the two composites share one tone instance` with **`exactly one composite is
+- [x] Replace `the two composites share one tone instance` with **`exactly one composite is
       tone-mapped`**: filter composites, assert the `foreground:0→hdr` step has `tone: null`
       and the `hdr→swap` step has `tone === TONE`, and assert exactly one composite carries
       a non-null tone.
-- [ ] Add **`foreground:0→hdr composite precedes hdr→swap composite`**: assert the index of
+- [x] Add **`foreground:0→hdr composite precedes hdr→swap composite`**: assert the index of
       the `foreground:0→hdr` step is less than the `hdr→swap` step.
-- [ ] Update the `timedSlotsOf` expected arrays (both the fake-registry and the real
+- [x] Update the `timedSlotsOf` expected arrays (both the fake-registry and the real
       `CONTENT_LAYERS` cases) for the reordered composites: `foreground:0→hdr` now precedes
       `hdr→swap`, and the near-field tail no longer emits a `foreground:0→swap` slot. Update
       the `timedSlotGroupsOf` `Composites & pick` rows accordingly.
-- [ ] `npm test -- frameProgram executeFrame` green; `npm run typecheck` green.
-- [ ] Commit.
+- [x] `npm test -- frameProgram executeFrame` green; `npm run typecheck` green.
+- [x] Commit.
 
 ### Task 6: Prep B ratified-look visual checkpoint (no commit)
 

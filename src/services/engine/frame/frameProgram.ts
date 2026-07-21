@@ -2,13 +2,13 @@
  * frameProgram — the FRAME as data, and the timing slots derived from it.
  *
  * A frame is an ordered sequence of steps: the compute prelude (the flow
- * integrate + the atmosphere sky-view LUT bake), a volume render,
- * an HDR render, a half-res survey-star-aggregate render into its own
- * offscreen, a near-field star-point render into that same HDR accumulation
- * (which also composites the aggregate offscreen back in), a tone-mapping
- * composite, the cosmological swap-chain overlay render, then the near-field
- * tail — the foreground bodies, their composite onto the swap chain, and the
- * near-field captions. Pre-unification that
+ * integrate + the atmosphere sky-view LUT bake), a volume render, an HDR
+ * render, a half-res survey-star-aggregate render into its own offscreen, a
+ * near-field star-point render into that same HDR accumulation (which also
+ * composites the aggregate offscreen back in), a near-field foreground-body
+ * render, that body composite OVER the HDR accumulator in linear space, the
+ * single tone-mapping composite, then the swap-chain overlay renders (the
+ * cosmological overlays, then the near-field captions). Pre-unification that
  * sequence lived as an imperative call chain spread across `renderFrame` and
  * two hand-wired HDR encoders — the order was implicit in which function
  * called which, and untestable without a GPU device. `frameProgram` returns
@@ -18,28 +18,32 @@
  * (`docs/superpowers/specs/2026-06-29-renderer-unification-design.md`) for the
  * essential/accidental split this data model rests on.
  *
- * The near-field tail (the zoom-to-earth fold) is now wired: a
- * `foreground:0` render draws the true-scale bodies (Sun, Earth) through the
- * NEAR0 slab into the depth-bearing foreground target, a `foreground:0→swap`
- * composite lays them over the tonemapped scene, then a NEAR0 swap render
- * draws the Sun/Earth captions. The tail's step order is the visible
- * "captions over bodies, bodies over cosmological labels" decision: the
- * near-field swap render (captions) follows the foreground composite so
- * captions land on top of the bodies, and that composite follows the
- * cosmological swap render so the opaque bodies occlude the cosmological
- * labels behind them — an ordering choice now readable in the program rather
- * than buried in an `encodeForegroundOver`-after-`encodeUiOverlay` convention.
+ * The near-field foreground bodies (the zoom-to-earth fold) accumulate into
+ * HDR before tone-mapping: a `foreground:0` render draws the true-scale bodies
+ * (Sun, Earth) through the NEAR0 slab into the depth-bearing foreground target,
+ * then a `foreground:0→hdr` composite lays them OVER the HDR accumulator in
+ * LINEAR space (`tone: null`). Because their pixels join HDR before the single
+ * tone-map, the bodies ride the SAME tone curve as the stars and galaxies —
+ * there is one tone curve across the whole frame, and no seam where the Sun's
+ * limb meets the cosmological scene. The lone `hdr→swap` replace-composite that
+ * follows is the frame's ONLY tone-map.
+ *
+ * The swap-chain overlays draw AFTER that single tone-map, on top of the
+ * tonemapped scene: the cosmological overlays (labels, marker-lines,
+ * selection-ring) first, then the near-field captions. The opaque Sun/Earth
+ * still occlude the cosmological labels behind them, but that occlusion is now
+ * carried by the Prep A COVERAGE test (the COSMO overlays test against the
+ * `foreground:0` depth) rather than by draw order — the foreground bodies no
+ * longer composite after the cosmological swap render, so `frameProgram` no
+ * longer depends on step order for that. The near-field captions still render
+ * last so they land on top of the bodies.
  *
  * There is no `volume→hdr` composite — the volume offscreen is merged into
  * HDR by the `volume-upsample` *layer* inside the HDR render step, not a
  * separate whole-texture composite (plan-time decision 3). The
  * `star-aggregates` offscreen is merged the same way — by the `star-upsample`
  * layer inside the hdr NEAR0 render step, adjacent to the `star-catalog` leaf
- * draw — so there is no `star-aggregates→hdr` composite step either. The two composites
- * in the program share one `tone` object by reference: the tone-map `hdr→swap`
- * (where the HDR scene is compressed to display range before the overlay
- * layers draw on top) and the `foreground:0→swap` OVER, so the tone curve is
- * identical across the Sun's limb.
+ * draw — so there is no `star-aggregates→hdr` composite step either.
  */
 
 import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
@@ -49,12 +53,13 @@ import { COSMO, NEAR0, groupKeyOf } from './slabs';
 import { CONTENT_LAYERS } from './passes';
 
 /**
- * Build this frame's step program. `tone` is threaded into BOTH composites —
- * the same object reference — so the tone-map curve is identical where the
- * foreground bodies meet the tonemapped cosmological scene. The cosmological
- * body (compute → volume → hdr → tone-map → swap) projects through the COSMO
- * slab; the near-field star points and the near-field tail (foreground
- * bodies, their composite, captions) project through the NEAR0 slab.
+ * Build this frame's step program. `tone` is threaded into the LONE tone-map —
+ * the `hdr→swap` replace-composite — which is the only place the HDR scene is
+ * compressed to display range. The foreground-body composite runs in linear
+ * space (`tone: null`) and rides that same single curve because it merges into
+ * HDR before the tone-map, not after. The cosmological body (compute → volume
+ * → hdr → tone-map → swap) projects through the COSMO slab; the near-field star
+ * points and the near-field bodies + captions project through the NEAR0 slab.
  */
 export function frameProgram(tone: ToneMap): readonly FrameStep[] {
   return [
@@ -83,18 +88,23 @@ export function frameProgram(tone: ToneMap): readonly FrameStep[] {
     // tone curve for stars and galaxies. The hdr target is already touched
     // by the COSMO step above, so this pass loads rather than clears.
     { kind: 'render', target: 'hdr', slab: NEAR0 },
-    { kind: 'composite', step: { source: 'hdr', dest: 'swap', blend: 'replace', tone } },
-    { kind: 'render', target: 'swap', slab: COSMO },
-    // Near-field tail (zoom-to-earth fold). The step ORDER is the visible
-    // "captions over bodies, bodies over cosmological labels" decision:
-    //   - the foreground bodies composite (OVER) after the cosmological swap
-    //     render, so the opaque Sun/Earth occlude the cosmological labels;
-    //   - the near-field captions render AFTER that composite, so they land on
-    //     top of the bodies.
-    // The `tone` here is the SAME object the hdr→swap composite carries, which
-    // is how the shared tone curve across the Sun's limb is enforced.
+    // Near-field foreground bodies (zoom-to-earth fold). Rendered into their
+    // depth-bearing foreground target, then composited OVER hdr in LINEAR
+    // space (tone: null) so the Sun/Earth pixels join the HDR accumulator
+    // BEFORE tone-mapping and ride the SAME single tone curve as the stars and
+    // galaxies. No second tone-map: the lone hdr→swap replace-composite below
+    // is the frame's only tone-map, so there is one tone curve across the
+    // whole frame — no seam where the Sun's limb meets the cosmological scene.
     { kind: 'render', target: 'foreground:0', slab: NEAR0 },
-    { kind: 'composite', step: { source: 'foreground:0', dest: 'swap', blend: 'over', tone } },
+    { kind: 'composite', step: { source: 'foreground:0', dest: 'hdr', blend: 'over', tone: null } },
+    { kind: 'composite', step: { source: 'hdr', dest: 'swap', blend: 'replace', tone } },
+    // Cosmological + near-field swap overlays now draw AFTER the tone-map, on
+    // top of the tonemapped scene. The COSMO overlays (labels, marker-lines,
+    // selection-ring) occlude against the foreground bodies via the Prep A
+    // coverage test — frameProgram no longer relies on draw order to keep the
+    // opaque Sun/Earth in front of the cosmological labels. The NEAR0 swap
+    // render (Sun/Earth captions) follows so captions land on top of the bodies.
+    { kind: 'render', target: 'swap', slab: COSMO },
     { kind: 'render', target: 'swap', slab: NEAR0 },
   ];
 }
