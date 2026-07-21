@@ -323,22 +323,22 @@ enclosing declaration, and counts distinct files + tests. Build fixtures as
 in-memory Projects seeding an importer, a call site, a type-position use, a
 re-export, and a file under `tests/`.
 
-- [ ] `collectRefs` test `classifies an import-only reference as import`.
-- [ ] `collectRefs` test `classifies a call site as call` (with the correct
+- [x] `collectRefs` test `classifies an import-only reference as import`.
+- [x] `collectRefs` test `classifies a call site as call` (with the correct
       `enclosing` declaration name).
-- [ ] `collectRefs` test `classifies a type-position use as type-position`.
-- [ ] `collectRefs` test `classifies a re-export as re-export`.
-- [ ] `collectRefs` test `counts references under tests/ as tests` — assert
+- [x] `collectRefs` test `classifies a type-position use as type-position`.
+- [x] `collectRefs` test `classifies a re-export as re-export`.
+- [x] `collectRefs` test `counts references under tests/ as tests` — assert
       `testCount` and `fileCount` for a graph mixing a `src/` and a `tests/`
       referrer.
-- [ ] `renderRefReport` test `--json output parses to the documented shape` —
+- [x] `renderRefReport` test `--json output parses to the documented shape` —
       `JSON.parse(renderRefReport(report, true))` has `target`, `summary.refs/
       files/tests`, and `refs.length === report.refs.length` (structural, not a
       golden-text snapshot — text formatting is not pinned).
-- [ ] Wire the `refs` handler: resolve, `collectRefs`, print `renderRefReport`.
-- [ ] `npm test -- collectRefs renderRefReport` → green; `npm run refactor -- refs
+- [x] Wire the `refs` handler: resolve, `collectRefs`, print `renderRefReport`.
+- [x] `npm test -- collectRefs renderRefReport` → green; `npm run refactor -- refs
       <real symbol> --json` prints valid JSON.
-- [ ] Commit: the five files above.
+- [x] Commit: the five files above.
 
 ### Task 5: `rename`
 

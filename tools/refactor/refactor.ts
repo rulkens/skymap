@@ -42,9 +42,12 @@
 
 import type { Project } from 'ts-morph';
 import { parseFlags } from '../utils/cli/args';
+import { collectRefs } from '../utils/refactor/collectRefs';
 import { loadRefactorProject } from '../utils/refactor/loadRefactorProject';
 import { parseSymbolAddress } from '../utils/refactor/parseSymbolAddress';
 import { readManifest } from '../utils/refactor/readManifest';
+import { renderRefReport } from '../utils/refactor/renderRefReport';
+import { resolveSymbol } from '../utils/refactor/resolveSymbol';
 
 // The six subcommands. Address-taking ones name their target as `<file>#<symbol>`;
 // `move` takes a `<from> <to>` path pair instead.
@@ -89,7 +92,17 @@ function runOp(
     if (address === undefined) {
       throw new Error(`refactor ${sub}: expected a <file>#<symbol> address.`);
     }
-    parseSymbolAddress(address);
+    const parsed = parseSymbolAddress(address);
+
+    if (sub === 'refs') {
+      // `refs` is read-only: it resolves the target, walks its references, and
+      // prints the classified report. It never mutates the project, so the
+      // driver's tail `project.save()` is a no-op regardless of `--dry` — no
+      // special-casing needed here.
+      const report = collectRefs(project, resolveSymbol(project, parsed));
+      process.stdout.write(`${renderRefReport(report, flags['--json'])}\n`);
+      return;
+    }
   } else if (positionals.length !== 2) {
     throw new Error('refactor move: expected <from> <to>.');
   }
@@ -115,7 +128,10 @@ async function main(): Promise<void> {
   const argv = process.argv.slice(2);
   const sub = argv[0];
   if (sub === undefined || !isSubcommand(sub)) {
-    const lead = sub === undefined ? 'refactor: missing subcommand.' : `refactor: unknown subcommand '${sub}'.`;
+    const lead =
+      sub === undefined
+        ? 'refactor: missing subcommand.'
+        : `refactor: unknown subcommand '${sub}'.`;
     process.stderr.write(`${lead}\n${USAGE}\n`);
     process.exitCode = 1;
     return;
