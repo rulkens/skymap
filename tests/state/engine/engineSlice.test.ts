@@ -20,6 +20,7 @@ import reducer, {
   engineStructureCountsChanged,
   engineLoadProgressChanged,
   engineScaleChanged,
+  engineTimeReported,
 } from '../../../src/state/engine/engineSlice';
 import type { EngineSliceState } from '../../../src/@types/store/EngineSliceState';
 import { Source } from '../../../src/data/source';
@@ -27,6 +28,7 @@ import { Source } from '../../../src/data/source';
 const base = (): EngineSliceState => ({
   status: { kind: 'initializing' },
   scale: { label: '…', widthPx: 100 },
+  timeReport: { simDays: 2451545.0, focusedBodyDistanceMpc: null },
   sourceCounts: {},
   structureCounts: {},
   loadProgress: null,
@@ -101,5 +103,45 @@ describe('engineSlice — engineScaleChanged', () => {
     const s: EngineSliceState = { ...base(), scale: { label: '500 Mpc', widthPx: 120 } };
     const next = reducer(s, engineScaleChanged({ label: '1 Gpc', widthPx: 120 }));
     expect(next.scale.label).toBe('1 Gpc');
+  });
+});
+
+describe('engineSlice — engineTimeReported', () => {
+  it('engineTimeReported returns the same state reference when simDays and distance are unchanged', () => {
+    const s: EngineSliceState = {
+      ...base(),
+      timeReport: { simDays: 2460000.5, focusedBodyDistanceMpc: 1.2e-6 },
+    };
+    // Freshly-allocated payload with identical fields must be deduped away so
+    // the TimeBar / InfoCard subscribers do not re-fire a few Hz on a stable clock.
+    const next = reducer(
+      s,
+      engineTimeReported({ simDays: 2460000.5, focusedBodyDistanceMpc: 1.2e-6 }),
+    );
+    expect(next).toBe(s);
+  });
+
+  it('engineTimeReported writes when simDays advances', () => {
+    const s: EngineSliceState = {
+      ...base(),
+      timeReport: { simDays: 2460000.5, focusedBodyDistanceMpc: null },
+    };
+    const next = reducer(
+      s,
+      engineTimeReported({ simDays: 2460000.75, focusedBodyDistanceMpc: null }),
+    );
+    expect(next.timeReport.simDays).toBe(2460000.75);
+  });
+
+  it('engineTimeReported writes when only the focused-body distance changes', () => {
+    const s: EngineSliceState = {
+      ...base(),
+      timeReport: { simDays: 2460000.5, focusedBodyDistanceMpc: null },
+    };
+    const next = reducer(
+      s,
+      engineTimeReported({ simDays: 2460000.5, focusedBodyDistanceMpc: 3.4e-6 }),
+    );
+    expect(next.timeReport.focusedBodyDistanceMpc).toBe(3.4e-6);
   });
 });

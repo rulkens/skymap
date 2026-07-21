@@ -27,6 +27,7 @@
 
 import type { EngineStatus } from '../engine/EngineStatus';
 import type { ScaleInfo } from '../engine/ScaleInfo';
+import type { TimeReport } from '../engine/TimeReport';
 import type { SourceType } from '../data/SourceType';
 import type { StructureId } from '../data/structure/StructureId';
 import type { LoadProgressState } from '../loading/LoadProgressState';
@@ -34,6 +35,13 @@ import type { LoadProgressState } from '../loading/LoadProgressState';
 export type EngineSliceState = {
   status: EngineStatus;
   scale: ScaleInfo;
+  /**
+   * The engine's throttled sim-clock + focused-body-distance snapshot, written
+   * by `engineTimeReported`. Dispatched a few Hz (not per-frame) behind a
+   * `throttleByTime` gate, with dedup-on-write so a stable instant does not
+   * re-fire the TimeBar / InfoCard subscribers.
+   */
+  timeReport: TimeReport;
   sourceCounts: Partial<Record<SourceType, number>>;
   structureCounts: Partial<Record<StructureId, number>>;
   loadProgress: LoadProgressState | null;
