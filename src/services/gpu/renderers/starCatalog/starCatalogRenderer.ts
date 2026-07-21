@@ -453,6 +453,15 @@ export function createStarCatalogRenderer(
         const baseRadius = edge * 0.8660254; // edge·√3/2
         let cullRadius: number;
         if (isAggregate[i]! !== 0) {
+          // This models the glow spill as pure world slack and omits the
+          // `STAR_GLOW_MIN_PX` pixel floor the shader also applies to
+          // aggregates (vertex.wesl, box radius floored before the
+          // sizeScale/overlap spread). That's safe only because
+          // `walkStarOctreeCut` commits aggregates at edge/dist ~ 0.08-0.16,
+          // so their boxes already span tens-to-hundreds of pixels and the
+          // floor never binds. If the walk's LOD threshold is ever lowered
+          // enough that an aggregate's box could shrink toward ~1px on
+          // screen, this cull would need the pick-style angular floor too.
           const sizeScale = sizePx / DEFAULT_STAR_SIZE_PX;
           const spread = sizeScale * glowOverlap;
           cullRadius = baseRadius * (spread > 1 ? spread : 1);
