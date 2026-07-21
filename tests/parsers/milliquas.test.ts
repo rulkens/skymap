@@ -28,10 +28,14 @@ describe('parseMilliquas', () => {
     expect(r.parentSurveyByte).toBe(0);
   });
 
-  it('rejects z=0 sentinel rows', () => {
+  it('rejects non-positive z rows (z=0 sentinel and bad negative measurements)', () => {
+    // A quasar/AGN catalog has no physical z <= 0; a negative z is a bad
+    // measurement or a misclassified foreground object. The fixture carries
+    // both a 0.000 sentinel row and a -0.001 row; neither may survive.
     const { records, skipped } = parseMilliquas(raw);
-    expect(records.every((r) => r.z !== 0)).toBe(true);
-    expect(skipped.zZero).toBeGreaterThan(0);
+    expect(records.every((r) => r.z > 0)).toBe(true);
+    // Both the zero and the negative row land in the same counter.
+    expect(skipped.zNonPositive).toBeGreaterThanOrEqual(2);
   });
 
   it('rejects 0.1-rounded photo-z candidate rows', () => {
