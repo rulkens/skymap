@@ -25,10 +25,21 @@ import {
   clearSelection,
 } from '../../../src/state/selection/selectionSlice';
 import { catalogLoaded } from '../../../src/state/catalog/catalogLoaded';
+import { engineSourceCountReported } from '../../../src/state/engine/engineSlice';
 import { selectionRowsRoute } from '../../../src/store/constants';
 import { Source } from '../../../src/data/sources';
+import {
+  buildStarOctree,
+  type OctreeLeafStar,
+  type StarOctreeGrid,
+} from '../../../tools/stars/buildStarOctree';
+import {
+  encodeStarCatalog,
+  decodeStarCatalog,
+} from '../../../src/data/starCatalog/starCatalogFormat';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { StarCatalog } from '../../../src/@types/data/starCatalog/StarCatalog';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -52,10 +63,25 @@ function makeCloud(): GalaxyCatalog {
   } as unknown as GalaxyCatalog;
 }
 
+// A one-leaf star octree round-tripped through the real encode/decode path, so
+// resolveStarRecord (which extractSelectionRow's star arm calls) resolves record
+// index 0 to a real row. Two stars keep the leaf non-degenerate; index 0 lands
+// in the dense leaf at grid origin, an exact reconstruction.
+const STAR_GRID: StarOctreeGrid = { mortonBitsPerAxis: 9, cellEdgePc: 1.0, gridOrigin: [0, 0, 0] };
+async function makeStarCatalog(): Promise<StarCatalog> {
+  const stars: OctreeLeafStar[] = [
+    { mortonIndex: 0, offset: [1, 2, 3], absMag: 5, bpRp: 0.3 },
+    { mortonIndex: 0, offset: [4, 5, 6], absMag: 5, bpRp: 0.3 },
+  ];
+  return decodeStarCatalog(await encodeStarCatalog(buildStarOctree(stars, STAR_GRID)));
+}
+
 describe('watchSelectionRowsSaga', () => {
   let store: ReturnType<typeof build>;
   // Mutable: the cloud is absent at first (deep-link), then arrives.
   let cloudPresent = false;
+  // Mutable star catalog: null until the star bin commits (deep-link race).
+  let starCatalog: StarCatalog | null = null;
 
   function build() {
     const sagaMiddleware = createSagaMiddleware();
@@ -67,7 +93,7 @@ describe('watchSelectionRowsSaga', () => {
       catalogs: { get: (src) => (cloudPresent && src === Source.SDSS ? makeCloud() : undefined) },
       famousMeta: [],
       structures: { byId: () => null },
-      stars: { current: () => null },
+      stars: { current: () => starCatalog },
     };
     sagaMiddleware.run(watchSelectionRowsSaga);
     sagaMiddleware.setContext({ resolveDeps: () => deps });
@@ -76,6 +102,7 @@ describe('watchSelectionRowsSaga', () => {
 
   beforeEach(() => {
     cloudPresent = true;
+    starCatalog = null;
     store = build();
   });
 
@@ -121,6 +148,26 @@ describe('watchSelectionRowsSaga', () => {
     expect(store.getState()[selectionRowsRoute].focus).toMatchObject({
       type: 'galaxyCatalog',
       objId: '1237668',
+    });
+  });
+
+  it('a star deep link fills on engineSourceCountReported (the star bin never fires catalogLoaded)', async () => {
+    // The Gaia star bin commits by dispatching engineSourceCountReported, NOT
+    // catalogLoaded (that pulse is galaxy-cloud-only). A star deep link resolves
+    // its ref at bootstrap, before the bin loads → null row. The gap-fill must
+    // wake on the star bin's commit pulse too, or the star focus row stays null
+    // forever (camera arrives via watchFocusTweenSaga, but no InfoCard/body).
+    starCatalog = null;
+    store.dispatch(updateSelectionFocus({ type: 'star', index: 0 }));
+    await flush();
+    expect(store.getState()[selectionRowsRoute].focus).toBeNull();
+
+    starCatalog = await makeStarCatalog();
+    store.dispatch(engineSourceCountReported({ source: Source.GaiaStars, count: 2 }));
+    await flush();
+    expect(store.getState()[selectionRowsRoute].focus).toMatchObject({
+      type: 'star',
+      index: 0,
     });
   });
 });

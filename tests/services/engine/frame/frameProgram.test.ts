@@ -180,7 +180,7 @@ describe('timedSlotsOf', () => {
     // composite, the five swap overlays, then the near-field tail (the
     // foreground:0 body render — one slot per body layer: earth, then Earth's
     // translucent cloud-shell overlay (drawn right after the opaque surface),
-    // star-spheres, focused-field-star-sphere, planets, textured-bodies, then the
+    // star-spheres, field-star-sphere, planets, textured-bodies, then the
     // translucent rings overlay last — the foreground:0→swap composite, and the
     // (swap, NEAR0) render group → near0-selection-ring then foreground-labels),
     // and pick last.
@@ -219,7 +219,7 @@ describe('timedSlotsOf', () => {
       'earth',
       'cloud-shell',
       'star-spheres',
-      'focused-field-star-sphere',
+      'field-star-sphere',
       'planets',
       'textured-bodies',
       'rings',
