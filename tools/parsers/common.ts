@@ -76,6 +76,22 @@ export type ParsedRecord = {
    */
   diameterKpc: number | null;
   /**
+   * Angular major-axis diameter in arcseconds, when the survey publishes an
+   * angular size measurement independent of any assumed distance (2MRS Riso).
+   *
+   * Kept separately from `diameterKpc` because the two answer different
+   * questions: `diameterKpc` is a *physical* size baked against a distance the
+   * parser happened to have (the cz-derived distance), while this is the raw
+   * *angular* measurement. When the build pipeline later adopts a different,
+   * better distance for the same galaxy — the CF4 / HyperLEDA / curated-seed
+   * local-volume override — it re-derives the physical diameter from this
+   * angular value against the adopted distance, instead of trusting a
+   * `diameterKpc` computed from a distance that turned out wrong (or, for
+   * blueshifted galaxies, negative). `undefined` when the survey has no
+   * angular-size column for this row.
+   */
+  angularMajorAxisArcsec?: number;
+  /**
    * Per-source classification byte (see `src/data/galaxyCatalog/sourceClass.ts`).
    * Defaults to `0` (unknown); Milliquas populates it with the AGN letter
    * (Q/A/B/K/N/S → enum 1..6), DESI Deep with the LSS tracer

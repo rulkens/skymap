@@ -245,6 +245,40 @@ describe('parseTwoMrs diameterKpc', () => {
     expect(records).toHaveLength(1);
     // 7000 km/s / 70 km/s/Mpc = 100 Mpc → 30" → 14.54 kpc.
     expect(records[0]!.diameterKpc).toBeCloseTo(14.54, 1);
+    // The distance-independent angular size rides alongside: 2·10^1.176 ≈ 30".
+    expect(records[0]!.angularMajorAxisArcsec).toBeCloseTo(29.99, 1);
+  });
+
+  it('emits angularMajorAxisArcsec even for a blueshifted (negative cz) row', () => {
+    // The whole point of the separate angular field: diameterKpc is cz-gated
+    // (null here, since a negative cz would give a negative distance), but the
+    // angular size is a pure catalog fact and must survive so the build can
+    // re-derive a physical size against a corrected local-volume distance.
+    const pad = (s: string, w: number, left = false): string =>
+      left ? s.padStart(w, ' ') : s.padEnd(w, ' ');
+    let line = '';
+    line += pad('00000000+0000000', 16);
+    line += ' ';
+    line += pad('150.00000', 9, true);
+    line += ' ';
+    line += pad(' 30.00000', 9, true);
+    line += ' '.repeat(57 - line.length);
+    line += pad('10.000', 6, true);
+    line += ' ';
+    line += pad('10.500', 6, true);
+    line += ' ';
+    line += pad('11.000', 6, true);
+    line += ' '.repeat(141 - line.length);
+    line += pad('1.176', 5);
+    line += ' ';
+    line += pad('1.200', 5);
+    line += ' '.repeat(173 - line.length);
+    line += pad(' -120', 5, true); // blueshifted
+
+    const { records } = parseTwoMrs(line);
+    expect(records).toHaveLength(1);
+    expect(records[0]!.diameterKpc).toBeNull();
+    expect(records[0]!.angularMajorAxisArcsec).toBeCloseTo(29.99, 1);
   });
 
   it('returns null diameterKpc when Riso is blank', () => {

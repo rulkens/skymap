@@ -37,8 +37,18 @@ import type { ParsedRecord } from '../parsers/common';
 export type CatalogDistance = {
   distMpc: number;
   /** Provenance of the chosen distance — surfaced for InfoCard provenance chips. */
-  source: 'cf4' | 'hyperleda';
+  source: 'cf4' | 'hyperleda' | 'seed';
 };
+
+/**
+ * Curated local-volume distance seed, keyed by 2MASS XSC designation
+ * (`ParsedRecord.massId`). Hand-maintained redshift-independent distances for
+ * the handful of galaxies that CF4 and the (partial) HyperLEDA cache both
+ * miss — in practice the blueshifted 2MRS rows whose only alternative is the
+ * cz path, which mirrors them through the origin to a nonsense antipodal
+ * position. Checked first, so a curated value always wins.
+ */
+export type LocalVolumeDistanceSeed = Map<string, { distMpc: number }>;
 
 /** Convert HyperLEDA `mod0` distance modulus to Mpc. NaN → null. */
 function hyperLedaModToMpc(mod0: number): number | null {
@@ -50,7 +60,18 @@ export function catalogDistanceFor(
   record: ParsedRecord,
   cf4: Cf4CatalogIndex,
   hyperLeda: HyperLedaShapeMap,
+  seed?: LocalVolumeDistanceSeed,
 ): CatalogDistance | null {
+  // Step 0: curated seed by 2MASS designation. Keyed on massId (not PGC) so it
+  // reaches the blueshifted 2MRS rows that never got a PGC cross-walk. Highest
+  // precedence — a hand-verified distance overrides CF4 / HyperLEDA.
+  if (seed !== undefined && record.massId !== undefined) {
+    const seedHit = seed.get(record.massId);
+    if (seedHit !== undefined) {
+      return { distMpc: seedHit.distMpc, source: 'seed' };
+    }
+  }
+
   // No PGC → no lookup possible. (objID == 0n is the convention for
   // "this record has no SDSS/PGC cross-walk".)
   if (record.objID === 0n) return null;
