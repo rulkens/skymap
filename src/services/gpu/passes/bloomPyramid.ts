@@ -1,8 +1,11 @@
 /**
- * bloomPyramid — owns the three pipelines of the dual-filter bloom mip pyramid
- * (bright prefilter, downsample, upsample) plus the linear sampler and the
- * per-level texel-size uniform buffers. Ported from the `galaxy-renderer` dev
- * tool's bloom stack (`createGalaxyEngine.buildTargets` + its post pipelines).
+ * bloomPyramid — owns the four pipelines of the dual-filter bloom mip pyramid
+ * (bright prefilter, downsample, upsample, and the strength-scaled fold back
+ * into HDR) plus the linear sampler and the per-level texel-size uniform
+ * buffers. Ported from the `galaxy-renderer` dev tool's bloom stack
+ * (`createGalaxyEngine.buildTargets` + its post pipelines); the fold is
+ * skymap's addition, carrying the per-frame `settings.bloom.strength` multiply
+ * the generic compositor has no slot for.
  *
  * The pyramid's TEXTURES are not owned here — they are `renderTargets` rows
  * (`bloom0..bloom4`), recreated on resize. Each draw takes the source view as a
@@ -39,6 +42,7 @@
 import brightCode from '../shaders/bloom/bright.wesl?static';
 import downsampleCode from '../shaders/bloom/downsample.wesl?static';
 import upsampleCode from '../shaders/bloom/upsample.wesl?static';
+import foldCode from '../shaders/bloom/fold.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../lib/blendStates';
 import type { BloomPyramid } from '../../../@types/rendering/BloomPyramid';
@@ -66,6 +70,7 @@ export function createBloomPyramid(
   const brightModule = createShaderModuleWithDevLog(device, brightCode, 'bloom.bright');
   const downsampleModule = createShaderModuleWithDevLog(device, downsampleCode, 'bloom.downsample');
   const upsampleModule = createShaderModuleWithDevLog(device, upsampleCode, 'bloom.upsample');
+  const foldModule = createShaderModuleWithDevLog(device, foldCode, 'bloom.fold');
 
   // Linear sampler — the 5-tap downsample and 8-tap upsample kernels rely on
   // bilinear filtering to land their sub-texel diagonal taps. Default address
@@ -126,6 +131,23 @@ export function createBloomPyramid(
     primitive: { topology: 'triangle-list' },
   });
 
+  // The final fold pipeline: samples bloom0 and adds its strength-scaled colour
+  // into HDR. Additive one/one like upsample — it accumulates the glow onto the
+  // scene rather than overwriting it. Built AFTER the three pyramid pipelines so
+  // the bright/downsample/upsample build order (asserted by the factory tests)
+  // is unperturbed.
+  const foldPipeline = device.createRenderPipeline({
+    label: 'bloomPyramid-fold-pipeline',
+    layout: pipelineLayout,
+    vertex: { module: foldModule, entryPoint: 'vs' },
+    fragment: {
+      module: foldModule,
+      entryPoint: 'fs',
+      targets: [{ format: hdrFormat, blend: ADDITIVE_BLEND }],
+    },
+    primitive: { topology: 'triangle-list' },
+  });
+
   // Per-level texel-size uniforms, ONE array per stage — see module header on
   // why they must not be shared. Each buffer is [1/w, 1/h, flag, 0] (16 bytes).
   const makeLevelUniforms = (stage: string): GPUBuffer[] =>
@@ -143,6 +165,14 @@ export function createBloomPyramid(
   // no intra-frame reuse means no writeBuffer/submit race to avoid.
   const brightBuf = device.createBuffer({
     label: 'bloomPyramid-bright-uniform',
+    size: 16,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+
+  // Same single-buffer reasoning as brightBuf: the fold is drawn once per frame,
+  // so no intra-frame reuse means no writeBuffer/submit race to dodge.
+  const foldBuf = device.createBuffer({
+    label: 'bloomPyramid-fold-uniform',
     size: 16,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
@@ -202,12 +232,19 @@ export function createBloomPyramid(
       pass.setBindGroup(0, bindFor(srcView, uniform));
       pass.draw(3, 1, 0, 0);
     },
+    fold(pass: GPURenderPassEncoder, srcView: GPUTextureView, strength: number): void {
+      device.queue.writeBuffer(foldBuf, 0, new Float32Array([strength, 0, 0, 0]));
+      pass.setPipeline(foldPipeline);
+      pass.setBindGroup(0, bindFor(srcView, foldBuf));
+      pass.draw(3, 1, 0, 0);
+    },
     destroy(): void {
       // Uniform buffers have an explicit destroy; release them. Sampler,
       // layout, and pipelines are GC'd when their last reference drops.
       for (const buf of downTexelBufs) buf.destroy();
       for (const buf of upTexelBufs) buf.destroy();
       brightBuf.destroy();
+      foldBuf.destroy();
     },
   };
 }

@@ -388,6 +388,19 @@ describe('CONTENT_LAYERS blend legality', () => {
         }
       } else if (layer.target === 'swap') {
         expect(layer.blend).toBe('over');
+      } else if (/^bloom[0-4]$/.test(layer.target)) {
+        // The bloom mip pyramid rows: the bright prefilter and the four
+        // downsample folds OVERWRITE their target (opaque — each is its target's
+        // sole producer), while the four upsample folds accumulate ADDITIVELY
+        // onto the finer level. So a `bloomN` target legitimately admits both
+        // blends, split by which stage draws it: `bloom-up-*` is additive, the
+        // bright + `bloom-down-*` producers are opaque. (The final fold targets
+        // `hdr`, additive — covered by the `hdr` branch above.)
+        if (layer.name.startsWith('bloom-up-')) {
+          expect(layer.blend).toBe('additive');
+        } else {
+          expect(layer.blend).toBe('opaque');
+        }
       } else {
         throw new Error(
           `CONTENT_LAYERS: unexpected target '${layer.target}' on layer '${layer.name}'`,

@@ -425,19 +425,28 @@ wires the steps), so they never draw this task — the frameProgram slot tests s
 - Produces: `bloomBrightLayer`, four downsample layers, four upsample layers,
   `bloomFoldLayer`; all in `CONTENT_LAYERS`.
 
-- [ ] Each layer's `enabled(state)` returns `state.gpu.bloomPyramid !== null` (the handle is
+- [x] Each layer's `enabled(state)` returns `state.gpu.bloomPyramid !== null` (the handle is
       minted in `initGpu`; add the `state.gpu.bloomPyramid` field + construction there — a
       `createBloomPyramid(device, hdrFormat)` call beside the other pass factories). The
       program-level `settings.bloom.enabled` gate lives in `frameProgram` (Task 13), so the
       layer gate is just the handle-ready check (per the render-wake / opacity-0 conventions
       the program omits the steps entirely when disabled).
-- [ ] `srcTexelSize` per level = `[scale / viewportPx.x, scale / viewportPx.y]` where `scale`
+- [x] `srcTexelSize` per level = `[scale / viewportPx.x, scale / viewportPx.y]` where `scale`
       is the **source** target's divisor — derive it from the target row, never hard-code.
-- [ ] Wire `state.gpu.bloomPyramid` construction + null-init + teardown in
+      (Extracted to `bloomSrcTexelSize.ts`.)
+- [x] Wire `state.gpu.bloomPyramid` construction + null-init + teardown in
       `initGpu.ts` (+ the `EngineGpu` type field).
-- [ ] `npm run typecheck` green; `npm test -- passes frameProgram` green (the registry gains
+- [x] `npm run typecheck` green; `npm test -- passes frameProgram` green (the registry gains
       layers but no new slots until Task 13 adds the steps).
-- [ ] Commit.
+- [x] Commit.
+
+> **DEVIATION (accepted):** the ten bloom layers live on a NEW `BLOOM = 2` slab
+> (`slabs.ts`), NOT on `COSMO`. The plan's T13 pseudocode below put the fold on `(hdr, COSMO)`
+> — but the executor filters layers by `(target, slab)` with no already-drawn exclusion, so an
+> `(hdr, COSMO)` fold step re-sweeps every galaxy layer and DOUBLE-DRAWS the scene. The `BLOOM`
+> slab makes the fold's `(hdr, BLOOM)` step match only `bloomFoldLayer`. Layers are dormant
+> until Task 13 wires `slab: BLOOM` steps + a `deriveSlabs` `BLOOM` row (full-res screen-space
+> `viewportPx`, no projection). **Task 13 MUST use `slab: BLOOM`, not `COSMO`.**
 
 ### Task 12: Display panel — Bloom sub-section (UI)
 

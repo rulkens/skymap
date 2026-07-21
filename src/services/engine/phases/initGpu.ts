@@ -62,6 +62,7 @@ import { createVolumeFieldRenderer } from '../../gpu/renderers/volumeField/volum
 import { createFlowFieldRenderer } from '../../gpu/renderers/flowField/flowFieldRenderer';
 import { createVolumeUpsample } from '../../gpu/passes/volumeUpsample';
 import { createStarAggregateUpsample } from '../../gpu/passes/starAggregateUpsample';
+import { createBloomPyramid } from '../../gpu/passes/bloomPyramid';
 import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
 import { createDiskRadiusRing } from '../../gpu/renderers/devTools/diskRadiusRing';
 import { createEarthRenderer } from '../../gpu/renderers/bodies/earthRenderer';
@@ -411,6 +412,16 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // summed aggregate field, and adds it into HDR. Targets 'rgba16float' — both
   // the HDR and the star-aggregates rows share that format.
   state.gpu.starAggregateUpsample = createStarAggregateUpsample(device, 'rgba16float');
+
+  // ── Bloom mip pyramid (bright / downsample / upsample / fold) ──────
+  //
+  // Built unconditionally alongside the other post-process passes; the four
+  // pipelines are cheap and the `bloom0..bloom4` mip textures live on
+  // `renderTargets` (recreated on resize), so nothing here depends on viewport
+  // size. Targets 'rgba16float' — the HDR + every bloom row share that format.
+  // The bloom content layers gate on `state.gpu.bloomPyramid !== null`; the
+  // `settings.bloom.enabled` master toggle gates at frame-program build.
+  state.gpu.bloomPyramid = createBloomPyramid(device, 'rgba16float');
 
   // ── Pick-buffer debug overlay ────────────────────────────────────
   //

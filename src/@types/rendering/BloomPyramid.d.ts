@@ -79,6 +79,20 @@ export type BloomPyramid = {
     srcTexelSize: Vec2,
   ): void;
   /**
+   * Final fold: reads `srcView` (`bloom0`, the accumulated finest level) and
+   * ADDITIVELY (one/one) blits it into the bound HDR target, scaled by
+   * `strength`. `strength` is `state.settings.bloom.strength`, a per-draw
+   * multiply the generic compositor's fixed blend table has no slot for — so
+   * the fold lives here rather than as a compositor merge.
+   *
+   * Uses a SINGLE uniform buffer (like `bright`): the fold is drawn once per
+   * frame, so there is no intra-frame reuse and thus no writeBuffer/submit race
+   * to guard against with a per-level buffer.
+   *
+   * @param strength Linear multiplier on the folded bloom (0 = no glow).
+   */
+  fold(pass: GPURenderPassEncoder, srcView: GPUTextureView, strength: number): void;
+  /**
    * No-op — sampler, bind-group-layout, pipelines, and the small uniform
    * buffers are GC'd when their last reference drops. Present for teardown
    * symmetry with the other GPU-resource owners.
