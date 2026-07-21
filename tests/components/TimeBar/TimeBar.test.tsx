@@ -11,7 +11,7 @@
 // here — only the logic that jsdom can see.
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, cleanup } from '@testing-library/react';
 import { fireEvent } from '@testing-library/dom';
 import TimeBar, { type TimeBarProps } from '../../../src/components/TimeBar/TimeBar';
 
@@ -46,12 +46,43 @@ describe('TimeBar', () => {
     expect(props.onPlayPause).toHaveBeenCalledTimes(1);
   });
 
-  it('shows the now button only in manual mode', () => {
-    renderBar({ mode: 'live' });
-    expect(screen.queryByRole('button', { name: /now/i })).toBeNull();
+  it('disables the step buttons at the ladder ends so they cannot fire', () => {
+    // Native `disabled` blocks the click — the guard against re-dispatching a
+    // clamped step (which silently re-anchored a live clock into manual mode).
+    const props = renderBar({ slowerDisabled: true, fasterDisabled: true });
 
-    renderBar({ mode: 'manual' });
-    expect(screen.getByRole('button', { name: /now/i })).not.toBeNull();
+    const slower = screen.getByRole('button', { name: /slower/i });
+    const faster = screen.getByRole('button', { name: /faster/i });
+    expect(slower).toBeDisabled();
+    expect(faster).toBeDisabled();
+
+    fireEvent.click(slower);
+    fireEvent.click(faster);
+    expect(props.onSlower).not.toHaveBeenCalled();
+    expect(props.onFaster).not.toHaveBeenCalled();
+  });
+
+  it('keeps the now button mounted always: inert when live, interactive when manual', () => {
+    // The button is always in the DOM (so the pill width can animate on the
+    // hand-back), so query the raw node rather than the a11y tree. In live mode
+    // its collapser wrapper carries `inert` — the guarantee that a folded Now is
+    // unfocusable and can't be actioned. This assertion fails if that wrapper
+    // stops being inert (i.e. the folded Now becomes clickable/focusable again).
+    renderBar({ mode: 'live' });
+    const liveNow = document.body.querySelector('button[aria-label="Return to now"]');
+    expect(liveNow).not.toBeNull();
+    expect(liveNow?.closest('[inert]')).not.toBeNull();
+
+    cleanup();
+
+    const props = renderBar({ mode: 'manual' });
+    const manualNow = document.body.querySelector<HTMLButtonElement>(
+      'button[aria-label="Return to now"]',
+    );
+    expect(manualNow).not.toBeNull();
+    expect(manualNow?.closest('[inert]')).toBeNull();
+    fireEvent.click(manualNow!);
+    expect(props.onNow).toHaveBeenCalledTimes(1);
   });
 
   it('renders the readout and fires onReadoutClick', () => {

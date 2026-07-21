@@ -83,10 +83,13 @@ import { distanceMpc } from '../../../utils/math/distanceMpc';
  * Desired scale-bar width in CSS pixels. The engine computes this per-frame
  * and dispatches the result to the store, so every consumer (ScaleBar, tour
  * sagas) reads a consistent value without a React-side computation callback.
- * 150 px is the design choice: wide enough to read, narrow enough to never
- * collide with the InfoCard.
+ * Capped by the ScaleBar panel's content box: that panel now hugs the TimeBar
+ * pill's mono readout (~145 px content width; see ScaleBar.module.css), so the
+ * legend must stay comfortably under it to avoid clamping. 120 px reads clearly
+ * and leaves margin against the ~145 px box; if that panel width changes, this
+ * ceiling follows.
  */
-const SCALE_TARGET_PX = 150;
+const SCALE_TARGET_PX = 120;
 
 /**
  * Rate-limit the `engineTimeReported` publication to ~4 Hz. The store field it

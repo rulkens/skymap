@@ -43,10 +43,6 @@ export type TimeBarContainerProps = {
   readonly hidden: boolean;
 };
 
-function clampRateIndex(index: number): number {
-  return Math.min(Math.max(index, 0), RATE_LADDER.length - 1);
-}
-
 // The current sim instant as a UTC Date — the readout string and the
 // date-entry popover's seed both derive from this same moment.
 function readoutInstant(time: TimeState): Date {
@@ -57,16 +53,15 @@ function formatReadout(time: TimeState): string {
   return formatSimClock(readoutInstant(time));
 }
 
-// The popover is a fixed pane centred just above the bottom-center TimeBar pill.
-// Placement lives here rather than in the popover's module (which owns only its
-// own chrome), matching the popover css note that the container's wrapper anchors
-// it. The offset clears the bar's height; the final corner is a deferred visual
-// gate (see TimeBar.tsx), so this stays an estimate, not tuned spacing.
+// The popover is a fixed pane pinned to the bottom-right corner, lifted just
+// above the TimeBar toolbar (it may overlap the ScaleBar above it while open;
+// the z-index wins). Placement lives here rather than in the popover's module
+// (which owns only its own chrome), matching the popover css note that the
+// container's wrapper anchors it. The lift matches the toolbar's height + gap.
 const POPOVER_PLACEMENT: CSSProperties = {
   position: 'fixed',
-  left: '50%',
-  bottom: 'calc(var(--corner-offset) + 3.5rem)',
-  transform: 'translateX(-50%)',
+  right: 'var(--corner-offset)',
+  bottom: 'calc(var(--corner-offset) + var(--time-toolbar-height) + var(--space-3))',
   zIndex: 11,
 };
 
@@ -98,15 +93,22 @@ function TimeBarContainer({ hidden }: TimeBarContainerProps): ReactNode {
   const { mode, paused, rateIndex } = time;
   const [popoverOpen, setPopoverOpen] = useState(false);
 
-  const onSlower = useCallback(
-    () => dispatch(setRate({ rateIndex: clampRateIndex(rateIndex - 1), nowMs: performance.now() })),
-    [dispatch, rateIndex],
-  );
+  // At the ladder ends the step is inert: a clamped step used to re-dispatch the
+  // same rate, which silently re-anchors a live clock into manual mode (the only
+  // tell being the Now button appearing). Skip the dispatch entirely at the ends
+  // and disable the button so it can't fire — no clamp needed.
+  const atSlowest = rateIndex === 0;
+  const atFastest = rateIndex === RATE_LADDER.length - 1;
 
-  const onFaster = useCallback(
-    () => dispatch(setRate({ rateIndex: clampRateIndex(rateIndex + 1), nowMs: performance.now() })),
-    [dispatch, rateIndex],
-  );
+  const onSlower = useCallback(() => {
+    if (rateIndex === 0) return;
+    dispatch(setRate({ rateIndex: rateIndex - 1, nowMs: performance.now() }));
+  }, [dispatch, rateIndex]);
+
+  const onFaster = useCallback(() => {
+    if (rateIndex === RATE_LADDER.length - 1) return;
+    dispatch(setRate({ rateIndex: rateIndex + 1, nowMs: performance.now() }));
+  }, [dispatch, rateIndex]);
 
   const onPlayPause = useCallback(
     () =>
@@ -144,6 +146,8 @@ function TimeBarContainer({ hidden }: TimeBarContainerProps): ReactNode {
         paused={paused}
         onSlower={onSlower}
         onFaster={onFaster}
+        slowerDisabled={atSlowest}
+        fasterDisabled={atFastest}
         onPlayPause={onPlayPause}
         onNow={onNow}
         onReadoutClick={onReadoutClick}

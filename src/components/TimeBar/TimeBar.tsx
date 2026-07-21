@@ -15,12 +15,21 @@
  * the reveal is pure CSS (`:hover` / `:focus-within` on .root), which is why
  * it isn't (and can't be) unit-tested. In `manual` mode the user has taken the
  * wheel: the controls are always shown and the lit "now" button appears as the
- * way back to live. The `now` button renders only in manual mode by construction
- * (conditional render, not a CSS hide) so it's genuinely absent when live.
+ * way back to live. The `now` button is always mounted; live mode CSS-collapses
+ * its wrapper (grid 1fr→0fr) and marks it `inert`, rather than conditionally
+ * rendering it. Keeping the node alive lets the pill width *animate* the
+ * hand-back-to-live moment — a React unmount would snap it, since the node is
+ * gone before a transition can run — while `inert` preserves the "genuinely not
+ * interactive when live" guarantee (unfocusable, out of the a11y tree).
  *
  * The step glyphs carry `aria-hidden` — the button's `aria-label` is the
  * accessible name, so screen readers announce "Slower" / "Faster" rather than a
  * chevron character.
+ *
+ * Slower/Faster disable at the ladder ends: a clamped step there used to silently
+ * re-anchor a live clock into manual mode. Native `disabled` blocks the click and
+ * drops the button from the tab order (and its `pointer-events: none` styling
+ * suppresses the tooltip).
  */
 
 import type { ReactNode } from 'react';
@@ -35,6 +44,8 @@ export type TimeBarProps = {
   readonly paused: boolean;
   readonly onSlower: () => void; // step toward a slower rate  ( [ )
   readonly onFaster: () => void; // step toward a faster rate  ( ] )
+  readonly slowerDisabled?: boolean; // at the slowest detent — step is inert
+  readonly fasterDisabled?: boolean; // at the fastest detent — step is inert
   readonly onPlayPause: () => void; // toggle paused             ( \ )
   readonly onNow: () => void; // return to live wall-time  ( Shift+N )
   readonly onReadoutClick: () => void; // open the date-entry popover (Task 4)
@@ -48,20 +59,20 @@ function TimeBar({
   paused,
   onSlower,
   onFaster,
+  slowerDisabled = false,
+  fasterDisabled = false,
   onPlayPause,
   onNow,
   onReadoutClick,
   hidden = false,
 }: TimeBarProps): ReactNode {
-  // TODO(visual-gate): default placement is bottom-center (see .root). The open
-  // question deferred to a USER VISUAL GATE is the final corner + clearances
-  // against InfoCard (top-right), ScaleBar (bottom-right), and the left-stack
-  // NavigationPanel — don't tune spacing blind.
+  // Placement is the bottom-right HUD rail, stacked under the ScaleBar with the
+  // readout's right edge pinned at the corner (see .root / .pill).
   return (
     // Outer .root is the transparent hit surface at the full expanded width, so
-    // sweeping the cursor into the empty region right of the readout still wakes
-    // the reveal. The visible chrome lives on the inner .pill, which hugs the
-    // readout when collapsed and grows rightward on hover.
+    // sweeping the cursor into the empty region left of the readout still wakes
+    // the reveal. The visible chrome lives on the inner .pill (row-reverse),
+    // which holds the readout on the right and grows leftward on hover.
     <div
       className={cx(styles.root, styles[mode], hidden && styles.hidden)}
       aria-hidden={hidden || undefined}
@@ -83,12 +94,43 @@ function TimeBar({
 
         {/* Grid 0fr→1fr collapses the controls' layout width so the pill hugs the
             readout; the inner .group is clipped horizontally while its tooltips
-            escape upward. */}
+            escape upward. The pill's row-reverse puts this block left of the
+            readout, so the group is authored in its left-to-right visual order:
+            Now | rate | ‹ ⏯ › | (divider abutting the readout). */}
         <div className={styles.controls}>
           <div className={styles.group}>
+            {/* Now collapser: the button is always mounted so the pill width can
+                animate the hand-back-to-live moment. The same grid 1fr→0fr trick
+                as .controls folds it (with the inner min-width:0 + horizontal
+                clip) when live; `inert` keeps the folded button + its divider
+                unfocusable and out of the a11y tree. The trailing divider rides
+                inside the collapser so folding Now never strands a stray rule +
+                gap against the rate label. */}
+            <div
+              className={cx(styles.nowCollapse, mode === 'live' && styles.nowCollapsed)}
+              inert={mode === 'live'}
+            >
+              <div className={styles.nowInner}>
+                <Button className={styles.now} onClick={onNow} aria-label="Return to now">
+                  Now
+                  <span className={styles.tooltip} aria-hidden="true">
+                    Back to now
+                  </span>
+                </Button>
+                <span className={styles.divider} aria-hidden="true" />
+              </div>
+            </div>
+
+            <span className={styles.rate}>{rateLabel}</span>
+
             <span className={styles.divider} aria-hidden="true" />
 
-            <Button className={styles.step} onClick={onSlower} aria-label="Slower">
+            <Button
+              className={styles.step}
+              onClick={onSlower}
+              disabled={slowerDisabled}
+              aria-label="Slower"
+            >
               <span aria-hidden="true">‹</span>
               <span className={styles.tooltip} aria-hidden="true">
                 Slower
@@ -107,7 +149,12 @@ function TimeBar({
               </span>
             </Button>
 
-            <Button className={styles.step} onClick={onFaster} aria-label="Faster">
+            <Button
+              className={styles.step}
+              onClick={onFaster}
+              disabled={fasterDisabled}
+              aria-label="Faster"
+            >
               <span aria-hidden="true">›</span>
               <span className={styles.tooltip} aria-hidden="true">
                 Faster
@@ -115,20 +162,6 @@ function TimeBar({
             </Button>
 
             <span className={styles.divider} aria-hidden="true" />
-
-            <span className={styles.rate}>{rateLabel}</span>
-
-            {mode === 'manual' && (
-              <>
-                <span className={styles.divider} aria-hidden="true" />
-                <Button className={styles.now} onClick={onNow} aria-label="Return to now">
-                  Now
-                  <span className={styles.tooltip} aria-hidden="true">
-                    Back to now
-                  </span>
-                </Button>
-              </>
-            )}
           </div>
         </div>
       </div>

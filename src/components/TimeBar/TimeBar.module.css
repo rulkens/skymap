@@ -1,39 +1,41 @@
 /*
  * TimeBar.module.css — the sim clock's transport instrument.
  *
- * Two nested boxes carry the collapse behaviour:
- *   - .root is the transparent, full-expanded-width hit surface. It never
- *     changes size, so its centred placement keeps the readout's left edge
- *     anchored whether the bar is collapsed or expanded, and its idle width
- *     reaches over the region where the controls will appear (sweep the cursor
- *     there and the reveal still fires).
- *   - .pill is the visible glass chrome. It hugs the readout when collapsed and
- *     grows rightward as the controls' grid track opens.
+ * The bar lives in the bottom-right HUD rail, stacked under the ScaleBar with
+ * its right edge pinned at the corner. Two nested boxes carry the collapse:
+ *   - .root is the transparent, full-expanded-width hit surface pinned to the
+ *     right corner. It never changes size, so its right-anchored placement
+ *     keeps the readout's right edge fixed whether the bar is collapsed or
+ *     expanded, and its idle width reaches LEFTWARD over the region where the
+ *     controls will appear (sweep the cursor there and the reveal still fires).
+ *   - .pill is the visible glass chrome (row-reverse). The readout stays on the
+ *     right; the controls' grid track opens leftward as the pill grows past its
+ *     rail-width floor.
  *
  * The transport buttons are flat glyphs on the toolbar chrome (no per-button
- * pill), grouped readout | ‹ ⏯ › | rate | Now by thin 1px dividers. All atoms
+ * pill), grouped Now | rate | ‹ ⏯ › | readout by thin 1px dividers. All atoms
  * reference tokens from src/styles/global.css.
  */
 
 .root {
   position: fixed;
   bottom: var(--corner-offset);
-  left: 50%;
-  transform: translateX(-50%);
+  right: var(--corner-offset);
   z-index: 10;
+  transform-origin: bottom right;
 
   /*
-   * Fixed idle footprint = the expanded pill's width. It is a deliberate
-   * reservation, not content-derived: the grid trick below zeroes the controls'
-   * layout width when collapsed, so an auto-sized root would shrink to the
-   * readout and lose the reach-ahead hit area. Constant width also pins the
-   * readout in place across the animation. Tune against the real expanded
-   * footprint at the visual gate (see TODO in TimeBar.tsx).
+   * Fixed idle footprint = the expanded pill's width, reserved reaching
+   * leftward from the pinned right edge. It is a deliberate reservation, not
+   * content-derived: the grid trick below zeroes the controls' layout width
+   * when collapsed, so an auto-sized root would shrink to the readout and lose
+   * the reach-ahead hit area. flex-end pins the pill's right edge at the corner
+   * so it grows leftward, keeping the readout anchored across the animation.
    */
   width: 30rem;
   max-width: calc(100vw - 2 * var(--corner-offset));
   display: flex;
-  justify-content: flex-start;
+  justify-content: flex-end;
 
   color: var(--color-fg-base);
   font: var(--font-size-md) / var(--line-height-tight) var(--font-family-mono);
@@ -47,15 +49,23 @@
 /* App-layout gate: fade + settle out, matching the HUD pills' hidden state. */
 .hidden {
   opacity: 0;
-  transform: translateX(-50%) scale(0.96);
+  transform: scale(0.96);
   pointer-events: none;
 }
 
-/* The visible glass chrome. Inline-flex so it hugs the readout when the
- * controls collapse; the single toolbar pill wraps every atom. */
+/*
+ * The visible glass chrome. row-reverse keeps the readout (first in DOM, for a
+ * sensible focus order) pinned to the right while the controls open to its
+ * left. Collapsed, the pill hugs the readout (its intrinsic content width); the
+ * ScaleBar above reproduces that outer width from the same mono metrics so the
+ * two boxes read as one column. The pill grows past it on expand.
+ */
 .pill {
-  display: inline-flex;
+  display: flex;
+  flex-direction: row-reverse;
   align-items: center;
+  box-sizing: border-box;
+  height: var(--time-toolbar-height);
   padding: var(--space-3) var(--space-5);
 
   background: var(--surface-card-soft);
@@ -98,15 +108,15 @@
 /*
  * Controls collapse via the grid-template-columns 0fr→1fr trick: the track
  * shrinks to zero width (with .group's min-width: 0) so the pill hugs the
- * readout, then opens to the group's content width on reveal. Opacity trails
- * slightly so the controls fade in after the width has started to open.
+ * readout, then opens leftward to the group's content width on reveal. Opacity
+ * trails slightly so the controls fade in after the width has started to open.
  */
 .controls {
   display: grid;
   grid-template-columns: 0fr;
   opacity: 0;
   /* The clip-path leaves the collapsed (invisible) glyphs hit-testable in a
-   * thin zone right of the readout; disable them until the reveal so a click in
+   * thin zone left of the readout; disable them until the reveal so a click in
    * the reserved area doesn't land on a hidden button. The root still catches
    * the hover that triggers the reveal. */
   pointer-events: none;
@@ -125,8 +135,9 @@
    * stay inside the growing track) but extends the region well past top/bottom
    * so the labels escape upward. Any transient horizontal spill during the
    * animation is masked by the controls' opacity gate. The negative horizontal
-   * inset leaves room for the end-cap tooltips (Slower / Back to now) to centre
-   * past their buttons.
+   * inset (symmetric, so it covers the leftward side too) leaves room for the
+   * end-cap tooltips (Back to now on the far left, Faster nearest the readout)
+   * to centre past their buttons.
    */
   clip-path: inset(-40px -48px);
 }
@@ -143,6 +154,39 @@
   grid-template-columns: 1fr;
   opacity: 1;
   pointer-events: auto;
+}
+
+/*
+ * Now collapser. Mirrors .controls' 0fr→1fr trick at single-button scale: the
+ * grid track holds the "return to now" affordance + its trailing divider, open
+ * (1fr) in manual and folded to 0 in live so the pill glides narrower as the
+ * clock is handed back to wall-time. The inner clips horizontally — but stays
+ * visible vertically, so the tooltip escapes upward — and drops to min-width: 0
+ * so the track can reach zero. Opacity trails the width, matching .controls.
+ */
+.nowCollapse {
+  display: grid;
+  grid-template-columns: 1fr;
+  transition: grid-template-columns var(--duration-base) var(--ease-standard),
+    opacity var(--duration-color) var(--ease-standard) 80ms,
+    margin var(--duration-base) var(--ease-standard);
+}
+
+.nowInner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  overflow-x: clip;
+  overflow-y: visible;
+}
+
+.nowCollapsed {
+  grid-template-columns: 0fr;
+  opacity: 0;
+  /* Cancel .group's inter-item gap so the folded Now leaves no leading space
+     before the rate label (visible on live-hover, when .controls is open). */
+  margin-right: calc(-1 * var(--space-3));
 }
 
 /* Thin vertical rule between control groups. */
@@ -172,6 +216,17 @@
 .pill .step:hover:not(:disabled) {
   background: var(--surface-control);
   border-color: transparent;
+}
+
+/*
+ * A step at the ladder end is inert (it can no longer change the rate). It reads
+ * as unavailable: Button's own :disabled rule supplies the dim, the hover tint is
+ * already gated off above (:not(:disabled)), and pointer-events: none both drops
+ * the idle cursor and suppresses the tooltip (the hover that lifts it can't land).
+ */
+.pill .step:disabled {
+  cursor: default;
+  pointer-events: none;
 }
 
 .rate {
@@ -221,7 +276,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .root,
-  .controls {
+  .controls,
+  .nowCollapse {
     transition: none;
   }
 }

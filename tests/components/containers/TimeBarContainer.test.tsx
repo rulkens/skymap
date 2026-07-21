@@ -21,6 +21,7 @@ import TimeBarContainer from '../../../src/components/containers/TimeBarContaine
 import { createAppStore } from '../../../src/store/createAppStore';
 import { selectTimeState } from '../../../src/state/time/selectors';
 import { setRate, setSimDays } from '../../../src/state/time/timeSlice';
+import { RATE_LADDER } from '../../../src/data/time/rateLadder';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { formatSimClock } from '../../../src/utils/time/formatSimClock';
 import { julianDaysToUnixMs } from '../../../src/utils/time/julianDaysToUnixMs';
@@ -153,6 +154,42 @@ describe('TimeBarContainer', () => {
     fireEvent.click(button(container, 'Slower'));
 
     expect(selectTimeState(store.getState()).rateIndex).toBe(2);
+  });
+
+  it('the slowest detent disables Slower — no silent flip into manual', () => {
+    // Boot state: live, rateIndex 0 (the slowest detent). The old code let Slower
+    // still dispatch a clamped setRate, which re-anchored the live clock into
+    // manual (the only visible tell being the Now button). The step must be inert
+    // at the floor: the click does nothing and the clock stays live at index 0.
+    const { store } = createAppStore();
+    expect(selectTimeState(store.getState()).mode).toBe('live');
+    expect(selectTimeState(store.getState()).rateIndex).toBe(0);
+
+    const { container } = render(createElement(TimeBarContainer, { hidden: false }), {
+      wrapper: makeWrapper(store),
+    });
+
+    fireEvent.click(button(container, 'Slower'));
+
+    const time = selectTimeState(store.getState());
+    expect(time.mode).toBe('live');
+    expect(time.rateIndex).toBe(0);
+  });
+
+  it('the fastest detent disables Faster — the step is inert at the ceiling', () => {
+    // Distinct wiring from the floor guard (its own handler + fasterDisabled prop),
+    // so it earns its own cheap check: seeded at the top detent, Faster can't step.
+    const top = RATE_LADDER.length - 1;
+    const { store } = createAppStore();
+    store.dispatch(setRate({ rateIndex: top, nowMs: 0 }));
+
+    const { container } = render(createElement(TimeBarContainer, { hidden: false }), {
+      wrapper: makeWrapper(store),
+    });
+
+    fireEvent.click(button(container, 'Faster'));
+
+    expect(selectTimeState(store.getState()).rateIndex).toBe(top);
   });
 
   it('opens the date-entry popover on readout click', () => {
