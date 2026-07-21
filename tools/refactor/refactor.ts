@@ -45,6 +45,7 @@ import { parseFlags } from '../utils/cli/args';
 import { collectRefs } from '../utils/refactor/collectRefs';
 import { loadRefactorProject } from '../utils/refactor/loadRefactorProject';
 import { parseSymbolAddress } from '../utils/refactor/parseSymbolAddress';
+import { planDelete } from '../utils/refactor/planDelete';
 import { planRename } from '../utils/refactor/planRename';
 import { readManifest } from '../utils/refactor/readManifest';
 import { renderRefReport } from '../utils/refactor/renderRefReport';
@@ -118,6 +119,17 @@ function runOp(
       process.stdout.write(`${renderRefReport(report, flags['--json'])}\n`);
       // File rename is the default; --no-file-rename opts out (see planRename).
       planRename(project, resolved, newName, !flags['--no-file-rename']);
+      return;
+    }
+
+    if (sub === 'delete') {
+      const resolved = resolveSymbol(project, parsed);
+      // Print the blast radius first: when refs exist it shows what blocks the
+      // delete (planDelete then throws the refusal), and when clear it's an empty
+      // report. --dry stops at this preview; the driver's tail save is skipped.
+      const report = collectRefs(project, resolved);
+      process.stdout.write(`${renderRefReport(report, flags['--json'])}\n`);
+      planDelete(project, resolved);
       return;
     }
   } else if (positionals.length !== 2) {

@@ -380,17 +380,17 @@ branch: in a no-barrel repo re-exports are near-nonexistent, so the agent
 hand-removes the rare one and re-runs. Otherwise removes the declaration and
 removes the file + test mirror if it was a one-symbol file.
 
-- [ ] Test `refuses to delete a referenced symbol and lists the references` —
+- [x] Test `refuses to delete a referenced symbol and lists the references` —
       seed a referrer; assert `planDelete` throws and the message names the
       referring file.
-- [ ] Test `refuses when the only reference is a re-export` — a file that
+- [x] Test `refuses when the only reference is a re-export` — a file that
       `export { foo } from './foo'` and nothing else; assert the throw (pins
       that re-exports are not treated as ignorable plumbing).
-- [ ] Test `deletes an unreferenced one-symbol file` — no referrers; assert the
+- [x] Test `deletes an unreferenced one-symbol file` — no referrers; assert the
       declaration is gone and the source file is removed from the project.
-- [ ] Wire the handler.
-- [ ] `npm test -- planDelete` → green.
-- [ ] Commit: the three files above.
+- [x] Wire the handler.
+- [x] `npm test -- planDelete` → green.
+- [x] Commit: the three files above.
 
 ### Task 7: `inline` (passthrough-only)
 
