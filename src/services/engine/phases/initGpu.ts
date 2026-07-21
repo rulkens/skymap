@@ -212,8 +212,22 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   const uiCtx = { device, context, format, canvas };
 
   const fontAtlases = await loadFontAtlases();
-  state.gpu.labelRenderer = createLabelRenderer(uiCtx, format, fontAtlases);
-  state.gpu.markerLineRenderer = createMarkerLineRenderer(uiCtx, format);
+  // `{ occludeAgainstDepth: true }` opts these COSMO overlays into per-pixel
+  // occlusion behind nearer solar-system bodies — the same capability the
+  // `foreground*` instances below carry. `labelsLayer` / `markerLinesLayer`
+  // hand each `draw` the guarded `foreground:0` depth view. Today that view
+  // is undefined for the COSMO layers (they draw BEFORE the body pass, so the
+  // depth is stale/absent and the guard yields `undefined`), which makes the
+  // occlusion renderers fall back to their plain pipeline — behaviour-neutral.
+  // The opt-in goes live once the frame graph reorders bodies ahead of these
+  // overlays. `maxLabels` / `maxGlyphsPerLabel` / `maxLines` default via
+  // `undefined` to reach the trailing opts slot.
+  state.gpu.labelRenderer = createLabelRenderer(uiCtx, format, fontAtlases, undefined, undefined, {
+    occludeAgainstDepth: true,
+  });
+  state.gpu.markerLineRenderer = createMarkerLineRenderer(uiCtx, format, undefined, {
+    occludeAgainstDepth: true,
+  });
   // Dedicated debug-line renderer for the clip-path inspector overlay. Same
   // swap-chain ctx as the marker lines (UI overlay, drawn post-tone-map), but
   // its own pipeline + buffers so the debug viz never touches the label
@@ -525,8 +539,10 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // `{ occludeAgainstDepth: true }` opts this near-field caption instance into
   // per-pixel occlusion behind nearer solar-system bodies — `foregroundLabelsLayer`
   // hands its `draw` the `foreground:0` scene depth view each frame. The COSMO
-  // `labelRenderer` above stays non-occluding (no opts). `maxGlyphsPerLabel`
-  // defaults via `undefined` to reach the trailing opts slot.
+  // `labelRenderer` above shares the same opt-in, but its depth view stays
+  // undefined until the frame graph reorders bodies ahead of the overlays, so
+  // its occlusion is dormant. `maxGlyphsPerLabel` defaults via `undefined` to
+  // reach the trailing opts slot.
   state.gpu.foregroundLabelRenderer = createLabelRenderer(
     uiCtx,
     format,
@@ -550,7 +566,8 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // caption anchors, not a static set.
   // Same occlusion opt-in as the caption sibling above: the leader lines occlude
   // behind nearer bodies too. `maxLines` defaults via `undefined` to reach the
-  // trailing opts slot. The COSMO `markerLineRenderer` stays non-occluding.
+  // trailing opts slot. The COSMO `markerLineRenderer` shares the opt-in but its
+  // occlusion stays dormant until the frame graph reorders bodies ahead of it.
   state.gpu.foregroundMarkerLineRenderer = createMarkerLineRenderer(uiCtx, format, undefined, {
     occludeAgainstDepth: true,
   });
