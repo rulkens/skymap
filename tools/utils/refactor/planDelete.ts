@@ -48,16 +48,12 @@
 
 import { Node } from 'ts-morph';
 import type { Project, SourceFile } from 'ts-morph';
+import { anchorToMirroredRoot } from './anchorToMirroredRoot';
 import { collectRefs } from './collectRefs';
 import type { RefReport } from './collectRefs';
 import { expandTestMirrors } from './expandTestMirrors';
 import { renderRefReport } from './renderRefReport';
 import type { ResolvedSymbol } from './resolveSymbol';
-
-// The source roots whose files have `tests/` mirrors — the same anchor set
-// planRename uses to turn an absolute Project path into the repo-relative form
-// expandTestMirrors keys off.
-const MIRRORED_ROOTS = ['src/', 'tools/'] as const;
 
 export function planDelete(project: Project, resolved: ResolvedSymbol): void {
   // Validate first: any reference of any kind blocks the delete, and the throw
@@ -134,19 +130,4 @@ function removeFileAndMirror(project: Project, sourceFile: SourceFile): void {
     }
   }
   sourceFile.delete();
-}
-
-// Split an absolute Project path at its `src/` or `tools/` root: `rel` is the
-// repo-relative form expandTestMirrors keys off, `prefix` is everything before it
-// (a real repo root, or '/' for an in-memory '/src/...' fixture) so
-// `prefix + rel === absPath`. Returns null for a path under no mirrored root.
-function anchorToMirroredRoot(absPath: string): { rel: string; prefix: string } | null {
-  for (const root of MIRRORED_ROOTS) {
-    const marker = `/${root}`;
-    const idx = absPath.indexOf(marker);
-    if (idx !== -1) {
-      return { rel: absPath.slice(idx + 1), prefix: absPath.slice(0, idx + 1) };
-    }
-  }
-  return null;
 }

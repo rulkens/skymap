@@ -52,14 +52,9 @@ import { Node } from 'ts-morph';
 import type { Project } from 'ts-morph';
 import type { MovePair } from './applyMoves';
 import { applyMoves } from './applyMoves';
+import { anchorToMirroredRoot } from './anchorToMirroredRoot';
 import { expandTestMirrors } from './expandTestMirrors';
 import type { ResolvedSymbol } from './resolveSymbol';
-
-// The source roots whose files have `tests/` mirrors. Anchoring on these turns
-// the Project's absolute file path into the repo-relative form expandTestMirrors
-// expects, and records the prefix so we can reconstruct absolute paths for
-// applyMoves — the same absolute-vs-relative split moveFiles.ts makes.
-const MIRRORED_ROOTS = ['src/', 'tools/'] as const;
 
 export function planRename(
   project: Project,
@@ -111,19 +106,4 @@ function planFileRename(
     (relPath) => project.getSourceFile(prefix + relPath) !== undefined,
   );
   return relMoves.map(({ from, to }) => ({ from: prefix + from, to: prefix + to }));
-}
-
-// Split an absolute Project path at its `src/` or `tools/` root: `rel` is the
-// repo-relative form expandTestMirrors keys off, `prefix` is everything before
-// it (a real repo root, or '/' for an in-memory '/src/...' fixture) so
-// `prefix + rel === absPath`. Returns null for a path under no mirrored root.
-function anchorToMirroredRoot(absPath: string): { rel: string; prefix: string } | null {
-  for (const root of MIRRORED_ROOTS) {
-    const marker = `/${root}`;
-    const idx = absPath.indexOf(marker);
-    if (idx !== -1) {
-      return { rel: absPath.slice(idx + 1), prefix: absPath.slice(0, idx + 1) };
-    }
-  }
-  return null;
 }
