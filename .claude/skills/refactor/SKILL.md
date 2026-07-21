@@ -19,10 +19,11 @@ npm run refactor -- refs    <file>#<symbol>
 npm run refactor -- move    <from> <to>
 ```
 
-Global flags on every subcommand: `--dry` (report the blast radius, save nothing),
-`--json` (machine-readable), `--manifest <ops.json>` (batch: validate every entry
-against the one Project, then a single save; a throw on any entry aborts the whole
-batch before disk is touched).
+Global flags on every subcommand: `--dry` (report the blast radius, save nothing) and
+`--manifest <ops.json>` (batch: validate every entry against the one Project, then a
+single save; a throw on any entry aborts the whole batch before disk is touched).
+`--json` (machine-readable) applies to the symbol subcommands
+(`rename`/`extract`/`inline`/`delete`/`refs`); `move`'s report stays text-only.
 
 ## When to reach for each subcommand
 
@@ -58,8 +59,10 @@ batch before disk is touched).
 
 - **`move`**: relocate or reorganize files. Same machinery as `npm run move-files`
   (which stays a byte-identical alias); rewrites both the moved file's own imports and
-  every importer's relative path, and drags the `tests/` mirror. Manifests keep the
-  `[{from,to}, ...]` object shape.
+  every importer's relative path, and drags the `tests/` mirror. `move` manifests keep
+  the `[{from,to}, ...]` object shape; the five symbol subcommands take a bare array of
+  that subcommand's positional args per entry (a `rename` entry is
+  `["src/utils/math/foo.ts#foo", "bar"]`).
 
 ## Refusals are the workflow, not errors to fight
 
