@@ -265,21 +265,21 @@ the `moveFiles.ts` header.
 Signatures per the **Shared contracts** section above. The load-bearing
 behaviours are the error paths (fail loudly before any mutation, per Q7).
 
-- [ ] `parseSymbolAddress` test `parses file#symbol into its parts` — one happy
+- [x] `parseSymbolAddress` test `parses file#symbol into its parts` — one happy
       case asserting `{ file, symbol }`.
-- [ ] `parseSymbolAddress` test `throws when the '#' delimiter is missing` and
+- [x] `parseSymbolAddress` test `throws when the '#' delimiter is missing` and
       `throws on an empty file or empty symbol` — assert it throws (error-path
       behaviour, not the message text).
-- [ ] `resolveSymbol` test `resolves an exported declaration` — in-memory Project
+- [x] `resolveSymbol` test `resolves an exported declaration` — in-memory Project
       with one exported `const`; assert `resolved.name` and that `sourceFile` is
       the right file.
-- [ ] `resolveSymbol` test `throws when the file is not in the project`.
-- [ ] `resolveSymbol` test `throws when the symbol is not exported from the file`.
-- [ ] `resolveSymbol` test `throws and lists candidates on an ambiguous name` —
+- [x] `resolveSymbol` test `throws when the file is not in the project`.
+- [x] `resolveSymbol` test `throws when the symbol is not exported from the file`.
+- [x] `resolveSymbol` test `throws and lists candidates on an ambiguous name` —
       seed a file with two declarations colliding on the name; assert the throw
       and that the message contains both candidates (the candidate-list contract).
-- [ ] `npm test -- parseSymbolAddress resolveSymbol` → green.
-- [ ] Commit: the four files above.
+- [x] `npm test -- parseSymbolAddress resolveSymbol` → green.
+- [x] Commit: the four files above.
 
 ### Task 3: CLI skeleton + subcommand dispatch + batch driver
 
