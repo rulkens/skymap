@@ -7,8 +7,8 @@
  *
  * The single seeded `bodies.earth` record, composed as a unit sphere scaled to
  * `earth.radiusKm × CLOUD_SHELL_PARAMS.radiusRatio` (a hair above the surface) and
- * placed in the body's `RENDER_ORIGIN_MPC`-relative frame with its baked
- * orientation. The shared `cloudShellRenderer` textures that sphere with Earth's
+ * placed in the body's `RENDER_ORIGIN_MPC`-relative frame with the orientation
+ * resolved this frame from the `BodyState` snapshot. The shared `cloudShellRenderer` textures that sphere with Earth's
  * equirectangular cloud map (RGB colour + `.a` coverage) and dims it by the same
  * body-local sun-relative Lambert term the surface uses, so the deck goes dark on
  * the night side. `CLOUD_SHELL_PARAMS.opacity` is the coverage-to-alpha

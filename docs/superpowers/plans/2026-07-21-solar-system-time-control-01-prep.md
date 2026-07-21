@@ -117,18 +117,18 @@ Derive from `ORBITAL_ELEMENTS` (`src/data/bodies/orbitalElements.ts`) reusing
 parent-hop logic the makers use (`satelliteBody.ts:26-38`). Moons resolve their
 parent's world position from the parent's already-derived state.
 
-- [ ] `deriveBodyStates returns a state for every ORBITAL_ELEMENTS id and no star id` — structural; catches a dropped moon or an accidental star inclusion.
-- [ ] `a moon rides its parent` — assert `|state('moon').positionMpc − state('earth').positionMpc|` is within the Moon's [periapsis, apoapsis] band (an independent orbital property, not a re-run of `keplerianPositionMpc`).
-- [ ] `orientation is identity iff the body is untextured` — e.g. `state('titan').orientation === IDENTITY_MAT3`, `state('earth').orientation !== IDENTITY_MAT3` (matches `orientationForBody`'s texture-gate contract).
-- [ ] Do **not** add a test restating a J2000 element or asserting a hand-copied position literal.
-- [ ] Commit.
+- [x] `deriveBodyStates returns a state for every ORBITAL_ELEMENTS id and no star id` — structural; catches a dropped moon or an accidental star inclusion.
+- [x] `a moon rides its parent` — assert `|state('moon').positionMpc − state('earth').positionMpc|` is within the Moon's [periapsis, apoapsis] band (an independent orbital property, not a re-run of `keplerianPositionMpc`).
+- [x] `orientation is identity iff the body is untextured` — e.g. `state('titan').orientation === IDENTITY_MAT3`, `state('earth').orientation !== IDENTITY_MAT3` (matches `orientationForBody`'s texture-gate contract).
+- [x] Do **not** add a test restating a J2000 element or asserting a hand-copied position literal.
+- [x] Commit.
 
 ### Task A2 — `sceneBodyStates(state, ctx)` per-frame seam
 
 **Files:** `src/services/engine/frame/sceneBodyStates.ts` (new). No test of its own — it is a one-line `deriveBodyStates(CONST_J2000)` bind (the "epoch chosen once" seam); A1 covers the derive and the repoint tasks exercise the binding.
 
-- [ ] Mirror `sceneBodyPartition.ts`'s shape (takes `state`, `ctx`; returns the map). Document that this is the sole epoch-choice site.
-- [ ] Commit.
+- [x] Mirror `sceneBodyPartition.ts`'s shape (takes `state`, `ctx`; returns the map). Document that this is the sole epoch-choice site.
+- [x] Commit.
 
 ### Task A3 — Repoint the mesh-body layers + the partition
 
@@ -143,9 +143,9 @@ so give it a `bodyStates` (or `positionOf(id)`) input, bound in
 `orientation` as parameters (`drawFlooredSpherePick.ts:40-60`) — **pass-through,
 no change**; only its callers change (they already are these layers).
 
-- [ ] Repoint every `body.positionMpc` / `body.orientation` read in the four layers + the partition to the snapshot.
-- [ ] Existing pass tests (`tests/services/engine/frame/passes/*.test.ts`) stay green; move any fixture that hand-set a body's `positionMpc` onto a `sceneBodyStates`/`deriveBodyStates` stub returning the same J2000 values.
-- [ ] Commit.
+- [x] Repoint every `body.positionMpc` / `body.orientation` read in the four layers + the partition to the snapshot.
+- [x] Existing pass tests (`tests/services/engine/frame/passes/*.test.ts`) stay green; move any fixture that hand-set a body's `positionMpc` onto a `sceneBodyStates`/`deriveBodyStates` stub returning the same J2000 values.
+- [x] Commit.
 
 ### Task A4 — Repoint the glint + atmosphere + cloud layers
 
@@ -160,9 +160,9 @@ the resolved pairing) — so the two atmosphere consumers keep reading ONE resol
 list and cannot diverge. `bodyGlintsLayer`/`cloudShellLayer` repoint their own
 reads to the snapshot.
 
-- [ ] Repoint reads; extend `AtmosphereDrawEntry` with resolved `positionMpc` + `orientation`.
-- [ ] Existing atmosphere/glint/cloud tests stay green (fixtures onto the snapshot as in A3).
-- [ ] Commit.
+- [x] Repoint reads; extend `AtmosphereDrawEntry` with resolved `positionMpc` + `orientation`.
+- [x] Existing atmosphere/glint/cloud tests stay green (fixtures onto the snapshot as in A3).
+- [x] Commit.
 
 ### Task A5 — Repoint captions + texture-demand wiring
 
@@ -176,9 +176,9 @@ reads to the snapshot.
 `CONST_J2000` (labels stay a construction-time static call in prep — the feature
 re-plumbs labels-follow-bodies per-frame; that is feature scope, not this plan).
 
-- [ ] Repoint the Earth+planet reads in `sceneBodyLabels` and `bodyPosOf` to the snapshot; leave the `SCENE_STARS` label reads on the record.
-- [ ] Existing `tests/services/engine/presentation/sceneBodyLabels.test.ts` + wiring tests stay green.
-- [ ] Commit.
+- [x] Repoint the Earth+planet reads in `sceneBodyLabels` and `bodyPosOf` to the snapshot; leave the `SCENE_STARS` label reads on the record.
+- [x] Existing `tests/services/engine/presentation/sceneBodyLabels.test.ts` + wiring tests stay green.
+- [x] Commit.
 
 ### Task A6 — Repoint the selection resolver
 
@@ -192,9 +192,9 @@ live catalog). The downstream consumers `focusFraming`
 `selectionHaloTable` (`selectionHaloTable.ts:90-102`) read `row.positionMpc`, not
 the scene record — **confirm they need no change** and note it in the commit.
 
-- [ ] Repoint the `body` arm of `extractSelectionRow` to the snapshot.
-- [ ] `tests/services/engine/helpers/extractSelectionRow.test.ts` stays green.
-- [ ] Commit.
+- [x] Repoint the `body` arm of `extractSelectionRow` to the snapshot.
+- [x] `tests/services/engine/helpers/extractSelectionRow.test.ts` stays green.
+- [x] Commit.
 
 ### Task A7 — foregroundMaxDistance: repoint + comment fix
 
@@ -209,9 +209,9 @@ stars, so it stays effectively time-invariant with its ×100 margin). Fold in th
 stale comment fix: `foregroundMaxDistance.ts:68` "authored origin-relative" no
 longer describes a baked record field — reword to reflect the snapshot source.
 
-- [ ] Repoint the two `max`-reductions; reword the comment.
-- [ ] `tests/services/engine/frame/foregroundMaxDistance.test.ts` (the "< 1 Mpc, ≥ two decades over the roster" invariants) stays green.
-- [ ] Commit.
+- [x] Repoint the two `max`-reductions; reword the comment.
+- [x] `tests/services/engine/frame/foregroundMaxDistance.test.ts` (the "< 1 Mpc, ≥ two decades over the roster" invariants) stays green.
+- [x] Commit.
 
 ### Task A8 — sceneOrbitConics → per-frame-capable derivation
 
@@ -226,9 +226,9 @@ parent center by re-deriving it from the parent's `ORBITAL_ELEMENTS` via
 `SCENE_ORBIT_CONICS = deriveOrbitConics(CONST_J2000)` so the current static
 consumers (`orbitTrailsLayer`, three tests) are untouched.
 
-- [ ] Extract `deriveOrbitConics(simDays)`; parent centers re-derive from elements.
-- [ ] `SCENE_ORBIT_CONICS` retains its exact current values (existing `sceneOrbitConics.test.ts`, `orbitTrailsLayer.test.ts`, `composeOrbitConic.test.ts` stay green — this is the zero-change proof; do not add a mirror test re-deriving the conic).
-- [ ] Commit.
+- [x] Extract `deriveOrbitConics(simDays)`; parent centers re-derive from elements.
+- [x] `SCENE_ORBIT_CONICS` retains its exact current values (existing `sceneOrbitConics.test.ts`, `orbitTrailsLayer.test.ts`, `composeOrbitConic.test.ts` stay green — this is the zero-change proof; do not add a mirror test re-deriving the conic).
+- [x] Commit.
 
 ### Task A9 — orbitTrailsLayer: time-invariant extent bound
 
@@ -241,9 +241,9 @@ apoapsis** (`a·(1+e)` from the parent-relative extent), which is **time-invaria
 — an outer envelope every orbit stays inside for all `t`. The cull stays
 conservative (never drops a visible orbit).
 
-- [ ] Replace the center-derived bound with the apoapsis envelope.
-- [ ] `tests/services/engine/frame/passes/orbitTrailsLayer.test.ts` stays green; if a test pins the old bound value, retarget it to the envelope property (bound ≥ every orbit's farthest reach), not a copied literal.
-- [ ] Commit.
+- [x] Replace the center-derived bound with the apoapsis envelope.
+- [x] `tests/services/engine/frame/passes/orbitTrailsLayer.test.ts` stays green; if a test pins the old bound value, retarget it to the envelope property (bound ≥ every orbit's farthest reach), not a copied literal.
+- [x] Commit.
 
 ### Task A10 — earthFlyout + earthSurfaceFraming: off SCENE_EARTH.positionMpc
 
@@ -258,9 +258,9 @@ Earth's J2000 position directly from `ORBITAL_ELEMENTS` via `keplerianPositionMp
 saga caller passes the resolved Earth state (J2000 in prep; the feature passes the
 live state for free).
 
-- [ ] Repoint both; keep the pure, state-free shape of `earthSurfaceFraming`.
-- [ ] `tests/utils/camera/earthSurfaceFraming.test.ts` + any `earthFlyout` test stay green (adjust the fixture to pass the position, same J2000 value).
-- [ ] Commit.
+- [x] Repoint both; keep the pure, state-free shape of `earthSurfaceFraming`.
+- [x] `tests/utils/camera/earthSurfaceFraming.test.ts` + any `earthFlyout` test stay green (adjust the fixture to pass the position, same J2000 value).
+- [x] Commit.
 
 ### Task A11 — Strip state from the records (compile proves the repoint)
 
@@ -273,10 +273,10 @@ the `SceneBody` union docstring (it currently claims all arms share
 `positionMpc`). `tsc` now fails at any un-repointed read — fix each (they should
 all be A3–A10; this task catches stragglers).
 
-- [ ] Strip the fields; run `npx tsc --noEmit` (both tsconfigs) — zero errors means every reader was repointed.
-- [ ] Move any remaining test fixture that built a record with `positionMpc`/`orientation` onto `deriveBodyStates`/a state stub.
-- [ ] Full suite green.
-- [ ] Commit.
+- [x] Strip the fields; run `npx tsc --noEmit` (both tsconfigs) — zero errors means every reader was repointed.
+- [x] Move any remaining test fixture that built a record with `positionMpc`/`orientation` onto `deriveBodyStates`/a state stub.
+- [x] Full suite green.
+- [x] Commit.
 
 ---
 
@@ -324,10 +324,10 @@ source, faithful behaviour.
 
 **Files:** `src/utils/url/parseHashParams.ts` (new), `src/utils/url/composeHashParams.ts` (new), tests alongside.
 
-- [ ] `parseHashParams splits &-separated key=value pairs` — `'focus=a&t=b'` → map of two.
-- [ ] `round-trips` — `composeHashParams(parseHashParams(x)) === x` for `'focus=body-jupiter'`, `'focus=a&t=b'`, and `''`; and `parseHashParams(composeHashParams(m))` deep-equals `m`.
-- [ ] `single focus param parses as today` — `'focus=cluster-virgo-m87'` → `{ focus: 'cluster-virgo-m87' }`.
-- [ ] Commit.
+- [x] `parseHashParams splits &-separated key=value pairs` — `'focus=a&t=b'` → map of two.
+- [x] `round-trips` — `composeHashParams(parseHashParams(x)) === x` for `'focus=body-jupiter'`, `'focus=a&t=b'`, and `''`; and `parseHashParams(composeHashParams(m))` deep-equals `m`.
+- [x] `single focus param parses as today` — `'focus=cluster-virgo-m87'` → `{ focus: 'cluster-virgo-m87' }`.
+- [x] Commit.
 
 ### Task B2 — HashParamSource registry; focus as the first source
 
@@ -338,10 +338,10 @@ Refactor `computeDesiredHash` to compose the write body over the source table vi
 each source. `focus`'s write reuses `URL_HASH_FOR` (`useUrlSync.ts:95-96`); its
 read reuses the present/absent/isInitial logic (`useUrlSync.ts:118-124`).
 
-- [ ] Every existing `useUrlSync` test and `tests/hooks/urlHashFor.test.ts` stays green **unchanged** (the behaviour is identical) — this IS the round-trip acceptance for `focus`.
-- [ ] Add `computeDesiredHash composes focus through the param seam` asserting `focus=<id>` is still produced for a galaxy/structure focus (one targeted assertion, not a full-object snapshot).
-- [ ] `hasDeepLink` (`src/utils/url/hasDeepLink.ts`) still detects `#focus…` — verify its test stays green (no change expected; it substring-matches).
-- [ ] Commit.
+- [x] Every existing `useUrlSync` test and `tests/hooks/urlHashFor.test.ts` stays green **unchanged** (the behaviour is identical) — this IS the round-trip acceptance for `focus`.
+- [x] Add `computeDesiredHash composes focus through the param seam` asserting `focus=<id>` is still produced for a galaxy/structure focus (one targeted assertion, not a full-object snapshot).
+- [x] `hasDeepLink` (`src/utils/url/hasDeepLink.ts`) still detects `#focus…` — verify its test stays green (no change expected; it substring-matches).
+- [x] Commit.
 
 ---
 
@@ -352,20 +352,20 @@ read reuses the present/absent/isInitial logic (`useUrlSync.ts:118-124`).
 Run the `entanglement-radar` skill over the whole #472 diff (Prep A + Prep B).
 Specifically check:
 
-- [ ] No body position/orientation is read from **two** sources (a baked record field surviving next to the snapshot) — the split must be clean, one source (A11's `tsc` pass is the mechanical proof; confirm no runtime fallback re-introduced it).
-- [ ] `sceneBodyStates` is the **only** epoch-choice site (grep for stray `deriveBodyStates(` calls that hard-code `CONST_J2000` in a per-frame path — those belong behind the memo).
-- [ ] The data-layer re-derivations (A8, A10, A7's planet source) share `keplerianPositionMpc` and do not copy its formula (no mirror).
-- [ ] The `HashParamSource` seam did not over-abstract for one param — it earns its shape by making the feature's `t=` a pure table append.
-- [ ] Fold or file any knot named; commit the review notes in the PR description.
+- [x] No body position/orientation is read from **two** sources (a baked record field surviving next to the snapshot) — the split must be clean, one source (A11's `tsc` pass is the mechanical proof; confirm no runtime fallback re-introduced it).
+- [x] `sceneBodyStates` is the **only** epoch-choice site (grep for stray `deriveBodyStates(` calls that hard-code `CONST_J2000` in a per-frame path — those belong behind the memo).
+- [x] The data-layer re-derivations (A8, A10, A7's planet source) share `keplerianPositionMpc` and do not copy its formula (no mirror).
+- [x] The `HashParamSource` seam did not over-abstract for one param — it earns its shape by making the feature's `t=` a pure table append.
+- [x] Fold or file any knot named; commit the review notes in the PR description.
 
 ---
 
 ## Definition of done
 
-- [ ] `npm run typecheck` clean (both tsconfigs).
-- [ ] `npm test` green — the whole suite, unchanged except fixtures moved onto the snapshot / param seam.
-- [ ] Zero visual/behaviour change: at any camera pose the bodies, trails, captions, atmosphere, selection halo, and URL are byte-identical to `main` (the existing suite is the proof; a dev-server spot-check of the solar-system descent is the human confirm).
-- [ ] `PlanetBody` + `EarthBody` carry no `positionMpc`/`orientation`; `StarBody` unchanged.
-- [ ] `deriveBodyStates` + `sceneBodyStates` + `deriveOrbitConics(simDays)` exist and are evaluated at `CONST_J2000` everywhere in prep.
-- [ ] `useUrlSync` parses/composes through the `&`-separated param seam with `focus` as the sole source; existing URL tests unchanged and green.
-- [ ] One PR (#472), ordered commits, entanglement-radar notes in the PR body.
+- [x] `npm run typecheck` clean (both tsconfigs).
+- [x] `npm test` green — the whole suite, unchanged except fixtures moved onto the snapshot / param seam.
+- [x] Zero visual/behaviour change: at any camera pose the bodies, trails, captions, atmosphere, selection halo, and URL are byte-identical to `main` (the existing suite is the proof; a dev-server spot-check of the solar-system descent is the human confirm).
+- [x] `PlanetBody` + `EarthBody` carry no `positionMpc`/`orientation`; `StarBody` unchanged.
+- [x] `deriveBodyStates` + `sceneBodyStates` + `deriveOrbitConics(simDays)` exist and are evaluated at `CONST_J2000` everywhere in prep.
+- [x] `useUrlSync` parses/composes through the `&`-separated param seam with `focus` as the sole source; existing URL tests unchanged and green.
+- [x] One PR (#472), ordered commits, entanglement-radar notes in the PR body.
