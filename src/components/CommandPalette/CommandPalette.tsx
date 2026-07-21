@@ -108,7 +108,7 @@ function CommandPalette({
         <input
           ref={inputRef}
           className={styles.input}
-          placeholder="Search galaxies, stars, planets & clusters (Sirius, Jupiter, M31, Coma …)"
+          placeholder="Search galaxies, stars, planets & clusters…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />

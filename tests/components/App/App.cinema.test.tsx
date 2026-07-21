@@ -88,7 +88,7 @@ function renderApp(store: Store): ReturnType<typeof render> {
 // queries, because splash/palette transitions toggle aria-hidden and the
 // contract under test is DOM existence, not accessibility-tree visibility.
 const HUD_SELECTORS: readonly string[] = [
-  '[aria-label="Search galaxies and clusters"]', // SearchTrigger
+  '[aria-label="Search galaxies, stars, planets, and clusters"]', // SearchTrigger
   '[aria-label="About skymap"]', // AboutPill
   '[aria-label="Navigation cheatsheet"]', // NavigationPanel
   '[aria-label="Scale reference"]', // ScaleBar
