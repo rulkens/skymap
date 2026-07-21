@@ -289,6 +289,13 @@ export function parseTwoMrs(rawText: string, xsc: XscShapeMap = new Map()): TwoM
     // build pipeline applies DEFAULT_GALAXY_DIAMETER_KPC = 30 in that case.
     const risoStr = line.slice(141, 146).trim();
     const riso = risoStr === '' ? NaN : parseFloat(risoStr);
+    // The angular major-axis diameter is a pure catalog fact — it does NOT
+    // depend on cz, so we compute it whenever Riso is present, including for
+    // blueshifted (cz < 0) rows. The build pipeline converts it to a physical
+    // diameter against whatever distance it ultimately adopts (see
+    // ParsedRecord.angularMajorAxisArcsec). The distance-baked `diameterKpc`
+    // below stays cz-gated for backward compatibility with the cz > 0 path.
+    const angularMajorAxisArcsec = Number.isFinite(riso) ? 2 * Math.pow(10, riso) : undefined;
     let diameterKpc: number | null = null;
     if (Number.isFinite(riso)) {
       const arcsecRadius = Math.pow(10, riso);
@@ -331,6 +338,7 @@ export function parseTwoMrs(rawText: string, xsc: XscShapeMap = new Map()): TwoM
       axisRatio: xscEntry ? xscEntry.sup_ba : null,
       positionAngleDeg: xscEntry ? xscEntry.sup_phi : null,
       diameterKpc,
+      angularMajorAxisArcsec,
       // 2MRS rows have no AGN class signal and no Milliquas
       // parent-survey prefix; both bytes stay 0.
       classByte: 0,

@@ -52,20 +52,20 @@ function eOfZ(z: number): number {
  * several Virgo galaxies whose infall velocity exceeds the Hubble flow).
  * The ΛCDM comoving integral is only defined for z ≥ 0, but |z| there is
  * tiny (< 0.002), so we fall back to the linear Hubble law — identical to
- * ΛCDM at that scale — and KEEP THE SIGN. That yields a negative radius,
- * mirroring the row through the origin exactly as the linear-distance
- * pipeline did before the ΛCDM swap. Crucially it does NOT collapse the
- * row onto the origin (which `return 0` would, stacking 25 max-size
- * sprites on the Milky Way).
+ * ΛCDM at that scale — and KEEP THE SIGN. Keeping the sign lets callers
+ * that want a signed line-of-sight velocity (`hubbleVelocityKmS`) read the
+ * blueshift straight off, and lets the position pipeline recover the
+ * magnitude with `Math.abs`.
  *
- * Astrophysically-correct redshift-independent distances inside ~30 Mpc
- * are now applied at build time via the CF4 / HyperLEDA override in
+ * Astrophysically-correct redshift-independent distances inside ~30 Mpc are
+ * applied at build time via the CF4 / HyperLEDA / curated-seed override in
  * `tools/catalog/buildAllBins.ts` (see
- * `docs/superpowers/specs/2026-05-27-local-volume-distances.md`). This
- * function still runs for every row past `CUTOFF_MPC` and for
- * unmatched-inside-cutoff rows (Resolved decision #3); the linear-sign
- * fallback for z < 0 stays in place as the safety net for rows the
- * override didn't catch.
+ * `docs/superpowers/specs/2026-05-27-local-volume-distances.md`). For the
+ * blueshifted rows that override doesn't catch, `buildAllBins` places the
+ * galaxy in its true direction at `|distance|` — NOT at the antipodal
+ * position a raw negative radius would produce by mirroring through the
+ * origin. This function is a pure z→distance map; the sign convention on
+ * the return value is the caller's to interpret.
  */
 export function redshiftToDistanceMpc(z: number): number {
   if (z === 0) return 0;

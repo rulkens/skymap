@@ -67,8 +67,12 @@ import type { DesiPatch } from './desiPatches';
 import { encodeGalaxyCatalog } from '../../src/data/galaxyCatalog/galaxyCatalogFormat';
 import { raDecZToCartesian } from '../../src/utils/math/index';
 import { raDecDistToCartesian } from '../../src/utils/math/raDecDistToCartesian';
+import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';
 import { fallbackOrientation } from '../../src/utils/random/fallbackOrientation';
 import { catalogDistanceFor } from './catalogDistanceFor';
+import type { LocalVolumeDistanceSeed } from './catalogDistanceFor';
+import { loadLocalVolumeDistanceSeed } from './loadLocalVolumeDistanceSeed';
+import { arcsecToKpc } from '../../src/utils/math/arcsecToKpc';
 import { CUTOFF_MPC } from './localVolumeCutoff';
 import type { Cf4CatalogIndex } from '../parsers/cosmicflows4';
 import { loadCf4CatalogIndex } from '../parsers/cosmicflows4';
@@ -101,6 +105,12 @@ export type { CrossMatchInputs } from './crossMatch';
 export type LocalVolumeOverrides = {
   cf4: Cf4CatalogIndex;
   hyperLeda: HyperLedaShapeMap;
+  /**
+   * Curated redshift-independent distances for galaxies CF4 and the partial
+   * HyperLEDA cache both miss — chiefly the blueshifted 2MRS rows. Checked
+   * first in `catalogDistanceFor`. Empty map when the seed file is absent.
+   */
+  blueshiftSeed: LocalVolumeDistanceSeed;
 };
 
 /**
@@ -151,7 +161,9 @@ export function recordsToCloud(
     let y: number;
     let z: number;
     const overrideHit =
-      overrides !== null ? catalogDistanceFor(r, overrides.cf4, overrides.hyperLeda) : null;
+      overrides !== null
+        ? catalogDistanceFor(r, overrides.cf4, overrides.hyperLeda, overrides.blueshiftSeed)
+        : null;
     if (overrideHit !== null && overrideHit.distMpc < CUTOFF_MPC) {
       // Inside-cutoff catalog match: use the measured distance for the
       // cartesian position. The catalogued z still lands on
@@ -159,6 +171,17 @@ export function recordsToCloud(
       // line keeps showing the published value.
       [x, y, z] = raDecDistToCartesian(r.ra, r.dec, overrideHit.distMpc);
       overridesApplied++;
+    } else if (r.z < 0) {
+      // Blueshifted row with no redshift-independent distance. The cz path
+      // (raDecZToCartesian) would run a negative Hubble distance and mirror
+      // the galaxy through the origin to an antipodal position — wrong
+      // hemisphere, not just wrong distance. Place it in its TRUE direction at
+      // |distance| instead: a wrong distance is far less wrong than a wrong
+      // patch of sky, and it still avoids stacking on the origin. The
+      // local-volume seed already fixes the ones we have real distances for;
+      // this is the safety net for those we don't (heavily-extincted
+      // Zone-of-Avoidance dwarfs with no measured distance anywhere).
+      [x, y, z] = raDecDistToCartesian(r.ra, r.dec, Math.abs(redshiftToDistanceMpc(r.z)));
     } else {
       // No catalog match, or the match is past the cutoff (in which case
       // the Hubble-flow distance is good enough that the extra dependency
@@ -200,8 +223,21 @@ export function recordsToCloud(
     // wouldn't touch every parser, and (3) the null/finite distinction at
     // the parser boundary doubles as the provenance signal for the
     // InfoCard's "real / Tully / fallback" chip.
-    cloud.diameterKpc[i] =
-      r.diameterKpc !== null && r.diameterKpc > 0 ? r.diameterKpc : DEFAULT_GALAXY_DIAMETER_KPC;
+    // Diameter precedence:
+    //   1. the parser's distance-baked physical diameter (2MRS cz > 0 Riso,
+    //      GLADE Tully, SDSS petroR50), when it produced a finite positive one;
+    //   2. else re-derive from the parser's raw *angular* size against the
+    //      distance we actually adopted above — this is what rescues the
+    //      blueshifted 2MRS rows, whose cz-baked diameterKpc was null but whose
+    //      Riso angular size is real and now pairs with a real seed distance;
+    //   3. else the flat DEFAULT_GALAXY_DIAMETER_KPC = 30.
+    let diameterKpc = r.diameterKpc !== null && r.diameterKpc > 0 ? r.diameterKpc : null;
+    if (diameterKpc === null && r.angularMajorAxisArcsec !== undefined) {
+      const adoptedDistMpc = Math.hypot(x, y, z);
+      const fromAngular = arcsecToKpc(r.angularMajorAxisArcsec, adoptedDistMpc);
+      if (Number.isFinite(fromAngular) && fromAngular > 0) diameterKpc = fromAngular;
+    }
+    cloud.diameterKpc[i] = diameterKpc ?? DEFAULT_GALAXY_DIAMETER_KPC;
     // Per-source classification byte (e.g. Milliquas AGN class
     // letter → 1..6).  Every parser that doesn't carry a class
     // signal leaves r.classByte at 0, so we copy unconditionally.
@@ -579,7 +615,13 @@ async function runCli(): Promise<void> {
   // tolerant — a fresh checkout without the raw CF4 download still
   // produces .bin outputs, just without the override fired.
   const cf4Index = loadCf4CatalogIndex();
-  const overrides: LocalVolumeOverrides = { cf4: cf4Index, hyperLeda: leda };
+  // Curated redshift-independent distances for the blueshifted local-volume
+  // galaxies CF4 + HyperLEDA miss. Missing-file tolerant (returns empty map).
+  const blueshiftSeed = loadLocalVolumeDistanceSeed();
+  if (blueshiftSeed.size > 0) {
+    process.stderr.write(`loaded ${blueshiftSeed.size} curated local-volume distance(s)\n`);
+  }
+  const overrides: LocalVolumeOverrides = { cf4: cf4Index, hyperLeda: leda, blueshiftSeed };
 
   process.stderr.write('parsing SDSS…\n');
   const sdss = loadOrEmpty(args.sdss, parseSdssCsv);
