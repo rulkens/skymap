@@ -80,10 +80,14 @@ import package::lib::sphere::CloudShellUniforms;
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
-  // RGB = cloud colour (sRGB de-gammad on read), .a = coverage. The +0.5 on u
-  // puts the map centre (geographic longitude 0) on the local +x prime meridian,
-  // matching the surface (see the '## uv / orientation' note); the shared
-  // uvSphereMesh emits u=0 there, so the origin correction lives here.
+  // RGB = cloud colour (sRGB de-gammad on read), .a = coverage. The +0.5 on u is
+  // the EARTH_TEXTURE_PRIME_MERIDIAN_U convention: it puts the map centre
+  // (geographic longitude 0) on the local +x prime meridian, matching the surface
+  // (see the '## uv / orientation' note); the shared uvSphereMesh emits u=0 there,
+  // so the origin correction lives here. WESL cannot import the TS constant, so
+  // this offset is re-encoded; the other two sites of the same 0.5 are
+  // 'cubeSphereMesh.ts' (the TS home exporting EARTH_TEXTURE_PRIME_MERIDIAN_U) and
+  // 'earth/fragment.wesl'. Grep the token to find all three.
   // No explicit fract() wrap: the sampler uses addressModeU 'repeat', so a u of
   // 0.5..1.5 wraps correctly in hardware. Wrapping in-shader with fract() instead
   // breaks the quad derivatives at the u=0.5 seam (the value jumps 1->0), which

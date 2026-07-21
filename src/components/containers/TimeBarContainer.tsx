@@ -29,7 +29,8 @@ import TimeBar from '../TimeBar/TimeBar';
 import DateEntryPopover from '../TimeBar/DateEntryPopover/DateEntryPopover';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectRateStep, selectTimeState } from '../../state/time/selectors';
-import { goLive, pause, resume, setRate, setSimDays } from '../../state/time/timeSlice';
+import { goLive, pause, resume, setRate } from '../../state/time/timeSlice';
+import { enterManualPausedAt } from '../../state/time/enterManualPausedAt';
 import { RATE_LADDER } from '../../data/time/rateLadder';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { formatSimClock } from '../../utils/time/formatSimClock';
@@ -123,15 +124,12 @@ function TimeBarContainer({ hidden }: TimeBarContainerProps): ReactNode {
   const onReadoutClick = useCallback(() => setPopoverOpen((open) => !open), []);
   const onPopoverCancel = useCallback(() => setPopoverOpen(false), []);
 
-  // Commit mirrors the URL `t=` restore (hashParamSources): `setSimDays` anchors
-  // the manual clock at the chosen instant, then `pause` freezes it there. Both
-  // dispatches share one `nowMs` so pause's re-anchor derives zero elapsed real
-  // time and holds the exact instant. A date jump lands paused, not playing.
+  // Commit and the URL `t=` restore share one operation: `enterManualPausedAt`
+  // lands the manual clock at the chosen instant, paused (a date jump lands
+  // paused, not playing). The shared-`nowMs` invariant lives in that helper.
   const onPopoverCommit = useCallback(
     (instant: Date) => {
-      const nowMs = performance.now();
-      dispatch(setSimDays({ simDays: unixMsToJulianDays(instant.getTime()), nowMs }));
-      dispatch(pause({ nowMs }));
+      enterManualPausedAt(dispatch, instant);
       setPopoverOpen(false);
     },
     [dispatch],

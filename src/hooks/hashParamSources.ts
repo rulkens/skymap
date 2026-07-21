@@ -23,9 +23,8 @@ import type { HashParamSource } from '../@types/hooks/HashParamSource';
 import { URL_HASH_FOR } from './urlHashFor';
 import { requestFocus } from '../state/selection/requestFocus';
 import { clearSelection } from '../state/selection/selectionSlice';
-import { setSimDays, pause } from '../state/time/timeSlice';
+import { enterManualPausedAt } from '../state/time/enterManualPausedAt';
 import { julianDaysToUnixMs } from '../utils/time/julianDaysToUnixMs';
-import { unixMsToJulianDays } from '../utils/time/unixMsToJulianDays';
 
 const focusSource: HashParamSource = {
   key: 'focus',
@@ -57,12 +56,11 @@ const focusSource: HashParamSource = {
  * "pause, then share" freezes exactly the moment on screen.
  *
  * ── read ──
- * A parseable ISO string restores manual + paused at that instant: `setSimDays`
- * anchors the manual clock there, then `pause` freezes it. Both dispatches carry
- * the SAME `nowMs` so `pause`'s re-anchor sees zero elapsed real time and holds
- * the instant exactly (`deriveSimDays(now) === instant`). An absent, empty, or
- * unparseable value is a no-op — the clock stays live (bare-URL semantics), and
- * the engine's bootstrap `goLive` owns "now".
+ * A parseable ISO string restores manual + paused at that instant via
+ * `enterManualPausedAt` (the shared operation the date-entry popover commit also
+ * uses; the shared-`nowMs` invariant that holds the instant exactly lives there).
+ * An absent, empty, or unparseable value is a no-op — the clock stays live
+ * (bare-URL semantics), and the engine's bootstrap `goLive` owns "now".
  */
 const timeSource: HashParamSource = {
   key: 't',
@@ -74,12 +72,7 @@ const timeSource: HashParamSource = {
     if (!value) return;
     const unixMs = Date.parse(value);
     if (Number.isNaN(unixMs)) return;
-    // One `nowMs` for both dispatches: `setSimDays` pins the anchor's `realMs`
-    // to it, so `pause`'s re-anchor derives zero elapsed and freezes the exact
-    // instant. Two `performance.now()` reads would drift the paused value.
-    const nowMs = performance.now();
-    dispatch(setSimDays({ simDays: unixMsToJulianDays(unixMs), nowMs }));
-    dispatch(pause({ nowMs }));
+    enterManualPausedAt(dispatch, new Date(unixMs));
   },
 };
 
