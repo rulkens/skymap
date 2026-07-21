@@ -1,0 +1,113 @@
+/*
+ * TimeBar.module.css — the sim clock's transport instrument.
+ *
+ * Glassmorphic pill row using the same surface vocabulary as the HUD pills
+ * (soft glass, card border, blur). Default placement is bottom-center, clear
+ * of the right-corner ScaleBar / InfoCard and the left-stack panels — the
+ * final corner is a deferred USER VISUAL GATE (see TimeBar.tsx). All atoms
+ * reference tokens from src/styles/global.css.
+ */
+
+.root {
+  position: fixed;
+  bottom: var(--corner-offset);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-5);
+
+  background: var(--surface-card-soft);
+  -webkit-backdrop-filter: blur(var(--blur-card));
+  backdrop-filter: blur(var(--blur-card));
+  border: 1px solid var(--border-card);
+  border-radius: 999px;
+  box-shadow: var(--shadow-card);
+
+  color: var(--color-fg-base);
+  font: var(--font-size-md) / var(--line-height-tight) var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+
+  transition: opacity var(--duration-base) var(--ease-standard),
+    transform var(--duration-base) var(--ease-standard);
+}
+
+/* App-layout gate: fade + settle out, matching the HUD pills' hidden state. */
+.hidden {
+  opacity: 0;
+  transform: translateX(-50%) scale(0.96);
+  pointer-events: none;
+}
+
+/*
+ * The time readout doubles as the date-entry trigger. Styled as text rather
+ * than a chromed button so it reads as the bar's primary content; the hover
+ * accent is the only affordance hint until the popover (Task 4) lands.
+ */
+.readout {
+  font: inherit;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--color-fg);
+  letter-spacing: var(--letter-spacing-tight);
+  cursor: pointer;
+  transition: var(--transition-color), background var(--duration-color) ease;
+}
+
+.readout:hover,
+.readout:focus-visible {
+  color: var(--color-accent);
+  background: var(--surface-control);
+}
+
+.readout:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  transition: opacity var(--duration-base) var(--ease-standard);
+}
+
+/*
+ * Live mode is pinned to wall-time, so the transport collapses away and the
+ * readout stands alone. Hovering or keyboard-focusing the bar reveals the
+ * controls. Manual mode overrides this — the controls are always visible.
+ */
+.live .controls {
+  opacity: 0;
+}
+
+.live:hover .controls,
+.live:focus-within .controls {
+  opacity: 1;
+}
+
+/* Rate stepper + play/pause: compact square glyph buttons. */
+.step {
+  min-width: 28px;
+  padding: var(--space-2) var(--space-3);
+  line-height: 1;
+}
+
+.rate {
+  min-width: 6ch;
+  text-align: center;
+  color: var(--color-fg-muted);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+/* The lit "return to now" affordance — accent fill via Button's primary. */
+.now {
+  padding: var(--space-2) var(--space-4);
+  line-height: 1;
+}
