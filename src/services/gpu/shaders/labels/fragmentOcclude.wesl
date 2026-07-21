@@ -1,17 +1,26 @@
 // labels/fragmentOcclude.wesl — depth-occluding variant of the MSDF label
 // fragment stage.
 //
-// ## Why a second entry
+// ## Why two occluding entries
 //
-// The near-field foreground captions draw AFTER the solar-system bodies, in a
-// depthless OVER composite. A caption anchored behind a planet would otherwise
-// paint over the body that sits in front of it. This variant tests the body
-// pass's depth buffer at the fragment and discards where a nearer body already
-// owns the pixel — see lib/sceneDepth.wesl for the 'greater means occluded' rule.
+// Labels draw AFTER the solar-system bodies, in a depthless OVER composite. A
+// label anchored behind a planet would otherwise paint over the body in front
+// of it. Two families of label need occluding, from different projections, so
+// this file exposes two discard-gated entries (the renderer picks one by mode):
 //
-// The shading itself is identical to the plain 'fs' entry: we reuse
-// 'shadeMsdf' from labels/fragment.wesl so glyph colour has one source of
-// truth. This entry only adds the discard gate in front of it.
+//   'fs' — depth COMPARE via 'occludedByScene(input.pos.xy, input.pos.z)'. Used
+//   by the NEAR0 foreground captions, which share the bodies' slab so their
+//   window depth is comparable — see lib/sceneDepth.wesl for the 'greater means
+//   occluded' rule. Compare keeps a caption visible over its OWN body.
+//
+//   'fsCoverage' — pure COVERAGE via 'coveredByScene(input.pos.xy)' (no depth
+//   arg). Used by the COSMO overlay labels, which project through a different
+//   slab than the NEAR0 bodies, so their window-Z is incomparable to the stored
+//   body depth; any body depth written at this pixel occludes them.
+//
+// The shading itself is identical to the plain 'fs' entry in labels/fragment.wesl:
+// both entries reuse 'shadeMsdf' so glyph colour has one source of truth. These
+// entries only add the discard gate in front of it.
 //
 // ## Per-glyph, not per-pixel, occlusion
 //
@@ -29,9 +38,16 @@
 import package::labels::io::VsOut;
 import package::labels::fragment::shadeMsdf;
 import package::lib::sceneDepth::occludedByScene;
+import package::lib::sceneDepth::coveredByScene;
 
 @fragment
 fn fs(input: VsOut) -> @location(0) vec4<f32> {
   if (occludedByScene(input.pos.xy, input.pos.z)) { discard; }
+  return shadeMsdf(input);
+}
+
+@fragment
+fn fsCoverage(input: VsOut) -> @location(0) vec4<f32> {
+  if (coveredByScene(input.pos.xy)) { discard; }
   return shadeMsdf(input);
 }

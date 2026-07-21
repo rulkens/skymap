@@ -87,7 +87,7 @@ describe('MarkerLineRenderer occlusion variant', () => {
       format: 'rgba16float' as GPUTextureFormat,
       canvas: null as unknown as HTMLCanvasElement,
     };
-    createMarkerLineRenderer(ctx, ctx.format, 64, { occludeAgainstDepth: true });
+    createMarkerLineRenderer(ctx, ctx.format, 64, { occludeAgainstDepth: 'coverage' });
 
     // Two BGLs: the marker-line BGL (shared by both pipelines) + the occlusion depth BGL.
     expect(bindGroupLayouts).toHaveLength(2);

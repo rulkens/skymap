@@ -126,18 +126,26 @@ const CORNER_BYTES = UNIT_QUAD_STRIP_CORNERS.byteLength; // 32 bytes (4 × 2 × 
  * a follow-up resize.
  *
  * `opts.occludeAgainstDepth` opts this instance into per-pixel occlusion
- * behind nearer solar-system bodies.  When set, the pipeline gains a
- * group(1) depth binding (`OCCLUSION_DEPTH_LAYOUT_DESC`) and compiles the
- * discard-gated `fragmentOcclude.wesl` entry instead of the plain
- * `fragment.wesl`; `draw` then consumes a per-frame scene depth view.  The
- * default (opts omitted) keeps the plain single-BGL, non-occluding pipeline
- * the Milky Way + structure leader lines rely on — byte-for-byte unchanged.
+ * behind nearer solar-system bodies, and selects WHICH occluder.  When set,
+ * the pipeline gains a group(1) depth binding (`OCCLUSION_DEPTH_LAYOUT_DESC`)
+ * and compiles a discard-gated `fragmentOcclude.wesl` entry instead of the
+ * plain `fragment.wesl`; `draw` then consumes a per-frame scene depth view.
+ * The mode picks the entry point:
+ *   - `'compare'`  → the `fs` entry (depth COMPARE) for NEAR0 foreground
+ *     leader lines that share the bodies' slab.
+ *   - `'coverage'` → the `fsCoverage` entry (pure COVERAGE) for the COSMO
+ *     overlay marker-lines, whose window-Z is in a different projection than
+ *     the NEAR0 body depths, so any body depth written at the pixel occludes
+ *     them.
+ * The default (opts omitted) keeps the plain single-BGL, non-occluding
+ * pipeline the Milky Way + structure leader lines rely on — byte-for-byte
+ * unchanged.
  */
 export function createMarkerLineRenderer(
   ctx: GpuContext,
   targetFormat: GPUTextureFormat,
   maxLines = 64,
-  opts?: { occludeAgainstDepth?: boolean },
+  opts?: { occludeAgainstDepth?: 'compare' | 'coverage' },
 ): MarkerLineRenderer {
   // The `as ... | null` cast lets a test pass `device: null as unknown as
   // GPUDevice` through GpuContext without TypeScript complaining at the
@@ -175,7 +183,10 @@ export function createMarkerLineRenderer(
   // occlusion branch.
   let occlusionDepthBGL: GPUBindGroupLayout | null = null;
 
-  const occludeAgainstDepth = opts?.occludeAgainstDepth === true;
+  // The occlude MODE, or undefined for a plain instance. Present ⇒ build the
+  // occlude pipeline + depth BGL (exactly as the old boolean did); the mode
+  // then selects the fragment ENTRY POINT — see the factory docblock.
+  const occludeMode = opts?.occludeAgainstDepth;
 
   if (device) {
     // ── Bind group layout ─────────────────────────────────────────────────
@@ -198,7 +209,7 @@ export function createMarkerLineRenderer(
     // compiles the discard-gated fragment entry.  `occlusionDepthBGL` is
     // retained so `draw` can rebuild its per-frame bind group (the depth
     // view changes on every resize — see occlusionDepthGroup.ts).
-    if (occludeAgainstDepth) {
+    if (occludeMode != null) {
       occlusionDepthBGL = device.createBindGroupLayout(OCCLUSION_DEPTH_LAYOUT_DESC);
     }
 
@@ -270,7 +281,13 @@ export function createMarkerLineRenderer(
           bindGroupLayouts: [bindGroupLayout, occlusionDepthBGL],
         }),
         vertex: { module: vsModule, entryPoint: 'vs', buffers: vertexBuffers },
-        fragment: { module: fsOccludeModule, entryPoint: 'fs', targets: colorTargets },
+        fragment: {
+          module: fsOccludeModule,
+          // COVERAGE for the cross-slab COSMO overlays, COMPARE for the
+          // same-slab NEAR0 connectors — see the factory docblock.
+          entryPoint: occludeMode === 'coverage' ? 'fsCoverage' : 'fs',
+          targets: colorTargets,
+        },
         primitive: { topology: 'triangle-strip' },
       });
     }

@@ -25,9 +25,11 @@ export type SelectionRingRenderer = {
    * block on the swap-chain texture (premultiplied-OVER expects an LDR target).
    *
    * `sceneDepthView` is consumed only by an instance created with
-   * `occludeAgainstDepth: true`, where it feeds the group(1) depth joint so
-   * fragments behind a nearer solar-system body are discarded (per-pixel
-   * body occlusion).  A plain instance ignores it.
+   * `occludeAgainstDepth: 'compare' | 'coverage'`, where it feeds the group(1)
+   * depth joint so fragments behind a nearer solar-system body are discarded
+   * (per-pixel body occlusion).  The mode picks the occluder — `'compare'` for
+   * a same-slab NEAR0 ring, `'coverage'` for the cross-slab COSMO ring.  A
+   * plain instance ignores it.
    */
   draw(
     pass: GPURenderPassEncoder,
