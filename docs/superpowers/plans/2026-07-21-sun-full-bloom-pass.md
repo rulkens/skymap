@@ -636,9 +636,32 @@ Baseline measured 2026-07-21 post-prep (single tone-map), tier medium, 1400×900
 
 | scenario | baseline (ms) | after (ms) | delta |
 | --- | --- | --- | --- |
-| solar-system | 14.8 (68 fps ✓) | | |
-| star-field | 11.7 (86 fps ✓) | | |
-| milky-way | 21.0 (48 fps ⚠) | | |
+| solar-system | 14.8 (68 fps ✓) | 22.7 (44 fps ⚠) | +7.9 |
+| star-field | 11.7 (86 fps ✓) | 11.1 (90 fps ✓) | −0.6 |
+| milky-way | 21.0 (48 fps ⚠) | 27.8 (36 fps ⚠) | +6.8 |
+
+After measured 2026-07-21 (bloom ON, default settings), same rig, port 5176.
+
+**The reliable bloom cost is the directly-measured MERGED `bloom` slot: 5.4 ms** (milky-way,
+20% of frame). The scenario-TOTAL deltas above are noisier than that — star-field came in
+−0.6 ms (baseline and after were measured on different ports/runs, and the harness carries a
+±1–2 ms clock artifact, see `project_star_frustum_cull`), so quote the 5.4 ms slot, not the
+TOTAL delta. Bloom is a fixed-cost screen-space pass (five-mip pyramid at full-res 1400×900),
+so it lands the same ~5 ms regardless of scene content. That sits at the top of the spec's
+quality-first 3–5 ms budget.
+
+`--sweep` (milky-way, 0.5/1/1.5/2×) classifies the `bloom` pass as **overhead/CPU-bound
+(exp 0.21)**, not fragment-bound: its time barely tracks pixel count (and is non-monotonic —
+2× reads lower than 1.5×). The mips are already small (`bloom0` half-res through `bloom4` at
+1/32), so the ~5.4 ms is dominated by the **ten sub-passes' fixed per-pass overhead**
+(~0.5 ms each), not fill.
+
+**Note for the user:** bloom pushes solar-system from a clean 60 fps (14.8) below it (22.7,
+44 fps) and milky-way further under (21.0→27.8). Both scenes were already at/over budget; the
+fixed ~5 ms bloom is the added cost. Because the cost is pass-count, not fill, **half-res
+bloom would NOT help** — the lever is fewer mip levels (5→3 drops ~4 passes) or merging the
+downsample/upsample steps. In-budget for the quality-first 3–5 ms spec; deferred as a
+follow-up unless the user wants the fps back on solar-system now.
 
 Note: `milky-way` was already over the 16.7 ms budget before bloom (hdr·NEAR0 5.8 ms +
 hdr→swap 4.7 + swap·COSMO 4.6 dominate). Bloom adds a 5-mip pyramid + fold; T14 measures the
