@@ -48,7 +48,7 @@ These four kinds of code are the contract. Include them, exactly.
    `git mv` + hand-editing every import path (observed, repeatedly); naming
    the tool in the task text is the only channel that reliably reaches a
    subagent, since they never load project skills. See
-   `.claude/skills/move-files/SKILL.md`.
+   `.claude/skills/refactor/SKILL.md`.
 
 ## What doesn't
 
