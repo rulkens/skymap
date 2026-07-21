@@ -81,14 +81,14 @@ in and feeds them the guarded depth view.
   `ctx.renderedTargets: ReadonlySet<string>`, `ctx.renderTargets.depthViewOf('foreground:0')`.
 - Produces: no new exports (behaviour of two existing layers).
 
-- [ ] In each layer's `draw`, derive the depth view exactly as
+- [x] In each layer's `draw`, derive the depth view exactly as
       `foregroundLabelsLayer.ts:592-594` does:
       `const depthView = ctx.renderedTargets.has('foreground:0') ? ctx.renderTargets.depthViewOf('foreground:0') : undefined;`
       and pass it as the trailing `draw` arg.
-- [ ] Flip both COSMO renderer constructions in `initGpu.ts` to `occludeAgainstDepth: true`.
-- [ ] `npm run typecheck` green. (No unit test: the occlusion is a device-level pipeline
+- [x] Flip both COSMO renderer constructions in `initGpu.ts` to `occludeAgainstDepth: true`.
+- [x] `npm run typecheck` green. (No unit test: the occlusion is a device-level pipeline
       behaviour, dormant until prep B — verified by the Task 3 visual check.)
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 2: selection-ring COSMO coverage occlusion
 
@@ -127,15 +127,15 @@ Only `selectionRingLayer` (COSMO) feeds the guarded depth view.
 - Produces: `createSelectionRingRenderer(ctx, format, init?: { occludeAgainstDepth?: boolean })`
   with an occlude pipeline; `draw(pass, vp, viewportPx, ring, sceneDepthView?)`.
 
-- [ ] Add the occlude fragment shader (group(1) depth, `discard` when `occludedByScene`).
-- [ ] Add the dual-pipeline + per-draw selection to the renderer; keep the existing plain
+- [x] Add the occlude fragment shader (group(1) depth, `discard` when `occludedByScene`).
+- [x] Add the dual-pipeline + per-draw selection to the renderer; keep the existing plain
       path byte-identical when no depth view is passed.
-- [ ] Wire `selectionRingLayer` to feed the guarded depth view; leave
+- [x] Wire `selectionRingLayer` to feed the guarded depth view; leave
       `near0SelectionRingLayer` unchanged (no depth view → plain pipeline).
-- [ ] `npm run typecheck` green. (No headless unit test — the pipeline/shader binding is
+- [x] `npm run typecheck` green. (No headless unit test — the pipeline/shader binding is
       device-only, like the caption occlusion; the `occlusionDepthGroup.test.ts` precedent
       pins the descriptor shape, which this reuses unchanged.)
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 3: Prep A visual neutrality checkpoint (no commit)
 
