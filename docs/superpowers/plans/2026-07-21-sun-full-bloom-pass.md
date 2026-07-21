@@ -472,14 +472,15 @@ Display section** (spec §6). Load the **create-component** skill first.
 - Consumes: `selectBloom{Enabled,Strength,Threshold}`, `setBloom{Enabled,Strength,Threshold}`.
 - Produces: the three controls in the Display disclosure.
 
-- [ ] Component test: render `DisplaySection` with plain props (no Provider); assert the
+- [x] Component test: render `DisplaySection` with plain props (no Provider); assert the
       enabled checkbox toggles via `fireEvent.click` (NOT `fireEvent.change` — controlled
       checkbox, testing.md gotcha) and calls `onBloomEnabledChange` with the toggled value;
       assert a strength `fireEvent.change` calls `onBloomStrengthChange` with the parsed
       number. Type mock callbacks `vi.fn<(v: boolean) => void>()` / `vi.fn<(v: number) =>
       void>()` (never bare `vi.fn()`).
-- [ ] `npm test -- DisplaySection` green; `npm run typecheck` green.
-- [ ] Commit.
+- [x] `npm test -- DisplaySection` green; `npm run typecheck` green.
+- [x] Commit. (Controls kept inline ~40 lines; slider bounds strength 0-2, threshold 0-12
+      are UI-only, adjust freely during tuning.)
 
 ### Task 13: frame-program bloom steps + gating + group titles + `renderFrame` threading + program-shape tests
 

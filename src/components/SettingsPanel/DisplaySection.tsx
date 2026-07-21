@@ -3,11 +3,12 @@
  * DisplaySection — presentational component for the Display settings section
  * inside the SettingsPanel.
  *
- * Owns the Display thematic group UI: the tone-mapping curve dropdown. Nested
+ * Owns the Display thematic group UI: the tone-mapping curve dropdown and the
+ * Bloom sub-group (enabled toggle + strength/threshold sliders). Nested
  * subgroups (e.g. the Earth atmosphere-exposure disclosure) are passed in as
- * `children` and rendered below the dropdown, so Display need not drill their
- * props. Isolating this into its own component ensures a change here re-renders
- * ONLY this section rather than the entire HUD.
+ * `children` and rendered below, so Display need not drill their props.
+ * Isolating this into its own component ensures a change here re-renders ONLY
+ * this section rather than the entire HUD.
  *
  * ### Props-driven, no internal state
  *
@@ -40,6 +41,18 @@ export type DisplaySectionProps = {
   toneMapCurve: ToneMapCurveT;
   /** Called with the newly selected curve when the dropdown changes. */
   onToneMapCurveChange: (curve: ToneMapCurveT) => void;
+  /** Whether the screen-space bloom pass is active. */
+  bloomEnabled: boolean;
+  /** Called with the toggled flag when the bloom checkbox is clicked. */
+  onBloomEnabledChange: (next: boolean) => void;
+  /** Scale on the blurred mip pyramid composited back over the HDR frame. */
+  bloomStrength: number;
+  /** Called with the new strength as the slider drags. */
+  onBloomStrengthChange: (next: number) => void;
+  /** HDR luminance above which a pixel contributes to the bloom pyramid. */
+  bloomThreshold: number;
+  /** Called with the new threshold as the slider drags. */
+  onBloomThresholdChange: (next: number) => void;
   /** Nested subgroups rendered below the tone-curve dropdown (e.g. Earth). */
   children?: ReactNode;
 };
@@ -51,7 +64,17 @@ export type DisplaySectionProps = {
  * power-user disclosure (default closed — explorer never sees tone-curve
  * jargon; tweaker opens one disclosure to find it).
  */
-function DisplaySection({ toneMapCurve, onToneMapCurveChange, children }: DisplaySectionProps) {
+function DisplaySection({
+  toneMapCurve,
+  onToneMapCurveChange,
+  bloomEnabled,
+  onBloomEnabledChange,
+  bloomStrength,
+  onBloomStrengthChange,
+  bloomThreshold,
+  onBloomThresholdChange,
+  children,
+}: DisplaySectionProps) {
   return (
     <CollapsibleSection title="Display">
       <div className={styles.panelRow}>
@@ -68,6 +91,46 @@ function DisplaySection({ toneMapCurve, onToneMapCurveChange, children }: Displa
             </option>
           ))}
         </select>
+      </div>
+
+      <div className={styles.panelRow}>
+        <label htmlFor="bloom-enabled">Bloom</label>
+        <input
+          id="bloom-enabled"
+          type="checkbox"
+          checked={bloomEnabled}
+          onChange={(e) => onBloomEnabledChange(e.target.checked)}
+        />
+      </div>
+      <div className={styles.panelRow}>
+        <label htmlFor="bloom-strength">Strength</label>
+        <span className={styles.panelValue}>{bloomStrength.toFixed(2)}</span>
+      </div>
+      <div className={styles.panelRow}>
+        <input
+          id="bloom-strength"
+          type="range"
+          min="0"
+          max="2"
+          step="0.05"
+          value={bloomStrength}
+          onChange={(e) => onBloomStrengthChange(Number(e.target.value))}
+        />
+      </div>
+      <div className={styles.panelRow}>
+        <label htmlFor="bloom-threshold">Threshold</label>
+        <span className={styles.panelValue}>{bloomThreshold.toFixed(1)}</span>
+      </div>
+      <div className={styles.panelRow}>
+        <input
+          id="bloom-threshold"
+          type="range"
+          min="0"
+          max="12"
+          step="0.1"
+          value={bloomThreshold}
+          onChange={(e) => onBloomThresholdChange(Number(e.target.value))}
+        />
       </div>
 
       {children}
