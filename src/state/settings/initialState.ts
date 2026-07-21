@@ -26,6 +26,9 @@ import {
   DEFAULT_SHOW_PICK_BUFFER,
   DEFAULT_SHOW_DISK_RADIUS_RING,
   DEFAULT_EXPOSURE,
+  DEFAULT_BLOOM_ENABLED,
+  DEFAULT_BLOOM_STRENGTH,
+  DEFAULT_BLOOM_THRESHOLD,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_FAMOUS_STARS_ENABLED,
   DEFAULT_MILKY_WAY_ENABLED,
@@ -100,6 +103,15 @@ export function buildInitialSettings(): EngineSettingsState {
     tonemap: {
       exposure: DEFAULT_EXPOSURE,
       curve: DEFAULT_TONE_MAP_CURVE,
+    },
+    // Screen-space bloom: master gate + the two look knobs, each seeded from its
+    // `data/defaults.ts` constant so that file stays the default's single source
+    // of truth (mirroring `tonemap`). Read live by the bloom pass; `enabled`
+    // gates the pass at frame-program build.
+    bloom: {
+      enabled: DEFAULT_BLOOM_ENABLED,
+      strength: DEFAULT_BLOOM_STRENGTH,
+      threshold: DEFAULT_BLOOM_THRESHOLD,
     },
     // Bias's user-tunable subset.  Bake-derived fields live on
     // `state.bias` (worker outputs, not settings).  The -19 default is

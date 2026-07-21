@@ -95,6 +95,17 @@ const settingsSlice = createSlice({
       settings.tonemap.curve = action.payload;
     },
 
+    // ── bloom ───────────────────────────────────────────────────────────────
+    setBloomEnabled: (settings, action: PayloadAction<boolean>) => {
+      settings.bloom.enabled = action.payload;
+    },
+    setBloomStrength: (settings, action: PayloadAction<number>) => {
+      settings.bloom.strength = action.payload;
+    },
+    setBloomThreshold: (settings, action: PayloadAction<number>) => {
+      settings.bloom.threshold = action.payload;
+    },
+
     // ── bias ────────────────────────────────────────────────────────────────
     setBiasMode: (settings, action: PayloadAction<BiasMode>) => {
       settings.bias.mode = action.payload;
@@ -415,6 +426,9 @@ export const {
   setGalaxyCatalogLabelEnabled,
   setExposure,
   setToneMapCurve,
+  setBloomEnabled,
+  setBloomStrength,
+  setBloomThreshold,
   setBiasMode,
   setAbsMagLimit,
   setThumbnailsEnabled,

@@ -383,10 +383,10 @@ Mirror the `tonemap` group file-for-file (spec §6). One global
 - Produces: `settings.bloom`, `setBloom{Enabled,Strength,Threshold}`,
   `selectBloom{Enabled,Strength,Threshold}`, the three `DEFAULT_BLOOM_*` constants.
 
-- [ ] Add the type cluster, defaults, seed, reducers, selectors, snapshot-exclusion comment.
-- [ ] No reducer/selector restatement or default-object equality tests (testing.md — those
+- [x] Add the type cluster, defaults, seed, reducers, selectors, snapshot-exclusion comment.
+- [x] No reducer/selector restatement or default-object equality tests (testing.md — those
       are change-detectors). `npm run typecheck` green; existing settings tests green.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 11: bloom content layers + registry
 

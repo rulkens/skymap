@@ -93,6 +93,18 @@ export type EngineSettingsState = {
   };
 
   /**
+   * Screen-space bloom controls.  One global knob set, read live by the bloom
+   * pass layers (`strength` / `threshold`) and gated by `enabled` at frame-program
+   * build.  Like `tonemap`, this is a post-process cluster not tied to any
+   * individual draw call.
+   */
+  bloom: {
+    enabled: boolean;
+    strength: number;
+    threshold: number;
+  };
+
+  /**
    * Luminosity-bias correction inputs — the user-tunable subset.  The
    * bake-derived per-galaxy weights (Schechter ratio, angular-density
    * weight) aren't settings at all: `biasCorrectionSubsystem` splices them
