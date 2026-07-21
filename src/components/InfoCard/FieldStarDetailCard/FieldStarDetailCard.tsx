@@ -65,17 +65,24 @@ function FieldStarDetailCard({
       </CardRow>
 
       <div className={styles.cardSection}>
+        {/*
+          Shared star-card row order (harmonized with BodyDetailCard's famous
+          star): distance → apparent mag → absolute mag → class (colour BP−RP) →
+          temperature → luminosity → radius.  The field-star magnitudes are Gaia
+          G band — hence the '(G)' — and the last three are derived estimates
+          (the '~' affordance), not the famous card's measured values.
+        */}
         <CardRow
           label={<InfoTip {...TIPS.starDistance!}>Distance</InfoTip>}
           value={`${Math.round(target.distancePc).toLocaleString()} pc`}
         />
         <CardRow
-          label={<InfoTip {...TIPS.starAbsoluteMag!}>Absolute mag</InfoTip>}
-          value={target.absMag.toFixed(2)}
+          label={<InfoTip {...TIPS.starApparentMag!}>Apparent mag (G)</InfoTip>}
+          value={target.apparentMag.toFixed(2)}
         />
         <CardRow
-          label={<InfoTip {...TIPS.starApparentMag!}>Apparent mag</InfoTip>}
-          value={target.apparentMag.toFixed(2)}
+          label={<InfoTip {...TIPS.starAbsoluteMag!}>Absolute mag</InfoTip>}
+          value={target.absMag.toFixed(2)}
         />
         <CardRow
           label={<InfoTip {...TIPS.colourBpRp!}>Colour BP−RP</InfoTip>}
