@@ -67,7 +67,7 @@ describe('BodyDetailCard', () => {
     mockedHook.mockReset();
   });
 
-  it('renders headline + also-known-as + description from resolved meta', () => {
+  it('renders headline + also-known-as + description + Wikipedia link from resolved meta', () => {
     stubMeta({ famousStarsMeta: [rigelMeta], ready: true });
     render(createElement(BodyDetailCard, { target: rigelTarget }));
 
@@ -75,6 +75,11 @@ describe('BodyDetailCard', () => {
     // Aliases come from names.slice(1) — the primary name heads the card.
     expect(screen.getByText(/Beta Orionis/)).toBeInTheDocument();
     expect(screen.getByText(rigelMeta.description)).toBeInTheDocument();
+    // "Learn more" Wikipedia link — Rigel's primary name is the article slug.
+    expect(screen.getByRole('link', { name: 'Wikipedia' })).toHaveAttribute(
+      'href',
+      'https://en.wikipedia.org/wiki/Rigel',
+    );
   });
 
   it('renders headline only before meta resolves', () => {
@@ -88,20 +93,31 @@ describe('BodyDetailCard', () => {
     expect(container.textContent).not.toMatch(/Temperature/);
   });
 
-  it("shows a planet's radius and omits the stellar rows", () => {
+  it("shows a planet's fact sheet + Wikipedia link and omits the stellar rows", () => {
     // The hook still runs (rules-of-hooks forbid a conditional call), but a
     // non-star body must not consume it — even when the sidecar returns a
-    // stellar entry, no meta rows leak onto a planet card.
+    // stellar entry, no meta rows leak onto a planet card.  Jupiter's rows come
+    // from the compiled-in BODY_FACTS table, not the star sidecar.
     stubMeta({ famousStarsMeta: [rigelMeta], ready: true });
     const { container } = render(createElement(BodyDetailCard, { target: jupiterTarget }));
 
     expect(screen.getByText('Jupiter')).toBeInTheDocument();
-    expect(screen.getByText('Radius')).toBeInTheDocument();
+    // Radius stays first (straight off BodyInfo).
     expect(screen.getByText(`${jupiterTarget.radiusKm.toLocaleString()} km`)).toBeInTheDocument();
-    // No stellar / meta rows on a non-star body.
+    // A few fact-sheet rows from BODY_FACTS.jupiter.
+    expect(screen.getByText('317.8 M⊕')).toBeInTheDocument();
+    expect(screen.getByText('2.53 g')).toBeInTheDocument();
+    expect(screen.getByText('9.9 hours')).toBeInTheDocument();
+    expect(screen.getByText('95')).toBeInTheDocument();
+    // "Learn more" Wikipedia link uses the body's explicit wikiTitle.
+    expect(screen.getByRole('link', { name: 'Wikipedia' })).toHaveAttribute(
+      'href',
+      'https://en.wikipedia.org/wiki/Jupiter',
+    );
+    // No stellar / meta rows leak onto a planet card.
     expect(container.textContent).not.toMatch(/Spectral/);
-    expect(container.textContent).not.toMatch(/Temperature/);
     expect(container.textContent).not.toMatch(/Constellation/);
+    expect(container.textContent).not.toMatch(/R☉|L☉/);
   });
 
   it('omits absent optional properties', () => {
@@ -112,8 +128,9 @@ describe('BodyDetailCard', () => {
     stubMeta({ famousStarsMeta: [lean], ready: true });
     const { container } = render(createElement(BodyDetailCard, { target: rigelTarget }));
 
-    // Required rows still render…
-    expect(screen.getByText('Spectral type')).toBeInTheDocument();
+    // Required rows still render… ('Spectral type' is both the row label and
+    // its InfoTip title, so it appears more than once.)
+    expect(screen.getAllByText('Spectral type').length).toBeGreaterThan(0);
     // …but the optional lines are dropped, not shown blank.
     expect(container.textContent).not.toMatch(/Mass/);
     expect(container.textContent).not.toMatch(/Age/);

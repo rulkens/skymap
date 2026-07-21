@@ -126,7 +126,9 @@ function GalaxyDetailCard({
         orientation are reference data for the curious and live below the fold.
       */}
       <div className={styles.cardSection}>
-        {info.agnClass && <CardRow label="Class" value={info.agnClass} />}
+        {info.agnClass && (
+          <CardRow label={<InfoTip {...TIPS.agnClass!}>Class</InfoTip>} value={info.agnClass} />
+        )}
         <CardRow
           label={<InfoTip {...TIPS.redshift!}>Redshift z</InfoTip>}
           value={info.redshift.toFixed(4)}
@@ -172,15 +174,11 @@ function GalaxyDetailCard({
             <>
               {/* Source-aware band label: 2MRS puts J in the g-slot, GLADE puts B. */}
               <CardRow
-                label={
-                  <InfoTip {...TIPS.apparentMag!}>{`Apparent mag (${info.bands.g})`}</InfoTip>
-                }
+                label={<InfoTip {...TIPS.apparentMag!}>{`Apparent mag (${info.bands.g})`}</InfoTip>}
                 value={Number.isFinite(info.magG) ? info.magG.toFixed(2) : 'N/A'}
               />
               <CardRow
-                label={
-                  <InfoTip {...TIPS.absoluteMag!}>{`Absolute mag (${info.bands.g})`}</InfoTip>
-                }
+                label={<InfoTip {...TIPS.absoluteMag!}>{`Absolute mag (${info.bands.g})`}</InfoTip>}
                 value={Number.isFinite(info.absoluteMagG) ? info.absoluteMagG.toFixed(2) : 'N/A'}
               />
               {info.colours.length > 0 && (

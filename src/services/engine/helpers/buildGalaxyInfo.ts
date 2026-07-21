@@ -22,6 +22,7 @@ import { famousDisplayName } from './famousDisplayName';
 import { fallbackOrientation } from '../../../utils/random/fallbackOrientation';
 import { formatMorphology } from '../../../utils/format/formatMorphology';
 import { famousWikipediaTitle } from '../../../utils/format/famousWikipediaTitle';
+import { wikipediaUrl } from '../../../utils/format/wikipediaUrl';
 import {
   cartesianToRaDecZ,
   formatRaSexagesimal,
@@ -77,9 +78,7 @@ export function buildGalaxyInfo(row: GalaxyRow): GalaxyInfo {
   // stray non-BGS SGW row (if the selection ever caught one) would still be
   // caught by the classByte check rather than silently painting synthetic mags.
   const suppressPhotometry =
-    (source === Source.DesiDeep ||
-      source === Source.DesiWedge ||
-      source === Source.DesiSgw) &&
+    (source === Source.DesiDeep || source === Source.DesiWedge || source === Source.DesiSgw) &&
     DESI_NO_PHOTOMETRY_TRACERS.has(row.classByte);
   const { magU, magG, magR, magI, magZ } = suppressPhotometry
     ? { magU: NaN, magG: NaN, magR: NaN, magI: NaN, magZ: NaN }
@@ -130,9 +129,7 @@ export function buildGalaxyInfo(row: GalaxyRow): GalaxyInfo {
   if (famousEntry) {
     catalogues.push({
       label: 'Wikipedia',
-      href: `https://en.wikipedia.org/wiki/${encodeURIComponent(
-        famousWikipediaTitle([...famousEntry.names]).replace(/ /g, '_'),
-      )}`,
+      href: wikipediaUrl(famousWikipediaTitle([...famousEntry.names])),
     });
   }
 

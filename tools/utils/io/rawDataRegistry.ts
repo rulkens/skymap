@@ -155,6 +155,13 @@ export const RAW_DATA = {
     description:
       'Hand-authored seed list of well-known stars (Sirius, Betelgeuse, the Sun, …). Drives the famous-stars build (generated render table + meta sidecar) and the Gaia dedup.',
   },
+  'planet-facts.seed': {
+    path: 'data/seeds/planet_facts.seed.json',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Hand-authored fact sheets for every Solar-System body (planets + moons). Drives the planet-facts build (generated BODY_FACTS table for the InfoCard).',
+  },
   'famous.curated': {
     path: 'data/seeds/famous_curated_overrides.json',
     kind: 'file',

@@ -41,6 +41,7 @@
     "build-stars-rs": "cargo run --manifest-path tools/stars-rs/Cargo.toml --release -- --out public/data",
     "build-famous": "tsx tools/famous/buildFamous.ts",
     "build-famous-stars": "tsx tools/famous/buildFamousStars.ts",
+    "build-planet-facts": "tsx tools/bodies/buildPlanetFacts.ts",
     "build-famous-hires": "tsx tools/famous/copyHiResToPublic.ts",
     "build-famous-thumbs": "tsx tools/famous/buildFamousThumbs.ts",
     "build-pgc-aliases": "tsx tools/fetch/buildPgcAliases.ts",
