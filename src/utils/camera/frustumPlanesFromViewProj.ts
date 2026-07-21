@@ -43,6 +43,17 @@
  * units. So we divide all four numbers of each plane by `|(a,b,c)|`, scaling `d`
  * along with the normal to keep the plane fixed while making its distances metric.
  *
+ * ### Reversed-Z: the near/far slot labels swap geometrically
+ *
+ * Under a reversed-Z, infinite-far projection (`mat4d.perspectiveReverseZ`,
+ * used by the NEAR0 foreground slab), `row_z` collapses to `(0, 0, 0, zNear)`
+ * — a zero-length normal, which `setPlane`'s guard turns into the harmless
+ * all-zero plane. The slot this derivation labels "near" therefore holds that
+ * degenerate row, while the slot labelled "far" (`row_w - row_z`) ends up
+ * holding the real near-clip boundary. Harmless for the uniform six-plane AND
+ * test this function feeds, but a trap for a future caller that reaches into
+ * slot 16 expecting "the near plane."
+ *
  * @param vp   Column-major length-16 view-projection (`Float32Array`), e.g.
  *             `narrowMat4(rebaseViewProj(...))` — the exact matrix the GPU clips
  *             against, so the cull it feeds is visually lossless.

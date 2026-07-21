@@ -84,4 +84,46 @@ describe('frustumPlanesFromViewProj', () => {
     const returned = frustumPlanesFromViewProj(mat4.identity() as Float32Array, out);
     expect(returned).toBe(out);
   });
+
+  it('reversed-Z infinite-far vp never reports an in-view point outside (degenerate z row)', () => {
+    // Production shape: NEAR0's foreground slab builds vp via
+    // mat4d.perspectiveReverseZ(fovYRad, aspect, near) — zFar omitted, so the
+    // z-row of vp collapses to (0, 0, 0, zNear), a zero-length normal that
+    // setPlane's guard maps to the all-zero plane. That guard is the SAFE
+    // direction: an all-zero plane reports every point as "inside" (dot
+    // product is always 0, which passes `>= 0`). The unsafe failure mode
+    // would be the guard instead reporting real in-view points as outside,
+    // which would cull the entire starfield behind this degenerate plane.
+    const fovYRad = Math.PI / 3;
+    const aspect = 1;
+    const near = 0.1;
+    // omit zFar so wgpu-matrix takes the infinite-far branch (zFar defaults
+    // to Infinity in perspectiveReverseZ).
+    const proj = mat4.perspectiveReverseZ(fovYRad, aspect, near);
+    const view = mat4.lookAt([0, 0, 0], [0, 0, -1], [0, 1, 0]);
+    const vp = mat4.multiply(proj, view) as Float32Array;
+
+    const planes = frustumPlanesFromViewProj(vp);
+
+    const assertInside = (px: number, py: number, pz: number) => {
+      for (let p = 0; p < 6; p++) {
+        const signed =
+          planes[p * 4 + 0]! * px +
+          planes[p * 4 + 1]! * py +
+          planes[p * 4 + 2]! * pz +
+          planes[p * 4 + 3]!;
+        expect(signed).toBeGreaterThanOrEqual(0);
+      }
+    };
+
+    // Comfortably inside: on-axis, well past near, nowhere near a finite far.
+    assertInside(0, 0, -5);
+
+    // Extremely far along the view direction, inside laterally (offset scales
+    // with depth so it stays inside the symmetric frustum's side planes).
+    // Under infinite-far reversed-Z nothing should ever far-clip this point.
+    const depth = 1e10;
+    const halfWidthAtDepth = depth * Math.tan(fovYRad / 2) * aspect;
+    assertInside(0.3 * halfWidthAtDepth, 0.3 * halfWidthAtDepth, -depth);
+  });
 });
