@@ -61,12 +61,12 @@ import { createStarCatalogSlot } from '../../loading/slots/starCatalogSlot';
 import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
 import { BODY_TEXTURE_REGISTRY } from '../../../data/bodies/bodyTextureRegistry';
-import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
+import { CONST_J2000 } from '../../../data/time/constJ2000';
 import { clampTier } from '../../../utils/math/clampTier';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { hostBodyId } from '../../../utils/scene/hostBodyId';
 import { bodyTextureSlotKey } from '../../../utils/scene/bodyTextureSlotKey';
-import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
+import { deriveBodyStates } from '../frame/deriveBodyStates';
 import { loadRadiusMpc } from '../frame/bodyTextureLoadRadius';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyCatalogId';
@@ -154,9 +154,26 @@ function starCatalogRow(source: SourceType): AssetWiringRow {
   };
 }
 
+/**
+ * The J2000 body-state snapshot, derived ONCE at module load. The texture
+ * proximity gates read a host body's world position; every host is an orbital
+ * body, so its position comes from `deriveBodyStates` — the same source the
+ * render layers read — rather than a baked record field. This is a direct
+ * construction-time derive (not the per-frame `sceneBodyStates` seam): the
+ * demand table is pure over `DemandCtx` and carries no clock, so a fixed-epoch
+ * snapshot is the construction-time twin. The feature (02-core Task 8b) makes
+ * the proximity read live by threading the frame's states through `DemandCtx`.
+ */
+const BODY_STATES_J2000 = deriveBodyStates(CONST_J2000);
+
 /** The body's world position (the ring rides its host body's). */
 function bodyPosOf(id: BodyTextureId | RingTextureId): Readonly<Vec3> {
-  return findByIdOrThrow(SCENE_BODIES, hostBodyId(id), 'bodyTextureRow').positionMpc;
+  const hostId = hostBodyId(id);
+  const state = BODY_STATES_J2000.get(hostId);
+  if (state === undefined) {
+    throw new Error(`bodyPosOf: texture host '${hostId}' has no derived body state`);
+  }
+  return state.positionMpc;
 }
 
 /**
