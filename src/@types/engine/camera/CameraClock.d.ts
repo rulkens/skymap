@@ -48,6 +48,26 @@ export type CameraClock = {
   // `followElapsed`; the first `pose()` after fills it (only the driver can see
   // the live rendered pose, so the capture is split from the timer).
   followFrom: CameraPose | null;
+  // The distance the approach eases TOWARD. Two distinct sources feed it, and
+  // conflating them is the bug this field un-braids:
+  //
+  //   - INITIAL APPROACH target = the `bodyFocusDistance` framing distance. On a
+  //     fresh focus (ref change), `followElapsed` nulls this alongside `followFrom`
+  //     and the first `pose()` re-seeds it to the framing distance, so the camera
+  //     flies in and frames the body regardless of where it started.
+  //
+  //   - STEADY-STATE target = the user's committed `base.distance`. When a drag
+  //     interrupts a follow (orbitDrag wins, commits a zoom into `base`) and follow
+  //     then re-wins for the SAME focus ref, `pose()` re-captures `base.distance`
+  //     here — so a drag-zoom sticks instead of snapping back to the framing
+  //     distance every frame. The re-capture edge is 'follow won this frame but was
+  //     not the previous winner' (`prevActiveId !== 'followBody'` with the focus ref
+  //     unchanged), detected in the driver via the existing `prevActiveId` Resource.
+  //
+  // Null means 'no target seeded yet' — the fresh-focus signal that routes `pose()`
+  // to the framing branch. Non-null with an unchanged focus ref means an approach
+  // is (or was) in flight, so a not-follow-previous frame is a drag reactivation.
+  followDistanceTarget: number | null;
   // The `base` reference auto-rotate last spun from. A commit-on-edge installs a
   // NEW base object while auto-rotate stays active; the spin clock resets when
   // this changes so the freshly committed base spins from elapsed 0, not from

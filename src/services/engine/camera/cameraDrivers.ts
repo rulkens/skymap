@@ -55,7 +55,8 @@ import { tweenToClip } from './tweenToClip';
 import { spinAutoRotate } from './spinAutoRotate';
 import { tweenElapsed, autoRotateElapsed, clipElapsed, followElapsed } from './cameraClock';
 import { evaluateClip } from './evaluateClip';
-import { bodyLikeFraming } from './bodyLikeFraming';
+import { bodyFocusDistance } from './bodyFocusDistance';
+import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { FOCUS_TWEEN_MS } from './focusTweenDuration';
 import { deriveBodyStates } from '../frame/deriveBodyStates';
 import { easeOutCubic } from '../../../utils/math/easeOutCubic';
@@ -170,7 +171,11 @@ export function runCameraDrivers(
  *     Its target term is ALWAYS the live body position (so it tracks the body as
  *     the sim clock moves it), while yaw/pitch stay world-frame (translate-
  *     follow); on activation it eases the distance from the captured on-screen
- *     pose into the `bodyLikeFraming` framing distance over `FOCUS_TWEEN_MS`.
+ *     pose into the `bodyFocusDistance` framing distance over `FOCUS_TWEEN_MS`.
+ *     Once a drag has committed a zoom into `base`, follow eases toward that
+ *     committed `base.distance` instead (the two distance sources are un-braided
+ *     via `clock.followDistanceTarget` — see CameraClock), so zoom-while-following
+ *     is preserved rather than the framing distance being re-asserted each frame.
  *     `commitsOnEdge: true` bakes the last follow pose into `base` on
  *     deactivation, so lower drivers resume from where the camera is (no snap-
  *     back). It replaces the tween for body targets — the tween compiles fixed
@@ -237,8 +242,13 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
       // always the LIVE body position, so the camera tracks the body the sim
       // clock is moving. yaw/pitch translate-follow (they ease from the captured
       // on-screen pose toward the committed base, so a post-follow drag is
-      // honoured while an un-dragged follow keeps its heading). Distance eases
-      // from the captured pose into the physical-radius framing distance.
+      // honoured while an un-dragged follow keeps its heading).
+      //
+      // Distance has TWO sources, un-braided via `clock.followDistanceTarget`
+      // (see CameraClock): an INITIAL APPROACH eases into the framing distance;
+      // once a drag has committed a zoom into `base`, follow eases toward THAT
+      // committed `base.distance` instead, so the user can zoom while following
+      // rather than having the framing distance re-asserted every frame.
       pose: (s, _cam, elapsed) => {
         const focus = s.selectionRows.focus;
         const clock = state.cameraRuntime.clock;
@@ -267,13 +277,29 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
         }
         const from = clock.followFrom;
         const base = s.camera.base;
-        // Reuse the shared body framing math — only its distance is read here;
-        // the target term below is the live body position, not the framing's.
-        const framing = bodyLikeFraming(
-          live.positionMpc,
-          focus.radiusKm,
-          state.cameraRuntime.projection.fovYRad,
-        );
+
+        // Resolve the distance target for this frame (the two-source un-braid).
+        if (clock.followDistanceTarget === null) {
+          // Fresh focus (followElapsed nulled it): seed the INITIAL-APPROACH
+          // target to the framing distance. Call `bodyFocusDistance` directly —
+          // allocation-free, unlike `bodyLikeFraming`, which builds a FocusFraming
+          // object + target array of which only `.distance` is read here. Computed
+          // only in this branch, so the per-frame steady path skips the tan().
+          const radiusMpc = focus.radiusKm * SCALE_UNITS.KM_TO_MPC;
+          clock.followDistanceTarget = bodyFocusDistance(
+            radiusMpc,
+            state.cameraRuntime.projection.fovYRad,
+          );
+        } else if (state.cameraRuntime.prevActiveId.current !== 'followBody') {
+          // Follow re-won this frame but was not last frame's winner, and the
+          // focus ref is unchanged (else followDistanceTarget would be null): a
+          // drag (or clip) interrupted the follow and committed a new pose into
+          // `base`. Re-capture `base.distance` as the STEADY-STATE target so the
+          // user's zoom sticks instead of snapping back to the framing distance.
+          clock.followDistanceTarget = base.distance;
+        }
+        const distanceTarget = clock.followDistanceTarget;
+
         const t = easeOutCubic(elapsed / FOCUS_TWEEN_MS);
         return {
           // Alias the live snapshot position (a fresh, immutable per-frame array
@@ -281,7 +307,7 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
           target: live.positionMpc,
           yaw: lerp(from.yaw, base.yaw, t),
           pitch: lerp(from.pitch, base.pitch, t),
-          distance: lerp(from.distance, framing.distance, t),
+          distance: lerp(from.distance, distanceTarget, t),
         };
       },
     },

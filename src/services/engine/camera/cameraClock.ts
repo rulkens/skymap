@@ -43,6 +43,7 @@ export function createCameraClock(): CameraClock {
     followStartMs: null,
     lastFollowRef: null,
     followFrom: null,
+    followDistanceTarget: null,
   };
 }
 
@@ -139,11 +140,13 @@ export function clipElapsed(
  * change the ref, so the ease is not restarted on drag-release: the camera
  * resumes its saturated follow instead of re-approaching.
  *
- * On the reset edge it also NULLS `followFrom`, signalling the driver's `pose`
- * to re-capture the live on-screen pose as the `from` the approach eases out of.
- * The capture is split from this timer because only the driver (closing over
- * `EngineState`) can see the live rendered pose (`lastPose`); this function sees
- * only the store's focus ref.
+ * On the reset edge it also NULLS `followFrom` AND `followDistanceTarget`,
+ * signalling the driver's `pose` to re-capture the live on-screen pose as the
+ * `from` the approach eases out of, and to re-seed the distance target to the
+ * framing distance (the INITIAL-APPROACH source — see `CameraClock`). The capture
+ * is split from this timer because only the driver (closing over `EngineState`)
+ * can see the live rendered pose (`lastPose`) and the body radius / FOV; this
+ * function sees only the store's focus ref.
  *
  * A freshly-selected body returns 0 on the arrival frame and grows on later
  * frames carrying the same ref. A null focus always returns 0.
@@ -156,8 +159,10 @@ export function followElapsed(
   if (focusRow !== clock.lastFollowRef) {
     clock.lastFollowRef = focusRow;
     clock.followStartMs = focusRow === null ? null : nowMs;
-    // Force the driver to re-capture the `from` pose on the next produce.
+    // Force the driver to re-capture the `from` pose and re-seed the framing
+    // distance target on the next produce (fresh-approach signal).
     clock.followFrom = null;
+    clock.followDistanceTarget = null;
   }
   return clock.followStartMs === null ? 0 : nowMs - clock.followStartMs;
 }

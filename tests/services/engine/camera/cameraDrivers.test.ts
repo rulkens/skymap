@@ -407,21 +407,27 @@ const EARTH_ROW = {
 
 /** Minimal EngineState carrying only the cameraRuntime fields the follow driver
  * reads. `followFrom` seeds the captured approach `from` (bypassing the live-pose
- * capture so the ease endpoints are deterministic). */
+ * capture so the ease endpoints are deterministic); `followDistanceTarget` seeds
+ * the distance-target un-braid state. `prevActiveId` defaults to 'followBody' —
+ * the steady-state (follow was already the winner), so the drag-interrupt
+ * re-capture branch stays quiet unless a test names a different previous winner. */
 function makeFollowEngineState(opts: {
   simDays: number;
   fovYRad: number;
   lastPose: CameraPose;
   followFrom?: CameraPose | null;
+  followDistanceTarget?: number | null;
+  prevActiveId?: string;
 }): EngineState {
   const clock = createCameraClock();
   clock.followFrom = opts.followFrom ?? null;
+  clock.followDistanceTarget = opts.followDistanceTarget ?? null;
   return {
     cameraRuntime: {
       clock,
       projection: { fovYRad: opts.fovYRad, aspect: 1, near: 0.01, far: 50000 },
       lastPose: { current: opts.lastPose },
-      prevActiveId: { current: 'resting' },
+      prevActiveId: { current: opts.prevActiveId ?? 'followBody' },
       lastRenderedSimDays: { current: opts.simDays },
     },
   } as unknown as EngineState;
@@ -528,5 +534,53 @@ describe('buildCameraDrivers — followBody', () => {
       expect(samples[i]!).toBeLessThan(samples[i - 1]!);
     }
     expect(samples[0]!).toBeGreaterThan(framingDistance);
+  });
+
+  it('a drag-committed zoom sticks: follow re-eases to base.distance, not framing', () => {
+    // Zoom-while-following. Sequence this fixture stands in for:
+    //   1. Follow approaches Earth → distance target = the tiny framing distance.
+    //   2. User grabs a drag (orbitDrag@80 wins) and ZOOMS OUT; on release the
+    //      dragged distance is committed into `base` (COMMITTED_DIST here).
+    //   3. Follow re-wins the SAME focus ref this frame — but was NOT the previous
+    //      winner (prevActiveId === 'orbitDrag').
+    // The follow driver must re-capture `base.distance` as the steady-state target
+    // so the zoom is honoured. The OLD behaviour re-asserted the framing distance
+    // every frame (snap-back), which this test rejects.
+    const snapshot = deriveBodyStates(FOLLOW_SIM_DAYS);
+    const livePos = snapshot.get('earth')!.positionMpc;
+    const framingDistance = bodyLikeFraming(livePos, EARTH_ROW.radiusKm, FOLLOW_FOV).distance;
+
+    // The user's committed drag-zoom — vastly larger than Earth's ~1e-15 Mpc
+    // framing distance, so 'stuck to base' vs 'snapped to framing' is unambiguous.
+    const COMMITTED_DIST = 500;
+
+    const store = makeStore();
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
+    // Commit the post-drag pose into base (this is what orbitDrag's gesture-end
+    // bakes). Only `distance` matters for the assertion.
+    store.dispatch(
+      commitCameraPose({ target: [0, 0, 0], yaw: 1.2, pitch: 0.3, distance: COMMITTED_DIST }),
+    );
+    const s = store.getState() as unknown as RootState;
+
+    // followDistanceTarget pre-seeded to the framing distance = 'the initial
+    // approach already ran'; prevActiveId 'orbitDrag' = 'a drag just interrupted
+    // and follow re-wins this frame' (the re-capture edge).
+    const engineState = makeFollowEngineState({
+      simDays: FOLLOW_SIM_DAYS,
+      fovYRad: FOLLOW_FOV,
+      lastPose: BASE_POSE,
+      followFrom: { target: [9, 9, 9], yaw: 0.2, pitch: 0.1, distance: 500 },
+      followDistanceTarget: framingDistance,
+      prevActiveId: 'orbitDrag',
+    });
+    const follow = buildCameraDrivers(engineState).find((d) => d.id === 'followBody')!;
+
+    // Saturated (t=1): distance is the committed base distance, NOT framing.
+    const result = follow.pose(s, CAM_STUB, FOCUS_TWEEN_MS * 4);
+    expect(result.distance).toBeCloseTo(COMMITTED_DIST, 9);
+    // Guard the snap-back regression explicitly: the framing distance is tiny, so
+    // 'equals framing' would be a hard failure the old code produced.
+    expect(result.distance).not.toBeCloseTo(framingDistance, 3);
   });
 });
