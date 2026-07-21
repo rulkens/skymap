@@ -86,26 +86,29 @@
 // is the image's BOTTOM row (south) -- which matches the mesh's v=0 south. No
 // v-remap is needed here.
 //
-// ## uv / u-orientation (no flip needed)
+// ## uv / u-orientation (handedness raw; origin baked in the mesh)
 //
-// The raw u reads correctly for an outside viewer. 'cubeSphereMesh' now places
-// longitude on the +Y axis (equatorial J2000 frame): a vertex at world position
+// HANDEDNESS reads correctly with no flip. 'cubeSphereMesh' places longitude on
+// the +Y axis (equatorial J2000 frame): a vertex at world position
 // cosLat*cosLon (x), cosLat*sinLon (y), sinLat (z), with the pole on +Z. Walk
 // two equatorial vertices to see where increasing u goes for a viewer OUTSIDE
 // the sphere (the camera side, back-face culled):
 //
-//   u=0.00 -> lon=0    -> dir (+1, 0, 0)  = +X
-//   u=0.25 -> lon=pi/2 -> dir ( 0,+1, 0)  = +Y
+//   u=0.50 -> lon=0    -> dir (+1, 0, 0)  = +X   (prime meridian at the map CENTRE)
+//   u=0.75 -> lon=pi/2 -> dir ( 0,+1, 0)  = +Y
 //
 // A camera facing the +X vertex from outside (eye on +X, looking toward the
 // origin, up=+Z the north pole) has screen-right = +Y: right x up = back, and
-// (+Y) x (+Z) = +X = -forward. So the u=0.25 vertex at +Y lands on the viewer's
+// (+Y) x (+Z) = +X = -forward. So the higher-u vertex at +Y lands on the viewer's
 // RIGHT. Increasing u (increasing east longitude) therefore moves the surface
-// point toward screen-right -- CCW seen from outside. Equirectangular world maps
-// are authored with longitude (east) increasing left->right as seen from
-// outside, so sampling at the raw u draws the continents in the correct
-// orientation. No u remap is needed (the old +Z-longitude basis mirrored east
-// to screen-left and required a flip; swapping to +Y longitude removed it).
+// point toward screen-right -- CCW seen from outside, matching how equirectangular
+// world maps run east left->right. The ORIGIN is the other half: the mesh bakes
+// u = lon/2pi + 0.5 so the prime meridian (lon 0, the local +x the IAU rotation
+// aims Earth's Greenwich at) samples the map centre u=0.5 -- where Blue Marble
+// paints geographic longitude 0. A raw lon/2pi (prime meridian at u=0) would land
+// the map's antimeridian on +x and rotate every continent 180deg about the pole,
+// reading the day/night terminator inverted against a live clock. So the fragment
+// samples in.uv straight (the mesh carries both the handedness and the +0.5).
 //
 // ## Blend target
 //
@@ -139,16 +142,17 @@ import package::lib::math::TAU;
 // samples the identical texel a mesh vertex pointing that way would (used for
 // the ground-shadow crossing point, which has no interpolated in.uv to reuse).
 //
-//   u = east longitude / TAU. 'cubeSphereMesh' puts longitude on +Y, so
-//       lon = atan2(dir.y, dir.x) (0 at +X, +pi/2 at +Y) -- exactly the raw u
-//       the fragment samples in.uv at (see the '## uv / u-orientation' note).
-//       atan2 returns (-pi, pi], so u lands in (-0.5, 0.5]; 'fract' wraps it to
-//       [0, 1) -- the same wrap the sampler's 'repeat' addressing applies.
+//   u = east longitude / TAU + 0.5. 'cubeSphereMesh' puts longitude on +Y, so
+//       lon = atan2(dir.y, dir.x) (0 at +X, +pi/2 at +Y). The +0.5 matches the
+//       mesh's u origin: the prime meridian (lon 0) samples the map CENTRE u=0.5,
+//       where standard equirectangular planetary maps paint geographic longitude
+//       0 (see the '## uv / u-orientation' note). 'fract' wraps to [0, 1) -- the
+//       same wrap the sampler's 'repeat' addressing applies.
 //   v = latitude mapped south (0) to north (1): lat = asin(dir.z) in
 //       [-pi/2, pi/2], so v = lat/PI + 0.5 matches the mesh's south-first v
 //       (v=0 south pole, v=1 north pole) that flipY:true co-registers with.
 fn dirToEquirectUv(dir: vec3<f32>) -> vec2<f32> {
-  let u_uv = fract(atan2(dir.y, dir.x) / TAU);
+  let u_uv = fract(atan2(dir.y, dir.x) / TAU + 0.5);
   let v_uv = asin(clamp(dir.z, -1.0, 1.0)) / PI + 0.5;
   return vec2<f32>(u_uv, v_uv);
 }

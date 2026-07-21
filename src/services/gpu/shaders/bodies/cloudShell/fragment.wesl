@@ -53,9 +53,15 @@
 //
 // The cloud map is equirectangular, same v-orientation as the surface albedo:
 // the renderer uploads it flipY:true so texture v=0 is the image's bottom (south)
-// row, matching 'uvSphereMesh's south-first v. u reads raw (longitude on +Y winds
-// east to screen-right for an outside viewer). So no uv remap here -- see
-// 'earth/fragment.wesl' for the full derivation the shell inherits.
+// row, matching 'uvSphereMesh's south-first v. HANDEDNESS reads raw (longitude on
+// +Y winds east to screen-right for an outside viewer). The u ORIGIN needs a +0.5
+// though: the map paints the prime meridian (geographic longitude 0) at its CENTRE
+// (u=0.5), while 'uvSphereMesh' emits u=0 at the local +x prime meridian. The
+// Earth SURFACE rides the Earth-only 'cubeSphereMesh', which now bakes this same
+// +0.5 into its uv; the deck rides the SHARED 'uvSphereMesh' (also serving the
+// distant planets), so the correction stays local to this Earth shader rather than
+// shifting every planet's mesh. Without it the deck sits 180deg off the surface
+// beneath it. See 'earth/fragment.wesl' for the full derivation.
 //
 // ## Blend target
 //
@@ -74,8 +80,12 @@ import package::lib::sphere::CloudShellUniforms;
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
-  // RGB = cloud colour (sRGB de-gammad on read), .a = coverage.
-  let c = textureSample(cloudTexture, cloudSampler, in.uv);
+  // RGB = cloud colour (sRGB de-gammad on read), .a = coverage. The +0.5 on u
+  // puts the map centre (geographic longitude 0) on the local +x prime meridian,
+  // matching the surface (see the '## uv / orientation' note); the shared
+  // uvSphereMesh emits u=0 there, so the origin correction lives here.
+  let uv = vec2<f32>(fract(in.uv.x + 0.5), in.uv.y);
+  let c = textureSample(cloudTexture, cloudSampler, uv);
   // Sun-relative day/night term, decomposed so 'sunIrradiance' scales the DIRECT
   // (sun-lit) portion only -- mirroring the surface, whose direct term is scaled
   // by the same irradiance while its ambient floor is not. The 'u.ambientLight'
