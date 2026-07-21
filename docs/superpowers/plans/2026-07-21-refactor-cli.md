@@ -522,14 +522,14 @@ first. The `move-files` skill slims to a short "moving files is `refactor move`;
 see the refactor skill" pointer while keeping its trigger phrases (many memories
 and CLAUDE.md name `move-files`). Prose follows the no-LLM-tells rule.
 
-- [ ] Write `.claude/skills/refactor/SKILL.md` (frontmatter `name` + `description`
+- [x] Write `.claude/skills/refactor/SKILL.md` (frontmatter `name` + `description`
       with trigger phrases; per-subcommand "when to reach for it"; shared blind
       spots; commit hygiene).
-- [ ] Slim `.claude/skills/move-files/SKILL.md` to point at the refactor skill,
+- [x] Slim `.claude/skills/move-files/SKILL.md` to point at the refactor skill,
       preserving its trigger phrases.
-- [ ] Add one line to the CLAUDE.md Commands table:
+- [x] Add one line to the CLAUDE.md Commands table:
       `npm run refactor    # ts-morph refactoring CLI → .claude/skills/refactor/SKILL.md`.
-- [ ] Commit: the three files above.
+- [x] Commit: the three files above.
 
 ---
 
