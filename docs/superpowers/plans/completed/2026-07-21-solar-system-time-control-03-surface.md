@@ -82,14 +82,14 @@ with an independent hand-computed round-trip test, not folded into the formatter
 **Behaviour:** a compact UTC date-time readout, e.g. `2026-11-03 18:00 UTC`. Fixed
 UTC (matches the `t=` param's UTC encoding — Task 5); no locale/timezone drift.
 
-- [ ] Add test `formatSimClock renders a UTC date-time` — a `Date` built from a
+- [x] Add test `formatSimClock renders a UTC date-time` — a `Date` built from a
       known UTC instant → the exact expected string (hand-written, not derived
       via the same `toISOString` call the impl uses).
-- [ ] Add test `formatSimClock is stable across host timezone` — same instant
+- [x] Add test `formatSimClock is stable across host timezone` — same instant
       formats identically regardless of `TZ` (guards an accidental local-time
       slip).
-- [ ] Implement.
-- [ ] `npm test -- formatSimClock` green. Commit.
+- [x] Implement.
+- [x] `npm test -- formatSimClock` green. Commit.
 
 ## Task 2 — TimeBar presentational component
 
@@ -135,15 +135,15 @@ top-right and ScaleBar bottom-right) and **leave a `TODO(visual-gate)` comment**
 naming the open question (corner + clearances vs InfoCard/ScaleBar/NavigationPanel).
 Do not tune spacing blind.
 
-- [ ] Add test `TimeBar fires onFaster/onSlower/onPlayPause on the step buttons`
+- [x] Add test `TimeBar fires onFaster/onSlower/onPlayPause on the step buttons`
       (three targeted assertions, one dispatch each; mocks typed `vi.fn<() => void>()`).
-- [ ] Add test `TimeBar shows the now button only in manual mode` — asserts the
+- [x] Add test `TimeBar shows the now button only in manual mode` — asserts the
       control is absent for `mode='live'`, present for `mode='manual'`.
-- [ ] Add test `TimeBar renders the readout and fires onReadoutClick`.
-- [ ] Add test `TimeBar reflects paused state on the play/pause control`
+- [x] Add test `TimeBar renders the readout and fires onReadoutClick`.
+- [x] Add test `TimeBar reflects paused state on the play/pause control`
       (aria-label / pressed state flips with `paused`).
-- [ ] Implement `.tsx` + `.module.css` (`.root` + control classes).
-- [ ] `npm test -- TimeBar` green. Commit.
+- [x] Implement `.tsx` + `.module.css` (`.root` + control classes).
+- [x] `npm test -- TimeBar` green. Commit.
 
 ## Task 3 — TimeBarContainer (store boundary + live readout tick)
 
@@ -173,15 +173,15 @@ the readout via Task 1.
   keep that local UI state in the container or a wrapping component, not the store).
 - `export default memo(TimeBarContainer)`; every handler `useCallback(…, [dispatch, …])`.
 
-- [ ] Add test `TimeBarContainer dispatches goLive on now` — render with a mock
+- [x] Add test `TimeBarContainer dispatches goLive on now` — render with a mock
       store in `manual`, invoke the now handler, assert the `goLive` action
       dispatched. Use the store-test idiom already in `containers/*.test.tsx`.
-- [ ] Add test `TimeBarContainer dispatches pause/resume from the play toggle`
+- [x] Add test `TimeBarContainer dispatches pause/resume from the play toggle`
       (paused=false → `pause`; paused=true → `resume`).
-- [ ] Add test `TimeBarContainer maps rateIndex to the RATE_LADDER label`.
-- [ ] Implement container + `useTimeReadout`; mount in `App.tsx` HUD wrapper (behind
+- [x] Add test `TimeBarContainer maps rateIndex to the RATE_LADDER label`.
+- [x] Implement container + `useTimeReadout`; mount in `App.tsx` HUD wrapper (behind
       the same `hidden={paletteOpen || splashVisible}` gate the sibling pills use).
-- [ ] `npm test -- TimeBarContainer` + `npm run typecheck` green. Commit.
+- [x] `npm test -- TimeBarContainer` + `npm run typecheck` green. Commit.
 
 ## Task 4 — Exact date-entry popover
 
@@ -209,12 +209,12 @@ export type DateEntryPopoverProps = {
 Enter / a Set button → `onCommit(parsedDate)`; Esc / click-outside → `onCancel`.
 Interpret the input as UTC (consistent with the readout + `t=` param).
 
-- [ ] Add test `DateEntryPopover commits the parsed instant` — `fireEvent.change`
+- [x] Add test `DateEntryPopover commits the parsed instant` — `fireEvent.change`
       the input to a known value, trigger commit, assert `onCommit` called with the
       matching `Date` (mock typed `vi.fn<(d: Date) => void>()`).
-- [ ] Add test `DateEntryPopover cancels on Esc`.
-- [ ] Implement; container dispatches `setDate` on commit and closes the popover.
-- [ ] `npm test -- DateEntryPopover` green. Commit.
+- [x] Add test `DateEntryPopover cancels on Esc`.
+- [x] Implement; container dispatches `setDate` on commit and closes the popover.
+- [x] `npm test -- DateEntryPopover` green. Commit.
 
 ## Task 5 — URL `t=` param source
 
@@ -240,15 +240,15 @@ Keep the interesting logic in **pure helpers** (the seam already does this so
 Vitest's node env can test without a DOM — see `computeDesiredHash` in the
 pre-prep `useUrlSync.ts:90`).
 
-- [ ] Add test `t compose emits t=<ISO> in manual mode` and
+- [x] Add test `t compose emits t=<ISO> in manual mode` and
       `t compose emits nothing in live mode`.
-- [ ] Add test `t parse restores manual+paused at the instant` (assert the
+- [x] Add test `t parse restores manual+paused at the instant` (assert the
       dispatched action(s) / resulting state).
-- [ ] Add test `invalid t is ignored and stays live` (garbage value → no time
+- [x] Add test `invalid t is ignored and stays live` (garbage value → no time
       dispatch).
-- [ ] Add round-trip test `focus + t compose/parse together`, plus `focus alone`
+- [x] Add round-trip test `focus + t compose/parse together`, plus `focus alone`
       and `t alone` (each param independent on the `&`-seam).
-- [ ] Implement the `t` source; `npm test -- useUrlSync` + `npm run typecheck`
+- [x] Implement the `t` source; `npm test -- useUrlSync` + `npm run typecheck`
       green. Commit.
 
 ## Task 6 — InfoCard live time-dependent rows
@@ -280,14 +280,14 @@ same branch, not something to hack into the card. The presentational
 `BodyDetailCard` stays pure; a `BodyDetailCardContainer` (or the existing InfoCard
 wiring) subscribes to the pub and passes the live values as props.
 
-- [ ] Add test `BodyDetailCard distance row updates from the time-status pub` —
+- [x] Add test `BodyDetailCard distance row updates from the time-status pub` —
       change the published value, assert the rendered distance changes; identity
       rows (Radius, label) unchanged.
-- [ ] Add test `identity rows do not subscribe to the pub` — a pub tick with the
+- [x] Add test `identity rows do not subscribe to the pub` — a pub tick with the
       same body leaves Radius/label render output stable (targeted, not a snapshot).
-- [ ] Implement the minimal repoint (container subscribes pub → props; card renders
+- [x] Implement the minimal repoint (container subscribes pub → props; card renders
       the time-dependent row(s) from props).
-- [ ] `npm test -- BodyDetailCard` + `npm run typecheck` green. Commit.
+- [x] `npm test -- BodyDetailCard` + `npm run typecheck` green. Commit.
 
 ## Task 7 — Keyboard shortcuts
 
@@ -309,12 +309,12 @@ and the same `time/` actions the container uses. The hook's **form-field guard**
 (`useKeyboardShortcuts.ts:48-58`) already excludes typing into the date-entry input —
 keep that first-return in place.
 
-- [ ] First: verify/adjust the four keys against the current taken map; record the
+- [x] First: verify/adjust the four keys against the current taken map; record the
       final mapping in the hook's docblock.
-- [ ] Add test `[ and ] step the rate` (keydown → `stepRate` ∓1).
-- [ ] Add test `\ toggles play/pause` and `Shift+N goes live`.
-- [ ] Add test `time keys are ignored while a form field is focused` (guard holds).
-- [ ] Implement; `npm test -- useKeyboardShortcuts` + `npm run typecheck` green. Commit.
+- [x] Add test `[ and ] step the rate` (keydown → `stepRate` ∓1).
+- [x] Add test `\ toggles play/pause` and `Shift+N goes live`.
+- [x] Add test `time keys are ignored while a form field is focused` (guard holds).
+- [x] Implement; `npm test -- useKeyboardShortcuts` + `npm run typecheck` green. Commit.
 
 ## Task 8 — Entanglement-radar review over the surface diff
 
@@ -330,9 +330,9 @@ keep that first-return in place.
 - Any time-dependent value recomputed in the card instead of read from the pub
   (the Q12/§4 single-source rule).
 
-- [ ] Run the skill; fix or explicitly justify each flagged knot in a short
+- [x] Run the skill; fix or explicitly justify each flagged knot in a short
       review note appended to this plan (or a follow-up commit).
-- [ ] Final `npm run typecheck` + full `npm test` green. Commit.
+- [x] Final `npm run typecheck` + full `npm test` green. Commit.
 
 ---
 

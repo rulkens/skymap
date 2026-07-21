@@ -86,11 +86,11 @@ export type RateLadderStep = {
 Sign is `direction`, not a ladder entry; pause is `TimeState.paused`, not a ladder entry.
 Galactic steps (`1 Myr/s`, `1 Gyr/s`) append later — the table is the extension point.
 
-- [ ] Test `each RATE_LADDER step is strictly faster than its predecessor` — assert monotone
+- [x] Test `each RATE_LADDER step is strictly faster than its predecessor` — assert monotone
       increasing `simSecPerRealSec` (a structural invariant that catches a transcription swap;
       NOT a value restatement — do not assert the literal seconds).
-- [ ] Test `every RATE_LADDER label is non-empty and unique`.
-- [ ] `npm run typecheck`; commit.
+- [x] Test `every RATE_LADDER label is non-empty and unique`.
+- [x] `npm run typecheck`; commit.
 
 ---
 
@@ -131,15 +131,15 @@ goLive({ simDays: number, nowMs: number })             // live mode; anchor = { 
 Selectors: `selectTimeState`, `selectRateStep` (`RATE_LADDER[time.rateIndex]`),
 `selectIsManualPlaying` (`mode === 'manual' && !paused`) — the last is read by the wake predicate (Task 9).
 
-- [ ] Test `every intent action leaves derived simDays continuous across the action boundary` —
+- [x] Test `every intent action leaves derived simDays continuous across the action boundary` —
       the re-anchor discipline pin. For a fixed `nowMs`, build a `TimeState`, compute
       `before = deriveSimDays(state, nowMs)`, apply the reducer with that `nowMs`, compute
       `after = deriveSimDays(nextState, nowMs)`, assert `after ≈ before` (float tolerance). Parameterise
       over `setRate`, `setDirection`, `pause`, `resume` from BOTH a live and a manual starting state.
       (This is the single most important test in the plan — a reducer that forgets to re-anchor jumps time.)
-- [ ] Test `pause then resume at a later nowMs does not advance simDays while paused` — pause at `t0`,
+- [x] Test `pause then resume at a later nowMs does not advance simDays while paused` — pause at `t0`,
       derive at `t1 > t0` (constant), resume at `t1`, derive at `t2 > t1` advances from the paused value.
-- [ ] `npm run typecheck && npm test -- time` green; commit.
+- [x] `npm run typecheck && npm test -- time` green; commit.
 
 ---
 
@@ -163,16 +163,16 @@ export function deriveSimDays(time: TimeState, nowMs: number): number;
 export function unixMsToJulianDays(unixMs: number): number; // unixMs/86_400_000 + 2_440_587.5
 ```
 
-- [ ] Test `paused derivation is constant across nowMs` — paused state, two different `nowMs`, equal.
-- [ ] Test `live derivation advances one day per 86_400_000 ms` — hand-computed: `Δ = 86_400_000 ms`
+- [x] Test `paused derivation is constant across nowMs` — paused state, two different `nowMs`, equal.
+- [x] Test `live derivation advances one day per 86_400_000 ms` — hand-computed: `Δ = 86_400_000 ms`
       ⇒ `simDays` increases by exactly 1.
-- [ ] Test `manual derivation slope is simSecPerRealSec·direction` — pick the `1 hr/s` step, a
+- [x] Test `manual derivation slope is simSecPerRealSec·direction` — pick the `1 hr/s` step, a
       hand-computed `nowMs` delta, assert the simDays delta equals `3600·ΔrealSec/86400` days; repeat
       with `direction = -1` and assert simDays DECREASES (reverse works).
-- [ ] Test `unixMsToJulianDays maps the J2000 epoch instant` — hand-computed: unix ms for
+- [x] Test `unixMsToJulianDays maps the J2000 epoch instant` — hand-computed: unix ms for
       2000-01-01T12:00:00Z → `2_451_545.0` (independent of the source formula: compute the ms literal
       yourself, assert the JD).
-- [ ] `npm test -- deriveSimDays unixMsToJulianDays` green; commit.
+- [x] `npm test -- deriveSimDays unixMsToJulianDays` green; commit.
 
 ---
 
@@ -221,21 +221,21 @@ same authoring discipline as the epoch columns. Update the `OrbitalElements` mod
 (`OrbitalElements.d.ts:5-9`) and `orbitalElements.ts:36-39` — the "rates deliberately omitted / static
 epoch" paragraphs are now false; rewrite them (timeless comment style, no history note).
 
-- [ ] Test `propagateElements at T=0 returns the epoch elements` — `simDays = 2_451_545.0` ⇒ every
+- [x] Test `propagateElements at T=0 returns the epoch elements` — `simDays = 2_451_545.0` ⇒ every
       classical field equals the input (a genuine fixed point, not a restatement).
-- [ ] Test `Earth mean anomaly advances ~one revolution per year` — propagate Earth by
+- [x] Test `Earth mean anomaly advances ~one revolution per year` — propagate Earth by
       `Δ = 365.25` days, assert `M` increased by ≈ `2π` (independent property: Earth's orbital period;
       hand-reasoned, not the source's rate constant).
-- [ ] Test `propagate +Δ then −Δ ≈ identity` — propagate to `T+Δ`, then a second `propagateElements`
+- [x] Test `propagate +Δ then −Δ ≈ identity` — propagate to `T+Δ`, then a second `propagateElements`
       is not composable (it's absolute in `simDays`), so instead assert
       `propagate(el, J2000+Δd)` and `propagate(el, J2000−Δd)` are symmetric about the epoch value for
       the linear fields (e.g. `M(+Δ) − M₀ ≈ M₀ − M(−Δ)`).
-- [ ] Test `Earth heliocentric position at a known date matches a JPL Horizons reference` —
+- [x] Test `Earth heliocentric position at a known date matches a JPL Horizons reference` —
       one hand-checked Horizons state vector (or heliocentric ecliptic lon/lat + range) for Earth at ONE
       date in 1800–2050, converted to the scene frame, arcminute-class tolerance. Feed
       `keplerianPositionMpc(propagateElements(earth, jd))`. (Record the Horizons query + date in the
       test comment — it is the external contract, per `testing.md` keep-rules.)
-- [ ] `npm test -- propagateElements` green; commit.
+- [x] `npm test -- propagateElements` green; commit.
 
 ---
 
@@ -283,15 +283,15 @@ sign. The implementer MUST verify each moon's precession direction against JPL a
 sign in the row comment. **Fetch the JPL page and record every transcribed value + its provenance in a
 comment** — do not transcribe from memory.
 
-- [ ] Test `Io mean-motion rate corresponds to its ~1.769 day period` — from Io's own `periodDays`
+- [x] Test `Io mean-motion rate corresponds to its ~1.769 day period` — from Io's own `periodDays`
       column, assert `meanAnomalyRateRadPerCty` implies a period of ≈ 1.769 d (independent: turns per
       century = `36_525/period`; hand-check the period, not the rate constant).
-- [ ] Test `a Galilean moon position matches a JPL Horizons reference at one date` — one moon
+- [x] Test `a Galilean moon position matches a JPL Horizons reference at one date` — one moon
       (e.g. Io), one date, hand-checked Horizons Jupiter-relative position, arcminute-class tolerance.
       Feed `keplerianPositionMpc(propagateElements(io, jd))` + Jupiter's propagated world position.
-- [ ] Test `propagate a moon +Δ then −Δ is symmetric about the epoch` — as Task 4, for a moon.
-- [ ] NO test restating the epoch `Ω/ω/M` or period literals back at the table.
-- [ ] `npm test -- satellite` green; commit.
+- [x] Test `propagate a moon +Δ then −Δ is symmetric about the epoch` — as Task 4, for a moon.
+- [x] NO test restating the epoch `Ω/ω/M` or period literals back at the table.
+- [x] `npm test -- satellite` green; commit.
 
 ---
 
@@ -315,13 +315,13 @@ sub-arcminute over 250 yr; note this in the header so it reads as a deliberate o
 > live, Earth's texture longitude must line up with the real sub-solar point (the terminator honest).
 > A correctness check for the later dev-server pass; land the code behind the gate.
 
-- [ ] Test `Earth prime meridian advances ~360° per sidereal day` — `orientationForBody('earth', jd)`
+- [x] Test `Earth prime meridian advances ~360° per sidereal day` — `orientationForBody('earth', jd)`
       vs `orientationForBody('earth', jd + 0.99727)` (sidereal day) differ by ≈ one full rotation about
       the pole (independent property: a sidereal day is one rotation; compare the rotated equinox vector,
       not the raw W formula).
-- [ ] Test `a non-textured body is orientation-invariant in simDays` — `orientationForBody('titan', jd)`
+- [x] Test `a non-textured body is orientation-invariant in simDays` — `orientationForBody('titan', jd)`
       equals identity for any `jd` (Titan carries no rotation row — `rotationElements.ts` set).
-- [ ] `npm test -- orientationForBody` green; commit.
+- [x] `npm test -- orientationForBody` green; commit.
 
 ---
 
@@ -343,14 +343,14 @@ planets-before-moons (one parent hop). This task makes it TIME-VARYING and memoi
   unchanged (paused ⇒ free; the value is bit-identical frame-to-frame). ~22 Kepler solves, µs-scale
   when the cache misses.
 
-- [ ] Test `deriveBodyStates is memoized on simDays` — two calls with the same `simDays` return the
+- [x] Test `deriveBodyStates is memoized on simDays` — two calls with the same `simDays` return the
       SAME Map reference; a different `simDays` returns a different reference. (Guards the paused-frame
       free-ride and the "one instant per frame" contract.)
-- [ ] Test `a moon's snapshot position rides its propagated parent` — at a `simDays` where Jupiter has
+- [x] Test `a moon's snapshot position rides its propagated parent` — at a `simDays` where Jupiter has
       moved off epoch, Io's snapshot position minus Jupiter's snapshot position equals Io's
       Jupiter-relative propagated position (no draw-vs-pick tearing; the parent hop uses the snapshot,
       not a re-derive).
-- [ ] `npm test -- deriveBodyStates` green; commit.
+- [x] `npm test -- deriveBodyStates` green; commit.
 
 ---
 
@@ -374,15 +374,15 @@ planets-before-moons (one parent hop). This task makes it TIME-VARYING and memoi
   ONCE at engine startup so a bare load is live-now (Q3). A one-shot guard (a boolean ref, or gate on
   the initial J2000 sentinel anchor) prevents re-dispatch every frame. Keep it one commented line.
 
-- [ ] Test `runFrame derives simDays before the camera produce step` — with a manual-playing time
+- [x] Test `runFrame derives simDays before the camera produce step` — with a manual-playing time
       state and a stub follow driver reading the stash, the driver sees the frame's `simDays`-derived
       body position (i.e. the snapshot is populated before `runCameraDrivers`). (If the existing
       runFrame test harness can't reach this, assert the ordering via the stash being non-null at the
       driver's `pose` call.)
-- [ ] Manual verification note (no test): confirm `npm run perf` before/after shows the snapshot derive
+- [x] Manual verification note (no test): confirm `npm run perf` before/after shows the snapshot derive
       is µs-scale (spec §8 perf note) — the implementer records the two numbers in the PR description,
       not a committed test.
-- [ ] `npm run typecheck && npm test -- runFrame` green; commit.
+- [x] `npm run typecheck && npm test -- runFrame` green; commit.
 
 ---
 
@@ -407,12 +407,12 @@ points at where a body USED to be:
 - **`earthSurfaceFraming` caller** — 01-prep A10 made the signature take a position; flip the saga
   caller from the J2000 value to the live snapshot state.
 
-- [ ] Test `a body caption position tracks the snapshot when simDays changes` — targeted at the
+- [x] Test `a body caption position tracks the snapshot when simDays changes` — targeted at the
       label-position source, not pixel output.
-- [ ] Test `bodyPosOf reflects the live snapshot position` — fixture at a non-J2000 `simDays`.
-- [ ] Test `earthFlyout targets the frozen-clock Earth` — clip built with the clock at a
+- [x] Test `bodyPosOf reflects the live snapshot position` — fixture at a non-J2000 `simDays`.
+- [x] Test `earthFlyout targets the frozen-clock Earth` — clip built with the clock at a
       non-J2000 instant targets that instant's Earth position.
-- [ ] `npm run typecheck` + targeted suites green; commit.
+- [x] `npm run typecheck` + targeted suites green; commit.
 
 ---
 
@@ -436,12 +436,12 @@ Spec §8, Q11. Two behaviors:
    loop is already busy). The React TimeBar readout ticks on its own timer regardless (surface plan) —
    the idle tick is only for the scene terminator, so a coarse cadence (~2–4 s) is correct.
 
-- [ ] Test `shouldKeepTicking is true when manual and playing` — manual, `!paused` ⇒ true even when
+- [x] Test `shouldKeepTicking is true when manual and playing` — manual, `!paused` ⇒ true even when
       every other term is false (mirror the flow-layer test shape).
-- [ ] Test `shouldKeepTicking is false at live 1× with the scene at rest` — live, not paused, no camera
+- [x] Test `shouldKeepTicking is false at live 1× with the scene at rest` — live, not paused, no camera
       motion / fades / in-flight work ⇒ false (live must not pin the loop; the idle tick is the separate
       path, not this predicate).
-- [ ] `npm test -- shouldKeepTicking` green; commit. (The idle-tick cadence itself is a dev-server
+- [x] `npm test -- shouldKeepTicking` green; commit. (The idle-tick cadence itself is a dev-server
       observation, not a unit test — note it in the PR.)
 
 ---
@@ -477,12 +477,12 @@ read the engine snapshot (store-boundary rule). Publish it alongside `simDays` i
 dedup dispatch (e.g. `focusedBodyDistanceMpc: number | null`, derived from the frame snapshot when the
 focus is a scene body); null when no body focus. Keep it one payload, one throttle gate.
 
-- [ ] Test `throttleByTime gates to at most once per interval` — hand-driven `nowMs` sequence:
+- [x] Test `throttleByTime gates to at most once per interval` — hand-driven `nowMs` sequence:
       `t=0` true, `t=100` false, `t=250` true (for a 250 ms interval). Independent of any clock.
-- [ ] Test `engineTimeReported dedups an unchanged simDays` — dispatch the same `simDays` twice, assert
+- [x] Test `engineTimeReported dedups an unchanged simDays` — dispatch the same `simDays` twice, assert
       the slice reference is unchanged on the second (the `engineScaleChanged` dedup pattern; a real
       re-render guard, not a restatement).
-- [ ] `npm test -- throttleByTime engineSlice` green; commit.
+- [x] `npm test -- throttleByTime engineSlice` green; commit.
 
 ---
 
@@ -512,11 +512,11 @@ Today `orbitTrailsLayer` packs the STATIC `SCENE_ORBIT_CONICS` table (built once
   edit DOES prove necessary, follow the `wesl-shaders` skill — **no backticks in WESL comments** (parse
   error), read `input.pos` from the struct (duplicate `@builtin(position)` fails only at runtime).
 
-- [ ] Test `a moon trail centre rides its propagated parent` — at a `simDays` where the parent has
+- [x] Test `a moon trail centre rides its propagated parent` — at a `simDays` where the parent has
       moved, the derived Moon conic centre equals Earth's snapshot position + the focus-relative offset
       (not the J2000 centre). Reuse the snapshot from Task 7; do not re-derive with the layer's own math
       (no mirror).
-- [ ] `npm run typecheck && npm test -- orbitTrails` green; commit.
+- [x] `npm run typecheck && npm test -- orbitTrails` green; commit.
 
 ---
 
@@ -560,18 +560,18 @@ Spec §5, Q7. A new **row** in `buildCameraDrivers` (`cameraDrivers.ts:167`):
 - **Deactivation:** leaving focus (`focus` null / non-body) deactivates the row; `commitsOnEdge: true`
   bakes the last follow pose into `base` so lower drivers resume from where the camera is (no snap-back).
 
-- [ ] Test `followBody pose target equals the body snapshot position while active` — with a body
+- [x] Test `followBody pose target equals the body snapshot position while active` — with a body
       focused and a populated snapshot, `pose(...).target` equals `bodyStates.get(id).positionMpc`
       (after approach saturation; the target term is live).
-- [ ] Test `followBody deactivates when focus leaves the body` — `isActive` flips false when the focus
+- [x] Test `followBody deactivates when focus leaves the body` — `isActive` flips false when the focus
       row is null / a galaxy, and `pickWinner` hands off to the next-highest active driver.
-- [ ] Test `the follow approach ease converges to the framing offset` — at `elapsed = 0` the pose
+- [x] Test `the follow approach ease converges to the framing offset` — at `elapsed = 0` the pose
       distance ≈ the captured `from` distance; at `elapsed ≥ FOCUS_TWEEN_MS` it ≈ the
       `bodyLikeFraming` framing distance (monotone convergence, hand-reasoned ease-out — not the source
       ease formula mirrored).
-- [ ] Test `focusing a body dispatches NO camera tween` — `watchFocusTweenSaga` on a `body` focus ref
+- [x] Test `focusing a body dispatches NO camera tween` — `watchFocusTweenSaga` on a `body` focus ref
       puts no `startCameraTween` (the follow driver owns it); a galaxy focus still does.
-- [ ] `npm run typecheck && npm test -- cameraDrivers watchFocusTween` green; commit.
+- [x] `npm run typecheck && npm test -- cameraDrivers watchFocusTween` green; commit.
 
 ---
 
@@ -594,13 +594,13 @@ a `race({ run, stop })`:
   sets a different mode (Q9 option c) is a new `applySceneEffect` verb through this same seam — do not
   build that now.
 
-- [ ] Test `clip start pauses the sim clock` — dispatching `startClip` results in a `pause` action with
+- [x] Test `clip start pauses the sim clock` — dispatching `startClip` results in a `pause` action with
       the anchor captured (the clip is now frozen). Assert the dispatched `pause` re-anchors from the
       pre-clip derived simDays (continuity).
-- [ ] Test `clip end restores the prior mode` — starting from LIVE, a clip start→end round-trip leaves
+- [x] Test `clip end restores the prior mode` — starting from LIVE, a clip start→end round-trip leaves
       the clock back in live; starting from MANUAL (playing) leaves it manual and unpaused. Cover the
       cancel path (a second `startClip` / `stopClip`) restoring too.
-- [ ] `npm test -- watchClipSaga` green; commit.
+- [x] `npm test -- watchClipSaga` green; commit.
 
 ---
 
@@ -624,9 +624,9 @@ not just asserted:
 - **Re-anchor discipline** — confirm every `time/` reducer re-anchors through the one `deriveSimDays`
   call, not an inlined copy of the formula (a mirror would rot).
 
-- [ ] Apply any un-braiding the radar surfaces (via `/simplify` if it's a real knot) or record an
+- [x] Apply any un-braiding the radar surfaces (via `/simplify` if it's a real knot) or record an
       explicit "reviewed, no change — because X" in the PR.
-- [ ] Full `npm run typecheck && npm test` green; PR #472 ready for review.
+- [x] Full `npm run typecheck && npm test` green; PR #472 ready for review.
 
 ---
 
