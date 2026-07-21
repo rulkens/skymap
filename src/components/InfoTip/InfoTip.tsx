@@ -50,34 +50,17 @@
  * `transition-behavior: allow-discrete` on `display`, the browser
  * keeps the element painted during the entire fade.  Pure CSS, no JS
  * timer or setTimeout(0) hack.
- *
- * ### Two shapes from one atom: teaching card vs compact label
- *
- * With a `body` the tip is a roomy teaching card — a title, a divider,
- * and an explanatory paragraph (the InfoCard jargon rows).  Without a
- * `body` it collapses to a compact label: just the title in a small
- * frosted box, no divider, no wide reading measure.  That label shape
- * is what the HUD's icon-only controls need — a terse "what does this
- * glyph do" hint — so `body` is optional and the label case is the
- * whole content.  One atom, one show/hide + anchor mechanism, two
- * looks; the toolbar pills and the TimeBar transport both ride it.
  */
 
 import { useId } from 'react';
 import type { ReactNode, CSSProperties } from 'react';
-import cx from 'classnames';
 import styles from './InfoTip.module.css';
 
 export type InfoTipProps = {
   /** Short heading rendered as the tip's title. Plain text only. */
   title: string;
-  /**
-   * The teaching-card body — accepts JSX so callers can include line
-   * breaks, formulas, italics, etc.  Omit it for the compact
-   * label-only shape (title alone, no divider): the look the HUD's
-   * icon-only controls use for their hover hint.
-   */
-  body?: ReactNode;
+  /** The body of the tip — accepts JSX so callers can include line breaks, formulas, italics, etc. */
+  body: ReactNode;
   /**
    * The trigger content (the value or label that the user hovers).
    * Optional only because React's `createElement` signature can pass
@@ -163,17 +146,17 @@ export function InfoTip({
       <span
         id={tipDomId}
         role="tooltip"
-        className={cx(
+        className={[
           styles.tip,
-          // No body → the compact label shape (no divider, tight box).
-          body == null && styles.tipLabel,
-          placement === 'top' && styles.tipTopOnly,
-          placement === 'bottom' && styles.tipBottomOnly,
-        )}
+          placement === 'top' ? styles.tipTopOnly : '',
+          placement === 'bottom' ? styles.tipBottomOnly : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
         style={tipStyle}
       >
         <span className={styles.tipTitle}>{title}</span>
-        {body != null && <span className={styles.tipBody}>{body}</span>}
+        <span className={styles.tipBody}>{body}</span>
       </span>
     </span>
   );

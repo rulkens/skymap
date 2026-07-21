@@ -7,8 +7,8 @@
  *
  * Placement in the row is owned by the parent (.topBar in
  * App.module.css); this rule has no `top` / `left`. The hover label is
- * an InfoTip (fixed-positioned, self-anchoring), so the pill needs no
- * positioning context of its own.
+ * a CompactInfoTip, which supplies its own `position: relative`
+ * wrapper, so the pill needs no positioning context of its own.
  */
 .root {
   width: 40px;

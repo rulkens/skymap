@@ -67,16 +67,6 @@
  * Anchoring right (rather than centering) is the safe default given
  * the InfoCard sits in the top-right of the viewport.  Centered tips
  * may look slightly off-axis in this fallback, but they don't clip.
- *
- * ── Compact label variant (`.tipLabel`) ───────────────────────────
- *
- * `.tipLabel` rides alongside `.tip` when the caller gives a title but
- * no body — the HUD's icon-only controls, whose hint is a single terse
- * phrase.  It reshapes the same box to a small frosted label: tighter
- * padding, no 360px reading measure, single-line, and it drops the
- * title's divider (there's nothing below to divide from).  The
- * show/hide fade, anchor positioning, and edge-fallback list are all
- * inherited unchanged from `.tip`; only the box's proportions differ.
  */
 
 .wrapper {
@@ -348,36 +338,6 @@
   display: block;
   color: var(--color-fg-muted, currentColor);
   opacity: 0.92;
-}
-
-/*
- * Compact label shape — no body, so no wide reading measure and no
- * divider.  Tokens map the old hand-rolled toolbar tooltip's hardcoded
- * values onto the scale: 4px 8px → --space-2 --space-4, the 8px radius
- * → --radius-xl, 12px text → --font-size-lg, 1.2 leading → the nearest
- * rung --line-height-tight.  Single-line by contract (these hints are
- * a few words); `white-space: nowrap` keeps them from wrapping into a
- * ragged block.
- */
-.tipLabel {
-  max-width: none;
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-xl);
-  font-size: var(--font-size-lg);
-  line-height: var(--line-height-tight);
-  white-space: nowrap;
-}
-
-/*
- * The label's title is its entire content, so strip the teaching-card
- * divider (border + the space it reserved) and lift the colour to the
- * brightest foreground so a one-word hint reads crisply.
- */
-.tipLabel .tipTitle {
-  margin-bottom: 0;
-  padding-bottom: 0;
-  border-bottom: none;
-  color: var(--color-fg);
 }
 
 /* Reduced-motion accessibility — skip the fade for users who request it. */

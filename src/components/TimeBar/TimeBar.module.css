@@ -78,8 +78,7 @@
 
 /*
  * The time readout doubles as the date-entry trigger. Styled as text rather
- * than a chromed button so it reads as the bar's primary content. `position:
- * relative` anchors its tooltip.
+ * than a chromed button so it reads as the bar's primary content.
  */
 .readout {
   position: relative;
@@ -134,8 +133,11 @@
    * controls inside the growing track, and any transient horizontal spill during
    * the animation is masked by the controls' opacity gate. The negative insets
    * (extending the region past top/bottom and symmetrically on the inline axis)
-   * aren't load-bearing: the InfoTip hints are fixed-positioned and escape any
-   * clip on their own, so this could tighten to a plain box clip later.
+   * ARE load-bearing now: CompactInfoTip's hints are plain absolutely-positioned
+   * labels (not fixed/escaping), so they render inside this clip region. -40px
+   * gives ~40px of headroom above the group's own box; a tip is one line plus
+   * padding and border (~26px) plus its --space-2 gap (~4px) ≈ 30px, so it clears
+   * with room to spare.
    */
   clip-path: inset(-40px -48px);
 }
@@ -181,7 +183,6 @@
   align-items: center;
   gap: var(--space-3);
   min-width: 0;
-  overflow-x: clip;
   overflow-y: visible;
 }
 
@@ -191,6 +192,19 @@
   /* Cancel .group's inter-item gap so the folded Now leaves no leading space
      before the rate label (visible on live-hover, when .controls is open). */
   margin-right: calc(-1 * var(--space-3));
+}
+
+/*
+ * Clip horizontally only while collapsed (live mode) or animating shut, so
+ * the Now glyph hides as the track narrows to zero — the same class that
+ * drives the 1fr→0fr collapse holds through the whole closing transition,
+ * so the clip stays active exactly as long as it's needed. Manual mode
+ * drops this class immediately, leaving overflow visible so the Now
+ * button's CompactInfoTip label (wider than the button) renders whole
+ * above it instead of being cropped at the track edge.
+ */
+.nowCollapsed .nowInner {
+  overflow-x: clip;
 }
 
 /* Thin vertical rule between control groups. */
@@ -236,7 +250,7 @@
 /*
  * The rate label doubles as the rate-selector trigger. Chromeless at rest (no
  * fill, no border) so it reads as the current-speed text, with the same hover
- * tint the flat-glyph steppers use. `position: relative` anchors its tooltip.
+ * tint the flat-glyph steppers use.
  */
 .rate {
   position: relative;

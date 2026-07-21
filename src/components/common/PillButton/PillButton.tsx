@@ -15,17 +15,18 @@
  * shared `hidden` fade-out used during palette-open transitions, and
  * the optional hover/focus label (these pills are icon-only, so a
  * short hint is the only thing telling a newcomer what each glyph
- * does).  That hint is an InfoTip in its compact label-only shape,
- * wrapping the button in `interactive` mode: the button stays the
- * focus target and the tip reveals on hover / keyboard focus.  Placed
+ * does).  That hint is a CompactInfoTip, not InfoTip: the pill's own
+ * `backdrop-filter` makes it a containing block for `position: fixed`
+ * descendants, which traps InfoTip's viewport-fixed panel inside the
+ * tiny pill box instead of the viewport.  CompactInfoTip's plain
+ * absolute-inside-relative label has no such requirement.  Placed
  * BELOW the pill because the top-bar row hugs the viewport top and has
- * no room above.  InfoTip's `position: fixed` panel escapes any
- * ancestor clipping, so the pill needs no clip-path escape hatch.
+ * no room above.
  */
 
 import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react';
 import cx from 'classnames';
-import { InfoTip } from '../../InfoTip/InfoTip';
+import CompactInfoTip from '../CompactInfoTip/CompactInfoTip';
 import styles from './PillButton.module.css';
 
 export type PillButtonProps = {
@@ -41,9 +42,9 @@ export type PillButtonProps = {
    * on hover / keyboard focus. These icon-only pills carry no visible
    * text, so the label is what tells a first-time user what each glyph
    * does — keep it terse (a few words). The screen-reader name still
-   * comes from the consumer's `aria-label`, and InfoTip's interactive
-   * mode leaves the button as the sole focus + described target, so
-   * there's no double announcement. Omit it and no label renders.
+   * comes from the consumer's `aria-label`; the tip is a purely visual
+   * `role="tooltip"` label, so there's no double announcement. Omit it
+   * and no label renders.
    */
   readonly tooltip?: string;
   readonly children: ReactNode;
@@ -71,9 +72,9 @@ function PillButton({
   );
   // Top-bar row hugs the viewport top, so the hint drops BELOW the pill.
   return tooltip ? (
-    <InfoTip title={tooltip} placement="bottom" interactive>
+    <CompactInfoTip label={tooltip} placement="bottom">
       {button}
-    </InfoTip>
+    </CompactInfoTip>
   ) : (
     button
   );

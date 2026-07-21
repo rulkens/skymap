@@ -32,16 +32,23 @@
  * clamped step there used to silently re-anchor a live clock into manual mode.
  * Native `disabled` blocks the interaction and drops the button from the tab
  * order; the hold-repeat also self-stops the instant the prop flips. A disabled
- * stepper carries NO hover hint at all: it renders bare, without its InfoTip
- * wrapper, rather than relying on the button's `pointer-events: none` — that
- * only silences the button, while the tip's own trigger span (an ancestor of
- * the button) would still catch the hover and reveal the label.
+ * stepper carries NO hover hint at all: it renders bare, without its
+ * CompactInfoTip wrapper — the wrapper's own box still reveals its label on
+ * hover even when the child button is disabled (a disabled button doesn't
+ * stop pointer events from reaching its parent), so omitting the wrapper is
+ * the only way to keep a disabled step's hint from surfacing.
+ *
+ * Every hover hint here is a CompactInfoTip, not InfoTip: the pill's own
+ * `backdrop-filter` makes it a containing block for `position: fixed`
+ * descendants, which would trap InfoTip's viewport-fixed panel inside the
+ * collapsing strip instead of the viewport. CompactInfoTip's plain
+ * absolute-inside-relative label needs no such escape hatch.
  */
 
 import { useCallback, useEffect, useRef, type ReactNode } from 'react';
 import cx from 'classnames';
 import Button from '../common/Button/Button';
-import { InfoTip } from '../InfoTip/InfoTip';
+import CompactInfoTip from '../common/CompactInfoTip/CompactInfoTip';
 import styles from './TimeBar.module.css';
 
 const HOLD_DELAY_MS = 400; // dwell before press-and-hold auto-repeat engages
@@ -163,7 +170,7 @@ function TimeBar({
       aria-label="Time controls"
     >
       <div className={styles.pill}>
-        <InfoTip title="Set date & time" placement="top" interactive>
+        <CompactInfoTip label="Set date & time" placement="top">
           <button
             type="button"
             className={styles.readout}
@@ -176,14 +183,15 @@ function TimeBar({
           >
             {readout}
           </button>
-        </InfoTip>
+        </CompactInfoTip>
 
         {/* Grid 0fr→1fr collapses the controls' layout width so the pill hugs the
             readout; the inner .group is clipped horizontally to mask the sliding
-            controls. Their InfoTip hints are fixed-positioned and escape any clip
-            on their own. The pill's row-reverse puts this block left of the
-            readout, so the group is authored in its left-to-right visual order:
-            Now | rate | ‹ ⏯ › | (divider abutting the readout). */}
+            controls. The .group clip-path insets give the CompactInfoTip labels
+            room to escape above without being cropped. The pill's row-reverse
+            puts this block left of the readout, so the group is authored in its
+            left-to-right visual order: Now | rate | ‹ ⏯ › | (divider abutting
+            the readout). */}
         <div className={styles.controls}>
           <div className={styles.group}>
             {/* Now collapser: the button is always mounted so the pill width can
@@ -198,16 +206,16 @@ function TimeBar({
               inert={mode === 'live'}
             >
               <div className={styles.nowInner}>
-                <InfoTip title="Back to now" placement="top" interactive>
+                <CompactInfoTip label="Back to now" placement="top">
                   <Button className={styles.now} onClick={onNow} aria-label="Return to now">
                     Now
                   </Button>
-                </InfoTip>
+                </CompactInfoTip>
                 <span className={styles.divider} aria-hidden="true" />
               </div>
             </div>
 
-            <InfoTip title="Change speed" placement="top" interactive>
+            <CompactInfoTip label="Change speed" placement="top">
               <button
                 type="button"
                 className={styles.rate}
@@ -220,12 +228,12 @@ function TimeBar({
               >
                 {rateLabel}
               </button>
-            </InfoTip>
+            </CompactInfoTip>
 
             <span className={styles.divider} aria-hidden="true" />
 
-            {/* A disabled stepper renders bare (no InfoTip) so its hint can't
-                surface at the ladder end — see the module header. */}
+            {/* A disabled stepper renders bare (no CompactInfoTip) so its hint
+                can't surface at the ladder end — see the module header. */}
             {slowerDisabled ? (
               <Button
                 className={styles.step}
@@ -236,14 +244,14 @@ function TimeBar({
                 <span aria-hidden="true">‹</span>
               </Button>
             ) : (
-              <InfoTip title="Slower" placement="top" interactive>
+              <CompactInfoTip label="Slower" placement="top">
                 <Button className={styles.step} {...slowerHold} aria-label="Slower">
                   <span aria-hidden="true">‹</span>
                 </Button>
-              </InfoTip>
+              </CompactInfoTip>
             )}
 
-            <InfoTip title={paused ? 'Run time' : 'Pause time'} placement="top" interactive>
+            <CompactInfoTip label={paused ? 'Run time' : 'Pause time'} placement="top">
               <Button
                 className={styles.step}
                 onClick={onPlayPause}
@@ -252,7 +260,7 @@ function TimeBar({
               >
                 <span aria-hidden="true">{paused ? '▶' : '❚❚'}</span>
               </Button>
-            </InfoTip>
+            </CompactInfoTip>
 
             {fasterDisabled ? (
               <Button
@@ -264,11 +272,11 @@ function TimeBar({
                 <span aria-hidden="true">›</span>
               </Button>
             ) : (
-              <InfoTip title="Faster" placement="top" interactive>
+              <CompactInfoTip label="Faster" placement="top">
                 <Button className={styles.step} {...fasterHold} aria-label="Faster">
                   <span aria-hidden="true">›</span>
                 </Button>
-              </InfoTip>
+              </CompactInfoTip>
             )}
 
             <span className={styles.divider} aria-hidden="true" />
