@@ -78,7 +78,8 @@ export const ROTATION_ELEMENTS: readonly RotationElements[] = [
   // δ₀ = 64.495303 + 0.002413T (+ periodic), W = 284.95 + 870.5360000·d.
   { id: 'jupiter', poleRaDeg: 268.056595, poleDecDeg: 64.495303, primeMeridianDeg: 284.95, spinRateDegPerDay: 870.536 },
   // Saturn. α₀ = 40.589 − 0.036T, δ₀ = 83.537 − 0.004T, W = 38.90 + 810.7939024·d.
-  // The pole MUST equal SATURN_EQUATORIAL_FRAME's (rings + moons share the frame).
+  // The pole MUST equal SATURN_EQUATORIAL_FRAME's (the rings share Saturn's
+  // equatorial frame; the moons derive their orbit planes from their own Laplace poles).
   { id: 'saturn', poleRaDeg: 40.589, poleDecDeg: 83.537, primeMeridianDeg: 38.9, spinRateDegPerDay: 810.7939024 },
   // Uranus (retrograde; IAU north pole points south of the ecliptic — δ₀ < 0).
   // α₀ = 257.311, δ₀ = −15.175, W = 203.81 − 501.1600928·d.

@@ -77,9 +77,11 @@ export type CameraClock = {
   // motion (translate-follow keeps tracking the body, just shifted). World-frame
   // is chosen for simplicity: at the scales a followed body is viewed, a fixed
   // world-space offset reads as a stable screen strafe, and it needs no camera
-  // basis re-projection. A fresh focus (focus ROW ref change) zeroes it, so each
-  // new target starts centred. `followElapsed` owns that reset alongside the
-  // other follow fields.
+  // basis re-projection. The reset is winner-gated: `followElapsed` zeroes it
+  // (alongside the other follow fields) on a focus ROW ref change, but it only
+  // runs when followBody wins the frame. So an offset can outlive a focus switch
+  // while a higher driver (e.g. autoRotate) holds the win; it clears the next
+  // time followBody wins, and the new target starts centred from there.
   followPanOffset: Vec3;
   // The `cam.target` recorded on the previous follow-drag frame, so the strafe is
   // folded in as the frame-to-frame DELTA of `cam.target` (which, during a drag,

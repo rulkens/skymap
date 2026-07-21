@@ -56,7 +56,7 @@ function makeStub(name: string): Stub {
     // Methods `initGpu` invokes synchronously inside the phase.
     upload: vi.fn().mockResolvedValue(undefined),
     setBiasMode: vi.fn(),
-    // `initGpu` calls `foregroundLabelRenderer.setLabels(sceneBodyLabels())`
+    // `initGpu` calls `foregroundLabelRenderer.setLabels(sceneBodyLabels(<snapshot>))`
     // synchronously after constructing the second label renderer.
     setLabels: vi.fn(),
     // `initGpu` calls `starPointRenderer.setStars(<the far partition>)`
@@ -499,8 +499,8 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     // alone lands the handle; the destroy chain must reach it to release its
     // instance + uniform buffers.
     expect(state.gpu.bodyGlintRenderer).toBe(stubs.bodyGlintRenderer);
-    // The orbit-trail renderer needs no data delivery (SCENE_ORBIT_CONICS is a
-    // static module-level table) — construction alone lands the handle.
+    // The orbit-trail renderer needs no bootstrap data delivery (orbitTrailsLayer
+    // derives + packs the conics per frame) — construction alone lands the handle.
     expect(state.gpu.orbitTrailRenderer).toBe(stubs.orbitTrailRenderer);
     // The body pick renderer owns its sphere mesh VBO/IBO + the sphere/point
     // uniform + point instance buffers — the destroy chain must reach it.

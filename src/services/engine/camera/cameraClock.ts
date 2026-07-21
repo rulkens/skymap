@@ -191,8 +191,8 @@ export function followElapsed(
  *
  * Off a follow-drag frame the delta chain is dropped (`lastPanTarget = null`) so
  * the next grab continues the existing offset instead of re-basing it — and the
- * accumulated offset persists (it is only zeroed by a fresh focus, in
- * `followElapsed`).
+ * accumulated offset persists until `followElapsed` zeroes it on a fresh focus,
+ * which happens the next time followBody wins the frame (see `CameraClock`).
  */
 export function accumulateFollowPan(
   clock: CameraClock,

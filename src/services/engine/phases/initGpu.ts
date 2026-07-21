@@ -506,9 +506,8 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // orbitTrailRenderer draws the accurate Keplerian orbit trails (Earth /
   // Jupiter / Moon) as additive screen-space conics into the same depthless
   // HDR target — no depth format, like starPointRenderer above.  Unlike the
-  // stars, no data-delivery step: the conic table (SCENE_ORBIT_CONICS) is a
-  // static module-level derivation of the orbital elements, packed per-frame
-  // by orbitTrailsLayer.
+  // stars, no bootstrap data-delivery step: orbitTrailsLayer derives the conic
+  // geometry per frame from the current body snapshot and packs it itself.
   state.gpu.orbitTrailRenderer = createOrbitTrailRenderer(device, 'rgba16float');
 
   // foregroundLabelRenderer is a second MSDF label renderer against the

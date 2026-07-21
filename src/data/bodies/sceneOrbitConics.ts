@@ -53,9 +53,9 @@ import type { Vec3 } from '../../@types/math/Vec3';
  * Resolve an orbit's focus to an absolute-world position: `null` is the render
  * origin (heliocentric); any other id re-derives that parent's world position
  * from its OWN elements (`RENDER_ORIGIN_MPC + keplerianPositionMpc`) — every
- * moon parent is itself heliocentric, so one hop suffices. Re-deriving (rather
- * than reading a baked snapshot) is what lets the centre ride a moving parent
- * once trails animate; `elementsById` throws loudly on an unknown id.
+ * moon parent is itself heliocentric, so one hop suffices. This builder emits
+ * the fixed J2000-epoch geometry, so the parent is taken at its tabulated mean
+ * position; `elementsById` throws loudly on an unknown id.
  */
 function parentWorldMpc(parentId: string | null): Readonly<Vec3> {
   if (parentId === null) return RENDER_ORIGIN_MPC;
