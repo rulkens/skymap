@@ -84,7 +84,12 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // puts the map centre (geographic longitude 0) on the local +x prime meridian,
   // matching the surface (see the '## uv / orientation' note); the shared
   // uvSphereMesh emits u=0 there, so the origin correction lives here.
-  let uv = vec2<f32>(fract(in.uv.x + 0.5), in.uv.y);
+  // No explicit fract() wrap: the sampler uses addressModeU 'repeat', so a u of
+  // 0.5..1.5 wraps correctly in hardware. Wrapping in-shader with fract() instead
+  // breaks the quad derivatives at the u=0.5 seam (the value jumps 1->0), which
+  // forces the coarsest mip along a ~1px antimeridian line; leaving u continuous
+  // keeps ddx/ddy well-behaved and lets repeat addressing do the wrap.
+  let uv = vec2<f32>(in.uv.x + 0.5, in.uv.y);
   let c = textureSample(cloudTexture, cloudSampler, uv);
   // Sun-relative day/night term, decomposed so 'sunIrradiance' scales the DIRECT
   // (sun-lit) portion only -- mirroring the surface, whose direct term is scaled
