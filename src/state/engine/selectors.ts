@@ -45,3 +45,13 @@ export const selectStructureCounts = (state: RootState): Partial<Record<Structur
 
 export const selectLoadProgress = (state: RootState): LoadProgressState | null =>
   selectEngine(state).loadProgress;
+
+/**
+ * Live distance (Mpc) from the camera to the focused scene body, or null when no
+ * body is focused. A primitive read, so `useSelector`'s reference-equality check
+ * bails when the throttled `engineTimeReported` pub republishes an unchanged
+ * distance — the InfoCard live-distance row re-renders only when the number
+ * actually moves.
+ */
+export const selectFocusedBodyDistanceMpc = (state: RootState): number | null =>
+  selectEngine(state).timeReport.focusedBodyDistanceMpc;

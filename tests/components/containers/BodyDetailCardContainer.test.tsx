@@ -1,0 +1,115 @@
+// @vitest-environment jsdom
+//
+// BodyDetailCardContainer — store-boundary coverage for the focused-body card's
+// live distance row.
+//
+// The container's whole job is to read the throttled `engineTimeReported` pub's
+// `focusedBodyDistanceMpc` and hand it to the pure card as the `distanceMpc`
+// prop. These tests drive a real store (createAppStore + <Provider>), dispatch
+// `engineTimeReported`, and assert the rendered distance row tracks the pub while
+// the identity rows (Radius, label) stay put. Asserting on rendered text keeps
+// the contract stable against CSS-modules class mangling.
+//
+// The famous-stars hook is mocked so the non-star (planet) branch is exercised
+// without a sidecar fetch — Jupiter's id misses FAMOUS_STAR_IDS regardless, but
+// the mock keeps the hook deterministic.
+
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, act } from '@testing-library/react';
+import { createElement, type ReactNode } from 'react';
+import { Provider } from 'react-redux';
+import BodyDetailCardContainer from '../../../src/components/containers/BodyDetailCardContainer';
+import { createAppStore } from '../../../src/store/createAppStore';
+import { engineTimeReported } from '../../../src/state/engine/engineSlice';
+import { CONST_J2000 } from '../../../src/data/time/constJ2000';
+import { SCALE_UNITS } from '../../../src/data/scaleUnits';
+import { formatDistance } from '../../../src/utils/format/formatDistance';
+import type { BodyInfo } from '../../../src/@types/engine/BodyInfo';
+
+vi.mock('../../../src/hooks/useFamousStarsMeta', () => ({
+  useFamousStarsMeta: () => ({ famousStarsMeta: [], ready: true }),
+}));
+
+const jupiter: BodyInfo = {
+  type: 'body',
+  id: 'jupiter',
+  label: 'Jupiter',
+  positionMpc: [0, 0, 0],
+  radiusKm: 69911,
+};
+
+const NEAR_DISTANCE_MPC = 3 * SCALE_UNITS.AU_TO_MPC;
+const FAR_DISTANCE_MPC = 7 * SCALE_UNITS.AU_TO_MPC;
+
+function makeWrapper(store: ReturnType<typeof createAppStore>['store']) {
+  return ({ children }: { children: ReactNode }) => createElement(Provider, { store, children });
+}
+
+describe('BodyDetailCardContainer', () => {
+  it('distance row updates from the time-status pub', () => {
+    const { store } = createAppStore();
+    store.dispatch(
+      engineTimeReported({ simDays: CONST_J2000, focusedBodyDistanceMpc: NEAR_DISTANCE_MPC }),
+    );
+
+    render(createElement(BodyDetailCardContainer, { target: jupiter, pinned: true }), {
+      wrapper: makeWrapper(store),
+    });
+
+    expect(screen.getByText(formatDistance(NEAR_DISTANCE_MPC))).toBeInTheDocument();
+
+    // A fresh pub with the body now farther away: the distance row tracks it, the
+    // old value is gone, and the identity rows are untouched. `act` flushes the
+    // react-redux useSyncExternalStore subscription the post-mount dispatch fires.
+    act(() => {
+      store.dispatch(
+        engineTimeReported({ simDays: CONST_J2000 + 30, focusedBodyDistanceMpc: FAR_DISTANCE_MPC }),
+      );
+    });
+
+    expect(screen.getByText(formatDistance(FAR_DISTANCE_MPC))).toBeInTheDocument();
+    expect(screen.queryByText(formatDistance(NEAR_DISTANCE_MPC))).not.toBeInTheDocument();
+    expect(screen.getByText('Jupiter')).toBeInTheDocument();
+    expect(screen.getByText('Radius')).toBeInTheDocument();
+    expect(screen.getByText('69,911 km')).toBeInTheDocument();
+  });
+
+  it('identity rows do not change when the pub ticks without moving the body', () => {
+    const { store } = createAppStore();
+    store.dispatch(
+      engineTimeReported({ simDays: CONST_J2000, focusedBodyDistanceMpc: NEAR_DISTANCE_MPC }),
+    );
+
+    render(createElement(BodyDetailCardContainer, { target: jupiter, pinned: true }), {
+      wrapper: makeWrapper(store),
+    });
+
+    // The clock advances but the body's distance is unchanged. The identity rows
+    // read nothing off the pub, so they stay exactly as they were.
+    act(() => {
+      store.dispatch(
+        engineTimeReported({
+          simDays: CONST_J2000 + 100,
+          focusedBodyDistanceMpc: NEAR_DISTANCE_MPC,
+        }),
+      );
+    });
+
+    expect(screen.getByText('Jupiter')).toBeInTheDocument();
+    expect(screen.getByText('Radius')).toBeInTheDocument();
+    expect(screen.getByText('69,911 km')).toBeInTheDocument();
+    expect(screen.getByText(formatDistance(NEAR_DISTANCE_MPC))).toBeInTheDocument();
+  });
+
+  it('drops the distance row when no body distance is published', () => {
+    const { store } = createAppStore();
+    // Initial store report has focusedBodyDistanceMpc = null (no focus yet).
+    const { container } = render(
+      createElement(BodyDetailCardContainer, { target: jupiter, pinned: true }),
+      { wrapper: makeWrapper(store) },
+    );
+
+    expect(screen.getByText('Radius')).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/Distance/);
+  });
+});

@@ -16,6 +16,13 @@
  *     renders a lean panel: the headline plus its physical radius (km) straight
  *     off the `BodyInfo`, no fetch dependency.
  *
+ * The non-star body's **distance** is time-dependent (it swings as the body
+ * orbits), so it is NOT baked into the identity `BodyInfo`; it arrives as the
+ * `distanceMpc` prop, which `BodyDetailCardContainer` reads live off the
+ * throttled `engineTimeReported` pub. This card stays presentational: it renders
+ * whatever distance it is handed and never derives the value itself (the
+ * store-boundary rule forbids a card reaching into the engine snapshot).
+ *
  * Optional physical fields (mass, luminosity, age, variability) drop their row
  * entirely when absent rather than showing a blank — the same absent-row pattern
  * the galaxy/structure cards use.  Aliases trail the primary name as a muted
@@ -40,6 +47,11 @@ export type BodyDetailCardProps = {
   target: BodyInfo;
   pinned?: boolean;
   chrome?: boolean;
+  /**
+   * Live camera→body distance in Mpc off the throttled time pub, or null when no
+   * distance is published. Rendered as a row on the non-star body branch only.
+   */
+  distanceMpc?: number | null;
   onFocus?: (target: FocusableTarget) => void;
   onClose?: () => void;
 };
@@ -48,6 +60,7 @@ function BodyDetailCard({
   target,
   pinned = false,
   chrome = true,
+  distanceMpc = null,
   onFocus,
   onClose,
 }: BodyDetailCardProps): ReactNode {
@@ -74,12 +87,18 @@ function BodyDetailCard({
       {aliases.length > 0 && <div className={styles.headlineAlias}>{aliases.join(' · ')}</div>}
 
       {/*
-        Non-star body (Earth, a planet, a moon): the physical radius straight off
-        the BodyInfo — no stellar sidecar, so this is all the card can show.
+        Non-star body (Earth, a planet, a moon): the physical radius is an
+        identity value straight off the BodyInfo; the distance is the live,
+        time-dependent row re-derived from the pub (dropped when no distance is
+        published, e.g. the initial null report). Phase / apparent magnitude are
+        not on the pub, so they are out of this surface — see the plan.
       */}
       {!isFamousStar && (
         <div className={styles.cardSection}>
           <CardRow label="Radius" value={`${target.radiusKm.toLocaleString()} km`} />
+          {distanceMpc != null && (
+            <CardRow label="Distance" value={formatDistance(distanceMpc)} />
+          )}
         </div>
       )}
 
