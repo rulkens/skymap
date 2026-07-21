@@ -43,7 +43,10 @@
    * promoted to a token because it's the only consumer.
    */
   border: 1px solid rgba(160, 200, 255, 0.14);
-  border-radius: var(--radius-xl);
+  /* Same corner curvature as the TimeBar pill below: its 999px full-round on a
+   * --time-toolbar-height box renders as a half-height radius, so the rail's two
+   * chromes read as one family without turning this taller panel into a stadium. */
+  border-radius: calc(var(--time-toolbar-height) / 2);
 
   color: var(--color-fg-base);
   font: var(--font-size-md) / var(--line-height-tight) var(--font-family-mono);
