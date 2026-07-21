@@ -102,6 +102,25 @@ describe('rankPaletteMatches — scene-body rows', () => {
     expect(hit?.kind === 'body' && hit.body).toBe(SCENE_EARTH);
   });
 
+  it('ranks an exact body match above a famous row that only matched in its description', () => {
+    // A famous entry whose *description* contains 'earth' scores low (~15);
+    // Earth the scene body is an exact *name* match (~1000). The body must
+    // outrank the famous row, even though famous rows are otherwise listed
+    // first — the regression the sectioned concatenation used to cause.
+    const earthlyFamous: FamousMetaEntry = {
+      id: 'ngc-earthish',
+      names: ['NGC 9999'],
+      description: 'A galaxy visible from Earth on a clear night.',
+      type: 'Sc',
+    };
+    const rows = rankPaletteMatches([earthlyFamous], [], [], 'earth');
+    const bodyIdx = rows.findIndex((r) => r.kind === 'body' && r.body.id === 'earth');
+    const famousIdx = rows.findIndex((r) => r.kind === 'famous');
+    expect(bodyIdx).toBeGreaterThanOrEqual(0);
+    expect(famousIdx).toBeGreaterThanOrEqual(0);
+    expect(bodyIdx).toBeLessThan(famousIdx);
+  });
+
   it('shows no body rows on an empty query (browse = famous + MW)', () => {
     const rows = rankPaletteMatches([M31], [], [], '');
     expect(rows.some((r) => r.kind === 'body')).toBe(false);

@@ -1,9 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { catalogDistanceFor } from '../../tools/catalog/catalogDistanceFor';
-import type {
-  Cf4CatalogIndex,
-  Cf4Record,
-} from '../../tools/parsers/cosmicflows4';
+import type { Cf4CatalogIndex, Cf4Record } from '../../tools/parsers/cosmicflows4';
 import type { HyperLedaShapeMap } from '../../tools/parsers/glade';
 import type { ParsedRecord } from '../../tools/parsers/common';
 import { Source } from '../../src/data/sources';
@@ -70,10 +67,7 @@ describe('catalogDistanceFor — HyperLEDA fallback', () => {
   it('uses HyperLEDA mod0 when CF4 has no match for the PGC', () => {
     const record = rec({ objID: 12345n });
     const hyperLeda: HyperLedaShapeMap = new Map([
-      [
-        '12345',
-        { pa: 0, axisRatio: 1, mod0: 28.0, e_mod0: 0.3 },
-      ],
+      ['12345', { pa: 0, axisRatio: 1, mod0: 28.0, e_mod0: 0.3 }],
     ]);
     const out = catalogDistanceFor(record, cf4Index([]), hyperLeda);
     expect(out).not.toBeNull();
@@ -119,5 +113,39 @@ describe('catalogDistanceFor — no-PGC records', () => {
     ]);
     const out = catalogDistanceFor(record, cf4, new Map());
     expect(out).toBeNull();
+  });
+});
+
+describe('catalogDistanceFor — curated local-volume seed', () => {
+  it('reaches a no-PGC record by 2MASS massId (the whole point of the seed)', () => {
+    // A blueshifted 2MRS row with no PGC — CF4/HyperLEDA can never match it,
+    // yet the seed must, keyed on its 2MASS designation.
+    const record = rec({ objID: 0n, massId: '12265643+1502507' });
+    const seed = new Map([['12265643+1502507', { distMpc: 13.5 }]]);
+    const out = catalogDistanceFor(record, cf4Index([]), new Map(), seed);
+    expect(out).not.toBeNull();
+    expect(out!.distMpc).toBeCloseTo(13.5, 3);
+    expect(out!.source).toBe('seed');
+  });
+
+  it('wins over CF4 even when the PGC also matches', () => {
+    const record = rec({ objID: 2557n, massId: '00424433+4116075' });
+    const cf4 = cf4Index([
+      { pgc: 2557, distMpc: 0.785, eDistMpc: 0.04, raDeg: 10.68, deDeg: 41.27 },
+    ]);
+    const seed = new Map([['00424433+4116075', { distMpc: 0.9 }]]);
+    const out = catalogDistanceFor(record, cf4, new Map(), seed);
+    expect(out!.source).toBe('seed');
+    expect(out!.distMpc).toBeCloseTo(0.9, 3);
+  });
+
+  it('falls through to CF4 when the massId is not seeded', () => {
+    const record = rec({ objID: 2557n, massId: 'unseeded' });
+    const cf4 = cf4Index([
+      { pgc: 2557, distMpc: 0.785, eDistMpc: 0.04, raDeg: 10.68, deDeg: 41.27 },
+    ]);
+    const seed = new Map([['someone-else', { distMpc: 0.9 }]]);
+    const out = catalogDistanceFor(record, cf4, new Map(), seed);
+    expect(out!.source).toBe('cf4');
   });
 });

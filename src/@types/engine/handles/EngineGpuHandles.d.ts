@@ -54,6 +54,7 @@ import type { VolumeFieldRenderer } from '../../rendering/VolumeFieldRenderer';
 import type { FlowFieldRenderer } from '../../rendering/FlowFieldRenderer';
 import type { VolumeUpsample } from '../../rendering/VolumeUpsample';
 import type { StarAggregateUpsample } from '../../rendering/StarAggregateUpsample';
+import type { BloomPyramid } from '../../rendering/BloomPyramid';
 import type { PickDebugOverlay } from '../../rendering/PickDebugOverlay';
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
@@ -332,6 +333,18 @@ export type EngineGpuHandles = {
    * pipeline + sampler + bind-group-layout via the pass's no-op destroy method.
    */
   starAggregateUpsample: StarAggregateUpsample | null;
+  /**
+   * Dual-filter bloom mip pyramid — owns the bright / downsample / upsample /
+   * fold pipelines that drive the `bloom0..bloom4` render-target rows and the
+   * strength-scaled fold back into HDR. Null until `initGpu` constructs it
+   * (same phase as `volumeUpsample` / `starAggregateUpsample`). Excluded from
+   * `isEngineReady` — every bloom content layer's `enabled` gate is exactly the
+   * `bloomPyramid !== null` handle-ready check, so a null handle silently drops
+   * the whole bloom sub-program. The `settings.bloom.enabled` toggle gates at
+   * frame-program build, not here. Stored so `destroy()` can release the small
+   * per-level + fold uniform buffers.
+   */
+  bloomPyramid: BloomPyramid | null;
   /**
    * Pick-buffer debug overlay — fullscreen colour-map of the r32uint
    * pick texture over the tone-mapped frame.  Null until `initGpu`

@@ -139,6 +139,14 @@ export const RAW_DATA = {
       'Hand-authored seed list of featured galaxy clusters, superclusters, and voids. Drives the structure-coverage POI build.',
   },
 
+  'localvolume.distances': {
+    path: 'data/seeds/local_volume_distances.seed.json',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Hand-curated redshift-independent distances (Mpc) for blueshifted local-volume galaxies that CF4 and the partial HyperLEDA cache both miss. Keyed by 2MASS XSC designation; consumed by the local-volume distance override in buildAllBins.',
+  },
+
   // ─── Famous (curated catalog) ──────────────────────────────────────────
 
   'famous.seed': {
@@ -154,6 +162,13 @@ export const RAW_DATA = {
     source: 'committed',
     description:
       'Hand-authored seed list of well-known stars (Sirius, Betelgeuse, the Sun, …). Drives the famous-stars build (generated render table + meta sidecar) and the Gaia dedup.',
+  },
+  'planet-facts.seed': {
+    path: 'data/seeds/planet_facts.seed.json',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Hand-authored fact sheets for every Solar-System body (planets + moons). Drives the planet-facts build (generated BODY_FACTS table for the InfoCard).',
   },
   'famous.curated': {
     path: 'data/seeds/famous_curated_overrides.json',

@@ -128,7 +128,7 @@ describe('LabelRenderer occlusion variant', () => {
       canvas: null as unknown as HTMLCanvasElement,
     };
     createLabelRenderer(ctx, ctx.format, FIXTURE_ATLASES, 64, 64, {
-      occludeAgainstDepth: true,
+      occludeAgainstDepth: 'coverage',
     });
 
     // Two BGLs: the label BGL (shared by both pipelines) + the occlusion depth BGL.

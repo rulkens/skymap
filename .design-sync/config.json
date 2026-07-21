@@ -1,0 +1,22 @@
+{
+  "projectId": "ff60d4fd-2768-443b-9e84-f8567fc10c25",
+  "pkg": "skymap",
+  "globalName": "SkymapUI",
+  "shape": "package",
+  "tsconfig": "tsconfig.json",
+  "cssEntry": ".design-sync/dist/styles-combined.css",
+  "readmeHeader": ".design-sync/conventions.md",
+  "guidelinesGlob": [],
+  "componentSrcMap": {
+    "InfoCard": "src/components/InfoCard/InfoCard.tsx",
+    "SettingsPanelPreview": ".design-sync/hud/SettingsPanelPreview.tsx"
+  },
+  "docsMap": {
+    "InfoCard": ".design-sync/docs/InfoCard.md",
+    "SettingsPanelPreview": ".design-sync/docs/SettingsPanelPreview.md"
+  },
+  "overrides": {
+    "InfoCard": { "cardMode": "column" },
+    "SettingsPanelPreview": { "cardMode": "column" }
+  }
+}

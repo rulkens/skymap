@@ -79,7 +79,24 @@ function makeStub(name: string): Stub {
 
 vi.mock('../../../../src/services/gpu/device', () => ({
   initGpu: vi.fn(async () => ({
-    device: { __mockDevice: true } as unknown as GPUDevice,
+    // `initGpu` constructs the real `createBloomPyramid(device, ...)` (it is not
+    // mocked like the renderer factories), which builds four shader modules,
+    // a sampler, a shared bind-group layout + pipeline layout, four render
+    // pipelines, and the per-level uniform buffers. The plain stub device needs
+    // those methods or construction throws. Each returns a minimal stub; the
+    // shader module carries `getCompilationInfo` because `createShaderModuleWithDevLog`
+    // consumes it under vitest's DEV env.
+    device: {
+      __mockDevice: true,
+      createShaderModule: vi.fn(() => ({
+        getCompilationInfo: () => Promise.resolve({ messages: [] }),
+      })),
+      createSampler: vi.fn(() => ({})),
+      createBindGroupLayout: vi.fn(() => ({})),
+      createPipelineLayout: vi.fn(() => ({})),
+      createRenderPipeline: vi.fn(() => ({})),
+      createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
+    } as unknown as GPUDevice,
     context: { __mockContext: true } as unknown as GPUCanvasContext,
     format: 'bgra8unorm' as GPUTextureFormat,
   })),

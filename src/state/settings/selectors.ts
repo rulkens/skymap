@@ -85,6 +85,17 @@ export const selectExposure = (state: RootState): number => selectSettings(state
 export const selectToneMapCurve = (state: RootState): ToneMapCurve =>
   selectSettings(state).tonemap.curve;
 
+// --- bloom cluster ------------------------------------------------------------
+
+export const selectBloomEnabled = (state: RootState): boolean =>
+  selectSettings(state).bloom.enabled;
+
+export const selectBloomStrength = (state: RootState): number =>
+  selectSettings(state).bloom.strength;
+
+export const selectBloomThreshold = (state: RootState): number =>
+  selectSettings(state).bloom.threshold;
+
 // --- bias cluster -------------------------------------------------------------
 
 export const selectBiasMode = (state: RootState): BiasMode => selectSettings(state).bias.mode;

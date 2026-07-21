@@ -11,6 +11,7 @@
  *   watchSelectionRowsSaga — keeps the selectionRows derived cache in sync with selection refs
  *   watchSelectionWakeSaga — wakes the render loop on select/focus writes (hover excluded)
  *   watchRequestFocusSaga  — resolves a durable focus id to a ref, deferring on catalogLoaded
+ *   watchRequestSelectSaga — resolves a durable focus id to a ref and PINS it in the select slot
  *   watchFocusTweenSaga    — builds + dispatches the camera tween on every focus ref change
  *   watchTourSaga          — starts a guidedTourSaga run on each startTour (takeLatest — single-instance)
  *   watchTourKeyboardSaga  — binds the tour nav keys (→/←/Space) only while a tour runs
@@ -44,6 +45,7 @@ import { watchFadesSaga } from './effects/watchFadesSaga';
 import { watchSelectionRowsSaga } from '../state/selectionRows/watchSelectionRowsSaga';
 import { watchSelectionWakeSaga } from '../state/selection/watchSelectionWakeSaga';
 import { watchRequestFocusSaga } from '../state/selection/watchRequestFocusSaga';
+import { watchRequestSelectSaga } from '../state/selection/watchRequestSelectSaga';
 import { watchFocusTweenSaga } from '../state/selection/watchFocusTweenSaga';
 import { watchTourSaga } from '../state/tour/watchTourSaga';
 import { watchTourKeyboardSaga } from '../state/tour/watchTourKeyboardSaga';
@@ -62,6 +64,7 @@ export function* mainSaga() {
     watchSelectionRowsSaga(),
     watchSelectionWakeSaga(),
     watchRequestFocusSaga(),
+    watchRequestSelectSaga(),
     watchFocusTweenSaga(),
     watchTourSaga(),
     watchTourKeyboardSaga(),

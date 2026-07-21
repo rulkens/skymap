@@ -3,11 +3,12 @@
  * writes. Table order fixes the on-URL layout: `composeHashParams` emits values
  * in this order, so two identical states always produce byte-identical hashes.
  *
- * Only `focus` exists today. The write reuses `URL_HASH_FOR` (the FocusableTarget
- * → id-segment codec); the read reproduces the original single-param behaviour
- * exactly:
+ * The `focus` write reuses `URL_HASH_FOR` (the FocusableTarget → id-segment
+ * codec); the read makes a URL arrival look like a scene click plus a fly:
  *
- *   - a non-empty `focus=<id>`     ⇒ `requestFocus(id)`  (always, mount included)
+ *   - a non-empty `focus=<id>`     ⇒ `requestSelect(id)` (pins the InfoCard) +
+ *                                     `requestFocus(id)` (flies the camera),
+ *                                     always, mount included
  *   - an absent / empty `focus`    ⇒ `clearSelection()`  but ONLY on a hashchange
  *                                     (`isInitial === false`); the mount pass
  *                                     never clears, so a plain page load with no
@@ -22,6 +23,7 @@
 import type { HashParamSource } from '../@types/hooks/HashParamSource';
 import { URL_HASH_FOR } from './urlHashFor';
 import { requestFocus } from '../state/selection/requestFocus';
+import { requestSelect } from '../state/selection/requestSelect';
 import { clearSelection } from '../state/selection/selectionSlice';
 import { enterManualPausedAt } from '../state/time/enterManualPausedAt';
 import { julianDaysToUnixMs } from '../utils/time/julianDaysToUnixMs';
@@ -36,8 +38,10 @@ const focusSource: HashParamSource = {
     return URL_HASH_FOR[input.focused.type](input.focused) || null;
   },
   read: ({ value, isInitial, dispatch }) => {
-    if (value) dispatch(requestFocus(value));
-    else if (!isInitial) dispatch(clearSelection());
+    if (value) {
+      dispatch(requestSelect(value));
+      dispatch(requestFocus(value));
+    } else if (!isInitial) dispatch(clearSelection());
   },
 };
 

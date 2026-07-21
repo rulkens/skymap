@@ -1,20 +1,22 @@
 /**
  * rankPaletteMatches — the command palette's pure ranking pipeline.
  *
- * Filters + ranks the three parallel indexes (the curated famous atlas, the
- * PGC-keyed alias index, and the large-scale structure catalog) against the
- * current query, plus the always-present Milky Way row, into one ordered
- * `ScoredRow[]` ready to render.  Pulled out of the component so it has no
- * React / DOM dependency and can be tested in isolation.
+ * Filters + ranks the parallel indexes (the curated famous atlas, the seeded
+ * scene bodies, the PGC-keyed alias index, and the large-scale structure
+ * catalog) against the current query, plus the always-present Milky Way row,
+ * into one ordered `ScoredRow[]` ready to render.  Pulled out of the component
+ * so it has no React / DOM dependency and can be tested in isolation.
  *
  * Empty query shows the full famous atlas in seed-file order so the user can
- * browse without typing — alias and structure entries are NOT shown for empty
- * queries (48k aliases / ~370 structures) because rendering the full list
+ * browse without typing — alias, body, and structure entries are NOT shown for
+ * empty queries (48k aliases / ~370 structures) because rendering the full list
  * every time the palette opens would be a DOM-thrashing disaster.
  *
- * Non-empty query: score every index, sort, slice the alias/structure lists to
- * a reasonable cap, and concatenate (famous first because famous always wins
- * ties — see FAMOUS_TIEBREAK; structures after aliases).
+ * Non-empty query: score every index and sort.  Famous rows and seeded scene
+ * bodies (Earth, the planets, the stars) are one class of "primary named
+ * object" and share a single score-sorted list, so an exact body match like
+ * "earth" outranks a famous row that only matched "earth" in its description.
+ * The alias and structure lists are scored, capped, and appended after.
  */
 import { scoreFamousMatch } from './scoreFamousMatch';
 import { scoreAliasMatch } from './scoreAliasMatch';
@@ -43,14 +45,14 @@ const MAX_ALIAS_RESULTS = 50;
 const MAX_STRUCTURE_RESULTS = 50;
 
 /**
- * Famous-row tiebreak boost.  Added to every famous-row score so that
- * when a famous entry and an alias entry both score "name starts with
- * query", the famous one ranks higher.  Set just over the largest
- * possible length-bonus to avoid an alias's longer query bonus
- * leapfrogging a famous match — queries are realistically <16 chars,
- * so a +1 boost would be enough; we use +5 for safety.
+ * Primary-row tiebreak boost.  Added to every famous-row and scene-body score
+ * so that when a primary named object and an alias both score "name starts with
+ * query", the primary one ranks higher.  Set just over the largest possible
+ * length-bonus so an alias's longer-query bonus can't leapfrog a primary match
+ * — queries are realistically <16 chars, so a +1 boost would be enough; we use
+ * +5 for safety.
  */
-const FAMOUS_TIEBREAK = 5;
+const PRIMARY_TIEBREAK = 5;
 
 export function rankPaletteMatches(
   entries: readonly FamousMetaEntry[],
@@ -74,14 +76,11 @@ export function rankPaletteMatches(
   }
 
   const famousScored: ScoredRow[] = entries
-    .map<ScoredRow>((entry) => ({
-      kind: 'famous',
-      entry,
-      score:
-        scoreFamousMatch(entry, query) + (scoreFamousMatch(entry, query) > 0 ? FAMOUS_TIEBREAK : 0),
-    }))
+    .map<ScoredRow>((entry) => {
+      const raw = scoreFamousMatch(entry, query);
+      return { kind: 'famous', entry, score: raw > 0 ? raw + PRIMARY_TIEBREAK : 0 };
+    })
     .filter((s) => s.score > 0);
-  famousScored.sort((a, b) => b.score - a.score);
 
   // Seeded scene bodies (Earth, the stars, the planets) are scored like a famous
   // row; they skip the empty-query browse list (like aliases/structures) so
@@ -95,16 +94,18 @@ export function rankPaletteMatches(
   // their single label.
   const bodyScored: ScoredRow[] = SCENE_BODIES.map<ScoredRow>((body) => {
     const search = FAMOUS_STAR_SEARCH.get(body.id);
-    return {
-      kind: 'body',
-      body,
-      score: scoreFamousMatch(
-        { id: body.id, names: search ? search.names : [body.label], description: '' },
-        query,
-      ),
-    };
+    const raw = scoreFamousMatch(
+      { id: body.id, names: search ? search.names : [body.label], description: '' },
+      query,
+    );
+    return { kind: 'body', body, score: raw > 0 ? raw + PRIMARY_TIEBREAK : 0 };
   }).filter((s) => s.score > 0);
-  bodyScored.sort((a, b) => b.score - a.score);
+
+  // Famous rows and scene bodies are one class of primary named object: merge
+  // and sort together so an exact body match ("earth") outranks a famous row
+  // that only matched "earth" in its description. The sort is stable, so a
+  // famous row stays ahead of a body on an exact score tie (famous listed first).
+  const primaryScored = [...famousScored, ...bodyScored].sort((a, b) => b.score - a.score);
 
   const aliasScored: ScoredRow[] = (aliasIndex ?? [])
     .map<ScoredRow>((entry) => ({
@@ -139,8 +140,7 @@ export function rankPaletteMatches(
 
   return [
     ...(milkyWayRow ? [milkyWayRow] : []),
-    ...famousScored,
-    ...bodyScored,
+    ...primaryScored,
     ...aliasCapped,
     ...structureCapped,
   ];

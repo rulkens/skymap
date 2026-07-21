@@ -20,21 +20,31 @@ export type Compositor = {
    * Composite the source texture onto the target within the given render pass.
    *
    * The implementation selects a pipeline from its internal cache keyed by
-   * (blend, dstFormat of the pass target). When `tone` is non-null, the
-   * tone-map curve and exposure are applied; when null, the source is
-   * treated as already LDR and passed through unchanged.
+   * (blend, dstFormat). When `tone` is non-null, the tone-map curve and
+   * exposure are applied; when null, the source is treated as already LDR and
+   * passed through unchanged.
    *
-   * @param pass   GPU render pass encoder (assumed to have a color attachment
-   *               ready to receive the composite result).
-   * @param src    Texture view containing the source to composite.
-   * @param blend  Blend mode (determines how src combines with the target).
-   * @param tone   Tone-mapping parameters, or null for LDR pass-through.
+   * `dstFormat` is the format of the render pass's colour attachment, supplied
+   * by the caller because a render-pass encoder cannot be queried for its own
+   * target format. It is threaded from the composite's *dest target*, NOT
+   * derived from the blend — the same blend (`over`) can target either the
+   * swap chain or the HDR buffer, and the pipeline's baked target format has to
+   * match whichever attachment the pass actually carries.
+   *
+   * @param pass       GPU render pass encoder (assumed to have a color
+   *                   attachment ready to receive the composite result).
+   * @param src        Texture view containing the source to composite.
+   * @param blend      Blend mode (determines how src combines with the target).
+   * @param tone       Tone-mapping parameters, or null for LDR pass-through.
+   * @param dstFormat  Colour-attachment format of `pass` — the dest target's
+   *                   format; the second half of the pipeline cache key.
    */
   draw(
     pass: GPURenderPassEncoder,
     src: GPUTextureView,
     blend: CompositeBlend,
     tone: ToneMap | null,
+    dstFormat: GPUTextureFormat,
   ): void;
   /** Tear down — releases GPU resources (pipelines, bind groups, uniform buffers). */
   destroy(): void;

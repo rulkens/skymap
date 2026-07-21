@@ -43,6 +43,9 @@ import {
 import {
   DEFAULT_ABS_MAG_LIMIT,
   DEFAULT_BIAS_MODE,
+  DEFAULT_BLOOM_ENABLED,
+  DEFAULT_BLOOM_STRENGTH,
+  DEFAULT_BLOOM_THRESHOLD,
   DEFAULT_BRIGHTNESS,
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_EXPOSURE,
@@ -94,6 +97,11 @@ export function makeSettingsFixture(
       ) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>,
     },
     tonemap: { exposure: DEFAULT_EXPOSURE, curve: DEFAULT_TONE_MAP_CURVE },
+    bloom: {
+      enabled: DEFAULT_BLOOM_ENABLED,
+      strength: DEFAULT_BLOOM_STRENGTH,
+      threshold: DEFAULT_BLOOM_THRESHOLD,
+    },
     bias: { mode: DEFAULT_BIAS_MODE, absMagLimit: DEFAULT_ABS_MAG_LIMIT },
     thumbnails: { enabled: DEFAULT_GALAXY_TEXTURES_ENABLED },
     milkyWay: {

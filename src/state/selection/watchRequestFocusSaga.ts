@@ -1,28 +1,24 @@
 /**
- * watchRequestFocusSaga — the deep-link / palette command handler. requestFocus
- * carries a durable focus id; this resolves it to a ref via resolveFocusId,
- * DEFERRING on catalogLoaded while the id is unresolvable (the cloud for a deep
- * link, or a tier galaxy still fetching). Once resolved it dispatches
- * updateSelectionFocus(ref); the watchSelectionRowsSaga reconciler then fills the
- * row off that write. takeLatest aborts a stale deferral if a newer requestFocus
- * arrives. This is the single command->ref bridge; React never resolves ids.
+ * watchRequestFocusSaga — the deep-link / palette FLY command handler.
+ * requestFocus carries a durable focus id; this resolves it to a ref via the
+ * shared resolveFocusRefDeferring loop, which DEFERS while the id is unresolvable
+ * on BOTH catalog-commit pulses — catalogLoaded (the galaxy cloud) AND
+ * engineSourceCountReported (every source's count pulse, incl. the Gaia star bin,
+ * which never fires catalogLoaded), so a star deep link resolves too. Once
+ * resolved it dispatches updateSelectionFocus(ref); the watchSelectionRowsSaga
+ * reconciler then fills the row off that write. takeLatest aborts a stale
+ * deferral if a newer requestFocus arrives. Its sibling watchRequestSelectSaga
+ * writes the select slot off the same shared loop; React never resolves ids.
  */
-import { takeLatest, take, put, getContext } from 'typed-redux-saga';
+import { takeLatest, put } from 'typed-redux-saga';
 
 import { requestFocus } from './requestFocus';
 import { updateSelectionFocus } from './selectionSlice';
-import { catalogLoaded } from '../catalog/catalogLoaded';
-import { resolveFocusId } from '../../services/url/resolveFocusId';
-import type { SagaContext } from '../../store/types';
+import { resolveFocusRefDeferring } from './resolveFocusRefDeferring';
 
 export function* watchRequestFocusSaga() {
   yield* takeLatest(requestFocus, function* (action) {
-    const resolveDeps = yield* getContext<SagaContext['resolveDeps']>('resolveDeps');
-    let ref = resolveFocusId(action.payload, resolveDeps());
-    while (!ref) {
-      yield* take(catalogLoaded);
-      ref = resolveFocusId(action.payload, resolveDeps());
-    }
+    const ref = yield* resolveFocusRefDeferring(action.payload);
     yield* put(updateSelectionFocus(ref));
   });
 }

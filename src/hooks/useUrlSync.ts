@@ -6,12 +6,14 @@
  *
  *   A. Hash READ (mount + hashchange listener)
  *      Parses `#focus=<id>` from the URL on mount and on every
- *      subsequent hashchange. A match dispatches `requestFocus(id)`.
+ *      subsequent hashchange. A match dispatches BOTH `requestSelect(id)`
+ *      (pins the InfoCard) and `requestFocus(id)` (flies the camera), so
+ *      arriving by URL looks the same as a scene click plus a fly.
  *      An empty or unrecognised hash dispatches `clearSelection()`,
  *      but ONLY on hashchange events (back/forward navigation) — not
  *      on the initial mount call, which would fire a spurious
- *      `clearSelection` on every normal page load. The
- *      `watchRequestFocusSaga` owns resolution and deferral.
+ *      `clearSelection` on every normal page load. The two watch sagas
+ *      own resolution and deferral.
  *
  *   B. URL WRITE (runs on every store-derived `focused` change)
  *      Reads `selectFocusedFocusable` from the Redux store and
@@ -118,7 +120,9 @@ export function useUrlSync(): void {
 
   // ── Effect A: hash READ → dispatch ───────────────────────────────────
   // Parse the URL once on mount and on every subsequent hashchange.
-  // A `focus=<id>` match always dispatches `requestFocus(id)`.
+  // A `focus=<id>` match dispatches BOTH `requestSelect(id)` (pins the
+  // InfoCard) and `requestFocus(id)` (flies the camera), so a URL arrival
+  // looks the same as a scene click plus a fly.
   // An empty or unrecognised hash dispatches `clearSelection()` only on
   // hashchange (back/forward navigation) — not on the initial mount call,
   // which would fire a spurious `clearSelection` on every normal page load.

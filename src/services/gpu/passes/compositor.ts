@@ -180,16 +180,22 @@ const BLEND_TABLE: Record<
 /**
  * createCompositor — build the unified composite primitive.
  *
+ * `swapFormat` / `hdrFormat` are accepted for call-site stability but are no
+ * longer used to derive the dst format: each draw now carries its own
+ * `dstFormat`, resolved by the caller from the composite's dest target (see
+ * `draw`). A blend no longer implies a single format — `over` can target the
+ * swap chain OR the HDR buffer — so the format has to ride in per draw.
+ *
  * @param init.device      GPU device (mockable in tests).
- * @param init.swapFormat  dst format for `replace` and `over` (→ swap chain).
- * @param init.hdrFormat   dst format for `additive` (→ HDR target).
+ * @param init.swapFormat  Retained for signature stability; unused here.
+ * @param init.hdrFormat   Retained for signature stability; unused here.
  */
 export function createCompositor(init: {
   device: GPUDevice;
   swapFormat: GPUTextureFormat;
   hdrFormat: GPUTextureFormat;
 }): Compositor {
-  const { device, swapFormat, hdrFormat } = init;
+  const { device } = init;
 
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'compositor.vertex');
   const fsModule = createShaderModuleWithDevLog(device, fsCode, 'compositor.fragment');
@@ -220,16 +226,10 @@ export function createCompositor(init: {
     bindGroupLayouts: [bindGroupLayout],
   });
 
-  // dst format per blend — the second half of the cache key. `replace`
-  // and `over` target the swap chain; `additive` targets the HDR buffer.
-  const dstFormatFor: Record<CompositeBlend, GPUTextureFormat> = {
-    replace: swapFormat,
-    over: swapFormat,
-    additive: hdrFormat,
-  };
-
   // Lazy pipeline + per-entry uniform-buffer cache. See module header for
-  // both the key composition and the one-buffer-per-entry rationale.
+  // both the key composition and the one-buffer-per-entry rationale. The dst
+  // format is no longer derived from the blend — it arrives per draw from the
+  // dest target, so the same blend can key two entries for two formats.
   const cache = new Map<string, { pipeline: GPURenderPipeline; uniformBuffer: GPUBuffer }>();
 
   // Mixed f32/u32 uniform — pack via two views over one 32-byte
@@ -240,11 +240,13 @@ export function createCompositor(init: {
   const uniformF32 = new Float32Array(uniformBytes);
   const uniformU32 = new Uint32Array(uniformBytes);
 
-  function entryFor(blend: CompositeBlend): {
+  function entryFor(
+    blend: CompositeBlend,
+    dstFormat: GPUTextureFormat,
+  ): {
     pipeline: GPURenderPipeline;
     uniformBuffer: GPUBuffer;
   } {
-    const dstFormat = dstFormatFor[blend];
     const key = `${blend}:${dstFormat}`;
     const existing = cache.get(key);
     if (existing) return existing;
@@ -279,8 +281,9 @@ export function createCompositor(init: {
       src: GPUTextureView,
       blend: CompositeBlend,
       tone: ToneMap | null,
+      dstFormat: GPUTextureFormat,
     ): void {
-      const entry = entryFor(blend);
+      const entry = entryFor(blend, dstFormat);
 
       if (tone) {
         // Clamp at point of use: the store holds raw intent, this pass

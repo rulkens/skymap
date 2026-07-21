@@ -62,6 +62,7 @@ import { createVolumeFieldRenderer } from '../../gpu/renderers/volumeField/volum
 import { createFlowFieldRenderer } from '../../gpu/renderers/flowField/flowFieldRenderer';
 import { createVolumeUpsample } from '../../gpu/passes/volumeUpsample';
 import { createStarAggregateUpsample } from '../../gpu/passes/starAggregateUpsample';
+import { createBloomPyramid } from '../../gpu/passes/bloomPyramid';
 import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
 import { createDiskRadiusRing } from '../../gpu/renderers/devTools/diskRadiusRing';
 import { createEarthRenderer } from '../../gpu/renderers/bodies/earthRenderer';
@@ -214,14 +215,35 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   const uiCtx = { device, context, format, canvas };
 
   const fontAtlases = await loadFontAtlases();
-  state.gpu.labelRenderer = createLabelRenderer(uiCtx, format, fontAtlases);
-  state.gpu.markerLineRenderer = createMarkerLineRenderer(uiCtx, format);
+  // `{ occludeAgainstDepth: 'coverage' }` opts these COSMO overlays into
+  // per-pixel occlusion behind nearer solar-system bodies. COVERAGE, not
+  // COMPARE: the COSMO overlays project through a different slab than the
+  // NEAR0 bodies, so their window-Z is incomparable to the stored body depth —
+  // a depth compare would never fire and cosmological labels would paint over
+  // the Sun. Any body depth written at the pixel occludes them (see
+  // lib/sceneDepth.wesl). `labelsLayer` / `markerLinesLayer` hand each `draw`
+  // the guarded `foreground:0` depth view. `maxLabels` / `maxGlyphsPerLabel` /
+  // `maxLines` default via `undefined` to reach the trailing opts slot.
+  state.gpu.labelRenderer = createLabelRenderer(uiCtx, format, fontAtlases, undefined, undefined, {
+    occludeAgainstDepth: 'coverage',
+  });
+  state.gpu.markerLineRenderer = createMarkerLineRenderer(uiCtx, format, undefined, {
+    occludeAgainstDepth: 'coverage',
+  });
   // Dedicated debug-line renderer for the clip-path inspector overlay. Same
   // swap-chain ctx as the marker lines (UI overlay, drawn post-tone-map), but
   // its own pipeline + buffers so the debug viz never touches the label
   // director's reconcile path.
   state.gpu.debugLineRenderer = createDebugLineRenderer(uiCtx, format);
-  state.gpu.selectionRingRenderer = createSelectionRingRenderer(uiCtx, format);
+  // `{ occludeAgainstDepth: 'coverage' }` opts the COSMO selection ring into the
+  // same cross-slab COVERAGE occlusion as the label + marker-line overlays
+  // above — its window-Z is incomparable to the NEAR0 body depth, so any body
+  // depth written at the pixel occludes it. `selectionRingLayer` hands each
+  // `draw` the guarded `foreground:0` depth view. The shared NEAR0 sibling
+  // passes no depth view, so it always draws through the plain pipeline.
+  state.gpu.selectionRingRenderer = createSelectionRingRenderer(uiCtx, format, {
+    occludeAgainstDepth: 'coverage',
+  });
   // HDR pass — writes into the rgba16float offscreen target, NOT the
   // swap chain.  The fadeBgl placeholder at @group(1) must match what the
   // other HDR passes (filaments) bind at the same slot on the shared
@@ -393,6 +415,16 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // the HDR and the star-aggregates rows share that format.
   state.gpu.starAggregateUpsample = createStarAggregateUpsample(device, 'rgba16float');
 
+  // ── Bloom mip pyramid (bright / downsample / upsample / fold) ──────
+  //
+  // Built unconditionally alongside the other post-process passes; the four
+  // pipelines are cheap and the `bloom0..bloom4` mip textures live on
+  // `renderTargets` (recreated on resize), so nothing here depends on viewport
+  // size. Targets 'rgba16float' — the HDR + every bloom row share that format.
+  // The bloom content layers gate on `state.gpu.bloomPyramid !== null`; the
+  // `settings.bloom.enabled` master toggle gates at frame-program build.
+  state.gpu.bloomPyramid = createBloomPyramid(device, 'rgba16float');
+
   // ── Pick-buffer debug overlay ────────────────────────────────────
   //
   // Fullscreen pass that samples the r32uint pick texture and writes a
@@ -523,18 +555,23 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // 64-label default: setLabels clamps at maxLabels, so the default would
   // silently drop captions once the seed table outgrew it (the roster already
   // exceeds 64 and climbs toward ~130). The derived capacity tracks the roster.
-  // `{ occludeAgainstDepth: true }` opts this near-field caption instance into
-  // per-pixel occlusion behind nearer solar-system bodies — `foregroundLabelsLayer`
-  // hands its `draw` the `foreground:0` scene depth view each frame. The COSMO
-  // `labelRenderer` above stays non-occluding (no opts). `maxGlyphsPerLabel`
-  // defaults via `undefined` to reach the trailing opts slot.
+  // `{ occludeAgainstDepth: 'compare' }` opts this near-field caption instance
+  // into per-pixel occlusion behind nearer solar-system bodies —
+  // `foregroundLabelsLayer` hands its `draw` the `foreground:0` scene depth view
+  // each frame. COMPARE, not COVERAGE: these captions live in the SAME NEAR0
+  // reversed-Z slab as the bodies, so their window depth is directly comparable
+  // to the stored body depth — the compare keeps a caption visible over its OWN
+  // body while hiding it behind a nearer one (coverage would wrongly hide it).
+  // The COSMO `labelRenderer` above uses 'coverage' precisely because its slab
+  // differs. `maxGlyphsPerLabel` defaults via `undefined` to reach the trailing
+  // opts slot.
   state.gpu.foregroundLabelRenderer = createLabelRenderer(
     uiCtx,
     format,
     fontAtlases,
     FOREGROUND_LABEL_CAPACITY,
     undefined,
-    { occludeAgainstDepth: true },
+    { occludeAgainstDepth: 'compare' },
   );
   // Bootstrap seed at the J2000 epoch — `foregroundLabelsLayer` overwrites this
   // with the live per-frame snapshot on its first draw, so this only needs a
@@ -552,11 +589,13 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // origin-distance cancellation dodge it applies to the caption anchors. No
   // bootstrap seed: the connectors are geometry derived per frame from the
   // caption anchors, not a static set.
-  // Same occlusion opt-in as the caption sibling above: the leader lines occlude
-  // behind nearer bodies too. `maxLines` defaults via `undefined` to reach the
-  // trailing opts slot. The COSMO `markerLineRenderer` stays non-occluding.
+  // Same COMPARE occlusion as the caption sibling above: the leader lines share
+  // the NEAR0 slab with the bodies, so their window depth is comparable — occlude
+  // by depth compare, not coverage. `maxLines` defaults via `undefined` to reach
+  // the trailing opts slot. The COSMO `markerLineRenderer` uses 'coverage'
+  // because its slab differs.
   state.gpu.foregroundMarkerLineRenderer = createMarkerLineRenderer(uiCtx, format, undefined, {
-    occludeAgainstDepth: true,
+    occludeAgainstDepth: 'compare',
   });
 
   // ── Earth (Plan 02 — zoom-to-Earth) ──────────────────────────────────

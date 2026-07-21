@@ -85,10 +85,15 @@ export function renderFrame(input: RenderFrameInput): void {
     encoder,
     ctx,
     state,
-    program: frameProgram({
-      exposure: state.settings.tonemap.exposure,
-      curve: state.settings.tonemap.curve,
-    }),
+    program: frameProgram(
+      {
+        exposure: state.settings.tonemap.exposure,
+        curve: state.settings.tonemap.curve,
+      },
+      // The master bloom toggle is the ONLY bloom value that shapes the step
+      // list; strength/threshold are read live by the bloom layers each draw.
+      state.settings.bloom.enabled,
+    ),
     layers: CONTENT_LAYERS,
     strategy,
     timing: timingService,

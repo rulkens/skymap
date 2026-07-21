@@ -18,6 +18,8 @@ import { MILKY_WAY_INFO } from '../../../data/milkyWay/milkyWayInfo';
 import CardHeader from '../CardHeader/CardHeader';
 import CardRow from '../CardRow/CardRow';
 import DescriptionBlock from '../DescriptionBlock/DescriptionBlock';
+import { InfoTip } from '../../InfoTip/InfoTip';
+import { TIPS } from '../tooltips';
 import styles from '../cardChrome.module.css';
 import mw from './MilkyWayDetailCard.module.css';
 
@@ -55,7 +57,9 @@ function MilkyWayDetailCard({
           🌌
         </div>
         <div className={styles.cardSummary}>
-          <div className={styles.cardTypeLine}>{target.typeString}</div>
+          <div className={styles.cardTypeLine}>
+            <InfoTip {...TIPS.morphology!}>{target.typeString}</InfoTip>
+          </div>
           <div className={styles.cardDistLine}>{target.distanceNote}</div>
         </div>
       </div>
