@@ -103,7 +103,8 @@ npm run test:watch  # vitest watch mode
 npm run build-all   # regenerate public/data/*.bin from raw catalogs
 npm run build-tiers # alias for build-all — emits per-tier .bin variants
 npm run format      # prettier
-npm run move-files  # move/rename TS files, imports auto-rewritten (see .claude/skills/move-files)
+npm run move-files  # move/rename TS files, imports auto-rewritten (see .claude/skills/refactor)
+npm run refactor    # ts-morph refactoring CLI (rename/extract/inline/delete/refs/move) → .claude/skills/refactor/SKILL.md
 npm run record-tour # offline 4K tour recorder → tools/record/README.md
 npm run perf        # headless GPU-timing harness → tools/perf/README.md
 ```
@@ -259,7 +260,7 @@ A new fetcher script that mirrors `tools/fetch/fetchHyperLeda.ts` or `tools/fetc
 - **"fix this bug"** → check tests first; the project favours reproducing bugs as failing tests, then fixing.
 - **"why is this slow?"** → **measure first**: `npm run perf` (see `tools/perf/README.md`) gives per-pass GPU medians, per-layer attribution with the pass-overhead floor separated out, and a `--sweep` fragment-vs-vertex-bound classifier — get a number before theorizing. CPU-side mental model: per-frame work scales with on-screen galaxies (~2.5M total); inner-loop trig and `Math.sqrt` are real costs. Hoist constants, gate with squared distances, avoid per-galaxy `Math.tan`.
 - **"refactor X"** → keep the services/ layout. Cross-cutting helpers go in `utils/`; rendering subsystems in `services/gpu/`. Tests mirror the src tree. Any file move/rename goes through `npm run move-files` (next entry), not `git mv` + hand-edited imports.
-- **"move/rename/relocate a file"** (incl. folder reorgs) → `npm run move-files -- <from> <to>`, or `-- --manifest <moves.json>` for a batch. ts-morph rewrites every relative import project-wide and drags the `tests/` mirror along; run `--dry` first. Hand-editing import paths after a move is always the wrong plan. Not covered: `.wesl` `package::` imports + string-literal paths — grep for the old path afterwards. Details in `.claude/skills/move-files/SKILL.md`.
+- **"move/rename/relocate a file"** (incl. folder reorgs) → `npm run move-files -- <from> <to>`, or `-- --manifest <moves.json>` for a batch. ts-morph rewrites every relative import project-wide and drags the `tests/` mirror along; run `--dry` first. Hand-editing import paths after a move is always the wrong plan. Not covered: `.wesl` `package::` imports + string-literal paths — grep for the old path afterwards. `npm run refactor -- move <from> <to>` is the canonical spelling. Details in `.claude/skills/refactor/SKILL.md`.
 - **"why does the renderer use index Y?"** → check `pointRenderer.ts` SLOTS_PER_POINT and the matching attribute layout in the shader. They must agree byte-for-byte.
 
 ## Things that have bitten us before
