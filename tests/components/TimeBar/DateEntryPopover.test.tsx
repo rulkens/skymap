@@ -49,6 +49,19 @@ describe('DateEntryPopover', () => {
     expect(props.onCommit).toHaveBeenCalledWith(new Date(Date.UTC(2027, 2, 14, 9, 26)));
   });
 
+  it('does not commit a blank input on Set', () => {
+    const props = renderPopover();
+    const input = screen.getByLabelText(/date and time \(utc\)/i) as HTMLInputElement;
+
+    // Clearing to blank makes the value unparseable; Set must no-op rather than
+    // hand back an Invalid Date. Cancel isn't fired either — the popover stays open.
+    fireEvent.change(input, { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: /set/i }));
+
+    expect(props.onCommit).not.toHaveBeenCalled();
+    expect(props.onCancel).not.toHaveBeenCalled();
+  });
+
   it('cancels on Esc', () => {
     const props = renderPopover();
     const input = screen.getByLabelText(/date and time \(utc\)/i);

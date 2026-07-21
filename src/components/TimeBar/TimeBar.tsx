@@ -61,6 +61,7 @@ function TimeBar({
     <div
       className={cx(styles.root, styles[mode], hidden && styles.hidden)}
       aria-hidden={hidden || undefined}
+      role="toolbar"
       aria-label="Time controls"
     >
       <button

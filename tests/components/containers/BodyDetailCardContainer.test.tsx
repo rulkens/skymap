@@ -30,6 +30,27 @@ vi.mock('../../../src/hooks/useFamousStarsMeta', () => ({
   useFamousStarsMeta: () => ({ famousStarsMeta: [], ready: true }),
 }));
 
+// Render probe: wrap the real BodyDetailCard so we can count how many times the
+// container actually renders it. The wrapper renders the genuine component (so the
+// text assertions below still see real output); it just increments a counter each
+// time the container hands it fresh props. A same-distance pub tick must leave the
+// counter untouched — that's the memo/selector suppression, proven by mechanism
+// rather than by output stability alone. The `mock` prefix lets vitest's hoisted
+// factory reference the counter.
+const mockCardRenderProbe = { count: 0 };
+vi.mock('../../../src/components/InfoCard/BodyDetailCard/BodyDetailCard', async () => {
+  const actual = await vi.importActual<
+    typeof import('../../../src/components/InfoCard/BodyDetailCard/BodyDetailCard')
+  >('../../../src/components/InfoCard/BodyDetailCard/BodyDetailCard');
+  return {
+    ...actual,
+    default: (props: Parameters<typeof actual.default>[0]) => {
+      mockCardRenderProbe.count += 1;
+      return createElement(actual.default, props);
+    },
+  };
+});
+
 const jupiter: BodyInfo = {
   type: 'body',
   id: 'jupiter',
@@ -84,8 +105,11 @@ describe('BodyDetailCardContainer', () => {
       wrapper: makeWrapper(store),
     });
 
-    // The clock advances but the body's distance is unchanged. The identity rows
-    // read nothing off the pub, so they stay exactly as they were.
+    const rendersBeforeTick = mockCardRenderProbe.count;
+
+    // The clock advances but the body's distance is unchanged. The selector reads a
+    // primitive, so react-redux bails the container out — the card is never re-rendered
+    // and the identity rows stay exactly as they were.
     act(() => {
       store.dispatch(
         engineTimeReported({
@@ -95,6 +119,7 @@ describe('BodyDetailCardContainer', () => {
       );
     });
 
+    expect(mockCardRenderProbe.count).toBe(rendersBeforeTick);
     expect(screen.getByText('Jupiter')).toBeInTheDocument();
     expect(screen.getByText('Radius')).toBeInTheDocument();
     expect(screen.getByText('69,911 km')).toBeInTheDocument();
