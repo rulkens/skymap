@@ -80,6 +80,14 @@ export function* watchFocusTweenSaga() {
       }
       if (row === null) return;
 
+      // A scene body is FOLLOWED by the camera's `followBody` driver, not tweened.
+      // The tween compiles fixed vec3 endpoints and cannot track a body the sim
+      // clock is moving, so the follow driver — activated purely by the focus
+      // selection — owns body targets. Return before building any tween so the
+      // two never both author the camera; non-body rows (galaxy / structure /
+      // Milky Way / star) still tween below.
+      if (row.type === 'body') return;
+
       // A focus that resolves during bootstrap can outrun the camera: the ref is
       // known but `state.cam` (hence `cameraRuntime()`) isn't built until wireInput
       // runs. Defer on the engine-status pulse — the first one past bootstrap fires

@@ -25,18 +25,23 @@
  * winner, guaranteeing that the driver's `pose` and the commit-on-edge guard
  * never disagree (invariant 1 of the frame-ordering contract).
  *
- * `buildCameraDrivers` produces the five-row table that reads directly from the
- * Redux store. Each driver's `isActive` and `pose` read `s.camera.*`, so the
- * resolver needs only the store `RootState` to work; `cam` is still forwarded
- * to the `orbitDrag` driver, which reads `state.cam` (the gesture register) for
- * its live yaw/pitch/distance. The `_state: EngineState` parameter is unused
- * but kept for stability at the `startLoop` call site.
+ * `buildCameraDrivers` produces the six-row table that reads directly from the
+ * Redux store. Most drivers' `isActive` and `pose` read only `s.camera.*`; `cam`
+ * is forwarded to the `orbitDrag` driver, which reads `state.cam` (the gesture
+ * register) for its live yaw/pitch/distance. The `followBody` driver is the one
+ * that needs the engine snapshot, so `buildCameraDrivers(state)` closes over
+ * `EngineState`: follow reads the per-frame body-state snapshot (primed by
+ * `runFrame` before produce), the live lens FOV, and the follow ease clock.
  *
- * Priorities: clip 95 > orbitDrag 80 > tween 60 > autoRotate 20 > resting 0.
- * The gap between each step is deliberate headroom so a future driver can slot
- * in without renumbering. The clip@95 and tween@60 rows share ONE evaluator:
- * both produce their pose through `evaluateClip` (the tween via `tweenToClip`),
- * differing only in priority and which `camera.*` descriptor they read.
+ * Priorities: clip 95 > orbitDrag 80 > followBody 70 > tween 60 > autoRotate 20
+ * > resting 0. The gap between each step is deliberate headroom so a future
+ * driver can slot in without renumbering. `followBody` sits between `orbitDrag`
+ * and `tween` on purpose: a held drag still wins (the user can reorient a
+ * followed body), but follow replaces the tween for body targets so the two
+ * never both author the camera. The clip@95 and tween@60 rows share ONE
+ * evaluator: both produce their pose through `evaluateClip` (the tween via
+ * `tweenToClip`), differing only in priority and which `camera.*` descriptor
+ * they read.
  */
 
 import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
@@ -48,8 +53,13 @@ import type { CameraClock } from '../../../@types/engine/camera/CameraClock';
 import { poseOf } from './poseOf';
 import { tweenToClip } from './tweenToClip';
 import { spinAutoRotate } from './spinAutoRotate';
-import { tweenElapsed, autoRotateElapsed, clipElapsed } from './cameraClock';
+import { tweenElapsed, autoRotateElapsed, clipElapsed, followElapsed } from './cameraClock';
 import { evaluateClip } from './evaluateClip';
+import { bodyLikeFraming } from './bodyLikeFraming';
+import { FOCUS_TWEEN_MS } from './focusTweenDuration';
+import { deriveBodyStates } from '../frame/deriveBodyStates';
+import { easeOutCubic } from '../../../utils/math/easeOutCubic';
+import { lerp } from '../../../utils/math/lerp';
 
 /**
  * Pick the highest-priority active driver. A pure max-scan over `drivers`:
@@ -100,6 +110,10 @@ function elapsedForWinner(
   if (winner.id === 'tween') return tweenElapsed(clock, s.camera.tween, nowMs); // returns ms
   if (winner.id === 'autoRotate')
     return autoRotateElapsed(clock, s.camera.autoRotate.active, s.camera.base, nowMs); // returns ms
+  if (winner.id === 'followBody')
+    // Keys on the focus ROW reference so a new / re-selected body restarts the
+    // approach ease; a drag mid-follow leaves it untouched. returns ms.
+    return followElapsed(clock, s.selectionRows.focus, nowMs);
   // orbitDrag and resting are stateless; elapsed is irrelevant to their pose.
   return 0;
 }
@@ -130,14 +144,13 @@ export function runCameraDrivers(
 }
 
 /**
- * Build the engine's camera-driver table — five rows, store-reading, returned
+ * Build the engine's camera-driver table — six rows, store-reading, returned
  * in priority order for readability (the resolver uses a max-scan, so order
  * does not affect correctness).
  *
- * All five drivers read directly from the Redux store `RootState`; none of them
- * mutate `state.cam` or `EngineState`. The `_state` parameter is kept for
- * stability at the `startLoop.ts` call site (`buildCameraDrivers(state)`) — it
- * is unused here because the drivers close over nothing from `EngineState`.
+ * The `state` parameter is closed over for the `followBody` driver alone (see
+ * below); the other five read only `RootState` and mutate neither `state.cam`
+ * nor `EngineState`.
  *
  * Drivers, highest priority first:
  *
@@ -152,6 +165,18 @@ export function runCameraDrivers(
  *     `s.camera.dragging` is true. Returns `poseOf(cam)` so the controls keep
  *     directly manipulating the register without re-composing through the store.
  *
+ *   - `followBody` (70) — a focus on a moving scene body. Active while
+ *     `s.selectionRows.focus` is a body present in this frame's body snapshot.
+ *     Its target term is ALWAYS the live body position (so it tracks the body as
+ *     the sim clock moves it), while yaw/pitch stay world-frame (translate-
+ *     follow); on activation it eases the distance from the captured on-screen
+ *     pose into the `bodyLikeFraming` framing distance over `FOCUS_TWEEN_MS`.
+ *     `commitsOnEdge: true` bakes the last follow pose into `base` on
+ *     deactivation, so lower drivers resume from where the camera is (no snap-
+ *     back). It replaces the tween for body targets — the tween compiles fixed
+ *     vec3 endpoints and cannot track a moving destination, so the focus saga
+ *     routes body focus here instead of dispatching a tween.
+ *
  *   - `tween` (60) — an in-flight focus tween. Active while `s.camera.tween`
  *     is non-null. Pure: reads `s.camera.tween` + `elapsedMs` from the clock,
  *     converts descriptor via `tweenToClip`, calls `evaluateClip(data, elapsed/1000)`.
@@ -164,7 +189,7 @@ export function runCameraDrivers(
  *   - `resting` (0) — always active; returns `s.camera.base` as-is. The
  *     permanent floor that guarantees the resolver always has a winner.
  */
-export function buildCameraDrivers(_state: EngineState): readonly CameraDriver[] {
+export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] {
   return [
     {
       id: 'clip',
@@ -187,6 +212,78 @@ export function buildCameraDrivers(_state: EngineState): readonly CameraDriver[]
       // held — poseOf reads yaw/pitch/distance/target off the OrbitCamera
       // that orbitControls mutates in real time.
       pose: (_s, cam) => poseOf(cam),
+    },
+    {
+      id: 'followBody',
+      priority: 70,
+      // Leaving focus (null / a non-body row) deactivates the row; the last
+      // follow pose is baked into `base` so lower drivers resume from where the
+      // camera actually is rather than snapping back to the pre-focus base.
+      commitsOnEdge: true,
+      // Active when the focus resolves to a scene body that is present in THIS
+      // frame's body snapshot. The focus row is RootState; the snapshot is the
+      // memoized `deriveBodyStates` map at the instant `runFrame` derived this
+      // frame's bodies (`lastRenderedSimDays.current`, written before produce) —
+      // a same-instant call returns the cached Map for free, so this reads the
+      // frame stash without a second Kepler solve. A star / structure / galaxy
+      // focus is not a body, so this stays false and the tween owns those.
+      isActive: (s) => {
+        const focus = s.selectionRows.focus;
+        if (focus === null || focus.type !== 'body') return false;
+        return deriveBodyStates(state.cameraRuntime.lastRenderedSimDays.current).has(focus.id);
+      },
+      // The follow pose. `elapsed` is ms since the approach started (from
+      // `followElapsed`, keyed on the focus row reference). The target term is
+      // always the LIVE body position, so the camera tracks the body the sim
+      // clock is moving. yaw/pitch translate-follow (they ease from the captured
+      // on-screen pose toward the committed base, so a post-follow drag is
+      // honoured while an un-dragged follow keeps its heading). Distance eases
+      // from the captured pose into the physical-radius framing distance.
+      pose: (s, _cam, elapsed) => {
+        const focus = s.selectionRows.focus;
+        const clock = state.cameraRuntime.clock;
+        // Defensive: pose only runs for the winner, so isActive already proved a
+        // body focus present in the snapshot this same frame — but a null-guard
+        // keeps the arm total, falling back to the resting pose.
+        if (focus === null || focus.type !== 'body') return s.camera.base;
+        const live = deriveBodyStates(state.cameraRuntime.lastRenderedSimDays.current).get(
+          focus.id,
+        );
+        if (live === undefined) return s.camera.base;
+
+        // Capture the `from` pose ONCE per activation. `followElapsed` nulls it
+        // on the edge; the first produce after fills it from the LIVE rendered
+        // pose (the previous frame's, not yet overwritten this frame) so the ease
+        // starts where the camera visibly is — switching focus A→B eases from
+        // framing-A, never jumping back to the committed base first.
+        if (clock.followFrom === null) {
+          const cur = state.cameraRuntime.lastPose.current;
+          clock.followFrom = {
+            target: [cur.target[0], cur.target[1], cur.target[2]],
+            yaw: cur.yaw,
+            pitch: cur.pitch,
+            distance: cur.distance,
+          };
+        }
+        const from = clock.followFrom;
+        const base = s.camera.base;
+        // Reuse the shared body framing math — only its distance is read here;
+        // the target term below is the live body position, not the framing's.
+        const framing = bodyLikeFraming(
+          live.positionMpc,
+          focus.radiusKm,
+          state.cameraRuntime.projection.fovYRad,
+        );
+        const t = easeOutCubic(elapsed / FOCUS_TWEEN_MS);
+        return {
+          // Alias the live snapshot position (a fresh, immutable per-frame array
+          // downstream reads read-only) — the target is the body, always.
+          target: live.positionMpc,
+          yaw: lerp(from.yaw, base.yaw, t),
+          pitch: lerp(from.pitch, base.pitch, t),
+          distance: lerp(from.distance, framing.distance, t),
+        };
+      },
     },
     {
       id: 'tween',

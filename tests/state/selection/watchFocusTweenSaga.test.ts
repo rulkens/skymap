@@ -172,6 +172,22 @@ describe('watchFocusTweenSaga', () => {
     expect(store.getState()[cameraRoute].tween).toBeNull();
   });
 
+  // A scene body is FOLLOWED by the camera's `followBody` driver, not tweened —
+  // the tween compiles fixed vec3 endpoints and cannot track a body the sim clock
+  // moves. The saga must return before planting a tween for a body row, while a
+  // non-body focus (here the Milky Way) still tweens as before.
+  it('a body focus plants NO tween (the follow driver owns it); a non-body focus still does', async () => {
+    // 'earth' resolves statically off SCENE_BODIES (no catalog needed).
+    store.dispatch(updateSelectionFocus({ type: 'body', id: 'earth' }));
+    await flush();
+    expect(store.getState()[cameraRoute].tween).toBeNull();
+
+    // A non-body focus (Milky Way) still plants a tween through the same saga.
+    store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
+    await flush();
+    expect(store.getState()[cameraRoute].tween).not.toBeNull();
+  });
+
   // A minimal clip payload: no camera motion, just timeline structure. The
   // timeline contents don't matter — what matters is that `camera.clip` is
   // non-null, which is what `selectClipActive` reads.

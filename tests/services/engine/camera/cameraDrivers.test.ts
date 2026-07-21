@@ -38,6 +38,11 @@ import { evaluateClip } from '../../../../src/services/engine/camera/evaluateCli
 import { tweenToClip } from '../../../../src/services/engine/camera/tweenToClip';
 import { spinAutoRotate } from '../../../../src/services/engine/camera/spinAutoRotate';
 import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
+import { bodyLikeFraming } from '../../../../src/services/engine/camera/bodyLikeFraming';
+import { FOCUS_TWEEN_MS } from '../../../../src/services/engine/camera/focusTweenDuration';
+import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
+import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
+import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
 import { rootReducer } from '../../../../src/store/rootReducer';
 import {
   beginDrag,
@@ -377,5 +382,151 @@ describe('runCameraDrivers — elapsed dispatch', () => {
     runCameraDrivers(patchedDrivers, s, CAM_STUB, clock, installMs + 1500);
     expect(poseSpy).toHaveBeenCalledTimes(1);
     expect(poseSpy.mock.calls[0]![2]).toBeCloseTo(1.5, 5);
+  });
+});
+
+// ── followBody driver ───────────────────────────────────────────────────────
+//
+// The follow driver reads the per-frame body snapshot (memoized deriveBodyStates
+// at the frame's `lastRenderedSimDays`) plus the follow ease clock, both off the
+// EngineState it closes over. A body id present in ORBITAL_ELEMENTS + SCENE_BODIES
+// ('earth') is focused; the snapshot is primed by calling deriveBodyStates once.
+
+const FOLLOW_SIM_DAYS = CONST_J2000 + 3652.5; // ~10 years past epoch (not J2000).
+const FOLLOW_FOV = 1.0;
+
+/** A body focus row (radiusKm drives framing; positionMpc is unused — the driver
+ * targets the LIVE snapshot position, not the row's). */
+const EARTH_ROW = {
+  type: 'body' as const,
+  id: 'earth',
+  label: 'Earth',
+  positionMpc: [0, 0, 0] as [number, number, number],
+  radiusKm: 6371,
+};
+
+/** Minimal EngineState carrying only the cameraRuntime fields the follow driver
+ * reads. `followFrom` seeds the captured approach `from` (bypassing the live-pose
+ * capture so the ease endpoints are deterministic). */
+function makeFollowEngineState(opts: {
+  simDays: number;
+  fovYRad: number;
+  lastPose: CameraPose;
+  followFrom?: CameraPose | null;
+}): EngineState {
+  const clock = createCameraClock();
+  clock.followFrom = opts.followFrom ?? null;
+  return {
+    cameraRuntime: {
+      clock,
+      projection: { fovYRad: opts.fovYRad, aspect: 1, near: 0.01, far: 50000 },
+      lastPose: { current: opts.lastPose },
+      prevActiveId: { current: 'resting' },
+      lastRenderedSimDays: { current: opts.simDays },
+    },
+  } as unknown as EngineState;
+}
+
+describe('buildCameraDrivers — followBody', () => {
+  it('pose target equals the body snapshot position while active', () => {
+    // The snapshot at the frame instant — the driver's target term must be THIS
+    // (the live body), not the row's static positionMpc.
+    const snapshot = deriveBodyStates(FOLLOW_SIM_DAYS);
+    const livePos = snapshot.get('earth')!.positionMpc;
+
+    const store = makeStore();
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
+    const s = store.getState() as unknown as RootState;
+
+    const engineState = makeFollowEngineState({
+      simDays: FOLLOW_SIM_DAYS,
+      fovYRad: FOLLOW_FOV,
+      lastPose: BASE_POSE,
+      followFrom: BASE_POSE,
+    });
+    const follow = buildCameraDrivers(engineState).find((d) => d.id === 'followBody')!;
+
+    // After approach saturation the target is the live body position.
+    const result = follow.pose(s, CAM_STUB, FOCUS_TWEEN_MS);
+    expect(result.target).toEqual(livePos);
+    // And it is NOT the row's static positionMpc ([0,0,0]) — proving it reads the
+    // live snapshot, whose Earth sits far from the origin at this instant.
+    expect(result.target).not.toEqual(EARTH_ROW.positionMpc);
+  });
+
+  it('deactivates when focus leaves the body; pickWinner hands off to the next driver', () => {
+    // autoRotate off so the resting floor is the fallback winner.
+    const store = makeStore();
+    store.dispatch(setAutoRotate({ active: false, rate: 0.000873 }));
+
+    const engineState = makeFollowEngineState({
+      simDays: FOLLOW_SIM_DAYS,
+      fovYRad: FOLLOW_FOV,
+      lastPose: BASE_POSE,
+    });
+    const drivers = buildCameraDrivers(engineState);
+    const follow = drivers.find((d) => d.id === 'followBody')!;
+
+    // No focus → inactive → resting wins.
+    let s = store.getState() as unknown as RootState;
+    expect(follow.isActive(s)).toBe(false);
+    expect(pickWinner(drivers, s).id).toBe('resting');
+
+    // A non-body focus (Milky Way) → still inactive.
+    store.dispatch(setSelectionRow({ slot: 'focus', row: { type: 'milkyWay' } }));
+    s = store.getState() as unknown as RootState;
+    expect(follow.isActive(s)).toBe(false);
+
+    // A body focus present in the snapshot → active, and it wins over resting.
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
+    s = store.getState() as unknown as RootState;
+    expect(follow.isActive(s)).toBe(true);
+    expect(pickWinner(drivers, s).id).toBe('followBody');
+
+    // Focus leaves the body again → deactivates → hands back to resting.
+    store.dispatch(setSelectionRow({ slot: 'focus', row: null }));
+    s = store.getState() as unknown as RootState;
+    expect(follow.isActive(s)).toBe(false);
+    expect(pickWinner(drivers, s).id).toBe('resting');
+  });
+
+  it('the follow approach ease converges from the captured pose to the framing offset', () => {
+    // Framing distance oracle — the shared body framing math, NOT the ease
+    // formula. At elapsed 0 the pose sits at the captured `from` distance; by
+    // FOCUS_TWEEN_MS it has converged to the framing distance, monotonically.
+    const snapshot = deriveBodyStates(FOLLOW_SIM_DAYS);
+    const livePos = snapshot.get('earth')!.positionMpc;
+    const framingDistance = bodyLikeFraming(livePos, EARTH_ROW.radiusKm, FOLLOW_FOV).distance;
+
+    const FROM: CameraPose = { target: [9, 9, 9], yaw: 0.2, pitch: 0.1, distance: 500 };
+
+    const store = makeStore();
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
+    const s = store.getState() as unknown as RootState;
+
+    const engineState = makeFollowEngineState({
+      simDays: FOLLOW_SIM_DAYS,
+      fovYRad: FOLLOW_FOV,
+      lastPose: BASE_POSE,
+      followFrom: FROM,
+    });
+    const follow = buildCameraDrivers(engineState).find((d) => d.id === 'followBody')!;
+
+    // At activation (elapsed 0) the distance is the captured `from` distance.
+    expect(follow.pose(s, CAM_STUB, 0).distance).toBeCloseTo(FROM.distance, 9);
+
+    // At (and past) saturation the distance is the framing distance.
+    expect(follow.pose(s, CAM_STUB, FOCUS_TWEEN_MS).distance).toBeCloseTo(framingDistance, 12);
+    expect(follow.pose(s, CAM_STUB, FOCUS_TWEEN_MS * 2).distance).toBeCloseTo(framingDistance, 12);
+
+    // Monotone convergence: sampling forward in time moves strictly toward the
+    // framing distance (Earth's framing distance is tiny, so distance decreases).
+    const samples = [0, 150, 300, 450, 600].map(
+      (ms) => follow.pose(s, CAM_STUB, ms).distance,
+    );
+    for (let i = 1; i < samples.length; i++) {
+      expect(samples[i]!).toBeLessThan(samples[i - 1]!);
+    }
+    expect(samples[0]!).toBeGreaterThan(framingDistance);
   });
 });

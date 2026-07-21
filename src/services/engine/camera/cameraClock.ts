@@ -8,14 +8,14 @@
  * changed by reference identity / value, resets the relevant start time, and
  * returns elapsed time from that start.
  *
- * Three functions, one resource: `tweenElapsed` and `autoRotateElapsed` both
- * return milliseconds (for easing drivers); `clipElapsed` returns SECONDS (for
- * `evaluateClip`). All take `nowMs` as a parameter — they never read
- * `performance.now()` or `Date.now()` themselves. The caller owns the wall
- * clock; this keeps the clock deterministic and testable.
+ * Four functions, one resource: `tweenElapsed`, `autoRotateElapsed`, and
+ * `followElapsed` all return milliseconds (for easing drivers); `clipElapsed`
+ * returns SECONDS (for `evaluateClip`). All take `nowMs` as a parameter — they
+ * never read `performance.now()` or `Date.now()` themselves. The caller owns the
+ * wall clock; this keeps the clock deterministic and testable.
  *
- * One module for all three functions because they share the `CameraClock`
- * Resource: the three halves are inseparable parts of one stateful computation.
+ * One module for all four functions because they share the `CameraClock`
+ * Resource: the halves are inseparable parts of one stateful computation.
  * Same reasoning as `cameraDrivers.ts` holding both `runCameraDrivers` and
  * `buildCameraDrivers`.
  */
@@ -24,6 +24,7 @@ import type { CameraClock } from '../../../@types/engine/camera/CameraClock';
 import type { CameraTweenDescriptor } from '../../../@types/camera/CameraTweenDescriptor';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { ClipData } from '../../../@types/animation/ClipData';
+import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 
 /**
  * Create a fresh CameraClock with no recorded starts.
@@ -39,6 +40,9 @@ export function createCameraClock(): CameraClock {
     lastBaseRef: null,
     clipStartMs: null,
     lastClipRef: null,
+    followStartMs: null,
+    lastFollowRef: null,
+    followFrom: null,
   };
 }
 
@@ -122,4 +126,38 @@ export function clipElapsed(
     clock.clipStartMs = clip === null ? null : nowMs;
   }
   return clock.clipStartMs === null ? 0 : (nowMs - clock.clipStartMs) / 1000;
+}
+
+/**
+ * Reset the follow-approach start to `nowMs` when the focus ROW reference
+ * changes (a new / re-selected body, or focus leaving a body → null); then
+ * return ms elapsed since that start.
+ *
+ * Keys on the row REFERENCE, not the body id, so a re-select of the same body
+ * (a fresh `selectionRows.focus` object) restarts the ease exactly once — the
+ * same identity-reset pattern `tweenElapsed` uses. A drag mid-follow does not
+ * change the ref, so the ease is not restarted on drag-release: the camera
+ * resumes its saturated follow instead of re-approaching.
+ *
+ * On the reset edge it also NULLS `followFrom`, signalling the driver's `pose`
+ * to re-capture the live on-screen pose as the `from` the approach eases out of.
+ * The capture is split from this timer because only the driver (closing over
+ * `EngineState`) can see the live rendered pose (`lastPose`); this function sees
+ * only the store's focus ref.
+ *
+ * A freshly-selected body returns 0 on the arrival frame and grows on later
+ * frames carrying the same ref. A null focus always returns 0.
+ */
+export function followElapsed(
+  clock: CameraClock,
+  focusRow: SelectionRow | null,
+  nowMs: number,
+): number {
+  if (focusRow !== clock.lastFollowRef) {
+    clock.lastFollowRef = focusRow;
+    clock.followStartMs = focusRow === null ? null : nowMs;
+    // Force the driver to re-capture the `from` pose on the next produce.
+    clock.followFrom = null;
+  }
+  return clock.followStartMs === null ? 0 : nowMs - clock.followStartMs;
 }
