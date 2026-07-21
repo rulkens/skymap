@@ -79,9 +79,21 @@ export const selectionRingLayer: ContentLayer = {
       state.settings.galaxyCatalogs.sizePx,
     );
 
-    state.gpu.selectionRingRenderer!.draw(pass, view.vp, view.viewportPx, {
-      worldPos,
-      ringRadiusPx,
-    });
+    // Occlude the ring per-pixel behind nearer bodies ONLY when the body pass
+    // actually ran this frame — else the `foreground:0` depth is stale/absent
+    // and would spuriously discard the whole ring. When undefined, the
+    // occlusion renderer falls back to its plain pipeline and draws the ring
+    // un-occluded. Mirrors `markerLinesLayer`'s guard.
+    const depthView = ctx.renderedTargets.has('foreground:0')
+      ? ctx.renderTargets.depthViewOf('foreground:0')
+      : undefined;
+
+    state.gpu.selectionRingRenderer!.draw(
+      pass,
+      view.vp,
+      view.viewportPx,
+      { worldPos, ringRadiusPx },
+      depthView,
+    );
   },
 };

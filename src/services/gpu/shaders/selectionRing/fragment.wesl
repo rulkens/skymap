@@ -22,8 +22,14 @@
 
 import package::selectionRing::io::VsOut;
 
-@fragment
-fn fs(input: VsOut) -> @location(0) vec4<f32> {
+// The annulus mask + colour body, factored out of the '@fragment fn fs'
+// entry so a depth-occluding variant (selectionRing/fragmentOcclude.wesl)
+// can reuse the exact same mask after its discard gate — one source of
+// truth for the ring shape, two entry points that differ only in whether
+// they test the scene depth first.  The interior 'discard' statements are
+// valid inside a called function: WGSL permits 'discard' anywhere in a
+// fragment's call tree, so both entries inherit the annulus's own culling.
+fn shadeRing(input: VsOut) -> vec4<f32> {
   // Radial distance² from the quad centre.  UV is in [-1, +1]², so
   // 'dot(uv, uv)' is r² in unit-quad space.
   let r2 = dot(input.uv, input.uv);
@@ -47,4 +53,9 @@ fn fs(input: VsOut) -> @location(0) vec4<f32> {
 
   // Premultiplied-alpha OVER blend (set on the JS pipeline descriptor).
   return vec4<f32>(alpha, alpha, alpha, alpha);
+}
+
+@fragment
+fn fs(input: VsOut) -> @location(0) vec4<f32> {
+  return shadeRing(input);
 }

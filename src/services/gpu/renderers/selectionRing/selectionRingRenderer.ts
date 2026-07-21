@@ -41,7 +41,13 @@ import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { SelectionRingRenderer } from '../../../../@types/rendering/SelectionRingRenderer';
 import vsCode from '../../shaders/selectionRing/vertex.wesl?static';
 import fsCode from '../../shaders/selectionRing/fragment.wesl?static';
+import fsOccludeCode from '../../shaders/selectionRing/fragmentOcclude.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import {
+  OCCLUSION_DEPTH_GROUP_INDEX,
+  OCCLUSION_DEPTH_LAYOUT_DESC,
+  createOcclusionDepthBindGroup,
+} from '../labels/occlusionDepthGroup';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
 import { PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
 
@@ -53,20 +59,43 @@ const SELECTION_UNIFORM_BYTES = 16;
  * format the pipeline writes into; the ring is a post-tone-map UI overlay, so
  * this is the swap-chain format — passed EXPLICITLY rather than read off
  * `ctx.format`, so the target is legible at the construction site.
+ *
+ * `init.occludeAgainstDepth` opts this instance into per-pixel occlusion behind
+ * nearer solar-system bodies. When set, the pipeline gains a group(1) depth
+ * binding (`OCCLUSION_DEPTH_LAYOUT_DESC`) and compiles the discard-gated
+ * `fragmentOcclude.wesl` entry alongside the plain one; `draw` then selects the
+ * occlude pipeline on any frame handed a scene depth view. The default (init
+ * omitted) keeps the plain single-BGL, non-occluding pipeline the NEAR0
+ * selection ring relies on — byte-for-byte unchanged, since that sibling passes
+ * no depth view.
  */
 export function createSelectionRingRenderer(
   ctx: GpuContext,
   targetFormat: GPUTextureFormat,
+  init?: { occludeAgainstDepth?: boolean },
 ): SelectionRingRenderer {
   // The cast lets a test pass `device: null as unknown as GPUDevice`
   // through. Runtime null-checks below gate every GPU call.
   const device = ctx.device as GPUDevice | null;
   const format = targetFormat;
 
-  let pipeline: GPURenderPipeline | null = null;
+  // The occlusion instance builds BOTH pipelines and picks per-draw:
+  // `plainPipeline` (single BGL) whenever no scene depth is supplied this
+  // frame, `occludePipeline` (two BGLs, discard-gated fragment) when it is. A
+  // non-occlusion instance builds only `plainPipeline` and leaves the other
+  // null — which is what keeps the NEAR0 sibling's draws byte-identical.
+  let plainPipeline: GPURenderPipeline | null = null;
+  let occludePipeline: GPURenderPipeline | null = null;
   let cameraBuffer: GPUBuffer | null = null;
   let selectionBuffer: GPUBuffer | null = null;
   let bindGroup: GPUBindGroup | null = null;
+  // Retained only on the occlusion path — the group(1) depth BGL that `draw`
+  // rebuilds a per-frame bind group against (the depth view changes on every
+  // resize — see occlusionDepthGroup.ts). Null on the plain path (and whenever
+  // device is null), which is what gates `draw`'s occlusion branch.
+  let occlusionDepthBGL: GPUBindGroupLayout | null = null;
+
+  const occludeAgainstDepth = init?.occludeAgainstDepth === true;
 
   if (device) {
     const bindGroupLayout = device.createBindGroupLayout({
@@ -77,28 +106,50 @@ export function createSelectionRingRenderer(
       ],
     });
 
+    // Occlusion joint (opt-in): a second bind-group layout at group 1 (the
+    // shared depth joint). Retained so `draw` can rebuild its per-frame bind
+    // group from the resize-recreated depth view.
+    if (occludeAgainstDepth) {
+      occlusionDepthBGL = device.createBindGroupLayout(OCCLUSION_DEPTH_LAYOUT_DESC);
+    }
+
     const vsModule = createShaderModuleWithDevLog(device, vsCode, 'selectionRing.vertex');
     const fsModule = createShaderModuleWithDevLog(device, fsCode, 'selectionRing.fragment');
 
-    pipeline = device.createRenderPipeline({
+    // Both pipelines draw the identical geometry into the identical target;
+    // only the fragment entry and the group(1) depth binding differ, so the
+    // colour-target descriptor is shared.
+    const colorTargets: GPUColorTargetState[] = [{ format, blend: PREMULTIPLIED_OVER_BLEND }];
+
+    plainPipeline = device.createRenderPipeline({
       label: 'selection-ring-pipeline',
       layout: device.createPipelineLayout({
         label: 'selection-ring-pipeline-layout',
         bindGroupLayouts: [bindGroupLayout],
       }),
       vertex: { module: vsModule, entryPoint: 'vs' },
-      fragment: {
-        module: fsModule,
-        entryPoint: 'fs',
-        targets: [
-          {
-            format,
-            blend: PREMULTIPLIED_OVER_BLEND,
-          },
-        ],
-      },
+      fragment: { module: fsModule, entryPoint: 'fs', targets: colorTargets },
       primitive: { topology: 'triangle-list' },
     });
+
+    if (occlusionDepthBGL) {
+      const fsOccludeModule = createShaderModuleWithDevLog(
+        device,
+        fsOccludeCode,
+        'selectionRing.fragmentOcclude',
+      );
+      occludePipeline = device.createRenderPipeline({
+        label: 'selection-ring-pipeline-occlude',
+        layout: device.createPipelineLayout({
+          label: 'selection-ring-pipeline-occlude-layout',
+          // group 0 = the selection-ring BGL; group 1 = the shared depth joint.
+          bindGroupLayouts: [bindGroupLayout, occlusionDepthBGL],
+        }),
+        vertex: { module: vsModule, entryPoint: 'vs' },
+        fragment: { module: fsOccludeModule, entryPoint: 'fs', targets: colorTargets },
+        primitive: { topology: 'triangle-list' },
+      });
+    }
 
     cameraBuffer = device.createBuffer({
       label: 'selection-ring-camera',
@@ -127,8 +178,9 @@ export function createSelectionRingRenderer(
     viewProj: Float32Array,
     viewportSize: Vec2,
     selection: { worldPos: Readonly<Vec3>; ringRadiusPx: number } | null,
+    sceneDepthView?: GPUTextureView,
   ): void {
-    if (!device || !pipeline || !bindGroup || !cameraBuffer || !selectionBuffer) return;
+    if (!device || !plainPipeline || !bindGroup || !cameraBuffer || !selectionBuffer) return;
     if (selection === null) return;
 
     // Camera UBO: viewProj at [0..15], viewportPx at [16..17], pads zero
@@ -144,8 +196,26 @@ export function createSelectionRingRenderer(
     selUni[3] = selection.ringRadiusPx;
     device.queue.writeBuffer(selectionBuffer, 0, selUni);
 
-    pass.setPipeline(pipeline);
-    pass.setBindGroup(0, bindGroup);
+    // Pipeline selection: an occlusion instance draws through its occlusion
+    // pipeline only when a scene depth view is supplied THIS frame, binding the
+    // group(1) depth joint rebuilt from that view. With no depth view (e.g. the
+    // NEAR0 sibling, or a COSMO frame in which no foreground body rendered), it
+    // falls back to the plain pipeline and draws the ring un-occluded — a valid
+    // draw, NOT an occlusion draw with group(1) left unbound. A non-occlusion
+    // instance (occludePipeline null) always takes the plain path.
+    if (occlusionDepthBGL && occludePipeline && sceneDepthView) {
+      pass.setPipeline(occludePipeline);
+      pass.setBindGroup(0, bindGroup);
+      const depthBindGroup = createOcclusionDepthBindGroup(
+        device,
+        occlusionDepthBGL,
+        sceneDepthView,
+      );
+      pass.setBindGroup(OCCLUSION_DEPTH_GROUP_INDEX, depthBindGroup);
+    } else {
+      pass.setPipeline(plainPipeline);
+      pass.setBindGroup(0, bindGroup);
+    }
     pass.draw(6, 1, 0, 0);
   }
 

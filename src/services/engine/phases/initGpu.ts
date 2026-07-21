@@ -233,7 +233,16 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // its own pipeline + buffers so the debug viz never touches the label
   // director's reconcile path.
   state.gpu.debugLineRenderer = createDebugLineRenderer(uiCtx, format);
-  state.gpu.selectionRingRenderer = createSelectionRingRenderer(uiCtx, format);
+  // `{ occludeAgainstDepth: true }` opts the COSMO selection ring into the same
+  // per-pixel body occlusion as the label + marker-line overlays above.
+  // `selectionRingLayer` hands each `draw` the guarded `foreground:0` depth
+  // view; today it's undefined (the COSMO ring draws BEFORE the body pass), so
+  // the occlude pipeline falls back to the plain one — behaviour-neutral until
+  // the frame graph reorders bodies ahead of these overlays. The shared NEAR0
+  // sibling passes no depth view, so it always draws through the plain pipeline.
+  state.gpu.selectionRingRenderer = createSelectionRingRenderer(uiCtx, format, {
+    occludeAgainstDepth: true,
+  });
   // HDR pass — writes into the rgba16float offscreen target, NOT the
   // swap chain.  The fadeBgl placeholder at @group(1) must match what the
   // other HDR passes (filaments) bind at the same slot on the shared
