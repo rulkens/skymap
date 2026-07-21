@@ -498,24 +498,37 @@ group.
     `{ composite: hdr → swap }`, only `if (bloomEnabled)`:
 
     ```ts
-    // bright + 4 downsamples + 4 upsample folds — one render step per stage,
-    // each screen-space (slab arbitrary; COSMO, ignored by the bloom layers).
-    { kind: 'render', target: 'bloom0', slab: COSMO },   // bright, reads hdr
-    { kind: 'render', target: 'bloom1', slab: COSMO },   // downsample
-    { kind: 'render', target: 'bloom2', slab: COSMO },
-    { kind: 'render', target: 'bloom3', slab: COSMO },
-    { kind: 'render', target: 'bloom4', slab: COSMO },
-    { kind: 'render', target: 'bloom3', slab: COSMO },   // upsample fold (load, additive)
-    { kind: 'render', target: 'bloom2', slab: COSMO },
-    { kind: 'render', target: 'bloom1', slab: COSMO },
-    { kind: 'render', target: 'bloom0', slab: COSMO },   // final fold into bloom0
-    { kind: 'render', target: 'hdr',    slab: COSMO },   // bloomFoldLayer: bloom0 × strength → hdr
+    // bright + 4 downsamples + 4 upsample folds + fold — one render step per stage.
+    // slab: BLOOM (NOT COSMO) — see the Task-11 deviation note. The layers are
+    // screen-space (they ignore the SlabView projection, using only viewportPx), but
+    // the slab is the executor's (target, slab) GROUP KEY: the fold's (hdr, BLOOM) step
+    // must match ONLY bloomFoldLayer. On COSMO it would re-sweep every hdr·COSMO galaxy
+    // layer and additively double-draw the whole scene.
+    { kind: 'render', target: 'bloom0', slab: BLOOM },   // bright, reads hdr
+    { kind: 'render', target: 'bloom1', slab: BLOOM },   // downsample
+    { kind: 'render', target: 'bloom2', slab: BLOOM },
+    { kind: 'render', target: 'bloom3', slab: BLOOM },
+    { kind: 'render', target: 'bloom4', slab: BLOOM },
+    { kind: 'render', target: 'bloom3', slab: BLOOM },   // upsample fold (load, additive)
+    { kind: 'render', target: 'bloom2', slab: BLOOM },
+    { kind: 'render', target: 'bloom1', slab: BLOOM },
+    { kind: 'render', target: 'bloom0', slab: BLOOM },   // final fold into bloom0
+    { kind: 'render', target: 'hdr',    slab: BLOOM },   // bloomFoldLayer: bloom0 × strength → hdr
     ```
 
     The re-targeted `bloom3..bloom0` steps rely on the executor's `touched` set (clear on
-    first, additive-load after — spec §4). The trailing `hdr` render step draws only
-    `bloomFoldLayer` (the other hdr layers already ran in the earlier hdr steps, which are
-    already `touched`, so this step loads).
+    first, additive-load after — spec §4). Because the trailing `hdr` step is on the BLOOM
+    slab, the executor's `(target='hdr', slab=BLOOM)` filter matches ONLY `bloomFoldLayer`;
+    `hdr` is already `touched` from the earlier `hdr·COSMO`/`hdr·NEAR0` steps, so it loads and
+    the fold blends additively onto the accumulated scene.
+  - **`deriveSlabs` BLOOM row (REQUIRED — else `slabViewOf(BLOOM)` throws the moment a bloom
+    step runs).** Add a `BLOOM`-index (2) row to whatever `deriveSlabs` returns: a
+    screen-space `SlabView` carrying the full-res `viewportPx` (same as the swap/foreground
+    full-res size) and an arbitrary/identity projection — the bloom layers never read the
+    projection, only `view.viewportPx`. Do NOT give it a reversed-Z entry (`SLAB_REVERSED_Z`
+    has no BLOOM key and must not gain one — only `deriveSlabs` reads it, for the slabs it
+    builds; the BLOOM row is projection-free). Mirror the existing NEAR0/COSMO row shape but
+    with identity/zero projection and full-res viewport.
   - **Dedup the merged-timing group-key row** in `timedSlotRowsOf`: today it pushes one
     `{ name: groupKey, groupKey }` row per render step, assuming each `(target, slab)` is
     unique. The bloom fold reuses `bloom0..bloom3`, so push that row **only on the first
@@ -525,9 +538,11 @@ group.
     merged slot. (Per-layer names stay unique regardless, so `perLayerTimed` per-pass timing
     is exact; the merged group slot for a reused target reflects the first pass — acceptable,
     documented below.)
-  - `PASS_GROUP_TITLES` — add `'bloom0·COSMO'..'bloom4·COSMO': 'Bloom'` (five entries),
-    placed after `'foreground:0·NEAR0'` so the Bloom group renders between Foreground and
-    Overlays.
+  - `PASS_GROUP_TITLES` — add `'bloom0·BLOOM'..'bloom4·BLOOM': 'Bloom'` (five entries; the
+    `hdr·BLOOM` fold step buckets under the existing `hdr` title or add `'hdr·BLOOM': 'Bloom'`
+    if you want the fold in the Bloom group), placed after `'foreground:0·NEAR0'` so the Bloom
+    group renders between Foreground and Overlays. Use the `groupKeyOf(target, BLOOM)` format
+    (`'<target>·BLOOM'`) — verify against `SLAB_NAME[BLOOM]='BLOOM'`.
   - Update the three module consts that call `frameProgram` with placeholders
     (`TIMED_SLOTS`, `TIMED_SLOT_GROUPS`, `PASS_GROUP_KEYS`) to pass `bloomEnabled = true` so
     the timing service allocates the bloom slots (they are simply unused on frames where
@@ -538,11 +553,13 @@ group.
   (spec §8).
 
 **Interfaces**
-- Consumes: `state.settings.bloom.enabled`, `COSMO`, the bloom layers (via `CONTENT_LAYERS`).
-- Produces: `frameProgram(tone, bloomEnabled)`; bloom render steps; `'Bloom'` group.
+- Consumes: `state.settings.bloom.enabled`, `BLOOM` (from `slabs.ts`), the bloom layers (via
+  `CONTENT_LAYERS`).
+- Produces: `frameProgram(tone, bloomEnabled)`; bloom render steps on `slab: BLOOM`; the
+  `deriveSlabs` BLOOM row; `'Bloom'` group.
 
-- [ ] Add the bloom steps + `bloomEnabled` gate + the `timedSlotRowsOf` dedup +
-      `PASS_GROUP_TITLES` entries; thread `renderFrame`.
+- [ ] Add the bloom steps (`slab: BLOOM`) + `bloomEnabled` gate + the `deriveSlabs` BLOOM
+      row + the `timedSlotRowsOf` dedup + `PASS_GROUP_TITLES` entries; thread `renderFrame`.
 - [ ] Test **`bloom enabled: foreground→hdr composite precedes the bright pass`** — assert
       the `foreground:0→hdr` composite index < the first `bloom0` render step index.
 - [ ] Test **`bloom enabled: the fold precedes the single tone-map composite`** — assert the
@@ -554,9 +571,10 @@ group.
       ten added steps and is otherwise identical.
 - [ ] Update `timedSlotsOf` real-`CONTENT_LAYERS` expectation: with bloom enabled the list
       gains `bloom-bright`, the four downsample names, the four upsample names, `bloom-fold`,
-      and one `bloom0·COSMO..bloom4·COSMO` merged slot **each** (deduped — `bloom0·COSMO` and
-      `bloom3·COSMO` appear once despite two steps); assert `new Set(slots).size ===
-      slots.length` still holds.
+      and one `bloom0·BLOOM..bloom4·BLOOM` merged slot **each** (deduped — `bloom0·BLOOM` and
+      `bloom3·BLOOM` appear once despite two steps; the `hdr·BLOOM` fold step's groupKey is
+      `hdr·BLOOM`, distinct from the earlier `hdr·COSMO`/`hdr·NEAR0`); assert
+      `new Set(slots).size === slots.length` still holds.
 - [ ] Update `timedSlotGroupsOf` / `TIMED_SLOT_GROUPS` expectation: a `'Bloom'` group appears
       between `'Foreground bodies · depth'` and `'Overlays'` with the bloom rows.
 - [ ] `npm test -- frameProgram executeFrame renderFrame` green; `npm run typecheck` green.
