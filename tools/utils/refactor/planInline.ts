@@ -47,8 +47,6 @@ import type {
   ExportSpecifier,
   FunctionDeclaration,
   Identifier,
-  ImportDeclaration,
-  ImportSpecifier,
   Project,
   SourceFile,
   VariableDeclaration,
@@ -60,6 +58,7 @@ import type { PassthroughTarget } from './detectPassthrough';
 import { hasMeaningfulStatements } from './hasMeaningfulStatements';
 import { removeFileWithMirror } from './removeFileWithMirror';
 import { renderRefReport } from './renderRefReport';
+import { retargetNamedImport } from './retargetNamedImport';
 import type { ResolvedSymbol } from './resolveSymbol';
 
 export function planInline(project: Project, resolved: ResolvedSymbol): void {
@@ -193,65 +192,9 @@ function repointImports(
       if (importDecl.getModuleSpecifierSourceFile() !== wrapperFile) continue;
       const spec = importDecl.getNamedImports().find((named) => named.getName() === underlyingName);
       if (spec === undefined) continue;
-      retargetSpecifier(sourceFile, importDecl, spec, underlyingFile, underlyingName);
+      retargetNamedImport(sourceFile, importDecl, spec, underlyingFile, underlyingName);
     }
   }
-}
-
-// Move one named import to `underlyingFile`. When the import brings in nothing else
-// the whole clause is retargeted; otherwise only this specifier is split off into
-// a (possibly merged) import from the underlying's file.
-function retargetSpecifier(
-  sourceFile: SourceFile,
-  importDecl: ImportDeclaration,
-  spec: ImportSpecifier,
-  underlyingFile: SourceFile,
-  underlyingName: string,
-): void {
-  const named = importDecl.getNamedImports();
-  const bringsInOnlyThis =
-    named.length === 1 &&
-    importDecl.getDefaultImport() === undefined &&
-    importDecl.getNamespaceImport() === undefined;
-  const aliasText = spec.getAliasNode()?.getText();
-
-  if (bringsInOnlyThis) {
-    importDecl.setModuleSpecifier(underlyingFile);
-    return;
-  }
-  spec.remove();
-  ensureNamedImport(sourceFile, underlyingFile, underlyingName, aliasText);
-}
-
-// Add `underlyingName` (keeping any local alias) to an existing import from
-// `underlyingFile`, or create that import — skipping when the name is already
-// brought in, so a caller that already imported the underlying does not double up.
-function ensureNamedImport(
-  sourceFile: SourceFile,
-  underlyingFile: SourceFile,
-  underlyingName: string,
-  aliasText: string | undefined,
-): void {
-  const structure =
-    aliasText !== undefined && aliasText !== underlyingName
-      ? { name: underlyingName, alias: aliasText }
-      : underlyingName;
-  const localName = aliasText ?? underlyingName;
-
-  const existing = sourceFile
-    .getImportDeclarations()
-    .find((decl) => decl.getModuleSpecifierSourceFile() === underlyingFile);
-  if (existing !== undefined) {
-    const alreadyThere = existing
-      .getNamedImports()
-      .some((named) => (named.getAliasNode()?.getText() ?? named.getName()) === localName);
-    if (!alreadyThere) existing.addNamedImport(structure);
-    return;
-  }
-  sourceFile.addImportDeclaration({
-    moduleSpecifier: sourceFile.getRelativePathAsModuleSpecifierTo(underlyingFile),
-    namedImports: [structure],
-  });
 }
 
 // Find the `export {}` specifier whose exported name is the target. Captured before

@@ -465,20 +465,20 @@ it first (Q4: the shared-dep block is a design signal, not a failure to smooth
 over). Refuse if `dest` already exists. A previously-unexported dragged symbol is
 necessarily exported from `dest` (inherent, not warned).
 
-- [ ] Test `moves the declaration to dest and repoints importers` — external
+- [x] Test `moves the declaration to dest and repoints importers` — external
       importer now imports from `dest`; the symbol is gone from the source.
-- [ ] Test `re-imports into the source when the source still uses the symbol` —
+- [x] Test `re-imports into the source when the source still uses the symbol` —
       source references the extracted symbol internally; assert an import of it
       from `dest` is added to the source.
-- [ ] Test `drags an exclusive local dep into dest` — `A` + exclusive local `h`;
+- [x] Test `drags an exclusive local dep into dest` — `A` + exclusive local `h`;
       after extract, `dest` contains both and the source no longer declares `h`.
-- [ ] Test `throws and names the shared dep when a local dep is shared` — assert
+- [x] Test `throws and names the shared dep when a local dep is shared` — assert
       throw, message names the shared symbol, and (all-or-nothing) the source
       file is UNCHANGED — nothing was moved.
-- [ ] Test `refuses when dest already exists`.
-- [ ] Wire the handler.
-- [ ] `npm test -- planExtract` → green.
-- [ ] Commit: the three files above.
+- [x] Test `refuses when dest already exists`.
+- [x] Wire the handler.
+- [x] `npm test -- planExtract` → green.
+- [x] Commit: the three files above.
 
 ### Task 10: fold `move` into the CLI (prep — keep `move-files` working)
 

@@ -46,6 +46,7 @@ import { collectRefs } from '../utils/refactor/collectRefs';
 import { loadRefactorProject } from '../utils/refactor/loadRefactorProject';
 import { parseSymbolAddress } from '../utils/refactor/parseSymbolAddress';
 import { planDelete } from '../utils/refactor/planDelete';
+import { planExtract } from '../utils/refactor/planExtract';
 import { planInline } from '../utils/refactor/planInline';
 import { planRename } from '../utils/refactor/planRename';
 import { readManifest } from '../utils/refactor/readManifest';
@@ -131,6 +132,21 @@ function runOp(
       const report = collectRefs(project, resolved);
       process.stdout.write(`${renderRefReport(report, flags['--json'])}\n`);
       planDelete(project, resolved);
+      return;
+    }
+
+    if (sub === 'extract') {
+      const dest = positionals[1];
+      if (dest === undefined) {
+        throw new Error('refactor extract: expected a <file>#<symbol> address and a <dest.ts>.');
+      }
+      const resolved = resolveSymbol(project, parsed);
+      // Print the blast radius first: it previews the external importers the extract
+      // will repoint, or (on a shared-dep refusal) an empty report before
+      // planExtract throws. --dry stops at this preview; the tail save is skipped.
+      const report = collectRefs(project, resolved);
+      process.stdout.write(`${renderRefReport(report, flags['--json'])}\n`);
+      planExtract(project, resolved, dest);
       return;
     }
 
