@@ -104,6 +104,7 @@ npm run build-all   # regenerate public/data/*.bin from raw catalogs
 npm run build-tiers # alias for build-all — emits per-tier .bin variants
 npm run format      # prettier
 npm run move-files  # move/rename TS files, imports auto-rewritten (see .claude/skills/move-files)
+npm run refactor    # ts-morph refactoring CLI (rename/extract/inline/delete/refs/move) → .claude/skills/refactor/SKILL.md
 npm run record-tour # offline 4K tour recorder → tools/record/README.md
 npm run perf        # headless GPU-timing harness → tools/perf/README.md
 ```
