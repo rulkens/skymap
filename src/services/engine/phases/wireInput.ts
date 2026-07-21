@@ -254,17 +254,23 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // Discrete wheel zoom (no gesture in progress). The zoom goes to whichever
     // driver owns the distance this frame: while a body is followed the
     // followBody driver owns it (scale its distance target in place, so the
-    // zoom is not swallowed by the re-asserted framing distance); at rest the
-    // resting driver renders `base`, so commit the zoomed base. Reading `base`
-    // from the store (not the frame-lagged `lastPose` Resource) makes rapid
-    // wheel ticks accumulate correctly — each tick zooms from the prior tick's
-    // committed distance. See `applyWheelZoom` for the ownership split.
+    // zoom is not swallowed by the re-asserted framing distance); under an
+    // active auto-rotate the committed base folds in the accumulated spin so the
+    // elapsed reset is seamless; at rest the resting driver renders `base`, so
+    // commit the zoomed base. Reading `base` from the store (not the
+    // frame-lagged `lastPose` Resource) makes rapid wheel ticks accumulate
+    // correctly — each tick zooms from the prior tick's committed distance.
+    // `autoRotate` + `performance.now()` feed the auto-rotate branch's spin
+    // fold. See `applyWheelZoom` for the ownership split.
     onZoom: (factor) => {
+      const cam = store.getState().camera;
       const zoomed = applyWheelZoom(
         state.cameraRuntime.clock,
         state.cameraRuntime.prevActiveId.current,
-        store.getState().camera.base,
+        cam.base,
         factor,
+        cam.autoRotate,
+        performance.now(),
       );
       if (zoomed !== null) store.dispatch(commitCameraPose(zoomed));
       state.subsystems.scheduler.requestRender();

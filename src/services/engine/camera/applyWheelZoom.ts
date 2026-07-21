@@ -2,7 +2,7 @@
  * applyWheelZoom — route a discrete wheel-zoom factor to whichever owner
  * authors the camera distance this frame.
  *
- * Two distance owners, split by who wins the driver arbitration:
+ * Three distance owners, split by who wins the driver arbitration:
  *
  *   - followBody. While a scene body is focused, the followBody driver owns the
  *     pose distance and reads it from `clock.followDistanceTarget`. The resting
@@ -13,8 +13,24 @@
  *     directly (the same slot a post-drag recapture writes), and the driver
  *     eases to it. Returns null — nothing to commit into the store.
  *
- *   - everyone else (resting / autoRotate / tween …). `camera.base` IS the
- *     rendered distance, so return the zoomed `base` for the caller to commit.
+ *   - autoRotate. The auto-rotate driver renders `spinAutoRotate(base, rate,
+ *     elapsed)` — yaw advances from a FROZEN base by the cumulative elapsed the
+ *     clock accumulates. `camera.base` IS the rendered distance, so a zoom must
+ *     commit a new base. But committing the raw zoomed `base` installs a fresh
+ *     base reference with the OLD (un-spun) yaw, and `autoRotateElapsed` resets
+ *     its start on any base-identity change — so the rendered yaw would snap
+ *     from `base.yaw + spin` back to `base.yaw`: a visible pop on every wheel
+ *     tick. We fold the accumulated spin into the committed pose instead: zoom
+ *     the ALREADY-spun pose, so the elapsed reset lands on a base that already
+ *     carries the spin and the spin continues seamlessly from there.
+ *     `autoRotateElapsed` here is an idempotent READ — the driver already called
+ *     it this frame with the same (active, base) refs, so re-reading it does not
+ *     reset the start. Passing the REAL active bit matters: if auto-rotate was
+ *     switched off between frames, elapsed reads 0 and this branch degrades to
+ *     the plain zoomed base.
+ *
+ *   - everyone else (resting / tween …). `camera.base` IS the rendered
+ *     distance, so return the zoomed `base` for the caller to commit.
  *
  * `prevActiveId` is the previous frame's winning driver id
  * (`state.cameraRuntime.prevActiveId.current`). The wheel event fires BETWEEN
@@ -30,6 +46,8 @@
  * function is the WHEEL half of 'any user zoom'.
  */
 
+import { autoRotateElapsed } from './cameraClock';
+import { spinAutoRotate } from './spinAutoRotate';
 import { clampDistance } from '../../../utils/camera/clampDistance';
 import { zoomedPose } from '../../../utils/camera/zoomedPose';
 import type { CameraClock } from '../../../@types/engine/camera/CameraClock';
@@ -40,10 +58,16 @@ export function applyWheelZoom(
   prevActiveId: string,
   base: CameraPose,
   factor: number,
+  autoRotate: { active: boolean; rate: number },
+  nowMs: number,
 ): CameraPose | null {
   if (prevActiveId === 'followBody' && clock.followDistanceTarget !== null) {
     clock.followDistanceTarget = clampDistance(clock.followDistanceTarget * factor);
     return null;
+  }
+  if (prevActiveId === 'autoRotate') {
+    const elapsed = autoRotateElapsed(clock, autoRotate.active, base, nowMs);
+    return zoomedPose(spinAutoRotate(base, autoRotate.rate, elapsed), factor);
   }
   return zoomedPose(base, factor);
 }
