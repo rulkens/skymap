@@ -15,6 +15,11 @@
  *  - `selectIsManualPlaying` is the wake predicate's read (Task 9): true only when
  *    a manual clock is actively advancing, so the render loop can stay asleep in
  *    live/paused states where nothing on the intent side moves.
+ *  - `selectIsLiveTicking` is its live-mode complement (Task 9): true when a live
+ *    clock is advancing (not paused). It does NOT feed `shouldKeepTicking` — live
+ *    advances at real-time rate, so nothing perceptible changes per frame and
+ *    pinning the loop at 60 fps would be waste. Instead runFrame arms a coarse
+ *    idle tick off this so the Earth terminator stays honest without a busy loop.
  *
  * Every selector is `RootState`-scoped so the same function works unchanged on
  * BOTH the React side (`useAppSelector(selectX)`) and the engine side
@@ -36,4 +41,9 @@ export const selectRateStep = (state: RootState): RateLadderStep | undefined =>
 export const selectIsManualPlaying = (state: RootState): boolean => {
   const time = selectTimeState(state);
   return time.mode === 'manual' && !time.paused;
+};
+
+export const selectIsLiveTicking = (state: RootState): boolean => {
+  const time = selectTimeState(state);
+  return time.mode === 'live' && !time.paused;
 };

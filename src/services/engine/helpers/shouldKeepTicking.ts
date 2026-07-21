@@ -48,11 +48,19 @@
  *     renderer; slotReady IS the 'field loaded' truth (the slot dispatches
  *     'ready' only after upload commits), selecting exactly the animating set
  *     with no renderer mirror.
+ *   - manual clock playing: `selectIsManualPlaying(s)` — a manual sim clock that
+ *     is advancing (not paused) moves every body every frame, so playback must
+ *     be continuous. LIVE mode is deliberately absent: it advances at real-time
+ *     rate, so nothing perceptible changes frame-to-frame and pinning the loop
+ *     at 60 fps would be waste — runFrame arms a coarse idle tick for the live
+ *     terminator instead (see its wake tail), keeping that path OUT of this
+ *     predicate.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RootState } from '../../../store/types';
 import { selectCameraActive } from '../../../state/camera/selectors';
+import { selectIsManualPlaying } from '../../../state/time/selectors';
 import { isEngineReady } from './engineReady';
 import { slotReady } from '../../loading/slotReady';
 
@@ -68,6 +76,7 @@ export function shouldKeepTicking(
     state.subsystems.fades.isAnyAnimating(nowMs) ||
     state.subsystems.structureFocus.isAwake(nowMs) ||
     (state.settings.flow.enabled && slotReady(state.assetSlots.flow)) ||
+    selectIsManualPlaying(s) ||
     anim.starFadeAnimating
   );
 }

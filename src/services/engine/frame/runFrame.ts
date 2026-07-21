@@ -69,7 +69,7 @@ import { commitCameraPose, cancelCameraTween } from '../../../state/camera/camer
 import { computeScaleInfo } from '../helpers/scaleBar';
 import { engineScaleChanged, engineTimeReported } from '../../../state/engine/engineSlice';
 import { deriveSimDays } from '../../../utils/time/deriveSimDays';
-import { selectTimeState } from '../../../state/time/selectors';
+import { selectTimeState, selectIsLiveTicking } from '../../../state/time/selectors';
 import { throttleByTime } from '../../../utils/throttle/throttleByTime';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 
@@ -92,6 +92,26 @@ const SCALE_TARGET_PX = 150;
  * unchanged report inside an open window still costs nothing downstream.
  */
 const publishTimeReportGate = throttleByTime(250);
+
+/**
+ * Idle-tick cadence for a LIVE sim clock, in milliseconds. Live time advances
+ * at the real-time rate (one sim day per real day), so the Sun barely moves —
+ * the Earth terminator creeps by a fraction of a pixel per second. Pinning the
+ * render loop at 60 fps to redraw that would burn the GPU for no visible gain,
+ * so live mode is deliberately kept OUT of `shouldKeepTicking`. Instead we ask
+ * the scheduler for ONE frame every few seconds: a coarse heartbeat that keeps
+ * the terminator honest while letting the loop sleep in between. A few seconds
+ * is well below the threshold where terminator drift becomes noticeable, and
+ * far above the per-frame cost we are avoiding. The React TimeBar readout runs
+ * its own timer, so this heartbeat serves only the 3D scene.
+ *
+ * A `setInterval` would be the wrong tool: it fires unconditionally, fighting
+ * render-on-demand and double-scheduling whenever a real wake (drag, fade) is
+ * already driving the loop. The scheduler's `requestIdleFrame` instead arms a
+ * single one-shot that self-cancels once fired and is ignored while a rAF frame
+ * is already queued — so it only ever supplies the frames the busy loop didn't.
+ */
+const LIVE_IDLE_TICK_MS = 3_000;
 
 /**
  * Run one frame of the render loop. Called every rAF tick by the scheduler in
@@ -503,5 +523,11 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   if (keepTicking) {
     state.subsystems.scheduler.requestRender();
+  } else if (selectIsLiveTicking(rootState)) {
+    // The scene is otherwise at rest, but a live sim clock is advancing. Arm a
+    // coarse heartbeat (see LIVE_IDLE_TICK_MS) so the terminator stays honest
+    // without pinning the loop — the scheduler ignores this while a frame is
+    // already queued and never stacks timers, so it can't fight the wake path.
+    state.subsystems.scheduler.requestIdleFrame(LIVE_IDLE_TICK_MS);
   }
 }

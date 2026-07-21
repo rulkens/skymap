@@ -23,9 +23,19 @@ import { shouldKeepTicking } from '../../../../src/services/engine/helpers/shoul
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { RootState } from '../../../../src/store/types';
 
-/** A RootState whose only term shouldKeepTicking reads is the camera slice. */
+/**
+ * A RootState carrying the two slices shouldKeepTicking reads: the camera slice
+ * and the time slice. Both default to their AT-REST value — camera still, clock
+ * live (so `selectIsManualPlaying` is false); a case flips exactly one.
+ */
 function rootWithCamera(
-  over: { dragging?: boolean; tween?: unknown; autoRotateActive?: boolean } = {},
+  over: {
+    dragging?: boolean;
+    tween?: unknown;
+    autoRotateActive?: boolean;
+    timeMode?: 'live' | 'manual';
+    paused?: boolean;
+  } = {},
 ): RootState {
   return {
     camera: {
@@ -33,6 +43,10 @@ function rootWithCamera(
       tween: over.tween ?? null,
       autoRotate: { active: over.autoRotateActive ?? false },
       clip: null,
+    },
+    time: {
+      mode: over.timeMode ?? 'live',
+      paused: over.paused ?? false,
     },
   } as unknown as RootState;
 }
@@ -131,6 +145,32 @@ describe('shouldKeepTicking', () => {
   it('structure-focus fade awake → true', () => {
     const state = makeState({ focusAwake: true });
     expect(shouldKeepTicking(state, restingRoot, 1000, NO_ANIM)).toBe(true);
+  });
+
+  it('manual clock playing → true even with everything else at rest', () => {
+    // A manual sim clock that is advancing (not paused) moves every body every
+    // frame, so playback must keep the loop ticking — the same shape as the
+    // flow-layer disjunct: one term true, all others at rest.
+    const state = makeState({});
+    expect(
+      shouldKeepTicking(
+        state,
+        rootWithCamera({ timeMode: 'manual', paused: false }),
+        1000,
+        NO_ANIM,
+      ),
+    ).toBe(true);
+  });
+
+  it('live clock at 1× with the scene at rest → false (idle-tick path, not this predicate)', () => {
+    // Live time advances at real-time rate: nothing perceptible changes per
+    // frame, so live must NOT pin the loop. The coarse idle tick (runFrame's
+    // wake tail) keeps the terminator honest instead — it is a separate path,
+    // deliberately absent from this predicate.
+    const state = makeState({});
+    expect(
+      shouldKeepTicking(state, rootWithCamera({ timeMode: 'live', paused: false }), 1000, NO_ANIM),
+    ).toBe(false);
   });
 
   it('a star LOD fade in flight → true even with everything else at rest', () => {
