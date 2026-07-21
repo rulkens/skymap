@@ -127,7 +127,10 @@ import type { StarCatalogRenderer } from '../../../../@types/rendering/StarCatal
 import { NEAR0 } from '../slabs';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
+import { frustumPlanesFromViewProj } from '../../../../utils/camera/frustumPlanesFromViewProj';
 import { fadeBand } from '../../../../utils/math/fadeBand';
+import { DEFAULT_FOV_Y_RAD } from '../../camera/cameraFraming';
+import { DEFAULT_STAR_SIZE_PX } from '../../../../data/defaults';
 import { walkStarOctreeCut } from '../../../gpu/renderers/starCatalog/walkStarOctreeCut';
 import { starOctreeIndex } from '../../../gpu/renderers/starCatalog/starOctreeIndex';
 import { starPickLeafDraws } from '../../../gpu/renderers/starCatalog/starPickLeafDraws';
@@ -138,6 +141,71 @@ import { SCALE_UNITS } from '../../../../data/scaleUnits';
 // The star octree grid is parsec-based; the scene frame is Mpc. This is the
 // inverse of PC_TO_MPC, kept a single source of truth off SCALE_UNITS.
 const MPC_TO_PC = 1 / SCALE_UNITS.PC_TO_MPC;
+
+/**
+ * The 24-float destination `frustumPlanesFromViewProj` writes each frame — six
+ * unit-normalized `(nx, ny, nz, d)` planes. Reused by BOTH `drawStream` and
+ * `drawPick` because the star pass is single-threaded and non-reentrant: the
+ * same discipline the rebased-vp narrowing already relies on (one shared camera
+ * uniform, one rebased matrix per frame). A per-frame `new Float32Array(24)`
+ * would allocate on every draw of the hot path this cull exists to make cheaper.
+ */
+const frustumScratch = new Float32Array(24);
+
+/**
+ * A leaf star's minimum on-screen glow radius, in pixels. It has no shared TS
+ * home — keep in sync with `lib/starPhotometry.wesl` STAR_GLOW_MIN_PX (the
+ * WESL/TS twin discipline this subsystem uses). Used to size the leaf cull
+ * sphere's angular slack; the `STAR_GLOW_MAX_PX` cap is intentionally ignored
+ * (this is conservative cull slack, not photometry — over-keeping is free, a
+ * false cull would wink a visible star out).
+ */
+const STAR_GLOW_MIN_PX = 1.5;
+
+/**
+ * The pick pass floors every leaf billboard to this clickable pixel radius (a
+ * 7 px footprint) so a sub-pixel star stays clickable — keep in sync with
+ * `starCatalog/vertex.wesl` STAR_PICK_MIN_RADIUS_PX. The pick cull sphere must
+ * cover that inflated footprint, or a node whose dot has left the screen but
+ * whose clickable floor still touches the edge would be culled (an unclickable
+ * edge star). So the pick margin floors the leaf px radius at this value where
+ * the visual margin uses the bare `STAR_GLOW_MIN_PX`.
+ */
+const STAR_PICK_MIN_RADIUS_PX = 3.5;
+
+/**
+ * Derive the per-frame angular cull slack (radians per unit camera distance) for
+ * the leaf cull sphere — the `glowMarginAngleRad` the renderers add as
+ * `length(center) · margin` (see `StarCatalogDrawArgs.glowMarginAngleRad`). A
+ * leaf draws as a fixed-PIXEL dot, so its world footprint grows with distance; a
+ * node whose box CENTRE has just crossed a clip plane can still paint on-screen
+ * pixels, and the slack keeps it.
+ *
+ *   - `radiansPerPx = DEFAULT_FOV_Y_RAD / viewportHeightPx` — the angle one
+ *     vertical pixel subtends, the exact conversion the vertex stage's
+ *     pixel-size-to-clip math inverts.
+ *   - `leafPxRadius = STAR_GLOW_MIN_PX · (sizePx / STAR_SIZE_REF_PX)` — the dot's
+ *     glow radius in pixels, scaled by the user's dot size relative to the
+ *     reference size (`DEFAULT_STAR_SIZE_PX`, the WESL STAR_SIZE_REF_PX twin).
+ *
+ * Two margins because the pick pass inflates every leaf to the 3.5 px clickable
+ * floor: `pick` floors `leafPxRadius` at `STAR_PICK_MIN_RADIUS_PX` BEFORE the
+ * radians conversion, so `max(a,b)·radiansPerPx` covers the larger of the two
+ * footprints. Conservative round-up is fine — this is slack, not photometry.
+ *
+ * Returns a mutated module-level scratch (read synchronously by the caller before
+ * any other call) rather than a fresh object — the same non-reentrant discipline
+ * `frustumScratch` and the rebased-vp narrowing already rely on, keeping the
+ * per-draw path allocation-free.
+ */
+const marginScratch = { leaf: 0, pick: 0 };
+function starCullMargins(sizePx: number, viewportHeightPx: number): typeof marginScratch {
+  const radiansPerPx = DEFAULT_FOV_Y_RAD / viewportHeightPx;
+  const leafPxRadius = STAR_GLOW_MIN_PX * (sizePx / DEFAULT_STAR_SIZE_PX);
+  marginScratch.leaf = leafPxRadius * radiansPerPx;
+  marginScratch.pick = Math.max(leafPxRadius, STAR_PICK_MIN_RADIUS_PX) * radiansPerPx;
+  return marginScratch;
+}
 
 /**
  * Milliseconds for a node's LOD fade to travel the full 0→1 (or 1→0). Linear
@@ -702,6 +770,12 @@ function drawStream(
   stream: StarDrawStream,
 ): void {
   const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, view.camPos));
+  // Extract the six clip planes ONCE from the SAME rebased vp the draws use — the
+  // exact matrix the GPU clips against, which is what makes the cull visually
+  // lossless — and derive the leaf angular slack once. Both are source-independent
+  // and forwarded identically to every source's draw (the shared-vp invariant).
+  const frustumPlanes = frustumPlanesFromViewProj(rebasedVp, frustumScratch);
+  const glowMarginAngleRad = starCullMargins(prep.sizePx, view.viewportPx[1]).leaf;
   for (const s of prep.sources) {
     const nodes = s[stream];
     if (nodes.count === 0) continue;
@@ -722,10 +796,8 @@ function drawStream(
       brightness: prep.brightness,
       glowOverlap: prep.glowOverlap,
       aggregateIntensityCap: prep.aggregateIntensityCap,
-      // Culling stays off until Task 5 wires real per-frame planes from the
-      // slab view; `null` packs every walked node exactly as before.
-      frustumPlanes: null,
-      glowMarginAngleRad: 0,
+      frustumPlanes,
+      glowMarginAngleRad,
     });
   }
 }
@@ -786,6 +858,14 @@ export const starCatalogLayer: ContentLayer = {
     if (prep === null) return;
 
     const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, view.camPos));
+    // Same once-per-draw plane extraction as `drawStream`, off the identical
+    // rebased vp — the pick cull must agree with the visual cull so a picked and
+    // a drawn star always partition the frustum the same way. The margin uses the
+    // PICK branch: every leaf is floored to the 3.5 px clickable footprint, so the
+    // cull sphere must cover that inflated dot (a false cull here = an unclickable
+    // edge star, forbidden), which the visual 1.5 px slack would undercover.
+    const frustumPlanes = frustumPlanesFromViewProj(rebasedVp, frustumScratch);
+    const glowMarginAngleRad = starCullMargins(prep.sizePx, view.viewportPx[1]).pick;
     for (const d of starPickLeafDraws(prep)) {
       pickRenderer.draw(pass, {
         source: d.source,
@@ -797,10 +877,8 @@ export const starCatalogLayer: ContentLayer = {
         originRelCamMpc: d.originRelCamMpc,
         cellScaleMpc: d.cellScaleMpc,
         sizePx: prep.sizePx,
-        // Real planes + the clickable-footprint margin are wired in Task 5; until
-        // then the pick path culls nothing (null disables it, margin unused).
-        frustumPlanes: null,
-        glowMarginAngleRad: 0,
+        frustumPlanes,
+        glowMarginAngleRad,
       });
     }
   },
