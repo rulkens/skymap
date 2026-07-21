@@ -797,6 +797,10 @@ export const starCatalogLayer: ContentLayer = {
         originRelCamMpc: d.originRelCamMpc,
         cellScaleMpc: d.cellScaleMpc,
         sizePx: prep.sizePx,
+        // Real planes + the clickable-footprint margin are wired in Task 5; until
+        // then the pick path culls nothing (null disables it, margin unused).
+        frustumPlanes: null,
+        glowMarginAngleRad: 0,
       });
     }
   },
