@@ -185,6 +185,10 @@ describe('the (foreground:0, NEAR0) render group above the foreground gate', () 
       gpu: {
         earthRenderer: { draw: vi.fn() },
         starRenderer: null,
+        // The field-star sphere shares this group; its presence query reads the
+        // catalog off this handle, so a null handle short-circuits its enabled
+        // gate and keeps it out below and above the gate (like the siblings).
+        starCatalogRenderer: null,
         planetRenderer: null,
         texturedBodyRenderer: null,
         // The ring shares this group; its null handle short-circuits enabled, so

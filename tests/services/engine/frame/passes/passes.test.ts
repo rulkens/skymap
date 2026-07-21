@@ -220,7 +220,7 @@ const SWAP_NAMES = [
 const FOREGROUND_NAMES = [
   'earth',
   'star-spheres',
-  'focused-field-star-sphere',
+  'field-star-sphere',
   'planets',
   'textured-bodies',
 ];
@@ -886,7 +886,7 @@ describe('drawPick migration-table rows', () => {
       'star-catalog',
       'earth',
       'star-spheres',
-      'focused-field-star-sphere',
+      'field-star-sphere',
       'planets',
     ]);
   });
