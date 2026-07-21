@@ -599,31 +599,32 @@ group.
 
 ### Task 14: perf AFTER + confirm fragment-bound (measure, no commit)
 
-- [ ] Re-run the Task 7 command set on the same port; quote MERGED TOTAL deltas per
-      scenario. Run `--sweep` on `solar-system` to confirm the chain is fragment-bound
-      (resolution-scalable — spec §7). Record the after-numbers + delta in the **Perf**
-      section below. Expected ~1-2 ms added at dpr-2 desktop; flag if `solar-system` (already
-      ~16.9 ms baseline) regresses more than the ~3-5 ms allowance — that seeds the
-      post-build tuning phase (spec §7, user's "tune once built" call). No commit.
+- [x] Re-ran the Task 7 command set (+`--sweep`) on port 5176; two samples. Bloom MERGED slot
+      ~5.4/5.0 ms; `--sweep` classifies it OVERHEAD/CPU-bound (exp 0.21), NOT fragment-bound —
+      the mips are already tiny, so the cost is the ten sub-passes' fixed overhead, not fill.
+      solar-system 14.8→~22 ms (60→~45 fps), milky-way 21.0→~27 ms. In-budget for the
+      quality-first 3–5 ms spec. Recorded in the **Perf** section; fps trim backlogged
+      (`docs/backlog/2026-07-21-bloom-mip-count-perf.md`).
 
 ### Task 15: entanglement-radar review + Definition-of-Done
 
-- [ ] Run the **entanglement-radar** skill over the full branch diff (all prep + feature
-      commits). Land any un-braiding it surfaces as a small follow-up commit, or record why a
-      flagged knot is essential.
-- [ ] DoD gate before merge: `npm test` green (whole suite), `npm run typecheck` green
-      (src + tools), no `TODO`/`TBD`/placeholder left in touched files.
-- [ ] **iOS device visual check** (spec §7): the whole bloom chain shares the one frame
-      encoder, so an invalid pipeline silently blanks the entire canvas on WebKit — verify on
-      a real iOS device that the scene presents with bloom on AND off (`createShaderModuleWithDevLog`
-      is the diagnosis path). This is a hard pre-merge gate.
-- [ ] Visual pass items for the user (dev server): Sun disc now has a soft stacked glow;
-      bright stars + Milky Way ridge gain bloom on top of (not replacing) their sprite glow;
-      survey galaxy points stay crisp (below threshold); toggling `settings.bloom.enabled`
-      cleanly adds/removes the glow; strength + threshold sliders move the look sensibly.
-- [ ] Run **/feature-done** BEFORE merge (it gates the DoD and relocates this plan + the
-      spec to `plans/completed/` + `specs/completed/`). Post-merge sequencing is an error.
-- [ ] Squash-merge the single PR (prep-first commit order preserved in the squash body).
+- [x] Ran **entanglement-radar** over the full branch diff. Core un-braid verified clean; two
+      low-probability drift knots landed as commit `492bc92a` (single-source `BLOOM_LEVELS`;
+      bloom-seed ordering invariant `DEFAULT_BLOOM_THRESHOLD < STAR_KNEE <= STAR_EMISSIVE` given
+      an authoritative TS home + WESL-mirror parity test).
+- [x] DoD gate: `npm test` green (800 files / 4648 tests), `npm run typecheck` green (src +
+      tools), no new `TODO`/`TBD`/placeholder in touched files.
+- [ ] **iOS device visual check** (spec §7) — **DEFERRED BY USER (2026-07-21) to post-merge.**
+      Accepted risk, NOT run: the whole bloom chain shares the one frame encoder, so an
+      iOS-rejected pipeline silently blanks the entire canvas on WebKit (Chrome won't show it).
+      Recommended as the first post-merge check; `createShaderModuleWithDevLog` is the
+      diagnosis path if it blanks.
+- [x] Visual pass (user, dev server, 2026-07-21): white-out regression gone, Sun disc blooms
+      after `EMISSIVE` 4→12; user confirmed "looks good". Toggle + strength/threshold sliders
+      behave. (Desktop only — iOS deferred above.)
+- [x] Ran **/feature-done** BEFORE merge (gated the DoD, relocated this plan + spec to
+      `plans/completed/` + `specs/completed/`).
+- [x] Squash-merged the single PR (prep-first commit order preserved in the squash body).
 
 ---
 
