@@ -496,16 +496,16 @@ idiom). The `move` manifest keeps the existing `[{ from, to }]` shape. Use `npm 
 existing `applyMoves`/`expandTestMirrors` tests already cover the rewriting; add
 only the thin-orchestration test.
 
-- [ ] Test `expands a source move to drag its test mirror then applies both` —
+- [x] Test `expands a source move to drag its test mirror then applies both` —
       in-memory project + a `fileExists` stub; assert both the source and its
       mirror are moved (that `planMove` chains expand→apply, the one new
       behaviour this file owns).
-- [ ] Wire `refactor move`; rewire `moveFiles.ts` to delegate to `planMove` +
+- [x] Wire `refactor move`; rewire `moveFiles.ts` to delegate to `planMove` +
       `loadRefactorProject`.
-- [ ] `npm test -- planMove applyMoves expandTestMirrors` → green;
+- [x] `npm test -- planMove applyMoves expandTestMirrors` → green;
       `npm run move-files -- <a> <b> --dry` and `npm run refactor -- move <a> <b>
       --dry` both preview identically.
-- [ ] Commit: the four files above.
+- [x] Commit: the four files above.
 
 ### Task 11: skills + CLAUDE.md doc line
 

@@ -40,16 +40,21 @@
  *   Batch form (any subcommand): refactor <subcommand> --manifest <ops.json>
  */
 
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import type { Project } from 'ts-morph';
 import { parseFlags } from '../utils/cli/args';
 import { collectRefs } from '../utils/refactor/collectRefs';
 import { loadRefactorProject } from '../utils/refactor/loadRefactorProject';
+import { parseMovePairEntry } from '../utils/refactor/parseMovePairEntry';
 import { parseSymbolAddress } from '../utils/refactor/parseSymbolAddress';
 import { planDelete } from '../utils/refactor/planDelete';
 import { planExtract } from '../utils/refactor/planExtract';
 import { planInline } from '../utils/refactor/planInline';
+import { planMove } from '../utils/refactor/planMove';
 import { planRename } from '../utils/refactor/planRename';
 import { readManifest } from '../utils/refactor/readManifest';
+import { renderMoveReport } from '../utils/refactor/renderMoveReport';
 import { renderRefReport } from '../utils/refactor/renderRefReport';
 import { resolveSymbol } from '../utils/refactor/resolveSymbol';
 
@@ -160,21 +165,41 @@ function runOp(
       planInline(project, resolved);
       return;
     }
-  } else if (positionals.length !== 2) {
-    throw new Error('refactor move: expected <from> <to>.');
+  } else {
+    // move: a `<from> <to>` path pair, no symbol address. planMove expands the
+    // test mirror against the real filesystem and applies the batch to the
+    // shared project — the same orchestration `npm run move-files` runs.
+    if (positionals.length !== 2) {
+      throw new Error('refactor move: expected <from> <to>.');
+    }
+    const moves = planMove(
+      project,
+      [{ from: positionals[0]!, to: positionals[1]! }],
+      (p) => existsSync(resolve(p)),
+    );
+    // Preview the move-files blast radius: the expanded moves plus every file
+    // whose imports ts-morph rewrote. --dry stops before the driver's tail
+    // save; this report is the preview either way (move owns no symbol, so it
+    // prints this instead of the shared ref report).
+    const rewritten = project.getSourceFiles().filter((file) => !file.isSaved());
+    process.stdout.write(
+      renderMoveReport('refactor move', moves, rewritten.map((file) => file.getFilePath())),
+    );
+    return;
   }
-
-  void project;
-  void flags;
-  throw new Error(`refactor ${sub}: not yet implemented.`);
 }
 
-// Decode one batch entry into its positional argument tuple. Only the shape
-// every subcommand shares is proven here — a JSON array of string arguments;
-// per-subcommand tuple validation (arity, address well-formedness) is runOp's
-// job, and richer entry shapes (move's `{from,to}`) arrive with the subcommand
-// tasks that own them.
-function entryToPositionals(entry: unknown): readonly string[] {
+// Decode one batch entry into the positional argument tuple runOp expects.
+// Most subcommands share one shape — a JSON array of string arguments — with
+// per-subcommand tuple validation (arity, address well-formedness) left to
+// runOp. `move` is the exception: its manifests keep the `{from,to}` object
+// shape `npm run move-files` has always used, so it is decoded through the
+// shared parseMovePairEntry into the same `[from, to]` pair.
+function entryToPositionals(sub: Subcommand, entry: unknown): readonly string[] {
+  if (sub === 'move') {
+    const { from, to } = parseMovePairEntry(entry);
+    return [from, to];
+  }
   if (Array.isArray(entry) && entry.every((arg) => typeof arg === 'string')) {
     return entry as readonly string[];
   }
@@ -204,7 +229,7 @@ async function main(): Promise<void> {
   } else {
     // Batch: every entry runs against the ONE project. A throw on any entry
     // aborts before the single save below, so disk is never partially written.
-    for (const entry of manifest) runOp(sub, project, entryToPositionals(entry), flags);
+    for (const entry of manifest) runOp(sub, project, entryToPositionals(sub, entry), flags);
   }
 
   if (!flags['--dry']) await project.save();
