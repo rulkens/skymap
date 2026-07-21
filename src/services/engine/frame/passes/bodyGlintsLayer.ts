@@ -73,6 +73,7 @@ import { Source } from '../../../../data/sources';
 import { SCENE_PLANETS } from '../../../../data/bodies/scenePlanets';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { sceneBodyPartition } from '../sceneBodyPartition';
+import { sceneBodyStates } from '../sceneBodyStates';
 import { seedIndexOfBody } from './seedIndexOfBody';
 import { glintBandClass } from './glintBandClass';
 import { bodyApparentDiameterPx } from '../../../../utils/scene/bodyApparentDiameterPx';
@@ -157,6 +158,10 @@ export const bodyGlintsLayer: ContentLayer = {
     if (renderer === null) return;
 
     const { glints } = sceneBodyPartition(state, ctx);
+    // Live positions from the per-frame snapshot (keyed by id), resolved ONCE for
+    // the whole pack loop — not the baked record fields; radius + albedo stay
+    // authored identity on each record.
+    const states = sceneBodyStates(state, ctx);
 
     // Rebase into the camera-relative frame in f64 so the f32 upload carries no
     // catastrophic cancellation — see the module header's f64-seam note.
@@ -179,8 +184,9 @@ export const bodyGlintsLayer: ContentLayer = {
     let count = 0;
     for (const body of glints) {
       if (count >= MAX_GLINTS) break;
+      const positionMpc = states.get(body.id)!.positionMpc;
       const diameterPx = bodyApparentDiameterPx({
-        positionMpc: body.positionMpc,
+        positionMpc,
         radiusKm: body.radiusKm,
         camPosMpc: camPos,
         viewportHeightPx: view.viewportPx[1],
@@ -189,7 +195,7 @@ export const bodyGlintsLayer: ContentLayer = {
       // brightness (size x albedo x phase) x the descent cross-fade band.
       const raw = bodyGlintBrightness({
         albedo: body.albedo,
-        positionMpc: body.positionMpc,
+        positionMpc,
         camPosMpc: camPos,
         renderOriginMpc: RENDER_ORIGIN_MPC,
         apparentDiameterPx: diameterPx,
@@ -201,9 +207,9 @@ export const bodyGlintsLayer: ContentLayer = {
       // renderer narrows to f32 — narrowing the raw AU-scale anchor would have
       // already lost the low bits.
       const base = count * INSTANCE_FLOATS;
-      staging[base + 0] = body.positionMpc[0] - camPos[0];
-      staging[base + 1] = body.positionMpc[1] - camPos[1];
-      staging[base + 2] = body.positionMpc[2] - camPos[2];
+      staging[base + 0] = positionMpc[0] - camPos[0];
+      staging[base + 1] = positionMpc[1] - camPos[1];
+      staging[base + 2] = positionMpc[2] - camPos[2];
       staging[base + 3] = body.albedo[0];
       staging[base + 4] = body.albedo[1];
       staging[base + 5] = body.albedo[2];
@@ -274,6 +280,9 @@ export const bodyGlintsLayer: ContentLayer = {
     if (pickRenderer === null) return;
 
     const { glints } = sceneBodyPartition(state, ctx);
+    // Live positions from the per-frame snapshot (keyed by id), resolved ONCE for
+    // both the Earth stamp and the whole glint loop — not the baked record fields.
+    const states = sceneBodyStates(state, ctx);
 
     const camPos = view.camPos;
     // The same far-dissolve alpha `draw` folds into each glint's brightness, so the
@@ -308,11 +317,12 @@ export const bodyGlintsLayer: ContentLayer = {
     // glint).
     const earth = state.data.bodies.earth;
     if (earth !== null && earthCaptionPickable(state, ctx)) {
+      const earthPos = states.get(earth.id)!.positionMpc;
       pickPoints.push({
         posRelCamMpc: [
-          earth.positionMpc[0] - camPos[0],
-          earth.positionMpc[1] - camPos[1],
-          earth.positionMpc[2] - camPos[2],
+          earthPos[0] - camPos[0],
+          earthPos[1] - camPos[1],
+          earthPos[2] - camPos[2],
         ] as Vec3,
         packedId: packSelection(Source.Earth, 0 + PICK_SENTINEL_OFFSET),
         bandClass: glintBandClass('earth'),
@@ -322,6 +332,8 @@ export const bodyGlintsLayer: ContentLayer = {
     for (const body of glints) {
       const seedIndex = seedIndexOfBody(body.id, SCENE_PLANETS);
       if (seedIndex < 0) continue; // unknown id: a packed id from −1 would alias body 0.
+
+      const positionMpc = states.get(body.id)!.positionMpc;
 
       // Per-body visibility skip — but only BEYOND the caption range. Within it
       // the visible affordance is the body's LABEL, which rides a flat toggle in
@@ -337,7 +349,7 @@ export const bodyGlintsLayer: ContentLayer = {
       // `GLINT_MIN_BRIGHTNESS`, so within the gate the pick set is WIDER than the
       // drawn set and beyond it they match.
       const diameterPx = bodyApparentDiameterPx({
-        positionMpc: body.positionMpc,
+        positionMpc,
         radiusKm: body.radiusKm,
         camPosMpc: camPos,
         viewportHeightPx: view.viewportPx[1],
@@ -346,7 +358,7 @@ export const bodyGlintsLayer: ContentLayer = {
       const brightness =
         bodyGlintBrightness({
           albedo: body.albedo,
-          positionMpc: body.positionMpc,
+          positionMpc,
           camPosMpc: camPos,
           renderOriginMpc: RENDER_ORIGIN_MPC,
           apparentDiameterPx: diameterPx,
@@ -361,9 +373,9 @@ export const bodyGlintsLayer: ContentLayer = {
 
       pickPoints.push({
         posRelCamMpc: [
-          body.positionMpc[0] - camPos[0],
-          body.positionMpc[1] - camPos[1],
-          body.positionMpc[2] - camPos[2],
+          positionMpc[0] - camPos[0],
+          positionMpc[1] - camPos[1],
+          positionMpc[2] - camPos[2],
         ] as Vec3,
         packedId: packSelection(Source.Planet, seedIndex + PICK_SENTINEL_OFFSET),
         // Priority class from the element table: 1 (heliocentric planet) or 2

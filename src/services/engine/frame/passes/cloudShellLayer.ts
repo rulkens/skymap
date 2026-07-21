@@ -69,6 +69,7 @@ import { packCloudShellUniforms } from '../../../../utils/gpu/packCloudShellUnif
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from '../subPixelBodyCullPx';
+import { sceneBodyStates } from '../sceneBodyStates';
 
 /**
  * The Earth record to draw the cloud shell for this frame, or `null` if the shell
@@ -86,12 +87,15 @@ function cloudShellDraw(state: EngineState, ctx: ReadyFrameContext): EarthBody |
   if (state.assetSlots.bodyTextures.get(bodyTextureSlotKey('earth', 'clouds'))?.current() == null)
     return null;
   // Sub-pixel cull on Earth's diameter (the shell is a hair larger, so the
-  // surface gate governs both). A zero camera-to-centre distance means the camera
-  // is INSIDE the body — apparentSizePx defensively returns 0 there, which would
-  // read as sub-pixel, so treat it as resolved.
-  const dx = earth.positionMpc[0] - ctx.drawCamPos[0];
-  const dy = earth.positionMpc[1] - ctx.drawCamPos[1];
-  const dz = earth.positionMpc[2] - ctx.drawCamPos[2];
+  // surface gate governs both). Live position from the per-frame snapshot (keyed
+  // by id) — not the baked record field; the record still gates presence +
+  // residency and carries the authored radius. A zero camera-to-centre distance
+  // means the camera is INSIDE the body — apparentSizePx defensively returns 0
+  // there, which would read as sub-pixel, so treat it as resolved.
+  const earthPos = sceneBodyStates(state, ctx).get(earth.id)!.positionMpc;
+  const dx = earthPos[0] - ctx.drawCamPos[0];
+  const dy = earthPos[1] - ctx.drawCamPos[1];
+  const dz = earthPos[2] - ctx.drawCamPos[2];
   const distanceMpc = Math.hypot(dx, dy, dz);
   if (distanceMpc === 0) return earth;
   const diameterPx = apparentSizePx({
@@ -125,21 +129,25 @@ export const cloudShellLayer: ContentLayer = {
     const earth = cloudShellDraw(state, ctx);
     if (earth === null) return;
 
+    // Live position + orientation from the per-frame snapshot (keyed by id) — not
+    // the baked record fields; radius stays authored identity on the record.
+    const earthState = sceneBodyStates(state, ctx).get(earth.id)!;
+
     // Scale the unit sphere to the shell radius — just above the surface — from
-    // the slab's f64 vp (the f64 seam), folding in Earth's baked orientation so
+    // the slab's f64 vp (the f64 seam), folding in Earth's resolved orientation so
     // the cloud map's equirectangular texels co-register with the surface.
     const shellRadiusMpc = earth.radiusKm * SCALE_UNITS.KM_TO_MPC * CLOUD_SHELL_PARAMS.radiusRatio;
     const mvp = composeBodyMvp(
       view.slab.vp,
-      earth.positionMpc,
+      earthState.positionMpc,
       RENDER_ORIGIN_MPC,
       shellRadiusMpc,
-      earth.orientation,
+      earthState.orientation,
     );
-    // Sun rotated into Earth's local frame (its baked orientation carries the
+    // Sun rotated into Earth's local frame (its resolved orientation carries the
     // axial tilt), so the fragment's Lambert dim on the night side stays co-framed
     // with the surface.
-    const sun = sunDirLocal(earth.positionMpc, RENDER_ORIGIN_MPC, earth.orientation);
+    const sun = sunDirLocal(earthState.positionMpc, RENDER_ORIGIN_MPC, earthState.orientation);
     // Scale the shell's direct (sun-lit) term by the SAME irradiance the surface
     // uses (single source of truth), so clouds — the brightest real feature — are
     // not dimmer than the ground beneath them. The ambient floor is likewise the
