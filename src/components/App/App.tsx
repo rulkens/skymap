@@ -42,6 +42,7 @@ import NavigationPanel from '../NavigationPanel/NavigationPanel';
 import CommandPaletteContainer from '../containers/CommandPaletteContainer';
 import SearchTrigger from '../SearchTrigger/SearchTrigger';
 import AutoRotateToggleContainer from '../containers/AutoRotateToggleContainer';
+import TimeBarContainer from '../containers/TimeBarContainer';
 import HomeButton from '../HomeButton/HomeButton';
 import SplashContainer from '../containers/SplashContainer';
 import AboutPill from '../Splash/AboutPill';
@@ -259,6 +260,9 @@ export function App(): React.ReactElement {
           onClose={() => dispatch(clearSelection())}
         />
         <ScaleBar scale={scale} />
+        {/* Self-positioning (fixed, bottom-center), so it rides the HUD stack
+            as a direct child rather than joining a flex row. */}
+        <TimeBarContainer hidden={paletteOpen || splashVisible} />
         {/* Flex column anchored bottom-left.  Children stack upward as
             they're added, so we don't need per-panel `bottom:` math. */}
         <div className={appStyles.leftStack}>
