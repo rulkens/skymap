@@ -36,7 +36,7 @@
   font-family: var(--font-family-mono);
   font-size: var(--font-size-lg);
   line-height: var(--line-height-tight);
-  color: var(--color-fg);
+  color: var(--color-fg-muted);
 
   transition: opacity var(--duration-fast) ease-out;
 }
