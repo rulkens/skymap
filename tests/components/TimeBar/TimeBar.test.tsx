@@ -26,6 +26,7 @@ function renderBar(overrides: Partial<TimeBarProps> = {}) {
     onPlayPause: vi.fn<() => void>(),
     onNow: vi.fn<() => void>(),
     onReadoutClick: vi.fn<() => void>(),
+    onRateLabelClick: vi.fn<() => void>(),
     ...overrides,
   };
   render(<TimeBar {...props} />);
@@ -94,6 +95,13 @@ describe('TimeBar', () => {
     const readout = screen.getByRole('button', { name: /2026-11-03 18:00 UTC/i });
     fireEvent.click(readout);
     expect(props.onReadoutClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('fires onRateLabelClick from the rate label', () => {
+    // The rate label is a chromeless button that opens the rate-selector popover.
+    const props = renderBar({ rateLabel: '1 day/s' });
+    fireEvent.click(screen.getByRole('button', { name: /change speed/i }));
+    expect(props.onRateLabelClick).toHaveBeenCalledTimes(1);
   });
 
   it('press-and-hold on a step button auto-repeats, and release stops it', () => {

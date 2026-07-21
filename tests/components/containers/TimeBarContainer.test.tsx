@@ -49,6 +49,19 @@ function popover(container: HTMLElement): HTMLElement | null {
   return container.querySelector<HTMLElement>('[role="dialog"]');
 }
 
+function dialogCount(container: HTMLElement): number {
+  return container.querySelectorAll('[role="dialog"]').length;
+}
+
+// A detent row inside the rate-selector popover carries only its ladder label.
+function detent(container: HTMLElement, label: string): HTMLButtonElement {
+  const dialog = popover(container);
+  const el =
+    dialog && Array.from(dialog.querySelectorAll('button')).find((b) => b.textContent === label);
+  if (!el) throw new Error(`no detent row "${label}"`);
+  return el;
+}
+
 describe('TimeBarContainer', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -231,6 +244,73 @@ describe('TimeBarContainer', () => {
       9,
     );
     expect(popover(container)).toBeNull();
+  });
+
+  it('opens the rate selector on rate-label click', () => {
+    const { store } = createAppStore();
+    const { container } = render(createElement(TimeBarContainer, { hidden: false }), {
+      wrapper: makeWrapper(store),
+    });
+
+    expect(popover(container)).toBeNull();
+    fireEvent.click(button(container, 'Change speed'));
+
+    const dialog = popover(container);
+    if (dialog === null) throw new Error('rate selector did not open');
+    // The list carries every ladder detent, so a couple of representative labels
+    // must be present.
+    expect(dialog.textContent).toContain('1 s/s');
+    expect(dialog.textContent).toContain('10 yr/s');
+  });
+
+  it('sets the chosen detent and closes on rate selection', () => {
+    const { store } = createAppStore();
+    // Boot detent is index 0; pick a distinct one so the dispatch is unambiguous.
+    const { container } = render(createElement(TimeBarContainer, { hidden: false }), {
+      wrapper: makeWrapper(store),
+    });
+
+    fireEvent.click(button(container, 'Change speed'));
+    fireEvent.click(detent(container, '1 day/s'));
+
+    expect(selectTimeState(store.getState()).rateIndex).toBe(6);
+    expect(popover(container)).toBeNull();
+  });
+
+  it('opening the rate selector closes the date popover (mutual exclusion)', () => {
+    const { store } = createAppStore();
+    const { container } = render(createElement(TimeBarContainer, { hidden: false }), {
+      wrapper: makeWrapper(store),
+    });
+
+    fireEvent.click(readoutTrigger(container));
+    expect(container.querySelector('input[type="datetime-local"]')).not.toBeNull();
+
+    fireEvent.click(button(container, 'Change speed'));
+
+    // Only the rate selector is open: exactly one dialog, and it's not the date
+    // popover (no datetime input).
+    expect(dialogCount(container)).toBe(1);
+    expect(container.querySelector('input[type="datetime-local"]')).toBeNull();
+    expect(popover(container)?.textContent).toContain('1 day/s');
+  });
+
+  it('closes the rate selector on Esc without dispatching', () => {
+    // The rate selector implements its own Esc handler (a mirror of the date
+    // popover's), so it earns its own guard: Esc closes, nothing dispatches.
+    const { store } = createAppStore();
+    const before = selectTimeState(store.getState());
+    const { container } = render(createElement(TimeBarContainer, { hidden: false }), {
+      wrapper: makeWrapper(store),
+    });
+
+    fireEvent.click(button(container, 'Change speed'));
+    const dialog = popover(container);
+    if (dialog === null) throw new Error('rate selector did not open');
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+
+    expect(popover(container)).toBeNull();
+    expect(selectTimeState(store.getState())).toBe(before);
   });
 
   it('cancels the popover on Esc without dispatching', () => {

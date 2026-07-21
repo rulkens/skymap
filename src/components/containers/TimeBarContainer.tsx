@@ -27,6 +27,7 @@ import { memo, useCallback, useEffect, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import TimeBar from '../TimeBar/TimeBar';
 import DateEntryPopover from '../TimeBar/DateEntryPopover/DateEntryPopover';
+import RateSelectorPopover from '../TimeBar/RateSelectorPopover/RateSelectorPopover';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectRateStep, selectTimeState } from '../../state/time/selectors';
 import { goLive, pause, resume, setRate } from '../../state/time/timeSlice';
@@ -91,7 +92,11 @@ function TimeBarContainer({ hidden }: TimeBarContainerProps): ReactNode {
   const readout = useTimeReadout(time);
 
   const { mode, paused, rateIndex } = time;
-  const [popoverOpen, setPopoverOpen] = useState(false);
+
+  // One discriminated open-state, not two parallel booleans: the popovers are
+  // mutually exclusive (opening one closes the other), so a single value both
+  // models that invariant and makes "which, if any, is open" a single read.
+  const [openPopover, setOpenPopover] = useState<'none' | 'date' | 'rate'>('none');
 
   // At the ladder ends the step is inert: a clamped step used to re-dispatch the
   // same rate, which silently re-anchors a live clock into manual mode (the only
@@ -121,10 +126,29 @@ function TimeBarContainer({ hidden }: TimeBarContainerProps): ReactNode {
     [dispatch],
   );
 
-  // The container owns the popover's open/close and placement; the popover itself
-  // is pure. Clicking the readout toggles it.
-  const onReadoutClick = useCallback(() => setPopoverOpen((open) => !open), []);
-  const onPopoverCancel = useCallback(() => setPopoverOpen(false), []);
+  // The container owns each popover's open/close and placement; the popovers
+  // themselves are pure. Each trigger toggles its own popover, which (via the
+  // single open-state) closes the other one.
+  const onReadoutClick = useCallback(
+    () => setOpenPopover((cur) => (cur === 'date' ? 'none' : 'date')),
+    [],
+  );
+  const onRateLabelClick = useCallback(
+    () => setOpenPopover((cur) => (cur === 'rate' ? 'none' : 'rate')),
+    [],
+  );
+  const onPopoverClose = useCallback(() => setOpenPopover('none'), []);
+
+  // Selecting a detent jumps straight to it — same setRate payload the
+  // Slower/Faster steppers build (performance.now() base, matching anchor.realMs)
+  // — then closes the selector.
+  const onRateSelect = useCallback(
+    (nextRateIndex: number) => {
+      dispatch(setRate({ rateIndex: nextRateIndex, nowMs: performance.now() }));
+      setOpenPopover('none');
+    },
+    [dispatch],
+  );
 
   // Commit and the URL `t=` restore share one operation: `enterManualPausedAt`
   // lands the manual clock at the chosen instant, paused (a date jump lands
@@ -132,7 +156,7 @@ function TimeBarContainer({ hidden }: TimeBarContainerProps): ReactNode {
   const onPopoverCommit = useCallback(
     (instant: Date) => {
       enterManualPausedAt(dispatch, instant);
-      setPopoverOpen(false);
+      setOpenPopover('none');
     },
     [dispatch],
   );
@@ -151,14 +175,24 @@ function TimeBarContainer({ hidden }: TimeBarContainerProps): ReactNode {
         onPlayPause={onPlayPause}
         onNow={onNow}
         onReadoutClick={onReadoutClick}
+        onRateLabelClick={onRateLabelClick}
         hidden={hidden}
       />
-      {popoverOpen && !hidden && (
+      {openPopover === 'date' && !hidden && (
         <div style={POPOVER_PLACEMENT}>
           <DateEntryPopover
             initial={readoutInstant(time)}
             onCommit={onPopoverCommit}
-            onCancel={onPopoverCancel}
+            onCancel={onPopoverClose}
+          />
+        </div>
+      )}
+      {openPopover === 'rate' && !hidden && (
+        <div style={POPOVER_PLACEMENT}>
+          <RateSelectorPopover
+            currentIndex={rateIndex}
+            onSelect={onRateSelect}
+            onClose={onPopoverClose}
           />
         </div>
       )}

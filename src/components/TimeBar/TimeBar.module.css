@@ -229,11 +229,35 @@
   pointer-events: none;
 }
 
+/*
+ * The rate label doubles as the rate-selector trigger. Chromeless at rest (no
+ * fill, no border) so it reads as the current-speed text, with the same hover
+ * tint the flat-glyph steppers use. `position: relative` anchors its tooltip.
+ */
 .rate {
+  position: relative;
+  font: inherit;
   min-width: 6ch;
+  padding: var(--space-2) var(--space-3);
   text-align: center;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
   color: var(--color-fg-muted);
   letter-spacing: var(--letter-spacing-tight);
+  cursor: pointer;
+  transition: var(--transition-color), background var(--duration-color) ease;
+}
+
+.rate:hover,
+.rate:focus-visible {
+  color: var(--color-accent);
+  background: var(--surface-control);
+}
+
+.rate:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 /*
@@ -267,6 +291,8 @@
 
 .readout:hover .tooltip,
 .readout:focus-visible .tooltip,
+.rate:hover .tooltip,
+.rate:focus-visible .tooltip,
 .step:hover .tooltip,
 .step:focus-visible .tooltip,
 .now:hover .tooltip,

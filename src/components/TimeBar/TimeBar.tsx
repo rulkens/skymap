@@ -110,7 +110,8 @@ export type TimeBarProps = {
   readonly fasterDisabled?: boolean; // at the fastest detent — step is inert
   readonly onPlayPause: () => void; // toggle paused             ( \ )
   readonly onNow: () => void; // return to live wall-time  ( Shift+N )
-  readonly onReadoutClick: () => void; // open the date-entry popover (Task 4)
+  readonly onReadoutClick: () => void; // open the date-entry popover
+  readonly onRateLabelClick: () => void; // open the rate-selector popover
   readonly hidden?: boolean; // App-layout gate, mirrors other HUD pills
 };
 
@@ -126,6 +127,7 @@ function TimeBar({
   onPlayPause,
   onNow,
   onReadoutClick,
+  onRateLabelClick,
   hidden = false,
 }: TimeBarProps): ReactNode {
   const slowerHold = useHoldRepeat(onSlower, slowerDisabled);
@@ -186,7 +188,17 @@ function TimeBar({
               </div>
             </div>
 
-            <span className={styles.rate}>{rateLabel}</span>
+            <button
+              type="button"
+              className={styles.rate}
+              onClick={onRateLabelClick}
+              aria-label="Change speed"
+            >
+              {rateLabel}
+              <span className={styles.tooltip} aria-hidden="true">
+                Change speed
+              </span>
+            </button>
 
             <span className={styles.divider} aria-hidden="true" />
 

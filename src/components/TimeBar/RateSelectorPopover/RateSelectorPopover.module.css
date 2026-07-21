@@ -1,0 +1,55 @@
+/*
+ * RateSelectorPopover.module.css — the playback-detent selector popover.
+ *
+ * A small glass panel anchored above the TimeBar's rate label. Shares the HUD's
+ * surface vocabulary with DateEntryPopover via the composed `panel` chrome, then
+ * adds its own vertical-list layout. Positioning is left to the container's
+ * placement wrapper; the root owns only its own chrome and internal layout.
+ */
+
+.root {
+  composes: panel from '../popoverChrome.module.css';
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 7rem;
+
+  color: var(--color-fg-base);
+  font: var(--font-size-md) / var(--line-height-tight) var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Detent rows: chromeless text buttons that tint on hover/focus, mirroring the
+ * toolbar's flat-glyph steppers rather than reading as filled pills.
+ */
+.detent {
+  font: inherit;
+  text-align: right;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--color-fg-muted);
+  letter-spacing: var(--letter-spacing-tight);
+  cursor: pointer;
+  transition: var(--transition-color), background var(--duration-color) ease;
+}
+
+.detent:hover,
+.detent:focus-visible {
+  color: var(--color-accent);
+  background: var(--surface-control);
+}
+
+.detent:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* The lit detent: brighter text on a filled row so the current speed reads at a
+ * glance without relying on colour alone (aria-current carries it for AT). */
+.detentCurrent {
+  color: var(--color-fg);
+  background: var(--surface-control);
+}
