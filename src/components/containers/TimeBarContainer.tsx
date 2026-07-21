@@ -24,11 +24,12 @@
  */
 
 import { memo, useCallback, useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import TimeBar from '../TimeBar/TimeBar';
+import DateEntryPopover from '../TimeBar/DateEntryPopover/DateEntryPopover';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectRateStep, selectTimeState } from '../../state/time/selectors';
-import { goLive, pause, resume, setRate } from '../../state/time/timeSlice';
+import { goLive, pause, resume, setRate, setSimDays } from '../../state/time/timeSlice';
 import { RATE_LADDER } from '../../data/time/rateLadder';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { formatSimClock } from '../../utils/time/formatSimClock';
@@ -45,10 +46,28 @@ function clampRateIndex(index: number): number {
   return Math.min(Math.max(index, 0), RATE_LADDER.length - 1);
 }
 
-function formatReadout(time: TimeState): string {
-  const simDays = deriveSimDays(time, performance.now());
-  return formatSimClock(new Date(julianDaysToUnixMs(simDays)));
+// The current sim instant as a UTC Date — the readout string and the
+// date-entry popover's seed both derive from this same moment.
+function readoutInstant(time: TimeState): Date {
+  return new Date(julianDaysToUnixMs(deriveSimDays(time, performance.now())));
 }
+
+function formatReadout(time: TimeState): string {
+  return formatSimClock(readoutInstant(time));
+}
+
+// The popover is a fixed pane centred just above the bottom-center TimeBar pill.
+// Placement lives here rather than in the popover's module (which owns only its
+// own chrome), matching the popover css note that the container's wrapper anchors
+// it. The offset clears the bar's height; the final corner is a deferred visual
+// gate (see TimeBar.tsx), so this stays an estimate, not tuned spacing.
+const POPOVER_PLACEMENT: CSSProperties = {
+  position: 'fixed',
+  left: '50%',
+  bottom: 'calc(var(--corner-offset) + 3.5rem)',
+  transform: 'translateX(-50%)',
+  zIndex: 11,
+};
 
 /**
  * Derived readout string that keeps ticking without a per-frame Redux write.
@@ -76,6 +95,7 @@ function TimeBarContainer({ hidden }: TimeBarContainerProps): ReactNode {
   const readout = useTimeReadout(time);
 
   const { mode, paused, rateIndex } = time;
+  const [popoverOpen, setPopoverOpen] = useState(false);
 
   const onSlower = useCallback(
     () => dispatch(setRate({ rateIndex: clampRateIndex(rateIndex - 1), nowMs: performance.now() })),
@@ -98,24 +118,49 @@ function TimeBarContainer({ hidden }: TimeBarContainerProps): ReactNode {
     [dispatch],
   );
 
-  // The date-entry popover (Task 4) owns its own open state inside the TimeBar
-  // subtree. Until it lands this affordance is inert; TimeBar exposes no
-  // popover-open prop yet, so there is nothing for the container to drive.
-  const onReadoutClick = useCallback(() => {}, []);
+  // The container owns the popover's open/close and placement; the popover itself
+  // is pure. Clicking the readout toggles it.
+  const onReadoutClick = useCallback(() => setPopoverOpen((open) => !open), []);
+  const onPopoverCancel = useCallback(() => setPopoverOpen(false), []);
+
+  // Commit mirrors the URL `t=` restore (hashParamSources): `setSimDays` anchors
+  // the manual clock at the chosen instant, then `pause` freezes it there. Both
+  // dispatches share one `nowMs` so pause's re-anchor derives zero elapsed real
+  // time and holds the exact instant. A date jump lands paused, not playing.
+  const onPopoverCommit = useCallback(
+    (instant: Date) => {
+      const nowMs = performance.now();
+      dispatch(setSimDays({ simDays: unixMsToJulianDays(instant.getTime()), nowMs }));
+      dispatch(pause({ nowMs }));
+      setPopoverOpen(false);
+    },
+    [dispatch],
+  );
 
   return (
-    <TimeBar
-      readout={readout}
-      rateLabel={rateStep?.label ?? ''}
-      mode={mode}
-      paused={paused}
-      onSlower={onSlower}
-      onFaster={onFaster}
-      onPlayPause={onPlayPause}
-      onNow={onNow}
-      onReadoutClick={onReadoutClick}
-      hidden={hidden}
-    />
+    <>
+      <TimeBar
+        readout={readout}
+        rateLabel={rateStep?.label ?? ''}
+        mode={mode}
+        paused={paused}
+        onSlower={onSlower}
+        onFaster={onFaster}
+        onPlayPause={onPlayPause}
+        onNow={onNow}
+        onReadoutClick={onReadoutClick}
+        hidden={hidden}
+      />
+      {popoverOpen && !hidden && (
+        <div style={POPOVER_PLACEMENT}>
+          <DateEntryPopover
+            initial={readoutInstant(time)}
+            onCommit={onPopoverCommit}
+            onCancel={onPopoverCancel}
+          />
+        </div>
+      )}
+    </>
   );
 }
 

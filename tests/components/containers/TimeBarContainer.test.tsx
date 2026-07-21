@@ -20,6 +20,7 @@ import TimeBarContainer from '../../../src/components/containers/TimeBarContaine
 import { createAppStore } from '../../../src/store/createAppStore';
 import { selectTimeState } from '../../../src/state/time/selectors';
 import { setRate } from '../../../src/state/time/timeSlice';
+import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 
 function makeWrapper(store: ReturnType<typeof createAppStore>['store']) {
   return ({ children }: { children: ReactNode }) => createElement(Provider, { store, children });
@@ -29,6 +30,18 @@ function button(container: HTMLElement, label: string): HTMLButtonElement {
   const el = container.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);
   if (el === null) throw new Error(`no button with aria-label "${label}"`);
   return el;
+}
+
+// The readout trigger's accessible name embeds the live time, so match the stable
+// prefix rather than the whole string.
+function readoutTrigger(container: HTMLElement): HTMLButtonElement {
+  const el = container.querySelector<HTMLButtonElement>('button[aria-label^="Set date and time"]');
+  if (el === null) throw new Error('no readout trigger button');
+  return el;
+}
+
+function popover(container: HTMLElement): HTMLElement | null {
+  return container.querySelector<HTMLElement>('[role="dialog"]');
 }
 
 describe('TimeBarContainer', () => {
@@ -90,5 +103,59 @@ describe('TimeBarContainer', () => {
     fireEvent.click(button(container, 'Slower'));
 
     expect(selectTimeState(store.getState()).rateIndex).toBe(2);
+  });
+
+  it('opens the date-entry popover on readout click', () => {
+    const { store } = createAppStore();
+    const { container } = render(createElement(TimeBarContainer, { hidden: false }), {
+      wrapper: makeWrapper(store),
+    });
+
+    expect(popover(container)).toBeNull();
+    fireEvent.click(readoutTrigger(container));
+    expect(popover(container)).not.toBeNull();
+  });
+
+  it('jumps the clock to the committed instant (manual + paused) and closes', () => {
+    const { store } = createAppStore();
+    const { container } = render(createElement(TimeBarContainer, { hidden: false }), {
+      wrapper: makeWrapper(store),
+    });
+
+    fireEvent.click(readoutTrigger(container));
+    const input = container.querySelector<HTMLInputElement>('input[type="datetime-local"]');
+    if (input === null) throw new Error('no datetime-local input');
+    // The popover reads the field as UTC, matching the readout + `t=` param.
+    fireEvent.change(input, { target: { value: '2030-06-15T12:30' } });
+
+    const set = popover(container)?.querySelector<HTMLButtonElement>('button');
+    if (!set) throw new Error('no Set button');
+    fireEvent.click(set);
+
+    const time = selectTimeState(store.getState());
+    expect(time.mode).toBe('manual');
+    expect(time.paused).toBe(true);
+    expect(time.anchor.simDays).toBeCloseTo(
+      unixMsToJulianDays(Date.UTC(2030, 5, 15, 12, 30)),
+      9,
+    );
+    expect(popover(container)).toBeNull();
+  });
+
+  it('cancels the popover on Esc without dispatching', () => {
+    const { store } = createAppStore();
+    const before = selectTimeState(store.getState());
+    const { container } = render(createElement(TimeBarContainer, { hidden: false }), {
+      wrapper: makeWrapper(store),
+    });
+
+    fireEvent.click(readoutTrigger(container));
+    const dialog = popover(container);
+    if (dialog === null) throw new Error('popover did not open');
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+
+    expect(popover(container)).toBeNull();
+    // No action dispatched → the slice reference is untouched.
+    expect(selectTimeState(store.getState())).toBe(before);
   });
 });
