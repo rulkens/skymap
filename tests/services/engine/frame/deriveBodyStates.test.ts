@@ -4,6 +4,8 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { ORBITAL_ELEMENTS, elementsById } from '../../../../src/data/bodies/orbitalElements';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
+import { propagateElements } from '../../../../src/utils/orbit/propagateElements';
+import { keplerianPositionMpc } from '../../../../src/utils/orbit/keplerianPositionMpc';
 
 const states = deriveBodyStates(CONST_J2000);
 
@@ -38,6 +40,36 @@ describe('deriveBodyStates', () => {
 
     expect(dist).toBeGreaterThanOrEqual(periapsis);
     expect(dist).toBeLessThanOrEqual(apoapsis);
+  });
+
+  it('is memoized on simDays (same instant ⇒ same Map reference)', () => {
+    // A frame reads this snapshot from several passes; every reader must see the
+    // one instant, so an unchanged simDays returns the SAME Map (paused-frame
+    // free-ride + no draw-vs-pick tearing), and a new instant returns a fresh one.
+    const t = CONST_J2000 + 4000;
+    const first = deriveBodyStates(t);
+    const second = deriveBodyStates(t);
+    expect(second).toBe(first);
+
+    const later = deriveBodyStates(t + 1);
+    expect(later).not.toBe(first);
+  });
+
+  it("a moon's snapshot position rides its propagated parent", () => {
+    // 0.1 century off epoch: Jupiter has moved, and Io (1.76 d period) is many
+    // orbits from its epoch phase. Io's snapshot offset from Jupiter's snapshot
+    // must equal Io's Jupiter-relative PROPAGATED position — the parent hop uses
+    // the snapshot Jupiter, and the moon offset uses propagated (not epoch)
+    // elements. An epoch-only moon offset would miss by ~a whole orbit radius.
+    const t = CONST_J2000 + 3652.5;
+    const snap = deriveBodyStates(t);
+    const io = snap.get('io')!;
+    const jupiter = snap.get('jupiter')!;
+    const ioRelative = keplerianPositionMpc(propagateElements(elementsById('io'), t));
+
+    expect(io.positionMpc[0] - jupiter.positionMpc[0]).toBeCloseTo(ioRelative[0], 18);
+    expect(io.positionMpc[1] - jupiter.positionMpc[1]).toBeCloseTo(ioRelative[1], 18);
+    expect(io.positionMpc[2] - jupiter.positionMpc[2]).toBeCloseTo(ioRelative[2], 18);
   });
 
   it('orientation is identity iff the body is untextured', () => {

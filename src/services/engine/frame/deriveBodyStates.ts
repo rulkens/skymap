@@ -14,17 +14,33 @@
  * `heliocentricPlanet` / `satelliteBody` compute it today — same
  * `keplerianPositionMpc` evaluation, same render-origin anchor, same
  * `orientationForBody` gate. `deriveBodyStates(CONST_J2000)` therefore
- * reproduces the current baked values bit-for-bit (the prep zero-change proof).
+ * reproduces the current baked values bit-for-bit (the prep zero-change proof):
+ * at the epoch `propagateElements` is the identity map, so the propagated
+ * elements equal the tabulated ones.
  *
- * ### `simDays` drives orientation; positions do not yet propagate
+ * ### `simDays` drives both orientation and position
  *
- * The sim-day scalar drives each body's orientation (its spin phase) through
- * `orientationForBody`, so at `CONST_J2000` the derived spin matches the baked
- * J2000 value and later instants rotate the body. Position, by contrast, is
- * still evaluated at the tabulated epoch elements only — the derive does not yet
- * propagate mean anomaly, so a body's world position is fixed at its J2000 place
- * regardless of `simDays`. The elements table carries the rates for that
- * propagation step; once the derive reads them, `simDays` will move positions too.
+ * The sim-day scalar advances each body along its orbit AND turns it on its
+ * axis. Position comes from `keplerianPositionMpc(propagateElements(el,
+ * simDays))` — the element table's per-Julian-century rates carry mean anomaly
+ * (and the slowly precessing node/apsis) forward to `t` — and orientation from
+ * `orientationForBody`. At `CONST_J2000`, zero centuries have elapsed, so
+ * propagation leaves the elements untouched and the derived state matches the
+ * baked J2000 values; later instants move the body along its ellipse and spin
+ * it. `meanAnomalyRad` on the state is the PROPAGATED `M` (the value at `t`, not
+ * epoch), because it is the orbit-trail falloff anchor — a trail that fades
+ * behind the body must anchor on where the body actually is.
+ *
+ * ### One instant per frame, memoized
+ *
+ * A frame reads this snapshot from several passes (draw, pick, labels), so all
+ * of them must see the SAME instant — recomputing per reader would let a
+ * mid-frame clock tick tear the draw pass from the pick pass. The result is
+ * memoized on `simDays`: an unchanged `simDays` (a paused clock, or the repeated
+ * reads within one frame) returns the cached Map by reference at no cost, and
+ * only a new instant pays for the ~22 Kepler solves. The cache is one deep — the
+ * clock advances monotonically, so the last instant is the only one a frame ever
+ * re-reads.
  *
  * ### Planets first, then moons — one parent hop
  *
@@ -41,33 +57,41 @@ import type { BodyState } from '../../../@types/scene/BodyState';
 import { ORBITAL_ELEMENTS } from '../../../data/bodies/orbitalElements';
 import { orientationForBody } from '../../../data/bodies/orientationForBody';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
+import { propagateElements } from '../../../utils/orbit/propagateElements';
 import { keplerianPositionMpc } from '../../../utils/orbit/keplerianPositionMpc';
 import { addVec3 } from '../../../utils/math/addVec3';
 
-// `simDays` drives orientation (spin phase) via `orientationForBody`. Position
-// propagation still evaluates the tabulated epoch elements only, so a body's
-// world position is unaffected by `simDays` until the derive reads the element
-// table's rates to advance mean anomaly.
+// The last computed snapshot, keyed by the instant it was computed at. A frame
+// re-reads the same instant from several passes and a paused clock re-reads it
+// every frame, so a one-deep cache makes both free; a new instant recomputes.
+let cachedSimDays: number | undefined;
+let cachedStates: ReadonlyMap<string, BodyState> | undefined;
+
 export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState> {
+  if (cachedStates !== undefined && simDays === cachedSimDays) {
+    return cachedStates;
+  }
+
   const states = new Map<string, BodyState>();
 
   // Pass one — heliocentric bodies (planets + the EMB). Focus is the render
-  // origin, so the position is origin + the element table's offset, exactly as
-  // `heliocentricPlanet` bakes it.
+  // origin, so the position is origin + the propagated element offset — the same
+  // composition `heliocentricPlanet` performs, evaluated at `simDays`.
   for (const el of ORBITAL_ELEMENTS) {
     if (el.parentId !== null) continue;
+    const propagated = propagateElements(el, simDays);
     states.set(el.id, {
-      positionMpc: addVec3(RENDER_ORIGIN_MPC, keplerianPositionMpc(el)),
+      positionMpc: addVec3(RENDER_ORIGIN_MPC, keplerianPositionMpc(propagated)),
       orientation: orientationForBody(el.id, simDays),
-      meanAnomalyRad: el.meanAnomalyRad,
+      meanAnomalyRad: propagated.meanAnomalyRad,
     });
   }
 
-  // Pass two — moons. Focus is the parent's already-derived world position
+  // Pass two — moons. Focus is the parent's already-derived SNAPSHOT position
   // (one hop; every parent is heliocentric, resolved in pass one), plus the
-  // moon's own offset — the same composition `satelliteBody` performs, and
-  // value-identical because addVec3 folds origin + parentOffset + moonOffset in
-  // the same order either way.
+  // moon's own propagated offset — the same composition `satelliteBody`
+  // performs. Reading the parent from the snapshot, not re-deriving it, is what
+  // welds a moon to the exact parent instant every reader of this map sees.
   for (const el of ORBITAL_ELEMENTS) {
     if (el.parentId === null) continue;
     const parent = states.get(el.parentId);
@@ -76,12 +100,15 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
         `deriveBodyStates: moon '${el.id}' names unknown parent '${el.parentId}'`,
       );
     }
+    const propagated = propagateElements(el, simDays);
     states.set(el.id, {
-      positionMpc: addVec3(parent.positionMpc, keplerianPositionMpc(el)),
+      positionMpc: addVec3(parent.positionMpc, keplerianPositionMpc(propagated)),
       orientation: orientationForBody(el.id, simDays),
-      meanAnomalyRad: el.meanAnomalyRad,
+      meanAnomalyRad: propagated.meanAnomalyRad,
     });
   }
 
+  cachedSimDays = simDays;
+  cachedStates = states;
   return states;
 }
