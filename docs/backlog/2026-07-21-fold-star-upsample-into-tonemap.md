@@ -31,10 +31,18 @@ hdr→swap input bindings; if bloom does consume it, the fold either moves the
 sample into bloom's input path too, or is not a free move and should be
 re-costed.
 
-## Relation to the sibling lever
+## Relation to the sibling levers
 
 Independent of the existing "Lower-res offscreen star-aggregate pass" item
 (`STAR_AGGREGATE_DIVISOR` 2 → 4): that one cuts the *aggregate draw* fill at
 source resolution; this one cuts the *composite*, whose cost is
 destination-resolution-bound (one sample per hdr pixel regardless of source
 size). The two compose.
+
+The `2026-07-21-bloom-mip-count-perf.md` item lands the SAME tonemap pass: the
+bloom fold (`bloom0 → hdr`) is also a full-viewport composite that fuses into
+`hdr→swap`. The two folds are not symmetric, and the asymmetry is exactly the
+design question above: the bloom fold is the LAST hdr write so it moves cleanly,
+but this star-upsample fold is gated on bloom's bright prefilter still seeing the
+star glow (bloom reads `hdr` before tonemap). Land the bloom fold first, then
+resolve whether star-upsample moves into tonemap or must also feed bloom's input.
