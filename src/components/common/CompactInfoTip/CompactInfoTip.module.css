@@ -29,6 +29,11 @@
   box-shadow: var(--shadow-card);
   padding: var(--space-2) var(--space-4);
 
+  /* Own font-family, no inheritance: the tip span sits OUTSIDE the wrapped
+   * button, so in a font-less region (the top-bar pills) it would fall through
+   * to the browser's default serif. Mono matches the rest of the HUD chrome
+   * (InfoTip cards, ScaleBar, TimeBar). */
+  font-family: var(--font-family-mono);
   font-size: var(--font-size-lg);
   line-height: var(--line-height-tight);
   color: var(--color-fg);
