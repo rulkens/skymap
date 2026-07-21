@@ -43,6 +43,7 @@ import type { SourceType } from '../../../../src/@types/data/SourceType';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { GALAXY_CATALOG_POINT_SOURCES } from '../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry';
 import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
+import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 
 // ── Module mocks needed for wiring helpers ──────────────────────────────────
 
@@ -279,6 +280,7 @@ function makeSyntheticFallbackState(): {
     cameraRuntime: {
       lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity } },
       projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
+      lastRenderedSimDays: { current: CONST_J2000 },
     },
   } as unknown as EngineState;
 
