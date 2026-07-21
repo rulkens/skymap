@@ -32,10 +32,11 @@
  *   The ecliptic→equatorial rotation into the scene's frame is `ECLIPTIC_FRAME`
  *   (see `orbitPlaneFrames.ts`), applied downstream where the ellipse is built.
  *
- * The scene is static at a single epoch (J2000, no clock), so only the epoch
- * column of the mean elements is stored; JPL's element rates are recorded in the
- * spec for provenance but deliberately omitted here (YAGNI — a future animated
- * ephemeris is the named extension point).
+ * Each planet row carries its J2000 epoch elements AND the six per-Julian-
+ * century rates from the same JPL table, so `propagateElements` can advance the
+ * body to any simulated instant. The Moon and the satellite rows carry epoch
+ * elements only (their rates are a Task-5 concern); a row with no rates
+ * propagates to itself, so the mixed table stays uniform.
  *
  * ### Authoring discipline
  *
@@ -44,7 +45,10 @@
  * discipline the scene body tables observe. JPL tabulates the planets by mean
  * longitude `L` and longitude of perihelion `ϖ`; the classical `ω` and `M` are
  * derived at the seed site via `ω = ϖ − Ω` and `M = L − ϖ`, with that
- * arithmetic written out inline so the transcription stays checkable.
+ * arithmetic written out inline so the transcription stays checkable. The rates
+ * follow the same discipline: the raw JPL rate columns (`dL/dt`, `dϖ/dt`,
+ * `dΩ/dt`, …) sit in each row comment, and `dM/dt = dL/dt − dϖ/dt`,
+ * `dω/dt = dϖ/dt − dΩ/dt` are shown inline, mirroring the `M`/`ω` derivations.
  *
  * ### Provenance (J2000 mean elements)
  *
@@ -117,6 +121,16 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisRad: degToRad(77.45779628 - 48.33076593),
     // M = L − ϖ = 252.25032350 − 77.45779628
     meanAnomalyRad: degToRad(252.2503235 - 77.45779628),
+    // Rates (JPL, per Julian century): dL/dt = 149472.67411175, dϖ/dt = 0.16047689,
+    // dΩ/dt = −0.12534081, da/dt = 0.00000037 au, de/dt = 0.00001906, dI/dt = −0.00594749.
+    semiMajorRateMpcPerCty: 0.00000037 * SCALE_UNITS.AU_TO_MPC,
+    eccentricityRatePerCty: 0.00001906,
+    inclinationRateRadPerCty: degToRad(-0.00594749),
+    ascendingNodeRateRadPerCty: degToRad(-0.12534081),
+    // dω/dt = dϖ/dt − dΩ/dt = 0.16047689 − (−0.12534081)
+    argPeriapsisRateRadPerCty: degToRad(0.16047689 - -0.12534081),
+    // dM/dt = dL/dt − dϖ/dt = 149472.67411175 − 0.16047689
+    meanAnomalyRateRadPerCty: degToRad(149472.67411175 - 0.16047689),
     color: MERCURY_GREY,
   },
   {
@@ -132,6 +146,16 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisRad: degToRad(131.60246718 - 76.67984255),
     // M = L − ϖ = 181.97909950 − 131.60246718
     meanAnomalyRad: degToRad(181.9790995 - 131.60246718),
+    // Rates (JPL, per Julian century): dL/dt = 58517.81538729, dϖ/dt = 0.00268329,
+    // dΩ/dt = −0.27769418, da/dt = 0.00000390 au, de/dt = −0.00004107, dI/dt = −0.00078890.
+    semiMajorRateMpcPerCty: 0.0000039 * SCALE_UNITS.AU_TO_MPC,
+    eccentricityRatePerCty: -0.00004107,
+    inclinationRateRadPerCty: degToRad(-0.0007889),
+    ascendingNodeRateRadPerCty: degToRad(-0.27769418),
+    // dω/dt = dϖ/dt − dΩ/dt = 0.00268329 − (−0.27769418)
+    argPeriapsisRateRadPerCty: degToRad(0.00268329 - -0.27769418),
+    // dM/dt = dL/dt − dϖ/dt = 58517.81538729 − 0.00268329
+    meanAnomalyRateRadPerCty: degToRad(58517.81538729 - 0.00268329),
     color: VENUS_CREAM,
   },
   {
@@ -147,6 +171,16 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisRad: degToRad(102.93768193 - 0.0),
     // M = L − ϖ = 100.46457166 − 102.93768193
     meanAnomalyRad: degToRad(100.46457166 - 102.93768193),
+    // Rates (JPL, per Julian century): dL/dt = 35999.37244981, dϖ/dt = 0.32327364,
+    // dΩ/dt = 0.0, da/dt = 0.00000562 au, de/dt = −0.00004392, dI/dt = −0.01294668.
+    semiMajorRateMpcPerCty: 0.00000562 * SCALE_UNITS.AU_TO_MPC,
+    eccentricityRatePerCty: -0.00004392,
+    inclinationRateRadPerCty: degToRad(-0.01294668),
+    ascendingNodeRateRadPerCty: degToRad(0.0),
+    // dω/dt = dϖ/dt − dΩ/dt = 0.32327364 − 0.0
+    argPeriapsisRateRadPerCty: degToRad(0.32327364 - 0.0),
+    // dM/dt = dL/dt − dϖ/dt = 35999.37244981 − 0.32327364
+    meanAnomalyRateRadPerCty: degToRad(35999.37244981 - 0.32327364),
     color: EARTH_BLUE,
   },
   {
@@ -162,6 +196,16 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisRad: degToRad(-23.94362959 - 49.55953891),
     // M = L − ϖ = −4.55343205 − (−23.94362959)
     meanAnomalyRad: degToRad(-4.55343205 - -23.94362959),
+    // Rates (JPL, per Julian century): dL/dt = 19140.30268499, dϖ/dt = 0.44441088,
+    // dΩ/dt = −0.29257343, da/dt = 0.00001847 au, de/dt = 0.00007882, dI/dt = −0.00813131.
+    semiMajorRateMpcPerCty: 0.00001847 * SCALE_UNITS.AU_TO_MPC,
+    eccentricityRatePerCty: 0.00007882,
+    inclinationRateRadPerCty: degToRad(-0.00813131),
+    ascendingNodeRateRadPerCty: degToRad(-0.29257343),
+    // dω/dt = dϖ/dt − dΩ/dt = 0.44441088 − (−0.29257343)
+    argPeriapsisRateRadPerCty: degToRad(0.44441088 - -0.29257343),
+    // dM/dt = dL/dt − dϖ/dt = 19140.30268499 − 0.44441088
+    meanAnomalyRateRadPerCty: degToRad(19140.30268499 - 0.44441088),
     color: MARS_RED,
   },
   {
@@ -177,6 +221,16 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisRad: degToRad(14.72847983 - 100.47390909),
     // M = L − ϖ = 34.39644051 − 14.72847983
     meanAnomalyRad: degToRad(34.39644051 - 14.72847983),
+    // Rates (JPL, per Julian century): dL/dt = 3034.74612775, dϖ/dt = 0.21252668,
+    // dΩ/dt = 0.20469106, da/dt = −0.00011607 au, de/dt = −0.00013253, dI/dt = −0.00183714.
+    semiMajorRateMpcPerCty: -0.00011607 * SCALE_UNITS.AU_TO_MPC,
+    eccentricityRatePerCty: -0.00013253,
+    inclinationRateRadPerCty: degToRad(-0.00183714),
+    ascendingNodeRateRadPerCty: degToRad(0.20469106),
+    // dω/dt = dϖ/dt − dΩ/dt = 0.21252668 − 0.20469106
+    argPeriapsisRateRadPerCty: degToRad(0.21252668 - 0.20469106),
+    // dM/dt = dL/dt − dϖ/dt = 3034.74612775 − 0.21252668
+    meanAnomalyRateRadPerCty: degToRad(3034.74612775 - 0.21252668),
     color: JUPITER_TAN,
   },
   {
@@ -192,6 +246,16 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisRad: degToRad(92.59887831 - 113.66242448),
     // M = L − ϖ = 49.95424423 − 92.59887831
     meanAnomalyRad: degToRad(49.95424423 - 92.59887831),
+    // Rates (JPL, per Julian century): dL/dt = 1222.49362201, dϖ/dt = −0.41897216,
+    // dΩ/dt = −0.28867794, da/dt = −0.00125060 au, de/dt = −0.00050991, dI/dt = 0.00193609.
+    semiMajorRateMpcPerCty: -0.0012506 * SCALE_UNITS.AU_TO_MPC,
+    eccentricityRatePerCty: -0.00050991,
+    inclinationRateRadPerCty: degToRad(0.00193609),
+    ascendingNodeRateRadPerCty: degToRad(-0.28867794),
+    // dω/dt = dϖ/dt − dΩ/dt = −0.41897216 − (−0.28867794)
+    argPeriapsisRateRadPerCty: degToRad(-0.41897216 - -0.28867794),
+    // dM/dt = dL/dt − dϖ/dt = 1222.49362201 − (−0.41897216)
+    meanAnomalyRateRadPerCty: degToRad(1222.49362201 - -0.41897216),
     color: SATURN_GOLD,
   },
   {
@@ -207,6 +271,16 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisRad: degToRad(170.9542763 - 74.01692503),
     // M = L − ϖ = 313.23810451 − 170.95427630
     meanAnomalyRad: degToRad(313.23810451 - 170.9542763),
+    // Rates (JPL, per Julian century): dL/dt = 428.48202785, dϖ/dt = 0.40805281,
+    // dΩ/dt = 0.04240589, da/dt = −0.00196176 au, de/dt = −0.00004397, dI/dt = −0.00242939.
+    semiMajorRateMpcPerCty: -0.00196176 * SCALE_UNITS.AU_TO_MPC,
+    eccentricityRatePerCty: -0.00004397,
+    inclinationRateRadPerCty: degToRad(-0.00242939),
+    ascendingNodeRateRadPerCty: degToRad(0.04240589),
+    // dω/dt = dϖ/dt − dΩ/dt = 0.40805281 − 0.04240589
+    argPeriapsisRateRadPerCty: degToRad(0.40805281 - 0.04240589),
+    // dM/dt = dL/dt − dϖ/dt = 428.48202785 − 0.40805281
+    meanAnomalyRateRadPerCty: degToRad(428.48202785 - 0.40805281),
     color: URANUS_CYAN,
   },
   {
@@ -222,6 +296,16 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisRad: degToRad(44.96476227 - 131.78422574),
     // M = L − ϖ = −55.12002969 − 44.96476227
     meanAnomalyRad: degToRad(-55.12002969 - 44.96476227),
+    // Rates (JPL, per Julian century): dL/dt = 218.45945325, dϖ/dt = −0.32241464,
+    // dΩ/dt = −0.00508664, da/dt = 0.00026291 au, de/dt = 0.00005105, dI/dt = 0.00035372.
+    semiMajorRateMpcPerCty: 0.00026291 * SCALE_UNITS.AU_TO_MPC,
+    eccentricityRatePerCty: 0.00005105,
+    inclinationRateRadPerCty: degToRad(0.00035372),
+    ascendingNodeRateRadPerCty: degToRad(-0.00508664),
+    // dω/dt = dϖ/dt − dΩ/dt = −0.32241464 − (−0.00508664)
+    argPeriapsisRateRadPerCty: degToRad(-0.32241464 - -0.00508664),
+    // dM/dt = dL/dt − dϖ/dt = 218.45945325 − (−0.32241464)
+    meanAnomalyRateRadPerCty: degToRad(218.45945325 - -0.32241464),
     color: NEPTUNE_BLUE,
   },
   {
