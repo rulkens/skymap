@@ -5,26 +5,29 @@
  * textured planet correctly and aim its 0° meridian — the axial-tilt + facing
  * counterpart to `OrbitalElements` (which places the body, not orients it).
  *
- * The scene is static at a single epoch (J2000), so only the constant terms are
- * stored. The published elements also carry rates — `α̇`, `δ̇`, and crucially the
- * spin rate `Ẇ` in `W(t) = W₀ + Ẇ·t` — that are deliberately omitted here.
- * Restoring `Ẇ` (and driving it from a scene clock) is the single named
- * extension point for an animated, rotating planet; until then W₀ freezes each
- * body's meridian at the epoch.
+ * The published elements are `W(t) = W₀ + Ẇ·d` for the prime meridian and
+ * `α₀ + α̇·T`, `δ₀ + δ̇·T` for the pole (d = days from J2000, T = centuries). The
+ * spin rate `Ẇ` is stored per row and drives each body's live meridian as the
+ * scene clock advances — this is what makes a textured planet visibly rotate.
+ * The pole's own rates `α̇`/`δ̇` are deliberately dropped: they shift the pole by
+ * under an arcminute over 250 years, far below a textured sphere's resolution, so
+ * the constant α₀/δ₀ pole is authored and only W turns.
  *
  * Only the textured bodies need these: a flat-albedo or emissive sphere is
  * rotation-invariant, so the irregular moons carry none. Angles are authored in
  * degrees at the seed site (matching the JPL/IAU tables they come from) and
- * converted to a baked `Mat3` orientation once, via `rotationFromIau`.
+ * composed into a `Mat3` orientation via `rotationFromIau`.
  */
 
 export type RotationElements = {
   /** Stable identifier (e.g. `'earth'`, `'saturn'`) — same id space as the bodies. */
   readonly id: string;
-  /** IAU north-pole right ascension α₀, in degrees, referenced to J2000. */
+  /** IAU north-pole right ascension α₀, in degrees at J2000 (the α̇ rate is dropped). */
   readonly poleRaDeg: number;
-  /** IAU north-pole declination δ₀, in degrees, referenced to J2000. */
+  /** IAU north-pole declination δ₀, in degrees at J2000 (the δ̇ rate is dropped). */
   readonly poleDecDeg: number;
-  /** Prime meridian W₀ at the J2000 epoch, in degrees (the `Ẇ·t` term is omitted). */
+  /** Prime meridian W₀ at the J2000 epoch, in degrees; the live W is W₀ + Ẇ·d. */
   readonly primeMeridianDeg: number;
+  /** Spin rate Ẇ, degrees per day — advances the prime meridian from W₀. */
+  readonly spinRateDegPerDay: number;
 };

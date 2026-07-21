@@ -11,15 +11,16 @@
  * are exactly the textured set (spec §3): the eight major planets, the Moon, and
  * Jupiter's four Galilean moons.
  *
- * ### Static-epoch elements (the omitted rates + periodic terms)
+ * ### The spin rate Ẇ is live; the pole rates are not
  *
  * The published elements are of the form `α₀ + α̇·T`, `δ₀ + δ̇·T`, and
  * `W₀ + Ẇ·d`, several of them carrying additional periodic nutation/libration
- * terms (Neptune's `N`, the Moon's `E1…`, the Galileans' `Jn`). The scene is
- * frozen at a single epoch (J2000, no clock), so ONLY the constant terms are
- * authored — the `T`/`d`-dependent rates and the periodic corrections are
- * dropped. Restoring the spin rate `Ẇ` (and driving W from a scene clock) is the
- * single named extension point for an animated, rotating planet.
+ * terms (Neptune's `N`, the Moon's `E1…`, the Galileans' `Jn`). The
+ * prime-meridian spin `Ẇ` is authored per row (`spinRateDegPerDay`) and drives
+ * each body's live meridian as the scene clock advances — a visibly rotating
+ * planet. The pole rates `α̇`/`δ̇` and the periodic corrections stay dropped: they
+ * move the pole by under an arcminute over 250 years, below a textured sphere's
+ * resolution, so the constant α₀/δ₀ pole is authored and only W turns.
  *
  * ### Saturn's pole is shared, not re-authored loosely
  *
@@ -58,47 +59,47 @@ export function rotationById(id: string): RotationElements {
 /**
  * The thirteen textured bodies, in the same outward order as `orbitalElements`:
  * the eight major planets (Mercury → Neptune), Earth's Moon, then Jupiter's four
- * Galilean moons. Each row is the constant J2000 term of the WGCCRE-2015
- * elements; degrees at the seed site (matching the report's tables), converted
- * to a baked `Mat3` once via `rotationFromIau`.
+ * Galilean moons. Each row carries the J2000 pole (α₀, δ₀), the epoch meridian
+ * W₀, and its spin rate Ẇ; degrees at the seed site (matching the report's
+ * tables), composed into a `Mat3` per instant via `rotationFromIau`.
  */
 export const ROTATION_ELEMENTS: readonly RotationElements[] = [
   // Mercury. WGCCRE-2015 Table 1: α₀ = 281.0103 − 0.0328T, δ₀ = 61.4155 − 0.0049T,
   // W = 329.5988 + 6.1385108·d (+ periodic Mn terms).
-  { id: 'mercury', poleRaDeg: 281.0103, poleDecDeg: 61.4155, primeMeridianDeg: 329.5988 },
+  { id: 'mercury', poleRaDeg: 281.0103, poleDecDeg: 61.4155, primeMeridianDeg: 329.5988, spinRateDegPerDay: 6.1385108 },
   // Venus (retrograde). α₀ = 272.76, δ₀ = 67.16, W = 160.20 − 1.4813688·d.
-  { id: 'venus', poleRaDeg: 272.76, poleDecDeg: 67.16, primeMeridianDeg: 160.2 },
+  { id: 'venus', poleRaDeg: 272.76, poleDecDeg: 67.16, primeMeridianDeg: 160.2, spinRateDegPerDay: -1.4813688 },
   // Earth. α₀ = 0.00 − 0.641T, δ₀ = 90.00 − 0.557T, W = 190.147 + 360.9856235·d.
-  { id: 'earth', poleRaDeg: 0.0, poleDecDeg: 90.0, primeMeridianDeg: 190.147 },
+  { id: 'earth', poleRaDeg: 0.0, poleDecDeg: 90.0, primeMeridianDeg: 190.147, spinRateDegPerDay: 360.9856235 },
   // Mars. α₀ = 317.68143 − 0.1061T, δ₀ = 52.88650 − 0.0609T,
   // W = 176.630 + 350.89198226·d. (orbitPlaneFrames rounds the pole to 317.681/52.887.)
-  { id: 'mars', poleRaDeg: 317.68143, poleDecDeg: 52.8865, primeMeridianDeg: 176.63 },
+  { id: 'mars', poleRaDeg: 317.68143, poleDecDeg: 52.8865, primeMeridianDeg: 176.63, spinRateDegPerDay: 350.89198226 },
   // Jupiter. α₀ = 268.056595 − 0.006499T (+ periodic Ja terms),
   // δ₀ = 64.495303 + 0.002413T (+ periodic), W = 284.95 + 870.5360000·d.
-  { id: 'jupiter', poleRaDeg: 268.056595, poleDecDeg: 64.495303, primeMeridianDeg: 284.95 },
+  { id: 'jupiter', poleRaDeg: 268.056595, poleDecDeg: 64.495303, primeMeridianDeg: 284.95, spinRateDegPerDay: 870.536 },
   // Saturn. α₀ = 40.589 − 0.036T, δ₀ = 83.537 − 0.004T, W = 38.90 + 810.7939024·d.
   // The pole MUST equal SATURN_EQUATORIAL_FRAME's (rings + moons share the frame).
-  { id: 'saturn', poleRaDeg: 40.589, poleDecDeg: 83.537, primeMeridianDeg: 38.9 },
+  { id: 'saturn', poleRaDeg: 40.589, poleDecDeg: 83.537, primeMeridianDeg: 38.9, spinRateDegPerDay: 810.7939024 },
   // Uranus (retrograde; IAU north pole points south of the ecliptic — δ₀ < 0).
   // α₀ = 257.311, δ₀ = −15.175, W = 203.81 − 501.1600928·d.
-  { id: 'uranus', poleRaDeg: 257.311, poleDecDeg: -15.175, primeMeridianDeg: 203.81 },
+  { id: 'uranus', poleRaDeg: 257.311, poleDecDeg: -15.175, primeMeridianDeg: 203.81, spinRateDegPerDay: -501.1600928 },
   // Neptune. α₀ = 299.36 + 0.70·sin N, δ₀ = 43.46 − 0.51·cos N,
   // W = 249.978 + 541.1397757·d − 0.48·sin N. Constant terms only (N-periodic dropped).
-  { id: 'neptune', poleRaDeg: 299.36, poleDecDeg: 43.46, primeMeridianDeg: 249.978 },
+  { id: 'neptune', poleRaDeg: 299.36, poleDecDeg: 43.46, primeMeridianDeg: 249.978, spinRateDegPerDay: 541.1397757 },
   // The Moon. WGCCRE-2015 Table 2 (constant terms; the E1…E13 libration series
   // dropped): α₀ = 269.9949 + 0.0031T − …, δ₀ = 66.5392 + 0.0130T + …,
   // W = 38.3213 + 13.17635815·d − ….
-  { id: 'moon', poleRaDeg: 269.9949, poleDecDeg: 66.5392, primeMeridianDeg: 38.3213 },
+  { id: 'moon', poleRaDeg: 269.9949, poleDecDeg: 66.5392, primeMeridianDeg: 38.3213, spinRateDegPerDay: 13.17635815 },
   // Io. α₀ = 268.05 − 0.009T (+ Jn periodic), δ₀ = 64.50 + 0.003T (+ periodic),
   // W = 200.39 + 203.4889538·d − ….
-  { id: 'io', poleRaDeg: 268.05, poleDecDeg: 64.5, primeMeridianDeg: 200.39 },
+  { id: 'io', poleRaDeg: 268.05, poleDecDeg: 64.5, primeMeridianDeg: 200.39, spinRateDegPerDay: 203.4889538 },
   // Europa. α₀ = 268.08 − 0.009T (+ periodic), δ₀ = 64.51 + 0.003T (+ periodic),
   // W = 36.022 + 101.3747235·d − ….
-  { id: 'europa', poleRaDeg: 268.08, poleDecDeg: 64.51, primeMeridianDeg: 36.022 },
+  { id: 'europa', poleRaDeg: 268.08, poleDecDeg: 64.51, primeMeridianDeg: 36.022, spinRateDegPerDay: 101.3747235 },
   // Ganymede. α₀ = 268.20 − 0.009T (+ periodic), δ₀ = 64.57 + 0.003T (+ periodic),
   // W = 44.064 + 50.3176081·d − ….
-  { id: 'ganymede', poleRaDeg: 268.2, poleDecDeg: 64.57, primeMeridianDeg: 44.064 },
+  { id: 'ganymede', poleRaDeg: 268.2, poleDecDeg: 64.57, primeMeridianDeg: 44.064, spinRateDegPerDay: 50.3176081 },
   // Callisto. α₀ = 268.72 − 0.009T (+ periodic), δ₀ = 64.83 + 0.003T (+ periodic),
   // W = 259.51 + 21.5710715·d − ….
-  { id: 'callisto', poleRaDeg: 268.72, poleDecDeg: 64.83, primeMeridianDeg: 259.51 },
+  { id: 'callisto', poleRaDeg: 268.72, poleDecDeg: 64.83, primeMeridianDeg: 259.51, spinRateDegPerDay: 21.5710715 },
 ];

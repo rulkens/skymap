@@ -58,7 +58,7 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
     if (el.parentId !== null) continue;
     states.set(el.id, {
       positionMpc: addVec3(RENDER_ORIGIN_MPC, keplerianPositionMpc(el)),
-      orientation: orientationForBody(el.id),
+      orientation: orientationForBody(el.id, simDays),
       meanAnomalyRad: el.meanAnomalyRad,
     });
   }
@@ -78,7 +78,7 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
     }
     states.set(el.id, {
       positionMpc: addVec3(parent.positionMpc, keplerianPositionMpc(el)),
-      orientation: orientationForBody(el.id),
+      orientation: orientationForBody(el.id, simDays),
       meanAnomalyRad: el.meanAnomalyRad,
     });
   }
