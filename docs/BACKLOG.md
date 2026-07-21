@@ -38,6 +38,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Source-registry factory** `needs-design` — auto-generate fetcher + slot + UI rows from a single `SOURCE_REGISTRY` entry; today each source is hand-wired across `slots/`, `assetWiring.ts`, `initGpu`. → [details](backlog/2026-06-29-source-registry-factory.md)
 - [ ] **GPU-handle nullability follow-on** `deferred` — `EngineGpuHandles` fields are all `T | null` (a transient bootstrap fact as a perpetual null-check); narrow into a non-null "ready GPU" view and shed `PassDeps`' renderer fields. → [details](backlog/2026-06-29-gpu-handle-nullability.md)
 - [ ] **`useStructureMemberCount` honest invalidation** `deferred` — the hook's `sourceCounts`/`tier` args are memo tripwires for live GPU catalog state; swap for a real catalog-generation signal. → [details](backlog/2026-06-29-usestructuremembercount-invalidation.md)
+- [ ] **Asset-loading audit + debug UI sweep** `needs-design` — inventory what loads/stays resident (`release` exists for body textures only), add eviction where it pays; redesign the flat one-row-per-slot `AssetLoadingSection`. → [details](backlog/2026-07-22-asset-loading-audit.md)
 - [ ] **Derive `BULK_CATALOG_CATEGORIES` from a registry flag** `deferred` — add `hasBulkCatalog` to `SOURCE_REGISTRY` rows so the hand-listed `['cluster','supercluster','void']` in `assetWiring.ts` derives from it. Keep the three category lists (UI / marker / bulk-fetch) separate — membership genuinely differs. (`bearsMarker` + `DEFAULT_CATEGORY_VISIBILITY` already shipped.)
 
 ## Rendering
@@ -75,9 +76,13 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Tier-ladder single home** `ready` — one exported TIER_LADDER const (Tier type derived) replacing the copies in clampTier, emittedTiersForBody, tiersFittingSourceWidth, buildAllBins, buildStars.
 - [ ] **Star-bin ↔ MW-cloud crossfade density calibration** `deferred` — calibrate the procedural cloud's inner density/colors to Gaia counts if the v1 hand-tuned crossfade band shows a seam; gated on the star bin shipping. → [details](backlog/2026-07-13-star-bin-crossfade-density-calibration.md)
 - [ ] **Zone of Avoidance visualization + tour beat** `needs-design` — make the galactic-plane galaxy-density gap legible and explain it as dust extinction, not a real void; feature the NIR-only ZoA dwarfs. → [details](backlog/2026-07-21-zone-of-avoidance-visualization.md)
+- [ ] **Switchable global coordinate frame** `needs-design` — world is fixed equatorial J2000, so the planets render on a ~23°-tilted line; add a UI switch for ecliptic/galactic/equatorial "up". → [details](backlog/2026-07-22-coordinate-frame-switch.md)
 
 ## UI & UX
 
+- [ ] **Nearby-galaxy label size cap** `ready` — LMC/SMC labels ride the 150 px `maxPixelSize` clamp (`famousLabelStyle.ts`) and dominate the view from inside the Milky Way; lower or distance-scale the cap for close companions.
+- [ ] **"You are here" label continuity** `needs-design` — the label fades out below 2 kpc (`surveyDeepZoom` band); decide whether it hands off toward the Sun/Earth instead of vanishing. → [details](backlog/2026-07-22-you-are-here-label-continuity.md)
+- [ ] **Home button → Earth** `ready` — the Home pill and `h` key both dispatch `updateSelectionFocus({ type: 'milkyWay' })` (`App.tsx`, `useKeyboardShortcuts.ts`); retarget home to Earth (decide if `h` follows).
 - [ ] **StatusBar mobile reflow** `ready` — reflow the StatusBar for narrow viewports (no media queries today). The InfoCard bottom-sheet + SettingsPanel collapse-launcher already shipped.
 - [ ] **VolumeFieldRow schema-driven UI** `needs-design` — replace the seven hand-coded sliders with a settings-schema-generated UI.
 - [ ] **Global shortcuts → keyboard saga** `needs-design` — migrate the non-tour keys (Cmd+K, /, Esc, f, h, l, Tab, d) from the `useKeyboardShortcuts` hook to a declarative map + a shared `watchKeyboardEventsSaga`. → [details](backlog/2026-06-29-keyboard-shortcuts-saga.md)
