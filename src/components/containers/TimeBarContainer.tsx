@@ -54,11 +54,11 @@ function formatReadout(time: TimeState): string {
   return formatSimClock(readoutInstant(time));
 }
 
-// The popover is a fixed pane pinned to the bottom-right corner, lifted just
+// The date popover is a fixed pane pinned to the bottom-right corner, lifted just
 // above the TimeBar toolbar (it may overlap the ScaleBar above it while open;
-// the z-index wins). Placement lives here rather than in the popover's module
-// (which owns only its own chrome), matching the popover css note that the
-// container's wrapper anchors it. The lift matches the toolbar's height + gap.
+// the z-index wins). The lift matches the toolbar's height + gap. (The rate
+// popover self-places via CSS Anchor Positioning against the rate label instead —
+// see RateSelectorPopover.module.css; its fallback mirrors these same values.)
 const POPOVER_PLACEMENT: CSSProperties = {
   position: 'fixed',
   right: 'var(--corner-offset)',
@@ -187,14 +187,15 @@ function TimeBarContainer({ hidden }: TimeBarContainerProps): ReactNode {
           />
         </div>
       )}
+      {/* The rate popover self-places via CSS Anchor Positioning (its .root anchors
+          to TimeBar's rate label), so it needs no placement wrapper — rendered
+          bare. The date popover above keeps the fixed right-rail wrapper. */}
       {openPopover === 'rate' && !hidden && (
-        <div style={POPOVER_PLACEMENT}>
-          <RateSelectorPopover
-            currentIndex={rateIndex}
-            onSelect={onRateSelect}
-            onClose={onPopoverClose}
-          />
-        </div>
+        <RateSelectorPopover
+          currentIndex={rateIndex}
+          onSelect={onRateSelect}
+          onClose={onPopoverClose}
+        />
       )}
     </>
   );

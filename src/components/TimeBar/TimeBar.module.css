@@ -236,6 +236,12 @@
  */
 .rate {
   position: relative;
+  /*
+   * Anchor for the rate-selector popover (see RateSelectorPopover.module.css).
+   * Anchor names are page-global — CSS Modules does NOT scope them the way it
+   * hashes class names — so the name is spelled specifically to avoid collision.
+   */
+  anchor-name: --time-rate-label;
   font: inherit;
   min-width: 6ch;
   padding: var(--space-2) var(--space-3);
