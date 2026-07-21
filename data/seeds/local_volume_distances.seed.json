@@ -58,5 +58,29 @@
     "name": "IC 810",
     "distMpc": 16.5,
     "method": "Virgo cluster mean, Mei+ 2007"
+  },
+  {
+    "massId": "00450137+5521179",
+    "name": "2MASX J00450137+5521179",
+    "distMpc": 3.0,
+    "method": "NAM flow model (Local Sheet Vls=+159); no direct distance, Zone of Avoidance"
+  },
+  {
+    "massId": "04000932+3726113",
+    "name": "2MASX J04000932+3726113",
+    "distMpc": 2.7,
+    "method": "NAM flow-model floor (Vls~0, low confidence); no direct distance, Zone of Avoidance"
+  },
+  {
+    "massId": "19261464+4351036",
+    "name": "2MASX J19261464+4351036",
+    "distMpc": 1.3,
+    "method": "NAM flow model (Local Sheet Vls=+112, +/-1-2 Mpc); no direct distance, Zone of Avoidance"
+  },
+  {
+    "massId": "20475214+5937111",
+    "name": "2MASX J20475214+5937111",
+    "distMpc": 2.5,
+    "method": "NAM flow model; Crook 2007 group LDC 1412 / HDC 1123 member"
   }
 ]
