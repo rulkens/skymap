@@ -65,10 +65,22 @@ function FieldStarDetailCard({
       </CardRow>
 
       <div className={styles.cardSection}>
-        <CardRow label="Distance" value={`${Math.round(target.distancePc).toLocaleString()} pc`} />
-        <CardRow label="Absolute mag" value={target.absMag.toFixed(2)} />
-        <CardRow label="Apparent mag" value={target.apparentMag.toFixed(2)} />
-        <CardRow label="Colour BP−RP" value={target.bpRp.toFixed(2)} />
+        <CardRow
+          label={<InfoTip {...TIPS.starDistance!}>Distance</InfoTip>}
+          value={`${Math.round(target.distancePc).toLocaleString()} pc`}
+        />
+        <CardRow
+          label={<InfoTip {...TIPS.starAbsoluteMag!}>Absolute mag</InfoTip>}
+          value={target.absMag.toFixed(2)}
+        />
+        <CardRow
+          label={<InfoTip {...TIPS.starApparentMag!}>Apparent mag</InfoTip>}
+          value={target.apparentMag.toFixed(2)}
+        />
+        <CardRow
+          label={<InfoTip {...TIPS.colourBpRp!}>Colour BP−RP</InfoTip>}
+          value={target.bpRp.toFixed(2)}
+        />
         <CardRow
           label={<InfoTip {...TIPS.starDerived!}>Temperature</InfoTip>}
           value={`${approx}${formatScalar(derived.teffK)} K`}

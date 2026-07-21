@@ -33,6 +33,8 @@ import { useFamousStarsMeta } from '../../../hooks/useFamousStarsMeta';
 import CardHeader from '../CardHeader/CardHeader';
 import CardRow from '../CardRow/CardRow';
 import DescriptionBlock from '../DescriptionBlock/DescriptionBlock';
+import { InfoTip } from '../../InfoTip/InfoTip';
+import { TIPS } from '../tooltips';
 import styles from '../cardChrome.module.css';
 import local from './BodyDetailCard.module.css';
 
@@ -79,7 +81,10 @@ function BodyDetailCard({
       */}
       {!isFamousStar && (
         <div className={styles.cardSection}>
-          <CardRow label="Radius" value={`${target.radiusKm.toLocaleString()} km`} />
+          <CardRow
+            label={<InfoTip {...TIPS.bodyRadius!}>Radius</InfoTip>}
+            value={`${target.radiusKm.toLocaleString()} km`}
+          />
         </div>
       )}
 
@@ -91,28 +96,55 @@ function BodyDetailCard({
       {entry && (
         <>
           <div className={styles.cardSection}>
-            <CardRow label="Constellation" value={entry.constellation} />
-            <CardRow label="Spectral type" value={entry.spectralType} />
             <CardRow
-              label="Distance"
+              label={<InfoTip {...TIPS.constellation!}>Constellation</InfoTip>}
+              value={entry.constellation}
+            />
+            <CardRow
+              label={<InfoTip {...TIPS.spectralType!}>Spectral type</InfoTip>}
+              value={entry.spectralType}
+            />
+            <CardRow
+              label={<InfoTip {...TIPS.starDistance!}>Distance</InfoTip>}
               value={formatDistance(entry.distancePc * SCALE_UNITS.PC_TO_MPC)}
             />
-            <CardRow label="Apparent mag (V)" value={entry.magV.toFixed(2)} />
-            <CardRow label="Absolute mag" value={entry.absMag.toFixed(2)} />
-            <CardRow label="Radius" value={`${entry.radiusSolar.toLocaleString()} R☉`} />
-            <CardRow label="Temperature" value={`${entry.temperatureK.toLocaleString()} K`} />
+            <CardRow
+              label={<InfoTip {...TIPS.starApparentMag!}>Apparent mag (V)</InfoTip>}
+              value={entry.magV.toFixed(2)}
+            />
+            <CardRow
+              label={<InfoTip {...TIPS.starAbsoluteMag!}>Absolute mag</InfoTip>}
+              value={entry.absMag.toFixed(2)}
+            />
+            <CardRow
+              label={<InfoTip {...TIPS.stellarRadius!}>Radius</InfoTip>}
+              value={`${entry.radiusSolar.toLocaleString()} R☉`}
+            />
+            <CardRow
+              label={<InfoTip {...TIPS.stellarTemperature!}>Temperature</InfoTip>}
+              value={`${entry.temperatureK.toLocaleString()} K`}
+            />
             {entry.massSolar != null && (
-              <CardRow label="Mass" value={`${entry.massSolar.toLocaleString()} M☉`} />
+              <CardRow
+                label={<InfoTip {...TIPS.stellarMass!}>Mass</InfoTip>}
+                value={`${entry.massSolar.toLocaleString()} M☉`}
+              />
             )}
             {entry.luminositySolar != null && (
-              <CardRow label="Luminosity" value={`${entry.luminositySolar.toLocaleString()} L☉`} />
+              <CardRow
+                label={<InfoTip {...TIPS.stellarLuminosity!}>Luminosity</InfoTip>}
+                value={`${entry.luminositySolar.toLocaleString()} L☉`}
+              />
             )}
             {entry.ageGyr != null && (
-              <CardRow label="Age" value={`${entry.ageGyr.toLocaleString()} Gyr`} />
+              <CardRow
+                label={<InfoTip {...TIPS.stellarAge!}>Age</InfoTip>}
+                value={`${entry.ageGyr.toLocaleString()} Gyr`}
+              />
             )}
             {entry.variable && (
               <CardRow
-                label="Variability"
+                label={<InfoTip {...TIPS.variability!}>Variability</InfoTip>}
                 value={`${entry.variable.type} (mag ${entry.variable.magRange[0]}–${entry.variable.magRange[1]})`}
               />
             )}

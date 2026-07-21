@@ -96,7 +96,8 @@ describe('BodyDetailCard', () => {
     const { container } = render(createElement(BodyDetailCard, { target: jupiterTarget }));
 
     expect(screen.getByText('Jupiter')).toBeInTheDocument();
-    expect(screen.getByText('Radius')).toBeInTheDocument();
+    // 'Radius' appears twice — once as the row label, once as its InfoTip title.
+    expect(screen.getAllByText('Radius').length).toBeGreaterThan(0);
     expect(screen.getByText(`${jupiterTarget.radiusKm.toLocaleString()} km`)).toBeInTheDocument();
     // No stellar / meta rows on a non-star body.
     expect(container.textContent).not.toMatch(/Spectral/);
@@ -112,8 +113,9 @@ describe('BodyDetailCard', () => {
     stubMeta({ famousStarsMeta: [lean], ready: true });
     const { container } = render(createElement(BodyDetailCard, { target: rigelTarget }));
 
-    // Required rows still render…
-    expect(screen.getByText('Spectral type')).toBeInTheDocument();
+    // Required rows still render… ('Spectral type' is both the row label and
+    // its InfoTip title, so it appears more than once.)
+    expect(screen.getAllByText('Spectral type').length).toBeGreaterThan(0);
     // …but the optional lines are dropped, not shown blank.
     expect(container.textContent).not.toMatch(/Mass/);
     expect(container.textContent).not.toMatch(/Age/);
