@@ -1,10 +1,17 @@
 /*
  * TimeBar.module.css — the sim clock's transport instrument.
  *
- * Glassmorphic pill row using the same surface vocabulary as the HUD pills
- * (soft glass, card border, blur). Default placement is bottom-center, clear
- * of the right-corner ScaleBar / InfoCard and the left-stack panels — the
- * final corner is a deferred USER VISUAL GATE (see TimeBar.tsx). All atoms
+ * Two nested boxes carry the collapse behaviour:
+ *   - .root is the transparent, full-expanded-width hit surface. It never
+ *     changes size, so its centred placement keeps the readout's left edge
+ *     anchored whether the bar is collapsed or expanded, and its idle width
+ *     reaches over the region where the controls will appear (sweep the cursor
+ *     there and the reveal still fires).
+ *   - .pill is the visible glass chrome. It hugs the readout when collapsed and
+ *     grows rightward as the controls' grid track opens.
+ *
+ * The transport buttons are flat glyphs on the toolbar chrome (no per-button
+ * pill), grouped readout | ‹ ⏯ › | rate | Now by thin 1px dividers. All atoms
  * reference tokens from src/styles/global.css.
  */
 
@@ -15,17 +22,18 @@
   transform: translateX(-50%);
   z-index: 10;
 
+  /*
+   * Fixed idle footprint = the expanded pill's width. It is a deliberate
+   * reservation, not content-derived: the grid trick below zeroes the controls'
+   * layout width when collapsed, so an auto-sized root would shrink to the
+   * readout and lose the reach-ahead hit area. Constant width also pins the
+   * readout in place across the animation. Tune against the real expanded
+   * footprint at the visual gate (see TODO in TimeBar.tsx).
+   */
+  width: 30rem;
+  max-width: calc(100vw - 2 * var(--corner-offset));
   display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-3) var(--space-5);
-
-  background: var(--surface-card-soft);
-  -webkit-backdrop-filter: blur(var(--blur-card));
-  backdrop-filter: blur(var(--blur-card));
-  border: 1px solid var(--border-card);
-  border-radius: 999px;
-  box-shadow: var(--shadow-card);
+  justify-content: flex-start;
 
   color: var(--color-fg-base);
   font: var(--font-size-md) / var(--line-height-tight) var(--font-family-mono);
@@ -43,12 +51,28 @@
   pointer-events: none;
 }
 
+/* The visible glass chrome. Inline-flex so it hugs the readout when the
+ * controls collapse; the single toolbar pill wraps every atom. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-3) var(--space-5);
+
+  background: var(--surface-card-soft);
+  -webkit-backdrop-filter: blur(var(--blur-card));
+  backdrop-filter: blur(var(--blur-card));
+  border: 1px solid var(--border-card);
+  border-radius: 999px;
+  box-shadow: var(--shadow-card);
+}
+
 /*
  * The time readout doubles as the date-entry trigger. Styled as text rather
- * than a chromed button so it reads as the bar's primary content; the hover
- * accent is the only affordance hint until the popover (Task 4) lands.
+ * than a chromed button so it reads as the bar's primary content. `position:
+ * relative` anchors its tooltip.
  */
 .readout {
+  position: relative;
   font: inherit;
   padding: var(--space-2) var(--space-3);
   border: none;
@@ -71,32 +95,83 @@
   outline-offset: 2px;
 }
 
+/*
+ * Controls collapse via the grid-template-columns 0fr→1fr trick: the track
+ * shrinks to zero width (with .group's min-width: 0) so the pill hugs the
+ * readout, then opens to the group's content width on reveal. Opacity trails
+ * slightly so the controls fade in after the width has started to open.
+ */
 .controls {
+  display: grid;
+  grid-template-columns: 0fr;
+  opacity: 0;
+  /* The clip-path leaves the collapsed (invisible) glyphs hit-testable in a
+   * thin zone right of the readout; disable them until the reveal so a click in
+   * the reserved area doesn't land on a hidden button. The root still catches
+   * the hover that triggers the reveal. */
+  pointer-events: none;
+  transition: grid-template-columns var(--duration-base) var(--ease-standard),
+    opacity var(--duration-color) var(--ease-standard) 80ms;
+}
+
+.group {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  transition: opacity var(--duration-base) var(--ease-standard);
+  min-width: 0;
+  /*
+   * Clip the horizontal collapse without trapping the tooltips, which sit above
+   * the bar. `inset` clips left/right at the box edges (so the sliding controls
+   * stay inside the growing track) but extends the region well past top/bottom
+   * so the labels escape upward. Any transient horizontal spill during the
+   * animation is masked by the controls' opacity gate. The negative horizontal
+   * inset leaves room for the end-cap tooltips (Slower / Back to now) to centre
+   * past their buttons.
+   */
+  clip-path: inset(-40px -48px);
 }
 
 /*
  * Live mode is pinned to wall-time, so the transport collapses away and the
- * readout stands alone. Hovering or keyboard-focusing the bar reveals the
- * controls. Manual mode overrides this — the controls are always visible.
+ * readout stands alone. Hovering or keyboard-focusing anywhere on the bar
+ * (including the reserved hit area) reveals the controls. Manual mode overrides
+ * this — the controls are always open.
  */
-.live .controls {
-  opacity: 0;
-}
-
 .live:hover .controls,
-.live:focus-within .controls {
+.live:focus-within .controls,
+.manual .controls {
+  grid-template-columns: 1fr;
   opacity: 1;
+  pointer-events: auto;
 }
 
-/* Rate stepper + play/pause: compact square glyph buttons. */
-.step {
+/* Thin vertical rule between control groups. */
+.divider {
+  align-self: stretch;
+  width: 1px;
+  margin: 2px 0;
+  background: var(--border-divider);
+}
+
+/*
+ * Rate stepper + play/pause: flat glyph buttons that read as toolbar chrome,
+ * not per-button pills. The descendant selector outranks Button's own chrome
+ * regardless of stylesheet order, so the transparent fill + hover tint win.
+ */
+.pill .step {
+  position: relative;
   min-width: 28px;
   padding: var(--space-2) var(--space-3);
   line-height: 1;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--color-fg-base);
+}
+
+.pill .step:hover:not(:disabled) {
+  background: var(--surface-control);
+  border-color: transparent;
 }
 
 .rate {
@@ -106,8 +181,47 @@
   letter-spacing: var(--letter-spacing-tight);
 }
 
-/* The lit "return to now" affordance — accent fill via Button's primary. */
-.now {
+/*
+ * The "return to now" affordance. Subtle by design: accent-coloured text on the
+ * chromeless toolbar, not a filled accent pill — it reads as the way back
+ * without shouting.
+ */
+.pill .now {
+  position: relative;
   padding: var(--space-2) var(--space-4);
   line-height: 1;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--color-accent);
+  letter-spacing: var(--letter-spacing-mid);
+}
+
+.pill .now:hover:not(:disabled) {
+  background: var(--surface-control);
+  border-color: transparent;
+  color: var(--color-accent-bright);
+}
+
+/* Hover/focus label, lifted ABOVE the bar (the top-bar has room below, we
+ * don't). Shares its frosted box with PillButton via the common vocabulary. */
+.tooltip {
+  composes: tooltip from '../common/tooltip.module.css';
+  bottom: calc(100% + 8px);
+}
+
+.readout:hover .tooltip,
+.readout:focus-visible .tooltip,
+.step:hover .tooltip,
+.step:focus-visible .tooltip,
+.now:hover .tooltip,
+.now:focus-visible .tooltip {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root,
+  .controls {
+    transition: none;
+  }
 }

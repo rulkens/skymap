@@ -58,51 +58,79 @@ function TimeBar({
   // against InfoCard (top-right), ScaleBar (bottom-right), and the left-stack
   // NavigationPanel — don't tune spacing blind.
   return (
+    // Outer .root is the transparent hit surface at the full expanded width, so
+    // sweeping the cursor into the empty region right of the readout still wakes
+    // the reveal. The visible chrome lives on the inner .pill, which hugs the
+    // readout when collapsed and grows rightward on hover.
     <div
       className={cx(styles.root, styles[mode], hidden && styles.hidden)}
       aria-hidden={hidden || undefined}
       role="toolbar"
       aria-label="Time controls"
     >
-      <button
-        type="button"
-        className={styles.readout}
-        onClick={onReadoutClick}
-        aria-label={`Set date and time (currently ${readout})`}
-      >
-        {readout}
-      </button>
-
-      <div className={styles.controls}>
-        <Button className={styles.step} onClick={onSlower} aria-label="Slower">
-          <span aria-hidden="true">‹</span>
-        </Button>
-
-        <Button
-          className={styles.step}
-          onClick={onPlayPause}
-          aria-label={paused ? 'Play' : 'Pause'}
-          aria-pressed={!paused}
+      <div className={styles.pill}>
+        <button
+          type="button"
+          className={styles.readout}
+          onClick={onReadoutClick}
+          aria-label={`Set date and time (currently ${readout})`}
         >
-          <span aria-hidden="true">{paused ? '▶' : '❚❚'}</span>
-        </Button>
+          {readout}
+          <span className={styles.tooltip} aria-hidden="true">
+            Set date &amp; time
+          </span>
+        </button>
 
-        <Button className={styles.step} onClick={onFaster} aria-label="Faster">
-          <span aria-hidden="true">›</span>
-        </Button>
+        {/* Grid 0fr→1fr collapses the controls' layout width so the pill hugs the
+            readout; the inner .group is clipped horizontally while its tooltips
+            escape upward. */}
+        <div className={styles.controls}>
+          <div className={styles.group}>
+            <span className={styles.divider} aria-hidden="true" />
 
-        <span className={styles.rate}>{rateLabel}</span>
+            <Button className={styles.step} onClick={onSlower} aria-label="Slower">
+              <span aria-hidden="true">‹</span>
+              <span className={styles.tooltip} aria-hidden="true">
+                Slower
+              </span>
+            </Button>
 
-        {mode === 'manual' && (
-          <Button
-            className={styles.now}
-            variant="primary"
-            onClick={onNow}
-            aria-label="Return to now"
-          >
-            Now
-          </Button>
-        )}
+            <Button
+              className={styles.step}
+              onClick={onPlayPause}
+              aria-label={paused ? 'Play' : 'Pause'}
+              aria-pressed={!paused}
+            >
+              <span aria-hidden="true">{paused ? '▶' : '❚❚'}</span>
+              <span className={styles.tooltip} aria-hidden="true">
+                {paused ? 'Run time' : 'Pause time'}
+              </span>
+            </Button>
+
+            <Button className={styles.step} onClick={onFaster} aria-label="Faster">
+              <span aria-hidden="true">›</span>
+              <span className={styles.tooltip} aria-hidden="true">
+                Faster
+              </span>
+            </Button>
+
+            <span className={styles.divider} aria-hidden="true" />
+
+            <span className={styles.rate}>{rateLabel}</span>
+
+            {mode === 'manual' && (
+              <>
+                <span className={styles.divider} aria-hidden="true" />
+                <Button className={styles.now} onClick={onNow} aria-label="Return to now">
+                  Now
+                  <span className={styles.tooltip} aria-hidden="true">
+                    Back to now
+                  </span>
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

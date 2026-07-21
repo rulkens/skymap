@@ -1,0 +1,41 @@
+/*
+ * tooltip.module.css — the HUD's hover / focus label chrome.
+ *
+ * Shared vocabulary, not a component (hence no `.root`): the small frosted-
+ * glass label that appears when a chromeless or icon-only control is hovered
+ * or keyboard-focused. `composes`d into each consumer's own `.tooltip`, which
+ * adds only what varies — the vertical anchor (below the top-bar pills, above
+ * the bottom-centre TimeBar) and the reveal selectors. Never `:global`; the
+ * composition keeps one source of truth for the box while placement stays with
+ * the consumer.
+ *
+ * Horizontal centring, the frosted surface, and the reveal transition live
+ * here; `top` / `bottom` do not, because the anchor edge depends on where the
+ * control sits against the viewport.
+ */
+.tooltip {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: var(--surface-card-strong);
+  -webkit-backdrop-filter: blur(var(--blur-card));
+  backdrop-filter: blur(var(--blur-card));
+  border: 1px solid var(--border-card);
+  box-shadow: var(--shadow-card);
+
+  /* Explicit `--color-fg` resists the accent tint a hovered control applies to
+   * currentColor. Whitespace-nowrap because these labels are short by contract
+   * — a wrapping tooltip would look broken. */
+  color: var(--color-fg);
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease-out;
+}
