@@ -11,19 +11,9 @@
  * the correct number of `../` depends on where the *importer* lives — the kind
  * of mechanical re-derivation an AST tool does perfectly and a human (or an
  * agent hand-editing) gets subtly wrong. `SourceFile.move()` re-parses the
- * module graph and rewrites references in both directions.
- *
- * ## Why one Project spanning three trees
- *
- * The repo has two tsconfigs and NEITHER covers everything: `tsconfig.json`
- * includes `["src", "tests"]` (excludes `tools`), `tsconfig.tools.json`
- * includes `["tools", "src"]` (no `tests`). A move can ripple across all three
- * — a `tools/` helper imported by a `src/` file with a `tests/` mirror — so we
- * build ONE ts-morph `Project` over `src/ + tests/ + tools/`. We borrow
- * `tsconfig.json` only for its `compilerOptions` (`skipAddingFilesFromTsConfig`
- * stops it also pulling in that tsconfig's file set), then add every file
- * explicitly. Using either tsconfig's own include set would silently miss a
- * whole tree and leave dangling imports.
+ * module graph and rewrites references in both directions. The one `Project`
+ * spanning all three source trees comes from `loadRefactorProject` — see its
+ * header for why neither tsconfig's own include set is sufficient.
  *
  * ## What this does NOT rewrite
  *
@@ -50,11 +40,11 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { Project } from 'ts-morph';
 import { parseFlags } from '../utils/cli/args';
 import type { MovePair } from '../utils/refactor/applyMoves';
 import { applyMoves } from '../utils/refactor/applyMoves';
 import { expandTestMirrors } from '../utils/refactor/expandTestMirrors';
+import { loadRefactorProject } from '../utils/refactor/loadRefactorProject';
 
 // Parse argv into the raw move pairs the user asked for (before test-mirror
 // expansion). Either a manifest JSON array or a single positional <from> <to>.
@@ -83,13 +73,7 @@ async function main(): Promise<void> {
   // Expand against the real filesystem so a source move drags its test mirror.
   const moves = expandTestMirrors(requested, (p) => existsSync(resolve(p)));
 
-  // One Project over all three trees — see the module header for why neither
-  // tsconfig's own include set is sufficient.
-  const project = new Project({
-    tsConfigFilePath: 'tsconfig.json',
-    skipAddingFilesFromTsConfig: true,
-  });
-  project.addSourceFilesAtPaths(['src/**/*.{ts,tsx}', 'tests/**/*.{ts,tsx}', 'tools/**/*.ts']);
+  const project = loadRefactorProject();
 
   applyMoves(
     project,

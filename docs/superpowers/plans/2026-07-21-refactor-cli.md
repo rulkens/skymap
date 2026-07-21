@@ -244,16 +244,16 @@ thin `tools/refactor/` entry.
 Project spanning three trees / neither tsconfig covers all three" reasoning from
 the `moveFiles.ts` header.
 
-- [ ] Test `loads all three source trees` — construct via `loadRefactorProject()`,
+- [x] Test `loads all three source trees` — construct via `loadRefactorProject()`,
       assert the returned `Project` contains at least one known file from each of
       `src/`, `tests/`, and `tools/` (real repo files, e.g. an existing util +
       its test). This catches the "silently missed a whole tree" regression the
       header warns about.
-- [ ] Rewire `moveFiles.ts` to import and call `loadRefactorProject()` instead of
+- [x] Rewire `moveFiles.ts` to import and call `loadRefactorProject()` instead of
       constructing the `Project` inline; delete the inline construction.
-- [ ] `npm test -- loadRefactorProject` → green; sanity-run
+- [x] `npm test -- loadRefactorProject` → green; sanity-run
       `npm run move-files -- <a> <b> --dry` still previews correctly.
-- [ ] Commit: the three files above.
+- [x] Commit: the three files above.
 
 ### Task 2: symbol addressing + resolution
 
