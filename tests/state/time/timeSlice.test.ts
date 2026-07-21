@@ -16,6 +16,7 @@ import reducer, {
   setDirection,
   pause,
   resume,
+  goLive,
 } from '../../../src/state/time/timeSlice';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import type { TimeState } from '../../../src/@types/time/TimeState';
@@ -86,5 +87,24 @@ describe('timeSlice pause holds, resume advances', () => {
     // Resume rebases realMs to t1; a still-later t2 then advances from the held value.
     const resumed = reducer(paused, resume({ nowMs: t1 }));
     expect(deriveSimDays(resumed, t2)).toBeGreaterThan(pausedInstant);
+  });
+});
+
+describe('timeSlice goLive lands the ladder on the truthful detent', () => {
+  it('resets rateIndex to 0 (1 s/s) so the displayed rate matches live wall time', () => {
+    // Coming back from a fast manual detent, live mode advances at exactly 1 s/s
+    // and ignores the ladder — so the detent must snap to index 0 or the toolbar
+    // would keep reading the stale manual rate. This fails if goLive stops
+    // touching rateIndex.
+    const fastManual: TimeState = {
+      mode: 'manual',
+      anchor: { simDays: 2460000.0, realMs: 0 },
+      rateIndex: 6,
+      direction: -1,
+      paused: true,
+    };
+
+    const next = reducer(fastManual, goLive({ simDays: 2451545.0, nowMs: 1_000 }));
+    expect(next.rateIndex).toBe(0);
   });
 });

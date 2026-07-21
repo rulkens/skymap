@@ -45,9 +45,10 @@ const initialState: TimeState = {
   // J2000.0 as a Julian Day number — the static seed anchor. Overwritten by the
   // engine's bootstrap `goLive` before the first frame the user sees.
   anchor: { simDays: CONST_J2000, realMs: 0 },
-  // '1 day/s' — a legible default scrub speed when the clock first goes manual.
-  // Ignored while `mode === 'live'`, so it only bites the first manual play.
-  rateIndex: 3,
+  // '1 s/s' — the boot clock is live, which advances at exactly wall time, so the
+  // ladder detent must read the same rate the user is actually shown. Any other
+  // default would make the toolbar label lie until the first manual step.
+  rateIndex: 0,
   direction: 1,
   paused: false,
 };
@@ -110,6 +111,11 @@ const timeSlice = createSlice({
       time.anchor = { simDays: action.payload.simDays, realMs: action.payload.nowMs };
       time.paused = false;
       time.direction = 1;
+      // Live pins to wall time (1 s/s), so the ladder detent must land on the
+      // truthful rate the user is shown — otherwise the toolbar would read a
+      // stale manual detent live mode ignores. A subsequent Faster then walks up
+      // from the real rate rather than jumping from wherever manual left off.
+      time.rateIndex = 0;
     },
   },
 });

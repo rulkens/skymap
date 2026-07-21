@@ -198,7 +198,7 @@ describe('watchClipSaga', () => {
     const seam = blockingSeam(() => {});
     const { store } = buildHarness(seam);
 
-    // A manual clock advancing at the default '1 day/s' detent from a known anchor.
+    // A manual clock advancing at the default '1 s/s' detent from a known anchor.
     const T0 = 1000;
     store.dispatch(setSimDays({ simDays: 2451545, nowMs: T0 }));
 

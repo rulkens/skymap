@@ -178,7 +178,8 @@ describe('useKeyboardShortcuts — integration (real store)', () => {
         createElement(Provider, { store, children }),
     });
 
-    // Seed anchor: the slice starts at rateIndex 3 (see timeSlice initial state).
+    // Read the boot detent from the store rather than hard-coding it, so this
+    // stays a relative step-by-one assertion independent of the initial index.
     const start = selectTimeState(store.getState()).rateIndex;
 
     act(() => fireKey({ key: ']' }));
