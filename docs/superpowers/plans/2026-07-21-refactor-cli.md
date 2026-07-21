@@ -303,11 +303,11 @@ tasks; a single end-to-end smoke lives in the DoD. Stub each subcommand handler
 to throw `not yet implemented` so the skeleton typechecks and later tasks fill
 them in.
 
-- [ ] Add the npm script and the entry file with the dispatch skeleton + usage
+- [x] Add the npm script and the entry file with the dispatch skeleton + usage
       text; `refs`/`rename`/`extract`/`inline`/`delete`/`move` handlers stubbed.
-- [ ] `npm run typecheck` clean; `npm run refactor -- refs <a real symbol>`
+- [x] `npm run typecheck` clean; `npm run refactor -- refs <a real symbol>`
       reaches the stub (dispatch works) — will be wired in Task 4.
-- [ ] Commit: `tools/refactor/refactor.ts`, `package.json`.
+- [x] Commit: `tools/refactor/refactor.ts`, `package.json`.
 
 ### Task 4: `refs` — structured reference reporter (reused by every mutating command)
 

@@ -1,0 +1,144 @@
+#!/usr/bin/env node
+/**
+ * refactor — one ts-morph CLI whose subcommands map onto skymap's house
+ * conventions (one symbol per file, filename = export name, deep relative
+ * imports, no barrels): rename, extract, inline, delete, refs, move. The
+ * existing `npm run move-files` folds in as the `move` subcommand.
+ *
+ * ## Why the entry stays thin
+ *
+ * This file does argv dispatch and nothing else — parse the leading subcommand,
+ * resolve the bool flags, load the shared Project, run the requested op(s)
+ * against it, and save once at the tail. All the real behaviour lives in
+ * one-function planners under `tools/utils/refactor/`, each unit-tested against
+ * an in-memory Project. Keeping the entry logic-free is the same choice
+ * `moveFiles.ts` made: argv plumbing is not worth a test, and a fat entry would
+ * hide the testable seams inside an untestable one.
+ *
+ * ## Why the driver owns the single save (all-or-nothing)
+ *
+ * Every mutating subcommand is a planner that resolves + validates + mutates the
+ * ONE in-memory Project and throws on any validation failure WITHOUT saving. The
+ * driver runs each requested op (a single invocation, or one per `--manifest`
+ * batch entry) against that project, then calls `project.save()` exactly once at
+ * the tail. All-or-nothing falls out structurally: a throw mid-batch aborts
+ * before the save, so disk is never partially written. This mirrors
+ * `applyMoves` + `moveFiles.main` today. `--dry` skips the save and (once the
+ * planners land) prints the structured blast-radius report instead.
+ *
+ * ## Usage
+ *
+ *   npm run refactor -- <subcommand> <args...> [--dry] [--json]
+ *
+ *     refactor rename  <file>#<symbol> <newName>   [--no-file-rename]
+ *     refactor extract <file>#<symbol> <dest.ts>
+ *     refactor inline  <file>#<symbol>
+ *     refactor delete  <file>#<symbol>
+ *     refactor refs    <file>#<symbol>
+ *     refactor move    <from> <to>
+ *
+ *   Batch form (any subcommand): refactor <subcommand> --manifest <ops.json>
+ */
+
+import type { Project } from 'ts-morph';
+import { parseFlags } from '../utils/cli/args';
+import { loadRefactorProject } from '../utils/refactor/loadRefactorProject';
+import { parseSymbolAddress } from '../utils/refactor/parseSymbolAddress';
+import { readManifest } from '../utils/refactor/readManifest';
+
+// The six subcommands. Address-taking ones name their target as `<file>#<symbol>`;
+// `move` takes a `<from> <to>` path pair instead.
+const ADDRESS_SUBCOMMANDS = ['rename', 'extract', 'inline', 'delete', 'refs'] as const;
+const SUBCOMMANDS = [...ADDRESS_SUBCOMMANDS, 'move'] as const;
+type Subcommand = (typeof SUBCOMMANDS)[number];
+
+function isSubcommand(value: string): value is Subcommand {
+  return (SUBCOMMANDS as readonly string[]).includes(value);
+}
+
+function isAddressSubcommand(sub: Subcommand): boolean {
+  return (ADDRESS_SUBCOMMANDS as readonly string[]).includes(sub);
+}
+
+const USAGE = `Usage: refactor <subcommand> <args...> [--dry] [--json]
+
+  refactor rename  <file>#<symbol> <newName>   [--no-file-rename]
+  refactor extract <file>#<symbol> <dest.ts>
+  refactor inline  <file>#<symbol>
+  refactor delete  <file>#<symbol>
+  refactor refs    <file>#<symbol>
+  refactor move    <from> <to>
+
+Batch form (any subcommand): refactor <subcommand> --manifest <ops.json>`;
+
+const FLAG_SCHEMA = { '--dry': 'bool', '--json': 'bool', '--no-file-rename': 'bool' } as const;
+type Flags = Record<keyof typeof FLAG_SCHEMA, boolean>;
+
+// Run one op against the shared project. Address-taking subcommands parse their
+// `<file>#<symbol>` here so a malformed address fails loudly BEFORE any mutation
+// (and, in a batch, aborts the whole run before the single save). The planners
+// that do the real work land in Tasks 4-10; every handler throws until then.
+function runOp(
+  sub: Subcommand,
+  project: Project,
+  positionals: readonly string[],
+  flags: Flags,
+): void {
+  if (isAddressSubcommand(sub)) {
+    const address = positionals[0];
+    if (address === undefined) {
+      throw new Error(`refactor ${sub}: expected a <file>#<symbol> address.`);
+    }
+    parseSymbolAddress(address);
+  } else if (positionals.length !== 2) {
+    throw new Error('refactor move: expected <from> <to>.');
+  }
+
+  void project;
+  void flags;
+  throw new Error(`refactor ${sub}: not yet implemented.`);
+}
+
+// Decode one batch entry into its positional argument tuple. Only the shape
+// every subcommand shares is proven here — a JSON array of string arguments;
+// per-subcommand tuple validation (arity, address well-formedness) is runOp's
+// job, and richer entry shapes (move's `{from,to}`) arrive with the subcommand
+// tasks that own them.
+function entryToPositionals(entry: unknown): readonly string[] {
+  if (Array.isArray(entry) && entry.every((arg) => typeof arg === 'string')) {
+    return entry as readonly string[];
+  }
+  throw new Error('Each manifest entry must be an array of string arguments.');
+}
+
+async function main(): Promise<void> {
+  const argv = process.argv.slice(2);
+  const sub = argv[0];
+  if (sub === undefined || !isSubcommand(sub)) {
+    const lead = sub === undefined ? 'refactor: missing subcommand.' : `refactor: unknown subcommand '${sub}'.`;
+    process.stderr.write(`${lead}\n${USAGE}\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const flags = parseFlags(argv, FLAG_SCHEMA);
+  const project = loadRefactorProject();
+
+  const manifest = readManifest(argv);
+  if (manifest === null) {
+    const positionals = argv.slice(1).filter((arg) => !arg.startsWith('--'));
+    runOp(sub, project, positionals, flags);
+  } else {
+    // Batch: every entry runs against the ONE project. A throw on any entry
+    // aborts before the single save below, so disk is never partially written.
+    for (const entry of manifest) runOp(sub, project, entryToPositionals(entry), flags);
+  }
+
+  if (!flags['--dry']) await project.save();
+}
+
+main().catch((err) => {
+  const message = err instanceof Error ? err.message : String(err);
+  process.stderr.write(`${message}\n\n${USAGE}\n`);
+  process.exitCode = 1;
+});
