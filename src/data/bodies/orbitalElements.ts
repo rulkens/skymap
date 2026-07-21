@@ -26,17 +26,22 @@
  * - **Reference plane** (`plane`, see `orbitPlaneFrames.ts`): the planets AND
  *   Earth's Moon are referenced to the **ecliptic** (JPL publishes them there),
  *   the default when `plane` is omitted. But a planet's OWN moons are referenced
- *   to that planet's **equatorial (Laplace) plane** — Saturn's is tilted ~27° to
- *   the ecliptic, which is why its regular moons ride visibly tilted — so each
- *   satellite row carries an explicit `plane` (`{MARS,JUPITER,SATURN}_EQUATORIAL_FRAME`).
- *   The ecliptic→equatorial rotation into the scene's frame is `ECLIPTIC_FRAME`
- *   (see `orbitPlaneFrames.ts`), applied downstream where the ellipse is built.
+ *   to their **local Laplace plane** — Saturn's regular moons ride ~27° off the
+ *   ecliptic, which is why they look visibly tilted — so each satellite row's
+ *   `plane` is built by the `satellite` maker from that moon's OWN Laplace-plane
+ *   pole (the `poleRaDeg`/`poleDecDeg` JPL tabulates), not from a shared
+ *   equatorial constant: the inner moons' poles ≈ the planet's equatorial pole,
+ *   but a distant moon's Laplace plane tilts off the equator (Iapetus ~15°) and
+ *   its own pole captures that. The ecliptic→equatorial rotation into the
+ *   scene's frame is `ECLIPTIC_FRAME` (see `orbitPlaneFrames.ts`), applied
+ *   downstream where the ellipse is built.
  *
  * Each planet row carries its J2000 epoch elements AND the six per-Julian-
  * century rates from the same JPL table, so `propagateElements` can advance the
- * body to any simulated instant. The Moon and the satellite rows carry epoch
- * elements only (their rates are a Task-5 concern); a row with no rates
- * propagates to itself, so the mixed table stays uniform.
+ * body to any simulated instant. The Moon and the satellite rows carry the same
+ * epoch elements + rates, converted by the `satellite` maker (and, for the Moon,
+ * by `moonRatesFromPeriods` inline) from JPL's period columns; so the mixed
+ * table stays uniform and one affine map moves every body.
  *
  * ### Authoring discipline
  *
@@ -55,19 +60,18 @@
  * - Planets: JPL SSD "Keplerian Elements for Approximate Positions of the Major
  *   Planets", Table 1 (valid 1800–2050 AD, mean ecliptic and equinox of J2000).
  *   https://ssd.jpl.nasa.gov/planets/approx_pos.html
- * - Moon: JPL SSD "Planetary Satellite Mean Orbital Parameters" (ecliptic,
- *   epoch J2000, DE405/LE405 fit). These describe a precessing mean ellipse —
- *   exactly, and only, what a guidance trail needs.
- *   https://ssd.jpl.nasa.gov/sats/elem/
+ * - Moon + the 13 planetary satellites: JPL SSD "Planetary Satellite Mean
+ *   Orbital Parameters" (epoch 2000-01-01.5 TDB; the Moon in the ecliptic frame,
+ *   the planets' moons each in their local Laplace plane). Each row transcribes
+ *   that moon's full table line — a, e, i, node Ω, ω, M, and the sidereal /
+ *   apsidal / nodal periods P / Papsis / Pnode, plus the Laplace-plane pole
+ *   RA/Dec — verbatim in its comment. These describe a precessing mean ellipse,
+ *   exactly what a guidance trail needs. https://ssd.jpl.nasa.gov/sats/elem/
  */
 
 import { SCALE_UNITS } from '../scaleUnits';
-import {
-  MARS_EQUATORIAL_FRAME,
-  JUPITER_EQUATORIAL_FRAME,
-  SATURN_EQUATORIAL_FRAME,
-} from './orbitPlaneFrames';
 import { satellite } from './makers/satellite';
+import { moonRatesFromPeriods } from '../../utils/orbit/moonRatesFromPeriods';
 import {
   MERCURY_GREY,
   VENUS_CREAM,
@@ -101,11 +105,13 @@ export function elementsById(id: string): OrbitalElements {
 /**
  * The guidance orbits: the eight major planets (heliocentric, in order outward
  * from the Sun), then the Moon (geocentric, ecliptic), then each planet's own
- * major moons (geocentric, in that planet's equatorial `plane` — see
- * `satellite`). Planet columns are authored in the units JPL publishes (au /
- * km, degrees) and converted at the seed site; `ω` and `M` show their `ϖ`/`L`/`Ω`
- * derivation inline. Moon rows go through `satellite` (angular phase not
- * modelled — the trail's size and tilt are what matter).
+ * major moons (geocentric, each in its own Laplace `plane` — see `satellite`).
+ * Planet columns are authored in the units JPL publishes (au / km, degrees) and
+ * converted at the seed site; `ω` and `M` show their `ϖ`/`L`/`Ω` derivation
+ * inline. Moon rows go through `satellite`, which transcribes the full JPL
+ * satellite-elements line — real epoch phases Ω/ω/M and the period columns → the
+ * shared per-century rates — so the moons sit at their true J2000 positions and
+ * animate with everything else.
  */
 export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
   {
@@ -309,8 +315,17 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     color: NEPTUNE_BLUE,
   },
   {
-    // The Moon, geocentric — its focus is Earth's derived position. JPL gives ω
-    // and M directly (no ϖ/L derivation needed) for the satellite mean elements.
+    // The Moon, geocentric — its focus is Earth's derived position. JPL sats/elem
+    // (ecliptic frame, epoch 2000-01-01.5 TDB, DE405/LE405): a=384400 km,
+    // e=0.0554, i=5.16°, node Ω=125.08°, ω=318.15°, M=135.27°, P=27.322 d,
+    // Papsis=5.997 yr, Pnode=18.600 yr. JPL gives ω and M directly (no ϖ/L
+    // derivation). Periods → rates via moonRatesFromPeriods (built inline here —
+    // the Moon is authored directly, not via `satellite`, but earns the same
+    // three rate columns so it animates too). Papsis is the ARGUMENT-of-periapsis
+    // period (ω relative to the regressing node): 5.997 yr is consistent with the
+    // famous 8.85 yr perigee (longitude ϖ) and 18.6 yr node —
+    // 360/(360/8.85 + 360/18.6) = 5.997. Prograde: apsis advances (+), node
+    // regresses (−). Ecliptic-framed, so `plane` is omitted.
     id: 'moon',
     parentId: 'earth',
     semiMajorMpc: 384400 * SCALE_UNITS.KM_TO_MPC,
@@ -319,129 +334,269 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     ascendingNodeRad: degToRad(125.08),
     argPeriapsisRad: degToRad(318.15),
     meanAnomalyRad: degToRad(135.27),
+    ...moonRatesFromPeriods({
+      periodDays: 27.322,
+      apsidalPrecessionYears: 5.997,
+      nodalPrecessionYears: 18.6,
+    }),
     color: MOON_GREY,
   },
 
-  // Mars' moons (semi-major km, e, inclination° to Mars' equator).
+  // Mars' moons. JPL sats/elem (Laplace frame, epoch 2000-01-01.5 TDB). Columns
+  // transcribed verbatim: a(km) e ω° M° i° node° P(d) Papsis(yr) Pnode(yr),
+  // pole RA/Dec (tilt of Laplace plane off the equator).
   satellite({
+    // Phobos: a=9375 e=0.015 ω=216.3 M=189.7 i=1.1 node=169.2 P=0.3187
+    // Papsis=1.1 Pnode=2.3; pole RA=317.7 Dec=52.9 (tilt 0.0°). Prograde.
     id: 'phobos',
     parentId: 'mars',
-    plane: MARS_EQUATORIAL_FRAME,
-    semiMajorKm: 9376,
-    eccentricity: 0.0151,
-    inclinationDeg: 1.08,
+    semiMajorKm: 9375,
+    eccentricity: 0.015,
+    inclinationDeg: 1.1,
+    ascendingNodeDeg: 169.2,
+    argPeriapsisDeg: 216.3,
+    meanAnomalyDeg: 189.7,
+    periodDays: 0.3187,
+    apsidalPrecessionYears: 1.1,
+    nodalPrecessionYears: 2.3,
+    poleRaDeg: 317.7,
+    poleDecDeg: 52.9,
     color: SAT_ROCK,
   }),
   satellite({
+    // Deimos: a=23457 e=0.000 ω=0.0 M=205.0 i=1.8 node=54.3 P=1.2625
+    // Papsis=0.0 Pnode=56.2; pole RA=316.6 Dec=53.5 (tilt 0.9°). Prograde.
+    // Papsis=0.0 (circular orbit → apsis undefined) ⇒ ω-rate frozen to 0.
     id: 'deimos',
     parentId: 'mars',
-    plane: MARS_EQUATORIAL_FRAME,
-    semiMajorKm: 23463,
-    eccentricity: 0.00033,
-    inclinationDeg: 1.79,
+    semiMajorKm: 23457,
+    eccentricity: 0.0,
+    inclinationDeg: 1.8,
+    ascendingNodeDeg: 54.3,
+    argPeriapsisDeg: 0.0,
+    meanAnomalyDeg: 205.0,
+    periodDays: 1.2625,
+    apsidalPrecessionYears: 0.0,
+    nodalPrecessionYears: 56.2,
+    poleRaDeg: 316.6,
+    poleDecDeg: 53.5,
     color: SAT_ROCK,
   }),
 
-  // Jupiter's Galilean moons (inclination° to Jupiter's equator).
+  // Jupiter's Galilean moons. JPL sats/elem (Laplace frame, epoch 2000-01-01.5
+  // TDB, JUP365). Columns verbatim: a(km) e ω° M° i° node° P(d) Papsis(yr)
+  // Pnode(yr), pole RA/Dec. P is the anomalistic mean-motion period — for the
+  // fast-precessing inner pair it is ~0.4% shorter than the sidereal period.
   satellite({
+    // Io: a=421800 e=0.004 ω=49.1 M=330.9 i=0.0 node=0.0 P=1.762732
+    // Papsis=1.333 Pnode=0.000; pole RA=268.1 Dec=64.5 (tilt 0.0°). Prograde.
+    // i≈0 ⇒ node undefined, Pnode=0.000 ⇒ Ω-rate frozen to 0.
     id: 'io',
     parentId: 'jupiter',
-    plane: JUPITER_EQUATORIAL_FRAME,
     semiMajorKm: 421800,
-    eccentricity: 0.0041,
-    inclinationDeg: 0.036,
+    eccentricity: 0.004,
+    inclinationDeg: 0.0,
+    ascendingNodeDeg: 0.0,
+    argPeriapsisDeg: 49.1,
+    meanAnomalyDeg: 330.9,
+    periodDays: 1.762732,
+    apsidalPrecessionYears: 1.333,
+    nodalPrecessionYears: 0.0,
+    poleRaDeg: 268.1,
+    poleDecDeg: 64.5,
     color: IO_SULFUR,
   }),
   satellite({
+    // Europa: a=671100 e=0.009 ω=45.0 M=345.4 i=0.5 node=184.0 P=3.525463
+    // Papsis=1.394 Pnode=30.202; pole RA=268.1 Dec=64.5 (tilt 0.0°). Prograde.
     id: 'europa',
     parentId: 'jupiter',
-    plane: JUPITER_EQUATORIAL_FRAME,
     semiMajorKm: 671100,
-    eccentricity: 0.0094,
-    inclinationDeg: 0.466,
+    eccentricity: 0.009,
+    inclinationDeg: 0.5,
+    ascendingNodeDeg: 184.0,
+    argPeriapsisDeg: 45.0,
+    meanAnomalyDeg: 345.4,
+    periodDays: 3.525463,
+    apsidalPrecessionYears: 1.394,
+    nodalPrecessionYears: 30.202,
+    poleRaDeg: 268.1,
+    poleDecDeg: 64.5,
     color: SAT_ICE,
   }),
   satellite({
+    // Ganymede: a=1070400 e=0.001 ω=198.3 M=324.8 i=0.2 node=58.5 P=7.155588
+    // Papsis=68.301 Pnode=137.812; pole RA=268.2 Dec=64.6 (tilt 0.1°). Prograde.
     id: 'ganymede',
     parentId: 'jupiter',
-    plane: JUPITER_EQUATORIAL_FRAME,
     semiMajorKm: 1070400,
-    eccentricity: 0.0013,
-    inclinationDeg: 0.177,
+    eccentricity: 0.001,
+    inclinationDeg: 0.2,
+    ascendingNodeDeg: 58.5,
+    argPeriapsisDeg: 198.3,
+    meanAnomalyDeg: 324.8,
+    periodDays: 7.155588,
+    apsidalPrecessionYears: 68.301,
+    nodalPrecessionYears: 137.812,
+    poleRaDeg: 268.2,
+    poleDecDeg: 64.6,
     color: SAT_ROCK,
   }),
   satellite({
+    // Callisto: a=1882700 e=0.007 ω=43.8 M=87.4 i=0.3 node=309.1 P=16.690440
+    // Papsis=277.921 Pnode=577.264; pole RA=268.7 Dec=64.8 (tilt 0.4°). Prograde.
     id: 'callisto',
     parentId: 'jupiter',
-    plane: JUPITER_EQUATORIAL_FRAME,
     semiMajorKm: 1882700,
-    eccentricity: 0.0074,
-    inclinationDeg: 0.192,
+    eccentricity: 0.007,
+    inclinationDeg: 0.3,
+    ascendingNodeDeg: 309.1,
+    argPeriapsisDeg: 43.8,
+    meanAnomalyDeg: 87.4,
+    periodDays: 16.690440,
+    apsidalPrecessionYears: 277.921,
+    nodalPrecessionYears: 577.264,
+    poleRaDeg: 268.7,
+    poleDecDeg: 64.8,
     color: SAT_ROCK,
   }),
 
-  // Saturn's major moons (inclination° to Saturn's equator; Iapetus rides ~15° out).
+  // Saturn's major moons. JPL sats/elem (Laplace frame, epoch 2000-01-01.5 TDB,
+  // SAT441). Columns verbatim: a(km) e ω° M° i° node° P(d) Papsis(yr) Pnode(yr),
+  // pole RA/Dec. The inner moons share Saturn's pole (RA≈40.6 Dec≈83.5, tilt≈0);
+  // Iapetus sits far enough out that its Laplace plane tilts 14.8° off the
+  // equator, so its own pole (RA=288.7 Dec=78.9) and i=7.6° carry that truthfully
+  // — the trail no longer laid on Saturn's equator.
   satellite({
+    // Mimas: a=186000 e=0.020 ω=160.4 M=275.3 i=1.6 node=66.2 P=0.942422
+    // Papsis=0.493 Pnode=0.986; pole RA=40.6 Dec=83.5 (tilt 0.0°). Prograde.
     id: 'mimas',
     parentId: 'saturn',
-    plane: SATURN_EQUATORIAL_FRAME,
-    semiMajorKm: 185540,
-    eccentricity: 0.0196,
-    inclinationDeg: 1.574,
+    semiMajorKm: 186000,
+    eccentricity: 0.02,
+    inclinationDeg: 1.6,
+    ascendingNodeDeg: 66.2,
+    argPeriapsisDeg: 160.4,
+    meanAnomalyDeg: 275.3,
+    periodDays: 0.942422,
+    apsidalPrecessionYears: 0.493,
+    nodalPrecessionYears: 0.986,
+    poleRaDeg: 40.6,
+    poleDecDeg: 83.5,
     color: SAT_ICE,
   }),
   satellite({
+    // Enceladus: a=238400 e=0.005 ω=119.5 M=57.0 i=0.0 node=0.0 P=1.370218
+    // Papsis=2.916 Pnode=0.000; pole RA=40.6 Dec=83.5 (tilt 0.0°). Prograde.
+    // i≈0 ⇒ node undefined, Pnode=0.000 ⇒ Ω-rate frozen to 0.
     id: 'enceladus',
     parentId: 'saturn',
-    plane: SATURN_EQUATORIAL_FRAME,
-    semiMajorKm: 238040,
-    eccentricity: 0.0047,
-    inclinationDeg: 0.009,
+    semiMajorKm: 238400,
+    eccentricity: 0.005,
+    inclinationDeg: 0.0,
+    ascendingNodeDeg: 0.0,
+    argPeriapsisDeg: 119.5,
+    meanAnomalyDeg: 57.0,
+    periodDays: 1.370218,
+    apsidalPrecessionYears: 2.916,
+    nodalPrecessionYears: 0.0,
+    poleRaDeg: 40.6,
+    poleDecDeg: 83.5,
     color: SAT_ICE,
   }),
   satellite({
+    // Tethys: a=295000 e=0.001 ω=335.3 M=0.0 i=1.1 node=273.0 P=1.887802
+    // Papsis=0.005 Pnode=4.982; pole RA=40.6 Dec=83.5 (tilt 0.0°). Prograde.
+    // Papsis=0.005 yr is a near-circular-orbit table artifact (72000°/yr taken
+    // literally) ⇒ ω-rate frozen to 0 (degenerate periapsis; error ≤ e·a).
     id: 'tethys',
     parentId: 'saturn',
-    plane: SATURN_EQUATORIAL_FRAME,
-    semiMajorKm: 294670,
-    eccentricity: 0.0001,
-    inclinationDeg: 1.091,
+    semiMajorKm: 295000,
+    eccentricity: 0.001,
+    inclinationDeg: 1.1,
+    ascendingNodeDeg: 273.0,
+    argPeriapsisDeg: 335.3,
+    meanAnomalyDeg: 0.0,
+    periodDays: 1.887802,
+    apsidalPrecessionYears: 0.005,
+    nodalPrecessionYears: 4.982,
+    poleRaDeg: 40.6,
+    poleDecDeg: 83.5,
     color: SAT_ICE,
   }),
   satellite({
+    // Dione: a=377700 e=0.002 ω=116.0 M=212.0 i=0.0 node=0.0 P=2.736916
+    // Papsis=11.698 Pnode=0.000; pole RA=40.6 Dec=83.5 (tilt 0.0°). Prograde.
+    // i≈0 ⇒ node undefined, Pnode=0.000 ⇒ Ω-rate frozen to 0.
     id: 'dione',
     parentId: 'saturn',
-    plane: SATURN_EQUATORIAL_FRAME,
-    semiMajorKm: 377420,
-    eccentricity: 0.0022,
-    inclinationDeg: 0.028,
+    semiMajorKm: 377700,
+    eccentricity: 0.002,
+    inclinationDeg: 0.0,
+    ascendingNodeDeg: 0.0,
+    argPeriapsisDeg: 116.0,
+    meanAnomalyDeg: 212.0,
+    periodDays: 2.736916,
+    apsidalPrecessionYears: 11.698,
+    nodalPrecessionYears: 0.0,
+    poleRaDeg: 40.6,
+    poleDecDeg: 83.5,
     color: SAT_ICE,
   }),
   satellite({
+    // Rhea: a=527200 e=0.001 ω=44.3 M=31.5 i=0.3 node=133.7 P=4.517503
+    // Papsis=33.939 Pnode=35.775; pole RA=40.6 Dec=83.5 (tilt 0.0°). Prograde.
     id: 'rhea',
     parentId: 'saturn',
-    plane: SATURN_EQUATORIAL_FRAME,
-    semiMajorKm: 527070,
+    semiMajorKm: 527200,
     eccentricity: 0.001,
-    inclinationDeg: 0.345,
+    inclinationDeg: 0.3,
+    ascendingNodeDeg: 133.7,
+    argPeriapsisDeg: 44.3,
+    meanAnomalyDeg: 31.5,
+    periodDays: 4.517503,
+    apsidalPrecessionYears: 33.939,
+    nodalPrecessionYears: 35.775,
+    poleRaDeg: 40.6,
+    poleDecDeg: 83.5,
     color: SAT_ICE,
   }),
   satellite({
+    // Titan: a=1221900 e=0.029 ω=78.3 M=11.7 i=0.3 node=78.6 P=15.945448
+    // Papsis=346.680 Pnode=687.370; pole RA=36.4 Dec=84.0 (tilt 0.6°). Prograde.
     id: 'titan',
     parentId: 'saturn',
-    plane: SATURN_EQUATORIAL_FRAME,
-    semiMajorKm: 1221870,
-    eccentricity: 0.0288,
-    inclinationDeg: 0.348,
+    semiMajorKm: 1221900,
+    eccentricity: 0.029,
+    inclinationDeg: 0.3,
+    ascendingNodeDeg: 78.6,
+    argPeriapsisDeg: 78.3,
+    meanAnomalyDeg: 11.7,
+    periodDays: 15.945448,
+    apsidalPrecessionYears: 346.68,
+    nodalPrecessionYears: 687.37,
+    poleRaDeg: 36.4,
+    poleDecDeg: 84.0,
     color: TITAN_ORANGE,
   }),
   satellite({
+    // Iapetus: a=3561700 e=0.028 ω=254.5 M=74.8 i=7.6 node=86.5 P=79.331002
+    // Papsis=1662.900 Pnode=3130.302; pole RA=288.7 Dec=78.9 (tilt 14.8° — its
+    // Laplace plane is pulled well off Saturn's equator, so it rides its OWN
+    // pole, and i is 7.6° relative to THAT plane). Prograde.
     id: 'iapetus',
     parentId: 'saturn',
-    plane: SATURN_EQUATORIAL_FRAME,
-    semiMajorKm: 3560840,
-    eccentricity: 0.0286,
-    inclinationDeg: 15.47,
+    semiMajorKm: 3561700,
+    eccentricity: 0.028,
+    inclinationDeg: 7.6,
+    ascendingNodeDeg: 86.5,
+    argPeriapsisDeg: 254.5,
+    meanAnomalyDeg: 74.8,
+    periodDays: 79.331002,
+    apsidalPrecessionYears: 1662.9,
+    nodalPrecessionYears: 3130.302,
+    poleRaDeg: 288.7,
+    poleDecDeg: 78.9,
     color: SAT_ROCK,
   }),
 ];
