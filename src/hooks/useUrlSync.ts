@@ -53,17 +53,24 @@
 
 import { useEffect } from 'react';
 import type { FocusableTarget } from '../@types/engine/FocusableTarget';
+import type { TimeState } from '../@types/time/TimeState';
 import { HASH_PARAM_SOURCES } from './hashParamSources';
 import { parseHashParams } from '../utils/url/parseHashParams';
 import { composeHashParams } from '../utils/url/composeHashParams';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { selectFocusedFocusable } from '../state/selection/selectors';
+import { selectTimeState } from '../state/time/selectors';
 
 // ── Pure helpers (re-exported for unit tests) ──────────────────────────────
 
 export type DesiredHashInput = {
   focused: FocusableTarget | null;
   currentHash: string;
+  // The sim-clock intent, read by the `t` source's write to serialize a manual
+  // instant. Optional so focus-only callers (and the existing focus tests) that
+  // carry no clock still typecheck: a missing `time` means "no manual instant to
+  // put on the URL", which the `t` source treats identically to live mode.
+  time?: TimeState;
 };
 
 export type DesiredHashOutput = {
@@ -107,6 +114,7 @@ export function computeDesiredHash(input: DesiredHashInput): DesiredHashOutput {
 export function useUrlSync(): void {
   const dispatch = useAppDispatch();
   const focused = useAppSelector(selectFocusedFocusable);
+  const time = useAppSelector(selectTimeState);
 
   // ── Effect A: hash READ → dispatch ───────────────────────────────────
   // Parse the URL once on mount and on every subsequent hashchange.
@@ -142,11 +150,16 @@ export function useUrlSync(): void {
     if (typeof window === 'undefined') return;
     const { desiredHashBody, matches } = computeDesiredHash({
       focused,
+      time,
       currentHash: window.location.hash,
     });
     if (matches) return;
     const base = window.location.pathname + window.location.search;
     const next = desiredHashBody ? `${base}#${desiredHashBody}` : base;
     window.history.pushState(null, '', next);
-  }, [focused]);
+    // `time` is a dependency because the `t` source serializes the manual
+    // instant: a re-anchor (pause, scrub, rate/direction change) produces a new
+    // anchor object, so the write re-runs and crystallizes the new moment. Live
+    // mode composes no `t`, so a live clock's coarse idle ticks cause no writes.
+  }, [focused, time]);
 }
