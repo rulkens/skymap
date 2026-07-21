@@ -96,6 +96,17 @@ describe('computeDesiredHash (unified)', () => {
     const out = computeDesiredHash({ focused: null, currentHash: '' });
     expect(out.matches).toBe(true);
   });
+
+  it('composes focus through the param seam', () => {
+    // The body is now composed over HASH_PARAM_SOURCES, not hard-coded. A
+    // structure focus must still surface as the single `focus=<id>` param —
+    // proof the seam preserves the on-URL shape for the one existing source.
+    const out = computeDesiredHash({
+      focused: makeStructure('cluster-virgo-m87'),
+      currentHash: '',
+    });
+    expect(out.desiredHashBody).toBe('focus=cluster-virgo-m87');
+  });
 });
 
 // ── Hook integration ──────────────────────────────────────────────────────
