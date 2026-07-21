@@ -39,6 +39,7 @@ import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameC
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import { TARGET_CLEAR_VALUES } from '../../gpu/renderTargets';
+import { BLOOM_LEVELS } from '../../../data/bloomConstants';
 import { bloomSrcTexelSize } from './passes/bloomSrcTexelSize';
 
 /**
@@ -100,8 +101,10 @@ export function runBloom(
 
   // Descending downsample chain: bloom[level-1] → bloom[level], clearing each
   // level (the downsample is its target's sole producer). Karis only on level 1,
-  // the read off the raw bloom0 where fireflies live.
-  for (const level of [1, 2, 3, 4]) {
+  // the read off the raw bloom0 where fireflies live. Levels 1..BLOOM_LEVELS-1 —
+  // for BLOOM_LEVELS=5 this is exactly [1, 2, 3, 4].
+  const downsampleLevels = Array.from({ length: BLOOM_LEVELS - 1 }, (_unused, i) => i + 1);
+  for (const level of downsampleLevels) {
     const src = `bloom${level - 1}`;
     const target = `bloom${level}`;
     const pass = openBloomPass(encoder, viewOf(target), target, 'clear', undefined);
@@ -117,8 +120,13 @@ export function runBloom(
 
   // Ascending additive fold: bloom[level+1] → bloom[level], LOADING each level
   // (the downsample/bright already wrote it this sequence, so the additive
-  // upsample accumulates onto it).
-  for (const level of [3, 2, 1, 0]) {
+  // upsample accumulates onto it). Levels BLOOM_LEVELS-2..0 (mirror of the
+  // downsample range) — for BLOOM_LEVELS=5 this is exactly [3, 2, 1, 0].
+  const upsampleLevels = Array.from(
+    { length: BLOOM_LEVELS - 1 },
+    (_unused, i) => BLOOM_LEVELS - 2 - i,
+  );
+  for (const level of upsampleLevels) {
     const src = `bloom${level + 1}`;
     const target = `bloom${level}`;
     const pass = openBloomPass(encoder, viewOf(target), target, 'load', undefined);

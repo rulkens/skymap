@@ -274,10 +274,11 @@ export const DEFAULT_BLOOM_STRENGTH = 0.85;
 
 /**
  * Default bloom threshold — the HDR luminance above which a pixel contributes to
- * the bloom pyramid. Seeds `settings.bloom.threshold`. 7.0 sits just under the
- * star-pass `KNEE = 8.0` ceiling (`shaders/lib/starKnee.wesl`), so only
- * near-saturated cores bleed into the glow rather than the whole bright field.
- * A post-build tuning target (spec §4/§6).
+ * the bloom pyramid. Seeds `settings.bloom.threshold`. 7.0 is the low end of the
+ * bloom-seeding ordering invariant `DEFAULT_BLOOM_THRESHOLD < STAR_KNEE <=
+ * STAR_EMISSIVE` (see `starRenderConstants.ts` for the single statement of it):
+ * sitting under `STAR_KNEE` means only near-saturated cores bleed into the glow
+ * rather than the whole bright field. A post-build tuning target (spec §4/§6).
  */
 export const DEFAULT_BLOOM_THRESHOLD = 7.0;
 

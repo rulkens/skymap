@@ -37,6 +37,11 @@
 // KNEE sits comfortably above 1.0 so bloom still sees genuine HDR values and
 // bright cores still bloom, yet well below the old unbounded peaks so the
 // rolloff actually engages where the colour was dying. Eye-tunable via HMR.
+//
+// MIRRORS 'STAR_KNEE' in 'src/data/starRenderConstants.ts' (the authoritative
+// TS home, which also names the bloom-seeding ordering invariant). Kept in sync
+// by a parity test, not the linker: '?static' WESL linking has no value
+// injection, so this literal is a hand-written copy.
 
 const KNEE: f32 = 8.0;
 

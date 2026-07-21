@@ -31,6 +31,10 @@ import package::lib::sphere::TintedSphereUniforms;
 
 @group(0) @binding(0) var<uniform> u: TintedSphereUniforms;
 
+// MIRRORS 'STAR_EMISSIVE' in 'src/data/starRenderConstants.ts' (the
+// authoritative TS home, which also names the bloom-seeding ordering
+// invariant). Kept in sync by a parity test, not the linker: '?static' WESL
+// linking has no value injection, so this literal is a hand-written copy.
 const EMISSIVE: f32 = 12.0;
 
 @fragment

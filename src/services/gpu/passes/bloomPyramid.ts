@@ -47,14 +47,13 @@ import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../lib/blendStates';
 import type { BloomPyramid } from '../../../@types/rendering/BloomPyramid';
 import type { Vec2 } from '../../../@types/math/Vec2';
+import { BLOOM_LEVELS } from '../../../data/bloomConstants';
 
-/**
- * Levels in the pyramid: `bloom0..bloom4`. Matches the tool's `BLOOM_MIPS = 5`
- * and the five `bloomN` `renderTargets` rows. The uniform-buffer arrays are
- * indexed directly by level for legibility; the edge slots each stage never
- * uses (downsample's [0], upsample's [4]) are one 16-byte buffer apiece.
- */
-const BLOOM_LEVELS = 5;
+// Levels in the pyramid: `bloom0..bloom4`, from the shared `bloomConstants`
+// home so the uniform arrays here, the `renderTargets` rows, and `runBloom`'s
+// pass loops all derive from one number. The uniform-buffer arrays are indexed
+// directly by level for legibility; the edge slots each stage never uses
+// (downsample's [0], upsample's [4]) are one 16-byte buffer apiece.
 
 /**
  * Soft-threshold knee written into the bright prefilter's uniform (`u.y`).
@@ -63,10 +62,7 @@ const BLOOM_LEVELS = 5;
  */
 const BRIGHT_KNEE = 0.5;
 
-export function createBloomPyramid(
-  device: GPUDevice,
-  hdrFormat: GPUTextureFormat,
-): BloomPyramid {
+export function createBloomPyramid(device: GPUDevice, hdrFormat: GPUTextureFormat): BloomPyramid {
   const brightModule = createShaderModuleWithDevLog(device, brightCode, 'bloom.bright');
   const downsampleModule = createShaderModuleWithDevLog(device, downsampleCode, 'bloom.downsample');
   const upsampleModule = createShaderModuleWithDevLog(device, upsampleCode, 'bloom.upsample');

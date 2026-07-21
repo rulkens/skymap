@@ -31,6 +31,7 @@ import { memo } from 'react';
 import type { ReactNode } from 'react';
 import type { ToneMapCurve as ToneMapCurveT } from '../../@types/data/ToneMapCurve';
 import { ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';
+import { STAR_EMISSIVE } from '../../data/starRenderConstants';
 import { CollapsibleSection } from './CollapsibleSection';
 import styles from './SettingsPanel.module.css';
 
@@ -122,11 +123,14 @@ function DisplaySection({
         <span className={styles.panelValue}>{bloomThreshold.toFixed(1)}</span>
       </div>
       <div className={styles.panelRow}>
+        {/* Ceiling is the resolved-star emissive: above it the threshold would
+            exclude the Sun's own disc and kill its bloom. See the ordering
+            invariant in data/starRenderConstants.ts. */}
         <input
           id="bloom-threshold"
           type="range"
           min="0"
-          max="12"
+          max={STAR_EMISSIVE}
           step="0.1"
           value={bloomThreshold}
           onChange={(e) => onBloomThresholdChange(Number(e.target.value))}
