@@ -21,19 +21,22 @@ which rules out every obvious cost model:
   removed passes operate on the smallest mips (1/8..1/32 res), the cheapest in the pyramid.
 - **Not the mip fill.** `bloom0` at 1/3 res (`scale: 3 * 2**n`): no change on `solar-system`,
   slightly worse on `milky-way`.
-- **Not the fold.** The fold (`bloom0 → hdr`, a full-viewport write) was removed from `runBloom`
-  and fused into the `hdr→swap` tonemap shader (compositor reads `bloom0` and adds
-  `bloom0 * strength` before tone-mapping — implemented, renders correctly). The `bloom` timing
-  slot stayed ~5.3 ms **with the fold gone from it** — proving the fold was never a dominant
-  cost. Its ~0.7 ms mostly relocated into `hdr→swap` (which rose accordingly); net frame saving
-  ~0.7 ms at best, and it does not restore 60 fps. (An earlier note here claimed bloom's cost was
-  "two full-viewport HDR endpoints, bright read + fold write" — the fold spike disproves the fold
-  half.)
+- **Not the fold — a wash.** The fold (`bloom0 → hdr`, a full-viewport write) was removed from
+  `runBloom` and fused into the `hdr→swap` tonemap shader (compositor reads `bloom0` and adds
+  `bloom0 * strength` before tone-mapping — implemented, renders correctly). A quiet-machine
+  **interleaved paired A/B** (base ↔ fused alternated 4 rounds, `solar-system` 80 frames)
+  centred on **zero**: per-round Δ(base−fused) = +1.0, −2.5, +0.2, +0.1 ms, mean ≈ −0.3 ms, well
+  inside the ~4 ms round-to-round drift; the `bloom` slot was identical every round (base
+  5.4/4.7/4.5/5.4 vs fused 5.3/5.3/4.5/5.4). No measurable win. Mechanism: fusing deletes one
+  fullscreen fold pass but adds a `bloom0` sample to the tonemap pass, so the read-modify-write
+  work relocates 1:1 rather than disappearing — the fold's cost was never removable overhead,
+  it was necessary work. (An earlier note here claimed bloom's cost was "two full-viewport HDR
+  endpoints, bright read + fold write" — this disproves the fold half.)
 
-**Caveat on the numbers:** these runs were on a contended machine (three dev servers + load);
-`solar-system` totals ranged 16.7–23.9 ms across identical configs (±7 ms noise), which swamps a
-sub-1 ms effect. The robust, noise-independent finding is structural: *removing the fold did not
-shrink the single-slot bloom measurement.* Absolute deltas need a quiet machine.
+**On measurement method:** an initial batched attempt (all-baseline then all-fused) was
+contaminated by intermittent background load (`solar-system` totals ranged 16.7–23.9 ms across
+identical configs). Interleaving base/fused per round is what made the comparison trustworthy —
+any drift then hits both states equally. Batch-then-batch A/Bs on this machine are unreliable.
 
 ## What's left as the suspect
 
@@ -60,11 +63,12 @@ overhead-bound reading (exp 0.21) is consistent with either.
 
 1. ~~Fewer mip levels (5 → 3).~~ Measured dead.
 2. ~~Shrink the finest mips.~~ Measured dead.
-3. ~~Fuse the fold into `hdr→swap`.~~ Measured marginal (~0.7 ms, noise-obscured, no 60 fps).
-   Implemented + reverted. Still the cleanest of the small wins IF combined with the sibling
-   `2026-07-21-fold-star-upsample-into-tonemap.md` (shared tonemap pass) — but not worth the
-   shared-compositor complecting + HDR-path shader change + iOS verification on its own ~0.7 ms.
-   Revisit only after the per-sub-pass instrumentation says the two folds are worth it together.
+3. ~~Fuse the fold into `hdr→swap`.~~ **Measured dead (interleaved quiet-machine A/B, no win).**
+   Implemented + reverted. The work relocates 1:1 into the tonemap pass, it does not disappear.
+   Do NOT revisit standalone. The only scenario that could still pay is folding BOTH this and the
+   sibling `2026-07-21-fold-star-upsample-into-tonemap.md` into one tonemap pass so two fullscreen
+   passes collapse into zero — and even that must be measured (interleaved) before any build,
+   because this fold alone proved a wash.
 4. **Merge downsample/upsample passes.** Cut pass count by fusing pyramid steps. Only worth it if
    step 1 shows per-pass overhead dominates.
 5. **Gate bloom off below a scale threshold / on a perf-tier.** The cheap, always-available
