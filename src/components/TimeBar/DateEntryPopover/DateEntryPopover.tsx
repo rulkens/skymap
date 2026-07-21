@@ -5,7 +5,7 @@
  * A pure presentational popover: it seeds a single native
  * `<input type="datetime-local">` from the current sim instant, and on commit
  * hands the typed value back as a `Date`. It reaches into no store or clock —
- * the container re-anchors via `setDate` (which drops the clock into manual
+ * the container re-anchors via `setSimDays` (which drops the clock into manual
  * mode at that instant) and closes the popover.
  *
  * ## UTC, not host time
@@ -29,7 +29,7 @@ import styles from './DateEntryPopover.module.css';
 
 export type DateEntryPopoverProps = {
   readonly initial: Date; // current sim instant, seeds the input
-  readonly onCommit: (instant: Date) => void; // → container dispatches setDate
+  readonly onCommit: (instant: Date) => void; // → container dispatches setSimDays
   readonly onCancel: () => void;
 };
 

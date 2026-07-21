@@ -8,18 +8,22 @@
 // controls, and assert the intent slice moved the way the button promised —
 // asserting on store state (not CSS class names) keeps the contract stable.
 //
-// The readout's 1 Hz tick is deliberately untested: it re-derives a value the
-// unit suites for deriveSimDays / formatSimClock already cover, and a timer test
-// would only re-encode that plumbing.
+// The readout's 1 Hz *cadence* stays untested (a timer test would only re-encode
+// the setInterval plumbing), but its *time base* is pinned below: the readout must
+// derive its instant from performance.now(), because anchor.realMs is a
+// performance.now() stamp and a Date.now() base would subtract unrelated epochs.
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import TimeBarContainer from '../../../src/components/containers/TimeBarContainer';
 import { createAppStore } from '../../../src/store/createAppStore';
 import { selectTimeState } from '../../../src/state/time/selectors';
-import { setRate } from '../../../src/state/time/timeSlice';
+import { setRate, setSimDays } from '../../../src/state/time/timeSlice';
+import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
+import { formatSimClock } from '../../../src/utils/time/formatSimClock';
+import { julianDaysToUnixMs } from '../../../src/utils/time/julianDaysToUnixMs';
 import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 
 function makeWrapper(store: ReturnType<typeof createAppStore>['store']) {
@@ -45,6 +49,48 @@ function popover(container: HTMLElement): HTMLElement | null {
 }
 
 describe('TimeBarContainer', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('derives the ticking readout from performance.now(), not Date.now()', () => {
+    // The readout's instant comes from deriveSimDays(time, performance.now()).
+    // anchor.realMs is itself a performance.now() stamp, so the time base is
+    // load-bearing: a regression to Date.now() would subtract two unrelated epochs
+    // and derive a garbage instant. We stub the two clocks to WILDLY divergent
+    // values — a small perf-ms reading near the anchor, and a real wall-clock
+    // Date.now — so the two derivations can't collide by accident.
+    //
+    // deriveSimDays here is only an ORACLE for the expected string; the defect
+    // under guard is the call site's CHOICE of clock, not deriveSimDays itself.
+    const ANCHOR_REAL_MS = 2_000; // performance.now()-scale anchor stamp
+    const PERF_NOW = 12_000; // 10 real seconds on → +10 sim days at the 1 day/s detent
+    const DATE_NOW = 1_800_000_000_000; // a real wall-clock epoch, ~1.8e9 s off the anchor
+
+    vi.spyOn(performance, 'now').mockReturnValue(PERF_NOW);
+    vi.spyOn(Date, 'now').mockReturnValue(DATE_NOW);
+
+    const { store } = createAppStore();
+    // Manual + playing (paused stays false); default rateIndex 3 = '1 day/s',
+    // direction +1. Anchored at a known instant with a performance.now()-scale realMs.
+    store.dispatch(
+      setSimDays({ simDays: unixMsToJulianDays(Date.UTC(2030, 0, 1)), nowMs: ANCHOR_REAL_MS }),
+    );
+
+    const time = selectTimeState(store.getState());
+    const expected = formatSimClock(new Date(julianDaysToUnixMs(deriveSimDays(time, PERF_NOW))));
+
+    const { container } = render(createElement(TimeBarContainer, { hidden: false }), {
+      wrapper: makeWrapper(store),
+    });
+
+    // With performance.now() → PERF_NOW the readout lands 10 sim-days past the
+    // anchor. A Date.now() base would derive an instant ~1.8e9 sim-days away and
+    // never format to this string.
+    expect(container.textContent).toContain(expected);
+    expect(readoutTrigger(container).getAttribute('aria-label')).toContain(expected);
+  });
+
   it('dispatches goLive on the now button', () => {
     const { store } = createAppStore();
     // The "Now" button only renders in manual mode, so leave live first.
