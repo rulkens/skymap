@@ -36,19 +36,33 @@
  * does not pop. The degenerate case (camera on/inside an orbit, so the
  * projected conic fills the viewport) is handled in the fragment, which
  * discards every off-stroke, horizon, and non-finite pixel, so a degenerate
- * orbit paints only its (possibly huge) arc, never a filled blob. The orbits
- * are static module-level seeds (`SCENE_ORBIT_CONICS`, derived once from the
- * orbital elements), so there is no data gate.
+ * orbit paints only its (possibly huge) arc, never a filled blob.
+ *
+ * ### Conics re-derive at the frame instant
+ *
+ * The trails are NOT a baked table: each drawn frame re-derives every orbit at
+ * `ctx.simDays` — `keplerianEllipse(propagateElements(elements, simDays))` gives
+ * the focus-relative shape, and the absolute centre folds in the focus. A
+ * heliocentric orbit's focus is the render origin (the Sun); a moon's focus is
+ * its parent's LIVE position, read from the per-frame body snapshot
+ * (`sceneBodyStates`) so a moon's trail rides its moving parent. The falloff
+ * anchor is the body's PROPAGATED mean anomaly, also read from that one snapshot
+ * — so trail and drawn body can never disagree. The derivation is cheap and only
+ * runs inside the near-field gate, so it re-runs every frame rather than caching.
+ * `ORBITAL_ELEMENTS` is a compile-time table, always present, so there is still
+ * no data gate.
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
 import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
-import { SCENE_ORBIT_CONICS } from '../../../../data/bodies/sceneOrbitConics';
 import { ORBITAL_ELEMENTS, elementsById } from '../../../../data/bodies/orbitalElements';
 import type { OrbitalElements } from '../../../../@types/scene/OrbitalElements';
+import { propagateElements } from '../../../../utils/orbit/propagateElements';
+import { keplerianEllipse } from '../../../../utils/orbit/keplerianEllipse';
 import { composeOrbitConic } from '../../../../utils/camera/composeOrbitConic';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
+import { sceneBodyStates } from '../sceneBodyStates';
 import { MAX_ORBITS, INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/orbitTrailRenderer';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 
@@ -99,8 +113,10 @@ export const orbitTrailsLayer: ContentLayer = {
 
   enabled(state, ctx) {
     // Handle first (pre-bootstrap fixtures carry a bare ctx), then the shared
-    // near-field distance gate. SCENE_ORBIT_CONICS is a static module-level
-    // table (derived once from the elements), so there is no data condition.
+    // near-field distance gate. `ORBITAL_ELEMENTS` is a compile-time table
+    // (always present), so there is no data condition — and the apoapsis-derived
+    // MAX_ORBIT_EXTENT_MPC bound below is TIME-INVARIANT, so this gate needs no
+    // per-frame derivation even though the drawn conics do.
     if (state.gpu.orbitTrailRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     // Whole-layer sub-pixel cull, the conservative bound of the per-orbit
@@ -130,7 +146,12 @@ export const orbitTrailsLayer: ContentLayer = {
   draw(pass, view, ctx, state) {
     const renderer = state.gpu.orbitTrailRenderer;
     if (renderer === null) return;
-    const limit = Math.min(SCENE_ORBIT_CONICS.length, MAX_ORBITS);
+    // The per-frame body snapshot (memoized on `ctx.simDays`, shared with the
+    // planet/textured-body layers): the source of every moon's parent centre and
+    // every trail's mean-anomaly falloff anchor. Reading it — never re-deriving —
+    // is what welds each trail to the exact instant its body is drawn at.
+    const states = sceneBodyStates(state, ctx);
+    const limit = Math.min(ORBITAL_ELEMENTS.length, MAX_ORBITS);
     const camPos = ctx.drawCamPos;
     const viewportHeightPx = view.viewportPx[1];
 
@@ -151,20 +172,36 @@ export const orbitTrailsLayer: ContentLayer = {
     // rejection is what keeps a near-edge-on orbit a thin line, not a blob.
     let n = 0;
     for (let i = 0; i < limit; i++) {
-      const conic = SCENE_ORBIT_CONICS[i]!;
+      const elements = ORBITAL_ELEMENTS[i]!;
+      // Re-derive the conic AT the frame instant: propagate the elements to
+      // `ctx.simDays`, then image the unit circle. `keplerianEllipse` returns
+      // three FRESH focus-relative vectors per call — the same per-conic distinct
+      // arrays the static table used to hold, so composeOrbitConic still receives
+      // a distinct centre per orbit (nothing aliases a shared scratch).
+      const propagated = propagateElements(elements, ctx.simDays);
+      const { centerOffsetMpc, semiMajorMpc, semiMinorMpc } = keplerianEllipse(propagated);
+      // Fold the focus into an absolute-world centre, in place on the fresh
+      // offset array (no extra allocation): a heliocentric orbit's focus is the
+      // render origin (the Sun); a moon's focus is its parent's LIVE snapshot
+      // position, so its trail rides the moving parent.
+      const focus =
+        elements.parentId === null
+          ? RENDER_ORIGIN_MPC
+          : states.get(elements.parentId)!.positionMpc;
+      const centerMpc = centerOffsetMpc;
+      centerMpc[0] += focus[0];
+      centerMpc[1] += focus[1];
+      centerMpc[2] += focus[2];
+
       // Apparent on-screen diameter: 2·|semiMajor| across, at the camera's
       // distance to the ellipse centre.
-      const dx = conic.centerMpc[0] - camPos[0];
-      const dy = conic.centerMpc[1] - camPos[1];
-      const dz = conic.centerMpc[2] - camPos[2];
+      const dx = centerMpc[0] - camPos[0];
+      const dy = centerMpc[1] - camPos[1];
+      const dz = centerMpc[2] - camPos[2];
       const distanceMpc = Math.hypot(dx, dy, dz);
-      const semiMajorMpc = Math.hypot(
-        conic.semiMajorMpc[0],
-        conic.semiMajorMpc[1],
-        conic.semiMajorMpc[2],
-      );
+      const semiMajorLenMpc = Math.hypot(semiMajorMpc[0], semiMajorMpc[1], semiMajorMpc[2]);
       const diameterPx = apparentSizePx({
-        diameterKpc: 2 * semiMajorMpc * 1000,
+        diameterKpc: 2 * semiMajorLenMpc * 1000,
         distanceMpc,
         viewportHeightPx,
         fovYRad: ctx.fovYRad,
@@ -174,19 +211,21 @@ export const orbitTrailsLayer: ContentLayer = {
 
       const { ginv, minorS, minorT } = composeOrbitConic(
         view.slab.vp,
-        conic.centerMpc,
-        conic.semiMajorMpc,
-        conic.semiMinorMpc,
+        centerMpc,
+        semiMajorMpc,
+        semiMinorMpc,
         view.viewportPx,
         RENDER_ORIGIN_MPC,
       );
       const base = n * INSTANCE_FLOATS;
       staging.set(ginv, base); // Ginv columns → floats 0..11
-      staging[base + 12] = conic.color[0];
-      staging[base + 13] = conic.color[1];
-      staging[base + 14] = conic.color[2];
-      staging[base + 15] = conic.eccentricity;
-      staging[base + 16] = conic.meanAnomalyRad;
+      staging[base + 12] = elements.color[0];
+      staging[base + 13] = elements.color[1];
+      staging[base + 14] = elements.color[2];
+      staging[base + 15] = propagated.eccentricity;
+      // Falloff anchor: the body's PROPAGATED mean anomaly from the snapshot —
+      // where the body actually is at `t`, so the trail fades behind IT.
+      staging[base + 16] = states.get(elements.id)!.meanAnomalyRad;
       staging[base + 17] = alpha;
       staging[base + 18] = 0; // trailing pad — kept zeroed across frames
       staging[base + 19] = 0;

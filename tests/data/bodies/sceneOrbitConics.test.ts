@@ -28,7 +28,7 @@ import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 // Body positions live in the derived BodyState snapshot (frozen at J2000 here),
-// the same derive `deriveOrbitConics(CONST_J2000)` resolves its centres from.
+// the same J2000 epoch `deriveOrbitConics` resolves the static-seed centres at.
 const BODY_STATES = deriveBodyStates(CONST_J2000);
 
 function dot(a: Readonly<Vec3>, b: Readonly<Vec3>): number {
