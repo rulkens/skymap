@@ -20,7 +20,7 @@ import { CANCEL } from '@redux-saga/core';
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchClipSaga } from '../../../src/state/camera/watchClipSaga';
 import { startClip, stopClip } from '../../../src/state/camera/clipActions';
-import { setRate, setSimDays, goLive } from '../../../src/state/time/timeSlice';
+import { setRate, setSimDays, goLive, pause, resume } from '../../../src/state/time/timeSlice';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { clipRegistry } from '../../../src/data/animation/clips/clipRegistry';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
@@ -253,5 +253,37 @@ describe('watchClipSaga', () => {
     const after = store.getState().time;
     expect(after.mode).toBe('manual');
     expect(after.paused).toBe(false);
+  });
+
+  it('leaves an already-paused manual clock paused after a clip (no resume/goLive)', async () => {
+    // A deliberately-paused manual clock must not be un-paused by a clip. The
+    // finally-restore must dispatch neither `resume` nor `goLive` on this path.
+    const seam = blockingSeam(() => {});
+    const { store } = buildHarness(seam);
+
+    // A manual clock that the user has paused.
+    store.dispatch(setRate({ rateIndex: 2, nowMs: 100 }));
+    store.dispatch(pause({ nowMs: 100 }));
+    expect(store.getState().time).toMatchObject({ mode: 'manual', paused: true });
+
+    // Spy after the pre-clip setup so only the saga's dispatches are counted.
+    const dispatchSpy = vi.spyOn(store, 'dispatch');
+
+    store.dispatch(startClip(CLIP_ID));
+    await flush();
+    expect(store.getState().time.paused).toBe(true); // still paused during the clip
+
+    // Cancel via stopClip so the finally-restore runs on the clip's exit.
+    store.dispatch(stopClip());
+    await flush();
+
+    const after = store.getState().time;
+    expect(after.mode).toBe('manual');
+    expect(after.paused).toBe(true);
+    // No restore action un-paused the clock.
+    const restored = dispatchSpy.mock.calls
+      .map(([action]) => (action as { type: string }).type)
+      .filter((t) => t === resume.type || t === goLive.type);
+    expect(restored).toEqual([]);
   });
 });

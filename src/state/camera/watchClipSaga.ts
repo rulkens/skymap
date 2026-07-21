@@ -45,15 +45,21 @@
  *
  * A clip is a scripted camera move; the scene must not drift underneath it while
  * it plays (choreography and `record-tour` both depend on nothing else moving).
- * So before the run starts we capture the clock's prior `mode` and dispatch the
- * ordinary `pause` — the same re-anchor primitive user-pause uses, so the freeze
- * is continuous (the clock holds exactly the pre-clip derived instant, no jump).
- * When the clip ends OR is cancelled we restore the prior mode: `goLive` to a
- * fresh wall-clock JD if it was live, else `resume` if it was manual. The restore
- * sits in a `finally` so it runs on every exit route this saga has — the `run`
- * arm resolving (natural end), the `stop` arm winning (`stopClip`), and
- * `takeLatest` cancelling the task for a re-play. No new clock plumbing: the clip
- * player *sets* the clock through the existing time-slice actions.
+ * So before the run starts we capture the clock's prior `mode` AND `paused` flag,
+ * then dispatch the ordinary `pause` — the same re-anchor primitive user-pause
+ * uses, so the freeze is continuous (the clock holds exactly the pre-clip derived
+ * instant, no jump). When the clip ends OR is cancelled we restore what the clip
+ * interrupted, three ways: `goLive` to a fresh wall-clock JD if it was live;
+ * `resume` if it was manual AND playing; and NOTHING if it was manual AND already
+ * paused — a deliberately-paused clock must stay paused, so un-pausing it would be
+ * a bug (the earlier `priorMode`-only restore did exactly that). Skipping the
+ * restore there is safe because the clip's own `pause` only re-anchored an
+ * already-paused clock, which holds its `anchor.simDays` verbatim (a paused
+ * derivation ignores `realMs`) — no sim time moved. The restore sits in a
+ * `finally` so it runs on every exit route this saga has — the `run` arm resolving
+ * (natural end), the `stop` arm winning (`stopClip`), and `takeLatest` cancelling
+ * the task for a re-play. No new clock plumbing: the clip player *sets* the clock
+ * through the existing time-slice actions.
  */
 import { call, race, take, takeLatest, getContext, put, select } from 'typed-redux-saga';
 
@@ -73,10 +79,13 @@ export function* watchClipSaga() {
     const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
     const clip = clipRegistry[action.payload];
 
-    // Freeze the sim clock for the clip's duration, remembering the mode to
-    // return to. `pause` re-anchors from the current derived instant, so the
-    // clock holds the pre-clip sim time verbatim while the scripted move plays.
-    const priorMode = yield* select((state: RootState) => state.time.mode);
+    // Freeze the sim clock for the clip's duration, remembering both the mode
+    // AND the paused flag to return to. `pause` re-anchors from the current
+    // derived instant, so the clock holds the pre-clip sim time verbatim while
+    // the scripted move plays.
+    const { mode: priorMode, paused: priorPaused } = yield* select(
+      (state: RootState) => state.time,
+    );
     yield* put(pause({ nowMs: performance.now() }));
     try {
       yield* race({
@@ -95,11 +104,17 @@ export function* watchClipSaga() {
       });
     } finally {
       // Runs on natural end, `stopClip`, AND `takeLatest` cancellation. Restore
-      // the mode the clip interrupted: live re-snaps to the wall-clock JD now
-      // (so "live" is still true after the frozen interval), manual just resumes.
+      // exactly what the clip interrupted:
+      //   live            → re-snap to the wall-clock JD now (so "live" is still
+      //                     true after the frozen interval).
+      //   manual, playing → resume from the frozen instant.
+      //   manual, paused  → nothing. The clock was deliberately paused and stays
+      //                     paused; resuming it would un-pause a paused clock.
+      //                     The clip's own `pause` merely re-anchored an already-
+      //                     paused clock, which is a no-op on sim time.
       if (priorMode === 'live') {
         yield* put(goLive({ simDays: unixMsToJulianDays(Date.now()), nowMs: performance.now() }));
-      } else {
+      } else if (!priorPaused) {
         yield* put(resume({ nowMs: performance.now() }));
       }
     }
