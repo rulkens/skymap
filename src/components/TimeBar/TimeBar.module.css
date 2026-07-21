@@ -130,14 +130,12 @@
   gap: var(--space-3);
   min-width: 0;
   /*
-   * Clip the horizontal collapse without trapping the tooltips, which sit above
-   * the bar. `inset` clips left/right at the box edges (so the sliding controls
-   * stay inside the growing track) but extends the region well past top/bottom
-   * so the labels escape upward. Any transient horizontal spill during the
-   * animation is masked by the controls' opacity gate. The negative horizontal
-   * inset (symmetric, so it covers the leftward side too) leaves room for the
-   * end-cap tooltips (Back to now on the far left, Faster nearest the readout)
-   * to centre past their buttons.
+   * Clip the horizontal collapse. The left/right bound keeps the sliding
+   * controls inside the growing track, and any transient horizontal spill during
+   * the animation is masked by the controls' opacity gate. The negative insets
+   * (extending the region past top/bottom and symmetrically on the inline axis)
+   * aren't load-bearing: the InfoTip hints are fixed-positioned and escape any
+   * clip on their own, so this could tighten to a plain box clip later.
    */
   clip-path: inset(-40px -48px);
 }
@@ -166,9 +164,9 @@
  * Now collapser. Mirrors .controls' 0fr→1fr trick at single-button scale: the
  * grid track holds the "return to now" affordance + its trailing divider, open
  * (1fr) in manual and folded to 0 in live so the pill glides narrower as the
- * clock is handed back to wall-time. The inner clips horizontally — but stays
- * visible vertically, so the tooltip escapes upward — and drops to min-width: 0
- * so the track can reach zero. Opacity trails the width, matching .controls.
+ * clock is handed back to wall-time. The inner clips horizontally and drops to
+ * min-width: 0 so the track can reach zero. Opacity trails the width, matching
+ * .controls.
  */
 .nowCollapse {
   display: grid;
@@ -292,24 +290,6 @@
   background: var(--surface-control);
   border-color: transparent;
   color: var(--color-accent-bright);
-}
-
-/* Hover/focus label, lifted ABOVE the bar (the top-bar has room below, we
- * don't). Shares its frosted box with PillButton via the common vocabulary. */
-.tooltip {
-  composes: tooltip from '../common/tooltip.module.css';
-  bottom: calc(100% + 8px);
-}
-
-.readout:hover .tooltip,
-.readout:focus-visible .tooltip,
-.rate:hover .tooltip,
-.rate:focus-visible .tooltip,
-.step:hover .tooltip,
-.step:focus-visible .tooltip,
-.now:hover .tooltip,
-.now:focus-visible .tooltip {
-  opacity: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {

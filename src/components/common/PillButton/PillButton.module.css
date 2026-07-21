@@ -6,12 +6,11 @@
  * the cosmic-blue accent.
  *
  * Placement in the row is owned by the parent (.topBar in
- * App.module.css); this rule has no `top` / `left`. The lone
- * `position: relative` is not self-placement — it's the containing
- * block the absolutely-positioned `.tooltip` anchors to.
+ * App.module.css); this rule has no `top` / `left`. The hover label is
+ * an InfoTip (fixed-positioned, self-anchoring), so the pill needs no
+ * positioning context of its own.
  */
 .root {
-  position: relative;
   width: 40px;
   height: 40px;
   flex-shrink: 0;
@@ -52,22 +51,6 @@
   opacity: 0;
   transform: scale(0.92);
   pointer-events: none;
-}
-
-/*
- * Hover/focus tooltip. Shares its frosted-glass box with the TimeBar via the
- * common tooltip vocabulary; here it drops BELOW the pill because the top-bar
- * row hugs the viewport top and has no room above. Revealed only while the
- * parent .root is hovered or keyboard-focused.
- */
-.tooltip {
-  composes: tooltip from '../tooltip.module.css';
-  top: calc(100% + 8px);
-}
-
-.root:hover .tooltip,
-.root:focus-visible .tooltip {
-  opacity: 1;
 }
 
 /* WCAG 2.5.5 touch target on small phones. */

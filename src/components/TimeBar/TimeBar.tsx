@@ -31,13 +31,17 @@
  * onClick, no click/pointer double-fire. They disable at the ladder ends: a
  * clamped step there used to silently re-anchor a live clock into manual mode.
  * Native `disabled` blocks the interaction and drops the button from the tab
- * order (and its `pointer-events: none` styling suppresses the tooltip); the
- * hold-repeat also self-stops the instant the prop flips.
+ * order; the hold-repeat also self-stops the instant the prop flips. A disabled
+ * stepper carries NO hover hint at all: it renders bare, without its InfoTip
+ * wrapper, rather than relying on the button's `pointer-events: none` — that
+ * only silences the button, while the tip's own trigger span (an ancestor of
+ * the button) would still catch the hover and reveal the label.
  */
 
 import { useCallback, useEffect, useRef, type ReactNode } from 'react';
 import cx from 'classnames';
 import Button from '../common/Button/Button';
+import { InfoTip } from '../InfoTip/InfoTip';
 import styles from './TimeBar.module.css';
 
 const HOLD_DELAY_MS = 400; // dwell before press-and-hold auto-repeat engages
@@ -159,25 +163,25 @@ function TimeBar({
       aria-label="Time controls"
     >
       <div className={styles.pill}>
-        <button
-          type="button"
-          className={styles.readout}
-          onClick={onReadoutClick}
-          aria-label={`Set date and time (currently ${readout})`}
-          // Marks this button as the date popover's own trigger — see
-          // DateEntryPopover's outside-mousedown handler, which must not
-          // treat a re-click of this button as an "outside" dismiss.
-          data-date-trigger=""
-        >
-          {readout}
-          <span className={styles.tooltip} aria-hidden="true">
-            Set date &amp; time
-          </span>
-        </button>
+        <InfoTip title="Set date & time" placement="top" interactive>
+          <button
+            type="button"
+            className={styles.readout}
+            onClick={onReadoutClick}
+            aria-label={`Set date and time (currently ${readout})`}
+            // Marks this button as the date popover's own trigger — see
+            // DateEntryPopover's outside-mousedown handler, which must not
+            // treat a re-click of this button as an "outside" dismiss.
+            data-date-trigger=""
+          >
+            {readout}
+          </button>
+        </InfoTip>
 
         {/* Grid 0fr→1fr collapses the controls' layout width so the pill hugs the
-            readout; the inner .group is clipped horizontally while its tooltips
-            escape upward. The pill's row-reverse puts this block left of the
+            readout; the inner .group is clipped horizontally to mask the sliding
+            controls. Their InfoTip hints are fixed-positioned and escape any clip
+            on their own. The pill's row-reverse puts this block left of the
             readout, so the group is authored in its left-to-right visual order:
             Now | rate | ‹ ⏯ › | (divider abutting the readout). */}
         <div className={styles.controls}>
@@ -194,69 +198,78 @@ function TimeBar({
               inert={mode === 'live'}
             >
               <div className={styles.nowInner}>
-                <Button className={styles.now} onClick={onNow} aria-label="Return to now">
-                  Now
-                  <span className={styles.tooltip} aria-hidden="true">
-                    Back to now
-                  </span>
-                </Button>
+                <InfoTip title="Back to now" placement="top" interactive>
+                  <Button className={styles.now} onClick={onNow} aria-label="Return to now">
+                    Now
+                  </Button>
+                </InfoTip>
                 <span className={styles.divider} aria-hidden="true" />
               </div>
             </div>
 
-            <button
-              type="button"
-              className={styles.rate}
-              onClick={onRateLabelClick}
-              aria-label="Change speed"
-              // Marks this button as the rate popover's own trigger — see
-              // RateSelectorPopover's outside-mousedown handler, which must
-              // not treat a re-click of this button as an "outside" dismiss.
-              data-rate-trigger=""
-            >
-              {rateLabel}
-              <span className={styles.tooltip} aria-hidden="true">
-                Change speed
-              </span>
-            </button>
+            <InfoTip title="Change speed" placement="top" interactive>
+              <button
+                type="button"
+                className={styles.rate}
+                onClick={onRateLabelClick}
+                aria-label="Change speed"
+                // Marks this button as the rate popover's own trigger — see
+                // RateSelectorPopover's outside-mousedown handler, which must
+                // not treat a re-click of this button as an "outside" dismiss.
+                data-rate-trigger=""
+              >
+                {rateLabel}
+              </button>
+            </InfoTip>
 
             <span className={styles.divider} aria-hidden="true" />
 
-            <Button
-              className={styles.step}
-              {...slowerHold}
-              disabled={slowerDisabled}
-              aria-label="Slower"
-            >
-              <span aria-hidden="true">‹</span>
-              <span className={styles.tooltip} aria-hidden="true">
-                Slower
-              </span>
-            </Button>
+            {/* A disabled stepper renders bare (no InfoTip) so its hint can't
+                surface at the ladder end — see the module header. */}
+            {slowerDisabled ? (
+              <Button
+                className={styles.step}
+                {...slowerHold}
+                disabled
+                aria-label="Slower"
+              >
+                <span aria-hidden="true">‹</span>
+              </Button>
+            ) : (
+              <InfoTip title="Slower" placement="top" interactive>
+                <Button className={styles.step} {...slowerHold} aria-label="Slower">
+                  <span aria-hidden="true">‹</span>
+                </Button>
+              </InfoTip>
+            )}
 
-            <Button
-              className={styles.step}
-              onClick={onPlayPause}
-              aria-label={paused ? 'Play' : 'Pause'}
-              aria-pressed={!paused}
-            >
-              <span aria-hidden="true">{paused ? '▶' : '❚❚'}</span>
-              <span className={styles.tooltip} aria-hidden="true">
-                {paused ? 'Run time' : 'Pause time'}
-              </span>
-            </Button>
+            <InfoTip title={paused ? 'Run time' : 'Pause time'} placement="top" interactive>
+              <Button
+                className={styles.step}
+                onClick={onPlayPause}
+                aria-label={paused ? 'Play' : 'Pause'}
+                aria-pressed={!paused}
+              >
+                <span aria-hidden="true">{paused ? '▶' : '❚❚'}</span>
+              </Button>
+            </InfoTip>
 
-            <Button
-              className={styles.step}
-              {...fasterHold}
-              disabled={fasterDisabled}
-              aria-label="Faster"
-            >
-              <span aria-hidden="true">›</span>
-              <span className={styles.tooltip} aria-hidden="true">
-                Faster
-              </span>
-            </Button>
+            {fasterDisabled ? (
+              <Button
+                className={styles.step}
+                {...fasterHold}
+                disabled
+                aria-label="Faster"
+              >
+                <span aria-hidden="true">›</span>
+              </Button>
+            ) : (
+              <InfoTip title="Faster" placement="top" interactive>
+                <Button className={styles.step} {...fasterHold} aria-label="Faster">
+                  <span aria-hidden="true">›</span>
+                </Button>
+              </InfoTip>
+            )}
 
             <span className={styles.divider} aria-hidden="true" />
           </div>
