@@ -14,7 +14,9 @@ import { loadRefactorProject } from '../../../../tools/utils/refactor/loadRefact
 describe('loadRefactorProject', () => {
   it('loads all three source trees', () => {
     const project = loadRefactorProject();
-    const paths = new Set(project.getSourceFiles().map((f) => f.getFilePath()));
+    // getFilePath() returns ts-morph's branded StandardizedFilePath; widen to
+    // plain string so the resolve()-based has() checks below type-check.
+    const paths = new Set<string>(project.getSourceFiles().map((f) => f.getFilePath()));
 
     // One known file from each tree — src/, tests/, tools/.
     expect(paths.has(resolve('src/data/galaxyCatalog/galaxyCatalogFormat.ts'))).toBe(true);
