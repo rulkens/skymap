@@ -484,9 +484,23 @@ Display section** (spec §6). Load the **create-component** skill first.
 
 ### Task 13: frame-program bloom steps + gating + group titles + `renderFrame` threading + program-shape tests
 
-Emit the bloom render steps between the `foreground:0 → hdr` composite and the single
-`hdr → swap` tone-map, gated on `settings.bloom.enabled`; bucket them under one `'Bloom'`
+Emit the bloom pass between the `foreground:0 → hdr` composite and the single
+`hdr → swap` tone-map, gated on `settings.bloom.enabled`; bucket it under one `'Bloom'`
 group.
+
+> **REWORKED (commit `d484e29e`).** The original design below wired bloom as ten
+> reused-target render steps on a dedicated `BLOOM` slab. That shipped a whole-screen
+> white-out: the executor fires every layer matching a step's `(target, slab)` with no
+> already-drawn exclusion, so each upsample layer fired at its DOWNSAMPLE step and read a
+> coarser mip before its first-touch clear this frame — last frame's data, a cross-frame
+> feedback loop. A ping-pong mip pyramid that writes the same target twice with different
+> ops cannot be modelled as `(target, slab)` render steps. It ships instead as a single
+> `{ kind: 'bloom' }` `FrameStep` run by `runBloom()`, which opens the ten pyramid passes
+> (bright, four downsample, four upsample, fold) in strict order on the shared frame
+> encoder, so every source is written earlier in the same sequence. This deletes the four
+> bloom `ContentLayer`s, the entire `BLOOM` slab, and the `timedSlotRowsOf` dedup; one
+> `'bloom'` timing slot spans the sub-routine. The `slab: BLOOM` / `deriveSlabs` BLOOM-row
+> / per-mip-slot prose below is superseded and kept only as the record of the pivot.
 
 **Files:**
 - `src/services/engine/frame/frameProgram.ts` (modify):
@@ -558,27 +572,21 @@ group.
 - Produces: `frameProgram(tone, bloomEnabled)`; bloom render steps on `slab: BLOOM`; the
   `deriveSlabs` BLOOM row; `'Bloom'` group.
 
-- [ ] Add the bloom steps (`slab: BLOOM`) + `bloomEnabled` gate + the `deriveSlabs` BLOOM
-      row + the `timedSlotRowsOf` dedup + `PASS_GROUP_TITLES` entries; thread `renderFrame`.
-- [ ] Test **`bloom enabled: foreground→hdr composite precedes the bright pass`** — assert
-      the `foreground:0→hdr` composite index < the first `bloom0` render step index.
-- [ ] Test **`bloom enabled: the fold precedes the single tone-map composite`** — assert the
-      trailing `hdr` bloom-fold render step index < the `hdr→swap` composite index, and that
-      exactly **one** composite carries a non-null tone.
-- [ ] Test **`bloom disabled: no bloom step is emitted and the program is otherwise
-      identical`** — `frameProgram(TONE, false)` deep-equals the Task-5 (post-reorder)
-      program with zero `bloomN`/bloom-fold steps; `frameProgram(TONE, true)` contains the
-      ten added steps and is otherwise identical.
-- [ ] Update `timedSlotsOf` real-`CONTENT_LAYERS` expectation: with bloom enabled the list
-      gains `bloom-bright`, the four downsample names, the four upsample names, `bloom-fold`,
-      and one `bloom0·BLOOM..bloom4·BLOOM` merged slot **each** (deduped — `bloom0·BLOOM` and
-      `bloom3·BLOOM` appear once despite two steps; the `hdr·BLOOM` fold step's groupKey is
-      `hdr·BLOOM`, distinct from the earlier `hdr·COSMO`/`hdr·NEAR0`); assert
-      `new Set(slots).size === slots.length` still holds.
-- [ ] Update `timedSlotGroupsOf` / `TIMED_SLOT_GROUPS` expectation: a `'Bloom'` group appears
-      between `'Foreground bodies · depth'` and `'Overlays'` with the bloom rows.
-- [ ] `npm test -- frameProgram executeFrame renderFrame` green; `npm run typecheck` green.
-- [ ] Commit.
+- [x] **(reworked)** Add a single `{ kind: 'bloom' }` step to `frameProgram`, gated on
+      `bloomEnabled`, between the `foreground:0→hdr` composite and the `hdr→swap` tone-map;
+      new `runBloom()` opens the ten pyramid passes in strict order on the shared encoder;
+      `executeFrame` `case 'bloom'` dispatches it; thread `renderFrame`. Delete the four
+      bloom `ContentLayer`s + registry entries and the entire `BLOOM` slab.
+- [x] `runBloom.test.ts` asserts the ordered `bright → down(1..4) → up(3..0) → fold` with the
+      per-draw source id (proving down(L) reads `bloom[L-1]`, up(L) reads `bloom[L+1]`) and the
+      clear-vs-load op per pass — the forward invariant that would fail on the stale-read bug.
+- [x] `bloom enabled: exactly one `{ kind: 'bloom' }` between the `foreground:0→hdr` composite
+      and the `hdr→swap` tone-map; exactly one composite carries a non-null tone.
+- [x] `bloom disabled: no bloom step is emitted and the program is otherwise identical`.
+- [x] `timedSlotsOf`/`TIMED_SLOTS` gains one `'bloom'` slot; `TIMED_SLOT_GROUPS` has a `'Bloom'`
+      group between `'Foreground bodies · depth'` and `'Overlays'`; slot names stay unique.
+- [x] `npm run build` green (WESL link); full suite 799 files / 4646 tests green; typecheck green.
+- [x] Commit (`d484e29e`), reviewed clean (spec ✅ + code quality approved).
 
 > **Note on "thread the three values" (spec §6).** `frameProgram` takes only
 > `bloomEnabled` because only `enabled` shapes the step list; `strength`/`threshold` are
