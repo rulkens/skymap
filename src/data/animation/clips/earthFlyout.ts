@@ -8,11 +8,18 @@
  *
  * `flyout` plays "from here", so it captures the live camera. This clip's whole
  * premise is a fixed origin — Earth — so it bakes a concrete `CameraPose` (the
- * bookmark-clip path documented on `ClipData.start`). The pose is DERIVED from
- * the `SCENE_EARTH` seed, never hand-placed: `target` is Earth's real J2000
- * position and `distance` is a few Earth-radii (converted km → Mpc through the
- * one `SCALE_UNITS` table), so if the heliocentric anchor or the seed ever
- * moves the shot follows it. yaw/pitch are eye-tuned opening angles.
+ * bookmark-clip path documented on `ClipData.start`). The pose is DERIVED, never
+ * hand-placed: `target` re-evaluates Earth's real J2000 position straight from
+ * `ORBITAL_ELEMENTS` via `keplerianPositionMpc` + the render origin (data →
+ * data, the same composition the body seed performs), and `distance` is a few
+ * Earth-radii (converted km → Mpc through the one `SCALE_UNITS` table), so if
+ * the heliocentric anchor or the elements ever move the shot follows them.
+ * yaw/pitch are eye-tuned opening angles.
+ *
+ * The J2000 position is baked because the clip is authored data with no clock in
+ * scope. 02-core Task 8b repoints `target` to the frozen-clock snapshot at clip
+ * start — the shot must open where Earth IS when the clip plays, not where it
+ * sat at J2000.
  *
  * ### One dolly, every scale — the fade bands do the rest
  *
@@ -37,6 +44,10 @@
 import type { Clip } from '../../../@types/animation/Clip';
 import { dollyTo, spin, all } from '../../../services/engine/animation/effectHelpers';
 import { SCENE_EARTH } from '../../bodies/sceneEarth';
+import { elementsById } from '../../bodies/orbitalElements';
+import { RENDER_ORIGIN_MPC } from '../../renderOrigin';
+import { keplerianPositionMpc } from '../../../utils/orbit/keplerianPositionMpc';
+import { addVec3 } from '../../../utils/math/addVec3';
 import { SCALE_UNITS } from '../../scaleUnits';
 
 // The pull-back window. Longer than flyout's 22 s because this shot spans ~20
@@ -50,12 +61,17 @@ const FLIGHT_SEC = 70;
 const EARTH_RADIUS_MPC = SCENE_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC;
 const START_DISTANCE_MPC = EARTH_RADIUS_MPC * 3;
 
+// Earth's real J2000 position, re-derived from the element table (data → data),
+// value-identical to what the body seed bakes. 02-core Task 8b swaps this for
+// the frozen-clock snapshot at clip start.
+const EARTH_TARGET_MPC = addVec3(RENDER_ORIGIN_MPC, keplerianPositionMpc(elementsById('earth')));
+
 export const earthFlyout: Clip = {
   id: 'earthFlyout',
   label: 'Earth to the Edge',
   data: {
     start: {
-      target: SCENE_EARTH.positionMpc,
+      target: EARTH_TARGET_MPC,
       distance: START_DISTANCE_MPC,
       yaw: 0,
       pitch: 0,

@@ -17,7 +17,7 @@ import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 
 describe('earthSurfaceFraming', () => {
   it("earthSurfaceFraming targets Earth's position", () => {
-    const { target } = earthSurfaceFraming(SCENE_EARTH);
+    const { target } = earthSurfaceFraming(SCENE_EARTH.positionMpc, SCENE_EARTH.radiusKm);
     expect(target).toEqual(SCENE_EARTH.positionMpc);
     // A fresh array, not the body record's own — mutating the result must not
     // reach back into the seed.
@@ -25,7 +25,7 @@ describe('earthSurfaceFraming', () => {
   });
 
   it("earthSurfaceFraming distance is a small multiple of Earth's radius in Mpc", () => {
-    const { distance } = earthSurfaceFraming(SCENE_EARTH);
+    const { distance } = earthSurfaceFraming(SCENE_EARTH.positionMpc, SCENE_EARTH.radiusKm);
     const radiusMpc = SCENE_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC;
     // Surface-scale, not galaxy-scale: a couple-to-a-few Earth radii back.
     expect(distance).toBeGreaterThanOrEqual(2 * radiusMpc);

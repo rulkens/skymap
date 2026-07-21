@@ -1,11 +1,11 @@
 /**
  * earthSurfaceFraming — the pure core of the fly-to-Earth descent tween.
  *
- * Given Earth's seed it returns the `{ target, distance }` the descent settles
- * on: the camera parked a few Earth-radii off the surface, looking at Earth's
- * centre. A saga (Task 6) carries the live yaw/pitch and wraps this into the
- * tween payload — this function is state-free so it is trivially unit-testable,
- * mirroring `focusFraming`/`focusTweenDescriptor`.
+ * Given Earth's position and radius it returns the `{ target, distance }` the
+ * descent settles on: the camera parked a few Earth-radii off the surface,
+ * looking at Earth's centre. A saga (Task 6) carries the live yaw/pitch and
+ * wraps this into the tween payload — this function is state-free so it is
+ * trivially unit-testable, mirroring `focusFraming`/`focusTweenDescriptor`.
  *
  * ### Why a few Earth-radii distance
  *
@@ -32,7 +32,6 @@
  */
 
 import { SCALE_UNITS } from '../../data/scaleUnits';
-import type { EarthBody } from '../../@types/scene/EarthBody';
 import type { Vec3 } from '../../@types/math/Vec3';
 
 /**
@@ -42,10 +41,13 @@ import type { Vec3 } from '../../@types/math/Vec3';
  */
 const SURFACE_RADII = 2.5;
 
-export function earthSurfaceFraming(earth: EarthBody): { target: Vec3; distance: number } {
-  // Fresh array — the result must never alias the seed's `positionMpc`, so a
-  // consumer mutating the target can't reach back into `SCENE_EARTH`.
-  const target: Vec3 = [earth.positionMpc[0], earth.positionMpc[1], earth.positionMpc[2]];
-  const radiusMpc = earth.radiusKm * SCALE_UNITS.KM_TO_MPC;
+export function earthSurfaceFraming(
+  positionMpc: Vec3,
+  radiusKm: number,
+): { target: Vec3; distance: number } {
+  // Fresh array — the result must never alias the caller's position vector, so a
+  // consumer mutating the target can't reach back into the seed or derived state.
+  const target: Vec3 = [positionMpc[0], positionMpc[1], positionMpc[2]];
+  const radiusMpc = radiusKm * SCALE_UNITS.KM_TO_MPC;
   return { target, distance: SURFACE_RADII * radiusMpc };
 }

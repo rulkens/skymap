@@ -84,7 +84,7 @@ describe('watchFlyToEarthKeySaga', () => {
     const tween = store.getState()[cameraRoute].tween;
     expect(tween).not.toBeNull();
     expect(tween!.from).toEqual(FROM);
-    const framing = earthSurfaceFraming(SCENE_EARTH);
+    const framing = earthSurfaceFraming(SCENE_EARTH.positionMpc, SCENE_EARTH.radiusKm);
     expect(tween!.to.target).toEqual(framing.target);
     expect(tween!.to.distance).toBe(framing.distance);
     expect(tween!.to.yaw).toBe(FROM.yaw);

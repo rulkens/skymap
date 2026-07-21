@@ -41,6 +41,8 @@ import { call, take, getContext, put } from 'typed-redux-saga';
 import { createKeyboardListener } from '../../services/input/createKeyboardListener';
 import { startCameraTween } from '../camera/cameraSlice';
 import { earthSurfaceFraming } from '../../utils/camera/earthSurfaceFraming';
+import { deriveBodyStates } from '../../services/engine/frame/deriveBodyStates';
+import { CONST_J2000 } from '../../data/time/constJ2000';
 import { FOCUS_TWEEN_MS } from '../../services/engine/camera/focusTweenDuration';
 import type { SagaContext } from '../../store/types';
 
@@ -58,10 +60,20 @@ export function* watchFlyToEarthKeySaga() {
     const earth = earthBody();
     if (earth === null) continue;
 
+    // Framing position comes from the clock derive (frozen at J2000 here), not
+    // the baked seed, so the fly-to lands where Earth IS once a clock can move
+    // the bodies; radius is authored identity, read straight off the body. The
+    // core-feature task repoints CONST_J2000 to the live sim instant.
+    const earthPositionMpc = deriveBodyStates(CONST_J2000).get('earth')!.positionMpc;
+
     yield* put(
       startCameraTween({
         from: runtime.from,
-        to: { yaw: runtime.from.yaw, pitch: runtime.from.pitch, ...earthSurfaceFraming(earth) },
+        to: {
+          yaw: runtime.from.yaw,
+          pitch: runtime.from.pitch,
+          ...earthSurfaceFraming(earthPositionMpc, earth.radiusKm),
+        },
         durationMs: FOCUS_TWEEN_MS,
         easing: 'easeOutCubic',
       }),
