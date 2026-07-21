@@ -330,18 +330,18 @@ uniform buffers.
   export function createBloomPyramid(device: GPUDevice, hdrFormat: GPUTextureFormat): BloomPyramid;
   ```
 
-- [ ] **Per-level uniform buffers, NOT one shared buffer.** The downsample pipeline is
+- [x] **Per-level uniform buffers, NOT one shared buffer.** The downsample pipeline is
       reused for 4 draws and the upsample pipeline for 4 draws in one frame; a single shared
       uniform buffer written 4× then submitted once is the `queue.writeBuffer`/`submit` race
       (CLAUDE.md "things that have bitten us"; the tool's `mipTexelBufs` exists for exactly
       this). Allocate one uniform buffer **per pyramid level** for downsample and one per
       level for upsample; `level` selects the buffer.
-- [ ] Downsample + upsample pipelines carry the tool's targets: downsample writes opaque
+- [x] Downsample + upsample pipelines carry the tool's targets: downsample writes opaque
       (`rgba16float`, no blend), upsample uses `ADDITIVE_BLEND` (one/one) so fold-in-place
       accumulates.
-- [ ] Add the five target rows + clear values.
-- [ ] `npm run typecheck` green; `npm run build` green (shader link).
-- [ ] Commit.
+- [x] Add the five target rows + clear values.
+- [x] `npm run typecheck` green; `npm run build` green (shader link).
+- [x] Commit.
 
 ### Task 10: `settings.bloom` state
 

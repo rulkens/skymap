@@ -129,6 +129,16 @@ export const TARGET_CLEAR_VALUES: Readonly<Record<string, GPUColor>> = {
   volume: { r: 0, g: 0, b: 0, a: 0 },
   'star-aggregates': { r: 0, g: 0, b: 0, a: 0 },
   'foreground:0': { r: 0, g: 0, b: 0, a: 0 },
+  // Bloom pyramid mips clear transparent (a=0) — the pyramid accumulates
+  // additively (the upsample fold uses one/one blend), so an untouched texel
+  // must contribute nothing. The bright pass overwrites bloom0 outright, but
+  // the upsample folds add onto bloom0..3, and any level the fold does not
+  // cover has to start from zero coverage.
+  bloom0: { r: 0, g: 0, b: 0, a: 0 },
+  bloom1: { r: 0, g: 0, b: 0, a: 0 },
+  bloom2: { r: 0, g: 0, b: 0, a: 0 },
+  bloom3: { r: 0, g: 0, b: 0, a: 0 },
+  bloom4: { r: 0, g: 0, b: 0, a: 0 },
   swap: { r: 0, g: 0, b: 0, a: 1 },
 };
 
@@ -153,6 +163,15 @@ function buildSpecs(swapFormat: GPUTextureFormat): readonly RenderTargetSpec[] {
     { id: 'volume', format: 'rgba16float', depth: null, scale: 3 },
     { id: 'star-aggregates', format: 'rgba16float', depth: null, scale: STAR_AGGREGATE_DIVISOR },
     { id: 'foreground:0', format: 'rgba16float', depth: 'depth32float', scale: 1 },
+    // Bloom mip pyramid: level 0 at half-res, each further level halving again
+    // (scale 2/4/8/16/32) — an ever-wider glow. rgba16float mirrors the HDR
+    // precision so the additive fold keeps its dynamic range. No depth: these
+    // are fullscreen post passes, not depth-tested geometry.
+    { id: 'bloom0', format: 'rgba16float', depth: null, scale: 2 },
+    { id: 'bloom1', format: 'rgba16float', depth: null, scale: 4 },
+    { id: 'bloom2', format: 'rgba16float', depth: null, scale: 8 },
+    { id: 'bloom3', format: 'rgba16float', depth: null, scale: 16 },
+    { id: 'bloom4', format: 'rgba16float', depth: null, scale: 32 },
     { id: 'swap', format: swapFormat, depth: null, scale: 1 },
   ];
 }
