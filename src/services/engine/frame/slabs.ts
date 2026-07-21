@@ -30,24 +30,6 @@ import { foregroundFrustum } from '../../../utils/camera/foregroundFrustum';
 export const NEAR0 = 0;
 /** Cosmological slab: galaxies, Milky Way, filaments — everything at Mpc scale. */
 export const COSMO = 1;
-/**
- * Bloom slab: the screen-space bloom sub-program (bright / downsample / upsample
- * / fold). Its layers ignore the resolved view-projection entirely — they are
- * fullscreen blits of already-rendered offscreens — so this index exists only
- * to keep the bloom layers' `(target, slab)` group DISJOINT from the
- * cosmological and near-field groups the executor already draws. That matters
- * for the fold in particular: it targets `hdr`, and were it on `COSMO` it would
- * be swept into the galaxy `(hdr, COSMO)` render step (double-drawing the whole
- * scene, and drawing every frame before its steps even exist). A distinct slab
- * makes the bloom fold's own `(hdr, BLOOM)` step draw ONLY the fold.
- *
- * `deriveSlabs` does NOT yet emit a row at this index — no frame-program step
- * references it until the bloom steps are wired — so `slabViewOf(BLOOM)` must
- * not be called before that lands. The bloom layers read only `view.viewportPx`
- * (the full-res pixel size, identical across every slab), so the eventual bloom
- * row is a screen-space view carrying just the viewport.
- */
-export const BLOOM = 2;
 
 /**
  * Human-readable slab names, keyed by slab index, for debug surfaces. Kept
@@ -63,7 +45,6 @@ export const BLOOM = 2;
 export const SLAB_NAME: Readonly<Record<number, string>> = {
   [NEAR0]: 'NEAR0',
   [COSMO]: 'COSMO',
-  [BLOOM]: 'BLOOM',
 };
 
 /**

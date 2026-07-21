@@ -224,10 +224,6 @@ import { starAggregateUpsampleLayer } from './starAggregateUpsampleLayer';
 import { orbitTrailsLayer } from './orbitTrailsLayer';
 import { foregroundLabelsLayer } from './foregroundLabelsLayer';
 import { atmosphereShellLayer } from './atmosphereShellLayer';
-import { bloomBrightLayer } from './bloomBrightLayer';
-import { bloomDownsampleLayers } from './bloomDownsampleLayer';
-import { bloomUpsampleLayers } from './bloomUpsampleLayer';
-import { bloomFoldLayer } from './bloomFoldLayer';
 
 /**
  * The flat content-layer registry, in deterministic draw order.  HDR
@@ -275,24 +271,6 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   starAggregatesLayer,
   starCatalogLayer,
   starAggregateUpsampleLayer,
-  // The ten bloom sub-program layers: the bright prefilter (hdr → bloom0), the
-  // four descending downsample folds (bloom0 → bloom4), the four ascending
-  // additive upsample folds (bloom4 → bloom0), and the strength-scaled fold back
-  // into HDR. Each targets a distinct bloom stage and rides the dedicated BLOOM
-  // slab (see slabs.ts) so its `(target, slab)` group is DISJOINT from the
-  // cosmological + near-field groups — the fold's `(hdr, BLOOM)` group in
-  // particular must not join the galaxy `(hdr, COSMO)` step. Each becomes its own
-  // `(target, BLOOM)` render step once the frame program wires them (a later
-  // task); registered here but not yet referenced by any step, they contribute no
-  // timing slot and never draw this task. Every layer's enable gate is the
-  // `bloomPyramid !== null` handle-ready check; the `settings.bloom.enabled`
-  // master toggle gates at frame-program build. Grouped for readability; the
-  // downsample chain then the upsample chain then the fold read as the pyramid's
-  // descent, ascent, and composite.
-  bloomBrightLayer,
-  ...bloomDownsampleLayers,
-  ...bloomUpsampleLayers,
-  bloomFoldLayer,
   // Swap-target rows: post-tone-map, premultiplied-OVER overlays. Selection
   // ring leads so marker-lines and labels composite over its stroke; the
   // debug clip-path overlay trails so its route + gizmo draw on top of
@@ -384,7 +362,3 @@ export { starAggregateUpsampleLayer } from './starAggregateUpsampleLayer';
 export { orbitTrailsLayer } from './orbitTrailsLayer';
 export { foregroundLabelsLayer } from './foregroundLabelsLayer';
 export { atmosphereShellLayer } from './atmosphereShellLayer';
-export { bloomBrightLayer } from './bloomBrightLayer';
-export { bloomDownsampleLayers } from './bloomDownsampleLayer';
-export { bloomUpsampleLayers } from './bloomUpsampleLayer';
-export { bloomFoldLayer } from './bloomFoldLayer';

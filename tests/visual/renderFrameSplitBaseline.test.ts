@@ -454,6 +454,8 @@ describe('renderFrame visual baseline', () => {
             depthFade: settings.depthFadeEnabled,
           },
           tonemap: { exposure: settings.exposure, curve: settings.toneMapCurve },
+          // Bloom off: the split baseline captures the non-bloom program.
+          bloom: { enabled: false, strength: 1, threshold: 1 },
           bias: { mode: settings.biasMode, absMagLimit: settings.absMagLimit },
           thumbnails: { enabled: settings.galaxyTexturesEnabled },
           milkyWay: { enabled: settings.milkyWayEnabled },

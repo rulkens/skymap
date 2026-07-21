@@ -60,8 +60,17 @@ import { CONTENT_LAYERS } from './passes';
  * HDR before the tone-map, not after. The cosmological body (compute → volume
  * → hdr → tone-map → swap) projects through the COSMO slab; the near-field star
  * points and the near-field bodies + captions project through the NEAR0 slab.
+ *
+ * `bloomEnabled` (the `settings.bloom.enabled` master toggle) is the ONLY bloom
+ * value that shapes the program: it decides whether the bloom step is emitted
+ * between the linear body composite and the tone-map. The look knobs
+ * (`strength`/`threshold`) are NOT threaded here — `runBloom` reads them live
+ * from `state.settings.bloom` each draw, exactly as `earth`/`starCatalogs` knobs
+ * do, because the step carries no uniform payload (unlike the `tone` a
+ * `'composite'` step carries). So only `enabled` can change the step LIST;
+ * strength/threshold change pixels without changing the frame's shape.
  */
-export function frameProgram(tone: ToneMap): readonly FrameStep[] {
+export function frameProgram(tone: ToneMap, bloomEnabled: boolean): readonly FrameStep[] {
   return [
     { kind: 'compute', name: 'flow' },
     // Atmosphere sky-view LUT bake — folds in this frame's camera altitude + sun
@@ -97,6 +106,20 @@ export function frameProgram(tone: ToneMap): readonly FrameStep[] {
     // whole frame — no seam where the Sun's limb meets the cosmological scene.
     { kind: 'render', target: 'foreground:0', slab: NEAR0 },
     { kind: 'composite', step: { source: 'foreground:0', dest: 'hdr', blend: 'over', tone: null } },
+    // Screen-space bloom, gated on the master toggle. ONE step, not N render
+    // steps: `runBloom` opens the pyramid's ten passes (bright prefilter
+    // hdr → bloom0, a DESCENDING downsample chain bloom0 → bloom4, an ASCENDING
+    // additive upsample fold bloom4 → bloom0, and the strength-scaled fold back
+    // into HDR) in strict order. A ping-pong mip pyramid writes the same target
+    // twice with different ops (a downsample that clears, then an additive
+    // upsample that loads), which the executor's `(target, slab)` render-step
+    // model cannot express: it re-fires every layer matching a step's group, so
+    // a reused-target upsample would fire at its downsample step and read a
+    // stale, last-frame level. The single sequential step sidesteps that — see
+    // runBloom for the strict-order rationale. Placed after the foreground:0→hdr
+    // composite (the bright prefilter samples the composited HDR scene) and
+    // before the lone hdr→swap tone-map (the fold rides that one curve).
+    ...(bloomEnabled ? ([{ kind: 'bloom' }] as const) : []),
     { kind: 'composite', step: { source: 'hdr', dest: 'swap', blend: 'replace', tone } },
     // Cosmological + near-field swap overlays now draw AFTER the tone-map, on
     // top of the tonemapped scene. The COSMO overlays (labels, marker-lines,
@@ -117,6 +140,7 @@ export function frameProgram(tone: ToneMap): readonly FrameStep[] {
  *     `slab`), in registry order — one timing slot billed per layer.
  *   - `'composite'`→ a single `'<source>→<dest>'` slot (the unicode arrow),
  *     e.g. the tone-map's `'hdr→swap'`.
+ *   - `'bloom'`    → a single `'bloom'` slot spanning the whole sub-pipeline.
  *   - `'compute'`  → nothing; compute dispatches aren't timed as content slots.
  *
  * `'pick'` (the parallel r32uint pick pass) is appended last, matching the
@@ -167,6 +191,10 @@ export const PASS_GROUP_TITLES: Readonly<Record<string, string>> = {
   'hdr·COSMO': 'Cosmos · HDR',
   'hdr·NEAR0': 'Near field · HDR',
   'foreground:0·NEAR0': 'Foreground bodies · depth',
+  // The bloom sub-pipeline bills one `'bloom'` slot (the whole bright →
+  // downsample → upsample → fold span), placed after Foreground and before
+  // Overlays so the group renders in that slot.
+  bloom: 'Bloom',
   'swap·COSMO': 'Overlays',
   'swap·NEAR0': 'Overlays',
   composite: 'Composites & pick',
@@ -190,7 +218,9 @@ function timedSlotRowsOf(
       // Every layer matched by this step shares the step's `(target, slab)`, so
       // one groupKey covers the whole run. The key comes from the shared
       // `groupKeyOf` helper (slabs.ts) — the same definition the merged executor
-      // resolves against, so the two can't drift.
+      // resolves against, so the two can't drift. Every render step now has a
+      // distinct `(target, slab)` (the pyramid's reused-target repeats moved into
+      // the single `'bloom'` step), so no dedup is needed here.
       const groupKey = groupKeyOf(step.target, step.slab);
       for (const layer of layers) {
         if (layer.target === step.target && layer.slab === step.slab) {
@@ -213,6 +243,11 @@ function timedSlotRowsOf(
       // A composite merges whole textures rather than projecting geometry — it
       // belongs to no slab, and all composites share the one infra group.
       rows.push({ name: `${step.step.source}→${step.step.dest}`, groupKey: 'composite' });
+    } else if (step.kind === 'bloom') {
+      // The bloom sub-pipeline bills one slot spanning its whole pass sequence
+      // (see runBloom) — the same name the fold + bright passes write the shared
+      // query pair under.
+      rows.push({ name: 'bloom', groupKey: 'bloom' });
     }
     // 'compute' steps contribute no timing slot.
   }
@@ -282,9 +317,14 @@ export function timedSlotGroupsOf(
  * `(target, slab)` — the composite's `tone` never affects a slot NAME — so a
  * fixed `{ exposure: 1, curve: 0 }` yields the same list every real frame's
  * `frameProgram(tone)` would.
+ *
+ * `bloomEnabled = true` so the query-set allocation always includes the `'bloom'`
+ * slot. It costs nothing on frames where bloom is off — the master toggle omits
+ * the `'bloom'` step, and `runBloom` also no-ops on a null `bloomPyramid`, so the
+ * pre-allocated slot simply goes unused, like any empty group's slot.
  */
 export const TIMED_SLOTS: readonly string[] = timedSlotsOf(
-  frameProgram({ exposure: 1, curve: 0 }),
+  frameProgram({ exposure: 1, curve: 0 }, true),
   CONTENT_LAYERS,
 );
 
@@ -294,7 +334,7 @@ export const TIMED_SLOTS: readonly string[] = timedSlotsOf(
  * `CONTENT_LAYERS` gets a grouped row here with zero DebugPanel edits.
  */
 export const TIMED_SLOT_GROUPS: readonly TimedSlotGroup[] = timedSlotGroupsOf(
-  frameProgram({ exposure: 1, curve: 0 }),
+  frameProgram({ exposure: 1, curve: 0 }, true),
   CONTENT_LAYERS,
 );
 
@@ -305,7 +345,7 @@ export const TIMED_SLOT_GROUPS: readonly TimedSlotGroup[] = timedSlotGroupsOf(
  * walk, so the two lists stay positionally aligned.
  */
 const PASS_GROUP_KEYS: ReadonlyMap<string, string> = new Map(
-  timedSlotRowsOf(frameProgram({ exposure: 1, curve: 0 }), CONTENT_LAYERS).map((row) => [
+  timedSlotRowsOf(frameProgram({ exposure: 1, curve: 0 }, true), CONTENT_LAYERS).map((row) => [
     row.name,
     row.groupKey,
   ]),
