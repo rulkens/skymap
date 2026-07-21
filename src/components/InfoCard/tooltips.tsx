@@ -177,4 +177,18 @@ export const TIPS: Record<string, TipContent> = {
       </>
     ),
   },
+
+  // ── Field-star derived properties (temperature / luminosity / radius) ──────
+  starDerived: {
+    title: 'Estimated from colour + magnitude',
+    body: (
+      <>
+        Estimated from the star's absolute magnitude and BP−RP colour (Mucciarelli+21 for
+        temperature, Andrae+18 for the bolometric correction). Assumes solar metallicity and applies{' '}
+        <em>no</em> extinction correction, so a reddened distant star reads too cool and too large.
+        Order-of-magnitude figures, not measurements — a leading <code>~</code> marks a colour
+        outside the relation's calibrated range.
+      </>
+    ),
+  },
 };

@@ -19,8 +19,12 @@ import type { ReactNode } from 'react';
 import cx from 'classnames';
 import type { FieldStarInfo } from '../../../@types/engine/FieldStarInfo';
 import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
+import { deriveStarProperties } from '../../../utils/astro/deriveStarProperties';
+import { formatScalar } from '../../../utils/format/formatScalar';
 import CardHeader from '../CardHeader/CardHeader';
 import CardRow from '../CardRow/CardRow';
+import { InfoTip } from '../../InfoTip/InfoTip';
+import { TIPS } from '../tooltips';
 import styles from '../cardChrome.module.css';
 import local from './FieldStarDetailCard.module.css';
 
@@ -41,6 +45,12 @@ function FieldStarDetailCard({
 }: FieldStarDetailCardProps): ReactNode {
   const outerClass = cx(local.root, pinned && styles.pinned, !chrome && styles.chromeless);
 
+  // Physical estimates from the two catalogued numbers (absMag + colour). An
+  // out-of-range colour is clamped by the relation, so its readings get a
+  // leading '~' to signal "boundary value, not a fit".
+  const derived = deriveStarProperties(target.absMag, target.bpRp);
+  const approx = derived.extrapolated ? '~' : '';
+
   return (
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
@@ -59,6 +69,18 @@ function FieldStarDetailCard({
         <CardRow label="Absolute mag" value={target.absMag.toFixed(2)} />
         <CardRow label="Apparent mag" value={target.apparentMag.toFixed(2)} />
         <CardRow label="Colour BP−RP" value={target.bpRp.toFixed(2)} />
+        <CardRow
+          label={<InfoTip {...TIPS.starDerived!}>Temperature</InfoTip>}
+          value={`${approx}${formatScalar(derived.teffK)} K`}
+        />
+        <CardRow
+          label={<InfoTip {...TIPS.starDerived!}>Luminosity</InfoTip>}
+          value={`${approx}${formatScalar(derived.luminositySolar)} L☉`}
+        />
+        <CardRow
+          label={<InfoTip {...TIPS.starDerived!}>Radius</InfoTip>}
+          value={`${approx}${formatScalar(derived.radiusSolar)} R☉`}
+        />
       </div>
     </div>
   );
