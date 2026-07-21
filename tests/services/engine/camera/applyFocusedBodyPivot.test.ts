@@ -16,6 +16,7 @@ import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBo
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 // Two instants far enough apart that Earth has visibly moved along its orbit.
 const SIM_A = CONST_J2000 + 3652.5; // ~10 years past epoch
@@ -33,6 +34,9 @@ const EARTH_ROW: SelectionRow = {
 // the gesture-start cam.target) — the pin must overwrite it with the live body.
 const DRAG_POSE: CameraPose = { target: [7, 7, 7], yaw: 0.9, pitch: -0.1, distance: 200 };
 
+// No strafe (the common case) — a zero world-frame offset.
+const NO_PAN: Vec3 = [0, 0, 0];
+
 describe('applyFocusedBodyPivot', () => {
   it('pins the target to the live body while keeping the orbit terms (no drift)', () => {
     const posA = deriveBodyStates(SIM_A).get('earth')!.positionMpc;
@@ -40,8 +44,8 @@ describe('applyFocusedBodyPivot', () => {
     // Precondition for the test to mean anything: the body actually moved.
     expect(posA).not.toEqual(posB);
 
-    const pinnedA = applyFocusedBodyPivot(DRAG_POSE, true, EARTH_ROW, SIM_A);
-    const pinnedB = applyFocusedBodyPivot(DRAG_POSE, true, EARTH_ROW, SIM_B);
+    const pinnedA = applyFocusedBodyPivot(DRAG_POSE, true, EARTH_ROW, SIM_A, NO_PAN);
+    const pinnedB = applyFocusedBodyPivot(DRAG_POSE, true, EARTH_ROW, SIM_B, NO_PAN);
 
     // The pivot TRACKS the body across frames — the drift bug was the pivot
     // staying at the frozen DRAG_POSE.target while the body moved.
@@ -55,13 +59,34 @@ describe('applyFocusedBodyPivot', () => {
     expect(pinnedA.distance).toBe(DRAG_POSE.distance);
   });
 
+  it('adds the world-frame pan offset to the body pivot, and it rides the body across frames', () => {
+    // A right-drag strafe shifts the pivot to bodyPosition + offset; the offset is
+    // a fixed world-frame vector, so as the body moves the shifted pivot tracks it.
+    const offset: Vec3 = [10, -20, 30];
+    const posA = deriveBodyStates(SIM_A).get('earth')!.positionMpc;
+    const posB = deriveBodyStates(SIM_B).get('earth')!.positionMpc;
+
+    const pinnedA = applyFocusedBodyPivot(DRAG_POSE, true, EARTH_ROW, SIM_A, offset);
+    const pinnedB = applyFocusedBodyPivot(DRAG_POSE, true, EARTH_ROW, SIM_B, offset);
+
+    expect(pinnedA.target).toEqual([posA[0] + 10, posA[1] - 20, posA[2] + 30]);
+    // Offset survives body motion: the shift from the live body is the SAME vector.
+    expect([
+      pinnedB.target[0] - posB[0],
+      pinnedB.target[1] - posB[1],
+      pinnedB.target[2] - posB[2],
+    ]).toEqual([10, -20, 30]);
+  });
+
   it('is a pass-through for drivers that opt out of the pin (clip / tween)', () => {
-    const result = applyFocusedBodyPivot(DRAG_POSE, false, EARTH_ROW, SIM_A);
+    const result = applyFocusedBodyPivot(DRAG_POSE, false, EARTH_ROW, SIM_A, NO_PAN);
     expect(result).toBe(DRAG_POSE); // same reference — no rewrite
   });
 
   it('is a pass-through when the focus is not a body', () => {
-    expect(applyFocusedBodyPivot(DRAG_POSE, true, null, SIM_A)).toBe(DRAG_POSE);
-    expect(applyFocusedBodyPivot(DRAG_POSE, true, { type: 'milkyWay' }, SIM_A)).toBe(DRAG_POSE);
+    expect(applyFocusedBodyPivot(DRAG_POSE, true, null, SIM_A, NO_PAN)).toBe(DRAG_POSE);
+    expect(applyFocusedBodyPivot(DRAG_POSE, true, { type: 'milkyWay' }, SIM_A, NO_PAN)).toBe(
+      DRAG_POSE,
+    );
   });
 });

@@ -12,27 +12,39 @@
  * target). clip and tween keyframe a full path including the target, so they
  * opt out and keep their own target term.
  *
- * The pin is IDEMPOTENT and ABSOLUTE — it SETS the target to the body position,
- * never adds a delta — so it can never double-apply across a commit-on-edge
- * boundary. A one-frame-stale `base.target` baked on an edge is simply overwritten
- * by the next frame's pin, never accumulated.
+ * The pin is IDEMPOTENT and ABSOLUTE — it SETS the target to `bodyPosition +
+ * panOffset`, never adds a delta to the existing target — so it can never
+ * double-apply across a commit-on-edge boundary. A one-frame-stale `base.target`
+ * baked on an edge is simply overwritten by the next frame's pin, never accumulated.
  *
- * `pivot` aliases the live per-frame snapshot array (fresh + read-only downstream),
- * matching how `followBody` already aliases it — no defensive copy needed.
+ * `panOffset` is the world-frame strafe the user has panned away from the body
+ * (zero on a fresh focus); resolving `bodyPosition + panOffset` here keeps the
+ * pivot a SINGLE target-resolution home — the strafe is stored on the clock and
+ * only READ here, never a second per-driver target path.
+ *
+ * The result target is a fresh per-frame array (read-only downstream), so no
+ * defensive copy of the snapshot position is needed.
  */
 
 import { focusedBodyPosition } from './focusedBodyPosition';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
+import type { Vec3 } from '../../../@types/math/Vec3';
 
 export function applyFocusedBodyPivot(
   pose: CameraPose,
   pivotsOnFocusedBody: boolean,
   focusRow: SelectionRow | null,
   simDays: number,
+  panOffset: Vec3,
 ): CameraPose {
   if (!pivotsOnFocusedBody) return pose;
   const pivot = focusedBodyPosition(focusRow, simDays);
   if (pivot === null) return pose;
-  return { target: pivot, yaw: pose.yaw, pitch: pose.pitch, distance: pose.distance };
+  return {
+    target: [pivot[0] + panOffset[0], pivot[1] + panOffset[1], pivot[2] + panOffset[2]],
+    yaw: pose.yaw,
+    pitch: pose.pitch,
+    distance: pose.distance,
+  };
 }

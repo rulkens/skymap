@@ -58,7 +58,8 @@ import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 import { runCameraDrivers } from '../camera/cameraDrivers';
 import { activeDriverId } from '../camera/activeDriverId';
 import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
-import { tweenElapsed } from '../camera/cameraClock';
+import { focusedBodyPosition } from '../camera/focusedBodyPosition';
+import { tweenElapsed, accumulateFollowPan } from '../camera/cameraClock';
 import { resizeCanvasToDisplay } from '../../gpu/device';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
 import { produceStructureMarkers } from '../presentation/produceStructureMarkers';
@@ -311,11 +312,32 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // (clip / tween keyframe a full path including target and opt out). The pin is
   // absolute (SETS the target), so baking `renderPose` into `base` on the next
   // commit-on-edge can never double-apply the body translation.
+  //
+  // A right-drag STRAFE while following is folded into the clock's world-frame
+  // `followPanOffset` FIRST (a follow-drag frame is orbitDrag winning over a body
+  // focus), then the pin resolves the pivot to `bodyPosition + followPanOffset`.
+  // The offset — not `cam.target`, which the pin overwrites — is the strafe's home,
+  // so the shifted pivot still translate-follows the body and a fresh focus zeroes
+  // it (in `followElapsed`).
+  // Read the pivot focus off `rootState` (the SAME store snapshot the drivers
+  // resolved against this frame), so the pin and the winner never disagree on
+  // what is focused. A separate `focusRow` local below reads the EngineState
+  // mirror for the structure-focus / time-report sections.
+  const pivotFocus = rootState.selectionRows.focus;
+  const clock = state.cameraRuntime.clock;
+  const followingBody = focusedBodyPosition(pivotFocus, simDays) !== null;
+  if (state.cam) {
+    accumulateFollowPan(clock, activeId === 'orbitDrag' && followingBody, state.cam.target);
+  } else {
+    // Pre-bootstrap: no cam, no drag possible — keep the delta chain reset.
+    clock.lastPanTarget = null;
+  }
   renderPose = applyFocusedBodyPivot(
     renderPose,
     deps.drivers.find((d) => d.id === activeId)?.pivotsOnFocusedBody ?? false,
-    rootState.selectionRows.focus,
+    pivotFocus,
     simDays,
+    clock.followPanOffset,
   );
 
   // ── (4) UPDATE Resources for next frame ───────────────────────────────────

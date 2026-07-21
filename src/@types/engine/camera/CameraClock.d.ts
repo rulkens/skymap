@@ -21,6 +21,7 @@ import type { CameraTweenDescriptor } from '../../camera/CameraTweenDescriptor';
 import type { CameraPose } from '../../camera/CameraPose';
 import type { ClipData } from '../../animation/ClipData';
 import type { SelectionRow } from '../SelectionRow';
+import type { Vec3 } from '../../math/Vec3';
 
 export type CameraClock = {
   tweenStartMs: number | null;
@@ -68,6 +69,24 @@ export type CameraClock = {
   // to the framing branch. Non-null with an unchanged focus ref means an approach
   // is (or was) in flight, so a not-follow-previous frame is a drag reactivation.
   followDistanceTarget: number | null;
+  // ── follow-body pan (strafe) offset ────────────────────────────────────────
+  // A right-drag strafe while following a body cannot move `cam.target` (the
+  // pivot-pin overwrites it with the body position every frame). Instead the
+  // strafe accumulates here as a WORLD-frame offset, and the pivot resolves to
+  // `bodyPosition + followPanOffset` — so the offset rides along with the body's
+  // motion (translate-follow keeps tracking the body, just shifted). World-frame
+  // is chosen for simplicity: at the scales a followed body is viewed, a fixed
+  // world-space offset reads as a stable screen strafe, and it needs no camera
+  // basis re-projection. A fresh focus (focus ROW ref change) zeroes it, so each
+  // new target starts centred. `followElapsed` owns that reset alongside the
+  // other follow fields.
+  followPanOffset: Vec3;
+  // The `cam.target` recorded on the previous follow-drag frame, so the strafe is
+  // folded in as the frame-to-frame DELTA of `cam.target` (which, during a drag,
+  // is pure pan — orbit changes yaw/pitch, and the body's own motion never
+  // touches `cam.target`). Null when no follow-drag is in progress, so each grab
+  // starts a fresh delta chain rather than re-basing the offset.
+  lastPanTarget: Vec3 | null;
   // The `base` reference auto-rotate last spun from. A commit-on-edge installs a
   // NEW base object while auto-rotate stays active; the spin clock resets when
   // this changes so the freshly committed base spins from elapsed 0, not from
