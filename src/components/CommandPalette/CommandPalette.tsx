@@ -103,12 +103,12 @@ function CommandPalette({
         className={styles.panel}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
-        aria-label="Search galaxies and clusters"
+        aria-label="Search galaxies, stars, planets, and clusters"
       >
         <input
           ref={inputRef}
           className={styles.input}
-          placeholder="Search galaxies & clusters (M31, NGC 4565, Coma, A2703, …)"
+          placeholder="Search galaxies, stars, planets & clusters (Sirius, Jupiter, M31, Coma …)"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
