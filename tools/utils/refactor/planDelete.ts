@@ -47,11 +47,11 @@
  */
 
 import { Node } from 'ts-morph';
-import type { Project, SourceFile } from 'ts-morph';
-import { anchorToMirroredRoot } from './anchorToMirroredRoot';
+import type { Project } from 'ts-morph';
 import { collectRefs } from './collectRefs';
 import type { RefReport } from './collectRefs';
-import { expandTestMirrors } from './expandTestMirrors';
+import { hasMeaningfulStatements } from './hasMeaningfulStatements';
+import { removeFileWithMirror } from './removeFileWithMirror';
 import { renderRefReport } from './renderRefReport';
 import type { ResolvedSymbol } from './resolveSymbol';
 
@@ -74,7 +74,7 @@ export function planDelete(project: Project, resolved: ResolvedSymbol): void {
   // (a non-import top-level statement) is left behind — otherwise a stray helper
   // or side-effect statement would be silently deleted with it.
   if (wasOnlyExport && !hasMeaningfulStatements(sourceFile)) {
-    removeFileAndMirror(project, sourceFile);
+    removeFileWithMirror(project, sourceFile);
   }
 }
 
@@ -101,33 +101,4 @@ function removeDeclaration(declaration: Node): void {
     );
   }
   removable.remove();
-}
-
-// A file is an empty husk once every remaining top-level statement is an import.
-// Anything else (a lingering const, a side-effect call) counts as meaningful and
-// keeps the file alive so nothing is deleted out from under it.
-function hasMeaningfulStatements(sourceFile: SourceFile): boolean {
-  return sourceFile
-    .getStatements()
-    .some((statement) => !Node.isImportDeclaration(statement));
-}
-
-// Delete the source file and, if the Project knows it, its `tests/` mirror.
-// Mirror derivation runs through expandTestMirrors with the Project as the
-// existence oracle, so it works identically on the real repo and on an in-memory
-// fixture — no filesystem probe a synthetic Project could not satisfy.
-function removeFileAndMirror(project: Project, sourceFile: SourceFile): void {
-  const anchor = anchorToMirroredRoot(sourceFile.getFilePath());
-  if (anchor !== null) {
-    const { rel, prefix } = anchor;
-    const moves = expandTestMirrors(
-      [{ from: rel, to: rel }],
-      (relPath) => project.getSourceFile(prefix + relPath) !== undefined,
-    );
-    for (const { from } of moves) {
-      if (!from.startsWith('tests/')) continue; // the source file itself, deleted below
-      project.getSourceFile(prefix + from)?.delete();
-    }
-  }
-  sourceFile.delete();
 }

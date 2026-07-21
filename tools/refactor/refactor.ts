@@ -46,6 +46,7 @@ import { collectRefs } from '../utils/refactor/collectRefs';
 import { loadRefactorProject } from '../utils/refactor/loadRefactorProject';
 import { parseSymbolAddress } from '../utils/refactor/parseSymbolAddress';
 import { planDelete } from '../utils/refactor/planDelete';
+import { planInline } from '../utils/refactor/planInline';
 import { planRename } from '../utils/refactor/planRename';
 import { readManifest } from '../utils/refactor/readManifest';
 import { renderRefReport } from '../utils/refactor/renderRefReport';
@@ -130,6 +131,17 @@ function runOp(
       const report = collectRefs(project, resolved);
       process.stdout.write(`${renderRefReport(report, flags['--json'])}\n`);
       planDelete(project, resolved);
+      return;
+    }
+
+    if (sub === 'inline') {
+      const resolved = resolveSymbol(project, parsed);
+      // Print the blast radius first: it previews the call sites the inline will
+      // repoint, or (on a non-passthrough) the references planInline then refuses
+      // with. --dry stops at this preview; the driver's tail save is skipped.
+      const report = collectRefs(project, resolved);
+      process.stdout.write(`${renderRefReport(report, flags['--json'])}\n`);
+      planInline(project, resolved);
       return;
     }
   } else if (positionals.length !== 2) {

@@ -408,21 +408,21 @@ logic, multiple statements). `planInline` errors (throws, listing references)
 when `detectPassthrough` returns `null`; otherwise repoints importers/call sites
 at `underlying` and deletes the wrapper (+ file + test mirror if one-symbol).
 
-- [ ] `detectPassthrough` test `detects a const alias` → `{ kind: 'alias' }`.
-- [ ] `detectPassthrough` test `detects a same-signature single-call wrapper` →
+- [x] `detectPassthrough` test `detects a const alias` → `{ kind: 'alias' }`.
+- [x] `detectPassthrough` test `detects a same-signature single-call wrapper` →
       `{ kind: 'wrapper' }`.
-- [ ] `detectPassthrough` test `detects an aliased re-export` → `{ kind: 're-export' }`.
-- [ ] `detectPassthrough` test `returns null for a wrapper that reorders args`
+- [x] `detectPassthrough` test `detects an aliased re-export` → `{ kind: 're-export' }`.
+- [x] `detectPassthrough` test `returns null for a wrapper that reorders args`
       and `returns null for a wrapper with extra logic` — the correctness guard
       that keeps `inline` from mangling a non-passthrough (Q5 hazard).
-- [ ] `planInline` test `repoints call sites at the underlying symbol and deletes
+- [x] `planInline` test `repoints call sites at the underlying symbol and deletes
       the wrapper file` — assert callers now call `bar` and the wrapper file is
       removed.
-- [ ] `planInline` test `throws with the reference list on a non-passthrough` —
+- [x] `planInline` test `throws with the reference list on a non-passthrough` —
       seed a richer body; assert throw.
-- [ ] Wire the handler.
-- [ ] `npm test -- detectPassthrough planInline` → green.
-- [ ] Commit: the five files above.
+- [x] Wire the handler.
+- [x] `npm test -- detectPassthrough planInline` → green.
+- [x] Commit: the five files above.
 
 ### Task 8: `classifyLocalDeps` (extract's dependency analysis)
 
