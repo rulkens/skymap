@@ -75,6 +75,26 @@ export type StarCatalogPickDrawArgs = {
    * the vertex stage's pick branch so a sub-pixel star stays clickable.
    */
   readonly sizePx: number;
+  /**
+   * The six frustum planes as `frustumPlanesFromViewProj` packs them (6 × vec4,
+   * `Float32Array(24)`), against which each leaf node's bounding sphere is
+   * rejected in the pack loop, or `null` to disable culling (pack every node).
+   * The pick pass reuses the SAME per-node cull the visual renderer runs so an
+   * off-screen leaf never packs a pick instance — but conservatively: a false
+   * "inside" merely draws an unclickable off-screen node, a false "outside" would
+   * make an ON-screen star unclickable (forbidden), so the leaf cull sphere only
+   * ever grows past the true footprint.
+   */
+  readonly frustumPlanes: Float32Array | null;
+  /**
+   * The leaf node's on-screen spill as a small-angle radian margin, added to the
+   * box half-diagonal as a distance-scaled world slack (`length(center) ·
+   * glowMarginAngleRad`) so the cull sphere covers the CLICKABLE footprint — the
+   * pick dot plus its 3.5 px pick floor — not just the box. The layer derives it
+   * from that footprint (Task 5); a leaf is `isAggregate = 0` here so only this
+   * leaf branch of the cull-radius contract applies (no aggregate glow slack).
+   */
+  readonly glowMarginAngleRad: number;
 };
 
 export type StarCatalogPickRenderer = Renderer & {

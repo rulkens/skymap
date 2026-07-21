@@ -103,6 +103,8 @@ import fsCode from '../../shaders/starCatalog/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { writeCameraPrefix } from '../../lib/cameraUniforms';
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
+import { sphereOutsideFrustum } from '../../../../utils/camera/sphereOutsideFrustum';
+import { DEFAULT_STAR_SIZE_PX } from '../../../../data/defaults';
 // The NodeParams / StarUniforms byte layout lives in ONE home both star
 // renderers import — see starCatalogLayout.ts (the WESL structs in
 // shaders/starCatalog/io.wesl are the source of truth). This renderer never
@@ -390,6 +392,8 @@ export function createStarCatalogRenderer(
       brightness,
       glowOverlap,
       aggregateIntensityCap,
+      frustumPlanes,
+      glowMarginAngleRad,
     } = args;
     const entry = sources.get(source);
     if (!entry || drawCount === 0) return;
@@ -411,57 +415,111 @@ export function createStarCatalogRenderer(
     cameraScratch[AGG_INTENSITY_CAP_FLOAT_INDEX] = aggregateIntensityCap;
     device.queue.writeBuffer(cameraBuffer, 0, cameraScratch);
 
-    // Pack every draw's params contiguously and build the exclusive prefix sum
-    // of record counts in the same pass; `totalInstances` is the running sum's
-    // end — the single draw's instance count.
+    // Pack every SURVIVING draw's params contiguously and build the exclusive
+    // prefix sum of record counts in the same pass. Culled nodes are skipped
+    // entirely, so a separate output cursor `survivors` (≠ the loop index `i`)
+    // keeps the packing contiguous — every buffer size, upload length and bind
+    // size below is that survivor count, and `totalInstances` (the running sum's
+    // end) is the single draw's instance count over survivors only. Scratch is
+    // sized to the worst case (`drawCount` ≥ survivors) before the loop writes.
     ensureScratch(drawCount);
     let totalInstances = 0;
+    let survivors = 0;
     for (let i = 0; i < drawCount; i++) {
-      // Per-node opacity = source crossfade × this node's LOD fade (see the
-      // draw-args docblock). All per-node arrays are the star cut's reused flat
-      // typed arrays, `drawCount` valid entries: the scalar fields index `i`, the
-      // origin vec3 indexes `3*i`. `writeStarNodeParams` owns the byte offsets.
+      // Per-node arrays are the star cut's reused flat typed arrays, `drawCount`
+      // valid entries: scalar fields index `i`, the origin vec3 indexes `3*i`.
       const o = i * 3;
+      const ox = originRelCamMpc[o]!;
+      const oy = originRelCamMpc[o + 1]!;
+      const oz = originRelCamMpc[o + 2]!;
+      const edge = cellScaleMpc[i]!;
+
+      // Frustum cull (skipped when `frustumPlanes` is null — culling disabled).
+      // The camera is the rebase origin, so node positions are camera-relative:
+      // `originRelCamMpc` is the box MIN corner and records span [origin,
+      // origin+edge) per axis, hence centre = origin + edge/2, half-diagonal =
+      // edge·√3/2, and distance from the eye = length(centre). A conservative
+      // (never-under-cull) bounding sphere is the box half-diagonal grown by the
+      // node's on-screen spill: a LEAF draws as a fixed-pixel dot, so its world
+      // spill is angular — `length(centre) · glowMarginAngleRad`; an AGGREGATE
+      // fills its box footprint with glow that `glowOverlap`-spreads with the
+      // dot-size scale, a WORLD slack. Conservative is safe: a false "inside"
+      // merely draws an off-screen node, a false "outside" would drop a visible
+      // one (forbidden), so both radii only ever grow the sphere.
+      if (frustumPlanes !== null) {
+        const cx = ox + edge * 0.5;
+        const cy = oy + edge * 0.5;
+        const cz = oz + edge * 0.5;
+        const baseRadius = edge * 0.8660254; // edge·√3/2
+        let cullRadius: number;
+        if (isAggregate[i]! !== 0) {
+          // This models the glow spill as pure world slack and omits the
+          // `STAR_GLOW_MIN_PX` pixel floor the shader also applies to
+          // aggregates (vertex.wesl, box radius floored before the
+          // sizeScale/overlap spread). That's safe only because
+          // `walkStarOctreeCut` commits aggregates at edge/dist ~ 0.08-0.16,
+          // so their boxes already span tens-to-hundreds of pixels and the
+          // floor never binds. If the walk's LOD threshold is ever lowered
+          // enough that an aggregate's box could shrink toward ~1px on
+          // screen, this cull would need the pick-style angular floor too.
+          const sizeScale = sizePx / DEFAULT_STAR_SIZE_PX;
+          const spread = sizeScale * glowOverlap;
+          cullRadius = baseRadius * (spread > 1 ? spread : 1);
+        } else {
+          const dist = Math.sqrt(cx * cx + cy * cy + cz * cz);
+          cullRadius = baseRadius + dist * glowMarginAngleRad;
+        }
+        if (sphereOutsideFrustum(frustumPlanes, cx, cy, cz, cullRadius)) continue;
+      }
+
+      // Per-node opacity = source crossfade × this node's LOD fade (see the
+      // draw-args docblock). `writeStarNodeParams` owns the byte offsets; the
+      // survivor is packed at the output cursor, not the loop index.
       writeStarNodeParams(
         nodeScratchView,
-        i * NODE_PARAMS_BYTES,
-        originRelCamMpc[o]!,
-        originRelCamMpc[o + 1]!,
-        originRelCamMpc[o + 2]!,
-        cellScaleMpc[i]!,
+        survivors * NODE_PARAMS_BYTES,
+        ox,
+        oy,
+        oz,
+        edge,
         firstRecord[i]!,
         opacity[i]!,
         isAggregate[i]!,
         subtreeStarCount[i]!,
       );
       // Exclusive prefix: this draw's first global instance index is the sum of
-      // all earlier draws' record counts. Strictly increasing (every draw has
-      // ≥ 1 record), so the shader's binary search resolves a unique slot.
-      prefixScratch[i] = totalInstances;
+      // all earlier survivors' record counts. Strictly increasing (every draw
+      // has ≥ 1 record), so the shader's binary search resolves a unique slot.
+      prefixScratch[survivors] = totalInstances;
       totalInstances += recordCount[i]!;
+      survivors++;
     }
 
-    ensureDrawBuffers(buffers, stream, drawCount);
+    // Every node culled ⇒ nothing to draw: return before any GPU work (the
+    // second early return after the `drawCount === 0` guard above).
+    if (survivors === 0) return;
+
+    ensureDrawBuffers(buffers, stream, survivors);
     device.queue.writeBuffer(
       buffers.nodeParamsBuffer!,
       0,
       nodeScratch,
       0,
-      drawCount * NODE_PARAMS_BYTES,
+      survivors * NODE_PARAMS_BYTES,
     );
-    device.queue.writeBuffer(buffers.prefixBuffer!, 0, prefixScratch, 0, drawCount);
+    device.queue.writeBuffer(buffers.prefixBuffer!, 0, prefixScratch, 0, survivors);
 
     // Bind group rebuilt per frame with the EXACT bound size (grow-only buffers
-    // may over-allocate) so `arrayLength(&prefix)` yields exactly `drawCount`.
+    // may over-allocate) so `arrayLength(&prefix)` yields exactly `survivors`.
     const drawBindGroup = device.createBindGroup({
       label: `star-catalog-${stream}-draw-bg`,
       layout: drawBgl,
       entries: [
         {
           binding: 0,
-          resource: { buffer: buffers.nodeParamsBuffer!, size: drawCount * NODE_PARAMS_BYTES },
+          resource: { buffer: buffers.nodeParamsBuffer!, size: survivors * NODE_PARAMS_BYTES },
         },
-        { binding: 1, resource: { buffer: buffers.prefixBuffer!, size: drawCount * PREFIX_BYTES } },
+        { binding: 1, resource: { buffer: buffers.prefixBuffer!, size: survivors * PREFIX_BYTES } },
       ],
     });
 

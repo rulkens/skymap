@@ -55,6 +55,7 @@ import pickFsCode from '../../shaders/starCatalog/pickFragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { writeCameraPrefix } from '../../lib/cameraUniforms';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
+import { sphereOutsideFrustum } from '../../../../utils/camera/sphereOutsideFrustum';
 // The NodeParams / StarUniforms byte layout lives in ONE home both star
 // renderers import — see starCatalogLayout.ts (the WESL structs in
 // shaders/starCatalog/io.wesl are the source of truth). This pick renderer is
@@ -228,6 +229,8 @@ export function createStarCatalogPickRenderer(
       originRelCamMpc,
       cellScaleMpc,
       sizePx,
+      frustumPlanes,
+      glowMarginAngleRad,
     } = args;
     const recordsBindGroup = resources.recordsBindGroup(source);
     if (!recordsBindGroup || drawCount === 0) return;
@@ -239,58 +242,95 @@ export function createStarCatalogPickRenderer(
     uniformF32[SIZE_PX_FLOAT_INDEX] = sizePx;
     device.queue.writeBuffer(uniformBuffer, 0, uniformScratch);
 
-    // Pack each leaf draw's NodeParams contiguously + the exclusive prefix sum,
-    // mirroring the visual renderer's packing but with pick-fixed fields:
-    // isAggregate = 0 (point-source leaf), subtreeStarCount = 1 (one star per
-    // leaf record), opacity = 1 (the pick fragment ignores it). totalInstances is
-    // the running sum's end — the single draw's instance count.
+    // Pack every SURVIVING leaf draw's NodeParams contiguously + the exclusive
+    // prefix sum, mirroring the visual renderer's packing but with pick-fixed
+    // fields: isAggregate = 0 (point-source leaf), subtreeStarCount = 1 (one star
+    // per leaf record), opacity = 1 (the pick fragment ignores it). Culled leaves
+    // are skipped entirely, so a separate output cursor `survivors` (≠ the loop
+    // index `i`) keeps the packing contiguous — every buffer size, upload length
+    // and bind size below is that survivor count, and `totalInstances` (the
+    // running sum's end) is the single draw's instance count over survivors only.
+    // Scratch is sized to the worst case (`drawCount` ≥ survivors) before the loop.
     ensureScratch(drawCount);
     let totalInstances = 0;
+    let survivors = 0;
     for (let i = 0; i < drawCount; i++) {
+      // The per-node arrays are the leaf draw-list's compacted flat typed arrays —
+      // scalars index `i`, the origin vec3 indexes `3*i`.
+      const o = i * 3;
+      const ox = originRelCamMpc[o]!;
+      const oy = originRelCamMpc[o + 1]!;
+      const oz = originRelCamMpc[o + 2]!;
+      const edge = cellScaleMpc[i]!;
+
+      // Frustum cull (skipped when `frustumPlanes` is null — culling disabled).
+      // The camera is the rebase origin, so node positions are camera-relative:
+      // `originRelCamMpc` is the box MIN corner and records span [origin,
+      // origin+edge) per axis, hence centre = origin + edge/2, half-diagonal =
+      // edge·√3/2, and distance from the eye = length(centre). This path is
+      // leaf-only (every node is `isAggregate = 0`), so the LEAF branch of the
+      // cull-radius contract is the only one: a leaf draws as a fixed-pixel
+      // clickable dot, so its world spill is angular — `length(centre) ·
+      // glowMarginAngleRad`. Conservative is safe: a false "inside" merely draws
+      // an off-screen (unclickable) node, a false "outside" would make a visible
+      // star unclickable (forbidden), so the radius only ever grows the sphere.
+      if (frustumPlanes !== null) {
+        const cx = ox + edge * 0.5;
+        const cy = oy + edge * 0.5;
+        const cz = oz + edge * 0.5;
+        const baseRadius = edge * 0.8660254; // edge·√3/2
+        const dist = Math.sqrt(cx * cx + cy * cy + cz * cz);
+        const cullRadius = baseRadius + dist * glowMarginAngleRad;
+        if (sphereOutsideFrustum(frustumPlanes, cx, cy, cz, cullRadius)) continue;
+      }
+
       // Same byte layout as the visual packer, with pick-fixed fields: opacity 1
       // (ignored by the pick fragment), isAggregate 0 (point-source leaf),
-      // subtreeStarCount 1 (one star per leaf record). The per-node arrays are
-      // the leaf draw-list's compacted flat typed arrays — scalars index `i`, the
-      // origin vec3 indexes `3*i`. `writeStarNodeParams` owns the offsets.
-      const o = i * 3;
+      // subtreeStarCount 1 (one star per leaf record). `writeStarNodeParams` owns
+      // the offsets; the survivor is packed at the output cursor, not `i`.
       writeStarNodeParams(
         nodeScratchView,
-        i * NODE_PARAMS_BYTES,
-        originRelCamMpc[o]!,
-        originRelCamMpc[o + 1]!,
-        originRelCamMpc[o + 2]!,
-        cellScaleMpc[i]!,
+        survivors * NODE_PARAMS_BYTES,
+        ox,
+        oy,
+        oz,
+        edge,
         firstRecord[i]!,
         1.0,
         0,
         1.0,
       );
-      prefixScratch[i] = totalInstances;
+      prefixScratch[survivors] = totalInstances;
       totalInstances += recordCount[i]!;
+      survivors++;
     }
 
-    const buffers = ensureDrawBuffers(source, drawCount);
+    // Every leaf culled ⇒ nothing to draw: return before any GPU work (the second
+    // early return after the records/`drawCount === 0` guard above).
+    if (survivors === 0) return;
+
+    const buffers = ensureDrawBuffers(source, survivors);
     device.queue.writeBuffer(
       buffers.nodeParamsBuffer!,
       0,
       nodeScratch,
       0,
-      drawCount * NODE_PARAMS_BYTES,
+      survivors * NODE_PARAMS_BYTES,
     );
-    device.queue.writeBuffer(buffers.prefixBuffer!, 0, prefixScratch, 0, drawCount);
+    device.queue.writeBuffer(buffers.prefixBuffer!, 0, prefixScratch, 0, survivors);
 
     // Bind group rebuilt per frame with the EXACT bound size (grow-only buffers
     // may over-allocate) so the shader's `arrayLength(&prefix)` yields exactly
-    // `drawCount`.
+    // `survivors`.
     const drawBindGroup = device.createBindGroup({
       label: `star-catalog-pick-draw-bg-${source}`,
       layout: drawBgl,
       entries: [
         {
           binding: 0,
-          resource: { buffer: buffers.nodeParamsBuffer!, size: drawCount * NODE_PARAMS_BYTES },
+          resource: { buffer: buffers.nodeParamsBuffer!, size: survivors * NODE_PARAMS_BYTES },
         },
-        { binding: 1, resource: { buffer: buffers.prefixBuffer!, size: drawCount * PREFIX_BYTES } },
+        { binding: 1, resource: { buffer: buffers.prefixBuffer!, size: survivors * PREFIX_BYTES } },
       ],
     });
 
