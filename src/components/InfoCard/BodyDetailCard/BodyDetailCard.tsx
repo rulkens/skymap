@@ -37,7 +37,7 @@ import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { formatDistance } from '../../../utils/format/formatDistance';
 import { FAMOUS_STAR_IDS } from '../../../data/bodies/famousStarsIndex';
-import { BODY_FACTS } from '../../../data/bodies/bodyFacts';
+import { BODY_FACTS } from '../../../data/bodies/bodyFacts.generated';
 import { starWikipediaTitle } from '../../../utils/format/starWikipediaTitle';
 import { useFamousStarsMeta } from '../../../hooks/useFamousStarsMeta';
 import CardHeader from '../CardHeader/CardHeader';

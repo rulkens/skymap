@@ -1,26 +1,10 @@
-/**
- * BODY_FACTS — the curated planetary-fact-sheet rows for every Solar-System
- * body the scene can focus, keyed by the SAME `id` the engine's `BodyInfo`
- * carries (the seed ids in `scenePlanets` / `sceneEarth`). BodyDetailCard does a
- * direct `BODY_FACTS[target.id]` lookup, so seeding a body's card is a one-entry
- * addition here — no parallel list.
- *
- * These are static compiled-in constants, NOT an async sidecar: the Solar System
- * is a small fixed set whose masses and orbits don't change between builds, so a
- * fetch (as the famous-star meta uses) would be pure overhead. Values are stored
- * pre-formatted (see `BodyFacts`) and were curated against NASA's planetary fact
- * sheet (nssdc.gsfc.nasa.gov/planetary/factsheet). Moon counts are the confirmed
- * totals as catalogued and will drift upward as surveys find more — they are the
- * one genuinely-moving figure here.
- *
- * Bodies with no entry (should any seed lack curated facts) fall through to
- * BodyDetailCard's lean panel — the fail-soft path.
- */
-
+// src/data/bodies/bodyFacts.generated.ts
+// !!! GENERATED FILE — DO NOT EDIT BY HAND !!!
+// Regenerate with:  npm run build-planet-facts
+// Source of truth:  data/seeds/planet_facts.seed.json
 import type { BodyFacts } from '../../@types/scene/BodyFacts';
 
 export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
-  // ── Planets (distance from the Sun; mass in Earth masses) ─────────────────
   mercury: {
     mass: '0.055 M⊕',
     gravity: '0.38 g',
@@ -117,8 +101,6 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     atmosphere: 'H₂, He, CH₄',
     wikiTitle: 'Neptune',
   },
-
-  // ── Moons (distance from their parent planet; mass in kg) ──────────────────
   moon: {
     mass: '7.35 × 10²² kg',
     gravity: '0.17 g',
