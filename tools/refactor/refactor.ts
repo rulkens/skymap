@@ -172,10 +172,8 @@ function runOp(
     if (positionals.length !== 2) {
       throw new Error('refactor move: expected <from> <to>.');
     }
-    const moves = planMove(
-      project,
-      [{ from: positionals[0]!, to: positionals[1]! }],
-      (p) => existsSync(resolve(p)),
+    const moves = planMove(project, [{ from: positionals[0]!, to: positionals[1]! }], (p) =>
+      existsSync(resolve(p)),
     );
     // Preview the move-files blast radius: the expanded moves plus every file
     // whose imports ts-morph rewrote. --dry stops before the driver's tail
@@ -183,7 +181,11 @@ function runOp(
     // prints this instead of the shared ref report).
     const rewritten = project.getSourceFiles().filter((file) => !file.isSaved());
     process.stdout.write(
-      renderMoveReport('refactor move', moves, rewritten.map((file) => file.getFilePath())),
+      renderMoveReport(
+        'refactor move',
+        moves,
+        rewritten.map((file) => file.getFilePath()),
+      ),
     );
     return;
   }

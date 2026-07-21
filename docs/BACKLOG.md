@@ -95,6 +95,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Famous-curator suite runtime cost** `deferred` — real sharp encodes + tmpdir I/O dominate suite wall-clock; cache fixtures, shrink images, or tag a slow-suite split. → [details](backlog/2026-07-10-famous-curator-suite-runtime-cost.md)
 - [ ] **Deproject invariant consolidation** `deferred` — square-in/square-out tested 4× across the curator export surface; fold into one parameterized test if that surface is reworked. → [details](backlog/2026-07-10-deproject-invariant-consolidation.md)
 - [ ] **move-files: untracked references** `ready` — ts-morph skips `?worker`/`?static` specifiers + `vi.mock` literals; a stale `?worker` is silent on BOTH tsc and vite build. Rewrite them, then fail loudly on anything still dangling. → [details](backlog/2026-07-14-move-files-untracked-references.md)
+- [ ] **refactor CLI follow-ups** `deferred` — runOp dispatch table + extract closure gaps (dropped `//` comments, `export {}` form, import carry) + refusal/error-context polish. → [details](backlog/2026-07-21-refactor-cli-followups.md)
 
 ## External / blocked
 

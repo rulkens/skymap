@@ -80,7 +80,10 @@ type LocalDecl = {
 // The declaration that encloses a reference: the moving target, a tracked local,
 // or anything else (a staying export or a module-level statement) — 'outside' the
 // moving cohort. Only the first two can source a dependency edge.
-type Owner = { readonly kind: 'target' } | { readonly kind: 'local'; readonly decl: LocalDecl } | { readonly kind: 'outside' };
+type Owner =
+  | { readonly kind: 'target' }
+  | { readonly kind: 'local'; readonly decl: LocalDecl }
+  | { readonly kind: 'outside' };
 
 export function classifyLocalDeps(resolved: ResolvedSymbol): LocalDepClass {
   const { sourceFile, declaration: target } = resolved;
@@ -130,8 +133,7 @@ export function classifyLocalDeps(resolved: ResolvedSymbol): LocalDepClass {
   const shared: string[] = [];
   for (const dep of [...closure].sort((a, b) => a.start - b.start)) {
     const tainted = (referrers.get(dep) ?? []).some(
-      (owner) =>
-        owner.kind === 'outside' || (owner.kind === 'local' && !closure.has(owner.decl)),
+      (owner) => owner.kind === 'outside' || (owner.kind === 'local' && !closure.has(owner.decl)),
     );
     (tainted ? shared : exclusive).push(dep.name);
   }

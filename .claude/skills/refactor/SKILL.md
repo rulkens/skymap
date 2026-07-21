@@ -38,7 +38,9 @@ single save; a throw on any entry aborts the whole batch before disk is touched)
 - **`extract`**: a file has grown a second exported symbol and you want it in its own
   file (the one-symbol-per-file rule). Moves the target plus its exclusive file-local
   helpers (deps reached only through the moving cohort) into `dest.ts` and repoints
-  every importer. See the shared-dep refusal below.
+  every importer. See the shared-dep refusal below. Note: a plain `//` line comment
+  sitting directly above a dragged helper is dropped in the move (JSDoc `/** */`
+  blocks survive); re-check the moved file and restore any lost comment by hand.
 
 - **`inline`**: a passthrough wrapper earns its deletion, meaning an alias, a
   same-signature single-call wrapper, or an aliased re-export that adds nothing.

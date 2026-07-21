@@ -40,7 +40,8 @@ describe('resolveSymbol', () => {
     // A class + namespace sharing a name is declaration merging: ts-morph's
     // getExportedDeclarations() maps that name to TWO declarations.
     const project = projectWith({
-      '/src/utils/dup.ts': 'export class Widget {}\nexport namespace Widget { export const v = 1; }',
+      '/src/utils/dup.ts':
+        'export class Widget {}\nexport namespace Widget { export const v = 1; }',
     });
 
     let thrown: unknown;

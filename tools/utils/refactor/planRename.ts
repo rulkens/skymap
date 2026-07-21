@@ -84,11 +84,7 @@ export function planRename(
 // Return the absolute move pairs (source file + any test mirror) for the file
 // rename, or [] when the basename does not track the symbol name. Empty is the
 // convention-not-covered case: rename the identifier, leave the file untouched.
-function planFileRename(
-  project: Project,
-  resolved: ResolvedSymbol,
-  newName: string,
-): MovePair[] {
+function planFileRename(project: Project, resolved: ResolvedSymbol, newName: string): MovePair[] {
   const absSource = resolved.sourceFile.getFilePath();
   const anchor = anchorToMirroredRoot(absSource);
   if (anchor === null) return [];
