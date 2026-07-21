@@ -236,7 +236,14 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         if (!compositor) {
           throw new Error('executeFrame: compositor missing for composite step');
         }
-        compositor.draw(pass, viewFor(source, ctx, swapView), blend, tone);
+        // The compositor's pipeline bakes its colour-attachment format, so it
+        // needs the dest's format up front (a pass encoder can't be queried for
+        // its own target). Unlike the VIEW — where `swap` is executor-resolved
+        // from the acquired frame texture, not the target table — the FORMAT is
+        // a spec-table fact for every row including `swap` (whose spec carries
+        // the swap-chain format), so it resolves uniformly with no swap branch.
+        const dstFormat = ctx.renderTargets.specs.find((s) => s.id === dest)!.format;
+        compositor.draw(pass, viewFor(source, ctx, swapView), blend, tone, dstFormat);
         pass.end();
         touched.add(dest);
         break;

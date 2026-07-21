@@ -376,10 +376,36 @@ describe('executeFrame', () => {
     });
     executeFrame(args);
     expect(draw).toHaveBeenCalledTimes(1);
-    // draw(pass, viewFor(source)=HDR_VIEW, blend, tone)
+    // draw(pass, viewFor(source)=HDR_VIEW, blend, tone, dstFormat)
     expect(draw.mock.calls[0]![1]).toBe(HDR_VIEW);
     expect(draw.mock.calls[0]![2]).toBe('replace');
     expect(draw.mock.calls[0]![3]).toBe(null);
+    // dstFormat threaded from the dest target's spec: dest 'swap' → its
+    // swap-chain format, resolved from the target table (not derived from blend).
+    expect(draw.mock.calls[0]![4]).toBe('bgra8unorm');
+  });
+
+  it("threads a non-swap dest's format from the target table", () => {
+    // A composite whose dest is an offscreen row resolves that row's format
+    // (rgba16float for foreground:0) — proving the dstFormat comes from the
+    // dest spec, not a swap-only special case.
+    const draw = vi.fn();
+    const hdr = makeLayer({ name: 'hdr', target: 'hdr' });
+    const program: FrameStep[] = [
+      { kind: 'render', target: 'hdr', slab: COSMO },
+      {
+        kind: 'composite',
+        step: { source: 'hdr', dest: 'foreground:0', blend: 'over', tone: null },
+      },
+    ];
+    const { args } = makeArgs({
+      program,
+      layers: [hdr],
+      state: makeState({ compositor: { draw } }),
+    });
+    executeFrame(args);
+    expect(draw).toHaveBeenCalledTimes(1);
+    expect(draw.mock.calls[0]![4]).toBe('rgba16float');
   });
 
   it('merged strategy opens exactly one pass per non-empty render step', () => {

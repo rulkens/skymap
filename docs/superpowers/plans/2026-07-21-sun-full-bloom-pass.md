@@ -139,7 +139,7 @@ Only `selectionRingLayer` (COSMO) feeds the guarded depth view.
 
 ### Task 3: Prep A visual neutrality checkpoint (no commit)
 
-- [ ] Ask the user to look at the running dev server: cosmological selection rings, label
+- [x] Ask the user to look at the running dev server: cosmological selection rings, label
       stems, MSDF labels, and marker lines must look **exactly as before** (bodies still
       occlude them by draw order; the new coverage path is dormant because `foreground:0`
       renders after the overlays this phase). Confirm nothing changed before Prep B lands.
@@ -172,13 +172,13 @@ each composite's `dest` and can resolve its format from the target table.
 - Consumes: `RenderTargets.specs: readonly RenderTargetSpec[]` (each `{ id, format, ... }`).
 - Produces: `Compositor.draw(pass, src, blend, tone, dstFormat)`.
 
-- [ ] Change the `Compositor` type + `compositor.ts` to take `dstFormat`; the cache key is
+- [x] Change the `Compositor` type + `compositor.ts` to take `dstFormat`; the cache key is
       unchanged in shape (`blend:dstFormat`) but now honest for `over→hdr`.
-- [ ] Thread the dest format from `executeFrame`'s composite case.
-- [ ] `npm run typecheck` green; `npm test -- compositor` and `npm test -- executeFrame`
+- [x] Thread the dest format from `executeFrame`'s composite case.
+- [x] `npm run typecheck` green; `npm test -- compositor` and `npm test -- executeFrame`
       green (the JS-mirror tone tests in `toneMap.test.ts` are unaffected — no math
       changed).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 5: reorder the frame graph → a single tone-map (+ program-shape test)
 
