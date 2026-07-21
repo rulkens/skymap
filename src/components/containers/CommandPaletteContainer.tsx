@@ -4,10 +4,12 @@
  *
  * Owns everything the presentational `CommandPalette` should not reach for
  * itself: the famous-meta + alias-index + structure-index data hooks, the
- * `paletteOpen` slice read, the close dispatch, and the single selection
- * command — every pick (famous, alias, structure, Milky Way) is a durable
- * focus id the palette already built, fired through `requestFocus`, the one
- * command→ref bridge.  The palette stays a pure view that imports nothing from
+ * `paletteOpen` slice read, the close dispatch, and the two selection commands.
+ * Every pick (famous, alias, structure, Milky Way) is a durable focus id the
+ * palette already built; the container fires both single-purpose commands —
+ * `requestSelect` pins the InfoCard (the `select` slot) and `requestFocus` flies
+ * the camera (the `focus` slot), so a palette pick looks the same as a scene
+ * click plus a fly.  The palette stays a pure view that imports nothing from
  * `store/` or `state/`.
  *
  * App passes down only what isn't a store concern: `engineHandleRef`, the ref
@@ -31,6 +33,7 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectPaletteOpen } from '../../state/ui/selectors';
 import { setPaletteOpen } from '../../state/ui/uiSlice';
 import { requestFocus } from '../../state/selection/requestFocus';
+import { requestSelect } from '../../state/selection/requestSelect';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
 
 export type CommandPaletteContainerProps = {
@@ -52,7 +55,10 @@ function CommandPaletteContainer({
       structures={structures}
       open={paletteOpen}
       onClose={() => dispatch(setPaletteOpen(false))}
-      onSelect={(focusId) => dispatch(requestFocus(focusId))}
+      onSelect={(focusId) => {
+        dispatch(requestSelect(focusId));
+        dispatch(requestFocus(focusId));
+      }}
     />
   );
 }
