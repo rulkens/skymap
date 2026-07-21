@@ -42,6 +42,8 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { watchFlyToEarthKeySaga } from '../../../src/state/scene/watchFlyToEarthKeySaga';
 import { earthSurfaceFraming } from '../../../src/utils/camera/earthSurfaceFraming';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
+import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
+import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { cameraRoute } from '../../../src/store/constants';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { EarthBody } from '../../../src/@types/scene/EarthBody';
@@ -84,7 +86,9 @@ describe('watchFlyToEarthKeySaga', () => {
     const tween = store.getState()[cameraRoute].tween;
     expect(tween).not.toBeNull();
     expect(tween!.from).toEqual(FROM);
-    const framing = earthSurfaceFraming(SCENE_EARTH.positionMpc, SCENE_EARTH.radiusKm);
+    // The saga frames from Earth's derived J2000 position + the record radius.
+    const earthPos = deriveBodyStates(CONST_J2000).get('earth')!.positionMpc;
+    const framing = earthSurfaceFraming(earthPos, SCENE_EARTH.radiusKm);
     expect(tween!.to.target).toEqual(framing.target);
     expect(tween!.to.distance).toBe(framing.distance);
     expect(tween!.to.yaw).toBe(FROM.yaw);

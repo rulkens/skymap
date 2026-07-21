@@ -29,7 +29,8 @@ import type { Vec3 } from '../../src/@types/math/Vec3';
 export type PerfScenario = { readonly name: string; readonly pose: PerfPose };
 
 // The shared look-at point for every scenario: Earth (its J2000 heliocentric
-// position, matching SCENE_EARTH.positionMpc — verified equal at capture time).
+// position, matching `deriveBodyStates(CONST_J2000).get('earth')` — verified
+// equal at capture time).
 // Factored out so the six poses differ only in the axes that actually vary
 // (distance/yaw/pitch) and the target can never drift between them.
 const EARTH_TARGET: Vec3 = [-8.5895045e-13, 4.3022234e-12, 1.865304e-12];

@@ -18,11 +18,11 @@ import { describe, it, expect } from 'vitest';
 import { ASSET_WIRING } from '../../../../src/services/engine/wiring/assetWiring';
 import { Source } from '../../../../src/data/sources';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../../src/data/bodies/bodyTextureKeys';
-import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
 import { loadRadiusMpc } from '../../../../src/services/engine/frame/bodyTextureLoadRadius';
+import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
+import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { hostBodyId } from '../../../../src/utils/scene/hostBodyId';
 import { bodyTextureSlotKey } from '../../../../src/utils/scene/bodyTextureSlotKey';
-import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
@@ -60,9 +60,14 @@ function makeCtx(over: {
   };
 }
 
-/** The world position a body-texture key's proximity gate is measured from. */
+/**
+ * The world position a body-texture key's proximity gate is measured from. Host
+ * bodies are all orbital (textured planets / Earth / moons), so their position
+ * comes from the derived J2000 snapshot — the same source the wiring reads.
+ */
+const BODY_STATES = deriveBodyStates(CONST_J2000);
 function bodyPosOf(id: string): Readonly<Vec3> {
-  return findByIdOrThrow(SCENE_BODIES, hostBodyId(id as never), 'test').positionMpc;
+  return BODY_STATES.get(hostBodyId(id as never))!.positionMpc;
 }
 
 describe('ASSET_WIRING membership', () => {

@@ -9,7 +9,13 @@ import {
 } from '../../../../src/data/starCatalog/starCatalogFormat';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
+import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
+import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { Source } from '../../../../src/data/sources';
+
+// Earth's row position comes from the derived J2000 snapshot — the same source
+// the resolver's `body` arm reads (identity id/label/radius stay off the record).
+const EARTH_POS = deriveBodyStates(CONST_J2000).get('earth')!.positionMpc;
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { ResolveDeps } from '../../../../src/@types/engine/ResolveDeps';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
@@ -94,19 +100,17 @@ describe('extractSelectionRow', () => {
       type: 'body',
       id: SCENE_EARTH.id,
       label: SCENE_EARTH.label,
-      positionMpc: SCENE_EARTH.positionMpc,
+      positionMpc: EARTH_POS,
       radiusKm: SCENE_EARTH.radiusKm,
     });
   });
 
-  it('body row position is copied, not aliased to the shared seed constant', () => {
+  it('body row position is copied, not aliased to the shared derived state', () => {
     // The row lands in the RTK store, whose immutability middleware freezes
-    // state — an aliased Vec3 would freeze SCENE_EARTH.positionMpc for every
-    // other consumer of the seed.
+    // state — an aliased Vec3 would freeze the shared snapshot's positionMpc for
+    // every other consumer of the derive.
     const row = extractSelectionRow({ type: 'body', id: 'earth' }, deps);
-    expect(row !== null && row.type === 'body' && row.positionMpc).not.toBe(
-      SCENE_EARTH.positionMpc,
-    );
+    expect(row !== null && row.type === 'body' && row.positionMpc).not.toBe(EARTH_POS);
   });
 
   it('body ref with an unknown seed id → null (garbage, not "loading")', () => {

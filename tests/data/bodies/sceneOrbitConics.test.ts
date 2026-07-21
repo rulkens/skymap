@@ -21,11 +21,15 @@
 import { describe, expect, it } from 'vitest';
 
 import { SCENE_ORBIT_CONICS } from '../../../src/data/bodies/sceneOrbitConics';
-import { SCENE_BODIES } from '../../../src/data/bodies/sceneBodies';
-import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { ORBITAL_ELEMENTS } from '../../../src/data/bodies/orbitalElements';
 import { RENDER_ORIGIN_MPC } from '../../../src/data/renderOrigin';
+import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
+import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+
+// Body positions live in the derived BodyState snapshot (frozen at J2000 here),
+// the same derive `deriveOrbitConics(CONST_J2000)` resolves its centres from.
+const BODY_STATES = deriveBodyStates(CONST_J2000);
 
 function dot(a: Readonly<Vec3>, b: Readonly<Vec3>): number {
   return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
@@ -40,9 +44,9 @@ function sub(a: Readonly<Vec3>, b: Readonly<Vec3>): Vec3 {
 }
 
 function bodyPositionOf(id: string): Readonly<Vec3> {
-  const body = SCENE_BODIES.find((b) => b.id === id);
-  expect(body, `SCENE_BODIES has a '${id}' entry`).toBeDefined();
-  return body!.positionMpc;
+  const state = BODY_STATES.get(id);
+  expect(state, `deriveBodyStates has a '${id}' entry`).toBeDefined();
+  return state!.positionMpc;
 }
 
 describe('SCENE_ORBIT_CONICS', () => {
@@ -70,8 +74,9 @@ describe('SCENE_ORBIT_CONICS', () => {
     // focus resolved to Earth, the centre sits that tiny distance from Earth;
     // if it had (wrongly) resolved to the Sun, it would be ~1 AU away.
     const aE = moonEl.semiMajorMpc * moonEl.eccentricity;
-    const distToEarth = length(sub(moonConic!.centerMpc, SCENE_EARTH.positionMpc));
-    const earthSunDist = length(sub(SCENE_EARTH.positionMpc, RENDER_ORIGIN_MPC));
+    const earthPos = BODY_STATES.get('earth')!.positionMpc;
+    const distToEarth = length(sub(moonConic!.centerMpc, earthPos));
+    const earthSunDist = length(sub(earthPos, RENDER_ORIGIN_MPC));
 
     expect(distToEarth).toBeCloseTo(aE, 20); // centre offset is exactly a·e
     expect(distToEarth).toBeLessThan(earthSunDist * 1e-3); // Earth, not the Sun

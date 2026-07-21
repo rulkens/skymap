@@ -49,8 +49,16 @@ const EXTRACT_ROW: {
   body: (ref) => {
     const body = SCENE_BODIES.find((b) => b.id === ref.id);
     if (!body) return null;
+    // Orbital bodies (planets, Earth, moons) resolve from the snapshot; stars
+    // (incl. the Sun) are not in it and keep their record `positionMpc` — only
+    // `StarBody` carries that field, so `'positionMpc' in body` narrows the arm.
     const state = deriveBodyStates(CONST_J2000).get(body.id);
-    const p = state ? state.positionMpc : body.positionMpc;
+    const p = state
+      ? state.positionMpc
+      : 'positionMpc' in body
+        ? body.positionMpc
+        : null;
+    if (!p) return null;
     return {
       type: 'body' as const,
       id: body.id,

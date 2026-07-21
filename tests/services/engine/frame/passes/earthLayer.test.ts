@@ -27,6 +27,8 @@ import { earthLayer } from '../../../../../src/services/engine/frame/passes/eart
 import { CONTENT_LAYERS } from '../../../../../src/services/engine/frame/passes';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
+import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
+import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
@@ -51,13 +53,13 @@ import { composeBodyMvp } from '../../../../../src/utils/camera/composeBodyMvp';
 
 // The layer reads Earth's live position/orientation from the per-frame body-state
 // snapshot (keyed by id). Stub it to a map holding the seeded Earth, REUSING the
-// record's own positionMpc/orientation refs — so the layer sees the exact fixture
-// values (identity-equal), keeping the `toBe(...)` assertions below intact while
-// the reads move off the baked record fields.
+// SeededEarth fixture's own positionMpc/orientation refs — so the layer sees the
+// exact fixture values (identity-equal), keeping the `toBe(...)` assertions below
+// intact while the reads move off the baked record fields.
 vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
   sceneBodyStates: vi.fn((state: EngineState): ReadonlyMap<string, BodyState> => {
     const m = new Map<string, BodyState>();
-    const earth = state.data.bodies.earth;
+    const earth = state.data.bodies.earth as SeededEarth | null;
     if (earth)
       m.set(earth.id, {
         positionMpc: earth.positionMpc,
@@ -67,6 +69,18 @@ vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
     return m;
   }),
 }));
+
+// A test fixture pairing Earth's identity record with the J2000 state the
+// snapshot carries — position + orientation were lifted off the record onto the
+// derive, so the fixture supplies them here (sourced from the derive, so the
+// values are the real J2000 ones and the refs stay stable across the assertions).
+type SeededEarth = EarthBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
+const EARTH_STATE = deriveBodyStates(CONST_J2000).get('earth')!;
+const SEEDED_EARTH: SeededEarth = {
+  ...SCENE_EARTH,
+  positionMpc: EARTH_STATE.positionMpc,
+  orientation: EARTH_STATE.orientation,
+};
 
 const composeMock = composeBodyMvp as unknown as ReturnType<typeof vi.fn>;
 
@@ -93,9 +107,9 @@ function makeCtx(distance: number): ReadyFrameContext {
   return {
     cam: { distance },
     drawCamPos: [
-      SCENE_EARTH.positionMpc[0] + 1e-13,
-      SCENE_EARTH.positionMpc[1],
-      SCENE_EARTH.positionMpc[2],
+      SEEDED_EARTH.positionMpc[0] + 1e-13,
+      SEEDED_EARTH.positionMpc[1],
+      SEEDED_EARTH.positionMpc[2],
     ],
     canvasSize: { width: 1280, height: 720 },
     fovYRad: (60 * Math.PI) / 180,
@@ -157,13 +171,13 @@ describe('earthLayer.enabled', () => {
     // Renderer only (camera inside the gate — the body is the missing gate).
     expect(earthLayer.enabled(makeState(renderer, null), NEAR_CTX)).toBe(false);
     // Body only. Bare ctx: the handle check short-circuits first.
-    expect(earthLayer.enabled(makeState(null, SCENE_EARTH), CTX_STUB)).toBe(false);
+    expect(earthLayer.enabled(makeState(null, SEEDED_EARTH), CTX_STUB)).toBe(false);
     // Both present, camera inside the gate.
-    expect(earthLayer.enabled(makeState(renderer, SCENE_EARTH), NEAR_CTX)).toBe(true);
+    expect(earthLayer.enabled(makeState(renderer, SEEDED_EARTH), NEAR_CTX)).toBe(true);
   });
 
   it('is disabled beyond the foreground gate and enabled below it', () => {
-    const state = makeState({ draw: vi.fn() }, SCENE_EARTH);
+    const state = makeState({ draw: vi.fn() }, SEEDED_EARTH);
     // Below the gate → the handle + body gates decide (both pass).
     expect(earthLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2))).toBe(true);
     // At and above the gate → off, however present the handles are: Earth is
@@ -179,13 +193,13 @@ describe('earthLayer.enabled', () => {
     // ~1e-6 Mpc from Earth — the ~4e-16 Mpc globe subtends ~3e-7 px there,
     // far under SUB_PIXEL_BODY_CULL_PX, so the layer must leave the pass
     // plan: a sub-pixel sphere adds nothing the star backdrop doesn't.
-    const state = makeState({ draw: vi.fn() }, SCENE_EARTH);
+    const state = makeState({ draw: vi.fn() }, SEEDED_EARTH);
     const subPixelCtx = {
       cam: { distance: FOREGROUND_MAX_DISTANCE_MPC / 2 },
       drawCamPos: [
-        SCENE_EARTH.positionMpc[0] + 1e-6,
-        SCENE_EARTH.positionMpc[1],
-        SCENE_EARTH.positionMpc[2],
+        SEEDED_EARTH.positionMpc[0] + 1e-6,
+        SEEDED_EARTH.positionMpc[1],
+        SEEDED_EARTH.positionMpc[2],
       ],
       canvasSize: { width: 1280, height: 720 },
       fovYRad: (60 * Math.PI) / 180,
@@ -221,7 +235,7 @@ describe('the (foreground:0, NEAR0) render group above the foreground gate', () 
         // null-handle short-circuit keeps it out below and above the gate.
         atmosphereShellRenderer: null,
       },
-      data: { bodies: { earth: SCENE_EARTH } },
+      data: { bodies: { earth: SEEDED_EARTH } },
     } as unknown as EngineState;
     const groupAt = (ctx: ReadyFrameContext) =>
       CONTENT_LAYERS.filter(
@@ -243,7 +257,7 @@ describe('earthLayer.draw', () => {
     composeMock.mockClear();
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
     const view = makeNear0View();
-    const state = makeState({ draw: drawSpy }, SCENE_EARTH);
+    const state = makeState({ draw: drawSpy }, SEEDED_EARTH);
 
     earthLayer.draw(PASS_STUB, view, CTX_STUB, state);
 
@@ -254,11 +268,11 @@ describe('earthLayer.draw', () => {
     expect(call[0]).toBe(view.slab.vp);
     expect(call[0]).not.toBe(view.vp);
     // Position, render origin, and the km→Mpc radius carried through.
-    expect(call[1]).toBe(SCENE_EARTH.positionMpc);
+    expect(call[1]).toBe(SEEDED_EARTH.positionMpc);
     expect(call[2]).toBe(RENDER_ORIGIN_MPC);
-    expect(call[3]).toBe(SCENE_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC);
+    expect(call[3]).toBe(SEEDED_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC);
     // The body's baked orientation is forwarded as the model's rotation factor.
-    expect(call[4]).toBe(SCENE_EARTH.orientation);
+    expect(call[4]).toBe(SEEDED_EARTH.orientation);
 
     // The renderer receives the pass + the packed length-32 EarthSurfaceUniforms
     // record (16 mvp + 3 sunDirLocal + roughnessBase + 3 camPosLocal + f0 +
@@ -280,16 +294,16 @@ describe('earthLayer.draw', () => {
     composeMock.mockClear();
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
     const view = makeNear0View();
-    const state = makeState({ draw: drawSpy }, SCENE_EARTH);
+    const state = makeState({ draw: drawSpy }, SEEDED_EARTH);
 
     earthLayer.draw(PASS_STUB, view, CTX_STUB, state);
 
     const [, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
     expect(uniforms).toHaveLength(32);
     const expected = sunDirLocal(
-      SCENE_EARTH.positionMpc,
+      SEEDED_EARTH.positionMpc,
       RENDER_ORIGIN_MPC,
-      SCENE_EARTH.orientation,
+      SEEDED_EARTH.orientation,
     );
     expect(uniforms[16]).toBeCloseTo(expected[0]);
     expect(uniforms[17]).toBeCloseTo(expected[1]);
@@ -307,7 +321,7 @@ describe('earthLayer.draw', () => {
     composeMock.mockClear();
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
     const view = makeNear0View();
-    const state = makeState({ draw: drawSpy }, SCENE_EARTH);
+    const state = makeState({ draw: drawSpy }, SEEDED_EARTH);
 
     earthLayer.draw(PASS_STUB, view, CTX_STUB, state);
 
@@ -321,9 +335,9 @@ describe('earthLayer.draw', () => {
     // so the f32-narrowed slot equals Math.fround of the recomputed value exactly.
     const expectedCam = camPosLocal(
       view.camPos,
-      SCENE_EARTH.positionMpc,
-      SCENE_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC,
-      SCENE_EARTH.orientation,
+      SEEDED_EARTH.positionMpc,
+      SEEDED_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC,
+      SEEDED_EARTH.orientation,
     );
     expect(uniforms[20]).toBe(Math.fround(expectedCam[0]));
     expect(uniforms[21]).toBe(Math.fround(expectedCam[1]));
@@ -348,7 +362,7 @@ describe('earthLayer.draw', () => {
 
   it('is a no-op when the earthRenderer handle is null (pre-bootstrap)', () => {
     const view = makeNear0View();
-    const state = makeState(null, SCENE_EARTH);
+    const state = makeState(null, SEEDED_EARTH);
     expect(() => earthLayer.draw(PASS_STUB, view, CTX_STUB, state)).not.toThrow();
   });
 

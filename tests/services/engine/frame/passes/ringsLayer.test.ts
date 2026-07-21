@@ -49,10 +49,10 @@ import { composeBodyMvp } from '../../../../../src/utils/camera/composeBodyMvp';
 vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
   sceneBodyStates: vi.fn((state: EngineState): ReadonlyMap<string, BodyState> => {
     const m = new Map<string, BodyState>();
-    for (const b of state.data.bodies.planets ?? []) {
+    for (const b of (state.data.bodies.planets ?? []) as readonly SeededPlanet[]) {
       m.set(b.id, { positionMpc: b.positionMpc, orientation: b.orientation, meanAnomalyRad: 0 });
     }
-    const earth = state.data.bodies.earth;
+    const earth = state.data.bodies.earth as SeededPlanet | null;
     if (earth)
       m.set(earth.id, {
         positionMpc: earth.positionMpc,
@@ -64,6 +64,11 @@ vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
 }));
 
 const composeMock = composeBodyMvp as unknown as ReturnType<typeof vi.fn>;
+
+// A test fixture pairing the identity record with the J2000 state the snapshot
+// carries — position + orientation were lifted off the record onto the derive, so
+// the fixture supplies them here (keyed by id, refs reused by the mock above).
+type SeededPlanet = PlanetBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
 
 const PASS_STUB = {
   setPipeline: vi.fn(),
@@ -80,7 +85,7 @@ const IDENTITY_MAT3: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 const SATURN_RING = SCENE_RINGS.find((r) => r.textureId === 'saturn-ring')!;
 
 /** Saturn sitting down +x, firmly resolved on the 720-tall/60° fixture. */
-function saturnBody(orientation: Mat3 = IDENTITY_MAT3): PlanetBody {
+function saturnBody(orientation: Mat3 = IDENTITY_MAT3): SeededPlanet {
   const radiusKm = 58232;
   const distanceKm = radiusKm * 5;
   return {

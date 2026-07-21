@@ -24,6 +24,11 @@ import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
+// A test fixture pairing the identity record with the J2000 state the snapshot
+// carries — position + orientation were lifted off the record onto the derive,
+// so the fixture supplies them here for the split to read (keyed by id).
+type SeededPlanet = PlanetBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
+
 const VIEWPORT_HEIGHT_PX = 720;
 const FOV_Y_RAD = Math.PI / 3;
 const CAM: Vec3 = [0, 0, 0];
@@ -33,7 +38,7 @@ const CAM: Vec3 = [0, 0, 0];
  * origin. `distanceKm = 5·radiusKm` subtends ~0.4 rad (hundreds of px, firmly
  * resolved); `distanceKm = 1 AU` subtends ~0.01 px (deep sub-pixel glint).
  */
-function bodyAt(id: string, radiusKm: number, distanceKm: number): PlanetBody {
+function bodyAt(id: string, radiusKm: number, distanceKm: number): SeededPlanet {
   return {
     id,
     label: id,
@@ -47,7 +52,7 @@ function bodyAt(id: string, radiusKm: number, distanceKm: number): PlanetBody {
 const CLOSE = (radiusKm: number) => radiusKm * 5; // resolved (~hundreds of px)
 const AU_KM = SCALE_UNITS.AU_TO_MPC / SCALE_UNITS.KM_TO_MPC; // 1 AU in km → deep sub-pixel
 
-function partition(bodies: readonly PlanetBody[], resident: (id: string) => boolean) {
+function partition(bodies: readonly SeededPlanet[], resident: (id: string) => boolean) {
   // The apparent-size test reads each body's position from the per-frame snapshot
   // (keyed by id), not a baked record field — build it from the fixture bodies'
   // own positions so the split sees the same values it always has.

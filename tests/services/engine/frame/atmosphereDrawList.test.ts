@@ -15,6 +15,8 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { atmosphereDrawList } from '../../../../src/services/engine/frame/atmosphereDrawList';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
+import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
+import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { ATMOSPHERE_PARAMS } from '../../../../src/data/bodies/atmosphereParams';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/services/engine/frame/foregroundMaxDistance';
@@ -28,17 +30,17 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 
 // The derivation resolves each body's live position/orientation from the per-frame
-// body-state snapshot (keyed by id). Stub it to a map built from the fixture
-// bodies, REUSING each record's own positionMpc/orientation refs — so the list
+// body-state snapshot (keyed by id). Stub it to a map built from the SeededBody
+// fixtures, REUSING each fixture's own positionMpc/orientation refs — so the list
 // resolves the exact fixture values (identity-equal), keeping the assertions below
 // intact while the reads move off the baked record fields.
 vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
   sceneBodyStates: vi.fn((state: EngineState): ReadonlyMap<string, BodyState> => {
     const m = new Map<string, BodyState>();
-    for (const b of state.data.bodies.planets ?? []) {
+    for (const b of (state.data.bodies.planets ?? []) as readonly SeededPlanet[]) {
       m.set(b.id, { positionMpc: b.positionMpc, orientation: b.orientation, meanAnomalyRad: 0 });
     }
-    const earth = state.data.bodies.earth;
+    const earth = state.data.bodies.earth as SeededEarth | null;
     if (earth)
       m.set(earth.id, {
         positionMpc: earth.positionMpc,
@@ -48,6 +50,19 @@ vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
     return m;
   }),
 }));
+
+// Test fixtures pairing the identity records with the J2000 state the snapshot
+// carries — position + orientation were lifted off the record onto the derive, so
+// the fixtures supply them here (Earth's sourced from the derive so the values are
+// the real J2000 ones; refs stay stable across the mock + the assertions).
+type SeededEarth = EarthBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
+type SeededPlanet = PlanetBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
+const EARTH_STATE = deriveBodyStates(CONST_J2000).get('earth')!;
+const SEEDED_EARTH: SeededEarth = {
+  ...SCENE_EARTH,
+  positionMpc: EARTH_STATE.positionMpc,
+  orientation: EARTH_STATE.orientation,
+};
 
 /**
  * The minimal EngineState the derivation reads: the seeded Earth + planet list
@@ -60,7 +75,7 @@ function makeState(init: {
   return {
     data: {
       bodies: {
-        earth: 'earth' in init ? (init.earth ?? null) : SCENE_EARTH,
+        earth: 'earth' in init ? (init.earth ?? null) : SEEDED_EARTH,
         planets: init.planets ?? [],
       },
     },
@@ -92,10 +107,10 @@ function camRadiiOut(body: { positionMpc: Vec3; radiusKm: number }, radii: numbe
 }
 
 /** A body with no ATMOSPHERE_PARAMS row today — a synthetic id absent from the table. */
-const NO_ROW_PLANET: PlanetBody = {
+const NO_ROW_PLANET: SeededPlanet = {
   id: 'atmosphereless-test-body',
   label: 'No Atmosphere',
-  positionMpc: SCENE_EARTH.positionMpc,
+  positionMpc: SEEDED_EARTH.positionMpc,
   radiusKm: 6371,
   albedo: [0.5, 0.5, 0.5],
   orientation: [...IDENTITY_MAT3] as Mat3,
@@ -104,9 +119,9 @@ const NO_ROW_PLANET: PlanetBody = {
 describe('atmosphereDrawList', () => {
   it('includes a body with a row, in near-field range, and a supra-pixel disc', () => {
     // Five Earth-radii out: a large disc, well clear of the sub-pixel floor.
-    const list = atmosphereDrawList(makeState({}), makeCtx(camRadiiOut(SCENE_EARTH, 5)));
+    const list = atmosphereDrawList(makeState({}), makeCtx(camRadiiOut(SEEDED_EARTH, 5)));
     expect(list).toHaveLength(1);
-    expect(list[0]!.body).toBe(SCENE_EARTH);
+    expect(list[0]!.body).toBe(SEEDED_EARTH);
     expect(list[0]!.params).toBe(ATMOSPHERE_PARAMS['earth']);
   });
 
@@ -123,7 +138,7 @@ describe('atmosphereDrawList', () => {
   it('excludes a body beyond FOREGROUND_MAX_DISTANCE_MPC', () => {
     const list = atmosphereDrawList(
       makeState({}),
-      makeCtx(camRadiiOut(SCENE_EARTH, 5), FOREGROUND_MAX_DISTANCE_MPC),
+      makeCtx(camRadiiOut(SEEDED_EARTH, 5), FOREGROUND_MAX_DISTANCE_MPC),
     );
     expect(list).toHaveLength(0);
   });
@@ -131,7 +146,7 @@ describe('atmosphereDrawList', () => {
   it('excludes a body whose disc is sub-pixel', () => {
     // ~3000 radii out drops the disc under one pixel at this fov/height, while
     // the camera stays inside the near-field edge (still a sub-picometre Mpc).
-    const list = atmosphereDrawList(makeState({}), makeCtx(camRadiiOut(SCENE_EARTH, 3000)));
+    const list = atmosphereDrawList(makeState({}), makeCtx(camRadiiOut(SEEDED_EARTH, 3000)));
     expect(list).toHaveLength(0);
   });
 

@@ -3,8 +3,6 @@ import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBo
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { ORBITAL_ELEMENTS, elementsById } from '../../../../src/data/bodies/orbitalElements';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
-import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
-import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
 
 const states = deriveBodyStates(CONST_J2000);
@@ -47,21 +45,5 @@ describe('deriveBodyStates', () => {
     // carries a baked IAU rotation; an untextured one (Titan) carries identity.
     expect(states.get('titan')!.orientation).toEqual([...IDENTITY_MAT3]);
     expect(states.get('earth')!.orientation).not.toEqual([...IDENTITY_MAT3]);
-  });
-
-  it('reproduces the current baked maker output exactly (zero-change proof)', () => {
-    // The prep guarantee: the derive is value-identical to today's module-load
-    // baked SCENE_PLANETS / SCENE_EARTH. Legitimate now because both paths still
-    // exist. NOTE: Task A11 deletes the baked side — this test then compares
-    // against a fixture or is retired to the structural assertions above.
-    const earthState = states.get('earth')!;
-    expect(earthState.positionMpc).toEqual(SCENE_EARTH.positionMpc);
-    expect(earthState.orientation).toEqual(SCENE_EARTH.orientation);
-
-    for (const body of SCENE_PLANETS) {
-      const s = states.get(body.id)!;
-      expect(s.positionMpc).toEqual(body.positionMpc);
-      expect(s.orientation).toEqual(body.orientation);
-    }
   });
 });

@@ -5,9 +5,14 @@ import {
 } from '../../../../src/services/engine/presentation/sceneBodyLabels';
 import { FAMOUS_LABEL_STYLE } from '../../../../src/services/engine/presentation/famousLabelStyle';
 import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
-import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
+import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
+import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
+
+// Earth's label position comes from the derived J2000 snapshot, the same source
+// `sceneBodyLabels` reads; RENDER_ORIGIN_MPC is the Sun so worldPos == positionMpc.
+const EARTH_POS = deriveBodyStates(CONST_J2000).get('earth')!.positionMpc;
 
 describe('sceneBodyLabels', () => {
   const labels = sceneBodyLabels();
@@ -32,7 +37,7 @@ describe('sceneBodyLabels', () => {
     const sun = labels.find((label) => label.text === 'Sun')!;
     expect(sun.worldPos).toEqual([0, 0, 0]);
     const earth = labels.find((label) => label.text === 'Earth')!;
-    expect(earth.worldPos).toEqual([...SCENE_EARTH.positionMpc]);
+    expect(earth.worldPos).toEqual([...EARTH_POS]);
   });
 
   it('tints each label from its body record (spectral colour / albedo / Earth blue)', () => {

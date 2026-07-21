@@ -3,11 +3,13 @@
  *
  * Body-aware consumers that iterate the flat `SCENE_BODIES` registry (the
  * command-palette rows, the `body-<id>` focus resolver, the selection-row
- * extractor) only ever read the fields the three shapes share — `id`, `label`,
- * `positionMpc`, `radiusKm` — so the union is the honest type for the registry:
- * it names what a registry entry can be without forcing every entry into
- * Earth's texture-carrying shape or inventing a fourth "common base" record
- * that the seeds would then have to be re-projected into.
+ * extractor) only ever read the identity fields the three shapes share — `id`,
+ * `label`, `radiusKm` — so the union is the honest type for the registry: it
+ * names what a registry entry can be without forcing every entry into Earth's
+ * texture-carrying shape or inventing a fourth "common base" record that the
+ * seeds would then have to be re-projected into. Position lives elsewhere: only
+ * the star arm keeps a baked `positionMpc` (stars do not move); the planet and
+ * Earth arms carry no position — their state is derived by `deriveBodyStates`.
  */
 
 import type { EarthBody } from './EarthBody';
