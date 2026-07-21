@@ -229,7 +229,7 @@ the overlay occlusion that draw order used to.
 
 ### Task 6: Prep B ratified-look visual checkpoint (no commit)
 
-- [ ] Ask the user to look: bodies-over-starlight now tone-maps **once in linear**
+- [x] Ask the user to look: bodies-over-starlight now tone-maps **once in linear**
       (`tonemap(fg over hdr)`), an imperceptible-to-better change; the Sun's limb over the
       starfield and the COSMO overlays behind bodies must read correctly (the overlays now
       occlude via Prep A coverage, not draw order). This is the ratified look change (spec
