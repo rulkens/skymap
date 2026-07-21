@@ -58,6 +58,8 @@ import { resizeCanvasToDisplay } from '../../gpu/device';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
 import { produceStructureMarkers } from '../presentation/produceStructureMarkers';
 import { deriveFrameContext } from './frameContext';
+import { deriveBodyStates } from './deriveBodyStates';
+import { sceneBodyStates } from './sceneBodyStates';
 import { prepareStarCut } from './passes/starCatalogLayer';
 import { deriveSourceMasks } from './deriveSourceMasks';
 import { renderFrame } from './renderFrame';
@@ -65,7 +67,11 @@ import { drawPickDebugOverlay } from './drawPickDebugOverlay';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
 import { commitCameraPose, cancelCameraTween } from '../../../state/camera/cameraSlice';
 import { computeScaleInfo } from '../helpers/scaleBar';
-import { engineScaleChanged } from '../../../state/engine/engineSlice';
+import { engineScaleChanged, engineTimeReported } from '../../../state/engine/engineSlice';
+import { deriveSimDays } from '../../../utils/time/deriveSimDays';
+import { selectTimeState } from '../../../state/time/selectors';
+import { throttleByTime } from '../../../utils/throttle/throttleByTime';
+import { distanceMpc } from '../../../utils/math/distanceMpc';
 
 /**
  * Desired scale-bar width in CSS pixels. The engine computes this per-frame
@@ -75,6 +81,17 @@ import { engineScaleChanged } from '../../../state/engine/engineSlice';
  * collide with the InfoCard.
  */
 const SCALE_TARGET_PX = 150;
+
+/**
+ * Rate-limit the `engineTimeReported` publication to ~4 Hz. The store field it
+ * writes feeds presentational time/distance cards, which do not need a 60 Hz
+ * firehose — a per-frame dispatch would churn React for a value humans read at
+ * reading speed. The gate is created ONCE at module scope (not per frame): a
+ * fresh `throttleByTime(250)` every call would reset its closure state and
+ * defeat the throttle. It pairs with the reducer's dedup-on-write, so an
+ * unchanged report inside an open window still costs nothing downstream.
+ */
+const publishTimeReportGate = throttleByTime(250);
 
 /**
  * Run one frame of the render loop. Called every rAF tick by the scheduler in
@@ -149,6 +166,24 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // run before `deriveFrameContext` so a camera-only-ready frame still makes
   // motion progress before we early-return for missing GPU handles.
   const rootState = deps.cb.store.getState();
+
+  // ── Sim-clock instant for this frame (derived ONCE, before produce) ───────
+  //
+  // `deriveSimDays` resolves the sim clock from the time-intent slice plus this
+  // frame's wall-clock sample — pure, no accumulator. We compute it here, above
+  // the camera produce step, for two reasons:
+  //   1. A body-following camera driver (a later feature) runs INSIDE the
+  //      produce step and must aim at where the body is THIS frame, so the body
+  //      snapshot has to exist before `runCameraDrivers` is called.
+  //   2. `deriveFrameContext` stamps `simDays` onto `ctx` (below) so every
+  //      per-frame body reader shares one epoch via `sceneBodyStates(state, ctx)`.
+  //
+  // `deriveBodyStates(simDays)` primes the one-deep memo at this instant so the
+  // pre-produce driver and every post-ready pass reader hit the SAME cached map
+  // by reference — one Kepler solve per frame, not one per reader. The result is
+  // intentionally discarded here; the memo IS the shared snapshot.
+  const simDays = deriveSimDays(selectTimeState(rootState), nowMs);
+  deriveBodyStates(simDays);
 
   // ── (1) PRODUCE the pose from the driver table ────────────────────────────
   //
@@ -276,6 +311,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     state.cameraRuntime.projection,
     masks.draw,
     nowMs,
+    simDays,
   );
   if (!ctx.isReady) {
     // Essential wake: bootstrap populates cam/GPU handles without waking any
@@ -311,6 +347,28 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const focusUniforms = state.subsystems.structureFocus.produceFocusUniforms(nowMs);
   ctx.focusBlend = focusUniforms.blend;
   ctx.focus = focusUniforms;
+
+  // ── Time-status publication (throttled) ───────────────────────────────────
+  //
+  // Publish the frame's sim instant + the camera→focused-body distance to the
+  // store so presentational cards read them off `state.engine.timeReport`
+  // without ever touching the engine snapshot (the store-boundary rule). The
+  // ~4 Hz gate keeps this off the per-frame React path; the reducer dedups an
+  // unchanged report. `focusedBodyDistanceMpc` is the distance from the RENDERED
+  // camera position to the focused scene body's position IN THIS FRAME'S
+  // SNAPSHOT — so it tracks the body as the clock moves it — and is null unless
+  // an orbital body (present in the snapshot) is the current focus. A star or
+  // structure focus, or no focus, reports null.
+  if (publishTimeReportGate(nowMs)) {
+    let focusedBodyDistanceMpc: number | null = null;
+    if (focusRow !== null && focusRow.type === 'body') {
+      const bodyState = sceneBodyStates(state, ctx).get(focusRow.id);
+      if (bodyState !== undefined) {
+        focusedBodyDistanceMpc = distanceMpc(ctx.drawCamPos, bodyState.positionMpc);
+      }
+    }
+    deps.cb.store.dispatch(engineTimeReported({ simDays, focusedBodyDistanceMpc }));
+  }
 
   // ── Per-frame impostor planners ───────────────────────────────────────────
   //

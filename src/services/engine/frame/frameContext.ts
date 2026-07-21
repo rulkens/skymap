@@ -116,6 +116,14 @@ import { deriveSlabs } from './slabs';
  * context so every animated consumer reads the frame clock instead of
  * sampling `performance.now()` itself — the seam a frame-by-frame recorder
  * needs to step time deterministically.
+ *
+ * `simDays` is the frame's sim-clock instant (Julian days), derived by
+ * `runFrame` from the time-intent slice before the camera produce step and
+ * stamped here so `sceneBodyStates` evaluates the body snapshot at one agreed
+ * epoch every reader shares. It is a separate axis from `nowMs`: `nowMs` is
+ * wall-clock (drives fades and ramps), `simDays` is scene time (drives where
+ * the planets are), and the two decouple whenever the clock is paused or
+ * scrubbed.
  */
 export function deriveFrameContext(
   state: EngineState,
@@ -124,6 +132,7 @@ export function deriveFrameContext(
   projection: CameraProjection,
   visibleSourceMask: number,
   nowMs: number,
+  simDays: number,
 ): FrameContext {
   // The bootstrap gate. Every site that asks 'is the engine bootstrapped?' —
   // per-frame, slot-commit, public-handle — funnels through the one
@@ -181,6 +190,7 @@ export function deriveFrameContext(
     drawCamPos,
     drawPxPerRad,
     nowMs,
+    simDays,
     fovYRad: cam.fovYRad,
     focusBlend: 0,
     visibleSourceMask,

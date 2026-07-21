@@ -55,6 +55,24 @@ vi.mock('../../../../src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
 
+// deriveBodyStates is wrapped (not replaced) so the sim-clock test can (a)
+// record the exact instant runFrame primes the body snapshot at, and (b) prove
+// that prime runs BEFORE the camera produce step. The spy delegates to the REAL
+// derive so construction-time consumers (sceneBodyLabels) still get real maps;
+// it just appends the instant to a hoisted log the stub driver's pose() also
+// writes to, so one array captures the derive→produce order.
+const timeOrder = vi.hoisted(() => ({ log: [] as string[] }));
+vi.mock('../../../../src/services/engine/frame/deriveBodyStates', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../../src/services/engine/frame/deriveBodyStates')>();
+  return {
+    ...actual,
+    deriveBodyStates: vi.fn((simDays: number) => {
+      timeOrder.log.push(`derive:${simDays}`);
+      return actual.deriveBodyStates(simDays);
+    }),
+  };
+});
+
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
 import { buildCameraDrivers } from '../../../../src/services/engine/camera/cameraDrivers';
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
@@ -67,11 +85,13 @@ import {
   commitCameraPose,
 } from '../../../../src/state/camera/cameraSlice';
 import { engineScaleChanged } from '../../../../src/state/engine/engineSlice';
+import { setSimDays } from '../../../../src/state/time/timeSlice';
 import { rootReducer } from '../../../../src/store/rootReducer';
 import type { RunFrameDeps } from '../../../../src/@types/engine/frame/RunFrameDeps';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../src/data/sources';
 
 /** Build a real Redux store from the production root reducer. */
@@ -409,6 +429,42 @@ describe('runFrame — clipPlayer tick ordering (Task 12)', () => {
     runFrame(state, deps, 12345);
 
     expect(state.subsystems.clipPlayer.tick).toHaveBeenCalledWith(12345);
+  });
+});
+
+describe('runFrame — sim clock (Task 8)', () => {
+  it('derives simDays from the time intent and primes the body snapshot before the camera produce step', () => {
+    // The frame must resolve its sim instant and prime the body snapshot BEFORE
+    // it produces the camera pose, so a body-following driver (a later feature)
+    // can aim at where the body is THIS frame. This test drives a manual,
+    // non-J2000 clock and asserts (1) the snapshot is derived at that exact
+    // instant, and (2) the derive precedes the produce step.
+    timeOrder.log.length = 0;
+    const store = makeStore();
+    const NOW = 5000;
+    const SCRUBBED = 2_460_000.5; // a manual instant, far from the J2000 seed
+    // Manual mode anchored at SCRUBBED with realMs === NOW: deriveSimDays at
+    // nowMs=NOW returns exactly SCRUBBED (zero real time elapsed since anchor).
+    store.dispatch(setSimDays({ simDays: SCRUBBED, nowMs: NOW }));
+
+    const state = makeCamState();
+    // A stub driver that outranks every real driver and records WHEN the produce
+    // step runs (the resolver calls only the highest-priority active driver's
+    // pose). The renderer stays null, so the frame bails right after produce.
+    const stub: CameraDriver = {
+      id: 'stub',
+      priority: 1000,
+      isActive: () => true,
+      pose: () => {
+        timeOrder.log.push('produce');
+        return { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
+      },
+    };
+    const deps: RunFrameDeps = { ...makeCamDeps(state, store), drivers: [stub] };
+
+    runFrame(state, deps, NOW);
+
+    expect(timeOrder.log).toEqual([`derive:${SCRUBBED}`, 'produce']);
   });
 });
 

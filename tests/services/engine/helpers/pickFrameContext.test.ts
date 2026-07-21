@@ -121,6 +121,9 @@ describe('pickFrameContext', () => {
       state.cameraRuntime.projection,
       deriveSourceMasks(state).pick,
       0,
+      // simDays does not affect the view-projection this test compares; any
+      // valid epoch reproduces the same vp.
+      0,
     );
     expect(expected.isReady).toBe(true);
     if (!expected.isReady) return;

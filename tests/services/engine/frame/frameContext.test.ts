@@ -26,6 +26,7 @@ import type { CameraProjection } from '../../../../src/@types/camera/CameraProje
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
 import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
 import { deriveSlabs, NEAR0, COSMO } from '../../../../src/services/engine/frame/slabs';
+import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 
 const RESTING_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
 const PROJECTION: CameraProjection = { fovYRad: 1, aspect: 16 / 9, near: 0.1, far: 10000 };
@@ -88,6 +89,7 @@ describe('deriveFrameContext — not-ready branch', () => {
       PROJECTION,
       0xffffffff,
       0,
+      CONST_J2000,
     );
     expect(ctx.isReady).toBe(false);
   });
@@ -100,6 +102,7 @@ describe('deriveFrameContext — not-ready branch', () => {
       PROJECTION,
       0xffffffff,
       0,
+      CONST_J2000,
     );
     expect(ctx.isReady).toBe(false);
   });
@@ -112,6 +115,7 @@ describe('deriveFrameContext — not-ready branch', () => {
       PROJECTION,
       0xffffffff,
       0,
+      CONST_J2000,
     );
     expect(ctx.isReady).toBe(false);
   });
@@ -124,6 +128,7 @@ describe('deriveFrameContext — not-ready branch', () => {
       PROJECTION,
       0xffffffff,
       0,
+      CONST_J2000,
     );
     expect(ctx.isReady).toBe(false);
   });
@@ -133,7 +138,7 @@ describe('deriveFrameContext — ready branch', () => {
   it('assembles ctx.cam from pose + projection (not from state.cam)', () => {
     const pose: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 50 };
     const projection: CameraProjection = { fovYRad: 1.2, aspect: 2, near: 0.01, far: 5000 };
-    const ctx = deriveFrameContext(makeState(), makeCanvas(), pose, projection, 0xffffffff, 0);
+    const ctx = deriveFrameContext(makeState(), makeCanvas(), pose, projection, 0xffffffff, 0, CONST_J2000);
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
     // ctx.cam must reflect the pose and projection.
@@ -155,6 +160,7 @@ describe('deriveFrameContext — ready branch', () => {
       projection,
       0xffffffff,
       0,
+      CONST_J2000,
     );
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
@@ -164,7 +170,7 @@ describe('deriveFrameContext — ready branch', () => {
   it('drawPxPerRad uses projection.fovYRad', () => {
     const projection: CameraProjection = { fovYRad: 1, aspect: 16 / 9, near: 0.1, far: 10000 };
     const canvas = makeCanvas(1920, 1080);
-    const ctx = deriveFrameContext(makeState(), canvas, RESTING_POSE, projection, 0xffffffff, 0);
+    const ctx = deriveFrameContext(makeState(), canvas, RESTING_POSE, projection, 0xffffffff, 0, CONST_J2000);
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
     // pxPerRad = height / (2 * tan(fovY / 2))
@@ -174,7 +180,7 @@ describe('deriveFrameContext — ready branch', () => {
 
   it('ctx.vp matches computeViewProj(assembleOrbitCamera(pose, projection))', () => {
     const pose: CameraPose = { target: [0, 0, 0], yaw: 0.3, pitch: 0.1, distance: 100 };
-    const ctx = deriveFrameContext(makeState(), makeCanvas(), pose, PROJECTION, 0xffffffff, 0);
+    const ctx = deriveFrameContext(makeState(), makeCanvas(), pose, PROJECTION, 0xffffffff, 0, CONST_J2000);
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
     const expected = computeViewProj(assembleOrbitCamera(pose, PROJECTION));
@@ -183,7 +189,7 @@ describe('deriveFrameContext — ready branch', () => {
 
   it('populates ctx.slabs from deriveSlabs(cam, vp) — the single per-frame derivation', () => {
     const pose: CameraPose = { target: [0, 0, 0], yaw: 0.3, pitch: 0.1, distance: 100 };
-    const ctx = deriveFrameContext(makeState(), makeCanvas(), pose, PROJECTION, 0xffffffff, 0);
+    const ctx = deriveFrameContext(makeState(), makeCanvas(), pose, PROJECTION, 0xffffffff, 0, CONST_J2000);
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
     const cam = assembleOrbitCamera(pose, PROJECTION);
@@ -203,6 +209,7 @@ describe('deriveFrameContext — ready branch', () => {
       PROJECTION,
       0xffffffff,
       0,
+      CONST_J2000,
     );
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
@@ -220,6 +227,7 @@ describe('deriveFrameContext — ready branch', () => {
       PROJECTION,
       0xffffffff,
       0,
+      CONST_J2000,
     );
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
@@ -230,7 +238,7 @@ describe('deriveFrameContext — ready branch', () => {
 
   it('exposes visibleSourceMask and a seeded focus on the ready context', () => {
     const mask = 0b1011;
-    const ctx = deriveFrameContext(makeState(), makeCanvas(), RESTING_POSE, PROJECTION, mask, 0);
+    const ctx = deriveFrameContext(makeState(), makeCanvas(), RESTING_POSE, PROJECTION, mask, 0, CONST_J2000);
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
     expect(ctx.visibleSourceMask).toBe(mask);
@@ -245,9 +253,30 @@ describe('deriveFrameContext — ready branch', () => {
       PROJECTION,
       0xffffffff,
       1234.5,
+      CONST_J2000,
     );
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
     expect(ctx.nowMs).toBe(1234.5);
+  });
+
+  it('stamps simDays onto the ready context (the frame epoch every body reader shares)', () => {
+    // simDays is a separate axis from nowMs: it is scene time (where the planets
+    // are), threaded through so `sceneBodyStates(state, ctx)` evaluates the body
+    // snapshot at one agreed instant. A non-J2000 value proves it is the passed
+    // argument, not a re-derive.
+    const SCRUBBED = 2_460_000.25;
+    const ctx = deriveFrameContext(
+      makeState(),
+      makeCanvas(),
+      RESTING_POSE,
+      PROJECTION,
+      0xffffffff,
+      0,
+      SCRUBBED,
+    );
+    expect(ctx.isReady).toBe(true);
+    if (!ctx.isReady) return;
+    expect(ctx.simDays).toBe(SCRUBBED);
   });
 });

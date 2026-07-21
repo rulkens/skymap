@@ -123,6 +123,7 @@ describe('slabViewOf', () => {
       drawCamPos: [cam.position[0], cam.position[1], cam.position[2]],
       drawPxPerRad: 1000,
       nowMs: 0,
+      simDays: 0,
       fovYRad: cam.fovYRad,
       focusBlend: 0,
       visibleSourceMask: 0xffffffff,
