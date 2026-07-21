@@ -241,6 +241,9 @@ function BodyDetailCard({
                 value={`${entry.variable.type} (mag ${entry.variable.magRange[0]}–${entry.variable.magRange[1]})`}
               />
             )}
+          </div>
+
+          <div className={styles.cardSection}>
             <WikipediaRow title={starWikipediaTitle(entry.names[0]!)} />
           </div>
 
