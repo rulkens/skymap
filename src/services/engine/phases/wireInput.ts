@@ -56,6 +56,8 @@ import {
   clearSelection,
 } from '../../../state/selection/selectionSlice';
 import { selectSelectedRef, selectFocusRef } from '../../../state/selection/selectors';
+import { selectOrientation } from '../../../state/settings/selectors';
+import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
@@ -144,7 +146,12 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // is no jump on the first follow frame.
   const fovYRad = DEFAULT_FOV_Y_RAD;
   const simDays = unixMsToJulianDays(Date.now());
-  const initialCam = computeInitialCamera({ fovYRad, simDays });
+  // The committed orientation basis the boot pose encodes through, so first-paint
+  // yaw/pitch round-trip under the same frame the render path decodes with. A
+  // `#orientation=<frame>` deep link is already committed by this async phase (see
+  // the boot-ordering note below), so this reads the URL frame when present.
+  const frameBasis = ORIENTATION_FRAMES[selectOrientation(store.getState())];
+  const initialCam = computeInitialCamera({ fovYRad, simDays, frameBasis });
 
   // `InitialCam` is exactly an `OrbitCameraInit` minus `aspect` (reset uses the
   // live canvas ratio, not a captured one), so the camera is the framing

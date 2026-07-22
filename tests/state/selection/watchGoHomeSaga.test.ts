@@ -17,6 +17,8 @@ import { watchGoHomeSaga } from '../../../src/state/selection/watchGoHomeSaga';
 import { goHome } from '../../../src/state/selection/goHome';
 import { EARTH_REF } from '../../../src/data/selection/earthRef';
 import { earthHomePose } from '../../../src/services/engine/camera/earthHomePose';
+import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
+import { selectOrientation } from '../../../src/state/settings/selectors';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { setSimDays, pause } from '../../../src/state/time/timeSlice';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
@@ -67,8 +69,11 @@ describe('watchGoHomeSaga', () => {
     expect(tween).not.toBeNull();
     expect(tween!.from).toEqual(FROM);
 
+    // The pose is encoded through the store's committed orientation basis (not
+    // legacy identity) — recomputing with that basis proves the saga threads it.
     const simDays = deriveSimDays(store.getState()[timeRoute], performance.now());
-    expect(tween!.to).toEqual(earthHomePose(simDays, FOV));
+    const frameBasis = ORIENTATION_FRAMES[selectOrientation(store.getState())];
+    expect(tween!.to).toEqual(earthHomePose(simDays, FOV, frameBasis));
   });
 
   it('goHome is a no-op when the camera runtime is null', async () => {

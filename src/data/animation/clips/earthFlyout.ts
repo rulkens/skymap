@@ -75,6 +75,10 @@ export function earthFlyout(simDays: number): Clip {
       start: {
         target,
         distance: START_DISTANCE_MPC,
+        // Authored in the ecliptic frame: pitch 0 puts the camera on the
+        // ecliptic plane looking at Earth. These are frame-relative angles,
+        // not a world-equatorial direction — the same literals read a
+        // different world-space direction if the active frame changes.
         yaw: 0,
         pitch: 0,
       },

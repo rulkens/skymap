@@ -33,6 +33,7 @@
  */
 
 import type { InitialCam } from '../../../@types/camera/InitialCam';
+import type { Mat3 } from '../../../@types/math/Mat3';
 import { earthHomePose } from './earthHomePose';
 
 /** Initial camera distance in Mpc — sits the viewer inside the Local Group. */
@@ -44,9 +45,14 @@ export const FAR_CLIP_MPC = 50000;
 /** Default vertical field-of-view in radians (60°) — the bootstrap lens setting. */
 export const DEFAULT_FOV_Y_RAD = (Math.PI / 180) * 60;
 
-/** Eye-tuned bearing that faces the galactic disk — aimed at by the tour's opening/closing beats. */
-export const GALACTIC_DISC_YAW_RAD = 4.4889;
-export const GALACTIC_DISC_PITCH_RAD = -0.0644;
+/**
+ * Eye-tuned bearing that faces the galactic disk — aimed at by the tour's
+ * opening/closing beats. Encoded in the ecliptic default frame (the value the
+ * shared decode reads through `ORIENTATION_FRAMES.ecliptic`); it points at the
+ * same world direction the legacy Y-up pair `(4.4889, -0.0644)` did.
+ */
+export const GALACTIC_DISC_YAW_RAD = -1.4208;
+export const GALACTIC_DISC_PITCH_RAD = -0.1783;
 
 /**
  * Compute the initial camera snapshot: the Earth home pose at boot time wrapped
@@ -54,22 +60,28 @@ export const GALACTIC_DISC_PITCH_RAD = -0.0644;
  * analytic, so no dependency on loaded catalogs and the camera can be built
  * before any galaxy catalog arrives.
  *
- * @param fovYRad  Vertical field-of-view in radians (e.g. 60° → π/3).
- * @param simDays  Boot sim instant (Julian days) — where Earth is at load.
+ * @param fovYRad     Vertical field-of-view in radians (e.g. 60° → π/3).
+ * @param simDays     Boot sim instant (Julian days) — where Earth is at load.
+ * @param frameBasis  The committed orientation basis
+ *   (`ORIENTATION_FRAMES[settings.orientation]`) the boot pose encodes through,
+ *   so first-paint yaw/pitch round-trip under the same frame the render path
+ *   decodes with. Absent ⇒ identity (world-frame angles). See `earthHomePose`.
  */
 export function computeInitialCamera({
   fovYRad,
   simDays,
+  frameBasis,
 }: {
   fovYRad: number;
   simDays: number;
+  frameBasis?: Mat3;
 }): InitialCam {
   // The home distance is `bodyLikeFraming`'s deliberately UNCLAMPED Earth-scale
   // value — no `clampDistance` here: at ~2e-16 Mpc the Mpc-scale clamp floor
   // would swallow the framing. The wheel-zoom clamps own the floor
   // (MIN_DISTANCE_MPC reaches Earth-surface scale); see `bodyLikeFraming`.
   return {
-    ...earthHomePose(simDays, fovYRad),
+    ...earthHomePose(simDays, fovYRad, frameBasis),
     fovYRad,
     near: 0.01,
     far: FAR_CLIP_MPC,
