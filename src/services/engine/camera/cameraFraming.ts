@@ -17,10 +17,9 @@
  *     ratio fine.
  *   - `near = 0.01` Mpc (10 kpc) — well inside the focus-on tween's
  *     end distance (0.12 Mpc, see `galaxyFocusDistance.ts`).
- *   - `BOOT_YAW_RAD` / `BOOT_PITCH_RAD` — the Milky-Way framing the app
- *     boots with, looking at the galactic disk at first paint. Exported
- *     because the grand tour's opening snaps to the same bearing, so a
- *     tour run always approaches home from the boot orientation.
+ *   - `GALACTIC_DISC_YAW_RAD` / `GALACTIC_DISC_PITCH_RAD` — the eye-tuned
+ *     bearing that faces the galactic disk. The grand tour's opening and
+ *     closing beats aim at this bearing; the app also boots with it.
  */
 
 import { clampDistance } from '../../../utils/camera/clampDistance';
@@ -35,9 +34,9 @@ export const FAR_CLIP_MPC = 50000;
 /** Default vertical field-of-view in radians (60°) — the bootstrap lens setting. */
 export const DEFAULT_FOV_Y_RAD = (Math.PI / 180) * 60;
 
-/** Boot orientation — eye-tuned to face the galactic disk at first paint. */
-export const BOOT_YAW_RAD = 4.4889;
-export const BOOT_PITCH_RAD = -0.0644;
+/** Eye-tuned bearing that faces the galactic disk — aimed at by the tour's opening/closing beats. */
+export const GALACTIC_DISC_YAW_RAD = 4.4889;
+export const GALACTIC_DISC_PITCH_RAD = -0.0644;
 
 /**
  * Compute the initial camera snapshot. Pure constants — no dependency on
@@ -49,8 +48,8 @@ export function computeInitialCamera({ fovYRad }: { fovYRad: number }): InitialC
   return {
     target: [0, 0, 0],
     distance: clampDistance(INITIAL_DISTANCE_MPC),
-    yaw: BOOT_YAW_RAD,
-    pitch: BOOT_PITCH_RAD,
+    yaw: GALACTIC_DISC_YAW_RAD,
+    pitch: GALACTIC_DISC_PITCH_RAD,
     fovYRad,
     near: 0.01,
     far: FAR_CLIP_MPC,
