@@ -46,6 +46,7 @@ import {
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VOLUMES_ENABLED,
   DEFAULT_FLOW,
+  DEFAULT_ORIENTATION,
 } from '../../data/defaults';
 // The "Detail" knob's default is owned by the walk it feeds (single source of
 // truth), so seed the setting straight from it rather than restating 0.05.
@@ -75,6 +76,11 @@ import type { StarCatalogItemSettings } from '../../@types/settings/StarCatalogI
 
 export function buildInitialSettings(): EngineSettingsState {
   return {
+    // Camera orientation frame — the bare scalar "which pole is up" view
+    // preference (spec §3.2). Seeded from `DEFAULT_ORIENTATION` so that file
+    // stays the default's single source of truth (mirroring `tonemap.curve` ←
+    // `DEFAULT_TONE_MAP_CURVE`).
+    orientation: DEFAULT_ORIENTATION,
     // Galaxy catalog layer: master gate on + shared billboard appearance knobs +
     // one item row per galaxy catalog. Rows are DERIVED from the galaxy-catalog
     // registry entries so the seed can't drift from the galaxy catalog set — and,

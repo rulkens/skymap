@@ -53,6 +53,7 @@ import {
   DEFAULT_FLOW,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_HIGHLIGHT_FALLBACK,
+  DEFAULT_ORIENTATION,
   DEFAULT_MILKY_WAY_ENABLED,
   DEFAULT_MILKY_WAY_LABEL_ENABLED,
   DEFAULT_POINT_SIZE_PX,
@@ -85,6 +86,7 @@ export function makeSettingsFixture(
   overrides: Partial<EngineSettingsState> = {},
 ): EngineSettingsState {
   return {
+    orientation: DEFAULT_ORIENTATION,
     galaxyCatalogs: {
       enabled: true,
       sizePx: DEFAULT_POINT_SIZE_PX,

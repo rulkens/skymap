@@ -52,10 +52,21 @@ import type { PassByDir } from '../../@types/animation/PassByDir';
 import type { ClipPathTuningActive } from '../../@types/settings/ClipPathTuningActive';
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
+import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../data/sources';
 import { maskWith } from '../../utils/maskWith';
 
 export const selectSettings = (state: RootState) => state[settingsRoute];
+
+// --- orientation (bare scalar) ------------------------------------------------
+
+/**
+ * Camera orientation frame — which astronomical pole is "up". A primitive
+ * (string-union) read, so no memoization; the consuming camera code reads it to
+ * pick the frame-local-to-world basis from `ORIENTATION_FRAMES`.
+ */
+export const selectOrientation = (state: RootState): OrientationFrameId =>
+  selectSettings(state).orientation;
 
 // --- galaxyCatalogs cluster ---------------------------------------------------
 

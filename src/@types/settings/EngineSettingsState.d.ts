@@ -59,8 +59,18 @@ import type { SplineMode } from '../animation/SplineMode';
 import type { PassByDir } from '../animation/PassByDir';
 import type { ClipPathTuningActive } from './ClipPathTuningActive';
 import type { RenderStrategy } from '../engine/frame/RenderStrategy';
+import type { OrientationFrameId } from '../camera/OrientationFrameId';
 
 export type EngineSettingsState = {
+  /**
+   * Camera orientation frame — which astronomical pole the camera treats as
+   * "up" (`OrientationFrameId`). A bare scalar view preference, not a cluster:
+   * the world positions never move (they stay equatorial J2000); this only
+   * picks which of the four physically meaningful poles the camera aligns its
+   * up-vector to. Defaults to `'ecliptic'` (see `DEFAULT_ORIENTATION`).
+   */
+  orientation: OrientationFrameId;
+
   /**
    * Galaxy catalog point-billboard controls — the shared appearance knobs that
    * influence every galaxy catalog's `points.wgsl` draw — plus the galaxy-catalog-layer
