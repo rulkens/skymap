@@ -120,7 +120,15 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // to WebGPU — otherwise `getCurrentTexture()` may return a 300×150 default.
   resizeCanvasToDisplay(canvas);
 
-  const { device, context, format } = await gpuInitGpu(canvas);
+  const { device, context, format, hdr } = await gpuInitGpu(canvas);
+  // HDR-output spike: stamp the swap-chain's HDR-ness onto `state.gpu` so
+  // `deriveFrameContext` can forward it onto `ReadyFrameContext.hdr` — see
+  // `EngineGpuHandles.hdr`'s doc comment for why this one field skips the
+  // null-until-init lifecycle every other field on this bag follows.
+  // `GpuContext.hdr` is optional (see its doc comment); `gpuInitGpu`'s own
+  // return always sets it, but the `?? false` keeps this assignment honest
+  // against the wider optional type.
+  state.gpu.hdr = hdr ?? false;
 
   // Build the canonical fade + source + focus bind-group layouts ONCE —
   // every renderer pipeline below threads these into createPipelineLayout

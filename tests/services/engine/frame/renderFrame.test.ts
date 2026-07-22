@@ -351,6 +351,8 @@ function makeInput(
     renderer: pointRenderer,
     renderTargets,
     texturedDisks: thumbnails,
+    // HDR-output spike: these fixtures exercise the default SDR path.
+    hdr: false,
   };
 
   return {
@@ -617,7 +619,12 @@ describe('renderFrame', () => {
     const args = draw.mock.calls[0]!;
     expect(args[1]).toBe(fx.hdrTargetView);
     expect(args[2]).toBe('replace');
-    expect(args[3]).toEqual({ exposure: fx.settings.exposure, curve: fx.settings.toneMapCurve });
+    expect(args[3]).toEqual({
+      exposure: fx.settings.exposure,
+      curve: fx.settings.toneMapCurve,
+      hdrKneeStart: 0,
+      hdrHeadroom: 0,
+    });
   });
 
   it('records the full frame in canonical order: createEncoder → hdr COSMO pass (points) → hdr NEAR0 pass (milky-way) → composite pass → compositor.draw → finish → submit', () => {

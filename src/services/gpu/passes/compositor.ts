@@ -233,9 +233,11 @@ export function createCompositor(init: {
   const cache = new Map<string, { pipeline: GPURenderPipeline; uniformBuffer: GPUBuffer }>();
 
   // Mixed f32/u32 uniform — pack via two views over one 32-byte
-  // ArrayBuffer. Bytes 24..31 are padding and
-  // stay zero (a fresh ArrayBuffer is zero-filled and we never write
-  // those lanes), satisfying the uniform 16-byte-stride requirement.
+  // ArrayBuffer. Lanes 6 and 7 (bytes 24..31) carry the HDR-output spike's
+  // `hdrKneeStart` / `hdrHeadroom` — see the `if (tone)` / `else` branches
+  // below. They stay zero in the tone-null / SDR case (a fresh ArrayBuffer
+  // is zero-filled), satisfying the uniform 16-byte-stride requirement with
+  // no unused padding left in the buffer.
   const uniformBytes = new ArrayBuffer(32);
   const uniformF32 = new Float32Array(uniformBytes);
   const uniformU32 = new Uint32Array(uniformBytes);
@@ -293,6 +295,10 @@ export function createCompositor(init: {
         uniformF32[2] = DEFAULT_ASINH_SOFTNESS;
         uniformU32[3] = tone.curve >>> 0;
         uniformU32[4] = 1;
+        // HDR spike: 0 unless the caller opted a swap chain into HDR
+        // (`renderFrame` only sets these non-zero when `ctx.hdr` is true).
+        uniformF32[6] = tone.hdrKneeStart;
+        uniformF32[7] = tone.hdrHeadroom;
       } else {
         // No tone-map: exposure 1.0, curve params zeroed, toneEnabled 0.
         // The fragment takes the raw pass-through branch.
@@ -301,6 +307,8 @@ export function createCompositor(init: {
         uniformF32[2] = 0;
         uniformU32[3] = 0;
         uniformU32[4] = 0;
+        uniformF32[6] = 0;
+        uniformF32[7] = 0;
       }
       // preserveAlpha comes from the blend table, NOT the caller — alpha
       // handling is a property of the blend mode.
