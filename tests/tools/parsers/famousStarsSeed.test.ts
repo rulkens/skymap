@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
+  famousHipIds,
   parseFamousStarsSeed,
   validateFamousStarEntry,
   type FamousStarEntry,
@@ -22,6 +23,7 @@ function baseEntry(overrides: Partial<FamousStarEntry> = {}): FamousStarEntry {
     radiusSolar: 764,
     temperatureK: 3600,
     gaiaDr3: '3319948333282076928',
+    hipparcos: [27989],
     description: 'A red supergiant in Orion, one of the brightest stars in the sky.',
     ...overrides,
   };
@@ -44,6 +46,29 @@ describe('famousStarsSeed', () => {
   it('accepts gaiaDr3: null', () => {
     const e = baseEntry({ id: 'sun', gaiaDr3: null });
     expect(validateFamousStarEntry(e).gaiaDr3).toBeNull();
+  });
+
+  it('throws on a missing hipparcos field', () => {
+    // The bright-patch dedup key. Like gaiaDr3, a MISSING field ("not yet
+    // checked") must fail loud; an explicit empty array is the "checked, no
+    // Hp<4 counterpart" value.
+    const e = baseEntry();
+    delete (e as { hipparcos?: number[] }).hipparcos;
+    expect(() => validateFamousStarEntry(e)).toThrow(/hipparcos/);
+  });
+
+  it('accepts an empty hipparcos array', () => {
+    const e = baseEntry({ hipparcos: [] });
+    expect(validateFamousStarEntry(e).hipparcos).toEqual([]);
+  });
+
+  it('throws on a non-integer / out-of-range hipparcos element', () => {
+    expect(() => validateFamousStarEntry(baseEntry({ hipparcos: [12.5] }))).toThrow(/hipparcos/);
+    expect(() => validateFamousStarEntry(baseEntry({ hipparcos: [0] }))).toThrow(/hipparcos/);
+    expect(() => validateFamousStarEntry(baseEntry({ hipparcos: [200000] }))).toThrow(/hipparcos/);
+    expect(() => validateFamousStarEntry(baseEntry({ hipparcos: ['32349'] as never }))).toThrow(
+      /hipparcos/,
+    );
   });
 
   it('throws on a non-digit gaiaDr3 string', () => {
@@ -125,6 +150,20 @@ describe('famousStarsSeed', () => {
     const out = parseFamousStarsSeed(json);
     expect(out.map((e) => e.id)).toEqual(['sirius', 'vega']);
   });
+
+  it('famousHipIds flattens every entry hipparcos array into one set', () => {
+    const set = famousHipIds([
+      baseEntry({ id: 'sirius', hipparcos: [32349] }),
+      // Alpha Centauri's A+B pair — the one two-id entry.
+      baseEntry({ id: 'alpha-centauri', hipparcos: [71681, 71683] }),
+      baseEntry({ id: 'proxima-centauri', hipparcos: [] }),
+    ]);
+
+    expect(set.has(32349)).toBe(true);
+    expect(set.has(71681)).toBe(true);
+    expect(set.has(71683)).toBe(true);
+    expect(set.size).toBe(3);
+  });
 });
 
 // Coverage invariant migrated from the deleted famousStarGaiaIds.test.ts: every
@@ -148,5 +187,15 @@ describe.skipIf(!existsSync(SEED_PATH))('famousStarsSeed — real committed seed
     const sun = entries.find((e) => e.id === 'sun');
     expect(sun).toBeDefined();
     expect(sun!.gaiaDr3).toBeNull();
+  });
+
+  it('every parsed entry carries hipparcos, and Alpha Centauri lists its A+B pair', () => {
+    const entries = parseFamousStarsSeed(readFileSync(SEED_PATH, 'utf8'));
+    for (const e of entries) {
+      expect(Object.prototype.hasOwnProperty.call(e, 'hipparcos')).toBe(true);
+    }
+    const alphaCen = entries.find((e) => e.id === 'alpha-centauri');
+    expect(alphaCen).toBeDefined();
+    expect(alphaCen!.hipparcos).toEqual([71681, 71683]);
   });
 });

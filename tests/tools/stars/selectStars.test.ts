@@ -37,6 +37,7 @@ describe('selectStars', () => {
       hipparcosBright,
       hipToSourceId,
       famousGaiaIds: new Set(),
+      famousHipIds: new Set(),
     });
 
     // The Gaia row (tag 1) is gone; the bright row (tag 9) stands in for it.
@@ -55,6 +56,7 @@ describe('selectStars', () => {
       hipToSourceId: new Map(),
       // The set holds only non-null ids; 3000n is simply not famous and survives.
       famousGaiaIds: new Set([2000n]),
+      famousHipIds: new Set(),
     });
 
     expect(stars).toHaveLength(1);
@@ -69,6 +71,7 @@ describe('selectStars', () => {
       hipparcosBright: [brightRow(7, 8)],
       hipToSourceId: new Map(), // no cross-match: the bright row is a distinct star
       famousGaiaIds: new Set(),
+      famousHipIds: new Set(),
     });
 
     expect(stars).toHaveLength(2);
@@ -87,9 +90,30 @@ describe('selectStars', () => {
       hipparcosBright: [brightRow(11, 6)],
       hipToSourceId,
       famousGaiaIds: new Set([5000n]),
+      famousHipIds: new Set(),
     });
 
     expect(stars).toHaveLength(0);
+    expect(drops.famousSubtracted).toBe(1);
+    expect(drops.hipGaiaSubtracted).toBe(0);
+  });
+
+  it('subtracts a bright row by direct HIP id when it has no Gaia cross-match', () => {
+    // The Alpha-Cen case: the brightest famous stars have NO Gaia DR3 row, so
+    // their bright Hipparcos row has no hipToSourceId entry and the Gaia-id path
+    // can never catch them. The direct HIP-id subtraction is the reliable key.
+    const { stars, drops } = selectStars({
+      gaia: [],
+      hipparcosBright: [brightRow(71681, 6), brightRow(88888, 7)],
+      hipToSourceId: new Map(), // neither bright row cross-matches a Gaia id
+      famousGaiaIds: new Set(),
+      famousHipIds: new Set([71681]),
+    });
+
+    // HIP 71681 is a famous scene body → subtracted; the non-famous bright row
+    // (HIP 88888) survives.
+    expect(stars).toHaveLength(1);
+    expect(stars[0]?.absMag).toBe(7);
     expect(drops.famousSubtracted).toBe(1);
     expect(drops.hipGaiaSubtracted).toBe(0);
   });
@@ -100,6 +124,7 @@ describe('selectStars', () => {
       hipparcosBright: [],
       hipToSourceId: new Map(),
       famousGaiaIds: new Set(),
+      famousHipIds: new Set(),
     });
 
     // noBailerJones / hipNonPositivePlx belong to the parse/resolve stages; the

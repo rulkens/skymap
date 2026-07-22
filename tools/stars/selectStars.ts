@@ -27,9 +27,13 @@
  *
  * The famous subtraction (`∖ famousStarSet`) applies to the WHOLE union, not
  * just the Gaia side: a Hipparcos-bright row whose Gaia cross-match is famous is
- * also removed. Famous matching is by Gaia `source_id` only, so a bright row
- * with no `hipToSourceId` entry can never be famous-matched — there is no id to
- * test it against.
+ * also removed. A row is famous through EITHER of two keys — its mapped Gaia
+ * `source_id` OR its direct HIP id. The two keys exist because the very
+ * brightest scene bodies (Sirius, Vega, Alpha Centauri…) have NO Gaia DR3 row
+ * at all, so their bright Hipparcos rows carry no `hipToSourceId` entry and the
+ * Gaia-id test alone can never catch them; the HIP id is the reliable key for
+ * that bright patch. Both `famousGaiaIds` and `famousHipIds` derive from the one
+ * famous-stars seed (`gaiaDr3` and `hipparcos` respectively).
  *
  * WHY DEDUP HERE AND NOWHERE ELSE
  * Placing the subtraction in the encoder means the octree, quantizer, and packer
@@ -88,6 +92,7 @@ export type SelectStarsInputs = {
   hipparcosBright: readonly HipBrightRow[]; // hip2 rows with Hpmag < 4.0, distance-resolved
   hipToSourceId: ReadonlyMap<number, bigint>; // from hip2_best_neighbour (HIP → source_id)
   famousGaiaIds: ReadonlySet<bigint>; // non-null gaiaDr3 values from the famous-stars seed
+  famousHipIds: ReadonlySet<number>; // flattened hipparcos values from the famous-stars seed
 };
 
 export type SelectStarsResult = {
@@ -114,7 +119,7 @@ const toStarInput = (row: StarInput): StarInput => ({
 });
 
 export function selectStars(inputs: SelectStarsInputs): SelectStarsResult {
-  const { gaia, hipparcosBright, hipToSourceId, famousGaiaIds } = inputs;
+  const { gaia, hipparcosBright, hipToSourceId, famousGaiaIds, famousHipIds } = inputs;
 
   // hipMatched: the Gaia source_ids that a PRESENT bright Hipparcos row resolves
   // to. Only bright rows contribute — a map entry for a non-bright HIP is not a
@@ -146,9 +151,14 @@ export function selectStars(inputs: SelectStarsInputs): SelectStarsResult {
   }
 
   // ∪ hipparcosBright, then ∖ famousStarSet on the union. A bright row is famous
-  // only through its mapped Gaia id; with no map entry there is no id to test,
-  // so it survives.
+  // through EITHER key: its direct HIP id (the reliable one for the brightest
+  // scene bodies, which have no Gaia DR3 row) OR its mapped Gaia id (when the
+  // cross-match resolves one). Either match removes the row.
   for (const row of hipparcosBright) {
+    if (famousHipIds.has(row.hip)) {
+      famousSubtracted++;
+      continue;
+    }
     const sourceId = hipToSourceId.get(row.hip);
     if (sourceId !== undefined && famousGaiaIds.has(sourceId)) {
       famousSubtracted++;

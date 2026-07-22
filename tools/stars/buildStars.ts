@@ -86,6 +86,7 @@ import {
 } from './selectStars';
 import { buildStarOctree, type OctreeLeafStar, type StarOctreeGrid } from './buildStarOctree';
 import {
+  famousHipIds,
   parseFamousStarsSeed,
   selectDedupEntries,
   type FamousStarEntry,
@@ -203,6 +204,7 @@ export type BuildStarInputs = {
   hipNonPositivePlx: number; // parseHipparcos2().skipped, threaded for the report
   hipToSourceId: ReadonlyMap<number, bigint>;
   famousGaiaIds: ReadonlySet<bigint>;
+  famousHipIds: ReadonlySet<number>;
   mortonBitsPerAxis?: number;
   tierBudgets?: Readonly<Record<Tier, number>>;
   /**
@@ -287,6 +289,7 @@ export async function buildStarCatalog(inputs: BuildStarInputs): Promise<BuildSt
     hipNonPositivePlx,
     hipToSourceId,
     famousGaiaIds,
+    famousHipIds,
     mortonBitsPerAxis = DEFAULT_MORTON_BITS,
     tierBudgets = TIER_BUDGET_BYTES,
     onProgress,
@@ -387,6 +390,7 @@ export async function buildStarCatalog(inputs: BuildStarInputs): Promise<BuildSt
     hipparcosBright: hipBright,
     hipToSourceId,
     famousGaiaIds,
+    famousHipIds,
   });
 
   // ── Distance cap: drop far outliers before the grid is derived ────────────
@@ -788,12 +792,15 @@ async function runCli(): Promise<void> {
   const hipToSourceId = parseHipXmatch(readFileSync(rawDataPath('gaia.hip-xmatch'), 'utf8'));
   process.stderr.write(`  ${hipToSourceId.size.toLocaleString()} HIP→source_id pairs\n`);
 
-  // The curated seed is the single source of the Gaia-dedup fact now: subtract
-  // each entry's Gaia DR3 source_id from the bin so a nearby named star isn't
-  // drawn twice (once as a scene body, once as a Gaia point). A null gaiaDr3
-  // (the Sun; saturated bright stars with no DR3 row) drops out.
+  // The curated seed is the single source of BOTH scene-body dedup facts:
+  // subtract each entry's Gaia DR3 source_id AND each entry's HIP id from the bin
+  // so a nearby named star isn't drawn twice (once as a scene body, once as a
+  // survey point). A null gaiaDr3 (the Sun; saturated bright stars with no DR3
+  // row) contributes nothing to the Gaia set; those same bright stars are the
+  // ones the HIP set catches in the Hp<4 bright patch instead.
   const famousSeed = parseFamousStarsSeed(readFileSync(rawDataPath('famous-stars.seed'), 'utf8'));
   const famousGaiaIds = seedToFamousGaiaIds(famousSeed);
+  const famousHips = famousHipIds(famousSeed);
 
   process.stderr.write('building star catalog (dedup + octree + tiers)…\n');
   const result = await buildStarCatalog({
@@ -803,6 +810,7 @@ async function runCli(): Promise<void> {
     hipNonPositivePlx: hip.skipped,
     hipToSourceId,
     famousGaiaIds,
+    famousHipIds: famousHips,
     // Stream the tier-search progress to stderr so the minutes-long probe phase
     // is no longer silent. The sink lives here (the impure CLI), keeping
     // `buildStarCatalog` pure over its inputs.

@@ -128,13 +128,15 @@ function buildFixture() {
   // HIP 42 resolves to Gaia source 4004 — the Hipparcos-wins cross-match.
   const hipToSourceId = new Map<number, bigint>([[42, 4004n]]);
   const famousGaiaIds = new Set<bigint>([PROXIMA_ID]);
+  // No bright famous star in this fixture is subtracted by HIP id.
+  const famousHipIds = new Set<number>();
 
-  return { gaia, gcns, hip, hipToSourceId, famousGaiaIds };
+  return { gaia, gcns, hip, hipToSourceId, famousGaiaIds, famousHipIds };
 }
 
 describe('buildStarCatalog', () => {
   it('produces a round-trippable catalog from a synthetic fixture', async () => {
-    const { gaia, gcns, hip, hipToSourceId, famousGaiaIds } = buildFixture();
+    const { gaia, gcns, hip, hipToSourceId, famousGaiaIds, famousHipIds } = buildFixture();
 
     const result = await buildStarCatalog({
       gaia,
@@ -143,6 +145,7 @@ describe('buildStarCatalog', () => {
       hipNonPositivePlx: hip.skipped,
       hipToSourceId,
       famousGaiaIds,
+      famousHipIds,
     });
 
     // Post-dedup population: g1 (kept), gc1 (supplement), HIP 42 (kept) = 3.
@@ -181,7 +184,7 @@ describe('buildStarCatalog', () => {
   });
 
   it('reports the drop counters', async () => {
-    const { gaia, gcns, hip, hipToSourceId, famousGaiaIds } = buildFixture();
+    const { gaia, gcns, hip, hipToSourceId, famousGaiaIds, famousHipIds } = buildFixture();
 
     const result = await buildStarCatalog({
       gaia,
@@ -190,6 +193,7 @@ describe('buildStarCatalog', () => {
       hipNonPositivePlx: hip.skipped,
       hipToSourceId,
       famousGaiaIds,
+      famousHipIds,
     });
 
     expect(result.drops).toEqual({

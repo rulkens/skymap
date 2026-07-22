@@ -23,6 +23,14 @@
  * the Sun, saturated bright stars) is a real, intended value that contributes
  * nothing to subtract.  Making the key required forces every entry to state which
  * it is.  DR3 ids exceed Number.MAX_SAFE_INTEGER, so they live as digit strings.
+ *
+ * Why a SECOND required dedup key, `hipparcos`?  The star bin patches in
+ * Hipparcos-2 rows brighter than Hp = 4.0 (Gaia saturates there), and the very
+ * brightest famous stars (Sirius, Vega, Alpha Centauri…) have no Gaia DR3 row at
+ * all — so a Gaia-id-only subtraction leaves them duplicated as survey field
+ * stars sitting on top of their scene body.  `hipparcos` is a required array
+ * (empty = "checked, no Hp<4 counterpart", same discipline as `gaiaDr3`) so the
+ * bright patch can be subtracted by HIP id alongside the Gaia-id path.
  */
 
 /**
@@ -89,6 +97,25 @@ export type FamousStarEntry = {
   gaiaDr3: string | null;
   /** Optional provenance for a non-obvious resolution (which component, etc.). */
   gaiaDr3Note?: string;
+  /**
+   * Hipparcos-2 catalog numbers (HIP) of this star's Hp < 4.0 bright-patch
+   * rows — the SECOND scene-body dedup key, mirroring `gaiaDr3`'s discipline.
+   *
+   * The star bin patches in Hipparcos-2 rows brighter than Hp = 4.0 because
+   * Gaia saturates there, and the very brightest famous stars (Sirius, Vega,
+   * Alpha Centauri…) have NO Gaia DR3 row at all — so subtracting scene bodies
+   * by `gaiaDr3` alone leaves ~60 of them duplicated as survey field stars
+   * sitting on top of their scene body. The HIP id is the reliable key for that
+   * bright patch.
+   *
+   * REQUIRED on every entry, an ARRAY whose empty case (`[]`) is the meaningful
+   * "checked, no Hp<4 counterpart" value — a MISSING field is a validation
+   * error, exactly like `gaiaDr3`: "not yet checked" must never read as
+   * "nothing to subtract". Usually one element; a close visual pair patched by
+   * two Hipparcos rows carries both (Alpha Centauri A+B = [71681, 71683]). Each
+   * element is a positive integer HIP number (< 130000, the catalog's range).
+   */
+  hipparcos: number[];
   /** Curated prose, 3–5 sentences, fact-checked. */
   description: string;
 };
@@ -202,6 +229,26 @@ export function validateFamousStarEntry(e: FamousStarEntry): FamousStarEntry {
       );
     }
   }
+  // hipparcos must be PRESENT (own property) and an array; an empty array is the
+  // meaningful "checked, no Hp<4 counterpart" value, so — like gaiaDr3 — a
+  // missing key is the error, not an empty array. Every element is a positive
+  // integer HIP number below the catalog's ~118218-entry range (130000 headroom
+  // catches a mistyped Gaia/2MASS id without clipping a real HIP number).
+  if (!Object.prototype.hasOwnProperty.call(e, 'hipparcos')) {
+    throw new Error(`famous stars seed: ${e.id} is missing the required hipparcos field`);
+  }
+  if (!Array.isArray(e.hipparcos)) {
+    throw new Error(
+      `famous stars seed: ${e.id} has invalid hipparcos ${JSON.stringify(e.hipparcos)} (expected an array of HIP numbers)`,
+    );
+  }
+  for (const hip of e.hipparcos) {
+    if (typeof hip !== 'number' || !Number.isInteger(hip) || hip <= 0 || hip >= 130000) {
+      throw new Error(
+        `famous stars seed: ${e.id} has invalid hipparcos element ${JSON.stringify(hip)} (expected a positive integer HIP number < 130000)`,
+      );
+    }
+  }
   if (typeof e.description !== 'string' || e.description.length === 0) {
     throw new Error(`famous stars seed: ${e.id} has empty description`);
   }
@@ -231,6 +278,25 @@ export function selectDedupEntries<T extends Pick<FamousStarEntry, 'gaiaDr3'>>(
   entries: readonly T[],
 ): (T & { gaiaDr3: string })[] {
   return entries.filter((e): e is T & { gaiaDr3: string } => e.gaiaDr3 !== null);
+}
+
+/**
+ * Flatten every entry's `hipparcos` array into one set of HIP numbers — the
+ * bright-patch dedup key, the HIP-side counterpart of `selectDedupEntries`.
+ *
+ * This flatten has ONE home for the same reason the Gaia selection does: two
+ * independent build paths apply it — `buildStars.ts` bakes the ids into a
+ * `Set<number>` for the TS star bin, `buildFamousStars.ts` emits them as a
+ * `[u32; N]` Rust const for the native builder. Restating the flatten in each
+ * would let the two star bins drift; both derive it from here instead. Order is
+ * not preserved (a set has none) — the Rust encoder sorts ascending itself.
+ */
+export function famousHipIds(
+  entries: readonly Pick<FamousStarEntry, 'hipparcos'>[],
+): ReadonlySet<number> {
+  const out = new Set<number>();
+  for (const entry of entries) for (const hip of entry.hipparcos) out.add(hip);
+  return out;
 }
 
 /**

@@ -35,6 +35,7 @@ const FIXTURE: FamousStarEntry[] = [
     massSolar: 2.06,
     luminositySolar: 25.4,
     gaiaDr3: '2947050466531873024',
+    hipparcos: [32349],
     description: 'The brightest star in the night sky.',
   },
   {
@@ -53,6 +54,9 @@ const FIXTURE: FamousStarEntry[] = [
     oblateness: 0.35,
     variable: { type: 'Be', magRange: [0.4, 0.6] },
     gaiaDr3: '4732214452838183424',
+    // A two-id entry, exercising the flatten (a close visual pair patched by
+    // both Hipparcos rows) — Alpha Centauri is the real catalog's example.
+    hipparcos: [71681, 71683],
     description: 'The flattest known star, spun near breakup.',
   },
   {
@@ -69,6 +73,7 @@ const FIXTURE: FamousStarEntry[] = [
     radiusSolar: 0.15,
     temperatureK: 3042,
     gaiaDr3: null,
+    hipparcos: [],
     description: 'The nearest star to the Sun.',
   },
 ];
@@ -154,7 +159,23 @@ describe('seedToRustConst', () => {
     // Each id is a bare u64 literal with the star id as a provenance comment.
     expect(text).toContain('2947050466531873024, // sirius');
     expect(text).toContain('4732214452838183424, // achernar');
-    // The null entry contributes no element — Proxima's id never appears.
-    expect(text).not.toContain('proxima-centauri');
+    // The null entry contributes no element — Proxima's id never appears in the
+    // Gaia array (it may still list an empty hipparcos, contributing nothing).
+    expect(text).not.toContain('proxima-centauri,');
+  });
+
+  it('emits a u32 array of the flattened HIP ids, ascending, with per-id provenance', () => {
+    const text = seedToRustConst(FIXTURE);
+
+    // Sirius [32349] + Achernar [71681, 71683] flatten to three ids; Proxima's
+    // empty array contributes none. The length tracks the flattened HIP count.
+    expect(text).toContain('pub const FAMOUS_STAR_HIP_IDS: [u32; 3] = [');
+    // Each id is a bare u32 literal tagged with its source seed id; a two-id
+    // entry tags BOTH of its ids with the same seed.
+    expect(text).toContain('32349, // sirius');
+    expect(text).toContain('71681, // achernar');
+    expect(text).toContain('71683, // achernar');
+    // Ascending order: Sirius's 32349 precedes Achernar's 71681.
+    expect(text.indexOf('32349, // sirius')).toBeLessThan(text.indexOf('71681, // achernar'));
   });
 });

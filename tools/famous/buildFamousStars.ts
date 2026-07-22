@@ -49,6 +49,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
+  famousHipIds,
   parseFamousStarsSeed,
   selectDedupEntries,
   type FamousStarEntry,
@@ -157,26 +158,52 @@ const RUST_GENERATED_BANNER =
   '// Regenerate with:  npm run build-famous-stars\n' +
   '// Source of truth:  data/seeds/famous_stars.seed.json\n' +
   '//\n' +
-  '// FamousStar -> Gaia DR3 ids: the non-null gaiaDr3 values of every seed\n' +
-  '// entry, the scene-body dedup keys the star-bin build subtracts from the\n' +
-  '// Gaia bin.  include!()-d into population.rs so the const lands in that\n' +
-  "// module's namespace, exactly where the hand-maintained array used to live.\n";
+  '// Two scene-body dedup arrays the star-bin build subtracts from the survey:\n' +
+  '//\n' +
+  '//   FAMOUS_STAR_GAIA_IDS — the non-null gaiaDr3 values of every seed entry,\n' +
+  '//     keyed by Gaia DR3 source_id (the bulk of the Gaia bin).\n' +
+  '//   FAMOUS_STAR_HIP_IDS  — the flattened hipparcos arrays, keyed by HIP id.\n' +
+  '//     The brightest famous stars have NO Gaia DR3 row, so the Gaia-id path\n' +
+  '//     alone misses them; the HIP id is the reliable key for the Hp<4 bright\n' +
+  '//     patch (see the seed parser docstring).\n' +
+  '//\n' +
+  "// include!()-d into population.rs so the consts land in that module's\n" +
+  '// namespace, exactly where the hand-maintained array used to live.\n';
 
 /**
- * Emit the generated `.rs` module text: a `[u64; N]` array of the non-null
- * `gaiaDr3` ids, in seed order, each tagged with its star id as provenance
- * (mirroring the SIMBAD-sourced comments the old hand-maintained array carried).
- * The selection (which entries contribute) lives in `selectDedupEntries` — its
- * one home, shared with the `Set<bigint>` encoder in `buildStars.ts` — so both
- * languages subtract the same stars from the one seed; this function owns only
- * the Rust-text encoding. `N` is the count of contributing entries.
+ * Emit the generated `.rs` module text: two arrays the Rust builder subtracts.
+ *
+ * `FAMOUS_STAR_GAIA_IDS` — a `[u64; N]` of the non-null `gaiaDr3` ids, in seed
+ * order, each tagged with its star id as provenance (mirroring the SIMBAD-sourced
+ * comments the old hand-maintained array carried). The selection (which entries
+ * contribute) lives in `selectDedupEntries`.
+ *
+ * `FAMOUS_STAR_HIP_IDS` — a `[u32; M]` of the flattened `hipparcos` arrays,
+ * sorted ASCENDING (a set has no order; ascending is the stable, diff-friendly
+ * choice), each id tagged with its source seed id — a two-id entry tags both.
+ * The flatten lives in `famousHipIds`.
+ *
+ * Both selections have their one home in the seed parser, shared with the
+ * `Set` encoders in `buildStars.ts`, so both languages subtract the same stars
+ * from the one seed; this function owns only the Rust-text encoding.
  */
 export function seedToRustConst(entries: readonly FamousStarEntry[]): string {
   const matched = selectDedupEntries(entries);
-  const rows = matched.map((e) => `    ${e.gaiaDr3}, // ${e.id}`).join('\n');
+  const gaiaRows = matched.map((e) => `    ${e.gaiaDr3}, // ${e.id}`).join('\n');
+
+  // Membership comes from `famousHipIds` (the flatten's one home); the encoder
+  // adds only ascending order and a hip→seedId provenance lookup for the inline
+  // comments. Reading the set means a HIP shared by two seeds emits once, exactly
+  // as the Rust FxHashSet would dedup it.
+  const hipProvenance = new Map<number, string>();
+  for (const entry of entries) for (const hip of entry.hipparcos) hipProvenance.set(hip, entry.id);
+  const hipIds = [...famousHipIds(entries)].sort((a, b) => a - b);
+  const hipRows = hipIds.map((hip) => `    ${hip}, // ${hipProvenance.get(hip)}`).join('\n');
+
   return (
     RUST_GENERATED_BANNER +
-    `pub const FAMOUS_STAR_GAIA_IDS: [u64; ${matched.length}] = [\n${rows}\n];\n`
+    `pub const FAMOUS_STAR_GAIA_IDS: [u64; ${matched.length}] = [\n${gaiaRows}\n];\n\n` +
+    `pub const FAMOUS_STAR_HIP_IDS: [u32; ${hipIds.length}] = [\n${hipRows}\n];\n`
   );
 }
 
