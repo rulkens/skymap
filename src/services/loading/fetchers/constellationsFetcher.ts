@@ -34,18 +34,18 @@ export function parseConstellations(rawJson: string): ConstellationsArtifact {
   const parsed = JSON.parse(rawJson);
   if (parsed === null || typeof parsed !== 'object') {
     throw new Error(
-      'constellations.json: root must be an object — regenerate via "npm run build-stars-rs"',
+      'constellations.json: root must be an object. Regenerate via "npm run build-stars-rs"',
     );
   }
   if (parsed.version !== 1) {
     throw new Error(
-      `constellations.json: unsupported version ${String(parsed.version)} (expected 1) — ` +
-        'regenerate via "npm run build-stars-rs"',
+      `constellations.json: unsupported version ${String(parsed.version)} (expected 1). ` +
+        'Regenerate via "npm run build-stars-rs"',
     );
   }
   if (!Array.isArray(parsed.constellations)) {
     throw new Error(
-      'constellations.json: "constellations" must be an array — regenerate via "npm run build-stars-rs"',
+      'constellations.json: "constellations" must be an array. Regenerate via "npm run build-stars-rs"',
     );
   }
   return parsed as ConstellationsArtifact;
