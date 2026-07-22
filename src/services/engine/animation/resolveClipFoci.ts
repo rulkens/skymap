@@ -71,6 +71,7 @@ import { extractSelectionRow } from '../helpers/extractSelectionRow';
 import { focusFraming } from '../camera/focusFraming';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
+import { frameUp } from '../../../utils/camera/frameUp';
 
 /**
  * Rewrite every id-bearing leaf in `data` to its concrete equivalent, given
@@ -161,11 +162,13 @@ function walkEffect(
     }
     // A lateral tracking move: displace the live orbit target along the
     // horizontal right axis of the bearing toward the subject. That axis is
-    // the `right` of `imagePlaneBasis(forward, 0, worldUp)` — horizontal (its
-    // y-component is zero, so the strafe never changes the target's height),
-    // undefined only when the bearing is vertical. The angular `byDeg` scales
-    // into Mpc by the live camera distance, so the anchor slides ~byDeg degrees
-    // across the frame regardless of scale.
+    // the `right` of `imagePlaneBasis(forward, 0, frameUp(frameBasis))` — the
+    // reference up is the frame pole (world +Y absent a basis). The strafe still
+    // holds the target's world height fixed (see `displaced` below) and keys its
+    // vertical-bearing guard off the world XZ magnitude — its long-standing
+    // world-frame semantics, left intact. The angular `byDeg` scales into Mpc by
+    // the live camera distance, so the anchor slides ~byDeg degrees across the
+    // frame regardless of scale.
     case 'strafeId': {
       const { target } = resolveFraming(effect.id, deps, fovYRad);
       const forward: Vec3 = [
@@ -179,7 +182,7 @@ function walkEffect(
             `no horizontal right axis exists to strafe along.`,
         );
       }
-      const { right } = imagePlaneBasis(forward, 0, [0, 1, 0]);
+      const { right } = imagePlaneBasis(forward, 0, frameUp(frameBasis));
       const byMpc = Math.tan((effect.byDeg * Math.PI) / 180) * from.distance;
       const displaced: Vec3 = [
         from.target[0] + right[0] * byMpc,

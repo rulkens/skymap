@@ -74,6 +74,7 @@ import { monotoneCubic } from '../../../utils/math/monotoneCubic';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 import { yawPitchToDir } from '../../../utils/camera/yawPitchToDir';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
+import { frameUp } from '../../../utils/camera/frameUp';
 import { lerp } from '../../../utils/math/lerp';
 import { trapezoidEase } from '../../../utils/math/trapezoidEase';
 import { buildDwellWarp } from './buildDwellWarp';
@@ -158,7 +159,6 @@ function chord(a: Vec3, b: Vec3): number {
 }
 
 // --- Small Vec3 helpers for the pass-by offset geometry ---
-const WORLD_UP: Vec3 = [0, 1, 0];
 const sub3 = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const dot3 = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 function norm3(a: Vec3): Vec3 {
@@ -176,13 +176,22 @@ const isZero3 = (a: Vec3): boolean => a[0] === 0 && a[1] === 0 && a[2] === 0;
  * passByDirVec — the UNIT lateral direction to offset an interior eye knot so it
  * flies past the subject at knot `cK` rather than through it. `cPrev`/`cNext` are
  * the neighbouring centres (the travel tangent is their chord). See `PassByDir`.
+ * `frameBasis` supplies the reference up (the frame pole via `frameUp`; world +Y
+ * absent a basis) so the lateral axes track the active orientation frame.
  */
-function passByDirVec(cPrev: Vec3, cK: Vec3, cNext: Vec3, mode: PassByDir): Vec3 {
+function passByDirVec(
+  cPrev: Vec3,
+  cK: Vec3,
+  cNext: Vec3,
+  mode: PassByDir,
+  frameBasis?: Mat3,
+): Vec3 {
   const t = norm3(sub3(cNext, cPrev)); // travel tangent
+  const up0 = frameUp(frameBasis);
   // The lateral axes come from the shared image-plane basis about the travel
   // tangent: `above` is its screen-up axis, `screenSide` its screen-right axis.
   const above = (): Vec3 => {
-    const { up } = imagePlaneBasis(t, 0, WORLD_UP);
+    const { up } = imagePlaneBasis(t, 0, up0);
     const n: Vec3 = [up[0], up[1], up[2]];
     return isZero3(n) ? [1, 0, 0] : n; // travel is vertical → arbitrary lateral
   };
@@ -190,7 +199,7 @@ function passByDirVec(cPrev: Vec3, cK: Vec3, cNext: Vec3, mode: PassByDir): Vec3
     case 'above':
       return above();
     case 'screenSide': {
-      const { right } = imagePlaneBasis(t, 0, WORLD_UP);
+      const { right } = imagePlaneBasis(t, 0, up0);
       const r: Vec3 = [right[0], right[1], right[2]];
       return isZero3(r) ? [1, 0, 0] : r;
     }
@@ -266,7 +275,7 @@ export function buildPathTrack(params: BuildParams): PathTrack {
     for (let k = 1; k < nKnots - 1; k++) {
       const r = waypoints[k - 1]!.radius;
       if (r === undefined || r <= 0) continue;
-      const n = passByDirVec(centres[k - 1]!, centres[k]!, centres[k + 1]!, passDir);
+      const n = passByDirVec(centres[k - 1]!, centres[k]!, centres[k + 1]!, passDir, frameBasis);
       const d = passOffset * r;
       knotPos[k] = [
         centres[k]![0] + d * n[0],

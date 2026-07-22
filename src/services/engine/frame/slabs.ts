@@ -26,6 +26,7 @@ import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { computeForegroundViewProj } from '../../../utils/camera/computeForegroundViewProj';
 import { foregroundFrustum } from '../../../utils/camera/foregroundFrustum';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
+import { frameUp } from '../../../utils/camera/frameUp';
 import type { ImagePlaneBasis } from '../../../@types/camera/ImagePlaneBasis';
 
 /** Near-field slab: origin-relative near-Earth bodies (Sun, Earth), drawn in f64. */
@@ -92,16 +93,15 @@ export const SLAB_REVERSED_Z: Readonly<Record<number, boolean>> = {
 };
 
 // The near-field lookAt derives its image-plane up through the shared
-// `imagePlaneBasis` seam — world +Y as the reference up, rolled by 0 here. The
-// `0` is intentional: roll parity with the cosmological slab's `computeViewProj`
-// is deferred alongside the zoom-to-earth series, where this reference up
-// becomes the frame up.
-const WORLD_UP: Vec3 = [0, 1, 0];
+// `imagePlaneBasis` seam. The base up is the frame pole (`frameUp(cam.frameBasis)`;
+// world +Y absent a basis). Roll is 0 here — roll parity with the cosmological
+// slab's `computeViewProj` is deferred alongside the zoom-to-earth series.
 
-// Module-scope scratch reused each frame: the forward view direction and the
-// roll-adjusted basis. `deriveSlabs` runs once per frame, so both are hoisted
-// out to avoid per-call allocation.
+// Module-scope scratch reused each frame: the forward view direction, the
+// frame-pole reference up, and the roll-adjusted basis. `deriveSlabs` runs once
+// per frame, so all three are hoisted out to avoid per-call allocation.
 const forwardScratch: Vec3 = [0, 0, 0];
+const upRefScratch: Vec3 = [0, 0, 0];
 const basisScratch: ImagePlaneBasis = { rolledUp: [0, 0, 0], right: [0, 0, 0], up: [0, 0, 0] };
 
 // The cosmological slab's near/far are fixed: 10 kpc sits safely below the
@@ -141,8 +141,8 @@ export function deriveSlabs(cam: OrbitCamera, cosmoVp: Mat4): readonly Slab[] {
   // change as the user zooms, only the near-field's does.
   const { near: nearMpc, far: farMpc } = foregroundFrustum(cam.distance);
   // The image-plane up comes from the shared basis seam. At roll 0 `rolledUp`
-  // is exactly `WORLD_UP`, so this preserves the world-+Y near-field lookAt
-  // while routing it through the one place the orientation-frame switch edits.
+  // is exactly the frame pole (`frameUp(cam.frameBasis)`; world +Y absent a
+  // basis), so this tracks the cosmological slab's up through the one seam.
   const fx = cam.target[0] - cam.position[0];
   const fy = cam.target[1] - cam.position[1];
   const fz = cam.target[2] - cam.position[2];
@@ -150,7 +150,12 @@ export function deriveSlabs(cam: OrbitCamera, cosmoVp: Mat4): readonly Slab[] {
   forwardScratch[0] = fx / flen;
   forwardScratch[1] = fy / flen;
   forwardScratch[2] = fz / flen;
-  const { rolledUp } = imagePlaneBasis(forwardScratch, 0, WORLD_UP, basisScratch);
+  const { rolledUp } = imagePlaneBasis(
+    forwardScratch,
+    0,
+    frameUp(cam.frameBasis, upRefScratch),
+    basisScratch,
+  );
   const nearFieldVp = computeForegroundViewProj({
     eyeMpc: cam.position,
     targetMpc: cam.target,

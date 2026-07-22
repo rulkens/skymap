@@ -15,15 +15,14 @@ import type { OrbitCamera } from '../../@types/camera/OrbitCamera';
 import type { Vec3 } from '../../@types/math/Vec3';
 import type { ImagePlaneBasis } from '../../@types/camera/ImagePlaneBasis';
 import { imagePlaneBasis } from './imagePlaneBasis';
+import { frameUp } from './frameUp';
 
-// World +Y is the reference up for the current camera — a module const so the
-// hot per-frame call below allocates nothing for it.
-const WORLD_UP: Readonly<Vec3> = [0, 1, 0];
-
-// Module-scope scratch reused every frame: the forward view direction and the
-// roll-adjusted basis. computeViewProj runs once per frame on the render hot
-// path, so both are hoisted out of the function to avoid per-call allocation.
+// Module-scope scratch reused every frame: the forward view direction, the
+// frame-pole reference up, and the roll-adjusted basis. computeViewProj runs
+// once per frame on the render hot path, so all three are hoisted out of the
+// function to avoid per-call allocation.
 const forwardScratch: Vec3 = [0, 0, 0];
+const upRefScratch: Vec3 = [0, 0, 0];
 const basisScratch: ImagePlaneBasis = { rolledUp: [0, 0, 0], right: [0, 0, 0], up: [0, 0, 0] };
 
 /**
@@ -78,7 +77,8 @@ export function computeViewProj(cam: OrbitCamera): Mat4 {
   // the pitch-clamp in the controls module).  When `cam.roll` is non-zero the
   // up-vector is rotated about the view direction; `imagePlaneBasis` owns that
   // roll convention (Rodrigues' formula), and we hand its `rolledUp` result to
-  // `lookAt`.
+  // `lookAt`. The base up is the frame pole (`frameUp` reads `cam.frameBasis`);
+  // absent a basis that is world +Y, so the pre-frame camera is unchanged.
   //
   // `forward` is the unit view direction (target − position).  The previous
   // inline block computed it only when roll was non-zero; the helper needs it
@@ -92,7 +92,12 @@ export function computeViewProj(cam: OrbitCamera): Mat4 {
   forwardScratch[0] = fx / flen;
   forwardScratch[1] = fy / flen;
   forwardScratch[2] = fz / flen;
-  const basis = imagePlaneBasis(forwardScratch, cam.roll ?? 0, WORLD_UP, basisScratch);
+  const basis = imagePlaneBasis(
+    forwardScratch,
+    cam.roll ?? 0,
+    frameUp(cam.frameBasis, upRefScratch),
+    basisScratch,
+  );
 
   // wgpu-matrix ops take the destination as an optional LAST argument and
   // return it.  Omitting it allocates a fresh Mat4 (Float32Array) — same

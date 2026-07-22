@@ -65,6 +65,7 @@ import type { OrbitControlsOptions } from '../../@types/camera/OrbitControlsOpti
 import { updatePosition } from '../../utils/camera/updatePosition';
 import { clampDistance } from '../../utils/camera/clampDistance';
 import { imagePlaneBasis } from '../../utils/camera/imagePlaneBasis';
+import { frameUp } from '../../utils/camera/frameUp';
 import { vec3 } from 'wgpu-matrix';
 import type { Vec3 } from '../../@types/math/Vec3';
 import type { ImagePlaneBasis } from '../../@types/camera/ImagePlaneBasis';
@@ -325,7 +326,7 @@ export function attachOrbitControls(
   const forwardScratch: Vec3 = [0, 0, 0];
   const basisScratch: ImagePlaneBasis = { rolledUp: [0, 0, 0], right: [0, 0, 0], up: [0, 0, 0] };
   const panDeltaScratch = vec3.create();
-  const WORLD_UP: Vec3 = [0, 1, 0];
+  const upRefScratch: Vec3 = [0, 0, 0];
 
   const onMove = (e: PointerEvent) => {
     // Update the live position of whichever pointer this move belongs to.
@@ -396,12 +397,17 @@ export function attachOrbitControls(
       // `right` axis (`forward × up`, the side-axis of the screen plane) and
       // the orthonormal `up` axis (`right × forward`, recomputed orthogonal
       // to forward + right rather than blindly using world-up, so it handles
-      // tilt cases correctly when pitch is non-zero). Roll is 0 here — the
-      // orientation-frame switch is the site that later varies the reference
-      // up; today `WORLD_UP` keeps the drag pan world-+Y aligned.
+      // tilt cases correctly when pitch is non-zero). Roll is 0 here; the
+      // reference up is the frame pole (`frameUp(cam.frameBasis)`; world +Y
+      // absent a basis), so the drag pan tracks whichever frame is active.
       vec3.subtract(cam.target, cam.position, forwardScratch);
       vec3.normalize(forwardScratch, forwardScratch);
-      const basis = imagePlaneBasis(forwardScratch, 0, WORLD_UP, basisScratch);
+      const basis = imagePlaneBasis(
+        forwardScratch,
+        0,
+        frameUp(cam.frameBasis, upRefScratch),
+        basisScratch,
+      );
 
       // Step 2: convert pixel delta → world delta at the camera's focal
       // distance.  At the target depth, one CSS pixel maps to

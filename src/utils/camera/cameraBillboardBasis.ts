@@ -37,9 +37,11 @@
 import type { OrbitCamera } from '../../@types/camera/OrbitCamera';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { imagePlaneBasis } from './imagePlaneBasis';
+import { frameUp } from './frameUp';
 
-// World +Y is the reference up rolled about the view direction.
-const WORLD_UP: Readonly<Vec3> = [0, 1, 0];
+// The reference up rolled about the view direction is the frame pole. Module
+// scratch reused each call — `imagePlaneBasis` only reads it, never retains it.
+const upRefScratch: Vec3 = [0, 0, 0];
 
 /**
  * Compute the world-space right/up axes of the given camera's image plane.
@@ -56,10 +58,11 @@ export function cameraBillboardBasis(cam: OrbitCamera): { right: Vec3; up: Vec3 
   const flen = Math.hypot(fx, fy, fz) || 1;
   const forward: Vec3 = [fx / flen, fy / flen, fz / flen];
 
-  // `imagePlaneBasis` rolls world +Y about `forward` and derives the screen
-  // right/up axes. We omit its `out` argument so it allocates a fresh basis —
-  // the returned `right`/`up` are freshly-allocated vectors callers may retain,
-  // matching this function's long-standing contract.
-  const basis = imagePlaneBasis(forward, cam.roll ?? 0, WORLD_UP);
+  // `imagePlaneBasis` rolls the frame pole (`frameUp(cam.frameBasis)`; world +Y
+  // absent a basis) about `forward` and derives the screen right/up axes. We
+  // omit its `out` argument so it allocates a fresh basis — the returned
+  // `right`/`up` are freshly-allocated vectors callers may retain, matching this
+  // function's long-standing contract.
+  const basis = imagePlaneBasis(forward, cam.roll ?? 0, frameUp(cam.frameBasis, upRefScratch));
   return { right: basis.right, up: basis.up };
 }
