@@ -215,8 +215,10 @@ fn main() {
 
 /// Resolve every constellation stick-figure vertex to a real star and write
 /// `public/data/constellations.json`. An unresolvable vertex is a hard build
-/// failure (spec-mandated) — never a silently dropped line — printing the
-/// constellation, vertex, and nearest miss so the override seed can be extended.
+/// failure (spec-mandated) — never a silently dropped line. `build_artifact`
+/// collects every unresolvable vertex across the whole run rather than
+/// stopping at the first, so curating the override seed is one build per
+/// batch of misses instead of one build per miss.
 fn emit_constellations(args: &Args, pop: &Population, elapsed: f64) {
     let lines = parse_lines(&args.repo_root.join("data/raw/constellations/constellations.lines.json"));
     let famous = load_famous_seed(&args.repo_root.join("data/seeds/famous_stars.seed.json"));
@@ -226,20 +228,28 @@ fn emit_constellations(args: &Args, pop: &Population, elapsed: f64) {
 
     let artifact = match build_artifact(&lines, &famous, &bright, &overrides) {
         Ok(a) => a,
-        Err(ResolveError::Unresolvable {
-            constellation,
-            vertex_index,
-            ra_deg,
-            dec_deg,
-            nearest_miss_arcmin,
-        }) => {
+        Err(errors) => {
+            for e in &errors {
+                let ResolveError::Unresolvable {
+                    constellation,
+                    vertex_index,
+                    ra_deg,
+                    dec_deg,
+                    nearest_miss_arcmin,
+                } = e;
+                eprintln!(
+                    "\nSTOP: constellation vertex has no star to anchor to.\n  \
+                     constellation: {constellation}\n  vertex index:  {vertex_index}\n  \
+                     sky position:  ra {ra_deg:.4}°, dec {dec_deg:.4}°\n  \
+                     nearest miss:  {nearest_miss_arcmin:.2}′\n\
+                     Add an override (HIP id or explicit position) for this vertex to \
+                     data/seeds/constellation_overrides.seed.json and rebuild."
+                );
+            }
             eprintln!(
-                "\nSTOP: constellation vertex has no star to anchor to.\n  \
-                 constellation: {constellation}\n  vertex index:  {vertex_index}\n  \
-                 sky position:  ra {ra_deg:.4}°, dec {dec_deg:.4}°\n  \
-                 nearest miss:  {nearest_miss_arcmin:.2}′\n\
-                 Add an override (HIP id or explicit position) for this vertex to \
-                 data/seeds/constellation_overrides.seed.json and rebuild."
+                "\n{} unresolvable vertex(es) total — see \
+                 data/seeds/constellation_overrides.seed.json.",
+                errors.len()
             );
             std::process::exit(1);
         }

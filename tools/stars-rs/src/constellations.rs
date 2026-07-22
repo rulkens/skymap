@@ -327,13 +327,13 @@ pub fn resolve_vertex(
 /// and read verbatim by the runtime overlay layer, so the camelCase key names
 /// (via `serde(rename)`) and the `version` are load-bearing — a mismatch is a
 /// silent runtime break, not a compile error.
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct ConstellationsArtifact {
     pub version: u32,
     pub constellations: Vec<Constellation>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct Constellation {
     /// Full Latin name (e.g. "Orion"), the label text.
     pub name: String,
@@ -345,7 +345,7 @@ pub struct Constellation {
     pub segments: Vec<Segment>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct Segment {
     #[serde(rename = "aPc")]
     pub a_pc: [f32; 3],
@@ -421,15 +421,20 @@ pub fn bright_population(pop: &Population) -> Population {
 
 /// Assemble the full artifact: resolve every figure's vertices, build its
 /// segments (one per consecutive vertex pair within a polyline — segments never
-/// cross a polyline boundary) and its label anchor, in input-file order. Any
-/// unresolvable vertex aborts the whole build with the hard error from
-/// `resolve_vertex` — a missing star is a bug to fix, not a line to drop.
+/// cross a polyline boundary) and its label anchor, in input-file order.
+///
+/// Unresolvable vertices are collected rather than aborting on the first one:
+/// curating the override seed against a build that dies at vertex #1 of ~1550
+/// is a multi-minute round trip per fix, so the caller needs the complete list
+/// to fix them all before the next rebuild. A missing star is a bug to fix, not
+/// a line to drop, so the artifact is still discarded (`Err`) if any vertex
+/// failed — only the reporting is batched.
 pub fn build_artifact(
     lines: &[ConstellationLine],
     famous: &FamousSeed,
     pop: &Population,
     overrides: &Overrides,
-) -> Result<ConstellationsArtifact, ResolveError> {
+) -> Result<ConstellationsArtifact, Vec<ResolveError>> {
     // Group polylines by Latin name, preserving first-seen order (Serpens's two
     // features share a name and merge into one constellation). The emission
     // iterates `order`, a Vec, so no HashMap iteration order reaches the JSON.
@@ -446,6 +451,7 @@ pub fn build_artifact(
     }
 
     let mut constellations = Vec::with_capacity(order.len());
+    let mut errors: Vec<ResolveError> = Vec::new();
     for (name, polylines) in order.iter().zip(grouped.iter()) {
         let mut segments: Vec<Segment> = Vec::new();
         let mut all_resolved: Vec<ResolvedVertex> = Vec::new();
@@ -453,10 +459,15 @@ pub fn build_artifact(
         for pl in polylines {
             let mut resolved: Vec<ResolvedVertex> = Vec::with_capacity(pl.vertices.len());
             for &[ra, dec] in &pl.vertices {
-                let rv = resolve_vertex(
+                // Record and keep going rather than `?`-returning on the first
+                // miss — see the doc comment for why the whole artifact still
+                // gets scanned before reporting.
+                match resolve_vertex(
                     name, vertex_index, ra, dec, famous, pop, overrides, DEFAULT_TOL_ARCMIN,
-                )?;
-                resolved.push(rv);
+                ) {
+                    Ok(rv) => resolved.push(rv),
+                    Err(e) => errors.push(e),
+                }
                 vertex_index += 1;
             }
             for w in resolved.windows(2) {
@@ -476,6 +487,9 @@ pub fn build_artifact(
         });
     }
 
+    if !errors.is_empty() {
+        return Err(errors);
+    }
     Ok(ConstellationsArtifact { version: ARTIFACT_VERSION, constellations })
 }
 
@@ -748,5 +762,50 @@ mod tests {
                 );
             }
         }
+    }
+
+    // build_artifact must not stop at the first unresolvable vertex — curating
+    // the override seed one build per miss is a multi-minute round trip per
+    // fix. Two lines, each with one unresolvable vertex (no seed/population/
+    // override candidate anywhere near either), must both be reported by a
+    // single build_artifact call.
+    #[test]
+    fn build_artifact_collects_every_unresolvable_vertex_not_just_the_first() {
+        let lines = vec![
+            ConstellationLine {
+                name: "Andromeda".to_string(),
+                vertices: vec![[10.0, 20.0], [200.0, -50.0]],
+            },
+            ConstellationLine {
+                name: "Lyra".to_string(),
+                vertices: vec![[90.0, 10.0], [300.0, 60.0]],
+            },
+        ];
+        let fam = famous(vec![]);
+        let pop = pop_from(vec![]);
+        let overrides = Overrides::default();
+
+        let errors = build_artifact(&lines, &fam, &pop, &overrides)
+            .expect_err("no candidates anywhere, every vertex is unresolvable");
+
+        assert_eq!(errors.len(), 4, "one error per unresolvable vertex, got {errors:?}");
+
+        let names_and_indices: Vec<(String, usize)> = errors
+            .iter()
+            .map(|e| {
+                let ResolveError::Unresolvable { constellation, vertex_index, .. } = e;
+                (constellation.clone(), *vertex_index)
+            })
+            .collect();
+        assert!(
+            names_and_indices.contains(&("Andromeda".to_string(), 0)),
+            "{names_and_indices:?}"
+        );
+        assert!(
+            names_and_indices.contains(&("Andromeda".to_string(), 1)),
+            "{names_and_indices:?}"
+        );
+        assert!(names_and_indices.contains(&("Lyra".to_string(), 0)), "{names_and_indices:?}");
+        assert!(names_and_indices.contains(&("Lyra".to_string(), 1)), "{names_and_indices:?}");
     }
 }
