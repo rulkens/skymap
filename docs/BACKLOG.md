@@ -84,7 +84,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 - [ ] **InfoCard live phase + apparent-mag rows** `needs-design` — grow the engine time pub with phase angle + apparent magnitude for the focused body (distance row shipped in #472). → [details](backlog/2026-07-21-infocard-phase-apparent-mag-rows.md)
 - [ ] **"You are here" label continuity** `needs-design` — the label fades out below 2 kpc (`surveyDeepZoom` band); decide whether it hands off toward the Sun/Earth instead of vanishing. → [details](backlog/2026-07-22-you-are-here-label-continuity.md)
-- [ ] **Home button → Earth** `ready` — the Home pill and `h` key both dispatch `updateSelectionFocus({ type: 'milkyWay' })` (`App.tsx`, `useKeyboardShortcuts.ts`); retarget home to Earth (decide if `h` follows).
 - [ ] **StatusBar mobile reflow** `ready` — reflow the StatusBar for narrow viewports (no media queries today). The InfoCard bottom-sheet + SettingsPanel collapse-launcher already shipped.
 - [ ] **SettingsPanel polish** `needs-design` — visual cleanup + section re-ordering + per-section icons; 2.3k lines of hand-coded text-only rows today. → [details](backlog/2026-07-22-settings-panel-polish.md)
 - [ ] **VolumeFieldRow schema-driven UI** `needs-design` — replace the seven hand-coded sliders with a settings-schema-generated UI.

@@ -28,7 +28,7 @@ import {
 } from '../../../../services/engine/animation/effectHelpers';
 import { focusId } from '../../../../utils/animation/focusId';
 import { setLabelsFocusedOnly } from '../../../../state/settings/settingsSlice';
-import { BOOT_PITCH_RAD, BOOT_YAW_RAD } from '../../../../services/engine/camera/cameraFraming';
+import { GALACTIC_DISC_PITCH_RAD, GALACTIC_DISC_YAW_RAD } from '../../../../services/engine/camera/cameraFraming';
 
 const MW = focusId('milkyWay');
 
@@ -72,7 +72,7 @@ export const openingTitle: ClipData = {
     all([
       moveTargetId(MW, 0),
       dollyTo(FAR_OPEN_MPC, 0),
-      aimAt({ yaw: BOOT_YAW_RAD, pitch: BOOT_PITCH_RAD }, 0),
+      aimAt({ yaw: GALACTIC_DISC_YAW_RAD, pitch: GALACTIC_DISC_PITCH_RAD }, 0),
     ]),
     // …then the approach. Log-space dolly: three decades in, decelerating
     // onto the framing distance as the sprite swells from nothing.
