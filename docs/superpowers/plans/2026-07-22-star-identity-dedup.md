@@ -392,9 +392,11 @@ fn positional_gap_subtraction(
 
 ## Rollout
 
-Prep PR 1 of the constellations spec's rollout (`spec §Rollout` step 1). After merge, the
-new dedup only reaches the live data once the bins are rebuilt and re-synced — and that
-must run from the **main worktree**, not this one (`project_worktree_data_isolation`):
+Prep 1 of the constellations spec's rollout (`spec §Rollout` step 1) — its commits land
+first on the shared `worktree-constellations` branch (one PR for prep + feature, user
+decision 2026-07-22). After the PR merges, the new dedup only reaches the live data once
+the bins are rebuilt and re-synced — and that must run from the **main worktree**, not
+this one (`project_worktree_data_isolation`):
 
 1. `npm run build-stars-rs` (from main) — rebakes `stars-{small,medium,large}.bin` with
    the Gaia ∪ HIP subtraction + positional-gap fallback.

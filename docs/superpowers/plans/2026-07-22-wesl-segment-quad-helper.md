@@ -13,7 +13,8 @@ call sites (`filaments/vertex.wesl`, `markerLines/vertex.wesl`) onto it, **behav
 The constellation shader (feature PR) becomes the third consumer and inherits the helper for free.
 This is Prep 2 of the Constellations spec
 (`docs/superpowers/specs/2026-07-22-constellations-design.md`, section "Prep 2 — shared WESL
-segment-quad expansion helper"); it lands as its own PR before the feature.
+segment-quad expansion helper"); its commits land after prep 1 and before the feature tasks on
+the shared `worktree-constellations` branch (one PR for prep + feature, user decision 2026-07-22).
 
 ## Architecture
 

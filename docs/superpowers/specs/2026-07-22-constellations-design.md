@@ -23,9 +23,10 @@ morph mode deferred (Q9).
 
 Refactor-ground verdicts: the runtime side is pure growth — every touchpoint is
 a registry row or a new file at a seam that filaments/flow/structures/famous
-already use. Two bolt-ons were found on the build/shader side; each lands as its
-own prep PR **before** the feature PR. The rest of this spec is written against
-the post-prep architecture.
+already use. Two bolt-ons were found on the build/shader side; each is its own
+prep diff, sequenced **before** the feature commits. Packaging (user decision,
+2026-07-22): everything rides **one PR** on the `worktree-constellations`
+branch. The rest of this spec is written against the post-prep architecture.
 
 ### Prep 1 — star identity joint + complete bright-star dedup (`stars-rs` + seed)
 
@@ -212,9 +213,11 @@ Per `docs/superpowers/conventions/testing.md` — only what can break for real:
 
 ## Rollout
 
-1. Prep PR 1 (`stars-rs` identity joint + dedup) → merge → `build-stars-rs` +
-   `sync-r2-secure` from main.
-2. Prep PR 2 (WESL helper extraction) → merge.
-3. Feature PR (build stage + artifact + runtime layer) → `/feature-done` →
-   merge → `build-stars-rs` emission + R2 sync of `constellations.json` from
-   main.
+One PR (user decision, 2026-07-22), commits sequenced prep-first:
+
+1. Prep 1 commits (`stars-rs` identity joint + dedup).
+2. Prep 2 commits (WESL helper extraction).
+3. Feature commits (build stage + artifact + runtime layer).
+4. `/feature-done` → squash-merge the PR.
+5. Post-merge, from the **main** worktree: `npm run build-stars-rs` (rebakes the
+   deduped star bins AND emits `constellations.json`) + `npm run sync-r2-secure`.

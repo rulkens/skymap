@@ -10,7 +10,8 @@
 Spec: [`docs/superpowers/specs/2026-07-22-constellations-design.md`](../specs/2026-07-22-constellations-design.md).
 Grill: [`docs/grill-sessions/constellations-2026-07-22.md`](../../grill-sessions/constellations-2026-07-22.md).
 
-**Prep already landed (do NOT re-do):**
+**Prep landed as earlier commits on this branch (one PR for prep + feature, user decision
+2026-07-22 — do NOT re-do):**
 - **Prep 1** — `stars-rs` `Population` now carries `ids: Vec<StarIds>` with
   `StarIds { gaia: Option<u64>, hip: Option<u32> }` parallel to `stars`, and famous-star
   subtraction keys on Gaia ∪ HIP with the crossmatch-gap fallback. This plan CONSUMES that joint.
@@ -728,8 +729,8 @@ should see:
 
 ## Rollout (post-merge, from the MAIN worktree)
 
-Per the spec §Rollout, prep PRs 1 + 2 land first (already assumed landed). The feature PR (Tasks
-1–19) merges after `/feature-done`. THEN, from the **main** worktree (worktrees have their own
+Per the spec §Rollout, prep 1 + 2 commits precede the feature commits on this branch; the single
+PR (prep + Tasks 1–19) squash-merges after `/feature-done`. THEN, from the **main** worktree (worktrees have their own
 `data/` — regen from main before sync; see project memory `project_worktree_data_isolation`):
 
 1. `npm run build-stars-rs` — regenerates `public/data/constellations.json` (and the star bins)
