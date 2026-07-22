@@ -9,11 +9,17 @@
  * a clip is playing. Pose during the clip is DERIVED per frame by the
  * driver table (clip@95 wins), not written here — same principle as `tween`.
  * Null when no clip is active.
+ *
+ * `frameTween` carries the in-flight orientation-frame roll's serializable
+ * descriptor while the up-basis slerps to a new frame. The basis during the
+ * slerp is DERIVED per frame by a resolver, not written here — same principle
+ * as `tween`. Null when no frame roll is in flight.
  */
 
 import type { CameraPose } from './CameraPose';
 import type { CameraTweenDescriptor } from './CameraTweenDescriptor';
 import type { ClipData } from '../animation/ClipData';
+import type { FrameTween } from './FrameTween';
 
 export type CameraState = {
   base: CameraPose;
@@ -21,4 +27,5 @@ export type CameraState = {
   autoRotate: { active: boolean; rate: number };
   dragging: boolean;
   clip: { data: ClipData } | null;
+  frameTween: FrameTween | null;
 };
