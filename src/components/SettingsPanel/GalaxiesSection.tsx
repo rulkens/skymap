@@ -207,23 +207,17 @@ function GalaxiesSection({
           </select>
         </div>
         {biasMode === BiasMode.VolumeLimited && (
-          <>
-            <div className={styles.panelRow}>
-              <label htmlFor="abs-mag-limit">M_lim</label>
-              <span className={styles.panelValue}>{absMagLimit.toFixed(1)}</span>
-            </div>
-            <div className={styles.panelRow}>
-              <input
-                id="abs-mag-limit"
-                type="range"
-                min={-24}
-                max={-15}
-                step={0.1}
-                value={absMagLimit}
-                onChange={(e) => onAbsMagLimitChange(parseFloat(e.target.value))}
-              />
-            </div>
-          </>
+          <div className={styles.panelRow}>
+            <Slider
+              label="M_lim"
+              value={absMagLimit}
+              min={-24}
+              max={-15}
+              step={0.1}
+              onChange={onAbsMagLimitChange}
+              format={(v) => v.toFixed(1)}
+            />
+          </div>
         )}
       </CollapsibleSection>
     </CollapsibleSection>
