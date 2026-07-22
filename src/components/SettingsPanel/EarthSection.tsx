@@ -22,7 +22,7 @@
  */
 
 import { memo } from 'react';
-import { CollapsibleSection } from './CollapsibleSection';
+import CollapsibleSection from './CollapsibleSection';
 import styles from './SettingsPanel.module.css';
 
 // ── Props ──────────────────────────────────────────────────────────────────────

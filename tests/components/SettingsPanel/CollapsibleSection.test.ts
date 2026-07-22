@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createElement } from 'react';
-import { CollapsibleSection } from '../../../src/components/SettingsPanel/CollapsibleSection';
+import CollapsibleSection from '../../../src/components/SettingsPanel/CollapsibleSection';
 
 describe('CollapsibleSection', () => {
   it('toggles aria-expanded on the header button when clicked', async () => {
@@ -37,9 +37,10 @@ describe('CollapsibleSection', () => {
         children: 'body',
       }),
     );
-    expect(
-      screen.getByRole('button', { name: /display/i }),
-    ).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: /display/i })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
   });
 
   it('honors the headerToggleIndeterminate prop on the master checkbox', () => {
@@ -78,9 +79,7 @@ describe('CollapsibleSection', () => {
         children: 'body',
       }),
     );
-    await user.click(
-      screen.getByRole('checkbox', { name: /toggle display/i }),
-    );
+    await user.click(screen.getByRole('checkbox', { name: /toggle display/i }));
     expect(onChange).toHaveBeenCalledOnce();
     expect(onChange).toHaveBeenCalledWith(true);
   });
@@ -101,9 +100,7 @@ describe('CollapsibleSection', () => {
     );
     const header = screen.getByRole('button', { name: /display/i });
     expect(header).toHaveAttribute('aria-expanded', 'true');
-    await user.click(
-      screen.getByRole('checkbox', { name: /toggle display/i }),
-    );
+    await user.click(screen.getByRole('checkbox', { name: /toggle display/i }));
     // Section stays open; only the checkbox flipped.
     expect(header).toHaveAttribute('aria-expanded', 'true');
   });

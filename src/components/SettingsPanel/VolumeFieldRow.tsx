@@ -208,6 +208,7 @@ export function VolumeFieldRow({
         <label className={styles.label}>
           <input
             type="checkbox"
+            className={styles.toggle}
             checked={enabled}
             onChange={(e) => onEnabledChange(id, e.target.checked)}
           />

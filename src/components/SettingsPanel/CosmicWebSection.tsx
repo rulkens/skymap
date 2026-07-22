@@ -47,7 +47,7 @@ import type { ScalarFieldPaletteId } from '../../@types/data/volume/ScalarFieldP
 import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
 import { VolumeFieldRow } from './VolumeFieldRow';
-import { CollapsibleSection } from './CollapsibleSection';
+import CollapsibleSection from './CollapsibleSection';
 import styles from './SettingsPanel.module.css';
 
 // ── Types ──────────────────────────────────────────────────────────────────────

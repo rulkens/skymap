@@ -42,7 +42,7 @@ import { memo } from 'react';
 import { STAR_CATALOG_IDS } from '../../data/starCatalog/starCatalogIds';
 import { SOURCE_ENTRIES } from '../../data/sourceEntries';
 import { SCENE_STARS } from '../../data/bodies/sceneStars';
-import { CollapsibleSection } from './CollapsibleSection';
+import CollapsibleSection from './CollapsibleSection';
 import styles from './SettingsPanel.module.css';
 import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';
 import type { StarCatalogItemSettings } from '../../@types/settings/StarCatalogItemSettings';
@@ -174,6 +174,7 @@ function StarsSection({
           <input
             id="toggle-famous-stars"
             type="checkbox"
+            className={styles.toggle}
             checked={famousStarsEnabled}
             onChange={(e) => onToggleFamousStars(e.target.checked)}
           />
@@ -193,6 +194,7 @@ function StarsSection({
               <input
                 id={`toggle-star-catalog-${id}`}
                 type="checkbox"
+                className={styles.toggle}
                 checked={items[id].enabled}
                 onChange={(e) => onToggleCatalog(id, e.target.checked)}
               />

@@ -21,7 +21,7 @@
  * All atoms reference tokens from `src/styles/global.css`.
  */
 
-.section {
+.root {
   /*
    * No outer margin — adjacent sections sit flush; the body's own
    * top/bottom padding gives the breathing room.  Stacking two sections
@@ -78,9 +78,7 @@ button.header {
   /* Hover-brighten the chevron in lockstep with the title — the
    * transform transition (open/close rotate) and the colour transition
    * are independent properties, so listing both keeps each smooth. */
-  transition:
-    var(--transition-chevron),
-    var(--transition-color);
+  transition: var(--transition-chevron), var(--transition-color);
   transform: rotate(0deg);
 }
 
@@ -89,64 +87,20 @@ button.header {
 }
 
 /*
- * Optional master toggle — sits between the chevron and the title.
+ * Optional master toggle — sits between the chevron and the title.  The pill
+ * look comes from the shared `pillToggle` vocabulary so the master + per-row
+ * controls read as one family; only layout + the indeterminate state are local.
  *
- * Why a margin-right rather than `gap` on the header: the existing header
- * is a flexbox with `align-items: baseline` and no `gap`, so spacing comes
- * from per-child margins on the chevron + this element.  `align-self:
- * center` reads more cleanly than the default baseline alignment because
- * checkboxes have no text baseline of their own.
+ * Why a margin-right rather than `gap` on the header: the existing header is a
+ * flexbox with `align-items: baseline` and no `gap`, so spacing comes from
+ * per-child margins on the chevron + this element.  `align-self: center` reads
+ * more cleanly than the default baseline alignment because checkboxes have no
+ * text baseline of their own.
  */
 .headerToggle {
+  composes: pillToggle from './pillToggle.module.css';
   margin: 0 var(--space-4) 0 0;
   align-self: center;
-  cursor: pointer;
-  /* iOS-style pill toggle — matches the per-row toggles in
-   * `SettingsPanel.module.css` exactly so the master + per-row controls
-   * read as one family.  See the docblock there for the sizing
-   * rationale. */
-  appearance: none;
-  -webkit-appearance: none;
-  position: relative;
-  width: 28px;
-  height: 16px;
-  border: 1px solid var(--border-control);
-  border-radius: 999px;
-  background: var(--surface-control);
-  accent-color: var(--color-accent-control);
-  flex-shrink: 0;
-  transition:
-    background 0.18s ease,
-    border-color 0.18s ease;
-}
-
-.headerToggle::before {
-  content: '';
-  position: absolute;
-  top: 1px;
-  left: 1px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--color-fg-muted);
-  transition:
-    transform 0.18s ease,
-    background 0.18s ease;
-}
-
-.headerToggle:hover {
-  border-color: var(--border-hover);
-}
-
-.headerToggle:checked {
-  /* See the matching rule in `SettingsPanel.module.css` for the
-   * accent-link vs accent-control rationale. */
-  background: var(--color-accent-link);
-  border-color: var(--color-accent-link);
-}
-
-.headerToggle:checked::before {
-  transform: translateX(12px);
 }
 
 /* `indeterminate` is a JS-set IDL flag (see the component docblock); the

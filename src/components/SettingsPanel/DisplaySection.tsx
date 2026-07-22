@@ -32,7 +32,7 @@ import type { ReactNode } from 'react';
 import type { ToneMapCurve as ToneMapCurveT } from '../../@types/data/ToneMapCurve';
 import { ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';
 import { STAR_EMISSIVE } from '../../data/starRenderConstants';
-import { CollapsibleSection } from './CollapsibleSection';
+import CollapsibleSection from './CollapsibleSection';
 import styles from './SettingsPanel.module.css';
 
 // ── Props ──────────────────────────────────────────────────────────────────────
@@ -99,6 +99,7 @@ function DisplaySection({
         <input
           id="bloom-enabled"
           type="checkbox"
+          className={styles.toggle}
           checked={bloomEnabled}
           onChange={(e) => onBloomEnabledChange(e.target.checked)}
         />

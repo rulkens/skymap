@@ -28,7 +28,7 @@ import { maskHas } from '../../utils/maskHas';
 import { BiasMode } from '../../data/galaxyCatalog/biasMode';
 import type { BiasMode as BiasModeT } from '../../@types/data/galaxyCatalog/BiasMode';
 import type { SourceType } from '../../@types/data/SourceType';
-import { CollapsibleSection } from './CollapsibleSection';
+import CollapsibleSection from './CollapsibleSection';
 import styles from './SettingsPanel.module.css';
 
 // ── Module-level constants ─────────────────────────────────────────────────────
@@ -150,6 +150,7 @@ function GalaxiesSection({
               <input
                 id={`toggle-source-${s}`}
                 type="checkbox"
+                className={styles.toggle}
                 checked={maskHas(visibleSourceMask, s)}
                 onChange={(e) => onToggleSource(s, e.target.checked)}
               />
@@ -182,6 +183,7 @@ function GalaxiesSection({
           <input
             id="toggle-depth-fade"
             type="checkbox"
+            className={styles.toggle}
             checked={depthFadeEnabled}
             onChange={(e) => onDepthFadeEnabledChange(e.target.checked)}
           />
