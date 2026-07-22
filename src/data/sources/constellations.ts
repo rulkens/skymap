@@ -7,9 +7,9 @@ export const CONSTELLATIONS_ENTRY = {
   id: 'constellations',
   label: 'Constellations',
   allSky: true, // the classical 88-constellation set spans the whole sphere
-  // On by default — the stick figures are a familiar orientation aid the
-  // near-field descent leans on. Users can flip it off in the SettingsPanel.
-  visible: true,
+  // Off by default — at survey scales the stick figures shear into visual
+  // noise. Users opt in via the SettingsPanel.
+  visible: false,
   bearsLabel: false,
   bearsMarker: false,
   // 1.0 is the unit baseline; the user scales it down for a subtler overlay
