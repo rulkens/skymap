@@ -10,9 +10,16 @@
  * ellipse as three PERIODS where the planet table gives three RATES:
  *
  * - `periodDays` (P): the mean-anomaly period — the time for M to advance 2π
- *   (perinode to perinode; the "anomalistic" period, NOT the sidereal one — for
- *   a fast-precessing moon like Io the two differ by ~0.4%). M always advances,
- *   so `dM/dt = +2π · 36525 / P` per century, always finite and positive.
+ *   (periapsis to periapsis; the "anomalistic" period, NOT the sidereal one —
+ *   for a fast-precessing moon like Io the two differ by ~0.4%). M always
+ *   advances, so `dM/dt = +2π · 36525 / P` per century, always finite and
+ *   positive. This reading fits the PLANETARY-SATELLITE rows (Io's listed
+ *   1.762732 d is its M-period; its sidereal period is 1.769 d) but NOT the
+ *   Moon's row, whose P=27.322 d is the sidereal month — the Moon converts
+ *   through `moonRatesFromSiderealPeriods`, which treats 2π/P as the
+ *   mean-LONGITUDE rate and derives dM/dt by subtracting both precession
+ *   rates. Feeding a sidereal period in HERE double-counts the precessions
+ *   into longitude (for the Moon: +0.111°/day, 40.6°/yr of phase drift).
  * - `apsidalPrecessionYears` (Papsis): the period of the argument of periapsis
  *   ω. A prograde satellite's apsis ADVANCES, so `dω/dt = +2π · 100 / Papsis`.
  * - `nodalPrecessionYears` (Pnode): the period of the ascending node Ω. A

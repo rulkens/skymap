@@ -40,8 +40,10 @@
  * century rates from the same JPL table, so `propagateElements` can advance the
  * body to any simulated instant. The Moon and the satellite rows carry the same
  * epoch elements + rates, converted by the `satellite` maker (and, for the Moon,
- * by `moonRatesFromPeriods` inline) from JPL's period columns; so the mixed
- * table stays uniform and one affine map moves every body.
+ * by `moonRatesFromSiderealPeriods` inline — its P column is the sidereal month
+ * where the satellites' is the mean-anomaly period; see the Moon row) from JPL's
+ * period columns; so the mixed table stays uniform and one affine map moves
+ * every body.
  *
  * ### Authoring discipline
  *
@@ -71,7 +73,7 @@
 
 import { SCALE_UNITS } from '../scaleUnits';
 import { satellite } from './makers/satellite';
-import { moonRatesFromPeriods } from '../../utils/orbit/moonRatesFromPeriods';
+import { moonRatesFromSiderealPeriods } from '../../utils/orbit/moonRatesFromSiderealPeriods';
 import {
   MERCURY_GREY,
   VENUS_CREAM,
@@ -319,13 +321,20 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     // (ecliptic frame, epoch 2000-01-01.5 TDB, DE405/LE405): a=384400 km,
     // e=0.0554, i=5.16°, node Ω=125.08°, ω=318.15°, M=135.27°, P=27.322 d,
     // Papsis=5.997 yr, Pnode=18.600 yr. JPL gives ω and M directly (no ϖ/L
-    // derivation). Periods → rates via moonRatesFromPeriods (built inline here —
-    // the Moon is authored directly, not via `satellite`, but earns the same
-    // three rate columns so it animates too). Papsis is the ARGUMENT-of-periapsis
-    // period (ω relative to the regressing node): 5.997 yr is consistent with the
-    // famous 8.85 yr perigee (longitude ϖ) and 18.6 yr node —
-    // 360/(360/8.85 + 360/18.6) = 5.997. Prograde: apsis advances (+), node
-    // regresses (−). Ecliptic-framed, so `plane` is omitted.
+    // derivation). Periods → rates via moonRatesFromSiderealPeriods (built
+    // inline here — the Moon is authored directly, not via `satellite`, but
+    // earns the same three rate columns so it animates too). UNLIKE the
+    // planetary-satellite rows, whose P is the mean-anomaly period, the Moon's
+    // P=27.322 d is the SIDEREAL month (the anomalistic month is 27.5545 d), so
+    // it converts through the sidereal variant: 2π/P is the mean-LONGITUDE
+    // rate, and dM/dt is that minus both precession rates. Reading 27.322 d as
+    // the M-period would double-count the apsidal advance into longitude —
+    // +0.111°/day = 40.6°/yr of phase drift, a Moon 102° off the Sun at the
+    // real 2024-04-08 eclipse (see the eclipse regression test). Papsis is the
+    // ARGUMENT-of-periapsis period (ω relative to the regressing node):
+    // 5.997 yr is consistent with the famous 8.85 yr perigee (longitude ϖ) and
+    // 18.6 yr node — 360/(360/8.85 + 360/18.6) = 5.997. Prograde: apsis
+    // advances (+), node regresses (−). Ecliptic-framed, so `plane` is omitted.
     id: 'moon',
     parentId: 'earth',
     semiMajorMpc: 384400 * SCALE_UNITS.KM_TO_MPC,
@@ -334,8 +343,8 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     ascendingNodeRad: degToRad(125.08),
     argPeriapsisRad: degToRad(318.15),
     meanAnomalyRad: degToRad(135.27),
-    ...moonRatesFromPeriods({
-      periodDays: 27.322,
+    ...moonRatesFromSiderealPeriods({
+      siderealPeriodDays: 27.322,
       apsidalPrecessionYears: 5.997,
       nodalPrecessionYears: 18.6,
     }),
@@ -453,7 +462,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     ascendingNodeDeg: 309.1,
     argPeriapsisDeg: 43.8,
     meanAnomalyDeg: 87.4,
-    periodDays: 16.690440,
+    periodDays: 16.69044,
     apsidalPrecessionYears: 277.921,
     nodalPrecessionYears: 577.264,
     poleRaDeg: 268.7,
