@@ -292,9 +292,11 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
 
   // ── Constellation stick-figure overlay ───────────────────────────
   // Single tier-agnostic `constellations.json`. Demand = the layer's master
-  // gate, the singleton-overlay convention shared with filaments / flow. No
-  // commit — the renderer + label producer read the ready artifact straight off
-  // the slot. Default-on, so it loads at boot until the user hides the layer.
+  // gate, the singleton-overlay convention shared with filaments / flow.
+  // Opt-in and off by default, so it's demand-loaded on first enable rather
+  // than at boot. The commit uploads the segment buffer to the renderer once
+  // and kicks `syncVisibilityFades` for the row; the label producer reads the
+  // ready artifact straight off the slot.
   {
     key: 'constellations',
     factory: (deps) => createConstellationsSlot(deps.state, deps.cb),

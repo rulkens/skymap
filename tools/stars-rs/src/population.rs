@@ -153,10 +153,10 @@ pub(crate) fn ra_dec_dist_to_cartesian(ra_deg: f64, dec_deg: f64, dist: f64) -> 
 
 pub struct Population {
     pub stars: Vec<Star>,
-    // ids[i] identifies stars[i]. Nothing in the build binary reads it yet —
-    // the constellation endpoint-resolver (a later PR) is its first consumer —
-    // so it is `allow(dead_code)` until then rather than dropped and re-added.
-    #[allow(dead_code)]
+    // ids[i] identifies stars[i]. The constellation endpoint-resolver
+    // (`constellations.rs`) uses it to look up a vertex's star by HIP id
+    // (`resolve_hip`) and to filter the bright subset it scans
+    // (`bright_population`).
     pub ids: Vec<StarIds>,
     pub drops: DropCounts,
     pub clamps: ClampCounts,

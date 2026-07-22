@@ -40,10 +40,11 @@ import type { BodyTextureSlotKey } from '../data/BodyTextureSlotKey';
  *     asset key to route through `slotFor`.
  *
  *   - `'constellations'` — the true-3D constellation stick-figure artifact
- *     (`constellations.json`), a single tier-agnostic overlay asset. Default-on
- *     but demand-loaded on the layer's master gate; it has no point-`Source`
- *     code, so its slot lives as a named field on `state.assetSlots` and needs a
- *     string asset key to route through `slotFor`.
+ *     (`constellations.json`), a single tier-agnostic overlay asset. Opt-in
+ *     (defaults off), demand-loaded on the layer's master gate; it has no
+ *     point-`Source` code, so its slot lives as a named field on
+ *     `state.assetSlots` and needs a string asset key to route through
+ *     `slotFor`.
  *
  *   - `BodyTextureSlotKey` — the keyed `bodyTextures` slot family: one asset per
  *     `(bodyId, kind)` map, encoded as the composite `\`${bodyId}:${kind}\``

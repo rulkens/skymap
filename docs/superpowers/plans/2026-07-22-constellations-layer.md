@@ -101,19 +101,19 @@ It is ~100 KB — no announce-gate needed. Record the exact commit hash you pull
   'constellations.readme'`.
 - `constellations.readme` → `data/raw/constellations/README.md`, `source: 'committed'`.
 
-- [ ] Download `constellations.lines.json` into `data/raw/constellations/`.
-- [ ] Add both keys to `RAW_DATA` in `tools/utils/io/rawDataRegistry.ts` (see the `cf4.table2` /
+- [x] Download `constellations.lines.json` into `data/raw/constellations/`.
+- [x] Add both keys to `RAW_DATA` in `tools/utils/io/rawDataRegistry.ts` (see the `cf4.table2` /
       `cf4.readme` pair at `rawDataRegistry.ts:239-249` for the exact row shape). `RawDataKey` gains
       the two keys automatically.
-- [ ] Write `data/raw/constellations/README.md`: upstream URL, the d3-celestial commit hash, BSD-3
+- [x] Write `data/raw/constellations/README.md`: upstream URL, the d3-celestial commit hash, BSD-3
       license note (with the copyright line), the GeoJSON column/shape description, and the fetch
       date. The `!/data/raw/**/README.md` glob already tracks it — plain `git add`, no `-f`.
-- [ ] Add a `.gitignore` `!` line re-including the committed `.json`. The `/data/**` block
+- [x] Add a `.gitignore` `!` line re-including the committed `.json`. The `/data/**` block
       (`.gitignore:95-100`) re-includes only READMEs / `.sha256` / fonts / seeds, so the vendored
       `.json` needs its own negation. Add it in that block with a comment explaining the exception
       (a non-standard committed raw file the common globs don't cover):
       `!/data/raw/constellations/constellations.lines.json`.
-- [ ] Confirm `git status` shows the `.json` + README tracked (not ignored) and `git check-ignore`
+- [x] Confirm `git status` shows the `.json` + README tracked (not ignored) and `git check-ignore`
       reports the `.json` is NOT ignored.
 
 **No test** — vendoring + registry rows are static data with no behavior a test could exercise that
@@ -173,24 +173,24 @@ pub fn resolve_vertex(
 4. **Else HARD build failure** printing constellation, vertex index, ra/dec, and nearest-miss
    distance in arcmin, so the override file can be extended.
 
-- [ ] Parse `constellations.lines.json` (GeoJSON `MultiLineString`) into `Vec<ConstellationLine>`.
+- [x] Parse `constellations.lines.json` (GeoJSON `MultiLineString`) into `Vec<ConstellationLine>`.
       Note d3-celestial ra may be in `-180..180`; normalize to a consistent convention before
       angular comparison. Cite the vendored file's actual shape — read it, don't assume.
-- [ ] Load `constellation_overrides.seed.json` (may be empty) via `data/seeds/*.json`
+- [x] Load `constellation_overrides.seed.json` (may be empty) via `data/seeds/*.json`
       (already git-tracked; `serde` parse into `Overrides`).
-- [ ] Implement `resolve_vertex` with the four-step order above.
-- [ ] Test `orion resolves its bright endpoints to the expected stars` — feed a small fixture with
+- [x] Implement `resolve_vertex` with the four-step order above.
+- [x] Test `orion resolves its bright endpoints to the expected stars` — feed a small fixture with
       Orion's belt/shoulder vertices and assert each resolves to the expected famous/HIP star
       (Betelgeuse, Rigel, Saiph…) by id or by position within a few arcmin.
-- [ ] Test `famous-subtracted endpoint resolves from the seed position` — a vertex over a star that
+- [x] Test `famous-subtracted endpoint resolves from the seed position` — a vertex over a star that
       prep-1 subtracted from the bin (e.g. a Big Dipper star) resolves to the FAMOUS SEED position,
       not a population star.
-- [ ] Test `off-star vertex trips the override path` — a vertex with no famous/population match
+- [x] Test `off-star vertex trips the override path` — a vertex with no famous/population match
       within tolerance resolves via a seeded override (assert it uses the override's position/id).
-- [ ] Test `unresolvable vertex is a hard error naming the nearest miss` — a vertex with no match and
+- [x] Test `unresolvable vertex is a hard error naming the nearest miss` — a vertex with no match and
       no override returns `ResolveError::Unresolvable` carrying the constellation, vertex index, and
       a plausible `nearest_miss_arcmin`.
-- [ ] `cargo test` in `tools/stars-rs/` → the four tests pass.
+- [x] `cargo test` in `tools/stars-rs/` → the four tests pass.
 
 ---
 
@@ -231,15 +231,15 @@ vertices, placed at the **MEDIAN** vertex distance (median so one distant superg
 label off the figure). Compute the mean unit direction (average the normalized position vectors,
 renormalize), then scale by the median of the vertices' distances.
 
-- [ ] Implement `constellation_label_anchor(vertices: &[ResolvedVertex]) -> [f32; 3]` (mean unit
+- [x] Implement `constellation_label_anchor(vertices: &[ResolvedVertex]) -> [f32; 3]` (mean unit
       direction × median distance).
-- [ ] Implement `build_artifact(lines, famous, pop, overrides) -> Result<ConstellationsArtifact, ResolveError>`
+- [x] Implement `build_artifact(lines, famous, pop, overrides) -> Result<ConstellationsArtifact, ResolveError>`
       assembling every figure's segments + anchor, propagating the hard error from Task 2.
-- [ ] Test `median anchor resists one distant outlier` — a figure whose vertices are all ~100 pc
+- [x] Test `median anchor resists one distant outlier` — a figure whose vertices are all ~100 pc
       except one at ~1000 pc; assert the anchor's radial distance is ~the median (~100 pc), NOT the
       mean, and its direction is inside the figure's angular span. Use hand-computed expected values,
       not the function's own formula (no mirror test).
-- [ ] `cargo test` → the median test passes.
+- [x] `cargo test` → the median test passes.
 
 ---
 
@@ -253,15 +253,15 @@ resolve MUST run BETWEEN `build_population` (`main.rs:108`) and that `drop(pop)`
 written to `args.out_dir` (which is `public/data`, per the `stars-*.bin` write loop at
 `main.rs:156-178`).
 
-- [ ] After `build_population` (`main.rs:108`) and before `drop(pop)` (`main.rs:131`): read the
+- [x] After `build_population` (`main.rs:108`) and before `drop(pop)` (`main.rs:131`): read the
       vendored lines + overrides + famous seed, call `build_artifact`, and on `Ok` write
       `args.out_dir.join("constellations.json")` (serde_json to string, then `std::fs::write`). On
       `Err(ResolveError::Unresolvable { … })`, `panic!` / `process::exit` with the actionable message
       (constellation, vertex, nearest miss) — the spec mandates a hard build failure, never a
       silently dropped line.
-- [ ] Print a one-line summary to stderr matching the existing build-log style (`main.rs:110-122`):
+- [x] Print a one-line summary to stderr matching the existing build-log style (`main.rs:110-122`):
       figure count, segment count, and any override hits.
-- [ ] `cargo build` + a local `npm run build-stars-rs` (or the crate's run) against real raw data →
+- [x] `cargo build` + a local `npm run build-stars-rs` (or the crate's run) against real raw data →
       `public/data/constellations.json` is emitted and parses; spot-check Orion's segment count.
 
 **No new unit test here** — the emission path is exercised by the Task 2/3 tests plus the real-data
@@ -287,14 +287,14 @@ build spot-check; a test asserting "main writes a file" would be a wiring restat
   'constellations'; readonly code: number; readonly visible: boolean; readonly intensity: number }`.
   Default `visible: true` (Q7), `intensity: 1.0`.
 
-- [ ] Append `Constellations: 25` to the `Source` const with its docstring.
-- [ ] Create `ConstellationsSourceEntry` (`@types`, one type per file).
-- [ ] Create `src/data/sources/constellations.ts` — the `CONSTELLATIONS_ENTRY` `as const satisfies
+- [x] Append `Constellations: 25` to the `Source` const with its docstring.
+- [x] Create `ConstellationsSourceEntry` (`@types`, one type per file).
+- [x] Create `src/data/sources/constellations.ts` — the `CONSTELLATIONS_ENTRY` `as const satisfies
       ConstellationsSourceEntry` (model on `filaments.ts`), `visible: true`, `intensity: 1.0`.
-- [ ] Add `'constellations'` to the `SourceEntry`/`SourceType` discriminated union wherever
+- [x] Add `'constellations'` to the `SourceEntry`/`SourceType` discriminated union wherever
       `'filament'` is a member (find it via the `SourceEntry` type — the registry `type` field union);
       stitch `CONSTELLATIONS_ENTRY` into `SOURCE_REGISTRY` in `sources.ts` alongside the others.
-- [ ] `npm run typecheck` clean (the registry + entry types line up).
+- [x] `npm run typecheck` clean (the registry + entry types line up).
 
 **No test** — an entry-list or enum-value restatement is exactly the registry restatement
 testing.md forbids. Structural invariants (`code` uniqueness, non-empty label) are already covered by
@@ -322,11 +322,11 @@ assertion.
 - `selectConstellationsEnabled(state): boolean` and `selectConstellationIntensity(state): number` —
   twins of the filament selectors (`selectors.ts:129-135`).
 
-- [ ] Add the `constellations` field to the settings-state type + `initialState` seed.
-- [ ] Add the two reducers to `settingsSlice.ts` (with the `// ── constellations ──` banner comment
+- [x] Add the `constellations` field to the settings-state type + `initialState` seed.
+- [x] Add the two reducers to `settingsSlice.ts` (with the `// ── constellations ──` banner comment
       matching neighbours).
-- [ ] Add the two selectors to `selectors.ts`.
-- [ ] `npm run typecheck` clean.
+- [x] Add the two selectors to `selectors.ts`.
+- [x] `npm run typecheck` clean.
 
 **No test** — trivial setters + primitive-read selectors; a test would restate the reducer body
 (a mirror) or the default constant.
@@ -361,16 +361,16 @@ whose message names the regenerate command `npm run build-stars-rs` on mismatch.
 validate-and-throw on `parseStructureMeta` (`structureCatalogFetcher.ts:45-51`), which is public and
 unit-tested without the network.
 
-- [ ] Create the `ConstellationsArtifact` type.
-- [ ] Create the fetcher: URL via `dataUrl('constellations.json')`, `makeJsonFetcher(urlFor,
+- [x] Create the `ConstellationsArtifact` type.
+- [x] Create the fetcher: URL via `dataUrl('constellations.json')`, `makeJsonFetcher(urlFor,
       parseConstellations)`; export `parseConstellations` for the test.
-- [ ] Test `parseConstellations accepts a valid v1 artifact` — a minimal two-figure fixture parses
+- [x] Test `parseConstellations accepts a valid v1 artifact` — a minimal two-figure fixture parses
       to the expected object.
-- [ ] Test `parseConstellations rejects a wrong version` — `{ version: 2, … }` throws, and the
+- [x] Test `parseConstellations rejects a wrong version` — `{ version: 2, … }` throws, and the
       message mentions `npm run build-stars-rs`.
-- [ ] Test `parseConstellations rejects a malformed shape` — a non-array `constellations` (or missing
+- [x] Test `parseConstellations rejects a malformed shape` — a non-array `constellations` (or missing
       `segments`) throws.
-- [ ] `npm test -- constellationsFetcher` → all three pass.
+- [x] `npm test -- constellationsFetcher` → all three pass.
 
 ---
 
@@ -390,13 +390,13 @@ unit-tested without the network.
   deps.cb), req: () => …, demand: (ctx) => ctx.settings.constellations.enabled }` — model on the
   `flow` row (`assetWiring.ts:270-275`, demand = the layer's master gate).
 
-- [ ] Create the slot (mirror `structureCatalogSlot`), warning-only subscriber.
-- [ ] Add the `ASSET_WIRING` row with `demand: (ctx) => ctx.settings.constellations.enabled`.
-- [ ] Wire the slot's ready value to the renderer + label producer at the seam the structures slot
+- [x] Create the slot (mirror `structureCatalogSlot`), warning-only subscriber.
+- [x] Add the `ASSET_WIRING` row with `demand: (ctx) => ctx.settings.constellations.enabled`.
+- [x] Wire the slot's ready value to the renderer + label producer at the seam the structures slot
       uses (`wireStructureProjection`'s analog) — the ready artifact must reach both the GPU upload
       (Task 10) and `produceConstellationLabels` (Task 12). Follow whichever subscription mechanism
       the sibling singleton layer (filaments/flow) uses to hand its ready asset to its renderer.
-- [ ] `npm run typecheck` clean.
+- [x] `npm run typecheck` clean.
 
 **No test** — slot construction + a demand predicate are wiring; the fetcher's behavior (Task 7) and
 the layer's behavior (Task 11) carry the real coverage.
@@ -444,13 +444,13 @@ is a few lines, not a second expansion.
 > the simplest alternative before forking a third expansion copy — do not silently re-copy the
 > whole helper. (Pause-before-implementing.)
 
-- [ ] Create `io.wesl` with the instance struct + `Uniforms` (CameraUniforms prefix + `intensity`
+- [x] Create `io.wesl` with the instance struct + `Uniforms` (CameraUniforms prefix + `intensity`
       + viewport, whatever `expandSegmentQuad` needs) + the bindings, mirroring
       `markerLines/io.wesl`.
-- [ ] Create `vertex.wesl` importing `expandSegmentQuad`, applying the per-endpoint gap.
-- [ ] Create `fragment.wesl` — steel-blue additive output scaled by `intensity` and the per-instance
+- [x] Create `vertex.wesl` importing `expandSegmentQuad`, applying the per-endpoint gap.
+- [x] Create `fragment.wesl` — steel-blue additive output scaled by `intensity` and the per-instance
       alpha. Single quotes only in comments.
-- [ ] `npm run build` links (no WESL linker error; imports resolve).
+- [x] `npm run build` links (no WESL linker error; imports resolve).
 
 **No unit test** — WESL is verified by the visual pass (Task 15). The instance-stride byte layout is
 enforced by the TS↔WESL parity discipline in the renderer (Task 10), where a stride test IS
@@ -480,16 +480,16 @@ does (`starPointsLayer.ts:188,263`; primitives `rebaseViewProj` at
 `cameraUniforms.ts:64-85`). Keep the shared-vp invariant: compute the rebased vp ONCE per frame,
 hand the same matrix to the single draw.
 
-- [ ] Create the renderer (mirror `filamentRenderer`): pipeline, bind-group-per-pipeline (WebGPU
+- [x] Create the renderer (mirror `filamentRenderer`): pipeline, bind-group-per-pipeline (WebGPU
       `'auto'` layouts do not cross pipelines — build the bind group against this pipeline's layout),
       instance buffer from the artifact segments, `writeCameraPrefix` into the uniform.
-- [ ] Construct it in `initGpu.ts` beside `filamentRenderer`; add the `constellationRenderer` field
+- [x] Construct it in `initGpu.ts` beside `filamentRenderer`; add the `constellationRenderer` field
       to the GPU-handle type (nullable, like `filamentRenderer`).
-- [ ] Wire the slot's ready artifact (Task 8) to `renderer.upload(artifact)`.
-- [ ] IF the renderer packs a uniform struct whose byte offsets mirror a WESL struct: add a
+- [x] Wire the slot's ready artifact (Task 8) to `renderer.upload(artifact)`.
+- [x] IF the renderer packs a uniform struct whose byte offsets mirror a WESL struct: add a
       **uniform byte-layout parity test** (this is a testing.md keep-rule — WGSL/TS parity catches
       drift invisible until iOS drops the frame). Otherwise no test.
-- [ ] `npm run typecheck` + `npm run build` clean.
+- [x] `npm run typecheck` + `npm run build` clean.
 
 ---
 
@@ -520,16 +520,16 @@ STARTING POINT tuned visually in Task 15; the row's docblock must name the keyin
 file's "one table, mixed keying quantities" convention, `scaleFadeBands.ts:24-32`). Row shape:
 `{ fullAt, goneAt }` (a recede band — full at the small-distance edge).
 
-- [ ] Add the `constellations` `SCALE_FADE_BANDS` row with a keying-quantity docblock and eye-tuning
+- [x] Add the `constellations` `SCALE_FADE_BANDS` row with a keying-quantity docblock and eye-tuning
       note.
-- [ ] Create `constellationsLayer.ts` (mirror `filamentsLayer`, NEAR0 slab, the two-condition
+- [x] Create `constellationsLayer.ts` (mirror `filamentsLayer`, NEAR0 slab, the two-condition
       `enabled` gate, the fade-band × layer-opacity multiply in `draw`).
-- [ ] Register `constellationsLayer` in `CONTENT_LAYERS` (`passes/index.ts:235`) and add the
+- [x] Register `constellationsLayer` in `CONTENT_LAYERS` (`passes/index.ts:235`) and add the
       re-export (`passes/index.ts:338` pattern). Place it in draw order near the other additive
       overlays (after filaments / with the star layers — pick per the NEAR0 slab grouping; additive
       blend makes per-fragment color order-independent, so this is an encoder-record choice, not a
       correctness one — document that in the layer header like `filamentsLayer.ts:31-40`).
-- [ ] `npm run typecheck` + `npm run build` clean.
+- [x] `npm run typecheck` + `npm run build` clean.
 
 **No test** — the `enabled` gate + fade multiply are wiring mirrored from `filamentsLayer`; the fade
 BAND math is `fadeBand` (already tested) over a data row (a constant restatement to test).
@@ -557,17 +557,17 @@ BAND math is `fadeBand` (already tested) over a data row (a constant restatement
   `produceStructureLabels.ts:40-47`).
 - No abbreviations in v1.
 
-- [ ] Create the annotation-tier label style constant (dimmer/smaller than structure labels).
-- [ ] Create `produceConstellationLabels.ts` reading the ready artifact from wherever Task 8 lands it
+- [x] Create the annotation-tier label style constant (dimmer/smaller than structure labels).
+- [x] Create `produceConstellationLabels.ts` reading the ready artifact from wherever Task 8 lands it
       on `state` (mirror how `produceStructureLabels` reads `state.data.structures`).
-- [ ] Register it in `engine.ts` beside `structureLabels` (`engine.ts:532-535`), documenting the
+- [x] Register it in `engine.ts` beside `structureLabels` (`engine.ts:532-535`), documenting the
       merged-order note (`engine.ts:520-527`).
-- [ ] Test `produces one label per constellation at its anchor` — a two-constellation fixture yields
+- [x] Test `produces one label per constellation at its anchor` — a two-constellation fixture yields
       two labels at the expected `labelAnchorPc`s with the Latin names.
-- [ ] Test `label fadeAlpha multiplies the layer fade` — with a stubbed fade opacity of e.g. 0.5 and
+- [x] Test `label fadeAlpha multiplies the layer fade` — with a stubbed fade opacity of e.g. 0.5 and
       a full distance band, assert `fadeAlpha === 0.5 ×` the distance factor (hand-computed, not the
       producer's own expression).
-- [ ] `npm test -- produceConstellationLabels` → both pass.
+- [x] `npm test -- produceConstellationLabels` → both pass.
 
 ---
 
@@ -596,12 +596,12 @@ BAND math is `fadeBand` (already tested) over a data row (a constant restatement
   intensity setter drives no fade layer — do NOT add `setConstellationIntensity` to FADE_ROW (it is
   a brightness scale, not a visibility gate; the filament intensity setter is likewise absent).
 
-- [ ] Add the `FadeId` kind + docblock.
-- [ ] Add the `VisibilityLayerKey` union member.
-- [ ] Add the `fadeIdToVisibilityKey` case (build fails without it — confirms exhaustiveness).
-- [ ] Add the `FADE_LAYERS` row with the `hasData()` guard.
-- [ ] Add the single `FADE_ROW` entry for `setConstellationsEnabled` (import the action).
-- [ ] `npm run typecheck` + `npm run build` clean (the exhaustiveness guards pass).
+- [x] Add the `FadeId` kind + docblock.
+- [x] Add the `VisibilityLayerKey` union member.
+- [x] Add the `fadeIdToVisibilityKey` case (build fails without it — confirms exhaustiveness).
+- [x] Add the `FADE_LAYERS` row with the `hasData()` guard.
+- [x] Add the single `FADE_ROW` entry for `setConstellationsEnabled` (import the action).
+- [x] `npm run typecheck` + `npm run build` clean (the exhaustiveness guards pass).
 
 **No test** — every change here is a registry/union addition whose correctness is compiler-checked
 (the `never` guards). A runtime assertion of the mapping would restate the switch (a mirror).
@@ -628,17 +628,17 @@ split, one component per file, CSS-module `composes`.)
 **Interfaces (Consumes):** `selectConstellationsEnabled` / `selectConstellationIntensity` (Task 6),
 `setConstellationsEnabled` / `setConstellationIntensity` (Task 6).
 
-- [ ] Add a "Constellations" toggle row in `StarsSection`, modelled on the famous-stars singleton
+- [x] Add a "Constellations" toggle row in `StarsSection`, modelled on the famous-stars singleton
       row (`StarsSection.tsx:169-180`) — a checkbox bound to `constellationsEnabled` →
       `onToggleConstellations`. Place it with the star/famous controls.
-- [ ] Add a "Constellation intensity" slider in the Advanced block, modelled on the Advanced slider
+- [x] Add a "Constellation intensity" slider in the Advanced block, modelled on the Advanced slider
       pattern (`StarsSection.tsx:244-261`) — bound to `constellationIntensity` →
       `onConstellationIntensityChange`. Pick a sensible range (e.g. 0–2, 1.0 identity).
-- [ ] Wire both through `StarsSectionContainer` (add the two selectors + two `useCallback`
+- [x] Wire both through `StarsSectionContainer` (add the two selectors + two `useCallback`
       dispatchers with `[dispatch]` deps, and the two new props), mirroring
       `onToggleFamousStars` (`StarsSectionContainer.tsx:153-156`).
-- [ ] Label copy has no em dashes / LLM tells.
-- [ ] `npm run typecheck` clean; the dev server renders the new controls.
+- [x] Label copy has no em dashes / LLM tells.
+- [x] `npm run typecheck` clean; the dev server renders the new controls.
 
 **No test** — a toggle/slider row is presentational wiring; the spec explicitly scopes TS tests to
 the fetcher (Task 7) and the label producer (Task 12). Do not add a component-render restatement.
@@ -652,10 +652,10 @@ the fetcher (Task 7) and the label producer (Task 12). Do not add a component-re
 `constellations.json` is a `public/data/` build output (like `structures_meta.json`), so it belongs
 in the `ALLOW` filter (`syncR2.ts:118-173`), NOT `EXTRA_FILES`.
 
-- [ ] Add `name === 'constellations.json'` to the `ALLOW` predicate with a one-line comment (a
+- [x] Add `name === 'constellations.json'` to the `ALLOW` predicate with a one-line comment (a
       gitignored build artefact emitted by `stars-rs`, fetched by the runtime, tier-agnostic like
       `structures_meta.json`).
-- [ ] `npm run typecheck` clean.
+- [x] `npm run typecheck` clean.
 
 **No new test** — the match is an exact-string `name === 'constellations.json'` (a constant
 restatement to assert). The existing `tests/tools/deploy/syncR2.test.ts` covers the filter's
@@ -676,8 +676,8 @@ house convention (bake the review into the plan). Specifically check:
   validator).
 - No settings field is written by one path and read-for-truth by another.
 
-- [ ] Run `entanglement-radar`; record findings.
-- [ ] Land any surfaced un-braiding as follow-up edits (delegated) or, if out of scope, capture as a
+- [x] Run `entanglement-radar`; record findings.
+- [x] Land any surfaced un-braiding as follow-up edits (delegated) or, if out of scope, capture as a
       backlog item. Do not rubber-stamp.
 
 ---
@@ -706,10 +706,10 @@ should see:
 
 **Files:** none (verification).
 
-- [ ] `npm run typecheck` (both src + tools tsconfigs) clean.
-- [ ] `npm test` (full vitest run) green — the suite is 600+ files and must stay green.
-- [ ] `cargo test` in `tools/stars-rs/` green.
-- [ ] `npm run build` (tsc --noEmit + vite build) succeeds; WESL links.
+- [x] `npm run typecheck` (both src + tools tsconfigs) clean.
+- [x] `npm test` (full vitest run) green — the suite is 600+ files and must stay green.
+- [x] `cargo test` in `tools/stars-rs/` green.
+- [x] `npm run build` (tsc --noEmit + vite build) succeeds; WESL links.
 
 ---
 

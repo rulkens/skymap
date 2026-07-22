@@ -774,6 +774,41 @@ mod tests {
         assert!((r - 37.7).abs() < 0.5, "seed distance ~37.7 pc, not decoy 500, got {r}");
     }
 
+    // An override carrying a `hip` (instead of a literal `position_pc`) resolves
+    // through `resolve_hip`: the vertex lands at the POPULATION star's own
+    // position/magnitude, not the override's own ra/dec. The population star
+    // sits far from the vertex's sky coordinate (well outside step 2's angular
+    // tolerance), so step 2 can't claim it first — only the hip lookup in step 3
+    // does.
+    #[test]
+    fn override_hip_resolves_via_population_ids() {
+        let overrides = Overrides {
+            overrides: vec![OverrideEntry {
+                constellation: "Orion".into(),
+                ra: 100.0,
+                dec: 20.0,
+                hip: Some(99),
+                position_pc: None,
+                app_mag: None,
+            }],
+        };
+        // Far from the vertex (100.0, 20.0) — outside DEFAULT_TOL_ARCMIN, so step
+        // 2 does not match it; only the hip lookup can place this vertex.
+        let pop = pop_from(vec![(
+            star_at(200.0, -30.0, 50.0, 3.3),
+            StarIds { gaia: Some(7), hip: Some(99) },
+        )]);
+
+        let v = resolve_vertex(
+            "Orion", 5, 100.0, 20.0, &famous(vec![]), &pop, &overrides, DEFAULT_TOL_ARCMIN,
+        )
+        .expect("resolves via the override's hip lookup")
+        .vertex;
+        assert!((v.app_mag - 3.3).abs() < 1e-4, "population star's own magnitude used");
+        let r = (v.pos_pc[0].powi(2) + v.pos_pc[1].powi(2) + v.pos_pc[2].powi(2)).sqrt();
+        assert!((r - 50.0).abs() < 0.5, "population star's own distance ~50 pc, got {r}");
+    }
+
     // A vertex with no famous / population match, but a seeded position override
     // for its constellation + coordinate, resolves via the override.
     #[test]
