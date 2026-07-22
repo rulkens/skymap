@@ -37,6 +37,8 @@
 
 import { vec3 } from 'wgpu-matrix';
 import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { ImagePlaneBasis } from '../../../../@types/camera/ImagePlaneBasis';
+import { imagePlaneBasis } from '../../../../utils/camera/imagePlaneBasis';
 import vsCode from '../../shaders/horizonShell/vertex.wesl?static';
 import fsCode from '../../shaders/horizonShell/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
@@ -132,8 +134,9 @@ export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
   // reads below index cleanly under noUncheckedIndexedAccess.  wgpu-matrix
   // writes into them in place via the `dst` arg just the same.
   const fwd: Vec3 = [0, 0, 0];
-  const right: Vec3 = [0, 0, 0];
-  const up: Vec3 = [0, 0, 0];
+  // Roll-adjusted screen basis, allocated once and rewritten in place each
+  // frame by `imagePlaneBasis` via its `out` argument.
+  const basis: ImagePlaneBasis = { rolledUp: [0, 0, 0], right: [0, 0, 0], up: [0, 0, 0] };
 
   function draw(
     pass: GPURenderPassEncoder,
@@ -144,18 +147,19 @@ export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
     // ── Camera basis (matches gl-matrix lookAt in computeViewProj) ────
     //
     //   forward = normalize(target - position)
-    //   right   = normalize(cross(forward, worldUp))
-    //   up      = cross(right, forward)
+    //   right   = normalize(forward × rolledUp)
+    //   up      = normalize(right × forward)
     //
     // Built from the camera directly rather than by inverting the
-    // view-projection (which is numerically unstable at the shell's
-    // huge near:far ratio).  Roll is not applied — the shell predates
-    // any roll usage and the default up is world +Y.
+    // view-projection (which is numerically unstable at the shell's huge
+    // near:far ratio).  The right/up axes come from the shared
+    // `imagePlaneBasis`, which rolls world +Y about the view direction —
+    // so the shell rolls in lockstep with `computeViewProj`.
     vec3.subtract(cam.target, cam.position, fwd);
     vec3.normalize(fwd, fwd);
-    vec3.cross(fwd, WORLD_UP, right);
-    vec3.normalize(right, right);
-    vec3.cross(right, fwd, up);
+    imagePlaneBasis(fwd, cam.roll ?? 0, WORLD_UP, basis);
+    const right = basis.right;
+    const up = basis.up;
 
     const aspect = viewport[1] > 0 ? viewport[0] / viewport[1] : cam.aspect;
     const tanHalfFovY = Math.tan(cam.fovYRad / 2);
