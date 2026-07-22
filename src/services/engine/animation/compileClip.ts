@@ -70,6 +70,7 @@ import type {
 import type { Effect } from '../../../@types/animation/Effect';
 import type { Channel } from '../../../@types/animation/Channel';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
+import type { Mat3 } from '../../../@types/math/Mat3';
 import { CHANNEL_SPACE } from './channelSpace';
 import { validateSingleWriter } from './validateSingleWriter';
 import { buildPathTrack } from './buildPathTrack';
@@ -97,6 +98,10 @@ type Accum = {
   // The resolved clip start pose — a `flyPath` flies out of it (it is the first
   // spline knot), so the walk needs it when it reaches a `flyPath` leaf.
   readonly start: CameraPose;
+  // The STEADY orientation-frame basis this clip compiles under; a `flyPath`
+  // encodes its world tangents to (yaw, pitch) through it (see `buildPathTrack`).
+  // Absent ⇒ identity (world-frame aim), so every non-frame caller is unchanged.
+  readonly frameBasis?: Mat3;
 };
 
 // ---------------------------------------------------------------------------
@@ -208,6 +213,7 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
         lingerSec: effect.lingerSec,
         spline: effect.spline,
         passBy: effect.passBy,
+        frameBasis: acc.frameBasis,
       });
       acc.pathTracks.push(track);
       // A dwell (`linger` + `lingerSec`) ADDS time, so the real duration is the
@@ -292,14 +298,19 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
  * and the `Record<Channel, BaseSegment[]>` map — no engine state is read or
  * written.
  *
- * @param data  The authored clip description.
- * @returns     A `CompiledClip` ready for the evaluator.
+ * @param data        The authored clip description.
+ * @param frameBasis  The STEADY orientation-frame basis a `flyPath` encodes its
+ *                    world tangents through (see `buildPathTrack`). Absent ⇒
+ *                    identity (world-frame aim); a clip with no `flyPath` is
+ *                    unaffected either way, so `durationSec`-only callers may
+ *                    omit it.
+ * @returns           A `CompiledClip` ready for the evaluator.
  *
  * @throws      Throws via `validateSingleWriter` when a base-layer write clash
  *              is detected on a channel (two overlapping `[start, end)` windows
  *              on the same channel's base track).
  */
-export function compileClip(data: ClipData): CompiledClip {
+export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
   // Resolve the starting pose — 'live' and absent both fall through to the
   // zero placeholder; a concrete CameraPose is used directly.
   const start: CameraPose =
@@ -313,6 +324,7 @@ export function compileClip(data: ClipData): CompiledClip {
     cues: [],
     pathTracks: [],
     start,
+    frameBasis,
   };
 
   // Walk the timeline, accumulating the cursor across top-level entries. A

@@ -64,6 +64,7 @@ import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { PathTrack, PathSample } from '../../../@types/animation/CompiledClip';
 import type { Ease } from '../../../@types/animation/Ease';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Mat3 } from '../../../@types/math/Mat3';
 import type { SplineConfig } from '../../../@types/animation/SplineConfig';
 import type { PassByConfig } from '../../../@types/animation/PassByConfig';
 import type { PassByDir } from '../../../@types/animation/PassByDir';
@@ -122,6 +123,15 @@ type BuildParams = {
    * (lateral offset + direction). Omit for through-centre. See `PassByConfig`.
    */
   readonly passBy?: PassByConfig;
+  /**
+   * The STEADY orientation-frame basis this clip was compiled under
+   * (`ORIENTATION_FRAMES[settings.orientation]`). The path's world-space forward
+   * tangents are ENCODED to (yaw, pitch) through it (`orbitAnglesLookingAlong`)
+   * so the render-path decode through the same basis aims the camera down the
+   * world path. Absent ⇒ identity (world-frame aim), so the pre-feature callers
+   * and every direct test are byte-identical.
+   */
+  readonly frameBasis?: Mat3;
 };
 
 // Spline samples per leg for the arc-length table. 64 is plenty for a smooth
@@ -198,7 +208,7 @@ function passByDirVec(cPrev: Vec3, cK: Vec3, cNext: Vec3, mode: PassByDir): Vec3
 }
 
 export function buildPathTrack(params: BuildParams): PathTrack {
-  const { start, startSec, over, ease, waypoints, align, rampSec, linger } = params;
+  const { start, startSec, over, ease, waypoints, align, rampSec, linger, frameBasis } = params;
   // Normalize the basis + its causal-only knobs. centripetal carries neither, so
   // turnDelay is irrelevant and lookAhead is forced to 0 (no lead); the causal
   // arm fills each from the knob or its builder default.
@@ -331,7 +341,7 @@ export function buildPathTrack(params: BuildParams): PathTrack {
       next = k === nKnots - 1 ? knotPos[k]! : knotPos[k + 1]!;
     }
     const fwd: Vec3 = [next[0] - prev[0], next[1] - prev[1], next[2] - prev[2]];
-    return orbitAnglesLookingAlong(fwd);
+    return orbitAnglesLookingAlong(fwd, frameBasis);
   };
   const yaw: number[] = [];
   const pitch: number[] = [];
@@ -576,7 +586,7 @@ export function buildPathTrack(params: BuildParams): PathTrack {
     if (Math.hypot(fwd[0], fwd[1], fwd[2]) < CHORD_EPS) {
       return { yaw: splinedYaw, pitch: splinedPitch };
     }
-    const a = orbitAnglesLookingAlong(fwd);
+    const a = orbitAnglesLookingAlong(fwd, frameBasis);
     return {
       yaw: blendYaw(splinedYaw, a.yaw, lead),
       pitch: splinedPitch + (a.pitch - splinedPitch) * lead,
