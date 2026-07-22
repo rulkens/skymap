@@ -39,6 +39,12 @@
  *                   FRESH `{ data }` wrapper is stored on each `clipStarted` — the
  *                   Task 8 clock keys on this reference identity to detect a new
  *                   clip (same pattern as `tween` reference equality in tweenSaga).
+ *
+ *   `frameTween`  — an optional in-flight orientation-frame roll descriptor.
+ *                   Null when no frame roll is in flight. The up-basis is
+ *                   DERIVED per frame by a resolver while the slerp runs; the
+ *                   descriptor is wall-clock-free so it stays valid across
+ *                   serialisation and replay, like `tween`.
  */
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
@@ -48,6 +54,7 @@ import type { CameraState } from '../../@types/camera/CameraState';
 import type { CameraPose } from '../../@types/camera/CameraPose';
 import type { CameraTweenDescriptor } from '../../@types/camera/CameraTweenDescriptor';
 import type { ClipData } from '../../@types/animation/ClipData';
+import type { FrameTween } from '../../@types/camera/FrameTween';
 
 // `base` is a placeholder; bootstrap overwrites via `commitCameraPose` once
 // `computeInitialCamera` has run. 0.43 mirrors `cameraFraming.INITIAL_DISTANCE_MPC`,
@@ -65,6 +72,7 @@ const initialState: CameraState = {
   },
   dragging: false,
   clip: null,
+  frameTween: null,
 };
 
 const cameraSlice = createSlice({
@@ -119,6 +127,19 @@ const cameraSlice = createSlice({
       camera.tween = null;
     },
 
+    // ── frame-tween lifecycle ───────────────────────────────────────────────
+    // The orientation-frame roll is orthogonal to `setOrientation`: the latter
+    // snaps the committed target frame, this starts the up-basis slerp toward
+    // it. Keeping them separate lets a URL-boot apply or a tour cue set the
+    // frame without an animation they don't want. A resolver derives the basis
+    // per frame while `frameTween` is non-null.
+    startFrameTween: (camera, action: PayloadAction<FrameTween>) => {
+      camera.frameTween = action.payload;
+    },
+    clearFrameTween: (camera) => {
+      camera.frameTween = null;
+    },
+
     // ── auto-rotate ─────────────────────────────────────────────────────────
     // Replaces the whole sub-object so both `active` and `rate` can be
     // updated atomically (e.g. a settings panel that exposes a rate slider).
@@ -137,6 +158,8 @@ export const {
   setAutoRotate,
   clipStarted,
   clipEnded,
+  startFrameTween,
+  clearFrameTween,
 } = cameraSlice.actions;
 
 // ── pure helper (not a reducer) ──────────────────────────────────────────────

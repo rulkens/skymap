@@ -68,6 +68,8 @@ import { call, race, take, takeLatest, getContext, put, select } from 'typed-red
 import { startClip, stopClip } from './clipActions';
 import { clipFactories } from '../../data/animation/clips/clipRegistry';
 import { resolveClipFoci } from '../../services/engine/animation/resolveClipFoci';
+import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
+import { selectOrientation } from '../settings/selectors';
 import { clipFociReady } from '../tour/clipFociReady';
 import { waitUntil } from '../tour/waitUntil';
 import { pause, resume, goLive } from '../time/timeSlice';
@@ -107,7 +109,16 @@ export function* watchClipSaga() {
             () => clipFociReady(clip.data, resolveDeps()) && cameraRuntime() !== null,
           );
           const rt = cameraRuntime()!;
-          const resolved = resolveClipFoci(clip.data, resolveDeps(), rt.fovYRad, rt.from);
+          // The STEADY orientation basis so a lookAtId bearing encodes through
+          // the same frame the render path decodes with (world-invariant aim).
+          const frameBasis = ORIENTATION_FRAMES[yield* select(selectOrientation)];
+          const resolved = resolveClipFoci(
+            clip.data,
+            resolveDeps(),
+            rt.fovYRad,
+            rt.from,
+            frameBasis,
+          );
           yield* call(playClipSeam, resolved);
         }),
         stop: take(stopClip),

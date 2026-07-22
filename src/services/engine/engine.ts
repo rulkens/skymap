@@ -69,8 +69,11 @@ import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { EngineState } from '../../@types/engine/state/EngineState';
 
 import { createCameraClock } from './camera/cameraClock';
+import { liveFrameBasisQuat } from './camera/liveFrameBasisQuat';
 import type { CameraRuntime } from '../../@types/engine/state/CameraRuntime';
 import { CONST_J2000 } from '../../data/time/constJ2000';
+import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
+import { DEFAULT_ORIENTATION } from '../../data/defaults';
 import { createEngineData } from './data/createEngineData';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
@@ -209,6 +212,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // has run pre-bootstrap, so no pick can fire against it; `runFrame` overwrites
     // it with the real frame instant before the first pick is possible.
     lastRenderedSimDays: { current: CONST_J2000 },
+    // Seeded with the default frame's steady basis so a pre-first-frame read is
+    // valid; `runFrame` overwrites it with the resolved B(t) each frame. Copied
+    // so the seed never aliases the shared registry entry.
+    frameBasis: { current: [...ORIENTATION_FRAMES[DEFAULT_ORIENTATION]] },
   };
 
   // ── Settings — the injected Redux store ──────────────────────────
@@ -662,16 +669,19 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     runTierTransition: makeRunTierTransition(state, bootstrapDeps),
     reconcile: makeReconcileEffects(state),
     resolveDeps,
-    // The live camera Resources `watchFocusTweenSaga` reads to build a focus tween:
-    // the visible from-pose (so a re-focus hands off from what the user sees) and
-    // the lens FOV (for structure screen-fill framing). Null when `state.cam` is
-    // absent — pre-bootstrap or post-destroy — so the focus tween no-ops rather
-    // than tween from a stale pose.
+    // The live camera Resources the focus and orientation sagas read off the
+    // frame loop: the visible from-pose (so a re-focus hands off from what the
+    // user sees), the lens FOV (for structure screen-fill framing), and the
+    // up-basis quaternion resolved THIS frame via `liveFrameBasisQuat`, so a
+    // mid-slerp re-switch captures the live pole rather than snapping to the
+    // committed frame. Null when `state.cam` is absent — pre-bootstrap or
+    // post-destroy — so both sagas no-op rather than seed from a stale pose.
     cameraRuntime: () =>
       state.cam
         ? {
             from: state.cameraRuntime.lastPose.current,
             fovYRad: state.cameraRuntime.projection.fovYRad,
+            frameBasisQuat: liveFrameBasisQuat(state.cameraRuntime),
           }
         : null,
     playClip,

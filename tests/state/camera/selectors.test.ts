@@ -27,10 +27,12 @@ import {
   commitCameraPose,
   clipStarted,
   clipEnded,
+  startFrameTween,
 } from '../../../src/state/camera/cameraSlice';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { CameraTweenDescriptor } from '../../../src/@types/camera/CameraTweenDescriptor';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
+import type { FrameTween } from '../../../src/@types/camera/FrameTween';
 
 // Build a fresh store for each test so dispatch side-effects don't cross cases.
 const makeStore = () => configureStore({ reducer: rootReducer });
@@ -44,6 +46,13 @@ const tween: CameraTweenDescriptor = {
   to: pose,
   durationMs: 1200,
   easing: 'easeOutCubic',
+};
+
+const frameTween: FrameTween = {
+  fromQuat: [0, 0, 0, 1],
+  to: 'galactic',
+  durationMs: 800,
+  easing: 'inOut',
 };
 
 describe('selectCameraBase', () => {
@@ -106,6 +115,14 @@ describe('selectCameraActive', () => {
     const store = makeStore();
     store.dispatch(setAutoRotate({ active: false, rate: 0.001 }));
     store.dispatch(clipStarted(clipData));
+
+    expect(selectCameraActive(store.getState())).toBe(true);
+  });
+
+  it('is true while a frameTween is in flight', () => {
+    const store = makeStore();
+    store.dispatch(setAutoRotate({ active: false, rate: 0.001 }));
+    store.dispatch(startFrameTween(frameTween));
 
     expect(selectCameraActive(store.getState())).toBe(true);
   });

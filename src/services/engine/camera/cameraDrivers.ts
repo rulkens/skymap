@@ -64,6 +64,7 @@ import { spinAutoRotate } from './spinAutoRotate';
 import { tweenElapsed, autoRotateElapsed, clipElapsed, followElapsed } from './cameraClock';
 import { evaluateClip } from './evaluateClip';
 import { bodyFocusDistance } from './bodyFocusDistance';
+import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { FOCUS_TWEEN_MS } from './focusTweenDuration';
 import { liveBodyPosition } from './liveBodyPosition';
@@ -222,8 +223,12 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
       commitsOnEdge: true,
       isActive: (s) => s.camera.clip !== null,
       // elapsed here is SECONDS from clipElapsed (not ms) — evaluateClip
-      // takes elapsedSec. See the UNIT NOTE in elapsedForWinner.
-      pose: (s, _cam, elapsed) => evaluateClip(s.camera.clip!.data, elapsed),
+      // takes elapsedSec. See the UNIT NOTE in elapsedForWinner. The STEADY
+      // orientation basis is passed so a flyPath's world tangents encode to
+      // (yaw, pitch) through the committed frame the render path decodes with —
+      // a world-invariant aim (see buildPathTrack / orbitAnglesLookingAlong).
+      pose: (s, _cam, elapsed) =>
+        evaluateClip(s.camera.clip!.data, elapsed, ORIENTATION_FRAMES[s.settings.orientation]),
     },
     {
       id: 'orbitDrag',

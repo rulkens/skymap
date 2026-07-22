@@ -3,12 +3,14 @@
  * DisplaySection — presentational component for the Display settings section
  * inside the SettingsPanel.
  *
- * Owns the Display thematic group UI: the tone-mapping curve dropdown and the
- * Bloom sub-group (enabled toggle + strength/threshold sliders). Nested
- * subgroups (e.g. the Earth atmosphere-exposure disclosure) are passed in as
- * `children` and rendered below, so Display need not drill their props.
- * Isolating this into its own component ensures a change here re-renders ONLY
- * this section rather than the entire HUD.
+ * Owns the Display thematic group UI: the orientation and tone-mapping curve
+ * dropdowns, plus a nested "Bloom" CollapsibleSection (master enable on its
+ * header, strength/threshold sliders in its body — same header-toggle idiom
+ * `FlowSection` uses for its master enable). Further subgroups (e.g. the Earth
+ * atmosphere-exposure disclosure) are passed in as `children` and rendered
+ * below, so Display need not drill their props. Isolating this into its own
+ * component ensures a change here re-renders ONLY this section rather than
+ * the entire HUD.
  *
  * ### Props-driven, no internal state
  *
@@ -30,15 +32,36 @@
 import { memo } from 'react';
 import type { ReactNode } from 'react';
 import type { ToneMapCurve as ToneMapCurveT } from '../../@types/data/ToneMapCurve';
+import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
 import { ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';
+import { orientationFrameLabel } from '../../data/orientation/orientationFrameLabel';
+import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
+import { DEFAULT_ORIENTATION } from '../../data/defaults';
 import { STAR_EMISSIVE } from '../../data/starRenderConstants';
 import CollapsibleSection from './CollapsibleSection';
 import Slider from '../common/Slider/Slider';
 import styles from './SettingsPanel.module.css';
 
+// ── Module-level constants ─────────────────────────────────────────────────────
+
+/**
+ * The id SET is the registry's own keys (a new frame can't silently vanish
+ * from this dropdown); this only pins display order, default frame first.
+ */
+const ORIENTATION_FRAME_IDS: readonly OrientationFrameId[] = [
+  DEFAULT_ORIENTATION,
+  ...(Object.keys(ORIENTATION_FRAMES) as OrientationFrameId[]).filter(
+    (id) => id !== DEFAULT_ORIENTATION,
+  ),
+];
+
 // ── Props ──────────────────────────────────────────────────────────────────────
 
 export type DisplaySectionProps = {
+  /** Currently selected orientation frame (which plane is levelled as "up"). */
+  orientation: OrientationFrameId;
+  /** Called with the newly selected frame when the orientation dropdown changes. */
+  onOrientationChange: (frame: OrientationFrameId) => void;
   /** Currently selected tone-mapping curve. */
   toneMapCurve: ToneMapCurveT;
   /** Called with the newly selected curve when the dropdown changes. */
@@ -67,6 +90,8 @@ export type DisplaySectionProps = {
  * jargon; tweaker opens one disclosure to find it).
  */
 function DisplaySection({
+  orientation,
+  onOrientationChange,
   toneMapCurve,
   onToneMapCurveChange,
   bloomEnabled,
@@ -79,6 +104,22 @@ function DisplaySection({
 }: DisplaySectionProps) {
   return (
     <CollapsibleSection title="Display">
+      <div className={styles.panelRow}>
+        <label htmlFor="orientation-frame">Orientation</label>
+        <select
+          id="orientation-frame"
+          className={styles.modeSelect}
+          value={orientation}
+          onChange={(e) => onOrientationChange(e.target.value as OrientationFrameId)}
+        >
+          {ORIENTATION_FRAME_IDS.map((id) => (
+            <option key={id} value={id}>
+              {orientationFrameLabel(id)}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div className={styles.panelRow}>
         <label htmlFor="tonemap-curve">Tone curve</label>
         <select
@@ -95,41 +136,37 @@ function DisplaySection({
         </select>
       </div>
 
-      <div className={styles.panelRow}>
-        <label htmlFor="bloom-enabled">Bloom</label>
-        <input
-          id="bloom-enabled"
-          type="checkbox"
-          className={styles.toggle}
-          checked={bloomEnabled}
-          onChange={(e) => onBloomEnabledChange(e.target.checked)}
-        />
-      </div>
-      <div className={styles.panelRow}>
-        <Slider
-          label="Strength"
-          value={bloomStrength}
-          min={0}
-          max={2}
-          step={0.05}
-          onChange={onBloomStrengthChange}
-          format={(v) => v.toFixed(2)}
-        />
-      </div>
-      <div className={styles.panelRow}>
-        {/* Ceiling is the resolved-star emissive: above it the threshold would
-            exclude the Sun's own disc and kill its bloom. See the ordering
-            invariant in data/starRenderConstants.ts. */}
-        <Slider
-          label="Threshold"
-          value={bloomThreshold}
-          min={0}
-          max={STAR_EMISSIVE}
-          step={0.1}
-          onChange={onBloomThresholdChange}
-          format={(v) => v.toFixed(1)}
-        />
-      </div>
+      <CollapsibleSection
+        title="Bloom"
+        headerToggle={bloomEnabled}
+        onHeaderToggleChange={onBloomEnabledChange}
+      >
+        <div className={styles.panelRow}>
+          <Slider
+            label="Strength"
+            value={bloomStrength}
+            min={0}
+            max={2}
+            step={0.05}
+            onChange={onBloomStrengthChange}
+            format={(v) => v.toFixed(2)}
+          />
+        </div>
+        <div className={styles.panelRow}>
+          {/* Ceiling is the resolved-star emissive: above it the threshold would
+              exclude the Sun's own disc and kill its bloom. See the ordering
+              invariant in data/starRenderConstants.ts. */}
+          <Slider
+            label="Threshold"
+            value={bloomThreshold}
+            min={0}
+            max={STAR_EMISSIVE}
+            step={0.1}
+            onChange={onBloomThresholdChange}
+            format={(v) => v.toFixed(1)}
+          />
+        </div>
+      </CollapsibleSection>
 
       {children}
     </CollapsibleSection>

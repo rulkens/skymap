@@ -14,6 +14,7 @@
 
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { CameraProjection } from '../../../@types/camera/CameraProjection';
+import type { Mat3 } from '../../../@types/math/Mat3';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import { updatePosition } from '../../../utils/camera/updatePosition';
 
@@ -24,8 +25,19 @@ import { updatePosition } from '../../../utils/camera/updatePosition';
  * The returned camera is a fresh object with its own writable position vector
  * and a fresh target array — it does NOT alias any field of the (potentially
  * frozen) store pose.
+ *
+ * `frameBasis` is the frame-local → world orientation basis this frame resolved
+ * (which pole the camera treats as "up"). It is written onto the camera BEFORE
+ * `updatePosition`, so the derived `position` decodes through the same basis the
+ * draw uses. Callers pass the resolved per-frame basis (or the steady
+ * `ORIENTATION_FRAMES[orientation]` for demand reads at rest), guaranteeing
+ * demand-time and draw-time positions never diverge.
  */
-export function assembleOrbitCamera(pose: CameraPose, projection: CameraProjection): OrbitCamera {
+export function assembleOrbitCamera(
+  pose: CameraPose,
+  projection: CameraProjection,
+  frameBasis: Mat3,
+): OrbitCamera {
   const cam: OrbitCamera = {
     // Fresh target copy — never alias the store's frozen pose array.
     target: [pose.target[0], pose.target[1], pose.target[2]],
@@ -36,10 +48,13 @@ export function assembleOrbitCamera(pose: CameraPose, projection: CameraProjecti
     aspect: projection.aspect,
     near: projection.near,
     far: projection.far,
+    // The orientation basis is set before updatePosition so the derived position
+    // decodes through it (dir_world = frameBasis · dir_local).
+    frameBasis,
     // Writable position tuple; updatePosition fills it before we return.
     position: [0, 0, 0],
   };
-  // Derive position = target + distance * spherical-to-Cartesian(yaw, pitch).
+  // Derive position = target + distance * frameBasis · spherical(yaw, pitch).
   updatePosition(cam);
   return cam;
 }

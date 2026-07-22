@@ -30,8 +30,9 @@
  *
  * The easy-to-invert trap is column 1: the disk normal is the galactic *Z*
  * axis (the North Galactic Pole), so local +y maps to `GAL_Z_EQ`, not
- * `GAL_Y_EQ`. Those two literals must stay equal to util.wesl's — a parity
- * test scrapes them to guarantee it.
+ * `GAL_Y_EQ`. The galactic basis lives in the orientation-frame registry
+ * (`data/orientation/orientationFrames`); those literals must stay equal to
+ * util.wesl's — a parity test scrapes them to guarantee it.
  *
  * ## Why write the 16 elements by hand
  *
@@ -50,18 +51,9 @@
  * Built once per call with no module-level mutable state; callers cache the
  * result (the placement never changes).
  */
-import type { Vec3 } from '../../../@types/math/Vec3';
+import { GAL_X_EQ, GAL_Y_EQ, GAL_Z_EQ } from '../../../data/orientation/orientationFrames';
 import { MILKY_WAY_CENTER_WORLD } from '../../../data/milkyWay/galacticCenter';
 import { MILKY_WAY_MODEL_SCALE } from './milkyWayCalibration';
-
-/**
- * Equatorial J2000 unit vectors along each galactic axis — the mirror of
- * util.wesl's `GAL_X_EQ / GAL_Y_EQ / GAL_Z_EQ`. Kept in sync by the parity
- * test in `milkyWayModelMatrix.test.ts`, which scrapes the shader literals.
- */
-const GAL_X_EQ: Vec3 = [-0.054876, -0.873437, -0.483835]; // toward Galactic Centre
-const GAL_Y_EQ: Vec3 = [0.494109, -0.44483, 0.746982]; // direction of galactic rotation
-const GAL_Z_EQ: Vec3 = [-0.867666, -0.198076, 0.455984]; // toward North Galactic Pole
 
 /**
  * Model matrix placing the generated point cloud at the Milky Way's world

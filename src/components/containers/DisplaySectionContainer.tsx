@@ -23,6 +23,7 @@ import type { ReactNode } from 'react';
 import DisplaySection from '../SettingsPanel/DisplaySection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
+  selectOrientation,
   selectToneMapCurve,
   selectBloomEnabled,
   selectBloomStrength,
@@ -34,7 +35,9 @@ import {
   setBloomStrength,
   setBloomThreshold,
 } from '../../state/settings/settingsSlice';
+import { requestOrientationChange } from '../../state/camera/orientationActions';
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
+import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
 
 type DisplaySectionContainerProps = {
   /** Nested subgroups rendered inside the Display disclosure (e.g. Earth). */
@@ -43,11 +46,19 @@ type DisplaySectionContainerProps = {
 
 function DisplaySectionContainer({ children }: DisplaySectionContainerProps): React.ReactElement {
   const dispatch = useAppDispatch();
+  const orientation = useAppSelector(selectOrientation);
   const toneMapCurve = useAppSelector(selectToneMapCurve);
   const bloomEnabled = useAppSelector(selectBloomEnabled);
   const bloomStrength = useAppSelector(selectBloomStrength);
   const bloomThreshold = useAppSelector(selectBloomThreshold);
 
+  // Dispatch the single intent and nothing else: the orientation saga captures
+  // the live up-basis and fires setOrientation + startFrameTween. The container
+  // never touches the camera slice nor reads a quaternion.
+  const onOrientationChange = useCallback(
+    (frame: OrientationFrameId) => dispatch(requestOrientationChange(frame)),
+    [dispatch],
+  );
   const onToneMapCurveChange = useCallback(
     (curve: ToneMapCurve) => dispatch(setToneMapCurve(curve)),
     [dispatch],
@@ -67,6 +78,8 @@ function DisplaySectionContainer({ children }: DisplaySectionContainerProps): Re
 
   return (
     <DisplaySection
+      orientation={orientation}
+      onOrientationChange={onOrientationChange}
       toneMapCurve={toneMapCurve}
       onToneMapCurveChange={onToneMapCurveChange}
       bloomEnabled={bloomEnabled}

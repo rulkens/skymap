@@ -25,8 +25,11 @@ import { URL_HASH_FOR } from './urlHashFor';
 import { requestFocus } from '../state/selection/requestFocus';
 import { requestSelect } from '../state/selection/requestSelect';
 import { clearSelection } from '../state/selection/selectionSlice';
+import { setOrientation } from '../state/settings/settingsSlice';
 import { enterManualPausedAt } from '../state/time/enterManualPausedAt';
 import { julianDaysToUnixMs } from '../utils/time/julianDaysToUnixMs';
+import { isOrientationFrameId } from '../utils/url/isOrientationFrameId';
+import { DEFAULT_ORIENTATION } from '../data/defaults';
 
 const focusSource: HashParamSource = {
   key: 'focus',
@@ -80,4 +83,35 @@ const timeSource: HashParamSource = {
   },
 };
 
-export const HASH_PARAM_SOURCES: readonly HashParamSource[] = [focusSource, timeSource];
+/**
+ * `orientation` — which astronomical pole the camera treats as "up". A view
+ * preference, not a navigational target: the share link should reproduce the
+ * composition the author saw.
+ *
+ * ── write ──
+ * Only a non-default frame contributes a param, so a bare URL means "the default
+ * orientation" and the common case adds no bytes. Comparing against
+ * `DEFAULT_ORIENTATION` (not a hard-coded literal) keeps the omit-when-default
+ * rule tied to the one place the default is declared.
+ *
+ * ── read ──
+ * The value is routed through `isOrientationFrameId` before dispatch — the hash
+ * is external input and could carry a hand-typed junk frame. A recognised frame
+ * SNAPS via `setOrientation`; it deliberately does NOT `startFrameTween`, so a
+ * shared link reproduces the composition instantly with no slerp on arrival.
+ */
+const orientationSource: HashParamSource = {
+  key: 'orientation',
+  write: (input) => (input.orientation === DEFAULT_ORIENTATION ? null : input.orientation),
+  read: ({ value, dispatch }) => {
+    if (value && isOrientationFrameId(value)) dispatch(setOrientation(value));
+  },
+};
+
+// Append-only ordering: `composeHashParams` emits in table order, so appending
+// `orientation` after `focus`, `t` keeps existing deep links byte-stable.
+export const HASH_PARAM_SOURCES: readonly HashParamSource[] = [
+  focusSource,
+  timeSource,
+  orientationSource,
+];

@@ -25,7 +25,7 @@ import { resolveStarRecord } from '../../../src/services/engine/helpers/resolveS
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { StarCatalog } from '../../../src/@types/data/starCatalog/StarCatalog';
-import type { FocusCameraRuntime } from '../../../src/store/types';
+import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -65,13 +65,13 @@ async function makeStarCatalog(): Promise<StarCatalog> {
 
 describe('watchFocusTweenSaga', () => {
   let store: ReturnType<typeof build>;
-  let cameraRuntime: () => FocusCameraRuntime | null;
+  let cameraRuntime: () => LiveCameraRuntime | null;
 
   function build() {
     const mw = createSagaMiddleware();
     const s = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(mw) });
     mw.run(watchFocusTweenSaga);
-    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8 });
+    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, frameBasisQuat: [0, 0, 0, 1] });
     mw.setContext({ resolveDeps, cameraRuntime: () => cameraRuntime() });
     return s;
   }
@@ -119,7 +119,7 @@ describe('watchFocusTweenSaga', () => {
 
     // The camera comes online during wireInput; the engine then emits a status
     // pulse as the first catalog arrives (or the synthetic fallback fires).
-    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8 });
+    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, frameBasisQuat: [0, 0, 0, 1] });
     store.dispatch(engineStatusChanged({ kind: 'ready', count: 1, source: Source.SDSS }));
     await flush();
 

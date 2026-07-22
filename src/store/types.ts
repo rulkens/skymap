@@ -46,6 +46,7 @@ import type { ReconcileEffects } from './effects/ReconcileEffects';
 import type { ResolveDeps } from '../@types/engine/ResolveDeps';
 import type { Tier } from '../@types/data/Tier';
 import type { CameraPose } from '../@types/camera/CameraPose';
+import type { Vec4 } from '../@types/math/Vec4';
 import type { ClipData } from '../@types/animation/ClipData';
 import type { ClipId } from '../@types/animation/ClipId';
 
@@ -55,11 +56,16 @@ export type AppDispatch = AppStore['dispatch'];
 
 export type RunTierTransition = (prevTier: Tier, nextTier: Tier) => void;
 /**
- * The live camera Resources `watchFocusTweenSaga` reads to seed a tween: the visible
- * `from` pose (what the user sees this frame, so a re-focus hands off smoothly)
- * and the projection FOV (the structure arm frames a cluster to screen-fill).
+ * The live camera Resources the focus and orientation sagas read off the frame
+ * loop. `watchFocusTweenSaga` seeds a camera tween from the visible `from` pose
+ * (what the user sees this frame, so a re-focus hands off smoothly) and the
+ * projection FOV (the structure arm frames a cluster to screen-fill).
+ * `watchOrientationChangeSaga` seeds a frame roll from `frameBasisQuat`: the
+ * up-basis quaternion resolved THIS frame, so a re-switch mid-slerp composes
+ * continuously instead of snapping the pole back to the committed frame. The
+ * name is frame-agnostic (not `Focus…`) because both sagas share the snapshot.
  */
-export type FocusCameraRuntime = { from: CameraPose; fovYRad: number };
+export type LiveCameraRuntime = { from: CameraPose; fovYRad: number; frameBasisQuat: Vec4 };
 /**
  * The debug clip-path inspector seam — the non-reactive bridge the
  * `watchClipPathInspectSaga` calls to (re)sample a clip's camera route into the
@@ -91,11 +97,11 @@ export type SagaContext = {
   /** Live engine resources the selection reconciler reads to turn a SelectionRef into a SelectionRow. */
   resolveDeps: () => ResolveDeps;
   /**
-   * The live camera resources `watchFocusTweenSaga` reads to build the tween, or
-   * null when the camera is not ready (pre-bootstrap / post-destroy) — the focus
-   * tween then no-ops.
+   * The live camera resources `watchFocusTweenSaga` and `watchOrientationChangeSaga`
+   * read to seed their tweens, or null when the camera is not ready
+   * (pre-bootstrap / post-destroy) — both sagas then no-op.
    */
-  cameraRuntime: () => FocusCameraRuntime | null;
+  cameraRuntime: () => LiveCameraRuntime | null;
   /**
    * Plays a data clip and resolves when the clip completes or is cancelled.
    * The tour saga awaits this Promise for the establishing fly and races it

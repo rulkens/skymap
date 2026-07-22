@@ -72,6 +72,7 @@ import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 
 // ---------------------------------------------------------------------------
 // Fixture helpers — mirror the commitOnEdge.test.ts harness shape
@@ -115,6 +116,7 @@ function makeEngineState(startDistance: number): {
       },
       prevActiveId: { current: 'resting' as string },
       lastRenderedSimDays: { current: 0 },
+      frameBasis: { current: ORIENTATION_FRAMES.ecliptic },
     },
   };
 

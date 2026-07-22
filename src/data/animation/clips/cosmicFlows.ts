@@ -69,7 +69,9 @@ export const cosmicFlows: Clip = {
   id: 'cosmicFlows',
   label: 'Cosmic Flows',
   data: {
-    start: { target: [0, -0.01, 0] as Vec3, yaw: 4.44, pitch: 0.2932, distance: 0.14 },
+    // yaw/pitch encoded in the ecliptic default frame — same world bearing the
+    // legacy Y-up pair (4.44, 0.2932) framed the Local Group with.
+    start: { target: [0, -0.01, 0] as Vec3, yaw: -1.7455, pitch: -0.3589, distance: 0.14 },
     timeline: [
       wait(2), // lead-in: hold the start pose for 2 s (the forked bob still runs)
       hide(['volumesMaster', 'filaments', 'surveyLabel'], 0), // snap cosmic web off — instant intent

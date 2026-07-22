@@ -52,7 +52,7 @@ import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { Effect } from '../../../src/@types/animation/Effect';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { FocusCameraRuntime } from '../../../src/store/types';
+import type { LiveCameraRuntime } from '../../../src/store/types';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -125,9 +125,10 @@ const DIVE_DEPS: ResolveDeps = {
   },
 };
 
-const CAMERA_RUNTIME: FocusCameraRuntime = {
+const CAMERA_RUNTIME: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 },
   fovYRad: 0.8,
+  frameBasisQuat: [0, 0, 0, 1],
 };
 
 // ─── Tests ───────────────────────────────────────────────────────────────────

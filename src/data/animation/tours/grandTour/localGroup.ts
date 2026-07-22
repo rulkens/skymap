@@ -28,7 +28,7 @@
  * landing exactly on the M81 Group's bearing — the flythrough's first
  * knot. Same seed-geometry procedure as the Andromeda dwell: exit yaw
  * looks along LG barycentre → M81 Group centre, and the wrap is chosen
- * backward — the short way is a +6° sliver, so a whole negative revolution
+ * backward — the short way is a −7.2° sliver, so a whole negative revolution
  * keeps the earlier dwells' spin direction and makes the orbit the beat's
  * actual content. The reveal beat owns its gentle share of the turn
  * (imported below); this dwell takes exactly the remainder, so re-tuning
@@ -79,10 +79,12 @@ export const localGroup: ClipData = {
 };
 
 const DWELL_SEC = 14;
-const ARRIVAL_YAW_RAD = 2.602475; // inherited: the Andromeda dwell's landing bearing
-const EXIT_YAW_RAD = 2.706202; // M81 Group centre-frame from the LG barycentre
+// Ecliptic-frame yaws (the default the shared decode reads through
+// ORIENTATION_FRAMES.ecliptic) of the same two world sightlines.
+const ARRIVAL_YAW_RAD = 0.804001; // inherited: the Andromeda dwell's landing bearing
+const EXIT_YAW_RAD = 0.677955; // M81 Group centre-frame from the LG barycentre (+38.84°)
 // The full backward revolution both dwells share (see module header for why
-// not the +6° sliver), minus the reveal beat's own share of the turn.
+// not the −7.2° sliver), minus the reveal beat's own share of the turn.
 const TOTAL_NET_YAW_RAD = EXIT_YAW_RAD - ARRIVAL_YAW_RAD - Math.PI * 2;
 const NET_YAW_RAD = TOTAL_NET_YAW_RAD - REVEAL_NET_YAW_RAD;
 

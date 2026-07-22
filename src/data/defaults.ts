@@ -54,6 +54,7 @@ import type { BiasMode as BiasModeT } from '../@types/data/galaxyCatalog/BiasMod
 import { ToneMapCurve } from './toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
 import type { FlowSettings } from '../@types/settings/FlowSettings';
+import type { OrientationFrameId } from '../@types/camera/OrientationFrameId';
 import { SOURCE_REGISTRY, Source } from './sources';
 
 // ── Rendering knobs ─────────────────────────────────────────────────────────
@@ -413,3 +414,17 @@ export const DEFAULT_SHOW_PICK_BUFFER = false;
 
 /** Disk-radius debug ring starts off.  See `EngineSettingsState.debug.showDiskRadiusRing`. */
 export const DEFAULT_SHOW_DISK_RADIUS_RING = false;
+
+// ── Camera orientation frame ─────────────────────────────────────────────────
+
+/**
+ * Default orientation frame — which astronomical pole the camera treats as "up".
+ *
+ * Ecliptic, not equatorial: the descent lands in the solar system, and the
+ * ecliptic frame puts Earth's orbital plane flat so the planets read as a disk
+ * and Earth's 23.44° obliquity is *desired* — the tilt between the equatorial
+ * and ecliptic poles is exactly what makes the seasons legible in that view.
+ * Booting equatorial would instead flatten Earth's equator and rake the orbital
+ * plane at that same 23.44°, which is the wrong "up" for the arrival scene.
+ */
+export const DEFAULT_ORIENTATION: OrientationFrameId = 'ecliptic';
