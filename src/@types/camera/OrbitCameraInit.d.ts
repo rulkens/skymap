@@ -76,8 +76,12 @@ export type OrbitCameraInit = {
    * Optional: absent ⇒ identity, i.e. the pre-feature decode where local +Y is
    * world +Y. Every non-engine caller (synthetic clouds, focus tween, dev-tool
    * cameras) omits it and is byte-for-byte unchanged — mirrors `roll?`.
+   *
+   * Mutable (like `roll`, `yaw`, `pitch`): the engine's drag register
+   * (`state.cam`) has its `frameBasis` overwritten once per frame with the
+   * resolved B(t), so a grab decodes through the current pole.
    */
-  readonly frameBasis?: Mat3;
+  frameBasis?: Mat3;
 
   /**
    * Vertical field of view in **radians**.

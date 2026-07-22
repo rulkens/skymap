@@ -61,6 +61,7 @@ import {
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 
 /**
  * Minimal EngineState fixture with a live cameraRuntime Resource bag. Used by
@@ -91,6 +92,7 @@ function makeEngineState(): {
       lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 } as CameraPose },
       prevActiveId: { current: 'resting' as string },
       lastRenderedSimDays: { current: 0 },
+      frameBasis: { current: ORIENTATION_FRAMES.ecliptic },
     },
   };
 

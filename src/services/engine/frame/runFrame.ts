@@ -59,7 +59,8 @@ import { runCameraDrivers } from '../camera/cameraDrivers';
 import { activeDriverId } from '../camera/activeDriverId';
 import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
 import { liveBodyPosition } from '../camera/liveBodyPosition';
-import { tweenElapsed, accumulateFollowPan } from '../camera/cameraClock';
+import { tweenElapsed, accumulateFollowPan, frameTweenElapsed } from '../camera/cameraClock';
+import { resolveFrameBasis } from '../camera/resolveFrameBasis';
 import { resizeCanvasToDisplay } from '../../gpu/device';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
 import { produceStructureMarkers } from '../presentation/produceStructureMarkers';
@@ -71,14 +72,17 @@ import { deriveSourceMasks } from './deriveSourceMasks';
 import { renderFrame } from './renderFrame';
 import { drawPickDebugOverlay } from './drawPickDebugOverlay';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
-import { commitCameraPose, cancelCameraTween } from '../../../state/camera/cameraSlice';
+import {
+  commitCameraPose,
+  cancelCameraTween,
+  clearFrameTween,
+} from '../../../state/camera/cameraSlice';
 import { computeScaleInfo } from '../helpers/scaleBar';
 import { engineScaleChanged, engineBodyDistanceReported } from '../../../state/engine/engineSlice';
 import { deriveSimDays } from '../../../utils/time/deriveSimDays';
 import { selectTimeState, selectIsLiveTicking } from '../../../state/time/selectors';
 import { throttleByTime } from '../../../utils/throttle/throttleByTime';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
-import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 
 /**
  * Desired scale-bar width in CSS pixels. The engine computes this per-frame
@@ -245,6 +249,52 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   );
   const activeId = activeDriverId(deps.drivers, rootState);
 
+  // ── Orientation basis B(t): resolve ONCE, feed every reader ───────────────
+  //
+  // `resolveFrameBasis` is the single authority for 'which way is up this frame'.
+  // At rest it returns the steady registry basis for the current orientation;
+  // during an orientation-frame switch it returns the mid-slerp basis between the
+  // switch's captured `fromQuat` and the destination frame. Called exactly once
+  // here so no two consumers can drift on how a frame roll is interpolated — the
+  // resolved value flows to three readers: the boxed `frameBasis` Resource (read
+  // by the saga context + `applySceneEffect` to seed the next switch's `fromQuat`),
+  // the drag register `state.cam.frameBasis` (so a grab THIS frame decodes through
+  // the same pole), and `deriveFrameContext` below (the draw + demand decode).
+  //
+  // `frameTweenElapsed` (inside `resolveFrameBasis`) is the single per-frame tick
+  // of the frame-roll clock — reference-identity reset, exactly like `tweenElapsed`.
+  const frameBasis = resolveFrameBasis(
+    rootState.settings.orientation,
+    rootState.camera.frameTween,
+    state.cameraRuntime.clock,
+    nowMs,
+  );
+  state.cameraRuntime.frameBasis.current = frameBasis;
+  if (state.cam) {
+    // Pre-bootstrap `cam` is null; a grab is impossible until wireInput attaches
+    // controls, so there is no decode to keep in sync until then.
+    state.cam.frameBasis = frameBasis;
+  }
+
+  // Clear a finished frame roll exactly once, mirroring the camera-tween
+  // completion block below: when the roll's elapsed saturates its duration, the
+  // slerp has landed on the destination basis, so drop the descriptor and let the
+  // steady branch take over next frame. Re-calling `frameTweenElapsed` is safe —
+  // the descriptor reference is unchanged, so the clock-reset branch does not fire
+  // and no double-tick occurs. `EASE` clamps the slerp parameter, so THIS frame's
+  // already-resolved basis is the destination exactly; clearing only affects the
+  // next frame's getState.
+  if (rootState.camera.frameTween !== null) {
+    const rollElapsed = frameTweenElapsed(
+      state.cameraRuntime.clock,
+      rootState.camera.frameTween,
+      nowMs,
+    );
+    if (rollElapsed >= rootState.camera.frameTween.durationMs) {
+      deps.cb.store.dispatch(clearFrameTween());
+    }
+  }
+
   // ── (2) TWEEN COMPLETION: cancel a finished tween exactly once ────────────
   //
   // Must run AFTER the pose is produced (so `pose` already == to via saturation
@@ -385,10 +435,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     deps.canvas,
     renderPose,
     state.cameraRuntime.projection,
-    // Steady orientation basis for now. Task 9 replaces this with the per-frame
-    // resolved B(t) (the slerp between orientation frames during a switch); the
-    // parameter is threaded here so that swap is a one-line change.
-    ORIENTATION_FRAMES[rootState.settings.orientation],
+    // This frame's resolved orientation basis B(t) — the same value written to the
+    // `frameBasis` Resource and the drag register above, so the draw/demand decode
+    // shares one pole with the switch surfaces.
+    frameBasis,
     masks.draw,
     nowMs,
     simDays,

@@ -63,7 +63,8 @@ vi.mock('../../../../src/services/gpu/device', () => ({
 // writes to, so one array captures the derive→produce order.
 const timeOrder = vi.hoisted(() => ({ log: [] as string[] }));
 vi.mock('../../../../src/services/engine/frame/deriveBodyStates', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../../src/services/engine/frame/deriveBodyStates')>();
+  const actual =
+    await importOriginal<typeof import('../../../../src/services/engine/frame/deriveBodyStates')>();
   return {
     ...actual,
     deriveBodyStates: vi.fn((simDays: number) => {
@@ -83,7 +84,15 @@ import {
   startCameraTween,
   setAutoRotate,
   commitCameraPose,
+  startFrameTween,
 } from '../../../../src/state/camera/cameraSlice';
+import {
+  ORIENTATION_FRAMES,
+  ORIENTATION_FRAME_QUATERNIONS,
+} from '../../../../src/data/orientation/orientationFrames';
+import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
+import { frameUp } from '../../../../src/utils/camera/frameUp';
+import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
 import { engineScaleChanged } from '../../../../src/state/engine/engineSlice';
 import { setSimDays } from '../../../../src/state/time/timeSlice';
 import { rootReducer } from '../../../../src/store/rootReducer';
@@ -199,6 +208,9 @@ function makeState(): EngineState {
       // runFrame writes this once per frame (single writer) beside the body
       // snapshot prime — the box must exist for that assignment.
       lastRenderedSimDays: { current: 0 },
+      // runFrame resolves B(t) once per frame and writes it here — the box must
+      // exist for that assignment. Seeded with the ecliptic (default) basis.
+      frameBasis: { current: [...ORIENTATION_FRAMES.ecliptic] },
     },
   } as unknown as EngineState;
 }
@@ -360,6 +372,148 @@ describe('runFrame — camera drivers (regression)', () => {
     // After 1000 ms the yaw must have advanced from the base (0).
     const yaw = state.cameraRuntime.lastPose.current.yaw;
     expect(yaw).toBeGreaterThan(0);
+  });
+});
+
+describe('runFrame — orientation-frame roll (Task 9)', () => {
+  // Vector helpers local to this suite. The assembled camera exposes world
+  // `position`; the frame pole is `frameUp(B(t))` (middle column of the basis).
+  const sub = (a: readonly number[], b: readonly number[]): number[] => [
+    a[0]! - b[0]!,
+    a[1]! - b[1]!,
+    a[2]! - b[2]!,
+  ];
+  const norm = (v: readonly number[]): number => Math.hypot(v[0]!, v[1]!, v[2]!);
+  const dot = (a: readonly number[], b: readonly number[]): number =>
+    a[0]! * b[0]! + a[1]! * b[1]! + a[2]! * b[2]!;
+  // Angle (rad) between two unit-ish vectors, clamped so acos never sees >1.
+  const angleBetween = (a: readonly number[], b: readonly number[]): number => {
+    const c = dot(a, b) / (norm(a) * norm(b));
+    return Math.acos(Math.min(1, Math.max(-1, c)));
+  };
+
+  it('an idle frame switch holds the subject (target + distance) and rolls only the up-vector', () => {
+    // Q4 guarantee, reconciled against the decode math. With the resting driver
+    // winning, the base pose (target, yaw, pitch, distance) is returned unchanged
+    // every frame; only B(t) slerps. The decode is
+    //   position = target + distance · (B(t) · dir_local(yaw, pitch)).
+    // So the SUBJECT is invariant — target is fixed and |position − target| stays
+    // exactly `distance` — while the up-vector (frame pole) rotates old → new. The
+    // eye ORBITS the target along the slerp arc (a distance-preserving roll about
+    // the view axis), it does NOT translate. Full position-constancy would require
+    // the resting driver to re-encode the pose against B(t) each frame, which it
+    // does not; the invariant the produce path actually upholds is target-fixed +
+    // distance-fixed + up-rotating, which is what we assert.
+    const store = makeStore();
+    const state = makeCamState();
+    const deps = makeCamDeps(state, store);
+
+    // A base pose whose view direction is well away from either pole, so the roll
+    // is visible and the eye clearly orbits (yaw/pitch both non-trivial).
+    const BASE: CameraPose = { target: [0, 0, 0], yaw: 0.7, pitch: 0.3, distance: 100 };
+    store.dispatch(commitCameraPose(BASE));
+    state.cameraRuntime.lastPose.current = BASE;
+
+    // Switch ecliptic → galactic over 1 s, linear so the slerp parameter is the
+    // raw time fraction (monotonic pole rotation).
+    store.dispatch(
+      startFrameTween({
+        fromQuat: [...ORIENTATION_FRAME_QUATERNIONS.ecliptic],
+        to: 'galactic',
+        durationMs: 1000,
+        easing: 'linear',
+      }),
+    );
+
+    const projection = state.cameraRuntime.projection;
+    const samples: { t: number; target: number[]; position: number[]; up: number[] }[] = [];
+    for (const t of [0, 250, 500, 750, 1000]) {
+      runFrame(state, deps, t);
+      const B = state.cameraRuntime.frameBasis.current;
+      const cam = assembleOrbitCamera(state.cameraRuntime.lastPose.current, projection, B);
+      samples.push({
+        t,
+        target: [...cam.target],
+        position: [...cam.position],
+        up: frameUp(B),
+      });
+    }
+
+    const first = samples[0]!;
+    for (const s of samples) {
+      // Target is fixed across the whole transition.
+      expect(norm(sub(s.target, first.target))).toBeLessThan(1e-6);
+      // Distance (|position − target|) is preserved — the eye orbits, never
+      // translates toward or away from the subject. Relative tolerance: the basis
+      // slerp runs in float32, so absolute error scales with `distance` (~1e-5 at
+      // 100); the invariant is that the *ratio* holds to float32 precision.
+      const rel = Math.abs(norm(sub(s.position, s.target)) - BASE.distance) / BASE.distance;
+      expect(rel).toBeLessThan(1e-6);
+    }
+
+    // Endpoints: the up-vector starts on the ecliptic pole and lands on the
+    // galactic pole (the slerp saturates by elapsed ≥ durationMs).
+    expect(angleBetween(first.up, frameUp(ORIENTATION_FRAMES.ecliptic))).toBeLessThan(1e-6);
+    expect(
+      angleBetween(samples[samples.length - 1]!.up, frameUp(ORIENTATION_FRAMES.galactic)),
+    ).toBeLessThan(1e-6);
+
+    // The up-vector rotates MONOTONICALLY old → new: its angle from the start
+    // pole strictly increases across the transition. This is the roll.
+    const anglesFromStart = samples.map((s) => angleBetween(s.up, first.up));
+    for (let i = 1; i < anglesFromStart.length; i++) {
+      expect(anglesFromStart[i]!).toBeGreaterThan(anglesFromStart[i - 1]!);
+    }
+    // And the eye genuinely moved (orbited) — proving the up-roll is a real
+    // world-space change, not a no-op.
+    expect(norm(sub(samples[samples.length - 1]!.position, first.position))).toBeGreaterThan(1);
+
+    // Completion clears the descriptor exactly once: after the saturating frame
+    // the store's frameTween is null, so the steady branch takes over next frame.
+    expect(store.getState().camera.frameTween).toBeNull();
+  });
+
+  it('a switch into a near-pole-aligned view resolves to a finite pose at the clamp, not NaN', () => {
+    // PITCH_LIMIT edge (spec §10). With the view direction a hair off the frame
+    // pole — pitch pinned at the orbitControls clamp `π/2 − 0.01` — forward and
+    // the lookAt up-vector stay 0.01 rad apart through the ENTIRE slerp (B(t) is a
+    // rotation, so it rotates forward and up together, preserving their angle). We
+    // pin that every produced pose and its view-projection are finite: at exactly
+    // π/2 the lookAt would gimbal-lock to NaN, and the clamp is what keeps this
+    // switch well-defined.
+    const PITCH_LIMIT = Math.PI / 2 - 0.01; // mirrors orbitControls.ts:91
+    const store = makeStore();
+    const state = makeCamState();
+    const deps = makeCamDeps(state, store);
+
+    const BASE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: PITCH_LIMIT, distance: 100 };
+    store.dispatch(commitCameraPose(BASE));
+    state.cameraRuntime.lastPose.current = BASE;
+
+    store.dispatch(
+      startFrameTween({
+        fromQuat: [...ORIENTATION_FRAME_QUATERNIONS.ecliptic],
+        to: 'galactic',
+        durationMs: 1000,
+        easing: 'linear',
+      }),
+    );
+
+    const projection = state.cameraRuntime.projection;
+    for (const t of [0, 250, 500, 750, 1000]) {
+      runFrame(state, deps, t);
+      const pose = state.cameraRuntime.lastPose.current;
+      expect(Number.isFinite(pose.yaw)).toBe(true);
+      expect(Number.isFinite(pose.pitch)).toBe(true);
+      expect(Math.abs(pose.pitch)).toBeLessThanOrEqual(PITCH_LIMIT + 1e-9);
+
+      const cam = assembleOrbitCamera(pose, projection, state.cameraRuntime.frameBasis.current);
+      for (const c of cam.position) expect(Number.isFinite(c)).toBe(true);
+      // The view-projection is where a degenerate near-pole lookAt would surface
+      // NaN; assert every entry is finite.
+      const vp = computeViewProj(cam);
+      for (const m of vp) expect(Number.isFinite(m)).toBe(true);
+    }
   });
 });
 

@@ -71,6 +71,8 @@ import type { EngineState } from '../../@types/engine/state/EngineState';
 import { createCameraClock } from './camera/cameraClock';
 import type { CameraRuntime } from '../../@types/engine/state/CameraRuntime';
 import { CONST_J2000 } from '../../data/time/constJ2000';
+import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
+import { DEFAULT_ORIENTATION } from '../../data/defaults';
 import { createEngineData } from './data/createEngineData';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
@@ -93,10 +95,7 @@ import { awaitSlotReady } from '../loading/awaitSlotReady';
 import { runBootstrapPhases } from './phases/bootstrap';
 import type { BootstrapDeps } from '../../@types/engine/BootstrapDeps';
 import { createDisabledGpuTimingService } from '../gpu/timing/gpuTimingService';
-import {
-  updateFrameStats,
-  IDLE_GAP_MS,
-} from '../../utils/perf/updateFrameStats';
+import { updateFrameStats, IDLE_GAP_MS } from '../../utils/perf/updateFrameStats';
 import type { FrameStats } from '../../@types/engine/FrameStats';
 import { addVolumeField } from './handles/addVolumeField';
 import { removeVolumeField } from './handles/removeVolumeField';
@@ -212,6 +211,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // has run pre-bootstrap, so no pick can fire against it; `runFrame` overwrites
     // it with the real frame instant before the first pick is possible.
     lastRenderedSimDays: { current: CONST_J2000 },
+    // Seeded with the default frame's steady basis so a pre-first-frame read is
+    // valid; `runFrame` overwrites it with the resolved B(t) each frame. Copied
+    // so the seed never aliases the shared registry entry.
+    frameBasis: { current: [...ORIENTATION_FRAMES[DEFAULT_ORIENTATION]] },
   };
 
   // ── Settings — the injected Redux store ──────────────────────────
@@ -910,8 +913,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         fps: Math.round(frameStats.fps),
         cpuMs: frameStats.cpuMs,
         idle:
-          frameStats.lastStartMs === 0 ||
-          performance.now() - frameStats.lastStartMs > IDLE_GAP_MS,
+          frameStats.lastStartMs === 0 || performance.now() - frameStats.lastStartMs > IDLE_GAP_MS,
       }),
       passOverrides: {
         allNames: CONTENT_LAYERS.filter((l) => l.target !== 'volume').map((p) => p.name),
