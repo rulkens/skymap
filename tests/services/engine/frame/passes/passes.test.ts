@@ -36,6 +36,7 @@ import {
   starAggregateUpsampleLayer,
   foregroundLabelsLayer,
   near0SelectionRingLayer,
+  clipPathDebugLayer,
   structureMarkersLayer,
 } from '../../../../../src/services/engine/frame/passes';
 import { COSMO, NEAR0, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
@@ -196,17 +197,13 @@ const HDR_NAMES = [
   'structure-markers',
 ];
 
-// The canonical swap-group (post-tone-map, premultiplied-OVER) name order —
-// see the renderer-unification design's migration table (spec lines
-// 208-212). Selection ring leads so marker-lines and labels composite over
-// its stroke; the debug clip-path overlay trails everything else.
-const SWAP_NAMES = [
-  'selection-ring',
-  'disk-radius-ring',
-  'marker-lines',
-  'labels',
-  'clip-path-debug',
-];
+// The canonical (swap, COSMO) group (post-tone-map, premultiplied-OVER) name
+// order — see the renderer-unification design's migration table (spec lines
+// 208-212). Selection ring leads so marker-lines and labels composite over its
+// stroke. The debug clip-path overlay is NOT here: it projects through NEAR0
+// (so a near-field route clears the cosmological near plane) — see
+// NEAR_SWAP_NAMES below.
+const SWAP_NAMES = ['selection-ring', 'disk-radius-ring', 'marker-lines', 'labels'];
 
 // The near-field foreground group: the true-scale bodies drawn into the
 // depth-bearing `foreground:0` target through the near0 slab — Earth, the Sun
@@ -251,8 +248,12 @@ const NEAR_HDR_NAMES = [
 // near-field content rather than being clipped by the cosmological near plane.
 // Its own (swap, NEAR0) render group, distinct from the (swap, COSMO) overlays
 // above: the star selection ring first (so its stroke sits under the caption,
-// mirroring the COSMO ring→labels order), then the scene-body name captions.
-const NEAR_SWAP_NAMES = ['near0-selection-ring', 'foreground-labels'];
+// mirroring the COSMO ring→labels order), then the scene-body name captions,
+// then the clip-path inspector overlay LAST (so its debug route + gizmo draw on
+// top of everything). The clip-path overlay projects through NEAR0 so a
+// near-field clip's route — Earth-to-parsec, wholly inside COSMO's 10 kpc near
+// plane — is not clipped to nothing.
+const NEAR_SWAP_NAMES = ['near0-selection-ring', 'foreground-labels', 'clip-path-debug'];
 
 // ── Tests ───────────────────────────────────────────────────────────────────
 
@@ -304,7 +305,7 @@ describe('CONTENT_LAYERS migration table (near-field hdr group)', () => {
 
 describe('CONTENT_LAYERS migration table (swap group)', () => {
   it('every swap content layer matches the migration table', () => {
-    // The five post-tone-map UI overlays project through the same
+    // The COSMO post-tone-map UI overlays project through the same
     // cosmological slab as the HDR group but target the swap chain with
     // premultiplied-OVER blending — see the renderer-unification design's
     // migration table (spec lines 208-212).
@@ -335,19 +336,21 @@ describe('CONTENT_LAYERS migration table (foreground group)', () => {
 });
 
 describe('CONTENT_LAYERS migration table (near-field swap group)', () => {
-  it('the star selection ring and scene-body captions draw into swap through the near0 slab, over', () => {
+  it('the star selection ring, scene-body captions, and clip-path overlay draw into swap through the near0 slab, over', () => {
     // The (swap, NEAR0) group: like the COSMO swap overlays these target the
     // swap chain with premultiplied-OVER, but they project through NEAR0 so
     // their anchors track true-scale near-field content (a picked star, a body
-    // caption) rather than being clipped by the cosmological near plane. Drawn
-    // by the program's (swap, NEAR0) render step, filtered here by (target,
-    // slab) so a mis-registered member surfaces — the ring leads the caption.
+    // caption, a near-field clip's route) rather than being clipped by the
+    // cosmological near plane. Drawn by the program's (swap, NEAR0) render step,
+    // filtered here by (target, slab) so a mis-registered member surfaces — the
+    // ring leads the caption, the clip-path overlay trails.
     const nearSwap = CONTENT_LAYERS.filter(
       (layer) => layer.target === 'swap' && layer.slab === NEAR0,
     );
     expect(nearSwap.map((layer) => layer.name)).toEqual(NEAR_SWAP_NAMES);
     expect(nearSwap).toContain(near0SelectionRingLayer);
     expect(nearSwap).toContain(foregroundLabelsLayer);
+    expect(nearSwap).toContain(clipPathDebugLayer);
     for (const layer of nearSwap) {
       expect(layer.slab).toBe(NEAR0);
       expect(layer.target).toBe('swap');
@@ -408,14 +411,13 @@ describe('CONTENT_LAYERS blend legality', () => {
         );
       }
     }
-    // Ten layers blend OVER: the five COSMO swap overlays, the two (swap,
-    // NEAR0) overlays (the near0 star selection ring and foreground-labels), and
-    // the three translucent foreground members — the ring, Earth's cloud shell,
-    // and Earth's in-scatter atmosphere (the three OVER members of the
-    // otherwise-opaque foreground group). The star-picking branch added
-    // near0-selection-ring, the planet-rendering branch added the ring, the
-    // cloud-shell branch added the shell, and the atmosphere branch adds the
-    // in-scatter shell — raising the count to ten.
+    // Ten layers blend OVER: the four COSMO swap overlays, the three (swap,
+    // NEAR0) overlays (the near0 star selection ring, foreground-labels, and the
+    // clip-path inspector route — moved here from the COSMO swap group so a
+    // near-field clip's parsec-scale route is not clipped by the cosmological
+    // near plane), and the three translucent foreground members — the ring,
+    // Earth's cloud shell, and Earth's in-scatter atmosphere (the three OVER
+    // members of the otherwise-opaque foreground group).
     expect(CONTENT_LAYERS.filter((layer) => layer.blend === 'over')).toHaveLength(10);
   });
 });

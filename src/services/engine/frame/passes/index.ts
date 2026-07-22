@@ -272,9 +272,9 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   starCatalogLayer,
   starAggregateUpsampleLayer,
   // Swap-target rows: post-tone-map, premultiplied-OVER overlays. Selection
-  // ring leads so marker-lines and labels composite over its stroke; the
-  // debug clip-path overlay trails so its route + gizmo draw on top of
-  // everything else.
+  // ring leads so marker-lines and labels composite over its stroke; the debug
+  // clip-path overlay is the very last swap row (below, past the NEAR0 group) so
+  // its route + gizmo draw on top of everything else.
   selectionRingLayer,
   // The NEAR0 sibling of selection-ring: same shared renderer + `selectionHalo`
   // gate, but projected through the near0 slab (with the f64 rebase the other
@@ -286,7 +286,6 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   diskRadiusRingLayer,
   markerLinesLayer,
   labelsLayer,
-  clipPathDebugLayer,
   // Near-field foreground group: the true-scale bodies drawn into the
   // depth-bearing 'foreground:0' target through the near0 slab, all riding
   // the single (foreground:0, NEAR0) render step. Registered after the swap
@@ -320,6 +319,14 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   // step drives it — the (swap, COSMO) step selects nothing here by
   // construction.
   foregroundLabelsLayer,
+  // The clip-path inspector overlay: a debug swap row projected through NEAR0
+  // (so a near-field route — Earth-to-parsec — clears COSMO's 10 kpc near plane;
+  // see the layer header). Listed LAST among the (swap, NEAR0) rows so its route
+  // + gizmo draw on top of every other overlay, the same "trails everything"
+  // intent it had as a COSMO row. `atmosphereShellLayer` below is (foreground:0,
+  // NEAR0), a step the frame program runs BEFORE the swap overlays, so this stays
+  // the last thing painted.
+  clipPathDebugLayer,
   // Earth's in-scatter atmosphere: the LAST content-layer row (spec §8.3),
   // drawn LAST within the (foreground:0, NEAR0) group so it depth-tests against
   // every opaque sphere AND the rings/cloud-shell already stamped there (limb
