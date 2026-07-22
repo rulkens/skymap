@@ -35,6 +35,7 @@ const FIXTURE: FamousStarEntry[] = [
     massSolar: 2.06,
     luminositySolar: 25.4,
     gaiaDr3: '2947050466531873024',
+    hip: 32349,
     description: 'The brightest star in the night sky.',
   },
   {
@@ -53,6 +54,7 @@ const FIXTURE: FamousStarEntry[] = [
     oblateness: 0.35,
     variable: { type: 'Be', magRange: [0.4, 0.6] },
     gaiaDr3: '4732214452838183424',
+    hip: 7588,
     description: 'The flattest known star, spun near breakup.',
   },
   {
@@ -69,6 +71,7 @@ const FIXTURE: FamousStarEntry[] = [
     radiusSolar: 0.15,
     temperatureK: 3042,
     gaiaDr3: null,
+    hip: null,
     description: 'The nearest star to the Sun.',
   },
 ];
@@ -156,5 +159,17 @@ describe('seedToRustConst', () => {
     expect(text).toContain('4732214452838183424, // achernar');
     // The null entry contributes no element — Proxima's id never appears.
     expect(text).not.toContain('proxima-centauri');
+  });
+
+  it('emits a u32 array of the non-null hip ids', () => {
+    const text = seedToRustConst(FIXTURE);
+
+    // Sirius + Achernar carry a hip; Proxima's is null, so length is 2.
+    expect(text).toContain('pub const FAMOUS_STAR_HIP_IDS: [u32; 2] = [');
+    // Each hip is a bare u32 literal with the star id as a provenance comment.
+    expect(text).toContain('32349, // sirius');
+    expect(text).toContain('7588, // achernar');
+    // Proxima's null hip contributes nothing — it never appears in the hip array.
+    // (Its whole entry is already absent per the gaiaDr3 test above.)
   });
 });
