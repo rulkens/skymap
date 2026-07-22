@@ -20,6 +20,20 @@
  * `labelsLayer` is its slab, which is exactly why it's a separate row rather
  * than a branch inside one.
  *
+ * ### The constellation figure names ride here too
+ *
+ * The true-3D constellation NAMES (`constellationCaptions`) join this row for
+ * the SAME slab reason. Their anchors sit at parsec distances, inside the COSMO
+ * near plane, so the main director could never draw them — but on NEAR0 they
+ * project fine. They fold into the one entry pipeline below beside the scene
+ * bodies: their fade TARGET is `constellationLayerOpacity` (the distance band ×
+ * the fade-registry toggle — the same one home the stick-figure pass reads, so
+ * names dissolve in lock-step with the lines), and they contend in the shared
+ * declutter at the lowest tier. Unlike a body caption they anchor in EMPTY
+ * SPACE at a figure centroid, so they take no leader-line lift — pass 2 emits
+ * them forward-projected directly (the overlay shader's clip-z clamp keeps
+ * them drawing past the adaptive far plane).
+ *
  * ### Why a SECOND marker-line renderer for the leader lines
  *
  * Each caption hangs off its body on a short leader line — the famous-galaxy
@@ -175,9 +189,13 @@ import type { MarkerLine } from '../../../../@types/rendering/MarkerLine';
 import type { Vec2 } from '../../../../@types/math/Vec2';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { BodyState } from '../../../../@types/scene/BodyState';
+import type { AssetSlot } from '../../../../@types/loading/AssetSlot';
+import type { ConstellationsArtifact } from '../../../../@types/loading/ConstellationsArtifact';
 import { NEAR0 } from '../slabs';
-import type { SceneBodyLabel } from '../../presentation/sceneBodyLabels';
+import type { ForegroundCaption } from '../../presentation/foregroundCaption';
 import { sceneBodyLabels } from '../../presentation/sceneBodyLabels';
+import { constellationCaptions } from '../../presentation/constellationCaptions';
+import { constellationLayerOpacity } from '../../presentation/constellationLayerOpacity';
 import { sceneBodyStates } from '../sceneBodyStates';
 import { CAPTION_PRIORITY, CAPTION_TIER_SCALE } from '../../presentation/captionPriority';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
@@ -244,23 +262,51 @@ let captionClockMs: number | null = null;
  * Earth/planet anchors actually shift. `draw` then rebases whichever set is
  * current into the camera-relative frame.
  *
- * The narrowed `SceneBodyLabel` element type carries the producer's guarantee
- * that colour / em / clamps are always authored, so the loop below hands them
- * to `liftedLabelPlacement` (which requires plain numbers) without defensive
- * fallbacks.
+ * The narrowed `ForegroundCaption` element type carries the producer's
+ * guarantee that colour / em / clamps are always authored, so the loop below
+ * hands them to `liftedLabelPlacement` (which requires plain numbers) without
+ * defensive fallbacks.
  */
 let cachedStates: ReadonlyMap<string, BodyState> | undefined;
-let cachedLabels: readonly SceneBodyLabel[] = [];
-/** The caption-id universe (for the envelope prune), tracking `cachedLabels`. */
-let cachedLabelIds: ReadonlySet<string> = new Set();
+let cachedLabels: readonly ForegroundCaption[] = [];
 
-function baseLabelsFor(bodyStates: ReadonlyMap<string, BodyState>): readonly SceneBodyLabel[] {
+function baseLabelsFor(bodyStates: ReadonlyMap<string, BodyState>): readonly ForegroundCaption[] {
   if (bodyStates !== cachedStates) {
     cachedLabels = sceneBodyLabels(bodyStates);
-    cachedLabelIds = new Set(cachedLabels.map((l) => l.id));
     cachedStates = bodyStates;
   }
   return cachedLabels;
+}
+
+/**
+ * The constellation caption set, MEMOIZED on the artifact's identity. The
+ * artifact is static once its slot lands (positions and names never change), so
+ * an identity check on the slot's ready value is a free change-detector — the
+ * same posture `baseLabelsFor` takes on the body-state snapshot. The names are
+ * built once when the artifact arrives and reused every frame after; a released
+ * slot (`state` back to non-ready) drops the set to empty so the captions
+ * dissolve with the layer. The producer is pure — this layer applies the
+ * per-frame fade target and the toggle below.
+ */
+let cachedArtifact: ConstellationsArtifact | undefined;
+let cachedConstellationCaptions: readonly ForegroundCaption[] = [];
+
+function constellationCaptionsFor(
+  slot: AssetSlot<ConstellationsArtifact, void> | null,
+): readonly ForegroundCaption[] {
+  const slotState = slot?.state();
+  const artifact =
+    slotState !== undefined && slotState.kind === 'ready' ? slotState.value : undefined;
+  if (artifact === undefined) {
+    cachedArtifact = undefined;
+    cachedConstellationCaptions = [];
+    return cachedConstellationCaptions;
+  }
+  if (artifact !== cachedArtifact) {
+    cachedConstellationCaptions = constellationCaptions(artifact);
+    cachedArtifact = artifact;
+  }
+  return cachedConstellationCaptions;
 }
 
 /**
@@ -295,13 +341,29 @@ export const foregroundLabelsLayer: ContentLayer = {
   enabled(state, ctx) {
     const renderer = state.gpu.foregroundLabelRenderer;
     if (renderer === null || renderer.glyphCount() === 0) return false;
-    // Both distance gates compose: the shared foreground gate (so this row
-    // empties with its NEAR0 siblings at galaxy zoom) AND the tighter caption
-    // gate (see SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC's docblock).
-    return (
+    // The BODY captions' gate: the shared foreground gate (so this row empties
+    // with its NEAR0 siblings at galaxy zoom) AND the tighter caption gate (see
+    // SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC's docblock).
+    const bodyGate =
       ctx.cam.distance < FOREGROUND_MAX_DISTANCE_MPC &&
-      ctx.cam.distance < SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC
-    );
+      ctx.cam.distance < SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC;
+    // The CONSTELLATION captions ride their own distance band, which reaches
+    // out PAST the body caption gate (the band fades to 0 at 0.01 Mpc, beyond
+    // the ~9.2e-3 Mpc caption gate), so the row must also run while a figure
+    // name could still be visible — otherwise the names would be cut mid-band.
+    // Gate on: the artifact ready, and the distance band above 0 (opacity 1 →
+    // the band-only cull, the exact pattern constellationsLayer.enabled uses,
+    // keyed on the same heliocentric-origin camera distance the stick-figure
+    // pass reads). Composed with OR so each caption group keeps its own onset.
+    const slot = state.assetSlots.constellations;
+    const constellationGate =
+      slot !== null &&
+      slot.state().kind === 'ready' &&
+      constellationLayerOpacity(
+        Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]),
+        1,
+      ) > 0;
+    return bodyGate || constellationGate;
   },
 
   draw(pass, view, ctx, state) {
@@ -342,7 +404,7 @@ export const foregroundLabelsLayer: ContentLayer = {
     // ── Pass 1: rebase + size every body, and derive each caption's fade TARGET ──
     // (Stage 1 of the module header's three-stage pipeline.)
     type Entry = {
-      label: SceneBodyLabel;
+      label: ForegroundCaption;
       anchor: Vec3;
       subjectSizePx: number;
       baseTarget: number;
@@ -409,6 +471,45 @@ export const foregroundLabelsLayer: ContentLayer = {
       });
     }
 
+    // ── The constellation figure names, folded into the same entry set ──
+    // Static once the artifact lands (memoized on its identity); every figure
+    // shares ONE fade target this frame — the layer's distance band × the
+    // fade-registry toggle, `constellationLayerOpacity` (the same one home the
+    // stick-figure pass reads, so names dissolve in lock-step with the lines).
+    // The whole block is skipped while the slot is unloaded, so a state
+    // without a constellation slot never reads the fade registry.
+    const constellationCaps = constellationCaptionsFor(state.assetSlots.constellations);
+    if (constellationCaps.length > 0) {
+      const constellationCamDistMpc = Math.hypot(camPos[0], camPos[1], camPos[2]);
+      const constellationLayerFade = state.subsystems.fades.opacityOf(
+        { kind: 'constellations' },
+        ctx.nowMs,
+      );
+      const constellationTarget = constellationLayerOpacity(
+        constellationCamDistMpc,
+        constellationLayerFade,
+      );
+      for (const label of constellationCaps) {
+        // The anchor is empty space at the figure centroid — no body, so no
+        // apparent size (subjectSizePx 0, which composes cleanly into the
+        // declutter score below as the annotation tier's within-tier tiebreak)
+        // and no leader-line lift in pass 2. Re-express it camera-relative
+        // before the f32 upload, same as the body anchors.
+        const anchor: Vec3 = [
+          label.worldPos[0] - camPos[0],
+          label.worldPos[1] - camPos[1],
+          label.worldPos[2] - camPos[2],
+        ];
+        entries.push({
+          label,
+          anchor,
+          subjectSizePx: 0,
+          baseTarget: constellationTarget,
+          screenPx: projectToScreenPx(anchor, rebasedVp, viewportPx),
+        });
+      }
+    }
+
     // ── Stage 2: de-collide EVERY visible caption in one cull ──
     // Priority = kind tier · scale + clamped apparent size: the tier always
     // dominates (see `captionPriority.ts`), apparent size only breaks ties
@@ -448,7 +549,12 @@ export const foregroundLabelsLayer: ContentLayer = {
     const approach = 1 - Math.exp(-dtMs / CAPTION_ENVELOPE_TAU_MS);
     let anyRamping = false;
 
-    type Emit = { label: SceneBodyLabel; anchor: Vec3; subjectSizePx: number; fadeAlpha: number };
+    type Emit = {
+      label: ForegroundCaption;
+      anchor: Vec3;
+      subjectSizePx: number;
+      fadeAlpha: number;
+    };
     const toEmit: Emit[] = [];
     for (let i = 0; i < entries.length; i++) {
       const e = entries[i]!;
@@ -468,18 +574,36 @@ export const foregroundLabelsLayer: ContentLayer = {
       }
     }
 
-    // Prune envelope state for ids that left the caption universe. The
-    // universe is the static `BASE_LABELS` today, so this never fires — it is
-    // the leak guard that keeps the map honest if the seed list ever becomes
-    // dynamic.
+    // Prune envelope state for ids that left the caption universe — the union
+    // of both producers' ids, which IS the entry set this frame (every caption
+    // becomes an entry, faded or behind-camera included). For the body captions
+    // this never fires (the roster is static); it DOES fire when the
+    // constellation slot unloads, dropping those figures' envelope state so the
+    // map can't leak across a load/unload cycle.
+    const universe = new Set(entries.map((e) => e.label.id));
     for (const id of captionAlpha.keys()) {
-      if (!cachedLabelIds.has(id)) captionAlpha.delete(id);
+      if (!universe.has(id)) captionAlpha.delete(id);
     }
 
     // ── Pass 2: lift each survivor and emit its caption + connector ──
     const liftedLabels: Label[] = [];
     const lines: MarkerLine[] = [];
     for (const { label, anchor, subjectSizePx, fadeAlpha } of toEmit) {
+      // Constellation names anchor in EMPTY SPACE at a figure centroid, not on a
+      // body, so they skip the leader-line lift entirely and emit forward-
+      // projected at their anchor — the same direct emit the behind-camera
+      // fallback below uses. Their anchors sit far beyond the NEAR0 adaptive far
+      // plane at Earth zoom, but the overlay label shader clamps clip-z (module
+      // header, 'Why the overlay shaders clamp clip-z'), so a direct forward
+      // projection still draws — the far-plane clamp + em-scale machinery below
+      // exists only for the INVERSE-projection lift path, which this never
+      // takes. No connector, no size clamp: the caption just draws at its
+      // centroid, dissolving on the shared envelope like every other.
+      if (label.kind === 'constellation') {
+        liftedLabels.push({ ...label, worldPos: anchor, fadeAlpha });
+        continue;
+      }
+
       // Pull the anchor inside the NEAR0 far plane before the lift. A far star
       // (VY CMa at ~1170 pc ≈ 1.2e-3 Mpc) sits tens of MILLIONS of times beyond
       // the far plane, which floors at `FAR_MIN_MPC = 3e-11` on a deep Earth

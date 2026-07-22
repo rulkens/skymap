@@ -151,18 +151,17 @@ export type EngineSettingsState = {
 
   /**
    * Constellation stick-figure overlay controls. A singleton overlay like
-   * `filaments` / `milkyWay` / `flow`: master toggle + intensity scale paired
-   * because the intensity slider is meaningless when the master toggle is off.
+   * `filaments` / `milkyWay` / `flow`: master toggle + intensity scale.
    * `enabled` + `intensity` seed from the `SOURCE_REGISTRY` constellations row so
-   * that entry stays the single source of truth for those defaults; `labels` is
-   * an independent gate on the figure NAME labels (defaults on) — turning it off
-   * removes the names while the stick figures stay drawn. The labels also
-   * multiply by the layer fade, so lines off ⇒ labels off regardless.
+   * that entry stays the single source of truth for those defaults. The one
+   * `enabled` toggle governs BOTH the stick figures and their name captions —
+   * the captions ride the same layer fade the lines do, so there is no separate
+   * names gate. `intensity` has no panel control; it is a store-only dial the
+   * line-brightness math reads.
    */
   constellations: {
     enabled: boolean;
     intensity: number;
-    labels: boolean;
   };
 
   /**

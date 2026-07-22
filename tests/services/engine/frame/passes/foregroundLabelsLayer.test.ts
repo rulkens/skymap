@@ -96,6 +96,10 @@ function makeCtx(distance: number, nowMs?: number): ReadyFrameContext {
   // which assert on the rebase/fade seams, not occlusion — on the occluding path.
   return {
     cam: { distance },
+    // The constellation gate reads the heliocentric-origin camera distance off
+    // drawCamPos (matching constellationsLayer.enabled); park the eye on +X at
+    // the same distance the body gate reads.
+    drawCamPos: [distance, 0, 0],
     fovYRad: 1,
     nowMs,
     // The layer binds its caption epoch to ctx.simDays via sceneBodyStates; pin
@@ -145,9 +149,61 @@ function makeState(
       labels: { starLabelsEnabled, planetLabelsEnabled },
       famousStars: { enabled: famousStarsEnabled },
     },
+    // No constellation slot by default — the body-caption tests never exercise
+    // the figure-name path, so the layer reads an empty set and skips the toggle
+    // + fade-registry reads entirely (the constellation tests below supply a
+    // ready slot). The layer reads `state.assetSlots.constellations`, so the key
+    // must exist even when null.
+    assetSlots: { constellations: null },
     // The envelope wakes the render loop while alphas ramp — the layer calls
     // this spy on mid-ramp frames and stays quiet once settled.
     subsystems: { scheduler: { requestRender: vi.fn<() => void>() } },
+  } as unknown as EngineState;
+}
+
+// Two figures at parsec-scale anchors, spread on the sky so an identity-ish vp
+// keeps them apart in the declutter. The names are the caption ids.
+const CONSTELLATION_ARTIFACT = {
+  version: 1 as const,
+  constellations: [
+    {
+      name: 'Orion',
+      labelAnchorPc: [200, -50, 100] as Vec3,
+      segments: [{ aPc: [1, 2, 3] as Vec3, aAppMag: 0.5, bPc: [4, 5, 6] as Vec3, bAppMag: 1.2 }],
+    },
+    {
+      name: 'Ursa Major',
+      labelAnchorPc: [-30, 80, 12] as Vec3,
+      segments: [{ aPc: [7, 8, 9] as Vec3, aAppMag: 2, bPc: [10, 11, 12] as Vec3, bAppMag: 2.4 }],
+    },
+  ],
+};
+const CONSTELLATION_IDS = new Set(CONSTELLATION_ARTIFACT.constellations.map((c) => c.name));
+
+// A state whose constellation slot is READY, with the fade-registry opacity
+// under test control. `starLabelsEnabled` etc. are on so the body captions
+// coexist; the constellation-specific assertions filter by CONSTELLATION_IDS.
+function makeConstellationState(opts: { layerFade: number; ready?: boolean }): EngineState {
+  return {
+    gpu: {
+      foregroundLabelRenderer: makeRenderer(6),
+      foregroundMarkerLineRenderer: makeLineRenderer(),
+    },
+    settings: {
+      labels: { starLabelsEnabled: true, planetLabelsEnabled: true },
+      famousStars: { enabled: true },
+      constellations: {},
+    },
+    assetSlots: {
+      constellations:
+        (opts.ready ?? true)
+          ? { state: () => ({ kind: 'ready', value: CONSTELLATION_ARTIFACT }) }
+          : null,
+    },
+    subsystems: {
+      scheduler: { requestRender: vi.fn<() => void>() },
+      fades: { opacityOf: () => opts.layerFade },
+    },
   } as unknown as EngineState;
 }
 
@@ -653,5 +709,76 @@ describe('foregroundLabelsLayer.draw', () => {
     const view = makeNear0View();
     const state = makeState(null);
     expect(() => foregroundLabelsLayer.draw(PASS_STUB, view, makeCtx(5e-4), state)).not.toThrow();
+  });
+});
+
+const PC = SCALE_UNITS.PC_TO_MPC;
+
+describe('foregroundLabelsLayer — constellation captions', () => {
+  // A camera distance PAST the body-caption gate but still inside the
+  // constellation band (the band fades to 0 at goneAt, beyond that gate) — the
+  // exact window the old director-registered producer could never reach because
+  // the COSMO near plane clipped the parsec-scale anchors. The row must stay
+  // enabled here on the constellation gate alone.
+  const pastBodyGate =
+    (SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC + SCALE_FADE_BANDS.constellations.goneAt) / 2;
+
+  it('runs the row past the body-caption gate while a figure name could show', () => {
+    expect(pastBodyGate).toBeGreaterThan(SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC);
+
+    // Body-only state (no constellation slot): past the body gate the row is off.
+    expect(foregroundLabelsLayer.enabled(makeState(makeRenderer(6)), makeCtx(pastBodyGate))).toBe(
+      false,
+    );
+
+    // Artifact ready: the constellation gate keeps the row alive at the same
+    // distance — the fix's core.
+    expect(
+      foregroundLabelsLayer.enabled(
+        makeConstellationState({ layerFade: 1 }),
+        makeCtx(pastBodyGate),
+      ),
+    ).toBe(true);
+
+    // Beyond the band's far edge the distance band reads 0 ⇒ off regardless of
+    // the toggle (the "opacity 0 ⇒ no render" house rule, the band-only cull).
+    expect(
+      foregroundLabelsLayer.enabled(
+        makeConstellationState({ layerFade: 1 }),
+        makeCtx(SCALE_FADE_BANDS.constellations.goneAt),
+      ),
+    ).toBe(false);
+  });
+
+  it('emits a caption per figure at its centroid, fading with band × registry', () => {
+    rebaseMock.mockClear();
+    // Spread vp so every anchor de-collides — the whole set survives the cull.
+    rebaseMock.mockReturnValueOnce(makeSpreadVp());
+    // Eye inside the full-alpha band edge (< fullAt) so the distance factor is 1
+    // and the drawn alpha reduces to the fade-registry opacity alone.
+    const camPos: Vec3 = [5e-4, 0, 0];
+    const state = makeConstellationState({ layerFade: 0.5 });
+    const renderer = state.gpu.foregroundLabelRenderer!;
+    const lineRenderer = state.gpu.foregroundMarkerLineRenderer!;
+
+    foregroundLabelsLayer.draw(PASS_STUB, makeNear0View(camPos), makeCtx(5e-4), state);
+
+    const emitted = (renderer.setLabels as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0]![0] as readonly Label[];
+    const orion = emitted.find((l) => l.id === 'Orion')!;
+    expect(orion).toBeDefined();
+    // Direct emit: the caption sits at its camera-relative centroid with NO
+    // leader-line lift — all three components are the anchor exactly (a body
+    // caption would have a raised Y). Anchor = labelAnchorPc·PC − camPos.
+    expect(orion.worldPos).toEqual([200 * PC - camPos[0], -50 * PC, 100 * PC]);
+    // Band = 1 inside fullAt, so the drawn alpha is the registry opacity.
+    expect(orion.fadeAlpha).toBeCloseTo(0.5);
+
+    // No leader line belongs to a constellation — empty-space anchors get none.
+    const lines = (lineRenderer.setLines as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0]![0] as MarkerLine[];
+    expect(lines.some((line) => CONSTELLATION_IDS.has(line.id.replace(/-anchor$/, '')))).toBe(
+      false,
+    );
   });
 });

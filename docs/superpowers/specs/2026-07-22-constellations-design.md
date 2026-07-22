@@ -15,11 +15,11 @@ Scope decisions (grill): all 88 IAU figures (Q1); endpoints resolved inside the
 star-bin build so lines land exactly on rendered stars (Q2); line data derived
 from d3-celestial's BSD-3 dataset, not Stellarium's GPL file (Q3); screen-space
 pixel gap at each star (Q4); single dim steel-blue additive style (Q5); Latin
-name labels at the figure's 3D anchor (Q6); one toggle + intensity slider (Q7,
-revised 2026-07-22: default OFF — zoomed-out figures shear into visual noise —
-the toggles live in the Labels section, and the name labels get their own
-independent toggle that still rides the layer fade); no interactivity in v1
-(Q8); celestial-sphere morph mode deferred (Q9).
+name labels at the figure's 3D anchor (Q6); one toggle in the Labels section
+governing both the lines and the name labels together, plus a store-only
+intensity dial with no panel control (Q7, revised 2026-07-22: default OFF —
+zoomed-out figures shear into visual noise); no interactivity in v1 (Q8);
+celestial-sphere morph mode deferred (Q9).
 
 ## Ground preparation
 
@@ -118,18 +118,18 @@ every figure star is in all tiers; one artifact serves all.
 
 ```ts
 type ConstellationsArtifact = {
-  version: 1
+  version: 1;
   constellations: Array<{
-    name: string            // Latin, e.g. "Ursa Major"
-    labelAnchorPc: Vec3     // heliocentric equatorial J2000 parsecs
+    name: string; // Latin, e.g. "Ursa Major"
+    labelAnchorPc: Vec3; // heliocentric equatorial J2000 parsecs
     segments: Array<{
-      aPc: Vec3
-      aAppMag: number       // endpoint star's apparent mag → glow-radius gap in shader
-      bPc: Vec3
-      bAppMag: number
-    }>
-  }>
-}
+      aPc: Vec3;
+      aAppMag: number; // endpoint star's apparent mag → glow-radius gap in shader
+      bPc: Vec3;
+      bAppMag: number;
+    }>;
+  }>;
+};
 ```
 
 ~700 segments across 88 figures ≈ a few KB gzipped; JSON like
@@ -143,11 +143,12 @@ All growth at existing seams; one row/file per touchpoint.
 
 - **Source**: `Source.Constellations` + `src/data/sources/constellations.ts`
   registry row (`visible: false` default — Q7 as revised 2026-07-22).
-- **Settings**: `settings.constellations = { enabled, intensity, labels }`,
-  seeded from the registry; `setConstellationsEnabled` /
-  `setConstellationIntensity` / `setConstellationLabelsEnabled` reducers +
-  selectors. The labels flag gates the name labels independently; they still
-  multiply the layer fade (lines off ⇒ labels off).
+- **Settings**: `settings.constellations = { enabled, intensity }`, seeded
+  from the registry; `setConstellationsEnabled` / `setConstellationIntensity`
+  reducers + selectors. The single `enabled` toggle governs both the lines and
+  the name captions — the captions ride the same layer fade the lines do, so
+  there is no separate names gate. `intensity` has no panel control; it is a
+  store-only dial the line-brightness math reads.
 - **Loading**: `makeJsonFetcher`-based fetcher with the shape check, an
   `AssetSlot`, and an `ASSET_WIRING` row (demand: layer enabled). Status-only
   store field per the singleton-overlay convention; fetch/parse failure leaves
@@ -172,16 +173,21 @@ All growth at existing seams; one row/file per touchpoint.
   `watchFadesSaga` `FADE_ROW` entry for the enable setter only — intensity is a
   brightness scale, not a visibility gate (filament precedent: its intensity
   setter is likewise absent from `FADE_ROW`).
-- **Labels**: `presentation/produceConstellationLabels.ts` — a
-  `LabelProducer` registered in `engine.ts` beside `structureLabels`. Latin
-  names at the artifact anchors, annotation-tier styling (structure-label
-  face, dimmer/smaller), label alpha multiplied by the layer's fade + the
-  director's shared declutter/envelope. No abbreviations in v1.
-- **UI**: rows in the Labels section (user decision 2026-07-22 — the figures
-  are annotation, not a catalog): the layer toggle + intensity slider, plus a
-  separate "Constellation labels" toggle; wired through the section's
-  container. Both toggles count toward the section's tri-state master;
-  the intensity scalar stays out of it.
+- **Labels**: `presentation/constellationCaptions.ts` — a pure `ForegroundCaption`
+  source routed through `foregroundLabelsLayer` on the NEAR0 slab, NOT the main
+  `labelDirector`: the parsec-scale anchors sit inside the director's fixed
+  0.01-Mpc COSMO near plane, so a director label could never draw (the same
+  reason the scene-body captions live there). Latin names at the artifact
+  anchors, annotation-tier styling (dimmer/smaller), lowest declutter tier so
+  figure names yield to every body caption; the layer sets each caption's fade
+  target from `constellationLayerOpacity` (band × registry), then runs it
+  through the shared near-field declutter + alpha envelope. No abbreviations
+  in v1.
+- **UI**: one row in the Labels section (user decision 2026-07-22 — the
+  figures are annotation, not a catalog): the single layer toggle, governing
+  both the lines and the name captions, wired through the section's container.
+  It counts toward the section's tri-state master. The intensity dial has no
+  panel control — a store-only scalar for later tuning.
 
 No pick integration (Q8): lines and labels are annotation; the famous stars
 inside the figures remain the interactive objects.

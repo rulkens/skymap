@@ -5,15 +5,14 @@
  *
  * Owns the Labels thematic group UI: the tri-state master toggle, the per-
  * category label checkboxes, the two foreground scene-body caption rows (star
- * names, planet names), and the constellation rows (the stick-figure overlay
- * toggle, its name-labels toggle, and its intensity slider). Isolating this into
- * its own component ensures a label toggle re-renders ONLY this section rather
- * than the entire HUD. The section owns the tri-state master derivation (the
- * `labelsMaster` object) — that logic is section-local, summarising EVERY
+ * names, planet names), and the constellation row (the single toggle that
+ * governs both the stick-figure overlay and its name captions). Isolating this
+ * into its own component ensures a label toggle re-renders ONLY this section
+ * rather than the entire HUD. The section owns the tri-state master derivation
+ * (the `labelsMaster` object) — that logic is section-local, summarising EVERY
  * boolean row in the section (the COSMO label categories, the two foreground
- * caption rows, and the two constellation toggles; the intensity slider is a
- * scalar, not a boolean row, so it stays out of the master), so it belongs here,
- * not in a shared parent.
+ * caption rows, and the constellation toggle), so it belongs here, not in a
+ * shared parent.
  *
  * Three kinds of sources bear labels, which the container routes to three
  * dispatch homes (structure / milkyWay singleton / galaxy catalog). This
@@ -41,13 +40,13 @@ import type { LabelCategory } from '../../@types/engine/data/LabelCategory';
 
 /**
  * A boolean label row that is NOT a COSMO `LabelCategory` — the foreground
- * scene-body captions (star names, planet names) and the two constellation
- * toggles (the stick-figure overlay, its figure name labels). Each lives in its
- * own settings cluster rather than the category map, but they are structurally
- * identical checkboxes, so the container hands them as a uniform row array and
- * the section derives the master tri-state + JSX from it instead of hand-syncing
- * a fixed set of individual props. `id` is the checkbox element id (also the
- * `label`'s `htmlFor`).
+ * scene-body captions (star names, planet names) and the constellation toggle
+ * (the stick-figure overlay, whose name captions ride the same gate). Each
+ * lives in its own settings cluster rather than the category map, but they are
+ * structurally identical checkboxes, so the container hands them as a uniform
+ * row array and the section derives the master tri-state + JSX from it instead
+ * of hand-syncing a fixed set of individual props. `id` is the checkbox
+ * element id (also the `label`'s `htmlFor`).
  */
 export type NonCategoryLabelRow = {
   id: string;
@@ -62,15 +61,11 @@ type LabelsSectionProps = {
   /** Called when the user toggles a single label category on or off. */
   onSetLabelCategoryVisibility: (category: LabelCategory, visible: boolean) => void;
   /**
-   * The non-category boolean rows (star names, planet names, constellations,
-   * constellation labels), in render + master-derivation order. Every entry
-   * counts toward the master tri-state.
+   * The non-category boolean rows (star names, planet names, constellations),
+   * in render + master-derivation order. Every entry counts toward the master
+   * tri-state.
    */
   nonCategoryRows: ReadonlyArray<NonCategoryLabelRow>;
-  /** Constellation line brightness scale (1.0 = identity). */
-  constellationIntensity: number;
-  /** Called when the user moves the constellation-intensity slider. */
-  onConstellationIntensityChange: (v: number) => void;
 };
 
 // ── LabelsSection ──────────────────────────────────────────────────────────────
@@ -87,19 +82,15 @@ function LabelsSection({
   labelCategoryVisibility,
   onSetLabelCategoryVisibility,
   nonCategoryRows,
-  constellationIntensity,
-  onConstellationIntensityChange,
 }: LabelsSectionProps) {
   // ── Master tri-state derivation ──────────────────────────────────────────────
   // Tri-state master = how many of the section's BOOLEAN rows are currently on.
   // The rows are the COSMO LABEL_CATEGORIES PLUS the `nonCategoryRows` (star
-  // names, planet names, and the two constellation toggles) — the master
-  // summarises every checkbox the section renders, so each non-category row
-  // counts toward it even though they live in their own settings clusters rather
-  // than the category map. The count is derived from the row array, so adding a
-  // row is one container edit, not four hand-synced call sites here. The
-  // constellation intensity slider is a scalar knob, not a boolean row, so it is
-  // deliberately NOT part of the master.
+  // names, planet names, and the constellation toggle) — the master summarises
+  // every checkbox the section renders, so each non-category row counts toward
+  // it even though they live in their own settings clusters rather than the
+  // category map. The count is derived from the row array, so adding a row is
+  // one container edit, not four hand-synced call sites here.
   // Tri-state click convention (Windows Explorer / Finder / GitHub file-tree):
   //   "none" → set all on; "all" or "mixed" → clear everything.
   const total = LABEL_CATEGORIES.length + nonCategoryRows.length;
@@ -144,14 +135,12 @@ function LabelsSection({
         </div>
       ))}
       {/* The non-category boolean rows — the foreground scene-body captions
-          (star names, planet names) and the two constellation toggles (the
-          stick-figure overlay, its figure NAME labels). They are not COSMO label
-          categories (they live in the `labels` / `constellations` settings
-          clusters, not the structure/galaxy-catalog registries), so they render
-          as their own uniform rows. Turning a constellation label off keeps its
-          figures drawn — the gates are independent. Every row counts toward the
-          master tri-state; the intensity slider below does not (it is a scalar,
-          not a boolean row). */}
+          (star names, planet names) and the constellation toggle (the
+          stick-figure overlay, which also governs its figure NAME captions).
+          They are not COSMO label categories (they live in the `labels` /
+          `constellations` settings clusters, not the structure/galaxy-catalog
+          registries), so they render as their own uniform rows. Every row
+          counts toward the master tri-state. */}
       {nonCategoryRows.map((row) => (
         <div className={styles.panelRow} key={row.id}>
           <label htmlFor={row.id}>{row.label}</label>
@@ -163,24 +152,6 @@ function LabelsSection({
           />
         </div>
       ))}
-      {/* Constellation intensity — brightness scale for the stick-figure lines.
-          1.0 is identity (the calibrated at-rest stroke); dial down to a faint
-          guide or up for emphasis. Range 0–2. */}
-      <div className={styles.panelRow}>
-        <label htmlFor="slider-constellation-intensity">Constellation intensity</label>
-        <span className={styles.panelValue}>{constellationIntensity.toFixed(1)}×</span>
-      </div>
-      <div className={styles.panelRow}>
-        <input
-          id="slider-constellation-intensity"
-          type="range"
-          min={0}
-          max={2}
-          step={0.05}
-          value={constellationIntensity}
-          onChange={(e) => onConstellationIntensityChange(parseFloat(e.target.value))}
-        />
-      </div>
     </CollapsibleSection>
   );
 }

@@ -151,9 +151,6 @@ const settingsSlice = createSlice({
     setConstellationIntensity: (settings, action: PayloadAction<number>) => {
       settings.constellations.intensity = action.payload;
     },
-    setConstellationLabelsEnabled: (settings, action: PayloadAction<boolean>) => {
-      settings.constellations.labels = action.payload;
-    },
 
     // ── earth ───────────────────────────────────────────────────────────────
     // Exposure scale on the atmosphere shell's HDR output — read live by
@@ -450,7 +447,6 @@ export const {
   setFilamentIntensity,
   setConstellationsEnabled,
   setConstellationIntensity,
-  setConstellationLabelsEnabled,
   setAtmosphereExposure,
   setAmbientLight,
   setOceanRoughness,

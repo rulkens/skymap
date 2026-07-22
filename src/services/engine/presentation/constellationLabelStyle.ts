@@ -1,6 +1,6 @@
 /**
  * constellationLabelStyle — visual style for the constellation stick-figure
- * name labels (`produceConstellationLabels`).
+ * name captions (`constellationCaptions`).
  *
  * Label-only, like the Milky Way "You are here" caption: a single text label
  * anchored at the figure's `labelAnchorPc`, with no ring, halo, or marker-line
@@ -39,7 +39,7 @@ export type ConstellationLabelStyle = {
 export const CONSTELLATION_LABEL_STYLE: ConstellationLabelStyle = {
   // Dim steel-blue, tracking the stick-figure stroke; alpha < 1 so the caption
   // reads softly against the starfield rather than as bright chrome.
-  labelColor: [0.62, 0.74, 0.88, 0.72],
+  labelColor: [0.7, 0.8, 0.92, 0.84],
   // Tiny em: the anchors are parsecs from the origin, so a near-field em height
   // keeps the caption legible without the perspective clamps pinning it flat.
   worldEmMpc: 0.00003,
@@ -48,13 +48,3 @@ export const CONSTELLATION_LABEL_STYLE: ConstellationLabelStyle = {
   outlineColor: [0, 0, 0, 0.1],
   outlineEmFrac: 0.16,
 };
-
-/**
- * Declutter sort key for constellation labels (px). A low constant so the
- * annotation-tier captions yield to the structure / famous / "You are here"
- * labels — which carry real apparent-size prominence — whenever their text
- * rects collide in the director's cross-producer declutter. All figures share
- * one value, so a constellation-vs-constellation overlap falls to the stable
- * emission order.
- */
-export const CONSTELLATION_LABEL_PROMINENCE_PX = 12;

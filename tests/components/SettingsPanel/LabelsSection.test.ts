@@ -62,19 +62,17 @@ function partialVisibility(): Record<LabelCategory, boolean> {
   return result;
 }
 
-// The four non-category boolean rows in render order (star names, planet names,
-// constellations, constellation labels) — mirrors what the container assembles.
-// Each row's `enabled` and `onChange` can be overridden; unspecified spies are
-// throwaway `vi.fn()`s so tests only wire up what they assert on.
+// The three non-category boolean rows in render order (star names, planet
+// names, constellations) — mirrors what the container assembles. Each row's
+// `enabled` and `onChange` can be overridden; unspecified spies are throwaway
+// `vi.fn()`s so tests only wire up what they assert on.
 type RowOverrides = {
   starLabelsEnabled?: boolean;
   planetLabelsEnabled?: boolean;
   constellationsEnabled?: boolean;
-  constellationLabelsEnabled?: boolean;
   onSetStarLabelsEnabled?: (enabled: boolean) => void;
   onSetPlanetLabelsEnabled?: (enabled: boolean) => void;
   onToggleConstellations?: (enabled: boolean) => void;
-  onSetConstellationLabelsEnabled?: (enabled: boolean) => void;
 };
 
 function makeNonCategoryRows(o: RowOverrides = {}): NonCategoryLabelRow[] {
@@ -97,12 +95,6 @@ function makeNonCategoryRows(o: RowOverrides = {}): NonCategoryLabelRow[] {
       enabled: o.constellationsEnabled ?? true,
       onChange: o.onToggleConstellations ?? vi.fn<(enabled: boolean) => void>(),
     },
-    {
-      id: 'toggle-constellation-labels',
-      label: 'Constellation labels',
-      enabled: o.constellationLabelsEnabled ?? true,
-      onChange: o.onSetConstellationLabelsEnabled ?? vi.fn<(enabled: boolean) => void>(),
-    },
   ];
 }
 
@@ -111,8 +103,6 @@ function baseProps() {
     labelCategoryVisibility: allOnVisibility(),
     onSetLabelCategoryVisibility: vi.fn<(category: LabelCategory, visible: boolean) => void>(),
     nonCategoryRows: makeNonCategoryRows(),
-    constellationIntensity: 1.0,
-    onConstellationIntensityChange: vi.fn<(v: number) => void>(),
   };
 }
 
@@ -146,7 +136,6 @@ describe('LabelsSection', () => {
           starLabelsEnabled: false,
           planetLabelsEnabled: false,
           constellationsEnabled: false,
-          constellationLabelsEnabled: false,
         }),
       };
       const { container } = render(createElement(LabelsSection, props));
@@ -230,7 +219,6 @@ describe('LabelsSection', () => {
       const onSetStarLabelsEnabled = vi.fn<(enabled: boolean) => void>();
       const onSetPlanetLabelsEnabled = vi.fn<(enabled: boolean) => void>();
       const onToggleConstellations = vi.fn<(enabled: boolean) => void>();
-      const onSetConstellationLabelsEnabled = vi.fn<(enabled: boolean) => void>();
       const props = {
         ...baseProps(),
         labelCategoryVisibility: noneOnVisibility(),
@@ -239,11 +227,9 @@ describe('LabelsSection', () => {
           starLabelsEnabled: false,
           planetLabelsEnabled: false,
           constellationsEnabled: false,
-          constellationLabelsEnabled: false,
           onSetStarLabelsEnabled,
           onSetPlanetLabelsEnabled,
           onToggleConstellations,
-          onSetConstellationLabelsEnabled,
         }),
       };
       const { container } = render(createElement(LabelsSection, props));
@@ -261,7 +247,6 @@ describe('LabelsSection', () => {
       expect(onSetStarLabelsEnabled).toHaveBeenCalledWith(true);
       expect(onSetPlanetLabelsEnabled).toHaveBeenCalledWith(true);
       expect(onToggleConstellations).toHaveBeenCalledWith(true);
-      expect(onSetConstellationLabelsEnabled).toHaveBeenCalledWith(true);
     });
 
     it('calls every category AND all extra-row callbacks with false when master toggled from allOn', () => {
@@ -270,7 +255,6 @@ describe('LabelsSection', () => {
       const onSetStarLabelsEnabled = vi.fn<(enabled: boolean) => void>();
       const onSetPlanetLabelsEnabled = vi.fn<(enabled: boolean) => void>();
       const onToggleConstellations = vi.fn<(enabled: boolean) => void>();
-      const onSetConstellationLabelsEnabled = vi.fn<(enabled: boolean) => void>();
       const props = {
         ...baseProps(),
         labelCategoryVisibility: allOnVisibility(),
@@ -279,7 +263,6 @@ describe('LabelsSection', () => {
           onSetStarLabelsEnabled,
           onSetPlanetLabelsEnabled,
           onToggleConstellations,
-          onSetConstellationLabelsEnabled,
         }),
       };
       const { container } = render(createElement(LabelsSection, props));
@@ -296,17 +279,19 @@ describe('LabelsSection', () => {
       expect(onSetStarLabelsEnabled).toHaveBeenCalledWith(false);
       expect(onSetPlanetLabelsEnabled).toHaveBeenCalledWith(false);
       expect(onToggleConstellations).toHaveBeenCalledWith(false);
-      expect(onSetConstellationLabelsEnabled).toHaveBeenCalledWith(false);
     });
   });
 
-  describe('constellation rows', () => {
+  describe('constellation row', () => {
     it('reflects the constellationsEnabled prop and fires onToggleConstellations when clicked', () => {
       const onToggleConstellations = vi.fn<(enabled: boolean) => void>();
       const { container } = render(
         createElement(LabelsSection, {
           ...baseProps(),
-          nonCategoryRows: makeNonCategoryRows({ constellationsEnabled: true, onToggleConstellations }),
+          nonCategoryRows: makeNonCategoryRows({
+            constellationsEnabled: true,
+            onToggleConstellations,
+          }),
         }),
       );
       const expandButton = container.querySelector<HTMLButtonElement>('button[type=button]')!;
@@ -317,46 +302,6 @@ describe('LabelsSection', () => {
       expect(toggle.checked).toBe(true);
       fireEvent.click(toggle);
       expect(onToggleConstellations).toHaveBeenCalledWith(false);
-    });
-
-    it('reflects the constellationLabelsEnabled prop and fires its callback when clicked', () => {
-      const onSetConstellationLabelsEnabled = vi.fn<(enabled: boolean) => void>();
-      const { container } = render(
-        createElement(LabelsSection, {
-          ...baseProps(),
-          nonCategoryRows: makeNonCategoryRows({
-            constellationLabelsEnabled: false,
-            onSetConstellationLabelsEnabled,
-          }),
-        }),
-      );
-      const expandButton = container.querySelector<HTMLButtonElement>('button[type=button]')!;
-      fireEvent.click(expandButton);
-
-      const toggle = container.querySelector<HTMLInputElement>('#toggle-constellation-labels')!;
-      expect(toggle).not.toBeNull();
-      expect(toggle.checked).toBe(false);
-      fireEvent.click(toggle);
-      expect(onSetConstellationLabelsEnabled).toHaveBeenCalledWith(true);
-    });
-
-    it('echoes the constellationIntensity prop and fires onConstellationIntensityChange on move', () => {
-      const onConstellationIntensityChange = vi.fn<(v: number) => void>();
-      const { container } = render(
-        createElement(LabelsSection, {
-          ...baseProps(),
-          constellationIntensity: 1.5,
-          onConstellationIntensityChange,
-        }),
-      );
-      const expandButton = container.querySelector<HTMLButtonElement>('button[type=button]')!;
-      fireEvent.click(expandButton);
-
-      const slider = container.querySelector<HTMLInputElement>('#slider-constellation-intensity')!;
-      expect(slider).not.toBeNull();
-      expect(slider.value).toBe('1.5');
-      fireEvent.change(slider, { target: { value: '0.8' } });
-      expect(onConstellationIntensityChange).toHaveBeenCalledWith(0.8);
     });
   });
 });

@@ -6,8 +6,8 @@
  * `selectGalaxyCatalogItems`, and `selectMilkyWayLabelEnabled`, runs the
  * three-input label-projection, and wraps the 3-way dispatch guard in a
  * `useCallback`. It also owns the foreground caption toggles (star / planet
- * names) and the constellation rows (the overlay lines toggle, the figure
- * name-labels toggle, and the intensity slider) — flat singleton settings that
+ * names) and the constellation row (the one overlay toggle that governs both
+ * the stick figures and their name captions) — flat singleton settings that
  * route straight to their own setters. The presentational `LabelsSection`
  * imports nothing from `store/` or `state/`.
  *
@@ -50,8 +50,6 @@ import {
   selectStarLabelsEnabled,
   selectPlanetLabelsEnabled,
   selectConstellationsEnabled,
-  selectConstellationLabelsEnabled,
-  selectConstellationIntensity,
 } from '../../state/settings/selectors';
 import {
   setStructureLabelEnabled,
@@ -60,8 +58,6 @@ import {
   setStarLabelsEnabled,
   setPlanetLabelsEnabled,
   setConstellationsEnabled,
-  setConstellationLabelsEnabled,
-  setConstellationIntensity,
 } from '../../state/settings/settingsSlice';
 import { projectLabelCategoryVisibility } from '../../state/settings/projectLabelCategoryVisibility';
 import { isStructureId } from '../../data/structure/structureIds';
@@ -76,8 +72,6 @@ function LabelsSectionContainer(): React.ReactElement {
   const starLabelsEnabled = useAppSelector(selectStarLabelsEnabled);
   const planetLabelsEnabled = useAppSelector(selectPlanetLabelsEnabled);
   const constellationsEnabled = useAppSelector(selectConstellationsEnabled);
-  const constellationLabelsEnabled = useAppSelector(selectConstellationLabelsEnabled);
-  const constellationIntensity = useAppSelector(selectConstellationIntensity);
 
   // Project items → flat label-visibility record. Rebuilds only when any of the
   // three stable-reference inputs change.
@@ -123,32 +117,34 @@ function LabelsSectionContainer(): React.ReactElement {
     [dispatch],
   );
 
-  const onSetConstellationLabelsEnabled = useCallback(
-    (enabled: boolean) => {
-      dispatch(setConstellationLabelsEnabled(enabled));
-    },
-    [dispatch],
-  );
-
-  const onConstellationIntensityChange = useCallback(
-    (value: number) => {
-      dispatch(setConstellationIntensity(value));
-    },
-    [dispatch],
-  );
-
   // The non-category boolean rows the section renders + folds into its master
-  // tri-state, in render order (star names, planet names, constellations,
-  // constellation labels). Assembling the array here keeps the section free of
-  // any per-row prop plumbing: a new caption row is one more entry, not a fresh
-  // prop pair threaded through both components. Each `id` is the checkbox
-  // element id (preserved verbatim from the former inline rows).
+  // tri-state, in render order (star names, planet names, constellations).
+  // Assembling the array here keeps the section free of any per-row prop
+  // plumbing: a new caption row is one more entry, not a fresh prop pair
+  // threaded through both components. Each `id` is the checkbox element id
+  // (preserved verbatim from the former inline rows). The constellations row
+  // governs both the stick figures and their name captions — there is no
+  // separate names toggle.
   const nonCategoryRows: ReadonlyArray<NonCategoryLabelRow> = useMemo(
     () => [
-      { id: 'toggle-label-stars', label: 'Star names', enabled: starLabelsEnabled, onChange: onSetStarLabelsEnabled },
-      { id: 'toggle-label-planets', label: 'Planet names', enabled: planetLabelsEnabled, onChange: onSetPlanetLabelsEnabled },
-      { id: 'toggle-constellations', label: 'Constellations', enabled: constellationsEnabled, onChange: onToggleConstellations },
-      { id: 'toggle-constellation-labels', label: 'Constellation labels', enabled: constellationLabelsEnabled, onChange: onSetConstellationLabelsEnabled },
+      {
+        id: 'toggle-label-stars',
+        label: 'Star names',
+        enabled: starLabelsEnabled,
+        onChange: onSetStarLabelsEnabled,
+      },
+      {
+        id: 'toggle-label-planets',
+        label: 'Planet names',
+        enabled: planetLabelsEnabled,
+        onChange: onSetPlanetLabelsEnabled,
+      },
+      {
+        id: 'toggle-constellations',
+        label: 'Constellations',
+        enabled: constellationsEnabled,
+        onChange: onToggleConstellations,
+      },
     ],
     [
       starLabelsEnabled,
@@ -157,8 +153,6 @@ function LabelsSectionContainer(): React.ReactElement {
       onSetPlanetLabelsEnabled,
       constellationsEnabled,
       onToggleConstellations,
-      constellationLabelsEnabled,
-      onSetConstellationLabelsEnabled,
     ],
   );
 
@@ -167,8 +161,6 @@ function LabelsSectionContainer(): React.ReactElement {
       labelCategoryVisibility={labelCategoryVisibility}
       onSetLabelCategoryVisibility={onSetLabelCategoryVisibility}
       nonCategoryRows={nonCategoryRows}
-      constellationIntensity={constellationIntensity}
-      onConstellationIntensityChange={onConstellationIntensityChange}
     />
   );
 }
