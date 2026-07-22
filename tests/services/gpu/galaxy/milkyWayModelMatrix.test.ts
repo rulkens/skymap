@@ -1,16 +1,28 @@
 /**
  * milkyWayModelMatrix places the GPU-generated Milky Way point cloud at the
  * galaxy's real world position, in the exact frame the old impostor rendered
- * in. Two things have to stay pinned for that placement to be correct, and a
- * test — not the compiler — is what keeps them from drifting:
+ * in. Two contracts have to stay pinned for that placement to be correct, and
+ * tests — not the compiler — are what keep them from drifting:
  *
- *   1. The rotation columns ARE the WESL galactic basis (`GAL_X_EQ` etc.),
- *      swizzled so local +y is the disk normal (NGP). We scrape those literals
- *      straight out of `util.wesl` (the `constants.parity.test.ts` pattern —
- *      read the `.wesl` as text, regex the `vec3<f32>(...)` literal, `parseFloat`)
- *      rather than re-typing them here, so the shader and the model matrix can
- *      never quietly disagree about which way the disk points.
- *   2. The translation lanes are the Milky Way's world centre.
+ *   1. WESL ↔ registry parity. The shader's galactic basis literals
+ *      (`GAL_X_EQ` etc. in `util.wesl`) must equal the TS copy that lives in the
+ *      orientation-frame registry (`data/orientation/orientationFrames`) — the
+ *      single source `milkyWayModelMatrix`, and every other frame consumer,
+ *      imports. We scrape those literals straight out of `util.wesl` (the
+ *      `constants.parity.test.ts` pattern — read the `.wesl` as text, regex the
+ *      `vec3<f32>(...)` literal, `parseFloat`) rather than re-typing them here,
+ *      and compare against `ORIENTATION_FRAMES.galactic`, whose columns are
+ *      `(GAL_X_EQ, GAL_Z_EQ, −GAL_Y_EQ)`. Drift becomes a test failure, not a
+ *      silent rendering bug.
+ *
+ *   2. `milkyWayModelMatrix`'s own placement. Its rotation columns arrange the
+ *      same registry constants into the generator's local-frame layout (local
+ *      +x → `GAL_X_EQ`, +y → `GAL_Z_EQ` (NGP, the disk normal), +z →
+ *      `GAL_Y_EQ`), its translation lanes are the Milky Way's world centre, and
+ *      its bottom row is `(0,0,0,1)`. Note column 2 is `+GAL_Y_EQ`, a deliberate
+ *      det −1 reflection for the symmetric disk — it diverges from the registry
+ *      basis's `−GAL_Y_EQ` (det +1), so the two swizzles genuinely need separate
+ *      guards, not one shared assertion.
  *
  * Path is resolved from `process.cwd()` (repo root under Vitest), matching the
  * convention `constants.parity.test.ts` documents — `__dirname` would not work
@@ -20,8 +32,15 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { MILKY_WAY_CENTER_WORLD } from '../../../../src/data/milkyWay/galacticCenter';
+import {
+  GAL_X_EQ,
+  GAL_Y_EQ,
+  GAL_Z_EQ,
+  ORIENTATION_FRAMES,
+} from '../../../../src/data/orientation/orientationFrames';
 import { MILKY_WAY_MODEL_SCALE } from '../../../../src/services/gpu/galaxy/milkyWayCalibration';
 import { milkyWayModelMatrix } from '../../../../src/services/gpu/galaxy/milkyWayModelMatrix';
 
@@ -48,25 +67,55 @@ function scrapeGalacticBasis(): Record<'GAL_X_EQ' | 'GAL_Y_EQ' | 'GAL_Z_EQ', Vec
   return basis;
 }
 
+/** Column `c` (0-based) of a flat column-major `Mat3`. */
+const col = (m: Mat3, c: number): Vec3 => [m[c * 3]!, m[c * 3 + 1]!, m[c * 3 + 2]!];
+
+describe('util.wesl galactic basis ↔ orientation-frame registry', () => {
+  it('the shader literals equal ORIENTATION_FRAMES.galactic (registry is the pinned TS copy)', () => {
+    const scraped = scrapeGalacticBasis();
+    const galactic = ORIENTATION_FRAMES.galactic;
+
+    // The registry assembles the galactic frame as (GAL_X_EQ, GAL_Z_EQ,
+    // −GAL_Y_EQ) — NGP into the middle (pole) column, the displaced +GAL_Y
+    // negated so the basis stays a proper rotation (det +1). Checking the
+    // scraped shader literals against those columns pins the WESL copy to the
+    // registry; the sign on column 2 is load-bearing, so it is asserted.
+    const c0 = col(galactic, 0);
+    const pole = col(galactic, 1);
+    const c2 = col(galactic, 2);
+    for (let i = 0; i < 3; i++) {
+      expect(c0[i], `galactic col0[${i}] = GAL_X_EQ`).toBeCloseTo(scraped.GAL_X_EQ[i]!, 8);
+      expect(pole[i], `galactic pole[${i}] = GAL_Z_EQ (NGP)`).toBeCloseTo(scraped.GAL_Z_EQ[i]!, 8);
+      expect(c2[i], `galactic col2[${i}] = −GAL_Y_EQ`).toBeCloseTo(-scraped.GAL_Y_EQ[i]!, 8);
+    }
+  });
+});
+
 describe('milkyWayModelMatrix', () => {
   const k = MILKY_WAY_MODEL_SCALE;
 
-  it('rotation columns are the WESL galactic basis, swizzled (x=GC, y=NGP, z=rotation)', () => {
-    const { GAL_X_EQ, GAL_Y_EQ, GAL_Z_EQ } = scrapeGalacticBasis();
+  it('rotation columns arrange the registry galactic basis (x=GC, y=NGP, z=rotation)', () => {
     const m = milkyWayModelMatrix();
+
+    // The registry constants are what the shader is pinned to (parity test
+    // above); this guards how milkyWayModelMatrix arranges them. Column 1 is
+    // GAL_Z_EQ (NGP) — the easy-to-invert trap — and column 2 is +GAL_Y_EQ,
+    // the deliberate det −1 reflection that diverges from the registry's
+    // −GAL_Y_EQ. Both the ordering and that sign are hand-written here, so
+    // neither is compiler-checked.
 
     // Column 0 (local +x, toward the Galactic Centre) = GAL_X_EQ * k.
     expect(m[0]).toBeCloseTo(GAL_X_EQ[0] * k, 8);
     expect(m[1]).toBeCloseTo(GAL_X_EQ[1] * k, 8);
     expect(m[2]).toBeCloseTo(GAL_X_EQ[2] * k, 8);
 
-    // Column 1 (local +y, disk normal) = GAL_Z_EQ * k — the swizzle: the disk
-    // normal is the galactic Z axis (NGP), not Y.
+    // Column 1 (local +y, disk normal) = GAL_Z_EQ * k — the disk normal is the
+    // galactic Z axis (NGP), not Y.
     expect(m[4]).toBeCloseTo(GAL_Z_EQ[0] * k, 8);
     expect(m[5]).toBeCloseTo(GAL_Z_EQ[1] * k, 8);
     expect(m[6]).toBeCloseTo(GAL_Z_EQ[2] * k, 8);
 
-    // Column 2 (local +z, in-disk rotation direction) = GAL_Y_EQ * k.
+    // Column 2 (local +z, in-disk rotation direction) = +GAL_Y_EQ * k.
     expect(m[8]).toBeCloseTo(GAL_Y_EQ[0] * k, 8);
     expect(m[9]).toBeCloseTo(GAL_Y_EQ[1] * k, 8);
     expect(m[10]).toBeCloseTo(GAL_Y_EQ[2] * k, 8);
