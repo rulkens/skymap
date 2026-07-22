@@ -163,8 +163,8 @@ const RUST_GENERATED_BANNER =
   '//   FAMOUS_STAR_GAIA_IDS — the non-null gaiaDr3 values (Gaia DR3 source_ids).\n' +
   '//   FAMOUS_STAR_HIP_IDS  — the non-null hip values (Hipparcos numbers), which\n' +
   '//     catch the saturated bright stars Gaia DR3 lacks a row for.\n' +
-  '// include!()-d into population.rs so the consts land in that module\'s\n' +
-  "// namespace, exactly where the hand-maintained array used to live.\n";
+  "// include!()-d into population.rs so the consts land in that module's\n" +
+  '// namespace, exactly where the hand-maintained array used to live.\n';
 
 /**
  * Emit the generated `.rs` module text: a `[u64; N]` array of the non-null

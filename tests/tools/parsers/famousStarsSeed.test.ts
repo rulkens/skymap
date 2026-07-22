@@ -75,9 +75,9 @@ describe('famousStarsSeed', () => {
   it('throws when hip disagrees with a HIP alias', () => {
     const e = baseEntry({ names: ['Betelgeuse', 'HIP 100'], hip: 200 });
     expect(() => validateFamousStarEntry(e)).toThrow(/hip/);
-    expect(validateFamousStarEntry(baseEntry({ names: ['Betelgeuse', 'HIP 100'], hip: 100 })).hip).toBe(
-      100,
-    );
+    expect(
+      validateFamousStarEntry(baseEntry({ names: ['Betelgeuse', 'HIP 100'], hip: 100 })).hip,
+    ).toBe(100);
   });
 
   it('allows a non-null hip with no HIP alias — the Alpha Centauri enrichment', () => {
