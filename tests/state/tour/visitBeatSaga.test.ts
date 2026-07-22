@@ -42,7 +42,7 @@ import { visitBeatSaga } from '../../../src/state/tour/visitBeatSaga';
 import { advanceTour, prevBeat, togglePause } from '../../../src/state/tour/tourActions';
 import type { BeatData } from '../../../src/@types/animation/tour/BeatData';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
-import type { FocusCameraRuntime } from '../../../src/store/types';
+import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import { flyAndFocusOnClip } from '../../../src/state/tour/flyAndFocusOnClip';
@@ -76,9 +76,10 @@ function collectTimelineNodes<T>(
 
 // ─── Stubs ───────────────────────────────────────────────────────────────────
 
-const CAMERA_RUNTIME: FocusCameraRuntime = {
+const CAMERA_RUNTIME: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 },
   fovYRad: 0.8,
+  frameBasisQuat: [0, 0, 0, 1],
 };
 
 // Structure resolved by id immediately — no catalog needed.
@@ -130,7 +131,7 @@ type PlayClipStub = ReturnType<typeof vi.fn<(clip: ClipData) => Promise<void>>>;
 function buildStore(opts: {
   playClip?: PlayClipStub;
   resolveDeps?: ResolveDeps;
-  cameraRuntime?: FocusCameraRuntime | null;
+  cameraRuntime?: LiveCameraRuntime | null;
 }) {
   const sagaMiddleware = createSagaMiddleware();
   const store = configureStore({
@@ -217,7 +218,7 @@ describe('visitBeatSaga', () => {
     const { sagaMiddleware } = buildStore({ playClip: playClipMock, resolveDeps: lazyDeps });
 
     // Camera runtime is dynamic; override the context with a closure read.
-    let currentRuntime: FocusCameraRuntime | null = null;
+    let currentRuntime: LiveCameraRuntime | null = null;
     sagaMiddleware.setContext({
       resolveDeps: () => lazyDeps,
       cameraRuntime: () => currentRuntime,

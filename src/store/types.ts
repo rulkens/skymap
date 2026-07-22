@@ -46,6 +46,7 @@ import type { ReconcileEffects } from './effects/ReconcileEffects';
 import type { ResolveDeps } from '../@types/engine/ResolveDeps';
 import type { Tier } from '../@types/data/Tier';
 import type { CameraPose } from '../@types/camera/CameraPose';
+import type { Vec4 } from '../@types/math/Vec4';
 import type { ClipData } from '../@types/animation/ClipData';
 import type { ClipId } from '../@types/animation/ClipId';
 import type { EarthBody } from '../@types/scene/EarthBody';
@@ -56,11 +57,16 @@ export type AppDispatch = AppStore['dispatch'];
 
 export type RunTierTransition = (prevTier: Tier, nextTier: Tier) => void;
 /**
- * The live camera Resources `watchFocusTweenSaga` reads to seed a tween: the visible
- * `from` pose (what the user sees this frame, so a re-focus hands off smoothly)
- * and the projection FOV (the structure arm frames a cluster to screen-fill).
+ * The live camera Resources the focus and orientation sagas read off the frame
+ * loop. `watchFocusTweenSaga` seeds a camera tween from the visible `from` pose
+ * (what the user sees this frame, so a re-focus hands off smoothly) and the
+ * projection FOV (the structure arm frames a cluster to screen-fill).
+ * `watchOrientationChangeSaga` seeds a frame roll from `frameBasisQuat`: the
+ * up-basis quaternion resolved THIS frame, so a re-switch mid-slerp composes
+ * continuously instead of snapping the pole back to the committed frame. The
+ * name is frame-agnostic (not `Focus…`) because both sagas share the snapshot.
  */
-export type FocusCameraRuntime = { from: CameraPose; fovYRad: number };
+export type LiveCameraRuntime = { from: CameraPose; fovYRad: number; frameBasisQuat: Vec4 };
 /**
  * The debug clip-path inspector seam — the non-reactive bridge the
  * `watchClipPathInspectSaga` calls to (re)sample a clip's camera route into the
@@ -96,7 +102,7 @@ export type SagaContext = {
    * null when the camera is not ready (pre-bootstrap / post-destroy) — the focus
    * tween then no-ops.
    */
-  cameraRuntime: () => FocusCameraRuntime | null;
+  cameraRuntime: () => LiveCameraRuntime | null;
   /**
    * The live Earth record `watchFlyToEarthKeySaga` frames its descent tween on,
    * or null before the scene-body seed installs it — the fly-to then no-ops.

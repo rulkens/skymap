@@ -49,7 +49,7 @@ import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { cameraRoute, timeRoute } from '../../../src/store/constants';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { EarthBody } from '../../../src/@types/scene/EarthBody';
-import type { FocusCameraRuntime } from '../../../src/store/types';
+import type { LiveCameraRuntime } from '../../../src/store/types';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -59,14 +59,14 @@ const FROM: CameraPose = { target: [1, 1, 1], yaw: 0.5, pitch: -0.2, distance: 9
 
 describe('watchFlyToEarthKeySaga', () => {
   let store: ReturnType<typeof build>;
-  let cameraRuntime: () => FocusCameraRuntime | null;
+  let cameraRuntime: () => LiveCameraRuntime | null;
   let earthBody: () => EarthBody | null;
 
   function build() {
     const mw = createSagaMiddleware();
     const s = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(mw) });
     mw.run(watchFlyToEarthKeySaga);
-    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8 });
+    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, frameBasisQuat: [0, 0, 0, 1] });
     earthBody = () => SCENE_EARTH;
     mw.setContext({ cameraRuntime: () => cameraRuntime(), earthBody: () => earthBody() });
     return s;
