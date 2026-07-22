@@ -21,3 +21,7 @@ Open the grand tour at Earth instead of the Milky Way, and climb the scale ladde
 - Whether `homeAgain` should return all the way to Earth for symmetry once the tour opens there.
 - Sim-time during the solar-system rung: live clock vs a scripted rate (time control shipped in #472).
 - Pacing: the tour is already long; three-plus new rungs need a `tour-length` rebalance pass.
+
+## Boot coupling (folded from the Earth-home ship, 2026-07-22)
+
+The app now boots into the Earth home state (sunlit `earthHomePose`, focus pinned — `specs/completed/2026-07-22-earth-home-sunlit-boot-design.md`), so the session already opens where this redesign wants the tour to open. Until the redesign lands, the existing `openingTitle`/`homeAgain` beats `aimAt` the galactic-disc bearing (`GALACTIC_DISC_YAW_RAD`/`GALACTIC_DISC_PITCH_RAD`, `cameraFraming.ts` — renamed from `BOOT_*` in that ship): the opening's first aim now swings from an Earth-scale pose it was never eye-tuned against — check that transition when choreographing the new opening. `homeAgain` landing on `earthHomePose` itself is the natural symmetry answer.
