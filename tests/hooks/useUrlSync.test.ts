@@ -30,13 +30,22 @@ import { renderHook, act } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { computeDesiredHash } from '../../src/hooks/useUrlSync';
 import { useUrlSync } from '../../src/hooks/useUrlSync';
+import { HASH_PARAM_SOURCES } from '../../src/hooks/hashParamSources';
 import type { GalaxyInfo } from '../../src/@types/engine/GalaxyInfo';
 import type { StructureInfo } from '../../src/@types/data/structure/StructureInfo';
+import type { TimeState } from '../../src/@types/time/TimeState';
+import type { AppDispatch } from '../../src/store/types';
+import type { UnknownAction } from '@reduxjs/toolkit';
 import { Source } from '../../src/data/sources';
 import { createAppStore } from '../../src/store/createAppStore';
 import { buildInitialSettings } from '../../src/state/settings/initialState';
 import { requestFocus } from '../../src/state/selection/requestFocus';
 import { clearSelection } from '../../src/state/selection/selectionSlice';
+import timeReducer, { setSimDays, pause } from '../../src/state/time/timeSlice';
+import { deriveSimDays } from '../../src/utils/time/deriveSimDays';
+import { unixMsToJulianDays } from '../../src/utils/time/unixMsToJulianDays';
+import { CONST_J2000 } from '../../src/data/time/constJ2000';
+import { parseHashParams } from '../../src/utils/url/parseHashParams';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────
 
@@ -59,6 +68,33 @@ function makeStructure(id: string): StructureInfo {
     physicalRadiusMpc: 2,
   };
 }
+
+// A known instant, seeded from a Unix-ms value so its JD lands on a clean
+// millisecond and the compose→parse round-trip is exact.
+const KNOWN_UNIX_MS = Date.UTC(2026, 10, 3, 18, 0, 0);
+const KNOWN_JD = unixMsToJulianDays(KNOWN_UNIX_MS);
+const KNOWN_ISO = new Date(KNOWN_UNIX_MS).toISOString(); // 2026-11-03T18:00:00.000Z
+
+function manualTime(simDays = KNOWN_JD): TimeState {
+  return { mode: 'manual', anchor: { simDays, realMs: 1000 }, rateIndex: 3, direction: 1, paused: false };
+}
+
+function liveTime(): TimeState {
+  return { mode: 'live', anchor: { simDays: CONST_J2000, realMs: 0 }, rateIndex: 3, direction: 1, paused: false };
+}
+
+// A dispatch that records the actions it receives — lets a source's `read` be
+// exercised in isolation (no store, no DOM) and its dispatches asserted.
+function collectingDispatch(): { dispatch: AppDispatch; actions: UnknownAction[] } {
+  const actions: UnknownAction[] = [];
+  const dispatch = ((action: UnknownAction) => {
+    actions.push(action);
+    return action;
+  }) as unknown as AppDispatch;
+  return { dispatch, actions };
+}
+
+const tSource = HASH_PARAM_SOURCES.find((s) => s.key === 't')!;
 
 // ── computeDesiredHash ────────────────────────────────────────────────────
 
@@ -95,6 +131,17 @@ describe('computeDesiredHash (unified)', () => {
   it('short-circuits when currentHash already matches the empty body', () => {
     const out = computeDesiredHash({ focused: null, currentHash: '' });
     expect(out.matches).toBe(true);
+  });
+
+  it('composes focus through the param seam', () => {
+    // The body is now composed over HASH_PARAM_SOURCES, not hard-coded. A
+    // structure focus must still surface as the single `focus=<id>` param —
+    // proof the seam preserves the on-URL shape for the one existing source.
+    const out = computeDesiredHash({
+      focused: makeStructure('cluster-virgo-m87'),
+      currentHash: '',
+    });
+    expect(out.desiredHashBody).toBe('focus=cluster-virgo-m87');
   });
 });
 
@@ -193,5 +240,107 @@ describe('useUrlSync hook integration', () => {
     });
 
     expect(dispatchSpy).not.toHaveBeenCalled();
+  });
+});
+
+// ── The `t` (sim-clock instant) param source ────────────────────────────────
+
+describe('t param source — compose (write)', () => {
+  it('emits t=<ISO> in manual mode', () => {
+    // focus is null, so the body is the `t` param alone.
+    const out = computeDesiredHash({ focused: null, time: manualTime(), currentHash: '' });
+    expect(out.desiredHashBody).toBe(`t=${KNOWN_ISO}`);
+  });
+
+  it('emits nothing in live mode', () => {
+    const out = computeDesiredHash({ focused: null, time: liveTime(), currentHash: '' });
+    expect(out.desiredHashBody).toBe('');
+  });
+
+  it('emits nothing when no time is supplied (focus-only caller)', () => {
+    const out = computeDesiredHash({ focused: null, currentHash: '' });
+    expect(out.desiredHashBody).toBe('');
+  });
+});
+
+describe('t param source — parse (read)', () => {
+  it('restores manual + paused at the instant', () => {
+    const { dispatch, actions } = collectingDispatch();
+    tSource.read({ value: KNOWN_ISO, isInitial: true, dispatch });
+
+    // setSimDays then pause, in that order.
+    expect(actions.map((a) => a.type)).toEqual(['time/setSimDays', 'time/pause']);
+    expect(actions[0]).toMatchObject({ payload: { simDays: KNOWN_JD } });
+
+    // Replaying the dispatched actions from a live clock lands in manual+paused
+    // and derives back to exactly the shared instant (paused ⇒ nowMs is inert).
+    let state = liveTime();
+    for (const action of actions) state = timeReducer(state, action);
+    expect(state.mode).toBe('manual');
+    expect(state.paused).toBe(true);
+    expect(deriveSimDays(state, 9_999_999)).toBe(KNOWN_JD);
+  });
+
+  it('ignores an unparseable value and stays live (no dispatch)', () => {
+    const { dispatch, actions } = collectingDispatch();
+    tSource.read({ value: 'not-a-timestamp', isInitial: true, dispatch });
+    expect(actions).toHaveLength(0);
+  });
+
+  it('ignores an absent value (bare URL = now)', () => {
+    const { dispatch, actions } = collectingDispatch();
+    tSource.read({ value: undefined, isInitial: true, dispatch });
+    tSource.read({ value: '', isInitial: false, dispatch });
+    expect(actions).toHaveLength(0);
+  });
+});
+
+describe('focus + t on the &-seam (round-trip)', () => {
+  // Drive every source's read over a parsed body, collecting the dispatches.
+  function readAll(body: string): UnknownAction[] {
+    const { dispatch, actions } = collectingDispatch();
+    const params = parseHashParams(body);
+    for (const source of HASH_PARAM_SOURCES) {
+      source.read({ value: params.get(source.key), isInitial: true, dispatch });
+    }
+    return actions;
+  }
+
+  it('composes and parses focus + t together', () => {
+    const body = computeDesiredHash({
+      focused: makeStructure('cluster-virgo-m87'),
+      time: manualTime(),
+      currentHash: '',
+    }).desiredHashBody;
+    expect(body).toBe(`focus=cluster-virgo-m87&t=${KNOWN_ISO}`);
+
+    const actions = readAll(body);
+    expect(actions).toContainEqual(requestFocus('cluster-virgo-m87'));
+    expect(actions.map((a) => a.type)).toContain('time/setSimDays');
+    expect(actions.map((a) => a.type)).toContain('time/pause');
+  });
+
+  it('focus alone: manual clock absent ⇒ no t param, no time dispatch', () => {
+    const body = computeDesiredHash({
+      focused: makeStructure('cluster-virgo-m87'),
+      time: liveTime(),
+      currentHash: '',
+    }).desiredHashBody;
+    expect(body).toBe('focus=cluster-virgo-m87');
+
+    const actions = readAll(body);
+    expect(actions).toContainEqual(requestFocus('cluster-virgo-m87'));
+    expect(actions.map((a) => a.type)).not.toContain('time/setSimDays');
+  });
+
+  it('t alone: no focus ⇒ only the clock is restored', () => {
+    const body = computeDesiredHash({ focused: null, time: manualTime(), currentHash: '' })
+      .desiredHashBody;
+    expect(body).toBe(`t=${KNOWN_ISO}`);
+
+    const actions = readAll(body);
+    // focus is absent on the initial pass, so no selection dispatch fires.
+    expect(actions).not.toContainEqual(clearSelection());
+    expect(actions.map((a) => a.type)).toEqual(['time/setSimDays', 'time/pause']);
   });
 });

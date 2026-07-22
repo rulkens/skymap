@@ -61,12 +61,11 @@ import { createStarCatalogSlot } from '../../loading/slots/starCatalogSlot';
 import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
 import { BODY_TEXTURE_REGISTRY } from '../../../data/bodies/bodyTextureRegistry';
-import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { clampTier } from '../../../utils/math/clampTier';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { hostBodyId } from '../../../utils/scene/hostBodyId';
 import { bodyTextureSlotKey } from '../../../utils/scene/bodyTextureSlotKey';
-import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
+import { deriveBodyStates } from '../frame/deriveBodyStates';
 import { loadRadiusMpc } from '../frame/bodyTextureLoadRadius';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyCatalogId';
@@ -154,9 +153,23 @@ function starCatalogRow(source: SourceType): AssetWiringRow {
   };
 }
 
-/** The body's world position (the ring rides its host body's). */
-function bodyPosOf(id: BodyTextureId | RingTextureId): Readonly<Vec3> {
-  return findByIdOrThrow(SCENE_BODIES, hostBodyId(id), 'bodyTextureRow').positionMpc;
+/**
+ * The host body's world position at the frame's LIVE sim instant. The texture
+ * proximity gates read a host body's world position; every host is an orbital
+ * body that MOVES, so its position comes from `deriveBodyStates(simDays)` — the
+ * same memoized source the render layers read — evaluated at the instant carried
+ * on `DemandCtx.simDays` (the last frame's `cameraRuntime.lastRenderedSimDays`),
+ * not a baked epoch. A paused clock re-reads the same memoized snapshot for free;
+ * a tick re-derives the ~22 Kepler solves once and every proximity row shares it.
+ * The ring rides its host body's position.
+ */
+function bodyPosOf(id: BodyTextureId | RingTextureId, simDays: number): Readonly<Vec3> {
+  const hostId = hostBodyId(id);
+  const state = deriveBodyStates(simDays).get(hostId);
+  if (state === undefined) {
+    throw new Error(`bodyPosOf: texture host '${hostId}' has no derived body state`);
+  }
+  return state.positionMpc;
 }
 
 /**
@@ -194,9 +207,11 @@ function bodyTextureRow(entry: BodyTextureKey): AssetWiringRow {
       tier: clampTier(tier, ceilingOf(entry.bodyId, entry.kind)),
     }),
     demand: (ctx) =>
-      distanceMpc(ctx.cameraPosMpc, bodyPosOf(entry.bodyId)) < loadRadiusMpc(entry.bodyId),
+      distanceMpc(ctx.cameraPosMpc, bodyPosOf(entry.bodyId, ctx.simDays)) <
+      loadRadiusMpc(entry.bodyId),
     release: (ctx) =>
-      distanceMpc(ctx.cameraPosMpc, bodyPosOf(entry.bodyId)) > 2 * loadRadiusMpc(entry.bodyId),
+      distanceMpc(ctx.cameraPosMpc, bodyPosOf(entry.bodyId, ctx.simDays)) >
+      2 * loadRadiusMpc(entry.bodyId),
   };
 }
 

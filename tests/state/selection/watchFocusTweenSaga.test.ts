@@ -172,6 +172,37 @@ describe('watchFocusTweenSaga', () => {
     expect(store.getState()[cameraRoute].tween).toBeNull();
   });
 
+  // A scene body is FOLLOWED by the camera's `followBody` driver, not tweened —
+  // the tween compiles fixed vec3 endpoints and cannot track a body the sim clock
+  // moves. The saga must return before planting a tween for a body row, while a
+  // non-body focus (here the Milky Way) still tweens as before.
+  it('a body focus plants NO tween (the follow driver owns it); a non-body focus still does', async () => {
+    // 'earth' resolves statically off SCENE_BODIES (no catalog needed).
+    store.dispatch(updateSelectionFocus({ type: 'body', id: 'earth' }));
+    await flush();
+    expect(store.getState()[cameraRoute].tween).toBeNull();
+
+    // A non-body focus (Milky Way) still plants a tween through the same saga.
+    store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
+    await flush();
+    expect(store.getState()[cameraRoute].tween).not.toBeNull();
+  });
+
+  // Regression: famous stars are scene BODIES (star-body presence) but are absent
+  // from the orbital body-state snapshot the follow driver activates on — and they
+  // do not move — so they must TWEEN, not be swallowed by the body no-op. The saga
+  // now gates on the follow driver's actual membership (liveBodyPosition), so a
+  // star body falls through to the tween. The PLANET-body-no-tween half is the
+  // 'earth' case above (earth IS in the snapshot).
+  it('a famous-star body focus DOES plant a tween (falls through the follow-membership gate)', async () => {
+    // 'sirius' is a StarBody in SCENE_BODIES, absent from deriveBodyStates, so
+    // liveBodyPosition returns null and the saga builds the tween. Its `to` is
+    // framed on the star's fixed world position (stars don't move → a tween is right).
+    store.dispatch(updateSelectionFocus({ type: 'body', id: 'sirius' }));
+    await flush();
+    expect(store.getState()[cameraRoute].tween).not.toBeNull();
+  });
+
   // A minimal clip payload: no camera motion, just timeline structure. The
   // timeline contents don't matter — what matters is that `camera.clip` is
   // non-null, which is what `selectClipActive` reads.

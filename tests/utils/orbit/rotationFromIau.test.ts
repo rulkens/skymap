@@ -22,6 +22,9 @@ const poleAtZenith: RotationElements = {
   poleRaDeg: 0,
   poleDecDeg: 90,
   primeMeridianDeg: 0,
+  // rotationFromIau resolves the meridian from its argument, not the spin rate,
+  // so this row's Ẇ is inert here — zero keeps the literal honest.
+  spinRateDegPerDay: 0,
 };
 
 describe('rotationFromIau', () => {

@@ -16,18 +16,14 @@ const star = (id: string): StarBody => ({
 const planet = (id: string): PlanetBody => ({
   id,
   label: id,
-  positionMpc: [0, 0, 0],
   radiusKm: 6371,
   albedo: [0.3, 0.3, 0.3],
-  orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
 });
 
 const earthRecord: EarthBody = {
   id: 'earth',
   label: 'Earth',
-  positionMpc: [1, 0, 0],
   radiusKm: 6371,
-  orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
 };
 
 describe('createBodyStore', () => {

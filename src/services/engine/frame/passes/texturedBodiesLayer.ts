@@ -71,6 +71,7 @@ import { camPosLocal } from '../../../../utils/camera/camPosLocal';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { packTexturedBodyUniforms } from '../../../../utils/gpu/packTexturedBodyUniforms';
 import { sceneBodyPartition } from '../sceneBodyPartition';
+import { sceneBodyStates } from '../sceneBodyStates';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 
 /**
@@ -117,25 +118,30 @@ export const texturedBodiesLayer: ContentLayer = {
     const renderer = state.gpu.texturedBodyRenderer;
     if (renderer === null) return;
 
+    // Live position + orientation from the per-frame snapshot (keyed by id),
+    // resolved ONCE for the whole draw loop — not the baked record fields.
+    const states = sceneBodyStates(state, ctx);
+
     // Draw each textured body once. Unlike planetsLayer's single instanced
     // batch, each body owns its own uniform buffer + surface/ring textures on
     // the renderer, so the draws are per-body — the renderer writes THIS body's
     // buffer immediately before its own draw, and no shared uniform can be
     // clobbered mid-frame (see texturedBodyRenderer's header).
     for (const body of sceneBodyPartition(state, ctx).textured) {
+      const bodyState = states.get(body.id)!;
       // Compose the MVP from the slab's f64 vp — see the header's "f64 seam"
       // note for why `view.slab.vp` and not `view.vp`.
       const mvp = composeBodyMvp(
         view.slab.vp,
-        body.positionMpc,
+        bodyState.positionMpc,
         RENDER_ORIGIN_MPC,
         body.radiusKm * SCALE_UNITS.KM_TO_MPC,
-        body.orientation,
+        bodyState.orientation,
       );
-      // Rotate the sun direction into the body's local frame (its baked
-      // orientation carries any axial tilt) so the fragment's Lambert term stays
-      // a plain co-framed dot product — the same rotate earth/planets do.
-      const sun = sunDirLocal(body.positionMpc, RENDER_ORIGIN_MPC, body.orientation);
+      // Rotate the sun direction into the body's local frame (its orientation
+      // carries any axial tilt) so the fragment's Lambert term stays a plain
+      // co-framed dot product — the same rotate earth/planets do.
+      const sun = sunDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation);
       const { inner, outer } = ringRatios(body);
       // Minnaert limb-darkening: the per-body strength/exponent (identity for a
       // body absent from `LIMB_DARKENING_PARAMS`), plus the camera in the body's
@@ -146,9 +152,9 @@ export const texturedBodiesLayer: ContentLayer = {
       const { strength, exponent } = limbParams(body);
       const cam = camPosLocal(
         view.camPos,
-        body.positionMpc,
+        bodyState.positionMpc,
         body.radiusKm * SCALE_UNITS.KM_TO_MPC,
-        body.orientation,
+        bodyState.orientation,
       );
       const uniforms = packTexturedBodyUniforms(mvp, sun, inner, outer, strength, exponent, cam);
       // The partition only routes bodies with a BODY_TEXTURE_REGISTRY row into

@@ -8,6 +8,17 @@ export type RenderScheduler = {
    */
   requestRender(): void;
   /**
+   * Arm a one-shot coarse "wake me in `delayMs`" timer, then let the loop
+   * sleep. When the timer fires it calls `requestRender` once; the frame body
+   * re-arms it while it still wants a slow heartbeat. This is the render-on-
+   * demand-friendly alternative to a free-running `setInterval`: a single
+   * pending timer at a time (re-arming while one is live is a no-op), and it
+   * is IGNORED while the loop is already awake (a rAF frame queued) so it never
+   * fights the 60 fps path. Used for the live sim clock, whose real-time
+   * advance would otherwise pin the loop just to nudge the terminator.
+   */
+  requestIdleFrame(delayMs: number): void;
+  /**
    * Cancel a queued frame (if any) and reset to "idle". Used by the
    * engine's `destroy()` to avoid a final post-teardown frame firing
    * after GPU resources have been released.

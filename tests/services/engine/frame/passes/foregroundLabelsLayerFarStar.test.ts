@@ -34,6 +34,8 @@ import {
 import { SCALE_FADE_BANDS } from '../../../../../src/services/engine/presentation/scaleFadeBands';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
+import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
+import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { computeForegroundViewProj } from '../../../../../src/utils/camera/computeForegroundViewProj';
 import { foregroundFrustum } from '../../../../../src/utils/camera/foregroundFrustum';
 import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
@@ -50,6 +52,10 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 const PASS_STUB = { draw: vi.fn() } as unknown as GPURenderPassEncoder;
 const SUN_LABEL_ID = sceneBodyLabelId('sun');
+
+// The layer derives captions from the frame's body snapshot at ctx.simDays;
+// these geometry tests pin it at J2000 so the anchors match J2000_STATES.
+const J2000_STATES = deriveBodyStates(CONST_J2000);
 
 function makeRenderer(): LabelRenderer {
   return {
@@ -96,6 +102,7 @@ function makeCtx(): ReadyFrameContext {
     cam: { distance: 1e-13 },
     fovYRad: 1,
     nowMs: clockMs,
+    simDays: CONST_J2000,
     renderTargets: { depthViewOf: () => ({}) as GPUTextureView },
     renderedTargets: new Set(['foreground:0']),
   } as unknown as ReadyFrameContext;
@@ -144,7 +151,7 @@ function makeRealNear0View(eye: Vec3, target: Vec3): SlabView {
 // at ~2300 pc is farther still). Deriving it from the seed keeps the test
 // anchored to real data, not a magic id.
 function farVisibleStar(): { id: string; worldPos: Vec3; distPc: number } {
-  const base = sceneBodyLabels();
+  const base = sceneBodyLabels(J2000_STATES);
   const earth = base.find((l) => l.id === sceneBodyLabelId('earth'))!;
   const cam = earth.worldPos;
   const stars = base
@@ -174,7 +181,7 @@ function emittedCaption(renderer: LabelRenderer, starId: string): Label | undefi
 describe('foregroundLabelsLayer — far-star caption/leader stability at Earth zoom', () => {
   it('keeps a far star caption + leader endpoints stable under a sub-parsec camera nudge', () => {
     const star = farVisibleStar();
-    const base = sceneBodyLabels();
+    const base = sceneBodyLabels(J2000_STATES);
     const earth = base.find((l) => l.id === sceneBodyLabelId('earth'))!;
     const eyeA: Vec3 = [...earth.worldPos] as Vec3;
     // Orbit step ~1e-15 Mpc — a fraction of a metre at 1 AU, well below one
@@ -215,7 +222,7 @@ describe('foregroundLabelsLayer — far-star caption/leader stability at Earth z
 
   it('bounds the lifted caption + leader endpoints inside the NEAR0 far plane', () => {
     const star = farVisibleStar();
-    const base = sceneBodyLabels();
+    const base = sceneBodyLabels(J2000_STATES);
     const earth = base.find((l) => l.id === sceneBodyLabelId('earth'))!;
     const eye: Vec3 = [...earth.worldPos] as Vec3;
     const view = makeRealNear0View(eye, star.worldPos);
@@ -253,7 +260,7 @@ describe('foregroundLabelsLayer — far-star caption/leader stability at Earth z
     // 150px ceiling. The fix scales the emitted worldEmMpc by the same ratio,
     // so em/clipW — hence the drawn px size — matches the true-depth value.
     const star = farVisibleStar();
-    const base = sceneBodyLabels();
+    const base = sceneBodyLabels(J2000_STATES);
     const earth = base.find((l) => l.id === sceneBodyLabelId('earth'))!;
     const trueLabel = base.find((l) => l.id === star.id)!;
     const eye: Vec3 = [...earth.worldPos] as Vec3;

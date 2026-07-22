@@ -34,3 +34,7 @@ export const tourRoute = 'tour' as const;
 // per-structure counts, load progress, and the scale-bar descriptor. Written
 // by the engine via action dispatches; read by React UI components.
 export const engineRoute = 'engine' as const;
+// `timeRoute` is the sim-clock *intent* slice — mode (live/manual), the
+// (simDays, realMs) anchor, rate-ladder index, direction, and pause. No
+// wall-clock tick lives here; the current instant is derived on demand.
+export const timeRoute = 'time' as const;

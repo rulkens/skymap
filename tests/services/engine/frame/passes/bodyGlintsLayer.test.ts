@@ -38,10 +38,38 @@ import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { PlanetBody } from '../../../../../src/@types/scene/PlanetBody';
+import type { BodyState } from '../../../../../src/@types/scene/BodyState';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
+// The layer reads each body's live position/orientation from the per-frame
+// body-state snapshot (keyed by id). Stub it to a map built from the fixture
+// bodies, REUSING each record's own positionMpc/orientation refs — so the layer
+// sees the exact fixture values (identity-equal), keeping the `toBe(...)`
+// assertions below intact while the reads move off the baked record fields.
+vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
+  sceneBodyStates: vi.fn((state: EngineState): ReadonlyMap<string, BodyState> => {
+    const m = new Map<string, BodyState>();
+    for (const b of (state.data.bodies.planets ?? []) as readonly SeededPlanet[]) {
+      m.set(b.id, { positionMpc: b.positionMpc, orientation: b.orientation, meanAnomalyRad: 0 });
+    }
+    const earth = state.data.bodies.earth as SeededPlanet | null;
+    if (earth)
+      m.set(earth.id, {
+        positionMpc: earth.positionMpc,
+        orientation: earth.orientation,
+        meanAnomalyRad: 0,
+      });
+    return m;
+  }),
+}));
+
+// A test fixture pairing the identity record with the J2000 state the snapshot
+// carries — position + orientation were lifted off the record onto the derive, so
+// the fixture supplies them here (keyed by id, refs reused by the mock above).
+type SeededPlanet = PlanetBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
+
 const KM = SCALE_UNITS.KM_TO_MPC;
-const IDENTITY = [1, 0, 0, 0, 1, 0, 0, 0, 1] as PlanetBody['orientation'];
+const IDENTITY = [1, 0, 0, 0, 1, 0, 0, 0, 1] as SeededPlanet['orientation'];
 
 // Camera 1e6 km down +x from the Sun (at the origin) — deep inside the
 // foreground gate, so `enabled`'s distance check passes.
@@ -56,7 +84,7 @@ const CAM_POS: Vec3 = [CAM_KM * KM, 0, 0];
  * (camera on the sunlit side); one CLOSER than the camera shows its unlit far
  * side (camera beyond it along the sun ray).
  */
-function bodyAt(id: string, posKm: number, albedo: Vec3): PlanetBody {
+function bodyAt(id: string, posKm: number, albedo: Vec3): SeededPlanet {
   return {
     id,
     label: id,
@@ -202,7 +230,7 @@ describe('bodyGlintsLayer.draw — far-dissolve brightness scaling', () => {
 
     const brightnessAt = (camX: number): number => {
       const camPos: Vec3 = [camX, 0, 0];
-      const body: PlanetBody = {
+      const body: SeededPlanet = {
         id: 'jupiter',
         label: 'jupiter',
         positionMpc: [camX + OFF, 0, 0], // just beyond the camera → lit, ~2 px glint
@@ -235,7 +263,7 @@ describe('bodyGlintsLayer.pickEnabled (Bug B — Earth-stamp-only frame stays in
   // stamp still needs to ride this layer's pick pass while the caption is on. The
   // pick gate is therefore WIDER than the draw gate: admit when glints are present
   // OR when Earth is seeded within the caption range.
-  const earthWithinGate: PlanetBody = {
+  const earthWithinGate: SeededPlanet = {
     id: 'earth',
     label: 'Earth',
     positionMpc: [1_100_000 * KM, 0, 0],
@@ -340,7 +368,7 @@ function makePickRenderer() {
 // A resolved Earth 1.1e6 km down +x — with the camera at 1e6 km its apparent
 // diameter is many px, so `earthLayer.enabled` (the SAME predicate the Earth
 // stamp is gated on) holds and the stamp is emitted.
-const EARTH_RESOLVED: PlanetBody = {
+const EARTH_RESOLVED: SeededPlanet = {
   id: 'earth',
   label: 'Earth',
   positionMpc: [1_100_000 * KM, 0, 0],
@@ -424,7 +452,7 @@ describe('bodyGlintsLayer.drawPick', () => {
     // gate down +x; a 160 km MARS between the Sun and the camera is deeply
     // sub-pixel (→ glints branch) AND unlit (camera beyond it along the sun ray →
     // illuminated fraction 0), so it is skipped.
-    const marsFar: PlanetBody = {
+    const marsFar: SeededPlanet = {
       id: 'mars',
       label: 'mars',
       positionMpc: [SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC, 0, 0],
@@ -456,7 +484,7 @@ describe('bodyGlintsLayer.drawPick', () => {
     // only the far dissolve can drop the point.
     expect(camFar[0]).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC);
     expect(fadeBand(SCALE_FADE_BANDS.bodyGlintBackdrop, camFar[0])).toBe(0);
-    const litFar: PlanetBody = {
+    const litFar: SeededPlanet = {
       id: 'jupiter',
       label: 'jupiter',
       positionMpc: [camFar[0] + 1e5 * KM, 0, 0], // just beyond the camera → lit, ~2 px glint
@@ -538,7 +566,7 @@ describe('bodyGlintsLayer.drawPick', () => {
     // 1e-6 Mpc ≪ the caption gate. No planets seeded (empty glints branch), so the
     // Earth stamp is the ONLY pick point. On the pre-fix code (gated on
     // earthLayer.enabled) this batch is empty — the bite.
-    const earthSubPixel: PlanetBody = {
+    const earthSubPixel: SeededPlanet = {
       id: 'earth',
       label: 'Earth',
       positionMpc: [1_100_000 * KM, 0, 0],

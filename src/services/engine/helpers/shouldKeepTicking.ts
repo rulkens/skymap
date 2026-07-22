@@ -48,13 +48,58 @@
  *     renderer; slotReady IS the 'field loaded' truth (the slot dispatches
  *     'ready' only after upload commits), selecting exactly the animating set
  *     with no renderer mirror.
+ *   - follow approach ease: `followApproachEaseActive` — the followBody driver's
+ *     time-based approach ease (it replaced the body-focus tween, which used to
+ *     contribute a wake term; the ease had none). True only while followBody is
+ *     the winner and the ease is unsaturated; goes false at saturation so steady
+ *     follow does not pin the loop. See the helper for why steady-follow-under-
+ *     motion is deliberately excluded.
+ *   - manual clock playing: `selectIsManualPlaying(s)` — a manual sim clock that
+ *     is advancing (not paused) moves every body every frame, so playback must
+ *     be continuous. LIVE mode is deliberately absent: it advances at real-time
+ *     rate, so nothing perceptible changes frame-to-frame and pinning the loop
+ *     at 60 fps would be waste — runFrame arms a coarse idle tick for the live
+ *     terminator instead (see its wake tail), keeping that path OUT of this
+ *     predicate.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RootState } from '../../../store/types';
 import { selectCameraActive } from '../../../state/camera/selectors';
+import { selectIsManualPlaying } from '../../../state/time/selectors';
 import { isEngineReady } from './engineReady';
 import { slotReady } from '../../loading/slotReady';
+import { FOCUS_TWEEN_MS } from '../camera/focusTweenDuration';
+
+/**
+ * The `followBody` driver's approach ease is a TIME-based animation (easeOutCubic
+ * over FOCUS_TWEEN_MS since `clock.followStartMs`) with NO camera-slice flag
+ * behind it — unlike a tween, which `selectCameraActive` already covers. It
+ * replaced the old body-focus tween, but the tween contributed a `currentTween`
+ * wake term and the ease contributed none. Without a wake term the loop renders
+ * the focus frame, sleeps, the ease saturates WHILE ASLEEP, and the next
+ * interaction reveals a finished (snapped) zoom. This term keeps the loop ticking
+ * while followBody is the winner AND the ease is still running; it goes FALSE at
+ * saturation so a steady follow does not pin 60 fps.
+ *
+ * `prevActiveId.current` holds THIS frame's winner (runFrame writes it before the
+ * keep-tick check), and `followStartMs` is maintained by `followElapsed` on every
+ * frame followBody wins — so both are current here.
+ *
+ * DELIBERATELY NOT a wake term: STEADY follow of a MOVING body after saturation.
+ * The pivot-pin only affects a RENDERED frame, so a slept steady-follow re-centres
+ * on the next wake. Manual playback already ticks (`selectIsManualPlaying`), and
+ * live-1x advances sub-perceptibly (the same coarse-idle-tick regime the
+ * terminator uses via runFrame's wake tail). Pinning 60 fps whenever any body is
+ * focused would defeat that power-saving for a drift that is imperceptible at the
+ * live rate — so steady follow stays out of this predicate, exactly as live time
+ * itself does.
+ */
+function followApproachEaseActive(state: EngineState, nowMs: number): boolean {
+  if (state.cameraRuntime.prevActiveId.current !== 'followBody') return false;
+  const start = state.cameraRuntime.clock.followStartMs;
+  return start !== null && nowMs - start < FOCUS_TWEEN_MS;
+}
 
 export function shouldKeepTicking(
   state: EngineState,
@@ -68,6 +113,8 @@ export function shouldKeepTicking(
     state.subsystems.fades.isAnyAnimating(nowMs) ||
     state.subsystems.structureFocus.isAwake(nowMs) ||
     (state.settings.flow.enabled && slotReady(state.assetSlots.flow)) ||
+    selectIsManualPlaying(s) ||
+    followApproachEaseActive(state, nowMs) ||
     anim.starFadeAnimating
   );
 }

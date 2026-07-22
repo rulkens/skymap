@@ -2,7 +2,8 @@
  * rootReducer — the Redux store's single combine point.
  *
  * The store combines slices — `settings`, `ui`, `tier`, `camera`,
- * `selection`, `selectionRows`, `tour`, and `engine` — via `combineReducers`.
+ * `selection`, `selectionRows`, `tour`, `engine`, and `time` — via
+ * `combineReducers`.
  * This forward-compatible shape derives `RootState` from the combine and makes
  * new sibling routes additive edits here rather than structural migrations
  * across every call site. A flat single reducer would have forced a migration
@@ -14,6 +15,9 @@
  * saga-owned derived display cache that InfoCard reads. `engine` holds the
  * observable runtime state the engine reports (lifecycle status, per-source
  * galaxy counts, per-structure counts, load progress, scale-bar descriptor).
+ * `time` holds the sim-clock intent (live/manual mode, the (simDays, realMs)
+ * anchor, rate-ladder index, direction, pause) from which the current instant is
+ * derived on demand — no per-frame store write.
  *
  * Each route key comes from a `./constants` literal (not an inline `'settings'`
  * / `'ui'` / `'tier'` / `'camera'`) so the literal types flow into `RootState`
@@ -32,6 +36,7 @@ import {
   selectionRowsRoute,
   tourRoute,
   engineRoute,
+  timeRoute,
 } from './constants';
 import settingsReducer from '../state/settings/settingsSlice';
 import uiReducer from '../state/ui/uiSlice';
@@ -41,6 +46,7 @@ import selectionReducer from '../state/selection/selectionSlice';
 import selectionRowsReducer from '../state/selectionRows/selectionRowsSlice';
 import tourReducer from '../state/tour/tourSlice';
 import engineReducer from '../state/engine/engineSlice';
+import timeReducer from '../state/time/timeSlice';
 
 export const rootReducer = combineReducers({
   [settingsRoute]: settingsReducer,
@@ -51,4 +57,5 @@ export const rootReducer = combineReducers({
   [selectionRowsRoute]: selectionRowsReducer,
   [tourRoute]: tourReducer,
   [engineRoute]: engineReducer,
+  [timeRoute]: timeReducer,
 });

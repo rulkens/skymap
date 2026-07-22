@@ -2,9 +2,10 @@
  * sceneBodyPartition — resolve THE per-frame `{ glints, flat, textured }` split
  * of the seeded non-Earth bodies from live engine state.
  *
- * `partitionBodiesByPresentation` is pure — it takes a body list, a camera, a
- * projection, and an `isTextureResident` predicate. This thin adapter binds
- * those inputs to the current frame ONCE so the layers that consume opposite
+ * `partitionBodiesByPresentation` is pure — it takes a body list, the per-frame
+ * body-state snapshot (`sceneBodyStates`), a camera, a projection, and an
+ * `isTextureResident` predicate. This thin adapter binds those inputs to the
+ * current frame ONCE so the layers that consume opposite
  * branches (`planetsLayer` the `flat` branch, `texturedBodiesLayer` the
  * `textured` branch, and eventually the glints layer) cannot drift apart on how
  * they build them. In particular the residency predicate — "is this body's
@@ -28,6 +29,7 @@ import type { PlanetBody } from '../../../@types/scene/PlanetBody';
 import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
 import { bodyTextureSlotKey } from '../../../utils/scene/bodyTextureSlotKey';
 import { partitionBodiesByPresentation } from './partitionBodiesByPresentation';
+import { sceneBodyStates } from './sceneBodyStates';
 
 export function sceneBodyPartition(
   state: EngineState,
@@ -35,6 +37,7 @@ export function sceneBodyPartition(
 ): { glints: readonly PlanetBody[]; flat: readonly PlanetBody[]; textured: readonly PlanetBody[] } {
   return partitionBodiesByPresentation({
     bodies: state.data.bodies.planets,
+    bodyStates: sceneBodyStates(state, ctx),
     camPosMpc: ctx.drawCamPos,
     viewportHeightPx: ctx.canvasSize.height,
     fovYRad: ctx.fovYRad,

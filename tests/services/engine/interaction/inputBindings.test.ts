@@ -61,6 +61,7 @@ let originalWindow: unknown;
 
 const scheduler: RenderScheduler = {
   requestRender: vi.fn(),
+  requestIdleFrame: vi.fn(),
   destroy: vi.fn(),
   isScheduled: () => false,
 };

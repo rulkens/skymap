@@ -67,6 +67,7 @@ import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from '../subPixelBodyCullPx';
 import { drawFlooredSpherePick } from '../../helpers/drawFlooredSpherePick';
+import { sceneBodyStates } from '../sceneBodyStates';
 
 export const earthLayer: ContentLayer = {
   name: 'earth',
@@ -82,6 +83,9 @@ export const earthLayer: ContentLayer = {
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     const earth = state.data.bodies.earth;
     if (earth === null) return false;
+    // Live position from the per-frame snapshot (keyed by id) — not the baked
+    // record field; the record still gates presence + carries the authored radius.
+    const earthState = sceneBodyStates(state, ctx).get(earth.id)!;
     // Sub-pixel cull: below SUB_PIXEL_BODY_CULL_PX apparent diameter the
     // sphere cannot resolve, so drop the layer from the pass plan entirely
     // (see that constant's docblock). Earth is the layer's only body, so the
@@ -89,9 +93,9 @@ export const earthLayer: ContentLayer = {
     // lives in its pack loop. A zero camera-to-centre distance means the
     // camera is INSIDE the body — apparentSizePx defensively returns 0
     // there, which would read as sub-pixel, so treat it as resolved.
-    const dx = earth.positionMpc[0] - ctx.drawCamPos[0];
-    const dy = earth.positionMpc[1] - ctx.drawCamPos[1];
-    const dz = earth.positionMpc[2] - ctx.drawCamPos[2];
+    const dx = earthState.positionMpc[0] - ctx.drawCamPos[0];
+    const dy = earthState.positionMpc[1] - ctx.drawCamPos[1];
+    const dz = earthState.positionMpc[2] - ctx.drawCamPos[2];
     const distanceMpc = Math.hypot(dx, dy, dz);
     if (distanceMpc === 0) return true;
     const diameterPx = apparentSizePx({
@@ -103,37 +107,41 @@ export const earthLayer: ContentLayer = {
     return diameterPx >= SUB_PIXEL_BODY_CULL_PX;
   },
 
-  draw(pass, view, _ctx, state) {
+  draw(pass, view, ctx, state) {
     const renderer = state.gpu.earthRenderer;
     const earth = state.data.bodies.earth;
     if (renderer === null || earth === null) return;
+
+    // Live position + orientation from the per-frame snapshot (keyed by id) —
+    // not the baked record fields; radius stays authored identity on the record.
+    const earthState = sceneBodyStates(state, ctx).get(earth.id)!;
 
     // Compose the Earth's MVP from the slab's f64 vp — see the module header's
     // "f64 seam" note for why `view.slab.vp` and not `view.vp`. Radius is the
     // authored kilometres resolved into Mpc at the draw site.
     const mvp = composeBodyMvp(
       view.slab.vp,
-      earth.positionMpc,
+      earthState.positionMpc,
       RENDER_ORIGIN_MPC,
       earth.radiusKm * SCALE_UNITS.KM_TO_MPC,
-      earth.orientation,
+      earthState.orientation,
     );
-    // Rotate the sun direction into Earth's local frame (its baked orientation
-    // carries the axial tilt), so the fragment's lighting stays a plain dot
-    // product. The night-side ambient floor rides the uniform below
+    // Rotate the sun direction into Earth's local frame (its orientation carries
+    // the axial tilt), so the fragment's lighting stays a plain dot product. The
+    // night-side ambient floor rides the uniform below
     // (`settings.earth.ambientLight`), an Earth-scoped override of the shared
     // AMBIENT const other bodies read.
-    const sun = sunDirLocal(earth.positionMpc, RENDER_ORIGIN_MPC, earth.orientation);
+    const sun = sunDirLocal(earthState.positionMpc, RENDER_ORIGIN_MPC, earthState.orientation);
     // The camera in Earth's local frame (body-radii units) — the view vector the
     // PBR fragment needs for the view-dependent ocean glint. `view.camPos` and
-    // `earth.positionMpc` are BOTH origin-relative (heliocentric) Mpc — the near
+    // the snapshot position are BOTH origin-relative (heliocentric) Mpc — the near
     // slab is origin-relative — so their difference resolves cleanly in JS doubles
     // before narrowing to f32 (the same precision posture as the f64 seam above).
     const camLocal = camPosLocal(
       view.camPos,
-      earth.positionMpc,
+      earthState.positionMpc,
       earth.radiusKm * SCALE_UNITS.KM_TO_MPC,
-      earth.orientation,
+      earthState.orientation,
     );
     // Pack MVP + sunDirLocal + camPosLocal + the PBR surface params into the
     // 128-byte EarthSurfaceUniforms record.
@@ -179,18 +187,22 @@ export const earthLayer: ContentLayer = {
     const earth = state.data.bodies.earth;
     if (pickRenderer === null || earth === null) return;
 
+    // Live position + orientation from the per-frame snapshot (keyed by id) — not
+    // the baked record fields; radius stays authored identity on the record.
+    const earthState = sceneBodyStates(state, ctx).get(earth.id)!;
+
     // Floor the PICK radius to the shared min footprint (visual sphere untouched):
     // a far-edge Earth can project to a couple of pixels, too small to click, so
     // its pick sphere inflates to the same 9 px-radius floor the point-partition
     // bodies get — the shared `drawFlooredSpherePick` recipe. Earth carries its
-    // baked orientation; its identity is the constant seed index 0.
+    // snapshot orientation; its identity is the constant seed index 0.
     drawFlooredSpherePick(pickRenderer, pass, {
       vp: view.slab.vp,
-      positionMpc: earth.positionMpc,
+      positionMpc: earthState.positionMpc,
       radiusMpc: earth.radiusKm * SCALE_UNITS.KM_TO_MPC,
       camPosMpc: view.camPos,
       drawPxPerRad: ctx.drawPxPerRad,
-      orientation: earth.orientation,
+      orientation: earthState.orientation,
       packedId: packSelection(Source.Earth, 0 + PICK_SENTINEL_OFFSET),
     });
   },

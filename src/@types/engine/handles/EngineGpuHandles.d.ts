@@ -182,8 +182,9 @@ export type EngineGpuHandles = {
    * captions project through the NEAR0 slab view — whose near plane scales
    * with `cam.distance` so it always contains the bodies — rather than the
    * galaxy-scale `vp` the main labels use, and one renderer draws with one
-   * view-projection.  Holds the static `sceneBodyLabels()` set (Earth, the
-   * local star map, the planets), uploaded once at construction.  Null until
+   * view-projection.  Seeded at construction with the `sceneBodyLabels(<body
+   * snapshot>)` caption set (Earth, the local star map, the planets), which
+   * `foregroundLabelsLayer` then re-uploads camera-relative each frame.  Null until
    * `initGpu` builds it against the font atlas; excluded from
    * `isEngineReady` and null-checked at use, like `labelRenderer`.
    * Released and re-nulled by `destroy()`.
@@ -552,9 +553,9 @@ export type EngineGpuHandles = {
    * `orbitTrailsLayer` packs each orbit's f64-composed inverse homography
    * `Ginv` + trail params into a per-instance vertex record, so no per-orbit
    * bind or mid-frame uniform exists for the writeBuffer-vs-submit race to
-   * clobber.  The conic table itself is a static module-level derivation of
-   * the orbital elements (`SCENE_ORBIT_CONICS`), so the renderer needs no data
-   * delivery at all.  Excluded from `isEngineReady` and null-checked at use.
+   * clobber.  `orbitTrailsLayer` derives the conic geometry per frame from the
+   * current body snapshot, so the renderer needs no bootstrap data delivery at
+   * all.  Excluded from `isEngineReady` and null-checked at use.
    * Null until `initGpu` constructs it; released and re-nulled by `destroy()`
    * (releases the instance buffer).
    */

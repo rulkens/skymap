@@ -84,21 +84,21 @@ export const atmosphereShellLayer: ContentLayer = {
     const renderer = state.gpu.atmosphereShellRenderer;
     if (renderer === null) return;
 
-    for (const { body, params } of atmosphereDrawList(state, ctx)) {
+    for (const { body, params, positionMpc, orientation } of atmosphereDrawList(state, ctx)) {
       // Scale the unit proxy sphere to the ATMOSPHERE-TOP radius (the shell's
-      // outer extent) from the slab's f64 vp (the f64 seam), folding in the body's
-      // baked orientation so the sky-view frame co-registers with the surface.
+      // outer extent) from the slab's f64 vp (the f64 seam), folding in the entry's
+      // resolved orientation so the sky-view frame co-registers with the surface.
       const atmosphereTopMpc = params.atmosphereTopKm * SCALE_UNITS.KM_TO_MPC;
       const mvp = composeBodyMvp(
         view.slab.vp,
-        body.positionMpc,
+        positionMpc,
         RENDER_ORIGIN_MPC,
         atmosphereTopMpc,
-        body.orientation,
+        orientation,
       );
-      // Sun rotated into the body's local frame (its baked orientation carries the
-      // axial tilt), co-framed with the in-scatter integral's sun direction.
-      const sun = sunDirLocal(body.positionMpc, RENDER_ORIGIN_MPC, body.orientation);
+      // Sun rotated into the body's local frame (its resolved orientation carries
+      // the axial tilt), co-framed with the in-scatter integral's sun direction.
+      const sun = sunDirLocal(positionMpc, RENDER_ORIGIN_MPC, orientation);
       // The camera in atmosphere-top-radius units — the view vector the in-scatter
       // fragment marches along. `view.camPos` is a copy of `ctx.drawCamPos` (the
       // rendered pose), the SAME vector `encodeAtmosphereSkyView` bakes the sky-view
@@ -106,12 +106,7 @@ export const atmosphereShellLayer: ContentLayer = {
       // what that SAME-radius LUT bake expects, so the baked view height and the
       // fragment altitude agree (the bake packs |camPosLocal| × atmosphereTopKm from
       // the same pose).
-      const camLocal = camPosLocal(
-        view.camPos,
-        body.positionMpc,
-        atmosphereTopMpc,
-        body.orientation,
-      );
+      const camLocal = camPosLocal(view.camPos, positionMpc, atmosphereTopMpc, orientation);
       // Ground/atmosphere-top radius ratio ∈ (0,1): in the proxy's local frame the
       // atmosphere top is the unit sphere and the ground sphere has this radius.
       const bottomRadius = params.planetRadiusKm / params.atmosphereTopKm;

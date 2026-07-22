@@ -8,14 +8,17 @@
  * changed by reference identity / value, resets the relevant start time, and
  * returns elapsed time from that start.
  *
- * Three functions, one resource: `tweenElapsed` and `autoRotateElapsed` both
- * return milliseconds (for easing drivers); `clipElapsed` returns SECONDS (for
- * `evaluateClip`). All take `nowMs` as a parameter — they never read
- * `performance.now()` or `Date.now()` themselves. The caller owns the wall
- * clock; this keeps the clock deterministic and testable.
+ * The elapsed functions share one resource: `tweenElapsed`, `autoRotateElapsed`,
+ * and `followElapsed` all return milliseconds (for easing drivers); `clipElapsed`
+ * returns SECONDS (for `evaluateClip`). All take `nowMs` as a parameter — they
+ * never read `performance.now()` or `Date.now()` themselves. The caller owns the
+ * wall clock; this keeps the clock deterministic and testable. `accumulateFollowPan`
+ * is the odd one out — it returns void, folding a follow-while-panning strafe into
+ * the clock's `followPanOffset` — but it lives here because that offset is
+ * follow-runtime state the same resource owns and `followElapsed` zeroes on focus.
  *
- * One module for all three functions because they share the `CameraClock`
- * Resource: the three halves are inseparable parts of one stateful computation.
+ * One module for all four functions because they share the `CameraClock`
+ * Resource: the halves are inseparable parts of one stateful computation.
  * Same reasoning as `cameraDrivers.ts` holding both `runCameraDrivers` and
  * `buildCameraDrivers`.
  */
@@ -24,6 +27,8 @@ import type { CameraClock } from '../../../@types/engine/camera/CameraClock';
 import type { CameraTweenDescriptor } from '../../../@types/camera/CameraTweenDescriptor';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { ClipData } from '../../../@types/animation/ClipData';
+import type { SelectionRow } from '../../../@types/engine/SelectionRow';
+import type { Vec3 } from '../../../@types/math/Vec3';
 
 /**
  * Create a fresh CameraClock with no recorded starts.
@@ -39,6 +44,12 @@ export function createCameraClock(): CameraClock {
     lastBaseRef: null,
     clipStartMs: null,
     lastClipRef: null,
+    followStartMs: null,
+    lastFollowRef: null,
+    followFrom: null,
+    followDistanceTarget: null,
+    followPanOffset: [0, 0, 0],
+    lastPanTarget: null,
   };
 }
 
@@ -122,4 +133,83 @@ export function clipElapsed(
     clock.clipStartMs = clip === null ? null : nowMs;
   }
   return clock.clipStartMs === null ? 0 : (nowMs - clock.clipStartMs) / 1000;
+}
+
+/**
+ * Reset the follow-approach start to `nowMs` when the focus ROW reference
+ * changes (a new / re-selected body, or focus leaving a body → null); then
+ * return ms elapsed since that start.
+ *
+ * Keys on the row REFERENCE, not the body id, so a re-select of the same body
+ * (a fresh `selectionRows.focus` object) restarts the ease exactly once — the
+ * same identity-reset pattern `tweenElapsed` uses. A drag mid-follow does not
+ * change the ref, so the ease is not restarted on drag-release: the camera
+ * resumes its saturated follow instead of re-approaching.
+ *
+ * On the reset edge it also NULLS `followFrom` AND `followDistanceTarget`,
+ * signalling the driver's `pose` to re-capture the live on-screen pose as the
+ * `from` the approach eases out of, and to re-seed the distance target to the
+ * framing distance (the INITIAL-APPROACH source — see `CameraClock`). The capture
+ * is split from this timer because only the driver (closing over `EngineState`)
+ * can see the live rendered pose (`lastPose`) and the body radius / FOV; this
+ * function sees only the store's focus ref.
+ *
+ * A freshly-selected body returns 0 on the arrival frame and grows on later
+ * frames carrying the same ref. A null focus always returns 0.
+ */
+export function followElapsed(
+  clock: CameraClock,
+  focusRow: SelectionRow | null,
+  nowMs: number,
+): number {
+  if (focusRow !== clock.lastFollowRef) {
+    clock.lastFollowRef = focusRow;
+    clock.followStartMs = focusRow === null ? null : nowMs;
+    // Force the driver to re-capture the `from` pose and re-seed the framing
+    // distance target on the next produce (fresh-approach signal).
+    clock.followFrom = null;
+    clock.followDistanceTarget = null;
+    // A NEW focus starts centred: zero the strafe offset and drop the drag-delta
+    // chain. (Any focus ROW ref change is a new target, incl. re-selecting the
+    // same body — same identity-reset semantics the fields above use.)
+    clock.followPanOffset = [0, 0, 0];
+    clock.lastPanTarget = null;
+  }
+  return clock.followStartMs === null ? 0 : nowMs - clock.followStartMs;
+}
+
+/**
+ * Fold a follow-while-panning strafe into `clock.followPanOffset`.
+ *
+ * `isFollowDragFrame` is true only when a body is followed AND a drag gesture is
+ * the frame's winner (orbitDrag). On such frames the frame-to-frame delta of
+ * `cam.target` is PURE PAN: an orbit drag changes yaw/pitch (not target), and the
+ * body's own motion never touches `cam.target`, so the delta isolates the strafe
+ * with no body-motion contamination. Accumulating the delta (rather than reading
+ * `cam.target - bodyPosition`) is what keeps the offset clean across a drag while
+ * the body moves under it.
+ *
+ * Off a follow-drag frame the delta chain is dropped (`lastPanTarget = null`) so
+ * the next grab continues the existing offset instead of re-basing it — and the
+ * accumulated offset persists until `followElapsed` zeroes it on a fresh focus,
+ * which happens the next time followBody wins the frame (see `CameraClock`).
+ */
+export function accumulateFollowPan(
+  clock: CameraClock,
+  isFollowDragFrame: boolean,
+  camTarget: Vec3,
+): void {
+  if (!isFollowDragFrame) {
+    clock.lastPanTarget = null;
+    return;
+  }
+  const last = clock.lastPanTarget;
+  if (last !== null) {
+    clock.followPanOffset = [
+      clock.followPanOffset[0] + (camTarget[0] - last[0]),
+      clock.followPanOffset[1] + (camTarget[1] - last[1]),
+      clock.followPanOffset[2] + (camTarget[2] - last[2]),
+    ];
+  }
+  clock.lastPanTarget = [camTarget[0], camTarget[1], camTarget[2]];
 }

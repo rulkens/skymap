@@ -30,7 +30,7 @@ import type { FocusableTargetType } from '../../@types/engine/FocusableTargetTyp
 import GalaxyDetailCard from './GalaxyDetailCard/GalaxyDetailCard';
 import StructureDetailCard from './StructureDetailCard/StructureDetailCard';
 import MilkyWayDetailCard from './MilkyWayDetailCard/MilkyWayDetailCard';
-import BodyDetailCard from './BodyDetailCard/BodyDetailCard';
+import BodyDetailCardContainer from '../containers/BodyDetailCardContainer';
 import FieldStarDetailCard from './FieldStarDetailCard/FieldStarDetailCard';
 import CompactCard from './CompactCard/CompactCard';
 import CompactStructureCard from './CompactStructureCard/CompactStructureCard';
@@ -112,9 +112,13 @@ export const DETAIL_CARD: Record<FocusableTargetType, DetailCardEntry> = {
       target.type === 'milkyWay' ? createElement(CompactMilkyWayCard, { target }) : null,
   },
   body: {
+    // The body arm renders through a store container: a focused body's distance
+    // is time-dependent and re-derived live off the throttled time pub, which a
+    // presentational card cannot read (store-boundary rule). The container reads
+    // it and passes it as a prop; identity rows stay on the pure card.
     Detail: ({ target, pinned, chrome, onFocus, onClose }) => {
       if (target.type !== 'body') return null;
-      return createElement(BodyDetailCard, {
+      return createElement(BodyDetailCardContainer, {
         target,
         pinned,
         chrome,

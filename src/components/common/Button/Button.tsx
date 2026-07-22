@@ -2,9 +2,9 @@
 /**
  * Button — the HUD's single push-button primitive.
  *
- * Every clickable affordance in the overlay UI (SettingsPanel's
- * "Reset camera", Splash's Explore / Tour / Reload / Continue
- * anyway) renders through here so they share font, padding,
+ * Every clickable affordance in the overlay UI (Splash's Explore /
+ * Tour / Reload / Continue anyway, the TimeBar controls) renders
+ * through here so they share font, padding,
  * border, focus ring, and disabled treatment.  Per-surface CSS
  * modules previously each rolled their own `.button` rule and
  * drifted (different paddings, different letter-spacing, the
@@ -13,13 +13,13 @@
  *
  * `font: inherit` is the keystone — it makes the button pick up
  * the parent's font-family + size + weight, so a Button placed in
- * SettingsPanel speaks mono, and a Button placed inside the
- * splash card (also mono via .card) does too.  No prop wiring
- * needed; the cascade does the work.
+ * the HUD speaks mono, and a Button placed inside the splash card
+ * (also mono via .card) does too.  No prop wiring needed; the
+ * cascade does the work.
  *
  * Three variants:
  *   - secondary (default) — neutral chrome on glass; the most
- *     common case (SettingsPanel reset, Tour CTA).
+ *     common case (Tour CTA).
  *   - primary — accent fill for high-conviction actions (Explore,
  *     Reload).
  *   - ghost — text-only with underline; for low-emphasis escapes

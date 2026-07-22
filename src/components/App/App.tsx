@@ -42,6 +42,7 @@ import NavigationPanel from '../NavigationPanel/NavigationPanel';
 import CommandPaletteContainer from '../containers/CommandPaletteContainer';
 import SearchTrigger from '../SearchTrigger/SearchTrigger';
 import AutoRotateToggleContainer from '../containers/AutoRotateToggleContainer';
+import TimeBarContainer from '../containers/TimeBarContainer';
 import HomeButton from '../HomeButton/HomeButton';
 import SplashContainer from '../containers/SplashContainer';
 import AboutPill from '../Splash/AboutPill';
@@ -109,12 +110,12 @@ export function App(): React.ReactElement {
   const scale = useAppSelector(selectScale);
   const loadProgress = useAppSelector(selectLoadProgress);
 
-  // "Home" frames our own galaxy: the Reset-camera button and the Home pill
-  // route through the standard focus channel (updateSelectionFocus →
-  // watchFocusTweenSaga), so the camera tween, URL hash, and selection state
-  // match every other focus. (The palette's Milky-Way row reaches the same
-  // state via requestFocus(MILKY_WAY_FOCUS_ID), the deep-link path.) One stable
-  // identity keeps the memo'd SettingsPanel / HomeButton from re-rendering.
+  // "Home" frames our own galaxy: the Home pill routes through the standard
+  // focus channel (updateSelectionFocus → watchFocusTweenSaga), so the camera
+  // tween, URL hash, and selection state match every other focus. (The palette's
+  // Milky-Way row reaches the same state via requestFocus(MILKY_WAY_FOCUS_ID),
+  // the deep-link path.) One stable identity keeps the memo'd HomeButton from
+  // re-rendering.
   const focusMilkyWay = useCallback(
     () => dispatch(updateSelectionFocus({ type: 'milkyWay' })),
     [dispatch],
@@ -259,11 +260,14 @@ export function App(): React.ReactElement {
           onClose={() => dispatch(clearSelection())}
         />
         <ScaleBar scale={scale} />
+        {/* Self-positioning (fixed, bottom-center), so it rides the HUD stack
+            as a direct child rather than joining a flex row. */}
+        <TimeBarContainer hidden={paletteOpen || splashVisible} />
         {/* Flex column anchored bottom-left.  Children stack upward as
             they're added, so we don't need per-panel `bottom:` math. */}
         <div className={appStyles.leftStack}>
           <NavigationPanel defaultOpen={initialPanelsOpen} isMobile={initialMobile} />
-          <SettingsPanel defaultOpen={initialPanelsOpen} onResetCamera={focusMilkyWay} />
+          <SettingsPanel defaultOpen={initialPanelsOpen} />
         </div>
         {/* Top-center pill row.  SearchTrigger + the pills share a flex
             wrapper so they fade together when the palette opens. */}

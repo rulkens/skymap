@@ -70,6 +70,12 @@ export function pickFrameContext(
     // it exists only to satisfy the shared `deriveFrameContext` contract — but
     // sampling here keeps a consistent "now" for any value that does stamp it.
     performance.now(),
+    // Sim instant: the one the last frame derived its bodies at, so pickable
+    // body sprites are re-derived exactly where they were drawn — the time
+    // analogue of reading `lastPose.current` for the pose. Single-writer state
+    // (`runFrame` only), so an unrelated `deriveBodyStates(CONST_J2000)` between
+    // frames cannot repoint the epoch the pick sees.
+    state.cameraRuntime.lastRenderedSimDays.current,
   );
   return ctx.isReady ? ctx : null;
 }

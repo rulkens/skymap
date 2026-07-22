@@ -40,6 +40,7 @@ import type { CaptionKind } from './captionPriority';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import { SCENE_STARS } from '../../../data/bodies/sceneStars';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
+import type { BodyState } from '../../../@types/scene/BodyState';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
@@ -124,14 +125,22 @@ export const SCENE_STAR_LABEL_IDS: ReadonlySet<string> = new Set(
 );
 
 /**
- * Build the common label shape for one body. The colour is the caller's
- * per-type derivation (spectral colour / albedo / Earth blue), widened to
- * straight RGBA at full alpha; `kind` is the caller's structural knowledge of
+ * Build the common label shape for one body. The position is the caller's —
+ * an orbital body's derived snapshot position, a star's record position — so
+ * this reads it as a parameter rather than off `body.positionMpc` (the baked
+ * record field the orbital bodies no longer position from). The colour is the
+ * caller's per-type derivation (spectral colour / albedo / Earth blue), widened
+ * to straight RGBA at full alpha; `kind` is the caller's structural knowledge of
  * which seed table the body came from.
  */
-function bodyLabel(body: SceneBody, tint: Readonly<Vec3>, kind: CaptionKind): SceneBodyLabel {
+function bodyLabel(
+  body: SceneBody,
+  positionMpc: Readonly<Vec3>,
+  tint: Readonly<Vec3>,
+  kind: CaptionKind,
+): SceneBodyLabel {
   const o = RENDER_ORIGIN_MPC;
-  const p = body.positionMpc;
+  const p = positionMpc;
   const worldPos: Vec3 = [p[0] - o[0], p[1] - o[1], p[2] - o[2]];
   return {
     id: sceneBodyLabelId(body.id),
@@ -162,15 +171,28 @@ function bodyLabel(body: SceneBody, tint: Readonly<Vec3>, kind: CaptionKind): Sc
 
 /**
  * Build one name label per seeded scene body, positioned relative to
- * `RENDER_ORIGIN_MPC` for the foreground view-projection.  Static — the
- * bodies don't move — so the caller sets these once at construction.
+ * `RENDER_ORIGIN_MPC` for the foreground view-projection.
+ *
+ * Earth + planets read their position from the caller's `bodyStates` snapshot
+ * (the per-frame `deriveBodyStates(simDays)` map), so their captions FOLLOW the
+ * bodies as the sim clock advances. The caller re-invokes this only when the
+ * snapshot actually changes — a paused clock returns the same map by reference,
+ * so a fresh instant is the only thing that rebuilds the handful of captions
+ * (see `foregroundLabelsLayer`'s memo). Stars are not orbital bodies, so they
+ * keep their authored record position regardless of the instant.
  */
-export function sceneBodyLabels(): SceneBodyLabel[] {
+export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): SceneBodyLabel[] {
   return [
-    bodyLabel(SCENE_EARTH, EARTH_TINT, 'earth'),
+    bodyLabel(SCENE_EARTH, bodyStates.get(SCENE_EARTH.id)!.positionMpc, EARTH_TINT, 'earth'),
     // The Sun rides the star seed table but is its own caption kind — it must
     // out-rank every other caption in a declutter collision (CAPTION_PRIORITY).
-    ...SCENE_STARS.map((star) => bodyLabel(star, star.color, star.id === 'sun' ? 'sun' : 'star')),
-    ...SCENE_PLANETS.map((planet) => bodyLabel(planet, planet.albedo, 'planet')),
+    // Stars sit at their authored record position (no orbital element), so they
+    // read `star.positionMpc` directly rather than the snapshot.
+    ...SCENE_STARS.map((star) =>
+      bodyLabel(star, star.positionMpc, star.color, star.id === 'sun' ? 'sun' : 'star'),
+    ),
+    ...SCENE_PLANETS.map((planet) =>
+      bodyLabel(planet, bodyStates.get(planet.id)!.positionMpc, planet.albedo, 'planet'),
+    ),
   ];
 }

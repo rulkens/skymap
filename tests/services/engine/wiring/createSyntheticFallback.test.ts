@@ -22,6 +22,7 @@ import { engineStatusChanged } from '../../../../src/state/engine/engineSlice';
 import { Source } from '../../../../src/data/sources';
 import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
 import { GALAXY_CATALOG_POINT_SOURCES } from '../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry';
+import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
@@ -152,6 +153,7 @@ function makeState(opts: { disabledSources?: readonly SourceType[] } = {}): Make
     cameraRuntime: {
       lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity } },
       projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
+      lastRenderedSimDays: { current: CONST_J2000 },
     },
   } as unknown as EngineState;
 

@@ -114,6 +114,7 @@ function makeEngineState(startDistance: number): {
         } as CameraPose,
       },
       prevActiveId: { current: 'resting' as string },
+      lastRenderedSimDays: { current: 0 },
     },
   };
 

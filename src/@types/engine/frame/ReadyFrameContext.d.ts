@@ -84,6 +84,15 @@ export type ReadyFrameContext = {
    * animation stays a pure function of the stamped time.
    */
   nowMs: number;
+  /**
+   * This frame's sim-clock instant in Julian days — `deriveSimDays(time, nowMs)`,
+   * sampled ONCE by `runFrame` from the time-intent slice before the camera
+   * produce step. `sceneBodyStates` evaluates the whole body snapshot at THIS
+   * instant, so every per-frame body reader (planets, textured bodies, orbit
+   * trails) shares one epoch and can never draw the same body at two positions.
+   * A paused clock holds it steady; live/manual playback advances it each frame.
+   */
+  simDays: number;
   /** Vertical field-of-view in radians (`cam.fovYRad`) — the source `drawPxPerRad` is derived from. */
   fovYRad: number;
   /** Structure-focus recession blend 0→1, from structureFocus.produceFocusUniforms (ticked once/frame). */
