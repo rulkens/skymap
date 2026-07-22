@@ -1,9 +1,9 @@
 // src/components/HomeButton/HomeButton.tsx
 /**
- * HomeButton — top-bar pill that frames the Milky Way (our galaxy is
- * "home"). Thin semantic wrapper over the shared PillButton chrome; owns
+ * HomeButton — top-bar pill that frames Earth (the viewer's starting point
+ * is "home"). Thin semantic wrapper over the shared PillButton chrome; owns
  * only the aria-label and the HomeIcon child. The click dispatches a focus
- * on the Milky Way through the standard selection channel, so this component
+ * on Earth through the standard selection channel, so this component
  * is pure UI. Memoised because the parent re-renders on every animation
  * frame and this pill's inputs change only on user action.
  */

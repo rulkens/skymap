@@ -83,6 +83,12 @@ vi.mock('../../../../src/services/engine/interaction/inputBindings', () => ({
 
 // Imported AFTER the mocks so wireInput picks them up.
 import { wireInput } from '../../../../src/services/engine/phases/wireInput';
+import { selectSelectedRef, selectFocusRef } from '../../../../src/state/selection/selectors';
+import {
+  updateSelectionSelect,
+  updateSelectionFocus,
+} from '../../../../src/state/selection/selectionSlice';
+import { EARTH_REF } from '../../../../src/data/selection/earthRef';
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -194,7 +200,7 @@ function makeDeps(): BootstrapDeps {
 // ── Tests ────────────────────────────────────────────────────────────
 
 describe('wireInput', () => {
-  it('calls computeInitialCamera with the canonical 60° vertical FOV', async () => {
+  it('frames the boot camera at the canonical 60° FOV and the live sim instant', async () => {
     const state = makeState();
     const deps = makeDeps();
 
@@ -203,7 +209,39 @@ describe('wireInput', () => {
     expect(computeInitialCameraSpy).toHaveBeenCalledTimes(1);
     expect(computeInitialCameraSpy).toHaveBeenCalledWith({
       fovYRad: (Math.PI / 180) * 60,
+      simDays: expect.any(Number),
     });
     expect(state.cam).not.toBeNull();
+  });
+
+  it('seeds the home selection: select + focus pinned to Earth at boot', async () => {
+    const state = makeState();
+    const deps = makeDeps();
+
+    await wireInput(state, deps);
+
+    // Boot IS the home state — both slots must point at Earth so the follow
+    // driver tracks the live globe and the InfoCard pins on first paint.
+    const root = deps.cb.store.getState();
+    expect(selectSelectedRef(root)).toEqual(EARTH_REF);
+    expect(selectFocusRef(root)).toEqual(EARTH_REF);
+  });
+
+  it('leaves an existing selection alone — a URL-hash focus restored before bootstrap wins', async () => {
+    const state = makeState();
+    const deps = makeDeps();
+
+    // A `#focus=body-jupiter` deep link resolves at React mount (bodies are a
+    // static registry — no catalog wait), which is BEFORE this async bootstrap
+    // phase runs. The Earth seed must not clobber it.
+    const jupiter = { type: 'body', id: 'jupiter' } as const;
+    deps.cb.store.dispatch(updateSelectionSelect(jupiter));
+    deps.cb.store.dispatch(updateSelectionFocus(jupiter));
+
+    await wireInput(state, deps);
+
+    const root = deps.cb.store.getState();
+    expect(selectSelectedRef(root)).toEqual(jupiter);
+    expect(selectFocusRef(root)).toEqual(jupiter);
   });
 });

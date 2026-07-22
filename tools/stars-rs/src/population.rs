@@ -102,6 +102,7 @@ pub struct DropCounts {
     /// `hip_gaia_subtracted`, which counts the crossmatch-resolved duplicates.
     pub positional_gap_subtracted: u64,
     pub far_distance: u64,
+    pub no_photometry: u64,
 }
 
 #[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
@@ -304,12 +305,13 @@ pub fn build_population(
     // the subtraction bookkeeping is three integer counters (order-free
     // sums). Chunked map + ordered flatten keeps the output order identical
     // to the sequential TS loop.
-    let chunks: Vec<(Vec<Star>, Vec<StarIds>, u64, u64, u64, u64)> = gaia
+    let chunks: Vec<(Vec<Star>, Vec<StarIds>, u64, u64, u64, u64, u64)> = gaia
         .par_chunks(1 << 16)
         .map(|chunk| {
             let mut out = Vec::with_capacity(chunk.len());
             let mut out_ids = Vec::with_capacity(chunk.len());
-            let (mut no_bj, mut hip_sub, mut famous_sub, mut gap_sub) = (0u64, 0u64, 0u64, 0u64);
+            let (mut no_bj, mut no_phot, mut hip_sub, mut famous_sub, mut gap_sub) =
+                (0u64, 0u64, 0u64, 0u64, 0u64);
             for row in chunk {
                 let dist_pc = row
                     .r_med_photogeo
@@ -319,6 +321,17 @@ pub fn build_population(
                     no_bj += 1;
                     continue;
                 };
+                // A missing G magnitude (empty CSV cell) parses to NaN at the
+                // parse boundary and flows through uncaught — that is
+                // deliberate there (see parse.rs). Left uncaught here,
+                // `absolute_magnitude(NaN, d)` is NaN, and the abs-mag
+                // quantizer's documented NaN semantics map NaN to LUT index 0,
+                // the BRIGHTEST bin, un-counted as a clamp: a fake beacon star
+                // near Earth. Drop before it can enter the population.
+                if !row.g_mag.is_finite() {
+                    no_phot += 1;
+                    continue;
+                }
                 // Set formula, hipMatched strictly before famous (a row that
                 // is both counts as hipGaiaSubtracted, per the TS comment); the
                 // positional-gap set is tested last, after the famous union, so
@@ -347,16 +360,17 @@ pub fn build_population(
                     hip: source_id_to_hip.get(&row.source_id).copied(),
                 });
             }
-            (out, out_ids, no_bj, hip_sub, famous_sub, gap_sub)
+            (out, out_ids, no_bj, no_phot, hip_sub, famous_sub, gap_sub)
         })
         .collect();
     // Ordered flatten in page order — the `ids` extend rides the same loop as
     // the `stars` extend, so the two vecs stay byte-order-parallel regardless
     // of how the chunks were scheduled across threads.
-    for (chunk, chunk_ids, no_bj, hip_sub, famous_sub, gap_sub) in chunks {
+    for (chunk, chunk_ids, no_bj, no_phot, hip_sub, famous_sub, gap_sub) in chunks {
         stars.extend(chunk);
         ids.extend(chunk_ids);
         drops.no_bailer_jones += no_bj;
+        drops.no_photometry += no_phot;
         drops.hip_gaia_subtracted += hip_sub;
         drops.famous_subtracted += famous_sub;
         drops.positional_gap_subtracted += gap_sub;
@@ -376,6 +390,13 @@ pub fn build_population(
         }
         if !keep_star(row.source_id, row.dist_pc, true) {
             continue; // faint dwarf thinned out of the supplement's outer shell
+        }
+        // Same missing-photometry guard as the Gaia main loop above — see
+        // its comment for why an un-caught NaN G magnitude is a fake-beacon
+        // bug, not a harmless clamp.
+        if !row.g_mag.is_finite() {
+            drops.no_photometry += 1;
+            continue;
         }
         if hip_matched.contains(&row.source_id) {
             drops.hip_gaia_subtracted += 1;
@@ -635,7 +656,8 @@ mod tests {
     // Synthetic-row constructors — source_ids and HIPs chosen well outside the
     // curated famous arrays so nothing is famous-subtracted unless a test asks
     // for it. All distances default inside the taper-start radius so a GCNS row
-    // is never thinned by the outer taper.
+    // is never thinned by the outer taper. Every row carries a finite G so it
+    // survives the missing-photometry guard unless a test overrides it.
     fn gaia_row(source_id: u64, ra: f64, dec: f64, dist_pc: f64, g_mag: f64) -> GaiaMainRow {
         GaiaMainRow {
             source_id,
@@ -799,5 +821,52 @@ mod tests {
         assert_eq!(pop.drops.positional_gap_subtracted, 1);
         assert_eq!(pop.drops.famous_subtracted, 0);
         assert_eq!(pop.ids[0], StarIds { gaia: None, hip: Some(500_001) });
+    }
+
+    // ── Missing-photometry drop (Gaia + GCNS loops) ───────────────────────
+
+    fn no_hip() -> (Vec<Hip2Row>, FxHashMap<u32, u64>) {
+        (Vec::new(), FxHashMap::default())
+    }
+
+    #[test]
+    fn gaia_main_row_with_nan_g_mag_is_dropped_and_counted() {
+        // A resolvable distance but a missing (NaN) G magnitude — the empty
+        // `phot_g_mean_mag` cell case. Without the guard this row would place
+        // a fake beacon star (absMag quantizes NaN to the brightest LUT bin).
+        let gaia = vec![GaiaMainRow {
+            source_id: 42,
+            ra_deg: 10.0,
+            dec_deg: 20.0,
+            g_mag: f64::NAN,
+            bp_rp: 0.7,
+            r_med_geo: None,
+            r_med_photogeo: Some(20.0),
+        }];
+        let (hip_rows, hip_to_source_id) = no_hip();
+        let pop = build_population(&gaia, &[], &hip_rows, 0, &hip_to_source_id);
+
+        assert_eq!(pop.stars.len(), 0);
+        assert_eq!(pop.drops.no_photometry, 1);
+    }
+
+    #[test]
+    fn gcns_supplement_row_with_nan_g_mag_is_dropped_and_counted() {
+        // Same guard on the GCNS-only supplement loop — a row inside the
+        // taper start (kept unconditionally by `keep_star`) still must not
+        // join the population without a real G magnitude.
+        let gcns = vec![GcnsRow {
+            source_id: 99,
+            ra_deg: 60.0,
+            dec_deg: -20.0,
+            dist_pc: 10.0,
+            g_mag: f64::NAN,
+            bp_rp: 1.0,
+        }];
+        let (hip_rows, hip_to_source_id) = no_hip();
+        let pop = build_population(&[], &gcns, &hip_rows, 0, &hip_to_source_id);
+
+        assert_eq!(pop.stars.len(), 0);
+        assert_eq!(pop.drops.no_photometry, 1);
     }
 }

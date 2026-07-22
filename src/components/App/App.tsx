@@ -54,6 +54,7 @@ import { selectVisibleSourceMask } from '../../state/settings/selectors';
 import { selectTier } from '../../state/tier/selectors';
 import { selectHoveredFocusable, selectSelectedFocusable } from '../../state/selection/selectors';
 import { updateSelectionFocus, clearSelection } from '../../state/selection/selectionSlice';
+import { goHome } from '../../state/selection/goHome';
 import { refOf } from '../../services/engine/helpers/refOf';
 import DebugPanelContainer from '../containers/DebugPanelContainer';
 import TourOverlayContainer from '../containers/TourOverlayContainer';
@@ -110,16 +111,13 @@ export function App(): React.ReactElement {
   const scale = useAppSelector(selectScale);
   const loadProgress = useAppSelector(selectLoadProgress);
 
-  // "Home" frames our own galaxy: the Home pill routes through the standard
-  // focus channel (updateSelectionFocus → watchFocusTweenSaga), so the camera
-  // tween, URL hash, and selection state match every other focus. (The palette's
-  // Milky-Way row reaches the same state via requestFocus(MILKY_WAY_FOCUS_ID),
-  // the deep-link path.) One stable identity keeps the memo'd HomeButton from
+  // "Home" flies to Earth — the viewer's literal starting point, not just our
+  // galaxy. The Home pill dispatches the one `goHome` intent (shared with the
+  // `h`/`e` keys); watchGoHomeSaga pins Earth and tweens to the sunlit home
+  // pose. (The palette's Earth row reaches Earth via requestFocus, the
+  // deep-link path.) One stable identity keeps the memo'd HomeButton from
   // re-rendering.
-  const focusMilkyWay = useCallback(
-    () => dispatch(updateSelectionFocus({ type: 'milkyWay' })),
-    [dispatch],
-  );
+  const goHomeCb = useCallback(() => dispatch(goHome()), [dispatch]);
 
   // Live "N galaxies" figure for a pinned cluster/SC/void card.  Recomputes
   // on selection / tier swap / catalog landing (`sourceCounts` from engine slice)
@@ -273,7 +271,7 @@ export function App(): React.ReactElement {
             wrapper so they fade together when the palette opens. */}
         <div className={appStyles.topBar}>
           <SearchTrigger onClick={openPalette} hidden={paletteOpen || splashVisible} />
-          <HomeButton onClick={focusMilkyWay} hidden={paletteOpen || splashVisible} />
+          <HomeButton onClick={goHomeCb} hidden={paletteOpen || splashVisible} />
           <AutoRotateToggleContainer hidden={paletteOpen || splashVisible} />
           <AboutPill onClick={reopenSplashScreen} hidden={paletteOpen || splashVisible} />
           {TOUR_DEBUG_GATE && <TourDebugPillContainer hidden={paletteOpen || splashVisible} />}
