@@ -26,14 +26,15 @@ import type { ClipId } from '../../../@types/animation/ClipId';
 import type { ClipPathSnapshot } from '../../../@types/engine/debug/ClipPathSnapshot';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { evaluateClip } from '../camera/evaluateClip';
+import { yawPitchToDir } from '../../../utils/camera/yawPitchToDir';
 
 /** Reconstruct the eye position from a pose via the orbit convention. */
 function eyeOf(target: Vec3, distance: number, yaw: number, pitch: number): Vec3 {
-  const cp = Math.cos(pitch);
+  const dir = yawPitchToDir(yaw, pitch);
   return [
-    target[0] + distance * (cp * Math.sin(yaw)),
-    target[1] + distance * Math.sin(pitch),
-    target[2] + distance * (cp * Math.cos(yaw)),
+    target[0] + distance * dir[0],
+    target[1] + distance * dir[1],
+    target[2] + distance * dir[2],
   ];
 }
 

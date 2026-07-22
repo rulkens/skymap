@@ -71,6 +71,7 @@ import { catmullRomNonUniform } from '../../../utils/math/catmullRomNonUniform';
 import { causalHermiteNonUniform } from '../../../utils/math/causalHermiteNonUniform';
 import { monotoneCubic } from '../../../utils/math/monotoneCubic';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
+import { yawPitchToDir } from '../../../utils/camera/yawPitchToDir';
 import { lerp } from '../../../utils/math/lerp';
 import { trapezoidEase } from '../../../utils/math/trapezoidEase';
 import { buildDwellWarp } from './buildDwellWarp';
@@ -234,11 +235,11 @@ export function buildPathTrack(params: BuildParams): PathTrack {
   // camera actually is right now — derived from the start pose via the orbit
   // convention eye = target + distance · dir(yaw, pitch) — so t=0 is pinned to
   // the live camera with no positional pop.
-  const cp0 = Math.cos(start.pitch);
+  const liveDir = yawPitchToDir(start.yaw, start.pitch);
   const liveEye: Vec3 = [
-    start.target[0] + start.distance * (cp0 * Math.sin(start.yaw)),
-    start.target[1] + start.distance * Math.sin(start.pitch),
-    start.target[2] + start.distance * (cp0 * Math.cos(start.yaw)),
+    start.target[0] + start.distance * liveDir[0],
+    start.target[1] + start.distance * liveDir[1],
+    start.target[2] + start.distance * liveDir[2],
   ];
   const knotPos: Vec3[] = [liveEye, ...waypoints.map((w) => [w.at[0], w.at[1], w.at[2]] as Vec3)];
 
@@ -597,8 +598,7 @@ export function buildPathTrack(params: BuildParams): PathTrack {
     // updatePosition sets eye = target + distance · dir(yaw, pitch), so to land
     // the eye on (tx,ty,tz) we set target = eye − distance · dir.
     const dist = Math.exp(pose.ld);
-    const cp = Math.cos(pitchV);
-    const dir: Vec3 = [cp * Math.sin(yawV), Math.sin(pitchV), cp * Math.cos(yawV)];
+    const dir = yawPitchToDir(yawV, pitchV);
     return {
       target: [pose.tx - dist * dir[0], pose.ty - dist * dir[1], pose.tz - dist * dir[2]],
       distance: dist,
