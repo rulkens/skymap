@@ -49,6 +49,11 @@
  * Like `produceStructureLabels`, this emits every surviving candidate tagged
  * with a `prominencePx` (the galaxy's apparent diameter); the
  * `labelDirectorSubsystem` declutters across all producers in its merge step.
+ *
+ * ### Distance-scaled pixel ceiling for near companions
+ *
+ * The ceiling ramps down with camera distance so permanently-near companions
+ * (LMC/SMC) don't pin the flat 150 px cap — see `famousLabelMaxPx`.
  */
 
 import type { Label } from '../../../@types/rendering/Label';
@@ -67,6 +72,7 @@ import { famousDisplayName } from '../helpers/famousDisplayName';
 import { FAMOUS_LABEL_STYLE } from './famousLabelStyle';
 import { liftedLabelPlacement } from './liftedLabelPlacement';
 import { focusRecession } from './focusRecession';
+import { smoothstep } from '../../../utils/math/smoothstep';
 
 const FAMOUS_MIN_APPARENT_PX = 6;
 
@@ -84,6 +90,30 @@ const FAMOUS_LABEL_WORLD_EM_LOG_GAIN = 0.3;
 function famousLabelWorldEmMpc(diameterKpc: number): number {
   const log = Math.log10(diameterKpc / FAMOUS_LABEL_REFERENCE_DIAMETER_KPC);
   return FAMOUS_LABEL_REFERENCE_WORLD_EM_MPC * Math.pow(10, FAMOUS_LABEL_WORLD_EM_LOG_GAIN * log);
+}
+
+/**
+ * Distance-scaled pixel ceiling for famous-galaxy labels. `style.maxPixelSize`
+ * (150 px) is tuned for the dramatic close-approach case — M31 filling the
+ * screen as the camera swoops in — but the LMC/SMC sit permanently inside
+ * that same near range as seen from home, inside the Milky Way, so a
+ * single fixed ceiling lets them tower over the view rather than reading as a
+ * momentary flourish. The rejected alternative was lowering `maxPixelSize`
+ * globally: that would also shrink the intended M31-at-close-approach drama
+ * for every OTHER far galaxy, not just the ones that never recede. Ramping
+ * the cap by distance instead keeps permanent near neighbours small while
+ * leaving the far-galaxy ceiling untouched.
+ */
+const FAMOUS_LABEL_NEAR_MPC = 0.1;
+const FAMOUS_LABEL_FAR_MPC = 1.0;
+const FAMOUS_LABEL_NEAR_CAP_PX = 60;
+
+function famousLabelMaxPx(distanceMpc: number): number {
+  return (
+    FAMOUS_LABEL_NEAR_CAP_PX +
+    (FAMOUS_LABEL_STYLE.maxPixelSize - FAMOUS_LABEL_NEAR_CAP_PX) *
+      smoothstep(FAMOUS_LABEL_NEAR_MPC, FAMOUS_LABEL_FAR_MPC, distanceMpc)
+  );
 }
 
 /**
@@ -211,6 +241,11 @@ export function produceFamousLabels(
     });
     if (sizePx < p.minApparentSizePx) continue;
     const prominencePx = sizePx;
+    // Distance-scaled ceiling — see `famousLabelMaxPx`'s docblock for why the
+    // category's flat 150 px cap can't stand for permanently-near companions
+    // like the LMC/SMC. Computed once and reused by both the label object and
+    // the placement call below.
+    const maxPixelSize = famousLabelMaxPx(distanceMpc);
     let fadeAlpha = 1;
     const t = Math.min(1, (sizePx - p.minApparentSizePx) / style.fadeBandPx);
     fadeAlpha = t * t * (3 - 2 * t); // smoothstep
@@ -237,7 +272,7 @@ export function produceFamousLabels(
       color: [...style.labelColor],
       worldEmMpc: p.labelWorldEmMpc,
       minPixelSize: style.minPixelSize,
-      maxPixelSize: style.maxPixelSize,
+      maxPixelSize,
       fadeAlpha: labelAlpha,
       alignX: 'center',
       alignY: 'baseline',
@@ -261,7 +296,7 @@ export function produceFamousLabels(
       textBbox: labelRenderer?.measure(label) ?? null,
       worldEmMpc: p.labelWorldEmMpc,
       minPixelSize: style.minPixelSize,
-      maxPixelSize: style.maxPixelSize,
+      maxPixelSize,
     });
     // Behind the camera the projection is undefined — nothing visible to label.
     if (placement === null) continue;
