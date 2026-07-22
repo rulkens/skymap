@@ -27,6 +27,7 @@ import {
 } from '../../src/state/ui/selectors';
 import { setPaletteOpen, toggleUiHidden, toggleDebugPanelOpen } from '../../src/state/ui/uiSlice';
 import { exitTour } from '../../src/state/tour/tourActions';
+import { goHome } from '../../src/state/selection/goHome';
 import { selectTimeState } from '../../src/state/time/selectors';
 import { RATE_LADDER } from '../../src/data/time/rateLadder';
 
@@ -166,6 +167,23 @@ describe('useKeyboardShortcuts — integration (real store)', () => {
 
     act(() => fireKey({ key: 'Escape' }));
     expect(dispatchSpy).toHaveBeenCalledWith(exitTour());
+  });
+
+  it('h and e both dispatch goHome (shared home intent)', () => {
+    const input = makeInput(store);
+    // goHome is reducer-less, so we assert the dispatch rather than state.
+    const dispatchSpy = vi.spyOn(store, 'dispatch');
+    renderHook(() => useKeyboardShortcuts(input), {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        createElement(Provider, { store, children }),
+    });
+
+    act(() => fireKey({ key: 'h' }));
+    expect(dispatchSpy).toHaveBeenCalledWith(goHome());
+
+    dispatchSpy.mockClear();
+    act(() => fireKey({ key: 'e' }));
+    expect(dispatchSpy).toHaveBeenCalledWith(goHome());
   });
 
   // The tour navigation keys (→/←/Space) moved to `watchTourKeyboardSaga`,

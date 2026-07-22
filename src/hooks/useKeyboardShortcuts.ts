@@ -5,7 +5,7 @@
  *   - Cmd+K / Ctrl+K / `/`  → open the command palette
  *   - Esc                    → clear pinned selection + exit a running tour
  *   - f / F                  → focus on the currently-pinned galaxy
- *   - h / H                  → frame the Milky Way ("home" is our galaxy)
+ *   - h / H, e / E           → fly home to Earth (sunlit arrival)
  *   - Tab                    → toggle "hide UI" mode (clean visual)
  *   - l                      → debug: log live camera state
  *   - d / D                  → toggle the asset-loading dev panel
@@ -30,6 +30,7 @@
 import { useEffect } from 'react';
 import { useAppDispatch, useAppStore } from '../store/hooks';
 import { clearSelection, updateSelectionFocus } from '../state/selection/selectionSlice';
+import { goHome } from '../state/selection/goHome';
 import { exitTour } from '../state/tour/tourActions';
 import { refOf } from '../services/engine/helpers/refOf';
 import { setRate, pause, resume, goLive } from '../state/time/timeSlice';
@@ -99,12 +100,13 @@ export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
         return;
       }
 
-      // ── h frames Earth — the viewer's starting point is "home" ─
-      // Matches the Home pill. Routes through the standard focus channel
-      // (updateSelectionFocus → watchFocusTweenSaga) so the camera tween,
-      // URL hash, and selection state stay consistent with every other focus.
-      if (e.key === 'h' || e.key === 'H') {
-        dispatch(updateSelectionFocus({ type: 'body', id: 'earth' }));
+      // ── h and e both fly home to Earth ─────────────────────────
+      // "Home" is the viewer's starting point. Both keys dispatch the one
+      // `goHome` intent (matching the Home pill); watchGoHomeSaga pins Earth
+      // and tweens to the sunlit home pose. The saga is the only place that
+      // knows what home means.
+      if (e.key === 'h' || e.key === 'H' || e.key === 'e' || e.key === 'E') {
+        dispatch(goHome());
         return;
       }
 
