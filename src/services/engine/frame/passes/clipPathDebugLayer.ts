@@ -12,6 +12,33 @@
  * it wholesale — cheap for a few hundred lines, and keeps the overlay live to
  * scrubbing without any per-frame compute.
  *
+ * ### Why NEAR0, not COSMO — the overlay must span every clip's scale
+ *
+ * A clip's route can live at ANY scale: a cosmic flythrough frames galaxies at
+ * Mpc distances, but a near-field clip (`starSpiral`) flies the solar
+ * neighbourhood, its whole path spanning Earth's surface (~1e-16 Mpc) out to a
+ * few parsecs (~4e-4 Mpc) — entirely INSIDE COSMO's fixed 10 kpc near plane.
+ * Projected through COSMO the parsec-scale route is wholly near-clipped and the
+ * inspector shows nothing. So the overlay projects through the NEAR0 slab, whose
+ * adaptive near/far bracket (`foregroundFrustum`) reaches down to Earth's
+ * surface AND whose reversed-Z / infinite-far projection, with the marker-line
+ * shader's clip-z clamp, never near- or far-clips content at any depth. A cosmic
+ * route renders identically here — the XY projection is the same camera, and the
+ * overlay is a depthless OVER composite, so the differing depth convention is
+ * unobserved. This is the same slab choice `near0SelectionRingLayer` makes for a
+ * picked star's halo, and for the same reason.
+ *
+ * ### The f64 rebase seam — camera-relative lines + a rebased vp
+ *
+ * At parsec scale the NEAR0 vp's view translation and the route coordinates are
+ * both tiny magnitudes measured from the render origin; their f32 subtraction
+ * cancels catastrophically and the route hops by pixels. So, like every NEAR0
+ * layer, this rebases into a camera-relative frame in f64 BEFORE narrowing:
+ * `rebaseViewProj(view.slab.vp, view.camPos)` folds the eye offset into the vp
+ * (zeroing the large view translation), and every line endpoint is re-expressed
+ * as `world − view.camPos` (a small camera-relative vector). The dedicated
+ * `debugLineRenderer` is reused unchanged — only what this layer hands it changes.
+ *
  * ### When it draws
  *
  *   1. `state.gpu.debugLineRenderer` is non-null (built in `initGpu`).
@@ -21,12 +48,16 @@
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
-import { COSMO } from '../slabs';
+import type { DebugLine } from '../../../../@types/rendering/DebugLine';
+import type { Vec3 } from '../../../../@types/math/Vec3';
+import { NEAR0 } from '../slabs';
 import { buildClipPathLines } from '../../presentation/buildClipPathLines';
+import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
+import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 
 export const clipPathDebugLayer: ContentLayer = {
   name: 'clip-path-debug',
-  slab: COSMO,
+  slab: NEAR0,
   target: 'swap',
   blend: 'over',
 
@@ -43,8 +74,22 @@ export const clipPathDebugLayer: ContentLayer = {
       fovYRad: ctx.fovYRad,
       aspect,
     });
+
+    // Re-express every endpoint as a small camera-relative vector in f64 before
+    // the renderer narrows to f32 — the NEAR0 rebase seam (see the header).
+    const cam = view.camPos;
+    const rebased: DebugLine[] = lines.map((line) => ({
+      ...line,
+      from: [line.from[0] - cam[0], line.from[1] - cam[1], line.from[2] - cam[2]] as Vec3,
+      to: [line.to[0] - cam[0], line.to[1] - cam[1], line.to[2] - cam[2]] as Vec3,
+    }));
+
+    // Fold the eye offset into the vp so it pairs with the camera-relative
+    // endpoints. Uses the slab's f64 `vp`, narrowed HERE at the upload boundary.
+    const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, view.camPos));
+
     const renderer = state.gpu.debugLineRenderer!;
-    renderer.setLines(lines);
-    renderer.draw(pass, view.vp, view.viewportPx);
+    renderer.setLines(rebased);
+    renderer.draw(pass, rebasedVp, view.viewportPx);
   },
 };
