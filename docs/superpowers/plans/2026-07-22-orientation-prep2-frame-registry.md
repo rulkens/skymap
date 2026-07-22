@@ -115,11 +115,11 @@ exists (`OrbitCamera.d.ts`, `CameraPose.d.ts`, …).
 export type OrientationFrameId = 'equatorial' | 'ecliptic' | 'galactic' | 'supergalactic';
 ```
 
-- [ ] Create the file with the union and a short didactic header: what an
+- [x] Create the file with the union and a short didactic header: what an
       orientation frame *is* (a "that frame's north pole is up" choice), and that
       the four ids key `ORIENTATION_FRAMES` (§3.1). Timeless, terse.
-- [ ] `npm run typecheck` clean.
-- [ ] Commit.
+- [x] `npm run typecheck` clean.
+- [x] Commit.
 
 No test: a runtime test of a string-union declaration is a compile-time fact
 restated at runtime (`testing.md` — "No runtime tests of type declarations").
@@ -149,22 +149,22 @@ Values are the exact literals currently at `milkyWayModelMatrix.ts:62-64` (the
 mirror of `util.wesl:173-175`). `src/data/orientation/` does not exist yet — create
 it (sibling of `src/data/bodies/`, `src/data/milkyWay/`).
 
-- [ ] Create `orientationFrames.ts` with a didactic module header framing it as
+- [x] Create `orientationFrames.ts` with a didactic module header framing it as
       the single TS home of the four orientation bases (§3.1) and the galactic
       literals' one source (kept equal to `util.wesl` by the parity test). Export
       the three `GAL_*_EQ` consts.
-- [ ] In `milkyWayModelMatrix.ts`: delete the local `GAL_*_EQ` definitions
+- [x] In `milkyWayModelMatrix.ts`: delete the local `GAL_*_EQ` definitions
       (`:62-64`), import them from `../../../data/orientation/orientationFrames`.
       Update its module header where it describes those literals so the prose still
       matches (they now live in the registry home; keep it timeless — no "moved
       from" note). The existing per-comment column mapping in `milkyWayModelMatrix`
       (`:76-83`) stays.
-- [ ] The existing `tests/services/gpu/galaxy/milkyWayModelMatrix.test.ts` still
+- [x] The existing `tests/services/gpu/galaxy/milkyWayModelMatrix.test.ts` still
       passes unchanged — it scrapes `util.wesl` and compares against
       `milkyWayModelMatrix()` output, both still correct. This is the regression
       guard for the move.
-- [ ] `npm test -- milkyWayModelMatrix` green; `npm run typecheck` clean.
-- [ ] Commit.
+- [x] `npm test -- milkyWayModelMatrix` green; `npm run typecheck` clean.
+- [x] Commit.
 
 ---
 
@@ -207,32 +207,32 @@ derived once at module init (mirrors `SG_TO_EQ_QUATERNION` at
 **Tests** (`tests/data/orientation/orientationFrames.test.ts`) — behaviour /
 independent-derivation, per `testing.md`. Not the four `Mat3` values as literals.
 
-- [ ] `it('every registry basis is orthonormal')` — for each of the four frames:
+- [x] `it('every registry basis is orthonormal')` — for each of the four frames:
       each column is unit length (‖·‖ ≈ 1) and the three columns are mutually
       orthogonal (pairwise dot ≈ 0), to ~1e-6. (Loosen to ~1e-4 only if the
       6-decimal `GAL_*_EQ` literals force it.)
-- [ ] `it('every registry basis is right-handed (det = +1)')` — determinant of
+- [x] `it('every registry basis is right-handed (det = +1)')` — determinant of
       each `Mat3` ≈ +1. This folds in the equatorial `[+x, +z, −y]`
       right-handedness check (a `[+x, +z, +y]` transcription would land det −1).
-- [ ] `it('ecliptic pole matches the obliquity pole from planeFrameFromPole')` —
+- [x] `it('ecliptic pole matches the obliquity pole from planeFrameFromPole')` —
       `ORIENTATION_FRAMES.ecliptic` middle column (indices 3,4,5) ≈
       `planeFrameFromPole(270, 66.56).normal`. Independent derivation: RA/Dec
       spherical (66.56° = 90°−23.44°) vs the `[0, −sinε, cosε]` obliquity rotation
       `ECLIPTIC_FRAME` is built from — a real drift check (catches a transcribed
       obliquity or a wrong pole column), not a mirror. Tolerance ~1e-4.
-- [ ] `it('galactic pole matches the NGP from eqRaDecToUnitCart')` —
+- [x] `it('galactic pole matches the NGP from eqRaDecToUnitCart')` —
       `ORIENTATION_FRAMES.galactic` middle column ≈
       `eqRaDecToUnitCart(192.8595, 27.1283)` (the NGP in equatorial). Independent
       of the hardcoded `GAL_Z_EQ` literal; tolerance ~1e-4 (the literal is rounded
       to 6 decimals).
-- [ ] `it('supergalactic pole is the SGZ column of SG_TO_EQ_MATRIX')` —
+- [x] `it('supergalactic pole is the SGZ column of SG_TO_EQ_MATRIX')` —
       `ORIENTATION_FRAMES.supergalactic` middle column ≈ `SG_TO_EQ_MATRIX` column 2
       (`[6],[7],[8]`). Verifies the swizzle placed the pole column in the middle
       (a wrong column pick or sign is exactly the transcription bug this catches),
       per the prompt's drift-vs-restatement framing.
-- [ ] Implement `ORIENTATION_FRAMES` and `ORIENTATION_FRAME_QUATERNIONS` to pass.
-- [ ] `npm test -- orientationFrames` green; `npm run typecheck` clean.
-- [ ] Commit.
+- [x] Implement `ORIENTATION_FRAMES` and `ORIENTATION_FRAME_QUATERNIONS` to pass.
+- [x] `npm test -- orientationFrames` green; `npm run typecheck` clean.
+- [x] Commit.
 
 `ORIENTATION_FRAME_QUATERNIONS` gets **no dedicated test** here: it is a pure
 derivation via the already-tested `matrixToQuaternion` over the already-tested
@@ -252,18 +252,18 @@ output. Repoint the parity assertion so the shader literals are checked against
 **the registry's galactic basis** — the registry, not a soon-stale TS copy, is now
 what the shader is pinned to.
 
-- [ ] Add a test that asserts the scraped `util.wesl` `GAL_*_EQ` literals equal the
+- [x] Add a test that asserts the scraped `util.wesl` `GAL_*_EQ` literals equal the
       registry's galactic basis: `ORIENTATION_FRAMES.galactic` middle column ≈
       scraped `GAL_Z_EQ`, and its side columns ≈ scraped `GAL_X_EQ` / `GAL_Y_EQ`
       (matching the swizzle chosen in Task 3, including any sign). Reuse the
       `scrapeGalacticBasis` helper (`:34-49`).
-- [ ] Keep the `translation lanes are MILKY_WAY_CENTER_WORLD` and `bottom row is
+- [x] Keep the `translation lanes are MILKY_WAY_CENTER_WORLD` and `bottom row is
       0,0,0,1` tests (`:75-106`) — they still guard `milkyWayModelMatrix`. Retire
       or fold the old `milkyWayModelMatrix()`-vs-scrape rotation assertions
       (`:54-73`) only insofar as the registry parity now covers the same WESL↔TS
       contract; do not leave two tests asserting the same swizzle twice.
-- [ ] `npm test -- milkyWayModelMatrix orientationFrames` green.
-- [ ] Commit.
+- [x] `npm test -- milkyWayModelMatrix orientationFrames` green.
+- [x] Commit.
 
 ---
 
@@ -274,12 +274,12 @@ what the shader is pinned to.
 House convention (`simplicity.md` / `entanglement-radar` skill): review the Prep 2
 diff for complecting before the PR goes up.
 
-- [ ] Run the `entanglement-radar` skill over the diff. Focus points: did the
+- [x] Run the `entanglement-radar` skill over the diff. Focus points: did the
       galactic-literal move leave a *single* source (no lingering duplicate in
       `milkyWayModelMatrix.ts`)? Is `util.wesl` still the one place the GPU copy
       lives, with exactly one parity test pinning TS↔WESL (not two)? Is the
       middle-column-is-pole convention stated once and read consistently?
-- [ ] Address anything flagged (default is to un-braid, not defend); re-run
+- [x] Address anything flagged (default is to un-braid, not defend); re-run
       `npm test` + `npm run typecheck`.
-- [ ] Commit any fixes; ensure the PR description notes Prep 2 = zero behaviour
+- [x] Commit any fixes; ensure the PR description notes Prep 2 = zero behaviour
       change (Milky Way renders identically), and that it precedes the feature PR.
