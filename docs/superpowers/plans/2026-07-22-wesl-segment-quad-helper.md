@@ -121,17 +121,17 @@ fn expandSegmentQuad(
 5. `offsetNdc = perp * (halfWidthPx / (cam.viewportPx * 0.5)) * (corner.y * 2 - 1)`.
 6. Return `vec4(endpoint.xy + offsetNdc * endpoint.w, endpoint.z, endpoint.w)`.
 
-- [ ] Capture the perf baseline **before any edits**, clean tree:
+- [x] Capture the perf baseline **before any edits**, clean tree:
       `npm run -s perf -- --url http://localhost:5174` — record the MERGED medians for the filament
       and marker/leader scenarios (this is the "before" for Task 4).
-- [ ] Create `lib/segmentQuad.wesl` with `import package::lib::camera::CameraUniforms;` +
+- [x] Create `lib/segmentQuad.wesl` with `import package::lib::camera::CameraUniforms;` +
       `import package::lib::camera::worldToClip;` and `expandSegmentQuad` matching the signature +
       six-step contract above. Module header explains the technique + why it's its own lib file
       (whole segment-expansion vocabulary; camera.wesl stays minimal). Single quotes only in
       comments.
-- [ ] Delete `worldToNdc` (`camera.wesl:104-126`) — the `── worldToNdc ──` banner, docblock, and
+- [x] Delete `worldToNdc` (`camera.wesl:104-126`) — the `── worldToNdc ──` banner, docblock, and
       `fn`. Leave `worldToClip` and `worldEyeDepth` intact.
-- [ ] `npm run build` links (no WESL linker error; nothing else imported `worldToNdc`).
+- [x] `npm run build` links (no WESL linker error; nothing else imported `worldToNdc`).
 
 **Interfaces**
 - Consumes: `package::lib::camera::CameraUniforms`, `package::lib::camera::worldToClip`.
@@ -146,13 +146,13 @@ fn expandSegmentQuad(
 **Contract:** the `@vertex fn vs` output is byte-identical to today. `u.halfWidthPx` is already a
 half-width, so it passes straight through.
 
-- [ ] Add `import package::lib::segmentQuad::expandSegmentQuad;`.
-- [ ] Replace the inline expansion (`:45-73`, the two `worldToClip` calls through the `out.clip`
+- [x] Add `import package::lib::segmentQuad::expandSegmentQuad;`.
+- [x] Replace the inline expansion (`:45-73`, the two `worldToClip` calls through the `out.clip`
       assignment) with `out.clip = expandSegmentQuad(u.cam, in.startPos, in.endPos, in.uv, u.halfWidthPx);`.
-- [ ] Keep the `out.uv` / `out.density` (`mix`) tail unchanged.
-- [ ] Drop the now-stale `worldToNdc`-mention comment (`:41-44`); the header's instanced-quad
+- [x] Keep the `out.uv` / `out.density` (`mix`) tail unchanged.
+- [x] Drop the now-stale `worldToNdc`-mention comment (`:41-44`); the header's instanced-quad
       rationale (`:1-19`) stays.
-- [ ] `npm run build` links.
+- [x] `npm run build` links.
 
 **Interfaces**
 - Consumes: `package::lib::segmentQuad::expandSegmentQuad` (plus existing `io` structs + `worldToClip`
@@ -169,16 +169,16 @@ half-width, so it passes straight through.
 becomes `pixelWidth * 0.5` at the call site; `CLIP_Z_EPS` clamp is applied to the helper's returned
 `z`/`w`.
 
-- [ ] Add `import package::lib::segmentQuad::expandSegmentQuad;`. Keep `const CLIP_Z_EPS` (`:30`).
-- [ ] Replace the inline expansion (`:40-87`) with:
+- [x] Add `import package::lib::segmentQuad::expandSegmentQuad;`. Keep `const CLIP_Z_EPS` (`:30`).
+- [x] Replace the inline expansion (`:40-87`) with:
       `let p = expandSegmentQuad(u.cam, fromWorld, toWorld, input.uv, pixelWidth * 0.5);`
       then `out.pos = vec4<f32>(p.xy, min(p.z, p.w * (1.0 - CLIP_Z_EPS)), p.w);`.
-- [ ] Keep the unpack (`:35-38`) and the `out.uv` / `out.color = input.color * fadeAlpha` tail.
-- [ ] Rewrite the docblock: `:9-12` currently says it *copies* filaments' expansion — replace with
+- [x] Keep the unpack (`:35-38`) and the `out.uv` / `out.color = input.color * fadeAlpha` tail.
+- [x] Rewrite the docblock: `:9-12` currently says it *copies* filaments' expansion — replace with
       "expansion via the shared `lib::segmentQuad` helper; this shader owns only the far-plane
       z-clamp (see `CLIP_Z_EPS`)". Preserve the substantive `CLIP_Z_EPS` rationale (`:73-80`, the
       NEAR0 far-plane / depthless-composite explanation) next to the clamp. Single quotes only.
-- [ ] `npm run build` links.
+- [x] `npm run build` links.
 
 **Interfaces**
 - Consumes: `package::lib::segmentQuad::expandSegmentQuad`.
@@ -190,9 +190,9 @@ becomes `pixelWidth * 0.5` at the call site; `CLIP_Z_EPS` clamp is applied to th
 
 **Files:** none (verification only).
 
-- [ ] `npm run build` — tsc `--noEmit` + vite build; the vite build links **all** WESL, so any
+- [x] `npm run build` — tsc `--noEmit` + vite build; the vite build links **all** WESL, so any
       linker error across the shader tree surfaces here.
-- [ ] `npm test` stays green — in particular the shader-linking/render-frame suites
+- [x] `npm test` stays green — in particular the shader-linking/render-frame suites
       (`tests/services/gpu/renderers/filaments/filamentRenderer.test.ts`,
       `tests/services/gpu/renderers/labels/markerLineRenderer.test.ts`,
       `tests/services/engine/frame/renderFrame.test.ts`,
@@ -204,7 +204,7 @@ becomes `pixelWidth * 0.5` at the call site; `CLIP_Z_EPS` clamp is applied to th
       same thickness/brightness as before; (b) on **label hover**, marker/leader lines render
       identically (thickness, the "you are here" indicator, structure leader lines). Any missing or
       mis-thick line = a regression.
-- [ ] **Perf sanity**: `npm run -s perf -- --url http://localhost:5174` (worktree → pass `--url`
+- [x] **Perf sanity**: `npm run -s perf -- --url http://localhost:5174` (worktree → pass `--url`
       with this server's port, per `tools/perf/README.md`). Compare **MERGED** medians against the
       Task 1 baseline; behavior-preserving ⇒ within run-to-run noise. Quote MERGED numbers only, not
       per-layer (per-layer carries ~1–3 ms pass overhead and must not be read as real cost).

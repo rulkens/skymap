@@ -143,7 +143,7 @@ fn absolute_magnitude(apparent: f64, dist_pc: f64) -> f64 {
 /// by ulps — that is the one accepted source of rare quantization-bin flips
 /// the equivalence report tolerates.
 #[inline]
-fn ra_dec_dist_to_cartesian(ra_deg: f64, dec_deg: f64, dist: f64) -> [f64; 3] {
+pub(crate) fn ra_dec_dist_to_cartesian(ra_deg: f64, dec_deg: f64, dist: f64) -> [f64; 3] {
     let ra = ra_deg * std::f64::consts::PI / 180.0;
     let dec = dec_deg * std::f64::consts::PI / 180.0;
     let cos_dec = dec.cos();
