@@ -45,15 +45,16 @@
  * the flight begins — they read as clutter the instant the camera leaves the
  * planets behind.
  *
- * `PASS_DISTANCE_MPC`, `LINGER`, `LINGER_FAMOUS`, `DURATION_SEC` and
- * `OPENING_LEG_SEC` are eye-tuning knobs — dialled in the live loop via
- * `?clip=starSpiral`.
+ * `PASS_DISTANCE_MPC`, `LOOK_AHEAD_SEC`, `LINGER`, `LINGER_FAMOUS`,
+ * `DURATION_SEC` and `OPENING_LEG_SEC` are eye-tuning knobs — dialled in the
+ * live loop via `?clip=starSpiral`.
  */
 
 import type { Clip } from '../../../@types/animation/Clip';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { PathWaypoint } from '../../../@types/animation/PathWaypoint';
 import { atPoint, flyPath, hide } from '../../../services/engine/animation/effectHelpers';
+import { DEFAULT_TURN_DELAY } from '../../../services/engine/animation/pathDefaults';
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
 import { SCENE_EARTH } from '../../bodies/sceneEarth';
 import { SCALE_UNITS } from '../../scaleUnits';
@@ -64,11 +65,33 @@ import { STAR_SPIRAL_WAYPOINTS } from './starSpiralWaypoints.generated';
 const EARTH_RADIUS_MPC = SCENE_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC;
 const START_DISTANCE_MPC = EARTH_RADIUS_MPC * 3;
 
-// How close the camera passes each star, in Mpc (~0.2 pc). Near enough that the
-// star reads as a close, bright sun sweeping through frame, far enough that its
-// disc does not fill the view. The final waypoint is settle-framed at this
-// distance rather than flown past.
-const PASS_DISTANCE_MPC = 2e-7;
+// How close the camera passes each star, in Mpc (~103 AU). This is the camera's
+// orbit distance at each star, and on the adaptive near-field slab (`slabs.ts`
+// NEAR0) it sets the near clip plane to `distance · 1e-4` (`foregroundFrustum`).
+// The old 2e-7 (~0.2 pc = 41,000 AU) put the near plane at ~4 AU, so a star's
+// true-scale sphere (`fieldStarSphereLayer`, one solar radius) clipped away once
+// the eye closed inside ~4 AU — it never grew past ~2 px and read as a dot (the
+// user's complaint, measured). At 5e-10 the near plane is ~0.01 AU (≈2 solar
+// radii), so the sphere fills the frame (~36° / ~580 px at a 1080-px viewport)
+// at closest approach before the eye punches through — a bright sun swimming
+// past. The angle channels (yaw/pitch) are distance-independent, so this does
+// NOT change the path's turn-rate jank: closer framing is free on that axis
+// (measured — whiplash was identical from 2e-7 down to 1e-10). Dial toward 1e-10
+// (~21 AU, sun overfills) for a surface skim or 1e-9 (~206 AU, ~21°) for calmer.
+const PASS_DISTANCE_MPC = 5e-10;
+
+// Seconds the look leads the eye down the path (the causal-Hermite `lookAhead`).
+// The itinerary snaps 203 real stars whose spacing ranges from 0.02 pc to 158 pc
+// (a 6,970× spread); at the default lead (1.3 s) the aim whipped hard passing
+// the near-coincident knots — 12% of frames turned faster than 1 rad/s, peaking
+// at ~110 rad/s (measured, the "very janky" report). A longer lead averages the
+// aim over more of the path, so it tracks the smoothed direction of travel
+// rather than snapping between crowded knots: at 7 s the 95th-percentile yaw
+// rate drops 1.83 → 0.64 rad/s and the peak 110 → 6.5 rad/s, with eye speed left
+// smooth (it is arc-length paced). The rest of the spline config (basis, turn
+// delay) stays the tuned default. Raise toward 10 for even smoother aim, lower
+// toward the 1.3 default for a more reactive one.
+const LOOK_AHEAD_SEC = 7;
 
 // Per-waypoint brake ∈ [0,1]: the local slow-down as the camera passes a star.
 // Anonymous Gaia stars get the gentler dip; curated famous stars brake harder
@@ -115,7 +138,17 @@ export function starSpiral(simDays: number): Clip {
         yaw: 0,
         pitch: 0,
       },
-      timeline: [hide(['orbitTrails'], 1), flyPath(waypoints, { over: DURATION_SEC })],
+      timeline: [
+        hide(['orbitTrails'], 1),
+        flyPath(waypoints, {
+          over: DURATION_SEC,
+          // Longer look-ahead than the authored default to tame the aim whiplash
+          // through the densely-snapped, unevenly-spaced star knots (see
+          // `LOOK_AHEAD_SEC`); basis + turn-delay stay the tuned default
+          // (`DEFAULT_SPLINE_CONFIG` is the same causal-Hermite basis).
+          spline: { kind: 'causalHermite', turnDelay: DEFAULT_TURN_DELAY, lookAhead: LOOK_AHEAD_SEC },
+        }),
+      ],
     },
   };
 }
