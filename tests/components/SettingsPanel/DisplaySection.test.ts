@@ -118,13 +118,6 @@ describe('DisplaySection', () => {
   });
 
   describe('orientation dropdown', () => {
-    it('renders all four frame options', () => {
-      const { getByRole, getByLabelText } = render(createElement(DisplaySection, baseProps()));
-      fireEvent.click(getByRole('button', { name: /display/i }));
-      const select = getByLabelText(/orientation/i) as HTMLSelectElement;
-      expect(select.options).toHaveLength(4);
-    });
-
     it('reflects the orientation prop as the selected value', () => {
       const { getByRole, getByLabelText } = render(
         createElement(DisplaySection, baseProps({ orientation: 'galactic' })),

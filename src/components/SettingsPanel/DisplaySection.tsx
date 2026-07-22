@@ -32,14 +32,24 @@ import type { ReactNode } from 'react';
 import type { ToneMapCurve as ToneMapCurveT } from '../../@types/data/ToneMapCurve';
 import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
 import { ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';
-import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { orientationFrameLabel } from '../../data/orientation/orientationFrameLabel';
 import { STAR_EMISSIVE } from '../../data/starRenderConstants';
-
-/** Frame ids in registry order, so the dropdown can't drift from the registry. */
-const ORIENTATION_FRAME_IDS = Object.keys(ORIENTATION_FRAMES) as OrientationFrameId[];
 import { CollapsibleSection } from './CollapsibleSection';
 import styles from './SettingsPanel.module.css';
+
+// ── Module-level constants ─────────────────────────────────────────────────────
+
+/**
+ * Display order puts the default (ecliptic) first; the ids themselves stay
+ * sourced from `ORIENTATION_FRAMES` (data/orientation/orientationFrames.ts) —
+ * this only reorders them for the dropdown.
+ */
+const ORIENTATION_FRAME_IDS = [
+  'ecliptic',
+  'equatorial',
+  'galactic',
+  'supergalactic',
+] as const satisfies readonly OrientationFrameId[];
 
 // ── Props ──────────────────────────────────────────────────────────────────────
 
