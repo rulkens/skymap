@@ -233,8 +233,10 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // Dedicated debug-line renderer for the clip-path inspector overlay. Same
   // swap-chain ctx as the marker lines (UI overlay, drawn post-tone-map), but
   // its own pipeline + buffers so the debug viz never touches the label
-  // director's reconcile path.
-  state.gpu.debugLineRenderer = createDebugLineRenderer(uiCtx, format);
+  // director's reconcile path. Sized for the densest inspected route: the seam
+  // samples up to 4000 points (`engine.ts`), so the buffer must hold
+  // 2·(4000−1) route+target segments + 9 gizmo = 8007 lines — 8192 gives margin.
+  state.gpu.debugLineRenderer = createDebugLineRenderer(uiCtx, format, 8192);
   // `{ occludeAgainstDepth: 'coverage' }` opts the COSMO selection ring into the
   // same cross-slab COVERAGE occlusion as the label + marker-line overlays
   // above — its window-Z is incomparable to the NEAR0 body depth, so any body
