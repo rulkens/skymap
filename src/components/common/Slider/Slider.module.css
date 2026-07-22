@@ -4,16 +4,17 @@
  * The track is the interactive element (`.root`, `role="slider"`). It's a flex
  * row: label at the start, value at the end, both painted on top of the fill
  * bar that sits behind them (`.fill`, `inset: 0`, width driven by an inline
- * `%`). A thin `.handle` marks the fill edge, revealed on hover / focus / drag.
+ * `%`); the fill edge is the only progress cue (no separate handle/thumb).
  *
  * Tokens mirror the house range slider (SettingsPanel's `.panelRow`): the track
- * borrows `--surface-control` + `--border-control`, the handle is the
- * `--color-accent-control` disc colour, and hover raises the border to
- * `--border-hover` — so this reads as the same control family.
+ * borrows `--surface-control` + `--border-control` and hover raises the border
+ * to `--border-hover`, so this reads as the same control family. The fill stays
+ * a muted `--surface-control-*` wash (not a bright accent) so a board of these
+ * doesn't shout.
  *
- * The fill/handle `transition` is what animates a keyboard nudge or a
- * programmatic change; `.dragging` kills it so a pointer drag tracks the finger
- * frame-for-frame instead of easing behind it (see the .tsx module header).
+ * The fill `transition` is what animates a keyboard nudge or a programmatic
+ * change; `.dragging` kills it so a pointer drag tracks the finger frame-for-
+ * frame instead of easing behind it (see the .tsx module header).
  */
 
 .root {
@@ -23,10 +24,10 @@
   justify-content: space-between;
   gap: var(--space-5);
   width: 100%;
-  padding: var(--space-3) var(--space-5);
+  padding: var(--space-2) var(--space-5);
   overflow: hidden;
   border: 1px solid var(--border-control);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background: var(--surface-control);
   cursor: pointer;
   user-select: none;
@@ -48,7 +49,7 @@
 .fill {
   position: absolute;
   inset: 0;
-  background: var(--surface-control-active);
+  background: var(--surface-control-hover);
   pointer-events: none;
   transition:
     width var(--duration-base) var(--ease-standard),
@@ -57,30 +58,7 @@
 
 .root:hover .fill,
 .root:focus-visible .fill {
-  background: var(--color-accent-link);
-}
-
-.handle {
-  position: absolute;
-  top: 50%;
-  width: 2px;
-  height: 60%;
-  margin-left: -1px;
-  border-radius: var(--radius-xs);
-  background: var(--color-accent-control);
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(-50%);
-  transition:
-    left var(--duration-base) var(--ease-standard),
-    opacity var(--duration-fast) var(--ease-standard);
-}
-
-.root:hover .handle,
-.root:focus-visible .handle,
-.dragging .handle {
-  opacity: 1;
-  background: var(--color-accent-bright);
+  background: var(--surface-control-active);
 }
 
 /*
@@ -93,7 +71,7 @@
   position: relative;
   z-index: 1;
   pointer-events: none;
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-md);
   color: var(--color-fg-muted);
   transition: color var(--duration-color) var(--ease-standard);
 }
@@ -109,12 +87,9 @@
   color: var(--color-fg);
 }
 
-/* During a drag the fill/handle must follow the pointer with no easing lag. */
-.dragging .fill,
-.dragging .handle {
-  transition:
-    opacity var(--duration-fast) var(--ease-standard),
-    background var(--duration-color) var(--ease-standard);
+/* During a drag the fill must follow the pointer with no easing lag. */
+.dragging .fill {
+  transition: background var(--duration-color) var(--ease-standard);
 }
 
 .disabled {
@@ -127,11 +102,7 @@
 }
 
 .disabled:hover .fill {
-  background: var(--surface-control-active);
-}
-
-.disabled:hover .handle {
-  opacity: 0;
+  background: var(--surface-control-hover);
 }
 
 .disabled:hover .label,

@@ -29,6 +29,7 @@ import { BiasMode } from '../../data/galaxyCatalog/biasMode';
 import type { BiasMode as BiasModeT } from '../../@types/data/galaxyCatalog/BiasMode';
 import type { SourceType } from '../../@types/data/SourceType';
 import CollapsibleSection from './CollapsibleSection';
+import Slider from '../common/Slider/Slider';
 import styles from './SettingsPanel.module.css';
 
 // ── Module-level constants ─────────────────────────────────────────────────────
@@ -160,20 +161,18 @@ function GalaxiesSection({
       </CollapsibleSection>
 
       <CollapsibleSection title="Advanced">
-        {/* Point size — galaxy-only tunable. */}
+        {/* Point size — galaxy-only tunable.  First in-panel trial of the
+            compact Slider (label + value folded into one pill) in place of the
+            house label-row + range-row + value-span triple. */}
         <div className={styles.panelRow}>
-          <label htmlFor="slider-point-size">Point size</label>
-          <span className={styles.panelValue}>{pointSize.toFixed(1)} px</span>
-        </div>
-        <div className={styles.panelRow}>
-          <input
-            id="slider-point-size"
-            type="range"
+          <Slider
+            label="Point size"
+            value={pointSize}
             min={1.0}
             max={8.0}
             step={0.1}
-            value={pointSize}
-            onChange={(e) => onPointSizeChange(parseFloat(e.target.value))}
+            onChange={onPointSizeChange}
+            format={(v) => `${v.toFixed(1)} px`}
           />
         </div>
 

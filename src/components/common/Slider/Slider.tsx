@@ -11,23 +11,23 @@
  * bar painted *behind* both — so a stack of them reads as a dense dial board.
  * It's a reimplementation of dialkit's Slider adapted to skymap's tokens.
  *
- * Why no animation library: the reference drives the fill width, the handle
- * position, and a rubber-band overscroll with `motion/react` springs. We add
- * no dependency — the fill width and handle offset are plain inline-style
- * percentages, and their easing is a CSS `transition` (the `--duration-*` /
- * `--ease-standard` tokens). The transition is what makes a keyboard nudge
- * glide; during a pointer drag we add `.dragging`, which sets
- * `transition: none` so the fill tracks the finger with no lag rather than
- * chasing it one eased step behind. The rubber-band overscroll and the
- * click-to-type value editing from the reference are dropped as non-essential.
+ * Why no animation library: the reference drives the fill width and a
+ * rubber-band overscroll with `motion/react` springs. We add no dependency —
+ * the fill width is a plain inline-style percentage, and its easing is a CSS
+ * `transition` (the `--duration-*` / `--ease-standard` tokens). The transition
+ * is what makes a keyboard nudge glide; during a pointer drag we add
+ * `.dragging`, which sets `transition: none` so the fill tracks the finger with
+ * no lag rather than chasing it one eased step behind. The rubber-band
+ * overscroll and the click-to-type value editing from the reference are dropped
+ * as non-essential; the fill edge is the only progress cue (no separate handle).
  *
  * Drag math: the track's bounding rect is captured on pointer-down; a pointer
  * at clientX maps to the fraction `(clientX - rect.left) / rect.width`, clamped
  * to 0..1, then scaled into `[min, max]` and snapped to the `step` grid. Because
  * the fill spans the full padded width (`inset: 0`), fraction 0 sits at the left
- * edge and 1 at the right, so the fill edge, the handle, and the pointer all
- * agree. There is no native `<input type=range>`, so slider semantics are
- * supplied explicitly via `role="slider"` + `aria-value*` and arrow-key handling.
+ * edge and 1 at the right, so the fill edge and the pointer agree. There is no
+ * native `<input type=range>`, so slider semantics are supplied explicitly via
+ * `role="slider"` + `aria-value*` and arrow-key handling.
  */
 
 import { useRef, useState, type PointerEvent, type KeyboardEvent, type ReactNode } from 'react';
@@ -161,7 +161,6 @@ function Slider({
       onKeyDown={handleKeyDown}
     >
       <div className={styles.fill} style={{ width: `${percent}%` }} />
-      <div className={styles.handle} style={{ left: `${percent}%` }} />
       <span className={styles.label}>{label}</span>
       <span className={styles.value}>{display}</span>
     </div>
