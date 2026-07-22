@@ -115,6 +115,7 @@ export function makeSettingsFixture(
     constellations: {
       enabled: SOURCE_REGISTRY[Source.Constellations].visible,
       intensity: SOURCE_REGISTRY[Source.Constellations].intensity,
+      labels: true,
     },
     earth: {
       // `earth` is a definitional row in the atmosphere table, so the indexed

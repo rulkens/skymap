@@ -49,8 +49,6 @@ function baseProps() {
     exposureFarX: 70,
     aggregateIntensityCap: 0.06,
     famousStarsEnabled: true,
-    constellationsEnabled: true,
-    constellationIntensity: 1.0,
     onToggleMaster: vi.fn<(enabled: boolean) => void>(),
     onToggleCatalog: vi.fn<(id: StarCatalogId, enabled: boolean) => void>(),
     onSizeChange: vi.fn<(v: number) => void>(),
@@ -62,8 +60,6 @@ function baseProps() {
     onExposureFarXChange: vi.fn<(v: number) => void>(),
     onAggregateIntensityCapChange: vi.fn<(v: number) => void>(),
     onToggleFamousStars: vi.fn<(enabled: boolean) => void>(),
-    onToggleConstellations: vi.fn<(enabled: boolean) => void>(),
-    onConstellationIntensityChange: vi.fn<(v: number) => void>(),
   };
 }
 

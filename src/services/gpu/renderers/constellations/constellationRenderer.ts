@@ -9,27 +9,33 @@
  * differs only in its data source and camera seam:
  *
  *   - Data: the CPU-resident `ConstellationsArtifact` (line segments between
- *     real stars), uploaded ONCE — the segment set is a static, tier-agnostic
- *     `constellations.json`, so there is no per-frame rebuild. Endpoints are
- *     scaled parsecs → world Mpc at upload (`buildConstellationInstances`).
- *   - Camera: the caller (the NEAR0 pass) hands the already-resolved
- *     view-projection every frame, so the renderer stays a dumb f32 pipeline —
- *     it never touches the f64 rebase seam itself.
+ *     real stars). `upload` builds the ABSOLUTE-position instance data once (the
+ *     segment set is a static, tier-agnostic `constellations.json`) and caches
+ *     it; endpoints are scaled parsecs → world Mpc at upload
+ *     (`buildConstellationInstances`).
+ *   - Camera: the caller (the NEAR0 pass) hands the f64-rebased view-projection
+ *     AND the camera position every frame. The renderer re-expresses each cached
+ *     absolute endpoint as `pos − camPos` into a scratch buffer and re-uploads
+ *     it, so the f32 shader multiplies a well-conditioned camera-relative
+ *     position by a rebased vp — the `starPointsLayer` precision seam (no
+ *     catastrophic cancellation on close approach). The per-frame re-write is
+ *     ~743 segments × 32 B, trivially cheap.
  *
  * Buffers:
  *
  *   indexBuffer (static)      : 6 × uint16 → two-triangle quad
  *   quadVertexBuffer (static) : 4 × vec2<f32> → shared unit-quad corners
  *   instanceBuffer            : segmentCount × 8 × f32 → per-segment endpoints
+ *                               (camera-relative, re-written each frame)
  *   uniformBuffer             : 96 bytes (CameraUniforms prefix + halfWidthPx +
  *                               intensity + tail pad)
  *   fadeBuffer                : 16 bytes (FadeUniforms — per-frame opacity)
  *
  * Public API:
  *   - createConstellationRenderer(device, targetFormat, fadeBgl)
- *   - upload(artifact)  → builds the instance buffer (once)
+ *   - upload(artifact)  → caches the absolute instance data + sizes the buffer (once)
  *   - hasData()         → whether a drawable segment set is committed
- *   - draw(pass, viewProj, viewportPx, halfWidthPx, intensity, fadeOpacity)
+ *   - draw(pass, viewProj, viewportPx, halfWidthPx, intensity, fadeOpacity, camPos)
  *   - destroy()         → releases all GPU resources
  *
  * Factory (not class) form matches `createFilamentRenderer` and the other
@@ -44,6 +50,7 @@ import type { ConstellationRenderer } from '../../../../@types/rendering/Constel
 import type { ConstellationsArtifact } from '../../../../@types/loading/ConstellationsArtifact';
 import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsBgl';
 import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec3 } from '../../../../@types/math/Vec3';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { writeCameraPrefix } from '../../lib/cameraUniforms';
 import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from '../../lib/unitQuad';
@@ -161,11 +168,16 @@ export function createConstellationRenderer(
 
   // ── Stateful per-artifact bookkeeping ─────────────────────────────
   //
-  // Null/zero means "no artifact uploaded yet"; `draw` early-returns. The
-  // segment set is static, so `upload` runs at most once (the pass guards on
-  // `hasData`), but a re-upload is harmless — it destroys and rebuilds.
+  // Null/zero means "no artifact uploaded yet"; `draw` early-returns. `upload`
+  // runs once (the slot commit guards on it), caching the ABSOLUTE-position
+  // instance data; `draw` subtracts the per-frame camera position from it into
+  // `relativeScratch` and re-uploads that camera-relative buffer.
   let instanceBuffer: GPUBuffer | null = null;
   let segmentCount = 0;
+  // The cached absolute-position instance data (world Mpc). Reused every frame:
+  // draw copies it minus camPos into relativeScratch. A re-upload rebuilds both.
+  let absoluteData: Float32Array | null = null;
+  let relativeScratch: Float32Array | null = null;
 
   // Per-handle FadeUniforms buffer + bind group, created lazily on first upload.
   let fadeBuffer: GPUBuffer | null = null;
@@ -183,15 +195,21 @@ export function createConstellationRenderer(
     if (built.segmentCount === 0) {
       instanceBuffer?.destroy();
       instanceBuffer = null;
+      absoluteData = null;
+      relativeScratch = null;
       return;
     }
+    // Cache the absolute-position instance data + a same-size scratch for the
+    // per-frame camera-relative re-write. The buffer is sized here but written
+    // per frame in draw (no absolute write — it would only be overwritten).
+    absoluteData = built.data;
+    relativeScratch = new Float32Array(built.data.length);
     instanceBuffer?.destroy();
     instanceBuffer = device.createBuffer({
       label: 'constellations-instance-buffer',
       size: built.data.byteLength,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
-    device.queue.writeBuffer(instanceBuffer, 0, built.data);
 
     if (fadeBuffer === null) {
       fadeBuffer = device.createBuffer({
@@ -218,8 +236,37 @@ export function createConstellationRenderer(
     halfWidthPx: number,
     intensity: number,
     fadeOpacity: number,
+    /**
+     * The NEAR0-origin camera position (world Mpc). Subtracted from each cached
+     * absolute endpoint to re-express the segment set camera-relative, pairing
+     * with the caller's f64-rebased `viewProj` — the `starPointsLayer` seam.
+     */
+    camPos: Vec3,
   ): void {
     if (segmentCount === 0 || !instanceBuffer || !fadeBuffer || !fadeBindGroup) return;
+    if (!absoluteData || !relativeScratch) return;
+
+    // Re-express every endpoint camera-relative (`pos − camPos`) into the scratch
+    // and re-upload. Only the two xyz triples move; the apparent-magnitude slots
+    // (floats 3 and 7 of each 8-float segment) copy straight through. The pass
+    // hands the matching f64-rebased vp, so the f32 shader multiply is
+    // well-conditioned even on close approach (module header).
+    const abs = absoluteData;
+    const rel = relativeScratch;
+    const cx = camPos[0];
+    const cy = camPos[1];
+    const cz = camPos[2];
+    for (let o = 0; o < abs.length; o += FLOATS_PER_SEGMENT) {
+      rel[o + 0] = abs[o + 0]! - cx;
+      rel[o + 1] = abs[o + 1]! - cy;
+      rel[o + 2] = abs[o + 2]! - cz;
+      rel[o + 3] = abs[o + 3]!; // aAppMag
+      rel[o + 4] = abs[o + 4]! - cx;
+      rel[o + 5] = abs[o + 5]! - cy;
+      rel[o + 6] = abs[o + 6]! - cz;
+      rel[o + 7] = abs[o + 7]!; // bAppMag
+    }
+    device.queue.writeBuffer(instanceBuffer, 0, rel);
 
     // Pack the 96-byte Uniforms struct (byte layout documented on
     // CONSTELLATION_UNIFORM_BYTES above). Reused scratch, so the two named tail

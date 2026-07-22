@@ -69,6 +69,12 @@ function baseProps() {
     onSetStarLabelsEnabled: vi.fn<(enabled: boolean) => void>(),
     planetLabelsEnabled: true,
     onSetPlanetLabelsEnabled: vi.fn<(enabled: boolean) => void>(),
+    constellationsEnabled: true,
+    onToggleConstellations: vi.fn<(enabled: boolean) => void>(),
+    constellationLabelsEnabled: true,
+    onSetConstellationLabelsEnabled: vi.fn<(enabled: boolean) => void>(),
+    constellationIntensity: 1.0,
+    onConstellationIntensityChange: vi.fn<(v: number) => void>(),
   };
 }
 
@@ -100,6 +106,8 @@ describe('LabelsSection', () => {
         labelCategoryVisibility: noneOnVisibility(),
         starLabelsEnabled: false,
         planetLabelsEnabled: false,
+        constellationsEnabled: false,
+        constellationLabelsEnabled: false,
       };
       const { container } = render(createElement(LabelsSection, props));
       const headerCheckbox =
@@ -173,23 +181,29 @@ describe('LabelsSection', () => {
       expect(onSetLabelCategoryVisibility).toHaveBeenCalledWith('famousGalaxy', false);
     });
 
-    it('calls every category AND both foreground callbacks with true when master toggled from noneOn', () => {
+    it('calls every category AND all extra-row callbacks with true when master toggled from noneOn', () => {
       const onSetLabelCategoryVisibility =
         vi.fn<(category: LabelCategory, visible: boolean) => void>();
       const onSetStarLabelsEnabled = vi.fn<(enabled: boolean) => void>();
       const onSetPlanetLabelsEnabled = vi.fn<(enabled: boolean) => void>();
+      const onToggleConstellations = vi.fn<(enabled: boolean) => void>();
+      const onSetConstellationLabelsEnabled = vi.fn<(enabled: boolean) => void>();
       const props = {
         ...baseProps(),
         labelCategoryVisibility: noneOnVisibility(),
         starLabelsEnabled: false,
         planetLabelsEnabled: false,
+        constellationsEnabled: false,
+        constellationLabelsEnabled: false,
         onSetLabelCategoryVisibility,
         onSetStarLabelsEnabled,
         onSetPlanetLabelsEnabled,
+        onToggleConstellations,
+        onSetConstellationLabelsEnabled,
       };
       const { container } = render(createElement(LabelsSection, props));
 
-      // noneOn → master click sets all rows to true, foreground rows included.
+      // noneOn → master click sets all boolean rows to true, extra rows included.
       // Master checkbox is the first input — in the header, always accessible.
       const headerCheckbox =
         container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
@@ -201,23 +215,29 @@ describe('LabelsSection', () => {
       }
       expect(onSetStarLabelsEnabled).toHaveBeenCalledWith(true);
       expect(onSetPlanetLabelsEnabled).toHaveBeenCalledWith(true);
+      expect(onToggleConstellations).toHaveBeenCalledWith(true);
+      expect(onSetConstellationLabelsEnabled).toHaveBeenCalledWith(true);
     });
 
-    it('calls every category AND both foreground callbacks with false when master toggled from allOn', () => {
+    it('calls every category AND all extra-row callbacks with false when master toggled from allOn', () => {
       const onSetLabelCategoryVisibility =
         vi.fn<(category: LabelCategory, visible: boolean) => void>();
       const onSetStarLabelsEnabled = vi.fn<(enabled: boolean) => void>();
       const onSetPlanetLabelsEnabled = vi.fn<(enabled: boolean) => void>();
+      const onToggleConstellations = vi.fn<(enabled: boolean) => void>();
+      const onSetConstellationLabelsEnabled = vi.fn<(enabled: boolean) => void>();
       const props = {
         ...baseProps(),
         labelCategoryVisibility: allOnVisibility(),
         onSetLabelCategoryVisibility,
         onSetStarLabelsEnabled,
         onSetPlanetLabelsEnabled,
+        onToggleConstellations,
+        onSetConstellationLabelsEnabled,
       };
       const { container } = render(createElement(LabelsSection, props));
 
-      // allOn → master click clears every row, foreground rows included.
+      // allOn → master click clears every boolean row, extra rows included.
       const headerCheckbox =
         container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
       fireEvent.click(headerCheckbox);
@@ -228,6 +248,63 @@ describe('LabelsSection', () => {
       }
       expect(onSetStarLabelsEnabled).toHaveBeenCalledWith(false);
       expect(onSetPlanetLabelsEnabled).toHaveBeenCalledWith(false);
+      expect(onToggleConstellations).toHaveBeenCalledWith(false);
+      expect(onSetConstellationLabelsEnabled).toHaveBeenCalledWith(false);
+    });
+  });
+
+  describe('constellation rows', () => {
+    it('reflects the constellationsEnabled prop and fires onToggleConstellations when clicked', () => {
+      const onToggleConstellations = vi.fn<(enabled: boolean) => void>();
+      const { container } = render(
+        createElement(LabelsSection, { ...baseProps(), constellationsEnabled: true, onToggleConstellations }),
+      );
+      const expandButton = container.querySelector<HTMLButtonElement>('button[type=button]')!;
+      fireEvent.click(expandButton);
+
+      const toggle = container.querySelector<HTMLInputElement>('#toggle-constellations')!;
+      expect(toggle).not.toBeNull();
+      expect(toggle.checked).toBe(true);
+      fireEvent.click(toggle);
+      expect(onToggleConstellations).toHaveBeenCalledWith(false);
+    });
+
+    it('reflects the constellationLabelsEnabled prop and fires its callback when clicked', () => {
+      const onSetConstellationLabelsEnabled = vi.fn<(enabled: boolean) => void>();
+      const { container } = render(
+        createElement(LabelsSection, {
+          ...baseProps(),
+          constellationLabelsEnabled: false,
+          onSetConstellationLabelsEnabled,
+        }),
+      );
+      const expandButton = container.querySelector<HTMLButtonElement>('button[type=button]')!;
+      fireEvent.click(expandButton);
+
+      const toggle = container.querySelector<HTMLInputElement>('#toggle-constellation-labels')!;
+      expect(toggle).not.toBeNull();
+      expect(toggle.checked).toBe(false);
+      fireEvent.click(toggle);
+      expect(onSetConstellationLabelsEnabled).toHaveBeenCalledWith(true);
+    });
+
+    it('echoes the constellationIntensity prop and fires onConstellationIntensityChange on move', () => {
+      const onConstellationIntensityChange = vi.fn<(v: number) => void>();
+      const { container } = render(
+        createElement(LabelsSection, {
+          ...baseProps(),
+          constellationIntensity: 1.5,
+          onConstellationIntensityChange,
+        }),
+      );
+      const expandButton = container.querySelector<HTMLButtonElement>('button[type=button]')!;
+      fireEvent.click(expandButton);
+
+      const slider = container.querySelector<HTMLInputElement>('#slider-constellation-intensity')!;
+      expect(slider).not.toBeNull();
+      expect(slider.value).toBe('1.5');
+      fireEvent.change(slider, { target: { value: '0.8' } });
+      expect(onConstellationIntensityChange).toHaveBeenCalledWith(0.8);
     });
   });
 });

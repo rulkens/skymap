@@ -5,8 +5,11 @@
  * Owns all Redux reach for the Labels group: reads `selectStructureItems`,
  * `selectGalaxyCatalogItems`, and `selectMilkyWayLabelEnabled`, runs the
  * three-input label-projection, and wraps the 3-way dispatch guard in a
- * `useCallback`. The presentational `LabelsSection` imports nothing from
- * `store/` or `state/`.
+ * `useCallback`. It also owns the foreground caption toggles (star / planet
+ * names) and the constellation rows (the overlay lines toggle, the figure
+ * name-labels toggle, and the intensity slider) — flat singleton settings that
+ * route straight to their own setters. The presentational `LabelsSection`
+ * imports nothing from `store/` or `state/`.
  *
  * ### Label-visibility projection
  *
@@ -45,6 +48,9 @@ import {
   selectMilkyWayLabelEnabled,
   selectStarLabelsEnabled,
   selectPlanetLabelsEnabled,
+  selectConstellationsEnabled,
+  selectConstellationLabelsEnabled,
+  selectConstellationIntensity,
 } from '../../state/settings/selectors';
 import {
   setStructureLabelEnabled,
@@ -52,6 +58,9 @@ import {
   setGalaxyCatalogLabelEnabled,
   setStarLabelsEnabled,
   setPlanetLabelsEnabled,
+  setConstellationsEnabled,
+  setConstellationLabelsEnabled,
+  setConstellationIntensity,
 } from '../../state/settings/settingsSlice';
 import { projectLabelCategoryVisibility } from '../../state/settings/projectLabelCategoryVisibility';
 import { isStructureId } from '../../data/structure/structureIds';
@@ -65,6 +74,9 @@ function LabelsSectionContainer(): React.ReactElement {
   const milkyWayLabelEnabled = useAppSelector(selectMilkyWayLabelEnabled);
   const starLabelsEnabled = useAppSelector(selectStarLabelsEnabled);
   const planetLabelsEnabled = useAppSelector(selectPlanetLabelsEnabled);
+  const constellationsEnabled = useAppSelector(selectConstellationsEnabled);
+  const constellationLabelsEnabled = useAppSelector(selectConstellationLabelsEnabled);
+  const constellationIntensity = useAppSelector(selectConstellationIntensity);
 
   // Project items → flat label-visibility record. Rebuilds only when any of the
   // three stable-reference inputs change.
@@ -103,6 +115,27 @@ function LabelsSectionContainer(): React.ReactElement {
     [dispatch],
   );
 
+  const onToggleConstellations = useCallback(
+    (enabled: boolean) => {
+      dispatch(setConstellationsEnabled(enabled));
+    },
+    [dispatch],
+  );
+
+  const onSetConstellationLabelsEnabled = useCallback(
+    (enabled: boolean) => {
+      dispatch(setConstellationLabelsEnabled(enabled));
+    },
+    [dispatch],
+  );
+
+  const onConstellationIntensityChange = useCallback(
+    (value: number) => {
+      dispatch(setConstellationIntensity(value));
+    },
+    [dispatch],
+  );
+
   return (
     <LabelsSection
       labelCategoryVisibility={labelCategoryVisibility}
@@ -111,6 +144,12 @@ function LabelsSectionContainer(): React.ReactElement {
       onSetStarLabelsEnabled={onSetStarLabelsEnabled}
       planetLabelsEnabled={planetLabelsEnabled}
       onSetPlanetLabelsEnabled={onSetPlanetLabelsEnabled}
+      constellationsEnabled={constellationsEnabled}
+      onToggleConstellations={onToggleConstellations}
+      constellationLabelsEnabled={constellationLabelsEnabled}
+      onSetConstellationLabelsEnabled={onSetConstellationLabelsEnabled}
+      constellationIntensity={constellationIntensity}
+      onConstellationIntensityChange={onConstellationIntensityChange}
     />
   );
 }

@@ -46,6 +46,12 @@ export function produceConstellationLabels(
   state: EngineState,
   ctx: ReadyFrameContext,
 ): LabelProducerOutput {
+  // Independent labels gate: turning the figure NAMES off removes them while the
+  // stick figures keep drawing. (The lines' own master toggle lives on the layer
+  // fade below, which these labels also multiply by — so lines off ⇒ labels off
+  // regardless; this only removes labels while lines stay on.)
+  if (!state.settings.constellations.labels) return { labels: [], lines: [], awake: false };
+
   // The artifact is CPU-resident on the slot; nothing to draw until it's ready.
   const slot = state.assetSlots.constellations;
   if (slot === null) return { labels: [], lines: [], awake: false };

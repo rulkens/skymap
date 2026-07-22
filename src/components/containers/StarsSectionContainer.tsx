@@ -45,12 +45,7 @@
 import { memo, useCallback, useMemo } from 'react';
 import StarsSection from '../SettingsPanel/StarsSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import {
-  selectStarCatalogs,
-  selectFamousStarsEnabled,
-  selectConstellationsEnabled,
-  selectConstellationIntensity,
-} from '../../state/settings/selectors';
+import { selectStarCatalogs, selectFamousStarsEnabled } from '../../state/settings/selectors';
 import { selectSourceCounts } from '../../state/engine/selectors';
 import {
   setStarCatalogEnabled,
@@ -64,8 +59,6 @@ import {
   setStarCatalogAggregateIntensityCap,
   setStarCatalogVisible,
   setFamousStarsEnabled,
-  setConstellationsEnabled,
-  setConstellationIntensity,
 } from '../../state/settings/settingsSlice';
 import { STAR_CATALOG_IDS } from '../../data/starCatalog/starCatalogIds';
 import { SOURCE_ENTRIES } from '../../data/sourceEntries';
@@ -91,11 +84,6 @@ function StarsSectionContainer(): React.ReactElement {
   // The famous-star map's own visibility gate — a singleton overlay flag
   // (`settings.famousStars`), independent of the star-catalogs master above.
   const famousStarsEnabled = useAppSelector(selectFamousStarsEnabled);
-
-  // The constellation stick-figure overlay — a singleton overlay gate +
-  // brightness scale, independent of the star-catalogs master above.
-  const constellationsEnabled = useAppSelector(selectConstellationsEnabled);
-  const constellationIntensity = useAppSelector(selectConstellationIntensity);
 
   // Per-catalog loaded counts from the engine slice, keyed by numeric
   // `SourceType`. Re-key into the string `StarCatalogId` domain the section
@@ -167,16 +155,6 @@ function StarsSectionContainer(): React.ReactElement {
     [dispatch],
   );
 
-  const onToggleConstellations = useCallback(
-    (next: boolean) => dispatch(setConstellationsEnabled(next)),
-    [dispatch],
-  );
-
-  const onConstellationIntensityChange = useCallback(
-    (next: number) => dispatch(setConstellationIntensity(next)),
-    [dispatch],
-  );
-
   return (
     <StarsSection
       enabled={enabled}
@@ -191,8 +169,6 @@ function StarsSectionContainer(): React.ReactElement {
       exposureFarX={exposureFarX}
       aggregateIntensityCap={aggregateIntensityCap}
       famousStarsEnabled={famousStarsEnabled}
-      constellationsEnabled={constellationsEnabled}
-      constellationIntensity={constellationIntensity}
       onToggleMaster={onToggleMaster}
       onToggleCatalog={onToggleCatalog}
       onSizeChange={onSizeChange}
@@ -204,8 +180,6 @@ function StarsSectionContainer(): React.ReactElement {
       onExposureFarXChange={onExposureFarXChange}
       onAggregateIntensityCapChange={onAggregateIntensityCapChange}
       onToggleFamousStars={onToggleFamousStars}
-      onToggleConstellations={onToggleConstellations}
-      onConstellationIntensityChange={onConstellationIntensityChange}
     />
   );
 }

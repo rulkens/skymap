@@ -24,10 +24,11 @@ const ARTIFACT: ConstellationsArtifact = {
   ],
 };
 
-// Minimal state: the producer reads the constellations slot's ready value and
-// the fade registry (opacityOf only — a pure reader).
-function makeState(layerOpacity: number, ready = true): EngineState {
+// Minimal state: the producer reads the constellations slot's ready value, the
+// fade registry (opacityOf only — a pure reader), and the labels settings gate.
+function makeState(layerOpacity: number, ready = true, labels = true): EngineState {
   return {
+    settings: { constellations: { labels } },
     assetSlots: {
       constellations: {
         state: () => (ready ? { kind: 'ready', value: ARTIFACT } : { kind: 'idle' }),
@@ -58,11 +59,23 @@ describe('produceConstellationLabels', () => {
     expect(out.labels).toHaveLength(2);
 
     expect(out.labels[0]!.text).toBe('Orion');
+    // The anchor ships in PARSECS; the producer must scale it into world Mpc
+    // (PC_TO_MPC) so the name projects at the same near-field scale as the
+    // stick-figure segments (buildConstellationInstances) rather than 1e6× too
+    // far and getting culled. This is the anchor-unit regression pin.
     expect(out.labels[0]!.worldPos).toEqual([200 * PC, -50 * PC, 100 * PC]);
 
     expect(out.labels[1]!.text).toBe('Ursa Major');
     expect(out.labels[1]!.worldPos).toEqual([-30 * PC, 80 * PC, 12 * PC]);
 
+    expect(out.lines).toEqual([]);
+  });
+
+  it('emits nothing when the constellation labels gate is off (lines stay on)', () => {
+    // The independent labels toggle removes the names while the layer fade is
+    // still fully up (opacity 1, inside the band) — lines on, labels off.
+    const out = produceConstellationLabels(makeState(1, true, false), makeCtx(0.0005));
+    expect(out.labels).toEqual([]);
     expect(out.lines).toEqual([]);
   });
 

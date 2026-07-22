@@ -15,9 +15,11 @@ Scope decisions (grill): all 88 IAU figures (Q1); endpoints resolved inside the
 star-bin build so lines land exactly on rendered stars (Q2); line data derived
 from d3-celestial's BSD-3 dataset, not Stellarium's GPL file (Q3); screen-space
 pixel gap at each star (Q4); single dim steel-blue additive style (Q5); Latin
-name labels at the figure's 3D anchor (Q6); default ON, one toggle + intensity
-slider, labels ride the layer (Q7); no interactivity in v1 (Q8); celestial-sphere
-morph mode deferred (Q9).
+name labels at the figure's 3D anchor (Q6); one toggle + intensity slider (Q7,
+revised 2026-07-22: default OFF — zoomed-out figures shear into visual noise —
+the toggles live in the Labels section, and the name labels get their own
+independent toggle that still rides the layer fade); no interactivity in v1
+(Q8); celestial-sphere morph mode deferred (Q9).
 
 ## Ground preparation
 
@@ -140,10 +142,12 @@ command (`npm run build-stars-rs`).
 All growth at existing seams; one row/file per touchpoint.
 
 - **Source**: `Source.Constellations` + `src/data/sources/constellations.ts`
-  registry row (`visible: true` default per Q7).
-- **Settings**: `settings.constellations = { enabled, intensity }`, seeded from
-  the registry; `setConstellationsEnabled` / `setConstellationIntensity`
-  reducers + selectors.
+  registry row (`visible: false` default — Q7 as revised 2026-07-22).
+- **Settings**: `settings.constellations = { enabled, intensity, labels }`,
+  seeded from the registry; `setConstellationsEnabled` /
+  `setConstellationIntensity` / `setConstellationLabelsEnabled` reducers +
+  selectors. The labels flag gates the name labels independently; they still
+  multiply the layer fade (lines off ⇒ labels off).
 - **Loading**: `makeJsonFetcher`-based fetcher with the shape check, an
   `AssetSlot`, and an `ASSET_WIRING` row (demand: layer enabled). Status-only
   store field per the singleton-overlay convention; fetch/parse failure leaves
@@ -173,9 +177,11 @@ All growth at existing seams; one row/file per touchpoint.
   names at the artifact anchors, annotation-tier styling (structure-label
   face, dimmer/smaller), label alpha multiplied by the layer's fade + the
   director's shared declutter/envelope. No abbreviations in v1.
-- **UI**: one row in `StarsSection` (the famous-stars singleton-toggle row is
-  the exact precedent) + an intensity slider following the Advanced-section
-  slider pattern; wired through `StarsSectionContainer`.
+- **UI**: rows in the Labels section (user decision 2026-07-22 — the figures
+  are annotation, not a catalog): the layer toggle + intensity slider, plus a
+  separate "Constellation labels" toggle; wired through the section's
+  container. Both toggles count toward the section's tri-state master;
+  the intensity scalar stays out of it.
 
 No pick integration (Q8): lines and labels are annotation; the famous stars
 inside the figures remain the interactive objects.

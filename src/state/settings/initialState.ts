@@ -135,10 +135,12 @@ export function buildInitialSettings(): EngineSettingsState {
     },
     // Constellation stick-figure overlay, seeded from the registry constellations
     // row (same pattern as `filaments`) so that entry stays the single source of
-    // truth for the default-visible gate + intensity.
+    // truth for the default-visible gate + intensity. `labels` (the figure name
+    // labels) is an independent gate that defaults on.
     constellations: {
       enabled: SOURCE_REGISTRY[Source.Constellations].visible,
       intensity: SOURCE_REGISTRY[Source.Constellations].intensity,
+      labels: true,
     },
     // Earth's per-body look dials. Each seeds from its authored data constant so
     // that file stays the default's single source of truth (the same

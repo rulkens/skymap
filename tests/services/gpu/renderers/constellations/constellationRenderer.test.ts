@@ -7,8 +7,10 @@ import {
   CONSTELLATION_INTENSITY_F32,
 } from '../../../../../src/services/gpu/renderers/constellations/constellationRenderer';
 import { writeCameraPrefix, CAMERA_UNIFORM_BYTES } from '../../../../../src/services/gpu/lib/cameraUniforms';
+import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import type { ConstellationsArtifact } from '../../../../../src/@types/loading/ConstellationsArtifact';
 import type { FadeUniformsBgl } from '../../../../../src/@types/rendering/FadeUniformsBgl';
+import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 /** Minimal GPUDevice mock — same shape as the filamentRenderer test. */
 function mockDevice(renderPipelines?: GPURenderPipelineDescriptor[]): GPUDevice {
@@ -63,6 +65,61 @@ describe('createConstellationRenderer.hasData', () => {
     expect(pipelines).toHaveLength(1);
     const target = Array.from(pipelines[0]!.fragment!.targets!)[0]!;
     expect(target!.format).toBe('rgba16float');
+  });
+});
+
+/**
+ * The precision seam (Item 4): `draw` re-expresses each cached ABSOLUTE endpoint
+ * camera-relative (`pos − camPos`) into the instance buffer every frame, pairing
+ * with the caller's f64-rebased vp — the `starPointsLayer` fix that kills the
+ * close-approach cancellation. This pins that the per-frame instance write is the
+ * absolute endpoints minus camPos, with the apparent-magnitude slots passed
+ * through untouched.
+ */
+describe('createConstellationRenderer.draw camera-relative write', () => {
+  it('uploads endpoints as (absolute − camPos) with magnitudes untouched', () => {
+    const writeBuffer = vi.fn();
+    const device = {
+      createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
+      createShaderModule: vi.fn(() => ({ getCompilationInfo: () => Promise.resolve({ messages: [] }) })),
+      createBindGroupLayout: vi.fn(() => ({})),
+      createPipelineLayout: vi.fn(() => ({})),
+      createRenderPipeline: vi.fn(() => ({ getBindGroupLayout: vi.fn(() => ({})) })),
+      createBindGroup: vi.fn(() => ({})),
+      queue: { writeBuffer },
+    } as unknown as GPUDevice;
+
+    const renderer = createConstellationRenderer(device, 'rgba16float', mockFadeBgl);
+    renderer.upload(oneSegmentArtifact()); // aPc [1,2,3] mag 0.5, bPc [4,5,6] mag 1.5
+
+    const pass = {
+      setPipeline: vi.fn(),
+      setBindGroup: vi.fn(),
+      setIndexBuffer: vi.fn(),
+      setVertexBuffer: vi.fn(),
+      drawIndexed: vi.fn(),
+    } as unknown as GPURenderPassEncoder;
+
+    const PC = SCALE_UNITS.PC_TO_MPC;
+    const camPos: Vec3 = [0.5 * PC, 1 * PC, 1.5 * PC];
+    writeBuffer.mockClear();
+    renderer.draw(pass, mat4.identity() as Float32Array, [1920, 1080], 0.9, 1, 1, camPos);
+
+    // The instance write is the only writeBuffer whose payload is a Float32Array
+    // (uniform + fade writes hand ArrayBuffers).
+    const instanceWrite = writeBuffer.mock.calls.find((c) => c[2] instanceof Float32Array);
+    expect(instanceWrite).toBeDefined();
+    const data = instanceWrite![2] as Float32Array;
+    // aWorld = aPc·PC − camPos; magnitudes pass through.
+    expect(data[0]).toBeCloseTo(1 * PC - camPos[0], 12);
+    expect(data[1]).toBeCloseTo(2 * PC - camPos[1], 12);
+    expect(data[2]).toBeCloseTo(3 * PC - camPos[2], 12);
+    expect(data[3]).toBe(Math.fround(0.5));
+    // bWorld = bPc·PC − camPos.
+    expect(data[4]).toBeCloseTo(4 * PC - camPos[0], 12);
+    expect(data[5]).toBeCloseTo(5 * PC - camPos[1], 12);
+    expect(data[6]).toBeCloseTo(6 * PC - camPos[2], 12);
+    expect(data[7]).toBe(Math.fround(1.5));
   });
 });
 

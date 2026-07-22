@@ -20,32 +20,29 @@
  * placement among the additive NEAR0 rows is an encoder-record listing choice,
  * not a compositing one (see `filamentsLayer` for the same rationale).
  *
- * ### Precision — a dumb f32 renderer fed the plain NEAR0 vp
+ * ### Precision — the `starPointsLayer` f64 rebase seam
  *
- * The renderer uploads the artifact's endpoints ONCE, scaled parsecs → world
- * Mpc (the segment set is static, tier-agnostic data — there is no per-frame
- * rebuild). Those uploaded positions are ABSOLUTE heliocentric Mpc, and NEAR0's
- * `view.vp` is an origin-relative projection built around `RENDER_ORIGIN_MPC`
- * ([0,0,0], the heliocentric origin), so `view.vp · vec4(pos, 1)` projects them
- * correctly. Deliberately NOT the `rebaseViewProj(view.slab.vp, camPos)` seam
- * `starPointsLayer` / `starCatalogLayer` use: that rebase folds the eye offset
- * into the matrix and REQUIRES camera-relative position inputs (`pos − camPos`),
- * which a once-uploaded absolute buffer does not provide — feeding it absolute
- * positions would translate every figure by `camPos`. The trade-off is the
- * close-approach f32 jitter the rebase exists to remove: within ~AU of a
- * constellation endpoint star the projected line can quantise slightly. That is
- * acceptable for an annotation overlay that is degenerate at that zoom and fades
- * out well before it (the distance band below). If close-approach precision is
- * ever needed, the fix is to re-express endpoints camera-relative per frame in
- * f64 and pass the rebased vp — the `starPointsLayer` pattern, at the cost of a
- * cheap per-frame re-upload of ~700 segments.
+ * The endpoints live at parsec-to-kiloparsec coordinates (~1.3×10⁻⁶ Mpc),
+ * and on the final approach to a figure's member star the NEAR0 vp's view
+ * translation is a similarly-sized number. Multiplying an absolute endpoint by
+ * the plain (f32-narrowed) `view.vp` subtracts two large-ish numbers in the
+ * shader to recover a tiny camera-relative position — catastrophic cancellation
+ * that quantises the projected line onto a coarse grid and makes it hop as the
+ * camera closes. The fix mirrors `starPointsLayer` exactly: each frame we fold
+ * the eye offset into the vp in f64 (`rebaseViewProj(view.slab.vp, camPos)`,
+ * narrowed at the upload boundary) and hand the renderer `camPos`, which
+ * re-expresses every endpoint camera-relative in the per-frame instance write.
+ * Neither operand the f32 shader multiplies then carries a large-number hazard,
+ * and the shader + instance layout are untouched — only what this layer HANDS
+ * the renderer changes. `view.camPos` is NEAR0's origin-relative eye, the same
+ * frame the slab vp and the endpoints are built in, so it zeroes the view
+ * translation the rebase folds out.
  *
- * ### Upload is lazy, off the slot (no commit)
+ * ### Upload happens once, in the slot commit (not here)
  *
- * The `constellations` slot carries the artifact as CPU-resident data with no
- * commit step, so this pass performs the one-time GPU upload itself the first
- * ready frame: `renderer.upload(artifact)` runs once, guarded by
- * `renderer.hasData()`.
+ * The `constellations` slot's commit uploads the artifact to the renderer the
+ * moment it lands (and kicks the demand-loaded fade) — see `constellationsSlot`.
+ * So this pass never uploads; it only draws once `renderer.hasData()` is true.
  *
  * ### When it draws (house rule: gate at `enabled`, opacity 0 ⇒ no render)
  *
@@ -58,10 +55,11 @@
  * Inside the band, the master toggle drives a smooth ENABLE/DISABLE fade via the
  * FadeRegistry `{ kind: 'constellations' }` controller (seeded by its
  * `FADE_LAYERS` row, ramped by the `watchFadesSaga` FADE_ROW entry on
- * `setConstellationsEnabled`). So `enabled` renders while the setting is on OR the
- * disable fade-out tail is still above 0 — the same pattern `filamentsLayer` uses —
- * and `draw` hands the renderer the distance band TIMES that fade opacity so the
- * figures dissolve smoothly on toggle rather than hard-cutting. `enabled` reads the
+ * `setConstellationsEnabled` — and first kicked to the on-intent by the slot
+ * commit). So `enabled` renders while the setting is on OR the disable fade-out
+ * tail is still above 0 — the same pattern `filamentsLayer` uses — and `draw`
+ * hands the renderer the distance band TIMES that fade opacity so the figures
+ * dissolve smoothly on toggle rather than hard-cutting. `enabled` reads the
  * absolute camera (`ctx.drawCamPos`) while `draw` reads NEAR0's origin-relative
  * `view.camPos`; the two coincide because `RENDER_ORIGIN_MPC` is [0,0,0].
  */
@@ -69,6 +67,8 @@
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
 import { NEAR0 } from '../slabs';
 import { fadeBand } from '../../../../utils/math/fadeBand';
+import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
+import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
 
 /**
@@ -101,33 +101,33 @@ export const constellationsLayer: ContentLayer = {
   draw(pass, view, ctx, state) {
     const renderer = state.gpu.constellationRenderer;
     if (renderer === null) return;
-
-    // Lazy one-time upload off the slot's ready artifact (the slot has no commit
-    // — see the module header). `hasData()` makes this run exactly once.
-    if (!renderer.hasData()) {
-      const slot = state.assetSlots.constellations;
-      if (slot === null) return;
-      const slotState = slot.state();
-      if (slotState.kind !== 'ready') return;
-      renderer.upload(slotState.value);
-      if (!renderer.hasData()) return; // empty artifact — nothing to draw
-    }
+    // The slot commit uploads on the first ready frame; nothing to draw until it
+    // has run (an empty artifact leaves this false permanently).
+    if (!renderer.hasData()) return;
 
     // The renderer's per-frame opacity: the distance band (keyed on the camera's
     // heliocentric-origin distance, read from `view.camPos` — the frames coincide,
     // see the module header) TIMES the fade-registry toggle opacity, so the
     // figures dissolve smoothly on ENABLE/DISABLE within the band.
-    const camDistMpc = Math.hypot(view.camPos[0], view.camPos[1], view.camPos[2]);
+    const camPos = view.camPos;
+    const camDistMpc = Math.hypot(camPos[0], camPos[1], camPos[2]);
     const distanceFade = fadeBand(SCALE_FADE_BANDS.constellations, camDistMpc);
     const toggleFade = state.subsystems.fades.opacityOf({ kind: 'constellations' }, ctx.nowMs);
 
+    // Fold the eye offset into the vp in f64 so it pairs with the camera-relative
+    // endpoints the renderer re-writes per frame — narrowed HERE at the GPU-upload
+    // boundary, exactly the `starPointsLayer` seam. Uses the slab's f64 `vp`, NOT
+    // the already-narrowed `view.vp`.
+    const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, camPos));
+
     renderer.draw(
       pass,
-      view.vp,
+      rebasedVp,
       view.viewportPx,
       CONSTELLATION_LINE_HALFWIDTH_PX,
       state.settings.constellations.intensity,
       distanceFade * toggleFade,
+      camPos,
     );
   },
 };
