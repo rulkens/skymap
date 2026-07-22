@@ -763,6 +763,13 @@ export const RAW_DATA = {
     description:
       'SHA-256 sidecar for the vendored constellations.lines.json — committed so a drifted or truncated re-fetch is caught.',
   },
+  'constellation-overrides.seed': {
+    path: 'data/seeds/constellation_overrides.seed.json',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Hand-authored per-vertex overrides (HIP id or explicit position) the stars-rs constellation resolver consults at step 3 when a stick-figure vertex has no famous-seed or population star to anchor to. Extended in response to the build failure that names each unresolvable vertex.',
+  },
 
   // ─── StarNet++ weights (famous-galaxy curator) ────────────────────────
 

@@ -146,8 +146,8 @@ export type EngineAssetSlots = {
   flow: AssetSlot<ScalarCube, void> | null;
   /**
    * True-3D constellation stick-figure artifact (`constellations.json`) routed
-   * through a slot for parity with the other CPU-side sidecars. Default-on but
-   * demand-loaded on the layer's master gate (`settings.constellations.enabled`),
+   * through a slot for parity with the other CPU-side sidecars. Opt-in (defaults
+   * off), demand-loaded on the layer's master gate (`settings.constellations.enabled`),
    * mirroring `flow`.
    *
    * The `commit` runs once on artifact-ready: it uploads the segment set to

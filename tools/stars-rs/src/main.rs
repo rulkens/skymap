@@ -228,7 +228,7 @@ fn emit_constellations(args: &Args, pop: &Population, elapsed: f64) {
     // Scan only the naked-eye stars — the resolver never matches fainter ones.
     let bright = bright_population(pop);
 
-    let artifact = match build_artifact(&lines, &famous, &bright, &overrides) {
+    let (artifact, usage) = match build_artifact(&lines, &famous, &bright, &overrides) {
         Ok(a) => a,
         Err(errors) => {
             for e in &errors {
@@ -264,13 +264,26 @@ fn emit_constellations(args: &Args, pop: &Population, elapsed: f64) {
 
     let segments: usize = artifact.constellations.iter().map(|c| c.segments.len()).sum();
     eprintln!(
-        "constellations: {} figures, {} segments (overrides {}, bright pop {})  [{:.1}s]",
+        "constellations: {} figures, {} segments (overrides {}/{} used, bright pop {})  [{:.1}s]",
         artifact.constellations.len(),
         segments,
-        overrides.overrides.len(),
+        usage.used_count(),
+        usage.total(),
         bright.stars.len(),
         elapsed
     );
+    // An override earns its place only while the population still lacks a star at
+    // its vertex; Gaia coverage improving can quietly retire one. Name each
+    // unused entry so it can be pruned, same spirit as the drop/clamp counters —
+    // not a failure, a curation signal.
+    for i in usage.unused_indices() {
+        let ov = &overrides.overrides[i];
+        eprintln!(
+            "  WARNING: unused override — {} vertex at ra {:.4}°, dec {:.4}° resolved \
+             without it; prune it from data/seeds/constellation_overrides.seed.json.",
+            ov.constellation, ov.ra, ov.dec
+        );
+    }
     eprintln!("  wrote {}", out.display());
 }
 

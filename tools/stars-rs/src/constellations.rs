@@ -182,6 +182,50 @@ pub fn load_overrides(path: &Path) -> Overrides {
     serde_json::from_str(&text).expect("constellation_overrides.seed.json parse")
 }
 
+/// Which override entries the resolver actually consumed across a whole build,
+/// positionally parallel to `Overrides.overrides` (`used[i]` is set once some
+/// vertex resolved through entry `i` at step 3).
+///
+/// An override exists only because the shipped population currently has no star
+/// at that vertex — a fact that rots as Gaia coverage improves: an entry can
+/// quietly stop being reached and then sits as dead weight nobody notices. So,
+/// in the same spirit as the drop/clamp counters, the build reports a used/total
+/// tally and names each unused entry. An unused override is NOT a build failure
+/// (the artifact is still correct) — it is a curation signal.
+#[derive(Debug)]
+pub struct OverrideUsage {
+    used: Vec<bool>,
+}
+
+impl OverrideUsage {
+    fn new(len: usize) -> Self {
+        OverrideUsage { used: vec![false; len] }
+    }
+
+    fn mark(&mut self, index: usize) {
+        self.used[index] = true;
+    }
+
+    /// Total override entries in the seed.
+    pub fn total(&self) -> usize {
+        self.used.len()
+    }
+
+    /// How many entries at least one vertex consumed.
+    pub fn used_count(&self) -> usize {
+        self.used.iter().filter(|&&u| u).count()
+    }
+
+    /// Indices of the overrides no vertex consumed — the prune candidates.
+    pub fn unused_indices(&self) -> Vec<usize> {
+        self.used
+            .iter()
+            .enumerate()
+            .filter_map(|(i, &u)| if u { None } else { Some(i) })
+            .collect()
+    }
+}
+
 // ── Resolution ────────────────────────────────────────────────────────────
 
 /// A polyline vertex placed in 3D: heliocentric equatorial-J2000 parsecs plus
@@ -190,6 +234,17 @@ pub fn load_overrides(path: &Path) -> Overrides {
 pub struct ResolvedVertex {
     pub pos_pc: [f32; 3],
     pub app_mag: f32,
+}
+
+/// The outcome of resolving one vertex: where it landed, plus which override (if
+/// any) placed it. `override_index` is `Some(i)` only when step 3 consumed
+/// `overrides.overrides[i]`; a famous-seed or population match leaves it `None`.
+/// The caller folds these into an `OverrideUsage` tally so an override that no
+/// vertex ever needs can be surfaced.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Resolution {
+    pub vertex: ResolvedVertex,
+    pub override_index: Option<usize>,
 }
 
 /// A vertex the four-step resolver could not place. Carries everything needed to
@@ -243,7 +298,7 @@ pub fn resolve_vertex(
     pop: &Population,
     overrides: &Overrides,
     tol_arcmin: f64,
-) -> Result<ResolvedVertex, ResolveError> {
+) -> Result<Resolution, ResolveError> {
     let target = unit_dir(ra_deg, dec_deg);
     let mut nearest_miss = f64::INFINITY;
 
@@ -262,9 +317,12 @@ pub fn resolve_vertex(
         }
     }
     if let Some((_, e)) = best_famous {
-        return Ok(ResolvedVertex {
-            pos_pc: to_f32(ra_dec_dist_to_cartesian(e.ra, e.dec, e.distance_pc)),
-            app_mag: e.mag_v as f32,
+        return Ok(Resolution {
+            vertex: ResolvedVertex {
+                pos_pc: to_f32(ra_dec_dist_to_cartesian(e.ra, e.dec, e.distance_pc)),
+                app_mag: e.mag_v as f32,
+            },
+            override_index: None,
         });
     }
 
@@ -287,11 +345,14 @@ pub fn resolve_vertex(
     }
     if let Some((_, i)) = best_pop {
         let s = &pop.stars[i];
-        return Ok(ResolvedVertex { pos_pc: to_f32(s.position), app_mag: s.app_mag as f32 });
+        return Ok(Resolution {
+            vertex: ResolvedVertex { pos_pc: to_f32(s.position), app_mag: s.app_mag as f32 },
+            override_index: None,
+        });
     }
 
     // Step 3 — explicit override for this constellation + vertex coordinate.
-    for ov in &overrides.overrides {
+    for (ov_index, ov) in overrides.overrides.iter().enumerate() {
         if ov.constellation != constellation {
             continue;
         }
@@ -300,11 +361,14 @@ pub fn resolve_vertex(
         }
         if let Some(hip) = ov.hip {
             if let Some(rv) = resolve_hip(hip, pop) {
-                return Ok(rv);
+                return Ok(Resolution { vertex: rv, override_index: Some(ov_index) });
             }
         }
         if let (Some(pos_pc), Some(app_mag)) = (ov.position_pc, ov.app_mag) {
-            return Ok(ResolvedVertex { pos_pc, app_mag });
+            return Ok(Resolution {
+                vertex: ResolvedVertex { pos_pc, app_mag },
+                override_index: Some(ov_index),
+            });
         }
         // A matched override that resolves to nothing (bad HIP, no position)
         // falls through to the hard error — the message tells the author to fix
@@ -434,7 +498,7 @@ pub fn build_artifact(
     famous: &FamousSeed,
     pop: &Population,
     overrides: &Overrides,
-) -> Result<ConstellationsArtifact, Vec<ResolveError>> {
+) -> Result<(ConstellationsArtifact, OverrideUsage), Vec<ResolveError>> {
     // Group polylines by Latin name, preserving first-seen order (Serpens's two
     // features share a name and merge into one constellation). The emission
     // iterates `order`, a Vec, so no HashMap iteration order reaches the JSON.
@@ -452,6 +516,7 @@ pub fn build_artifact(
 
     let mut constellations = Vec::with_capacity(order.len());
     let mut errors: Vec<ResolveError> = Vec::new();
+    let mut usage = OverrideUsage::new(overrides.overrides.len());
     for (name, polylines) in order.iter().zip(grouped.iter()) {
         let mut segments: Vec<Segment> = Vec::new();
         let mut all_resolved: Vec<ResolvedVertex> = Vec::new();
@@ -465,7 +530,12 @@ pub fn build_artifact(
                 match resolve_vertex(
                     name, vertex_index, ra, dec, famous, pop, overrides, DEFAULT_TOL_ARCMIN,
                 ) {
-                    Ok(rv) => resolved.push(rv),
+                    Ok(res) => {
+                        if let Some(i) = res.override_index {
+                            usage.mark(i);
+                        }
+                        resolved.push(res.vertex);
+                    }
                     Err(e) => errors.push(e),
                 }
                 vertex_index += 1;
@@ -490,7 +560,7 @@ pub fn build_artifact(
     if !errors.is_empty() {
         return Err(errors);
     }
-    Ok(ConstellationsArtifact { version: ARTIFACT_VERSION, constellations })
+    Ok((ConstellationsArtifact { version: ARTIFACT_VERSION, constellations }, usage))
 }
 
 /// Resolve a HIP number through the population's id sidecar to that star's
@@ -503,11 +573,23 @@ fn resolve_hip(hip: u32, pop: &Population) -> Option<ResolvedVertex> {
 }
 
 /// Expand a 3-letter IAU abbreviation (the d3-celestial feature `id`) to the
-/// full Latin constellation name. Unknown ids fall back to the abbreviation so a
-/// future upstream addition still produces a (less pretty) label rather than
-/// panicking.
+/// full Latin constellation name. An id absent from the table falls back to the
+/// abbreviation itself so a FUTURE upstream addition still produces a (less
+/// pretty) label rather than panicking. Every id in the vendored line data is
+/// expected to hit the table proper — the completeness test asserts it, so a
+/// typo in the 88-entry table fails tests instead of silently degrading a real
+/// label to its 3-letter code.
 fn latin_name(abbr: &str) -> &'static str {
-    match abbr {
+    latin_name_in_table(abbr).unwrap_or_else(|| Box::leak(abbr.to_string().into_boxed_str()))
+}
+
+/// The 88-entry IAU abbreviation → full Latin name table; `None` for an id not
+/// in it. Split from `latin_name` so the completeness test can distinguish a
+/// real table hit from the fallback: some Latin names ("Ara", "Leo") equal their
+/// own abbreviation, so a name-vs-id comparison can't detect a fallthrough, but a
+/// `None` can.
+fn latin_name_in_table(abbr: &str) -> Option<&'static str> {
+    Some(match abbr {
         "And" => "Andromeda",
         "Ant" => "Antlia",
         "Aps" => "Apus",
@@ -596,8 +678,8 @@ fn latin_name(abbr: &str) -> &'static str {
         "Vir" => "Virgo",
         "Vol" => "Volans",
         "Vul" => "Vulpecula",
-        other => Box::leak(other.to_string().into_boxed_str()),
-    }
+        _ => return None,
+    })
 }
 
 #[cfg(test)]
@@ -649,7 +731,8 @@ mod tests {
         let vb = resolve_vertex(
             "Orion", 0, 88.7929, 7.4071, &fam, &pop, &overrides, DEFAULT_TOL_ARCMIN,
         )
-        .expect("Betelgeuse resolves from the seed");
+        .expect("Betelgeuse resolves from the seed")
+        .vertex;
         assert!((vb.app_mag - 0.42).abs() < 1e-4, "seed magnitude used");
         let rb = (vb.pos_pc[0].powi(2) + vb.pos_pc[1].powi(2) + vb.pos_pc[2].powi(2)).sqrt();
         assert!((rb - 168.0).abs() < 0.5, "seed distance, got {rb}");
@@ -658,7 +741,8 @@ mod tests {
         let vr = resolve_vertex(
             "Orion", 1, 78.6345, -8.2016, &fam, &pop, &overrides, DEFAULT_TOL_ARCMIN,
         )
-        .expect("Rigel resolves from the population");
+        .expect("Rigel resolves from the population")
+        .vertex;
         assert!((vr.app_mag - 0.13).abs() < 1e-4, "population magnitude used");
         let rr = (vr.pos_pc[0].powi(2) + vr.pos_pc[1].powi(2) + vr.pos_pc[2].powi(2)).sqrt();
         assert!((rr - 264.0).abs() < 0.5, "population distance, got {rr}");
@@ -683,7 +767,8 @@ mod tests {
             "Ursa Major", 0, 165.9319, 61.7510, &fam, &pop, &Overrides::default(),
             DEFAULT_TOL_ARCMIN,
         )
-        .expect("resolves from the seed");
+        .expect("resolves from the seed")
+        .vertex;
         assert!((v.app_mag - 1.79).abs() < 1e-4, "seed magnitude, not decoy 2.0");
         let r = (v.pos_pc[0].powi(2) + v.pos_pc[1].powi(2) + v.pos_pc[2].powi(2)).sqrt();
         assert!((r - 37.7).abs() < 0.5, "seed distance ~37.7 pc, not decoy 500, got {r}");
@@ -707,7 +792,8 @@ mod tests {
             "Orion", 3, 90.0, 10.0, &famous(vec![]), &pop_from(vec![]), &overrides,
             DEFAULT_TOL_ARCMIN,
         )
-        .expect("resolves via the override");
+        .expect("resolves via the override")
+        .vertex;
         assert_eq!(v.pos_pc, [1.0, 2.0, 3.0]);
         assert!((v.app_mag - 4.5).abs() < 1e-4);
     }
@@ -807,5 +893,82 @@ mod tests {
         );
         assert!(names_and_indices.contains(&("Lyra".to_string(), 0)), "{names_and_indices:?}");
         assert!(names_and_indices.contains(&("Lyra".to_string(), 1)), "{names_and_indices:?}");
+    }
+
+    // Override entries rot silently as Gaia coverage improves: an entry no vertex
+    // reaches anymore is dead weight. build_artifact must report which overrides
+    // were consumed so the unused ones can be pruned. Two Orion vertices — the
+    // first placed by an override (USED), the second sitting on a population star
+    // and resolving at step 2 (touching no override) — plus a second override
+    // keyed to a coordinate no vertex visits (UNUSED).
+    #[test]
+    fn build_artifact_identifies_the_unused_override() {
+        let lines = vec![ConstellationLine {
+            name: "Orion".to_string(),
+            vertices: vec![[90.0, 10.0], [80.0, -5.0]],
+        }];
+        let fam = famous(vec![]);
+        // A bright population star exactly under the second vertex, so it resolves
+        // via step 2 and never consults an override.
+        let pop = pop_from(vec![(
+            star_at(80.0, -5.0, 100.0, 2.0),
+            StarIds { gaia: Some(1), hip: None },
+        )]);
+        let overrides = Overrides {
+            overrides: vec![
+                // index 0 — placed the first vertex: USED.
+                OverrideEntry {
+                    constellation: "Orion".into(),
+                    ra: 90.0,
+                    dec: 10.0,
+                    hip: None,
+                    position_pc: Some([1.0, 2.0, 3.0]),
+                    app_mag: Some(4.5),
+                },
+                // index 1 — keyed to a vertex the figure never has: UNUSED.
+                OverrideEntry {
+                    constellation: "Orion".into(),
+                    ra: 200.0,
+                    dec: -40.0,
+                    hip: None,
+                    position_pc: Some([4.0, 5.0, 6.0]),
+                    app_mag: Some(4.9),
+                },
+            ],
+        };
+
+        let (_artifact, usage) =
+            build_artifact(&lines, &fam, &pop, &overrides).expect("every vertex resolves");
+
+        assert_eq!(usage.total(), 2);
+        assert_eq!(usage.used_count(), 1, "only the first override was consumed");
+        assert_eq!(
+            usage.unused_indices(),
+            vec![1],
+            "the second override is dead weight and must be named"
+        );
+    }
+
+    // Every feature id in the REAL vendored line data must resolve through the
+    // latin_name table proper, never the abbreviation fallback. The fallback is a
+    // safety net for a future upstream addition; a typo in the 88-entry table
+    // would otherwise silently degrade a real label to its 3-letter code. Reads
+    // the vendored file relative to the crate (CARGO_MANIFEST_DIR), independent of
+    // the test runner's CWD — the same anchoring main.rs uses at runtime.
+    #[test]
+    fn every_vendored_feature_id_has_a_latin_name() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../data/raw/constellations/constellations.lines.json");
+        let text = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        let gj: GeoJson = serde_json::from_str(&text).expect("vendored file is valid GeoJSON");
+        for f in &gj.features {
+            assert!(
+                latin_name_in_table(&f.id).is_some(),
+                "feature id {:?} is missing from latin_name's table (would fall back to the \
+                 abbreviation) — add it",
+                f.id
+            );
+        }
     }
 }
