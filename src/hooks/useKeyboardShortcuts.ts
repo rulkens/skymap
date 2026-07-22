@@ -99,12 +99,12 @@ export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
         return;
       }
 
-      // ── h frames the Milky Way — our galaxy is "home" ──────────
-      // Routes through the standard focus channel (updateSelectionFocus →
-      // watchFocusTweenSaga) so the camera tween, URL hash, and selection
-      // state stay consistent with every other focus.
+      // ── h frames Earth — the viewer's starting point is "home" ─
+      // Matches the Home pill. Routes through the standard focus channel
+      // (updateSelectionFocus → watchFocusTweenSaga) so the camera tween,
+      // URL hash, and selection state stay consistent with every other focus.
       if (e.key === 'h' || e.key === 'H') {
-        dispatch(updateSelectionFocus({ type: 'milkyWay' }));
+        dispatch(updateSelectionFocus({ type: 'body', id: 'earth' }));
         return;
       }
 
