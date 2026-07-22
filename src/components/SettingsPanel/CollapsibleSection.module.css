@@ -210,8 +210,8 @@ button.header {
  * its padding + opacity.  The descendant form leaves a ghost gap under every
  * nested collapsed header (Galaxies → Advanced, etc.). */
 .bodyWrapperOpen > .body {
-  padding-top: var(--space-4);
-  padding-bottom: var(--space-3);
+  padding-top: var(--space-1);
+  padding-bottom: var(--space-1);
   opacity: 1;
 }
 
