@@ -60,6 +60,7 @@
     "luminositySolar": 1.51,
     "gaiaDr3": null,
     "hip": 71683,
+    "hipCompanions": [71681],
     "gaiaDr3Note": "Represents Alpha Centauri A, the Sun-like G2V primary; SIMBAD 'alf Cen A' lists no Gaia DR3 row (saturated bright-star hole).",
     "description": "Alpha Centauri is the nearest stellar system to the Sun and, at apparent magnitude near zero, the third-brightest star in the night sky. What the eye sees as a single point is really a close binary of two Sun-like stars — the G2 primary Rigil Kentaurus (component A) and the slightly cooler K1 dwarf Toliman (component B) — orbiting each other every 80 years, with the red dwarf Proxima as a distant third companion. Component A is almost a twin of our own Sun in mass, temperature and colour, which makes the system a favourite target for imagining nearby habitable worlds. Its estimated age is debated, with determinations ranging from roughly 5 to 8 billion years."
   },
@@ -222,7 +223,7 @@
     "luminositySolar": 0.326,
     "ageGyr": 1.1,
     "gaiaDr3": "5164707970261890560",
-    "hip": null,
+    "hip": 16537,
     "description": "Epsilon Eridani, formally named Ran, is a young orange K-type dwarf in the constellation Eridanus and one of the closest Sun-like stars, about 3.2 parsecs away and easily visible to the naked eye. Younger and cooler than the Sun, it is magnetically active and encircled by at least one debris disk, a dusty analogue of our own asteroid and Kuiper belts. Its proximity and Sun-like character made it a target of Project Ozma, the first modern search for radio signals from other civilisations, back in 1960. A confirmed giant planet, Epsilon Eridani b (named AEgir), orbits within the system."
   },
   {
@@ -660,7 +661,7 @@
     "massSolar": 12,
     "luminositySolar": 41700,
     "gaiaDr3": null,
-    "hip": null,
+    "hip": 68702,
     "gaiaDr3Note": "Represents the massive B-type primary of the Hadar (β Cen) system; SIMBAD lists no Gaia DR3 source (saturated bright-star hole).",
     "description": "Hadar, also called Agena, is the second-brightest star in Centaurus and the eleventh-brightest in the sky, forming with nearby Alpha Centauri a pair of 'Southern Pointers' that guide observers to the Southern Cross. It is a hot blue giant about 120 parsecs away, far more distant and intrinsically far more luminous than its bright neighbour. Hadar is in fact a triple system: the main object is itself two nearly identical massive B-type stars in a tight, eccentric orbit, with a third star circling farther out. Its component stars pulsate slightly as Beta Cephei-type variables."
   },
@@ -801,7 +802,7 @@
       "magRange": [1.23, 1.31]
     },
     "gaiaDr3": null,
-    "hip": null,
+    "hip": 62434,
     "gaiaDr3Note": "SIMBAD notes 'Not recovered in Gaia DR2 nor Gaia DR3' for Mimosa — a saturated bright-star hole.",
     "description": "Mimosa, also known as Becrux, is the second-brightest star in the Southern Cross and the twentieth-brightest in the sky, a hot blue giant about 85 parsecs away. It is one of the hottest naked-eye stars, with a surface near 27,000 K, and it pulsates in a matter of hours as a Beta Cephei-type variable. A massive companion orbits it on a highly elongated five-year path. Only a few million years old, it belongs to the same young Scorpius–Centaurus association as many of the bright blue stars of the southern sky."
   },
@@ -2118,7 +2119,7 @@
   {
     "id": "ankaa",
     "commonName": "Ankaa",
-    "names": ["Ankaa", "Alpha Phoenicis", "HD 6510", "HIP 5348"],
+    "names": ["Ankaa", "Alpha Phoenicis", "HD 6510", "HIP 2081"],
     "constellation": "Phoenix",
     "ra": 6.571,
     "dec": -42.306,
@@ -2131,7 +2132,7 @@
     "massSolar": 0.96,
     "luminositySolar": 83,
     "gaiaDr3": "4993479684438433792",
-    "hip": 5348,
+    "hip": 2081,
     "gaiaDr3Note": "Gaia DR3 4993479684438433792 resolves in SIMBAD to * alf Phe (Ankaa).",
     "description": "Ankaa is the brightest star in Phoenix, the mythical bird that rises reborn from its own ashes; the name comes from the Arabic 'al-'anqā', 'the phoenix'. An orange giant about 25 parsecs away, it has swelled to some thirteen times the Sun's radius as it ages. It is a spectroscopic binary whose unseen companion completes an orbit every eleven years, betrayed only by the rhythmic shifting of its spectral lines. Though the lucida of its constellation, it is modest beside its brilliant neighbours Achernar and Fomalhaut, leaving it the third-brightest star in that lonely stretch of southern sky."
   },
@@ -2399,7 +2400,7 @@
     "luminositySolar": 31600,
     "ageGyr": 0.006,
     "gaiaDr3": null,
-    "hip": null,
+    "hip": 78820,
     "gaiaDr3Note": "SIMBAD lists no Gaia DR3 source for the saturated multiple system Beta Scorpii (Acrab); HD 144217 is its brightest component.",
     "description": "Acrab crowns the head of Scorpius, and its name comes straight from the Arabic word for 'the scorpion'; its alternative title Graffias means 'the claws'. What looks to the eye like a single star is in truth a system of at least five hot blue stars bound in a complex hierarchy, first teased apart when the Moon occulted it and revealed the components winking out one by one. The brightest members are massive stars of fifteen and ten solar masses, blazing tens of thousands of times brighter than the Sun some 120 parsecs away. Sitting almost on the ecliptic, Acrab is regularly occulted by the Moon and occasionally by planets."
   },

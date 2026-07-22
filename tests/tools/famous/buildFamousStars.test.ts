@@ -172,4 +172,37 @@ describe('seedToRustConst', () => {
     // Proxima's null hip contributes nothing — it never appears in the hip array.
     // (Its whole entry is already absent per the gaiaDr3 test above.)
   });
+
+  it('unions hipCompanions into FAMOUS_STAR_HIP_IDS, tagged as companions', () => {
+    // A multi-component entry (the Alpha Centauri case: Gaia DR3 lacks both
+    // components, so one seed entry maps to two Hipparcos rows) contributes its
+    // canonical hip AND each companion. The union length grows by the companion
+    // count; each companion carries a "(companion)" provenance comment.
+    const withCompanion: FamousStarEntry[] = [
+      {
+        id: 'alpha-centauri',
+        commonName: 'Alpha Centauri',
+        names: ['Alpha Centauri', 'Rigil Kentaurus'],
+        constellation: 'Centaurus',
+        ra: 219.9021,
+        dec: -60.8339,
+        distancePc: 1.339,
+        magV: -0.01,
+        absMag: 4.38,
+        spectralType: 'G2V',
+        radiusSolar: 1.22,
+        temperatureK: 5804,
+        gaiaDr3: null,
+        hip: 71683,
+        hipCompanions: [71681],
+        description: 'The nearest stellar system to the Sun.',
+      },
+    ];
+    const text = seedToRustConst(withCompanion);
+
+    // One canonical hip + one companion = 2 elements.
+    expect(text).toContain('pub const FAMOUS_STAR_HIP_IDS: [u32; 2] = [');
+    expect(text).toContain('71683, // alpha-centauri');
+    expect(text).toContain('71681, // alpha-centauri (companion)');
+  });
 });

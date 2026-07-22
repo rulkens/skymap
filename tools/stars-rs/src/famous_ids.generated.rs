@@ -61,11 +61,13 @@ pub const FAMOUS_STAR_GAIA_IDS: [u64; 49] = [
     4152993273702130432, // uy-scuti
     1220110705972528512, // t-coronae-borealis
 ];
-pub const FAMOUS_STAR_HIP_IDS: [u32; 99] = [
+pub const FAMOUS_STAR_HIP_IDS: [u32; 104] = [
     70890, // proxima-centauri
     71683, // alpha-centauri
+    71681, // alpha-centauri (companion)
     87937, // barnards-star
     32349, // sirius
+    16537, // epsilon-eridani
     37279, // procyon
     8102, // tau-ceti
     97649, // altair
@@ -78,11 +80,13 @@ pub const FAMOUS_STAR_HIP_IDS: [u32; 99] = [
     24436, // rigel
     7588, // achernar
     27989, // betelgeuse
+    68702, // hadar
     60718, // acrux
     21421, // aldebaran
     80763, // antares
     65474, // spica
     102098, // deneb
+    62434, // mimosa
     49669, // regulus
     33579, // adhara
     36850, // castor
@@ -143,7 +147,7 @@ pub const FAMOUS_STAR_HIP_IDS: [u32; 99] = [
     82396, // larawag
     71352, // eta-centauri
     53910, // merak
-    5348, // ankaa
+    2081, // ankaa
     86670, // girtab
     107315, // enif
     113881, // scheat
@@ -155,6 +159,7 @@ pub const FAMOUS_STAR_HIP_IDS: [u32; 99] = [
     4427, // gamma-cassiopeiae
     113963, // markab
     102488, // aljanah
+    78820, // acrab
     10826, // mira
     95947, // albireo
     110991, // delta-cephei

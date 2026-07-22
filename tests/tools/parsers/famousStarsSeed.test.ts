@@ -85,6 +85,52 @@ describe('famousStarsSeed', () => {
     expect(validateFamousStarEntry(e).hip).toBe(71683);
   });
 
+  it('accepts hipCompanions — the Alpha Centauri two-component case', () => {
+    const e = baseEntry({ names: ['Betelgeuse'], hip: 71683, hipCompanions: [71681] });
+    expect(validateFamousStarEntry(e).hipCompanions).toEqual([71681]);
+  });
+
+  it('throws when hipCompanions is present but hip is null', () => {
+    // A companion is an *additional* resolved component; the canonical hip is the
+    // identity, so companions are meaningless without it.
+    const e = baseEntry({ id: 'sun', gaiaDr3: null, hip: null, hipCompanions: [71681] });
+    expect(() => validateFamousStarEntry(e)).toThrow(/hipCompanions/);
+  });
+
+  it('throws on a non-positive or non-integer hipCompanion', () => {
+    expect(() => validateFamousStarEntry(baseEntry({ hipCompanions: [1.5] }))).toThrow(
+      /hipCompanions/,
+    );
+    expect(() => validateFamousStarEntry(baseEntry({ hipCompanions: [-1] }))).toThrow(
+      /hipCompanions/,
+    );
+    expect(() => validateFamousStarEntry(baseEntry({ hipCompanions: [0] }))).toThrow(
+      /hipCompanions/,
+    );
+  });
+
+  it('throws on a duplicate hipCompanion', () => {
+    expect(() =>
+      validateFamousStarEntry(baseEntry({ hip: 71683, hipCompanions: [71681, 71681] })),
+    ).toThrow(/hipCompanions/);
+  });
+
+  it('throws when hipCompanions contains the entry own hip', () => {
+    // The canonical hip stays the identity; a companion repeating it would
+    // double-count the same Hipparcos row in the dedup set.
+    expect(() =>
+      validateFamousStarEntry(baseEntry({ hip: 71683, hipCompanions: [71683] })),
+    ).toThrow(/hipCompanions/);
+  });
+
+  it('throws on an empty hipCompanions array', () => {
+    // Convention: the key is present only when non-empty; an empty array is the
+    // "absent value as an empty key" placeholder the schema forbids elsewhere.
+    expect(() => validateFamousStarEntry(baseEntry({ hip: 71683, hipCompanions: [] }))).toThrow(
+      /hipCompanions/,
+    );
+  });
+
   it('throws on out-of-range ra / dec / distancePc / temperatureK', () => {
     expect(() => validateFamousStarEntry(baseEntry({ ra: 360 }))).toThrow(/ra/);
     expect(() => validateFamousStarEntry(baseEntry({ dec: 91 }))).toThrow(/dec/);

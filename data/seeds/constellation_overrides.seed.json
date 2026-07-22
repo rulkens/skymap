@@ -181,18 +181,6 @@
       "note": "HIP 107354 — stick-figure vertex star absent from the shipped population. Hipparcos-2 position (ra/dec x 1000/plx=29.22 mas => 34.2 pc); appMag = Hp."
     },
     {
-      "constellation": "Phoenix",
-      "ra": 17.0962,
-      "dec": -55.2458,
-      "positionPc": [
-        49.896291,
-        15.34637,
-        -75.238597
-      ],
-      "appMag": 3.9219,
-      "note": "HIP 5348 — stick-figure vertex star absent from the shipped population. Hipparcos-2 position (ra/dec x 1000/plx=10.92 mas => 91.6 pc); appMag = Hp."
-    },
-    {
       "constellation": "Piscis Austrinus",
       "ra": 326.934,
       "dec": -30.8983,
