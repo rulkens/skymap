@@ -847,23 +847,23 @@ under the new ecliptic default and get a one-time re-tune (spec §6). This is a
 tuning step, not a maths step: the implementer **may not** claim visual
 verification — each sub-item asks the user to look (dev server running).
 
-- [ ] `BOOT_YAW_RAD` / `BOOT_PITCH_RAD` — the real first-paint pose. Re-tune under
+- [x] `BOOT_YAW_RAD` / `BOOT_PITCH_RAD` — the real first-paint pose. Re-tune under
       ecliptic. Note: `cameraSlice.ts:56-57` base `yaw 0 / pitch 0` is a
       placeholder `commitCameraPose` overwrites via bootstrap — no re-tune there
       beyond the boot bearing. The grand-tour `openingTitle.ts:75` and
       `homeAgain.ts:45` reference `BOOT_YAW_RAD` / `BOOT_PITCH_RAD` directly, so
       they re-tune for free once the boot constants are set.
-- [ ] `cosmicFlows.ts:72` (`start: { yaw: 4.44, pitch: 0.2932 }`) — absolute start
+- [x] `cosmicFlows.ts:72` (`start: { yaw: 4.44, pitch: 0.2932 }`) — absolute start
       pose; re-tune.
-- [ ] `earthFlyout.ts:78-79` (`yaw: 0, pitch: 0`) — absolute opening angles;
+- [x] `earthFlyout.ts:78-79` (`yaw: 0, pitch: 0`) — absolute opening angles;
       re-tune.
-- [ ] Grand-tour waypoint pins — the hardcoded absolute bearings
+- [x] Grand-tour waypoint pins — the hardcoded absolute bearings
       `approachM31.ts:49-50` (`ARRIVAL_YAW_RAD` / `EXIT_YAW_RAD`) and
       `localGroup.ts:82-83`. Re-tune the pinned absolutes only; relative legs hold.
       If a specific beat genuinely breaks only when *played in a non-default frame*,
       that is a targeted pin fix, not a framework (Q5 rejects a per-clip
       authoring-frame tag).
-- [ ] **Ask the user to confirm** each pose reads correctly under the ecliptic
+- [x] **Ask the user to confirm** each pose reads correctly under the ecliptic
       default before committing. Commit the re-tune once confirmed.
 
 ---
