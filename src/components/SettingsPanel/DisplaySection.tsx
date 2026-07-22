@@ -30,14 +30,24 @@
 import { memo } from 'react';
 import type { ReactNode } from 'react';
 import type { ToneMapCurve as ToneMapCurveT } from '../../@types/data/ToneMapCurve';
+import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
 import { ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';
+import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
+import { orientationFrameLabel } from '../../data/orientation/orientationFrameLabel';
 import { STAR_EMISSIVE } from '../../data/starRenderConstants';
+
+/** Frame ids in registry order, so the dropdown can't drift from the registry. */
+const ORIENTATION_FRAME_IDS = Object.keys(ORIENTATION_FRAMES) as OrientationFrameId[];
 import { CollapsibleSection } from './CollapsibleSection';
 import styles from './SettingsPanel.module.css';
 
 // ── Props ──────────────────────────────────────────────────────────────────────
 
 export type DisplaySectionProps = {
+  /** Currently selected orientation frame (which plane is levelled as "up"). */
+  orientation: OrientationFrameId;
+  /** Called with the newly selected frame when the orientation dropdown changes. */
+  onOrientationChange: (frame: OrientationFrameId) => void;
   /** Currently selected tone-mapping curve. */
   toneMapCurve: ToneMapCurveT;
   /** Called with the newly selected curve when the dropdown changes. */
@@ -66,6 +76,8 @@ export type DisplaySectionProps = {
  * jargon; tweaker opens one disclosure to find it).
  */
 function DisplaySection({
+  orientation,
+  onOrientationChange,
   toneMapCurve,
   onToneMapCurveChange,
   bloomEnabled,
@@ -78,6 +90,22 @@ function DisplaySection({
 }: DisplaySectionProps) {
   return (
     <CollapsibleSection title="Display">
+      <div className={styles.panelRow}>
+        <label htmlFor="orientation-frame">Orientation</label>
+        <select
+          id="orientation-frame"
+          className={styles.modeSelect}
+          value={orientation}
+          onChange={(e) => onOrientationChange(e.target.value as OrientationFrameId)}
+        >
+          {ORIENTATION_FRAME_IDS.map((id) => (
+            <option key={id} value={id}>
+              {orientationFrameLabel(id)}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div className={styles.panelRow}>
         <label htmlFor="tonemap-curve">Tone curve</label>
         <select

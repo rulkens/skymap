@@ -28,12 +28,15 @@ import { createElement } from 'react';
 import DisplaySection from '../../../src/components/SettingsPanel/DisplaySection';
 import type { DisplaySectionProps } from '../../../src/components/SettingsPanel/DisplaySection';
 import type { ToneMapCurve as ToneMapCurveT } from '../../../src/@types/data/ToneMapCurve';
+import type { OrientationFrameId } from '../../../src/@types/camera/OrientationFrameId';
 import { ToneMapCurve } from '../../../src/data/toneMapCurve';
 
 // ── Fixtures ───────────────────────────────────────────────────────────────────
 
 function baseProps(overrides?: Partial<DisplaySectionProps>): DisplaySectionProps {
   return {
+    orientation: 'ecliptic',
+    onOrientationChange: vi.fn<(frame: OrientationFrameId) => void>(),
     toneMapCurve: ToneMapCurve.Reinhard as ToneMapCurveT,
     onToneMapCurveChange: vi.fn<(curve: ToneMapCurveT) => void>(),
     bloomEnabled: true,
@@ -111,6 +114,35 @@ describe('DisplaySection', () => {
       fireEvent.change(select, { target: { value: String(ToneMapCurve.Aces) } });
       expect(onToneMapCurveChange).toHaveBeenCalledOnce();
       expect(onToneMapCurveChange).toHaveBeenCalledWith(ToneMapCurve.Aces);
+    });
+  });
+
+  describe('orientation dropdown', () => {
+    it('renders all four frame options', () => {
+      const { getByRole, getByLabelText } = render(createElement(DisplaySection, baseProps()));
+      fireEvent.click(getByRole('button', { name: /display/i }));
+      const select = getByLabelText(/orientation/i) as HTMLSelectElement;
+      expect(select.options).toHaveLength(4);
+    });
+
+    it('reflects the orientation prop as the selected value', () => {
+      const { getByRole, getByLabelText } = render(
+        createElement(DisplaySection, baseProps({ orientation: 'galactic' })),
+      );
+      fireEvent.click(getByRole('button', { name: /display/i }));
+      const select = getByLabelText(/orientation/i) as HTMLSelectElement;
+      expect(select.value).toBe('galactic');
+    });
+
+    it('calls onOrientationChange with the selected frame id on change', () => {
+      const onOrientationChange = vi.fn<(frame: OrientationFrameId) => void>();
+      const { getByRole, getByLabelText } = render(
+        createElement(DisplaySection, baseProps({ orientation: 'ecliptic', onOrientationChange })),
+      );
+      fireEvent.click(getByRole('button', { name: /display/i }));
+      fireEvent.change(getByLabelText(/orientation/i), { target: { value: 'supergalactic' } });
+      expect(onOrientationChange).toHaveBeenCalledOnce();
+      expect(onOrientationChange).toHaveBeenCalledWith('supergalactic');
     });
   });
 
