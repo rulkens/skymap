@@ -3,12 +3,14 @@
  * DisplaySection — presentational component for the Display settings section
  * inside the SettingsPanel.
  *
- * Owns the Display thematic group UI: the tone-mapping curve dropdown and the
- * Bloom sub-group (enabled toggle + strength/threshold sliders). Nested
- * subgroups (e.g. the Earth atmosphere-exposure disclosure) are passed in as
- * `children` and rendered below, so Display need not drill their props.
- * Isolating this into its own component ensures a change here re-renders ONLY
- * this section rather than the entire HUD.
+ * Owns the Display thematic group UI: the orientation and tone-mapping curve
+ * dropdowns, plus a nested "Bloom" CollapsibleSection (master enable on its
+ * header, strength/threshold sliders in its body — same header-toggle idiom
+ * `FlowSection` uses for its master enable). Further subgroups (e.g. the Earth
+ * atmosphere-exposure disclosure) are passed in as `children` and rendered
+ * below, so Display need not drill their props. Isolating this into its own
+ * component ensures a change here re-renders ONLY this section rather than
+ * the entire HUD.
  *
  * ### Props-driven, no internal state
  *
@@ -132,48 +134,45 @@ function DisplaySection({
         </select>
       </div>
 
-      <div className={styles.panelRow}>
-        <label htmlFor="bloom-enabled">Bloom</label>
-        <input
-          id="bloom-enabled"
-          type="checkbox"
-          checked={bloomEnabled}
-          onChange={(e) => onBloomEnabledChange(e.target.checked)}
-        />
-      </div>
-      <div className={styles.panelRow}>
-        <label htmlFor="bloom-strength">Strength</label>
-        <span className={styles.panelValue}>{bloomStrength.toFixed(2)}</span>
-      </div>
-      <div className={styles.panelRow}>
-        <input
-          id="bloom-strength"
-          type="range"
-          min="0"
-          max="2"
-          step="0.05"
-          value={bloomStrength}
-          onChange={(e) => onBloomStrengthChange(Number(e.target.value))}
-        />
-      </div>
-      <div className={styles.panelRow}>
-        <label htmlFor="bloom-threshold">Threshold</label>
-        <span className={styles.panelValue}>{bloomThreshold.toFixed(1)}</span>
-      </div>
-      <div className={styles.panelRow}>
-        {/* Ceiling is the resolved-star emissive: above it the threshold would
-            exclude the Sun's own disc and kill its bloom. See the ordering
-            invariant in data/starRenderConstants.ts. */}
-        <input
-          id="bloom-threshold"
-          type="range"
-          min="0"
-          max={STAR_EMISSIVE}
-          step="0.1"
-          value={bloomThreshold}
-          onChange={(e) => onBloomThresholdChange(Number(e.target.value))}
-        />
-      </div>
+      <CollapsibleSection
+        title="Bloom"
+        headerToggle={bloomEnabled}
+        onHeaderToggleChange={onBloomEnabledChange}
+      >
+        <div className={styles.panelRow}>
+          <label htmlFor="bloom-strength">Strength</label>
+          <span className={styles.panelValue}>{bloomStrength.toFixed(2)}</span>
+        </div>
+        <div className={styles.panelRow}>
+          <input
+            id="bloom-strength"
+            type="range"
+            min="0"
+            max="2"
+            step="0.05"
+            value={bloomStrength}
+            onChange={(e) => onBloomStrengthChange(Number(e.target.value))}
+          />
+        </div>
+        <div className={styles.panelRow}>
+          <label htmlFor="bloom-threshold">Threshold</label>
+          <span className={styles.panelValue}>{bloomThreshold.toFixed(1)}</span>
+        </div>
+        <div className={styles.panelRow}>
+          {/* Ceiling is the resolved-star emissive: above it the threshold would
+              exclude the Sun's own disc and kill its bloom. See the ordering
+              invariant in data/starRenderConstants.ts. */}
+          <input
+            id="bloom-threshold"
+            type="range"
+            min="0"
+            max={STAR_EMISSIVE}
+            step="0.1"
+            value={bloomThreshold}
+            onChange={(e) => onBloomThresholdChange(Number(e.target.value))}
+          />
+        </div>
+      </CollapsibleSection>
 
       {children}
     </CollapsibleSection>

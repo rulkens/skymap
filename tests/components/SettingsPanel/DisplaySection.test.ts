@@ -14,7 +14,12 @@
  * CollapsibleSection note: the body is always in the DOM but is aria-hidden
  * when collapsed (default closed). To query controls inside the body (like the
  * tone-curve `<select>`), first expand the section with
- * `fireEvent.click(getByRole('button', { name: /display/i }))`.
+ * `fireEvent.click(getByRole('button', { name: /display/i }))`. Bloom is a
+ * further-nested CollapsibleSection with its own header toggle (the master
+ * enable, mirroring FlowSection's header-toggle idiom) — the toggle itself
+ * lives in the header button and is reachable once Display is open, but the
+ * strength/threshold sliders live in Bloom's own body and need Bloom expanded
+ * too: `fireEvent.click(getByRole('button', { name: /bloom/i }))`.
  *
  * Dropdown change: fireEvent.change(select, { target: { value: '...' } }) is
  * correct for `<select>` elements — the change event is the reliable trigger
@@ -142,13 +147,16 @@ describe('DisplaySection', () => {
   describe('bloom controls', () => {
     // Controlled checkbox: fireEvent.click (not .change) flips it and fires the
     // handler with the toggled boolean — testing.md controlled-checkbox gotcha.
+    // The toggle is now Bloom's CollapsibleSection header toggle (aria-label
+    // "Toggle Bloom"), reachable once Display is open — no need to also expand
+    // Bloom's own body, since the header lives outside its aria-hidden wrapper.
     it('toggles bloomEnabled off via click when currently on', () => {
       const onBloomEnabledChange = vi.fn<(next: boolean) => void>();
       const { getByRole, getByLabelText } = render(
         createElement(DisplaySection, baseProps({ bloomEnabled: true, onBloomEnabledChange })),
       );
       fireEvent.click(getByRole('button', { name: /display/i }));
-      fireEvent.click(getByLabelText('Bloom'));
+      fireEvent.click(getByLabelText(/toggle bloom/i));
       expect(onBloomEnabledChange).toHaveBeenCalledOnce();
       expect(onBloomEnabledChange).toHaveBeenCalledWith(false);
     });
@@ -159,6 +167,9 @@ describe('DisplaySection', () => {
         createElement(DisplaySection, baseProps({ bloomStrength: 0.85, onBloomStrengthChange })),
       );
       fireEvent.click(getByRole('button', { name: /display/i }));
+      // Strength lives in Bloom's own body, which defaults closed like the
+      // other nested Display subgroups (Earth, Advanced) — expand it too.
+      fireEvent.click(getByRole('button', { name: /bloom/i }));
       fireEvent.change(getByLabelText('Strength'), { target: { value: '1.25' } });
       expect(onBloomStrengthChange).toHaveBeenCalledOnce();
       expect(onBloomStrengthChange).toHaveBeenCalledWith(1.25);
