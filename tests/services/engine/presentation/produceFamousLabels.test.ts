@@ -203,10 +203,7 @@ describe('produceFamousLabels', () => {
 
     const dot = screenOf([17, 0, 0]);
     const anchor = screenOf(out.labels[0]!.worldPos);
-    expect(dot[1] - anchor[1]).toBeCloseTo(
-      MIN_LABEL_CLEARANCE_PX + TEXT_BOTTOM_BELOW_ANCHOR_PX,
-      2,
-    );
+    expect(dot[1] - anchor[1]).toBeCloseTo(MIN_LABEL_CLEARANCE_PX + TEXT_BOTTOM_BELOW_ANCHOR_PX, 2);
     const tip = screenOf(out.lines[0]!.toWorld);
     expect(tip[1] - anchor[1]).toBeCloseTo(TEXT_BOTTOM_BELOW_ANCHOR_PX + LEADER_LINE_PADDING_PX, 2);
   });
@@ -392,5 +389,34 @@ describe('produceFamousLabels', () => {
     const out = produceFamousLabels(state, makeCtx());
     expect(out.labels[0]!.fadeAlpha).toBe(1);
     expect(out.lines[0]!.fadeAlpha).toBe(1);
+  });
+
+  it('caps a very close companion (e.g. the LMC) to the near-distance pixel ceiling', () => {
+    // Inside the near band (< 0.1 Mpc), the ramp is fully bottomed out at the
+    // 60 px near cap rather than the category's 150 px `maxPixelSize` — the
+    // bug this fixes: a fixed 150 px ceiling let the LMC/SMC tower over the
+    // view from inside the Milky Way.
+    const state = makeState();
+    seed(state, [{ id: 'lmc', names: ['LMC'] }], [0.05, 0, 0], [10]);
+    const out = produceFamousLabels(state, makeCtx());
+    expect(out.labels[0]!.maxPixelSize).toBe(60);
+  });
+
+  it('keeps the full 150 px ceiling for a distant famous galaxy (e.g. M31)', () => {
+    // Beyond the far band (> 1 Mpc), the ramp is fully saturated at the
+    // category's normal `maxPixelSize` — the dramatic close-approach labels
+    // for far companions like M31 must not shrink.
+    const state = makeState();
+    seed(state, [{ id: 'm31', names: ['M31'] }], [3, 0, 0], [40]);
+    const out = produceFamousLabels(state, makeCtx());
+    expect(out.labels[0]!.maxPixelSize).toBe(FAMOUS_LABEL_STYLE.maxPixelSize);
+  });
+
+  it('yields a strictly intermediate ceiling in the near-to-far ramp band', () => {
+    const state = makeState();
+    seed(state, [{ id: 'mid', names: ['Mid'] }], [0.5, 0, 0], [20]);
+    const out = produceFamousLabels(state, makeCtx());
+    expect(out.labels[0]!.maxPixelSize).toBeGreaterThan(60);
+    expect(out.labels[0]!.maxPixelSize).toBeLessThan(FAMOUS_LABEL_STYLE.maxPixelSize);
   });
 });
