@@ -571,34 +571,34 @@ root saga forks):
 `while (true)` watcher loop is needed, so the `while (true)` saga convention does
 not apply here. RTK arg names throughout.
 
-- [ ] Create `orientationActions.ts` (didactic header: reducer-less; the saga owns
+- [x] Create `orientationActions.ts` (didactic header: reducer-less; the saga owns
       the live-basis capture, mirroring `clipActions.ts`).
-- [ ] Rename `FocusCameraRuntime` → `LiveCameraRuntime`
+- [x] Rename `FocusCameraRuntime` → `LiveCameraRuntime`
       (`npm run refactor -- rename` — it now serves the focus AND orientation
       sagas, so the focus-scoped name would lie), extend it with
       `frameBasisQuat: Vec4`, and fill that in the `cameraRuntime()` accessor
       (`engine.ts:656-662`) via
       `matrixToQuaternion(state.cameraRuntime.frameBasis.current)`. Update the
       accessor's doc comment to name the new field; the focus saga ignores it.
-- [ ] Create `watchOrientationChangeSaga.ts` per the contract; register it in
+- [x] Create `watchOrientationChangeSaga.ts` per the contract; register it in
       `rootSaga.ts` (`:68` `all([...])`, next to `watchFocusTweenSaga()`), and add
       its one-line description to the root-saga header list (`rootSaga.ts:15`-style).
-- [ ] Tests (`tests/state/camera/watchOrientationChangeSaga.test.ts`) — use
+- [x] Tests (`tests/state/camera/watchOrientationChangeSaga.test.ts`) — use
       `redux-saga`'s test runner / a mock `cameraRuntime` context:
-  - [ ] `it('requestOrientationChange dispatches setOrientation then startFrameTween to the target')`
+  - [x] `it('requestOrientationChange dispatches setOrientation then startFrameTween to the target')`
         — with a non-null `cameraRuntime`, dispatching `requestOrientationChange('galactic')`
         yields `put(setOrientation('galactic'))` and a `put(startFrameTween(...))`
         whose `to === 'galactic'`, `durationMs === FRAME_TWEEN_MS`, `easing === 'inOut'`.
-  - [ ] `it('requestOrientationChange mid-slerp captures the live basis, not the committed frame')`
+  - [x] `it('requestOrientationChange mid-slerp captures the live basis, not the committed frame')`
         — the mock `cameraRuntime().frameBasisQuat` returns a quaternion distinct
         from every `ORIENTATION_FRAME_QUATERNIONS` entry (a synthetic mid-slerp
         value); assert the dispatched `startFrameTween.fromQuat` equals **that live
         quat**, not `ORIENTATION_FRAME_QUATERNIONS[committedFrame]`. (This is the
         regression guard for the rejected committed-frame capture — the jank the
         amendment fixes.)
-  - [ ] `it('a null cameraRuntime snaps via setOrientation with no frameTween')` —
+  - [x] `it('a null cameraRuntime snaps via setOrientation with no frameTween')` —
         with `cameraRuntime()` null, only `setOrientation` is put; no `startFrameTween`.
-- [ ] `npm run typecheck` clean; `npm test -- watchOrientationChangeSaga` green. Commit.
+- [x] `npm run typecheck` clean; `npm test -- watchOrientationChangeSaga` green. Commit.
 
 ---
 
@@ -699,33 +699,33 @@ const orientationSource: HashParamSource = {
 };
 ```
 
-- [ ] Create `isOrientationFrameId` deriving its accepted set from
+- [x] Create `isOrientationFrameId` deriving its accepted set from
       `Object.keys(ORIENTATION_FRAMES)` (registry as the single source of truth).
       Test: `it('accepts the four frame ids and rejects others')` — `'galactic'`
       true, `'ecliptic'` true, `''` false, `'polaris'` false. (Guards the URL read
       against a hand-typed junk value; not a constant restatement — it's a
       classifier over external input.)
-- [ ] Add `orientation: OrientationFrameId` to `DesiredHashInput`
+- [x] Add `orientation: OrientationFrameId` to `DesiredHashInput`
       (`useUrlSync.ts:68-76`) — **required**, not optional (unlike `time`): every
       caller derives it from the store, and a missing frame has a well-defined
       default. Update `useUrlSync` to read `selectOrientation` and thread it into
       the `computeDesiredHash` input (`useUrlSync.ts:117-119`, `:155-159`).
-- [ ] Add `orientationSource` to `HASH_PARAM_SOURCES` (`hashParamSources.ts:83`).
+- [x] Add `orientationSource` to `HASH_PARAM_SOURCES` (`hashParamSources.ts:83`).
       Table order fixes on-URL layout — append it after `focus`, `t` so existing
       deep links are byte-stable.
-- [ ] Add `orientation` to Effect B's dependency array (`useUrlSync.ts:168`) so an
+- [x] Add `orientation` to Effect B's dependency array (`useUrlSync.ts:168`) so an
       interactive switch re-writes the hash.
-- [ ] Tests (spec §10 URL write-null):
-  - [ ] `it('writes null at the ecliptic default and the frame id otherwise')` —
+- [x] Tests (spec §10 URL write-null):
+  - [x] `it('writes null at the ecliptic default and the frame id otherwise')` —
         `orientationSource.write` with `orientation:'ecliptic'` → `null`; with
         `'galactic'` → `'galactic'`.
-  - [ ] `it('a non-default frame round-trips through compose/parse')` —
+  - [x] `it('a non-default frame round-trips through compose/parse')` —
         `computeDesiredHash` for a galactic input composes a body containing
         `orientation=galactic`; `parseHashParams` recovers it.
-  - [ ] `it('the read snaps the frame and dispatches no frameTween')` — the source
+  - [x] `it('the read snaps the frame and dispatches no frameTween')` — the source
         `read` with `value:'galactic'` dispatches `setOrientation('galactic')` and
         **not** `startFrameTween` (assert on a spy dispatch).
-- [ ] `npm run typecheck` clean; `npm test -- hashParamSources useUrlSync isOrientationFrameId`
+- [x] `npm run typecheck` clean; `npm test -- hashParamSources useUrlSync isOrientationFrameId`
       green. Commit.
 
 ---
