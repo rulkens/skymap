@@ -1,13 +1,11 @@
 /**
  * earthHomePose — the home pose must land the eye on Earth's sunlit side, offset
- * from the pure-sunward axis by the terminator constant, and frame Earth exactly
- * as body focus does (so the tween→follow handoff is seamless).
+ * from the pure-sunward axis by the terminator constant as a true 3D phase
+ * angle, and frame Earth exactly as body focus does (so the tween→follow
+ * handoff is seamless).
  *
  * The ephemeris is analytic, so these run against a real sim instant with no
- * mocking. Earth in the equatorial world frame sits well off the xz-plane (its
- * declination is non-zero), so the terminator rotation about world Y swings the
- * AZIMUTH by exactly the offset while the full 3D angle to the sun axis is
- * smaller — the azimuth is the deterministic thing to pin.
+ * mocking.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -44,12 +42,10 @@ describe('earthHomePose', () => {
     expect(dot).toBeGreaterThan(0);
   });
 
-  it('offsets the eye azimuth from the sun axis by the terminator constant', () => {
-    const azDir = Math.atan2(dir[0], dir[2]);
-    const azSun = Math.atan2(sunward[0], sunward[2]);
-    // Shortest signed azimuth difference.
-    const delta = Math.atan2(Math.sin(azDir - azSun), Math.cos(azDir - azSun));
-    expect(delta).toBeCloseTo(HOME_TERMINATOR_OFFSET_RAD);
+  it('offsets the eye from the sun axis by the terminator constant, as a true 3D angle', () => {
+    const dot = dir[0] * sunward[0] + dir[1] * sunward[1] + dir[2] * sunward[2];
+    const angle = Math.acos(dot);
+    expect(angle).toBeCloseTo(HOME_TERMINATOR_OFFSET_RAD);
   });
 
   it('targets and frames Earth exactly as body focus does', () => {

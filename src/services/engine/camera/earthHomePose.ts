@@ -13,11 +13,15 @@
  * Sun sits at the render origin, so `earthPos` itself IS the sun→Earth direction
  * — the aim a camera looking at Earth's day side travels along. Aiming straight
  * down that axis, though, puts the Sun directly behind the camera and washes the
- * globe into a flat, shadowless full-phase disc. Rotating the aim a little about
- * world Y (`HOME_TERMINATOR_OFFSET_RAD`, eye-tuned over HMR) slides the eye off
- * the pure-sunward axis so the day/night boundary sweeps into view and gives the
- * sphere depth. The rotation is a plain 2D turn of the x/z components; it changes
- * only the aim's xz-azimuth, by exactly the offset.
+ * globe into a flat, shadowless full-phase disc. The pose instead aims along a
+ * vector tilted `HOME_TERMINATOR_OFFSET_RAD` away from `s` (the sun→Earth unit
+ * direction), swung toward `t`, a unit vector perpendicular to `s` and horizontal
+ * in the equatorial frame (`t = normalize(cross(worldUp, s))`). Because `s` and
+ * `t` are orthonormal, `aim = cos(offset)·s + sin(offset)·t` is itself unit
+ * length and the angle between `aim` and `s` is exactly the offset — a true
+ * Sun–Earth–camera phase angle, independent of Earth's declination. That phase
+ * angle is what actually controls the visible terminator: the shadowed fraction
+ * of the disc is `(1 − cos(offset)) / 2`.
  *
  * ### Why the distance is `bodyLikeFraming`'s, not a bespoke home distance
  *
@@ -41,22 +45,35 @@ import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import { bodyLikeFraming } from './bodyLikeFraming';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 
-/** Terminator swing off the pure-sunward aim, about world Y. Eye-tuned. */
-export const HOME_TERMINATOR_OFFSET_RAD = (Math.PI / 180) * 25;
+/**
+ * True Sun–Earth–camera phase angle between the aim and the pure-sunward axis.
+ * Eye-tuned. The shadowed fraction of the disc is `(1 − cos(offset)) / 2`.
+ */
+export const HOME_TERMINATOR_OFFSET_RAD = (Math.PI / 180) * 60;
 
 export function earthHomePose(simDays: number, fovYRad: number): CameraPose {
   const earthPos = deriveBodyStates(simDays).get('earth')!.positionMpc;
   const { target, distance } = bodyLikeFraming(earthPos, SCENE_EARTH.radiusKm, fovYRad);
 
-  // `earthPos` is the sun→Earth (day-side) aim. Turn it about world Y by the
-  // terminator offset, then let `orbitAnglesLookingAlong` read out the yaw/pitch
-  // that looks along it — leaving the eye trailing on the sunlit side.
+  // `s` is the sun→Earth (pure-sunward) unit direction; `t` is perpendicular to
+  // it and horizontal in the equatorial frame (never degenerate — Earth never
+  // sits at the celestial pole). Swinging from `s` toward `t` by the terminator
+  // offset gives an aim whose angle to `s` is exactly that offset, at any
+  // declination — unlike a world-Y rotation, whose true angle to `s` shrinks as
+  // Earth's declination grows.
+  const sMag = Math.hypot(earthPos[0], earthPos[1], earthPos[2]);
+  const sVec: Vec3 = [earthPos[0] / sMag, earthPos[1] / sMag, earthPos[2] / sMag];
+  // cross([0, 1, 0], sVec), which collapses to this closed form.
+  const tRaw: Vec3 = [sVec[2], 0, -sVec[0]];
+  const tMag = Math.hypot(tRaw[0], tRaw[1], tRaw[2]);
+  const tVec: Vec3 = [tRaw[0] / tMag, tRaw[1] / tMag, tRaw[2] / tMag];
+
   const c = Math.cos(HOME_TERMINATOR_OFFSET_RAD);
   const s = Math.sin(HOME_TERMINATOR_OFFSET_RAD);
   const aim: Vec3 = [
-    earthPos[0] * c + earthPos[2] * s,
-    earthPos[1],
-    -earthPos[0] * s + earthPos[2] * c,
+    c * sVec[0] + s * tVec[0],
+    c * sVec[1] + s * tVec[1],
+    c * sVec[2] + s * tVec[2],
   ];
 
   const { yaw, pitch } = orbitAnglesLookingAlong(aim);
