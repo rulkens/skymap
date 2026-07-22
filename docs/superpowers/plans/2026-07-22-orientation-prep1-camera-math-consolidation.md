@@ -305,11 +305,11 @@ roll-correct.
 
 **Files:** none (review only) — house convention (bake the radar into every plan).
 
-- [ ] Run the `entanglement-radar` skill over the full Prep 1 diff. Focus points:
+- [x] Run the `entanglement-radar` skill over the full Prep 1 diff. Focus points:
       that `imagePlaneBasis`'s three outputs are a genuine single concern (the
       camera image-plane basis) and not two braided ones; that the per-caller `roll`
       argument (`cam.roll` vs `0`) reads as intent, not an accidental asymmetry; that
       the degenerate-fallback policy correctly stayed at the call sites; that no
       consumer took a byte change except `horizonShell`-under-roll.
-- [ ] Record findings; fold any trivial fixes in (green suite), or capture a
+- [x] Record findings; fold any trivial fixes in (green suite), or capture a
       backlog note if larger. Commit if anything changed.
