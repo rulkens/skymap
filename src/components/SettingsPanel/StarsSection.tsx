@@ -92,6 +92,14 @@ type StarsSectionProps = {
    * compile-time constant), so it needs no `counts` entry.
    */
   famousStarsEnabled: boolean;
+  /**
+   * Whether the true-3D constellation stick-figure overlay is shown. A
+   * singleton overlay gate (`settings.constellations.enabled`), sitting beside
+   * the famous-stars row.
+   */
+  constellationsEnabled: boolean;
+  /** Constellation line brightness scale (1.0 = identity). */
+  constellationIntensity: number;
   /** Called when the user toggles the master gate on or off. */
   onToggleMaster: (enabled: boolean) => void;
   /** Called when the user toggles a single star catalog on or off. */
@@ -114,6 +122,10 @@ type StarsSectionProps = {
   onAggregateIntensityCapChange: (v: number) => void;
   /** Called when the user toggles the famous-star map on or off. */
   onToggleFamousStars: (enabled: boolean) => void;
+  /** Called when the user toggles the constellation overlay on or off. */
+  onToggleConstellations: (enabled: boolean) => void;
+  /** Called when the user moves the constellation-intensity slider. */
+  onConstellationIntensityChange: (v: number) => void;
 };
 
 // ── StarsSection ─────────────────────────────────────────────────────────────
@@ -135,6 +147,8 @@ function StarsSection({
   exposureFarX,
   aggregateIntensityCap,
   famousStarsEnabled,
+  constellationsEnabled,
+  constellationIntensity,
   onToggleMaster,
   onToggleCatalog,
   onSizeChange,
@@ -146,6 +160,8 @@ function StarsSection({
   onExposureFarXChange,
   onAggregateIntensityCapChange,
   onToggleFamousStars,
+  onToggleConstellations,
+  onConstellationIntensityChange,
 }: StarsSectionProps) {
   // Tri-state master: `checked` follows the real gate; `indeterminate` flags
   // "gate on, but not every catalog is individually enabled" (mixed).
@@ -176,6 +192,20 @@ function StarsSection({
             type="checkbox"
             checked={famousStarsEnabled}
             onChange={(e) => onToggleFamousStars(e.target.checked)}
+          />
+        </div>
+
+        {/* Constellations — the true-3D stick-figure overlay. A singleton
+            overlay gate (`settings.constellations.enabled`) beside the famous
+            stars, drawing the classical figures between their real member stars
+            (they shear apart as you fly away). */}
+        <div className={styles.panelRow}>
+          <label htmlFor="toggle-constellations">Constellations</label>
+          <input
+            id="toggle-constellations"
+            type="checkbox"
+            checked={constellationsEnabled}
+            onChange={(e) => onToggleConstellations(e.target.checked)}
           />
         </div>
 
@@ -238,6 +268,25 @@ function StarsSection({
             step={0.05}
             value={brightness}
             onChange={(e) => onBrightnessChange(parseFloat(e.target.value))}
+          />
+        </div>
+
+        {/* Constellation intensity — brightness scale for the stick-figure
+            lines. 1.0 is identity (the calibrated at-rest stroke); dial down to
+            a faint guide or up for emphasis. Range 0–2. */}
+        <div className={styles.panelRow}>
+          <label htmlFor="slider-constellation-intensity">Constellation intensity</label>
+          <span className={styles.panelValue}>{constellationIntensity.toFixed(1)}×</span>
+        </div>
+        <div className={styles.panelRow}>
+          <input
+            id="slider-constellation-intensity"
+            type="range"
+            min={0}
+            max={2}
+            step={0.05}
+            value={constellationIntensity}
+            onChange={(e) => onConstellationIntensityChange(parseFloat(e.target.value))}
           />
         </div>
 

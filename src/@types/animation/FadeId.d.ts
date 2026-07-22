@@ -30,6 +30,10 @@
  *   - flow         — the CF4++ peculiar-velocity flow overlay. Fades in on
  *                    first load (the slot commit), like filament/galaxy catalog;
  *                    fades out on disable. No discriminator.
+ *   - constellations — the true-3D constellation stick-figure overlay. A
+ *                    singleton demand-loaded layer (like filament): fades in
+ *                    once its artifact uploads, fades out on the master toggle.
+ *                    No discriminator.
  *   - labelLayer   — one logical label layer (milkyWay, structure,
  *                    galaxy names, scale bar). Discriminator:
  *                    `layer: LabelLayerId`. Structure labels additionally key
@@ -70,6 +74,7 @@ export type FadeId =
   | { readonly kind: 'milkyWay' }
   | { readonly kind: 'filament' }
   | { readonly kind: 'flow' }
+  | { readonly kind: 'constellations' }
   | {
       readonly kind: 'labelLayer';
       readonly layer: LabelLayerId;

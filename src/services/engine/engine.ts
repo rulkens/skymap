@@ -79,6 +79,7 @@ import { createLabelDirectorSubsystem } from './subsystems/labelDirectorSubsyste
 import { produceMilkyWayLabel } from './presentation/produceMilkyWayLabel';
 import { produceStructureLabels } from './presentation/produceStructureLabels';
 import { produceFamousLabels } from './presentation/produceFamousLabels';
+import { produceConstellationLabels } from './presentation/produceConstellationLabels';
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
@@ -523,11 +524,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // ── Register label producers with the director ───────────────────────
   //
   // Registration order = merged label order: milkyWayLabel, then the structure
-  // labels, then the famous-galaxy labels.  The director declutters across
-  // all of them by `prominencePx`, so registration order only sets the
-  // tiebreak for equal-prominence collisions (rare).  All three producers are
-  // pure functions over the state; wrap each as a LabelProducer with a stable
-  // id.  All eager, so this is synchronous before any frame.
+  // labels, then the famous-galaxy labels, then the constellation names.  The
+  // director declutters across all of them by `prominencePx`, so registration
+  // order only sets the tiebreak for equal-prominence collisions (rare) — the
+  // annotation-tier constellation names sit last, yielding to everything above.
+  // All producers are pure functions over the state; wrap each as a
+  // LabelProducer with a stable id.  All eager, so this is synchronous before
+  // any frame.
   state.subsystems.labelDirector.registerProducer({
     id: 'milkyWayLabel',
     produceLabels: produceMilkyWayLabel,
@@ -539,6 +542,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   state.subsystems.labelDirector.registerProducer({
     id: 'famousLabels',
     produceLabels: produceFamousLabels,
+  });
+  state.subsystems.labelDirector.registerProducer({
+    id: 'constellationLabels',
+    produceLabels: produceConstellationLabels,
   });
 
   // ── Cleanup function returned by `attachOrbitControls` ─────────────────

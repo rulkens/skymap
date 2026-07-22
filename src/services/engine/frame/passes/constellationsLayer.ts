@@ -49,19 +49,21 @@
  *
  * ### When it draws (house rule: gate at `enabled`, opacity 0 ⇒ no render)
  *
- * `enabled` gates on the layer's master toggle (`settings.constellations.enabled`)
- * AND the distance band being non-zero. Keyed on the camera's distance from the
- * heliocentric origin, the band (`SCALE_FADE_BANDS.constellations`) recedes the
- * figures as the camera pulls out of the neighbourhood; once it reads 0 the layer
- * DISABLES outright rather than draw invisible lines — the same "opacity 0 ⇒ no
- * render" discipline `starPointsLayer` follows. `enabled` reads the absolute
- * camera (`ctx.drawCamPos`) while `draw` reads NEAR0's origin-relative
- * `view.camPos`; the two coincide because `RENDER_ORIGIN_MPC` is [0,0,0].
+ * The distance band (`SCALE_FADE_BANDS.constellations`), keyed on the camera's
+ * distance from the heliocentric origin, is a HARD cull: once it reads 0 (camera
+ * far out of the neighbourhood, figures sheared/subpixel) `enabled` returns false
+ * regardless of the toggle — the "opacity 0 ⇒ no render" discipline
+ * `starPointsLayer` follows, which also empties the (hdr, NEAR0) step for this row.
  *
- * The smooth ENABLE/DISABLE toggle fade (the FadeRegistry `{ kind:
- * 'constellations' }` controller + its `FADE_LAYERS` row) is a separate wiring
- * task (spec §Runtime → Fades); until it lands the toggle is a hard cut, and the
- * per-frame `fadeOpacity` handed to the renderer is the distance band alone.
+ * Inside the band, the master toggle drives a smooth ENABLE/DISABLE fade via the
+ * FadeRegistry `{ kind: 'constellations' }` controller (seeded by its
+ * `FADE_LAYERS` row, ramped by the `watchFadesSaga` FADE_ROW entry on
+ * `setConstellationsEnabled`). So `enabled` renders while the setting is on OR the
+ * disable fade-out tail is still above 0 — the same pattern `filamentsLayer` uses —
+ * and `draw` hands the renderer the distance band TIMES that fade opacity so the
+ * figures dissolve smoothly on toggle rather than hard-cutting. `enabled` reads the
+ * absolute camera (`ctx.drawCamPos`) while `draw` reads NEAR0's origin-relative
+ * `view.camPos`; the two coincide because `RENDER_ORIGIN_MPC` is [0,0,0].
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
@@ -82,14 +84,18 @@ export const constellationsLayer: ContentLayer = {
   blend: 'additive',
 
   enabled(state, ctx) {
-    if (!state.settings.constellations.enabled) return false;
-    // Disable once the distance band has receded to 0 (camera far out of the
-    // neighbourhood, figures sheared/subpixel) — the "opacity 0 ⇒ no render"
-    // house rule, which also empties the (hdr, NEAR0) step for this row. Keyed
-    // on the camera's heliocentric-origin distance (drawCamPos is the absolute
-    // eye; the origin is [0,0,0]).
+    // Hard distance cull: once the band reads 0 (camera far out of the
+    // neighbourhood, figures sheared/subpixel) the layer disables regardless of
+    // the toggle — "opacity 0 ⇒ no render", which also empties the (hdr, NEAR0)
+    // step for this row. Keyed on the camera's heliocentric-origin distance
+    // (drawCamPos is the absolute eye; the origin is [0,0,0]).
     const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
-    return fadeBand(SCALE_FADE_BANDS.constellations, camDistMpc) > 0;
+    if (fadeBand(SCALE_FADE_BANDS.constellations, camDistMpc) === 0) return false;
+    // Inside the band: the setting is the user's intent; the fade opacity is the
+    // visual state. Render while EITHER is live so the disable fade-out tail
+    // keeps drawing until it reaches 0 (mirrors filamentsLayer).
+    if (state.settings.constellations.enabled) return true;
+    return state.subsystems.fades.opacityOf({ kind: 'constellations' }, ctx.nowMs) > 0;
   },
 
   draw(pass, view, ctx, state) {
@@ -107,12 +113,13 @@ export const constellationsLayer: ContentLayer = {
       if (!renderer.hasData()) return; // empty artifact — nothing to draw
     }
 
-    // The distance fade for THIS frame, keyed on the camera's heliocentric-origin
-    // distance — the same quantity `enabled` gates on, read here from
-    // `view.camPos` (the frames coincide; module header). It is the renderer's
-    // per-frame opacity.
+    // The renderer's per-frame opacity: the distance band (keyed on the camera's
+    // heliocentric-origin distance, read from `view.camPos` — the frames coincide,
+    // see the module header) TIMES the fade-registry toggle opacity, so the
+    // figures dissolve smoothly on ENABLE/DISABLE within the band.
     const camDistMpc = Math.hypot(view.camPos[0], view.camPos[1], view.camPos[2]);
     const distanceFade = fadeBand(SCALE_FADE_BANDS.constellations, camDistMpc);
+    const toggleFade = state.subsystems.fades.opacityOf({ kind: 'constellations' }, ctx.nowMs);
 
     renderer.draw(
       pass,
@@ -120,7 +127,7 @@ export const constellationsLayer: ContentLayer = {
       view.viewportPx,
       CONSTELLATION_LINE_HALFWIDTH_PX,
       state.settings.constellations.intensity,
-      distanceFade,
+      distanceFade * toggleFade,
     );
   },
 };
