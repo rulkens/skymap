@@ -383,10 +383,10 @@ fn positional_gap_subtraction(
 
 ## Verification
 
-- [ ] `cargo test --manifest-path tools/stars-rs/Cargo.toml` — all Rust tests green.
-- [ ] `npm test -- famousStarsSeed buildFamousStars` — TS tests green.
-- [ ] `npm run typecheck` — src + tools tsconfigs clean.
-- [ ] `npm run build-famous-stars` is idempotent (re-running leaves
+- [x] `cargo test --manifest-path tools/stars-rs/Cargo.toml` — all Rust tests green.
+- [x] `npm test -- famousStarsSeed buildFamousStars` — TS tests green.
+- [x] `npm run typecheck` — src + tools tsconfigs clean.
+- [x] `npm run build-famous-stars` is idempotent (re-running leaves
   `famous_ids.generated.rs` unchanged) and the committed generated file carries both id
   arrays.
 
