@@ -206,6 +206,23 @@ describe('useUrlSync hook integration', () => {
     expect(calls).toContainEqual(requestFocus('m31'));
   });
 
+  it('the mount read commits the URL frame via setOrientation on isInitial', () => {
+    // Boot ordering, at the React-mount layer: a `#orientation=<frame>` deep
+    // link must be COMMITTED on the initial mount pass (isInitial), so the
+    // engine's later async bootstrap seed and the first produced frame both
+    // resolve B(t) in the URL's frame. Unlike `focus` (which suppresses its
+    // clear on the mount pass), the orientation source has no boot-suppression
+    // arm — a view preference applies on first load. It is a snap
+    // (setOrientation), never `requestOrientationChange`, so the mount read can
+    // never start a frameTween.
+    window.location.hash = '#orientation=galactic';
+    const { dispatchSpy, wrapper } = makeStoreAndWrapper();
+    renderHook(() => useUrlSync(), { wrapper });
+    const calls = dispatchSpy.mock.calls.map((c) => c[0]);
+    expect(calls).toContainEqual(setOrientation('galactic'));
+    expect(calls.some((a) => (a as UnknownAction).type === 'orientation/request')).toBe(false);
+  });
+
   it('does NOT dispatch clearSelection on mount when hash is empty', () => {
     // The empty-hash → clearSelection branch is gated to hashchange events
     // only. A normal page load with no hash should not fire clearSelection.

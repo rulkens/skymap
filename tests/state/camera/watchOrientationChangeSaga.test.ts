@@ -8,6 +8,7 @@ import {
   FRAME_TWEEN_MS,
 } from '../../../src/state/camera/watchOrientationChangeSaga';
 import { requestOrientationChange } from '../../../src/state/camera/orientationActions';
+import { setOrientation } from '../../../src/state/settings/settingsSlice';
 import { ORIENTATION_FRAME_QUATERNIONS } from '../../../src/data/orientation/orientationFrames';
 import { cameraRoute, settingsRoute } from '../../../src/store/constants';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
@@ -72,6 +73,20 @@ describe('watchOrientationChangeSaga', () => {
     const frameTween = store.getState()[cameraRoute].frameTween;
     expect(frameTween!.fromQuat).toEqual(LIVE_QUAT);
     expect(frameTween!.fromQuat).not.toEqual(ORIENTATION_FRAME_QUATERNIONS.galactic);
+  });
+
+  it('a boot setOrientation never starts a frameTween', async () => {
+    // The URL/boot path dispatches `setOrientation` directly (a snap), NOT
+    // `requestOrientationChange`. The saga watches only the interactive intent,
+    // so a boot snap must leave `frameTween` null — this is the structural
+    // guarantee that a shared link or the first paint reproduces the frame with
+    // no roll on arrival. If the saga ever grew a `setOrientation` watcher, a
+    // deep-link load would slerp on boot; this pins that it cannot.
+    store.dispatch(setOrientation('galactic'));
+    await flush();
+
+    expect(store.getState()[settingsRoute].orientation).toBe('galactic');
+    expect(store.getState()[cameraRoute].frameTween).toBeNull();
   });
 
   it('a null cameraRuntime snaps via setOrientation with no frameTween', async () => {
