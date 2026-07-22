@@ -146,16 +146,16 @@ Vitest. No WGSL, no `.bin`, no GPU-uniform-layout change. No React.
 **Signature:** `yawPitchToDir(yaw: number, pitch: number, out?: Vec3): Vec3`
 returning the unit direction `[cos(p)·sin(y), sin(p), cos(p)·cos(y)]` (target → eye).
 
-- [ ] Test `yawPitchToDir(0, 0) is +Z` — hand value `[0, 0, 1]`.
-- [ ] Test `yawPitchToDir(π/2, 0) is +X` — hand value `[1, 0, 0]`.
-- [ ] Test `yawPitchToDir(0, π/2) is +Y` — hand value `[0, 1, 0]`.
-- [ ] Test `yawPitchToDir round-trips through orbitAnglesLookingAlong` — for an
+- [x] Test `yawPitchToDir(0, 0) is +Z` — hand value `[0, 0, 1]`.
+- [x] Test `yawPitchToDir(π/2, 0) is +X` — hand value `[1, 0, 0]`.
+- [x] Test `yawPitchToDir(0, π/2) is +Y` — hand value `[0, 1, 0]`.
+- [x] Test `yawPitchToDir round-trips through orbitAnglesLookingAlong` — for an
       oblique bearing (e.g. yaw 0.6, pitch 0.35), `dir = yawPitchToDir(y, p)`, then
       `orbitAnglesLookingAlong([-dir0, -dir1, -dir2])` returns `{ yaw: y, pitch: p }`
       (independent inverse: `atan2`/`asin` vs `sin`/`cos`, not a mirror).
-- [ ] Implement, carrying the didactic module-header style from
+- [x] Implement, carrying the didactic module-header style from
       `updatePosition.ts:20-39`. Write into `out` when provided.
-- [ ] `npm test -- yawPitchToDir` green; `npm run typecheck`; format; commit.
+- [x] `npm test -- yawPitchToDir` green; `npm run typecheck`; format; commit.
 
 ## Task 2 — Reroute the four decode sites onto `yawPitchToDir`
 
@@ -167,17 +167,17 @@ No new tests — this is behavior-preserving; the guards are the existing
 `orbitAnglesLookingAlong.test.ts`, `orbitCamera.test.ts`,
 `sampleClipPath.test.ts` (`:37`,`:51`), and `flyPathDemo.test.ts`.
 
-- [ ] `updatePosition.ts:50` — replace the inline `vec3.fromValues(...)` with
+- [x] `updatePosition.ts:50` — replace the inline `vec3.fromValues(...)` with
       `yawPitchToDir(cam.yaw, cam.pitch, <module scratch>)`, then the existing
       `vec3.addScaled` into `cam.position`. Keep the per-frame path allocation-free
       (module-scope scratch `Vec3`).
-- [ ] `buildPathTrack.ts:237-242` (`liveEye`) — build `dir` via `yawPitchToDir`,
+- [x] `buildPathTrack.ts:237-242` (`liveEye`) — build `dir` via `yawPitchToDir`,
       then `eye = target + distance·dir`.
-- [ ] `buildPathTrack.ts:599-601` — replace the inline `dir` with `yawPitchToDir`.
-- [ ] `sampleClipPath.ts:31-38` (`eyeOf`) — build `dir` via `yawPitchToDir`, then
+- [x] `buildPathTrack.ts:599-601` — replace the inline `dir` with `yawPitchToDir`.
+- [x] `sampleClipPath.ts:31-38` (`eyeOf`) — build `dir` via `yawPitchToDir`, then
       `eye = target + distance·dir`; delete the now-dead local `eyeOf` if fully
       subsumed.
-- [ ] `npm test` green (whole suite); `npm run typecheck`; format touched files; commit.
+- [x] `npm test` green (whole suite); `npm run typecheck`; format touched files; commit.
 
 ## Task 3 — Extract `imagePlaneBasis`
 
@@ -189,22 +189,22 @@ No new tests — this is behavior-preserving; the guards are the existing
 signature from the Architecture section. `rolledUp` = raw Rodrigues result;
 `right = normalize(forward × rolledUp)` (`||1`-guarded); `up = normalize(right × forward)`.
 
-- [ ] Test `roll=0 leaves rolledUp equal to upRef` — for an oblique `forward`,
+- [x] Test `roll=0 leaves rolledUp equal to upRef` — for an oblique `forward`,
       `rolledUp` is exactly `upRef` (pins the byte-identity contract the reroutes
       rely on).
-- [ ] Test `identity forward gives world-aligned axes` — `forward=[0,0,-1]`,
+- [x] Test `identity forward gives world-aligned axes` — `forward=[0,0,-1]`,
       `roll=0`, `upRef=[0,1,0]` → `right≈[1,0,0]`, `up≈[0,1,0]` (hand values).
-- [ ] Test `axes are orthonormal for an oblique forward + roll` — pick oblique
+- [x] Test `axes are orthonormal for an oblique forward + roll` — pick oblique
       `forward` and `roll≈0.9`; assert `right`,`up` unit-length and
       `right·up ≈ right·forward ≈ up·forward ≈ 0` (independent property, not a
       formula restatement).
-- [ ] Test `roll rotates the basis about forward` — `forward=[0,0,-1]`,
+- [x] Test `roll rotates the basis about forward` — `forward=[0,0,-1]`,
       `upRef=[0,1,0]`, `roll=π/2` → `right≈[0,1,0]`, `up≈[-1,0,0]` (hand values).
-- [ ] Test `forward parallel to upRef yields a finite (non-NaN) basis` — the
+- [x] Test `forward parallel to upRef yields a finite (non-NaN) basis` — the
       pole-aligned degenerate; assert every component is `Number.isFinite`.
-- [ ] Implement with a didactic header explaining it is the single home for the
+- [x] Implement with a didactic header explaining it is the single home for the
       roll math (point at the two blocks it replaces). Write into `out` when given.
-- [ ] `npm test -- imagePlaneBasis` green; `npm run typecheck`; format; commit.
+- [x] `npm test -- imagePlaneBasis` green; `npm run typecheck`; format; commit.
 
 ## Task 4 — Reroute the two Rodrigues consumers
 
@@ -214,19 +214,19 @@ signature from the Architecture section. `rolledUp` = raw Rodrigues result;
 Guards: `orbitCamera.test.ts` (`roll=0` and `roll=π/2` cases, tolerant) and
 `cameraBillboardBasis.test.ts` (identity / orthonormal / roll cases). No new tests.
 
-- [ ] `computeViewProj.ts:85-122` — compute `forward = normalize(target − position)`,
+- [x] `computeViewProj.ts:85-122` — compute `forward = normalize(target − position)`,
       call `imagePlaneBasis(forward, cam.roll ?? 0, [0,1,0], <module scratch>)`, pass
       `.rolledUp` to `mat4.lookAt` as `up`. Delete the inline Rodrigues block. Keep
       the pitch-clamp caveat comment. Verify byte-identity intent: at `roll=0`,
       `rolledUp` is exactly `[0,1,0]` (the test suite is the check — do not claim it
       visually).
-- [ ] `cameraBillboardBasis.ts:65-112` — replace the Rodrigues block **and** the two
+- [x] `cameraBillboardBasis.ts:65-112` — replace the Rodrigues block **and** the two
       cross derivations with one `imagePlaneBasis(forward, cam.roll ?? 0, [0,1,0])`
       call; return `{ right: basis.right, up: basis.up }`.
-- [ ] Rewrite `cameraBillboardBasis.ts:15-27` (the "why this mirrors computeViewProj
+- [x] Rewrite `cameraBillboardBasis.ts:15-27` (the "why this mirrors computeViewProj
       instead of importing" header) to state the math is now shared via
       `imagePlaneBasis`; drop the "copied verbatim, check both" note.
-- [ ] `npm test` green (whole suite — `orbitCamera`, `cameraBillboardBasis`,
+- [x] `npm test` green (whole suite — `orbitCamera`, `cameraBillboardBasis`,
       `renderFrame*`); `npm run typecheck`; format; commit.
 
 ## Task 5 — Reroute the pure-refactor cross consumers
@@ -241,12 +241,12 @@ Guards: `slabs.test.ts` (byte-exact near-vp), `resolveClipFoci.test.ts` (strafe 
 its vertical-bearing throw), `buildClipPathLines`/`flyPathDemo`, and pan is
 exercised via the existing controls integration. No new tests.
 
-- [ ] `orbitControls.ts:398-406` (pan) — replace the `forward/right/up` cross with
+- [x] `orbitControls.ts:398-406` (pan) — replace the `forward/right/up` cross with
       `imagePlaneBasis(forward, 0, WORLD_UP, <module scratch>)`; feed `.right`/`.up`
       into the existing `panDeltaScratch` math. Keep `forwardScratch` for the
       `subtract`+`normalize`; drop `rightScratch`/`upScratch` if the scratch result
       subsumes them. Remove the now-unused local `WORLD_UP` if nothing else reads it.
-- [ ] `slabs.ts:95`,`:133-143` — compute `forward` from `cam`, call
+- [x] `slabs.ts:95`,`:133-143` — compute `forward` from `cam`, call
       `imagePlaneBasis(forward, 0, WORLD_UP, <module scratch>)`, pass `.rolledUp` as
       the `up` argument to `computeForegroundViewProj`. `.rolledUp` is exactly
       `[0,1,0]` at roll 0, so `slabs.test.ts:76-100`'s byte-exact `toEqual` stays
@@ -254,17 +254,17 @@ exercised via the existing controls integration. No new tests.
       `:92-94` "roll parity deferred" comment to note the seam is now the shared
       helper (still roll-deferred here: the `0` is intentional; the feature PR swaps
       `WORLD_UP → frameUp`).
-- [ ] `buildPathTrack.ts:173-197` (`passByDirVec`) — express `above` as the `.up`
+- [x] `buildPathTrack.ts:173-197` (`passByDirVec`) — express `above` as the `.up`
       and `screenSide` as the `.right` of `imagePlaneBasis(tangent, 0, WORLD_UP)`;
       keep the `isZero3 → [1,0,0]` fallbacks and the `outsideBend` accel path
       unchanged. Remove the local `WORLD_UP` at `:149` only if `passByDirVec` was its
       sole reader.
-- [ ] `resolveClipFoci.ts:152-168` (`strafeId`) — replace the baked `[-fz, 0, fx]`
+- [x] `resolveClipFoci.ts:152-168` (`strafeId`) — replace the baked `[-fz, 0, fx]`
       with `imagePlaneBasis(forward, 0, [0,1,0]).right` (forward = `target − from.target`,
       full 3D — `.right` has a zero y-component so `displaced.y` stays `from.target[1]`,
       identical to today). Keep the `hypot(fz, fx) < 1e-12` vertical-bearing throw and
       update the comment that describes the `[-fz,0,fx]` simplification.
-- [ ] `npm test` green (whole suite); `npm run typecheck`; format touched files; commit.
+- [x] `npm test` green (whole suite); `npm run typecheck`; format touched files; commit.
 
 ## Task 6 — Reroute `horizonShellRenderer` (the surfaced roll fix) + visual gate
 
@@ -275,19 +275,19 @@ This is the **one deliberate behavior change** in Prep 1: the shell today hardco
 `computeViewProj` under roll. Rerouting with `roll = cam.roll ?? 0` makes it
 roll-correct.
 
-- [ ] `horizonShellRenderer.ts:75`,`:154-158` (inside `draw`) — replace the
+- [x] `horizonShellRenderer.ts:75`,`:154-158` (inside `draw`) — replace the
       `WORLD_UP`-cross `fwd/right/up` derivation with
       `imagePlaneBasis(fwd, cam.roll ?? 0, WORLD_UP, <the pre-allocated scratch basis>)`;
       write `.right`/`.up` into the uniform floats as before. Preserve the
       once-allocated per-frame scratch (no new per-frame allocation). Compute `fwd`
       into the existing scratch first.
-- [ ] Rewrite the `:150-153` "Roll is not applied" comment to state the shell now
+- [x] Rewrite the `:150-153` "Roll is not applied" comment to state the shell now
       derives its basis through the shared `imagePlaneBasis` and rolls in lockstep
       with `computeViewProj`.
-- [ ] Remove the local `WORLD_UP` at `:75` if nothing else in the file reads it.
-- [ ] `npm test` green (`horizonShellRenderer.test.ts`, `horizonShellFadeAlpha`,
+- [x] Remove the local `WORLD_UP` at `:75` if nothing else in the file reads it.
+- [x] `npm test` green (`horizonShellRenderer.test.ts`, `horizonShellFadeAlpha`,
       `renderFrame*`); `npm run typecheck`; format; commit.
-- [ ] **VISUAL GATE — ask the USER (do not self-verify).** The dev server is
+- [x] **VISUAL GATE — ask the USER (do not self-verify).** The dev server is
       running. Because no shipping code path sets `cam.roll ≠ 0` yet, ask the user to
       confirm two things:
       1. **No regression at rest:** the faint cosmic-horizon rim renders exactly as
