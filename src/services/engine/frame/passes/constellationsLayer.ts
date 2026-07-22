@@ -75,9 +75,10 @@ import { constellationLayerOpacity } from '../../presentation/constellationLayer
 
 /**
  * Line half-width in screen-space pixels — a ~1.5-2 px thin steel-blue stroke
- * (spec Q5). Matches `FILAMENT_LINE_HALFWIDTH_PX`; eye-tuning starting point.
+ * (spec Q5). Eye-tuned slightly heavier than the filament lines' 0.9 so the
+ * figures read at a glance.
  */
-const CONSTELLATION_LINE_HALFWIDTH_PX = 0.9;
+const CONSTELLATION_LINE_HALFWIDTH_PX = 1.3;
 
 export const constellationsLayer: ContentLayer = {
   name: 'constellations',

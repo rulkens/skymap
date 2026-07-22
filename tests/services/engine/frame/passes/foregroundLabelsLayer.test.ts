@@ -3,10 +3,16 @@
  *
  * Two things are load-bearing here:
  *
- *   1. The three-clause `enabled` gate: a non-null second label renderer, a
- *      non-empty glyph set, AND a camera closer than the kiloparsec distance
- *      threshold. Above that distance the Sun/Earth are an irrelevant speck at
- *      the galactic centre and the captions would just clutter the normal view.
+ *   1. The `enabled` gate reads DEMAND, never the artifact of the last draw:
+ *      a non-null second label renderer, the distance gates, AND at least one
+ *      settings switch (or fade-registry opacity, or a still-fading caption)
+ *      that could put a caption on screen this frame. It must NEVER read
+ *      `renderer.glyphCount()` — a prior version did, and once every
+ *      caption's fade target hit 0 in the same frame (the labels master
+ *      toggle switching off) `draw`'s `setLabels([])` zeroed the glyph count
+ *      and the gate latched false forever, un-fixable by re-enabling the
+ *      toggle. The regression test below pins a renderer whose LAST set was
+ *      empty returning `enabled() === true` once settings demand it.
  *
  *   2. `draw` feeds the renderer the f64-DERIVED data, mirroring the sphere-body
  *      layers' `composeBodyMvp` seam. The caption anchors sit ~1 AU from the
@@ -18,7 +24,7 @@
  *      the cancellation after the low-order bits are already gone.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { foregroundLabelsLayer } from '../../../../../src/services/engine/frame/passes/foregroundLabelsLayer';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/solarSystemLabelMaxDistance';
@@ -240,12 +246,35 @@ function makeSpreadVp(): Float64Array {
   return new Float64Array([1e12, 0, 0, 0, 0, 1e12, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
 }
 
+// `enabled` now folds the module-level `captionAlpha` envelope state into its
+// ENVELOPE TAIL clause, so a test asserting the gate goes dark needs that map
+// genuinely empty rather than carrying a settled `1` left by an unrelated
+// earlier test (the map is a module singleton — see the layer's own header —
+// so it persists across every test in this file). Driving every caption's
+// target to 0 (both body toggles off) with NO constellation slot and a
+// full-clock-advance `makeCtx` settles every currently-tracked id EXACTLY to 0
+// in one draw: `draw`'s own end-of-frame prune deletes any id outside this
+// frame's entry universe (which, with no constellation slot, is body captions
+// only), so a stray constellation id from an earlier test is dropped too.
+function settleAllCaptions(): void {
+  foregroundLabelsLayer.draw(
+    PASS_STUB,
+    makeNear0View([1e6, 1e6, 1e6]),
+    makeCtx(5e-4),
+    makeState(makeRenderer(0), makeLineRenderer(), false, false),
+  );
+}
+
+beforeEach(() => {
+  settleAllCaptions();
+});
+
 describe('foregroundLabelsLayer.enabled', () => {
   it('respects the kiloparsec distance gate', () => {
     const renderer = makeRenderer(6);
     const state = makeState(renderer);
 
-    // Well inside a kiloparsec with glyphs present → captions show.
+    // Well inside a kiloparsec with body-caption toggles on → captions show.
     expect(foregroundLabelsLayer.enabled(state, makeCtx(5e-4))).toBe(true);
 
     // At and above the threshold → captions hidden (no clutter at galaxy scale).
@@ -263,11 +292,47 @@ describe('foregroundLabelsLayer.enabled', () => {
     const betweenGatesMpc = (SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC + FOREGROUND_MAX_DISTANCE_MPC) / 2;
     expect(foregroundLabelsLayer.enabled(state, makeCtx(betweenGatesMpc))).toBe(false);
 
-    // No glyphs → nothing to draw even when close.
-    expect(foregroundLabelsLayer.enabled(makeState(makeRenderer(0)), makeCtx(5e-4))).toBe(false);
-
     // Pre-bootstrap: the second label renderer hasn't been constructed yet.
     expect(foregroundLabelsLayer.enabled(makeState(null), makeCtx(5e-4))).toBe(false);
+  });
+
+  it('regression: an empty last-drawn glyph set does not latch the gate off', () => {
+    // This is the reported bug's exact mechanism: the renderer's LAST
+    // `setLabels` call was empty (as it is right after a demand-drop draw),
+    // yet the settings now demand a caption again — `enabled` must read that
+    // demand fresh rather than the stale artifact. A prior version of the
+    // gate short-circuited on `renderer.glyphCount() === 0` and returned
+    // false here regardless of the toggles, latching the row off forever.
+    const renderer = makeRenderer(0);
+    const state = makeState(renderer, undefined, /* starLabelsEnabled */ true, false);
+    expect(foregroundLabelsLayer.enabled(state, makeCtx(5e-4))).toBe(true);
+  });
+
+  it('reads each body-caption toggle as its own source of demand', () => {
+    // Star toggle alone is enough demand, with the planet toggle off.
+    expect(
+      foregroundLabelsLayer.enabled(
+        makeState(makeRenderer(0), undefined, true, false),
+        makeCtx(5e-4),
+      ),
+    ).toBe(true);
+    // Planet toggle alone is enough demand, with the star toggle off.
+    expect(
+      foregroundLabelsLayer.enabled(
+        makeState(makeRenderer(0), undefined, false, true),
+        makeCtx(5e-4),
+      ),
+    ).toBe(true);
+    // Both off, no constellation slot, and no caption mid-fade (a fresh
+    // module state — see the "settled" test below for the envelope-tail
+    // half of this) → no demand at all, so the row stays off. This is the
+    // "opacity 0 ⇒ no render" house rule applied to the gate itself.
+    expect(
+      foregroundLabelsLayer.enabled(
+        makeState(makeRenderer(0), undefined, false, false),
+        makeCtx(5e-4),
+      ),
+    ).toBe(false);
   });
 });
 
@@ -695,6 +760,72 @@ describe('foregroundLabelsLayer.draw', () => {
     expect(wakeSpy(settledB)).not.toHaveBeenCalled();
   });
 
+  it('keeps enabled() true through a demand-drop fade-out, then false once settled', () => {
+    // Earth's caption to full alpha. Spread vp so Earth de-collides from the
+    // Sun (their anchors are ~1 AU apart, which the identity vp used by
+    // default would pile onto the same screen point, and the Sun's higher
+    // priority tier would win the declutter, leaving Earth's target at 0
+    // regardless of the toggle this test exercises).
+    const base = sceneBodyLabels(J2000_STATES);
+    const earthId = sceneBodyLabelId('earth');
+    const earth = base.find((l) => l.id === earthId)!;
+    const camPos: Vec3 = [...earth.worldPos] as Vec3;
+    const renderer = makeRenderer(6);
+    rebaseMock.mockReturnValueOnce(makeSpreadVp());
+    foregroundLabelsLayer.draw(
+      PASS_STUB,
+      makeNear0View(camPos),
+      makeCtx(5e-4),
+      makeState(renderer, makeLineRenderer()),
+    );
+    const t0 = testClockMs;
+
+    // Demand drops: the planet toggle switches off, dropping Earth's target to
+    // 0. A short dt later the envelope has only PARTLY eased down — the
+    // caption is still emitted, strictly between 0 and 1.
+    foregroundLabelsLayer.draw(
+      PASS_STUB,
+      makeNear0View(camPos),
+      makeCtx(5e-4, t0 + 20),
+      makeState(renderer, makeLineRenderer(), true, false),
+    );
+    const setSpy = renderer.setLabels as unknown as ReturnType<typeof vi.fn>;
+    const midAlpha = (setSpy.mock.calls.at(-1)![0] as readonly Label[]).find(
+      (l) => l.id === earthId,
+    )?.fadeAlpha;
+    expect(midAlpha).toBeGreaterThan(0);
+    expect(midAlpha).toBeLessThan(1);
+
+    // With demand OFF (both toggles off, camera past the body-caption gate,
+    // no constellation slot) the settings alone say "off" — but the ENVELOPE
+    // TAIL keeps `enabled` true while Earth's caption is still fading out, so
+    // the row draws one more frame instead of popping to invisible.
+    const offSettingsState = makeState(renderer, makeLineRenderer(), false, false);
+    expect(
+      foregroundLabelsLayer.enabled(offSettingsState, makeCtx(SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC)),
+    ).toBe(true);
+
+    // Let the ramp run to completion (a full-clock-advance draw settles every
+    // caption exactly onto its target, per the envelope's settle snap).
+    foregroundLabelsLayer.draw(
+      PASS_STUB,
+      makeNear0View(camPos),
+      makeCtx(5e-4),
+      makeState(renderer, makeLineRenderer(), false, false),
+    );
+    const settledLabels = (renderer.setLabels as unknown as ReturnType<typeof vi.fn>).mock.calls.at(
+      -1,
+    )![0] as readonly Label[];
+    expect(settledLabels.some((l) => l.id === earthId)).toBe(false);
+
+    // Now that nothing is mid-fade AND settings demand nothing, the gate goes
+    // dark — the "opacity 0 ⇒ no render" house rule, applied to the layer's
+    // own enable gate rather than a single caption's draw alpha.
+    expect(
+      foregroundLabelsLayer.enabled(offSettingsState, makeCtx(SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC)),
+    ).toBe(false);
+  });
+
   it('draws captions even when the leader-line renderer is null (bootstrap gap)', () => {
     const renderer = makeRenderer(6);
     const view = makeNear0View();
@@ -746,6 +877,24 @@ describe('foregroundLabelsLayer — constellation captions', () => {
       foregroundLabelsLayer.enabled(
         makeConstellationState({ layerFade: 1 }),
         makeCtx(SCALE_FADE_BANDS.constellations.goneAt),
+      ),
+    ).toBe(false);
+  });
+
+  it('reads the fade-registry opacity, not a band-only `1`, for constellation demand', () => {
+    // Past the body-caption gate, so the body toggles (both on in
+    // `makeConstellationState`) contribute no demand of their own — isolating
+    // the constellation term. A prior version of the gate passed
+    // `constellationLayerOpacity` the constant `1` (the band-only cull) and
+    // never the registry's actual toggle opacity, so a constellations-layer
+    // switch-off couldn't drop this term on its own; it relied on the (buggy)
+    // glyph-count latch to eventually zero the row. With the toggle opacity
+    // at 0 the product is 0 despite the distance band being favourable, so
+    // the row goes dark on the toggle alone.
+    expect(
+      foregroundLabelsLayer.enabled(
+        makeConstellationState({ layerFade: 0 }),
+        makeCtx(pastBodyGate),
       ),
     ).toBe(false);
   });

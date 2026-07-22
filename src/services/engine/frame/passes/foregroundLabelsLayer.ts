@@ -89,6 +89,21 @@
  * just clutter the normal view — so the row stays dark until the camera has
  * zoomed well past galaxy scale.
  *
+ * ### `enabled()` reads DEMAND, never the last draw's ARTIFACT
+ *
+ * The gate is the distance bands above ORed with the settings that could put
+ * a caption on screen this frame (`enabled`'s own doc comment spells out the
+ * exact terms). It never inspects anything `draw` produced — no glyph count,
+ * no cached label array — because an artifact of the last draw and "should
+ * this layer draw now" are two different questions that happen to agree right
+ * up until they don't: every caption's fade TARGET can drop to 0 in the same
+ * frame (the labels master toggle switching off), at which point `draw`
+ * uploads an empty set, and a gate built on that upload's size would then read
+ * "off" forever — re-enabling the toggle can't wake a layer whose own draw
+ * is what's gated off by the leftover emptiness. Reading settings/state
+ * directly has no such leftover to get stuck on: the moment demand returns,
+ * the gate reads it and `draw` runs again.
+ *
  * ### How caption visibility is decided (fade target → declutter → envelope)
  *
  * The two-dozen-name local map is dense: viewed from outside the neighbourhood
@@ -251,6 +266,22 @@ const captionAlpha = new Map<string, number>();
 let captionClockMs: number | null = null;
 
 /**
+ * Whether any caption is still mid-fade. `enabled`'s ENVELOPE TAIL reads this
+ * to keep the row drawing for the last few frames after settings-demand drops
+ * to 0, so a caption already on screen eases out instead of popping the
+ * instant the toggle flips — the temporal envelope (stage 3 below) has
+ * nothing to animate if `draw` never runs again. The settle snap in `draw`
+ * always lands a finished ramp on exactly 0, so a caption that has faded out
+ * leaves no trace here and this tail cannot hold the row on indefinitely.
+ */
+function anyCaptionAlive(): boolean {
+  for (const alpha of captionAlpha.values()) {
+    if (alpha > 0) return true;
+  }
+  return false;
+}
+
+/**
  * The render-origin-relative caption set, MEMOIZED on the body-state snapshot.
  * `sceneBodyLabels` reads the frame's body positions, so Earth + the planets
  * move as the sim clock advances — but only when it actually does:
@@ -340,30 +371,58 @@ export const foregroundLabelsLayer: ContentLayer = {
 
   enabled(state, ctx) {
     const renderer = state.gpu.foregroundLabelRenderer;
-    if (renderer === null || renderer.glyphCount() === 0) return false;
-    // The BODY captions' gate: the shared foreground gate (so this row empties
-    // with its NEAR0 siblings at galaxy zoom) AND the tighter caption gate (see
-    // SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC's docblock).
-    const bodyGate =
+    if (renderer === null) return false;
+    // The gate reads DEMAND — could `draw` want to show a caption this frame —
+    // never the ARTIFACT of the last draw. An earlier version short-circuited
+    // on `renderer.glyphCount() === 0`, i.e. "did the last `setLabels` upload
+    // anything": that reads fine right up until every caption's fade target
+    // hits 0 in the same frame (e.g. the labels master toggle switching off).
+    // `draw` then calls `setLabels([])`, glyphCount drops to 0, and the gate
+    // latches false FOREVER — re-enabling the toggle can't wake it, because the
+    // draw that would repopulate the buffer is exactly the thing the glyph-
+    // count check is gating off. Reading settings/state directly, as below,
+    // has no such artifact to latch on.
+    //
+    // The BODY captions' demand: the shared foreground gate (so this row
+    // empties with its NEAR0 siblings at galaxy zoom) AND the tighter caption
+    // gate (see SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC's docblock) AND at least
+    // one of the two toggles that can make a body-caption target nonzero
+    // (`draw`'s per-kind switch). `famousStars.enabled` is deliberately NOT
+    // part of this OR: it only narrows the star-map target down to the Sun
+    // (see `draw`'s `baseTarget` derivation) and can never turn a caption on
+    // when `starLabelsEnabled` is off, so it carries no demand of its own.
+    const bodyDemand =
       ctx.cam.distance < FOREGROUND_MAX_DISTANCE_MPC &&
-      ctx.cam.distance < SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC;
-    // The CONSTELLATION captions ride their own distance band, which reaches
-    // out PAST the body caption gate (the band fades to 0 at 0.01 Mpc, beyond
-    // the ~9.2e-3 Mpc caption gate), so the row must also run while a figure
-    // name could still be visible — otherwise the names would be cut mid-band.
-    // Gate on: the artifact ready, and the distance band above 0 (opacity 1 →
-    // the band-only cull, the exact pattern constellationsLayer.enabled uses,
-    // keyed on the same heliocentric-origin camera distance the stick-figure
-    // pass reads). Composed with OR so each caption group keeps its own onset.
+      ctx.cam.distance < SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC &&
+      (state.settings.labels.starLabelsEnabled || state.settings.labels.planetLabelsEnabled);
+    // The CONSTELLATION captions' demand rides the SAME product `draw` uses
+    // for their fade target — `constellationLayerOpacity`, the distance band
+    // times the fade-registry toggle opacity (not the band-only `1` an
+    // earlier version passed here, which left this term "on" even after a
+    // constellations-layer switch-off, relying entirely on the glyph-count
+    // latch to eventually zero the row). Reading the toggle here keeps the
+    // gate a true demand summary on its own. The band reaches out PAST the
+    // body caption gate (the band fades to 0 at 0.01 Mpc, beyond the ~9.2e-3
+    // Mpc caption gate), so the row must also run while a figure name could
+    // still be visible — otherwise the names would be cut mid-band. Composed
+    // with OR so each caption group keeps its own onset.
     const slot = state.assetSlots.constellations;
-    const constellationGate =
+    const constellationDemand =
       slot !== null &&
       slot.state().kind === 'ready' &&
       constellationLayerOpacity(
         Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]),
-        1,
+        state.subsystems.fades.opacityOf({ kind: 'constellations' }, ctx.nowMs),
       ) > 0;
-    return bodyGate || constellationGate;
+    // The ENVELOPE TAIL: once demand drops to 0 (a toggle switched off, the
+    // camera crossed a band edge), every caption still has to ease its drawn
+    // alpha down to exactly 0 over the temporal envelope (see `draw`'s stage
+    // 3) rather than vanishing on the SAME frame demand disappears — so the
+    // row must keep drawing for those few remaining frames. `anyCaptionAlive`
+    // reads the module's own envelope state, which is exactly what's left to
+    // fade; the settle snap in `draw` always lands it on precisely 0, so this
+    // tail is guaranteed to terminate.
+    return bodyDemand || constellationDemand || anyCaptionAlive();
   },
 
   draw(pass, view, ctx, state) {
@@ -682,12 +741,14 @@ export const foregroundLabelsLayer: ContentLayer = {
         lineBottomLiftPx: subjectSizePx / 2 + LEADER_LINE_BOTTOM_GAP_PX,
       });
 
-      // Behind the camera the projection is undefined. Keep the caption in the
-      // set at its unlifted anchor (the shader clips it anyway) rather than
-      // dropping it, so `glyphCount()` stays constant and the layer's
-      // `enabled` gate — which reads the last-set glyph count — never latches
-      // off. There is no valid projection to derive a connector from, so none
-      // is emitted for it.
+      // Behind the camera the projection is undefined. Still push the caption
+      // (unlifted, at its raw anchor) rather than dropping it — the overlay
+      // shader clips it on `clip.w`, so nothing extra actually draws — because
+      // `liftedLabels` should mirror `toEmit`'s DEMAND (fadeAlpha > 0)
+      // uniformly: a caption's presence in the emitted set should depend on
+      // whether it's wanted, not on which side of the camera plane its anchor
+      // happens to sit this frame. There is no valid projection to derive a
+      // connector from, so none is emitted for it.
       if (placement === null) {
         liftedLabels.push({ ...label, worldPos: anchor, fadeAlpha });
         continue;
