@@ -15,9 +15,9 @@
  * ### Why NEAR0, not COSMO — the overlay must span every clip's scale
  *
  * A clip's route can live at ANY scale: a cosmic flythrough frames galaxies at
- * Mpc distances, but a near-field clip (`starSpiral`) flies the solar
- * neighbourhood, its whole path spanning Earth's surface (~1e-16 Mpc) out to a
- * few parsecs (~4e-4 Mpc) — entirely INSIDE COSMO's fixed 10 kpc near plane.
+ * Mpc distances, but a near-field clip can fly the solar neighbourhood, its
+ * whole path spanning Earth's surface (~1e-16 Mpc) out to a few parsecs
+ * (~4e-4 Mpc) — entirely INSIDE COSMO's fixed 10 kpc near plane.
  * Projected through COSMO the parsec-scale route is wholly near-clipped and the
  * inspector shows nothing. So the overlay projects through the NEAR0 slab, whose
  * adaptive near/far bracket (`foregroundFrustum`) reaches down to Earth's

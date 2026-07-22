@@ -641,13 +641,21 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // to sample a clip's camera route into the `clipPathInspector` subsystem (read
   // each frame by `clipPathDebugLayer`) and `clear` to drop it. Shares the same
   // live-pose accessor as `playClip` so a `start:'live'` clip samples from the
-  // pose the user sees. 384 samples keeps the route + target polylines smooth
-  // through the tight Catmull-Rom corners of a flyPath (must stay within the
-  // debugLineRenderer's maxLines: 2·(n−1) route+target segments + 9 gizmo).
+  // pose the user sees.
+  //
+  // The sample count must cover the WAYPOINT-DENSEST clip, not just the sparse
+  // demo path: a flyPath threading ~200 waypoints gives 384 samples only ~1.9
+  // per leg — the polyline then draws the raw waypoint-to-waypoint CHORDS and
+  // hides the smooth spline between knots, reading as hard corners everywhere.
+  // 4000 samples is ~20 per leg on such a route, enough to resolve the actual
+  // curve so a smooth stretch reads smooth and only genuinely tight turns
+  // still bend. This must stay within the
+  // debugLineRenderer's maxLines (2·(n−1) route+target segments + 9 gizmo =
+  // 8007 here; the renderer is built with 8192 in `initGpu`).
   const clipPathInspect = createClipPathInspectSeam({
     inspector: state.subsystems.clipPathInspector,
     getLivePose: () => state.cameraRuntime.lastPose.current,
-    sampleCount: 384,
+    sampleCount: 4000,
   });
 
   cb.setSagaContext({
