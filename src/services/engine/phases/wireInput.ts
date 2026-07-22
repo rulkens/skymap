@@ -41,6 +41,8 @@ import { computeInitialCamera, DEFAULT_FOV_Y_RAD } from '../camera/cameraFraming
 import { poseOf } from '../camera/poseOf';
 import { projectionOf } from '../camera/projectionOf';
 import { cssToTexPx } from '../helpers/cssToTexPx';
+import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
+import { EARTH_REF } from '../../../data/selection/earthRef';
 import {
   commitCameraPose,
   beginDrag,
@@ -130,10 +132,19 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
 
   // ── Camera auto-framing ──────────────────────────────────────────────
   //
-  // Pure constants — see `cameraFraming.ts`. No dependency on loaded
-  // catalogs, so the camera is built before any galaxy catalog has arrived.
+  // Boot straight into the Earth home pose — see `cameraFraming.ts`. The pose
+  // is a pure function of the boot sim instant (the ephemeris is analytic), so
+  // the camera is still built before any galaxy catalog has arrived.
+  //
+  // `simDays` is the live wall-clock instant `startLoop`'s `goLive` re-anchors
+  // the sim clock to a moment later (`unixMsToJulianDays(Date.now())`). Reading
+  // the same source here — rather than `deriveSimDays(state.time, …)`, which
+  // would run against the still-placeholder J2000 anchor at this phase — frames
+  // Earth where it will actually sit the instant the loop goes live, so there
+  // is no jump on the first follow frame.
   const fovYRad = DEFAULT_FOV_Y_RAD;
-  const initialCam = computeInitialCamera({ fovYRad });
+  const simDays = unixMsToJulianDays(Date.now());
+  const initialCam = computeInitialCamera({ fovYRad, simDays });
 
   // `InitialCam` is exactly an `OrbitCameraInit` minus `aspect` (reset uses the
   // live canvas ratio, not a captured one), so the camera is the framing
@@ -159,6 +170,21 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   state.cameraRuntime.projection = projectionOf(cam);
   state.cameraRuntime.lastPose.current = poseOf(cam);
   store.dispatch(commitCameraPose(poseOf(cam)));
+
+  // ── Home selection seed ──────────────────────────────────────────────────
+  //
+  // Boot IS the home state: pose alone would drift. The sim clock boots live
+  // (`startLoop`'s `goLive`), so Earth moves from the first frame — a bare pose
+  // would let the globe slide out of frame. Seeding focus makes the follow-pivot
+  // driver track Earth's live position; seeding select pins the Earth InfoCard,
+  // which doubles as the "you are here" onboarding card.
+  //
+  // No tween is planted: `watchFocusTweenSaga` no-ops for follow-driver bodies,
+  // so this focus write never competes with a camera animation. A URL-hash focus
+  // dispatched during hash restore simply overwrites these seeds — exactly as it
+  // already overwrites the boot pose above.
+  store.dispatch(updateSelectionSelect(EARTH_REF));
+  store.dispatch(updateSelectionFocus(EARTH_REF));
 
   // ── Pointer / keyboard / resize listeners ────────────────────────────
   //
