@@ -637,15 +637,15 @@ export function frameTo(
 ): SceneEffect & { kind: 'frameTo' };   // ease defaults to 'inOut'
 ```
 
-- [ ] Add the `frameTo` arm to `SceneEffect` with a didactic note (cue-style
+- [x] Add the `frameTo` arm to `SceneEffect` with a didactic note (cue-style
       reorientation; fires `startFrameTween` + `setOrientation`).
-- [ ] Add the `frameTo` constructor to `effectHelpers.ts` (scene-effect helpers
+- [x] Add the `frameTo` constructor to `effectHelpers.ts` (scene-effect helpers
       section, near `scene` / `focus`), defaulting `ease` to `'inOut'`.
-- [ ] `compileClip.ts` — add `case 'frameTo':` to the cue-accumulator arm
+- [x] `compileClip.ts` — add `case 'frameTo':` to the cue-accumulator arm
       (`compileClip.ts:255-262`, alongside `show`/`hide`/`fade`/`scene`/`focus`):
       push `{ atSec, effect }`, return `0`. The exhaustive `never` guard
       (`:276-279`) forces this; no other compile change.
-- [ ] `applySceneEffect.ts` — add `case 'frameTo':` (`applySceneEffect.ts:63-129`).
+- [x] `applySceneEffect.ts` — add `case 'frameTo':` (`applySceneEffect.ts:63-129`).
       At fire time, capture the **live** basis (symmetric with the interactive
       saga, Task 10): `const fromQuat = matrixToQuaternion(state.cameraRuntime.frameBasis.current)`
       (`state` is `deps.state: EngineState`, so the resource is at hand). Dispatch
@@ -654,18 +654,18 @@ export function frameTo(
       durationMs: effect.over * 1000, easing: effect.ease }))` so the frame persists
       past the clip and the roll composes over the current `B(t)` (a `frameTo`
       firing mid-roll continues, never snaps).
-- [ ] Compile test: `it('compiling a clip with frameTo emits one cue at the beat and 0 awaited duration')`
+- [x] Compile test: `it('compiling a clip with frameTo emits one cue at the beat and 0 awaited duration')`
       — a timeline `[wait(2), frameTo('galactic', { over: 1 })]` compiles to one
       cue at `atSec ≈ 2` with `effect.kind === 'frameTo'`, and `durationSec === 2`
       (the `frameTo` adds no awaited time).
-- [ ] Fire test: `it('firing a frameTo cue dispatches setOrientation + startFrameTween with the live basis fromQuat')`
+- [x] Fire test: `it('firing a frameTo cue dispatches setOrientation + startFrameTween with the live basis fromQuat')`
       — call `applySceneEffect` with a `frameTo('galactic', { over: 1 })` effect and
       a `deps.state` whose `cameraRuntime.frameBasis.current` is a known `Mat3`;
       assert `setOrientation('galactic')` was dispatched, and `startFrameTween` with
       `to === 'galactic'`, `durationMs === 1000`, `easing` from the cue, and
       `fromQuat` equal to `matrixToQuaternion(that live basis)` — **not** a steady
       `ORIENTATION_FRAME_QUATERNIONS` entry. (Use spy/mock dispatch.)
-- [ ] `npm run typecheck` clean; `npm test -- compileClip applySceneEffect` green. Commit.
+- [x] `npm run typecheck` clean; `npm test -- compileClip applySceneEffect` green. Commit.
 
 ---
 
@@ -744,7 +744,7 @@ frame with no animation. The read dispatches `setOrientation` (not
 `requestOrientationChange` **only** — so a boot `setOrientation` can never start a
 `frameTween`. That is the structural guarantee this task pins.
 
-- [ ] **Verify the actual mount order**: does `useUrlSync`'s Effect A (which fires
+- [x] **Verify the actual mount order**: does `useUrlSync`'s Effect A (which fires
       the `orientation` source `read` → `setOrientation`) run before the engine's
       bootstrap dispatches `commitCameraPose`? Trace the App mount + engine-init
       wiring. Two outcomes:
@@ -756,22 +756,22 @@ frame with no animation. The read dispatches `setOrientation` (not
     `computeInitialCamera` / `commitCameraPose` time (or gate the seed on the URL
     read), so the first produced frame uses the URL frame. Keep the change minimal
     and documented.
-- [ ] Add a test at whatever layer is reachable in `node` env (the hooks/URL test
+- [x] Add a test at whatever layer is reachable in `node` env (the hooks/URL test
       env, not a live engine): `it('the mount read commits the URL frame via setOrientation on isInitial')`
       — the `orientation` source `read({ value:'galactic', isInitial:true })`
       dispatches `setOrientation('galactic')` (the frame must apply on first load,
       unlike `focus`'s clear-suppression). Already partly covered by Task 12's read
       test; keep the `isInitial:true` case explicit here.
-- [ ] Add the boot-snap guard: `it('a boot setOrientation never starts a frameTween')`
+- [x] Add the boot-snap guard: `it('a boot setOrientation never starts a frameTween')`
       — run `watchOrientationChangeSaga` and dispatch `setOrientation('galactic')`
       (not `requestOrientationChange`); assert the saga puts **no** `startFrameTween`.
       This pins that the URL/boot snap path can't slerp, because the saga watches
       only the interactive intent.
-- [ ] If the ordering is only assertable by manual trace (no reachable seam),
+- [x] If the ordering is only assertable by manual trace (no reachable seam),
       this task is the **documentation** of the constraint with the file anchors
       above and the seed-site comment — not a test. State that outcome explicitly
       in the commit message.
-- [ ] `npm run typecheck` clean; `npm test` green. Commit.
+- [x] `npm run typecheck` clean; `npm test` green. Commit.
 
 ---
 
