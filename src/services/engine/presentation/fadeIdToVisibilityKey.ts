@@ -77,6 +77,8 @@ export function fadeIdToVisibilityKey(h: FadeId): VisibilityLayerKey | undefined
       return 'filaments';
     case 'flow':
       return 'flow';
+    case 'constellations':
+      return 'constellations';
     case 'labelLayer': {
       switch (h.layer) {
         case 'milkyWay':

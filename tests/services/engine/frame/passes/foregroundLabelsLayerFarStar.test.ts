@@ -84,6 +84,10 @@ function makeState(renderer: LabelRenderer, lineRenderer: MarkerLineRenderer): E
       labels: { starLabelsEnabled: true, planetLabelsEnabled: true },
       famousStars: { enabled: true },
     },
+    // No constellation slot: these tests exercise only the far-star body-caption
+    // lift, so the layer reads an empty figure-name set and skips its toggle +
+    // fade reads. The key must exist (the layer reads `.constellations`).
+    assetSlots: { constellations: null },
     subsystems: { scheduler: { requestRender: vi.fn<() => void>() } },
   } as unknown as EngineState;
 }

@@ -93,10 +93,7 @@ import { awaitSlotReady } from '../loading/awaitSlotReady';
 import { runBootstrapPhases } from './phases/bootstrap';
 import type { BootstrapDeps } from '../../@types/engine/BootstrapDeps';
 import { createDisabledGpuTimingService } from '../gpu/timing/gpuTimingService';
-import {
-  updateFrameStats,
-  IDLE_GAP_MS,
-} from '../../utils/perf/updateFrameStats';
+import { updateFrameStats, IDLE_GAP_MS } from '../../utils/perf/updateFrameStats';
 import type { FrameStats } from '../../@types/engine/FrameStats';
 import { addVolumeField } from './handles/addVolumeField';
 import { removeVolumeField } from './handles/removeVolumeField';
@@ -280,6 +277,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       renderTargets: null,
       compositor: null,
       filamentRenderer: null,
+      constellationRenderer: null,
       // labelRenderer + markerLineRenderer: null until initGpu finishes the
       // font-atlas fetch.  Excluded from isEngineReady (optional async
       // resources, null-checked at use by labelsLayer / markerLinesLayer).
@@ -503,6 +501,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       mcpm: null,
       // Default-off velocity flow field; demand-loaded like cf4Density.
       flow: null,
+      // Constellation stick-figure artifact; demand-loaded on its master gate.
+      constellations: null,
       // Keyed body-surface texture family (Earth + planets/moons + Saturn ring),
       // minted in initGpu beside the body renderers. Empty map at construction —
       // proximity-demanded + released per body (mirrors the `points` map).
@@ -520,11 +520,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // ── Register label producers with the director ───────────────────────
   //
   // Registration order = merged label order: milkyWayLabel, then the structure
-  // labels, then the famous-galaxy labels.  The director declutters across
-  // all of them by `prominencePx`, so registration order only sets the
-  // tiebreak for equal-prominence collisions (rare).  All three producers are
-  // pure functions over the state; wrap each as a LabelProducer with a stable
-  // id.  All eager, so this is synchronous before any frame.
+  // labels, then the famous-galaxy labels.  The director declutters across all
+  // of them by `prominencePx`, so registration order only sets the tiebreak for
+  // equal-prominence collisions (rare).  All producers are pure functions over
+  // the state; wrap each as a LabelProducer with a stable id.  All eager, so
+  // this is synchronous before any frame.
+  //
+  // The constellation figure NAMES are deliberately NOT here: their anchors sit
+  // at parsec distances, inside the COSMO slab's fixed 0.01-Mpc near plane the
+  // director projects through, so a director label for them could never draw.
+  // They route through `foregroundLabelsLayer` on the NEAR0 slab instead, beside
+  // the scene-body captions — see `constellationCaptions`.
   state.subsystems.labelDirector.registerProducer({
     id: 'milkyWayLabel',
     produceLabels: produceMilkyWayLabel,
@@ -778,6 +784,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.compositor = null;
     state.gpu.filamentRenderer?.destroy();
     state.gpu.filamentRenderer = null;
+    state.gpu.constellationRenderer?.destroy();
+    state.gpu.constellationRenderer = null;
     state.gpu.labelRenderer?.destroy();
     state.gpu.labelRenderer = null;
     state.gpu.foregroundLabelRenderer?.destroy();
@@ -905,8 +913,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         fps: Math.round(frameStats.fps),
         cpuMs: frameStats.cpuMs,
         idle:
-          frameStats.lastStartMs === 0 ||
-          performance.now() - frameStats.lastStartMs > IDLE_GAP_MS,
+          frameStats.lastStartMs === 0 || performance.now() - frameStats.lastStartMs > IDLE_GAP_MS,
       }),
       passOverrides: {
         allNames: CONTENT_LAYERS.filter((l) => l.target !== 'volume').map((p) => p.name),

@@ -56,8 +56,10 @@ function makeStub(name: string): Stub {
     // Methods `initGpu` invokes synchronously inside the phase.
     upload: vi.fn().mockResolvedValue(undefined),
     setBiasMode: vi.fn(),
-    // `initGpu` calls `foregroundLabelRenderer.setLabels(sceneBodyLabels(<snapshot>))`
-    // synchronously after constructing the second label renderer.
+    // `initGpu` never calls `setLabels` itself — `foregroundLabelsLayer`
+    // uploads the live caption set on its own first draw. Kept on the stub
+    // shape because other stubbed renderers built from the same factory
+    // expose the method.
     setLabels: vi.fn(),
     // `initGpu` calls `starPointRenderer.setStars(<the far partition>)`
     // synchronously after constructing the star-point renderer.
@@ -158,6 +160,9 @@ vi.mock('../../../../src/services/gpu/renderers/horizonShell/horizonShellRendere
 
 vi.mock('../../../../src/services/gpu/renderers/filaments/filamentRenderer', () => ({
   createFilamentRenderer: vi.fn(() => makeStub('filamentRenderer')),
+}));
+vi.mock('../../../../src/services/gpu/renderers/constellations/constellationRenderer', () => ({
+  createConstellationRenderer: vi.fn(() => makeStub('constellationRenderer')),
 }));
 
 vi.mock('../../../../src/services/gpu/galaxy/milkyWayCloud', () => ({
@@ -539,9 +544,12 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     expect(state.gpu.labelRenderer).toBe(labelResults[0]!.value);
     expect(state.gpu.foregroundLabelRenderer).toBe(labelResults[1]!.value);
     expect(state.gpu.foregroundLabelRenderer).not.toBe(state.gpu.labelRenderer);
-    // The static scene-body caption set is uploaded once, at construction,
-    // onto the foreground renderer only.
-    expect(state.gpu.foregroundLabelRenderer!.setLabels).toHaveBeenCalledTimes(1);
+    // Neither label renderer gets a bootstrap `setLabels` call: the executor
+    // never runs a layer's `draw` before its `enabled()` gate reads true (see
+    // `executeFrame`), so an empty starting buffer is never observed — the
+    // director and `foregroundLabelsLayer` both upload their live set on the
+    // first real draw instead.
+    expect(state.gpu.foregroundLabelRenderer!.setLabels).not.toHaveBeenCalled();
     expect(state.gpu.labelRenderer!.setLabels).not.toHaveBeenCalled();
   });
 });

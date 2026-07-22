@@ -52,6 +52,7 @@ import { createMilkyWayCloud } from '../../gpu/galaxy/milkyWayCloud';
 import { createMilkyWayCloudRenderer } from '../../gpu/renderers/milkyWay/milkyWayCloudRenderer';
 import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShell/horizonShellRenderer';
 import { createFilamentRenderer } from '../../gpu/renderers/filaments/filamentRenderer';
+import { createConstellationRenderer } from '../../gpu/renderers/constellations/constellationRenderer';
 import { createLabelRenderer } from '../../gpu/renderers/labels/labelRenderer';
 import { createMarkerLineRenderer } from '../../gpu/renderers/labels/markerLineRenderer';
 import { createDebugLineRenderer } from '../../gpu/renderers/devTools/debugLineRenderer';
@@ -79,9 +80,7 @@ import { createStarCatalogRenderer } from '../../gpu/renderers/starCatalog/starC
 import { createStarCatalogPickRenderer } from '../../gpu/renderers/starCatalog/starCatalogPickRenderer';
 import { createBodyPickRenderer } from '../../gpu/renderers/bodies/bodyPickRenderer';
 import { createOrbitTrailRenderer } from '../../gpu/renderers/bodies/orbitTrailRenderer';
-import { sceneBodyLabels, FOREGROUND_LABEL_CAPACITY } from '../presentation/sceneBodyLabels';
-import { deriveBodyStates } from '../frame/deriveBodyStates';
-import { CONST_J2000 } from '../../../data/time/constJ2000';
+import { FOREGROUND_LABEL_CAPACITY } from '../presentation/sceneBodyLabels';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
 import { TIMED_SLOTS } from '../frame/frameProgram';
 import { SLAB_REVERSED_Z, NEAR0, COSMO } from '../frame/slabs';
@@ -344,6 +343,21 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   const filamentRenderer = createFilamentRenderer(device, 'rgba16float', state.gpu.fadeBgl!);
   state.gpu.filamentRenderer = filamentRenderer;
 
+  // ── Constellation stick-figure renderer ──────────────────────────
+  //
+  // Built unconditionally beside filaments (same cheap instanced-quad
+  // pipeline + shared unit-quad VBO + fade uniform). The per-instance buffer
+  // is populated later, when `constellationsLayer` sees the demand-loaded
+  // `constellations.json` artifact ready on its slot and calls `upload` once.
+  // Until then `hasData()` is false and the layer skips its draw. Same HDR
+  // target as every overlay.
+  const constellationRenderer = createConstellationRenderer(
+    device,
+    'rgba16float',
+    state.gpu.fadeBgl!,
+  );
+  state.gpu.constellationRenderer = constellationRenderer;
+
   // Store the thumbnail-related renderers on `state.gpu.*` so
   // `engine.ts.destroy()` can reach them for teardown, and so later
   // bootstrap phases (`wireSlots`, `startLoop`) consume the same
@@ -546,11 +560,13 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // swap-chain `format` (`uiCtx`, like the main `labelRenderer`), holding
   // the scene-body caption set (Earth + the local star map + the planets),
   // projecting through the NEAR0 slab view so the captions track bodies that
-  // sit far inside the main camera's near plane. This bootstrap upload primes
-  // the label set (glyph atlas + the count `foregroundLabelsLayer.enabled`
-  // gates on); the layer then RE-uploads the anchors camera-relative each
-  // frame to dodge the f32 origin-distance cancellation that would otherwise
-  // make the captions flicker at deep zoom — see that layer's f64-seam note.
+  // sit far inside the main camera's near plane. No bootstrap seed: the
+  // executor never calls a layer's `draw` unless its `enabled()` gate reads
+  // true first (see `executeFrame`), and `foregroundLabelsLayer.enabled` gates
+  // on the SETTINGS demand for a caption, not on anything already sitting in
+  // this renderer's buffer — so an empty starting buffer is never observed.
+  // `foregroundLabelsLayer` uploads the live per-frame snapshot on its first
+  // real draw.
   // Sized to the whole scene-body roster (FOREGROUND_LABEL_CAPACITY), NOT the
   // 64-label default: setLabels clamps at maxLabels, so the default would
   // silently drop captions once the seed table outgrew it (the roster already
@@ -573,10 +589,6 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     undefined,
     { occludeAgainstDepth: 'compare' },
   );
-  // Bootstrap seed at the J2000 epoch — `foregroundLabelsLayer` overwrites this
-  // with the live per-frame snapshot on its first draw, so this only needs a
-  // non-empty set for the initial glyph-count gate.
-  state.gpu.foregroundLabelRenderer.setLabels(sceneBodyLabels(deriveBodyStates(CONST_J2000)));
 
   // foregroundMarkerLineRenderer is the leader-line sibling of the caption
   // renderer above: a second `createMarkerLineRenderer` against the swap-chain

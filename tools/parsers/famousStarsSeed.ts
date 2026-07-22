@@ -89,9 +89,47 @@ export type FamousStarEntry = {
   gaiaDr3: string | null;
   /** Optional provenance for a non-obvious resolution (which component, etc.). */
   gaiaDr3Note?: string;
+  /**
+   * Hipparcos catalog number (HIP), or `null` when the star has no HIP row.
+   * Second dedup key alongside `gaiaDr3`: Gaia DR3 lacks the saturated bright
+   * stars, so a HIP id lets the native builder subtract them from the HIP-derived
+   * side.  REQUIRED on every entry — a MISSING field is a validation error, so a
+   * curation gap ("not yet resolved") can never read as an intended `null`.
+   */
+  hip: number | null;
+  /**
+   * Additional resolved-component HIP ids for a multi-star famous entry —
+   * dedup-only, never the identity. Present only when non-empty.
+   *
+   * Why does one entry ever need a second HIP? A famous entry is one point on
+   * the map (one `hip` identity, one InfoCard), but the sky sometimes packs two
+   * catalogued stars into it. Alpha Centauri is the motivating case: Gaia DR3
+   * resolves *neither* component A nor B (both saturate the detector), so the
+   * only way to keep their bright Hipparcos rows (HIP 71683 = A, HIP 71681 = B)
+   * from doubling the scene body is to subtract BOTH from the star bin. The
+   * canonical `hip` carries A; `hipCompanions` carries B. The native builder
+   * unions these into its HIP dedup set; nothing else reads them (the InfoCard,
+   * render row, and Gaia-side dedup all key on the single canonical identity).
+   */
+  hipCompanions?: number[];
   /** Curated prose, 3–5 sentences, fact-checked. */
   description: string;
 };
+
+/**
+ * Extract the HIP integer from a `"HIP n"` alias in an entry's `names[]`, or
+ * `null` when none is present.  The seed authors HIP twice — once as a human
+ * alias the palette searches, once as the structured `hip` dedup key — so a
+ * single parser here lets `validateFamousStarEntry` cross-check the two and
+ * catch drift, rather than restating the regex at each call site.
+ */
+function hipFromAliases(names: string[]): number | null {
+  for (const name of names) {
+    const match = /^HIP (\d+)$/.exec(name);
+    if (match) return Number(match[1]);
+  }
+  return null;
+}
 
 /**
  * Validate a single entry from the seed file.  Throws on any malformed field
@@ -202,6 +240,65 @@ export function validateFamousStarEntry(e: FamousStarEntry): FamousStarEntry {
       );
     }
   }
+  // hip mirrors the gaiaDr3 required-field invariant: PRESENT (own property),
+  // and either null or a positive integer.  `!== undefined` alone would let a
+  // missing key slip through, so we check own-property existence explicitly — a
+  // curation gap must fail loud rather than read as an intended "no HIP row".
+  if (!Object.prototype.hasOwnProperty.call(e, 'hip')) {
+    throw new Error(`famous stars seed: ${e.id} is missing the required hip field`);
+  }
+  if (e.hip !== null) {
+    if (!Number.isInteger(e.hip) || e.hip <= 0) {
+      throw new Error(
+        `famous stars seed: ${e.id} has invalid hip ${JSON.stringify(e.hip)} (expected positive integer or null)`,
+      );
+    }
+  }
+  // When a `"HIP n"` alias is present, the structured `hip` must equal it — the
+  // two are hand-authored independently, so this catches a typo drifting them
+  // apart.  A non-null `hip` with no alias is allowed (the Alpha-Centauri case:
+  // a real HIP exists but the curator listed HD 128620 rather than a HIP alias).
+  const aliasHip = hipFromAliases(e.names);
+  if (aliasHip !== null && e.hip !== aliasHip) {
+    throw new Error(
+      `famous stars seed: ${e.id} has hip ${JSON.stringify(e.hip)} disagreeing with its "HIP ${aliasHip}" alias`,
+    );
+  }
+  // Optional companion HIP ids: additional resolved components a multi-star
+  // entry contributes to the dedup set. Present only when non-empty, and only
+  // when the canonical `hip` exists — a companion enriches an identity, it never
+  // stands in for a missing one. Each must be a positive int, distinct from the
+  // others and from the entry's own `hip` (a repeat would double-count the same
+  // Hipparcos row in the subtraction).
+  if (e.hipCompanions !== undefined) {
+    if (e.hip === null) {
+      throw new Error(
+        `famous stars seed: ${e.id} has hipCompanions but a null hip (companions require a canonical hip)`,
+      );
+    }
+    if (!Array.isArray(e.hipCompanions) || e.hipCompanions.length === 0) {
+      throw new Error(
+        `famous stars seed: ${e.id} has an empty or non-array hipCompanions (omit the key when there are none)`,
+      );
+    }
+    const seenCompanions = new Set<number>();
+    for (const c of e.hipCompanions) {
+      if (!Number.isInteger(c) || c <= 0) {
+        throw new Error(
+          `famous stars seed: ${e.id} has invalid hipCompanions member ${JSON.stringify(c)} (expected positive integer)`,
+        );
+      }
+      if (c === e.hip) {
+        throw new Error(
+          `famous stars seed: ${e.id} has hipCompanions member ${c} equal to its own hip`,
+        );
+      }
+      if (seenCompanions.has(c)) {
+        throw new Error(`famous stars seed: ${e.id} has duplicate hipCompanions member ${c}`);
+      }
+      seenCompanions.add(c);
+    }
+  }
   if (typeof e.description !== 'string' || e.description.length === 0) {
     throw new Error(`famous stars seed: ${e.id} has empty description`);
   }
@@ -231,6 +328,22 @@ export function selectDedupEntries<T extends Pick<FamousStarEntry, 'gaiaDr3'>>(
   entries: readonly T[],
 ): (T & { gaiaDr3: string })[] {
   return entries.filter((e): e is T & { gaiaDr3: string } => e.gaiaDr3 !== null);
+}
+
+/**
+ * Select the entries that contribute a HIP dedup id: those whose `hip` is a real
+ * Hipparcos number, dropping the `null` ones (the Sun; stars with no HIP row).
+ * The HIP counterpart of `selectDedupEntries` — a distinct key because the native
+ * builder subtracts famous stars from BOTH the Gaia and the HIP-derived sides, and
+ * Gaia DR3 lacks exactly the saturated bright stars a HIP id still catches.  Same
+ * one-home rationale: the emitter here and any future HIP consumer share the rule,
+ * so it can only change in one place.  The return type narrows `hip` from
+ * `number | null` to `number`; seed order is preserved for the Rust provenance.
+ */
+export function selectHipEntries<T extends Pick<FamousStarEntry, 'hip'>>(
+  entries: readonly T[],
+): (T & { hip: number })[] {
+  return entries.filter((e): e is T & { hip: number } => e.hip !== null);
 }
 
 /**

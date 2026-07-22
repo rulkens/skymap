@@ -33,12 +33,15 @@ import package::lib::camera::CameraUniforms;
 // 'lib/camera.wesl' (viewProj at offset 0, viewportPx at offset 64,
 // two reserved-pad f32s at 72/76). The next two f32 slots at offsets
 // 80 and 84 hold this renderer's two scalar parameters; offsets
-// 88..95 are an explicit 8-byte tail pad to round the struct up to
-// a 16-byte multiple. Total: 96 bytes.
+// 88..95 are an 8-byte pad carrying the first vec3 tint to its
+// required 16-byte boundary. 'baseTint' occupies 96..107 and 'hotTint'
+// 112..123, each followed by a 4-byte pad to the next 16-byte boundary.
+// Total: 128 bytes.
 //
 // CPU-side counterpart in 'filamentRenderer.ts' writes halfWidthPx
-// at f32-index 20 (byte 80) and intensityScale at f32-index 21
-// (byte 84) — see UNIFORM_BYTES there.
+// at f32-index 20 (byte 80), intensityScale at f32-index 21 (byte 84),
+// baseTint at f32-indices 24..26 (byte 96), and hotTint at 28..30
+// (byte 112) — see UNIFORM_BYTES there.
 
 struct Uniforms {
   cam : CameraUniforms,
@@ -49,8 +52,18 @@ struct Uniforms {
   // when high-σ skeletons (with their longer, denser ridges) saturate
   // to flat white under the tone-mapped pass.
   intensityScale : f32,    // offset 84
-  _pad0 : f32,             // offset 88 — see struct comment above
+  _pad0 : f32,             // offset 88 — carries baseTint to its 16-byte boundary
   _pad1 : f32,             // offset 92
+  // The two endpoints of the density-driven tint ramp: 'baseTint' the dim
+  // cool-purple tendril tone at low density, 'hotTint' the bright near-white
+  // violet spine tone at high density. One home for the layer's palette,
+  // defined CPU-side in 'filamentsLayer.ts' and packed into these slots; the
+  // fragment mixes between them by 'in.density'. vec3 needs 16-byte alignment,
+  // hence the pad after each.
+  baseTint : vec3<f32>,    // offset 96
+  _pad2 : f32,             // offset 108
+  hotTint : vec3<f32>,     // offset 112
+  _pad3 : f32,             // offset 124 — rounds the struct to 128 bytes
 };
 
 // ── per-vertex attributes ──────────────────────────────────────────

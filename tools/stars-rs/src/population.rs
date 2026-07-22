@@ -41,6 +41,28 @@ use rustc_hash::{FxHashMap, FxHashSet};
 /// Hipparcos-2 bright-star cut: Gaia saturates on stars brighter than this.
 pub const HP_BRIGHT_CUT: f64 = 4.0;
 
+// ── Crossmatch-gap positional fallback tuning ─────────────────────────────
+// The forward HIP→Gaia crossmatch resolves most bright Hipparcos stars, but a
+// handful are simply absent from it. Their Gaia twin then survives the
+// hipMatched subtraction uncontested, doubling the star the bright patch also
+// emits. This fallback catches that last class by matching an unmatched bright
+// Hipparcos star to the nearest bright Gaia source in position + magnitude.
+//
+/// Angular radius (degrees) inside which a Gaia source counts as the same star.
+/// Bright Hipparcos and Gaia positions are both J2000-framed but ~25 yr apart in
+/// epoch, so a high-proper-motion bright star can drift arcseconds between them;
+/// ~30 arcsec is a safe non-false-matching radius given how sparse bright stars
+/// are on the sky (nearest-neighbour separations are degrees, not arcseconds).
+pub const GAP_MATCH_RADIUS_DEG: f64 = 0.008_333; // 30 arcsec
+/// Upper bound on |Hp − G| for the pair to be considered the same star. Hp and
+/// Gaia G are different passbands, so even a true match differs by tenths of a
+/// magnitude; 1.0 admits that spread without pairing a genuinely different star.
+pub const GAP_MATCH_MAG_WINDOW: f64 = 1.0;
+/// Gaia brightness prefilter: only sources at least this bright can twin a
+/// bright Hipparcos star (Hp < 4 plus the magnitude window plus margin), so the
+/// brute-force nearest search runs over a few thousand rows, not two billion.
+pub const GAP_MATCH_MAX_GAIA_MAG: f64 = 6.0;
+
 /// Maximum heliocentric distance a star may sit at and still join the built
 /// population; farther stars are dropped before the grid is derived. Mirror of
 /// the TS `MAX_STAR_DISTANCE_PC` (buildStars.ts) — see that constant's docstring
@@ -75,6 +97,10 @@ pub struct DropCounts {
     pub hip_non_positive_plx: u64,
     pub famous_subtracted: u64,
     pub hip_gaia_subtracted: u64,
+    /// Gaia rows dropped because they positionally duplicate a bright Hipparcos
+    /// star missing from the crossmatch (the gap fallback). Distinct from
+    /// `hip_gaia_subtracted`, which counts the crossmatch-resolved duplicates.
+    pub positional_gap_subtracted: u64,
     pub far_distance: u64,
     pub no_photometry: u64,
 }
@@ -94,6 +120,19 @@ pub struct Star {
     pub is_supplement: bool,
 }
 
+/// Source identifiers for one population star, parallel to `Population.stars`
+/// (`ids[i]` identifies `stars[i]`). This is the identity joint the
+/// constellation endpoint-resolver (a later PR) reads to map a rendered
+/// polyline vertex back to the exact star it drew: a Gaia-catalogued vertex
+/// carries a `gaia` source_id, a saturated bright vertex carries only its
+/// `hip`, and a crossmatched star carries both. Populated inline as each star
+/// is placed so it never has to be reconstructed from position later.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct StarIds {
+    pub gaia: Option<u64>,
+    pub hip: Option<u32>,
+}
+
 /// M = m − 5·log10(d_pc) + 5.
 #[inline]
 fn absolute_magnitude(apparent: f64, dist_pc: f64) -> f64 {
@@ -105,7 +144,7 @@ fn absolute_magnitude(apparent: f64, dist_pc: f64) -> f64 {
 /// by ulps — that is the one accepted source of rare quantization-bin flips
 /// the equivalence report tolerates.
 #[inline]
-fn ra_dec_dist_to_cartesian(ra_deg: f64, dec_deg: f64, dist: f64) -> [f64; 3] {
+pub(crate) fn ra_dec_dist_to_cartesian(ra_deg: f64, dec_deg: f64, dist: f64) -> [f64; 3] {
     let ra = ra_deg * std::f64::consts::PI / 180.0;
     let dec = dec_deg * std::f64::consts::PI / 180.0;
     let cos_dec = dec.cos();
@@ -114,8 +153,83 @@ fn ra_dec_dist_to_cartesian(ra_deg: f64, dec_deg: f64, dist: f64) -> [f64; 3] {
 
 pub struct Population {
     pub stars: Vec<Star>,
+    // ids[i] identifies stars[i]. The constellation endpoint-resolver
+    // (`constellations.rs`) uses it to look up a vertex's star by HIP id
+    // (`resolve_hip`) and to filter the bright subset it scans
+    // (`bright_population`).
+    pub ids: Vec<StarIds>,
     pub drops: DropCounts,
     pub clamps: ClampCounts,
+}
+
+/// Gaia source_ids to subtract as famous: the curated Gaia ids unioned with the
+/// Gaia ids that the famous HIP stars resolve to through the crossmatch. The
+/// seed carries two dedup keys because the brightest famous stars saturate Gaia
+/// DR3 — those have a `hip` but no `gaiaDr3`, so keying on Gaia id alone would
+/// let their Gaia twin (present at fainter, non-saturated flux, or from a
+/// neighbouring window) survive as a duplicate scene body. Resolving each famous
+/// HIP forward through the crossmatch recovers the Gaia id to subtract. A famous
+/// HIP with no crossmatch entry (Gaia has no row at all) contributes nothing
+/// here — the bright Hipparcos loop subtracts it directly by HIP instead.
+fn famous_gaia_subtraction(
+    famous_gaia: &FxHashSet<u64>,
+    famous_hip: &FxHashSet<u32>,
+    hip_to_source_id: &FxHashMap<u32, u64>,
+) -> FxHashSet<u64> {
+    let mut union = famous_gaia.clone();
+    for hip in famous_hip {
+        if let Some(&sid) = hip_to_source_id.get(hip) {
+            union.insert(sid);
+        }
+    }
+    union
+}
+
+/// Gaia source_ids to additionally subtract because they duplicate a bright
+/// Hipparcos star that is missing from the crossmatch. For each unmatched bright
+/// Hipparcos star, the nearest bright Gaia source within `radius_deg` whose
+/// magnitude is within `mag_window` of Hp is that star's Gaia twin and is
+/// dropped so the bright patch's HIP copy stands alone.
+///
+/// Angular distance is a true great-circle metric — the dot product of the two
+/// unit direction vectors, reusing the same equatorial frame as
+/// `ra_dec_dist_to_cartesian` (with distance 1) — so it is correct at the poles
+/// and across the RA=0/360 wrap, where a naive (Δra, Δdec) Euclidean distance
+/// would badly under- or over-estimate the separation. A larger dot product is a
+/// smaller angle, so the radius test is `dot ≥ cos(radius)`.
+///
+/// `bright_gaia` is assumed pre-filtered to the bright-Gaia prefilter, so this
+/// is a brute-force nearest over a small set — no spatial index needed.
+fn positional_gap_subtraction(
+    unmatched_bright_hip: &[&Hip2Row],
+    bright_gaia: &[&GaiaMainRow],
+    radius_deg: f64,
+    mag_window: f64,
+) -> FxHashSet<u64> {
+    let cos_radius = (radius_deg * std::f64::consts::PI / 180.0).cos();
+    let mut out = FxHashSet::default();
+    for hip in unmatched_bright_hip {
+        let hv = ra_dec_dist_to_cartesian(hip.ra_deg, hip.dec_deg, 1.0);
+        // Track the largest dot (smallest angle) among in-window candidates.
+        let mut best: Option<(f64, u64)> = None;
+        for g in bright_gaia {
+            if (hip.hp_mag - g.g_mag).abs() > mag_window {
+                continue;
+            }
+            let gv = ra_dec_dist_to_cartesian(g.ra_deg, g.dec_deg, 1.0);
+            let dot = hv[0] * gv[0] + hv[1] * gv[1] + hv[2] * gv[2];
+            if dot < cos_radius {
+                continue; // outside the angular radius
+            }
+            if best.is_none_or(|(best_dot, _)| dot > best_dot) {
+                best = Some((dot, g.source_id));
+            }
+        }
+        if let Some((_, sid)) = best {
+            out.insert(sid);
+        }
+    }
+    out
 }
 
 /// Evaluate the set formula over the parsed inputs:
@@ -133,11 +247,41 @@ pub fn build_population(
     hip_to_source_id: &FxHashMap<u32, u64>,
 ) -> Population {
     let famous: FxHashSet<u64> = FAMOUS_STAR_GAIA_IDS.iter().copied().collect();
+    let famous_hip: FxHashSet<u32> = FAMOUS_STAR_HIP_IDS.iter().copied().collect();
+    // Gaia ids to subtract as famous — the curated Gaia set plus the Gaia twins
+    // of the famous HIP stars (see `famous_gaia_subtraction`). Computed once and
+    // tested by both the Gaia and GCNS loops.
+    let famous_union = famous_gaia_subtraction(&famous, &famous_hip, hip_to_source_id);
+
+    // Inverse of the HIP→source_id crossmatch, so a Gaia-placed star can carry
+    // its reverse HIP in the `ids` sidecar. The crossmatch is HIP-keyed and can
+    // in rare cases send two HIPs to one source_id; the inverse then keeps an
+    // arbitrary winner (last insertion wins), which is acceptable because this
+    // reverse id is a display/identity hint, not a dedup key — the dedup keys
+    // all flow the forward HIP→source_id direction.
+    let source_id_to_hip: FxHashMap<u64, u32> =
+        hip_to_source_id.iter().map(|(&hip, &sid)| (sid, hip)).collect();
 
     // hipMatched: Gaia ids that a PRESENT bright Hipparcos row resolves to.
     let hip_bright: Vec<&Hip2Row> = hip_rows.iter().filter(|r| r.hp_mag < HP_BRIGHT_CUT).collect();
     let hip_matched: FxHashSet<u64> =
         hip_bright.iter().filter_map(|r| hip_to_source_id.get(&r.hip).copied()).collect();
+
+    // Crossmatch-gap fallback: bright Hipparcos stars the crossmatch never maps
+    // leave their Gaia twin uncontested by hipMatched. Pair each such unmatched
+    // bright star to its nearest bright Gaia source in position + magnitude, and
+    // subtract that Gaia id positionally. The Gaia prefilter keeps the
+    // brute-force nearest search cheap (a few thousand bright rows).
+    let unmatched_bright_hip: Vec<&Hip2Row> =
+        hip_bright.iter().copied().filter(|r| !hip_to_source_id.contains_key(&r.hip)).collect();
+    let bright_gaia: Vec<&GaiaMainRow> =
+        gaia.iter().filter(|r| r.g_mag <= GAP_MATCH_MAX_GAIA_MAG).collect();
+    let gap_subtracted = positional_gap_subtraction(
+        &unmatched_bright_hip,
+        &bright_gaia,
+        GAP_MATCH_RADIUS_DEG,
+        GAP_MATCH_MAG_WINDOW,
+    );
 
     let gcns_dist: FxHashMap<u64, f64> =
         gcns.iter().map(|r| (r.source_id, r.dist_pc)).collect();
@@ -152,17 +296,22 @@ pub fn build_population(
 
     let mut drops = DropCounts { hip_non_positive_plx: hip_skipped, ..Default::default() };
     let mut stars: Vec<Star> = Vec::with_capacity(gaia.len() + gcns.len() + hip_bright.len());
+    // Parallel to `stars`: every push into one pushes into the other in the
+    // same iteration, and the distance cap below drops from both in lockstep.
+    let mut ids: Vec<StarIds> = Vec::with_capacity(stars.capacity());
 
     // ── Gaia mains, in page order ─────────────────────────────────────────
     // The distance resolve + placement is pure per-row, so it parallelises;
     // the subtraction bookkeeping is three integer counters (order-free
     // sums). Chunked map + ordered flatten keeps the output order identical
     // to the sequential TS loop.
-    let chunks: Vec<(Vec<Star>, u64, u64, u64, u64)> = gaia
+    let chunks: Vec<(Vec<Star>, Vec<StarIds>, u64, u64, u64, u64, u64)> = gaia
         .par_chunks(1 << 16)
         .map(|chunk| {
             let mut out = Vec::with_capacity(chunk.len());
-            let (mut no_bj, mut no_phot, mut hip_sub, mut famous_sub) = (0u64, 0u64, 0u64, 0u64);
+            let mut out_ids = Vec::with_capacity(chunk.len());
+            let (mut no_bj, mut no_phot, mut hip_sub, mut famous_sub, mut gap_sub) =
+                (0u64, 0u64, 0u64, 0u64, 0u64);
             for row in chunk {
                 let dist_pc = row
                     .r_med_photogeo
@@ -184,13 +333,19 @@ pub fn build_population(
                     continue;
                 }
                 // Set formula, hipMatched strictly before famous (a row that
-                // is both counts as hipGaiaSubtracted, per the TS comment).
+                // is both counts as hipGaiaSubtracted, per the TS comment); the
+                // positional-gap set is tested last, after the famous union, so
+                // a row that is both famous and a gap twin counts famous.
                 if hip_matched.contains(&row.source_id) {
                     hip_sub += 1;
                     continue;
                 }
-                if famous.contains(&row.source_id) {
+                if famous_union.contains(&row.source_id) {
                     famous_sub += 1;
+                    continue;
+                }
+                if gap_subtracted.contains(&row.source_id) {
+                    gap_sub += 1;
                     continue;
                 }
                 out.push(Star {
@@ -200,16 +355,25 @@ pub fn build_population(
                     app_mag: row.g_mag,
                     is_supplement: false,
                 });
+                out_ids.push(StarIds {
+                    gaia: Some(row.source_id),
+                    hip: source_id_to_hip.get(&row.source_id).copied(),
+                });
             }
-            (out, no_bj, no_phot, hip_sub, famous_sub)
+            (out, out_ids, no_bj, no_phot, hip_sub, famous_sub, gap_sub)
         })
         .collect();
-    for (chunk, no_bj, no_phot, hip_sub, famous_sub) in chunks {
+    // Ordered flatten in page order — the `ids` extend rides the same loop as
+    // the `stars` extend, so the two vecs stay byte-order-parallel regardless
+    // of how the chunks were scheduled across threads.
+    for (chunk, chunk_ids, no_bj, no_phot, hip_sub, famous_sub, gap_sub) in chunks {
         stars.extend(chunk);
+        ids.extend(chunk_ids);
         drops.no_bailer_jones += no_bj;
         drops.no_photometry += no_phot;
         drops.hip_gaia_subtracted += hip_sub;
         drops.famous_subtracted += famous_sub;
+        drops.positional_gap_subtracted += gap_sub;
     }
 
     // ── GCNS-only supplements, in GCNS file order ─────────────────────────
@@ -238,8 +402,12 @@ pub fn build_population(
             drops.hip_gaia_subtracted += 1;
             continue;
         }
-        if famous.contains(&row.source_id) {
+        if famous_union.contains(&row.source_id) {
             drops.famous_subtracted += 1;
+            continue;
+        }
+        if gap_subtracted.contains(&row.source_id) {
+            drops.positional_gap_subtracted += 1;
             continue;
         }
         stars.push(Star {
@@ -249,15 +417,22 @@ pub fn build_population(
             app_mag: row.g_mag,
             is_supplement: true,
         });
+        ids.push(StarIds {
+            gaia: Some(row.source_id),
+            hip: source_id_to_hip.get(&row.source_id).copied(),
+        });
     }
 
     // ── Hipparcos bright patch (Hp < 4.0) ─────────────────────────────────
     for row in &hip_bright {
-        if let Some(&sid) = hip_to_source_id.get(&row.hip) {
-            if famous.contains(&sid) {
-                drops.famous_subtracted += 1;
-                continue;
-            }
+        // Famous either way: its crossmatched Gaia id is curated, OR the star
+        // itself is a curated famous HIP (the saturated bright stars, which
+        // often have no Gaia row at all — only this direct HIP test catches
+        // them, since there is no source_id to look up).
+        let gaia_famous = hip_to_source_id.get(&row.hip).is_some_and(|sid| famous.contains(sid));
+        if gaia_famous || famous_hip.contains(&row.hip) {
+            drops.famous_subtracted += 1;
+            continue;
         }
         stars.push(Star {
             position: ra_dec_dist_to_cartesian(row.ra_deg, row.dec_deg, row.dist_pc),
@@ -266,6 +441,9 @@ pub fn build_population(
             app_mag: row.hp_mag,
             is_supplement: false,
         });
+        // The bright patch is HIP-native; its Gaia twin (if the crossmatch has
+        // one) rides along as the reverse identity.
+        ids.push(StarIds { gaia: hip_to_source_id.get(&row.hip).copied(), hip: Some(row.hip) });
     }
 
     // ── Distance cap: drop far outliers before the grid is derived ────────
@@ -277,10 +455,19 @@ pub fn build_population(
     // `retain` preserves population order, which the later stable sorts observe.
     let before_cap = stars.len() as u64;
     let max_dist_sq_pc = MAX_STAR_DISTANCE_PC * MAX_STAR_DISTANCE_PC;
-    stars.retain(|s| {
-        let [x, y, z] = s.position;
-        x * x + y * y + z * z <= max_dist_sq_pc
-    });
+    // `stars` and `ids` are index-parallel, so the cap must drop the same
+    // indices from both. Consuming them together through `zip`/`unzip` makes
+    // the lockstep structural rather than a pair of retains that could drift.
+    let (kept_stars, kept_ids): (Vec<Star>, Vec<StarIds>) = stars
+        .into_iter()
+        .zip(ids)
+        .filter(|(s, _)| {
+            let [x, y, z] = s.position;
+            x * x + y * y + z * z <= max_dist_sq_pc
+        })
+        .unzip();
+    let stars = kept_stars;
+    let ids = kept_ids;
     drops.far_distance = before_cap - stars.len() as u64;
 
     // ── Counted clamps over the whole deduped population ──────────────────
@@ -303,7 +490,7 @@ pub fn build_population(
             color_idx: a.color_idx + b.color_idx,
         });
 
-    Population { stars, drops, clamps }
+    Population { stars, ids, drops, clamps }
 }
 
 /// Gaia DR3 Table 5.9: G_BP − G_RP = f(B−V), Horner form — port of
@@ -465,6 +652,178 @@ pub fn quantize_population(stars: &[Star], grid: Grid) -> Quantized {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // Synthetic-row constructors — source_ids and HIPs chosen well outside the
+    // curated famous arrays so nothing is famous-subtracted unless a test asks
+    // for it. All distances default inside the taper-start radius so a GCNS row
+    // is never thinned by the outer taper. Every row carries a finite G so it
+    // survives the missing-photometry guard unless a test overrides it.
+    fn gaia_row(source_id: u64, ra: f64, dec: f64, dist_pc: f64, g_mag: f64) -> GaiaMainRow {
+        GaiaMainRow {
+            source_id,
+            ra_deg: ra,
+            dec_deg: dec,
+            g_mag,
+            bp_rp: 0.5,
+            r_med_geo: None,
+            r_med_photogeo: Some(dist_pc),
+        }
+    }
+
+    fn gcns_row(source_id: u64, ra: f64, dec: f64, dist_pc: f64, g_mag: f64) -> GcnsRow {
+        GcnsRow { source_id, ra_deg: ra, dec_deg: dec, dist_pc, g_mag, bp_rp: 0.5 }
+    }
+
+    fn hip_row(hip: u32, ra: f64, dec: f64, dist_pc: f64, hp_mag: f64) -> Hip2Row {
+        Hip2Row { hip, ra_deg: ra, dec_deg: dec, dist_pc, hp_mag, bv: 0.5 }
+    }
+
+    fn xmatch(pairs: &[(u32, u64)]) -> FxHashMap<u32, u64> {
+        pairs.iter().copied().collect()
+    }
+
+    // ── Task 3: the ids sidecar ───────────────────────────────────────────
+
+    #[test]
+    fn ids_stay_parallel_to_stars_across_all_three_loops() {
+        // One row from each loop: a Gaia main, a GCNS-only supplement (its
+        // source_id absent from the Gaia set), and a bright Hipparcos row whose
+        // HIP the crossmatch resolves to a Gaia id not present among the Gaia
+        // rows (so its hipMatched membership subtracts nothing).
+        let gaia = vec![gaia_row(1001, 10.0, 20.0, 50.0, 9.0)];
+        let gcns = vec![gcns_row(2002, 30.0, 40.0, 50.0, 12.0)];
+        let hip = vec![hip_row(900_001, 50.0, 60.0, 50.0, 3.0)];
+        let xm = xmatch(&[(900_001, 3003)]);
+
+        let pop = build_population(&gaia, &gcns, &hip, 0, &xm);
+
+        assert_eq!(pop.stars.len(), 3);
+        assert_eq!(pop.ids.len(), pop.stars.len());
+        // Gaia main: its own source_id, no reverse HIP.
+        assert_eq!(pop.ids[0], StarIds { gaia: Some(1001), hip: None });
+        // GCNS-only supplement: its own source_id, no reverse HIP.
+        assert_eq!(pop.ids[1], StarIds { gaia: Some(2002), hip: None });
+        // Hipparcos bright: its own HIP, plus the crossmatched Gaia id.
+        assert_eq!(pop.ids[2], StarIds { gaia: Some(3003), hip: Some(900_001) });
+    }
+
+    #[test]
+    fn distance_cap_drops_a_star_and_its_ids_in_lockstep() {
+        // Two Gaia mains along the same ray (ra=dec=0 ⇒ |position| == dist_pc):
+        // one inside the cap, one past MAX_STAR_DISTANCE_PC.
+        let gaia = vec![
+            gaia_row(1001, 0.0, 0.0, 50.0, 9.0),
+            gaia_row(1002, 0.0, 0.0, MAX_STAR_DISTANCE_PC + 1000.0, 9.0),
+        ];
+        let pop = build_population(&gaia, &[], &[], 0, &FxHashMap::default());
+
+        assert_eq!(pop.stars.len(), 1);
+        assert_eq!(pop.ids.len(), 1);
+        assert_eq!(pop.drops.far_distance, 1);
+        // The surviving row is the near one, and its ids rode along.
+        assert_eq!(pop.ids[0], StarIds { gaia: Some(1001), hip: None });
+    }
+
+    // ── Task 4: famous subtraction = Gaia ∪ HIP ───────────────────────────
+
+    #[test]
+    fn famous_gaia_subtraction_unions_hip_resolved_ids() {
+        // A famous HIP with a crossmatch entry contributes the Gaia id it
+        // resolves to; a famous HIP without one contributes nothing.
+        let famous_gaia: FxHashSet<u64> = FxHashSet::default();
+        let famous_hip: FxHashSet<u32> = [5u32].into_iter().collect();
+        let xm = xmatch(&[(5, 999)]);
+
+        let result = famous_gaia_subtraction(&famous_gaia, &famous_hip, &xm);
+        assert!(result.contains(&999));
+
+        // HIP 7 is famous but absent from the crossmatch → adds no Gaia id.
+        let famous_hip_unmatched: FxHashSet<u32> = [7u32].into_iter().collect();
+        let result = famous_gaia_subtraction(&famous_gaia, &famous_hip_unmatched, &xm);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn hip_only_famous_star_is_subtracted_from_the_bin() {
+        // Sirius (HIP 32349) is in FAMOUS_STAR_HIP_IDS but has no Gaia row —
+        // Gaia saturates on it — so no crossmatch entry exists. Only the direct
+        // row.hip ∈ famous_hip check can subtract it from the bright patch.
+        let hip = vec![hip_row(32349, 101.3, -16.7, 2.64, -1.46)];
+        let pop = build_population(&[], &[], &hip, 0, &FxHashMap::default());
+
+        assert!(pop.stars.is_empty());
+        assert_eq!(pop.drops.famous_subtracted, 1);
+    }
+
+    // ── Task 5: crossmatch-gap positional fallback ────────────────────────
+
+    // Angular offset in degrees, as a fraction of one arcsecond, applied along
+    // RA at the equator (cos dec = 1 there ⇒ RA degrees are true angle).
+    fn arcsec(n: f64) -> f64 {
+        n / 3600.0
+    }
+
+    #[test]
+    fn positional_gap_subtraction_matches_a_bright_gaia_twin_within_radius_and_mag_window() {
+        let hip = hip_row(500_001, 100.0, 0.0, 100.0, 3.0);
+        // ~10 arcsec away (inside 30), G within 1 mag of Hp.
+        let gaia = gaia_row(88_888, 100.0 + arcsec(10.0), 0.0, 100.0, 3.2);
+        let result = positional_gap_subtraction(
+            &[&hip],
+            &[&gaia],
+            GAP_MATCH_RADIUS_DEG,
+            GAP_MATCH_MAG_WINDOW,
+        );
+        assert!(result.contains(&88_888));
+    }
+
+    #[test]
+    fn positional_gap_subtraction_rejects_a_gaia_row_outside_the_radius() {
+        let hip = hip_row(500_001, 100.0, 0.0, 100.0, 3.0);
+        // ~72 arcsec away, well beyond the 30 arcsec radius.
+        let gaia = gaia_row(88_888, 100.0 + arcsec(72.0), 0.0, 100.0, 3.0);
+        let result = positional_gap_subtraction(
+            &[&hip],
+            &[&gaia],
+            GAP_MATCH_RADIUS_DEG,
+            GAP_MATCH_MAG_WINDOW,
+        );
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn positional_gap_subtraction_rejects_a_gaia_row_outside_the_mag_window() {
+        let hip = hip_row(500_001, 100.0, 0.0, 100.0, 3.0);
+        // Positionally on top of the star, but |Hp − G| = 2 > 1 mag window.
+        let gaia = gaia_row(88_888, 100.0 + arcsec(5.0), 0.0, 100.0, 5.0);
+        let result = positional_gap_subtraction(
+            &[&hip],
+            &[&gaia],
+            GAP_MATCH_RADIUS_DEG,
+            GAP_MATCH_MAG_WINDOW,
+        );
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn crossmatch_gap_fallback_dedupes_a_synthetic_missing_xmatch_bright_star() {
+        // A bright Hipparcos star with no crossmatch row (so the forward
+        // hipMatched path never subtracts its Gaia twin), plus its Gaia twin
+        // ~8 arcsec away with a matching magnitude. Only the positional fallback
+        // can dedupe the pair.
+        let hip = vec![hip_row(500_001, 100.0, 0.0, 100.0, 3.0)];
+        let gaia = vec![gaia_row(88_888, 100.0 + arcsec(8.0), 0.0, 100.0, 3.1)];
+        let pop = build_population(&gaia, &[], &hip, 0, &FxHashMap::default());
+
+        // The Gaia twin is gone; the star appears exactly once, as the
+        // Hipparcos version, counted against the gap counter (not famous).
+        assert_eq!(pop.stars.len(), 1);
+        assert_eq!(pop.drops.positional_gap_subtracted, 1);
+        assert_eq!(pop.drops.famous_subtracted, 0);
+        assert_eq!(pop.ids[0], StarIds { gaia: None, hip: Some(500_001) });
+    }
+
+    // ── Missing-photometry drop (Gaia + GCNS loops) ───────────────────────
 
     fn no_hip() -> (Vec<Hip2Row>, FxHashMap<u32, u64>) {
         (Vec::new(), FxHashMap::default())

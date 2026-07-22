@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
   parseFamousStarsSeed,
+  selectHipEntries,
   validateFamousStarEntry,
   type FamousStarEntry,
 } from '../../../tools/parsers/famousStarsSeed';
@@ -22,6 +23,7 @@ function baseEntry(overrides: Partial<FamousStarEntry> = {}): FamousStarEntry {
     radiusSolar: 764,
     temperatureK: 3600,
     gaiaDr3: '3319948333282076928',
+    hip: 27989,
     description: 'A red supergiant in Orion, one of the brightest stars in the sky.',
     ...overrides,
   };
@@ -49,6 +51,84 @@ describe('famousStarsSeed', () => {
   it('throws on a non-digit gaiaDr3 string', () => {
     expect(() => validateFamousStarEntry(baseEntry({ gaiaDr3: 'DR3 123' }))).toThrow(/gaiaDr3/);
     expect(() => validateFamousStarEntry(baseEntry({ gaiaDr3: '12a3' }))).toThrow(/gaiaDr3/);
+  });
+
+  it('throws on a missing hip field', () => {
+    // Same required-field invariant as gaiaDr3: a curation gap ("not yet
+    // resolved") must never be indistinguishable from an intended null.
+    const e = baseEntry();
+    delete (e as { hip?: number | null }).hip;
+    expect(() => validateFamousStarEntry(e)).toThrow(/hip/);
+  });
+
+  it('accepts hip: null — the Sun', () => {
+    const e = baseEntry({ id: 'sun', gaiaDr3: null, hip: null });
+    expect(validateFamousStarEntry(e).hip).toBeNull();
+  });
+
+  it('throws on a non-integer or non-positive hip', () => {
+    expect(() => validateFamousStarEntry(baseEntry({ hip: 1.5 }))).toThrow(/hip/);
+    expect(() => validateFamousStarEntry(baseEntry({ hip: -1 }))).toThrow(/hip/);
+    expect(() => validateFamousStarEntry(baseEntry({ hip: 0 }))).toThrow(/hip/);
+  });
+
+  it('throws when hip disagrees with a HIP alias', () => {
+    const e = baseEntry({ names: ['Betelgeuse', 'HIP 100'], hip: 200 });
+    expect(() => validateFamousStarEntry(e)).toThrow(/hip/);
+    expect(
+      validateFamousStarEntry(baseEntry({ names: ['Betelgeuse', 'HIP 100'], hip: 100 })).hip,
+    ).toBe(100);
+  });
+
+  it('allows a non-null hip with no HIP alias — the Alpha Centauri enrichment', () => {
+    const e = baseEntry({ names: ['Betelgeuse'], hip: 71683 });
+    expect(validateFamousStarEntry(e).hip).toBe(71683);
+  });
+
+  it('accepts hipCompanions — the Alpha Centauri two-component case', () => {
+    const e = baseEntry({ names: ['Betelgeuse'], hip: 71683, hipCompanions: [71681] });
+    expect(validateFamousStarEntry(e).hipCompanions).toEqual([71681]);
+  });
+
+  it('throws when hipCompanions is present but hip is null', () => {
+    // A companion is an *additional* resolved component; the canonical hip is the
+    // identity, so companions are meaningless without it.
+    const e = baseEntry({ id: 'sun', gaiaDr3: null, hip: null, hipCompanions: [71681] });
+    expect(() => validateFamousStarEntry(e)).toThrow(/hipCompanions/);
+  });
+
+  it('throws on a non-positive or non-integer hipCompanion', () => {
+    expect(() => validateFamousStarEntry(baseEntry({ hipCompanions: [1.5] }))).toThrow(
+      /hipCompanions/,
+    );
+    expect(() => validateFamousStarEntry(baseEntry({ hipCompanions: [-1] }))).toThrow(
+      /hipCompanions/,
+    );
+    expect(() => validateFamousStarEntry(baseEntry({ hipCompanions: [0] }))).toThrow(
+      /hipCompanions/,
+    );
+  });
+
+  it('throws on a duplicate hipCompanion', () => {
+    expect(() =>
+      validateFamousStarEntry(baseEntry({ hip: 71683, hipCompanions: [71681, 71681] })),
+    ).toThrow(/hipCompanions/);
+  });
+
+  it('throws when hipCompanions contains the entry own hip', () => {
+    // The canonical hip stays the identity; a companion repeating it would
+    // double-count the same Hipparcos row in the dedup set.
+    expect(() =>
+      validateFamousStarEntry(baseEntry({ hip: 71683, hipCompanions: [71683] })),
+    ).toThrow(/hipCompanions/);
+  });
+
+  it('throws on an empty hipCompanions array', () => {
+    // Convention: the key is present only when non-empty; an empty array is the
+    // "absent value as an empty key" placeholder the schema forbids elsewhere.
+    expect(() => validateFamousStarEntry(baseEntry({ hip: 71683, hipCompanions: [] }))).toThrow(
+      /hipCompanions/,
+    );
   });
 
   it('throws on out-of-range ra / dec / distancePc / temperatureK', () => {
@@ -125,6 +205,17 @@ describe('famousStarsSeed', () => {
     const out = parseFamousStarsSeed(json);
     expect(out.map((e) => e.id)).toEqual(['sirius', 'vega']);
   });
+
+  it('selectHipEntries drops null-hip entries and narrows the type', () => {
+    const entries = [
+      baseEntry({ id: 'sirius', hip: 100 }),
+      baseEntry({ id: 'sun', gaiaDr3: null, hip: null }),
+    ];
+    const kept = selectHipEntries(entries);
+    expect(kept.map((e) => e.id)).toEqual(['sirius']);
+    // The narrowed element reads `hip` as a plain number, no non-null assertion.
+    expect(kept[0]!.hip + 1).toBe(101);
+  });
 });
 
 // Coverage invariant migrated from the deleted famousStarGaiaIds.test.ts: every
@@ -148,5 +239,22 @@ describe.skipIf(!existsSync(SEED_PATH))('famousStarsSeed — real committed seed
     const sun = entries.find((e) => e.id === 'sun');
     expect(sun).toBeDefined();
     expect(sun!.gaiaDr3).toBeNull();
+  });
+
+  it('every entry carries hip, the Sun is null, and hip matches any HIP alias', () => {
+    const entries = parseFamousStarsSeed(readFileSync(SEED_PATH, 'utf8'));
+    for (const e of entries) {
+      expect(Object.prototype.hasOwnProperty.call(e, 'hip')).toBe(true);
+    }
+    const sun = entries.find((e) => e.id === 'sun');
+    expect(sun!.hip).toBeNull();
+    // Every entry whose names[] carries a "HIP n" alias must have hip === n —
+    // catches drift between the two hand-authored fields across the real seed.
+    for (const e of entries) {
+      const alias = e.names.find((n) => /^HIP \d+$/.test(n));
+      if (alias) {
+        expect(e.hip).toBe(Number(alias.slice(4)));
+      }
+    }
   });
 });
