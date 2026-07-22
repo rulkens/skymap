@@ -55,7 +55,7 @@ import {
   updateSelectionHover,
   clearSelection,
 } from '../../../state/selection/selectionSlice';
-import { selectSelectedRef } from '../../../state/selection/selectors';
+import { selectSelectedRef, selectFocusRef } from '../../../state/selection/selectors';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
@@ -180,11 +180,20 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // which doubles as the "you are here" onboarding card.
   //
   // No tween is planted: `watchFocusTweenSaga` no-ops for follow-driver bodies,
-  // so this focus write never competes with a camera animation. A URL-hash focus
-  // dispatched during hash restore simply overwrites these seeds — exactly as it
-  // already overwrites the boot pose above.
-  store.dispatch(updateSelectionSelect(EARTH_REF));
-  store.dispatch(updateSelectionFocus(EARTH_REF));
+  // so this focus write never competes with a camera animation.
+  //
+  // The seed only fills EMPTY slots. This phase runs asynchronously after React
+  // mounts, and a URL-hash focus with a statically-resolvable id (`body-*`,
+  // milkyWay, structures) lands in the store at mount — before this line runs.
+  // An unconditional seed would clobber that deep link (and useUrlSync would
+  // then rewrite the hash to Earth). Deferred ids (galaxies/stars waiting on a
+  // catalog pulse) resolve after this phase and overwrite the seed — exactly as
+  // they already overwrite the boot pose above.
+  const rootState = store.getState();
+  if (selectSelectedRef(rootState) === null && selectFocusRef(rootState) === null) {
+    store.dispatch(updateSelectionSelect(EARTH_REF));
+    store.dispatch(updateSelectionFocus(EARTH_REF));
+  }
 
   // ── Pointer / keyboard / resize listeners ────────────────────────────
   //
