@@ -50,9 +50,9 @@
  * Dispatches `setOrientation(effect.frame)` then `startFrameTween`, in that order
  * — the same pair, and the same live-basis capture, the interactive
  * `watchOrientationChangeSaga` performs. The roll's `fromQuat` is the live basis
- * `B(t)` resolved this frame (`matrixToQuaternion(cameraRuntime.frameBasis.current)`),
- * so a switch firing mid-roll composes continuously instead of snapping back to a
- * steady pole. Unlike the interactive saga there is no null-runtime bail: inside a
+ * `B(t)` resolved this frame (`liveFrameBasisQuat(cameraRuntime)`), so a switch
+ * firing mid-roll composes continuously instead of snapping back to a steady
+ * pole. Unlike the interactive saga there is no null-runtime bail: inside a
  * running clip the frame loop has already resolved `frameBasis.current`.
  */
 
@@ -62,7 +62,7 @@ import type { AppDispatch } from '../../store/types';
 import { updateSelectionFocus } from '../../state/selection/selectionSlice';
 import { setOrientation } from '../../state/settings/settingsSlice';
 import { startFrameTween } from '../../state/camera/cameraSlice';
-import { matrixToQuaternion } from '../../utils/math/matrixToQuaternion';
+import { liveFrameBasisQuat } from '../engine/camera/liveFrameBasisQuat';
 import { syncVisibilityFades } from '../engine/wiring/syncVisibilityFades';
 import { VISIBILITY_ACTION_ROW } from './visibilityActionRow';
 import { scopedVisibilityActions } from './scopedVisibilityActions';
@@ -140,9 +140,8 @@ export function applySceneEffect(
       // as a quaternion — NOT the destination frame's steady pole. During a
       // slerp the resolved basis sits between two frames, so a frameTo firing
       // mid-roll must compose continuously from wherever the pole is now rather
-      // than snapping back. matrixToQuaternion converts the tight column-major
-      // Mat3 the frame loop maintains in cameraRuntime.frameBasis.current.
-      const fromQuat = matrixToQuaternion(state.cameraRuntime.frameBasis.current);
+      // than snapping back.
+      const fromQuat = liveFrameBasisQuat(state.cameraRuntime);
       store.dispatch(setOrientation(effect.frame));
       store.dispatch(
         startFrameTween({

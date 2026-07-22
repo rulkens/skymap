@@ -35,6 +35,8 @@ import type { ToneMapCurve as ToneMapCurveT } from '../../@types/data/ToneMapCur
 import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
 import { ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';
 import { orientationFrameLabel } from '../../data/orientation/orientationFrameLabel';
+import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
+import { DEFAULT_ORIENTATION } from '../../data/defaults';
 import { STAR_EMISSIVE } from '../../data/starRenderConstants';
 import { CollapsibleSection } from './CollapsibleSection';
 import styles from './SettingsPanel.module.css';
@@ -42,16 +44,15 @@ import styles from './SettingsPanel.module.css';
 // ── Module-level constants ─────────────────────────────────────────────────────
 
 /**
- * Display order puts the default (ecliptic) first; the ids themselves stay
- * sourced from `ORIENTATION_FRAMES` (data/orientation/orientationFrames.ts) —
- * this only reorders them for the dropdown.
+ * The id SET is the registry's own keys (a new frame can't silently vanish
+ * from this dropdown); this only pins display order, default frame first.
  */
-const ORIENTATION_FRAME_IDS = [
-  'ecliptic',
-  'equatorial',
-  'galactic',
-  'supergalactic',
-] as const satisfies readonly OrientationFrameId[];
+const ORIENTATION_FRAME_IDS: readonly OrientationFrameId[] = [
+  DEFAULT_ORIENTATION,
+  ...(Object.keys(ORIENTATION_FRAMES) as OrientationFrameId[]).filter(
+    (id) => id !== DEFAULT_ORIENTATION,
+  ),
+];
 
 // ── Props ──────────────────────────────────────────────────────────────────────
 

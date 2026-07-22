@@ -69,10 +69,10 @@ import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { EngineState } from '../../@types/engine/state/EngineState';
 
 import { createCameraClock } from './camera/cameraClock';
+import { liveFrameBasisQuat } from './camera/liveFrameBasisQuat';
 import type { CameraRuntime } from '../../@types/engine/state/CameraRuntime';
 import { CONST_J2000 } from '../../data/time/constJ2000';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
-import { matrixToQuaternion } from '../../utils/math/matrixToQuaternion';
 import { DEFAULT_ORIENTATION } from '../../data/defaults';
 import { createEngineData } from './data/createEngineData';
 import { createRenderScheduler } from './subsystems/renderScheduler';
@@ -672,8 +672,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // The live camera Resources the focus and orientation sagas read off the
     // frame loop: the visible from-pose (so a re-focus hands off from what the
     // user sees), the lens FOV (for structure screen-fill framing), and the
-    // up-basis quaternion resolved THIS frame — `frameBasis.current` is a tight
-    // 9-float column-major Mat3, exactly `matrixToQuaternion`'s input, so a
+    // up-basis quaternion resolved THIS frame via `liveFrameBasisQuat`, so a
     // mid-slerp re-switch captures the live pole rather than snapping to the
     // committed frame. Null when `state.cam` is absent — pre-bootstrap or
     // post-destroy — so both sagas no-op rather than seed from a stale pose.
@@ -682,7 +681,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         ? {
             from: state.cameraRuntime.lastPose.current,
             fovYRad: state.cameraRuntime.projection.fovYRad,
-            frameBasisQuat: matrixToQuaternion(state.cameraRuntime.frameBasis.current),
+            frameBasisQuat: liveFrameBasisQuat(state.cameraRuntime),
           }
         : null,
     playClip,
