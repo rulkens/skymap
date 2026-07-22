@@ -61,39 +61,11 @@
 }
 
 /*
- * Labelled-slider row: fixed-width label + value columns so the readout
- * lines up, then the slider stretches to fill.  Tabular numerals keep the
- * value from shimmying as the user drags.  Same grid as VolumeFieldRow.
+ * Slider row wrapper — just enough to host the shared compact `Slider`
+ * (label + value readout folded into its own pill) and the descriptive
+ * hover `title`.  Same idiom as VolumeFieldRow's `.sliderRow`.
  */
 .sliderRow {
   display: flex;
   align-items: center;
-  gap: var(--space-2, 4px);
-  font-size: 0.85em;
-  color: var(--color-fg-muted, #aaa);
-}
-
-.sliderLabel {
-  flex: 0 0 4.5em;
-  text-align: left;
-  letter-spacing: 0.02em;
-}
-
-.sliderValue {
-  flex: 0 0 3em;
-  text-align: right;
-  font-feature-settings: 'tnum';
-  color: var(--color-fg, #ddd);
-}
-
-.slider {
-  flex: 1;
-  min-width: 0;
-  accent-color: var(--color-accent-control, #4a9eff);
-  cursor: pointer;
-}
-
-.slider:disabled {
-  opacity: 0.4;
-  cursor: default;
 }

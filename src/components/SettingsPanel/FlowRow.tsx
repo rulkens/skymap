@@ -6,7 +6,7 @@
  * Layout (two stacked regions, mirroring the Cosmic web body):
  *
  *   [ Advect ][ Streamline ]
- *   Intensity   0.70  [━━━━━━━━━━━●━━━━━━]
+ *   [Intensity ━━━━━━━●━━━━━━━━━━━━━ 0.70]
  *
  * The enable toggle is NOT here — it lives on the section header as the
  * `CollapsibleSection`'s `headerToggle`, exactly like the Galaxies / Cosmic
@@ -37,6 +37,7 @@ import type { FlowMode } from '../../@types/data/flow/FlowMode';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
 import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
 import { FLOW_SLIDER_FIELDS, flowSliderPatch } from '../../data/flow/flowFields';
+import Slider from '../common/Slider/Slider';
 import styles from './FlowRow.module.css';
 
 export type FlowRowProps = {
@@ -85,22 +86,19 @@ function FlowRow({ flow, onChange }: FlowRowProps): ReactNode {
 
       {/* Panel-surface sliders (intensity today) — driven from the flow field
           registry so ranges/labels live in one place.  Disabled while the layer
-          is off (no visible effect). */}
+          is off (no visible effect).  Compact `Slider` folds label + value
+          readout into one pill (see common/Slider/Slider.tsx). */}
       {PANEL_SLIDERS.map((f) => (
-        <div className={styles.sliderRow} key={f.key}>
-          <span className={styles.sliderLabel}>{f.label}</span>
-          <span className={styles.sliderValue}>{f.format(flow[f.key])}</span>
-          <input
-            className={styles.slider}
-            type="range"
+        <div className={styles.sliderRow} key={f.key} title={f.title}>
+          <Slider
+            label={f.label}
+            value={flow[f.key]}
             min={f.min}
             max={f.max}
             step={f.step}
-            value={flow[f.key]}
             disabled={!enabled}
-            aria-label={`Flow ${f.label.toLowerCase()}`}
-            title={f.title}
-            onChange={(e) => onChange(flowSliderPatch(f.key, Number(e.target.value)))}
+            format={f.format}
+            onChange={(v) => onChange(flowSliderPatch(f.key, v))}
           />
         </div>
       ))}
