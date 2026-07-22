@@ -49,7 +49,6 @@ import type { CameraPose } from '../@types/camera/CameraPose';
 import type { Vec4 } from '../@types/math/Vec4';
 import type { ClipData } from '../@types/animation/ClipData';
 import type { ClipId } from '../@types/animation/ClipId';
-import type { EarthBody } from '../@types/scene/EarthBody';
 
 export type RootState = ReturnType<typeof rootReducer>;
 export type AppStore = ReturnType<typeof createAppStore>['store'];
@@ -103,15 +102,6 @@ export type SagaContext = {
    * tween then no-ops.
    */
   cameraRuntime: () => LiveCameraRuntime | null;
-  /**
-   * The live Earth record `watchFlyToEarthKeySaga` frames its descent tween on,
-   * or null before the scene-body seed installs it — the fly-to then no-ops.
-   * A context getter, not a store selector, because the `BodyStore` is engine
-   * state (`EngineState.data.bodies`), not `RootState`: mirroring the record
-   * into a redux slice would duplicate ownership of a seeded engine resource,
-   * the exact split `cameraRuntime` already resolves the same way.
-   */
-  earthBody: () => EarthBody | null;
   /**
    * Plays a data clip and resolves when the clip completes or is cancelled.
    * The tour saga awaits this Promise for the establishing fly and races it

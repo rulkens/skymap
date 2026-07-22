@@ -19,7 +19,7 @@
  *   watchClipSaga          — runs the clip-player seam on each playClip; stopClip/re-play cancels it
  *   watchClipPathInspectSaga — samples a clip's camera route into the debug inspector on inspectClipPath/clearClipPath
  *   watchReplayInspectedPathSaga — replays the inspector's pinned route verbatim on replayInspectedPath
- *   watchFlyToEarthKeySaga — tweens the camera to Earth-surface framing on the 'e' debug key
+ *   watchGoHomeSaga        — pins Earth and tweens to the sunlit home pose on each goHome intent
  *
  * Each watcher is one saga per file, named after the saga, authored beside its
  * concern (the tier watcher in `state/tier/watchTierSaga`, the reconcile watchers
@@ -54,7 +54,7 @@ import { watchTourKeyboardSaga } from '../state/tour/watchTourKeyboardSaga';
 import { watchClipSaga } from '../state/camera/watchClipSaga';
 import { watchClipPathInspectSaga } from '../state/camera/watchClipPathInspectSaga';
 import { watchReplayInspectedPathSaga } from '../state/camera/watchReplayInspectedPathSaga';
-import { watchFlyToEarthKeySaga } from '../state/scene/watchFlyToEarthKeySaga';
+import { watchGoHomeSaga } from '../state/selection/watchGoHomeSaga';
 
 export function* mainSaga() {
   yield* all([
@@ -74,6 +74,6 @@ export function* mainSaga() {
     watchClipSaga(),
     watchClipPathInspectSaga(),
     watchReplayInspectedPathSaga(),
-    watchFlyToEarthKeySaga(),
+    watchGoHomeSaga(),
   ]);
 }

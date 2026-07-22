@@ -94,12 +94,27 @@ function buildFixture() {
       rMedGeo: 100,
       rMedPhotogeo: 100,
     },
+    // Dropped: a resolvable distance but no G magnitude (empty CSV cell parses
+    // to NaN). Without the guard, absoluteMagnitude(NaN, d) is NaN, and the
+    // absMag quantizer's NaN semantics land it in LUT index 0 — the brightest
+    // bin — as a fake beacon star that is never counted as a clamp.
+    {
+      sourceId: 1003n,
+      raDeg: 70,
+      decDeg: 25,
+      gMag: NaN,
+      bpRp: 0.5,
+      rMedGeo: null,
+      rMedPhotogeo: 20,
+    },
   ];
 
   // One GCNS-only row (source_id not in the main set) → an always-kept
-  // supplement star.
+  // supplement star, plus one with the same missing-photometry gap on the
+  // supplement loop.
   const gcns: GcnsRow[] = [
     { sourceId: 2001n, raDeg: 60, decDeg: -20, distPc: 10, gMag: 15, bpRp: 2.5 },
+    { sourceId: 2002n, raDeg: 65, decDeg: -25, distPc: 10, gMag: NaN, bpRp: 1.0 },
   ];
 
   // Two Hipparcos rows: one bright (kept, wins over Gaia 4004) and one with a
@@ -132,7 +147,7 @@ describe('buildStarCatalog', () => {
 
     // Post-dedup population: g1 (kept), gc1 (supplement), HIP 42 (kept) = 3.
     // g2 dropped (no distance), Proxima subtracted (famous), Gaia 4004
-    // subtracted (Hipparcos wins).
+    // subtracted (Hipparcos wins), g3/gc2 dropped (no G magnitude).
     expect(result.totalStars).toBe(3);
 
     // Three tiers built; with a tiny fixture every tier holds all three stars.
@@ -183,6 +198,7 @@ describe('buildStarCatalog', () => {
       famousSubtracted: 1, // Proxima — matched the famous-star set
       hipGaiaSubtracted: 1, // Gaia 4004 — replaced by bright HIP 42
       farDistance: 0, // every fixture star sits within MAX_STAR_DISTANCE_PC
+      noPhotometry: 2, // Gaia 1003 + GCNS 2002 — resolvable distance, no G magnitude
     });
   });
 });

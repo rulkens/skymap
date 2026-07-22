@@ -31,46 +31,17 @@
 import package::filaments::io::Uniforms;
 import package::filaments::io::PerVertex;
 import package::filaments::io::VSOut;
-import package::lib::camera::worldToClip;
+import package::lib::segmentQuad::expandSegmentQuad;
 
 @group(0) @binding(0) var<uniform> u : Uniforms;
 
 @vertex
 fn vs(in : PerVertex) -> VSOut {
-  // Project both endpoints to clip space via the shared helper. We
-  // could call 'worldToNdc' twice and drop the perspective divide
-  // separately, but we still need 'aClip.w' / 'bClip.w' below to
-  // restore clip space after the pixel-space offset, so doing the
-  // divide locally is cheaper than projecting twice.
-  let aClip = worldToClip(u.cam, in.startPos);
-  let bClip = worldToClip(u.cam, in.endPos);
-
-  // Choose which endpoint this corner uses (uv.x = 0 → start, 1 → end).
-  let endpoint = select(aClip, bClip, in.uv.x > 0.5);
-
-  // Compute the screen-space tangent and perpendicular for THIS segment.
-  // We do the math in NDC then scale to pixels — clip-space requires the
-  // perspective divide first.
-  let aNdc = aClip.xy / aClip.w;
-  let bNdc = bClip.xy / bClip.w;
-  let tangent = normalize(bNdc - aNdc);
-  let perp = vec2<f32>(-tangent.y, tangent.x);
-
-  // pixel width → NDC offset: (px / halfViewport) is the NDC-space length
-  // of one pixel.  Multiplied by halfWidthPx gives the half-width in NDC.
-  let halfWidthNdc = perp * (u.halfWidthPx / (u.cam.viewportPx * 0.5));
-
-  // uv.y in [0, 1] picks +halfWidth or -halfWidth.
-  let sideSign = in.uv.y * 2.0 - 1.0;
-  let offsetNdc = halfWidthNdc * sideSign;
-
-  // Apply the offset to the chosen endpoint, then re-multiply by w to
-  // restore clip space (perspective-correct interpolation).
+  // Expand this corner into a clip-space vertex via the shared
+  // segment-quad helper. 'u.halfWidthPx' is already a half-width, so it
+  // passes straight through.
   var out : VSOut;
-  out.clip = vec4<f32>(
-    endpoint.xy + offsetNdc * endpoint.w,
-    endpoint.zw,
-  );
+  out.clip = expandSegmentQuad(u.cam, in.startPos, in.endPos, in.uv, u.halfWidthPx);
   // Pass uv.y through for the fragment falloff; lerp density between
   // start/end based on uv.x.
   out.uv = in.uv;

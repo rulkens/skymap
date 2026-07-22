@@ -238,8 +238,13 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
       // NEAR0), but its visibility window is far WIDER than the foreground
       // gate — at galaxy scale it legitimately draws while the star rows
       // skip. Toggle it off (and zero its fade tail) so this test keeps
-      // pinning the STAR rows' wholesale-skip property.
-      settings: { milkyWay: { enabled: false }, famousStars: { enabled: true } },
+      // pinning the STAR rows' wholesale-skip property. The constellation
+      // overlay likewise rides this group; toggle it off for the same reason.
+      settings: {
+        milkyWay: { enabled: false },
+        famousStars: { enabled: true },
+        constellations: { enabled: false, intensity: 1 },
+      },
       subsystems: { fades: { opacityOf: () => 0 } },
     } as unknown as EngineState;
     const groupAt = (ctx: ReadyFrameContext) =>

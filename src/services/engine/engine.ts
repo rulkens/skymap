@@ -284,6 +284,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       renderTargets: null,
       compositor: null,
       filamentRenderer: null,
+      constellationRenderer: null,
       // labelRenderer + markerLineRenderer: null until initGpu finishes the
       // font-atlas fetch.  Excluded from isEngineReady (optional async
       // resources, null-checked at use by labelsLayer / markerLinesLayer).
@@ -507,6 +508,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       mcpm: null,
       // Default-off velocity flow field; demand-loaded like cf4Density.
       flow: null,
+      // Constellation stick-figure artifact; demand-loaded on its master gate.
+      constellations: null,
       // Keyed body-surface texture family (Earth + planets/moons + Saturn ring),
       // minted in initGpu beside the body renderers. Empty map at construction —
       // proximity-demanded + released per body (mirrors the `points` map).
@@ -524,11 +527,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // ── Register label producers with the director ───────────────────────
   //
   // Registration order = merged label order: milkyWayLabel, then the structure
-  // labels, then the famous-galaxy labels.  The director declutters across
-  // all of them by `prominencePx`, so registration order only sets the
-  // tiebreak for equal-prominence collisions (rare).  All three producers are
-  // pure functions over the state; wrap each as a LabelProducer with a stable
-  // id.  All eager, so this is synchronous before any frame.
+  // labels, then the famous-galaxy labels.  The director declutters across all
+  // of them by `prominencePx`, so registration order only sets the tiebreak for
+  // equal-prominence collisions (rare).  All producers are pure functions over
+  // the state; wrap each as a LabelProducer with a stable id.  All eager, so
+  // this is synchronous before any frame.
+  //
+  // The constellation figure NAMES are deliberately NOT here: their anchors sit
+  // at parsec distances, inside the COSMO slab's fixed 0.01-Mpc near plane the
+  // director projects through, so a director label for them could never draw.
+  // They route through `foregroundLabelsLayer` on the NEAR0 slab instead, beside
+  // the scene-body captions — see `constellationCaptions`.
   state.subsystems.labelDirector.registerProducer({
     id: 'milkyWayLabel',
     produceLabels: produceMilkyWayLabel,
@@ -639,13 +648,21 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // to sample a clip's camera route into the `clipPathInspector` subsystem (read
   // each frame by `clipPathDebugLayer`) and `clear` to drop it. Shares the same
   // live-pose accessor as `playClip` so a `start:'live'` clip samples from the
-  // pose the user sees. 384 samples keeps the route + target polylines smooth
-  // through the tight Catmull-Rom corners of a flyPath (must stay within the
-  // debugLineRenderer's maxLines: 2·(n−1) route+target segments + 9 gizmo).
+  // pose the user sees.
+  //
+  // The sample count must cover the WAYPOINT-DENSEST clip, not just the sparse
+  // demo path: a flyPath threading ~200 waypoints gives 384 samples only ~1.9
+  // per leg — the polyline then draws the raw waypoint-to-waypoint CHORDS and
+  // hides the smooth spline between knots, reading as hard corners everywhere.
+  // 4000 samples is ~20 per leg on such a route, enough to resolve the actual
+  // curve so a smooth stretch reads smooth and only genuinely tight turns
+  // still bend. This must stay within the
+  // debugLineRenderer's maxLines (2·(n−1) route+target segments + 9 gizmo =
+  // 8007 here; the renderer is built with 8192 in `initGpu`).
   const clipPathInspect = createClipPathInspectSeam({
     inspector: state.subsystems.clipPathInspector,
     getLivePose: () => state.cameraRuntime.lastPose.current,
-    sampleCount: 384,
+    sampleCount: 4000,
   });
 
   cb.setSagaContext({
@@ -668,11 +685,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
             frameBasisQuat: matrixToQuaternion(state.cameraRuntime.frameBasis.current),
           }
         : null,
-    // The live Earth record `watchFlyToEarthKeySaga` frames its descent tween
-    // on. Read lazily (like `resolveDeps`) because the scene-body seed installs
-    // Earth after the root saga forks; null until then, so the fly-to key
-    // no-ops rather than tween toward a body that isn't there.
-    earthBody: () => state.data.bodies.earth,
     playClip,
     clipPathInspect,
   });
@@ -791,6 +803,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.compositor = null;
     state.gpu.filamentRenderer?.destroy();
     state.gpu.filamentRenderer = null;
+    state.gpu.constellationRenderer?.destroy();
+    state.gpu.constellationRenderer = null;
     state.gpu.labelRenderer?.destroy();
     state.gpu.labelRenderer = null;
     state.gpu.foregroundLabelRenderer?.destroy();

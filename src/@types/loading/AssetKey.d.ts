@@ -39,6 +39,13 @@ import type { BodyTextureSlotKey } from '../data/BodyTextureSlotKey';
  *     slot lives as a named field on `state.assetSlots` and needs a string
  *     asset key to route through `slotFor`.
  *
+ *   - `'constellations'` — the true-3D constellation stick-figure artifact
+ *     (`constellations.json`), a single tier-agnostic overlay asset. Opt-in
+ *     (defaults off), demand-loaded on the layer's master gate; it has no
+ *     point-`Source` code, so its slot lives as a named field on
+ *     `state.assetSlots` and needs a string asset key to route through
+ *     `slotFor`.
+ *
  *   - `BodyTextureSlotKey` — the keyed `bodyTextures` slot family: one asset per
  *     `(bodyId, kind)` map, encoded as the composite `\`${bodyId}:${kind}\``
  *     string (`'earth:surface'`, `'mars:surface'`, the Saturn ring strip
@@ -70,4 +77,5 @@ export type AssetKey =
   | 'cf4Density'
   | 'mcpm'
   | 'flow'
+  | 'constellations'
   | BodyTextureSlotKey;

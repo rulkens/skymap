@@ -40,6 +40,7 @@
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { Vec3 } from '../../../../@types/math/Vec3';
 import { COSMO } from '../slabs';
 import { resolveLayerOpacity } from '../../presentation/focusRecession';
 
@@ -51,6 +52,17 @@ import { resolveLayerOpacity } from '../../presentation/focusRecession';
  * against dense galaxy fields.
  */
 const FILAMENT_LINE_HALFWIDTH_PX = 1.5;
+
+/**
+ * The two endpoints of the filament tint ramp (RGB), mixed per-fragment by local
+ * density: `FILAMENT_BASE_TINT` the dim cool-purple tone at sparse tendrils,
+ * `FILAMENT_HOT_TINT` the bright near-white violet at dense spines. The two have
+ * similar luminance so the shift reads as colour temperature, not glare. This is
+ * the one home for the layer's palette; the pass hands both to the renderer,
+ * which packs them into the fragment shader's tint uniforms.
+ */
+const FILAMENT_BASE_TINT: Vec3 = [0.55, 0.45, 0.85];
+const FILAMENT_HOT_TINT: Vec3 = [0.85, 0.75, 1.0];
 
 export const filamentsLayer: ContentLayer = {
   name: 'filaments',
@@ -104,6 +116,8 @@ export const filamentsLayer: ContentLayer = {
         nowMs,
         state.subsystems.clipPlayer,
       ),
+      FILAMENT_BASE_TINT,
+      FILAMENT_HOT_TINT,
     );
   },
 };

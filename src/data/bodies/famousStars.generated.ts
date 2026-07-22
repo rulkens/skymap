@@ -1188,7 +1188,7 @@ export const FAMOUS_STARS_GENERATED: readonly FamousStarRow[] = [
   {
     id: 'ankaa',
     commonName: 'Ankaa',
-    names: ['Ankaa', 'Alpha Phoenicis', 'HD 6510', 'HIP 5348'],
+    names: ['Ankaa', 'Alpha Phoenicis', 'HD 6510', 'HIP 2081'],
     constellation: 'Phoenix',
     raDeg: 6.571,
     decDeg: -42.306,

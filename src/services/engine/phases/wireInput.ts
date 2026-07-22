@@ -41,6 +41,8 @@ import { computeInitialCamera, DEFAULT_FOV_Y_RAD } from '../camera/cameraFraming
 import { poseOf } from '../camera/poseOf';
 import { projectionOf } from '../camera/projectionOf';
 import { cssToTexPx } from '../helpers/cssToTexPx';
+import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
+import { EARTH_REF } from '../../../data/selection/earthRef';
 import {
   commitCameraPose,
   beginDrag,
@@ -53,7 +55,7 @@ import {
   updateSelectionHover,
   clearSelection,
 } from '../../../state/selection/selectionSlice';
-import { selectSelectedRef } from '../../../state/selection/selectors';
+import { selectSelectedRef, selectFocusRef } from '../../../state/selection/selectors';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
@@ -130,10 +132,19 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
 
   // ── Camera auto-framing ──────────────────────────────────────────────
   //
-  // Pure constants — see `cameraFraming.ts`. No dependency on loaded
-  // catalogs, so the camera is built before any galaxy catalog has arrived.
+  // Boot straight into the Earth home pose — see `cameraFraming.ts`. The pose
+  // is a pure function of the boot sim instant (the ephemeris is analytic), so
+  // the camera is still built before any galaxy catalog has arrived.
+  //
+  // `simDays` is the live wall-clock instant `startLoop`'s `goLive` re-anchors
+  // the sim clock to a moment later (`unixMsToJulianDays(Date.now())`). Reading
+  // the same source here — rather than `deriveSimDays(state.time, …)`, which
+  // would run against the still-placeholder J2000 anchor at this phase — frames
+  // Earth where it will actually sit the instant the loop goes live, so there
+  // is no jump on the first follow frame.
   const fovYRad = DEFAULT_FOV_Y_RAD;
-  const initialCam = computeInitialCamera({ fovYRad });
+  const simDays = unixMsToJulianDays(Date.now());
+  const initialCam = computeInitialCamera({ fovYRad, simDays });
 
   // `InitialCam` is exactly an `OrbitCameraInit` minus `aspect` (reset uses the
   // live canvas ratio, not a captured one), so the camera is the framing
@@ -171,6 +182,30 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   state.cameraRuntime.projection = projectionOf(cam);
   state.cameraRuntime.lastPose.current = poseOf(cam);
   store.dispatch(commitCameraPose(poseOf(cam)));
+
+  // ── Home selection seed ──────────────────────────────────────────────────
+  //
+  // Boot IS the home state: pose alone would drift. The sim clock boots live
+  // (`startLoop`'s `goLive`), so Earth moves from the first frame — a bare pose
+  // would let the globe slide out of frame. Seeding focus makes the follow-pivot
+  // driver track Earth's live position; seeding select pins the Earth InfoCard,
+  // which doubles as the "you are here" onboarding card.
+  //
+  // No tween is planted: `watchFocusTweenSaga` no-ops for follow-driver bodies,
+  // so this focus write never competes with a camera animation.
+  //
+  // The seed only fills EMPTY slots. This phase runs asynchronously after React
+  // mounts, and a URL-hash focus with a statically-resolvable id (`body-*`,
+  // milkyWay, structures) lands in the store at mount — before this line runs.
+  // An unconditional seed would clobber that deep link (and useUrlSync would
+  // then rewrite the hash to Earth). Deferred ids (galaxies/stars waiting on a
+  // catalog pulse) resolve after this phase and overwrite the seed — exactly as
+  // they already overwrite the boot pose above.
+  const rootState = store.getState();
+  if (selectSelectedRef(rootState) === null && selectFocusRef(rootState) === null) {
+    store.dispatch(updateSelectionSelect(EARTH_REF));
+    store.dispatch(updateSelectionFocus(EARTH_REF));
+  }
 
   // ── Pointer / keyboard / resize listeners ────────────────────────────
   //

@@ -55,6 +55,7 @@ import { createFamousMetaSlot } from '../../loading/slots/famousMetaSlot';
 import { createStructureCatalogSlot } from '../../loading/slots/structureCatalogSlot';
 import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
 import { createFlowFieldSlot } from '../../loading/slots/flowFieldSlot';
+import { createConstellationsSlot } from '../../loading/slots/constellationsSlot';
 import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
 import { createPgcAliasSlot } from '../../loading/slots/pgcAliasSlot';
 import { createStarCatalogSlot } from '../../loading/slots/starCatalogSlot';
@@ -287,6 +288,20 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     factory: (deps) => createFlowFieldSlot(deps.state, deps.cb),
     req: () => undefined,
     demand: (ctx) => ctx.settings.flow.enabled,
+  },
+
+  // ── Constellation stick-figure overlay ───────────────────────────
+  // Single tier-agnostic `constellations.json`. Demand = the layer's master
+  // gate, the singleton-overlay convention shared with filaments / flow.
+  // Opt-in and off by default, so it's demand-loaded on first enable rather
+  // than at boot. The commit uploads the segment buffer to the renderer once
+  // and kicks `syncVisibilityFades` for the row; the label producer reads the
+  // ready artifact straight off the slot.
+  {
+    key: 'constellations',
+    factory: (deps) => createConstellationsSlot(deps.state, deps.cb),
+    req: () => undefined,
+    demand: (ctx) => ctx.settings.constellations.enabled,
   },
 
   // ── Cluster/supercluster bulk coverage ───────────────────────────

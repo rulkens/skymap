@@ -198,6 +198,19 @@ export const FADE_LAYERS = [
     // layer pops in at whatever the invisible fade had reached.
     guard: (state) => state.gpu.filamentRenderer?.hasCloud() ?? false,
   }),
+  // constellation stick figures — singleton demand-loaded overlay (seed 0)
+  layer({
+    key: 'constellations',
+    expand: () => [undefined],
+    handle: () => ({ kind: 'constellations' }),
+    seed: () => 0,
+    intent: (s) => s.constellations.enabled,
+    // Same demand-loaded gate as filaments/flow: suppress the fade until the
+    // artifact is uploaded (the renderer has drawable segments), so an enable
+    // racing the constellations.json download doesn't burn the fade window over
+    // an empty renderer.
+    guard: (state) => state.gpu.constellationRenderer?.hasData() ?? false,
+  }),
   // flow field — absorbs flowFieldSlot.ts:36 (demand-loaded; seed 0)
   layer({
     key: 'flow',

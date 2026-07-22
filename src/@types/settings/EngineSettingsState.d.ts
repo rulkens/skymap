@@ -160,6 +160,21 @@ export type EngineSettingsState = {
   };
 
   /**
+   * Constellation stick-figure overlay controls. A singleton overlay like
+   * `filaments` / `milkyWay` / `flow`: master toggle + intensity scale.
+   * `enabled` + `intensity` seed from the `SOURCE_REGISTRY` constellations row so
+   * that entry stays the single source of truth for those defaults. The one
+   * `enabled` toggle governs BOTH the stick figures and their name captions —
+   * the captions ride the same layer fade the lines do, so there is no separate
+   * names gate. `intensity` has no panel control; it is a store-only dial the
+   * line-brightness math reads.
+   */
+  constellations: {
+    enabled: boolean;
+    intensity: number;
+  };
+
+  /**
    * Earth's per-body look dials. Three fields today:
    *   - `atmosphereExposure`, the exposure scale on the in-scatter atmosphere
    *     shell's HDR output. Seeded from `ATMOSPHERE_PARAMS.earth.exposure` and

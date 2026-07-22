@@ -45,6 +45,7 @@ import type { PickRenderer } from '../../rendering/PickRenderer';
 import type { PickProgram } from '../frame/PickProgram';
 import type { MilkyWayPickRenderer } from '../../rendering/MilkyWayPickRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
+import type { ConstellationRenderer } from '../../rendering/ConstellationRenderer';
 import type { LabelRenderer } from '../../rendering/LabelRenderer';
 import type { MarkerLineRenderer } from '../../rendering/MarkerLineRenderer';
 import type { DebugLineRenderer } from '../../rendering/DebugLineRenderer';
@@ -166,6 +167,17 @@ export type EngineGpuHandles = {
    * time closure to outlive the public handle.
    */
   filamentRenderer: FilamentRenderer | null;
+  /**
+   * True-3D constellation stick-figure renderer. Constructed unconditionally
+   * during GPU init (the pipeline is cheap), stays empty until the
+   * `constellations` slot's commit uploads the ready `constellations.json`
+   * artifact once on artifact-ready (flipping `hasData()` true and kicking the
+   * demand-loaded fade); the pass thereafter only draws. Nullable + excluded
+   * from `isEngineReady`, same rationale as `filamentRenderer`: the overlay is
+   * an optional demand-loaded asset the `constellationsLayer` null-checks at
+   * point of use.
+   */
+  constellationRenderer: ConstellationRenderer | null;
   /**
    * MSDF text label renderer.  Null until `initGpu` completes the
    * `loadFontAtlas()` fetch and constructs the renderer against the

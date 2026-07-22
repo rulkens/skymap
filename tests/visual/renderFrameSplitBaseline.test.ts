@@ -460,6 +460,7 @@ describe('renderFrame visual baseline', () => {
           thumbnails: { enabled: settings.galaxyTexturesEnabled },
           milkyWay: { enabled: settings.milkyWayEnabled },
           filaments: { enabled: settings.filamentsEnabled, intensity: settings.filamentIntensity },
+          constellations: { enabled: false, intensity: 1 },
           volumes: { enabled: settings.volumesEnabled, items: {} },
           flow: { enabled: false },
           debug: { disabledPasses: {}, renderStrategy: 'auto' },
@@ -524,7 +525,7 @@ describe('renderFrame visual baseline', () => {
           "renderer": "textured-disks",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2],number,number,number",
+          "argShape": "pass,Float32Array[16],Array[2],number,number,number,Array[3],Array[3]",
           "renderer": "filaments",
         },
         {

@@ -63,6 +63,7 @@ import { VOID_ENTRY } from './sources/void';
 import { GROUP_ENTRY } from './sources/group';
 import { MILLIQUAS_ENTRY } from './sources/milliquas';
 import { FILAMENTS_ENTRY } from './sources/filaments';
+import { CONSTELLATIONS_ENTRY } from './sources/constellations';
 import { CF4_DENSITY_ENTRY } from './sources/cf4-density';
 import { MCPM_ENTRY } from './sources/mcpm';
 import { DEBUG_GAUSSIAN_ENTRY } from './sources/debug-gaussian';
@@ -134,6 +135,7 @@ export const SOURCE_REGISTRY = {
   [Source.Planet]: PLANET_ENTRY,
   [Source.Earth]: EARTH_ENTRY,
   [Source.GaiaStars]: GAIA_STARS_ENTRY,
+  [Source.Constellations]: CONSTELLATIONS_ENTRY,
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;
 
 // ─── Famous-galaxy high-res LOD ─────────────────────────────────────────────
