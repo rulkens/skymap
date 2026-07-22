@@ -69,6 +69,7 @@ import { resolveFocusId } from '../../url/resolveFocusId';
 import { extractSelectionRow } from '../helpers/extractSelectionRow';
 import { focusFraming } from '../camera/focusFraming';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
+import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 
 /**
  * Rewrite every id-bearing leaf in `data` to its concrete equivalent, given
@@ -144,27 +145,31 @@ function walkEffect(effect: Effect, deps: ResolveDeps, fovYRad: number, from: Ca
       return aimAt(orbitAnglesLookingAlong(forward), effect.over, effect.ease);
     }
     // A lateral tracking move: displace the live orbit target along the
-    // horizontal right axis of the bearing toward the subject. `forward ×
-    // worldUp` simplifies to `[-fz, 0, fx]` — always horizontal, undefined
-    // only when the bearing is vertical. The angular `byDeg` scales into Mpc
-    // by the live camera distance, so the old anchor slides ~byDeg degrees
+    // horizontal right axis of the bearing toward the subject. That axis is
+    // the `right` of `imagePlaneBasis(forward, 0, worldUp)` — horizontal (its
+    // y-component is zero, so the strafe never changes the target's height),
+    // undefined only when the bearing is vertical. The angular `byDeg` scales
+    // into Mpc by the live camera distance, so the anchor slides ~byDeg degrees
     // across the frame regardless of scale.
     case 'strafeId': {
       const { target } = resolveFraming(effect.id, deps, fovYRad);
-      const fx = target[0] - from.target[0];
-      const fz = target[2] - from.target[2];
-      const m = Math.hypot(fz, fx);
-      if (m < 1e-12) {
+      const forward: Vec3 = [
+        target[0] - from.target[0],
+        target[1] - from.target[1],
+        target[2] - from.target[2],
+      ];
+      if (Math.hypot(forward[2], forward[0]) < 1e-12) {
         throw new Error(
           `resolveClipFoci: strafeId '${effect.id}' has a vertical bearing — ` +
             `no horizontal right axis exists to strafe along.`,
         );
       }
+      const { right } = imagePlaneBasis(forward, 0, [0, 1, 0]);
       const byMpc = Math.tan((effect.byDeg * Math.PI) / 180) * from.distance;
       const displaced: Vec3 = [
-        from.target[0] + (-fz / m) * byMpc,
+        from.target[0] + right[0] * byMpc,
         from.target[1],
-        from.target[2] + (fx / m) * byMpc,
+        from.target[2] + right[2] * byMpc,
       ];
       return moveTarget(displaced, effect.over, effect.ease);
     }

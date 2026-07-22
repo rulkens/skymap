@@ -64,8 +64,10 @@ import type { OrbitCamera } from '../../@types/camera/OrbitCamera';
 import type { OrbitControlsOptions } from '../../@types/camera/OrbitControlsOptions';
 import { updatePosition } from '../../utils/camera/updatePosition';
 import { clampDistance } from '../../utils/camera/clampDistance';
+import { imagePlaneBasis } from '../../utils/camera/imagePlaneBasis';
 import { vec3 } from 'wgpu-matrix';
 import type { Vec3 } from '../../@types/math/Vec3';
+import type { ImagePlaneBasis } from '../../@types/camera/ImagePlaneBasis';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -316,12 +318,12 @@ export function attachOrbitControls(
   // ── Reusable scratch vectors for the pan path ────────────────────────────
   //
   // Allocated once at attach time and reused on every pointermove so the
-  // hot-path doesn't allocate.  vec3.cross / vec3.normalize / vec3.scale all
+  // hot-path doesn't allocate.  vec3.subtract / vec3.normalize / vec3.scale all
   // accept the `dst` as an optional LAST arg; we pass these scratches in as
   // that destination to keep GC pressure at zero during a continuous drag.
-  const forwardScratch = vec3.create();
-  const rightScratch = vec3.create();
-  const upScratch = vec3.create();
+  // `imagePlaneBasis` writes its result into `basisScratch` for the same reason.
+  const forwardScratch: Vec3 = [0, 0, 0];
+  const basisScratch: ImagePlaneBasis = { rolledUp: [0, 0, 0], right: [0, 0, 0], up: [0, 0, 0] };
   const panDeltaScratch = vec3.create();
   const WORLD_UP: Vec3 = [0, 1, 0];
 
@@ -390,20 +392,16 @@ export function attachOrbitControls(
       //
       // Step 1: derive camera basis vectors.  `forward` is the unit vector
       // from camera position toward the target — that's the negative of
-      // (position − target).  `right = forward × world_up` (the side-axis
-      // of the camera's screen plane).  `cam_up = right × forward` (the
-      // screen-up axis, recomputed orthogonal to forward + right rather
-      // than blindly using world_up; this is what handles tilt cases
-      // correctly when pitch is non-zero).
+      // (position − target).  `imagePlaneBasis` turns it into the screen
+      // `right` axis (`forward × up`, the side-axis of the screen plane) and
+      // the orthonormal `up` axis (`right × forward`, recomputed orthogonal
+      // to forward + right rather than blindly using world-up, so it handles
+      // tilt cases correctly when pitch is non-zero). Roll is 0 here — the
+      // orientation-frame switch is the site that later varies the reference
+      // up; today `WORLD_UP` keeps the drag pan world-+Y aligned.
       vec3.subtract(cam.target, cam.position, forwardScratch);
       vec3.normalize(forwardScratch, forwardScratch);
-      vec3.cross(forwardScratch, WORLD_UP, rightScratch);
-      vec3.normalize(rightScratch, rightScratch);
-      vec3.cross(rightScratch, forwardScratch, upScratch);
-      // upScratch is already unit length (cross of two perpendicular unit
-      // vectors), but normalising defensively guards against floating-point
-      // drift on long drags.
-      vec3.normalize(upScratch, upScratch);
+      const basis = imagePlaneBasis(forwardScratch, 0, WORLD_UP, basisScratch);
 
       // Step 2: convert pixel delta → world delta at the camera's focal
       // distance.  At the target depth, one CSS pixel maps to
@@ -423,8 +421,8 @@ export function attachOrbitControls(
       // (CSS y grows downward; cam_up points toward +screen-up, which is
       // the OPPOSITE of CSS y, so the +dy → +cam_up sign falls out
       // naturally without an extra flip.)
-      vec3.scale(rightScratch, -dx * pxToWorld, panDeltaScratch);
-      vec3.addScaled(panDeltaScratch, upScratch, dy * pxToWorld, panDeltaScratch);
+      vec3.scale(basis.right, -dx * pxToWorld, panDeltaScratch);
+      vec3.addScaled(panDeltaScratch, basis.up, dy * pxToWorld, panDeltaScratch);
 
       // Step 4: shift the target.  Camera.position is recomputed from
       // target + dir(yaw, pitch) · distance inside updatePosition, so we

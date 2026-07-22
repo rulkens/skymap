@@ -72,6 +72,7 @@ import { causalHermiteNonUniform } from '../../../utils/math/causalHermiteNonUni
 import { monotoneCubic } from '../../../utils/math/monotoneCubic';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 import { yawPitchToDir } from '../../../utils/camera/yawPitchToDir';
+import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { lerp } from '../../../utils/math/lerp';
 import { trapezoidEase } from '../../../utils/math/trapezoidEase';
 import { buildDwellWarp } from './buildDwellWarp';
@@ -150,11 +151,6 @@ function chord(a: Vec3, b: Vec3): number {
 const WORLD_UP: Vec3 = [0, 1, 0];
 const sub3 = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const dot3 = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-const cross3 = (a: Vec3, b: Vec3): Vec3 => [
-  a[1] * b[2] - a[2] * b[1],
-  a[2] * b[0] - a[0] * b[2],
-  a[0] * b[1] - a[1] * b[0],
-];
 function norm3(a: Vec3): Vec3 {
   const m = Math.hypot(a[0], a[1], a[2]);
   return m > CHORD_EPS ? [a[0] / m, a[1] / m, a[2] / m] : [0, 0, 0];
@@ -173,15 +169,19 @@ const isZero3 = (a: Vec3): boolean => a[0] === 0 && a[1] === 0 && a[2] === 0;
  */
 function passByDirVec(cPrev: Vec3, cK: Vec3, cNext: Vec3, mode: PassByDir): Vec3 {
   const t = norm3(sub3(cNext, cPrev)); // travel tangent
+  // The lateral axes come from the shared image-plane basis about the travel
+  // tangent: `above` is its screen-up axis, `screenSide` its screen-right axis.
   const above = (): Vec3 => {
-    const n = norm3(perp3(WORLD_UP, t));
+    const { up } = imagePlaneBasis(t, 0, WORLD_UP);
+    const n: Vec3 = [up[0], up[1], up[2]];
     return isZero3(n) ? [1, 0, 0] : n; // travel is vertical → arbitrary lateral
   };
   switch (mode) {
     case 'above':
       return above();
     case 'screenSide': {
-      const r = norm3(cross3(t, WORLD_UP));
+      const { right } = imagePlaneBasis(t, 0, WORLD_UP);
+      const r: Vec3 = [right[0], right[1], right[2]];
       return isZero3(r) ? [1, 0, 0] : r;
     }
     case 'outsideBend': {
