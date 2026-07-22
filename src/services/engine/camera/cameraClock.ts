@@ -25,6 +25,7 @@
 
 import type { CameraClock } from '../../../@types/engine/camera/CameraClock';
 import type { CameraTweenDescriptor } from '../../../@types/camera/CameraTweenDescriptor';
+import type { FrameTween } from '../../../@types/camera/FrameTween';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { ClipData } from '../../../@types/animation/ClipData';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
@@ -41,6 +42,8 @@ export function createCameraClock(): CameraClock {
     autoRotateStartMs: null,
     lastTweenRef: null,
     lastAutoRotateActive: false,
+    frameTweenStartMs: null,
+    lastFrameTweenRef: null,
     lastBaseRef: null,
     clipStartMs: null,
     lastClipRef: null,
@@ -75,6 +78,31 @@ export function tweenElapsed(
     clock.tweenStartMs = tween === null ? null : nowMs;
   }
   return clock.tweenStartMs === null ? 0 : nowMs - clock.tweenStartMs;
+}
+
+/**
+ * Detect whether the frame-tween descriptor reference changed; if so, reset the
+ * frame-roll start to `nowMs` (or null when the new descriptor is null). Then
+ * return ms elapsed since the current frame roll started.
+ *
+ * A freshly-installed descriptor returns 0 on the arrival frame and grows on
+ * subsequent frames that carry the same reference. A null frame tween always
+ * returns 0.
+ *
+ * Reference identity is the correct signal: an orientation-frame switch installs
+ * a new `FrameTween` object, so `!==` fires exactly once on the transition frame
+ * — the same identity-reset idiom `tweenElapsed` uses for camera tweens.
+ */
+export function frameTweenElapsed(
+  clock: CameraClock,
+  frameTween: FrameTween | null,
+  nowMs: number,
+): number {
+  if (frameTween !== clock.lastFrameTweenRef) {
+    clock.lastFrameTweenRef = frameTween;
+    clock.frameTweenStartMs = frameTween === null ? null : nowMs;
+  }
+  return clock.frameTweenStartMs === null ? 0 : nowMs - clock.frameTweenStartMs;
 }
 
 /**
