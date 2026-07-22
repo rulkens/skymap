@@ -872,7 +872,7 @@ verification — each sub-item asks the user to look (dev server running).
 
 **Files:** none (review pass).
 
-- [ ] Run the `entanglement-radar` skill over the feature diff (`simplicity.md`
+- [x] Run the `entanglement-radar` skill over the feature diff (`simplicity.md`
       convention). Focus points:
   - Is `frameBasis` written by exactly one per-frame authority (`runFrame` →
     `resolveFrameBasis`) and read (never re-resolved) by the decode / encode / up
@@ -887,7 +887,7 @@ verification — each sub-item asks the user to look (dev server running).
     convention, and no committed-frame fallback that would snap a mid-slerp switch.
   - No branch on "is the camera idle or driven" — the one mechanism (decode
     through `B(t)`) covers both (spec §3.5).
-- [ ] Address anything flagged (default is to un-braid, not defend); re-run
+- [x] Address anything flagged (default is to un-braid, not defend); re-run
       `npm test` + `npm run typecheck`. Commit any fixes.
 
 ---
