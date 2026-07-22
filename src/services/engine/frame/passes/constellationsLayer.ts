@@ -68,6 +68,7 @@
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { Vec3 } from '../../../../@types/math/Vec3';
 import { NEAR0 } from '../slabs';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
@@ -79,6 +80,15 @@ import { constellationLayerOpacity } from '../../presentation/constellationLayer
  * figures read at a glance.
  */
 const CONSTELLATION_LINE_HALFWIDTH_PX = 1.3;
+
+/**
+ * The single dim steel-blue tone (RGB) every figure emits, additively into the
+ * HDR buffer — a cool faint wireflow over the starfield, not a saturated UI
+ * stroke (grill Q5: one tone for all 88 figures, no per-constellation hue). This
+ * is the one home for the layer's tint; the pass hands it to the renderer, which
+ * packs it into the fragment shader's `lineColor` uniform. Eye-tuned in Task 15.
+ */
+const CONSTELLATION_LINE_COLOR: Vec3 = [0.42, 0.58, 0.9];
 
 export const constellationsLayer: ContentLayer = {
   name: 'constellations',
@@ -134,6 +144,7 @@ export const constellationsLayer: ContentLayer = {
       state.settings.constellations.intensity,
       layerOpacity,
       camPos,
+      CONSTELLATION_LINE_COLOR,
     );
   },
 };

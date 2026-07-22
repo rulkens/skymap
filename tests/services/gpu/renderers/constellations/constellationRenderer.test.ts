@@ -5,8 +5,12 @@ import {
   CONSTELLATION_UNIFORM_BYTES,
   CONSTELLATION_HALFWIDTH_F32,
   CONSTELLATION_INTENSITY_F32,
+  CONSTELLATION_COLOR_F32,
 } from '../../../../../src/services/gpu/renderers/constellations/constellationRenderer';
-import { writeCameraPrefix, CAMERA_UNIFORM_BYTES } from '../../../../../src/services/gpu/lib/cameraUniforms';
+import {
+  writeCameraPrefix,
+  CAMERA_UNIFORM_BYTES,
+} from '../../../../../src/services/gpu/lib/cameraUniforms';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import type { ConstellationsArtifact } from '../../../../../src/@types/loading/ConstellationsArtifact';
 import type { FadeUniformsBgl } from '../../../../../src/@types/rendering/FadeUniformsBgl';
@@ -81,7 +85,9 @@ describe('createConstellationRenderer.draw camera-relative write', () => {
     const writeBuffer = vi.fn();
     const device = {
       createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
-      createShaderModule: vi.fn(() => ({ getCompilationInfo: () => Promise.resolve({ messages: [] }) })),
+      createShaderModule: vi.fn(() => ({
+        getCompilationInfo: () => Promise.resolve({ messages: [] }),
+      })),
       createBindGroupLayout: vi.fn(() => ({})),
       createPipelineLayout: vi.fn(() => ({})),
       createRenderPipeline: vi.fn(() => ({ getBindGroupLayout: vi.fn(() => ({})) })),
@@ -103,7 +109,16 @@ describe('createConstellationRenderer.draw camera-relative write', () => {
     const PC = SCALE_UNITS.PC_TO_MPC;
     const camPos: Vec3 = [0.5 * PC, 1 * PC, 1.5 * PC];
     writeBuffer.mockClear();
-    renderer.draw(pass, mat4.identity() as Float32Array, [1920, 1080], 0.9, 1, 1, camPos);
+    renderer.draw(
+      pass,
+      mat4.identity() as Float32Array,
+      [1920, 1080],
+      0.9,
+      1,
+      1,
+      camPos,
+      [0.42, 0.58, 0.9],
+    );
 
     // The instance write is the only writeBuffer whose payload is a Float32Array
     // (uniform + fade writes hand ArrayBuffers).
@@ -138,6 +153,13 @@ describe('constellation uniform layout parity', () => {
     expect(CONSTELLATION_INTENSITY_F32 * 4).toBe(CAMERA_UNIFORM_BYTES + 4); // byte 84
     expect(CONSTELLATION_UNIFORM_BYTES % 16).toBe(0);
     expect(CONSTELLATION_UNIFORM_BYTES).toBeGreaterThanOrEqual(CAMERA_UNIFORM_BYTES + 8);
+  });
+
+  it('aligns the lineColor vec3 to a 16-byte boundary that fits inside the struct', () => {
+    // vec3<f32> requires 16-byte alignment; the WGSL struct places it at byte 96,
+    // so a misaligned f32-index here would make the GPU read the wrong lanes.
+    expect((CONSTELLATION_COLOR_F32 * 4) % 16).toBe(0);
+    expect(CONSTELLATION_COLOR_F32 * 4 + 12).toBeLessThanOrEqual(CONSTELLATION_UNIFORM_BYTES);
   });
 
   it('the camera prefix write never collides with the scalar slots', () => {

@@ -23,10 +23,11 @@ import package::lib::camera::CameraUniforms;
 // The first 80 bytes are the shared 'CameraUniforms' prefix from
 // 'lib/camera.wesl' (viewProj at offset 0, viewportPx at offset 64, two
 // reserved pad f32s at 72/76). The two f32 slots at offsets 80 and 84 hold this
-// renderer's scalars; offsets 88..95 are an explicit 8-byte tail pad rounding
-// the struct to a 16-byte multiple. Total: 96 bytes — identical to the filament
-// Uniforms, so the CPU-side 'writeCameraPrefix' + two scalar writes are the same
-// packing (see 'constellationRenderer.ts' UNIFORM_BYTES).
+// renderer's scalars; offsets 88..95 are an 8-byte pad carrying the vec3 tint at
+// offset 96 to its required 16-byte boundary. 'lineColor' occupies 96..107 and a
+// final 4-byte pad rounds the struct to 112 bytes (a 16-byte multiple). The
+// CPU-side 'writeCameraPrefix' + two scalar writes + one colour write mirror
+// this exactly (see 'constellationRenderer.ts' UNIFORM_BYTES).
 
 struct Uniforms {
   cam : CameraUniforms,
@@ -37,8 +38,14 @@ struct Uniforms {
   // constellation-intensity slider (offset 84). Multiplied into the fragment's
   // alpha alongside the fade opacity.
   intensity : f32,
-  _pad0 : f32,             // offset 88 — see struct comment above
+  _pad0 : f32,             // offset 88 — carries lineColor to its 16-byte boundary
   _pad1 : f32,             // offset 92
+  // The single dim steel-blue tone every figure emits (offset 96). One home for
+  // the layer's tint, defined CPU-side in 'constellationsLayer.ts' and written
+  // into this slot; the fragment reads it directly. vec3 needs 16-byte
+  // alignment, hence the pad pair above.
+  lineColor : vec3<f32>,
+  _pad2 : f32,             // offset 108 — rounds the struct to 112 bytes
 };
 
 // ── per-vertex + per-instance attributes ───────────────────────────
@@ -77,8 +84,8 @@ struct PerVertex {
 // Only 'uv' passes through: uv.y (0..1 across the line's width) drives the soft
 // anti-aliased edge in the fragment stage; uv.x already did its work in the
 // vertex stage (endpoint + gap selection). The single steel-blue tone and the
-// intensity scale are constants/uniforms the fragment reads directly, so they
-// need no varying.
+// intensity scale are uniforms the fragment reads directly, so they need no
+// varying.
 
 struct VSOut {
   @builtin(position) clip : vec4<f32>,

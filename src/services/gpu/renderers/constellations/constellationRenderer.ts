@@ -27,15 +27,15 @@
  *   quadVertexBuffer (static) : 4 × vec2<f32> → shared unit-quad corners
  *   instanceBuffer            : segmentCount × 8 × f32 → per-segment endpoints
  *                               (camera-relative, re-written each frame)
- *   uniformBuffer             : 96 bytes (CameraUniforms prefix + halfWidthPx +
- *                               intensity + tail pad)
+ *   uniformBuffer             : 112 bytes (CameraUniforms prefix + halfWidthPx +
+ *                               intensity + pad + lineColor vec3 + tail pad)
  *   fadeBuffer                : 16 bytes (FadeUniforms — per-frame opacity)
  *
  * Public API:
  *   - createConstellationRenderer(device, targetFormat, fadeBgl)
  *   - upload(artifact)  → caches the absolute instance data + sizes the buffer (once)
  *   - hasData()         → whether a drawable segment set is committed
- *   - draw(pass, viewProj, viewportPx, halfWidthPx, intensity, fadeOpacity, camPos)
+ *   - draw(pass, viewProj, viewportPx, halfWidthPx, intensity, fadeOpacity, camPos, lineColor)
  *   - destroy()         → releases all GPU resources
  *
  * Factory (not class) form matches `createFilamentRenderer` and the other
@@ -59,21 +59,25 @@ import { buildConstellationInstances, FLOATS_PER_SEGMENT } from './buildConstell
 
 // Uniform block layout, mirroring 'struct Uniforms' in
 // 'shaders/constellations/io.wesl'. Bytes 0..79 are the shared 'CameraUniforms'
-// prefix (lib/camera.wesl); the two scalar params sit at offsets 80/84; the
-// trailing 8B pad rounds the struct to a 16-byte multiple. Total 96 bytes —
-// identical to the filament Uniforms.
+// prefix (lib/camera.wesl); the two scalar params sit at offsets 80/84; an 8B
+// pad carries the vec3 lineColor to its required 16-byte boundary at 96; a final
+// 4B pad rounds the struct to 112 bytes (a 16-byte multiple).
 //
-//   offset  0..63 : viewProj    mat4x4<f32>   (CameraUniforms.viewProj)
-//   offset 64..71 : viewportPx  vec2<f32>     (CameraUniforms.viewportPx)
+//   offset  0..63 : viewProj     mat4x4<f32>   (CameraUniforms.viewProj)
+//   offset 64..71 : viewportPx   vec2<f32>     (CameraUniforms.viewportPx)
 //   offset 72..79 : _pad0, _pad1 2 × f32       (CameraUniforms reserved)
-//   offset 80..83 : halfWidthPx f32
-//   offset 84..87 : intensity   f32
-//   offset 88..95 : _pad0, _pad1 2 × f32       (Uniforms tail pad)
-export const CONSTELLATION_UNIFORM_BYTES = 96;
+//   offset 80..83 : halfWidthPx  f32
+//   offset 84..87 : intensity    f32
+//   offset 88..95 : _pad0, _pad1 2 × f32       (vec3 alignment pad)
+//   offset 96..107: lineColor    vec3<f32>
+//   offset 108..111: _pad2       f32           (Uniforms tail pad)
+export const CONSTELLATION_UNIFORM_BYTES = 112;
 /** f32-index of `halfWidthPx` in the packed uniform (byte 80 / 4). */
 export const CONSTELLATION_HALFWIDTH_F32 = 20;
 /** f32-index of `intensity` in the packed uniform (byte 84 / 4). */
 export const CONSTELLATION_INTENSITY_F32 = 21;
+/** f32-index of `lineColor`'s first lane in the packed uniform (byte 96 / 4). */
+export const CONSTELLATION_COLOR_F32 = 24;
 
 export function createConstellationRenderer(
   device: GPUDevice,
@@ -242,6 +246,12 @@ export function createConstellationRenderer(
      * with the caller's f64-rebased `viewProj` — the `starPointsLayer` seam.
      */
     camPos: Vec3,
+    /**
+     * The steel-blue tone every figure emits (RGB). Defined once in
+     * `constellationsLayer.ts` (`CONSTELLATION_LINE_COLOR`) and packed into the
+     * uniform's `lineColor` slot; the fragment reads it directly.
+     */
+    lineColor: Vec3,
   ): void {
     if (segmentCount === 0 || !instanceBuffer || !fadeBuffer || !fadeBindGroup) return;
     if (!absoluteData || !relativeScratch) return;
@@ -268,12 +278,15 @@ export function createConstellationRenderer(
     }
     device.queue.writeBuffer(instanceBuffer, 0, rel);
 
-    // Pack the 96-byte Uniforms struct (byte layout documented on
-    // CONSTELLATION_UNIFORM_BYTES above). Reused scratch, so the two named tail
-    // pads are left as their prior contents — they are never read by the shader.
+    // Pack the 112-byte Uniforms struct (byte layout documented on
+    // CONSTELLATION_UNIFORM_BYTES above). Reused scratch, so the named pads are
+    // left as their prior contents — they are never read by the shader.
     writeCameraPrefix(uniformF32, viewProj, viewportPx);
     uniformF32[CONSTELLATION_HALFWIDTH_F32] = halfWidthPx;
     uniformF32[CONSTELLATION_INTENSITY_F32] = intensity;
+    uniformF32[CONSTELLATION_COLOR_F32] = lineColor[0];
+    uniformF32[CONSTELLATION_COLOR_F32 + 1] = lineColor[1];
+    uniformF32[CONSTELLATION_COLOR_F32 + 2] = lineColor[2];
     device.queue.writeBuffer(uniformBuffer, 0, uniformScratch);
 
     // Per-frame fade opacity into the shared FadeUniforms buffer.

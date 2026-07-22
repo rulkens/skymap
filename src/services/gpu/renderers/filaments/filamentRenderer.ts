@@ -13,12 +13,12 @@
  *   indexBuffer (static)        :  6 × uint16  → two-triangle quad
  *   quadVertexBuffer (static)   :  4 × vec2<f32> → corner UVs
  *   segmentInstanceBuffer       :  segmentCount × 8 × f32 → per-segment endpoints
- *   uniformBuffer               :  96 bytes (CameraUniforms prefix + halfWidth + intensityScale + tail pad)
+ *   uniformBuffer               :  128 bytes (CameraUniforms prefix + halfWidth + intensityScale + baseTint + hotTint + pads)
  *
  * Public API:
  *   - createFilamentRenderer(device, targetFormat, fadeBgl)
  *   - upload(cloud: FilamentCloud)  → builds the instance buffer
- *   - draw(pass, viewProj, viewportPx, halfWidthPx, intensityScale, fadeOpacity)
+ *   - draw(pass, viewProj, viewportPx, halfWidthPx, intensityScale, fadeOpacity, baseTint, hotTint)
  *   - clear()                       → drops the instance buffer
  *   - destroy()                     → releases all GPU resources
  *
@@ -40,6 +40,7 @@ import type { FilamentRenderer } from '../../../../@types/rendering/FilamentRend
 import type { Mat4 } from 'wgpu-matrix';
 import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsBgl';
 import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec3 } from '../../../../@types/math/Vec3';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { clampFilamentIntensity } from '../../../../utils/clampFilamentIntensity';
 import { writeCameraPrefix } from '../../lib/cameraUniforms';
@@ -48,21 +49,28 @@ import { ADDITIVE_BLEND } from '../../lib/blendStates';
 import { buildSegmentInstances, FLOATS_PER_SEGMENT } from './buildSegmentInstances';
 
 // Uniform block layout, mirroring 'struct Uniforms' in
-// 'shaders/filaments.wesl'. The first 80 bytes are the shared
+// 'shaders/filaments/io.wesl'. The first 80 bytes are the shared
 // 'CameraUniforms' prefix from 'shaders/lib/camera.wesl'; the
-// renderer-specific scalars sit AFTER it in offsets 80..87. The
-// trailing 8B pad rounds up to a 16-byte multiple — WebGPU would
-// round the buffer size anyway, but writing the pad explicitly keeps
-// the JS-side layout obvious and grep-able.
+// renderer-specific scalars sit AFTER it in offsets 80..87. Each vec3
+// tint needs a 16-byte alignment boundary, so an 8B pad carries the
+// first to offset 96 and a 4B pad follows each. Writing the pads
+// explicitly keeps the JS-side layout obvious and grep-able.
 //
 //   offset  0..63 : viewProj       mat4x4<f32>   (CameraUniforms.viewProj)
 //   offset 64..71 : viewportPx     vec2<f32>     (CameraUniforms.viewportPx)
 //   offset 72..79 : _pad0, _pad1   2 × f32       (CameraUniforms reserved)
 //   offset 80..83 : halfWidthPx    f32
 //   offset 84..87 : intensityScale f32
-//   offset 88..95 : _pad0, _pad1   2 × f32       (Uniforms tail pad)
-// Total: 96 bytes.
-const UNIFORM_BYTES = 96;
+//   offset 88..95 : _pad0, _pad1   2 × f32       (vec3 alignment pad)
+//   offset 96..107: baseTint       vec3<f32>
+//   offset 108..111: _pad2         f32
+//   offset 112..123: hotTint       vec3<f32>
+//   offset 124..127: _pad3         f32           (Uniforms tail pad)
+// Total: 128 bytes.
+const UNIFORM_BYTES = 128;
+// f32-index of each vec3 tint's first lane in the packed uniform.
+const BASE_TINT_F32 = 24; // byte 96
+const HOT_TINT_F32 = 28; // byte 112
 
 export function createFilamentRenderer(
   device: GPUDevice,
@@ -233,14 +241,23 @@ export function createFilamentRenderer(
     halfWidthPx: number,
     intensityScale: number,
     fadeOpacity: number,
+    /**
+     * The density-ramp tint endpoints (RGB): `baseTint` the dim cool-purple
+     * tendril tone, `hotTint` the bright near-white violet spine tone. Defined
+     * once in `filamentsLayer.ts` and packed into the uniform's tint slots; the
+     * fragment mixes between them by per-vertex density.
+     */
+    baseTint: Vec3,
+    hotTint: Vec3,
   ): void {
     if (segmentCount === 0 || !instanceBuffer || !fadeBuffer || !fadeBindGroup) return;
 
-    // Pack the 96-byte Uniforms struct. Byte layout is documented on
+    // Pack the 128-byte Uniforms struct. Byte layout is documented on
     // the UNIFORM_BYTES const at module top — keep slot indices here
     // in sync with that table (mat4 occupies f32[0..15]; viewportPx at
     // 16..17; the two reserved pads at 18..19; halfWidthPx at 20;
-    // intensityScale at 21; the two trailing pads at 22..23).
+    // intensityScale at 21; the alignment pads at 22..23; baseTint at
+    // 24..26; hotTint at 28..30).
     const buf = new ArrayBuffer(UNIFORM_BYTES);
     const f32 = new Float32Array(buf);
     writeCameraPrefix(f32, viewProj, viewportPx);
@@ -248,6 +265,12 @@ export function createFilamentRenderer(
     // Clamp to [0,1] at point of use: a negative value would drive a negative
     // additive-blend alpha (undefined). The store holds raw intent.
     f32[21] = clampFilamentIntensity(intensityScale);
+    f32[BASE_TINT_F32] = baseTint[0];
+    f32[BASE_TINT_F32 + 1] = baseTint[1];
+    f32[BASE_TINT_F32 + 2] = baseTint[2];
+    f32[HOT_TINT_F32] = hotTint[0];
+    f32[HOT_TINT_F32 + 1] = hotTint[1];
+    f32[HOT_TINT_F32 + 2] = hotTint[2];
     device.queue.writeBuffer(uniformBuffer, 0, buf);
 
     // Write the per-frame fade.opacity from the registry-supplied value.

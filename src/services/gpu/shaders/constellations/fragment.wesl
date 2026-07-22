@@ -2,7 +2,9 @@
 // constellation stick figures.
 //
 // A single dim steel-blue tone for every figure (grill Q5 — no per-constellation
-// hue). Three scalars shape the emitted alpha:
+// hue). The tone is 'u.lineColor', a uniform the CPU packs from
+// 'CONSTELLATION_LINE_COLOR' in 'constellationsLayer.ts' (the one home for the
+// layer's tint). Three scalars shape the emitted alpha:
 //
 //   - edgeBandMask(uv.y, ...) — a two-tailed smoothstep giving a soft edge
 //     across the line's perpendicular axis (the screen-space anti-aliasing),
@@ -31,11 +33,6 @@ import package::lib::masks::edgeBandMask;
 @group(0) @binding(0) var<uniform> u : Uniforms;
 @group(1) @binding(0) var<uniform> fade : FadeUniforms;
 
-// Dim steel-blue, one tone for all 88 figures. Emitted additively into the HDR
-// buffer, so it reads as a cool faint wireflow over the starfield rather than a
-// saturated UI stroke. Eye-tuning starting point (Task 15).
-const STEEL_BLUE : vec3<f32> = vec3<f32>(0.42, 0.58, 0.9);
-
 // Base emission before the intensity slider, soft edge, and fade. Keeps a lone
 // figure line visible against the tone-mapped HDR background without saturating
 // where many segments overlap. Eye-tuning starting point (Task 15).
@@ -47,5 +44,5 @@ fn fs(in : VSOut) -> @location(0) vec4<f32> {
   // a 25%-on / 50%-flat / 25%-off shape — a gentle taper for a thin line.
   let edge = edgeBandMask(in.uv.y, 0.25);
   let alpha = applyFade(edge * BASE_ALPHA * u.intensity, fade.opacity);
-  return vec4<f32>(STEEL_BLUE * alpha, alpha); // pre-multiplied alpha
+  return vec4<f32>(u.lineColor * alpha, alpha); // pre-multiplied alpha
 }

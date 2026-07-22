@@ -31,6 +31,7 @@ export type ConstellationRenderer = {
     intensity: number,
     fadeOpacity: number,
     camPos: Vec3,
+    lineColor: Vec3,
   ): void;
   destroy(): void;
 };
