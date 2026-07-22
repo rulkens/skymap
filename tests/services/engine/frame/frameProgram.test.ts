@@ -314,10 +314,10 @@ describe('timedSlotsOf', () => {
       'disk-radius-ring',
       'marker-lines',
       'labels',
-      'clip-path-debug',
       'swap·COSMO',
       'near0-selection-ring',
       'foreground-labels',
+      'clip-path-debug',
       'swap·NEAR0',
       'pick',
     ]);
@@ -407,10 +407,10 @@ describe('timedSlotGroupsOf', () => {
       'disk-radius-ring',
       'marker-lines',
       'labels',
-      'clip-path-debug',
       'swap·COSMO',
       'near0-selection-ring',
       'foreground-labels',
+      'clip-path-debug',
       'swap·NEAR0',
     ]);
     // Composites and pick emit no group-key rows (only render steps do). The
