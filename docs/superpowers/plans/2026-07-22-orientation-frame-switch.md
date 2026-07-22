@@ -826,7 +826,7 @@ export function orientationFrameLabel(frame: OrientationFrameId): string;
       — spec §10 "Not tested"). Use `fireEvent.change` for the `<select>` (string
       value), and type any mock callback `vi.fn<(f: OrientationFrameId) => void>()`.
 - [x] `npm run typecheck` clean; `npm test -- DisplaySection` green. Commit.
-- [ ] **Visual gate (ask the user):** the row appears in Display; switching each
+- [x] **Visual gate (ask the user):** the row appears in Display; switching each
       frame animates a ~1 s roll that levels the intended plane and holds the
       subject; the URL gains `orientation=<frame>` for a non-default choice.
 
