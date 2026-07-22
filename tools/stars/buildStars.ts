@@ -223,6 +223,7 @@ export type StarDropCounts = {
   famousSubtracted: number; // rows removed as a famous-star duplicate
   hipGaiaSubtracted: number; // Gaia rows a bright Hipparcos row replaced
   farDistance: number; // stars past MAX_STAR_DISTANCE_PC, dropped before grid derivation
+  noPhotometry: number; // resolvable distance but a missing (NaN) G magnitude
 };
 
 /** LUT-saturation counters — near-zero means the frozen windows fit the data. */
@@ -297,6 +298,7 @@ export async function buildStarCatalog(inputs: BuildStarInputs): Promise<BuildSt
 
   const gaiaCandidates: GaiaSelectedRow[] = [];
   let noBailerJones = 0;
+  let noPhotometry = 0;
   // The GCNS-only loop below must skip any GCNS row whose source_id already
   // appears as a main row. The obvious form — a Set of ALL ~16.8 M main ids —
   // overflows V8's 2^24-entry Set cap and crashes the real build. So invert the
@@ -313,6 +315,15 @@ export async function buildStarCatalog(inputs: BuildStarInputs): Promise<BuildSt
     if (distPc === null) {
       // No distance from any source — cannot be placed in the scene.
       noBailerJones++;
+      continue;
+    }
+    if (!Number.isFinite(row.gMag)) {
+      // A missing G magnitude (empty CSV cell) parses to NaN, and
+      // `absoluteMagnitude(NaN, d)` is NaN. The absMag quantizer's documented
+      // NaN semantics map NaN to LUT index 0 — the BRIGHTEST bin — so an
+      // un-guarded row becomes a fake beacon star near Earth, and because it
+      // lands *inside* the LUT's valid range it is never counted as a clamp.
+      noPhotometry++;
       continue;
     }
     gaiaCandidates.push({
@@ -340,6 +351,12 @@ export async function buildStarCatalog(inputs: BuildStarInputs): Promise<BuildSt
   for (const row of gcns) {
     if (gcnsSeenInMain.has(row.sourceId)) continue;
     if (!keepStar({ sourceId: row.sourceId, distPc: row.distPc, isSupplement: true })) continue;
+    if (!Number.isFinite(row.gMag)) {
+      // Same missing-photometry guard as the Gaia main loop above — a NaN G
+      // magnitude here would quantize to the same fake-beacon LUT bin.
+      noPhotometry++;
+      continue;
+    }
     gaiaCandidates.push({
       sourceId: row.sourceId,
       position: raDecDistToCartesian(row.raDeg, row.decDeg, row.distPc),
@@ -390,6 +407,7 @@ export async function buildStarCatalog(inputs: BuildStarInputs): Promise<BuildSt
     famousSubtracted: selected.drops.famousSubtracted,
     hipGaiaSubtracted: selected.drops.hipGaiaSubtracted,
     farDistance,
+    noPhotometry,
   };
 
   // ── Counted-clamp totals over the whole deduped population ─────────────────
@@ -802,7 +820,8 @@ async function runCli(): Promise<void> {
       `hipNonPositivePlx ${drops.hipNonPositivePlx.toLocaleString()}, ` +
       `famousSubtracted ${drops.famousSubtracted.toLocaleString()}, ` +
       `hipGaiaSubtracted ${drops.hipGaiaSubtracted.toLocaleString()}, ` +
-      `farDistance ${drops.farDistance.toLocaleString()}; ` +
+      `farDistance ${drops.farDistance.toLocaleString()}, ` +
+      `noPhotometry ${drops.noPhotometry.toLocaleString()}; ` +
       `clamps absMag ${clamps.absMag.toLocaleString()}, colorIdx ${clamps.colorIdx.toLocaleString()}\n`,
   );
 
