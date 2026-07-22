@@ -16,6 +16,7 @@ export type ClipId =
   | 'flowOrbit'
   | 'flyPathDemo'
   | 'famousFlythrough'
+  | 'starSpiral'
   | 'tourOpeningTitle'
   | 'tourYouAreHere'
   | 'tourYouAreHereDwell'

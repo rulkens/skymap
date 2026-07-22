@@ -39,6 +39,7 @@
     "build-mcpm": "tsx tools/volumes/buildMcpmVolume.ts --all",
     "build-stars": "NODE_OPTIONS=--max-old-space-size=16384 tsx tools/stars/buildStars.ts",
     "build-stars-rs": "cargo run --manifest-path tools/stars-rs/Cargo.toml --release -- --out public/data",
+    "build-star-spiral": "tsx tools/animation/buildStarSpiral.ts",
     "build-famous": "tsx tools/famous/buildFamous.ts",
     "build-famous-stars": "tsx tools/famous/buildFamousStars.ts",
     "build-planet-facts": "tsx tools/bodies/buildPlanetFacts.ts",

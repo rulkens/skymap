@@ -37,6 +37,7 @@ import { earthFlyout } from './earthFlyout';
 import { flowOrbit } from './flowOrbit';
 import { flyPathDemo } from './flyPathDemo';
 import { famousFlythrough } from './famousFlythrough';
+import { starSpiral } from './starSpiral';
 import {
   tourOpeningTitle,
   tourYouAreHere,
@@ -64,6 +65,8 @@ export const clipFactories: Record<ClipId, (simDays: number) => Clip> = {
   flowOrbit: () => flowOrbit,
   flyPathDemo: () => flyPathDemo,
   famousFlythrough: () => famousFlythrough,
+  // Instant-dependent, like `earthFlyout`: opens on Earth's live position.
+  starSpiral,
   tourOpeningTitle: () => tourOpeningTitle,
   tourYouAreHere: () => tourYouAreHere,
   tourYouAreHereDwell: () => tourYouAreHereDwell,
