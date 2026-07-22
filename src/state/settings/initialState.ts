@@ -33,6 +33,7 @@ import {
   DEFAULT_FAMOUS_STARS_ENABLED,
   DEFAULT_MILKY_WAY_ENABLED,
   DEFAULT_MILKY_WAY_LABEL_ENABLED,
+  DEFAULT_ORBIT_TRAILS_ENABLED,
   DEFAULT_HIGHLIGHT_FALLBACK,
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_REAL_ONLY_MODE,
@@ -132,6 +133,12 @@ export function buildInitialSettings(): EngineSettingsState {
     filaments: {
       enabled: SOURCE_REGISTRY[Source.Filaments].visible,
       intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
+    },
+    // Orbit-trails singleton overlay: the master gate on the near-field Keplerian
+    // orbit trails, defaulting on (the trails are part of the baseline
+    // solar-system scene). A flat `enabled` field like `milkyWay` / `filaments`.
+    orbitTrails: {
+      enabled: DEFAULT_ORBIT_TRAILS_ENABLED,
     },
     // Earth's per-body look dials. Each seeds from its authored data constant so
     // that file stays the default's single source of truth (the same

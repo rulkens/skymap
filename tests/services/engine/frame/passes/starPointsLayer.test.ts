@@ -239,7 +239,14 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
       // gate — at galaxy scale it legitimately draws while the star rows
       // skip. Toggle it off (and zero its fade tail) so this test keeps
       // pinning the STAR rows' wholesale-skip property.
-      settings: { milkyWay: { enabled: false }, famousStars: { enabled: true } },
+      // orbit-trails rides this same (hdr, NEAR0) group; its enabled() gate reads
+      // the visibility intent, so the fixture carries the toggle on (matching the
+      // live default) — below the gate it draws alongside star-points.
+      settings: {
+        milkyWay: { enabled: false },
+        famousStars: { enabled: true },
+        orbitTrails: { enabled: true },
+      },
       subsystems: { fades: { opacityOf: () => 0 } },
     } as unknown as EngineState;
     const groupAt = (ctx: ReadyFrameContext) =>

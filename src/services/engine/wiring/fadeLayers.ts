@@ -198,6 +198,18 @@ export const FADE_LAYERS = [
     // layer pops in at whatever the invisible fade had reached.
     guard: (state) => state.gpu.filamentRenderer?.hasCloud() ?? false,
   }),
+  // orbit trails — near-field Keplerian trails (always present; settings-derived
+  // seed). Unlike flow/filament, the conic table is a compile-time constant with
+  // no asset slot, so there is NO demand-loaded guard and the seed follows the
+  // toggle (register at 1 when on, matching milkyWayDisk) rather than 0 — a
+  // default-on session must not flash the trails in on frame 1.
+  layer({
+    key: 'orbitTrails',
+    expand: () => [undefined],
+    handle: () => ({ kind: 'orbitTrails' }),
+    seed: (s) => (s.orbitTrails.enabled ? 1 : 0),
+    intent: (s) => s.orbitTrails.enabled,
+  }),
   // flow field — absorbs flowFieldSlot.ts:36 (demand-loaded; seed 0)
   layer({
     key: 'flow',

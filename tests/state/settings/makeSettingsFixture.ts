@@ -55,6 +55,7 @@ import {
   DEFAULT_HIGHLIGHT_FALLBACK,
   DEFAULT_MILKY_WAY_ENABLED,
   DEFAULT_MILKY_WAY_LABEL_ENABLED,
+  DEFAULT_ORBIT_TRAILS_ENABLED,
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_REAL_ONLY_MODE,
   DEFAULT_SHOW_DISK_RADIUS_RING,
@@ -112,6 +113,7 @@ export function makeSettingsFixture(
       enabled: SOURCE_REGISTRY[Source.Filaments].visible,
       intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
     },
+    orbitTrails: { enabled: DEFAULT_ORBIT_TRAILS_ENABLED },
     earth: {
       // `earth` is a definitional row in the atmosphere table, so the indexed
       // read is non-null (see `initialState.ts` — the index signature widens it).

@@ -78,6 +78,7 @@ function makeCtx(distance: number): ReadyFrameContext {
     drawCamPos: [0, 0, 0],
     canvasSize: { width: 1280, height: 720 },
     fovYRad: Math.PI / 4,
+    nowMs: 0,
   } as unknown as ReadyFrameContext;
 }
 
@@ -97,6 +98,8 @@ function makeDrawCtx(): ReadyFrameContext {
     fovYRad: Math.PI / 4,
     cam: { distance: 1e-13 },
     simDays: CONST_J2000,
+    focusBlend: 0,
+    nowMs: 0,
   } as unknown as ReadyFrameContext;
 }
 
@@ -131,8 +134,24 @@ function makeRendererSpy() {
   };
 }
 
-function makeState(orbitTrailRenderer: unknown): EngineState {
-  return { gpu: { orbitTrailRenderer } } as unknown as EngineState;
+// The layer reads settings.orbitTrails.enabled + the fade controller's opacity
+// (the hide/show visibility layer) and the clip-opacity channel. Defaults: the
+// toggle on and both fade factors at 1, so the pass behaves exactly as before the
+// layer became hideable. `orbitTrailsEnabled` / `layerOpacity` drive the gating +
+// fade-multiply assertions.
+function makeState(
+  orbitTrailRenderer: unknown,
+  opts: { orbitTrailsEnabled?: boolean; layerOpacity?: number } = {},
+): EngineState {
+  const layerOpacity = opts.layerOpacity ?? 1;
+  return {
+    gpu: { orbitTrailRenderer },
+    settings: { orbitTrails: { enabled: opts.orbitTrailsEnabled ?? true } },
+    subsystems: {
+      fades: { opacityOf: () => layerOpacity },
+      clipPlayer: { clipOpacityOf: () => 1 },
+    },
+  } as unknown as EngineState;
 }
 
 describe('orbitTrailsLayer registry row', () => {
@@ -157,6 +176,28 @@ describe('orbitTrailsLayer.enabled', () => {
     // a decade beyond, both derived so a farther seed growing the gate carries.
     expect(orbitTrailsLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC))).toBe(false);
     expect(orbitTrailsLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC * 10))).toBe(false);
+  });
+
+  it('gates on the orbitTrails visibility intent (opacity-0 ⇒ no render)', () => {
+    // Camera at the origin, inside the foreground gate — the sub-pixel cull is
+    // skipped, so the intent gate alone drives the result here.
+    const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
+    const renderer = makeRendererSpy();
+    // Toggled off AND the fade fully receded → the whole (hdr, NEAR0) pass drops.
+    expect(
+      orbitTrailsLayer.enabled(makeState(renderer, { orbitTrailsEnabled: false, layerOpacity: 0 }), ctx),
+    ).toBe(false);
+    // Toggled off but a fade-out tail is still > 0 → keep drawing until it hits 0.
+    expect(
+      orbitTrailsLayer.enabled(
+        makeState(renderer, { orbitTrailsEnabled: false, layerOpacity: 0.3 }),
+        ctx,
+      ),
+    ).toBe(true);
+    // Toggled on → visible regardless of the (idle) fade value.
+    expect(
+      orbitTrailsLayer.enabled(makeState(renderer, { orbitTrailsEnabled: true, layerOpacity: 0 }), ctx),
+    ).toBe(true);
   });
 
   it('disables when even the largest orbit is sub-CULL_PX (whole-layer cull)', () => {
@@ -238,6 +279,22 @@ describe('orbitTrailsLayer.draw', () => {
     expect(Array.from(staging.slice(24, 28))).toEqual([201, 202, 203, 0]);
   });
 
+  it('multiplies the whole-layer fade opacity into each per-orbit alpha', () => {
+    // A mid-fade hide (layer opacity 0.5) scales every packed per-orbit alpha:
+    // Mercury's apparent-size alpha saturates at 1 from the Sun, so its packed
+    // alpha must land at exactly 0.5 — the hide/show fade composed with the
+    // apparent-size fade rather than replacing it.
+    const renderer = makeRendererSpy();
+    orbitTrailsLayer.draw(
+      PASS_STUB,
+      makeNear0View(),
+      makeDrawCtx(),
+      makeState(renderer, { orbitTrailsEnabled: false, layerOpacity: 0.5 }),
+    );
+    const [, staging] = renderer.draw.mock.calls[0]!;
+    expect(staging[17]).toBeCloseTo(0.5);
+  });
+
   it('rides a moon trail centre on its propagated parent, not the J2000 centre', () => {
     composeMock.mockClear();
     const renderer = makeRendererSpy();
@@ -258,6 +315,8 @@ describe('orbitTrailsLayer.draw', () => {
       fovYRad: Math.PI / 4,
       cam: { distance: 1e-13 },
       simDays,
+      focusBlend: 0,
+      nowMs: 0,
     } as unknown as ReadyFrameContext;
 
     orbitTrailsLayer.draw(PASS_STUB, view, ctx, makeState(renderer));
@@ -324,6 +383,8 @@ describe('orbitTrailsLayer.draw', () => {
       fovYRad: Math.PI / 4,
       cam: { distance: 1 },
       simDays: CONST_J2000,
+      focusBlend: 0,
+      nowMs: 0,
     } as unknown as ReadyFrameContext;
     orbitTrailsLayer.draw(PASS_STUB, makeNear0View(), farCtx, makeState(renderer));
     expect(renderer.draw).not.toHaveBeenCalled();

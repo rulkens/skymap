@@ -56,4 +56,5 @@ export type VisibilityLayerKey =
   | 'survey'
   | 'filaments'
   | 'flow'
+  | 'orbitTrails'
   | 'volumeField';

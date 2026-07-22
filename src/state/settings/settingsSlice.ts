@@ -144,6 +144,13 @@ const settingsSlice = createSlice({
       settings.filaments.intensity = action.payload;
     },
 
+    // ── orbit trails ────────────────────────────────────────────────────────
+    // Singleton-overlay master gate on the near-field Keplerian orbit trails,
+    // its own single writer (like setMilkyWayEnabled / setFilamentsEnabled).
+    setOrbitTrailsEnabled: (settings, action: PayloadAction<boolean>) => {
+      settings.orbitTrails.enabled = action.payload;
+    },
+
     // ── earth ───────────────────────────────────────────────────────────────
     // Exposure scale on the atmosphere shell's HDR output — read live by
     // `atmosphereShellLayer` each frame. Twin of `setFilamentIntensity`.
@@ -437,6 +444,7 @@ export const {
   setFamousStarsEnabled,
   setFilamentsEnabled,
   setFilamentIntensity,
+  setOrbitTrailsEnabled,
   setAtmosphereExposure,
   setAmbientLight,
   setOceanRoughness,

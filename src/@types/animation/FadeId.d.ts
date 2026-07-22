@@ -30,6 +30,13 @@
  *   - flow         — the CF4++ peculiar-velocity flow overlay. Fades in on
  *                    first load (the slot commit), like filament/galaxy catalog;
  *                    fades out on disable. No discriminator.
+ *   - orbitTrails  — the near-field Keplerian orbit trails (Earth / Jupiter /
+ *                    Moon …). Seeded from `settings.orbitTrails.enabled` and
+ *                    multiplied into the layer's per-orbit apparent-size alpha so
+ *                    the whole trail layer dissolves smoothly on toggle. The
+ *                    compile-time conic table is always present (no demand load),
+ *                    so it seeds from the toggle rather than fading in at 0. No
+ *                    discriminator.
  *   - labelLayer   — one logical label layer (milkyWay, structure,
  *                    galaxy names, scale bar). Discriminator:
  *                    `layer: LabelLayerId`. Structure labels additionally key
@@ -70,6 +77,7 @@ export type FadeId =
   | { readonly kind: 'milkyWay' }
   | { readonly kind: 'filament' }
   | { readonly kind: 'flow' }
+  | { readonly kind: 'orbitTrails' }
   | {
       readonly kind: 'labelLayer';
       readonly layer: LabelLayerId;

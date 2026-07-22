@@ -51,6 +51,7 @@ import {
   setMilkyWayEnabled,
   setMilkyWayLabelEnabled,
   setFilamentsEnabled,
+  setOrbitTrailsEnabled,
   setVolumesEnabled,
   setFlowEnabled,
   setGalaxyCatalogVisible,
@@ -79,6 +80,7 @@ export const VISIBILITY_ACTION_ROW: Record<
   milkyWayDisk: (on) => [setMilkyWayEnabled(on)],
   milkyWayLabel: (on) => [setMilkyWayLabelEnabled(on)],
   filaments: (on) => [setFilamentsEnabled(on)],
+  orbitTrails: (on) => [setOrbitTrailsEnabled(on)],
   volumesMaster: (on) => [setVolumesEnabled(on)],
   flow: (on) => [setFlowEnabled(on)],
 
