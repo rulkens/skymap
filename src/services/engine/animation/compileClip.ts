@@ -34,7 +34,7 @@
  *   - `spin`           → `BaseSegment` with `segKind:'spin'`.
  *   - `rate`           → `VelRamp`.
  *   - `osc`            → `OscTrack`.
- *   - `show` / `hide` / `fade` / `scene` / `focus` → `SceneCue`.
+ *   - `show` / `hide` / `fade` / `scene` / `focus` / `frameTo` → `SceneCue`.
  *
  * ### Lead-in
  *
@@ -258,11 +258,15 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
     }
 
     // --- Scene effects: all fire as point-in-time cues at atSec ---
+    // `frameTo` joins them: it fires its `setOrientation` + `startFrameTween`
+    // at the beat and awaits zero time (the roll runs under the timeline, like
+    // a forked animation). An author dwelling through it sequences a `wait`.
     case 'show':
     case 'hide':
     case 'fade':
     case 'scene':
-    case 'focus': {
+    case 'focus':
+    case 'frameTo': {
       acc.cues.push({ atSec, effect });
       return 0;
     }
