@@ -97,9 +97,9 @@ export type SagaContext = {
   /** Live engine resources the selection reconciler reads to turn a SelectionRef into a SelectionRow. */
   resolveDeps: () => ResolveDeps;
   /**
-   * The live camera resources `watchFocusTweenSaga` reads to build the tween, or
-   * null when the camera is not ready (pre-bootstrap / post-destroy) — the focus
-   * tween then no-ops.
+   * The live camera resources `watchFocusTweenSaga` and `watchOrientationChangeSaga`
+   * read to seed their tweens, or null when the camera is not ready
+   * (pre-bootstrap / post-destroy) — both sagas then no-op.
    */
   cameraRuntime: () => LiveCameraRuntime | null;
   /**

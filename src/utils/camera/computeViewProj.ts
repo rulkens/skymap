@@ -80,10 +80,10 @@ export function computeViewProj(cam: OrbitCamera): Mat4 {
   // `lookAt`. The base up is the frame pole (`frameUp` reads `cam.frameBasis`);
   // absent a basis that is world +Y, so the pre-frame camera is unchanged.
   //
-  // `forward` is the unit view direction (target − position).  The previous
-  // inline block computed it only when roll was non-zero; the helper needs it
-  // as an argument unconditionally, so we always build it here — a subtract +
-  // normalize into module scratch, no allocation.
+  // `forward` is the unit view direction (target − position). `imagePlaneBasis`
+  // needs it as a required argument even when roll is zero (it also determines
+  // the frame-pole projection for the base up-vector), so we always build it
+  // here — a subtract + normalize into module scratch, no allocation.
   const tgt = cam.target as Vec3;
   const fx = tgt[0] - cam.position[0];
   const fy = tgt[1] - cam.position[1];

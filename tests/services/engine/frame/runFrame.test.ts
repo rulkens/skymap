@@ -375,7 +375,7 @@ describe('runFrame — camera drivers (regression)', () => {
   });
 });
 
-describe('runFrame — orientation-frame roll (Task 9)', () => {
+describe('runFrame — orientation-frame roll', () => {
   // Vector helpers local to this suite. The assembled camera exposes world
   // `position`; the frame pole is `frameUp(B(t))` (middle column of the basis).
   const sub = (a: readonly number[], b: readonly number[]): number[] => [

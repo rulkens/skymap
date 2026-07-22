@@ -320,10 +320,15 @@ options array with a label fn. Two differences from the tone-map row:
 
 Option labels (user-facing copy — parenthetical qualifiers, no em dashes):
 
-- `Ecliptic (solar system plane)` *(default)*
+- `Ecliptic (solar system)` *(default)*
 - `Equatorial (Polaris up)`
-- `Galactic (Milky Way plane)`
-- `Supergalactic (supercluster plane)`
+- `Galactic (Milky Way)`
+- `Supergalactic (superclusters)`
+
+The parentheticals ship shorter than the plane-naming form above (dropping the
+trailing "plane"/"supercluster plane" wording) because the longer strings
+clamped the settings-panel dropdown width; see `orientationFrameLabel.ts` for
+the canonical strings.
 
 `DisplaySectionContainer` wires `selectOrientation` → the row and dispatches
 `setOrientation` **plus** `startFrameTween` (capturing the live resolved basis as
