@@ -81,16 +81,15 @@ const START_DISTANCE_MPC = EARTH_RADIUS_MPC * 3;
 const PASS_DISTANCE_MPC = 5e-10;
 
 // Seconds the look leads the eye down the path (the causal-Hermite `lookAhead`).
-// The itinerary snaps 203 real stars whose spacing ranges from 0.02 pc to 158 pc
-// (a 6,970× spread); at the default lead (1.3 s) the aim whipped hard passing
-// the near-coincident knots — 12% of frames turned faster than 1 rad/s, peaking
-// at ~110 rad/s (measured, the "very janky" report). A longer lead averages the
-// aim over more of the path, so it tracks the smoothed direction of travel
-// rather than snapping between crowded knots: at 7 s the 95th-percentile yaw
-// rate drops 1.83 → 0.64 rad/s and the peak 110 → 6.5 rad/s, with eye speed left
-// smooth (it is arc-length paced). The rest of the spline config (basis, turn
-// delay) stays the tuned default. Raise toward 10 for even smoother aim, lower
-// toward the 1.3 default for a more reactive one.
+// The itinerary snaps 233 real stars at arc-length-uniform spacing (~20 pc
+// cadence), tightening toward a 4.66 pc minimum leg near the inner turn (10 pc
+// from Earth), where curvature peaks at a 95th-percentile ~4.5 deg/pc. At the
+// default lead (1.3 s) the aim snaps hard through that tight inner turn. A
+// longer lead averages the aim over more of the path, so it tracks the
+// smoothed direction of travel rather than snapping between crowded knots,
+// with eye speed left smooth (it is arc-length paced). The rest of the spline
+// config (basis, turn delay) stays the tuned default. Raise toward 10 for even
+// smoother aim, lower toward the 1.3 default for a more reactive one.
 const LOOK_AHEAD_SEC = 7;
 
 // Per-waypoint brake ∈ [0,1]: the local slow-down as the camera passes a star.
@@ -143,7 +142,7 @@ export function starSpiral(simDays: number): Clip {
         flyPath(waypoints, {
           over: DURATION_SEC,
           // Longer look-ahead than the authored default to tame the aim whiplash
-          // through the densely-snapped, unevenly-spaced star knots (see
+          // through the tightly-curved inner turn of the star knots (see
           // `LOOK_AHEAD_SEC`); basis + turn-delay stay the tuned default
           // (`DEFAULT_SPLINE_CONFIG` is the same causal-Hermite basis).
           spline: { kind: 'causalHermite', turnDelay: DEFAULT_TURN_DELAY, lookAhead: LOOK_AHEAD_SEC },

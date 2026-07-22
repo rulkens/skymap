@@ -26,6 +26,16 @@
  * output preserves sample order, which is the spiral's outward winding, so the
  * camera visits picks from the Sun outward.
  *
+ * ── The minimum-leg guard ───────────────────────────────────────────────────
+ *
+ * Even with arc-length-uniform samples, two adjacent corridors can both reach the
+ * same tiny knot of near-coincident stars, so successive picks can land a
+ * fraction of a parsec apart — a near-cusp the camera slams through. `minLegPc`
+ * removes any candidate closer than that distance to the PREVIOUSLY PICKED star
+ * from eligibility, so every consecutive pair of picks is at least `minLegPc`
+ * apart. A sample whose only in-corridor stars are all too close to the last pick
+ * falls through empty (it contributes nothing) rather than picking a cusp.
+ *
  * ── Purity and determinism ─────────────────────────────────────────────────
  *
  * No randomness and no I/O: the pick is a total function of the samples, the
@@ -53,14 +63,23 @@ export type CorridorPickOptions<C extends CorridorCandidate> = {
   readonly candidates: readonly C[];
   /** Corridor radius as a fraction of each sample's distance from the origin. */
   readonly corridorFrac: number;
+  /**
+   * Minimum distance (same unit as the positions) a pick must sit from the
+   * previously picked star. Candidates closer than this to the last pick are
+   * ineligible, so consecutive picks are never nearer than `minLegPc`. Defaults
+   * to 0 (no guard) when omitted.
+   */
+  readonly minLegPc?: number;
 };
 
 export function pickSpiralCorridorStars<C extends CorridorCandidate>(
   opts: CorridorPickOptions<C>,
 ): C[] {
-  const { samples, candidates, corridorFrac } = opts;
+  const { samples, candidates, corridorFrac, minLegPc = 0 } = opts;
   const claimed = new Uint8Array(candidates.length);
   const picked: C[] = [];
+  const minLegSq = minLegPc * minLegPc;
+  let lastPos: Vec3 | undefined;
 
   for (const sample of samples) {
     const [sx, sy, sz] = sample;
@@ -78,6 +97,14 @@ export function pickSpiralCorridorStars<C extends CorridorCandidate>(
       const dz = c.posPc[2] - sz;
       const distSq = dx * dx + dy * dy + dz * dz;
       if (distSq > corridorSq) continue;
+      // Reject a candidate sitting within minLegPc of the previous pick: that
+      // would be a near-cusp leg the camera whips through.
+      if (lastPos !== undefined) {
+        const lx = c.posPc[0] - lastPos[0];
+        const ly = c.posPc[1] - lastPos[1];
+        const lz = c.posPc[2] - lastPos[2];
+        if (lx * lx + ly * ly + lz * lz < minLegSq) continue;
+      }
       if (c.absMag < bestMag) {
         bestMag = c.absMag;
         bestIdx = i;
@@ -86,7 +113,9 @@ export function pickSpiralCorridorStars<C extends CorridorCandidate>(
 
     if (bestIdx < 0) continue; // empty corridor — this sample contributes nothing
     claimed[bestIdx] = 1;
-    picked.push(candidates[bestIdx]!);
+    const pick = candidates[bestIdx]!;
+    picked.push(pick);
+    lastPos = pick.posPc;
   }
 
   return picked;

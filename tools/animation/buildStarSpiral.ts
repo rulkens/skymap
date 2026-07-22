@@ -13,8 +13,9 @@
  *
  *   decode stars-<tier>.bin  →  reconstruct leaf-star positions (parsecs)
  *     →  merge curated famous stars as first-class candidates (dedup vs Gaia)
- *     →  sample the ideal spiral  →  corridor-snap the brightest per sample
- *     →  stamp famous identity  →  emit Mpc waypoints
+ *     →  sample the ideal spiral at a fixed ARC-LENGTH cadence
+ *     →  corridor-snap the brightest per sample, min-leg apart
+ *     →  stamp famous identity  →  drop duplicate famous ids  →  emit Mpc waypoints
  *
  * The two geometry decisions — the spiral shape and the snap rule — are pure
  * functions under `tools/utils/animation/`, tested in isolation. This script is
@@ -74,13 +75,28 @@ import { sampleConicalSpiral } from '../utils/animation/sampleConicalSpiral';
 import { pickSpiralCorridorStars } from '../utils/animation/pickSpiralCorridorStars';
 
 // ── Spiral parameters ───────────────────────────────────────────────────────
-// r0/r1 in parsecs; the path climbs from a parsec out to the near-field edge.
-const R0_PC = 1;
+// r0/r1 in parsecs; the path climbs from the inner edge out to the near-field
+// edge. The inner edge is 10 pc, not a single parsec: the innermost turns are
+// where the curvature demand is worst (tiny circumference, tightest bends), so
+// starting the winding further out drops the camera into the spiral where it can
+// already fly smoothly instead of clawing around a sub-parsec knot.
+const R0_PC = 10;
 const R1_PC = 400;
 const TURNS = 7;
 const INCLINE_RAD = (20 * Math.PI) / 180;
-const SAMPLES = 300;
+// Arc-length cadence: one sample every SPACING_PC of path. Chosen so the total
+// spiral length (~a few thousand pc) yields a candidate-sample count that snaps
+// into the 150–250-waypoint target band. Because samples are arc-length-uniform
+// (not t-uniform), this is a genuine physical cadence — the same parsecs of path
+// between every consecutive sample, inner turns included.
+const SPACING_PC = 20;
 const CORRIDOR_FRAC = 0.22;
+
+// A pick must sit at least this far (pc) from the previous pick. Kills the
+// sub-parsec cusp legs the old t-uniform bake produced (leg lengths ran down to
+// 0.02 pc), and drops accidental near-duplicates — a famous star's own Gaia twin
+// included — by construction rather than by a post-hoc filter.
+const MIN_LEG_PC = 2;
 
 /** Keep only stars within this factor of the outer radius as snap candidates. */
 const CANDIDATE_RADIUS_FACTOR = 1.2;
@@ -228,6 +244,28 @@ function stampFamous(
   });
 }
 
+/**
+ * A famous identity may appear at most once across the final itinerary. Two
+ * distinct picks can carry the same `famousId` — a curated famous candidate AND
+ * a separate Gaia measurement of that star stamped back to it — and flying to the
+ * "same" star twice reads as the path stalling. The min-leg guard already drops
+ * most such twins (they sit sub-parsec apart), but this keeps the guarantee
+ * absolute: walk the picks in flight order and drop any whose `famousId` was
+ * already emitted, keeping the first (nearest-to-the-Sun) occurrence.
+ */
+function dedupeFamousIdentity(picked: readonly SpiralCandidate[]): SpiralCandidate[] {
+  const seen = new Set<string>();
+  const out: SpiralCandidate[] = [];
+  for (const p of picked) {
+    if (p.famousId !== undefined) {
+      if (seen.has(p.famousId)) continue;
+      seen.add(p.famousId);
+    }
+    out.push(p);
+  }
+  return out;
+}
+
 /** Compact, deterministic number formatting for the generated source. */
 function fmt(n: number): string {
   return Number(n.toPrecision(6)).toString();
@@ -299,19 +337,26 @@ async function main(): Promise<void> {
     r0: R0_PC,
     r1: R1_PC,
     turns: TURNS,
-    samples: SAMPLES,
+    spacingPc: SPACING_PC,
     inclineRad: INCLINE_RAD,
   });
 
-  const picked = stampFamous(
-    pickSpiralCorridorStars({ samples, candidates, corridorFrac: CORRIDOR_FRAC }),
-    famous,
+  const picked = dedupeFamousIdentity(
+    stampFamous(
+      pickSpiralCorridorStars({
+        samples,
+        candidates,
+        corridorFrac: CORRIDOR_FRAC,
+        minLegPc: MIN_LEG_PC,
+      }),
+      famous,
+    ),
   );
 
   if (picked.length < MIN_WAYPOINTS) {
     throw new Error(
       `only ${picked.length} stars snapped onto the spiral (need ≥ ${MIN_WAYPOINTS}). ` +
-        `Widen CORRIDOR_FRAC, add TURNS/SAMPLES, or check the catalogue.`,
+        `Widen CORRIDOR_FRAC, shrink SPACING_PC, add TURNS, or check the catalogue.`,
     );
   }
 

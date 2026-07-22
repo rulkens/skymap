@@ -1,8 +1,9 @@
 /**
  * Tests for pickSpiralCorridorStars — the corridor snap. These cover the rules a
  * real bug could break: brightest-wins within a corridor, claim-once across
- * samples, the distance-scaled corridor width, empty-corridor skips, and the
- * order-preserving output.
+ * samples, the distance-scaled corridor width, empty-corridor skips, the
+ * order-preserving output, and the minimum-leg guard that forbids a pick landing
+ * within `minLegPc` of its predecessor.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -71,6 +72,44 @@ describe('pickSpiralCorridorStars', () => {
     });
     expect(near).toEqual([]);
     expect(far.map((s) => s.tag)).toEqual(['s']);
+  });
+
+  it('rejects a candidate closer than minLegPc to the previous pick', () => {
+    // Two samples, each with its own nearby bright star. The second sample's
+    // brightest option (the "cusp" star) sits 1 pc from the first pick — inside
+    // the 3 pc min-leg — so it is ineligible; the farther "far" star (4 pc from
+    // the first pick, still in corridor) is taken instead. Without the guard the
+    // brighter cusp star would win and the leg would be a near-coincident stub.
+    const picked = pickSpiralCorridorStars({
+      samples: [
+        [0, 0, 0],
+        [3, 0, 0],
+      ],
+      candidates: [
+        star([0, 0, 0], 1, 'first'),
+        star([1, 0, 0], 0, 'cusp'), // brightest, but only 1 pc from 'first'
+        star([4, 0, 0], 2, 'far'), // 4 pc from 'first', clears the 3 pc min-leg
+      ],
+      corridorFrac: 2,
+      minLegPc: 3,
+    });
+    expect(picked.map((s) => s.tag)).toEqual(['first', 'far']);
+  });
+
+  it('skips a sample whose only in-corridor stars are all within minLegPc', () => {
+    // The second sample can reach only the cusp star (1 pc from the first pick),
+    // so with the guard on it finds nothing eligible and is skipped rather than
+    // emitting a sub-minLeg leg.
+    const picked = pickSpiralCorridorStars({
+      samples: [
+        [0, 0, 0],
+        [1, 0, 0],
+      ],
+      candidates: [star([0, 0, 0], 1, 'first'), star([1, 0, 0], 0, 'cusp')],
+      corridorFrac: 2,
+      minLegPc: 3,
+    });
+    expect(picked.map((s) => s.tag)).toEqual(['first']);
   });
 
   it('returns picks in sample (spiral) order, threading candidate identity', () => {
