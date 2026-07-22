@@ -696,7 +696,7 @@ should see:
 - Latin name labels appear at figure anchors, decluttered against famous/structure/MW labels.
 - The layer fades out before figures go subpixel on deep zoom; the toggle + intensity slider work.
 
-- [ ] User confirms the visual pass (figures, shear, gaps, label declutter, fade). Tune the
+- [x] User confirms the visual pass (figures, shear, gaps, label declutter, fade). Tune the
       `SCALE_FADE_BANDS.constellations` edges, the steel-blue tone, half-width, and gap curve
       visually over HMR; capture the settled values.
 
@@ -717,11 +717,11 @@ should see:
 
 **Files:** the plan + spec (relocation).
 
-- [ ] Run the `/feature-done` audit: it gates on the Definition-of-Done (tests, typecheck, TODO scan,
+- [x] Run the `/feature-done` audit: it gates on the Definition-of-Done (tests, typecheck, TODO scan,
       modified-file inventory), then relocates THIS plan to `plans/completed/` and the spec to
       `specs/completed/`. The audit rides the feature PR (before merge — post-merge sequencing is an
       error).
-- [ ] Sweep `docs/BACKLOG.md` for the two deferred items the spec added (celestial-sphere morph
+- [x] Sweep `docs/BACKLOG.md` for the two deferred items the spec added (celestial-sphere morph
       toggle Q9; constellation interactivity Q8) — confirm they are captured as backlog items linked
       to this feature (add them if the spec-writing did not).
 

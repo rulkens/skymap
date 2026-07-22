@@ -198,7 +198,7 @@ becomes `pixelWidth * 0.5` at the call site; `CLIP_Z_EPS` clamp is applied to th
       `tests/services/engine/frame/renderFrame.test.ts`,
       `tests/visual/renderFrameSplitBaseline.test.ts`). No test edits expected — a red test means the
       refactor changed behavior.
-- [ ] **Visual HMR check** (dev server already running on `http://localhost:5174`) — catches
+- [x] **Visual HMR check** (dev server already running on `http://localhost:5174`) — catches
       shader-module errors that link clean but fail at `createShaderModule` (see Global
       Constraints). Confirm with the user: (a) at cosmic-web scale, **filament** lines render at the
       same thickness/brightness as before; (b) on **label hover**, marker/leader lines render
@@ -208,7 +208,7 @@ becomes `pixelWidth * 0.5` at the call site; `CLIP_Z_EPS` clamp is applied to th
       with this server's port, per `tools/perf/README.md`). Compare **MERGED** medians against the
       Task 1 baseline; behavior-preserving ⇒ within run-to-run noise. Quote MERGED numbers only, not
       per-layer (per-layer carries ~1–3 ms pass overhead and must not be read as real cost).
-- [ ] Commit.
+- [x] Commit.
 
 **Interfaces**
 - Consumes: the three edited shaders + new helper.
