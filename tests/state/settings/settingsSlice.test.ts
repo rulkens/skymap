@@ -13,6 +13,7 @@
 import { describe, it, expect } from 'vitest';
 
 import reducer, {
+  setOrientation,
   setBrightness,
   setGalaxyCatalogVisible,
   setGalaxyCatalogLabelEnabled,
@@ -43,12 +44,15 @@ import reducer, {
   setLabelsEnabled,
   mergeSnapshot,
 } from '../../../src/state/settings/settingsSlice';
+import { selectOrientation } from '../../../src/state/settings/selectors';
 import { buildInitialSettings } from '../../../src/state/settings/initialState';
+import { settingsRoute } from '../../../src/store/constants';
 import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { STRUCTURE_IDS, isStructureId } from '../../../src/data/structure/structureIds';
 import { LABEL_CATEGORIES } from '../../../src/data/structure/labelCategories';
 import type { VolumeFieldId } from '../../../src/@types/data/volume/VolumeFieldId';
 import type { SettingsSnapshot } from '../../../src/@types/engine/settings/SettingsSnapshot';
+import type { RootState } from '../../../src/store/types';
 
 const base = () => buildInitialSettings();
 
@@ -59,6 +63,13 @@ const structureId = STRUCTURE_IDS[0]!;
 
 // A seeded volume id (the construction seed records every shippable volume).
 const seededVolumeId = Object.keys(base().volumes.items)[0] as VolumeFieldId;
+
+describe('settingsSlice — orientation', () => {
+  it('setOrientation writes the frame (read back through selectOrientation)', () => {
+    const next = reducer(base(), setOrientation('galactic'));
+    expect(selectOrientation({ [settingsRoute]: next } as RootState)).toBe('galactic');
+  });
+});
 
 describe('settingsSlice — galaxy-catalog knobs', () => {
   it('setGalaxyCatalogVisible flips one item row', () => {

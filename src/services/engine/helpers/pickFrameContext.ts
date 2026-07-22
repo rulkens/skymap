@@ -51,6 +51,7 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import { deriveFrameContext } from '../frame/frameContext';
 import { deriveSourceMasks } from '../frame/deriveSourceMasks';
+import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 
 export function pickFrameContext(
   state: EngineState,
@@ -64,6 +65,11 @@ export function pickFrameContext(
     // screen.
     state.cameraRuntime.lastPose.current,
     state.cameraRuntime.projection,
+    // Pick is a demand read at rest (between frames), so the steady
+    // `ORIENTATION_FRAMES[orientation]` is the correct basis — the same reasoning
+    // as `buildDemandCtx`'s `cameraPosMpc`. The pick camera decodes its position
+    // through the pole the frame drew with.
+    ORIENTATION_FRAMES[state.settings.orientation],
     // Pick mask, not draw mask: pickability follows intent (see docblock).
     deriveSourceMasks(state).pick,
     // Pick-time wall clock. No animated consumer reads it in the pick pass —

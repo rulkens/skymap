@@ -17,12 +17,14 @@ import { watchGoHomeSaga } from '../../../src/state/selection/watchGoHomeSaga';
 import { goHome } from '../../../src/state/selection/goHome';
 import { EARTH_REF } from '../../../src/data/selection/earthRef';
 import { earthHomePose } from '../../../src/services/engine/camera/earthHomePose';
+import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
+import { selectOrientation } from '../../../src/state/settings/selectors';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { setSimDays, pause } from '../../../src/state/time/timeSlice';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { cameraRoute, selectionRoute, timeRoute } from '../../../src/store/constants';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
-import type { FocusCameraRuntime } from '../../../src/store/types';
+import type { LiveCameraRuntime } from '../../../src/store/types';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -34,13 +36,13 @@ const FOV = 0.8;
 
 describe('watchGoHomeSaga', () => {
   let store: ReturnType<typeof build>;
-  let cameraRuntime: () => FocusCameraRuntime | null;
+  let cameraRuntime: () => LiveCameraRuntime | null;
 
   function build() {
     const mw = createSagaMiddleware();
     const s = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(mw) });
     mw.run(watchGoHomeSaga);
-    cameraRuntime = () => ({ from: FROM, fovYRad: FOV });
+    cameraRuntime = () => ({ from: FROM, fovYRad: FOV, frameBasisQuat: [0, 0, 0, 1] });
     mw.setContext({ cameraRuntime: () => cameraRuntime() });
     return s;
   }
@@ -67,8 +69,11 @@ describe('watchGoHomeSaga', () => {
     expect(tween).not.toBeNull();
     expect(tween!.from).toEqual(FROM);
 
+    // The pose is encoded through the store's committed orientation basis (not
+    // legacy identity) — recomputing with that basis proves the saga threads it.
     const simDays = deriveSimDays(store.getState()[timeRoute], performance.now());
-    expect(tween!.to).toEqual(earthHomePose(simDays, FOV));
+    const frameBasis = ORIENTATION_FRAMES[selectOrientation(store.getState())];
+    expect(tween!.to).toEqual(earthHomePose(simDays, FOV, frameBasis));
   });
 
   it('goHome is a no-op when the camera runtime is null', async () => {

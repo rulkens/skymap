@@ -45,7 +45,7 @@
  * runs — same pattern as `watchFocusTweenSaga`.
  */
 
-import { call, put, race, take, getContext } from 'typed-redux-saga';
+import { call, put, race, take, getContext, select } from 'typed-redux-saga';
 
 import { advanceTour, prevBeat } from './tourActions';
 import { pausableDwellSaga } from './pausableDwellSaga';
@@ -54,6 +54,8 @@ import { clipFociReady } from './clipFociReady';
 import { beatChanged, dwellStarted } from './tourSlice';
 import { resolveClipFoci } from '../../services/engine/animation/resolveClipFoci';
 import { compileClip } from '../../services/engine/animation/compileClip';
+import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
+import { selectOrientation } from '../settings/selectors';
 import type { BeatData } from '../../@types/animation/tour/BeatData';
 import type { BeatOutcome } from './pausableDwellSaga';
 import type { SagaContext } from '../../store/types';
@@ -90,7 +92,16 @@ export function* visitBeatSaga(beat: BeatData, index: number): Generator<unknown
   // dwell begins immediately and the caption reveals at once.
   if (beat.enterClip !== undefined) {
     const rt = cameraRuntime()!;
-    const enterClip = resolveClipFoci(beat.enterClip, resolveDeps(), rt.fovYRad, rt.from);
+    // Steady orientation basis so authored lookAt bearings encode through the
+    // committed frame (see resolveClipFoci / orbitAnglesLookingAlong).
+    const frameBasis = ORIENTATION_FRAMES[yield* select(selectOrientation)];
+    const enterClip = resolveClipFoci(
+      beat.enterClip,
+      resolveDeps(),
+      rt.fovYRad,
+      rt.from,
+      frameBasis,
+    );
     const winner = yield* race({
       landed: call(playClip, enterClip),
       next: take(advanceTour),
@@ -106,7 +117,8 @@ export function* visitBeatSaga(beat: BeatData, index: number): Generator<unknown
   // runtime is re-read here: the enter clip just moved the camera, and a
   // lookAt in the dwell must bear from where it LANDED, not where it began.
   const rt = cameraRuntime()!;
-  const dwellClip = resolveClipFoci(beat.dwellClip, resolveDeps(), rt.fovYRad, rt.from);
+  const dwellBasis = ORIENTATION_FRAMES[yield* select(selectOrientation)];
+  const dwellClip = resolveClipFoci(beat.dwellClip, resolveDeps(), rt.fovYRad, rt.from, dwellBasis);
   const dwellSec = compileClip(dwellClip).durationSec;
   yield* put(dwellStarted({ dwellSec }));
 

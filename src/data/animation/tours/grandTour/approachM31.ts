@@ -16,8 +16,8 @@
  * different channels: the strafe moves `target`, the aim moves yaw/pitch.
  *
  * The dwell's orbit is SIZED TO LAND on a chosen bearing: its net yaw
- * carries the camera from the arrival bearing to one ~79° off the
- * Milky-Way–M31 axis (the M81 Group's direction), which the Local-Group
+ * carries the camera from the arrival bearing to the M81 Group's
+ * direction, which the Local-Group
  * beat inherits untouched — its enter writes only target/distance — so the
  * pull-back there separates home and Andromeda on screen instead of
  * stacking them. Both bearings are pure seed geometry
@@ -46,10 +46,14 @@ import { dwellDrift } from '../../../../state/tour/dwellDrift';
 const M31 = focusId('m31');
 
 const DWELL_SEC = 10;
-const ARRIVAL_YAW_RAD = -2.30311; // lookAtId(M31) bearing from the MW target (−131.96°)
-const EXIT_YAW_RAD = 2.602475; // M81 Group centre-frame beyond M31 (+149.11°)
-// Short way round: −78.9°. The full-wrap +281° alternative keeps the other
-// beats' spin direction but at triple the orbit speed — too brisk this close.
+// Ecliptic-frame yaws (the default the shared decode reads through
+// ORIENTATION_FRAMES.ecliptic) of the same two world sightlines.
+const ARRIVAL_YAW_RAD = -1.074327; // lookAtId(M31) bearing from the MW target (−61.55°)
+const EXIT_YAW_RAD = 0.804001; // M81 Group centre-frame beyond M31 (+46.07°)
+// Ecliptic short way is +107.6°; the '- 2π' below takes the backward −252.4°
+// path instead — same spin sense as the earlier beats, brisker close in. Both
+// paths land on the exit bearing; the landing is the invariant, the sweep the
+// visual tuning knob.
 const NET_YAW_RAD = EXIT_YAW_RAD - ARRIVAL_YAW_RAD - Math.PI * 2;
 
 export const approachM31Dwell: ClipData = dwellDrift(DWELL_SEC, {

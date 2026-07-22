@@ -42,16 +42,17 @@ import { FOLD_SETTLE_MS } from '../../../src/state/tour/foldSettleMs';
 import type { BeatData } from '../../../src/@types/animation/tour/BeatData';
 import type { Tour } from '../../../src/@types/animation/tour/Tour';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
-import type { FocusCameraRuntime } from '../../../src/store/types';
+import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
 // ─── Stubs ──────────────────────────────────────────────────────────────────
 
-const CAMERA_RUNTIME: FocusCameraRuntime = {
+const CAMERA_RUNTIME: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 },
   fovYRad: 0.8,
+  frameBasisQuat: [0, 0, 0, 1],
 };
 
 // Deps for narration clips — no id-bearing cues, so clipFociReady is trivially
@@ -75,7 +76,7 @@ type PlayClipStub = ReturnType<typeof vi.fn<(clip: ClipData) => Promise<void>>>;
 function buildStore(opts: {
   playClip?: PlayClipStub;
   resolveDeps?: ResolveDeps;
-  cameraRuntime?: FocusCameraRuntime | null;
+  cameraRuntime?: LiveCameraRuntime | null;
 }) {
   const sagaMiddleware = createSagaMiddleware();
   const store = configureStore({

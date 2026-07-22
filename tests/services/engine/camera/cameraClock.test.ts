@@ -10,6 +10,7 @@ import { describe, it, expect } from 'vitest';
 import {
   createCameraClock,
   tweenElapsed,
+  frameTweenElapsed,
   autoRotateElapsed,
   clipElapsed,
   followElapsed,
@@ -19,6 +20,7 @@ import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { CameraTweenDescriptor } from '../../../../src/@types/camera/CameraTweenDescriptor';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { FrameTween } from '../../../../src/@types/camera/FrameTween';
 
 function makeDescriptor(overrides?: Partial<CameraTweenDescriptor>): CameraTweenDescriptor {
   return {
@@ -103,6 +105,32 @@ describe('tweenElapsed', () => {
     expect(x1).toBe(y1);
     expect(x2).toBe(y2);
     expect(x3).toBe(y3);
+  });
+});
+
+describe('frameTweenElapsed', () => {
+  function makeFrameTween(overrides?: Partial<FrameTween>): FrameTween {
+    return {
+      fromQuat: [0, 0, 0, 1],
+      to: 'ecliptic',
+      durationMs: 800,
+      easing: 'out',
+      ...overrides,
+    };
+  }
+
+  it('frameTweenElapsed resets on descriptor identity change', () => {
+    const clock = createCameraClock();
+    const descA = makeFrameTween();
+    // Fresh descriptor on the switch frame → 0.
+    expect(frameTweenElapsed(clock, descA, 1000)).toBe(0);
+    // Same reference later → grows.
+    expect(frameTweenElapsed(clock, descA, 1250)).toBe(250);
+    // A NEW descriptor object (a fresh frame switch) → reset to 0.
+    const descB = makeFrameTween();
+    expect(frameTweenElapsed(clock, descB, 1400)).toBe(0);
+    // Null frame tween → always 0.
+    expect(frameTweenElapsed(clock, null, 1500)).toBe(0);
   });
 });
 

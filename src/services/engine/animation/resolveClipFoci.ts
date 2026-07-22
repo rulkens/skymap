@@ -63,12 +63,15 @@ import type { Effect } from '../../../@types/animation/Effect';
 import type { ResolveDeps } from '../../../@types/engine/ResolveDeps';
 import type { SceneEffect } from '../../../@types/animation/SceneEffect';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Mat3 } from '../../../@types/math/Mat3';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import { moveTarget, dollyTo, aimAt } from './effectHelpers';
 import { resolveFocusId } from '../../url/resolveFocusId';
 import { extractSelectionRow } from '../helpers/extractSelectionRow';
 import { focusFraming } from '../camera/focusFraming';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
+import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
+import { frameUp } from '../../../utils/camera/frameUp';
 
 /**
  * Rewrite every id-bearing leaf in `data` to its concrete equivalent, given
@@ -76,6 +79,13 @@ import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookin
  * radians, and the live camera pose (`lookAtId` bearings are measured from
  * its target; `strafeId` scales degrees into Mpc by its distance — callers
  * pass `cameraRuntime.from`).
+ *
+ * `frameBasis` is the STEADY orientation-frame basis
+ * (`ORIENTATION_FRAMES[settings.orientation]`) resolved at this clip boundary.
+ * A `lookAtId` bearing is encoded through it so the aim decodes back to the
+ * subject under the same frame the render path decodes with (see
+ * `orbitAnglesLookingAlong`). Absent ⇒ identity (world-frame bearings), so every
+ * non-engine caller and test is unchanged.
  *
  * Returns a new `ClipData` with the same structure but id-bearing leaves
  * replaced. The `start` field is preserved unchanged (that rewrite is
@@ -89,10 +99,11 @@ export function resolveClipFoci(
   deps: ResolveDeps,
   fovYRad: number,
   from: CameraPose,
+  frameBasis?: Mat3,
 ): ClipData {
   return {
     ...data,
-    timeline: data.timeline.map((e) => walkEffect(e, deps, fovYRad, from)),
+    timeline: data.timeline.map((e) => walkEffect(e, deps, fovYRad, from, frameBasis)),
   };
 }
 
@@ -104,21 +115,27 @@ export function resolveClipFoci(
  * Structural nodes (`seq`, `all`, `fork`) recurse into their children.
  * Id-bearing leaves are rewritten. Everything else passes through as-is.
  */
-function walkEffect(effect: Effect, deps: ResolveDeps, fovYRad: number, from: CameraPose): Effect {
+function walkEffect(
+  effect: Effect,
+  deps: ResolveDeps,
+  fovYRad: number,
+  from: CameraPose,
+  frameBasis?: Mat3,
+): Effect {
   switch (effect.kind) {
     // ── Structural nodes — recurse ──────────────────────────────────────────
     case 'seq':
       return {
         kind: 'seq',
-        children: effect.children.map((c) => walkEffect(c, deps, fovYRad, from)),
+        children: effect.children.map((c) => walkEffect(c, deps, fovYRad, from, frameBasis)),
       };
     case 'all':
       return {
         kind: 'all',
-        children: effect.children.map((c) => walkEffect(c, deps, fovYRad, from)),
+        children: effect.children.map((c) => walkEffect(c, deps, fovYRad, from, frameBasis)),
       };
     case 'fork':
-      return { kind: 'fork', child: walkEffect(effect.child, deps, fovYRad, from) };
+      return { kind: 'fork', child: walkEffect(effect.child, deps, fovYRad, from, frameBasis) };
 
     // ── Id-bearing leaves — rewrite ─────────────────────────────────────────
     case 'moveTargetId': {
@@ -141,30 +158,36 @@ function walkEffect(effect: Effect, deps: ResolveDeps, fovYRad: number, from: Ca
         target[1] - from.target[1],
         target[2] - from.target[2],
       ];
-      return aimAt(orbitAnglesLookingAlong(forward), effect.over, effect.ease);
+      return aimAt(orbitAnglesLookingAlong(forward, frameBasis), effect.over, effect.ease);
     }
     // A lateral tracking move: displace the live orbit target along the
-    // horizontal right axis of the bearing toward the subject. `forward ×
-    // worldUp` simplifies to `[-fz, 0, fx]` — always horizontal, undefined
-    // only when the bearing is vertical. The angular `byDeg` scales into Mpc
-    // by the live camera distance, so the old anchor slides ~byDeg degrees
-    // across the frame regardless of scale.
+    // horizontal right axis of the bearing toward the subject. That axis is
+    // the `right` of `imagePlaneBasis(forward, 0, frameUp(frameBasis))` — the
+    // reference up is the frame pole (world +Y absent a basis). The strafe still
+    // holds the target's world height fixed (see `displaced` below) and keys its
+    // vertical-bearing guard off the world XZ magnitude — its long-standing
+    // world-frame semantics, left intact. The angular `byDeg` scales into Mpc by
+    // the live camera distance, so the anchor slides ~byDeg degrees across the
+    // frame regardless of scale.
     case 'strafeId': {
       const { target } = resolveFraming(effect.id, deps, fovYRad);
-      const fx = target[0] - from.target[0];
-      const fz = target[2] - from.target[2];
-      const m = Math.hypot(fz, fx);
-      if (m < 1e-12) {
+      const forward: Vec3 = [
+        target[0] - from.target[0],
+        target[1] - from.target[1],
+        target[2] - from.target[2],
+      ];
+      if (Math.hypot(forward[2], forward[0]) < 1e-12) {
         throw new Error(
           `resolveClipFoci: strafeId '${effect.id}' has a vertical bearing — ` +
             `no horizontal right axis exists to strafe along.`,
         );
       }
+      const { right } = imagePlaneBasis(forward, 0, frameUp(frameBasis));
       const byMpc = Math.tan((effect.byDeg * Math.PI) / 180) * from.distance;
       const displaced: Vec3 = [
-        from.target[0] + (-fz / m) * byMpc,
+        from.target[0] + right[0] * byMpc,
         from.target[1],
-        from.target[2] + (fx / m) * byMpc,
+        from.target[2] + right[2] * byMpc,
       ];
       return moveTarget(displaced, effect.over, effect.ease);
     }

@@ -56,12 +56,14 @@
 import { useEffect } from 'react';
 import type { FocusableTarget } from '../@types/engine/FocusableTarget';
 import type { TimeState } from '../@types/time/TimeState';
+import type { OrientationFrameId } from '../@types/camera/OrientationFrameId';
 import { HASH_PARAM_SOURCES } from './hashParamSources';
 import { parseHashParams } from '../utils/url/parseHashParams';
 import { composeHashParams } from '../utils/url/composeHashParams';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { selectFocusedFocusable } from '../state/selection/selectors';
 import { selectTimeState } from '../state/time/selectors';
+import { selectOrientation } from '../state/settings/selectors';
 
 // ── Pure helpers (re-exported for unit tests) ──────────────────────────────
 
@@ -73,6 +75,12 @@ export type DesiredHashInput = {
   // carry no clock still typecheck: a missing `time` means "no manual instant to
   // put on the URL", which the `t` source treats identically to live mode.
   time?: TimeState;
+  // The camera orientation frame, read by the `orientation` source's write.
+  // Required (unlike `time`): every caller derives it from the store, and a
+  // missing frame has a well-defined default, so `undefined` would be a bug
+  // rather than a meaningful "no orientation" state. A default-valued frame
+  // simply composes no param.
+  orientation: OrientationFrameId;
 };
 
 export type DesiredHashOutput = {
@@ -117,6 +125,7 @@ export function useUrlSync(): void {
   const dispatch = useAppDispatch();
   const focused = useAppSelector(selectFocusedFocusable);
   const time = useAppSelector(selectTimeState);
+  const orientation = useAppSelector(selectOrientation);
 
   // ── Effect A: hash READ → dispatch ───────────────────────────────────
   // Parse the URL once on mount and on every subsequent hashchange.
@@ -155,6 +164,7 @@ export function useUrlSync(): void {
     const { desiredHashBody, matches } = computeDesiredHash({
       focused,
       time,
+      orientation,
       currentHash: window.location.hash,
     });
     if (matches) return;
@@ -165,5 +175,8 @@ export function useUrlSync(): void {
     // instant: a re-anchor (pause, scrub, rate/direction change) produces a new
     // anchor object, so the write re-runs and crystallizes the new moment. Live
     // mode composes no `t`, so a live clock's coarse idle ticks cause no writes.
-  }, [focused, time]);
+    // `orientation` is a dependency so an interactive frame switch re-writes the
+    // hash (default composes no param, so switching to/from the default toggles
+    // the `orientation` bytes on the URL).
+  }, [focused, time, orientation]);
 }

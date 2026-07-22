@@ -11,6 +11,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 import { rootReducer } from '../../../../src/store/rootReducer';
 import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
+import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
@@ -207,9 +208,13 @@ describe('wireInput', () => {
     await wireInput(state, deps);
 
     expect(computeInitialCameraSpy).toHaveBeenCalledTimes(1);
+    // The boot store defaults to the ecliptic orientation, so the phase threads
+    // that committed basis into the framing call (first-paint encodes through the
+    // frame the render path decodes with).
     expect(computeInitialCameraSpy).toHaveBeenCalledWith({
       fovYRad: (Math.PI / 180) * 60,
       simDays: expect.any(Number),
+      frameBasis: ORIENTATION_FRAMES.ecliptic,
     });
     expect(state.cam).not.toBeNull();
   });

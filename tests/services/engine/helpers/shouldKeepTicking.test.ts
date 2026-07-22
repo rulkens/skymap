@@ -44,6 +44,7 @@ function rootWithCamera(
       tween: over.tween ?? null,
       autoRotate: { active: over.autoRotateActive ?? false },
       clip: null,
+      frameTween: null,
     },
     time: {
       mode: over.timeMode ?? 'live',

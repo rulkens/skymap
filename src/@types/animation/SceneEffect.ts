@@ -13,7 +13,7 @@
  * imports this type and does NOT redeclare it; this file is the ONE canonical
  * home.
  *
- * ### The five arms
+ * ### The six arms
  *
  *   - `show` / `hide` — visibility INTENT. Dispatches the same settings actions
  *     the UI does (e.g. `setMilkyWayEnabled(true)`) then fades in/out over `over`
@@ -32,6 +32,16 @@
  *   - `focus` — set the selection focus to `ref` (or `null` to clear). Drives the
  *     structure-isolation dim (`focusRecession` channel). `SelectionRef` carries
  *     a galaxyCatalog/structure/milkyWay discriminant and the durable id.
+ *
+ *   - `frameTo` — cue-style orientation-frame reorientation. Fires
+ *     `setOrientation(frame)` (persists the target pole past the clip) then
+ *     `startFrameTween` (rolls the up-basis toward it over `over` seconds). Like
+ *     the other cues it awaits ZERO duration — a beat that wants to dwell through
+ *     the roll sequences a `wait(over)` after it. The alternative — an awaited
+ *     camera-track writer — was rejected: the roll composes over the LIVE basis
+ *     `B(t)` captured at fire time (symmetric with the interactive
+ *     `watchOrientationChangeSaga`), so a `frameTo` firing mid-roll continues
+ *     from wherever the pole is rather than snapping back to a steady pole.
  *
  * ### `layers` are `VisibilityLayerKey`s; `scoped` are per-item entries
  *
@@ -55,6 +65,8 @@ import type { VisibilityLayerKey } from './VisibilityLayerKey';
 import type { ScopedVisibilityArg } from './ScopedVisibilityArg';
 import type { SettingsAction } from './SettingsAction';
 import type { SelectionRef } from '../engine/SelectionRef';
+import type { OrientationFrameId } from '../camera/OrientationFrameId';
+import type { Ease } from './Ease';
 
 export type SceneEffect =
   | {
@@ -82,4 +94,10 @@ export type SceneEffect =
   | {
       readonly kind: 'focus';
       readonly ref: SelectionRef | null;
+    }
+  | {
+      readonly kind: 'frameTo';
+      readonly frame: OrientationFrameId;
+      readonly over: number;
+      readonly ease: Ease;
     };

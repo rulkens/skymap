@@ -40,6 +40,7 @@
 import type { CameraAction } from '../../../@types/animation/CameraAction';
 import type { FocusBoundEffect } from '../../../@types/animation/FocusBoundEffect';
 import type { FocusId } from '../../../@types/animation/FocusId';
+import type { OrientationFrameId } from '../../../@types/camera/OrientationFrameId';
 import type { SceneEffect } from '../../../@types/animation/SceneEffect';
 import type { Effect } from '../../../@types/animation/Effect';
 import type { Channel } from '../../../@types/animation/Channel';
@@ -400,6 +401,24 @@ export function fade(
  */
 export function scene(action: SettingsAction): SceneEffect & { kind: 'scene' } {
   return { kind: 'scene', action };
+}
+
+/**
+ * frameTo — reorient the camera's "up" pole to `frame` over `opts.over` seconds.
+ *
+ * A cue-style effect (like `scene` / `focus`): it fires at its beat and awaits
+ * ZERO duration. At fire time `applySceneEffect` dispatches `setOrientation` +
+ * `startFrameTween`, seeding the roll from the LIVE basis `B(t)` — the same two
+ * writes (and the same live-basis capture) the interactive
+ * `watchOrientationChangeSaga` performs. A beat that should dwell through the
+ * reorientation sequences a `wait(opts.over)` after it; the cue itself adds no
+ * awaited time. `ease` defaults to `'inOut'`, the natural S-curve for an A→B roll.
+ */
+export function frameTo(
+  frame: OrientationFrameId,
+  opts: { over: number; ease?: Ease },
+): SceneEffect & { kind: 'frameTo' } {
+  return { kind: 'frameTo', frame, over: opts.over, ease: opts.ease ?? 'inOut' };
 }
 
 /**

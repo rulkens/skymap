@@ -48,6 +48,7 @@ import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSetti
 import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
 import type { SettingsSnapshot } from '../../@types/engine/settings/SettingsSnapshot';
 import type { RenderStrategy } from '../../@types/engine/frame/RenderStrategy';
+import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
 
 // The slice seeds the appearance knobs from `buildInitialSettings()`. The data
 // tier is NOT a settings field — it lives in its own root slice (seeded via the
@@ -58,6 +59,13 @@ const settingsSlice = createSlice({
   name: 'settings',
   initialState,
   reducers: {
+    // ── camera orientation frame ────────────────────────────────────────────
+    // Bare scalar view preference: which astronomical pole is "up". A string
+    // union (OrientationFrameId), not a numeric enum — no parse on the payload.
+    setOrientation: (settings, action: PayloadAction<OrientationFrameId>) => {
+      settings.orientation = action.payload;
+    },
+
     // ── galaxy-catalog billboard knobs ──────────────────────────────────────
     setGalaxyCatalogSize: (settings, action: PayloadAction<number>) => {
       settings.galaxyCatalogs.sizePx = action.payload;
@@ -425,6 +433,7 @@ const settingsSlice = createSlice({
 });
 
 export const {
+  setOrientation,
   setGalaxyCatalogSize,
   setBrightness,
   setDepthFade,
