@@ -161,18 +161,23 @@ describe('DisplaySection', () => {
       expect(onBloomEnabledChange).toHaveBeenCalledWith(false);
     });
 
-    it('calls onBloomStrengthChange with the parsed number on slider change', () => {
+    it('calls onBloomStrengthChange with the stepped value on a keyboard nudge', () => {
       const onBloomStrengthChange = vi.fn<(next: number) => void>();
-      const { getByRole, getByLabelText } = render(
+      const { getByRole, container } = render(
         createElement(DisplaySection, baseProps({ bloomStrength: 0.85, onBloomStrengthChange })),
       );
       fireEvent.click(getByRole('button', { name: /display/i }));
-      // Strength lives in Bloom's own body, which defaults closed like the
-      // other nested Display subgroups (Earth, Advanced) — expand it too.
-      fireEvent.click(getByRole('button', { name: /bloom/i }));
-      fireEvent.change(getByLabelText('Strength'), { target: { value: '1.25' } });
+      // The Strength control has no native range input; ArrowRight advances by
+      // one step (0.05) from 0.85, snapped to the step grid. Per the pattern in
+      // GalaxiesSection.test.ts: raw DOM query since the section body is
+      // aria-hidden until expanded (Bloom's own nested body stays closed — the
+      // raw query reaches the slider regardless).
+      const sliders = Array.from(container.querySelectorAll<HTMLElement>('[role="slider"]'));
+      const strength = sliders.find((el) => el.getAttribute('aria-label') === 'Strength')!;
+      expect(strength).not.toBeUndefined();
+      fireEvent.keyDown(strength, { key: 'ArrowRight' });
       expect(onBloomStrengthChange).toHaveBeenCalledOnce();
-      expect(onBloomStrengthChange).toHaveBeenCalledWith(1.25);
+      expect(onBloomStrengthChange).toHaveBeenCalledWith(0.9);
     });
   });
 });

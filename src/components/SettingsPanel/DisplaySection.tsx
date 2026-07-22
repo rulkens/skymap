@@ -38,7 +38,8 @@ import { orientationFrameLabel } from '../../data/orientation/orientationFrameLa
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../data/defaults';
 import { STAR_EMISSIVE } from '../../data/starRenderConstants';
-import { CollapsibleSection } from './CollapsibleSection';
+import CollapsibleSection from './CollapsibleSection';
+import Slider from '../common/Slider/Slider';
 import styles from './SettingsPanel.module.css';
 
 // ── Module-level constants ─────────────────────────────────────────────────────
@@ -141,36 +142,28 @@ function DisplaySection({
         onHeaderToggleChange={onBloomEnabledChange}
       >
         <div className={styles.panelRow}>
-          <label htmlFor="bloom-strength">Strength</label>
-          <span className={styles.panelValue}>{bloomStrength.toFixed(2)}</span>
-        </div>
-        <div className={styles.panelRow}>
-          <input
-            id="bloom-strength"
-            type="range"
-            min="0"
-            max="2"
-            step="0.05"
+          <Slider
+            label="Strength"
             value={bloomStrength}
-            onChange={(e) => onBloomStrengthChange(Number(e.target.value))}
+            min={0}
+            max={2}
+            step={0.05}
+            onChange={onBloomStrengthChange}
+            format={(v) => v.toFixed(2)}
           />
-        </div>
-        <div className={styles.panelRow}>
-          <label htmlFor="bloom-threshold">Threshold</label>
-          <span className={styles.panelValue}>{bloomThreshold.toFixed(1)}</span>
         </div>
         <div className={styles.panelRow}>
           {/* Ceiling is the resolved-star emissive: above it the threshold would
               exclude the Sun's own disc and kill its bloom. See the ordering
               invariant in data/starRenderConstants.ts. */}
-          <input
-            id="bloom-threshold"
-            type="range"
-            min="0"
-            max={STAR_EMISSIVE}
-            step="0.1"
+          <Slider
+            label="Threshold"
             value={bloomThreshold}
-            onChange={(e) => onBloomThresholdChange(Number(e.target.value))}
+            min={0}
+            max={STAR_EMISSIVE}
+            step={0.1}
+            onChange={onBloomThresholdChange}
+            format={(v) => v.toFixed(1)}
           />
         </div>
       </CollapsibleSection>

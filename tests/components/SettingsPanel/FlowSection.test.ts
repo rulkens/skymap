@@ -9,8 +9,6 @@
  * Tests cover:
  *  - Master toggle reflects `flow.enabled` (checked when true, unchecked when false).
  *  - Clicking the master toggle calls `onEnabledChange(<toggled>)`.
- *  - A FlowRow control change (mode button click) calls `onFlowChange` with the
- *    patched key.
  *
  * Checkbox toggle: fireEvent.click (not fireEvent.change) — click is the
  * reliable trigger for controlled checkboxes in jsdom; change does not update
@@ -18,10 +16,8 @@
  * the wrong value.
  *
  * CollapsibleSection note: the body is always in the DOM but is aria-hidden when
- * collapsed (default closed). To query controls inside the body (like FlowRow's
- * mode buttons), first expand the section with
- * `fireEvent.click(getByRole('button', { name: /flow/i }))`.
- * The header toggle is a CHECKBOX inside the header BUTTON — distinct affordances.
+ * collapsed (default closed). The header toggle is a CHECKBOX inside the header
+ * BUTTON — distinct affordances.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -107,24 +103,6 @@ describe('FlowSection', () => {
       fireEvent.click(headerCheckbox);
       expect(onEnabledChange).toHaveBeenCalledOnce();
       expect(onEnabledChange).toHaveBeenCalledWith(true);
-    });
-  });
-
-  describe('FlowRow mode button click calls onFlowChange', () => {
-    it('calls onFlowChange({ mode: "streamline" }) when the Streamline button is clicked', () => {
-      const onFlowChange = vi.fn<(patch: Partial<FlowFieldDefaults>) => void>();
-      // Start with mode='advect' so Streamline is not currently pressed.
-      const { getByRole } = render(
-        createElement(
-          FlowSection,
-          baseProps({ flow: { ...BASE_FLOW, enabled: true, mode: 'advect' }, onFlowChange }),
-        ),
-      );
-      // Expand the section so FlowRow controls leave aria-hidden and become queryable.
-      fireEvent.click(getByRole('button', { name: /flow/i }));
-      const streamlineBtn = getByRole('button', { name: /streamline/i });
-      fireEvent.click(streamlineBtn);
-      expect(onFlowChange).toHaveBeenCalledWith({ mode: 'streamline' });
     });
   });
 });

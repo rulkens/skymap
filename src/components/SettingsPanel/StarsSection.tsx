@@ -42,7 +42,8 @@ import { memo } from 'react';
 import { STAR_CATALOG_IDS } from '../../data/starCatalog/starCatalogIds';
 import { SOURCE_ENTRIES } from '../../data/sourceEntries';
 import { SCENE_STARS } from '../../data/bodies/sceneStars';
-import { CollapsibleSection } from './CollapsibleSection';
+import CollapsibleSection from './CollapsibleSection';
+import Slider from '../common/Slider/Slider';
 import styles from './SettingsPanel.module.css';
 import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';
 import type { StarCatalogItemSettings } from '../../@types/settings/StarCatalogItemSettings';
@@ -174,6 +175,7 @@ function StarsSection({
           <input
             id="toggle-famous-stars"
             type="checkbox"
+            className={styles.toggle}
             checked={famousStarsEnabled}
             onChange={(e) => onToggleFamousStars(e.target.checked)}
           />
@@ -193,6 +195,7 @@ function StarsSection({
               <input
                 id={`toggle-star-catalog-${id}`}
                 type="checkbox"
+                className={styles.toggle}
                 checked={items[id].enabled}
                 onChange={(e) => onToggleCatalog(id, e.target.checked)}
               />
@@ -205,18 +208,14 @@ function StarsSection({
         {/* Star size — shared star-billboard knob, twin of the Galaxies
             section's point-size slider (same 1–8 px range). */}
         <div className={styles.panelRow}>
-          <label htmlFor="slider-star-size">Star size</label>
-          <span className={styles.panelValue}>{sizePx.toFixed(1)} px</span>
-        </div>
-        <div className={styles.panelRow}>
-          <input
-            id="slider-star-size"
-            type="range"
+          <Slider
+            label="Star size"
+            value={sizePx}
             min={1.0}
             max={8.0}
             step={0.1}
-            value={sizePx}
-            onChange={(e) => onSizeChange(parseFloat(e.target.value))}
+            onChange={onSizeChange}
+            format={(v) => `${v.toFixed(1)} px`}
           />
         </div>
 
@@ -226,18 +225,14 @@ function StarsSection({
             A scale-dependent exposure ramp handles the big cross-scale swing,
             so this stays a trim rather than a wide-range knob. */}
         <div className={styles.panelRow}>
-          <label htmlFor="slider-star-brightness">Star brightness</label>
-          <span className={styles.panelValue}>{brightness.toFixed(1)}×</span>
-        </div>
-        <div className={styles.panelRow}>
-          <input
-            id="slider-star-brightness"
-            type="range"
+          <Slider
+            label="Star brightness"
+            value={brightness}
             min={0.01}
             max={4}
             step={0.05}
-            value={brightness}
-            onChange={(e) => onBrightnessChange(parseFloat(e.target.value))}
+            onChange={onBrightnessChange}
+            format={(v) => `${v.toFixed(1)}×`}
           />
         </div>
 
@@ -245,18 +240,14 @@ function StarsSection({
             earlier = fewer visible lattice cells (more detail), at the cost of
             more drawn nodes. Range 0.01–0.30; NOT a GPU uniform. */}
         <div className={styles.panelRow}>
-          <label htmlFor="slider-star-detail">Detail</label>
-          <span className={styles.panelValue}>{refineThreshold.toFixed(2)}</span>
-        </div>
-        <div className={styles.panelRow}>
-          <input
-            id="slider-star-detail"
-            type="range"
+          <Slider
+            label="Detail"
+            value={refineThreshold}
             min={0.01}
             max={0.3}
             step={0.01}
-            value={refineThreshold}
-            onChange={(e) => onRefineThresholdChange(parseFloat(e.target.value))}
+            onChange={onRefineThresholdChange}
+            format={(v) => v.toFixed(2)}
           />
         </div>
 
@@ -264,18 +255,14 @@ function StarsSection({
             footprint so the box lattice dissolves. 1.0 = identity (flux-
             conserving; the shader divides the peak by the square). Range 1.0–6.0. */}
         <div className={styles.panelRow}>
-          <label htmlFor="slider-star-glow-overlap">Glow overlap</label>
-          <span className={styles.panelValue}>{glowOverlap.toFixed(1)}×</span>
-        </div>
-        <div className={styles.panelRow}>
-          <input
-            id="slider-star-glow-overlap"
-            type="range"
+          <Slider
+            label="Glow overlap"
+            value={glowOverlap}
             min={1.0}
             max={6.0}
             step={0.1}
-            value={glowOverlap}
-            onChange={(e) => onGlowOverlapChange(parseFloat(e.target.value))}
+            onChange={onGlowOverlapChange}
+            format={(v) => `${v.toFixed(1)}×`}
           />
         </div>
 
@@ -283,18 +270,14 @@ function StarsSection({
             starExposureRamp targets at its near (solar-system) anchor. A live
             tuning knob; the value gets frozen once re-eye-tuned. Range 1–60. */}
         <div className={styles.panelRow}>
-          <label htmlFor="slider-star-exposure-near">Exposure (near)</label>
-          <span className={styles.panelValue}>{exposureNearX.toFixed(1)}×</span>
-        </div>
-        <div className={styles.panelRow}>
-          <input
-            id="slider-star-exposure-near"
-            type="range"
+          <Slider
+            label="Exposure (near)"
+            value={exposureNearX}
             min={1}
             max={60}
             step={0.5}
-            value={exposureNearX}
-            onChange={(e) => onExposureNearXChange(parseFloat(e.target.value))}
+            onChange={onExposureNearXChange}
+            format={(v) => `${v.toFixed(1)}×`}
           />
         </div>
 
@@ -302,18 +285,14 @@ function StarsSection({
             middle (few-kpc) anchor. Pull it down to darken the over-exposed
             central clump without touching either end. Range 5–150. */}
         <div className={styles.panelRow}>
-          <label htmlFor="slider-star-exposure-mid">Exposure (mid)</label>
-          <span className={styles.panelValue}>{exposureMidX.toFixed(0)}×</span>
-        </div>
-        <div className={styles.panelRow}>
-          <input
-            id="slider-star-exposure-mid"
-            type="range"
+          <Slider
+            label="Exposure (mid)"
+            value={exposureMidX}
             min={5}
             max={150}
             step={1}
-            value={exposureMidX}
-            onChange={(e) => onExposureMidXChange(parseFloat(e.target.value))}
+            onChange={onExposureMidXChange}
+            format={(v) => `${v.toFixed(0)}×`}
           />
         </div>
 
@@ -321,18 +300,14 @@ function StarsSection({
             far (whole-galaxy) anchor, where the field reads as diffuse surface
             brightness. Live tuning knob; range 5–300. */}
         <div className={styles.panelRow}>
-          <label htmlFor="slider-star-exposure-far">Exposure (far)</label>
-          <span className={styles.panelValue}>{exposureFarX.toFixed(0)}×</span>
-        </div>
-        <div className={styles.panelRow}>
-          <input
-            id="slider-star-exposure-far"
-            type="range"
+          <Slider
+            label="Exposure (far)"
+            value={exposureFarX}
             min={5}
             max={300}
             step={1}
-            value={exposureFarX}
-            onChange={(e) => onExposureFarXChange(parseFloat(e.target.value))}
+            onChange={onExposureFarXChange}
+            format={(v) => `${v.toFixed(0)}×`}
           />
         </div>
 
@@ -341,18 +316,14 @@ function StarsSection({
             aggregate deposits as luminous fog around the Sun. Deliberately
             non-physical: light above the cap is discarded. Range 0.01–0.5. */}
         <div className={styles.panelRow}>
-          <label htmlFor="slider-star-fog-cap">Fog cap</label>
-          <span className={styles.panelValue}>{aggregateIntensityCap.toFixed(2)}</span>
-        </div>
-        <div className={styles.panelRow}>
-          <input
-            id="slider-star-fog-cap"
-            type="range"
+          <Slider
+            label="Fog cap"
+            value={aggregateIntensityCap}
             min={0.01}
             max={0.5}
             step={0.01}
-            value={aggregateIntensityCap}
-            onChange={(e) => onAggregateIntensityCapChange(parseFloat(e.target.value))}
+            onChange={onAggregateIntensityCapChange}
+            format={(v) => v.toFixed(2)}
           />
         </div>
       </CollapsibleSection>

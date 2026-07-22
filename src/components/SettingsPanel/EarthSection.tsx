@@ -22,7 +22,8 @@
  */
 
 import { memo } from 'react';
-import { CollapsibleSection } from './CollapsibleSection';
+import Slider from '../common/Slider/Slider';
+import CollapsibleSection from './CollapsibleSection';
 import styles from './SettingsPanel.module.css';
 
 // ── Props ──────────────────────────────────────────────────────────────────────
@@ -60,48 +61,36 @@ function EarthSection({
   return (
     <CollapsibleSection title="Earth">
       <div className={styles.panelRow}>
-        <label htmlFor="atmosphere-exposure">Atmosphere exposure</label>
-        <span className={styles.panelValue}>{atmosphereExposure.toFixed(2)}</span>
-      </div>
-      <div className={styles.panelRow}>
-        <input
-          id="atmosphere-exposure"
-          type="range"
-          min="0"
-          max="4"
-          step="0.05"
+        <Slider
+          label="Atmosphere exposure"
           value={atmosphereExposure}
-          onChange={(e) => onAtmosphereExposureChange(Number(e.target.value))}
+          min={0}
+          max={4}
+          step={0.05}
+          onChange={onAtmosphereExposureChange}
+          format={(v) => v.toFixed(2)}
         />
       </div>
       <div className={styles.panelRow}>
-        <label htmlFor="ambient-light">Ambient light</label>
-        <span className={styles.panelValue}>{ambientLight.toFixed(3)}</span>
-      </div>
-      <div className={styles.panelRow}>
-        <input
-          id="ambient-light"
-          type="range"
-          min="0"
-          max="0.2"
-          step="0.005"
+        <Slider
+          label="Ambient light"
           value={ambientLight}
-          onChange={(e) => onAmbientLightChange(Number(e.target.value))}
+          min={0}
+          max={0.2}
+          step={0.005}
+          onChange={onAmbientLightChange}
+          format={(v) => v.toFixed(3)}
         />
       </div>
       <div className={styles.panelRow}>
-        <label htmlFor="ocean-roughness">Ocean roughness</label>
-        <span className={styles.panelValue}>{oceanRoughness.toFixed(2)}</span>
-      </div>
-      <div className={styles.panelRow}>
-        <input
-          id="ocean-roughness"
-          type="range"
-          min="0.02"
-          max="0.6"
-          step="0.01"
+        <Slider
+          label="Ocean roughness"
           value={oceanRoughness}
-          onChange={(e) => onOceanRoughnessChange(Number(e.target.value))}
+          min={0.02}
+          max={0.6}
+          step={0.01}
+          onChange={onOceanRoughnessChange}
+          format={(v) => v.toFixed(2)}
         />
       </div>
     </CollapsibleSection>

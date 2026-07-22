@@ -32,7 +32,7 @@
 import { memo } from 'react';
 import { LABEL_CATEGORIES } from '../../data/structure/labelCategories';
 import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
-import { CollapsibleSection } from './CollapsibleSection';
+import CollapsibleSection from './CollapsibleSection';
 import styles from './SettingsPanel.module.css';
 import type { LabelCategory } from '../../@types/engine/data/LabelCategory';
 
@@ -129,6 +129,7 @@ function LabelsSection({
           <input
             id={`toggle-label-${cat}`}
             type="checkbox"
+            className={styles.toggle}
             checked={labelCategoryVisibility[cat]}
             onChange={(e) => onSetLabelCategoryVisibility(cat, e.target.checked)}
           />
@@ -147,6 +148,7 @@ function LabelsSection({
           <input
             id={row.id}
             type="checkbox"
+            className={styles.toggle}
             checked={row.enabled}
             onChange={(e) => row.onChange(e.target.checked)}
           />

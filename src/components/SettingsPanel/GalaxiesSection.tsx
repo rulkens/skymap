@@ -28,7 +28,8 @@ import { maskHas } from '../../utils/maskHas';
 import { BiasMode } from '../../data/galaxyCatalog/biasMode';
 import type { BiasMode as BiasModeT } from '../../@types/data/galaxyCatalog/BiasMode';
 import type { SourceType } from '../../@types/data/SourceType';
-import { CollapsibleSection } from './CollapsibleSection';
+import CollapsibleSection from './CollapsibleSection';
+import Slider from '../common/Slider/Slider';
 import styles from './SettingsPanel.module.css';
 
 // ── Module-level constants ─────────────────────────────────────────────────────
@@ -150,6 +151,7 @@ function GalaxiesSection({
               <input
                 id={`toggle-source-${s}`}
                 type="checkbox"
+                className={styles.toggle}
                 checked={maskHas(visibleSourceMask, s)}
                 onChange={(e) => onToggleSource(s, e.target.checked)}
               />
@@ -159,20 +161,18 @@ function GalaxiesSection({
       </CollapsibleSection>
 
       <CollapsibleSection title="Advanced">
-        {/* Point size — galaxy-only tunable. */}
+        {/* Point size — galaxy-only tunable.  First in-panel trial of the
+            compact Slider (label + value folded into one pill) in place of the
+            house label-row + range-row + value-span triple. */}
         <div className={styles.panelRow}>
-          <label htmlFor="slider-point-size">Point size</label>
-          <span className={styles.panelValue}>{pointSize.toFixed(1)} px</span>
-        </div>
-        <div className={styles.panelRow}>
-          <input
-            id="slider-point-size"
-            type="range"
+          <Slider
+            label="Point size"
+            value={pointSize}
             min={1.0}
             max={8.0}
             step={0.1}
-            value={pointSize}
-            onChange={(e) => onPointSizeChange(parseFloat(e.target.value))}
+            onChange={onPointSizeChange}
+            format={(v) => `${v.toFixed(1)} px`}
           />
         </div>
 
@@ -182,6 +182,7 @@ function GalaxiesSection({
           <input
             id="toggle-depth-fade"
             type="checkbox"
+            className={styles.toggle}
             checked={depthFadeEnabled}
             onChange={(e) => onDepthFadeEnabledChange(e.target.checked)}
           />
@@ -206,23 +207,17 @@ function GalaxiesSection({
           </select>
         </div>
         {biasMode === BiasMode.VolumeLimited && (
-          <>
-            <div className={styles.panelRow}>
-              <label htmlFor="abs-mag-limit">M_lim</label>
-              <span className={styles.panelValue}>{absMagLimit.toFixed(1)}</span>
-            </div>
-            <div className={styles.panelRow}>
-              <input
-                id="abs-mag-limit"
-                type="range"
-                min={-24}
-                max={-15}
-                step={0.1}
-                value={absMagLimit}
-                onChange={(e) => onAbsMagLimitChange(parseFloat(e.target.value))}
-              />
-            </div>
-          </>
+          <div className={styles.panelRow}>
+            <Slider
+              label="M_lim"
+              value={absMagLimit}
+              min={-24}
+              max={-15}
+              step={0.1}
+              onChange={onAbsMagLimitChange}
+              format={(v) => v.toFixed(1)}
+            />
+          </div>
         )}
       </CollapsibleSection>
     </CollapsibleSection>

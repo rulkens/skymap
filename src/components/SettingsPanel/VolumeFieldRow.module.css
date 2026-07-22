@@ -36,51 +36,12 @@
   cursor: pointer;
 }
 
-.label input[type='checkbox'] {
-  /* Match the iOS-style pill toggle used in `SettingsPanel.module.css`
-   * so the per-cube enable checkbox reads as the same control family. */
-  appearance: none;
-  -webkit-appearance: none;
-  position: relative;
-  width: 28px;
-  height: 16px;
+/* Per-cube enable toggle — the shared iOS-style pill (see
+ * `pillToggle.module.css`) so it reads as the same control family as the
+ * section header + per-row toggles. */
+.toggle {
+  composes: pillToggle from './pillToggle.module.css';
   margin: 0;
-  border: 1px solid var(--border-control);
-  border-radius: 999px;
-  background: var(--surface-control);
-  accent-color: var(--color-accent-control, #4a9eff);
-  cursor: pointer;
-  flex-shrink: 0;
-  transition:
-    background 0.18s ease,
-    border-color 0.18s ease;
-}
-
-.label input[type='checkbox']::before {
-  content: '';
-  position: absolute;
-  top: 1px;
-  left: 1px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--color-fg-muted);
-  transition:
-    transform 0.18s ease,
-    background 0.18s ease;
-}
-
-.label input[type='checkbox']:hover {
-  border-color: var(--border-hover);
-}
-
-.label input[type='checkbox']:checked {
-  background: var(--color-accent-link);
-  border-color: var(--color-accent-link);
-}
-
-.label input[type='checkbox']:checked::before {
-  transform: translateX(12px);
 }
 
 .paletteSlot {
@@ -89,51 +50,12 @@
 }
 
 /*
- * Labelled-slider row: name on the left (fixed width), current value
- * next to it (also fixed, right-aligned so digits line up), then the
- * slider stretches to fill the rest of the row.  Fixed-width columns
- * keep the three sibling rows visually aligned even when the values
- * have different digit counts.
- *
- * The values use `font-feature-settings: 'tnum'` (tabular numerals)
- * so 0.51 → 0.52 doesn't shimmy horizontally as the user drags —
- * each digit occupies the same advance width regardless of glyph.
+ * Labelled-slider row: wraps one compact `Slider` (see
+ * `common/Slider/Slider.tsx`), which folds its own label + value pill
+ * into the track. This row just carries the descriptive `title`
+ * tooltip and vertical rhythm between sibling sliders.
  */
 .sliderRow {
   display: flex;
   align-items: center;
-  gap: var(--space-2, 4px);
-  font-size: 0.85em;
-  color: var(--color-fg-muted, #aaa);
-}
-
-.sliderLabel {
-  /* Wide enough for the longest label ("Intensity", 9 chars) at the
-     current font without wrapping; right-aligning makes the trailing
-     edge line up with the value column for a clean grid look. */
-  flex: 0 0 4.5em;
-  text-align: left;
-  letter-spacing: 0.02em;
-}
-
-.sliderValue {
-  /* Three significant chars max for any of our formatters
-     ("0.00" through "30.0"); 3em is wide enough.  Right-aligned and
-     tabular for visual stability while dragging. */
-  flex: 0 0 3em;
-  text-align: right;
-  font-feature-settings: 'tnum';
-  color: var(--color-fg, #ddd);
-}
-
-.slider {
-  flex: 1;
-  min-width: 0; /* let the flex item shrink below its natural size */
-  accent-color: var(--color-accent-control, #4a9eff);
-  cursor: pointer;
-}
-
-.slider:disabled {
-  opacity: 0.4;
-  cursor: default;
 }

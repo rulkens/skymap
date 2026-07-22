@@ -1,0 +1,80 @@
+/*
+ * pillToggle.module.css — the shared iOS-style pill toggle vocabulary for the
+ * SettingsPanel family.
+ *
+ * ### Why a shared module
+ *
+ * Three controls draw the exact same pill: the section header's master toggle
+ * (`CollapsibleSection`), every per-row on/off checkbox (`SettingsPanel`), and
+ * the per-cube enable checkbox (`VolumeFieldRow`).  They MUST read as one
+ * control family, so the look lived as three copy-pasted blocks that drifted
+ * the moment one was tweaked.  This module is the single source: consumers
+ * `composes: pillToggle from './pillToggle.module.css'` into their own class.
+ *
+ * It holds ONLY the pill *look* — appearance reset, track, thumb, and the
+ * hover/checked/focus states.  Layout context (the header toggle's right
+ * margin, a row's flex placement) is deliberately NOT here; each consumer owns
+ * its own `margin`, so composing never fights a cross-module specificity tie.
+ * There is no `.root` — this is a vocabulary, not a component.
+ *
+ * Built from a single `<input type=checkbox>` + a `::before` pseudo as the
+ * thumb, so it stays a native form control (keyboard / a11y / Space-to-toggle
+ * all work for free).  Sizing: 28×16 track, 12×12 thumb, 12px of travel — sits
+ * next to 10px body text without dominating the row.  All atoms reference
+ * tokens from `src/styles/global.css`.
+ */
+
+.pillToggle {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  width: 28px;
+  height: 16px;
+  border: 1px solid var(--border-control);
+  border-radius: 999px;
+  background: var(--surface-control);
+  accent-color: var(--color-accent-control);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.pillToggle::before {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-fg-muted);
+  transition:
+    transform 0.18s ease,
+    background 0.18s ease;
+}
+
+.pillToggle:hover {
+  border-color: var(--border-hover);
+}
+
+.pillToggle:checked {
+  /* `--color-accent-link` (0.65 alpha) rather than the brighter
+   * `--color-accent-control` (0.85) — the on-state pill sits on a dark panel
+   * and the 0.85 accent reads as shouting next to the muted body text. */
+  background: var(--color-accent-link);
+  border-color: var(--color-accent-link);
+}
+
+.pillToggle:checked::before {
+  /* Thumb keeps its off-state colour — only the track changes between on and
+   * off.  A black thumb on the accent-link track read as a hole cut out of
+   * the pill rather than a moving knob. */
+  transform: translateX(12px);
+}
+
+.pillToggle:focus-visible {
+  outline: 1px solid var(--focus-ring);
+  outline-offset: 2px;
+}
