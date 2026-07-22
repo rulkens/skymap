@@ -896,18 +896,15 @@ verification — each sub-item asks the user to look (dev server running).
 
 **Files:** none (verification) + PR description.
 
-- [ ] **iOS WebGPU check** (spec §11): the shared-encoder frame-drop class of bug
-      is renderer-adjacent, but this feature touches no shader path — confirm no
-      WGSL / uniform-layout regression by loading the built app on iOS Safari (or
-      the closest reachable WebKit) and switching each frame. The camera-up /
-      basis changes are all CPU-side (`Mat3` maths into `lookAt` up + `updatePosition`),
-      so the risk is low; the check is to confirm the canvas still presents after a
-      switch. If iOS is not reachable, state that explicitly and defer with a note
-      (as prior features have).
-- [ ] PR description: name the two prereq prep PRs, list the visual gates
-      (Task 14) and their user-confirmed outcomes, and the re-tune (Task 15). Note
-      **no R2 sync** (code only — no `.bin` change).
-- [ ] Run `/feature-done` before merge (sweeps the DoD + relocates this plan and
+- [x] **iOS WebGPU check** (spec §11): **deferred** — iOS hardware not reachable
+      this session. The feature touches no shader/WGSL/uniform-layout path; every
+      basis change is CPU-side (`Mat3` maths into `lookAt` up + `updatePosition`),
+      so the shared-encoder frame-drop class of bug does not apply. Deferred with a
+      note as prior features have.
+- [x] PR description: names the two prereq prep PRs, the Task 14/15 visual gates
+      and their user-confirmed outcomes, and the re-tune. Notes **no R2 sync**
+      (code only — no `.bin` change).
+- [x] Run `/feature-done` before merge (sweeps the DoD + relocates this plan and
       the spec to `plans/completed/` + `specs/completed/`), per the
       "/feature-done BEFORE merge" convention.
 
