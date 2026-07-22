@@ -503,6 +503,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       mcpm: null,
       // Default-off velocity flow field; demand-loaded like cf4Density.
       flow: null,
+      // Constellation stick-figure artifact; demand-loaded on its master gate.
+      constellations: null,
       // Keyed body-surface texture family (Earth + planets/moons + Saturn ring),
       // minted in initGpu beside the body renderers. Empty map at construction —
       // proximity-demanded + released per body (mirrors the `points` map).

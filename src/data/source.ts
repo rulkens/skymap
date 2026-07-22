@@ -179,4 +179,13 @@ export const Source = {
    * Planet=22, Earth=23). Never renumber the codes below it.
    */
   GaiaStars: 24,
+  /**
+   * True-3D constellation stick-figure overlay — the classical asterism lines
+   * projected onto the real heliocentric positions of their member stars
+   * (single `constellations.json` artifact, demand-loaded). Registry-key-only
+   * code (not persisted, not pickable); the entry carries the default-visible
+   * master toggle plus the line-intensity multiplier. Appended at 25 — never
+   * renumber the codes below it.
+   */
+  Constellations: 25,
 } as const;

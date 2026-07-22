@@ -1,6 +1,7 @@
 import type { GalaxyCatalogSourceEntry } from './galaxyCatalog/GalaxyCatalogSourceEntry';
 import type { StructureSourceEntry } from './structure/StructureSourceEntry';
 import type { FilamentSourceEntry } from './filament/FilamentSourceEntry';
+import type { ConstellationsSourceEntry } from './constellations/ConstellationsSourceEntry';
 import type { VolumeSourceEntry } from './volume/VolumeSourceEntry';
 import type { MilkyWaySourceEntry } from './milkyWay/MilkyWaySourceEntry';
 import type { FlowSourceEntry } from './flow/FlowSourceEntry';
@@ -20,6 +21,7 @@ export type SourceEntry =
   | GalaxyCatalogSourceEntry
   | StructureSourceEntry
   | FilamentSourceEntry
+  | ConstellationsSourceEntry
   | VolumeSourceEntry
   | MilkyWaySourceEntry
   | FlowSourceEntry

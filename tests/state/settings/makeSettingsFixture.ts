@@ -112,6 +112,10 @@ export function makeSettingsFixture(
       enabled: SOURCE_REGISTRY[Source.Filaments].visible,
       intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
     },
+    constellations: {
+      enabled: SOURCE_REGISTRY[Source.Constellations].visible,
+      intensity: SOURCE_REGISTRY[Source.Constellations].intensity,
+    },
     earth: {
       // `earth` is a definitional row in the atmosphere table, so the indexed
       // read is non-null (see `initialState.ts` — the index signature widens it).
