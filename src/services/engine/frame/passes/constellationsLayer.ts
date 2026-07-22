@@ -59,17 +59,19 @@
  * commit). So `enabled` renders while the setting is on OR the disable fade-out
  * tail is still above 0 — the same pattern `filamentsLayer` uses — and `draw`
  * hands the renderer the distance band TIMES that fade opacity so the figures
- * dissolve smoothly on toggle rather than hard-cutting. `enabled` reads the
+ * dissolve smoothly on toggle rather than hard-cutting. Both the band and the
+ * product come from `constellationLayerOpacity`, the one home the label producer
+ * shares, so the names dissolve in lock-step with the lines. `enabled` reads the
  * absolute camera (`ctx.drawCamPos`) while `draw` reads NEAR0's origin-relative
- * `view.camPos`; the two coincide because `RENDER_ORIGIN_MPC` is [0,0,0].
+ * `view.camPos`; the two carry the same value because `slabViewOf` copies
+ * `drawCamPos` verbatim into `view.camPos`.
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
 import { NEAR0 } from '../slabs';
-import { fadeBand } from '../../../../utils/math/fadeBand';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
-import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
+import { constellationLayerOpacity } from '../../presentation/constellationLayerOpacity';
 
 /**
  * Line half-width in screen-space pixels — a ~1.5-2 px thin steel-blue stroke
@@ -90,7 +92,9 @@ export const constellationsLayer: ContentLayer = {
     // step for this row. Keyed on the camera's heliocentric-origin distance
     // (drawCamPos is the absolute eye; the origin is [0,0,0]).
     const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
-    if (fadeBand(SCALE_FADE_BANDS.constellations, camDistMpc) === 0) return false;
+    // Passing opacity 1 reduces the shared product to the raw distance band —
+    // the band-only cull, keeping the `fadeBand` lookup in the one home.
+    if (constellationLayerOpacity(camDistMpc, 1) === 0) return false;
     // Inside the band: the setting is the user's intent; the fade opacity is the
     // visual state. Render while EITHER is live so the disable fade-out tail
     // keeps drawing until it reaches 0 (mirrors filamentsLayer).
@@ -106,13 +110,14 @@ export const constellationsLayer: ContentLayer = {
     if (!renderer.hasData()) return;
 
     // The renderer's per-frame opacity: the distance band (keyed on the camera's
-    // heliocentric-origin distance, read from `view.camPos` — the frames coincide,
-    // see the module header) TIMES the fade-registry toggle opacity, so the
-    // figures dissolve smoothly on ENABLE/DISABLE within the band.
+    // heliocentric-origin distance, read from `view.camPos` — a verbatim copy of
+    // `drawCamPos`, see the module header) TIMES the fade-registry toggle
+    // opacity, so the figures dissolve smoothly on ENABLE/DISABLE within the
+    // band. The same one home the label producer reads, so names track lines.
     const camPos = view.camPos;
     const camDistMpc = Math.hypot(camPos[0], camPos[1], camPos[2]);
-    const distanceFade = fadeBand(SCALE_FADE_BANDS.constellations, camDistMpc);
     const toggleFade = state.subsystems.fades.opacityOf({ kind: 'constellations' }, ctx.nowMs);
+    const layerOpacity = constellationLayerOpacity(camDistMpc, toggleFade);
 
     // Fold the eye offset into the vp in f64 so it pairs with the camera-relative
     // endpoints the renderer re-writes per frame — narrowed HERE at the GPU-upload
@@ -126,7 +131,7 @@ export const constellationsLayer: ContentLayer = {
       view.viewportPx,
       CONSTELLATION_LINE_HALFWIDTH_PX,
       state.settings.constellations.intensity,
-      distanceFade * toggleFade,
+      layerOpacity,
       camPos,
     );
   },

@@ -12,13 +12,13 @@
  *
  * ### fadeAlpha rides the layer's fade, not a label-local one
  *
- * Each label's `fadeAlpha` is the layer's distance band
- * (`fadeBand(SCALE_FADE_BANDS.constellations, camDistMpc)`) multiplied by the
- * layer's fade-registry opacity (`fades.opacityOf({ kind: 'constellations' })`)
- * — so the names dissolve in lock-step with the stick figures on both the
- * ENABLE/DISABLE toggle and the fly-away distance recession, with no
- * label-specific fade to keep in sync. The producer is a pure READER of the
- * fade opacity; the visibility bridge is its sole writer.
+ * Each label's `fadeAlpha` comes from `constellationLayerOpacity` — the layer's
+ * distance band times its fade-registry opacity, the same one home the
+ * `constellationsLayer` pass reads for the stick figures' alpha. So the names
+ * dissolve in lock-step with the figures on both the ENABLE/DISABLE toggle and
+ * the fly-away distance recession, with no label-specific fade to keep in sync.
+ * The producer is a pure READER of the fade opacity; the visibility bridge is
+ * its sole writer.
  *
  * ### No declutter here — the director owns it
  *
@@ -39,8 +39,7 @@ import {
   CONSTELLATION_LABEL_PROMINENCE_PX,
 } from './constellationLabelStyle';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { fadeBand } from '../../../utils/math/fadeBand';
-import { SCALE_FADE_BANDS } from './scaleFadeBands';
+import { constellationLayerOpacity } from './constellationLayerOpacity';
 
 export function produceConstellationLabels(
   state: EngineState,
@@ -65,9 +64,8 @@ export function produceConstellationLabels(
   // house rule the pass gates on).
   const now = ctx.nowMs;
   const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
-  const distanceFade = fadeBand(SCALE_FADE_BANDS.constellations, camDistMpc);
   const layerOpacity = state.subsystems.fades.opacityOf({ kind: 'constellations' }, now);
-  const fadeAlpha = distanceFade * layerOpacity;
+  const fadeAlpha = constellationLayerOpacity(camDistMpc, layerOpacity);
   if (fadeAlpha <= 0) return { labels: [], lines: [], awake: false };
 
   const style = CONSTELLATION_LABEL_STYLE;

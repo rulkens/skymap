@@ -169,12 +169,13 @@ export type EngineGpuHandles = {
   filamentRenderer: FilamentRenderer | null;
   /**
    * True-3D constellation stick-figure renderer. Constructed unconditionally
-   * during GPU init (the pipeline is cheap), stays empty until the pass uploads
-   * the ready `constellations.json` artifact on the first frame it is loaded
-   * (the artifact is CPU-resident on the slot, so there is no commit step).
-   * Nullable + excluded from `isEngineReady`, same rationale as
-   * `filamentRenderer`: the overlay is an optional demand-loaded asset the
-   * `constellationsLayer` null-checks at point of use.
+   * during GPU init (the pipeline is cheap), stays empty until the
+   * `constellations` slot's commit uploads the ready `constellations.json`
+   * artifact once on artifact-ready (flipping `hasData()` true and kicking the
+   * demand-loaded fade); the pass thereafter only draws. Nullable + excluded
+   * from `isEngineReady`, same rationale as `filamentRenderer`: the overlay is
+   * an optional demand-loaded asset the `constellationsLayer` null-checks at
+   * point of use.
    */
   constellationRenderer: ConstellationRenderer | null;
   /**

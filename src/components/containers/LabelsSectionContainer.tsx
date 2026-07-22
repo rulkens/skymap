@@ -41,6 +41,7 @@
 
 import { memo, useCallback, useMemo } from 'react';
 import LabelsSection from '../SettingsPanel/LabelsSection';
+import type { NonCategoryLabelRow } from '../SettingsPanel/LabelsSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
   selectStructureItems,
@@ -136,18 +137,36 @@ function LabelsSectionContainer(): React.ReactElement {
     [dispatch],
   );
 
+  // The non-category boolean rows the section renders + folds into its master
+  // tri-state, in render order (star names, planet names, constellations,
+  // constellation labels). Assembling the array here keeps the section free of
+  // any per-row prop plumbing: a new caption row is one more entry, not a fresh
+  // prop pair threaded through both components. Each `id` is the checkbox
+  // element id (preserved verbatim from the former inline rows).
+  const nonCategoryRows: ReadonlyArray<NonCategoryLabelRow> = useMemo(
+    () => [
+      { id: 'toggle-label-stars', label: 'Star names', enabled: starLabelsEnabled, onChange: onSetStarLabelsEnabled },
+      { id: 'toggle-label-planets', label: 'Planet names', enabled: planetLabelsEnabled, onChange: onSetPlanetLabelsEnabled },
+      { id: 'toggle-constellations', label: 'Constellations', enabled: constellationsEnabled, onChange: onToggleConstellations },
+      { id: 'toggle-constellation-labels', label: 'Constellation labels', enabled: constellationLabelsEnabled, onChange: onSetConstellationLabelsEnabled },
+    ],
+    [
+      starLabelsEnabled,
+      onSetStarLabelsEnabled,
+      planetLabelsEnabled,
+      onSetPlanetLabelsEnabled,
+      constellationsEnabled,
+      onToggleConstellations,
+      constellationLabelsEnabled,
+      onSetConstellationLabelsEnabled,
+    ],
+  );
+
   return (
     <LabelsSection
       labelCategoryVisibility={labelCategoryVisibility}
       onSetLabelCategoryVisibility={onSetLabelCategoryVisibility}
-      starLabelsEnabled={starLabelsEnabled}
-      onSetStarLabelsEnabled={onSetStarLabelsEnabled}
-      planetLabelsEnabled={planetLabelsEnabled}
-      onSetPlanetLabelsEnabled={onSetPlanetLabelsEnabled}
-      constellationsEnabled={constellationsEnabled}
-      onToggleConstellations={onToggleConstellations}
-      constellationLabelsEnabled={constellationLabelsEnabled}
-      onSetConstellationLabelsEnabled={onSetConstellationLabelsEnabled}
+      nonCategoryRows={nonCategoryRows}
       constellationIntensity={constellationIntensity}
       onConstellationIntensityChange={onConstellationIntensityChange}
     />

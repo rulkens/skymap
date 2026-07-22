@@ -150,11 +150,14 @@ export type EngineAssetSlots = {
    * demand-loaded on the layer's master gate (`settings.constellations.enabled`),
    * mirroring `flow`.
    *
-   * No `commit` step — there is nothing GPU-side to upload from the slot; the
-   * renderer + label producer read the artifact straight off the slot's ready
-   * value. Null until `wireSlots` mints it (matches `structureCatalog` /
-   * `flow` for the same lifecycle reason). A missing/404 artifact surfaces as a
-   * never-fires commit; the overlay simply stays empty.
+   * The `commit` runs once on artifact-ready: it uploads the segment set to
+   * `constellationRenderer` (a static, tier-agnostic buffer) and kicks
+   * `syncVisibilityFades` for the `constellations` row, ramping the seeded-0
+   * demand-loaded fade up to the master toggle's intent. The pass only draws.
+   * The label producer reads the artifact straight off the slot's ready value.
+   * Null until `wireSlots` mints it (matches `structureCatalog` / `flow` for the
+   * same lifecycle reason). A missing/404 artifact surfaces as a never-fires
+   * commit; the overlay simply stays empty.
    */
   constellations: AssetSlot<ConstellationsArtifact, void> | null;
   /**
