@@ -805,14 +805,14 @@ export function orientationFrameLabel(frame: OrientationFrameId): string;
 //   the closed union (mirrors toneMapCurveLabel, toneMapCurve.ts:58-71)
 ```
 
-- [ ] Create `orientationFrameLabel` (exhaustive switch, exact strings). Iterate
+- [x] Create `orientationFrameLabel` (exhaustive switch, exact strings). Iterate
       the options from `Object.keys(ORIENTATION_FRAMES)` (or a small ordered id
       array) so the select can't drift from the registry.
-- [ ] `DisplaySection.tsx`: add an Orientation `<label>` + `<select>` row (top
+- [x] `DisplaySection.tsx`: add an Orientation `<label>` + `<select>` row (top
       level, above/beside the tone-curve disclosure), driven by new props
       `orientation: OrientationFrameId` + `onOrientationChange: (f: OrientationFrameId) => void`.
       `onChange={(e) => onOrientationChange(e.target.value as OrientationFrameId)}`.
-- [ ] `DisplaySectionContainer.tsx`: read `selectOrientation` (for the current
+- [x] `DisplaySectionContainer.tsx`: read `selectOrientation` (for the current
       `<select>` value) and dispatch the single intent
       `requestOrientationChange(next)` from the change handler — **nothing else**.
       The saga (Task 10) owns capturing the live basis `fromQuat` and firing
@@ -820,12 +820,12 @@ export function orientationFrameLabel(frame: OrientationFrameId): string;
       camera slice and never reads a quaternion. The handler closes over `dispatch`
       only (`[dispatch]`), keeping stable identity for the `memo` bail — no `prev`
       capture, no `store.getState()`.
-- [ ] Test (only if a render test exists for this section): assert the four
+- [x] Test (only if a render test exists for this section): assert the four
       options render and selecting one calls `onOrientationChange` with the id.
       **Do not** test the label strings or option count as constants (`testing.md`
       — spec §10 "Not tested"). Use `fireEvent.change` for the `<select>` (string
       value), and type any mock callback `vi.fn<(f: OrientationFrameId) => void>()`.
-- [ ] `npm run typecheck` clean; `npm test -- DisplaySection` green. Commit.
+- [x] `npm run typecheck` clean; `npm test -- DisplaySection` green. Commit.
 - [ ] **Visual gate (ask the user):** the row appears in Display; switching each
       frame animates a ~1 s roll that levels the intended plane and holds the
       subject; the URL gains `orientation=<frame>` for a non-default choice.
