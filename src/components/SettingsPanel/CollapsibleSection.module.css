@@ -226,7 +226,7 @@ button.header {
 .body {
   min-height: 0;
   overflow: hidden;
-  /* Indent + top breathing room.  A bare left padding made the rows
+  /* Indent via left padding.  A bare left padding made the rows
    * feel detached from the header — the per-row checkboxes drifted
    * right while the master toggle stayed left, with nothing tying the
    * group together visually.  A thin left "rail" (border-left) at the
@@ -234,15 +234,30 @@ button.header {
    * branch hanging off the header, the same affordance file trees and
    * outline editors use.  Nested CollapsibleSections inherit the
    * indent + rail cumulatively, so deeper levels step in further with
-   * their own guide line. */
-  padding: var(--space-4) 0 var(--space-3) var(--space-5);
+   * their own guide line.
+   *
+   * VERTICAL padding lives on the open state below, not here.  A box
+   * can never be shorter than its own padding, so top/bottom padding
+   * on the always-rendered body would survive the 0fr track collapse
+   * and leave a ghost gap under every collapsed header.  Transitioning
+   * the padding with the same timing as the row collapse keeps the
+   * open/close animation smooth instead of popping at the state flip. */
+  padding: 0 0 0 var(--space-5);
   margin-left: var(--space-2);
-  border-left: 1px solid var(--color-border-subtle, rgba(160, 180, 230, 0.12));
+  border-left: 1px solid var(--border-divider);
   opacity: 0;
-  transition: var(--transition-fade);
+  transition:
+    var(--transition-fade),
+    padding var(--duration-base) var(--ease-standard);
 }
 
-.bodyWrapperOpen .body {
+/* Direct child (`>`), NOT a descendant, so an open PARENT section doesn't
+ * reach past its own body into a collapsed CHILD section's body and re-inflate
+ * its padding + opacity.  The descendant form leaves a ghost gap under every
+ * nested collapsed header (Galaxies → Advanced, etc.). */
+.bodyWrapperOpen > .body {
+  padding-top: var(--space-4);
+  padding-bottom: var(--space-3);
   opacity: 1;
 }
 
