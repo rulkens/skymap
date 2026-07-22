@@ -79,6 +79,10 @@ function makeState(
       labels: { starLabelsEnabled: true, planetLabelsEnabled: true },
       famousStars: { enabled: true },
     },
+    // No constellation slot: these occlusion tests exercise only the body
+    // captions, so the layer reads an empty figure-name set. The key must exist
+    // (the layer reads `.constellations`).
+    assetSlots: { constellations: null },
     subsystems: { scheduler: { requestRender: vi.fn<() => void>() } },
   } as unknown as EngineState;
 }

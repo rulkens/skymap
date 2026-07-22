@@ -10,6 +10,7 @@
 import type { Mat4 } from 'wgpu-matrix';
 import type { FilamentCloud } from '../data/filament/FilamentCloud';
 import type { Vec2 } from '../math/Vec2';
+import type { Vec3 } from '../math/Vec3';
 
 export type FilamentRenderer = {
   readonly label: string;
@@ -24,6 +25,8 @@ export type FilamentRenderer = {
     halfWidthPx: number,
     intensityScale: number,
     fadeOpacity: number,
+    baseTint: Vec3,
+    hotTint: Vec3,
   ): void;
   destroy(): void;
 };

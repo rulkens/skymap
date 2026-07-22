@@ -33,6 +33,7 @@ import type { MCPMReq } from '../../loading/MCPMReq';
 import type { CompanionAssetReq } from '../../loading/CompanionAssetReq';
 import type { StructureCatalogPayload } from '../../loading/StructureCatalogPayload';
 import type { StructureCatalogReq } from '../../loading/StructureCatalogReq';
+import type { ConstellationsArtifact } from '../../loading/ConstellationsArtifact';
 import type { StarCatalog } from '../../data/starCatalog/StarCatalog';
 import type { StarCatalogReq } from '../../loading/StarCatalogReq';
 import type { SourceType } from '../../data/SourceType';
@@ -143,6 +144,22 @@ export type EngineAssetSlots = {
    * commit only proves the fetch → decode → commit path.
    */
   flow: AssetSlot<ScalarCube, void> | null;
+  /**
+   * True-3D constellation stick-figure artifact (`constellations.json`) routed
+   * through a slot for parity with the other CPU-side sidecars. Opt-in (defaults
+   * off), demand-loaded on the layer's master gate (`settings.constellations.enabled`),
+   * mirroring `flow`.
+   *
+   * The `commit` runs once on artifact-ready: it uploads the segment set to
+   * `constellationRenderer` (a static, tier-agnostic buffer) and kicks
+   * `syncVisibilityFades` for the `constellations` row, ramping the seeded-0
+   * demand-loaded fade up to the master toggle's intent. The pass only draws.
+   * The label producer reads the artifact straight off the slot's ready value.
+   * Null until `wireSlots` mints it (matches `structureCatalog` / `flow` for the
+   * same lifecycle reason). A missing/404 artifact surfaces as a never-fires
+   * commit; the overlay simply stays empty.
+   */
+  constellations: AssetSlot<ConstellationsArtifact, void> | null;
   /**
    * The keyed body-texture family — one slot per `(bodyId, kind)` map, keyed by
    * the composite `BodyTextureSlotKey` (`'earth:surface'`, `'mars:surface'`, the

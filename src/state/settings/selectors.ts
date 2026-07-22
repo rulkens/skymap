@@ -134,6 +134,14 @@ export const selectFilamentsEnabled = (state: RootState): boolean =>
 export const selectFilamentIntensity = (state: RootState): number =>
   selectSettings(state).filaments.intensity;
 
+// --- constellations cluster ---------------------------------------------------
+
+export const selectConstellationsEnabled = (state: RootState): boolean =>
+  selectSettings(state).constellations.enabled;
+
+export const selectConstellationIntensity = (state: RootState): number =>
+  selectSettings(state).constellations.intensity;
+
 // --- earth cluster ------------------------------------------------------------
 
 export const selectAtmosphereExposure = (state: RootState): number =>

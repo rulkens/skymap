@@ -446,6 +446,23 @@ describe('FADE_LAYERS intent subset', () => {
     expect(row.guard?.(state, undefined)).toBe(true);
   });
 
+  it('constellations row guard gates on the renderer’s hasData()', () => {
+    // Same demand-loaded pattern as filaments/flow: the row seeds at 0 and its
+    // fade must stay suppressed until the artifact is uploaded (hasData true).
+    // The slot commit uploads then kicks the fade through the bridge — the guard
+    // is already satisfied at that point (Bug 1 fix).
+    const row = rowFor('constellations');
+    const hasData = vi.fn<() => boolean>(() => false);
+    const state = {
+      gpu: { constellationRenderer: { hasData } },
+    } as unknown as EngineState;
+    expect(row.guard?.(state, undefined)).toBe(false);
+    hasData.mockReturnValue(true);
+    expect(row.guard?.(state, undefined)).toBe(true);
+    // No renderer yet (mid-bootstrap) → suppressed.
+    expect(row.guard?.({ gpu: {} } as unknown as EngineState, undefined)).toBe(false);
+  });
+
   it('volume-field row guard gates on the renderer holding the field; debug fixtures exempt', () => {
     const row = rowFor('volumeField');
     const state = {

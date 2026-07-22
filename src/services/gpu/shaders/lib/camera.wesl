@@ -101,30 +101,6 @@ fn worldToClip(cam: CameraUniforms, p: vec3<f32>) -> vec4<f32> {
   return cam.viewProj * vec4<f32>(p, 1.0);
 }
 
-// ── worldToNdc ──────────────────────────────────────────────────────
-//
-// Perspective-divided 2D position. Used by filaments to compute the
-// screen-space tangent + perpendicular for thick-line expansion: it
-// projects both segment endpoints, divides by w to get NDC, and
-// builds a perpendicular from their delta. The perspective divide
-// must happen BEFORE the subtraction (you can't subtract two clip
-// vectors with different w and then divide — the result is gibberish
-// in NDC).
-//
-// A named helper because every renderer doing screen-space-aligned
-// billboard math would otherwise roll its own 'clip.xy / clip.w'
-// line under a different name ('aNdc', 'centerNdc', 'upNdc'). One
-// name + one definition keeps the post-projection step searchable.
-//
-// Note we drop the z component: NDC z is the depth used for the
-// depth test, not for screen layout. Callers who need it should use
-// 'worldToClip' and divide explicitly.
-
-fn worldToNdc(cam: CameraUniforms, p: vec3<f32>) -> vec2<f32> {
-  let clip = cam.viewProj * vec4<f32>(p, 1.0);
-  return clip.xy / clip.w;
-}
-
 // ── worldEyeDepth ───────────────────────────────────────────────────
 //
 // Linear distance from the camera to a world-space point — the

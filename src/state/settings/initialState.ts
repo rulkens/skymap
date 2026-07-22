@@ -140,6 +140,14 @@ export function buildInitialSettings(): EngineSettingsState {
     orbitTrails: {
       enabled: DEFAULT_ORBIT_TRAILS_ENABLED,
     },
+    // Constellation stick-figure overlay, seeded from the registry constellations
+    // row (same pattern as `filaments`) so that entry stays the single source of
+    // truth for the default-visible gate + intensity. The one `enabled` toggle
+    // governs both the lines and their name captions.
+    constellations: {
+      enabled: SOURCE_REGISTRY[Source.Constellations].visible,
+      intensity: SOURCE_REGISTRY[Source.Constellations].intensity,
+    },
     // Earth's per-body look dials. Each seeds from its authored data constant so
     // that file stays the default's single source of truth (the same
     // relationship the tonemap exposure default has to `DEFAULT_EXPOSURE`):

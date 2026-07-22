@@ -18,6 +18,13 @@ edition = "2021"
 rayon = "1"
 flate2 = { version = "1", default-features = false, features = ["zlib-ng"] }
 rustc-hash = "2"
+# serde + serde_json power the constellation build stage only: it reads the
+# vendored GeoJSON line data + the famous-star / override seeds at build time
+# and serialises public/data/constellations.json. The star-bin path stays
+# JSON-free by design (the famous dedup ids are committed codegen, see
+# famous_ids.generated.rs) — this dependency is scoped to constellations.rs.
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 
 [profile.release]
 lto = "thin"

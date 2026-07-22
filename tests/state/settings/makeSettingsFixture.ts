@@ -114,6 +114,10 @@ export function makeSettingsFixture(
       intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
     },
     orbitTrails: { enabled: DEFAULT_ORBIT_TRAILS_ENABLED },
+    constellations: {
+      enabled: SOURCE_REGISTRY[Source.Constellations].visible,
+      intensity: SOURCE_REGISTRY[Source.Constellations].intensity,
+    },
     earth: {
       // `earth` is a definitional row in the atmosphere table, so the indexed
       // read is non-null (see `initialState.ts` — the index signature widens it).

@@ -1,0 +1,256 @@
+{
+  "overrides": [
+    {
+      "constellation": "Andromeda",
+      "ra": 17.3755,
+      "dec": 47.2418,
+      "positionPc": [
+        142.401263,
+        44.559012,
+        161.368273
+      ],
+      "appMag": 4.235,
+      "note": "HIP 5434 (phi Andromedae) — stick-figure vertex star absent from the shipped population. Hipparcos-2 position (ra/dec x 1000/plx=4.55 mas => 219.8 pc); appMag = Hp."
+    },
+    {
+      "constellation": "Aquarius",
+      "ra": 349.4759,
+      "dec": -9.1825,
+      "positionPc": [
+        119.529391,
+        -22.205583,
+        -19.652649
+      ],
+      "appMag": 4.3607,
+      "note": "HIP 115033 (psi3 Aquarii) — stick-figure vertex star absent from the shipped population. Hipparcos-2 position (ra/dec x 1000/plx=8.12 mas => 123.2 pc); appMag = Hp. Shared coordinate resolves both vertex 8 and vertex 17."
+    },
+    {
+      "constellation": "Cetus",
+      "ra": 37.0398,
+      "dec": 8.4601,
+      "positionPc": [
+        46.74559,
+        35.276084,
+        8.710506
+      ],
+      "appMag": 4.2725,
+      "note": "HIP 11484 (xi2 Ceti) — stick-figure vertex star absent from the shipped population. Hipparcos-2 position (ra/dec x 1000/plx=16.89 mas => 59.2 pc); appMag = Hp."
+    },
+    {
+      "constellation": "Circinus",
+      "ra": 230.8444,
+      "dec": -59.3208,
+      "positionPc": [
+        -44.315706,
+        -54.42249,
+        -118.299402
+      ],
+      "appMag": 4.537,
+      "note": "HIP 75323 — stick-figure vertex star absent from the shipped population. Hipparcos-2 position (ra/dec x 1000/plx=7.27 mas => 137.6 pc); appMag = Hp."
+    },
+    {
+      "constellation": "Coma Berenices",
+      "ra": 197.497,
+      "dec": 17.5294,
+      "positionPc": [
+        -16.211044,
+        -5.11074,
+        5.368812
+      ],
+      "appMag": 4.4292,
+      "note": "HIP 64241 (alpha Comae Berenices, Diadem) — stick-figure vertex star absent from the shipped population. Hipparcos-2 position (ra/dec x 1000/plx=56.1 mas => 17.8 pc); appMag = Hp."
+    },
+    {
+      "constellation": "Corona Australis",
+      "ra": 286.6046,
+      "dec": -37.0634,
+      "positionPc": [
+        3.945842,
+        -13.232411,
+        -10.428957
+      ],
+      "appMag": 4.3123,
+      "note": "HIP 93825 — stick-figure vertex star absent from the shipped population. Hipparcos-2 position (ra/dec x 1000/plx=57.79 mas => 17.3 pc); appMag = Hp."
+    },
+    {
+      "constellation": "Draco",
+      "ra": 275.1893,
+      "dec": 71.3378,
+      "positionPc": [
+        2.687294,
+        -29.589383,
+        87.968541
+      ],
+      "appMag": 4.2004,
+      "note": "HIP 89908 — stick-figure vertex star absent from the shipped population. Hipparcos-2 position (ra/dec x 1000/plx=10.77 mas => 92.9 pc); appMag = Hp. Shared coordinate resolves both vertex 6 and vertex 14."
+    },
+    {
+      "constellation": "Equuleus",
+      "ra": 318.6201,
+      "dec": 10.007,
+      "positionPc": [
+        13.661018,
+        -12.035352,
+        3.212809
+      ],
+      "appMag": 4.5928,
+      "note": "HIP 104858 — stick-figure vertex star absent from the shipped population. Hipparcos-2 position (ra/dec x 1000/plx=54.09 mas => 18.5 pc); appMag = Hp."
+    },
+    {
+      "constellation": "Hydra",
+      "ra": 147.8696,
+      "dec": -14.8466,
+      "positionPc": [
+        -66.227164,
+        41.593349,
+        -20.730677
+      ],
+      "appMag": 4.2725,
+      "note": "HIP 48356 — stick-figure vertex star absent from the shipped population. Hipparcos-2 position (ra/dec x 1000/plx=12.36 mas => 80.9 pc); appMag = Hp."
+    },
+    {
+      "constellation": "Hydra",
+      "ra": 178.2272,
+      "dec": -33.9081,
+      "positionPc": [
+        -78.778343,
+        2.438084,
+        -52.978431
+      ],
+      "appMag": 4.2517,
+      "note": "HIP 57936 — stick-figure vertex star absent from the shipped population. Hipparcos-2 position (ra/dec x 1000/plx=10.53 mas => 95.0 pc); appMag = Hp."
+    },
+    {
+      "constellation": "Leo Minor",
+      "ra": 156.9708,
+      "dec": 36.7072,
+      "positionPc": [
+        -34.818741,
+        14.800325,
+        28.208107
+      ],
+      "appMag": 4.3599,
+      "note": "HIP 51233 — stick-figure vertex star absent from the shipped population. Hipparcos-2 position (ra/dec x 1000/plx=21.19 mas => 47.2 pc); appMag = Hp."
+    },
+    {
+      "constellation": "Lynx",
+      "ra": 104.3192,
+      "dec": 58.4228,
+      "positionPc": [
+        -7.080864,
+        27.740574,
+        46.579429
+      ],
+      "appMag": 4.5021,
+      "note": "HIP 33449 — stick-figure vertex star absent from the shipped population. Hipparcos-2 position (ra/dec x 1000/plx=18.29 mas => 54.7 pc); appMag = Hp."
+    },
+    {
+      "constellation": "Octans",
+      "ra": 341.5146,
+      "dec": -81.3816,
+      "positionPc": [
+        6.504421,
+        -2.174391,
+        -45.24981
+      ],
+      "appMag": 4.1964,
+      "note": "HIP 112405 (beta Octantis) — stick-figure vertex star absent from the shipped population. Hipparcos-2 position (ra/dec x 1000/plx=21.85 mas => 45.8 pc); appMag = Hp."
+    },
+    {
+      "constellation": "Orion",
+      "ra": 90.5958,
+      "dec": 9.6473,
+      "positionPc": [
+        -0.486999,
+        46.831569,
+        7.961227
+      ],
+      "appMag": 4.1792,
+      "note": "HIP 28614 — stick-figure vertex star absent from the shipped population. Hipparcos-2 position (ra/dec x 1000/plx=21.05 mas => 47.5 pc); appMag = Hp."
+    },
+    {
+      "constellation": "Pegasus",
+      "ra": 326.1614,
+      "dec": 25.645,
+      "positionPc": [
+        25.625851,
+        -17.180111,
+        14.811566
+      ],
+      "appMag": 4.2347,
+      "note": "HIP 107354 — stick-figure vertex star absent from the shipped population. Hipparcos-2 position (ra/dec x 1000/plx=29.22 mas => 34.2 pc); appMag = Hp."
+    },
+    {
+      "constellation": "Piscis Austrinus",
+      "ra": 326.934,
+      "dec": -30.8983,
+      "positionPc": [
+        70.778361,
+        -46.079909,
+        -50.542902
+      ],
+      "appMag": 5.0443,
+      "note": "HIP 107608 — stick-figure vertex star absent from the shipped population. Hipparcos-2 position (ra/dec x 1000/plx=10.16 mas => 98.4 pc); appMag = Hp."
+    },
+    {
+      "constellation": "Sagittarius",
+      "ra": 298.9598,
+      "dec": -26.2995,
+      "positionPc": [
+        11.280378,
+        -20.384501,
+        -11.514196
+      ],
+      "appMag": 4.8317,
+      "note": "HIP 98066 — stick-figure vertex star absent from the shipped population. Hipparcos-2 position (ra/dec x 1000/plx=38.48 mas => 26.0 pc); appMag = Hp."
+    },
+    {
+      "constellation": "Serpens",
+      "ra": 235.3877,
+      "dec": 19.6704,
+      "positionPc": [
+        -31.16961,
+        -45.162488,
+        19.616001
+      ],
+      "appMag": 4.5337,
+      "note": "HIP 76852 — stick-figure vertex star absent from the shipped population. Hipparcos-2 position (ra/dec x 1000/plx=17.16 mas => 58.3 pc); appMag = Hp."
+    },
+    {
+      "constellation": "Sextans",
+      "ra": 148.1268,
+      "dec": -8.105,
+      "positionPc": [
+        -71.552161,
+        44.490594,
+        -11.998823
+      ],
+      "appMag": 5.0859,
+      "note": "HIP 48437 — stick-figure vertex star absent from the shipped population. Hipparcos-2 position (ra/dec x 1000/plx=11.75 mas => 85.1 pc); appMag = Hp."
+    },
+    {
+      "constellation": "Ursa Major",
+      "ra": 169.5468,
+      "dec": 31.5308,
+      "positionPc": [
+        -7.40142,
+        1.36552,
+        4.617709
+      ],
+      "appMag": 3.79,
+      "note": "HIP 55203 (xi Ursae Majoris, Alula Australis) — nearby binary tracing this vertex but entirely absent from hip2.dat, so it resolves by neither HIP nor position search. Distance 8.83 pc and combined V mag 3.79 from its well-established astrometry; position = vertex direction x 8.83 pc."
+    },
+    {
+      "constellation": "Ursa Major",
+      "ra": 148.0265,
+      "dec": 54.0643,
+      "positionPc": [
+        -77.666749,
+        48.481635,
+        126.314505
+      ],
+      "appMag": 4.5812,
+      "note": "HIP 48402 — stick-figure vertex star absent from the shipped population. Hipparcos-2 position (ra/dec x 1000/plx=6.41 mas => 156.0 pc); appMag = Hp."
+    }
+  ]
+}

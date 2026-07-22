@@ -28,6 +28,7 @@
 //!                          [--pages <n>] [--compare <ref bin dir>]
 
 mod compare;
+mod constellations;
 mod format;
 mod morton;
 mod octree;
@@ -37,7 +38,10 @@ mod taper;
 mod tiers;
 
 use compare::{compare_aggregates, compare_leaves, decode_bin, DecodedBin};
-use population::{build_population, derive_grid, quantize_population, DEFAULT_MORTON_BITS};
+use constellations::{
+    build_artifact, bright_population, load_famous_seed, load_overrides, parse_lines, ResolveError,
+};
+use population::{build_population, derive_grid, quantize_population, DEFAULT_MORTON_BITS, Population};
 use rustc_hash::FxHashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
@@ -49,6 +53,9 @@ struct Args {
     out_dir: PathBuf,
     max_pages: Option<usize>,
     compare_dir: Option<PathBuf>,
+    /// Repo root, anchored to the crate location — the constellation build reads
+    /// its vendored line data + seeds relative to this, independent of `--data`.
+    repo_root: PathBuf,
 }
 
 fn parse_args() -> Args {
@@ -60,6 +67,7 @@ fn parse_args() -> Args {
         out_dir: repo_root.join("public/data"),
         max_pages: None,
         compare_dir: None,
+        repo_root,
     };
     let argv: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
@@ -109,19 +117,28 @@ fn main() {
     drop(gaia);
     eprintln!(
         "population ({} stars): drops noBailerJones {}, hipNonPositivePlx {}, \
-         famousSubtracted {}, hipGaiaSubtracted {}, farDistance {}, noPhotometry {}; \
+         famousSubtracted {}, hipGaiaSubtracted {}, positionalGapSubtracted {}, \
+         farDistance {}, noPhotometry {}; \
          clamps absMag {}, colorIdx {}  [{:.1}s]",
         pop.stars.len(),
         pop.drops.no_bailer_jones,
         pop.drops.hip_non_positive_plx,
         pop.drops.famous_subtracted,
         pop.drops.hip_gaia_subtracted,
+        pop.drops.positional_gap_subtracted,
         pop.drops.far_distance,
         pop.drops.no_photometry,
         pop.clamps.abs_mag,
         pop.clamps.color_idx,
         t0.elapsed().as_secs_f64()
     );
+
+    // ── Constellation overlay artifact ────────────────────────────────────
+    // Runs here, while `pop` (stars + id sidecar) is still alive — the resolver
+    // maps each stick-figure vertex back to a real star through those ids, so it
+    // must precede the `drop(pop)` below. Reads its inputs relative to the repo
+    // root (independent of `--data`) and writes public/data/constellations.json.
+    emit_constellations(&args, &pop, t0.elapsed().as_secs_f64());
 
     // ── Quantize once; sort once ──────────────────────────────────────────
     let grid = derive_grid(&pop.stars, DEFAULT_MORTON_BITS);
@@ -196,6 +213,78 @@ fn main() {
         );
         std::process::exit(1);
     }
+}
+
+/// Resolve every constellation stick-figure vertex to a real star and write
+/// `public/data/constellations.json`. An unresolvable vertex is a hard build
+/// failure (spec-mandated) — never a silently dropped line. `build_artifact`
+/// collects every unresolvable vertex across the whole run rather than
+/// stopping at the first, so curating the override seed is one build per
+/// batch of misses instead of one build per miss.
+fn emit_constellations(args: &Args, pop: &Population, elapsed: f64) {
+    let lines = parse_lines(&args.repo_root.join("data/raw/constellations/constellations.lines.json"));
+    let famous = load_famous_seed(&args.repo_root.join("data/seeds/famous_stars.seed.json"));
+    let overrides = load_overrides(&args.repo_root.join("data/seeds/constellation_overrides.seed.json"));
+    // Scan only the naked-eye stars — the resolver never matches fainter ones.
+    let bright = bright_population(pop);
+
+    let (artifact, usage) = match build_artifact(&lines, &famous, &bright, &overrides) {
+        Ok(a) => a,
+        Err(errors) => {
+            for e in &errors {
+                let ResolveError::Unresolvable {
+                    constellation,
+                    vertex_index,
+                    ra_deg,
+                    dec_deg,
+                    nearest_miss_arcmin,
+                } = e;
+                eprintln!(
+                    "\nSTOP: constellation vertex has no star to anchor to.\n  \
+                     constellation: {constellation}\n  vertex index:  {vertex_index}\n  \
+                     sky position:  ra {ra_deg:.4}°, dec {dec_deg:.4}°\n  \
+                     nearest miss:  {nearest_miss_arcmin:.2}′\n\
+                     Add an override (HIP id or explicit position) for this vertex to \
+                     data/seeds/constellation_overrides.seed.json and rebuild."
+                );
+            }
+            eprintln!(
+                "\n{} unresolvable vertex(es) total — see \
+                 data/seeds/constellation_overrides.seed.json.",
+                errors.len()
+            );
+            std::process::exit(1);
+        }
+    };
+
+    std::fs::create_dir_all(&args.out_dir).expect("create out dir");
+    let out = args.out_dir.join("constellations.json");
+    let json = serde_json::to_string(&artifact).expect("serialize constellations artifact");
+    std::fs::write(&out, json).expect("write constellations.json");
+
+    let segments: usize = artifact.constellations.iter().map(|c| c.segments.len()).sum();
+    eprintln!(
+        "constellations: {} figures, {} segments (overrides {}/{} used, bright pop {})  [{:.1}s]",
+        artifact.constellations.len(),
+        segments,
+        usage.used_count(),
+        usage.total(),
+        bright.stars.len(),
+        elapsed
+    );
+    // An override earns its place only while the population still lacks a star at
+    // its vertex; Gaia coverage improving can quietly retire one. Name each
+    // unused entry so it can be pruned, same spirit as the drop/clamp counters —
+    // not a failure, a curation signal.
+    for i in usage.unused_indices() {
+        let ov = &overrides.overrides[i];
+        eprintln!(
+            "  WARNING: unused override — {} vertex at ra {:.4}°, dec {:.4}° resolved \
+             without it; prune it from data/seeds/constellation_overrides.seed.json.",
+            ov.constellation, ov.ra, ov.dec
+        );
+    }
+    eprintln!("  wrote {}", out.display());
 }
 
 /// Rebuild at the reference's star count and diff field-by-field (see

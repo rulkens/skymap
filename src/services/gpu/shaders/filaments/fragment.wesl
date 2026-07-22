@@ -89,9 +89,11 @@ fn fs(in : VSOut) -> @location(0) vec4<f32> {
   // and adding a second per-segment vertex attribute.
   let densityBoost = mix(0.2, 1.0, pow(in.density, 0.6));
 
-  let baseTint = vec3<f32>(0.55, 0.45, 0.85); // dim, cool-purple tendrils
-  let hotTint  = vec3<f32>(0.85, 0.75, 1.0);  // bright, near-white-violet spine
-  let tint = mix(baseTint, hotTint, in.density);
+  // The tint-ramp endpoints are uniforms the CPU packs from 'FILAMENT_BASE_TINT'
+  // and 'FILAMENT_HOT_TINT' in 'filamentsLayer.ts' (the one home for the layer's
+  // palette): 'u.baseTint' the dim cool-purple tendrils, 'u.hotTint' the bright
+  // near-white-violet spine.
+  let tint = mix(u.baseTint, u.hotTint, in.density);
 
   // Per-cloud fade-in (opacity uniform written each frame from JS).
   // 'applyFade' (lib/fadeUniforms.wesl) is the documented place that

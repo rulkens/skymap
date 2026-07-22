@@ -738,6 +738,39 @@ export const RAW_DATA = {
       'Provenance for the planet-texture sources — upstream URLs, licences (SSS CC BY 4.0, NASA/USGS public domain), native dims, fetch date, checksums.',
   },
 
+  // ─── Constellations (d3-celestial stick-figure lines) ─────────────────
+
+  'constellations.lines': {
+    path: 'data/raw/constellations/constellations.lines.json',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'd3-celestial constellation stick-figure lines (GeoJSON FeatureCollection of MultiLineString figures with [ra,dec] vertices). Vendored; resolved to real 3D star positions by the stars-rs constellation build stage.',
+    upstream: 'https://github.com/ofrohn/d3-celestial/blob/master/data/constellations.lines.json',
+    readme: 'constellations.readme',
+  },
+  'constellations.readme': {
+    path: 'data/raw/constellations/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the vendored d3-celestial line data — upstream URL, pinned commit, BSD-3 license, GeoJSON shape, fetch date, checksum.',
+  },
+  'constellations.sha256': {
+    path: 'data/raw/constellations/constellations.lines.json.sha256',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'SHA-256 sidecar for the vendored constellations.lines.json — committed so a drifted or truncated re-fetch is caught.',
+  },
+  'constellation-overrides.seed': {
+    path: 'data/seeds/constellation_overrides.seed.json',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Hand-authored per-vertex overrides (HIP id or explicit position) the stars-rs constellation resolver consults at step 3 when a stick-figure vertex has no famous-seed or population star to anchor to. Extended in response to the build failure that names each unresolvable vertex.',
+  },
+
   // ─── StarNet++ weights (famous-galaxy curator) ────────────────────────
 
   'starnet.weights': {

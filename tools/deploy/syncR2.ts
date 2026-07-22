@@ -170,7 +170,11 @@ export const ALLOW = (name: string): boolean =>
   // emitted by `npm run build-structures`: the packed point catalog and its
   // per-structure metadata sidecar.  Tier-agnostic, like famous.bin.
   name === 'structures.ccat' ||
-  name === 'structures_meta.json';
+  name === 'structures_meta.json' ||
+  // The true-3D constellation stick-figure artifact — a gitignored build output
+  // emitted by `build-stars-rs`, fetched by the runtime. Tier-agnostic (one
+  // file, no tier suffix), like structures_meta.json.
+  name === 'constellations.json';
 
 /**
  * Decide whether a local file is byte-identical to the object already in R2,

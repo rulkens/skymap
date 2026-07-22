@@ -221,6 +221,7 @@ import { bodyGlintsLayer } from './bodyGlintsLayer';
 import { starCatalogLayer } from './starCatalogLayer';
 import { starAggregatesLayer } from './starAggregatesLayer';
 import { starAggregateUpsampleLayer } from './starAggregateUpsampleLayer';
+import { constellationsLayer } from './constellationsLayer';
 import { orbitTrailsLayer } from './orbitTrailsLayer';
 import { foregroundLabelsLayer } from './foregroundLabelsLayer';
 import { atmosphereShellLayer } from './atmosphereShellLayer';
@@ -271,6 +272,12 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   starAggregatesLayer,
   starCatalogLayer,
   starAggregateUpsampleLayer,
+  // Constellation stick figures — additive line segments between the real stars,
+  // through NEAR0 into HDR, so they ride the same tone-map as the stars they
+  // connect and join the existing (hdr, NEAR0) render step. Drawn after the star
+  // streams so the figure lines read over the starfield; additive blend makes
+  // that a listing choice, not a compositing one.
+  constellationsLayer,
   // Swap-target rows: post-tone-map, premultiplied-OVER overlays. Selection
   // ring leads so marker-lines and labels composite over its stroke; the debug
   // clip-path overlay is the very last swap row (below, past the NEAR0 group) so
@@ -366,6 +373,7 @@ export { bodyGlintsLayer } from './bodyGlintsLayer';
 export { starCatalogLayer } from './starCatalogLayer';
 export { starAggregatesLayer } from './starAggregatesLayer';
 export { starAggregateUpsampleLayer } from './starAggregateUpsampleLayer';
+export { constellationsLayer } from './constellationsLayer';
 export { orbitTrailsLayer } from './orbitTrailsLayer';
 export { foregroundLabelsLayer } from './foregroundLabelsLayer';
 export { atmosphereShellLayer } from './atmosphereShellLayer';

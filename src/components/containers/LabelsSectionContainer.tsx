@@ -5,8 +5,11 @@
  * Owns all Redux reach for the Labels group: reads `selectStructureItems`,
  * `selectGalaxyCatalogItems`, and `selectMilkyWayLabelEnabled`, runs the
  * three-input label-projection, and wraps the 3-way dispatch guard in a
- * `useCallback`. The presentational `LabelsSection` imports nothing from
- * `store/` or `state/`.
+ * `useCallback`. It also owns the foreground caption toggles (star / planet
+ * names) and the constellation row (the one overlay toggle that governs both
+ * the stick figures and their name captions) — flat singleton settings that
+ * route straight to their own setters. The presentational `LabelsSection`
+ * imports nothing from `store/` or `state/`.
  *
  * ### Label-visibility projection
  *
@@ -38,6 +41,7 @@
 
 import { memo, useCallback, useMemo } from 'react';
 import LabelsSection from '../SettingsPanel/LabelsSection';
+import type { NonCategoryLabelRow } from '../SettingsPanel/LabelsSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
   selectStructureItems,
@@ -45,6 +49,7 @@ import {
   selectMilkyWayLabelEnabled,
   selectStarLabelsEnabled,
   selectPlanetLabelsEnabled,
+  selectConstellationsEnabled,
 } from '../../state/settings/selectors';
 import {
   setStructureLabelEnabled,
@@ -52,6 +57,7 @@ import {
   setGalaxyCatalogLabelEnabled,
   setStarLabelsEnabled,
   setPlanetLabelsEnabled,
+  setConstellationsEnabled,
 } from '../../state/settings/settingsSlice';
 import { projectLabelCategoryVisibility } from '../../state/settings/projectLabelCategoryVisibility';
 import { isStructureId } from '../../data/structure/structureIds';
@@ -65,6 +71,7 @@ function LabelsSectionContainer(): React.ReactElement {
   const milkyWayLabelEnabled = useAppSelector(selectMilkyWayLabelEnabled);
   const starLabelsEnabled = useAppSelector(selectStarLabelsEnabled);
   const planetLabelsEnabled = useAppSelector(selectPlanetLabelsEnabled);
+  const constellationsEnabled = useAppSelector(selectConstellationsEnabled);
 
   // Project items → flat label-visibility record. Rebuilds only when any of the
   // three stable-reference inputs change.
@@ -103,14 +110,57 @@ function LabelsSectionContainer(): React.ReactElement {
     [dispatch],
   );
 
+  const onToggleConstellations = useCallback(
+    (enabled: boolean) => {
+      dispatch(setConstellationsEnabled(enabled));
+    },
+    [dispatch],
+  );
+
+  // The non-category boolean rows the section renders + folds into its master
+  // tri-state, in render order (star names, planet names, constellations).
+  // Assembling the array here keeps the section free of any per-row prop
+  // plumbing: a new caption row is one more entry, not a fresh prop pair
+  // threaded through both components. Each `id` is the checkbox element id
+  // (preserved verbatim from the former inline rows). The constellations row
+  // governs both the stick figures and their name captions — there is no
+  // separate names toggle.
+  const nonCategoryRows: ReadonlyArray<NonCategoryLabelRow> = useMemo(
+    () => [
+      {
+        id: 'toggle-label-stars',
+        label: 'Star names',
+        enabled: starLabelsEnabled,
+        onChange: onSetStarLabelsEnabled,
+      },
+      {
+        id: 'toggle-label-planets',
+        label: 'Planet names',
+        enabled: planetLabelsEnabled,
+        onChange: onSetPlanetLabelsEnabled,
+      },
+      {
+        id: 'toggle-constellations',
+        label: 'Constellations',
+        enabled: constellationsEnabled,
+        onChange: onToggleConstellations,
+      },
+    ],
+    [
+      starLabelsEnabled,
+      onSetStarLabelsEnabled,
+      planetLabelsEnabled,
+      onSetPlanetLabelsEnabled,
+      constellationsEnabled,
+      onToggleConstellations,
+    ],
+  );
+
   return (
     <LabelsSection
       labelCategoryVisibility={labelCategoryVisibility}
       onSetLabelCategoryVisibility={onSetLabelCategoryVisibility}
-      starLabelsEnabled={starLabelsEnabled}
-      onSetStarLabelsEnabled={onSetStarLabelsEnabled}
-      planetLabelsEnabled={planetLabelsEnabled}
-      onSetPlanetLabelsEnabled={onSetPlanetLabelsEnabled}
+      nonCategoryRows={nonCategoryRows}
     />
   );
 }

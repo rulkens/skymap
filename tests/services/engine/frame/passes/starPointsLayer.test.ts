@@ -241,11 +241,14 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
       // pinning the STAR rows' wholesale-skip property.
       // orbit-trails rides this same (hdr, NEAR0) group; its enabled() gate reads
       // the visibility intent, so the fixture carries the toggle on (matching the
-      // live default) — below the gate it draws alongside star-points.
+      // live default) — below the gate it draws alongside star-points. The
+      // constellation overlay likewise rides this group; toggle it off for the
+      // same reason.
       settings: {
         milkyWay: { enabled: false },
         famousStars: { enabled: true },
         orbitTrails: { enabled: true },
+        constellations: { enabled: false, intensity: 1 },
       },
       subsystems: { fades: { opacityOf: () => 0 } },
     } as unknown as EngineState;

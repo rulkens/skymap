@@ -455,6 +455,7 @@ function makeInput(
           thumbnails: { enabled: settings.galaxyTexturesEnabled },
           milkyWay: { enabled: settings.milkyWayEnabled },
           filaments: { enabled: settings.filamentsEnabled, intensity: settings.filamentIntensity },
+          constellations: { enabled: false, intensity: 1 },
           volumes: { enabled: settings.volumesEnabled, items: {} },
           flow: { enabled: false },
           debug: { disabledPasses: overrides.disabledPasses ?? {}, renderStrategy: 'auto' },

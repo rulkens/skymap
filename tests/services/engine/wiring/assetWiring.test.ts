@@ -94,6 +94,7 @@ describe('ASSET_WIRING membership', () => {
       'mcpm',
       'cf4Density',
       'flow',
+      'constellations',
       'structureCatalog',
       'pgcAlias',
       ...ALL_BODY_TEXTURE_KEYS.map((e) => bodyTextureSlotKey(e.bodyId, e.kind)),

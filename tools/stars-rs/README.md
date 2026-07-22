@@ -8,9 +8,12 @@ the browser renderer loads.
 This is the **canonical builder for real-scale runs**. The TypeScript builder at
 `tools/stars/buildStars.ts` is the **reference implementation** — it is the
 executable spec, and the one the vitest suite exercises. This crate is a
-speed-and-memory rewrite of that spec: it produces **byte-identical** output far
-faster and with a much lower memory ceiling than the ~16 GB the TS build needs
-to hold the full Gaia superset in a Node heap.
+speed-and-memory rewrite of that spec, far faster and with a much lower memory
+ceiling than the ~16 GB the TS build needs to hold the full Gaia superset in a
+Node heap. It shares the reference's encode/quantize/tier pipeline behaviour for
+behaviour, and adds two dedup rules the reference does not have — so its output
+subtracts a few more stars than a TS build of the same inputs. See
+[Parity with the TS builder](#parity-with-the-ts-builder).
 
 ## Prerequisites
 
@@ -46,11 +49,11 @@ cargo run --release -- [--data <gaia dir>] [--out <dir>] [--pages <n>] [--compar
 - `--compare <dir>` prints a field-by-field equivalence report against a set of
   reference `stars-*.bin` files (used to confirm parity with the TS builder).
 
-## Bit-parity contract with the TS builder
+## Parity with the TS builder
 
-The two builders are held to produce the same `.bin` bytes from the same raw
-inputs. The port mirrors these five behaviours from `tools/stars/buildStars.ts`
-exactly (each has a corresponding constant/test in this crate):
+The two builders share one encode/quantize/tier pipeline. The port mirrors these
+five behaviours from `tools/stars/buildStars.ts` exactly (each has a
+corresponding constant/test in this crate):
 
 1. **Mean-flux aggregate encode.** Octree aggregate nodes carry their subtree's
    summed linear flux and star count *unquantized* up the tree, and the emitted
@@ -75,11 +78,39 @@ exactly (each has a corresponding constant/test in this crate):
    `splitmix64(0) = 0xE220A8397B1DCDAF`, matching
    `tools/utils/random/splitmix64.ts`. (`taper.rs`)
 
-Two documented, accepted sources of rare divergence at the quantization-bin
-boundary: `libm` sin/cos vs V8's fdlibm port may differ by ulps, and zlib-ng's
-deflate may pick a truncation `k` a hair off Node's zlib. Neither has ever moved
-the output — the current builds are byte-identical across the three tiers — but
+Across those five behaviours the two builders agree to the bit, modulo two
+documented, accepted sources of rare divergence at the quantization-bin boundary:
+`libm` sin/cos vs V8's fdlibm port may differ by ulps, and zlib-ng's deflate may
+pick a truncation `k` a hair off Node's zlib. Neither has ever moved the output;
 the equivalence report (`--compare`) tolerates them by design.
+
+### Canonical-builder-only dedup
+
+The Rust builder additionally applies two dedup rules that the TS reference does
+not, so its population subtracts a few more stars than a TS build of the same raw
+inputs. These are deliberate — the canonical real-scale builds carry them — not
+drift. `cargo run -- --compare <ref bin dir>` surfaces their subtractions as
+unpaired records in the equivalence report; that is the expected shape of the
+delta, not a parity failure to chase back into byte-agreement. Do **not** port
+them into `tools/stars/`; the TS builder stays the leaner executable spec for the
+five shared behaviours above.
+
+1. **Famous subtraction over Gaia ∪ HIP.** The famous-star seed carries two dedup
+   keys — a Gaia `source_id` and a Hipparcos `HIP` — because the brightest famous
+   stars saturate Gaia DR3 and are seeded by HIP with no Gaia id. The subtraction
+   set is the union: the curated Gaia ids, plus the Gaia twin each famous HIP
+   resolves to through the crossmatch, plus the famous HIP companions subtracted
+   directly by HIP in the bright-Hipparcos patch (catching saturated stars that
+   have no Gaia row at all). This keeps a famous body from also appearing as an
+   ordinary catalog point. (`population.rs` — `famous_gaia_subtraction`,
+   `FAMOUS_STAR_HIP_IDS`)
+2. **Positional crossmatch-gap fallback.** A bright Hipparcos star missing from
+   `hip2_best_neighbour` has no crossmatch-resolved Gaia id to subtract, so its
+   Gaia twin would otherwise survive as a duplicate scene body next to the bright
+   patch's HIP copy. For each such unmatched bright star, the nearest bright Gaia
+   source within a small angular radius and magnitude window is taken as its twin
+   and subtracted positionally. (`population.rs` — `positional_gap_subtraction`,
+   the `positionalGapSubtracted` drop counter)
 
 ## Tests
 

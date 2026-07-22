@@ -49,17 +49,17 @@ function makeWrapper(store: AppStore) {
 }
 
 describe('LabelsSectionContainer', () => {
-  it('renders with default store state: all categories on → master checked', () => {
+  it('renders with default store state: constellations off, rest on → master indeterminate', () => {
     const { store } = createAppStore();
     const { container } = render(createElement(LabelsSectionContainer, null), {
       wrapper: makeWrapper(store),
     });
 
-    // Master checkbox (in the header) should be checked — initial state has all
-    // label flags enabled.
+    // Master checkbox (in the header) should be indeterminate — the constellations
+    // overlay defaults off while every other label row defaults on.
     const headerCheckbox = container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
-    expect(headerCheckbox.checked).toBe(true);
-    expect(headerCheckbox.indeterminate).toBe(false);
+    expect(headerCheckbox.checked).toBe(false);
+    expect(headerCheckbox.indeterminate).toBe(true);
   });
 
   it('reflects a per-category labelEnabled=false from pre-seeded store state (structure)', () => {

@@ -34,6 +34,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
 import { createElement } from 'react';
 import LabelsSection from '../../../src/components/SettingsPanel/LabelsSection';
+import type { NonCategoryLabelRow } from '../../../src/components/SettingsPanel/LabelsSection';
 import { LABEL_CATEGORIES } from '../../../src/data/structure/labelCategories';
 import type { LabelCategory } from '../../../src/@types/engine/data/LabelCategory';
 
@@ -61,14 +62,47 @@ function partialVisibility(): Record<LabelCategory, boolean> {
   return result;
 }
 
+// The three non-category boolean rows in render order (star names, planet
+// names, constellations) — mirrors what the container assembles. Each row's
+// `enabled` and `onChange` can be overridden; unspecified spies are throwaway
+// `vi.fn()`s so tests only wire up what they assert on.
+type RowOverrides = {
+  starLabelsEnabled?: boolean;
+  planetLabelsEnabled?: boolean;
+  constellationsEnabled?: boolean;
+  onSetStarLabelsEnabled?: (enabled: boolean) => void;
+  onSetPlanetLabelsEnabled?: (enabled: boolean) => void;
+  onToggleConstellations?: (enabled: boolean) => void;
+};
+
+function makeNonCategoryRows(o: RowOverrides = {}): NonCategoryLabelRow[] {
+  return [
+    {
+      id: 'toggle-label-stars',
+      label: 'Star names',
+      enabled: o.starLabelsEnabled ?? true,
+      onChange: o.onSetStarLabelsEnabled ?? vi.fn<(enabled: boolean) => void>(),
+    },
+    {
+      id: 'toggle-label-planets',
+      label: 'Planet names',
+      enabled: o.planetLabelsEnabled ?? true,
+      onChange: o.onSetPlanetLabelsEnabled ?? vi.fn<(enabled: boolean) => void>(),
+    },
+    {
+      id: 'toggle-constellations',
+      label: 'Constellations',
+      enabled: o.constellationsEnabled ?? true,
+      onChange: o.onToggleConstellations ?? vi.fn<(enabled: boolean) => void>(),
+    },
+  ];
+}
+
 function baseProps() {
   return {
     labelCategoryVisibility: allOnVisibility(),
     onSetLabelCategoryVisibility: vi.fn<(category: LabelCategory, visible: boolean) => void>(),
-    starLabelsEnabled: true,
-    onSetStarLabelsEnabled: vi.fn<(enabled: boolean) => void>(),
-    planetLabelsEnabled: true,
-    onSetPlanetLabelsEnabled: vi.fn<(enabled: boolean) => void>(),
+    nonCategoryRows: makeNonCategoryRows(),
   };
 }
 
@@ -98,8 +132,11 @@ describe('LabelsSection', () => {
       const props = {
         ...baseProps(),
         labelCategoryVisibility: noneOnVisibility(),
-        starLabelsEnabled: false,
-        planetLabelsEnabled: false,
+        nonCategoryRows: makeNonCategoryRows({
+          starLabelsEnabled: false,
+          planetLabelsEnabled: false,
+          constellationsEnabled: false,
+        }),
       };
       const { container } = render(createElement(LabelsSection, props));
       const headerCheckbox =
@@ -113,7 +150,10 @@ describe('LabelsSection', () => {
       // the master tri-state: with every COSMO category on but the star-names
       // row off, the section is a mixed set — the master must read indeterminate,
       // not checked. This is the pin for the rows joining the master.
-      const props = { ...baseProps(), starLabelsEnabled: false };
+      const props = {
+        ...baseProps(),
+        nonCategoryRows: makeNonCategoryRows({ starLabelsEnabled: false }),
+      };
       const { container } = render(createElement(LabelsSection, props));
       const headerCheckbox =
         container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
@@ -173,23 +213,28 @@ describe('LabelsSection', () => {
       expect(onSetLabelCategoryVisibility).toHaveBeenCalledWith('famousGalaxy', false);
     });
 
-    it('calls every category AND both foreground callbacks with true when master toggled from noneOn', () => {
+    it('calls every category AND all extra-row callbacks with true when master toggled from noneOn', () => {
       const onSetLabelCategoryVisibility =
         vi.fn<(category: LabelCategory, visible: boolean) => void>();
       const onSetStarLabelsEnabled = vi.fn<(enabled: boolean) => void>();
       const onSetPlanetLabelsEnabled = vi.fn<(enabled: boolean) => void>();
+      const onToggleConstellations = vi.fn<(enabled: boolean) => void>();
       const props = {
         ...baseProps(),
         labelCategoryVisibility: noneOnVisibility(),
-        starLabelsEnabled: false,
-        planetLabelsEnabled: false,
         onSetLabelCategoryVisibility,
-        onSetStarLabelsEnabled,
-        onSetPlanetLabelsEnabled,
+        nonCategoryRows: makeNonCategoryRows({
+          starLabelsEnabled: false,
+          planetLabelsEnabled: false,
+          constellationsEnabled: false,
+          onSetStarLabelsEnabled,
+          onSetPlanetLabelsEnabled,
+          onToggleConstellations,
+        }),
       };
       const { container } = render(createElement(LabelsSection, props));
 
-      // noneOn → master click sets all rows to true, foreground rows included.
+      // noneOn → master click sets all boolean rows to true, extra rows included.
       // Master checkbox is the first input — in the header, always accessible.
       const headerCheckbox =
         container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
@@ -201,23 +246,28 @@ describe('LabelsSection', () => {
       }
       expect(onSetStarLabelsEnabled).toHaveBeenCalledWith(true);
       expect(onSetPlanetLabelsEnabled).toHaveBeenCalledWith(true);
+      expect(onToggleConstellations).toHaveBeenCalledWith(true);
     });
 
-    it('calls every category AND both foreground callbacks with false when master toggled from allOn', () => {
+    it('calls every category AND all extra-row callbacks with false when master toggled from allOn', () => {
       const onSetLabelCategoryVisibility =
         vi.fn<(category: LabelCategory, visible: boolean) => void>();
       const onSetStarLabelsEnabled = vi.fn<(enabled: boolean) => void>();
       const onSetPlanetLabelsEnabled = vi.fn<(enabled: boolean) => void>();
+      const onToggleConstellations = vi.fn<(enabled: boolean) => void>();
       const props = {
         ...baseProps(),
         labelCategoryVisibility: allOnVisibility(),
         onSetLabelCategoryVisibility,
-        onSetStarLabelsEnabled,
-        onSetPlanetLabelsEnabled,
+        nonCategoryRows: makeNonCategoryRows({
+          onSetStarLabelsEnabled,
+          onSetPlanetLabelsEnabled,
+          onToggleConstellations,
+        }),
       };
       const { container } = render(createElement(LabelsSection, props));
 
-      // allOn → master click clears every row, foreground rows included.
+      // allOn → master click clears every boolean row, extra rows included.
       const headerCheckbox =
         container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
       fireEvent.click(headerCheckbox);
@@ -228,6 +278,30 @@ describe('LabelsSection', () => {
       }
       expect(onSetStarLabelsEnabled).toHaveBeenCalledWith(false);
       expect(onSetPlanetLabelsEnabled).toHaveBeenCalledWith(false);
+      expect(onToggleConstellations).toHaveBeenCalledWith(false);
+    });
+  });
+
+  describe('constellation row', () => {
+    it('reflects the constellationsEnabled prop and fires onToggleConstellations when clicked', () => {
+      const onToggleConstellations = vi.fn<(enabled: boolean) => void>();
+      const { container } = render(
+        createElement(LabelsSection, {
+          ...baseProps(),
+          nonCategoryRows: makeNonCategoryRows({
+            constellationsEnabled: true,
+            onToggleConstellations,
+          }),
+        }),
+      );
+      const expandButton = container.querySelector<HTMLButtonElement>('button[type=button]')!;
+      fireEvent.click(expandButton);
+
+      const toggle = container.querySelector<HTMLInputElement>('#toggle-constellations')!;
+      expect(toggle).not.toBeNull();
+      expect(toggle.checked).toBe(true);
+      fireEvent.click(toggle);
+      expect(onToggleConstellations).toHaveBeenCalledWith(false);
     });
   });
 });

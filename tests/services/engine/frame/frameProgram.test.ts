@@ -246,7 +246,7 @@ describe('timedSlotsOf', () => {
     expect(new Set(slots).size).toBe(slots.length);
   });
 
-  it('derives the real registry slot list: scalar-volume, eight hdr, star-aggregates, the (hdr, NEAR0) five, foreground bodies, foreground:0→hdr, hdr→swap, five swap, near captions, pick', () => {
+  it('derives the real registry slot list: scalar-volume, eight hdr, star-aggregates, the (hdr, NEAR0) six, foreground bodies, foreground:0→hdr, hdr→swap, five swap, near captions, pick', () => {
     // The real CONTENT_LAYERS registry against the real program — the exact
     // ordered slot list the timing service allocates from and the DebugPanel
     // iterates. scalar-volume leads (the volume render step), then the eight
@@ -289,6 +289,7 @@ describe('timedSlotsOf', () => {
       'body-glints',
       'star-catalog',
       'star-upsample',
+      'constellations',
       'hdr·NEAR0',
       'earth',
       'cloud-shell',

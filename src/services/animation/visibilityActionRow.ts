@@ -54,6 +54,7 @@ import {
   setOrbitTrailsEnabled,
   setVolumesEnabled,
   setFlowEnabled,
+  setConstellationsEnabled,
   setGalaxyCatalogVisible,
   setGalaxyCatalogLabelEnabled,
   setStructureItemEnabled,
@@ -83,6 +84,7 @@ export const VISIBILITY_ACTION_ROW: Record<
   orbitTrails: (on) => [setOrbitTrailsEnabled(on)],
   volumesMaster: (on) => [setVolumesEnabled(on)],
   flow: (on) => [setFlowEnabled(on)],
+  constellations: (on) => [setConstellationsEnabled(on)],
 
   // ── Per-item layers (one action per registered item) ────────────────────
   // These layers fan out across a `settings.<cluster>.items` record. The factory
