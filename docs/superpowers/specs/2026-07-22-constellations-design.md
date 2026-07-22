@@ -163,8 +163,10 @@ All growth at existing seams; one row/file per touchpoint.
   `SCALE_FADE_BANDS.constellations` row + a `fadeBand()` call in the pass —
   full presence through the solar neighborhood, gone before figures go
   subpixel (edges tuned visually over HMR).
-- **Fades**: `FADE_LAYERS` row (singleton; guard = slot ready) +
-  `watchFadesSaga` `FADE_ROW` entries for both setters.
+- **Fades**: `FADE_LAYERS` row (singleton; guard = slot ready) + a
+  `watchFadesSaga` `FADE_ROW` entry for the enable setter only — intensity is a
+  brightness scale, not a visibility gate (filament precedent: its intensity
+  setter is likewise absent from `FADE_ROW`).
 - **Labels**: `presentation/produceConstellationLabels.ts` — a
   `LabelProducer` registered in `engine.ts` beside `structureLabels`. Latin
   names at the artifact anchors, annotation-tier styling (structure-label
