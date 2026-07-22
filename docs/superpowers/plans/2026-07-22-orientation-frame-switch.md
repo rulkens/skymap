@@ -155,20 +155,20 @@ export const selectOrientation = (state: RootState): OrientationFrameId =>
   selectSettings(state).orientation;
 ```
 
-- [ ] Add `DEFAULT_ORIENTATION` to `data/defaults.ts` with a didactic comment:
+- [x] Add `DEFAULT_ORIENTATION` to `data/defaults.ts` with a didactic comment:
       ecliptic default because Earth's 23.44° obliquity is *desired* in the
       solar-system view (spec Goals). Import `OrientationFrameId` as a type.
-- [ ] Add the `orientation` field to `EngineSettingsState` (top-level, not inside
+- [x] Add the `orientation` field to `EngineSettingsState` (top-level, not inside
       a cluster) and seed it in `buildInitialSettings()` from `DEFAULT_ORIENTATION`
       (mirror how `tonemap.curve` seeds from `DEFAULT_TONE_MAP_CURVE`).
-- [ ] Add `setOrientation` to the slice reducers **and** to the exported action
+- [x] Add `setOrientation` to the slice reducers **and** to the exported action
       creators list (`settingsSlice.ts:419-485`).
-- [ ] Add `selectOrientation` to `selectors.ts`.
-- [ ] No constant-restatement test (`testing.md` — a `DEFAULT_SETTINGS` toEqual is
+- [x] Add `selectOrientation` to `selectors.ts`.
+- [x] No constant-restatement test (`testing.md` — a `DEFAULT_SETTINGS` toEqual is
       a change-detector). If a slice-behaviour test file exists, add one case:
       `it('setOrientation writes the frame')` — dispatch `setOrientation('galactic')`,
       assert `selectOrientation` returns `'galactic'`. Otherwise omit.
-- [ ] `npm run typecheck` clean; `npm test -- settings` green. Commit.
+- [x] `npm run typecheck` clean; `npm test -- settings` green. Commit.
 
 ---
 
@@ -204,23 +204,23 @@ clearFrameTween: (camera) => {
 },
 ```
 
-- [ ] Create `FrameTween.d.ts` with a didactic header (transient roll descriptor;
+- [x] Create `FrameTween.d.ts` with a didactic header (transient roll descriptor;
       `fromQuat` is wall-clock-free like `CameraTweenDescriptor`, so it survives
       serialise/replay). Import `Vec4`, `OrientationFrameId`, `Ease`.
-- [ ] Add `frameTween: FrameTween | null` to `CameraState`, seeded `null` in the
+- [x] Add `frameTween: FrameTween | null` to `CameraState`, seeded `null` in the
       slice `initialState` (`cameraSlice.ts:56-68`). Update the slice module
       header's "concerns" list to name it (mirror the `tween` / `clip` prose).
-- [ ] Add `startFrameTween` / `clearFrameTween` reducers + export them
+- [x] Add `startFrameTween` / `clearFrameTween` reducers + export them
       (`cameraSlice.ts:131-140`).
-- [ ] Extend `selectCameraActive` (`state/camera/selectors.ts:48-51`) with
+- [x] Extend `selectCameraActive` (`state/camera/selectors.ts:48-51`) with
       `|| c.frameTween !== null` so the render loop keeps ticking through the
       slerp — this is the one definition `shouldKeepTicking` ORs, so no separate
       wake term is added to `shouldKeepTicking.ts`.
-- [ ] Test: `it('selectCameraActive is true while a frameTween is in flight')` —
+- [x] Test: `it('selectCameraActive is true while a frameTween is in flight')` —
       state with only `frameTween` non-null (base at rest, no tween/clip/drag/
       autoRotate) → `true`; with `frameTween: null` and all else at rest → `false`.
       (Behavioural: catches a dropped OR term that would freeze the roll mid-slerp.)
-- [ ] `npm run typecheck` clean; `npm test -- camera` green. Commit.
+- [x] `npm run typecheck` clean; `npm test -- camera` green. Commit.
 
 ---
 
@@ -246,14 +246,14 @@ export function frameTweenElapsed(
 //   the arrival frame, grows on later same-ref frames; null always 0.
 ```
 
-- [ ] Add `frameTweenStartMs: number | null` and `lastFrameTweenRef: FrameTween | null`
+- [x] Add `frameTweenStartMs: number | null` and `lastFrameTweenRef: FrameTween | null`
       to `CameraClock`, initialised in `createCameraClock` (`cameraClock.ts:38-54`).
-- [ ] Implement `frameTweenElapsed` exactly parallel to `tweenElapsed`.
-- [ ] Test: `it('frameTweenElapsed resets on descriptor identity change')` —
+- [x] Implement `frameTweenElapsed` exactly parallel to `tweenElapsed`.
+- [x] Test: `it('frameTweenElapsed resets on descriptor identity change')` —
       first call with a fresh descriptor at `nowMs=1000` returns `0`; same ref at
       `1250` returns `250`; a **new** descriptor object at `1400` returns `0`
       again; `null` returns `0`. (Identity-reset behaviour; not a mirror.)
-- [ ] `npm run typecheck` clean; `npm test -- cameraClock` green. Commit.
+- [x] `npm run typecheck` clean; `npm test -- cameraClock` green. Commit.
 
 ---
 
@@ -288,22 +288,22 @@ keyed by `frameTween.easing`. Clamp the eased `t` to `[0,1]` so an over-elapsed
 call returns the endpoint (the produce path clears the tween, but the resolver
 must be total).
 
-- [ ] Write the tests first (TDD):
-  - [ ] `it('at elapsed 0 the basis equals the fromQuat basis')` — a `frameTween`
+- [x] Write the tests first (TDD):
+  - [x] `it('at elapsed 0 the basis equals the fromQuat basis')` — a `frameTween`
         with `fromQuat = ORIENTATION_FRAME_QUATERNIONS.equatorial`, `to:'galactic'`;
         with the clock arranged so elapsed is 0, `resolveFrameBasis` ≈
         `ORIENTATION_FRAMES.equatorial` (per-cell, ~1e-6).
-  - [ ] `it('at elapsed ≥ durationMs the basis equals the destination frame')` —
+  - [x] `it('at elapsed ≥ durationMs the basis equals the destination frame')` —
         same descriptor, clock elapsed ≥ `durationMs` → ≈ `ORIENTATION_FRAMES.galactic`.
-  - [ ] `it('every sampled midpoint basis is orthonormal')` — sample eased `t` at
+  - [x] `it('every sampled midpoint basis is orthonormal')` — sample eased `t` at
         several interior fractions; each resolved `Mat3` has unit-length,
         mutually-orthogonal columns (~1e-6). (Slerp keeps midpoints orthonormal;
         this fails if the conversion drops normalisation.)
-  - [ ] `it('a null frameTween returns the steady registry basis')` — ≈
+  - [x] `it('a null frameTween returns the steady registry basis')` — ≈
         `ORIENTATION_FRAMES[orientation]` for one non-default frame.
-- [ ] Implement to pass. Note the `'linear'` easing arm for a maths-clean midpoint
+- [x] Implement to pass. Note the `'linear'` easing arm for a maths-clean midpoint
       assertion.
-- [ ] `npm run typecheck` clean; `npm test -- resolveFrameBasis` green. Commit.
+- [x] `npm run typecheck` clean; `npm test -- resolveFrameBasis` green. Commit.
 
 ---
 
@@ -332,15 +332,15 @@ readonly frameBasis?: Mat3;
 `yawPitchToDir` directly. Use `vec3.transformMat3` (wgpu-matrix) for the
 `frameBasis · dir` product, then `vec3.addScaled(target, dir_world, distance, position)`.
 
-- [ ] Add the optional field to `OrbitCameraInit` with the didactic note.
-- [ ] Reroute `updatePosition` through `frameBasis` when present; keep the
+- [x] Add the optional field to `OrbitCameraInit` with the didactic note.
+- [x] Reroute `updatePosition` through `frameBasis` when present; keep the
       no-basis path identical to Prep 1's `yawPitchToDir` decode.
-- [ ] Test: `it('a non-identity frameBasis rotates the derived position into the frame')`
+- [x] Test: `it('a non-identity frameBasis rotates the derived position into the frame')`
       — with `frameBasis = ORIENTATION_FRAMES.equatorial` (pole = world +z), a
       pose at `yaw=0, pitch=π/2` (local pole) puts `position` at
       `target + distance·(+z)` (hand-computed: the equatorial pole is world +z),
       NOT `+y`. (Proves the basis is applied and which column is the pole.)
-- [ ] `npm run typecheck` clean; `npm test -- updatePosition` green. Commit.
+- [x] `npm run typecheck` clean; `npm test -- updatePosition` green. Commit.
 
 ---
 
@@ -365,20 +365,20 @@ export function orbitAnglesLookingAlong(
 ): { yaw: number; pitch: number };
 ```
 
-- [ ] Add the optional `frameBasis` param. When present, transform `−forward` by
+- [x] Add the optional `frameBasis` param. When present, transform `−forward` by
       `frameBasisᵀ` before extracting the angles (transpose a column-major `Mat3`,
       or `vec3.transformMat3` with the transposed basis — either is fine; the
       encode consumers pass the **steady** basis, so precompute the transpose once
       at the call context). Absent ⇒ current behaviour exactly.
-- [ ] Thread the active-frame **steady** basis into the two runtime encode call
+- [x] Thread the active-frame **steady** basis into the two runtime encode call
       sites so encode/decode share it:
-  - [ ] `resolveClipFoci.ts:144` (`lookAtId` → `aimAt(orbitAnglesLookingAlong(forward))`).
-  - [ ] `buildPathTrack.ts:333` and `:578` (path-tangent aim channels).
+  - [x] `resolveClipFoci.ts:144` (`lookAtId` → `aimAt(orbitAnglesLookingAlong(forward))`).
+  - [x] `buildPathTrack.ts:333` and `:578` (path-tangent aim channels).
       Both resolve at clip start, so read `ORIENTATION_FRAMES[state.settings.orientation]`
       (steady) at that context. **Confirm** how each already receives store/engine
       state; if the basis is not currently in scope there, thread it from the clip
       resolve entry point (do not read the store deep inside `buildPathTrack`).
-- [ ] Round-trip test (spec §10, the load-bearing invariant):
+- [x] Round-trip test (spec §10, the load-bearing invariant):
       `it('encode ∘ decode recovers yaw/pitch under each frame basis')` — for each
       of the four `ORIENTATION_FRAMES` and a spread of non-pole `(yaw, pitch)`
       away from the poles: build `dir_world` via the Task-5 decode
@@ -386,7 +386,7 @@ export function orbitAnglesLookingAlong(
       `orbitAnglesLookingAlong(forward, frameBasis)`, assert the recovered
       `(yaw, pitch)` matches the input (~1e-6, normalising yaw to `(−π, π]`). Fails
       on any encode/decode basis mismatch.
-- [ ] `npm run typecheck` clean; `npm test -- orbitAnglesLookingAlong resolveClipFoci buildPathTrack`
+- [x] `npm run typecheck` clean; `npm test -- orbitAnglesLookingAlong resolveClipFoci buildPathTrack`
       green. Commit.
 
 ---
@@ -406,15 +406,17 @@ rerouted (`computeViewProj` lookAt-up, `cameraBillboardBasis`, `orbitControls`
 pan, `slabs`, `buildPathTrack`, `horizonShellRenderer`) becomes frame-aware in
 one place.
 
-- [ ] In the shared helper: when `cam.frameBasis` is present, use
+- [x] In the shared helper: when `cam.frameBasis` is present, use
       `frameBasis · [0,1,0]` (the middle column — `mat3` column 1, indices 3,4,5)
       as the base up before applying the roll rotation; absent ⇒ `[0,1,0]`
       (unchanged). No consumer edits — they already call the helper.
-- [ ] Test: `it('the camera up follows the frame pole')` — a camera with
+      *(Landed as `frameUp()` util + upRef swaps at the seven call sites — the
+      helper's upRef parameter is the seam Prep 1 built; same semantics.)*
+- [x] Test: `it('the camera up follows the frame pole')` — a camera with
       `frameBasis = ORIENTATION_FRAMES.equatorial` and `roll = 0` yields an up ≈
       world `+z` (the equatorial pole), not `+y`; with no `frameBasis` yields `+y`.
       (Proves frame-up is fed and roll composes over it.)
-- [ ] `npm run typecheck` clean; run the helper's test file green. Commit.
+- [x] `npm run typecheck` clean; run the helper's test file green. Commit.
 
 ---
 
@@ -438,28 +440,28 @@ export function assembleOrbitCamera(
 ): OrbitCamera;   // writes frameBasis onto the returned camera before updatePosition
 ```
 
-- [ ] Add the `frameBasis` parameter to `assembleOrbitCamera`; set
+- [x] Add the `frameBasis` parameter to `assembleOrbitCamera`; set
       `cam.frameBasis = frameBasis` **before** the `updatePosition(cam)` call
       (`assembleOrbitCamera.ts:28-45`) so the derived `position` decodes through it.
-- [ ] `frameContext.ts:152` — `deriveFrameContext` gains a `frameBasis: Mat3`
+- [x] `frameContext.ts:152` — `deriveFrameContext` gains a `frameBasis: Mat3`
       parameter (threaded from `runFrame`, Task 9) and forwards it to
       `assembleOrbitCamera(pose, projection, frameBasis)`. `computeViewProj` and
       `deriveSlabs` then see the frame-aware `cam` for free.
-- [ ] `buildDemandCtx.ts:50` — the `cameraPosMpc` read must pass the **same**
+- [x] `buildDemandCtx.ts:50` — the `cameraPosMpc` read must pass the **same**
       basis the frame used (its comment at `:44-47` already pins the byte-identical
       requirement). Thread the resolved basis (or, if `buildDemandCtx` runs off the
       frame path, resolve the steady `ORIENTATION_FRAMES[state.settings.orientation]`
       there — a demand read between frames is at rest, so steady is correct).
-- [ ] The **drag register** (`state.cam`): `runFrame` writes the resolved basis
+- [x] The **drag register** (`state.cam`): `runFrame` writes the resolved basis
       onto it each frame (Task 9) so `orbitControls` / `seedCameraFromBase`'s
       `updatePosition(cam)` (`seedCameraFromBase.ts:48`, `orbitControls.ts:356/433/466`)
       decode through the live `B(t)` during a drag. No edit to those files (Prep 1
       already routed their up/pan through the shared helper); the field is simply
       present. Verify `state.cam` is constructed with (or tolerates) `frameBasis`.
-- [ ] Update the `assembleOrbitCamera` test to pass a basis and assert the
+- [x] Update the `assembleOrbitCamera` test to pass a basis and assert the
       returned camera carries it and its `position` reflects it (reuse the Task-5
       hand-computed pole case).
-- [ ] `npm run typecheck` clean; `npm test -- assembleOrbitCamera` green. Commit.
+- [x] `npm run typecheck` clean; `npm test -- assembleOrbitCamera` green. Commit.
 
 ---
 
@@ -481,38 +483,38 @@ elapsed ≥ `durationMs` (mirroring the tween-completion block at `runFrame.ts:2
 readonly frameBasis: { current: Mat3 };   // this frame's resolved B(t); single writer = runFrame
 ```
 
-- [ ] Add `frameBasis: { current: Mat3 }` to `CameraRuntime` (boxed, like
+- [x] Add `frameBasis: { current: Mat3 }` to `CameraRuntime` (boxed, like
       `lastPose` / `prevActiveId`). Seed it at engine construction with
       `ORIENTATION_FRAMES[DEFAULT_ORIENTATION]` so a pre-first-frame read is valid.
-- [ ] After the pose is produced (`runFrame.ts:238-244`), call
+- [x] After the pose is produced (`runFrame.ts:238-244`), call
       `resolveFrameBasis(rootState.settings.orientation, rootState.camera.frameTween,
       state.cameraRuntime.clock, nowMs)` **once**, capturing `B(t)`. The clock is
       already advanced once per frame here — `frameTweenElapsed` resets on identity
       like `tweenElapsed`, so calling it inside `resolveFrameBasis` is the single
       per-frame tick.
-- [ ] Write `B(t)` to **both** live-basis readers:
+- [x] Write `B(t)` to **both** live-basis readers:
       `state.cameraRuntime.frameBasis.current = B` (the host the saga context +
       `applySceneEffect` read for the switch `fromQuat`) and the drag register
       `state.cam.frameBasis = B` (so a grab this frame decodes correctly).
-- [ ] Pass `B(t)` into `deriveFrameContext` (Task 8 added the parameter) at the
+- [x] Pass `B(t)` into `deriveFrameContext` (Task 8 added the parameter) at the
       `runFrame.ts:382` call.
-- [ ] Clear-on-completion: when `rootState.camera.frameTween !== null` and
+- [x] Clear-on-completion: when `rootState.camera.frameTween !== null` and
       `frameTweenElapsed(...) >= frameTween.durationMs`, dispatch `clearFrameTween()`
       (idempotent same-frame `frameTweenElapsed` re-call is safe — the ref is
       unchanged, no clock double-tick, exactly as the tween-completion block notes).
-- [ ] **Hold-pose invariance test** (spec §10, the Q4 guarantee):
+- [x] **Hold-pose invariance test** (spec §10, the Q4 guarantee):
       `it('an idle frame switch rotates the up-vector without moving eye or target')`
       — with the resting driver winning (base at rest) and a `frameTween` in
       flight, produce the frame at several elapsed instants; assert `cam.target`
       and `cam.position` are constant across the transition (~1e-6) while the
       lookAt up-vector rotates. Proves the roll does not translate the eye.
-- [ ] **`PITCH_LIMIT` edge test** (spec §10): `it('a switch into a near-pole-aligned
+- [x] **`PITCH_LIMIT` edge test** (spec §10): `it('a switch into a near-pole-aligned
       view resolves to a finite pose at the clamp, not NaN')` — arrange a view
       direction nearly parallel to the destination frame's pole; produce through
       the slerp; assert every `cam.position` / `cam.yaw` / `cam.pitch` is finite
       (`Number.isFinite`) and pitch sits at the existing `PITCH_LIMIT`
       (`orbitControls.ts:91`), not NaN. (The clamp already handles it; this pins it.)
-- [ ] `npm run typecheck` clean; `npm test -- runFrame` (and the new test) green. Commit.
+- [x] `npm run typecheck` clean; `npm test -- runFrame` (and the new test) green. Commit.
 
 ---
 
