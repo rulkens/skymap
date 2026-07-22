@@ -78,6 +78,7 @@ import { deriveSimDays } from '../../../utils/time/deriveSimDays';
 import { selectTimeState, selectIsLiveTicking } from '../../../state/time/selectors';
 import { throttleByTime } from '../../../utils/throttle/throttleByTime';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
+import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 
 /**
  * Desired scale-bar width in CSS pixels. The engine computes this per-frame
@@ -384,6 +385,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     deps.canvas,
     renderPose,
     state.cameraRuntime.projection,
+    // Steady orientation basis for now. Task 9 replaces this with the per-frame
+    // resolved B(t) (the slerp between orientation frames during a switch); the
+    // parameter is threaded here so that swap is a one-line change.
+    ORIENTATION_FRAMES[rootState.settings.orientation],
     masks.draw,
     nowMs,
     simDays,
