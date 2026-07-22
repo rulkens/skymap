@@ -280,6 +280,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       renderTargets: null,
       compositor: null,
       filamentRenderer: null,
+      constellationRenderer: null,
       // labelRenderer + markerLineRenderer: null until initGpu finishes the
       // font-atlas fetch.  Excluded from isEngineReady (optional async
       // resources, null-checked at use by labelsLayer / markerLinesLayer).
@@ -785,6 +786,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.compositor = null;
     state.gpu.filamentRenderer?.destroy();
     state.gpu.filamentRenderer = null;
+    state.gpu.constellationRenderer?.destroy();
+    state.gpu.constellationRenderer = null;
     state.gpu.labelRenderer?.destroy();
     state.gpu.labelRenderer = null;
     state.gpu.foregroundLabelRenderer?.destroy();

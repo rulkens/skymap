@@ -130,6 +130,20 @@ export const SCALE_FADE_BANDS = {
     goneAt: SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC,
   },
 
+  // Keyed on: CAMERA distance from the heliocentric render origin, Mpc (the same
+  // quantity as `surveyDeepZoom` / `starBackdrop`). Consumer: `constellationsLayer`.
+  // The true-3D stick figures read as Earth's familiar sky from within the solar
+  // neighbourhood and shear apart as the camera pulls away; this recede band holds
+  // them at full presence through the neighbourhood and dissolves them before the
+  // sheared, shrinking figures clutter the galactic-disc view (and before a whole
+  // figure would go subpixel). Full within `fullAt` (≈ 1 kpc, deep inside the
+  // neighbourhood), gone past `goneAt` (≈ 10 kpc, galactic-disc framing). A recede
+  // band — full at the small-distance edge. Because the layer DISABLES outright once
+  // this reads 0 (the "opacity 0 ⇒ no render" house rule, gated in `enabled`), this
+  // band is the smooth far gate. These edges are an eye-tuning STARTING POINT, tuned
+  // visually in Task 15 alongside the halfwidth / tone / gap.
+  constellations: { fullAt: 0.001, goneAt: 0.01 },
+
   // Keyed on: a scene BODY's apparent diameter, px. The sub-pixel glint
   // cross-fade: a body renders as a brightness-scaled additive point that is at
   // FULL strength at/below 1 px and GONE at/above `BODY_GLINT_MAX_PX` (a recede

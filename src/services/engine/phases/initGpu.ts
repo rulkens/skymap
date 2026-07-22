@@ -52,6 +52,7 @@ import { createMilkyWayCloud } from '../../gpu/galaxy/milkyWayCloud';
 import { createMilkyWayCloudRenderer } from '../../gpu/renderers/milkyWay/milkyWayCloudRenderer';
 import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShell/horizonShellRenderer';
 import { createFilamentRenderer } from '../../gpu/renderers/filaments/filamentRenderer';
+import { createConstellationRenderer } from '../../gpu/renderers/constellations/constellationRenderer';
 import { createLabelRenderer } from '../../gpu/renderers/labels/labelRenderer';
 import { createMarkerLineRenderer } from '../../gpu/renderers/labels/markerLineRenderer';
 import { createDebugLineRenderer } from '../../gpu/renderers/devTools/debugLineRenderer';
@@ -343,6 +344,21 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // returns early on `segmentCount=0`.  Same HDR target as every overlay.
   const filamentRenderer = createFilamentRenderer(device, 'rgba16float', state.gpu.fadeBgl!);
   state.gpu.filamentRenderer = filamentRenderer;
+
+  // ── Constellation stick-figure renderer ──────────────────────────
+  //
+  // Built unconditionally beside filaments (same cheap instanced-quad
+  // pipeline + shared unit-quad VBO + fade uniform). The per-instance buffer
+  // is populated later, when `constellationsLayer` sees the demand-loaded
+  // `constellations.json` artifact ready on its slot and calls `upload` once.
+  // Until then `hasData()` is false and the layer skips its draw. Same HDR
+  // target as every overlay.
+  const constellationRenderer = createConstellationRenderer(
+    device,
+    'rgba16float',
+    state.gpu.fadeBgl!,
+  );
+  state.gpu.constellationRenderer = constellationRenderer;
 
   // Store the thumbnail-related renderers on `state.gpu.*` so
   // `engine.ts.destroy()` can reach them for teardown, and so later

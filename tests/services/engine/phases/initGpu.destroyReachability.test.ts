@@ -159,6 +159,9 @@ vi.mock('../../../../src/services/gpu/renderers/horizonShell/horizonShellRendere
 vi.mock('../../../../src/services/gpu/renderers/filaments/filamentRenderer', () => ({
   createFilamentRenderer: vi.fn(() => makeStub('filamentRenderer')),
 }));
+vi.mock('../../../../src/services/gpu/renderers/constellations/constellationRenderer', () => ({
+  createConstellationRenderer: vi.fn(() => makeStub('constellationRenderer')),
+}));
 
 vi.mock('../../../../src/services/gpu/galaxy/milkyWayCloud', () => ({
   createMilkyWayCloud: vi.fn(() => makeStub('milkyWayCloud')),
