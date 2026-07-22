@@ -1,81 +1,59 @@
 # Skymap — Claude onboarding
 
-Quick orientation for an AI agent picking up work in this repo. Read this first; it points at the deeper docs.
+Quick orientation for an AI agent picking up work here; it points at the deeper docs.
 
 ## What this is
 
-A WebGPU 3D galaxy renderer. Three real catalogs (SDSS, 2MRS, GLADE) are parsed at build time into a custom binary format, loaded in the browser, and drawn as instanced point billboards with selective per-galaxy thumbnail quads on close approach. TS + Vite + React for the UI shell, raw WebGPU + WGSL for the renderer.
+A WebGPU 3D galaxy renderer: three real catalogs (SDSS, 2MRS, GLADE) parsed at build time into a custom binary format, loaded in the browser, drawn as instanced point billboards with per-galaxy thumbnail quads on close approach. TS + Vite + React UI shell; raw WebGPU + WGSL renderer.
 
 ## Where to look
 
 ```
 src/
-  @types/             Top-level type declarations, organized into subfolders
-                      (data/, engine/, rendering/, loading/, camera/, input/,
-                      settings/, math/). One file per type. No barrel — all
-                      imports are deep + relative.
-  components/         React UI shell (InfoCard, SettingsPanel, ScaleBar, StatusBar)
-  data/               Static data definitions: sources enum, colourIndex spec, binary format
-  hooks/              React hooks (useEngine, useSplash, useUrlSync,
-                      useKeyboardShortcuts, alias/structure indexes)
+  @types/  one type per file; deep relative imports, no barrels
+  components/  React UI shell (InfoCard, SettingsPanel, ScaleBar, StatusBar)
+  data/  static data: sources enum, colourIndex spec, binary format
+  hooks/  React hooks (useEngine, useUrlSync, alias/structure indexes, …)
   services/
-    camera/           OrbitCamera, OrbitControls (mouse pan/orbit), tweens
-    engine/           Top-level engine orchestrator, autoLod, cloud loader
-    gpu/              Renderers, texture atlas, image queue/fetcher, WGSL shaders
-    input/            SpaceMouse + raw input → camera deltas
-  state/              Framework-agnostic RTK slices + selectors + sagas, one
-                      subdir per domain (camera/, settings/, selection/, tour/,
-                      ui/, …). Forbids react-redux — see store/ for the wiring.
-  store/              RTK store wiring: createAppStore, root reducer/saga,
-                      react-redux hooks, effects, SagaContextProvider
-  styles/             global.css — design tokens + body/html reset only
-  utils/              Pure helpers (math, format, random) — heavily tested
+    camera/  OrbitCamera, OrbitControls, tweens
+    engine/  engine orchestrator, autoLod, cloud loader
+    gpu/  renderers, texture atlas, image queue/fetcher, WGSL shaders
+    input/  SpaceMouse + raw input → camera deltas
+  state/  RTK slices/selectors/sagas per domain; forbids react-redux (see store/)
+  store/  RTK store wiring: createAppStore, root reducer/saga, effects
+  styles/  global.css — design tokens + body/html reset only
+  utils/  pure helpers (math, format, random) — heavily tested
 tools/
-  animation/          tourLength — beat-sheet / clip-length reporting for tours
-  catalog/            buildAllBins (pipeline entry point), crossMatch dedup,
-                      subsampleByAbsMag
-  curation/           shared curation helpers (dedupeByProximity, writeMetaSidecar)
-  dev/                tmux + worktree helpers — see "Tmux workflow helpers" below
-  famous/             famous-galaxy seed expansion + image fetcher cluster
-                      (buildFamous, expandFamousFromCatalogs, fetchFamousImages,
-                      famousImageProcessor)
-  famous-curator/     local-only Vite dev tool for hand-curating Famous
-                      thumbnails (npm run curate-famous)
-  filaments/          buildFilaments — DisPerSE wrapper
-  flow/               CF4++ peculiar-velocity flow-field builder + verifier
-  flow-workbench/     "Cosmic Flow" WebGPU dev tool visualising the flow field
-  galaxy-renderer/    WebGPU dev tool drawing a single procedural Hubble-sequence
-                      galaxy behind an HDR bloom pipeline
-  volumes/            scalar-field volume builders (CF-4, MCPM) + diagnostics
-                      (auditCf4Anchors, verifyCf4Scfd, buildScalarVolumeFixture,
-                      extractMcpmCube.py)
-  fonts/              buildFontAtlas — MSDF multi-font atlas generator
-  perf/               headless GPU-timing harness (npm run perf) — per-pass
-                      timings, tier compare, bound classifier → tools/perf/README.md
-  record/             offline tour recorder → mp4 (npm run record-tour)
-  site/               makeFavicon, makeOgImage
-  structures/         buildStructures — cluster/supercluster catalog builder
-  deploy/             syncR2 + r2Cors.json + r2-static/ static assets
-  fetch/              fetch2massXsc, fetchHyperLeda, buildPgcAliases — long-running
-                      external-catalog fetchers with on-disk resume caches
-  parsers/            SDSS CSV, 2MRS fixed-width, GLADE fixed-width, NPY,
-                      ND-skeleton parsers
-  utils/              tools-only helpers (math, io, cli, async, random) —
-                      one file per function, deep imports
-  vendor-types/       ambient .d.ts shims for msdf-bmfont-xml and pngjs
+  animation/  tourLength — beat-sheet / clip-length reporting
+  catalog/  buildAllBins (pipeline entry), crossMatch dedup, subsampleByAbsMag
+  curation/  shared curation helpers (dedupeByProximity, writeMetaSidecar)
+  dev/  tmux + worktree helpers — see "Tmux workflow helpers" below
+  famous/  famous-galaxy seed expansion + image fetchers
+  famous-curator/  hand-curate Famous thumbnails (npm run curate-famous)
+  filaments/  buildFilaments — DisPerSE wrapper
+  flow/  CF4++ peculiar-velocity flow-field builder + verifier
+  flow-workbench/  WebGPU dev tool visualising the flow field
+  galaxy-renderer/  dev tool: procedural Hubble-sequence galaxy + HDR bloom
+  volumes/  scalar-field volume builders (CF-4, MCPM) + diagnostics
+  fonts/  buildFontAtlas — MSDF multi-font atlas generator
+  perf/  GPU-timing harness (npm run perf) → tools/perf/README.md
+  record/  offline tour recorder → mp4 (npm run record-tour)
+  site/  makeFavicon, makeOgImage
+  structures/  buildStructures — cluster/supercluster catalog builder
+  deploy/  syncR2 + r2Cors.json + r2-static/ static assets
+  fetch/  external-catalog fetchers with on-disk resume caches
+  parsers/  SDSS CSV, 2MRS fixed-width, GLADE fixed-width, NPY, ND-skeleton
+  utils/  tools-only helpers — one file per function, deep imports
+  vendor-types/  ambient .d.ts shims for msdf-bmfont-xml and pngjs
 data/
-  raw/                Catalog source files, one subdir per source: 2mrs/, glade/,
-                      hyperleda/, sdss/, cf4/, mcpm/, milliquas/, filaments/, famous/,
-                      fonts/, mcxc/, mscc/. VizieR ReadMes live next to the file they describe
-                      (read for byte layouts!). Path lookups go through
-                      `tools/utils/io/rawDataRegistry.ts`.
-docs/BACKLOG.md           Ground-truth list of what's next — pickup-able plans,
-                      specs awaiting plans, deferred items, surfaced issues
-docs/superpowers/plans/   Active implementation plans (TDD task lists); shipped
-                      plans move to plans/completed/ via the /feature-done audit
-docs/superpowers/specs/   Design specs; shipped specs move to specs/completed/
-                      alongside their plan when the feature ships
-tests/                Vitest suite — mirrors src/ tree
+  raw/  catalog sources, one subdir per source (2mrs/, glade/, hyperleda/, sdss/,
+        cf4/, mcpm/, milliquas/, filaments/, famous/, fonts/, mcxc/, mscc/).
+        VizieR ReadMes live beside their files (byte layouts!). Paths go
+        through tools/utils/io/rawDataRegistry.ts.
+docs/BACKLOG.md  ground-truth list of what's next
+docs/superpowers/plans/  active implementation plans; shipped → plans/completed/
+docs/superpowers/specs/  design specs; shipped → specs/completed/
+tests/  Vitest suite — mirrors src/ tree
 ```
 
 ## Project conventions (these override defaults)
@@ -109,120 +87,69 @@ npm run record-tour # offline 4K tour recorder → tools/record/README.md
 npm run perf        # headless GPU-timing harness → tools/perf/README.md
 ```
 
-`npm run perf` measures per-pass GPU timings at fixed camera poses in headless Chromium — use it
-**before and after** any renderer/perf change instead of eyeballing; the `perf` skill
-(`.claude/skills/perf/SKILL.md`) walks the workflow and the interpretation traps. It needs the dev server
-running; **in a worktree pass `--url http://localhost:<port>`** with the port from _your_ server's
-`Local:` line (Vite auto-increments past 5173, and without `--url` you may silently measure another
-branch's server). Key modes: `--scenario <name> --frames N`, `--sweep` (fragment- vs vertex-bound
-classifier), `--tier large` / `--compare-tiers` (catalog-tier cost), `npm run -s perf -- --json`
-(machine-readable). Read `tools/perf/README.md` for how to interpret MERGED vs PER-LAYER vs FLOOR —
-per-layer numbers carry ~1–3 ms pass overhead each and must not be quoted as real costs.
+For `npm run perf`, read the `perf` skill (`.claude/skills/perf/SKILL.md`) first: measure **before and after** any renderer/perf change, and **in a worktree pass `--url http://localhost:<port>`** from _your_ server's `Local:` line or you silently measure another branch's server. The skill carries the flags and interpretation traps (MERGED vs PER-LAYER vs FLOOR, Apple Silicon slot-sum inflation).
 
 The suite is large (600+ test files) and must stay green. Tests follow [`docs/superpowers/conventions/testing.md`](docs/superpowers/conventions/testing.md) — what _not_ to test matters as much as what to test.
 
 ### Tmux workflow helpers
 
-Two bash helpers live in `tools/dev/` for managing parallel Claude sessions across worktrees:
+- **`tools/dev/skymap-tmux.sh`** — starts/reattaches a `skymap` session, one window per `.claude/worktrees/*` plus `main` and `shell`; does not auto-start `claude`.
+- **`tools/dev/skymap-wt-clean.sh`** — interactive cleanup of merged worktrees; skips dirty ones. Closing a tmux window does **not** remove its worktree.
 
-- **`tools/dev/skymap-tmux.sh`** — starts (or reattaches) a `skymap` tmux session with one window per existing `.claude/worktrees/*` plus a `main` and `shell` window. Does not auto-start `claude` — pick per window. Re-run to reattach.
-- **`tools/dev/skymap-wt-clean.sh`** — interactive cleanup of worktrees whose branches have merged into `origin/main`. Skips dirty worktrees. Closing a tmux window does **not** remove its worktree; this is the hygiene pass.
-
-The intended workflow is one tmux window per worktree, each rooted at the worktree path so the shell and any `claude` started inside it share CWD — no `EnterWorktree` call needed. Use `EnterWorktree`/`ExitWorktree` only in single-window flows where you want the harness to handle creation and cleanup.
+One tmux window per worktree, rooted at the worktree path, so shell and `claude` share CWD. Use `EnterWorktree`/`ExitWorktree` only in single-window flows.
 
 ## Data pipeline (mental model)
 
 ```
-data/raw/*.dat,*.csv  ──parsers──▶  ParsedRecord[]  ──crossMatch──▶  GalaxyCatalog  ──encode──▶  public/data/*.bin
-                                                                                                       │
-                                                                                                       ▼
-                                            browser fetch  ◀──decodeGalaxyCatalog──  ArrayBuffer  ◀──load
-                                              │
-                                              ▼
-                                          GPU vertex/index buffers  ──pointRenderer──▶  WGSL  ──▶  canvas
+data/raw/*  ─parsers─▶ ParsedRecord[] ─crossMatch─▶ GalaxyCatalog ─encode─▶ public/data/*.bin
+  ─fetch─▶ decodeGalaxyCatalog ─▶ GPU vertex/index buffers ─pointRenderer─▶ WGSL ─▶ canvas
 ```
 
-Binary format is in `src/data/galaxyCatalogFormat.ts` — currently v6, 64 bytes/galaxy. Bumping the version means regenerating bins via `npm run build-all`. The format header stores `magic + version + count`, so old bins fail loudly with a clear regenerate message. (The 2026-05-17 PointCloud → GalaxyCatalog code rename did NOT bump the on-disk format; v6 added `spectroscopicZ` at byte 54 for the local-volume distance override.)
+Binary format is in `src/data/galaxyCatalogFormat.ts` — currently v6, 64 bytes/galaxy. Bumping the version means regenerating bins via `npm run build-all`; the `magic + version + count` header makes old bins fail loudly. (The PointCloud → GalaxyCatalog code rename did NOT bump the on-disk format.)
 
 ### Local-volume distance override
 
-For galaxies inside `CUTOFF_MPC = 30` the build pipeline replaces the cz-derived position with a Cosmicflows-4 (or HyperLEDA `mod0`) measured distance. The catalogued spectroscopic z is stored separately on the .bin (v6 format, byte offset 54) so the InfoCard shows the published value, not the value implied by `|position|`. See `docs/superpowers/specs/2026-05-27-local-volume-distances.md`.
+Inside `CUTOFF_MPC = 30` the pipeline replaces the cz-derived position with a Cosmicflows-4 (or HyperLEDA `mod0`) measured distance; the catalogued spectroscopic z is stored separately on the .bin (v6, byte 54) so the InfoCard shows the published value. See `docs/superpowers/specs/2026-05-27-local-volume-distances.md`. Coverage: ~2,030 of CF4's 2,159 PGCs via GLADE-by-PGC; 2MRS rows get CF4 distances via the `2MASX → PGC` patching step in `buildAllBins`; famous/SDSS rows without PGCs fall through to the cz path.
 
-Coverage: ~2,030 of CF4's 2,159 local-volume PGCs are reachable via the direct GLADE-by-PGC path; 2MRS rows pick up CF4 distances via the existing `2MASX → PGC` patching step in `buildAllBins`. Famous-galaxy and SDSS rows without PGCs fall through to the cz path.
+### Data-refresh re-run orders
 
-Re-run order when CF4 raw data changes:
+All refreshes share one 3-step shape: fetch, build, then `npm run sync-r2-secure` from the **main worktree only** (memory `project_worktree_data_isolation`).
 
-1. `npm run fetch-cf4` — refreshes `data/raw/cf4/table2.dat`.
-2. `npm run build-tiers` — re-bakes `2mrs.bin` and `glade-*.bin` with the new distances.
-3. `npm run sync-r2-secure` — from the main worktree only (see project memory `project_worktree_data_isolation`).
+| Data changed           | 1. Fetch                                            | 2. Build                                                  |
+| ---------------------- | --------------------------------------------------- | --------------------------------------------------------- |
+| CF4 distances          | `fetch-cf4`                                         | `build-tiers` (`2mrs.bin`, `glade-*.bin`)                 |
+| Clusters/superclusters | `fetch-structures` (CDS VizieR, verifies `.sha256`) | `build-structures` (after `build-tiers`) → `structures.*` |
+| DESI                   | `fetch-desi` (four DR1 LSS `.fits`)                 | `build-tiers` (`desi-deep.bin`, the CrB deep cone)        |
+| Planet textures        | `fetch-textures` (~700 MB; `--dev` = 2k subset)     | `build-textures` → `public/data/images/textures/`         |
 
-Re-run order when cluster/supercluster data changes:
-
-1. `npm run fetch-structures` — downloads `data/raw/{mcxc,mscc}/{*.dat,ReadMe}` from CDS VizieR and verifies against the committed `.sha256` sidecars. Same pattern as `npm run fetch-cf4`.
-2. `npm run build-structures` — parses the raw tables + the featured seed, emits `public/data/structures.ccat` + `public/data/structures_meta.json`. Run after `npm run build-tiers`.
-3. `npm run sync-r2-secure` — uploads the new artefacts to R2.
-
-The `.ccat` + `structures_meta.json` artefacts are gitignored (build outputs, like the `.bin` files). The raw `.dat`/`ReadMe` files are also gitignored; only the provenance `README.md` + `.dat.sha256` sidecars are committed.
-
-Re-run order when DESI raw data changes:
-
-1. `npm run fetch-desi` — downloads the four DESI DR1 LSS tracer `.fits` files into `data/raw/desi/` and writes the committed `desi_dr1_lss.sha256` sidecar. Same pattern as `npm run fetch-cf4`.
-2. `npm run build-tiers` — re-bakes `desi-deep.bin` (the CrB deep-cone patch) alongside the other catalog bins.
-3. `npm run sync-r2-secure` — from the main worktree only (see project memory `project_worktree_data_isolation`).
-
-Re-run order when planet textures change:
-
-1. `npm run fetch-textures` — pulls the source planet maps (~700 MB full; `--dev` fetches the ~7 MB 2k subset). GET-only fetcher, resumes by completed files.
-2. `npm run build-textures` — tiers the maps into `public/data/images/textures/`.
-3. `npm run sync-r2-secure` — from the main worktree only (see project memory `project_worktree_data_isolation`).
-
-The full-res pull, build, and sync run post-merge from the main worktree.
+Raw files and built artefacts are gitignored; only provenance `README.md` + `.sha256` sidecars are committed. Full-res texture pull/build/sync runs post-merge from the main worktree.
 
 ### Deploy workflow (Cloudflare Workers Assets + R2)
 
-Two Cloudflare resources serve skymap, and they're updated independently:
+Two Cloudflare resources serve skymap, updated independently:
 
-- **The static shell** (HTML, JS, CSS, WGSL shaders, `_headers`, famous-galaxy WebPs) ships to **Cloudflare Workers Assets** automatically on every push to `main`. Cloudflare's dashboard-managed GitHub integration runs `npm run build` and uploads `dist/`. There is no local CLI step for the shell deploy — `npm run deploy` is just `git push origin main` with a hint of where to watch the build progress.
+- **The static shell** (HTML, JS, CSS, WGSL, `_headers`, famous WebPs) ships to **Workers Assets** automatically on every push to `main` (Cloudflare's GitHub integration builds and uploads `dist/`). No local CLI step — `npm run deploy` is just `git push origin main`.
+- **The `.bin` catalog files** (~280 MB across tiers + filaments) live in **R2** at `skymap-data.rulkens.com`, synced manually via `npm run sync-r2-secure` after a `build-tiers` rerun, **not** on every push. (Large tiers exceed Workers Assets' per-file caps; R2 has no caps, zero egress fees, and decouples catalog refreshes from code deploys.)
 
-- **The `.bin` catalog files** (~280 MB across all tiers + filaments) live in **Cloudflare R2** at `skymap-data.rulkens.com`, because they exceed Workers Assets' per-file size limit and because R2 has zero egress costs. They're synced manually via `npm run sync-r2` after a `build-tiers` rerun, **not** on every push.
-
-A full data-refreshing deploy is therefore:
+A full data-refreshing deploy:
 
 1. `npm run build-tiers` — regenerates all `public/data/*.bin`.
-2. `npm run build-filaments` (only if filaments need rebuilding — rare).
-3. `npm run sync-r2-secure` — uploads regenerated `.bin` files (and `famous_*.json` sidecars, plus the cluster `structures.ccat` + `structures_meta.json`) to R2, then purges the matching URLs from the Cloudflare CDN edge cache. Idempotent; full bucket replacement on every run. The `-secure` wrapper loads `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ZONE_ID` from the OS secrets store (macOS Keychain, Linux libsecret) so the credentials never live in a dotfile; the bare `npm run sync-r2` is a fallback for environments without bash where the env vars are already injected (CI, Windows-without-WSL). Without the credentials the purge step is skipped and the CDN keeps serving stale bytes until the per-object TTL expires — use the secure wrapper.
-4. `npm run deploy` — pushes `main`. The Cloudflare GitHub integration takes over and rebuilds the shell.
+2. `npm run build-filaments` — only if filaments need rebuilding (rare).
+3. `npm run sync-r2-secure` — uploads `.bin` + `famous_*.json` + `structures.*`, then purges matching CDN URLs; idempotent full-bucket replacement. The wrapper loads `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ZONE_ID` from the OS secrets store; bare `sync-r2` (no-bash fallback) skips the purge without credentials, leaving stale CDN bytes until TTL expiry.
+4. `npm run deploy` — pushes `main`; Cloudflare rebuilds the shell (~30 s).
 
-If you only changed code and not catalog bytes, **step 4 alone is enough**. The most common loop is "edit, push, watch the Workers build", which finishes in ~30 s.
+Code-only change: **step 4 alone is enough**. The `.bin` files stay out of git (`public/data/*.bin` gitignored): they are deterministic build artefacts, and committing them would bloat clones and drift against pipeline settings.
 
-The `.bin` files are intentionally **not** in git (`public/data/*.bin` is gitignored). They are pure build artefacts: deterministic outputs of `tools/catalog/buildAllBins.ts` against the raw catalog files in `data/raw/`. Checking them in would inflate every clone by ~150 MB for no informational gain — the same bytes can always be rebuilt from source on demand. Keeping them out also avoids accidental drift between `tools/catalog/buildAllBins.ts` settings (tier targets, abs-mag thresholds) and a stale committed binary; the R2 sync ships a fresh build on demand, so what's hosted is always in sync with the current pipeline code.
-
-The runtime `cloudLoader` requests `<source>-<tier>.bin` per source as the user switches tiers; the `dataUrl()` helper prefixes each path with `VITE_DATA_BASE_URL`, which is set in the committed `.env.production` (the rest of `.env*` is gitignored — see the .gitignore docblock for the rationale). Vite inlines that value into the production bundle at build time. Dev runs with no `.env.development` present, so `dataUrl()` falls back to the empty string and Vite serves `public/data/*` at the relative `/data/` path. A complete R2 sync must include every variant the runtime might request: `sdss-medium.bin`, `sdss-large.bin`, `glade-small.bin`, `glade-medium.bin`, `glade-large.bin`, plus the tier-agnostic `2mrs.bin`, `famous.bin`, `desi-deep.bin`, `filaments.bin`, `structures.ccat`, and `structures_meta.json`. The `tools/deploy/syncR2.ts` ALLOW filter encodes that set.
+The runtime `cloudLoader` requests `<source>-<tier>.bin` per source; `dataUrl()` prefixes paths with `VITE_DATA_BASE_URL` from the committed `.env.production` (rest of `.env*` gitignored — see the .gitignore docblock). Dev has no `.env.development`: `dataUrl()` falls back to `''` and Vite serves `public/data/*` at `/data/`. A complete R2 sync includes every variant the runtime might request; the `tools/deploy/syncR2.ts` ALLOW filter encodes the full set.
 
 ### MCPM Cosmic Web volume
 
-The SDSS DR17 Cosmic Slime VAC `SDSS_z_44-476mpc` cube ships as three
-tiered SCFDs (`mcpm-{small,medium,large}.scfd`) alongside CF-4. The
-extract step requires Python + pyslime and only happens once per VAC
-release; contributors curl the pre-extracted `.npy` tiers from R2 and
-run `npm run build-mcpm` to emit the SCFDs locally. The runtime fetches
-`mcpm-<tier>.scfd` per the user's current tier dropdown — same path
-the galaxy catalogs use through `state.sources.tier`. See
-`docs/superpowers/specs/2026-05-11-mcpm-cosmic-web-volume-design.md`
-for the full pipeline + format details.
+The SDSS DR17 Cosmic Slime VAC cube ships as three tiered SCFDs (`mcpm-{small,medium,large}.scfd`). The Python + pyslime extract happens once per VAC release; contributors curl the pre-extracted `.npy` tiers from R2 and run `npm run build-mcpm` locally. The runtime fetches `mcpm-<tier>.scfd` per the tier dropdown (`state.sources.tier`). See `docs/superpowers/specs/2026-05-11-mcpm-cosmic-web-volume-design.md`.
 
-#### Cache-Control
+#### Cache-Control + CORS
 
-- **Static shell:** `public/_headers` (Workers Assets reads it automatically). JS/CSS/WGSL/WASM get `max-age=31536000, immutable`; `images/famous/*.webp` get `max-age=86400`.
-- **R2 objects:** set per-object on upload by `tools/deploy/syncR2.ts` (`max-age=86400`).
-
-#### CORS
-
-R2 has a single CORS rule allowing `GET`/`HEAD` from `https://skymap.rulkens.com`, `https://skymap.rulkens.workers.dev`, and `http://localhost:5173`. Re-apply with `npm run r2-cors` (config in `tools/deploy/r2Cors.json`).
-
-#### Why R2 instead of bundling .bin into the Workers deploy
-
-Workers Assets has per-file and per-deploy size caps that the larger tiers (`glade-large.bin` ~130 MB) blow through. R2 has neither, has zero egress fees, and treats large binary blobs as a first-class use case. The split also makes catalog refreshes independent of code deploys — a re-sync to R2 doesn't require a rebuild.
+- **Cache:** shell via `public/_headers` (JS/CSS/WGSL/WASM `max-age=31536000, immutable`; famous WebPs `max-age=86400`); R2 objects per-object on upload by `syncR2.ts` (`max-age=86400`).
+- **CORS:** one R2 rule allows `GET`/`HEAD` from `skymap.rulkens.com`, `skymap.rulkens.workers.dev`, and `localhost:5173`; re-apply with `npm run r2-cors` (`tools/deploy/r2Cors.json`).
 
 ## Catalog gotchas
 
@@ -230,20 +157,20 @@ Workers Assets has per-file and per-deploy size caps that the larger tiers (`gla
 - **GLADE v2.3** has no orientation columns. PGC numbers in col 1-7 are the cross-match key into HyperLEDA.
 - **2MRS** has `b/a` but no PA. The 2MASS XSC (the underlying source) has `sup_phi` — cross-match by 2MASS ID.
 - **SDSS** CSV column set is whatever was in the SkyServer SQL query — check the CSV header before assuming a column exists.
+- **2MRS `objID` in the .bin IS the PGC number** (patched in `buildAllBins` from the GLADE 2MASX→PGC crosswalk); `objID = 0` means no PGC. A synthesized `2MASX J<RA><Dec>` InfoCard name that is absent from `2mrs_table3.dat` is wrong-place coordinates dressed up as an ID.
+- **Blueshifted rows without a measured distance** are placed in their TRUE direction at `|cz|/H0` via the curated `data/seeds/local_volume_distances.seed.json` (registry key `localvolume.distances`). Never let negative-z rows mirror to the antipode.
 
-ReadMes for the upstream catalogs live alongside each catalog (`data/raw/2mrs/J_ApJS_199_26_ReadMe`, `data/raw/glade/VII_281_ReadMe`). Always consult them for byte offsets when extending parsers. The canonical source-of-truth for every raw-data path is `tools/utils/io/rawDataRegistry.ts` — consumers call `rawDataPath('<key>')` rather than hard-coding paths.
+Always consult the upstream ReadMes (alongside each catalog, e.g. `data/raw/2mrs/J_ApJS_199_26_ReadMe`, `data/raw/glade/VII_281_ReadMe`) for byte offsets when extending parsers. Every raw-data path goes through `tools/utils/io/rawDataRegistry.ts` — `rawDataPath('<key>')`, never hard-coded paths.
 
 ## Adding a new raw data source
 
-When a new catalog or dataset gets added to the build pipeline, follow this checklist so it slots into the existing conventions instead of inventing a parallel path-handling style.
+1. **Per-catalog subdir** under `data/raw/<catalog>/` (lowercase, single word). No loose files at `data/raw/` root.
+2. **Register every file** in `tools/utils/io/rawDataRegistry.ts`. Keys are dotted-lowercase `<catalog>.<artifact>` (e.g. `'cf4.table2'`); dynamically-named outputs register the directory as `<catalog>.dir` and consumers `join()` the rest. Fill in `source: 'committed' | 'gitignored'`, a one-line `description`, optional `upstream` URL + `fetcher`.
+3. **Consume via the registry**: `rawDataPath('<catalog>.<artifact>')`, never `resolve('data/raw/...')`. For a relative path (e.g. `wrangler --file`), use `RAW_DATA['<key>'].path`.
+4. **`.gitignore` exception** only for a _non-standard_ committed file. The `/data/**` block already re-includes `data/raw/**/README.md`, `data/raw/**/*.sha256`, `data/raw/fonts/*.ttf`, and `data/seeds/*.json`, so a new catalog's README + checksum sidecar track with a plain `git add`. Add a `!` line (with a comment) only for a file none of those cover.
+5. **Provenance README** at `data/raw/<catalog>/README.md`: upstream URL, columns / byte layout, fetch date, checksum.
 
-1. **Pick a per-catalog subdir** under `data/raw/<catalog>/` (lowercase, single word — e.g. `data/raw/cf4/`, `data/raw/hyperleda/`). Every loose file at `data/raw/` root is wrong — they all live in subdirs now.
-2. **Register every file** in `tools/utils/io/rawDataRegistry.ts`. Keys are dotted-lowercase `<catalog>.<artifact>` (e.g. `'cf4.table2'`, `'cf4.readme'`, `'cf4.sha256'`). For dynamically-named outputs (chunks, tier variants), register the directory as `<catalog>.dir` and let consumers `join(rawDataPath(...), <dynamic>)`. Fill in `source: 'committed' | 'gitignored'`, a one-line `description`, and optional `upstream` URL + `fetcher` script.
-3. **Consume via the registry.** Fetchers / parsers / build scripts call `rawDataPath('<catalog>.<artifact>')` — never `resolve('data/raw/<catalog>/<file>')`. If the consumer needs the path relative (e.g. for `wrangler --file`), use `RAW_DATA['<key>'].path`.
-4. **`.gitignore` exception** only for a _non-standard_ committed file. The `/data/**` block already re-includes the common committed artefacts — `data/raw/**/README.md`, `data/raw/**/*.sha256`, `data/raw/fonts/*.ttf`, and `data/seeds/*.json` — so a new catalog's README and checksum sidecar need **no** gitignore edit and track with a plain `git add` (the functional glob pattern makes the negations work, so no `git add -f`). Add a new `!` line only for a committed file that none of those globs cover, and explain it in a comment.
-5. **Provenance README** at `data/raw/<catalog>/README.md` documenting the upstream URL, the columns / byte layout, the fetch date, and the checksum (if any). Already covered by the `!/data/raw/**/README.md` glob — just `git add` it.
-
-A new fetcher script that mirrors `tools/fetch/fetchHyperLeda.ts` or `tools/fetch/fetch2massXsc.ts` is the easiest reference for "where does the new file get written, and how does the consumer find it." Both of those have already been migrated to the registry.
+Reference fetchers: `tools/fetch/fetchHyperLeda.ts`, `tools/fetch/fetch2massXsc.ts` (both registry-migrated).
 
 ## Renderer quick map
 
@@ -274,4 +201,4 @@ A new fetcher script that mirrors `tools/fetch/fetchHyperLeda.ts` or `tools/fetc
 
 ## Memory
 
-The agent's auto-memory at `~/.claude/projects/-Users-rulkens-Development-js-skymap/memory/` carries cross-session context (project state, user preferences, plan progress). Read `MEMORY.md` for the index. Update memories when project state shifts (plan task completed, new convention adopted, catalog re-fetched, etc.).
+The agent's auto-memory at `~/.claude/projects/-Users-rulkens-Development-js-skymap/memory/` carries cross-session context. Read `MEMORY.md` for the index; update memories whenever project state shifts (plan task completed, convention adopted, catalog re-fetched).

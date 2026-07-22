@@ -44,6 +44,25 @@ fill-bound" should come from a harness run, not intuition. Full reference:
   once read 3–4 ms per-layer; they're ~1 ms real.)
 - **Machine parsing:** `npm run -s perf -- --json` — the `-s` is required or npm's banner
   pollutes stdout.
+- **CRITICAL on Apple Silicon: MERGED slot-sums are ~3× inflated.** TBDR executes passes
+  concurrently, so back-to-back small passes each report the shared retire interval. The tell:
+  adjacent slots with IDENTICAL medians (e.g. hdr→swap / swap·COSMO / swap·NEAR0 all reading
+  3.2–3.3 ms). Per-slot ms are ordinal at best: never additive, never fps-convertible. The
+  honest total is a wall-clock/rAF probe: boot `?perf`, `setStrategy('merged')`, `setPose` to
+  the harness pose, collect 240 rAF deltas, then `collectTimings` and compare. Sustained
+  120 fps bounds real per-frame GPU work at ≤ 8.3 ms, whatever the slot sums claim.
+
+## Off-harness techniques
+
+- **Paired-baseline A/B.** For before/after claims that survive thermal drift: check out the
+  base commit in a scratch worktree (`git worktree add --detach <scratch> <base>`), symlink
+  `node_modules` and `public/data` into it, start a second dev server (Vite auto-increments the
+  port), and alternate runs A-B-A-B across the two URLs instead of measuring all-A then all-B.
+  Remove the scratch worktree after use.
+- **CPU-side frame costs.** Bench against the REAL .bin with a tsx scratchpad script that
+  drives the actual code path (name it `.mts`: the scratchpad has no `package.json`, so a plain
+  `.ts`/`.js` script runs as CJS). "GC churn" diagnoses are usually inline allocation + cache
+  pressure in disguise; measure before optimizing.
 
 ## Gotchas
 
