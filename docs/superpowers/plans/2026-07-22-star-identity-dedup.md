@@ -127,7 +127,7 @@ in `names[]`, `hip` must equal `n` — catches drift between the two hand-author
 A non-null `hip` with no HIP alias is allowed (the Alpha-Centauri enrichment case).
 
 **Steps**
-- [ ] Add failing tests to `famousStarsSeed.test.ts`:
+- [x] Add failing tests to `famousStarsSeed.test.ts`:
   - `throws on a missing hip field` — delete `hip` key (as the `gaiaDr3` test at `:36`
     does), expect `/hip/`.
   - `accepts hip: null` — a Sun-style entry, `validateFamousStarEntry(e).hip` is `null`.
@@ -136,20 +136,20 @@ A non-null `hip` with no HIP alias is allowed (the Alpha-Centauri enrichment cas
   - `throws when hip disagrees with a HIP alias` — `names: ['X','HIP 100']`, `hip: 200`
     throws `/hip/`; `hip: 100` passes.
   - `allows a non-null hip with no HIP alias` — `names: ['X']`, `hip: 71683` passes.
-- [ ] Run `npm test -- famousStarsSeed` → red.
-- [ ] Add `hip` to `FamousStarEntry` + `baseEntry` fixture; implement the validation
+- [x] Run `npm test -- famousStarsSeed` → red.
+- [x] Add `hip` to `FamousStarEntry` + `baseEntry` fixture; implement the validation
   branch (own-property check + null-or-positive-int + alias consistency). A helper to
   extract the HIP integer from a `"HIP n"` alias belongs in this module (one small pure
   fn); reuse it in the consistency check.
-- [ ] Author `hip` into all 119 seed entries: derive from the `"HIP n"` alias where one
+- [x] Author `hip` into all 119 seed entries: derive from the `"HIP n"` alias where one
   exists, else `null`. Additionally set the real HIP on the aliasless saturated bright
   stars that render as duplicates today (at minimum `alpha-centauri` → 71683). Sun →
   `null`.
-- [ ] Extend the real-seed block (`famousStarsSeed.test.ts:142-152`): every parsed entry
+- [x] Extend the real-seed block (`famousStarsSeed.test.ts:142-152`): every parsed entry
   has a `hip` own-property; the Sun's is `null`; and for every entry whose `names[]`
   contains a `"HIP n"`, `hip === n`.
-- [ ] Run `npm test -- famousStarsSeed` → green.
-- [ ] Commit.
+- [x] Run `npm test -- famousStarsSeed` → green.
+- [x] Commit.
 
 ## Task 2 — Generator: emit `FAMOUS_STAR_HIP_IDS`
 
@@ -186,22 +186,22 @@ pub const FAMOUS_STAR_HIP_IDS: [u32; M] = [ /* hip, // id */ ];
 comment, in seed order. `M` = count of non-null-`hip` entries.
 
 **Steps**
-- [ ] Add failing test to `famousStarsSeed.test.ts`: `selectHipEntries drops null-hip
+- [x] Add failing test to `famousStarsSeed.test.ts`: `selectHipEntries drops null-hip
   entries` — a two-entry input (one `hip: 100`, one `hip: null`) returns length 1 with
   the narrowed `hip: number`.
-- [ ] Add failing test to `buildFamousStars.test.ts`: give `FIXTURE` `hip` values
+- [x] Add failing test to `buildFamousStars.test.ts`: give `FIXTURE` `hip` values
   (sirius 32349, achernar 7588, proxima `null` — proxima already demonstrates the
   gaiaDr3-null exclusion at `:71`). New test `emits a u32 array of the non-null hip ids`:
   `seedToRustConst(FIXTURE)` contains `pub const FAMOUS_STAR_HIP_IDS: [u32; 2] = [`,
   `32349, // sirius`, `7588, // achernar`, and does not mention proxima in the hip array.
-- [ ] Run `npm test -- famousStarsSeed buildFamousStars` → red.
-- [ ] Implement `selectHipEntries` (filter `hip !== null`, narrow the type — clone the
+- [x] Run `npm test -- famousStarsSeed buildFamousStars` → red.
+- [x] Implement `selectHipEntries` (filter `hip !== null`, narrow the type — clone the
   `selectDedupEntries` shape). Extend `seedToRustConst` to append the HIP array via
   `selectHipEntries`; update the banner.
-- [ ] Run `npm test -- famousStarsSeed buildFamousStars` → green.
-- [ ] Run `npm run build-famous-stars`; confirm `famous_ids.generated.rs` now carries
+- [x] Run `npm test -- famousStarsSeed buildFamousStars` → green.
+- [x] Run `npm run build-famous-stars`; confirm `famous_ids.generated.rs` now carries
   both consts. Commit the regenerated `.rs` alongside the code + seed.
-- [ ] Commit.
+- [x] Commit.
 
 ## Task 3 — Rust: `StarIds` joint, `ids` parallel to `stars`
 
@@ -245,7 +245,7 @@ on the rare many-HIP→one-source collision — note it in a comment).
 `retain` (`:258-264`) must drop from `stars` and `ids` in lockstep.
 
 **Steps**
-- [ ] Add failing tests to a new `#[cfg(test)] mod tests` in `population.rs` (pattern:
+- [x] Add failing tests to a new `#[cfg(test)] mod tests` in `population.rs` (pattern:
   `parse.rs:253`). Synthetic inputs (fabricate `GaiaMainRow` / `GcnsRow` / `Hip2Row`
   literals with source_ids and HIPs **not** present in `FAMOUS_STAR_GAIA_IDS` /
   `FAMOUS_STAR_HIP_IDS`, so nothing is subtracted):
@@ -257,11 +257,11 @@ on the rare many-HIP→one-source collision — note it in a comment).
   - `distance cap drops a star and its ids in lockstep` — add a star beyond
     `MAX_STAR_DISTANCE_PC` (`:51`); assert it is absent from both `stars` and `ids`, the
     two vecs remain equal length, and `drops.far_distance == 1`.
-- [ ] Run `cargo test --manifest-path tools/stars-rs/Cargo.toml` → red.
-- [ ] Add `StarIds`, `Population.ids`, `source_id_to_hip`; thread the ids through the
+- [x] Run `cargo test --manifest-path tools/stars-rs/Cargo.toml` → red.
+- [x] Add `StarIds`, `Population.ids`, `source_id_to_hip`; thread the ids through the
   three pushes and the cap. Match the module's didactic comment style.
-- [ ] Run `cargo test --manifest-path tools/stars-rs/Cargo.toml` → green.
-- [ ] Commit.
+- [x] Run `cargo test --manifest-path tools/stars-rs/Cargo.toml` → green.
+- [x] Commit.
 
 ## Task 4 — Rust: famous subtraction = Gaia ∪ HIP
 
@@ -295,19 +295,19 @@ fn famous_gaia_subtraction(
   `famous_subtracted`.
 
 **Steps**
-- [ ] Add failing tests to `population.rs` `mod tests`:
+- [x] Add failing tests to `population.rs` `mod tests`:
   - `famous_gaia_subtraction unions hip-resolved ids` — `famous_gaia = {}`,
     `famous_hip = {5}`, `hip_to_source_id = {5→999}`; result contains 999. A famous HIP
     with no crossmatch entry contributes nothing (result excludes it).
   - `hip-only famous star is subtracted from the bin` — pick a real HIP from
     `FAMOUS_STAR_HIP_IDS`; a synthetic bright Hipparcos row with that HIP is **not**
     emitted (absent from `pop.stars`), and `drops.famous_subtracted` counts it.
-- [ ] Run `cargo test --manifest-path tools/stars-rs/Cargo.toml` → red.
-- [ ] Build `famous_hip: FxHashSet<u32>` from `FAMOUS_STAR_HIP_IDS`; implement
+- [x] Run `cargo test --manifest-path tools/stars-rs/Cargo.toml` → red.
+- [x] Build `famous_hip: FxHashSet<u32>` from `FAMOUS_STAR_HIP_IDS`; implement
   `famous_gaia_subtraction`; replace the two Gaia/GCNS famous tests with a union
   membership test; add the `row.hip` check in the Hipparcos loop.
-- [ ] Run `cargo test --manifest-path tools/stars-rs/Cargo.toml` → green.
-- [ ] Commit.
+- [x] Run `cargo test --manifest-path tools/stars-rs/Cargo.toml` → green.
+- [x] Commit.
 
 ## Task 5 — Rust: crossmatch-gap positional fallback + `DropCounts` field
 
@@ -359,7 +359,7 @@ fn positional_gap_subtraction(
   rows increment `positional_gap_subtracted`, NOT `famous_subtracted`.
 
 **Steps**
-- [ ] Add failing tests to `population.rs` `mod tests`:
+- [x] Add failing tests to `population.rs` `mod tests`:
   - `positional_gap_subtraction matches a bright Gaia twin within radius and mag window`
     — one unmatched bright Hipparcos star; a bright Gaia row ~10 arcsec away with
     `|Hp − G| < window` → result contains that source_id.
@@ -371,13 +371,13 @@ fn positional_gap_subtraction(
     famous sets). Assert the Gaia row is absent from `pop.stars`, the Hipparcos version
     is present, `drops.positional_gap_subtracted == 1`, and the star appears exactly
     once.
-- [ ] Run `cargo test --manifest-path tools/stars-rs/Cargo.toml` → red.
-- [ ] Add the consts + `DropCounts` field; implement `positional_gap_subtraction`
+- [x] Run `cargo test --manifest-path tools/stars-rs/Cargo.toml` → red.
+- [x] Add the consts + `DropCounts` field; implement `positional_gap_subtraction`
   (prefilter Gaia to `g_mag <= GAP_MATCH_MAX_GAIA_MAG` once, brute-force nearest within
   that small set); union the result into the Gaia/GCNS drop test with the new counter;
   add the field to the `main.rs` summary line.
-- [ ] Run `cargo test --manifest-path tools/stars-rs/Cargo.toml` → green.
-- [ ] Commit.
+- [x] Run `cargo test --manifest-path tools/stars-rs/Cargo.toml` → green.
+- [x] Commit.
 
 ---
 

@@ -109,12 +109,14 @@ fn main() {
     drop(gaia);
     eprintln!(
         "population ({} stars): drops noBailerJones {}, hipNonPositivePlx {}, \
-         famousSubtracted {}, hipGaiaSubtracted {}, farDistance {}; clamps absMag {}, colorIdx {}  [{:.1}s]",
+         famousSubtracted {}, hipGaiaSubtracted {}, positionalGapSubtracted {}, farDistance {}; \
+         clamps absMag {}, colorIdx {}  [{:.1}s]",
         pop.stars.len(),
         pop.drops.no_bailer_jones,
         pop.drops.hip_non_positive_plx,
         pop.drops.famous_subtracted,
         pop.drops.hip_gaia_subtracted,
+        pop.drops.positional_gap_subtracted,
         pop.drops.far_distance,
         pop.clamps.abs_mag,
         pop.clamps.color_idx,
