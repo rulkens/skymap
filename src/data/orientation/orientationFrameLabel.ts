@@ -14,13 +14,13 @@ import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId'
 export function orientationFrameLabel(frame: OrientationFrameId): string {
   switch (frame) {
     case 'ecliptic':
-      return 'Ecliptic (solar system plane)';
+      return 'Ecliptic (solar system)';
     case 'equatorial':
       return 'Equatorial (Polaris up)';
     case 'galactic':
-      return 'Galactic (Milky Way plane)';
+      return 'Galactic (Milky Way)';
     case 'supergalactic':
-      return 'Supergalactic (supercluster plane)';
+      return 'Supergalactic (superclusters)';
     default: {
       const exhaustive: never = frame;
       return exhaustive;
