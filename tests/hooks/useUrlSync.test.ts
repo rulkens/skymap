@@ -41,6 +41,7 @@ import { createAppStore } from '../../src/store/createAppStore';
 import { buildInitialSettings } from '../../src/state/settings/initialState';
 import { requestFocus } from '../../src/state/selection/requestFocus';
 import { clearSelection } from '../../src/state/selection/selectionSlice';
+import { setOrientation } from '../../src/state/settings/settingsSlice';
 import timeReducer, { setSimDays, pause } from '../../src/state/time/timeSlice';
 import { deriveSimDays } from '../../src/utils/time/deriveSimDays';
 import { unixMsToJulianDays } from '../../src/utils/time/unixMsToJulianDays';
@@ -76,11 +77,23 @@ const KNOWN_JD = unixMsToJulianDays(KNOWN_UNIX_MS);
 const KNOWN_ISO = new Date(KNOWN_UNIX_MS).toISOString(); // 2026-11-03T18:00:00.000Z
 
 function manualTime(simDays = KNOWN_JD): TimeState {
-  return { mode: 'manual', anchor: { simDays, realMs: 1000 }, rateIndex: 3, direction: 1, paused: false };
+  return {
+    mode: 'manual',
+    anchor: { simDays, realMs: 1000 },
+    rateIndex: 3,
+    direction: 1,
+    paused: false,
+  };
 }
 
 function liveTime(): TimeState {
-  return { mode: 'live', anchor: { simDays: CONST_J2000, realMs: 0 }, rateIndex: 3, direction: 1, paused: false };
+  return {
+    mode: 'live',
+    anchor: { simDays: CONST_J2000, realMs: 0 },
+    rateIndex: 3,
+    direction: 1,
+    paused: false,
+  };
 }
 
 // A dispatch that records the actions it receives — lets a source's `read` be
@@ -95,18 +108,23 @@ function collectingDispatch(): { dispatch: AppDispatch; actions: UnknownAction[]
 }
 
 const tSource = HASH_PARAM_SOURCES.find((s) => s.key === 't')!;
+const orientationSource = HASH_PARAM_SOURCES.find((s) => s.key === 'orientation')!;
 
 // ── computeDesiredHash ────────────────────────────────────────────────────
 
 describe('computeDesiredHash (unified)', () => {
   it('returns empty body when focus is null', () => {
-    const out = computeDesiredHash({ focused: null, currentHash: '' });
+    const out = computeDesiredHash({ focused: null, orientation: 'ecliptic', currentHash: '' });
     expect(out.desiredHashBody).toBe('');
     expect(out.matches).toBe(true);
   });
 
   it('returns focus=<id> when focused is a galaxy', () => {
-    const out = computeDesiredHash({ focused: makeGalaxy(), currentHash: '' });
+    const out = computeDesiredHash({
+      focused: makeGalaxy(),
+      orientation: 'ecliptic',
+      currentHash: '',
+    });
     expect(out.desiredHashBody).toMatch(/^focus=/);
     expect(out.matches).toBe(false);
   });
@@ -114,6 +132,7 @@ describe('computeDesiredHash (unified)', () => {
   it('writes focus=<id> when focused is a structure', () => {
     const out = computeDesiredHash({
       focused: makeStructure('cluster-virgo-m87'),
+      orientation: 'ecliptic',
       currentHash: '',
     });
     expect(out.desiredHashBody).toBe('focus=cluster-virgo-m87');
@@ -123,13 +142,14 @@ describe('computeDesiredHash (unified)', () => {
   it('short-circuits when currentHash already matches a structure body', () => {
     const out = computeDesiredHash({
       focused: makeStructure('cluster-virgo-m87'),
+      orientation: 'ecliptic',
       currentHash: '#focus=cluster-virgo-m87',
     });
     expect(out.matches).toBe(true);
   });
 
   it('short-circuits when currentHash already matches the empty body', () => {
-    const out = computeDesiredHash({ focused: null, currentHash: '' });
+    const out = computeDesiredHash({ focused: null, orientation: 'ecliptic', currentHash: '' });
     expect(out.matches).toBe(true);
   });
 
@@ -139,6 +159,7 @@ describe('computeDesiredHash (unified)', () => {
     // proof the seam preserves the on-URL shape for the one existing source.
     const out = computeDesiredHash({
       focused: makeStructure('cluster-virgo-m87'),
+      orientation: 'ecliptic',
       currentHash: '',
     });
     expect(out.desiredHashBody).toBe('focus=cluster-virgo-m87');
@@ -248,17 +269,27 @@ describe('useUrlSync hook integration', () => {
 describe('t param source — compose (write)', () => {
   it('emits t=<ISO> in manual mode', () => {
     // focus is null, so the body is the `t` param alone.
-    const out = computeDesiredHash({ focused: null, time: manualTime(), currentHash: '' });
+    const out = computeDesiredHash({
+      focused: null,
+      time: manualTime(),
+      orientation: 'ecliptic',
+      currentHash: '',
+    });
     expect(out.desiredHashBody).toBe(`t=${KNOWN_ISO}`);
   });
 
   it('emits nothing in live mode', () => {
-    const out = computeDesiredHash({ focused: null, time: liveTime(), currentHash: '' });
+    const out = computeDesiredHash({
+      focused: null,
+      time: liveTime(),
+      orientation: 'ecliptic',
+      currentHash: '',
+    });
     expect(out.desiredHashBody).toBe('');
   });
 
   it('emits nothing when no time is supplied (focus-only caller)', () => {
-    const out = computeDesiredHash({ focused: null, currentHash: '' });
+    const out = computeDesiredHash({ focused: null, orientation: 'ecliptic', currentHash: '' });
     expect(out.desiredHashBody).toBe('');
   });
 });
@@ -310,6 +341,7 @@ describe('focus + t on the &-seam (round-trip)', () => {
     const body = computeDesiredHash({
       focused: makeStructure('cluster-virgo-m87'),
       time: manualTime(),
+      orientation: 'ecliptic',
       currentHash: '',
     }).desiredHashBody;
     expect(body).toBe(`focus=cluster-virgo-m87&t=${KNOWN_ISO}`);
@@ -324,6 +356,7 @@ describe('focus + t on the &-seam (round-trip)', () => {
     const body = computeDesiredHash({
       focused: makeStructure('cluster-virgo-m87'),
       time: liveTime(),
+      orientation: 'ecliptic',
       currentHash: '',
     }).desiredHashBody;
     expect(body).toBe('focus=cluster-virgo-m87');
@@ -334,13 +367,61 @@ describe('focus + t on the &-seam (round-trip)', () => {
   });
 
   it('t alone: no focus ⇒ only the clock is restored', () => {
-    const body = computeDesiredHash({ focused: null, time: manualTime(), currentHash: '' })
-      .desiredHashBody;
+    const body = computeDesiredHash({
+      focused: null,
+      time: manualTime(),
+      orientation: 'ecliptic',
+      currentHash: '',
+    }).desiredHashBody;
     expect(body).toBe(`t=${KNOWN_ISO}`);
 
     const actions = readAll(body);
     // focus is absent on the initial pass, so no selection dispatch fires.
     expect(actions).not.toContainEqual(clearSelection());
     expect(actions.map((a) => a.type)).toEqual(['time/setSimDays', 'time/pause']);
+  });
+});
+
+// ── The `orientation` (camera frame) param source ───────────────────────────
+
+describe('orientation param source — compose (write)', () => {
+  it('writes null at the ecliptic default and the frame id otherwise', () => {
+    // A view preference, not a target: the default composes no bytes (bare URL =
+    // default frame), and only a non-default frame surfaces on the hash.
+    expect(
+      orientationSource.write({ focused: null, orientation: 'ecliptic', currentHash: '' }),
+    ).toBe(null);
+    expect(
+      orientationSource.write({ focused: null, orientation: 'galactic', currentHash: '' }),
+    ).toBe('galactic');
+  });
+
+  it('a non-default frame round-trips through compose/parse', () => {
+    const body = computeDesiredHash({
+      focused: null,
+      orientation: 'galactic',
+      currentHash: '',
+    }).desiredHashBody;
+    expect(body).toBe('orientation=galactic');
+    expect(parseHashParams(body).get('orientation')).toBe('galactic');
+  });
+});
+
+describe('orientation param source — parse (read)', () => {
+  it('snaps the frame via setOrientation and dispatches no frameTween', () => {
+    // The read SNAPS the committed frame so a share link reproduces the
+    // composition with no slerp: exactly one setOrientation dispatch, and no
+    // frame-tween action.
+    const { dispatch, actions } = collectingDispatch();
+    orientationSource.read({ value: 'galactic', isInitial: true, dispatch });
+    expect(actions).toEqual([setOrientation('galactic')]);
+  });
+
+  it('ignores an absent or junk value (hand-typed hash, bare URL)', () => {
+    const { dispatch, actions } = collectingDispatch();
+    orientationSource.read({ value: undefined, isInitial: true, dispatch });
+    orientationSource.read({ value: '', isInitial: false, dispatch });
+    orientationSource.read({ value: 'polaris', isInitial: false, dispatch });
+    expect(actions).toHaveLength(0);
   });
 });
