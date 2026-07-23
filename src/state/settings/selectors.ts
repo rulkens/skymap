@@ -79,11 +79,11 @@ export const selectBrightness = (state: RootState): number =>
 export const selectDepthFade = (state: RootState): boolean =>
   selectSettings(state).galaxyCatalogs.depthFade;
 
-export const selectHighlightFallback = (state: RootState): boolean =>
-  selectSettings(state).galaxyCatalogs.highlightFallback;
+export const selectHighlightEstimatedOrientation = (state: RootState): boolean =>
+  selectSettings(state).galaxyCatalogs.highlightEstimatedOrientation;
 
-export const selectRealOnly = (state: RootState): boolean =>
-  selectSettings(state).galaxyCatalogs.realOnly;
+export const selectOnlyMeasuredOrientation = (state: RootState): boolean =>
+  selectSettings(state).galaxyCatalogs.onlyMeasuredOrientation;
 
 export const selectGalaxyCatalogItems = (
   state: RootState,

@@ -76,11 +76,11 @@ const settingsSlice = createSlice({
     setDepthFade: (settings, action: PayloadAction<boolean>) => {
       settings.galaxyCatalogs.depthFade = action.payload;
     },
-    setHighlightFallback: (settings, action: PayloadAction<boolean>) => {
-      settings.galaxyCatalogs.highlightFallback = action.payload;
+    setHighlightEstimatedOrientation: (settings, action: PayloadAction<boolean>) => {
+      settings.galaxyCatalogs.highlightEstimatedOrientation = action.payload;
     },
-    setRealOnly: (settings, action: PayloadAction<boolean>) => {
-      settings.galaxyCatalogs.realOnly = action.payload;
+    setOnlyMeasuredOrientation: (settings, action: PayloadAction<boolean>) => {
+      settings.galaxyCatalogs.onlyMeasuredOrientation = action.payload;
     },
     setGalaxyCatalogVisible: (
       settings,
@@ -437,8 +437,8 @@ export const {
   setGalaxyCatalogSize,
   setBrightness,
   setDepthFade,
-  setHighlightFallback,
-  setRealOnly,
+  setHighlightEstimatedOrientation,
+  setOnlyMeasuredOrientation,
   setGalaxyCatalogVisible,
   setGalaxyCatalogLabelEnabled,
   setExposure,

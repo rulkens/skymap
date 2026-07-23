@@ -155,8 +155,8 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  *   bytes 92..95  : brightness        f32
  *   bytes 96..107 : camPosWorld       vec3<f32>    (3 floats)        } 16 bytes (one vec4 slot)
  *   bytes 108..111: pxPerRad          f32          (1 float)         }
- *   bytes 112..115: highlightFallback u32                            }
- *   bytes 116..119: realOnlyMode      u32                            } 16 bytes (one vec4 slot)
+ *   bytes 112..115: highlightEstimatedOrientation u32                }
+ *   bytes 116..119: onlyMeasuredOrientation       u32                } 16 bytes (one vec4 slot)
  *   bytes 120..123: depthFadeEnabled  u32          (UI toggle)
  *   bytes 124..127: _pad4             u32          (written as 0)
  *   bytes 128..131: biasMode          u32          (Malmquist mode)  }

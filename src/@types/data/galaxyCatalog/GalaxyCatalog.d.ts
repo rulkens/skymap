@@ -200,4 +200,28 @@ export type GalaxyCatalog = {
    * `milliquasParentSurveyPrefix(byte)` returns `null`.
    */
   parentSurveyByte: Uint8Array;
+
+  /**
+   * Per-galaxy "orientation is a deterministic fallback" flag — length ===
+   * count. 1 means the (axisRatio, positionAngleDeg) pair was synthesised by
+   * `fallbackOrientation(objID, ra, dec)` because the source catalog had no
+   * measured axis-ratio / position-angle; 0 means the pair is a real
+   * measurement (or a sentinel like NaN for synthetic clouds).
+   *
+   * This is the AUTHORITATIVE provenance signal, stamped at build time in
+   * `recordsToCloud` where the real-vs-fallback decision is actually made,
+   * and persisted verbatim through the .bin. Consumers (the sign-bit pack in
+   * `buildPointInterleavedBuffer`, the InfoCard's "measured vs estimated"
+   * chip via `extractGalaxyRow`) read it directly.
+   *
+   * Why a persisted byte rather than recomputing? The old load side inferred
+   * the flag by re-hashing `fallbackOrientation` from the baked f32 cartesian
+   * position and comparing floats for exact equality. That round-trip is lossy
+   * — the position is stored as f32, `cartesianToRaDec` re-derives (ra, dec),
+   * and the hash buckets `ra` at `Math.round(ra * 1e5)` — so ~10% of true
+   * fallback rows failed the equality check and were misclassified as real.
+   * One byte per row makes the build-side truth survive to the load side
+   * exactly, no reconstruction.
+   */
+  orientationIsFallback: Uint8Array;
 };

@@ -340,8 +340,8 @@ function makeState(
         sizePx: 2.5,
         brightness: 1.0,
         depthFade: true,
-        highlightFallback: true,
-        realOnly: false,
+        highlightEstimatedOrientation: true,
+        onlyMeasuredOrientation: false,
         // All galaxy catalogs enabled (a uniform test scenario; the real boot
         // seed derives `enabled` from each registry entry's `visible`, so
         // desiDeep boots off) — galaxy catalog demand reads these `enabled`

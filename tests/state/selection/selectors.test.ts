@@ -65,6 +65,7 @@ const galaxyRow: GalaxyRow = {
   diameterKpc: 18,
   axisRatio: 0.7,
   positionAngleDeg: 45,
+  orientationIsFallback: false,
   classByte: 3,
   parentSurveyByte: 0,
 };

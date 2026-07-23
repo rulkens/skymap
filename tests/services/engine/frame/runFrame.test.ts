@@ -124,8 +124,8 @@ function makeState(): EngineState {
         sizePx: 2,
         brightness: 0.5,
         depthFade: false,
-        highlightFallback: false,
-        realOnly: false,
+        highlightEstimatedOrientation: false,
+        onlyMeasuredOrientation: false,
         // deriveSourceMasks (called at the top of runFrame, before the
         // renderer-null bail-out) iterates EVERY GALAXY_CATALOG_SOURCES code and reads
         // items[id].enabled, so a partial record would throw on the first

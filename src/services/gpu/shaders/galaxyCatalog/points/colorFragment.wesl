@@ -62,7 +62,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // (intensity scalar, Schechter, angular reweight, depth fade,
   // procedural-disk crossfade-out, magenta highlight) are folded into
   // 'in.shaded.rgb' by the vertex stage — see vertex.wesl. Galaxies
-  // gated by realOnlyMode are culled at the vertex stage too, so this
+  // gated by onlyMeasuredOrientation are culled at the vertex stage too, so this
   // fragment never sees them.
   var alpha = exp(-r2 * 4.0);
   let rgb = in.shaded.rgb;

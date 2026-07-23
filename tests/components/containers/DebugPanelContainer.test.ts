@@ -7,7 +7,7 @@
  *   - reads `showPickBuffer` out of the store and reflects it on the matching checkbox;
  *   - dispatches `setShowPickBuffer` when the checkbox is toggled;
  *   - routes a RenderTogglesSection checkbox click through `onTogglePass` → `setPassDisabled`;
- *   - dispatches `setRealOnly` when the data-quality toggle fires.
+ *   - dispatches `setOnlyMeasuredOrientation` when the galaxy-orientation toggle fires.
  *
  * Stub engine props — a `new Map()` for `slots`, a minimal `timingService` stub
  * (enabled=false, all methods are no-ops), and a `passNames` array — satisfy the
@@ -26,7 +26,7 @@ import { createAppStore } from '../../../src/store/createAppStore';
 import {
   selectShowPickBuffer,
   selectDisabledPasses,
-  selectRealOnly,
+  selectOnlyMeasuredOrientation,
 } from '../../../src/state/settings/selectors';
 import { setShowPickBuffer } from '../../../src/state/settings/settingsSlice';
 import { startClip } from '../../../src/state/camera/clipActions';
@@ -119,17 +119,17 @@ describe('DebugPanelContainer', () => {
     expect(selectDisabledPasses(store.getState())['point-sprites']).toBe(true);
   });
 
-  it('dispatches setRealOnly on the data-quality toggle', () => {
+  it('dispatches setOnlyMeasuredOrientation on the galaxy-orientation toggle', () => {
     const { store } = createAppStore();
-    expect(selectRealOnly(store.getState())).toBe(false);
+    expect(selectOnlyMeasuredOrientation(store.getState())).toBe(false);
     const { container } = renderContainer(store);
-    // DataQualitySection renders a "Show only real" checkbox label.
+    // GalaxyOrientationSection renders an "Only measured orientation" checkbox label.
     const labels = Array.from(container.querySelectorAll('label'));
-    const realLabel = labels.find((l) => l.textContent?.includes('Show only real'));
+    const realLabel = labels.find((l) => l.textContent?.includes('Only measured orientation'));
     expect(realLabel).not.toBeUndefined();
     const box = realLabel!.querySelector<HTMLInputElement>('input[type=checkbox]')!;
     fireEvent.click(box);
-    expect(selectRealOnly(store.getState())).toBe(true);
+    expect(selectOnlyMeasuredOrientation(store.getState())).toBe(true);
   });
 
   it('dispatches startClip with the clip id on a clip-play button click', () => {

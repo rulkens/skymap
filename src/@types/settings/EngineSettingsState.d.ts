@@ -88,8 +88,8 @@ export type EngineSettingsState = {
     sizePx: number;
     brightness: number;
     depthFade: boolean;
-    highlightFallback: boolean;
-    realOnly: boolean;
+    highlightEstimatedOrientation: boolean;
+    onlyMeasuredOrientation: boolean;
     items: Record<GalaxyCatalogId, GalaxyCatalogItemSettings>;
   };
 

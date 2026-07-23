@@ -51,8 +51,8 @@ const SETTINGS: PointDrawSettings = {
   visibleSourceMask: 0b11111,
   camPosWorld: [100, 200, 300],
   pxPerRad: 600,
-  highlightFallback: true,
-  realOnlyMode: false,
+  highlightEstimatedOrientation: true,
+  onlyMeasuredOrientation: false,
   biasMode: 2,
   absMagLimit: -19.5,
   depthFadeEnabled: true,
@@ -166,16 +166,16 @@ describe('packPointUniforms — camPosWorld + pxPerRad (bytes 96..111)', () => {
 });
 
 describe('packPointUniforms — flags (bytes 112..127)', () => {
-  it('writes highlightFallback as 1 at byte 112 (u32 index 28)', () => {
+  it('writes highlightEstimatedOrientation as 1 at byte 112 (u32 index 28)', () => {
     const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
     const u32 = new Uint32Array(buf);
-    expect(u32[28]).toBe(1); // highlightFallback: true
+    expect(u32[28]).toBe(1); // highlightEstimatedOrientation: true
   });
 
-  it('writes realOnlyMode as 0 at byte 116 (u32 index 29)', () => {
+  it('writes onlyMeasuredOrientation as 0 at byte 116 (u32 index 29)', () => {
     const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
     const u32 = new Uint32Array(buf);
-    expect(u32[29]).toBe(0); // realOnlyMode: false
+    expect(u32[29]).toBe(0); // onlyMeasuredOrientation: false
   });
 
   it('writes depthFadeEnabled as 1 at byte 120 (u32 index 30)', () => {

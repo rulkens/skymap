@@ -38,6 +38,7 @@ function makeCatalog(positions: ReadonlyArray<readonly [number, number, number]>
     classByte: zb,
     parentSurveyByte: zb,
     spectroscopicZ: z,
+    orientationIsFallback: zb,
   };
 }
 

@@ -68,6 +68,7 @@ function makeCloud(objId: bigint, index: number, count: number): GalaxyCatalog {
     positionAngleDeg: new Float32Array(count).fill(0),
     classByte: new Uint8Array(count),
     parentSurveyByte: new Uint8Array(count),
+    orientationIsFallback: new Uint8Array(count),
   } as unknown as GalaxyCatalog;
 }
 
@@ -209,6 +210,7 @@ describe('watchTierSaga', () => {
         positionAngleDeg: new Float32Array(count).fill(0),
         classByte: new Uint8Array(count),
         parentSurveyByte: new Uint8Array(count),
+        orientationIsFallback: new Uint8Array(count),
       } as unknown as GalaxyCatalog;
     }
 

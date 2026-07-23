@@ -49,6 +49,7 @@ function makeCloud(objId: bigint): GalaxyCatalog {
     positionAngleDeg: new Float32Array([0]),
     classByte: new Uint8Array([0]),
     parentSurveyByte: new Uint8Array([0]),
+    orientationIsFallback: new Uint8Array([0]),
   } as unknown as GalaxyCatalog;
 }
 

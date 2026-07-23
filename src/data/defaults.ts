@@ -182,11 +182,11 @@ export const DEFAULT_AUTO_ROTATE = false;
  */
 export const DEFAULT_GALAXY_TEXTURES_ENABLED = true;
 
-/** "Highlight fallback orientation" magenta tint defaults OFF (debug-tinged). */
-export const DEFAULT_HIGHLIGHT_FALLBACK = false;
+/** "Highlight estimated orientation" magenta tint defaults OFF (debug-tinged). */
+export const DEFAULT_HIGHLIGHT_ESTIMATED_ORIENTATION = false;
 
-/** "Show only galaxies with real (b/a, PA) photometry" defaults OFF. */
-export const DEFAULT_REAL_ONLY_MODE = false;
+/** "Show only galaxies with measured (b/a, PA) photometry" defaults OFF. */
+export const DEFAULT_ONLY_MEASURED_ORIENTATION = false;
 
 /**
  * Camera-distance depth fade defaults ON.  Without it, additive billboards

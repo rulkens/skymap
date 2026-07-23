@@ -33,9 +33,9 @@ import {
   DEFAULT_FAMOUS_STARS_ENABLED,
   DEFAULT_MILKY_WAY_ENABLED,
   DEFAULT_MILKY_WAY_LABEL_ENABLED,
-  DEFAULT_HIGHLIGHT_FALLBACK,
+  DEFAULT_HIGHLIGHT_ESTIMATED_ORIENTATION,
   DEFAULT_POINT_SIZE_PX,
-  DEFAULT_REAL_ONLY_MODE,
+  DEFAULT_ONLY_MEASURED_ORIENTATION,
   DEFAULT_STAR_BRIGHTNESS,
   DEFAULT_STAR_GLOW_OVERLAP,
   DEFAULT_STAR_EXPOSURE_NEAR_X,
@@ -97,8 +97,8 @@ export function buildInitialSettings(): EngineSettingsState {
       sizePx: DEFAULT_POINT_SIZE_PX,
       brightness: DEFAULT_BRIGHTNESS,
       depthFade: DEFAULT_DEPTH_FADE_ENABLED,
-      highlightFallback: DEFAULT_HIGHLIGHT_FALLBACK,
-      realOnly: DEFAULT_REAL_ONLY_MODE,
+      highlightEstimatedOrientation: DEFAULT_HIGHLIGHT_ESTIMATED_ORIENTATION,
+      onlyMeasuredOrientation: DEFAULT_ONLY_MEASURED_ORIENTATION,
       items: Object.fromEntries(
         SOURCE_ENTRIES.filter((e) => e.type === 'galaxyCatalog').map((e) => [
           e.id,

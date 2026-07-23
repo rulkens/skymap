@@ -1,13 +1,14 @@
 /**
- * Format-level tests for the v6 galaxy-catalog binary.
+ * Format-level tests for the v7 galaxy-catalog binary.
  *
  * Two contracts under test:
  *
  *   1. encode → decode is a faithful round trip for every field —
- *      the v6 `spectroscopicZ` float, the v5 uint8 slots (`classByte`,
- *      `parentSurveyByte`), the v4 `diameterKpc`, the v3 orientation
- *      pair, the five magnitude bands, and full 64-bit `objID`
- *      precision (no silent coercion through `number`).
+ *      the v7 `orientationIsFallback` byte, the v6 `spectroscopicZ`
+ *      float, the v5 uint8 slots (`classByte`, `parentSurveyByte`),
+ *      the v4 `diameterKpc`, the v3 orientation pair, the five
+ *      magnitude bands, and full 64-bit `objID` precision (no silent
+ *      coercion through `number`).
  *   2. Any foreign on-disk shape (bad magic, or any earlier format
  *      version) is rejected with the documented "regenerate" error —
  *      the format-version gate is the single source of truth for "do
@@ -37,6 +38,7 @@ function makeCatalog(count: number): GalaxyCatalog {
     classByte: new Uint8Array(count),
     parentSurveyByte: new Uint8Array(count),
     spectroscopicZ: new Float32Array(count),
+    orientationIsFallback: new Uint8Array(count),
   };
 }
 
@@ -98,6 +100,24 @@ describe('galaxyCatalogFormat — v5/v6 fields', () => {
 
     expect(Array.from(out.classByte)).toEqual([0, 1, 6]);
     expect(Array.from(out.parentSurveyByte)).toEqual([0, 1, 4]);
+  });
+
+  it('round-trips the persisted orientationIsFallback flag per record', () => {
+    // The authoritative build-side provenance byte: 1 = deterministic
+    // fallback orientation, 0 = real measurement.  Encode/decode must carry
+    // it verbatim so the load side never re-hashes position to guess it.
+    const cat = makeCatalog(4);
+    cat.orientationIsFallback.set([1, 0, 1, 0]);
+
+    const out = decodeGalaxyCatalog(encodeGalaxyCatalog(cat));
+
+    expect(Array.from(out.orientationIsFallback)).toEqual([1, 0, 1, 0]);
+  });
+
+  it('throws when orientationIsFallback length mismatches count', () => {
+    const cat = makeCatalog(2);
+    cat.orientationIsFallback = new Uint8Array([1]); // one short of count
+    expect(() => encodeGalaxyCatalog(cat)).toThrow(/orientationIsFallback length mismatch/);
   });
 
   it('round-trips spectroscopicZ for every record including negatives and NaN', () => {
@@ -174,21 +194,21 @@ describe('galaxyCatalogFormat — header / version rejection', () => {
     expect(() => decodeGalaxyCatalog(buf)).toThrow(/magic/);
   });
 
-  it('rejects v5 with the version-specific regenerate error', () => {
+  it('rejects v6 with the version-specific regenerate error', () => {
     const buf = new ArrayBuffer(16);
     const dv = new DataView(buf);
     dv.setUint32(0, 0x504d4b53, true); // "SKMP"
-    dv.setUint32(4, 5, true); // v5 — the previous on-disk shape
+    dv.setUint32(4, 6, true); // v6 — the previous on-disk shape
     dv.setUint32(8, 0, true);
     dv.setUint32(12, 0, true);
-    expect(() => decodeGalaxyCatalog(buf)).toThrow(/unsupported version: 5/);
+    expect(() => decodeGalaxyCatalog(buf)).toThrow(/unsupported version: 6/);
     expect(() => decodeGalaxyCatalog(buf)).toThrow(/regenerate/);
   });
 
-  it('rejects every earlier version (v1–v5) with the same regenerate message', () => {
+  it('rejects every earlier version (v1–v6) with the same regenerate message', () => {
     // The version check fires before the per-record loop, so a 16-byte
     // header with count=0 is enough to exercise every foreign version.
-    for (const version of [1, 2, 3, 4, 5]) {
+    for (const version of [1, 2, 3, 4, 5, 6]) {
       const buf = new ArrayBuffer(16);
       const dv = new DataView(buf);
       dv.setUint32(0, 0x504d4b53, true);

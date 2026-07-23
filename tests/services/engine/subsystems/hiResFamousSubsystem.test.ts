@@ -87,6 +87,7 @@ function makeFamousCloud(count: number, diameterKpc = 50): GalaxyCatalog {
     classByte: new Uint8Array(count),
     parentSurveyByte: new Uint8Array(count),
     spectroscopicZ: new Float32Array(count),
+    orientationIsFallback: new Uint8Array(count),
   };
 }
 
@@ -303,6 +304,7 @@ describe('createHiResFamousSubsystem', () => {
       classByte: new Uint8Array(count),
       parentSurveyByte: new Uint8Array(count),
       spectroscopicZ: new Float32Array(count),
+      orientationIsFallback: new Uint8Array(count),
     };
     const clouds = new Map([[Source.FamousGalaxy, cloud]]);
     const meta = makeFamousMeta(count);

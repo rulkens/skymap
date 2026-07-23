@@ -99,6 +99,7 @@ function galaxyRow(overrides: Partial<GalaxyRow> = {}): GalaxyRow {
     diameterKpc: 60, // 60 kpc galaxy
     axisRatio: 1,
     positionAngleDeg: 0,
+    orientationIsFallback: false,
     classByte: 0,
     parentSurveyByte: 0,
     ...overrides,

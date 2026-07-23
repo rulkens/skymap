@@ -202,5 +202,9 @@ export function generateSyntheticCloud(count: number, seed = 42): GalaxyCatalog 
     classByte: new Uint8Array(count),
     parentSurveyByte: new Uint8Array(count),
     spectroscopicZ: new Float32Array(count),
+    // Orientation above is the constant round-point sentinel (b/a=1, PA=0),
+    // not the deterministic hash fallback, so every row is flagged 0 ("not
+    // fallback"). Uint8Array default-fills with 0.
+    orientationIsFallback: new Uint8Array(count),
   };
 }

@@ -20,6 +20,7 @@ function makeCloud(): GalaxyCatalog {
     positionAngleDeg: new Float32Array([35]),
     classByte: new Uint8Array([0]),
     parentSurveyByte: new Uint8Array([0]),
+    orientationIsFallback: new Uint8Array([0]),
   };
 }
 
@@ -40,9 +41,17 @@ describe('extractGalaxyRow', () => {
       positionAngleDeg: expect.closeTo(35, 4),
       classByte: 0,
       parentSurveyByte: 0,
+      orientationIsFallback: false,
     });
     // No bigint anywhere — JSON round-trip must succeed.
     expect(() => JSON.stringify(row)).not.toThrow();
+  });
+
+  it('maps the persisted orientationIsFallback byte (1) to a boolean true', () => {
+    const cloud = makeCloud();
+    cloud.orientationIsFallback[0] = 1;
+    const row = extractGalaxyRow(cloud, 0, Source.SDSS);
+    expect(row!.orientationIsFallback).toBe(true);
   });
 
   it('returns null for an out-of-bounds index or missing cloud (tier-swap race guard)', () => {

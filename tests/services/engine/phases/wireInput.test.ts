@@ -101,8 +101,8 @@ function makeState(): EngineState {
         sizePx: 2.5,
         brightness: 1.0,
         depthFade: true,
-        highlightFallback: true,
-        realOnly: false,
+        highlightEstimatedOrientation: true,
+        onlyMeasuredOrientation: false,
         items: {
           famousGalaxy: { enabled: true, labelEnabled: true },
         },

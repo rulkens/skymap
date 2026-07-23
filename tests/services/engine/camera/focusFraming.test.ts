@@ -46,6 +46,7 @@ const galaxyRow = (over: Partial<GalaxyRow> = {}): GalaxyRow => ({
   diameterKpc: 40,
   axisRatio: 1,
   positionAngleDeg: 0,
+  orientationIsFallback: false,
   classByte: 0,
   parentSurveyByte: 0,
   ...over,

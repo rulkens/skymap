@@ -79,6 +79,7 @@ function makeDenseCloud(count: number, ar = 0.7, pa = 45): GalaxyCatalog {
     classByte: new Uint8Array(count),
     parentSurveyByte: new Uint8Array(count),
     spectroscopicZ: new Float32Array(count),
+    orientationIsFallback: new Uint8Array(count),
   };
 }
 
@@ -102,6 +103,7 @@ function makeSingletonCloud(x: number, diameterKpc: number): GalaxyCatalog {
     classByte: new Uint8Array(1),
     parentSurveyByte: new Uint8Array(1),
     spectroscopicZ: new Float32Array(1),
+    orientationIsFallback: new Uint8Array(1),
   };
 }
 
@@ -253,7 +255,11 @@ describe('diskPlannerWalk drives both bodies', () => {
 
     // ── Frame 1: sticky maps are empty, so procedural's lastOutput IS this
     // frame's window; textured enqueues a fetch per freshly-visited row.
-    walk.runFrame(input, proc.beginFrame(input), tex.beginFrame({ ...input, famousMeta: [], nowMs: 0 }));
+    walk.runFrame(
+      input,
+      proc.beginFrame(input),
+      tex.beginFrame({ ...input, famousMeta: [], nowMs: 0 }),
+    );
     const procWindow1 = new Set(proc.lastOutput.instances.map((d) => d.localIdx));
     const texWindow1 = texWindow();
     expect(procWindow1).toEqual(new Set([0, 1, 2]));
@@ -264,7 +270,11 @@ describe('diskPlannerWalk drives both bodies', () => {
     // ── Frame 2: cursor advances. Procedural's sticky map still holds window 1,
     // so the NEWLY-added indices (lastOutput minus frame-1 window) are frame 2's
     // window; textured enqueues only the freshly-visited rows.
-    walk.runFrame(input, proc.beginFrame(input), tex.beginFrame({ ...input, famousMeta: [], nowMs: 0 }));
+    walk.runFrame(
+      input,
+      proc.beginFrame(input),
+      tex.beginFrame({ ...input, famousMeta: [], nowMs: 0 }),
+    );
     const procAll2 = new Set(proc.lastOutput.instances.map((d) => d.localIdx));
     const procWindow2 = new Set([...procAll2].filter((i) => !procWindow1.has(i)));
     const texWindow2 = texWindow();

@@ -72,6 +72,7 @@ function makeCloud(count: number): GalaxyCatalog {
     classByte: new Uint8Array(count),
     parentSurveyByte: new Uint8Array(count),
     spectroscopicZ: new Float32Array(count),
+    orientationIsFallback: new Uint8Array(count),
   };
 }
 
@@ -342,8 +343,8 @@ describe('PointRenderer.draw — PointDrawSettings shape', () => {
       visibleSourceMask: 0xffffffff,
       camPosWorld: [0, 0, 0],
       pxPerRad: 1,
-      highlightFallback: false,
-      realOnlyMode: false,
+      highlightEstimatedOrientation: false,
+      onlyMeasuredOrientation: false,
       biasMode: 0,
       absMagLimit: 0,
       depthFadeEnabled: false,
@@ -388,8 +389,8 @@ describe('PointRenderer.draw — PointDrawSettings shape', () => {
       visibleSourceMask: 0xffffffff,
       camPosWorld: [0, 0, 0],
       pxPerRad: 1,
-      highlightFallback: false,
-      realOnlyMode: false,
+      highlightEstimatedOrientation: false,
+      onlyMeasuredOrientation: false,
       biasMode: 0,
       absMagLimit: 0,
       depthFadeEnabled: false,

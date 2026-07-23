@@ -65,8 +65,8 @@ export function packPointUniforms(
     selectedPacked,
     camPosWorld,
     pxPerRad,
-    highlightFallback,
-    realOnlyMode,
+    highlightEstimatedOrientation,
+    onlyMeasuredOrientation,
     biasMode,
     absMagLimit,
     depthFadeEnabled,
@@ -93,8 +93,8 @@ export function packPointUniforms(
   f32[25] = camPosWorld[1]; // byte 100
   f32[26] = camPosWorld[2]; // byte 104
   f32[27] = pxPerRad; // byte 108
-  u32[28] = highlightFallback ? 1 : 0; // byte 112
-  u32[29] = realOnlyMode ? 1 : 0; // byte 116
+  u32[28] = highlightEstimatedOrientation ? 1 : 0; // byte 112
+  u32[29] = onlyMeasuredOrientation ? 1 : 0; // byte 116
   u32[30] = depthFadeEnabled ? 1 : 0; // byte 120
   // u32[31] _pad4 stays zero.
 

@@ -45,6 +45,7 @@ function makeCloud(count: number): GalaxyCatalog {
     classByte: new Uint8Array(count),
     parentSurveyByte: new Uint8Array(count),
     spectroscopicZ: new Float32Array(count),
+    orientationIsFallback: new Uint8Array(count),
   };
 }
 
@@ -166,17 +167,13 @@ describe('buildGalaxyInfo — SDSS source', () => {
     expect(info.catalogues[0]!.href).toContain('Near+Position+Search');
   });
 
-  it('flags orientation provenance as "deterministic fallback" when ar/pa match the hash', () => {
-    // Replay the deterministic fallback for this objID / ra / dec, write the
-    // result back into the cloud, and confirm provenance comes back as
-    // "deterministic fallback".  Float32 round-trip via the cloud arrays
-    // matches the source's own Float32Array trick.
+  it('flags orientation provenance as "deterministic fallback" when the persisted flag is set', () => {
+    // Provenance now reads the authoritative persisted `orientationIsFallback`
+    // byte (threaded through the row), NOT a re-hash of position.  Setting the
+    // flag directly is the whole contract.
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 100, 0, 0);
-    const [ra, dec] = cartesianToRaDecZ(100, 0, 0);
-    const fb = fallbackOrientation(cloud.objIDs[0]!, ra, dec);
-    cloud.axisRatio[0] = fb.axisRatio;
-    cloud.positionAngleDeg[0] = fb.positionAngleDeg;
+    cloud.orientationIsFallback[0] = 1;
     const info = buildInfo(cloud, 0, Source.SDSS);
     expect(info.orientation.provenance).toBe('deterministic fallback');
   });

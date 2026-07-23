@@ -19,7 +19,6 @@ import {
   milliquasParentSurveyPrefix,
 } from '../../../data/galaxyCatalog/sourceClass';
 import { famousDisplayName } from './famousDisplayName';
-import { fallbackOrientation } from '../../../utils/random/fallbackOrientation';
 import { formatMorphology } from '../../../utils/format/formatMorphology';
 import { famousWikipediaTitle } from '../../../utils/format/famousWikipediaTitle';
 import { wikipediaUrl } from '../../../utils/format/wikipediaUrl';
@@ -144,10 +143,12 @@ export function buildGalaxyInfo(row: GalaxyRow): GalaxyInfo {
 
   const ar = row.axisRatio;
   const pa = row.positionAngleDeg;
-  const fb = fallbackOrientation(objID, ra, dec);
-  const fbAr = new Float32Array([fb.axisRatio])[0]!;
-  const fbPa = new Float32Array([fb.positionAngleDeg])[0]!;
-  const isFallback = ar === fbAr && pa === fbPa;
+  // Authoritative persisted flag (from cloud.orientationIsFallback via the
+  // row), NOT a re-hash of position. The old detector recomputed
+  // fallbackOrientation from the baked f32 (x,y,z) and compared floats for
+  // exact equality — lossy through the cartesian→ra/dec→hash round-trip, so
+  // ~10 % of true fallback rows read as "measured" here.
+  const isFallback = row.orientationIsFallback;
   let provenance: string;
   if (isFallback) {
     provenance = 'deterministic fallback';

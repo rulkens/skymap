@@ -75,8 +75,8 @@ import package::lib::camera::CameraUniforms;
 //   offset 92  : brightness          (f32)
 //   offset 96  : camPosWorld         (vec3<f32>)
 //   offset 108 : pxPerRad            (f32)
-//   offset 112 : highlightFallback   (u32)
-//   offset 116 : realOnlyMode        (u32)
+//   offset 112 : highlightEstimatedOrientation (u32)
+//   offset 116 : onlyMeasuredOrientation        (u32)
 //   offset 120 : depthFadeEnabled    (u32)
 //   offset 124 : _pad4               (u32)
 //   offset 128..159 : Malmquist block (biasMode, absMagLimit, ...)
@@ -134,8 +134,8 @@ struct Uniforms {
   // galaxies whose orientation came from the deterministic fallback
   // rather than a real photometric measurement. The fallback flag
   // itself rides on the sign bit of the per-vertex 'axisRatio'.
-  highlightFallback: u32,
-  realOnlyMode: u32,
+  highlightEstimatedOrientation: u32,
+  onlyMeasuredOrientation: u32,
   // Per-galaxy camera-distance depth fade gate. When 1, the vertex
   // stage computes '1 / (1 + (camDist / FALLOFF_HALF)²)'; when 0 it
   // skips the gate and forwards 1.0 through.

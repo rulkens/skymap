@@ -5,9 +5,9 @@
  * ### Why this lives in its own module
  *
  * For a fully-loaded SDSS + 2MRS + GLADE deck (~3.5 M galaxies total) the
- * bake runs a Schechter integral, a 1/V_max weight, a fallback-orientation
- * hash, a K-correction lookup, and a colour-index pickup *per row* —
- * roughly 10 seconds of CPU work, all of it during `.bin` arrival, right
+ * bake runs a Schechter integral, a 1/V_max weight, a K-correction lookup,
+ * and a colour-index pickup *per row* — roughly 10 seconds of CPU work, all
+ * of it during `.bin` arrival, right
  * when the user expects the UI to come alive.  Doing that on the main
  * thread would freeze the page, so the bake ships to a Web Worker.  That
  * requires a *pure* function — no `this`, no `device`, no DOM globals, no
@@ -47,13 +47,7 @@ import {
   galaxyCatalogFluxLimit,
   galaxyCatalogSchechter,
 } from '../../../data/galaxyCatalog/galaxyCatalogFluxLimits';
-import { fallbackOrientation } from '../../../utils/random/fallbackOrientation';
-import {
-  absoluteFromApparent,
-  cartesianToRaDec,
-  expectedNumberDensity,
-  vMaxWeight,
-} from '../../../utils/math';
+import { absoluteFromApparent, expectedNumberDensity, vMaxWeight } from '../../../utils/math';
 import { computeSchechterRatios } from './computeSchechterRatios';
 import type { BuildPointInterleavedBufferMode } from '../../../@types/engine/BuildPointInterleavedBufferMode';
 import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/BuildPointInterleavedBufferInput';
@@ -204,25 +198,17 @@ export function buildPointInterleavedBuffer(
   const schechterRatios: Float32Array | null =
     mode === 'with-schechter' ? computeSchechterRatios({ cloud, source }) : null;
 
-  // ── Pre-compute "is this row a fallback orientation?" flag ─────────────
+  // ── "Is this row a fallback orientation?" flag ─────────────────────────
   //
-  // Done once at upload time (not per-frame); cost is the same hash +
-  // Float32 round-trip we'd pay anyway in the InfoCard.  The build pipeline
-  // stamped the SAME f32 we recompute here whenever a galaxy lacks real
-  // orientation, so equality is exact (no epsilon needed).
-  const isFallbackArr = new Uint8Array(cloud.count);
-  for (let i = 0; i < cloud.count; i++) {
-    const x = cloud.positions[i * 3 + 0]!;
-    const y = cloud.positions[i * 3 + 1]!;
-    const z = cloud.positions[i * 3 + 2]!;
-    const [ra, dec] = cartesianToRaDec(x, y, z);
-    const fb = fallbackOrientation(cloud.objIDs[i]!, ra, dec);
-    const fbAr = new Float32Array([fb.axisRatio])[0]!;
-    const fbPa = new Float32Array([fb.positionAngleDeg])[0]!;
-    if (cloud.axisRatio[i] === fbAr && cloud.positionAngleDeg[i] === fbPa) {
-      isFallbackArr[i] = 1;
-    }
-  }
+  // Read straight off the cloud's persisted `orientationIsFallback` byte —
+  // the AUTHORITATIVE flag `recordsToCloud` stamped at build time and the
+  // .bin carried through verbatim.  The old code reconstructed this here by
+  // re-hashing `fallbackOrientation` from the baked f32 position and testing
+  // float equality; that round-trip is lossy (f32 cartesian → ra/dec → hash
+  // bucketed at Math.round(ra·1e5)) and silently misclassified ~10 % of
+  // fallback rows.  We `.slice()` to own a fresh buffer the worker can
+  // transfer back without detaching the caller's cloud.
+  const isFallbackArr = cloud.orientationIsFallback.slice();
 
   for (let i = 0; i < cloud.count; i++) {
     const o = i * SLOTS_PER_POINT;

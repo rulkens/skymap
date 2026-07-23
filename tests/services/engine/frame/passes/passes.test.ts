@@ -744,8 +744,8 @@ const POINT_SPRITES_SETTINGS_STUB = {
   galaxyCatalogs: {
     sizePx: 2.5,
     brightness: 1.0,
-    highlightFallback: true,
-    realOnly: false,
+    highlightEstimatedOrientation: true,
+    onlyMeasuredOrientation: false,
     depthFade: true,
   },
   bias: {

@@ -4,9 +4,9 @@
  * Sections: `AssetLoadingSection` (slot-progress rows),
  * `GpuTimingsSection` (per-pass GPU timing live readout),
  * `RenderTogglesSection` (per-pass on/off checkboxes for visual
- * debugging), `FlowTuningSection` + the pick/disk-ring toggles,
- * `DataQualitySection` (catalog-audit diagnostics such as the
- * orientation-fallback toggles), and two
+ * debugging), `FlowTuningSection`, `DebugOverlaysSection` (pick-buffer
+ * / disk-radius-ring toggles), `GalaxyOrientationSection` (catalog-audit
+ * diagnostics for measured vs. estimated orientation), and two
  * self-contained sections mounted via their own store containers —
  * `ClipTriggersSectionContainer` (play/stop a registered clip + launch a guided
  * tour) and `ClipPathInspectorSectionContainer` (precompute + scrub a clip's
@@ -23,9 +23,10 @@
  * is `ready` — a collapsed `<details>` keeps the panel compact
  * during steady-state runs.  GPU timings is the opposite (always
  * live), but the user might want to focus on one or the other.
- * `RenderTogglesSection` and `DataQualitySection` both default to
- * closed (most sessions won't need to flip a renderer off or audit
- * data quality); the other two default to open because their data
+ * `RenderTogglesSection`, `DebugOverlaysSection`, and
+ * `GalaxyOrientationSection` all default to closed (most sessions won't
+ * need to flip a renderer off, a raw overlay, or audit orientation
+ * provenance); the other two default to open because their data
  * is the primary reason for opening the panel.
  */
 
@@ -39,9 +40,11 @@ import { FrameStatsRow } from './FrameStatsRow';
 import { GpuTimingsSection } from './GpuTimingsSection';
 import { RenderTogglesSection } from './RenderTogglesSection';
 import { FlowTuningSection } from './FlowTuningSection';
-import { DataQualitySection } from './DataQualitySection';
+import DebugOverlaysSection from './DebugOverlaysSection';
+import { GalaxyOrientationSection } from './GalaxyOrientationSection';
 import ClipTriggersSectionContainer from '../containers/ClipTriggersSectionContainer';
 import ClipPathInspectorSectionContainer from '../containers/ClipPathInspectorSectionContainer';
+import styles from './DebugPanel.module.css';
 
 export type DebugPanelProps = {
   slots: ReadonlyMap<string, AssetSlot<unknown, unknown>>;
@@ -56,10 +59,12 @@ export type DebugPanelProps = {
    * the container dispatches `setPassDisabled`, and `watchWakeSaga` wakes the loop.
    */
   disabledPasses: Record<string, boolean>;
-  highlightFallback: boolean;
-  realOnlyMode: boolean;
-  onHighlightFallbackChange: (enabled: boolean) => void;
-  onRealOnlyModeChange: (enabled: boolean) => void;
+  /** Tint galaxies whose b/a + position-angle is estimated, not measured, magenta. */
+  highlightEstimatedOrientation: boolean;
+  /** Discard estimated-orientation fragments entirely, leaving only measured galaxies. */
+  onlyMeasuredOrientation: boolean;
+  onHighlightEstimatedOrientationChange: (enabled: boolean) => void;
+  onOnlyMeasuredOrientationChange: (enabled: boolean) => void;
   /**
    * Pick-buffer debug overlay toggle.  When on, the renderer paints a
    * colour-mapped RGBA layer over the tone-mapped frame so the
@@ -99,10 +104,10 @@ export function DebugPanel({
   frameStats,
   passNames,
   disabledPasses,
-  highlightFallback,
-  realOnlyMode,
-  onHighlightFallbackChange,
-  onRealOnlyModeChange,
+  highlightEstimatedOrientation,
+  onlyMeasuredOrientation,
+  onHighlightEstimatedOrientationChange,
+  onOnlyMeasuredOrientationChange,
   showPickBuffer,
   onShowPickBufferChange,
   showDiskRadiusRing,
@@ -112,64 +117,32 @@ export function DebugPanel({
   onTogglePass,
 }: DebugPanelProps) {
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 8,
-        right: 8,
-        background: 'rgba(0,0,0,0.85)',
-        color: '#cfc',
-        font: '11px/1.4 ui-monospace, monospace',
-        padding: '8px 10px',
-        borderRadius: 4,
-        zIndex: 99999,
-        maxWidth: 480,
-        pointerEvents: 'auto',
-      }}
-    >
-      <div style={{ fontWeight: 'bold', marginBottom: 6, opacity: 0.8 }}>Skymap Debug</div>
+    <div className={styles.root}>
+      <div className={styles.title}>Skymap Debug</div>
       <AssetLoadingSection slots={slots} />
-      <div style={{ marginTop: 6 }} />
       {/* Always shown — its numbers need no GPU query, so it sits above the
           GPU timings section, which is dark without `?gpuTimings`. */}
       <FrameStatsRow frameStats={frameStats} />
-      <div style={{ marginTop: 6 }} />
       <GpuTimingsSection service={timingService} />
-      <div style={{ marginTop: 6 }} />
       <RenderTogglesSection
         passNames={passNames}
         disabledPasses={disabledPasses}
         onTogglePass={onTogglePass}
       />
-      <div style={{ marginTop: 6 }} />
       <FlowTuningSection flow={flow} onChange={onFlowChange} />
-      <div style={{ marginTop: 6 }} />
-      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-        <input
-          type="checkbox"
-          checked={showPickBuffer}
-          onChange={(e) => onShowPickBufferChange(e.target.checked)}
-        />
-        <span>Show pick buffer</span>
-      </label>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-        <input
-          type="checkbox"
-          checked={showDiskRadiusRing}
-          onChange={(e) => onShowDiskRadiusRingChange(e.target.checked)}
-        />
-        <span>Show disk radius ring</span>
-      </label>
-      <div style={{ marginTop: 6 }} />
-      <DataQualitySection
-        highlightFallback={highlightFallback}
-        realOnlyMode={realOnlyMode}
-        onHighlightFallbackChange={onHighlightFallbackChange}
-        onRealOnlyModeChange={onRealOnlyModeChange}
+      <DebugOverlaysSection
+        showPickBuffer={showPickBuffer}
+        onShowPickBufferChange={onShowPickBufferChange}
+        showDiskRadiusRing={showDiskRadiusRing}
+        onShowDiskRadiusRingChange={onShowDiskRadiusRingChange}
       />
-      <div style={{ marginTop: 6 }} />
+      <GalaxyOrientationSection
+        highlightEstimatedOrientation={highlightEstimatedOrientation}
+        onlyMeasuredOrientation={onlyMeasuredOrientation}
+        onHighlightEstimatedOrientationChange={onHighlightEstimatedOrientationChange}
+        onOnlyMeasuredOrientationChange={onOnlyMeasuredOrientationChange}
+      />
       <ClipTriggersSectionContainer />
-      <div style={{ marginTop: 6 }} />
       <ClipPathInspectorSectionContainer />
     </div>
   );

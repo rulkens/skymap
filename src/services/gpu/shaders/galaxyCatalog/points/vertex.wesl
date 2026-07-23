@@ -118,13 +118,13 @@ fn vs(
   let isFallbackFlag = select(0u, 1u, p.axisRatio < 0.0);
 
   // Vertex-side cull: galaxies gated out by Malmquist mode 1 (volume-
-  // limited) or by realOnlyMode (hide fallback orientations) emit a
-  // degenerate clip position so all 3 vertices of the triangle land
+  // limited) or by onlyMeasuredOrientation (hide estimated orientations)
+  // emit a degenerate clip position so all 3 vertices of the triangle land
   // outside the NDC cube and the rasteriser drops the primitive — no
   // fragment work, no pick-texture write.
   let malmquistGated = u.biasMode == 1u && p.absMag > u.absMagLimit;
-  let realOnlyGated = u.realOnlyMode == 1u && isFallbackFlag == 1u;
-  if (malmquistGated || realOnlyGated) {
+  let onlyMeasuredGated = u.onlyMeasuredOrientation == 1u && isFallbackFlag == 1u;
+  if (malmquistGated || onlyMeasuredGated) {
     var earlyOut: VSOut;
     earlyOut.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
     earlyOut.uv = corner;
@@ -238,7 +238,7 @@ fn vs(
   // pre-computed ellipse-mask coefficient, defaulted to 1.0 (circle)
   // for invalid/NaN axisRatio (synthetic-fallback rows). 'abs(NaN) >
   // 0.0' is false, so the select branch is the correct gate.
-  let highlightActive = u.highlightFallback == 1u && isFallbackFlag == 1u;
+  let highlightActive = u.highlightEstimatedOrientation == 1u && isFallbackFlag == 1u;
   let highlightTint = select(vec3<f32>(1.0), vec3<f32>(1.0, 0.3, 1.0), highlightActive);
   let absAR = abs(p.axisRatio);
   let safeAB = select(1.0, max(absAR, 0.05), absAR > 0.0);

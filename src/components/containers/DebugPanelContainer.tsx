@@ -1,7 +1,7 @@
 // src/components/containers/DebugPanelContainer.tsx
 /**
  * DebugPanelContainer — store boundary for the developer debug panel's
- * top-level knobs (pick/disk-ring toggles, flow, data-quality, render toggles).
+ * top-level knobs (pick/disk-ring toggles, flow, galaxy orientation, render toggles).
  *
  * Owns the store reads + dispatch for those knobs plus the `onTogglePass`
  * handler previously inline in `RenderTogglesSection`. The clip/tour and
@@ -25,15 +25,15 @@ import {
   selectShowPickBuffer,
   selectShowDiskRadiusRing,
   selectDisabledPasses,
-  selectHighlightFallback,
-  selectRealOnly,
+  selectHighlightEstimatedOrientation,
+  selectOnlyMeasuredOrientation,
   selectFlow,
 } from '../../state/settings/selectors';
 import {
   setShowPickBuffer,
   setShowDiskRadiusRing,
-  setHighlightFallback,
-  setRealOnly,
+  setHighlightEstimatedOrientation,
+  setOnlyMeasuredOrientation,
   setFlow,
   setPassDisabled,
 } from '../../state/settings/settingsSlice';
@@ -60,8 +60,8 @@ function DebugPanelContainer({
   const showPickBuffer = useAppSelector(selectShowPickBuffer);
   const showDiskRadiusRing = useAppSelector(selectShowDiskRadiusRing);
   const disabledPasses = useAppSelector(selectDisabledPasses);
-  const highlightFallback = useAppSelector(selectHighlightFallback);
-  const realOnlyMode = useAppSelector(selectRealOnly);
+  const highlightEstimatedOrientation = useAppSelector(selectHighlightEstimatedOrientation);
+  const onlyMeasuredOrientation = useAppSelector(selectOnlyMeasuredOrientation);
   const flow = useAppSelector(selectFlow);
 
   const onShowPickBufferChange = useCallback(
@@ -74,13 +74,13 @@ function DebugPanelContainer({
     [dispatch],
   );
 
-  const onHighlightFallbackChange = useCallback(
-    (enabled: boolean) => dispatch(setHighlightFallback(enabled)),
+  const onHighlightEstimatedOrientationChange = useCallback(
+    (enabled: boolean) => dispatch(setHighlightEstimatedOrientation(enabled)),
     [dispatch],
   );
 
-  const onRealOnlyModeChange = useCallback(
-    (enabled: boolean) => dispatch(setRealOnly(enabled)),
+  const onOnlyMeasuredOrientationChange = useCallback(
+    (enabled: boolean) => dispatch(setOnlyMeasuredOrientation(enabled)),
     [dispatch],
   );
 
@@ -103,10 +103,10 @@ function DebugPanelContainer({
       frameStats={frameStats}
       passNames={passNames}
       disabledPasses={disabledPasses}
-      highlightFallback={highlightFallback}
-      realOnlyMode={realOnlyMode}
-      onHighlightFallbackChange={onHighlightFallbackChange}
-      onRealOnlyModeChange={onRealOnlyModeChange}
+      highlightEstimatedOrientation={highlightEstimatedOrientation}
+      onlyMeasuredOrientation={onlyMeasuredOrientation}
+      onHighlightEstimatedOrientationChange={onHighlightEstimatedOrientationChange}
+      onOnlyMeasuredOrientationChange={onOnlyMeasuredOrientationChange}
       showPickBuffer={showPickBuffer}
       onShowPickBufferChange={onShowPickBufferChange}
       showDiskRadiusRing={showDiskRadiusRing}

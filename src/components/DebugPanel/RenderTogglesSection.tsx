@@ -29,7 +29,7 @@
  * calls `onTogglePass`, the container dispatches `setPassDisabled`, the
  * store notifies synchronously, and the prop flows the new record back.
  *
- * ### Why a separate `<details>` block
+ * ### Why a collapsible section
  *
  * Matches `AssetLoadingSection` and `GpuTimingsSection` — the user can
  * collapse the toggle list once they've finished poking at it.  The
@@ -40,6 +40,7 @@
 
 import type { ReactElement } from 'react';
 import { groupPassNames } from '../../services/engine/frame/frameProgram';
+import DebugSection from './DebugSection';
 
 export type RenderTogglesSectionProps = {
   /** Pass names in draw order, sourced from the engine handle's `passOverrides.allNames`. */
@@ -62,37 +63,34 @@ export function RenderTogglesSection({
   // the handle's pass list, so their group is simply empty here).
   const groups = groupPassNames(passNames);
   return (
-    <details>
-      <summary style={{ fontWeight: 'bold', cursor: 'pointer' }}>Renderer Toggles</summary>
-      <div style={{ marginTop: 4 }}>
-        {groups.map((group) => (
-          <div key={group.title} style={{ marginTop: 4 }}>
-            <div style={{ fontWeight: 'bold', opacity: 0.6, marginBottom: 2 }}>{group.title}</div>
-            {group.rows.map((row) => {
-              const isDisabled = disabledPasses[row.name] === true;
-              return (
-                <label
-                  key={row.name}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    cursor: 'pointer',
-                    opacity: isDisabled ? 0.5 : 1,
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={!isDisabled}
-                    onChange={() => onTogglePass(row.name)}
-                  />
-                  <span>{row.name}</span>
-                </label>
-              );
-            })}
-          </div>
-        ))}
-      </div>
-    </details>
+    <DebugSection title="Renderer Toggles">
+      {groups.map((group) => (
+        <div key={group.title} style={{ marginTop: 4 }}>
+          <div style={{ fontWeight: 'bold', opacity: 0.6, marginBottom: 2 }}>{group.title}</div>
+          {group.rows.map((row) => {
+            const isDisabled = disabledPasses[row.name] === true;
+            return (
+              <label
+                key={row.name}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  cursor: 'pointer',
+                  opacity: isDisabled ? 0.5 : 1,
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={!isDisabled}
+                  onChange={() => onTogglePass(row.name)}
+                />
+                <span>{row.name}</span>
+              </label>
+            );
+          })}
+        </div>
+      ))}
+    </DebugSection>
   );
 }

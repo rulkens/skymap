@@ -1,0 +1,26 @@
+.root {
+  position: fixed;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.85);
+  color: #cfc;
+  font:
+    11px/1.4 ui-monospace,
+    monospace;
+  padding: 8px 10px;
+  border-radius: 4px;
+  z-index: 99999;
+  max-width: 480px;
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.title {
+  font-weight: bold;
+  opacity: 0.8;
+}

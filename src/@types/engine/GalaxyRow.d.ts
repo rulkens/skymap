@@ -33,6 +33,14 @@ export type GalaxyRow = {
   readonly diameterKpc: number;
   readonly axisRatio: number;
   readonly positionAngleDeg: number;
+  /**
+   * True when (axisRatio, positionAngleDeg) is a deterministic hash fallback
+   * rather than a real measurement — the authoritative persisted flag,
+   * threaded straight from `cloud.orientationIsFallback`. Drives the
+   * InfoCard's "measured vs estimated" orientation provenance without
+   * re-hashing from position (which was lossy).
+   */
+  readonly orientationIsFallback: boolean;
   readonly classByte: number;
   readonly parentSurveyByte: number;
   readonly famous?: {

@@ -27,8 +27,7 @@ export function extractGalaxyRow(
   if (!cloud) return null;
   if (idx < 0 || idx >= cloud.count) return null;
 
-  const famousEntry =
-    source === Source.FamousGalaxy && famousMeta ? famousMeta[idx] : undefined;
+  const famousEntry = source === Source.FamousGalaxy && famousMeta ? famousMeta[idx] : undefined;
   const famous = famousEntry
     ? {
         id: famousEntry.id,
@@ -56,6 +55,7 @@ export function extractGalaxyRow(
     diameterKpc: cloud.diameterKpc[idx]!,
     axisRatio: cloud.axisRatio[idx]!,
     positionAngleDeg: cloud.positionAngleDeg[idx]!,
+    orientationIsFallback: cloud.orientationIsFallback[idx] === 1,
     classByte: cloud.classByte[idx]!,
     parentSurveyByte: cloud.parentSurveyByte[idx]!,
     ...(famous ? { famous } : {}),

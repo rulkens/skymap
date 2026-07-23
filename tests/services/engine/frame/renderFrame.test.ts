@@ -286,8 +286,8 @@ function makeInput(
     brightness: 1.0,
     selected: null as SelectionRef | null,
     visibleSourceMask: 0xffffffff,
-    highlightFallback: true,
-    realOnlyMode: false,
+    highlightEstimatedOrientation: true,
+    onlyMeasuredOrientation: false,
     biasMode: BiasMode.None,
     absMagLimit: -19,
     depthFadeEnabled: true,
@@ -443,8 +443,8 @@ function makeInput(
           galaxyCatalogs: {
             sizePx: settings.pointSizePx,
             brightness: settings.brightness,
-            highlightFallback: settings.highlightFallback,
-            realOnly: settings.realOnlyMode,
+            highlightEstimatedOrientation: settings.highlightEstimatedOrientation,
+            onlyMeasuredOrientation: settings.onlyMeasuredOrientation,
             depthFade: settings.depthFadeEnabled,
           },
           tonemap: { exposure: settings.exposure, curve: settings.toneMapCurve },
@@ -567,8 +567,10 @@ describe('renderFrame', () => {
     // pxPerRad = h / (2 · tan(fovY/2))
     const expectedPxPerRad = fx.canvasHeight / (2 * Math.tan(fx.cam.fovYRad / 2));
     expect(drawSettings.pxPerRad as number).toBeCloseTo(expectedPxPerRad, 6);
-    expect(drawSettings.highlightFallback).toBe(fx.settings.highlightFallback);
-    expect(drawSettings.realOnlyMode).toBe(fx.settings.realOnlyMode);
+    expect(drawSettings.highlightEstimatedOrientation).toBe(
+      fx.settings.highlightEstimatedOrientation,
+    );
+    expect(drawSettings.onlyMeasuredOrientation).toBe(fx.settings.onlyMeasuredOrientation);
     expect(drawSettings.biasMode).toBe(fx.settings.biasMode);
     expect(drawSettings.absMagLimit).toBe(fx.settings.absMagLimit);
     expect(drawSettings.depthFadeEnabled).toBe(fx.settings.depthFadeEnabled);

@@ -41,6 +41,7 @@ function makeCloud(objId: bigint, pos: [number, number, number] = [1, 0, 0]): Ga
     positionAngleDeg: new Float32Array([0]),
     classByte: new Uint8Array([0]),
     parentSurveyByte: new Uint8Array([0]),
+    orientationIsFallback: new Uint8Array([0]),
   } as GalaxyCatalog;
 }
 
