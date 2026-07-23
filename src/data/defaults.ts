@@ -69,12 +69,12 @@ export const DEFAULT_POINT_SIZE_PX = 2.5;
 
 /**
  * Default star-billboard pixel radius — the star-catalog twin of
- * `DEFAULT_POINT_SIZE_PX`. Seeds `settings.starCatalogs.sizePx`. Same 2.5 px
- * sweet spot and same 1–8 px user range as the galaxy point size; kept a
- * separate constant so the two layers can diverge without one silently
- * dragging the other.
+ * `DEFAULT_POINT_SIZE_PX`. Seeds `settings.starCatalogs.sizePx`. 4.7 px within
+ * the shared 1–8 px user range, diverged larger than the 2.5 px galaxy point
+ * size; kept a separate constant so the two layers can diverge without one
+ * silently dragging the other.
  */
-export const DEFAULT_STAR_SIZE_PX = 2.5;
+export const DEFAULT_STAR_SIZE_PX = 4.7;
 
 /**
  * Default star-brightness trim — the star-catalog twin of `DEFAULT_BRIGHTNESS`.
@@ -94,15 +94,15 @@ export const DEFAULT_STAR_BRIGHTNESS = 1.0;
  * conserved (only the spread changes). User range 1.0–2.5. Leaves (point
  * sources) are untouched.
  *
- * 4.7 is eye-tuned, not the 1.0 physical identity: at 1.0 the far field still
+ * 3.0 is eye-tuned, not the 1.0 physical identity: at 1.0 the far field still
  * shows the octree's box lattice as faceted seams between aggregates (see
  * `walkStarOctreeCut`'s `DEFAULT_REFINE_THRESHOLD` header for why a proxy
  * threshold alone can't fully hide it). Spreading each aggregate's glow to
- * 4.7x its box radius overlaps neighbours enough to dissolve the lattice into
+ * 3.0x its box radius overlaps neighbours enough to dissolve the lattice into
  * a continuous far field. Tuned together with `DEFAULT_REFINE_THRESHOLD` — see
  * that constant's comment for how the two compensate.
  */
-export const DEFAULT_STAR_GLOW_OVERLAP = 4.7;
+export const DEFAULT_STAR_GLOW_OVERLAP = 3.0;
 
 /**
  * Default near-anchor star display exposure — seeds
@@ -266,22 +266,23 @@ export const DEFAULT_BLOOM_ENABLED = true;
 
 /**
  * Default bloom strength — the scale on the blurred mip pyramid composited back
- * over the HDR frame. Seeds `settings.bloom.strength`. 0.85 is an eye-tuned
+ * over the HDR frame. Seeds `settings.bloom.strength`. 0.8 is an eye-tuned
  * starting point: strong enough to read as a soft halo around saturated cores,
  * shy of a full 1.0 that would smear the whole highlight field. A post-build
  * tuning target (spec §4/§6).
  */
-export const DEFAULT_BLOOM_STRENGTH = 0.85;
+export const DEFAULT_BLOOM_STRENGTH = 0.8;
 
 /**
  * Default bloom threshold — the HDR luminance above which a pixel contributes to
- * the bloom pyramid. Seeds `settings.bloom.threshold`. 7.0 is the low end of the
- * bloom-seeding ordering invariant `DEFAULT_BLOOM_THRESHOLD < STAR_KNEE <=
- * STAR_EMISSIVE` (see `starRenderConstants.ts` for the single statement of it):
- * sitting under `STAR_KNEE` means only near-saturated cores bleed into the glow
- * rather than the whole bright field. A post-build tuning target (spec §4/§6).
+ * the bloom pyramid. Seeds `settings.bloom.threshold`. 2.0 sits well under
+ * `STAR_KNEE`, holding the bloom-seeding ordering invariant
+ * `DEFAULT_BLOOM_THRESHOLD < STAR_KNEE <= STAR_EMISSIVE` (see
+ * `starRenderConstants.ts` for the single statement of it) with margin to spare:
+ * a broad swath of the bright field, not only near-saturated cores, now seeds
+ * the glow. A post-build tuning target (spec §4/§6).
  */
-export const DEFAULT_BLOOM_THRESHOLD = 7.0;
+export const DEFAULT_BLOOM_THRESHOLD = 2.0;
 
 // ── Malmquist-bias correction ────────────────────────────────────────────────
 
