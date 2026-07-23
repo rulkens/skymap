@@ -30,11 +30,28 @@ import { enterManualPausedAt } from '../state/time/enterManualPausedAt';
 import { julianDaysToUnixMs } from '../utils/time/julianDaysToUnixMs';
 import { isOrientationFrameId } from '../utils/url/isOrientationFrameId';
 import { DEFAULT_ORIENTATION } from '../data/defaults';
+import { EARTH_REF } from '../data/selection/earthRef';
 
 const focusSource: HashParamSource = {
   key: 'focus',
   write: (input) => {
     if (input.focused === null) return null;
+    // Earth is the boot 'home' state: `wireInput` seeds it into focus so the
+    // camera frames Earth, but home is the canonical EMPTY URL. Like the
+    // `orientation` source's DEFAULT_ORIENTATION and the `t` source's live mode,
+    // the home target composes no param, so a fresh load stays a bare URL.
+    // Compared against EARTH_REF (the one home declaration) rather than a literal
+    // so the omit rule can't drift from the seed. The read is unchanged, so an
+    // explicit `body-earth` from an old shared link still resolves on arrival.
+    // The `EARTH_REF.type === 'body'` clause is a discriminant narrow (always
+    // true) that lets TS reach `.id` on both tagged unions.
+    if (
+      input.focused.type === 'body' &&
+      EARTH_REF.type === 'body' &&
+      input.focused.id === EARTH_REF.id
+    ) {
+      return null;
+    }
     // Table dispatch on the union tag: galaxy ids run the codec ladder (null
     // when non-encodable), structures/bodies/stars yield their own id token.
     // An empty id (non-encodable row) contributes no param, same as null.
