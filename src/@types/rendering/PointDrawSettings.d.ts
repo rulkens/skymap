@@ -34,6 +34,12 @@ export type PointDrawSettings = {
   absMagLimit: number;
   /** Whether the points pass applies depth-based alpha fade. */
   depthFadeEnabled: boolean;
+  /** Overall physical-SB → HDR gain — multiplies each galaxy's baked `sbAmp` into the additive HDR field (the `galaxySbScale` uniform). */
+  sbScale: number;
+  /** Bloom ceiling — the max baked surface-brightness amplitude a compact galaxy can emit; the vertex stage clamps `sbAmp` to it (the `galaxySbMax` uniform). */
+  sbMax: number;
+  /** Readability-falloff exponent on the resolved-fraction falloff, gated by `depthFadeEnabled` (the `galaxyFalloffStrength` uniform). */
+  falloffStrength: number;
   /** Procedural-disk crossfade band — pixel threshold below which points render full-alpha. */
   pxFadeStart: number;
   /** Procedural-disk crossfade band — pixel threshold above which points render zero-alpha (hand-off to disk pass). */

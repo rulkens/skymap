@@ -1,5 +1,5 @@
 /**
- * packPointUniforms — pure packer for the 176-byte `Uniforms` struct.
+ * packPointUniforms — pure packer for the 192-byte `Uniforms` struct.
  *
  * Single source of truth for the visual-pass byte layout.  Both the point
  * renderer's `draw()` and (via the returned buffer) the pick renderer's
@@ -32,10 +32,12 @@ import type { PointDrawSettings } from '../../@types/rendering/PointDrawSettings
  * `pointRenderer.ts` re-exports this so existing call-sites that already
  * import from `pointRenderer` don't need a new import path.
  *
- * 176 = (16 + 4 + 4 + 4 + 4 + 8 + 4) × 4 bytes.  See the `UNIFORM_BYTES`
- * docblock in `pointRenderer.ts` for the full slot-by-slot layout.
+ * 192 = (16 + 4 + 4 + 4 + 4 + 8 + 4 + 4) × 4 bytes.  See the `UNIFORM_BYTES`
+ * docblock in `pointRenderer.ts` for the full slot-by-slot layout.  The final
+ * 4-float block carries the galaxy surface-brightness calibration knobs
+ * (galaxySbScale / galaxySbMax / galaxyFalloffStrength) + one pad word.
  */
-export const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 8 * 4 + 4 * 4; // 176 bytes
+export const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 8 * 4 + 4 * 4 + 4 * 4; // 192 bytes
 
 /**
  * Allocate and pack a `Uniforms` buffer for the visual point-sprite pass.
@@ -72,6 +74,9 @@ export function packPointUniforms(
     depthFadeEnabled,
     pxFadeStart,
     pxFadeEnd,
+    sbScale,
+    sbMax,
+    falloffStrength,
   } = settings;
 
   // Pad slots are zero-initialised by `new ArrayBuffer` and never written.
@@ -115,7 +120,14 @@ export function packPointUniforms(
   f32[40] = pxFadeStart; // byte 160
   f32[41] = pxFadeEnd; // byte 164
   u32[42] = pickPass >>> 0; // byte 168  pickPass (u32)
-  // f32[43] (_padFade1, byte 172) stays zero.
+
+  // Galaxy surface-brightness calibration knobs.  Slot 43 (byte 172) was the
+  // former `_padFade1` pad word, repurposed to `galaxySbScale`; slots 46/47
+  // (bytes 184..191) stay zero pad to round the struct to 192 bytes.
+  f32[43] = sbScale; // byte 172  galaxySbScale
+  f32[44] = sbMax; // byte 176  galaxySbMax
+  f32[45] = falloffStrength; // byte 180  galaxyFalloffStrength
+  // f32[46..47] (bytes 184..191) stay zero pad → 192 total.
 
   return buf;
 }

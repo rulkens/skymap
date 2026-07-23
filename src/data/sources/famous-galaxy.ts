@@ -32,6 +32,7 @@ export const FAMOUS_GALAXY_ENTRY = {
   iauPrefix: 'Famous',
   // ~150 rows total — never subsampled; one file shared across tiers.
   tierTargets: {},
-  intensityFloor: 0.02,
+  // Per-source SB boost — 1.0 = no boost.
+  sbBoost: 1.0,
   falloffHalfMpc: 1000,
 } as const satisfies GalaxyCatalogSourceEntry;

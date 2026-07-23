@@ -78,8 +78,9 @@ import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/B
  *   slot 10    — schechterRatio (f32)
  *   slot 11    — angularDensityWeight (f32)
  *   slot 12    — absMag (f32) — from the offset-normalised slot-3 magnitude
+ *   slot 13    — sbAmp (f32) — physical surface-brightness amplitude
  *
- * Total: 13 × 4 = 52 bytes per point.  Per-galaxy catalog constants stay out of
+ * Total: 14 × 4 = 56 bytes per point.  Per-galaxy catalog constants stay out of
  * the per-row layout: the K-correction kPerZ lives in the per-galaxy-catalog
  * `SourceUniforms` uniform (k is constant per galaxy catalog, so paying for it
  * per-row would be waste), and instance identity is composed per draw
@@ -107,13 +108,24 @@ import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/B
  * once here is the classic space-for-ALU trade — +8 bytes/row against the
  * hottest per-frame loop in the app.
  */
-const SLOTS_PER_POINT = 13;
+const SLOTS_PER_POINT = 14;
 
 /** Reference distance used to normalise the per-galaxy 1/V_max weight. */
 const D_REF_MPC = 750;
 
 /** Target post-shift mean magnitude for the per-galaxy-catalog magG normalisation. */
 const SDSS_TARGET_MEAN_MAG = 18;
+
+/** Reference physical diameter (kpc) for the surface-brightness zero-point — the L-star / Milky-Way scale. */
+const SB_REF_DIAMETER_KPC = 30;
+/**
+ * Float-safety guard on the baked surface-brightness amplitude — only there to
+ * keep a pathologically compact/bright galaxy's `sbAmp` finite and in range. The
+ * live bloom ceiling now lives in the shader's `galaxySbMax` uniform (seeded
+ * from `DEFAULT_GALAXY_SB_MAX`), so this cap is deliberately far above the
+ * slider range and no longer limits the visible amplitude.
+ */
+const SB_AMP_MAX = 100000;
 
 /**
  * Bake one point cloud's per-vertex GPU bytes.  Pure: no `this`, no DOM, no
@@ -154,15 +166,27 @@ export function buildPointInterleavedBuffer(
   // and most 2MRS galaxies render at maximum intensity with zero contrast.
   let magSum = 0;
   let magCount = 0;
+  let absMagSum = 0;
+  let absMagCount = 0;
   for (let i = 0; i < cloud.count; i++) {
     const m = cloud.magG[i]!;
     if (Number.isFinite(m)) {
       magSum += m;
       magCount++;
     }
+    const x = cloud.positions[i * 3 + 0]!;
+    const y = cloud.positions[i * 3 + 1]!;
+    const z = cloud.positions[i * 3 + 2]!;
+    const dMpc = Math.hypot(x, y, z);
+    const M = absoluteFromApparent(m, dMpc);
+    if (Number.isFinite(M)) {
+      absMagSum += M;
+      absMagCount++;
+    }
   }
   const sourceMean = magCount > 0 ? magSum / magCount : SDSS_TARGET_MEAN_MAG;
   const magOffset = SDSS_TARGET_MEAN_MAG - sourceMean;
+  const meanAbsMag = absMagCount > 0 ? absMagSum / absMagCount : -20.5;
 
   // ── Malmquist 1/V_max weight inputs ──────────────────────────────────────
   //
@@ -326,6 +350,20 @@ export function buildPointInterleavedBuffer(
     // is slot 3, so the baked value must fold the same per-catalog mean
     // shift or every mode-1 threshold would move by `magOffset`.
     interleaved[o + 12] = interleaved[o + 3]! - 5 * Math.log10(dMpc) - 25;
+
+    // Slot 13 — physical surface-brightness amplitude. Relative luminosity
+    // (vs the per-catalog mean absolute magnitude) over (diameter / 30 kpc)^2.
+    // This is the intrinsic per-pixel radiance the vertex stage scales into
+    // HDR: intrinsically bright / compact galaxies emit above the bloom
+    // threshold; diffuse ones stay dim. Uses the RAW physical absMag (same as
+    // vMax), not the cosmetic offset-normalised slot-3/slot-12 value.
+    const diamKpc = cloud.diameterKpc[i]! > 0 ? cloud.diameterKpc[i]! : SB_REF_DIAMETER_KPC;
+    const diamRatio = diamKpc / SB_REF_DIAMETER_KPC;
+    const lumRel = Math.pow(10, -0.4 * (absMag - meanAbsMag));
+    const sbAmpRaw = lumRel / (diamRatio * diamRatio);
+    interleaved[o + 13] = Number.isFinite(sbAmpRaw)
+      ? Math.min(Math.max(sbAmpRaw, 0), SB_AMP_MAX)
+      : 1.0;
   }
 
   return {

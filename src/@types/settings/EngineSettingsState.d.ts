@@ -90,6 +90,27 @@ export type EngineSettingsState = {
     depthFade: boolean;
     highlightFallback: boolean;
     realOnly: boolean;
+    /**
+     * Overall physical-SB → HDR gain — multiplies each galaxy's baked
+     * surface-brightness amplitude into the additive HDR field. The live
+     * successor to the old hardcoded `GALAXY_SB_SCALE` shader const; rides the
+     * points `Uniforms` struct as `galaxySbScale`. Default `DEFAULT_GALAXY_SB_SCALE`.
+     */
+    sbScale: number;
+    /**
+     * Bloom ceiling — the maximum baked surface-brightness amplitude a compact
+     * galaxy can emit. The vertex stage clamps `sbAmp` to it live (`galaxySbMax`
+     * uniform), replacing the old bake-time clamp (now only a float-safety
+     * guard). Default `DEFAULT_GALAXY_SB_MAX`.
+     */
+    sbMax: number;
+    /**
+     * Readability-falloff exponent `k` on the resolved-fraction falloff
+     * `pow(resolvedFrac, k)`, gated by `depthFade`. k = 2 is the full physical
+     * inverse-square; lower k keeps the deep field visible. Rides the points
+     * uniform as `galaxyFalloffStrength`. Default `DEFAULT_GALAXY_FALLOFF_STRENGTH`.
+     */
+    falloffStrength: number;
     items: Record<GalaxyCatalogId, GalaxyCatalogItemSettings>;
   };
 

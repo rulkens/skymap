@@ -24,8 +24,9 @@
  *   slot 10    — schechterRatio
  *   slot 11    — angularDensityWeight
  *   slot 12    — absMag (from the offset-normalised slot-3 magnitude)
+ *   slot 13    — sbAmp (physical surface-brightness amplitude)
  *
- * 13 slots × 4 bytes = 52 bytes per point.  kPerZ moved to per-galaxy-catalog
+ * 14 slots × 4 bytes = 56 bytes per point.  kPerZ moved to per-galaxy-catalog
  * `SourceUniforms`; the picker reads instance identity from a per-source
  * uniform + the GPU's `@builtin(instance_index)`.
  */
@@ -55,10 +56,10 @@ function makeCloud(count: number): GalaxyCatalog {
   };
 }
 
-const SLOTS = 13;
+const SLOTS = 14;
 
 describe('buildPointInterleavedBuffer', () => {
-  it('produces an interleaved Float32Array of the expected length (13 slots × 4 bytes)', () => {
+  it('produces an interleaved Float32Array of the expected length (14 slots × 4 bytes)', () => {
     const cloud = makeCloud(3);
     const result = buildPointInterleavedBuffer({
       cloud,

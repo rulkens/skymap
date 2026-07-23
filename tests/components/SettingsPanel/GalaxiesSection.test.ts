@@ -52,6 +52,12 @@ function baseProps() {
     onBiasModeChange: vi.fn<(mode: BiasModeT) => void>(),
     absMagLimit: -19,
     onAbsMagLimitChange: vi.fn<(absMag: number) => void>(),
+    sbScale: 8,
+    onSbScaleChange: vi.fn<(v: number) => void>(),
+    sbMax: 30,
+    onSbMaxChange: vi.fn<(v: number) => void>(),
+    falloffStrength: 0.8,
+    onFalloffStrengthChange: vi.fn<(v: number) => void>(),
   };
 }
 

@@ -173,6 +173,35 @@ export const DEFAULT_BRIGHTNESS = 1.0;
 /** Auto-rotate (yaw drift) defaults OFF — most users want a static frame to explore. */
 export const DEFAULT_AUTO_ROTATE = false;
 
+/**
+ * Default overall physical-SB → HDR gain for galaxy point billboards — seeds
+ * `settings.galaxyCatalogs.sbScale`. Multiplies each galaxy's baked
+ * surface-brightness amplitude (`sbAmp`) into the additive HDR field. Replaces
+ * the old hardcoded `GALAXY_SB_SCALE` shader const; 5.0 places the per-catalog
+ * mean galaxy's resolved core relative to the 2.0 bloom threshold. Live-tunable
+ * (UI range 0.5–30) so the galaxy look can be re-eye-tuned without a rebuild.
+ */
+export const DEFAULT_GALAXY_SB_SCALE = 5.0;
+
+/**
+ * Default bloom ceiling for galaxy point billboards — seeds
+ * `settings.galaxyCatalogs.sbMax`. The maximum baked surface-brightness
+ * amplitude a compact galaxy can emit; the vertex stage clamps `sbAmp` to it
+ * live. Moved out of the bake-time clamp (now only a float-safety guard) so the
+ * ceiling is a live knob; 30.0 reproduces the old bake clamp. UI range 1–100.
+ */
+export const DEFAULT_GALAXY_SB_MAX = 30.0;
+
+/**
+ * Default readability-falloff exponent for galaxy point billboards — seeds
+ * `settings.galaxyCatalogs.falloffStrength`. The exponent `k` on the
+ * resolved-fraction falloff `pow(resolvedFrac, k)`: k = 2 is the full physical
+ * inverse-square (unresolved galaxies dim as (angular / floor)²), lower k keeps
+ * the deep field visible. 0.7 is eye-tuned; UI range 0–2. Gated by the
+ * depth-fade toggle (off holds flat constant surface brightness).
+ */
+export const DEFAULT_GALAXY_FALLOFF_STRENGTH = 0.7;
+
 // ── Galaxy thumbnails / orientation toggles ─────────────────────────────────
 
 /**

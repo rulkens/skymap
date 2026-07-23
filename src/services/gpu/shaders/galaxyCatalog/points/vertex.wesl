@@ -58,7 +58,7 @@ import package::lib::focusUniforms::focusAlphaMultiplier;
 // ── @group(2) — per-source SourceUniforms ──────────────────────────
 //
 // Each loaded galaxy catalog has its OWN @group(2) bind group whose buffer
-// carries SourceUniforms's 16-byte struct (sourceCode + intensityFloor
+// carries SourceUniforms's 16-byte struct (sourceCode + sbBoost
 // + falloffHalfMpc + 4 bytes pad — see lib/sourceUniforms.wesl).
 // Per-source bind groups dodge the 'queue.writeBuffer' race entirely
 // (different uniform buffers per source means writes to one don't
@@ -173,30 +173,27 @@ fn vs(
   // — K-correction and the unknown-colour fallback already happened
   // CPU-side in pickColourIndex. The shader just looks the value up.
 
-  // ── MAGNITUDE → INTENSITY, with every per-instance modulator folded in ──
+  // ── SURFACE BRIGHTNESS → INTENSITY, with every per-instance modulator folded in ──
   //
-  //   intensity = clamp((22 - magnitude) / 8, 0.05, 1.0)   // mag 14 → 1.0,
-  //                                                          mag 22 → 0.05
-  //               × u.brightness                            // global slider
+  //   intensity = min(sbAmp, u.galaxySbMax)    // physical SB base, bloom-ceiling clamped
+  //               × u.galaxySbScale             // overall HDR gain (live knob)
+  //               × source.sbBoost              // per-source lift (e.g. faint Milliquas quasars)
+  //               × fluxFalloff                 // readability falloff, pow(resolvedFrac, k)
+  //               × u.brightness                // global slider
   //               × vMaxWeight     (mode 2: 1/V_max)
   //               × schechterRatio (mode 3: Schechter LF)
   //               × angularReweight (mode 4: HEALPix)
-  //               × depthFade      (camera-distance falloff)
   //               × crossfadeOut   (procedural-disk handoff band)
+  //               × focusMult      (cluster-focus dim)
   //
-  // All six factors are per-instance constants, so the fragment reads
-  // out.shaded.rgb directly — no per-pixel multiply.
+  // The old apparent-magnitude clamp is gone: p.sbAmp is the baked physical
+  // surface-brightness amplitude and u.galaxySbScale is the live HDR gain that
+  // replaced the hardcoded GALAXY_SB_SCALE const. All factors are per-instance
+  // constants, so the fragment reads out.shaded.rgb directly — no per-pixel
+  // multiply.
   let vMaxAlpha = select(1.0, p.vMaxWeight, u.biasMode == 2u);
   let schechterMult = select(1.0, p.schechterRatio, u.biasMode == 3u);
   let angularMult = select(1.0, p.angularDensityWeight, u.biasMode == 4u);
-
-  // Depth-fade: 1 / (1 + (camDist/FALLOFF_HALF)²), gated by depthFadeEnabled.
-  // Half-distance is per-source ('source.falloffHalfMpc') so sparse far-field
-  // catalogs (Milliquas) can effectively disable the fade by carrying a very
-  // large value while bulk galaxy catalogs keep the original ~1000 Mpc tuning.
-  let camDistRel = distanceMpc / source.falloffHalfMpc;
-  let depthFadeRaw = 1.0 / (1.0 + camDistRel * camDistRel);
-  let depthFadeMult = select(1.0, depthFadeRaw, u.depthFadeEnabled == 1u);
 
   // Crossfade-out against the procedural-disk pass. ThumbnailRenderer
   // fades IN across [pxFadeStart, pxFadeEnd] (apparent-pixel diameter);
@@ -211,10 +208,6 @@ fn vs(
     inPickPass,
   );
 
-  // Per-source intensity floor ('source.intensityFloor'). Lower floors
-  // reduce per-galaxy contribution to the additive HDR target in dense
-  // regions (tames center saturation); higher floors keep faint objects
-  // visible (Milliquas at high z).
   // Cluster-focus dim: non-members of the focused POI fade toward 0.08,
   // scaled by the smoothstep blend. Collapses to exactly 1.0 when no POI
   // is focused (blend == 0) AND for members (mix(1.0, 1.0, blend)), so a
@@ -224,12 +217,25 @@ fn vs(
   // non-member that drops under the perceptibility floor is culled rather
   // than left to pile up additively in a dense field.
   let focusMult = focusAlphaMultiplier(p.position, focus);
-  let intensity = clamp((22.0 - p.magnitude) / 8.0, source.intensityFloor, 1.0)
+  // Physical surface-brightness intensity. p.sbAmp is the baked intrinsic
+  // amplitude; u.galaxySbMax caps how bright a compact galaxy can emit (the
+  // live bloom-ceiling knob); u.galaxySbScale is the overall HDR gain.
+  let sbAmpClamped = min(p.sbAmp, u.galaxySbMax);
+  // Readability falloff, gated by the depth-fade toggle: pow(resolvedFrac, k)
+  // with k = u.galaxyFalloffStrength. k = 2 is the full physical inverse-square
+  // (unresolved galaxies dim as (angular / floor)^2); lower k keeps the deep
+  // field visible; toggle OFF holds flat constant surface brightness.
+  let resolvedFrac = clamp(apparentPxRadius / u.pointSizePx, 0.0, 1.0);
+  let fluxFalloff = select(1.0, pow(resolvedFrac, u.galaxyFalloffStrength), u.depthFadeEnabled == 1u);
+  // source.sbBoost is the per-source lift, applied after the SB-scale and
+  // bloom-ceiling clamp so it can brighten even a galaxy already at u.galaxySbMax.
+  let intensity = sbAmpClamped * u.galaxySbScale
+    * source.sbBoost
+    * fluxFalloff
     * u.brightness
     * vMaxAlpha
     * schechterMult
     * angularMult
-    * depthFadeMult
     * crossfadeOut
     * focusMult;
 

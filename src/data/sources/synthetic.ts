@@ -21,11 +21,7 @@ export const SYNTHETIC_ENTRY = {
   schechter: { mStar: -21.18, alpha: -1.16, phiStar: 0.0093 },
   iauPrefix: 'Synth',
   tierTargets: {}, // no caps anywhere — synthetic is procedurally sized
-  // Synthetic is the "no real data, show *something*" fallback — must be
-  // aggressively visible.  Match Milliquas: higher floor + no depth fade.
-  // Bulk-galaxy catalog defaults (floor=0.02 / falloff=1000) at radius 1000 Mpc
-  // attenuate the cloud to a near-black haze against the additive HDR
-  // target — the symptom the fallback exists to prevent in the first place.
-  intensityFloor: 0.15,
+  // Per-source SB boost — 1.0 = no boost.
+  sbBoost: 1.0,
   falloffHalfMpc: 1e30,
 } as const satisfies GalaxyCatalogSourceEntry;

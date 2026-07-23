@@ -58,6 +58,9 @@ const SETTINGS: PointDrawSettings = {
   depthFadeEnabled: true,
   pxFadeStart: 4,
   pxFadeEnd: 8,
+  sbScale: 8,
+  sbMax: 30,
+  falloffStrength: 0.8,
   focusBindGroup: FOCUS_BIND_GROUP,
   // packPointUniforms does not call this; fadeOpacityOf is a per-draw-loop
   // concern owned by the renderer.  The pure packer receives the settings
@@ -68,12 +71,12 @@ const SETTINGS: PointDrawSettings = {
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('packPointUniforms — byteLength', () => {
-  it('returns a buffer of exactly UNIFORM_BYTES (176)', () => {
+  it('returns a buffer of exactly UNIFORM_BYTES (192)', () => {
     // The size is the single source of truth (exported UNIFORM_BYTES); a
     // mismatch here means the alloc and the layout constant are out of sync.
     const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
     expect(buf.byteLength).toBe(UNIFORM_BYTES);
-    expect(buf.byteLength).toBe(176);
+    expect(buf.byteLength).toBe(192);
   });
 });
 
@@ -245,10 +248,31 @@ describe('packPointUniforms — procedural-disk crossfade + pickPass (bytes 160.
     const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS, 1);
     expect(new Uint32Array(buf)[42]).toBe(1);
   });
+});
 
-  it('leaves _padFade1 at byte 172 (float index 43) as zero', () => {
+describe('packPointUniforms — galaxy SB calibration knobs (bytes 172..191)', () => {
+  it('writes galaxySbScale at byte 172 (float index 43, the old _padFade1 slot)', () => {
     const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
     const f32 = new Float32Array(buf);
-    expect(f32[43]).toBe(0);
+    expect(f32[43]).toBeCloseTo(SETTINGS.sbScale);
+  });
+
+  it('writes galaxySbMax at byte 176 (float index 44)', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const f32 = new Float32Array(buf);
+    expect(f32[44]).toBeCloseTo(SETTINGS.sbMax);
+  });
+
+  it('writes galaxyFalloffStrength at byte 180 (float index 45)', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const f32 = new Float32Array(buf);
+    expect(f32[45]).toBeCloseTo(SETTINGS.falloffStrength);
+  });
+
+  it('leaves the two trailing pad words (bytes 184..191, indices 46/47) as zero', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const f32 = new Float32Array(buf);
+    expect(f32[46]).toBe(0);
+    expect(f32[47]).toBe(0);
   });
 });

@@ -80,8 +80,10 @@ import package::lib::camera::CameraUniforms;
 //   offset 120 : depthFadeEnabled    (u32)
 //   offset 124 : _pad4               (u32)
 //   offset 128..159 : Malmquist block (biasMode, absMagLimit, ...)
-//   offset 160..175 : pxFadeStart, pxFadeEnd, _padFade0, _padFade1
-//   total: 176 bytes.
+//   offset 160..171 : pxFadeStart, pxFadeEnd, pickPass
+//   offset 172..183 : galaxySbScale, galaxySbMax, galaxyFalloffStrength
+//   offset 184..191 : _padU0, _padU1 (two pad words)
+//   total: 192 bytes.
 //
 // The full historical narrative (why fields moved during the
 // CameraUniforms-prefix adoption, why pointSizePx + brightness now sit
@@ -185,7 +187,17 @@ struct Uniforms {
   // without those gates, galaxies handed off to a procedural disk
   // would not be pickable (the disk renderer has no pick pipeline).
   pickPass: u32,
-  _padFade1: f32,
+
+  // Physical-SB live calibration knobs (galaxy-look spike). galaxySbScale is
+  // the overall HDR gain; galaxySbMax caps a compact galaxy's emitted
+  // amplitude (bloom ceiling); galaxyFalloffStrength is the exponent on the
+  // resolved-fraction readability falloff. Two pad words round the struct to
+  // 192 bytes.
+  galaxySbScale: f32,
+  galaxySbMax: f32,
+  galaxyFalloffStrength: f32,
+  _padU0: f32,
+  _padU1: f32,
 };
 
 // ─── per-instance vertex attributes ──────────────────────────────────
@@ -264,6 +276,14 @@ struct PerVertex {
   // length(position))' spent a log10 + sqrt per invocation recomputing
   // a constant.
   @location(9) absMag: f32,
+
+  // Physical surface-brightness amplitude, baked at upload: relative
+  // luminosity (vs the per-catalog mean absolute magnitude) over
+  // (diameter / 30 kpc)^2. Drives the HDR intensity so intrinsically bright
+  // / compact galaxies emit above the bloom threshold and diffuse ones stay
+  // dim. Surface brightness is distance-independent; the inverse-square
+  // behaviour on approach comes from the flux-conservation term in vs.
+  @location(10) sbAmp: f32,
 };
 
 // ─── vertex-to-fragment interface ───────────────────────────────────

@@ -85,6 +85,30 @@ export const selectHighlightFallback = (state: RootState): boolean =>
 export const selectRealOnly = (state: RootState): boolean =>
   selectSettings(state).galaxyCatalogs.realOnly;
 
+/**
+ * Overall physical-SB → HDR gain — the "Galaxy brightness" knob. A primitive
+ * read, so no memoization. The points draw layer writes it into the
+ * `galaxySbScale` uniform each frame.
+ */
+export const selectGalaxySbScale = (state: RootState): number =>
+  selectSettings(state).galaxyCatalogs.sbScale;
+
+/**
+ * Bloom ceiling — the "Bloom ceiling" knob. A primitive read, so no
+ * memoization. The max baked surface-brightness amplitude a galaxy can emit;
+ * the vertex stage clamps `sbAmp` to it via the `galaxySbMax` uniform.
+ */
+export const selectGalaxySbMax = (state: RootState): number =>
+  selectSettings(state).galaxyCatalogs.sbMax;
+
+/**
+ * Readability-falloff exponent — the "Distance falloff" knob. A primitive read,
+ * so no memoization. The exponent on the resolved-fraction falloff, gated by
+ * the depth-fade toggle; rides the `galaxyFalloffStrength` uniform.
+ */
+export const selectGalaxyFalloffStrength = (state: RootState): number =>
+  selectSettings(state).galaxyCatalogs.falloffStrength;
+
 export const selectGalaxyCatalogItems = (
   state: RootState,
 ): Record<GalaxyCatalogId, GalaxyCatalogItemSettings> => selectSettings(state).galaxyCatalogs.items;

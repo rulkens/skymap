@@ -270,7 +270,7 @@ export function createCatalogStore(init: {
   async function upload(id: GalaxyCatalogId, galaxyCatalog: GalaxyCatalog): Promise<void> {
     // The store only handles galaxy catalog sources; the registry
     // entry for this id carries the numeric source code, per-source
-    // intensityFloor + falloffHalfMpc, and the discriminant we narrow on.
+    // sbBoost + falloffHalfMpc, and the discriminant we narrow on.
     const source = CODE_OF_ID.get(id);
     if (source === undefined) {
       throw new Error(`catalogStore cannot upload unknown galaxy catalog id '${id}'`);
@@ -331,7 +331,7 @@ export function createCatalogStore(init: {
       entries: [{ binding: 0, resource: { buffer: fadeBuffer } }],
     });
 
-    // SourceUniforms: 5-bit sourceCode + per-source intensityFloor +
+    // SourceUniforms: 5-bit sourceCode + per-source sbBoost +
     // per-source falloffHalfMpc + 4 B pad.  Written once here; the
     // values are constant per source so per-frame writes would be
     // wasted bytes.  See lib/sourceUniforms.wesl for the struct layout
@@ -345,7 +345,7 @@ export function createCatalogStore(init: {
     const sourceU32 = new Uint32Array(sourceScratch);
     const sourceF32 = new Float32Array(sourceScratch);
     sourceU32[0] = source >>> 0;
-    sourceF32[1] = entry.intensityFloor;
+    sourceF32[1] = entry.sbBoost;
     sourceF32[2] = entry.falloffHalfMpc;
     device.queue.writeBuffer(sourceBuffer, 0, sourceScratch);
     const sourceBindGroup = device.createBindGroup({
