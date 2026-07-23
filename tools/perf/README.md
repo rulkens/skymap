@@ -70,6 +70,24 @@ captured from real flights via the in-app `l` (logState) key. To add one: fly th
 copy the dumped pose into a new entry. Keep poses stable — the value of the harness is comparing
 runs across commits, which dies if the poses drift.
 
+## CPU-side star-cut bench (`starCutCpuBench.mts`)
+
+The GPU harness above measures render-pass time and is blind to the star renderer's **CPU**
+per-frame work (octree cut + LOD-fade partition + NodeParams pack). `starCutCpuBench.mts` drives
+that path headless in Node against the real large-tier bin, and A/Bs the octree walk with the
+off-screen frustum prune OFF vs ON — calling the same production `walkStarOctreeCut`, so the
+number is what the app ships.
+
+```bash
+npx tsx tools/perf/starCutCpuBench.mts               # fetches stars-large.bin from R2 into .cache/
+npx tsx tools/perf/starCutCpuBench.mts --bin foo.gz  # or point at a local gzipped bin
+```
+
+Reads: `walkOff` vs `walkOn` is the prune's walk-time win; `cutOff→cutOn` is the node-count shrink;
+`TOTAL(on)` is walk+partition+pack for the pruned path. Node runs ~1.5–2× faster than the browser,
+so treat the **deltas and cut-size ratios** as the portable results, not the absolute ms. The
+`.cache/` bin is a per-machine fetch cache (gitignored), not a source asset.
+
 ## Gotchas
 
 - **504 "Outdated Optimize Dep" → boot timeout.** A long-running Vite server whose dependency

@@ -59,6 +59,41 @@
  * the cut is byte-identical to routing every node through the heap — just far
  * cheaper.
  *
+ * ── Optional frustum cull: prune off-screen subtrees during descent ────────
+ *
+ * Given a `StarCutFrustum` (six camera-relative parsec-space planes plus a
+ * conservative slack model), the walk drops any node whose slack-grown bounding
+ * sphere is fully outside the frustum — and because a parent box geometrically
+ * encloses every descendant box, dropping an interior node prunes its WHOLE
+ * subtree unvisited. That is the win: at a star-field pose most of the cut's
+ * nodes are off-screen, and pruning them at their common ancestor turns a ~44k
+ * node walk into a ~12k one and roughly halves the walk's wall time (measured on
+ * the large tier with the pick-safe slack this cull actually ships — a looser,
+ * unsafe slack would prune more but wink-drop visible aggregate glow). The cull
+ * is a COARSE pre-filter: its
+ * slack is deliberately loose (sized to cover the widest downstream footprint —
+ * the pick pass's 3.5px clickable floor and an aggregate's glow spread — so it
+ * can never wrong-drop a node any consumer would still paint), and the exact
+ * per-node cull the renderer already runs stays the precise filter. Passing
+ * `null` (the default) disables it and the walk is byte-identical to before, so
+ * the covering-partition tests and every non-frustum caller are unaffected.
+ *
+ * The budget arithmetic is unchanged: `childCost` still sums ALL present
+ * children (culled ones included), so a refine that survives the cull is charged
+ * exactly as before — the cull only removes nodes from the emitted cut, never
+ * perturbs the running instance count. That keeps the budget conservative (a
+ * pruned subtree's cost is still reserved) at the cost of leaving some refinement
+ * headroom on the table; spending the freed budget on the visible field is a
+ * follow-up, deliberately out of this change's scope.
+ *
+ * With a cull active the returned cut is a covering partition of the VISIBLE
+ * leaf stars — a pruned subtree is neither refined nor aggregated. One
+ * consumer-visible consequence lives in the LOD-fade layer, not here: a node
+ * that rotates back into the frustum re-enters the cut as a newcomer (opacity 0)
+ * and fades in over `NODE_FADE_MS`, where before it was already in the cut and
+ * popped in instantly when the renderer's exact cull stopped dropping it. See
+ * `starCatalogLayer`'s frustum note.
+ *
  * ── Why aggregates for the far / sub-pixel field ───────────────────────────
  *
  * Each interior node carries one flux-weighted centroid record (`recordCount
@@ -142,6 +177,39 @@ export type StarCutSnapshot = {
 };
 
 /**
+ * The frustum-cull descriptor the walk prunes off-screen subtrees with. All in
+ * the CAMERA-RELATIVE PARSEC frame the walk already works in (box centre =
+ * `boxOriginPc + edge/2 − camPc`), so the cull needs no unit conversion inside
+ * the hot loop — the layer bakes the scene-unit → parsec scale into `planesPc`'s
+ * distance term once (see `starCatalogLayer`).
+ *
+ * The slack is intentionally generous — this is a coarse pre-filter that must
+ * never wrong-drop a node any downstream consumer would still paint, with the
+ * renderer's exact per-node cull the precise filter:
+ *   - `angularMarginRad`: a leaf draws as a fixed-PIXEL dot, so its world spill
+ *     grows with distance; the cull sphere gains `dist · angularMarginRad`.
+ *     Sized to the PICK footprint (the 3.5px clickable floor ≥ the visual glow),
+ *     so a pick recompute of the same cut never drops a clickable edge star.
+ *   - `worldSpread`: an aggregate fills its box footprint with glow that spreads
+ *     with the dot-size/overlap scale — a WORLD slack, applied as a multiplier on
+ *     the box half-diagonal (`≥ 1`).
+ * A subtree holds both species, so the sphere grows by BOTH terms (their sum ≥
+ * either alone) — over-keeping is free, a false drop is forbidden.
+ */
+export type StarCutFrustum = {
+  /**
+   * Six unit-normalized `(nx, ny, nz, d)` planes in the camera-relative parsec
+   * frame — 24 floats, inside is `n·p + d ≥ 0`. The layer derives these from the
+   * NEAR0 rebased vp and scales the distance term into parsecs.
+   */
+  readonly planesPc: Float64Array;
+  /** Leaf angular slack, radians of on-screen spill per parsec of distance. */
+  readonly angularMarginRad: number;
+  /** Aggregate glow spread as a half-diagonal multiplier (`≥ 1`). */
+  readonly worldSpread: number;
+};
+
+/**
  * Default refine threshold — seeds `settings.starCatalogs.refineThreshold` (the
  * "Detail" slider) and is the fallback when `walkStarOctreeCut` is called with
  * no explicit threshold. A node refines while its box edge subtends more than
@@ -187,6 +255,12 @@ export function walkStarOctreeCut(
   // expose the knob (tests) keep the old behaviour. Stays in LINEAR units; it is
   // squared once here to match the squared on-screen-size proxy.
   refineThreshold: number = DEFAULT_REFINE_THRESHOLD,
+  // Optional off-screen prune (see `StarCutFrustum` + the header). `null` (the
+  // default) disables it: the walk is then byte-identical to the no-cull era, so
+  // the covering-partition tests and every caller that passes no frustum are
+  // unaffected. When present, off-screen subtrees are dropped at their common
+  // ancestor and the cut covers the VISIBLE leaf stars only.
+  frustum: StarCutFrustum | null = null,
 ): StarCutSnapshot {
   const n = catalog.nodes.length;
   if (n === 0) return emptySnapshot();
@@ -221,10 +295,36 @@ export function walkStarOctreeCut(
     cutCount++;
   };
 
-  // Classify a node the walk has reached: a leaf (childless) or a sub-pixel box
+  // Off-screen prune: true when node `i`'s slack-grown bounding sphere is fully
+  // outside a frustum plane. Reached only when a frustum is supplied; hoisted so
+  // the `frustum === null` fast path pays nothing. Box centre + slack are all in
+  // the camera-relative parsec frame (see `StarCutFrustum`).
+  const outsideFrustum = (i: number): boolean => {
+    const planes = frustum!.planesPc;
+    const edge = boxEdgePc[i]!;
+    const o3 = i * 3;
+    const cx = boxOriginPc[o3]! + edge * 0.5 - camX;
+    const cy = boxOriginPc[o3 + 1]! + edge * 0.5 - camY;
+    const cz = boxOriginPc[o3 + 2]! + edge * 0.5 - camZ;
+    const dist = Math.sqrt(cx * cx + cy * cy + cz * cz);
+    // Half-diagonal grown by aggregate world glow (worldSpread) AND leaf angular
+    // spill (dist · angularMarginRad) — the sum covers whichever species the
+    // subtree holds. Conservative: this only ever enlarges the sphere.
+    const radius = edge * 0.8660254 * frustum!.worldSpread + dist * frustum!.angularMarginRad;
+    const negR = -radius;
+    for (let b = 0; b < 24; b += 4) {
+      if (planes[b]! * cx + planes[b + 1]! * cy + planes[b + 2]! * cz + planes[b + 3]! < negR)
+        return true;
+    }
+    return false;
+  };
+
+  // Classify a node the walk has reached: an off-screen box is pruned outright
+  // (its whole subtree with it); otherwise a leaf (childless) or a sub-pixel box
   // commits immediately (it can never refine — see the header's commit-at-push);
   // only a childful, above-threshold refine CANDIDATE enters the heap.
   const pushOrCommit = (i: number): void => {
+    if (frustum !== null && outsideFrustum(i)) return; // off-screen — prune subtree
     if (childMask[i] === 0) {
       commit(i); // leaf (level-0 cell OR fat leaf) — records are real stars
       return;
