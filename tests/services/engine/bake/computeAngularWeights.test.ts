@@ -16,25 +16,15 @@ import { describe, it, expect } from 'vitest';
 import { computeAngularWeights } from '../../../../src/services/engine/bake/computeAngularWeights';
 import { Source } from '../../../../src/data/sources';
 import { raDecZToCartesian } from '../../../../src/utils/math';
+import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 function emptyCloud(count: number): GalaxyCatalog {
-  return {
-    count,
-    objIDs: BigUint64Array.from({ length: count }, (_, i) => BigInt(i + 1)),
-    positions: new Float32Array(count * 3),
-    magU: new Float32Array(count),
-    magG: new Float32Array(count),
-    magR: new Float32Array(count),
-    magI: new Float32Array(count),
-    magZ: new Float32Array(count),
+  return makeGalaxyCatalog(count, {
     axisRatio: new Float32Array(count).fill(0.7),
     positionAngleDeg: new Float32Array(count).fill(45),
     diameterKpc: new Float32Array(count).fill(30),
-    classByte: new Uint8Array(count),
-    parentSurveyByte: new Uint8Array(count),
-    spectroscopicZ: new Float32Array(count),
-  };
+  });
 }
 
 /**

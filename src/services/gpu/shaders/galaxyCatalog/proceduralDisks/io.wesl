@@ -76,7 +76,7 @@ struct Uniforms {
 struct InstanceIn {
   @location(0) posSize: vec4<f32>,         // x, y, z, sizeWorldMpc
   @location(1) orientation: vec4<f32>,     // axisRatio, positionAngleDeg, pickIdBits, _
-  @location(2) extras: vec4<f32>,          // colourIndex, crossfadeAlpha, procFadeOut, _
+  @location(2) extras: vec4<f32>,          // colourIndex, crossfadeAlpha, procFadeOut, sbAmp
 };
 
 // ── vertex-to-fragment interface ────────────────────────────────────
@@ -112,4 +112,10 @@ struct VsOut {
   // identity. Only the pick fragment declares and reads 'pickId'; the visual
   // fragment does not, so the value is simply ignored there.
   @location(5) @interpolate(flat) pickId: u32,
+  // Per-instance effective surface-brightness amplitude (already scaled by
+  // the live sbScale / sbMax / sbBoost / brightness sliders on the CPU).
+  // Flat because it's constant across a quad's fragments; the fragment
+  // stage multiplies its brightness profile by this so intrinsically
+  // bright galaxies push their HDR core above the bloom threshold.
+  @location(6) @interpolate(flat) sbAmp: f32,
 };

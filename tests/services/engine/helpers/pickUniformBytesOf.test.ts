@@ -58,9 +58,14 @@ const STATE = {
     galaxyCatalogs: {
       sizePx: 5.5,
       brightness: 0.8,
-      highlightFallback: true,
-      realOnly: false,
+      provenance: {
+        orientation: { highlight: true, filter: 'measured' },
+        size: { highlight: false, filter: 'all' },
+      },
       depthFade: true,
+      sbScale: 8,
+      sbMax: 30,
+      falloffStrength: 0.8,
     },
     bias: { mode: 1, absMagLimit: -18.25 },
   },
@@ -79,11 +84,13 @@ describe('pickUniformBytesOf', () => {
       selectedPacked: 42, // arbitrary — override stamps the sentinel below
       camPosWorld: CAM_POS,
       pxPerRad: PX_PER_RAD,
-      highlightFallback: STATE.settings.galaxyCatalogs.highlightFallback,
-      realOnlyMode: STATE.settings.galaxyCatalogs.realOnly,
+      provenance: STATE.settings.galaxyCatalogs.provenance,
       biasMode: STATE.settings.bias.mode,
       absMagLimit: STATE.settings.bias.absMagLimit,
       depthFadeEnabled: STATE.settings.galaxyCatalogs.depthFade,
+      sbScale: STATE.settings.galaxyCatalogs.sbScale,
+      sbMax: STATE.settings.galaxyCatalogs.sbMax,
+      falloffStrength: STATE.settings.galaxyCatalogs.falloffStrength,
       pxFadeStart: PROCEDURAL_DISK_FADE_START_PX,
       pxFadeEnd: PROCEDURAL_DISK_FADE_END_PX,
     }); // pickPass defaults to 0 — the override below sets it to 1

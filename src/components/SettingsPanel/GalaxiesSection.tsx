@@ -81,6 +81,18 @@ type GalaxiesSectionProps = {
   absMagLimit: number;
   /** Called when the user moves the M_lim slider. */
   onAbsMagLimitChange: (absMag: number) => void;
+  /** Overall physical-SB → HDR gain — the "Galaxy brightness" knob. */
+  sbScale: number;
+  /** Called when the user moves the galaxy-brightness slider. */
+  onSbScaleChange: (v: number) => void;
+  /** Bloom ceiling — the max surface-brightness amplitude a compact galaxy can emit. */
+  sbMax: number;
+  /** Called when the user moves the bloom-ceiling slider. */
+  onSbMaxChange: (v: number) => void;
+  /** Readability-falloff exponent — the "Distance falloff" knob. */
+  falloffStrength: number;
+  /** Called when the user moves the distance-falloff slider. */
+  onFalloffStrengthChange: (v: number) => void;
 };
 
 // ── GalaxiesSection ────────────────────────────────────────────────────────────
@@ -103,6 +115,12 @@ function GalaxiesSection({
   onBiasModeChange,
   absMagLimit,
   onAbsMagLimitChange,
+  sbScale,
+  onSbScaleChange,
+  sbMax,
+  onSbMaxChange,
+  falloffStrength,
+  onFalloffStrengthChange,
 }: GalaxiesSectionProps) {
   // ── Master tri-state derivation ──────────────────────────────────────────────
   // Tri-state master = how many TOGGLEABLE_SOURCES are currently enabled.
@@ -173,6 +191,44 @@ function GalaxiesSection({
             step={0.1}
             onChange={onPointSizeChange}
             format={(v) => `${v.toFixed(1)} px`}
+          />
+        </div>
+
+        {/* Galaxy surface-brightness calibration knobs — overall HDR gain,
+            bloom ceiling, and the resolved-fraction readability falloff. */}
+        <div className={styles.panelRow}>
+          <Slider
+            label="Galaxy brightness"
+            value={sbScale}
+            min={0.5}
+            max={30}
+            step={0.5}
+            onChange={onSbScaleChange}
+            format={(v) => `${v.toFixed(1)}×`}
+          />
+        </div>
+
+        <div className={styles.panelRow}>
+          <Slider
+            label="Bloom ceiling"
+            value={sbMax}
+            min={1}
+            max={100}
+            step={1}
+            onChange={onSbMaxChange}
+            format={(v) => v.toFixed(0)}
+          />
+        </div>
+
+        <div className={styles.panelRow}>
+          <Slider
+            label="Distance falloff"
+            value={falloffStrength}
+            min={0}
+            max={2}
+            step={0.05}
+            onChange={onFalloffStrengthChange}
+            format={(v) => v.toFixed(2)}
           />
         </div>
 

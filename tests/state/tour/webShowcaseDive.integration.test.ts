@@ -48,6 +48,7 @@ import { updateSelectionFocus } from '../../../src/state/selection/selectionSlic
 import { watchFocusTweenSaga } from '../../../src/state/selection/watchFocusTweenSaga';
 
 import { Source } from '../../../src/data/source';
+import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { Effect } from '../../../src/@types/animation/Effect';
@@ -76,8 +77,7 @@ function collectNodes(effects: Effect[]): Effect[] {
 // ─── Stubs ───────────────────────────────────────────────────────────────────
 
 /** Minimal one-row FamousGalaxy cloud for resolving 'm87' via famousMeta. */
-const M87_CLOUD: GalaxyCatalog = {
-  count: 1,
+const M87_CLOUD: GalaxyCatalog = makeGalaxyCatalog(1, {
   positions: new Float32Array([1, 0, 0]),
   spectroscopicZ: new Float32Array([0.004]),
   magU: new Float32Array([9]),
@@ -89,9 +89,7 @@ const M87_CLOUD: GalaxyCatalog = {
   diameterKpc: new Float32Array([40]),
   axisRatio: new Float32Array([0.85]),
   positionAngleDeg: new Float32Array([155]),
-  classByte: new Uint8Array([0]),
-  parentSurveyByte: new Uint8Array([0]),
-} as unknown as GalaxyCatalog;
+});
 
 /**
  * ResolveDeps stub: Virgo resolves via `structures.byId`, M87 via `famousMeta`

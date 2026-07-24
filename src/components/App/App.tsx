@@ -5,7 +5,8 @@
  * chrome as leaf container components — LoadingBarContainer, StatusBarContainer,
  * InfoCardContainer, ScaleBarContainer, TimeBarContainer, NavigationPanelContainer,
  * SettingsPanelContainer, TopBarContainer, CommandPaletteContainer,
- * DebugPanelContainer, SplashContainer — plus wires keyboard shortcuts + URL sync.
+ * SplashContainer, and `DebugPanel` (memo-boundary, its sections mount their
+ * own containers) — plus wires keyboard shortcuts + URL sync.
  * Each container owns its own store reach; App just arranges them.
  *
  * `handleRef` is a ref, not state: engine hooks call methods on it, and
@@ -48,7 +49,7 @@ import { useUrlSync } from '../../hooks/useUrlSync';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectSelectedFocusable } from '../../state/selection/selectors';
-import DebugPanelContainer from '../containers/DebugPanelContainer';
+import DebugPanel from '../DebugPanel/DebugPanel';
 import TourOverlayContainer from '../containers/TourOverlayContainer';
 import TourBeatRailContainer from '../containers/TourBeatRailContainer';
 import { isCinemaMode } from '../../utils/url/isCinemaMode';
@@ -183,7 +184,7 @@ export function App(): React.ReactElement {
         {/* `handleRef.current` set means the engine finished constructing,
             so the panel can subscribe to slots without racing. */}
         {debugPanelOpen && handleRef.current && (
-          <DebugPanelContainer
+          <DebugPanel
             slots={handleRef.current.assetSlots}
             timingService={handleRef.current.debug.timingService}
             frameStats={handleRef.current.debug.frameStats}

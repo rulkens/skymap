@@ -24,8 +24,9 @@
  *   slot 10    — schechterRatio
  *   slot 11    — angularDensityWeight
  *   slot 12    — absMag (from the offset-normalised slot-3 magnitude)
+ *   slot 13    — sbAmp (physical surface-brightness amplitude)
  *
- * 13 slots × 4 bytes = 52 bytes per point.  kPerZ moved to per-galaxy-catalog
+ * 14 slots × 4 bytes = 56 bytes per point.  kPerZ moved to per-galaxy-catalog
  * `SourceUniforms`; the picker reads instance identity from a per-source
  * uniform + the GPU's `@builtin(instance_index)`.
  */
@@ -33,32 +34,22 @@
 import { describe, it, expect } from 'vitest';
 import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bake/buildPointInterleavedBuffer';
 import { Source } from '../../../../src/data/sources';
+import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 /** Build a tiny synthetic cloud with three galaxies at known coordinates. */
 function makeCloud(count: number): GalaxyCatalog {
-  return {
-    count,
-    objIDs: BigUint64Array.from({ length: count }, (_, i) => BigInt(i + 1)),
-    positions: new Float32Array(count * 3),
-    magU: new Float32Array(count),
-    magG: new Float32Array(count),
-    magR: new Float32Array(count),
-    magI: new Float32Array(count),
-    magZ: new Float32Array(count),
+  return makeGalaxyCatalog(count, {
     axisRatio: new Float32Array(count).fill(0.7),
     positionAngleDeg: new Float32Array(count).fill(45),
     diameterKpc: new Float32Array(count).fill(30),
-    classByte: new Uint8Array(count),
-    parentSurveyByte: new Uint8Array(count),
-    spectroscopicZ: new Float32Array(count),
-  };
+  });
 }
 
-const SLOTS = 13;
+const SLOTS = 14;
 
 describe('buildPointInterleavedBuffer', () => {
-  it('produces an interleaved Float32Array of the expected length (13 slots × 4 bytes)', () => {
+  it('produces an interleaved Float32Array of the expected length (14 slots × 4 bytes)', () => {
     const cloud = makeCloud(3);
     const result = buildPointInterleavedBuffer({
       cloud,
@@ -85,10 +76,9 @@ describe('buildPointInterleavedBuffer', () => {
     expect(interleaved[1 * SLOTS + 2]).toBeCloseTo(-15);
   });
 
-  it('writes axisRatio at slot 5 with positive sign for non-fallback rows', () => {
-    // axisRatio = 0.7 is unlikely to match the deterministic
-    // fallbackOrientation for these specific (objIDs, ra, dec) — so
-    // the bake should keep the value positive (no sign-bit flip).
+  it('writes axisRatio at slot 5 with positive sign when orientationIsFallback is 0', () => {
+    // makeCloud leaves orientationIsFallback all-zero, so the bake keeps every
+    // axisRatio positive (no sign-bit flip) and echoes the persisted flag.
     const cloud = makeCloud(3);
     cloud.magG.set([18, 18, 18]);
     const { interleaved, isFallbackArr } = buildPointInterleavedBuffer({
@@ -96,20 +86,43 @@ describe('buildPointInterleavedBuffer', () => {
       source: Source.SDSS,
     });
     for (let i = 0; i < 3; i++) {
+      expect(isFallbackArr[i]).toBe(0);
       const ab = interleaved[i * SLOTS + 5]!;
-      // Either positive (real measurement) or negative (fallback).  These
-      // particular rows shouldn't be classified as fallback (their
-      // (b/a, PA) doesn't match the deterministic hash output for the
-      // dummy objID + (0,0,0) position), but we double-check via
-      // isFallbackArr to keep the assertion robust.
-      if (isFallbackArr[i] === 0) {
-        expect(ab).toBeGreaterThan(0);
-        expect(ab).toBeCloseTo(0.7, 5);
-      } else {
-        expect(ab).toBeLessThan(0);
-        expect(Math.abs(ab)).toBeCloseTo(0.7, 5);
-      }
+      expect(ab).toBeGreaterThan(0);
+      expect(ab).toBeCloseTo(0.7, 5);
     }
+  });
+
+  it('flips the slot-5 sign bit for rows whose persisted orientationIsFallback is 1', () => {
+    // The authoritative build-side flag drives the packing directly — no
+    // re-hashing of position.  Row 1 is marked fallback, rows 0/2 are not.
+    const cloud = makeCloud(3);
+    cloud.magG.set([18, 18, 18]);
+    cloud.orientationIsFallback.set([0, 1, 0]);
+    const { interleaved, isFallbackArr } = buildPointInterleavedBuffer({
+      cloud,
+      source: Source.SDSS,
+    });
+    expect(Array.from(isFallbackArr)).toEqual([0, 1, 0]);
+    expect(interleaved[0 * SLOTS + 5]).toBeCloseTo(0.7, 5);
+    expect(interleaved[1 * SLOTS + 5]).toBeCloseTo(-0.7, 5); // sign bit flipped
+    expect(interleaved[2 * SLOTS + 5]).toBeCloseTo(0.7, 5);
+  });
+
+  it('flips the slot-8 (radiusMpc) sign bit for rows whose persisted diameterIsFallback is 1', () => {
+    // Same authoritative-byte contract as orientationIsFallback/slot 5, one
+    // slot over: the padded radius is always positive, so a fallback
+    // diameter negates it. Row 1 is marked fallback, rows 0/2 are not.
+    const cloud = makeCloud(3);
+    cloud.magG.set([18, 18, 18]);
+    cloud.diameterIsFallback.set([0, 1, 0]);
+    const { interleaved } = buildPointInterleavedBuffer({
+      cloud,
+      source: Source.SDSS,
+    });
+    expect(interleaved[0 * SLOTS + 8]).toBeGreaterThan(0);
+    expect(interleaved[1 * SLOTS + 8]).toBeLessThan(0);
+    expect(interleaved[2 * SLOTS + 8]).toBeGreaterThan(0);
   });
 
   it('returns the galaxy catalog schechter triple, mLim and central density nRef', () => {

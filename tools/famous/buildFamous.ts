@@ -153,6 +153,10 @@ async function main(): Promise<void> {
     classByte: new Uint8Array(count),
     parentSurveyByte: new Uint8Array(count),
     spectroscopicZ: new Float32Array(count),
+    orientationIsFallback: new Uint8Array(count),
+    // Famous entries always carry a curated real diameter (e.diameterKpc), so
+    // no row is a flat-default fallback; every flag stays 0.
+    diameterIsFallback: new Uint8Array(count),
   };
 
   for (let i = 0; i < count; i++) {
@@ -190,6 +194,12 @@ async function main(): Promise<void> {
     });
     cloud.axisRatio[i] = orient.axisRatio;
     cloud.positionAngleDeg[i] = orient.positionAngleDeg;
+    // Provenance flag mirrors the field-by-field resolution above: a row is a
+    // true orientation fallback only when BOTH the axis ratio AND the PA were
+    // synthesised (the seed carried neither). A real axisRatio paired with a
+    // hash-filled PA (the common near-face-on showpiece) stays flagged 0 —
+    // its shape is a real measurement.
+    cloud.orientationIsFallback[i] = e.axisRatio == null && e.positionAngleDeg == null ? 1 : 0;
     // Photometric mapping: HyperLEDA gives B/V/K, the GalaxyCatalog arrays
     // are SDSS-shaped (u/g/r/i/z).  Same shoehorn convention as GLADE:
     // map B→G, V→R, K→I.  magU/magZ stay NaN — HyperLEDA doesn't carry

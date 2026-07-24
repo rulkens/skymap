@@ -29,6 +29,7 @@ export const SDSS_ENTRY = {
   // them (3,469 local in large → 1 in medium). The g-band flux floor recovers
   // them. Only affects medium; small is excluded entirely.
   fluxSupplementMagLimit: 15,
-  intensityFloor: 0.02,
+  // Per-source SB boost — 1.0 = no boost.
+  sbBoost: 1.0,
   falloffHalfMpc: 1000,
 } as const satisfies GalaxyCatalogSourceEntry;
