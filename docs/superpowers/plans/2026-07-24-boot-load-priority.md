@@ -384,10 +384,10 @@ thumbnail queue is idle exactly when boot contention matters).
 Wire `state.subsystems.assetQueue.destroy()` into `engine.destroy()` next to
 `state.subsystems.scheduler.destroy()` (`engine.ts:753`).
 
-- [ ] No test (a constant and a field assignment; `ASSET_QUEUE_CONCURRENCY === 2` is exactly
+- [x] No test (a constant and a field assignment; `ASSET_QUEUE_CONCURRENCY === 2` is exactly
       the constant restatement the spec rules out).
-- [ ] `npm run typecheck` clean.
-- [ ] Commit (feature): the three files above.
+- [x] `npm run typecheck` clean.
+- [x] Commit (feature): the three files above.
 
 ### 1.3: `evaluateRows` enqueues instead of loading, and drops on lost demand
 

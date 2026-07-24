@@ -97,6 +97,8 @@ import { runBootstrapPhases } from './phases/bootstrap';
 import type { BootstrapDeps } from '../../@types/engine/BootstrapDeps';
 import { createDisabledGpuTimingService } from '../gpu/timing/gpuTimingService';
 import { updateFrameStats, IDLE_GAP_MS } from '../../utils/perf/updateFrameStats';
+import { PriorityQueue } from '../../utils/concurrency/priorityQueue';
+import { ASSET_QUEUE_CONCURRENCY } from '../../utils/concurrency/assetQueueConcurrency';
 import type { FrameStats } from '../../@types/engine/FrameStats';
 import { addVolumeField } from './handles/addVolumeField';
 import { removeVolumeField } from './handles/removeVolumeField';
@@ -471,6 +473,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         requestRender: () => state.subsystems.scheduler.requestRender(),
       }),
 
+      // ── Boot asset queue ──────────────────────────────────────────
+      // Bounds how many boot fetches (catalog `.bin` files, body textures)
+      // run at once — see `ASSET_QUEUE_CONCURRENCY` for why 2, not the
+      // thumbnail queue's `MAX_CONCURRENT_FETCHES`. Eager, no GPU dep:
+      // `evaluateRows` (the per-frame demand walk) can enqueue before the
+      // GPU init IIFE below finishes.
+      assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY),
+
       // The rest land later in the IIFE once their deps (GPU device,
       // pickRenderer, scheduler) exist.
       clickResolver: null,
@@ -751,6 +761,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // 1. Cancel the render loop first — every subsequent destroy() must be
     //    safe after the loop has stopped.
     state.subsystems.scheduler.destroy();
+    state.subsystems.assetQueue.destroy();
 
     // 2. Detach DOM listeners before the subsystems they fire into.
     state.subsystems.inputBindings?.destroy();
