@@ -54,12 +54,14 @@
  *   catalogs like 2MRS. We use only `Number.isFinite(cz)` here — no
  *   positivity check.
  *
- * - **Kcmag or Hcmag non-finite → skip.** These two bands carry the
+ * - **Kcmag or Hcmag missing → skip.** These two bands carry the
  *   2MRS flux limit and are present for essentially every row; a
  *   missing K or H signals the row was added for redshift bookkeeping
- *   but lacks usable photometry, which makes it un-renderable.
+ *   but lacks usable photometry, which makes it un-renderable. "Missing"
+ *   means non-finite OR outside `isPlausibleMagnitude`, since 2MRS spells
+ *   absence as a number (99.999) rather than a blank.
  *
- * - **Jcmag = 99.999 → store as NaN.** 2MRS uses 99.999 as a sentinel
+ * - **Implausible Jcmag → store as NaN.** 2MRS uses 99.999 as a sentinel
  *   for "no J measurement available" (a small fraction of rows are K/H
  *   detections only). NaN propagates correctly through the renderer's
  *   colour computation, so this is just normal "missing band" behaviour.
@@ -71,6 +73,7 @@
 import { Source } from '../../src/data/sources';
 import { nonCommentLines, type ParsedRecord } from './common';
 import { arcsecToKpc } from '../../src/utils/math/arcsecToKpc';
+import { isPlausibleMagnitude } from '../utils/math/isPlausibleMagnitude';
 
 /**
  * Speed of light in km/s, used to convert heliocentric velocity cz into
@@ -79,13 +82,6 @@ import { arcsecToKpc } from '../../src/utils/math/arcsecToKpc';
  * cite the same constant.
  */
 const C_KM_S = 299792.458;
-
-/**
- * 2MRS' documented "no J-band measurement" sentinel. Recording it as a
- * named constant (rather than inlining `99.999` next to the comparison)
- * makes the magic number greppable and hard to mis-read as a magnitude.
- */
-const J_MISSING_SENTINEL = 99.999;
 
 /**
  * Minimum line length required for a row to even be considered. The cz
@@ -229,11 +225,15 @@ export function parseTwoMrs(rawText: string, xsc: XscShapeMap = new Map()): TwoM
     const czStr = line.slice(173, 178).trim();
     const cz = czStr === '' ? NaN : parseFloat(czStr);
 
+    // K and H are gated by `isPlausibleMagnitude` rather than plain
+    // finiteness: 2MRS writes its "no measurement" sentinel as a number
+    // (99.999), so a finiteness check alone would let a row with no usable
+    // photometry through carrying a magnitude 88 mag off the sample limit.
     if (
       !Number.isFinite(ra) ||
       !Number.isFinite(dec) ||
-      !Number.isFinite(kc) ||
-      !Number.isFinite(hc) ||
+      !isPlausibleMagnitude(kc) ||
+      !isPlausibleMagnitude(hc) ||
       !Number.isFinite(cz)
     ) {
       // Note: we deliberately do NOT check `cz > 0` here. Local Group
@@ -276,10 +276,14 @@ export function parseTwoMrs(rawText: string, xsc: XscShapeMap = new Map()): TwoM
       continue;
     }
 
-    // Translate Jcmag's published sentinel to NaN so downstream consumers
-    // can use the same "missing band" idiom regardless of which survey
-    // the record came from.
-    const jc = jcRaw === J_MISSING_SENTINEL ? NaN : jcRaw;
+    // Translate Jcmag's published sentinel (99.999) to NaN so downstream
+    // consumers can use the same "missing band" idiom regardless of which
+    // survey the record came from. The shared range predicate does that
+    // without naming the constant: 99.999 is nowhere near a magnitude any
+    // instrument reports, and matching the family rather than the exact
+    // literal also catches a truncated `99.99` or a `-9999` inherited from
+    // an upstream cross-match.
+    const jc = isPlausibleMagnitude(jcRaw) ? jcRaw : NaN;
 
     // Riso (log10 of isophotal RADIUS in arcsec, K=20 mag/arcsec² isophote)
     // sits at bytes 142-146 (1-based inclusive, half-open 141..146).  About

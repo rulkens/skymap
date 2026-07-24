@@ -50,7 +50,7 @@ import {
 import { absoluteFromApparent, expectedNumberDensity, vMaxWeight } from '../../../utils/math';
 import { computeSchechterRatios } from './computeSchechterRatios';
 import { galaxySbAmp } from '../../../utils/galaxy/galaxySbAmp';
-import { galaxyMeanAbsMag } from '../../../utils/galaxy/galaxyMeanAbsMag';
+import { galaxyMedianAbsMag } from '../../../utils/galaxy/galaxyMedianAbsMag';
 import type { BuildPointInterleavedBufferMode } from '../../../@types/engine/BuildPointInterleavedBufferMode';
 import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/BuildPointInterleavedBufferInput';
 import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/BuildPointInterleavedBufferResult';
@@ -169,12 +169,12 @@ export function buildPointInterleavedBuffer(
 
   // Surface-brightness zero-point — a DIFFERENT quantity from the magOffset
   // above (that one is a cosmetic per-catalog display shift; this one is
-  // the physical mean absolute magnitude `galaxySbAmp` normalises against).
-  // Shared with the disk-planner mirror of this bake via `cloud.meanAbsMag`
-  // when the catalog carries one (the real decode/synthetic paths always
-  // populate it); recomputed here as a fallback for lightweight test
-  // fixtures that omit the optional field.
-  const meanAbsMag = cloud.meanAbsMag ?? galaxyMeanAbsMag(cloud);
+  // the physical median absolute magnitude `galaxySbAmp` normalises
+  // against). Shared with the disk-planner mirror of this bake via
+  // `cloud.medianAbsMag` when the catalog carries one (the real
+  // decode/synthetic paths always populate it); recomputed here as a
+  // fallback for lightweight test fixtures that omit the optional field.
+  const medianAbsMag = cloud.medianAbsMag ?? galaxyMedianAbsMag(cloud);
 
   // ── Malmquist 1/V_max weight inputs ──────────────────────────────────────
   //
@@ -347,7 +347,7 @@ export function buildPointInterleavedBuffer(
     // procedural-disk pass (`proceduralDiskSubsystem.ts`) recomputes this
     // SAME amplitude via the shared `galaxySbAmp` helper so the point↔disk
     // crossfade holds constant brightness.
-    interleaved[o + 13] = galaxySbAmp(absMag, meanAbsMag, cloud.diameterKpc[i]!);
+    interleaved[o + 13] = galaxySbAmp(absMag, medianAbsMag, cloud.diameterKpc[i]!);
   }
 
   return {

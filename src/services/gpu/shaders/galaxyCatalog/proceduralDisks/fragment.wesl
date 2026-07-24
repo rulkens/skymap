@@ -20,7 +20,7 @@
 // surface-brightness amplitude computed once per row in
 // 'proceduralDiskSubsystem.ts' via the SAME 'galaxySbAmp' helper the
 // point-sprite bake uses (see 'buildPointInterleavedBuffer.ts'). Sharing
-// the helper and the per-catalog 'meanAbsMag' zero-point means an
+// the helper and the per-catalog 'medianAbsMag' zero-point means an
 // intrinsically bright or compact galaxy pushes this pass's HDR core
 // above the bloom threshold exactly the way its companion point sprite
 // does, and the two passes agree on brightness at the 8-14 px crossfade

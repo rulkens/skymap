@@ -202,22 +202,22 @@ export type GalaxyCatalog = {
   parentSurveyByte: Uint8Array;
 
   /**
-   * Per-catalog mean absolute magnitude — the surface-brightness
+   * Per-catalog MEDIAN absolute magnitude — the surface-brightness
    * zero-point `galaxySbAmp` normalises against (see
-   * `utils/galaxy/galaxySbAmp.ts` and `utils/galaxy/galaxyMeanAbsMag.ts`).
+   * `utils/galaxy/galaxySbAmp.ts` and `utils/galaxy/galaxyMedianAbsMag.ts`).
    *
    * Populated by every runtime construction path: `decodeGalaxyCatalog`,
    * `generateSyntheticCloud`, `emptyGalaxyCatalog`, and
    * `cloneGalaxyCatalogForTransfer`. Optional ONLY so lightweight test
    * fixtures may omit it — consumers that need a value fall back
-   * themselves (the point bake recomputes via `galaxyMeanAbsMag`; the
+   * themselves (the point bake recomputes via `galaxyMedianAbsMag`; the
    * disk planner falls back to -20.5).
    *
    * Derived, NOT stored in the `.bin` — `decodeGalaxyCatalog` recomputes
-   * it from the decoded `magG` + `positions` on every load, so adding
-   * this field did not bump the binary format version.
+   * it from the decoded `magG` + `positions` on every load, so the field
+   * costs no binary format version.
    */
-  meanAbsMag?: number;
+  medianAbsMag?: number;
 
   /**
    * Per-galaxy "orientation is a deterministic fallback" flag — length ===

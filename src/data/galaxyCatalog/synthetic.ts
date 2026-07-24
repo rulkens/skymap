@@ -30,7 +30,7 @@
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
 import { mulberry32 } from '../../utils/random/mulberry32';
 import { uniformInSphere } from '../../utils/random/uniformInSphere';
-import { galaxyMeanAbsMag } from '../../utils/galaxy/galaxyMeanAbsMag';
+import { galaxyMedianAbsMag } from '../../utils/galaxy/galaxyMedianAbsMag';
 
 // ─── Cloud generator ─────────────────────────────────────────────────────────
 
@@ -212,6 +212,6 @@ export function generateSyntheticCloud(count: number, seed = 42): GalaxyCatalog 
     // flagged 0. Uint8Array default-fills with 0.
     diameterIsFallback: new Uint8Array(count),
   };
-  cloud.meanAbsMag = galaxyMeanAbsMag(cloud);
+  cloud.medianAbsMag = galaxyMedianAbsMag(cloud);
   return cloud;
 }

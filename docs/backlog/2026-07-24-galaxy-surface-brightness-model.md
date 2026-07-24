@@ -10,8 +10,8 @@ The galaxy point/disk passes are driven by a physical surface-brightness amplitu
 
 The amplitude is one shared helper consumed by both passes, so any fix lands in one place:
 
-- `src/utils/galaxy/galaxySbAmp.ts:36-41` — `lumRel = 10^(-0.4·(absMag − meanAbsMag))`, `raw = lumRel / (diameterKpc/30)²`.
-- `src/utils/galaxy/galaxyMeanAbsMag.ts:23-38` — per-catalog mean absolute magnitude, `-20.5` fallback.
+- `src/utils/galaxy/galaxySbAmp.ts:36-41` — `lumRel = 10^(-0.4·(absMag − medianAbsMag))`, `raw = lumRel / (diameterKpc/30)²`.
+- `src/utils/galaxy/galaxyMedianAbsMag.ts:43-71` — per-catalog median absolute magnitude, `-20.5` fallback.
 - Point pass: baked into slot 13 (`buildPointInterleavedBuffer.ts:177,351`), consumed at `shaders/galaxyCatalog/points/vertex.wesl:223-234`.
 - Disk pass: recomputed CPU-side per frame (`proceduralDiskSubsystem.ts:127-132`) and packed into `extras.w`.
 - Live knobs: `DEFAULT_GALAXY_SB_SCALE = 5.0`, `SB_MAX = 30.0`, `FALLOFF_STRENGTH = 0.7` (`src/data/defaults.ts:184,193,203`).
@@ -20,14 +20,14 @@ The amplitude is one shared helper consumed by both passes, so any fix lands in 
 
 ## Three defects
 
-### 1. `meanAbsMag` conflates a calibration constant with real physics
+### 1. `medianAbsMag` conflates a calibration constant with real physics
 
-Subtracting each catalog's own mean absolute magnitude erases two different things at once:
+Subtracting each catalog's own median absolute magnitude erases two different things at once:
 
 - the **photometric band zero-point** (SDSS g / 2MRS J / GLADE B / Famous B) — a genuine per-catalog constant that _should_ be corrected;
 - the catalog's **real luminosity distribution** — a genuine physical difference that should _not_ be erased.
 
-Famous galaxies really are more luminous and higher surface brightness. Normalising that away and then re-introducing an absolute 30 kpc size term is what manufactures the mismatch. Secondary effect: the mean is arithmetic in log space, then exponentiated, so `lumRel` has median ≈ 1 but mean > 1 (Jensen) — a bright-tail skew that disappears with a fixed reference.
+Famous galaxies really are more luminous and higher surface brightness. Normalising that away and then re-introducing an absolute 30 kpc size term is what manufactures the mismatch. Secondary effect: the zero-point is a central statistic in log space, then exponentiated, so `lumRel` has median ≈ 1 but mean > 1 (Jensen) — a bright-tail skew that disappears with a fixed reference.
 
 ### 2. `sbBoost` is the right shape, derived the wrong way
 
@@ -47,9 +47,9 @@ Catalogs with genuinely measured sizes, where SB is real: SDSS (`petroR50_r`, `s
 
 ## What needs decided
 
-- **Band unification.** Replace `meanAbsMag` with a per-catalog **band zero-point constant** plus a single **global absolute reference magnitude**. Needs a real transformation per source (B→g, J→g, …), each requiring a colour term — Famous has B−V, 2MRS has J−K, GLADE is B-only. Decide the target band and what to do where the colour term is missing.
+- **Band unification.** Replace `medianAbsMag` with a per-catalog **band zero-point constant** plus a single **global absolute reference magnitude**. Needs a real transformation per source (B→g, J→g, …), each requiring a colour term — Famous has B−V, 2MRS has J−K, GLADE is B-only. Decide the target band and what to do where the colour term is missing.
 - **What to do about GLADE.** Options: flag its SB as synthetic and render it at flat surface brightness; source measured diameters (HyperLEDA `logd25` by PGC — coverage is partial, see `project_hyperleda_partial_cache`); or accept the degeneracy and document it.
-- **Re-tuning cost.** Dropping the per-catalog mean shifts _every_ catalog's brightness, so this needs a full visual pass and probably new `sbScale` defaults. Famous would become legitimately brighter than the field, at which point "too bright" is an exposure/tone-map question, not a data one — it interacts with the HDR bloom threshold and the brightness slider the same way [star apparent-magnitude realism](2026-07-22-star-apparent-magnitude-realism.md) does.
+- **Re-tuning cost.** Dropping the per-catalog median shifts _every_ catalog's brightness, so this needs a full visual pass and probably new `sbScale` defaults. Famous would become legitimately brighter than the field, at which point "too bright" is an exposure/tone-map question, not a data one — it interacts with the HDR bloom threshold and the brightness slider the same way [star apparent-magnitude realism](2026-07-22-star-apparent-magnitude-realism.md) does.
 - **Whether it's worth it.** A defensible alternative is to keep the current tuning, delete the "physically grounded" claim from the comments, and treat `sbAmp` as a legibility heuristic. Cheaper and honest.
 
 ## Validation

@@ -10,7 +10,7 @@
  * scales with intrinsic luminosity, and for a fixed intrinsic luminosity
  * scales inversely with projected area. Hence `lumRel / diamRatio²`: the
  * amplitude rises for galaxies that are intrinsically brighter than their
- * catalog's mean AND falls for galaxies that spread that luminosity over
+ * catalog's median AND falls for galaxies that spread that luminosity over
  * a larger apparent disk.
  *
  * `SB_REF_DIAMETER_KPC = 30` is the zero-point for the area term — the
@@ -33,10 +33,10 @@
 const SB_REF_DIAMETER_KPC = 30;
 const SB_AMP_MAX = 100000;
 
-export function galaxySbAmp(absMag: number, meanAbsMag: number, diameterKpc: number): number {
+export function galaxySbAmp(absMag: number, medianAbsMag: number, diameterKpc: number): number {
   const diamKpc = diameterKpc > 0 ? diameterKpc : SB_REF_DIAMETER_KPC;
   const diamRatio = diamKpc / SB_REF_DIAMETER_KPC;
-  const lumRel = Math.pow(10, -0.4 * (absMag - meanAbsMag));
+  const lumRel = Math.pow(10, -0.4 * (absMag - medianAbsMag));
   const raw = lumRel / (diamRatio * diamRatio);
   return Number.isFinite(raw) ? Math.min(Math.max(raw, 0), SB_AMP_MAX) : 1.0;
 }

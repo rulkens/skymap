@@ -31,7 +31,7 @@ describe('galaxySbAmp', () => {
     expect(viaNegative).toBe(viaExplicit30);
   });
 
-  it('returns exactly 1.0 when absMag equals meanAbsMag and diameter is the 30 kpc reference', () => {
+  it('returns exactly 1.0 when absMag equals medianAbsMag and diameter is the 30 kpc reference', () => {
     // lumRel = 10^0 = 1, diamRatio = 1 → raw = 1.
     expect(galaxySbAmp(-20.5, -20.5, 30)).toBeCloseTo(1, 6);
   });

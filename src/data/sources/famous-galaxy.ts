@@ -37,10 +37,10 @@ export const FAMOUS_GALAXY_ENTRY = {
   // Famous runs HOT without a trim, and the cause is a systematic in the
   // surface-brightness model rather than missing photometry (77 of the 80
   // seed rows carry a real magB). `galaxySbAmp` divides a catalog-RELATIVE
-  // luminosity (normalised against this catalog's own meanAbsMag) by an
+  // luminosity (normalised against this catalog's own medianAbsMag) by an
   // ABSOLUTE size reference (a fixed 30 kpc). Famous galaxies have a median
   // diameter of 25.4 kpc, so that size term alone inflates every row by
-  // 1/0.847^2 = 1.39x; combined with the log-space-mean-then-exponentiate
+  // 1/0.847^2 = 1.39x; combined with the log-space-average-then-exponentiate
   // skew the measured median `raw` lands at 2.14 against a nominal 1.0, with
   // a tail to 11.7 (NGC 4449). Since every row then clears the 2.0 bloom
   // threshold, the whole catalog blooms at once and reads as blown out —

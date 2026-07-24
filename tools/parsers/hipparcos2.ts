@@ -52,6 +52,7 @@
  */
 
 import { nonCommentLines, slot } from './common';
+import { isPlausibleMagnitude } from '../utils/math/isPlausibleMagnitude';
 
 /** Radians → degrees. Named so the conversion at the boundary is greppable. */
 const RAD_TO_DEG = 180 / Math.PI;
@@ -112,12 +113,16 @@ export function parseHipparcos2(rawText: string): Hip2Result {
     const bvStr = slot(line, 153, 158);
     const bv = bvStr === '' ? NaN : parseFloat(bvStr);
 
+    // Hpmag goes through the shared plausibility predicate rather than a
+    // bare finiteness check: VizieR-distributed reductions substitute a
+    // numeric sentinel when a column is unmeasured, and a finite -9999 would
+    // otherwise become the brightest star in the sky.
     if (
       !Number.isFinite(hip) ||
       !Number.isFinite(raRad) ||
       !Number.isFinite(deRad) ||
       !Number.isFinite(plxMas) ||
-      !Number.isFinite(hpMag)
+      !isPlausibleMagnitude(hpMag)
     ) {
       // A required numeric field failed to parse — no usable row.
       skipped++;

@@ -66,7 +66,7 @@
  */
 
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
-import { galaxyMeanAbsMag } from '../../utils/galaxy/galaxyMeanAbsMag';
+import { galaxyMedianAbsMag } from '../../utils/galaxy/galaxyMedianAbsMag';
 
 const MAGIC = 0x504d4b53;
 const VERSION = 8;
@@ -243,7 +243,7 @@ export function decodeGalaxyCatalog(buf: ArrayBuffer): GalaxyCatalog {
   // Derived, not stored on disk — recomputed here (rather than encoded)
   // so adding this field never bumps the binary format version. Computed
   // AFTER the object above so the helper sees the finished typed arrays.
-  catalog.meanAbsMag = galaxyMeanAbsMag(catalog);
+  catalog.medianAbsMag = galaxyMedianAbsMag(catalog);
   return catalog;
 }
 
@@ -263,7 +263,7 @@ export function emptyGalaxyCatalog(): GalaxyCatalog {
     classByte: new Uint8Array(0),
     parentSurveyByte: new Uint8Array(0),
     spectroscopicZ: new Float32Array(0),
-    meanAbsMag: -20.5, // count-0 fallback — same sentinel galaxyMeanAbsMag returns for count===0.
+    medianAbsMag: -20.5, // count-0 fallback — same sentinel galaxyMedianAbsMag returns for count===0.
     orientationIsFallback: new Uint8Array(0),
     diameterIsFallback: new Uint8Array(0),
   };

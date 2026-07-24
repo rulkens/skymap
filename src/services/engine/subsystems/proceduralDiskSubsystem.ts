@@ -121,12 +121,12 @@ export function createProceduralDiskSubsystem(
 
         // The disk recomputes the SAME physical surface brightness the
         // point bake baked (shared `galaxySbAmp` helper + the same
-        // per-catalog `meanAbsMag`), pre-scaled by the live sliders, so
+        // per-catalog `medianAbsMag`), pre-scaled by the live sliders, so
         // the point -> disk crossfade holds constant brightness and
         // intrinsically bright galaxies bloom in the disk view too.
-        const meanAbsMag = catalog.meanAbsMag ?? -20.5;
+        const medianAbsMag = catalog.medianAbsMag ?? -20.5;
         const absMag = absoluteFromApparent(catalog.magG[i]!, dMpcFromOrigin);
-        const rawSb = galaxySbAmp(absMag, meanAbsMag, dKpcRow);
+        const rawSb = galaxySbAmp(absMag, medianAbsMag, dKpcRow);
         const regEntry = SOURCE_REGISTRY[source];
         const sbBoost = regEntry.type === 'galaxyCatalog' ? regEntry.sbBoost : 1;
         const sbAmp = Math.min(rawSb, sbMax) * sbScale * sbBoost * brightness;

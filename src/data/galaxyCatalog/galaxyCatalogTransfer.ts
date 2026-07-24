@@ -62,7 +62,7 @@ export function cloneGalaxyCatalogForTransfer(catalog: GalaxyCatalog): ClonedGal
     spectroscopicZ: new Float32Array(catalog.spectroscopicZ.buffer.slice(0)),
     // Scalar, not a typed array — rides along by value, no buffer to slice
     // or add to the transfer list.
-    meanAbsMag: catalog.meanAbsMag,
+    medianAbsMag: catalog.medianAbsMag,
     orientationIsFallback: new Uint8Array(catalog.orientationIsFallback.buffer.slice(0)),
     diameterIsFallback: new Uint8Array(catalog.diameterIsFallback.buffer.slice(0)),
   };
