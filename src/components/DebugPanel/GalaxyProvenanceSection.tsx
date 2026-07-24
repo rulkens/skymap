@@ -2,20 +2,20 @@
 /**
  * GalaxyProvenanceSection — the catalog-audit table for the DebugPanel.
  *
- * A galaxy record carries two values the build pipeline invents when the source
- * catalog has none: its orientation (b/a + position angle, hashed from sky
- * position) and its size (a flat 30 kpc diameter). Each is flagged per record,
- * so the renderer can tell measurement from guess.
+ * A galaxy record carries two values the build pipeline fills in when the source
+ * catalog has no measurement: its orientation (b/a + position angle, hashed from
+ * sky position) and its size (a flat 30 kpc diameter). Each is flagged per record,
+ * so the renderer can tell measurement from fallback.
  *
  * One row per `PROVENANCE_AXES` entry, each carrying the same three controls:
  *
  *   - **highlight** replaces the galaxy's ramp colour with the axis's swatch
  *     colour in the vertex shader (a replacement, not a tint — a red galaxy
- *     multiplied by a tint just darkens), so estimated records are scannable
- *     against the sky.
+ *     multiplied by a tint just darkens), so records missing this measurement
+ *     are scannable against the sky.
  *   - **cull** discards fragments on the other side of the axis: `measured`
  *     leaves only real measurements, `estimated` leaves only the fallbacks.
- *   - **counts**, the estimated tally and its share of every loaded catalog,
+ *   - **counts**, the missing-value tally and its share of every loaded catalog,
  *     which turns "that looks like a lot of magenta" into a number.
  *
  * The rows are mapped from the registry, never written by hand: a third axis
@@ -51,7 +51,7 @@ import DebugSection from './DebugSection';
 import styles from './GalaxyProvenanceSection.module.css';
 
 const CULL_HINT =
-  'All draws everything. Measured drops the estimates. Estimated drops the measurements.';
+  'All draws everything. Measured drops the galaxies missing this value. Estimated keeps only those.';
 
 export type GalaxyProvenanceSectionProps = {
   readonly provenance: GalaxyProvenanceSettings;
@@ -77,17 +77,20 @@ function GalaxyProvenanceSection({
         <span />
         <span
           className={cx(styles.head, styles.spanTwo)}
-          title="Galaxies whose value on this axis the pipeline invented rather than measured."
+          title="Galaxies with no measured value for this in the source catalog. The pipeline filled one in."
         >
           estimated
         </span>
         <span
           className={styles.head}
-          title="Paint estimated galaxies in the swatch colour instead of their catalog colour."
+          title="Paint the galaxies missing this measurement in the swatch colour."
         >
           show
         </span>
-        <span className={styles.head} title="Which half of the axis is drawn.">
+        <span
+          className={styles.head}
+          title="Draw all galaxies, only those with a real measurement, or only those missing one."
+        >
           cull
         </span>
 
@@ -102,13 +105,13 @@ function GalaxyProvenanceSection({
               </label>
               <span
                 className={styles.number}
-                title="Estimated galaxies on this axis, across all loaded catalogs."
+                title="Galaxies missing this measurement, across all loaded catalogs."
               >
                 {loaded ? estimated.toLocaleString() : '—'}
               </span>
               <span
                 className={cx(styles.number, styles.percent)}
-                title="Share of loaded galaxies that are estimated on this axis."
+                title="Share of loaded galaxies missing this measurement."
               >
                 {loaded ? `${((estimated / counts.total) * 100).toFixed(1)}%` : '—'}
               </span>
@@ -116,7 +119,7 @@ function GalaxyProvenanceSection({
                 id={checkboxId}
                 className={styles.check}
                 type="checkbox"
-                title={`Highlight estimated ${axis.label.toLowerCase()}.`}
+                title={`Highlight galaxies with no measured ${axis.label.toLowerCase()}.`}
                 checked={provenance[axis.id].highlight}
                 onChange={(e) => onHighlightChange(axis.id, e.target.checked)}
               />
