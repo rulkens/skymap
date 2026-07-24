@@ -47,6 +47,7 @@ import { join, resolve } from 'node:path';
 import sharp from 'sharp';
 
 import type { BodyTextureId } from '../../src/@types/data/BodyTextureId';
+import { atlasTileRect } from '../../src/utils/gpu/atlasTileRect';
 import { bodyTextureFilename } from '../../src/utils/scene/bodyTextureFilename';
 
 /**
@@ -158,10 +159,15 @@ export async function writeBodyAtlas(
       process.stderr.write(`  warn atlas ${bodyId}: no built tier — cell ${index} left grey\n`);
       continue;
     }
+    // The SAME index→pixel derivation the runtime crops with, not a second
+    // spelling of it: a tool that packed column-major while `atlasTileRect` read
+    // row-major would hand every body a neighbour's face, silently, with the
+    // atlas otherwise valid. `left`/`top` are sharp's names for `x`/`y`.
+    const rect = atlasTileRect(index, GRID.columns, { w: GRID.tileW, h: GRID.tileH });
     tiles.push({
-      input: await sharp(srcPath).resize({ width: GRID.tileW, height: GRID.tileH }).toBuffer(),
-      left: (index % GRID.columns) * GRID.tileW,
-      top: Math.floor(index / GRID.columns) * GRID.tileH,
+      input: await sharp(srcPath).resize({ width: rect.w, height: rect.h }).toBuffer(),
+      left: rect.x,
+      top: rect.y,
     });
   }
 
