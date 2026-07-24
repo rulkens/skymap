@@ -399,6 +399,20 @@ export function createTexturedBodyRenderer(
     res.bindGroup = buildBindGroup(res);
   }
 
+  // ── hasMap ────────────────────────────────────────────────────────────────
+  //
+  // Residency, answered by the thing that draws it: does this (body, kind)
+  // binding hold a real texture rather than the shared 1×1 placeholder? The
+  // frame's flat-vs-textured split asks THIS rather than the loading system,
+  // because "a committed `bodyTextures` slot" is only a proxy for the fact and
+  // the two can diverge (a texture the renderer holds with no slot behind it
+  // would read as untextured, and the two layers consuming opposite branches
+  // would both draw the body opaquely into `foreground:0`).
+
+  function hasMap(bodyId: BodyTextureId, kind: TextureKind): boolean {
+    return bodies.get(bodyId)?.maps.has(kind) ?? false;
+  }
+
   // ── setRingTexture ────────────────────────────────────────────────────────
 
   function setRingTexture(bodyId: BodyTextureId, bitmap: ImageBitmap): void {
@@ -459,6 +473,7 @@ export function createTexturedBodyRenderer(
     label: 'texturedBodyRenderer',
     setMap,
     clearMap,
+    hasMap,
     setRingTexture,
     draw,
     destroy,

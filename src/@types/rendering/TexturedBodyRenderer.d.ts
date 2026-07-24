@@ -68,6 +68,20 @@ export type TexturedBodyRenderer = Renderer & {
    */
   clearMap(bodyId: BodyTextureId, kind: TextureKind): void;
   /**
+   * True iff this (body, kind) has ANY texture bound other than the shared 1×1
+   * placeholder — i.e. whether the body currently RENDERS as textured.
+   *
+   * Residency is a rendering fact, and this is where it lives. The frame's
+   * `flat`/`textured` split used to infer it from the loading system (the keyed
+   * `bodyTextures` slot holding a committed bitmap), which held only while the
+   * two could not diverge. They can: a body-atlas tile is bound by the renderer
+   * with no per-body slot behind it, so a slot-derived answer would say "flat"
+   * about a body that is visibly textured, and the layers that consume opposite
+   * branches would double-draw it. Asking the renderer what it has bound makes
+   * the answer true by construction whatever put the texture there.
+   */
+  hasMap(bodyId: BodyTextureId, kind: TextureKind): boolean;
+  /**
    * Swap a body's ring-alpha texture (binding 3) — Saturn's radial ring strip
    * for the ring-on-planet shadow. Every other body keeps the shared 1×1
    * transparent placeholder (never sampled, since `ringOuterRatio == 0`).
