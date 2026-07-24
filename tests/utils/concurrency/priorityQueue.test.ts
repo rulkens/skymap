@@ -7,7 +7,7 @@ describe('PriorityQueue', () => {
     let inFlight = 0;
     let maxInFlight = 0;
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-    const queue = new PriorityQueue();
+    const queue = new PriorityQueue(MAX_CONCURRENT_FETCHES);
 
     for (let i = 0; i < 12; i++) {
       queue.enqueue({
@@ -27,6 +27,38 @@ describe('PriorityQueue', () => {
 
     expect(maxInFlight).toBeLessThanOrEqual(MAX_CONCURRENT_FETCHES);
     expect(maxInFlight).toBeGreaterThan(1); // sanity: parallelism actually happened
+  });
+
+  it('runs at most the constructed limit simultaneously', async () => {
+    const queue = new PriorityQueue(2);
+    let inFlight = 0;
+    let maxInFlight = 0;
+    const unblockers: Array<() => void> = [];
+
+    for (let i = 0; i < 6; i++) {
+      const gate = new Promise<void>((r) => unblockers.push(r));
+      queue.enqueue({
+        key: `k${i}`,
+        priority: i,
+        fetcher: async () => {
+          inFlight++;
+          maxInFlight = Math.max(maxInFlight, inFlight);
+          await gate;
+          inFlight--;
+          return null;
+        },
+        onResult: () => {},
+      });
+    }
+
+    for (const u of unblockers) u();
+    await queue.drain();
+
+    // Exactly 2, not toBeLessThanOrEqual: a silently-unbounded queue would
+    // let all 6 run at once, and a <= assertion would miss that regression
+    // just as readily as it would miss a queue that serialises everything
+    // down to 1 — only an exact bound catches both failure directions.
+    expect(maxInFlight).toBe(2);
   });
 
   it('processes higher-priority entries first', async () => {
