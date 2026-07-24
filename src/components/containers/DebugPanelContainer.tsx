@@ -1,7 +1,7 @@
 // src/components/containers/DebugPanelContainer.tsx
 /**
  * DebugPanelContainer — store boundary for the developer debug panel's
- * top-level knobs (pick/disk-ring toggles, flow, galaxy orientation, render toggles).
+ * top-level knobs (pick/disk-ring toggles, flow, galaxy provenance, render toggles).
  *
  * Owns the store reads + dispatch for those knobs plus the `onTogglePass`
  * handler previously inline in `RenderTogglesSection`. The clip/tour and
@@ -16,33 +16,39 @@
  * `[dispatch]`-only pattern used by the simple boolean toggles. This
  * preserves the existing `disabled: disabledPasses[pass] !== true` toggle
  * semantics exactly.
+ *
+ * The provenance totals are summed here rather than in a selector: the engine
+ * slice holds one entry per source, and the panel wants one row. The store
+ * record is a stable reference between commits, so a `useMemo` on it holds
+ * without needing `createSelector`'s memoization.
  */
 
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { DebugPanel } from '../DebugPanel/DebugPanel';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
   selectShowPickBuffer,
   selectShowDiskRadiusRing,
   selectDisabledPasses,
-  selectHighlightEstimatedOrientation,
-  selectOnlyMeasuredOrientation,
-  selectHighlightEstimatedSize,
+  selectGalaxyProvenance,
   selectFlow,
 } from '../../state/settings/selectors';
+import { selectProvenanceCounts } from '../../state/engine/selectors';
 import {
   setShowPickBuffer,
   setShowDiskRadiusRing,
-  setHighlightEstimatedOrientation,
-  setOnlyMeasuredOrientation,
-  setHighlightEstimatedSize,
+  setProvenanceHighlight,
+  setProvenanceFilter,
   setFlow,
   setPassDisabled,
 } from '../../state/settings/settingsSlice';
+import { sumProvenanceCounts } from '../../utils/sumProvenanceCounts';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
 import type { FrameStats } from '../../@types/engine/FrameStats';
 import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
+import type { ProvenanceAxisId } from '../../@types/settings/ProvenanceAxisId';
+import type { ProvenanceFilter } from '../../@types/settings/ProvenanceFilter';
 
 export type DebugPanelContainerProps = {
   slots: ReadonlyMap<string, AssetSlot<unknown, unknown>>;
@@ -62,10 +68,14 @@ function DebugPanelContainer({
   const showPickBuffer = useAppSelector(selectShowPickBuffer);
   const showDiskRadiusRing = useAppSelector(selectShowDiskRadiusRing);
   const disabledPasses = useAppSelector(selectDisabledPasses);
-  const highlightEstimatedOrientation = useAppSelector(selectHighlightEstimatedOrientation);
-  const onlyMeasuredOrientation = useAppSelector(selectOnlyMeasuredOrientation);
-  const highlightEstimatedSize = useAppSelector(selectHighlightEstimatedSize);
+  const provenance = useAppSelector(selectGalaxyProvenance);
+  const provenanceCountsBySource = useAppSelector(selectProvenanceCounts);
   const flow = useAppSelector(selectFlow);
+
+  const provenanceCounts = useMemo(
+    () => sumProvenanceCounts(provenanceCountsBySource),
+    [provenanceCountsBySource],
+  );
 
   const onShowPickBufferChange = useCallback(
     (enabled: boolean) => dispatch(setShowPickBuffer(enabled)),
@@ -77,18 +87,15 @@ function DebugPanelContainer({
     [dispatch],
   );
 
-  const onHighlightEstimatedOrientationChange = useCallback(
-    (enabled: boolean) => dispatch(setHighlightEstimatedOrientation(enabled)),
+  const onProvenanceHighlightChange = useCallback(
+    (axis: ProvenanceAxisId, highlight: boolean) =>
+      dispatch(setProvenanceHighlight({ axis, highlight })),
     [dispatch],
   );
 
-  const onOnlyMeasuredOrientationChange = useCallback(
-    (enabled: boolean) => dispatch(setOnlyMeasuredOrientation(enabled)),
-    [dispatch],
-  );
-
-  const onHighlightEstimatedSizeChange = useCallback(
-    (enabled: boolean) => dispatch(setHighlightEstimatedSize(enabled)),
+  const onProvenanceFilterChange = useCallback(
+    (axis: ProvenanceAxisId, filter: ProvenanceFilter) =>
+      dispatch(setProvenanceFilter({ axis, filter })),
     [dispatch],
   );
 
@@ -111,12 +118,10 @@ function DebugPanelContainer({
       frameStats={frameStats}
       passNames={passNames}
       disabledPasses={disabledPasses}
-      highlightEstimatedOrientation={highlightEstimatedOrientation}
-      onlyMeasuredOrientation={onlyMeasuredOrientation}
-      onHighlightEstimatedOrientationChange={onHighlightEstimatedOrientationChange}
-      onOnlyMeasuredOrientationChange={onOnlyMeasuredOrientationChange}
-      highlightEstimatedSize={highlightEstimatedSize}
-      onHighlightEstimatedSizeChange={onHighlightEstimatedSizeChange}
+      provenance={provenance}
+      provenanceCounts={provenanceCounts}
+      onProvenanceHighlightChange={onProvenanceHighlightChange}
+      onProvenanceFilterChange={onProvenanceFilterChange}
       showPickBuffer={showPickBuffer}
       onShowPickBufferChange={onShowPickBufferChange}
       showDiskRadiusRing={showDiskRadiusRing}

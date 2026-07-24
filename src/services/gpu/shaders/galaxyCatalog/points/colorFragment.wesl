@@ -60,10 +60,10 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // Gaussian-like falloff: bright at centre (r²=0 → e⁰=1), fading to
   // e⁻⁴ ≈ 0.018 at the edge (r²=1). All per-instance modulators
   // (intensity scalar, Schechter, angular reweight, depth fade,
-  // procedural-disk crossfade-out, magenta highlight) are folded into
-  // 'in.shaded.rgb' by the vertex stage — see vertex.wesl. Galaxies
-  // gated by onlyMeasuredOrientation are culled at the vertex stage too, so this
-  // fragment never sees them.
+  // procedural-disk crossfade-out, provenance highlight) are folded into
+  // 'in.shaded.rgb' by the vertex stage — see vertex.wesl. Galaxies culled
+  // by a provenance filter ('orientationFilter' / 'sizeFilter') are dropped
+  // at the vertex stage too, so this fragment never sees them.
   var alpha = exp(-r2 * 4.0);
   let rgb = in.shaded.rgb;
 

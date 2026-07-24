@@ -75,12 +75,13 @@ import package::lib::camera::CameraUniforms;
 //   offset 92  : brightness          (f32)
 //   offset 96  : camPosWorld         (vec3<f32>)
 //   offset 108 : pxPerRad            (f32)
-//   offset 112 : highlightEstimatedOrientation (u32)
-//   offset 116 : onlyMeasuredOrientation        (u32)
-//   offset 120 : depthFadeEnabled    (u32)
-//   offset 124 : highlightEstimatedSize (u32)
-//   offset 128..159 : Malmquist block (biasMode, absMagLimit, ...)
-//   offset 160..175 : pxFadeStart, pxFadeEnd, _padFade0, _padFade1
+//   offset 112 : orientationHighlight (u32)
+//   offset 116 : orientationFilter    (u32)
+//   offset 120 : sizeHighlight        (u32)
+//   offset 124 : sizeFilter           (u32)
+//   offset 128..155 : Malmquist block (biasMode, absMagLimit, ...)
+//   offset 156 : depthFadeEnabled    (u32)
+//   offset 160..175 : pxFadeStart, pxFadeEnd, pickPass, _padFade1
 //   total: 176 bytes.
 //
 // The full historical narrative (why fields moved during the
@@ -128,23 +129,31 @@ struct Uniforms {
   // pre-computed CPU-side as 'viewport.y / (2 · tan(fovY / 2))'.
   pxPerRad: f32,
 
-  // ── Task 15: orientation-visibility toggles ─────────────────────────
+  // ── Provenance-audit block (two axes × (highlight, filter)) ─────────
   //
-  // u32 booleans (0 / 1) controlling how the fragment shader treats
-  // galaxies whose orientation came from the deterministic fallback
-  // rather than a real photometric measurement. The fallback flag
-  // itself rides on the sign bit of the per-vertex 'axisRatio'.
-  highlightEstimatedOrientation: u32,
-  onlyMeasuredOrientation: u32,
-  // Per-galaxy camera-distance depth fade gate. When 1, the vertex
-  // stage computes '1 / (1 + (camDist / FALLOFF_HALF)²)'; when 0 it
-  // skips the gate and forwards 1.0 through.
-  depthFadeEnabled: u32,
-  // u32 boolean: replaces fallback-diameter galaxies' colour with green
-  // (amber if orientation is also estimated). The flag itself rides
-  // the sign bit of the per-vertex 'radiusMpc' (abs() for magnitude, < 0
-  // for the flag), the same encoding orientation uses on 'axisRatio'.
-  highlightEstimatedSize: u32,
+  // Each of the two provenance axes says whether a galaxy's value was
+  // MEASURED or ESTIMATED by a deterministic fallback. The estimated
+  // flag rides the sign bit of the axis's per-vertex attribute:
+  // 'axisRatio < 0.0' for orientation, 'radiusMpc < 0.0' for size (the
+  // magnitude comes back through abs()).
+  //
+  // '*Highlight' is a u32 boolean (0 / 1): when 1, the vertex stage
+  // replaces the ramp colour of ESTIMATED galaxies on that axis with a
+  // flat audit colour (magenta for orientation, green for size, amber
+  // when both fire).
+  //
+  // '*Filter' is a tri-state cull code, not a boolean:
+  //   0 = all       — draw both measured and estimated.
+  //   1 = measured  — cull galaxies estimated on this axis.
+  //   2 = estimated — cull galaxies measured on this axis.
+  // A single code rather than two booleans because 'hide measured' and
+  // 'hide estimated' together would mean 'draw nothing', a state the
+  // encoding should not be able to express. The two axes' filters
+  // compose by AND: a galaxy survives only if it passes both.
+  orientationHighlight: u32,
+  orientationFilter: u32,
+  sizeHighlight: u32,
+  sizeFilter: u32,
 
   // ── Malmquist-bias correction state ─────────────────────────────────
   //
@@ -169,7 +178,13 @@ struct Uniforms {
   schechterAlpha: f32,
   schechterMLim: f32,
   schechterNRef: f32,
-  _pad5: u32,
+  // Per-galaxy camera-distance depth fade gate. When 1, the vertex
+  // stage computes '1 / (1 + (camDist / FALLOFF_HALF)²)'; when 0 it
+  // skips the gate and forwards 1.0 through. It lodges in the Malmquist
+  // group's trailing slot purely for packing — it has nothing to do with
+  // bias correction, and living here leaves the provenance block above a
+  // contiguous 112..127 run.
+  depthFadeEnabled: u32,
 
   // ── Procedural-disk crossfade-OUT band ──────────────────────────────
   //

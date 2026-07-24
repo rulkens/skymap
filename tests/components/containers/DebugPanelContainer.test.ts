@@ -7,7 +7,8 @@
  *   - reads `showPickBuffer` out of the store and reflects it on the matching checkbox;
  *   - dispatches `setShowPickBuffer` when the checkbox is toggled;
  *   - routes a RenderTogglesSection checkbox click through `onTogglePass` → `setPassDisabled`;
- *   - dispatches `setOnlyMeasuredOrientation` when the galaxy-orientation toggle fires.
+ *   - routes the galaxy-provenance table's highlight checkbox and cull `<select>`
+ *     through `setProvenanceHighlight` / `setProvenanceFilter`.
  *
  * Stub engine props — a `new Map()` for `slots`, a minimal `timingService` stub
  * (enabled=false, all methods are no-ops), and a `passNames` array — satisfy the
@@ -26,7 +27,7 @@ import { createAppStore } from '../../../src/store/createAppStore';
 import {
   selectShowPickBuffer,
   selectDisabledPasses,
-  selectOnlyMeasuredOrientation,
+  selectGalaxyProvenance,
 } from '../../../src/state/settings/selectors';
 import { setShowPickBuffer } from '../../../src/state/settings/settingsSlice';
 import { startClip } from '../../../src/state/camera/clipActions';
@@ -119,17 +120,28 @@ describe('DebugPanelContainer', () => {
     expect(selectDisabledPasses(store.getState())['point-sprites']).toBe(true);
   });
 
-  it('dispatches setOnlyMeasuredOrientation on the galaxy-orientation toggle', () => {
+  it('dispatches setProvenanceFilter and setProvenanceHighlight from the provenance table', () => {
     const { store } = createAppStore();
-    expect(selectOnlyMeasuredOrientation(store.getState())).toBe(false);
+    expect(selectGalaxyProvenance(store.getState()).orientation.filter).toBe('all');
+    expect(selectGalaxyProvenance(store.getState()).orientation.highlight).toBe(false);
     const { container } = renderContainer(store);
-    // GalaxyOrientationSection renders an "Only measured orientation" checkbox label.
-    const labels = Array.from(container.querySelectorAll('label'));
-    const realLabel = labels.find((l) => l.textContent?.includes('Only measured orientation'));
-    expect(realLabel).not.toBeUndefined();
-    const box = realLabel!.querySelector<HTMLInputElement>('input[type=checkbox]')!;
-    fireEvent.click(box);
-    expect(selectOnlyMeasuredOrientation(store.getState())).toBe(true);
+
+    // GalaxyProvenanceSection renders the tri-state cull as a <select>, named by
+    // its aria-label rather than the row's index — the table is built by
+    // iterating PROVENANCE_AXES, so index is an accident of registry order.
+    const cullSelect = container.querySelector<HTMLSelectElement>(
+      'select[aria-label="Cull by orientation provenance"]',
+    );
+    expect(cullSelect).not.toBeNull();
+    fireEvent.change(cullSelect!, { target: { value: 'measured' } });
+    expect(selectGalaxyProvenance(store.getState()).orientation.filter).toBe('measured');
+
+    const highlightBox = container.querySelector<HTMLInputElement>(
+      '#provenance-highlight-orientation',
+    );
+    expect(highlightBox).not.toBeNull();
+    fireEvent.click(highlightBox!);
+    expect(selectGalaxyProvenance(store.getState()).orientation.highlight).toBe(true);
   });
 
   it('dispatches startClip with the clip id on a clip-play button click', () => {

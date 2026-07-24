@@ -115,19 +115,31 @@ fn vs(
   // '@builtin(instance_index)' (local 0..count-1).
   let myPacked = packSelection(source.sourceCode, ii);
 
-  let isFallbackFlag = select(0u, 1u, p.axisRatio < 0.0);
-  // Size-fallback flag rides the sign bit of 'radiusMpc'. NaN < 0.0 is
-  // false, so synthetic-fallback rows (NaN radius) read as non-fallback.
-  let sizeIsFallbackFlag = select(0u, 1u, p.radiusMpc < 0.0);
+  // Provenance flags: each axis's 'this value was estimated, not measured'
+  // bit rides the sign bit of that axis's per-instance attribute.
+  //
+  // Synthetic-fallback rows carry NaN in both slots, and 'NaN < 0.0' is
+  // false — so they read as MEASURED on both axes. That is deliberate for
+  // the highlight (nothing to audit on a row with no catalogued value), but
+  // it means an 'estimated'-only filter culls them along with the genuinely
+  // measured galaxies.
+  let orientEstimated = p.axisRatio < 0.0;
+  let sizeEstimated = p.radiusMpc < 0.0;
 
   // Vertex-side cull: galaxies gated out by Malmquist mode 1 (volume-
-  // limited) or by onlyMeasuredOrientation (hide estimated orientations)
-  // emit a degenerate clip position so all 3 vertices of the triangle land
-  // outside the NDC cube and the rasteriser drops the primitive — no
-  // fragment work, no pick-texture write.
+  // limited) or by either provenance filter emit a degenerate clip position
+  // so all 3 vertices of the triangle land outside the NDC cube and the
+  // rasteriser drops the primitive — no fragment work, no pick-texture
+  // write, so a culled galaxy is not clickable either.
+  //
+  // Filter codes (see 'points/io.wesl'): 0 = all, 1 = only measured,
+  // 2 = only estimated. The two axes AND together — a galaxy must pass both.
   let malmquistGated = u.biasMode == 1u && p.absMag > u.absMagLimit;
-  let onlyMeasuredGated = u.onlyMeasuredOrientation == 1u && isFallbackFlag == 1u;
-  if (malmquistGated || onlyMeasuredGated) {
+  let orientGated = (u.orientationFilter == 1u && orientEstimated)
+    || (u.orientationFilter == 2u && !orientEstimated);
+  let sizeGated = (u.sizeFilter == 1u && sizeEstimated)
+    || (u.sizeFilter == 2u && !sizeEstimated);
+  if (malmquistGated || orientGated || sizeGated) {
     var earlyOut: VSOut;
     earlyOut.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
     earlyOut.uv = corner;
@@ -244,11 +256,8 @@ fn vs(
   // pre-computed ellipse-mask coefficient, defaulted to 1.0 (circle)
   // for invalid/NaN axisRatio (synthetic-fallback rows). 'abs(NaN) >
   // 0.0' is false, so the select branch is the correct gate.
-  // 'p.radiusMpc < 0.0' is the fallback-diameter flag; NaN < 0.0 is
-  // false, so synthetic rows (NaN radius) are treated as non-fallback
-  // and stay untinted.
-  let orientHighlight = u.highlightEstimatedOrientation == 1u && isFallbackFlag == 1u;
-  let sizeHighlight = u.highlightEstimatedSize == 1u && sizeIsFallbackFlag == 1u;
+  let orientHighlight = u.orientationHighlight == 1u && orientEstimated;
+  let sizeHighlight = u.sizeHighlight == 1u && sizeEstimated;
 
   // Provenance highlight REPLACES the ramp colour and boosts brightness
   // rather than multiplying a tint in: multiplying against a red galaxy

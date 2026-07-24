@@ -144,9 +144,10 @@ function packSentinels(): ArrayBuffer {
     visibleSourceMask: 0b11111,
     camPosWorld: [SENTINEL.camPosWorldX, SENTINEL.camPosWorldX + 1, SENTINEL.camPosWorldX + 2],
     pxPerRad: SENTINEL.pxPerRad,
-    highlightEstimatedOrientation: false,
-    highlightEstimatedSize: false,
-    onlyMeasuredOrientation: false,
+    provenance: {
+      orientation: { highlight: false, filter: 'all' },
+      size: { highlight: false, filter: 'all' },
+    },
     biasMode: 0,
     absMagLimit: 0,
     depthFadeEnabled: false,

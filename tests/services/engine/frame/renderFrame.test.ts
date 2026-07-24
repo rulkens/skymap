@@ -286,8 +286,10 @@ function makeInput(
     brightness: 1.0,
     selected: null as SelectionRef | null,
     visibleSourceMask: 0xffffffff,
-    highlightEstimatedOrientation: true,
-    onlyMeasuredOrientation: false,
+    provenance: {
+      orientation: { highlight: true, filter: 'all' },
+      size: { highlight: false, filter: 'all' },
+    },
     biasMode: BiasMode.None,
     absMagLimit: -19,
     depthFadeEnabled: true,
@@ -443,8 +445,7 @@ function makeInput(
           galaxyCatalogs: {
             sizePx: settings.pointSizePx,
             brightness: settings.brightness,
-            highlightEstimatedOrientation: settings.highlightEstimatedOrientation,
-            onlyMeasuredOrientation: settings.onlyMeasuredOrientation,
+            provenance: settings.provenance,
             depthFade: settings.depthFadeEnabled,
           },
           tonemap: { exposure: settings.exposure, curve: settings.toneMapCurve },
@@ -567,10 +568,7 @@ describe('renderFrame', () => {
     // pxPerRad = h / (2 · tan(fovY/2))
     const expectedPxPerRad = fx.canvasHeight / (2 * Math.tan(fx.cam.fovYRad / 2));
     expect(drawSettings.pxPerRad as number).toBeCloseTo(expectedPxPerRad, 6);
-    expect(drawSettings.highlightEstimatedOrientation).toBe(
-      fx.settings.highlightEstimatedOrientation,
-    );
-    expect(drawSettings.onlyMeasuredOrientation).toBe(fx.settings.onlyMeasuredOrientation);
+    expect(drawSettings.provenance).toEqual(fx.settings.provenance);
     expect(drawSettings.biasMode).toBe(fx.settings.biasMode);
     expect(drawSettings.absMagLimit).toBe(fx.settings.absMagLimit);
     expect(drawSettings.depthFadeEnabled).toBe(fx.settings.depthFadeEnabled);

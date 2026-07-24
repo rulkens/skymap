@@ -57,6 +57,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { BiasMode } from '../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../src/data/toneMapCurve';
+import { DEFAULT_GALAXY_PROVENANCE } from '../../src/data/defaults';
 import { renderFrame } from '../../src/services/engine/frame/renderFrame';
 import { createDisabledGpuTimingService } from '../../src/services/gpu/timing/gpuTimingService';
 import { COSMO } from '../../src/services/engine/frame/slabs';
@@ -365,8 +366,6 @@ describe('renderFrame visual baseline', () => {
       brightness: 1.0,
       selected: null as { source: SourceType; localIdx: number } | null,
       visibleSourceMask: 0xffffffff,
-      highlightEstimatedOrientation: true,
-      onlyMeasuredOrientation: false,
       biasMode: BiasMode.None,
       absMagLimit: -19,
       depthFadeEnabled: true,
@@ -449,8 +448,7 @@ describe('renderFrame visual baseline', () => {
           galaxyCatalogs: {
             sizePx: settings.pointSizePx,
             brightness: settings.brightness,
-            highlightEstimatedOrientation: settings.highlightEstimatedOrientation,
-            onlyMeasuredOrientation: settings.onlyMeasuredOrientation,
+            provenance: DEFAULT_GALAXY_PROVENANCE,
             depthFade: settings.depthFadeEnabled,
           },
           tonemap: { exposure: settings.exposure, curve: settings.toneMapCurve },

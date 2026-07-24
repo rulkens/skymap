@@ -5,8 +5,8 @@
  * `GpuTimingsSection` (per-pass GPU timing live readout),
  * `RenderTogglesSection` (per-pass on/off checkboxes for visual
  * debugging), `FlowTuningSection`, `DebugOverlaysSection` (pick-buffer
- * / disk-radius-ring toggles), `GalaxyProvenanceSection` (catalog-audit
- * diagnostics for measured vs. estimated orientation and size), and two
+ * / disk-radius-ring toggles), `GalaxyProvenanceSection` (a per-axis table of
+ * measured-vs-estimated tallies with highlight and cull controls), and two
  * self-contained sections mounted via their own store containers —
  * `ClipTriggersSectionContainer` (play/stop a registered clip + launch a guided
  * tour) and `ClipPathInspectorSectionContainer` (precompute + scrub a clip's
@@ -35,13 +35,17 @@ import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService'
 import type { FrameStats } from '../../@types/engine/FrameStats';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
 import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
+import type { GalaxyProvenanceSettings } from '../../@types/settings/GalaxyProvenanceSettings';
+import type { ProvenanceAxisId } from '../../@types/settings/ProvenanceAxisId';
+import type { ProvenanceFilter } from '../../@types/settings/ProvenanceFilter';
+import type { ProvenanceCounts } from '../../@types/engine/ProvenanceCounts';
 import { AssetLoadingSection } from './AssetLoadingSection';
 import { FrameStatsRow } from './FrameStatsRow';
 import { GpuTimingsSection } from './GpuTimingsSection';
 import { RenderTogglesSection } from './RenderTogglesSection';
 import { FlowTuningSection } from './FlowTuningSection';
 import DebugOverlaysSection from './DebugOverlaysSection';
-import { GalaxyProvenanceSection } from './GalaxyProvenanceSection';
+import GalaxyProvenanceSection from './GalaxyProvenanceSection';
 import ClipTriggersSectionContainer from '../containers/ClipTriggersSectionContainer';
 import ClipPathInspectorSectionContainer from '../containers/ClipPathInspectorSectionContainer';
 import styles from './DebugPanel.module.css';
@@ -59,15 +63,12 @@ export type DebugPanelProps = {
    * the container dispatches `setPassDisabled`, and `watchWakeSaga` wakes the loop.
    */
   disabledPasses: Record<string, boolean>;
-  /** Replace the colour of galaxies whose b/a + position-angle is estimated, not measured, with magenta. */
-  highlightEstimatedOrientation: boolean;
-  /** Discard estimated-orientation fragments entirely, leaving only measured galaxies. */
-  onlyMeasuredOrientation: boolean;
-  onHighlightEstimatedOrientationChange: (enabled: boolean) => void;
-  onOnlyMeasuredOrientationChange: (enabled: boolean) => void;
-  /** Replace the colour of galaxies whose diameter is estimated, not measured, with green. */
-  highlightEstimatedSize: boolean;
-  onHighlightEstimatedSizeChange: (enabled: boolean) => void;
+  /** Per-axis highlight + cull state for the provenance table. */
+  provenance: GalaxyProvenanceSettings;
+  /** Estimated-vs-total tallies summed across every loaded catalog. */
+  provenanceCounts: ProvenanceCounts;
+  onProvenanceHighlightChange: (axis: ProvenanceAxisId, highlight: boolean) => void;
+  onProvenanceFilterChange: (axis: ProvenanceAxisId, filter: ProvenanceFilter) => void;
   /**
    * Pick-buffer debug overlay toggle.  When on, the renderer paints a
    * colour-mapped RGBA layer over the tone-mapped frame so the
@@ -107,12 +108,10 @@ export function DebugPanel({
   frameStats,
   passNames,
   disabledPasses,
-  highlightEstimatedOrientation,
-  onlyMeasuredOrientation,
-  onHighlightEstimatedOrientationChange,
-  onOnlyMeasuredOrientationChange,
-  highlightEstimatedSize,
-  onHighlightEstimatedSizeChange,
+  provenance,
+  provenanceCounts,
+  onProvenanceHighlightChange,
+  onProvenanceFilterChange,
   showPickBuffer,
   onShowPickBufferChange,
   showDiskRadiusRing,
@@ -142,12 +141,10 @@ export function DebugPanel({
         onShowDiskRadiusRingChange={onShowDiskRadiusRingChange}
       />
       <GalaxyProvenanceSection
-        highlightEstimatedOrientation={highlightEstimatedOrientation}
-        onlyMeasuredOrientation={onlyMeasuredOrientation}
-        onHighlightEstimatedOrientationChange={onHighlightEstimatedOrientationChange}
-        onOnlyMeasuredOrientationChange={onOnlyMeasuredOrientationChange}
-        highlightEstimatedSize={highlightEstimatedSize}
-        onHighlightEstimatedSizeChange={onHighlightEstimatedSizeChange}
+        provenance={provenance}
+        counts={provenanceCounts}
+        onHighlightChange={onProvenanceHighlightChange}
+        onFilterChange={onProvenanceFilterChange}
       />
       <ClipTriggersSectionContainer />
       <ClipPathInspectorSectionContainer />

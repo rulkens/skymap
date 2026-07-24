@@ -10,6 +10,7 @@
 
 import type { Vec3 } from '../math/Vec3';
 import type { SourceType } from '../data/SourceType';
+import type { GalaxyProvenanceSettings } from '../settings/GalaxyProvenanceSettings';
 
 export type PointDrawSettings = {
   /** Far-field billboard floor radius in pixels.  Galaxies smaller than this stay rendered at this size; nearby galaxies grow past it to their real disc size. */
@@ -24,12 +25,8 @@ export type PointDrawSettings = {
   camPosWorld: Readonly<Vec3>;
   /** Pixels-per-radian for the current viewport + FOV: `viewportPx[1] / (2 * tan(fovYRad / 2))`. */
   pxPerRad: number;
-  /** When true, fallback-orientation fragments have their colour replaced with magenta in the visual shader.  Selection / pick paths unaffected. */
-  highlightEstimatedOrientation: boolean;
-  /** When true, fallback-orientation fragments are `discard`ed entirely. */
-  onlyMeasuredOrientation: boolean;
-  /** When true, fallback-diameter galaxies have their colour replaced with green in the visual shader.  Pick path unaffected. */
-  highlightEstimatedSize: boolean;
+  /** Per-axis provenance audit state: highlight overlay + tri-state cull. Applies to the visual AND pick passes (a culled galaxy is not pickable either). */
+  provenance: GalaxyProvenanceSettings;
   /** Malmquist-bias correction selector (`data/biasMode.ts`).  0 = no correction; `absMagLimit` ignored.  The Schechter / 1-over-Vmax modes read per-vertex weights (`schechterRatio`, angular-density) the bias-correction subsystem splices into the vertex buffer — not uniforms. */
   biasMode: number;
   /** Volume-limit threshold for `biasMode == 1`.  Galaxies fainter than this are discarded in the vertex stage. */

@@ -53,6 +53,7 @@ import type { ClipPathTuningActive } from '../../@types/settings/ClipPathTuningA
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
 import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
+import type { GalaxyProvenanceSettings } from '../../@types/settings/GalaxyProvenanceSettings';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../data/sources';
 import { maskWith } from '../../utils/maskWith';
 
@@ -79,14 +80,8 @@ export const selectBrightness = (state: RootState): number =>
 export const selectDepthFade = (state: RootState): boolean =>
   selectSettings(state).galaxyCatalogs.depthFade;
 
-export const selectHighlightEstimatedOrientation = (state: RootState): boolean =>
-  selectSettings(state).galaxyCatalogs.highlightEstimatedOrientation;
-
-export const selectOnlyMeasuredOrientation = (state: RootState): boolean =>
-  selectSettings(state).galaxyCatalogs.onlyMeasuredOrientation;
-
-export const selectHighlightEstimatedSize = (state: RootState): boolean =>
-  selectSettings(state).galaxyCatalogs.highlightEstimatedSize;
+export const selectGalaxyProvenance = (state: RootState): GalaxyProvenanceSettings =>
+  selectSettings(state).galaxyCatalogs.provenance;
 
 export const selectGalaxyCatalogItems = (
   state: RootState,

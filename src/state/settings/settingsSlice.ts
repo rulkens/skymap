@@ -49,6 +49,8 @@ import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults
 import type { SettingsSnapshot } from '../../@types/engine/settings/SettingsSnapshot';
 import type { RenderStrategy } from '../../@types/engine/frame/RenderStrategy';
 import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
+import type { ProvenanceAxisId } from '../../@types/settings/ProvenanceAxisId';
+import type { ProvenanceFilter } from '../../@types/settings/ProvenanceFilter';
 
 // The slice seeds the appearance knobs from `buildInitialSettings()`. The data
 // tier is NOT a settings field — it lives in its own root slice (seeded via the
@@ -76,14 +78,21 @@ const settingsSlice = createSlice({
     setDepthFade: (settings, action: PayloadAction<boolean>) => {
       settings.galaxyCatalogs.depthFade = action.payload;
     },
-    setHighlightEstimatedOrientation: (settings, action: PayloadAction<boolean>) => {
-      settings.galaxyCatalogs.highlightEstimatedOrientation = action.payload;
+    // Data-quality provenance axes (orientation / size): each axis's highlight
+    // overlay and tri-state filter are independent writers, mirroring how
+    // `setGalaxyCatalogVisible` / `setGalaxyCatalogLabelEnabled` each own one
+    // axis of a per-item row.
+    setProvenanceHighlight: (
+      settings,
+      action: PayloadAction<{ axis: ProvenanceAxisId; highlight: boolean }>,
+    ) => {
+      settings.galaxyCatalogs.provenance[action.payload.axis].highlight = action.payload.highlight;
     },
-    setOnlyMeasuredOrientation: (settings, action: PayloadAction<boolean>) => {
-      settings.galaxyCatalogs.onlyMeasuredOrientation = action.payload;
-    },
-    setHighlightEstimatedSize: (settings, action: PayloadAction<boolean>) => {
-      settings.galaxyCatalogs.highlightEstimatedSize = action.payload;
+    setProvenanceFilter: (
+      settings,
+      action: PayloadAction<{ axis: ProvenanceAxisId; filter: ProvenanceFilter }>,
+    ) => {
+      settings.galaxyCatalogs.provenance[action.payload.axis].filter = action.payload.filter;
     },
     setGalaxyCatalogVisible: (
       settings,
@@ -440,9 +449,8 @@ export const {
   setGalaxyCatalogSize,
   setBrightness,
   setDepthFade,
-  setHighlightEstimatedOrientation,
-  setOnlyMeasuredOrientation,
-  setHighlightEstimatedSize,
+  setProvenanceHighlight,
+  setProvenanceFilter,
   setGalaxyCatalogVisible,
   setGalaxyCatalogLabelEnabled,
   setExposure,

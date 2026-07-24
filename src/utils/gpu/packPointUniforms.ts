@@ -24,6 +24,7 @@
 
 import type { Mat4 } from 'wgpu-matrix';
 import type { PointDrawSettings } from '../../@types/rendering/PointDrawSettings';
+import { PROVENANCE_FILTER_CODE } from '../../data/provenanceFilter';
 
 /**
  * Byte size of the `Uniforms` struct as seen by the GPU.  The single
@@ -65,9 +66,7 @@ export function packPointUniforms(
     selectedPacked,
     camPosWorld,
     pxPerRad,
-    highlightEstimatedOrientation,
-    onlyMeasuredOrientation,
-    highlightEstimatedSize,
+    provenance,
     biasMode,
     absMagLimit,
     depthFadeEnabled,
@@ -94,22 +93,31 @@ export function packPointUniforms(
   f32[25] = camPosWorld[1]; // byte 100
   f32[26] = camPosWorld[2]; // byte 104
   f32[27] = pxPerRad; // byte 108
-  u32[28] = highlightEstimatedOrientation ? 1 : 0; // byte 112
-  u32[29] = onlyMeasuredOrientation ? 1 : 0; // byte 116
-  u32[30] = depthFadeEnabled ? 1 : 0; // byte 120
-  u32[31] = highlightEstimatedSize ? 1 : 0; // byte 124 highlightEstimatedSize
+  // Provenance-audit block: the two axes sit side by side, each as a
+  // (highlight, filter) pair, so a new axis is a contiguous append rather
+  // than a scatter of booleans across the struct.  The filter is a code from
+  // `PROVENANCE_FILTER_CODE`, not a boolean — the shader's cull is tri-state
+  // (all / only-measured / only-estimated) and a pair of booleans would admit
+  // a nonsense "neither" combination.
+  u32[28] = provenance.orientation.highlight ? 1 : 0; // byte 112
+  u32[29] = PROVENANCE_FILTER_CODE[provenance.orientation.filter]; // byte 116
+  u32[30] = provenance.size.highlight ? 1 : 0; // byte 120
+  u32[31] = PROVENANCE_FILTER_CODE[provenance.size.filter]; // byte 124
 
   // Malmquist-bias state.  Mode through u32, threshold through f32 — both
   // alias the same ArrayBuffer.
   u32[32] = biasMode >>> 0; // byte 128
   f32[33] = absMagLimit; // byte 132
   // f32[34..38] (apparentMagLimit / schechterMStar / schechterAlpha /
-  // schechterMLim / schechterNRef) + u32[39] (_pad5) stay zero.  The
-  // Schechter / 1-over-Vmax modes read their per-galaxy weights from the
-  // per-vertex `schechterRatio` + angular slots (spliced in by
-  // `biasCorrectionSubsystem`), so these uniform slots carry nothing —
-  // left reserved rather than removed to keep the struct's byte offsets
-  // (incl. `pickPass`) stable.
+  // schechterMLim / schechterNRef) stay zero.  The Schechter / 1-over-Vmax
+  // modes read their per-galaxy weights from the per-vertex `schechterRatio`
+  // + angular slots (spliced in by `biasCorrectionSubsystem`), so these
+  // uniform slots carry nothing — left reserved rather than removed to keep
+  // the struct's byte offsets (incl. `pickPass`) stable.
+  // Slot 39 closes the Malmquist vec4 group; it hosts `depthFadeEnabled`
+  // (unrelated to bias correction) so the provenance block above keeps a
+  // contiguous 112..127 run.
+  u32[39] = depthFadeEnabled ? 1 : 0; // byte 156
 
   // Procedural-disk crossfade band.  Slot 42 is `pickPass` (u32) — 0 for the
   // visual pass, 1 when `pickUniformBytesOf` packs the pick image directly.

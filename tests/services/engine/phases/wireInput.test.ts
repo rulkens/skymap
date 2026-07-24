@@ -12,6 +12,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { rootReducer } from '../../../../src/store/rootReducer';
 import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
+import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/data/defaults';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
@@ -101,8 +102,7 @@ function makeState(): EngineState {
         sizePx: 2.5,
         brightness: 1.0,
         depthFade: true,
-        highlightEstimatedOrientation: true,
-        onlyMeasuredOrientation: false,
+        provenance: DEFAULT_GALAXY_PROVENANCE,
         items: {
           famousGalaxy: { enabled: true, labelEnabled: true },
         },
