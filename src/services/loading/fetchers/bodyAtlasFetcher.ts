@@ -9,11 +9,13 @@
  * `{ tier }` request would imply per-tier atlas variants that the build tool
  * does not emit.
  *
- * The filename is authored twice: here, and as `BODY_ATLAS_FILENAME` in
- * `tools/textures/writeBodyAtlas.ts` (the emitter). Sharing one constant across
- * the src/tools boundary was rejected for this task's scope — the twin is one
- * literal in one place each, and a mismatch degrades exactly as a 404 does
- * (below), never as a crash.
+ * The filename comes from the generated layout module, which the emitter writes
+ * in the same run that writes the atlas itself, so the URL and the file on disk
+ * cannot drift onto different names — the guarantee `bodyTextureFilename` gives
+ * the per-body tiers. A hand-copied literal here would degrade as a silent 404:
+ * the atlas never arrives, every body falls back to its grey placeholder, and
+ * neither a test nor the compiler can see it. The `images/textures/` prefix is
+ * the shared textures directory, spelled as `bodyTextureFetcher` spells it.
  *
  * The decode is the DEFAULT managed one, not `colorSpaceConversion: 'none'`:
  * every tile in the atlas is an sRGB colour map (only `surface` kinds are
@@ -28,10 +30,11 @@
  */
 
 import type { Fetcher } from '../../../@types/loading/Fetcher';
+import { BODY_ATLAS_FILENAME } from '../../../data/bodies/bodyAtlas.generated';
 import { dataUrl } from '../fetchWithProgress';
 
 export const bodyAtlasFetcher: Fetcher<ImageBitmap, void> = async (_req, signal) => {
-  const url = dataUrl('images/textures/body-atlas.webp');
+  const url = dataUrl(`images/textures/${BODY_ATLAS_FILENAME}`);
   const res = await fetch(url, { signal });
   if (!res.ok) throw new Error(`bodyAtlas: HTTP ${res.status} for ${url}`);
   const blob = await res.blob();

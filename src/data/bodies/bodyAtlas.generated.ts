@@ -4,6 +4,9 @@
 // Source of truth:  src/data/bodies/bodyTextureRegistry.ts
 import type { BodyTextureId } from '../../@types/data/BodyTextureId';
 
+/** The atlas file this build wrote, under the textures directory. */
+export const BODY_ATLAS_FILENAME = 'body-atlas.webp';
+
 /** Each body's tile index in the atlas, row-major from the top-left cell. */
 export const BODY_ATLAS_LAYOUT: Readonly<Record<BodyTextureId, number>> = {
   mercury: 0,

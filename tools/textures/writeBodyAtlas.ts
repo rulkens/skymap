@@ -49,7 +49,14 @@ import sharp from 'sharp';
 import type { BodyTextureId } from '../../src/@types/data/BodyTextureId';
 import { bodyTextureFilename } from '../../src/utils/scene/bodyTextureFilename';
 
-/** The atlas file the runtime fetches, written beside the per-body tiers. */
+/**
+ * The atlas file, written beside the per-body tiers. Authored HERE and nowhere
+ * else: the emitter copies it into the generated layout module below, and
+ * `bodyAtlasFetcher` builds its URL from that constant. A literal repeated on
+ * the runtime side would degrade as a silent 404 — the atlas never arrives, every
+ * body falls back to grey, and no test or type check can see it — which is the
+ * failure mode `bodyTextureFilename` already removes for the per-body tiers.
+ */
 const BODY_ATLAS_FILENAME = 'body-atlas.webp';
 
 /**
@@ -88,14 +95,16 @@ const GENERATED_BANNER =
   '// Source of truth:  src/data/bodies/bodyTextureRegistry.ts\n';
 
 /**
- * Emit the generated layout module: each body's tile index, plus the grid those
- * indices are read against.
+ * Emit the generated layout module: the atlas filename, each body's tile index,
+ * and the grid those indices are read against.
  *
- * The grid rides the generated file rather than being hand-written on the
- * runtime side because its row-major order and cell size are facts BOTH ends
- * must agree on — the build assigns indices while iterating the registry, the
- * runtime looks an index up by body id — and stating them once beats trusting
- * two independent sides to preserve the registry's iteration order forever.
+ * All three ride the generated file rather than being hand-written on the runtime
+ * side because they are facts BOTH ends must agree on — the build names the file
+ * and assigns indices while iterating the registry, the runtime fetches that name
+ * and looks an index up by body id — and stating them once beats trusting two
+ * independent sides to stay in step forever. Emitting rather than sharing a `src/`
+ * constant also makes the agreement per-RUN: the bytes on disk and the constants
+ * describing them are written by the same call.
  *
  * It is generated code and not a fetched JSON sidecar because a sidecar means an
  * extra round trip before the atlas is usable, which is exactly the latency this
@@ -106,6 +115,9 @@ function serializeBodyAtlasLayout(bodyIds: readonly BodyTextureId[]): string {
   return (
     GENERATED_BANNER +
     "import type { BodyTextureId } from '../../@types/data/BodyTextureId';\n" +
+    '\n' +
+    '/** The atlas file this build wrote, under the textures directory. */\n' +
+    `export const BODY_ATLAS_FILENAME = '${BODY_ATLAS_FILENAME}';\n` +
     '\n' +
     "/** Each body's tile index in the atlas, row-major from the top-left cell. */\n" +
     `export const BODY_ATLAS_LAYOUT: Readonly<Record<BodyTextureId, number>> = {\n${rows}\n};\n` +
