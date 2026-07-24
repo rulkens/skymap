@@ -227,13 +227,13 @@ At this point `hasMap` reflects only `res.maps`, so behaviour is unchanged (a co
 is exactly a body with a committed map). Part 2 widens what counts as "bound" to include the
 atlas tile, and this predicate picks that up for free.
 
-- [ ] No new test. `partitionBodiesByPresentation` is pure and injects the predicate, so its
+- [x] No new test. `partitionBodiesByPresentation` is pure and injects the predicate, so its
       existing test is untouched; `sceneBodyPartition` is a two-line adapter whose only
       behaviour is the wiring a compiler check already covers.
-- [ ] Implement `hasMap` (it reads the per-body `maps` map; after P4a it reads the committed
+- [x] Implement `hasMap` (it reads the per-body `maps` map; after P4a it reads the committed
       layer OR a per-body placeholder override, which is the point).
-- [ ] `npm test -- partitionBodiesByPresentation` green; `npm run typecheck` clean.
-- [ ] Commit (prep P3): the three files above.
+- [x] `npm test -- partitionBodiesByPresentation` green; `npm run typecheck` clean.
+- [x] Commit (prep P3): the three files above.
 
 ### P4a: per-(body, kind) placeholder resolver in `texturedBodyRenderer`
 
