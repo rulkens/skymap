@@ -80,6 +80,72 @@ describe('PriorityQueue', () => {
     expect(priorityOrder).toEqual(['high', 'mid', 'low']);
   });
 
+  it('pops the highest priority pending entry when a slot frees', async () => {
+    const queue = new PriorityQueue(2);
+    const started: string[] = [];
+    const unblockers: Array<() => void> = [];
+
+    // Two gated blockers saturate the two slots the constructed limit
+    // allows.
+    for (let i = 0; i < 2; i++) {
+      const gate = new Promise<void>((r) => unblockers.push(r));
+      queue.enqueue({
+        key: `blocker-${i}`,
+        priority: 0,
+        fetcher: async () => {
+          started.push(`blocker-${i}`);
+          await gate;
+          return null;
+        },
+        onResult: () => {},
+      });
+    }
+
+    // Enqueued out of rank order: the queue must sort by priority when it
+    // pulls from `pending`, not preserve enqueue order.
+    queue.enqueue({
+      key: 'low',
+      priority: 1,
+      fetcher: async () => {
+        started.push('low');
+        return null;
+      },
+      onResult: () => {},
+    });
+    queue.enqueue({
+      key: 'high',
+      priority: 10,
+      fetcher: async () => {
+        started.push('high');
+        return null;
+      },
+      onResult: () => {},
+    });
+    queue.enqueue({
+      key: 'mid',
+      priority: 5,
+      fetcher: async () => {
+        started.push('mid');
+        return null;
+      },
+      onResult: () => {},
+    });
+
+    // Free exactly one of the two saturating slots first, and let the
+    // microtask queue settle before freeing the other.  With only one slot
+    // open, the three immediately-resolving pending entries cycle through
+    // it one at a time, so which one starts next is decided purely by
+    // priority — not by two entries racing into two simultaneously-freed
+    // slots, which would make start order a scheduling accident instead of
+    // a priority decision.
+    unblockers[0]!();
+    await new Promise((r) => setTimeout(r, 0));
+    unblockers[1]!();
+    await queue.drain();
+
+    expect(started.filter((k) => !k.startsWith('blocker'))).toEqual(['high', 'mid', 'low']);
+  });
+
   it('calls onResult with the fetcher result', async () => {
     const queue = new PriorityQueue();
     const cb = vi.fn();

@@ -22,11 +22,15 @@
  *
  * ### Behaviour
  *
- *   - At most `MAX_CONCURRENT_FETCHES` tasks run at once.  Browsers cap
- *     HTTP/1.1 at ~6 connections per origin; 4 leaves room for other
- *     resources (the .bin downloads, fonts, etc) without bottlenecking
- *     them when the user zooms in suddenly and we want a flurry of
- *     thumbnails.
+ *   - At most `limit` tasks run at once — a per-instance constructor arg,
+ *     defaulting to `MAX_CONCURRENT_FETCHES`.  Different callers want
+ *     different bounds: the boot asset queue wants 2, so a handful of big
+ *     one-shot fetches (catalog .bin files, body textures) don't flood the
+ *     connection pool at startup, while the thumbnail queue wants 4, since
+ *     it streams many small fetches as the camera moves and can afford
+ *     more parallelism.  Browsers cap HTTP/1.1 at ~6 connections per
+ *     origin, so either bound leaves room for other resources without
+ *     bottlenecking them.
  *   - When a slot frees, we pick the pending entry with the highest
  *     priority — the engine sets priority to the galaxy's apparent
  *     on-screen pixel size, so big galaxies in the foreground load first.
@@ -53,6 +57,11 @@ export class PriorityQueue<T = ImageBitmap | null> {
   private pending = new Map<string, QueueEntry<T>>();
   private inFlight = new Set<string>();
   private drainResolvers: Array<() => void> = [];
+  private readonly limit: number;
+
+  constructor(limit: number = MAX_CONCURRENT_FETCHES) {
+    this.limit = limit;
+  }
 
   enqueue(entry: QueueEntry<T>): void {
     // Idempotent: if the same key is already in flight, do nothing — the
@@ -117,7 +126,7 @@ export class PriorityQueue<T = ImageBitmap | null> {
   }
 
   private tryStart(): void {
-    while (this.inFlight.size < MAX_CONCURRENT_FETCHES && this.pending.size > 0) {
+    while (this.inFlight.size < this.limit && this.pending.size > 0) {
       const entry = this.popHighestPriority();
       if (!entry) break;
       this.inFlight.add(entry.key);
