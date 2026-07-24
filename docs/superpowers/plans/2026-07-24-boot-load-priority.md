@@ -271,15 +271,15 @@ rather than 1x1 grey. The known landmine (a slot reading `ready` while its GPU t
 destroyed) cannot reproduce. The same two-layer shape is what prevents an out-of-order atlas
 commit overwriting an already-landed hi-res map, with no slot-state peek in the commit path.
 
-- [ ] No new test: this task changes no observable behaviour (no override is ever seeded yet).
+- [x] No new test: this task changes no observable behaviour (no override is ever seeded yet).
       The public entry point that seeds one lands in part 2 with its own visual check.
-- [ ] Refactor to the two-layer resolver; update the module header's "Placeholder posture"
+- [x] Refactor to the two-layer resolver; update the module header's "Placeholder posture"
       paragraph (`:19-28`) to describe the per-(body, kind) resolver and why the chain stays
       two-term.
-- [ ] `npm test -- texturedBodyRenderer` green. Repair only what breaks; add nothing (the
+- [x] `npm test -- texturedBodyRenderer` green. Repair only what breaks; add nothing (the
       existing `clearMap frees a body kind and reverts it to the placeholder` and
       `the normal placeholder is the linear flat-normal texel` cases should both still pass).
-- [ ] Commit (prep P4a): the files above.
+- [x] Commit (prep P4a): the files above.
 
 ### P4b: placeholder layer in `earthRenderer`
 
