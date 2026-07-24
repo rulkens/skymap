@@ -29,8 +29,13 @@ const TOUR_DEBUG_GATE = hasUrlGate('tour');
 function TopBarContainer(): React.ReactElement {
   const dispatch = useAppDispatch();
   // Shared HUD-pill gate: the whole top-center row fades together when the
-  // palette opens or the splash is up.
-  const hidden = useAppSelector(selectPaletteOpen) || useAppSelector(selectSplashVisible);
+  // palette opens or the splash is up. Both reads are their own statement —
+  // folding them into one `||` expression short-circuits the second
+  // `useAppSelector` as soon as the first is true, which changes the hook count
+  // mid-session and crashes React on the next hook.
+  const paletteOpen = useAppSelector(selectPaletteOpen);
+  const splashVisible = useAppSelector(selectSplashVisible);
+  const hidden = paletteOpen || splashVisible;
 
   const openPalette = useCallback(() => dispatch(setPaletteOpen(true)), [dispatch]);
   // "Home" flies to Earth — the viewer's literal starting point, not just our
