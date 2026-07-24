@@ -32,4 +32,5 @@ export type ReconcileEffects = {
   syncFades: (rows?: readonly VisibilityLayerKey[]) => void;
   reseedFlow: () => void;
   bakeBias: (mode: BiasMode) => void;
+  logCameraState: () => void;
 };
