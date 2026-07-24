@@ -54,10 +54,12 @@ export const BODY_GLINT_MAX_PX = 3;
  * resolve each body's live position/orientation from the same `bodyStates`
  * snapshot, keyed by id.
  *
- * `isTextureResident(id)` reports whether the body's surface texture is live on
- * the renderer (the `bodyTextures` slot's `current() != null`). A registry body
- * whose texture has not landed yet is `flat` — the flat albedo sphere IS the
- * placeholder, exactly as Earth shows mid-blue before Blue Marble arrives.
+ * `isTextureResident(id)` reports whether a real surface texture is BOUND for the
+ * body — a rendering fact asked of the renderer, never inferred from the loading
+ * system (`sceneBodyPartition` binds it to `texturedBodyRenderer.hasMap`). A
+ * registry body with nothing bound but the shared 1×1 is `flat` — the flat albedo
+ * sphere IS the placeholder, exactly as Earth shows mid-blue before Blue Marble
+ * arrives.
  *
  * A body the camera sits INSIDE (distance 0) resolves unconditionally:
  * `bodyApparentDiameterPx` returns `Infinity` at distance 0 (the camera is
@@ -74,7 +76,11 @@ export function partitionBodiesByPresentation(input: {
   viewportHeightPx: number;
   fovYRad: number;
   isTextureResident: (id: string) => boolean;
-}): { glints: readonly PlanetBody[]; flat: readonly PlanetBody[]; textured: readonly PlanetBody[] } {
+}): {
+  glints: readonly PlanetBody[];
+  flat: readonly PlanetBody[];
+  textured: readonly PlanetBody[];
+} {
   const { bodies, bodyStates, camPosMpc, viewportHeightPx, fovYRad, isTextureResident } = input;
   const glints: PlanetBody[] = [];
   const flat: PlanetBody[] = [];
