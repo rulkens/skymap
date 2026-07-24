@@ -24,18 +24,22 @@ through `DebugPanel`'s prop list down to the leaf section.
     `containers/ClipTriggersSectionContainer.tsx`.
   - `ClipPathInspectorSection.tsx` + `.module.css` +
     `containers/ClipPathInspectorSectionContainer.tsx`.
-- Still inline-styled / prop-drilled:
+- CSS-modules done, container still outstanding:
+  - `DebugOverlaysSection.tsx` + `.module.css` — absorbed the pick-buffer +
+    disk-radius-ring checkboxes that used to sit inline in `DebugPanel.tsx`.
+    Still reads its props from `DebugPanelContainer`.
+  - `GalaxyProvenanceSection.tsx` + `.module.css`. Still reads its props from
+    `DebugPanelContainer`.
+- Still inline-styled and prop-drilled:
   - `AssetLoadingSection.tsx`
   - `GpuTimingsSection.tsx`
   - `RenderTogglesSection.tsx`
   - `FlowTuningSection.tsx`
-  - `DataQualitySection.tsx`
-  - `LabelEffectsSection.tsx`
-  - the inline pick-buffer + disk-radius-ring checkboxes in `DebugPanel.tsx`
-    itself (lift into a small section + container, or a shared toggle row).
-- `DebugPanelContainer.tsx` still owns the store reach for the toggles + flow +
-  data-quality + render-toggles; those move into per-section containers as each
-  section is converted.
+- `DebugPanel.tsx` itself no longer has any inline checkbox markup — the
+  pick-buffer / disk-radius-ring toggles moved into `DebugOverlaysSection`.
+- `DebugPanelContainer.tsx` still owns the store reach for the pick-buffer +
+  disk-radius-ring toggles, flow, galaxy provenance, and render-pass toggles;
+  those move into per-section containers as each section converts.
 
 ## Approach
 
