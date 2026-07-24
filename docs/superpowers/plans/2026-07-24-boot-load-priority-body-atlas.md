@@ -161,17 +161,22 @@ npm run build-textures`, `Source of truth: src/data/bodies/bodyTextureRegistry.t
 Run the atlas pass AFTER the per-body loop and BEFORE the ring loop, so every `-2048.jpg` it
 reads already exists.
 
-- [ ] No test. `textureBuildEntries()` already has coverage as the build's pure spine; the
+- [x] No test. `textureBuildEntries()` already has coverage as the build's pure spine; the
       atlas pass is I/O plus a sharp composite, and its correctness is a pixel question the
       visual check in 4.2 answers.
-- [ ] Implement `writeBodyAtlas`; call it from `buildTextures`.
-- [ ] Run `npm run build-textures`. Report the emitted atlas byte size against the 1 MB budget
-      and the per-body ok/skip lines.
-- [ ] Note for deploy: `public/data/images/textures/body-atlas.webp` is a build artefact that
+- [x] Implement `writeBodyAtlas`; call it from `buildTextures`.
+- [x] Run the atlas pass. 2048x1024, **161,334 bytes** (16% of the 1 MB budget), 13/13 tiles,
+      no skips. A full `npm run build-textures` was NOT run here: this worktree carries no
+      `data/raw/textures/` sources (~700 MB, gitignored) and no `public/data/`, so the pass ran
+      against copies of the main checkout's already-built `*-2048.jpg` tiers — the same bytes a
+      full run would have re-emitted.
+- [x] Note for deploy: `public/data/images/textures/body-atlas.webp` is a build artefact that
       must ride the R2 sync before production (see `docs/DEPLOY.md`). It is NOT part of this
       task.
-- [ ] `npm run typecheck` clean (both tsconfigs; the generated file is under `src/`).
-- [ ] Commit: the tool files, the generated file, and the emitted `.webp`.
+- [x] `npm run typecheck` clean (both tsconfigs; the generated file is under `src/`).
+- [x] Commit: the tool files and the generated file. The `.webp` is NOT committed —
+      `/public/data/` is gitignored (`.gitignore:109`), like every other texture the build
+      emits; it is produced by `npm run build-textures` in the main worktree and synced to R2.
 
 ### 3.3: `setPlaceholderMap` on `texturedBodyRenderer` (the crop)
 
@@ -359,7 +364,7 @@ simplicity review into the plan rather than leaving it to chance.
 - [ ] Pay particular attention to the four places this feature deliberately kept two things
       apart, and confirm none of them re-braided during implementation: - the negation lives at the enqueue site, not inside `PriorityQueue` (which still serves
       thumbnails where larger-is-first is the natural reading), - the drop edge is its own edge, not a variant of the evict edge, - residency is a rendering fact read off the renderer, with no second `atlasReady ||
-      slotReady` branch anywhere, - the placeholder chain is two-term (`committed ?? placeholder`), with no slot-state peek
+    slotReady` branch anywhere, - the placeholder chain is two-term (`committed ?? placeholder`), with no slot-state peek
       in any commit path.
 - [ ] Report the verdicts. Apply only fixes that are in scope for this feature; anything broader
       (for example the deferred project-wide body-texture store consolidation,

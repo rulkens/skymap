@@ -83,6 +83,7 @@ import { TEXTURE_SOURCES, type TextureSourceRow } from '../utils/io/textureSourc
 import { bakeNormalMap, exaggerationFor } from './bakeNormalMap';
 import { emittedTiersForBody } from './emittedTiersForBody';
 import { tiersFittingSourceWidth } from './tiersFittingSourceWidth';
+import { writeBodyAtlas } from './writeBodyAtlas';
 import { writeCloudTier } from './writeCloudTier';
 import { writeLinearTier } from './writeLinearTier';
 
@@ -459,6 +460,17 @@ export async function buildTextures(outDir: string): Promise<void> {
       process.stderr.write(`  ok   ${filename}${note}\n`);
     }
   }
+
+  // The boot atlas downsamples the `small` surface tiers the loop above just
+  // wrote, so it runs after that loop and before the ring (which contributes no
+  // tile). Its membership is the SAME work list filtered to `surface`, in the
+  // same order — the registry stays the one enumeration of the textured set.
+  await writeBodyAtlas(
+    outDir,
+    textureBuildEntries()
+      .filter((entry) => entry.kind === 'surface')
+      .map((entry) => entry.bodyId),
+  );
 
   const ringSrc = firstExisting(ringSourcePaths());
   if (ringSrc === null) {
