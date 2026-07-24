@@ -3,17 +3,19 @@
  * a galaxy's data provenance: whether its orientation (b/a + position angle)
  * and its diameter come from real measurement or a catalog fallback estimate.
  *
- *   - "Highlight estimated orientation" tints estimated-orientation
- *     galaxies magenta in the fragment shader, so the user can scan which
- *     catalogs have real photometric orientation coverage.
+ *   - "Estimated orientation" replaces estimated-orientation galaxies'
+ *     ramp colour with magenta in the vertex shader (not a tint — a red
+ *     galaxy multiplied by a tint just darkens), so the user can scan
+ *     which catalogs have real photometric orientation coverage.
  *   - "Only measured orientation" goes further and discards
  *     estimated-orientation fragments entirely, leaving only galaxies with
  *     measured b/a + PA.
- *   - "Highlight estimated size" tints estimated-diameter galaxies in the
- *     fragment shader, the size-provenance analogue of the first toggle.
- *     It has no "only measured" counterpart by design: size estimates are
- *     used to *place* a galaxy's rendered footprint, not to gate whether it
- *     draws at all, so there's no equivalent cull to offer.
+ *   - "Estimated size" replaces estimated-diameter galaxies' colour with
+ *     green, the size-provenance analogue of the first toggle. Galaxies
+ *     flagged by both axes render amber. It has no "only measured"
+ *     counterpart by design: size estimates are used to *place* a
+ *     galaxy's rendered footprint, not to gate whether it draws at all,
+ *     so there's no equivalent cull to offer.
  *
  * ### Why a separate section, not RenderTogglesSection
  *
@@ -70,7 +72,16 @@ export function GalaxyProvenanceSection({
           checked={highlightEstimatedOrientation}
           onChange={(e) => onHighlightEstimatedOrientationChange(e.target.checked)}
         />
-        <span>Highlight estimated orientation</span>
+        <span
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: 2,
+            background: '#ff1ae6',
+            flexShrink: 0,
+          }}
+        />
+        <span>Estimated orientation</span>
       </label>
       <label
         style={{
@@ -100,7 +111,16 @@ export function GalaxyProvenanceSection({
           checked={highlightEstimatedSize}
           onChange={(e) => onHighlightEstimatedSizeChange(e.target.checked)}
         />
-        <span>Highlight estimated size (highlight-only, no measured-only cull)</span>
+        <span
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: 2,
+            background: '#26ff40',
+            flexShrink: 0,
+          }}
+        />
+        <span>Estimated size</span>
       </label>
     </DebugSection>
   );

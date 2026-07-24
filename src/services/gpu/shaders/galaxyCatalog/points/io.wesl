@@ -140,7 +140,8 @@ struct Uniforms {
   // stage computes '1 / (1 + (camDist / FALLOFF_HALF)²)'; when 0 it
   // skips the gate and forwards 1.0 through.
   depthFadeEnabled: u32,
-  // u32 boolean: tints fallback-diameter galaxies. The flag itself rides
+  // u32 boolean: replaces fallback-diameter galaxies' colour with green
+  // (amber if orientation is also estimated). The flag itself rides
   // the sign bit of the per-vertex 'radiusMpc' (abs() for magnitude, < 0
   // for the flag), the same encoding orientation uses on 'axisRatio'.
   highlightEstimatedSize: u32,
@@ -297,8 +298,10 @@ struct VSOut {
   @location(0) uv: vec2<f32>,
 
   // Fully-shaded per-instance appearance packed into one vec4.
-  // .rgb = ramp(restColorIndex) × magenta highlight × intensity, where
-  //        intensity already folds in the magnitude clamp, brightness
+  // .rgb = provenance-highlight colour (replacing the ramp colour when a
+  //        highlight is active; magenta/green/amber — see vertex.wesl)
+  //        × intensity, where intensity already folds in the magnitude
+  //        clamp, brightness
   //        slider, Malmquist mode-2/3/4 weights, depth fade, and the
   //        procedural-disk crossfade-out. Fragment writes
   //        '(rgb * alpha, alpha)' directly with no further scaling.

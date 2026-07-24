@@ -59,13 +59,13 @@ export type DebugPanelProps = {
    * the container dispatches `setPassDisabled`, and `watchWakeSaga` wakes the loop.
    */
   disabledPasses: Record<string, boolean>;
-  /** Tint galaxies whose b/a + position-angle is estimated, not measured, magenta. */
+  /** Replace the colour of galaxies whose b/a + position-angle is estimated, not measured, with magenta. */
   highlightEstimatedOrientation: boolean;
   /** Discard estimated-orientation fragments entirely, leaving only measured galaxies. */
   onlyMeasuredOrientation: boolean;
   onHighlightEstimatedOrientationChange: (enabled: boolean) => void;
   onOnlyMeasuredOrientationChange: (enabled: boolean) => void;
-  /** Tint galaxies whose diameter is estimated, not measured. */
+  /** Replace the colour of galaxies whose diameter is estimated, not measured, with green. */
   highlightEstimatedSize: boolean;
   onHighlightEstimatedSizeChange: (enabled: boolean) => void;
   /**

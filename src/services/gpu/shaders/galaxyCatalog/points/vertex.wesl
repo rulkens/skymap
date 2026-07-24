@@ -239,24 +239,38 @@ fn vs(
     * crossfadeOut
     * focusMult;
 
-  // Bake the K-corrected ramp colour, the magenta highlight, and the
+  // Bake the K-corrected ramp colour, the provenance highlight, and the
   // intensity scalar straight into out.shaded.rgb. .w carries safeAB —
   // pre-computed ellipse-mask coefficient, defaulted to 1.0 (circle)
   // for invalid/NaN axisRatio (synthetic-fallback rows). 'abs(NaN) >
   // 0.0' is false, so the select branch is the correct gate.
-  // Two independent highlight axes, combined multiplicatively so a galaxy
-  // that is both orientation-fallback and size-fallback shows both tints.
-  // Orientation is magenta, size is cyan. 'p.radiusMpc < 0.0' is the
-  // fallback-diameter flag; NaN < 0.0 is false, so synthetic rows (NaN
-  // radius) are treated as non-fallback and stay untinted.
+  // 'p.radiusMpc < 0.0' is the fallback-diameter flag; NaN < 0.0 is
+  // false, so synthetic rows (NaN radius) are treated as non-fallback
+  // and stay untinted.
   let orientHighlight = u.highlightEstimatedOrientation == 1u && isFallbackFlag == 1u;
   let sizeHighlight = u.highlightEstimatedSize == 1u && sizeIsFallbackFlag == 1u;
-  let orientTint = select(vec3<f32>(1.0), vec3<f32>(1.0, 0.3, 1.0), orientHighlight);
-  let sizeTint = select(vec3<f32>(1.0), vec3<f32>(0.3, 1.0, 1.0), sizeHighlight);
-  let highlightTint = orientTint * sizeTint;
+
+  // Provenance highlight REPLACES the ramp colour and boosts brightness
+  // rather than multiplying a tint in: multiplying against a red galaxy
+  // darkens it instead of making it pop. Magenta and green are both
+  // colours no real galaxy SED produces, so they read as unmistakably
+  // synthetic against the field.
+  let HIGHLIGHT_BOOST = 2.5;
+  var highlightRgb = ramp(p.colorIndex);
+  var highlightBoost = 1.0;
+  if (orientHighlight && sizeHighlight) {
+    highlightRgb = vec3<f32>(1.0, 0.85, 0.1);
+    highlightBoost = HIGHLIGHT_BOOST;
+  } else if (orientHighlight) {
+    highlightRgb = vec3<f32>(1.0, 0.1, 0.9);
+    highlightBoost = HIGHLIGHT_BOOST;
+  } else if (sizeHighlight) {
+    highlightRgb = vec3<f32>(0.15, 1.0, 0.25);
+    highlightBoost = HIGHLIGHT_BOOST;
+  }
   let absAR = abs(p.axisRatio);
   let safeAB = select(1.0, max(absAR, 0.05), absAR > 0.0);
-  out.shaded = vec4<f32>(ramp(p.colorIndex) * highlightTint * intensity, safeAB);
+  out.shaded = vec4<f32>(highlightRgb * intensity * highlightBoost, safeAB);
 
   // Invisibility cull: galaxies whose folded intensity falls below this
   // threshold contribute imperceptibly to the additive HDR target, so
