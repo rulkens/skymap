@@ -214,14 +214,19 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
 
   return {
     name,
-    load(req: Req): void {
+    load(req: Req): Promise<void> {
       lastRequest = req;
       generation += 1;
       const myGen = generation;
       controller?.abort();
       controller = new AbortController();
-      // Fire-and-forget — runLoad never throws (errors become 'gave-up' events).
-      void runLoad(req, myGen, controller);
+      // runLoad never throws (errors become 'gave-up' events); every one of
+      // its `return`s is a plain return inside this async function, so the
+      // promise below resolves on every terminal path — see the docblock on
+      // the `load` type for the enumerated list. Returning it (rather than
+      // firing-and-forgetting) is what lets a bounded queue await "this
+      // slot's work is done" instead of guessing from state transitions.
+      return runLoad(req, myGen, controller);
     },
     current(): T | null {
       return state.kind === 'ready' ? state.value : null;
@@ -237,7 +242,10 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
       return lastRequest;
     },
     forceReload(): void {
-      if (lastRequest !== null) this.load(lastRequest);
+      // load() now returns a promise; forceReload() has no caller that wants
+      // to await it, so mark the discard explicit rather than leaving an
+      // implicit floating promise for the linter to flag.
+      if (lastRequest !== null) void this.load(lastRequest);
     },
     cancel(): void {
       generation += 1; // invalidates any in-flight runLoad

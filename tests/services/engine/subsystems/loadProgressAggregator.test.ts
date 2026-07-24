@@ -43,7 +43,7 @@ function fakeSlot(name: string): {
   const subs = new Set<(s: LoadState<unknown>) => void>();
   const slot: AssetSlot<unknown, unknown> = {
     name,
-    load: () => {},
+    load: () => Promise.resolve(),
     current: () => null,
     state: () => cur,
     subscribe(fn) {

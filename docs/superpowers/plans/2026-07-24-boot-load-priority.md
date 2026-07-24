@@ -117,26 +117,26 @@ the module constant is the bound; state that the bound is per instance and why (
 queue wants 2 for big one-shot boot fetches, thumbnails want 4 for many small streaming
 fetches).
 
-- [ ] Repair: the existing `runs at most MAX_CONCURRENT_FETCHES tasks simultaneously` test
+- [x] Repair: the existing `runs at most MAX_CONCURRENT_FETCHES tasks simultaneously` test
       (`priorityQueue.test.ts:6-30`) keeps working under the defaulted arg, but the limit is
       its subject, so construct it explicitly: `new PriorityQueue(MAX_CONCURRENT_FETCHES)`.
       The other three cases (`:32`, `:83`, `:97`) keep the bare constructor.
-- [ ] **Spec test 1.** Add `runs at most the constructed limit simultaneously` to the same
+- [x] **Spec test 1.** Add `runs at most the constructed limit simultaneously` to the same
       file: enqueue 6 tasks on `new PriorityQueue(2)`, each gated on a promise the test
       resolves, tracking `inFlight` / `maxInFlight` the way the existing test does. Release the
       gates, `await queue.drain()`, assert `maxInFlight === 2`. Exactly 2, not
       `toBeLessThanOrEqual`: a silently-unbounded queue is the failure mode this test exists
       for, and a `<=` assertion also passes when the queue serialises everything.
-- [ ] **Spec test 4.** Add `pops the highest priority pending entry when a slot frees` to the
+- [x] **Spec test 4.** Add `pops the highest priority pending entry when a slot frees` to the
       same file: on `new PriorityQueue(2)`, enqueue 2 gated blockers to saturate it, then
       enqueue `low` (priority 1), `high` (priority 10), `mid` (priority 5) out of rank order,
       recording each fetcher's key into a `started: string[]` **at fetcher invocation** (not in
       `onResult`, so the assertion is about START order, which is what the scheduler
       controls). Release one blocker, `await queue.drain()`, assert
       `started.filter(k => !k.startsWith('blocker')) === ['high', 'mid', 'low']`.
-- [ ] Implement the constructor arg.
-- [ ] `npm test -- priorityQueue` green.
-- [ ] Commit (prep P1): the two files above.
+- [x] Implement the constructor arg.
+- [x] `npm test -- priorityQueue` green.
+- [x] Commit (prep P1): the two files above.
 
 ### P2: `AssetSlot.load()` returns `Promise<void>` resolving after commit
 
@@ -180,7 +180,7 @@ Also: `forceReload()` (`:239-241`) calls `this.load(lastRequest)`, which now ret
 it ignores. Mark it `void this.load(lastRequest)` so the fire-and-forget is explicit. Same for
 any caller in the scope-boundary list above that has no reason to await.
 
-- [ ] **Spec test 3.** Add `load() resolves after commit, not after fetch` to
+- [x] **Spec test 3.** Add `load() resolves after commit, not after fetch` to
       `AssetSlot.test.ts`. Build a slot whose `fetch` resolves immediately and whose `commit`
       returns a promise the test controls. Call `load(...)`, attach
       `.then(() => { settled = true; })`, flush microtasks
@@ -189,11 +189,11 @@ any caller in the scope-boundary list above that has no reason to await.
       started). Resolve the commit deferred, `await` the load promise, assert
       `settled === true`. Without this the queue would free a slot mid GPU upload and the bound
       would be a lie under load.
-- [ ] Change the type and the implementation; extend the `load` docblock in the `.d.ts` with
+- [x] Change the type and the implementation; extend the `load` docblock in the `.d.ts` with
       the resolve-on-every-terminal-path contract.
-- [ ] `npm test -- AssetSlot` green; `npm run typecheck` clean (no test asserts `load()`
+- [x] `npm test -- AssetSlot` green; `npm run typecheck` clean (no test asserts `load()`
       returns `undefined`; verified 2026-07-24, but re-check).
-- [ ] Commit (prep P2): the three files above.
+- [x] Commit (prep P2): the three files above.
 
 ### P3: residency is a rendering fact, not a loading fact
 

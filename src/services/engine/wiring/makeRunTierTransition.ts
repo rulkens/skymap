@@ -60,7 +60,7 @@ export function makeRunTierTransition(
       // old tier fade out of. The commit reads this flag instead of guessing "is
       // this a re-commit" from the data store, so re-enable / forceReload / boot
       // never trigger a spurious dissolve.
-      state.assetSlots.points
+      void state.assetSlots.points
         .get(src)
         ?.load({ source: src, tier: nextTier, dissolvePrevious: true });
       // Companion sidecars reload in lockstep so localIdx lookups stay valid.
@@ -69,7 +69,7 @@ export function makeRunTierTransition(
 
     // MCPM volume is tier-aware (unlike CF-4); same per-tier reload via the
     // AssetSlot machinery.
-    state.assetSlots.mcpm?.load({ tier: nextTier });
+    void state.assetSlots.mcpm?.load({ tier: nextTier });
 
     // Star catalogs are tier-aware like MCPM, but per-source and demand-loaded.
     // This runner (not reevaluateDemand, whose idle-guard deliberately leaves
@@ -81,7 +81,7 @@ export function makeRunTierTransition(
     // reevaluateDemand issues the then-current tier's request.
     for (const [source, slot] of state.assetSlots.starCatalogs) {
       if (slot.state().kind === 'idle') continue;
-      slot.load({ source, tier: nextTier });
+      void slot.load({ source, tier: nextTier });
     }
 
     // The Milky-Way point cloud folds the tier's star budget into its

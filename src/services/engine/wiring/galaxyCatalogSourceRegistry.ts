@@ -153,7 +153,7 @@ export function loadCompanionAssets(
   tier: Tier,
 ): void {
   if (!cfg.companions) return;
-  for (const ref of cfg.companions) state.assetSlots[ref]?.load({ tier });
+  for (const ref of cfg.companions) void state.assetSlots[ref]?.load({ tier });
 }
 
 /**

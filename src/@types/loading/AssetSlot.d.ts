@@ -6,7 +6,17 @@ import type { LoadState } from './LoadState';
  */
 export type AssetSlot<T, Req> = {
   readonly name: string;
-  load(req: Req): void;
+  /**
+   * Resolves AFTER commit completes (or after any terminal early exit — an
+   * abort, a give-up, or a superseded race-check inside `runLoad`). Never
+   * rejects: `runLoad` turns every fetch/commit failure into a `gave-up`
+   * event rather than a thrown error, so this promise is a "the load's
+   * worker task is done" signal, not a success/failure one. A caller that
+   * wants to bound in-flight work (the boot-time load queue is the reason
+   * this became a promise) can safely `await` it; a fire-and-forget caller
+   * marks the call `void` to say so explicitly.
+   */
+  load(req: Req): Promise<void>;
   current(): T | null;
   state(): LoadState<T>;
   subscribe(fn: (state: LoadState<T>) => void): () => void;
