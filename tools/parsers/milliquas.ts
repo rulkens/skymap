@@ -175,8 +175,21 @@ export function parseMilliquas(rawText: string): MilliquasParseResult {
       continue;
     }
 
-    const magR = rmagStr === '' ? NaN : parseFloat(rmagStr);
-    const magG = bmagStr === '' ? NaN : parseFloat(bmagStr);
+    // Milliquas marks a missing magnitude with a literal `0`, NOT a blank —
+    // the Circinus row reads `Rmag="10.93" Bmag=" 0 "`, meaning "R measured,
+    // B absent". A blank-only guard lets `parseFloat('0')` through as a real
+    // magnitude, and zero is catastrophic downstream rather than merely
+    // wrong: a 4 Mpc galaxy at m=0 back-solves to M=-28, which the
+    // surface-brightness model reads as ~240x a typical galaxy's luminosity.
+    // That is what made Circinus and the Milliquas copy of Centaurus A
+    // render as blown-out white blobs (2169 rows carried magG=0).
+    //
+    // Treating 0 as "missing" is safe for THIS catalog specifically: the
+    // brightest known AGN (3C 273) sits at ~12.9, so no Milliquas row has a
+    // legitimate magnitude anywhere near zero. NaN is the honest sentinel —
+    // downstream consumers already treat it as "no measurement".
+    const magR = rmagStr === '' || parseFloat(rmagStr) === 0 ? NaN : parseFloat(rmagStr);
+    const magG = bmagStr === '' || parseFloat(bmagStr) === 0 ? NaN : parseFloat(bmagStr);
 
     const nameTrimmed = nameRaw.trimEnd().trimStart();
     const classByte = classByteFromType(typeRaw);
