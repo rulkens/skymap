@@ -22,9 +22,26 @@
  *
  * A body's surface bitmap is fetched asynchronously by the proximity-gated
  * `bodyTextures` slot family. Rather than branch the fragment on a "has-texture"
- * flag, every body binds a real texture at all times: a per-kind 1×1 placeholder
- * until `setMap` swaps in the real map. So the geometry is a plain lit sphere
- * before the asset arrives, never black or absent.
+ * flag, every body binds a real texture at all times: a placeholder until
+ * `setMap` swaps in the real map. So the geometry is a plain lit sphere before
+ * the asset arrives, never black or absent.
+ *
+ * What a body shows for an uncommitted kind is decided by a per-(body, kind)
+ * RESOLVER, in two layers: the shared 1×1 per-kind texture (the default, one per
+ * KIND_CFG row) and an optional per-body override in `BodyResources.placeholders`
+ * — a stand-in better than 1×1 grey for one specific body, e.g. a tile of a
+ * low-resolution all-bodies atlas. No override is seeded today; the layer exists
+ * so seeding one is a write, not a rework.
+ *
+ * The resolver keeps the bind-group chain TWO-term —
+ * `res.maps.get(kind) ?? placeholderFor(bodyId, kind)` — rather than growing a
+ * third `?? shared` term at every rebuild site. That is not tidiness: a
+ * three-term chain puts the precedence rule in the caller, so every future
+ * rebuild site has to restate it, and eviction (`clearMap`) has to know what to
+ * fall back TO. With the resolver, `clearMap` deletes from the committed layer
+ * and rebuilds, and the body lands on its own override if it has one — correct
+ * by construction, and an out-of-order override arrival can never overwrite an
+ * already-committed hi-res map, because they are different maps.
  *
  * ## Per-kind sphere maps = the extension point (KIND_CFG)
  *
@@ -115,12 +132,18 @@ type SphereMapKind = keyof typeof KIND_CFG;
 const SPHERE_MAP_KINDS = Object.keys(KIND_CFG) as SphereMapKind[];
 
 /** Per-body GPU resources. Each body owns its uniform buffer + bind group so no
- *  shared uniform can be clobbered mid-frame. `maps` holds only the sphere maps a
- *  body has committed (a missing kind falls back to the shared placeholder);
+ *  shared uniform can be clobbered mid-frame.
+ *
+ *  Two independent texture layers per sphere-map kind, never one:
+ *  - `maps` — the COMMITTED layer, a full-resolution map this body owns.
+ *  - `placeholders` — this body's stand-in for a kind it has not committed,
+ *    overriding the shared 1×1. Empty for every body today.
+ *
  *  `ringTexture` is `null` while the body uses the shared ring placeholder. */
 type BodyResources = {
   uniformBuffer: GPUBuffer;
   maps: Map<TextureKind, GPUTexture>;
+  placeholders: Map<TextureKind, GPUTexture>;
   ringTexture: GPUTexture | null;
   bindGroup: GPUBindGroup;
 };
@@ -180,10 +203,13 @@ export function createTexturedBodyRenderer(
   //
   // One 1×1 placeholder texture PER sphere-map kind (mid-grey for `surface`),
   // each in that kind's own format + texel — derived by iterating KIND_CFG so a
-  // new kind gets its placeholder for free. A transparent 1×1 ring texture stands
-  // in for every non-ringed body. Binding real textures at all times keeps the
-  // fragment branch-free and the layout identical across the whole body set.
-  const placeholderMaps = new Map<SphereMapKind, GPUTexture>();
+  // new kind gets its placeholder for free. These are the DEFAULT layer of the
+  // placeholder resolver: shared by every body, owned by the renderer, and only
+  // ever superseded per body (never per kind globally). A transparent 1×1 ring
+  // texture stands in for every non-ringed body. Binding real textures at all
+  // times keeps the fragment branch-free and the layout identical across the
+  // whole body set.
+  const sharedPlaceholders = new Map<SphereMapKind, GPUTexture>();
   for (const kind of SPHERE_MAP_KINDS) {
     const cfg = KIND_CFG[kind];
     const placeholder = device.createTexture({
@@ -198,7 +224,7 @@ export function createTexturedBodyRenderer(
       { bytesPerRow: 4, rowsPerImage: 1 },
       [1, 1, 1],
     );
-    placeholderMaps.set(kind, placeholder);
+    sharedPlaceholders.set(kind, placeholder);
   }
 
   const placeholderRing = device.createTexture({
@@ -285,10 +311,26 @@ export function createTexturedBodyRenderer(
   // ── Per-body resources ────────────────────────────────────────────────────
   const bodies = new Map<BodyTextureId, BodyResources>();
 
+  // Resolve what a body shows for a kind it has NOT committed: its own override
+  // if it has one, else the shared 1×1. The two layers are separate objects with
+  // separate lifetimes, which is what keeps the resolution chain in
+  // `buildBindGroup` two-term (see the module header) and keeps `setMap` /
+  // `clearMap` free of any "is this texture really mine?" check.
+  //
+  // The lookup goes through `bodies` rather than through a passed-in map so a
+  // caller cannot resolve against a stale copy. A body mid-construction in
+  // `resourcesFor` is not in `bodies` yet and therefore resolves to the shared
+  // 1×1 — correct by definition, since an override can only be seeded on a
+  // `BodyResources` that `resourcesFor` has already returned.
+  function placeholderFor(bodyId: BodyTextureId, kind: SphereMapKind): GPUTexture {
+    return bodies.get(bodyId)?.placeholders.get(kind) ?? sharedPlaceholders.get(kind)!;
+  }
+
   // Build a bind group from a body's current resources, falling back to the
-  // shared placeholders while a body texture / ring texture is unset. Called at
+  // resolved placeholder while a body texture / ring texture is unset. Called at
   // first reference and rebuilt on every texture swap against the stable layout.
   function buildBindGroup(
+    bodyId: BodyTextureId,
     res: Pick<BodyResources, 'uniformBuffer' | 'maps' | 'ringTexture'>,
   ): GPUBindGroup {
     return device.createBindGroup({
@@ -298,11 +340,11 @@ export function createTexturedBodyRenderer(
         { binding: 0, resource: { buffer: res.uniformBuffer } },
         { binding: 1, resource: sampler },
         // One sphere-map entry per KIND_CFG row: the body's committed texture, or
-        // that kind's shared placeholder while it is unset. Derived, not
+        // its resolved placeholder while that kind is unset. Derived, not
         // hardcoded — a new kind binds here automatically.
         ...SPHERE_MAP_KINDS.map((kind) => ({
           binding: KIND_CFG[kind].binding,
-          resource: (res.maps.get(kind) ?? placeholderMaps.get(kind)!).createView(),
+          resource: (res.maps.get(kind) ?? placeholderFor(bodyId, kind)).createView(),
         })),
         { binding: 3, resource: (res.ringTexture ?? placeholderRing).createView() },
       ],
@@ -324,8 +366,9 @@ export function createTexturedBodyRenderer(
     const res: BodyResources = {
       uniformBuffer,
       maps: new Map(),
+      placeholders: new Map(),
       ringTexture: null,
-      bindGroup: buildBindGroup({ uniformBuffer, maps: new Map(), ringTexture: null }),
+      bindGroup: buildBindGroup(bodyId, { uniformBuffer, maps: new Map(), ringTexture: null }),
     };
     bodies.set(bodyId, res);
     return res;
@@ -365,20 +408,25 @@ export function createTexturedBodyRenderer(
     ]);
     generateMipChain(device, texture);
     res.maps.set(kind, texture);
-    res.bindGroup = buildBindGroup(res);
+    res.bindGroup = buildBindGroup(bodyId, res);
   }
 
   // ── clearMap ──────────────────────────────────────────────────────────────
   //
-  // The eviction inverse of `setMap`: free ONE kind's sphere map and rebind that
-  // kind's shared placeholder. Per-KIND, not per-body, because the `bodyTextures`
-  // slots are per-(body,kind) and each releases independently: `surface` and
-  // `normal` have INDEPENDENT clamped tiers (e.g. the Moon's surface ceiling is
-  // `large` but its normal ceiling is `medium`), so a tier switch can evict the
-  // surface slot alone. A per-body clear would then destroy the sibling `normal`
-  // texture too — and because its clamped tier is unchanged the demand loop never
-  // re-fetches it, so the normal map vanishes until an unrelated tier change. Only
-  // freeing the named kind keeps every sibling's resident texture bound.
+  // The eviction inverse of `setMap`: free ONE kind's sphere map and rebind
+  // whatever the resolver gives for that (body, kind) — the body's own
+  // placeholder override if it has one, else the shared 1×1. Eviction is correct
+  // by construction that way: the fallback is chosen at rebuild time, so a
+  // cleared kind never has to be told what to fall back TO.
+  //
+  // Per-KIND, not per-body, because the `bodyTextures` slots are per-(body,kind)
+  // and each releases independently: `surface` and `normal` have INDEPENDENT
+  // clamped tiers (e.g. the Moon's surface ceiling is `large` but its normal
+  // ceiling is `medium`), so a tier switch can evict the surface slot alone. A
+  // per-body clear would then destroy the sibling `normal` texture too — and
+  // because its clamped tier is unchanged the demand loop never re-fetches it, so
+  // the normal map vanishes until an unrelated tier change. Only freeing the
+  // named kind keeps every sibling's resident texture bound.
   //
   // The ring texture and the per-body uniform buffer are left intact: the ring
   // rides its OWN slot key (freed by that slot's onRelease), and keeping the
@@ -396,7 +444,7 @@ export function createTexturedBodyRenderer(
     if (texture === undefined) return;
     texture.destroy();
     res.maps.delete(kind);
-    res.bindGroup = buildBindGroup(res);
+    res.bindGroup = buildBindGroup(bodyId, res);
   }
 
   // ── hasMap ────────────────────────────────────────────────────────────────
@@ -408,9 +456,15 @@ export function createTexturedBodyRenderer(
   // the two can diverge (a texture the renderer holds with no slot behind it
   // would read as untextured, and the two layers consuming opposite branches
   // would both draw the body opaquely into `foreground:0`).
+  //
+  // Either layer counts. A body whose only texture for the kind is its own
+  // placeholder override still draws as textured, so residency is the union —
+  // the whole reason the override is a texture layer and not a loading state.
 
   function hasMap(bodyId: BodyTextureId, kind: TextureKind): boolean {
-    return bodies.get(bodyId)?.maps.has(kind) ?? false;
+    const res = bodies.get(bodyId);
+    if (res === undefined) return false;
+    return res.maps.has(kind) || res.placeholders.has(kind);
   }
 
   // ── setRingTexture ────────────────────────────────────────────────────────
@@ -435,7 +489,7 @@ export function createTexturedBodyRenderer(
       1,
     ]);
     res.ringTexture = texture;
-    res.bindGroup = buildBindGroup(res);
+    res.bindGroup = buildBindGroup(bodyId, res);
   }
 
   // ── draw ──────────────────────────────────────────────────────────────────
@@ -459,11 +513,14 @@ export function createTexturedBodyRenderer(
     positionBuffer.destroy();
     uvBuffer.destroy();
     indexBuffer.destroy();
-    for (const placeholder of placeholderMaps.values()) placeholder.destroy();
+    for (const placeholder of sharedPlaceholders.values()) placeholder.destroy();
     placeholderRing.destroy();
     for (const res of bodies.values()) {
       res.uniformBuffer.destroy();
+      // Both texture layers: the per-body placeholder overrides are textures this
+      // renderer owns as much as the committed maps, so teardown frees them too.
       for (const texture of res.maps.values()) texture.destroy();
+      for (const placeholder of res.placeholders.values()) placeholder.destroy();
       res.ringTexture?.destroy();
     }
     bodies.clear();
