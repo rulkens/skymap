@@ -34,13 +34,13 @@
  * ### Why props, not an imperative handle
  *
  * The provenance settings live in the RTK settings slice and the counts in the
- * engine slice; `DebugPanelContainer` reads both via selectors and passes them
- * down. Receiving them as props keeps this section a pure function of its
- * inputs and lets the container own the wiring, the way every other DebugPanel
- * section works.
+ * engine slice; `GalaxyProvenanceSectionContainer` reads both via selectors and
+ * passes them down. Receiving them as props keeps this section a pure function
+ * of its inputs and lets the container own the wiring, the way every other
+ * DebugPanel section works.
  */
 
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, type CSSProperties, type ReactNode } from 'react';
 import cx from 'classnames';
 import type { GalaxyProvenanceSettings } from '../../@types/settings/GalaxyProvenanceSettings';
 import type { ProvenanceAxisId } from '../../@types/settings/ProvenanceAxisId';
@@ -101,7 +101,10 @@ function GalaxyProvenanceSection({
           return (
             <Fragment key={axis.id}>
               <label className={styles.axis} htmlFor={checkboxId} title={axis.hint}>
-                <span className={styles.swatch} style={{ background: axis.highlightColor }} />
+                <span
+                  className={styles.swatch}
+                  style={{ '--swatch': axis.highlightColor } as CSSProperties}
+                />
                 {axis.label}
               </label>
               <span

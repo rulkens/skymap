@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 
 /**
- * DebugPanelContainer — store-backed integration test.
+ * DebugPanel — store-backed integration test.
  *
- * Verifies that the container:
+ * Verifies that the sections DebugPanel mounts (each via its own container)
+ * round-trip through the store:
  *   - reads `showPickBuffer` out of the store and reflects it on the matching checkbox;
  *   - dispatches `setShowPickBuffer` when the checkbox is toggled;
  *   - routes a RenderTogglesSection checkbox click through `onTogglePass` → `setPassDisabled`;
@@ -22,7 +23,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
-import DebugPanelContainer from '../../../src/components/containers/DebugPanelContainer';
+import DebugPanel from '../../../src/components/DebugPanel/DebugPanel';
 import { createAppStore } from '../../../src/store/createAppStore';
 import {
   selectShowPickBuffer,
@@ -62,7 +63,7 @@ function makeWrapper(store: ReturnType<typeof createAppStore>['store']) {
 
 function renderContainer(store: ReturnType<typeof createAppStore>['store']) {
   return render(
-    createElement(DebugPanelContainer, {
+    createElement(DebugPanel, {
       slots: stubSlots,
       timingService: stubTimingService,
       frameStats: () => ({ fps: 0, cpuMs: 0, idle: true }),
@@ -76,7 +77,7 @@ function renderContainer(store: ReturnType<typeof createAppStore>['store']) {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('DebugPanelContainer', () => {
+describe('DebugPanel', () => {
   it('reflects showPickBuffer from the store', () => {
     const { store } = createAppStore();
     // Seed showPickBuffer=true by dispatching before render.

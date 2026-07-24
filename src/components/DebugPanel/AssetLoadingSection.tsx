@@ -26,11 +26,13 @@
  * file's module header for the rationale.
  */
 
-import { useEffect, useState, type CSSProperties, type MouseEvent } from 'react';
+import { useEffect, useState, type MouseEvent } from 'react';
+import cx from 'classnames';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { LoadState } from '../../@types/loading/LoadState';
 import { aggregateRegistry } from '../../services/loading/aggregateRegistry';
 import DebugSection from './DebugSection';
+import styles from './AssetLoadingSection.module.css';
 
 export type AssetLoadingSectionProps = {
   slots: ReadonlyMap<string, AssetSlot<unknown, unknown>>;
@@ -116,14 +118,19 @@ function AssetLoadingTitle({ slots, filter, onToggleFilter }: AssetLoadingTitleP
     else if (state.kind === 'error') error++;
     else inFlight++;
   }
-  const muted = { opacity: 0.6 };
-
-  const countStyle = (kind: FilterKind): CSSProperties => ({
-    color: kind ? stateColor(kind === 'inFlight' ? 'loading' : kind) : undefined,
-    cursor: 'pointer',
-    textDecoration: filter === kind ? 'underline' : 'none',
-    opacity: filter === null || filter === kind ? 1 : 0.5,
-  });
+  // `kind` is one of a small fixed set (idle/ready/error/inFlight), so its
+  // colour and its selected/dimmed look are conditional classes rather than
+  // computed styles. `inFlight` borrows `loading`'s colour, the same fold
+  // `matchesFilter` uses. `selected` and `dimmed` are mutually exclusive
+  // (dimmed requires `filter !== kind`), so they never fight over the same
+  // declaration.
+  const countClass = (kind: FilterKind): string =>
+    cx(
+      styles.count,
+      kind && STATE_COLOR_CLASS[kind === 'inFlight' ? 'loading' : kind],
+      filter === kind && styles.selected,
+      filter !== null && filter !== kind && styles.dimmed,
+    );
 
   const makeToggle = (kind: FilterKind) => (e: MouseEvent) => {
     e.preventDefault();
@@ -136,44 +143,40 @@ function AssetLoadingTitle({ slots, filter, onToggleFilter }: AssetLoadingTitleP
       Asset Loading{' '}
       {inFlight > 0 && (
         <span
-          style={countStyle('inFlight')}
+          className={countClass('inFlight')}
           onClick={makeToggle('inFlight')}
           title="Show only in-flight (click to toggle)"
         >
           ⟳{inFlight}{' '}
         </span>
       )}
-      <span style={muted}>(</span>
+      <span className={styles.punct}>(</span>
       <span
-        style={countStyle('idle')}
+        className={countClass('idle')}
         onClick={makeToggle('idle')}
         title="Show only idle (click to toggle)"
       >
         {idle}
       </span>
-      <span style={muted}>/</span>
+      <span className={styles.punct}>/</span>
       <span
-        style={countStyle('ready')}
+        className={countClass('ready')}
         onClick={makeToggle('ready')}
         title="Show only ready (click to toggle)"
       >
         {ready}
       </span>
-      <span style={muted}>/</span>
+      <span className={styles.punct}>/</span>
       <span
-        style={countStyle('error')}
+        className={countClass('error')}
         onClick={makeToggle('error')}
         title="Show only error (click to toggle)"
       >
         {error}
       </span>
-      <span style={muted}>)</span>
+      <span className={styles.punct}>)</span>
       {filter !== null && (
-        <span
-          style={{ ...muted, cursor: 'pointer', marginLeft: 4 }}
-          onClick={makeToggle(filter)}
-          title="Clear filter"
-        >
+        <span className={styles.clear} onClick={makeToggle(filter)} title="Clear filter">
           ✕ clear
         </span>
       )}
@@ -190,7 +193,7 @@ type SlotRowProps = {
 function SlotRow({ name, state, slot }: SlotRowProps) {
   const [hover, setHover] = useState(false);
   const summary = describe(state);
-  const color = stateColor(state.kind);
+  const colorClass = stateColorClass(state.kind);
   // The request payload (`req`) is `unknown` on every non-idle state; we
   // stringify defensively and truncate so a fat request object can't blow
   // out the panel width.
@@ -204,52 +207,24 @@ function SlotRow({ name, state, slot }: SlotRowProps) {
             return '<unserialisable>';
           }
         })();
+  const visibility = hover ? styles.shown : styles.hidden;
   return (
-    // Grid (not inline-block spans) so every row shares one column layout —
-    // browsers can't align independent inline-blocks across sibling rows —
-    // and `width: '100%'` lets the row span the panel instead of shrinking
-    // to its content's ~380px.
     <div
+      className={styles.root}
       title={`req: ${reqJson}`}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'auto minmax(120px, 1fr) 78px 120px auto',
-        alignItems: 'center',
-        gap: '0 8px',
-        width: '100%',
-      }}
     >
-      <span style={{ fontSize: 9, color }}>●</span>
-      {/* `min-width: 0` lets a grid track shrink below its content's
-          intrinsic width so the ellipsis (rather than an overflow) kicks in
-          for long slot names/summaries. */}
-      <span
-        style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-      >
-        {name}
-      </span>
-      <span style={{ color }}>{state.kind}</span>
-      <span
-        style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-      >
-        {summary}
-      </span>
-      {/* `visibility: hidden` (not `display: none`) keeps the buttons in the
-          layout so hovering across the row doesn't reflow its width. */}
-      <span style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <button
-          onClick={() => slot.forceReload()}
-          style={{ fontSize: 10, visibility: hover ? 'visible' : 'hidden' }}
-        >
+      <span className={cx(styles.dot, colorClass)}>●</span>
+      <span className={styles.truncate}>{name}</span>
+      <span className={colorClass}>{state.kind}</span>
+      <span className={styles.truncate}>{summary}</span>
+      <span className={styles.actions}>
+        <button onClick={() => slot.forceReload()} className={cx(styles.actionButton, visibility)}>
           Reload
         </button>
         {state.kind === 'loading' && (
-          <button
-            onClick={() => slot.cancel()}
-            style={{ fontSize: 10, marginLeft: 4, visibility: hover ? 'visible' : 'hidden' }}
-          >
+          <button onClick={() => slot.cancel()} className={cx(styles.cancelButton, visibility)}>
             Cancel
           </button>
         )}
@@ -258,18 +233,21 @@ function SlotRow({ name, state, slot }: SlotRowProps) {
   );
 }
 
-// One colour per LoadState kind so a busy panel scans by colour instead of
-// by reading every row's text — the dot + kind label share this map.
-const STATE_COLORS: Record<LoadState<unknown>['kind'], string> = {
-  idle: '#888',
-  loading: '#e0b341',
-  committing: '#4aa3e0',
-  ready: '#5fd07a',
-  error: '#e0574a',
+// One colour class per LoadState kind so a busy panel scans by colour
+// instead of by reading every row's text — the dot + kind label share this
+// map. Non-null assertions: these keys are declared in
+// AssetLoadingSection.module.css, so the CSS-module index signature's
+// `| undefined` (from `noUncheckedIndexedAccess`) never actually happens.
+const STATE_COLOR_CLASS: Record<LoadState<unknown>['kind'], string> = {
+  idle: styles.colorIdle!,
+  loading: styles.colorLoading!,
+  committing: styles.colorCommitting!,
+  ready: styles.colorReady!,
+  error: styles.colorError!,
 };
 
-function stateColor(kind: LoadState<unknown>['kind']): string {
-  return STATE_COLORS[kind];
+function stateColorClass(kind: LoadState<unknown>['kind']): string {
+  return STATE_COLOR_CLASS[kind];
 }
 
 function describe(state: LoadState<unknown>): string {

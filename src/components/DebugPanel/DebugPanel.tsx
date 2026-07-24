@@ -3,18 +3,22 @@
  *
  * Sections: `AssetLoadingSection` (slot-progress rows),
  * `GpuTimingsSection` (per-pass GPU timing live readout),
- * `RenderTogglesSection` (per-pass on/off checkboxes for visual
- * debugging), `FlowTuningSection`, `DebugOverlaysSection` (pick-buffer
- * / disk-radius-ring toggles), `GalaxyProvenanceSection` (a per-axis table of
- * measured-vs-estimated tallies with highlight and cull controls), and two
- * self-contained sections mounted via their own store containers —
- * `ClipTriggersSectionContainer` (play/stop a registered clip + launch a guided
- * tour) and `ClipPathInspectorSectionContainer` (precompute + scrub a clip's
- * debug camera path) — so their store reach doesn't prop-drill through here.
- * Mount is owned by `App.tsx` (toggled by the `d` keyboard shortcut);
- * when this component renders, all sections always render — section-level
- * visibility (e.g. "GPU timings unavailable") is each section's
+ * `RenderTogglesSectionContainer` (per-pass on/off checkboxes for visual
+ * debugging), `FlowTuningSectionContainer`, `DebugOverlaysSectionContainer`
+ * (pick-buffer / disk-radius-ring toggles), `GalaxyProvenanceSectionContainer`
+ * (a per-axis table of missing / highlight / show controls over measured-vs-
+ * estimated tallies), and `ClipTriggersSectionContainer` (play/stop a registered clip
+ * + launch a guided tour) / `ClipPathInspectorSectionContainer` (precompute +
+ * scrub a clip's debug camera path) — every section that touches the store
+ * owns its own container, so DebugPanel itself receives only the engine-handle
+ * props (`slots`, `timingService`, `frameStats`, `passNames`) that App reads
+ * off `handleRef`. Mount is owned by `App.tsx` (toggled by the `d` keyboard
+ * shortcut); when this component renders, all sections always render —
+ * section-level visibility (e.g. "GPU timings unavailable") is each section's
  * own concern.
+ *
+ * `memo` is load-bearing here: this is App's memo boundary for the panel, so
+ * an unrelated App re-render doesn't cascade into every section's store reads.
  *
  * ### Why collapsible sections
  *
@@ -30,22 +34,17 @@
  * is the primary reason for opening the panel.
  */
 
+import { memo } from 'react';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
 import type { FrameStats } from '../../@types/engine/FrameStats';
-import type { FlowSettings } from '../../@types/settings/FlowSettings';
-import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
-import type { GalaxyProvenanceSettings } from '../../@types/settings/GalaxyProvenanceSettings';
-import type { ProvenanceAxisId } from '../../@types/settings/ProvenanceAxisId';
-import type { ProvenanceFilter } from '../../@types/settings/ProvenanceFilter';
-import type { ProvenanceCounts } from '../../@types/engine/ProvenanceCounts';
 import { AssetLoadingSection } from './AssetLoadingSection';
 import { FrameStatsRow } from './FrameStatsRow';
 import { GpuTimingsSection } from './GpuTimingsSection';
-import { RenderTogglesSection } from './RenderTogglesSection';
-import { FlowTuningSection } from './FlowTuningSection';
-import DebugOverlaysSection from './DebugOverlaysSection';
-import GalaxyProvenanceSection from './GalaxyProvenanceSection';
+import RenderTogglesSectionContainer from '../containers/RenderTogglesSectionContainer';
+import FlowTuningSectionContainer from '../containers/FlowTuningSectionContainer';
+import DebugOverlaysSectionContainer from '../containers/DebugOverlaysSectionContainer';
+import GalaxyProvenanceSectionContainer from '../containers/GalaxyProvenanceSectionContainer';
 import ClipTriggersSectionContainer from '../containers/ClipTriggersSectionContainer';
 import ClipPathInspectorSectionContainer from '../containers/ClipPathInspectorSectionContainer';
 import styles from './DebugPanel.module.css';
@@ -57,69 +56,9 @@ export type DebugPanelProps = {
   frameStats: () => FrameStats;
   /** Pass names in draw order, sourced from the engine handle's `passOverrides.allNames`. */
   passNames: readonly string[];
-  /**
-   * Live disabled-pass record from the settings store (`DebugPanelContainer`
-   * subscribes via `selectDisabledPasses`).  A toggle calls `onTogglePass`,
-   * the container dispatches `setPassDisabled`, and `watchWakeSaga` wakes the loop.
-   */
-  disabledPasses: Record<string, boolean>;
-  /** Per-axis highlight + cull state for the provenance table. */
-  provenance: GalaxyProvenanceSettings;
-  /** Estimated-vs-total tallies summed across every loaded catalog. */
-  provenanceCounts: ProvenanceCounts;
-  onProvenanceHighlightChange: (axis: ProvenanceAxisId, highlight: boolean) => void;
-  onProvenanceFilterChange: (axis: ProvenanceAxisId, filter: ProvenanceFilter) => void;
-  /**
-   * Pick-buffer debug overlay toggle.  When on, the renderer paints a
-   * colour-mapped RGBA layer over the tone-mapped frame so the
-   * developer can see which billboards the picker actually claims.
-   */
-  showPickBuffer: boolean;
-  onShowPickBufferChange: (enabled: boolean) => void;
-  /**
-   * Disk-radius debug ring toggle.  When on, the renderer outlines each
-   * famous-galaxy thumbnail's disk-radius footprint so the developer can
-   * calibrate the placement against the underlying billboard.
-   */
-  showDiskRadiusRing: boolean;
-  onShowDiskRadiusRingChange: (enabled: boolean) => void;
-  /**
-   * Flow overlay slice + its knob-patch callback.  App-owned and optimistic,
-   * like the other DebugPanel toggles: `onFlowChange` applies a
-   * `Partial<FlowFieldDefaults>` to both the React mirror and the engine handle.
-   * The dev-only motion knobs (count / trail / flowSpeed / densityBias / wander
-   * / edgeFade) live in FlowTuningSection, driven from the flow field registry.
-   * The master gate is not here — it rides the SettingsPanel header via
-   * `setFlowEnabled`.
-   */
-  flow: FlowSettings;
-  onFlowChange: (patch: Partial<FlowFieldDefaults>) => void;
-  /**
-   * Called with the pass name when a RenderTogglesSection checkbox is toggled.
-   * Container (DebugPanelContainer) dispatches `setPassDisabled`; absorbed here
-   * from the section so it is no longer a leaf-level store reach.
-   */
-  onTogglePass: (name: string) => void;
 };
 
-export function DebugPanel({
-  slots,
-  timingService,
-  frameStats,
-  passNames,
-  disabledPasses,
-  provenance,
-  provenanceCounts,
-  onProvenanceHighlightChange,
-  onProvenanceFilterChange,
-  showPickBuffer,
-  onShowPickBufferChange,
-  showDiskRadiusRing,
-  onShowDiskRadiusRingChange,
-  flow,
-  onFlowChange,
-  onTogglePass,
-}: DebugPanelProps) {
+function DebugPanel({ slots, timingService, frameStats, passNames }: DebugPanelProps) {
   return (
     <div className={styles.root}>
       <div className={styles.title}>Skymap Debug</div>
@@ -128,26 +67,14 @@ export function DebugPanel({
           GPU timings section, which is dark without `?gpuTimings`. */}
       <FrameStatsRow frameStats={frameStats} />
       <GpuTimingsSection service={timingService} />
-      <RenderTogglesSection
-        passNames={passNames}
-        disabledPasses={disabledPasses}
-        onTogglePass={onTogglePass}
-      />
-      <FlowTuningSection flow={flow} onChange={onFlowChange} />
-      <DebugOverlaysSection
-        showPickBuffer={showPickBuffer}
-        onShowPickBufferChange={onShowPickBufferChange}
-        showDiskRadiusRing={showDiskRadiusRing}
-        onShowDiskRadiusRingChange={onShowDiskRadiusRingChange}
-      />
-      <GalaxyProvenanceSection
-        provenance={provenance}
-        counts={provenanceCounts}
-        onHighlightChange={onProvenanceHighlightChange}
-        onFilterChange={onProvenanceFilterChange}
-      />
+      <RenderTogglesSectionContainer passNames={passNames} />
+      <FlowTuningSectionContainer />
+      <DebugOverlaysSectionContainer />
+      <GalaxyProvenanceSectionContainer />
       <ClipTriggersSectionContainer />
       <ClipPathInspectorSectionContainer />
     </div>
   );
 }
+
+export default memo(DebugPanel);

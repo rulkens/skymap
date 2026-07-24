@@ -2,10 +2,9 @@
 /**
  * DebugSection — shared collapsible chrome for a DebugPanel section.
  *
- * Every section wants the same `<details>` + bold `<summary>` shell; before
- * this component each one re-declared its own inline `style={{ fontWeight:
- * 'bold', cursor: 'pointer' }}` summary. Centralising it here means the
- * chrome (and any future tweak to it) lives in one place.
+ * Every section wants the same `<details>` + bold `<summary>` shell. This
+ * component owns that chrome in one place, so a future tweak to it is a
+ * single edit rather than a hunt through every section.
  *
  * ### Why open-state is mirrored into `useState`, not read straight off `open`
  *

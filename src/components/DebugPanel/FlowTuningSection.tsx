@@ -10,9 +10,8 @@
  * field list, ranges, and value formatting live in one registry rather than
  * re-spelled here.  Each slider owns its `max`; a new debug knob is one registry row.
  *
- * Idiom: a default-closed `DebugSection` with inline monospace styles (no
- * `.module.css`), matching the other DebugPanel sections.  A local `Slider`
- * component DRYs the labelled rows.
+ * Idiom: a default-closed `DebugSection` with a local `Slider` component that
+ * DRYs the labelled rows.
  */
 
 import type { ReactElement } from 'react';
@@ -20,6 +19,7 @@ import type { FlowSettings } from '../../@types/settings/FlowSettings';
 import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
 import { FLOW_SLIDER_FIELDS, flowSliderPatch } from '../../data/flow/flowFields';
 import DebugSection from './DebugSection';
+import styles from './FlowTuningSection.module.css';
 
 type SliderProps = {
   label: string;
@@ -34,9 +34,9 @@ type SliderProps = {
 
 function Slider({ label, value, min, max, step, readout, onChange }: SliderProps): ReactElement {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-      <span style={{ flex: '0 0 90px' }}>{label}</span>
-      <span style={{ flex: '0 0 52px', textAlign: 'right', opacity: 0.8 }}>{readout}</span>
+    <div className={styles.root}>
+      <span className={styles.label}>{label}</span>
+      <span className={styles.readout}>{readout}</span>
       <input
         type="range"
         min={min}
@@ -45,7 +45,7 @@ function Slider({ label, value, min, max, step, readout, onChange }: SliderProps
         value={value}
         aria-label={label}
         onChange={(e) => onChange(Number(e.target.value))}
-        style={{ flex: '1 1 auto' }}
+        className={styles.range}
       />
     </div>
   );

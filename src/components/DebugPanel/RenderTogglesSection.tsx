@@ -4,15 +4,16 @@
  *
  * The intended use case is "I see two overlapping draws on screen and
  * I want to know which renderer is responsible for which".  Toggling
- * a pass calls `onTogglePass(name)` (supplied by `DebugPanelContainer`),
- * which dispatches `setPassDisabled` to the RTK settings store; the
+ * a pass calls `onTogglePass(name)` (supplied by
+ * `RenderTogglesSectionContainer`), which dispatches `setPassDisabled` to
+ * the RTK settings store; the
  * store notifies synchronously and the updated `disabledPasses` record
  * flows back down via the `disabledPasses` prop; `watchWakeSaga` wakes the
  * render-on-demand loop so the change shows up on the next frame even
  * when the camera is idle.
  *
  * This section is PRESENTATIONAL — it imports nothing from `store/` or
- * `state/`.  All dispatch is delegated upward to `DebugPanelContainer`.
+ * `state/`.  All dispatch is delegated upward to `RenderTogglesSectionContainer`.
  *
  * ### Override semantics (one-way)
  *
@@ -39,8 +40,10 @@
  */
 
 import type { ReactElement } from 'react';
+import cx from 'classnames';
 import { groupPassNames } from '../../services/engine/frame/frameProgram';
 import DebugSection from './DebugSection';
+import styles from './RenderTogglesSection.module.css';
 
 export type RenderTogglesSectionProps = {
   /** Pass names in draw order, sourced from the engine handle's `passOverrides.allNames`. */
@@ -65,21 +68,12 @@ export function RenderTogglesSection({
   return (
     <DebugSection title="Renderer Toggles">
       {groups.map((group) => (
-        <div key={group.title} style={{ marginTop: 4 }}>
-          <div style={{ fontWeight: 'bold', opacity: 0.6, marginBottom: 2 }}>{group.title}</div>
+        <div key={group.title} className={styles.group}>
+          <div className={styles.groupTitle}>{group.title}</div>
           {group.rows.map((row) => {
             const isDisabled = disabledPasses[row.name] === true;
             return (
-              <label
-                key={row.name}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  cursor: 'pointer',
-                  opacity: isDisabled ? 0.5 : 1,
-                }}
-              >
+              <label key={row.name} className={cx(styles.row, isDisabled && styles.rowDisabled)}>
                 <input
                   type="checkbox"
                   checked={!isDisabled}

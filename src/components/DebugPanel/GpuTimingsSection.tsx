@@ -44,12 +44,14 @@
  */
 
 import { useEffect, useState, useRef, type ReactElement } from 'react';
+import cx from 'classnames';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
 import type { GpuTimingFrame } from '../../@types/gpu/timing/GpuTimingFrame';
 import type { TimingSlotName } from '../../@types/gpu/timing/TimingSlotName';
 import { TIMED_SLOT_GROUPS } from '../../services/engine/frame/frameProgram';
 import { Sparkline } from './Sparkline';
 import DebugSection from './DebugSection';
+import styles from './GpuTimingsSection.module.css';
 
 // Rows are grouped by the frame program's (target, slab) step structure — the
 // SAME grouping RenderTogglesSection uses, so the two lists scan positionally.
@@ -118,7 +120,7 @@ export function GpuTimingsSection({ service }: GpuTimingsSectionProps): ReactEle
   if (!service.enabled) {
     return (
       <DebugSection title="GPU Timings" defaultOpen>
-        <div style={{ opacity: 0.7 }}>
+        <div className={styles.notice}>
           GPU timings disabled. Add <code>?gpuTimings</code> to the URL and reload; requires the
           adapter's <code>timestamp-query</code> feature.
         </div>
@@ -164,8 +166,8 @@ export function GpuTimingsSection({ service }: GpuTimingsSectionProps): ReactEle
           if (row.staleFrames === 0 && row.recent.length > 0) groupMs += avgOf(row);
         }
         return (
-          <div key={group.title} style={{ marginTop: 6 }}>
-            <div style={{ fontWeight: 'bold', opacity: 0.6, marginBottom: 2 }}>
+          <div key={group.title} className={styles.group}>
+            <div className={styles.groupHeader}>
               {group.title} ({groupMs.toFixed(1)} ms)
             </div>
             {liveRows.map((r) => {
@@ -176,12 +178,10 @@ export function GpuTimingsSection({ service }: GpuTimingsSectionProps): ReactEle
               // when it was on) but dimmed so they don't read it as live.
               const isIdle = row.staleFrames > 0;
               return (
-                <div key={r.name} style={isIdle ? { opacity: 0.4 } : undefined}>
-                  <span style={{ display: 'inline-block', width: 130 }}>{r.name}</span>
-                  <span style={{ display: 'inline-block', width: 70, textAlign: 'right' }}>
-                    {avgOf(row).toFixed(1)} ms
-                  </span>
-                  <span style={{ marginLeft: 8 }}>
+                <div key={r.name} className={cx(isIdle && styles.rowIdle)}>
+                  <span className={styles.name}>{r.name}</span>
+                  <span className={styles.avg}>{avgOf(row).toFixed(1)} ms</span>
+                  <span className={styles.sparklineWrap}>
                     <Sparkline samples={row.spark} />
                   </span>
                 </div>
