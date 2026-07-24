@@ -539,14 +539,14 @@ explicit, because both look wrong at a glance:
   about a second, and buys local structure being resident the moment the camera pulls back.
   Accepted knowingly.
 
-- [ ] No test. The rank table IS the specification; a test asserting its order restates a
+- [x] No test. The rank table IS the specification; a test asserting its order restates a
       constant (`testing.md`). See the standing refusal at the top of this file.
-- [ ] Add the field to the type with its docblock.
-- [ ] Thread `priority` through `pointRow`; set every row's integer per the table.
-- [ ] `npm run typecheck` clean (the required field makes a missed row a compile error, which
+- [x] Add the field to the type with its docblock.
+- [x] Thread `priority` through `pointRow`; set every row's integer per the table.
+- [x] `npm run typecheck` clean (the required field makes a missed row a compile error, which
       is the whole point of not making it optional).
-- [ ] `npm test` full pass.
-- [ ] Commit (feature): the two files above.
+- [x] `npm test` full pass.
+- [x] Commit (feature): the two files above.
 
 ---
 

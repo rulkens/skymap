@@ -96,7 +96,9 @@ function row(
   opts: { release?: AssetWiringRow['release']; req?: AssetWiringRow['req'] } = {},
 ): AssetWiringRow {
   const req = opts.req ?? ((tier) => ({ source: key, tier }));
-  return { key, factory: () => stubSlot(), req, demand, release: opts.release };
+  // `priority` is required on the row type but irrelevant to the edges under
+  // test here (fetch order is the queue's concern), so every stub row shares 0.
+  return { key, factory: () => stubSlot(), req, demand, release: opts.release, priority: 0 };
 }
 
 afterEach(() => {
@@ -247,6 +249,7 @@ describe('evaluateRows — bodyTextures stale-tier evict', () => {
     factory: () => stubSlot(),
     req: (tier) => ({ bodyId: 'earth', kind: 'surface', tier: clampTier(tier, 'large') }),
     demand: () => false,
+    priority: 0,
   };
 
   /** A low-ceiling body-texture row (Uranus ships only up to 'small'). */
@@ -255,6 +258,7 @@ describe('evaluateRows — bodyTextures stale-tier evict', () => {
     factory: () => stubSlot(),
     req: (tier) => ({ bodyId: 'uranus', kind: 'surface', tier: clampTier(tier, 'small') }),
     demand: () => false,
+    priority: 0,
   };
 
   /** State with `slot` in the keyed bodyTextures map under `key` at the given tier. */
