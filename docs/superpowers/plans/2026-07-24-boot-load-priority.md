@@ -311,11 +311,11 @@ This also deletes the five-branch `if/else` ladder in `setMap` and the parallel 
 they are (2 surface, 3 material, 4 night, 5 normal, 6 clouds) by driving `buildBindGroup` from
 a small kind-to-binding table, mirroring `texturedBodyRenderer`'s `KIND_CFG`.
 
-- [ ] No new test (same reasoning as P4a; the seeding entry point lands in part 2).
-- [ ] Refactor; update the module header's "Untextured behaviour (placeholder texture)"
+- [x] No new test (same reasoning as P4a; the seeding entry point lands in part 2).
+- [x] Refactor; update the module header's "Untextured behaviour (placeholder texture)"
       section (`:37-61`) to describe the committed-over-placeholder resolution.
-- [ ] `npm test -- earthRenderer` green; repair only what breaks.
-- [ ] Commit (prep P4b): the files above.
+- [x] `npm test -- earthRenderer` green; repair only what breaks.
+- [x] Commit (prep P4b): the files above.
 
 ---
 
