@@ -125,6 +125,38 @@ export class PriorityQueue<T = ImageBitmap | null> {
     return this.inFlight.size;
   }
 
+  /**
+   * Remove a pending entry by key.  No-op if the key isn't pending — in
+   * particular, an in-flight entry is left untouched.  We could try to
+   * cancel the in-flight fetch (e.g. AbortController), but responses
+   * aren't resumable and the queue's re-enqueue semantics already treat
+   * "let it finish" as correct (see the module docblock's "never preempt"
+   * note): a caller that no longer wants the result just ignores
+   * `onResult`.  Cancelling would add plumbing for a case that's rare in
+   * practice — the camera moving away mid-fetch costs one wasted request,
+   * not a stuck queue.
+   */
+  drop(key: string): void {
+    this.pending.delete(key);
+  }
+
+  /**
+   * Tear down the queue: clear every pending entry and resolve any
+   * outstanding `drain()` callers.  Exists because every
+   * `EngineSubsystemHandles` field satisfies `Destroyable` — without this,
+   * a `drain()` call made just before teardown would hang forever, since
+   * nothing would ever bring `pending.size` and `inFlight.size` to zero
+   * (the in-flight tasks that ARE still running settle on their own timer
+   * and their `.finally` handlers already null-check nothing that
+   * `destroy()` needs to touch).  In-flight tasks are left to run out
+   * rather than aborted, for the same reason `drop()` doesn't touch them.
+   */
+  destroy(): void {
+    this.pending.clear();
+    const resolvers = this.drainResolvers.splice(0);
+    for (const r of resolvers) r();
+  }
+
   private tryStart(): void {
     while (this.inFlight.size < this.limit && this.pending.size > 0) {
       const entry = this.popHighestPriority();

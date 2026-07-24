@@ -343,15 +343,15 @@ and the spec's "never preempt" decision (Q11) is explicit. `destroy()` exists be
 (`EngineSubsystemHandles.d.ts:152-156`); it must also fire `drainResolvers` so a pending
 `drain()` cannot hang past teardown.
 
-- [ ] **Spec test 2.** Add `a dropped entry never starts` to `priorityQueue.test.ts`: on
+- [x] **Spec test 2.** Add `a dropped entry never starts` to `priorityQueue.test.ts`: on
       `new PriorityQueue(2)`, enqueue 2 gated blockers to saturate it, enqueue a third entry
       whose fetcher is a `vi.fn<() => Promise<null>>()`, `queue.drop('third')`, release the
       blockers, `await queue.drain()`, assert the third fetcher was never called. Silent and
       easy to regress, and it is what stops a body texture fetching minutes after the camera
       left.
-- [ ] Implement `drop` + `destroy`.
-- [ ] `npm test -- priorityQueue` green.
-- [ ] Commit (feature): the two files above.
+- [x] Implement `drop` + `destroy`.
+- [x] `npm test -- priorityQueue` green.
+- [x] Commit (feature): the two files above.
 
 ### 1.2: `ASSET_QUEUE_CONCURRENCY` + the `assetQueue` subsystem field
 

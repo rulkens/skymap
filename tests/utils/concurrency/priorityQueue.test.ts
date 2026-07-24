@@ -146,6 +146,44 @@ describe('PriorityQueue', () => {
     expect(started.filter((k) => !k.startsWith('blocker'))).toEqual(['high', 'mid', 'low']);
   });
 
+  it('a dropped entry never starts', async () => {
+    const queue = new PriorityQueue(2);
+    const unblockers: Array<() => void> = [];
+
+    // Saturate both slots so the third entry sits pending instead of
+    // starting immediately.
+    for (let i = 0; i < 2; i++) {
+      const gate = new Promise<void>((r) => unblockers.push(r));
+      queue.enqueue({
+        key: `blocker-${i}`,
+        priority: 0,
+        fetcher: async () => {
+          await gate;
+          return null;
+        },
+        onResult: () => {},
+      });
+    }
+
+    const thirdFetcher = vi.fn<() => Promise<null>>(async () => null);
+    queue.enqueue({
+      key: 'third',
+      priority: 1,
+      fetcher: thirdFetcher,
+      onResult: () => {},
+    });
+
+    // Dropped while still pending: the queue must never call its fetcher,
+    // even once a slot frees up — this is what stops a body texture
+    // fetching minutes after the camera has moved on.
+    queue.drop('third');
+
+    for (const u of unblockers) u();
+    await queue.drain();
+
+    expect(thirdFetcher).not.toHaveBeenCalled();
+  });
+
   it('calls onResult with the fetcher result', async () => {
     const queue = new PriorityQueue();
     const cb = vi.fn();
