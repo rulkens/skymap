@@ -1,13 +1,10 @@
 import { describe, it, expect } from 'vitest';
 
 import reducer, { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
-import { Source } from '../../../src/data/sources';
+import { makeGalaxyRow } from '../../fixtures/makeGalaxyRow';
 import type { SelectionRowsState } from '../../../src/@types/store/SelectionRowsState';
-import type { GalaxyRow } from '../../../src/@types/engine/GalaxyRow';
 
-const galaxyRow: GalaxyRow = {
-  type: 'galaxyCatalog',
-  source: Source.SDSS,
+const galaxyRow = makeGalaxyRow({
   index: 42,
   objId: '1237668347496587264',
   x: 100,
@@ -22,10 +19,8 @@ const galaxyRow: GalaxyRow = {
   diameterKpc: 18,
   axisRatio: 0.7,
   positionAngleDeg: 45,
-  orientationIsFallback: false,
   classByte: 3,
-  parentSurveyByte: 0,
-};
+});
 
 describe('selectionRowsSlice', () => {
   it('setSelectionRow writes a GalaxyRow into the correct slot', () => {

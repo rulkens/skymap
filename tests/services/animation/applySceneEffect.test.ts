@@ -97,6 +97,7 @@ function makeSettings(opts?: {
       brightness: 1,
       depthFade: false,
       highlightEstimatedOrientation: false,
+      highlightEstimatedSize: false,
       onlyMeasuredOrientation: false,
     },
     structures: { enabled: true, items: structureItems },

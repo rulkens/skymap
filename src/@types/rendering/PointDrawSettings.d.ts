@@ -28,6 +28,8 @@ export type PointDrawSettings = {
   highlightEstimatedOrientation: boolean;
   /** When true, fallback-orientation fragments are `discard`ed entirely. */
   onlyMeasuredOrientation: boolean;
+  /** When true, fallback-diameter galaxies are tinted cyan in the visual shader.  Pick path unaffected. */
+  highlightEstimatedSize: boolean;
   /** Malmquist-bias correction selector (`data/biasMode.ts`).  0 = no correction; `absMagLimit` ignored.  The Schechter / 1-over-Vmax modes read per-vertex weights (`schechterRatio`, angular-density) the bias-correction subsystem splices into the vertex buffer — not uniforms. */
   biasMode: number;
   /** Volume-limit threshold for `biasMode == 1`.  Galaxies fainter than this are discarded in the vertex stage. */

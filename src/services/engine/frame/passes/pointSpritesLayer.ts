@@ -30,7 +30,7 @@
  * - `ctx.drawPxPerRad` — radian→pixel scale for apparent-size
  *   computation (slab-invariant; no `SlabView` equivalent)
  * - `ctx.visibleSourceMask` — bitmask of currently-visible source codes
- * - `state.settings.galaxyCatalogs.{sizePx,brightness,highlightEstimatedOrientation,onlyMeasuredOrientation,depthFade}`
+ * - `state.settings.galaxyCatalogs.{sizePx,brightness,highlightEstimatedOrientation,onlyMeasuredOrientation,highlightEstimatedSize,depthFade}`
  *   — point-billboard appearance knobs
  * - `state.settings.bias.{mode,absMagLimit}` — luminosity-bias correction
  * - `state.selection.select` — structured selection ref translated to the
@@ -113,6 +113,7 @@ export const pointSpritesLayer: ContentLayer = {
       pxPerRad: drawPxPerRad,
       highlightEstimatedOrientation: state.settings.galaxyCatalogs.highlightEstimatedOrientation,
       onlyMeasuredOrientation: state.settings.galaxyCatalogs.onlyMeasuredOrientation,
+      highlightEstimatedSize: state.settings.galaxyCatalogs.highlightEstimatedSize,
       biasMode: state.settings.bias.mode,
       absMagLimit: state.settings.bias.absMagLimit,
       depthFadeEnabled: state.settings.galaxyCatalogs.depthFade,

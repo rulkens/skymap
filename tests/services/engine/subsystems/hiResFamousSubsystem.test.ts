@@ -28,6 +28,7 @@ import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/Ga
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaEntry';
+import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 
 const LAYER_SIDE = 1024;
 const LAYER_COUNT = 8;
@@ -72,8 +73,7 @@ function makeFamousCloud(count: number, diameterKpc = 50): GalaxyCatalog {
     a.fill(v);
     return a;
   };
-  return {
-    count,
+  return makeGalaxyCatalog(count, {
     objIDs: new BigUint64Array(count),
     positions,
     magU: fill(20),
@@ -84,11 +84,7 @@ function makeFamousCloud(count: number, diameterKpc = 50): GalaxyCatalog {
     axisRatio: fill(0.7),
     positionAngleDeg: fill(45),
     diameterKpc: fill(diameterKpc),
-    classByte: new Uint8Array(count),
-    parentSurveyByte: new Uint8Array(count),
-    spectroscopicZ: new Float32Array(count),
-    orientationIsFallback: new Uint8Array(count),
-  };
+  });
 }
 
 /** Camera placed at `[10 - camDist, 0, 0]` (galaxy at `[10, 0, 0]`). */
@@ -289,8 +285,7 @@ describe('createHiResFamousSubsystem', () => {
       // invariant under test.
       diameters[i] = 220 + i * 10;
     }
-    const cloud: GalaxyCatalog = {
-      count,
+    const cloud: GalaxyCatalog = makeGalaxyCatalog(count, {
       objIDs: new BigUint64Array(count),
       positions,
       magU: new Float32Array(count).fill(20),
@@ -301,11 +296,7 @@ describe('createHiResFamousSubsystem', () => {
       axisRatio: new Float32Array(count).fill(0.7),
       positionAngleDeg: new Float32Array(count).fill(45),
       diameterKpc: diameters,
-      classByte: new Uint8Array(count),
-      parentSurveyByte: new Uint8Array(count),
-      spectroscopicZ: new Float32Array(count),
-      orientationIsFallback: new Uint8Array(count),
-    };
+    });
     const clouds = new Map([[Source.FamousGalaxy, cloud]]);
     const meta = makeFamousMeta(count);
     // Camera close enough that every galaxy clears the 120 px gate —

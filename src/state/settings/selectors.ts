@@ -85,6 +85,9 @@ export const selectHighlightEstimatedOrientation = (state: RootState): boolean =
 export const selectOnlyMeasuredOrientation = (state: RootState): boolean =>
   selectSettings(state).galaxyCatalogs.onlyMeasuredOrientation;
 
+export const selectHighlightEstimatedSize = (state: RootState): boolean =>
+  selectSettings(state).galaxyCatalogs.highlightEstimatedSize;
+
 export const selectGalaxyCatalogItems = (
   state: RootState,
 ): Record<GalaxyCatalogId, GalaxyCatalogItemSettings> => selectSettings(state).galaxyCatalogs.items;

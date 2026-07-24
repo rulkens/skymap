@@ -152,6 +152,7 @@ export function recordsToCloud(
     parentSurveyByte: new Uint8Array(count),
     spectroscopicZ: new Float32Array(count),
     orientationIsFallback: new Uint8Array(count),
+    diameterIsFallback: new Uint8Array(count),
   };
   let overridesApplied = 0;
   for (let i = 0; i < count; i++) {
@@ -246,6 +247,13 @@ export function recordsToCloud(
       const fromAngular = arcsecToKpc(r.angularMajorAxisArcsec, adoptedDistMpc);
       if (Number.isFinite(fromAngular) && fromAngular > 0) diameterKpc = fromAngular;
     }
+    // `diameterKpc === null` here means both attempts failed — no measured
+    // size and no angular size to re-derive one — so the row falls through to
+    // the flat DEFAULT_GALAXY_DIAMETER_KPC = 30. Stamp the authoritative
+    // fallback signal on that exact distinction (single source of truth,
+    // mirroring the orientationIsFallback stamp above) so the load side never
+    // has to guess via a lossy `diameterKpc === 30` compare.
+    cloud.diameterIsFallback[i] = diameterKpc === null ? 1 : 0;
     cloud.diameterKpc[i] = diameterKpc ?? DEFAULT_GALAXY_DIAMETER_KPC;
     // Per-source classification byte (e.g. Milliquas AGN class
     // letter → 1..6).  Every parser that doesn't carry a class

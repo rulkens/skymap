@@ -78,7 +78,7 @@ import package::lib::camera::CameraUniforms;
 //   offset 112 : highlightEstimatedOrientation (u32)
 //   offset 116 : onlyMeasuredOrientation        (u32)
 //   offset 120 : depthFadeEnabled    (u32)
-//   offset 124 : _pad4               (u32)
+//   offset 124 : highlightEstimatedSize (u32)
 //   offset 128..159 : Malmquist block (biasMode, absMagLimit, ...)
 //   offset 160..175 : pxFadeStart, pxFadeEnd, _padFade0, _padFade1
 //   total: 176 bytes.
@@ -140,7 +140,10 @@ struct Uniforms {
   // stage computes '1 / (1 + (camDist / FALLOFF_HALF)²)'; when 0 it
   // skips the gate and forwards 1.0 through.
   depthFadeEnabled: u32,
-  _pad4: u32,
+  // u32 boolean: tints fallback-diameter galaxies. The flag itself rides
+  // the sign bit of the per-vertex 'radiusMpc' (abs() for magnitude, < 0
+  // for the flag), the same encoding orientation uses on 'axisRatio'.
+  highlightEstimatedSize: u32,
 
   // ── Malmquist-bias correction state ─────────────────────────────────
   //
@@ -237,6 +240,14 @@ struct PerVertex {
   // thumbnail-footprint padding and the synthetic-fallback floor are
   // already applied; the shader reads the value directly as the
   // half-extent of the world-space quad.
+  //
+  // The SIGN BIT carries the fallback-diameter flag, mirroring
+  // '@location(3) axisRatio'. Real padded radii are always positive; the
+  // JS-side bake negates the value for rows whose diameter was a fallback
+  // estimate. The vertex stage recovers both pieces in one read:
+  //   - 'abs(radiusMpc)' for the billboard magnitude
+  //   - 'radiusMpc < 0.0' for the fallback flag
+  // 'NaN < 0.0' is false, so synthetic rows read as non-fallback.
   @location(5) radiusMpc: f32,
 
   // Per-galaxy 1/V_max weight for Malmquist-bias correction. Baked at

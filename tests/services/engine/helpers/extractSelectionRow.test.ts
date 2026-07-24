@@ -13,6 +13,8 @@ import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { Source } from '../../../../src/data/sources';
+import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
+
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { ResolveDeps } from '../../../../src/@types/engine/ResolveDeps';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
@@ -23,8 +25,7 @@ import type { StarCatalog } from '../../../../src/@types/data/starCatalog/StarCa
 const EARTH_POS = deriveBodyStates(CONST_J2000).get('earth')!.positionMpc;
 
 function makeCloud(): GalaxyCatalog {
-  return {
-    count: 1,
+  return makeGalaxyCatalog(1, {
     positions: new Float32Array([10, 20, 30]),
     spectroscopicZ: new Float32Array([0.0123]),
     magU: new Float32Array([18.1]),
@@ -36,10 +37,7 @@ function makeCloud(): GalaxyCatalog {
     diameterKpc: new Float32Array([42]),
     axisRatio: new Float32Array([0.7]),
     positionAngleDeg: new Float32Array([35]),
-    classByte: new Uint8Array([0]),
-    parentSurveyByte: new Uint8Array([0]),
-    orientationIsFallback: new Uint8Array([0]),
-  };
+  });
 }
 
 const structure: StructureInfo = {

@@ -224,4 +224,22 @@ export type GalaxyCatalog = {
    * exactly, no reconstruction.
    */
   orientationIsFallback: Uint8Array;
+
+  /**
+   * Per-galaxy "diameter is the flat fallback" flag — length === count. 1
+   * means `diameterKpc[i]` is the project-wide DEFAULT_GALAXY_DIAMETER_KPC =
+   * 30 default, applied because the parser had NO real measured size AND no
+   * angular size to re-derive a physical diameter from; 0 means the row's
+   * diameter is a real catalog measurement, an angular-derived value, or a
+   * synthetic / famous-curated size.
+   *
+   * This is the AUTHORITATIVE persisted provenance signal, stamped at build
+   * time in `recordsToCloud` on the exact `diameterKpc === null` distinction
+   * that decides the fallback, and carried verbatim through the .bin. It
+   * replaces the old lossy `diameterKpc === 30` compare the InfoCard used to
+   * guess provenance — a real 30-kpc measurement is indistinguishable from
+   * the fallback under that comparison, so the persisted byte is the only
+   * exact signal.
+   */
+  diameterIsFallback: Uint8Array;
 };

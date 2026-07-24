@@ -53,6 +53,7 @@ const SETTINGS: PointDrawSettings = {
   pxPerRad: 600,
   highlightEstimatedOrientation: true,
   onlyMeasuredOrientation: false,
+  highlightEstimatedSize: false,
   biasMode: 2,
   absMagLimit: -19.5,
   depthFadeEnabled: true,
@@ -184,10 +185,20 @@ describe('packPointUniforms — flags (bytes 112..127)', () => {
     expect(u32[30]).toBe(1); // depthFadeEnabled: true
   });
 
-  it('leaves _pad4 at byte 124 (u32 index 31) as zero', () => {
-    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
-    const u32 = new Uint32Array(buf);
-    expect(u32[31]).toBe(0);
+  it('writes highlightEstimatedSize as a u32 at byte 124 (u32 index 31)', () => {
+    // Byte 124 (formerly _pad4) now carries highlightEstimatedSize — a bool
+    // packed as u32, mirroring the other flag slots.  Guard both encodings so
+    // a byte-offset drift or a float-vs-u32 mistake fails loudly.
+    const on = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, {
+      ...SETTINGS,
+      highlightEstimatedSize: true,
+    });
+    expect(new Uint32Array(on)[31]).toBe(1);
+    const off = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, {
+      ...SETTINGS,
+      highlightEstimatedSize: false,
+    });
+    expect(new Uint32Array(off)[31]).toBe(0);
   });
 });
 

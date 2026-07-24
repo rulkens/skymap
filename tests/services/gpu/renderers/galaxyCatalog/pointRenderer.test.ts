@@ -27,6 +27,7 @@ import { Source, SOURCE_REGISTRY } from '../../../../../src/data/sources';
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { Mat4 } from 'wgpu-matrix';
+import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 
 // PointRenderer keys its catalogs by the string `GalaxyCatalogId`; these
 // tests still reason in terms of the numeric `Source` codes, so resolve the
@@ -53,27 +54,12 @@ const testRunner: BuildRunner = async (input) => buildPointInterleavedBuffer(inp
  * path inspects their values here, only their lengths.
  */
 function makeCloud(count: number): GalaxyCatalog {
-  return {
-    count,
+  return makeGalaxyCatalog(count, {
     objIDs: new BigUint64Array(count),
-    positions: new Float32Array(count * 3),
-    magU: new Float32Array(count),
-    magG: new Float32Array(count),
-    magR: new Float32Array(count),
-    magI: new Float32Array(count),
-    magZ: new Float32Array(count),
-    // Orientation fields — zero-filled arrays of the right length suffice.
-    axisRatio: new Float32Array(count),
-    positionAngleDeg: new Float32Array(count),
     // Fill with the 30 kpc project default so apparent-size logic never
     // divides by zero.
     diameterKpc: new Float32Array(count).fill(30),
-    // Per-record metadata bytes; zero-filled.
-    classByte: new Uint8Array(count),
-    parentSurveyByte: new Uint8Array(count),
-    spectroscopicZ: new Float32Array(count),
-    orientationIsFallback: new Uint8Array(count),
-  };
+  });
 }
 
 /**
@@ -344,6 +330,7 @@ describe('PointRenderer.draw — PointDrawSettings shape', () => {
       camPosWorld: [0, 0, 0],
       pxPerRad: 1,
       highlightEstimatedOrientation: false,
+      highlightEstimatedSize: false,
       onlyMeasuredOrientation: false,
       biasMode: 0,
       absMagLimit: 0,
@@ -390,6 +377,7 @@ describe('PointRenderer.draw — PointDrawSettings shape', () => {
       camPosWorld: [0, 0, 0],
       pxPerRad: 1,
       highlightEstimatedOrientation: false,
+      highlightEstimatedSize: false,
       onlyMeasuredOrientation: false,
       biasMode: 0,
       absMagLimit: 0,

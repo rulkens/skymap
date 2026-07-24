@@ -67,6 +67,7 @@ export function packPointUniforms(
     pxPerRad,
     highlightEstimatedOrientation,
     onlyMeasuredOrientation,
+    highlightEstimatedSize,
     biasMode,
     absMagLimit,
     depthFadeEnabled,
@@ -96,7 +97,7 @@ export function packPointUniforms(
   u32[28] = highlightEstimatedOrientation ? 1 : 0; // byte 112
   u32[29] = onlyMeasuredOrientation ? 1 : 0; // byte 116
   u32[30] = depthFadeEnabled ? 1 : 0; // byte 120
-  // u32[31] _pad4 stays zero.
+  u32[31] = highlightEstimatedSize ? 1 : 0; // byte 124 highlightEstimatedSize
 
   // Malmquist-bias state.  Mode through u32, threshold through f32 — both
   // alias the same ArrayBuffer.

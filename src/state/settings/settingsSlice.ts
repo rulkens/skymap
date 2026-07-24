@@ -82,6 +82,9 @@ const settingsSlice = createSlice({
     setOnlyMeasuredOrientation: (settings, action: PayloadAction<boolean>) => {
       settings.galaxyCatalogs.onlyMeasuredOrientation = action.payload;
     },
+    setHighlightEstimatedSize: (settings, action: PayloadAction<boolean>) => {
+      settings.galaxyCatalogs.highlightEstimatedSize = action.payload;
+    },
     setGalaxyCatalogVisible: (
       settings,
       action: PayloadAction<{ id: GalaxyCatalogId; enabled: boolean }>,
@@ -439,6 +442,7 @@ export const {
   setDepthFade,
   setHighlightEstimatedOrientation,
   setOnlyMeasuredOrientation,
+  setHighlightEstimatedSize,
   setGalaxyCatalogVisible,
   setGalaxyCatalogLabelEnabled,
   setExposure,

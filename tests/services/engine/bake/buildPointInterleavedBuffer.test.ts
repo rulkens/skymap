@@ -33,27 +33,16 @@
 import { describe, it, expect } from 'vitest';
 import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bake/buildPointInterleavedBuffer';
 import { Source } from '../../../../src/data/sources';
+import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 /** Build a tiny synthetic cloud with three galaxies at known coordinates. */
 function makeCloud(count: number): GalaxyCatalog {
-  return {
-    count,
-    objIDs: BigUint64Array.from({ length: count }, (_, i) => BigInt(i + 1)),
-    positions: new Float32Array(count * 3),
-    magU: new Float32Array(count),
-    magG: new Float32Array(count),
-    magR: new Float32Array(count),
-    magI: new Float32Array(count),
-    magZ: new Float32Array(count),
+  return makeGalaxyCatalog(count, {
     axisRatio: new Float32Array(count).fill(0.7),
     positionAngleDeg: new Float32Array(count).fill(45),
     diameterKpc: new Float32Array(count).fill(30),
-    classByte: new Uint8Array(count),
-    parentSurveyByte: new Uint8Array(count),
-    spectroscopicZ: new Float32Array(count),
-    orientationIsFallback: new Uint8Array(count),
-  };
+  });
 }
 
 const SLOTS = 13;
@@ -117,6 +106,22 @@ describe('buildPointInterleavedBuffer', () => {
     expect(interleaved[0 * SLOTS + 5]).toBeCloseTo(0.7, 5);
     expect(interleaved[1 * SLOTS + 5]).toBeCloseTo(-0.7, 5); // sign bit flipped
     expect(interleaved[2 * SLOTS + 5]).toBeCloseTo(0.7, 5);
+  });
+
+  it('flips the slot-8 (radiusMpc) sign bit for rows whose persisted diameterIsFallback is 1', () => {
+    // Same authoritative-byte contract as orientationIsFallback/slot 5, one
+    // slot over: the padded radius is always positive, so a fallback
+    // diameter negates it. Row 1 is marked fallback, rows 0/2 are not.
+    const cloud = makeCloud(3);
+    cloud.magG.set([18, 18, 18]);
+    cloud.diameterIsFallback.set([0, 1, 0]);
+    const { interleaved } = buildPointInterleavedBuffer({
+      cloud,
+      source: Source.SDSS,
+    });
+    expect(interleaved[0 * SLOTS + 8]).toBeGreaterThan(0);
+    expect(interleaved[1 * SLOTS + 8]).toBeLessThan(0);
+    expect(interleaved[2 * SLOTS + 8]).toBeGreaterThan(0);
   });
 
   it('returns the galaxy catalog schechter triple, mLim and central density nRef', () => {

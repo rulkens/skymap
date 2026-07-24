@@ -25,6 +25,7 @@ import type {
   HiResFamousPerGalaxyState,
   HiResFamousSubsystem,
 } from '../../../../src/@types/engine/subsystems/HiResFamousSubsystem';
+import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 
 function makeFakeDevice(): GPUDevice {
   const fakeTexture = { createView: () => ({}) as GPUTextureView };
@@ -53,8 +54,7 @@ function makeDenseCloud(count: number, ar = 0.7, pa = 45): GalaxyCatalog {
     a.fill(v);
     return a;
   };
-  return {
-    count,
+  return makeGalaxyCatalog(count, {
     objIDs: new BigUint64Array(count),
     positions,
     magU: fill(20),
@@ -65,11 +65,7 @@ function makeDenseCloud(count: number, ar = 0.7, pa = 45): GalaxyCatalog {
     axisRatio: fill(ar),
     positionAngleDeg: fill(pa),
     diameterKpc: fill(50),
-    classByte: new Uint8Array(count),
-    parentSurveyByte: new Uint8Array(count),
-    spectroscopicZ: new Float32Array(count),
-    orientationIsFallback: new Uint8Array(count),
-  };
+  });
 }
 
 function makeCam(): OrbitCamera {

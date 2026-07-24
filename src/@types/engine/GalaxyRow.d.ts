@@ -41,6 +41,14 @@ export type GalaxyRow = {
    * re-hashing from position (which was lossy).
    */
   readonly orientationIsFallback: boolean;
+  /**
+   * True when `diameterKpc` is the flat 30 kpc fallback rather than a real
+   * measurement — the authoritative persisted flag, threaded straight from
+   * `cloud.diameterIsFallback`. Drives the InfoCard's diameter provenance tag,
+   * replacing the old `diameterKpc === 30` compare (lossy: a genuinely
+   * measured 30 kpc galaxy would have been mislabeled fallback).
+   */
+  readonly diameterIsFallback: boolean;
   readonly classByte: number;
   readonly parentSurveyByte: number;
   readonly famous?: {

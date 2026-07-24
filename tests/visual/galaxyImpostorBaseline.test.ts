@@ -26,6 +26,7 @@ import { createTexturedDiskSubsystem } from '../../src/services/engine/subsystem
 import { createDiskPlannerWalk } from '../../src/services/engine/subsystems/diskPlannerWalk';
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../src/@types/camera/OrbitCamera';
+import { makeGalaxyCatalog } from '../fixtures/makeGalaxyCatalog';
 
 function makeFakeDevice(): GPUDevice {
   const fakeTexture = { createView: () => ({}) as GPUTextureView };
@@ -50,8 +51,7 @@ function makeCloud(count: number): GalaxyCatalog {
     a.fill(v);
     return a;
   };
-  return {
-    count,
+  return makeGalaxyCatalog(count, {
     objIDs: new BigUint64Array(count),
     positions,
     magU: fill(20),
@@ -62,11 +62,7 @@ function makeCloud(count: number): GalaxyCatalog {
     axisRatio: fill(0.7),
     positionAngleDeg: fill(45),
     diameterKpc: fill(50),
-    classByte: new Uint8Array(count),
-    parentSurveyByte: new Uint8Array(count),
-    spectroscopicZ: new Float32Array(count),
-    orientationIsFallback: new Uint8Array(count),
-  };
+  });
 }
 
 function makeCam(): OrbitCamera {

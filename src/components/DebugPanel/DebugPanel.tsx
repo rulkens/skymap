@@ -5,8 +5,8 @@
  * `GpuTimingsSection` (per-pass GPU timing live readout),
  * `RenderTogglesSection` (per-pass on/off checkboxes for visual
  * debugging), `FlowTuningSection`, `DebugOverlaysSection` (pick-buffer
- * / disk-radius-ring toggles), `GalaxyOrientationSection` (catalog-audit
- * diagnostics for measured vs. estimated orientation), and two
+ * / disk-radius-ring toggles), `GalaxyProvenanceSection` (catalog-audit
+ * diagnostics for measured vs. estimated orientation and size), and two
  * self-contained sections mounted via their own store containers —
  * `ClipTriggersSectionContainer` (play/stop a registered clip + launch a guided
  * tour) and `ClipPathInspectorSectionContainer` (precompute + scrub a clip's
@@ -24,8 +24,8 @@
  * during steady-state runs.  GPU timings is the opposite (always
  * live), but the user might want to focus on one or the other.
  * `RenderTogglesSection`, `DebugOverlaysSection`, and
- * `GalaxyOrientationSection` all default to closed (most sessions won't
- * need to flip a renderer off, a raw overlay, or audit orientation
+ * `GalaxyProvenanceSection` all default to closed (most sessions won't
+ * need to flip a renderer off, a raw overlay, or audit orientation/size
  * provenance); the other two default to open because their data
  * is the primary reason for opening the panel.
  */
@@ -41,7 +41,7 @@ import { GpuTimingsSection } from './GpuTimingsSection';
 import { RenderTogglesSection } from './RenderTogglesSection';
 import { FlowTuningSection } from './FlowTuningSection';
 import DebugOverlaysSection from './DebugOverlaysSection';
-import { GalaxyOrientationSection } from './GalaxyOrientationSection';
+import { GalaxyProvenanceSection } from './GalaxyProvenanceSection';
 import ClipTriggersSectionContainer from '../containers/ClipTriggersSectionContainer';
 import ClipPathInspectorSectionContainer from '../containers/ClipPathInspectorSectionContainer';
 import styles from './DebugPanel.module.css';
@@ -65,6 +65,9 @@ export type DebugPanelProps = {
   onlyMeasuredOrientation: boolean;
   onHighlightEstimatedOrientationChange: (enabled: boolean) => void;
   onOnlyMeasuredOrientationChange: (enabled: boolean) => void;
+  /** Tint galaxies whose diameter is estimated, not measured. */
+  highlightEstimatedSize: boolean;
+  onHighlightEstimatedSizeChange: (enabled: boolean) => void;
   /**
    * Pick-buffer debug overlay toggle.  When on, the renderer paints a
    * colour-mapped RGBA layer over the tone-mapped frame so the
@@ -108,6 +111,8 @@ export function DebugPanel({
   onlyMeasuredOrientation,
   onHighlightEstimatedOrientationChange,
   onOnlyMeasuredOrientationChange,
+  highlightEstimatedSize,
+  onHighlightEstimatedSizeChange,
   showPickBuffer,
   onShowPickBufferChange,
   showDiskRadiusRing,
@@ -136,11 +141,13 @@ export function DebugPanel({
         showDiskRadiusRing={showDiskRadiusRing}
         onShowDiskRadiusRingChange={onShowDiskRadiusRingChange}
       />
-      <GalaxyOrientationSection
+      <GalaxyProvenanceSection
         highlightEstimatedOrientation={highlightEstimatedOrientation}
         onlyMeasuredOrientation={onlyMeasuredOrientation}
         onHighlightEstimatedOrientationChange={onHighlightEstimatedOrientationChange}
         onOnlyMeasuredOrientationChange={onOnlyMeasuredOrientationChange}
+        highlightEstimatedSize={highlightEstimatedSize}
+        onHighlightEstimatedSizeChange={onHighlightEstimatedSizeChange}
       />
       <ClipTriggersSectionContainer />
       <ClipPathInspectorSectionContainer />

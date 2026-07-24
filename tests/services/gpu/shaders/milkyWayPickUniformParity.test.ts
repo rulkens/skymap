@@ -145,6 +145,7 @@ function packSentinels(): ArrayBuffer {
     camPosWorld: [SENTINEL.camPosWorldX, SENTINEL.camPosWorldX + 1, SENTINEL.camPosWorldX + 2],
     pxPerRad: SENTINEL.pxPerRad,
     highlightEstimatedOrientation: false,
+    highlightEstimatedSize: false,
     onlyMeasuredOrientation: false,
     biasMode: 0,
     absMagLimit: 0,

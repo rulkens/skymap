@@ -116,6 +116,9 @@ fn vs(
   let myPacked = packSelection(source.sourceCode, ii);
 
   let isFallbackFlag = select(0u, 1u, p.axisRatio < 0.0);
+  // Size-fallback flag rides the sign bit of 'radiusMpc'. NaN < 0.0 is
+  // false, so synthetic-fallback rows (NaN radius) read as non-fallback.
+  let sizeIsFallbackFlag = select(0u, 1u, p.radiusMpc < 0.0);
 
   // Vertex-side cull: galaxies gated out by Malmquist mode 1 (volume-
   // limited) or by onlyMeasuredOrientation (hide estimated orientations)
@@ -147,7 +150,10 @@ fn vs(
   // Guard distanceMpc against 0 so we don't divide-by-zero when the camera
   // is parked exactly on a galaxy (test fixture path; not a real scenario).
   let safeDist = max(distanceMpc, 0.001);
-  let apparentPxRadius = (p.radiusMpc / safeDist) * u.pxPerRad;
+  // Use the magnitude only: 'radiusMpc's sign bit is a fallback-diameter
+  // flag, so the raw value can be negative and must not drive sizing.
+  let radiusMag = abs(p.radiusMpc);
+  let apparentPxRadius = (radiusMag / safeDist) * u.pxPerRad;
   // In the pick pass, clamp the billboard to the dot floor: resolved
   // galaxy disks are now picked by the procedural-disk pass at the disk
   // edge, so the point pick only needs to claim a small dot.
@@ -238,8 +244,16 @@ fn vs(
   // pre-computed ellipse-mask coefficient, defaulted to 1.0 (circle)
   // for invalid/NaN axisRatio (synthetic-fallback rows). 'abs(NaN) >
   // 0.0' is false, so the select branch is the correct gate.
-  let highlightActive = u.highlightEstimatedOrientation == 1u && isFallbackFlag == 1u;
-  let highlightTint = select(vec3<f32>(1.0), vec3<f32>(1.0, 0.3, 1.0), highlightActive);
+  // Two independent highlight axes, combined multiplicatively so a galaxy
+  // that is both orientation-fallback and size-fallback shows both tints.
+  // Orientation is magenta, size is cyan. 'p.radiusMpc < 0.0' is the
+  // fallback-diameter flag; NaN < 0.0 is false, so synthetic rows (NaN
+  // radius) are treated as non-fallback and stay untinted.
+  let orientHighlight = u.highlightEstimatedOrientation == 1u && isFallbackFlag == 1u;
+  let sizeHighlight = u.highlightEstimatedSize == 1u && sizeIsFallbackFlag == 1u;
+  let orientTint = select(vec3<f32>(1.0), vec3<f32>(1.0, 0.3, 1.0), orientHighlight);
+  let sizeTint = select(vec3<f32>(1.0), vec3<f32>(0.3, 1.0, 1.0), sizeHighlight);
+  let highlightTint = orientTint * sizeTint;
   let absAR = abs(p.axisRatio);
   let safeAB = select(1.0, max(absAR, 0.05), absAR > 0.0);
   out.shaded = vec4<f32>(ramp(p.colorIndex) * highlightTint * intensity, safeAB);

@@ -1,30 +1,36 @@
 /**
- * Binary on-disk format for a `GalaxyCatalog` — version 7.
+ * Binary on-disk format for a `GalaxyCatalog` — version 8.
  *
- * v7 consumes 1 of v6's 6 trailing padding bytes for a new per-record
- * uint8 field:
+ * v8 consumes 1 of v7's 5 trailing padding bytes for a second per-record
+ * uint8 provenance field, alongside the v7 `orientationIsFallback`:
  *
  *   - `orientationIsFallback` (offset 58, uint8): 1 when the row's
  *     (axisRatio, positionAngleDeg) pair is a deterministic
  *     hash-based fallback (the source catalog had no measured
  *     orientation), 0 when it is a real measurement.
  *
- *     This persists the build-side truth. `recordsToCloud` KNOWS which
- *     rows fell through to `fallbackOrientation` — it makes that very
- *     decision — so it stamps the flag directly. Before v7 the load side
- *     RECONSTRUCTED the flag by re-hashing `fallbackOrientation` from the
- *     baked f32 position and comparing floats for exact equality. That
- *     round-trip is lossy (f32 cartesian → `cartesianToRaDec` → hash
- *     bucketed at `Math.round(ra * 1e5)`), so ~10 % of true fallback rows
- *     were misclassified. Persisting one authoritative byte per row beats
- *     the lossy recomputation outright.
+ *   - `diameterIsFallback` (offset 59, uint8): 1 when `diameterKpc` is the
+ *     flat DEFAULT_GALAXY_DIAMETER_KPC = 30 fallback (the parser had no
+ *     measured size AND no angular size to re-derive one), 0 when it is a
+ *     real / angular-derived / curated measurement.
  *
- * Other than the new field, the per-record layout is identical to v6
- * (which itself reuses the v4 64-byte stride). The remaining 5 bytes
+ *     Both fields persist the build-side truth. `recordsToCloud` KNOWS which
+ *     rows fell through to a fallback — it makes that very decision — so it
+ *     stamps each flag directly. The alternative (reconstructing on load) is
+ *     lossy: for orientation the pre-v7 code re-hashed `fallbackOrientation`
+ *     from the baked f32 position and compared floats (f32 cartesian →
+ *     `cartesianToRaDec` → hash bucketed at `Math.round(ra * 1e5)`), so ~10 %
+ *     of true fallback rows were misclassified; for diameter the InfoCard
+ *     compared `diameterKpc === 30`, which cannot tell a real 30-kpc
+ *     measurement apart from the default. Persisting one authoritative byte
+ *     per field beats both reconstructions outright.
+ *
+ * Other than the new field, the per-record layout is identical to v7
+ * (which itself reuses the v4 64-byte stride). The remaining 4 bytes
  * of tail padding stay reserved for future per-record metadata that
  * fits in the existing stride.
  *
- * v6 (and earlier) files are rejected with the documented "regenerate
+ * v7 (and earlier) files are rejected with the documented "regenerate
  * via `npm run build-tiers`" error — the magic + version header is
  * the single source of truth for "do I understand this file?".
  *
@@ -32,7 +38,7 @@
  *
  *     ── HEADER (16 bytes) ──────────────────────────────────────────────────
  *     0       4     magic    = "SKMP" (0x504d4b53)
- *     4       4     version  = 7 (uint32)
+ *     4       4     version  = 8 (uint32)
  *     8       4     count    = number of galaxies (uint32)
  *     12      4     reserved = 0
  *
@@ -52,8 +58,9 @@
  *     52      1     classByte             (uint8)  — per-source enum
  *     53      1     parentSurveyByte      (uint8)  — Milliquas-only
  *     54      4     spectroscopicZ        (float32)
- *     58      1     orientationIsFallback (uint8)  — NEW in v7; 1 = fallback
- *     59      5     padding               (zeroed)
+ *     58      1     orientationIsFallback (uint8)  — v7; 1 = fallback
+ *     59      1     diameterIsFallback    (uint8)  — NEW in v8; 1 = fallback
+ *     60      4     padding               (zeroed)
  *
  * Total file size: 16 + count × 64.
  */
@@ -61,7 +68,7 @@
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
 
 const MAGIC = 0x504d4b53;
-const VERSION = 7;
+const VERSION = 8;
 const HEADER_BYTES = 16;
 const BYTES_PER_GALAXY = 64;
 
@@ -82,6 +89,7 @@ export function encodeGalaxyCatalog(catalog: GalaxyCatalog): ArrayBuffer {
     parentSurveyByte,
     spectroscopicZ,
     orientationIsFallback,
+    diameterIsFallback,
   } = catalog;
   if (objIDs.length !== count) throw new Error('objIDs length mismatch');
   if (positions.length !== count * 3) throw new Error('positions length mismatch');
@@ -98,6 +106,8 @@ export function encodeGalaxyCatalog(catalog: GalaxyCatalog): ArrayBuffer {
   if (spectroscopicZ.length !== count) throw new Error('spectroscopicZ length mismatch');
   if (orientationIsFallback.length !== count)
     throw new Error('orientationIsFallback length mismatch');
+  if (diameterIsFallback.length !== count)
+    throw new Error('diameterIsFallback length mismatch');
 
   const buf = new ArrayBuffer(HEADER_BYTES + count * BYTES_PER_GALAXY);
   const dv = new DataView(buf);
@@ -141,7 +151,9 @@ export function encodeGalaxyCatalog(catalog: GalaxyCatalog): ArrayBuffer {
     // classByte/parentSurveyByte note above for why we index the shared
     // Uint8Array view directly).
     byteView[byteBase + 58] = orientationIsFallback[i]!;
-    // Tail padding (byteBase+59 … byteBase+63) stays zero because
+    // Single uint8 diameter-provenance flag at byteBase + 59.
+    byteView[byteBase + 59] = diameterIsFallback[i]!;
+    // Tail padding (byteBase+60 … byteBase+63) stays zero because
     // `new ArrayBuffer` zero-inits.  No write needed.
   }
   return buf;
@@ -178,6 +190,7 @@ export function decodeGalaxyCatalog(buf: ArrayBuffer): GalaxyCatalog {
   const parentSurveyByte = new Uint8Array(count);
   const spectroscopicZ = new Float32Array(count);
   const orientationIsFallback = new Uint8Array(count);
+  const diameterIsFallback = new Uint8Array(count);
 
   const floatView = new Float32Array(buf);
   const byteView = new Uint8Array(buf);
@@ -204,7 +217,8 @@ export function decodeGalaxyCatalog(buf: ArrayBuffer): GalaxyCatalog {
     parentSurveyByte[i] = byteView[byteBase + 53]!;
     spectroscopicZ[i] = dv.getFloat32(byteBase + 54, true);
     orientationIsFallback[i] = byteView[byteBase + 58]!;
-    // The remaining 5 padding bytes are ignored on decode.
+    diameterIsFallback[i] = byteView[byteBase + 59]!;
+    // The remaining 4 padding bytes are ignored on decode.
   }
 
   return {
@@ -223,6 +237,7 @@ export function decodeGalaxyCatalog(buf: ArrayBuffer): GalaxyCatalog {
     parentSurveyByte,
     spectroscopicZ,
     orientationIsFallback,
+    diameterIsFallback,
   };
 }
 
@@ -243,5 +258,6 @@ export function emptyGalaxyCatalog(): GalaxyCatalog {
     parentSurveyByte: new Uint8Array(0),
     spectroscopicZ: new Float32Array(0),
     orientationIsFallback: new Uint8Array(0),
+    diameterIsFallback: new Uint8Array(0),
   };
 }

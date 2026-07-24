@@ -154,6 +154,9 @@ async function main(): Promise<void> {
     parentSurveyByte: new Uint8Array(count),
     spectroscopicZ: new Float32Array(count),
     orientationIsFallback: new Uint8Array(count),
+    // Famous entries always carry a curated real diameter (e.diameterKpc), so
+    // no row is a flat-default fallback; every flag stays 0.
+    diameterIsFallback: new Uint8Array(count),
   };
 
   for (let i = 0; i < count; i++) {

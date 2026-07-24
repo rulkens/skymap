@@ -24,7 +24,7 @@
  *
  *   [x, y, z, magnitude, colorIndex,
  *    axisRatio (sign bit = isFallback flag),
- *    paCos, paSin, radiusMpc,
+ *    paCos, paSin, radiusMpc (sign bit = diameterIsFallback),
  *    vMaxWeight, schechterRatio, angularDensityWeight, absMag]
  *
  * Every slot is f32; the fallback-orientation bit rides on the sign of
@@ -56,8 +56,9 @@ const PA_COS_SIN_BYTE_OFFSET = 24;
 /**
  * Slot 8: padded billboard radius in Mpc.  Baked at upload as
  * `max(diameterKpc, 30) * 2 / 1000` — folds in 4× thumbnail-footprint
- * padding and the synthetic-fallback floor.  Vertex shader divides by
- * distance_Mpc for angular radius.
+ * padding and the synthetic-fallback floor.  Vertex shader takes
+ * `abs()` then divides by distance_Mpc for angular radius; the sign bit
+ * flags a fallback-diameter estimate (mirrors axisRatio's sign bit).
  */
 const RADIUS_MPC_BYTE_OFFSET = 32;
 
@@ -97,7 +98,7 @@ const ABS_MAG_BYTE_OFFSET = 48;
  *   2  colorIndex (f32)
  *   3  axisRatio (sign bit = isFallback)
  *   4  paCosSin (vec2<f32>)
- *   5  radiusMpc
+ *   5  radiusMpc (sign bit = diameterIsFallback)
  *   6  vMaxWeight
  *   7  schechterRatio
  *   8  angularDensityWeight
@@ -158,7 +159,7 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  *   bytes 112..115: highlightEstimatedOrientation u32                }
  *   bytes 116..119: onlyMeasuredOrientation       u32                } 16 bytes (one vec4 slot)
  *   bytes 120..123: depthFadeEnabled  u32          (UI toggle)
- *   bytes 124..127: _pad4             u32          (written as 0)
+ *   bytes 124..127: highlightEstimatedSize u32     (UI toggle)
  *   bytes 128..131: biasMode          u32          (Malmquist mode)  }
  *   bytes 132..135: absMagLimit       f32          (volume-limit M)  }
  *   bytes 136..139: apparentMagLimit  f32          (reserved, unwritten) } 32 bytes

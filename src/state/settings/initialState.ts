@@ -34,6 +34,7 @@ import {
   DEFAULT_MILKY_WAY_ENABLED,
   DEFAULT_MILKY_WAY_LABEL_ENABLED,
   DEFAULT_HIGHLIGHT_ESTIMATED_ORIENTATION,
+  DEFAULT_HIGHLIGHT_ESTIMATED_SIZE,
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_ONLY_MEASURED_ORIENTATION,
   DEFAULT_STAR_BRIGHTNESS,
@@ -99,6 +100,7 @@ export function buildInitialSettings(): EngineSettingsState {
       depthFade: DEFAULT_DEPTH_FADE_ENABLED,
       highlightEstimatedOrientation: DEFAULT_HIGHLIGHT_ESTIMATED_ORIENTATION,
       onlyMeasuredOrientation: DEFAULT_ONLY_MEASURED_ORIENTATION,
+      highlightEstimatedSize: DEFAULT_HIGHLIGHT_ESTIMATED_SIZE,
       items: Object.fromEntries(
         SOURCE_ENTRIES.filter((e) => e.type === 'galaxyCatalog').map((e) => [
           e.id,

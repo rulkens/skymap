@@ -90,6 +90,7 @@ export type EngineSettingsState = {
     depthFade: boolean;
     highlightEstimatedOrientation: boolean;
     onlyMeasuredOrientation: boolean;
+    highlightEstimatedSize: boolean;
     items: Record<GalaxyCatalogId, GalaxyCatalogItemSettings>;
   };
 

@@ -185,6 +185,9 @@ export const DEFAULT_GALAXY_TEXTURES_ENABLED = true;
 /** "Highlight estimated orientation" magenta tint defaults OFF (debug-tinged). */
 export const DEFAULT_HIGHLIGHT_ESTIMATED_ORIENTATION = false;
 
+/** "Highlight estimated size" tint defaults OFF (debug-tinged). */
+export const DEFAULT_HIGHLIGHT_ESTIMATED_SIZE = false;
+
 /** "Show only galaxies with measured (b/a, PA) photometry" defaults OFF. */
 export const DEFAULT_ONLY_MEASURED_ORIENTATION = false;
 

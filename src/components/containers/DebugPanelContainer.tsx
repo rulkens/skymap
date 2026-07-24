@@ -27,6 +27,7 @@ import {
   selectDisabledPasses,
   selectHighlightEstimatedOrientation,
   selectOnlyMeasuredOrientation,
+  selectHighlightEstimatedSize,
   selectFlow,
 } from '../../state/settings/selectors';
 import {
@@ -34,6 +35,7 @@ import {
   setShowDiskRadiusRing,
   setHighlightEstimatedOrientation,
   setOnlyMeasuredOrientation,
+  setHighlightEstimatedSize,
   setFlow,
   setPassDisabled,
 } from '../../state/settings/settingsSlice';
@@ -62,6 +64,7 @@ function DebugPanelContainer({
   const disabledPasses = useAppSelector(selectDisabledPasses);
   const highlightEstimatedOrientation = useAppSelector(selectHighlightEstimatedOrientation);
   const onlyMeasuredOrientation = useAppSelector(selectOnlyMeasuredOrientation);
+  const highlightEstimatedSize = useAppSelector(selectHighlightEstimatedSize);
   const flow = useAppSelector(selectFlow);
 
   const onShowPickBufferChange = useCallback(
@@ -81,6 +84,11 @@ function DebugPanelContainer({
 
   const onOnlyMeasuredOrientationChange = useCallback(
     (enabled: boolean) => dispatch(setOnlyMeasuredOrientation(enabled)),
+    [dispatch],
+  );
+
+  const onHighlightEstimatedSizeChange = useCallback(
+    (enabled: boolean) => dispatch(setHighlightEstimatedSize(enabled)),
     [dispatch],
   );
 
@@ -107,6 +115,8 @@ function DebugPanelContainer({
       onlyMeasuredOrientation={onlyMeasuredOrientation}
       onHighlightEstimatedOrientationChange={onHighlightEstimatedOrientationChange}
       onOnlyMeasuredOrientationChange={onOnlyMeasuredOrientationChange}
+      highlightEstimatedSize={highlightEstimatedSize}
+      onHighlightEstimatedSizeChange={onHighlightEstimatedSizeChange}
       showPickBuffer={showPickBuffer}
       onShowPickBufferChange={onShowPickBufferChange}
       showDiskRadiusRing={showDiskRadiusRing}

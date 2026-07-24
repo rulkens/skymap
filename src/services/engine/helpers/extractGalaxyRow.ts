@@ -56,6 +56,7 @@ export function extractGalaxyRow(
     axisRatio: cloud.axisRatio[idx]!,
     positionAngleDeg: cloud.positionAngleDeg[idx]!,
     orientationIsFallback: cloud.orientationIsFallback[idx] === 1,
+    diameterIsFallback: cloud.diameterIsFallback[idx] === 1,
     classByte: cloud.classByte[idx]!,
     parentSurveyByte: cloud.parentSurveyByte[idx]!,
     ...(famous ? { famous } : {}),

@@ -48,6 +48,7 @@ import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/Galax
 import { flyAndFocusOnClip } from '../../../src/state/tour/flyAndFocusOnClip';
 import { dwellDrift } from '../../../src/state/tour/dwellDrift';
 import { focusId } from '../../../src/utils/animation/focusId';
+import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 
 // CANCEL is typed as `string` in @redux-saga/core, but its runtime value is a
 // Symbol. Cast so we can use it as a property key on the drift Promise stub.
@@ -184,8 +185,7 @@ describe('visitBeatSaga', () => {
     let cloudLoaded = false;
 
     const FAMOUS_ID = 'm87';
-    const CLOUD: GalaxyCatalog = {
-      count: 1,
+    const CLOUD: GalaxyCatalog = makeGalaxyCatalog(1, {
       positions: new Float32Array([1, 0, 0]),
       spectroscopicZ: new Float32Array([0.01]),
       magU: new Float32Array([18]),
@@ -196,11 +196,7 @@ describe('visitBeatSaga', () => {
       objIDs: new BigUint64Array([1n]),
       diameterKpc: new Float32Array([30]),
       axisRatio: new Float32Array([1]),
-      positionAngleDeg: new Float32Array([0]),
-      classByte: new Uint8Array([0]),
-      parentSurveyByte: new Uint8Array([0]),
-      orientationIsFallback: new Uint8Array([0]),
-    } as unknown as GalaxyCatalog;
+    });
 
     const lazyDeps: ResolveDeps = {
       catalogs: { get: () => (cloudLoaded ? CLOUD : undefined) },

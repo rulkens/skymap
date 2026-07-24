@@ -71,6 +71,7 @@ export function pickUniformBytesOf(
       pxPerRad: ctx.drawPxPerRad,
       highlightEstimatedOrientation: g.highlightEstimatedOrientation,
       onlyMeasuredOrientation: g.onlyMeasuredOrientation,
+      highlightEstimatedSize: g.highlightEstimatedSize,
       biasMode: bias.mode,
       absMagLimit: bias.absMagLimit,
       depthFadeEnabled: g.depthFade,
