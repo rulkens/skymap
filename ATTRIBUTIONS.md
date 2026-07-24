@@ -251,6 +251,54 @@ two sources:
   to the Wikipedia article is recorded in
   `data/raw/wikipedia_famous_cache.json`.
 
+### Planetary, lunar & ring surface textures
+
+The textured solar-system bodies (`src/data/bodies/bodyTextureRegistry.ts`) and
+the ≤1 MB boot placeholder atlas (`public/data/images/textures/body-atlas.webp`,
+a 13-tile mosaic emitted by `tools/textures/buildTextures.ts`) are derived —
+downsampled into runtime tiers, and in two cases baked into normal maps — from
+three public sources. The raw sources are gitignored; per-file provenance,
+upstream URLs, and licences live in `tools/utils/io/rawDataRegistry.ts`
+(the `textures.*` rows) and `tools/utils/io/textureSources.ts`.
+
+#### Solar System Scope — planet & moon albedo maps
+
+- **Use:** Full-colour equirectangular surface maps for Mercury, Venus (cloud
+  tops), Mars, Jupiter, Saturn, Uranus, Neptune, and the Moon, plus the Saturn
+  ring radial-alpha strip.
+- **Source:** <https://www.solarsystemscope.com/textures/>.
+- **Licence:** CC BY 4.0. Attribution: "Textures by Solar System Scope
+  (solarsystemscope.com), licensed under CC BY 4.0."
+
+#### NASA — Earth & Moon imagery
+
+All public domain; NASA asks that credit go to the named observatory / program.
+
+- **Earth surface** — Blue Marble Next Generation (December topography +
+  bathymetry) equirect, NASA Earth Observatory (<https://visibleearth.nasa.gov/>).
+- **Earth night lights** — Black Marble 2016, NASA Earth Observatory / NASA
+  Goddard Space Flight Center, Suomi NPP VIIRS.
+- **Earth water mask** (feeds the material/roughness map) — Blue Marble Next
+  Generation land/water mask, NASA Earth Observatory. Preserved via the Internet
+  Archive after NASA retired the NEO bluemarble archive.
+- **Earth relief** (baked into the normal map — a build input, never shipped as
+  runtime pixels) — GEBCO_08-derived grayscale topography/bathymetry, NASA Earth
+  Observatory, imagery by Jesse Allen using GEBCO_08 grid data.
+- **Earth clouds** — Blue Marble cloud composite, NASA Goddard Space Flight
+  Center, Reto Stockli.
+- **Moon relief** (baked into the normal map — a build input, never shipped as
+  runtime pixels) — NASA Scientific Visualization Studio "CGI Moon Kit" LOLA
+  elevation.
+
+#### USGS Astrogeology — Galilean moon mosaics
+
+- **Use:** Global surface mosaics for Io, Europa, Ganymede, and Callisto
+  (Voyager + Galileo SSI). Europa and Callisto ship single-channel and are
+  hue-tinted at build time (`grayscaleTint` in the body-texture registry).
+- **Source:** USGS Astrogeology Science Center,
+  <https://planetarymaps.usgs.gov/>.
+- **Licence:** Public domain. Credit: "NASA / USGS".
+
 ## Shaders
 
 ### Milky Way impostor — "Spiral galaxy" by mrange
