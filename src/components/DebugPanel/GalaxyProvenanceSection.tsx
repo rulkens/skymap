@@ -51,7 +51,7 @@ import DebugSection from './DebugSection';
 import styles from './GalaxyProvenanceSection.module.css';
 
 const CULL_HINT =
-  'All = draw everything. Measured = draw only real measurements. Estimated = draw only the fallbacks.';
+  'All draws everything. Measured drops the estimates. Estimated drops the measurements.';
 
 export type GalaxyProvenanceSectionProps = {
   readonly provenance: GalaxyProvenanceSettings;
@@ -77,17 +77,17 @@ function GalaxyProvenanceSection({
         <span />
         <span
           className={cx(styles.head, styles.spanTwo)}
-          title="Galaxies whose value on this axis the build pipeline invented, and their share of the loaded total."
+          title="Galaxies whose value on this axis the pipeline invented rather than measured."
         >
           estimated
         </span>
         <span
           className={styles.head}
-          title="Paint those galaxies in the swatch colour instead of their catalog colour."
+          title="Paint estimated galaxies in the swatch colour instead of their catalog colour."
         >
           show
         </span>
-        <span className={styles.head} title={CULL_HINT}>
+        <span className={styles.head} title="Which half of the axis is drawn.">
           cull
         </span>
 
@@ -96,18 +96,27 @@ function GalaxyProvenanceSection({
           const checkboxId = `provenance-highlight-${axis.id}`;
           return (
             <Fragment key={axis.id}>
-              <label className={styles.axis} htmlFor={checkboxId}>
+              <label className={styles.axis} htmlFor={checkboxId} title={axis.hint}>
                 <span className={styles.swatch} style={{ background: axis.highlightColor }} />
                 {axis.label}
               </label>
-              <span className={styles.number}>{loaded ? estimated.toLocaleString() : '—'}</span>
-              <span className={cx(styles.number, styles.percent)}>
+              <span
+                className={styles.number}
+                title="Estimated galaxies on this axis, across all loaded catalogs."
+              >
+                {loaded ? estimated.toLocaleString() : '—'}
+              </span>
+              <span
+                className={cx(styles.number, styles.percent)}
+                title="Share of loaded galaxies that are estimated on this axis."
+              >
                 {loaded ? `${((estimated / counts.total) * 100).toFixed(1)}%` : '—'}
               </span>
               <input
                 id={checkboxId}
                 className={styles.check}
                 type="checkbox"
+                title={`Highlight estimated ${axis.label.toLowerCase()}.`}
                 checked={provenance[axis.id].highlight}
                 onChange={(e) => onHighlightChange(axis.id, e.target.checked)}
               />
@@ -128,7 +137,7 @@ function GalaxyProvenanceSection({
           );
         })}
 
-        <span className={styles.footer}>
+        <span className={styles.footer} title="Total galaxies across every loaded catalog.">
           {loaded ? `${counts.total.toLocaleString()} galaxies loaded` : 'no catalogs loaded'}
         </span>
       </div>

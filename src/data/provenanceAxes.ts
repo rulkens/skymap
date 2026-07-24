@@ -22,6 +22,8 @@
  * `flagsOf` points at the cloud's per-record flag array so the estimated-count
  * tally (`countEstimatedProvenance`) iterates the registry instead of naming
  * each array.
+ *
+ * `hint` is the tooltip the DebugPanel's provenance table shows for the row.
  */
 
 import type { GalaxyCatalog } from '../@types/data/galaxyCatalog/GalaxyCatalog';
@@ -30,6 +32,7 @@ export const PROVENANCE_AXES = [
   {
     id: 'orientation',
     label: 'Orientation',
+    hint: 'Disk b/a and position angle. Estimated ones are hashed from sky position.',
     /** Magenta — matches the `orientHighlight` branch in points/vertex.wesl. */
     highlightColor: '#ff1ae6',
     flagsOf: (cloud: GalaxyCatalog): Uint8Array => cloud.orientationIsFallback,
@@ -37,6 +40,7 @@ export const PROVENANCE_AXES = [
   {
     id: 'size',
     label: 'Size',
+    hint: 'Galaxy diameter. Estimated ones use a flat 30 kpc.',
     /** Green — matches the `sizeHighlight` branch in points/vertex.wesl. */
     highlightColor: '#26ff40',
     flagsOf: (cloud: GalaxyCatalog): Uint8Array => cloud.diameterIsFallback,

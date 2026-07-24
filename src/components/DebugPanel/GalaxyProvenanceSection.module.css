@@ -29,7 +29,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  cursor: pointer;
+  cursor: help;
 }
 
 .swatch {
@@ -42,6 +42,7 @@
 .number {
   text-align: right;
   font-variant-numeric: tabular-nums;
+  cursor: help;
 }
 
 .percent {
@@ -68,4 +69,5 @@
   composes: muted from './debugSection.module.css';
   grid-column: 1 / -1;
   margin-top: 2px;
+  cursor: help;
 }
