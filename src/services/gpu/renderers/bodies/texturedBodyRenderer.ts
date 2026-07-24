@@ -29,9 +29,9 @@
  * What a body shows for an uncommitted kind is decided by a per-(body, kind)
  * RESOLVER, in two layers: the shared 1×1 per-kind texture (the default, one per
  * KIND_CFG row) and an optional per-body override in `BodyResources.placeholders`
- * — a stand-in better than 1×1 grey for one specific body, e.g. a tile of a
- * low-resolution all-bodies atlas. No override is seeded today; the layer exists
- * so seeding one is a write, not a rework.
+ * — a stand-in better than 1×1 grey for one specific body, seeded by
+ * `setPlaceholderMap` from a tile of the low-resolution all-bodies atlas that
+ * loads first at boot.
  *
  * The resolver keeps the bind-group chain TWO-term —
  * `res.maps.get(kind) ?? placeholderFor(bodyId, kind)` — rather than growing a
@@ -50,8 +50,9 @@
  * `normal` row (binding 4, LINEAR tangent-space relief for airless bodies); the
  * layout, placeholders, and every body's bind group are all derived by iterating
  * those rows. Adding a further map role is ONE more row — the whole path picks it
- * up automatically, no second hardcoded branch. `setMap(id, kind, bmp)` is the
- * single per-kind upload entry.
+ * up automatically, no second hardcoded branch. `setMap(id, kind, bmp)` uploads
+ * the committed layer and `setPlaceholderMap(id, kind, atlas, rect)` the
+ * override layer; both take their binding + format from the same row.
  *
  * ## The ring binding is a real texture on every body (branch on data, not code)
  *
@@ -84,6 +85,7 @@
 
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { TexturedBodyRenderer } from '../../../../@types/rendering/TexturedBodyRenderer';
+import type { AtlasTileRect } from '../../../../@types/data/AtlasTileRect';
 import type { BodyTextureId } from '../../../../@types/data/BodyTextureId';
 import type { TextureKind } from '../../../../@types/data/TextureKind';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
@@ -122,7 +124,11 @@ const KIND_CFG = {
 } as const satisfies Partial<
   Record<
     TextureKind,
-    { binding: number; format: GPUTextureFormat; placeholder: readonly [number, number, number, number] }
+    {
+      binding: number;
+      format: GPUTextureFormat;
+      placeholder: readonly [number, number, number, number];
+    }
   >
 >;
 
@@ -137,7 +143,7 @@ const SPHERE_MAP_KINDS = Object.keys(KIND_CFG) as SphereMapKind[];
  *  Two independent texture layers per sphere-map kind, never one:
  *  - `maps` — the COMMITTED layer, a full-resolution map this body owns.
  *  - `placeholders` — this body's stand-in for a kind it has not committed,
- *    overriding the shared 1×1. Empty for every body today.
+ *    overriding the shared 1×1. Seeded by `setPlaceholderMap` from an atlas tile.
  *
  *  `ringTexture` is `null` while the body uses the shared ring placeholder. */
 type BodyResources = {
@@ -411,6 +417,76 @@ export function createTexturedBodyRenderer(
     res.bindGroup = buildBindGroup(bodyId, res);
   }
 
+  // ── setPlaceholderMap ─────────────────────────────────────────────────────
+  //
+  // Seed ONE body's placeholder override for one kind from a tile of the shared
+  // low-resolution body atlas. Structurally `setMap`, with two differences that
+  // carry the whole design: the texture lands in `res.placeholders` rather than
+  // `res.maps`, so a committed hi-res map shadows it whichever order the two
+  // arrive in and `clearMap` falls back onto it; and only `rect` of the source
+  // bitmap is copied.
+  //
+  // The atlas is a TRANSPORT format, not a sampling format. Cropping the tile at
+  // upload into an ordinary per-body texture means no shader change, no layout
+  // change, no UV remap, no seam gutters, and no atlas texture bound anywhere —
+  // the alternative (bind the atlas and offset UVs in the fragment) would push
+  // the packing into WGSL and onto iOS's stricter validation for nothing.
+
+  function setPlaceholderMap(
+    bodyId: BodyTextureId,
+    kind: TextureKind,
+    atlas: ImageBitmap,
+    rect: AtlasTileRect,
+  ): void {
+    const cfg = KIND_CFG[kind as SphereMapKind];
+    const res = resourcesFor(bodyId);
+    res.placeholders.get(kind)?.destroy();
+    const levels = mipLevelCount(rect.w, rect.h);
+    const texture = device.createTexture({
+      label: `texturedBody-placeholder-${kind}-${bodyId}`,
+      size: [rect.w, rect.h, 1],
+      format: cfg.format,
+      mipLevelCount: levels,
+      // Same as `setMap`: generateMipChain renders each level below 0.
+      usage:
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.COPY_DST |
+        GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+    // COORDINATE CONVENTION — `origin` and `flipY` INTERACT, and this is the one
+    // place a wrong assumption survives every test: the mock device rasterises
+    // nothing, so a mirrored or wrong-row crop is green in CI and visibly wrong
+    // on screen.
+    //
+    // `origin` is the minimum corner of the source sub-region in UNFLIPPED source
+    // coordinates — top-left origin, y increasing DOWNWARD, unaffected by `flipY`
+    // (WebGPU §GPUCopyExternalImageSourceInfo: "The origin option is still
+    // relative to the top-left corner of the source image, increasing downward").
+    // That is exactly the space `atlasTileRect` computes in. `flipY: true` is then
+    // applied to the SELECTED REGION alone — the region's bottom row becomes the
+    // destination's first row — so the tile lands with precisely the orientation a
+    // standalone per-body upload of the same image would have: texture v=0 is the
+    // tile's south row, matching the mesh's south-first v (`setMap`'s convention,
+    // shared with earthRenderer).
+    //
+    // Rejected: cropping one sub-bitmap per tile with
+    // `createImageBitmap(atlas, x, y, w, h)`. It sidesteps `origin` entirely, but
+    // it is asynchronous — this entry point would have to return a promise or the
+    // crop would move out to every caller — and it allocates 13 short-lived
+    // bitmaps, all to avoid an interaction the spec pins normatively.
+    device.queue.copyExternalImageToTexture(
+      { source: atlas, origin: { x: rect.x, y: rect.y }, flipY: true },
+      { texture },
+      [rect.w, rect.h, 1],
+    );
+    generateMipChain(device, texture);
+    // Store BEFORE the rebuild: `buildBindGroup` resolves the placeholder through
+    // `bodies`, so the override has to be visible there for the new bind group to
+    // pick it up.
+    res.placeholders.set(kind, texture);
+    res.bindGroup = buildBindGroup(bodyId, res);
+  }
+
   // ── clearMap ──────────────────────────────────────────────────────────────
   //
   // The eviction inverse of `setMap`: free ONE kind's sphere map and rebind
@@ -529,6 +605,7 @@ export function createTexturedBodyRenderer(
   const renderer: TexturedBodyRenderer = {
     label: 'texturedBodyRenderer',
     setMap,
+    setPlaceholderMap,
     clearMap,
     hasMap,
     setRingTexture,

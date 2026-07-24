@@ -222,8 +222,8 @@ UNFLIPPED source coordinates, and the flip is then applied to that region (the b
 the selected region becomes the first row of the destination). The tile must therefore keep the
 same orientation a standalone per-body upload would have.
 
-- [ ] Implement with `origin` in unflipped source coordinates, as above.
-- [ ] Add a didactic comment at the copy naming the interaction explicitly, so the next reader
+- [x] Implement with `origin` in unflipped source coordinates, as above.
+- [x] Add a didactic comment at the copy naming the interaction explicitly, so the next reader
       does not have to re-derive it.
 - [ ] **Ask the USER to look**, before moving on: from a cold load, is each planet upright (not
       vertically mirrored) and showing ITS OWN surface (not a neighbouring tile's)? Mars is the
@@ -233,8 +233,10 @@ same orientation a standalone per-body upload would have.
       layer with `createImageBitmap(atlas, rect.x, rect.y, rect.w, rect.h)` per tile, then
       upload each sub-bitmap exactly as `setMap` does. Cost is 13 short-lived bitmaps. Do NOT
       spend more than one debugging round on `origin` before taking this.
-- [ ] `npm test -- texturedBodyRenderer` green.
-- [ ] Commit: the two files above.
+- [x] `npm test -- texturedBodyRenderer` green (16 passed). No new test: the standing refusal
+      covers this task — the crop's correctness is pixels, and the mock device rasterises
+      nothing.
+- [x] Commit: the two files above.
 
 ### 3.4: `setPlaceholderMap` on `earthRenderer`
 

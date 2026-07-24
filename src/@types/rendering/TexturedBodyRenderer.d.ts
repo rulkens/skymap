@@ -38,6 +38,7 @@
  */
 
 import type { Renderer } from './Renderer';
+import type { AtlasTileRect } from '../data/AtlasTileRect';
 import type { BodyTextureId } from '../data/BodyTextureId';
 import type { TextureKind } from '../data/TextureKind';
 
@@ -52,6 +53,29 @@ export type TexturedBodyRenderer = Renderer & {
    * per-kind config, so adding a map role is one config row, not a new method.
    */
   setMap(bodyId: BodyTextureId, kind: TextureKind, bitmap: ImageBitmap): void;
+  /**
+   * Seed a body's per-(body, kind) PLACEHOLDER fallback from one tile of the
+   * shared low-resolution body atlas — the stand-in this body shows for a kind it
+   * has not committed, in place of the shared 1×1.
+   *
+   * `rect` names the tile inside `atlas` in UNFLIPPED source coordinates
+   * (top-left origin, y increasing downward — what `atlasTileRect` returns). Only
+   * that rect is copied, into a fresh texture of the tile's own size in the kind's
+   * configured format with a full mip chain, so the atlas bitmap is a TRANSPORT
+   * container and never becomes a bound texture: no shader, layout, sampler or UV
+   * change follows from it.
+   *
+   * Writes the OTHER texture layer from `setMap`, which is what makes arrival
+   * order irrelevant: a committed hi-res map always shadows the tile, and
+   * `clearMap` lands back on it. Replacing an existing override for the same
+   * (body, kind) destroys the old texture first.
+   */
+  setPlaceholderMap(
+    bodyId: BodyTextureId,
+    kind: TextureKind,
+    atlas: ImageBitmap,
+    rect: AtlasTileRect,
+  ): void;
   /**
    * Free ONE `TextureKind`'s sphere map for a body and revert that kind's binding
    * to its shared 1×1 placeholder — the per-kind eviction inverse of `setMap`,
