@@ -71,6 +71,7 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
   let controller: AbortController | null = null;
   const subscribers = new Set<(s: LoadState<T>) => void>();
   let lastRequest: Req | null = null;
+  let startedAtMs: number | null = null; // wall clock of the last load() call
   let lastReady: LoadState<T> | null = null; // for cancel() rollback
   // ── Commit serialization chain ────────────────────────────────────────
   // Holds the in-flight commit's resolve-promise, or null when no commit
@@ -216,6 +217,11 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
     name,
     load(req: Req): Promise<void> {
       lastRequest = req;
+      // Stamped HERE, not inside runLoad, so it marks the moment the caller
+      // (the bounded asset queue) actually let this fetch off the leash — the
+      // whole point of the stamp is to separate queue-start order from
+      // completion order.
+      startedAtMs = Date.now();
       generation += 1;
       const myGen = generation;
       controller?.abort();
@@ -240,6 +246,9 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
     },
     lastRequest(): Req | null {
       return lastRequest;
+    },
+    startedAtMs(): number | null {
+      return startedAtMs;
     },
     forceReload(): void {
       // load() now returns a promise; forceReload() has no caller that wants
@@ -283,8 +292,10 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
       lastReady = null;
       // Clear the committed request too: a released slot holds nothing, so the
       // stale-tier check reads `null` and `forceReload()` is a no-op until the
-      // demand loop re-loads it at the current tier.
+      // demand loop re-loads it at the current tier. The start stamp goes with
+      // it: a released slot has no live load attempt to have started.
       lastRequest = null;
+      startedAtMs = null;
       state = { kind: 'idle' };
       if (releasing && onRelease) onRelease(releasing.value);
       for (const sub of subscribers) sub(state);

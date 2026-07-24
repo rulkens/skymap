@@ -36,6 +36,24 @@ export type AssetSlot<T, Req> = {
    */
   lastRequest(): Req | null;
   /**
+   * `Date.now()` at the moment the slot's most recent `load()` was CALLED, or
+   * `null` before the first one and after `release()`.
+   *
+   * Pairs with the `ready` state's `loadedAtMs` (commit time) to give the debug
+   * panel two independent orderings: which asset the queue STARTED first versus
+   * which one FINISHED first. Without a start stamp a 26 MB payload that was
+   * dequeued first still reads as "late", which is exactly the confusion a
+   * fetch-order investigation needs to rule out.
+   *
+   * A slot accessor rather than a field on the `loading` LoadState, mirroring
+   * `lastRequest()`: `reduceLoadState` is a pure function with no clock, so
+   * threading a timestamp through it would mean a new event payload plus
+   * carrying the value across the loading → committing → ready rebuilds. The
+   * value is a property of the load ATTEMPT, not of any one state, so it lives
+   * beside the other attempt-scoped cell.
+   */
+  startedAtMs(): number | null;
+  /**
    * The evict edge of two-way demand. From any state: aborts any in-flight
    * fetch and drops the slot to `idle`, bumping the generation so a commit that
    * resolves after this call fails its race-check and cannot resurrect the slot.

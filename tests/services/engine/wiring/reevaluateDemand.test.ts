@@ -60,6 +60,7 @@ function stubSlot(
     // The request the slot last committed with — the stale-tier evict edge reads
     // its tier. Seeded per stub so a test can model a slot resident at a tier.
     lastRequest: () => lastReq,
+    startedAtMs: () => null,
     forceReload: () => {},
     cancel: () => {},
     release: release as unknown as StubSlot['release'],

@@ -62,6 +62,7 @@ function stubSlot(): StubSlot {
       return () => listeners.delete(fn as Listener);
     },
     lastRequest: () => null,
+    startedAtMs: () => null,
     forceReload: () => {},
     cancel: () => {},
     release: () => {},

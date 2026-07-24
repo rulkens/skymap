@@ -248,6 +248,7 @@ function makeFakeSlot(name: string): FakeSlot {
       };
     },
     lastRequest: () => null,
+    startedAtMs: () => null,
     forceReload: vi.fn(),
     cancel: vi.fn(),
     release: vi.fn(),

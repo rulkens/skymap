@@ -158,6 +158,7 @@ function makeStructureState(): {
         state: () => ({ kind: 'idle' }),
         current: () => null,
         lastRequest: () => null,
+        startedAtMs: () => null,
         forceReload: vi.fn(),
         cancel: vi.fn(),
         release: vi.fn(),
@@ -180,6 +181,7 @@ function makeProgressState(): EngineState {
     state: () => ({ kind: 'idle' }),
     subscribe: () => () => {},
     lastRequest: () => null,
+    startedAtMs: () => null,
     forceReload: () => {},
     cancel: () => {},
     release: () => {},
@@ -264,6 +266,7 @@ function makeSyntheticFallbackState(): {
         return () => listeners.delete(fn);
       },
       lastRequest: () => null,
+      startedAtMs: () => null,
       forceReload: () => {},
       cancel: () => {},
       release: () => {},

@@ -51,6 +51,7 @@ function fakeSlot(name: string): {
       return () => subs.delete(fn);
     },
     lastRequest: () => null,
+    startedAtMs: () => null,
     forceReload: () => {},
     cancel: () => {},
     release: () => {},

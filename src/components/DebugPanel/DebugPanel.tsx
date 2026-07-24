@@ -38,7 +38,7 @@ import { memo } from 'react';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
 import type { FrameStats } from '../../@types/engine/FrameStats';
-import { AssetLoadingSection } from './AssetLoadingSection';
+import AssetLoadingSection from './AssetLoadingSection';
 import { FrameStatsRow } from './FrameStatsRow';
 import { GpuTimingsSection } from './GpuTimingsSection';
 import RenderTogglesSectionContainer from '../containers/RenderTogglesSectionContainer';
@@ -56,13 +56,25 @@ export type DebugPanelProps = {
   frameStats: () => FrameStats;
   /** Pass names in draw order, sourced from the engine handle's `passOverrides.allNames`. */
   passNames: readonly string[];
+  /**
+   * Authored `ASSET_WIRING` fetch rank per slot name, from the engine handle's
+   * `debug.assetPriorities`. A getter, not a Map, because slots are minted by
+   * the async bootstrap long after the handle is built.
+   */
+  assetPriorities: () => ReadonlyMap<string, number>;
 };
 
-function DebugPanel({ slots, timingService, frameStats, passNames }: DebugPanelProps) {
+function DebugPanel({
+  slots,
+  timingService,
+  frameStats,
+  passNames,
+  assetPriorities,
+}: DebugPanelProps) {
   return (
     <div className={styles.root}>
       <div className={styles.title}>Skymap Debug</div>
-      <AssetLoadingSection slots={slots} />
+      <AssetLoadingSection slots={slots} assetPriorities={assetPriorities} />
       {/* Always shown — its numbers need no GPU query, so it sits above the
           GPU timings section, which is dark without `?gpuTimings`. */}
       <FrameStatsRow frameStats={frameStats} />

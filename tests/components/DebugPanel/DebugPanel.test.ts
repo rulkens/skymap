@@ -68,6 +68,7 @@ function renderContainer(store: ReturnType<typeof createAppStore>['store']) {
       timingService: stubTimingService,
       frameStats: () => ({ fps: 0, cpuMs: 0, idle: true }),
       passNames: PASS_NAMES,
+      assetPriorities: () => new Map<string, number>(),
     }),
     { wrapper: makeWrapper(store) },
   );

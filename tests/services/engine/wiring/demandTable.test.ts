@@ -103,6 +103,7 @@ function stubSlot(kind: LoadState<unknown>['kind'] = 'idle'): StubSlot {
     state: () => ({ kind: current }) as LoadState<unknown>,
     subscribe: () => () => {},
     lastRequest: () => null,
+    startedAtMs: () => null,
     forceReload: () => {},
     cancel: () => {},
     release: () => {},
