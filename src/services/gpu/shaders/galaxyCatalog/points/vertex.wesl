@@ -32,7 +32,8 @@ import package::lib::camera::worldToClip;
 import package::lib::billboard::triCorner;
 import package::lib::billboard::expandBillboardScreen;
 import package::lib::sourceUniforms::SourceUniforms;
-import package::lib::colorIndex::ramp;
+import package::lib::colorIndex::rampCore;
+import package::lib::colorIndex::rampRim;
 import package::lib::selectionEncoding::packSelection;
 import package::lib::focusUniforms::FocusUniforms;
 import package::lib::focusUniforms::focusAlphaMultiplier;
@@ -131,6 +132,7 @@ fn vs(
     earlyOut.shaded = vec4<f32>(0.0, 0.0, 0.0, 1.0);
     earlyOut.instanceIdx = myPacked;
     earlyOut.paRotation = vec2<f32>(1.0, 0.0);
+    earlyOut.rimDelta = vec3<f32>(0.0);
     return earlyOut;
   }
 
@@ -240,15 +242,25 @@ fn vs(
     * focusMult;
 
   // Bake the K-corrected ramp colour, the magenta highlight, and the
-  // intensity scalar straight into out.shaded.rgb. .w carries safeAB —
-  // pre-computed ellipse-mask coefficient, defaulted to 1.0 (circle)
-  // for invalid/NaN axisRatio (synthetic-fallback rows). 'abs(NaN) >
-  // 0.0' is false, so the select branch is the correct gate.
+  // intensity scalar straight into out.shaded.rgb and out.rimDelta.
+  // 'out.shaded.rgb' carries the CORE endpoint of the warm-core /
+  // cool-rim gradient (see 'lib/colorIndex.wesl'); 'out.rimDelta'
+  // carries the already-fully-modulated RIM-minus-CORE difference, so
+  // the fragment reconstructs the gradient with one fused multiply-add
+  // instead of evaluating the ramp itself (see the 'rimDelta' field
+  // comment in io.wesl for why that hoist is worth it here but not in
+  // the procedural-disk pass). .w carries safeAB — pre-computed
+  // ellipse-mask coefficient, defaulted to 1.0 (circle) for invalid/NaN
+  // axisRatio (synthetic-fallback rows). 'abs(NaN) > 0.0' is false, so
+  // the select branch is the correct gate.
   let highlightActive = u.highlightFallback == 1u && isFallbackFlag == 1u;
   let highlightTint = select(vec3<f32>(1.0), vec3<f32>(1.0, 0.3, 1.0), highlightActive);
   let absAR = abs(p.axisRatio);
   let safeAB = select(1.0, max(absAR, 0.05), absAR > 0.0);
-  out.shaded = vec4<f32>(ramp(p.colorIndex) * highlightTint * intensity, safeAB);
+  let coreRgb = rampCore(p.colorIndex) * highlightTint * intensity;
+  let rimRgb = rampRim(p.colorIndex) * highlightTint * intensity;
+  out.shaded = vec4<f32>(coreRgb, safeAB);
+  out.rimDelta = rimRgb - coreRgb;
 
   // Invisibility cull: galaxies whose folded intensity falls below this
   // threshold contribute imperceptibly to the additive HDR target, so

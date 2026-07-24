@@ -306,11 +306,13 @@ struct VSOut {
   @location(0) uv: vec2<f32>,
 
   // Fully-shaded per-instance appearance packed into one vec4.
-  // .rgb = ramp(restColorIndex) × magenta highlight × intensity, where
-  //        intensity already folds in the magnitude clamp, brightness
-  //        slider, Malmquist mode-2/3/4 weights, depth fade, and the
-  //        procedural-disk crossfade-out. Fragment writes
-  //        '(rgb * alpha, alpha)' directly with no further scaling.
+  // .rgb = rampCore(restColorIndex) × magenta highlight × intensity —
+  //        the CORE endpoint of the warm-core / cool-rim gradient (see
+  //        'rimDelta' below for the rim endpoint). intensity already
+  //        folds in the magnitude clamp, brightness slider, Malmquist
+  //        mode-2/3/4 weights, depth fade, and the procedural-disk
+  //        crossfade-out. 'colorFragment.wesl' adds in
+  //        'rimDelta * sqrt(r2)' before writing '(rgb * alpha, alpha)'.
   // .w   = pre-computed safeAB (axis ratio clamped to [0.05, 1.0],
   //        defaulted to 1.0 for invalid/NaN inputs). Fragment uses .w
   //        directly to squash the elliptical mask.
@@ -326,4 +328,33 @@ struct VSOut {
   // once per primitive in 'vs' instead of per fragment, saving millions
   // of trig calls per frame. Packed into a vec2 at one location.
   @location(3) @interpolate(flat) paRotation: vec2<f32>,
+
+  // Warm-core / cool-rim colour gradient, pre-differenced:
+  // '(rampRim(colorIndex) - rampCore(colorIndex)) * highlightTint *
+  // intensity' — i.e. the already-fully-modulated RGB difference
+  // between the disk rim and the core. 'colorFragment.wesl' reconstructs
+  // the per-fragment colour as 'shaded.rgb + rimDelta * sqrt(r2)', a
+  // single fused multiply-add with no per-fragment 'ramp' call.
+  //
+  // Why hoist both ramp evaluations to the vertex stage instead of
+  // calling 'rampCore'/'rampRim' per fragment the way the procedural-
+  // disk pass does: the points pass is fragment/blend-bound (its
+  // billboards cover most of the screen at the large tiers — see
+  // docs/RENDERER.md), so evaluating the colour ramp twice per COVERED
+  // PIXEL would be a real, measurable cost. The vertex stage runs 3
+  // times per instance (once per triangle corner) rather than once per
+  // covered pixel, so paying for both ramp evaluations there is nearly
+  // free by comparison. The procedural-disk pass has far fewer
+  // instances on screen at once, so it evaluates 'rampCore'/'rampRim'
+  // directly per fragment (see 'proceduralDisks/fragment.wesl') without
+  // needing this hoist.
+  //
+  // The two spellings agree exactly: 'colorIndex' is a per-instance
+  // constant (flat across all 3 vertices and every fragment of one
+  // galaxy's billboard), so 'coreRgb + (rimRgb - coreRgb) * r' is just
+  // the algebraic identity for 'mix(coreRgb, rimRgb, r)' — nothing about
+  // WHERE the two endpoint colours were evaluated changes that. Hoisting
+  // to the vertex stage moves the ramp calls earlier, it doesn't change
+  // the math the fragment ultimately performs.
+  @location(4) @interpolate(flat) rimDelta: vec3<f32>,
 };

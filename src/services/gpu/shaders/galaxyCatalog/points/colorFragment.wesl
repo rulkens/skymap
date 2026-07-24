@@ -65,7 +65,26 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // gated by realOnlyMode are culled at the vertex stage too, so this
   // fragment never sees them.
   var alpha = exp(-r2 * 4.0);
-  let rgb = in.shaded.rgb;
+  // Warm-core / cool-rim gradient reconstruction. 'in.shaded.rgb' is the
+  // CORE endpoint colour and 'in.rimDelta' is the pre-differenced
+  // (rim - core) delta — both baked per-instance in the vertex stage
+  // (see io.wesl's 'rimDelta' field comment for why the ramp evaluation
+  // is hoisted there instead of living here). 'r2' is the ELLIPTIC
+  // squared radius from the transform above — already axis-ratio
+  // corrected — so 'sqrt(r2)' is the normalised galactocentric radius
+  // in the galaxy's own plane, the same quantity the procedural-disk
+  // pass reads as 'length(in.uv)'.
+  //
+  // The match is not exact, and this is a known, accepted approximation
+  // rather than a claim of agreement: the point sprite's billboard is
+  // padded relative to the galaxy's true apparent extent (see
+  // 'PerVertex.radiusMpc' in io.wesl), while the disk impostor's 'r = 1'
+  // sits at the disk's true edge. So the same gradient reads somewhat
+  // radially compressed on the point relative to the disk. Because the
+  // two passes are cross-faded over the 8-14 px band rather than
+  // swapped instantly, this reads as the gradient gaining definition on
+  // approach rather than as a seam.
+  let rgb = in.shaded.rgb + in.rimDelta * sqrt(r2);
 
   // ── Source fade-in ─────────────────────────────────────────────────────────
   //

@@ -49,6 +49,50 @@
 // argument order. So 'select(blueWhite, whiteRed, t > 1.0)' returns
 // blueWhite for t ≤ 1 and whiteRed for t > 1. Easy to invert; worth
 // the comment.
+//
+// ── warm-core / cool-rim gradient ────────────────────────────────────
+//
+// This is the 'future colour-related helper' the module header above
+// anticipates: a real galaxy isn't one flat colour end to end — the
+// bulge is old, red, metal-rich stars, while the spiral arms carry
+// young, blue O/B stars still lit by recent star formation. 'rampCore'
+// and 'rampRim' give the two passes that draw a galaxy (points,
+// procedural-disk) a shared pair of endpoint colours to mix between,
+// so the radial gradient is expressed the SAME way 'ramp' itself is
+// expressed: as a shift in colour-INDEX space, not as an ad-hoc RGB
+// tint layered on top. The alternative — nudging RGB channels directly
+// at the core or rim — was tried and reverted (see the procedural-disk
+// fragment shader's header) precisely because an RGB tint doesn't
+// respect the ramp's shape: it can shift an intrinsically red
+// elliptical toward blue at the rim, which is physically backwards.
+// Shifting the ramp's INPUT instead guarantees a red galaxy just gets
+// a *redder* core and a *less-red* rim — it never crosses into a hue
+// the galaxy's catalogued colour index doesn't support.
+//
+// Why both passes calling 'rampCore'/'rampRim' (rather than each
+// re-deriving '±DISK_TINT_SPREAD * 0.5' locally) matters: it's the same
+// argument the module header already makes for 'ramp' itself — two
+// independent copies of an offset constant are an editing trap, and
+// centralising the two derived lookups here makes cross-LOD drift
+// between the points pass and the procedural-disk pass structurally
+// impossible rather than merely policed by convention.
+//
+// Why 0.4: real SDSS g−r colour indices run roughly 0.75 in a galaxy's
+// bulge and 0.35 in its spiral arms — a difference of about 0.4. The
+// split is symmetric around the catalogued colour index (±0.2, i.e.
+// ±DISK_TINT_SPREAD * 0.5) rather than skewed toward one endpoint, so
+// the galaxy's INTEGRATED hue — what you'd get averaging core and rim
+// — stays close to its catalogued g−r value; the gradient adds internal
+// structure without changing the galaxy's overall colour identity.
+//
+// 'ramp' saturates its input at both ends (t ≤ 0 is fully blue, t > 2
+// is fully red — see the piecewise description above), so for a
+// colour index already near either extreme, 'rampCore' and 'rampRim'
+// converge to the same clamped colour and the gradient visibly
+// flattens out. That's intended, not a bug: a t=0 quasar has no
+// redder-bulge structure to reveal, so there's nothing physical for
+// the gradient to express, and self-limiting at the ramp's clamps
+// keeps the two endpoints from ever producing an out-of-range tint.
 
 import package::lib::math::saturate;
 
@@ -65,4 +109,21 @@ fn ramp(t: f32) -> vec3<f32> {
   // Pick the right half of the ramp: blue-white for t ≤ 1, white-red for t > 1.
   // Remember: select(falseVal, trueVal, condition).
   return select(blueWhite, whiteRed, t > 1.0);
+}
+
+// Total core-to-rim spread in colour-index units — see the header
+// section above ('warm-core / cool-rim gradient') for why 0.4 and why
+// the split below is symmetric around 't' rather than one-sided.
+const DISK_TINT_SPREAD = 0.4;
+
+// The warm endpoint: shifts 't' toward red (higher colour index) by
+// half the spread, matching a galaxy's old-star bulge.
+fn rampCore(t: f32) -> vec3<f32> {
+  return ramp(t + DISK_TINT_SPREAD * 0.5);
+}
+
+// The cool endpoint: shifts 't' toward blue (lower colour index) by
+// half the spread, matching a galaxy's young-star spiral arms.
+fn rampRim(t: f32) -> vec3<f32> {
+  return ramp(t - DISK_TINT_SPREAD * 0.5);
 }
