@@ -10,11 +10,10 @@ import type { StructureInfo } from '../../../../src/@types/data/structure/Struct
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { FieldStarInfo } from '../../../../src/@types/engine/FieldStarInfo';
 import { Source } from '../../../../src/data/sources';
+import { makeGalaxyRow } from '../../../fixtures/makeGalaxyRow';
 
-const galaxyRow: GalaxyRow = {
-  type: 'galaxyCatalog',
+const galaxyRow: GalaxyRow = makeGalaxyRow({
   source: Source.SDSS,
-  index: 0,
   objId: '1237668',
   x: 10,
   y: 20,
@@ -28,9 +27,7 @@ const galaxyRow: GalaxyRow = {
   diameterKpc: 42,
   axisRatio: 0.7,
   positionAngleDeg: 35,
-  classByte: 0,
-  parentSurveyByte: 0,
-};
+});
 
 const structure: StructureInfo = {
   type: 'structure',

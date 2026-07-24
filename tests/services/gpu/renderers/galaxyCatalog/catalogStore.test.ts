@@ -28,6 +28,7 @@ import { buildPointInterleavedBuffer } from '../../../../../src/services/engine/
 import { Source, SOURCE_REGISTRY } from '../../../../../src/data/sources';
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
+import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 
 // The store keys its catalogs by the string `GalaxyCatalogId`; these tests
 // still reason in terms of the numeric `Source` codes (the `loadedSources()`
@@ -55,28 +56,12 @@ const testRunner: BuildRunner = async (input) => buildPointInterleavedBuffer(inp
  * inspects their values, only their lengths.
  */
 function makeCloud(count: number): GalaxyCatalog {
-  return {
-    count,
+  return makeGalaxyCatalog(count, {
     objIDs: new BigUint64Array(count),
-    positions: new Float32Array(count * 3),
-    magU: new Float32Array(count),
-    magG: new Float32Array(count),
-    magR: new Float32Array(count),
-    magI: new Float32Array(count),
-    magZ: new Float32Array(count),
-    // Orientation fields — the bookkeeping path doesn't read their values,
-    // so zero-filled arrays of the right length suffice.
-    axisRatio: new Float32Array(count),
-    positionAngleDeg: new Float32Array(count),
     // Fill with the 30 kpc project default so apparent-size logic never
     // divides by zero.
     diameterKpc: new Float32Array(count).fill(30),
-    // Per-record metadata bytes; zero-filled (the bookkeeping path
-    // doesn't read them).
-    classByte: new Uint8Array(count),
-    parentSurveyByte: new Uint8Array(count),
-    spectroscopicZ: new Float32Array(count),
-  };
+  });
 }
 
 /**

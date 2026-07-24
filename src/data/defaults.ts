@@ -55,6 +55,7 @@ import { ToneMapCurve } from './toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
 import type { FlowSettings } from '../@types/settings/FlowSettings';
 import type { OrientationFrameId } from '../@types/camera/OrientationFrameId';
+import type { GalaxyProvenanceSettings } from '../@types/settings/GalaxyProvenanceSettings';
 import { SOURCE_REGISTRY, Source } from './sources';
 
 // ── Rendering knobs ─────────────────────────────────────────────────────────
@@ -182,11 +183,17 @@ export const DEFAULT_AUTO_ROTATE = false;
  */
 export const DEFAULT_GALAXY_TEXTURES_ENABLED = true;
 
-/** "Highlight fallback orientation" magenta tint defaults OFF (debug-tinged). */
-export const DEFAULT_HIGHLIGHT_FALLBACK = false;
-
-/** "Show only galaxies with real (b/a, PA) photometry" defaults OFF. */
-export const DEFAULT_REAL_ONLY_MODE = false;
+/**
+ * Default provenance-axis settings — one row per `PROVENANCE_AXES` entry.
+ * Every axis starts at the no-op state (no highlight tint, filter `'all'`):
+ * these are debug-panel data-quality diagnostics for auditing which galaxies
+ * have measured vs. estimated orientation/size, not a default look, so the
+ * unaudited scene renders exactly as the catalogs describe it.
+ */
+export const DEFAULT_GALAXY_PROVENANCE: GalaxyProvenanceSettings = {
+  orientation: { highlight: false, filter: 'all' },
+  size: { highlight: false, filter: 'all' },
+};
 
 /**
  * Camera-distance depth fade defaults ON.  Without it, additive billboards

@@ -15,8 +15,10 @@
  * counts one source at a time via `engineSourceCountReported`; not every
  * source is necessarily loaded in every session (tier selection, slow
  * network). `structureCounts` follows the same pattern for structure
- * sources. Using Partial rather than `Record<…, number | undefined>` keeps
- * the type honest: a missing key means "not yet reported", not "zero".
+ * sources, and `provenanceCounts` follows it a third time for the per-source
+ * estimated-value tallies the debug panel's provenance table reads. Using
+ * Partial rather than `Record<…, number | undefined>` keeps the type
+ * honest: a missing key means "not yet reported", not "zero".
  *
  * `loadProgress` is nullable rather than an optional field because the
  * discriminated presence / absence is meaningful: null means "no fetch in
@@ -30,6 +32,7 @@ import type { ScaleInfo } from '../engine/ScaleInfo';
 import type { SourceType } from '../data/SourceType';
 import type { StructureId } from '../data/structure/StructureId';
 import type { LoadProgressState } from '../loading/LoadProgressState';
+import type { ProvenanceCounts } from '../engine/ProvenanceCounts';
 
 export type EngineSliceState = {
   status: EngineStatus;
@@ -44,5 +47,6 @@ export type EngineSliceState = {
   focusedBodyDistanceMpc: number | null;
   sourceCounts: Partial<Record<SourceType, number>>;
   structureCounts: Partial<Record<StructureId, number>>;
+  provenanceCounts: Partial<Record<SourceType, ProvenanceCounts>>;
   loadProgress: LoadProgressState | null;
 };

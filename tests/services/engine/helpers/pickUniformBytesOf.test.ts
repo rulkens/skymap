@@ -58,8 +58,10 @@ const STATE = {
     galaxyCatalogs: {
       sizePx: 5.5,
       brightness: 0.8,
-      highlightFallback: true,
-      realOnly: false,
+      provenance: {
+        orientation: { highlight: true, filter: 'measured' },
+        size: { highlight: false, filter: 'all' },
+      },
       depthFade: true,
     },
     bias: { mode: 1, absMagLimit: -18.25 },
@@ -79,8 +81,7 @@ describe('pickUniformBytesOf', () => {
       selectedPacked: 42, // arbitrary — override stamps the sentinel below
       camPosWorld: CAM_POS,
       pxPerRad: PX_PER_RAD,
-      highlightFallback: STATE.settings.galaxyCatalogs.highlightFallback,
-      realOnlyMode: STATE.settings.galaxyCatalogs.realOnly,
+      provenance: STATE.settings.galaxyCatalogs.provenance,
       biasMode: STATE.settings.bias.mode,
       absMagLimit: STATE.settings.bias.absMagLimit,
       depthFadeEnabled: STATE.settings.galaxyCatalogs.depthFade,

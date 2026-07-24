@@ -8,6 +8,7 @@ import {
   MILKY_WAY_VIEW_DISTANCE_MPC,
 } from '../../../src/data/milkyWay/galacticCenter';
 import { FOCUS_TWEEN_MS } from '../../../src/services/engine/camera/focusTweenDuration';
+import { makeGalaxyRow } from '../../fixtures/makeGalaxyRow';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { GalaxyRow } from '../../../src/@types/engine/GalaxyRow';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
@@ -17,27 +18,19 @@ import type { StructureInfo } from '../../../src/@types/data/structure/Structure
 const FROM: CameraPose = { target: [9, 9, 9], yaw: 1.23, pitch: -0.4, distance: 5 };
 const FOVY = 0.8;
 
-const galaxyRow = (over: Partial<GalaxyRow> = {}): GalaxyRow => ({
-  type: 'galaxyCatalog',
-  source: 0,
-  index: 7,
-  objId: '12345',
-  x: 1,
-  y: 2,
-  z: 3,
-  redshift: 0.01,
-  magU: 0,
-  magG: 0,
-  magR: 0,
-  magI: 0,
-  magZ: 0,
-  diameterKpc: 40,
-  axisRatio: 1,
-  positionAngleDeg: 0,
-  classByte: 0,
-  parentSurveyByte: 0,
-  ...over,
-});
+const galaxyRow = (over: Partial<GalaxyRow> = {}): GalaxyRow =>
+  makeGalaxyRow({
+    source: 0,
+    index: 7,
+    objId: '12345',
+    x: 1,
+    y: 2,
+    z: 3,
+    redshift: 0.01,
+    diameterKpc: 40,
+    axisRatio: 1,
+    ...over,
+  });
 
 const structureRow = (over: Partial<StructureInfo> = {}): StructureInfo =>
   ({

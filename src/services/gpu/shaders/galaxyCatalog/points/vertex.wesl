@@ -115,16 +115,31 @@ fn vs(
   // '@builtin(instance_index)' (local 0..count-1).
   let myPacked = packSelection(source.sourceCode, ii);
 
-  let isFallbackFlag = select(0u, 1u, p.axisRatio < 0.0);
+  // Provenance flags: each axis's 'this value was estimated, not measured'
+  // bit rides the sign bit of that axis's per-instance attribute.
+  //
+  // Synthetic-fallback rows carry NaN in both slots, and 'NaN < 0.0' is
+  // false — so they read as MEASURED on both axes. That is deliberate for
+  // the highlight (nothing to audit on a row with no catalogued value), but
+  // it means an 'estimated'-only filter culls them along with the genuinely
+  // measured galaxies.
+  let orientEstimated = p.axisRatio < 0.0;
+  let sizeEstimated = p.radiusMpc < 0.0;
 
   // Vertex-side cull: galaxies gated out by Malmquist mode 1 (volume-
-  // limited) or by realOnlyMode (hide fallback orientations) emit a
-  // degenerate clip position so all 3 vertices of the triangle land
-  // outside the NDC cube and the rasteriser drops the primitive — no
-  // fragment work, no pick-texture write.
+  // limited) or by either provenance filter emit a degenerate clip position
+  // so all 3 vertices of the triangle land outside the NDC cube and the
+  // rasteriser drops the primitive — no fragment work, no pick-texture
+  // write, so a culled galaxy is not clickable either.
+  //
+  // Filter codes (see 'points/io.wesl'): 0 = all, 1 = only measured,
+  // 2 = only estimated. The two axes AND together — a galaxy must pass both.
   let malmquistGated = u.biasMode == 1u && p.absMag > u.absMagLimit;
-  let realOnlyGated = u.realOnlyMode == 1u && isFallbackFlag == 1u;
-  if (malmquistGated || realOnlyGated) {
+  let orientGated = (u.orientationFilter == 1u && orientEstimated)
+    || (u.orientationFilter == 2u && !orientEstimated);
+  let sizeGated = (u.sizeFilter == 1u && sizeEstimated)
+    || (u.sizeFilter == 2u && !sizeEstimated);
+  if (malmquistGated || orientGated || sizeGated) {
     var earlyOut: VSOut;
     earlyOut.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
     earlyOut.uv = corner;
@@ -147,7 +162,10 @@ fn vs(
   // Guard distanceMpc against 0 so we don't divide-by-zero when the camera
   // is parked exactly on a galaxy (test fixture path; not a real scenario).
   let safeDist = max(distanceMpc, 0.001);
-  let apparentPxRadius = (p.radiusMpc / safeDist) * u.pxPerRad;
+  // Use the magnitude only: 'radiusMpc's sign bit is a fallback-diameter
+  // flag, so the raw value can be negative and must not drive sizing.
+  let radiusMag = abs(p.radiusMpc);
+  let apparentPxRadius = (radiusMag / safeDist) * u.pxPerRad;
   // In the pick pass, clamp the billboard to the dot floor: resolved
   // galaxy disks are now picked by the procedural-disk pass at the disk
   // edge, so the point pick only needs to claim a small dot.
@@ -233,16 +251,35 @@ fn vs(
     * crossfadeOut
     * focusMult;
 
-  // Bake the K-corrected ramp colour, the magenta highlight, and the
+  // Bake the K-corrected ramp colour, the provenance highlight, and the
   // intensity scalar straight into out.shaded.rgb. .w carries safeAB —
   // pre-computed ellipse-mask coefficient, defaulted to 1.0 (circle)
   // for invalid/NaN axisRatio (synthetic-fallback rows). 'abs(NaN) >
   // 0.0' is false, so the select branch is the correct gate.
-  let highlightActive = u.highlightFallback == 1u && isFallbackFlag == 1u;
-  let highlightTint = select(vec3<f32>(1.0), vec3<f32>(1.0, 0.3, 1.0), highlightActive);
+  let orientHighlight = u.orientationHighlight == 1u && orientEstimated;
+  let sizeHighlight = u.sizeHighlight == 1u && sizeEstimated;
+
+  // Provenance highlight REPLACES the ramp colour and boosts brightness
+  // rather than multiplying a tint in: multiplying against a red galaxy
+  // darkens it instead of making it pop. Magenta and green are both
+  // colours no real galaxy SED produces, so they read as unmistakably
+  // synthetic against the field.
+  let HIGHLIGHT_BOOST = 2.5;
+  var highlightRgb = ramp(p.colorIndex);
+  var highlightBoost = 1.0;
+  if (orientHighlight && sizeHighlight) {
+    highlightRgb = vec3<f32>(1.0, 0.85, 0.1);
+    highlightBoost = HIGHLIGHT_BOOST;
+  } else if (orientHighlight) {
+    highlightRgb = vec3<f32>(1.0, 0.1, 0.9);
+    highlightBoost = HIGHLIGHT_BOOST;
+  } else if (sizeHighlight) {
+    highlightRgb = vec3<f32>(0.15, 1.0, 0.25);
+    highlightBoost = HIGHLIGHT_BOOST;
+  }
   let absAR = abs(p.axisRatio);
   let safeAB = select(1.0, max(absAR, 0.05), absAR > 0.0);
-  out.shaded = vec4<f32>(ramp(p.colorIndex) * highlightTint * intensity, safeAB);
+  out.shaded = vec4<f32>(highlightRgb * intensity * highlightBoost, safeAB);
 
   // Invisibility cull: galaxies whose folded intensity falls below this
   // threshold contribute imperceptibly to the additive HDR target, so

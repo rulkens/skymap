@@ -60,6 +60,7 @@ import type { PassByDir } from '../animation/PassByDir';
 import type { ClipPathTuningActive } from './ClipPathTuningActive';
 import type { RenderStrategy } from '../engine/frame/RenderStrategy';
 import type { OrientationFrameId } from '../camera/OrientationFrameId';
+import type { GalaxyProvenanceSettings } from './GalaxyProvenanceSettings';
 
 export type EngineSettingsState = {
   /**
@@ -88,8 +89,13 @@ export type EngineSettingsState = {
     sizePx: number;
     brightness: number;
     depthFade: boolean;
-    highlightFallback: boolean;
-    realOnly: boolean;
+    /**
+     * Data-quality audit state: per provenance axis (see `PROVENANCE_AXES`), a
+     * highlight overlay and a tri-state cull. Debug-panel-only; every axis
+     * defaults to "highlight off, show all", which the shader collapses to a
+     * no-op.
+     */
+    provenance: GalaxyProvenanceSettings;
     items: Record<GalaxyCatalogId, GalaxyCatalogItemSettings>;
   };
 

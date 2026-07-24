@@ -39,6 +39,7 @@ import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsS
 import { selectionRoute, selectionRowsRoute } from '../../../src/store/constants';
 import { MILKY_WAY_INFO } from '../../../src/data/milkyWay/milkyWayInfo';
 import { Source } from '../../../src/data/sources';
+import { makeGalaxyRow } from '../../fixtures/makeGalaxyRow';
 import type { RootState } from '../../../src/store/types';
 import type { SelectionRef } from '../../../src/@types/engine/SelectionRef';
 import type { GalaxyRow } from '../../../src/@types/engine/GalaxyRow';
@@ -48,9 +49,7 @@ import type { StructureInfo } from '../../../src/@types/data/structure/Structure
 
 const galaxyRef: SelectionRef = { type: 'galaxyCatalog', source: Source.SDSS, index: 7 };
 
-const galaxyRow: GalaxyRow = {
-  type: 'galaxyCatalog',
-  source: Source.SDSS,
+const galaxyRow = makeGalaxyRow({
   index: 7,
   objId: '1237668347496587264',
   x: 100,
@@ -66,8 +65,7 @@ const galaxyRow: GalaxyRow = {
   axisRatio: 0.7,
   positionAngleDeg: 45,
   classByte: 3,
-  parentSurveyByte: 0,
-};
+});
 
 const structureInfo: StructureInfo = {
   type: 'structure',

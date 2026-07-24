@@ -60,6 +60,8 @@ export function cloneGalaxyCatalogForTransfer(catalog: GalaxyCatalog): ClonedGal
     classByte: new Uint8Array(catalog.classByte.buffer.slice(0)),
     parentSurveyByte: new Uint8Array(catalog.parentSurveyByte.buffer.slice(0)),
     spectroscopicZ: new Float32Array(catalog.spectroscopicZ.buffer.slice(0)),
+    orientationIsFallback: new Uint8Array(catalog.orientationIsFallback.buffer.slice(0)),
+    diameterIsFallback: new Uint8Array(catalog.diameterIsFallback.buffer.slice(0)),
   };
   const transfer: Transferable[] = [
     copy.objIDs.buffer,
@@ -75,6 +77,8 @@ export function cloneGalaxyCatalogForTransfer(catalog: GalaxyCatalog): ClonedGal
     copy.classByte.buffer,
     copy.parentSurveyByte.buffer,
     copy.spectroscopicZ.buffer,
+    copy.orientationIsFallback.buffer,
+    copy.diameterIsFallback.buffer,
   ];
   return { copy, transfer };
 }

@@ -30,7 +30,7 @@
  * - `ctx.drawPxPerRad` — radian→pixel scale for apparent-size
  *   computation (slab-invariant; no `SlabView` equivalent)
  * - `ctx.visibleSourceMask` — bitmask of currently-visible source codes
- * - `state.settings.galaxyCatalogs.{sizePx,brightness,highlightFallback,realOnly,depthFade}`
+ * - `state.settings.galaxyCatalogs.{sizePx,brightness,provenance,depthFade}`
  *   — point-billboard appearance knobs
  * - `state.settings.bias.{mode,absMagLimit}` — luminosity-bias correction
  * - `state.selection.select` — structured selection ref translated to the
@@ -111,8 +111,7 @@ export const pointSpritesLayer: ContentLayer = {
       visibleSourceMask: ctx.visibleSourceMask,
       camPosWorld: view.camPos,
       pxPerRad: drawPxPerRad,
-      highlightFallback: state.settings.galaxyCatalogs.highlightFallback,
-      realOnlyMode: state.settings.galaxyCatalogs.realOnly,
+      provenance: state.settings.galaxyCatalogs.provenance,
       biasMode: state.settings.bias.mode,
       absMagLimit: state.settings.bias.absMagLimit,
       depthFadeEnabled: state.settings.galaxyCatalogs.depthFade,

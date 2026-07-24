@@ -41,6 +41,7 @@ import {
 import { catalogLoaded } from '../../../src/state/catalog/catalogLoaded';
 import { selectionRoute } from '../../../src/store/constants';
 import { Source } from '../../../src/data/sources';
+import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import type { RunTierTransition } from '../../../src/store/types';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
@@ -53,8 +54,7 @@ const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 function makeCloud(objId: bigint, index: number, count: number): GalaxyCatalog {
   const objIDs = new BigUint64Array(count);
   objIDs[index] = objId;
-  return {
-    count,
+  return makeGalaxyCatalog(count, {
     positions: new Float32Array(count * 3).fill(1),
     spectroscopicZ: new Float32Array(count).fill(0.01),
     magU: new Float32Array(count).fill(18),
@@ -65,10 +65,7 @@ function makeCloud(objId: bigint, index: number, count: number): GalaxyCatalog {
     objIDs,
     diameterKpc: new Float32Array(count).fill(30),
     axisRatio: new Float32Array(count).fill(1),
-    positionAngleDeg: new Float32Array(count).fill(0),
-    classByte: new Uint8Array(count),
-    parentSurveyByte: new Uint8Array(count),
-  } as unknown as GalaxyCatalog;
+  });
 }
 
 // ─── Store builder ─────────────────────────────────────────────────────────────
@@ -194,8 +191,7 @@ describe('watchTierSaga', () => {
 
     function buildCloud(objIDs: BigUint64Array): GalaxyCatalog {
       const count = objIDs.length;
-      return {
-        count,
+      return makeGalaxyCatalog(count, {
         positions: new Float32Array(count * 3).fill(1),
         spectroscopicZ: new Float32Array(count).fill(0.01),
         magU: new Float32Array(count).fill(18),
@@ -206,10 +202,7 @@ describe('watchTierSaga', () => {
         objIDs,
         diameterKpc: new Float32Array(count).fill(30),
         axisRatio: new Float32Array(count).fill(1),
-        positionAngleDeg: new Float32Array(count).fill(0),
-        classByte: new Uint8Array(count),
-        parentSurveyByte: new Uint8Array(count),
-      } as unknown as GalaxyCatalog;
+      });
     }
 
     let currentCloud = buildCloud(objIDsOld);

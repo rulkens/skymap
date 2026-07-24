@@ -24,7 +24,7 @@
  *
  *   [x, y, z, magnitude, colorIndex,
  *    axisRatio (sign bit = isFallback flag),
- *    paCos, paSin, radiusMpc,
+ *    paCos, paSin, radiusMpc (sign bit = diameterIsFallback),
  *    vMaxWeight, schechterRatio, angularDensityWeight, absMag]
  *
  * Every slot is f32; the fallback-orientation bit rides on the sign of
@@ -56,8 +56,9 @@ const PA_COS_SIN_BYTE_OFFSET = 24;
 /**
  * Slot 8: padded billboard radius in Mpc.  Baked at upload as
  * `max(diameterKpc, 30) * 2 / 1000` — folds in 4× thumbnail-footprint
- * padding and the synthetic-fallback floor.  Vertex shader divides by
- * distance_Mpc for angular radius.
+ * padding and the synthetic-fallback floor.  Vertex shader takes
+ * `abs()` then divides by distance_Mpc for angular radius; the sign bit
+ * flags a fallback-diameter estimate (mirrors axisRatio's sign bit).
  */
 const RADIUS_MPC_BYTE_OFFSET = 32;
 
@@ -97,7 +98,7 @@ const ABS_MAG_BYTE_OFFSET = 48;
  *   2  colorIndex (f32)
  *   3  axisRatio (sign bit = isFallback)
  *   4  paCosSin (vec2<f32>)
- *   5  radiusMpc
+ *   5  radiusMpc (sign bit = diameterIsFallback)
  *   6  vMaxWeight
  *   7  schechterRatio
  *   8  angularDensityWeight
@@ -155,10 +156,10 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  *   bytes 92..95  : brightness        f32
  *   bytes 96..107 : camPosWorld       vec3<f32>    (3 floats)        } 16 bytes (one vec4 slot)
  *   bytes 108..111: pxPerRad          f32          (1 float)         }
- *   bytes 112..115: highlightFallback u32                            }
- *   bytes 116..119: realOnlyMode      u32                            } 16 bytes (one vec4 slot)
- *   bytes 120..123: depthFadeEnabled  u32          (UI toggle)
- *   bytes 124..127: _pad4             u32          (written as 0)
+ *   bytes 112..115: orientationHighlight u32       (audit tint on/off)   }
+ *   bytes 116..119: orientationFilter u32          (0 all/1 measured/2 estimated) } 16 bytes
+ *   bytes 120..123: sizeHighlight     u32          (audit tint on/off)   } (one vec4 slot)
+ *   bytes 124..127: sizeFilter        u32          (0 all/1 measured/2 estimated) }
  *   bytes 128..131: biasMode          u32          (Malmquist mode)  }
  *   bytes 132..135: absMagLimit       f32          (volume-limit M)  }
  *   bytes 136..139: apparentMagLimit  f32          (reserved, unwritten) } 32 bytes
@@ -166,7 +167,7 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  *   bytes 144..147: schechterAlpha    f32          (reserved, unwritten) }
  *   bytes 148..151: schechterMLim     f32          (reserved, unwritten) }
  *   bytes 152..155: schechterNRef     f32          (reserved, unwritten) }
- *   bytes 156..159: _pad5             u32          (written as 0)        }
+ *   bytes 156..159: depthFadeEnabled  u32          (UI toggle)           }
  *   bytes 160..163: pxFadeStart       f32          (procedural-disk band low)  }
  *   bytes 164..167: pxFadeEnd         f32          (procedural-disk band high) } 16 bytes
  *   bytes 168..171: pickPass          u32          (0 = visual, 1 = pick)      }

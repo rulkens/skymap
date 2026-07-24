@@ -44,6 +44,7 @@ import { createAppStore } from '../../../../src/store/createAppStore';
 import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { seedVolumeFields } from '../../../../src/data/volume/volumeFieldDefaults';
+import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/data/defaults';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import {
   engineStatusChanged,
@@ -340,8 +341,7 @@ function makeState(
         sizePx: 2.5,
         brightness: 1.0,
         depthFade: true,
-        highlightFallback: true,
-        realOnly: false,
+        provenance: DEFAULT_GALAXY_PROVENANCE,
         // All galaxy catalogs enabled (a uniform test scenario; the real boot
         // seed derives `enabled` from each registry entry's `visible`, so
         // desiDeep boots off) — galaxy catalog demand reads these `enabled`
