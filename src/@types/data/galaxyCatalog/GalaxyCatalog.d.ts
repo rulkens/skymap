@@ -200,4 +200,22 @@ export type GalaxyCatalog = {
    * `milliquasParentSurveyPrefix(byte)` returns `null`.
    */
   parentSurveyByte: Uint8Array;
+
+  /**
+   * Per-catalog mean absolute magnitude — the surface-brightness
+   * zero-point `galaxySbAmp` normalises against (see
+   * `utils/galaxy/galaxySbAmp.ts` and `utils/galaxy/galaxyMeanAbsMag.ts`).
+   *
+   * Populated by every runtime construction path: `decodeGalaxyCatalog`,
+   * `generateSyntheticCloud`, `emptyGalaxyCatalog`, and
+   * `cloneGalaxyCatalogForTransfer`. Optional ONLY so lightweight test
+   * fixtures may omit it — consumers that need a value fall back
+   * themselves (the point bake recomputes via `galaxyMeanAbsMag`; the
+   * disk planner falls back to -20.5).
+   *
+   * Derived, NOT stored in the `.bin` — `decodeGalaxyCatalog` recomputes
+   * it from the decoded `magG` + `positions` on every load, so adding
+   * this field did not bump the binary format version.
+   */
+  meanAbsMag?: number;
 };

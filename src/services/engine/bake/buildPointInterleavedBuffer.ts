@@ -55,6 +55,8 @@ import {
   vMaxWeight,
 } from '../../../utils/math';
 import { computeSchechterRatios } from './computeSchechterRatios';
+import { galaxySbAmp } from '../../../utils/galaxy/galaxySbAmp';
+import { galaxyMeanAbsMag } from '../../../utils/galaxy/galaxyMeanAbsMag';
 import type { BuildPointInterleavedBufferMode } from '../../../@types/engine/BuildPointInterleavedBufferMode';
 import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/BuildPointInterleavedBufferInput';
 import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/BuildPointInterleavedBufferResult';
@@ -116,17 +118,6 @@ const D_REF_MPC = 750;
 /** Target post-shift mean magnitude for the per-galaxy-catalog magG normalisation. */
 const SDSS_TARGET_MEAN_MAG = 18;
 
-/** Reference physical diameter (kpc) for the surface-brightness zero-point — the L-star / Milky-Way scale. */
-const SB_REF_DIAMETER_KPC = 30;
-/**
- * Float-safety guard on the baked surface-brightness amplitude — only there to
- * keep a pathologically compact/bright galaxy's `sbAmp` finite and in range. The
- * live bloom ceiling now lives in the shader's `galaxySbMax` uniform (seeded
- * from `DEFAULT_GALAXY_SB_MAX`), so this cap is deliberately far above the
- * slider range and no longer limits the visible amplitude.
- */
-const SB_AMP_MAX = 100000;
-
 /**
  * Bake one point cloud's per-vertex GPU bytes.  Pure: no `this`, no DOM, no
  * module-level state.  Safe to call from a Worker.
@@ -166,27 +157,24 @@ export function buildPointInterleavedBuffer(
   // and most 2MRS galaxies render at maximum intensity with zero contrast.
   let magSum = 0;
   let magCount = 0;
-  let absMagSum = 0;
-  let absMagCount = 0;
   for (let i = 0; i < cloud.count; i++) {
     const m = cloud.magG[i]!;
     if (Number.isFinite(m)) {
       magSum += m;
       magCount++;
     }
-    const x = cloud.positions[i * 3 + 0]!;
-    const y = cloud.positions[i * 3 + 1]!;
-    const z = cloud.positions[i * 3 + 2]!;
-    const dMpc = Math.hypot(x, y, z);
-    const M = absoluteFromApparent(m, dMpc);
-    if (Number.isFinite(M)) {
-      absMagSum += M;
-      absMagCount++;
-    }
   }
   const sourceMean = magCount > 0 ? magSum / magCount : SDSS_TARGET_MEAN_MAG;
   const magOffset = SDSS_TARGET_MEAN_MAG - sourceMean;
-  const meanAbsMag = absMagCount > 0 ? absMagSum / absMagCount : -20.5;
+
+  // Surface-brightness zero-point — a DIFFERENT quantity from the magOffset
+  // above (that one is a cosmetic per-catalog display shift; this one is
+  // the physical mean absolute magnitude `galaxySbAmp` normalises against).
+  // Shared with the disk-planner mirror of this bake via `cloud.meanAbsMag`
+  // when the catalog carries one (the real decode/synthetic paths always
+  // populate it); recomputed here as a fallback for lightweight test
+  // fixtures that omit the optional field.
+  const meanAbsMag = cloud.meanAbsMag ?? galaxyMeanAbsMag(cloud);
 
   // ── Malmquist 1/V_max weight inputs ──────────────────────────────────────
   //
@@ -356,14 +344,11 @@ export function buildPointInterleavedBuffer(
     // This is the intrinsic per-pixel radiance the vertex stage scales into
     // HDR: intrinsically bright / compact galaxies emit above the bloom
     // threshold; diffuse ones stay dim. Uses the RAW physical absMag (same as
-    // vMax), not the cosmetic offset-normalised slot-3/slot-12 value.
-    const diamKpc = cloud.diameterKpc[i]! > 0 ? cloud.diameterKpc[i]! : SB_REF_DIAMETER_KPC;
-    const diamRatio = diamKpc / SB_REF_DIAMETER_KPC;
-    const lumRel = Math.pow(10, -0.4 * (absMag - meanAbsMag));
-    const sbAmpRaw = lumRel / (diamRatio * diamRatio);
-    interleaved[o + 13] = Number.isFinite(sbAmpRaw)
-      ? Math.min(Math.max(sbAmpRaw, 0), SB_AMP_MAX)
-      : 1.0;
+    // vMax), not the cosmetic offset-normalised slot-3/slot-12 value. The
+    // procedural-disk pass (`proceduralDiskSubsystem.ts`) recomputes this
+    // SAME amplitude via the shared `galaxySbAmp` helper so the point↔disk
+    // crossfade holds constant brightness.
+    interleaved[o + 13] = galaxySbAmp(absMag, meanAbsMag, cloud.diameterKpc[i]!);
   }
 
   return {

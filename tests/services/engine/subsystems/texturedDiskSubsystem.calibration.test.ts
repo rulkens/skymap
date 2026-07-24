@@ -104,6 +104,11 @@ function makeInput(
     pxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
     famousMeta,
     nowMs: 0,
+    // Live surface-brightness sliders, needed by the procedural body's
+    // frame input; the textured body ignores them.
+    sbScale: 5,
+    sbMax: 30,
+    brightness: 1,
   };
 }
 

@@ -30,6 +30,7 @@
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
 import { mulberry32 } from '../../utils/random/mulberry32';
 import { uniformInSphere } from '../../utils/random/uniformInSphere';
+import { galaxyMeanAbsMag } from '../../utils/galaxy/galaxyMeanAbsMag';
 
 // ─── Cloud generator ─────────────────────────────────────────────────────────
 
@@ -185,7 +186,7 @@ export function generateSyntheticCloud(count: number, seed = 42): GalaxyCatalog 
   // the build pipeline applies when a real catalog record has no size measurement.
   const diameterKpc = new Float32Array(count).fill(30);
 
-  return {
+  const cloud: GalaxyCatalog = {
     count,
     objIDs,
     positions,
@@ -203,4 +204,6 @@ export function generateSyntheticCloud(count: number, seed = 42): GalaxyCatalog 
     parentSurveyByte: new Uint8Array(count),
     spectroscopicZ: new Float32Array(count),
   };
+  cloud.meanAbsMag = galaxyMeanAbsMag(cloud);
+  return cloud;
 }

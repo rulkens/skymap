@@ -132,7 +132,17 @@ describe('galaxy-impostor visual baseline', () => {
       // frame loop makes. `nowFakeAtFrame` is captured per frame so the textured
       // body's stamped clock matches the advancing synthetic clock.
       const driveFrame = (nowMs: number): void => {
-        const sharedInput = { cam, catalogs, visibleSourceMask: 0xffffffff, pxPerRad };
+        const sharedInput = {
+          cam,
+          catalogs,
+          visibleSourceMask: 0xffffffff,
+          pxPerRad,
+          // Live surface-brightness sliders — arbitrary plausible defaults;
+          // this baseline is about emission/crossfade geometry, not brightness.
+          sbScale: 5,
+          sbMax: 30,
+          brightness: 1,
+        };
         walk.runFrame(
           sharedInput,
           procSys.beginFrame(sharedInput),
@@ -163,7 +173,7 @@ describe('galaxy-impostor visual baseline', () => {
         {
           "procDisks": {
             "count": 8,
-            "hash": "axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=7|positionAngleDeg=45|procFadeOut=1|sizeWorldMpc=0.2|sourceCode=1|x=10|y=0.007|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=6|positionAngleDeg=45|procFadeOut=1|sizeWorldMpc=0.2|sourceCode=1|x=10|y=0.006|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=5|positionAngleDeg=45|procFadeOut=1|sizeWorldMpc=0.2|sourceCode=1|x=10|y=0.005|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=4|positionAngleDeg=45|procFadeOut=1|sizeWorldMpc=0.2|sourceCode=1|x=10|y=0.004|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=3|positionAngleDeg=45|procFadeOut=1|sizeWorldMpc=0.2|sourceCode=1|x=10|y=0.003|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=2|positionAngleDeg=45|procFadeOut=1|sizeWorldMpc=0.2|sourceCode=1|x=10|y=0.002|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=1|positionAngleDeg=45|procFadeOut=1|sizeWorldMpc=0.2|sourceCode=1|x=10|y=0.001|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=0|positionAngleDeg=45|procFadeOut=1|sizeWorldMpc=0.2|sourceCode=1|x=10|y=0|z=0",
+            "hash": "axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=7|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|sourceCode=1|x=10|y=0.007|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=6|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|sourceCode=1|x=10|y=0.006|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=5|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|sourceCode=1|x=10|y=0.005|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=4|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|sourceCode=1|x=10|y=0.004|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=3|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|sourceCode=1|x=10|y=0.003|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=2|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|sourceCode=1|x=10|y=0.002|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=1|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|sourceCode=1|x=10|y=0.001|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=0|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|sourceCode=1|x=10|y=0|z=0",
           },
           "texDisks": {
             "count": 8,

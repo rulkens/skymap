@@ -4,8 +4,18 @@
 // apparent edge) and shades a two-component galaxy brightness
 // profile:
 //
-//   - Gaussian bulge (σ = 0.4): bright inner core.
+//   - Gaussian bulge (sigma = 0.28): bright, tight inner core.
 //   - Exponential disk (scale = 0.5): softer halo.
+//
+// The profile's output is scaled by 'in.sbAmp', the physical
+// surface-brightness amplitude computed once per row in
+// 'proceduralDiskSubsystem.ts' via the SAME 'galaxySbAmp' helper the
+// point-sprite bake uses (see 'buildPointInterleavedBuffer.ts'). Sharing
+// the helper and the per-catalog 'meanAbsMag' zero-point means an
+// intrinsically bright or compact galaxy pushes this pass's HDR core
+// above the bloom threshold exactly the way its companion point sprite
+// does, and the two passes agree on brightness at the 8-14 px crossfade
+// instead of only agreeing on hue.
 //
 // Hue comes entirely from the per-galaxy colour-index ramp — the
 // same ramp the points pass uses, so a galaxy's procedural-disk
@@ -15,7 +25,7 @@
 // points pass (warmer at the centre, cooler at the rim) so it's
 // been removed. Only the brightness profile remains.
 //
-// Final alpha is the combined brightness × crossfadeAlpha so the
+// Final alpha is the combined brightness x crossfadeAlpha so the
 // impostor fades in cleanly across the 8-14 px transition band.
 //
 // ## Why no uniform binding declared here
@@ -40,10 +50,10 @@ import package::lib::colorIndex::ramp;
 // explicit.
 import package::lib::masks::circularMask;
 
-const BULGE_SIGMA = 0.4;
+const BULGE_SIGMA = 0.28;
 const DISK_SCALE = 0.5;
-const BULGE_WEIGHT = 0.6;
-const DISK_WEIGHT = 0.4;
+const BULGE_WEIGHT = 0.7;
+const DISK_WEIGHT = 0.3;
 
 // 'ramp(t)' lives in 'lib/colorIndex.wesl' — imported above. Sharing
 // the function with the points pass guarantees procedural-disk
@@ -58,7 +68,7 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
 
   let bulge = exp(-(r * r) / (2.0 * BULGE_SIGMA * BULGE_SIGMA));
   let disk  = exp(-r / DISK_SCALE);
-  let intensity = bulge * BULGE_WEIGHT + disk * DISK_WEIGHT;
+  let intensity = (bulge * BULGE_WEIGHT + disk * DISK_WEIGHT) * in.sbAmp;
 
   // Colour: ramp hue only, no per-component tint shifts.  See the
   // fragment-stage header comment above for why the warm-bulge / cool-
