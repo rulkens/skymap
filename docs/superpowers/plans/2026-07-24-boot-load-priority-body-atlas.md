@@ -343,13 +343,15 @@ Update the `AssetKey` docblock with a `'bodyTextureAtlas'` bullet alongside `'fa
 `'constellations'` / `'flow'`: a singleton sidecar with a named `EngineAssetSlots` field, whose
 one bitmap fans out to 13 placeholder seeds rather than committing to a single consumer.
 
-- [ ] No test. The wiring is compile-checked end to end (`installLoadProgress.ts:70-74` fails to
-      compile on a key with no matching field), and the observable result is pixels.
-- [ ] Write the fetcher, the slot factory, the type edits, and the wiring row.
-- [ ] `npm run typecheck` clean; `npm test` full pass.
+- [x] No test. The wiring is compile-checked end to end (`installLoadProgress.ts:70-74` fails to
+      compile on a key with no matching field), and the observable result is pixels. The one test
+      edit is a repair: `assetWiring.test.ts`'s membership pin gains the new key.
+- [x] Write the fetcher, the slot factory, the type edits, and the wiring row.
+- [x] `npm run typecheck` clean; `npm test` full pass (866 files, 5022 tests).
 - [ ] **Ask the USER to look:** cold load with DevTools "Disable cache" checked; every visible
       body is textured from the first frame it is drawable, never a flat albedo sphere.
-- [ ] Commit: the five files above.
+- [x] Commit: the five files above, plus `engine.ts` (the named field must be seeded null in the
+      `assetSlots` literal) and the membership-pin repair.
 
 ---
 

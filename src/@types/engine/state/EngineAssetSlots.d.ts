@@ -183,6 +183,23 @@ export type EngineAssetSlots = {
    */
   bodyTextures: Map<BodyTextureSlotKey, AssetSlot<ImageBitmap, BodyTextureReq>>;
   /**
+   * The low-resolution all-bodies surface atlas (`body-atlas.webp`) — one
+   * 512×256 tile per textured body in a single ~160 KB image, fetched first at
+   * boot (`priority: 0`) so every body has its own surface to draw before any
+   * hi-res map lands.
+   *
+   * A singleton sidecar field (like `constellations` / `flow`) rather than a
+   * member of the `bodyTextures` map above, because it is ONE asset for the
+   * whole set: one request, no tier, no proximity gate. Its commit fans the one
+   * decoded bitmap out to every body renderer's PLACEHOLDER layer, which is what
+   * lets it and the per-body maps arrive in either order with no check.
+   *
+   * Null until `wireSlots` mints it (matches the other named sidecars). A 404 /
+   * decode failure surfaces as a never-fires commit; every renderer keeps the
+   * 1×1 placeholder it drew before this asset existed.
+   */
+  bodyTextureAtlas: AssetSlot<ImageBitmap, void> | null;
+  /**
    * Dev-only slots for the synthetic test cubes (Gaussian blob,
    * Cartesian grid, spherical grid).  `undefined` (not the slots being
    * null) in production builds — the `wireSlots` phase only mints

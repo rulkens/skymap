@@ -59,6 +59,7 @@ import { createConstellationsSlot } from '../../loading/slots/constellationsSlot
 import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
 import { createPgcAliasSlot } from '../../loading/slots/pgcAliasSlot';
 import { createStarCatalogSlot } from '../../loading/slots/starCatalogSlot';
+import { createBodyTextureAtlasSlot } from '../../loading/slots/bodyTextureAtlasSlot';
 import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
 import { BODY_TEXTURE_REGISTRY } from '../../../data/bodies/bodyTextureRegistry';
@@ -256,6 +257,26 @@ function bodyTextureRow(entry: BodyTextureKey): AssetWiringRow {
  *     resident the moment the camera pulls back. Accepted knowingly.
  */
 export const ASSET_WIRING: readonly AssetWiringRow[] = [
+  // ── Low-resolution all-bodies surface atlas ──────────────────────
+  // Rank 0, the head of the table: its entire purpose is to arrive before any
+  // hi-res texture, so a body reached early shows its own surface instead of a
+  // flat albedo sphere. ~160 KB buys a tile for all thirteen textured bodies.
+  //
+  // `demand: () => true` — unconditional at boot, and deliberately NOT
+  // proximity-gated. The per-body rows below gate on the camera because their
+  // payloads are multi-MB; this one is the universal fallback those upgrade, so
+  // gating it would reinstate the very "reached before its texture" gap it
+  // exists to close. Registry-built (no `built: 'external'`): there is no
+  // renderer to co-mint it beside — the commit fans out to several — and
+  // `installSlots` routes its string key to the matching named field.
+  {
+    key: 'bodyTextureAtlas',
+    factory: (deps) => createBodyTextureAtlasSlot(deps.state, deps.cb),
+    req: () => undefined,
+    demand: () => true,
+    priority: 0,
+  },
+
   // ── Point sources (demand+req only; slots minted in initGpu) ──────
   pointRow(Source.SDSS, 60),
   pointRow(Source.TwoMRS, 40),

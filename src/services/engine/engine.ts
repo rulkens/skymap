@@ -524,6 +524,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // minted in initGpu beside the body renderers. Empty map at construction —
       // proximity-demanded + released per body (mirrors the `points` map).
       bodyTextures: new Map(),
+      // The all-bodies low-res atlas: one boot fetch seeding every body's
+      // placeholder, so no body ever draws untextured while its own map loads.
+      bodyTextureAtlas: null,
     },
     // ── One-shot transient request flags ────────────────────────────────
     //
