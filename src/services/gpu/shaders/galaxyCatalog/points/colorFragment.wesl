@@ -63,10 +63,10 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // Gaussian-like falloff: bright at centre (r²=0 → e⁰=1), fading to
   // e⁻⁴ ≈ 0.018 at the edge (r²=1). All per-instance modulators
   // (intensity scalar, Schechter, angular reweight, depth fade,
-  // procedural-disk crossfade-out, magenta highlight) are folded into
-  // 'in.instanceTint.rgb' by the vertex stage — see vertex.wesl.
-  // Galaxies gated by realOnlyMode are culled at the vertex stage too,
-  // so this fragment never sees them.
+  // procedural-disk crossfade-out, provenance highlight) are folded into
+  // 'in.instanceTint.rgb' by the vertex stage — see vertex.wesl. Galaxies
+  // culled by a provenance filter ('orientationFilter' / 'sizeFilter') are
+  // dropped at the vertex stage too, so this fragment never sees them.
   var alpha = exp(-r2 * 4.0);
   // Warm-core / cool-rim gradient. 'r2' is the ELLIPTIC squared radius
   // from the transform above — already axis-ratio corrected — so
@@ -91,7 +91,16 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // cross-faded over the 8-14 px band rather than swapped instantly,
   // this reads as the gradient gaining definition on approach rather
   // than as a seam.
-  let rgb = in.instanceTint.rgb * rampRadial(in.instanceTint.w, sqrt(r2));
+  //
+  // A NEGATIVE colour index is the provenance-highlight sentinel (see the
+  // 'instanceTint' field comment in io.wesl): the vertex stage has already
+  // written the flat audit colour into '.rgb', so the ramp collapses to a
+  // no-op multiply by white and the debug overlay stays flat rather than
+  // gradient-modulated. Note WGSL's argument order — 'select(falseVal,
+  // trueVal, cond)' — so the ramp lookup is the FIRST argument here.
+  let ci = in.instanceTint.w;
+  let rampRgb = select(rampRadial(ci, sqrt(r2)), vec3<f32>(1.0), ci < 0.0);
+  let rgb = in.instanceTint.rgb * rampRgb;
 
   // ── Source fade-in ─────────────────────────────────────────────────────────
   //

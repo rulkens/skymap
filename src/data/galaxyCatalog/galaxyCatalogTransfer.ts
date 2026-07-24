@@ -63,6 +63,8 @@ export function cloneGalaxyCatalogForTransfer(catalog: GalaxyCatalog): ClonedGal
     // Scalar, not a typed array — rides along by value, no buffer to slice
     // or add to the transfer list.
     meanAbsMag: catalog.meanAbsMag,
+    orientationIsFallback: new Uint8Array(catalog.orientationIsFallback.buffer.slice(0)),
+    diameterIsFallback: new Uint8Array(catalog.diameterIsFallback.buffer.slice(0)),
   };
   const transfer: Transferable[] = [
     copy.objIDs.buffer,
@@ -78,6 +80,8 @@ export function cloneGalaxyCatalogForTransfer(catalog: GalaxyCatalog): ClonedGal
     copy.classByte.buffer,
     copy.parentSurveyByte.buffer,
     copy.spectroscopicZ.buffer,
+    copy.orientationIsFallback.buffer,
+    copy.diameterIsFallback.buffer,
   ];
   return { copy, transfer };
 }

@@ -33,6 +33,7 @@ import {
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
+import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 
 // ── Fixtures (same idioms as the two subsystem suites) ──────────────────────
 
@@ -64,8 +65,7 @@ function makeDenseCloud(count: number, ar = 0.7, pa = 45): GalaxyCatalog {
     a.fill(v);
     return a;
   };
-  return {
-    count,
+  return makeGalaxyCatalog(count, {
     objIDs: new BigUint64Array(count),
     positions,
     magU: fill(20),
@@ -76,10 +76,7 @@ function makeDenseCloud(count: number, ar = 0.7, pa = 45): GalaxyCatalog {
     axisRatio: fill(ar),
     positionAngleDeg: fill(pa),
     diameterKpc: fill(50),
-    classByte: new Uint8Array(count),
-    parentSurveyByte: new Uint8Array(count),
-    spectroscopicZ: new Float32Array(count),
-  };
+  });
 }
 
 /** A single-row cloud at (x, 0, 0) with a chosen diameter — used to place a row
@@ -87,8 +84,7 @@ function makeDenseCloud(count: number, ar = 0.7, pa = 45): GalaxyCatalog {
 function makeSingletonCloud(x: number, diameterKpc: number): GalaxyCatalog {
   const positions = new Float32Array([x, 0, 0]);
   const fill = (v: number): Float32Array => new Float32Array([v]);
-  return {
-    count: 1,
+  return makeGalaxyCatalog(1, {
     objIDs: new BigUint64Array(1),
     positions,
     magU: fill(20),
@@ -99,10 +95,7 @@ function makeSingletonCloud(x: number, diameterKpc: number): GalaxyCatalog {
     axisRatio: fill(0.7),
     positionAngleDeg: fill(45),
     diameterKpc: fill(diameterKpc),
-    classByte: new Uint8Array(1),
-    parentSurveyByte: new Uint8Array(1),
-    spectroscopicZ: new Float32Array(1),
-  };
+  });
 }
 
 function makeCam(): OrbitCamera {

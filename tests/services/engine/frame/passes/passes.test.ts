@@ -22,6 +22,7 @@ import type { Mat4 } from 'wgpu-matrix';
 
 import { Source } from '../../../../../src/data/sources';
 import { BiasMode } from '../../../../../src/data/galaxyCatalog/biasMode';
+import { DEFAULT_GALAXY_PROVENANCE } from '../../../../../src/data/defaults';
 import {
   CONTENT_LAYERS,
   scalarVolumeLayer,
@@ -744,8 +745,7 @@ const POINT_SPRITES_SETTINGS_STUB = {
   galaxyCatalogs: {
     sizePx: 2.5,
     brightness: 1.0,
-    highlightFallback: true,
-    realOnly: false,
+    provenance: DEFAULT_GALAXY_PROVENANCE,
     depthFade: true,
   },
   bias: {

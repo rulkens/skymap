@@ -69,8 +69,9 @@ export function pickUniformBytesOf(
       selectedPacked: SELECTION_NONE_SENTINEL,
       camPosWorld: view.camPos,
       pxPerRad: ctx.drawPxPerRad,
-      highlightFallback: g.highlightFallback,
-      realOnlyMode: g.realOnly,
+      // Same provenance state the visual pass packs: a filter culls at the
+      // shared vertex stage, so a hidden galaxy must not be clickable either.
+      provenance: g.provenance,
       biasMode: bias.mode,
       absMagLimit: bias.absMagLimit,
       depthFadeEnabled: g.depthFade,

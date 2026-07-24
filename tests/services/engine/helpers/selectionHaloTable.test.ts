@@ -11,30 +11,17 @@ import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
 import type { GalaxyRow } from '../../../../src/@types/engine/GalaxyRow';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
+import { makeGalaxyRow } from '../../../fixtures/makeGalaxyRow';
 
 // A minimal GalaxyRow with x/y/z and a measured diameter.
 function galaxyRow(overrides: Partial<GalaxyRow> = {}): GalaxyRow {
-  return {
-    type: 'galaxyCatalog',
+  return makeGalaxyRow({
     source: Source.Glade,
-    index: 0,
-    objId: '1',
-    x: 0,
-    y: 0,
     z: 100,
-    redshift: 0,
-    magU: 0,
-    magG: 0,
-    magR: 0,
-    magI: 0,
-    magZ: 0,
     diameterKpc: 60,
     axisRatio: 1,
-    positionAngleDeg: 0,
-    classByte: 0,
-    parentSurveyByte: 0,
     ...overrides,
-  };
+  });
 }
 
 function structureRow(): StructureInfo {

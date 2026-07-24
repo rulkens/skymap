@@ -37,6 +37,7 @@ import type { ScaleInfo } from '../../@types/engine/ScaleInfo';
 import type { SourceType } from '../../@types/data/SourceType';
 import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { LoadProgressState } from '../../@types/loading/LoadProgressState';
+import type { ProvenanceCounts } from '../../@types/engine/ProvenanceCounts';
 
 /**
  * Initial scale-bar value that renders something sensible before the engine
@@ -50,6 +51,7 @@ const initialState: EngineSliceState = {
   focusedBodyDistanceMpc: null,
   sourceCounts: {},
   structureCounts: {},
+  provenanceCounts: {},
   loadProgress: null,
 };
 
@@ -70,6 +72,19 @@ const engineSlice = createSlice({
       action: PayloadAction<{ source: SourceType; count: number }>,
     ) => {
       state.sourceCounts[action.payload.source] = action.payload.count;
+    },
+
+    // ── per-source provenance counts ─────────────────────────────────────────
+    // A SEPARATE action from `engineSourceCountReported`, not a wider payload
+    // on it: three sagas `take` that action as a bare "a catalog landed"
+    // pulse, keyed on nothing but its dispatch. Folding the provenance tally
+    // into that payload would braid a debug-panel readout into a
+    // load-completion signal those sagas have no reason to depend on.
+    engineProvenanceCountsReported: (
+      state,
+      action: PayloadAction<{ source: SourceType; counts: ProvenanceCounts }>,
+    ) => {
+      state.provenanceCounts[action.payload.source] = action.payload.counts;
     },
 
     // ── per-structure counts ─────────────────────────────────────────────────
@@ -120,6 +135,7 @@ const engineSlice = createSlice({
 export const {
   engineStatusChanged,
   engineSourceCountReported,
+  engineProvenanceCountsReported,
   engineStructureCountsChanged,
   engineLoadProgressChanged,
   engineScaleChanged,

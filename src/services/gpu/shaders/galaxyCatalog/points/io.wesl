@@ -75,15 +75,21 @@ import package::lib::camera::CameraUniforms;
 //   offset 92  : brightness          (f32)
 //   offset 96  : camPosWorld         (vec3<f32>)
 //   offset 108 : pxPerRad            (f32)
-//   offset 112 : highlightFallback   (u32)
-//   offset 116 : realOnlyMode        (u32)
-//   offset 120 : depthFadeEnabled    (u32)
-//   offset 124 : _pad4               (u32)
-//   offset 128..159 : Malmquist block (biasMode, absMagLimit, ...)
+//   offset 112 : orientationHighlight (u32)
+//   offset 116 : orientationFilter    (u32)
+//   offset 120 : sizeHighlight        (u32)
+//   offset 124 : sizeFilter           (u32)
+//   offset 128..155 : Malmquist block (biasMode, absMagLimit, apparentMagLimit,
+//                     schechterMStar, schechterAlpha, schechterMLim, schechterNRef)
+//   offset 156 : depthFadeEnabled    (u32)
 //   offset 160..171 : pxFadeStart, pxFadeEnd, pickPass
 //   offset 172..183 : galaxySbScale, galaxySbMax, galaxyFalloffStrength
 //   offset 184..191 : _padU0, _padU1 (two pad words)
 //   total: 192 bytes.
+//
+// 'src/utils/gpu/packPointUniforms.ts' is the CPU mirror of this table —
+// it writes f32[43] / f32[44] / f32[45] at bytes 172 / 176 / 180 and sizes
+// the buffer at UNIFORM_BYTES = 192. Any edit here is an edit there.
 //
 // The full historical narrative (why fields moved during the
 // CameraUniforms-prefix adoption, why pointSizePx + brightness now sit
@@ -130,19 +136,31 @@ struct Uniforms {
   // pre-computed CPU-side as 'viewport.y / (2 · tan(fovY / 2))'.
   pxPerRad: f32,
 
-  // ── Task 15: orientation-visibility toggles ─────────────────────────
+  // ── Provenance-audit block (two axes × (highlight, filter)) ─────────
   //
-  // u32 booleans (0 / 1) controlling how the fragment shader treats
-  // galaxies whose orientation came from the deterministic fallback
-  // rather than a real photometric measurement. The fallback flag
-  // itself rides on the sign bit of the per-vertex 'axisRatio'.
-  highlightFallback: u32,
-  realOnlyMode: u32,
-  // Per-galaxy camera-distance depth fade gate. When 1, the vertex
-  // stage computes '1 / (1 + (camDist / FALLOFF_HALF)²)'; when 0 it
-  // skips the gate and forwards 1.0 through.
-  depthFadeEnabled: u32,
-  _pad4: u32,
+  // Each of the two provenance axes says whether a galaxy's value was
+  // MEASURED or ESTIMATED by a deterministic fallback. The estimated
+  // flag rides the sign bit of the axis's per-vertex attribute:
+  // 'axisRatio < 0.0' for orientation, 'radiusMpc < 0.0' for size (the
+  // magnitude comes back through abs()).
+  //
+  // '*Highlight' is a u32 boolean (0 / 1): when 1, the vertex stage
+  // replaces the ramp colour of ESTIMATED galaxies on that axis with a
+  // flat audit colour (magenta for orientation, green for size, amber
+  // when both fire).
+  //
+  // '*Filter' is a tri-state cull code, not a boolean:
+  //   0 = all       — draw both measured and estimated.
+  //   1 = measured  — cull galaxies estimated on this axis.
+  //   2 = estimated — cull galaxies measured on this axis.
+  // A single code rather than two booleans because 'hide measured' and
+  // 'hide estimated' together would mean 'draw nothing', a state the
+  // encoding should not be able to express. The two axes' filters
+  // compose by AND: a galaxy survives only if it passes both.
+  orientationHighlight: u32,
+  orientationFilter: u32,
+  sizeHighlight: u32,
+  sizeFilter: u32,
 
   // ── Malmquist-bias correction state ─────────────────────────────────
   //
@@ -167,7 +185,13 @@ struct Uniforms {
   schechterAlpha: f32,
   schechterMLim: f32,
   schechterNRef: f32,
-  _pad5: u32,
+  // Per-galaxy camera-distance depth fade gate. When 1, the vertex
+  // stage computes '1 / (1 + (camDist / FALLOFF_HALF)²)'; when 0 it
+  // skips the gate and forwards 1.0 through. It lodges in the Malmquist
+  // group's trailing slot purely for packing — it has nothing to do with
+  // bias correction, and living here leaves the provenance block above a
+  // contiguous 112..127 run.
+  depthFadeEnabled: u32,
 
   // ── Procedural-disk crossfade-OUT band ──────────────────────────────
   //
@@ -249,6 +273,14 @@ struct PerVertex {
   // thumbnail-footprint padding and the synthetic-fallback floor are
   // already applied; the shader reads the value directly as the
   // half-extent of the world-space quad.
+  //
+  // The SIGN BIT carries the fallback-diameter flag, mirroring
+  // '@location(3) axisRatio'. Real padded radii are always positive; the
+  // JS-side bake negates the value for rows whose diameter was a fallback
+  // estimate. The vertex stage recovers both pieces in one read:
+  //   - 'abs(radiusMpc)' for the billboard magnitude
+  //   - 'radiusMpc < 0.0' for the fallback flag
+  // 'NaN < 0.0' is false, so synthetic rows read as non-fallback.
   @location(5) radiusMpc: f32,
 
   // Per-galaxy 1/V_max weight for Malmquist-bias correction. Baked at
@@ -306,12 +338,14 @@ struct VSOut {
   @location(0) uv: vec2<f32>,
 
   // Per-instance colour modulator, packed into one vec4.
-  // .rgb = highlightTint × intensity — the magenta-highlight tint and
-  //        the fully-folded brightness scalar ONLY. The ramp colour
-  //        itself is NOT baked in here: 'colorFragment.wesl' evaluates
-  //        'rampRadial' per fragment (see 'lib/colorIndex.wesl'), because
-  //        the ramp's argument depends on the fragment's radius within
-  //        the billboard and so cannot be a flat per-instance constant.
+  // .rgb = intensity in the normal case — a brightness MODULATOR, not a
+  //        finished colour. The ramp colour is deliberately absent:
+  //        'colorFragment.wesl' evaluates 'rampRadial' per fragment (see
+  //        'lib/colorIndex.wesl'), because the ramp's argument depends on
+  //        the fragment's radius within the billboard and so cannot be a
+  //        flat per-instance constant.
+  //        With a provenance highlight active, .rgb is instead the FINAL
+  //        colour: the flat audit hue times intensity times a boost.
   //        intensity already folds in the magnitude clamp, brightness
   //        slider, Malmquist mode-2/3/4 weights, depth fade, and the
   //        procedural-disk crossfade-out.
@@ -319,6 +353,14 @@ struct VSOut {
   //        index, forwarded unchanged from 'PerVertex.colorIndex' so the
   //        fragment stage has the ramp's 't' argument without needing
   //        its own attribute slot.
+  //        Its SIGN is the highlight signal. 'pickColourIndex' clamps every
+  //        real colour index to [0, 2], so a negative value is a free,
+  //        unambiguous sentinel meaning 'a provenance highlight is active,
+  //        .rgb is already final, skip the ramp'. Same sign-bit-as-flag
+  //        idiom as 'PerVertex.axisRatio' and 'PerVertex.radiusMpc'. Signal
+  //        rather than a fifth varying because varying slots cost ~1.5 ms
+  //        on this fragment-bound pass (see the note at the end of this
+  //        file) while a sign test costs nothing.
   // Flat-interpolated — all 6 vertices of an instance share the value.
   @location(1) @interpolate(flat) instanceTint: vec4<f32>,
 

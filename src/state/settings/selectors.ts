@@ -53,6 +53,7 @@ import type { ClipPathTuningActive } from '../../@types/settings/ClipPathTuningA
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
 import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
+import type { GalaxyProvenanceSettings } from '../../@types/settings/GalaxyProvenanceSettings';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../data/sources';
 import { maskWith } from '../../utils/maskWith';
 
@@ -79,11 +80,8 @@ export const selectBrightness = (state: RootState): number =>
 export const selectDepthFade = (state: RootState): boolean =>
   selectSettings(state).galaxyCatalogs.depthFade;
 
-export const selectHighlightFallback = (state: RootState): boolean =>
-  selectSettings(state).galaxyCatalogs.highlightFallback;
-
-export const selectRealOnly = (state: RootState): boolean =>
-  selectSettings(state).galaxyCatalogs.realOnly;
+export const selectGalaxyProvenance = (state: RootState): GalaxyProvenanceSettings =>
+  selectSettings(state).galaxyCatalogs.provenance;
 
 /**
  * Overall physical-SB → HDR gain — the "Galaxy brightness" knob. A primitive

@@ -9,11 +9,12 @@ export type BuildPointInterleavedBufferResult = {
   /** Interleaved per-vertex bytes — see `SLOTS_PER_POINT` in pointRenderer.ts. */
   interleaved: Float32Array;
   /**
-   * Parallel per-row flag set when the row's (axisRatio, positionAngleDeg)
-   * exactly equals the deterministic fallback for that row.  Used inside
-   * the bake to encode the fallback flag into the sign bit of axisRatio
-   * (slot 6); also exposed so callers and tests can assert which rows the
-   * bake classified as fallback without re-running the hash.
+   * Parallel per-row copy of the cloud's persisted `orientationIsFallback`
+   * flag (1 = the row's orientation is a deterministic fallback, not a
+   * measurement).  Used inside the bake to encode the flag into the sign bit
+   * of axisRatio (slot 5); also exposed so callers and tests can read which
+   * rows are fallback without touching the cloud.  Sourced from the
+   * authoritative persisted byte, never re-hashed.
    */
   isFallbackArr: Uint8Array;
   /** Schechter LF triple `(M*, α, φ*)` for this galaxy catalog's selection band. */

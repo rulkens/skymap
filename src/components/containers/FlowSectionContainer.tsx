@@ -8,8 +8,9 @@
  * or `state/`.
  *
  * `selectFlow` has two independent subscribers: this container and
- * `DebugPanelContainer`. Each subscriber re-renders only its own subtree on a
- * flow change — correct per spec §2 (independent subtree isolation).
+ * `FlowTuningSectionContainer`. Each subscriber re-renders only its own
+ * subtree on a flow change — correct per spec §2 (independent subtree
+ * isolation).
  *
  * ### Handler stability
  *

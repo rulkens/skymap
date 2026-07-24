@@ -30,6 +30,7 @@ import type { ScaleInfo } from '../../@types/engine/ScaleInfo';
 import type { SourceType } from '../../@types/data/SourceType';
 import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { LoadProgressState } from '../../@types/loading/LoadProgressState';
+import type { ProvenanceCounts } from '../../@types/engine/ProvenanceCounts';
 
 const selectEngine = (state: RootState): EngineSliceState => state[engineRoute];
 
@@ -42,6 +43,10 @@ export const selectSourceCounts = (state: RootState): Partial<Record<SourceType,
 
 export const selectStructureCounts = (state: RootState): Partial<Record<StructureId, number>> =>
   selectEngine(state).structureCounts;
+
+export const selectProvenanceCounts = (
+  state: RootState,
+): Partial<Record<SourceType, ProvenanceCounts>> => selectEngine(state).provenanceCounts;
 
 export const selectLoadProgress = (state: RootState): LoadProgressState | null =>
   selectEngine(state).loadProgress;

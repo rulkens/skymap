@@ -203,6 +203,14 @@ export function generateSyntheticCloud(count: number, seed = 42): GalaxyCatalog 
     classByte: new Uint8Array(count),
     parentSurveyByte: new Uint8Array(count),
     spectroscopicZ: new Float32Array(count),
+    // Orientation above is the constant round-point sentinel (b/a=1, PA=0),
+    // not the deterministic hash fallback, so every row is flagged 0 ("not
+    // fallback"). Uint8Array default-fills with 0.
+    orientationIsFallback: new Uint8Array(count),
+    // Diameter above is a procedurally generated 30-kpc value, treated as a
+    // real (non-fallback) size like the orientation sentinel, so every row is
+    // flagged 0. Uint8Array default-fills with 0.
+    diameterIsFallback: new Uint8Array(count),
   };
   cloud.meanAbsMag = galaxyMeanAbsMag(cloud);
   return cloud;
