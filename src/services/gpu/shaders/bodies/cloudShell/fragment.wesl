@@ -54,14 +54,12 @@
 // The cloud map is equirectangular, same v-orientation as the surface albedo:
 // the renderer uploads it flipY:true so texture v=0 is the image's bottom (south)
 // row, matching 'uvSphereMesh's south-first v. HANDEDNESS reads raw (longitude on
-// +Y winds east to screen-right for an outside viewer). The u ORIGIN needs a +0.5
-// though: the map paints the prime meridian (geographic longitude 0) at its CENTRE
-// (u=0.5), while 'uvSphereMesh' emits u=0 at the local +x prime meridian. The
-// Earth SURFACE rides the Earth-only 'cubeSphereMesh', which now bakes this same
-// +0.5 into its uv; the deck rides the SHARED 'uvSphereMesh' (also serving the
-// distant planets), so the correction stays local to this Earth shader rather than
-// shifting every planet's mesh. Without it the deck sits 180deg off the surface
-// beneath it. See 'earth/fragment.wesl' for the full derivation.
+// +Y winds east to screen-right for an outside viewer). The u ORIGIN needs no
+// correction here: 'uvSphereMesh' bakes TEXTURE_PRIME_MERIDIAN_U into its vertex
+// u, registering the map's centre column (geographic longitude 0) on the local +x
+// prime meridian -- the same offset 'cubeSphereMesh' bakes for the Earth SURFACE
+// this deck rides above, so the two agree by construction. See
+// 'earth/fragment.wesl' for the full derivation.
 //
 // ## Blend target
 //
@@ -80,21 +78,11 @@ import package::lib::sphere::CloudShellUniforms;
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
-  // RGB = cloud colour (sRGB de-gammad on read), .a = coverage. The +0.5 on u is
-  // the EARTH_TEXTURE_PRIME_MERIDIAN_U convention: it puts the map centre
-  // (geographic longitude 0) on the local +x prime meridian, matching the surface
-  // (see the '## uv / orientation' note); the shared uvSphereMesh emits u=0 there,
-  // so the origin correction lives here. WESL cannot import the TS constant, so
-  // this offset is re-encoded; the other two sites of the same 0.5 are
-  // 'cubeSphereMesh.ts' (the TS home exporting EARTH_TEXTURE_PRIME_MERIDIAN_U) and
-  // 'earth/fragment.wesl'. Grep the token to find all three.
-  // No explicit fract() wrap: the sampler uses addressModeU 'repeat', so a u of
-  // 0.5..1.5 wraps correctly in hardware. Wrapping in-shader with fract() instead
-  // breaks the quad derivatives at the u=0.5 seam (the value jumps 1->0), which
-  // forces the coarsest mip along a ~1px antimeridian line; leaving u continuous
-  // keeps ddx/ddy well-behaved and lets repeat addressing do the wrap.
-  let uv = vec2<f32>(in.uv.x + 0.5, in.uv.y);
-  let c = textureSample(cloudTexture, cloudSampler, uv);
+  // RGB = cloud colour (sRGB de-gammad on read), .a = coverage. The mesh uv is
+  // already registered on the prime meridian (see the '## uv / orientation' note),
+  // so it samples straight through. Its u runs 0.5..1.5 unwrapped and the sampler
+  // uses addressModeU 'repeat', so the hardware closes the turn.
+  let c = textureSample(cloudTexture, cloudSampler, in.uv);
   // Sun-relative day/night term, decomposed so 'sunIrradiance' scales the DIRECT
   // (sun-lit) portion only -- mirroring the surface, whose direct term is scaled
   // by the same irradiance while its ambient floor is not. The 'u.ambientLight'

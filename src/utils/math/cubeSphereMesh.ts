@@ -72,7 +72,7 @@
 
 import type { CubeSphereMesh } from '../../@types/math/CubeSphereMesh';
 import type { Vec3 } from '../../@types/math/Vec3';
-import { EARTH_TEXTURE_PRIME_MERIDIAN_U } from '../../data/bodies/earthTexturePrimeMeridianU';
+import { TEXTURE_PRIME_MERIDIAN_U } from '../../data/bodies/texturePrimeMeridianU';
 
 // Six cube faces (index 0..5 = +x, -x, +y, -y, +z, -z). Each carries its outward
 // normal and two in-plane axes chosen so sAxis × tAxis = normal — which makes the
@@ -149,7 +149,7 @@ export function cubeSphereMesh(
       const lon = Math.atan2(y, x); // Right Ascension,  (-π, π]
       const lat = Math.asin(Math.max(-1, Math.min(1, z))); // Declination, [-π/2, π/2]
       // Base u in [0,1); per-triangle shifts restore continuity across the seam
-      // below. EARTH_TEXTURE_PRIME_MERIDIAN_U puts the PRIME MERIDIAN (lon 0, the
+      // below. TEXTURE_PRIME_MERIDIAN_U puts the PRIME MERIDIAN (lon 0, the
       // local +x the IAU rotation orients Earth's Greenwich to) at u=0.5 — the
       // image CENTRE, where every standard equirectangular planetary map (Blue
       // Marble and the rest) paints geographic longitude 0. Without it a raw
@@ -158,10 +158,10 @@ export function cubeSphereMesh(
       // day/night terminator reads inverted against a live clock (mid-afternoon
       // Europe shown in night). The seam (u wrap) moves to lon=±π accordingly;
       // windowShifts re-continuizes it per triangle wherever it lands, and the
-      // +u=east tangent below is unchanged. The two shader sites that re-encode
-      // this same offset (they can't import a TS constant) are named in the
-      // constant's docblock.
-      let u = lon / (2 * Math.PI) + EARTH_TEXTURE_PRIME_MERIDIAN_U;
+      // +u=east tangent below is unchanged. `uvSphereMesh` bakes the same offset
+      // for every other body; the one shader site that re-encodes it (it can't
+      // import a TS constant) is named in the constant's docblock.
+      let u = lon / (2 * Math.PI) + TEXTURE_PRIME_MERIDIAN_U;
       u = u - Math.floor(u);
       const v = lat / Math.PI + 0.5;
       uvs.push(u, v);
