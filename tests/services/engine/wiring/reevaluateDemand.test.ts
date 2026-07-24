@@ -22,6 +22,8 @@ import { evaluateRows } from '../../../../src/services/engine/wiring/reevaluateD
 import { Source } from '../../../../src/data/sources';
 import { clampTier } from '../../../../src/utils/math/clampTier';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
+import { PriorityQueue } from '../../../../src/utils/concurrency/priorityQueue';
+import { ASSET_QUEUE_CONCURRENCY } from '../../../../src/utils/concurrency/assetQueueConcurrency';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { AssetWiringRow } from '../../../../src/@types/loading/AssetWiringRow';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
@@ -70,7 +72,15 @@ function stubSlot(
 /**
  * Build a minimal EngineState with the slices evaluateRows reads transitively
  * (via buildDemandCtx + slotFor): the `tier` root field, `settings`, `requests`,
- * and a `points` map carrying the stub slots.
+ * a `points` map carrying the stub slots, and the `subsystems.assetQueue` the
+ * load edge enqueues onto.
+ *
+ * The queue is constructed PER CALL, never shared: a queue leaked across cases
+ * would carry one test's pending entries into the next. It is also mandatory
+ * rather than optional — `evaluateRows` guards each row in a try/catch, so a
+ * missing queue would surface as a swallowed TypeError and turn every
+ * `expect(slot.load).toHaveBeenCalled()` in this file into a silent failure
+ * instead of a visible crash.
  */
 function makeState(points: Map<SourceType, AssetSlot<unknown, unknown>>): EngineState {
   return {
@@ -78,6 +88,7 @@ function makeState(points: Map<SourceType, AssetSlot<unknown, unknown>>): Engine
     settings: {},
     requests: new Set(),
     assetSlots: { points },
+    subsystems: { assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY) },
     // buildDemandCtx assembles the camera eye from pose + projection, so both
     // must be present. A far resting pose keeps the proximity-gated body-texture
     // rows out of the demand set.
@@ -268,6 +279,8 @@ describe('evaluateRows — bodyTextures stale-tier evict', () => {
       settings: {},
       requests: new Set(),
       assetSlots: { points: new Map(), bodyTextures: new Map([[key, slot]]) },
+      // Per-call queue, for the same reasons spelled out on `makeState`.
+      subsystems: { assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY) },
       cameraRuntime: {
         lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e6 } },
         projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },

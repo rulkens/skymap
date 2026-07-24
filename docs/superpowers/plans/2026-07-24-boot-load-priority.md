@@ -461,11 +461,19 @@ should carry the drop-edge rationale (trap 2) since that is the non-obvious part
 - Add nothing else to this file. The enqueue-vs-load substitution is covered by the existing
   cases; the queue's own behaviour is covered by P1 and 1.1.
 
-- [ ] Repair the two state helpers and the row literals; confirm the suite is green BEFORE the
+- [x] Repair the two state helpers and the row literals; confirm the suite is green BEFORE the
       production change (it should be, since the queue is unused).
-- [ ] Implement the three-edge loop.
-- [ ] `npm test -- reevaluateDemand` green.
-- [ ] Commit (feature): the two files above.
+- [x] Implement the three-edge loop.
+- [x] `npm test -- reevaluateDemand` green.
+- [x] Commit (feature): the two files above — plus four further test files the plan did not
+      anticipate. `demandTable`, `createSyntheticFallback`, `engineSliceDispatches` and
+      `wireSlots` all drive `reevaluateDemand` over a cast `EngineState` with no `subsystems`
+      bag, and all but the last also assert on `load` spies synchronously across more than
+      `ASSET_QUEUE_CONCURRENCY` demanded rows. Each gained a per-state queue and, where the
+      assertion counts rows rather than concurrency, an `await …assetQueue.drain()`.
+      `demandTable`'s `firedKeys` additionally re-runs the loop to a fixpoint, because
+      `famousMeta` demands on the Famous row having STARTED and the queue defers that start
+      past the pass that enqueued it — the frame loop picks it up next frame in production.
 
 ---
 
