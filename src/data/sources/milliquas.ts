@@ -50,13 +50,8 @@ export const MILLIQUAS_ENTRY = {
   // small caps at ~60k brightest for the mobile GPU budget; medium caps at
   // ~200k brightest; large is uncapped.
   tierTargets: { small: 60_000, medium: 200_000 },
-  // Quasars sit at apparent mag 18–22+; with the bulk-galaxy catalog floor of
-  // 0.02 most rows would pin to it and look identical. A higher floor
-  // (0.15) keeps the faint tail distinguishable. The 1000-Mpc fade
-  // half-distance attenuates the catalog to ~0.04 at d=5 Gpc — kills
-  // the high-z quasars the whole catalog exists to show — so we set
-  // an effectively-infinite half-distance to disable distance fade
-  // for this source while keeping the toggle architecture intact.
-  intensityFloor: 0.15,
+  // SB boost — Milliquas quasars are intrinsically faint in the physical
+  // model; lift them.
+  sbBoost: 3.0,
   falloffHalfMpc: 1e30,
 } as const satisfies GalaxyCatalogSourceEntry;

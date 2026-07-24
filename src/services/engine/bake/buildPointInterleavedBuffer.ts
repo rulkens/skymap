@@ -49,6 +49,8 @@ import {
 } from '../../../data/galaxyCatalog/galaxyCatalogFluxLimits';
 import { absoluteFromApparent, expectedNumberDensity, vMaxWeight } from '../../../utils/math';
 import { computeSchechterRatios } from './computeSchechterRatios';
+import { galaxySbAmp } from '../../../utils/galaxy/galaxySbAmp';
+import { galaxyMedianAbsMag } from '../../../utils/galaxy/galaxyMedianAbsMag';
 import type { BuildPointInterleavedBufferMode } from '../../../@types/engine/BuildPointInterleavedBufferMode';
 import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/BuildPointInterleavedBufferInput';
 import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/BuildPointInterleavedBufferResult';
@@ -72,8 +74,9 @@ import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/B
  *   slot 10    — schechterRatio (f32)
  *   slot 11    — angularDensityWeight (f32)
  *   slot 12    — absMag (f32) — from the offset-normalised slot-3 magnitude
+ *   slot 13    — sbAmp (f32) — physical surface-brightness amplitude
  *
- * Total: 13 × 4 = 52 bytes per point.  Per-galaxy catalog constants stay out of
+ * Total: 14 × 4 = 56 bytes per point.  Per-galaxy catalog constants stay out of
  * the per-row layout: the K-correction kPerZ lives in the per-galaxy-catalog
  * `SourceUniforms` uniform (k is constant per galaxy catalog, so paying for it
  * per-row would be waste), and instance identity is composed per draw
@@ -107,7 +110,7 @@ import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/B
  * once here is the classic space-for-ALU trade — +8 bytes/row against the
  * hottest per-frame loop in the app.
  */
-const SLOTS_PER_POINT = 13;
+const SLOTS_PER_POINT = 14;
 
 /** Reference distance used to normalise the per-galaxy 1/V_max weight. */
 const D_REF_MPC = 750;
@@ -163,6 +166,15 @@ export function buildPointInterleavedBuffer(
   }
   const sourceMean = magCount > 0 ? magSum / magCount : SDSS_TARGET_MEAN_MAG;
   const magOffset = SDSS_TARGET_MEAN_MAG - sourceMean;
+
+  // Surface-brightness zero-point — a DIFFERENT quantity from the magOffset
+  // above (that one is a cosmetic per-catalog display shift; this one is
+  // the physical median absolute magnitude `galaxySbAmp` normalises
+  // against). Shared with the disk-planner mirror of this bake via
+  // `cloud.medianAbsMag` when the catalog carries one (the real
+  // decode/synthetic paths always populate it); recomputed here as a
+  // fallback for lightweight test fixtures that omit the optional field.
+  const medianAbsMag = cloud.medianAbsMag ?? galaxyMedianAbsMag(cloud);
 
   // ── Malmquist 1/V_max weight inputs ──────────────────────────────────────
   //
@@ -325,6 +337,17 @@ export function buildPointInterleavedBuffer(
     // is slot 3, so the baked value must fold the same per-catalog mean
     // shift or every mode-1 threshold would move by `magOffset`.
     interleaved[o + 12] = interleaved[o + 3]! - 5 * Math.log10(dMpc) - 25;
+
+    // Slot 13 — physical surface-brightness amplitude. Relative luminosity
+    // (vs the per-catalog mean absolute magnitude) over (diameter / 30 kpc)^2.
+    // This is the intrinsic per-pixel radiance the vertex stage scales into
+    // HDR: intrinsically bright / compact galaxies emit above the bloom
+    // threshold; diffuse ones stay dim. Uses the RAW physical absMag (same as
+    // vMax), not the cosmetic offset-normalised slot-3/slot-12 value. The
+    // procedural-disk pass (`proceduralDiskSubsystem.ts`) recomputes this
+    // SAME amplitude via the shared `galaxySbAmp` helper so the point↔disk
+    // crossfade holds constant brightness.
+    interleaved[o + 13] = galaxySbAmp(absMag, medianAbsMag, cloud.diameterKpc[i]!);
   }
 
   return {

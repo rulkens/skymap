@@ -94,6 +94,23 @@ const settingsSlice = createSlice({
     ) => {
       settings.galaxyCatalogs.provenance[action.payload.axis].filter = action.payload.filter;
     },
+    // Overall physical-SB → HDR gain, twin of setGalaxyCatalogSize. Rides the
+    // points uniform as `galaxySbScale`; the live successor to the old
+    // hardcoded `GALAXY_SB_SCALE` shader const.
+    setGalaxySbScale: (settings, action: PayloadAction<number>) => {
+      settings.galaxyCatalogs.sbScale = action.payload;
+    },
+    // Bloom ceiling — the max baked surface-brightness amplitude a compact
+    // galaxy can emit. The vertex stage clamps `sbAmp` to it live
+    // (`galaxySbMax` uniform), replacing the old bake-time clamp.
+    setGalaxySbMax: (settings, action: PayloadAction<number>) => {
+      settings.galaxyCatalogs.sbMax = action.payload;
+    },
+    // Readability-falloff exponent on the resolved-fraction falloff, gated by
+    // the depth-fade toggle. Rides the points uniform as `galaxyFalloffStrength`.
+    setGalaxyFalloffStrength: (settings, action: PayloadAction<number>) => {
+      settings.galaxyCatalogs.falloffStrength = action.payload;
+    },
     setGalaxyCatalogVisible: (
       settings,
       action: PayloadAction<{ id: GalaxyCatalogId; enabled: boolean }>,
@@ -449,6 +466,9 @@ export const {
   setGalaxyCatalogSize,
   setBrightness,
   setDepthFade,
+  setGalaxySbScale,
+  setGalaxySbMax,
+  setGalaxyFalloffStrength,
   setProvenanceHighlight,
   setProvenanceFilter,
   setGalaxyCatalogVisible,

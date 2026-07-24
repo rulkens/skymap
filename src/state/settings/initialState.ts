@@ -30,6 +30,9 @@ import {
   DEFAULT_BLOOM_STRENGTH,
   DEFAULT_BLOOM_THRESHOLD,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
+  DEFAULT_GALAXY_SB_SCALE,
+  DEFAULT_GALAXY_SB_MAX,
+  DEFAULT_GALAXY_FALLOFF_STRENGTH,
   DEFAULT_FAMOUS_STARS_ENABLED,
   DEFAULT_MILKY_WAY_ENABLED,
   DEFAULT_MILKY_WAY_LABEL_ENABLED,
@@ -97,6 +100,9 @@ export function buildInitialSettings(): EngineSettingsState {
       brightness: DEFAULT_BRIGHTNESS,
       depthFade: DEFAULT_DEPTH_FADE_ENABLED,
       provenance: DEFAULT_GALAXY_PROVENANCE,
+      sbScale: DEFAULT_GALAXY_SB_SCALE,
+      sbMax: DEFAULT_GALAXY_SB_MAX,
+      falloffStrength: DEFAULT_GALAXY_FALLOFF_STRENGTH,
       items: Object.fromEntries(
         SOURCE_ENTRIES.filter((e) => e.type === 'galaxyCatalog').map((e) => [
           e.id,

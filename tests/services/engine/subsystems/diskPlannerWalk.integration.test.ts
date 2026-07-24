@@ -118,7 +118,17 @@ function pxPerRadFor(cam: OrbitCamera): number {
 
 function makeInput(catalogs: Map<SourceType, GalaxyCatalog>, mask = 0xffffffff) {
   const cam = makeCam();
-  return { cam, catalogs, visibleSourceMask: mask, pxPerRad: pxPerRadFor(cam) };
+  return {
+    cam,
+    catalogs,
+    visibleSourceMask: mask,
+    pxPerRad: pxPerRadFor(cam),
+    // Live surface-brightness sliders — arbitrary plausible defaults; this
+    // suite is about parity between merged/solo walks, not brightness math.
+    sbScale: 5,
+    sbMax: 30,
+    brightness: 1,
+  };
 }
 
 const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));

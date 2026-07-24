@@ -784,10 +784,33 @@ async function runCli(): Promise<void> {
   //    survey it draws from (SDSS, Veron, NED, …), so a second dedup
   //    pass would just spend CPU re-discovering the empty intersection.
   //
-  // Add the records straight into the per-source bucket so the per-tier
-  // write loop below treats them like any other survey.
+  // The crossMatch bypass above does NOT extend to the famous-seed dedup.
+  // Milliquas used to be added straight to the bucket here, which meant it
+  // silently skipped `dropFamousMatches` (that runs on the crossMatch output,
+  // which Milliquas is deliberately absent from) — so a famous galaxy with an
+  // active nucleus rendered twice: once as its curated entry, once as a
+  // Milliquas point on top. Centaurus A was the visible case.
+  //
+  // Measured cost of closing the gap: 20 of ~943k Milliquas rows sit within
+  // 30" of a famous-seed position, and only ONE is genuinely a different
+  // object — a ~1 Gpc background quasar shining through the Antennae. The
+  // rest are the host's own nucleus, scattered in distance only by Milliquas'
+  // coarse 3-decimal redshift (z=0.001 quantises to 4.28 Mpc, 0.002 to 8.56,
+  // …). Losing one background AGN to de-duplicate 19 is the accepted trade;
+  // a redshift-agreement test like `crossMatch` uses would save it, at the
+  // cost of a second matching pass for 19 rows.
   if (milliquasResult.records.length > 0) {
-    bySource.set(Source.Milliquas, milliquasResult.records);
+    const { kept: milliquasKept, dropped: milliquasFamousDropped } = dropFamousMatches(
+      milliquasResult.records,
+      famousPositions,
+      30,
+    );
+    if (milliquasFamousDropped > 0) {
+      process.stderr.write(
+        `  famous-seed dedup: dropped ${milliquasFamousDropped.toLocaleString()} Milliquas rows that match a famous-seed position\n`,
+      );
+    }
+    bySource.set(Source.Milliquas, milliquasKept);
   }
 
   // Per-source dedup report. Subtracting kept from input gives the number

@@ -102,6 +102,7 @@ function fakeProceduralInstance(
     procFadeOut: 1,
     sourceCode: 0,
     localIdx: 0,
+    sbAmp: 1,
     ...overrides,
   };
 }

@@ -1,7 +1,7 @@
 /**
  * pickUniformBytesOf — rebuild the point pick uniform as a value, at pick time.
  *
- * The pick pass needs the same 176-byte `Uniforms` image the visual points pass
+ * The pick pass needs the same 192-byte `Uniforms` image the visual points pass
  * uploads, minus the fields it always overrides. Building it as a side effect of
  * the visual `draw()` would braid pick-camera availability into "the points pass
  * has already drawn this frame" — a frame-ordering coupling — and mirror one
@@ -75,6 +75,9 @@ export function pickUniformBytesOf(
       biasMode: bias.mode,
       absMagLimit: bias.absMagLimit,
       depthFadeEnabled: g.depthFade,
+      sbScale: g.sbScale,
+      sbMax: g.sbMax,
+      falloffStrength: g.falloffStrength,
       // Same fade-band source of truth the visual pass reads (kept in one place
       // so points fade-out and disks fade-in bands can't drift apart).
       pxFadeStart: PROCEDURAL_DISK_FADE_START_PX,

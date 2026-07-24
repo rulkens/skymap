@@ -66,6 +66,7 @@
  */
 
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
+import { galaxyMedianAbsMag } from '../../utils/galaxy/galaxyMedianAbsMag';
 
 const MAGIC = 0x504d4b53;
 const VERSION = 8;
@@ -221,7 +222,7 @@ export function decodeGalaxyCatalog(buf: ArrayBuffer): GalaxyCatalog {
     // The remaining 4 padding bytes are ignored on decode.
   }
 
-  return {
+  const catalog: GalaxyCatalog = {
     count,
     objIDs,
     positions,
@@ -239,6 +240,11 @@ export function decodeGalaxyCatalog(buf: ArrayBuffer): GalaxyCatalog {
     orientationIsFallback,
     diameterIsFallback,
   };
+  // Derived, not stored on disk — recomputed here (rather than encoded)
+  // so adding this field never bumps the binary format version. Computed
+  // AFTER the object above so the helper sees the finished typed arrays.
+  catalog.medianAbsMag = galaxyMedianAbsMag(catalog);
+  return catalog;
 }
 
 export function emptyGalaxyCatalog(): GalaxyCatalog {
@@ -257,6 +263,7 @@ export function emptyGalaxyCatalog(): GalaxyCatalog {
     classByte: new Uint8Array(0),
     parentSurveyByte: new Uint8Array(0),
     spectroscopicZ: new Float32Array(0),
+    medianAbsMag: -20.5, // count-0 fallback — same sentinel galaxyMedianAbsMag returns for count===0.
     orientationIsFallback: new Uint8Array(0),
     diameterIsFallback: new Uint8Array(0),
   };

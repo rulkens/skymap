@@ -455,10 +455,10 @@ describe('catalogStore.spliceSchechterRatios', () => {
     const last = writeCalls[writeCalls.length - 1]!;
     const view = last.data as Float32Array;
     const f32 = new Float32Array(view.buffer, view.byteOffset, view.length);
-    // SLOTS_PER_POINT = 13; slot 10 = SCHECHTER_RATIO_BYTE_OFFSET / 4.
-    expect(f32[0 * 13 + 10]).toBeCloseTo(0.25);
-    expect(f32[1 * 13 + 10]).toBeCloseTo(0.5);
-    expect(f32[2 * 13 + 10]).toBeCloseTo(0.75);
+    // SLOTS_PER_POINT = 14; slot 10 = SCHECHTER_RATIO_BYTE_OFFSET / 4.
+    expect(f32[0 * 14 + 10]).toBeCloseTo(0.25);
+    expect(f32[1 * 14 + 10]).toBeCloseTo(0.5);
+    expect(f32[2 * 14 + 10]).toBeCloseTo(0.75);
   });
 
   it('throws when ratios.length !== source count', async () => {
@@ -503,8 +503,8 @@ describe('catalogStore.spliceAngularWeights', () => {
     const view = last.data as Float32Array;
     const f32 = new Float32Array(view.buffer, view.byteOffset, view.length);
     // slot 11 = ANGULAR_WEIGHT_BYTE_OFFSET / 4.
-    expect(f32[0 * 13 + 11]).toBeCloseTo(0.1);
-    expect(f32[1 * 13 + 11]).toBeCloseTo(0.9);
+    expect(f32[0 * 14 + 11]).toBeCloseTo(0.1);
+    expect(f32[1 * 14 + 11]).toBeCloseTo(0.9);
   });
 
   it('throws when weights.length !== source count', async () => {
@@ -541,10 +541,10 @@ describe('catalogStore.clearBiasOverlays', () => {
     const last = writeCalls[writeCalls.length - 1]!;
     const view = last.data as Float32Array;
     const f32 = new Float32Array(view.buffer, view.byteOffset, view.length);
-    expect(f32[0 * 13 + 10]).toBe(0);
-    expect(f32[0 * 13 + 11]).toBe(0);
-    expect(f32[1 * 13 + 10]).toBe(0);
-    expect(f32[1 * 13 + 11]).toBe(0);
+    expect(f32[0 * 14 + 10]).toBe(0);
+    expect(f32[0 * 14 + 11]).toBe(0);
+    expect(f32[1 * 14 + 10]).toBe(0);
+    expect(f32[1 * 14 + 11]).toBe(0);
   });
 
   it('zeroes for every loaded source when called with no argument', async () => {

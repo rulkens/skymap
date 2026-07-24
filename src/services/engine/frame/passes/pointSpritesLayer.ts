@@ -115,6 +115,9 @@ export const pointSpritesLayer: ContentLayer = {
       biasMode: state.settings.bias.mode,
       absMagLimit: state.settings.bias.absMagLimit,
       depthFadeEnabled: state.settings.galaxyCatalogs.depthFade,
+      sbScale: state.settings.galaxyCatalogs.sbScale,
+      sbMax: state.settings.galaxyCatalogs.sbMax,
+      falloffStrength: state.settings.galaxyCatalogs.falloffStrength,
       // The points-layer fragment fades alpha to zero across the same
       // apparent-pixel-size band the procedural-disk layer fades IN over.
       // Both thresholds come from one source of truth so they can't drift
