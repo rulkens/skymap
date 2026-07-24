@@ -275,9 +275,11 @@ export type GalaxyInfo = {
    *   - 'GLADE Tully'     — Tully (1988) size–luminosity from absolute B mag
    *   - 'fallback (30 kpc)' — no parser-supplied measurement; built-in default
    *
-   * Computed at info-card-build time by comparing `cloud.diameterKpc[idx]`
-   * to the project-wide DEFAULT_GALAXY_DIAMETER_KPC and (where applicable)
-   * the source catalog.
+   * Computed at info-card-build time from the authoritative persisted
+   * `cloud.diameterIsFallback[idx]` flag (via `GalaxyRow.diameterIsFallback`)
+   * and, where applicable, the source catalog — not by comparing
+   * `cloud.diameterKpc[idx]` to DEFAULT_GALAXY_DIAMETER_KPC, which would
+   * mislabel a genuinely measured 30 kpc galaxy as fallback.
    */
   diameterProvenance: string;
 

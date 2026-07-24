@@ -42,6 +42,7 @@ function stubSlot(name: string): AssetSlot<unknown, unknown> {
     state: () => ({ kind: 'idle' }),
     subscribe: () => () => {},
     lastRequest: () => null,
+    startedAtMs: () => null,
     forceReload: () => {},
     cancel: () => {},
     release: () => {},

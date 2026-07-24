@@ -4,6 +4,7 @@ import { Source } from '../../../src/data/sources';
 import { ALL_VISIBLE_MASK } from '../../../src/utils/allVisibleMask';
 import { maskWith } from '../../../src/utils/maskWith';
 import { maskWithout } from '../../../src/utils/maskWithout';
+import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { SourceType } from '../../../src/@types/data/SourceType';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
@@ -21,24 +22,7 @@ function makeCatalog(positions: ReadonlyArray<readonly [number, number, number]>
     flat[i * 3 + 1] = positions[i]![1];
     flat[i * 3 + 2] = positions[i]![2];
   }
-  const z = new Float32Array(count);
-  const zb = new Uint8Array(count);
-  return {
-    count,
-    objIDs: new BigUint64Array(count),
-    positions: flat,
-    magU: z,
-    magG: z,
-    magR: z,
-    magI: z,
-    magZ: z,
-    axisRatio: z,
-    positionAngleDeg: z,
-    diameterKpc: z,
-    classByte: zb,
-    parentSurveyByte: zb,
-    spectroscopicZ: z,
-  };
+  return makeGalaxyCatalog(count, { positions: flat });
 }
 
 /** A cluster at the origin with a 10 Mpc core radius. */

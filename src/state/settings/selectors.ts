@@ -53,6 +53,7 @@ import type { ClipPathTuningActive } from '../../@types/settings/ClipPathTuningA
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
 import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
+import type { GalaxyProvenanceSettings } from '../../@types/settings/GalaxyProvenanceSettings';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../data/sources';
 import { maskWith } from '../../utils/maskWith';
 
@@ -79,11 +80,32 @@ export const selectBrightness = (state: RootState): number =>
 export const selectDepthFade = (state: RootState): boolean =>
   selectSettings(state).galaxyCatalogs.depthFade;
 
-export const selectHighlightFallback = (state: RootState): boolean =>
-  selectSettings(state).galaxyCatalogs.highlightFallback;
+export const selectGalaxyProvenance = (state: RootState): GalaxyProvenanceSettings =>
+  selectSettings(state).galaxyCatalogs.provenance;
 
-export const selectRealOnly = (state: RootState): boolean =>
-  selectSettings(state).galaxyCatalogs.realOnly;
+/**
+ * Overall physical-SB → HDR gain — the "Galaxy brightness" knob. A primitive
+ * read, so no memoization. The points draw layer writes it into the
+ * `galaxySbScale` uniform each frame.
+ */
+export const selectGalaxySbScale = (state: RootState): number =>
+  selectSettings(state).galaxyCatalogs.sbScale;
+
+/**
+ * Bloom ceiling — the "Bloom ceiling" knob. A primitive read, so no
+ * memoization. The max baked surface-brightness amplitude a galaxy can emit;
+ * the vertex stage clamps `sbAmp` to it via the `galaxySbMax` uniform.
+ */
+export const selectGalaxySbMax = (state: RootState): number =>
+  selectSettings(state).galaxyCatalogs.sbMax;
+
+/**
+ * Readability-falloff exponent — the "Distance falloff" knob. A primitive read,
+ * so no memoization. The exponent on the resolved-fraction falloff, gated by
+ * the depth-fade toggle; rides the `galaxyFalloffStrength` uniform.
+ */
+export const selectGalaxyFalloffStrength = (state: RootState): number =>
+  selectSettings(state).galaxyCatalogs.falloffStrength;
 
 export const selectGalaxyCatalogItems = (
   state: RootState,

@@ -8,9 +8,9 @@
  * section fills that gap with plain buttons — no URL gate. It iterates
  * `clipRegistry` / `tourRegistry`, so adding a clip or tour to a registry adds a
  * button here with zero edits. Play/stop/tour are fire-and-forget dispatches
- * wired by `DebugPanelContainer` (`startClip` / `stopClip` / `startTour` request
- * actions, each naming a registered id), the same way the other panel knobs
- * dispatch.
+ * wired by `ClipTriggersSectionContainer` (`startClip` / `stopClip` /
+ * `startTour` request actions, each naming a registered id), the same way the
+ * other panel knobs dispatch.
  *
  * ### Why the readout reads `clipActive`, not a Promise
  *

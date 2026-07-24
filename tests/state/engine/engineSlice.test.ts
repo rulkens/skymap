@@ -17,6 +17,7 @@ import { describe, it, expect } from 'vitest';
 import reducer, {
   engineStatusChanged,
   engineSourceCountReported,
+  engineProvenanceCountsReported,
   engineStructureCountsChanged,
   engineLoadProgressChanged,
   engineScaleChanged,
@@ -31,6 +32,7 @@ const base = (): EngineSliceState => ({
   focusedBodyDistanceMpc: null,
   sourceCounts: {},
   structureCounts: {},
+  provenanceCounts: {},
   loadProgress: null,
 });
 
@@ -53,6 +55,23 @@ describe('engineSlice — engineSourceCountReported', () => {
     const after2 = reducer(after1, engineSourceCountReported({ source: Source.TwoMRS, count: 42 }));
     expect(after2.sourceCounts[Source.SDSS]).toBe(5);
     expect(after2.sourceCounts[Source.TwoMRS]).toBe(42);
+  });
+});
+
+describe('engineSlice — engineProvenanceCountsReported', () => {
+  it('engineProvenanceCountsReported merges a second source without dropping the first', () => {
+    const first = { total: 100, estimated: { orientation: 10, size: 5 } };
+    const second = { total: 200, estimated: { orientation: 20, size: 15 } };
+    const after1 = reducer(
+      base(),
+      engineProvenanceCountsReported({ source: Source.SDSS, counts: first }),
+    );
+    const after2 = reducer(
+      after1,
+      engineProvenanceCountsReported({ source: Source.TwoMRS, counts: second }),
+    );
+    expect(after2.provenanceCounts[Source.SDSS]).toEqual(first);
+    expect(after2.provenanceCounts[Source.TwoMRS]).toEqual(second);
   });
 });
 

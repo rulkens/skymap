@@ -1,13 +1,15 @@
 // @vitest-environment jsdom
 
 /**
- * DebugPanelContainer — store-backed integration test.
+ * DebugPanel — store-backed integration test.
  *
- * Verifies that the container:
+ * Verifies that the sections DebugPanel mounts (each via its own container)
+ * round-trip through the store:
  *   - reads `showPickBuffer` out of the store and reflects it on the matching checkbox;
  *   - dispatches `setShowPickBuffer` when the checkbox is toggled;
  *   - routes a RenderTogglesSection checkbox click through `onTogglePass` → `setPassDisabled`;
- *   - dispatches `setRealOnly` when the data-quality toggle fires.
+ *   - routes the galaxy-provenance table's highlight checkbox and cull `<select>`
+ *     through `setProvenanceHighlight` / `setProvenanceFilter`.
  *
  * Stub engine props — a `new Map()` for `slots`, a minimal `timingService` stub
  * (enabled=false, all methods are no-ops), and a `passNames` array — satisfy the
@@ -21,12 +23,12 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
-import DebugPanelContainer from '../../../src/components/containers/DebugPanelContainer';
+import DebugPanel from '../../../src/components/DebugPanel/DebugPanel';
 import { createAppStore } from '../../../src/store/createAppStore';
 import {
   selectShowPickBuffer,
   selectDisabledPasses,
-  selectRealOnly,
+  selectGalaxyProvenance,
 } from '../../../src/state/settings/selectors';
 import { setShowPickBuffer } from '../../../src/state/settings/settingsSlice';
 import { startClip } from '../../../src/state/camera/clipActions';
@@ -61,11 +63,12 @@ function makeWrapper(store: ReturnType<typeof createAppStore>['store']) {
 
 function renderContainer(store: ReturnType<typeof createAppStore>['store']) {
   return render(
-    createElement(DebugPanelContainer, {
+    createElement(DebugPanel, {
       slots: stubSlots,
       timingService: stubTimingService,
       frameStats: () => ({ fps: 0, cpuMs: 0, idle: true }),
       passNames: PASS_NAMES,
+      assetPriorities: () => new Map<string, number>(),
     }),
     { wrapper: makeWrapper(store) },
   );
@@ -75,7 +78,7 @@ function renderContainer(store: ReturnType<typeof createAppStore>['store']) {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('DebugPanelContainer', () => {
+describe('DebugPanel', () => {
   it('reflects showPickBuffer from the store', () => {
     const { store } = createAppStore();
     // Seed showPickBuffer=true by dispatching before render.
@@ -119,17 +122,28 @@ describe('DebugPanelContainer', () => {
     expect(selectDisabledPasses(store.getState())['point-sprites']).toBe(true);
   });
 
-  it('dispatches setRealOnly on the data-quality toggle', () => {
+  it('dispatches setProvenanceFilter and setProvenanceHighlight from the provenance table', () => {
     const { store } = createAppStore();
-    expect(selectRealOnly(store.getState())).toBe(false);
+    expect(selectGalaxyProvenance(store.getState()).orientation.filter).toBe('all');
+    expect(selectGalaxyProvenance(store.getState()).orientation.highlight).toBe(false);
     const { container } = renderContainer(store);
-    // DataQualitySection renders a "Show only real" checkbox label.
-    const labels = Array.from(container.querySelectorAll('label'));
-    const realLabel = labels.find((l) => l.textContent?.includes('Show only real'));
-    expect(realLabel).not.toBeUndefined();
-    const box = realLabel!.querySelector<HTMLInputElement>('input[type=checkbox]')!;
-    fireEvent.click(box);
-    expect(selectRealOnly(store.getState())).toBe(true);
+
+    // GalaxyProvenanceSection renders the tri-state cull as a <select>, named by
+    // its aria-label rather than the row's index — the table is built by
+    // iterating PROVENANCE_AXES, so index is an accident of registry order.
+    const cullSelect = container.querySelector<HTMLSelectElement>(
+      'select[aria-label="Show by orientation provenance"]',
+    );
+    expect(cullSelect).not.toBeNull();
+    fireEvent.change(cullSelect!, { target: { value: 'measured' } });
+    expect(selectGalaxyProvenance(store.getState()).orientation.filter).toBe('measured');
+
+    const highlightBox = container.querySelector<HTMLInputElement>(
+      '#provenance-highlight-orientation',
+    );
+    expect(highlightBox).not.toBeNull();
+    fireEvent.click(highlightBox!);
+    expect(selectGalaxyProvenance(store.getState()).orientation.highlight).toBe(true);
   });
 
   it('dispatches startClip with the clip id on a clip-play button click', () => {

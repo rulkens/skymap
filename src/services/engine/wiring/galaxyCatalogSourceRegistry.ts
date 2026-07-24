@@ -47,7 +47,11 @@ import { syncVisibilityFadeItem } from './syncVisibilityFades';
 import { dissolveCatalogBuffer } from './dissolveCatalogBuffer';
 import type { SourceType } from '../../../@types/data/SourceType';
 import { dispatchCatalogLoaded } from './dispatchCatalogLoaded';
-import { engineSourceCountReported } from '../../../state/engine/engineSlice';
+import {
+  engineSourceCountReported,
+  engineProvenanceCountsReported,
+} from '../../../state/engine/engineSlice';
+import { countEstimatedProvenance } from '../../../utils/countEstimatedProvenance';
 
 /**
  * Registry rows, in Source enum order.  Order matters: `initGpu`'s
@@ -153,7 +157,7 @@ export function loadCompanionAssets(
   tier: Tier,
 ): void {
   if (!cfg.companions) return;
-  for (const ref of cfg.companions) state.assetSlots[ref]?.load({ tier });
+  for (const ref of cfg.companions) void state.assetSlots[ref]?.load({ tier });
 }
 
 /**
@@ -242,6 +246,12 @@ export function wireGalaxyCatalogSourceSlot(
   slot.subscribe((s) => {
     if (s.kind === 'ready') {
       cb.store.dispatch(engineSourceCountReported({ source, count: s.value.count }));
+      // One O(rows) pass over the two fallback-flag columns, paid once per
+      // commit here rather than lazily in React, so the debug panel never
+      // has to reach into the raw cloud (a couple of ms at full deck).
+      cb.store.dispatch(
+        engineProvenanceCountsReported({ source, counts: countEstimatedProvenance(s.value) }),
+      );
     }
   });
 

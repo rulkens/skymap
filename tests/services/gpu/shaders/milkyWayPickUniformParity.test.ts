@@ -144,11 +144,16 @@ function packSentinels(): ArrayBuffer {
     visibleSourceMask: 0b11111,
     camPosWorld: [SENTINEL.camPosWorldX, SENTINEL.camPosWorldX + 1, SENTINEL.camPosWorldX + 2],
     pxPerRad: SENTINEL.pxPerRad,
-    highlightFallback: false,
-    realOnlyMode: false,
+    provenance: {
+      orientation: { highlight: false, filter: 'all' },
+      size: { highlight: false, filter: 'all' },
+    },
     biasMode: 0,
     absMagLimit: 0,
     depthFadeEnabled: false,
+    sbScale: 8,
+    sbMax: 30,
+    falloffStrength: 0.8,
     pxFadeStart: 0,
     pxFadeEnd: 0,
     focusBindGroup: {} as unknown as GPUBindGroup,
@@ -212,7 +217,7 @@ describe('milkyWayPick/io.wesl Uniforms ↔ packPointUniforms layout parity', ()
     expect(at('pxPerRad')).toBe(observedF32Offset(buf, SENTINEL.pxPerRad));
   });
 
-  it('reads exactly the documented 112-byte prefix, within the 176-byte buffer', () => {
+  it('reads exactly the documented 112-byte prefix, within the 192-byte buffer', () => {
     // The mirror must stay a PREFIX: its total extent is what the MW draw
     // reads through the caller's bind group, and WGSL only permits the
     // bound buffer to be LARGER than the declared struct — never smaller.

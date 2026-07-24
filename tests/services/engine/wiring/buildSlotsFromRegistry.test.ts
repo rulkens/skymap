@@ -30,6 +30,7 @@ function stubSlot(name: string): AssetSlot<unknown, unknown> {
     state: () => ({ kind: 'idle' }),
     subscribe: () => () => {},
     lastRequest: () => null,
+    startedAtMs: () => null,
     forceReload: () => {},
     cancel: () => {},
     release: () => {},
@@ -46,8 +47,14 @@ describe('buildSlotsFromRegistry', () => {
     const filamentSlot = stubSlot('filaments');
     const mcpmSlot = stubSlot('mcpm');
     const rows: AssetWiringRow[] = [
-      { key: 'filaments', factory: () => filamentSlot, req: () => ({}), demand: () => false },
-      { key: 'mcpm', factory: () => mcpmSlot, req: () => ({}), demand: () => false },
+      {
+        key: 'filaments',
+        factory: () => filamentSlot,
+        req: () => ({}),
+        demand: () => false,
+        priority: 0,
+      },
+      { key: 'mcpm', factory: () => mcpmSlot, req: () => ({}), demand: () => false, priority: 0 },
     ];
 
     const slots = buildSlotsFromRegistry(rows, makeDeps());
@@ -69,8 +76,15 @@ describe('buildSlotsFromRegistry', () => {
         factory: externalFactory,
         req: (tier) => ({ source: Source.SDSS, tier }),
         demand: () => true,
+        priority: 0,
       },
-      { key: 'filaments', factory: () => filamentSlot, req: () => ({}), demand: () => false },
+      {
+        key: 'filaments',
+        factory: () => filamentSlot,
+        req: () => ({}),
+        demand: () => false,
+        priority: 0,
+      },
     ];
 
     const slots = buildSlotsFromRegistry(rows, makeDeps());
@@ -86,7 +100,7 @@ describe('buildSlotsFromRegistry', () => {
     const deps = makeDeps();
     const factory = vi.fn(() => stubSlot('filaments'));
     const rows: AssetWiringRow[] = [
-      { key: 'filaments', factory, req: () => ({}), demand: () => true },
+      { key: 'filaments', factory, req: () => ({}), demand: () => true, priority: 0 },
     ];
 
     const slots = buildSlotsFromRegistry(rows, deps);

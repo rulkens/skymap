@@ -30,6 +30,7 @@
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
 import { mulberry32 } from '../../utils/random/mulberry32';
 import { uniformInSphere } from '../../utils/random/uniformInSphere';
+import { galaxyMedianAbsMag } from '../../utils/galaxy/galaxyMedianAbsMag';
 
 // ─── Cloud generator ─────────────────────────────────────────────────────────
 
@@ -185,7 +186,7 @@ export function generateSyntheticCloud(count: number, seed = 42): GalaxyCatalog 
   // the build pipeline applies when a real catalog record has no size measurement.
   const diameterKpc = new Float32Array(count).fill(30);
 
-  return {
+  const cloud: GalaxyCatalog = {
     count,
     objIDs,
     positions,
@@ -202,5 +203,15 @@ export function generateSyntheticCloud(count: number, seed = 42): GalaxyCatalog 
     classByte: new Uint8Array(count),
     parentSurveyByte: new Uint8Array(count),
     spectroscopicZ: new Float32Array(count),
+    // Orientation above is the constant round-point sentinel (b/a=1, PA=0),
+    // not the deterministic hash fallback, so every row is flagged 0 ("not
+    // fallback"). Uint8Array default-fills with 0.
+    orientationIsFallback: new Uint8Array(count),
+    // Diameter above is a procedurally generated 30-kpc value, treated as a
+    // real (non-fallback) size like the orientation sentinel, so every row is
+    // flagged 0. Uint8Array default-fills with 0.
+    diameterIsFallback: new Uint8Array(count),
   };
+  cloud.medianAbsMag = galaxyMedianAbsMag(cloud);
+  return cloud;
 }

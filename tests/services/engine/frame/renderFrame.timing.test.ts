@@ -37,6 +37,7 @@ import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
+import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/data/defaults';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { COSMO } from '../../../../src/services/engine/frame/slabs';
@@ -244,8 +245,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     brightness: 1.0,
     selected: null as { source: SourceType; localIdx: number } | null,
     visibleSourceMask: 0xffffffff,
-    highlightFallback: true,
-    realOnlyMode: false,
     biasMode: BiasMode.None,
     absMagLimit: -19,
     depthFadeEnabled: true,
@@ -311,8 +310,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         galaxyCatalogs: {
           sizePx: settings.pointSizePx,
           brightness: settings.brightness,
-          highlightFallback: settings.highlightFallback,
-          realOnly: settings.realOnlyMode,
+          provenance: DEFAULT_GALAXY_PROVENANCE,
           depthFade: settings.depthFadeEnabled,
         },
         tonemap: { exposure: settings.exposure, curve: settings.toneMapCurve },
