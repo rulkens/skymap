@@ -34,6 +34,9 @@
  *   - When a slot frees, we pick the pending entry with the highest
  *     priority — the engine sets priority to the galaxy's apparent
  *     on-screen pixel size, so big galaxies in the foreground load first.
+ *   - `enqueue` starts eagerly, so a caller submitting a whole batch at once
+ *     must use `enqueueMany` for priority to govern the FIRST starts too;
+ *     see that method's docblock.
  *   - Re-enqueueing the same `key` while the entry is still pending
  *     REPLACES the old entry (priority + fetcher updated).  This lets
  *     the engine bump priority each frame for galaxies that are getting
@@ -64,6 +67,46 @@ export class PriorityQueue<T = ImageBitmap | null> {
   }
 
   enqueue(entry: QueueEntry<T>): void {
+    if (this.admit(entry)) this.tryStart();
+  }
+
+  /**
+   * Admit a whole synchronous batch, THEN start.  The distinction from calling
+   * `enqueue` in a loop is the whole point: `enqueue` starts a task the moment
+   * a slot is free, so in a loop the first `limit` entries walked start
+   * immediately, in ARRAY order, before any later (possibly better-ranked)
+   * entry has even been seen.  Priority then only decides which entry fills a
+   * slot that frees LATER — the head of the queue is chosen by iteration order,
+   * not by rank.  That is exactly how a rank-60 all-sky survey took one of the
+   * boot's two pipes for 22 seconds ahead of every rank-10 asset the opening
+   * view actually draws: it merely sat second in `ASSET_WIRING`.
+   *
+   * Admitting every entry into `pending` first and calling `tryStart` once
+   * restores the invariant callers assume: the first `limit` tasks started are
+   * the `limit` best-ranked entries of the batch, whatever order they arrived
+   * in.
+   *
+   * The rejected alternative was to defer `tryStart` inside `enqueue` to a
+   * microtask, which would give the same guarantee to every caller for free.
+   * It was dropped because it changes semantics for callers that never asked:
+   * the galaxy-thumbnail queue enqueues one entry per frame (nothing to batch,
+   * so it would only gain latency), and both it and the asset wiring rely on a
+   * fetch having actually STARTED by the time the enqueuing call returns.  An
+   * explicit batch API keeps the timing change confined to the caller that
+   * needs it.
+   */
+  enqueueMany(entries: readonly QueueEntry<T>[]): void {
+    let admitted = false;
+    for (const entry of entries) admitted = this.admit(entry) || admitted;
+    if (admitted) this.tryStart();
+  }
+
+  /**
+   * Place an entry in `pending` without starting anything, applying the dedup
+   * rules.  Returns whether the entry newly entered `pending`, i.e. whether a
+   * `tryStart` could possibly have new work to do.
+   */
+  private admit(entry: QueueEntry<T>): boolean {
     // Idempotent: if the same key is already in flight, do nothing — the
     // running fetch's `onResult` will fire when it finishes and the
     // caller's per-frame gate (e.g. bitmapReady / bitmapFailed in the
@@ -84,19 +127,19 @@ export class PriorityQueue<T = ImageBitmap | null> {
     // Priority bumps for already-running fetches are nice-to-have, not
     // necessary; if the caller wants to re-run, it'll get a chance once
     // the current attempt resolves and the per-frame gate clears.
-    if (this.inFlight.has(entry.key)) return;
+    if (this.inFlight.has(entry.key)) return false;
 
     // Already pending?  Update priority + fetcher (latest enqueue wins on
     // priority; e.g., as a galaxy gets bigger on screen the engine bumps
-    // its priority each frame).  Don't tryStart — the existing pending
+    // its priority each frame).  Report "nothing new" — the existing pending
     // entry will be picked up by the next slot release.
     if (this.pending.has(entry.key)) {
       this.pending.set(entry.key, entry);
-      return;
+      return false;
     }
 
     this.pending.set(entry.key, entry);
-    this.tryStart();
+    return true;
   }
 
   /**

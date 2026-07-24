@@ -113,6 +113,12 @@ function row(
   return { key, factory: () => stubSlot(), req, demand, release: opts.release, priority: 0 };
 }
 
+/** A demanded row carrying a real rank — for the fetch-order test, where
+ *  `priority` is the thing under test rather than an irrelevant field. */
+function ranked(key: SourceType, priority: number): AssetWiringRow {
+  return { ...row(key, () => true), priority };
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -226,6 +232,44 @@ describe('evaluateRows', () => {
     const state = makeState(new Map([[Source.SDSS, slot]]));
     evaluateRows(state, [row(Source.SDSS, () => false, { release: () => true })]);
     expect(slot.release).not.toHaveBeenCalled();
+  });
+
+  it('starts the best-ranked demanded rows first, whatever their table position', () => {
+    // The regression this pins: a single pass submitted its loads row by row,
+    // so the first ASSET_QUEUE_CONCURRENCY demanded rows WALKED started
+    // immediately and `priority` only decided who filled a slot that freed
+    // later. In the real table that let a rank-60 all-sky survey, second in the
+    // array, hold one of the two pipes for 22 s ahead of everything the opening
+    // view draws. Rows here are ordered worst-rank-first so array order and rank
+    // order disagree completely.
+    const started: SourceType[] = [];
+    /** A slot whose load records its source and never settles, so the pass's
+     *  two concurrency slots stay occupied for the whole assertion. */
+    const recordingSlot = (source: SourceType) => {
+      const slot = stubSlot();
+      slot.load.mockImplementation(() => {
+        started.push(source);
+        return new Promise<void>(() => {});
+      });
+      return slot;
+    };
+    const state = makeState(
+      new Map([
+        [Source.SDSS, recordingSlot(Source.SDSS)],
+        [Source.Glade, recordingSlot(Source.Glade)],
+        [Source.TwoMRS, recordingSlot(Source.TwoMRS)],
+      ]),
+    );
+
+    evaluateRows(state, [
+      ranked(Source.SDSS, 60),
+      ranked(Source.Glade, 10),
+      ranked(Source.TwoMRS, 0),
+    ]);
+
+    // Exactly ASSET_QUEUE_CONCURRENCY loads, and they are the two best ranks in
+    // rank order — SDSS, first in the array and worst-ranked, waits its turn.
+    expect(started).toEqual([Source.TwoMRS, Source.Glade]);
   });
 
   it('a throwing release predicate is caught and does not stop later rows', () => {

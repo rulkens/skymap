@@ -178,6 +178,32 @@ describe('PriorityQueue', () => {
     expect(started.filter((k) => !k.startsWith('blocker'))).toEqual(['high', 'mid', 'low']);
   });
 
+  it('enqueueMany starts the best-ranked entries of a batch, not the first submitted', () => {
+    const queue = new PriorityQueue<null>(2);
+    const started: string[] = [];
+    const gate = new Promise<null>(() => {});
+    const entry = (key: string, priority: number) => ({
+      key,
+      priority,
+      fetcher: () => {
+        started.push(key);
+        // Never resolves: the two slots stay occupied, so `started` records
+        // exactly which entries the batch submission itself chose to run.
+        return gate;
+      },
+      onResult: () => {},
+    });
+
+    // Best ranks LAST in submission order. A queue that starts eagerly as it
+    // walks the batch runs 'worst' and 'bad' — the array positions — and rank
+    // only governs whichever slot frees later. Nothing frees here, so the two
+    // that start are the batch's own choice.
+    queue.enqueueMany([entry('worst', 1), entry('bad', 2), entry('good', 8), entry('best', 9)]);
+
+    expect(started).toEqual(['best', 'good']);
+    queue.destroy();
+  });
+
   it('a dropped entry never starts', async () => {
     const queue = new PriorityQueue(2);
     const unblockers: Array<() => void> = [];

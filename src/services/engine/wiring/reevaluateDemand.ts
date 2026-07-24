@@ -82,6 +82,7 @@ import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { Tier } from '../../../@types/data/Tier';
 import type { BodyTextureReq } from '../../../@types/loading/BodyTextureReq';
+import type { QueueEntry } from '../../../@types/loading/QueueEntry';
 
 /**
  * Stale-tier evict test for the `bodyTextures` family: a `ready` slot whose
@@ -112,6 +113,13 @@ function staleTierEvict(
 export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]): void {
   const ctx = buildDemandCtx(state);
   const queue = state.subsystems.assetQueue;
+  // Collected across the whole walk and submitted in ONE call at the end.
+  // Enqueueing inside the loop would start the first `ASSET_QUEUE_CONCURRENCY`
+  // demanded rows the instant they were walked — in `ASSET_WIRING` array order,
+  // before a better-ranked row further down the table had even been evaluated —
+  // leaving `priority` to govern only the slots that free later. See
+  // `PriorityQueue.enqueueMany`.
+  const batch: QueueEntry<void>[] = [];
   for (const row of rows) {
     try {
       const slot = slotFor(state, row.key);
@@ -127,7 +135,7 @@ export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]
       // lives here rather than inside load() (which stays a re-fetch
       // primitive).
       if (kind === 'idle' && row.demand(ctx)) {
-        queue.enqueue({
+        batch.push({
           key: queueKey,
           // NEGATED on purpose. `popHighestPriority` pops the LARGEST
           // `priority` because the queue's other caller ranks galaxy
@@ -180,6 +188,11 @@ export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]
       console.warn(`reevaluateDemand: row '${String(row.key)}' threw during evaluation`, err);
     }
   }
+  // Outside the per-row guard on purpose: everything policy-shaped (the demand
+  // predicate, slot lookup, release) ran inside it, and all that is left here is
+  // a map insert per entry plus the queue's own scheduling — a throw from that
+  // is an engine bug worth surfacing, not one row's failure to contain.
+  queue.enqueueMany(batch);
 }
 
 /** Re-evaluate the full asset-wiring registry against the current state. */
