@@ -23,5 +23,7 @@ export const PROVENANCE_FILTER_CODE: Record<ProvenanceFilter, number> = {
 export const PROVENANCE_FILTER_OPTIONS: readonly { value: ProvenanceFilter; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'measured', label: 'Measured' },
-  { value: 'estimated', label: 'Estimated' },
+  // Label says "missing" (what the source catalog lacks); value stays
+  // 'estimated' (what the pipeline put there instead).
+  { value: 'estimated', label: 'Missing' },
 ];

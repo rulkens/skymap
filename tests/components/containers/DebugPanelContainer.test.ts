@@ -130,7 +130,7 @@ describe('DebugPanelContainer', () => {
     // its aria-label rather than the row's index — the table is built by
     // iterating PROVENANCE_AXES, so index is an accident of registry order.
     const cullSelect = container.querySelector<HTMLSelectElement>(
-      'select[aria-label="Cull by orientation provenance"]',
+      'select[aria-label="Show by orientation provenance"]',
     );
     expect(cullSelect).not.toBeNull();
     fireEvent.change(cullSelect!, { target: { value: 'measured' } });

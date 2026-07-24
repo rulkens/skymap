@@ -13,8 +13,9 @@
  *     colour in the vertex shader (a replacement, not a tint — a red galaxy
  *     multiplied by a tint just darkens), so records missing this measurement
  *     are scannable against the sky.
- *   - **cull** discards fragments on the other side of the axis: `measured`
- *     leaves only real measurements, `estimated` leaves only the fallbacks.
+ *   - **show** selects which half of the axis is drawn: `measured` draws only
+ *     real measurements, `estimated` draws only the fallbacks, culling the
+ *     other half's fragments in the shader.
  *   - **counts**, the missing-value tally and its share of every loaded catalog,
  *     which turns "that looks like a lot of magenta" into a number.
  *
@@ -50,8 +51,8 @@ import { PROVENANCE_FILTER_OPTIONS } from '../../data/provenanceFilter';
 import DebugSection from './DebugSection';
 import styles from './GalaxyProvenanceSection.module.css';
 
-const CULL_HINT =
-  'All draws everything. Measured drops the galaxies missing this value. Estimated keeps only those.';
+const SHOW_HINT =
+  'All draws everything. Measured draws only galaxies with a real measurement. Missing draws only those without one.';
 
 export type GalaxyProvenanceSectionProps = {
   readonly provenance: GalaxyProvenanceSettings;
@@ -79,19 +80,19 @@ function GalaxyProvenanceSection({
           className={cx(styles.head, styles.spanTwo)}
           title="Galaxies with no measured value for this in the source catalog. The pipeline filled one in."
         >
-          estimated
+          missing
         </span>
         <span
           className={styles.head}
           title="Paint the galaxies missing this measurement in the swatch colour."
         >
-          show
+          highlight
         </span>
         <span
           className={styles.head}
           title="Draw all galaxies, only those with a real measurement, or only those missing one."
         >
-          cull
+          show
         </span>
 
         {PROVENANCE_AXES.map((axis) => {
@@ -125,8 +126,8 @@ function GalaxyProvenanceSection({
               />
               <select
                 className={styles.select}
-                title={CULL_HINT}
-                aria-label={`Cull by ${axis.label.toLowerCase()} provenance`}
+                title={SHOW_HINT}
+                aria-label={`Show by ${axis.label.toLowerCase()} provenance`}
                 value={provenance[axis.id].filter}
                 onChange={(e) => onFilterChange(axis.id, e.target.value as ProvenanceFilter)}
               >
