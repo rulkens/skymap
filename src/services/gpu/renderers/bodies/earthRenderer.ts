@@ -57,12 +57,23 @@
  * alpha) contribute nothing until `setMap('clouds', …)` lands. All five
  * placeholder FORMATS derive from the one `isLinearTextureKind` predicate (only
  * the placeholder COLOUR is per-kind), so a placeholder can never disagree with
- * the real map that later replaces it. When
+ * the real map that later shadows it. When
  * `setMap('surface'|'material'|'night'|'normal'|'clouds', …)` runs it creates a
  * fresh texture sized to the bitmap (format chosen by that same
  * `isLinearTextureKind`), uploads it, generates mips, and rebuilds the fragment
  * bind group to point at the new view. Every `TextureKind` is now wired — no kind
  * is inert.
+ *
+ * The placeholder for a kind is itself upgradable: `setPlaceholderMap(kind,
+ * atlas, rect)` crops one tile out of the shared low-resolution all-bodies atlas
+ * — the first asset to land at boot — over that kind's 1×1, so an Earth reached
+ * before the multi-megabyte Blue Marble arrives shows a recognisable low-res
+ * Earth rather than a featureless blue ball. Only `'surface'` has a tile.
+ *
+ * The two setters write two DIFFERENT maps (`committed` and `placeholders`), and
+ * that is the entire out-of-order-arrival story: neither can free the other's
+ * texture, so a tile that arrives after the hi-res map cannot clobber it and no
+ * commit path has to ask which one landed first.
  *
  * ### uv / texture orientation
  *
@@ -116,6 +127,7 @@
 
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { EarthRenderer } from '../../../../@types/rendering/EarthRenderer';
+import type { AtlasTileRect } from '../../../../@types/data/AtlasTileRect';
 import type { TextureKind } from '../../../../@types/data/TextureKind';
 import { cubeSphereMesh } from '../../../../utils/math/cubeSphereMesh';
 import { generateMipChain, mipLevelCount } from '../../lib/generateMipChain';
@@ -522,6 +534,72 @@ export function createEarthRenderer(
     bindGroup = buildBindGroup();
   }
 
+  // ── setPlaceholderMap ─────────────────────────────────────────────────────
+  //
+  // Upgrade ONE kind's stand-in from its 1×1 to a tile of the shared
+  // low-resolution body atlas. Structurally `setMap`, with two differences that
+  // carry the whole design: the texture lands in `placeholders` rather than
+  // `committed`, so a committed hi-res map shadows it whichever order the two
+  // arrive in; and only `rect` of the source bitmap is copied.
+  //
+  // The atlas is a TRANSPORT format, not a sampling format. Cropping the tile at
+  // upload into an ordinary per-kind texture means no shader change, no layout
+  // change, no UV remap, no seam gutters, and no atlas texture bound anywhere —
+  // the alternative (bind the atlas and offset UVs in the fragment) would push
+  // the packing into WGSL and onto iOS's stricter validation for nothing.
+
+  function setPlaceholderMap(kind: TextureKind, atlas: ImageBitmap, rect: AtlasTileRect): void {
+    // Same predicate as `setMap`, deliberately: the tile and the map that later
+    // shadows it must agree on sRGB-vs-linear, or the stand-in would shift gamma
+    // the moment the hi-res texture lands.
+    const format: GPUTextureFormat = isLinearTextureKind(kind) ? 'rgba8unorm' : 'rgba8unorm-srgb';
+    const levels = mipLevelCount(rect.w, rect.h);
+    const fresh = device.createTexture({
+      label: `earth-placeholder-${kind}`,
+      size: [rect.w, rect.h, 1],
+      format,
+      mipLevelCount: levels,
+      // As in `setMap`: RENDER_ATTACHMENT is what lets generateMipChain render
+      // each level below 0.
+      usage:
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.COPY_DST |
+        GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+    // COORDINATE CONVENTION — `origin` and `flipY` INTERACT, and this is the one
+    // place a wrong assumption survives every test: the mock device rasterises
+    // nothing, so a mirrored or wrong-row crop is green in CI and visibly wrong
+    // on screen.
+    //
+    // `origin` is the minimum corner of the source sub-region in UNFLIPPED source
+    // coordinates — top-left origin, y increasing DOWNWARD, unaffected by `flipY`
+    // (WebGPU §GPUCopyExternalImageSourceInfo: "The origin option is still
+    // relative to the top-left corner of the source image, increasing downward").
+    // That is exactly the space `atlasTileRect` computes in. `flipY: true` is then
+    // applied to the SELECTED REGION alone — the region's bottom row becomes the
+    // destination's first row — so the tile lands with precisely the orientation a
+    // standalone `setMap` upload of that same image would have: texture v=0 is the
+    // tile's south row, matching the mesh's south-first v.
+    //
+    // Rejected: cropping a sub-bitmap with `createImageBitmap(atlas, x, y, w, h)`.
+    // It sidesteps `origin` entirely, but it is asynchronous — this entry point
+    // would have to return a promise, or the crop would move out to its caller —
+    // all to avoid an interaction the spec pins normatively.
+    device.queue.copyExternalImageToTexture(
+      { source: atlas, origin: { x: rect.x, y: rect.y }, flipY: true },
+      { texture: fresh },
+      [rect.w, rect.h, 1],
+    );
+    generateMipChain(device, fresh);
+    // Retire ONLY the prior PLACEHOLDER for this kind — the construction-time 1×1,
+    // or an earlier tile — and never the committed map. Mirror image of `setMap`'s
+    // rule above; the pair is what makes arrival order a non-question here, where
+    // there is no `clearMap` and nothing is ever evicted.
+    placeholders.get(kind)?.destroy();
+    placeholders.set(kind, fresh);
+    bindGroup = buildBindGroup();
+  }
+
   // ── draw ────────────────────────────────────────────────────────────────────
 
   function draw(pass: GPURenderPassEncoder, uniforms: Float32Array): void {
@@ -544,14 +622,19 @@ export function createEarthRenderer(
     indexBuffer.destroy();
     uniformBuffer.destroy();
     // Both layers: the committed maps and the placeholders that outlived them.
+    // Neither setter frees the other's layer, so teardown is the only place both
+    // are released — and the placeholders are worth clearing too now that one of
+    // them can be a mipped atlas tile rather than a 1×1.
     for (const texture of committed.values()) texture.destroy();
     for (const placeholder of placeholders.values()) placeholder.destroy();
     committed.clear();
+    placeholders.clear();
   }
 
   const renderer: EarthRenderer = {
     label: 'earthRenderer',
     setMap,
+    setPlaceholderMap,
     draw,
     destroy,
   };

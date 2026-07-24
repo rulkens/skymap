@@ -262,13 +262,14 @@ Format comes from `isLinearTextureKind(kind)` exactly as `setMap` does (`:494`),
 placeholder can never disagree with the map that later shadows it. In practice the atlas only
 ever passes `'surface'`.
 
-- [ ] Implement.
+- [x] Implement.
 - [ ] **Ask the USER to look:** from a cold load at the Earth home view, does Earth show a
       recognisable low-res Blue Marble (right way up, continents in the right hemisphere)
       before the hi-res map lands, and does it sharpen rather than flicker or revert when the
       hi-res map arrives?
-- [ ] `npm test -- earthRenderer` green.
-- [ ] Commit: the two files above.
+- [x] `npm test -- earthRenderer` green (5 passed). No new test: the standing refusal covers
+      this task — the crop's correctness is pixels, and the mock device rasterises nothing.
+- [x] Commit: the two files above.
 
 ### 3.5: the `'bodyTextureAtlas'` asset (key, slot, fetcher, wiring row, commit fan-out)
 
