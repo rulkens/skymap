@@ -1,9 +1,9 @@
 # Boot load priority — part 1: prep + the bounded asset queue
 
-**Spec:** [`docs/superpowers/specs/2026-07-24-boot-load-priority.md`](../specs/2026-07-24-boot-load-priority.md).
+**Spec:** [`docs/superpowers/specs/2026-07-24-boot-load-priority.md`](../../specs/2026-07-24-boot-load-priority.md).
 The spec is the source of truth for every decision; this plan only sequences the work.
 
-**Part 2:** [`2026-07-24-boot-load-priority-body-atlas.md`](2026-07-24-boot-load-priority-body-atlas.md)
+**Part 2:** [`2026-07-24-boot-load-priority-body-atlas.md`](../2026-07-24-boot-load-priority-body-atlas.md)
 carries Phase 3 (the body-texture atlas) plus the two closing tasks (entanglement-radar,
 verification). This file was split because the combined task list is large and the atlas is a
 self-contained second half. Execute part 1 fully, then part 2.
