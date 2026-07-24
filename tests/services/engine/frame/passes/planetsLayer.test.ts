@@ -157,16 +157,16 @@ const DRAW_CTX = {
 } as unknown as ReadyFrameContext;
 
 /**
- * State with a `planetRenderer` handle, a seeded planet list, and an empty
- * `bodyTextures` slot Map — so no body's texture is resident and the partition
- * routes every resolved body to the `flat` branch this layer draws (a resident
- * body would slide to `textured`, drawn by `texturedBodiesLayer` instead).
+ * State with a `planetRenderer` handle and a seeded planet list, and NO
+ * `texturedBodyRenderer` handle — `sceneBodyPartition`'s `?? false` then
+ * treats every body as not-resident, so the partition routes every resolved
+ * body to the `flat` branch this layer draws (a resident body would slide to
+ * `textured`, drawn by `texturedBodiesLayer` instead).
  */
 function makeState(planetRenderer: unknown, planets: readonly PlanetBody[]): EngineState {
   return {
     gpu: { planetRenderer },
     data: { bodies: { planets } },
-    assetSlots: { bodyTextures: new Map() },
   } as unknown as EngineState;
 }
 
@@ -381,11 +381,16 @@ describe('planetsLayer.pickEnabled (Bug A — textured-only frame stays pickable
   } as unknown as ReadyFrameContext;
   function texturedState(): EngineState {
     return {
-      gpu: { planetRenderer: makeRendererSpy(), bodyPickRenderer: { drawSphere: vi.fn() } },
+      gpu: {
+        planetRenderer: makeRendererSpy(),
+        bodyPickRenderer: { drawSphere: vi.fn() },
+        // hasMap('mars', 'surface') resident → the partition routes it to
+        // `textured`, not `flat`.
+        texturedBodyRenderer: {
+          hasMap: (id: string, kind: string) => id === 'mars' && kind === 'surface',
+        },
+      },
       data: { bodies: { planets: [texturedBody] } },
-      // Resident texture slot for the body → partition routes it to `textured`.
-      // Keyed by the composite `${id}:surface` slot key.
-      assetSlots: { bodyTextures: new Map([['mars:surface', { current: () => ({}) }]]) },
     } as unknown as EngineState;
   }
 
@@ -455,7 +460,6 @@ describe('planetsLayer.drawPick', () => {
     const state = {
       gpu: { bodyPickRenderer: { drawSphere: vi.fn() } },
       data: { bodies: { planets: [body] } },
-      assetSlots: { bodyTextures: new Map() },
     } as unknown as EngineState;
 
     planetsLayer.drawPick!(PASS_STUB, view, ctx, state);

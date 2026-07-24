@@ -22,6 +22,8 @@ import { evaluateRows } from '../../../../src/services/engine/wiring/reevaluateD
 import { Source } from '../../../../src/data/sources';
 import { clampTier } from '../../../../src/utils/math/clampTier';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
+import { PriorityQueue } from '../../../../src/utils/concurrency/priorityQueue';
+import { ASSET_QUEUE_CONCURRENCY } from '../../../../src/utils/concurrency/assetQueueConcurrency';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { AssetWiringRow } from '../../../../src/@types/loading/AssetWiringRow';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
@@ -58,6 +60,7 @@ function stubSlot(
     // The request the slot last committed with — the stale-tier evict edge reads
     // its tier. Seeded per stub so a test can model a slot resident at a tier.
     lastRequest: () => lastReq,
+    startedAtMs: () => null,
     forceReload: () => {},
     cancel: () => {},
     release: release as unknown as StubSlot['release'],
@@ -70,7 +73,15 @@ function stubSlot(
 /**
  * Build a minimal EngineState with the slices evaluateRows reads transitively
  * (via buildDemandCtx + slotFor): the `tier` root field, `settings`, `requests`,
- * and a `points` map carrying the stub slots.
+ * a `points` map carrying the stub slots, and the `subsystems.assetQueue` the
+ * load edge enqueues onto.
+ *
+ * The queue is constructed PER CALL, never shared: a queue leaked across cases
+ * would carry one test's pending entries into the next. It is also mandatory
+ * rather than optional — `evaluateRows` guards each row in a try/catch, so a
+ * missing queue would surface as a swallowed TypeError and turn every
+ * `expect(slot.load).toHaveBeenCalled()` in this file into a silent failure
+ * instead of a visible crash.
  */
 function makeState(points: Map<SourceType, AssetSlot<unknown, unknown>>): EngineState {
   return {
@@ -78,6 +89,7 @@ function makeState(points: Map<SourceType, AssetSlot<unknown, unknown>>): Engine
     settings: {},
     requests: new Set(),
     assetSlots: { points },
+    subsystems: { assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY) },
     // buildDemandCtx assembles the camera eye from pose + projection, so both
     // must be present. A far resting pose keeps the proximity-gated body-texture
     // rows out of the demand set.
@@ -96,7 +108,15 @@ function row(
   opts: { release?: AssetWiringRow['release']; req?: AssetWiringRow['req'] } = {},
 ): AssetWiringRow {
   const req = opts.req ?? ((tier) => ({ source: key, tier }));
-  return { key, factory: () => stubSlot(), req, demand, release: opts.release };
+  // `priority` is required on the row type but irrelevant to the edges under
+  // test here (fetch order is the queue's concern), so every stub row shares 0.
+  return { key, factory: () => stubSlot(), req, demand, release: opts.release, priority: 0 };
+}
+
+/** A demanded row carrying a real rank — for the fetch-order test, where
+ *  `priority` is the thing under test rather than an irrelevant field. */
+function ranked(key: SourceType, priority: number): AssetWiringRow {
+  return { ...row(key, () => true), priority };
 }
 
 afterEach(() => {
@@ -214,6 +234,44 @@ describe('evaluateRows', () => {
     expect(slot.release).not.toHaveBeenCalled();
   });
 
+  it('starts the best-ranked demanded rows first, whatever their table position', () => {
+    // The regression this pins: a single pass submitted its loads row by row,
+    // so the first ASSET_QUEUE_CONCURRENCY demanded rows WALKED started
+    // immediately and `priority` only decided who filled a slot that freed
+    // later. In the real table that let a rank-60 all-sky survey, second in the
+    // array, hold one of the two pipes for 22 s ahead of everything the opening
+    // view draws. Rows here are ordered worst-rank-first so array order and rank
+    // order disagree completely.
+    const started: SourceType[] = [];
+    /** A slot whose load records its source and never settles, so the pass's
+     *  two concurrency slots stay occupied for the whole assertion. */
+    const recordingSlot = (source: SourceType) => {
+      const slot = stubSlot();
+      slot.load.mockImplementation(() => {
+        started.push(source);
+        return new Promise<void>(() => {});
+      });
+      return slot;
+    };
+    const state = makeState(
+      new Map([
+        [Source.SDSS, recordingSlot(Source.SDSS)],
+        [Source.Glade, recordingSlot(Source.Glade)],
+        [Source.TwoMRS, recordingSlot(Source.TwoMRS)],
+      ]),
+    );
+
+    evaluateRows(state, [
+      ranked(Source.SDSS, 60),
+      ranked(Source.Glade, 10),
+      ranked(Source.TwoMRS, 0),
+    ]);
+
+    // Exactly ASSET_QUEUE_CONCURRENCY loads, and they are the two best ranks in
+    // rank order — SDSS, first in the array and worst-ranked, waits its turn.
+    expect(started).toEqual([Source.TwoMRS, Source.Glade]);
+  });
+
   it('a throwing release predicate is caught and does not stop later rows', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const sdss = stubSlot('ready');
@@ -247,6 +305,7 @@ describe('evaluateRows — bodyTextures stale-tier evict', () => {
     factory: () => stubSlot(),
     req: (tier) => ({ bodyId: 'earth', kind: 'surface', tier: clampTier(tier, 'large') }),
     demand: () => false,
+    priority: 0,
   };
 
   /** A low-ceiling body-texture row (Uranus ships only up to 'small'). */
@@ -255,6 +314,7 @@ describe('evaluateRows — bodyTextures stale-tier evict', () => {
     factory: () => stubSlot(),
     req: (tier) => ({ bodyId: 'uranus', kind: 'surface', tier: clampTier(tier, 'small') }),
     demand: () => false,
+    priority: 0,
   };
 
   /** State with `slot` in the keyed bodyTextures map under `key` at the given tier. */
@@ -264,6 +324,8 @@ describe('evaluateRows — bodyTextures stale-tier evict', () => {
       settings: {},
       requests: new Set(),
       assetSlots: { points: new Map(), bodyTextures: new Map([[key, slot]]) },
+      // Per-call queue, for the same reasons spelled out on `makeState`.
+      subsystems: { assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY) },
       cameraRuntime: {
         lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e6 } },
         projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },

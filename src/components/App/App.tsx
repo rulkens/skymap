@@ -189,6 +189,7 @@ export function App(): React.ReactElement {
             timingService={handleRef.current.debug.timingService}
             frameStats={handleRef.current.debug.frameStats}
             passNames={handleRef.current.debug.passOverrides.allNames}
+            assetPriorities={handleRef.current.debug.assetPriorities}
           />
         )}
       </div>

@@ -1,0 +1,32 @@
+/*
+ * The five LoadState colours — shared vocabulary for the asset-loading header
+ * tallies and the per-slot rows, so the dot beside a row and the count in the
+ * collapsed summary can never disagree about what "loading" looks like.
+ *
+ * A slot's `kind` is one of a small fixed set (idle/loading/committing/ready/
+ * error), so its colour is a class per kind rather than a runtime custom
+ * property — the set only grows by editing `LoadState` itself.
+ *
+ * Concept-named, not component-named: there is no eponymous .tsx. Consumers
+ * `composes` these in rather than reaching across with :global.
+ */
+
+.colorIdle {
+  color: #888;
+}
+
+.colorLoading {
+  color: #e0b341;
+}
+
+.colorCommitting {
+  color: #4aa3e0;
+}
+
+.colorReady {
+  color: #5fd07a;
+}
+
+.colorError {
+  color: #e0574a;
+}

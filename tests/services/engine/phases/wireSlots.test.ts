@@ -46,6 +46,8 @@ import { createEngineData } from '../../../../src/services/engine/data/createEng
 import { seedVolumeFields } from '../../../../src/data/volume/volumeFieldDefaults';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/data/defaults';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
+import { PriorityQueue } from '../../../../src/utils/concurrency/priorityQueue';
+import { ASSET_QUEUE_CONCURRENCY } from '../../../../src/utils/concurrency/assetQueueConcurrency';
 import {
   engineStatusChanged,
   engineStructureCountsChanged,
@@ -246,6 +248,7 @@ function makeFakeSlot(name: string): FakeSlot {
       };
     },
     lastRequest: () => null,
+    startedAtMs: () => null,
     forceReload: vi.fn(),
     cancel: vi.fn(),
     release: vi.fn(),
@@ -389,6 +392,9 @@ function makeState(
     },
     subsystems: {
       scheduler: { requestRender: vi.fn() } as never,
+      // `wireSlots` ends with `reevaluateDemand`, which enqueues onto this
+      // rather than calling `slot.load()` directly.
+      assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY),
       galaxyAtlas: null,
       proceduralDisks: null,
       texturedDisks: null,
@@ -489,6 +495,11 @@ describe('wireSlots', () => {
     await wireSlots(state, deps);
 
     expect(dispatchSpy).toHaveBeenCalledWith(engineStatusChanged({ kind: 'loading' }));
+    // The boot demand pass ENQUEUES rather than loading, and the queue starts
+    // only `ASSET_QUEUE_CONCURRENCY` of them before returning. Drain so every
+    // demanded row actually reaches its slot — the question here is which rows
+    // were demanded, not how many the queue runs at once.
+    await state.subsystems.assetQueue.drain();
     expect(sdssSlot.load).toHaveBeenCalled();
     expect(twoMrsSlot.load).toHaveBeenCalled();
     expect(gladeSlot.load).toHaveBeenCalled();
@@ -583,6 +594,8 @@ describe('wireSlots', () => {
     const deps = makeDeps();
 
     await wireSlots(state, deps);
+    // Drain the asset queue for the same reason as the case above.
+    await state.subsystems.assetQueue.drain();
 
     // Default-on / structures-visible / famous-loading ⇒ fetched.
     expect(mcpmFetcher).toHaveBeenCalled();
@@ -681,6 +694,10 @@ describe('wireSlots', () => {
     gladeSlot.fire(errorValue('glade boom'));
     famousSlot.fire(errorValue('famous boom'));
 
+    // Drain the asset queue for the same reason as the boot cases above: the
+    // fallback's re-evaluation enqueues the synthetic row behind whatever the
+    // boot pass already put in flight.
+    await state.subsystems.assetQueue.drain();
     expect(synthSlot.load).toHaveBeenCalledTimes(1);
     expect(synthSlot.load).toHaveBeenCalledWith({
       source: Source.Synthetic,

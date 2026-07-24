@@ -57,12 +57,23 @@
  * alpha) contribute nothing until `setMap('clouds', …)` lands. All five
  * placeholder FORMATS derive from the one `isLinearTextureKind` predicate (only
  * the placeholder COLOUR is per-kind), so a placeholder can never disagree with
- * the real map that later replaces it. When
+ * the real map that later shadows it. When
  * `setMap('surface'|'material'|'night'|'normal'|'clouds', …)` runs it creates a
  * fresh texture sized to the bitmap (format chosen by that same
  * `isLinearTextureKind`), uploads it, generates mips, and rebuilds the fragment
  * bind group to point at the new view. Every `TextureKind` is now wired — no kind
  * is inert.
+ *
+ * The placeholder for a kind is itself upgradable: `setPlaceholderMap(kind,
+ * atlas, rect)` crops one tile out of the shared low-resolution all-bodies atlas
+ * — the first asset to land at boot — over that kind's 1×1, so an Earth reached
+ * before the multi-megabyte Blue Marble arrives shows a recognisable low-res
+ * Earth rather than a featureless blue ball. Only `'surface'` has a tile.
+ *
+ * The two setters write two DIFFERENT maps (`committed` and `placeholders`), and
+ * that is the entire out-of-order-arrival story: neither can free the other's
+ * texture, so a tile that arrives after the hi-res map cannot clobber it and no
+ * commit path has to ask which one landed first.
  *
  * ### uv / texture orientation
  *
@@ -116,6 +127,7 @@
 
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { EarthRenderer } from '../../../../@types/rendering/EarthRenderer';
+import type { AtlasTileRect } from '../../../../@types/data/AtlasTileRect';
 import type { TextureKind } from '../../../../@types/data/TextureKind';
 import { cubeSphereMesh } from '../../../../utils/math/cubeSphereMesh';
 import { generateMipChain, mipLevelCount } from '../../lib/generateMipChain';
@@ -144,6 +156,47 @@ const CUBESPHERE_FACE_RESOLUTION = 48;
  *  f32 count (× 4 bytes) so this can never drift from the layout it writes.
  *  Written from `packEarthSurfaceUniforms`. */
 const UNIFORM_BUFFER_SIZE = EARTH_SURFACE_UNIFORM_FLOATS * 4;
+
+/**
+ * Per-kind map config — the one place a `TextureKind` is tied to a bind-group
+ * binding and a 1×1 placeholder texel. The bind-group layout, the placeholder
+ * textures, and the bind group are all derived by iterating these rows, so each
+ * binding number exists once rather than being restated at all three sites (and
+ * `setMap` needs no per-kind branch at all). Mirrors `texturedBodyRenderer`'s
+ * `KIND_CFG`.
+ *
+ * The FORMAT is deliberately not a row: it comes from `isLinearTextureKind(kind)`,
+ * the same predicate `setMap` uses for the real texture, so a placeholder can
+ * never allocate a format the real map contradicts. Bindings 0 (uniform) and 1
+ * (sampler) are fixed and hand-written; only the map bindings live here.
+ *
+ * Typed as a total `Record<TextureKind, …>` rather than a `Partial`: Earth binds
+ * every kind in the union, so a new kind is a compile error here until it gets a
+ * binding — which is the reminder you want, because the fragment shader needs a
+ * matching `@binding` anyway.
+ */
+const KIND_CFG = {
+  // Mid-blue, opaque — a visible-but-plain sphere until the Blue Marble lands.
+  surface: { binding: 2, placeholder: [70, 110, 160, 255] },
+  // roughness=1 (R), ocean mask=0 (G) → matte, glint-free until the map lands.
+  material: { binding: 3, placeholder: [255, 0, 0, 255] },
+  // Black → no emissive city-lights term; the dark side is lit only by `AMBIENT`.
+  night: { binding: 4, placeholder: [0, 0, 0, 255] },
+  // Flat tangent-space normal: RG=128 → nxy=(0,0), so nz reconstructs to 1 → the
+  // shading normal equals the geometric normal → no relief until the map lands.
+  normal: { binding: 5, placeholder: [128, 128, 255, 255] },
+  // Transparent → cloud alpha reads 0, so the surface fragment's ground shadow
+  // and night occlusion (both keyed on cloud alpha) stay inert until the Blue
+  // Marble cloud map lands.
+  clouds: { binding: 6, placeholder: [0, 0, 0, 0] },
+} as const satisfies Record<
+  TextureKind,
+  { binding: number; placeholder: readonly [number, number, number, number] }
+>;
+
+/** Every `TextureKind`, in `KIND_CFG` declaration order — the iteration order for
+ *  the layout entries, the placeholder textures, and the bind group. */
+const MAP_KINDS = Object.keys(KIND_CFG) as TextureKind[];
 
 /** Concatenate the six whole level-0 cube-sphere faces into one indexed mesh.
  *  Each `cubeSphereMesh` call builds a single face tile, so we sum the six
@@ -292,70 +345,47 @@ export function createEarthRenderer(
     addressModeV: 'clamp-to-edge',
   });
 
-  // ── Placeholder textures ──────────────────────────────────────────────────
+  // ── The two per-kind texture layers ───────────────────────────────────────
   //
-  // Each texture binding is fed a 1×1 placeholder at construction so the fragment
-  // shader never needs a "has-texture" branch — it always samples a real texture,
-  // and before the real bitmap lands it reads a uniform value chosen so that map
-  // contributes nothing surprising (mid-blue albedo, all-land material, black
-  // night = no city lights, flat normal = no relief).
+  // `placeholders` holds one 1×1 texture per kind, alive from construction to
+  // teardown. `committed` holds the real map for a kind once `setMap` uploads
+  // one, and `buildBindGroup` prefers it. Keeping the placeholder alive under the
+  // committed map (rather than overwriting a single cell) is what makes arrival
+  // order irrelevant — see the module header.
   //
-  // The sRGB-vs-linear FORMAT is not hardcoded per placeholder: it derives from
-  // `isLinearTextureKind(kind)` — the exact same predicate `setMap` uses for the
-  // real texture — so a placeholder can never disagree with the map that later
-  // replaces it. Only the placeholder COLOUR is per-kind. Surface/night are sRGB
-  // colour (`rgba8unorm-srgb`, hardware de-gammas on read); material/normal are
-  // linear-packed DATA (`rgba8unorm`, raw numeric channels).
-  function createPlaceholder(
-    kind: TextureKind,
-    label: string,
-    rgba: readonly [number, number, number, number],
-  ): GPUTexture {
-    const tex = device.createTexture({
-      label,
+  // Surface/night/clouds are sRGB colour (`rgba8unorm-srgb`, hardware de-gammas
+  // on read); material/normal are linear-packed DATA (`rgba8unorm`, raw numeric
+  // channels). That axis lives entirely in `isLinearTextureKind`.
+  const placeholders = new Map<TextureKind, GPUTexture>();
+  for (const kind of MAP_KINDS) {
+    const placeholder = device.createTexture({
+      label: `earth-placeholder-${kind}`,
       size: [1, 1, 1],
       format: isLinearTextureKind(kind) ? 'rgba8unorm' : 'rgba8unorm-srgb',
       usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
     });
     device.queue.writeTexture(
-      { texture: tex },
-      new Uint8Array(rgba),
+      { texture: placeholder },
+      new Uint8Array(KIND_CFG[kind].placeholder),
       { bytesPerRow: 4, rowsPerImage: 1 },
       [1, 1, 1],
     );
-    return tex;
+    placeholders.set(kind, placeholder);
   }
 
-  // Mid-blue, opaque — a visible-but-plain sphere until the Blue Marble lands.
-  let texture = createPlaceholder('surface', 'earth-placeholder-texture', [70, 110, 160, 255]);
-  // roughness=1 (R), ocean mask=0 (G) → matte, glint-free until the map lands.
-  let materialTexture = createPlaceholder(
-    'material',
-    'earth-placeholder-material',
-    [255, 0, 0, 255],
-  );
-  // Black → no emissive city-lights term; dark side lit only by `AMBIENT`.
-  let nightTexture = createPlaceholder('night', 'earth-placeholder-night', [0, 0, 0, 255]);
-  // Flat tangent-space normal: RG=128 → nxy=(0,0), so nz reconstructs to 1 →
-  // n == the geometric normal → no relief until the baked normal map lands.
-  let normalTexture = createPlaceholder('normal', 'earth-placeholder-normal', [128, 128, 255, 255]);
-  // Transparent → cloud alpha reads 0, so the surface fragment's ground shadow
-  // and night occlusion (both keyed on cloud alpha) are inert until the Blue
-  // Marble cloud map lands. sRGB colour like surface/night (`isLinearTextureKind`
-  // returns false for `clouds`), so it allocates `rgba8unorm-srgb` automatically.
-  let cloudTexture = createPlaceholder('clouds', 'earth-placeholder-clouds', [0, 0, 0, 0]);
+  const committed = new Map<TextureKind, GPUTexture>();
 
   // ── Bind group layout (explicit, not 'auto') ──────────────────────────────
   //
   // Binding 0: `EarthSurfaceUniforms`, VERTEX (mvp) + FRAGMENT (sun dir, camera,
   //            material knobs).
-  // Binding 1: the sampler, fragment stage (shared by all three textures).
-  // Binding 2: the 2D Earth albedo texture, fragment stage (filterable f32).
-  // Binding 3: the 2D material (roughness/ocean-mask) texture, fragment stage.
-  // Binding 4: the 2D night (Black Marble city-lights) texture, fragment stage.
-  // Binding 5: the 2D tangent-space normal (relief) texture, fragment stage.
-  // Binding 6: the 2D cloud (coverage in alpha) texture, fragment stage — the
-  //            surface samples it for the ground shadow + night occlusion.
+  // Binding 1: the sampler, fragment stage (shared by all five textures).
+  // Bindings 2–6: the map textures, fragment stage (filterable f32) — albedo,
+  //            material (roughness/ocean-mask), night (Black Marble city
+  //            lights), tangent-space normal (relief), and cloud
+  //            (coverage-in-alpha, sampled by the surface for its ground shadow +
+  //            night occlusion). Derived from `KIND_CFG`, which is where those
+  //            numbers live; they must match the fragment's `@binding`s.
   const bindGroupLayout = device.createBindGroupLayout({
     label: 'earth-bgl',
     entries: [
@@ -369,38 +399,16 @@ export function createEarthRenderer(
         visibility: GPUShaderStage.FRAGMENT,
         sampler: { type: 'filtering' },
       },
-      {
-        binding: 2,
+      ...MAP_KINDS.map((kind) => ({
+        binding: KIND_CFG[kind].binding,
         visibility: GPUShaderStage.FRAGMENT,
-        texture: { sampleType: 'float' },
-      },
-      {
-        binding: 3,
-        visibility: GPUShaderStage.FRAGMENT,
-        texture: { sampleType: 'float' },
-      },
-      {
-        binding: 4,
-        visibility: GPUShaderStage.FRAGMENT,
-        texture: { sampleType: 'float' },
-      },
-      {
-        binding: 5,
-        visibility: GPUShaderStage.FRAGMENT,
-        texture: { sampleType: 'float' },
-      },
-      {
-        binding: 6,
-        visibility: GPUShaderStage.FRAGMENT,
-        texture: { sampleType: 'float' },
-      },
+        texture: { sampleType: 'float' as const },
+      })),
     ],
   });
 
-  // The bind group references the current `texture` + `materialTexture` +
-  // `nightTexture` + `normalTexture` + `cloudTexture` views. `setMap` rebuilds it
-  // against a fresh texture (binding 2, 3, 4, 5, or 6), so it lives in a mutable
-  // closure slot.
+  // Resolve every map binding as committed-over-placeholder. `setMap` rebuilds
+  // the group against a fresh texture, so it lives in a mutable closure slot.
   function buildBindGroup(): GPUBindGroup {
     return device.createBindGroup({
       label: 'earth-bg',
@@ -408,11 +416,10 @@ export function createEarthRenderer(
       entries: [
         { binding: 0, resource: { buffer: uniformBuffer } },
         { binding: 1, resource: sampler },
-        { binding: 2, resource: texture.createView() },
-        { binding: 3, resource: materialTexture.createView() },
-        { binding: 4, resource: nightTexture.createView() },
-        { binding: 5, resource: normalTexture.createView() },
-        { binding: 6, resource: cloudTexture.createView() },
+        ...MAP_KINDS.map((kind) => ({
+          binding: KIND_CFG[kind].binding,
+          resource: (committed.get(kind) ?? placeholders.get(kind)!).createView(),
+        })),
       ],
     });
   }
@@ -477,12 +484,12 @@ export function createEarthRenderer(
   // ── setMap ─────────────────────────────────────────────────────────────────
 
   function setMap(kind: TextureKind, bitmap: ImageBitmap): void {
-    // Every `TextureKind` is wired: plan A the `surface` (day albedo) +
-    // `material` (roughness/ocean-mask) maps, plan B the `night` (Black Marble
+    // Every `TextureKind` has a `KIND_CFG` row: plan A the `surface` (day albedo)
+    // + `material` (roughness/ocean-mask) maps, plan B the `night` (Black Marble
     // city-lights) map, plan C the `normal` (tangent-space relief) map, and plan D
     // the `clouds` (coverage-in-alpha) map the surface samples for its ground
     // shadow + night occlusion. No kind is inert, so there is no early-return
-    // guard — the retirement branch below is exhaustive over the union.
+    // guard.
 
     // sRGB colour (surface/night/clouds) samples through `rgba8unorm-srgb` so the
     // hardware de-gammas on read; linear-packed data (material/normal) samples
@@ -494,16 +501,7 @@ export function createEarthRenderer(
     const format: GPUTextureFormat = isLinearTextureKind(kind) ? 'rgba8unorm' : 'rgba8unorm-srgb';
     const levels = mipLevelCount(bitmap.width, bitmap.height);
     const fresh = device.createTexture({
-      label:
-        kind === 'material'
-          ? 'earth-material'
-          : kind === 'night'
-            ? 'earth-night'
-            : kind === 'normal'
-              ? 'earth-normal'
-              : kind === 'clouds'
-                ? 'earth-clouds'
-                : 'earth-texture',
+      label: `earth-${kind}`,
       size: [bitmap.width, bitmap.height, 1],
       format,
       mipLevelCount: levels,
@@ -526,24 +524,79 @@ export function createEarthRenderer(
     // Fill mip levels 1..N-1 so the mipmapFilter:'linear' sampler has a real
     // chain to trilinearly blend as Earth shrinks toward the glint handoff.
     generateMipChain(device, fresh);
-    // Retire the previous texture (placeholder or a prior bitmap) in the matching
-    // slot and rebuild the bind group against the new view.
-    if (kind === 'material') {
-      materialTexture.destroy();
-      materialTexture = fresh;
-    } else if (kind === 'night') {
-      nightTexture.destroy();
-      nightTexture = fresh;
-    } else if (kind === 'normal') {
-      normalTexture.destroy();
-      normalTexture = fresh;
-    } else if (kind === 'clouds') {
-      cloudTexture.destroy();
-      cloudTexture = fresh;
-    } else {
-      texture.destroy();
-      texture = fresh;
-    }
+    // Retire ONLY a prior committed texture of this kind — never the placeholder,
+    // which stays alive under the committed layer for the whole renderer
+    // lifetime. That is the out-of-order-arrival protection: a late low-resolution
+    // tile lands in `committed` and supersedes its predecessor, and no arrival
+    // order can leave a binding pointing at a destroyed texture.
+    committed.get(kind)?.destroy();
+    committed.set(kind, fresh);
+    bindGroup = buildBindGroup();
+  }
+
+  // ── setPlaceholderMap ─────────────────────────────────────────────────────
+  //
+  // Upgrade ONE kind's stand-in from its 1×1 to a tile of the shared
+  // low-resolution body atlas. Structurally `setMap`, with two differences that
+  // carry the whole design: the texture lands in `placeholders` rather than
+  // `committed`, so a committed hi-res map shadows it whichever order the two
+  // arrive in; and only `rect` of the source bitmap is copied.
+  //
+  // The atlas is a TRANSPORT format, not a sampling format. Cropping the tile at
+  // upload into an ordinary per-kind texture means no shader change, no layout
+  // change, no UV remap, no seam gutters, and no atlas texture bound anywhere —
+  // the alternative (bind the atlas and offset UVs in the fragment) would push
+  // the packing into WGSL and onto iOS's stricter validation for nothing.
+
+  function setPlaceholderMap(kind: TextureKind, atlas: ImageBitmap, rect: AtlasTileRect): void {
+    // Same predicate as `setMap`, deliberately: the tile and the map that later
+    // shadows it must agree on sRGB-vs-linear, or the stand-in would shift gamma
+    // the moment the hi-res texture lands.
+    const format: GPUTextureFormat = isLinearTextureKind(kind) ? 'rgba8unorm' : 'rgba8unorm-srgb';
+    const levels = mipLevelCount(rect.w, rect.h);
+    const fresh = device.createTexture({
+      label: `earth-placeholder-${kind}`,
+      size: [rect.w, rect.h, 1],
+      format,
+      mipLevelCount: levels,
+      // As in `setMap`: RENDER_ATTACHMENT is what lets generateMipChain render
+      // each level below 0.
+      usage:
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.COPY_DST |
+        GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+    // COORDINATE CONVENTION — `origin` and `flipY` INTERACT, and this is the one
+    // place a wrong assumption survives every test: the mock device rasterises
+    // nothing, so a mirrored or wrong-row crop is green in CI and visibly wrong
+    // on screen.
+    //
+    // `origin` is the minimum corner of the source sub-region in UNFLIPPED source
+    // coordinates — top-left origin, y increasing DOWNWARD, unaffected by `flipY`
+    // (WebGPU §GPUCopyExternalImageSourceInfo: "The origin option is still
+    // relative to the top-left corner of the source image, increasing downward").
+    // That is exactly the space `atlasTileRect` computes in. `flipY: true` is then
+    // applied to the SELECTED REGION alone — the region's bottom row becomes the
+    // destination's first row — so the tile lands with precisely the orientation a
+    // standalone `setMap` upload of that same image would have: texture v=0 is the
+    // tile's south row, matching the mesh's south-first v.
+    //
+    // Rejected: cropping a sub-bitmap with `createImageBitmap(atlas, x, y, w, h)`.
+    // It sidesteps `origin` entirely, but it is asynchronous — this entry point
+    // would have to return a promise, or the crop would move out to its caller —
+    // all to avoid an interaction the spec pins normatively.
+    device.queue.copyExternalImageToTexture(
+      { source: atlas, origin: { x: rect.x, y: rect.y }, flipY: true },
+      { texture: fresh },
+      [rect.w, rect.h, 1],
+    );
+    generateMipChain(device, fresh);
+    // Retire ONLY the prior PLACEHOLDER for this kind — the construction-time 1×1,
+    // or an earlier tile — and never the committed map. Mirror image of `setMap`'s
+    // rule above; the pair is what makes arrival order a non-question here, where
+    // there is no `clearMap` and nothing is ever evicted.
+    placeholders.get(kind)?.destroy();
+    placeholders.set(kind, fresh);
     bindGroup = buildBindGroup();
   }
 
@@ -568,16 +621,20 @@ export function createEarthRenderer(
     tangentBuffer.destroy();
     indexBuffer.destroy();
     uniformBuffer.destroy();
-    texture.destroy();
-    materialTexture.destroy();
-    nightTexture.destroy();
-    normalTexture.destroy();
-    cloudTexture.destroy();
+    // Both layers: the committed maps and the placeholders that outlived them.
+    // Neither setter frees the other's layer, so teardown is the only place both
+    // are released — and the placeholders are worth clearing too now that one of
+    // them can be a mipped atlas tile rather than a 1×1.
+    for (const texture of committed.values()) texture.destroy();
+    for (const placeholder of placeholders.values()) placeholder.destroy();
+    committed.clear();
+    placeholders.clear();
   }
 
   const renderer: EarthRenderer = {
     label: 'earthRenderer',
     setMap,
+    setPlaceholderMap,
     draw,
     destroy,
   };

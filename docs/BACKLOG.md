@@ -40,12 +40,20 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **`useStructureMemberCount` honest invalidation** `deferred` — the hook's `sourceCounts`/`tier` args are memo tripwires for live GPU catalog state; swap for a real catalog-generation signal. → [details](backlog/2026-06-29-usestructuremembercount-invalidation.md)
 - [ ] **Asset-loading audit + debug UI sweep** `needs-design` — inventory what loads/stays resident (`release` exists for body textures only), add eviction where it pays; redesign the flat one-row-per-slot `AssetLoadingSection`. → [details](backlog/2026-07-22-asset-loading-audit.md)
 - [ ] **Derive `BULK_CATALOG_CATEGORIES` from a registry flag** `deferred` — add `hasBulkCatalog` to `SOURCE_REGISTRY` rows so the hand-listed `['cluster','supercluster','void']` in `assetWiring.ts` derives from it. Keep the three category lists (UI / marker / bulk-fetch) separate — membership genuinely differs. (`bearsMarker` + `DEFAULT_CATEGORY_VISIBILITY` already shipped.)
+- [ ] **Scale-gated asset demand** `needs-design` — boot fetches catalogs invisible at the current camera distance, ~68 MB of ~101.7 MB drawing nothing at the Earth boot view. → [details](backlog/2026-07-24-scale-gated-asset-demand.md)
+- [ ] **`famous_stars_meta.json` fetches unconditionally at boot** `ready` — bypasses slot wiring entirely (`useFamousStarsMeta.ts`); give it a lazy demand predicate like `pgcAlias`'s one-shot `paletteOpened`, so it loads on first star InfoCard open instead.
+- [ ] **Font atlas load blocks `initGpu`** `needs-design` — the ~297 KB Cormorant fetch is awaited before every renderer + catalog fetch in `initGpu` starts; make label rendering tolerate a missing atlas instead. → [details](backlog/2026-07-24-font-atlas-blocks-initgpu.md)
+- [ ] **Direct `slot.load()` sites bypass the asset queue** `needs-design` — five call sites fetch outside the bounded queue, so `ASSET_QUEUE_CONCURRENCY` is not the system-wide bound it reads as. → [details](backlog/2026-07-24-direct-loads-bypass-asset-queue.md)
+- [ ] **Companion-asset relation has three homes** `needs-design` — "famousMeta rides Famous" is authored as a registry list, a demand predicate, and a rank integer. → [details](backlog/2026-07-24-companion-asset-relation-three-homes.md)
 
 ## Rendering
 
 - [ ] **Multi-star sphere presence** `deferred` — the field-star sphere is one-at-a-time (nearest wins); a Gaia-resolved double a few AU apart would leave the companion sprite-retired with no body. → [details](backlog/2026-07-21-multi-star-sphere-presence.md)
 - [ ] **Saturn ring brightness** `ready` — the ring reads too dim next to the new limb-darkened disc; retune ring albedo/exposure (surfaced in the planet-atmospherics per-body visual pass).
+- [ ] **Atmosphere limb transparent seam** `needs-investigation` — thin fully-transparent ring between a body's surface and its atmosphere shell (seen on Mars). → [details](backlog/2026-07-24-atmosphere-limb-transparent-seam.md)
+- [ ] **Body-texture colour calibration** `needs-design` — Mars reads over-saturated; the `sss` sources are enhanced, not colorimetric, and no target appearance is recorded. → [details](backlog/2026-07-24-mars-texture-colour-calibration.md)
 - [ ] **Body texture meridian registration (non-Earth)** `deferred` — every non-Earth map renders 180° rotated about its spin axis (invisible without a phase ground truth; Earth fixed in #472). → [details](backlog/2026-07-21-body-texture-meridian-registration.md)
+- [ ] **Body-texture store consolidation** `needs-design` — four renderers (textured, Earth, ring, cloud-shell) each hand-roll map storage + placeholder fallback separately. → [details](backlog/2026-07-24-body-texture-store-consolidation.md)
 - [ ] **Photoreal-Earth follow-ups** `deferred` — drift traps + fidelity gaps from plans A–E (equirect-uv mirror, setMap kind table, shared proxy-sphere idiom). → [details](backlog/2026-07-19-photoreal-earth-followups.md)
 - [ ] **Titan atmosphere** `needs-design` — minimal params-row-over-flat-sphere vs full Venus-style cloud-as-surface + limb treatment (needs a texture through the fetch/build pipeline). → [details](backlog/2026-07-19-titan-atmosphere.md)
 - [ ] **Cloud deck PBR + live coverage** `deferred` — deck is Lambert-lit with no thickness channel (alpha = luminance of RGB); analytic multiple-scattering phase term is cheap, real τ / live GIBS clouds are separable data-layer efforts. → [details](backlog/2026-07-19-cloud-deck-pbr.md)
@@ -69,6 +77,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Orbit-trail residual speckle (edge-on pose)** `deferred` — gradient-minors hoist shipped (#448) but per-pixel stipple survives on hardware; remaining suspects ranked (q.z horizon noise, Newton-refine flicker, hard-discard binarization). → [details](backlog/2026-07-18-orbit-trail-residual-speckle.md)
 - [ ] **Star-picking deferred edges** `ready` — star deep link waits forever with Gaia disabled; ring collapses on a degenerate sizePx=0 frame; both small guards. → [details](backlog/2026-07-18-star-picking-deferred-edges.md)
 - [ ] **bodyTextureFetcher content-type guard** `ready` — Vite's SPA fallback serves index.html for missing texture files; the fetcher hands it to createImageBitmap and fails as "source image could not be decoded" — check the response content-type and fail loudly with the real 404 path instead.
+- [ ] **Jupiter/Saturn 404 on the `large` texture tier** `ready` — `bodyTextureRegistry.ts` declares `surface: 'large'` for both but no 8192px texture exists on disk; fails silently into the slot's error state. Generate the textures or lower the registry ceiling to `medium`.
 - [ ] **Milliquas AGN colormap** `needs-design` — AGN reuse the galaxy B−R ramp and misread as blue star-forming; give them their own encoding. Only the kPerZ=0 clamp shipped (#282). → [details](backlog/2026-06-29-milliquas-agn-colormap.md)
 - [ ] **Supercluster/wall shape in focus** `needs-design` — membership is a sphere, so sheets like the Hydra Wall get swallowed; try an ellipsoid fit or density-field membership. → [details](backlog/2026-06-29-supercluster-shape-focus.md)
 - [ ] **In-scene thumbnail quality (SDSS/DSS)** `needs-design` — the auto-fetched atlas-quad path still uses fixed cutout sizes; mask / sky-sub / per-galaxy size / DESI / brightness-norm. (InfoCard path already got sizing + DSS color.) → [details](backlog/2026-06-29-thumbnail-quality-sdss-dss.md)
@@ -85,6 +94,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Tier-ladder single home** `ready` — one exported TIER_LADDER const (Tier type derived) replacing the copies in clampTier, emittedTiersForBody, tiersFittingSourceWidth, buildAllBins, buildStars.
 - [ ] **Star-bin ↔ MW-cloud crossfade density calibration** `deferred` — calibrate the procedural cloud's inner density/colors to Gaia counts if the v1 hand-tuned crossfade band shows a seam; gated on the star bin shipping. → [details](backlog/2026-07-13-star-bin-crossfade-density-calibration.md)
 - [ ] **Zone of Avoidance visualization + tour beat** `needs-design` — make the galactic-plane galaxy-density gap legible and explain it as dust extinction, not a real void; feature the NIR-only ZoA dwarfs. → [details](backlog/2026-07-21-zone-of-avoidance-visualization.md)
+- [ ] **Filaments + flow field lack scale fade bands** `ready` — both layers gate on user intent alone, with no zoom-based fade like the survey point clouds. → [details](backlog/2026-07-24-filaments-flow-scale-bands.md)
 
 ## UI & UX
 
@@ -111,6 +121,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Deproject invariant consolidation** `deferred` — square-in/square-out tested 4× across the curator export surface; fold into one parameterized test if that surface is reworked. → [details](backlog/2026-07-10-deproject-invariant-consolidation.md)
 - [ ] **move-files: untracked references** `ready` — ts-morph skips `?worker`/`?static` specifiers + `vi.mock` literals; a stale `?worker` is silent on BOTH tsc and vite build. Rewrite them, then fail loudly on anything still dangling. → [details](backlog/2026-07-14-move-files-untracked-references.md)
 - [ ] **refactor CLI follow-ups** `deferred` — runOp dispatch table + extract closure gaps (dropped `//` comments, `export {}` form, import carry) + refusal/error-context polish. → [details](backlog/2026-07-21-refactor-cli-followups.md)
+- [ ] **Dead files in `public/data/`** `ready` — unreachable `desi-deep-NEW.bin`/`desi-deep-OLD.bin` + superseded `clusters.ccat`/`clusters_meta.json` (structures.ccat replaced them); delete all four. `filaments-sdss.bin` is build-input only (`package.json:49`), not runtime-fetchable — keep it.
 
 ## External / blocked
 

@@ -59,6 +59,7 @@ import { createConstellationsSlot } from '../../loading/slots/constellationsSlot
 import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
 import { createPgcAliasSlot } from '../../loading/slots/pgcAliasSlot';
 import { createStarCatalogSlot } from '../../loading/slots/starCatalogSlot';
+import { createBodyTextureAtlasSlot } from '../../loading/slots/bodyTextureAtlasSlot';
 import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
 import { BODY_TEXTURE_REGISTRY } from '../../../data/bodies/bodyTextureRegistry';
@@ -106,8 +107,13 @@ const externalFactory = (): never => {
   );
 };
 
-/** One demand+req row for a point source, marked as externally built. */
-function pointRow(source: SourceType): AssetWiringRow {
+/**
+ * One demand+req row for a point source, marked as externally built.
+ * `priority` is a parameter rather than a constant because the eight galaxy
+ * catalogs do NOT share a rank: Famous outranks every bulk survey, 2MRS
+ * outranks the rest, and the remaining six are ordered small-payload-first.
+ */
+function pointRow(source: SourceType, priority: number): AssetWiringRow {
   // The source → galaxy-catalog-id registry mapping is resolved once at row
   // construction, like the volume-field handles above. The items record is
   // keyed by GalaxyCatalogId but the cast comes from the broader SourceType, so the
@@ -119,6 +125,7 @@ function pointRow(source: SourceType): AssetWiringRow {
     factory: externalFactory,
     req: (tier) => ({ source, tier }),
     demand: (ctx) => ctx.settings.galaxyCatalogs.items[id]?.enabled === true,
+    priority,
   };
 }
 
@@ -151,6 +158,10 @@ function starCatalogRow(source: SourceType): AssetWiringRow {
     req: (tier) => ({ source, tier }),
     demand: (ctx) =>
       ctx.settings.starCatalogs.enabled && ctx.settings.starCatalogs.items[id]?.enabled === true,
+    // Every star catalog shares one rank: they are the Earth boot view's own
+    // scale rung, ahead of the bulk galaxy surveys but behind the bodies and
+    // the two catalogs called out in the ASSET_WIRING header.
+    priority: 50,
   };
 }
 
@@ -213,19 +224,68 @@ function bodyTextureRow(entry: BodyTextureKey): AssetWiringRow {
     release: (ctx) =>
       distanceMpc(ctx.cameraPosMpc, bodyPosOf(entry.bodyId, ctx.simDays)) >
       2 * loadRadiusMpc(entry.bodyId),
+    // One rank for the whole family: a body texture is only ever demanded once
+    // the camera is already close enough to see the body, so by the time any of
+    // these enqueue they are the most relevant asset on the wire. Ranking them
+    // against each other would be ranking assets that are rarely co-demanded.
+    priority: 10,
   };
 }
 
+/**
+ * ### Fetch ranks (`priority`, lower first)
+ *
+ * The array order below is grouped for READING (point sources together, overlays
+ * together); the `priority` integers are what decide fetch order, and the two
+ * orders differ on purpose. In particular the six bulk-survey ranks 60–65 are
+ * DISTINCT: `popHighestPriority` breaks ties by first-encountered, so equal ranks
+ * would fall back to this array's order and fetch GLADE (26 MB) before Milliquas
+ * (12.8 MB) — the large-before-small order the ranking exists to prevent. Likewise
+ * the DESI rows read Deep, Wedge, Sgw here but rank Deep (1.6 MB), Sgw (2.4 MB),
+ * Wedge (10.3 MB).
+ *
+ * Two ranks look wrong at a glance and are deliberate:
+ *
+ *   - **Famous galaxies (20) outrank the star catalog (50).** The famous catalog
+ *     is the only exemption from `surveyDeepZoom` in the codebase
+ *     (`pointSpritesLayer.ts`, mirrored on the pick path), so famous objects stay
+ *     visible at close-in scales where every bulk survey has faded out. It is the
+ *     one galaxy asset that can draw at the boot rung.
+ *   - **2MRS (40) outranks the star catalog (50)**, ordering data that is INVISIBLE
+ *     at the Earth boot view ahead of data that is fully visible there. It costs
+ *     about a second of stars-arrive-later and buys local structure already being
+ *     resident the moment the camera pulls back. Accepted knowingly.
+ */
 export const ASSET_WIRING: readonly AssetWiringRow[] = [
+  // ── Low-resolution all-bodies surface atlas ──────────────────────
+  // Rank 0, the head of the table: its entire purpose is to arrive before any
+  // hi-res texture, so a body reached early shows its own surface instead of a
+  // flat albedo sphere. ~160 KB buys a tile for all thirteen textured bodies.
+  //
+  // `demand: () => true` — unconditional at boot, and deliberately NOT
+  // proximity-gated. The per-body rows below gate on the camera because their
+  // payloads are multi-MB; this one is the universal fallback those upgrade, so
+  // gating it would reinstate the very "reached before its texture" gap it
+  // exists to close. Registry-built (no `built: 'external'`): there is no
+  // renderer to co-mint it beside — the commit fans out to several — and
+  // `installSlots` routes its string key to the matching named field.
+  {
+    key: 'bodyTextureAtlas',
+    factory: (deps) => createBodyTextureAtlasSlot(deps.state, deps.cb),
+    req: () => undefined,
+    demand: () => true,
+    priority: 0,
+  },
+
   // ── Point sources (demand+req only; slots minted in initGpu) ──────
-  pointRow(Source.SDSS),
-  pointRow(Source.TwoMRS),
-  pointRow(Source.Glade),
-  pointRow(Source.Milliquas),
-  pointRow(Source.FamousGalaxy),
-  pointRow(Source.DesiDeep),
-  pointRow(Source.DesiWedge),
-  pointRow(Source.DesiSgw),
+  pointRow(Source.SDSS, 60),
+  pointRow(Source.TwoMRS, 40),
+  pointRow(Source.Glade, 62),
+  pointRow(Source.Milliquas, 61),
+  pointRow(Source.FamousGalaxy, 20),
+  pointRow(Source.DesiDeep, 63),
+  pointRow(Source.DesiWedge, 65),
+  pointRow(Source.DesiSgw, 64),
   {
     // Synthetic fallback: loads only when armed by `createSyntheticFallback`,
     // which runs the precise gate (count-aware, hidden-at-boot-aware) at the
@@ -236,6 +296,9 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     factory: externalFactory,
     req: (tier) => ({ source: Source.Synthetic, tier }),
     demand: (ctx) => ctx.request('syntheticFallback'),
+    // Ahead of everything real: it is only ever demanded when the real catalogs
+    // failed, and it is the stand-in that keeps the view from being empty.
+    priority: 5,
   },
 
   // ── Famous-galaxy meta sidecar ───────────────────────────────────
@@ -247,6 +310,9 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     factory: (deps) => createFamousMetaSlot(deps.state, deps.cb),
     req: (tier) => ({ tier }),
     demand: (ctx) => ctx.slotState(Source.FamousGalaxy) !== 'idle',
+    // Immediately behind its .bin (20) — the companion join wants the text to
+    // ride alongside the binary, not to overtake it.
+    priority: 21,
   },
 
   // ── Cosmic-web filament skeleton ─────────────────────────────────
@@ -256,6 +322,8 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     factory: (deps) => createFilamentSlot(deps.state, deps.cb),
     req: (tier) => ({ tier }),
     demand: (ctx) => ctx.settings.filaments.enabled,
+    // Cosmic-web overlays sit behind the catalogs they are drawn over.
+    priority: 80,
   },
 
   // ── MCPM Cosmic Web volume ───────────────────────────────────────
@@ -266,6 +334,8 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     factory: (deps) => createMcpmSlot(deps.state, deps.cb),
     req: (tier) => ({ tier }),
     demand: (ctx) => ctx.settings.volumes.items[MCPM_FIELD]?.enabled === true,
+    // The largest single boot payload, and it only reads at the widest rung.
+    priority: 70,
   },
 
   // ── CF-4 DM density volume ───────────────────────────────────────
@@ -275,6 +345,9 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     factory: (deps) => createCf4DensitySlot(deps.state, deps.cb),
     req: () => undefined,
     demand: (ctx) => ctx.settings.volumes.items[CF4_FIELD]?.enabled === true,
+    // Default-off, so it only ever competes with a boot fetch when a user turns
+    // it on mid-load; last of the cosmic-web overlays.
+    priority: 82,
   },
 
   // ── CF4++ velocity flow field ────────────────────────────────────
@@ -288,6 +361,8 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     factory: (deps) => createFlowFieldSlot(deps.state, deps.cb),
     req: () => undefined,
     demand: (ctx) => ctx.settings.flow.enabled,
+    // Default-off overlay on the same rung as filaments, behind them by size.
+    priority: 81,
   },
 
   // ── Constellation stick-figure overlay ───────────────────────────
@@ -302,6 +377,8 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     factory: (deps) => createConstellationsSlot(deps.state, deps.cb),
     req: () => undefined,
     demand: (ctx) => ctx.settings.constellations.enabled,
+    // Small JSON drawn over the near-sky rung, right behind the marker catalog.
+    priority: 31,
   },
 
   // ── Cluster/supercluster bulk coverage ───────────────────────────
@@ -318,6 +395,9 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
           ctx.settings.structures.items[cat].enabled ||
           ctx.settings.structures.items[cat].labelEnabled,
       ),
+    // A small .ccat that draws rings + labels across many rungs at once, so it
+    // buys visible structure per byte well ahead of any bulk survey.
+    priority: 30,
   },
 
   // ── PGC alias map ────────────────────────────────────────────────
@@ -327,6 +407,9 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     factory: (deps) => createPgcAliasSlot(deps.state, deps.cb),
     req: () => undefined,
     demand: (ctx) => ctx.request('paletteOpened'),
+    // Last: nothing renders from it, and it is only demanded by an explicit
+    // one-shot user action that tolerates a wait.
+    priority: 90,
   },
 
   // ── Body-surface textures (proximity-demanded + released) ────────
