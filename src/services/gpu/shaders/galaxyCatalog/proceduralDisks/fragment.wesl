@@ -4,8 +4,17 @@
 // apparent edge) and shades a two-component galaxy brightness
 // profile:
 //
-//   - Gaussian bulge (sigma = 0.28): bright, tight inner core.
+//   - Gaussian bulge (sigma = 0.18): bright, tight inner core.
 //   - Exponential disk (scale = 0.5): softer halo.
+//
+// The bulge/disk weights (0.85 / 0.15) sum to 1.0, so the CENTRE peak
+// stays at 1.0 x sbAmp — the value that already matches the companion
+// point sprite at the crossfade, so retuning contrast here does not
+// reintroduce a brightness pop at the handoff. Contrast is boosted by
+// draining weight OUT of the halo and tightening the bulge, which drops
+// the mid/outer-disk floor while leaving the peak fixed: the bright core
+// clears the bloom threshold while the dim halo stays below it, so the
+// nucleus blooms and the disk does not.
 //
 // The profile's output is scaled by 'in.sbAmp', the physical
 // surface-brightness amplitude computed once per row in
@@ -50,10 +59,10 @@ import package::lib::colorIndex::ramp;
 // explicit.
 import package::lib::masks::circularMask;
 
-const BULGE_SIGMA = 0.28;
+const BULGE_SIGMA = 0.18;
 const DISK_SCALE = 0.5;
-const BULGE_WEIGHT = 0.7;
-const DISK_WEIGHT = 0.3;
+const BULGE_WEIGHT = 0.85;
+const DISK_WEIGHT = 0.15;
 
 // 'ramp(t)' lives in 'lib/colorIndex.wesl' — imported above. Sharing
 // the function with the points pass guarantees procedural-disk
