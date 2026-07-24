@@ -32,8 +32,6 @@ import package::lib::camera::worldToClip;
 import package::lib::billboard::triCorner;
 import package::lib::billboard::expandBillboardScreen;
 import package::lib::sourceUniforms::SourceUniforms;
-import package::lib::colorIndex::rampCore;
-import package::lib::colorIndex::rampRim;
 import package::lib::selectionEncoding::packSelection;
 import package::lib::focusUniforms::FocusUniforms;
 import package::lib::focusUniforms::focusAlphaMultiplier;
@@ -129,10 +127,9 @@ fn vs(
     var earlyOut: VSOut;
     earlyOut.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
     earlyOut.uv = corner;
-    earlyOut.shaded = vec4<f32>(0.0, 0.0, 0.0, 1.0);
+    earlyOut.instanceTint = vec4<f32>(0.0, 0.0, 0.0, 0.0);
     earlyOut.instanceIdx = myPacked;
-    earlyOut.paRotation = vec2<f32>(1.0, 0.0);
-    earlyOut.rimDelta = vec3<f32>(0.0);
+    earlyOut.ellipse = vec3<f32>(1.0, 0.0, 1.0);
     return earlyOut;
   }
 
@@ -191,8 +188,9 @@ fn vs(
   // The old apparent-magnitude clamp is gone: p.sbAmp is the baked physical
   // surface-brightness amplitude and u.galaxySbScale is the live HDR gain that
   // replaced the hardcoded GALAXY_SB_SCALE const. All factors are per-instance
-  // constants, so the fragment reads out.shaded.rgb directly — no per-pixel
-  // multiply.
+  // constants, so the fragment reads out.instanceTint.rgb directly — no
+  // per-pixel multiply for the brightness modulator (the ramp colour it
+  // multiplies against IS evaluated per-fragment; see colorFragment.wesl).
   let vMaxAlpha = select(1.0, p.vMaxWeight, u.biasMode == 2u);
   let schechterMult = select(1.0, p.schechterRatio, u.biasMode == 3u);
   let angularMult = select(1.0, p.angularDensityWeight, u.biasMode == 4u);
@@ -241,26 +239,28 @@ fn vs(
     * crossfadeOut
     * focusMult;
 
-  // Bake the K-corrected ramp colour, the magenta highlight, and the
-  // intensity scalar straight into out.shaded.rgb and out.rimDelta.
-  // 'out.shaded.rgb' carries the CORE endpoint of the warm-core /
-  // cool-rim gradient (see 'lib/colorIndex.wesl'); 'out.rimDelta'
-  // carries the already-fully-modulated RIM-minus-CORE difference, so
-  // the fragment reconstructs the gradient with one fused multiply-add
-  // instead of evaluating the ramp itself (see the 'rimDelta' field
-  // comment in io.wesl for why that hoist is worth it here but not in
-  // the procedural-disk pass). .w carries safeAB — pre-computed
-  // ellipse-mask coefficient, defaulted to 1.0 (circle) for invalid/NaN
-  // axisRatio (synthetic-fallback rows). 'abs(NaN) > 0.0' is false, so
-  // the select branch is the correct gate.
+  // Bake the per-instance colour MODULATOR (magenta highlight x
+  // intensity) into out.instanceTint.rgb, and forward the galaxy's
+  // colour index unchanged in out.instanceTint.w. The ramp colour
+  // itself is NOT evaluated here — 'colorFragment.wesl' calls
+  // 'rampRadial(instanceTint.w, r)' per fragment instead, because the
+  // warm-core / cool-rim gradient's argument depends on the fragment's
+  // radius within the billboard and so cannot be baked as a flat
+  // per-instance constant (see the 'VSOut has no fifth @location'
+  // comment in io.wesl for why moving the ramp call to the fragment
+  // stage is the right trade rather than a regression).
+  //
+  // safeAB — the pre-computed ellipse-mask coefficient — is defaulted
+  // to 1.0 (circle) for invalid/NaN axisRatio (synthetic-fallback
+  // rows). 'abs(NaN) > 0.0' is false, so the select branch is the
+  // correct gate. It's computed here (rather than in the ellipse
+  // packing below) because it's derived from 'p.axisRatio', which is
+  // already in scope at this point in the function.
   let highlightActive = u.highlightFallback == 1u && isFallbackFlag == 1u;
   let highlightTint = select(vec3<f32>(1.0), vec3<f32>(1.0, 0.3, 1.0), highlightActive);
   let absAR = abs(p.axisRatio);
   let safeAB = select(1.0, max(absAR, 0.05), absAR > 0.0);
-  let coreRgb = rampCore(p.colorIndex) * highlightTint * intensity;
-  let rimRgb = rampRim(p.colorIndex) * highlightTint * intensity;
-  out.shaded = vec4<f32>(coreRgb, safeAB);
-  out.rimDelta = rimRgb - coreRgb;
+  out.instanceTint = vec4<f32>(highlightTint * intensity, p.colorIndex);
 
   // Invisibility cull: galaxies whose folded intensity falls below this
   // threshold contribute imperceptibly to the additive HDR target, so
@@ -290,11 +290,14 @@ fn vs(
   // The visual 'fs' ignores this field.
   out.instanceIdx = myPacked;
 
-  // Forward the pre-baked (cos, sin) of the position-angle rotation —
-  // computed once at upload in 'buildPointInterleavedBuffer' (negation
-  // for the east-of-north → screen-UV convention already folded in), so
-  // neither this stage nor the fragment pays any trig.
-  out.paRotation = p.paCosSin;
+  // Pack the ellipse-mask parameters: the pre-baked (cos, sin) of the
+  // position-angle rotation — computed once at upload in
+  // 'buildPointInterleavedBuffer' (negation for the east-of-north →
+  // screen-UV convention already folded in), so neither this stage nor
+  // the fragment pays any trig — alongside 'safeAB' (computed above
+  // from 'p.axisRatio'). See the 'ellipse' field comment in io.wesl for
+  // why these three values share one @location.
+  out.ellipse = vec3<f32>(p.paCosSin, safeAB);
 
   return out;
 }

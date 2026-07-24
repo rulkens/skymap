@@ -26,21 +26,18 @@
 // does, and the two passes agree on brightness at the 8-14 px crossfade
 // instead of only agreeing on hue.
 //
-// Hue is a warm-core / cool-rim gradient built from the SHARED
-// 'rampCore' / 'rampRim' pair in 'lib/colorIndex.wesl' — the same two
-// functions the points pass uses to fill 'VSOut.rimDelta' (see
-// 'points/vertex.wesl'). An earlier version of this pass applied its
-// own warm-bulge / cool-disk tint on top of the plain ramp colour, and
-// that shift was independent of what the points pass did — the two
-// passes visibly diverged at the crossfade boundary (warmer at centre,
-// cooler at rim on one pass but not the other), so the per-pass tint
-// was removed and only the flat ramp colour survived. Routing the
-// gradient through 'rampCore'/'rampRim' brings the tint back without
-// reintroducing that failure mode: both passes now derive their
-// endpoint colours from the exact same two function calls over the
-// exact same 't', so there is no second copy of the gradient math left
-// to drift out of sync. Only the brightness profile is pass-local; the
-// colour math is fully shared.
+// Hue is a warm-core / cool-rim gradient from the SHARED 'rampRadial'
+// function in 'lib/colorIndex.wesl' — the same function the points
+// pass calls in 'colorFragment.wesl'. Sharing the function is
+// load-bearing, not incidental: if this pass computed its own radial
+// tint independently of the points pass, the two would disagree across
+// the 8-14 px crossfade and the galaxy would visibly shift hue (warmer
+// at centre / cooler at rim on one pass but not the other) as the
+// impostor faded in. Deriving both passes' per-radius colour from the
+// same call over the same 't' and 'r' makes that class of divergence
+// structurally impossible, rather than merely avoided by convention.
+// Only the brightness profile is pass-local; the colour math is fully
+// shared.
 //
 // Final alpha is the combined brightness x crossfadeAlpha so the
 // impostor fades in cleanly across the 8-14 px transition band.
@@ -56,8 +53,7 @@
 // actually references end up emitted.
 
 import package::galaxyCatalog::proceduralDisks::io::VsOut;
-import package::lib::colorIndex::rampCore;
-import package::lib::colorIndex::rampRim;
+import package::lib::colorIndex::rampRadial;
 // Shared fragment-stage mask shapes — see 'lib/masks.wesl' for the
 // rationale (three smoothstep patterns recurred across four shaders,
 // naming the shapes makes the intent visible at the call site). The
@@ -73,12 +69,11 @@ const DISK_SCALE = 0.5;
 const BULGE_WEIGHT = 0.85;
 const DISK_WEIGHT = 0.15;
 
-// 'rampCore(t)' / 'rampRim(t)' live in 'lib/colorIndex.wesl' — imported
-// above. Sharing the pair with the points pass guarantees the
-// procedural-disk gradient's two endpoint colours match the points
-// pass's endpoint colours exactly at any colour-index value, so the
-// disk impostor fade-in doesn't introduce a visible cross-LOD hue
-// shift.
+// 'rampRadial(t, r)' lives in 'lib/colorIndex.wesl' — imported above.
+// Sharing it with the points pass guarantees the procedural-disk
+// gradient matches the points pass's gradient exactly at any given
+// colour index and radius, so the disk impostor fade-in doesn't
+// introduce a visible cross-LOD hue shift.
 
 @fragment
 fn fs(in: VsOut) -> @location(0) vec4<f32> {
@@ -89,11 +84,11 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
   let disk  = exp(-r / DISK_SCALE);
   let intensity = (bulge * BULGE_WEIGHT + disk * DISK_WEIGHT) * in.sbAmp;
 
-  // Colour: warm-core / cool-rim gradient in colour-index space, mixed
+  // Colour: warm-core / cool-rim gradient in colour-index space, shifted
   // by normalised radius 'r' (0 at centre, 1 at the disk edge). See the
   // fragment-stage header comment above for why this reads from the
-  // shared 'rampCore'/'rampRim' pair rather than an ad-hoc per-pass tint.
-  let tinted = mix(rampCore(in.colourIndex), rampRim(in.colourIndex), r);
+  // shared 'rampRadial' function rather than an ad-hoc per-pass tint.
+  let tinted = rampRadial(in.colourIndex, r);
 
   // Soft edge fade.  We're outputting LINEAR colour into an rgba16float
   // HDR target; the compositor's tone-map curve converts to sRGB later

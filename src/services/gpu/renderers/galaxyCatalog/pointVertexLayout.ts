@@ -49,7 +49,7 @@ const AXIS_RATIO_BYTE_OFFSET = 20;
 
 /**
  * Slots 6/7: cos/sin of the negated east-of-north position angle —
- * the exact pair the shader forwards as `paRotation`, pre-baked.
+ * the exact pair the shader forwards as `ellipse.xy`, pre-baked.
  */
 const PA_COS_SIN_BYTE_OFFSET = 24;
 
