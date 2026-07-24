@@ -364,16 +364,22 @@ one bitmap fans out to 13 placeholder seeds rather than committing to a single c
 House convention (`CLAUDE.md`, `docs/superpowers/conventions/simplicity.md`): bake the
 simplicity review into the plan rather than leaving it to chance.
 
-- [ ] Run the `entanglement-radar` skill over the FULL branch diff (part 1 + part 2), not one
+- [x] Run the `entanglement-radar` skill over the FULL branch diff (part 1 + part 2), not one
       module. It is a diff-scoped review.
-- [ ] Pay particular attention to the four places this feature deliberately kept two things
+- [x] Pay particular attention to the four places this feature deliberately kept two things
       apart, and confirm none of them re-braided during implementation: - the negation lives at the enqueue site, not inside `PriorityQueue` (which still serves
       thumbnails where larger-is-first is the natural reading), - the drop edge is its own edge, not a variant of the evict edge, - residency is a rendering fact read off the renderer, with no second `atlasReady ||
-    slotReady` branch anywhere, - the placeholder chain is two-term (`committed ?? placeholder`), with no slot-state peek
+  slotReady` branch anywhere, - the placeholder chain is two-term (`committed ?? placeholder`), with no slot-state peek
       in any commit path.
-- [ ] Report the verdicts. Apply only fixes that are in scope for this feature; anything broader
+      **All four verified intact.**
+- [x] Report the verdicts. Apply only fixes that are in scope for this feature; anything broader
       (for example the deferred project-wide body-texture store consolidation,
       `docs/backlog/2026-07-24-body-texture-store-consolidation.md`) stays on the backlog.
+      Fixed in scope: the atlas filename authored twice, the row-major tile-rect formula
+      authored twice, and a residency docblock left stale by P3. Backlogged: direct
+      `slot.load()` sites bypassing the queue, the companion relation's three homes, and the
+      `bodyId === 'earth'` commit-side routing (appended to the body-texture store
+      consolidation item).
 
 ### 4.2: verification
 

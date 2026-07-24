@@ -43,6 +43,8 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Scale-gated asset demand** `needs-design` — boot fetches catalogs invisible at the current camera distance, ~68 MB of ~101.7 MB drawing nothing at the Earth boot view. → [details](backlog/2026-07-24-scale-gated-asset-demand.md)
 - [ ] **`famous_stars_meta.json` fetches unconditionally at boot** `ready` — bypasses slot wiring entirely (`useFamousStarsMeta.ts`); give it a lazy demand predicate like `pgcAlias`'s one-shot `paletteOpened`, so it loads on first star InfoCard open instead.
 - [ ] **Font atlas load blocks `initGpu`** `needs-design` — the ~297 KB Cormorant fetch is awaited before every renderer + catalog fetch in `initGpu` starts; make label rendering tolerate a missing atlas instead. → [details](backlog/2026-07-24-font-atlas-blocks-initgpu.md)
+- [ ] **Direct `slot.load()` sites bypass the asset queue** `needs-design` — five call sites fetch outside the bounded queue, so `ASSET_QUEUE_CONCURRENCY` is not the system-wide bound it reads as. → [details](backlog/2026-07-24-direct-loads-bypass-asset-queue.md)
+- [ ] **Companion-asset relation has three homes** `needs-design` — "famousMeta rides Famous" is authored as a registry list, a demand predicate, and a rank integer. → [details](backlog/2026-07-24-companion-asset-relation-three-homes.md)
 
 ## Rendering
 

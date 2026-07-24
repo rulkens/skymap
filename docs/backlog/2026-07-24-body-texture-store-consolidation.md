@@ -43,6 +43,23 @@ consolidation out here rather than scoping it into the same prep — prep
 is bounded to exactly the delta the feature needs, and this is
 substantially larger than that delta.
 
+## The commit-side routing is a second instance of the same split
+
+Which renderer receives a body's texture is dispatched by a hand-written
+`bodyId === 'earth'` branch, now in two places: `commitBodyTexture`
+(`src/services/engine/wiring/bodyTextureSlotRegistry.ts:88-116`, three
+arms — Earth, the shared textured bodies, ring ids) and the atlas
+commit's placeholder fan-out
+(`src/services/loading/slots/bodyTextureAtlasSlot.ts`, two arms). A
+second body earning its own renderer, or Earth gaining a placeholder
+consumer the way it gained `cloudShellRenderer`, means editing both.
+
+The un-braided shape is a sink table keyed by body id —
+`Record<BodyTextureId, sink>` with one row per body, `setMap` and
+`setPlaceholderMap` as two operations on the row — which is the same
+table the store below wants anyway. Fold it into that design rather
+than dispatching it separately.
+
 ## Proposed fix
 
 Extract a shared body-texture store the renderers use for map storage
