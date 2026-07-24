@@ -103,10 +103,10 @@ per-tile `{x,y,w,h}`, and dropping the ring restored a uniform grid, so the rect
 the index alone and `setPlaceholderMap`'s signature stays rect-shaped for a future non-uniform
 atlas.
 
-- [ ] No test (see the standing refusal above).
-- [ ] Write both files.
-- [ ] `npm run typecheck` clean.
-- [ ] Commit: the two files above.
+- [x] No test (see the standing refusal above).
+- [x] Write both files.
+- [x] `npm run typecheck` clean.
+- [x] Commit: the two files above.
 
 ### 3.2: build emission + generated layout
 
@@ -156,7 +156,7 @@ this feature removes.
   warn loudly above 1 MB.
 - Codegen: write `src/data/bodies/bodyAtlas.generated.ts` with the four-line generated header
   copied in shape from `famousStars.generated.ts:1-5` (path, DO NOT EDIT, `Regenerate with:
-  npm run build-textures`, `Source of truth: src/data/bodies/bodyTextureRegistry.ts`).
+npm run build-textures`, `Source of truth: src/data/bodies/bodyTextureRegistry.ts`).
 
 Run the atlas pass AFTER the per-body loop and BEFORE the ring loop, so every `-2048.jpg` it
 reads already exists.
@@ -313,7 +313,7 @@ reusing the same Earth-vs-other-bodies routing `commitBodyTexture`
 (`bodyTextureSlotRegistry.ts:88-116`) already performs:
 
 - for each `[bodyId, index]` in `BODY_ATLAS_LAYOUT`, `rect = atlasTileRect(index,
-  BODY_ATLAS_GRID.columns, { w: BODY_ATLAS_GRID.tileW, h: BODY_ATLAS_GRID.tileH })`,
+BODY_ATLAS_GRID.columns, { w: BODY_ATLAS_GRID.tileW, h: BODY_ATLAS_GRID.tileH })`,
 - `'earth'` goes to `state.gpu.earthRenderer?.setPlaceholderMap('surface', atlas, rect)`,
 - the twelve others go to
   `state.gpu.texturedBodyRenderer?.setPlaceholderMap(bodyId, 'surface', atlas, rect)`.
@@ -357,14 +357,10 @@ simplicity review into the plan rather than leaving it to chance.
 - [ ] Run the `entanglement-radar` skill over the FULL branch diff (part 1 + part 2), not one
       module. It is a diff-scoped review.
 - [ ] Pay particular attention to the four places this feature deliberately kept two things
-      apart, and confirm none of them re-braided during implementation:
-      - the negation lives at the enqueue site, not inside `PriorityQueue` (which still serves
-        thumbnails where larger-is-first is the natural reading),
-      - the drop edge is its own edge, not a variant of the evict edge,
-      - residency is a rendering fact read off the renderer, with no second `atlasReady ||
-        slotReady` branch anywhere,
-      - the placeholder chain is two-term (`committed ?? placeholder`), with no slot-state peek
-        in any commit path.
+      apart, and confirm none of them re-braided during implementation: - the negation lives at the enqueue site, not inside `PriorityQueue` (which still serves
+      thumbnails where larger-is-first is the natural reading), - the drop edge is its own edge, not a variant of the evict edge, - residency is a rendering fact read off the renderer, with no second `atlasReady ||
+      slotReady` branch anywhere, - the placeholder chain is two-term (`committed ?? placeholder`), with no slot-state peek
+      in any commit path.
 - [ ] Report the verdicts. Apply only fixes that are in scope for this feature; anything broader
       (for example the deferred project-wide body-texture store consolidation,
       `docs/backlog/2026-07-24-body-texture-store-consolidation.md`) stays on the backlog.
@@ -393,12 +389,7 @@ else.
       DevTools, Network tab, "Disable cache" CHECKED, hard reload, throttled to Fast 3G, plus
       one unthrottled sanity pass. Same branch pair, same throttle profile, same viewport for
       before and after.
-- [ ] **What to watch in the waterfall:**
-      - at most 2 concurrent data requests at any moment,
-      - `body-atlas.webp` completes early,
-      - every visible body is textured, never a flat albedo sphere,
-      - `stars-medium.bin` completes BEFORE `glade-medium.bin` starts,
-      - the star field appears materially sooner than on the base branch.
+- [ ] **What to watch in the waterfall:** - at most 2 concurrent data requests at any moment, - `body-atlas.webp` completes early, - every visible body is textured, never a flat albedo sphere, - `stars-medium.bin` completes BEFORE `glade-medium.bin` starts, - the star field appears materially sooner than on the base branch.
 - [ ] **Also check `#focus=body-saturn` from a cold load:** Saturn arrives textured from the
       atlas and upgrades to hi-res on approach. Its RING has no atlas tile by design, so it
       stays untextured for the few seconds before its own 8,832-byte strip lands. That is
