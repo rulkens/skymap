@@ -4,36 +4,65 @@
  *
  * `hotkeys-js` owns the parts that MUST stay synchronous and DOM-side: the
  * keydown listener, the combo/keyname parsing (`right`, `left`, `space`, `⌘+k`),
- * the platform fold, and the built-in form-field guard (it does not fire inside
- * `input` / `textarea` / `select`). The channel carries only the matched key
- * string outward; the routing (key → which action) lives in the consuming saga.
+ * and the platform fold. The caller passes a list of `KeyboardShortcut`s (which
+ * keys, plus each key's `preventDefault` policy) and a `getState` reader; the
+ * channel carries only the matched key string outward, and the routing (key →
+ * which action) lives in the consuming saga.
  *
  * ### Why preventDefault here, not in the saga
  *
  * `event.preventDefault()` must run inside the DOM event tick. A saga consuming
  * the emitted key runs a tick later — too late to cancel the browser default
- * (Space/arrows scroll the page). So the listener cancels the default for every
- * registered key synchronously; the channel just reports which key fired. The
- * caller decides WHICH keys to register (and, by closing the channel, WHEN they
- * are live) — e.g. the tour binds its keys only while a tour runs, so this
- * preventDefault never reaches outside that window.
+ * (Space/arrows scroll the page). So the listener resolves each shortcut's
+ * `preventDefault` synchronously and cancels the default only when it says so:
+ * a static `true`/`false`, or a `(state) => boolean` predicate evaluated against
+ * the live store via `getState`. The channel then reports which key fired.
  *
- * The teardown returned to `eventChannel` unbinds the same key set when the
- * channel is closed, so `hotkeys` holds no listener once the caller is done.
+ * ### Form-field guard
+ *
+ * `hotkeys.filter` gates whether a keydown is even considered. hotkeys-js's
+ * built-in filter already ignores `input` / `textarea` / `select`; it does NOT
+ * cover `contentEditable`, so the filter below adds that case (previously done
+ * by hand in the `useKeyboardShortcuts` hook).
+ *
+ * The teardown returned to `eventChannel` unbinds every registered key set when
+ * the channel is closed, so `hotkeys` holds no listener once the caller is done.
  */
 
 import hotkeys from 'hotkeys-js';
 import { eventChannel, type EventChannel } from 'redux-saga';
 
-/** `keys` is a hotkeys-js key list, e.g. `'right,left,space'`. */
-export function createKeyboardListener(keys: string): EventChannel<string> {
+import type { KeyboardShortcut } from '../../@types/state/input/KeyboardShortcut';
+import type { RootState } from '../../store/types';
+
+// Keep hotkeys-js's built-in input/textarea/select guard AND additionally
+// ignore contentEditable targets (rich-text editors), which the default filter
+// does not cover.
+hotkeys.filter = (event) => {
+  const target = event.target as HTMLElement | null;
+  const tag = target?.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable) {
+    return false;
+  }
+  return true;
+};
+
+export function createKeyboardListener(
+  shortcuts: readonly KeyboardShortcut[],
+  getState: () => RootState,
+): EventChannel<string> {
   return eventChannel<string>((emit) => {
-    hotkeys(keys, (event, handler) => {
-      event.preventDefault();
-      emit(handler.key);
-    });
+    for (const shortcut of shortcuts) {
+      hotkeys(shortcut.keys, (event, handler) => {
+        const { preventDefault } = shortcut;
+        const swallow =
+          typeof preventDefault === 'function' ? preventDefault(getState()) : preventDefault === true;
+        if (swallow) event.preventDefault();
+        emit(handler.key);
+      });
+    }
     return () => {
-      hotkeys.unbind(keys);
+      for (const shortcut of shortcuts) hotkeys.unbind(shortcut.keys);
     };
   });
 }

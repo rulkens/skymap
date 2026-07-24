@@ -23,11 +23,13 @@
  * button surfaces share one behaviour with no duplicated routing.
  */
 
-import { call, put, take, race, takeLatest } from 'typed-redux-saga';
+import { call, put, take, race, takeLatest, getContext } from 'typed-redux-saga';
 import type { EventChannel } from 'redux-saga';
 import type { ActionCreatorWithoutPayload } from '@reduxjs/toolkit';
 
 import { createKeyboardListener } from '../../services/input/createKeyboardListener';
+import type { KeyboardShortcut } from '../../@types/state/input/KeyboardShortcut';
+import type { RootState } from '../../store/types';
 import { tourStarted, tourEnded } from './tourSlice';
 import { advanceTour, prevBeat, togglePause } from './tourActions';
 
@@ -37,6 +39,14 @@ const TOUR_KEYS: Record<string, ActionCreatorWithoutPayload> = {
   left: prevBeat,
   space: togglePause,
 };
+
+// The shortcut list handed to `createKeyboardListener`, derived from TOUR_KEYS.
+// Every tour key preventDefaults unconditionally: bound only while a tour runs
+// (HUD hidden, no focusable buttons), so hijacking Space/arrows is confined to
+// exactly that window. Routing still goes through `routeKeys` + TOUR_KEYS.
+const TOUR_SHORTCUTS: readonly KeyboardShortcut[] = Object.entries(TOUR_KEYS).map(
+  ([keys, action]) => ({ keys, run: () => action(), preventDefault: true }),
+);
 
 /** Drain the key channel, dispatching each known key's signal until cancelled. */
 function* routeKeys(channel: EventChannel<string>): Generator {
@@ -49,7 +59,8 @@ function* routeKeys(channel: EventChannel<string>): Generator {
 
 export function* watchTourKeyboardSaga() {
   yield* takeLatest(tourStarted, function* () {
-    const channel = yield* call(createKeyboardListener, Object.keys(TOUR_KEYS).join(','));
+    const getState = yield* getContext<() => RootState>('getState');
+    const channel = yield* call(createKeyboardListener, TOUR_SHORTCUTS, getState);
     try {
       // `route` runs forever; `ended` ends the block on a normal tour exit. A
       // supersede (new tourStarted) cancels the whole block via takeLatest.

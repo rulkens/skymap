@@ -92,6 +92,13 @@ export type ClipPathInspectSeam = {
   pinnedClip: () => ClipData | null;
 };
 export type SagaContext = {
+  /**
+   * The store's own `getState`, seeded by the factory at construction. Feature
+   * sagas read it via `getContext('getState')` to hand store-reading seams a
+   * live-state reader — e.g. `createKeyboardListener` resolves a per-shortcut
+   * `preventDefault` predicate against the current state inside the DOM tick.
+   */
+  getState: () => RootState;
   runTierTransition: RunTierTransition; // already present — drives per-source data load on tier change
   reconcile: ReconcileEffects; // already present — provides requestRender + fade/reseed/bias
   /** Live engine resources the selection reconciler reads to turn a SelectionRef into a SelectionRow. */
