@@ -7,10 +7,9 @@
  * action(s). A recorder middleware captures every dispatched action.
  *
  * This test exercises the DRAIN routing (known key → put, null run → nothing,
- * unknown key → skip, multi-action entry → both in order) and the colocated
- * `logCameraState` arm (dispatching the command calls the reconcile effect). It
- * does NOT re-test the per-entry `run` bodies (Task 4) — a few entries are used
- * only as vehicles for the drain.
+ * unknown key → skip, multi-action entry → both in order). It does NOT re-test
+ * the per-entry `run` bodies (Task 4) — a few entries are used only as vehicles
+ * for the drain.
  *
  * ### Timing
  *
@@ -39,7 +38,6 @@ vi.mock('../../../src/services/input/createKeyboardListener', async () => {
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchKeyboardEventsSaga } from '../../../src/state/input/watchKeyboardEventsSaga';
-import { logCameraState } from '../../../src/state/camera/logCameraState';
 import { setPaletteOpen } from '../../../src/state/ui/uiSlice';
 import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import { exitTour } from '../../../src/state/tour/tourActions';
@@ -52,15 +50,13 @@ function buildHarness() {
     recorded.push(action as Action);
     return next(action);
   };
-  const logCameraStateFx = vi.fn<() => void>();
   const sagaMiddleware = createSagaMiddleware();
   const store = configureStore({
     reducer: rootReducer,
     middleware: (getDefault) => getDefault().concat(recorder, sagaMiddleware),
   });
-  sagaMiddleware.setContext({ reconcile: { logCameraState: logCameraStateFx } });
   sagaMiddleware.run(watchKeyboardEventsSaga);
-  return { store, recorded, logCameraStateFx };
+  return { store, recorded };
 }
 
 describe('watchKeyboardEventsSaga', () => {
@@ -112,15 +108,5 @@ describe('watchKeyboardEventsSaga', () => {
 
     const after = recorded.slice(before);
     expect(after).toEqual([clearSelection(), exitTour()]);
-  });
-
-  it('calls the reconcile log-camera effect once when logCameraState is dispatched', async () => {
-    const { store, logCameraStateFx } = buildHarness();
-    await flush();
-
-    store.dispatch(logCameraState());
-    await flush();
-
-    expect(logCameraStateFx).toHaveBeenCalledTimes(1);
   });
 });

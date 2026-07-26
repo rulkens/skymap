@@ -21,33 +21,15 @@
  * default (see `createKeyboardListener`'s "Why preventDefault here, not in the
  * saga"). The listener applies each shortcut's static `preventDefault` flag
  * itself; the channel reports only which key fired.
- *
- * ### Why the `logCameraState` arm reads getContext lazily
- *
- * The `l` key dispatches `logCameraState`, a reducer-less command whose effect is
- * the engine printing the current pose. This colocated `takeEvery` reaches
- * `reconcile.logCameraState` and calls it. getContext is read PER ACTION, inside
- * the worker — not once at saga start — because the engine registers its saga
- * context AFTER the root saga forks (the same reason `watchGoHomeSaga` reads
- * `cameraRuntime` lazily). `takeEvery` forks a detached arm and returns
- * immediately, so the drain loop below runs concurrently with it; both cancel
- * together when the parent saga is cancelled.
  */
-import { take, call, put, select, getContext, takeEvery } from 'typed-redux-saga';
+import { take, call, put, select } from 'typed-redux-saga';
 
 import { createKeyboardListener } from '../../services/input/createKeyboardListener';
 import { KEYBOARD_SHORTCUTS, SHORTCUTS_BY_KEY } from './keyboardShortcuts';
-import { logCameraState } from '../camera/logCameraState';
 import { asArray } from '../../utils/asArray';
-import type { ReconcileEffects } from '../../store/effects/ReconcileEffects';
 import type { RootState } from '../../store/types';
 
 export function* watchKeyboardEventsSaga() {
-  yield* takeEvery(logCameraState, function* () {
-    const fx = yield* getContext<ReconcileEffects>('reconcile');
-    fx.logCameraState();
-  });
-
   const channel = yield* call(createKeyboardListener, KEYBOARD_SHORTCUTS);
   try {
     while (true) {
