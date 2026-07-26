@@ -19,11 +19,12 @@
  *
  * ### Form-field guard
  *
- * `hotkeys.filter` gates whether a keydown is even considered. hotkeys-js's
- * built-in filter already ignores `input` / `textarea` / `select` (with its own
- * exceptions for e.g. `range`/`checkbox`/`button` inputs and `readOnly`
- * fields); the filter below composes over that builtin rather than
- * reimplementing it, adding only the `contentEditable` case it doesn't cover.
+ * `hotkeys.filter` gates whether a keydown is even considered. The form-field
+ * guard is hotkeys-js's builtin filter: it already ignores `input` /
+ * `textarea` / `select` (with its own exceptions for e.g.
+ * `range`/`checkbox`/`button` inputs and `readOnly` fields) and
+ * `contentEditable` targets, so the listener relies on it directly rather
+ * than adding its own.
  *
  * The teardown returned to `eventChannel` unbinds every registered key set when
  * the channel is closed, so `hotkeys` holds no listener once the caller is done.
@@ -33,14 +34,6 @@ import hotkeys from 'hotkeys-js';
 import { eventChannel, type EventChannel } from 'redux-saga';
 
 import type { KeyboardShortcut } from '../../@types/state/input/KeyboardShortcut';
-
-// Compose over hotkeys-js's built-in input/textarea/select guard (which
-// already carves out range/checkbox/button inputs and readOnly fields) and
-// additionally ignore contentEditable targets (rich-text editors), which the
-// builtin filter does not cover.
-const builtinFilter = hotkeys.filter;
-hotkeys.filter = (event) =>
-  builtinFilter(event) && !((event.target as HTMLElement | null)?.isContentEditable);
 
 export function createKeyboardListener(shortcuts: readonly KeyboardShortcut[]): EventChannel<string> {
   return eventChannel<string>((emit) => {
