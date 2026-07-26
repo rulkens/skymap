@@ -15,7 +15,7 @@
  *   watchFocusTweenSaga    — builds + dispatches the camera tween on every focus ref change
  *   watchOrientationChangeSaga — persists the frame + rolls the up-basis from the live pole on each orientation switch
  *   watchTourSaga          — starts a guidedTourSaga run on each startTour (takeLatest — single-instance)
- *   watchTourKeyboardSaga  — binds the tour nav keys (→/←/Space) only while a tour runs
+ *   watchKeyboardEventsSaga — drains the global keyboard channel; dispatches each key's built action (tour keys gated by selectTourActive)
  *   watchClipSaga          — runs the clip-player seam on each playClip; stopClip/re-play cancels it
  *   watchClipPathInspectSaga — samples a clip's camera route into the debug inspector on inspectClipPath/clearClipPath
  *   watchReplayInspectedPathSaga — replays the inspector's pinned route verbatim on replayInspectedPath
@@ -50,7 +50,7 @@ import { watchRequestSelectSaga } from '../state/selection/watchRequestSelectSag
 import { watchFocusTweenSaga } from '../state/selection/watchFocusTweenSaga';
 import { watchOrientationChangeSaga } from '../state/camera/watchOrientationChangeSaga';
 import { watchTourSaga } from '../state/tour/watchTourSaga';
-import { watchTourKeyboardSaga } from '../state/tour/watchTourKeyboardSaga';
+import { watchKeyboardEventsSaga } from '../state/input/watchKeyboardEventsSaga';
 import { watchClipSaga } from '../state/camera/watchClipSaga';
 import { watchClipPathInspectSaga } from '../state/camera/watchClipPathInspectSaga';
 import { watchReplayInspectedPathSaga } from '../state/camera/watchReplayInspectedPathSaga';
@@ -70,7 +70,7 @@ export function* mainSaga() {
     watchFocusTweenSaga(),
     watchOrientationChangeSaga(),
     watchTourSaga(),
-    watchTourKeyboardSaga(),
+    watchKeyboardEventsSaga(),
     watchClipSaga(),
     watchClipPathInspectSaga(),
     watchReplayInspectedPathSaga(),
