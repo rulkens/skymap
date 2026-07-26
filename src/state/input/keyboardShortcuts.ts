@@ -20,10 +20,8 @@
  * Tour keys (`right` / `left` / `space`) are always registered; whether they do
  * anything is gated inside `run` by `selectTourActive`, not by conditionally
  * registering the shortcut. They OMIT `preventDefault` (default `false`) so
- * that outside a tour, Space stays free to activate a focused button and the
- * arrow keys stay free to scroll — the swallow only matters while a tour's HUD
- * is hidden, which `watchTourKeyboardSaga`'s own bracketed listener already
- * owns.
+ * that Space stays free to activate a focused button and the arrow keys stay
+ * free to scroll, whether or not a tour is running.
  */
 
 import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
@@ -69,9 +67,9 @@ export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
     run: () => goLive({ simDays: unixMsToJulianDays(Date.now()), nowMs: performance.now() }),
   },
   // Tour keys — always registered, gated on an active tour by `run` (returns
-  // null outside a tour). `preventDefault` is OMITTED: outside a tour, Space
-  // must stay free to activate a focused button / scroll; `watchTourKeyboardSaga`
-  // owns the swallow while a tour is actually running.
+  // null outside a tour). `preventDefault` is OMITTED: Space must stay free to
+  // activate a focused button and the arrow keys must stay free to scroll,
+  // whether or not a tour is running.
   { keys: 'right', run: (s) => (selectTourActive(s) ? advanceTour() : null) },
   { keys: 'left', run: (s) => (selectTourActive(s) ? prevBeat() : null) },
   { keys: 'space', run: (s) => (selectTourActive(s) ? togglePause() : null) },

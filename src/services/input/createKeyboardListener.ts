@@ -23,8 +23,7 @@
  * built-in filter already ignores `input` / `textarea` / `select` (with its own
  * exceptions for e.g. `range`/`checkbox`/`button` inputs and `readOnly`
  * fields); the filter below composes over that builtin rather than
- * reimplementing it, adding only the `contentEditable` case it doesn't cover
- * (previously done by hand in the `useKeyboardShortcuts` hook).
+ * reimplementing it, adding only the `contentEditable` case it doesn't cover.
  *
  * The teardown returned to `eventChannel` unbinds every registered key set when
  * the channel is closed, so `hotkeys` holds no listener once the caller is done.
