@@ -7,10 +7,11 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { KEYBOARD_SHORTCUTS } from '../../../src/state/input/keyboardShortcuts';
+import { KEYBOARD_SHORTCUTS, SHORTCUTS_BY_KEY } from '../../../src/state/input/keyboardShortcuts';
+import { goHome } from '../../../src/state/selection/goHome';
 import { clearSelection, updateSelectionFocus } from '../../../src/state/selection/selectionSlice';
-import { setPaletteOpen } from '../../../src/state/ui/uiSlice';
-import { setRate, pause, resume } from '../../../src/state/time/timeSlice';
+import { setPaletteOpen, toggleDebugPanelOpen, toggleUiHidden } from '../../../src/state/ui/uiSlice';
+import { goLive, setRate, pause, resume } from '../../../src/state/time/timeSlice';
 import { exitTour, advanceTour, prevBeat, togglePause } from '../../../src/state/tour/tourActions';
 import type { RootState } from '../../../src/store/types';
 import type { SelectionRef } from '../../../src/@types/engine/SelectionRef';
@@ -99,6 +100,29 @@ describe('KEYBOARD_SHORTCUTS', () => {
     const pauseResult = run(stateWith({ time: time(3, false) })) as ReturnType<typeof pause>;
     expect(resumeResult.type).toBe(resume({ nowMs: 0 }).type);
     expect(pauseResult.type).toBe(pause({ nowMs: 0 }).type);
+  });
+
+  it('tab toggles the UI-hidden flag', () => {
+    expect(byKeys('tab').run(stateWith({}))).toEqual(toggleUiHidden());
+  });
+
+  it('d toggles the debug panel', () => {
+    expect(byKeys('d').run(stateWith({}))).toEqual(toggleDebugPanelOpen());
+  });
+
+  it('h,e goes home', () => {
+    expect(byKeys('h,e').run(stateWith({}))).toEqual(goHome());
+  });
+
+  it('shift+n goes live', () => {
+    const result = byKeys('shift+n').run(stateWith({})) as ReturnType<typeof goLive>;
+    expect(result.type).toBe(goLive({ simDays: 0, nowMs: 0 }).type);
+  });
+
+  it('command+k,ctrl+k opens the palette, both comma-split keys resolving to the same entry', () => {
+    expect(byKeys('command+k,ctrl+k').run(stateWith({}))).toEqual(setPaletteOpen(true));
+    expect(SHORTCUTS_BY_KEY['command+k']).toBe(byKeys('command+k,ctrl+k'));
+    expect(SHORTCUTS_BY_KEY['ctrl+k']).toBe(byKeys('command+k,ctrl+k'));
   });
 
   it('tour keys return null when no tour is active and their signal when active', () => {
