@@ -29,10 +29,7 @@ const h = vi.hoisted(() => ({
 vi.mock('../../../src/services/input/createKeyboardListener', async () => {
   const { eventChannel } = await import('redux-saga');
   return {
-    createKeyboardListener: (
-      shortcuts: ReadonlyArray<{ keys: string }>,
-      _getState: () => unknown,
-    ) => {
+    createKeyboardListener: (shortcuts: ReadonlyArray<{ keys: string }>) => {
       h.keys = shortcuts.map((s) => s.keys).join(',');
       return eventChannel<string>((emit) => {
         h.emit = emit;

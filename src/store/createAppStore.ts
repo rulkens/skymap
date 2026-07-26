@@ -63,10 +63,6 @@ export function createAppStore(preloadedState?: PreloadedState) {
     middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(sagaMiddleware),
   });
   sagaMiddleware.run(mainSaga);
-  // Seed the store's own `getState` into saga context so feature sagas can hand
-  // it to store-reading seams (e.g. `createKeyboardListener` resolving a
-  // per-shortcut `preventDefault` predicate against live state).
-  sagaMiddleware.setContext({ getState: store.getState });
   return {
     store,
     setSagaContext: (ctx: Partial<SagaContext>) => sagaMiddleware.setContext(ctx),

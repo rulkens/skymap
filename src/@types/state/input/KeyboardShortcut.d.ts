@@ -21,9 +21,8 @@
  * moment early enough to cancel a browser default (Space/arrows scroll the
  * page; Tab traverses focus). A saga consuming the emitted key runs a tick
  * later, too late to cancel. So the decision lives on the shortcut and the
- * listener applies it synchronously: `true`/`false` is a static choice, or a
- * `(state) => boolean` predicate swallows the default conditionally (e.g. only
- * when a palette is closed). Omitted means no preventDefault.
+ * listener applies it synchronously, a static flag: `true` cancels the browser
+ * default for this key, omitted (or `false`) leaves it alone.
  */
 
 import type { Action } from '@reduxjs/toolkit';
@@ -32,5 +31,5 @@ import type { RootState } from '../../../store/types';
 export type KeyboardShortcut = {
   readonly keys: string;
   readonly run: (state: RootState) => Action | readonly Action[] | null;
-  readonly preventDefault?: boolean | ((state: RootState) => boolean);
+  readonly preventDefault?: boolean;
 };

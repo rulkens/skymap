@@ -23,13 +23,12 @@
  * button surfaces share one behaviour with no duplicated routing.
  */
 
-import { call, put, take, race, takeLatest, getContext } from 'typed-redux-saga';
+import { call, put, take, race, takeLatest } from 'typed-redux-saga';
 import type { EventChannel } from 'redux-saga';
 import type { ActionCreatorWithoutPayload } from '@reduxjs/toolkit';
 
 import { createKeyboardListener } from '../../services/input/createKeyboardListener';
 import type { KeyboardShortcut } from '../../@types/state/input/KeyboardShortcut';
-import type { RootState } from '../../store/types';
 import { tourStarted, tourEnded } from './tourSlice';
 import { advanceTour, prevBeat, togglePause } from './tourActions';
 
@@ -59,8 +58,7 @@ function* routeKeys(channel: EventChannel<string>): Generator {
 
 export function* watchTourKeyboardSaga() {
   yield* takeLatest(tourStarted, function* () {
-    const getState = yield* getContext<() => RootState>('getState');
-    const channel = yield* call(createKeyboardListener, TOUR_SHORTCUTS, getState);
+    const channel = yield* call(createKeyboardListener, TOUR_SHORTCUTS);
     try {
       // `route` runs forever; `ended` ends the block on a normal tour exit. A
       // supersede (new tourStarted) cancels the whole block via takeLatest.
