@@ -5,8 +5,8 @@
  * Owns every store reach the presentational `TimeBar` refuses to do itself: it
  * subscribes the time *intent* slice (mode / paused / rateIndex → ladder label /
  * anchor) and maps each control to the matching re-anchoring intent action,
- * mirroring the keyboard shortcuts in `useKeyboardShortcuts`. `memo` localizes an
- * intent change's re-render to this leaf instead of cascading from App.
+ * mirroring the `[`/`]`/`\` entries in `KEYBOARD_SHORTCUTS`. `memo` localizes
+ * an intent change's re-render to this leaf instead of cascading from App.
  *
  * ### The readout ticks locally, not off an engine pub
  *

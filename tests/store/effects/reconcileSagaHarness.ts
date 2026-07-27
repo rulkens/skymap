@@ -48,6 +48,7 @@ export function buildStore() {
     syncFades: vi.fn<(rows?: readonly VisibilityLayerKey[]) => void>(),
     reseedFlow: vi.fn<() => void>(),
     bakeBias: vi.fn<(mode: BiasMode) => void>(),
+    logCameraState: vi.fn<() => void>(),
   };
 
   // setContext BEFORE running the sagas so getContext finds the closures when

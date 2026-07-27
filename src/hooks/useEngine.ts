@@ -8,9 +8,9 @@
  *     job is to render the `<canvas>` element with this ref attached;
  *     the engine sets up its own WebGPU context against it.
  *   - `handleRef` — the `EngineHandle` returned by `createEngine`,
- *     stored in a ref so other hooks (useFocusUrlSync, useAliasIndex,
- *     useKeyboardShortcuts) can call methods on it without dependency
- *     gymnastics.
+ *     stored in a ref so other hooks and containers (useFocusUrlSync,
+ *     useAliasIndex, InfoCardContainer, CommandPaletteContainer) can call
+ *     methods on it without dependency gymnastics.
  *
  * All engine-driven state (status, scale, source counts, load progress,
  * structure counts) lives in the Redux `engine` slice, dispatched

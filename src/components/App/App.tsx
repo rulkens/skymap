@@ -6,7 +6,7 @@
  * InfoCardContainer, ScaleBarContainer, TimeBarContainer, NavigationPanelContainer,
  * SettingsPanelContainer, TopBarContainer, CommandPaletteContainer,
  * SplashContainer, and `DebugPanel` (memo-boundary, its sections mount their
- * own containers) — plus wires keyboard shortcuts + URL sync.
+ * own containers) — plus wires URL sync.
  * Each container owns its own store reach; App just arranges them.
  *
  * `handleRef` is a ref, not state: engine hooks call methods on it, and
@@ -21,8 +21,8 @@
  * from the DOM, not merely CSS-hidden — see the branch above the main return.
  *
  * Store reach: App itself keeps only shell-level reach. `selectSelectedFocusable`
- * drives the `uiStack` "has a pinned mobile selection" className and feeds
- * `useKeyboardShortcuts`; `selectPaletteOpen`, `selectUiHidden`,
+ * drives the `uiStack` "has a pinned mobile selection" className;
+ * `selectPaletteOpen`, `selectUiHidden`,
  * `selectDebugPanelOpen`, `selectSplashVisible` gate App's own JSX; and
  * `selectTourActive` picks the tour-overlay/beat-rail branch. Everything
  * else — hover/selection detail, engine status/scale/load-progress, settings,
@@ -30,7 +30,6 @@
  * feeds, not App.
  */
 
-import { useCallback } from 'react';
 import cx from 'classnames';
 import { useEngine } from '../../hooks/useEngine';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -46,8 +45,7 @@ import TimeBarContainer from '../containers/TimeBarContainer';
 import SplashContainer from '../containers/SplashContainer';
 import appStyles from './App.module.css';
 import { useUrlSync } from '../../hooks/useUrlSync';
-import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
-import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { useAppSelector } from '../../store/hooks';
 import { selectSelectedFocusable } from '../../state/selection/selectors';
 import DebugPanel from '../DebugPanel/DebugPanel';
 import TourOverlayContainer from '../containers/TourOverlayContainer';
@@ -60,19 +58,13 @@ import {
   selectDebugPanelOpen,
   selectSplashVisible,
 } from '../../state/ui/selectors';
-import { setPaletteOpen, toggleUiHidden, toggleDebugPanelOpen } from '../../state/ui/uiSlice';
 
 export function App(): React.ReactElement {
   const { canvasRef, handleRef } = useEngine();
 
-  // Dispatch drives the palette/ui/debug toggle actions fired from the
-  // keyboard hook below.
-  const dispatch = useAppDispatch();
-
   // The only selection-slice read App keeps: it drives the `uiStack`
-  // "pinned selection on mobile" className and feeds `useKeyboardShortcuts`.
-  // All other selection reach (hover, InfoCard detail, member count) lives in
-  // InfoCardContainer.
+  // "pinned selection on mobile" className. All other selection reach (hover,
+  // InfoCard detail, member count) lives in InfoCardContainer.
   const selected = useAppSelector(selectSelectedFocusable);
 
   // Reactive companion to the containers' one-shot `useInitialMobile`: the
@@ -80,8 +72,9 @@ export function App(): React.ReactElement {
   // breakpoint (rotation), so it reads the `matchMedia`-backed hook.
   const isMobile = useIsMobile();
 
-  // paletteOpen / uiHidden / debugPanelOpen are owned by the `ui` slice;
-  // keyboard shortcuts dispatch slice actions, not React setters.
+  // paletteOpen / uiHidden / debugPanelOpen are owned by the `ui` slice; App
+  // reads them only to gate its own render (TimeBar visibility, HUD fade,
+  // DebugPanel mount).
   const paletteOpen = useAppSelector(selectPaletteOpen);
   const uiHidden = useAppSelector(selectUiHidden);
   const debugPanelOpen = useAppSelector(selectDebugPanelOpen);
@@ -96,33 +89,9 @@ export function App(): React.ReactElement {
   // is up (to hide the HUD stack / gate TimeBar / mark the canvas inert).
   const splashVisible = useAppSelector(selectSplashVisible);
 
-  // Stable dispatching callbacks for the keyboard hook — wrapped in
-  // `useCallback([dispatch])` so the arrow identity is stable for the
-  // component lifetime and the effect's dep array stays stable.
-  // `useAppDispatch()` returns the invariant `store.dispatch`, so these
-  // never trigger re-binds.
-  const dispatchSetPaletteOpen = useCallback(
-    (open: boolean) => dispatch(setPaletteOpen(open)),
-    [dispatch],
-  );
-  const dispatchToggleUiHidden = useCallback(() => dispatch(toggleUiHidden()), [dispatch]);
-  const dispatchToggleDebugPanelOpen = useCallback(
-    () => dispatch(toggleDebugPanelOpen()),
-    [dispatch],
-  );
-
   // Deep-link hash read + URL write. Reads focus from the store directly;
   // dispatches `requestFocus` / `clearSelection` for hash changes.
   useUrlSync();
-
-  useKeyboardShortcuts({
-    selected,
-    paletteOpen,
-    engineHandleRef: handleRef,
-    setPaletteOpen: dispatchSetPaletteOpen,
-    toggleUiHidden: dispatchToggleUiHidden,
-    toggleDebugPanelOpen: dispatchToggleDebugPanelOpen,
-  });
 
   // Shared between BOTH return branches (cinema + normal) so the `id="c"`
   // contract and the mount-only-while-touring rule each live in one place.
@@ -142,8 +111,8 @@ export function App(): React.ReactElement {
   // screenshots this page, so the HUD chrome must not EXIST in the DOM;
   // CSS-hiding it (the `uiStackHidden` route) would still leave it findable
   // and able to bleed into captures. Every hook above still runs — the
-  // engine, URL sync and keyboard wiring are what make the page playable —
-  // only the JSX diverges, which also keeps the hook order unconditional.
+  // engine and URL sync are what make the page playable — only the JSX
+  // diverges, which also keeps the hook order unconditional.
   if (isCinemaMode()) {
     return (
       <>
