@@ -57,12 +57,12 @@ export function createKeyboardListener(
 
 **Migrate `watchTourKeyboardSaga.ts`:** replace the bare `Object.keys(TOUR_KEYS).join(',')` call at `watchTourKeyboardSaga.ts:52` with a minimal 3-entry `KeyboardShortcut[]` (`right`/`left`/`space`, each `run` returning its existing action creator's action, `preventDefault: true` static on all three — matches today's unconditional preventDefault) and pass `yield* getContext<() => RootState>('getState')` through to `createKeyboardListener`. `TOUR_KEYS` and the manual dispatch table can stay or fold into the new shortcut list's `run` fields — keep the diff minimal since this saga is deleted in Task 6.
 
-- [ ] Add `src/@types/state/input/KeyboardShortcut.d.ts`.
-- [ ] Reshape `createKeyboardListener.ts` to the new signature + conditional preventDefault + contentEditable filter.
-- [ ] Seed `getState` into saga context in `createAppStore.ts`; add it to `SagaContext` in `store/types.ts`.
-- [ ] Migrate `watchTourKeyboardSaga.ts` onto the new `createKeyboardListener` call, passing a 3-entry `KeyboardShortcut[]` and the context `getState`.
-- [ ] Run the existing tour-keyboard test (find it beside `watchTourKeyboardSaga.ts`) + `npm run typecheck` — both green, behaviour identical.
-- [ ] Commit.
+- [x] Add `src/@types/state/input/KeyboardShortcut.d.ts`.
+- [x] Reshape `createKeyboardListener.ts` to the new signature + conditional preventDefault + contentEditable filter.
+- [x] Seed `getState` into saga context in `createAppStore.ts`; add it to `SagaContext` in `store/types.ts`.
+- [x] Migrate `watchTourKeyboardSaga.ts` onto the new `createKeyboardListener` call, passing a 3-entry `KeyboardShortcut[]` and the context `getState`.
+- [x] Run the existing tour-keyboard test (find it beside `watchTourKeyboardSaga.ts`) + `npm run typecheck` — both green, behaviour identical.
+- [x] Commit.
 
 ---
 
@@ -75,12 +75,12 @@ _Spec §3.2._
 **Signature:** `stepRate(state: RootState, delta: number): number`
 **Behaviour:** clamps `selectTimeState(state).rateIndex + delta` to `[0, RATE_LADDER.length - 1]` (mirrors the inline clamp today in `useKeyboardShortcuts.ts:155-161`; `RATE_LADDER` from `src/data/time/rateLadder.ts`, `selectTimeState` from `src/state/time/selectors.ts:36`).
 
-- [ ] Write failing test `clamps at the slow end` — `rateIndex: 0`, `delta: -1` → `0`.
-- [ ] Write failing test `clamps at the fast end` — `rateIndex: RATE_LADDER.length - 1`, `delta: +1` → `RATE_LADDER.length - 1`.
-- [ ] Write failing test `steps one detent` — mid index, `delta: +1` → index + 1.
-- [ ] Implement `stepRate`, all three green.
-- [ ] `npm run typecheck`.
-- [ ] Commit.
+- [x] Write failing test `clamps at the slow end` — `rateIndex: 0`, `delta: -1` → `0`.
+- [x] Write failing test `clamps at the fast end` — `rateIndex: RATE_LADDER.length - 1`, `delta: +1` → `RATE_LADDER.length - 1`.
+- [x] Write failing test `steps one detent` — mid index, `delta: +1` → index + 1.
+- [x] Implement `stepRate`, all three green.
+- [x] `npm run typecheck`.
+- [x] Commit.
 
 ---
 
@@ -115,11 +115,11 @@ logCameraState: () => logCameraState(state.cam),
 
 No new registration call is needed at the `cb.setSagaContext({ reconcile: makeReconcileEffects(state), ... })` site (`engine.ts:668-689`) — `reconcile` already carries the whole bag through unchanged.
 
-- [ ] Add `src/state/camera/logCameraState.ts`.
-- [ ] Add the `logCameraState` field to the `ReconcileEffects` type.
-- [ ] Implement the closure in `makeReconcileEffects.ts`, importing the existing helper.
-- [ ] `npm run typecheck` green. No new test — this is a straight wiring addition that fails loudly (compile error) if wrong, and gets exercised for real by Task 5's `logCameraState arm` test; adding one here would just restate the assignment (testing.md).
-- [ ] Commit.
+- [x] Add `src/state/camera/logCameraState.ts`.
+- [x] Add the `logCameraState` field to the `ReconcileEffects` type.
+- [x] Implement the closure in `makeReconcileEffects.ts`, importing the existing helper.
+- [x] `npm run typecheck` green. No new test — this is a straight wiring addition that fails loudly (compile error) if wrong, and gets exercised for real by Task 5's `logCameraState arm` test; adding one here would just restate the assignment (testing.md).
+- [x] Commit.
 
 ---
 
@@ -158,16 +158,16 @@ export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
 
 **Tests** (names + assertions, from spec §7 — build a minimal `RootState`-shaped fixture per case, no store needed since `run` is pure):
 
-- [ ] `Esc returns clearSelection and exitTour` — asserts the array `[clearSelection(), exitTour()]`.
-- [ ] `/ opens palette only when closed` — palette closed → `setPaletteOpen(true)`; palette open → `null`.
-- [ ] `f focuses selected ref, null when nothing selected` — a selected ref → `updateSelectionFocus(ref)`; no selection → `null`.
-- [ ] `[ and ] clamp via stepRate` — at the ladder ends, `[`/`]` don't step past 0 / `length - 1` (assert the dispatched `rateIndex`, not `stepRate` itself again — that's Task 2's test).
-- [ ] `\ returns resume when paused, pause when running`.
-- [ ] `tour keys return null when no tour is active and their signal when active` — one case per key (`right`/`left`/`space`) × both tour states, or a parametrized test.
-- [ ] `preventDefault predicate: / true only when palette closed, space true only during a tour`.
-- [ ] Implement the map + `SHORTCUTS_BY_KEY`, all green.
-- [ ] `npm run typecheck`.
-- [ ] Commit.
+- [x] `Esc returns clearSelection and exitTour` — asserts the array `[clearSelection(), exitTour()]`.
+- [x] `/ opens palette only when closed` — palette closed → `setPaletteOpen(true)`; palette open → `null`.
+- [x] `f focuses selected ref, null when nothing selected` — a selected ref → `updateSelectionFocus(ref)`; no selection → `null`.
+- [x] `[ and ] clamp via stepRate` — at the ladder ends, `[`/`]` don't step past 0 / `length - 1` (assert the dispatched `rateIndex`, not `stepRate` itself again — that's Task 2's test).
+- [x] `\ returns resume when paused, pause when running`.
+- [x] `tour keys return null when no tour is active and their signal when active` — one case per key (`right`/`left`/`space`) × both tour states, or a parametrized test.
+- [x] `preventDefault predicate: / true only when palette closed, space true only during a tour`.
+- [x] Implement the map + `SHORTCUTS_BY_KEY`, all green.
+- [x] `npm run typecheck`.
+- [x] Commit.
 
 ---
 
@@ -203,13 +203,13 @@ Plus a `takeEvery(logCameraState)` arm, colocated in the same file, that pulls `
 
 **Tests** (names — mock the `EventChannel` and use the typed-redux-saga test harness; cite the deleted-in-Task-6 tour saga's test file for the harness shape before it's removed):
 
-- [ ] `a taken key puts its built action(s)`.
-- [ ] `a null run result puts nothing`.
-- [ ] `an unknown key is skipped`.
-- [ ] `logCameraState arm calls the context effect once`.
-- [ ] Implement `watchKeyboardEventsSaga` + the `logCameraState` arm, all green.
-- [ ] `npm run typecheck`.
-- [ ] Commit.
+- [x] `a taken key puts its built action(s)`.
+- [x] `a null run result puts nothing`.
+- [x] `an unknown key is skipped`.
+- [x] `logCameraState arm calls the context effect once`.
+- [x] Implement `watchKeyboardEventsSaga` + the `logCameraState` arm, all green.
+- [x] `npm run typecheck`.
+- [x] Commit.
 
 ---
 
@@ -230,11 +230,11 @@ _Spec §5._
 
 **`App.tsx`:** remove the `useKeyboardShortcuts` import (`App.tsx:48`) and its call (`App.tsx:117-124`); remove the now-dead `dispatchSetPaletteOpen` / `dispatchToggleUiHidden` / `dispatchToggleDebugPanelOpen` `useCallback` wrappers (`App.tsx:103-111`) and the `useCallback` import if nothing else in the file needs it; remove the `setPaletteOpen, toggleUiHidden, toggleDebugPanelOpen` action-creator import (`App.tsx:62`) since App no longer dispatches them directly. Keep the `paletteOpen` / `uiHidden` / `debugPanelOpen` selector reads (`App.tsx:84-86`) and the `selected` read (`App.tsx:75`) — the render tree and `uiStack` className still need them. `handleRef` stays (still passed to `InfoCardContainer`/`CommandPaletteContainer`/the debug panel).
 
-- [ ] Edit rootSaga: swap the fork.
-- [ ] Delete the hook, its input type, the tour keyboard saga + test.
-- [ ] Edit `App.tsx`: remove the hook wiring and its dead `useCallback`s per above, keep the selectors that still feed JSX.
-- [ ] `npm test` (full suite) + `npm run typecheck` green.
-- [ ] Commit.
+- [x] Edit rootSaga: swap the fork.
+- [x] Delete the hook, its input type, the tour keyboard saga + test.
+- [x] Edit `App.tsx`: remove the hook wiring and its dead `useCallback`s per above, keep the selectors that still feed JSX.
+- [x] `npm test` (full suite) + `npm run typecheck` green.
+- [x] Commit.
 
 ---
 
@@ -242,8 +242,8 @@ _Spec §5._
 
 _Spec §7, §8._ No commit unless a fix is needed.
 
-- [ ] Ask the user to manually sweep, against the running dev server: Cmd+K / `/` open the palette; Esc clears selection + exits a tour; `f` focuses the pinned target; `h`/`e` fly home; Tab hides UI; `l` logs camera state to console; `d` toggles the debug panel; `[`/`]`/`\`/Shift+N drive the clock; in a running tour, `→`/`←`/`Space` navigate and Space is NOT hijacked outside a tour (still scrolls/activates buttons).
-- [ ] Note: the `/feature-done` audit runs before merge, not as a step here.
+- [x] Ask the user to manually sweep, against the running dev server: Cmd+K / `/` open the palette; Esc clears selection + exits a tour; `f` focuses the pinned target; `h`/`e` fly home; Tab hides UI; `l` logs camera state to console; `d` toggles the debug panel; `[`/`]`/`\`/Shift+N drive the clock; in a running tour, `→`/`←`/`Space` navigate and Space is NOT hijacked outside a tour (still scrolls/activates buttons).
+- [x] Note: the `/feature-done` audit runs before merge, not as a step here.
 
 ---
 
