@@ -54,6 +54,7 @@ function makeState(
     milkyWayLabelEnabled?: boolean;
     surveyLabelEnabled?: boolean;
     volumesMasterEnabled?: boolean;
+    orbitTrailsEnabled?: boolean;
     ringVisibility?: Partial<Record<string, boolean>>;
     labelVisibility?: Partial<Record<string, boolean>>;
   } = {},
@@ -72,6 +73,9 @@ function makeState(
         labelEnabled: opts.milkyWayLabelEnabled ?? true,
       },
       volumes: { enabled: opts.volumesMasterEnabled ?? true },
+      // The orbitTrails fade row seeds from settings.orbitTrails.enabled, so
+      // seedFades indexes this leaf (default on, like the live scene).
+      orbitTrails: { enabled: opts.orbitTrailsEnabled ?? true },
       // The surveyLabel fade row seeds from famousGalaxy.labelEnabled (famous
       // labels reuse the galaxyNames layer), so seedFades indexes this leaf.
       galaxyCatalogs: {
@@ -102,6 +106,7 @@ function makeSettings(
     sdssEnabled?: boolean;
     famousLabelEnabled?: boolean;
     milkyWayEnabled?: boolean;
+    orbitTrailsEnabled?: boolean;
   } = {},
 ): EngineSettingsState {
   const galaxyItems: Record<string, { enabled: boolean; labelEnabled: boolean }> = {};
@@ -120,6 +125,7 @@ function makeSettings(
     volumes: { enabled: true, items: {} },
     filaments: { enabled: true },
     flow: { enabled: true },
+    orbitTrails: { enabled: opts.orbitTrailsEnabled ?? true },
   } as unknown as EngineSettingsState;
 }
 
@@ -254,6 +260,20 @@ describe('seedFades', () => {
     expect(state.subsystems.fades.opacityOf({ kind: 'flow' })).toBe(0);
   });
 
+  it('seeds orbitTrails from its toggle (NOT demand-loaded) — 1 on, 0 off', () => {
+    // Unlike filament/flow, the orbit-trails conic table is a compile-time
+    // constant with no asset slot, so its fade is settings-derived like
+    // milkyWayDisk: a default-on session registers at 1 (no fade-in), a hidden
+    // one at 0 (no frame-1 flash) — NOT the demand-loaded seed-0 rule.
+    const on = makeState({ orbitTrailsEnabled: true });
+    seedFades(on);
+    expect(on.subsystems.fades.opacityOf({ kind: 'orbitTrails' })).toBe(1);
+
+    const off = makeState({ orbitTrailsEnabled: false });
+    seedFades(off);
+    expect(off.subsystems.fades.opacityOf({ kind: 'orbitTrails' })).toBe(0);
+  });
+
   it('survey row has no post — masks are a pure per-frame derivation', () => {
     // The draw/pick bitmasks are no longer cached state recomputed on toggle;
     // `deriveSourceMasks` projects them on read (per-frame in `runFrame`, fresh
@@ -314,6 +334,7 @@ describe('FADE_LAYERS intent subset', () => {
     'volumeField',
     'volumesMaster',
     'filaments',
+    'orbitTrails',
     'milkyWayDisk',
     'milkyWayLabel',
     'flow',
@@ -345,6 +366,17 @@ describe('FADE_LAYERS intent subset', () => {
     const row = rowFor('surveyLabel');
     expect(row.intent?.(makeSettings({ famousLabelEnabled: false }), undefined)).toBe(false);
     expect(row.intent?.(makeSettings({ famousLabelEnabled: true }), undefined)).toBe(true);
+  });
+
+  it('orbitTrails row intent + seed follow settings.orbitTrails.enabled', () => {
+    const row = rowFor('orbitTrails');
+    expect(row.intent?.(makeSettings({ orbitTrailsEnabled: false }), undefined)).toBe(false);
+    expect(row.intent?.(makeSettings({ orbitTrailsEnabled: true }), undefined)).toBe(true);
+    // Settings-derived seed (no demand-loaded guard): on → 1, off → 0.
+    expect(row.seed(makeSettings({ orbitTrailsEnabled: false }), undefined)).toBe(0);
+    expect(row.seed(makeSettings({ orbitTrailsEnabled: true }), undefined)).toBe(1);
+    // And no guard — the conic table is always present (unlike flow/filaments).
+    expect(row.guard).toBeUndefined();
   });
 
   it('surveyLabel seed follows famousGalaxy.labelEnabled', () => {

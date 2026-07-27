@@ -260,6 +260,16 @@ export const DEFAULT_MILKY_WAY_ENABLED = SOURCE_REGISTRY[Source.MilkyWay].visibl
 export const DEFAULT_MILKY_WAY_LABEL_ENABLED: boolean = true;
 
 /**
+ * Orbit-trails overlay default — ON.  The near-field Keplerian orbit trails
+ * (Earth / Jupiter / Moon …) are part of the baseline solar-system scene, so the
+ * master gate defaults on.  A plain `true` literal like
+ * `DEFAULT_MILKY_WAY_LABEL_ENABLED`: the trails are a compile-time conic table
+ * (`ORBITAL_ELEMENTS`), not a registry source with its own `visible` gate, so the
+ * literal is the honest single source of truth for this axis.
+ */
+export const DEFAULT_ORBIT_TRAILS_ENABLED: boolean = true;
+
+/**
  * Famous-stars overlay default — the seeded near-field star map (the Sun and its
  * ~130 named neighbours) is part of the baseline descent scene, resolving on
  * close approach through the star point/sphere layers, so it defaults ON.

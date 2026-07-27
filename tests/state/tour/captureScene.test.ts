@@ -24,6 +24,7 @@ const SNAPSHOT_SETTINGS_KEYS = [
   'galaxyCatalogs',
   'labels',
   'milkyWay',
+  'orbitTrails',
   'structures',
   'volumes',
 ].sort();
@@ -31,7 +32,7 @@ const SNAPSHOT_SETTINGS_KEYS = [
 const FOCUS_REF: SelectionRef = { type: 'structure', id: 'virgo-cluster' };
 
 /**
- * A minimal state carrying the six tour-owned settings clusters plus a
+ * A minimal state carrying the eight tour-owned settings clusters plus a
  * non-null `selection.focus`. Cast through `unknown` rather than building
  * full cluster shapes — only the fields assertions touch are needed.
  */
@@ -44,6 +45,7 @@ function makeState(focus: SelectionRef | null = FOCUS_REF) {
       filaments: { enabled: true, intensity: 0.5 },
       milkyWay: { enabled: true, labelEnabled: false },
       flow: { enabled: true, nested: { speed: 2 } },
+      orbitTrails: { enabled: true },
       tonemap: { exposure: 1.2 },
     },
     selection: { hover: null, select: null, focus },
@@ -51,11 +53,11 @@ function makeState(focus: SelectionRef | null = FOCUS_REF) {
 }
 
 describe('captureScene', () => {
-  it('captures the seven settings clusters + selection.focus', () => {
+  it('captures the eight settings clusters + selection.focus', () => {
     const state = makeState(FOCUS_REF);
     const snap = captureScene(state);
 
-    // Settings half carries exactly the seven tour-owned clusters.
+    // Settings half carries exactly the eight tour-owned clusters.
     expect(Object.keys(snap.settings).sort()).toEqual(SNAPSHOT_SETTINGS_KEYS);
     for (const key of SNAPSHOT_SETTINGS_KEYS) {
       expect((snap.settings as Record<string, unknown>)[key]).toEqual(

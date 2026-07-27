@@ -1,5 +1,5 @@
 /**
- * captureSettings — take a detached snapshot of the seven tour-owned
+ * captureSettings — take a detached snapshot of the eight tour-owned
  * settings clusters off the live store state.
  *
  * The cinematic tour captures the user's settings, plays an effect that
@@ -8,7 +8,7 @@
  * later mutation of the live settings (a slider drag, an effect step)
  * must not bleed into the snapshot we'll restore from. A shallow copy
  * would share nested cluster objects, so we `structuredClone` a plain
- * object of the six clusters into a deep, independent copy.
+ * object of the eight clusters into a deep, independent copy.
  *
  * We clone whole clusters with zero per-field projection: the look-knobs
  * (brightness, intensity, palette, …) ride along with the visibility bits
@@ -25,7 +25,8 @@ import type { RootState } from '../../store/types';
 import type { SettingsSnapshot } from '../../@types/engine/settings/SettingsSnapshot';
 
 export function captureSettings(state: Pick<RootState, 'settings'>): SettingsSnapshot {
-  const { galaxyCatalogs, structures, volumes, filaments, milkyWay, flow, labels } = state.settings;
+  const { galaxyCatalogs, structures, volumes, filaments, milkyWay, flow, orbitTrails, labels } =
+    state.settings;
   return structuredClone({
     galaxyCatalogs,
     structures,
@@ -33,6 +34,7 @@ export function captureSettings(state: Pick<RootState, 'settings'>): SettingsSna
     filaments,
     milkyWay,
     flow,
+    orbitTrails,
     labels,
   });
 }

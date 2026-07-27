@@ -207,6 +207,7 @@ function makeBridgeState(): {
     volumes: { enabled: true, items: {} },
     filaments: { enabled: true },
     flow: { enabled: true },
+    orbitTrails: { enabled: true },
   } as unknown as EngineSettingsState;
 
   const state = {
@@ -237,6 +238,7 @@ const INTENT_KEYS = [
   'volumeField',
   'volumesMaster',
   'filaments',
+  'orbitTrails',
   'milkyWayDisk',
   'milkyWayLabel',
   'flow',
@@ -287,6 +289,7 @@ describe('syncVisibilityFades', () => {
       structureLabel: { kind: 'labelLayer', layer: 'structure', category: STRUCTURE_IDS[0]! },
       volumesMaster: { kind: 'volumesMaster' },
       filaments: { kind: 'filament' },
+      orbitTrails: { kind: 'orbitTrails' },
       milkyWayDisk: { kind: 'milkyWay' },
       milkyWayLabel: { kind: 'labelLayer', layer: 'milkyWay' },
       flow: { kind: 'flow' },

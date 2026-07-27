@@ -2,7 +2,7 @@
  * SettingsSnapshot — the whole-cluster capture the cinematic tour takes
  * before it plays an effect, and restores afterwards.
  *
- * ### Why these seven clusters and not the whole settings bag
+ * ### Why these eight clusters and not the whole settings bag
  *
  * The tour captures, mutates, and restores the user's settings around a
  * playback. Only the clusters that carry user-visible *visibility* and
@@ -14,6 +14,7 @@
  *   - `filaments`      — filament-skeleton master gate + intensity.
  *   - `milkyWay`       — Milky-Way disk + label axes.
  *   - `flow`           — CF4++ flow-field overlay gate + look/motion knobs.
+ *   - `orbitTrails`    — near-field Keplerian orbit-trails master gate.
  *   - `labels`         — cross-cutting label-presentation mode (focusedOnly).
  *
  * The remaining clusters (`tonemap`, `bloom`, `camera`, `bias`, `thumbnails`,
@@ -33,6 +34,13 @@ import type { EngineSettingsState } from '../../settings/EngineSettingsState';
 export type SettingsSnapshot = Readonly<
   Pick<
     EngineSettingsState,
-    'galaxyCatalogs' | 'structures' | 'volumes' | 'filaments' | 'milkyWay' | 'flow' | 'labels'
+    | 'galaxyCatalogs'
+    | 'structures'
+    | 'volumes'
+    | 'filaments'
+    | 'milkyWay'
+    | 'flow'
+    | 'orbitTrails'
+    | 'labels'
   >
 >;

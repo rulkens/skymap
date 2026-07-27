@@ -359,6 +359,9 @@ function makeState(
       thumbnails: { enabled: true },
       milkyWay: { enabled: true, labelEnabled: true },
       filaments: { enabled: false, intensity: 1.0 },
+      // seedFades reads orbitTrails.enabled for the settings-derived orbit-trails
+      // seed (always present, unlike the demand-loaded flow/filament rows).
+      orbitTrails: { enabled: true },
       volumes: { enabled: true, items: seedVolumeFields() },
       // Overridable so a test can hide every category and pin the bug-fix
       // (structureCatalog must NOT load when nothing structural is visible).
