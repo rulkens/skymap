@@ -1,0 +1,530 @@
+# Analytic sphere primitive for body rendering
+
+**Spec:** [`docs/superpowers/specs/2026-07-28-analytic-sphere-primitive.md`](../specs/2026-07-28-analytic-sphere-primitive.md)
+**Grill:** [`docs/grill-sessions/analytic-sphere-primitive-2026-07-28.md`](../../grill-sessions/analytic-sphere-primitive-2026-07-28.md)
+**Spike (proven, visually confirmed):** commit `e4bd0dbb`, gated behind `?impostor`.
+
+For agentic workers: REQUIRED SUB-SKILL `superpowers:subagent-driven-development`, and load the
+`wesl-shaders` skill before touching any `.wesl` file. Each task ends with its own scoped
+commit.
+
+## Goal
+
+Replace the tessellated 48×24 silhouette with a ray-traced analytic sphere on
+`texturedBodyRenderer` and `bodyPickRenderer`, so the drawn edge is pixel-exact and coincides
+with the analytic radius the atmosphere shell already tests against. Closes the transparent
+limb seam by construction. `earthRenderer`, `starRenderer` and `planetRenderer` stay on the
+mesh. No oblateness work.
+
+## Packaging — three PRs, in this order
+
+| PR | contents | based on |
+| --- | --- | --- |
+| **1 — prep** | Phase 0. The `lib/analyticSphere.wesl` extraction, no behaviour change. | main |
+| **2 — pick** | Phase 1. `bodyPickRenderer` goes analytic. Nothing is deleted. | main, after 1 merges |
+| **3 — adopt** | Phases 2–3. `texturedBodyRenderer` adopts it, the mesh shading path is deleted, closing tasks. | main, after 2 merges |
+
+**Prep and feature are separate diffs, always** — PR 1 never carries a feature commit.
+
+**Why pick before adopt.** PR 3 deletes the fallback, so it is the highest-risk merge; PR 2
+exercises the shared lib in a second consumer and puts `frag_depth` on iOS **while the mesh path
+still exists everywhere**. The intervening state on main (exact pick silhouette, 48-gon visual)
+is the benign direction of the mismatch: a hairline ring just outside the drawn planet that
+responds to clicks, versus PR-3-first's hairline that looks like the planet and does not.
+
+Open a draft PR when the first task of each lands.
+
+## Checkpoint before Phase 1 — BLOCKING
+
+**Spec correction #3.** `starSpheresLayer.ts:178` passes `oblateness: star.oblateness` into
+`drawFlooredSpherePick`, and six famous stars carry a non-zero value (0.35 on Achernar). An
+analytic pick sphere whose ray origin ignores flattening is wrong by `1/(1 − oblateness)` along
+the polar axis — silently, because the visual star still draws correctly through the mesh
+`starRenderer`. The grill did not have this in front of it.
+
+Read the spec's correction #3 for the three options and the recommendation. **Get an explicit
+user decision before starting Phase 1.**
+
+- **If approved** (recommended): Task 1.1 lands the one-line `camPosLocal` correction and
+  Phase 1 proceeds as written.
+- **If held**: delete Phase 1 from this plan, file the pick conversion as a backlog item
+  alongside `starRenderer`, and renumber. Phases 0, 2 and 3 are independent of the decision and
+  proceed unchanged — main keeps the 0.214% pick/visual hairline permanently.
+
+## Standing test refusal
+
+Per the spec's Testing section and
+[`docs/superpowers/conventions/testing.md`](../conventions/testing.md), **do not** add tests for:
+
+- shader maths (ray-sphere, equirect uv, gradients, frag depth) — unreachable without a GPU; the
+  mock device rasterises nothing, so a green test proves only that a string reached a stub;
+- `cullMode: 'front'` or `PROXY_SCALE = 1.05` — constant restatements;
+- the mesh path's deletion.
+
+The existing `texturedBodyRenderer` tests assert layout, sampler, per-body buffers and mip
+generation — none touches the shading path. **If one needs editing, stop and re-read the diff**:
+that is a signal the deletion reached further than intended.
+
+## Standing acceptance rule — every `.wesl` task
+
+A clean `npm run build` **does not prove a shader compiles**. `?static` is build-time text
+linking; the WESL linker and `tsc` both pass on WGSL that `device.createShaderModule` rejects
+(the duplicate-`@builtin(position)` landmine fails only at module creation). So every task below
+that touches a `.wesl` file carries its own **visual acceptance** step. That step is not
+optional and not deferrable to the end of the phase.
+
+Each visual step means: dev server running, browser console open, fly to the named body,
+confirm the named appearance, and confirm **zero** `Invalid ShaderModule` /
+`Invalid RenderPipeline` lines. `createShaderModuleWithDevLog` prints the real
+`getCompilationInfo()` error plus the linked WGSL — error line numbers refer to the **linked**
+output, not the source `.wesl`.
+
+WESL constraints that bite (`wesl-shaders` skill): comments use **single quotes, never
+backticks**; imports are one identifier per line, at the **top** of the file, rooted at the
+literal `package::`; never two `@builtin(position)`-bearing structs in one linked module.
+
+---
+
+## Phase 0 — prep (PR 1)
+
+### 0.1: Backlog hygiene — remove the item this work picks up
+
+**Files:** `docs/BACKLOG.md` (modify, line 53), `docs/backlog/2026-07-24-atmosphere-limb-transparent-seam.md` (delete)
+
+Picking up a backlog item removes it in the same change; the detail file seeded the spec and the
+spec is now the source of truth. Never strike through — delete.
+
+- [ ] Delete the `**Atmosphere limb transparent seam**` index line from the Rendering section.
+- [ ] `rm -f docs/backlog/2026-07-24-atmosphere-limb-transparent-seam.md` (bare `rm` prompts
+      interactively and hangs).
+- [ ] Commit alongside the spec + this plan, if they are not already committed.
+
+### 0.2: Extract `lib/analyticSphere.wesl`
+
+**Files:** `src/services/gpu/shaders/lib/analyticSphere.wesl` (new),
+`src/services/gpu/shaders/bodies/texturedBody/impostorFragment.wesl` (modify)
+
+**This is a pure extraction. Zero behaviour change.** The maths moves verbatim from
+`impostorFragment.wesl:143-209`; only its home changes.
+
+**Contract:**
+
+```wgsl
+struct SphereHit {
+  hit: bool,
+  point: vec3<f32>,
+};
+
+struct UvGradients {
+  ddx: vec2<f32>,
+  ddy: vec2<f32>,
+};
+
+const TEXTURE_PRIME_MERIDIAN_U: f32 = 0.5;
+
+fn hitUnitSphere(ro: vec3<f32>, rd: vec3<f32>) -> SphereHit;
+fn equirectUvFromDir(dir: vec3<f32>) -> vec2<f32>;
+fn equirectUvGradients(uv: vec2<f32>) -> UvGradients;
+fn fragDepthFromLocal(mvp: mat4x4<f32>, pLocal: vec3<f32>) -> f32;
+```
+
+Semantics, each already implemented in the spike — cite it, don't re-derive:
+
+- `hitUnitSphere` — `impostorFragment.wesl:149-162`. Wraps `package::lib::util::raySphere`
+  against the unit sphere at the origin. `hit` is `roots.y > 0.0`; the parameter is the near
+  positive root (`select(roots.y, roots.x, roots.x > 0.0)`); on a miss it is the
+  closest-approach parameter `max(dot(-ro, rd), 0.0)`. `point` is `normalize(ro + rd * t)` in
+  **both** cases, so it is always unit length.
+- `equirectUvFromDir` — `impostorFragment.wesl:165-168`.
+- `equirectUvGradients` — `impostorFragment.wesl:170-182`. Takes the uv (it needs `uv.x` for the
+  wrap trick and `uv.y` for the plain v derivative) and calls `dpdx`/`dpdy` internally.
+- `fragDepthFromLocal` — `impostorFragment.wesl:205-209`. `clip = mvp * vec4(pLocal, 1.0)`,
+  return `clip.z / clip.w`.
+
+Move `TEXTURE_PRIME_MERIDIAN_U` here too (delete the copy at `impostorFragment.wesl:108`) and
+carry its comment: WESL cannot import the TS constant, so this is a greppable-not-importable
+mirror of `src/data/bodies/texturePrimeMeridianU.ts`.
+
+The module header is the didactic home for the four rationales the spike currently carries in
+its own header — the grazing fallback and why derivatives run before `discard`; the `(0, 1]` vs
+`[0.5, 1.5)` u range being sampler-identical under `repeat`; the two-seam gradient trick; and
+why `fragDepthFromLocal` applies **no** reversed-Z flip. Move that prose across rather than
+rewriting it, and leave `impostorFragment.wesl`'s header pointing at the lib for the details.
+
+- [ ] No test (standing refusal — GPU-only maths).
+- [ ] Write `lib/analyticSphere.wesl`; one cohesive module, **not** one function per file (WESL
+      resolves the last path segment as the symbol name — the `lib/math.wesl` precedent).
+- [ ] Repoint `impostorFragment.wesl` at it: four `import package::lib::analyticSphere::…`
+      lines at the top, the inline maths deleted, the fragment body otherwise untouched.
+- [ ] `npm run typecheck` clean.
+- [ ] **Visual acceptance:** load with `?impostor`, fly to Mars and to Saturn. The bodies render
+      **exactly** as they did before this task — same silhouette, same texture registration,
+      no antimeridian blur line, Saturn's ring shadow unchanged. Console clean.
+- [ ] Commit: the two files.
+
+### 0.3: Prep PR
+
+- [ ] `npm test`, `npm run typecheck`, `npm run build` — all green.
+- [ ] `npm run format` on touched files only.
+- [ ] Open the PR with `--base main`. Merge before starting Phase 1.
+
+---
+
+## Phase 1 — the pick goes analytic (PR 2)
+
+Gated on the checkpoint above.
+
+### 1.1: `camPosLocal` learns about oblateness
+
+**Files:** `src/utils/camera/camPosLocal.ts` (modify),
+`tests/utils/camera/camPosLocal.test.ts` (modify)
+
+**Signature:**
+
+```ts
+export function camPosLocal(
+  camPosMpc: Readonly<Vec3>,
+  bodyPosMpc: Readonly<Vec3>,
+  radiusMpc: number,
+  orientation: Readonly<Mat3>,
+  oblateness?: number, // defaults to 0
+): Vec3;
+```
+
+**Behaviour:** unchanged for `oblateness === 0`. Otherwise the local z component is additionally
+divided by `1 − oblateness`, because `composeBodyMvp` scales the polar (model-Z) axis by
+`radiusMpc·(1 − oblateness)` (`composeBodyMvp.ts:29-33`) — so the frame in which the body is the
+**unit** sphere is the one this function must land in, and today it lands in a spheroid frame
+instead. The header must say that, and say that this is the frame an analytic ray-sphere test
+requires; a Lambert/Minnaert **direction** consumer never noticed because it renormalizes.
+
+- [ ] Add the test `leaves the local vector unchanged for a spherical body` — a hand-computed
+      expectation, oblateness omitted, asserting the existing result is byte-identical.
+- [ ] Add the test `divides the polar component by 1 − oblateness` — hand-computed, e.g.
+      oblateness 0.35 with an on-axis camera, asserting z is `1/0.65` times the spherical result
+      while x and y are untouched. Compute the expectation on paper, **never** by calling the
+      function (no mirror tests).
+- [ ] Implement.
+- [ ] `npm test -- camPosLocal` green; the four existing call sites are unedited and unchanged.
+- [ ] Commit.
+
+### 1.2: `SpherePickUniforms` grows `camPosLocal` into its padding
+
+**Files:** `src/services/gpu/shaders/bodies/spherePick.wesl` (modify),
+`src/services/gpu/renderers/bodies/bodyPickRenderer.ts` (modify),
+`src/@types/rendering/BodyPickRenderer.d.ts` (modify),
+`tests/services/gpu/shaders/sphereUniforms.test.ts` (modify)
+
+**Byte layout — the struct stays 80 bytes:**
+
+```
+offset  0..63  mvp          mat4x4<f32>   column-major, 64 B
+offset 64..75  camPosLocal  vec3<f32>     16-byte aligned at 64
+offset 76..79  packedId     u32           fills the vec3's trailing slot — a REAL field
+total: 80
+```
+
+CPU scratch: `f32[0..15] = mvp`, `f32[16..18] = camPosLocal`, `u32[19] = packedId`.
+`SPHERE_UNIFORM_BYTES`, the dynamic-offset slot stride, `minBindingSize` and `MAX_SPHERE_DRAWS`
+are **unchanged** — that is the point of the pad-slot trick
+(`RingUniforms.planetRadiusRatio` is the precedent, `lib/sphere.wesl:237-243`).
+
+**Type:**
+
+```ts
+export type BodySpherePickArgs = {
+  readonly mvp: Float32Array;
+  /** Camera in the body's local frame, in FLOORED-pick-radius units — the ray origin. */
+  readonly camPosLocal: Readonly<Vec3>;
+  readonly packedId: number;
+};
+```
+
+- [ ] Add the test `SpherePickUniforms byte offsets` asserting the scratch mirror: mvp at f32
+      0..15, camPosLocal at f32 16..18, packedId at u32 word 19, total 80 bytes. This is the
+      WGSL/TS layout-parity keep-rule — the failure mode is a silently dropped iOS frame, not a
+      wrong pixel.
+- [ ] Widen the WESL struct and the TS scratch/type. `SPHERE_PACKED_ID_U32_INDEX` moves 16 → 19.
+- [ ] The shader is otherwise untouched **in this task** — `camPosLocal` is bound and unread, so
+      the pick behaves exactly as before. Splitting the layout change from the geometry change
+      keeps each bisectable.
+- [ ] `npm test -- sphereUniforms bodyPickRenderer` green; `npm run typecheck` clean.
+- [ ] **Visual acceptance:** picking still works — hover and click Mars, the Moon, and a Moon
+      overlapping Earth; the InfoCard names the right body each time. Console clean.
+- [ ] Commit.
+
+### 1.3: `drawFlooredSpherePick` composes the ray origin
+
+**Files:** `src/services/engine/helpers/drawFlooredSpherePick.ts` (modify)
+
+The one funnel all four sphere-pick layers pass through, and it already holds every input.
+Compute `camPosLocal(args.camPosMpc, args.positionMpc, pickRadiusMpc, args.orientation,
+args.oblateness)` from the **same** `pickRadiusMpc` local the mvp is composed with, and pass it
+through.
+
+The header gains the "why" the spec's pick section states: the floor is a CPU-side **model
+radius** inflation, so in the local frame the floored sphere **is** the unit sphere — the
+analytic primitive composes with it unchanged, exactly as the mesh did. No call site changes.
+
+- [ ] No new test — the helper is a thin composition over `camPosLocal` (1.1, tested) and
+      `composeBodyMvp` (tested); a test here would restate both.
+- [ ] Implement; update the module header.
+- [ ] `npm run typecheck` clean; `npm test` green.
+- [ ] Commit.
+
+### 1.4: `spherePick.wesl` ray-traces the sphere
+
+**Files:** `src/services/gpu/shaders/bodies/spherePick.wesl` (modify),
+`src/services/gpu/renderers/bodies/bodyPickRenderer.ts` (modify),
+`src/services/gpu/shaders/lib/analyticSphere.wesl` (modify — `PROXY_SCALE` graduates here)
+
+**Contract:**
+
+```wgsl
+// lib/analyticSphere.wesl — gains its second consumer, so the proxy scale graduates.
+const PROXY_SCALE: f32 = 1.05;
+
+// spherePick.wesl
+struct SpherePickVSOut {
+  @builtin(position) clip: vec4<f32>,
+  @location(0) localPos: vec3<f32>,
+};
+
+struct PickFSOut {
+  @location(0) id: vec4<u32>,
+  @builtin(frag_depth) depth: f32,
+};
+```
+
+`vs` inflates the mesh position by `PROXY_SCALE` and forwards it. `fsPick` forms
+`rd = normalize(in.localPos − u.camPosLocal)`, calls `hitUnitSphere`, **discards on a miss**
+(no derivatives are needed here — the pick samples nothing), and emits
+`vec4<u32>(u.packedId, 0u, 0u, 0u)` plus `fragDepthFromLocal(u.mvp, hit.point)`.
+
+Renderer: `cullMode` `'back'` → `'front'`. Nothing else about the sphere pipeline changes.
+
+**The three ways this breaks, in order of how quietly:**
+
+1. **Missing `frag_depth`.** The fragment keeps the proxy's interpolated depth — 5% too near,
+   far hemisphere — and depth-tested nearest-wins occlusion silently breaks. **The Moon in front
+   of Earth is the acceptance case, and it must be tested explicitly.**
+2. **`cullMode` left at `'back'`.** The body's pick vanishes the moment the camera crosses
+   inside the 1.05 shell.
+3. **A second `@builtin(position)`-bearing struct** in this module — build and linker both pass,
+   `createShaderModule` rejects at runtime. There is exactly one; keep it that way.
+
+`PROXY_SCALE` graduating to the lib on its **second** consumer is the promotion criterion
+`lib/util.wesl`'s header states, applied rather than pre-empted. `PROXY_SCALE · cos(3.75°) =
+1.0478 > 1.0`, so the proxy strictly circumscribes; the fragment discards outside the unit
+sphere, so the effective pick silhouette is exactly the model radius — the 5% never reaches the
+target.
+
+- [ ] No test (standing refusal).
+- [ ] Implement the shader + the cull-mode flip; move `PROXY_SCALE` into the lib and import it
+      from `spherePick.wesl` (leave `impostorVertex.wesl`'s local copy alone — Task 2.2 repoints
+      it, and touching it here would put a feature edit in the wrong PR).
+- [ ] `npm test -- bodyPickRenderer` green; `npm run typecheck` clean.
+- [ ] **Visual acceptance (the pick is invisible — use the debug pick view):** click precisely on
+      the outermost limb pixel of Mars at close approach and confirm it selects; click one pixel
+      outside and confirm it does not. Then **the occlusion case**: frame the Moon transiting
+      Earth and confirm clicking the Moon selects the Moon, not Earth. Then a far-edge planet
+      that projects to ~2 px, confirming `minPickRadiusMpc`'s floor still gives it a clickable
+      disc. Console clean.
+- [ ] Commit.
+
+### 1.5: iOS check — `frag_depth` on the pick pass
+
+**Files:** none (verification).
+
+Not yet the gate (nothing is deleted in this PR), but the cheap early read on the riskiest
+primitive. `frag_depth` written alongside an `r32uint` colour target is the specific thing to
+confirm.
+
+- [ ] `SKYMAP_HTTPS=1 npm run dev`, open the LAN HTTPS URL on an iPhone or iPad
+      (`vite.config.ts:9-51`; tap through the mkcert warning).
+- [ ] Confirm the scene **presents at all** — the silent failure mode is the whole frame being
+      dropped by a shared-encoder validation error while the loop ticks and the UI updates.
+- [ ] Tap a planet and confirm the InfoCard opens with the right body.
+- [ ] Record the result (device + iOS version) in the PR description.
+
+### 1.6: Pick PR
+
+- [ ] `npm test`, `npm run typecheck`, `npm run build` — all green.
+- [ ] `npm run format` on touched files only.
+- [ ] Request code review covering the uniform layout parity and the `frag_depth` occlusion path.
+- [ ] Merge (`gh api ... PUT /merge`, never `gh pr merge --delete-branch` from a worktree).
+
+---
+
+## Phase 2 — the textured body adopts it, the mesh path goes (PR 3)
+
+### 2.1: Delete the mesh shading path and the `?impostor` gate
+
+**Files:** `src/services/gpu/shaders/bodies/texturedBody/{vertex,fragment,io}.wesl` (delete),
+`src/services/gpu/renderers/bodies/texturedBodyRenderer.ts` (modify)
+
+The analytic path becomes the only path: one shader-module pair, `cullMode: 'front'`
+unconditionally, no `hasUrlGate` import, no pipeline-label branch. The renderer's module header
+loses its SPIKE paragraph (`texturedBodyRenderer.ts:276-299`) and gains a short, timeless
+paragraph on the proxy + analytic sphere — comments are timeless and terse, no history notes.
+
+Everything else in the renderer is untouched: `UNIFORM_BUFFER_SIZE`, `KIND_CFG`, the
+bind-group layout, the sampler, the per-body buffer/bind-group map, `setMap`,
+`setPlaceholderMap`, `clearMap`, `hasMap`, `setRingTexture`, `draw`, `destroy`.
+
+- [ ] No test (standing refusal). Existing `texturedBodyRenderer` tests must pass **unedited**.
+- [ ] Delete the three mesh `.wesl` files; drop the gate and the two `?static` imports for them.
+- [ ] `npm test -- texturedBodyRenderer` green; `npm run typecheck`; `npm run build`.
+- [ ] **Visual acceptance, no URL gate now:** Mars at close approach shows a smooth limb and
+      **no transparent seam** against its atmosphere shell — that is the feature. Then Saturn
+      (ring shadow on the planet, ring in front of the disc), the Moon (normal-mapped craters at
+      the terminator), and a body mid-load (placeholder texture, still a smooth sphere). Console
+      clean.
+- [ ] Commit.
+
+### 2.2: Rename the impostor trio to the canonical names
+
+**Files:** `src/services/gpu/shaders/bodies/texturedBody/impostor{Vertex,Fragment,Io}.wesl` →
+`{vertex,fragment,io}.wesl`, `src/services/gpu/renderers/bodies/texturedBodyRenderer.ts` (modify)
+
+**"Impostor" already means something else in this codebase** — billboard impostors for galaxies
+and the Milky Way (`wireImpostorSubsystems.ts`, `galaxyImpostorBaseline.test.ts`,
+`lib/focusUniforms.wesl`). A ray-traced sphere is the opposite technique. Leaving the name
+plants a permanent collision, and a rename that stops half-way is worse than either end state.
+
+**`npm run move-files` does NOT cover this.** It rewrites relative imports in `.ts`/`.tsx` via
+ts-morph; `.wesl` files are moved by hand, and neither the `?static` import literals in TS nor
+the `package::bodies::texturedBody::…` paths inside the `.wesl` files are rewritten for you.
+
+- [ ] `git mv` the three files.
+- [ ] Update the two `?static` import literals in `texturedBodyRenderer.ts` and the shader-module
+      labels (`texturedBody.vertex` / `texturedBody.fragment`).
+- [ ] Update the `package::bodies::texturedBody::impostorIo::ImpostorVSOut` imports inside the
+      renamed vertex + fragment; rename the struct `ImpostorVSOut` → `TexturedBodyVSOut`.
+- [ ] Repoint the vertex at `package::lib::analyticSphere::PROXY_SCALE` and delete its local
+      const (Task 1.4 already moved it).
+- [ ] Sweep the three files' comments for the word "impostor" and for SPIKE / `?impostor`
+      language; the surviving prose is timeless.
+- [ ] `rg -n "impostor" src/services/gpu/` returns **nothing** under `bodies/`.
+- [ ] `npm run typecheck`; `npm run build`.
+- [ ] **Visual acceptance:** Mars and Saturn render identically to 2.1 — a rename that breaks a
+      `?static` literal or a `package::` path fails only at `createShaderModule`. Console clean.
+- [ ] Commit.
+
+### 2.3: Rewrite `sphereTessellation.ts`'s header — third time, and the last
+
+**Files:** `src/data/bodies/sphereTessellation.ts` (modify)
+
+The text merged in #510 and corrected in #512 is now wrong in three separate ways, and will stay
+wrong if nobody touches it:
+
+1. It names **four** renderers that must agree. Two remain (`starRenderer`, `planetRenderer`)
+   plus the two analytic paths, which consume the mesh only as **proxy geometry**.
+2. Its "Why 48×24 and not higher" section reasons about the **drawn silhouette's** 0.214%
+   inscribed deficit. For the two converted renderers there is no such deficit: the silhouette is
+   analytic and the mesh is a 1.05× proxy that is never itself visible. 0.214% is still the
+   number that matters, but now only as the **floor `PROXY_SCALE` must clear**.
+3. Its closing paragraph claims the atmosphere shell "derives its ground-occlusion test radius
+   from these counts via `inscribedSphereRadiusFactor`". **No such symbol exists anywhere in the
+   repo.** `packAtmosphereUniforms` takes `bottomRadius = planetRadiusKm / atmosphereTopKm`
+   (`packAtmosphereUniforms.ts:75`) — purely physical. The shell has never tracked the
+   tessellation; that mismatch **was the seam**. Delete the claim outright, do not soften it.
+
+The load-bearing reason the constant has one home also changes: it is no longer "the pick must
+match the drawn silhouette" (they now match by construction), it is "the two remaining mesh
+renderers must agree, and both proxies must stay coarse enough to be cheap and fine enough that
+`PROXY_SCALE` clears their deficit".
+
+- [ ] No test (constant restatement).
+- [ ] Rewrite the header against the post-feature architecture; the values stay 48 and 24.
+- [ ] `npm run typecheck`.
+- [ ] Commit.
+
+---
+
+## Phase 3 — closing (PR 3, before merge)
+
+### 3.1: iOS verification — THE GATE
+
+**Files:** none (verification). **Blocking. PR 3 does not merge until this passes.**
+
+PR 3 deletes the mesh fallback, so the analytic path must be confirmed on iOS/WebKit **first**.
+WebKit is stricter than Tint and the failure is silent: all HDR passes share one command
+encoder, so an invalid pipeline makes `encoder.finish()` produce an invalid command buffer and
+`queue.submit()` drops the **entire** frame. The loop ticks, the camera moves, the React UI
+updates, and nothing ever presents — no thrown error, no console entry unless
+`createShaderModuleWithDevLog` catches it.
+
+Four things a stricter implementation could reject, all of them new to this path:
+
+- `@builtin(frag_depth)` written from a fragment that also writes colour;
+- `textureSampleGrad` with hand-computed gradients;
+- `dpdx`/`dpdy` taken **before** a `discard` in the same function;
+- a `bool` field in a function-scope struct (`SphereHit`). Legal WGSL — bool is only barred from
+  host-shareable types — but it is the least-exercised of the four. If WebKit rejects it, encode
+  the flag as an `f32` and note it in the lib header.
+
+- [ ] `SKYMAP_HTTPS=1 npm run dev`; open the LAN HTTPS URL on a real iPhone **and** a real iPad
+      if both are available (`vite.config.ts:9-51`).
+- [ ] Confirm the scene presents and the camera responds — **this is the whole point of the
+      gate**; a blank canvas with a working UI is the exact silent-failure signature.
+- [ ] Fly to Mars: smooth limb, no transparent seam, correctly registered texture, no
+      antimeridian blur line.
+- [ ] Fly to Saturn (ring shadow) and the Moon (normal-mapped terminator).
+- [ ] Tap to pick a planet and confirm the right body resolves.
+- [ ] If anything fails: **do not merge.** Diagnose via `createShaderModuleWithDevLog`'s output
+      and fix on the branch. Reverting to a `?mesh` fallback is Option C, which Q6 rejected —
+      raise it with the user rather than reinstating it unilaterally.
+- [ ] Record device + iOS version in the PR description.
+
+### 3.2: File the deferred items as backlog entries
+
+**Files:** `docs/BACKLOG.md` (modify), five new `docs/backlog/2026-07-28-*.md` files
+
+From the grill's "Deferred to backlog" section. **Index lines stay very short** — title +
+readiness tag + one terse clause + the `→ [details]` link; everything else goes in the detail
+file, never inline.
+
+| slug | tag | note for the detail file |
+| --- | --- | --- |
+| `star-renderer-analytic-plus-oblate-giants` | `needs-design` | ONE item, not two: `starRenderer` conversion and Saturn/Jupiter flattening. **Write it against post-Phase-1 state** — if the checkpoint approved Task 1.1, the `camPosLocal` frame fix already exists and this item is no longer gated on it; what remains is ellipsoid normals, `packTintedSphereUniforms`, and flattening the atmosphere shell proxy (an oblate body against a spherical shell puts a 10% radius mismatch at the poles — this same seam at fifty times the scale). |
+| `in-atmosphere-haze` | `needs-design` | the shell cannot render over the disc from inside it; a proxy shell has no geometry in front of the planet. Needs a full-screen pass — the first half of Hillaire's aerial-perspective froxel. |
+| `star-renderer-uniform-buffer-race` | `ready` | single uniform buffer rewritten per body per frame; the documented `writeBuffer`-vs-`submit` hazard. `texturedBodyRenderer`'s own-buffer-per-body is the fix shape. |
+| `analytic-equirect-pole-mip-quality` | `deferred` | `v = asin(z)/π` has unbounded derivative at the poles, so the analytic uv degrades mip selection there. Inherent to the approach, **not** fixable with the wrap trick. |
+| `planet-renderer-max-planets-cap` | `ready` | `MAX_PLANETS = 24`. |
+
+- [ ] Write the five detail files and the five index lines (Rendering section).
+- [ ] Commit.
+
+### 3.3: `entanglement-radar` review pass
+
+**Files:** none (review).
+
+- [ ] Run the `entanglement-radar` skill over the whole branch diff (house convention). Pay
+      attention to:
+      - **`lib/analyticSphere.wesl` is the single home for the sphere maths** — no consumer
+        re-derives a uv, a gradient pair, or a depth from clip space locally;
+      - **no second branch on the same discriminant** — one analytic path, not
+        analytic-for-round / mesh-for-oblate anywhere (Q3 named this as the trap);
+      - **`PROXY_SCALE` has one home** and is not restated next to the 0.214% deficit it must
+        clear;
+      - **`sphereTessellation.ts` describes exactly what it now governs** — proxy coarseness for
+        four consumers, two of which no longer take their silhouette from it;
+      - **the pick and the visual share the silhouette by construction**, not by two call sites
+        reading one constant;
+      - **`camPosLocal`'s oblateness parameter is a frame correction, not an oblateness
+        feature** — nothing downstream has grown an "is this body flattened" branch.
+- [ ] Address findings, or record why deferred; keep the suite green.
+
+### 3.4: Final review + verification
+
+**Files:** none.
+
+- [ ] `npm test` (full suite green), `npm run typecheck` (both tsconfigs), `npm run build`.
+- [ ] `npm run format` on touched files only.
+- [ ] Request code review (`superpowers:requesting-code-review`) covering the analytic-sphere
+      lib, the deleted mesh path, and the pick silhouette/depth agreement.
+- [ ] Confirm the DoD and run `/feature-done` **before** merge — it sweeps the backlog and
+      relocates the spec + plan into `specs/completed/` + `plans/completed/`, and that sweep
+      rides this PR.
+- [ ] Merge PR 3 (`gh api ... PUT /merge`).
