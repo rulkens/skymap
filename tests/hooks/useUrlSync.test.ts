@@ -13,7 +13,9 @@
  *      (b) an empty hash on mount does NOT dispatch `clearSelection()` —
  *          the empty-hash clear is gated to hashchange only;
  *      (c) a hashchange to `#focus=<id>` dispatches `requestFocus(id)`;
- *      (d) a hashchange to empty dispatches `clearSelection()`.
+ *      (d) a hashchange to empty dispatches `clearSelection()`;
+ *      (e) a cold `#focus=<id>` load whose id is still deferring never
+ *          pushes a URL without the focus param.
  *
  * The URL WRITE (Effect B) is verified indirectly: it calls
  * `history.pushState`, which jsdom honours on the `window.location`
@@ -35,6 +37,7 @@ import type { GalaxyInfo } from '../../src/@types/engine/GalaxyInfo';
 import type { StructureInfo } from '../../src/@types/data/structure/StructureInfo';
 import type { BodyInfo } from '../../src/@types/engine/BodyInfo';
 import type { TimeState } from '../../src/@types/time/TimeState';
+import type { ResolveDeps } from '../../src/@types/engine/ResolveDeps';
 import type { AppDispatch } from '../../src/store/types';
 import type { UnknownAction } from '@reduxjs/toolkit';
 import { Source } from '../../src/data/sources';
@@ -74,6 +77,14 @@ function makeStructure(id: string): StructureInfo {
 function makeBody(id: string): BodyInfo {
   return { type: 'body', id, name: id } as unknown as BodyInfo;
 }
+
+/** Deps standing for "nothing has loaded yet" — every resolver misses. */
+const emptyDeps: ResolveDeps = {
+  catalogs: { get: () => undefined },
+  famousMeta: [],
+  structures: { byId: () => null },
+  stars: { current: () => null },
+};
 
 // A known instant, seeded from a Unix-ms value so its JD lands on a clean
 // millisecond and the compose→parse round-trip is exact.
@@ -119,7 +130,12 @@ const orientationSource = HASH_PARAM_SOURCES.find((s) => s.key === 'orientation'
 
 describe('computeDesiredHash (unified)', () => {
   it('returns empty body when focus is null', () => {
-    const out = computeDesiredHash({ focused: null, orientation: 'ecliptic', currentHash: '' });
+    const out = computeDesiredHash({
+      focused: null,
+      pendingFocusId: null,
+      orientation: 'ecliptic',
+      currentHash: '',
+    });
     expect(out.desiredHashBody).toBe('');
     expect(out.matches).toBe(true);
   });
@@ -127,6 +143,7 @@ describe('computeDesiredHash (unified)', () => {
   it('returns focus=<id> when focused is a galaxy', () => {
     const out = computeDesiredHash({
       focused: makeGalaxy(),
+      pendingFocusId: null,
       orientation: 'ecliptic',
       currentHash: '',
     });
@@ -137,6 +154,7 @@ describe('computeDesiredHash (unified)', () => {
   it('writes focus=<id> when focused is a structure', () => {
     const out = computeDesiredHash({
       focused: makeStructure('cluster-virgo-m87'),
+      pendingFocusId: null,
       orientation: 'ecliptic',
       currentHash: '',
     });
@@ -147,6 +165,7 @@ describe('computeDesiredHash (unified)', () => {
   it('omits focus for the Earth home body (bare URL is home)', () => {
     const out = computeDesiredHash({
       focused: makeBody('earth'),
+      pendingFocusId: null,
       orientation: 'ecliptic',
       currentHash: '',
     });
@@ -157,6 +176,7 @@ describe('computeDesiredHash (unified)', () => {
   it('writes focus=body-<id> for a non-home body', () => {
     const out = computeDesiredHash({
       focused: makeBody('jupiter'),
+      pendingFocusId: null,
       orientation: 'ecliptic',
       currentHash: '',
     });
@@ -167,6 +187,7 @@ describe('computeDesiredHash (unified)', () => {
   it('short-circuits when currentHash already matches a structure body', () => {
     const out = computeDesiredHash({
       focused: makeStructure('cluster-virgo-m87'),
+      pendingFocusId: null,
       orientation: 'ecliptic',
       currentHash: '#focus=cluster-virgo-m87',
     });
@@ -174,8 +195,27 @@ describe('computeDesiredHash (unified)', () => {
   });
 
   it('short-circuits when currentHash already matches the empty body', () => {
-    const out = computeDesiredHash({ focused: null, orientation: 'ecliptic', currentHash: '' });
+    const out = computeDesiredHash({
+      focused: null,
+      pendingFocusId: null,
+      orientation: 'ecliptic',
+      currentHash: '',
+    });
     expect(out.matches).toBe(true);
+  });
+
+  it('publishes a pending focus id ahead of the resolved target', () => {
+    // Precedence, not fallback: an in-flight request outranks whatever is still
+    // sitting in the resolved slot. Switching focus while the previous target is
+    // still focused would otherwise keep writing the OLD id until the new one
+    // resolves, so Back would land on a URL that never matched the screen.
+    const out = computeDesiredHash({
+      focused: makeStructure('cluster-virgo-m87'),
+      pendingFocusId: 'm31',
+      orientation: 'ecliptic',
+      currentHash: '',
+    });
+    expect(out.desiredHashBody).toBe('focus=m31');
   });
 
   it('composes focus through the param seam', () => {
@@ -184,6 +224,7 @@ describe('computeDesiredHash (unified)', () => {
     // proof the seam preserves the on-URL shape for the one existing source.
     const out = computeDesiredHash({
       focused: makeStructure('cluster-virgo-m87'),
+      pendingFocusId: null,
       orientation: 'ecliptic',
       currentHash: '',
     });
@@ -201,11 +242,11 @@ describe('computeDesiredHash (unified)', () => {
  * which actions the hook fires.
  */
 function makeStoreAndWrapper() {
-  const { store } = createAppStore({ settings: buildInitialSettings() });
+  const { store, setSagaContext } = createAppStore({ settings: buildInitialSettings() });
   const dispatchSpy = vi.spyOn(store, 'dispatch');
   const wrapper = ({ children }: { children: ReactNode }) =>
     createElement(Provider, { store, children });
-  return { store, dispatchSpy, wrapper };
+  return { store, dispatchSpy, setSagaContext, wrapper };
 }
 
 describe('useUrlSync hook integration', () => {
@@ -289,6 +330,41 @@ describe('useUrlSync hook integration', () => {
     expect(calls).toContainEqual(clearSelection());
   });
 
+  it('does not clobber #focus=<id> while the id is still deferring', () => {
+    // The deep-link clobber, end to end. `requestFocus('m31')` parks inside
+    // `resolveFocusRefDeferring` waiting on a catalog pulse, so the resolved focus
+    // slot stays null for the whole boot — and every write that runs in that
+    // window used to compose a body with no `focus` at all and pushState the deep
+    // link away.
+    //
+    // The deferral is reproduced faithfully rather than mocked: `resolveDeps`
+    // returns empty catalogs and empty famousMeta, so `resolveFocusId('m31')`
+    // misses on the famous branch and the saga parks on `take([catalogLoaded, …])`.
+    window.location.hash = '#focus=m31';
+    const pushSpy = vi.spyOn(window.history, 'pushState');
+    const { store, setSagaContext, wrapper } = makeStoreAndWrapper();
+    setSagaContext({ resolveDeps: () => emptyDeps });
+
+    renderHook(() => useUrlSync(), { wrapper });
+
+    // A store change landing DURING the resolve window is the second half of the
+    // bug and the reason the write reads the pending id rather than just skipping
+    // its mount pass: boot dispatches plenty (the loop's `goLive`, the engine's
+    // Earth seed), each one re-running the write against an empty focus slot.
+    act(() => {
+      store.dispatch(setOrientation('galactic'));
+    });
+
+    // Sanity: the intent really is unresolved — the saga is still deferring.
+    expect(store.getState().selection.focus).toBeNull();
+
+    const pushed = pushSpy.mock.calls.map((call) => String(call[2]));
+    expect(pushed.filter((url) => !url.includes('focus=m31'))).toEqual([]);
+    // …and the requested id is carried forward verbatim, so the URL the visitor
+    // arrived on survives the window byte for byte.
+    expect(pushed).toContain('/#focus=m31&orientation=galactic');
+  });
+
   it('removes the hashchange listener on unmount', () => {
     window.location.hash = '';
     const { dispatchSpy, wrapper } = makeStoreAndWrapper();
@@ -313,6 +389,7 @@ describe('t param source — compose (write)', () => {
     // focus is null, so the body is the `t` param alone.
     const out = computeDesiredHash({
       focused: null,
+      pendingFocusId: null,
       time: manualTime(),
       orientation: 'ecliptic',
       currentHash: '',
@@ -323,6 +400,7 @@ describe('t param source — compose (write)', () => {
   it('emits nothing in live mode', () => {
     const out = computeDesiredHash({
       focused: null,
+      pendingFocusId: null,
       time: liveTime(),
       orientation: 'ecliptic',
       currentHash: '',
@@ -331,7 +409,12 @@ describe('t param source — compose (write)', () => {
   });
 
   it('emits nothing when no time is supplied (focus-only caller)', () => {
-    const out = computeDesiredHash({ focused: null, orientation: 'ecliptic', currentHash: '' });
+    const out = computeDesiredHash({
+      focused: null,
+      pendingFocusId: null,
+      orientation: 'ecliptic',
+      currentHash: '',
+    });
     expect(out.desiredHashBody).toBe('');
   });
 });
@@ -382,6 +465,7 @@ describe('focus + t on the &-seam (round-trip)', () => {
   it('composes and parses focus + t together', () => {
     const body = computeDesiredHash({
       focused: makeStructure('cluster-virgo-m87'),
+      pendingFocusId: null,
       time: manualTime(),
       orientation: 'ecliptic',
       currentHash: '',
@@ -397,6 +481,7 @@ describe('focus + t on the &-seam (round-trip)', () => {
   it('focus alone: manual clock absent ⇒ no t param, no time dispatch', () => {
     const body = computeDesiredHash({
       focused: makeStructure('cluster-virgo-m87'),
+      pendingFocusId: null,
       time: liveTime(),
       orientation: 'ecliptic',
       currentHash: '',
@@ -411,6 +496,7 @@ describe('focus + t on the &-seam (round-trip)', () => {
   it('t alone: no focus ⇒ only the clock is restored', () => {
     const body = computeDesiredHash({
       focused: null,
+      pendingFocusId: null,
       time: manualTime(),
       orientation: 'ecliptic',
       currentHash: '',
@@ -430,17 +516,15 @@ describe('orientation param source — compose (write)', () => {
   it('writes null at the ecliptic default and the frame id otherwise', () => {
     // A view preference, not a target: the default composes no bytes (bare URL =
     // default frame), and only a non-default frame surfaces on the hash.
-    expect(
-      orientationSource.write({ focused: null, orientation: 'ecliptic', currentHash: '' }),
-    ).toBe(null);
-    expect(
-      orientationSource.write({ focused: null, orientation: 'galactic', currentHash: '' }),
-    ).toBe('galactic');
+    const base = { focused: null, pendingFocusId: null, currentHash: '' };
+    expect(orientationSource.write({ ...base, orientation: 'ecliptic' })).toBe(null);
+    expect(orientationSource.write({ ...base, orientation: 'galactic' })).toBe('galactic');
   });
 
   it('a non-default frame round-trips through compose/parse', () => {
     const body = computeDesiredHash({
       focused: null,
+      pendingFocusId: null,
       orientation: 'galactic',
       currentHash: '',
     }).desiredHashBody;

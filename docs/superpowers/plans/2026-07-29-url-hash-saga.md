@@ -7,7 +7,7 @@
 Two PRs. **Phase A** (T1–T5) is prep + the deep-link clobber fix, against the current
 hook. **Phase B** (T6–T13) is the port. Phase A must merge before Phase B opens.
 
-**Green-at-every-commit strategy for Phase B:** the new stack is built *alongside* the
+**Green-at-every-commit strategy for Phase B:** the new stack is built _alongside_ the
 hook (new type + table in `state/url/`, old ones untouched in `hooks/`), unforked, until
 T12's atomic cutover forks it and deletes the old. This is #507's shape — its saga landed
 with "Not yet forked into rootSaga — that atomic cutover is a later task." Accept the
@@ -39,8 +39,8 @@ route pattern as the existing ref selectors (`selectors.ts:51-` base selectors).
 `updateSelectionFocus` / `updateSelectionSelect` clear theirs; `clearSelection` nulls both
 beside the two ref slots it already nulls (`selectionSlice.ts:33-36`).
 
-- [ ] Test `requestFocus records the pending focus id`
-- [ ] Test `updateSelectionFocus clears the pending focus id`
+- [x] Test `requestFocus records the pending focus id`
+- [x] Test `updateSelectionFocus clears the pending focus id`
 - [x] Test `a newer requestFocus replaces the pending id` — this is what makes
       `takeLatest`'s stale-deferral abort need no explicit handling
 - [x] Test `clearSelection nulls both pending slots`
@@ -55,13 +55,13 @@ beside the two ref slots it already nulls (`selectionSlice.ts:33-36`).
 1. **`extraReducers` cannot handle the slice's OWN actions.** RTK builds
    `finalCaseReducers` with the `reducers` entry applied LAST, so an `extraReducers`
    case for an own action type is **silently dropped** — no warning, just a `pending`
-   slot that never clears. Only the two *commands* (`requestFocus` / `requestSelect`,
+   slot that never clears. Only the two _commands_ (`requestFocus` / `requestSelect`,
    foreign actions) belong there; the two completions clear their slot inside their own
    reducer via a `resolveRef(slot)` factory, deliberately outside the dedup guard (a
    resolve landing on a structurally-equal ref is still a resolve).
 2. **`SelectionSlot = keyof SelectionState` broke.** Widening the state swept `'pending'`
    into the slot union used by `SELECTION_WRITE_BY_SLOT` and `watchSelectionRowsSaga`.
-   It now derives the ref-*valued* keys via a mapped type, so the next non-ref field
+   It now derives the ref-_valued_ keys via a mapped type, so the next non-ref field
    drops out automatically rather than needing a hand-maintained exclusion.
 
 ### Task 2: the URL write holds the pending id (the clobber fix)
@@ -73,15 +73,36 @@ beside the two ref slots it already nulls (`selectionSlice.ts:33-36`).
 to the resolved target. `DesiredHashInput` gains a `pendingFocusId: string | null` field —
 deliberately throwaway; Phase B deletes the whole type when `write` takes `RootState`.
 
-- [ ] Move `tests/hooks/urlSyncPendingClobber.test.ts` →
+- [x] Move `tests/hooks/urlSyncPendingClobber.test.ts` →
       `tests/hooks/useUrlSync.test.ts` (merge into the existing describe blocks). Confirm
       it FAILS first: `expected [ '/' ] to deeply equal []`.
-- [ ] Add the `pendingFocusId` field, thread it from `useAppSelector(selectPendingFocusId)`,
+- [x] Add the `pendingFocusId` field, thread it from `useAppSelector(selectPendingFocusId)`,
       and return it first in the `focus` source's `write` (`hashParamSources.ts:36-59`).
-- [ ] Add the dependency-array entry — and note in the commit body that this third list is
+- [x] Add the dependency-array entry — and note in the commit body that this third list is
       exactly what Phase B deletes.
-- [ ] `npm test -- useUrlSync` → the regression test passes, the existing cases stay green.
-- [ ] Commit.
+- [x] `npm test -- useUrlSync` → the regression test passes, the existing cases stay green.
+- [x] Commit.
+
+**A second half of the bug, found during implementation: the write's MOUNT pass.**
+`pendingFocusId` alone does not fix the clobber. Effect A dispatches `requestFocus` inside
+the mount commit, but Effect B in that same commit still holds the render snapshot taken
+_before_ those dispatches — every store read is the boot value, so the body composes empty
+and the deep link is pushed away regardless of what `pending` holds. Confirmed against the
+real store: pushes were `['/', '/#focus=m31']`, which is exactly the two history entries
+reported from the browser.
+
+The write effect therefore skips its first run. At mount the store cannot know anything the
+URL does not already carry, so the URL is that commit's input, not its output; Effect A's
+dispatches re-run the effect immediately with real values. **This is the shape Phase B gets
+for free** — a saga write fires only on an action, so there is no start-up pass to suppress.
+
+Both halves are independently pinned: the merged test dispatches `setOrientation` after
+mount to force a write _during_ the resolve window, so deleting either the pending read or
+the mount gate fails it (verified by mutation).
+
+One consequence, accepted: a junk `#focus=zzz` is no longer scrubbed off the URL, because
+the pending id is republished until something resolves it. That is inherent to publishing
+intent and it reads as more honest — the URL shows what was asked for.
 
 ### Task 3: `manualPausedAtActions` — action builder split
 
@@ -97,14 +118,19 @@ instant)` stays as a thin wrapper so the date-entry popover's call site is untou
 The shared-`nowMs` invariant is the whole point of the existing docblock
 (`enterManualPausedAt.ts:7-15`) — read it before touching this.
 
-- [ ] Test `manualPausedAtActions threads one nowMs sample through both actions` —
-      assert the two payloads carry the *same* `nowMs`, with `performance.now` stubbed to
+- [x] Test `manualPausedAtActions threads one nowMs sample through both actions` —
+      assert the two payloads carry the _same_ `nowMs`, with `performance.now` stubbed to
       return increasing values. This is the test that catches a caller-supplied `nowMs`
       regression.
-- [ ] Test `enterManualPausedAt still dispatches both actions in order`.
-- [ ] Implement; update the docblock so it describes the builder, not the dispatcher.
-- [ ] `npm test -- time` → green.
-- [ ] Commit.
+- [x] Test `enterManualPausedAt still dispatches both actions in order`.
+- [x] Implement; update the docblock so it describes the builder, not the dispatcher.
+- [x] `npm test -- time` → green.
+- [x] Commit. → `ef3f5358`
+
+Both symbols stay in `enterManualPausedAt.ts`: the one-symbol-per-file rule is scoped to
+`src/utils/` and `src/@types/`, and `src/state/` neighbours already export coherent
+clusters. Renaming the file to match the new primary export was the alternative, ruled out
+because it would rewrite the import in `hashParamSources.ts` — off-limits while T2 held it.
 
 ### Task 4: move `urlHashFor.ts` out of `hooks/`
 
@@ -174,7 +200,7 @@ writeHashBody(body: string): void
 
 **Guards are load-bearing, not SSR insurance** — see spec §3.4. `createAppStore` runs
 `mainSaga` under `environment: 'node'` in existing tests, and T10's saga reads the hash at
-saga *start*. Without the guards the suite breaks.
+saga _start_. Without the guards the suite breaks.
 
 `writeHashBody` owns compare-and-skip: caches the last body it wrote, reads
 `window.location.hash` only when the desired body differs, and a `hashchange` invalidates
@@ -293,7 +319,7 @@ settings, time slices}` and none import back into `state/ui/`. Re-verify after T
 
 ## Notes for the implementer
 
-- **No backlog item to sweep** — this work had none (verified 2026-07-28). Four *new*
+- **No backlog item to sweep** — this work had none (verified 2026-07-28). Four _new_
   backlog items were filed as adjacent findings; leave them alone.
 - **Behaviour changes are exactly two** (spec §5): the clobber fix (Phase A) and
   back/forward restoring all params (Q8, T10). Everything else must be neutral — if you
