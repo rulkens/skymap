@@ -33,6 +33,7 @@
     "build": "tsc --noEmit && vite build && rm -rf dist/data",
     "build-all": "tsx tools/catalog/buildAllBins.ts",
     "build-cf4-density": "tsx tools/volumes/buildCf4Density.ts",
+    "build-earth-tiles": "tsx tools/textures/buildEarthTiles.ts",
     "build-flow-field": "tsx tools/flow/buildFlowField.ts",
     "verify-flow-field": "tsx tools/flow/verifyFlowField.ts",
     "build-structures": "tsx tools/structures/buildStructures.ts",
