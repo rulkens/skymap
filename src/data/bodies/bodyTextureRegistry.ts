@@ -30,13 +30,35 @@
  *
  * ### Ceilings and tints
  *
- * Each kind's tier ceiling caps detail where higher resolution buys nothing:
- * Uranus and Neptune are near-featureless discs (`small`), Venus is unresolved
- * cloud (`medium`), everything else goes to `large` (8 k). Today every body has
- * only a `surface` kind whose ceiling is that value. `grayscaleTint` marks the
- * two USGS Galilean sources that ship single-channel — the tint restores a
- * plausible hue the mono map lacks; its presence is the mono-source marker
- * (spec §3).
+ * A kind's tier ceiling is authored for one of two distinct reasons, and they
+ * must not be conflated:
+ *
+ *  - a **look ceiling** caps detail where higher resolution would buy nothing
+ *    even with a bigger source: Uranus and Neptune are near-featureless discs
+ *    (`small`), Venus is unresolved cloud (`medium`). Everything else not
+ *    listed below goes to `large` (8 k).
+ *  - a **source ceiling** caps detail where the raw image itself tops out
+ *    below `large`, regardless of what the surface would reward. Jupiter and
+ *    Saturn are `medium` for this reason: their Solar System Scope source
+ *    file is 4096×2048 despite its `8k_` filename prefix (Solar System
+ *    Scope's naming, not the delivered resolution) — there is no `large`
+ *    (8192) tile for the build to emit. Raising either back to `large`
+ *    requires sourcing a genuinely higher-resolution image first; without
+ *    that, it is a regression, not an upgrade.
+ *
+ * Today every body has only a `surface` kind whose ceiling is one of the two
+ * values above. `grayscaleTint` marks the two USGS Galilean sources that ship
+ * single-channel — the tint restores a plausible hue the mono map lacks; its
+ * presence is the mono-source marker (spec §3).
+ *
+ * Nothing here checks an authored ceiling against the source it names.
+ * `tools/textures/tiersFittingSourceWidth.ts` measures the real pixel width
+ * of each raw source at build time and emits only the tiers that fit — it
+ * already computes the number this file should never exceed, but the two are
+ * not cross-checked. An authored ceiling can drift above what the build can
+ * emit (as it did for Jupiter and Saturn); the build then silently omits the
+ * unreachable tile, the proximity loader 404s requesting it, and the body is
+ * left permanently on the low-resolution boot-atlas tile with no error.
  */
 
 import type { BodyTextureId } from '../../@types/data/BodyTextureId';
@@ -74,8 +96,10 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
     provenance: 'nasa',
   },
   mars: { bodyId: 'mars', kinds: { surface: 'large' }, provenance: 'sss' },
-  jupiter: { bodyId: 'jupiter', kinds: { surface: 'large' }, provenance: 'sss' },
-  saturn: { bodyId: 'saturn', kinds: { surface: 'large' }, provenance: 'sss' },
+  // Jupiter / Saturn: source ceiling, not a look ceiling — see header. The
+  // `8k_` source files are actually 4096×2048; `large` has no tile to load.
+  jupiter: { bodyId: 'jupiter', kinds: { surface: 'medium' }, provenance: 'sss' },
+  saturn: { bodyId: 'saturn', kinds: { surface: 'medium' }, provenance: 'sss' },
   // Uranus / Neptune are near-featureless discs — small is the highest useful tier.
   uranus: { bodyId: 'uranus', kinds: { surface: 'small' }, provenance: 'sss' },
   neptune: { bodyId: 'neptune', kinds: { surface: 'small' }, provenance: 'sss' },

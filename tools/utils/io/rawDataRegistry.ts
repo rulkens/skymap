@@ -537,20 +537,22 @@ export const RAW_DATA = {
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
-  'textures.sssJupiter8k': {
-    path: 'data/raw/textures/8k_jupiter.jpg',
+  'textures.sssJupiter4k': {
+    path: 'data/raw/textures/4k_jupiter.jpg',
     kind: 'file',
     source: 'gitignored',
-    description: 'Solar System Scope Jupiter cloud bands, 8k JPG (CC BY 4.0).',
+    description:
+      'Solar System Scope Jupiter cloud bands, 4096x2048 JPG (CC BY 4.0). Named 4k locally though the upstream filename says 8k — the delivered image is 4096x2048, not 8192x4096.',
     upstream: 'https://www.solarsystemscope.com/textures/download/8k_jupiter.jpg',
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
-  'textures.sssSaturn8k': {
-    path: 'data/raw/textures/8k_saturn.jpg',
+  'textures.sssSaturn4k': {
+    path: 'data/raw/textures/4k_saturn.jpg',
     kind: 'file',
     source: 'gitignored',
-    description: 'Solar System Scope Saturn cloud bands, 8k JPG (CC BY 4.0).',
+    description:
+      'Solar System Scope Saturn cloud bands, 4096x2048 JPG (CC BY 4.0). Named 4k locally though the upstream filename says 8k — the delivered image is 4096x2048, not 8192x4096.',
     upstream: 'https://www.solarsystemscope.com/textures/download/8k_saturn.jpg',
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
