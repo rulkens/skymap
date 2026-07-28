@@ -6,7 +6,7 @@ import { SOURCE_ENTRIES } from '../sourceEntries';
  *
  * Three kinds of sources bear labels:
  *   - 'famousGalaxy' — the curated atlas entry carries a name that floats above
- *     the dot on a leader line (the 'galaxyNames' layer).
+ *     the dot on a leader line (the 'galaxy' layer).
  *   - Structure categories (cluster, supercluster, void, group) — each ring
  *     carries a name on the 'structure' label layer.
  *   - 'milkyWay' — the Milky Way overlay carries the "You are here" label at the

@@ -11,7 +11,7 @@ export const FAMOUS_GALAXY_ENTRY = {
   visible: true,
   bearsLabel: true,
   bearsMarker: false,
-  labelLayer: 'galaxyNames',
+  labelLayer: 'galaxy',
   detailLabel: 'Famous Galaxy',
   shortLabel: 'Galaxy',
   plural: 'Famous Galaxies',

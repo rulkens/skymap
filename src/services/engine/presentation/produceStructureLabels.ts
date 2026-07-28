@@ -85,7 +85,7 @@ export function produceStructureLabels(
 
   // Clip-owned transient opacity for structure labels — hoisted outside the loop
   // because ALL structure-label categories (`{ kind: 'labelLayer', layer: 'structure',
-  // category: any }`) collapse to the same `'structureLabel'` key. Returns 1 when
+  // item: any }`) collapse to the same `'structureLabel'` key. Returns 1 when
   // no clip is playing. We address the key directly since `fadeIdToVisibilityKey`
   // maps every structure-label FadeId to this value without discrimination.
   const clipFactor = state.subsystems.clipPlayer.clipOpacityOf('structureLabel', now);
@@ -103,7 +103,7 @@ export function produceStructureLabels(
     // category's label is enabled OR still fading out. Skip only when it's both
     // disabled AND fully faded (the all-or-nothing case).
     const catOpacity = fades.opacityOf(
-      { kind: 'labelLayer', layer: 'structure', category: p.category },
+      { kind: 'labelLayer', layer: 'structure', item: p.category },
       now,
     );
     const labelEnabled = state.settings.structures.items[p.category].labelEnabled;
@@ -187,7 +187,7 @@ export function produceStructureLabels(
       p.id === focusedStructureId
         ? 1
         : focusRecession(
-            { kind: 'labelLayer', layer: 'structure', category: p.category },
+            { kind: 'labelLayer', layer: 'structure', item: p.category },
             ctx.focusBlend,
           );
     fadeAlpha *= catOpacity * recession * clipFactor * surveyFade;

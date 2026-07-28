@@ -42,10 +42,9 @@
  *
  * ### `labelLayer` sub-switch
  *
- * The `labelLayer` kind splits into four keys by `LabelLayerId`. The inner
- * switch has its own `never`-guard `default` arm — extending `LabelLayerId`
- * is a compile error here. This guard also closes the former fall-through
- * path from the inner switch into the outer `case 'overlay'` arm.
+ * The `labelLayer` kind splits by `LabelLayerId`. The inner switch has its own
+ * `never`-guard `default` arm — extending `LabelLayerId` is a compile error
+ * here, so a new label layer must declare its clip stance.
  */
 
 import type { FadeId } from '../../../@types/animation/FadeId';
@@ -85,15 +84,21 @@ export function fadeIdToVisibilityKey(h: FadeId): VisibilityLayerKey | undefined
       switch (h.layer) {
         case 'milkyWay':
           return 'milkyWayLabel';
-        case 'galaxyNames':
+        case 'galaxy':
           return 'surveyLabel';
         case 'scaleBar':
           return 'scaleBar';
         case 'structure':
-          // A per-category structure label (h.category) still maps to the
-          // single `structureLabel` key — the clip channel targets all
-          // structure labels together.
+          // A per-item structure label (h.item) still maps to the single
+          // `structureLabel` key — the clip channel targets all structure
+          // labels together.
           return 'structureLabel';
+        case 'starCatalog':
+        case 'body':
+          // Near-field caption layers have no VisibilityLayerKey of their own,
+          // so no clip cue addresses them through this bridge → factor 1. Same
+          // conservative stance as the `overlay` kind below.
+          return undefined;
         // TypeScript exhaustiveness guard — a new LabelLayerId must map a key here.
         default: {
           const _exhaustive: never = h.layer;

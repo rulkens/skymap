@@ -135,13 +135,13 @@ export const FADE_LAYERS = [
     intent: (s) => s.milkyWay.labelEnabled,
   }),
   // survey/galaxy names label — registerOverlayFades.ts:99. The famous-galaxy
-  // label fade reuses the galaxyNames handle and is driven by the famous-galaxy
+  // label fade reuses the galaxy handle and is driven by the famous-galaxy
   // "Labels" toggle, so this row is settings-derived (intent + seed both read
   // famousGalaxy.labelEnabled) — matching milkyWayLabel/structureLabel.
   layer({
     key: 'surveyLabel',
     expand: () => [undefined],
-    handle: () => ({ kind: 'labelLayer', layer: 'galaxyNames' }),
+    handle: () => ({ kind: 'labelLayer', layer: 'galaxy' }),
     seed: (s) => (s.galaxyCatalogs.items.famousGalaxy.labelEnabled ? 1 : 0),
     intent: (s) => s.galaxyCatalogs.items.famousGalaxy.labelEnabled,
   }),
@@ -164,7 +164,7 @@ export const FADE_LAYERS = [
   layer({
     key: 'structureLabel',
     expand: () => STRUCTURE_IDS,
-    handle: (id) => ({ kind: 'labelLayer', layer: 'structure', category: id }),
+    handle: (id) => ({ kind: 'labelLayer', layer: 'structure', item: id }),
     seed: (s, id) => (s.structures.items[id].labelEnabled ? 1 : 0),
     intent: (s, id) => s.structures.items[id].labelEnabled,
   }),

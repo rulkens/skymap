@@ -284,9 +284,9 @@ describe('syncVisibilityFades', () => {
     // rather than against one hardcoded id.
     const intentSamples: Record<Exclude<(typeof INTENT_KEYS)[number], 'volumeField'>, FadeId> = {
       survey: { kind: 'galaxyCatalog', id: GALAXY_CATALOG_IDS[0]! },
-      surveyLabel: { kind: 'labelLayer', layer: 'galaxyNames' },
+      surveyLabel: { kind: 'labelLayer', layer: 'galaxy' },
       structureRing: { kind: 'structure', id: STRUCTURE_IDS[0]! },
-      structureLabel: { kind: 'labelLayer', layer: 'structure', category: STRUCTURE_IDS[0]! },
+      structureLabel: { kind: 'labelLayer', layer: 'structure', item: STRUCTURE_IDS[0]! },
       volumesMaster: { kind: 'volumesMaster' },
       filaments: { kind: 'filament' },
       orbitTrails: { kind: 'orbitTrails' },

@@ -559,9 +559,9 @@ describe('wireSlots', () => {
     expect(hasHandle({ kind: 'overlay', id: 'texturedDisks' })).toBe(true);
     expect(hasHandle({ kind: 'volumesMaster' })).toBe(true);
     expect(hasHandle({ kind: 'labelLayer', layer: 'milkyWay' })).toBe(true);
-    // No category-less structure handle: structure labels use per-category
-    // handles, and produceStructureLabels fires each category's load-in.
-    expect(hasHandle({ kind: 'labelLayer', layer: 'galaxyNames' })).toBe(true);
+    // No item-less structure handle: structure labels use per-item handles,
+    // and produceStructureLabels fires each category's load-in.
+    expect(hasHandle({ kind: 'labelLayer', layer: 'galaxy' })).toBe(true);
     expect(hasHandle({ kind: 'labelLayer', layer: 'scaleBar' })).toBe(true);
 
     // Opacities are deterministic under the default fixture (milkyWay disk +

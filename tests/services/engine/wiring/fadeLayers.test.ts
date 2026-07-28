@@ -9,7 +9,7 @@
  *      not flash the Milky Way on frame 1.
  *   2. The volumesMaster handle seeds at `settings.volumes.enabled`.
  *   3. The label-layer handles seed correctly: milkyWay from
- *      `settings.milkyWay.labelEnabled`, galaxyNames + scaleBar at 1.
+ *      `settings.milkyWay.labelEnabled`, galaxy + scaleBar at 1.
  *   4. Each structure ring + label seeds from its per-category settings row.
  *   5. The demand-loaded sets (galaxy catalogs, filament, flow, volume fields)
  *      seed at 0 so their first-load `fadeTo(1)` still fades them in.
@@ -77,7 +77,7 @@ function makeState(
       // seedFades indexes this leaf (default on, like the live scene).
       orbitTrails: { enabled: opts.orbitTrailsEnabled ?? true },
       // The surveyLabel fade row seeds from famousGalaxy.labelEnabled (famous
-      // labels reuse the galaxyNames layer), so seedFades indexes this leaf.
+      // labels reuse the galaxy layer), so seedFades indexes this leaf.
       galaxyCatalogs: {
         items: { famousGalaxy: { enabled: true, labelEnabled: opts.surveyLabelEnabled ?? true } },
       },
@@ -184,27 +184,27 @@ describe('seedFades', () => {
     expect(state.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'milkyWay' })).toBe(0);
   });
 
-  it('seeds galaxyNames (surveyLabel) and scaleBar at 1', () => {
-    // Famous-galaxy labels reuse galaxyNames and consume its opacity directly,
-    // so a 0 would hide them. scaleBar is React-side / tour-addressable, never
-    // auto-faded by the engine, so it starts at 1.
+  it('seeds galaxy (surveyLabel) and scaleBar at 1', () => {
+    // Famous-galaxy labels reuse the galaxy layer and consume its opacity
+    // directly, so a 0 would hide them. scaleBar is React-side / tour-addressable,
+    // never auto-faded by the engine, so it starts at 1.
     const state = makeState();
     seedFades(state);
-    expect(state.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'galaxyNames' })).toBe(1);
+    expect(state.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'galaxy' })).toBe(1);
     expect(state.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'scaleBar' })).toBe(1);
   });
 
-  it('seeds the surveyLabel (galaxyNames) handle from famousGalaxy.labelEnabled', () => {
-    // Wired THROUGH seedFades (not just the row.seed unit call): the galaxyNames
+  it('seeds the surveyLabel (galaxy) handle from famousGalaxy.labelEnabled', () => {
+    // Wired THROUGH seedFades (not just the row.seed unit call): the galaxy
     // layer's frame-1 opacity must honour the persisted famous-label toggle so a
     // labels-off session doesn't flash them on.
     const off = makeState({ surveyLabelEnabled: false });
     seedFades(off);
-    expect(off.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'galaxyNames' })).toBe(0);
+    expect(off.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'galaxy' })).toBe(0);
 
     const on = makeState();
     seedFades(on);
-    expect(on.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'galaxyNames' })).toBe(1);
+    expect(on.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'galaxy' })).toBe(1);
   });
 
   // ── per-structure ring + label handles ───────────────────────────
@@ -218,7 +218,7 @@ describe('seedFades', () => {
         `structure{${id}} ring should seed at 1`,
       ).toBe(1);
       expect(
-        state.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'structure', category: id }),
+        state.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'structure', item: id }),
         `labelLayer{structure,${id}} should seed at 1`,
       ).toBe(1);
     }
@@ -236,7 +236,7 @@ describe('seedFades', () => {
     seedFades(state);
     expect(state.subsystems.fades.opacityOf({ kind: 'structure', id: ring })).toBe(0);
     expect(
-      state.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'structure', category: label }),
+      state.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'structure', item: label }),
     ).toBe(0);
   });
 

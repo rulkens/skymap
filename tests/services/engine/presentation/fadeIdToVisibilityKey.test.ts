@@ -10,8 +10,8 @@
  * We do NOT test every single FadeId discriminator variant (every
  * GalaxyCatalogId, every StructureId, …) — that would be a mechanical
  * mirror of the implementation. Instead we verify one representative from
- * each kind, plus the LabelLayerId sub-switch in full (four members, four
- * results) because that inner switch is a separate exhaustiveness concern.
+ * each kind, plus every clip-addressable member of the LabelLayerId
+ * sub-switch, because that inner switch is a separate exhaustiveness concern.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -55,28 +55,28 @@ describe('fadeIdToVisibilityKey', () => {
     expect(fadeIdToVisibilityKey({ kind: 'volumeField', id: 'cf4-density' })).toBe('volumeField');
   });
 
-  // labelLayer sub-switch — all four LabelLayerId members.
+  // labelLayer sub-switch.
   it("maps labelLayer 'milkyWay' to 'milkyWayLabel'", () => {
     expect(fadeIdToVisibilityKey({ kind: 'labelLayer', layer: 'milkyWay' })).toBe('milkyWayLabel');
   });
 
-  it("maps labelLayer 'galaxyNames' to 'surveyLabel'", () => {
-    expect(fadeIdToVisibilityKey({ kind: 'labelLayer', layer: 'galaxyNames' })).toBe('surveyLabel');
+  it("maps labelLayer 'galaxy' to 'surveyLabel'", () => {
+    expect(fadeIdToVisibilityKey({ kind: 'labelLayer', layer: 'galaxy' })).toBe('surveyLabel');
   });
 
   it("maps labelLayer 'scaleBar' to 'scaleBar'", () => {
     expect(fadeIdToVisibilityKey({ kind: 'labelLayer', layer: 'scaleBar' })).toBe('scaleBar');
   });
 
-  it("maps labelLayer 'structure' to 'structureLabel' regardless of category discriminator", () => {
-    // Without category.
+  it("maps labelLayer 'structure' to 'structureLabel' regardless of item discriminator", () => {
+    // Without item.
     expect(fadeIdToVisibilityKey({ kind: 'labelLayer', layer: 'structure' })).toBe(
       'structureLabel',
     );
-    // With category — same result (per-category discrimination is deferred).
-    expect(
-      fadeIdToVisibilityKey({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }),
-    ).toBe('structureLabel');
+    // With item — same result (per-item discrimination is deferred).
+    expect(fadeIdToVisibilityKey({ kind: 'labelLayer', layer: 'structure', item: 'cluster' })).toBe(
+      'structureLabel',
+    );
   });
 
   // Non-clip-fadeable kinds.

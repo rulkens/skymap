@@ -132,7 +132,7 @@ describe('Registry capability flags — bearsLabel / bearsMarker', () => {
     const entry = SOURCE_REGISTRY[Source.FamousGalaxy];
     expect(entry.bearsLabel).toBe(true);
     expect(entry.bearsMarker).toBe(false);
-    expect(entry.labelLayer).toBe('galaxyNames');
+    expect(entry.labelLayer).toBe('galaxy');
   });
 
   it('structure rows bear both a label and a marker', () => {

@@ -37,10 +37,10 @@
  * the kinds we just split (disk vs label) and lose the addressability the
  * tour depends on.
  *
- * Note on `surveyLabel`: it is the `galaxyNames`-handle row — a single
+ * Note on `surveyLabel`: it is the `galaxy`-handle row — a single
  * famous-catalog label toggle, NOT a per-catalog row. There is one survey
  * label intent across all galaxy catalogs, mirroring how `FadeId`'s
- * `labelLayer` reuses the `galaxyNames` layer for famous-galaxy labels.
+ * `labelLayer` reuses the `galaxy` layer for famous-galaxy labels.
  */
 
 export type VisibilityLayerKey =
