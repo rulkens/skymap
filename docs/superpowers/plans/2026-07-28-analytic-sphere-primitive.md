@@ -14,15 +14,18 @@ Replace the tessellated 48×24 silhouette with a ray-traced analytic sphere on
 `texturedBodyRenderer` and `bodyPickRenderer`, so the drawn edge is pixel-exact and coincides
 with the analytic radius the atmosphere shell already tests against. Closes the transparent
 limb seam by construction. `earthRenderer`, `starRenderer` and `planetRenderer` stay on the
-mesh. No oblateness work.
+mesh. No oblateness feature work — no ellipsoid normals, no flattening Saturn or Jupiter, no
+reopening the atmosphere shell's scalar `bottomRadius`. The one exception is `camPosLocal`'s
+optional `oblateness` parameter (Q7), a correctness precondition the pick conversion forces,
+not the deferred feature.
 
 ## Packaging — three PRs, in this order
 
-| PR | contents | based on |
-| --- | --- | --- |
-| **1 — prep** | Phase 0. The `lib/analyticSphere.wesl` extraction, no behaviour change. | main |
-| **2 — pick** | Phase 1. `bodyPickRenderer` goes analytic. Nothing is deleted. | main, after 1 merges |
-| **3 — adopt** | Phases 2–3. `texturedBodyRenderer` adopts it, the mesh shading path is deleted, closing tasks. | main, after 2 merges |
+| PR            | contents                                                                                                                                                                                              | based on             |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| **1 — prep**  | Phase 0. The `camPosLocal` oblateness parameter (Q7) and the `lib/analyticSphere.wesl` extraction — no behaviour change to any existing caller — plus this spec, its grill transcript, and this plan. | main                 |
+| **2 — pick**  | Phase 1. `bodyPickRenderer` goes analytic, using the `camPosLocal` parameter PR 1 already landed. Nothing is deleted.                                                                                 | main, after 1 merges |
+| **3 — adopt** | Phases 2–3. `texturedBodyRenderer` adopts it, the mesh shading path is deleted, closing tasks.                                                                                                        | main, after 2 merges |
 
 **Prep and feature are separate diffs, always** — PR 1 never carries a feature commit.
 
@@ -34,22 +37,21 @@ responds to clicks, versus PR-3-first's hairline that looks like the planet and 
 
 Open a draft PR when the first task of each lands.
 
-## Checkpoint before Phase 1 — BLOCKING
+## Decided: `camPosLocal` takes the oblateness parameter (Q7)
 
-**Spec correction #3.** `starSpheresLayer.ts:178` passes `oblateness: star.oblateness` into
-`drawFlooredSpherePick`, and six famous stars carry a non-zero value (0.35 on Achernar). An
-analytic pick sphere whose ray origin ignores flattening is wrong by `1/(1 − oblateness)` along
-the polar axis — silently, because the visual star still draws correctly through the mesh
-`starRenderer`. The grill did not have this in front of it.
+`bodyPickRenderer` is one renderer serving every body type. `starSpheresLayer.ts:178` passes
+`oblateness: star.oblateness` into `drawFlooredSpherePick`, and six famous stars carry a
+non-zero value (0.35 on Achernar), so converting the pick to analytic (Q5) meets a flattened
+body regardless of `starRenderer` staying on the mesh (Q3). An analytic pick sphere whose ray
+origin ignores flattening is wrong by `1/(1 − oblateness)` along the polar axis — silently,
+because the visual star still draws correctly through the mesh `starRenderer`. Recorded as Q7
+in the grill transcript and spec correction #3, with the rejected alternatives (reverting the
+pick to a finer mesh; dropping oblateness from the ray origin and accepting the wrong ellipse).
 
-Read the spec's correction #3 for the three options and the recommendation. **Get an explicit
-user decision before starting Phase 1.**
-
-- **If approved** (recommended): Task 1.1 lands the one-line `camPosLocal` correction and
-  Phase 1 proceeds as written.
-- **If held**: delete Phase 1 from this plan, file the pick conversion as a backlog item
-  alongside `starRenderer`, and renumber. Phases 0, 2 and 3 are independent of the decision and
-  proceed unchanged — main keeps the 0.214% pick/visual hairline permanently.
+`camPosLocal` gains an optional `oblateness` parameter, default 0, so the four existing callers
+are byte-identical. It is Task 0.3, ground preparation alongside the `analyticSphere.wesl`
+extraction, and lands in PR 1 — not the pick PR — because it is a correction to a shared
+utility, not pick-specific behaviour.
 
 ## Standing test refusal
 
@@ -162,22 +164,17 @@ rewriting it, and leave `impostorFragment.wesl`'s header pointing at the lib for
       no antimeridian blur line, Saturn's ring shadow unchanged. Console clean.
 - [ ] Commit: the two files.
 
-### 0.3: Prep PR
-
-- [ ] `npm test`, `npm run typecheck`, `npm run build` — all green.
-- [ ] `npm run format` on touched files only.
-- [ ] Open the PR with `--base main`. Merge before starting Phase 1.
-
----
-
-## Phase 1 — the pick goes analytic (PR 2)
-
-Gated on the checkpoint above.
-
-### 1.1: `camPosLocal` learns about oblateness
+### 0.3: `camPosLocal` learns about oblateness
 
 **Files:** `src/utils/camera/camPosLocal.ts` (modify),
 `tests/utils/camera/camPosLocal.test.ts` (modify)
+
+Ground preparation item two (Q7 in the grill transcript, spec correction #3): `bodyPickRenderer`
+is one renderer serving every body type, and six famous stars carry non-zero oblateness (up to
+0.35 on Achernar), so the pick conversion in Phase 1 needs an oblateness-aware ray origin
+regardless of `starRenderer` staying on the mesh. This task carries no visible behaviour change
+on its own — nothing calls the new parameter yet — which is why it rides the prep PR alongside
+the `analyticSphere.wesl` extraction rather than Phase 1.
 
 **Signature:**
 
@@ -208,7 +205,20 @@ requires; a Lambert/Minnaert **direction** consumer never noticed because it ren
 - [ ] `npm test -- camPosLocal` green; the four existing call sites are unedited and unchanged.
 - [ ] Commit.
 
-### 1.2: `SpherePickUniforms` grows `camPosLocal` into its padding
+### 0.4: Prep PR
+
+- [ ] `npm test`, `npm run typecheck`, `npm run build` — all green.
+- [ ] `npm run format` on touched files only.
+- [ ] Open the PR with `--base main`. Merge before starting Phase 1.
+
+---
+
+## Phase 1 — the pick goes analytic (PR 2)
+
+Depends on PR 1 having merged: the `camPosLocal` oblateness parameter (Task 0.3) already exists
+by the time this phase starts.
+
+### 1.1: `SpherePickUniforms` grows `camPosLocal` into its padding
 
 **Files:** `src/services/gpu/shaders/bodies/spherePick.wesl` (modify),
 `src/services/gpu/renderers/bodies/bodyPickRenderer.ts` (modify),
@@ -253,7 +263,7 @@ export type BodySpherePickArgs = {
       overlapping Earth; the InfoCard names the right body each time. Console clean.
 - [ ] Commit.
 
-### 1.3: `drawFlooredSpherePick` composes the ray origin
+### 1.2: `drawFlooredSpherePick` composes the ray origin
 
 **Files:** `src/services/engine/helpers/drawFlooredSpherePick.ts` (modify)
 
@@ -266,13 +276,13 @@ The header gains the "why" the spec's pick section states: the floor is a CPU-si
 radius** inflation, so in the local frame the floored sphere **is** the unit sphere — the
 analytic primitive composes with it unchanged, exactly as the mesh did. No call site changes.
 
-- [ ] No new test — the helper is a thin composition over `camPosLocal` (1.1, tested) and
+- [ ] No new test — the helper is a thin composition over `camPosLocal` (0.3, tested) and
       `composeBodyMvp` (tested); a test here would restate both.
 - [ ] Implement; update the module header.
 - [ ] `npm run typecheck` clean; `npm test` green.
 - [ ] Commit.
 
-### 1.4: `spherePick.wesl` ray-traces the sphere
+### 1.3: `spherePick.wesl` ray-traces the sphere
 
 **Files:** `src/services/gpu/shaders/bodies/spherePick.wesl` (modify),
 `src/services/gpu/renderers/bodies/bodyPickRenderer.ts` (modify),
@@ -332,7 +342,7 @@ target.
       disc. Console clean.
 - [ ] Commit.
 
-### 1.5: iOS check — `frag_depth` on the pick pass
+### 1.4: iOS check — `frag_depth` on the pick pass
 
 **Files:** none (verification).
 
@@ -347,7 +357,7 @@ confirm.
 - [ ] Tap a planet and confirm the InfoCard opens with the right body.
 - [ ] Record the result (device + iOS version) in the PR description.
 
-### 1.6: Pick PR
+### 1.5: Pick PR
 
 - [ ] `npm test`, `npm run typecheck`, `npm run build` — all green.
 - [ ] `npm run format` on touched files only.
@@ -402,7 +412,7 @@ the `package::bodies::texturedBody::…` paths inside the `.wesl` files are rewr
 - [ ] Update the `package::bodies::texturedBody::impostorIo::ImpostorVSOut` imports inside the
       renamed vertex + fragment; rename the struct `ImpostorVSOut` → `TexturedBodyVSOut`.
 - [ ] Repoint the vertex at `package::lib::analyticSphere::PROXY_SCALE` and delete its local
-      const (Task 1.4 already moved it).
+      const (Task 1.3 already moved it).
 - [ ] Sweep the three files' comments for the word "impostor" and for SPIKE / `?impostor`
       language; the surviving prose is timeless.
 - [ ] `rg -n "impostor" src/services/gpu/` returns **nothing** under `bodies/`.
@@ -485,13 +495,13 @@ From the grill's "Deferred to backlog" section. **Index lines stay very short** 
 readiness tag + one terse clause + the `→ [details]` link; everything else goes in the detail
 file, never inline.
 
-| slug | tag | note for the detail file |
-| --- | --- | --- |
-| `star-renderer-analytic-plus-oblate-giants` | `needs-design` | ONE item, not two: `starRenderer` conversion and Saturn/Jupiter flattening. **Write it against post-Phase-1 state** — if the checkpoint approved Task 1.1, the `camPosLocal` frame fix already exists and this item is no longer gated on it; what remains is ellipsoid normals, `packTintedSphereUniforms`, and flattening the atmosphere shell proxy (an oblate body against a spherical shell puts a 10% radius mismatch at the poles — this same seam at fifty times the scale). |
-| `in-atmosphere-haze` | `needs-design` | the shell cannot render over the disc from inside it; a proxy shell has no geometry in front of the planet. Needs a full-screen pass — the first half of Hillaire's aerial-perspective froxel. |
-| `star-renderer-uniform-buffer-race` | `ready` | single uniform buffer rewritten per body per frame; the documented `writeBuffer`-vs-`submit` hazard. `texturedBodyRenderer`'s own-buffer-per-body is the fix shape. |
-| `analytic-equirect-pole-mip-quality` | `deferred` | `v = asin(z)/π` has unbounded derivative at the poles, so the analytic uv degrades mip selection there. Inherent to the approach, **not** fixable with the wrap trick. |
-| `planet-renderer-max-planets-cap` | `ready` | `MAX_PLANETS = 24`. |
+| slug                                        | tag            | note for the detail file                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `star-renderer-analytic-plus-oblate-giants` | `needs-design` | ONE item, not two: `starRenderer` conversion and Saturn/Jupiter flattening. The `camPosLocal` oblateness parameter (Task 0.3) already exists by this point and this item is no longer gated on it; what remains is ellipsoid normals, `packTintedSphereUniforms`, and flattening the atmosphere shell proxy (an oblate body against a spherical shell puts a 10% radius mismatch at the poles — this same seam at fifty times the scale). |
+| `in-atmosphere-haze`                        | `needs-design` | the shell cannot render over the disc from inside it; a proxy shell has no geometry in front of the planet. Needs a full-screen pass — the first half of Hillaire's aerial-perspective froxel.                                                                                                                                                                                                                                            |
+| `star-renderer-uniform-buffer-race`         | `ready`        | single uniform buffer rewritten per body per frame; the documented `writeBuffer`-vs-`submit` hazard. `texturedBodyRenderer`'s own-buffer-per-body is the fix shape.                                                                                                                                                                                                                                                                       |
+| `analytic-equirect-pole-mip-quality`        | `deferred`     | `v = asin(z)/π` has unbounded derivative at the poles, so the analytic uv degrades mip selection there. Inherent to the approach, **not** fixable with the wrap trick.                                                                                                                                                                                                                                                                    |
+| `planet-renderer-max-planets-cap`           | `ready`        | `MAX_PLANETS = 24`.                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
 - [ ] Write the five detail files and the five index lines (Rendering section).
 - [ ] Commit.
@@ -501,19 +511,13 @@ file, never inline.
 **Files:** none (review).
 
 - [ ] Run the `entanglement-radar` skill over the whole branch diff (house convention). Pay
-      attention to:
-      - **`lib/analyticSphere.wesl` is the single home for the sphere maths** — no consumer
-        re-derives a uv, a gradient pair, or a depth from clip space locally;
-      - **no second branch on the same discriminant** — one analytic path, not
-        analytic-for-round / mesh-for-oblate anywhere (Q3 named this as the trap);
-      - **`PROXY_SCALE` has one home** and is not restated next to the 0.214% deficit it must
-        clear;
-      - **`sphereTessellation.ts` describes exactly what it now governs** — proxy coarseness for
-        four consumers, two of which no longer take their silhouette from it;
-      - **the pick and the visual share the silhouette by construction**, not by two call sites
-        reading one constant;
-      - **`camPosLocal`'s oblateness parameter is a frame correction, not an oblateness
-        feature** — nothing downstream has grown an "is this body flattened" branch.
+      attention to: - **`lib/analyticSphere.wesl` is the single home for the sphere maths** — no consumer
+      re-derives a uv, a gradient pair, or a depth from clip space locally; - **no second branch on the same discriminant** — one analytic path, not
+      analytic-for-round / mesh-for-oblate anywhere (Q3 named this as the trap); - **`PROXY_SCALE` has one home** and is not restated next to the 0.214% deficit it must
+      clear; - **`sphereTessellation.ts` describes exactly what it now governs** — proxy coarseness for
+      four consumers, two of which no longer take their silhouette from it; - **the pick and the visual share the silhouette by construction**, not by two call sites
+      reading one constant; - **`camPosLocal`'s oblateness parameter is a frame correction, not an oblateness
+      feature** — nothing downstream has grown an "is this body flattened" branch.
 - [ ] Address findings, or record why deferred; keep the suite green.
 
 ### 3.4: Final review + verification

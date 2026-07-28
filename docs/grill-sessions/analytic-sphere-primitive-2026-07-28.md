@@ -92,7 +92,7 @@ scalar `bottomRadius`.
 
 ## Q3: Does `starRenderer` convert?
 
-**The question:** A star sphere is uniformly emissive, so its silhouette carries *all*
+**The question:** A star sphere is uniformly emissive, so its silhouette carries _all_
 the shape information — no texture, no shading, no terminator. A 48-sided polygon
 against black space is where faceting reads worst, and the Sun is a body you can fly
 right up to. Strong case for converting. But it is also the most awkward renderer in
@@ -114,14 +114,14 @@ Converting star without the `camPosLocal` fix would visibly break the six oblate
 The fragment intersects a unit sphere in local space using `camPosLocal` as the ray
 origin; for Achernar (oblateness 0.35) that origin's Z is wrong by a factor of
 `1/(1−0.35)`, a 54% error along the polar axis. The result is not a slightly-wrong
-ellipse but a badly-wrong one. So star conversion *requires* the oblateness work, and
+ellipse but a badly-wrong one. So star conversion _requires_ the oblateness work, and
 holding oblateness holds star.
 
 Option B is explicitly rejected as the trap this whole refactor-ground pass exists to
 catch: branching on oblateness inside one renderer is the second-special-case pattern.
 
 **Carried forward:** "convert `starRenderer`" and "flatten Saturn and Jupiter" are now
-a *single* backlog item, not two, because neither can happen without the `camPosLocal`
+a _single_ backlog item, not two, because neither can happen without the `camPosLocal`
 frame fix.
 
 ---
@@ -142,13 +142,13 @@ a new per-instance attribute and a model matrix reaching the fragment.
 
 Checked against the texture registry: the registry covers mercury, venus, earth, mars,
 jupiter, saturn, uranus, neptune, moon, io, europa, ganymede, callisto. The only bodies
-in `SCENE_PLANETS` *not* covered are **Phobos and Deimos** (radii 11 km and 6 km).
+in `SCENE_PLANETS` _not_ covered are **Phobos and Deimos** (radii 11 km and 6 km).
 Everything else this renderer touches is a transient loading state before a bitmap
 arrives.
 
 So converting `planetRenderer` permanently buys a smooth silhouette on two bodies that
 are almost always sub-pixel — and both of which are famously potato-shaped in reality,
-so a mathematically perfect analytic *sphere* is arguably the wrong primitive for them
+so a mathematically perfect analytic _sphere_ is arguably the wrong primitive for them
 regardless.
 
 ---
@@ -210,7 +210,7 @@ The iOS risk was raised and the user chose deletion anyway. A fallback nobody ex
 is a fallback that rots, and two paths means every future change to body shading is made
 twice or silently diverges.
 
-**Mitigation folded into the plan:** iOS verification is a gate *before* the feature PR
+**Mitigation folded into the plan:** iOS verification is a gate _before_ the feature PR
 merges, so the fallback is not removed on untested hardware. It is a sequencing
 requirement, not a code artifact.
 
@@ -219,21 +219,79 @@ Note the mesh does not fully disappear: the impostor still uses `uvSphereMesh` a
 
 ---
 
+## Q7: Q5 and Q3 don't compose — does the pick conversion need the `camPosLocal` fix after all?
+
+**The question:** Q5 decided `bodyPickRenderer` converts to analytic. Q3 held
+`starRenderer` on the mesh, on the strength of Q2 holding oblateness entirely. Those two
+decisions were made independently and do not compose the way the session assumed:
+`bodyPickRenderer` is **one** renderer serving every body type, star included.
+`starSpheresLayer.ts:126` passes `star.oblateness` into `composeBodyMvp` for the draw,
+and `starSpheresLayer.ts:178` passes the same `star.oblateness` into
+`drawFlooredSpherePick` for the pick — the comment at line 146 states the pick
+silhouette matches the draw precisely _because_ of it. Converting the pick to analytic
+therefore converts it for oblate stars regardless of what `starRenderer` does on the
+visual side. Six famous stars carry non-zero oblateness, up to 0.35 on Achernar, and an
+analytic pick whose ray origin ignores flattening is wrong by `1/(1 − oblateness)` along
+the polar axis — 54% for Achernar. The failure is **silent**: the star still draws
+correctly through the mesh `starRenderer`, while clicks near its limb resolve against a
+shape that is nowhere on screen. Does the pick conversion take the `camPosLocal`
+oblateness parameter back into scope?
+
+**Considerations:**
+
+- **Option A (give `camPosLocal` an optional `oblateness` parameter, default 0):** One
+  line in one pure util — divide the local z by `1 − oblateness` — plus a test, plus one
+  extra argument at the single call site in `drawFlooredSpherePick`, which already
+  receives `oblateness` today. The four existing callers pass nothing and get the
+  identical result back, so nothing already shipped changes behaviour. Fixes the six
+  stars for the same reason Q3 diagnosed the break in the first place.
+- **Option B (revert Q5 to its Option B — raise the pick mesh to 256×128):** Removes the
+  need for an analytic ray origin entirely, so the composition problem cannot arise. But
+  this is exactly the two-notions-of-the-silhouette outcome Q5 rejected: pick and visual
+  would drift again, just below today's noise floor instead of at it.
+- **Option C (convert the pick but drop `oblateness` from the ray origin):** No new
+  parameter, no new scope. But it makes the pick shape wrong for the six oblate stars in
+  the _other_ direction — a stretched sphere instead of a squashed one — trading one
+  silent misalignment for another.
+
+**Decision:** Option A.
+
+This does **not** reopen the Q2 oblateness hold. Nothing new is flattened, no ellipsoid
+normal appears anywhere, and the atmosphere shell's scalar `bottomRadius` is untouched —
+none of the three things Q2 actually dropped. It is a correctness precondition of scope
+already decided at Q5, not the deferred oblateness feature, and all four existing
+`camPosLocal` callers stay byte-identical via the default.
+
+Worth recording honestly, since this parameter has a history in this session: it was
+first proposed as prep on a justification that turned out to be **false** (a claimed
+Minnaert-view-vector error for oblate stars — `starRenderer`'s fragment is
+`u.tint * EMISSIVE` and never calls `camPosLocal` at all, see "Context" above), and was
+correctly withdrawn there. It returns now for a different reason: Q5's pick conversion
+gives it a real consumer for the first time. This is a new justification, not a reversal
+of the earlier withdrawal.
+
+**Consequence:** once this lands, the deferred "convert `starRenderer` + flatten Saturn
+and Jupiter" backlog item is no longer gated on the `camPosLocal` frame fix — that fix
+will already exist. What remains gating that item is ellipsoid normals,
+`packTintedSphereUniforms`, and flattening the atmosphere shell proxy.
+
+---
+
 ## Resulting scope
 
 **Converts:** `texturedBodyRenderer`, `bodyPickRenderer`
 **Stays mesh:** `earthRenderer` (Q1), `starRenderer` (Q3), `planetRenderer` (Q4)
 
-**Ground preparation — one item:**
+**Ground preparation — two items:**
 
-| item | status |
-| --- | --- |
-| extract `lib/analyticSphere.wesl` from the spike | keep — two consumers immediately, Earth's new renderer likely third |
-| ~~`camPosLocal` oblateness param~~ | dropped — oblateness held (Q2) |
-| ~~`packTintedSphereUniforms`~~ | dropped — star not converting (Q3) |
+| item                                             | status                                                                                            |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| extract `lib/analyticSphere.wesl` from the spike | keep — two consumers immediately, Earth's new renderer likely third                               |
+| `camPosLocal` oblateness param, default 0        | keep — Q7: the pick conversion (Q5) needs it for six oblate stars; not a reopening of the Q2 hold |
+| ~~`packTintedSphereUniforms`~~                   | dropped — star not converting (Q3)                                                                |
 
-**Packaging:** one prep PR containing the extraction, merged; then feature PRs stacked
-on main afterwards. Prep, adjacent cleanup, and feature stay three separate diffs.
+**Packaging:** one prep PR containing both items, merged; then feature PRs stacked on
+main afterwards. Prep, adjacent cleanup, and feature stay three separate diffs.
 
 ## Deferred to backlog
 

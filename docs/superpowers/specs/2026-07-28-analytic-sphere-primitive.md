@@ -2,11 +2,11 @@
 
 **Status:** approved design, spec'd 2026-07-28. Every scope decision below was settled in
 [`docs/grill-sessions/analytic-sphere-primitive-2026-07-28.md`](../../grill-sessions/analytic-sphere-primitive-2026-07-28.md)
-(six questions, with the rejected alternatives recorded there). This spec is written against
+(seven questions, with the rejected alternatives recorded there). This spec is written against
 that transcript and against the code as it stands at `e4bd0dbb`; it does not re-open settled
 questions. Where the code contradicted a claim made during the grill, the correction is
-recorded in "Corrections to the grill record" at the end — one of them is load-bearing and
-needs a user decision before the pick phase starts.
+recorded in "Corrections to the grill record" at the end — one of them is load-bearing and is
+settled by Q7, folded into "Ground preparation" below.
 
 Supersedes `docs/backlog/2026-07-24-atmosphere-limb-transparent-seam.md`, which began as
 "raise the vertex count a bit" and escalated once the seam's mechanism was pinned down. That
@@ -55,13 +55,13 @@ Proven and visually confirmed as a spike at `e4bd0dbb`, gated behind `?impostor`
 
 ## Scope
 
-| renderer | verdict | why (grill Q) |
-| --- | --- | --- |
-| `texturedBodyRenderer` | **converts** | the spike; 12 bodies, the seam's home |
-| `bodyPickRenderer` (`drawSphere`) | **converts** | Q5 — identical-by-construction beats close-enough |
-| `earthRenderer` | stays mesh | Q1 — a deep-zoom Earth surface effort is in flight and needs its own renderer |
-| `starRenderer` | stays mesh | Q3 — conversion requires the oblateness frame fix, which Q2 holds |
-| `planetRenderer` | stays mesh | Q4 — the only bodies it permanently draws are Phobos and Deimos |
+| renderer                          | verdict      | why (grill Q)                                                                 |
+| --------------------------------- | ------------ | ----------------------------------------------------------------------------- |
+| `texturedBodyRenderer`            | **converts** | the spike; 12 bodies, the seam's home                                         |
+| `bodyPickRenderer` (`drawSphere`) | **converts** | Q5 — identical-by-construction beats close-enough                             |
+| `earthRenderer`                   | stays mesh   | Q1 — a deep-zoom Earth surface effort is in flight and needs its own renderer |
+| `starRenderer`                    | stays mesh   | Q3 — conversion requires the oblateness frame fix, which Q2 holds             |
+| `planetRenderer`                  | stays mesh   | Q4 — the only bodies it permanently draws are Phobos and Deimos               |
 
 **Out of scope, explicitly:** oblateness work of any kind (Q2) — no ellipsoid normals, no
 flattening Saturn or Jupiter, no `*Local` family rename, no reopening the atmosphere shell's
@@ -77,7 +77,7 @@ The mesh itself does not disappear: `uvSphereMesh(48, 24)` remains, as the 1.05�
 
 ## Ground preparation
 
-Ideal-diff pass run 2026-07-28 (grill "Resulting scope" table). **One item.**
+Ideal-diff pass run 2026-07-28 (grill "Resulting scope" table). **Two items.**
 
 **Growth (seams exist, no prep needed):**
 
@@ -102,13 +102,23 @@ before any feature commit:**
   `impostorFragment.wesl`. `bodyPickRenderer` needs the first and the last of those, and Earth's
   new renderer is a likely third consumer (a renderer built for zooming into a surface wants an
   exact silhouette more than any other). Extract the four into a lib module and repoint
-  `impostorFragment.wesl` at it, **with no behaviour change**. This is the whole of the prep.
+  `impostorFragment.wesl` at it, **with no behaviour change**.
+- **P2 — `camPosLocal` gains an optional `oblateness` parameter, default 0.** Contract change:
+  `camPosLocal(camPosMpc, bodyPosMpc, radiusMpc, orientation, oblateness?: number)` divides the
+  local z component by `1 − oblateness` when given; omitted or `0`, the function returns exactly
+  what it returns today. `bodyPickRenderer` is one renderer serving every body type, and
+  `starSpheresLayer.ts:178` passes `star.oblateness` into `drawFlooredSpherePick` for the six
+  famous stars that carry a non-zero value — so converting the pick (below) converts it for
+  those stars regardless of `starRenderer` staying on the mesh. Without the parameter, the
+  analytic pick's ray origin is wrong by `1/(1 − oblateness)` along the polar axis, silently,
+  because the star still draws correctly through the mesh. The default is what keeps the four
+  existing callers byte-identical: none of them passes a fifth argument, so none of them changes
+  behaviour. See Q7 in the grill transcript for the full reasoning and rejected alternatives.
 
-**Dropped during the ideal-diff pass** (recorded so nobody re-adds them):
+**Dropped during the ideal-diff pass** (recorded so nobody re-adds it):
 
-| dropped item | why |
-| --- | --- |
-| `camPosLocal` oblateness parameter | presented as prep on the grounds that it fixes a live error in the Minnaert view vector for oblate stars. False: `starRenderer`'s fragment is `u.tint * EMISSIVE` with zero varyings and no camera uniform. Every renderer that calls `camPosLocal` passes oblateness 0. Withdrawn — but see correction #3, which resurrects a narrow version of it for a different and real reason. |
+| dropped item               | why                                                    |
+| -------------------------- | ------------------------------------------------------ |
 | `packTintedSphereUniforms` | only needed to convert `starRenderer`, which Q3 holds. |
 
 **Not prepped, deliberately:** `PROXY_SCALE` stays a module-local const in the textured body's
@@ -377,8 +387,8 @@ the decision; the decision was "convert". Placing `packedId` in the vec3's trail
 the struct at 80 bytes with no change to the buffer, the slot stride, `minBindingSize` or
 `MAX_SPHERE_DRAWS`, and matches the house idiom three sibling structs already use.
 
-**3. The pick conversion is NOT oblateness-free — and this needs a decision before the pick
-phase starts.** Q2 held all oblateness work and Q3 held `starRenderer` on the strength of it,
+**3. The pick conversion is NOT oblateness-free — settled as Q7.** Q2 held all oblateness work
+and Q3 held `starRenderer` on the strength of it,
 on the reasoning that no converting renderer would meet a flattened body. That is true of
 `texturedBodyRenderer` (every textured body passes oblateness 0) but **false of the pick**:
 `starSpheresLayer.ts:178` passes `oblateness: star.oblateness` into `drawFlooredSpherePick`, and
@@ -402,22 +412,15 @@ Three ways out, and the grill's own reasoning rules out two of them:
   test, one extra argument at the single call site in `drawFlooredSpherePick` — which already
   receives `oblateness` today.
 
-**Recommendation: the third.** It is a *correctness precondition of the decided scope*, not the
+**Decided: the third** (Q7). It is a _correctness precondition of the decided scope_, not the
 deferred oblateness feature: nothing is flattened, `starRenderer` is untouched, no ellipsoid
 normal appears, the atmosphere shell's scalar `bottomRadius` is not reopened, and no `*Local`
-family rename happens. What Q2 dropped was a prep item justified by a **false** claim (a live
-error in the Minnaert view vector for oblate stars, which does not exist because
-`starRenderer`'s fragment reads no camera at all). This resurrects a strictly narrower version
-of it for a real reason that Q2 did not have in front of it.
+family rename happens. It rides the prep PR as the second ground-preparation item, alongside
+`lib/analyticSphere.wesl` — see "Ground preparation" above for the contract.
 
 Consequence to record: once this lands, the deferred "convert `starRenderer` + flatten Saturn
 and Jupiter" backlog item is **no longer gated on the frame fix** — the frame fix will already
 exist. Its backlog entry must be written against that state.
-
-**The plan treats this as a user checkpoint, blocking the pick phase.** If the user prefers to
-hold it, the pick conversion drops out of this feature entirely and returns to the backlog
-alongside `starRenderer`; the textured-body conversion is independent and proceeds either way,
-at the cost of leaving the 0.214% pick/visual hairline permanently on main.
 
 ## Deferred to backlog
 
