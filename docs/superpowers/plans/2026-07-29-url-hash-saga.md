@@ -154,11 +154,14 @@ transcript); those are a historical record and stay as written.
 
 ### Task 5: Phase A verification + PR 1
 
-- [ ] `npm test` → full suite green.
-- [ ] `npm run typecheck` → clean.
-- [ ] `npm run format` on touched files only.
-- [ ] Open PR 1 (`--base main`). Body: the confirmed clobber trace, and that the
-      `computeDesiredHash` change is deliberately throwaway.
+- [x] `npm test` → full suite green (871 files / 5038 tests).
+- [x] `npm run typecheck` → clean.
+- [x] `npm run format` on touched files only. `tests/state/input/keyboardShortcuts.test.ts`
+      is left unformatted on purpose: it was already prettier-dirty on `main` (over-long
+      import), and T1's one-line `pending` addition is no reason to bury it in an unrelated
+      reformat hunk.
+- [x] Open PR 1 (`--base main`). Body: the confirmed clobber trace, and that the
+      `computeDesiredHash` change is deliberately throwaway. → #519
 - [ ] **Ask the user** to confirm a cold `#focus=<galaxy>` load keeps its hash in the
       browser. This is a behaviour fix; the unit test proves the logic, not the boot timing.
 
