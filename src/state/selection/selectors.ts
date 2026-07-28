@@ -26,6 +26,9 @@
  *  - `selectIsSelectionActive` is a cheap boolean derived from the two ref
  *    slots; memoized so the UI can react to "is anything selected" without
  *    building a full `FocusableTarget`.
+ *  - `selectHasSelectionIntent` is the same shape as `selectIsSelectionActive`
+ *    but also covers the two `pending` slots, so a deep link still parked in a
+ *    deferred resolve counts as intent even though its ref slot reads null.
  *
  * `buildFocusable` is imported from the engine helpers layer, but it is
  * intentionally pure: it touches no engine state, no react-redux, and no
@@ -133,4 +136,23 @@ export const selectFocusedFocusable = createSelector(
 export const selectIsSelectionActive = createSelector(
   [selectSelectedRef, selectFocusRef],
   (select, focus) => select !== null || focus !== null,
+);
+
+/**
+ * selectHasSelectionIntent — true when the user has expressed ANY selection
+ * intent, resolved OR still in flight: either ref slot holds a SelectionRef,
+ * or either pending slot holds a durable id waiting on a deferred resolve
+ * (`resolveFocusRefDeferring` parks a galaxy/star id until its catalog pulse
+ * lands, which can outlive a boot phase that only checks the resolved refs).
+ *
+ * This is the guard a "seed only if nothing is going on" check must use
+ * instead of `selectSelectedRef`/`selectFocusRef` alone — a deep link that is
+ * still resolving is not an empty slot, even though its ref reads null.
+ * Memoized over all four inputs so it only recomputes when one of them
+ * actually changes.
+ */
+export const selectHasSelectionIntent = createSelector(
+  [selectSelectedRef, selectFocusRef, selectPendingSelectId, selectPendingFocusId],
+  (select, focus, pendingSelect, pendingFocus) =>
+    select !== null || focus !== null || pendingSelect !== null || pendingFocus !== null,
 );

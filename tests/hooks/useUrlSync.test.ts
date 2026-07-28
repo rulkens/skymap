@@ -44,9 +44,15 @@ import { Source } from '../../src/data/sources';
 import { createAppStore } from '../../src/store/createAppStore';
 import { buildInitialSettings } from '../../src/state/settings/initialState';
 import { requestFocus } from '../../src/state/selection/requestFocus';
-import { clearSelection } from '../../src/state/selection/selectionSlice';
+import {
+  clearSelection,
+  updateSelectionSelect,
+  updateSelectionFocus,
+} from '../../src/state/selection/selectionSlice';
+import { selectHasSelectionIntent } from '../../src/state/selection/selectors';
+import { EARTH_REF } from '../../src/data/selection/earthRef';
 import { setOrientation } from '../../src/state/settings/settingsSlice';
-import timeReducer, { setSimDays, pause } from '../../src/state/time/timeSlice';
+import timeReducer from '../../src/state/time/timeSlice';
 import { deriveSimDays } from '../../src/utils/time/deriveSimDays';
 import { unixMsToJulianDays } from '../../src/utils/time/unixMsToJulianDays';
 import { CONST_J2000 } from '../../src/data/time/constJ2000';
@@ -363,6 +369,42 @@ describe('useUrlSync hook integration', () => {
     // …and the requested id is carried forward verbatim, so the URL the visitor
     // arrived on survives the window byte for byte.
     expect(pushed).toContain('/#focus=m31&orientation=galactic');
+  });
+
+  it('survives the wireInput.ts home-selection seed racing the same deferred deep link', () => {
+    // The full end-to-end bug: `wireInput.ts` runs a "Home selection seed"
+    // asynchronously after React mounts, seeding EARTH_REF into select/focus
+    // when it finds no selection in progress. Its guard used to read only the
+    // resolved ref slots (`selectSelectedRef`/`selectFocusRef` both null),
+    // which is exactly the state a deferred `#focus=m31` sits in for the whole
+    // boot window — so the seed fired, clobbered the pending request via
+    // `resolveRef`'s unconditional `pending[slot] = null`, and useUrlSync then
+    // pushed a bare `/` for the seeded Earth ref before m31 ever resolved.
+    //
+    // The seed is replicated here through the real `selectHasSelectionIntent`
+    // guard — not mocked — so this test rots if the guard regresses rather
+    // than silently passing regardless of the fix.
+    window.location.hash = '#focus=m31';
+    const pushSpy = vi.spyOn(window.history, 'pushState');
+    const { store, setSagaContext, wrapper } = makeStoreAndWrapper();
+    setSagaContext({ resolveDeps: () => emptyDeps });
+
+    renderHook(() => useUrlSync(), { wrapper });
+
+    // Replicates wireInput.ts's home-selection seed, guard and all.
+    act(() => {
+      if (!selectHasSelectionIntent(store.getState())) {
+        store.dispatch(updateSelectionSelect(EARTH_REF));
+        store.dispatch(updateSelectionFocus(EARTH_REF));
+      }
+    });
+
+    const pushed = pushSpy.mock.calls.map((call) => String(call[2]));
+    expect(pushed.filter((url) => !url.includes('focus=m31'))).toEqual([]);
+    // The seed must not have fired at all: the pending request is still
+    // parked, and the guard should have deferred to it rather than seeding
+    // Earth and letting `resolveRef` wipe the pending id out from under it.
+    expect(store.getState().selection.pending.focus).toBe('m31');
   });
 
   it('removes the hashchange listener on unmount', () => {

@@ -55,7 +55,7 @@ import {
   updateSelectionHover,
   clearSelection,
 } from '../../../state/selection/selectionSlice';
-import { selectSelectedRef, selectFocusRef } from '../../../state/selection/selectors';
+import { selectSelectedRef, selectHasSelectionIntent } from '../../../state/selection/selectors';
 import { selectOrientation } from '../../../state/settings/selectors';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 
@@ -201,15 +201,31 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // No tween is planted: `watchFocusTweenSaga` no-ops for follow-driver bodies,
   // so this focus write never competes with a camera animation.
   //
-  // The seed only fills EMPTY slots. This phase runs asynchronously after React
-  // mounts, and a URL-hash focus with a statically-resolvable id (`body-*`,
-  // milkyWay, structures) lands in the store at mount — before this line runs.
-  // An unconditional seed would clobber that deep link (and useUrlSync would
-  // then rewrite the hash to Earth). Deferred ids (galaxies/stars waiting on a
-  // catalog pulse) resolve after this phase and overwrite the seed — exactly as
-  // they already overwrite the boot pose above.
+  // The seed only fires when there is no selection INTENT at all — resolved or
+  // still in flight. This phase runs asynchronously after React mounts, and a
+  // URL-hash focus with a statically-resolvable id (`body-*`, milkyWay,
+  // structures) lands in the store at mount — before this line runs. An
+  // unconditional seed would clobber that deep link (and useUrlSync would then
+  // rewrite the hash to Earth).
+  //
+  // A ref-only guard (`selectSelectedRef`/`selectFocusRef` both null) is not
+  // enough: a galaxy/star id defers until its catalog pulse lands
+  // (`resolveFocusRefDeferring` parks it), so the resolved ref slot reads null
+  // for the whole boot window while `selection.pending.focus` already holds
+  // the requested id. That window is exactly where this phase runs, so a
+  // ref-only guard sees "empty" and seeds Earth over a deep link that is
+  // simply still resolving — `resolveRef` then clears the pending id
+  // unconditionally, destroying the in-flight request along with the seed.
+  // `selectHasSelectionIntent` reads the pending slots too, so a parked
+  // request counts as non-empty and the seed defers to it.
+  //
+  // Accepted consequence: a junk `#focus=zzz` that never resolves parks
+  // forever, which permanently suppresses the Earth seed for that session.
+  // That is inherent to honouring intent over resolved state — the seed
+  // cannot tell "still resolving" from "never will" — and a junk deep link is
+  // already a broken URL.
   const rootState = store.getState();
-  if (selectSelectedRef(rootState) === null && selectFocusRef(rootState) === null) {
+  if (!selectHasSelectionIntent(rootState)) {
     store.dispatch(updateSelectionSelect(EARTH_REF));
     store.dispatch(updateSelectionFocus(EARTH_REF));
   }
