@@ -2,7 +2,7 @@
  * TexturedDiskSubsystem — LOD-2 per-frame planner.
  *
  * Walks the catalog, applies the px ≥ 24 fetch gate, allocates atlas
- * slots through the injected `GalaxyAtlasSubsystem`, schedules fetches,
+ * slots through the injected `BitmapStreamSubsystem`, schedules fetches,
  * computes load-fade + distance-fade multipliers, sorts back-to-front,
  * emits the disk array. Every encoded galaxy has finite (axisRatio, PA)
  * — `tools/catalog/buildAllBins.ts` supplies a deterministic hash-based
