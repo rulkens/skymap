@@ -18,13 +18,15 @@
  *
  * Every term except the last is read off `(state, s, nowMs)` — the signature is
  * the proof the predicate depends on nothing else. The one exception is `anim`,
- * an explicit bag of IN-FRAME animation votes derived by planners that runFrame
- * has already run this frame (today: the star LOD-fade `anyNodeFading`, computed
- * by `prepareStarCut`). It is threaded as a PARAMETER rather than read off
- * EngineState precisely because it is a per-frame derivation, not stored state:
- * passing it in keeps the predicate a pure function of its inputs, and keeps the
- * one wake authority here — the star pass computes the vote, this predicate
- * decides. New in-frame animators extend the bag, never a hidden state read.
+ * an explicit bag of IN-FRAME animation votes collected by the planners runFrame
+ * has already run this frame: the star LOD-fade `anyNodeFading` from
+ * `prepareStarCut`, and the Earth tile subsystem's `isAnimating()`. It is
+ * threaded as a PARAMETER rather than read off EngineState precisely because it
+ * is gathered per frame at the drive sites: passing it in keeps the predicate a
+ * pure function of its inputs, and keeps the one wake authority here — a planner
+ * or subsystem computes the vote, this predicate decides, and nothing wakes the
+ * loop on its own behalf. New in-frame animators extend the bag, never a hidden
+ * state read.
  *
  * Predicate breakdown:
  *   - camera active: `selectCameraActive(s)` — the continuation predicate
@@ -54,6 +56,12 @@
  *     the winner and the ease is unsaturated; goes false at saturation so steady
  *     follow does not pin the loop. See the helper for why steady-follow-under-
  *     motion is deliberately excluded.
+ *   - `anim.earthTilesAnimating`: Earth's surface virtual texture has its
+ *     manifest or a tile in flight, or a landed tile still ramping through its
+ *     load fade. The manifest leg is the one that matters: it is in flight
+ *     BEFORE the feature can engage, so runFrame reads this vote outside its
+ *     engage gate — otherwise a camera that stops moving mid-fetch sleeps the
+ *     loop and the tiles never appear.
  *   - manual clock playing: `selectIsManualPlaying(s)` — a manual sim clock that
  *     is advancing (not paused) moves every body every frame, so playback must
  *     be continuous. LIVE mode is deliberately absent: it advances at real-time
@@ -105,7 +113,7 @@ export function shouldKeepTicking(
   state: EngineState,
   s: RootState,
   nowMs: number,
-  anim: { starFadeAnimating: boolean },
+  anim: { starFadeAnimating: boolean; earthTilesAnimating: boolean },
 ): boolean {
   return (
     selectCameraActive(s) ||
@@ -115,6 +123,7 @@ export function shouldKeepTicking(
     (state.settings.flow.enabled && slotReady(state.assetSlots.flow)) ||
     selectIsManualPlaying(s) ||
     followApproachEaseActive(state, nowMs) ||
-    anim.starFadeAnimating
+    anim.starFadeAnimating ||
+    anim.earthTilesAnimating
   );
 }

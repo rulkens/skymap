@@ -55,6 +55,8 @@
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 
+import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
+import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { runCameraDrivers } from '../camera/cameraDrivers';
 import { activeDriverId } from '../camera/activeDriverId';
 import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
@@ -68,6 +70,11 @@ import { deriveFrameContext } from './frameContext';
 import { deriveBodyStates } from './deriveBodyStates';
 import { sceneBodyStates } from './sceneBodyStates';
 import { prepareStarCut } from './passes/starCatalogLayer';
+import { earthLayer } from './passes/earthLayer';
+import { NEAR0, slabViewOf } from './slabs';
+import { composeBodyMvp } from '../../../utils/camera/composeBodyMvp';
+import { camPosLocal } from '../../../utils/camera/camPosLocal';
+import { planEarthTiles } from '../../../utils/scene/planEarthTiles';
 import { deriveSourceMasks } from './deriveSourceMasks';
 import { renderFrame } from './renderFrame';
 import { drawPickDebugOverlay } from './drawPickDebugOverlay';
@@ -548,6 +555,70 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     );
   }
 
+  // ── Earth surface virtual texture — the tile planner ──────────────────────
+  //
+  // A CPU-side planner, sited with the disk planners above because it is the
+  // same kind of step: walk the scene, decide what to stream, hand the result
+  // to a subsystem that owns the atlas — all before the GPU dispatch reads
+  // what it uploaded.
+  //
+  // The gate is `earthLayer.enabled` itself rather than a hand-copied
+  // predicate. The tiles refine exactly the pixels that layer draws, so the two
+  // must not be able to disagree about whether Earth is on screen — and the
+  // layer's gate is already the interesting one (the renderer handle, the
+  // near-field distance bracket, the sub-pixel cull). Anywhere outside the
+  // inner solar system it is false and this whole block is one call.
+  const earthTiles = state.subsystems.earthTiles;
+  const earth = state.data.bodies.earth;
+  if (earthTiles !== null && earth !== null && earthLayer.enabled(state, ctx)) {
+    // Null until the manifest lands; the first call is what starts that fetch,
+    // so it must happen here rather than behind the engage gate below — the
+    // gate is stated in terms of a level the manifest supplies.
+    const params = earthTiles.plannerParams();
+    if (params !== null) {
+      // The SAME slab resolution the executor hands `earthLayer.draw`, and the
+      // same two derivations that draw feeds into `packEarthSurfaceUniforms`:
+      // `composeBodyMvp` off the NEAR0 slab's f64 vp (the f64 seam — see
+      // `earthLayer`'s module header) and `camPosLocal` off the slab camera.
+      // Deriving the plan's frame any other way would let the tiles the planner
+      // asks for drift from the pixels the fragment samples them into.
+      const view = slabViewOf(ctx, NEAR0);
+      const earthState = sceneBodyStates(state, ctx).get(earth.id)!;
+      const radiusMpc = earth.radiusKm * SCALE_UNITS.KM_TO_MPC;
+      const plan = planEarthTiles({
+        ...params,
+        camPosLocal: camPosLocal(
+          view.camPos,
+          earthState.positionMpc,
+          radiusMpc,
+          earthState.orientation,
+        ),
+        viewProjLocal: composeBodyMvp(
+          view.slab.vp,
+          earthState.positionMpc,
+          RENDER_ORIGIN_MPC,
+          radiusMpc,
+          earthState.orientation,
+        ),
+        viewportPx: view.viewportPx,
+      });
+      // The engage gate, one rule: the planner already decided which level the
+      // screen's texel density calls for, so "is the base texture magnifying
+      // yet?" is read off the plan rather than re-derived as an altitude
+      // threshold. Below it there is nothing a tile could add that the
+      // whole-globe base does not already carry.
+      if (plan.zWin > params.minLevel) earthTiles.update({ plan, nowMs: ctx.nowMs });
+    }
+  }
+
+  // The keep-ticking vote, read OUTSIDE the gate above and outside the engage
+  // branch inside it. `isAnimating()` is true while the manifest is in flight,
+  // which is a state the subsystem enters BEFORE it can ever engage — so a vote
+  // consulted only on engaged frames would let a camera that stops moving
+  // mid-fetch sleep the loop, and the feature would stay dormant until the next
+  // input event as though the fetch had silently failed.
+  const earthTilesAnimating = earthTiles?.isAnimating() ?? false;
+
   // ── Label director per-frame update ──────────────────────────────────────
   //
   // Runs BEFORE the GPU dispatch so `labelRenderer.setLabels` /
@@ -627,6 +698,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   state.subsystems.fades.tick(nowMs);
   const keepTicking = shouldKeepTicking(state, rootState, nowMs, {
     starFadeAnimating: starCut?.anyNodeFading ?? false,
+    earthTilesAnimating,
   });
 
   if (keepTicking) {

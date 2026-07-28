@@ -397,6 +397,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       hiResFamous: null,
       hiResFamousTexture: null,
 
+      // ── Earth surface virtual texture ─────────────────────────────
+      // Null until `wireSlots` constructs it post-GPU init, and holding no
+      // GPU memory even then — the atlas is allocated by the first frame the
+      // tile planner engages on.
+      earthTiles: null,
+
       // ── Bias-correction subsystem ─────────────────────────────────
       // Owns Malmquist-bias mode flags, cached per-source ratios/weights,
       // and the async bake state machine.  Eager (no GPU dep); the renderer
@@ -798,6 +804,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.subsystems.diskPlannerWalk = null;
     state.subsystems.galaxyAtlas?.destroy();
     state.subsystems.galaxyAtlas = null;
+    // The Earth tile subsystem owns a 67 MB atlas and a page-table texture
+    // once engaged, neither of which WebGPU releases on GC. Order-independent:
+    // nothing subscribes to it.
+    state.subsystems.earthTiles?.destroy();
+    state.subsystems.earthTiles = null;
     state.subsystems.clickResolver?.destroy();
     state.subsystems.clickResolver = null;
     state.subsystems.loadProgress?.destroy();

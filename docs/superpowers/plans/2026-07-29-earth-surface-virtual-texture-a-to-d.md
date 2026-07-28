@@ -478,8 +478,8 @@ established home for per-frame CPU planners.
 early rejections make it cheap, and the whole block is skipped when the Earth layer is
 disabled — so the common case (anywhere outside the inner solar system) costs one comparison.
 
-- [ ] Add the drive site, gated on the same handles `earthLayer.enabled` checks.
-- [ ] Wake rules: a landed tile wakes the loop via `BitmapStreamSubsystem`'s existing
+- [x] Add the drive site, gated on the same handles `earthLayer.enabled` checks.
+- [x] Wake rules: a landed tile wakes the loop via `BitmapStreamSubsystem`'s existing
       `requestRender`, and a mid-fade tile keeps it ticking through the fade. Subsystems
       never wake themselves (`project_render_wake_consolidation`) — surface the vote, let
       `shouldKeepTicking` decide, exactly as `prepareStarCut` does at `runFrame.ts:561-574`.
