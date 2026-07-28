@@ -162,8 +162,10 @@ transcript); those are a historical record and stay as written.
       reformat hunk.
 - [x] Open PR 1 (`--base main`). Body: the confirmed clobber trace, and that the
       `computeDesiredHash` change is deliberately throwaway. → #519
-- [ ] **Ask the user** to confirm a cold `#focus=<galaxy>` load keeps its hash in the
+- [x] **Ask the user** to confirm a cold `#focus=<galaxy>` load keeps its hash in the
       browser. This is a behaviour fix; the unit test proves the logic, not the boot timing.
+      Confirmed 2026-07-29 on `#focus=m31`: no extra history entries. The first two
+      confirmations were premature — see Task 5b for why the unit tests could not see it.
 
 ### Task 5b: the home seed defers to a still-resolving deep link
 

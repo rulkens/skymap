@@ -31,8 +31,8 @@
  *      suppressing the write instead would leave a stale hash sitting on
  *      screen after a `clearSelection` that never resolves anything.
  *
- *      Its MOUNT pass is skipped — see the effect for why the snapshot it
- *      holds on that one commit is always the pre-read boot state.
+ *      It composes from a fresh `store.getState()` read rather than the
+ *      render snapshot — see the effect for why.
  *
  * ──────────────────────────────────────────────────────────────────────
  * Why pushState fires no hashchange (no write↔read loop)
@@ -64,14 +64,14 @@
  * 'undefined'`. Skymap doesn't SSR today but the guard is cheap.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import type { FocusableTarget } from '../@types/engine/FocusableTarget';
 import type { TimeState } from '../@types/time/TimeState';
 import type { OrientationFrameId } from '../@types/camera/OrientationFrameId';
 import { HASH_PARAM_SOURCES } from './hashParamSources';
 import { parseHashParams } from '../utils/url/parseHashParams';
 import { composeHashParams } from '../utils/url/composeHashParams';
-import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { useAppDispatch, useAppSelector, useAppStore } from '../store/hooks';
 import { selectFocusedFocusable, selectPendingFocusId } from '../state/selection/selectors';
 import { selectTimeState } from '../state/time/selectors';
 import { selectOrientation } from '../state/settings/selectors';
@@ -140,6 +140,7 @@ export function computeDesiredHash(input: DesiredHashInput): DesiredHashOutput {
 
 export function useUrlSync(): void {
   const dispatch = useAppDispatch();
+  const store = useAppStore();
   const focused = useAppSelector(selectFocusedFocusable);
   const pendingFocusId = useAppSelector(selectPendingFocusId);
   const time = useAppSelector(selectTimeState);
@@ -177,27 +178,32 @@ export function useUrlSync(): void {
   // under noisy re-renders. The pending id (above) keeps a deferring focus
   // request on the URL for the whole resolve window.
   //
-  // The MOUNT pass is skipped. On the mount commit this effect still holds
-  // the render snapshot taken BEFORE Effect A ran, so every store read is
-  // the boot value even though Effect A has just dispatched the URL's own
-  // params — the body composes empty and pushState throws the deep link
-  // away. Skipping costs nothing: at mount the store cannot know anything
-  // the URL does not already carry, so the URL is the input on that commit,
-  // not the output. Effect A's dispatches re-run this effect immediately
-  // with real values. (The saga port gets this for free — the write fires
-  // only on an action, so there is no start-up pass to suppress.)
-  const mountPassDone = useRef(false);
+  // Composes from a fresh `store.getState()` read, not the `focused` /
+  // `pendingFocusId` / `time` / `orientation` values closed over from this
+  // render. An effect runs after the commit that scheduled it, and more
+  // dispatches can land in between — the render snapshot can already be
+  // stale by the time the effect body executes. The mount commit is the
+  // case that bites hardest: Effect A's own mount-time dispatches
+  // (`requestSelect` + `requestFocus` for a `#focus=<id>` deep link) fire
+  // during the SAME commit, before this effect runs, so a fresh read at
+  // that point already reflects them. The composed body matches the URL
+  // the visitor arrived on, and the existing `matches` check skips the
+  // write — no separate mount case to special-case.
+  //
+  // The `useAppSelector` calls above stay: they are what SUBSCRIBES this
+  // component to those store slices, which is what makes React schedule a
+  // re-run of this effect when one of them changes. Their VALUES are no
+  // longer read here — only `store.getState()`'s are — but the subscription
+  // is still load-bearing. Removing them as "unused" would silently stop
+  // the write from ever re-running.
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (!mountPassDone.current) {
-      mountPassDone.current = true;
-      return;
-    }
+    const state = store.getState();
     const { desiredHashBody, matches } = computeDesiredHash({
-      focused,
-      pendingFocusId,
-      time,
-      orientation,
+      focused: selectFocusedFocusable(state),
+      pendingFocusId: selectPendingFocusId(state),
+      time: selectTimeState(state),
+      orientation: selectOrientation(state),
       currentHash: window.location.hash,
     });
     if (matches) return;
@@ -221,5 +227,5 @@ export function useUrlSync(): void {
     // entry composes a valid hash and silently never writes. The saga port
     // deletes all three: `write` takes `RootState`, and the trigger set becomes
     // each source's own declaration.
-  }, [focused, pendingFocusId, time, orientation]);
+  }, [focused, pendingFocusId, time, orientation, store]);
 }
