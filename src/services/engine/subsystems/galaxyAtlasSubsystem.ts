@@ -35,6 +35,15 @@ import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import { TextureAtlas } from '../../gpu/resources/textureAtlas';
 import { PriorityQueue } from '../../../utils/concurrency/priorityQueue';
 
+// Geometry of the galaxy thumbnail atlas: a single 2048×2048 texture
+// sliced into a 16×16 grid of 128×128 slots (256 thumbnails total).
+// `GALAXY_ATLAS_SLOT_SIDE` is exported because the bitmap fetcher
+// (fetchGalaxyBitmap) resizes network images to exactly this size during
+// decode, so the two must stay in lockstep.
+const GALAXY_ATLAS_SIDE = 2048;
+export const GALAXY_ATLAS_SLOT_SIDE = 128;
+const GALAXY_ATLAS_FORMAT: GPUTextureFormat = 'rgba8unorm-srgb';
+
 export type GalaxyAtlasDeps = {
   readonly device: GPUDevice;
   /**
@@ -48,7 +57,12 @@ export type GalaxyAtlasDeps = {
 export function createGalaxyAtlasSubsystem(deps: GalaxyAtlasDeps): GalaxyAtlasSubsystem {
   const { device, requestRender } = deps;
 
-  const atlas = new TextureAtlas(device);
+  const atlas = new TextureAtlas(device, {
+    atlasSide: GALAXY_ATLAS_SIDE,
+    slotSide: GALAXY_ATLAS_SLOT_SIDE,
+    format: GALAXY_ATLAS_FORMAT,
+    label: 'galaxy-atlas',
+  });
   atlas.initTexture();
 
   const queue = new PriorityQueue();
