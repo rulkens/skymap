@@ -15,7 +15,7 @@
  *
  * Each label's final `fadeAlpha` is the distance fade multiplied by two
  * composed strands (see `focusRecession.ts`): the per-category toggle's
- * opacity (`opacityOf({labelLayer, structure, category})`, read from the
+ * opacity (`opacityOf({labelLayer, structure, item})`, read from the
  * FadeRegistry) and the focus recession factor. The authoritative gate is the
  * `structures.items[cat].labelEnabled` boolean: a category that is both
  * DISABLED and fully faded (opacity 0) is skipped wholesale — the only
@@ -27,7 +27,7 @@
  *
  * ### Pure reader of the per-category opacity
  *
- * The producer only READS `fades.opacityOf({labelLayer, structure, category})`
+ * The producer only READS `fades.opacityOf({labelLayer, structure, item})`
  * — the visibility bridge (`syncVisibilityFades`) is the sole writer of each
  * category's intent opacity, seeding and ramping it from the category's
  * `labelEnabled` setting. The producer never drives a fade of its own.

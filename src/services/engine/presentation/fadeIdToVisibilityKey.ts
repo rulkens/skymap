@@ -51,8 +51,9 @@ import type { FadeId } from '../../../@types/animation/FadeId';
 import type { VisibilityLayerKey } from '../../../@types/animation/VisibilityLayerKey';
 
 /**
- * Maps a `FadeId` to its `VisibilityLayerKey`, or `undefined` for kinds
- * with no clip-layer address (`overlay`).
+ * Maps a `FadeId` to its `VisibilityLayerKey`, or `undefined` for ids with no
+ * clip-layer address: the `overlay` kind, and the near-field caption label
+ * layers (`starCatalog`, `body`).
  *
  * Exhaustive over `FadeId['kind']` via a `never`-guard `default` arm — a
  * new union kind must declare its clip stance here or tsc fails.

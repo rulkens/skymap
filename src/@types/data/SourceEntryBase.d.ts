@@ -34,8 +34,8 @@ export type SourceEntryBase = {
    *
    * This is a CAPABILITY, not a routing detail — a source that puts a name on
    * screen sets it, whichever renderer draws that name. Setting it from "does
-   * this go through the COSMO label system" is what previously left the
-   * near-field bodies marked false while they captioned every frame.
+   * this go through the COSMO label system" would leave the near-field bodies
+   * marked false while they caption every frame.
    */
   readonly bearsLabel: boolean;
   /**
