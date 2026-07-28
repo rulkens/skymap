@@ -89,16 +89,15 @@ import type { AtlasTileRect } from '../../../../@types/data/AtlasTileRect';
 import type { BodyTextureId } from '../../../../@types/data/BodyTextureId';
 import type { TextureKind } from '../../../../@types/data/TextureKind';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
+import {
+  BODY_SPHERE_RINGS,
+  BODY_SPHERE_SEGMENTS,
+} from '../../../../data/bodies/sphereTessellation';
 import { generateMipChain, mipLevelCount } from '../../lib/generateMipChain';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import vsCode from '../../shaders/bodies/texturedBody/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/texturedBody/fragment.wesl?static';
-
-/** UV-sphere tessellation — 48×24, shared with every sphere body renderer for a
- *  smooth silhouette at close range without overwhelming vertex throughput. */
-const SEGMENTS = 48;
-const RINGS = 24;
 
 /** `TexturedBodyUniforms` is 112 bytes (28 f32): the 80-byte lit prefix + two
  *  ring ratios + two Minnaert limb params + camPosLocal vec3 + one pad float.
@@ -166,7 +165,7 @@ export function createTexturedBodyRenderer(
   reversedZ: boolean,
 ): TexturedBodyRenderer {
   // ── Geometry upload (positions + uvs, like earthRenderer) ─────────────────
-  const mesh = uvSphereMesh(SEGMENTS, RINGS);
+  const mesh = uvSphereMesh(BODY_SPHERE_SEGMENTS, BODY_SPHERE_RINGS);
   const indexCount = mesh.indices.length;
 
   const positionBuffer = device.createBuffer({

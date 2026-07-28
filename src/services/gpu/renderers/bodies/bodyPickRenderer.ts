@@ -103,16 +103,15 @@ import type {
   BodyPointPickArgs,
 } from '../../../../@types/rendering/BodyPickRenderer';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
+import {
+  BODY_SPHERE_RINGS,
+  BODY_SPHERE_SEGMENTS,
+} from '../../../../data/bodies/sphereTessellation';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import spherePickCode from '../../shaders/bodies/spherePick.wesl?static';
 import starPointPickCode from '../../shaders/bodies/starPointPick.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { writeCameraPrefix } from '../../lib/cameraUniforms';
-
-/** UV-sphere tessellation — matches the visual sphere bodies so the pick
- *  silhouette is identical to the drawn sphere. */
-const SEGMENTS = 48;
-const RINGS = 24;
 
 /**
  * `SpherePickUniforms` byte size (spherePick.wesl): mat4x4<f32> (64) + u32 (4),
@@ -167,7 +166,7 @@ const GLINT_BAND_CLASS_WORD = 4;
 export function createBodyPickRenderer(device: GPUDevice, reversedZ: boolean): BodyPickRenderer {
   // ── Shared sphere geometry (positions + indices; no uvs — the pick fragment
   //    samples nothing) ────────────────────────────────────────────────────
-  const mesh = uvSphereMesh(SEGMENTS, RINGS);
+  const mesh = uvSphereMesh(BODY_SPHERE_SEGMENTS, BODY_SPHERE_RINGS);
   const indexCount = mesh.indices.length;
 
   const positionBuffer = device.createBuffer({
