@@ -29,16 +29,31 @@
 //
 // ## Byte layout (uniform std140)
 //
-//   offset  0..63  mvp       mat4x4<f32>  (column-major, 64 B)
-//   offset 64..67  packedId  u32          (4 B)
-//   struct size rounds up to 80 (the 16-byte alignment the mat4x4 demands; the
-//   4 trailing bytes are pad). bodyPickRenderer's scratch mirrors this exactly:
-//   f32[0..15] = mvp, u32[16] = packedId.
+//   offset  0..63  mvp          mat4x4<f32>  (column-major, 64 B)
+//   offset 64..75  camPosLocal  vec3<f32>    (16-byte aligned at 64)
+//   offset 76..79  packedId     u32          (fills the vec3's trailing slot)
+//   total: 80 bytes. bodyPickRenderer's scratch mirrors this exactly:
+//   f32[0..15] = mvp, f32[16..18] = camPosLocal, u32[19] = packedId.
+//
+// 'packedId' sits in what a vec3 would otherwise waste. A vec3<f32> occupies 12
+// bytes but demands 16-byte alignment, so the 4 bytes after it are unusable by
+// anything wider than a scalar -- putting a REAL scalar field there is free,
+// where declaring 'camPosLocal' AFTER 'packedId' would have cost a fresh
+// 16-byte row and pushed the struct to 96. Same trick as
+// 'RingUniforms.planetRadiusRatio' (lib/sphere.wesl). Because the struct size,
+// the dynamic-offset slot stride and 'minBindingSize' are all unchanged, the
+// per-draw slot mechanism below is untouched by the widening.
+//
+// 'camPosLocal' is the camera expressed in the frame where this body is the UNIT
+// sphere, composed CPU-side by 'drawFlooredSpherePick' from the SAME floored
+// pick radius the mvp is composed with -- the ray origin an analytic
+// silhouette test takes. No stage below reads it.
 
 import package::lib::sphere::clip_from_local;
 
 struct SpherePickUniforms {
   mvp: mat4x4<f32>,
+  camPosLocal: vec3<f32>,
   packedId: u32,
 };
 
