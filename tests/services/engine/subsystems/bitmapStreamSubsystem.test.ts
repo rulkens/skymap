@@ -1,5 +1,5 @@
 /**
- * galaxyAtlasSubsystem — unit tests for the shared atlas + queue
+ * bitmapStreamSubsystem — unit tests for the shared atlas + queue
  * infrastructure extracted from thumbnailSubsystem.
  *
  * Coverage focus:
@@ -9,10 +9,25 @@
  *   - setEvictHandler fires on LRU eviction with the ousted key
  *   - inFlightCount() tracks pending fetches
  *   - destroy() clears the eviction handler
+ *
+ * Atlas geometry here (32×32 texture, 8×8 slots → 16 total) is an
+ * arbitrary test config, not a real consumer's — this file exercises the
+ * generic machinery in isolation from any one atlas's real dimensions.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createGalaxyAtlasSubsystem } from '../../../../src/services/engine/subsystems/galaxyAtlasSubsystem';
+import {
+  createBitmapStreamSubsystem,
+  type BitmapStreamDeps,
+} from '../../../../src/services/engine/subsystems/bitmapStreamSubsystem';
+
+const TEST_ATLAS_CONFIG: Omit<BitmapStreamDeps, 'device' | 'requestRender'> = {
+  atlasSide: 32,
+  slotSide: 8,
+  format: 'rgba8unorm-srgb',
+  label: 'test-atlas',
+};
+const TEST_SLOT_COUNT = 16; // (32 / 8) ** 2
 
 function makeFakeDevice(): GPUDevice {
   const fakeTexture = { createView: () => ({}) as GPUTextureView };
@@ -26,17 +41,21 @@ function makeFakeDevice(): GPUDevice {
 }
 
 function makeFakeBitmap(): ImageBitmap {
-  return { width: 128, height: 128, close: () => {} } as unknown as ImageBitmap;
+  return { width: 8, height: 8, close: () => {} } as unknown as ImageBitmap;
 }
 
-describe('createGalaxyAtlasSubsystem', () => {
+describe('createBitmapStreamSubsystem', () => {
   let device: GPUDevice;
   beforeEach(() => {
     device = makeFakeDevice();
   });
 
   it('allocate returns distinct slots for distinct keys', () => {
-    const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
+    const atlas = createBitmapStreamSubsystem({
+      device,
+      requestRender: () => {},
+      ...TEST_ATLAS_CONFIG,
+    });
     const s1 = atlas.allocate('a', 1);
     const s2 = atlas.allocate('b', 1);
     expect(s1).not.toBeNull();
@@ -45,7 +64,11 @@ describe('createGalaxyAtlasSubsystem', () => {
   });
 
   it('allocate refreshes the LRU clock for a repeat key', () => {
-    const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
+    const atlas = createBitmapStreamSubsystem({
+      device,
+      requestRender: () => {},
+      ...TEST_ATLAS_CONFIG,
+    });
     atlas.allocate('k', 1);
     expect(atlas.lastSeenFrame('k')).toBe(1);
     atlas.allocate('k', 7);
@@ -53,7 +76,11 @@ describe('createGalaxyAtlasSubsystem', () => {
   });
 
   it('enqueueFetch is idempotent for an in-flight key', () => {
-    const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
+    const atlas = createBitmapStreamSubsystem({
+      device,
+      requestRender: () => {},
+      ...TEST_ATLAS_CONFIG,
+    });
     const fetcher = vi.fn(() => new Promise<ImageBitmap | null>(() => {})); // hangs
     atlas.enqueueFetch({ key: 'k', priority: 1, fetcher, onResult: () => {} });
     atlas.enqueueFetch({ key: 'k', priority: 1, fetcher, onResult: () => {} });
@@ -63,18 +90,26 @@ describe('createGalaxyAtlasSubsystem', () => {
   });
 
   it('setEvictHandler fires when LRU recycles a slot', () => {
-    const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
+    const atlas = createBitmapStreamSubsystem({
+      device,
+      requestRender: () => {},
+      ...TEST_ATLAS_CONFIG,
+    });
     const evicted: string[] = [];
     atlas.setEvictHandler((k) => evicted.push(k));
-    // Fill 256 slots, then allocate a 257th to force eviction.
-    for (let i = 0; i < 256; i++) atlas.allocate(`k${i}`, 1);
-    atlas.allocate('k256', 2);
+    // Fill every slot, then allocate one more to force eviction.
+    for (let i = 0; i < TEST_SLOT_COUNT; i++) atlas.allocate(`k${i}`, 1);
+    atlas.allocate('kOverflow', 2);
     expect(evicted.length).toBe(1);
     expect(evicted[0]).toBe('k0');
   });
 
   it('isLoaded flips true after uploadBitmap', () => {
-    const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
+    const atlas = createBitmapStreamSubsystem({
+      device,
+      requestRender: () => {},
+      ...TEST_ATLAS_CONFIG,
+    });
     const slot = atlas.allocate('k', 1)!;
     expect(atlas.isLoaded('k')).toBe(false);
     atlas.uploadBitmap(slot, makeFakeBitmap());
@@ -86,7 +121,11 @@ describe('createGalaxyAtlasSubsystem', () => {
   });
 
   it('destroy clears the eviction handler', () => {
-    const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
+    const atlas = createBitmapStreamSubsystem({
+      device,
+      requestRender: () => {},
+      ...TEST_ATLAS_CONFIG,
+    });
     const handler = vi.fn();
     atlas.setEvictHandler(handler);
     atlas.destroy();
