@@ -34,6 +34,13 @@
  *                    singleton demand-loaded layer (like filament): fades in
  *                    once its artifact uploads, fades out on the master toggle.
  *                    No discriminator.
+ *   - orbitTrails  — the near-field Keplerian orbit trails (Earth / Jupiter /
+ *                    Moon …). Seeded from `settings.orbitTrails.enabled` and
+ *                    multiplied into the layer's per-orbit apparent-size alpha so
+ *                    the whole trail layer dissolves smoothly on toggle. The
+ *                    compile-time conic table is always present (no demand load),
+ *                    so it seeds from the toggle rather than fading in at 0. No
+ *                    discriminator.
  *   - labelLayer   — one logical label layer (milkyWay, structure,
  *                    galaxy names, scale bar). Discriminator:
  *                    `layer: LabelLayerId`. Structure labels additionally key
@@ -75,6 +82,7 @@ export type FadeId =
   | { readonly kind: 'filament' }
   | { readonly kind: 'flow' }
   | { readonly kind: 'constellations' }
+  | { readonly kind: 'orbitTrails' }
   | {
       readonly kind: 'labelLayer';
       readonly layer: LabelLayerId;

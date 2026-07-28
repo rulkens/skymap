@@ -26,6 +26,10 @@ describe('fadeIdToVisibilityKey', () => {
     expect(fadeIdToVisibilityKey({ kind: 'filament' })).toBe('filaments');
   });
 
+  it("maps an orbitTrails id to 'orbitTrails'", () => {
+    expect(fadeIdToVisibilityKey({ kind: 'orbitTrails' })).toBe('orbitTrails');
+  });
+
   it("maps a structure ring id to 'structureRing'", () => {
     // All StructureId values collapse to the same key.
     expect(fadeIdToVisibilityKey({ kind: 'structure', id: 'cluster' })).toBe('structureRing');

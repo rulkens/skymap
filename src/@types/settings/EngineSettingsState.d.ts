@@ -202,6 +202,20 @@ export type EngineSettingsState = {
   };
 
   /**
+   * Orbit-trails singleton overlay — the master gate on the near-field Keplerian
+   * orbit trails (Earth / Jupiter / Moon …). A flat `enabled` field, mirroring
+   * the `milkyWay` / `filaments` / `flow` singleton overlays rather than the
+   * per-record source-type clusters: the trails are one compile-time conic table,
+   * not a per-catalog fan-out. Read by `orbitTrailsLayer`, whose per-orbit
+   * apparent-size fade is multiplied by this gate's fade opacity so the whole
+   * layer dissolves on toggle rather than popping. Defaults on — the trails are
+   * part of the baseline solar-system scene.
+   */
+  orbitTrails: {
+    enabled: boolean;
+  };
+
+  /**
    * Earth's per-body look dials. Three fields today:
    *   - `atmosphereExposure`, the exposure scale on the in-scatter atmosphere
    *     shell's HDR output. Seeded from `ATMOSPHERE_PARAMS.earth.exposure` and

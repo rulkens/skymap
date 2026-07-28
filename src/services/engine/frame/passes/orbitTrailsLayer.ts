@@ -23,10 +23,25 @@
  * stroke width. This is a HARD INVARIANT — see `composeOrbitConic`'s module
  * header.
  *
+ * ### The visibility layer — a hideable overlay
+ *
+ * The trails are a `VisibilityLayerKey` (`'orbitTrails'`): a clip can
+ * `hide(['orbitTrails'])` / `show(['orbitTrails'])` exactly like `'filaments'`
+ * or `'milkyWayDisk'`, and the UI toggle flows the same way. Intent lives in
+ * `settings.orbitTrails.enabled`; the FADE_LAYERS manifest bridges that toggle to
+ * a `{ kind: 'orbitTrails' }` fade controller so the whole layer DISSOLVES rather
+ * than pops. `draw` reads that controller's opacity via `resolveLayerOpacity`
+ * (same as `filamentsLayer`) and multiplies it into every orbit's per-orbit
+ * apparent-size alpha, so the layer fade and the sub-pixel fade compose. Unlike
+ * the demand-loaded overlays the conic table is a compile-time constant with no
+ * asset slot, so the fade seeds from the toggle (register at 1 when on), not 0.
+ *
  * ### When it draws
  *
  * `enabled` gates on the `orbitTrailRenderer` GPU handle (null in the
- * pre-bootstrap window) AND the shared near-field distance gate
+ * pre-bootstrap window), then the layer-visibility intent (toggled off AND the
+ * fade fully receded ⇒ opacity-0, so the whole pass is dropped — the
+ * opacity-0-means-no-render rule), then the shared near-field distance gate
  * (`FOREGROUND_MAX_DISTANCE_MPC`) — beyond it every AU-to-lunar-scale trail
  * is deep sub-pixel, and gating with the NEAR0 siblings lets the executor
  * skip the whole `(hdr, NEAR0)` render step as empty. Within that gate, each
@@ -65,6 +80,7 @@ import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { sceneBodyStates } from '../sceneBodyStates';
 import { MAX_ORBITS, INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/orbitTrailRenderer';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
+import { resolveLayerOpacity } from '../../presentation/focusRecession';
 
 // Apparent-size fade band, in on-screen orbit DIAMETER pixels. Below CULL_PX an
 // orbit is deep sub-pixel noise (aliasing, not a legible path), so it is dropped
@@ -118,6 +134,17 @@ export const orbitTrailsLayer: ContentLayer = {
     // MAX_ORBIT_EXTENT_MPC bound below is TIME-INVARIANT, so this gate needs no
     // per-frame derivation even though the drawn conics do.
     if (state.gpu.orbitTrailRenderer === null) return false;
+    // Layer-visibility intent, mirroring filamentsLayer: the toggle is the user's
+    // intent, opacityOf > 0 is the visual tail. Render whenever EITHER holds so a
+    // fade-out keeps drawing after a hide until opacity hits 0. When the toggle is
+    // off AND the fade has fully receded the layer is truly hidden — drop the
+    // whole (hdr, NEAR0) pass (opacity 0 ⇒ no render).
+    if (
+      !state.settings.orbitTrails.enabled &&
+      state.subsystems.fades.opacityOf({ kind: 'orbitTrails' }, ctx.nowMs) <= 0
+    ) {
+      return false;
+    }
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     // Whole-layer sub-pixel cull, the conservative bound of the per-orbit
     // CULL_PX loop in `draw`: at the camera's NEAREST possible distance to
@@ -155,6 +182,18 @@ export const orbitTrailsLayer: ContentLayer = {
     const camPos = ctx.drawCamPos;
     const viewportHeightPx = view.viewportPx[1];
 
+    // Whole-layer opacity — the toggle/hide fade (× focus recession, neutral for
+    // this near-field layer, × the clip-owned channel). Multiplied into every
+    // orbit's apparent-size alpha below so the layer dissolves on hide rather than
+    // popping. Mirrors filamentsLayer's `resolveLayerOpacity` call.
+    const layerOpacity = resolveLayerOpacity(
+      state.subsystems.fades,
+      { kind: 'orbitTrails' },
+      ctx.focusBlend,
+      ctx.nowMs,
+      state.subsystems.clipPlayer,
+    );
+
     // Pack one 28-float instance record per VISIBLE conic (byte offsets mirror
     // the renderer's INSTANCE_ATTRIBUTES):
     //   floats 0..11  — the three Ginv columns (loc1/2/3 at byte 0/16/32),
@@ -185,9 +224,7 @@ export const orbitTrailsLayer: ContentLayer = {
       // render origin (the Sun); a moon's focus is its parent's LIVE snapshot
       // position, so its trail rides the moving parent.
       const focus =
-        elements.parentId === null
-          ? RENDER_ORIGIN_MPC
-          : states.get(elements.parentId)!.positionMpc;
+        elements.parentId === null ? RENDER_ORIGIN_MPC : states.get(elements.parentId)!.positionMpc;
       const centerMpc = centerOffsetMpc;
       centerMpc[0] += focus[0];
       centerMpc[1] += focus[1];
@@ -207,7 +244,8 @@ export const orbitTrailsLayer: ContentLayer = {
         fovYRad: ctx.fovYRad,
       });
       if (diameterPx < CULL_PX) continue; // deep sub-pixel — do not render
-      const alpha = Math.min(1, (diameterPx - CULL_PX) / (FULL_PX - CULL_PX));
+      // Per-orbit apparent-size fade × the whole-layer opacity (hide/show fade).
+      const alpha = Math.min(1, (diameterPx - CULL_PX) / (FULL_PX - CULL_PX)) * layerOpacity;
 
       const { ginv, minorS, minorT } = composeOrbitConic(
         view.slab.vp,

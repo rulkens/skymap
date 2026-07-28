@@ -90,6 +90,8 @@ export function recessionTargetFor(h: FadeId): number | undefined {
       return undefined;
     case 'milkyWay':
       return undefined; // the MW disk does not recede on focus
+    case 'orbitTrails':
+      return undefined; // near-field foreground trails never recede on focus
     case 'overlay':
       return undefined;
   }
