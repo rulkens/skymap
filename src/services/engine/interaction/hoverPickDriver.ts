@@ -94,6 +94,10 @@ export function createHoverPickDriver(deps: HoverPickDeps): {
     deps.pickProgram
       .pick(cssToTexPx(pos.x), cssToTexPx(pos.y))
       .then((hit) => deps.store.dispatch(updateSelectionHover(resolvePick(hit, deps.resolveDeps))))
+      .catch(() => {
+        // A failed GPU readback is not a hover result worth surfacing: leave
+        // the prior hover selection in place rather than crash the driver.
+      })
       .finally(() => {
         deps.state.picking.pickInFlight = false;
         // Trailing edge: fire a new pick if the pointer has moved since we

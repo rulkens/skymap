@@ -72,18 +72,27 @@ export function useAliasIndex(input: UseAliasIndexInput): UseAliasIndexReturn {
     if (!handle.selection?.loadAliases) return;
 
     aliasLoadStarted.current = true;
-    handle.selection.loadAliases().then((loadedAliasMap) => {
-      // Stash the raw Map first for the deep-link resolver oracle —
-      // it only needs `.has(pgc)`, not the per-source localIdx join.
-      setAliasMap(loadedAliasMap);
-      setAliasIndex(
-        buildAliasIndex({
-          handle,
-          aliasMap: loadedAliasMap,
-          sources: [Source.Glade, Source.TwoMRS],
-        }),
-      );
-    });
+    handle.selection
+      .loadAliases()
+      .then((loadedAliasMap) => {
+        // Stash the raw Map first for the deep-link resolver oracle —
+        // it only needs `.has(pgc)`, not the per-source localIdx join.
+        setAliasMap(loadedAliasMap);
+        setAliasIndex(
+          buildAliasIndex({
+            handle,
+            aliasMap: loadedAliasMap,
+            sources: [Source.Glade, Source.TwoMRS],
+          }),
+        );
+      })
+      .catch(() => {
+        // `loadAliases()` already resolves to an empty Map on a failed
+        // fetch (see engine.ts's `awaitSlotReady` fallback), so this
+        // never fires in practice; it exists only to satisfy the type
+        // as a Promise. Leaving the index unset matches the sidecar-
+        // absent case: alias search degrades to no results, not a crash.
+      });
   }, [paletteOpen, sourceCounts, engineHandleRef]); // engineHandleRef is a stable ref object — listed for linter correctness, never triggers re-run
 
   return { aliasIndex, aliasMap };

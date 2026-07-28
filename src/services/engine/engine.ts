@@ -704,7 +704,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   // The main async IIFE runs the bootstrap phases; all errors are caught
   // and dispatched via `engineStatusChanged({ kind: 'error' })`.  See `runBootstrapPhases`.
-  (async () => {
+  // `void`: nothing awaits engine construction, and the catch below already
+  // routes failures to the status callback rather than an unhandled rejection.
+  void (async () => {
     try {
       await runBootstrapPhases(state, bootstrapDeps);
     } catch (err) {
