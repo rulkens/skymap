@@ -210,5 +210,30 @@ export function planEarthTiles(input: {
   const winY0 =
     winRows <= windowSide ? 0 : Math.min(winRows - windowSide, Math.max(0, subY - windowSide / 2));
 
-  return { zWin, winX0, winY0, requests };
+  // ── 5. Clip to the window ───────────────────────────────────────────────
+  //
+  // A tile the page table cannot address is a tile that would be fetched,
+  // uploaded and then never sampled, so the clip belongs here rather than in the
+  // shader. Ground beyond the window falls back to the whole-globe base texture,
+  // which is the same identity case an empty atlas produces.
+  //
+  // The test is OVERLAP, not containment: a coarse leaf straddling the window
+  // edge still covers cells inside it, and `buildEarthPageTable` naturally writes
+  // only the cells it has. Demanding full containment would drop such a leaf and
+  // put a resolution seam INSIDE the window rather than at its frontier.
+  //
+  // Longitude wraps and latitude does not, so the two axes are tested
+  // differently — the same asymmetry `earthTileXyForUv` handles, for the same
+  // reason.
+  const inWindow = requests.filter(({ tile }) => {
+    const span = 1 << (zWin - tile.z);
+    const y0 = tile.y * span;
+    if (y0 + span - 1 < winY0 || y0 > winY0 + windowSide - 1) return false;
+    const dx = (((tile.x * span - winX0) % winCols) + winCols) % winCols;
+    // `dx + span > winCols` means the tile wraps past column 0, which is inside
+    // the window by construction.
+    return dx < windowSide || dx + span > winCols;
+  });
+
+  return { zWin, winX0, winY0, requests: inWindow };
 }
