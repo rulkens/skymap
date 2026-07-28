@@ -1741,7 +1741,182 @@ git commit -m "refactor(settings-panel): one uniform row array for Labels & Guid
 
 ---
 
-### Task 8: Entanglement radar + visual verification
+### Task 8: Align the famous-star meta with the galaxy-catalog path
+
+**Adjacent alignment, not required by the label feature.** Promoted from an adjacent
+finding at the user's call: `famous_meta.json` rides the standard asset-slot machinery
+(`famousMetaSlot`, `AssetKey: 'famousMeta'`, a slot on `EngineAssetSlots`, subscriber
+writing `state.data.galaxies.setFamousMeta`), while `famous_stars_meta.json` has no slot
+at all — `useFamousStarsMeta` calls the fetcher directly, a choice its own docblock
+records ("We call the fetcher directly rather than routing through the engine's slot
+wiring — same payload either way"). Now that `famousStar` is a `starCatalog` row beside
+`famousGalaxy`'s `galaxyCatalog` row, the two curated sources should load their sidecars
+the same way. Its own commit, distinct from both the prep and the feature diffs.
+
+**Files:**
+
+- Create: `src/services/loading/slots/famousStarsMetaSlot.ts`
+- Modify: `src/@types/loading/AssetKey.d.ts` (add `'famousStarsMeta'`)
+- Modify: `src/@types/engine/state/EngineAssetSlots.d.ts` (add the slot field)
+- Modify: `src/@types/engine/data/BodyStore.d.ts` (add `famousStarsMeta` + `setFamousStarsMeta`)
+- Modify: the `BodyStore` implementation (find it with `grep -rn "createBodyStore" src`)
+- Modify: the boot path that mints `famousMeta` (find with `grep -rn "createFamousMetaSlot" src`)
+- Modify: `src/hooks/useFamousStarsMeta.ts`
+- Test: `tests/services/loading/slots/famousStarsMetaSlot.test.ts` (create)
+
+**Interfaces:**
+
+- Consumes: Task 3's `famousStar` star-catalog row (nothing else — this task is otherwise independent and could land on its own).
+- Produces: `createFamousStarsMetaSlot: SlotFactory<FamousStarsPayload, CompanionAssetReq>`; `state.assetSlots.famousStarsMeta`; `state.data.bodies.famousStarsMeta` + `setFamousStarsMeta`.
+
+- [ ] **Step 1: Write the failing test**
+
+`tests/services/loading/slots/famousStarsMetaSlot.test.ts` — the fail-soft contract is the
+part worth testing: a missing sidecar must leave the engine running with an empty array,
+which is exactly the branch a naive slot would let throw.
+
+```ts
+/**
+ * The slot's contract is graceful degradation: the fetcher throws on HTTP
+ * failure so a retry policy can branch on status, and the slot's subscriber
+ * maps that to "feature off" by writing an empty array. A deployment without
+ * `famous_stars_meta.json` must still render stars, just without enriched
+ * InfoCard text.
+ */
+import { describe, it, expect, vi } from 'vitest';
+import { createFamousStarsMetaSlot } from '../../../../src/services/loading/slots/famousStarsMetaSlot';
+
+function fakeState() {
+  return {
+    data: { bodies: { setFamousStarsMeta: vi.fn() } },
+  } as never;
+}
+
+describe('createFamousStarsMetaSlot', () => {
+  it('writes the parsed meta into the body store on success', async () => {
+    const state = fakeState();
+    const slot = createFamousStarsMetaSlot(state, () => {});
+    await slot.load({ tier: 'medium' });
+
+    expect(state.data.bodies.setFamousStarsMeta).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.objectContaining({ id: 'sun' })]),
+    );
+  });
+
+  it('writes an empty array when the sidecar is missing', async () => {
+    const state = fakeState();
+    const slot = createFamousStarsMetaSlot(state, () => {});
+    await slot.load({ tier: 'medium' }).catch(() => {});
+
+    expect(state.data.bodies.setFamousStarsMeta).toHaveBeenCalledWith([]);
+  });
+});
+```
+
+Stub `fetch` per case (resolve with the JSON body; reject / 404 for the second). Match
+however `tests/services/loading/` already stubs it — read a neighbouring slot test first
+and reuse its harness rather than inventing one.
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `npx vitest run tests/services/loading/slots/famousStarsMetaSlot.test.ts`
+Expected: FAIL — "Failed to resolve import ... famousStarsMetaSlot".
+
+- [ ] **Step 3: Add the body-store field**
+
+Mirror `GalaxyStore`'s `famousMeta` / `setFamousMeta` pair on `BodyStore`: a
+`readonly famousStarsMeta: readonly FamousStarMetaEntry[]` defaulting to `[]`, and a
+`setFamousStarsMeta(meta: readonly FamousStarMetaEntry[]): void` setter. Read
+`GalaxyStore`'s pair and its implementation first, and match their shape exactly — the
+point of this task is that the two are the same.
+
+- [ ] **Step 4: Create the slot**
+
+`src/services/loading/slots/famousStarsMetaSlot.ts`:
+
+```ts
+/**
+ * famousStarsMetaSlot — factory for the famous-star meta sidecar.
+ *
+ * Carries `famous_stars_meta.json` through the standard asset-slot machinery,
+ * the star twin of `famousMetaSlot`. The two curated sources — the famous
+ * galaxies and the famous stars — now load their sidecars by the same path,
+ * so neither has a bespoke fetch to reason about.
+ *
+ * No `commit` step: there's nothing GPU-side to upload — the payload is pure
+ * metadata consumed by the InfoCard via `state.data.bodies.famousStarsMeta`.
+ * The subscriber writes the field; the render wake is `installSlotReadyWake`'s
+ * job, not the factory's.
+ *
+ * **Graceful degradation on error.** The fetcher throws on HTTP failure (so
+ * the retry policy distinguishes "really gone" from "transient flake"), and
+ * this subscriber maps `kind: 'error'` → "feature off" by writing an empty
+ * array. Net effect: the stars render without enriched InfoCard text, and the
+ * engine keeps running.
+ */
+
+import { createAssetSlot } from '../AssetSlot';
+import { famousStarsMetaFetcher } from '../fetchers/famousStarsMetaFetcher';
+import type { FamousStarsPayload } from '../../../@types/loading/FamousStarsPayload';
+import type { CompanionAssetReq } from '../../../@types/loading/CompanionAssetReq';
+import type { SlotFactory } from '../../../@types/loading/SlotFactory';
+
+export const createFamousStarsMetaSlot: SlotFactory<FamousStarsPayload, CompanionAssetReq> = (
+  state,
+  _cb,
+) => {
+  const slot = createAssetSlot({
+    name: 'famous-stars-meta',
+    fetch: famousStarsMetaFetcher,
+  });
+  slot.subscribe((s) => {
+    if (s.kind === 'ready') {
+      state.data.bodies.setFamousStarsMeta(s.value.meta);
+    }
+    if (s.kind === 'error') {
+      // Defensive — the field defaults to `[]` already, but writing it again
+      // here is explicit about the contract: missing sidecar disables enriched
+      // InfoCard text but keeps the engine functional.
+      state.data.bodies.setFamousStarsMeta([]);
+      console.warn('[engine] famous-stars sidecar failed to load:', s.error);
+    }
+  });
+  return slot;
+};
+```
+
+- [ ] **Step 5: Wire the slot**
+
+Add `'famousStarsMeta'` to `AssetKey`, and a `famousStarsMeta: AssetSlot<FamousStarsPayload, CompanionAssetReq> | null` field to `EngineAssetSlots` with a docblock mirroring `famousMeta`'s. Mint and eagerly load it wherever `createFamousMetaSlot` is minted and loaded — same boot position, same eagerness (the JSON is tiny, and the InfoCard depends on the meta being present whenever a famous star is hovered).
+
+- [ ] **Step 6: Point the hook at the slot**
+
+`useFamousStarsMeta` stops calling the fetcher. Read whatever bridge `useFamousMeta`'s
+galaxy-side equivalent uses to surface engine store state to React and use the same one;
+if `useFamousMeta` also still fetches directly, leave both hooks alone and note it — the
+engine-side slot is the deliverable here, and converting both hooks is a separate
+consistency pass.
+
+Delete the "We call the fetcher directly rather than routing through the engine's slot
+wiring — same payload either way" comment either way: it is no longer true of the
+loading path.
+
+- [ ] **Step 7: Verify**
+
+Run: `npm test && npm run typecheck`
+Expected: PASS. Existing `famousStarsMetaFetcher` tests are untouched — the fetcher itself does not change.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add src/services/loading/slots/famousStarsMetaSlot.ts src/@types/loading/AssetKey.d.ts src/@types/engine/state/EngineAssetSlots.d.ts src/@types/engine/data/BodyStore.d.ts src/hooks/useFamousStarsMeta.ts tests/services/loading/slots/famousStarsMetaSlot.test.ts
+git add <the BodyStore implementation and the boot path touched in Steps 3 and 5>
+git commit -m "refactor(loading): route the famous-star meta through an asset slot"
+```
+
+---
+
+### Task 9: Entanglement radar + visual verification
 
 **Files:** none created. This task produces a review and any follow-up fixes.
 
@@ -1776,7 +1951,7 @@ Gate on the DoD, then relocate `docs/superpowers/plans/2026-07-28-body-sources-b
 
 ## Self-review notes
 
-**Spec coverage.** Every spec section maps to a task: Registry entries → 3/4/5; Settings shape → 3/4; Prep → 1; Fade identity and intents → 2/3/4; Sun decomplection → 5; Panel → 7; Testing → the test steps of 3/4/5/6; Verification → 8. The spec's "Out of scope" list is respected — no `bodies.enabled`, no live `sun.enabled`, no per-item `VisibilityLayerKey`s, no Earth look-dial move, no `bearsMarker` change, no Labels/Guides subheadings.
+**Spec coverage.** Every spec section maps to a task: Registry entries → 3/4/5; Settings shape → 3/4; Prep → 1; Fade identity and intents → 2/3/4; Sun decomplection → 5; Panel → 7; Testing → the test steps of 3/4/5/6; Verification → 9. Task 8 is outside the spec — an adjacent finding the user promoted (see its preamble). The spec's "Out of scope" list is respected — no `bodies.enabled`, no live `sun.enabled`, no per-item `VisibilityLayerKey`s, no Earth look-dial move, no `bearsMarker` change, no Labels/Guides subheadings.
 
 **One spec item deliberately extended:** Task 6 (tour snapshot) is listed in the spec only as a test, but the `labels` cluster shrink makes it a required code change or the round-trip silently regresses.
 
