@@ -21,6 +21,7 @@ export function maybeEmitProceduralDisk(
   z: number,
   sizeWorldMpc: number,
   colourIndex: number,
+  sbAmp: number,
   fadeStartPx: number,
   fadeEndPx: number,
   sourceCode: SourceType,
@@ -41,5 +42,6 @@ export function maybeEmitProceduralDisk(
     procFadeOut: 1.0,
     sourceCode,
     localIdx,
+    sbAmp,
   };
 }

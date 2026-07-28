@@ -144,14 +144,15 @@ import package::lib::math::TAU;
 //
 //   u = east longitude / TAU + 0.5. 'cubeSphereMesh' puts longitude on +Y, so
 //       lon = atan2(dir.y, dir.x) (0 at +X, +pi/2 at +Y). The +0.5 is the
-//       EARTH_TEXTURE_PRIME_MERIDIAN_U convention: the prime meridian (lon 0)
+//       TEXTURE_PRIME_MERIDIAN_U convention: the prime meridian (lon 0)
 //       samples the map CENTRE u=0.5, where standard equirectangular planetary
 //       maps paint geographic longitude 0 (see the '## uv / u-orientation' note).
 //       WESL cannot import the TS constant, so this offset is re-encoded here; the
-//       other two sites of the same 0.5 are 'cubeSphereMesh.ts' (the TS home that
-//       exports EARTH_TEXTURE_PRIME_MERIDIAN_U) and 'cloudShell/fragment.wesl'.
-//       Grep the token to find all three. 'fract' wraps to [0, 1) -- the same
-//       wrap the sampler's 'repeat' addressing applies.
+//       other two sites of the same 0.5 are the meshes that bake it into their
+//       vertex u -- 'cubeSphereMesh.ts' (Earth's, and the TS home that exports
+//       TEXTURE_PRIME_MERIDIAN_U) and 'uvSphereMesh.ts' (every other body plus
+//       this Earth's cloud deck). Grep the token to find all three. 'fract' wraps
+//       to [0, 1) -- the same wrap the sampler's 'repeat' addressing applies.
 //   v = latitude mapped south (0) to north (1): lat = asin(dir.z) in
 //       [-pi/2, pi/2], so v = lat/PI + 0.5 matches the mesh's south-first v
 //       (v=0 south pole, v=1 north pole) that flipY:true co-registers with.

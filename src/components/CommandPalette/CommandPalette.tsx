@@ -9,7 +9,8 @@
  *      superclusters / voids / groups, by name + Abell number).
  *
  * UX:
- *   - Triggered by a keyboard shortcut (handled in App.tsx).
+ *   - Triggered by Cmd+K / Ctrl+K / `/`, routed through `watchKeyboardEventsSaga`
+ *     via the `KEYBOARD_SHORTCUTS` map.
  *   - Famous matches always rank above alias matches at equal score.
  *   - Alias matches are capped at 50 per query so a query that hits
  *     "MCG" (which matches thousands of rows) doesn't drown the famous

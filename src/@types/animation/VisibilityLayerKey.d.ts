@@ -57,4 +57,5 @@ export type VisibilityLayerKey =
   | 'filaments'
   | 'flow'
   | 'constellations'
+  | 'orbitTrails'
   | 'volumeField';

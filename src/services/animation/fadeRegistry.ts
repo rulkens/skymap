@@ -77,6 +77,8 @@ function serializeFadeId(h: FadeId): string {
       return 'flow';
     case 'constellations':
       return 'constellations';
+    case 'orbitTrails':
+      return 'orbitTrails';
     // A category-less structure handle and a per-category one must not collide,
     // and a category-less key (e.g. `labelLayer:milkyWay`) must stay distinct
     // from a per-category one — so the category suffix is appended only when present.

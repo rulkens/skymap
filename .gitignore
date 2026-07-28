@@ -113,6 +113,10 @@ pnpm-debug.log*
 /tools/cosmic-flow/public/cf4pp_vfield.bin
 /tools/cosmic-flow/public/cf4pp_vfield.json
 
+# starCutCpuBench downloads the large-tier star bin here on first run (~75 MB).
+# A per-machine fetch cache, not a source asset.
+/tools/perf/.cache/
+
 # Ephemeral working artefacts the famous-galaxy curator drops next to the
 # committed tiles: `mask.jpg` is the star-removal luminance mask used mid-
 # pipeline, and `.tmp/` holds StarNet scratch.  The committed tile set per

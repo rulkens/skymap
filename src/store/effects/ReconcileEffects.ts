@@ -16,6 +16,8 @@
  *                    scene-restore needs)
  *   reseedFlow     — reseeds the cosmic-flow particle field (e.g. on setting change)
  *   bakeBias       — re-computes the galaxy brightness bias LUT
+ *   logCameraState — prints the current orbit-camera pose (debug aid, the
+ *                    `l` key)
  *
  * This boundary is kept deliberately small: the tour's scene capture is a pure
  * store read (`captureScene` selector) and its restore is pure Intent
@@ -32,4 +34,5 @@ export type ReconcileEffects = {
   syncFades: (rows?: readonly VisibilityLayerKey[]) => void;
   reseedFlow: () => void;
   bakeBias: (mode: BiasMode) => void;
+  logCameraState: () => void;
 };

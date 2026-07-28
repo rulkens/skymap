@@ -534,7 +534,12 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     };
     diskPlannerWalk.runFrame(
       sharedInput,
-      proceduralDisks.beginFrame(sharedInput),
+      proceduralDisks.beginFrame({
+        ...sharedInput,
+        sbScale: state.settings.galaxyCatalogs.sbScale,
+        sbMax: state.settings.galaxyCatalogs.sbMax,
+        brightness: state.settings.galaxyCatalogs.brightness,
+      }),
       texturedDisks.beginFrame({
         ...sharedInput,
         famousMeta: state.data.galaxies.famousMeta,

@@ -40,16 +40,12 @@ export function createShaderModuleWithDevLog(
         for (const m of errors) {
           const ln = Number(m.lineNum) || 0;
           const src = ln > 0 ? lines[ln - 1] : '(unknown line)';
-          // eslint-disable-next-line no-console
           console.error(
             `[${label}] WGSL COMPILE ERROR @ line ${m.lineNum}:${m.linePos}: ${m.message}\n  > ${src}`,
           );
         }
-        // eslint-disable-next-line no-console
         console.groupCollapsed(`[${label}] linked WGSL (for error line lookup)`);
-        // eslint-disable-next-line no-console
         console.log(code);
-        // eslint-disable-next-line no-console
         console.groupEnd();
       }
     });

@@ -102,6 +102,7 @@ import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../src/data/sources';
+import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/data/defaults';
 
 /** Build a real Redux store from the production root reducer. */
 function makeStore() {
@@ -124,8 +125,7 @@ function makeState(): EngineState {
         sizePx: 2,
         brightness: 0.5,
         depthFade: false,
-        highlightFallback: false,
-        realOnly: false,
+        provenance: DEFAULT_GALAXY_PROVENANCE,
         // deriveSourceMasks (called at the top of runFrame, before the
         // renderer-null bail-out) iterates EVERY GALAXY_CATALOG_SOURCES code and reads
         // items[id].enabled, so a partial record would throw on the first

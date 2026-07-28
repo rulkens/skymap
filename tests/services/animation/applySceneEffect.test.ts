@@ -47,7 +47,7 @@ import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { AppStore } from '../../../src/store/types';
 import type { VisibilityLayerKey } from '../../../src/@types/animation/VisibilityLayerKey';
-import { createAppStore } from '../../../src/store/createAppStore';
+import { createTestStore as createAppStore } from '../../support/createTestStore';
 import {
   setFilamentsEnabled,
   setFlowEnabled,
@@ -60,6 +60,7 @@ import {
 import { updateSelectionFocus } from '../../../src/state/selection/selectionSlice';
 import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
+import { DEFAULT_GALAXY_PROVENANCE } from '../../../src/data/defaults';
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -96,8 +97,7 @@ function makeSettings(opts?: {
       sizePx: 2,
       brightness: 1,
       depthFade: false,
-      highlightFallback: false,
-      realOnly: false,
+      provenance: DEFAULT_GALAXY_PROVENANCE,
     },
     structures: { enabled: true, items: structureItems },
     milkyWay: { enabled: true, labelEnabled: true },

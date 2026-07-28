@@ -1,13 +1,14 @@
 /**
- * Format-level tests for the v6 galaxy-catalog binary.
+ * Format-level tests for the v8 galaxy-catalog binary.
  *
  * Two contracts under test:
  *
  *   1. encode → decode is a faithful round trip for every field —
- *      the v6 `spectroscopicZ` float, the v5 uint8 slots (`classByte`,
- *      `parentSurveyByte`), the v4 `diameterKpc`, the v3 orientation
- *      pair, the five magnitude bands, and full 64-bit `objID`
- *      precision (no silent coercion through `number`).
+ *      the v8 `diameterIsFallback` byte, the v7 `orientationIsFallback`
+ *      byte, the v6 `spectroscopicZ` float, the v5 uint8 slots
+ *      (`classByte`, `parentSurveyByte`), the v4 `diameterKpc`, the v3
+ *      orientation pair, the five magnitude bands, and full 64-bit
+ *      `objID` precision (no silent coercion through `number`).
  *   2. Any foreign on-disk shape (bad magic, or any earlier format
  *      version) is rejected with the documented "regenerate" error —
  *      the format-version gate is the single source of truth for "do
@@ -18,31 +19,11 @@ import {
   encodeGalaxyCatalog,
   decodeGalaxyCatalog,
 } from '../../../src/data/galaxyCatalog/galaxyCatalogFormat';
-import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-
-/** Build a zero-filled v6 GalaxyCatalog of `count` records; tests override fields. */
-function makeCatalog(count: number): GalaxyCatalog {
-  return {
-    count,
-    objIDs: BigUint64Array.from({ length: count }, (_, i) => BigInt(i + 1)),
-    positions: new Float32Array(count * 3),
-    magU: new Float32Array(count),
-    magG: new Float32Array(count),
-    magR: new Float32Array(count),
-    magI: new Float32Array(count),
-    magZ: new Float32Array(count),
-    axisRatio: new Float32Array(count),
-    positionAngleDeg: new Float32Array(count),
-    diameterKpc: new Float32Array(count),
-    classByte: new Uint8Array(count),
-    parentSurveyByte: new Uint8Array(count),
-    spectroscopicZ: new Float32Array(count),
-  };
-}
+import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 
 describe('galaxyCatalogFormat — full round trip', () => {
   it('round-trips every scalar field plus full 64-bit objID precision', () => {
-    const original = makeCatalog(2);
+    const original = makeGalaxyCatalog(2);
     // 1234567890123456789n exceeds Number.MAX_SAFE_INTEGER (2^53 − 1 ≈
     // 9 × 10^15), so any accidental conversion to `number` would silently
     // lose the low-order bits.
@@ -79,14 +60,14 @@ describe('galaxyCatalogFormat — full round trip', () => {
 
   it('encoded byte length matches 16 + count * 64', () => {
     // HEADER_BYTES=16, BYTES_PER_GALAXY=64. count=2 → 144; count=1 → 80.
-    expect(encodeGalaxyCatalog(makeCatalog(2)).byteLength).toBe(16 + 2 * 64);
-    expect(encodeGalaxyCatalog(makeCatalog(1)).byteLength).toBe(16 + 1 * 64);
+    expect(encodeGalaxyCatalog(makeGalaxyCatalog(2)).byteLength).toBe(16 + 2 * 64);
+    expect(encodeGalaxyCatalog(makeGalaxyCatalog(1)).byteLength).toBe(16 + 1 * 64);
   });
 });
 
 describe('galaxyCatalogFormat — v5/v6 fields', () => {
   it('round-trips classByte and parentSurveyByte for every record', () => {
-    const cat = makeCatalog(3);
+    const cat = makeGalaxyCatalog(3);
     cat.classByte[0] = 0;
     cat.classByte[1] = 1; // Milliquas Quasar
     cat.classByte[2] = 6; // Milliquas Candidate
@@ -100,8 +81,38 @@ describe('galaxyCatalogFormat — v5/v6 fields', () => {
     expect(Array.from(out.parentSurveyByte)).toEqual([0, 1, 4]);
   });
 
+  it('round-trips the persisted orientationIsFallback flag per record', () => {
+    // The authoritative build-side provenance byte: 1 = deterministic
+    // fallback orientation, 0 = real measurement.  Encode/decode must carry
+    // it verbatim so the load side never re-hashes position to guess it.
+    const cat = makeGalaxyCatalog(4);
+    cat.orientationIsFallback.set([1, 0, 1, 0]);
+
+    const out = decodeGalaxyCatalog(encodeGalaxyCatalog(cat));
+
+    expect(Array.from(out.orientationIsFallback)).toEqual([1, 0, 1, 0]);
+  });
+
+  it('throws when orientationIsFallback length mismatches count', () => {
+    const cat = makeGalaxyCatalog(2);
+    cat.orientationIsFallback = new Uint8Array([1]); // one short of count
+    expect(() => encodeGalaxyCatalog(cat)).toThrow(/orientationIsFallback length mismatch/);
+  });
+
+  it('round-trips the persisted diameterIsFallback flag per record', () => {
+    // Same authoritative-byte contract as orientationIsFallback, one byte
+    // over at offset 59: 1 = diameterKpc is the flat 30-kpc fallback, 0 = a
+    // real / angular-derived measurement.
+    const cat = makeGalaxyCatalog(4);
+    cat.diameterIsFallback.set([1, 0, 1, 0]);
+
+    const out = decodeGalaxyCatalog(encodeGalaxyCatalog(cat));
+
+    expect(Array.from(out.diameterIsFallback)).toEqual([1, 0, 1, 0]);
+  });
+
   it('round-trips spectroscopicZ for every record including negatives and NaN', () => {
-    const cat = makeCatalog(4);
+    const cat = makeGalaxyCatalog(4);
     cat.spectroscopicZ[0] = 0.0234; // typical SDSS row
     cat.spectroscopicZ[1] = -0.00094; // M31 (real blueshift)
     cat.spectroscopicZ[2] = 0; // intentional zero (e.g. local fixture)
@@ -118,7 +129,7 @@ describe('galaxyCatalogFormat — v5/v6 fields', () => {
 
 describe('galaxyCatalogFormat — orientation round-trip', () => {
   it('round-trips finite axisRatio and positionAngleDeg', () => {
-    const cat = makeCatalog(4);
+    const cat = makeGalaxyCatalog(4);
     for (let i = 0; i < cat.count; i++) {
       // Deterministic but distinct values so an accidental swap between
       // axisRatio and positionAngleDeg shows up as a failure.
@@ -134,7 +145,7 @@ describe('galaxyCatalogFormat — orientation round-trip', () => {
     // NaN is a legitimate "no measurement" marker. The encoder must preserve
     // it bit-for-bit through the Float32Array view; toEqual won't help here
     // because NaN !== NaN, so we test via Number.isNaN on each slot.
-    const cat = makeCatalog(2);
+    const cat = makeGalaxyCatalog(2);
     cat.axisRatio.fill(NaN);
     cat.positionAngleDeg.fill(NaN);
     const decoded = decodeGalaxyCatalog(encodeGalaxyCatalog(cat));
@@ -147,21 +158,21 @@ describe('galaxyCatalogFormat — orientation round-trip', () => {
 
 describe('galaxyCatalogFormat — diameterKpc', () => {
   it('round-trips finite diameterKpc values', () => {
-    const cat = makeCatalog(2);
+    const cat = makeGalaxyCatalog(2);
     cat.diameterKpc.set([30, 12.5]);
     const decoded = decodeGalaxyCatalog(encodeGalaxyCatalog(cat));
     expect(Array.from(decoded.diameterKpc)).toEqual([30, 12.5]);
   });
 
   it('round-trips the NaN sentinel in diameterKpc', () => {
-    const cat = makeCatalog(1);
+    const cat = makeGalaxyCatalog(1);
     cat.diameterKpc[0] = NaN;
     const decoded = decodeGalaxyCatalog(encodeGalaxyCatalog(cat));
     expect(Number.isNaN(decoded.diameterKpc[0])).toBe(true);
   });
 
   it('throws when diameterKpc length mismatches count', () => {
-    const cat = makeCatalog(2);
+    const cat = makeGalaxyCatalog(2);
     cat.diameterKpc = new Float32Array([30]); // one short of count
     expect(() => encodeGalaxyCatalog(cat)).toThrow(/diameterKpc length mismatch/);
   });
@@ -174,21 +185,21 @@ describe('galaxyCatalogFormat — header / version rejection', () => {
     expect(() => decodeGalaxyCatalog(buf)).toThrow(/magic/);
   });
 
-  it('rejects v5 with the version-specific regenerate error', () => {
+  it('rejects v7 with the version-specific regenerate error', () => {
     const buf = new ArrayBuffer(16);
     const dv = new DataView(buf);
     dv.setUint32(0, 0x504d4b53, true); // "SKMP"
-    dv.setUint32(4, 5, true); // v5 — the previous on-disk shape
+    dv.setUint32(4, 7, true); // v7 — the previous on-disk shape
     dv.setUint32(8, 0, true);
     dv.setUint32(12, 0, true);
-    expect(() => decodeGalaxyCatalog(buf)).toThrow(/unsupported version: 5/);
+    expect(() => decodeGalaxyCatalog(buf)).toThrow(/unsupported version: 7/);
     expect(() => decodeGalaxyCatalog(buf)).toThrow(/regenerate/);
   });
 
-  it('rejects every earlier version (v1–v5) with the same regenerate message', () => {
+  it('rejects every earlier version (v1–v7) with the same regenerate message', () => {
     // The version check fires before the per-record loop, so a 16-byte
     // header with count=0 is enough to exercise every foreign version.
-    for (const version of [1, 2, 3, 4, 5]) {
+    for (const version of [1, 2, 3, 4, 5, 6, 7]) {
       const buf = new ArrayBuffer(16);
       const dv = new DataView(buf);
       dv.setUint32(0, 0x504d4b53, true);
@@ -200,7 +211,7 @@ describe('galaxyCatalogFormat — header / version rejection', () => {
   });
 
   it('points users at the modern build pipeline (build-tiers) for any bad version', () => {
-    const buf = encodeGalaxyCatalog(makeCatalog(1));
+    const buf = encodeGalaxyCatalog(makeGalaxyCatalog(1));
     new DataView(buf).setUint32(4, 99, true); // arbitrary foreign version
     expect(() => decodeGalaxyCatalog(buf)).toThrow(/version/);
     expect(() => decodeGalaxyCatalog(buf)).toThrow(/regenerate/);

@@ -29,6 +29,7 @@ import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaEntry';
 import type { FamousCalibration } from '../../../../src/@types/loading/FamousCalibration';
+import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 
 function makeFakeDevice(): GPUDevice {
   const fakeTexture = { createView: () => ({}) as GPUTextureView };
@@ -59,8 +60,7 @@ function makeDenseCloud(count: number, ar = 0.7, pa = 45): GalaxyCatalog {
     a.fill(v);
     return a;
   };
-  return {
-    count,
+  return makeGalaxyCatalog(count, {
     objIDs: new BigUint64Array(count),
     positions,
     magU: fill(20),
@@ -71,10 +71,7 @@ function makeDenseCloud(count: number, ar = 0.7, pa = 45): GalaxyCatalog {
     axisRatio: fill(ar),
     positionAngleDeg: fill(pa),
     diameterKpc: fill(DKPC),
-    classByte: new Uint8Array(count),
-    parentSurveyByte: new Uint8Array(count),
-    spectroscopicZ: new Float32Array(count),
-  };
+  });
 }
 
 function makeCam(): OrbitCamera {
@@ -104,6 +101,11 @@ function makeInput(
     pxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
     famousMeta,
     nowMs: 0,
+    // Live surface-brightness sliders, needed by the procedural body's
+    // frame input; the textured body ignores them.
+    sbScale: 5,
+    sbMax: 30,
+    brightness: 1,
   };
 }
 

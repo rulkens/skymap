@@ -97,6 +97,7 @@ describe('ASSET_WIRING membership', () => {
       'constellations',
       'structureCatalog',
       'pgcAlias',
+      'bodyTextureAtlas',
       ...ALL_BODY_TEXTURE_KEYS.map((e) => bodyTextureSlotKey(e.bodyId, e.kind)),
       Source.GaiaStars,
     ];

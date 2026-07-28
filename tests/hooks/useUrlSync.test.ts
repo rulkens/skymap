@@ -33,11 +33,12 @@ import { useUrlSync } from '../../src/hooks/useUrlSync';
 import { HASH_PARAM_SOURCES } from '../../src/hooks/hashParamSources';
 import type { GalaxyInfo } from '../../src/@types/engine/GalaxyInfo';
 import type { StructureInfo } from '../../src/@types/data/structure/StructureInfo';
+import type { BodyInfo } from '../../src/@types/engine/BodyInfo';
 import type { TimeState } from '../../src/@types/time/TimeState';
 import type { AppDispatch } from '../../src/store/types';
 import type { UnknownAction } from '@reduxjs/toolkit';
 import { Source } from '../../src/data/sources';
-import { createAppStore } from '../../src/store/createAppStore';
+import { createTestStore as createAppStore } from '../support/createTestStore';
 import { buildInitialSettings } from '../../src/state/settings/initialState';
 import { requestFocus } from '../../src/state/selection/requestFocus';
 import { clearSelection } from '../../src/state/selection/selectionSlice';
@@ -68,6 +69,10 @@ function makeStructure(id: string): StructureInfo {
     featured: true,
     physicalRadiusMpc: 2,
   };
+}
+
+function makeBody(id: string): BodyInfo {
+  return { type: 'body', id, name: id } as unknown as BodyInfo;
 }
 
 // A known instant, seeded from a Unix-ms value so its JD lands on a clean
@@ -136,6 +141,26 @@ describe('computeDesiredHash (unified)', () => {
       currentHash: '',
     });
     expect(out.desiredHashBody).toBe('focus=cluster-virgo-m87');
+    expect(out.matches).toBe(false);
+  });
+
+  it('omits focus for the Earth home body (bare URL is home)', () => {
+    const out = computeDesiredHash({
+      focused: makeBody('earth'),
+      orientation: 'ecliptic',
+      currentHash: '',
+    });
+    expect(out.desiredHashBody).toBe('');
+    expect(out.matches).toBe(true);
+  });
+
+  it('writes focus=body-<id> for a non-home body', () => {
+    const out = computeDesiredHash({
+      focused: makeBody('jupiter'),
+      orientation: 'ecliptic',
+      currentHash: '',
+    });
+    expect(out.desiredHashBody).toBe('focus=body-jupiter');
     expect(out.matches).toBe(false);
   });
 

@@ -55,6 +55,7 @@ import { ToneMapCurve } from './toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
 import type { FlowSettings } from '../@types/settings/FlowSettings';
 import type { OrientationFrameId } from '../@types/camera/OrientationFrameId';
+import type { GalaxyProvenanceSettings } from '../@types/settings/GalaxyProvenanceSettings';
 import { SOURCE_REGISTRY, Source } from './sources';
 
 // ── Rendering knobs ─────────────────────────────────────────────────────────
@@ -69,12 +70,12 @@ export const DEFAULT_POINT_SIZE_PX = 2.5;
 
 /**
  * Default star-billboard pixel radius — the star-catalog twin of
- * `DEFAULT_POINT_SIZE_PX`. Seeds `settings.starCatalogs.sizePx`. Same 2.5 px
- * sweet spot and same 1–8 px user range as the galaxy point size; kept a
- * separate constant so the two layers can diverge without one silently
- * dragging the other.
+ * `DEFAULT_POINT_SIZE_PX`. Seeds `settings.starCatalogs.sizePx`. 4.7 px within
+ * the shared 1–8 px user range, diverged larger than the 2.5 px galaxy point
+ * size; kept a separate constant so the two layers can diverge without one
+ * silently dragging the other.
  */
-export const DEFAULT_STAR_SIZE_PX = 2.5;
+export const DEFAULT_STAR_SIZE_PX = 4.7;
 
 /**
  * Default star-brightness trim — the star-catalog twin of `DEFAULT_BRIGHTNESS`.
@@ -94,15 +95,15 @@ export const DEFAULT_STAR_BRIGHTNESS = 1.0;
  * conserved (only the spread changes). User range 1.0–2.5. Leaves (point
  * sources) are untouched.
  *
- * 4.7 is eye-tuned, not the 1.0 physical identity: at 1.0 the far field still
+ * 3.0 is eye-tuned, not the 1.0 physical identity: at 1.0 the far field still
  * shows the octree's box lattice as faceted seams between aggregates (see
  * `walkStarOctreeCut`'s `DEFAULT_REFINE_THRESHOLD` header for why a proxy
  * threshold alone can't fully hide it). Spreading each aggregate's glow to
- * 4.7x its box radius overlaps neighbours enough to dissolve the lattice into
+ * 3.0x its box radius overlaps neighbours enough to dissolve the lattice into
  * a continuous far field. Tuned together with `DEFAULT_REFINE_THRESHOLD` — see
  * that constant's comment for how the two compensate.
  */
-export const DEFAULT_STAR_GLOW_OVERLAP = 4.7;
+export const DEFAULT_STAR_GLOW_OVERLAP = 3.0;
 
 /**
  * Default near-anchor star display exposure — seeds
@@ -173,6 +174,35 @@ export const DEFAULT_BRIGHTNESS = 1.0;
 /** Auto-rotate (yaw drift) defaults OFF — most users want a static frame to explore. */
 export const DEFAULT_AUTO_ROTATE = false;
 
+/**
+ * Default overall physical-SB → HDR gain for galaxy point billboards — seeds
+ * `settings.galaxyCatalogs.sbScale`. Multiplies each galaxy's baked
+ * surface-brightness amplitude (`sbAmp`) into the additive HDR field. Replaces
+ * the old hardcoded `GALAXY_SB_SCALE` shader const; 5.0 places the per-catalog
+ * mean galaxy's resolved core relative to the 2.0 bloom threshold. Live-tunable
+ * (UI range 0.5–30) so the galaxy look can be re-eye-tuned without a rebuild.
+ */
+export const DEFAULT_GALAXY_SB_SCALE = 5.0;
+
+/**
+ * Default bloom ceiling for galaxy point billboards — seeds
+ * `settings.galaxyCatalogs.sbMax`. The maximum baked surface-brightness
+ * amplitude a compact galaxy can emit; the vertex stage clamps `sbAmp` to it
+ * live. Moved out of the bake-time clamp (now only a float-safety guard) so the
+ * ceiling is a live knob; 30.0 reproduces the old bake clamp. UI range 1–100.
+ */
+export const DEFAULT_GALAXY_SB_MAX = 30.0;
+
+/**
+ * Default readability-falloff exponent for galaxy point billboards — seeds
+ * `settings.galaxyCatalogs.falloffStrength`. The exponent `k` on the
+ * resolved-fraction falloff `pow(resolvedFrac, k)`: k = 2 is the full physical
+ * inverse-square (unresolved galaxies dim as (angular / floor)²), lower k keeps
+ * the deep field visible. 0.7 is eye-tuned; UI range 0–2. Gated by the
+ * depth-fade toggle (off holds flat constant surface brightness).
+ */
+export const DEFAULT_GALAXY_FALLOFF_STRENGTH = 0.7;
+
 // ── Galaxy thumbnails / orientation toggles ─────────────────────────────────
 
 /**
@@ -182,11 +212,17 @@ export const DEFAULT_AUTO_ROTATE = false;
  */
 export const DEFAULT_GALAXY_TEXTURES_ENABLED = true;
 
-/** "Highlight fallback orientation" magenta tint defaults OFF (debug-tinged). */
-export const DEFAULT_HIGHLIGHT_FALLBACK = false;
-
-/** "Show only galaxies with real (b/a, PA) photometry" defaults OFF. */
-export const DEFAULT_REAL_ONLY_MODE = false;
+/**
+ * Default provenance-axis settings — one row per `PROVENANCE_AXES` entry.
+ * Every axis starts at the no-op state (no highlight tint, filter `'all'`):
+ * these are debug-panel data-quality diagnostics for auditing which galaxies
+ * have measured vs. estimated orientation/size, not a default look, so the
+ * unaudited scene renders exactly as the catalogs describe it.
+ */
+export const DEFAULT_GALAXY_PROVENANCE: GalaxyProvenanceSettings = {
+  orientation: { highlight: false, filter: 'all' },
+  size: { highlight: false, filter: 'all' },
+};
 
 /**
  * Camera-distance depth fade defaults ON.  Without it, additive billboards
@@ -222,6 +258,16 @@ export const DEFAULT_MILKY_WAY_ENABLED = SOURCE_REGISTRY[Source.MilkyWay].visibl
  * the literal is the honest single source of truth for this axis.
  */
 export const DEFAULT_MILKY_WAY_LABEL_ENABLED: boolean = true;
+
+/**
+ * Orbit-trails overlay default — ON.  The near-field Keplerian orbit trails
+ * (Earth / Jupiter / Moon …) are part of the baseline solar-system scene, so the
+ * master gate defaults on.  A plain `true` literal like
+ * `DEFAULT_MILKY_WAY_LABEL_ENABLED`: the trails are a compile-time conic table
+ * (`ORBITAL_ELEMENTS`), not a registry source with its own `visible` gate, so the
+ * literal is the honest single source of truth for this axis.
+ */
+export const DEFAULT_ORBIT_TRAILS_ENABLED: boolean = true;
 
 /**
  * Famous-stars overlay default — the seeded near-field star map (the Sun and its
@@ -266,22 +312,23 @@ export const DEFAULT_BLOOM_ENABLED = true;
 
 /**
  * Default bloom strength — the scale on the blurred mip pyramid composited back
- * over the HDR frame. Seeds `settings.bloom.strength`. 0.85 is an eye-tuned
+ * over the HDR frame. Seeds `settings.bloom.strength`. 0.8 is an eye-tuned
  * starting point: strong enough to read as a soft halo around saturated cores,
  * shy of a full 1.0 that would smear the whole highlight field. A post-build
  * tuning target (spec §4/§6).
  */
-export const DEFAULT_BLOOM_STRENGTH = 0.85;
+export const DEFAULT_BLOOM_STRENGTH = 0.8;
 
 /**
  * Default bloom threshold — the HDR luminance above which a pixel contributes to
- * the bloom pyramid. Seeds `settings.bloom.threshold`. 7.0 is the low end of the
- * bloom-seeding ordering invariant `DEFAULT_BLOOM_THRESHOLD < STAR_KNEE <=
- * STAR_EMISSIVE` (see `starRenderConstants.ts` for the single statement of it):
- * sitting under `STAR_KNEE` means only near-saturated cores bleed into the glow
- * rather than the whole bright field. A post-build tuning target (spec §4/§6).
+ * the bloom pyramid. Seeds `settings.bloom.threshold`. 2.0 sits well under
+ * `STAR_KNEE`, holding the bloom-seeding ordering invariant
+ * `DEFAULT_BLOOM_THRESHOLD < STAR_KNEE <= STAR_EMISSIVE` (see
+ * `starRenderConstants.ts` for the single statement of it) with margin to spare:
+ * a broad swath of the bright field, not only near-saturated cores, now seeds
+ * the glow. A post-build tuning target (spec §4/§6).
  */
-export const DEFAULT_BLOOM_THRESHOLD = 7.0;
+export const DEFAULT_BLOOM_THRESHOLD = 2.0;
 
 // ── Malmquist-bias correction ────────────────────────────────────────────────
 

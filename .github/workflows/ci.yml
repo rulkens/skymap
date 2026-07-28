@@ -32,6 +32,11 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      # eslint — narrow correctness net (Rules of Hooks, floating promises) +
+      # house conventions. Hard-fails like typecheck.
+      - name: Lint
+        run: npm run lint
+
       # vitest run, single pass.  All 594 tests pass at time of writing.
       - name: Tests
         run: npm test

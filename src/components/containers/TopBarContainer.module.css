@@ -1,0 +1,37 @@
+/*
+ * `.root` — fixed-positioned flex container for the top-center row.
+ *
+ * Why a wrapper instead of each pill positioning itself?  Several pills
+ * sharing one anchor used to mean copies of `position: fixed; top: …; left: 50%; translateX(-50%)`
+ * with z-index juggling and a fresh source of truth for every companion
+ * (tour-playback transport, etc.).  A single flex container owns the
+ * placement once; children just say "I'm a pill".
+ *
+ * z-index sits one notch below the palette's z=50 backdrop so the
+ * palette overlays the pills cleanly while their fade-out runs.
+ */
+.root {
+  position: fixed;
+  top: var(--corner-offset);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/*
+ * Mobile — pin the bar to the full width minus corner offsets so the
+ * search pill can flex-grow into the available space while the
+ * auto-rotate pill stays at its intrinsic 40 px.  Risk to watch on
+ * narrow viewports (see spec): if a pinned InfoCard underlaps the
+ * right edge, the toggle's z-index may need a one-notch bump.
+ */
+@media (max-width: 768px) {
+  .root {
+    left: var(--corner-offset);
+    right: var(--corner-offset);
+    transform: none;
+  }
+}

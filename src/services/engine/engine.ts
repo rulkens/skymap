@@ -97,6 +97,8 @@ import { runBootstrapPhases } from './phases/bootstrap';
 import type { BootstrapDeps } from '../../@types/engine/BootstrapDeps';
 import { createDisabledGpuTimingService } from '../gpu/timing/gpuTimingService';
 import { updateFrameStats, IDLE_GAP_MS } from '../../utils/perf/updateFrameStats';
+import { PriorityQueue } from '../../utils/concurrency/priorityQueue';
+import { ASSET_QUEUE_CONCURRENCY } from '../../utils/concurrency/assetQueueConcurrency';
 import type { FrameStats } from '../../@types/engine/FrameStats';
 import { addVolumeField } from './handles/addVolumeField';
 import { removeVolumeField } from './handles/removeVolumeField';
@@ -104,6 +106,7 @@ import { listVolumeFields } from './handles/listVolumeFields';
 import { getVolumeFieldsState } from './handles/getVolumeFieldsState';
 import { makeRunTierTransition } from './wiring/makeRunTierTransition';
 import { makeReconcileEffects } from './wiring/makeReconcileEffects';
+import { assetPriorityBySlotName } from './wiring/assetPriorityBySlotName';
 import { createPlayClip } from './animation/playClip';
 import { createClipPathInspectSeam } from './animation/computeClipPath';
 import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
@@ -477,6 +480,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         requestRender: () => state.subsystems.scheduler.requestRender(),
       }),
 
+      // ── Boot asset queue ──────────────────────────────────────────
+      // Bounds how many boot fetches (catalog `.bin` files, body textures)
+      // run at once — see `ASSET_QUEUE_CONCURRENCY` for why 2, not the
+      // thumbnail queue's `MAX_CONCURRENT_FETCHES`. Eager, no GPU dep:
+      // `evaluateRows` (the per-frame demand walk) can enqueue before the
+      // GPU init IIFE below finishes.
+      assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY),
+
       // The rest land later in the IIFE once their deps (GPU device,
       // pickRenderer, scheduler) exist.
       clickResolver: null,
@@ -520,6 +531,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // minted in initGpu beside the body renderers. Empty map at construction —
       // proximity-demanded + released per body (mirrors the `points` map).
       bodyTextures: new Map(),
+      // The all-bodies low-res atlas: one boot fetch seeding every body's
+      // placeholder, so no body ever draws untextured while its own map loads.
+      bodyTextureAtlas: null,
     },
     // ── One-shot transient request flags ────────────────────────────────
     //
@@ -696,7 +710,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   // The main async IIFE runs the bootstrap phases; all errors are caught
   // and dispatched via `engineStatusChanged({ kind: 'error' })`.  See `runBootstrapPhases`.
-  (async () => {
+  // `void`: nothing awaits engine construction, and the catch below already
+  // routes failures to the status callback rather than an unhandled rejection.
+  void (async () => {
     try {
       await runBootstrapPhases(state, bootstrapDeps);
     } catch (err) {
@@ -757,6 +773,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // 1. Cancel the render loop first — every subsequent destroy() must be
     //    safe after the loop has stopped.
     state.subsystems.scheduler.destroy();
+    state.subsystems.assetQueue.destroy();
 
     // 2. Detach DOM listeners before the subsystems they fire into.
     state.subsystems.inputBindings?.destroy();
@@ -942,6 +959,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       passOverrides: {
         allNames: CONTENT_LAYERS.filter((l) => l.target !== 'volume').map((p) => p.name),
       },
+      // Re-derived per call off the live state rather than snapshotted: the
+      // slots this joins against are minted by the async IIFE below.
+      assetPriorities: () => assetPriorityBySlotName(state),
     },
 
     destroy,

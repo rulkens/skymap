@@ -60,6 +60,7 @@ import type { PassByDir } from '../animation/PassByDir';
 import type { ClipPathTuningActive } from './ClipPathTuningActive';
 import type { RenderStrategy } from '../engine/frame/RenderStrategy';
 import type { OrientationFrameId } from '../camera/OrientationFrameId';
+import type { GalaxyProvenanceSettings } from './GalaxyProvenanceSettings';
 
 export type EngineSettingsState = {
   /**
@@ -88,8 +89,34 @@ export type EngineSettingsState = {
     sizePx: number;
     brightness: number;
     depthFade: boolean;
-    highlightFallback: boolean;
-    realOnly: boolean;
+    /**
+     * Data-quality audit state: per provenance axis (see `PROVENANCE_AXES`), a
+     * highlight overlay and a tri-state cull. Debug-panel-only; every axis
+     * defaults to "highlight off, show all", which the shader collapses to a
+     * no-op.
+     */
+    provenance: GalaxyProvenanceSettings;
+    /**
+     * Overall physical-SB → HDR gain — multiplies each galaxy's baked
+     * surface-brightness amplitude into the additive HDR field. The live
+     * successor to the old hardcoded `GALAXY_SB_SCALE` shader const; rides the
+     * points `Uniforms` struct as `galaxySbScale`. Default `DEFAULT_GALAXY_SB_SCALE`.
+     */
+    sbScale: number;
+    /**
+     * Bloom ceiling — the maximum baked surface-brightness amplitude a compact
+     * galaxy can emit. The vertex stage clamps `sbAmp` to it live (`galaxySbMax`
+     * uniform), replacing the old bake-time clamp (now only a float-safety
+     * guard). Default `DEFAULT_GALAXY_SB_MAX`.
+     */
+    sbMax: number;
+    /**
+     * Readability-falloff exponent `k` on the resolved-fraction falloff
+     * `pow(resolvedFrac, k)`, gated by `depthFade`. k = 2 is the full physical
+     * inverse-square; lower k keeps the deep field visible. Rides the points
+     * uniform as `galaxyFalloffStrength`. Default `DEFAULT_GALAXY_FALLOFF_STRENGTH`.
+     */
+    falloffStrength: number;
     items: Record<GalaxyCatalogId, GalaxyCatalogItemSettings>;
   };
 
@@ -172,6 +199,20 @@ export type EngineSettingsState = {
   constellations: {
     enabled: boolean;
     intensity: number;
+  };
+
+  /**
+   * Orbit-trails singleton overlay — the master gate on the near-field Keplerian
+   * orbit trails (Earth / Jupiter / Moon …). A flat `enabled` field, mirroring
+   * the `milkyWay` / `filaments` / `flow` singleton overlays rather than the
+   * per-record source-type clusters: the trails are one compile-time conic table,
+   * not a per-catalog fan-out. Read by `orbitTrailsLayer`, whose per-orbit
+   * apparent-size fade is multiplied by this gate's fade opacity so the whole
+   * layer dissolves on toggle rather than popping. Defaults on — the trails are
+   * part of the baseline solar-system scene.
+   */
+  orbitTrails: {
+    enabled: boolean;
   };
 
   /**

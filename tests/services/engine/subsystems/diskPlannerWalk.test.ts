@@ -21,6 +21,7 @@ import type { DiskRowVisitor } from '../../../../src/@types/engine/subsystems/Di
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
+import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 
 /**
  * Camera fixed at the origin so a row at (d, 0, 0) sits exactly d Mpc away —
@@ -50,8 +51,7 @@ function makeCatalog(rows: readonly { distMpc: number; diameterKpc: number }[]):
     a.fill(v);
     return a;
   };
-  return {
-    count,
+  return makeGalaxyCatalog(count, {
     objIDs: new BigUint64Array(count),
     positions,
     magU: fill(20),
@@ -62,10 +62,7 @@ function makeCatalog(rows: readonly { distMpc: number; diameterKpc: number }[]):
     axisRatio: fill(0.7),
     positionAngleDeg: fill(45),
     diameterKpc,
-    classByte: new Uint8Array(count),
-    parentSurveyByte: new Uint8Array(count),
-    spectroscopicZ: new Float32Array(count),
-  };
+  });
 }
 
 const PX_PER_RAD = 600;

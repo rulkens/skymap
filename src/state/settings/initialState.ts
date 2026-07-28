@@ -30,12 +30,15 @@ import {
   DEFAULT_BLOOM_STRENGTH,
   DEFAULT_BLOOM_THRESHOLD,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
+  DEFAULT_GALAXY_SB_SCALE,
+  DEFAULT_GALAXY_SB_MAX,
+  DEFAULT_GALAXY_FALLOFF_STRENGTH,
   DEFAULT_FAMOUS_STARS_ENABLED,
   DEFAULT_MILKY_WAY_ENABLED,
   DEFAULT_MILKY_WAY_LABEL_ENABLED,
-  DEFAULT_HIGHLIGHT_FALLBACK,
+  DEFAULT_GALAXY_PROVENANCE,
+  DEFAULT_ORBIT_TRAILS_ENABLED,
   DEFAULT_POINT_SIZE_PX,
-  DEFAULT_REAL_ONLY_MODE,
   DEFAULT_STAR_BRIGHTNESS,
   DEFAULT_STAR_GLOW_OVERLAP,
   DEFAULT_STAR_EXPOSURE_NEAR_X,
@@ -97,8 +100,10 @@ export function buildInitialSettings(): EngineSettingsState {
       sizePx: DEFAULT_POINT_SIZE_PX,
       brightness: DEFAULT_BRIGHTNESS,
       depthFade: DEFAULT_DEPTH_FADE_ENABLED,
-      highlightFallback: DEFAULT_HIGHLIGHT_FALLBACK,
-      realOnly: DEFAULT_REAL_ONLY_MODE,
+      provenance: DEFAULT_GALAXY_PROVENANCE,
+      sbScale: DEFAULT_GALAXY_SB_SCALE,
+      sbMax: DEFAULT_GALAXY_SB_MAX,
+      falloffStrength: DEFAULT_GALAXY_FALLOFF_STRENGTH,
       items: Object.fromEntries(
         SOURCE_ENTRIES.filter((e) => e.type === 'galaxyCatalog').map((e) => [
           e.id,
@@ -146,6 +151,12 @@ export function buildInitialSettings(): EngineSettingsState {
     constellations: {
       enabled: SOURCE_REGISTRY[Source.Constellations].visible,
       intensity: SOURCE_REGISTRY[Source.Constellations].intensity,
+    },
+    // Orbit-trails singleton overlay: the master gate on the near-field Keplerian
+    // orbit trails, defaulting on (the trails are part of the baseline
+    // solar-system scene). A flat `enabled` field like `milkyWay` / `filaments`.
+    orbitTrails: {
+      enabled: DEFAULT_ORBIT_TRAILS_ENABLED,
     },
     // Earth's per-body look dials. Each seeds from its authored data constant so
     // that file stays the default's single source of truth (the same

@@ -15,7 +15,7 @@
  * 3. The transfer list points to the COPY's buffers, not the original's
  *    — for the same reason: the original catalog must survive the call.
  * 4. The transfer list contains exactly one entry per typed-array field
- *    (10 entries) and they appear in a stable order — so the helper
+ *    (15 entries) and they appear in a stable order — so the helper
  *    doesn't accidentally drop a field when GalaxyCatalog grows.
  *
  * ### Why a stable field order matters
@@ -29,13 +29,13 @@
 
 import { describe, it, expect } from 'vitest';
 import { cloneGalaxyCatalogForTransfer } from '../../../src/data/galaxyCatalog/galaxyCatalogTransfer';
+import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 function makeCloud(count: number): GalaxyCatalog {
   // Each field gets a distinct fill value so we can later assert which
   // index in the transfer list corresponds to which source field.
-  return {
-    count,
+  return makeGalaxyCatalog(count, {
     objIDs: new BigUint64Array(count).fill(1n),
     positions: new Float32Array(count * 3).fill(0.5),
     magU: new Float32Array(count).fill(2),
@@ -49,7 +49,9 @@ function makeCloud(count: number): GalaxyCatalog {
     classByte: new Uint8Array(count).fill(7),
     parentSurveyByte: new Uint8Array(count).fill(8),
     spectroscopicZ: new Float32Array(count).fill(0.0234),
-  };
+    orientationIsFallback: new Uint8Array(count).fill(1),
+    diameterIsFallback: new Uint8Array(count).fill(1),
+  });
 }
 
 describe('cloneGalaxyCatalogForTransfer', () => {
@@ -101,16 +103,18 @@ describe('cloneGalaxyCatalogForTransfer', () => {
       copy.classByte.buffer,
       copy.parentSurveyByte.buffer,
       copy.spectroscopicZ.buffer,
+      copy.orientationIsFallback.buffer,
+      copy.diameterIsFallback.buffer,
     ]);
     for (const t of transfer) {
       expect(copyBuffers.has(t as ArrayBufferLike)).toBe(true);
     }
   });
 
-  it('transfer list has one entry per typed-array field (13 total)', () => {
+  it('transfer list has one entry per typed-array field (15 total)', () => {
     const cloud = makeCloud(4);
     const { transfer } = cloneGalaxyCatalogForTransfer(cloud);
-    expect(transfer.length).toBe(13);
+    expect(transfer.length).toBe(15);
   });
 
   it('handles count = 0 (empty catalog)', () => {
@@ -119,6 +123,6 @@ describe('cloneGalaxyCatalogForTransfer', () => {
     expect(copy.count).toBe(0);
     expect(copy.objIDs.length).toBe(0);
     expect(copy.positions.length).toBe(0);
-    expect(transfer.length).toBe(13);
+    expect(transfer.length).toBe(15);
   });
 });
