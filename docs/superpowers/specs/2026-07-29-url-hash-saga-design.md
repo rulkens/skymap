@@ -36,20 +36,20 @@ change. This promotes both directions into the store, deletes the hook, and resh
 
 ## 2. Decisions summary
 
-| # | Decision |
-|---|---|
-| Q1 | Write wakes on an enumerated `writesOn` per source, **not** `takeEvery('*')` |
-| Q2 | Deep-link detection derived from the table, not a literal `'#focus='` match |
-| Q3 | Sources return `readonly Action[]`; the saga is a pure pump |
-| Q4 | DOM touches live in `services/url/`, reached by `call` |
-| Q5 | `selection.pending` so the URL writes intent (fixes the clobber) |
-| Q6 | Prose discipline against `writesOn` drift; slice-prefix form where free |
-| Q7 | Two sagas under one parent fork |
-| Q8 | Absent param uniformly restores that param's default; `isInitial` moves to the pass |
-| Q9 | `?` gates out of scope |
-| Q10 | `watchHashSaga` / `watchHashReadSaga` / `watchHashWriteSaga` in `src/state/url/` |
-| Q11 | Real-store harness with `services/url/` mocked; no jsdom |
-| Q12 | Two PRs: prep + fix, then port |
+| #   | Decision                                                                            |
+| --- | ----------------------------------------------------------------------------------- |
+| Q1  | Write wakes on an enumerated `writesOn` per source, **not** `takeEvery('*')`        |
+| Q2  | Deep-link detection derived from the table, not a literal `'#focus='` match         |
+| Q3  | Sources return `readonly Action[]`; the saga is a pure pump                         |
+| Q4  | DOM touches live in `services/url/`, reached by `call`                              |
+| Q5  | `selection.pending` so the URL writes intent (fixes the clobber)                    |
+| Q6  | Prose discipline against `writesOn` drift; slice-prefix form where free             |
+| Q7  | Two sagas under one parent fork                                                     |
+| Q8  | Absent param uniformly restores that param's default; `isInitial` moves to the pass |
+| Q9  | `?` gates out of scope                                                              |
+| Q10 | `watchHashSaga` / `watchHashReadSaga` / `watchHashWriteSaga` in `src/state/url/`    |
+| Q11 | Real-store harness with `services/url/` mocked; no jsdom                            |
+| Q12 | Two PRs: prep + fix, then port                                                      |
 
 ---
 
@@ -139,9 +139,9 @@ export const HASH_PARAM_SOURCES: readonly HashParamSource[] = [
 ```
 
 **`writesOn` completeness contract** (the one thing prose has to carry, per Q6, in the
-house style of `watchSelectionRowsSaga`): *every action that can change a row's `write`
+house style of `watchSelectionRowsSaga`): _every action that can change a row's `write`
 output MUST be covered by its `writesOn`, or the URL goes stale until the next covered
-action.* A miss is self-healing — the write recomposes the entire body from scratch — so
+action._ A miss is self-healing — the write recomposes the entire body from scratch — so
 the failure is "stale until the next focus/time/orientation change", never "wrong".
 Prefer the slice-prefix form wherever it does not pull in a hot stream.
 
@@ -156,7 +156,7 @@ export function* watchHashSaga() {
 // src/state/url/watchHashReadSaga.ts
 export function* watchHashReadSaga() {
   const channel = yield* call(createHashChangeChannel);
-  yield* call(applyHash, yield* call(readHashBody), true);   // initial pass
+  yield* call(applyHash, yield* call(readHashBody), true); // initial pass
   try {
     while (true) {
       yield* call(applyHash, yield* take(channel), false);
@@ -213,7 +213,7 @@ the cache (the read side already observes it).
 
 **The guards are load-bearing, not SSR insurance.** `createAppStore` runs `mainSaga`, and
 `tests/state/ui/*.test.ts` call it under `environment: 'node'`. `watchHashReadSaga` reads
-the hash *at saga start*, not lazily on an action, so without the guards the existing
+the hash _at saga start_, not lazily on an action, so without the guards the existing
 suite breaks. (`createKeyboardListener` gets away with no guard only because hotkeys-js
 self-guards.)
 
@@ -226,9 +226,7 @@ neither `hashchange` nor `popstate`, so the write can never feed the read.
 `hasDeepLink`'s hash half becomes table-derived:
 
 ```ts
-const DEEP_LINK_HASH_KEYS = new Set(
-  HASH_PARAM_SOURCES.filter((s) => s.deepLink).map((s) => s.key),
-);
+const DEEP_LINK_HASH_KEYS = new Set(HASH_PARAM_SOURCES.filter((s) => s.deepLink).map((s) => s.key));
 ```
 
 It currently hand-matches the literal `'#focus='` (`hasDeepLink.ts:45`) and has already
@@ -245,15 +243,15 @@ Verified no import cycle: `uiSlice → buildInitialUiState → hashParamSources 
 
 ## 4. Deletions / rewiring
 
-| File | Action |
-|---|---|
-| `src/hooks/useUrlSync.ts` | **Delete** — hook, `computeDesiredHash`, `DesiredHashInput`, `DesiredHashOutput` |
-| `src/@types/hooks/HashParamSource.d.ts` | **Move** → `@types/state/url/` |
-| `src/hooks/hashParamSources.ts` | **Move** → `state/url/` |
-| `src/hooks/urlHashFor.ts` | **Move** → `services/url/` (prep — it is not a hook) |
-| `src/components/App/App.tsx` | Drop the `useUrlSync()` call + import |
-| `src/store/rootSaga.ts` | Fork `watchHashSaga()`; add its docblock line |
-| `tests/hooks/useUrlSync.test.ts` | **Delete**; coverage restructures into §7 |
+| File                                    | Action                                                                           |
+| --------------------------------------- | -------------------------------------------------------------------------------- |
+| `src/hooks/useUrlSync.ts`               | **Delete** — hook, `computeDesiredHash`, `DesiredHashInput`, `DesiredHashOutput` |
+| `src/@types/hooks/HashParamSource.d.ts` | **Move** → `@types/state/url/`                                                   |
+| `src/hooks/hashParamSources.ts`         | **Move** → `state/url/`                                                          |
+| `src/hooks/urlHashFor.ts`               | **Move** → `services/url/` (prep — it is not a hook)                             |
+| `src/components/App/App.tsx`            | Drop the `useUrlSync()` call + import                                            |
+| `src/store/rootSaga.ts`                 | Fork `watchHashSaga()`; add its docblock line                                    |
+| `tests/hooks/useUrlSync.test.ts`        | **Delete**; coverage restructures into §7                                        |
 
 Unchanged: `utils/url/parseHashParams.ts`, `composeHashParams.ts`, `searchHasGate.ts`,
 and the gate helpers.
@@ -281,7 +279,7 @@ verdicts below.
 ### Prep (own commits, sequenced first — rides PR 1)
 
 **P1 — `selection.pending` (J1).** The write side has no way to see an in-flight focus
-intent: `selection` holds three *resolved-ref* slots, and the deferral lives inside
+intent: `selection` holds three _resolved-ref_ slots, and the deferral lives inside
 `resolveFocusRefDeferring`'s local loop (`resolveFocusRefDeferring.ts:22-25`).
 
 ```ts
@@ -309,7 +307,7 @@ strand `pending` for the rest of the session.
 
 **Second correction.** `SelectionSlot` was `keyof SelectionState`, which swept `'pending'`
 into the slot union consumed by `SELECTION_WRITE_BY_SLOT` and `watchSelectionRowsSaga`. It
-now derives the ref-*valued* keys via a mapped type, so the next non-ref field drops out
+now derives the ref-_valued_ keys via a mapped type, so the next non-ref field drops out
 automatically rather than needing a hand-maintained `Exclude`.
 
 `takeLatest`'s stale-deferral abort needs no handling: a newer `requestFocus` overwrites
@@ -324,12 +322,11 @@ second-field bolt-on later. Two extra reducer lines, no extra concept.
 
 ```ts
 export function manualPausedAtActions(instant: Date): readonly Action[] {
-  const nowMs = performance.now();            // still sampled ONCE, still inside
-  return [setSimDays({ simDays: unixMsToJulianDays(instant.getTime()), nowMs }),
-          pause({ nowMs })];
+  const nowMs = performance.now(); // still sampled ONCE, still inside
+  return [setSimDays({ simDays: unixMsToJulianDays(instant.getTime()), nowMs }), pause({ nowMs })];
 }
 export const enterManualPausedAt = (dispatch: AppDispatch, instant: Date) =>
-  manualPausedAtActions(instant).forEach(dispatch);   // date-entry popover unchanged
+  manualPausedAtActions(instant).forEach(dispatch); // date-entry popover unchanged
 ```
 
 The shared-`nowMs` invariant its docblock calls "structurally impossible for a caller to
@@ -339,15 +336,15 @@ break" survives verbatim — the sample stays inside the builder.
 
 ### Growth / bolt-on verdicts
 
-| Touchpoint | Verdict |
-|---|---|
-| `HASH_PARAM_SOURCES` | Growth — the table seam exists; the row reshape *is* the feature |
-| `services/url/` | Growth — folder exists (`focusUrl`, `resolveFocusId`, `milkyWayFocusId`) |
-| `rootSaga`'s `all([...])` | Growth — a composition root, not a parallel list |
-| `parseHashParams` / `composeHashParams` | Growth — unchanged, already generic |
-| `selection` slice | **Bolt-on without P1** — no store-visible intent to read |
-| `enterManualPausedAt` | **Bolt-on without P2** — dispatch-shaped, not action-shaped |
-| `src/hooks/urlHashFor.ts` | **Bolt-on without P3** — a codec parked in the hooks folder |
+| Touchpoint                              | Verdict                                                                  |
+| --------------------------------------- | ------------------------------------------------------------------------ |
+| `HASH_PARAM_SOURCES`                    | Growth — the table seam exists; the row reshape _is_ the feature         |
+| `services/url/`                         | Growth — folder exists (`focusUrl`, `resolveFocusId`, `milkyWayFocusId`) |
+| `rootSaga`'s `all([...])`               | Growth — a composition root, not a parallel list                         |
+| `parseHashParams` / `composeHashParams` | Growth — unchanged, already generic                                      |
+| `selection` slice                       | **Bolt-on without P1** — no store-visible intent to read                 |
+| `enterManualPausedAt`                   | **Bolt-on without P2** — dispatch-shaped, not action-shaped              |
+| `src/hooks/urlHashFor.ts`               | **Bolt-on without P3** — a codec parked in the hooks folder              |
 
 `asArray` (from #507) was checked and is not needed: `read`/`readAbsent` return arrays
 directly.
@@ -402,7 +399,7 @@ therefore not uniformly pure across rows; its tests freeze time.
 ## 8. Delivery
 
 **PR 1 — prep + clobber fix.** P1, P2, P3 as three commits, plus the Q5 regression test
-made to pass by fixing `computeDesiredHash` in the *existing* hook. Verifiable against
+made to pass by fixing `computeDesiredHash` in the _existing_ hook. Verifiable against
 the architecture on `main`; independently revertable. Accepted cost, stated rather than
 buried: ~15 lines of `computeDesiredHash` change that PR 2 deletes, traded for a clean
 bisect and a checkable "the port is behaviour-neutral except Q8" claim.

@@ -43,16 +43,18 @@ slots, and now `pending.{select,focus}`), so the consolidated form has an obviou
 
 ```ts
 const REQUEST_ROWS = [
-  { request: requestFocus,  commit: updateSelectionFocus },
+  { request: requestFocus, commit: updateSelectionFocus },
   { request: requestSelect, commit: updateSelectionSelect },
 ] as const;
 
 export function* watchSelectionRequestsSaga() {
-  yield* all(REQUEST_ROWS.map((row) =>
-    takeLatest(row.request, function* (action) {
-      yield* put(row.commit(yield* resolveFocusRefDeferring(action.payload)));
-    }),
-  ));
+  yield* all(
+    REQUEST_ROWS.map((row) =>
+      takeLatest(row.request, function* (action) {
+        yield* put(row.commit(yield* resolveFocusRefDeferring(action.payload)));
+      }),
+    ),
+  );
 }
 ```
 

@@ -51,7 +51,7 @@ yielding a silently stale URL.
 That trace ran upstream past a funnel. `selectFocusedFocusable` derives from
 `selectionRows.focus` **only**, and the sole writer of that slot is
 `setSelectionRow` (`watchSelectionRowsSaga.ts:46`). Every resolution path — late
-catalog, star-count pulse, direct ref write — reaches the URL *through* it. The
+catalog, star-count pulse, direct ref write — reaches the URL _through_ it. The
 enumeration collapses to three entries.
 
 There is also direct house precedent: `watchSelectionRowsSaga` is itself keyed on an
@@ -62,9 +62,9 @@ selection ref MUST appear here, or its slot's row goes stale").
 The resulting sets are small and closed:
 
 ```ts
-focus:       [requestFocus, clearSelection, setSelectionRow]
-t:           (a) => a.type.startsWith(`${timeRoute}/`)   // all six reducers re-anchor
-orientation: [setOrientation, mergeSnapshot]             // mergeSnapshot = tour scene restore
+focus: [requestFocus, clearSelection, setSelectionRow];
+t: (a) => a.type.startsWith(`${timeRoute}/`); // all six reducers re-anchor
+orientation: [setOrientation, mergeSnapshot]; // mergeSnapshot = tour scene restore
 ```
 
 **Decision:** Option B. `takeEvery('*')` reads as a code smell, and the actions that
@@ -139,12 +139,11 @@ Returning actions preserves it exactly:
 
 ```ts
 export function manualPausedAtActions(instant: Date): readonly Action[] {
-  const nowMs = performance.now();                    // still sampled once, still inside
-  return [setSimDays({ simDays: unixMsToJulianDays(instant.getTime()), nowMs }),
-          pause({ nowMs })];
+  const nowMs = performance.now(); // still sampled once, still inside
+  return [setSimDays({ simDays: unixMsToJulianDays(instant.getTime()), nowMs }), pause({ nowMs })];
 }
 export const enterManualPausedAt = (dispatch: AppDispatch, instant: Date) =>
-  manualPausedAtActions(instant).forEach(dispatch);   // date-entry popover keeps its call site
+  manualPausedAtActions(instant).forEach(dispatch); // date-entry popover keeps its call site
 ```
 
 **Decision:** Option A. The honest limit — a future source needing a genuine side
@@ -162,7 +161,7 @@ A constraint became load-bearing here. `createAppStore` runs `mainSaga`, and
 `tests/state/ui/selectors.test.ts` + `persistSplashVersion.test.ts` call it under
 `environment: 'node'` with no `window`. Today that survives because
 `createKeyboardListener` leans on hotkeys-js, which self-guards. A URL saga forked
-into `mainSaga` reads `window.location.hash` *at saga start*, not lazily on an action.
+into `mainSaga` reads `window.location.hash` _at saga start_, not lazily on an action.
 So the `typeof window === 'undefined'` guard that `useUrlSync`'s docblock calls cheap
 insurance for an SSR we do not do becomes the thing keeping the existing suite green.
 
@@ -173,7 +172,7 @@ insurance for an SSR we do not do becomes the thing keeping the existing suite g
   `state/input/watchKeyboardEventsSaga.ts`. Three functions
   (`createHashChangeChannel`, `readHashBody`, `writeHashBody`), one guard each, none
   in the saga. `yield* call(writeHashBody, desired)` is assertable as a declarative
-  effect, so a test can check what *would* be written with no DOM.
+  effect, so a test can check what _would_ be written with no DOM.
 - **Option B (a `UrlPort` via `getContext('url')`):** mirrors `ReconcileEffects`. But
   `ReconcileEffects` exists to enforce a layering rule (`state/` must not import
   `services/engine/`); no such rule exists between `state/` and `services/url/`, and
@@ -234,7 +233,7 @@ React effect ordering becomes deterministic.
 - **Option D (saga-local memory of the id read):** no slice change, but two owners of
   the same truth and nothing else can observe it.
 
-**Decision:** Option A, as *ground preparation* in the refactor-ground sense: the
+**Decision:** Option A, as _ground preparation_ in the refactor-ground sense: the
 joint the feature needs (store-visible focus intent) does not exist yet.
 
 **CONFIRMED 2026-07-28.** Reproduced in `tests/hooks/urlSyncPendingClobber.test.ts`
@@ -305,15 +304,15 @@ rewrites the same id it just read.
 
 ---
 
-## Q8: What does an *absent* param mean on the read side?
+## Q8: What does an _absent_ param mean on the read side?
 
 **The question:** Porting exposed three different answers, one per row:
 
-| row | absent on `hashchange` | absent on mount |
-|---|---|---|
-| `focus` | `clearSelection()` | nothing (`isInitial` guard) |
-| `t` | nothing | nothing |
-| `orientation` | nothing | nothing |
+| row           | absent on `hashchange` | absent on mount             |
+| ------------- | ---------------------- | --------------------------- |
+| `focus`       | `clearSelection()`     | nothing (`isInitial` guard) |
+| `t`           | nothing                | nothing                     |
+| `orientation` | nothing                | nothing                     |
 
 We `pushState` on every change, so every history entry claims a view state. Back
 should restore it. Today only `focus` honours that: visit `#orientation=galactic`,
@@ -335,6 +334,7 @@ history entries exist and lie.
   Mount suppression is correct uniformly because the store already boots at defaults,
   so applying them would be a no-op at best and would clobber the engine's Earth seed
   at worst.
+
 - **Option B (keep the three rules):** strict port discipline, zero behaviour change.
   Cost: `isInitial` stays in every row's signature to serve one row, and two of three
   params keep lying about their history entries.
@@ -397,8 +397,8 @@ names neither direction nor surface.
 
 - **Option A (`watchHashSaga` / `watchHashReadSaga` / `watchHashWriteSaga` in
   `src/state/url/`):** the sagas own `location.hash` and nothing else — the query
-  string is untouched per Q9. Folder says *url*, matching `services/url/` and
-  `utils/url/`; saga names say *hash*, matching what they drive. `HASH_PARAM_SOURCES`
+  string is untouched per Q9. Folder says _url_, matching `services/url/` and
+  `utils/url/`; saga names say _hash_, matching what they drive. `HASH_PARAM_SOURCES`
   and `hashBodyFor` already spell it that way.
 - **Option B (`watchUrlSaga` + arms):** continuous with the familiar `useUrlSync`
   name, but claims a surface it does not own, and reads as wrong the moment the gate
@@ -410,7 +410,8 @@ rather than churn.
 
 **File inventory that falls out:**
 
-*New*
+_New_
+
 ```
 src/services/url/createHashChangeChannel.ts   eventChannel over 'hashchange'
 src/services/url/readHashBody.ts              '' when no window
@@ -423,15 +424,15 @@ src/state/url/watchHashWriteSaga.ts
 src/@types/state/url/HashParamSource.d.ts     moved from @types/hooks/
 ```
 
-*Deleted* — `src/hooks/useUrlSync.ts` entire (hook, `computeDesiredHash`,
+_Deleted_ — `src/hooks/useUrlSync.ts` entire (hook, `computeDesiredHash`,
 `DesiredHashInput`, `DesiredHashOutput`), `src/@types/hooks/HashParamSource.d.ts`, and
 `App.tsx`'s `useUrlSync()` call plus its import.
 
-*Also moving* — `src/hooks/urlHashFor.ts` is not a hook; it is a pure codec and
+_Also moving_ — `src/hooks/urlHashFor.ts` is not a hook; it is a pure codec and
 belongs in `src/services/url/` beside `focusUrl.ts`, which it already imports from.
 Via `npm run move-files`.
 
-*Unchanged* — `src/utils/url/parseHashParams.ts`, `composeHashParams.ts`,
+_Unchanged_ — `src/utils/url/parseHashParams.ts`, `composeHashParams.ts`,
 `searchHasGate.ts`, and the gate helpers.
 
 **Resulting row shape:**
@@ -439,11 +440,11 @@ Via `npm run move-files`.
 ```ts
 export type HashParamSource = {
   readonly key: string;
-  readonly deepLink: boolean;                              // Q2
-  readonly writesOn: readonly ActionCreator[] | ((a: Action) => boolean);  // Q1, Q6
+  readonly deepLink: boolean; // Q2
+  readonly writesOn: readonly ActionCreator[] | ((a: Action) => boolean); // Q1, Q6
   readonly write: (state: RootState) => string | null;
-  readonly read: (value: string) => readonly Action[];     // Q3, Q8 — value guaranteed present
-  readonly readAbsent: () => readonly Action[];            // Q8
+  readonly read: (value: string) => readonly Action[]; // Q3, Q8 — value guaranteed present
+  readonly readAbsent: () => readonly Action[]; // Q8
 };
 ```
 
@@ -455,7 +456,7 @@ export type HashParamSource = {
 `computeDesiredHash` cases (node) and six `renderHook` + `HashChangeEvent` integration
 cases needing `// @vitest-environment jsdom`. After the port most of it becomes pure,
 since sources return actions (Q3) and `hashBodyFor(state)` takes a `RootState`. What
-covers the *wiring*, which is where Q6 put the residual risk?
+covers the _wiring_, which is where Q6 put the residual risk?
 
 **Considerations:**
 
@@ -494,11 +495,11 @@ the same PR is an explicit ask every time.
 **Considerations:**
 
 - **Option A (two PRs — bug fix, then port):**
-  - *PR 1:* fix the deep-link clobber in the existing hook. `selection.pendingFocusId`
-    + `selectPendingFocusId` + clearing discipline, `computeDesiredHash` reads pending
-    before resolved, plus the failing-first regression test. Verifiable against the
-    architecture on `main` today, independently revertable.
-  - *PR 2:* the port. `HashParamSource` reshape, `services/url/`, the three sagas,
+  - _PR 1:_ fix the deep-link clobber in the existing hook. `selection.pendingFocusId`
+    - `selectPendingFocusId` + clearing discipline, `computeDesiredHash` reads pending
+      before resolved, plus the failing-first regression test. Verifiable against the
+      architecture on `main` today, independently revertable.
+  - _PR 2:_ the port. `HashParamSource` reshape, `services/url/`, the three sagas,
     `hasDeepLink` from the table, the `urlHashFor` move, cutover and deletions, Q8's
     absent-⇒-default change.
 - **Option B (one PR, prep commits first):** fewer round trips, one review context,
@@ -507,12 +508,12 @@ the same PR is an explicit ask every time.
 - **Option C (three PRs):** over-segmented; the middle has no standalone meaning.
 
 **Decision:** Option A. Without the split, PR 2's diff mixes a behaviour fix, a
-behaviour *change* (Q8), a type reshape, a file move and a delete-the-hook cutover.
+behaviour _change_ (Q8), a type reshape, a file move and a delete-the-hook cutover.
 Whether the clobber fix is right is a different review question from whether the port
 preserves behaviour. It also makes "the port is behaviour-neutral except Q8" a
 checkable claim rather than an assertion.
 
-**Accepted cost, stated rather than buried:** PR 1 fixes the bug *in the hook*, code
+**Accepted cost, stated rather than buried:** PR 1 fixes the bug _in the hook_, code
 that PR 2 then deletes — roughly 15 lines of throwaway work in `computeDesiredHash`,
 traded for a clean bisect.
 

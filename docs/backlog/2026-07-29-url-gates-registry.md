@@ -9,14 +9,14 @@ re-derived.
 
 Four live gates, read through five helpers, at four different moments:
 
-| gate | helper | where | when |
-|---|---|---|---|
-| `cinema` | `isCinemaSearch(search)` (pure) | `state/ui/buildInitialUiState.ts:42` | store construction |
-| `cinema` | `isCinemaMode()` (live `window`) | `state/recorder/installRecorderHook.ts:79` | module load |
-| `cinema` | `isCinemaMode()` | `components/App/App.tsx:116`, `containers/TourOverlayContainer.tsx:61` | **during render** |
-| `perf` | `isPerfMode()` | `state/perf/installPerfHook.ts:182`, `services/engine/phases/initGpu.ts:469` | module load / engine init |
-| `gpuTimings` | `hasUrlGate('gpuTimings')` | `services/engine/phases/initGpu.ts:469` | engine init |
-| `tour` | `hasUrlGate('tour')` | `components/containers/TopBarContainer.tsx:27` | **module load** (`const TOUR_DEBUG_GATE = …`) |
+| gate         | helper                           | where                                                                        | when                                          |
+| ------------ | -------------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------- |
+| `cinema`     | `isCinemaSearch(search)` (pure)  | `state/ui/buildInitialUiState.ts:42`                                         | store construction                            |
+| `cinema`     | `isCinemaMode()` (live `window`) | `state/recorder/installRecorderHook.ts:79`                                   | module load                                   |
+| `cinema`     | `isCinemaMode()`                 | `components/App/App.tsx:116`, `containers/TourOverlayContainer.tsx:61`       | **during render**                             |
+| `perf`       | `isPerfMode()`                   | `state/perf/installPerfHook.ts:182`, `services/engine/phases/initGpu.ts:469` | module load / engine init                     |
+| `gpuTimings` | `hasUrlGate('gpuTimings')`       | `services/engine/phases/initGpu.ts:469`                                      | engine init                                   |
+| `tour`       | `hasUrlGate('tour')`             | `components/containers/TopBarContainer.tsx:27`                               | **module load** (`const TOUR_DEBUG_GATE = …`) |
 
 `isCinemaSearch` / `isPerfSearch` are single-gate wrappers over `searchHasGate`;
 `isCinemaMode` / `isPerfMode` add the live `window.location.search` read; `hasUrlGate` is
@@ -29,12 +29,12 @@ in the store, so no gate is reachable by a selector or settable by a test fixtur
 
 Keep `?` and `#` as **two tables, never one**. They differ on every axis:
 
-| | `?` gates | `#` params |
-|---|---|---|
-| direction | read-only | read **and** write |
-| cardinality | once, at boot | continuously |
-| meaning | session configuration | shareable view state |
-| change at runtime | requires reload | expected |
+|                   | `?` gates             | `#` params           |
+| ----------------- | --------------------- | -------------------- |
+| direction         | read-only             | read **and** write   |
+| cardinality       | once, at boot         | continuously         |
+| meaning           | session configuration | shareable view state |
+| change at runtime | requires reload       | expected             |
 
 A unified `URL_PARAMS` table would need a `location: 'search' \| 'hash'` discriminant with
 half the fields `never` for half the rows — the asymmetry-paragraph smell.
