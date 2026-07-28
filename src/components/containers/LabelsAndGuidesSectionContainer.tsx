@@ -5,32 +5,28 @@
  *
  * Owns all Redux reach for the Labels & Guides group: reads
  * `selectStructureItems`, `selectGalaxyCatalogItems`, and
- * `selectMilkyWayLabelEnabled`, runs the three-input label-projection, and
- * wraps the 3-way dispatch guard in a `useCallback`. It also owns the
- * foreground caption toggles (star / planet names) and the overlay guide rows
- * — constellations (the stick figures, whose name captions ride the same
- * gate) and orbit trails — flat singleton settings that route straight to
- * their own setters. The presentational `LabelsAndGuidesSection` imports
- * nothing from `store/` or `state/`.
+ * `selectMilkyWayLabelEnabled`, bundles them into the `LabelHomes` the
+ * label-projection reads, and wraps the label dispatch in a `useCallback`. It
+ * also owns the foreground caption toggles (star / planet names) and the
+ * overlay guide rows — constellations (the stick figures, whose name captions
+ * ride the same gate) and orbit trails — flat singleton settings that route
+ * straight to their own setters. The presentational `LabelsAndGuidesSection`
+ * imports nothing from `store/` or `state/`.
  *
  * ### Label-visibility projection
  *
- * Label visibility lives in three authoritative homes — structure items,
+ * Label visibility lives in several authoritative homes — structure items,
  * the galaxy catalog items (famousGalaxy), and the milkyWay scalar. The
  * projection (`projectLabelCategoryVisibility`) merges them into the flat
  * `Record<LabelCategory, boolean>` the section's checkboxes read. The
  * `useMemo` rebuilds only when any of those stable-reference inputs change.
  *
- * ### 3-way dispatch guard
+ * ### Label dispatch
  *
- * A label checkbox toggle dispatches to one of three slices based on the
- * category's type:
- *   - structure ids (cluster, supercluster, void, group) → `setStructureLabelEnabled`
- *   - milkyWay singleton overlay → `setMilkyWayLabelEnabled`
- *   - galaxy-catalog label categories (famousGalaxy) → `setGalaxyCatalogLabelEnabled`
- *
- * The guard order is: `isStructureId` → `=== 'milkyWay'` → else (galaxy catalog).
- * This exact order is preserved from App to keep behaviour byte-identical.
+ * Both directions run off `LABEL_HOME_BY_SOURCE_TYPE`: the category's registry
+ * row names its source type, and that type's row knows both where the bit is
+ * read from and which action writes it. A new label-bearing source type is a
+ * row in that table, not another branch here.
  *
  * ### Why `[dispatch]` only in `useCallback`
  *
@@ -55,16 +51,14 @@ import {
   selectOrbitTrailsEnabled,
 } from '../../state/settings/selectors';
 import {
-  setStructureLabelEnabled,
-  setMilkyWayLabelEnabled,
-  setGalaxyCatalogLabelEnabled,
   setStarLabelsEnabled,
   setPlanetLabelsEnabled,
   setConstellationsEnabled,
   setOrbitTrailsEnabled,
 } from '../../state/settings/settingsSlice';
 import { projectLabelCategoryVisibility } from '../../state/settings/projectLabelCategoryVisibility';
-import { isStructureId } from '../../data/structure/structureIds';
+import { LABEL_HOME_BY_SOURCE_TYPE } from '../../data/labels/labelHomeBySourceType';
+import { SOURCE_TYPE_BY_LABEL_CATEGORY } from '../../data/labels/sourceTypeByLabelCategory';
 import type { LabelCategory } from '../../@types/engine/data/LabelCategory';
 
 function LabelsAndGuidesSectionContainer(): React.ReactElement {
@@ -78,25 +72,29 @@ function LabelsAndGuidesSectionContainer(): React.ReactElement {
   const constellationsEnabled = useAppSelector(selectConstellationsEnabled);
   const orbitTrailsEnabled = useAppSelector(selectOrbitTrailsEnabled);
 
-  // Project items → flat label-visibility record. Rebuilds only when any of the
-  // three stable-reference inputs change.
-  const labelCategoryVisibility = useMemo(
-    () => projectLabelCategoryVisibility(structureItems, galaxyCatalogItems, milkyWayLabelEnabled),
+  // Bundle the label homes, then project them → flat label-visibility record.
+  // Both rebuild only when one of the stable-reference inputs changes.
+  const labelHomes = useMemo(
+    () => ({
+      structures: structureItems,
+      galaxyCatalogs: galaxyCatalogItems,
+      milkyWayLabelEnabled,
+    }),
     [structureItems, galaxyCatalogItems, milkyWayLabelEnabled],
   );
 
-  // 3-way dispatch guard. Narrowing order: structure → milkyWay → galaxy catalog
-  // (else branch covers famousGalaxy and any future label-bearing galaxy catalog
-  // sources).
+  const labelCategoryVisibility = useMemo(
+    () => projectLabelCategoryVisibility(labelHomes),
+    [labelHomes],
+  );
+
+  // One table lookup replaces the former three-way chain. The registry row's
+  // `type` names the home; the home knows how to write it.
   const onSetLabelCategoryVisibility = useCallback(
     (category: LabelCategory, enabled: boolean) => {
-      if (isStructureId(category)) {
-        dispatch(setStructureLabelEnabled({ id: category, enabled }));
-      } else if (category === 'milkyWay') {
-        dispatch(setMilkyWayLabelEnabled(enabled));
-      } else {
-        dispatch(setGalaxyCatalogLabelEnabled({ id: category, enabled }));
-      }
+      dispatch(
+        LABEL_HOME_BY_SOURCE_TYPE[SOURCE_TYPE_BY_LABEL_CATEGORY[category]].write(category, enabled),
+      );
     },
     [dispatch],
   );

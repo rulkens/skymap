@@ -1,0 +1,50 @@
+/**
+ * LABEL_HOME_BY_SOURCE_TYPE — where each label-bearing source type keeps its
+ * per-category label bit, and how to write it.
+ *
+ * Callers resolve a category's home with
+ * `LABEL_HOME_BY_SOURCE_TYPE[SOURCE_REGISTRY[cat].type]`, so a new
+ * label-bearing source type is ONE row here rather than a fresh branch in both
+ * the read projection and the container's write handler. It replaces a pair of
+ * hardcoded chains that had to be kept in mirror-image agreement by hand:
+ * `isStructureId → === 'milkyWay' → else galaxy-catalog`, spelled once for
+ * reads and once for writes.
+ *
+ * `milkyWay` is a row like any other. Its `read`/`write` reach a singleton
+ * scalar rather than an `items` record — a genuine difference (one disk, one
+ * "You are here" label, no per-record catalog), so it is expressed as that
+ * row's implementation rather than smoothed away by synthesising a one-entry
+ * items record, which would pretend the overlay is a catalog.
+ *
+ * The `as StructureId` / `as GalaxyCatalogId` casts are the table's one
+ * unavoidable seam: `LabelHome.read` is uniform over `LabelCategory` (that is
+ * what makes the table a `Record`), while each row indexes a record keyed by
+ * its own narrower id union. The registry lookup that selects the row is what
+ * guarantees the cast holds.
+ */
+
+import type { LabelHome } from '../../@types/settings/LabelHome';
+import type { LabelBearingSourceType } from '../../@types/data/LabelBearingSourceType';
+import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
+import type { StructureId } from '../../@types/data/structure/StructureId';
+import {
+  setStructureLabelEnabled,
+  setMilkyWayLabelEnabled,
+  setGalaxyCatalogLabelEnabled,
+} from '../../state/settings/settingsSlice';
+
+export const LABEL_HOME_BY_SOURCE_TYPE: Readonly<Record<LabelBearingSourceType, LabelHome>> = {
+  structure: {
+    read: (homes, id) => homes.structures[id as StructureId].labelEnabled,
+    write: (id, enabled) => setStructureLabelEnabled({ id: id as StructureId, enabled }),
+  },
+  galaxyCatalog: {
+    read: (homes, id) => homes.galaxyCatalogs[id as GalaxyCatalogId].labelEnabled,
+    write: (id, enabled) => setGalaxyCatalogLabelEnabled({ id: id as GalaxyCatalogId, enabled }),
+  },
+  // The singleton overlay: one scalar, no per-record row to index.
+  milkyWay: {
+    read: (homes) => homes.milkyWayLabelEnabled,
+    write: (_id, enabled) => setMilkyWayLabelEnabled(enabled),
+  },
+};
