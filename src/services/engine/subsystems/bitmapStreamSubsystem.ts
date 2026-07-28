@@ -52,6 +52,18 @@ export type BitmapStreamDeps = {
   /** GPU debug label for the atlas texture (see `TextureAtlas`). */
   readonly label: string;
   /**
+   * How many bitmap fetches this stream runs at once.  Omitted means
+   * `PriorityQueue`'s own default (`MAX_CONCURRENT_FETCHES`).
+   *
+   * The bound belongs to the stream, not to the queue: each consumer is
+   * fetching a different SHAPE of thing against the same ~6-connection
+   * browser cap, and only the consumer knows which.  Without this field a
+   * second consumer's only route to its own limit would be to reach past
+   * this seam and construct the queue itself, which would drag the atlas
+   * and the memoisation sets out with it.
+   */
+  readonly concurrency?: number;
+  /**
    * Wake the engine's render loop for the next frame.  Called when a
    * fetch completes (so the bitmap can render) and when a fetch
    * fails (so the still-animating predicate re-checks `inFlightCount`).
@@ -60,7 +72,7 @@ export type BitmapStreamDeps = {
 };
 
 export function createBitmapStreamSubsystem(deps: BitmapStreamDeps): BitmapStreamSubsystem {
-  const { device, atlasSide, slotSide, format, label, requestRender } = deps;
+  const { device, atlasSide, slotSide, format, label, concurrency, requestRender } = deps;
 
   const atlas = new TextureAtlas(device, {
     atlasSide,
@@ -70,7 +82,9 @@ export function createBitmapStreamSubsystem(deps: BitmapStreamDeps): BitmapStrea
   });
   atlas.initTexture();
 
-  const queue = new PriorityQueue();
+  // `undefined` falls through to the queue's own default, so a caller that
+  // has no opinion keeps today's behaviour.
+  const queue = new PriorityQueue(concurrency);
 
   // Set membership: "this bitmap landed".  No timing — that's the
   // load-fade planner's job, layered above this subsystem.

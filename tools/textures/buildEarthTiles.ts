@@ -70,6 +70,7 @@ import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 
 import type { EarthTileKind } from '../../src/@types/data/EarthTileKind';
+import type { EarthTileManifest } from '../../src/@types/scene/EarthTileManifest';
 import { EARTH_TILE_MIN_LEVEL, EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
 import { earthTileColumns } from '../../src/utils/scene/earthTileColumns';
 import { earthTilePath } from '../../src/utils/scene/earthTilePath';
@@ -93,23 +94,6 @@ const WEBP_QUALITY = 82;
  * over kinds here, not a type rewrite.
  */
 const KIND: EarthTileKind = 'surface';
-
-/**
- * The manifest as emitted. The runtime's parse site holds the other half of
- * this contract and its type is the authority on what may be read; this local
- * shape is the authority on what is written.
- *
- * The `Partial` is load-bearing. A surface-only bake has no `normal` entry,
- * and a total `Record<EarthTileKind, ...>` would force one to be invented —
- * a level range for a pyramid that does not exist is exactly the kind of
- * plausible lie the manifest exists to prevent.
- */
-type EmittedManifest = {
-  readonly tilePx: number;
-  readonly levels: Partial<Record<EarthTileKind, { readonly min: number; readonly max: number }>>;
-  /** Source id + attribution + vintage, so a stale or mis-licensed bake is diagnosable. */
-  readonly builtFrom: Partial<Record<EarthTileKind, string>>;
-};
 
 /**
  * The geographic extent of tile `(z, x, y)`. `x` increases east from longitude
@@ -265,7 +249,7 @@ export async function buildEarthTiles(source: EarthImagerySource, outDir: string
     process.stderr.write(`  z${z}: ${levelPaths.length} tiles (2x2 average of z${z + 1})\n`);
   }
 
-  const manifest: EmittedManifest = {
+  const manifest: EarthTileManifest = {
     tilePx,
     levels: { [KIND]: { min: minLevel, max: maxLevel } },
     builtFrom: { [KIND]: `${source.id} — ${source.attribution}` },

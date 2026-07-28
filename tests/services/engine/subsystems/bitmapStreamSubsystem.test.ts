@@ -89,6 +89,24 @@ describe('createBitmapStreamSubsystem', () => {
     expect(atlas.inFlightCount()).toBe(1);
   });
 
+  it('honours the caller-supplied concurrency limit', () => {
+    // The tile stream and the thumbnail stream fetch different shapes of thing
+    // against the same ~6-connection browser cap, so each supplies its own
+    // bound.  A regression that stopped threading `concurrency` through to the
+    // queue would leave every consumer on the shared default and show up only
+    // as a crowded Network tab — nothing else observes it.
+    const atlas = createBitmapStreamSubsystem({
+      device,
+      requestRender: () => {},
+      ...TEST_ATLAS_CONFIG,
+      concurrency: 1,
+    });
+    const hang = () => new Promise<ImageBitmap | null>(() => {});
+    atlas.enqueueFetch({ key: 'a', priority: 1, fetcher: hang, onResult: () => {} });
+    atlas.enqueueFetch({ key: 'b', priority: 1, fetcher: hang, onResult: () => {} });
+    expect(atlas.inFlightCount()).toBe(1);
+  });
+
   it('setEvictHandler fires when LRU recycles a slot', () => {
     const atlas = createBitmapStreamSubsystem({
       device,

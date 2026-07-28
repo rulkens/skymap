@@ -389,10 +389,14 @@ a round trip costs nothing, and re-baking deeper must be a data change, not a co
    contract holds — but **nothing in Phase C or D may assert 4 channels** on the file or on
    the decoded bitmap. Phase E's land-only sources carry real transparency and keep the plane.
 
-- [ ] Add the type and the fetcher.
-- [ ] **No test.** The shape is enforced by its type at the one parse site; the null-on-failure
+- [x] Add the type and the fetcher.
+- [x] **No test.** The shape is enforced by its type at the one parse site; the null-on-failure
       path is exercised by the identity case, which task A5 already asserts.
-- [ ] `npm run typecheck`. Commit.
+- [x] `npm run typecheck`. Commit.
+
+`EarthTileManifest` is the ONE type, imported by both the emit site (`buildEarthTiles`) and the
+parse site. A second local shape on the tools side is what let the two disagree about `Partial`
+in the first place; a manifest type that only one end imports is not a contract.
 
 ### Task C2: `earthTileSubsystem`
 
@@ -421,16 +425,45 @@ engages (67 MB held for a session that never approaches Earth is not acceptable)
 the whole-globe `committed` / `placeholders` maps in `earthRenderer` (`:348-376`). It is a
 third layer above both and it only changes what the fragment blends on top.
 
-- [ ] `PriorityQueue` is constructed with `EARTH_TILE_CONCURRENCY`. Note that
+- [x] `PriorityQueue` is constructed with `EARTH_TILE_CONCURRENCY`. Note that
       `bitmapStreamSubsystem.ts:73` currently does `new PriorityQueue()` with no argument;
       the limit must reach it, so `BitmapStreamDeps` gains an optional `concurrency` field
       rather than the tile subsystem reaching around the seam.
-- [ ] Wire `setEvictHandler` to drop the evicted key's `bitmapReadyTime` entry, the same way
+- [x] Wire `setEvictHandler` to drop the evicted key's `bitmapReadyTime` entry, the same way
       `texturedDiskSubsystem` does.
-- [ ] Implement lazy allocation on first engage, and `destroy()`.
-- [ ] **No test.** Every line of it is GPU, network or clock. The arithmetic it calls is
-      already covered by Phase A.
-- [ ] `npm run typecheck`. Commit.
+- [x] Implement lazy allocation on first engage, and `destroy()`.
+- [x] **No test.** Every line of it is GPU, network or clock. The arithmetic it calls is
+      already covered by Phase A. (One test WAS added, to
+      `tests/services/engine/subsystems/bitmapStreamSubsystem.test.ts`, for the new
+      `concurrency` pass-through — observable through the public API with no mocks.)
+- [x] `npm run typecheck`. Commit.
+
+**Three findings this task settled, which C3 and Phase D inherit:**
+
+1. **The engage gate is circular as the plan states it.** `plan.zWin > minLevel` needs
+   `minLevel`, which comes from a manifest the plan says is fetched "when the virtual texture
+   first engages" — the gate waiting on its own answer. Split into two lazinesses: the
+   **manifest** fetch starts on the first `plannerParams()` call, i.e. whenever the Earth layer
+   is drawable (one small JSON); the **67 MB atlas + page table** are still allocated only by
+   the first `update()`, which is the real engage. The budget constraint is honoured; the
+   plan's manifest-timing sentence is not literally.
+2. **`isAnimating()` must be ORed into `shouldKeepTicking` even when NOT engaged**, because it
+   returns true while the manifest is in flight. The subsystem deliberately does not
+   `requestRender()` on manifest arrival (subsystems never wake themselves), so a vote read
+   only inside the engage branch leaves a stationary camera dormant until the next input — and
+   it presents as a silently failed manifest fetch.
+3. **`isFailed` is checked BEFORE `allocate`**, deviating from `texturedDiskSubsystem`'s order.
+   A land-only pyramid means most of the grid legitimately 404s, and allocating for a failed
+   key would hold a slot *and* refresh its LRU stamp every frame — a descent over ocean could
+   pin all 64 slots on tiles that will never have pixels.
+
+**Known leak, pre-existing, not fixed here:** `destroy()` cannot release the atlas.
+`TextureAtlas` has no `destroy()` and `BitmapStreamSubsystem.destroy()` only clears its sets,
+so the 67 MB GPUTexture lives until device teardown — `engine.ts:785`'s "galaxyAtlas releases
+its GPU texture last" comment is not true today. Adding `TextureAtlas.destroy()` changes shared
+teardown semantics for the galaxy atlas and risks a destroyed texture still referenced by a
+renderer bind group, so it wants its own decision rather than a drive-by. This subsystem
+releases only what it owns (the page-table texture).
 
 ### Task C3: the drive site and the engage gate
 
