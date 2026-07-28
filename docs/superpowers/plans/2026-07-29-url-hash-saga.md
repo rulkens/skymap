@@ -165,6 +165,39 @@ transcript); those are a historical record and stay as written.
 - [ ] **Ask the user** to confirm a cold `#focus=<galaxy>` load keeps its hash in the
       browser. This is a behaviour fix; the unit test proves the logic, not the boot timing.
 
+### Task 5b: the home seed defers to a still-resolving deep link
+
+Found by the browser check, which still showed two history entries after T2. The clobber
+had **three** independent causes, not two — each one alone was enough to lose the deep
+link, so fixing any subset left the symptom unchanged. That is why the unit test passed
+while the browser did not: nothing in the test path ran `wireInput`'s home seed.
+
+The third: the seed guard (`wireInput.ts:211-215`) read the resolved ref slots alone, and a
+galaxy/star id parks in `resolveFocusRefDeferring` for the whole boot window with both refs
+null. The guard seeded Earth, `resolveRef` cleared `pending.focus` as a side effect, and the
+write pushed the bare home hash. The guard was right when every deep link resolved
+statically; it had no way to see a deferred one until T1 added `selection.pending`.
+
+- [x] `selectHasSelectionIntent(state)` over all four slots — both refs, both pending ids.
+      A named selector rather than a four-way conjunction inlined at the call site.
+- [x] `wireInput`'s guard becomes `if (!selectHasSelectionIntent(rootState))`.
+- [x] Selector test: false on virgin state, true when only `pending.focus` is set.
+- [x] Regression at BOTH levels. The `useUrlSync` integration test replicates the guard
+      expression inline, so it cannot catch a change to the real guard; the
+      `wireInput.test.ts` case calls the actual function. Both mutation-verified —
+      ref-only guard ⇒ `expected [ '/' ] to deeply equal []` and
+      `expected { type: 'body', id: 'earth' } to be null`.
+- [x] Commit. → `98fc216b`
+
+Accepted consequence: a junk `#focus=zzz` parks forever and so suppresses the Earth seed for
+that session. The seed cannot distinguish "still resolving" from "never will". Consistent
+with T2's accepted consequence (junk ids are no longer scrubbed off the URL).
+
+Latent, NOT fixed here: `updateSelectionFocus` clears `pending` unconditionally, so any
+direct ref write retires an in-flight request. Nothing in the boot path does that once the
+guard is fixed. Same entanglement as the `twin-request-selection-sagas` backlog item —
+direct writes and request resolutions share one action.
+
 ---
 
 ## Phase B — the port (PR 2)
