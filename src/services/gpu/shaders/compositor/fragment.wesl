@@ -81,13 +81,26 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     mapped = applyAces(scaled);
   }
 
-  // HDR spike: the curve above compressed everything into [0,1] for SDR.
-  // On an HDR swap we additionally spill the energy ABOVE the knee back on
-  // top, so bright sources (sun, bloom, bright stars) punch into the
-  // display's headroom (>1.0) instead of flattening to paper-white. When
-  // hdrHeadroom is 0 (SDR) this adds nothing and the result is identical.
-  let peak = max(scaled - vec3<f32>(u.hdrKneeStart), vec3<f32>(0.0));
-  let out = mapped + peak * u.hdrHeadroom;
+  // Every curve above clamps into [0,1], so 'mapped' can never exceed white and
+  // a pixel past the curve's saturation point is indistinguishable from one far
+  // past it. On an extended-range swap we hand those pixels back their
+  // separation: energy ABOVE the knee is added on top, so bright sources (Sun,
+  // bloom, star cores) climb into the display's headroom instead of flattening
+  // to paper-white. hdrKnee defaults to the curve's own saturation point, so the
+  // spill picks up exactly where the curve gives up. hdrHeadroom of 0 (every SDR
+  // draw) adds nothing and the result is bit-identical to the curve alone.
+  //
+  // Brightness is the MAX CHANNEL, matching the bloom bright-pass ('bloom/
+  // bright.wesl'), so the two passes agree on which pixels count as bright. The
+  // spill then rides the pixel's own colour ratio rather than being added per
+  // channel: a saturated red star gains brightness without drifting toward
+  // white, upholding the hue contract 'lib/starKnee.wesl' establishes upstream.
+  // A per-channel add would re-introduce exactly the channel-at-a-time distortion
+  // that module exists to prevent, one stage later.
+  let lum = max(scaled.r, max(scaled.g, scaled.b));
+  let peak = max(0.0, lum - u.hdrKnee);
+  let tint = scaled / max(lum, 0.0001);
+  let out = mapped + tint * peak * u.hdrHeadroom;
 
   // Alpha depends on the blend the caller picked, packed into
   // 'preserveAlpha':

@@ -323,7 +323,7 @@ export function timedSlotGroupsOf(
  * the `'bloom'` step, and `runBloom` also no-ops on a null `bloomPyramid`, so the
  * pre-allocated slot simply goes unused, like any empty group's slot.
  */
-const PLACEHOLDER_TONE: ToneMap = { exposure: 1, curve: 0, hdrKneeStart: 0, hdrHeadroom: 0 };
+const PLACEHOLDER_TONE: ToneMap = { exposure: 1, curve: 0, hdrKnee: 0, hdrHeadroom: 0 };
 
 export const TIMED_SLOTS: readonly string[] = timedSlotsOf(
   frameProgram(PLACEHOLDER_TONE, true),

@@ -49,6 +49,8 @@ import {
   DEFAULT_BRIGHTNESS,
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_EXPOSURE,
+  DEFAULT_HDR_KNEE,
+  DEFAULT_HDR_HEADROOM,
   DEFAULT_FAMOUS_STARS_ENABLED,
   DEFAULT_FLOW,
   DEFAULT_GALAXY_FALLOFF_STRENGTH,
@@ -103,7 +105,12 @@ export function makeSettingsFixture(
         GALAXY_CATALOG_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
       ) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>,
     },
-    tonemap: { exposure: DEFAULT_EXPOSURE, curve: DEFAULT_TONE_MAP_CURVE },
+    tonemap: {
+      exposure: DEFAULT_EXPOSURE,
+      curve: DEFAULT_TONE_MAP_CURVE,
+      hdrKnee: DEFAULT_HDR_KNEE,
+      hdrHeadroom: DEFAULT_HDR_HEADROOM,
+    },
     bloom: {
       enabled: DEFAULT_BLOOM_ENABLED,
       strength: DEFAULT_BLOOM_STRENGTH,

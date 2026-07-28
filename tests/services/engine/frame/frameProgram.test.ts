@@ -32,7 +32,7 @@ import type { ContentLayer } from '../../../../src/@types/engine/frame/ContentLa
 import type { FrameStep } from '../../../../src/@types/engine/frame/FrameStep';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 
-const TONE: ToneMap = { exposure: 1.5, curve: 4, hdrKneeStart: 0, hdrHeadroom: 0 };
+const TONE: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0 };
 
 function makeCam(): OrbitCamera {
   return {

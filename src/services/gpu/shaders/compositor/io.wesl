@@ -34,8 +34,8 @@
 // two alpha-related flags are separate u32s because they answer two
 // independent questions — 'do we tone-map at all' and 'is this a
 // coverage-bearing layer' — and folding them would re-braid them.
-// hdrKneeStart / hdrHeadroom are the HDR-output spike's two knobs (see
-// their doc comments below); both are 0 in every SDR draw.
+// hdrKnee / hdrHeadroom are the extended-range headroom knobs (see their
+// doc comments below); both are 0 in every SDR draw.
 //
 // | offset | field         | type |
 // | ------ | ------------- | ---- |
@@ -45,7 +45,7 @@
 // | 12     | curve         | u32  |
 // | 16     | toneEnabled   | u32  |
 // | 20     | preserveAlpha | u32  |
-// | 24     | hdrKneeStart  | f32  |
+// | 24     | hdrKnee       | f32  |
 // | 28     | hdrHeadroom   | f32  |
 
 struct CompositorUniforms {
@@ -62,10 +62,10 @@ struct CompositorUniforms {
   toneEnabled: u32,
   // 1 = emit the source's straight-alpha coverage; 0 = force opaque 1.0.
   preserveAlpha: u32,
-  // HDR spike (bytes 24, 28): the knee above which over-white energy spills
-  // into the extended-range swap, and the multiplier on that spill. Both 0
-  // in SDR so the output is identical to the pre-spike tone-map.
-  hdrKneeStart: f32,
+  // Bytes 24, 28: the post-exposure knee above which over-white energy spills
+  // into an extended-range swap chain, and the multiplier on that spill. Both 0
+  // in SDR, where the output is exactly the tone curve's clamped result.
+  hdrKnee: f32,
   hdrHeadroom: f32,
 }
 

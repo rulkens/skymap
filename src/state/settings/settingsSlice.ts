@@ -131,6 +131,12 @@ const settingsSlice = createSlice({
     setToneMapCurve: (settings, action: PayloadAction<ToneMapCurve>) => {
       settings.tonemap.curve = action.payload;
     },
+    setHdrKnee: (settings, action: PayloadAction<number>) => {
+      settings.tonemap.hdrKnee = action.payload;
+    },
+    setHdrHeadroom: (settings, action: PayloadAction<number>) => {
+      settings.tonemap.hdrHeadroom = action.payload;
+    },
 
     // ── bloom ───────────────────────────────────────────────────────────────
     setBloomEnabled: (settings, action: PayloadAction<boolean>) => {
@@ -482,6 +488,8 @@ export const {
   setGalaxyCatalogLabelEnabled,
   setExposure,
   setToneMapCurve,
+  setHdrKnee,
+  setHdrHeadroom,
   setBloomEnabled,
   setBloomStrength,
   setBloomThreshold,

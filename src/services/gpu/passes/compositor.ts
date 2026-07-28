@@ -74,16 +74,11 @@ import fsCode from '../shaders/compositor/fragment.wesl?static';
 import { clampExposure } from '../../../utils/clampExposure';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../lib/blendStates';
+import { DEFAULT_WHITEPOINT, DEFAULT_ASINH_SOFTNESS } from '../../../data/defaults';
 import type { Compositor } from '../../../@types/rendering/Compositor';
 import type { CompositeBlend } from '../../../@types/rendering/CompositeBlend';
 import type { ToneMap } from '../../../@types/rendering/ToneMap';
 import type { Renderer } from '../../../@types/rendering/Renderer';
-
-/** Default whitepoint for Reinhard-extended — input value where the curve reaches 1.0. */
-export const DEFAULT_WHITEPOINT = 4.0;
-
-/** Default softness for asinh stretch — higher = more aggressive low-end lift. */
-export const DEFAULT_ASINH_SOFTNESS = 10.0;
 
 // ─── JS-mirror tone-map curves ────────────────────────────────────────────
 //
@@ -233,8 +228,8 @@ export function createCompositor(init: {
   const cache = new Map<string, { pipeline: GPURenderPipeline; uniformBuffer: GPUBuffer }>();
 
   // Mixed f32/u32 uniform — pack via two views over one 32-byte
-  // ArrayBuffer. Lanes 6 and 7 (bytes 24..31) carry the HDR-output spike's
-  // `hdrKneeStart` / `hdrHeadroom` — see the `if (tone)` / `else` branches
+  // ArrayBuffer. Lanes 6 and 7 (bytes 24..31) carry the extended-range
+  // `hdrKnee` / `hdrHeadroom` — see the `if (tone)` / `else` branches
   // below. They stay zero in the tone-null / SDR case (a fresh ArrayBuffer
   // is zero-filled), satisfying the uniform 16-byte-stride requirement with
   // no unused padding left in the buffer.
@@ -295,9 +290,9 @@ export function createCompositor(init: {
         uniformF32[2] = DEFAULT_ASINH_SOFTNESS;
         uniformU32[3] = tone.curve >>> 0;
         uniformU32[4] = 1;
-        // HDR spike: 0 unless the caller opted a swap chain into HDR
-        // (`renderFrame` only sets these non-zero when `ctx.hdr` is true).
-        uniformF32[6] = tone.hdrKneeStart;
+        // 0 unless the caller opted a swap chain into HDR (`renderFrame` only
+        // sets these non-zero when `ctx.hdr` is true).
+        uniformF32[6] = tone.hdrKnee;
         uniformF32[7] = tone.hdrHeadroom;
       } else {
         // No tone-map: exposure 1.0, curve params zeroed, toneEnabled 0.

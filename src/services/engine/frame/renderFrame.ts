@@ -53,18 +53,6 @@ import { frameProgram } from './frameProgram';
 import { resolveStrategy } from './resolveStrategy';
 import { CONTENT_LAYERS } from './passes';
 
-// HDR-output spike: the two knobs that shape how much over-white energy
-// spills above 1.0 into the extended-range swap chain (see
-// `ToneMap.hdrKneeStart` / `ToneMap.hdrHeadroom` and the compositor
-// fragment shader that reads them). Both are only ever non-zero when
-// `ctx.hdr` is true — see the `frameProgram` call below — so on every
-// default page load and every SDR display this constant pair is dead
-// weight, never reaching the shader as anything but 0.
-/** HDR spike: over-white energy above this scaled value spills into display headroom. Tunable. */
-const HDR_KNEE_START = 1.0;
-/** HDR spike: multiplier on the spilled over-white energy. Conservative default; tune per display. */
-const HDR_HEADROOM = 0.25;
-
 /**
  * Encode and submit one frame. Synchronous: by the time it returns, the GPU
  * has the buffer queued. Order of operations is the `frameProgram` step list
@@ -101,12 +89,12 @@ export function renderFrame(input: RenderFrameInput): void {
       {
         exposure: state.settings.tonemap.exposure,
         curve: state.settings.tonemap.curve,
-        // HDR spike: 0 on every SDR frame — `ctx.hdr` is only true behind
-        // BOTH the `?hdr` URL gate and a real `(dynamic-range: high)`
-        // display (see `initGpu` in `device.ts`), so this is a no-op unless
-        // both conditions hold.
-        hdrKneeStart: ctx.hdr ? HDR_KNEE_START : 0,
-        hdrHeadroom: ctx.hdr ? HDR_HEADROOM : 0,
+        // Zeroed on every SDR frame — `ctx.hdr` is only true behind BOTH the
+        // `?hdr` URL gate and a real `(dynamic-range: high)` display (see
+        // `initGpu` in `device.ts`). Gating here rather than in the shader
+        // keeps the SDR output bit-identical no matter where the sliders sit.
+        hdrKnee: ctx.hdr ? state.settings.tonemap.hdrKnee : 0,
+        hdrHeadroom: ctx.hdr ? state.settings.tonemap.hdrHeadroom : 0,
       },
       // The master bloom toggle is the ONLY bloom value that shapes the step
       // list; strength/threshold are read live by the bloom layers each draw.

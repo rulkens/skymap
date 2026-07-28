@@ -301,6 +301,8 @@ function makeInput(
     focus: { center: [0, 0, 0], apparentRadiusMpc: 0, physicalRadiusMpc: 0, blend: 0 } as const,
     exposure: 1.0,
     toneMapCurve: ToneMapCurve.Reinhard,
+    hdrKnee: 4.0,
+    hdrHeadroom: 0.25,
     galaxyTexturesEnabled: true,
     milkyWayEnabled: true,
     filamentsEnabled: false,
@@ -450,7 +452,12 @@ function makeInput(
             provenance: settings.provenance,
             depthFade: settings.depthFadeEnabled,
           },
-          tonemap: { exposure: settings.exposure, curve: settings.toneMapCurve },
+          tonemap: {
+            exposure: settings.exposure,
+            curve: settings.toneMapCurve,
+            hdrKnee: settings.hdrKnee,
+            hdrHeadroom: settings.hdrHeadroom,
+          },
           // Bloom off by default in these fixtures: the bloom render steps only
           // shape the program when enabled, and no fixture asserts on them.
           bloom: { enabled: settings.bloomEnabled, strength: 1, threshold: 1 },
@@ -622,9 +629,23 @@ describe('renderFrame', () => {
     expect(args[3]).toEqual({
       exposure: fx.settings.exposure,
       curve: fx.settings.toneMapCurve,
-      hdrKneeStart: 0,
+      hdrKnee: 0,
       hdrHeadroom: 0,
     });
+  });
+
+  it('forwards the settings headroom knobs only when the swap chain is extended-range', () => {
+    // The two knobs are live settings but must reach the shader as 0 on an SDR
+    // swap chain, where spilled energy would just be clamped back to white. The
+    // gate lives in renderFrame, so flipping ctx.hdr is the whole difference
+    // between the settings values and zeros.
+    fx.input.ctx.hdr = true;
+    renderFrame(fx.input);
+
+    const draw = fx.compositor.draw as ReturnType<typeof vi.fn>;
+    const tone = draw.mock.calls[0]![3];
+    expect(tone.hdrKnee).toBe(fx.settings.hdrKnee);
+    expect(tone.hdrHeadroom).toBe(fx.settings.hdrHeadroom);
   });
 
   it('records the full frame in canonical order: createEncoder → hdr COSMO pass (points) → hdr NEAR0 pass (milky-way) → composite pass → compositor.draw → finish → submit', () => {

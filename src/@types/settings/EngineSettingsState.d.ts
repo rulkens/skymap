@@ -127,6 +127,18 @@ export type EngineSettingsState = {
   tonemap: {
     exposure: number;
     curve: ToneMapCurve;
+    /**
+     * Post-exposure brightness above which over-white energy spills into an
+     * extended-range swap chain's headroom. Same units as the curve's own input,
+     * so it stays aligned with where the curve saturates as exposure moves.
+     * Default `DEFAULT_HDR_KNEE`.
+     */
+    hdrKnee: number;
+    /**
+     * Multiplier on the spilled over-knee energy. 0 is exactly the SDR result.
+     * Default `DEFAULT_HDR_HEADROOM`.
+     */
+    hdrHeadroom: number;
   };
 
   /**

@@ -26,6 +26,8 @@ import {
   DEFAULT_SHOW_PICK_BUFFER,
   DEFAULT_SHOW_DISK_RADIUS_RING,
   DEFAULT_EXPOSURE,
+  DEFAULT_HDR_KNEE,
+  DEFAULT_HDR_HEADROOM,
   DEFAULT_BLOOM_ENABLED,
   DEFAULT_BLOOM_STRENGTH,
   DEFAULT_BLOOM_THRESHOLD,
@@ -114,6 +116,8 @@ export function buildInitialSettings(): EngineSettingsState {
     tonemap: {
       exposure: DEFAULT_EXPOSURE,
       curve: DEFAULT_TONE_MAP_CURVE,
+      hdrKnee: DEFAULT_HDR_KNEE,
+      hdrHeadroom: DEFAULT_HDR_HEADROOM,
     },
     // Screen-space bloom: master gate + the two look knobs, each seeded from its
     // `data/defaults.ts` constant so that file stays the default's single source

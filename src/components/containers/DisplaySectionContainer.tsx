@@ -2,9 +2,10 @@
 /**
  * DisplaySectionContainer — store boundary for the Display settings section.
  *
- * Owns all Redux reach for the Display group: reads `selectToneMapCurve` and
- * wraps the `setToneMapCurve` dispatch in `useCallback`. The presentational
- * `DisplaySection` imports nothing from `store/` or `state/`.
+ * Owns all Redux reach for the Display group: the orientation frame, the tone-map
+ * curve and exposure, the two extended-range headroom knobs, and the bloom trio,
+ * each dispatch wrapped in `useCallback`. The presentational `DisplaySection`
+ * imports nothing from `store/` or `state/`.
  *
  * Nested subgroups (e.g. `EarthSectionContainer`) are passed in as `children`
  * and forwarded to `DisplaySection`, keeping each subgroup's store reach in its
@@ -25,12 +26,18 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
   selectOrientation,
   selectToneMapCurve,
+  selectExposure,
+  selectHdrKnee,
+  selectHdrHeadroom,
   selectBloomEnabled,
   selectBloomStrength,
   selectBloomThreshold,
 } from '../../state/settings/selectors';
 import {
   setToneMapCurve,
+  setExposure,
+  setHdrKnee,
+  setHdrHeadroom,
   setBloomEnabled,
   setBloomStrength,
   setBloomThreshold,
@@ -48,6 +55,9 @@ function DisplaySectionContainer({ children }: DisplaySectionContainerProps): Re
   const dispatch = useAppDispatch();
   const orientation = useAppSelector(selectOrientation);
   const toneMapCurve = useAppSelector(selectToneMapCurve);
+  const exposure = useAppSelector(selectExposure);
+  const hdrKnee = useAppSelector(selectHdrKnee);
+  const hdrHeadroom = useAppSelector(selectHdrHeadroom);
   const bloomEnabled = useAppSelector(selectBloomEnabled);
   const bloomStrength = useAppSelector(selectBloomStrength);
   const bloomThreshold = useAppSelector(selectBloomThreshold);
@@ -61,6 +71,12 @@ function DisplaySectionContainer({ children }: DisplaySectionContainerProps): Re
   );
   const onToneMapCurveChange = useCallback(
     (curve: ToneMapCurve) => dispatch(setToneMapCurve(curve)),
+    [dispatch],
+  );
+  const onExposureChange = useCallback((next: number) => dispatch(setExposure(next)), [dispatch]);
+  const onHdrKneeChange = useCallback((next: number) => dispatch(setHdrKnee(next)), [dispatch]);
+  const onHdrHeadroomChange = useCallback(
+    (next: number) => dispatch(setHdrHeadroom(next)),
     [dispatch],
   );
   const onBloomEnabledChange = useCallback(
@@ -82,6 +98,12 @@ function DisplaySectionContainer({ children }: DisplaySectionContainerProps): Re
       onOrientationChange={onOrientationChange}
       toneMapCurve={toneMapCurve}
       onToneMapCurveChange={onToneMapCurveChange}
+      exposure={exposure}
+      onExposureChange={onExposureChange}
+      hdrKnee={hdrKnee}
+      onHdrKneeChange={onHdrKneeChange}
+      hdrHeadroom={hdrHeadroom}
+      onHdrHeadroomChange={onHdrHeadroomChange}
       bloomEnabled={bloomEnabled}
       onBloomEnabledChange={onBloomEnabledChange}
       bloomStrength={bloomStrength}

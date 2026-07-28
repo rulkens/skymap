@@ -300,6 +300,50 @@ export const DEFAULT_TONE_MAP_CURVE: ToneMapCurveT = ToneMapCurve.Reinhard;
  */
 export const DEFAULT_EXPOSURE = 3.0;
 
+/**
+ * Whitepoint for the Reinhard-extended curve — the post-exposure input value at
+ * which it reaches exactly 1.0 and clamps. Not a settings field: the curve
+ * parameters are fixed shape, only the curve CHOICE is user-facing. Lives here
+ * rather than beside the compositor so `DEFAULT_HDR_KNEE` can state its identity
+ * with it directly instead of restating the number.
+ */
+export const DEFAULT_WHITEPOINT = 4.0;
+
+/** Softness for the asinh stretch — higher = more aggressive low-end lift. */
+export const DEFAULT_ASINH_SOFTNESS = 10.0;
+
+/**
+ * Default HDR headroom knee — the brightness above which a pixel's over-white
+ * energy spills past paper-white into an extended-range swap chain. Seeds
+ * `settings.tonemap.hdrKnee`.
+ *
+ * Measured in the SAME post-exposure units the tone curve works in, and defaulted
+ * to the Reinhard whitepoint, because the knee's job is to pick up exactly where
+ * the curve runs out of range: `applyReinhard` reaches 1.0 at the whitepoint and
+ * clamps from there, so a pixel at the knee is precisely one that the curve can no
+ * longer separate. Sharing the curve's units means the two stay aligned when the
+ * exposure slider moves — raising exposure makes a dimmer pixel saturate, and the
+ * knee follows without being re-tuned. (Bloom's threshold is pre-exposure instead
+ * because bloom reads the raw buffer before the tone map; the spill runs after it.)
+ *
+ * Below the whitepoint the spill lifts midtones the curve was still handling; above
+ * it, highlights clip flat to white before the spill picks them up. The other four
+ * curves saturate elsewhere (asinh and gamma2 at 1.0, ACES near 2.5), so switching
+ * curve wants a nudge on the slider — which is what the slider is for. Inert unless
+ * the swap chain is the extended-range surface (`GpuContext.hdr`).
+ */
+export const DEFAULT_HDR_KNEE = DEFAULT_WHITEPOINT;
+
+/**
+ * Default multiplier on the over-knee energy spilled into display headroom.
+ * Seeds `settings.tonemap.hdrHeadroom`. 0 is exactly the SDR result — the tone
+ * curve's compressed output, nothing added — so the knob spans "no headroom" to
+ * "aggressive headroom" with no discontinuity at either end. 0.25 is deliberately
+ * conservative: available headroom varies per display and with screen brightness,
+ * so the honest default under-uses it rather than clipping on a modest panel.
+ */
+export const DEFAULT_HDR_HEADROOM = 0.25;
+
 // ── Screen-space bloom ───────────────────────────────────────────────────────
 
 /**
