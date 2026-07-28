@@ -6,16 +6,16 @@
  * the structure row returns the structure's own id.
  */
 import { describe, it, expect } from 'vitest';
-import { URL_HASH_FOR } from '../../src/hooks/urlHashFor';
-import { MILKY_WAY_FOCUS_ID } from '../../src/services/url/milkyWayFocusId';
-import { MILKY_WAY_INFO } from '../../src/data/milkyWay/milkyWayInfo';
-import { selectionToFocusId } from '../../src/services/url/focusUrl';
-import { resolveFocusId } from '../../src/services/url/resolveFocusId';
-import type { GalaxyInfo } from '../../src/@types/engine/GalaxyInfo';
-import type { StructureInfo } from '../../src/@types/data/structure/StructureInfo';
-import type { BodyInfo } from '../../src/@types/engine/BodyInfo';
-import type { ResolveDeps } from '../../src/@types/engine/ResolveDeps';
-import { Source } from '../../src/data/sources';
+import { URL_HASH_FOR } from '../../../src/services/url/urlHashFor';
+import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
+import { MILKY_WAY_INFO } from '../../../src/data/milkyWay/milkyWayInfo';
+import { selectionToFocusId } from '../../../src/services/url/focusUrl';
+import { resolveFocusId } from '../../../src/services/url/resolveFocusId';
+import type { GalaxyInfo } from '../../../src/@types/engine/GalaxyInfo';
+import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
+import type { BodyInfo } from '../../../src/@types/engine/BodyInfo';
+import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
+import { Source } from '../../../src/data/sources';
 
 function makeGalaxy(source: number): GalaxyInfo {
   return {

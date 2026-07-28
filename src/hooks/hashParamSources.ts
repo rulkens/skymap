@@ -21,7 +21,7 @@
  */
 
 import type { HashParamSource } from '../@types/hooks/HashParamSource';
-import { URL_HASH_FOR } from './urlHashFor';
+import { URL_HASH_FOR } from '../services/url/urlHashFor';
 import { requestFocus } from '../state/selection/requestFocus';
 import { requestSelect } from '../state/selection/requestSelect';
 import { clearSelection } from '../state/selection/selectionSlice';

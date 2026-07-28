@@ -138,13 +138,19 @@ because it would rewrite the import in `hashParamSources.ts` — off-limits whil
 
 It is a pure codec, not a hook, and it already imports from `services/url/focusUrl.ts`.
 
-- [ ] `npm run move-files -- --dry src/hooks/urlHashFor.ts src/services/url/urlHashFor.ts`
+- [x] `npm run move-files -- --dry src/hooks/urlHashFor.ts src/services/url/urlHashFor.ts`
       — inspect the rewrite list.
-- [ ] `npm run move-files -- src/hooks/urlHashFor.ts src/services/url/urlHashFor.ts`
-- [ ] Grep for `urlHashFor` in non-TS contexts (`.md`, `vi.mock` string literals) —
+- [x] `npm run move-files -- src/hooks/urlHashFor.ts src/services/url/urlHashFor.ts`
+- [x] Grep for `urlHashFor` in non-TS contexts (`.md`, `vi.mock` string literals) —
       ts-morph does not rewrite those. See `reference_move_files_blind_spots`.
-- [ ] `npm run typecheck` → clean.
-- [ ] Commit (move only, no behaviour).
+- [x] `npm run typecheck` → clean.
+- [x] Commit (move only, no behaviour).
+
+The test mirror came along automatically (`tests/hooks/urlHashFor.test.ts` →
+`tests/services/url/`), and three of the file's four imports collapsed from `../services/url/`
+to `./` — `focusUrl`, `milkyWayFocusId`, `bodyFocusId` and `starFocusId` were already its
+neighbours-in-waiting. The only `.md` hits are archival (completed plans, the grill
+transcript); those are a historical record and stay as written.
 
 ### Task 5: Phase A verification + PR 1
 
