@@ -41,14 +41,28 @@ beside the two ref slots it already nulls (`selectionSlice.ts:33-36`).
 
 - [ ] Test `requestFocus records the pending focus id`
 - [ ] Test `updateSelectionFocus clears the pending focus id`
-- [ ] Test `a newer requestFocus replaces the pending id` — this is what makes
+- [x] Test `a newer requestFocus replaces the pending id` — this is what makes
       `takeLatest`'s stale-deferral abort need no explicit handling
-- [ ] Test `clearSelection nulls both pending slots`
-- [ ] Test `requestSelect and requestFocus track independently` — the two slots must not
+- [x] Test `clearSelection nulls both pending slots`
+- [x] Test `requestSelect and requestFocus track independently` — the two slots must not
       alias; a select-only request leaves `pending.focus` null
-- [ ] Implement via `extraReducers` on `selectionSlice`.
-- [ ] `npm test -- selection` → green.
-- [ ] Commit.
+- [x] Implement via `extraReducers` on `selectionSlice`.
+- [x] `npm test -- selection` → green.
+- [x] Commit. → `630216e7`
+
+**Two corrections found during implementation — the sketch above was wrong:**
+
+1. **`extraReducers` cannot handle the slice's OWN actions.** RTK builds
+   `finalCaseReducers` with the `reducers` entry applied LAST, so an `extraReducers`
+   case for an own action type is **silently dropped** — no warning, just a `pending`
+   slot that never clears. Only the two *commands* (`requestFocus` / `requestSelect`,
+   foreign actions) belong there; the two completions clear their slot inside their own
+   reducer via a `resolveRef(slot)` factory, deliberately outside the dedup guard (a
+   resolve landing on a structurally-equal ref is still a resolve).
+2. **`SelectionSlot = keyof SelectionState` broke.** Widening the state swept `'pending'`
+   into the slot union used by `SELECTION_WRITE_BY_SLOT` and `watchSelectionRowsSaga`.
+   It now derives the ref-*valued* keys via a mapped type, so the next non-ref field
+   drops out automatically rather than needing a hand-maintained exclusion.
 
 ### Task 2: the URL write holds the pending id (the clobber fix)
 

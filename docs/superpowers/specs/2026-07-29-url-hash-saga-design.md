@@ -288,14 +288,29 @@ intent: `selection` holds three *resolved-ref* slots, and the deferral lives ins
 // SelectionState gains:
 readonly pending: { readonly select: string | null; readonly focus: string | null };
 
-// selectionSlice extraReducers — pending is state derived from the action stream,
-// which is a reducer's job, so no saga edits at all:
-.addCase(requestFocus,          (selection, action) => { selection.pending.focus  = action.payload })
-.addCase(requestSelect,         (selection, action) => { selection.pending.select = action.payload })
-.addCase(updateSelectionFocus,  (selection) => { selection.pending.focus  = null })
-.addCase(updateSelectionSelect, (selection) => { selection.pending.select = null })
-// clearSelection nulls both, beside the two ref slots it already nulls
+// pending is state derived from the action stream, which is a reducer's job — no saga
+// edits at all. The two COMMANDS are foreign actions, so they land in extraReducers:
+.addCase(requestFocus,  (selection, action) => { selection.pending.focus  = action.payload })
+.addCase(requestSelect, (selection, action) => { selection.pending.select = action.payload })
+
+// The two COMPLETIONS are this slice's OWN actions, so their clear rides inside their
+// reducer via a resolveRef(slot) factory — NOT a second addCase. See the landmine below.
+// clearSelection nulls both pending slots, beside the two ref slots it already nulls.
 ```
+
+**Landmine, found during implementation (2026-07-29, commit `630216e7`).** RTK's
+`createSlice` builds `finalCaseReducers` with the `reducers` entry applied **last**, so an
+`extraReducers` case whose action type collides with an own reducer is **silently
+dropped** — no warning, no throw, just a `pending` slot that never clears.
+`updateSelectionFocus` / `updateSelectionSelect` are own actions, so their clear must live
+in the reducer body. It sits deliberately outside `setIfChanged`'s dedup guard: a resolve
+landing on a structurally-equal ref is still a resolve, and skipping the clear there would
+strand `pending` for the rest of the session.
+
+**Second correction.** `SelectionSlot` was `keyof SelectionState`, which swept `'pending'`
+into the slot union consumed by `SELECTION_WRITE_BY_SLOT` and `watchSelectionRowsSaga`. It
+now derives the ref-*valued* keys via a mapped type, so the next non-ref field drops out
+automatically rather than needing a hand-maintained `Exclude`.
 
 `takeLatest`'s stale-deferral abort needs no handling: a newer `requestFocus` overwrites
 `pending.focus` in the reducer, which is exactly right.
