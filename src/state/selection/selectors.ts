@@ -65,6 +65,20 @@ export const selectSelectedRef = (state: RootState): SelectionRef | null =>
 export const selectFocusRef = (state: RootState): SelectionRef | null =>
   selectSelection(state).focus;
 
+// --- pending request reads (in-flight Intent) ---------------------------------
+
+/**
+ * The durable id a `requestSelect` / `requestFocus` is still waiting to resolve,
+ * or null when nothing is in flight. Readers that must not lose the target
+ * during the resolve window — a request defers until its catalog lands — take
+ * the pending id first and fall back to the resolved ref.
+ */
+export const selectPendingSelectId = (state: RootState): string | null =>
+  selectSelection(state).pending.select;
+
+export const selectPendingFocusId = (state: RootState): string | null =>
+  selectSelection(state).pending.focus;
+
 // --- selectionRows slot reads (resolved display cache) ------------------------
 
 export const selectHoverRow = (state: RootState): SelectionRow | null =>

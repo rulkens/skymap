@@ -91,7 +91,13 @@ const stubState = (
   }> = {},
 ) =>
   ({
-    [selectionRoute]: { hover: null, select: null, focus: null, ...selection },
+    [selectionRoute]: {
+      hover: null,
+      select: null,
+      focus: null,
+      pending: { select: null, focus: null },
+      ...selection,
+    },
     [selectionRowsRoute]: { hover: null, select: null, focus: null, ...selectionRows },
   }) as unknown as RootState;
 
