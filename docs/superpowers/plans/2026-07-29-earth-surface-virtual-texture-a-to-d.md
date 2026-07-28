@@ -305,17 +305,17 @@ open source question.
 over an equirect file on disk, reading through `rawDataPath()` — **never** a literal
 `data/raw/...` string.
 
-- [ ] Add both `.d.ts` files, one type each.
-- [ ] Implement `equirectFileSource` against `textures.nasaBmng` (21600 × 10800,
+- [x] Add both `.d.ts` files, one type each.
+- [x] Implement `equirectFileSource` against `textures.nasaBmng` (21600 × 10800,
       `rawDataRegistry.ts:597-607`). `readBox` extracts the lon/lat box with `sharp` (already
       a dependency at 0.34.5) and resizes to the requested pixel size. Alpha is 255
       everywhere — BMNG has no no-data. Return `null` never, since coverage is global.
-- [ ] `maxLevel: 5`. z5's equirect width is `512 << 5 = 16384`, which is under 21600, so the
+- [x] `maxLevel: 5`. z5's equirect width is `512 << 5 = 16384`, which is under 21600, so the
       pyramid is a genuine downsample and never an upscale. z6 would be 32768 and would be
       inventing detail.
-- [ ] **No test.** `EarthImagerySource` conformance is a compiler check and the pixels are
+- [x] **No test.** `EarthImagerySource` conformance is a compiler check and the pixels are
       judged by eye in task B2.
-- [ ] `npm run typecheck`. Commit.
+- [x] `npm run typecheck`. Commit.
 
 ### Task B2: `buildEarthTiles`
 
@@ -340,20 +340,20 @@ Build order is deepest-level-first, then each coarser level a 2×2 average of th
 it correctly anyway, because Phase E is where it matters and Phase E should not be rewriting
 this loop.
 
-- [ ] Add `"build-earth-tiles": "tsx tools/textures/buildEarthTiles.ts"` to `package.json`.
-- [ ] Implement. Surface tiles are lossy WebP quality 82, sRGB, **with** an alpha channel
+- [x] Add `"build-earth-tiles": "tsx tools/textures/buildEarthTiles.ts"` to `package.json`.
+- [x] Implement. Surface tiles are lossy WebP quality 82, sRGB, **with** an alpha channel
       (design 7) even though BMNG's alpha is uniformly 255 — the channel's presence is what
       Phase C and D are built against.
-- [ ] `flipY: false` orientation: row 0 of every tile is its NORTH edge. The reconciliation
+- [x] `flipY: false` orientation: row 0 of every tile is its NORTH edge. The reconciliation
       with the mesh's south-first `v` happens in the tile-index arithmetic (task A2), in one
       place, not per upload.
-- [ ] Run it. 512 tiles at z5, no network.
-- [ ] **Visual check before wiring anything:** open a handful of tiles as flat files —
+- [x] Run it. 512 tiles at z5, no network.
+- [x] **Visual check before wiring anything:** open a handful of tiles as flat files —
       one mid-latitude, one polar, one spanning the antimeridian — and confirm they are the
       right patch of Earth the right way up. A wrong flip caught here costs a minute; caught
       in Phase D it looks like a shader bug.
-- [ ] **No test.** No GPU, no assertion worth making; the output is judged by eye.
-- [ ] Commit. Do NOT commit the emitted tiles — confirm `public/data/images/earth-tiles/` is
+- [x] **No test.** No GPU, no assertion worth making; the output is judged by eye.
+- [x] Commit. Do NOT commit the emitted tiles — confirm `public/data/images/earth-tiles/` is
       gitignored first, and add it if not.
 
 ---
@@ -374,6 +374,20 @@ through `dataUrl()` (`src/services/loading/fetchWithProgress.ts:24`).
 
 Not committed codegen (spec design 8): the virtual texture engages only on close approach so
 a round trip costs nothing, and re-baking deeper must be a data change, not a code deploy.
+
+**Two corrections from the Phase B bake, both load-bearing:**
+
+1. **`levels` and `builtFrom` must be `Partial<Record<EarthTileKind, …>>`, not total.**
+   `EarthTileKind` is `'surface' | 'normal'`, and a surface-only bake cannot satisfy a total
+   `Record` without inventing a `normal` range. The emitted manifest carries `surface` only,
+   so a total type would have the runtime read `manifest.levels.normal` as defined when it is
+   absent. Q1 answering "tile the normal too" adds a key; it does not change the type.
+2. **A fully-opaque WebP has no alpha plane on disk.** libwebp drops it, and there is no
+   option to force it, so the BMNG tiles report `channels: 3, hasAlpha: false` even though
+   they were encoded from a 4-channel raster. Harmless — `createImageBitmap` plus an
+   `rgba8unorm-srgb` upload yields alpha 1 regardless, so the shader's `tile.a` land-mask
+   contract holds — but **nothing in Phase C or D may assert 4 channels** on the file or on
+   the decoded bitmap. Phase E's land-only sources carry real transparency and keep the plane.
 
 - [ ] Add the type and the fetcher.
 - [ ] **No test.** The shape is enforced by its type at the one parse site; the null-on-failure
