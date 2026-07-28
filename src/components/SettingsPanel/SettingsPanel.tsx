@@ -16,7 +16,9 @@
  *   2. **Cosmic web** — the diffuse matter between galaxies (volumes + filaments).
  *   3. **Flow** — CF4++ peculiar-velocity overlay, sibling of Cosmic web.
  *   4. **Structures** — clusters / superclusters / voids as marker rings.
- *   5. **Labels** — every text annotation (cluster names, "you are here", …).
+ *   5. **Labels & Guides** — every text annotation (cluster names, "you are
+ *      here", …) plus the overlay guide toggles (constellation stick figures,
+ *      orbit trails).
  *   6. **Display** — power-user tone-curve disclosure (default closed).
  *
  * ### Props
@@ -50,7 +52,7 @@ import StarsSectionContainer from '../containers/StarsSectionContainer';
 import CosmicWebSectionContainer from '../containers/CosmicWebSectionContainer';
 import FlowSectionContainer from '../containers/FlowSectionContainer';
 import StructuresSectionContainer from '../containers/StructuresSectionContainer';
-import LabelsSectionContainer from '../containers/LabelsSectionContainer';
+import LabelsAndGuidesSectionContainer from '../containers/LabelsAndGuidesSectionContainer';
 import DisplaySectionContainer from '../containers/DisplaySectionContainer';
 import EarthSectionContainer from '../containers/EarthSectionContainer';
 
@@ -78,7 +80,7 @@ export const SettingsPanel = memo(function SettingsPanel({
       <CosmicWebSectionContainer />
       <FlowSectionContainer />
       <StructuresSectionContainer />
-      <LabelsSectionContainer />
+      <LabelsAndGuidesSectionContainer />
       <DisplaySectionContainer>
         <EarthSectionContainer />
       </DisplaySectionContainer>

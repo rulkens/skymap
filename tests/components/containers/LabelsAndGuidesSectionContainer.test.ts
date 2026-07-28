@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 /**
- * LabelsSectionContainer — store-backed tests.
+ * LabelsAndGuidesSectionContainer — store-backed tests.
  *
  * Pattern: `createAppStore()` + `<Provider>` + `createElement` (no JSX —
  * matches `vitest.config.ts` `include` glob `tests/**\/*.test.ts`).
@@ -21,6 +21,14 @@
  * `selectMilkyWayLabelEnabled`; toggling `famousGalaxy` flips the galaxy
  * catalog item's `labelEnabled` flag.
  *
+ * The master tri-state now folds FOUR non-category rows (star names, planet
+ * names, constellations, orbit trails) on top of the COSMO label categories —
+ * `constellations` defaults off and every other row defaults on, so the
+ * default-state master stays indeterminate whether the row count is three or
+ * four; that scenario alone wouldn't catch a miscounted row. `orbitTrailsEnabled`
+ * defaults on, so a store-seeded off is what actually pins the fourth row into
+ * the tri-state arithmetic.
+ *
  * Tests assert on `store.getState()` via selectors — RTK dispatch is
  * synchronous so the store reflects the new value immediately after the
  * fireEvent.click. No need to await re-renders.
@@ -35,12 +43,13 @@ import { describe, it, expect } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
-import LabelsSectionContainer from '../../../src/components/containers/LabelsSectionContainer';
+import LabelsAndGuidesSectionContainer from '../../../src/components/containers/LabelsAndGuidesSectionContainer';
 import { createAppStore } from '../../../src/store/createAppStore';
 import {
   selectStructureItems,
   selectGalaxyCatalogItems,
   selectMilkyWayLabelEnabled,
+  selectOrbitTrailsEnabled,
 } from '../../../src/state/settings/selectors';
 import type { AppStore } from '../../../src/store/types';
 
@@ -48,15 +57,33 @@ function makeWrapper(store: AppStore) {
   return ({ children }: { children: ReactNode }) => createElement(Provider, { store, children });
 }
 
-describe('LabelsSectionContainer', () => {
+describe('LabelsAndGuidesSectionContainer', () => {
   it('renders with default store state: constellations off, rest on → master indeterminate', () => {
     const { store } = createAppStore();
-    const { container } = render(createElement(LabelsSectionContainer, null), {
+    const { container } = render(createElement(LabelsAndGuidesSectionContainer, null), {
       wrapper: makeWrapper(store),
     });
 
     // Master checkbox (in the header) should be indeterminate — the constellations
-    // overlay defaults off while every other label row defaults on.
+    // overlay defaults off while every other label row (orbit trails included)
+    // defaults on.
+    const headerCheckbox = container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
+    expect(headerCheckbox.checked).toBe(false);
+    expect(headerCheckbox.indeterminate).toBe(true);
+  });
+
+  it('is indeterminate when every row is on except a store-seeded orbit-trails off', () => {
+    const { store } = createAppStore();
+    // Flip constellations on and orbit trails off — isolates the fourth row's
+    // contribution to the master tri-state from the default-state fixture above.
+    store.dispatch({ type: 'settings/setConstellationsEnabled', payload: true });
+    store.dispatch({ type: 'settings/setOrbitTrailsEnabled', payload: false });
+    expect(selectOrbitTrailsEnabled(store.getState())).toBe(false);
+
+    const { container } = render(createElement(LabelsAndGuidesSectionContainer, null), {
+      wrapper: makeWrapper(store),
+    });
+
     const headerCheckbox = container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
     expect(headerCheckbox.checked).toBe(false);
     expect(headerCheckbox.indeterminate).toBe(true);
@@ -70,7 +97,7 @@ describe('LabelsSectionContainer', () => {
       payload: { id: 'cluster', enabled: false },
     });
 
-    const { container } = render(createElement(LabelsSectionContainer, null), {
+    const { container } = render(createElement(LabelsAndGuidesSectionContainer, null), {
       wrapper: makeWrapper(store),
     });
 
@@ -94,7 +121,7 @@ describe('LabelsSectionContainer', () => {
     // Confirm initial state: cluster.labelEnabled is true.
     expect(selectStructureItems(store.getState())['cluster'].labelEnabled).toBe(true);
 
-    const { container } = render(createElement(LabelsSectionContainer, null), {
+    const { container } = render(createElement(LabelsAndGuidesSectionContainer, null), {
       wrapper: makeWrapper(store),
     });
 
@@ -116,7 +143,7 @@ describe('LabelsSectionContainer', () => {
     // Confirm initial state: milkyWay label is enabled.
     expect(selectMilkyWayLabelEnabled(store.getState())).toBe(true);
 
-    const { container } = render(createElement(LabelsSectionContainer, null), {
+    const { container } = render(createElement(LabelsAndGuidesSectionContainer, null), {
       wrapper: makeWrapper(store),
     });
 
@@ -138,7 +165,7 @@ describe('LabelsSectionContainer', () => {
     // Confirm initial state: famousGalaxy.labelEnabled is true.
     expect(selectGalaxyCatalogItems(store.getState())['famousGalaxy'].labelEnabled).toBe(true);
 
-    const { container } = render(createElement(LabelsSectionContainer, null), {
+    const { container } = render(createElement(LabelsAndGuidesSectionContainer, null), {
       wrapper: makeWrapper(store),
     });
 
@@ -153,5 +180,24 @@ describe('LabelsSectionContainer', () => {
 
     // Assert the galaxy catalog item's labelEnabled flipped — confirming setGalaxyCatalogLabelEnabled.
     expect(selectGalaxyCatalogItems(store.getState())['famousGalaxy'].labelEnabled).toBe(false);
+  });
+
+  it('toggling the orbit-trails row dispatches setOrbitTrailsEnabled', () => {
+    const { store } = createAppStore();
+    expect(selectOrbitTrailsEnabled(store.getState())).toBe(true);
+
+    const { container } = render(createElement(LabelsAndGuidesSectionContainer, null), {
+      wrapper: makeWrapper(store),
+    });
+
+    const expandButton = container.querySelector<HTMLButtonElement>('button[type=button]')!;
+    fireEvent.click(expandButton);
+
+    const orbitTrailsCheckbox = container.querySelector<HTMLInputElement>('#toggle-orbit-trails')!;
+    expect(orbitTrailsCheckbox).not.toBeNull();
+    expect(orbitTrailsCheckbox.checked).toBe(true);
+    fireEvent.click(orbitTrailsCheckbox);
+
+    expect(selectOrbitTrailsEnabled(store.getState())).toBe(false);
   });
 });

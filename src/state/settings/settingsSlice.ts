@@ -443,7 +443,7 @@ const settingsSlice = createSlice({
     // Set the text-label axis for EVERY label-bearing category at once. Label
     // visibility has three authoritative homes (structure items, the famous-
     // galaxy catalog item, the milkyWay scalar); this routes each LABEL_CATEGORY
-    // to its home, mirroring LabelsSectionContainer's dispatch guard. One
+    // to its home, mirroring LabelsAndGuidesSectionContainer's dispatch guard. One
     // dispatchable action for the panel's tri-state master and for tour setup,
     // so callers don't hand-roll the per-category loop.
     setLabelsEnabled: (settings, action: PayloadAction<boolean>) => {

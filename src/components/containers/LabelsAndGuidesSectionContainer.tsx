@@ -1,15 +1,17 @@
-// src/components/containers/LabelsSectionContainer.tsx
+// src/components/containers/LabelsAndGuidesSectionContainer.tsx
 /**
- * LabelsSectionContainer — store boundary for the Labels settings section.
+ * LabelsAndGuidesSectionContainer — store boundary for the Labels & Guides
+ * settings section.
  *
- * Owns all Redux reach for the Labels group: reads `selectStructureItems`,
- * `selectGalaxyCatalogItems`, and `selectMilkyWayLabelEnabled`, runs the
- * three-input label-projection, and wraps the 3-way dispatch guard in a
- * `useCallback`. It also owns the foreground caption toggles (star / planet
- * names) and the constellation row (the one overlay toggle that governs both
- * the stick figures and their name captions) — flat singleton settings that
- * route straight to their own setters. The presentational `LabelsSection`
- * imports nothing from `store/` or `state/`.
+ * Owns all Redux reach for the Labels & Guides group: reads
+ * `selectStructureItems`, `selectGalaxyCatalogItems`, and
+ * `selectMilkyWayLabelEnabled`, runs the three-input label-projection, and
+ * wraps the 3-way dispatch guard in a `useCallback`. It also owns the
+ * foreground caption toggles (star / planet names) and the overlay guide rows
+ * — constellations (the stick figures, whose name captions ride the same
+ * gate) and orbit trails — flat singleton settings that route straight to
+ * their own setters. The presentational `LabelsAndGuidesSection` imports
+ * nothing from `store/` or `state/`.
  *
  * ### Label-visibility projection
  *
@@ -40,8 +42,8 @@
  */
 
 import { memo, useCallback, useMemo } from 'react';
-import LabelsSection from '../SettingsPanel/LabelsSection';
-import type { NonCategoryLabelRow } from '../SettingsPanel/LabelsSection';
+import LabelsAndGuidesSection from '../SettingsPanel/LabelsAndGuidesSection';
+import type { NonCategoryRow } from '../SettingsPanel/LabelsAndGuidesSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
   selectStructureItems,
@@ -50,6 +52,7 @@ import {
   selectStarLabelsEnabled,
   selectPlanetLabelsEnabled,
   selectConstellationsEnabled,
+  selectOrbitTrailsEnabled,
 } from '../../state/settings/selectors';
 import {
   setStructureLabelEnabled,
@@ -58,12 +61,13 @@ import {
   setStarLabelsEnabled,
   setPlanetLabelsEnabled,
   setConstellationsEnabled,
+  setOrbitTrailsEnabled,
 } from '../../state/settings/settingsSlice';
 import { projectLabelCategoryVisibility } from '../../state/settings/projectLabelCategoryVisibility';
 import { isStructureId } from '../../data/structure/structureIds';
 import type { LabelCategory } from '../../@types/engine/data/LabelCategory';
 
-function LabelsSectionContainer(): React.ReactElement {
+function LabelsAndGuidesSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();
 
   const structureItems = useAppSelector(selectStructureItems);
@@ -72,6 +76,7 @@ function LabelsSectionContainer(): React.ReactElement {
   const starLabelsEnabled = useAppSelector(selectStarLabelsEnabled);
   const planetLabelsEnabled = useAppSelector(selectPlanetLabelsEnabled);
   const constellationsEnabled = useAppSelector(selectConstellationsEnabled);
+  const orbitTrailsEnabled = useAppSelector(selectOrbitTrailsEnabled);
 
   // Project items → flat label-visibility record. Rebuilds only when any of the
   // three stable-reference inputs change.
@@ -117,15 +122,22 @@ function LabelsSectionContainer(): React.ReactElement {
     [dispatch],
   );
 
+  const onToggleOrbitTrails = useCallback(
+    (enabled: boolean) => {
+      dispatch(setOrbitTrailsEnabled(enabled));
+    },
+    [dispatch],
+  );
+
   // The non-category boolean rows the section renders + folds into its master
-  // tri-state, in render order (star names, planet names, constellations).
-  // Assembling the array here keeps the section free of any per-row prop
-  // plumbing: a new caption row is one more entry, not a fresh prop pair
+  // tri-state, in render order (star names, planet names, constellations,
+  // orbit trails). Assembling the array here keeps the section free of any
+  // per-row prop plumbing: a new row is one more entry, not a fresh prop pair
   // threaded through both components. Each `id` is the checkbox element id
   // (preserved verbatim from the former inline rows). The constellations row
   // governs both the stick figures and their name captions — there is no
   // separate names toggle.
-  const nonCategoryRows: ReadonlyArray<NonCategoryLabelRow> = useMemo(
+  const nonCategoryRows: ReadonlyArray<NonCategoryRow> = useMemo(
     () => [
       {
         id: 'toggle-label-stars',
@@ -145,6 +157,12 @@ function LabelsSectionContainer(): React.ReactElement {
         enabled: constellationsEnabled,
         onChange: onToggleConstellations,
       },
+      {
+        id: 'toggle-orbit-trails',
+        label: 'Orbit trails',
+        enabled: orbitTrailsEnabled,
+        onChange: onToggleOrbitTrails,
+      },
     ],
     [
       starLabelsEnabled,
@@ -153,11 +171,13 @@ function LabelsSectionContainer(): React.ReactElement {
       onSetPlanetLabelsEnabled,
       constellationsEnabled,
       onToggleConstellations,
+      orbitTrailsEnabled,
+      onToggleOrbitTrails,
     ],
   );
 
   return (
-    <LabelsSection
+    <LabelsAndGuidesSection
       labelCategoryVisibility={labelCategoryVisibility}
       onSetLabelCategoryVisibility={onSetLabelCategoryVisibility}
       nonCategoryRows={nonCategoryRows}
@@ -165,4 +185,4 @@ function LabelsSectionContainer(): React.ReactElement {
   );
 }
 
-export default memo(LabelsSectionContainer);
+export default memo(LabelsAndGuidesSectionContainer);
