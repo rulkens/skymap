@@ -204,6 +204,99 @@ function AppInner() {
       console.error('file drop failed', err);
     }
   }
+
+  /**
+   * resumeGalaxy — the resumable-flow half of galaxy selection.
+   *
+   * Split out from the `onSelect` handler so the handler itself can stay
+   * synchronous (dispatch the selection, then fire-and-forget the resume):
+   *   1. Load recipe.json → reconstruct sliders + crop + metadata
+   *   2. Point PreviewPane at the existing exported WebPs on disk
+   *      (served by Vite from `public/images/famous-curated/<id>/`)
+   *      so the maintainer immediately sees what was previously
+   *      shipped, even before the source re-fetch completes.
+   *   3. Re-fetch the source via the same Wikipedia-aware resolver
+   *      that onFetch uses — recipes from the wiki-helper era
+   *      store the article URL, not the direct image URL.
+   * The source bytes aren't cached across sessions per spec, so
+   * step 3 is unavoidable if the maintainer wants to re-Process.
+   */
+  async function resumeGalaxy(id: string): Promise<void> {
+    const entry = state.galaxies.find((g) => g.id === id);
+    if (!entry?.curated) return;
+    try {
+      const r = await api.getRecipe(id);
+      // Apply recipe-derived state first.  These are intentionally
+      // dispatched BEFORE setSource because setSource resets crop +
+      // previews to defaults — we'd lose the recipe values if the
+      // order were reversed.  setSource is the last dispatch below.
+      dispatch({ type: 'setStarnet', starnet: r.recipe.starnet });
+      dispatch({ type: 'setAlpha', alpha: r.recipe.alpha });
+      dispatch({ type: 'setMetadata', metadata: r.recipe.metadata });
+      // Disk geometry is re-hydrated AFTER the re-fetch below, because it
+      // shares the crop's source-pixel frame and must be rescaled by the
+      // same fetched/authored ratio.
+      // Same resolver fallthrough as onFetch — recipes from older
+      // curator sessions may store a Wikipedia article URL or a
+      // NOIRLab gallery page; either way we want the direct image
+      // URL to re-fetch the source bytes.
+      const wiki = await resolveWikipediaMedia(r.recipe.metadata.sourceUrl).catch(() => null);
+      const resolved = wiki ?? (await api.resolveMedia(r.recipe.metadata.sourceUrl));
+      const fetchUrl = resolved?.directUrl ?? r.recipe.metadata.sourceUrl;
+      const fetched = await api.postFetchUrl(fetchUrl);
+      dispatch({
+        type: 'setSource',
+        tmpId: fetched.tmpId,
+        width: fetched.width,
+        height: fetched.height,
+        previewUrl: fetched.previewUrl,
+      });
+      // setSource reset crop + previews; re-apply the recipe crop
+      // and point previews at the prior export's on-disk files.
+      // The ?v=<processedAt> query is a cache-buster: when the
+      // maintainer re-exports, the file bytes change but the URL
+      // would otherwise be identical, causing the browser to
+      // serve the stale image from its disk cache.
+      //
+      // The recipe's crop + disk are in the ORIGINAL source's pixels and
+      // the re-fetch can return a different resolution.  When the recipe
+      // records the dimensions it was authored against (recipe.source),
+      // we rescale BOTH by the exact fetched/authored ratio so they stay
+      // co-registered with each other and the image.  Older recipes
+      // predate that field, so the crop falls back to the best-effort
+      // reframe and the disk is left as-is (no scale is knowable).
+      const authored = r.recipe.source;
+      const scale = authored && authored.width > 0 ? fetched.width / authored.width : undefined;
+      dispatch({
+        type: 'setCrop',
+        crop:
+          scale !== undefined
+            ? rescaleCrop(r.recipe.crop, scale)
+            : fitCropToSource(r.recipe.crop, {
+                width: fetched.width,
+                height: fetched.height,
+              }),
+      });
+      // Re-hydrate disk geometry when the prior session drew one.
+      // setDisk sets dirty.disk=true, so the resumed session will
+      // re-Process on next Commit — acceptable, since setCrop above also
+      // dirties crop, making a re-Process on Commit unavoidable anyway.
+      if (r.recipe.disk) {
+        dispatch({
+          type: 'setDisk',
+          disk: scale !== undefined ? rescaleDisk(r.recipe.disk, scale) : r.recipe.disk,
+        });
+      }
+      const cacheBust = encodeURIComponent(r.recipe.processedAt);
+      dispatch({
+        type: 'setPreviews',
+        starless: `/api/curated/${id}/starless.webp?v=${cacheBust}`,
+        alpha: `/api/curated/${id}/full.webp?v=${cacheBust}`,
+      });
+    } catch (err) {
+      console.error('resume failed', err);
+    }
+  }
   // Derived for the active galaxy — used in both the JSX tree (DiskControls,
   // CropCanvas) and onCommit (postProcess body).  A single derivation keeps
   // both consumers consistent without threading a prop.
@@ -356,96 +449,9 @@ function AppInner() {
         <GalaxyList
           galaxies={state.galaxies}
           activeId={state.activeId}
-          onSelect={async (id) => {
+          onSelect={(id) => {
             dispatch({ type: 'selectGalaxy', id });
-            const entry = state.galaxies.find((g) => g.id === id);
-            // Resumable flow for already-curated galaxies:
-            //   1. Load recipe.json → reconstruct sliders + crop + metadata
-            //   2. Point PreviewPane at the existing exported WebPs on disk
-            //      (served by Vite from `public/images/famous-curated/<id>/`)
-            //      so the maintainer immediately sees what was previously
-            //      shipped, even before the source re-fetch completes.
-            //   3. Re-fetch the source via the same Wikipedia-aware resolver
-            //      that onFetch uses — recipes from the wiki-helper era
-            //      store the article URL, not the direct image URL.
-            // The source bytes aren't cached across sessions per spec, so
-            // step 3 is unavoidable if the maintainer wants to re-Process.
-            if (!entry?.curated) return;
-            try {
-              const r = await api.getRecipe(id);
-              // Apply recipe-derived state first.  These are intentionally
-              // dispatched BEFORE setSource because setSource resets crop +
-              // previews to defaults — we'd lose the recipe values if the
-              // order were reversed.  setSource is the last dispatch below.
-              dispatch({ type: 'setStarnet', starnet: r.recipe.starnet });
-              dispatch({ type: 'setAlpha', alpha: r.recipe.alpha });
-              dispatch({ type: 'setMetadata', metadata: r.recipe.metadata });
-              // Disk geometry is re-hydrated AFTER the re-fetch below, because it
-              // shares the crop's source-pixel frame and must be rescaled by the
-              // same fetched/authored ratio.
-              // Same resolver fallthrough as onFetch — recipes from older
-              // curator sessions may store a Wikipedia article URL or a
-              // NOIRLab gallery page; either way we want the direct image
-              // URL to re-fetch the source bytes.
-              const wiki = await resolveWikipediaMedia(r.recipe.metadata.sourceUrl).catch(
-                () => null,
-              );
-              const resolved = wiki ?? (await api.resolveMedia(r.recipe.metadata.sourceUrl));
-              const fetchUrl = resolved?.directUrl ?? r.recipe.metadata.sourceUrl;
-              const fetched = await api.postFetchUrl(fetchUrl);
-              dispatch({
-                type: 'setSource',
-                tmpId: fetched.tmpId,
-                width: fetched.width,
-                height: fetched.height,
-                previewUrl: fetched.previewUrl,
-              });
-              // setSource reset crop + previews; re-apply the recipe crop
-              // and point previews at the prior export's on-disk files.
-              // The ?v=<processedAt> query is a cache-buster: when the
-              // maintainer re-exports, the file bytes change but the URL
-              // would otherwise be identical, causing the browser to
-              // serve the stale image from its disk cache.
-              //
-              // The recipe's crop + disk are in the ORIGINAL source's pixels and
-              // the re-fetch can return a different resolution.  When the recipe
-              // records the dimensions it was authored against (recipe.source),
-              // we rescale BOTH by the exact fetched/authored ratio so they stay
-              // co-registered with each other and the image.  Older recipes
-              // predate that field, so the crop falls back to the best-effort
-              // reframe and the disk is left as-is (no scale is knowable).
-              const authored = r.recipe.source;
-              const scale =
-                authored && authored.width > 0 ? fetched.width / authored.width : undefined;
-              dispatch({
-                type: 'setCrop',
-                crop:
-                  scale !== undefined
-                    ? rescaleCrop(r.recipe.crop, scale)
-                    : fitCropToSource(r.recipe.crop, {
-                        width: fetched.width,
-                        height: fetched.height,
-                      }),
-              });
-              // Re-hydrate disk geometry when the prior session drew one.
-              // setDisk sets dirty.disk=true, so the resumed session will
-              // re-Process on next Commit — acceptable, since setCrop above also
-              // dirties crop, making a re-Process on Commit unavoidable anyway.
-              if (r.recipe.disk) {
-                dispatch({
-                  type: 'setDisk',
-                  disk: scale !== undefined ? rescaleDisk(r.recipe.disk, scale) : r.recipe.disk,
-                });
-              }
-              const cacheBust = encodeURIComponent(r.recipe.processedAt);
-              dispatch({
-                type: 'setPreviews',
-                starless: `/api/curated/${id}/starless.webp?v=${cacheBust}`,
-                alpha: `/api/curated/${id}/full.webp?v=${cacheBust}`,
-              });
-            } catch (err) {
-              console.error('resume failed', err);
-            }
+            void resumeGalaxy(id);
           }}
         />
       </aside>
@@ -459,13 +465,13 @@ function AppInner() {
           key={state.activeId ?? '__none__'}
           disabled={state.activeId === undefined}
           busy={fetchBusy}
-          onFetch={onFetch}
+          onFetch={(url) => void onFetch(url)}
         />
         <CropCanvas
           source={state.source}
           crop={state.crop}
           onCropChange={(c) => dispatch({ type: 'setCrop', crop: c })}
-          onFileDrop={onFileDrop}
+          onFileDrop={(file) => void onFileDrop(file)}
           disk={state.disk}
           catalogAxisRatio={catalogAxisRatio}
           onDiskChange={onDiskChange}
@@ -485,7 +491,7 @@ function AppInner() {
             // fetch was still pending at switch time.
             key={state.activeId ?? '__none__'}
             names={state.galaxies.find((g) => g.id === state.activeId)?.names ?? []}
-            onPick={(url) => onFetch(url)}
+            onPick={(url) => void onFetch(url)}
           />
         </div>
       </main>
@@ -507,7 +513,7 @@ function AppInner() {
           commitPhase={commitPhase}
           onStarnet={(p) => dispatch({ type: 'setStarnet', starnet: p })}
           onAlpha={(p) => dispatch({ type: 'setAlpha', alpha: p })}
-          onCommit={onCommit}
+          onCommit={() => void onCommit()}
         />
         <PreviewPane previews={state.previews} />
       </aside>

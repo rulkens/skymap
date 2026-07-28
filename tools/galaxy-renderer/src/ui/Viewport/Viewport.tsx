@@ -82,7 +82,7 @@ function Viewport({ onEngine, onFps, onStats }: ViewportProps): ReactNode {
       handle?.dispose();
       onEngine?.(null);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- boot-once effect: onEngine/onFps/onStats are read only inside the one-time engine construction above; listing them would re-run the boot on every new inline callback from the parent
   }, []);
 
   const showFallback = status === 'no-webgpu' || status === 'no-adapter' || status === 'error';

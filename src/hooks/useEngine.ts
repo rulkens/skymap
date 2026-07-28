@@ -90,7 +90,7 @@ export function useEngine(): UseEngineReturn {
     // render: each is a single instance stable for the app's lifetime
     // (created once in main.tsx). Listing either here would re-create the
     // engine on every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- store/setSagaContext are stable app-lifetime singletons; listing them would re-create the engine on every render
   }, []);
 
   return { canvasRef, handleRef };

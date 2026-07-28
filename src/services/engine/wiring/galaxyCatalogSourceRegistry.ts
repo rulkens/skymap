@@ -204,7 +204,6 @@ export function wireGalaxyCatalogSourceSlot(
       if (req.dissolvePrevious) await dissolveCatalogBuffer(state, catalogId);
 
       const t0 = performance.now();
-      // eslint-disable-next-line no-console
       console.log(`[engine] upload start ${shortName} count=${cloud.count}`);
       // PointRenderer keys its catalogs by the string id; resolve from
       // the registry (the source code carries the matching id).
@@ -236,7 +235,6 @@ export function wireGalaxyCatalogSourceSlot(
         .map((e) => `${SHORT_NAME_BY_SOURCE.get(e.source) ?? e.source}=${e.count}`)
         .join(', ');
       const total = state.gpu.renderer.totalCount();
-      // eslint-disable-next-line no-console
       console.log(
         `[engine] upload done  ${shortName} count=${cloud.count} (${dtMs} ms) | on-GPU: ${onGpu} | total=${total}`,
       );

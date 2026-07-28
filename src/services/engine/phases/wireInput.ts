@@ -361,9 +361,14 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       if (!pick) return;
       // Single-click dispatches the identity ref (null clears). The
       // reconciler saga watches the slot and fills `selectionRows`.
-      pick.then((ref) => {
-        store.dispatch(updateSelectionSelect(ref));
-      });
+      pick
+        .then((ref) => {
+          store.dispatch(updateSelectionSelect(ref));
+        })
+        .catch(() => {
+          // A failed pick readback should not crash input handling; the
+          // click is simply dropped and the prior selection stands.
+        });
     },
     onDoubleClick: () => {
       // Upgrade the current select ref to focus. The preceding single-click
