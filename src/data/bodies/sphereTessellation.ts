@@ -28,12 +28,20 @@
  * 33,153. `uvSphereMesh` also returns `Uint16Array` indices, so
  * `(rings+1)·(segments+1) ≤ 65536` caps the practical ceiling near 256×128.
  *
- * The atmosphere shell does not pay that tax to stay aligned with this mesh: it
- * derives its ground-occlusion test radius from these counts via
- * `inscribedSphereRadiusFactor`, so the analytic ground sphere it tests against
- * tracks whatever tessellation the surface actually draws. That is the load-bearing
- * reason this constant has ONE home rather than four — a silent drift here would
- * reopen the transparent limb seam these values are chosen against.
+ * The atmosphere shell fragment (`shell/fragment.wesl`) tests its ray against the
+ * EXACT analytic ground radius, with no tessellation compensation — it does not
+ * read these counts at all. So the drawn surface (a polygon inscribed 0.214%
+ * inside that radius) and the ground-occlusion test (the true sphere) disagree,
+ * and along the limb a ray can pass the surface's silhouette while still failing
+ * the ground test, or the reverse. That mismatch is the known transparent limb
+ * seam tracked in `docs/backlog/2026-07-24-atmosphere-limb-transparent-seam.md`;
+ * it is an open, understood gap, not something this file compensates for.
+ *
+ * What this file's single-home status actually buys is `bodyPickRenderer`
+ * staying exact: its pick silhouette is built from these same counts, so it can
+ * never drift from the drawn silhouette. If it did, a click near a body's limb
+ * would resolve against an edge that is not where the pixel is — a real
+ * misclick a comment cannot prevent, only a shared constant can.
  */
 
 /** Longitude slices around the equator. */
