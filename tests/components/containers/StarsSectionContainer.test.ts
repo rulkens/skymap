@@ -48,7 +48,6 @@ import {
   selectStarCatalogExposureMidX,
   selectStarCatalogExposureFarX,
   selectStarCatalogAggregateIntensityCap,
-  selectFamousStarsEnabled,
 } from '../../../src/state/settings/selectors';
 import {
   setStarCatalogSize,
@@ -120,22 +119,26 @@ describe('StarsSectionContainer', () => {
     expect(selectStarCatalogs(store.getState()).items.gaiaStars.enabled).toBe(false);
   });
 
-  it('dispatches setFamousStarsEnabled and flips the flag when the famous-stars row is toggled', () => {
+  it('toggles the famous-star map through its own catalog row, leaving the survey row alone', () => {
+    // The curated map is a star-catalog row like any other, so it renders from
+    // the same loop and writes to its own `items` entry. The isolation is the
+    // claim worth pinning: the two rows share a cluster and a reducer, and a
+    // mis-keyed dispatch would flip the wrong catalog with no type error.
     const { store } = createAppStore();
-    // Famous stars start enabled in the default store state.
-    expect(selectFamousStarsEnabled(store.getState())).toBe(true);
 
     const { container } = render(createElement(StarsSectionContainer, null), {
       wrapper: makeWrapper(store),
     });
 
-    const toggle = container.querySelector<HTMLInputElement>('#toggle-famous-stars');
+    const toggle = container.querySelector<HTMLInputElement>('#toggle-star-catalog-famousStar');
     expect(toggle).not.toBeNull();
     expect(toggle!.checked).toBe(true);
 
     fireEvent.click(toggle!);
 
-    expect(selectFamousStarsEnabled(store.getState())).toBe(false);
+    const items = selectStarCatalogs(store.getState()).items;
+    expect(items.famousStar.enabled).toBe(false);
+    expect(items.gaiaStars.enabled).toBe(true);
   });
 
   it('reflects seeded sizePx in the star-size slider value', () => {

@@ -11,7 +11,8 @@
  *
  * Current aggregates:
  *   - `'labels'` — every text label: `surveyLabel` + `structureLabel` +
- *     `milkyWayLabel`. Mirrors the settings-side `setLabelsEnabled` master.
+ *     `milkyWayLabel`. The authoring twin of the Labels panel's tri-state
+ *     master, which fans a click out over the same set.
  */
 
 import type { VisibilityLayerKey } from './VisibilityLayerKey';

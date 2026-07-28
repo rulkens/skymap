@@ -130,15 +130,16 @@ function pointRow(source: SourceType, priority: number): AssetWiringRow {
 }
 
 /**
- * Star-catalog sources, derived from the registry's `type: 'starCatalog'` rows
- * rather than re-spelled, so a future famous-star catalog joins the demand
- * table automatically — the same auto-widening `STAR_CATALOG_IDS` gives the
- * settings key domain. `code` is the numeric `Source` twin of each row (it IS
- * a `SourceType` at the entry literal; the union type widens it to `number`
- * once read through `SOURCE_ENTRIES`, so the cast re-narrows it).
+ * Star-catalog sources that actually ship an asset, derived from the registry
+ * rather than re-spelled. A SEEDED catalog (`binBaseName: null`, the curated
+ * famous-star map) is built in code and has no `.bin` to demand, so it is
+ * filtered out here — including it would have the fetcher request a filename
+ * assembled from a null stem. `code` is the numeric `Source` twin of each row
+ * (it IS a `SourceType` at the entry literal; the union type widens it to
+ * `number` once read through `SOURCE_ENTRIES`, so the cast re-narrows it).
  */
 const STAR_CATALOG_SOURCES: readonly SourceType[] = SOURCE_ENTRIES.filter(
-  (e) => e.type === 'starCatalog',
+  (e) => e.type === 'starCatalog' && e.binBaseName !== null,
 ).map((e) => e.code);
 
 /**

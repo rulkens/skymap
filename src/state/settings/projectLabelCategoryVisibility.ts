@@ -6,9 +6,11 @@
  * Each label-bearing source type keeps its label bit beside that source's other
  * visibility axis, so the bits live in several authoritative homes. This
  * projection merges them into the single record the panel wants, routing each
- * category through `LABEL_HOME_BY_SOURCE_TYPE[SOURCE_REGISTRY[cat].type]`. The
- * React prop shape is therefore a derived view, not one more stored copy that
- * could drift.
+ * category through
+ * `LABEL_HOME_BY_SOURCE_TYPE[SOURCE_TYPE_BY_LABEL_CATEGORY[cat]]` — two
+ * id-keyed lookups, since `SOURCE_REGISTRY` itself is keyed by numeric pick
+ * code. The React prop shape is therefore a derived view, not one more stored
+ * copy that could drift.
  *
  * ### Why milkyWay is a scalar in the bundle, not an items row
  *

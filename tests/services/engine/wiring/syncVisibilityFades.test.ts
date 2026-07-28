@@ -35,6 +35,7 @@ import {
   syncVisibilityFadeItem,
 } from '../../../../src/services/engine/wiring/syncVisibilityFades';
 import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
+import { STAR_CATALOG_IDS } from '../../../../src/data/starCatalog/starCatalogIds';
 import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 
 // ── Fixtures ──────────────────────────────────────────────────────────
@@ -197,8 +198,12 @@ function makeBridgeState(): {
   const structureItems: Record<string, { enabled: boolean; labelEnabled: boolean }> = {};
   for (const id of STRUCTURE_IDS) structureItems[id] = { enabled: true, labelEnabled: true };
 
+  const starCatalogItems: Record<string, { enabled: boolean; labelEnabled: boolean }> = {};
+  for (const id of STAR_CATALOG_IDS) starCatalogItems[id] = { enabled: true, labelEnabled: true };
+
   const settings = {
     galaxyCatalogs: { items: galaxyItems },
+    starCatalogs: { enabled: true, items: starCatalogItems },
     structures: { enabled: true, items: structureItems },
     milkyWay: { enabled: true, labelEnabled: true },
     // Empty volume items: the volumeField intent reads items[id]?.enabled (→
@@ -233,6 +238,7 @@ function makeBridgeState(): {
 const INTENT_KEYS = [
   'survey',
   'surveyLabel',
+  'starCatalogLabel',
   'structureRing',
   'structureLabel',
   'volumeField',
@@ -285,6 +291,7 @@ describe('syncVisibilityFades', () => {
     const intentSamples: Record<Exclude<(typeof INTENT_KEYS)[number], 'volumeField'>, FadeId> = {
       survey: { kind: 'galaxyCatalog', id: GALAXY_CATALOG_IDS[0]! },
       surveyLabel: { kind: 'labelLayer', layer: 'galaxy' },
+      starCatalogLabel: { kind: 'labelLayer', layer: 'starCatalog', item: 'famousStar' },
       structureRing: { kind: 'structure', id: STRUCTURE_IDS[0]! },
       structureLabel: { kind: 'labelLayer', layer: 'structure', item: STRUCTURE_IDS[0]! },
       volumesMaster: { kind: 'volumesMaster' },

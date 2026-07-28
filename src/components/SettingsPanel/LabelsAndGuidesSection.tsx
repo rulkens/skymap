@@ -4,8 +4,8 @@
  * thematic group inside the SettingsPanel.
  *
  * Owns the Labels & Guides thematic group UI: the tri-state master toggle,
- * the per-category label checkboxes, the two foreground scene-body caption
- * rows (star names, planet names), and the overlay guide rows — the
+ * the per-category label checkboxes, the foreground planet-caption row, and
+ * the overlay guide rows — the
  * constellation stick figures and the near-field orbit trails. Isolating this
  * into its own component ensures a toggle re-renders ONLY this section rather
  * than the entire HUD. The section owns the tri-state master derivation (the
@@ -13,10 +13,10 @@
  * boolean row in the section (the COSMO label categories plus every
  * `nonCategoryRows` entry), so it belongs here, not in a shared parent.
  *
- * Three kinds of sources bear labels, which the container routes to three
- * dispatch homes (structure / milkyWay singleton / galaxy catalog). This
- * component sees only the flat `Record<LabelCategory, boolean>` projection and
- * a single callback — it has no knowledge of the routing.
+ * Several source types bear labels, and the container routes each to its own
+ * dispatch home. This component sees only the flat
+ * `Record<LabelCategory, boolean>` projection and a single callback — it has no
+ * knowledge of the routing.
  *
  * Imports nothing from `store/` or `state/`: this is a pure function of props
  * and transient CollapsibleSection open/closed state. Tests supply plain props
@@ -39,7 +39,7 @@ import type { LabelCategory } from '../../@types/engine/data/LabelCategory';
 
 /**
  * A boolean row that is NOT a COSMO `LabelCategory` — the foreground
- * scene-body captions (star names, planet names) and the overlay guide
+ * planet-caption toggle and the overlay guide
  * toggles (the constellation stick figures, the orbit trails). Each lives in
  * its own settings cluster rather than the category map, but they are
  * structurally identical checkboxes, so the container hands them as a uniform
@@ -60,9 +60,9 @@ type LabelsAndGuidesSectionProps = {
   /** Called when the user toggles a single label category on or off. */
   onSetLabelCategoryVisibility: (category: LabelCategory, visible: boolean) => void;
   /**
-   * The non-category boolean rows (star names, planet names, constellations,
-   * orbit trails), in render + master-derivation order. Every entry counts
-   * toward the master tri-state.
+   * The non-category boolean rows (planet names, constellations, orbit
+   * trails), in render + master-derivation order. Every entry counts toward
+   * the master tri-state.
    */
   nonCategoryRows: ReadonlyArray<NonCategoryRow>;
 };
@@ -75,7 +75,8 @@ type LabelsAndGuidesSectionProps = {
  *
  * The label axis is independent of the marker axis (Structures group). Flipping
  * a label off keeps its ring visible, and vice versa. `milkyWay` appears here as
- * the "You are here" label category alongside structure and famousGalaxy labels.
+ * the "You are here" label category alongside the structure, famousGalaxy and
+ * famousStar labels.
  */
 function LabelsAndGuidesSection({
   labelCategoryVisibility,
@@ -84,8 +85,8 @@ function LabelsAndGuidesSection({
 }: LabelsAndGuidesSectionProps) {
   // ── Master tri-state derivation ──────────────────────────────────────────────
   // Tri-state master = how many of the section's BOOLEAN rows are currently on.
-  // The rows are the COSMO LABEL_CATEGORIES PLUS the `nonCategoryRows` (star
-  // names, planet names, and the overlay guide toggles — constellations, orbit
+  // The rows are the COSMO LABEL_CATEGORIES PLUS the `nonCategoryRows` (planet
+  // names and the overlay guide toggles — constellations, orbit
   // trails) — the master summarises every checkbox the section renders, so
   // each non-category row counts toward it even though they live in their own
   // settings clusters rather than the category map. The count is derived from
@@ -135,8 +136,8 @@ function LabelsAndGuidesSection({
           />
         </div>
       ))}
-      {/* The non-category boolean rows — the foreground scene-body captions
-          (star names, planet names) and the overlay guide toggles
+      {/* The non-category boolean rows — the foreground planet-caption toggle
+          and the overlay guide toggles
           (constellation stick figures, orbit trails). They are not COSMO
           label categories (they live in their own settings clusters, not the
           structure/galaxy-catalog registries), so they render as their own

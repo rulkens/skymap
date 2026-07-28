@@ -248,10 +248,13 @@ export type EngineSettingsState = {
    * `enabled` is the coarse "hide all star catalogs" gate; per-catalog state
    * lives in `items` — one row per `StarCatalogId`, each carrying the
    * layer-visibility axis (`enabled`) and the text-label axis (`labelEnabled`).
-   * Today the sole row is the survey-wide Gaia bin (`gaiaStars`), which carries
-   * `labelEnabled` inertly (the star renderer draws no per-star names); the
-   * curated famous-star map will add a label-bearing row later, so all four
-   * source-type clusters expose the same per-item shape.
+   *
+   * Two rows today: the survey-wide Gaia bin (`gaiaStars`), which carries
+   * `labelEnabled` inertly because the star renderer draws no per-star names,
+   * and the curated famous-star map (`famousStar`), whose `labelEnabled` gates
+   * its captions on the final descent. `famousStar.enabled` gates the SEEDED
+   * MAP, not the solar system: with it off the star layers draw the Sun alone
+   * (see `visibleStars`).
    *
    * Singleton-overlay convention still holds per row: a star catalog's "loaded"
    * status is its asset slot's own readiness (Tasks 5–6 wire the slot), NOT a
@@ -312,26 +315,6 @@ export type EngineSettingsState = {
     exposureFarX: number;
     aggregateIntensityCap: number;
     items: Record<StarCatalogId, StarCatalogItemSettings>;
-  };
-
-  /**
-   * Famous-stars singleton overlay — the master gate on the SEEDED near-field
-   * star map (the Sun plus its ~130 named neighbours drawn by the star
-   * point/sphere layers and captioned by `foregroundLabelsLayer`). A flat
-   * `enabled` field, mirroring the `milkyWay` / `filaments` / `flow` singleton
-   * overlays rather than the per-record source-type clusters — there is no
-   * `items` row because the seed is one static set, not a per-catalog fan-out.
-   *
-   * This is DISTINCT from `starCatalogs.enabled`: that gates the survey-wide
-   * Gaia bin, this gates the curated famous-star scene bodies. When it is off
-   * the star layers fall back to drawing the Sun ALONE — the Sun anchors the
-   * final descent and Earth/planets ride their own layers, so muting the map
-   * never hides the solar system (see the star layers' `visibleStars`
-   * derivation). The star-map captions zero to 0 in lockstep (the Sun caption
-   * excepted), fading rather than popping via the caption envelope.
-   */
-  famousStars: {
-    enabled: boolean;
   };
 
   /**

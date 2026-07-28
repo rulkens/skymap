@@ -230,12 +230,11 @@ describe('Source enum — body codes (famousStar/planet/earth)', () => {
     expect(Source.Earth).toBe(23);
   });
 
-  it('famousStar/planet/earth rows are non-label, non-marker body sources', () => {
+  it('planet/earth rows are non-label, non-marker body sources', () => {
     // Bodies are near-field scene objects, not galaxy catalogs or structure
     // rings. Their captions ship through the foreground-labels layer, bypassing
     // the COSMO label/marker systems — so both capability flags are false.
     const bodyRows = [
-      [Source.FamousStar, 'famousStar'],
       [Source.Planet, 'planet'],
       [Source.Earth, 'earth'],
     ] as const;

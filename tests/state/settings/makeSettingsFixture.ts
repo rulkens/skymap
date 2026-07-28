@@ -8,9 +8,9 @@
  * build it here. The body mirrors the engine's startup construction
  * (`buildInitialSettings`) so the fixture stays a true shape: defaults
  * from `data/defaults.ts`, item rows DERIVED from `GALAXY_CATALOG_IDS` /
- * `STRUCTURE_IDS`, volume items from `seedVolumeFields()`. Deriving the
- * item keys (rather than hand-listing them) means adding a galaxy catalog or category
- * can't silently leave the fixture stale.
+ * `STAR_CATALOG_IDS` / `STRUCTURE_IDS`, volume items from `seedVolumeFields()`.
+ * Deriving the item keys (rather than hand-listing them) means adding a
+ * catalog or category can't silently leave the fixture stale.
  *
  * One deliberate divergence from the boot seed: every galaxy catalog row is
  * `enabled: true` here, whereas the real seed derives `enabled` from each
@@ -49,7 +49,6 @@ import {
   DEFAULT_BRIGHTNESS,
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_EXPOSURE,
-  DEFAULT_FAMOUS_STARS_ENABLED,
   DEFAULT_FLOW,
   DEFAULT_GALAXY_FALLOFF_STRENGTH,
   DEFAULT_GALAXY_PROVENANCE,
@@ -145,10 +144,9 @@ export function makeSettingsFixture(
         STAR_CATALOG_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
       ) as Record<StarCatalogId, StarCatalogItemSettings>,
     },
-    famousStars: { enabled: DEFAULT_FAMOUS_STARS_ENABLED },
     volumes: { enabled: DEFAULT_VOLUMES_ENABLED, items: seedVolumeFields() },
     flow: { ...DEFAULT_FLOW },
-    labels: { focusedOnly: false, starLabelsEnabled: true, planetLabelsEnabled: true },
+    labels: { focusedOnly: false, planetLabelsEnabled: true },
     debug: {
       showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
       showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,

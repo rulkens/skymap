@@ -1,11 +1,11 @@
 /**
  * visibleStars — the seeded star set the near-field star layers actually draw
- * this frame, after the famous-stars master gate.
+ * this frame, after the famous-star map's visibility gate.
  *
  * Both star content rows (`starPointsLayer`, `starSpheresLayer`) feed their
  * `partitionStarsByResolution` call this set rather than `state.data.bodies.stars`
- * directly, so the `settings.famousStars.enabled` toggle is honoured in ONE
- * place shared across all four call sites (each layer's `enabled` gate + its
+ * directly, so the `starCatalogs.items.famousStar.enabled` toggle is honoured in
+ * ONE place shared across all four call sites (each layer's `enabled` gate + its
  * `draw`), keeping the enable gate and the drawn set from ever disagreeing —
  * the same one-partition-consumed-twice discipline the partition module keeps.
  *
@@ -27,6 +27,6 @@ const SUN_BODY_ID = 'sun';
 
 export function visibleStars(state: EngineState): readonly StarBody[] {
   const stars = state.data.bodies.stars;
-  if (state.settings.famousStars.enabled) return stars;
+  if (state.settings.starCatalogs.items.famousStar.enabled) return stars;
   return stars.filter((star) => star.id === SUN_BODY_ID);
 }

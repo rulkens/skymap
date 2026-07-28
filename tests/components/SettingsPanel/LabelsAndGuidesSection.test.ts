@@ -64,17 +64,14 @@ function partialVisibility(): Record<LabelCategory, boolean> {
   return result;
 }
 
-// The four non-category boolean rows in render order (star names, planet
-// names, constellations, orbit trails) — mirrors what the container
-// assembles. Each row's `enabled` and `onChange` can be overridden;
-// unspecified spies are throwaway `vi.fn()`s so tests only wire up what they
-// assert on.
+// The three non-category boolean rows in render order (planet names,
+// constellations, orbit trails) — mirrors what the container assembles. Each
+// row's `enabled` and `onChange` can be overridden; unspecified spies are
+// throwaway `vi.fn()`s so tests only wire up what they assert on.
 type RowOverrides = {
-  starLabelsEnabled?: boolean;
   planetLabelsEnabled?: boolean;
   constellationsEnabled?: boolean;
   orbitTrailsEnabled?: boolean;
-  onSetStarLabelsEnabled?: (enabled: boolean) => void;
   onSetPlanetLabelsEnabled?: (enabled: boolean) => void;
   onToggleConstellations?: (enabled: boolean) => void;
   onToggleOrbitTrails?: (enabled: boolean) => void;
@@ -82,12 +79,6 @@ type RowOverrides = {
 
 function makeNonCategoryRows(o: RowOverrides = {}): NonCategoryRow[] {
   return [
-    {
-      id: 'toggle-label-stars',
-      label: 'Star names',
-      enabled: o.starLabelsEnabled ?? true,
-      onChange: o.onSetStarLabelsEnabled ?? vi.fn<(enabled: boolean) => void>(),
-    },
     {
       id: 'toggle-label-planets',
       label: 'Planet names',
@@ -144,7 +135,6 @@ describe('LabelsAndGuidesSection', () => {
         ...baseProps(),
         labelCategoryVisibility: noneOnVisibility(),
         nonCategoryRows: makeNonCategoryRows({
-          starLabelsEnabled: false,
           planetLabelsEnabled: false,
           constellationsEnabled: false,
           orbitTrailsEnabled: false,
@@ -229,7 +219,6 @@ describe('LabelsAndGuidesSection', () => {
     it('calls every category AND all non-category-row callbacks with true when master toggled from noneOn', () => {
       const onSetLabelCategoryVisibility =
         vi.fn<(category: LabelCategory, visible: boolean) => void>();
-      const onSetStarLabelsEnabled = vi.fn<(enabled: boolean) => void>();
       const onSetPlanetLabelsEnabled = vi.fn<(enabled: boolean) => void>();
       const onToggleConstellations = vi.fn<(enabled: boolean) => void>();
       const onToggleOrbitTrails = vi.fn<(enabled: boolean) => void>();
@@ -238,11 +227,9 @@ describe('LabelsAndGuidesSection', () => {
         labelCategoryVisibility: noneOnVisibility(),
         onSetLabelCategoryVisibility,
         nonCategoryRows: makeNonCategoryRows({
-          starLabelsEnabled: false,
           planetLabelsEnabled: false,
           constellationsEnabled: false,
           orbitTrailsEnabled: false,
-          onSetStarLabelsEnabled,
           onSetPlanetLabelsEnabled,
           onToggleConstellations,
           onToggleOrbitTrails,
@@ -260,7 +247,6 @@ describe('LabelsAndGuidesSection', () => {
       for (const cat of LABEL_CATEGORIES) {
         expect(onSetLabelCategoryVisibility).toHaveBeenCalledWith(cat, true);
       }
-      expect(onSetStarLabelsEnabled).toHaveBeenCalledWith(true);
       expect(onSetPlanetLabelsEnabled).toHaveBeenCalledWith(true);
       expect(onToggleConstellations).toHaveBeenCalledWith(true);
       expect(onToggleOrbitTrails).toHaveBeenCalledWith(true);
@@ -269,7 +255,6 @@ describe('LabelsAndGuidesSection', () => {
     it('calls every category AND all non-category-row callbacks with false when master toggled from allOn', () => {
       const onSetLabelCategoryVisibility =
         vi.fn<(category: LabelCategory, visible: boolean) => void>();
-      const onSetStarLabelsEnabled = vi.fn<(enabled: boolean) => void>();
       const onSetPlanetLabelsEnabled = vi.fn<(enabled: boolean) => void>();
       const onToggleConstellations = vi.fn<(enabled: boolean) => void>();
       const onToggleOrbitTrails = vi.fn<(enabled: boolean) => void>();
@@ -278,7 +263,6 @@ describe('LabelsAndGuidesSection', () => {
         labelCategoryVisibility: allOnVisibility(),
         onSetLabelCategoryVisibility,
         nonCategoryRows: makeNonCategoryRows({
-          onSetStarLabelsEnabled,
           onSetPlanetLabelsEnabled,
           onToggleConstellations,
           onToggleOrbitTrails,
@@ -295,7 +279,6 @@ describe('LabelsAndGuidesSection', () => {
       for (const cat of LABEL_CATEGORIES) {
         expect(onSetLabelCategoryVisibility).toHaveBeenCalledWith(cat, false);
       }
-      expect(onSetStarLabelsEnabled).toHaveBeenCalledWith(false);
       expect(onSetPlanetLabelsEnabled).toHaveBeenCalledWith(false);
       expect(onToggleConstellations).toHaveBeenCalledWith(false);
       expect(onToggleOrbitTrails).toHaveBeenCalledWith(false);

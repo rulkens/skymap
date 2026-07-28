@@ -52,8 +52,7 @@ import type { VisibilityLayerKey } from '../../../@types/animation/VisibilityLay
 
 /**
  * Maps a `FadeId` to its `VisibilityLayerKey`, or `undefined` for ids with no
- * clip-layer address: the `overlay` kind, and the near-field caption label
- * layers (`starCatalog`, `body`).
+ * clip-layer address: the `overlay` kind and the `body` caption label layer.
  *
  * Exhaustive over `FadeId['kind']` via a `never`-guard `default` arm — a
  * new union kind must declare its clip stance here or tsc fails.
@@ -95,9 +94,14 @@ export function fadeIdToVisibilityKey(h: FadeId): VisibilityLayerKey | undefined
           // labels together.
           return 'structureLabel';
         case 'starCatalog':
+          // A per-item star-catalog caption (h.item) maps to the single
+          // `starCatalogLabel` key, the same collapse the structure arm makes:
+          // a clip cue targeting the star map fades every catalog's captions
+          // together.
+          return 'starCatalogLabel';
         case 'body':
-          // Near-field caption layers have no VisibilityLayerKey of their own,
-          // so no clip cue addresses them through this bridge → factor 1. Same
+          // The body caption layer has no VisibilityLayerKey of its own, so no
+          // clip cue addresses it through this bridge → factor 1. Same
           // conservative stance as the `overlay` kind below.
           return undefined;
         // TypeScript exhaustiveness guard — a new LabelLayerId must map a key here.

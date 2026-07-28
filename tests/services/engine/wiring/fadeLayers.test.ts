@@ -24,6 +24,7 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
 import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
+import { STAR_CATALOG_IDS } from '../../../../src/data/starCatalog/starCatalogIds';
 import { SOURCE_REGISTRY } from '../../../../src/data/sources';
 import type { VisibilityLayerKey } from '../../../../src/@types/animation/VisibilityLayerKey';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
@@ -48,6 +49,13 @@ expectTypeOf<RowKeys>().toEqualTypeOf<VisibilityLayerKey>();
  * StructureId is populated (driven off STRUCTURE_IDS) so the structure rows'
  * `items[id]` reads never go undefined.
  */
+/** Every star-catalog row, both axes on — the shape both builders below need. */
+function starCatalogItems(): Record<string, { enabled: boolean; labelEnabled: boolean }> {
+  return Object.fromEntries(
+    STAR_CATALOG_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
+  );
+}
+
 function makeState(
   opts: {
     milkyWayEnabled?: boolean;
@@ -81,6 +89,10 @@ function makeState(
       galaxyCatalogs: {
         items: { famousGalaxy: { enabled: true, labelEnabled: opts.surveyLabelEnabled ?? true } },
       },
+      // The starCatalogLabel fade row seeds per label-bearing star catalog, so
+      // every star-catalog row is populated for the same reason the structure
+      // items are.
+      starCatalogs: { enabled: true, items: starCatalogItems() },
       structures: { enabled: true, items },
     },
     subsystems: {
@@ -120,6 +132,7 @@ function makeSettings(
   for (const id of STRUCTURE_IDS) structureItems[id] = { enabled: true, labelEnabled: true };
   return {
     galaxyCatalogs: { items: galaxyItems },
+    starCatalogs: { enabled: true, items: starCatalogItems() },
     structures: { enabled: true, items: structureItems },
     milkyWay: { enabled: opts.milkyWayEnabled ?? true, labelEnabled: true },
     volumes: { enabled: true, items: {} },

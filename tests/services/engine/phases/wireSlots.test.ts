@@ -42,6 +42,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Source } from '../../../../src/data/sources';
 import { createAppStore } from '../../../../src/store/createAppStore';
 import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
+import { STAR_CATALOG_IDS } from '../../../../src/data/starCatalog/starCatalogIds';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { seedVolumeFields } from '../../../../src/data/volume/volumeFieldDefaults';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/data/defaults';
@@ -363,6 +364,14 @@ function makeState(
       // seed (always present, unlike the demand-loaded flow/filament rows).
       orbitTrails: { enabled: true },
       volumes: { enabled: true, items: seedVolumeFields() },
+      // seedFades registers a caption handle per label-bearing star catalog, and
+      // the star-catalog demand rows read these `enabled` bits.
+      starCatalogs: {
+        enabled: true,
+        items: Object.fromEntries(
+          STAR_CATALOG_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
+        ),
+      },
       // Overridable so a test can hide every category and pin the bug-fix
       // (structureCatalog must NOT load when nothing structural is visible).
       structures: { enabled: true, items: structureItems },

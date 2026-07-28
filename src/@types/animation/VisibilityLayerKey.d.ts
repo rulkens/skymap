@@ -41,6 +41,11 @@
  * famous-catalog label toggle, NOT a per-catalog row. There is one survey
  * label intent across all galaxy catalogs, mirroring how `FadeId`'s
  * `labelLayer` reuses the `galaxy` layer for famous-galaxy labels.
+ *
+ * Note on `starCatalogLabel`: it is a CLUSTER-level row — one intent across
+ * every star catalog — matching how `surveyLabel` addresses all galaxy-catalog
+ * labels at once. Per-item keys are added when a tour beat actually needs to
+ * address one catalog's captions alone.
  */
 
 export type VisibilityLayerKey =
@@ -50,6 +55,7 @@ export type VisibilityLayerKey =
   | 'volumesMaster'
   | 'milkyWayLabel'
   | 'surveyLabel'
+  | 'starCatalogLabel'
   | 'scaleBar'
   | 'structureRing'
   | 'structureLabel'

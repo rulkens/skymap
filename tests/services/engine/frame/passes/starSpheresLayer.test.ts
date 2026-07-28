@@ -129,12 +129,12 @@ function makeNear0View(camPos: Vec3): SlabView {
 function makeState(
   starRenderer: unknown,
   stars: readonly StarBody[],
-  famousStarsEnabled = true,
+  famousStarMapEnabled = true,
 ): EngineState {
   return {
     gpu: { starRenderer },
     data: { bodies: { stars } },
-    settings: { famousStars: { enabled: famousStarsEnabled } },
+    settings: { starCatalogs: { items: { famousStar: { enabled: famousStarMapEnabled } } } },
   } as unknown as EngineState;
 }
 
@@ -225,10 +225,10 @@ describe('starSpheresLayer.draw', () => {
     expect(drawSpy.mock.calls.map((c) => c[2])).toEqual([SIRIUS.color]);
   });
 
-  it('with the famous-stars gate off, only the Sun can resolve — never a neighbour', () => {
+  it('with the famous-star map gate off, only the Sun can resolve — never a neighbour', () => {
     composeMock.mockClear();
-    // Camera half an AU off Sirius, which WOULD resolve — but the famousStars
-    // gate is OFF, so the layer sees the Sun alone. The Sun is parsecs away from
+    // Camera half an AU off Sirius, which WOULD resolve — but the famous-star
+    // row is OFF, so the layer sees the Sun alone. The Sun is parsecs away from
     // this camera (sub-pixel), so nothing resolves: no sphere is composed.
     const offSirius = makeState({ draw: vi.fn() }, [SUN, PROXIMA, SIRIUS], false);
     starSpheresLayer.draw(
@@ -295,7 +295,7 @@ describe('starSpheresLayer.drawPick', () => {
     const state = {
       gpu: { bodyPickRenderer },
       data: { bodies: { stars: [SUN, PROXIMA, SIRIUS] } },
-      settings: { famousStars: { enabled: true } },
+      settings: { starCatalogs: { items: { famousStar: { enabled: true } } } },
     } as unknown as EngineState;
 
     starSpheresLayer.drawPick!(PASS_STUB, view, makeCtx(camPos), state);

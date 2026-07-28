@@ -18,11 +18,14 @@
 
 import type { StructureId } from '../data/structure/StructureId';
 import type { GalaxyCatalogId } from '../data/galaxyCatalog/GalaxyCatalogId';
+import type { StarCatalogId } from '../data/starCatalog/StarCatalogId';
 import type { StructureItemSettings } from './StructureItemSettings';
 import type { GalaxyCatalogItemSettings } from './GalaxyCatalogItemSettings';
+import type { StarCatalogItemSettings } from './StarCatalogItemSettings';
 
 export type LabelHomes = {
   readonly structures: Record<StructureId, StructureItemSettings>;
   readonly galaxyCatalogs: Record<GalaxyCatalogId, GalaxyCatalogItemSettings>;
+  readonly starCatalogs: Record<StarCatalogId, StarCatalogItemSettings>;
   readonly milkyWayLabelEnabled: boolean;
 };

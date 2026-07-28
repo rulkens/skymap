@@ -44,22 +44,27 @@ export const RESOLVE_PICK: Partial<
   // The Milky Way is a singleton: the pick resolves to the tag with no
   // per-instance data needed.
   milkyWay: () => ({ type: 'milkyWay' }),
-  // Star identity is positional like the galaxy arm — the pick's localIdx is
-  // the bin-stable global star-record index. No catalog read here; the
-  // reconciler resolves the record to a row at display time.
-  starCatalog: (_entry, pick) => ({ type: 'star', index: pick.localIdx }),
-  // Body arms are the decode side of the foreground `drawPick`s (Task 11): the
-  // pack side stamped `seedIndexOfBody(body, seeds) + PICK_SENTINEL_OFFSET`, and
+  // The two star-catalog variants carry different notions of a star's identity,
+  // so the arm splits on the same `binBaseName` discriminant the entry type
+  // does. A SURVEY catalog is positional like the galaxy arm — the pick's
+  // localIdx is the bin-stable global star-record index, and the reconciler
+  // resolves it to a row at display time. A SEEDED catalog has no bin: its
+  // localIdx indexes the durable body-store seed array, so it resolves to a
+  // body ref, exactly as the planet/earth arms below do.
+  starCatalog: (entry, pick) => {
+    if (entry.type !== 'starCatalog') return null;
+    if (entry.binBaseName !== null) return { type: 'star', index: pick.localIdx };
+    const body = SCENE_STARS[pick.localIdx];
+    return body ? { type: 'body', id: body.id } : null;
+  },
+  // Body arms are the decode side of the foreground `drawPick`s: the pack side
+  // stamped `seedIndexOfBody(body, seeds) + PICK_SENTINEL_OFFSET`, and
   // `unpackPick` has already subtracted the offset, so `pick.localIdx` indexes
   // the SAME durable seed array. That seed index is order-stable (a property of
   // the authored table, not the camera-dependent draw subset), so it round-trips
   // to `seeds[localIdx].id` — the durable `{ type: 'body', id }` ref the body
   // half of the selection path already resolves against SCENE_BODIES. A localIdx
   // past the array (a seed/draw-set desync) yields null rather than a ghost hit.
-  famousStar: (_entry, pick) => {
-    const body = SCENE_STARS[pick.localIdx];
-    return body ? { type: 'body', id: body.id } : null;
-  },
   planet: (_entry, pick) => {
     const body = SCENE_PLANETS[pick.localIdx];
     return body ? { type: 'body', id: body.id } : null;

@@ -50,6 +50,7 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 
 import { STRUCTURE_IDS } from '../../../data/structure/structureIds';
 import { GALAXY_CATALOG_IDS } from '../../../data/galaxyCatalog/galaxyCatalogIds';
+import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import { SOURCE_REGISTRY } from '../../../data/sources';
 import { maybeLazyLoadDebugVolume } from '../volume/maybeLazyLoadDebugVolume';
 
@@ -85,6 +86,16 @@ function volumeFieldIds(): readonly VolumeFieldId[] {
   }
   return ids;
 }
+
+// The star catalogs that actually caption their members. `STAR_CATALOG_IDS`
+// spans the whole cluster, but the survey-wide Gaia bin draws no per-star
+// names, so a caption fade handle for it would be a controller nothing can
+// ever move. Filtering on the registry's `bearsLabel` capability is also what
+// keeps the handle's `item` inside `LabelCategory` — the label-bearing ids ARE
+// the label categories.
+const LABEL_BEARING_STAR_CATALOG_IDS = SOURCE_ENTRIES.filter(
+  (e) => e.type === 'starCatalog' && e.bearsLabel,
+).map((e) => e.id);
 
 // The DEV-only runtime-generated fixtures (`binBaseName: null`) — exempt from
 // the volumeField row's demand-loaded guard because their lazy-load is
@@ -144,6 +155,16 @@ export const FADE_LAYERS = [
     handle: () => ({ kind: 'labelLayer', layer: 'galaxy' }),
     seed: (s) => (s.galaxyCatalogs.items.famousGalaxy.labelEnabled ? 1 : 0),
     intent: (s) => s.galaxyCatalogs.items.famousGalaxy.labelEnabled,
+  }),
+  // curated star-map captions — per label-bearing StarCatalogId,
+  // settings-derived seed (the seed is in code, not demand-loaded, so there is
+  // no guard and the seed follows the toggle).
+  layer({
+    key: 'starCatalogLabel',
+    expand: () => LABEL_BEARING_STAR_CATALOG_IDS,
+    handle: (id) => ({ kind: 'labelLayer', layer: 'starCatalog', item: id }),
+    seed: (s, id) => (s.starCatalogs.items[id].labelEnabled ? 1 : 0),
+    intent: (s, id) => s.starCatalogs.items[id].labelEnabled,
   }),
   // scale bar — registerOverlayFades.ts:100 (React-side, tour-addressable)
   layer({

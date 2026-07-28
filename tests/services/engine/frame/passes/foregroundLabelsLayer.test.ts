@@ -145,15 +145,17 @@ function makeLineRenderer(): MarkerLineRenderer {
 function makeState(
   renderer: LabelRenderer | null,
   lineRenderer: MarkerLineRenderer | null = makeLineRenderer(),
-  starLabelsEnabled = true,
+  starMapLabelsEnabled = true,
   planetLabelsEnabled = true,
-  famousStarsEnabled = true,
+  starMapEnabled = true,
 ): EngineState {
   return {
     gpu: { foregroundLabelRenderer: renderer, foregroundMarkerLineRenderer: lineRenderer },
     settings: {
-      labels: { starLabelsEnabled, planetLabelsEnabled },
-      famousStars: { enabled: famousStarsEnabled },
+      labels: { planetLabelsEnabled },
+      starCatalogs: {
+        items: { famousStar: { enabled: starMapEnabled, labelEnabled: starMapLabelsEnabled } },
+      },
     },
     // No constellation slot by default — the body-caption tests never exercise
     // the figure-name path, so the layer reads an empty set and skips the toggle
@@ -187,7 +189,7 @@ const CONSTELLATION_ARTIFACT = {
 const CONSTELLATION_IDS = new Set(CONSTELLATION_ARTIFACT.constellations.map((c) => c.name));
 
 // A state whose constellation slot is READY, with the fade-registry opacity
-// under test control. `starLabelsEnabled` etc. are on so the body captions
+// under test control. The body-caption toggles are all on so those captions
 // coexist; the constellation-specific assertions filter by CONSTELLATION_IDS.
 function makeConstellationState(opts: { layerFade: number; ready?: boolean }): EngineState {
   return {
@@ -196,8 +198,8 @@ function makeConstellationState(opts: { layerFade: number; ready?: boolean }): E
       foregroundMarkerLineRenderer: makeLineRenderer(),
     },
     settings: {
-      labels: { starLabelsEnabled: true, planetLabelsEnabled: true },
-      famousStars: { enabled: true },
+      labels: { planetLabelsEnabled: true },
+      starCatalogs: { items: { famousStar: { enabled: true, labelEnabled: true } } },
       constellations: {},
     },
     assetSlots: {
@@ -304,7 +306,7 @@ describe('foregroundLabelsLayer.enabled', () => {
     // gate short-circuited on `renderer.glyphCount() === 0` and returned
     // false here regardless of the toggles, latching the row off forever.
     const renderer = makeRenderer(0);
-    const state = makeState(renderer, undefined, /* starLabelsEnabled */ true, false);
+    const state = makeState(renderer, undefined, /* starMapLabelsEnabled */ true, false);
     expect(foregroundLabelsLayer.enabled(state, makeCtx(5e-4))).toBe(true);
   });
 
@@ -464,10 +466,10 @@ describe('foregroundLabelsLayer.draw', () => {
     expect(offLabels.some((l) => l.id === sceneBodyLabelId('earth'))).toBe(true);
   });
 
-  it('suppresses the star map but KEEPS the Sun when the famous-stars gate is off', () => {
+  it('suppresses the star map but KEEPS the Sun when the famous-star row is off', () => {
     // Camera at Earth (deep inside the neighbourhood), spread vp so declutter
-    // keeps every separated caption. The famousStars gate is a THIRD, independent
-    // mute switch: with it off the seeded star map drops — but the Sun (its own
+    // keeps every separated caption. The row's visibility axis is a THIRD,
+    // independent mute switch: with it off the seeded star map drops — but the Sun (its own
     // `sunCaption` band) and Earth still show. This is the caption twin of the
     // point/sphere layers falling back to the Sun alone.
     const base = sceneBodyLabels(J2000_STATES);
@@ -490,7 +492,7 @@ describe('foregroundLabelsLayer.draw', () => {
       true,
     );
 
-    // Gate OFF (famousStars): no non-Sun star caption, but the Sun + Earth still show.
+    // Gate OFF (the map's own `enabled`): no non-Sun star caption, but the Sun + Earth still show.
     rebaseMock.mockReturnValueOnce(makeSpreadVp());
     const offRenderer = makeRenderer(6);
     foregroundLabelsLayer.draw(

@@ -81,8 +81,8 @@ function makeState(renderer: LabelRenderer, lineRenderer: MarkerLineRenderer): E
   return {
     gpu: { foregroundLabelRenderer: renderer, foregroundMarkerLineRenderer: lineRenderer },
     settings: {
-      labels: { starLabelsEnabled: true, planetLabelsEnabled: true },
-      famousStars: { enabled: true },
+      labels: { planetLabelsEnabled: true },
+      starCatalogs: { items: { famousStar: { enabled: true, labelEnabled: true } } },
     },
     // No constellation slot: these tests exercise only the far-star body-caption
     // lift, so the layer reads an empty figure-name set and skips its toggle +

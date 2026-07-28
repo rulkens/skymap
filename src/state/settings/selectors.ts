@@ -149,16 +149,6 @@ export const selectMilkyWayEnabled = (state: RootState): boolean =>
 export const selectMilkyWayLabelEnabled = (state: RootState): boolean =>
   selectSettings(state).milkyWay.labelEnabled;
 
-// --- famousStars cluster ------------------------------------------------------
-
-/**
- * Master gate on the seeded famous-star map. A primitive read, so no
- * memoization. Distinct from `selectStarCatalogs(...).enabled` (the Gaia survey
- * gate) — this gates only the curated near-field scene bodies.
- */
-export const selectFamousStarsEnabled = (state: RootState): boolean =>
-  selectSettings(state).famousStars.enabled;
-
 // --- filaments cluster --------------------------------------------------------
 
 export const selectFilamentsEnabled = (state: RootState): boolean =>
@@ -253,9 +243,6 @@ export const selectClipPathTuningActive = (state: RootState): ClipPathTuningActi
 
 // --- labels cluster -----------------------------------------------------------
 
-export const selectStarLabelsEnabled = (state: RootState): boolean =>
-  selectSettings(state).labels.starLabelsEnabled;
-
 export const selectPlanetLabelsEnabled = (state: RootState): boolean =>
   selectSettings(state).labels.planetLabelsEnabled;
 
@@ -288,6 +275,16 @@ export const selectStarCatalogs = (
   aggregateIntensityCap: number;
   items: Record<StarCatalogId, StarCatalogItemSettings>;
 } => selectSettings(state).starCatalogs;
+
+/**
+ * The per-catalog item rows alone — the star-catalog twin of
+ * `selectGalaxyCatalogItems`. The Labels section bundles it into `LabelHomes`
+ * and needs the narrowest stable reference it can get: reading the whole
+ * cluster there would rebuild the projection on every star-brightness drag.
+ */
+export const selectStarCatalogItems = (
+  state: RootState,
+): Record<StarCatalogId, StarCatalogItemSettings> => selectSettings(state).starCatalogs.items;
 
 /**
  * Star-billboard pixel radius — the star-catalog twin of

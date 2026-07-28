@@ -3,10 +3,10 @@
  * per-category label bit, and how to write it.
  *
  * Callers resolve a category's home with
- * `LABEL_HOME_BY_SOURCE_TYPE[SOURCE_REGISTRY[cat].type]`, so a new
+ * `LABEL_HOME_BY_SOURCE_TYPE[SOURCE_TYPE_BY_LABEL_CATEGORY[cat]]`, so a new
  * label-bearing source type is ONE row here rather than a fresh branch in both
- * the read projection and the container's write handler. It replaces a pair of
- * hardcoded chains that had to be kept in mirror-image agreement by hand:
+ * the read projection and the container's write handler. The alternative is a
+ * pair of hardcoded chains kept in mirror-image agreement by hand —
  * `isStructureId → === 'milkyWay' → else galaxy-catalog`, spelled once for
  * reads and once for writes.
  *
@@ -16,7 +16,8 @@
  * row's implementation rather than smoothed away by synthesising a one-entry
  * items record, which would pretend the overlay is a catalog.
  *
- * The `as StructureId` / `as GalaxyCatalogId` casts are the table's one
+ * The `as StructureId` / `as GalaxyCatalogId` / `as StarCatalogId` casts are
+ * the table's one
  * unavoidable seam: `LabelHome.read` is uniform over `LabelCategory` (that is
  * what makes the table a `Record`), while each row indexes a record keyed by
  * its own narrower id union. The registry lookup that selects the row is what
@@ -26,11 +27,13 @@
 import type { LabelHome } from '../../@types/settings/LabelHome';
 import type { LabelBearingSourceType } from '../../@types/data/LabelBearingSourceType';
 import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
+import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';
 import type { StructureId } from '../../@types/data/structure/StructureId';
 import {
   setStructureLabelEnabled,
   setMilkyWayLabelEnabled,
   setGalaxyCatalogLabelEnabled,
+  setStarCatalogLabelEnabled,
 } from '../../state/settings/settingsSlice';
 
 export const LABEL_HOME_BY_SOURCE_TYPE: Readonly<Record<LabelBearingSourceType, LabelHome>> = {
@@ -41,6 +44,10 @@ export const LABEL_HOME_BY_SOURCE_TYPE: Readonly<Record<LabelBearingSourceType, 
   galaxyCatalog: {
     read: (homes, id) => homes.galaxyCatalogs[id as GalaxyCatalogId].labelEnabled,
     write: (id, enabled) => setGalaxyCatalogLabelEnabled({ id: id as GalaxyCatalogId, enabled }),
+  },
+  starCatalog: {
+    read: (homes, id) => homes.starCatalogs[id as StarCatalogId].labelEnabled,
+    write: (id, enabled) => setStarCatalogLabelEnabled({ id: id as StarCatalogId, enabled }),
   },
   // The singleton overlay: one scalar, no per-record row to index.
   milkyWay: {

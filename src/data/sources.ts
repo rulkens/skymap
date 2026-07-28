@@ -20,21 +20,22 @@
  *   'flow'          — CF4++ peculiar-velocity field overlay (single
  *                     flowfield.scfd cube). No per-record identity; carries
  *                     its own look/motion defaults.
- *   'famousStar'/'planet'/'earth'
- *                   — near-field true-scale bodies (the curated stellar
- *                     neighbourhood, Solar-System planets, Earth). Seeded records
- *                     drawn by their own content-layer; not persisted (a body's
- *                     identity is its stable seed id), but pickable on the NEAR0
- *                     pick pass via `drawPick`.
- *   'starCatalog'   — survey-wide stellar point clouds (the Gaia bin today).
- *                     Streamed as tiered `.bin` clouds and drawn by the star
- *                     renderer. Leaf stars are pickable on the NEAR0 pick pass
- *                     (the code tags the source there); a star's identity is its
- *                     record index and is not persisted to the `.bin`.
+ *   'planet'/'earth' — near-field true-scale bodies (Solar-System planets,
+ *                     Earth). Seeded records drawn by their own content-layer;
+ *                     not persisted (a body's identity is its stable seed id),
+ *                     but pickable on the NEAR0 pick pass via `drawPick`.
+ *   'starCatalog'   — stellar point sets the user toggles as a unit. Two
+ *                     variants, split by `binBaseName`: the SURVEY-wide Gaia bin
+ *                     streams tiered `.bin` clouds from disk, while the curated
+ *                     famous-star map is SEEDED in code from the body store
+ *                     (`binBaseName: null`). Both are pickable on the NEAR0 pick
+ *                     pass — a survey star's identity is its record index, a
+ *                     seeded star's is its stable seed id — and neither is
+ *                     persisted to a `.bin`.
  *
  * Only `'galaxyCatalog'` and `'structure'` codes are persisted to disk / packed into
  * GPU buffers; `'filament'`, `'volume'`, `'milkyWay'`, `'flow'`, `'starCatalog'`, and
- * the body codes (`'famousStar'`, `'planet'`, `'earth'`) exist
+ * the body codes (`'planet'`, `'earth'`) exist
  * solely so every data source has one place to look. The visibility-bitmask helpers
  * (`utils/maskHas`, `utils/maskWith`, `utils/maskWithout`) operate on
  * galaxy catalog codes only.

@@ -43,6 +43,12 @@
  * source) while others recede for *some* (`labelLayer` for
  * `structure`/`galaxy` only). The switch says exactly that without
  * repetition.
+ *
+ * The `labelLayer` arm nests its own `never`-guarded switch over
+ * `LabelLayerId` for the same reason. A predicate (`layer === 'structure' ||
+ * layer === 'galaxy'`) reads more compactly but makes "does not recede" the
+ * silent default for every layer added later — the stance a caption layer
+ * inherits without anyone choosing it. The guard forces the choice.
  */
 
 import type { FadeId } from '../../../@types/animation/FadeId';
@@ -78,10 +84,39 @@ export function recessionTargetFor(h: FadeId): number | undefined {
     case 'structure':
       return MARKER_RECESSION; // all structure sources recede
     case 'labelLayer':
-      // Structure labels (any item) and famous-galaxy labels recede;
-      // famous labels reuse the 'galaxy' id. The YOU-ARE-HERE
-      // pin ('milkyWay') and scale bar ('scaleBar') do not.
-      return h.layer === 'structure' || h.layer === 'galaxy' ? LABEL_RECESSION : undefined;
+      switch (h.layer) {
+        // The COSMO name labels: structure labels (any item) and famous-galaxy
+        // labels, which reuse the 'galaxy' id. These are the labels focus is
+        // meant to quiet — they crowd the same slab as the focused subject.
+        case 'structure':
+        case 'galaxy':
+          return LABEL_RECESSION;
+        // The YOU-ARE-HERE pin: one label at the world origin, the anchor the
+        // focused subject is read against. Receding it would dim the reference.
+        case 'milkyWay':
+          return undefined;
+        // The scale bar is a readout, not scenery — it must stay legible at
+        // full focus.
+        case 'scaleBar':
+          return undefined;
+        // The near-field caption layers draw on the NEAR0 slab through
+        // `foregroundLabelsLayer`, which owns its OWN declutter (a screen-space
+        // separation cull with priority tiers) and its own temporal envelope,
+        // and never routes through `resolveLayerOpacity`. A recession factor
+        // here would be a second, competing dimming authority over the same
+        // captions — and the focus blend it keys on is driven at Mpc scales,
+        // where these pc-band captions have already faded out. So they do not
+        // recede: the near field declutters by its own mechanism.
+        case 'starCatalog':
+        case 'body':
+          return undefined;
+        // TypeScript exhaustiveness guard — a new LabelLayerId must declare its
+        // recession stance here rather than inheriting "does not recede".
+        default: {
+          const _exhaustive: never = h.layer;
+          throw new Error(`unhandled LabelLayerId: ${JSON.stringify(_exhaustive)}`);
+        }
+      }
     // Non-recessing kinds — explicit so a new union member can't silently
     // skip declaring its stance.
     case 'galaxyCatalog':
