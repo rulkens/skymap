@@ -273,20 +273,20 @@ would produce a garbage span rather than an obvious error. Naming such a tile wo
 make most of the cell sample the wrong ground, since the fragment derives its within-tile
 uv from the level in `B`. It waits for the window to deepen again, or for the LRU.
 
-- [ ] **Spec test 6 — the finest resident ancestor wins.** Given a resident set holding a
+- [x] **Spec test 6 — the finest resident ancestor wins.** Given a resident set holding a
       coarse tile and ONE of its four fine descendants, assert the cells under the descendant
       name the FINE slot and its sibling cells name the COARSE slot. This single property IS
       the graceful-degradation mechanism of design 5; if it regresses you get holes or
       wrong-area sampling.
-- [ ] **Spec test 7 — a rebuilt table never names an evicted slot.** Drive a real
+- [x] **Spec test 7 — a rebuilt table never names an evicted slot.** Drive a real
       `TextureAtlas` (constructed with the Earth geometry, no `initTexture`, so no GPU) past
       full so `allocate` evicts, rebuild, and assert no cell points at the recycled slot.
       A regression test by construction against the named landmine.
-- [ ] Assert `A === 0` everywhere for an empty resident set — the identity case that makes
+- [x] Assert `A === 0` everywhere for an empty resident set — the identity case that makes
       the feature strictly additive. One line, and it is the thing every degradation path
       collapses to.
-- [ ] Implement.
-- [ ] `npm test -- buildEarthPageTable`. Commit.
+- [x] Implement.
+- [x] `npm test -- buildEarthPageTable`. Commit.
 
 ---
 
