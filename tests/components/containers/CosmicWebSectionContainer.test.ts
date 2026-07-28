@@ -32,7 +32,7 @@ import { render, fireEvent } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import CosmicWebSectionContainer from '../../../src/components/containers/CosmicWebSectionContainer';
-import { createAppStore } from '../../../src/store/createAppStore';
+import { createTestStore as createAppStore } from '../../support/createTestStore';
 import {
   selectVolumesEnabled,
   selectFilamentsEnabled,

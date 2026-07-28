@@ -29,7 +29,7 @@ import { render, fireEvent } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import FlowSectionContainer from '../../../src/components/containers/FlowSectionContainer';
-import { createAppStore } from '../../../src/store/createAppStore';
+import { createTestStore as createAppStore } from '../../support/createTestStore';
 import { selectFlow } from '../../../src/state/settings/selectors';
 import { setFlowEnabled } from '../../../src/state/settings/settingsSlice';
 import type { AppStore } from '../../../src/store/types';
