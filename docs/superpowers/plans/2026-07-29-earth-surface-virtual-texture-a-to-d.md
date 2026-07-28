@@ -112,14 +112,14 @@ reachable this phase — that is what makes Q1 a one-word edit rather than a typ
 Called by BOTH `buildEarthTiles` (task B2) and the runtime fetcher (task C3); this is the
 anti-drift pattern `bodyTextureFilename.ts:9-15` already enforces.
 
-- [ ] Add the two `@types` files. One type per file, no barrel.
-- [ ] Add `earthTileParams.ts` with the table above.
-- [ ] Add `earthTilePath.ts`.
-- [ ] **No test.** Per `testing.md` and the spec's "Nothing else earns a test", a test over
+- [x] Add the two `@types` files. One type per file, no barrel.
+- [x] Add `earthTileParams.ts` with the table above.
+- [x] Add `earthTilePath.ts`.
+- [x] **No test.** Per `testing.md` and the spec's "Nothing else earns a test", a test over
       `earthTilePath`'s output string restates the format, and a test over the constants
       restates the table. The anti-drift guarantee comes from there being one caller-shared
       function, not from an assertion.
-- [ ] `npm run typecheck`. Commit.
+- [x] `npm run typecheck`. Commit.
 
 ### Task A2: the grid, uv↔tile conversion, and the round trip (spec test 1)
 
@@ -149,16 +149,16 @@ and `fragment.wesl:156-158` documents the same convention) while tile `y = 0` is
 edge. `u = 0` is exactly longitude -180, so no prime-meridian offset enters here; the
 `TEXTURE_PRIME_MERIDIAN_U` 0.5 is already baked into the mesh's vertex `u`.
 
-- [ ] **Spec test 1 — tile-address round trip.** `tests/utils/scene/earthTileXyForUv.test.ts`:
+- [x] **Spec test 1 — tile-address round trip.** `tests/utils/scene/earthTileXyForUv.test.ts`:
       for a spread of tiles across z = 5..13 including the four corners of each level and the
       antimeridian column, assert
       `earthTileXyForUv(earthTileCentreUv([x, y], z, 512), z, 512)` deep-equals `[x, y]`.
       This catches an off-by-one in either the `1 - v` flip or the `cols / 2` row count, both
       of which read on a globe as "the texture is subtly wrong" rather than as a break.
-- [ ] Add one assertion in `earthTexelMetres.test.ts` anchoring z = 4 to 4892 m/texel, which
+- [x] Add one assertion in `earthTexelMetres.test.ts` anchoring z = 4 to 4892 m/texel, which
       is the spec's own "equals today's base" claim and the anchor the whole ladder hangs on.
       Nothing else in that file.
-- [ ] `npm test -- earthTile`. Commit.
+- [x] `npm test -- earthTile`. Commit.
 
 ### Task A3: `planEarthTiles` — horizon, frustum, level selection (spec tests 2, 3, 4)
 
@@ -175,7 +175,7 @@ The level rule, stated once so the exponent has one home:
 > A patch at level `z` whose projected on-screen extent is `screenPx` needs level
 > `z + ceil(log2(screenPx / tilePx))`, clamped to `[minLevel, maxLevel]`.
 
-- [ ] **Spec test 2 — level from texel density, hand-computed anchor.** A nadir-facing camera
+- [x] **Spec test 2 — level from texel density, hand-computed anchor.** A nadir-facing camera
       at a stated altitude, `fovY = 40°`, viewport 1440 px. Assert the plan's `zWin` equals
       the level worked out on paper from
       `groundMetresPerPixel = h * 2 * tan(fovY / 2) / viewportHeightPx` against
@@ -184,15 +184,15 @@ The level rule, stated once so the exponent has one home:
       altitude raises `zWin` by exactly one, over at least three consecutive halvings.
       A wrong exponent here starves or thrashes the atlas and is invisible on screen except
       as vague blurriness.
-- [ ] **Spec test 3 — clamp to `maxLevel`.** One assertion: with `maxLevel: 5` and a camera
+- [x] **Spec test 3 — clamp to `maxLevel`.** One assertion: with `maxLevel: 5` and a camera
       low enough to want z11, no request exceeds z5. Without it, a shallower pyramid draws a
       sustained 404 storm on every close approach.
-- [ ] **Spec test 4 — the far hemisphere is rejected.** A nadir plan contains the sub-camera
+- [x] **Spec test 4 — the far hemisphere is rejected.** A nadir plan contains the sub-camera
       tile at `zWin`, and contains no tile whose four corners all satisfy
       `dot(corner, camPosLocal) < 1`. Roughly half the fetches and half the atlas ride on
       this and no compiler check reaches it.
-- [ ] Implement steps 1 to 4. Keep it pure — no clock, no module state.
-- [ ] `npm test -- planEarthTiles`. Commit.
+- [x] Implement steps 1 to 4. Keep it pure — no clock, no module state.
+- [x] `npm test -- planEarthTiles`. Commit.
 
 ### Task A4: the window, and the antimeridian (spec test 5)
 
@@ -205,33 +205,48 @@ never resident, and never needs representing.
 
 The wrapping subtraction the fragment will mirror is `dx = (px + cols - winX0) % cols`.
 
-- [ ] **Spec test 5 — the window contains every emitted leaf, across the antimeridian.**
+- [x] **Spec test 5 — the window contains every emitted leaf, across the antimeridian.**
       A plan centred at longitude 180 must emit leaves on **both** sides of the seam, and
       every emitted leaf must map into `[0, windowSide)` after the wrapping subtraction.
       Assert the both-sides part explicitly — a window that silently emitted nothing west of
       the seam would pass a naive containment check. This is the one place the window
       arithmetic can be wrong in a way that shows only in the Pacific.
-- [ ] Implement window derivation + step 5.
-- [ ] `npm test -- planEarthTiles`. Commit.
+- [x] Implement window derivation + step 5.
+- [x] `npm test -- planEarthTiles`. Commit.
 
 ### Task A5: `buildEarthPageTable` (spec tests 6, 7)
 
-**Files:** `src/utils/scene/buildEarthPageTable.ts` (new),
+**Files:** `src/@types/scene/EarthResidentTile.d.ts` (new),
+`src/utils/scene/buildEarthPageTable.ts` (new),
 `tests/utils/scene/buildEarthPageTable.test.ts` (new).
 
 **Signature:**
 
 ```ts
+// src/@types/scene/EarthResidentTile.d.ts
+export type EarthResidentTile = {
+  readonly tile: EarthTileId;
+  /** Index of the atlas slot holding this tile's bitmap. */
+  readonly slot: number;
+  /** Blend weight against the whole-globe base, 0..1 — the load fade. */
+  readonly weight: number;
+};
+
 buildEarthPageTable(input: {
-  /** tile key -> atlas slot index, the atlas's authoritative resident set. */
-  readonly resident: ReadonlyMap<string, number>;
+  /** Every tile currently in the atlas, in any order. */
+  readonly resident: readonly EarthResidentTile[];
   readonly plan: EarthTilePlan;
   readonly slotsPerRow: number;
   readonly windowSide: number;
-  /** tile key -> blend weight 0..1 (the load fade); absent means 1. */
-  readonly weight: ReadonlyMap<string, number>;
+  readonly tilePx: number;
 }): Uint8Array;   // windowSide * windowSide * 4, RGBA8UI
 ```
+
+One structured list, not a key-to-slot map plus a parallel key-to-weight map. Residency
+keyed by `earthTilePath(tile)` would force this function to INVERT that string to recover
+`(z, x, y)` — an inverse that should not exist, because the subsystem calling it holds the
+`EarthTileId`, the slot and the fade stamp in full and formats the key itself. Two parallel
+maps that must agree is the same smell seen from the other side.
 
 Byte map per texel, verbatim from spec design 2:
 
@@ -249,6 +264,14 @@ Two properties are the whole point of this function:
   the "eviction granularity must match slot granularity" landmine unreachable.
 - **Written in INCREASING `z`**, so a fine tile overwrites its coarse ancestor's cells and
   every cell ends up naming the finest resident ancestor. No search, no per-cell level loop.
+
+A third case neither the spec nor the first draft of this plan named: **a resident tile
+FINER than `plan.zWin` is unrepresentable and must be skipped.** It is reachable — the
+camera climbing lowers `zWin` while the atlas still holds deeper tiles from the frames
+before — and `1 << (zWin - z)` with a negative shift is JavaScript's shift-mod-32, so it
+would produce a garbage span rather than an obvious error. Naming such a tile would also
+make most of the cell sample the wrong ground, since the fragment derives its within-tile
+uv from the level in `B`. It waits for the window to deepen again, or for the LRU.
 
 - [ ] **Spec test 6 — the finest resident ancestor wins.** Given a resident set holding a
       coarse tile and ONE of its four fine descendants, assert the cells under the descendant
@@ -494,6 +517,15 @@ match its shape, and five of its properties are load-bearing and must survive re
 Half-texel clamp inside the slot, no gutters: `clamp(tileUv, 0.5/512, 1 - 0.5/512)` before
 converting to atlas coordinates, so bilinear at a slot edge replicates the tile's own edge
 texel instead of bleeding a stranger's.
+
+**One trap in the spec's snippet, found during A5.** It opens with
+`let cols = 1u << u32(zWin)`, which is the column count only when `tilePx == 512` — the
+ladder's `(512 << z) / tilePx` cancels at exactly that tile edge and nowhere else. The TS
+side is parametric in `tilePx` and reads it from the manifest, so a re-bake at a different
+tile edge would silently desync the shader from the planner: same uv, different cell.
+Resolve it one of two ways, and say which in the commit — either carry `tilePx` (or the
+column count) into the uniforms alongside the window, or drop `tilePx` from the manifest and
+make 512 a fixed property of the format. Do not leave both stories in the tree.
 
 - [ ] Meticulous WESL pass. **Single quotes in comments, never backticks** (they are a parse
       error). `?static` imports. Read the whole file before editing.
