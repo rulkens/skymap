@@ -47,7 +47,7 @@ import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { AppStore } from '../../../src/store/types';
 import type { VisibilityLayerKey } from '../../../src/@types/animation/VisibilityLayerKey';
-import { createAppStore } from '../../../src/store/createAppStore';
+import { createTestStore as createAppStore } from '../../support/createTestStore';
 import {
   setFilamentsEnabled,
   setFlowEnabled,

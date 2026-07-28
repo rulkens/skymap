@@ -38,7 +38,7 @@ import type { TimeState } from '../../src/@types/time/TimeState';
 import type { AppDispatch } from '../../src/store/types';
 import type { UnknownAction } from '@reduxjs/toolkit';
 import { Source } from '../../src/data/sources';
-import { createAppStore } from '../../src/store/createAppStore';
+import { createTestStore as createAppStore } from '../support/createTestStore';
 import { buildInitialSettings } from '../../src/state/settings/initialState';
 import { requestFocus } from '../../src/state/selection/requestFocus';
 import { clearSelection } from '../../src/state/selection/selectionSlice';
