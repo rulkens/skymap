@@ -53,7 +53,7 @@ import type { SelectionRingRenderer } from '../../rendering/SelectionRingRendere
 import type { StructureMarkerRenderer } from '../../rendering/StructureMarkerRenderer';
 import type { VolumeFieldRenderer } from '../../rendering/VolumeFieldRenderer';
 import type { FlowFieldRenderer } from '../../rendering/FlowFieldRenderer';
-import type { VolumeUpsample } from '../../rendering/VolumeUpsample';
+import type { AdditiveUpsample } from '../../rendering/AdditiveUpsample';
 import type { StarAggregateUpsample } from '../../rendering/StarAggregateUpsample';
 import type { BloomPyramid } from '../../rendering/BloomPyramid';
 import type { PickDebugOverlay } from '../../rendering/PickDebugOverlay';
@@ -333,7 +333,7 @@ export type EngineGpuHandles = {
    * no-op).  Stored here so `destroy()` can release the pipeline +
    * sampler + bind-group-layout.
    */
-  volumeUpsample: VolumeUpsample | null;
+  volumeUpsample: AdditiveUpsample | null;
   /**
    * Reduced-res-to-HDR composite for the Milky Way cloud's star field. Reads
    * the `mw-aggregate` offscreen that `milkyWayAggregateLayer` drew the
@@ -345,7 +345,7 @@ export type EngineGpuHandles = {
    * null handle is a silent no-op. Stored here so `destroy()` can release the
    * pipeline + sampler + bind-group-layout via the pass's no-op destroy method.
    */
-  milkyWayUpsample: VolumeUpsample | null;
+  milkyWayUpsample: AdditiveUpsample | null;
   /**
    * Half-res-to-HDR survey-star aggregate upsample composite. Reads the
    * `star-aggregates` offscreen the aggregate stream drew LINEAR into,

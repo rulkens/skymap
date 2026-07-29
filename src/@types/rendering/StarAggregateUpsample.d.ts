@@ -4,8 +4,8 @@
  * pass's hue-preserving knee to the SUMMED aggregate field, and additively
  * blends the result into the HDR target.
  *
- * The twin of `VolumeUpsample`, differing only in the composite math: the
- * volume upsample is a plain filtered blit, whereas this one knees the summed
+ * The twin of `AdditiveUpsample`, differing only in the composite math: that
+ * one is a plain filtered blit, whereas this one knees the summed
  * scalar (carried in the offscreen alpha) so an aggregate-covered region
  * compresses like a concentrated bright leaf does — the LOD-symmetry fix. See
  * `services/gpu/shaders/starAggregateUpsample/fragment.wesl`.

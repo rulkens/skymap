@@ -15,7 +15,7 @@
  *
  * ### Why a dedicated factory
  *
- * Same shape as `volumeUpsample`: a single covering-triangle pipeline
+ * Same shape as `additiveUpsample`: a single covering-triangle pipeline
  * that samples one texture and writes one RGBA target.  Each fullscreen
  * blit lives in its own factory under `services/gpu/passes/` so the
  * consumer threads exactly one descriptor through one call.  Bundling
@@ -27,7 +27,7 @@
  * via `textureSample` (that operation is float-only).  The fragment
  * uses `textureLoad` at exact integer texel coordinates, which doesn't
  * need a sampler binding.  Saves a bind-group slot and a sampler
- * allocation versus the volumeUpsample shape.
+ * allocation versus the additiveUpsample shape.
  */
 
 import vsCode from '../shaders/pickDebugOverlay/vertex.wesl?static';

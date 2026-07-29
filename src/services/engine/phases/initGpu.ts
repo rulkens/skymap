@@ -61,7 +61,7 @@ import { createStructureMarkerRenderer } from '../../gpu/renderers/structureMark
 import { createMilkyWayPickRenderer } from '../../gpu/renderers/milkyWay/milkyWayPickRenderer';
 import { createVolumeFieldRenderer } from '../../gpu/renderers/volumeField/volumeFieldRenderer';
 import { createFlowFieldRenderer } from '../../gpu/renderers/flowField/flowFieldRenderer';
-import { createVolumeUpsample } from '../../gpu/passes/volumeUpsample';
+import { createAdditiveUpsample } from '../../gpu/passes/additiveUpsample';
 import { createStarAggregateUpsample } from '../../gpu/passes/starAggregateUpsample';
 import { createBloomPyramid } from '../../gpu/passes/bloomPyramid';
 import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
@@ -420,16 +420,15 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   //
   // Built unconditionally; the pipeline is cheap and the 1/3-scale target
   // lives on `renderTargets`, so nothing here depends on viewport size.
-  state.gpu.volumeUpsample = createVolumeUpsample(device, 'rgba16float');
+  state.gpu.volumeUpsample = createAdditiveUpsample(device, 'rgba16float');
 
   // ── Reduced-res-to-HDR Milky Way star-field composite ─────────────
   //
-  // A SECOND instance of the same factory (which is generic — a linear-sampled
+  // A SECOND instance of the same factory (which is generic — a filtered
   // additive blit of whatever view it is handed). Deliberately not the volume's
   // handle: sharing one would braid two independently-gated subsystems onto a
-  // single resource. See `milkyWayUpsampleLayer` on the pending rename of the
-  // factory now that it has two unrelated callers.
-  state.gpu.milkyWayUpsample = createVolumeUpsample(device, 'rgba16float');
+  // single resource.
+  state.gpu.milkyWayUpsample = createAdditiveUpsample(device, 'rgba16float');
 
   // ── Half-res survey-star aggregate upsample composite ─────────────
   //

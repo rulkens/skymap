@@ -12,7 +12,7 @@
  * shares the HDR composite's tone object, so it runs tone-enabled too.
  *
  * Before this primitive, each of those lived in its own bespoke pass
- * (`postProcess.ts`, a foreground compositor, `volumeUpsample.ts`) with
+ * (`postProcess.ts`, a foreground compositor, `additiveUpsample.ts`) with
  * three copies of the covering-triangle vertex stage, three sampler
  * declarations, and three near-identical pipeline builds. The compositor
  * unifies the pipeline plumbing while keeping the parts that genuinely
@@ -169,7 +169,7 @@ const BLEND_TABLE: Record<
     preserveAlpha: 1,
   },
   // Additive — matches the scalar-volume pipeline's blend byte-for-byte
-  // (see volumeUpsample.ts). Source coverage is carried straight
+  // (see additiveUpsample.ts). Source coverage is carried straight
   // (preserveAlpha 1) so the sum of contributions is order-independent.
   additive: {
     blend: ADDITIVE_BLEND,
@@ -309,7 +309,7 @@ export function createCompositor(init: {
 
       // Bind group is rebuilt per draw because `src` is recreated on
       // resize — caching across resize would bind a destroyed view (same
-      // rationale as volumeUpsample.ts). One alloc per draw is trivial
+      // rationale as additiveUpsample.ts). One alloc per draw is trivial
       // against the fullscreen blit it carries.
       const bindGroup = device.createBindGroup({
         label: `compositor-bg-${blend}`,

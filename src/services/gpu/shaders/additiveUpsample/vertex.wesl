@@ -1,11 +1,11 @@
-// volumeUpsample/vertex.wesl — fullscreen covering-triangle vertex stage.
+// additiveUpsample/vertex.wesl — fullscreen covering-triangle vertex stage.
 //
 // Identical to compositor/vertex.wesl: synthesise three vertices that cover
 // the entire viewport with UVs in [0, 1]².  The fragment stage samples
-// the half-res target at 'in.uv' with a linear sampler, which gives us
-// a free 2x bilinear upscale.
+// the reduced-resolution offscreen at 'in.uv' with a linear sampler, which
+// carries the magnification for free.
 
-import package::volumeUpsample::io::VSOut;
+import package::additiveUpsample::io::VSOut;
 
 @vertex
 fn vs(@builtin(vertex_index) vi: u32) -> VSOut {

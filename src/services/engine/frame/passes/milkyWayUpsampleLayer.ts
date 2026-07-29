@@ -10,18 +10,15 @@
  * billboards straight into HDR would have produced, up to bilinear
  * interpolation — and interpolating a low-frequency glow field is invisible.
  *
- * ### Why it reuses the volume upsample factory
+ * ### Why it reuses the shared additive-upsample factory
  *
- * `createVolumeUpsample` is already fully generic: a covering-triangle pipeline
- * that linear-samples whatever view it is handed and adds it into an
- * `rgba16float` target. Nothing in it is volume-specific. This layer draws
- * through its OWN instance (`state.gpu.milkyWayUpsample`), not the volume's, so
- * the two subsystems share no handle and neither gate can affect the other.
- *
- * The factory's NAME is now wrong for one of its two callers. Renaming it to
- * something like `createAdditiveUpsample` (and its `shaders/volumeUpsample/`
- * directory with it) is the follow-up; it was left out of this change so the
- * split lands as one reviewable thing.
+ * `createAdditiveUpsample` is fully generic: a covering-triangle pipeline that
+ * filters whatever view it is handed and adds it into an `rgba16float` target.
+ * The cloud's aggregate offscreen meets its contract — additively summed, and
+ * low-frequency enough that the 4-tap reconstruction costs nothing. This layer
+ * draws through its OWN instance (`state.gpu.milkyWayUpsample`), not the
+ * volume's, so the two subsystems share no handle and neither gate can affect
+ * the other.
  *
  * ### Why not the star-aggregate upsample instead
  *
