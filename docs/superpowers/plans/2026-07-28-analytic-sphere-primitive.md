@@ -250,18 +250,24 @@ export type BodySpherePickArgs = {
 };
 ```
 
-- [ ] Add the test `SpherePickUniforms byte offsets` asserting the scratch mirror: mvp at f32
+**Landed as ONE commit with 1.2.** `drawSphere` has exactly one call site
+(`drawFlooredSpherePick.ts:74`), so a required `camPosLocal` breaks `npm run typecheck` until
+1.2 supplies it; the only ways to split were a throwaway placeholder or an optional field, both
+worse. Bisectability is preserved where it matters — the merged commit changes no behaviour at
+all (the uniform is bound and unread) and the geometry change is still its own commit (1.3).
+
+- [x] Add the test `SpherePickUniforms byte offsets` asserting the scratch mirror: mvp at f32
       0..15, camPosLocal at f32 16..18, packedId at u32 word 19, total 80 bytes. This is the
       WGSL/TS layout-parity keep-rule — the failure mode is a silently dropped iOS frame, not a
       wrong pixel.
-- [ ] Widen the WESL struct and the TS scratch/type. `SPHERE_PACKED_ID_U32_INDEX` moves 16 → 19.
-- [ ] The shader is otherwise untouched **in this task** — `camPosLocal` is bound and unread, so
+- [x] Widen the WESL struct and the TS scratch/type. `SPHERE_PACKED_ID_U32_INDEX` moves 16 → 19.
+- [x] The shader is otherwise untouched **in this task** — `camPosLocal` is bound and unread, so
       the pick behaves exactly as before. Splitting the layout change from the geometry change
       keeps each bisectable.
-- [ ] `npm test -- sphereUniforms bodyPickRenderer` green; `npm run typecheck` clean.
+- [x] `npm test -- sphereUniforms bodyPickRenderer` green; `npm run typecheck` clean.
 - [ ] **Visual acceptance:** picking still works — hover and click Mars, the Moon, and a Moon
       overlapping Earth; the InfoCard names the right body each time. Console clean.
-- [ ] Commit.
+- [x] Commit.
 
 ### 1.2: `drawFlooredSpherePick` composes the ray origin
 
@@ -276,11 +282,13 @@ The header gains the "why" the spec's pick section states: the floor is a CPU-si
 radius** inflation, so in the local frame the floored sphere **is** the unit sphere — the
 analytic primitive composes with it unchanged, exactly as the mesh did. No call site changes.
 
-- [ ] No new test — the helper is a thin composition over `camPosLocal` (0.3, tested) and
+**Landed as ONE commit with 1.1** — see the note under 1.1 for why the split was not achievable.
+
+- [x] No new test — the helper is a thin composition over `camPosLocal` (0.3, tested) and
       `composeBodyMvp` (tested); a test here would restate both.
-- [ ] Implement; update the module header.
-- [ ] `npm run typecheck` clean; `npm test` green.
-- [ ] Commit.
+- [x] Implement; update the module header.
+- [x] `npm run typecheck` clean; `npm test` green.
+- [x] Commit.
 
 ### 1.3: `spherePick.wesl` ray-traces the sphere
 
@@ -329,18 +337,18 @@ Renderer: `cullMode` `'back'` → `'front'`. Nothing else about the sphere pipel
 sphere, so the effective pick silhouette is exactly the model radius — the 5% never reaches the
 target.
 
-- [ ] No test (standing refusal).
-- [ ] Implement the shader + the cull-mode flip; move `PROXY_SCALE` into the lib and import it
+- [x] No test (standing refusal).
+- [x] Implement the shader + the cull-mode flip; move `PROXY_SCALE` into the lib and import it
       from `spherePick.wesl` (leave `impostorVertex.wesl`'s local copy alone — Task 2.2 repoints
       it, and touching it here would put a feature edit in the wrong PR).
-- [ ] `npm test -- bodyPickRenderer` green; `npm run typecheck` clean.
+- [x] `npm test -- bodyPickRenderer` green; `npm run typecheck` clean.
 - [ ] **Visual acceptance (the pick is invisible — use the debug pick view):** click precisely on
       the outermost limb pixel of Mars at close approach and confirm it selects; click one pixel
       outside and confirm it does not. Then **the occlusion case**: frame the Moon transiting
       Earth and confirm clicking the Moon selects the Moon, not Earth. Then a far-edge planet
       that projects to ~2 px, confirming `minPickRadiusMpc`'s floor still gives it a clickable
       disc. Console clean.
-- [ ] Commit.
+- [x] Commit.
 
 ### 1.4: iOS check — `frag_depth` on the pick pass
 

@@ -99,6 +99,28 @@ const TEXTURE_PRIME_MERIDIAN_U: f32 = 0.5;
 // The sphere centre every test here uses: the body centre, at the local origin.
 const LOCAL_ORIGIN = vec3<f32>(0.0, 0.0, 0.0);
 
+// Radial blow-up of the coarse proxy shell, in body radii. It must exceed the
+// mesh's inscribed-silhouette deficit -- '1 - cos(half-step)' -- at the WORST
+// point the silhouette can cut a facet, not just the easy one. At a facet's
+// edge midpoint only one 7.5 deg step applies: '1 - cos(3.75 deg) = 0.214%' of
+// the radius at 48x24 ('sphereTessellation.ts'). Near a facet's diagonal both
+// steps combine (half-diagonal roughly 5.3 deg): '1 - cos(5.3 deg) = 0.43%'.
+// Either way the proxy's own outline would otherwise clip the analytic sphere
+// it exists to reveal, shaving exactly the limb pixels this primitive
+// recovers. '1.05 * cos(5.3 deg) = 1.05 * 0.9957 = 1.0455', comfortably
+// outside 1.0 even at the worst case, so the projected proxy disc strictly
+// contains the true disc at every camera distance. 5% is cheap because the
+// proxy is never shaded, only rasterised, and never itself visible: every
+// fragment either hits the unit sphere or discards, so the extra 5% never
+// reaches a pixel.
+//
+// Consumers pair it with 'cullMode: front', so the FAR hemisphere of the shell
+// is what rasterises. Front faces would vanish the moment the camera crossed
+// inside the shell -- a legal close approach, 5% of a body radius above the
+// surface -- taking the body with them. The far hemisphere still covers the whole
+// disc from in there, because the near hemisphere is behind the eye.
+const PROXY_SCALE: f32 = 1.05;
+
 // The outcome of a ray cast at the unit sphere. 'point' is ALWAYS unit length --
 // the true entry point on a hit, the closest-approach direction on a miss (see
 // the header's grazing fallback). Callers shade from 'point' unconditionally and
