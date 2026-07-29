@@ -68,8 +68,15 @@ export type HashParamSource = {
   readonly deepLink: boolean;
 
   /** Which dispatched actions can change this row's `write` output. A predicate for
-   *  whole-slice coverage, a list for surgical coverage. See §3.3 for the contract. */
-  readonly writesOn: readonly ActionCreator[] | ((action: Action) => boolean);
+   *  whole-slice coverage, a list for surgical coverage. See §3.3 for the contract.
+   *
+   *  CORRECTED during T6: this said `ActionCreator[]`, which does not compile. No such
+   *  type exists in this repo, and redux's same-named `ActionCreator<A, P>` carries no
+   *  `.match`, so §3.3's `s.writesOn.some((c) => c.match(action))` would be a type error.
+   *  RTK has the right shape internally as `HasMatchFunction` but does not export it, so
+   *  the capability is declared locally in `@types/state/url/ActionMatcher.d.ts`. RTK
+   *  action creators satisfy it structurally. */
+  readonly writesOn: readonly ActionMatcher[] | ((action: Action) => boolean);
 
   /** Serialize from the store. `null` omits the param entirely. */
   readonly write: (state: RootState) => string | null;

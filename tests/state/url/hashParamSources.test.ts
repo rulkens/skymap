@@ -14,11 +14,10 @@
  */
 
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import type { Action } from '@reduxjs/toolkit';
 
 import { HASH_PARAM_SOURCES } from '../../../src/state/url/hashParamSources';
-import { rootReducer } from '../../../src/store/rootReducer';
 import type { RootState } from '../../../src/store/types';
+import { stateAfter } from '../../fixtures/stateAfter';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { requestSelect } from '../../../src/state/selection/requestSelect';
 import { clearSelection } from '../../../src/state/selection/selectionSlice';
@@ -36,14 +35,6 @@ const orientationSource = HASH_PARAM_SOURCES.find((source) => source.key === 'or
 /** JD 2451545.0 — the J2000.0 epoch, and the instant it names. */
 const J2000_ISO = '2000-01-01T12:00:00.000Z';
 const J2000_UNIX_MS = Date.UTC(2000, 0, 1, 12, 0, 0);
-
-/** The store state reached by folding `actions` over the real root reducer. */
-function stateAfter(...actions: readonly Action[]): RootState {
-  return actions.reduce<RootState>(
-    (state, action) => rootReducer(state, action),
-    rootReducer(undefined, { type: '@@test/init' }),
-  );
-}
 
 const virgoRow: StructureInfo = {
   type: 'structure',
