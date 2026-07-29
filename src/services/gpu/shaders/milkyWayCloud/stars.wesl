@@ -24,15 +24,23 @@
 //      model transform, so sprites face the camera regardless of the model's
 //      rotation.
 //
-//   2. Screen-size clamp in PIXELS, not NDC. The tool capped the projected
-//      half-extent at 0.11 NDC. Here we convert the NDC delta to pixels via
-//      viewportPx and clamp to [starPxMin, starPxMax]. The px FLOOR is the
-//      anti-sparkle lever the tool lacked — a distant star never shrinks
-//      below a stable dot, so it stops twinkling as sub-pixel coverage
-//      flickers; the px CAP still bounds foreground swell on close
-//      flythroughs. A dead record (size 0) projects its corner onto its
-//      center, giving a zero-length delta that the 'lPx > 0' guard skips —
-//      so the floor never resurrects a dead sprite (it stays zero-area).
+//   2. Screen-size clamp in PIXELS, not NDC — and FLUX-CONSERVING. The tool
+//      capped the projected half-extent at 0.11 NDC. Here we convert the NDC
+//      delta to pixels via viewportPx and clamp to [starPxMin, starPxMax].
+//      The px FLOOR is the anti-sparkle lever the tool lacked — a distant
+//      star never shrinks below a stable dot, so it stops twinkling as
+//      sub-pixel coverage flickers; the px CAP bounds foreground swell on
+//      close flythroughs. Resizing a sprite also resizes how much light it
+//      emits: the fragment falloff runs over the quad's OWN corner coords, so
+//      peak alpha never learns the quad's screen size and total emission
+//      tracks screen AREA. The vertex stage therefore divides emission by the
+//      square of the size ratio, which keeps the clamp a pure SIZE decision
+//      in both directions — the floor stabilises coverage without inflating
+//      the far field, the cap bounds fill without dimming a close approach.
+//      A dead record (size 0) projects its corner onto its center, giving a
+//      zero-length delta that the 'lPx > 0' guard skips — so the floor never
+//      resurrects a dead sprite (it stays zero-area) and its flux correction
+//      stays exactly 1.
 //
 //   3. Fade multiplies EMISSION. fadeAlpha scales the final star colour, so a
 //      faded-out Milky Way adds no light under the additive blend.
@@ -90,6 +98,11 @@ fn vs(@location(0) corner: vec2<f32>,
   // 'apparent' defaults to 1.0 (LOD leaves off-screen stars alone; clip
   // culling handles them), matching the tool.
   var apparent = 1.0;
+  // Emission factor that undoes the area change the px clamp is about to make
+  // (see the inner block). Declared out here so that every path which applies
+  // NO clamp — center or corner behind the camera, or a zero-length delta —
+  // leaves it at exactly 1.0 and needs no correction of its own.
+  var clampFluxScale = 1.0;
   if (cClip.w > 0.0 && kClip.w > 0.0) {
     let cN = cClip.xy / cClip.w;
     var d = kClip.xy / kClip.w - cN;
@@ -105,6 +118,25 @@ fn vs(@location(0) corner: vec2<f32>,
       let targetPx = clamp(lPx, u.params1.x, u.params1.y);
       d = d * (targetPx / lPx);
       kClip = vec4<f32>((cN + d) * kClip.w, kClip.z, kClip.w);
+      // Conserve flux across that resize. Peak alpha is fixed by the corner
+      // coords, so a sprite's total light is proportional to its screen area
+      // — which, left alone, is already inverse-square correct: the projected
+      // half-extent goes as 1/distance, so the area goes as 1/distance^2.
+      // That is exactly why a clamp breaks it. Scaling the quad by
+      // k = targetPx / lPx scales its area by k*k, so dividing emission by
+      // k*k restores the sprite's light exactly.
+      //
+      // Applied in BOTH directions. At the floor k > 1, so this cancels the
+      // inflation the floor would otherwise hand the entire far field (which
+      // all sits on the floor). At the cap k < 1, so it BRIGHTENS a close
+      // star instead of capping it — the honest reading, since a star you are
+      // nearly inside really is blinding and the tone mapper and bloom exist
+      // for that. No ceiling is imposed on the boost: any ceiling would only
+      // move the un-conserved regime to a different threshold rather than
+      // remove it, and the alternative (correcting the floor only) would make
+      // the clamp conserve light in one direction and eat it in the other.
+      let invK = lPx / targetPx;
+      clampFluxScale = invK * invK;
     }
   }
 
@@ -118,7 +150,11 @@ fn vs(@location(0) corner: vec2<f32>,
   kClip.z = min(kClip.z, kClip.w * (1.0 - CLIP_Z_EPS));
 
   // Flux-conserving LOD — the band math and its tuning rationale live in
-  // lib/cloudSprite.wesl, shared with the galaxy-renderer tool's passes.
+  // lib/cloudSprite.wesl, shared with the galaxy-renderer tool's passes. It is
+  // independent of the clamp correction above and does not double-count it: it
+  // keys off 'apparent', the NDC size captured BEFORE the rescale, and answers
+  // a different question (how many sprites survive, and by how much the
+  // survivors stand in for the culled). The two factors multiply onto bright.
   let lod = fluxConservingLod(inPos, apparent, u.params1.w);
 
   // A culled star parks its quad outside clip space — all four corners land
@@ -127,7 +163,7 @@ fn vs(@location(0) corner: vec2<f32>,
   if (lod.cull) { o.pos = vec4<f32>(2.0, 2.0, 2.0, 1.0); } else { o.pos = kClip; }
   o.uv = corner;
   o.color = inColor;
-  o.bright = inSB.y * lod.boost;
+  o.bright = inSB.y * lod.boost * clampFluxScale;
   return o;
 }
 
