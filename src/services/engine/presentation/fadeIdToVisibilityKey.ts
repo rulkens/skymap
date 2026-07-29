@@ -24,8 +24,8 @@
  * ### Two tables, one branch
  *
  * The mapping is constant per kind, so it lives in data rather than in
- * control flow. Nested switches expressed the same lookup as ~70 lines of
- * `case`/`return`, which buries the one genuinely conditional thing —
+ * control flow. A nested switch would express the same lookup as ~70 lines
+ * of `case`/`return`, burying the one genuinely conditional thing —
  * `labelLayer` is the only kind carrying a sub-discriminator — under ten
  * arms that do nothing but return a literal. Two tables plus one two-way
  * branch says exactly that, and the per-row comments stay attached to the
@@ -33,8 +33,8 @@
  *
  * ### Exhaustiveness discipline
  *
- * `satisfies Record<K, V>` is the guard, and it is stronger than the
- * `never`-assignment `default` arm it replaces: a `Record` cannot be
+ * `satisfies Record<K, V>` is the guard, and it is stronger than a
+ * `never`-assignment `default` arm would be: a `Record` cannot be
  * satisfied by omission, so adding a member to `FadeId['kind']` or to
  * `LabelLayerId` makes the table a compile error until the new member
  * declares its clip stance. `satisfies` (not a type annotation) is what

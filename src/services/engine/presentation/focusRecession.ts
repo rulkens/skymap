@@ -40,11 +40,12 @@
  * *choice* rather than an inheritance. A `Record` cannot be satisfied by
  * omission, so a new `FadeId` kind or a new `LabelLayerId` is a compile
  * error until someone writes its row — including the rows that say
- * `undefined`. The switch this replaced could not promise that at the
- * outer level: with no `default` arm and no `noImplicitReturns` in this
- * repo's tsconfig, a missing kind fell through and returned `undefined`
- * silently, which is exactly how `flow` and `constellations` came to have
- * an unstated stance. The table form surfaces such a gap at build time.
+ * `undefined`. A switch over `FadeId['kind']` could not promise that at
+ * the outer level: this repo's tsconfig has no `noImplicitReturns`, so a
+ * switch with no `default` arm gives no exhaustiveness guarantee at all —
+ * a kind missing an arm falls through and returns `undefined` silently,
+ * indistinguishable from a deliberate "does not recede". The table form
+ * surfaces such a gap at build time instead of leaving it unstated.
  *
  * A predicate (`layer === 'structure' || layer === 'galaxy'`) reads more
  * compactly than the label-layer table but makes "does not recede" the
@@ -167,7 +168,7 @@ export function resolveLayerOpacity(
   h: FadeId,
   blend: number,
   now: number,
-  clip?: ClipPlayer, // NEW — omitted ⇒ factor 1 (no clip playing)
+  clip?: ClipPlayer,
 ): number {
   const clipFactor = clip === undefined ? 1 : clipFactorFor(clip, h, now);
   return fades.opacityOf(h, now) * focusRecession(h, blend) * clipFactor;

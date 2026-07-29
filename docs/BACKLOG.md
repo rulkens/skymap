@@ -53,7 +53,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Rendering
 
-- [ ] **`CaptionKind` shadows the label-bearing registry** `needs-design` — four per-caption facts dispatched at four sites; `CAPTION_PRIORITY` is already the right table, its three siblings are not. → [details](backlog/2026-07-29-caption-kind-shadow-registry.md)
+- [ ] **`CaptionKind` shadows the label-bearing registry** `deferred` — the union is still hand-typed, but it was never 1:1 with `bearsLabel`, so deriving it needs a new registry flag rather than a filter. → [details](backlog/2026-07-29-caption-kind-shadow-registry.md)
 - [ ] **Multi-star sphere presence** `deferred` — the field-star sphere is one-at-a-time (nearest wins); a Gaia-resolved double a few AU apart would leave the companion sprite-retired with no body. → [details](backlog/2026-07-21-multi-star-sphere-presence.md)
 - [ ] **Saturn ring brightness** `ready` — the ring reads too dim next to the new limb-darkened disc; retune ring albedo/exposure (surfaced in the planet-atmospherics per-body visual pass).
 - [ ] **Atmosphere limb transparent seam** `needs-investigation` — thin fully-transparent ring between a body's surface and its atmosphere shell (seen on Mars). → [details](backlog/2026-07-24-atmosphere-limb-transparent-seam.md)

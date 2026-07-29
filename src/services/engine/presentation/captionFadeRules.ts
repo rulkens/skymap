@@ -21,8 +21,8 @@
  *
  * The call site reduces to "look up the row, apply the two gates, take the
  * target". The alternative — a `switch` for the gates plus a nested ternary for
- * the target — encoded the SAME per-kind dispatch twice in two different
- * shapes, so a kind could (and did) get an entry in one and fall through to
+ * the target — encodes the SAME per-kind dispatch twice in two different
+ * shapes, so a kind could get an entry in one and fall through to
  * another kind's arm in the other. `satisfies` over the kind union makes this
  * table compiler-complete: adding a `CaptionKind` fails the build until it gets
  * a row, and the fall-through cannot come back.
@@ -122,7 +122,7 @@ export const CAPTION_FADE_RULES = {
    * `constellations.enabled` switch governs lines and names together through
    * that fade registry — so both gates are open and the target is the
    * producer's. The row exists so the table stays total over the kind union;
-   * leaving the kind implicit is what let it silently inherit the star map's
+   * leaving the kind implicit would let it silently inherit the star map's
    * parsec band and the star map's visibility toggle.
    */
   constellation: {
