@@ -10,14 +10,17 @@
  *
  * ### Why initial opacities are settings-derived (not a blanket 1.0)
  *
- * The fade registry is the single source of truth for every layer's opacity.
- * Registering at the wrong initial value produces a one-frame flash: a disabled
- * layer registered at 1 draws on frame 1 before a `setImmediate(0)` fires; an
- * enabled layer registered at 0 is invisible until a `fadeTo(1)` completes. Each
- * row's `seed(settings, item)` returns the value that matches the session's
+ * For every row a reader actually resolves an opacity from, registering at the
+ * wrong initial value produces a one-frame flash: a disabled layer registered
+ * at 1 draws on frame 1 before a `setImmediate(0)` fires; an enabled layer
+ * registered at 0 is invisible until a `fadeTo(1)` completes. Each row's
+ * `seed(settings, item)` returns the value that matches the session's
  * persisted settings so frame 1 is always coherent — milkyWay/volumesMaster/the
  * label and structure rows seed from their toggles, the always-on disk overlays
- * seed at 1.
+ * seed at 1. (`starCatalogLabel` and `bodyLabel` are the two rows where this
+ * reasoning is moot rather than load-bearing — see their own comments below —
+ * but they follow the same settings-derived convention anyway, since nothing
+ * about writing this manifest tells a reader which rows are the exception.)
  *
  * ### Registration now has exactly one home
  *
@@ -160,6 +163,22 @@ export const FADE_LAYERS = [
   // curated star-map captions — per label-bearing StarCatalogId,
   // settings-derived seed (the seed is in code, not demand-loaded, so there is
   // no guard and the seed follows the toggle).
+  //
+  // This handle's opacity has NO CONSUMER. The layer that actually draws these
+  // captions, `foregroundLabelsLayer`, reads `starCatalogs.items[id].labelEnabled`
+  // straight off settings and runs its own declutter + temporal envelope; it
+  // never calls `resolveLayerOpacity` (the only production reader of a fade
+  // registry opacity via `fadeIdToVisibilityKey`) for this key. The row is
+  // registered anyway because `starCatalogLabel` must be a real
+  // `VisibilityLayerKey` — the type-level test over FADE_LAYERS' keys, the
+  // `VISIBILITY_ACTION_ROW` factory, and `LAYER_GROUPS.labels`'s clip address
+  // space all need the key to exist independent of whether anything reads its
+  // fade. So `hide(['starCatalogLabel'])` still works end to end — its settings
+  // write (`setStarCatalogLabelEnabled`, via `VISIBILITY_ACTION_ROW`) is what
+  // the caption layer reads — but `fade(['starCatalogLabel'], …)` type-checks,
+  // registers, and animates a controller nothing multiplies into a drawn pixel.
+  // Finishing that wire (multiplying this handle's opacity into the caption's
+  // fade target) is a separate piece of work, not attempted here.
   layer({
     key: 'starCatalogLabel',
     expand: () => LABEL_BEARING_STAR_CATALOG_IDS,
@@ -169,6 +188,13 @@ export const FADE_LAYERS = [
   }),
   // scene-body captions — per BodyId, settings-derived seed (bodies are seeded
   // in code, so no demand-loaded guard).
+  //
+  // Same no-consumer gap as `starCatalogLabel` above: `foregroundLabelsLayer`
+  // reads `bodies.items[id].labelEnabled` directly for Earth/planet/Sun
+  // captions and never resolves this handle's opacity. Registered for the same
+  // reason — the key set that `FADE_LAYERS`, `VISIBILITY_ACTION_ROW`, and the
+  // clip address space share must stay total — not because anything reads the
+  // fade it drives.
   layer({
     key: 'bodyLabel',
     expand: () => BODY_IDS,

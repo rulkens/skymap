@@ -82,9 +82,9 @@ export type EngineSettingsState = {
    * Per-galaxy catalog state lives in `items` — one row per `GalaxyCatalogId`, each carrying
    * the layer-visibility axis (`enabled`) and the text-label axis
    * (`labelEnabled`). Only the famous-galaxy catalog actually renders a label;
-   * the other galaxy catalogs carry `labelEnabled` inertly so all four source-type
+   * the other galaxy catalogs carry `labelEnabled` inertly so all five source-type
    * clusters share the one per-item shape (galaxy catalogs / structures / volumes /
-   * star catalogs all expose `items[id].enabled`).
+   * star catalogs / bodies all expose `items[id].enabled`).
    */
   galaxyCatalogs: {
     enabled: boolean;
@@ -360,7 +360,8 @@ export type EngineSettingsState = {
    * row per registry-known volume field, seeded from `SOURCE_REGISTRY` at
    * construction so the panel can show a field's toggle before its cube
    * lazy-loads.  `items` is the same per-item accessor that galaxy catalogs,
-   * structures, and star catalogs expose, so all four source-type clusters share one shape.
+   * structures, star catalogs, and bodies expose, so all five source-type
+   * clusters share one shape.
    */
   volumes: {
     enabled: boolean;
@@ -492,9 +493,9 @@ export type EngineSettingsState = {
    * parallel root records that previously held the same booleans in different
    * shapes: a reader walks one `items[cat]` entry to learn everything about a
    * category's visibility instead of cross-indexing two records by the same
-   * key.  `items` is the same per-item accessor galaxy catalogs, volumes, and star
-   * catalogs expose, so all four source-type clusters share one shape.  Defaults to every
-   * category fully visible.
+   * key.  `items` is the same per-item accessor galaxy catalogs, volumes, star
+   * catalogs, and bodies expose, so all five source-type clusters share one
+   * shape.  Defaults to every category fully visible.
    */
   structures: {
     enabled: boolean;
