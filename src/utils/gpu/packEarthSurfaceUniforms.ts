@@ -39,8 +39,30 @@
  * fragment reads in place of that const. `oceanRoughness` at float index 28
  * opens a fresh 16-byte row: the open-water GGX roughness (the user-tunable
  * Earth-scoped override of the `OCEAN_ROUGHNESS` const in `lib/pbr.wesl`), which
- * the surface fragment reads in place of that const. Its row's remaining three
- * slots (indices 29..31) are the zeroed pad that rounds the struct to 128 bytes.
+ * the surface fragment reads in place of that const.
+ *
+ * ## zWin / winX0 / winY0 — the page-table window
+ *
+ * The surface virtual texture addresses tiles through a fixed-size page table
+ * whose window slides with the camera (`EarthTilePlan`), so the fragment cannot
+ * turn a surface uv into a page-table cell without knowing where that window
+ * sits: its level (`zWin`) and its origin tile at that level (`winX0` west
+ * column, `winY0` north row). They occupy the three slots `oceanRoughness`'s row
+ * already rounded over, so the window costs no struct growth — the alternative,
+ * a fourth 16-byte row, would have grown every Earth draw's uniform write for
+ * data that fits in existing pad.
+ *
+ * They are integers carried as `f32` and read back shader-side with `u32(...)`.
+ * WGSL would happily declare them `u32`, but this packer returns one
+ * `Float32Array`, and a `u32` field would force a second typed-array view over
+ * the same buffer at the pack site — a fresh way for the two halves of a
+ * hand-written layout to drift, for no gain: a level below 16 and a tile index
+ * below 2^24 are both exactly representable in f32.
+ *
+ * All-zero is the identity. A page table whose cells all read "no tile" sends
+ * the fragment to the whole-globe base texture and never consults the window, so
+ * a caller with no plan yet passes zeros and draws exactly the picture Earth
+ * draws without the virtual texture.
  *
  * ## Byte layout (uniform address space) — 128 bytes / 32 f32
  *
@@ -54,7 +76,9 @@
  *   f32 26     (byte 104..107): cloudShellRadius (unit-sphere shell radius)
  *   f32 27     (byte 108..111): ambientLight (night-side floor; Earth-scoped)
  *   f32 28     (byte 112..115): oceanRoughness (open-water GGX roughness; Earth-scoped)
- *   f32 29..31 (byte 116..127): _pad0..2 (zeroed; rounds the struct to 128)
+ *   f32 29     (byte 116..119): zWin (page-table window level; read as u32)
+ *   f32 30     (byte 120..123): winX0 (window origin west column at zWin; as u32)
+ *   f32 31     (byte 124..127): winY0 (window origin north row at zWin; as u32)
  *
  * @param mvp                 16-element column-major MVP (from `composeBodyMvp`).
  * @param sunDirLocal         Sun direction in the body's local frame.
@@ -71,13 +95,16 @@
  * @param oceanRoughness      Open-water GGX perceptual roughness (the ocean
  *                            glint breadth); Earth-scoped override of the
  *                            `OCEAN_ROUGHNESS` const in `lib/pbr.wesl`.
+ * @param zWin                Page-table window level (`EarthTilePlan.zWin`).
+ * @param winX0               Window origin tile at `zWin`: west column.
+ * @param winY0               Window origin tile at `zWin`: north row.
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
 import { packLitBodyUniforms } from './packLitBodyUniforms';
 
 /** f32 count of `EarthSurfaceUniforms` — 16 mvp + 4 (sun+rough) + 4 (cam+f0) + 4
- *  (irradiance/cloud/ambient) + 4 (oceanRoughness + pad). */
+ *  (irradiance/cloud/ambient) + 4 (oceanRoughness + the page-table window). */
 export const EARTH_SURFACE_UNIFORM_FLOATS = 32;
 
 export function packEarthSurfaceUniforms(
@@ -91,6 +118,9 @@ export function packEarthSurfaceUniforms(
   cloudShellRadius: number,
   ambientLight: number,
   oceanRoughness: number,
+  zWin: number,
+  winX0: number,
+  winY0: number,
 ): Float32Array {
   const out = new Float32Array(EARTH_SURFACE_UNIFORM_FLOATS);
   // Reuse the 80-byte lit prefix (mvp + sunDirLocal); no re-derivation.
@@ -105,6 +135,10 @@ export function packEarthSurfaceUniforms(
   out[26] = cloudShellRadius; // byte 104 — the shadow shell's local radius
   out[27] = ambientLight; // byte 108 — night-side floor, fills the former pad
   out[28] = oceanRoughness; // byte 112 — open-water GGX roughness, new 16-byte row
-  // out[29..31] stay 0 — the row's trailing pad rounds the struct to 128 bytes.
+  // The page-table window fills the row's remaining three slots — integers held
+  // as f32, read shader-side with u32(...). All-zero is the identity.
+  out[29] = zWin; // byte 116 — window level
+  out[30] = winX0; // byte 120 — window origin west column at zWin
+  out[31] = winY0; // byte 124 — window origin north row at zWin
   return out;
 }

@@ -166,6 +166,13 @@ export const earthLayer: ContentLayer = {
         // OCEAN_ROUGHNESS const (seeded from EARTH_SURFACE_PARAMS.oceanRoughness
         // so the default matches).
         state.settings.earth.oceanRoughness,
+        // The surface virtual texture's page-table window (zWin, winX0, winY0).
+        // All-zero is the identity: every page-table cell reads "no tile", the
+        // fragment samples the whole-globe base texture, and the window is never
+        // consulted.
+        0,
+        0,
+        0,
       ),
     );
   },
