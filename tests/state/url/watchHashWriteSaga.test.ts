@@ -32,7 +32,7 @@ import { watchHashWriteSaga } from '../../../src/state/url/watchHashWriteSaga';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
-import { mergeSnapshot, setOrientation } from '../../../src/state/settings/settingsSlice';
+import { setOrientation } from '../../../src/state/settings/settingsSlice';
 import { manualPausedAtActions } from '../../../src/state/time/enterManualPausedAt';
 import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
 import { timeRoute } from '../../../src/store/constants';
@@ -118,19 +118,6 @@ describe('watchHashWriteSaga', () => {
 
   it('writes a non-default frame on setOrientation', () => {
     buildHarness().dispatch(setOrientation('galactic'));
-
-    expect(lastBody()).toBe('orientation=galactic');
-  });
-
-  it('writes on mergeSnapshot, the tour scene-restore path', () => {
-    const store = buildHarness();
-    store.dispatch(setOrientation('galactic'));
-    write.mockClear();
-
-    // The patch is empty on purpose: this row's trigger is the bulk restore
-    // ITSELF, and the write recomposes the whole body from live state rather
-    // than from the patch, so the patch's contents cannot change the assertion.
-    store.dispatch(mergeSnapshot({}));
 
     expect(lastBody()).toBe('orientation=galactic');
   });

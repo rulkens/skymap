@@ -62,7 +62,7 @@ import { clearSelection } from '../selection/selectionSlice';
 import { selectFocusedFocusable, selectPendingFocusId } from '../selection/selectors';
 import { setSelectionRow } from '../selectionRows/selectionRowsSlice';
 import { selectOrientation } from '../settings/selectors';
-import { mergeSnapshot, setOrientation } from '../settings/settingsSlice';
+import { setOrientation } from '../settings/settingsSlice';
 import { manualPausedAtActions } from '../time/enterManualPausedAt';
 import { selectTimeState } from '../time/selectors';
 import { goLive } from '../time/timeSlice';
@@ -191,9 +191,11 @@ const timeSource: HashParamSource = {
 const orientationSource: HashParamSource = {
   key: 'orientation',
   deepLink: false,
-  // `mergeSnapshot` is the bulk settings restore (the tour's scene restore) and
-  // can change `orientation` without `setOrientation` ever being dispatched.
-  writesOn: [setOrientation, mergeSnapshot],
+  // `orientation` sits outside `SettingsSnapshot`, so the bulk settings restore
+  // (`mergeSnapshot`) provably cannot move it — see
+  // docs/backlog/2026-07-29-tour-snapshot-orientation.md. If that ever changes,
+  // this list must grow.
+  writesOn: [setOrientation],
   write: (state) => {
     const orientation = selectOrientation(state);
     return orientation === DEFAULT_ORIENTATION ? null : orientation;
