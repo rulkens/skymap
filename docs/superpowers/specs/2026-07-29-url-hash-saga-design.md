@@ -214,9 +214,28 @@ readHashBody(): string                            // '' with no window
 writeHashBody(body: string): void                 // pushState + compare-and-skip; no-op with no window
 ```
 
-`writeHashBody` caches the last body it wrote and compares against that, reading
+~~`writeHashBody` caches the last body it wrote and compares against that, reading
 `window.location.hash` only when the desired body differs. A `hashchange` invalidates
-the cache (the read side already observes it).
+the cache (the read side already observes it).~~
+
+**CORRECTED during T7 — there is no cache.** `writeHashBody` compares against the live
+`readHashBody()` on every call. `window.location` already _is_ that cache: `pushState`
+updates it synchronously and it is never stale, so a remembered copy is a second source of
+truth whose only gain is skipping one property read.
+
+The invalidation listener the cache needs is the hole. Back, Forward and a hand-edited
+address bar all move the URL without this module's knowledge, and a module-level
+`hashchange` subscription registered on first use has no owner and no teardown — unlike the
+read saga's channel, which closes in a `finally`. Under vitest it would bind to whichever
+jsdom `window` existed at first call and survive module-registry resets.
+
+The cache also had a live failure: URL bare, cache `''`, visitor types `#orientation=zzz`.
+The read rejects the junk frame and returns no actions, the write recomposes `''`, hits the
+cache fast-path, and the junk hash is never scrubbed. The live read scrubs it.
+
+Nothing was being optimised. `timeSlice` has no tick action — all six reducers are user
+intent — and `writesOn` already excludes the frame path, so writes fire on selection, clock
+and orientation actions only, never per frame.
 
 **The guards are load-bearing, not SSR insurance.** `createAppStore` runs `mainSaga`, and
 `tests/state/ui/*.test.ts` call it under `environment: 'node'`. `watchHashReadSaga` reads
