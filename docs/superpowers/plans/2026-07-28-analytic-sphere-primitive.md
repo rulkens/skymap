@@ -453,10 +453,10 @@ match the drawn silhouette" (they now match by construction), it is "the two rem
 renderers must agree, and both proxies must stay coarse enough to be cheap and fine enough that
 `PROXY_SCALE` clears their deficit".
 
-- [ ] No test (constant restatement).
-- [ ] Rewrite the header against the post-feature architecture; the values stay 48 and 24.
-- [ ] `npm run typecheck`.
-- [ ] Commit.
+- [x] No test (constant restatement).
+- [x] Rewrite the header against the post-feature architecture; the values stay 48 and 24.
+- [x] `npm run typecheck`.
+- [x] Commit.
 
 ---
 
