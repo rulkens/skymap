@@ -48,9 +48,19 @@ Two conventions carry unusual weight here and are called out per task rather tha
 3. **One ladder, not two.** The spec states the engage gate in altitude terms and the
    planner's refinement in projected-extent terms. Those are the same rule seen from two
    ends, and implementing both would be two places to get the exponent wrong. `planEarthTiles`
-   is the single home: the engage gate is `plan.zWin > minLevel`, read off the plan the
+   is the single home: the engage gate is `plan.zWin > baseLevel`, read off the plan the
    planner already produced. Test 2's altitude anchor is asserted against `planEarthTiles`
    directly.
+4. **One ladder, but two floors on it.** The base level (`EARTH_TILE_BASE_LEVEL`, z4 — the
+   density the whole-globe 8192×4096 equirect already delivers) and the shallowest baked
+   level (`EARTH_TILE_MIN_LEVEL`, z5 — the shallowest level with tile files) are distinct
+   numbers, and the planner takes both: it walks from `baseLevel`, clamps `required` between
+   `baseLevel` and `maxTileLevel`, and emits a request only for a leaf at `minTileLevel` or
+   deeper. `zWin` is therefore the finest level the walk reached, floored at `baseLevel`, so
+   an all-base view reports `zWin === baseLevel` with no requests. A single floor cannot
+   carry both facts: rooting the walk at the shallowest baked level makes
+   `zWin >= minTileLevel` true of every plan, so the gate can never fire and no tile is ever
+   fetched at any altitude.
 
 ## Definition of done
 
@@ -454,7 +464,7 @@ third layer above both and it only changes what the fragment blends on top.
    it presents as a silently failed manifest fetch.
 3. **`isFailed` is checked BEFORE `allocate`**, deviating from `texturedDiskSubsystem`'s order.
    A land-only pyramid means most of the grid legitimately 404s, and allocating for a failed
-   key would hold a slot *and* refresh its LRU stamp every frame — a descent over ocean could
+   key would hold a slot _and_ refresh its LRU stamp every frame — a descent over ocean could
    pin all 64 slots on tiles that will never have pixels.
 
 **Known leak, pre-existing, not fixed here:** `destroy()` cannot release the atlas.

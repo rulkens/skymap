@@ -2,13 +2,18 @@
  * planEarthTiles — the quadtree refinement that decides which Earth surface
  * tiles should be resident this frame.
  *
- * Spec tests 2 to 5. All four cover behaviour no compiler check reaches and
- * that is close to invisible on screen when it breaks:
+ * Spec tests 2 to 5, plus the engage-gate pin. All of them cover behaviour no
+ * compiler check reaches and that is close to invisible on screen when it
+ * breaks:
  *
  *   - A wrong exponent in the level rule starves the atlas or thrashes it, and
  *     shows only as vague blurriness. Hence a hand-computed anchor with the
  *     arithmetic written out, plus monotonicity across three halvings.
- *   - A missing `maxLevel` clamp draws a sustained 404 storm on every close
+ *   - A walk rooted at the shallowest BAKED level instead of the BASE level
+ *     makes `zWin >= minTileLevel` true by construction, so the drive site's
+ *     `plan.zWin > baseLevel` engage gate can never fire and the whole feature
+ *     stays dark at every altitude — no error, no 404, no visual difference.
+ *   - A missing `maxTileLevel` clamp draws a sustained 404 storm on every close
  *     approach against a pyramid shallower than the camera wants.
  *   - Missing horizon rejection roughly doubles the fetches and the atlas
  *     pressure while looking completely normal.
@@ -26,6 +31,7 @@ import { earthTexelMetres } from '../../../src/utils/scene/earthTexelMetres';
 import { earthTileXyForUv } from '../../../src/utils/scene/earthTileXyForUv';
 import { earthTileColumns } from '../../../src/utils/scene/earthTileColumns';
 import {
+  EARTH_TILE_BASE_LEVEL,
   EARTH_TILE_MIN_LEVEL,
   EARTH_TILE_PX,
   EARTH_TILE_WINDOW_SIDE,
@@ -56,8 +62,9 @@ function nadirAt(altitudeKm: number, lonDeg = 20, latDeg = 15) {
     camPosLocal,
     viewProjLocal,
     viewportPx: VIEWPORT,
-    minLevel: EARTH_TILE_MIN_LEVEL,
-    maxLevel: 13,
+    baseLevel: EARTH_TILE_BASE_LEVEL,
+    minTileLevel: EARTH_TILE_MIN_LEVEL,
+    maxTileLevel: 13,
     windowSide: EARTH_TILE_WINDOW_SIDE,
     tilePx: EARTH_TILE_PX,
   };
@@ -74,6 +81,11 @@ function nadirAt(altitudeKm: number, lonDeg = 20, latDeg = 15) {
  * against a stated 4892. Then take the shallowest level whose texel is at least
  * that fine.
  *
+ * The search starts at the BASE level, not the shallowest baked one: the walk's
+ * floor is the density the whole-globe base texture already delivers, and an
+ * altitude the base already covers must come out AT that floor rather than one
+ * level deeper.
+ *
  * Worked, for h = 1000 km:
  *   gmpp = 1_000_000 · 2·tan(20°) / 1440 = 1_000_000 · 0.727940 / 1440 = 505.5 m
  *   earthTexelMetres(7) = 611.5 m  — too coarse
@@ -81,7 +93,7 @@ function nadirAt(altitudeKm: number, lonDeg = 20, latDeg = 15) {
  */
 function expectedLevel(altitudeKm: number): number {
   const gmpp = (altitudeKm * 1000 * 2 * Math.tan(FOV_Y_RAD / 2)) / VIEWPORT[1];
-  let z = EARTH_TILE_MIN_LEVEL;
+  let z = EARTH_TILE_BASE_LEVEL;
   while (earthTexelMetres(z) > gmpp) z++;
   return z;
 }
@@ -102,10 +114,38 @@ describe('planEarthTiles', () => {
     }
   });
 
-  it('never exceeds maxLevel, however close the camera gets', () => {
+  it('engages against the shipped z5-only pyramid, and stands down above it', () => {
+    // The shipped development bake: one level, z5, sitting directly on the z4
+    // base. It is the whole feature's smallest possible pyramid, and the one
+    // where rooting the walk at the shallowest BAKED level rather than at the
+    // base is indistinguishable from the feature being switched off — every
+    // altitude reports zWin = 5, so the drive site's `plan.zWin > baseLevel`
+    // never fires and no tile is ever fetched.
+    const shipped = {
+      baseLevel: EARTH_TILE_BASE_LEVEL,
+      minTileLevel: EARTH_TILE_MIN_LEVEL,
+      maxTileLevel: EARTH_TILE_MIN_LEVEL,
+    };
+
+    const close = planEarthTiles({ ...nadirAt(1000), ...shipped });
+    expect(close.zWin, 'engages at 1000 km').toBeGreaterThan(EARTH_TILE_BASE_LEVEL);
+    expect(close.requests.length).toBeGreaterThan(0);
+    // A leaf left at the base level has no file to fetch, so it must never
+    // reach the request list however deep the plan went elsewhere.
+    expect(close.requests.every((r) => r.tile.z >= EARTH_TILE_MIN_LEVEL)).toBe(true);
+
+    // The far end of the same rule: from 20 000 km the base texture is already
+    // finer than the screen, so the plan bottoms out at the base and asks for
+    // nothing.
+    const far = planEarthTiles({ ...nadirAt(20_000), ...shipped });
+    expect(far.zWin, 'stands down at 20 000 km').toBe(EARTH_TILE_BASE_LEVEL);
+    expect(far.requests).toEqual([]);
+  });
+
+  it('never exceeds maxTileLevel, however close the camera gets', () => {
     // A camera low enough to want z11 against a pyramid baked only to z5 — the
     // development-pyramid case, and the one that would otherwise 404-storm.
-    const plan = planEarthTiles({ ...nadirAt(125), maxLevel: 5 });
+    const plan = planEarthTiles({ ...nadirAt(125), maxTileLevel: 5 });
     expect(plan.zWin).toBe(5);
     expect(plan.requests.every((r) => r.tile.z <= 5)).toBe(true);
     expect(plan.requests.length).toBeGreaterThan(0);
@@ -113,20 +153,25 @@ describe('planEarthTiles', () => {
 
   it('drops the far hemisphere', () => {
     // High enough that the whole globe is inside the frustum, so horizon
-    // rejection is the only cull doing any work.
-    const input = nadirAt(20_000);
-    const plan = planEarthTiles(input);
-    expect(plan.zWin).toBe(EARTH_TILE_MIN_LEVEL);
+    // rejection is the only cull doing any work. At that altitude the base
+    // texture already out-resolves the screen, so every leaf sits at the base
+    // level — hence `minTileLevel: baseLevel`, which makes those leaves
+    // observable as requests and leaves the horizon test as the only thing that
+    // can remove one. With the shipped floor they would all be dropped for
+    // having no file, and the cull under test would have nothing to show.
+    const z = EARTH_TILE_BASE_LEVEL;
+    const plan = planEarthTiles({ ...nadirAt(20_000), minTileLevel: z });
+    expect(plan.zWin).toBe(z);
 
     const keys = new Set(plan.requests.map((r) => `${r.tile.z}/${r.tile.x}/${r.tile.y}`));
-    const subCamera = earthTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], 5, EARTH_TILE_PX);
-    const antipode = earthTileXyForUv([-160 / 360 + 0.5, -15 / 180 + 0.5], 5, EARTH_TILE_PX);
+    const subCamera = earthTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, EARTH_TILE_PX);
+    const antipode = earthTileXyForUv([-160 / 360 + 0.5, -15 / 180 + 0.5], z, EARTH_TILE_PX);
 
-    expect(keys.has(`5/${subCamera[0]}/${subCamera[1]}`), 'sub-camera tile').toBe(true);
-    expect(keys.has(`5/${antipode[0]}/${antipode[1]}`), 'antipodal tile').toBe(false);
-    // 32 x 16 = 512 tiles cover the globe at level 5; the visible cap at this
-    // altitude is 38% of the sphere, so anything near 512 means nothing culled.
-    expect(plan.requests.length).toBeLessThan(512 * 0.6);
+    expect(keys.has(`${z}/${subCamera[0]}/${subCamera[1]}`), 'sub-camera tile').toBe(true);
+    expect(keys.has(`${z}/${antipode[0]}/${antipode[1]}`), 'antipodal tile').toBe(false);
+    // 16 x 8 = 128 tiles cover the globe at level 4; the visible cap at this
+    // altitude is 38% of the sphere, so anything near 128 means nothing culled.
+    expect(plan.requests.length).toBeLessThan(128 * 0.6);
   });
 
   it('returns an empty plan rather than nonsense when the camera is on the surface', () => {

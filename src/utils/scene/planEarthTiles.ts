@@ -30,10 +30,23 @@ import { equirectUvToDirection } from '../math/equirectUvToDirection';
  *
  * A patch at level `z` whose projected extent is `screenPx` needs level
  * `z + ceil(log2(screenPx / tilePx))`. That is stated once, here, and the
- * engage gate elsewhere reads `plan.zWin > minLevel` rather than re-deriving a
+ * engage gate elsewhere reads `plan.zWin > baseLevel` rather than re-deriving a
  * distance threshold — the two are the same statement about screen texel
  * density seen from opposite ends, and having two homes for it would be two
  * places to get the exponent wrong.
+ *
+ * ## Why the walk floor and the request floor are different levels
+ *
+ * `baseLevel` is the density the whole-globe base texture already delivers;
+ * `minTileLevel` is the shallowest level with tile files, which is deeper
+ * because the base is itself a level of the same pyramid. The walk is rooted at
+ * `baseLevel` so that "the base is enough here" is an answer the plan can
+ * express — it comes out as `zWin === baseLevel` with nothing to fetch — and
+ * that is exactly what the engage gate reads. Rooting at `minTileLevel` instead
+ * would make `zWin >= minTileLevel` true of every plan, leaving the gate
+ * unsatisfiable against its own floor. Leaves that stop at a level shallower
+ * than `minTileLevel` are dropped rather than requested: the ground they cover
+ * is served by the base texture, and there is no file to fetch for them.
  *
  * ## Conservative rejection, deliberately
  *
@@ -58,20 +71,32 @@ export function planEarthTiles(input: {
    *  or not) does not matter here. */
   readonly viewProjLocal: Float32Array;
   readonly viewportPx: Readonly<Vec2>;
-  /** The level at which the whole-globe base texture is already as good. */
-  readonly minLevel: number;
+  /** The level the whole-globe base texture already delivers — the walk's floor. */
+  readonly baseLevel: number;
+  /** The manifest's shallowest baked level for this kind; leaves above it have
+   *  no file and are not requested. */
+  readonly minTileLevel: number;
   /** The manifest's deepest baked level for this kind. */
-  readonly maxLevel: number;
+  readonly maxTileLevel: number;
   /** Page-table window edge, in tiles at the finest level. */
   readonly windowSide: number;
   readonly tilePx: number;
 }): EarthTilePlan {
-  const { kind, camPosLocal, viewProjLocal, viewportPx, minLevel, maxLevel, windowSide, tilePx } =
-    input;
+  const {
+    kind,
+    camPosLocal,
+    viewProjLocal,
+    viewportPx,
+    baseLevel,
+    minTileLevel,
+    maxTileLevel,
+    windowSide,
+    tilePx,
+  } = input;
 
   const camLen = Math.hypot(camPosLocal[0], camPosLocal[1], camPosLocal[2]);
   // Camera on or inside the surface: no horizon, nothing sensible to plan.
-  if (!(camLen > 1)) return { zWin: minLevel, winX0: 0, winY0: 0, requests: [] };
+  if (!(camLen > 1)) return { zWin: baseLevel, winX0: 0, winY0: 0, requests: [] };
   const camDir: Vec3 = [camPosLocal[0] / camLen, camPosLocal[1] / camLen, camPosLocal[2] / camLen];
   // Angular radius of the visible cap: the horizon lies acos(1/d) from the
   // sub-camera point on the unit sphere.
@@ -95,15 +120,15 @@ export function planEarthTiles(input: {
   const mw3 = viewProjLocal[15]!;
 
   const requests: EarthTileRequest[] = [];
-  let zWin = minLevel;
+  let zWin = baseLevel;
 
   // Explicit stack of (z, x, y) triples rather than recursion: the walk can go
   // eight levels deep across hundreds of roots, and a flat number array keeps
   // the whole thing allocation-free in a per-frame path.
   const stack: number[] = [];
-  const rootCols = earthTileColumns(minLevel, tilePx);
+  const rootCols = earthTileColumns(baseLevel, tilePx);
   for (let y = 0; y < rootCols / 2; y++) {
-    for (let x = 0; x < rootCols; x++) stack.push(minLevel, x, y);
+    for (let x = 0; x < rootCols; x++) stack.push(baseLevel, x, y);
   }
 
   while (stack.length > 0) {
@@ -175,18 +200,25 @@ export function planEarthTiles(input: {
 
     // ── 3 & 4. Refine or emit ─────────────────────────────────────────────
     const required = Math.min(
-      maxLevel,
-      Math.max(minLevel, z + Math.ceil(Math.log2(screenPx / tilePx))),
+      maxTileLevel,
+      Math.max(baseLevel, z + Math.ceil(Math.log2(screenPx / tilePx))),
     );
-    if (required > z && z < maxLevel) {
+    if (required > z && z < maxTileLevel) {
       stack.push(z + 1, x * 2, y * 2);
       stack.push(z + 1, x * 2 + 1, y * 2);
       stack.push(z + 1, x * 2, y * 2 + 1);
       stack.push(z + 1, x * 2 + 1, y * 2 + 1);
       continue;
     }
-    requests.push({ tile: { kind, z, x, y }, screenPx });
+    // `zWin` is the finest level the walk REACHED, counting leaves that no bake
+    // covers: it is what the engage gate reads ("does the screen want more than
+    // the base has?") and what the page-table window is sized at, and neither
+    // question is about which files happen to exist.
     if (z > zWin) zWin = z;
+    // A leaf the base texture already serves is still a leaf — it ends the walk
+    // — but there is no file to fetch for it, so it is not a request.
+    if (z < minTileLevel) continue;
+    requests.push({ tile: { kind, z, x, y }, screenPx });
   }
 
   // Largest-on-screen-first: the order residency walks in, and the order the

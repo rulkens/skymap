@@ -46,9 +46,10 @@ export type EarthTileSubsystem = Destroyable & {
    * state if it never does.
    *
    * The first call starts the one-shot manifest fetch, because the engage rule
-   * (`plan.zWin > minLevel`) is stated in terms of a level the manifest supplies,
-   * so a gate that waited for engagement before fetching would be waiting on its
-   * own answer. Calling it costs one small JSON per session and nothing after.
+   * (`plan.zWin > baseLevel`) is stated in terms of a plan the planner cannot
+   * produce without these facts, so a gate that waited for engagement before
+   * fetching would be waiting on its own answer. Calling it costs one small JSON
+   * per session and nothing after.
    */
   plannerParams(): EarthTilePlannerParams | null;
 

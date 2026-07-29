@@ -22,10 +22,18 @@ export type EarthTilePlannerParams = {
   readonly kind: EarthTileKind;
   /** Tile edge in pixels, from the manifest — also the atlas's slot edge. */
   readonly tilePx: number;
-  /** Shallowest level worth requesting: below it the whole-globe base is already as good. */
-  readonly minLevel: number;
+  /**
+   * The level the whole-globe base texture already delivers. The planner's walk
+   * floor, and the level the engage gate compares `zWin` against. Distinct from
+   * `minTileLevel` because "the base is already as good as the screen needs" and
+   * "no tile file exists this shallow" are different facts about different
+   * images; see `planEarthTiles`.
+   */
+  readonly baseLevel: number;
+  /** Shallowest level the bake emitted for this kind — the floor on what may be requested. */
+  readonly minTileLevel: number;
   /** Deepest level the bake actually emitted for this kind. */
-  readonly maxLevel: number;
+  readonly maxTileLevel: number;
   /** Page-table window edge, in tiles at the finest level. */
   readonly windowSide: number;
 };

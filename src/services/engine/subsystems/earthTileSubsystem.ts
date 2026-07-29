@@ -63,6 +63,7 @@ import { fetchEarthTileBitmap } from '../../../utils/network/fetchEarthTileBitma
 import { loadFadeAlpha } from '../../../utils/render/disk/loadFadeAlpha';
 import {
   EARTH_TILE_ATLAS_SIDE,
+  EARTH_TILE_BASE_LEVEL,
   EARTH_TILE_CONCURRENCY,
   EARTH_TILE_FADE_MS,
   EARTH_TILE_MIN_LEVEL,
@@ -110,10 +111,10 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
   //
   // Fetched once, on the first `plannerParams()` call. That is earlier than
   // "when the virtual texture engages" and deliberately so: the engage rule is
-  // `plan.zWin > minLevel`, `minLevel` comes from the manifest, and a gate that
-  // waited for engagement before fetching what the gate needs would be waiting on
-  // its own answer. One small JSON, once per session, and nothing GPU-side rides
-  // on it.
+  // `plan.zWin > baseLevel`, `zWin` only exists once the planner has run, and the
+  // planner cannot run without the manifest's tile edge and level range. A fetch
+  // that waited for engagement would be waiting on its own answer. One small JSON,
+  // once per session, and nothing GPU-side rides on it.
   let manifestRequested = false;
   let manifestPending = false;
   let params: EarthTilePlannerParams | null = null;
@@ -145,8 +146,8 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
    * Turn a fetched manifest into planner inputs, or null if the bake it describes
    * is unusable. Each rejection below would otherwise surface as something much
    * worse than "the feature did nothing": a tile edge that does not divide the
-   * atlas gives `TextureAtlas` a fractional slot count, and a `maxLevel` under the
-   * floor means every request 404s on every close approach.
+   * atlas gives `TextureAtlas` a fractional slot count, and a deepest level under
+   * the floor means every request 404s on every close approach.
    */
   function derivePlannerParams(manifest: EarthTileManifest): EarthTilePlannerParams | null {
     const levels = manifest.levels?.[TILED_KIND];
@@ -154,16 +155,17 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     const tilePx = manifest.tilePx || EARTH_TILE_PX;
     if (!Number.isInteger(tilePx) || tilePx <= 0) return null;
     if (EARTH_TILE_ATLAS_SIDE % tilePx !== 0) return null;
-    // Level 4 IS the whole-globe base texture, so the floor holds even if a bake
-    // emitted shallower levels — fetching one would re-download an image already
-    // bound.
-    const minLevel = Math.max(EARTH_TILE_MIN_LEVEL, levels.min);
-    if (!(levels.max >= minLevel)) return null;
+    // The base level IS the whole-globe base texture, so the request floor holds
+    // even if a bake emitted shallower levels — fetching one would re-download an
+    // image already bound.
+    const minTileLevel = Math.max(EARTH_TILE_MIN_LEVEL, levels.min);
+    if (!(levels.max >= minTileLevel)) return null;
     return {
       kind: TILED_KIND,
       tilePx,
-      minLevel,
-      maxLevel: levels.max,
+      baseLevel: EARTH_TILE_BASE_LEVEL,
+      minTileLevel,
+      maxTileLevel: levels.max,
       windowSide: EARTH_TILE_WINDOW_SIDE,
     };
   }

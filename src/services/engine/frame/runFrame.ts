@@ -605,9 +605,11 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       // The engage gate, one rule: the planner already decided which level the
       // screen's texel density calls for, so "is the base texture magnifying
       // yet?" is read off the plan rather than re-derived as an altitude
-      // threshold. Below it there is nothing a tile could add that the
-      // whole-globe base does not already carry.
-      if (plan.zWin > params.minLevel) earthTiles.update({ plan, nowMs: ctx.nowMs });
+      // threshold. The comparison is against `baseLevel` — the density the
+      // whole-globe base texture already carries — and NOT against the
+      // shallowest baked level, which the plan's own floor would satisfy by
+      // construction. At or below it there is nothing a tile could add.
+      if (plan.zWin > params.baseLevel) earthTiles.update({ plan, nowMs: ctx.nowMs });
     }
   }
 
