@@ -111,9 +111,14 @@ export { Source } from './source';
  *   layout, so labelling rows "(g)" for a 2MRS galaxy would be misleading.
  *   `'—'` (em-dash) marks an empty slot.
  *
- * Key insertion order is load-bearing: `sourceEntries.ts` /
- * `sourceIds.ts` derive `SOURCE_ENTRIES` / `SOURCE_IDS` via
- * `Object.values`, so the order here is the order those arrays carry.
+ * Key insertion order here is cosmetic: every key is a `Source` code, a
+ * non-negative integer, and JS iterates integer-like own keys in ascending
+ * numeric order regardless of where they were written — `sourceEntries.ts` /
+ * `sourceIds.ts` derive `SOURCE_ENTRIES` / `SOURCE_IDS` via `Object.values`,
+ * so those arrays (and anything downstream, e.g. the Labels panel's row
+ * order) are ordered by ascending code value. Changing that order needs
+ * either renumbering codes (forbidden — codes are append-only by value) or a
+ * separate display-order mechanism; neither is a decision this file makes.
  */
 export const SOURCE_REGISTRY = {
   [Source.Synthetic]: SYNTHETIC_ENTRY,

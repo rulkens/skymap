@@ -265,11 +265,11 @@ const settingsSlice = createSlice({
 
     // ── bodies (fifth source-type cluster) ──────────────────────────────────
     // The caption axis is the only WRITABLE one: `bodies.items[id].enabled` is
-    // seeded from the registry row and read by `visibleStars`, but hiding a
-    // near-field body has no defined meaning (they are the destination of the
-    // descent), so no setter exists to turn it into a knob nothing turns. There
-    // is no cluster-level gate either, for the same reason (see
-    // EngineSettingsState).
+    // seeded from the registry row and read by `visibleStars` (the Sun's dot)
+    // and `foregroundLabelsLayer` (the Sun's caption), but no product decision
+    // has been made to expose a "hide this body" control, so no setter exists
+    // to turn it into a knob nothing turns. There is no cluster-level gate
+    // either, for the same reason (see EngineSettingsState).
     setBodyLabelEnabled: (settings, action: PayloadAction<{ id: BodyId; enabled: boolean }>) => {
       settings.bodies.items[action.payload.id].labelEnabled = action.payload.enabled;
     },

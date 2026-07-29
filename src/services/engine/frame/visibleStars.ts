@@ -31,7 +31,10 @@
  * Stars panel derives its header tri-state over every star-catalog id, so it
  * would show a checkbox claiming authority it did not have.
  * `foregroundLabelsLayer` composes the same two bits for the map's captions,
- * keeping dots and names in lockstep.
+ * keeping dots and names in lockstep — and reads `bodies.items.sun.enabled`
+ * for the Sun's caption the same way it reads it here for the Sun's dot, so
+ * the same lockstep holds for the Sun even though nothing writes that flag
+ * today.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';

@@ -160,6 +160,7 @@ function makeState(
   starMapLabelsEnabled = true,
   bodyLabels: boolean | { earth: boolean; planet: boolean; sun?: boolean } = true,
   starMapEnabled = true,
+  sunVisible = true,
 ): EngineState {
   const bodies =
     typeof bodyLabels === 'boolean'
@@ -170,12 +171,14 @@ function makeState(
     settings: {
       labels: { focusedOnly: false },
       // Each caption reads its OWN source's label gate, so the body rows carry
-      // the Earth / planet / Sun caption bits.
+      // the Earth / planet / Sun caption bits. `sunVisible` is the Sun's
+      // separate VISIBILITY axis (`bodies.items.sun.enabled`) — the same flag
+      // `visibleStars` reads to hide its dot — independent of `labelEnabled`.
       bodies: {
         items: {
           earth: { enabled: true, labelEnabled: bodies.earth },
           planet: { enabled: true, labelEnabled: bodies.planet },
-          sun: { enabled: true, labelEnabled: bodies.sun },
+          sun: { enabled: sunVisible, labelEnabled: bodies.sun },
         },
       },
       // The cluster master is on: the caption's visibility gate requires it AND
@@ -544,6 +547,40 @@ describe('foregroundLabelsLayer.draw', () => {
       .calls[0]![0] as readonly Label[];
     expect(drawn.some((l) => l.id === SUN_LABEL_ID)).toBe(false);
     expect(drawn.some((l) => SCENE_STAR_LABEL_IDS.has(l.id) && l.id !== SUN_LABEL_ID)).toBe(true);
+  });
+
+  it('mutes the Sun caption when its own visibility row is off, even with its label on', () => {
+    // `visibleStars` hides the Sun's DOT when `bodies.items.sun.enabled` is
+    // false; the caption must not survive that gate and float with nothing to
+    // name. `sunVisible: false` here with the Sun's `labelEnabled` still true
+    // isolates exactly that axis — a gate that read only `labelEnabled` (the
+    // bug this pins) would keep drawing the caption. Unreachable via any
+    // setter today, but a future snapshot restore can write `enabled`
+    // directly, same as the star map's `enabled` already can.
+    const base = sceneBodyLabels(J2000_STATES);
+    const camPos: Vec3 = [
+      ...base.find((l) => l.id === sceneBodyLabelId('earth'))!.worldPos,
+    ] as Vec3;
+
+    rebaseMock.mockReturnValueOnce(makeSpreadVp());
+    const renderer = makeRenderer(6);
+    foregroundLabelsLayer.draw(
+      PASS_STUB,
+      makeNear0View(camPos),
+      makeCtx(5e-4),
+      makeState(
+        renderer,
+        makeLineRenderer(),
+        true,
+        { earth: true, planet: true, sun: true },
+        true,
+        /* sunVisible */ false,
+      ),
+    );
+    const drawn = (renderer.setLabels as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0]![0] as readonly Label[];
+    expect(drawn.some((l) => l.id === SUN_LABEL_ID)).toBe(false);
+    expect(drawn.some((l) => l.id === sceneBodyLabelId('earth'))).toBe(true);
   });
 
   it('suppresses the star map but KEEPS the Sun when the famous-star row is off', () => {

@@ -130,12 +130,15 @@
  *      'planet' kind, so it follows that row), and `bodies.items.sun.labelEnabled`
  *      the Sun's. The Sun is its own body row, so muting the curated
  *      neighbourhood leaves it captioning — governed by that row and paced by
- *      its own `sunCaption` band. Independently, the star map's
- *      VISIBILITY axis (the cluster master `starCatalogs.enabled` AND
- *      `…items.famousStar.enabled`, the pair `visibleStars` composes) zeroes the
- *      map's captions in lockstep with the point/sphere layers; it reaches only
- *      the 'star' kind, so there is no exemption to remember. All of them flow
- *      through the envelope below, so flipping any fades rather than pops.
+ *      its own `sunCaption` band. Independently, both the star map and the Sun
+ *      carry a VISIBILITY axis distinct from their label axis, and each zeroes
+ *      only its own kind so neither caption can outlive the dot it names: the
+ *      star map's (the cluster master `starCatalogs.enabled` AND
+ *      `…items.famousStar.enabled`, the pair `visibleStars` composes) reaches
+ *      only the 'star' kind; the Sun's (`bodies.items.sun.enabled`, the same
+ *      flag `visibleStars` reads to hide the Sun's dot) reaches only the
+ *      'sun' kind. All of them flow through the envelope below, so flipping
+ *      any fades rather than pops.
  *   2. DECLUTTER — EVERY visible caption contends in one screen-space cull
  *      (`declutterByScreenSeparation`), Earth and the planets included. The
  *      collision winner is the higher `CAPTION_PRIORITY` kind tier (sun >
@@ -474,6 +477,13 @@ export const foregroundLabelsLayer: ContentLayer = {
     // axis, exactly as `visibleStars` composes them: a caption must not survive
     // the cluster master that hid the dot it names.
     const starMapEnabled = state.settings.starCatalogs.enabled && starMapRow.enabled;
+    // The Sun's own visibility gate — the same flag `visibleStars` reads to
+    // hide the Sun's dot. Unwritable today (no setter exists for
+    // `bodies.items.sun.enabled`), but reachable via a future snapshot
+    // restore, so the caption must consult it now rather than assume it is
+    // always true: a caption must not outlive the dot it names, same rule as
+    // `starMapEnabled` above.
+    const sunVisible = bodyItems.sun.enabled;
 
     // Each caption asks its OWN source's label gate — the same registry-derived
     // home the settings panel writes. `star` routes to the star map's row,
@@ -532,20 +542,24 @@ export const foregroundLabelsLayer: ContentLayer = {
       // The fade TARGET before declutter. A caption's own source's label gate
       // comes first (`labelGateFor`); past it the star map rides the
       // neighbourhood distance band (Mpc → pc through the named scale-unit),
-      // while the Sun — the descent's aim point — rides its OWN band
-      // (`sunCaption`) so its name FADES IN as the camera descends toward the
-      // solar system rather than popping to full alpha the frame the layer's
-      // gate switches on. For the Sun `distanceMpc` IS the camera's distance
-      // from the heliocentric origin (the Sun sits there), which is what that
-      // band keys on. Earth + the planets carry no band: inside the caption
-      // gate they are simply on. Every gate feeds the target that flows through
-      // the envelope below, so flipping any of them fades rather than pops.
+      // gated by `starMapEnabled` so a caption cannot outlive the dot it
+      // names, while the Sun — the descent's aim point — rides its OWN band
+      // (`sunCaption`), gated the same way by `sunVisible`, so its name FADES
+      // IN as the camera descends toward the solar system rather than popping
+      // to full alpha the frame the layer's gate switches on. For the Sun
+      // `distanceMpc` IS the camera's distance from the heliocentric origin
+      // (the Sun sits there), which is what that band keys on. Earth + the
+      // planets carry no band: inside the caption gate they are simply on.
+      // Every gate feeds the target that flows through the envelope below, so
+      // flipping any of them fades rather than pops.
       const baseTarget = !labelGateFor(label.kind)
         ? 0
         : label.kind === 'earth' || label.kind === 'planet'
           ? 1
           : label.kind === 'sun'
-            ? fadeBand(SCALE_FADE_BANDS.sunCaption, distanceMpc)
+            ? sunVisible
+              ? fadeBand(SCALE_FADE_BANDS.sunCaption, distanceMpc)
+              : 0
             : starMapEnabled
               ? fadeBand(SCALE_FADE_BANDS.starCaption, distanceMpc / SCALE_UNITS.PC_TO_MPC)
               : 0;

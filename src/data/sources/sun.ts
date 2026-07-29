@@ -24,11 +24,12 @@ export const SUN_ENTRY = {
   // A single body at the near-field origin, not a sky patch — allSky:true
   // matches the other non-catalog rows.
   allSky: true,
-  // Always on: `bodies.items.sun.enabled` is seeded from this and nothing ever
-  // writes it, because hiding the render origin has no defined meaning for the
-  // sphere, the bloom, or the orbit foci that hang off it. The axis exists so
-  // the bodies cluster keeps ONE per-item shape — the same inert-axis idiom
-  // `gaiaStars.labelEnabled` uses.
+  // `bodies.items.sun.enabled` is seeded true from this. Unlike a truly inert
+  // axis (`gaiaStars.labelEnabled`, which nothing ever reads), this one IS
+  // live — `visibleStars` gates the Sun's dot on it — but it is unwritable
+  // today: no setter exists, because no product decision has been made to
+  // expose a control for hiding the render origin. Seeded true so the Sun
+  // renders until such a control (or a restored snapshot) says otherwise.
   visible: true,
   bearsLabel: true,
   labelLayer: 'body',

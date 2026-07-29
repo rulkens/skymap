@@ -330,10 +330,14 @@ export type EngineSettingsState = {
    * `BodyId` (earth, planet, sun), each carrying the visibility axis
    * (`enabled`) and the caption axis (`labelEnabled`).
    *
-   * `enabled` is read (`visibleStars` composes the Sun's) but never written:
-   * hiding a near-field body has no defined meaning, so the settings slice
-   * ships no setter for it. The axis exists so every row keeps ONE shape, the
-   * same inert-axis idiom `gaiaStars.labelEnabled` uses.
+   * `enabled` is genuinely live for the Sun — `visibleStars` gates its dot on
+   * `bodies.items.sun.enabled`, and the foreground-caption layer gates the
+   * Sun's caption on the same flag so neither can outlive the other — but
+   * unlike that pair of readers, the axis is unwritten: no product decision
+   * has been made to expose a "hide this body" control, so the settings slice
+   * ships no setter for it. Earth's and the planet's `enabled` have no reader
+   * at all today. The axis exists on every row regardless, so the cluster
+   * keeps ONE per-item shape rather than the Sun alone carrying an extra field.
    *
    * No cluster-level `enabled`: unlike the four data clusters there is no
    * "hide all bodies" intent — the bodies ARE the destination of the descent,
