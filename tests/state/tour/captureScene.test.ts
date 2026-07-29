@@ -1,11 +1,11 @@
 /**
  * captureScene — unit tests for the widened tour scene-snapshot capture.
  *
- * A tour beat may mutate both the six settings clusters AND `selection.focus`;
+ * A tour beat may mutate both the ten settings clusters AND `selection.focus`;
  * restore must wind both back. These tests pin the two properties that make
  * the scene-level capture sound:
  *
- *   1. *Scope* — the snapshot carries all six settings clusters AND the focus
+ *   1. *Scope* — the snapshot carries all ten settings clusters AND the focus
  *      ref from `state.selection.focus`.
  *   2. *Detachment* — the settings half is a deep clone (via `captureSettings`);
  *      the focus half is a reference copy of an immutable identity value. A
@@ -19,12 +19,14 @@ import type { SelectionRef } from '../../../src/@types/engine/SelectionRef';
 import { captureScene } from '../../../src/state/tour/captureScene';
 
 const SNAPSHOT_SETTINGS_KEYS = [
+  'bodies',
   'filaments',
   'flow',
   'galaxyCatalogs',
   'labels',
   'milkyWay',
   'orbitTrails',
+  'starCatalogs',
   'structures',
   'volumes',
 ].sort();
@@ -32,7 +34,7 @@ const SNAPSHOT_SETTINGS_KEYS = [
 const FOCUS_REF: SelectionRef = { type: 'structure', id: 'virgo-cluster' };
 
 /**
- * A minimal state carrying the eight tour-owned settings clusters plus a
+ * A minimal state carrying the ten tour-owned settings clusters plus a
  * non-null `selection.focus`. Cast through `unknown` rather than building
  * full cluster shapes — only the fields assertions touch are needed.
  */
@@ -46,6 +48,8 @@ function makeState(focus: SelectionRef | null = FOCUS_REF) {
       milkyWay: { enabled: true, labelEnabled: false },
       flow: { enabled: true, nested: { speed: 2 } },
       orbitTrails: { enabled: true },
+      starCatalogs: { enabled: true, items: {} },
+      bodies: { items: {} },
       tonemap: { exposure: 1.2 },
     },
     selection: { hover: null, select: null, focus },
@@ -53,11 +57,11 @@ function makeState(focus: SelectionRef | null = FOCUS_REF) {
 }
 
 describe('captureScene', () => {
-  it('captures the eight settings clusters + selection.focus', () => {
+  it('captures the ten settings clusters + selection.focus', () => {
     const state = makeState(FOCUS_REF);
     const snap = captureScene(state);
 
-    // Settings half carries exactly the eight tour-owned clusters.
+    // Settings half carries exactly the ten tour-owned clusters.
     expect(Object.keys(snap.settings).sort()).toEqual(SNAPSHOT_SETTINGS_KEYS);
     for (const key of SNAPSHOT_SETTINGS_KEYS) {
       expect((snap.settings as Record<string, unknown>)[key]).toEqual(
