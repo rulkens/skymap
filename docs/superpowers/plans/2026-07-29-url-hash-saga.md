@@ -195,6 +195,12 @@ Accepted consequence: a junk `#focus=zzz` parks forever and so suppresses the Ea
 that session. The seed cannot distinguish "still resolving" from "never will". Consistent
 with T2's accepted consequence (junk ids are no longer scrubbed off the URL).
 
+**Decided 2026-07-29 — junk URLs are deliberately not handled. Do not re-open this.** The
+boot pose already frames Earth, so a suppressed seed is not a blank screen. The residue is
+that the follow-pivot driver never engages, so the globe drifts out of frame as the live
+sim clock advances (`wireInput`'s seed comment: "pose alone would drift"). Judged not worth
+a resolver timeout or a give-up path for a URL the visitor mistyped.
+
 Latent, NOT fixed here: `updateSelectionFocus` clears `pending` unconditionally, so any
 direct ref write retires an in-flight request. Nothing in the boot path does that once the
 guard is fixed. Same entanglement as the `twin-request-selection-sagas` backlog item —
