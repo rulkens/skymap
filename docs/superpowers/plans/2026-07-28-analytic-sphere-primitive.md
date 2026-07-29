@@ -414,20 +414,20 @@ plants a permanent collision, and a rename that stops half-way is worse than eit
 ts-morph; `.wesl` files are moved by hand, and neither the `?static` import literals in TS nor
 the `package::bodies::texturedBody::…` paths inside the `.wesl` files are rewritten for you.
 
-- [ ] `git mv` the three files.
-- [ ] Update the two `?static` import literals in `texturedBodyRenderer.ts` and the shader-module
+- [x] `git mv` the three files.
+- [x] Update the two `?static` import literals in `texturedBodyRenderer.ts` and the shader-module
       labels (`texturedBody.vertex` / `texturedBody.fragment`).
-- [ ] Update the `package::bodies::texturedBody::impostorIo::ImpostorVSOut` imports inside the
+- [x] Update the `package::bodies::texturedBody::impostorIo::ImpostorVSOut` imports inside the
       renamed vertex + fragment; rename the struct `ImpostorVSOut` → `TexturedBodyVSOut`.
-- [ ] Repoint the vertex at `package::lib::analyticSphere::PROXY_SCALE` and delete its local
+- [x] Repoint the vertex at `package::lib::analyticSphere::PROXY_SCALE` and delete its local
       const (Task 1.3 already moved it).
-- [ ] Sweep the three files' comments for the word "impostor" and for SPIKE / `?impostor`
+- [x] Sweep the three files' comments for the word "impostor" and for SPIKE / `?impostor`
       language; the surviving prose is timeless.
-- [ ] `rg -n "impostor" src/services/gpu/` returns **nothing** under `bodies/`.
-- [ ] `npm run typecheck`; `npm run build`.
+- [x] `rg -n "impostor" src/services/gpu/` returns **nothing** under `bodies/`.
+- [x] `npm run typecheck`; `npm run build`.
 - [ ] **Visual acceptance:** Mars and Saturn render identically to 2.1 — a rename that breaks a
       `?static` literal or a `package::` path fails only at `createShaderModule`. Console clean.
-- [ ] Commit.
+- [x] Commit.
 
 ### 2.3: Rewrite `sphereTessellation.ts`'s header — third time, and the last
 

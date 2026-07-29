@@ -111,8 +111,8 @@ import {
 import { generateMipChain, mipLevelCount } from '../../lib/generateMipChain';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
-import vsCode from '../../shaders/bodies/texturedBody/impostorVertex.wesl?static';
-import fsCode from '../../shaders/bodies/texturedBody/impostorFragment.wesl?static';
+import vsCode from '../../shaders/bodies/texturedBody/vertex.wesl?static';
+import fsCode from '../../shaders/bodies/texturedBody/fragment.wesl?static';
 
 /** `TexturedBodyUniforms` is 112 bytes (28 f32): the 80-byte lit prefix + two
  *  ring ratios + two Minnaert limb params + camPosLocal vec3 + one pad float.
@@ -286,8 +286,8 @@ export function createTexturedBodyRenderer(
   });
 
   // ── Shader modules + pipeline ─────────────────────────────────────────────
-  const vsModule = createShaderModuleWithDevLog(device, vsCode, 'texturedBody.impostorVertex');
-  const fsModule = createShaderModuleWithDevLog(device, fsCode, 'texturedBody.impostorFragment');
+  const vsModule = createShaderModuleWithDevLog(device, vsCode, 'texturedBody.vertex');
+  const fsModule = createShaderModuleWithDevLog(device, fsCode, 'texturedBody.fragment');
 
   const pipeline = device.createRenderPipeline({
     label: 'texturedBody-pipeline',

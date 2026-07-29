@@ -1,13 +1,13 @@
-// texturedBody/impostorFragment.wesl — fragment stage for the SPIKE analytic
-// ray-traced sphere ('?impostor'). Same lighting, ring shadow and Minnaert limb
-// term as 'fragment.wesl'; the ONLY difference is where the surface point, the
-// normal, the uv and the depth come from.
+// texturedBody/fragment.wesl — fragment stage for a textured planet or moon:
+// the lit albedo, the normal-mapped relief, Saturn's ring shadow and the
+// Minnaert limb term, over a RAY-TRACED sphere.
 //
-// Mesh path: the rasteriser interpolates a 48x24 polygon's vertex attributes, so
-// the silhouette is a 48-gon and the normal is a barycentric blend.
-// Impostor path: every fragment casts a ray from the camera through its own
-// proxy position, intersects the analytic unit sphere, and derives everything
-// from that hit. The silhouette becomes pixel-exact and the normal exact.
+// The rasterised triangles belong to a circumscribing proxy shell, not to the
+// body. Every fragment casts a ray from the camera through its own proxy
+// position, intersects the analytic unit sphere, and derives the surface point,
+// the normal, the uv and the depth from that hit -- so the silhouette is a
+// pixel-exact circle rather than a 48-gon, and the normal is exact rather than a
+// barycentric blend.
 //
 // The sphere maths itself lives in 'lib/analyticSphere.wesl' -- the hit and its
 // grazing fallback, the equirectangular uv convention, the wrap-safe gradient
@@ -41,7 +41,7 @@
 // fallback. Both texture reads (surface + normal map) share the one corrected
 // gradient pair, since both sample the same uv.
 
-import package::bodies::texturedBody::impostorIo::ImpostorVSOut;
+import package::bodies::texturedBody::io::TexturedBodyVSOut;
 import package::lib::analyticSphere::equirectUvFromDir;
 import package::lib::analyticSphere::equirectUvGradients;
 import package::lib::analyticSphere::fragDepthFromLocal;
@@ -58,16 +58,18 @@ import package::lib::normalMap::perturbNormal;
 @group(0) @binding(4) var normalTexture: texture_2d<f32>;
 
 // Colour + analytic depth. No '@builtin(position)' anywhere in this struct --
-// the entry point's position comes in through 'ImpostorVSOut'.
+// the entry point's position comes in through 'TexturedBodyVSOut', and a second
+// position-bearing struct in one linked module is rejected at
+// 'createShaderModule' having passed both the build and the WESL linker.
 struct FSOut {
   @location(0) colour: vec4<f32>,
   @builtin(frag_depth) depth: f32,
 };
 
-// Verbatim twin of 'fragment.wesl's ringSunVisibility. Duplicated rather than
-// lifted into a lib because this whole module is a throwaway A/B variant; if the
-// impostor path is adopted, the mesh fragment goes away and this becomes the
-// only copy.
+// The ring-on-planet half of the ring system: how much of the sun a point on
+// this body still sees through Saturn's rings. Its twin -- the planet's shadow
+// cast onto the ring -- lives in 'ring/fragment.wesl'. Local rather than in a
+// lib because it is the only copy and the ring pair's two halves share no maths.
 fn ringSunVisibility(p: vec3<f32>, sunDir: vec3<f32>, innerRatio: f32, outerRatio: f32) -> f32 {
   if (outerRatio <= 0.0) {
     return 1.0;
@@ -90,7 +92,7 @@ fn ringSunVisibility(p: vec3<f32>, sunDir: vec3<f32>, innerRatio: f32, outerRati
 }
 
 @fragment
-fn fs(in: ImpostorVSOut) -> FSOut {
+fn fs(in: TexturedBodyVSOut) -> FSOut {
   // ── The ray ───────────────────────────────────────────────────────────────
   let ro = u.camPosLocal;
   // Renormalize AFTER interpolation: 'in.localPos' rides a 1.05-scaled proxy.
@@ -110,7 +112,7 @@ fn fs(in: ImpostorVSOut) -> FSOut {
     discard;
   }
 
-  // ── Shading (identical to the mesh path from here down) ───────────────────
+  // ── Shading ───────────────────────────────────────────────────────────────
   let T = normalize(cross(vec3<f32>(0.0, 0.0, 1.0), ng));
   let n = perturbNormal(ng, T, textureSampleGrad(normalTexture, bodySampler, uv, grad.ddx, grad.ddy).rg);
   let albedo = textureSampleGrad(bodyTexture, bodySampler, uv, grad.ddx, grad.ddy).rgb;
