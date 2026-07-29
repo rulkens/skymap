@@ -15,10 +15,10 @@ canvas backing store, i.e. CSS size × `min(devicePixelRatio, 2)`.
 
 So the clickable disc a user can actually aim at is:
 
-| display | DPR used | pick disc in device px | pick disc in CSS px |
-| ------- | -------- | ---------------------- | ------------------- |
-| 1× desktop | 1 | ~9 | ~9 |
-| retina / phone | 2 | ~9 | **~4.5** |
+| display        | DPR used | pick disc in device px | pick disc in CSS px |
+| -------------- | -------- | ---------------------- | ------------------- |
+| 1× desktop     | 1        | ~9                     | ~9                  |
+| retina / phone | 2        | ~9                     | **~4.5**            |
 
 The target halves on exactly the device whose pointer is least precise. A
 fingertip contact patch is tens of CSS pixels wide and the browser reports its
@@ -51,7 +51,7 @@ a fix — it is a different bug with a different remedy.
 
 1. **Scale the pick padding by DPR.** `PICK_PADDING_PX * dpr` restores parity
    with the 1× desktop target. Smallest diff, and it only corrects the
-   regression — it does not make touch *good*, since 9 CSS px is still under
+   regression — it does not make touch _good_, since 9 CSS px is still under
    the ~44 px platform guidance for touch targets.
 2. **A pointer-type-aware padding.** A coarse pointer
    (`matchMedia('(pointer: coarse)')`) gets a larger pad than a fine one. Keeps

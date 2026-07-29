@@ -337,18 +337,18 @@ Renderer: `cullMode` `'back'` → `'front'`. Nothing else about the sphere pipel
 sphere, so the effective pick silhouette is exactly the model radius — the 5% never reaches the
 target.
 
-- [ ] No test (standing refusal).
-- [ ] Implement the shader + the cull-mode flip; move `PROXY_SCALE` into the lib and import it
+- [x] No test (standing refusal).
+- [x] Implement the shader + the cull-mode flip; move `PROXY_SCALE` into the lib and import it
       from `spherePick.wesl` (leave `impostorVertex.wesl`'s local copy alone — Task 2.2 repoints
       it, and touching it here would put a feature edit in the wrong PR).
-- [ ] `npm test -- bodyPickRenderer` green; `npm run typecheck` clean.
+- [x] `npm test -- bodyPickRenderer` green; `npm run typecheck` clean.
 - [ ] **Visual acceptance (the pick is invisible — use the debug pick view):** click precisely on
       the outermost limb pixel of Mars at close approach and confirm it selects; click one pixel
       outside and confirm it does not. Then **the occlusion case**: frame the Moon transiting
       Earth and confirm clicking the Moon selects the Moon, not Earth. Then a far-edge planet
       that projects to ~2 px, confirming `minPickRadiusMpc`'s floor still gives it a clickable
       disc. Console clean.
-- [ ] Commit.
+- [x] Commit.
 
 ### 1.4: iOS check — `frag_depth` on the pick pass
 

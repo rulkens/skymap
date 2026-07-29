@@ -11,7 +11,11 @@
  * ### Two geometries → two OWN pipelines
  *
  *   - `drawSphere` — ONE body sphere per call (Earth, a planet, a resolved
- *     scene-star sphere), same unit-sphere mesh as the visual sphere bodies.
+ *     scene-star sphere). The unit-sphere mesh is uploaded as PROXY geometry
+ *     only: `spherePick.wesl` inflates it, ray-traces the analytic sphere per
+ *     fragment and discards the misses, so the clickable disc is the body's exact
+ *     disc rather than a 48-gon — hence `cullMode: 'front'` and the shader's
+ *     `@builtin(frag_depth)` on this pipeline.
  *   - `drawPoints` — a sub-pixel body POINT partition as one instanced draw of
  *     pick billboards, each expanded to a generous 18 px footprint (these are the
  *     ≤25 labelled scene stars and the sub-pixel solar-system body glints — sparse
@@ -89,7 +93,9 @@
  * Both pipelines carry the NEAR0 `depth32float` depth profile
  * (`depthCompare: 'greater'`, `depthWriteEnabled: true`, the NEAR0 slab's reversed-Z
  * convention — clear `0.0`, greater-z-wins) so overlapping bodies — a
- * Moon in front of Earth — resolve nearest-wins, matching visual occlusion. The
+ * Moon in front of Earth — resolve nearest-wins, matching visual occlusion. That
+ * test is only as good as the depth fed into it, which is why the sphere fragment
+ * writes the analytic hit's depth rather than the proxy's. The
  * colour target is `r32uint` (integer formats cannot blend; depth resolves
  * overlaps instead), matching the pick program's NEAR0 attachment formats.
  *
@@ -260,7 +266,12 @@ export function createBodyPickRenderer(device: GPUDevice, reversedZ: boolean): B
     primitive: {
       topology: 'triangle-list',
       frontFace: 'ccw', // matches uvSphereMesh winding + the visual sphere bodies
-      cullMode: 'back',
+      // `front`, not `back`: the mesh is a 5%-inflated PROXY the shader ray-traces
+      // through, so the FAR hemisphere is the one that must rasterise. Culling
+      // back faces instead would drop the body's pick entirely the moment the
+      // camera crossed inside the proxy shell — a legal close approach, 5% of a
+      // body radius above the surface. See `spherePick.wesl`.
+      cullMode: 'front',
     },
     // NEAR0 depth profile — see module header (Moon-in-front-of-Earth resolves).
     depthStencil: {
