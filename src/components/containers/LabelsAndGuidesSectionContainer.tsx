@@ -90,8 +90,8 @@ function LabelsAndGuidesSectionContainer(): React.ReactElement {
     [labelHomes],
   );
 
-  // One table lookup replaces the former three-way chain. The registry row's
-  // `type` names the home; the home knows how to write it.
+  // One table lookup, not a per-type chain: the registry row's `type` names the
+  // home, and the home knows how to write it.
   const onSetLabelCategoryVisibility = useCallback(
     (category: LabelCategory, enabled: boolean) => {
       dispatch(

@@ -10,7 +10,8 @@
  *
  * The master toggle maps to `setStarCatalogEnabled` (a real gate on
  * `starCatalogs.enabled`), NOT a per-source fan-out like the Galaxies master —
- * the star-catalogs cluster owns that gate field (Task 5). The per-catalog rows
+ * the star-catalogs cluster owns that gate field, and it governs every row in
+ * the cluster, the curated famous-star map included. The per-catalog rows
  * map to `setStarCatalogVisible`, the Advanced star-size slider to
  * `setStarCatalogSize`, and the star-brightness slider to
  * `setStarCatalogBrightness` (the twins of the Galaxies point-size + brightness

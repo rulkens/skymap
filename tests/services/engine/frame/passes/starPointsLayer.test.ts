@@ -163,6 +163,9 @@ function makeState(
     settings: {
       starCatalogs: {
         ...STAR_CATALOG_SETTINGS,
+        // The cluster master is on: `visibleStars` requires it AND the row's own
+        // bit, so omitting it would silently drive the Sun-alone path.
+        enabled: true,
         items: { famousStar: { enabled: famousStarMapEnabled } },
       },
     },
@@ -251,7 +254,7 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
       // star-points.
       settings: {
         milkyWay: { enabled: false },
-        starCatalogs: { items: { famousStar: { enabled: true } } },
+        starCatalogs: { enabled: true, items: { famousStar: { enabled: true } } },
         constellations: { enabled: false, intensity: 1 },
         orbitTrails: { enabled: true },
       },

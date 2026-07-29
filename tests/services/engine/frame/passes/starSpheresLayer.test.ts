@@ -134,7 +134,11 @@ function makeState(
   return {
     gpu: { starRenderer },
     data: { bodies: { stars } },
-    settings: { starCatalogs: { items: { famousStar: { enabled: famousStarMapEnabled } } } },
+    // The cluster master is on: `visibleStars` requires it AND the row's own
+    // bit, so a fixture that omitted it would silently drive the Sun-alone path.
+    settings: {
+      starCatalogs: { enabled: true, items: { famousStar: { enabled: famousStarMapEnabled } } },
+    },
   } as unknown as EngineState;
 }
 
@@ -295,7 +299,9 @@ describe('starSpheresLayer.drawPick', () => {
     const state = {
       gpu: { bodyPickRenderer },
       data: { bodies: { stars: [SUN, PROXIMA, SIRIUS] } },
-      settings: { starCatalogs: { items: { famousStar: { enabled: true } } } },
+      settings: {
+        starCatalogs: { enabled: true, items: { famousStar: { enabled: true } } },
+      },
     } as unknown as EngineState;
 
     starSpheresLayer.drawPick!(PASS_STUB, view, makeCtx(camPos), state);

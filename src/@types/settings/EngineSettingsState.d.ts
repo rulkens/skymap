@@ -256,11 +256,17 @@ export type EngineSettingsState = {
    * MAP, not the solar system: with it off the star layers draw the Sun alone
    * (see `visibleStars`).
    *
+   * `enabled` is TOTAL over the cluster — it governs every row, not just the
+   * survey one. Each consumer therefore reads the pair: the asset-demand
+   * predicate, the survey draw path (`starCatalogLayer`), the seeded map's
+   * drawn set (`visibleStars`) and its captions (`foregroundLabelsLayer`) all
+   * require the master before consulting `items[id].enabled`. A master that
+   * governed only some of its rows would put a checkbox on the Stars panel
+   * header claiming authority over rows it could not hide.
+   *
    * Singleton-overlay convention still holds per row: a star catalog's "loaded"
-   * status is its asset slot's own readiness (Tasks 5–6 wire the slot), NOT a
-   * bit on a store. The asset-demand predicate reads
-   * `settings.starCatalogs.items[id].enabled`, and the renderer reads this slice
-   * each frame.
+   * status is its asset slot's own readiness, NOT a bit on a store. The renderer
+   * reads this slice each frame.
    *
    * `sizePx` is the star-billboard pixel radius — the star-catalog twin of
    * `galaxyCatalogs.sizePx`. It rides on the cluster (a shared appearance knob

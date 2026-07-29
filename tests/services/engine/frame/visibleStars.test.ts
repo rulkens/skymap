@@ -18,8 +18,9 @@ const STARS = [
   { id: 'vega', name: 'Vega' },
 ];
 
-function stateWith(famousStarMapOn: boolean) {
+function stateWith(famousStarMapOn: boolean, clusterMasterOn = true) {
   const settings = makeSettingsFixture();
+  settings.starCatalogs.enabled = clusterMasterOn;
   settings.starCatalogs.items.famousStar.enabled = famousStarMapOn;
   return { settings, data: { bodies: { stars: STARS } } } as never;
 }
@@ -31,5 +32,13 @@ describe('visibleStars', () => {
 
   it('draws the Sun alone when the famous-star row is off', () => {
     expect(visibleStars(stateWith(false)).map((s) => s.id)).toEqual(['sun']);
+  });
+
+  it('draws the Sun alone when the cluster master is off, whatever the row says', () => {
+    // The Stars panel header derives its tri-state over EVERY star-catalog id,
+    // so the master must be able to hide each row it summarises. Reading only
+    // the row's own bit here would leave the curated map drawing under a
+    // checkbox that says it is off — with no type error to catch it.
+    expect(visibleStars(stateWith(true, false)).map((s) => s.id)).toEqual(['sun']);
   });
 });

@@ -17,12 +17,18 @@
  *
  * Unlike `GalaxiesSection`/`StructuresSection` — whose masters derive purely
  * from the per-item flags and fan a click out to every row — the star-catalogs
- * cluster owns a real `enabled` gate (`starCatalogs.enabled`, Task 5). So the
+ * cluster owns a real `enabled` gate (`starCatalogs.enabled`). So the
  * master checkbox reflects that gate directly and flips it on click. The
  * `indeterminate` visual is still derived from the per-item flags: gate-on while
  * some-but-not-all catalogs are individually enabled reads as "mixed", the same
  * affordance the sibling sections show. Deriving it here keeps the summary
  * section-local rather than storing a redundant tri-state field.
+ *
+ * The tri-state is derived over EVERY star-catalog id, which is only honest
+ * because the gate is total: engine-side, every consumer of a star catalog's
+ * visibility requires the master before the row's own bit, so the header
+ * checkbox really can hide each row it summarises. Turning it off leaves the
+ * Sun drawn — `visibleStars` exempts the descent's aim point, not the map.
  *
  * Imports nothing from `store/` or `state/`: a pure function of props and the
  * transient CollapsibleSection open/closed state. Tests supply plain props with

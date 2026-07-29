@@ -107,7 +107,12 @@ describe('hide', () => {
 
   it("mixes aggregates and scoped entries: 'labels' expands, scoped separates", () => {
     const e = hide(['labels', 'survey:milliquas'], 0);
-    expect(e.layers).toEqual(['surveyLabel', 'structureLabel', 'milkyWayLabel']);
+    expect(e.layers).toEqual([
+      'surveyLabel',
+      'structureLabel',
+      'milkyWayLabel',
+      'starCatalogLabel',
+    ]);
     expect(e.scoped).toEqual(['survey:milliquas']);
     expect(e.over).toBe(0);
   });

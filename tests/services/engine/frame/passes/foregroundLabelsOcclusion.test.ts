@@ -77,7 +77,7 @@ function makeState(
     gpu: { foregroundLabelRenderer: renderer, foregroundMarkerLineRenderer: lineRenderer },
     settings: {
       labels: { planetLabelsEnabled: true },
-      starCatalogs: { items: { famousStar: { enabled: true, labelEnabled: true } } },
+      starCatalogs: { enabled: true, items: { famousStar: { enabled: true, labelEnabled: true } } },
     },
     // No constellation slot: these occlusion tests exercise only the body
     // captions, so the layer reads an empty figure-name set. The key must exist

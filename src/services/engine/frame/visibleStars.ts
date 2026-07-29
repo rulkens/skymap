@@ -4,10 +4,22 @@
  *
  * Both star content rows (`starPointsLayer`, `starSpheresLayer`) feed their
  * `partitionStarsByResolution` call this set rather than `state.data.bodies.stars`
- * directly, so the `starCatalogs.items.famousStar.enabled` toggle is honoured in
- * ONE place shared across all four call sites (each layer's `enabled` gate + its
- * `draw`), keeping the enable gate and the drawn set from ever disagreeing —
- * the same one-partition-consumed-twice discipline the partition module keeps.
+ * directly, so the map's visibility gate is honoured in ONE place shared across
+ * all four call sites (each layer's `enabled` gate + its `draw`), keeping the
+ * enable gate and the drawn set from ever disagreeing — the same
+ * one-partition-consumed-twice discipline the partition module keeps.
+ *
+ * ### Both halves of the visibility axis
+ *
+ * The gate is the cluster master AND the row's own bit, because a star catalog's
+ * visibility is a two-level fact everywhere else in the engine: the asset-demand
+ * predicate (`assetWiring`'s star-catalog row) and the survey draw path
+ * (`starCatalogLayer`) both require `starCatalogs.enabled` before consulting
+ * `items[id].enabled`. A cluster master that governed the survey row but not the
+ * seeded one would be a master over PART of its own cluster — the Stars panel
+ * derives its header tri-state over every star-catalog id, so it would show a
+ * checkbox claiming authority it did not have. `foregroundLabelsLayer` composes
+ * the same two bits for the map's captions, keeping dots and names in lockstep.
  *
  * ### The Sun is exempt
  *
@@ -27,6 +39,7 @@ const SUN_BODY_ID = 'sun';
 
 export function visibleStars(state: EngineState): readonly StarBody[] {
   const stars = state.data.bodies.stars;
-  if (state.settings.starCatalogs.items.famousStar.enabled) return stars;
+  const { enabled, items } = state.settings.starCatalogs;
+  if (enabled && items.famousStar.enabled) return stars;
   return stars.filter((star) => star.id === SUN_BODY_ID);
 }

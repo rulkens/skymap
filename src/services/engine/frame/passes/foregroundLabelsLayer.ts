@@ -123,9 +123,11 @@
  *      gate the caption groups, two of them the famous-star map's own
  *      star-catalog row: its label axis
  *      (`settings.starCatalogs.items.famousStar.labelEnabled`) zeroes the star
- *      map's target (Sun included); its visibility axis (`…famousStar.enabled`)
- *      zeroes the star map EXCEPT the Sun (the descent's aim point, which its
- *      own `sunCaption` band still governs), in lockstep with the point/sphere
+ *      map's target (Sun included); its visibility axis (the cluster master
+ *      `starCatalogs.enabled` AND `…items.famousStar.enabled`, the pair
+ *      `visibleStars` composes) zeroes the star map EXCEPT the Sun (the
+ *      descent's aim point, which its own `sunCaption` band still governs), in
+ *      lockstep with the point/sphere
  *      layers; the planet-labels toggle zeroes the Earth + planet (+ Moon,
  *      which rides the 'planet' kind) target. All flow through the envelope
  *      below, so flipping any fades rather than pops.
@@ -460,8 +462,11 @@ export const foregroundLabelsLayer: ContentLayer = {
     const planetLabelsEnabled = state.settings.labels.planetLabelsEnabled;
     // The famous-star map's visibility gate mutes its captions in lockstep with
     // the point/sphere layers — but NOT the Sun (`kind === 'sun'`), which
-    // anchors the descent and rides its own `sunCaption` band regardless.
-    const starMapEnabled = state.settings.starCatalogs.items.famousStar.enabled;
+    // anchors the descent and rides its own `sunCaption` band regardless. Both
+    // levels of that axis, exactly as `visibleStars` composes them: a caption
+    // must not survive the cluster master that hid the dot it names.
+    const starMapEnabled =
+      state.settings.starCatalogs.enabled && state.settings.starCatalogs.items.famousStar.enabled;
 
     // ── Pass 1: rebase + size every body, and derive each caption's fade TARGET ──
     // (Stage 1 of the module header's three-stage pipeline.)

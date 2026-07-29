@@ -153,7 +153,10 @@ function makeState(
     gpu: { foregroundLabelRenderer: renderer, foregroundMarkerLineRenderer: lineRenderer },
     settings: {
       labels: { planetLabelsEnabled },
+      // The cluster master is on: the caption's visibility gate requires it AND
+      // the row's own bit, matching how `visibleStars` composes the pair.
       starCatalogs: {
+        enabled: true,
         items: { famousStar: { enabled: starMapEnabled, labelEnabled: starMapLabelsEnabled } },
       },
     },
@@ -199,7 +202,7 @@ function makeConstellationState(opts: { layerFade: number; ready?: boolean }): E
     },
     settings: {
       labels: { planetLabelsEnabled: true },
-      starCatalogs: { items: { famousStar: { enabled: true, labelEnabled: true } } },
+      starCatalogs: { enabled: true, items: { famousStar: { enabled: true, labelEnabled: true } } },
       constellations: {},
     },
     assetSlots: {
