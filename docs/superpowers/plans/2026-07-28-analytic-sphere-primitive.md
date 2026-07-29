@@ -511,8 +511,20 @@ file, never inline.
 | `analytic-equirect-pole-mip-quality`        | `deferred`     | `v = asin(z)/π` has unbounded derivative at the poles, so the analytic uv degrades mip selection there. Inherent to the approach, **not** fixable with the wrap trick.                                                                                                                                                                                                                                                                    |
 | `planet-renderer-max-planets-cap`           | `ready`        | `MAX_PLANETS = 24`.                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
-- [ ] Write the five detail files and the five index lines (Rendering section).
-- [ ] Commit.
+**Correction found while filing.** The pole row's stated mechanism is wrong:
+`v = asin(dir.z)/π + 0.5` equals `1 − θ/π` for colatitude θ, so its derivative is
+the constant `1/π` per unit arc, poles included — `asin`'s singularity cancels
+against the geometry. The divergent coordinate is `u = atan2(y, x)/TAU`, whose
+gradient goes as `1/sin θ`. The conclusion (inherent to equirect, not fixable with
+the wrap trick) survives; the reason does not. The detail file carries the
+corrected derivation.
+
+- [x] Write the five detail files and the five index lines (Rendering section).
+      Filed under today's date, `docs/backlog/2026-07-29-*.md`. Four are new index
+      lines; `star-renderer-uniform-buffer-race` was **already on the backlog** as
+      "starRenderer per-instance uniforms", so that line was repointed at the new
+      detail file rather than duplicated.
+- [x] Commit.
 
 ### 3.3: `entanglement-radar` review pass
 
