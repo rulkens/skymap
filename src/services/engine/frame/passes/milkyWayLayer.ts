@@ -1,54 +1,58 @@
 /**
- * milkyWayLayer — the Milky Way star/dust point cloud at the galactic
- * centre (`MILKY_WAY_CENTER_WORLD`, the ~8 kpc Sgr A* offset from the
- * observer origin, applied via the model matrix).
+ * milkyWayLayer — the Milky Way point cloud's DUST pass, plus the cloud's pick
+ * aspect, at the galactic centre (`MILKY_WAY_CENTER_WORLD`, the ~8 kpc Sgr A*
+ * offset from the observer origin, applied via the model matrix).
  *
- * ### What it draws
+ * ### What it draws (and what it no longer draws)
  *
- * An instanced point cloud generated on-GPU (`milkyWayCloud` owns the
- * star/dust instance buffers), drawn by `milkyWayCloudRenderer` in two
- * pipelines: an ADDITIVE star pass (soft radial glows that sum their
- * light) followed by a MULTIPLICATIVE dust pass (per-channel
- * transmittance that darkens + reddens the light behind it).  The
- * sprites are camera-facing billboards built from the live camera basis
- * each frame; the cloud's world placement (fixed galactic orientation +
- * scale + the Sgr A* centre offset) is a model matrix built once and
- * reused.
+ * The cloud is generated on-GPU (`milkyWayCloud` owns the star/dust instance
+ * buffers) and drawn by `milkyWayCloudRenderer` in two pipelines that now live
+ * in two different layers, because they render into two different targets:
+ *
+ *   - the ADDITIVE star pass moved to `milkyWayAggregateLayer`, which draws it
+ *     into the reduced-resolution `mw-aggregate` offscreen;
+ *     `milkyWayUpsampleLayer` composites that back into HDR. It is the
+ *     fill-bound half and its summed glow is low-frequency, so it buys the
+ *     square of the divisor in fragment cost for a bilinear interpolation
+ *     nobody can see. See that layer's header.
+ *   - the MULTIPLICATIVE dust pass stays HERE, full-res in HDR: per-channel
+ *     transmittance that darkens + reddens the light behind it, which means it
+ *     has to land on the real cosmological accumulation.
+ *
+ * The dust sprites are camera-facing billboards built from the live camera
+ * basis each frame; the cloud's world placement (fixed galactic orientation +
+ * scale + the Sgr A* centre offset) is `milkyWayModelCached`, built once and
+ * shared with the aggregate layer.
  *
  * ### When it draws
  *
- * `enabled` delegates to `milkyWayVisible` — the ONE home of the MW
- * far-side / toggle predicate — AND a near-side approach fade, together
- * bounding a two-sided visibility window. The pick program runs this
- * SAME `enabled` gate (against the pick-time camera), so draw and pick
- * share ONE gate and can't drift.  Three gates:
+ * `enabled` delegates to `deriveMilkyWayCloudAlpha` — the ONE home of the
+ * cloud's visibility question, shared with the aggregate producer and its
+ * upsample consumer so the three can never disagree (see
+ * `milkyWayCloudLiveness`). The pick program runs this SAME gate against the
+ * pick-time camera, so draw and pick can't drift either. It folds three
+ * factors:
  *
  *   1. `state.settings.milkyWay.enabled` — user toggle — OR a still-
  *      nonzero toggle fade (`fades.opacityOf`), which keeps the layer
  *      alive through the ~100 ms fade-out tail.
- *   2. `milkyWayFadeAlpha(camDist, fovY, viewportH) > 0` — the
- *      apparent-size fade band defined in
+ *   2. `milkyWayFadeAlpha` — the far-side apparent-size fade band defined in
  *      `services/gpu/galaxy/milkyWayFadeAlpha.ts` (full strength while the
  *      disc spans at least `MILKY_WAY_FADE_FULL_PX` on screen, gone once it
  *      shrinks to `MILKY_WAY_FADE_GONE_PX`).
- *   3. `fadeBand(SCALE_FADE_BANDS.milkyWayApproach, camDist) > 0` — the
- *      near-side fade: the impostor rides the descent into the disc at full
+ *   3. `fadeBand(SCALE_FADE_BANDS.milkyWayApproach, camDist)` — the
+ *      near-side fade: the cloud rides the descent into the disc at full
  *      strength down to 2 kpc, then dissolves against the real Gaia star
  *      catalog (fully faded in inside 8 kpc), gone by 200 pc (the exact band
  *      is the `milkyWayApproach` row in `presentation/scaleFadeBands.ts`).
- *      Orthogonal to gate 2's apparent-size band — it is the
- *      only gate that closes at kpc range. Because it rides `enabled` it also
+ *      Orthogonal to factor 2's apparent-size band — it is the
+ *      only one that closes at kpc range. Because it rides `enabled` it also
  *      makes a fully approach-faded disc unpickable (invisible →
  *      unpickable) — coherent, but a behaviour the pick program inherits
  *      for free from the shared gate.
  *
- * All three gates live in `enabled` so that when the camera flies well
- * beyond the local volume — or all the way inside the disc toward the
- * Sun — the whole layer is skipped: no `beginRenderPass`, no tile-RAM
+ * A null result skips the whole layer: no `beginRenderPass`, no tile-RAM
  * round-trip on M1, and no idle timestamp slot in the GPU-timings panel.
- * Both fades are recomputed inside `draw` to set the shader alpha; every
- * read uses the frame-frozen `ctx.drawCamPos`, so they return the same
- * value (no race).
  *
  * ### Why NEAR0, not COSMO (the fifth layer to hit the near-plane trap)
  *
@@ -88,23 +92,19 @@
  * the local starfield (star-points / star-catalog, drawn after) out of that
  * multiply: during the descent the near-field stars sit between the camera
  * and the dust, so they must never be darkened by it.
+ *
+ * `milkyWayUpsampleLayer` is the ONE row that must precede this one: it adds
+ * the cloud's own starlight into HDR, and the dust has to multiply that too
+ * (which is what the single-pass version did when stars and dust shared an
+ * encoder). Everything else in the group still draws after.
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
 import { NEAR0 } from '../slabs';
 import { pickUniformBytesOf } from '../../helpers/pickUniformBytesOf';
-import { milkyWayFadeAlpha } from '../../../gpu/galaxy/milkyWayFadeAlpha';
-import { fadeBand } from '../../../../utils/math/fadeBand';
-import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
-import { milkyWayVisible } from '../../helpers/milkyWayVisible';
+import { deriveMilkyWayCloudAlpha } from '../milkyWayCloudLiveness';
 import { cameraBillboardBasis } from '../../../../utils/camera/cameraBillboardBasis';
-import { milkyWayModelMatrix } from '../../../gpu/galaxy/milkyWayModelMatrix';
-
-// The cloud's world placement never changes (fixed galactic orientation +
-// scale + the Sgr A* centre offset), so build the model matrix once and
-// reuse the same Float32Array every frame rather than re-deriving twelve
-// products per draw.
-let milkyWayModel: Float32Array | null = null;
+import { milkyWayModelCached } from '../../../gpu/galaxy/milkyWayModelCached';
 
 export const milkyWayLayer: ContentLayer = {
   name: 'milky-way',
@@ -114,23 +114,18 @@ export const milkyWayLayer: ContentLayer = {
   target: 'hdr',
   blend: 'additive',
 
+  // Shared with the aggregate producer and its upsample consumer — see
+  // `milkyWayCloudLiveness` on why all three must answer identically.
   enabled(state, ctx) {
-    // The shared far-side/toggle predicate (toggle-or-fade-tail AND
-    // apparent-size band), answered for THIS frame's camera and clock —
-    // the frame-frozen ctx snapshot (ctx.nowMs is the deterministic time
-    // seam; layers never read the wall clock directly).
-    if (!milkyWayVisible(state, ctx.drawCamPos, ctx.fovYRad, ctx.canvasSize.height, ctx.nowMs)) {
-      return false;
-    }
-    // Near-side approach fade: close the gate only deep inside the disc,
-    // once the Gaia star catalog has fully taken over (the band is the
-    // milkyWayApproach row in scaleFadeBands.ts). Orthogonal to the far-side
-    // band above — this is the only gate that shuts at kpc range.
-    const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
-    return fadeBand(SCALE_FADE_BANDS.milkyWayApproach, camDistMpc) > 0;
+    return deriveMilkyWayCloudAlpha(state, ctx) !== null;
   },
 
   draw(pass, view, ctx, state) {
+    // Defensive re-derivation, mirroring the sibling layers: `enabled` already
+    // proved liveness, but re-deriving keeps this a pure function of
+    // (state, ctx) with no reliance on gate ordering.
+    const fadeAlpha = deriveMilkyWayCloudAlpha(state, ctx);
+    if (fadeAlpha === null) return;
     // The cloud buffers live on `state.gpu` (nullable, like every GPU handle).
     // They are non-null once the frame loop runs, but `enabled` doesn't
     // narrow them, so guard here — the pre-bootstrap window is the only
@@ -140,31 +135,24 @@ export const milkyWayLayer: ContentLayer = {
     const cloudRenderer = state.gpu.milkyWayCloudRenderer;
     if (cloudRenderer === null) return;
 
-    const camDistMpc = Math.hypot(view.camPos[0], view.camPos[1], view.camPos[2]);
-    // Composite the far-side apparent-size fade, the near-side approach
-    // fade, and the registry-supplied toggle opacity, all on the frame
-    // clock (ctx.nowMs). The renderer accepts a scalar fadeAlpha CPU-side
-    // param, so multiplying opacities here is the minimal-change path — no
-    // shader edits, no FadeUniforms binding.
-    const toggleOpacity = state.subsystems.fades.opacityOf({ kind: 'milkyWay' }, ctx.nowMs);
-    const fadeAlpha =
-      milkyWayFadeAlpha(camDistMpc, ctx.fovYRad, view.viewportPx[1]) *
-      fadeBand(SCALE_FADE_BANDS.milkyWayApproach, camDistMpc) *
-      toggleOpacity;
-
-    // Camera-facing billboard axes for the star/dust sprites (world space),
+    // Camera-facing billboard axes for the dust sprites (world space),
     // derived from the live camera each frame.
     const { right: camRight, up: camUp } = cameraBillboardBasis(ctx.cam);
-    // Fixed world placement — built once, reused every frame.
-    milkyWayModel ??= milkyWayModelMatrix();
 
-    cloudRenderer.draw(pass, {
+    cloudRenderer.drawDust(pass, {
       vp: view.vp,
+      // Full-res into HDR, so the canvas viewport is the target viewport. (The
+      // dust pass's own size clamp is in NDC, not pixels, so this only feeds
+      // the shared camera prefix — but keeping it honest costs nothing.)
       viewportPx: view.viewportPx,
       camRight,
       camUp,
-      model: milkyWayModel,
+      model: milkyWayModelCached(),
       fadeAlpha,
+      // The live look knobs, same as the aggregate row. The dust pass reads
+      // only the model scale and fade out of the shared uniform struct, but it
+      // packs the whole struct, so the values still have to be present.
+      tuning: state.settings.milkyWay,
       buffers: cloud.buffers(),
     });
   },

@@ -6,8 +6,15 @@
  * (its physical size, its per-tier star budget, its on-screen sprite size, its
  * brightness). Splitting the two means a visual-gate tuning pass touches only
  * this file, never the shared preset the tool's reference gallery also reads.
+ *
+ * The look knobs are the exception to "constants the renderer needs": they are
+ * BOOT values (`MILKY_WAY_TUNING_DEFAULTS`) that `settings.milkyWay` spreads in
+ * at startup, and the renderer reads the live settings copy instead. That is
+ * what lets the DebugPanel's "Milky Way tuning" sliders move them without a
+ * reload; this module stays their single source of truth for where they start.
  */
 import type { Tier } from '../../../@types/data/Tier';
+import type { MilkyWayTuning } from '../../../@types/settings/MilkyWayTuning';
 import { MILKY_WAY_DISC_RADIUS_KPC } from '../../../data/milkyWay/galacticCenter';
 import { MILKY_WAY_GALAXY_PARAMS } from '../../../data/milkyWay/milkyWayGalaxyParams';
 import { outerRadiusOf } from './outerRadiusOf';
@@ -52,46 +59,43 @@ export const MILKY_WAY_STARS_PER_TIER: Record<Tier, number> = {
 export const MILKY_WAY_MODEL_SCALE = MILKY_WAY_RADIUS_MPC / outerRadiusOf(MILKY_WAY_GALAXY_PARAMS);
 
 /**
- * Star sprite screen-size clamp, px. Initial values are starting points —
- * tuned at the visual gate (the px floor is the first anti-sparkle lever:
- * raising it keeps distant/faint stars from vanishing to sub-pixel specks).
+ * Boot values of the star-cloud look knobs — the seed `settings.milkyWay`
+ * spreads in, and from there the only home of these numbers. Each is a
+ * starting point rather than a settled fact, which is why the live values ride
+ * settings (the DebugPanel's "Milky Way tuning" sliders write them) instead of
+ * being read straight from this module by the renderer. The knobs' semantics
+ * live on `MilkyWayTuning`; the notes here are why each number is what it is.
+ *
+ * One object rather than six exported scalars because every one of them has
+ * exactly one consumer — the settings seed. Separate constants would only add
+ * a hop between the number and the field it seeds.
  */
-export const MILKY_WAY_STAR_PX_MIN = 1.0;
-export const MILKY_WAY_STAR_PX_MAX = 48.0;
-
-/**
- * Emission factor into the app's HDR -> tonemap chain. Initial value is the
- * tool's tuned starIntensity default (`createGalaxyEngine.ts`'s render
- * defaults); expect a tuning loop at the visual gate since the app's post
- * chain differs from the tool's.
- */
-export const MILKY_WAY_EXPOSURE = 0.11;
-
-/**
- * Dimensionless multiplier on the generated star sprite world size. The
- * generation records carry the tool's own sprite sizes, tuned against the
- * tool's reference gallery; the app renders the same cloud against a busier
- * background (the full point-cloud sky), so sprites read fatter here than
- * they did in the tool. This scale shrinks them at draw time without
- * touching the generated data or the px clamp above. Tuned at the visual
- * gate like its neighbors.
- */
-export const MILKY_WAY_STAR_SIZE_SCALE = 0.7;
-
-/**
- * NDC apparent-size scale of the flux-conserving star LOD (0 disables).
- * Each star hashes a stable per-star fraction of this threshold; a star
- * whose projected NDC half-extent is smaller than roughly its hashed
- * fraction is culled in the VERTEX stage (degenerate quad, zero
- * fragments), and the survivors are brightened up to 3x so the total
- * light of the field holds — no popping, no dimming as stars drop out.
- * This is the first perf lever: at mid/far views the full star budget of
- * additive subpixel sprites collapses onto a handful of pixels, and
- * additive blending serializes the blender per pixel. Kept in NDC (not
- * px) because the hash band was tuned in NDC units in the tool. Tuned at
- * the visual gate like its neighbors.
- */
-export const MILKY_WAY_LOD_APPARENT = 0.02;
+export const MILKY_WAY_TUNING_DEFAULTS: MilkyWayTuning = {
+  // The generation records carry the galaxy-renderer tool's own sprite sizes,
+  // tuned against that tool's reference gallery; the app draws the same cloud
+  // against a busier background (the full point-cloud sky), so sprites read
+  // fatter here. 0.7 shrinks them back without touching the generated data.
+  starSizeScale: 0.7,
+  // The tool's tuned starIntensity default (`createGalaxyEngine.ts`'s render
+  // defaults). The app's post chain differs from the tool's, so this is the
+  // knob a visual-gate pass moves first.
+  exposure: 0.11,
+  // A 1 px floor is the mildest anti-sparkle setting that still stops a
+  // distant star from vanishing entirely between frames.
+  starPxMin: 1.0,
+  // 48 target px (96 screen px through the half-res aggregate) bounds the
+  // foreground swell on a close flythrough without visibly flattening the
+  // near disc into equal-sized discs.
+  starPxMax: 48.0,
+  // Off by default: the tight core+glow profile is what the generation preset
+  // was tuned against. Raising it is the "few large soft splats" experiment.
+  softness: 0,
+  // The first perf lever. At mid/far views the full star budget of additive
+  // subpixel sprites collapses onto a handful of pixels, and additive
+  // blending serializes the blender per pixel. In NDC (not px) because the
+  // hash band was tuned in NDC units in the tool.
+  lodApparent: 0.02,
+};
 
 /**
  * Apparent-size fade band, px of on-screen diameter. The cloud fades on how

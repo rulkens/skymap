@@ -53,6 +53,7 @@ import type { MilkyWayCloud } from '../../../@types/galaxy/MilkyWayCloud';
 import type { MilkyWayCloudBuffers } from '../../../@types/galaxy/MilkyWayCloudBuffers';
 import { MILKY_WAY_GALAXY_PARAMS } from '../../../data/milkyWay/milkyWayGalaxyParams';
 import { MILKY_WAY_STARS_PER_TIER } from './milkyWayCalibration';
+import { milkyWayProbe } from './milkyWayProbe';
 import { carveDustLayout } from './carveDustLayout';
 import { carveStarLayout } from './carveStarLayout';
 import { classifyHubbleType } from './classifyHubbleType';
@@ -77,7 +78,12 @@ export function createMilkyWayCloud(device: GPUDevice, tier: Tier): MilkyWayClou
   // star/dust buffers, pack + write the UBO, then dispatch generation into a
   // fresh encoder and submit. Returns the freshly-generated buffer snapshot.
   function generate(t: Tier): MilkyWayCloudBuffers {
-    const params = { ...MILKY_WAY_GALAXY_PARAMS, starCount: MILKY_WAY_STARS_PER_TIER[t] };
+    // SPIKE: milkyWayProbe's countScale scales the tier budget so the
+    // count/size tradeoff can be explored from the URL. Defaults to 1.
+    const params = {
+      ...MILKY_WAY_GALAXY_PARAMS,
+      starCount: MILKY_WAY_STARS_PER_TIER[t] * milkyWayProbe().countScale,
+    };
     const category = classifyHubbleType(params.type);
     const budget = splitStarBudget(category, params);
     const starLayout = carveStarLayout(category, params, budget);

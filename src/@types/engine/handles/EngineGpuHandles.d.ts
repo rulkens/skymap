@@ -335,6 +335,18 @@ export type EngineGpuHandles = {
    */
   volumeUpsample: VolumeUpsample | null;
   /**
+   * Reduced-res-to-HDR composite for the Milky Way cloud's star field. Reads
+   * the `mw-aggregate` offscreen that `milkyWayAggregateLayer` drew the
+   * additive star billboards into and blends it into HDR. A SECOND instance of
+   * the (fully generic) volume-upsample factory, deliberately not the volume's
+   * own handle, so the two subsystems' gates stay independent. Null until
+   * `initGpu` constructs it (same phase as `volumeUpsample`). Excluded from
+   * `isEngineReady` — when null, `milkyWayUpsampleLayer` skips its draw, so a
+   * null handle is a silent no-op. Stored here so `destroy()` can release the
+   * pipeline + sampler + bind-group-layout via the pass's no-op destroy method.
+   */
+  milkyWayUpsample: VolumeUpsample | null;
+  /**
    * Half-res-to-HDR survey-star aggregate upsample composite. Reads the
    * `star-aggregates` offscreen the aggregate stream drew LINEAR into,
    * re-applies the star pass's hue-preserving knee to the summed field, and

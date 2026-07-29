@@ -24,9 +24,9 @@
  *
  * ### Why we record at the renderer-mock level, not `pass.draw`
  *
- * Each `ContentLayer.draw` in `passes/` delegates to a renderer's `.draw(...)`
- * method (`pointRenderer.draw`, `milkyWayCloudRenderer.draw`, etc.) that we
- * stub at the test boundary.  The real renderers internally call
+ * Each `ContentLayer.draw` in `passes/` delegates to a renderer method
+ * (`pointRenderer.draw`, `milkyWayCloudRenderer.drawStars` / `.drawDust`, etc.)
+ * that we stub at the test boundary.  The real renderers internally call
  * `pass.draw(vertexCount, instanceCount, ...)` on the GPU encoder, but
  * those WGSL-pipeline-bound calls never fire here — the mocks
  * short-circuit before the encoder ever sees `draw`.  Recording at
@@ -192,11 +192,15 @@ function makeRenderTargets(): any {
   const views: Record<string, GPUTextureView> = {
     hdr: { __id: 'hdr-view' } as unknown as GPUTextureView,
     volume: { __id: 'volume-view' } as unknown as GPUTextureView,
+    'mw-aggregate': { __id: 'mw-aggregate-view' } as unknown as GPUTextureView,
   };
   return {
     specs: [
       { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
       { id: 'volume', format: 'rgba16float', depth: null, scale: 3 },
+      // milkyWayAggregateLayer.draw reads this row's `scale` to size the
+      // downscaled viewport it hands the cloud's star pass.
+      { id: 'mw-aggregate', format: 'rgba16float', depth: null, scale: 2 },
       { id: 'swap', format: 'bgra8unorm', depth: null, scale: 1 },
     ],
     viewOf: (id: string) => {
@@ -270,7 +274,18 @@ describe('renderFrame visual baseline', () => {
 
     // Renderer mocks — each draw lands on the same `records` array.
     const pointRenderer = makeLoggingRenderer(records, 'point-sprites');
-    const milkyWayCloudRenderer = makeLoggingRenderer(records, 'milky-way');
+    // The cloud renderer has two entry points because its two passes target two
+    // different textures: the additive stars into the reduced-resolution
+    // `mw-aggregate` offscreen, the multiplicative dust full-res into HDR. Each
+    // logs under the layer that dispatches it.
+    const milkyWayCloudRenderer = {
+      ...makeLoggingRenderer(records, 'milky-way-aggregate', 'drawStars'),
+      ...makeLoggingRenderer(records, 'milky-way', 'drawDust'),
+    };
+    // milkyWayUpsample is the state.gpu handle milkyWayUpsampleLayer.draw calls
+    // directly, the twin of volumeUpsample below — wired with a logging draw so
+    // the snapshot captures the offscreen's merge back into HDR.
+    const milkyWayUpsample = makeLoggingRenderer(records, 'milky-way-upsample');
     const horizonShellRenderer = makeLoggingRenderer(records, 'horizon-shell');
     const proceduralDiskRenderer = makeLoggingRenderer(records, 'procedural-disks');
     const texturedDiskRenderer = makeLoggingRenderer(records, 'textured-disks');
@@ -431,6 +446,7 @@ describe('renderFrame visual baseline', () => {
           // `filamentRenderer`) are the same logging-renderer instances
           // declared above, so their `argShape` entries land in `records`.
           milkyWayCloudRenderer,
+          milkyWayUpsample,
           horizonShellRenderer,
           proceduralDiskRenderer,
           texturedDiskRenderer,
@@ -532,6 +548,14 @@ describe('renderFrame visual baseline', () => {
         },
         {
           "argShape": "pass,object",
+          "renderer": "milky-way-aggregate",
+        },
+        {
+          "argShape": "pass,object",
+          "renderer": "milky-way-upsample",
+        },
+        {
+          "argShape": "pass,object",
           "renderer": "milky-way",
         },
         {
@@ -549,13 +573,15 @@ describe('renderFrame visual baseline', () => {
       ]
     `);
 
-    // Boundary-event count for the no-timing 'merged' path: FIVE begin/end
+    // Boundary-event count for the no-timing 'merged' path: SIX begin/end
     // pairs — one per non-empty render step's target group plus the composite.
     // In FRAME-program order: the volume raymarch pass, the (hdr, COSMO)
-    // mega-pass, the (hdr, NEAR0) pass (the milky-way impostor, on its own
-    // slab since the fixed COSMO near plane clipped the disc mid-descent),
-    // the hdr→swap composite pass, and the swap-chain overlay pass
-    // (marker-lines + labels). Unlike the old inline path, the tone-map's
+    // mega-pass, the (mw-aggregate, NEAR0) pass (the cloud's additive star
+    // billboards into their own reduced-resolution offscreen), the
+    // (hdr, NEAR0) pass (the cloud's upsample + dust, on their own slab since
+    // the fixed COSMO near plane clipped the disc mid-descent), the hdr→swap
+    // composite pass, and the swap-chain overlay pass (marker-lines +
+    // labels). Unlike the old inline path, the tone-map's
     // beginRenderPass is NOT hidden inside a bespoke blit helper — the
     // executor opens the composite pass, so it appears here. Counts are
     // asserted SEPARATELY from the inline snapshot: drawSequence captures the
@@ -563,7 +589,7 @@ describe('renderFrame visual baseline', () => {
     // structure.
     const beginCount = records.filter((r) => r.kind === 'beginRenderPass').length;
     const endCount = records.filter((r) => r.kind === 'passEnd').length;
-    expect(beginCount).toBe(5);
-    expect(endCount).toBe(5);
+    expect(beginCount).toBe(6);
+    expect(endCount).toBe(6);
   });
 });

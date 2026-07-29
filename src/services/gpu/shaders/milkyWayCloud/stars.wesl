@@ -138,7 +138,17 @@ fn fs(i: VSOut) -> @location(0) vec4<f32> {
   // Core+glow radial falloff from lib/cloudSprite.wesl, scaled by the
   // exposure knob.
   let exposure = u.params0.y;
-  let a = starGlowAlpha(r2) * exposure;
+  // Blend the tight core+glow profile toward a broad Gaussian, from the
+  // settings.milkyWay softness knob. A tight-cored sprite needs dozens of
+  // overlaps per pixel before a field of them reads smooth; a broad one needs
+  // a handful, which is why Celestia-style renderers use few large soft
+  // splats. Both profiles are normalised to the same integral over the unit
+  // disc (0.9294 vs 0.8956, hence the 1.038), so this changes SHAPE without
+  // changing how much light the sprite contributes -- moving the slider
+  // measures smoothness, not exposure.
+  let softness = u.params0.w;
+  let broad = max(0.0, exp(-r2 * 2.5) - 0.0821) * 1.038;
+  let a = mix(starGlowAlpha(r2), broad, softness) * exposure;
   // fadeAlpha multiplies EMISSION: at fadeAlpha 0 the star adds no light.
   let fadeAlpha = u.params0.x;
   return vec4<f32>(i.color * i.bright * a * fadeAlpha, a);

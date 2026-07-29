@@ -422,6 +422,15 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // lives on `renderTargets`, so nothing here depends on viewport size.
   state.gpu.volumeUpsample = createVolumeUpsample(device, 'rgba16float');
 
+  // ── Reduced-res-to-HDR Milky Way star-field composite ─────────────
+  //
+  // A SECOND instance of the same factory (which is generic — a linear-sampled
+  // additive blit of whatever view it is handed). Deliberately not the volume's
+  // handle: sharing one would braid two independently-gated subsystems onto a
+  // single resource. See `milkyWayUpsampleLayer` on the pending rename of the
+  // factory now that it has two unrelated callers.
+  state.gpu.milkyWayUpsample = createVolumeUpsample(device, 'rgba16float');
+
   // ── Half-res survey-star aggregate upsample composite ─────────────
   //
   // Built unconditionally alongside the volume upsample; the pipeline is cheap

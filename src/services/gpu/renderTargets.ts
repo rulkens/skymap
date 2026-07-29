@@ -129,6 +129,10 @@ export const TARGET_CLEAR_VALUES: Readonly<Record<string, GPUColor>> = {
   hdr: { r: 0, g: 0, b: 0, a: 1 },
   volume: { r: 0, g: 0, b: 0, a: 0 },
   'star-aggregates': { r: 0, g: 0, b: 0, a: 0 },
+  // Same reason as `volume` and `star-aggregates`: the Milky Way's star
+  // billboards draw additively into this row, so an untouched texel must
+  // contribute nothing when the upsample composites it back into HDR.
+  'mw-aggregate': { r: 0, g: 0, b: 0, a: 0 },
   'foreground:0': { r: 0, g: 0, b: 0, a: 0 },
   // Bloom pyramid mips clear transparent (a=0) — the pyramid accumulates
   // additively (the upsample fold uses one/one blend), so an untouched texel
@@ -152,6 +156,29 @@ export const TARGET_CLEAR_VALUES: Readonly<Record<string, GPUColor>> = {
 const STAR_AGGREGATE_DIVISOR = 2;
 
 /**
+ * Downsample divisor for the `mw-aggregate` row — the Milky Way point cloud's
+ * star billboards.
+ *
+ * ### Why the star pass needs its own reduced-resolution row
+ *
+ * The cloud stands in for ~1e11 stars with a budget in the hundreds of
+ * thousands, so at any framing where the disc covers real screen area the
+ * sprites are sub-pixel and the field reads as discrete particles rather than
+ * as a galaxy. The only cure is more overlap per pixel — bigger, softer,
+ * fewer sprites — and measurement says that wall is FILL, not vertex count: at
+ * ~5x the baseline sprite area the frame rate collapses while the instance
+ * count is going DOWN.
+ *
+ * That is the same shape the `star-aggregates` row exists for, and the same
+ * remedy applies: a smooth summed-glow field is low-frequency, so rendering it
+ * at 1/scale and bilinearly upsampling is visually free while the fragment
+ * cost drops by the square of the divisor. The DUST pass stays full-res in HDR
+ * — its multiplicative transmittance has to land on the real cosmological
+ * accumulation, and it is not the fill-bound half.
+ */
+const MILKY_WAY_AGGREGATE_DIVISOR = 2;
+
+/**
  * Build the concrete target table for this frame configuration. A function
  * (not a module constant) because the swap row's format is the runtime
  * swap-chain format (`bgra8unorm` on macOS, `rgba8unorm` elsewhere).
@@ -163,6 +190,7 @@ function buildSpecs(swapFormat: GPUTextureFormat): readonly RenderTargetSpec[] {
     { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
     { id: 'volume', format: 'rgba16float', depth: null, scale: 3 },
     { id: 'star-aggregates', format: 'rgba16float', depth: null, scale: STAR_AGGREGATE_DIVISOR },
+    { id: 'mw-aggregate', format: 'rgba16float', depth: null, scale: MILKY_WAY_AGGREGATE_DIVISOR },
     { id: 'foreground:0', format: 'rgba16float', depth: 'depth32float', scale: 1 },
     // Bloom mip pyramid: level 0 at half-res, each further level halving again
     // (scale 2/4/8/16/32 — that is 2**(n+1)) — an ever-wider glow. rgba16float

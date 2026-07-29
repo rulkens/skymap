@@ -46,6 +46,7 @@ import type { StarCatalogItemSettings } from '../../@types/settings/StarCatalogI
 import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSettings';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
+import type { MilkyWaySettings } from '../../@types/settings/MilkyWaySettings';
 import type { ClipId } from '../../@types/animation/ClipId';
 import type { SplineMode } from '../../@types/animation/SplineMode';
 import type { PassByDir } from '../../@types/animation/PassByDir';
@@ -148,6 +149,14 @@ export const selectMilkyWayEnabled = (state: RootState): boolean =>
 
 export const selectMilkyWayLabelEnabled = (state: RootState): boolean =>
   selectSettings(state).milkyWay.labelEnabled;
+
+/**
+ * The whole Milky-Way cluster — the slider board needs every tuning leaf at
+ * once, and the cluster reference is already stable between writes (Immer's
+ * structural sharing), so a bare property read is enough.
+ */
+export const selectMilkyWay = (state: RootState): MilkyWaySettings =>
+  selectSettings(state).milkyWay;
 
 // --- famousStars cluster ------------------------------------------------------
 

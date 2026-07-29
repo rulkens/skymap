@@ -54,6 +54,10 @@ import {
 // The "Detail" knob's default is owned by the walk it feeds (single source of
 // truth), so seed the setting straight from it rather than restating 0.05.
 import { DEFAULT_REFINE_THRESHOLD } from '../../services/gpu/renderers/starCatalog/walkStarOctreeCut';
+// Same relationship: the Milky-Way star-cloud look knobs are owned by the
+// renderer's calibration module, so seed them from there rather than restating
+// six numbers here.
+import { MILKY_WAY_TUNING_DEFAULTS } from '../../services/gpu/galaxy/milkyWayCalibration';
 import {
   DEFAULT_ALIGN_SEC,
   DEFAULT_RAMP_SEC,
@@ -136,9 +140,14 @@ export function buildInitialSettings(): EngineSettingsState {
     thumbnails: {
       enabled: DEFAULT_GALAXY_TEXTURES_ENABLED,
     },
+    // Milky Way is a singleton overlay layer: the two visibility axes plus the
+    // star-cloud look knobs all live here. The knobs spread in from
+    // `MILKY_WAY_TUNING_DEFAULTS`, which stays their single source of truth for
+    // where they start (the DebugPanel sliders own them from then on).
     milkyWay: {
       enabled: DEFAULT_MILKY_WAY_ENABLED,
       labelEnabled: DEFAULT_MILKY_WAY_LABEL_ENABLED,
+      ...MILKY_WAY_TUNING_DEFAULTS,
     },
     filaments: {
       enabled: SOURCE_REGISTRY[Source.Filaments].visible,

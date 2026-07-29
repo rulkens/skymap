@@ -1,5 +1,5 @@
 /*
- * FlowTuningSection — labelled slider rows for the flow-field debug knobs.
+ * DebugSlider — one labelled slider row in a DebugPanel tuning section.
  * Fixed label/readout widths keep the range input's left edge aligned across
  * rows regardless of label or value length.
  */
