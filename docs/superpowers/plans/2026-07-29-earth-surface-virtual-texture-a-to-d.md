@@ -647,6 +647,55 @@ mid-fade, which is also what keeps the render-on-demand loop ticking through it.
       never patched, and why.
 - [ ] Commit.
 
+### OPEN DECISION, gating D6: the atlas is over-subscribed
+
+**Found by the first probe session, D3.** In `TILE_DEBUG = 1u` the resident cap shows
+magenta (= level 5, correct) with **black cells scattered through it**. Those are not
+missing files — all 512 z5 tiles exist, BMNG carries bathymetry so ocean tiles are real
+imagery. They are the atlas slot budget: the view wants ~107 tiles on a 14" MBP, the atlas
+holds 64, and the 43 that do not fit fall back to the base.
+
+**Why it is worse than a transition artifact.** Tile demand tracks SCREEN PIXELS, not
+altitude — roughly 3x the screen's pixel count in texels, since tiles are only partly on
+screen and the sphere is curved. As the camera descends the visible cap shrinks and the
+level deepens proportionally, so the count stays roughly constant. Today's one-level
+pyramid hides this outside 6000-9000 km; a deep pyramid would show it at every altitude.
+
+```
+atlas 4096^2 = 16.8 Mtexels = 64 slots
+14" MBP      = 107 tiles wanted = 28 Mtexels   (~1.7x over)
+5K           = 149 tiles wanted = 39 Mtexels   (~2.3x over)
+```
+
+At the engage altitude the whole visible cap wants the SAME level at once (uniform texel
+density at distance), so largest-first priority cannot help and the dropped tiles land
+arbitrarily. Lower down, perspective spreads the sizes and refusals land near the horizon
+where the fallback barely shows.
+
+**Options, undecided:**
+
+1. **Cap refinement to what fits** — refine to the finest level whose tile count fits the
+   atlas. Degrades in whole steps rather than in patches. With today's pyramid it reduces
+   to "stay on base until it fits" (no improvement 6000-9000 km); with a deep pyramid it
+   gives z7-everywhere instead of z8-with-holes. Costs no memory.
+2. **`EARTH_TILE_ATLAS_SIDE` 4096 -> 8192** — 256 slots, full coverage, 268 MB against the
+   spec's 67 MB budget. 8192 is the max texture dimension on every current device
+   including iOS, so there is no step beyond it, and exhausting mobile memory drops the
+   context rather than slowing the frame.
+3. **Defer to Phase E** — judge coverage against real imagery instead of a placeholder.
+   Costs: D6 reads around a known artifact, which is where a real bug hides behind an
+   expected one.
+4. **Size to the device** — 8192 where there is headroom, 4096 where there is not. Avoids
+   the mobile risk; two visual behaviours to reason about, and WebGPU does not expose a
+   headroom signal directly.
+
+**Research commissioned** on how id Tech 5 / Unreal VT size the physical page cache and
+what they do on overflow, and on how Cesium bounds its tile cache and whether
+`maximumScreenSpaceError` is the standard lever. If "clamp the LOD until the working set
+fits" turns out to be established practice, option 1 is the sanctioned path; if SSE is the
+standard knob, option 1 restates as "raise SSE when the cache is tight", which is a dial
+rather than an on/off gate and is better. **Decide before D6.**
+
 ### Task D6: the visual pass
 
 No code by default. Run the spec's "Verification" list, in Chrome DevTools with cold-cache
