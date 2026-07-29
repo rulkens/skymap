@@ -5,6 +5,20 @@
  * diverges); the twelve remaining bodies are the same lit, textured unit sphere
  * and share this one pipeline.
  *
+ * ## The silhouette is analytic; the mesh is only a proxy
+ *
+ * `uvSphereMesh(48, 24)` is uploaded, but it is not the surface. The vertex
+ * stage inflates it into a shell that strictly CIRCUMSCRIBES the body
+ * (`PROXY_SCALE`), and the fragment then recovers the real surface per pixel: it
+ * casts a ray from `camPosLocal` through its own proxy position, intersects the
+ * analytic unit sphere, and derives the normal, the uv and
+ * `@builtin(frag_depth)` from that hit, discarding the lanes that miss. The
+ * drawn edge is therefore a pixel-exact circle at exactly the radius the
+ * atmosphere shell casts its own ray against, rather than a polygon inscribed
+ * 0.2–0.4% inside it — which is the sliver that neither surface nor shell
+ * rasterises, and that the background shows through. The maths and its full
+ * rationale live in `shaders/lib/analyticSphere.wesl`.
+ *
  * ## Per-body resources = the single-uniform-clobber fix, by construction
  *
  * The bodies differ only in surface texture and per-frame MVP + lighting
@@ -76,9 +90,10 @@
  * Matches `earthRenderer` / the `foreground:0` row: `rgba16float` colour +
  * `depth32float` depth (`depthWriteEnabled`, `depthCompare: 'greater'` — the NEAR0
  * slab's reversed-Z convention, clear `0.0`, greater-z-wins), opaque
- * replace, CCW front face + back-cull (matches `uvSphereMesh`'s outward
- * winding). Explicit bind-group layout (not `'auto'`) so texture swaps rebuild
- * bind groups against a stable layout — the `feedback_webgpu_auto_layout_trap`.
+ * replace, CCW front face (matches `uvSphereMesh`'s outward winding) and
+ * FRONT-cull, so the proxy's far hemisphere is what rasterises. Explicit
+ * bind-group layout (not `'auto'`) so texture swaps rebuild bind groups against
+ * a stable layout — the `feedback_webgpu_auto_layout_trap`.
  *
  * @module
  */
@@ -95,12 +110,9 @@ import {
 } from '../../../../data/bodies/sphereTessellation';
 import { generateMipChain, mipLevelCount } from '../../lib/generateMipChain';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
-import { hasUrlGate } from '../../../../utils/url/hasUrlGate';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
-import vsCode from '../../shaders/bodies/texturedBody/vertex.wesl?static';
-import fsCode from '../../shaders/bodies/texturedBody/fragment.wesl?static';
-import impostorVsCode from '../../shaders/bodies/texturedBody/impostorVertex.wesl?static';
-import impostorFsCode from '../../shaders/bodies/texturedBody/impostorFragment.wesl?static';
+import vsCode from '../../shaders/bodies/texturedBody/impostorVertex.wesl?static';
+import fsCode from '../../shaders/bodies/texturedBody/impostorFragment.wesl?static';
 
 /** `TexturedBodyUniforms` is 112 bytes (28 f32): the 80-byte lit prefix + two
  *  ring ratios + two Minnaert limb params + camPosLocal vec3 + one pad float.
@@ -274,32 +286,11 @@ export function createTexturedBodyRenderer(
   });
 
   // ── Shader modules + pipeline ─────────────────────────────────────────────
-  //
-  // SPIKE — `?impostor` selects the analytic ray-traced sphere variant: the same
-  // vertex buffers and the same bind-group layout, but the vertex stage inflates
-  // the mesh into a circumscribing PROXY shell and the fragment intersects the
-  // true unit sphere per pixel, writing its own `@builtin(frag_depth)`. The
-  // silhouette becomes pixel-exact instead of a 48-gon. Read ONCE here, never
-  // per frame: the gate picks a pipeline variant at construction, so the two
-  // paths cost exactly the same at draw time and can be A/B'd by reloading.
-  //
-  // The proxy is drawn BACK-face-only (`cullMode: 'front'`) — see
-  // `impostorVertex.wesl` for why front faces would drop the body the moment the
-  // camera crossed inside the 5% shell.
-  const impostor = hasUrlGate('impostor');
-  const vsModule = createShaderModuleWithDevLog(
-    device,
-    impostor ? impostorVsCode : vsCode,
-    impostor ? 'texturedBody.impostorVertex' : 'texturedBody.vertex',
-  );
-  const fsModule = createShaderModuleWithDevLog(
-    device,
-    impostor ? impostorFsCode : fsCode,
-    impostor ? 'texturedBody.impostorFragment' : 'texturedBody.fragment',
-  );
+  const vsModule = createShaderModuleWithDevLog(device, vsCode, 'texturedBody.impostorVertex');
+  const fsModule = createShaderModuleWithDevLog(device, fsCode, 'texturedBody.impostorFragment');
 
   const pipeline = device.createRenderPipeline({
-    label: impostor ? 'texturedBody-impostor-pipeline' : 'texturedBody-pipeline',
+    label: 'texturedBody-pipeline',
     layout: device.createPipelineLayout({
       label: 'texturedBody-pipeline-layout',
       bindGroupLayouts: [bindGroupLayout],
@@ -328,10 +319,12 @@ export function createTexturedBodyRenderer(
     primitive: {
       topology: 'triangle-list',
       frontFace: 'ccw', // outward-facing (matches uvSphereMesh winding)
-      // Mesh path: the near hemisphere IS the surface, so cull the back.
-      // Impostor path: the proxy is invisible scaffolding, so keep its FAR
-      // hemisphere — that is what still covers the disc from inside the shell.
-      cullMode: impostor ? 'front' : 'back',
+      // The proxy is invisible scaffolding, so its FAR hemisphere is the one to
+      // keep. Front faces would vanish the moment the camera crossed inside the
+      // 5% shell — a legal close approach — and take the body with them; the far
+      // hemisphere still covers the whole disc from in there, because the near
+      // hemisphere is behind the eye.
+      cullMode: 'front',
     },
     depthStencil: {
       format: depthFormat,

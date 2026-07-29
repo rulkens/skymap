@@ -390,15 +390,15 @@ Everything else in the renderer is untouched: `UNIFORM_BUFFER_SIZE`, `KIND_CFG`,
 bind-group layout, the sampler, the per-body buffer/bind-group map, `setMap`,
 `setPlaceholderMap`, `clearMap`, `hasMap`, `setRingTexture`, `draw`, `destroy`.
 
-- [ ] No test (standing refusal). Existing `texturedBodyRenderer` tests must pass **unedited**.
-- [ ] Delete the three mesh `.wesl` files; drop the gate and the two `?static` imports for them.
-- [ ] `npm test -- texturedBodyRenderer` green; `npm run typecheck`; `npm run build`.
+- [x] No test (standing refusal). Existing `texturedBodyRenderer` tests must pass **unedited**.
+- [x] Delete the three mesh `.wesl` files; drop the gate and the two `?static` imports for them.
+- [x] `npm test -- texturedBodyRenderer` green; `npm run typecheck`; `npm run build`.
 - [ ] **Visual acceptance, no URL gate now:** Mars at close approach shows a smooth limb and
       **no transparent seam** against its atmosphere shell — that is the feature. Then Saturn
       (ring shadow on the planet, ring in front of the disc), the Moon (normal-mapped craters at
       the terminator), and a body mid-load (placeholder texture, still a smooth sphere). Console
       clean.
-- [ ] Commit.
+- [x] Commit.
 
 ### 2.2: Rename the impostor trio to the canonical names
 
