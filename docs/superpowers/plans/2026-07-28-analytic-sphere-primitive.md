@@ -530,7 +530,7 @@ corrected derivation.
 
 **Files:** none (review).
 
-- [ ] Run the `entanglement-radar` skill over the whole branch diff (house convention). Pay
+- [x] Run the `entanglement-radar` skill over the whole branch diff (house convention). Pay
       attention to: - **`lib/analyticSphere.wesl` is the single home for the sphere maths** — no consumer
       re-derives a uv, a gradient pair, or a depth from clip space locally; - **no second branch on the same discriminant** — one analytic path, not
       analytic-for-round / mesh-for-oblate anywhere (Q3 named this as the trap); - **`PROXY_SCALE` has one home** and is not restated next to the 0.214% deficit it must
@@ -538,7 +538,10 @@ corrected derivation.
       four consumers, two of which no longer take their silhouette from it; - **the pick and the visual share the silhouette by construction**, not by two call sites
       reading one constant; - **`camPosLocal`'s oblateness parameter is a frame correction, not an oblateness
       feature** — nothing downstream has grown an "is this body flattened" branch.
-- [ ] Address findings, or record why deferred; keep the suite green.
+- [x] Address findings, or record why deferred; keep the suite green.
+      The equirect dir→uv mirror (`cubeSphereMesh.ts` / `earth/fragment.wesl` /
+      `equirectUvFromDir`) was routed to the existing photoreal-Earth backlog item
+      `docs/backlog/2026-07-19-photoreal-earth-followups.md` §2 rather than fixed here.
 
 ### 3.4: Final review + verification
 

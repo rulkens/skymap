@@ -15,10 +15,6 @@
  *   make the fragment stage run over every pixel the true sphere can touch.
  *   Their silhouettes come from the ray test and not from this file at all.
  *
- * Before this constant existed each renderer restated a bare 48/24 under a
- * comment promising it "matches the others", which is the weakest kind of
- * agreement: nothing enforced it.
- *
  * The two shell renderers deliberately do NOT read these. `atmosphereShellRenderer`
  * and `cloudShellRenderer` both run 128×64 because their meshes are proxy surfaces
  * whose own silhouettes carry the visible edge, and the cloud shell additionally

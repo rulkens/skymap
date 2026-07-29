@@ -19,10 +19,10 @@
 // 'u.camPosLocal' is the camera in the body's local frame in body radii (the
 // same vector the Minnaert term already needs), so it is the ray origin with no
 // extra uniform. 'in.localPos' is the interpolated point on the PROXY shell --
-// scaled up by 1.05, so it is NOT a unit vector and its interpolant is not unit
-// length either. 'normalize' has to run on the DIFFERENCE, per fragment, after
-// interpolation; skipping it silently breaks every dot product downstream (the
-// house 'renormalize after a scaled model transform' trap).
+// scaled up by 'PROXY_SCALE', so it is NOT a unit vector and its interpolant is
+// not unit length either. 'normalize' has to run on the DIFFERENCE, per
+// fragment, after interpolation; skipping it silently breaks every dot product
+// downstream (the house 'renormalize after a scaled model transform' trap).
 //
 // ## Oblateness is free -- because it is baked into the model matrix
 //
@@ -95,7 +95,8 @@ fn ringSunVisibility(p: vec3<f32>, sunDir: vec3<f32>, innerRatio: f32, outerRati
 fn fs(in: TexturedBodyVSOut) -> FSOut {
   // ── The ray ───────────────────────────────────────────────────────────────
   let ro = u.camPosLocal;
-  // Renormalize AFTER interpolation: 'in.localPos' rides a 1.05-scaled proxy.
+  // Renormalize AFTER interpolation: 'in.localPos' rides the 'PROXY_SCALE'-scaled
+  // proxy, so neither it nor its interpolant is unit length.
   let rd = normalize(in.localPos - ro);
 
   let surface = hitUnitSphere(ro, rd);
