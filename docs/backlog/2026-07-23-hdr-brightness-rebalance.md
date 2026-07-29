@@ -4,8 +4,8 @@
 
 Seeded by the `?hdr` output spike (branch `spike/hdr-mode`) and a survey of how other
 universe explorers handle brightness across scales. The spike proved the pipeline can
-reach an HDR display; this doc captures what the investigation learned about *why the
-brightness across layers is currently un-navigable as physical values*, and the direction
+reach an HDR display; this doc captures what the investigation learned about _why the
+brightness across layers is currently un-navigable as physical values_, and the direction
 the established tools point to.
 
 ## The HDR spike (context)
@@ -17,36 +17,42 @@ chain `rgba16float` + `toneMapping: { mode: 'extended' }`, and adds an additive 
 spill" in the tone pass so bright sources punch past paper-white:
 
 ```
-peak = max(scaled - hdrKneeStart, 0)
-out  = mapped + peak * hdrHeadroom      // hdrHeadroom 0 => SDR path bit-identical
+lum  = max channel of scaled                 // same measure the bloom bright-pass uses
+peak = max(0, lum - hdrKnee)
+out  = mapped + (scaled / lum) * peak * hdrHeadroom   // headroom 0 => SDR bit-identical
 ```
 
-Off by default; SDR output unchanged. Tuning constants live in `renderFrame.ts`
-(`HDR_KNEE_START`, `HDR_HEADROOM`). This is a viewing spike, not the brightness model.
+Off by default; SDR output unchanged. The spill rides the pixel's own colour ratio rather
+than being added per channel, so it lifts brightness without shifting hue. `hdrKnee` and
+`hdrHeadroom` are live settings behind Display → HDR; the knee defaults to
+`toneMapCurveSaturation(curve)`, the point where the curve stops separating values, since
+spilling below that lifts midtones the curve was still handling.
+
+This is a viewing spike, not the brightness model.
 
 ## The core finding — six incompatible brightness "currencies"
 
 Every layer writes into one shared `rgba16float` HDR buffer, then passes through **one
 static** exposure (`tonemap.exposure = 3.0`, `src/data/defaults.ts:255`) + Reinhard curve,
-then bloom fires above threshold `7.0`. But the six layers do not speak a common brightness
+then bloom fires above threshold `2.0`. But the six layers do not speak a common brightness
 unit — the cross-layer ordering (Sun brightest, then stars, then galaxies, then planets) is
-an *emergent accident* of hand-tuned constants, not a designed scale.
+an _emergent accident_ of hand-tuned constants, not a designed scale.
 
-| Layer | Brightness basis | Rough HDR peak | Physical? | Key knob (file:line) |
-| --- | --- | --- | --- | --- |
-| Galaxy points | linear remap `clamp((22−mag)/8, floor, 1) × brightness` — deliberate display compression, **not** flux | ~1–3 | no | `points/vertex.wesl:227-234`; `settings.galaxyCatalogs.brightness` (`defaults.ts:171`) |
-| Galaxy procedural disks | fixed bulge+disk silhouette; **no magnitude/luminosity input** | ~1 | no | `proceduralDisks/fragment.wesl:59-96` |
-| Galaxy thumbnails | raw survey JPEG/WebP texels (already display-referred) | ~1 | no | `texturedDisks/fragment.wesl:40,65-72` |
-| Stars (survey/near/famous) | real Pogson flux `10^(−0.4·absMag)` × inv-square × `STAR_FLUX_EXPOSURE=6000` × 15–70× camera ramp, compressed by `starKnee=8` | ~8 (post-knee) | core yes, ×big eye-tuned fudge | `lib/starPhotometry.wesl:119,145-147`; `starExposureRamp.ts`; `lib/starKnee.wesl:46` |
-| Planets / Earth | albedo(0–1) × Lambert, `AMBIENT=0.08` floor; Earth adds `sunIrradiance=3.0` (algebraic match to old look, not W/m²) | ~1 | shapes yes, no irradiance scale | `lib/bodyLighting.wesl:34`; `earthSurfaceParams.ts:77-91` |
-| Sun | flat `EMISSIVE=12.0` (resolved sphere) — sole requirement is to sit above bloom threshold `7.0` | 12 | no | `starRenderConstants.ts:31` (`star/fragment.wesl:38`) |
-| Milky Way | `MILKY_WAY_EXPOSURE=0.11` × per-star generated luminosity × fixed glow shape; additive, uncapped | sub-1/sprite, but core sums >1 (LOD boost up to 3×) | no | `milkyWayCalibration.ts:68`; `milkyWayCloud/stars.wesl:134-145` |
+| Layer                      | Brightness basis                                                                                                              | Rough HDR peak                                      | Physical?                       | Key knob (file:line)                                                                      |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------- |
+| Galaxy points              | baked per-galaxy surface brightness `sbAmp`, clamped by `sbMax`, scaled by `sbScale`                                          | ~30 (the `sbMax` ceiling)                           | yes, physical SB                | `points/vertex.wesl`; `DEFAULT_GALAXY_SB_SCALE` / `DEFAULT_GALAXY_SB_MAX` (`defaults.ts`) |
+| Galaxy procedural disks    | fixed bulge+disk silhouette; **no magnitude/luminosity input**                                                                | ~1                                                  | no                              | `proceduralDisks/fragment.wesl:59-96`                                                     |
+| Galaxy thumbnails          | raw survey JPEG/WebP texels (already display-referred)                                                                        | ~1                                                  | no                              | `texturedDisks/fragment.wesl:40,65-72`                                                    |
+| Stars (survey/near/famous) | real Pogson flux `10^(−0.4·absMag)` × inv-square × `STAR_FLUX_EXPOSURE=6000` × 15–70× camera ramp, compressed by `starKnee=8` | ~8 (post-knee)                                      | core yes, ×big eye-tuned fudge  | `lib/starPhotometry.wesl:119,145-147`; `starExposureRamp.ts`; `lib/starKnee.wesl:46`      |
+| Planets / Earth            | albedo(0–1) × Lambert, `AMBIENT=0.08` floor; Earth adds `sunIrradiance=3.0` (algebraic match to old look, not W/m²)           | ~1                                                  | shapes yes, no irradiance scale | `lib/bodyLighting.wesl:34`; `earthSurfaceParams.ts:77-91`                                 |
+| Sun                        | flat `EMISSIVE=12.0` (resolved sphere) — sole requirement is to sit above bloom threshold `2.0`                               | 12                                                  | no                              | `starRenderConstants.ts:31` (`star/fragment.wesl:38`)                                     |
+| Milky Way                  | `MILKY_WAY_EXPOSURE=0.11` × per-star generated luminosity × fixed glow shape; additive, uncapped                              | sub-1/sprite, but core sums >1 (LOD boost up to 3×) | no                              | `milkyWayCalibration.ts:68`; `milkyWayCloud/stars.wesl:134-145`                           |
 
 Two of these are **SDR-preservation hacks that HDR makes unnecessary**:
 
 - `starKnee = 8` exists only to stop the per-channel tone-map clipping star colours to white
   one channel at a time (`lib/starKnee.wesl:6-13`). HDR headroom is exactly what lets a star
-  keep its colour into the extended range — so the knee should *relax* in HDR, not be tuned.
+  keep its colour into the extended range — so the knee should _relax_ in HDR, not be tuned.
 - The Sun's `EMISSIVE = 12` is a "stay above bloom threshold" number
   (`starRenderConstants.ts:14-25`), decoupled from the Sun being ~10^10× a galaxy. With
   adaptation + headroom it becomes "emit real flux, let exposure and the curve handle it".
@@ -66,7 +72,7 @@ well-exposed for whatever you are near — that is what makes multi-scale naviga
   **"Automatic" HDR tone-mapping mode that adjusts exposure in real time to overall image
   lightness**.
 - **SpaceEngine** — this is the "pleasing but accurate when we want to" design already
-  shipped: **two modes**. *HDR* (pretty, deliberately unrealistic wide range) vs *Auto/Photo*
+  shipped: **two modes**. _HDR_ (pretty, deliberately unrealistic wide range) vs _Auto/Photo_
   = **physically-based real brightness + auto-exposure metering the centre of the screen**.
   They are explicit that no camera or eye has that wide a range, so Auto shrinks the range and
   floats exposure. Magnitude-limit keys pull faint stars into view. Auto-exposure simulates a
@@ -79,7 +85,7 @@ well-exposed for whatever you are near — that is what makes multi-scale naviga
 Common recipe: (1) real apparent magnitude → flux, (2) **scene-adaptive exposure** ← the
 keystone skymap lacks, (3) manual brightness + magnitude-limit override, (4) bloom/glow for
 bright sources, (5) a **realism toggle** (enhanced/compressed ↔ physical). Skymap has (3) and
-(4), a *static* exposure, and the six currencies above.
+(4), a _static_ exposure, and the six currencies above.
 
 Sources: [Gaia Sky star rendering](https://gaia.ari.uni-heidelberg.de/gaiasky/docs/3.4.0/Star-rendering.html),
 [Gaia Sky graphics settings](https://gaia.ari.uni-heidelberg.de/gaiasky/docs/3.4.1/Graphics-settings.html),
@@ -117,8 +123,37 @@ during navigation. Three shapes, in ascending effort:
 - **[Bright star clump at ~5.9 kpc](2026-07-17-star-clump-brightness-5-9kpc.md)** — residual
   over-exposure is display policy; a principled exposure/tone shoulder subsumes it.
 - **Bloom** (`2026-07-21-bloom-mip-count-perf.md`, `2026-07-21-fold-star-upsample-into-tonemap.md`) —
-  the bloom threshold `7.0` is load-bearing for the Sun; any brightness rebalance must hold or
+  the bloom threshold `2.0` is load-bearing for the Sun; any brightness rebalance must hold or
   re-derive the `DEFAULT_BLOOM_THRESHOLD < STAR_KNEE ≤ STAR_EMISSIVE` ordering
   (`starRenderConstants.ts:14-25`).
 - Depends on the `?hdr` output path (branch `spike/hdr-mode`) landing, or at least on its
   extended-range swap being the assumed output for direction 2/3.
+
+## Prerequisites for productionising the `?hdr` path
+
+Surfaced reviewing the spike; none of them block the tuning sliders, all of them block
+shipping HDR as a real setting.
+
+- **`hdr` is mirrored three times** — `GpuContext.hdr` (optional, its own doc comment
+  admitting the optionality exists to avoid touching call sites),
+  `EngineGpuHandles.hdr`, `ReadyFrameContext.hdr`. All three are derivable from
+  `format === 'rgba16float'`. Collapse to one question before adding a fourth reader.
+- **A settings toggle is not free.** The swap-chain format is chosen once in `initGpu`
+  and baked into every pipeline targeting it (compositor plus the post-tone-map overlays:
+  labels, marker lines, selection ring). A toggle means either forcing a reload or
+  building a pipeline-rebuild path — decide which, deliberately.
+- **The display can change under you.** `matchMedia('(dynamic-range: high)')` is read
+  once at init with no `change` listener, so dragging the window to an SDR monitor leaves
+  the app in HDR mode. `useIsMobile.ts` has the listener pattern to copy.
+- **`toneMapping: { mode: 'extended' }` is cast through `any`** in `device.ts` — needs an
+  ambient widening of `GPUCanvasConfiguration`, per the `tools/vendor-types/` precedent.
+- **Non-Chrome behaviour is assumed, not verified.** Other implementations will ignore the
+  unknown dict member and give a float swap chain that clamps at 1.0. Probably harmless;
+  check Safari rather than assume.
+- **Unmeasured.** An `rgba16float` swap chain doubles present bandwidth and no
+  `npm run perf` before/after exists for the spike.
+- **Offline harnesses must pin SDR** — `tools/record` (4K tour → mp4) and
+  `tools/site/makeOgImage`. Moot while `?hdr` is opt-in; a real bug the day it defaults on.
+- **Post-tone-map overlays need a headroom policy.** Labels and marker lines draw at white
+  over a scene that can now exceed it, so text over a bright star reads dim. Scale them
+  with the headroom or pin them at paper white as a stated choice.
