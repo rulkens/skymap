@@ -88,7 +88,7 @@ Replaces two hardcoded routing chains (the read chain in `projectLabelCategoryVi
   - `const LABEL_HOME_BY_SOURCE_TYPE: Record<LabelBearingSourceType, LabelHome>`
   - `projectLabelCategoryVisibility(homes: LabelHomes): Record<LabelCategory, boolean>` — **signature change** from three positional args to one bundle.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `tests/data/labels/labelHomeBySourceType.test.ts`:
 
@@ -140,12 +140,12 @@ describe('LABEL_HOME_BY_SOURCE_TYPE', () => {
 
 Adjust the `settingsReducer` / `initialSettingsState` import names to whatever `src/state/settings/settingsSlice.ts` and `initialState.ts` actually export — read those two files first and match. If the slice exports only the configured `settingsSlice`, use `settingsSlice.reducer` and `settingsSlice.getInitialState()`.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run tests/data/labels/labelHomeBySourceType.test.ts`
 Expected: FAIL — "Failed to resolve import ... labelHomeBySourceType".
 
-- [ ] **Step 3: Create the three types**
+- [x] **Step 3: Create the three types**
 
 `src/@types/data/LabelBearingSourceType.d.ts`:
 
@@ -230,7 +230,7 @@ export type LabelHome = {
 };
 ```
 
-- [ ] **Step 4: Create the table**
+- [x] **Step 4: Create the table**
 
 `src/data/labels/labelHomeBySourceType.ts`:
 
@@ -283,7 +283,7 @@ export const LABEL_HOME_BY_SOURCE_TYPE: Readonly<Record<LabelBearingSourceType, 
 
 The `as StructureId` / `as GalaxyCatalogId` casts are the table's one unavoidable seam: `LabelHome.read` is uniform over `LabelCategory` (that is what makes the table a `Record`), while each row indexes a record keyed by its own narrower id union. The registry lookup that selects the row is what guarantees the cast holds.
 
-- [ ] **Step 5: Rewrite the projection to use the table**
+- [x] **Step 5: Rewrite the projection to use the table**
 
 Replace the whole body of `src/state/settings/projectLabelCategoryVisibility.ts`. Keep the module docblock's first paragraph and the "why milkyWay is a scalar" section (both still true); replace the "This projection partitions structure vs galaxy catalog…" sentence and the "Why these arguments" section with the text below.
 
@@ -344,7 +344,7 @@ export function projectLabelCategoryVisibility(homes: LabelHomes): Record<LabelC
 }
 ```
 
-- [ ] **Step 6: Rewrite the container's write handler**
+- [x] **Step 6: Rewrite the container's write handler**
 
 In `src/components/containers/LabelsAndGuidesSectionContainer.tsx`, replace the `useMemo` at lines 83-86 and the `onSetLabelCategoryVisibility` `useCallback` at lines 91-102:
 
@@ -384,12 +384,12 @@ const SOURCE_REGISTRY_BY_ID = Object.fromEntries(
 
 Drop the now-unused `isStructureId`, `setStructureLabelEnabled`, `setMilkyWayLabelEnabled`, and `setGalaxyCatalogLabelEnabled` imports. Update the container's docblock: replace the "### 3-way dispatch guard" section with a "### Label dispatch" section pointing at `LABEL_HOME_BY_SOURCE_TYPE`.
 
-- [ ] **Step 7: Run the full suite**
+- [x] **Step 7: Run the full suite**
 
 Run: `npm test && npm run typecheck`
 Expected: PASS. Fix any test that constructed `projectLabelCategoryVisibility(a, b, c)` positionally — pass the bundle instead. Behaviour is unchanged, so no test's _assertions_ should need editing; only call shapes.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/@types/settings/LabelHomes.d.ts src/@types/settings/LabelHome.d.ts src/@types/data/LabelBearingSourceType.d.ts src/data/labels/labelHomeBySourceType.ts src/state/settings/projectLabelCategoryVisibility.ts src/components/containers/LabelsAndGuidesSectionContainer.tsx tests/data/labels/labelHomeBySourceType.test.ts
@@ -416,14 +416,14 @@ Renames `galaxyNames` → `galaxy`, adds `starCatalog` and `body`, and retypes `
 - Consumes: Task 1's table (untouched here).
 - Produces: `LabelLayerId = 'milkyWay' | 'structure' | 'galaxy' | 'scaleBar' | 'starCatalog' | 'body'`; `FadeId`'s labelLayer arm gains `item?: LabelCategory`.
 
-- [ ] **Step 1: Find every call site**
+- [x] **Step 1: Find every call site**
 
 Run: `grep -rn "galaxyNames" src tests --include="*.ts" --include="*.tsx"`
 Run: `grep -rn "kind: 'labelLayer'" src tests --include="*.ts" --include="*.tsx"`
 
 Record both lists — every hit is edited in Step 2. There is no test to write first: this step is a rename, and the compiler is the oracle. (Per `testing.md`, a test asserting a union's members is a constant restatement and must not be added.)
 
-- [ ] **Step 2: Rewrite the three type files**
+- [x] **Step 2: Rewrite the three type files**
 
 `src/@types/animation/LabelLayerId.d.ts`:
 
@@ -507,7 +507,7 @@ export type CategoryLabelLayer = Exclude<LabelLayerId, 'scaleBar'>;
 
 Add `import type { LabelCategory } from '../engine/data/LabelCategory';` and drop the now-unused `StructureId` import **only if** nothing else in the file uses it (the `structure` arm does — keep it).
 
-- [ ] **Step 3: Update every call site from Step 1**
+- [x] **Step 3: Update every call site from Step 1**
 
 In `src/services/engine/wiring/fadeLayers.ts`:
 
@@ -559,12 +559,12 @@ Also update `SourceEntryBase.d.ts`'s `bearsLabel` and `labelLayer` docblocks, wh
   readonly labelLayer?: CategoryLabelLayer;
 ```
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run: `npm run typecheck && npm test`
 Expected: PASS. TypeScript flags every missed rename; there should be no runtime behaviour change, so any _assertion_ failure means a call site was edited wrongly.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/@types/animation/LabelLayerId.d.ts src/@types/animation/CategoryLabelLayer.d.ts src/@types/animation/FadeId.d.ts src/@types/data/SourceEntryBase.d.ts src/services/engine/wiring/fadeLayers.ts
@@ -602,7 +602,7 @@ The `famousStars` singleton cluster becomes `starCatalogs.items.famousStar` — 
   - `VisibilityLayerKey` gains `'starCatalogLabel'`.
   - `settings.famousStars`, `settings.labels.starLabelsEnabled`, `selectFamousStarsEnabled`, `selectStarLabelsEnabled`, `setFamousStarsEnabled`, `setStarLabelsEnabled`, `DEFAULT_FAMOUS_STARS_ENABLED` are all **deleted**.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `tests/services/engine/frame/visibleStars.test.ts` — the single highest-value test in the change. Match the surrounding tests' fixture helpers; `tests/state/settings/makeSettingsFixture.ts` already exists and should be used rather than hand-built literals.
 
@@ -641,12 +641,12 @@ describe('visibleStars', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run tests/services/engine/frame/visibleStars.test.ts`
 Expected: FAIL — `settings.starCatalogs.items.famousStar` is undefined.
 
-- [ ] **Step 3: Split the star-catalog entry type**
+- [x] **Step 3: Split the star-catalog entry type**
 
 `src/@types/data/starCatalog/SurveyStarCatalogSourceEntry.d.ts` — today's `StarCatalogSourceEntry` body verbatim (keep its whole docblock), renamed, with `binBaseName` retyped:
 
@@ -730,7 +730,7 @@ export type StarCatalogSourceEntry = SurveyStarCatalogSourceEntry | SeededStarCa
 
 Point `src/data/sources/gaia-stars.ts` at `SurveyStarCatalogSourceEntry`. Delete `src/@types/data/body/FamousStarSourceEntry.d.ts` and drop it from `SourceEntry.d.ts`'s union + docblock.
 
-- [ ] **Step 4: Retype the famous-star registry row**
+- [x] **Step 4: Retype the famous-star registry row**
 
 `src/data/sources/famous-star.ts`:
 
@@ -782,7 +782,7 @@ const STAR_CATALOG_SOURCES: readonly SourceType[] = SOURCE_ENTRIES.filter(
 ).map((e) => e.code);
 ```
 
-- [ ] **Step 5: Move the settings home**
+- [x] **Step 5: Move the settings home**
 
 In `src/@types/settings/EngineSettingsState.d.ts`: delete the whole `famousStars` cluster (lines 317-335) and update the `starCatalogs` docblock — replace "Today the sole row is the survey-wide Gaia bin (`gaiaStars`) … will add a label-bearing row later" with:
 
@@ -801,7 +801,7 @@ Delete `DEFAULT_FAMOUS_STARS_ENABLED` from `src/data/defaults.ts:283`, `setFamou
 
 Then delete `labels.starLabelsEnabled`: remove the field from `src/@types/settings/LabelSettings.d.ts`, from `initialState.ts:222`, and remove `setStarLabelsEnabled` + `selectStarLabelsEnabled`.
 
-- [ ] **Step 6: Wire the fade + intent rows**
+- [x] **Step 6: Wire the fade + intent rows**
 
 `src/@types/animation/VisibilityLayerKey.d.ts` — add `| 'starCatalogLabel'` and a docblock note:
 
@@ -846,7 +846,7 @@ Import `setStarCatalogLabelEnabled` and `type StarCatalogId`.
   [setStarCatalogLabelEnabled.type]: 'starCatalogLabel',
 ```
 
-- [ ] **Step 7: Add the star-catalog label home**
+- [x] **Step 7: Add the star-catalog label home**
 
 `src/@types/data/LabelBearingSourceType.d.ts` — add `| 'starCatalog'`.
 
@@ -869,7 +869,7 @@ In `LabelsAndGuidesSectionContainer.tsx`, select `selectStarCatalogItems` and ad
 
 Finally, delete the `toggle-label-stars` entry from the container's `nonCategoryRows` array and its `starLabelsEnabled` / `onSetStarLabelsEnabled` plumbing — the "Famous Stars" row now arrives via `LABEL_CATEGORIES`.
 
-- [ ] **Step 8: Repoint the two readers**
+- [x] **Step 8: Repoint the two readers**
 
 `src/services/engine/frame/visibleStars.ts` — replace the settings read; the Sun exemption stays for now (Task 5 removes it):
 
@@ -898,12 +898,12 @@ state.settings.starCatalogs.items.famousStar.labelEnabled ||
 
 `src/components/SettingsPanel/StarsSection.tsx` + `StarsSectionContainer.tsx` — delete the bespoke famous-stars checkbox and its `famousStarsEnabled` prop. `famousStar` now renders through the existing `STAR_CATALOG_IDS.map` row loop, which the section's own docblock already calls "the extension point for a future famous-star catalog". Delete that anticipatory wording; it has arrived.
 
-- [ ] **Step 9: Verify**
+- [x] **Step 9: Verify**
 
 Run: `npm test && npm run typecheck`
 Expected: PASS, including both new `visibleStars` cases. Update `tests/state/settings/makeSettingsFixture.ts` to drop `famousStars` / `starLabelsEnabled` and seed both `starCatalogs.items` rows. Tests referencing `setFamousStarsEnabled` or `labels.starLabelsEnabled` move to the new fields.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add src/@types/data/starCatalog src/@types/data/SourceEntry.d.ts src/@types/data/LabelBearingSourceType.d.ts src/@types/settings src/@types/animation/VisibilityLayerKey.d.ts src/data src/state src/services src/components tests
@@ -938,7 +938,7 @@ git commit -m "feat(stars): make famousStar a label-bearing star-catalog row"
   - `setBodyItemEnabled` / `setBodyLabelEnabled` slice actions, `selectBodyItems` selector.
   - `VisibilityLayerKey` gains `'bodyLabel'`. `settings.labels` shrinks to `{ focusedOnly }`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Extend `tests/services/engine/frame/passes/foregroundLabelsLayer.test.ts` (match its existing harness — it already builds a state and inspects emitted labels):
 
@@ -966,12 +966,12 @@ it('mutes only the Earth caption when the earth row s label is off', () => {
 
 These two are the behaviour D1 buys: the merged "Planet names" toggle splits, so Earth and the planets must now mute independently. Reuse the file's existing state builder and label-collection helper rather than inventing new ones — read the file first and match its names.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run tests/services/engine/frame/passes/foregroundLabelsLayer.test.ts`
 Expected: FAIL — `settings.bodies` is undefined.
 
-- [ ] **Step 3: Create the body types**
+- [x] **Step 3: Create the body types**
 
 `src/@types/data/body/BodySourceEntry.d.ts`:
 
@@ -1054,7 +1054,7 @@ export type BodyItemSettings = DataItemSettings & {
 };
 ```
 
-- [ ] **Step 4: Retype the two registry rows**
+- [x] **Step 4: Retype the two registry rows**
 
 `src/data/sources/earth.ts` — keep the `allSky` / `visible` comments verbatim, replace the `bearsLabel` comment and add the label fields:
 
@@ -1094,7 +1094,7 @@ export const EARTH_ENTRY = {
 
 Delete `EarthSourceEntry.d.ts` / `PlanetSourceEntry.d.ts`, replace both in `SourceEntry.d.ts`'s union with `BodySourceEntry`, and update the `'famousStar'/'planet'/'earth'` bullet in `src/data/sources.ts`'s header to a single `'body'` bullet.
 
-- [ ] **Step 5: Add the settings cluster**
+- [x] **Step 5: Add the settings cluster**
 
 `src/@types/settings/EngineSettingsState.d.ts` — add after `starCatalogs`:
 
@@ -1157,7 +1157,7 @@ Export both. Add `selectBodyItems` to `selectors.ts` beside `selectStarCatalogIt
 
 Delete `labels.planetLabelsEnabled` from `LabelSettings.d.ts` and `initialState.ts` (so `labels: { focusedOnly: false }`), plus `setPlanetLabelsEnabled` and `selectPlanetLabelsEnabled`. `LabelSettings`'s docblock is now true as written — it really is cross-cutting.
 
-- [ ] **Step 6: Wire fade, intent, and label home**
+- [x] **Step 6: Wire fade, intent, and label home**
 
 `VisibilityLayerKey.d.ts` — add `| 'bodyLabel'`.
 
@@ -1197,7 +1197,7 @@ Delete `labels.planetLabelsEnabled` from `LabelSettings.d.ts` and `initialState.
 
 In `LabelsAndGuidesSectionContainer.tsx`: select `selectBodyItems`, add to the `labelHomes` memo + deps, and delete the `toggle-label-planets` entry from `nonCategoryRows` along with its `planetLabelsEnabled` / `onSetPlanetLabelsEnabled` plumbing. "Earth" and "Planets" now arrive via `LABEL_CATEGORIES`.
 
-- [ ] **Step 7: Repoint the caption gate**
+- [x] **Step 7: Repoint the caption gate**
 
 `foregroundLabelsLayer.ts`, in `draw`, replace the `planetLabelsEnabled` read with per-body lookups and flatten the caption-kind branch. The nested ternary at lines 509-519 becomes a lookup that asks each caption's own source:
 
@@ -1245,12 +1245,12 @@ starMapRow.labelEnabled || bodyItems.earth.labelEnabled || bodyItems.planet.labe
 
 reading `state.settings.*` directly there (the `enabled` hook has no local aliases). Update the module docblock's stage-1 paragraph: it currently describes "three independent mute switches" by their old names.
 
-- [ ] **Step 8: Verify**
+- [x] **Step 8: Verify**
 
 Run: `npm test && npm run typecheck`
 Expected: PASS, both new cases included. Update `makeSettingsFixture.ts` to seed `bodies.items` and drop `labels.planetLabelsEnabled`.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add src/@types/data/body src/@types/data/SourceEntry.d.ts src/@types/data/LabelBearingSourceType.d.ts src/@types/settings src/@types/animation/VisibilityLayerKey.d.ts src/data src/state src/services src/components tests

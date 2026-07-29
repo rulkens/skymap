@@ -18,6 +18,7 @@ describe('expandVisibilityLayers', () => {
       'structureLabel',
       'milkyWayLabel',
       'starCatalogLabel',
+      'bodyLabel',
     ]);
   });
 
@@ -28,6 +29,7 @@ describe('expandVisibilityLayers', () => {
       'structureLabel',
       'milkyWayLabel',
       'starCatalogLabel',
+      'bodyLabel',
       'flow',
     ]);
   });

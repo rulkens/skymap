@@ -54,6 +54,8 @@ import type { StructureItemSettings } from './StructureItemSettings';
 import type { GalaxyCatalogItemSettings } from './GalaxyCatalogItemSettings';
 import type { StarCatalogId } from '../data/starCatalog/StarCatalogId';
 import type { StarCatalogItemSettings } from './StarCatalogItemSettings';
+import type { BodyId } from '../data/body/BodyId';
+import type { BodyItemSettings } from './BodyItemSettings';
 import type { ClipId } from '../animation/ClipId';
 import type { SplineMode } from '../animation/SplineMode';
 import type { PassByDir } from '../animation/PassByDir';
@@ -321,6 +323,23 @@ export type EngineSettingsState = {
     exposureFarX: number;
     aggregateIntensityCap: number;
     items: Record<StarCatalogId, StarCatalogItemSettings>;
+  };
+
+  /**
+   * Near-field body gates — the FIFTH source-type cluster, one `items` row per
+   * `BodyId`, each carrying the visibility axis (`enabled`) and the caption
+   * axis (`labelEnabled`).
+   *
+   * No cluster-level `enabled`: unlike the four data clusters there is no
+   * "hide all bodies" intent — the bodies ARE the destination of the descent,
+   * and a master gate over them would have no caller. Adding one when a caller
+   * appears is a one-line change; inventing it now would be a knob nothing
+   * turns. Should one arrive it must be TOTAL over the rows, like
+   * `starCatalogs.enabled` and `volumes.enabled` — a master governing only
+   * part of its own cluster is a checkbox claiming authority it lacks.
+   */
+  bodies: {
+    items: Record<BodyId, BodyItemSettings>;
   };
 
   /**

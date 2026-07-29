@@ -36,6 +36,7 @@ import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
 import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';
+import type { BodyId } from '../../@types/data/body/BodyId';
 import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { ClipId } from '../../@types/animation/ClipId';
 import type { SplineMode } from '../../@types/animation/SplineMode';
@@ -262,6 +263,16 @@ const settingsSlice = createSlice({
       settings.starCatalogs.items[action.payload.id].labelEnabled = action.payload.enabled;
     },
 
+    // ── bodies (fifth source-type cluster) ──────────────────────────────────
+    // Per-body visibility / caption axes. No cluster-level gate: there is no
+    // "hide all bodies" intent (see EngineSettingsState).
+    setBodyItemEnabled: (settings, action: PayloadAction<{ id: BodyId; enabled: boolean }>) => {
+      settings.bodies.items[action.payload.id].enabled = action.payload.enabled;
+    },
+    setBodyLabelEnabled: (settings, action: PayloadAction<{ id: BodyId; enabled: boolean }>) => {
+      settings.bodies.items[action.payload.id].labelEnabled = action.payload.enabled;
+    },
+
     // ── volumes ─────────────────────────────────────────────────────────────
     setVolumesEnabled: (settings, action: PayloadAction<boolean>) => {
       settings.volumes.enabled = action.payload;
@@ -303,9 +314,6 @@ const settingsSlice = createSlice({
     // ── labels (cross-cutting presentation) ─────────────────────────────────
     setLabelsFocusedOnly: (settings, action: PayloadAction<boolean>) => {
       settings.labels.focusedOnly = action.payload;
-    },
-    setPlanetLabelsEnabled: (settings, action: PayloadAction<boolean>) => {
-      settings.labels.planetLabelsEnabled = action.payload;
     },
 
     // ── debug ───────────────────────────────────────────────────────────────
@@ -479,6 +487,8 @@ export const {
   setStarCatalogAggregateIntensityCap,
   setStarCatalogVisible,
   setStarCatalogLabelEnabled,
+  setBodyItemEnabled,
+  setBodyLabelEnabled,
   setVolumesEnabled,
   addVolumeField,
   removeVolumeField,
@@ -506,7 +516,6 @@ export const {
   setStructureItemEnabled,
   setStructureLabelEnabled,
   setLabelsFocusedOnly,
-  setPlanetLabelsEnabled,
   mergeSnapshot,
 } = settingsSlice.actions;
 

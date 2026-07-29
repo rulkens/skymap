@@ -76,7 +76,13 @@ function makeState(
   return {
     gpu: { foregroundLabelRenderer: renderer, foregroundMarkerLineRenderer: lineRenderer },
     settings: {
-      labels: { planetLabelsEnabled: true },
+      labels: { focusedOnly: false },
+      bodies: {
+        items: {
+          earth: { enabled: true, labelEnabled: true },
+          planet: { enabled: true, labelEnabled: true },
+        },
+      },
       starCatalogs: { enabled: true, items: { famousStar: { enabled: true, labelEnabled: true } } },
     },
     // No constellation slot: these occlusion tests exercise only the body

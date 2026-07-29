@@ -4,9 +4,9 @@
  *
  * Unlike the per-layer label gates (`galaxyCatalogs.items.*.labelEnabled`,
  * `starCatalogs.items.*.labelEnabled`, `structures.items.*.labelEnabled`,
- * `milkyWay.labelEnabled`), these knobs
- * apply across every label producer at once. They MULTIPLY on top of the
- * layer gates — a layer that is off stays off regardless of the mode here.
+ * `bodies.items.*.labelEnabled`, `milkyWay.labelEnabled`), these knobs apply
+ * across every label producer at once. They MULTIPLY on top of the layer
+ * gates — a layer that is off stays off regardless of the mode here.
  */
 export type LabelSettings = {
   /**
@@ -19,14 +19,4 @@ export type LabelSettings = {
    * tour snapshot on exit.
    */
   focusedOnly: boolean;
-  /**
-   * Master gate for the Earth + planet captions in the true-scale foreground
-   * (`foregroundLabelsLayer`) — the Moon rides the 'planet' caption kind, so it
-   * follows this switch too. Default ON, so a viewer flying the final descent
-   * can silence the solar-system body set on its own; the local star map has
-   * its own gate on its star-catalog row (`starCatalogs.items.famousStar`).
-   * Distinct from `focusedOnly`: that is a cross-cutting COSMO declutter, this
-   * is the near-field scene-body caption toggle.
-   */
-  planetLabelsEnabled: boolean;
 };

@@ -4,7 +4,8 @@
  * A known `LabelHomes` bundle → a known concrete record, exercising every home
  * (structure category from `structures[cat].labelEnabled`, famousGalaxy from
  * `galaxyCatalogs.famousGalaxy.labelEnabled`, famousStar from
- * `starCatalogs.famousStar.labelEnabled`, milkyWay from the scalar).
+ * `starCatalogs.famousStar.labelEnabled`, the near-field bodies from
+ * `bodies[id].labelEnabled`, milkyWay from the scalar).
  */
 
 import { describe, it, expect } from 'vitest';
@@ -21,6 +22,7 @@ function homesOf(state: EngineSettingsState): LabelHomes {
     structures: state.structures.items,
     galaxyCatalogs: state.galaxyCatalogs.items,
     starCatalogs: state.starCatalogs.items,
+    bodies: state.bodies.items,
     milkyWayLabelEnabled: state.milkyWay.labelEnabled,
   };
 }

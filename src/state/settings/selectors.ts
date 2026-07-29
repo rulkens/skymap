@@ -43,6 +43,8 @@ import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { StructureItemSettings } from '../../@types/settings/StructureItemSettings';
 import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';
 import type { StarCatalogItemSettings } from '../../@types/settings/StarCatalogItemSettings';
+import type { BodyId } from '../../@types/data/body/BodyId';
+import type { BodyItemSettings } from '../../@types/settings/BodyItemSettings';
 import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSettings';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
@@ -241,11 +243,6 @@ export const selectClipPathPassByDir = (state: RootState): PassByDir =>
 export const selectClipPathTuningActive = (state: RootState): ClipPathTuningActive =>
   selectSettings(state).debug.clipPathInspect.active;
 
-// --- labels cluster -----------------------------------------------------------
-
-export const selectPlanetLabelsEnabled = (state: RootState): boolean =>
-  selectSettings(state).labels.planetLabelsEnabled;
-
 // --- structures cluster -------------------------------------------------------
 
 export const selectStructureItems = (
@@ -285,6 +282,17 @@ export const selectStarCatalogs = (
 export const selectStarCatalogItems = (
   state: RootState,
 ): Record<StarCatalogId, StarCatalogItemSettings> => selectSettings(state).starCatalogs.items;
+
+// --- bodies cluster -----------------------------------------------------------
+
+/**
+ * The per-body item rows — the near-field twin of `selectStarCatalogItems`.
+ * The Labels section bundles it into `LabelHomes`; returning the Immer-stable
+ * `items` reference (not the cluster, and never `state.settings`) keeps the
+ * projection from rebuilding on unrelated writes.
+ */
+export const selectBodyItems = (state: RootState): Record<BodyId, BodyItemSettings> =>
+  selectSettings(state).bodies.items;
 
 /**
  * Star-billboard pixel radius — the star-catalog twin of

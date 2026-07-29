@@ -118,19 +118,22 @@
  *      (`SCALE_FADE_BANDS.sunCaption`, keyed on the camera's distance from the
  *      heliocentric origin) so its name FADES IN smoothly as the camera
  *      descends: exactly 0 at the layer's enable gate (no pop) up to full alpha
- *      by half that distance. Earth + the planets ride the planet-labels toggle
- *      (`settings.labels.planetLabelsEnabled`). Three independent mute switches
- *      gate the caption groups, two of them the famous-star map's own
- *      star-catalog row: its label axis
- *      (`settings.starCatalogs.items.famousStar.labelEnabled`) zeroes the star
- *      map's target (Sun included); its visibility axis (the cluster master
- *      `starCatalogs.enabled` AND `…items.famousStar.enabled`, the pair
- *      `visibleStars` composes) zeroes the star map EXCEPT the Sun (the
- *      descent's aim point, which its own `sunCaption` band still governs), in
- *      lockstep with the point/sphere
- *      layers; the planet-labels toggle zeroes the Earth + planet (+ Moon,
- *      which rides the 'planet' kind) target. All flow through the envelope
- *      below, so flipping any fades rather than pops.
+ *      by half that distance. Earth + the planets carry no band: inside the
+ *      caption gate they are simply on.
+ *
+ *      Every caption reads the LABEL GATE OF ITS OWN SOURCE — the same
+ *      registry-derived home the settings panel writes — so the mute switches
+ *      are per-row rather than a cross-cutting bag:
+ *      `starCatalogs.items.famousStar.labelEnabled` zeroes the star map's
+ *      target (Sun included), `bodies.items.earth.labelEnabled` the Earth
+ *      caption, and `bodies.items.planet.labelEnabled` the planet set (the Moon
+ *      rides the 'planet' kind, so it follows that row). Independently, the star
+ *      map's VISIBILITY axis (the cluster master `starCatalogs.enabled` AND
+ *      `…items.famousStar.enabled`, the pair `visibleStars` composes) zeroes the
+ *      star map EXCEPT the Sun — the descent's aim point, which its own
+ *      `sunCaption` band still governs — in lockstep with the point/sphere
+ *      layers. All of them flow through the envelope below, so flipping any
+ *      fades rather than pops.
  *   2. DECLUTTER — EVERY visible caption contends in one screen-space cull
  *      (`declutterByScreenSeparation`), Earth and the planets included. The
  *      collision winner is the higher `CAPTION_PRIORITY` kind tier (sun >
@@ -389,8 +392,8 @@ export const foregroundLabelsLayer: ContentLayer = {
     // The BODY captions' demand: the shared foreground gate (so this row
     // empties with its NEAR0 siblings at galaxy zoom) AND the tighter caption
     // gate (see SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC's docblock) AND at least
-    // one of the two toggles that can make a body-caption target nonzero
-    // (`draw`'s per-kind switch). The famous-star row's `enabled` is
+    // one of the label gates that can make a body-caption target nonzero
+    // (`draw`'s `labelGateFor`). The famous-star row's `enabled` is
     // deliberately NOT part of this OR: it only narrows the star-map target
     // down to the Sun (see `draw`'s `baseTarget` derivation) and can never turn
     // a caption on when that row's `labelEnabled` is off, so it carries no
@@ -399,7 +402,8 @@ export const foregroundLabelsLayer: ContentLayer = {
       ctx.cam.distance < FOREGROUND_MAX_DISTANCE_MPC &&
       ctx.cam.distance < SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC &&
       (state.settings.starCatalogs.items.famousStar.labelEnabled ||
-        state.settings.labels.planetLabelsEnabled);
+        state.settings.bodies.items.earth.labelEnabled ||
+        state.settings.bodies.items.planet.labelEnabled);
     // The CONSTELLATION captions' demand rides the SAME product `draw` uses
     // for their fade target — `constellationLayerOpacity`, the distance band
     // times the fade-registry toggle opacity (not the band-only `1` an
@@ -458,15 +462,32 @@ export const foregroundLabelsLayer: ContentLayer = {
     // (see `labelLeaderLine`); only the renderer uploads get the f32 narrow.
     const rebasedVp = rebaseViewProj(view.slab.vp, camPos);
     const rebasedVpF32 = narrowMat4(rebasedVp);
-    const starMapLabelsEnabled = state.settings.starCatalogs.items.famousStar.labelEnabled;
-    const planetLabelsEnabled = state.settings.labels.planetLabelsEnabled;
+    const bodyItems = state.settings.bodies.items;
+    const starMapRow = state.settings.starCatalogs.items.famousStar;
     // The famous-star map's visibility gate mutes its captions in lockstep with
     // the point/sphere layers — but NOT the Sun (`kind === 'sun'`), which
     // anchors the descent and rides its own `sunCaption` band regardless. Both
     // levels of that axis, exactly as `visibleStars` composes them: a caption
     // must not survive the cluster master that hid the dot it names.
-    const starMapEnabled =
-      state.settings.starCatalogs.enabled && state.settings.starCatalogs.items.famousStar.enabled;
+    const starMapEnabled = state.settings.starCatalogs.enabled && starMapRow.enabled;
+
+    // Each caption asks its OWN source's label gate — the same registry-derived
+    // home the settings panel writes. `sun`/`star` route to the star map's row,
+    // `earth`/`planet` to their body rows; the constellation kind never reaches
+    // here (those captions carry their own layer opacity).
+    const labelGateFor = (kind: ForegroundCaption['kind']): boolean => {
+      switch (kind) {
+        case 'earth':
+          return bodyItems.earth.labelEnabled;
+        case 'planet':
+          return bodyItems.planet.labelEnabled;
+        case 'sun':
+        case 'star':
+          return starMapRow.labelEnabled;
+        case 'constellation':
+          return true;
+      }
+    };
 
     // ── Pass 1: rebase + size every body, and derive each caption's fade TARGET ──
     // (Stage 1 of the module header's three-stage pipeline.)
@@ -503,23 +524,21 @@ export const foregroundLabelsLayer: ContentLayer = {
         fovYRad: ctx.fovYRad,
       });
 
-      // The fade TARGET before declutter: the star map rides the neighbourhood
-      // distance band (Mpc → pc through the named scale-unit); the Sun — the
-      // descent's aim point — rides its OWN distance band (`sunCaption`) so its
-      // name FADES IN as the camera descends toward the solar system rather than
-      // popping to full alpha the frame the layer's gate switches on. For the
-      // Sun `distanceMpc` IS the camera's distance from the heliocentric origin
-      // (the Sun sits there), which is what that band keys on. Earth + the
-      // planets ride the planet-labels toggle. Both toggles feed the target that
-      // flows through the envelope below, so flipping either fades rather than
-      // pops.
-      const isStarMap = label.kind === 'star' || label.kind === 'sun';
-      const baseTarget = !isStarMap
-        ? planetLabelsEnabled
+      // The fade TARGET before declutter. A caption's own source's label gate
+      // comes first (`labelGateFor`); past it the star map rides the
+      // neighbourhood distance band (Mpc → pc through the named scale-unit),
+      // while the Sun — the descent's aim point — rides its OWN band
+      // (`sunCaption`) so its name FADES IN as the camera descends toward the
+      // solar system rather than popping to full alpha the frame the layer's
+      // gate switches on. For the Sun `distanceMpc` IS the camera's distance
+      // from the heliocentric origin (the Sun sits there), which is what that
+      // band keys on. Earth + the planets carry no band: inside the caption
+      // gate they are simply on. Every gate feeds the target that flows through
+      // the envelope below, so flipping any of them fades rather than pops.
+      const baseTarget = !labelGateFor(label.kind)
+        ? 0
+        : label.kind === 'earth' || label.kind === 'planet'
           ? 1
-          : 0
-        : !starMapLabelsEnabled
-          ? 0
           : label.kind === 'sun'
             ? fadeBand(SCALE_FADE_BANDS.sunCaption, distanceMpc)
             : starMapEnabled

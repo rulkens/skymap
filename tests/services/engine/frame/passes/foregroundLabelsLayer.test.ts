@@ -38,6 +38,7 @@ import {
 import { SCALE_FADE_BANDS } from '../../../../../src/services/engine/presentation/scaleFadeBands';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
+import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 
 // The layer derives its caption set from the frame's body snapshot
@@ -50,6 +51,12 @@ const J2000_STATES = deriveBodyStates(CONST_J2000);
 // the caption by `kind === 'sun'`, and the Sun now rides a fade band rather
 // than a pinned constant), so the test derives it from the shared id helper.
 const SUN_LABEL_ID = sceneBodyLabelId('sun');
+
+// The `planet`-row caption ids, derived from the seed table rather than named
+// so the per-row mute tests don't pin one planet's presence in the seed.
+const PLANET_LABEL_IDS: ReadonlySet<string> = new Set(
+  SCENE_PLANETS.map((p) => sceneBodyLabelId(p.id)),
+);
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -142,17 +149,32 @@ function makeLineRenderer(): MarkerLineRenderer {
   } as unknown as MarkerLineRenderer;
 }
 
+/**
+ * `bodyLabels` seeds BOTH body rows from one flag by default, so a test that
+ * only cares whether body captions are on at all passes a bare boolean; the
+ * per-row cases pass the two bits separately, which is the axis those rows buy.
+ */
 function makeState(
   renderer: LabelRenderer | null,
   lineRenderer: MarkerLineRenderer | null = makeLineRenderer(),
   starMapLabelsEnabled = true,
-  planetLabelsEnabled = true,
+  bodyLabels: boolean | { earth: boolean; planet: boolean } = true,
   starMapEnabled = true,
 ): EngineState {
+  const bodies =
+    typeof bodyLabels === 'boolean' ? { earth: bodyLabels, planet: bodyLabels } : bodyLabels;
   return {
     gpu: { foregroundLabelRenderer: renderer, foregroundMarkerLineRenderer: lineRenderer },
     settings: {
-      labels: { planetLabelsEnabled },
+      labels: { focusedOnly: false },
+      // Each caption reads its OWN source's label gate, so the body rows carry
+      // the Earth / planet caption bits.
+      bodies: {
+        items: {
+          earth: { enabled: true, labelEnabled: bodies.earth },
+          planet: { enabled: true, labelEnabled: bodies.planet },
+        },
+      },
       // The cluster master is on: the caption's visibility gate requires it AND
       // the row's own bit, matching how `visibleStars` composes the pair.
       starCatalogs: {
@@ -201,7 +223,13 @@ function makeConstellationState(opts: { layerFade: number; ready?: boolean }): E
       foregroundMarkerLineRenderer: makeLineRenderer(),
     },
     settings: {
-      labels: { planetLabelsEnabled: true },
+      labels: { focusedOnly: false },
+      bodies: {
+        items: {
+          earth: { enabled: true, labelEnabled: true },
+          planet: { enabled: true, labelEnabled: true },
+        },
+      },
       starCatalogs: { enabled: true, items: { famousStar: { enabled: true, labelEnabled: true } } },
       constellations: {},
     },
@@ -513,11 +541,52 @@ describe('foregroundLabelsLayer.draw', () => {
     expect(offLabels.some((l) => l.id === earthId)).toBe(true);
   });
 
-  it('suppresses Earth + planet captions when the planet toggle is off', () => {
+  it('mutes only the planet captions when the planet row’s label is off', () => {
+    // Earth and the planets are separate registry rows, each with its own label
+    // gate, so muting one must leave the other captioning. A gate that read the
+    // wrong row's bit would mute both together with no type error.
+    const base = sceneBodyLabels(J2000_STATES);
+    const earthId = sceneBodyLabelId('earth');
+    const camPos: Vec3 = [...base.find((l) => l.id === earthId)!.worldPos] as Vec3;
+
+    rebaseMock.mockReturnValueOnce(makeSpreadVp());
+    const renderer = makeRenderer(6);
+    foregroundLabelsLayer.draw(
+      PASS_STUB,
+      makeNear0View(camPos),
+      makeCtx(5e-4),
+      makeState(renderer, makeLineRenderer(), true, { earth: true, planet: false }),
+    );
+    const drawn = (renderer.setLabels as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0]![0] as readonly Label[];
+    expect(drawn.some((l) => PLANET_LABEL_IDS.has(l.id))).toBe(false);
+    expect(drawn.some((l) => l.id === earthId)).toBe(true);
+  });
+
+  it('mutes only the Earth caption when the earth row’s label is off', () => {
+    const base = sceneBodyLabels(J2000_STATES);
+    const earthId = sceneBodyLabelId('earth');
+    const camPos: Vec3 = [...base.find((l) => l.id === earthId)!.worldPos] as Vec3;
+
+    rebaseMock.mockReturnValueOnce(makeSpreadVp());
+    const renderer = makeRenderer(6);
+    foregroundLabelsLayer.draw(
+      PASS_STUB,
+      makeNear0View(camPos),
+      makeCtx(5e-4),
+      makeState(renderer, makeLineRenderer(), true, { earth: false, planet: true }),
+    );
+    const drawn = (renderer.setLabels as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0]![0] as readonly Label[];
+    expect(drawn.some((l) => l.id === earthId)).toBe(false);
+    expect(drawn.some((l) => PLANET_LABEL_IDS.has(l.id))).toBe(true);
+  });
+
+  it('suppresses Earth + planet captions when both body rows’ labels are off', () => {
     // Camera at Earth, spread vp so declutter keeps every separated caption:
-    // with the planet toggle ON the Earth caption emits; with it OFF the Earth
-    // + planet set drops while the star map keeps showing. The two mute switches
-    // are independent.
+    // with the body label gates ON the Earth caption emits; with them OFF the
+    // Earth + planet set drops while the star map keeps showing. The body and
+    // star-map mute switches are independent.
     const base = sceneBodyLabels(J2000_STATES);
     const earthId = sceneBodyLabelId('earth');
     const earth = base.find((l) => l.id === earthId)!;

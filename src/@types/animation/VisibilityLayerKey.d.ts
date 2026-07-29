@@ -42,10 +42,12 @@
  * label intent across all galaxy catalogs, mirroring how `FadeId`'s
  * `labelLayer` reuses the `galaxy` layer for famous-galaxy labels.
  *
- * Note on `starCatalogLabel`: it is a CLUSTER-level row — one intent across
- * every star catalog — matching how `surveyLabel` addresses all galaxy-catalog
- * labels at once. Per-item keys are added when a tour beat actually needs to
- * address one catalog's captions alone.
+ * Note on `starCatalogLabel` and `bodyLabel`: both are CLUSTER-level rows — one
+ * intent across every star catalog, one across every near-field body — matching
+ * how `surveyLabel` addresses all galaxy-catalog labels at once. Per-item keys
+ * are added when a tour beat actually needs to address one row's captions
+ * alone; the fade handles underneath already carry the item, so that split is a
+ * key-vocabulary change, not a registry one.
  */
 
 export type VisibilityLayerKey =
@@ -56,6 +58,7 @@ export type VisibilityLayerKey =
   | 'milkyWayLabel'
   | 'surveyLabel'
   | 'starCatalogLabel'
+  | 'bodyLabel'
   | 'scaleBar'
   | 'structureRing'
   | 'structureLabel'

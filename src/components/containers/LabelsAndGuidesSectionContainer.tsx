@@ -5,23 +5,24 @@
  *
  * Owns all Redux reach for the Labels & Guides group: reads
  * `selectStructureItems`, `selectGalaxyCatalogItems`, `selectStarCatalogItems`,
- * and `selectMilkyWayLabelEnabled`, bundles them into the `LabelHomes` the
- * label-projection reads, and wraps the label dispatch in a `useCallback`. It
- * also owns the planet-caption toggle and the overlay guide rows —
- * constellations (the stick figures, whose name captions ride the same gate)
- * and orbit trails — flat singleton settings that route straight to their own
- * setters. The presentational `LabelsAndGuidesSection` imports nothing from
- * `store/` or `state/`.
+ * `selectBodyItems` and `selectMilkyWayLabelEnabled`, bundles them into the
+ * `LabelHomes` the label-projection reads, and wraps the label dispatch in a
+ * `useCallback`. It also owns the overlay guide rows — constellations (the
+ * stick figures, whose name captions ride the same gate) and orbit trails —
+ * flat singleton settings that route straight to their own setters. The
+ * presentational `LabelsAndGuidesSection` imports nothing from `store/` or
+ * `state/`.
  *
  * ### Label-visibility projection
  *
  * Label visibility lives in several authoritative homes — structure items, the
- * galaxy catalog items (famousGalaxy), the star catalog items (famousStar), and
- * the milkyWay scalar. The projection (`projectLabelCategoryVisibility`) merges
- * them into the flat `Record<LabelCategory, boolean>` the section's checkboxes
- * read. The `useMemo` rebuilds only when any of those stable-reference inputs
- * change — each is a per-cluster selector output, never `state.settings` itself,
- * which Immer re-identifies on every write.
+ * galaxy catalog items (famousGalaxy), the star catalog items (famousStar), the
+ * body items (Earth, the planets), and the milkyWay scalar. The projection
+ * (`projectLabelCategoryVisibility`) merges them into the flat
+ * `Record<LabelCategory, boolean>` the section's checkboxes read. The `useMemo`
+ * rebuilds only when any of those stable-reference inputs change — each is a
+ * per-cluster selector output, never `state.settings` itself, which Immer
+ * re-identifies on every write.
  *
  * ### Label dispatch
  *
@@ -47,13 +48,12 @@ import {
   selectStructureItems,
   selectGalaxyCatalogItems,
   selectStarCatalogItems,
+  selectBodyItems,
   selectMilkyWayLabelEnabled,
-  selectPlanetLabelsEnabled,
   selectConstellationsEnabled,
   selectOrbitTrailsEnabled,
 } from '../../state/settings/selectors';
 import {
-  setPlanetLabelsEnabled,
   setConstellationsEnabled,
   setOrbitTrailsEnabled,
 } from '../../state/settings/settingsSlice';
@@ -68,8 +68,8 @@ function LabelsAndGuidesSectionContainer(): React.ReactElement {
   const structureItems = useAppSelector(selectStructureItems);
   const galaxyCatalogItems = useAppSelector(selectGalaxyCatalogItems);
   const starCatalogItems = useAppSelector(selectStarCatalogItems);
+  const bodyItems = useAppSelector(selectBodyItems);
   const milkyWayLabelEnabled = useAppSelector(selectMilkyWayLabelEnabled);
-  const planetLabelsEnabled = useAppSelector(selectPlanetLabelsEnabled);
   const constellationsEnabled = useAppSelector(selectConstellationsEnabled);
   const orbitTrailsEnabled = useAppSelector(selectOrbitTrailsEnabled);
 
@@ -80,9 +80,10 @@ function LabelsAndGuidesSectionContainer(): React.ReactElement {
       structures: structureItems,
       galaxyCatalogs: galaxyCatalogItems,
       starCatalogs: starCatalogItems,
+      bodies: bodyItems,
       milkyWayLabelEnabled,
     }),
-    [structureItems, galaxyCatalogItems, starCatalogItems, milkyWayLabelEnabled],
+    [structureItems, galaxyCatalogItems, starCatalogItems, bodyItems, milkyWayLabelEnabled],
   );
 
   const labelCategoryVisibility = useMemo(
@@ -97,13 +98,6 @@ function LabelsAndGuidesSectionContainer(): React.ReactElement {
       dispatch(
         LABEL_HOME_BY_SOURCE_TYPE[SOURCE_TYPE_BY_LABEL_CATEGORY[category]].write(category, enabled),
       );
-    },
-    [dispatch],
-  );
-
-  const onSetPlanetLabelsEnabled = useCallback(
-    (enabled: boolean) => {
-      dispatch(setPlanetLabelsEnabled(enabled));
     },
     [dispatch],
   );
@@ -123,22 +117,16 @@ function LabelsAndGuidesSectionContainer(): React.ReactElement {
   );
 
   // The non-category boolean rows the section renders + folds into its master
-  // tri-state, in render order (planet names, constellations, orbit trails).
-  // Assembling the array here keeps the section free of any per-row prop
-  // plumbing: a new row is one more entry, not a fresh prop pair threaded
-  // through both components. Each `id` is the checkbox element id. The
-  // constellations row governs both the stick figures and their name captions —
-  // there is no separate names toggle. The star-map captions are NOT here: the
-  // famous-star map is a label-bearing registry row, so its toggle arrives with
-  // the other categories through `LABEL_CATEGORIES`.
+  // tri-state, in render order (constellations, orbit trails). Assembling the
+  // array here keeps the section free of any per-row prop plumbing: a new row
+  // is one more entry, not a fresh prop pair threaded through both components.
+  // Each `id` is the checkbox element id. The constellations row governs both
+  // the stick figures and their name captions — there is no separate names
+  // toggle. No CAPTION toggle belongs here: every caption-bearing source is a
+  // label-bearing registry row, so its toggle arrives with the other categories
+  // through `LABEL_CATEGORIES`.
   const nonCategoryRows: ReadonlyArray<NonCategoryRow> = useMemo(
     () => [
-      {
-        id: 'toggle-label-planets',
-        label: 'Planet names',
-        enabled: planetLabelsEnabled,
-        onChange: onSetPlanetLabelsEnabled,
-      },
       {
         id: 'toggle-constellations',
         label: 'Constellations',
@@ -152,14 +140,7 @@ function LabelsAndGuidesSectionContainer(): React.ReactElement {
         onChange: onToggleOrbitTrails,
       },
     ],
-    [
-      planetLabelsEnabled,
-      onSetPlanetLabelsEnabled,
-      constellationsEnabled,
-      onToggleConstellations,
-      orbitTrailsEnabled,
-      onToggleOrbitTrails,
-    ],
+    [constellationsEnabled, onToggleConstellations, orbitTrailsEnabled, onToggleOrbitTrails],
   );
 
   return (

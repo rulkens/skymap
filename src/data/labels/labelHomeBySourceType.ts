@@ -16,8 +16,8 @@
  * row's implementation rather than smoothed away by synthesising a one-entry
  * items record, which would pretend the overlay is a catalog.
  *
- * The `as StructureId` / `as GalaxyCatalogId` / `as StarCatalogId` casts are
- * the table's one
+ * The `as StructureId` / `as GalaxyCatalogId` / `as StarCatalogId` / `as
+ * BodyId` casts are the table's one
  * unavoidable seam: `LabelHome.read` is uniform over `LabelCategory` (that is
  * what makes the table a `Record`), while each row indexes a record keyed by
  * its own narrower id union. The registry lookup that selects the row is what
@@ -26,6 +26,7 @@
 
 import type { LabelHome } from '../../@types/settings/LabelHome';
 import type { LabelBearingSourceType } from '../../@types/data/LabelBearingSourceType';
+import type { BodyId } from '../../@types/data/body/BodyId';
 import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';
 import type { StructureId } from '../../@types/data/structure/StructureId';
@@ -34,6 +35,7 @@ import {
   setMilkyWayLabelEnabled,
   setGalaxyCatalogLabelEnabled,
   setStarCatalogLabelEnabled,
+  setBodyLabelEnabled,
 } from '../../state/settings/settingsSlice';
 
 export const LABEL_HOME_BY_SOURCE_TYPE: Readonly<Record<LabelBearingSourceType, LabelHome>> = {
@@ -48,6 +50,10 @@ export const LABEL_HOME_BY_SOURCE_TYPE: Readonly<Record<LabelBearingSourceType, 
   starCatalog: {
     read: (homes, id) => homes.starCatalogs[id as StarCatalogId].labelEnabled,
     write: (id, enabled) => setStarCatalogLabelEnabled({ id: id as StarCatalogId, enabled }),
+  },
+  body: {
+    read: (homes, id) => homes.bodies[id as BodyId].labelEnabled,
+    write: (id, enabled) => setBodyLabelEnabled({ id: id as BodyId, enabled }),
   },
   // The singleton overlay: one scalar, no per-record row to index.
   milkyWay: {

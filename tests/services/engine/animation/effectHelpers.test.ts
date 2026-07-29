@@ -112,6 +112,7 @@ describe('hide', () => {
       'structureLabel',
       'milkyWayLabel',
       'starCatalogLabel',
+      'bodyLabel',
     ]);
     expect(e.scoped).toEqual(['survey:milliquas']);
     expect(e.over).toBe(0);

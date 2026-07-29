@@ -75,6 +75,8 @@ import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { StructureItemSettings } from '../../@types/settings/StructureItemSettings';
 import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';
 import type { StarCatalogItemSettings } from '../../@types/settings/StarCatalogItemSettings';
+import type { BodyId } from '../../@types/data/body/BodyId';
+import type { BodyItemSettings } from '../../@types/settings/BodyItemSettings';
 
 export function buildInitialSettings(): EngineSettingsState {
   return {
@@ -197,6 +199,19 @@ export function buildInitialSettings(): EngineSettingsState {
         ]),
       ) as Record<StarCatalogId, StarCatalogItemSettings>,
     },
+    // Body rows are DERIVED from the registry's body entries, so the seed can't
+    // drift from the body set, and each row's `enabled` comes from that entry's
+    // `visible` field — SOURCE_REGISTRY stays the single source of truth for
+    // default visibility. `labelEnabled` seeds true: the captions are the
+    // descent's navigation aids and show until the user mutes them.
+    bodies: {
+      items: Object.fromEntries(
+        SOURCE_ENTRIES.filter((e) => e.type === 'body').map((e) => [
+          e.id,
+          { enabled: e.visible, labelEnabled: true },
+        ]),
+      ) as Record<BodyId, BodyItemSettings>,
+    },
     volumes: {
       enabled: DEFAULT_VOLUMES_ENABLED,
       items: seedVolumeFields(),
@@ -208,9 +223,7 @@ export function buildInitialSettings(): EngineSettingsState {
     flow: { ...DEFAULT_FLOW },
     // Cross-cutting label presentation: focusedOnly default OFF — all enabled
     // labels draw (the guided tour flips it on and its snapshot restores it).
-    // planetLabelsEnabled default ON — the Earth + planet captions show on the
-    // final descent until muted.
-    labels: { focusedOnly: false, planetLabelsEnabled: true },
+    labels: { focusedOnly: false },
     debug: {
       showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
       showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,

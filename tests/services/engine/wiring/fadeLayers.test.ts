@@ -25,6 +25,7 @@ import { createFadeRegistry } from '../../../../src/services/animation/fadeRegis
 import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { STAR_CATALOG_IDS } from '../../../../src/data/starCatalog/starCatalogIds';
+import { BODY_IDS } from '../../../../src/data/bodies/bodyIds';
 import { SOURCE_REGISTRY } from '../../../../src/data/sources';
 import type { VisibilityLayerKey } from '../../../../src/@types/animation/VisibilityLayerKey';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
@@ -54,6 +55,11 @@ function starCatalogItems(): Record<string, { enabled: boolean; labelEnabled: bo
   return Object.fromEntries(
     STAR_CATALOG_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
   );
+}
+
+/** Every body row, both axes on — the near-field twin of `starCatalogItems`. */
+function bodyItems(): Record<string, { enabled: boolean; labelEnabled: boolean }> {
+  return Object.fromEntries(BODY_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]));
 }
 
 function makeState(
@@ -93,6 +99,9 @@ function makeState(
       // every star-catalog row is populated for the same reason the structure
       // items are.
       starCatalogs: { enabled: true, items: starCatalogItems() },
+      // The bodyLabel fade row seeds per BodyId, so every body row is populated
+      // for the same reason the structure items are.
+      bodies: { items: bodyItems() },
       structures: { enabled: true, items },
     },
     subsystems: {
@@ -133,6 +142,7 @@ function makeSettings(
   return {
     galaxyCatalogs: { items: galaxyItems },
     starCatalogs: { enabled: true, items: starCatalogItems() },
+    bodies: { items: bodyItems() },
     structures: { enabled: true, items: structureItems },
     milkyWay: { enabled: opts.milkyWayEnabled ?? true, labelEnabled: true },
     volumes: { enabled: true, items: {} },

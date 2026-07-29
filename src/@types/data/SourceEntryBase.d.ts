@@ -33,9 +33,10 @@ export type SourceEntryBase = {
    * millions of points and no names.
    *
    * This is a CAPABILITY, not a routing detail — a source that puts a name on
-   * screen sets it, whichever renderer draws that name. Setting it from "does
-   * this go through the COSMO label system" would leave the near-field bodies
-   * marked false while they caption every frame.
+   * screen sets it, whichever renderer draws that name. The near-field bodies
+   * and the curated star map caption through `foregroundLabelsLayer` on the
+   * NEAR0 slab rather than the COSMO label director, and they set the flag all
+   * the same; `labelLayer` is where that routing difference is expressed.
    */
   readonly bearsLabel: boolean;
   /**

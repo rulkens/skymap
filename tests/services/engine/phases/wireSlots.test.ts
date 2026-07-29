@@ -43,6 +43,7 @@ import { Source } from '../../../../src/data/sources';
 import { createAppStore } from '../../../../src/store/createAppStore';
 import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { STAR_CATALOG_IDS } from '../../../../src/data/starCatalog/starCatalogIds';
+import { BODY_IDS } from '../../../../src/data/bodies/bodyIds';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { seedVolumeFields } from '../../../../src/data/volume/volumeFieldDefaults';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/data/defaults';
@@ -370,6 +371,12 @@ function makeState(
         enabled: true,
         items: Object.fromEntries(
           STAR_CATALOG_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
+        ),
+      },
+      // seedFades registers a caption handle per body row, so these must exist.
+      bodies: {
+        items: Object.fromEntries(
+          BODY_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
         ),
       },
       // Overridable so a test can hide every category and pin the bug-fix

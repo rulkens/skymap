@@ -20,6 +20,7 @@ function homesOf(settings: EngineSettingsState): LabelHomes {
     structures: settings.structures.items,
     galaxyCatalogs: settings.galaxyCatalogs.items,
     starCatalogs: settings.starCatalogs.items,
+    bodies: settings.bodies.items,
     milkyWayLabelEnabled: settings.milkyWay.labelEnabled,
   };
 }

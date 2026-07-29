@@ -22,16 +22,16 @@ import type { VisibilityLayerArg } from '../../@types/animation/VisibilityLayerA
 /**
  * Authoring aggregate → the atomic layer keys it stands for, in reveal order
  * (cosmological outward-in: survey names, structure names, the YOU-ARE-HERE
- * pin, then the near-field star-map captions).
+ * pin, then the near-field star-map and scene-body captions).
  *
  * `labels` is TOTAL over the label-layer keys, which is the whole promise of
  * writing `hide(['labels'])` instead of listing them: a caption left out here
  * survives a cue that says it hid every label, and nothing in the type system
  * catches the omission. So a new label-layer `VisibilityLayerKey` belongs in
- * this list — `bodyLabel` will, when the body captions get their key.
+ * this list.
  */
 const LAYER_GROUPS = {
-  labels: ['surveyLabel', 'structureLabel', 'milkyWayLabel', 'starCatalogLabel'],
+  labels: ['surveyLabel', 'structureLabel', 'milkyWayLabel', 'starCatalogLabel', 'bodyLabel'],
 } as const satisfies Record<string, readonly VisibilityLayerKey[]>;
 
 export function expandVisibilityLayers(args: readonly VisibilityLayerArg[]): VisibilityLayerKey[] {

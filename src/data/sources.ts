@@ -1,7 +1,7 @@
 /**
  * `Source` enum + `SOURCE_REGISTRY`.
  *
- * The single registry of every data source skymap loads. Eight kinds,
+ * The single registry of every data source skymap loads. Nine kinds,
  * discriminated by `type`:
  *
  *   'galaxyCatalog' — per-point galaxy catalogs (SDSS, GLADE, 2MRS, Famous,
@@ -20,10 +20,12 @@
  *   'flow'          — CF4++ peculiar-velocity field overlay (single
  *                     flowfield.scfd cube). No per-record identity; carries
  *                     its own look/motion defaults.
- *   'planet'/'earth' — near-field true-scale bodies (Solar-System planets,
- *                     Earth). Seeded records drawn by their own content-layer;
- *                     not persisted (a body's identity is its stable seed id),
- *                     but pickable on the NEAR0 pick pass via `drawPick`.
+ *   'body'          — near-field true-scale bodies (Earth, the Solar-System
+ *                     planets). Seeded records drawn by their own
+ *                     content-layer; not persisted (a body's identity is its
+ *                     stable seed id), but pickable on the NEAR0 pick pass via
+ *                     `drawPick` and captioned through the foreground-labels
+ *                     layer.
  *   'starCatalog'   — stellar point sets the user toggles as a unit. Two
  *                     variants, split by `binBaseName`: the SURVEY-wide Gaia bin
  *                     streams tiered `.bin` clouds from disk, while the curated
@@ -34,8 +36,8 @@
  *                     persisted to a `.bin`.
  *
  * Only `'galaxyCatalog'` and `'structure'` codes are persisted to disk / packed into
- * GPU buffers; `'filament'`, `'volume'`, `'milkyWay'`, `'flow'`, `'starCatalog'`, and
- * the body codes (`'planet'`, `'earth'`) exist
+ * GPU buffers; `'filament'`, `'volume'`, `'milkyWay'`, `'flow'`, `'starCatalog'`
+ * and `'body'` exist
  * solely so every data source has one place to look. The visibility-bitmask helpers
  * (`utils/maskHas`, `utils/maskWith`, `utils/maskWithout`) operate on
  * galaxy catalog codes only.

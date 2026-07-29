@@ -50,6 +50,7 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 
 import { STRUCTURE_IDS } from '../../../data/structure/structureIds';
 import { GALAXY_CATALOG_IDS } from '../../../data/galaxyCatalog/galaxyCatalogIds';
+import { BODY_IDS } from '../../../data/bodies/bodyIds';
 import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import { SOURCE_REGISTRY } from '../../../data/sources';
 import { maybeLazyLoadDebugVolume } from '../volume/maybeLazyLoadDebugVolume';
@@ -165,6 +166,15 @@ export const FADE_LAYERS = [
     handle: (id) => ({ kind: 'labelLayer', layer: 'starCatalog', item: id }),
     seed: (s, id) => (s.starCatalogs.items[id].labelEnabled ? 1 : 0),
     intent: (s, id) => s.starCatalogs.items[id].labelEnabled,
+  }),
+  // scene-body captions — per BodyId, settings-derived seed (bodies are seeded
+  // in code, so no demand-loaded guard).
+  layer({
+    key: 'bodyLabel',
+    expand: () => BODY_IDS,
+    handle: (id) => ({ kind: 'labelLayer', layer: 'body', item: id }),
+    seed: (s, id) => (s.bodies.items[id].labelEnabled ? 1 : 0),
+    intent: (s, id) => s.bodies.items[id].labelEnabled,
   }),
   // scale bar — registerOverlayFades.ts:100 (React-side, tour-addressable)
   layer({

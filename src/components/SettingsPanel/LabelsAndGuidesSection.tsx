@@ -4,8 +4,7 @@
  * thematic group inside the SettingsPanel.
  *
  * Owns the Labels & Guides thematic group UI: the tri-state master toggle,
- * the per-category label checkboxes, the foreground planet-caption row, and
- * the overlay guide rows — the
+ * the per-category label checkboxes, and the overlay guide rows — the
  * constellation stick figures and the near-field orbit trails. Isolating this
  * into its own component ensures a toggle re-renders ONLY this section rather
  * than the entire HUD. The section owns the tri-state master derivation (the
@@ -38,9 +37,8 @@ import type { LabelCategory } from '../../@types/engine/data/LabelCategory';
 // ── Props ──────────────────────────────────────────────────────────────────────
 
 /**
- * A boolean row that is NOT a COSMO `LabelCategory` — the foreground
- * planet-caption toggle and the overlay guide
- * toggles (the constellation stick figures, the orbit trails). Each lives in
+ * A boolean row that is NOT a `LabelCategory` — the overlay guide toggles (the
+ * constellation stick figures, the orbit trails). Each lives in
  * its own settings cluster rather than the category map, but they are
  * structurally identical checkboxes, so the container hands them as a uniform
  * row array and the section derives the master tri-state + JSX from it instead
@@ -60,9 +58,8 @@ type LabelsAndGuidesSectionProps = {
   /** Called when the user toggles a single label category on or off. */
   onSetLabelCategoryVisibility: (category: LabelCategory, visible: boolean) => void;
   /**
-   * The non-category boolean rows (planet names, constellations, orbit
-   * trails), in render + master-derivation order. Every entry counts toward
-   * the master tri-state.
+   * The non-category boolean rows (constellations, orbit trails), in render +
+   * master-derivation order. Every entry counts toward the master tri-state.
    */
   nonCategoryRows: ReadonlyArray<NonCategoryRow>;
 };
@@ -75,8 +72,8 @@ type LabelsAndGuidesSectionProps = {
  *
  * The label axis is independent of the marker axis (Structures group). Flipping
  * a label off keeps its ring visible, and vice versa. `milkyWay` appears here as
- * the "You are here" label category alongside the structure, famousGalaxy and
- * famousStar labels.
+ * the "You are here" label category alongside the structure, famousGalaxy,
+ * famousStar and near-field body (Earth, planet) labels.
  */
 function LabelsAndGuidesSection({
   labelCategoryVisibility,
@@ -85,8 +82,8 @@ function LabelsAndGuidesSection({
 }: LabelsAndGuidesSectionProps) {
   // ── Master tri-state derivation ──────────────────────────────────────────────
   // Tri-state master = how many of the section's BOOLEAN rows are currently on.
-  // The rows are the COSMO LABEL_CATEGORIES PLUS the `nonCategoryRows` (planet
-  // names and the overlay guide toggles — constellations, orbit
+  // The rows are LABEL_CATEGORIES PLUS the `nonCategoryRows` (the overlay guide
+  // toggles — constellations, orbit
   // trails) — the master summarises every checkbox the section renders, so
   // each non-category row counts toward it even though they live in their own
   // settings clusters rather than the category map. The count is derived from
@@ -136,11 +133,10 @@ function LabelsAndGuidesSection({
           />
         </div>
       ))}
-      {/* The non-category boolean rows — the foreground planet-caption toggle
-          and the overlay guide toggles
-          (constellation stick figures, orbit trails). They are not COSMO
-          label categories (they live in their own settings clusters, not the
-          structure/galaxy-catalog registries), so they render as their own
+      {/* The non-category boolean rows — the overlay guide toggles
+          (constellation stick figures, orbit trails). They are not label
+          categories (they live in their own settings clusters, not the
+          SOURCE_REGISTRY's label-bearing rows), so they render as their own
           uniform rows. Every row counts toward the master tri-state. */}
       {nonCategoryRows.map((row) => (
         <div className={styles.panelRow} key={row.id}>

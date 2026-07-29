@@ -20,4 +20,9 @@
  * which is exactly what its `LabelHome` row encapsulates.
  */
 
-export type LabelBearingSourceType = 'structure' | 'galaxyCatalog' | 'starCatalog' | 'milkyWay';
+export type LabelBearingSourceType =
+  | 'structure'
+  | 'galaxyCatalog'
+  | 'starCatalog'
+  | 'body'
+  | 'milkyWay';
