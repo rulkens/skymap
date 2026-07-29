@@ -609,7 +609,26 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       // whole-globe base texture already carries — and NOT against the
       // shallowest baked level, which the plan's own floor would satisfy by
       // construction. At or below it there is nothing a tile could add.
-      if (plan.zWin > params.baseLevel) earthTiles.update({ plan, nowMs: ctx.nowMs });
+      if (plan.zWin > params.baseLevel) {
+        // `update` is the only call that can allocate the atlas and the page
+        // table, so reading `getTileResources()` either side of it IS the
+        // null-to-non-null transition — no "have I wired this yet?" flag has to
+        // exist anywhere, and there is no way for one to get out of step. The
+        // renderer's bind group must be rebuilt exactly once, at that moment:
+        // its layout is fixed at pipeline creation and points at 1×1
+        // placeholders until then, and the views are identity-stable afterwards,
+        // so calling per frame would rebuild an identical group forever.
+        const engagedBefore = earthTiles.getTileResources() !== null;
+        earthTiles.update({ plan, nowMs: ctx.nowMs });
+        if (!engagedBefore) {
+          const tiles = earthTiles.getTileResources();
+          // Non-null by `earthLayer.enabled` above; the optional call keeps the
+          // types honest without restating that gate.
+          if (tiles !== null) {
+            state.gpu.earthRenderer?.setTileResources(tiles.pageTable, tiles.atlas);
+          }
+        }
+      }
     }
   }
 

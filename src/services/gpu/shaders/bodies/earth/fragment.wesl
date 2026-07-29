@@ -110,6 +110,27 @@
 // reading the day/night terminator inverted against a live clock. So the fragment
 // samples in.uv straight (the mesh carries both the handedness and the +0.5).
 //
+// ## The surface virtual texture (bindings 7-9)
+//
+// Above the whole-globe albedo sits a third texture layer this fragment blends
+// on top of it: a page table (binding 7) saying which atlas slot, if any, covers
+// the cell the fragment's uv falls in, and the tile atlas (binding 8) holding
+// those slots. Everything derives from 'in.uv' -- no new varying, because an
+// extra @location cost this project 1.5 ms once.
+//
+// The whole layer is strictly ADDITIVE, and that is a property of the data
+// rather than of a branch here. The page table's A channel is the blend weight,
+// A = 0 means 'no tile, sample the base', and every degradation path -- no
+// manifest, no atlas, a 404 on every tile, ground beyond the window, the 1x1
+// all-zero placeholder page table bound before the subsystem ever engages --
+// arrives as A = 0. So the failure picture is exactly the picture Earth draws
+// without the feature, and there is no hole state to design around.
+//
+// 'earthTileSubsystem.ts' owns the residency, 'buildEarthPageTable.ts' the
+// projection this reads, and 'planEarthTiles.ts' the window. The window is
+// enforced THERE, not here: a tile outside it is never requested, never
+// resident, and never needs representing.
+//
 // ## Blend target
 //
 // Output @location(0) writes to the rgba16float foreground colour target. The
@@ -135,6 +156,60 @@ import package::lib::math::TAU;
 @group(0) @binding(4) var nightTexture: texture_2d<f32>;
 @group(0) @binding(5) var normalTexture: texture_2d<f32>;
 @group(0) @binding(6) var cloudTexture: texture_2d<f32>;
+// The surface virtual texture. The page table is INTEGER data -- a slot column,
+// a slot row, a level and a weight -- read with 'textureLoad' and never
+// filtered, the same rule that keeps normal maps off '-srgb'. The atlas gets its
+// own sampler because 'repeat' on u is right for a whole-globe equirect map and
+// wrong here, where the texel past a slot's edge belongs to an unrelated tile.
+@group(0) @binding(7) var tilePageTable: texture_2d<u32>;
+@group(0) @binding(8) var tileAtlas: texture_2d<f32>;
+@group(0) @binding(9) var tileSampler: sampler;
+
+// Hand mirrors of 'data/bodies/earthTileParams.ts'. '?static' WESL linking is
+// pure build-time text linking with NO value injection, so a test -- not the
+// compiler -- is what keeps these from drifting from their TS twins
+// ('tests/services/gpu/shaders/earthTileConstants.parity.test.ts').
+const EARTH_TILE_WINDOW_SIDE: u32 = 128u;
+const EARTH_TILE_PX: f32 = 512.0;
+const EARTH_TILE_ATLAS_SIDE: f32 = 4096.0;
+
+// Derived from the three above rather than written out, so the atlas geometry
+// has one home on this side too. 'TILE_SLOT_SCALE' turns slot-relative
+// coordinates into atlas uv; 'TILE_HALF_TEXEL' is the inset that keeps a
+// bilinear tap at a slot edge inside its own tile.
+const TILE_SLOT_SCALE: f32 = EARTH_TILE_PX / EARTH_TILE_ATLAS_SIDE;
+const TILE_HALF_TEXEL: f32 = 0.5 / EARTH_TILE_PX;
+
+// TILE_DEBUG -- the tint probe, for a human to flip. A wrong window is INVISIBLE
+// in the final image (the base texture is a plausible picture of Earth at every
+// uv, so a misaddressed cell just looks like Earth) and obvious in false colour,
+// which is why the house rule is to check the hypothesis in-shader before
+// trusting the blend. Being a 'const' makes the unused arms dead code, so the
+// shipped shader at 0u pays nothing to carry it.
+//
+//   0u -- off; the real blend.
+//
+//   1u -- the page table's B channel (level): one flat hue per pyramid level,
+//         BLACK wherever no tile is named. CORRECT looks like a single coloured
+//         cap centred on the ground the camera is over, black everywhere else
+//         including the far hemisphere; the cap is one flat hue, briefly gaining
+//         a second while a finer level is part-loaded, and descending steps the
+//         whole cap to the next hue as it shrinks. WRONG looks like: a cap on
+//         the far side of the globe or in the opposite hemisphere (a winX0 /
+//         winY0 wrap or sign error); a cap that slides with the camera's
+//         rotation instead of staying on the sub-camera point; bands that split
+//         along latitude only (the '1 - v' flip); black under the camera at low
+//         altitude (the window test inverted).
+//
+//   2u -- the page table's A channel (weight): RED at 0, through YELLOW, to
+//         GREEN at 1. CORRECT looks like red everywhere the base is showing --
+//         the far hemisphere and the ground past the window frontier -- solid
+//         green under resident tiles, and a brief yellow ramp as each tile lands
+//         and fades in. WRONG looks like: green over the whole globe (the window
+//         mask not applied); or a cap that stays red while the Network tab shows
+//         tiles arriving (the page table uploaded against a different window
+//         than the uniform carries).
+const TILE_DEBUG: u32 = 0u;
 
 // dirToEquirectUv -- map a unit direction on the sphere to the mesh's
 // equirectangular uv, the SAME convention 'cubeSphereMesh' bakes and the cloud
@@ -162,6 +237,16 @@ fn dirToEquirectUv(dir: vec3<f32>) -> vec2<f32> {
   return vec2<f32>(u_uv, v_uv);
 }
 
+// debugTileLevelTint -- one distinct flat hue per pyramid level, for TILE_DEBUG
+// mode 1. A cosine palette stepped by the golden ratio rather than a lookup
+// table: levels 5 to 13 all have to be told apart, and the irrational step is
+// what guarantees two ADJACENT levels never land on similar hues -- which is
+// exactly the confusion the probe exists to rule out.
+fn debugTileLevelTint(level: u32) -> vec3<f32> {
+  let t = fract(f32(level) * 0.618034);
+  return 0.5 + 0.5 * cos(TAU * (t + vec3<f32>(0.0, 0.33, 0.67)));
+}
+
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // Sample the mesh uv directly. With longitude on +Y the equirectangular
@@ -171,8 +256,100 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // linearises on read); the material texture is LINEAR 'rgba8unorm' so its
   // packed roughness (.r) and ocean mask (.g) are read as raw numbers, not
   // gamma-shifted colour.
-  let albedo = textureSample(earthTexture, earthSampler, in.uv).rgb;
+  let baseAlbedo = textureSample(earthTexture, earthSampler, in.uv).rgb;
   let mat = textureSample(materialTexture, earthSampler, in.uv).rg;
+
+  // ── The surface virtual texture: one textureLoad, one textureSampleLevel ──
+  //
+  // The window ('u.zWin', 'u.winX0', 'u.winY0') says where the page table sits
+  // on the pyramid: its level, and its origin tile at that level. They are small
+  // integers carried as f32 -- see 'lib/sphere.wesl' for why the uniform is not
+  // declared u32. All-zero is the identity, which is the state before the
+  // subsystem engages and the permanent state of a session that never comes
+  // close to Earth.
+  let zWin = u32(u.zWin);
+
+  // Column count at the window level. 'cols = 1 << z' is the ladder's
+  // '(EARTH_EQUIRECT_BASE_WIDTH_PX << z) / tilePx' with the two 512s cancelled,
+  // and it is right BY CONSTRUCTION rather than by luck: the tile edge is a
+  // property of the tile FORMAT, and 'derivePlannerParams'
+  // ('earthTileSubsystem.ts') REFUSES a manifest declaring any other edge rather
+  // than adapting to it. It has to refuse, because nothing on this side reads
+  // 'tilePx' -- a differently-cut pyramid would resolve the same uv to a
+  // different cell, silently, with every cell in the window naming wrong ground.
+  // Rows are half the columns: a plate-carree raster is always exactly twice as
+  // wide as it is tall.
+  let cols = 1u << zWin;
+  // The mesh's v counts NORTH from the south pole while tile row 0 is the north
+  // edge, hence the '1 - in.uv.y'. That single flip is the feature's most likely
+  // off-by-one and its CPU-side home is 'earthTileXyForUv.ts'; these two must
+  // agree or the surface samples the wrong latitude band, which on a globe reads
+  // as 'the texture is subtly off' rather than as an obvious fault.
+  let px = u32(in.uv.x * f32(cols));
+  let py = u32((1.0 - in.uv.y) * f32(cols >> 1u));
+
+  // Longitude is periodic, so the window origin comes off modulo 'cols' -- the
+  // same wrapping subtraction 'buildEarthPageTable' performs, and what lets a
+  // window straddle the antimeridian. Latitude is NOT periodic, so its
+  // subtraction is deliberately left to UNDERFLOW: north of the window
+  // 'py - winY0' wraps to a huge u32, so a single unsigned compare per axis
+  // covers both ends of both and the test stays branchless.
+  let dx = (px + cols - u32(u.winX0)) % cols;
+  let dy = py - u32(u.winY0);
+  let inWindow = dx < EARTH_TILE_WINDOW_SIDE && dy < EARTH_TILE_WINDOW_SIDE;
+  let windowMask = select(0.0, 1.0, inWindow);
+
+  // Out-of-window coordinates are clamped rather than branched around: the load
+  // happens either way, and 'windowMask' is what makes an out-of-window result
+  // contribute nothing. R and G are the atlas slot's column and row, B the level
+  // of the tile occupying that cell, A its blend weight against the base.
+  let cellXy = vec2<u32>(
+    min(dx, EARTH_TILE_WINDOW_SIDE - 1u),
+    min(dy, EARTH_TILE_WINDOW_SIDE - 1u)
+  );
+  let cell = textureLoad(tilePageTable, cellXy, 0);
+
+  // The cell's tile may be COARSER than the window's level. That is not an edge
+  // case but the graceful-degradation path itself: an area whose finer tile is
+  // still in flight keeps sampling its resident ancestor, so refinement is
+  // progressive from the base upward. So the within-tile uv is derived at the
+  // level in B, never at 'zWin'. Rows come from halving the columns rather than
+  // shifting by 'B - 1', which would underflow at B = 0 -- the value every
+  // fragment reads from the 1x1 all-zero placeholder page table before the
+  // subsystem engages.
+  let cellCols = 1u << cell.b;
+  let tileUv = vec2<f32>(
+    fract(in.uv.x * f32(cellCols)),
+    fract((1.0 - in.uv.y) * f32(cellCols >> 1u))
+  );
+
+  // Half-texel clamp INSIDE the slot, in place of gutters. The atlas texel past
+  // a slot's edge belongs to an unrelated tile, so a bilinear tap at the edge
+  // would bleed a stranger across it; clamping replicates the tile's own edge
+  // texel instead, which is what 'clamp-to-edge' would do if every slot were its
+  // own texture. Gutters would buy a true neighbour-aware filter at the cost of
+  // baking, storing and uploading a border on every tile in the pyramid.
+  let slotUv =
+    (vec2<f32>(f32(cell.r), f32(cell.g))
+      + clamp(tileUv, vec2<f32>(TILE_HALF_TEXEL), vec2<f32>(1.0 - TILE_HALF_TEXEL)))
+    * TILE_SLOT_SCALE;
+
+  // 'textureSampleLevel', never 'textureSample'. The atlas has a single mip
+  // level so there is nothing to select; it sidesteps WGSL's uniformity
+  // requirement for implicit derivatives; and those derivatives would be wrong
+  // anyway, because 'slotUv' jumps discontinuously at a slot boundary and
+  // 'dpdx' across that jump is garbage.
+  let tile = textureSampleLevel(tileAtlas, tileSampler, slotUv, 0.0);
+
+  // Three factors, each of which alone is a complete reason to show the base:
+  // the page table's A (no tile named, or a load fade still ramping), the tile's
+  // own alpha (the LAND MASK -- ocean resolves to the base with no second
+  // texture and no extra sample), and the window test. A is what DRIVES the
+  // blend, and that ordering is load-bearing: the placeholder atlas texel is
+  // transparent black, so a weight keyed on 'tile.a' alone would look correct
+  // against the placeholders and be wrong the moment a real atlas arrived.
+  let tileWeight = f32(cell.a) / 255.0 * tile.a * windowMask;
+  let albedo = mix(baseAlbedo, tile.rgb, tileWeight);
 
   // Tangent-space normal perturbation (see the '## Renormalize the interpolated
   // normal + normal mapping' header). The baked map stores nx (R) along +u=east
@@ -243,5 +420,24 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // '(1 - cloudAlpha)' inside nightLights is a no-op and the lights show full.
   let cloudAlphaHere = textureSample(cloudTexture, earthSampler, in.uv).a;
   let emissive = nightLights(nightColour, NoL, cloudAlphaHere);
+
+  // The tint probe (see 'TILE_DEBUG' for what a correct picture looks like under
+  // each mode). It sits at the END, replacing the shaded colour rather than
+  // returning early beside the page-table load it probes, for one reason: an
+  // early return would put the remaining 'textureSample' calls after a branch,
+  // and WGSL's uniformity rules for implicit derivatives are not somewhere to
+  // rely on a compiler const-folding a condition. At 0u both arms are dead code
+  // and the shipped shader is unchanged.
+  if (TILE_DEBUG == 1u) {
+    // Black wherever no tile is named, so one picture carries both the tiled
+    // footprint and the level bands inside it.
+    let named = select(0.0, 1.0, cell.a > 0u) * windowMask;
+    return vec4<f32>(debugTileLevelTint(cell.b) * named, 1.0);
+  }
+  if (TILE_DEBUG == 2u) {
+    let probeWeight = f32(cell.a) / 255.0 * windowMask;
+    return vec4<f32>(1.0 - probeWeight, probeWeight, 0.0, 1.0);
+  }
+
   return vec4<f32>(colour + emissive, 1.0);
 }

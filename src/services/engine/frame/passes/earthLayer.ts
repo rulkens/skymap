@@ -143,6 +143,14 @@ export const earthLayer: ContentLayer = {
       earth.radiusKm * SCALE_UNITS.KM_TO_MPC,
       earthState.orientation,
     );
+    // The page-table window the fragment addresses tiles through. It comes from
+    // the tile subsystem rather than from this frame's plan on purpose: the
+    // subsystem reports the window the page-table TEXTURE was built against, and
+    // that texture is only re-derived when something about it changed, so on most
+    // frames the plan is newer than the contents. A newer window over older
+    // contents would misaddress every cell in it. Null before the first upload
+    // (and for every session that never engages), which is the all-zero identity.
+    const tileWindow = state.subsystems.earthTiles?.getUploadedWindow() ?? null;
     // Pack MVP + sunDirLocal + camPosLocal + the PBR surface params into the
     // 128-byte EarthSurfaceUniforms record.
     renderer.draw(
@@ -170,9 +178,9 @@ export const earthLayer: ContentLayer = {
         // All-zero is the identity: every page-table cell reads "no tile", the
         // fragment samples the whole-globe base texture, and the window is never
         // consulted.
-        0,
-        0,
-        0,
+        tileWindow?.zWin ?? 0,
+        tileWindow?.winX0 ?? 0,
+        tileWindow?.winY0 ?? 0,
       ),
     );
   },

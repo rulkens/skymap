@@ -150,6 +150,11 @@ function makeState(earthRenderer: unknown, earth: EarthBody | null): EngineState
   return {
     gpu: { earthRenderer },
     data: { bodies: { earth } },
+    // The tile subsystem is absent until `wireSlots` builds it, and a session
+    // that never approaches Earth never engages it — so `null` here is the
+    // shipped identity case, in which the packed page-table window is all-zero
+    // and the fragment reads the whole-globe base texture alone.
+    subsystems: { earthTiles: null },
     // earthLayer.draw reads the live night-side floor + ocean-glint roughness
     // from settings.earth each frame; seed both from EARTH_SURFACE_PARAMS so the
     // packed tail slots equal the authored defaults (a no-op override, exactly

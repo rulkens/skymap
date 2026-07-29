@@ -74,6 +74,31 @@ export type EarthTileSubsystem = Destroyable & {
   } | null;
 
   /**
+   * The window the page table currently in GPU memory was built against, or
+   * `null` before the first upload. The Earth draw packs it into the surface
+   * uniforms, where it is the coordinate system the fragment turns a mesh uv
+   * into a page-table cell in.
+   *
+   * **The UPLOADED window, never the latest plan's**, and that is the entire
+   * reason it is an accessor here rather than a field the draw site reads off
+   * the plan. The page table is re-derived only when residency changed, the
+   * window moved, or a fade is still ramping; on every frame in between, the
+   * plan is newer than the texture. Pairing a newer window with older contents
+   * would misaddress every cell — the same uv would resolve to different ground
+   * — so the two must be read from one place that only ever changes together.
+   *
+   * Kept separate from `getTileResources()` because the two have opposite
+   * lifetimes: that one is identity-stable once non-null, so a caller reads it
+   * to rebuild a bind group on the null-to-non-null transition; this one changes
+   * with every upload and is read every frame.
+   */
+  getUploadedWindow(): {
+    readonly zWin: number;
+    readonly winX0: number;
+    readonly winY0: number;
+  } | null;
+
+  /**
    * Whether anything this subsystem is doing will change the next frame's
    * picture: a manifest or a tile in flight, or a tile still ramping through its
    * load fade. A vote for the frame loop's keep-ticking predicate, never a wake.

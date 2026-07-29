@@ -180,8 +180,9 @@ const CUBESPHERE_FACE_RESOLUTION = 48;
  *  prefix (mat4x4<f32> MVP + body-local sun direction, with `roughnessBase`
  *  filling the sun-dir vec3 tail) followed by `camPosLocal` (vec3), `f0`,
  *  `sunIrradiance`, `cloudShadowStrength`, `cloudShellRadius`, `ambientLight`,
- *  `oceanRoughness`, and three zeroed pad floats. Size derives from the packer's
- *  f32 count (× 4 bytes) so this can never drift from the layout it writes.
+ *  `oceanRoughness`, and the virtual texture's page-table window (`zWin`,
+ *  `winX0`, `winY0` — the struct's former trailing pad). Size derives from the
+ *  packer's f32 count (× 4 bytes) so this can never drift from the layout it writes.
  *  Written from `packEarthSurfaceUniforms`. */
 const UNIFORM_BUFFER_SIZE = EARTH_SURFACE_UNIFORM_FLOATS * 4;
 

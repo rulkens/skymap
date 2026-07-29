@@ -138,23 +138,46 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
   // a fade still ramping are the other two reasons to rebuild, and both are read
   // rather than flagged because they are properties of the current frame.
   let residencyDirty = false;
-  let uploadedWindow: { z: number; x: number; y: number } | null = null;
+  // The window the page table IN GPU MEMORY was built against — not the latest
+  // plan's. Written only by `uploadPageTable`, so it and the texture's contents
+  // are always the same age. That pairing is what the fragment's cell arithmetic
+  // depends on, and it is why this is surfaced through its own accessor rather
+  // than read off the plan at the draw site (see `getUploadedWindow`).
+  let uploadedWindow: {
+    readonly zWin: number;
+    readonly winX0: number;
+    readonly winY0: number;
+  } | null = null;
 
   let destroyed = false;
 
   /**
    * Turn a fetched manifest into planner inputs, or null if the bake it describes
-   * is unusable. Each rejection below would otherwise surface as something much
-   * worse than "the feature did nothing": a tile edge that does not divide the
-   * atlas gives `TextureAtlas` a fractional slot count, and a deepest level under
-   * the floor means every request 404s on every close approach.
+   * is one this build cannot address. Every rejection degrades the feature to
+   * base-only, which is the identity case and the same picture Earth draws with
+   * no manifest at all — so a refusal costs a reader nothing to reason about,
+   * while the alternative (adapting) would be silently wrong pixels.
+   *
+   * ## Why a differently-cut pyramid is REFUSED and not adapted to
+   *
+   * 512 is a property of the tile FORMAT, not a parameter that flows. The
+   * fragment derives the window level's column count from `zWin` alone
+   * (`cols = 1u << zWin`), which is the ladder's `(EARTH_EQUIRECT_BASE_WIDTH_PX
+   * << z) / tilePx` with the two 512s cancelled — an identity that holds at this
+   * tile edge and at no other. Nothing on the GPU side reads `tilePx`, so a
+   * pyramid cut at a different edge is not something the runtime can adapt to: it
+   * would resolve the same uv to a different cell, and every cell in the window
+   * would name the wrong ground with no error anywhere. Hence the manifest's
+   * `tilePx` is a validated ASSERTION rather than an input — absent means "the
+   * format's edge", present-and-different means "not this format". A re-bake at
+   * another edge is a format change, and the format's version is the tile tree
+   * itself.
    */
   function derivePlannerParams(manifest: EarthTileManifest): EarthTilePlannerParams | null {
     const levels = manifest.levels?.[TILED_KIND];
     if (!levels) return null;
-    const tilePx = manifest.tilePx || EARTH_TILE_PX;
-    if (!Number.isInteger(tilePx) || tilePx <= 0) return null;
-    if (EARTH_TILE_ATLAS_SIDE % tilePx !== 0) return null;
+    const tilePx = manifest.tilePx ?? EARTH_TILE_PX;
+    if (tilePx !== EARTH_TILE_PX) return null;
     // The base level IS the whole-globe base texture, so the request floor holds
     // even if a bake emitted shallower levels — fetching one would re-download an
     // image already bound.
@@ -255,7 +278,7 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
       [EARTH_TILE_WINDOW_SIDE, EARTH_TILE_WINDOW_SIDE, 1],
     );
     residencyDirty = false;
-    uploadedWindow = { z: plan.zWin, x: plan.winX0, y: plan.winY0 };
+    uploadedWindow = { zWin: plan.zWin, winX0: plan.winX0, winY0: plan.winY0 };
   }
 
   function update(input: { readonly plan: EarthTilePlan; readonly nowMs: number }): void {
@@ -318,9 +341,9 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
 
     const windowMoved =
       uploadedWindow === null ||
-      uploadedWindow.z !== plan.zWin ||
-      uploadedWindow.x !== plan.winX0 ||
-      uploadedWindow.y !== plan.winY0;
+      uploadedWindow.zWin !== plan.zWin ||
+      uploadedWindow.winX0 !== plan.winX0 ||
+      uploadedWindow.winY0 !== plan.winY0;
     // A fade in progress means the weights differ from the ones last uploaded, so
     // the table is rebuilt every frame until the last arrival has ramped out. That
     // is also what carries the fade visually: nothing else changes during it.
@@ -351,6 +374,7 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     plannerParams,
     update,
     getTileResources: () => resources,
+    getUploadedWindow: () => uploadedWindow,
     isAnimating,
     destroy,
   };
