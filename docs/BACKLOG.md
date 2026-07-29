@@ -98,6 +98,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 - [ ] **InfoCard live phase + apparent-mag rows** `needs-design` — grow the engine time pub with phase angle + apparent magnitude for the focused body (distance row shipped in #472). → [details](backlog/2026-07-21-infocard-phase-apparent-mag-rows.md)
 - [ ] **"You are here" label continuity** `needs-design` — the label fades out below 2 kpc (`surveyDeepZoom` band); decide whether it hands off toward the Sun/Earth instead of vanishing. → [details](backlog/2026-07-22-you-are-here-label-continuity.md)
+- [ ] **Analytic pick fills the screen from inside a body** `needs-design` — camera can zoom inside a radius; the ray then hits the far wall everywhere. Decide with Earth deep zoom. → [details](backlog/2026-07-29-analytic-pick-inside-body.md)
 - [ ] **Earth caption stamp out-picks occluders** `ready` — the forced-band 18 px Earth pick point punches through a transiting Moon. → [details](backlog/2026-07-29-earth-caption-stamp-outpicks-occluders.md)
 - [ ] **Touch picking selects the wrong galaxy** `needs-design` — the pick pad is in device px, so the clickable disc halves on retina/phone. → [details](backlog/2026-07-29-touch-pick-accuracy.md)
 - [ ] **StatusBar mobile reflow** `ready` — reflow the StatusBar for narrow viewports (no media queries today). The InfoCard bottom-sheet + SettingsPanel collapse-launcher already shipped.
