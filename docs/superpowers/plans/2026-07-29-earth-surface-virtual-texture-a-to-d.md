@@ -71,7 +71,7 @@ Two conventions carry unusual weight here and are called out per task rather tha
 - [ ] Turning the camera away and back does not thrash the atlas.
 - [ ] Checked on a real iOS device (a bad shader freezes the canvas with no thrown error).
 - [ ] `entanglement-radar` run over the finished diff (task D7).
-- [ ] `docs/RENDERER.md` gains the virtual texture in its renderer map.
+- [x] `docs/RENDERER.md` gains the virtual texture in its renderer map.
 
 ---
 
@@ -612,15 +612,17 @@ Resolve it one of two ways, and say which in the commit — either carry `tilePx
 column count) into the uniforms alongside the window, or drop `tilePx` from the manifest and
 make 512 a fixed property of the format. Do not leave both stories in the tree.
 
-- [ ] Meticulous WESL pass. **Single quotes in comments, never backticks** (they are a parse
+- [x] Meticulous WESL pass. **Single quotes in comments, never backticks** (they are a parse
       error). `?static` imports. Read the whole file before editing.
-- [ ] **Tint probe before trusting it.** False-colour the page table's `B` channel (level) to
+- [x] **Tint probe before trusting it.** False-colour the page table's `B` channel (level) to
       screen and confirm the level bands move sensibly with altitude, then false-colour `A`
       and confirm it is 0 outside the window and 1 under resident tiles. Do this BEFORE
       wiring the real `mix` — a wrong window is invisible in the final image and obvious in
       false colour (`feedback_shader_tint_probe`).
-- [ ] Wire the real `mix(baseAlbedo, tile.rgb, w)`.
-- [ ] Commit.
+      **The probe stays in the tree** behind `TILE_DEBUG`, reset to `0u`. What it found is
+      recorded in the open-decision section below.
+- [x] Wire the real `mix(baseAlbedo, tile.rgb, w)`.
+- [x] Commit.
 
 ### Task D4: the fade
 
@@ -631,21 +633,28 @@ The `A` channel carries the per-cell blend weight, ramped by `loadFadeAlpha` ove
 (`texturedDiskSubsystem.ts:50`). The page table is rebuilt every frame while any tile is
 mid-fade, which is also what keeps the render-on-demand loop ticking through it.
 
-- [ ] Implement the per-tile fade weight into the page-table rebuild.
-- [ ] **Named limitation, do not try to fix it here:** a z→z+1 handoff is a hard sharpness
+- [x] Implement the per-tile fade weight into the page-table rebuild.
+- [x] **Named limitation, do not try to fix it here:** a z→z+1 handoff is a hard sharpness
       step, not a crossfade, because `A` is already 1 and only the slot pointer changes.
       That is how every clipmap looks. If it reads badly in D6, the escalation is spec
       design 5's `rgba16uint` two-slot table, gated on an `npm run perf` measurement.
-- [ ] Commit.
+- [x] Commit. **Landed with D3, not separately:** the weight channel had to be real for the
+      `mix` to be, so `loadFadeAlpha` went in alongside the lookup rather than after it.
+      `uploadPageTable` projects it (`earthTileSubsystem.ts:292`) and `isFading` holds the
+      render-on-demand loop open through the ramp.
 
 ### Task D5: docs
 
 **Files:** `docs/RENDERER.md` (modify).
 
-- [ ] Add the virtual texture to the renderer map: the subsystem, the page table, the atlas,
+- [x] Add the virtual texture to the renderer map: the subsystem, the page table, the atlas,
       and the one landmine worth writing down — that the page table is rebuilt whole and
       never patched, and why.
-- [ ] Commit.
+      Six landmines in the end, not one. The unplanned find: `RENDERER.md` had **no**
+      orientation note at all, so the `flipY: true` whole-globe upload and the `flipY: false`
+      shared-atlas upload were undocumented rather than mis-documented. Both are right for
+      their consumer; the reconciliation is CPU-side in the tile-index arithmetic.
+- [x] Commit.
 
 ### OPEN DECISION, gating D6: the atlas is over-subscribed
 
@@ -672,7 +681,7 @@ density at distance), so largest-first priority cannot help and the dropped tile
 arbitrarily. Lower down, perspective spreads the sizes and refusals land near the horizon
 where the fallback barely shows.
 
-**Options, undecided:**
+**Options as first framed:**
 
 1. **Cap refinement to what fits** — refine to the finest level whose tile count fits the
    atlas. Degrades in whole steps rather than in patches. With today's pyramid it reduces
@@ -689,12 +698,183 @@ where the fallback barely shows.
    the mobile risk; two visual behaviours to reason about, and WebGPU does not expose a
    headroom signal directly.
 
-**Research commissioned** on how id Tech 5 / Unreal VT size the physical page cache and
-what they do on overflow, and on how Cesium bounds its tile cache and whether
-`maximumScreenSpaceError` is the standard lever. If "clamp the LOD until the working set
-fits" turns out to be established practice, option 1 is the sanctioned path; if SSE is the
-standard knob, option 1 restates as "raise SSE when the cache is tight", which is a dial
-rather than an on/off gate and is better. **Decide before D6.**
+### What the research found
+
+Two surveys, one over the virtual-texturing literature (id Tech 5, Unreal, Unity, the
+clipmap paper) and one over the globe renderers (CesiumJS at `25741aac`, osgEarth `86d01c14`,
+both WorldWinds), read from primary sources and engine source rather than summaries.
+
+**1. The global LOD clamp is the standard response, and it is a hysteretic dial, not a
+gate.** Option 1 was the right instinct in the wrong form. Four independent systems ship it:
+
+| System    | Name                             | Behaviour                                                                    |
+| --------- | -------------------------------- | ---------------------------------------------------------------------------- |
+| id Tech 5 | dynamic feedback LOD bias        | high/low water marks on resident-page count                                  |
+| Unreal    | `bEnableResidencyMipMapBias`     | per-pool bias, max across pools applied to ALL VT sampling                   |
+| Unity SVT | automatic mipmap bias            | monitors cache usage, raises bias when it fills                              |
+| CesiumJS  | `memoryAdjustedScreenSpaceError` | `*= 1.02` per pass over budget, `/= 1.02` under, floored at the user's value |
+
+The canonical statement is a slide title: van Waveren, _id Tech 5 Challenges_ (SIGGRAPH 2009,
+Beyond Programmable Shading), slide 15 "Virtual Texturing - Thrashing", whose fix reads
+"with virtual texturing, you can globally adjust feedback LOD bias until working set fits".
+Its two illustrations are labelled "1024 Physical Pages" and **"64 Physical Pages"**, so the
+blurry example is literally this atlas's slot count. Mechanism verbatim, _Software Virtual
+Textures_ (2012) §3.5 "Oversubscription": track resident pages seen in the previous frame's
+feedback, increment the bias above a high water mark, decrement below a low water mark, clamp
+non-negative — "backs off of detail, without thrashing, for views where enough detail cannot
+be supplied, but then adds the detail back as soon as the system is not strained".
+
+**2. Today's behaviour is what Unreal documents as the bug**, not as a degradation mode: an
+oversubscribed pool "will drop data for visible tiles. This leads to unwanted IO and screen
+flickering". Ours is gentler than theirs on two counts — requests are sorted largest-on-screen
+first so refusals land on the smallest patches rather than at random, and the fallback is a
+real base texture rather than nothing — but "uniformly one level softer" beats "sharp with
+holes", which is the entire reason all four systems added the bias.
+
+**3. The bytes are unremarkable; the granularity is the outlier.** 67 MB sits on Unreal's
+documented 64 MB default pool and above RAGE's entire 40 MB budget; 268 MB would still be
+below Cesium's 512 MiB default and well below Unity's ~700 MB at 1080p. So option 2 is not
+extravagant by the standards of the field. What IS unusual is the slot size:
+
+```
+RAGE / id Tech 5   1024 pages x 128^2  = 14.7 Mtexels
+this atlas           64 slots x 512^2  = 16.8 Mtexels
+```
+
+Same texel budget, allocation quantum 16x coarser. Every primary source that discusses tile
+size lands on 128 or 256; Unreal's SVT default is 128. **But cutting tile size adds no texel
+capacity** — it only removes whole-tile waste — so it cannot close a 2.3x shortfall alone.
+Against van Waveren's 4x-the-viewport rule of thumb, 16.8 Mtexels is ~3.4x a 5 Mpixel retina
+viewport, i.e. below the floor before any waste. The shortfall is structural, not tuning.
+
+**4. The level rule sits at the most aggressive point on the curve.**
+`ceil(log2(screenPx / tilePx))` targets at least one texel per pixel. Cesium's shipped imagery
+chain (`Globe SSE = 2` x `heightmapTerrainQuality = 0.25` x `errorRatio = 1.0`) works out to
+roughly one texel per TWO pixels, deliberately. One level of bias is ~4x fewer tiles.
+
+The two rules are the same rule at different constants, which is worth writing down because it
+means the SSE literature transfers wholesale. `distance * 2 * tan(fovy/2)` is the world-space
+frustum height at that depth, so Cesium's `error = geometricError * H / (distance * sseDenom)`
+is just geometric error expressed in pixels; with error halving per level, solving
+`GE_L <= tau * metresPerPixel` gives `L >= log2(GE_0 / metresPerPixel) - log2(tau)`, the mip
+formula with a `-log2(tau)` bias. Cesium's `maximumScreenSpaceError = 16` is therefore four
+levels coarser than 1:1.
+
+**5. Correction to this section's own reasoning above.** The claim that the whole visible cap
+wants one level at once is true of the geometry but was used to argue the wrong thing. Under
+per-tile refinement the whole-globe view costs a couple of tiles, not a capful, and
+`planEarthTiles` already refines per tile rather than picking one global level, so this plan
+does not have the bug that framing implies. Simulating Cesium's rule against this pyramid:
+2 tiles at 51,200 km, 16 at 6,400 km, 40 at 400 km. Peak demand is at LOW altitude, and the
+count falls again only because the pyramid runs out of levels.
+
+The real worst case is specific to plate carrée and was found by accident: **a camera over a
+pole selects ~17x the tiles it selects over the equator** (704 vs 40 at 100 km in that
+simulation), because all `2^(z+1)` longitude columns converge there and every one of them is
+an oversampled sliver that passes an isotropic error test. osgEarth defends against this by
+name — `restrictPolarSubdivision`, default `true`, ramping a minimum tile aspect ratio from
+0.1 at level 6 and killing refinement outside the band, "progressively starting at about
++/- 72 degrees latitude". Cesium does NOT, for geographic tiling schemes. The window clip
+masks it at z5, where the whole 32x16 grid IS the window; it is real at Phase E depth.
+
+**6. Two mechanisms worth copying later, both already half-present here.** Every system
+pins the coarsest level so there is always something to sample — the unconditional base
+texture is a stronger version of that. And every system resolves residency at SAMPLE time by
+walking up to the nearest resident coarser ancestor (van Waveren §3.1; Gaia Sky's globe VT
+loops up through levels in the shader). This tree has exactly one ancestor, the base, which is
+sufficient at one level deep and not at Phase E depth. Also: van Waveren §5.2 evicts
+finest-mip-first and only then LRU within a level; `TextureAtlas` is flat LRU.
+
+### Recommendation
+
+**Option 1, in its dial form, and nothing else in this PR.** Add the level bias as one
+constant threaded into `planEarthTiles` — the local spelling of `maximumScreenSpaceError` —
+set one level coarser than 1:1. It is the sanctioned mechanism, it costs no memory, it makes
+the working set fit the current atlas (~107 tiles wanted becomes ~27 against 64 slots), and
+it converts the artifact the probe found from patches into a uniform softening.
+
+Superseded, with reasons:
+
+- **Option 2 (8192 atlas)** — not extravagant, but it spends 200 MB to buy what one constant
+  buys for free, and it would still be below the 4x rule at 5K. Revisit only if D6 shows the
+  bias costs visible sharpness.
+- **Option 3 (defer to Phase E)** — rejected for the reason already stated: a known artifact
+  is where a real bug hides.
+- **Option 4 (size to the device)** — moot while option 1 makes 4096 sufficient.
+- **The static bias, not the servo.** A hysteretic controller is the documented escalation and
+  is warranted when a deep pyramid makes demand swing; at one level deep there is nothing for
+  it to track. Say so in the commit so the escalation path is on the record.
+- **Tile size 512 -> 256 (or 128)** — the strongest finding against current shape, and now an
+  explicit **Phase E decision** rather than a vague revisit, because Phase E rebakes the
+  pyramid from real imagery anyway. Choosing the tile edge then costs one bake; choosing it now
+  costs two. See the addendum below for how strong this finding got.
+
+Backlog rather than this PR: the polar refinement clamp, intermediate-ancestor fallback in the
+page table, finest-mip-first eviction.
+
+### Addendum: Unreal's actual engine source
+
+The second survey came back with engine source rather than docs, verified against public 5.1.0
+and 5.3.2 mirrors. Three things it changes.
+
+**The single most useful number found.** UE's shipped default pool
+(`BaseEngine.ini`, one entry, no format filter, so it applies to every format a project does
+not override):
+
+```ini
+[/Script/Engine.VirtualTexturePoolConfig]
++Pools=(SizeInMegabyte=64, bAllowSizeScale=False, bEnableResidencyMipMapBias=True)
+```
+
+resolves, for an uncompressed 32bpp format, to a **4080x4080 physical texture holding 900
+tiles at 63.5 MB**. That is this atlas: same texture edge to within rounding, same memory,
+**14x the slots.** It is the cleanest available confirmation that the bytes here are normal and
+the granularity is not.
+
+**Tile size 512 is an outlier by 4x in every direction, and that is the number to change
+first.** Hardware sparse-texture pages are a fixed 64 KB, which is 128x128 at 32bpp on every
+vendor's GPU; and every shipping software VT surveyed picked the same neighbourhood — RAGE 128,
+UE SVT 128, UE RVT 256, Unity SVT 128. Nothing found anywhere uses 512. Note also how UE
+handles the same 8192 ceiling this plan is up against: it **drops tile count rather than
+tiling into multiple textures**, with a source comment conceding that texture-array slices
+would be the better answer and it just uses the maximum size for now.
+
+**Unreal ships the global clamp ON by default**, which Epic's own documentation obscures by
+framing it as opt-in for projects that rarely oversubscribe. `bEnableResidencyMipMapBias=True`
+is in the shipped default pool. And its controller is proportional with a zero-width dead band
+rather than hysteretic, `VirtualTexturePhysicalSpace.cpp`, with constants worth copying if the
+static bias ever needs to become a servo:
+
+- **Back off at 95% occupancy** (`r.VT.Residency.UpperBound = 0.95`), not at 100%. Waiting for
+  full is waiting too long.
+- **Deliberately glacial:** rate 0.2 against a 5% overshoot is 0.01 mips/frame, roughly 100
+  frames to gain one level. Cesium's 1.02 multiplicative step is the same choice. Both engines
+  picked slow over responsive, presumably because a fast servo oscillates visibly.
+- **Cap the bias** (`MaxMipMapBias = 4`).
+- **"Visible" is time-windowed**, not instantaneous — pages touched within the last
+  `r.VT.PageFreeThreshold = 60` frames.
+- **A futility kill switch:** if pinned pages alone exceed 65% of the pool the bias is forced
+  to zero, because a bias that cannot possibly help should not be applied. Not relevant here
+  while the base texture is a separate resource rather than pinned slots, and relevant the
+  moment that changes.
+
+One caution carried over: the bias lands in the **request path**, not at sample time, which is
+where this plan would put it too, and in UE one pool's pressure blurs every virtual texture in
+the frame (scoping via `ResidencyMipMapBiasGroup` only arrived in 5.7).
+
+**Sources:** [van Waveren, _Software Virtual Textures_
+(2012)](https://mrelusive.com/publications/papers/Software-Virtual-Textures.pdf) §3.1, §3.5,
+§5.2 · [van Waveren, _id Tech 5 Challenges_ (SIGGRAPH 2009)](https://mrl.cs.vsb.cz/people/gaura/agu/05-JP_id_Tech_5_Challenges.pdf) slide 15 ·
+[Mittring, _Advanced Virtual Texture Topics_ (SIGGRAPH 2008)](https://advances.realtimerendering.com/s2008/SIGGRAPH%202008%20-%20Advanced%20virtual%20texture%20topics.pdf)
+· [Epic, _Virtual Texture Memory
+Pools_](https://dev.epicgames.com/documentation/en-us/unreal-engine/virtual-texture-memory-pools-in-unreal-engine)
+· [Unity, _Cache Management for Virtual
+Texturing_](https://docs.unity3d.com/2021.3/Documentation/Manual/svt-cache-management.html) ·
+CesiumJS `Cesium3DTileset.js`, `Cesium3DTilesetTraversal.js`, `QuadtreePrimitive.js`,
+`TileReplacementQueue.js`, `ImageryLayer.js` · osgEarth `SelectionInfo.cpp`, `TileNode.cpp`,
+`Unloader.cpp` · [Tanner et al., _The Clipmap_ (SIGGRAPH
+'98)](https://notkyon.moe/vt/Clipmap.pdf) §7.3-7.4 `MaxTextureLOD` ·
+[Sagristà, _Sparse Virtual Textures_ (Gaia Sky, 2023)](https://tonisagrista.com/blog/2023/sparse-virtual-textures/)
 
 ### Task D6: the visual pass
 
