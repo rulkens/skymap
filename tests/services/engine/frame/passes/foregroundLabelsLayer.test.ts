@@ -150,29 +150,32 @@ function makeLineRenderer(): MarkerLineRenderer {
 }
 
 /**
- * `bodyLabels` seeds BOTH body rows from one flag by default, so a test that
+ * `bodyLabels` seeds ALL body rows from one flag by default, so a test that
  * only cares whether body captions are on at all passes a bare boolean; the
- * per-row cases pass the two bits separately, which is the axis those rows buy.
+ * per-row cases pass the bits separately, which is the axis those rows buy.
  */
 function makeState(
   renderer: LabelRenderer | null,
   lineRenderer: MarkerLineRenderer | null = makeLineRenderer(),
   starMapLabelsEnabled = true,
-  bodyLabels: boolean | { earth: boolean; planet: boolean } = true,
+  bodyLabels: boolean | { earth: boolean; planet: boolean; sun?: boolean } = true,
   starMapEnabled = true,
 ): EngineState {
   const bodies =
-    typeof bodyLabels === 'boolean' ? { earth: bodyLabels, planet: bodyLabels } : bodyLabels;
+    typeof bodyLabels === 'boolean'
+      ? { earth: bodyLabels, planet: bodyLabels, sun: bodyLabels }
+      : { ...bodyLabels, sun: bodyLabels.sun ?? true };
   return {
     gpu: { foregroundLabelRenderer: renderer, foregroundMarkerLineRenderer: lineRenderer },
     settings: {
       labels: { focusedOnly: false },
       // Each caption reads its OWN source's label gate, so the body rows carry
-      // the Earth / planet caption bits.
+      // the Earth / planet / Sun caption bits.
       bodies: {
         items: {
           earth: { enabled: true, labelEnabled: bodies.earth },
           planet: { enabled: true, labelEnabled: bodies.planet },
+          sun: { enabled: true, labelEnabled: bodies.sun },
         },
       },
       // The cluster master is on: the caption's visibility gate requires it AND
@@ -228,6 +231,7 @@ function makeConstellationState(opts: { layerFade: number; ready?: boolean }): E
         items: {
           earth: { enabled: true, labelEnabled: true },
           planet: { enabled: true, labelEnabled: true },
+          sun: { enabled: true, labelEnabled: true },
         },
       },
       starCatalogs: { enabled: true, items: { famousStar: { enabled: true, labelEnabled: true } } },
@@ -342,7 +346,7 @@ describe('foregroundLabelsLayer.enabled', () => {
   });
 
   it('reads each body-caption toggle as its own source of demand', () => {
-    // Star toggle alone is enough demand, with the planet toggle off.
+    // Star toggle alone is enough demand, with every body toggle off.
     expect(
       foregroundLabelsLayer.enabled(
         makeState(makeRenderer(0), undefined, true, false),
@@ -353,6 +357,15 @@ describe('foregroundLabelsLayer.enabled', () => {
     expect(
       foregroundLabelsLayer.enabled(
         makeState(makeRenderer(0), undefined, false, true),
+        makeCtx(5e-4),
+      ),
+    ).toBe(true);
+    // The Sun's own row alone is enough demand. The Sun rides the star map's
+    // seed table, so a gate that summarised it under the map's switch would
+    // read dark here while `draw` wanted the Sun's name on screen.
+    expect(
+      foregroundLabelsLayer.enabled(
+        makeState(makeRenderer(0), undefined, false, { earth: false, planet: false, sun: true }),
         makeCtx(5e-4),
       ),
     ).toBe(true);
@@ -465,24 +478,32 @@ describe('foregroundLabelsLayer.draw', () => {
     expect(lineDrawSpy.mock.calls[0]![1]).not.toBe(view.vp);
   });
 
-  it('suppresses star captions when the toggle is off', () => {
+  it('suppresses the map captions when the star-map label toggle is off, Sun and Earth aside', () => {
     const renderer = makeRenderer(6);
     const lineRenderer = makeLineRenderer();
     // Park the camera ~1e-12 Mpc from Proxima — deep inside the neighbourhood,
-    // so its caption is at full alpha and WOULD show — the toggle-off must drop
-    // it anyway, while Earth/planets keep showing.
+    // so its caption is at full alpha and WOULD show; the toggle-off must drop
+    // it anyway. The spread vp separates every anchor so the declutter can't be
+    // what removes a caption, leaving the toggle as the only variable.
     const base = sceneBodyLabels(J2000_STATES);
     const proxima = base.find((l) => l.id === sceneBodyLabelId('proxima-centauri'))!;
     const camPos: Vec3 = [proxima.worldPos[0] - 1e-12, proxima.worldPos[1], proxima.worldPos[2]];
 
-    // Toggle ON: at least one star caption (Proxima) is emitted.
+    // Toggle ON: at least one map star caption (not the Sun) is emitted.
+    rebaseMock.mockReturnValueOnce(makeSpreadVp());
     const onView = makeNear0View(camPos);
     foregroundLabelsLayer.draw(PASS_STUB, onView, makeCtx(5e-4), makeState(renderer, lineRenderer));
     const onSpy = renderer.setLabels as unknown as ReturnType<typeof vi.fn>;
     const onLabels = onSpy.mock.calls[0]![0] as readonly Label[];
-    expect(onLabels.some((l) => SCENE_STAR_LABEL_IDS.has(l.id))).toBe(true);
+    expect(onLabels.some((l) => SCENE_STAR_LABEL_IDS.has(l.id) && l.id !== SUN_LABEL_ID)).toBe(
+      true,
+    );
 
-    // Toggle OFF: no star caption at all (the Sun is a star too), but Earth still shows.
+    // Toggle OFF: no map caption at all, but Earth still shows — and so does the
+    // Sun, which rides the star SEED table yet answers to its own body row. That
+    // last part is the whole point of the Sun having a row: muting the curated
+    // neighbourhood must not silence the descent's aim point.
+    rebaseMock.mockReturnValueOnce(makeSpreadVp());
     const offRenderer = makeRenderer(6);
     const offView = makeNear0View(camPos);
     foregroundLabelsLayer.draw(
@@ -493,8 +514,36 @@ describe('foregroundLabelsLayer.draw', () => {
     );
     const offSpy = offRenderer.setLabels as unknown as ReturnType<typeof vi.fn>;
     const offLabels = offSpy.mock.calls[0]![0] as readonly Label[];
-    expect(offLabels.some((l) => SCENE_STAR_LABEL_IDS.has(l.id))).toBe(false);
+    expect(offLabels.some((l) => SCENE_STAR_LABEL_IDS.has(l.id) && l.id !== SUN_LABEL_ID)).toBe(
+      false,
+    );
+    expect(offLabels.some((l) => l.id === SUN_LABEL_ID)).toBe(true);
     expect(offLabels.some((l) => l.id === sceneBodyLabelId('earth'))).toBe(true);
+  });
+
+  it('mutes only the Sun caption when the sun row’s label is off', () => {
+    // The other half of the split: with the map's labels ON and the Sun's own
+    // row OFF, the neighbourhood keeps captioning and only the Sun goes quiet.
+    // A gate that still routed `sun` to the star-catalog row would mute either
+    // both or neither, with no type error to catch it. The spread vp separates
+    // every anchor so declutter cannot be what removes a caption here.
+    const base = sceneBodyLabels(J2000_STATES);
+    const camPos: Vec3 = [
+      ...base.find((l) => l.id === sceneBodyLabelId('earth'))!.worldPos,
+    ] as Vec3;
+
+    rebaseMock.mockReturnValueOnce(makeSpreadVp());
+    const renderer = makeRenderer(6);
+    foregroundLabelsLayer.draw(
+      PASS_STUB,
+      makeNear0View(camPos),
+      makeCtx(5e-4),
+      makeState(renderer, makeLineRenderer(), true, { earth: true, planet: true, sun: false }),
+    );
+    const drawn = (renderer.setLabels as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0]![0] as readonly Label[];
+    expect(drawn.some((l) => l.id === SUN_LABEL_ID)).toBe(false);
+    expect(drawn.some((l) => SCENE_STAR_LABEL_IDS.has(l.id) && l.id !== SUN_LABEL_ID)).toBe(true);
   });
 
   it('suppresses the star map but KEEPS the Sun when the famous-star row is off', () => {

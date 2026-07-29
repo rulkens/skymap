@@ -138,6 +138,9 @@ function makeState(
     // bit, so a fixture that omitted it would silently drive the Sun-alone path.
     settings: {
       starCatalogs: { enabled: true, items: { famousStar: { enabled: famousStarMapEnabled } } },
+      // The Sun answers to its own body row, so `visibleStars` reads it here
+      // rather than exempting an id from the map's gate.
+      bodies: { items: { sun: { enabled: true, labelEnabled: true } } },
     },
   } as unknown as EngineState;
 }
@@ -243,9 +246,9 @@ describe('starSpheresLayer.draw', () => {
     );
     expect(composeMock).not.toHaveBeenCalled();
 
-    // Camera half an AU off the Sun with the gate still off: the Sun is exempt,
-    // so it resolves and is the sole composed sphere — the map is muted, the
-    // descent's aim point kept.
+    // Camera half an AU off the Sun with the gate still off: the Sun answers to
+    // its own body row, so it resolves and is the sole composed sphere — the map
+    // is muted, the descent's aim point kept.
     composeMock.mockClear();
     const drawSpy = vi.fn<(pass: GPURenderPassEncoder, mvp: Float32Array, color: Vec3) => void>();
     const onSun = makeState({ draw: drawSpy }, [SUN, PROXIMA, SIRIUS], false);
@@ -301,6 +304,7 @@ describe('starSpheresLayer.drawPick', () => {
       data: { bodies: { stars: [SUN, PROXIMA, SIRIUS] } },
       settings: {
         starCatalogs: { enabled: true, items: { famousStar: { enabled: true } } },
+        bodies: { items: { sun: { enabled: true, labelEnabled: true } } },
       },
     } as unknown as EngineState;
 

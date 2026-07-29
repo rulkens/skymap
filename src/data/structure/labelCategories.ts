@@ -11,8 +11,8 @@ import { SOURCE_ENTRIES } from '../sourceEntries';
  *     carries a name on the 'structure' label layer.
  *   - 'famousStar' — the curated near-field star map captions its members on
  *     the final descent (the 'starCatalog' layer, drawn on the NEAR0 slab).
- *   - Near-field bodies ('earth', 'planet') — each captions itself on the final
- *     descent (the 'body' layer, also drawn on the NEAR0 slab).
+ *   - Near-field bodies ('earth', 'planet', 'sun') — each captions itself on
+ *     the final descent (the 'body' layer, also drawn on the NEAR0 slab).
  *   - 'milkyWay' — the Milky Way overlay carries the "You are here" label at the
  *     world origin (the 'milkyWay' label layer), a singleton overlay with no
  *     per-record catalog.

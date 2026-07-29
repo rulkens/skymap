@@ -1279,7 +1279,7 @@ Dissolves the Sun's gate exemption into data. `visibleStars`' hardcoded id filte
 - Consumes: Task 4's `BodySourceEntry`, `BodyId`, `BODY_IDS`, `bodies` cluster — all widen automatically.
 - Produces: `Source.Sun = 26`; `SUN_ENTRY`; `BodyId` widens to `'earth' | 'planet' | 'sun'`; `bodies.items.sun`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add to `tests/services/engine/frame/visibleStars.test.ts`:
 
@@ -1307,12 +1307,12 @@ it('keeps the Sun caption when the famous-star map s labels are off', () => {
 
 The second test IS the approved behaviour change (D5/D6). It is the reason this task exists — do not "fix" it back.
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run tests/services/engine/frame/visibleStars.test.ts tests/services/engine/frame/passes/foregroundLabelsLayer.test.ts`
 Expected: FAIL — `bodies.items.sun` is undefined.
 
-- [ ] **Step 3: Append the Source code**
+- [x] **Step 3: Append the Source code**
 
 In `src/data/source.ts`, after `Constellations: 25`:
 
@@ -1335,7 +1335,7 @@ Fix the three stale comments that claim the body codes are contiguous — `Famou
 - Lines ~162-166 (`Earth`): drop the "last of the three contiguous body codes (FamousStar=21, Planet=22, Earth=23)" clause, keeping "Codes are append-only by VALUE; the insertion order in this const is cosmetic."
 - Lines ~177-179 (`GaiaStars`): drop "the first code after the three contiguous body codes (…)".
 
-- [ ] **Step 4: Add the registry row**
+- [x] **Step 4: Add the registry row**
 
 `src/data/sources/sun.ts`:
 
@@ -1382,7 +1382,7 @@ export const SUN_ENTRY = {
 
 Register it in `src/data/sources.ts`: import `SUN_ENTRY` and add `[Source.Sun]: SUN_ENTRY,` after `[Source.Constellations]: CONSTELLATIONS_ENTRY,`. Registry key insertion order is load-bearing for `SOURCE_ENTRIES` iteration order, which is the panel's row order — appending puts "Sun" after "Planets" in the Labels list. If the checkpoint order (Famous Stars, Sun, Earth, Planets) is wanted, place the key beside the other body rows instead; either is correct, so pick appended and let the visual pass decide.
 
-- [ ] **Step 5: Decomplect `visibleStars`**
+- [x] **Step 5: Decomplect `visibleStars`**
 
 Replace `src/services/engine/frame/visibleStars.ts` entirely:
 
@@ -1423,7 +1423,7 @@ export function visibleStars(state: EngineState): readonly StarBody[] {
 
 `SUN_BODY_ID` survives because the seed table is a flat star list with no per-star source tag — the id is how a reader tells the Sun's row from the map's. That is a lookup key, not an exemption.
 
-- [ ] **Step 6: Point the Sun caption at its own row**
+- [x] **Step 6: Point the Sun caption at its own row**
 
 In `foregroundLabelsLayer.ts`'s `labelGateFor`, split the `sun` case off from `star`:
 
@@ -1438,12 +1438,12 @@ Update the module docblock's stage-1 paragraph: the Sun's caption is now gated b
 
 Add `'sun'` to the container's label rows implicitly (it arrives via `LABEL_CATEGORIES`) — no container edit needed.
 
-- [ ] **Step 7: Verify**
+- [x] **Step 7: Verify**
 
 Run: `npm test && npm run typecheck`
 Expected: PASS. Seed `bodies.items.sun` in `makeSettingsFixture.ts`.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/data/source.ts src/data/sources.ts src/data/sources/sun.ts src/services/engine/frame/visibleStars.ts src/services/engine/frame/passes/foregroundLabelsLayer.ts tests
@@ -1769,7 +1769,7 @@ the same way. Its own commit, distinct from both the prep and the feature diffs.
 - Consumes: Task 3's `famousStar` star-catalog row (nothing else — this task is otherwise independent and could land on its own).
 - Produces: `createFamousStarsMetaSlot: SlotFactory<FamousStarsPayload, CompanionAssetReq>`; `state.assetSlots.famousStarsMeta`; `state.data.bodies.famousStarsMeta` + `setFamousStarsMeta`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `tests/services/loading/slots/famousStarsMetaSlot.test.ts` — the fail-soft contract is the
 part worth testing: a missing sidecar must leave the engine running with an empty array,
@@ -1817,12 +1817,12 @@ Stub `fetch` per case (resolve with the JSON body; reject / 404 for the second).
 however `tests/services/loading/` already stubs it — read a neighbouring slot test first
 and reuse its harness rather than inventing one.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run tests/services/loading/slots/famousStarsMetaSlot.test.ts`
 Expected: FAIL — "Failed to resolve import ... famousStarsMetaSlot".
 
-- [ ] **Step 3: Add the body-store field**
+- [x] **Step 3: Add the body-store field**
 
 Mirror `GalaxyStore`'s `famousMeta` / `setFamousMeta` pair on `BodyStore`: a
 `readonly famousStarsMeta: readonly FamousStarMetaEntry[]` defaulting to `[]`, and a
@@ -1830,7 +1830,7 @@ Mirror `GalaxyStore`'s `famousMeta` / `setFamousMeta` pair on `BodyStore`: a
 `GalaxyStore`'s pair and its implementation first, and match their shape exactly — the
 point of this task is that the two are the same.
 
-- [ ] **Step 4: Create the slot**
+- [x] **Step 4: Create the slot**
 
 `src/services/loading/slots/famousStarsMetaSlot.ts`:
 
@@ -1885,11 +1885,11 @@ export const createFamousStarsMetaSlot: SlotFactory<FamousStarsPayload, Companio
 };
 ```
 
-- [ ] **Step 5: Wire the slot**
+- [x] **Step 5: Wire the slot**
 
 Add `'famousStarsMeta'` to `AssetKey`, and a `famousStarsMeta: AssetSlot<FamousStarsPayload, CompanionAssetReq> | null` field to `EngineAssetSlots` with a docblock mirroring `famousMeta`'s. Mint and eagerly load it wherever `createFamousMetaSlot` is minted and loaded — same boot position, same eagerness (the JSON is tiny, and the InfoCard depends on the meta being present whenever a famous star is hovered).
 
-- [ ] **Step 6: Point the hook at the slot**
+- [x] **Step 6: Point the hook at the slot**
 
 `useFamousStarsMeta` stops calling the fetcher. Read whatever bridge `useFamousMeta`'s
 galaxy-side equivalent uses to surface engine store state to React and use the same one;
@@ -1901,12 +1901,12 @@ Delete the "We call the fetcher directly rather than routing through the engine'
 wiring — same payload either way" comment either way: it is no longer true of the
 loading path.
 
-- [ ] **Step 7: Verify**
+- [x] **Step 7: Verify**
 
 Run: `npm test && npm run typecheck`
 Expected: PASS. Existing `famousStarsMetaFetcher` tests are untouched — the fetcher itself does not change.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/services/loading/slots/famousStarsMetaSlot.ts src/@types/loading/AssetKey.d.ts src/@types/engine/state/EngineAssetSlots.d.ts src/@types/engine/data/BodyStore.d.ts src/hooks/useFamousStarsMeta.ts tests/services/loading/slots/famousStarsMetaSlot.test.ts

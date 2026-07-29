@@ -18,14 +18,23 @@ import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { ResolvePickDeps } from '../../../@types/engine/ResolvePickDeps';
 
 /**
- * Each body row's DURABLE seed table — the array its content layer's `drawPick`
- * stamped indices into. Total over `BodyId`, so a new body row cannot be added
- * to the registry without naming the seeds its picks decode against; a missing
- * entry would otherwise resolve every click on that body to `null`, silently.
+ * Each body row's DURABLE seed table — the array a pick tagged with that row's
+ * source code indexes into. Total over `BodyId`, so a new body row cannot be
+ * added to the registry without naming the seeds its picks decode against; a
+ * missing entry would otherwise resolve every click on that body to `null`,
+ * silently.
+ *
+ * The Sun's row is total-by-obligation rather than reachable: its dot is drawn
+ * by the STAR layers over the shared famous-star seed table, so a click on the
+ * Sun arrives tagged `Source.FamousStar` and decodes through the `starCatalog`
+ * arm below. `SCENE_STARS` is nonetheless the honest answer to this table's
+ * question — it is the array a `Source.Sun` pick index would address — so the
+ * entry is correct by construction should a layer ever stamp that code.
  */
 const PICK_SEEDS_BY_BODY_ID: Readonly<Record<BodyId, readonly { readonly id: string }[]>> = {
   earth: [SCENE_EARTH],
   planet: SCENE_PLANETS,
+  sun: SCENE_STARS,
 };
 
 export const RESOLVE_PICK: Partial<

@@ -327,8 +327,13 @@ export type EngineSettingsState = {
 
   /**
    * Near-field body gates — the FIFTH source-type cluster, one `items` row per
-   * `BodyId`, each carrying the visibility axis (`enabled`) and the caption
-   * axis (`labelEnabled`).
+   * `BodyId` (earth, planet, sun), each carrying the visibility axis
+   * (`enabled`) and the caption axis (`labelEnabled`).
+   *
+   * `enabled` is read (`visibleStars` composes the Sun's) but never written:
+   * hiding a near-field body has no defined meaning, so the settings slice
+   * ships no setter for it. The axis exists so every row keeps ONE shape, the
+   * same inert-axis idiom `gaiaStars.labelEnabled` uses.
    *
    * No cluster-level `enabled`: unlike the four data clusters there is no
    * "hide all bodies" intent — the bodies ARE the destination of the descent,

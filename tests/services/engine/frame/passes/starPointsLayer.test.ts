@@ -168,6 +168,9 @@ function makeState(
         enabled: true,
         items: { famousStar: { enabled: famousStarMapEnabled } },
       },
+      // The Sun answers to its own body row, so `visibleStars` reads it here
+      // rather than exempting an id from the map's gate.
+      bodies: { items: { sun: { enabled: true, labelEnabled: true } } },
     },
   } as unknown as EngineState;
 }
@@ -255,6 +258,7 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
       settings: {
         milkyWay: { enabled: false },
         starCatalogs: { enabled: true, items: { famousStar: { enabled: true } } },
+        bodies: { items: { sun: { enabled: true, labelEnabled: true } } },
         constellations: { enabled: false, intensity: 1 },
         orbitTrails: { enabled: true },
       },

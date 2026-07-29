@@ -21,11 +21,13 @@
  *                     flowfield.scfd cube). No per-record identity; carries
  *                     its own look/motion defaults.
  *   'body'          — near-field true-scale bodies (Earth, the Solar-System
- *                     planets). Seeded records drawn by their own
+ *                     planets, the Sun). Seeded records drawn by their own
  *                     content-layer; not persisted (a body's identity is its
- *                     stable seed id), but pickable on the NEAR0 pick pass via
- *                     `drawPick` and captioned through the foreground-labels
- *                     layer.
+ *                     stable seed id) and captioned through the
+ *                     foreground-labels layer. Earth and the planets are
+ *                     pickable on the NEAR0 pick pass via `drawPick`; the Sun's
+ *                     dot is drawn by the star layers, so its picks carry the
+ *                     famousStar code.
  *   'starCatalog'   — stellar point sets the user toggles as a unit. Two
  *                     variants, split by `binBaseName`: the SURVEY-wide Gaia bin
  *                     streams tiered `.bin` clouds from disk, while the curated
@@ -80,6 +82,7 @@ import { DESI_SGW_ENTRY } from './sources/desiSgw';
 import { FAMOUS_STAR_ENTRY } from './sources/famous-star';
 import { PLANET_ENTRY } from './sources/planet';
 import { EARTH_ENTRY } from './sources/earth';
+import { SUN_ENTRY } from './sources/sun';
 import { GAIA_STARS_ENTRY } from './sources/gaia-stars';
 
 export { Source } from './source';
@@ -139,6 +142,7 @@ export const SOURCE_REGISTRY = {
   [Source.Earth]: EARTH_ENTRY,
   [Source.GaiaStars]: GAIA_STARS_ENTRY,
   [Source.Constellations]: CONSTELLATIONS_ENTRY,
+  [Source.Sun]: SUN_ENTRY,
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;
 
 // ─── Famous-galaxy high-res LOD ─────────────────────────────────────────────

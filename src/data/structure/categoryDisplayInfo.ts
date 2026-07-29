@@ -1,6 +1,6 @@
 /**
  * Per-category display metadata for label-bearing sources (cluster,
- * supercluster, void, group, famousGalaxy, famousStar, earth, planet,
+ * supercluster, void, group, famousGalaxy, famousStar, earth, planet, sun,
  * milkyWay).  Keyed by `LabelCategory`.
  *
  * Derived from the SOURCE_REGISTRY rows that carry `bearsLabel: true` — the

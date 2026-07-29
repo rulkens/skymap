@@ -28,7 +28,8 @@
  * because the gate is total: engine-side, every consumer of a star catalog's
  * visibility requires the master before the row's own bit, so the header
  * checkbox really can hide each row it summarises. Turning it off leaves the
- * Sun drawn — `visibleStars` exempts the descent's aim point, not the map.
+ * Sun drawn: the descent's aim point is its own `bodies` row, so it was never
+ * in the set this gate governs.
  *
  * Imports nothing from `store/` or `state/`: a pure function of props and the
  * transient CollapsibleSection open/closed state. Tests supply plain props with

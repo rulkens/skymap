@@ -14,7 +14,7 @@ import type { StarCatalogSourceEntry } from './starCatalog/StarCatalogSourceEntr
  * filament skeleton, the constellation figures, scalar-volume cubes, the
  * Milky-Way disk overlay, the peculiar-velocity flow field, star catalogs
  * (the survey-wide Gaia bin and the curated famous-star map), and near-field
- * bodies (Earth, the Solar-System planets).
+ * bodies (Earth, the Solar-System planets, the Sun).
  */
 export type SourceEntry =
   | GalaxyCatalogSourceEntry

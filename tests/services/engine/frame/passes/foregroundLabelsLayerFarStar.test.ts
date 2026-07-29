@@ -86,6 +86,7 @@ function makeState(renderer: LabelRenderer, lineRenderer: MarkerLineRenderer): E
         items: {
           earth: { enabled: true, labelEnabled: true },
           planet: { enabled: true, labelEnabled: true },
+          sun: { enabled: true, labelEnabled: true },
         },
       },
       starCatalogs: { enabled: true, items: { famousStar: { enabled: true, labelEnabled: true } } },

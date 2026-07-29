@@ -125,15 +125,17 @@
  *      registry-derived home the settings panel writes — so the mute switches
  *      are per-row rather than a cross-cutting bag:
  *      `starCatalogs.items.famousStar.labelEnabled` zeroes the star map's
- *      target (Sun included), `bodies.items.earth.labelEnabled` the Earth
- *      caption, and `bodies.items.planet.labelEnabled` the planet set (the Moon
- *      rides the 'planet' kind, so it follows that row). Independently, the star
- *      map's VISIBILITY axis (the cluster master `starCatalogs.enabled` AND
+ *      target, `bodies.items.earth.labelEnabled` the Earth caption,
+ *      `bodies.items.planet.labelEnabled` the planet set (the Moon rides the
+ *      'planet' kind, so it follows that row), and `bodies.items.sun.labelEnabled`
+ *      the Sun's. The Sun is its own body row, so muting the curated
+ *      neighbourhood leaves it captioning — governed by that row and paced by
+ *      its own `sunCaption` band. Independently, the star map's
+ *      VISIBILITY axis (the cluster master `starCatalogs.enabled` AND
  *      `…items.famousStar.enabled`, the pair `visibleStars` composes) zeroes the
- *      star map EXCEPT the Sun — the descent's aim point, which its own
- *      `sunCaption` band still governs — in lockstep with the point/sphere
- *      layers. All of them flow through the envelope below, so flipping any
- *      fades rather than pops.
+ *      map's captions in lockstep with the point/sphere layers; it reaches only
+ *      the 'star' kind, so there is no exemption to remember. All of them flow
+ *      through the envelope below, so flipping any fades rather than pops.
  *   2. DECLUTTER — EVERY visible caption contends in one screen-space cull
  *      (`declutterByScreenSeparation`), Earth and the planets included. The
  *      collision winner is the higher `CAPTION_PRIORITY` kind tier (sun >
@@ -393,17 +395,19 @@ export const foregroundLabelsLayer: ContentLayer = {
     // empties with its NEAR0 siblings at galaxy zoom) AND the tighter caption
     // gate (see SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC's docblock) AND at least
     // one of the label gates that can make a body-caption target nonzero
-    // (`draw`'s `labelGateFor`). The famous-star row's `enabled` is
-    // deliberately NOT part of this OR: it only narrows the star-map target
-    // down to the Sun (see `draw`'s `baseTarget` derivation) and can never turn
+    // (`draw`'s `labelGateFor`). The body half is a fold over the whole
+    // `bodies.items` record rather than a list of named rows, so a new
+    // near-field body joins the demand summary by existing — a hand-listed OR
+    // would silently leave its captions behind a dark gate. The famous-star
+    // row's `enabled` is deliberately NOT part of this OR: it only narrows the
+    // star-map target (see `draw`'s `baseTarget` derivation) and can never turn
     // a caption on when that row's `labelEnabled` is off, so it carries no
     // demand of its own.
     const bodyDemand =
       ctx.cam.distance < FOREGROUND_MAX_DISTANCE_MPC &&
       ctx.cam.distance < SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC &&
       (state.settings.starCatalogs.items.famousStar.labelEnabled ||
-        state.settings.bodies.items.earth.labelEnabled ||
-        state.settings.bodies.items.planet.labelEnabled);
+        Object.values(state.settings.bodies.items).some((body) => body.labelEnabled));
     // The CONSTELLATION captions' demand rides the SAME product `draw` uses
     // for their fade target — `constellationLayerOpacity`, the distance band
     // times the fade-registry toggle opacity (not the band-only `1` an
@@ -465,16 +469,16 @@ export const foregroundLabelsLayer: ContentLayer = {
     const bodyItems = state.settings.bodies.items;
     const starMapRow = state.settings.starCatalogs.items.famousStar;
     // The famous-star map's visibility gate mutes its captions in lockstep with
-    // the point/sphere layers — but NOT the Sun (`kind === 'sun'`), which
-    // anchors the descent and rides its own `sunCaption` band regardless. Both
-    // levels of that axis, exactly as `visibleStars` composes them: a caption
-    // must not survive the cluster master that hid the dot it names.
+    // the point/sphere layers. It reaches only the `star` kind — the Sun is not
+    // a member of the map, so there is nothing to exempt. Both levels of the
+    // axis, exactly as `visibleStars` composes them: a caption must not survive
+    // the cluster master that hid the dot it names.
     const starMapEnabled = state.settings.starCatalogs.enabled && starMapRow.enabled;
 
     // Each caption asks its OWN source's label gate — the same registry-derived
-    // home the settings panel writes. `sun`/`star` route to the star map's row,
-    // `earth`/`planet` to their body rows; the constellation kind never reaches
-    // here (those captions carry their own layer opacity).
+    // home the settings panel writes. `star` routes to the star map's row,
+    // `earth`/`planet`/`sun` to their body rows; the constellation kind never
+    // reaches here (those captions carry their own layer opacity).
     const labelGateFor = (kind: ForegroundCaption['kind']): boolean => {
       switch (kind) {
         case 'earth':
@@ -482,6 +486,7 @@ export const foregroundLabelsLayer: ContentLayer = {
         case 'planet':
           return bodyItems.planet.labelEnabled;
         case 'sun':
+          return bodyItems.sun.labelEnabled;
         case 'star':
           return starMapRow.labelEnabled;
         case 'constellation':
