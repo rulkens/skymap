@@ -74,7 +74,7 @@ import fsCode from '../shaders/compositor/fragment.wesl?static';
 import { clampExposure } from '../../../utils/clampExposure';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../lib/blendStates';
-import { DEFAULT_WHITEPOINT, DEFAULT_ASINH_SOFTNESS } from '../../../data/defaults';
+import { REINHARD_WHITEPOINT, ASINH_SOFTNESS } from '../../../data/toneMapCurve';
 import type { Compositor } from '../../../@types/rendering/Compositor';
 import type { CompositeBlend } from '../../../@types/rendering/CompositeBlend';
 import type { ToneMap } from '../../../@types/rendering/ToneMap';
@@ -93,7 +93,7 @@ export function linearClamp(c: number, exposure: number): number {
 export function reinhardExtended(
   c: number,
   exposure: number,
-  whitepoint: number = DEFAULT_WHITEPOINT,
+  whitepoint: number = REINHARD_WHITEPOINT,
 ): number {
   const x = c * exposure;
   const wsq = whitepoint * whitepoint;
@@ -110,7 +110,7 @@ export function reinhardExtended(
 export function asinhStretch(
   c: number,
   exposure: number,
-  softness: number = DEFAULT_ASINH_SOFTNESS,
+  softness: number = ASINH_SOFTNESS,
 ): number {
   const x = c * exposure;
   // The Lupton formula `asinh(k·c) / asinh(k)` reaches 1.0 at c=1; for
@@ -286,8 +286,8 @@ export function createCompositor(init: {
         // Clamp at point of use: the store holds raw intent, this pass
         // owns the HDR-buffer / black-frame limits (see clampExposure).
         uniformF32[0] = clampExposure(tone.exposure);
-        uniformF32[1] = DEFAULT_WHITEPOINT * DEFAULT_WHITEPOINT;
-        uniformF32[2] = DEFAULT_ASINH_SOFTNESS;
+        uniformF32[1] = REINHARD_WHITEPOINT * REINHARD_WHITEPOINT;
+        uniformF32[2] = ASINH_SOFTNESS;
         uniformU32[3] = tone.curve >>> 0;
         uniformU32[4] = 1;
         // 0 unless the caller opted a swap chain into HDR (`renderFrame` only

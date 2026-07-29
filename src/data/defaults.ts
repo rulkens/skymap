@@ -51,7 +51,7 @@
 
 import { BiasMode } from './galaxyCatalog/biasMode';
 import type { BiasMode as BiasModeT } from '../@types/data/galaxyCatalog/BiasMode';
-import { ToneMapCurve } from './toneMapCurve';
+import { ToneMapCurve, toneMapCurveSaturation } from './toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
 import type { FlowSettings } from '../@types/settings/FlowSettings';
 import type { OrientationFrameId } from '../@types/camera/OrientationFrameId';
@@ -302,38 +302,24 @@ export const DEFAULT_TONE_MAP_CURVE: ToneMapCurveT = ToneMapCurve.Reinhard;
 export const DEFAULT_EXPOSURE = 3.0;
 
 /**
- * Whitepoint for the Reinhard-extended curve — the post-exposure input value at
- * which it reaches exactly 1.0 and clamps. Not a settings field: the curve
- * parameters are fixed shape, only the curve CHOICE is user-facing. Lives here
- * rather than beside the compositor so `DEFAULT_HDR_KNEE` can state its identity
- * with it directly instead of restating the number.
- */
-export const DEFAULT_WHITEPOINT = 4.0;
-
-/** Softness for the asinh stretch — higher = more aggressive low-end lift. */
-export const DEFAULT_ASINH_SOFTNESS = 10.0;
-
-/**
  * Default HDR headroom knee — the brightness above which a pixel's over-white
  * energy spills past paper-white into an extended-range swap chain. Seeds
  * `settings.tonemap.hdrKnee`.
  *
- * Measured in the SAME post-exposure units the tone curve works in, and defaulted
- * to the Reinhard whitepoint, because the knee's job is to pick up exactly where
- * the curve runs out of range: `applyReinhard` reaches 1.0 at the whitepoint and
- * clamps from there, so a pixel at the knee is precisely one that the curve can no
- * longer separate. Sharing the curve's units means the two stay aligned when the
- * exposure slider moves — raising exposure makes a dimmer pixel saturate, and the
- * knee follows without being re-tuned. (Bloom's threshold is pre-exposure instead
- * because bloom reads the raw buffer before the tone map; the spill runs after it.)
+ * Measured in the SAME post-exposure units the tone curve works in, and derived
+ * from the default curve's saturation point, because the knee's job is to pick up
+ * exactly where the curve runs out of range: a pixel at the knee is precisely one
+ * the curve can no longer separate from a brighter one. Sharing the curve's units
+ * keeps the two aligned as the exposure slider moves — raising exposure makes a
+ * dimmer pixel saturate, and the knee follows without re-tuning. (Bloom's threshold
+ * is pre-exposure instead, because bloom reads the raw buffer before the tone map;
+ * the spill runs after it.)
  *
- * Below the whitepoint the spill lifts midtones the curve was still handling; above
- * it, highlights clip flat to white before the spill picks them up. The other four
- * curves saturate elsewhere (asinh and gamma2 at 1.0, ACES near 2.5), so switching
- * curve wants a nudge on the slider — which is what the slider is for. Inert unless
+ * The five curves saturate anywhere from 1.0 to 7.24, so this default only holds
+ * while the curve does — switching curve wants a nudge on the slider. Inert unless
  * the swap chain is the extended-range surface (`GpuContext.hdr`).
  */
-export const DEFAULT_HDR_KNEE = DEFAULT_WHITEPOINT;
+export const DEFAULT_HDR_KNEE = toneMapCurveSaturation(DEFAULT_TONE_MAP_CURVE);
 
 /**
  * Default multiplier on the over-knee energy spilled into display headroom.

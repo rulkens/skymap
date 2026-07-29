@@ -55,6 +55,49 @@ export const ALL_TONE_MAP_CURVES: ReadonlyArray<ToneMapCurveT> = [
   ToneMapCurve.Aces,
 ];
 
+/**
+ * Whitepoint for the Reinhard-extended curve — the post-exposure input at which
+ * it reaches exactly 1.0. Not a settings field: a curve's shape is fixed, only
+ * the curve CHOICE is user-facing.
+ */
+export const REINHARD_WHITEPOINT = 4.0;
+
+/** Softness for the asinh stretch — higher = more aggressive low-end lift. */
+export const ASINH_SOFTNESS = 10.0;
+
+/**
+ * The post-exposure input at which a curve reaches 1.0 and stops separating
+ * values — everything brighter clamps to the same white.
+ *
+ * Lives beside the curves because it is a property OF each curve, derived from
+ * the same formula `lib/tonemap.wesl` implements, and because the alternative is
+ * every consumer hardcoding one curve's number and being silently wrong for the
+ * other four. The HDR headroom knee is the consumer that forced the question:
+ * spilling over-white energy is only meaningful above the point where the curve
+ * gave up, and that point moves by a factor of seven across this set.
+ */
+export function toneMapCurveSaturation(curve: ToneMapCurveT): number {
+  switch (curve) {
+    // clamp(c, 0, 1) — saturates the moment it hits unity.
+    case ToneMapCurve.Linear:
+      return 1.0;
+    // c·(1 + c/W²)/(1 + c) equals 1.0 at c = W by construction.
+    case ToneMapCurve.Reinhard:
+      return REINHARD_WHITEPOINT;
+    // asinh(k·c)/asinh(k) equals 1.0 at c = 1 for any k.
+    case ToneMapCurve.Asinh:
+      return 1.0;
+    // sqrt(clamp(c, 0, 1)) — the clamp saturates first.
+    case ToneMapCurve.Gamma2:
+      return 1.0;
+    // Narkowicz ACES: numerator meets denominator where 0.08c² − 0.56c − 0.14 = 0,
+    // i.e. c = (7 + sqrt(56)) / 2. Far the highest of the five, which is why a
+    // knee tuned on Reinhard spills long before ACES has run out of range.
+    case ToneMapCurve.Aces:
+      return 7.24;
+  }
+}
+
 export function toneMapCurveLabel(curve: ToneMapCurveT): string {
   switch (curve) {
     case ToneMapCurve.Linear:
