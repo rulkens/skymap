@@ -71,7 +71,7 @@
 // stays byte-identical.
 import vsCode from '../shaders/compositor/vertex.wesl?static';
 import fsCode from '../shaders/compositor/fragment.wesl?static';
-import { clampExposure } from '../../../utils/clampExposure';
+import { clampExposure } from '../../../utils/tonemap/clampExposure';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../lib/blendStates';
 import { REINHARD_WHITEPOINT, ASINH_SOFTNESS } from '../../../data/toneMapCurve';

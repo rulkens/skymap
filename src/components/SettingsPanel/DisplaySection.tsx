@@ -40,8 +40,8 @@ import { orientationFrameLabel } from '../../data/orientation/orientationFrameLa
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../data/defaults';
 import { STAR_EMISSIVE } from '../../data/starRenderConstants';
-import { exposureToEv } from '../../utils/exposureToEv';
-import { evToExposure } from '../../utils/evToExposure';
+import { exposureToEv } from '../../utils/tonemap/exposureToEv';
+import { evToExposure } from '../../utils/tonemap/evToExposure';
 import CollapsibleSection from './CollapsibleSection';
 import Slider from '../common/Slider/Slider';
 import styles from './SettingsPanel.module.css';
