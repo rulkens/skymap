@@ -1467,7 +1467,7 @@ Today the tour captures `labels`, which held `starLabelsEnabled` / `planetLabels
 - Consumes: Tasks 3–4's clusters.
 - Produces: `SettingsSnapshot` picks ten clusters instead of eight.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 /**
@@ -1502,12 +1502,12 @@ describe('captureSettings', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run tests/state/tour/captureSettings.test.ts`
 Expected: FAIL — `snap.bodies` is undefined.
 
-- [ ] **Step 3: Widen the snapshot**
+- [x] **Step 3: Widen the snapshot**
 
 `src/@types/engine/settings/SettingsSnapshot.d.ts` — add two `Pick` members and two docblock bullets:
 
@@ -1538,7 +1538,7 @@ Note in that docblock that `starCatalogs` brings its shared look knobs (`sizePx`
 
 `src/state/tour/captureSettings.ts` — destructure and clone the two new clusters; update the "eight tour-owned settings clusters" phrasing to "ten".
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 Run: `npm test && npm run typecheck`
 Expected: PASS.
