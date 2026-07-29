@@ -1566,7 +1566,7 @@ The section currently sums its master tri-state across two differently-shaped co
 - Consumes: everything from Tasks 1–5.
 - Produces: `type SectionRow = { id: string; label: string; enabled: boolean; onChange: (enabled: boolean) => void }`; `LabelsAndGuidesSectionProps = { rows: ReadonlyArray<SectionRow> }`. `NonCategoryRow` is deleted.
 
-- [ ] **Step 1: Rewrite the section test**
+- [x] **Step 1: Rewrite the section test**
 
 Replace `tests/components/SettingsPanel/LabelsAndGuidesSection.test.ts`'s prop construction with the single `rows` array. Keep whatever the file already asserts about the tri-state master — that logic is the reason the component has a test at all. The master derivation is now one reduce over one array, so the assertions simplify but must still cover: all-on, all-off, mixed, and that clicking a mixed master clears everything.
 
@@ -1578,12 +1578,12 @@ const rows = [
 ];
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run tests/components/SettingsPanel/LabelsAndGuidesSection.test.ts`
 Expected: FAIL — the component still requires `labelCategoryVisibility`.
 
-- [ ] **Step 3: Create the row type**
+- [x] **Step 3: Create the row type**
 
 `src/@types/components/SectionRow.d.ts`:
 
@@ -1605,7 +1605,7 @@ export type SectionRow = {
 };
 ```
 
-- [ ] **Step 4: Rewrite the section**
+- [x] **Step 4: Rewrite the section**
 
 `src/components/SettingsPanel/LabelsAndGuidesSection.tsx`:
 
@@ -1680,7 +1680,7 @@ function LabelsAndGuidesSection({ rows }: LabelsAndGuidesSectionProps) {
 export default memo(LabelsAndGuidesSection);
 ```
 
-- [ ] **Step 5: Build the rows in the container**
+- [x] **Step 5: Build the rows in the container**
 
 In `LabelsAndGuidesSectionContainer.tsx`, replace `labelCategoryVisibility` + `nonCategoryRows` with one memo. Element ids stay `toggle-label-<cat>` so existing selectors keep working:
 
@@ -1727,12 +1727,12 @@ return <LabelsAndGuidesSection rows={rows} />;
 
 Import `LABEL_CATEGORIES` and `CATEGORY_DISPLAY_INFO` here (they leave the section). Update the container docblock's "### Label-visibility projection" section to describe the row assembly.
 
-- [ ] **Step 6: Verify**
+- [x] **Step 6: Verify**
 
 Run: `npm test && npm run typecheck`
 Expected: PASS. Any test that queried `toggle-label-stars` / `toggle-label-planets` moves to `toggle-label-famousStar` / `toggle-label-planet`.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/@types/components/SectionRow.d.ts src/components/SettingsPanel/LabelsAndGuidesSection.tsx src/components/containers/LabelsAndGuidesSectionContainer.tsx tests/components/SettingsPanel/LabelsAndGuidesSection.test.ts
