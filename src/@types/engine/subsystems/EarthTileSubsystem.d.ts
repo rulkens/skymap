@@ -54,12 +54,25 @@ export type EarthTileSubsystem = Destroyable & {
   plannerParams(): EarthTilePlannerParams | null;
 
   /**
-   * Drive one engaged frame: touch every planned tile's LRU slot largest-first,
-   * enqueue whatever is neither resident nor known-missing, and re-derive the
-   * page table if anything about residency, the window or a fade moved.
+   * Drive one frame. Call it on EVERY frame Earth's layer draws — the
+   * subsystem, not the caller, decides from the plan whether the virtual
+   * texture is engaged (`plan.zWin > baseLevel`, "has the base texture started
+   * magnifying yet?").
    *
-   * Call only while engaged. The first call allocates the atlas and the page
-   * table.
+   * Engaged, it touches every planned tile's LRU slot largest-first, enqueues
+   * whatever is neither resident nor known-missing, and re-derives the page
+   * table if anything about residency, the window or a fade moved. The first
+   * engaged call is what allocates the atlas and the page table.
+   *
+   * Disengaged, it stands down: once on the transition it blanks the page table
+   * so the fragment blends nothing on top of the whole-globe base, and it stops
+   * there — the atlas, the resident tiles and the caller's bind group all
+   * survive, so coming back is free. A subsystem that has never engaged does
+   * nothing at all on a disengaged frame and allocates nothing.
+   *
+   * The gate lives in here because as a caller-side `if` it only has one side:
+   * engaging is something the caller does, disengaging is something that stops
+   * happening, and a stand-down has nowhere to live.
    */
   update(input: { readonly plan: EarthTilePlan; readonly nowMs: number }): void;
 
@@ -75,9 +88,15 @@ export type EarthTileSubsystem = Destroyable & {
 
   /**
    * The window the page table currently in GPU memory was built against, or
-   * `null` before the first upload. The Earth draw packs it into the surface
-   * uniforms, where it is the coordinate system the fragment turns a mesh uv
-   * into a page-table cell in.
+   * `null` when there is no live table to address: before the first upload, and
+   * again for as long as the subsystem is stood down. The Earth draw packs it
+   * into the surface uniforms, where it is the coordinate system the fragment
+   * turns a mesh uv into a page-table cell in, and `null` packs the all-zero
+   * identity window.
+   *
+   * Reporting `null` while stood down is belt and braces with the blanked page
+   * table that stand-down uploads: either alone would leave the fragment
+   * sampling nothing but the base texture, and both are cheap.
    *
    * **The UPLOADED window, never the latest plan's**, and that is the entire
    * reason it is an accessor here rather than a field the draw site reads off

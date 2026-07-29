@@ -28,7 +28,7 @@
  * they answer separate questions. `EARTH_TILE_BASE_LEVEL` is the density the
  * whole-globe base texture already delivers, and it is what "does the screen
  * want more than the base has?" compares against — the planner walks down from
- * it and the drive site engages on `plan.zWin > baseLevel`.
+ * it and `earthTileSubsystem` engages on `plan.zWin > baseLevel`.
  * `EARTH_TILE_MIN_LEVEL` is the shallowest level for which tile FILES exist,
  * which is one finer precisely because the base covers everything above it.
  * Folding the two into a single constant would root the planner's walk at the

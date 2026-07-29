@@ -572,8 +572,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const earth = state.data.bodies.earth;
   if (earthTiles !== null && earth !== null && earthLayer.enabled(state, ctx)) {
     // Null until the manifest lands; the first call is what starts that fetch,
-    // so it must happen here rather than behind the engage gate below — the
-    // gate is stated in terms of a level the manifest supplies.
+    // and it has to happen before there is any plan at all — the subsystem's
+    // engage rule is stated in terms of a level the manifest supplies.
     const params = earthTiles.plannerParams();
     if (params !== null) {
       // The SAME slab resolution the executor hands `earthLayer.draw`, and the
@@ -602,38 +602,34 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
         ),
         viewportPx: view.viewportPx,
       });
-      // The engage gate, one rule: the planner already decided which level the
-      // screen's texel density calls for, so "is the base texture magnifying
-      // yet?" is read off the plan rather than re-derived as an altitude
-      // threshold. The comparison is against `baseLevel` — the density the
-      // whole-globe base texture already carries — and NOT against the
-      // shallowest baked level, which the plan's own floor would satisfy by
-      // construction. At or below it there is nothing a tile could add.
-      if (plan.zWin > params.baseLevel) {
-        // `update` is the only call that can allocate the atlas and the page
-        // table, so reading `getTileResources()` either side of it IS the
-        // null-to-non-null transition — no "have I wired this yet?" flag has to
-        // exist anywhere, and there is no way for one to get out of step. The
-        // renderer's bind group must be rebuilt exactly once, at that moment:
-        // its layout is fixed at pipeline creation and points at 1×1
-        // placeholders until then, and the views are identity-stable afterwards,
-        // so calling per frame would rebuild an identical group forever.
-        const engagedBefore = earthTiles.getTileResources() !== null;
-        earthTiles.update({ plan, nowMs: ctx.nowMs });
-        if (!engagedBefore) {
-          const tiles = earthTiles.getTileResources();
-          // Non-null by `earthLayer.enabled` above; the optional call keeps the
-          // types honest without restating that gate.
-          if (tiles !== null) {
-            state.gpu.earthRenderer?.setTileResources(tiles.pageTable, tiles.atlas);
-          }
+      // Unconditional: whether the virtual texture engages is the subsystem's
+      // own decision, made from this plan. A gate here would make engaging
+      // something this site does and disengaging something that merely stops
+      // happening, which is exactly how the stand-down came to be missing.
+      //
+      // `update` is still the only call that can allocate the atlas and the page
+      // table, so reading `getTileResources()` either side of it IS the
+      // null-to-non-null transition — no "have I wired this yet?" flag has to
+      // exist anywhere, and there is no way for one to get out of step. The
+      // renderer's bind group must be rebuilt exactly once, at that moment: its
+      // layout is fixed at pipeline creation and points at 1×1 placeholders
+      // until then, and the views are identity-stable afterwards, so calling per
+      // frame would rebuild an identical group forever.
+      const engagedBefore = earthTiles.getTileResources() !== null;
+      earthTiles.update({ plan, nowMs: ctx.nowMs });
+      if (!engagedBefore) {
+        const tiles = earthTiles.getTileResources();
+        // Still null on every frame before the subsystem first engages; the
+        // check keeps the types honest without restating its rule here.
+        if (tiles !== null) {
+          state.gpu.earthRenderer?.setTileResources(tiles.pageTable, tiles.atlas);
         }
       }
     }
   }
 
-  // The keep-ticking vote, read OUTSIDE the gate above and outside the engage
-  // branch inside it. `isAnimating()` is true while the manifest is in flight,
+  // The keep-ticking vote, read OUTSIDE the gate above rather than beside the
+  // `update` call. `isAnimating()` is true while the manifest is in flight,
   // which is a state the subsystem enters BEFORE it can ever engage — so a vote
   // consulted only on engaged frames would let a camera that stops moving
   // mid-fetch sleep the loop, and the feature would stay dormant until the next

@@ -13,15 +13,38 @@
  * is why it carries no unit test — the arithmetic it calls is covered in full one
  * layer up.
  *
+ * ## Engagement is a state of this subsystem, not a condition at the drive site
+ *
+ * `update()` runs on every frame Earth's layer draws, and the engage rule —
+ * `plan.zWin > baseLevel`, "has the whole-globe base texture started magnifying
+ * yet?" — is evaluated in here. It is read off the plan rather than re-derived
+ * as an altitude threshold because the planner already decided which level the
+ * screen's texel density calls for. The comparison is against `baseLevel` and
+ * NOT against the shallowest baked level, which the plan's own floor satisfies
+ * by construction; at or below the base there is nothing a tile could add.
+ *
+ * Siting the gate here rather than around the call is the whole point. As a
+ * drive-site `if`, engaging is a thing the caller does and disengaging is a
+ * thing that merely stops happening — an asymmetry that hides an entire missing
+ * half, and did: a camera that pulled back out left the last uploaded page
+ * table on the globe forever, painting ground from wherever it used to be.
+ * Owning both sides in one function means the disengaged frame is a frame this
+ * file sees, with somewhere to put the stand-down.
+ *
  * ## Lazy, because the atlas is 67 MB
  *
- * Construction allocates nothing. The atlas and the page-table texture are
- * created by the first `update()`, which the drive site only calls once the
- * planner says the base texture has started magnifying. A session that never
- * leaves the outer solar system pays for none of it, and `getTileResources()`
- * returning null is the state the renderer draws in until then — which it must
- * be able to do anyway, since a bind-group layout is fixed at pipeline creation
- * and cannot wait for an atlas.
+ * Construction allocates nothing, and neither does a disengaged frame. The
+ * atlas and the page-table texture are created by the first ENGAGED `update()`.
+ * A session that never leaves the outer solar system pays for none of it, and
+ * `getTileResources()` returning null is the state the renderer draws in until
+ * then — which it must be able to do anyway, since a bind-group layout is fixed
+ * at pipeline creation and cannot wait for an atlas.
+ *
+ * Standing down is therefore not the inverse of engaging: it uploads an
+ * all-zero page table and stops, keeping the atlas, the resident map and the
+ * bind group. A camera that pulls out and comes back finds its tiles still
+ * there, the LRU handles genuine pressure, and the placeholder machinery stays
+ * what it is — the pre-engage state, not a state to fall back into.
  *
  * ## The page table is rebuilt whole, every time, and never patched
  *
@@ -148,6 +171,11 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     readonly winX0: number;
     readonly winY0: number;
   } | null = null;
+  // Whether the all-zero page table has already been uploaded for the current
+  // disengaged spell. The stand-down is a transition, not a per-frame state: a
+  // camera parked just outside the engage altitude would otherwise re-upload the
+  // same 64 KB of zeroes for as long as it sat there.
+  let stoodDown = false;
 
   let destroyed = false;
 
@@ -278,7 +306,43 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
       [EARTH_TILE_WINDOW_SIDE, EARTH_TILE_WINDOW_SIDE, 1],
     );
     residencyDirty = false;
+    stoodDown = false;
     uploadedWindow = { zWin: plan.zWin, winX0: plan.winX0, winY0: plan.winY0 };
+  }
+
+  /**
+   * Leave the virtual texture showing nothing, once, on the frame the engage
+   * rule goes false.
+   *
+   * An all-zero page table is the identity: A is the blend weight, so a zeroed
+   * cell tells the fragment to take the whole-globe base texture and nothing
+   * else — the picture Earth draws in a session that never engages at all.
+   * Zeroing the table and reporting a null window from `getUploadedWindow()`
+   * are belt and braces, and either alone would be sufficient: the null window
+   * makes the draw site pack the all-zero identity window, and the zeroed cells
+   * make every cell the fragment could address weightless regardless of what
+   * window it addresses them through.
+   *
+   * Nothing is freed. The atlas costs 67 MB but re-fetching every tile costs a
+   * network round trip each, and the camera that just pulled out of the engage
+   * bracket is the one most likely to come straight back; the LRU is already the
+   * answer to genuine capacity pressure, and `destroy()` to a real teardown.
+   */
+  function standDown(): void {
+    // Never allocated means nothing to stand down — this is the path a session
+    // that never approaches Earth takes on every frame, and it must stay free.
+    if (pageTable === null || stoodDown) return;
+    device.queue.writeTexture(
+      { texture: pageTable },
+      new Uint8Array(EARTH_TILE_WINDOW_SIDE * EARTH_TILE_WINDOW_SIDE * 4),
+      { bytesPerRow: EARTH_TILE_WINDOW_SIDE * 4, rowsPerImage: EARTH_TILE_WINDOW_SIDE },
+      [EARTH_TILE_WINDOW_SIDE, EARTH_TILE_WINDOW_SIDE, 1],
+    );
+    stoodDown = true;
+    // Nulling this is what re-arms the rebuild: the next engaged frame reads it
+    // as a moved window, so the table is re-derived before anything is drawn
+    // through it.
+    uploadedWindow = null;
   }
 
   function update(input: { readonly plan: EarthTilePlan; readonly nowMs: number }): void {
@@ -289,7 +353,16 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     if (active === null) return;
 
     const { plan, nowMs } = input;
+    // Stamped on disengaged frames too, so the arrival callback and
+    // `isAnimating()` keep reading a current clock and fades from the last
+    // engaged spell can finish expiring rather than pinning the loop awake.
     lastFrameNowMs = nowMs;
+
+    if (!(plan.zWin > active.baseLevel)) {
+      standDown();
+      return;
+    }
+
     const atlas = stream ?? engage(active.tilePx);
 
     frameCounter++;
