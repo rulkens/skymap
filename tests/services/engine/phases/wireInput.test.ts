@@ -85,11 +85,16 @@ vi.mock('../../../../src/services/engine/interaction/inputBindings', () => ({
 
 // Imported AFTER the mocks so wireInput picks them up.
 import { wireInput } from '../../../../src/services/engine/phases/wireInput';
-import { selectSelectedRef, selectFocusRef } from '../../../../src/state/selection/selectors';
+import {
+  selectSelectedRef,
+  selectFocusRef,
+  selectPendingFocusId,
+} from '../../../../src/state/selection/selectors';
 import {
   updateSelectionSelect,
   updateSelectionFocus,
 } from '../../../../src/state/selection/selectionSlice';
+import { requestFocus } from '../../../../src/state/selection/requestFocus';
 import { EARTH_REF } from '../../../../src/data/selection/earthRef';
 
 // ── Fixtures ─────────────────────────────────────────────────────────
@@ -248,5 +253,25 @@ describe('wireInput', () => {
     const root = deps.cb.store.getState();
     expect(selectSelectedRef(root)).toEqual(jupiter);
     expect(selectFocusRef(root)).toEqual(jupiter);
+  });
+
+  it('defers the seed to a galaxy/star id still parked in a deferred resolve', async () => {
+    const state = makeState();
+    const deps = makeDeps();
+
+    // A galaxy/star focus id defers until its catalog pulse lands
+    // (`resolveFocusRefDeferring` parks it), so the resolved `focus` ref
+    // stays null for the whole boot window while `pending.focus` already
+    // holds the id — the extraReducer sets `pending.focus` synchronously,
+    // no saga needed to observe the guard here. A ref-only guard would read
+    // this as "empty" and seed Earth over the still-resolving deep link.
+    deps.cb.store.dispatch(requestFocus('m31'));
+
+    await wireInput(state, deps);
+
+    const root = deps.cb.store.getState();
+    expect(selectSelectedRef(root)).toBeNull();
+    expect(selectFocusRef(root)).toBeNull();
+    expect(selectPendingFocusId(root)).toBe('m31');
   });
 });

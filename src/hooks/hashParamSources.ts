@@ -21,7 +21,7 @@
  */
 
 import type { HashParamSource } from '../@types/hooks/HashParamSource';
-import { URL_HASH_FOR } from './urlHashFor';
+import { URL_HASH_FOR } from '../services/url/urlHashFor';
 import { requestFocus } from '../state/selection/requestFocus';
 import { requestSelect } from '../state/selection/requestSelect';
 import { clearSelection } from '../state/selection/selectionSlice';
@@ -35,6 +35,17 @@ import { EARTH_REF } from '../data/selection/earthRef';
 const focusSource: HashParamSource = {
   key: 'focus',
   write: (input) => {
+    // An in-flight request outranks the resolved slot. `requestFocus` for a
+    // galaxy or star parks inside `resolveFocusRefDeferring` until its catalog
+    // pulses, and the resolved slot stays null for that whole window — long
+    // enough for the write effect to run and compose a hash with no `focus` at
+    // all. The pending id is the very string the read handed to `requestFocus`,
+    // so republishing it is byte-identical to the URL that arrived.
+    //
+    // The home-is-a-bare-URL rule below survives this: the Earth seed writes its
+    // ref directly (`wireInput`'s `updateSelectionFocus(EARTH_REF)`), never as a
+    // request, so a plain load has no pending id to publish.
+    if (input.pendingFocusId !== null) return input.pendingFocusId;
     if (input.focused === null) return null;
     // Earth is the boot 'home' state: `wireInput` seeds it into focus so the
     // camera frames Earth, but home is the canonical EMPTY URL. Like the

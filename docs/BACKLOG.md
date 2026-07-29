@@ -45,6 +45,9 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Font atlas load blocks `initGpu`** `needs-design` — the ~297 KB Cormorant fetch is awaited before every renderer + catalog fetch in `initGpu` starts; make label rendering tolerate a missing atlas instead. → [details](backlog/2026-07-24-font-atlas-blocks-initgpu.md)
 - [ ] **Direct `slot.load()` sites bypass the asset queue** `needs-design` — five call sites fetch outside the bounded queue, so `ASSET_QUEUE_CONCURRENCY` is not the system-wide bound it reads as. → [details](backlog/2026-07-24-direct-loads-bypass-asset-queue.md)
 - [ ] **Companion-asset relation has three homes** `needs-design` — "famousMeta rides Famous" is authored as a registry list, a demand predicate, and a rank integer. → [details](backlog/2026-07-24-companion-asset-relation-three-homes.md)
+- [ ] **`?` query gates have no owner** `ready` — four gates read through five helpers at four moments, twice during render; collapse into a `URL_GATES` table seeded into `preloadedState`. → [details](backlog/2026-07-29-url-gates-registry.md)
+- [ ] **Twin selection request sagas** `ready` — `watchRequestFocusSaga`/`watchRequestSelectSaga` are structurally identical; fold into one row-driven saga (keep `takeLatest` per row). → [details](backlog/2026-07-29-twin-request-selection-sagas.md)
+- [ ] **`uiSlice` does boot I/O at module load** `needs-design` — `initialState = buildInitialUiState()` reads `window.location` + localStorage on import; make the fallback lazy. → [details](backlog/2026-07-29-uislice-module-load-boot-reads.md)
 
 ## Rendering
 
@@ -119,6 +122,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **move-files: untracked references** `ready` — ts-morph skips `?worker`/`?static` specifiers + `vi.mock` literals; a stale `?worker` is silent on BOTH tsc and vite build. Rewrite them, then fail loudly on anything still dangling. → [details](backlog/2026-07-14-move-files-untracked-references.md)
 - [ ] **refactor CLI follow-ups** `deferred` — runOp dispatch table + extract closure gaps (dropped `//` comments, `export {}` form, import carry) + refusal/error-context polish. → [details](backlog/2026-07-21-refactor-cli-followups.md)
 - [ ] **Dead files in `public/data/`** `ready` — unreachable `desi-deep-NEW.bin`/`desi-deep-OLD.bin` + superseded `clusters.ccat`/`clusters_meta.json` (structures.ccat replaced them); delete all four. `filaments-sdss.bin` is build-input only (`package.json:49`), not runtime-fetchable — keep it.
+- [ ] **`rootSaga` docblock restates its fork array** `ready` — the prose watcher list (`rootSaga.ts:6-23`) must be hand-kept in sync with `all([...])`; every new saga edits both.
 
 ## External / blocked
 
