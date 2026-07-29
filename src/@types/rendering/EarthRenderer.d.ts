@@ -78,6 +78,25 @@ export type EarthRenderer = Renderer & {
    */
   setPlaceholderMap(kind: TextureKind, atlas: ImageBitmap, rect: AtlasTileRect): void;
   /**
+   * Bind the surface virtual texture's page table and tile atlas — the views
+   * `earthTileSubsystem.getTileResources()` publishes once it has engaged — in
+   * place of the 1×1 stand-ins the renderer binds from construction, and rebuild
+   * the fragment bind group.
+   *
+   * The stand-ins exist because a bind-group layout is fixed at pipeline creation
+   * and the subsystem allocates nothing until the first engaged frame (the atlas
+   * is 67 MB, and most sessions never approach Earth). The placeholder page table
+   * is all-zero, and a zero blend weight means "sample the base", so a renderer
+   * that is never handed real resources draws exactly the picture it draws
+   * without the feature.
+   *
+   * Call on the null-to-non-null transition, NOT every frame: those two views are
+   * stable by identity once created, so a per-frame call would rebuild a bind
+   * group identical to the previous one. The views stay owned by the subsystem —
+   * this renderer's teardown releases its own stand-ins and never them.
+   */
+  setTileResources(pageTable: GPUTextureView, atlas: GPUTextureView): void;
+  /**
    * Draw the Earth into the current pass. `uniforms` is a length-32 Float32Array
    * (the 128-byte `EarthSurfaceUniforms` record from `packEarthSurfaceUniforms`):
    * 16 f32 column-major MVP + 3 f32 body-local sun direction + `roughnessBase` +
