@@ -1920,7 +1920,7 @@ git commit -m "refactor(loading): route the famous-star meta through an asset sl
 
 **Files:** none created. This task produces a review and any follow-up fixes.
 
-- [ ] **Step 1: Run the radar over the whole diff**
+- [x] **Step 1: Run the radar over the whole diff**
 
 Invoke the `entanglement-radar` skill with scope `git diff main...HEAD`. Report findings; apply only those that are real knots introduced by this change (a pre-existing documented knot gets referenced, not re-reported).
 
@@ -1929,12 +1929,12 @@ Specifically check the two places this change could have introduced a braid:
 - `labelGateFor`'s switch in `foregroundLabelsLayer` — it is a second dispatch on caption kind beside `CAPTION_PRIORITY`. If both now enumerate the same union, consider whether the gate belongs as a field on `ForegroundCaption` (produced once by `sceneBodyLabels`, which already knows each caption's source) rather than re-derived in the layer.
 - The `as StructureId` / `as BodyId` casts in `LABEL_HOME_BY_SOURCE_TYPE` — five of them now. Confirm the registry lookup that selects the row is genuinely what makes each cast sound, and that the comment says so.
 
-- [ ] **Step 2: Confirm the type-level fade coverage test still passes**
+- [x] **Step 2: Confirm the type-level fade coverage test still passes**
 
 Run: `npm test -- fadeLayers`
 Expected: the assertion that `FADE_LAYERS`' keys exactly cover `VisibilityLayerKey` passes with `starCatalogLabel` and `bodyLabel` present.
 
-- [ ] **Step 3: Visual pass**
+- [x] **Step 3: Visual pass**
 
 Start the dev server (`/dev`) and ask the user to confirm:
 
@@ -1943,7 +1943,7 @@ Start the dev server (`/dev`) and ask the user to confirm:
 - The Sun's sphere is unaffected by every toggle.
 - The Stars section's famous-star row still gates the seeded map.
 
-- [ ] **Step 4: Run `/feature-done`**
+- [x] **Step 4: Run `/feature-done`**
 
 Gate on the DoD, then relocate `docs/superpowers/plans/2026-07-28-body-sources-bear-labels.md` → `plans/completed/` and `docs/superpowers/specs/2026-07-28-body-sources-bear-labels.md` → `specs/completed/`, in the same PR (per `feedback_feature_done_before_merge`).
 
