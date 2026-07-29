@@ -41,8 +41,8 @@
  * analytic sphere it exists to reveal, shaving exactly the limb pixels the ray
  * test recovers. The margin arithmetic lives with the constant in
  * `analyticSphere.wesl` and is deliberately not restated here; what this file
- * owes it is counts coarse enough to stay cheap and fine enough that 1.05 still
- * covers the worst-case deficit.
+ * owes it is counts coarse enough to stay cheap and fine enough that
+ * `PROXY_SCALE` still covers the worst-case deficit.
  *
  * The atmosphere shell fragment (`shell/fragment.wesl`) reads none of this. It
  * intersects its ray with a purely physical ground radius —
