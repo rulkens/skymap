@@ -52,6 +52,7 @@ import type { StructureId } from '../../../@types/data/structure/StructureId';
 import { Source, SOURCE_REGISTRY } from '../../../data/sources';
 import { createFilamentSlot } from '../../loading/slots/filamentSlot';
 import { createFamousMetaSlot } from '../../loading/slots/famousMetaSlot';
+import { createFamousStarsMetaSlot } from '../../loading/slots/famousStarsMetaSlot';
 import { createStructureCatalogSlot } from '../../loading/slots/structureCatalogSlot';
 import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
 import { createFlowFieldSlot } from '../../loading/slots/flowFieldSlot';
@@ -314,6 +315,22 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     // Immediately behind its .bin (20) — the companion join wants the text to
     // ride alongside the binary, not to overtake it.
     priority: 21,
+  },
+
+  // ── Famous-star meta sidecar ──────────────────────────────────────
+  // Unlike famousMeta, there is no sibling `.bin` fetch to key the demand
+  // off: the famous stars are a seeded catalog compiled straight into the
+  // bundle, not loaded from a survey `.bin`. So this row is unconditionally
+  // demanded (mirrors `bodyTextureAtlas` above) rather than joining another
+  // slot's state — the tiny JSON just loads at boot alongside everything else.
+  {
+    key: 'famousStarsMeta',
+    factory: (deps) => createFamousStarsMetaSlot(deps.state, deps.cb),
+    req: (tier) => ({ tier }),
+    demand: () => true,
+    // Right behind famousMeta: both are tiny curated sidecars wanted early
+    // so the InfoCard has enriched text the first time either kind is hovered.
+    priority: 22,
   },
 
   // ── Cosmic-web filament skeleton ─────────────────────────────────

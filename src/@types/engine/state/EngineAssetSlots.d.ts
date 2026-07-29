@@ -26,6 +26,7 @@ import type { GalaxyCatalogReq } from '../../loading/GalaxyCatalogReq';
 import type { FilamentCloud } from '../../data/filament/FilamentCloud';
 import type { FilamentReq } from '../../loading/FilamentReq';
 import type { FamousPayload } from '../../loading/FamousPayload';
+import type { FamousStarsPayload } from '../../loading/FamousStarsPayload';
 import type { PgcAliasMap } from '../../loading/PgcAliasMap';
 import type { ScalarCube } from '../../data/volume/ScalarCube';
 import type { SyntheticVolumeReq } from '../../loading/SyntheticVolumeReq';
@@ -77,6 +78,22 @@ export type EngineAssetSlots = {
    * (matches `filaments` for the same lifecycle reason).
    */
   famousMeta: AssetSlot<FamousPayload, CompanionAssetReq> | null;
+  /**
+   * Famous-star `famous_stars_meta.json` sidecar — the star twin of
+   * `famousMeta`, routed through the same asset-slot machinery so the two
+   * curated sources load their metadata the same way.  Loaded eagerly at
+   * engine boot (`demand: () => true`, like `bodyTextureAtlas`): unlike
+   * `famousMeta`, there is no sibling `.bin` fetch to key the demand off —
+   * the famous stars are a seeded catalog compiled straight into the bundle
+   * — so the sidecar's own eagerness is the only signal. The subscriber
+   * writes the parsed array into the body store
+   * (`state.data.bodies.famousStarsMeta`).
+   *
+   * No `commit` step — there is nothing GPU-side to upload, just CPU state
+   * mutation done by the subscriber. Null until the IIFE mints it (matches
+   * `famousMeta` for the same lifecycle reason).
+   */
+  famousStarsMeta: AssetSlot<FamousStarsPayload, CompanionAssetReq> | null;
   /**
    * Cluster/supercluster coverage layer (`structures.ccat` + `structures_meta.json`)
    * routed through a slot for parity with the other CPU-side sidecars.  Loaded

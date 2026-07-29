@@ -512,6 +512,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       starCatalogs: new Map(),
       filaments: null,
       famousMeta: null,
+      famousStarsMeta: null,
       structureCatalog: null,
       pgcAlias: null,
       cf4Density: null,

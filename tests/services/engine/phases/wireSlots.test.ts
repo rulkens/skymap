@@ -94,6 +94,13 @@ vi.mock('../../../../src/services/loading/fetchers/famousMetaFetcher', () => ({
   famousMetaFetcher: vi.fn(async () => ({ meta: [] })),
 }));
 
+// famousStarsMeta demands unconditionally at boot (like bodyTextureAtlas
+// below), so its fetcher fires inside every wireSlots run; mock it so the
+// test doesn't network.
+vi.mock('../../../../src/services/loading/fetchers/famousStarsMetaFetcher', () => ({
+  famousStarsMetaFetcher: vi.fn(async () => ({ meta: [] })),
+}));
+
 // The structure-catalog slot fires `.load({})` at boot; mock its fetcher so
 // the test doesn't network.  An empty catalog is enough by default — the
 // merge test overrides this mock with a populated payload so wireStructureProjection

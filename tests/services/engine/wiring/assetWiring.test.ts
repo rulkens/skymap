@@ -90,6 +90,7 @@ describe('ASSET_WIRING membership', () => {
       Source.DesiSgw,
       Source.Synthetic,
       'famousMeta',
+      'famousStarsMeta',
       'filaments',
       'mcpm',
       'cf4Density',
@@ -133,6 +134,7 @@ describe('ASSET_WIRING membership', () => {
     // The sidecar rows are registry-built (no marker).
     expect(rowFor('filaments').built).toBeUndefined();
     expect(rowFor('famousMeta').built).toBeUndefined();
+    expect(rowFor('famousStarsMeta').built).toBeUndefined();
   });
 
   it('mints one externally-built row per body-texture family key', () => {
@@ -370,6 +372,7 @@ describe('ASSET_WIRING req builders', () => {
 
   it('tier-aware sidecars carry { tier }', () => {
     expect(rowFor('famousMeta').req('small')).toEqual({ tier: 'small' });
+    expect(rowFor('famousStarsMeta').req('small')).toEqual({ tier: 'small' });
     expect(rowFor('filaments').req('medium')).toEqual({ tier: 'medium' });
     expect(rowFor('mcpm').req('large')).toEqual({ tier: 'large' });
   });

@@ -18,6 +18,12 @@ import type { BodyTextureSlotKey } from '../data/BodyTextureSlotKey';
  *     needs its own key in the wiring registry even though its identity source
  *     is `Source.FamousGalaxy`.
  *
+ *   - `'famousStarsMeta'` — the `famous_stars_meta.json` sidecar, the star
+ *     twin of `'famousMeta'`. Unlike the famous galaxies, famous stars are a
+ *     SEEDED star catalog (compiled in, no `.bin` fetch), so there is no
+ *     sibling asset to key off — the sidecar is its own eager, tier-agnostic
+ *     load rather than a companion join.
+ *
  *   - `'pgcAlias'` — the PGC-alias lookup JSON. It is consumed across galaxy catalog
  *     sources (primarily 2MRS and GLADE) and has no unique `Source` code.
  *
@@ -83,6 +89,7 @@ export type AssetKey =
   | SourceType
   | 'structureCatalog'
   | 'famousMeta'
+  | 'famousStarsMeta'
   | 'pgcAlias'
   | 'filaments'
   | 'cf4Density'

@@ -7,6 +7,14 @@
  * private state.  The fetch is cheap and cacheable — a repeat mount hits the
  * same browser-cached response.
  *
+ * The engine *also* loads this sidecar internally (via its
+ * `famousStarsMeta` AssetSlot, the star twin of `famousMeta`), but exposing
+ * a parallel copy here lets the React layer read it without reaching into
+ * engine private state — same rationale as `useFamousMeta`. Converting both
+ * hooks to read the engine's copy through a shared bridge instead of
+ * fetching independently is a separate consistency pass; this hook and its
+ * galaxy-side sibling stay symmetric for now.
+ *
  * ### Why we expose a `ready` flag
  *
  * A consumer (the BodyDetailCard) needs to know when the fetch has settled
@@ -36,8 +44,10 @@ export function useFamousStarsMeta(): UseFamousStarsMetaReturn {
     const ac = new AbortController();
     // tier is ignored by famousStarsMetaFetcher; pass a placeholder so the
     // shared CompanionAssetReq shape stays uniform across companion
-    // fetchers.  We call the fetcher directly rather than routing through
-    // the engine's slot wiring — same payload either way.
+    // fetchers.  This hook fetches directly rather than reading the engine's
+    // own `famousStarsMeta` slot, so the React layer never reaches into
+    // engine private state — same payload either way, and the browser's HTTP
+    // cache means the engine's own slot fetch doesn't pay for it twice.
     famousStarsMetaFetcher({ tier: 'medium' }, ac.signal, () => {})
       .then((sc) => {
         setFamousStarsMeta(sc.meta);
