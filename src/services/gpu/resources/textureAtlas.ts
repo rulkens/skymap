@@ -12,7 +12,9 @@
  * items.
  *
  * Eviction is LRU by `lastSeenFrame`: when full, the slot with the oldest
- * `lastSeenFrame` is replaced. The caller calls `touch(key, frame)` every
+ * `lastSeenFrame` is replaced — unless that slot was claimed on the frame
+ * doing the asking, in which case `allocate` returns null instead of eating
+ * its own work (see its docstring). The caller calls `touch(key, frame)` every
  * frame the item is on screen so visible thumbnails stay alive.
  *
  * Geometry (atlasSide, slotSide) and pixel format are constructor
@@ -181,10 +183,26 @@ export class TextureAtlas {
 
   /**
    * Get the slot for `key`, allocating one if needed. Sets `lastSeenFrame`.
-   * If the atlas is full and `key` is new, evicts the LRU slot.
-   * Returns the slot index (callers use it to compute UVs).
+   * Returns the slot index (callers use it to compute UVs), or `null` when the
+   * atlas is full of slots already claimed on THIS frame.
+   *
+   * A resident key always gets its slot back, so refreshing what is already on
+   * screen never fails. Only a NEW key can be refused, and only when every slot
+   * carries `lastSeenFrame === frame`.
+   *
+   * Why refuse rather than evict? A consumer that wants more items than the
+   * atlas holds — the Earth tile planner asks for ~107 tiles against 64 slots —
+   * claims every slot early in the frame and keeps asking. Evicting there would
+   * recycle a slot claimed moments earlier in the same frame, undoing work
+   * already done, and because the consumer re-requests a stable set every frame
+   * from a stationary camera it would repeat forever: evict, refetch, evict.
+   * The bounded answer is to serve the requests that fit — the planners order
+   * theirs largest-on-screen-first — and tell the rest the atlas is full.
+   *
+   * A slot last seen on an EARLIER frame is a different story: it is genuinely
+   * stale, nothing this frame depends on it, and LRU recycles it as usual.
    */
-  allocate(key: string, frame: number): number {
+  allocate(key: string, frame: number): number | null {
     const existing = this.keyToSlot.get(key);
     if (existing !== undefined) {
       this.slots[existing]!.lastSeenFrame = frame;
@@ -208,6 +226,11 @@ export class TextureAtlas {
         lruFrame = f;
       }
     }
+    // Even the least-recently-used slot was claimed this frame, so every slot
+    // is spoken for and there is nothing to take. See the docstring for why
+    // taking one anyway is a refetch loop rather than a cache miss.
+    if (lruFrame === frame) return null;
+
     const evictedKey = this.slots[lruIdx]!.key;
     this.keyToSlot.delete(evictedKey);
     // Fire the eviction handler BEFORE we overwrite the slot, so the

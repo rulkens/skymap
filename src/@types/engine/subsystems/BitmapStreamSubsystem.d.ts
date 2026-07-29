@@ -43,6 +43,13 @@ export type BitmapStreamSubsystem = Destroyable & {
    * Allocate or refresh an LRU slot.  Returns slot index, or null when
    * every slot is in use AND none can be evicted.  Bumps the LRU clock
    * for an existing key.
+   *
+   * "None can be evicted" means every slot was claimed earlier in this same
+   * frame: taking one would undo work already done this frame, and with a
+   * consumer that re-requests a stable set every frame (a stationary camera
+   * over an over-subscribed atlas) that yields an unbounded refetch loop
+   * rather than a bounded atlas.  Callers skip the refused key and carry on
+   * with the rest of the frame's requests.
    */
   allocate(key: string, atFrame: number): number | null;
 

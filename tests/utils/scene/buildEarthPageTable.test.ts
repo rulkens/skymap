@@ -104,14 +104,17 @@ describe('buildEarthPageTable', () => {
     });
 
     // 65 distinct tiles at the window's own level, allocated with ascending
-    // frame numbers, so the 65th forces the LRU (the first) out of slot 0.
+    // frame numbers, so the 65th forces the LRU (the first) out of slot 0. One
+    // tile per frame also means no allocation is ever refused — `allocate`
+    // only returns null when the atlas is full of slots claimed on the frame
+    // doing the asking — hence the non-null assertions.
     const keys: string[] = [];
     for (let i = 0; i <= 64; i++) {
       const t = tile(7, i % 16, Math.floor(i / 16));
       const tileKey = earthTilePath(t);
       keys.push(tileKey);
       tileByKey.set(tileKey, t);
-      slotByKey.set(tileKey, atlas.allocate(tileKey, i));
+      slotByKey.set(tileKey, atlas.allocate(tileKey, i)!);
     }
     expect(slotByKey.has(keys[0]!)).toBe(false);
     expect(slotByKey.get(keys[64]!)).toBe(0);

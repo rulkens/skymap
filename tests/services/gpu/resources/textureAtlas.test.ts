@@ -118,6 +118,71 @@ describe('TextureAtlas slot state machine', () => {
     });
   });
 
+  // A consumer whose wanted set exceeds the atlas (the Earth tile planner asks
+  // for ~107 tiles against 64 slots) claims every slot within a single frame
+  // and then keeps asking. Evicting there would recycle a slot claimed moments
+  // earlier in the SAME frame, and since the consumer re-requests a stable set
+  // every frame from a stationary camera, that repeats forever: the evicted key
+  // is refetched next frame only to be evicted again. The atlas has to say
+  // "full" instead, which is what the `number | null` return exists for.
+  describe('over-budget within a single frame', () => {
+    // Deliberately tiny (2×2) so "wanted set exceeds capacity" is a handful of
+    // calls rather than hundreds.
+    const SMALL_SIDE = 256;
+    const SMALL_SLOT_COUNT = (SMALL_SIDE / SLOT_SIDE) * (SMALL_SIDE / SLOT_SIDE);
+    const newSmallAtlas = () =>
+      new TextureAtlas(null as unknown as GPUDevice, {
+        atlasSide: SMALL_SIDE,
+        slotSide: SLOT_SIDE,
+        format: 'rgba8unorm-srgb',
+        label: 'test-atlas-small',
+      });
+    // Twice capacity, so the back half is always over budget.
+    const WANTED = Array.from({ length: SMALL_SLOT_COUNT * 2 }, (_, i) => `tile-${i}`);
+
+    it('returns null rather than evicting a slot claimed earlier in the same frame', () => {
+      const a = newSmallAtlas();
+      const onEvict = vi.fn();
+      a.setEvictHandler(onEvict);
+
+      const slots = WANTED.map((key) => a.allocate(key, 1));
+
+      expect(slots.slice(0, SMALL_SLOT_COUNT)).toEqual([...Array(SMALL_SLOT_COUNT).keys()]);
+      expect(slots.slice(SMALL_SLOT_COUNT)).toEqual(new Array<null>(SMALL_SLOT_COUNT).fill(null));
+      expect(onEvict).not.toHaveBeenCalled();
+      // The keys that DID win slots keep them, unmolested by the over-budget tail.
+      expect(a.lastSeenFrame('tile-0')).toBe(1);
+    });
+
+    it('reaches a steady state when the same over-budget set repeats every frame', () => {
+      const a = newSmallAtlas();
+      const onEvict = vi.fn();
+      a.setEvictHandler(onEvict);
+
+      for (const frame of [1, 2, 3]) {
+        for (const key of WANTED) a.allocate(key, frame);
+      }
+
+      // A stationary camera asking for the same tiles must stop churning: any
+      // eviction here is a slot recycled inside the frame that claimed it, and
+      // the consumer would refetch it on the next frame, forever.
+      expect(onEvict).not.toHaveBeenCalled();
+      expect(a.lastSeenFrame('tile-0')).toBe(3);
+    });
+
+    it('still evicts across a frame boundary — a slot last seen earlier is stale', () => {
+      const a = newSmallAtlas();
+      const onEvict = vi.fn();
+      a.setEvictHandler(onEvict);
+
+      for (let i = 0; i < SMALL_SLOT_COUNT; i++) a.allocate(`tile-${i}`, 1);
+      // Frame 2: every resident slot is now a frame behind, so the atlas is free
+      // to recycle the oldest for a genuinely new key.
+      expect(a.allocate('tile-new', 2)).toBe(0);
+      expect(onEvict).toHaveBeenCalledWith('tile-0');
+    });
+  });
+
   it('slotUv returns the [u0,v0,u1,v1] rectangle for a slot in [0,1] coords', () => {
     const a = newAtlas();
     expect(a.slotUv(0)).toEqual([0, 0, SLOT_SIDE / ATLAS_SIDE, SLOT_SIDE / ATLAS_SIDE]);
