@@ -45,12 +45,14 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Font atlas load blocks `initGpu`** `needs-design` — the ~297 KB Cormorant fetch is awaited before every renderer + catalog fetch in `initGpu` starts; make label rendering tolerate a missing atlas instead. → [details](backlog/2026-07-24-font-atlas-blocks-initgpu.md)
 - [ ] **Direct `slot.load()` sites bypass the asset queue** `needs-design` — five call sites fetch outside the bounded queue, so `ASSET_QUEUE_CONCURRENCY` is not the system-wide bound it reads as. → [details](backlog/2026-07-24-direct-loads-bypass-asset-queue.md)
 - [ ] **Companion-asset relation has three homes** `needs-design` — "famousMeta rides Famous" is authored as a registry list, a demand predicate, and a rank integer. → [details](backlog/2026-07-24-companion-asset-relation-three-homes.md)
+- [ ] **`?` query gates have no owner** `ready` — four gates read through five helpers at four moments, twice during render; collapse into a `URL_GATES` table seeded into `preloadedState`. → [details](backlog/2026-07-29-url-gates-registry.md)
+- [ ] **Twin selection request sagas** `ready` — `watchRequestFocusSaga`/`watchRequestSelectSaga` are structurally identical; fold into one row-driven saga (keep `takeLatest` per row). → [details](backlog/2026-07-29-twin-request-selection-sagas.md)
+- [ ] **`uiSlice` does boot I/O at module load** `needs-design` — `initialState = buildInitialUiState()` reads `window.location` + localStorage on import; make the fallback lazy. → [details](backlog/2026-07-29-uislice-module-load-boot-reads.md)
 
 ## Rendering
 
 - [ ] **Multi-star sphere presence** `deferred` — the field-star sphere is one-at-a-time (nearest wins); a Gaia-resolved double a few AU apart would leave the companion sprite-retired with no body. → [details](backlog/2026-07-21-multi-star-sphere-presence.md)
 - [ ] **Saturn ring brightness** `ready` — the ring reads too dim next to the new limb-darkened disc; retune ring albedo/exposure (surfaced in the planet-atmospherics per-body visual pass).
-- [ ] **Atmosphere limb transparent seam** `needs-investigation` — thin fully-transparent ring between a body's surface and its atmosphere shell (seen on Mars). → [details](backlog/2026-07-24-atmosphere-limb-transparent-seam.md)
 - [ ] **Body-texture colour calibration** `needs-design` — Mars reads over-saturated; the `sss` sources are enhanced, not colorimetric, and no target appearance is recorded. → [details](backlog/2026-07-24-mars-texture-colour-calibration.md)
 - [ ] **Body-texture store consolidation** `needs-design` — four renderers (textured, Earth, ring, cloud-shell) each hand-roll map storage + placeholder fallback separately. → [details](backlog/2026-07-24-body-texture-store-consolidation.md)
 - [ ] **Photoreal-Earth follow-ups** `deferred` — drift traps + fidelity gaps from plans A–E (equirect-uv mirror, setMap kind table, shared proxy-sphere idiom). → [details](backlog/2026-07-19-photoreal-earth-followups.md)
@@ -100,6 +102,9 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 - [ ] **InfoCard live phase + apparent-mag rows** `needs-design` — grow the engine time pub with phase angle + apparent magnitude for the focused body (distance row shipped in #472). → [details](backlog/2026-07-21-infocard-phase-apparent-mag-rows.md)
 - [ ] **"You are here" label continuity** `needs-design` — the label fades out below 2 kpc (`surveyDeepZoom` band); decide whether it hands off toward the Sun/Earth instead of vanishing. → [details](backlog/2026-07-22-you-are-here-label-continuity.md)
+- [ ] **Analytic pick fills the screen from inside a body** `needs-design` — camera can zoom inside a radius; the ray then hits the far wall everywhere. Decide with Earth deep zoom. → [details](backlog/2026-07-29-analytic-pick-inside-body.md)
+- [ ] **Earth caption stamp out-picks occluders** `ready` — the forced-band 18 px Earth pick point punches through a transiting Moon. → [details](backlog/2026-07-29-earth-caption-stamp-outpicks-occluders.md)
+- [ ] **Touch picking selects the wrong galaxy** `needs-design` — the pick pad is in device px, so the clickable disc halves on retina/phone. → [details](backlog/2026-07-29-touch-pick-accuracy.md)
 - [ ] **StatusBar mobile reflow** `ready` — reflow the StatusBar for narrow viewports (no media queries today). The InfoCard bottom-sheet + SettingsPanel collapse-launcher already shipped.
 - [ ] **SettingsPanel polish** `needs-design` — visual cleanup + section re-ordering + per-section icons; 2.3k lines of hand-coded text-only rows today. → [details](backlog/2026-07-22-settings-panel-polish.md)
 - [ ] **Schema-driven slider rows** `needs-design` — a scalar knob costs ~9 hand-edited sites (default, type, seed, reducer, export, selector, container ×3, props, JSX, fixtures); VolumeFieldRow has 7, Display 6. → [details](backlog/2026-07-29-schema-driven-slider-rows.md)
@@ -121,6 +126,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **move-files: untracked references** `ready` — ts-morph skips `?worker`/`?static` specifiers + `vi.mock` literals; a stale `?worker` is silent on BOTH tsc and vite build. Rewrite them, then fail loudly on anything still dangling. → [details](backlog/2026-07-14-move-files-untracked-references.md)
 - [ ] **refactor CLI follow-ups** `deferred` — runOp dispatch table + extract closure gaps (dropped `//` comments, `export {}` form, import carry) + refusal/error-context polish. → [details](backlog/2026-07-21-refactor-cli-followups.md)
 - [ ] **Dead files in `public/data/`** `ready` — unreachable `desi-deep-NEW.bin`/`desi-deep-OLD.bin` + superseded `clusters.ccat`/`clusters_meta.json` (structures.ccat replaced them); delete all four. `filaments-sdss.bin` is build-input only (`package.json:49`), not runtime-fetchable — keep it.
+- [ ] **`rootSaga` docblock restates its fork array** `ready` — the prose watcher list (`rootSaga.ts:6-23`) must be hand-kept in sync with `all([...])`; every new saga edits both.
 
 ## External / blocked
 

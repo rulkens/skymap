@@ -23,7 +23,7 @@ import { Source } from '../../../data/sources';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { DiskInstance } from '../../../@types/rendering/DiskInstance';
 import type { DiskRowVisitor } from '../../../@types/engine/subsystems/DiskRowVisitor';
-import type { GalaxyAtlasSubsystem } from '../../../@types/engine/subsystems/GalaxyAtlasSubsystem';
+import type { BitmapStreamSubsystem } from '../../../@types/engine/subsystems/BitmapStreamSubsystem';
 import type { HiResFamousSubsystem } from '../../../@types/engine/subsystems/HiResFamousSubsystem';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type {
@@ -51,7 +51,7 @@ const LOAD_FADE_MS = 400;
 
 export type TexturedDiskDeps = {
   readonly device: GPUDevice;
-  readonly atlas: GalaxyAtlasSubsystem;
+  readonly atlas: BitmapStreamSubsystem;
   /** For tests.  Defaults to fetchGalaxyBitmap. */
   readonly fetcher?: (args: {
     ra: number;

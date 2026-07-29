@@ -1,42 +1,44 @@
 /**
- * GalaxyAtlasSubsystem — shared GPU texture atlas + bitmap-fetch queue
- * for the LOD-2 (textured-disk) galaxy path.
+ * BitmapStreamSubsystem — shared GPU texture atlas + bitmap-fetch queue
+ * for streaming bitmaps into a fixed-size GPU atlas on demand.
  *
  * ### What this owns
  *
- * The 2048² LRU atlas texture, the LRU clock, the priority-queued bitmap
- * fetcher, failure memoisation, and an eviction notification hook.  It
- * has NO direct connection to per-frame catalog walking — that lives in
- * `texturedDiskSubsystem`, which calls into this atlas to allocate
- * slots and schedule fetches.
+ * The LRU atlas texture (geometry + format supplied by the caller), the
+ * LRU clock, the priority-queued bitmap fetcher, failure memoisation, and
+ * an eviction notification hook.  It has NO catalog awareness and NO
+ * per-frame planning — those live in the caller (e.g. `texturedDiskSubsystem`
+ * for the galaxy LOD-2 path), which calls into this atlas to allocate slots
+ * and schedule fetches.
  *
  * ### Why a separate subsystem
  *
  * Pre-split, this state lived inline in `thumbnailSubsystem` alongside
- * per-frame planning + render dispatch.  Splitting it out gives the LOD-2
- * planner (`texturedDiskSubsystem`) one focused dependency to inject
- * — and gives future code that wants to read atlas state (debug HUD,
- * memory profilers) a typed surface to consume.
+ * per-frame planning + render dispatch.  Splitting it out gives each
+ * per-frame planner one focused dependency to inject.  Its shape carries
+ * no assumption about what kind of image is being streamed or what the
+ * atlas's grid geometry is, which is what lets more than one consumer
+ * (e.g. the galaxy thumbnail atlas and an Earth surface tile atlas) each
+ * configure their own atlas and reuse this machinery unchanged.
  *
  * ### Eviction handler protocol
  *
- * `setEvictHandler` is the seam by which the LOD-2 planner clears its
- * own parallel maps (`bitmapReady`, `bitmapFailed`, `bitmapReadyTime`)
+ * `setEvictHandler` is the seam by which a per-frame planner clears its
+ * own parallel maps (e.g. `bitmapReady`, `bitmapFailed`, `bitmapReadyTime`)
  * when the atlas's LRU recycles a slot.  Without this hook, those
- * parallel maps grow without bound — a pre-split bug fixed by the
- * `atlas.setEvictHandler` wiring in `thumbnailSubsystem.ts` lines 418-422.
+ * parallel maps grow without bound.
  */
 
 import type { Destroyable } from '../../rendering/Destroyable';
 
-export type GalaxyAtlasFetchInput = {
+export type BitmapStreamFetchInput = {
   readonly key: string;
   readonly priority: number;
   readonly fetcher: () => Promise<ImageBitmap | null>;
   readonly onResult: (bitmap: ImageBitmap | null) => void;
 };
 
-export type GalaxyAtlasSubsystem = Destroyable & {
+export type BitmapStreamSubsystem = Destroyable & {
   /**
    * Allocate or refresh an LRU slot.  Returns slot index, or null when
    * every slot is in use AND none can be evicted.  Bumps the LRU clock
@@ -61,7 +63,7 @@ export type GalaxyAtlasSubsystem = Destroyable & {
   uploadBitmap(slot: number, bitmap: ImageBitmap): void;
 
   /** Idempotent — re-enqueueing an in-flight key only refreshes priority. */
-  enqueueFetch(input: GalaxyAtlasFetchInput): void;
+  enqueueFetch(input: BitmapStreamFetchInput): void;
 
   /** Reports whether the bitmap has landed in the atlas / failed to fetch. */
   isLoaded(key: string): boolean;

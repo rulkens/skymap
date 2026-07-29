@@ -8,10 +8,10 @@
  * every whole step is a doubling, giving uniform perceptual spacing across the
  * whole range.
  *
- * Presentation only — state stores the linear multiplier, because `hdrKnee` and
- * the tone curve's whitepoint are both expressed in post-exposure linear units
- * and would have to convert back the moment they were compared. The inverse is
- * `evToExposure`.
+ * Presentation only — state keeps the linear multiplier, since that is the space
+ * the curve's own parameters (the Reinhard whitepoint, the asinh softness) and
+ * `hdrKnee` are all expressed in, and anything comparing against them would have
+ * to convert back. The inverse is `evToExposure`.
  */
 
 export function exposureToEv(exposure: number): number {

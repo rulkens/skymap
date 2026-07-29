@@ -15,13 +15,24 @@
  *      `clearSelection` on every normal page load. The two watch sagas
  *      own resolution and deferral.
  *
- *   B. URL WRITE (runs on every store-derived `focused` change)
+ *   B. URL WRITE (runs on every store read the hash depends on)
  *      Reads `selectFocusedFocusable` from the Redux store and
  *      derives the canonical hash body via `computeDesiredHash` +
  *      `URL_HASH_FOR`. Calls `history.pushState` only when the body
- *      actually differs. No pending-slot gating — the saga owns
- *      deferral, so the write is open immediately after a `focused`
- *      value lands.
+ *      actually differs.
+ *
+ *      It also reads `selectPendingFocusId` and publishes that id
+ *      ahead of the resolved target. A `requestFocus` for a galaxy or
+ *      star defers inside `resolveFocusRefDeferring` until its catalog
+ *      pulses, so on a cold `#focus=<galaxy>` load the write would
+ *      otherwise run against an empty focus slot and pushState the bare
+ *      URL, destroying the deep link the visitor arrived on. Publishing
+ *      the intent keeps the URL truthful across the resolve window;
+ *      suppressing the write instead would leave a stale hash sitting on
+ *      screen after a `clearSelection` that never resolves anything.
+ *
+ *      It composes from a fresh `store.getState()` read rather than the
+ *      render snapshot — see the effect for why.
  *
  * ──────────────────────────────────────────────────────────────────────
  * Why pushState fires no hashchange (no write↔read loop)
@@ -60,8 +71,8 @@ import type { OrientationFrameId } from '../@types/camera/OrientationFrameId';
 import { HASH_PARAM_SOURCES } from './hashParamSources';
 import { parseHashParams } from '../utils/url/parseHashParams';
 import { composeHashParams } from '../utils/url/composeHashParams';
-import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { selectFocusedFocusable } from '../state/selection/selectors';
+import { useAppDispatch, useAppSelector, useAppStore } from '../store/hooks';
+import { selectFocusedFocusable, selectPendingFocusId } from '../state/selection/selectors';
 import { selectTimeState } from '../state/time/selectors';
 import { selectOrientation } from '../state/settings/selectors';
 
@@ -70,6 +81,12 @@ import { selectOrientation } from '../state/settings/selectors';
 export type DesiredHashInput = {
   focused: FocusableTarget | null;
   currentHash: string;
+  // The id of a `requestFocus` that has not resolved yet, read by the `focus`
+  // source's write so an in-flight intent still reaches the URL. Required rather
+  // than optional (unlike `time`): a caller that forgets it composes a perfectly
+  // valid bare hash and silently reintroduces the clobber, so the omission has to
+  // be a type error rather than a plausible-looking URL.
+  pendingFocusId: string | null;
   // The sim-clock intent, read by the `t` source's write to serialize a manual
   // instant. Optional so focus-only callers (and the existing focus tests) that
   // carry no clock still typecheck: a missing `time` means "no manual instant to
@@ -123,7 +140,9 @@ export function computeDesiredHash(input: DesiredHashInput): DesiredHashOutput {
 
 export function useUrlSync(): void {
   const dispatch = useAppDispatch();
+  const store = useAppStore();
   const focused = useAppSelector(selectFocusedFocusable);
+  const pendingFocusId = useAppSelector(selectPendingFocusId);
   const time = useAppSelector(selectTimeState);
   const orientation = useAppSelector(selectOrientation);
 
@@ -154,17 +173,37 @@ export function useUrlSync(): void {
   }, [dispatch]);
 
   // ── Effect B: store → URL WRITE ──────────────────────────────────────
-  // Derives the canonical hash body from the resolved focus target and
-  // writes it via `pushState`. The no-op `matches` check prevents
-  // history-state churn under React Strict Mode and noisy re-renders.
-  // No pending-slot gating — the saga owns deferral, so the write opens
-  // the moment a `focused` value lands in the store.
+  // Derives the canonical hash body from the store and writes it via
+  // `pushState`. The no-op `matches` check prevents history-state churn
+  // under noisy re-renders. The pending id (above) keeps a deferring focus
+  // request on the URL for the whole resolve window.
+  //
+  // Composes from a fresh `store.getState()` read, not the `focused` /
+  // `pendingFocusId` / `time` / `orientation` values closed over from this
+  // render. An effect runs after the commit that scheduled it, and more
+  // dispatches can land in between — the render snapshot can already be
+  // stale by the time the effect body executes. The mount commit is the
+  // case that bites hardest: Effect A's own mount-time dispatches
+  // (`requestSelect` + `requestFocus` for a `#focus=<id>` deep link) fire
+  // during the SAME commit, before this effect runs, so a fresh read at
+  // that point already reflects them. The composed body matches the URL
+  // the visitor arrived on, and the existing `matches` check skips the
+  // write — no separate mount case to special-case.
+  //
+  // The `useAppSelector` calls above stay: they are what SUBSCRIBES this
+  // component to those store slices, which is what makes React schedule a
+  // re-run of this effect when one of them changes. Their VALUES are no
+  // longer read here — only `store.getState()`'s are — but the subscription
+  // is still load-bearing. Removing them as "unused" would silently stop
+  // the write from ever re-running.
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    const state = store.getState();
     const { desiredHashBody, matches } = computeDesiredHash({
-      focused,
-      time,
-      orientation,
+      focused: selectFocusedFocusable(state),
+      pendingFocusId: selectPendingFocusId(state),
+      time: selectTimeState(state),
+      orientation: selectOrientation(state),
       currentHash: window.location.hash,
     });
     if (matches) return;
@@ -178,5 +217,15 @@ export function useUrlSync(): void {
     // `orientation` is a dependency so an interactive frame switch re-writes the
     // hash (default composes no param, so switching to/from the default toggles
     // the `orientation` bytes on the URL).
-  }, [focused, time, orientation]);
+    // `pendingFocusId` is a dependency so the write re-runs when a focus request
+    // is filed AND again when it retires — the second run is what swaps the raw
+    // requested id for the resolved target's canonical encoding.
+    //
+    // This array is the third of three hand-maintained parallel lists (the
+    // `useAppSelector` calls and `DesiredHashInput`'s fields are the other two),
+    // all saying "these are the store reads the write depends on". A missing
+    // entry composes a valid hash and silently never writes. The saga port
+    // deletes all three: `write` takes `RootState`, and the trigger set becomes
+    // each source's own declaration.
+  }, [focused, pendingFocusId, time, orientation, store]);
 }
