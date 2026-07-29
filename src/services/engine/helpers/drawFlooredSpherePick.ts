@@ -45,6 +45,18 @@
  * the floored one would place the ray origin too far out, shrinking the apparent
  * pick disc back below the floor for exactly the distant bodies the floor exists
  * to keep clickable.
+ *
+ * ### A second invariant this glosses over: the render origin
+ *
+ * `camPosMpc` and `positionMpc` are both absolute (heliocentric) Mpc, so
+ * feeding them straight into `Math.hypot` above and into `camPosLocal` below
+ * treats them as already sharing one frame. That is only true because
+ * `RENDER_ORIGIN_MPC` (`src/data/renderOrigin.ts`) is `[0, 0, 0]` today —
+ * `composeBodyMvp` separately subtracts it when building the mvp. A dynamic
+ * render origin would move the mvp's frame without moving these two
+ * positions, so both would need reducing to that same origin before either
+ * use below. Left alone deliberately: nothing dynamic exists yet to reduce
+ * against.
  */
 
 import type { BodyPickRenderer } from '../../../@types/rendering/BodyPickRenderer';
