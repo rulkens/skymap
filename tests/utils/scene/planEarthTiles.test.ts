@@ -67,6 +67,10 @@ function nadirAt(altitudeKm: number, lonDeg = 20, latDeg = 15) {
     maxTileLevel: 13,
     windowSide: EARTH_TILE_WINDOW_SIDE,
     tilePx: EARTH_TILE_PX,
+    // Fixture default is the 1:1 point, not the shipped `EARTH_TILE_LOD_BIAS`,
+    // so every test above that predates the bias keeps asserting the rule it
+    // was written against rather than a softened one.
+    lodBias: 0,
   };
 }
 
@@ -112,6 +116,27 @@ describe('planEarthTiles', () => {
       expect(zWin, `${altitudeKm} km vs hand-computed`).toBe(expectedLevel(altitudeKm));
       previous = zWin;
     }
+  });
+
+  it('a lodBias of 1 settles exactly one level shallower, with fewer requests', () => {
+    // The whole reason the bias exists: it is a global softening of the level
+    // rule, so at the same camera it must shift `zWin` by exactly the bias and
+    // shrink the request list, never leave either unchanged.
+    const unbiased = planEarthTiles(nadirAt(1000));
+    const biased = planEarthTiles({ ...nadirAt(1000), lodBias: 1 });
+    expect(biased.zWin).toBe(unbiased.zWin - 1);
+    expect(biased.requests.length).toBeLessThan(unbiased.requests.length);
+  });
+
+  it('a lodBias large enough to push the settled level below baseLevel still floors there', () => {
+    // The subtraction is new and, unlike the log2 term it modifies, can push the
+    // pre-clamp level below the walk's floor. `Math.max(baseLevel, ...)` must
+    // still win, which this pins down: an oversized bias reports zWin at the
+    // floor with nothing to fetch, the same shape as the far-altitude
+    // stand-down, rather than an underflowed level with no tile behind it.
+    const plan = planEarthTiles({ ...nadirAt(1000), lodBias: 1000 });
+    expect(plan.zWin).toBe(EARTH_TILE_BASE_LEVEL);
+    expect(plan.requests).toEqual([]);
   });
 
   it('engages against the shipped z5-only pyramid, and stands down above it', () => {

@@ -89,6 +89,7 @@ import {
   EARTH_TILE_BASE_LEVEL,
   EARTH_TILE_CONCURRENCY,
   EARTH_TILE_FADE_MS,
+  EARTH_TILE_LOD_BIAS,
   EARTH_TILE_MIN_LEVEL,
   EARTH_TILE_PX,
   EARTH_TILE_WINDOW_SIDE,
@@ -218,6 +219,7 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
       minTileLevel,
       maxTileLevel: levels.max,
       windowSide: EARTH_TILE_WINDOW_SIDE,
+      lodBias: EARTH_TILE_LOD_BIAS,
     };
   }
 

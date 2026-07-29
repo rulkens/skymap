@@ -36,4 +36,7 @@ export type EarthTilePlannerParams = {
   readonly maxTileLevel: number;
   /** Page-table window edge, in tiles at the finest level. */
   readonly windowSide: number;
+  /** Levels coarser than one texel per screen pixel the planner settles for;
+   *  see `EARTH_TILE_LOD_BIAS`. */
+  readonly lodBias: number;
 };

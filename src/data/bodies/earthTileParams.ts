@@ -100,3 +100,30 @@ export const EARTH_TILE_FADE_MS = 400;
 /** WGS84 equatorial circumference in metres — the numerator of every
  *  metres-per-texel figure on the ladder. */
 export const EARTH_EQUATORIAL_CIRCUMFERENCE_M = 40075016.686;
+
+/**
+ * Levels COARSER than one texel per screen pixel that the planner settles for.
+ * `0` is the 1:1 point the level rule derives on its own; each step up quarters
+ * the tile count the walk wants, because one level is a 2x reduction in linear
+ * screen extent per patch and the walk is over a 2D grid.
+ *
+ * This is this codebase's spelling of Cesium's `maximumScreenSpaceError`: that
+ * knob is a geometric error in pixels, and reducing its formula gives the same
+ * mip rule with a `-log2(tau)` bias where `tau` is the error tolerance — one
+ * rule, two constants. A dev laptop wants roughly 107 tiles against a 64-slot
+ * atlas at bias 0; the virtual-texturing literature's answer to an
+ * oversubscribed cache is this bias, not a bigger atlas or dropping tiles —
+ * id Tech 5 calls it dynamic feedback LOD bias, Unreal
+ * `bEnableResidencyMipMapBias`, Unity's automatic mipmap bias, and CesiumJS
+ * ships its imagery chain targeting roughly one texel per TWO screen pixels
+ * rather than 1:1. One level here brings ~107 down to ~27, fitting the atlas
+ * with headroom, at the cost of a uniform one-level softening in place of the
+ * scattered patches an oversubscribed cache falls back to instead.
+ *
+ * Fixed rather than servoed against resident-page count: the literature's
+ * mechanism is a hysteretic controller with high and low water marks, which is
+ * the escalation to reach for once a deeper pyramid makes demand swing between
+ * frames. There is nothing for a controller to track while the pyramid is one
+ * level deep, so a constant is the whole answer today.
+ */
+export const EARTH_TILE_LOD_BIAS = 1;

@@ -29,11 +29,18 @@ import { equirectUvToDirection } from '../math/equirectUvToDirection';
  * ## The one level rule
  *
  * A patch at level `z` whose projected extent is `screenPx` needs level
- * `z + ceil(log2(screenPx / tilePx))`. That is stated once, here, and the
- * engage gate elsewhere reads `plan.zWin > baseLevel` rather than re-deriving a
- * distance threshold — the two are the same statement about screen texel
- * density seen from opposite ends, and having two homes for it would be two
- * places to get the exponent wrong.
+ * `z + ceil(log2(screenPx / tilePx)) - lodBias`. That is stated once, here, and
+ * the engage gate elsewhere reads `plan.zWin > baseLevel` rather than
+ * re-deriving a distance threshold — the two are the same statement about
+ * screen texel density seen from opposite ends, and having two homes for it
+ * would be two places to get the exponent wrong. `lodBias` softens the rule
+ * away from its 1:1 point to keep the walk's demand inside the atlas; see
+ * `EARTH_TILE_LOD_BIAS` for why it is a constant and not a servo. Raising the
+ * bias lowers the level the walk settles at for a given `screenPx` — it takes a
+ * bigger `screenPx`, i.e. a closer camera, to reach the same depth as bias 0 —
+ * so more views settle at `zWin === baseLevel` and the engage gate stands down
+ * at a lower altitude than it would at bias 0. That is the intended effect of
+ * the bias, not a side effect of it.
  *
  * ## Why the walk floor and the request floor are different levels
  *
@@ -81,6 +88,9 @@ export function planEarthTiles(input: {
   /** Page-table window edge, in tiles at the finest level. */
   readonly windowSide: number;
   readonly tilePx: number;
+  /** Levels coarser than one texel per screen pixel to settle for; see
+   *  `EARTH_TILE_LOD_BIAS`. */
+  readonly lodBias: number;
 }): EarthTilePlan {
   const {
     kind,
@@ -92,6 +102,7 @@ export function planEarthTiles(input: {
     maxTileLevel,
     windowSide,
     tilePx,
+    lodBias,
   } = input;
 
   const camLen = Math.hypot(camPosLocal[0], camPosLocal[1], camPosLocal[2]);
@@ -199,9 +210,13 @@ export function planEarthTiles(input: {
     if (!(screenPx > 0)) continue;
 
     // ── 3 & 4. Refine or emit ─────────────────────────────────────────────
+    // `lodBias` is subtracted AFTER the ceil, not folded into the log argument:
+    // for an integer bias `ceil(x) - bias === ceil(x - bias)`, so the two are
+    // exact, and subtracting after keeps the 1:1 rule intact and legible on its
+    // own rather than baked into the log's operand.
     const required = Math.min(
       maxTileLevel,
-      Math.max(baseLevel, z + Math.ceil(Math.log2(screenPx / tilePx))),
+      Math.max(baseLevel, z + Math.ceil(Math.log2(screenPx / tilePx)) - lodBias),
     );
     if (required > z && z < maxTileLevel) {
       stack.push(z + 1, x * 2, y * 2);
