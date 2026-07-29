@@ -6,11 +6,11 @@
  * `useAppDispatch` find the store.  The wrapper is built with `createElement`
  * (not JSX) so this stays a `.ts` file — matches the hooks.test.ts convention.
  *
- * `status` and `loadProgress` are now read from the engine Redux slice inside
- * the hook rather than being passed as input props.  Tests that previously
- * passed them via `makeInput` now seed the engine slice via the Task-1 action
- * creators (`engineStatusChanged`, `engineLoadProgressChanged`) before or
- * during the render.
+ * `status` and `loadProgress` are read from the engine Redux slice inside the
+ * hook rather than passed as input props, so these tests seed the engine slice
+ * via `engineStatusChanged` / `engineLoadProgressChanged` before or during the
+ * render.  Both readiness conditions live there, which is why `makeInput` now
+ * carries nothing that affects `blocked`.
  *
  * Visibility init (first-visit / deep-link / seenVersion gates) is covered by
  * `buildInitialUiState.test.ts`.  These tests assert that `splashVisible`
@@ -28,10 +28,7 @@ import { createAppStore } from '../../src/store/createAppStore';
 import { buildInitialUiState } from '../../src/state/ui/buildInitialUiState';
 import { buildInitialSettings } from '../../src/state/settings/initialState';
 import { dismissSplash, reopenSplash } from '../../src/state/ui/uiSlice';
-import {
-  engineStatusChanged,
-  engineLoadProgressChanged,
-} from '../../src/state/engine/engineSlice';
+import { engineStatusChanged, engineLoadProgressChanged } from '../../src/state/engine/engineSlice';
 import { selectSplashVisible, selectSplashDismissedVersion } from '../../src/state/ui/selectors';
 import { CURRENT_SPLASH_VERSION } from '../../src/state/ui/splashStorage';
 import type { UseSplashInput } from '../../src/@types/splash/UseSplashInput';
@@ -39,10 +36,7 @@ import type { UiState } from '../../src/@types/ui/UiState';
 import { Source } from '../../src/data/sources';
 
 function makeInput(overrides: Partial<UseSplashInput> = {}): UseSplashInput {
-  return {
-    famousMetaReady: false,
-    ...overrides,
-  };
+  return { ...overrides };
 }
 
 /**
@@ -176,7 +170,7 @@ describe('useSplash — blocked state', () => {
     window.history.replaceState(null, '', '/');
   });
 
-  it('flips blocked=false when engine ready + famousMetaReady + no loadProgress', () => {
+  it('flips blocked=false when the engine reports ready with no loadProgress', () => {
     const ui: UiState = {
       paletteOpen: false,
       uiHidden: false,
@@ -189,23 +183,16 @@ describe('useSplash — blocked state', () => {
 
     // Start with the default engine state (initializing, no loadProgress).
     // Hook reads status + loadProgress from the store.
-    const { result, rerender } = renderHook(
-      ({ input }: { input: UseSplashInput }) => useSplash(input),
-      { wrapper, initialProps: { input: makeInput() } },
-    );
+    const { result } = renderHook(() => useSplash(makeInput()), { wrapper });
     expect(result.current.blocked).toBe(true);
 
-    // Drive engine to ready state via the store.
+    // Both gate conditions now live in the store, so driving it is the whole
+    // trigger — no input prop participates in readiness.
     act(() => {
-      store.dispatch(
-        engineStatusChanged({ kind: 'ready', count: 100, source: Source.SDSS }),
-      );
+      store.dispatch(engineStatusChanged({ kind: 'ready', count: 100, source: Source.SDSS }));
       store.dispatch(engineLoadProgressChanged(null));
     });
 
-    // famousMetaReady is the only remaining prop — rerender with it true.
-    // (engine status + loadProgress are already in the store.)
-    rerender({ input: makeInput({ famousMetaReady: true }) });
     expect(result.current.blocked).toBe(false);
   });
 
@@ -219,16 +206,11 @@ describe('useSplash — blocked state', () => {
     const { store } = createAppStore({ settings: buildInitialSettings(), ui });
     // Seed the engine slice: status=ready, loadProgress in-flight.
     store.dispatch(engineStatusChanged({ kind: 'ready', count: 100, source: Source.SDSS }));
-    store.dispatch(
-      engineLoadProgressChanged({ loadedBytes: 1, totalBytes: 2, inFlightCount: 1 }),
-    );
+    store.dispatch(engineLoadProgressChanged({ loadedBytes: 1, totalBytes: 2, inFlightCount: 1 }));
     const wrapper = ({ children }: { children: ReactNode }) =>
       createElement(Provider, { store, children });
 
-    const { result } = renderHook(
-      () => useSplash(makeInput({ famousMetaReady: true })),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useSplash(makeInput()), { wrapper });
     expect(result.current.blocked).toBe(true);
   });
 });
@@ -332,10 +314,9 @@ describe('useSplash error mapping', () => {
     store.dispatch(engineLoadProgressChanged(null));
     const wrapper = ({ children }: { children: ReactNode }) =>
       createElement(Provider, { store, children });
-    const { result } = renderHook(
-      () => useSplash(makeInput({ famousMetaReady: true, famousMetaFailed: true })),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useSplash(makeInput({ famousMetaFailed: true })), {
+      wrapper,
+    });
     expect(result.current.error).toEqual({ kind: 'famous-meta-failed' });
   });
 
@@ -353,10 +334,7 @@ describe('useSplash error mapping', () => {
     store.dispatch(engineLoadProgressChanged(null));
     const wrapper = ({ children }: { children: ReactNode }) =>
       createElement(Provider, { store, children });
-    const { result } = renderHook(
-      () => useSplash(makeInput({ famousMetaReady: true })),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useSplash(makeInput()), { wrapper });
     expect(result.current.error).toBeNull();
   });
 });

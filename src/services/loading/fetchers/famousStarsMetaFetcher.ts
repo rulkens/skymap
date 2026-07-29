@@ -9,8 +9,8 @@
  *
  * The rejected alternative — swallow 404s into empty values so the card
  * keeps working on developer clones without the build step that emits the
- * sidecar — belongs a layer up: the React hook (`useFamousStarsMeta`) maps
- * a rejection → "feature off" by leaving the empty default in place.
+ * sidecar — belongs a layer up: the slot's subscriber maps a rejection →
+ * "feature off" by reporting an empty array to the engine slice.
  * Keeping the fetcher honest about HTTP status lets any retry policy
  * distinguish "really gone" (404, give up) from "transient flake"
  * (5xx, retry).

@@ -26,22 +26,26 @@
  *
  * ### Readiness signal
  *
- * The grill (Q4) resolved to "medium gating": the CTAs activate when
- *   1.  the engine is in `ready` state (WebGPU init done + first frame),
- *   2.  no catalog fetch is currently in flight (`loadProgress === null`),
- *   3.  famous-meta has settled (`famousMetaReady`).
+ * The CTAs activate when
+ *   1.  the engine is in `ready` state (WebGPU init done + first frame), and
+ *   2.  no catalog fetch is currently in flight (`loadProgress === null`).
  * The hook does NOT differentiate between Explore and Tour readiness —
  * both buttons activate together so the user never sees "Tour disabled,
- * Explore enabled" intermediate UI.  Famous-meta failure is treated as
- * "ready" downstream (the hook's input plumbing receives `ready=true`
- * from useFamousMeta in both success and error cases), but the splash
- * does render a disabled Tour tooltip — that's wired in Task 6's error
- * mapping plus the Splash component's disabled-state CSS.
+ * Explore enabled" intermediate UI.
+ *
+ * **Why famous-meta is not a third condition.** The sidecar loads through its
+ * asset slot, and that slot's demand is conditional: it waits for the
+ * famous-galaxy `.bin` to leave `idle`, which in turn requires
+ * `galaxyCatalogs.items.famousGalaxy.enabled`. With that category switched off
+ * the slot never loads and never reports, so a readiness flag derived from it
+ * would never settle — stranding the CTAs behind the 8 s escape hatch for a
+ * payload that was never coming. Gating on a signal that can legitimately never
+ * arrive is worse than not gating: the Tour may open before its InfoCard text
+ * exists, which degrades one panel, where the alternative blocks the whole
+ * entry point.
  *
  * `status` and `loadProgress` are read from the Redux engine slice via
- * `useAppSelector` — they are no longer threaded in as props.  Only
- * `famousMetaReady` / `famousMetaFailed` remain as inputs because they
- * come from `useFamousMeta`, not the engine store.
+ * `useAppSelector` rather than threaded in as props.
  *
  * ### 8 s "Continue anyway" timer
  *
@@ -67,7 +71,7 @@ import { dismissSplash, reopenSplash } from '../state/ui/uiSlice';
 export const CONTINUE_ANYWAY_DELAY_MS = 8_000;
 
 export function useSplash(input: UseSplashInput): UseSplashReturn {
-  const { famousMetaReady, famousMetaFailed = false } = input;
+  const { famousMetaFailed = false } = input;
 
   // ── Engine state from the Redux slice ────────────────────────────────────
   //
@@ -88,12 +92,11 @@ export function useSplash(input: UseSplashInput): UseSplashReturn {
 
   // ── Readiness signal ─────────────────────────────────────────────────────
   //
-  // The CTAs activate when the engine reports `ready`, no catalog fetches
-  // are in flight, and famous-meta has settled.  `blocked` is the
-  // negation — true while we're still waiting.
+  // The CTAs activate when the engine reports `ready` and no catalog fetches
+  // are in flight.  `blocked` is the negation — true while we're still waiting.
   const ready = useMemo(
-    () => status.kind === 'ready' && loadProgress === null && famousMetaReady,
-    [status, loadProgress, famousMetaReady],
+    () => status.kind === 'ready' && loadProgress === null,
+    [status, loadProgress],
   );
   const blocked = !ready;
 

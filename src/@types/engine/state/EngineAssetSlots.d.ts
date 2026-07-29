@@ -70,11 +70,11 @@ export type EngineAssetSlots = {
    * parity with point loads.  Loaded eagerly at engine boot — the JSON
    * is tiny so the cost is negligible, and the InfoCard depends on
    * `meta` being present whenever a famous galaxy is hovered.  The
-   * subscriber writes the parsed array straight into the galaxy store
-   * (`state.data.galaxies.famousMeta`).
+   * subscriber dispatches the parsed array into the Redux `engine` slice;
+   * the engine reads it back via `state.famousMeta`.
    *
-   * No `commit` step — there is nothing GPU-side to upload, just CPU
-   * state mutation done by the subscriber.  Null until the IIFE mints it
+   * No `commit` step — there is nothing GPU-side to upload, just the
+   * dispatch done by the subscriber.  Null until the IIFE mints it
    * (matches `filaments` for the same lifecycle reason).
    */
   famousMeta: AssetSlot<FamousPayload, CompanionAssetReq> | null;
@@ -86,11 +86,12 @@ export type EngineAssetSlots = {
    * `famousMeta`, there is no sibling `.bin` fetch to key the demand off —
    * the famous stars are a seeded catalog compiled straight into the bundle
    * — so the sidecar's own eagerness is the only signal. The subscriber
-   * writes the parsed array into the body store
-   * (`state.data.bodies.famousStarsMeta`).
+   * reports the parsed array to the engine Redux slice
+   * (`engineFamousStarsMetaReported`), the only place it is read from: unlike
+   * `famousMeta`, no engine code consults these entries, just the InfoCard.
    *
-   * No `commit` step — there is nothing GPU-side to upload, just CPU state
-   * mutation done by the subscriber. Null until the IIFE mints it (matches
+   * No `commit` step — there is nothing GPU-side to upload, just the store
+   * dispatch done by the subscriber. Null until the IIFE mints it (matches
    * `famousMeta` for the same lifecycle reason).
    */
   famousStarsMeta: AssetSlot<FamousStarsPayload, CompanionAssetReq> | null;

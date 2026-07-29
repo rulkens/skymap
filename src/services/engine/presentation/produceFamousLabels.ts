@@ -177,7 +177,7 @@ export function produceFamousLabels(
     return empty;
   }
 
-  const meta = galaxies.famousMeta;
+  const meta = state.famousMeta;
   const catalog = galaxies.get(Source.FamousGalaxy);
   if (meta.length === 0 || catalog === undefined || catalog.count === 0) return empty;
 

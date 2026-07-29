@@ -3,30 +3,33 @@
  *
  * Carries `famous_stars_meta.json` through the standard asset-slot machinery,
  * the star twin of `famousMetaSlot`. The two curated sources — the famous
- * galaxies and the famous stars — now load their sidecars by the same path,
- * so neither has a bespoke fetch to reason about.
+ * galaxies and the famous stars — load their sidecars by the same path, so
+ * neither has a bespoke fetch to reason about.
  *
  * No `commit` step: there's nothing GPU-side to upload — the payload is pure
- * metadata consumed by the InfoCard via `state.data.bodies.famousStarsMeta`.
- * The subscriber writes the field; the render wake is `installSlotReadyWake`'s
- * job, not the factory's.
+ * metadata for the InfoCard. The subscriber reports it to the engine slice
+ * (`engineFamousStarsMetaReported`), which is where the card's container reads
+ * it from; the engine itself has no use for the array, so parking a second copy
+ * on the body store would be mirror state with no reader. The render wake is
+ * `installSlotReadyWake`'s job, not the factory's.
  *
  * **Graceful degradation on error.** The fetcher throws on HTTP failure (so
  * the retry policy distinguishes "really gone" from "transient flake"), and
- * this subscriber maps `kind: 'error'` → "feature off" by writing an empty
+ * this subscriber maps `kind: 'error'` → "feature off" by reporting an empty
  * array. Net effect: the stars render without enriched InfoCard text, and the
  * engine keeps running.
  */
 
 import { createAssetSlot } from '../AssetSlot';
 import { famousStarsMetaFetcher } from '../fetchers/famousStarsMetaFetcher';
+import { engineFamousStarsMetaReported } from '../../../state/engine/engineSlice';
 import type { FamousStarsPayload } from '../../../@types/loading/FamousStarsPayload';
 import type { CompanionAssetReq } from '../../../@types/loading/CompanionAssetReq';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 
 export const createFamousStarsMetaSlot: SlotFactory<FamousStarsPayload, CompanionAssetReq> = (
-  state,
-  _cb,
+  _state,
+  cb,
 ) => {
   const slot = createAssetSlot({
     name: 'famous-stars-meta',
@@ -34,13 +37,13 @@ export const createFamousStarsMetaSlot: SlotFactory<FamousStarsPayload, Companio
   });
   slot.subscribe((s) => {
     if (s.kind === 'ready') {
-      state.data.bodies.setFamousStarsMeta(s.value.meta);
+      cb.store.dispatch(engineFamousStarsMetaReported(s.value.meta));
     }
     if (s.kind === 'error') {
-      // Defensive — the field defaults to `[]` already, but writing it again
-      // here is explicit about the contract: missing sidecar disables enriched
-      // InfoCard text but keeps the engine functional.
-      state.data.bodies.setFamousStarsMeta([]);
+      // The slice already defaults to `[]`, but reporting it again here is
+      // explicit about the contract: a missing sidecar disables enriched
+      // InfoCard text and keeps the engine functional.
+      cb.store.dispatch(engineFamousStarsMetaReported([]));
       console.warn('[engine] famous-stars sidecar failed to load:', s.error);
     }
   });

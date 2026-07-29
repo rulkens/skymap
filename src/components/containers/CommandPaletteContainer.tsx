@@ -26,10 +26,10 @@
 import { memo } from 'react';
 import type { RefObject } from 'react';
 import CommandPalette from '../CommandPalette/CommandPalette';
-import { useFamousMeta } from '../../hooks/useFamousMeta';
 import { useAliasIndex } from '../../hooks/useAliasIndex';
 import { useStructureIndex } from '../../hooks/useStructureIndex';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { selectFamousMeta } from '../../state/engine/selectors';
 import { selectPaletteOpen } from '../../state/ui/selectors';
 import { setPaletteOpen } from '../../state/ui/uiSlice';
 import { requestFocus } from '../../state/selection/requestFocus';
@@ -45,7 +45,7 @@ function CommandPaletteContainer({
 }: CommandPaletteContainerProps): React.ReactElement {
   const dispatch = useAppDispatch();
   const paletteOpen = useAppSelector(selectPaletteOpen);
-  const { famousMeta } = useFamousMeta();
+  const famousMeta = useAppSelector(selectFamousMeta);
   const { aliasIndex } = useAliasIndex({ paletteOpen, engineHandleRef });
   const structures = useStructureIndex({ paletteOpen, engineHandleRef });
   return (

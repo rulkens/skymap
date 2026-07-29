@@ -516,7 +516,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       catalogs: state.data.galaxies.catalogs,
       visibleSourceMask: masks.draw,
       pxPerRad: ctx.drawPxPerRad,
-      famousMeta: state.data.galaxies.famousMeta,
+      famousMeta: state.famousMeta,
     });
   }
   // ONE shared catalog walk drives both disk-planner bodies. It computes each
@@ -542,7 +542,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       }),
       texturedDisks.beginFrame({
         ...sharedInput,
-        famousMeta: state.data.galaxies.famousMeta,
+        famousMeta: state.famousMeta,
         nowMs: ctx.nowMs,
       }),
     );

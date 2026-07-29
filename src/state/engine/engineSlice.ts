@@ -38,6 +38,8 @@ import type { SourceType } from '../../@types/data/SourceType';
 import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { LoadProgressState } from '../../@types/loading/LoadProgressState';
 import type { ProvenanceCounts } from '../../@types/engine/ProvenanceCounts';
+import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
+import type { FamousStarMetaEntry } from '../../@types/loading/FamousStarMetaEntry';
 
 /**
  * Initial scale-bar value that renders something sensible before the engine
@@ -53,6 +55,8 @@ const initialState: EngineSliceState = {
   structureCounts: {},
   provenanceCounts: {},
   loadProgress: null,
+  famousMeta: [],
+  famousStarsMeta: [],
 };
 
 const engineSlice = createSlice({
@@ -102,6 +106,25 @@ const engineSlice = createSlice({
       state.loadProgress = action.payload;
     },
 
+    // ── curated metadata sidecars ────────────────────────────────────────────
+    // Whole-array replace, dispatched once per sidecar by its asset slot when
+    // the fetch settles — success writes the parsed entries, failure writes `[]`
+    // so React's fail-soft paths are reached by the same route as "not loaded
+    // yet". The alternative — React fetching the same JSON a second time from
+    // its own hook — put two loaders on one payload, and neither could see the
+    // other's failure. The spread copies the readonly payload into the Immer
+    // draft, which wants a mutable array slot even though nothing mutates it.
+    engineFamousMetaReported: (state, action: PayloadAction<readonly FamousMetaEntry[]>) => {
+      state.famousMeta = [...action.payload];
+    },
+
+    engineFamousStarsMetaReported: (
+      state,
+      action: PayloadAction<readonly FamousStarMetaEntry[]>,
+    ) => {
+      state.famousStarsMeta = [...action.payload];
+    },
+
     // ── scale bar ────────────────────────────────────────────────────────────
     // DEDUP-ON-WRITE: skip the mutation when both scalar fields are unchanged.
     // Without this guard, every autorotate frame would produce a new `scale`
@@ -138,6 +161,8 @@ export const {
   engineProvenanceCountsReported,
   engineStructureCountsChanged,
   engineLoadProgressChanged,
+  engineFamousMetaReported,
+  engineFamousStarsMetaReported,
   engineScaleChanged,
   engineBodyDistanceReported,
 } = engineSlice.actions;
