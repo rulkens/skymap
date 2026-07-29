@@ -9,20 +9,21 @@
  * `LabelHomes` the label-projection reads, and wraps the label dispatch in a
  * `useCallback`. It also owns the overlay guide rows — constellations (the
  * stick figures, whose name captions ride the same gate) and orbit trails —
- * flat singleton settings that route straight to their own setters. The
- * presentational `LabelsAndGuidesSection` imports nothing from `store/` or
- * `state/`.
+ * flat singleton settings that route straight to their own setters. All of it
+ * is assembled into one uniform `SectionRow` array; the presentational
+ * `LabelsAndGuidesSection` imports nothing from `store/` or `state/` and has
+ * no notion of where any row's bit lives.
  *
  * ### Label-visibility projection
  *
  * Label visibility lives in several authoritative homes — structure items, the
  * galaxy catalog items (famousGalaxy), the star catalog items (famousStar), the
- * body items (Earth, the planets), and the milkyWay scalar. The projection
- * (`projectLabelCategoryVisibility`) merges them into the flat
- * `Record<LabelCategory, boolean>` the section's checkboxes read. The `useMemo`
- * rebuilds only when any of those stable-reference inputs change — each is a
- * per-cluster selector output, never `state.settings` itself, which Immer
- * re-identifies on every write.
+ * body items (Earth, the planets, the Sun), and the milkyWay scalar. The
+ * projection (`projectLabelCategoryVisibility`) merges them into the flat
+ * `Record<LabelCategory, boolean>` the row-building memo below reads. The
+ * `useMemo` rebuilds only when any of those stable-reference inputs change —
+ * each is a per-cluster selector output, never `state.settings` itself, which
+ * Immer re-identifies on every write.
  *
  * ### Label dispatch
  *
@@ -30,6 +31,15 @@
  * row names its source type, and that type's row knows both where the bit is
  * read from and which action writes it. A new label-bearing source type is a
  * row in that table, not another branch here.
+ *
+ * ### Row order
+ *
+ * `LABEL_CATEGORIES` iterates `SOURCE_REGISTRY` in ascending `Source` code
+ * order (registry keys are the numeric codes, and JS iterates integer-keyed
+ * object properties in ascending order regardless of source-file layout) —
+ * there is no separate display-order mechanism, so the panel renders
+ * label-bearing categories in registry-code order, then the two hand-authored
+ * guide rows.
  *
  * ### Why `[dispatch]` only in `useCallback`
  *
@@ -42,7 +52,6 @@
 
 import { memo, useCallback, useMemo } from 'react';
 import LabelsAndGuidesSection from '../SettingsPanel/LabelsAndGuidesSection';
-import type { NonCategoryRow } from '../SettingsPanel/LabelsAndGuidesSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
   selectStructureItems,
@@ -60,7 +69,10 @@ import {
 import { projectLabelCategoryVisibility } from '../../state/settings/projectLabelCategoryVisibility';
 import { LABEL_HOME_BY_SOURCE_TYPE } from '../../data/labels/labelHomeBySourceType';
 import { SOURCE_TYPE_BY_LABEL_CATEGORY } from '../../data/labels/sourceTypeByLabelCategory';
+import { LABEL_CATEGORIES } from '../../data/structure/labelCategories';
+import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
 import type { LabelCategory } from '../../@types/engine/data/LabelCategory';
+import type { SectionRow } from '../../@types/components/SectionRow';
 
 function LabelsAndGuidesSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();
@@ -116,17 +128,19 @@ function LabelsAndGuidesSectionContainer(): React.ReactElement {
     [dispatch],
   );
 
-  // The non-category boolean rows the section renders + folds into its master
-  // tri-state, in render order (constellations, orbit trails). Assembling the
-  // array here keeps the section free of any per-row prop plumbing: a new row
-  // is one more entry, not a fresh prop pair threaded through both components.
-  // Each `id` is the checkbox element id. The constellations row governs both
-  // the stick figures and their name captions — there is no separate names
-  // toggle. No CAPTION toggle belongs here: every caption-bearing source is a
-  // label-bearing registry row, so its toggle arrives with the other categories
-  // through `LABEL_CATEGORIES`.
-  const nonCategoryRows: ReadonlyArray<NonCategoryRow> = useMemo(
+  // Every checkbox the section renders, in one uniform shape: the label rows
+  // derived from the registry, plus the two hand-authored guide rows. There is
+  // no other way to build a "rows" array — constellations and orbitTrails gate
+  // LINE OVERLAYS, not labels, so they have no registry row's label axis to
+  // derive from and stay hand-authored here.
+  const rows: ReadonlyArray<SectionRow> = useMemo(
     () => [
+      ...LABEL_CATEGORIES.map((cat) => ({
+        id: `toggle-label-${cat}`,
+        label: CATEGORY_DISPLAY_INFO[cat].plural,
+        enabled: labelCategoryVisibility[cat],
+        onChange: (enabled: boolean) => onSetLabelCategoryVisibility(cat, enabled),
+      })),
       {
         id: 'toggle-constellations',
         label: 'Constellations',
@@ -140,16 +154,17 @@ function LabelsAndGuidesSectionContainer(): React.ReactElement {
         onChange: onToggleOrbitTrails,
       },
     ],
-    [constellationsEnabled, onToggleConstellations, orbitTrailsEnabled, onToggleOrbitTrails],
+    [
+      labelCategoryVisibility,
+      onSetLabelCategoryVisibility,
+      constellationsEnabled,
+      onToggleConstellations,
+      orbitTrailsEnabled,
+      onToggleOrbitTrails,
+    ],
   );
 
-  return (
-    <LabelsAndGuidesSection
-      labelCategoryVisibility={labelCategoryVisibility}
-      onSetLabelCategoryVisibility={onSetLabelCategoryVisibility}
-      nonCategoryRows={nonCategoryRows}
-    />
-  );
+  return <LabelsAndGuidesSection rows={rows} />;
 }
 
 export default memo(LabelsAndGuidesSectionContainer);
