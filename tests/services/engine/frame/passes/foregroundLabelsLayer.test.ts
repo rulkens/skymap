@@ -161,6 +161,7 @@ function makeState(
   bodyLabels: boolean | { earth: boolean; planet: boolean; sun?: boolean } = true,
   starMapEnabled = true,
   sunVisible = true,
+  starCatalogsMasterEnabled = true,
 ): EngineState {
   const bodies =
     typeof bodyLabels === 'boolean'
@@ -181,10 +182,12 @@ function makeState(
           sun: { enabled: sunVisible, labelEnabled: bodies.sun },
         },
       },
-      // The cluster master is on: the caption's visibility gate requires it AND
-      // the row's own bit, matching how `visibleStars` composes the pair.
+      // The cluster master defaults on: the caption's visibility gate requires
+      // it AND the row's own bit, matching how `visibleStars` composes the
+      // pair. `starCatalogsMasterEnabled` lets a test drop the master alone,
+      // independent of the row-level `famousStar.enabled`.
       starCatalogs: {
-        enabled: true,
+        enabled: starCatalogsMasterEnabled,
         items: { famousStar: { enabled: starMapEnabled, labelEnabled: starMapLabelsEnabled } },
       },
     },
@@ -625,6 +628,39 @@ describe('foregroundLabelsLayer.draw', () => {
     );
     expect(offLabels.some((l) => l.id === SUN_LABEL_ID)).toBe(true);
     expect(offLabels.some((l) => l.id === earthId)).toBe(true);
+  });
+
+  it('mutes the star map when the cluster master is off, even with the row and label on', () => {
+    // `subjectVisible` for the star row is `starCatalogs.enabled &&
+    // items.famousStar.enabled` — a caption must not survive the cluster
+    // master that hid the dot it names. Here the row's own `enabled` and
+    // `labelEnabled` are both on (defaults); only the master is off, isolating
+    // that half of the conjunction.
+    const base = sceneBodyLabels(J2000_STATES);
+    const earthId = sceneBodyLabelId('earth');
+    const camPos: Vec3 = [...base.find((l) => l.id === earthId)!.worldPos] as Vec3;
+
+    rebaseMock.mockReturnValueOnce(makeSpreadVp());
+    const renderer = makeRenderer(6);
+    foregroundLabelsLayer.draw(
+      PASS_STUB,
+      makeNear0View(camPos),
+      makeCtx(5e-4),
+      makeState(
+        renderer,
+        makeLineRenderer(),
+        /* starMapLabelsEnabled */ true,
+        true,
+        /* starMapEnabled (row) */ true,
+        true,
+        /* starCatalogsMasterEnabled */ false,
+      ),
+    );
+    const drawn = (renderer.setLabels as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0]![0] as readonly Label[];
+    expect(drawn.some((l) => SCENE_STAR_LABEL_IDS.has(l.id) && l.id !== SUN_LABEL_ID)).toBe(false);
+    expect(drawn.some((l) => l.id === SUN_LABEL_ID)).toBe(true);
+    expect(drawn.some((l) => l.id === earthId)).toBe(true);
   });
 
   it('mutes only the planet captions when the planet row’s label is off', () => {

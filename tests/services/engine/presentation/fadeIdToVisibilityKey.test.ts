@@ -33,6 +33,10 @@ describe('fadeIdToVisibilityKey', () => {
     expect(fadeIdToVisibilityKey({ kind: 'orbitTrails' })).toBe('orbitTrails');
   });
 
+  it("maps a constellations id to 'constellations'", () => {
+    expect(fadeIdToVisibilityKey({ kind: 'constellations' })).toBe('constellations');
+  });
+
   it("maps a structure ring id to 'structureRing'", () => {
     // All StructureId values collapse to the same key.
     expect(fadeIdToVisibilityKey({ kind: 'structure', id: 'cluster' })).toBe('structureRing');
@@ -80,6 +84,16 @@ describe('fadeIdToVisibilityKey', () => {
     expect(fadeIdToVisibilityKey({ kind: 'labelLayer', layer: 'structure', item: 'cluster' })).toBe(
       'structureLabel',
     );
+  });
+
+  it("maps labelLayer 'starCatalog' to 'starCatalogLabel'", () => {
+    expect(fadeIdToVisibilityKey({ kind: 'labelLayer', layer: 'starCatalog' })).toBe(
+      'starCatalogLabel',
+    );
+  });
+
+  it("maps labelLayer 'body' to 'bodyLabel'", () => {
+    expect(fadeIdToVisibilityKey({ kind: 'labelLayer', layer: 'body' })).toBe('bodyLabel');
   });
 
   // Non-clip-fadeable kinds.
