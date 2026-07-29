@@ -493,11 +493,39 @@ disabled — so the common case (anywhere outside the inner solar system) costs 
       `requestRender`, and a mid-fade tile keeps it ticking through the fade. Subsystems
       never wake themselves (`project_render_wake_consolidation`) — surface the vote, let
       `shouldKeepTicking` decide, exactly as `prepareStarCut` does at `runFrame.ts:561-574`.
-- [ ] **Verify with no shader change:** descend to Earth in the dev server, watch the Network
+- [x] **Verify with no shader change:** descend to Earth in the dev server, watch the Network
       tab. Tiles must arrive largest-on-screen-first, at most 4 concurrently, and **stop**
       when the camera stops. A sustained stream while stationary means the planner is
       oscillating at a level boundary — fix that here, before the shader can mask it.
-- [ ] Commit.
+- [x] Commit.
+
+**This checkpoint earned its place — it caught two bugs no test reached, both of the same
+shape: a contract stated in one place and never honoured in another.**
+
+1. **The engage gate could never fire.** It compared `plan.zWin` against a floor the
+   planner guaranteed it would meet. Fixed by splitting `baseLevel` from `minTileLevel`
+   (see Corrections item 4).
+2. **`TextureAtlas.allocate` evicted a slot claimed earlier in the SAME frame.** Its LRU
+   scan uses a strict `<`, so once every slot carries the current frame stamp the winner
+   stays index 0 and each over-budget request evicts it again. Every eviction clears
+   `bitmapReady`, so the next frame refetched the key: ~2600 requests/second from a
+   stationary camera. `BitmapStreamSubsystem`'s type already documented the `null` return
+   and BOTH consumers already guarded on it — the guards were dead code, so the galaxy
+   thumbnail path carried the same latent loop and had simply never exceeded its budget.
+
+**Peak demand is at the ENGAGE transition, not at close approach** — a sphere at distance
+has near-uniform texel density, so the whole visible cap refines one level at once.
+Measured against the 64-slot atlas: 29 tiles at 1440x900 @1x, 64 at 2560x1440 @1x, 107 on
+a 14" MBP, 149 at 5K. Every retina viewport overshoots. Over-budget now degrades
+gracefully (requests arrive largest-first, so the biggest tiles win the slots and the rest
+fall back to the base), but that is a visible resolution boundary mid-screen at the engage
+altitude — **judge it at D6, and revisit `EARTH_TILE_ATLAS_SIDE` if it reads badly.** The
+spec sized the atlas from close-approach demand, which is the wrong end of the curve.
+
+**Known, deferred, not blocking:** the camera scrolls through the planet's surface
+(`clampDistance`'s floor is global and sits ~0.49 body radii from Earth's centre). Costs
+the ability to dwell at low altitude and turn, which is exactly the D6 gesture. Backlogged
+as `docs/backlog/2026-07-29-per-body-zoom-floor.md`.
 
 ---
 
