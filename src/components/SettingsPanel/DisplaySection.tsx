@@ -40,6 +40,8 @@ import { orientationFrameLabel } from '../../data/orientation/orientationFrameLa
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../data/defaults';
 import { STAR_EMISSIVE } from '../../data/starRenderConstants';
+import { exposureToEv } from '../../utils/exposureToEv';
+import { evToExposure } from '../../utils/evToExposure';
 import CollapsibleSection from './CollapsibleSection';
 import Slider from '../common/Slider/Slider';
 import styles from './SettingsPanel.module.css';
@@ -56,6 +58,15 @@ const ORIENTATION_FRAME_IDS: readonly OrientationFrameId[] = [
     (id) => id !== DEFAULT_ORIENTATION,
   ),
 ];
+
+/**
+ * Explicit `+` on gains above unity, the photographic convention — without it
+ * "1.6 EV" and "-1.6 EV" read as the same kind of number at a glance, when they
+ * are a 3× brightening and a 3× darkening.
+ */
+function formatEv(ev: number): string {
+  return `${ev > 0 ? '+' : ''}${ev.toFixed(1)} EV`;
+}
 
 // ── Props ──────────────────────────────────────────────────────────────────────
 
@@ -157,14 +168,17 @@ function DisplaySection({
       </div>
 
       <div className={styles.panelRow}>
+        {/* Shown in stops, stored as the linear gain the tone-map wants: equal
+            steps in linear exposure are wildly unequal perceptually, so the
+            slider would crawl at the dim end and jump at the bright one. */}
         <Slider
           label="Exposure"
-          value={exposure}
-          min={0.1}
+          value={exposureToEv(exposure)}
+          min={-4}
           max={4}
-          step={0.1}
-          onChange={onExposureChange}
-          format={(v) => v.toFixed(1)}
+          step={0.25}
+          onChange={(ev) => onExposureChange(evToExposure(ev))}
+          format={formatEv}
         />
       </div>
 

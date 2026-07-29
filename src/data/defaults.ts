@@ -294,9 +294,10 @@ export const DEFAULT_TONE_MAP_CURVE: ToneMapCurveT = ToneMapCurve.Reinhard;
 /**
  * Default exposure multiplier applied before the tone-map curve.  3.0 is
  * a visual judgment: the depth fade dims overall brightness, and lower
- * values read flat at typical zoom levels with the fade on.  Range
- * exposed to the user is 0.1–4.0; bump the slider's `max` if a future
- * default exceeds it.
+ * values read flat at typical zoom levels with the fade on.  Stored as the
+ * linear gain the shader applies, but presented as ±4 EV (0.0625×–16×) — a
+ * range chosen to sit inside `clampExposure`'s GPU-safety window, so the UI
+ * cannot reach a value the clamp would have to rescue.
  */
 export const DEFAULT_EXPOSURE = 3.0;
 
