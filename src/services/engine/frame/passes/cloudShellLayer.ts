@@ -44,9 +44,14 @@
  * same near-field gate `earthLayer` applies, so the shell appears exactly when the
  * surface does — AND the clouds slot being RESIDENT: until the cloud map commits,
  * the shell would draw a fully transparent sphere, so a row that would add nothing
- * to the frame leaves the pass plan (mirroring the ring's residency gate). Both
- * `enabled` and `draw` read ONE `cloudShellDraw` derivation, so the gate and the
- * loop can never disagree.
+ * to the frame leaves the pass plan (mirroring the ring's residency gate). It ALSO
+ * gates on `cloudDeckFade` reaching 0: as the camera descends toward the surface
+ * tiles, the whole-globe cloud map would smear over sharper detail than it can
+ * show, so the deck fades out on approach and, once fully faded, leaves the pass
+ * plan rather than drawing a fully transparent sphere (same house rule as the
+ * residency gate — see that util's header for why altitude drives the fade, not
+ * the tile planner's `zWin`). Both `enabled` and `draw` read ONE `cloudShellDraw`
+ * derivation, so the gate and the loop can never disagree.
  *
  * The shell is non-pickable (spec §8.3): a translucent overlay has no clickable
  * silhouette of its own — clicking Earth hits the opaque surface `earthLayer`
@@ -63,6 +68,7 @@ import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { CLOUD_SHELL_PARAMS } from '../../../../data/bodies/cloudShellParams';
 import { EARTH_SURFACE_PARAMS } from '../../../../data/bodies/earthSurfaceParams';
 import { bodyTextureSlotKey } from '../../../../utils/scene/bodyTextureSlotKey';
+import { cloudDeckFade } from '../../../../utils/scene/cloudDeckFade';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { packCloudShellUniforms } from '../../../../utils/gpu/packCloudShellUniforms';
@@ -71,40 +77,57 @@ import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from '../subPixelBodyCullPx';
 import { sceneBodyStates } from '../sceneBodyStates';
 
+/** The Earth body plus its resolved descent-fade multiplier for this frame. */
+type CloudShellDraw = { readonly earth: EarthBody; readonly deckFade: number };
+
 /**
- * The Earth record to draw the cloud shell for this frame, or `null` if the shell
- * should not render — the clouds map has not committed, the body is beyond the
- * near-field distance gate, or it resolves to sub-pixel. ONE derivation feeds both
- * `enabled` and `draw`, so the gate and the loop can never disagree about whether
- * the shell renders. Mirrors `earthLayer`'s near-field gate plus the ring's
- * residency gate.
+ * The Earth record + descent-fade multiplier to draw the cloud shell with this
+ * frame, or `null` if the shell should not render — the clouds map has not
+ * committed, the body is beyond the near-field distance gate, it resolves to
+ * sub-pixel, or the descent fade has reached 0. ONE derivation feeds both
+ * `enabled` and `draw`, so the gate and the loop can never disagree about
+ * whether the shell renders. Mirrors `earthLayer`'s near-field gate plus the
+ * ring's residency gate.
  */
-function cloudShellDraw(state: EngineState, ctx: ReadyFrameContext): EarthBody | null {
+function cloudShellDraw(state: EngineState, ctx: ReadyFrameContext): CloudShellDraw | null {
   const earth = state.data.bodies.earth;
   if (earth === null) return null;
   // Resident iff the clouds slot holds a committed bitmap; otherwise the shell
   // would draw a fully transparent sphere (placeholder alpha 0) — drop the row.
   if (state.assetSlots.bodyTextures.get(bodyTextureSlotKey('earth', 'clouds'))?.current() == null)
     return null;
-  // Sub-pixel cull on Earth's diameter (the shell is a hair larger, so the
-  // surface gate governs both). Live position from the per-frame snapshot (keyed
-  // by id) — not the baked record field; the record still gates presence +
-  // residency and carries the authored radius. A zero camera-to-centre distance
-  // means the camera is INSIDE the body — apparentSizePx defensively returns 0
-  // there, which would read as sub-pixel, so treat it as resolved.
+  // Live position from the per-frame snapshot (keyed by id) — not the baked
+  // record field; the record still gates presence + residency and carries the
+  // authored radius.
   const earthPos = sceneBodyStates(state, ctx).get(earth.id)!.positionMpc;
   const dx = earthPos[0] - ctx.drawCamPos[0];
   const dy = earthPos[1] - ctx.drawCamPos[1];
   const dz = earthPos[2] - ctx.drawCamPos[2];
   const distanceMpc = Math.hypot(dx, dy, dz);
-  if (distanceMpc === 0) return earth;
+  // The descent fade: computed from the SAME camera-to-centre distance the
+  // sub-pixel cull below uses. A fully-faded deck must leave the pass plan
+  // (the house "opacity 0 ⇒ no render" rule) rather than draw a fully
+  // transparent sphere, so this gate is checked before the sub-pixel cull —
+  // which also sidesteps that cull's distanceMpc === 0 degenerate case: a
+  // camera at the body's exact centre is deep inside the fade-out band, so
+  // deckFade is already 0 there.
+  const bodyRadiusMpc = earth.radiusKm * SCALE_UNITS.KM_TO_MPC;
+  const deckFade = cloudDeckFade(distanceMpc, bodyRadiusMpc);
+  if (deckFade <= 0) return null;
+  // Sub-pixel cull on Earth's diameter (the shell is a hair larger, so the
+  // surface gate governs both). A zero camera-to-centre distance means the
+  // camera is INSIDE the body — apparentSizePx defensively returns 0 there,
+  // which would read as sub-pixel, so treat it as resolved. (Only reachable
+  // when bodyRadiusMpc is degenerately non-positive — cloudDeckFade already
+  // returned 0 above for a real Earth radius at distanceMpc === 0.)
+  if (distanceMpc === 0) return { earth, deckFade };
   const diameterPx = apparentSizePx({
     diameterKpc: (2 * earth.radiusKm * SCALE_UNITS.KM_TO_MPC) / SCALE_UNITS.KPC_TO_MPC,
     distanceMpc,
     viewportHeightPx: ctx.canvasSize.height,
     fovYRad: ctx.fovYRad,
   });
-  return diameterPx >= SUB_PIXEL_BODY_CULL_PX ? earth : null;
+  return diameterPx >= SUB_PIXEL_BODY_CULL_PX ? { earth, deckFade } : null;
 }
 
 export const cloudShellLayer: ContentLayer = {
@@ -126,8 +149,9 @@ export const cloudShellLayer: ContentLayer = {
   draw(pass, view, ctx, state) {
     const renderer = state.gpu.cloudShellRenderer;
     if (renderer === null) return;
-    const earth = cloudShellDraw(state, ctx);
-    if (earth === null) return;
+    const drawInputs = cloudShellDraw(state, ctx);
+    if (drawInputs === null) return;
+    const { earth, deckFade } = drawInputs;
 
     // Live position + orientation from the per-frame snapshot (keyed by id) — not
     // the baked record fields; radius stays authored identity on the record.
@@ -152,13 +176,15 @@ export const cloudShellLayer: ContentLayer = {
     // uses (single source of truth), so clouds — the brightest real feature — are
     // not dimmer than the ground beneath them. The ambient floor is likewise the
     // SAME live user setting the surface reads (`settings.earth.ambientLight`), so
-    // the deck's night side dims in lockstep with the ground.
+    // the deck's night side dims in lockstep with the ground. `deckFade` folds the
+    // descent fade into the opacity multiplier — `cloudShellDraw` already returned
+    // `null` above once it reached 0, so here it is always > 0.
     renderer.draw(
       pass,
       packCloudShellUniforms(
         mvp,
         sun,
-        CLOUD_SHELL_PARAMS.opacity,
+        CLOUD_SHELL_PARAMS.opacity * deckFade,
         EARTH_SURFACE_PARAMS.sunIrradiance,
         state.settings.earth.ambientLight,
       ),

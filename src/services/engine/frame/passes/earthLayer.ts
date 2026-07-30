@@ -52,6 +52,8 @@
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
+import type { Vec3 } from '../../../../@types/math/Vec3';
 import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
@@ -63,11 +65,27 @@ import { camPosLocal } from '../../../../utils/camera/camPosLocal';
 import { packEarthSurfaceUniforms } from '../../../../utils/gpu/packEarthSurfaceUniforms';
 import { EARTH_SURFACE_PARAMS } from '../../../../data/bodies/earthSurfaceParams';
 import { CLOUD_SHELL_PARAMS } from '../../../../data/bodies/cloudShellParams';
+import { cloudDeckFade } from '../../../../utils/scene/cloudDeckFade';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from '../subPixelBodyCullPx';
 import { drawFlooredSpherePick } from '../../helpers/drawFlooredSpherePick';
 import { sceneBodyStates } from '../sceneBodyStates';
+
+/**
+ * Camera-to-Earth-centre distance in Mpc, from the live per-frame snapshot
+ * position — NOT `ctx.cam.distance` (the orbit distance-to-FOCUS, which
+ * coincides with this only while Earth is the orbit pivot). `enabled`'s
+ * sub-pixel cull and `draw`'s cloud-shadow descent fade both key off this same
+ * quantity; factoring it out here means they read it once instead of
+ * potentially drifting onto two slightly different distances.
+ */
+function earthCameraDistanceMpc(earthPositionMpc: Vec3, ctx: ReadyFrameContext): number {
+  const dx = earthPositionMpc[0] - ctx.drawCamPos[0];
+  const dy = earthPositionMpc[1] - ctx.drawCamPos[1];
+  const dz = earthPositionMpc[2] - ctx.drawCamPos[2];
+  return Math.hypot(dx, dy, dz);
+}
 
 export const earthLayer: ContentLayer = {
   name: 'earth',
@@ -93,10 +111,7 @@ export const earthLayer: ContentLayer = {
     // lives in its pack loop. A zero camera-to-centre distance means the
     // camera is INSIDE the body — apparentSizePx defensively returns 0
     // there, which would read as sub-pixel, so treat it as resolved.
-    const dx = earthState.positionMpc[0] - ctx.drawCamPos[0];
-    const dy = earthState.positionMpc[1] - ctx.drawCamPos[1];
-    const dz = earthState.positionMpc[2] - ctx.drawCamPos[2];
-    const distanceMpc = Math.hypot(dx, dy, dz);
+    const distanceMpc = earthCameraDistanceMpc(earthState.positionMpc, ctx);
     if (distanceMpc === 0) return true;
     const diameterPx = apparentSizePx({
       diameterKpc: (2 * earth.radiusKm * SCALE_UNITS.KM_TO_MPC) / SCALE_UNITS.KPC_TO_MPC,
@@ -151,6 +166,24 @@ export const earthLayer: ContentLayer = {
     // contents would misaddress every cell in it. Null before the first upload
     // (and for every session that never engages), which is the all-zero identity.
     const tileWindow = state.subsystems.earthTiles?.getUploadedWindow() ?? null;
+    // The SAME descent fade the cloud shell itself uses (`cloudDeckFade`), from
+    // the SAME camera-to-Earth-centre distance `enabled`'s sub-pixel cull reads
+    // (`earthCameraDistanceMpc`) — the deck and the shadow it casts must dissolve
+    // together, or a faded-out (invisible) deck would keep darkening the ground
+    // underneath it.
+    //
+    // KNOWN OMISSION: this fade does NOT reach the night-side city-lights dimming
+    // a few lines below (`nightLights` in the fragment reads `cloudAlphaHere`, its
+    // own texture sample at the fragment's uv, straight off the cloud texture with
+    // no strength scalar at all). Fixing that would need a 14th uniform field for
+    // the fade multiplier, and `packEarthSurfaceUniforms` is exactly 32 floats
+    // with none free — the cost is a new 16-byte row on every Earth draw's
+    // uniform write, for a night-side-only, cloud-covered-only artifact. Deferred
+    // rather than paid for now.
+    const cloudFade = cloudDeckFade(
+      earthCameraDistanceMpc(earthState.positionMpc, ctx),
+      earth.radiusKm * SCALE_UNITS.KM_TO_MPC,
+    );
     // Pack MVP + sunDirLocal + camPosLocal + the PBR surface params into the
     // 128-byte EarthSurfaceUniforms record.
     renderer.draw(
@@ -162,7 +195,7 @@ export const earthLayer: ContentLayer = {
         EARTH_SURFACE_PARAMS.roughnessBase,
         EARTH_SURFACE_PARAMS.f0,
         EARTH_SURFACE_PARAMS.sunIrradiance,
-        EARTH_SURFACE_PARAMS.cloudShadowStrength,
+        EARTH_SURFACE_PARAMS.cloudShadowStrength * cloudFade,
         // The cloud deck's unit-sphere local radius — the surface shadow ray
         // intersects this SAME shell the cloudShellLayer draws, so the cast
         // shadow and the drawn deck agree by construction.
