@@ -131,12 +131,12 @@ Replace the two-pass structure (`:81` skip-if-not-null, `:96` skip-if-null) with
 
 **The bit-for-bit obligation is the point of this task.** `deriveBodyStates(CONST_J2000)` must return values identical to today's for all 23 bodies.
 
-- [ ] Add the test `J2000 snapshot is unchanged after the anchor rewrite` — capture today's values as a committed fixture first, then assert against it.
-- [ ] Add the test `a focus cycle throws naming both ids`.
-- [ ] Add the test `a focus chain deeper than one hop resolves` using a synthetic three-level fixture.
-- [ ] Implement.
-- [ ] `npm test -- deriveBodyStates` → passes, including the unchanged-snapshot fixture.
-- [ ] Commit.
+- [x] Add the test `J2000 snapshot is unchanged after the anchor rewrite` — capture today's values as a committed fixture first, then assert against it.
+- [x] Add the test `a focus cycle throws naming both ids`.
+- [x] Add the test `a focus chain deeper than one hop resolves` using a synthetic three-level fixture.
+- [x] Implement.
+- [x] `npm test -- deriveBodyStates` → passes, including the unchanged-snapshot fixture.
+- [x] Commit.
 
 ---
 

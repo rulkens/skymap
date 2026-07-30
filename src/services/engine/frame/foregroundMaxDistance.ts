@@ -74,8 +74,9 @@ import { CONST_J2000 } from '../../../data/time/constJ2000';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { deriveBodyStates } from './deriveBodyStates';
 
-// The J2000 orbital-body snapshot (Earth + planets + moons), derived ONCE at
-// module load — the same construction-time direct-derive `assetWiring` reads.
+// The J2000 body snapshot (the anchors, plus Earth + planets + moons), derived
+// ONCE at module load — the same construction-time direct-derive `assetWiring`
+// reads.
 // The bounds below take each body's distance from the render origin from this
 // snapshot rather than a baked record field. The derive is rate-less at prep, so
 // at CONST_J2000 it reproduces the bodies' J2000 world positions; the feature
@@ -102,11 +103,11 @@ export const FARTHEST_BODY_MPC = Math.max(...ORBITAL_BODY_DISTANCES_MPC, ...STAR
 // AU (~1.5e-10 Mpc). Derived from the same `deriveBodyStates` snapshot as
 // `FARTHEST_BODY_MPC`, the same single-source-of-truth way `sceneOrbits.ts`
 // derives ring radii: the max over the snapshot, so adding or moving a body seed
-// carries this edge in lockstep. The whole snapshot (Earth + planets + moons) is
-// scanned rather than filtered because the geocentric moons ride their parent no
-// farther than Saturn's ~9.5 AU, comfortably inside Neptune's 30 AU, and Earth
-// sits at ~1 AU — so the max lands on Neptune with no need to discriminate body
-// kind.
+// carries this edge in lockstep. The whole snapshot is scanned rather than
+// filtered because the geocentric moons ride their parent no farther than
+// Saturn's ~9.5 AU, comfortably inside Neptune's 30 AU, and Earth sits at ~1 AU
+// — so the max lands on Neptune with no need to discriminate body kind. The
+// Sun anchor sits at the origin and so cannot move a max of distances from it.
 //
 // This is the SOLAR-SYSTEM analogue of `FARTHEST_BODY_MPC`: where that scales the
 // star-neighbourhood edges (the shared gate, the caption gate, the star fade
