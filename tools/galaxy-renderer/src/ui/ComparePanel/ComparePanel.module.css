@@ -1,3 +1,9 @@
+/* Glass chrome matches `src/components/common/Panel` (background, blur
+   strength, edge colour) — reproduced here rather than adopting `Panel`
+   itself, because the two don't share semantics: `Panel` is a fixed-width
+   floating card that manages its own collapse state, where this is a
+   full-height docked column, always open, with its own scroll body and a
+   header the panel doesn't have a slot for. */
 .root {
   position: absolute;
   top: 0;
@@ -6,17 +12,11 @@
   width: 390px;
   max-width: 88vw;
   background: var(--surface-panel);
-  backdrop-filter: blur(16px);
-  border-right: 1px solid var(--border-divider);
+  backdrop-filter: blur(var(--blur-panel));
+  border-right: 1px solid var(--border-default);
   display: flex;
   flex-direction: column;
   z-index: 20;
-  /* The panel's text has always self-declared mono per element (see .fact,
-     .headline, …); `Button` instead inherits its font from its DOM parent,
-     so this is the ambient font-family the app's own Button-hosting panels
-     set at their root — without it the buttons below would fall back to the
-     browser's default serif. */
-  font-family: var(--font-family-mono);
 }
 
 .header {
@@ -32,6 +32,7 @@
   font-size: var(--font-size-input);
   font-weight: 600;
   margin-top: 4px;
+  color: var(--color-fg);
 }
 
 .headerBody {
@@ -64,7 +65,7 @@
 .chipActive {
   background: var(--surface-control-active);
   border-color: var(--border-hover);
-  color: #fff;
+  color: var(--color-fg);
 }
 
 .body {
@@ -119,6 +120,7 @@
   margin-top: 16px;
   font-size: 19px;
   font-weight: 600;
+  color: var(--color-fg);
 }
 
 .type {
@@ -152,6 +154,7 @@
   font-weight: 600;
   margin-top: 3px;
   font-family: var(--font-family-mono);
+  color: var(--color-fg-base);
 }
 
 .notable {
@@ -206,7 +209,7 @@
 }
 
 .scoreBad {
-  color: #e08a6a;
+  color: var(--tool-status-bad);
 }
 
 .fitBody {
@@ -232,7 +235,7 @@
 .fitSection .fitButton {
   background: #2f8f5f;
   border-color: #3aa86f;
-  color: #fff;
+  color: var(--color-fg);
 }
 
 .fitSection .fitButton:hover:not(:disabled) {
@@ -281,7 +284,7 @@
   padding: 0;
   font-family: inherit;
   font-size: inherit;
-  color: #e08a6a;
+  color: var(--tool-status-bad);
   cursor: pointer;
 }
 

@@ -37,7 +37,7 @@ function Hud({ perf, stars, dust }: HudProps): ReactNode {
   const frameGood = perf.frameMs === 0 || perf.frameMs <= FRAME_MS_GOOD_THRESHOLD;
   return (
     <div className={styles.root}>
-      <div className={styles.eyebrow}>WEBGPU · PARAMETRIC</div>
+      <div className={styles.eyebrow}>SKYMAP · WEBGPU</div>
       <div className={styles.title}>Galaxy Renderer</div>
       <div className={styles.badges}>
         <span className={cx(styles.fpsPill, frameGood ? styles.fpsGood : styles.fpsWarn)}>

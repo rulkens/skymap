@@ -33,7 +33,7 @@ import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { paramsPatched } from '../../state/slices/galaxySlice';
 import { renderPatched } from '../../state/slices/renderSlice';
 import { lodPatched } from '../../state/slices/lodSlice';
-import { sectionToggled, autoRotateSet } from '../../state/slices/uiSlice';
+import { sectionToggled } from '../../state/slices/uiSlice';
 import { PARAM_SPEC } from '../../data/paramSpec';
 import { hubbleTypePatch } from '../../data/hubbleStagePatches';
 import { randomGalaxyParams } from '../../data/randomGalaxyParams';
@@ -410,11 +410,11 @@ function ControlsPanel(): ReactNode {
             step={0.02}
             onChange={(v) => dispatch(renderPatched({ vignette: v }))}
           />
-          <label className={styles.autoRotateRow}>
+          <label className={styles.toggleRow}>
             <span>Gamma encode (pow 1/2.2)</span>
             <input
               type="checkbox"
-              className={styles.autoRotateCheckbox}
+              className={styles.checkbox}
               checked={render.gammaEncode}
               onChange={(e) => dispatch(renderPatched({ gammaEncode: e.target.checked }))}
             />
@@ -424,16 +424,6 @@ function ControlsPanel(): ReactNode {
             encode. Whether that is right is an open question — this toggle is the A/B.
           </div>
         </CollapsibleSection>
-
-        <label className={styles.autoRotateRow}>
-          <span>Auto-rotate when idle</span>
-          <input
-            type="checkbox"
-            className={styles.autoRotateCheckbox}
-            checked={ui.autoRotate}
-            onChange={(e) => dispatch(autoRotateSet(e.target.checked))}
-          />
-        </label>
 
         <CollapsibleSection
           title="PERFORMANCE (LOD)"

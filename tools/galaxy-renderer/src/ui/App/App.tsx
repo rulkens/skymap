@@ -24,6 +24,8 @@ import type { PerfReport } from '../../../@types/engine/PerfReport';
 import { useAppDispatch, useAppSelector, useAppStore } from '../../state/hooks';
 import { connectEngineBridge } from '../../state/engineBridge';
 import { comparePanelToggled } from '../../state/slices/compareSlice';
+import { autoRotateSet } from '../../state/slices/uiSlice';
+import AutoRotateToggle from '../../../../../src/components/AutoRotateToggle/AutoRotateToggle';
 import Viewport from '../Viewport/Viewport';
 import Hud from '../Hud/Hud';
 import ComparePanel from '../ComparePanel/ComparePanel';
@@ -39,6 +41,7 @@ function App(): ReactNode {
   const dispatch = useAppDispatch();
   const store = useAppStore();
   const compareOpen = useAppSelector((state) => state.compare.open);
+  const autoRotate = useAppSelector((state) => state.ui.autoRotate);
 
   const [engine, setEngine] = useState<GalaxyEngineHandle | null>(null);
   const [perf, setPerf] = useState<PerfReport>(NO_PERF);
@@ -55,6 +58,12 @@ function App(): ReactNode {
     <div className={styles.root}>
       <Viewport onEngine={handleEngine} onPerf={setPerf} onStats={setStats} />
       <Hud perf={perf} stars={stats.stars} dust={stats.dust} />
+      <div className={styles.autoRotatePill}>
+        <AutoRotateToggle
+          playing={autoRotate}
+          onToggle={() => dispatch(autoRotateSet(!autoRotate))}
+        />
+      </div>
       <button
         type="button"
         className={cx(styles.compareToggle, compareOpen && styles.compareToggleActive)}

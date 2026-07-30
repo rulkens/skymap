@@ -14,10 +14,14 @@
 }
 
 .title {
+  font-family: var(--font-family-display);
   font-size: 23px;
   font-weight: 600;
   letter-spacing: 0.4px;
   margin-top: 2px;
+  /* Matches Splash's marquee title exactly (raw white, not a --color-fg
+     token) — both are the app's one-and-only display-serif headline. */
+  color: #ffffff;
 }
 
 .badges {

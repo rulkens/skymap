@@ -1,12 +1,12 @@
 /*
  * shared.module.css — the Galaxy Renderer's composable HUD classes (form
- * controls, section headers, sliders, the block-width button modifier).
- * Buttons and the slider pill now render through the app's own `Button` and
- * `Slider` primitives (`src/components/common/`); this file no longer owns
- * their chrome. Design *tokens* live in the main app's `src/styles/global.css`,
+ * controls, section headers, the block-width button modifier). Buttons and
+ * every slider now render through the app's own `Button` and `Slider`
+ * primitives (`src/components/common/`); this file no longer owns their
+ * chrome. Design *tokens* live in the main app's `src/styles/global.css`,
  * imported once from the tool's `main.tsx` — the tool and the app share one
  * palette so a look tuned here transfers directly to the renderer's own UI.
- * This file owns only the two tool-local status colours with no app
+ * This file owns only the three tool-local status colours with no app
  * equivalent, plus the classes built on top of the shared tokens.
  *
  * The `:root` block below is CSS custom properties, not class names — CSS
@@ -17,11 +17,13 @@
  */
 
 :root {
-  /* Status colours for the perf badge. No app equivalent — the app has no
-     good/warn semantic, so these stay tool-local rather than being forced
-     onto a palette token that means something else. */
+  /* Status colours for the perf badge and the auto-fit score/stop affordance.
+     No app equivalent — the app has no good/warn/bad semantic, so these stay
+     tool-local rather than being forced onto a palette token that means
+     something else. */
   --tool-status-good: #5fe0a8;
   --tool-status-warn: #e6c766;
+  --tool-status-bad: #e08a6a;
 }
 
 /* Full width is layout, not chrome — composed alongside the app's `Button`
@@ -42,49 +44,9 @@
 /* ── Section headers — uppercase, letter-spaced (html:196) ───────────────── */
 
 .sectionHeader {
-  font-size: var(--font-size-md);
-  letter-spacing: 2.5px;
+  font-size: var(--font-size-sm);
+  letter-spacing: var(--letter-spacing-widest);
   color: var(--color-fg-dim);
   font-weight: 600;
   text-transform: uppercase;
-}
-
-/* ── Mono value badge — slider readouts (html:203) ────────────────────────── */
-
-.monoBadge {
-  font-family: var(--font-family-mono);
-  font-size: var(--font-size-md);
-  color: var(--color-accent);
-}
-
-/* ── Range slider — thumb styling (galaxy.css:34-37) ─────────────────────── */
-
-.rangeInput {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 4px;
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.14);
-  outline: none;
-  cursor: pointer;
-}
-
-.rangeInput::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  background: var(--color-accent-bright);
-  cursor: pointer;
-  box-shadow: 0 0 6px rgba(140, 180, 255, 0.7);
-}
-
-.rangeInput::-moz-range-thumb {
-  width: 13px;
-  height: 13px;
-  border: none;
-  border-radius: 50%;
-  background: var(--color-accent-bright);
-  cursor: pointer;
 }

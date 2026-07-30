@@ -58,6 +58,6 @@
 .chipActive {
   background: var(--surface-control-active);
   border-color: var(--border-hover);
-  color: #fff;
+  color: var(--color-fg);
   box-shadow: 0 0 12px var(--surface-control-active);
 }

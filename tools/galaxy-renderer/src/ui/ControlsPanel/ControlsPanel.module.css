@@ -1,3 +1,6 @@
+/* Glass chrome matches `src/components/common/Panel` (background, blur
+   strength, edge colour) — see ComparePanel.module.css's `.root` for why
+   this reproduces the look rather than adopting `Panel` itself. */
 .root {
   position: absolute;
   top: 0;
@@ -6,14 +9,11 @@
   width: 340px;
   max-width: 90vw;
   background: var(--surface-panel);
-  backdrop-filter: blur(16px);
-  border-left: 1px solid var(--border-divider);
+  backdrop-filter: blur(var(--blur-panel));
+  border-left: 1px solid var(--border-default);
   display: flex;
   flex-direction: column;
   z-index: 15;
-  /* `Button` inherits its font from its DOM parent (see
-     ComparePanel.module.css's `.root` for the full note). */
-  font-family: var(--font-family-mono);
 }
 
 .scroll {
@@ -49,7 +49,10 @@
   margin-bottom: 5px;
 }
 
-.autoRotateRow {
+/* Sole remaining consumer is the gamma-encode toggle — the auto-rotate row
+   these were named for now renders as `AutoRotateToggle`, a HUD pill, in
+   `App`. */
+.toggleRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -60,7 +63,7 @@
   cursor: pointer;
 }
 
-.autoRotateCheckbox {
+.checkbox {
   width: 16px;
   height: 16px;
   accent-color: var(--color-accent);
