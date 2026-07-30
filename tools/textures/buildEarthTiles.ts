@@ -68,6 +68,18 @@ const BAKE_MIN_LEVEL = Math.min(...TIER_LADDER.map(earthBaseLevelForTier)) + 1;
  *  material map carry no fine structure worth streaming. */
 const KIND: EarthTileKind = 'surface';
 
+/** Stable location of the manifest and index — the pointer clients always fetch. */
+const TILE_ROOT = 'earth-tiles';
+
+/**
+ * Versioned prefix for the tile bodies themselves. BUMP THIS on any re-bake
+ * that changes pixels: the tiles are served `immutable` and never purged, so
+ * reusing a version leaves the CDN answering with old imagery against a new
+ * manifest for up to a day — mismatched, not merely stale. A new version is
+ * new keys, which cost nothing extra and need no purge.
+ */
+export const TILE_PREFIX = `${TILE_ROOT}/v1`;
+
 /** Geographic extent of tile `(z, x, y)`; `y` increases SOUTH, matching the
  *  raster's own north-first row order. */
 function tileBox(z: number, x: number, y: number, tilePx: number): LonLatBox {
@@ -120,7 +132,7 @@ async function bakeDeepestLevel(
     for (let x = 0; x < columns; x++) {
       const rgba = await source.readBox(tileBox(z, x, y, tilePx), tilePx, tilePx);
       if (rgba === null) continue;
-      const relPath = earthTilePath({ kind: KIND, z, x, y });
+      const relPath = earthTilePath({ kind: KIND, z, x, y }, TILE_PREFIX);
       await writeTile(rgba, tilePx, join(outDir, relPath));
       written.push(relPath);
     }
@@ -170,7 +182,10 @@ export async function bakeCoarserLevel(
         { i: 1, j: 1 },
       ]
         .map(({ i, j }) => ({
-          input: join(outDir, earthTilePath({ kind: KIND, z: z + 1, x: 2 * x + i, y: 2 * y + j })),
+          input: join(
+            outDir,
+            earthTilePath({ kind: KIND, z: z + 1, x: 2 * x + i, y: 2 * y + j }, TILE_PREFIX),
+          ),
           left: i * halfPx,
           top: j * halfPx,
         }))
@@ -188,7 +203,7 @@ export async function bakeCoarserLevel(
         })),
       );
 
-      const relPath = earthTilePath({ kind: KIND, z, x, y });
+      const relPath = earthTilePath({ kind: KIND, z, x, y }, TILE_PREFIX);
       const outPath = join(outDir, relPath);
       mkdirSync(dirname(outPath), { recursive: true });
       await sharp({
@@ -235,19 +250,24 @@ export async function buildEarthTiles(source: EarthImagerySource, outDir: string
   }
 
   const manifest: EarthTileManifest = {
+    prefix: TILE_PREFIX,
     tilePx,
     levels: { [KIND]: { min: minLevel, max: maxLevel } },
     builtFrom: { [KIND]: `${source.id} — ${source.attribution}` },
   };
-  writeFileSync(
-    join(outDir, 'earth-tiles/manifest.json'),
-    `${JSON.stringify(manifest, null, 2)}\n`,
-  );
 
   // Sorted so two bakes of the same pyramid produce the same index, letting a
   // resumed sync diff one against the other.
   written.sort();
-  writeFileSync(join(outDir, 'earth-tiles/index.txt'), `${written.join('\n')}\n`);
+  writeFileSync(join(outDir, `${TILE_ROOT}/index.txt`), `${written.join('\n')}\n`);
+
+  // Written LAST, after the index it implies: an interrupted bake then leaves
+  // no manifest, so the runtime degrades to base-only and the sync's
+  // index-driven collector finds nothing to upload. Both stand down together.
+  writeFileSync(
+    join(outDir, `${TILE_ROOT}/manifest.json`),
+    `${JSON.stringify(manifest, null, 2)}\n`,
+  );
 
   process.stderr.write(`  ${written.length} tiles indexed\n`);
 }

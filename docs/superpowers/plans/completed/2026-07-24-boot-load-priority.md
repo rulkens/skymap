@@ -1,6 +1,6 @@
 # Boot load priority — part 1: prep + the bounded asset queue
 
-**Spec:** [`docs/superpowers/specs/2026-07-24-boot-load-priority.md`](../../specs/2026-07-24-boot-load-priority.md).
+**Spec:** [`docs/superpowers/specs/completed/2026-07-24-boot-load-priority.md`](../../specs/completed/2026-07-24-boot-load-priority.md).
 The spec is the source of truth for every decision; this plan only sequences the work.
 
 **Part 2:** [`2026-07-24-boot-load-priority-body-atlas.md`](../2026-07-24-boot-load-priority-body-atlas.md)
