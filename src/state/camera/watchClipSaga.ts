@@ -72,9 +72,9 @@ import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { selectOrientation } from '../settings/selectors';
 import { clipFociReady } from '../tour/clipFociReady';
 import { waitUntil } from '../tour/waitUntil';
-import { pause, resume, goLive } from '../time/timeSlice';
+import { pause, resume } from '../time/timeSlice';
+import { goLiveNowAction } from '../time/goLiveNowAction';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
-import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import type { RootState, SagaContext } from '../../store/types';
 
 export function* watchClipSaga() {
@@ -134,7 +134,7 @@ export function* watchClipSaga() {
       //                     The clip's own `pause` merely re-anchored an already-
       //                     paused clock, which is a no-op on sim time.
       if (priorMode === 'live') {
-        yield* put(goLive({ simDays: unixMsToJulianDays(Date.now()), nowMs: performance.now() }));
+        yield* put(goLiveNowAction());
       } else if (!priorPaused) {
         yield* put(resume({ nowMs: performance.now() }));
       }

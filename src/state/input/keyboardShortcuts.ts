@@ -24,7 +24,6 @@
  * free to scroll, whether or not a tour is running.
  */
 
-import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import { stepRate } from '../../utils/time/stepRate';
 import { logCameraState } from '../camera/logCameraState';
 import { goHome } from '../selection/goHome';
@@ -35,12 +34,17 @@ import { advanceTour, exitTour, prevBeat, togglePause } from '../tour/tourAction
 import { selectPaletteOpen } from '../ui/selectors';
 import { setPaletteOpen, toggleDebugPanelOpen, toggleUiHidden } from '../ui/uiSlice';
 import { selectTimeState } from '../time/selectors';
-import { goLive, pause, resume, setRate } from '../time/timeSlice';
+import { pause, resume, setRate } from '../time/timeSlice';
+import { goLiveNowAction } from '../time/goLiveNowAction';
 import type { KeyboardShortcut } from '../../@types/state/input/KeyboardShortcut';
 
 export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
   { keys: 'command+k,ctrl+k', run: () => setPaletteOpen(true), preventDefault: true },
-  { keys: '/', run: (s) => (selectPaletteOpen(s) ? null : setPaletteOpen(true)), preventDefault: true },
+  {
+    keys: '/',
+    run: (s) => (selectPaletteOpen(s) ? null : setPaletteOpen(true)),
+    preventDefault: true,
+  },
   { keys: 'escape', run: () => [clearSelection(), exitTour()] },
   {
     keys: 'f',
@@ -62,10 +66,7 @@ export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
         ? resume({ nowMs: performance.now() })
         : pause({ nowMs: performance.now() }),
   },
-  {
-    keys: 'shift+n',
-    run: () => goLive({ simDays: unixMsToJulianDays(Date.now()), nowMs: performance.now() }),
-  },
+  { keys: 'shift+n', run: () => goLiveNowAction() },
   // Tour keys — always registered, gated on an active tour by `run` (returns
   // null outside a tour). `preventDefault` is OMITTED: Space must stay free to
   // activate a focused button and the arrow keys must stay free to scroll,
