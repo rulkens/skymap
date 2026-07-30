@@ -71,7 +71,9 @@
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
 import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
-import { ORBITAL_ELEMENTS, elementsById } from '../../../../data/bodies/orbitalElements';
+import { ORBITAL_ELEMENTS } from '../../../../data/bodies/orbitalElements';
+import { SCENE_ANCHORS } from '../../../../data/bodies/sceneAnchors';
+import { focusResolveOrder } from '../../../../utils/scene/focusResolveOrder';
 import type { OrbitalElements } from '../../../../@types/scene/OrbitalElements';
 import { propagateElements } from '../../../../utils/orbit/propagateElements';
 import { keplerianEllipse } from '../../../../utils/orbit/keplerianEllipse';
@@ -99,11 +101,12 @@ const staging = new Float32Array(MAX_ORBITS * INSTANCE_FLOATS);
 // The system's reach from the heliocentric origin: the farthest any orbit
 // point can lie from the origin, over ALL clock times — a TIME-INVARIANT outer
 // envelope. A bound orbit's farthest point from its focus is its apoapsis
-// a·(1+e); a heliocentric orbit's focus IS the origin, so its reach is a·(1+e).
-// A moon's focus rides its parent, whose world position never exceeds the
-// parent's own heliocentric apoapsis, so the moon's reach is bounded by
-// (parent apoapsis + moon apoapsis) — a value the moon orbit stays inside for
-// every t (worst case: both bodies at apoapsis, aligned through the origin).
+// a·(1+e); its focus in turn sits within its OWN focus's reach, so summing
+// apoapsis along the whole focus chain up to the anchor root bounds every
+// point on the orbit for every t (worst case: every body in the chain at
+// apoapsis, aligned through the origin). Walked via `focusResolveOrder` — the
+// same dependency order `deriveBodyStates` resolves anchors through — so a
+// chain of any depth is covered, not just satellite → planet.
 // Sourced from the static ORBITAL_ELEMENTS a/e, NOT the conic CENTRES: once a
 // clock animates the trails a moon centre rides its moving parent, so a
 // centre-derived bound would go stale, whereas this element-derived envelope
@@ -114,14 +117,16 @@ const staging = new Float32Array(MAX_ORBITS * INSTANCE_FLOATS);
 function apoapsisMpc(elements: OrbitalElements): number {
   return elements.semiMajorMpc * (1 + elements.eccentricity);
 }
-function maxHeliocentricReachMpc(elements: OrbitalElements): number {
-  const own = apoapsisMpc(elements);
-  // Every moon's focus is itself heliocentric, so one hop resolves it. The
-  // `'sun'` case is still special-cased rather than looked up — `elementsById`
-  // has no row for the Sun until it joins the table as an anchor.
-  return elements.focusId === 'sun' ? own : apoapsisMpc(elementsById(elements.focusId)) + own;
+const ANCHOR_IDS = new Set(SCENE_ANCHORS.map((anchor) => anchor.id));
+const FOCUS_ORDER = focusResolveOrder(SCENE_ANCHORS, ORBITAL_ELEMENTS);
+function reachMpcById(): ReadonlyMap<string, number> {
+  const reach = new Map<string, number>();
+  for (const id of ANCHOR_IDS) reach.set(id, 0); // an anchor has no orbit to extend the envelope
+  for (const el of FOCUS_ORDER) reach.set(el.id, apoapsisMpc(el) + reach.get(el.focusId)!);
+  return reach;
 }
-const MAX_ORBIT_EXTENT_MPC = Math.max(...ORBITAL_ELEMENTS.map(maxHeliocentricReachMpc));
+const REACH_MPC_BY_ID = reachMpcById();
+const MAX_ORBIT_EXTENT_MPC = Math.max(...ORBITAL_ELEMENTS.map((el) => REACH_MPC_BY_ID.get(el.id)!));
 
 export const orbitTrailsLayer: ContentLayer = {
   name: 'orbit-trails',
@@ -222,11 +227,10 @@ export const orbitTrailsLayer: ContentLayer = {
       const propagated = propagateElements(elements, ctx.simDays);
       const { centerOffsetMpc, semiMajorMpc, semiMinorMpc } = keplerianEllipse(propagated);
       // Fold the focus into an absolute-world centre, in place on the fresh
-      // offset array (no extra allocation): a heliocentric orbit's focus is the
-      // render origin (the Sun); a moon's focus is its parent's LIVE snapshot
-      // position, so its trail rides the moving parent.
-      const focus =
-        elements.focusId === 'sun' ? RENDER_ORIGIN_MPC : states.get(elements.focusId)!.positionMpc;
+      // offset array (no extra allocation). The snapshot seeds anchors (the
+      // Sun) alongside every element row, so every focus — heliocentric or a
+      // moving parent — is the same uniform lookup; no per-orbit special case.
+      const focus = states.get(elements.focusId)!.positionMpc;
       const centerMpc = centerOffsetMpc;
       centerMpc[0] += focus[0];
       centerMpc[1] += focus[1];

@@ -151,10 +151,10 @@ Two sites still resolve a focus their own way. `maxHeliocentricReachMpc` (`:117`
 
 Both must resolve through the Task 4 seam. `maxHeliocentricReachMpc` keeps computing a heliocentric reach for now; Plan 02 re-keys it per region.
 
-- [ ] Add the test `an orbit focused on an anchor resolves its conic centre` using a synthetic anchor + element pair.
-- [ ] Repoint both sites.
-- [ ] `npm test` → green; J2000 conic values unchanged.
-- [ ] Commit.
+- [x] Add the test `an orbit focused on an anchor resolves its conic centre` using a synthetic anchor + element pair.
+- [x] Repoint both sites.
+- [x] `npm test` → green; J2000 conic values unchanged.
+- [x] Commit.
 
 ---
 
