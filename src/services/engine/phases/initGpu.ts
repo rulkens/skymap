@@ -36,10 +36,12 @@
  *     `RunFrameDeps` for the frame body.
  *
  * `device` and `context` survive past this phase via the `phaseLocals`
- * carrier (read by `wireSlots` / `wireInput` / `startLoop`); they have no
- * `state.gpu.*` home. Every renderer is stored on `state.gpu.*` directly,
- * which is also how later phases consume them. See `BootstrapDeps` in
- * `bootstrap.ts` for the wiring.
+ * carrier (read by `wireSlots` / `wireInput` / `startLoop`) — that stays the
+ * canonical route for phases that need them directly. `state.gpu.uiCtx` is a
+ * separate, narrower home for the same two values (plus `canvas`), read only
+ * by `buildSwapRenderers` for a later swap-format rebuild. Every renderer is
+ * stored on `state.gpu.*` directly, which is also how later phases consume
+ * them. See `BootstrapDeps` in `bootstrap.ts` for the `phaseLocals` wiring.
  */
 
 import { initGpu as gpuInitGpu, resizeCanvasToDisplay } from '../../gpu/device';
@@ -53,10 +55,6 @@ import { createMilkyWayCloudRenderer } from '../../gpu/renderers/milkyWay/milkyW
 import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShell/horizonShellRenderer';
 import { createFilamentRenderer } from '../../gpu/renderers/filaments/filamentRenderer';
 import { createConstellationRenderer } from '../../gpu/renderers/constellations/constellationRenderer';
-import { createLabelRenderer } from '../../gpu/renderers/labels/labelRenderer';
-import { createMarkerLineRenderer } from '../../gpu/renderers/labels/markerLineRenderer';
-import { createDebugLineRenderer } from '../../gpu/renderers/devTools/debugLineRenderer';
-import { createSelectionRingRenderer } from '../../gpu/renderers/selectionRing/selectionRingRenderer';
 import { createStructureMarkerRenderer } from '../../gpu/renderers/structureMarker/structureMarkerRenderer';
 import { createMilkyWayPickRenderer } from '../../gpu/renderers/milkyWay/milkyWayPickRenderer';
 import { createVolumeFieldRenderer } from '../../gpu/renderers/volumeField/volumeFieldRenderer';
@@ -64,8 +62,6 @@ import { createFlowFieldRenderer } from '../../gpu/renderers/flowField/flowField
 import { createVolumeUpsample } from '../../gpu/passes/volumeUpsample';
 import { createStarAggregateUpsample } from '../../gpu/passes/starAggregateUpsample';
 import { createBloomPyramid } from '../../gpu/passes/bloomPyramid';
-import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
-import { createDiskRadiusRing } from '../../gpu/renderers/devTools/diskRadiusRing';
 import { createEarthRenderer } from '../../gpu/renderers/bodies/earthRenderer';
 import { createTexturedBodyRenderer } from '../../gpu/renderers/bodies/texturedBodyRenderer';
 import { createRingRenderer } from '../../gpu/renderers/bodies/ringRenderer';
@@ -80,11 +76,11 @@ import { createStarCatalogRenderer } from '../../gpu/renderers/starCatalog/starC
 import { createStarCatalogPickRenderer } from '../../gpu/renderers/starCatalog/starCatalogPickRenderer';
 import { createBodyPickRenderer } from '../../gpu/renderers/bodies/bodyPickRenderer';
 import { createOrbitTrailRenderer } from '../../gpu/renderers/bodies/orbitTrailRenderer';
-import { FOREGROUND_LABEL_CAPACITY } from '../presentation/sceneBodyLabels';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
 import { TIMED_SLOTS } from '../frame/frameProgram';
 import { SLAB_REVERSED_Z, NEAR0, COSMO } from '../frame/slabs';
 import { loadFontAtlases } from '../../gpu/labelLayout/loadFontAtlases';
+import { buildSwapRenderers } from './buildSwapRenderers';
 import { hasUrlGate } from '../../../utils/url/hasUrlGate';
 import { isPerfMode } from '../../../utils/url/isPerfMode';
 import {
@@ -199,60 +195,23 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // triggers a per-source bake without any engine-side coordination.
   state.subsystems.biasCorrection.attachRenderer(renderer);
 
-  // ── MSDF label renderer + marker-line renderer ───────────────────────
+  // ── Swap-chain-format renderers (labels, marker lines, debug lines,
+  // selection ring, pick-debug overlay, disk-radius ring, + their NEAR0
+  // foreground twins) ────────────────────────────────────────────────────
   //
-  // Load the font atlas (BMFont JSON + MSDF PNG) and construct the UI
-  // overlay renderers in one block, sequenced after the PointRenderer but
-  // before the GALAXY_CATALOG_SOURCE_REGISTRY loop.  Awaiting the atlas
-  // fetch here keeps the loop below from racing ahead of it; in practice
-  // the ~120 KB atlas resolves well before the much larger per-galaxy-catalog
-  // `.bin` fetches.  All renderers share the `{ device, context, format,
-  // canvas }` GpuContext shape, so building them here keeps GPU-resource
-  // allocation at one site.
-  //
-  // Stored on `state.gpu` so `engine.ts.destroy()` can release their
-  // buffers + atlas texture.  Excluded from `isEngineReady` (same as
-  // `filamentRenderer`): optional async resources, null-checked at use.
-  //
-  // They target the swap-chain format, NOT the HDR target: marker-lines +
-  // labels are swap-target layers, drawn AFTER tone-map onto the swap chain
-  // (see the swap render step in `services/engine/frame/executeFrame.ts`),
-  // so their pipelines need the swap-chain format for the colorAttachment
-  // to validate.
+  // Load the font atlas (BMFont JSON + MSDF PNG) before building anything
+  // that reads it, sequenced after the PointRenderer but before the
+  // GALAXY_CATALOG_SOURCE_REGISTRY loop.  Awaiting the atlas fetch here keeps
+  // the loop below from racing ahead of it; in practice the ~120 KB atlas
+  // resolves well before the much larger per-galaxy-catalog `.bin` fetches.
+  // `uiCtx` and the atlas are retained on `state.gpu` (not just local here)
+  // so `buildSwapRenderers` can rebuild these eight renderers on a later
+  // swap-format change — see its module header.
   const uiCtx = { device, context, format, canvas };
+  state.gpu.uiCtx = uiCtx;
+  state.gpu.fontAtlases = await loadFontAtlases();
+  buildSwapRenderers(state, format);
 
-  const fontAtlases = await loadFontAtlases();
-  // `{ occludeAgainstDepth: 'coverage' }` opts these COSMO overlays into
-  // per-pixel occlusion behind nearer solar-system bodies. COVERAGE, not
-  // COMPARE: the COSMO overlays project through a different slab than the
-  // NEAR0 bodies, so their window-Z is incomparable to the stored body depth —
-  // a depth compare would never fire and cosmological labels would paint over
-  // the Sun. Any body depth written at the pixel occludes them (see
-  // lib/sceneDepth.wesl). `labelsLayer` / `markerLinesLayer` hand each `draw`
-  // the guarded `foreground:0` depth view. `maxLabels` / `maxGlyphsPerLabel` /
-  // `maxLines` default via `undefined` to reach the trailing opts slot.
-  state.gpu.labelRenderer = createLabelRenderer(uiCtx, format, fontAtlases, undefined, undefined, {
-    occludeAgainstDepth: 'coverage',
-  });
-  state.gpu.markerLineRenderer = createMarkerLineRenderer(uiCtx, format, undefined, {
-    occludeAgainstDepth: 'coverage',
-  });
-  // Dedicated debug-line renderer for the clip-path inspector overlay. Same
-  // swap-chain ctx as the marker lines (UI overlay, drawn post-tone-map), but
-  // its own pipeline + buffers so the debug viz never touches the label
-  // director's reconcile path. Sized for the densest inspected route: the seam
-  // samples up to 4000 points (`engine.ts`), so the buffer must hold
-  // 2·(4000−1) route+target segments + 9 gizmo = 8007 lines — 8192 gives margin.
-  state.gpu.debugLineRenderer = createDebugLineRenderer(uiCtx, format, 8192);
-  // `{ occludeAgainstDepth: 'coverage' }` opts the COSMO selection ring into the
-  // same cross-slab COVERAGE occlusion as the label + marker-line overlays
-  // above — its window-Z is incomparable to the NEAR0 body depth, so any body
-  // depth written at the pixel occludes it. `selectionRingLayer` hands each
-  // `draw` the guarded `foreground:0` depth view. The shared NEAR0 sibling
-  // passes no depth view, so it always draws through the plain pipeline.
-  state.gpu.selectionRingRenderer = createSelectionRingRenderer(uiCtx, format, {
-    occludeAgainstDepth: 'coverage',
-  });
   // HDR pass — writes into the rgba16float offscreen target, NOT the
   // swap chain.  The fadeBgl placeholder at @group(1) must match what the
   // other HDR passes (filaments) bind at the same slot on the shared
@@ -271,17 +230,6 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     uiCtx,
     state.gpu.fadeBgl!,
     SLAB_REVERSED_Z[NEAR0]!,
-  );
-
-  // Wire the freshly-constructed renderers into the label director, which
-  // was built eagerly in the engine state literal with no renderers yet.
-  // Same `attachRenderer` post-construction pattern `biasCorrectionSubsystem`
-  // uses.  The director owns the renderer refs: all `LabelProducer`s —
-  // milkyWayLabel (produceMilkyWayLabel), structures, future overlays — are
-  // polled by the director, which merges their outputs and flushes once.
-  state.subsystems.labelDirector.attachRenderers(
-    state.gpu.labelRenderer,
-    state.gpu.markerLineRenderer,
   );
 
   // ── Per-source asset slots ───────────────────────────────────────────
@@ -449,23 +397,6 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // `settings.bloom.enabled` master toggle gates at frame-program build.
   state.gpu.bloomPyramid = createBloomPyramid(device, 'rgba16float');
 
-  // ── Pick-buffer debug overlay ────────────────────────────────────
-  //
-  // Fullscreen pass that samples the r32uint pick texture and writes a
-  // colour-mapped RGBA image over the tone-mapped swap chain.  Always
-  // constructed (cheap, no GPU buffers until first draw); the per-frame
-  // consumer gates on `state.settings.debug.showPickBuffer`.  Targets the
-  // swap-chain `format` since it draws AFTER tone-map, like marker-lines.
-  state.gpu.pickDebugOverlay = createPickDebugOverlay(device, format);
-
-  // ── Disk-radius debug ring ───────────────────────────────────────
-  //
-  // World-space line-strip drawn in the disk plane around the selected
-  // galaxy at its catalog disk radius (a famous-galaxy calibration aid).
-  // Swap-chain `format` (post-tone-map UI overlay); the per-frame
-  // `diskRadiusRingLayer` gates on `state.settings.debug.showDiskRadiusRing`.
-  state.gpu.diskRadiusRing = createDiskRadiusRing(device, format);
-
   // ── GPU timing service ────────────────────────────────────────────
   //
   // Always-constructed: the factory returns a no-op stub when neither
@@ -565,60 +496,6 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // stars, no bootstrap data-delivery step: orbitTrailsLayer derives the conic
   // geometry per frame from the current body snapshot and packs it itself.
   state.gpu.orbitTrailRenderer = createOrbitTrailRenderer(device, 'rgba16float');
-
-  // foregroundLabelRenderer is a second MSDF label renderer against the
-  // swap-chain `format` (`uiCtx`, like the main `labelRenderer`), holding
-  // the scene-body caption set (Earth + the local star map + the planets),
-  // projecting through the NEAR0 slab view so the captions track bodies that
-  // sit far inside the main camera's near plane. No bootstrap seed: the
-  // executor never calls a layer's `draw` unless its `enabled()` gate reads
-  // true first (see `executeFrame`), and `foregroundLabelsLayer.enabled` gates
-  // on the SETTINGS demand for a caption, not on anything already sitting in
-  // this renderer's buffer — so an empty starting buffer is never observed.
-  // `foregroundLabelsLayer` uploads the live per-frame snapshot on its first
-  // real draw.
-  // Sized to the whole scene-body roster (FOREGROUND_LABEL_CAPACITY), NOT the
-  // 64-label default: setLabels clamps at maxLabels, so the default would
-  // silently drop captions once the seed table outgrew it (the roster already
-  // exceeds 64 and climbs toward ~130). The derived capacity tracks the roster.
-  // `{ occludeAgainstDepth: 'compare' }` opts this near-field caption instance
-  // into per-pixel occlusion behind nearer solar-system bodies —
-  // `foregroundLabelsLayer` hands its `draw` the `foreground:0` scene depth view
-  // each frame. COMPARE, not COVERAGE: these captions live in the SAME NEAR0
-  // reversed-Z slab as the bodies, so their window depth is directly comparable
-  // to the stored body depth — the compare keeps a caption visible over its OWN
-  // body while hiding it behind a nearer one (coverage would wrongly hide it).
-  // The COSMO `labelRenderer` above uses 'coverage' precisely because its slab
-  // differs. `maxGlyphsPerLabel` defaults via `undefined` to reach the trailing
-  // opts slot.
-  state.gpu.foregroundLabelRenderer = createLabelRenderer(
-    uiCtx,
-    format,
-    fontAtlases,
-    FOREGROUND_LABEL_CAPACITY,
-    undefined,
-    { occludeAgainstDepth: 'compare' },
-  );
-
-  // foregroundMarkerLineRenderer is the leader-line sibling of the caption
-  // renderer above: a second `createMarkerLineRenderer` against the swap-chain
-  // `format`, drawing the short connectors that hang each caption off its
-  // body. It is SEPARATE from `markerLineRenderer` (the director's COSMO-slab
-  // lines) for the identical reason `foregroundLabelRenderer` is separate from
-  // `labelRenderer` — the connectors project through the NEAR0 slab so they
-  // track bodies far inside the main camera's near plane. `foregroundLabelsLayer`
-  // rebases the connector endpoints camera-relative each frame, the same f32
-  // origin-distance cancellation dodge it applies to the caption anchors. No
-  // bootstrap seed: the connectors are geometry derived per frame from the
-  // caption anchors, not a static set.
-  // Same COMPARE occlusion as the caption sibling above: the leader lines share
-  // the NEAR0 slab with the bodies, so their window depth is comparable — occlude
-  // by depth compare, not coverage. `maxLines` defaults via `undefined` to reach
-  // the trailing opts slot. The COSMO `markerLineRenderer` uses 'coverage'
-  // because its slab differs.
-  state.gpu.foregroundMarkerLineRenderer = createMarkerLineRenderer(uiCtx, format, undefined, {
-    occludeAgainstDepth: 'compare',
-  });
 
   // ── Earth (Plan 02 — zoom-to-Earth) ──────────────────────────────────
   //

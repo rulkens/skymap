@@ -124,34 +124,34 @@ export function buildSwapRenderers(state: EngineState, format: GPUTextureFormat)
 Destroys any existing instance of each of the eight handles before replacing it, then
 re-attaches the label director (`state.subsystems.labelDirector.attachRenderers(...)`).
 
-- [ ] Read `initGpu.ts:200-300` and `:450-630` in full before moving anything. The eight
+- [x] Read `initGpu.ts:200-300` and `:450-630` in full before moving anything. The eight
       sites are **not contiguous** — three blocks separated by unrelated construction.
-- [ ] Add `fontAtlases` to `EngineGpuHandles` (nullable, null until `initGpu`), and store
+- [x] Add `fontAtlases` to `EngineGpuHandles` (nullable, null until `initGpu`), and store
       it in `initGpu` where it is currently a local.
-- [ ] Create `buildSwapRenderers.ts` with the eight constructions **in their current
+- [x] Create `buildSwapRenderers.ts` with the eight constructions **in their current
       relative order** and the director attach last. Carry each site's existing didactic
       comment with it — those comments explain the `occludeAgainstDepth` coverage-vs-compare
       choice and the capacity derivations, and they are the reason the sites look
       asymmetric.
-- [ ] Replace the three blocks in `initGpu.ts` with the single call, placed at the
+- [x] Replace the three blocks in `initGpu.ts` with the single call, placed at the
       **earliest** of the three original positions (the `:222-255` block), since the
       director attach at `:282` depends on it.
-- [ ] **Verify the order claim rather than assuming it.** `pickDebugOverlay` (`:459`) and
+- [x] **Verify the order claim rather than assuming it.** `pickDebugOverlay` (`:459`) and
       `diskRadiusRing` (`:467`) currently construct _after_ things that run between
       `:255` and `:459`. Confirm neither reads state produced in that window (they take
       only `device` + `format`); if either does, keep it at its original position and
       say so in the module header.
-- [ ] Add the test `buildSwapRenderers destroys the previous renderers before replacing them`
+- [x] Add the test `buildSwapRenderers destroys the previous renderers before replacing them`
       — call twice with a stub `EngineState`, assert each first-round handle's `destroy`
       spy fired and `state.gpu.*` now holds the second-round instances.
-- [ ] Add the test `buildSwapRenderers re-attaches the label director to the new renderers`
+- [x] Add the test `buildSwapRenderers re-attaches the label director to the new renderers`
       — assert `attachRenderers` was called with the _second-round_ label and marker-line
       instances. This is the failure that would otherwise be silent until labels vanish.
-- [ ] `npm test -- buildSwapRenderers` → both pass. `npm run typecheck` clean.
+- [x] `npm test -- buildSwapRenderers` → both pass. `npm run typecheck` clean.
 - [ ] **Boot the app and confirm labels, marker lines, and the selection ring still
       draw.** A pure extraction that quietly drops one of eight constructions typechecks
-      fine and only shows up visually.
-- [ ] Commit.
+      fine and only shows up visually. — carried to the end-of-plan visual pass (task 10).
+- [x] Commit.
 
 ---
 
