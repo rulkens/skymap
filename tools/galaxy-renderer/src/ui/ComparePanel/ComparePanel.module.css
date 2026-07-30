@@ -11,6 +11,12 @@
   display: flex;
   flex-direction: column;
   z-index: 20;
+  /* The panel's text has always self-declared mono per element (see .fact,
+     .headline, …); `Button` instead inherits its font from its DOM parent,
+     so this is the ambient font-family the app's own Button-hosting panels
+     set at their root — without it the buttons below would fall back to the
+     browser's default serif. */
+  font-family: var(--font-family-mono);
 }
 
 .header {
@@ -162,12 +168,10 @@
 }
 
 .loadButton {
-  composes: btnPrimary from '../shared.module.css';
   flex: 1;
 }
 
 .matchButton {
-  composes: btnGhost from '../shared.module.css';
   flex: 1;
 }
 
@@ -213,14 +217,27 @@
 }
 
 .fitButton {
-  composes: btnGood btnBlock from '../shared.module.css';
+  composes: blockButton from '../shared.module.css';
   margin-top: 12px;
 }
 
-.fitButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  filter: none;
+/*
+ * Green has no equivalent in the app's Button (primary/secondary/ghost) —
+ * this button kicks off a multi-second hill-climb, not a simple state
+ * change, so a distinct "run this" colour earns its keep rather than
+ * reusing the accent CTA colour used for ordinary primary actions.
+ * Nested under `.fitSection` for specificity over Button's own `.root`
+ * rules regardless of CSS-file load order (mirrors TimeBar's `.pill .step`).
+ */
+.fitSection .fitButton {
+  background: #2f8f5f;
+  border-color: #3aa86f;
+  color: #fff;
+}
+
+.fitSection .fitButton:hover:not(:disabled) {
+  background: #37a06a;
+  border-color: #45bb7d;
 }
 
 .noPhotoHint {

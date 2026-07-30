@@ -28,6 +28,7 @@ import { type ReactNode } from 'react';
 import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';
 import type { ParamSpecEntry } from '../../../@types/data/ParamSpecEntry';
 import { mulberry32 } from '../../../../../src/utils/random/mulberry32';
+import Button from '../../../../../src/components/common/Button/Button';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { paramsPatched } from '../../state/slices/galaxySlice';
 import { renderPatched } from '../../state/slices/renderSlice';
@@ -212,8 +213,8 @@ function ControlsPanel(): ReactNode {
   return (
     <div className={styles.root}>
       <div className={styles.scroll}>
-        <button
-          type="button"
+        <Button
+          variant="primary"
           className={styles.randomizeButton}
           onClick={() => {
             const rng = freshRng();
@@ -221,7 +222,7 @@ function ControlsPanel(): ReactNode {
           }}
         >
           🎲 Randomize everything
-        </button>
+        </Button>
 
         <div className={styles.morphologyHeader}>MORPHOLOGY · HUBBLE SEQUENCE</div>
         <TypePicker
@@ -273,8 +274,7 @@ function ControlsPanel(): ReactNode {
           {GLOB_SLIDERS.map(renderGalaxySlider)}
         </CollapsibleSection>
 
-        <button
-          type="button"
+        <Button
           className={styles.newSeedButton}
           onClick={() => {
             const rng = freshRng();
@@ -282,7 +282,7 @@ function ControlsPanel(): ReactNode {
           }}
         >
           ⟲ New random seed
-        </button>
+        </Button>
 
         <CollapsibleSection
           title="RENDERING"

@@ -1,4 +1,9 @@
 .root {
+  /* `Button` inherits its font from its DOM parent; this section's text
+     already self-declares mono per element, but Button relies on the
+     cascade instead — see ComparePanel.module.css's `.root` for the same
+     note. */
+  font-family: var(--font-family-mono);
 }
 
 .header {
@@ -15,7 +20,6 @@
 }
 
 .button {
-  composes: btnGhost from '../shared.module.css';
   flex: 1;
 }
 

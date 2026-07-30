@@ -1,11 +1,13 @@
 /*
- * shared.module.css — the Galaxy Renderer's composable HUD classes (buttons,
- * form controls, section headers, sliders). Design *tokens* live in the main
- * app's `src/styles/global.css`, imported once from the tool's `main.tsx` —
- * the tool and the app share one palette so a look tuned here transfers
- * directly to the renderer's own UI. This file owns only the two tool-local
- * status colours with no app equivalent, plus the classes built on top of
- * the shared tokens.
+ * shared.module.css — the Galaxy Renderer's composable HUD classes (form
+ * controls, section headers, sliders, the block-width button modifier).
+ * Buttons and the slider pill now render through the app's own `Button` and
+ * `Slider` primitives (`src/components/common/`); this file no longer owns
+ * their chrome. Design *tokens* live in the main app's `src/styles/global.css`,
+ * imported once from the tool's `main.tsx` — the tool and the app share one
+ * palette so a look tuned here transfers directly to the renderer's own UI.
+ * This file owns only the two tool-local status colours with no app
+ * equivalent, plus the classes built on top of the shared tokens.
  *
  * The `:root` block below is CSS custom properties, not class names — CSS
  * Modules only renames class/id selectors, so these tokens stay as-written
@@ -22,68 +24,9 @@
   --tool-status-warn: #e6c766;
 }
 
-/* ── Buttons — compact, themed (galaxy.css:46-55) ────────────────────────── */
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 6px 11px;
-  border-radius: var(--radius-xl);
-  font-family: var(--font-family-mono);
-  font-size: 11.5px;
-  font-weight: 600;
-  letter-spacing: 0.2px;
-  line-height: 1;
-  cursor: pointer;
-  border: 1px solid transparent;
-  transition:
-    background 0.12s ease,
-    border-color 0.12s ease,
-    filter 0.12s ease,
-    transform 0.04s ease;
-  white-space: nowrap;
-}
-
-.btn:hover {
-  filter: brightness(1.1);
-}
-
-.btn:active {
-  transform: translateY(1px);
-}
-
-.btnPrimary {
-  composes: btn;
-  background: var(--surface-control-active);
-  color: #fff;
-  border-color: var(--border-hover);
-}
-
-.btnGood {
-  composes: btn;
-  background: #2f8f5f;
-  color: #fff;
-  border-color: #3aa86f;
-}
-
-.btnGhost {
-  composes: btn;
-  background: var(--surface-control);
-  color: var(--color-fg-base);
-  border-color: var(--border-control);
-}
-
-.btnGhost:hover {
-  background: var(--surface-control-hover);
-  border-color: var(--border-hover);
-  filter: none;
-}
-
-/* Modifier — combine with a color variant via `cx(shared.btnGhost,
-   shared.btnBlock)`, mirroring the spike's `class="btn btn-ghost block"`. */
-.btnBlock {
+/* Full width is layout, not chrome — composed alongside the app's `Button`
+   (which owns the chrome) rather than folded into a color variant. */
+.blockButton {
   width: 100%;
 }
 

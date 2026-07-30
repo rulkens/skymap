@@ -23,6 +23,7 @@ import type { ReactNode } from 'react';
 import cx from 'classnames';
 import type { GalaxyEngineHandle } from '../../../@types/engine/GalaxyEngineHandle';
 import type { GalaxyDescriptor } from '../../../@types/matcher/GalaxyDescriptor';
+import Button from '../../../../../src/components/common/Button/Button';
 import { useAppDispatch, useAppSelector, useAppStore } from '../../state/hooks';
 import {
   referenceSelected,
@@ -143,12 +144,12 @@ function ComparePanel({ engine }: ComparePanelProps): ReactNode {
         <div className={styles.notable}>{active.notable}</div>
 
         <div className={styles.actions}>
-          <button type="button" className={styles.loadButton} onClick={handleLoadPreset}>
+          <Button variant="primary" className={styles.loadButton} onClick={handleLoadPreset}>
             Load preset →
-          </button>
-          <button type="button" className={styles.matchButton} onClick={handleMatchView}>
+          </Button>
+          <Button className={styles.matchButton} onClick={handleMatchView}>
             Match view
-          </button>
+          </Button>
         </div>
 
         <div className={styles.fitSection}>
@@ -162,14 +163,9 @@ function ComparePanel({ engine }: ComparePanelProps): ReactNode {
             Extracts scale- and rotation-invariant descriptors (radial profile, arm harmonics, axis
             ratio, dust) from the photo and hill-climbs the parameters to minimise the difference.
           </div>
-          <button
-            type="button"
-            className={styles.fitButton}
-            disabled={fitDisabled}
-            onClick={handleAutoFit}
-          >
+          <Button className={styles.fitButton} disabled={fitDisabled} onClick={handleAutoFit}>
             {compare.fitting ? 'Fitting…' : '⚙ Auto-fit render to photo'}
-          </button>
+          </Button>
           {active.img === null && <div className={styles.noPhotoHint}>no photo — model only</div>}
 
           {compare.fitting && (

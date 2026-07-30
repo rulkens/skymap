@@ -11,6 +11,9 @@
   display: flex;
   flex-direction: column;
   z-index: 15;
+  /* `Button` inherits its font from its DOM parent (see
+     ComparePanel.module.css's `.root` for the full note). */
+  font-family: var(--font-family-mono);
 }
 
 .scroll {
@@ -20,7 +23,7 @@
 }
 
 .randomizeButton {
-  composes: btnPrimary btnBlock from '../shared.module.css';
+  composes: blockButton from '../shared.module.css';
   margin-bottom: 16px;
 }
 
@@ -30,7 +33,7 @@
 }
 
 .newSeedButton {
-  composes: btnGhost btnBlock from '../shared.module.css';
+  composes: blockButton from '../shared.module.css';
   margin-top: 4px;
 }
 

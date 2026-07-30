@@ -1,4 +1,7 @@
 .root {
+  /* `Button` inherits its font from its DOM parent (see
+     ComparePanel.module.css's `.root` for the full note). */
+  font-family: var(--font-family-mono);
 }
 
 .toggleRow {
@@ -52,7 +55,7 @@
 }
 
 .regenButton {
-  composes: btnGhost btnBlock from '../shared.module.css';
+  composes: blockButton from '../shared.module.css';
 }
 
 .explainer {
