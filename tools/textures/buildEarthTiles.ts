@@ -75,8 +75,10 @@ import { earthBaseLevelForTier } from '../../src/utils/scene/earthBaseLevelForTi
 import { earthTileColumns } from '../../src/utils/scene/earthTileColumns';
 import { earthTilePath } from '../../src/utils/scene/earthTilePath';
 import { parseFlags } from '../utils/cli/args';
+import { BMNG_QUADRANT_KEYS } from '../utils/io/bmngQuadrantKeys';
+import { BMNG_VINTAGE } from '../utils/io/bmngVintage';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
-import { bmngQuadrantSource } from './bmngQuadrantSource';
+import { bmngQuadrantSource, type BmngQuadrant } from './bmngQuadrantSource';
 import type { EarthImagerySource } from './EarthImagerySource';
 import { equirectFileSource } from './equirectFileSource';
 import type { LonLatBox } from './LonLatBox';
@@ -286,25 +288,28 @@ export async function buildEarthTiles(source: EarthImagerySource, outDir: string
 }
 
 /**
- * The shipped source: BMNG's eight-file August 2004 quadrant set, which reaches
- * z7. Named here rather than inside the source module so the vintage and its
- * attribution string sit together at the one site that decides what gets baked.
+ * Verbatim credit for both sources below, because both ARE the same imagery: the
+ * quadrants and the whole-globe equirect are two publications of one BMNG month,
+ * and Earth's base texture is built from that same month (see `BMNG_VINTAGE`).
+ * One string means the manifest's `builtFrom` cannot credit a vintage the pixels
+ * did not come from.
+ */
+const BMNG_ATTRIBUTION = `NASA Blue Marble Next Generation, ${BMNG_VINTAGE.label} topography + bathymetry (public domain, credit NASA Earth Observatory).`;
+
+/**
+ * The shipped source: BMNG's eight-file quadrant set, which reaches z7. The
+ * paths derive from `BMNG_QUADRANT_KEYS`, whose `satisfies Record<BmngQuadrant,
+ * …>` already proves the set is complete — which is what makes the assertion
+ * below sound, and keeps a forgotten quadrant a compile error rather than a hole
+ * in the globe.
  */
 async function deepSource(): Promise<EarthImagerySource> {
   return bmngQuadrantSource({
-    id: 'nasa-bmng-200408',
-    attribution:
-      'NASA Blue Marble Next Generation, August 2004 topography + bathymetry (public domain, credit NASA Earth Observatory).',
-    quadrantPaths: {
-      A1: rawDataPath('textures.nasaBmng200408A1'),
-      A2: rawDataPath('textures.nasaBmng200408A2'),
-      B1: rawDataPath('textures.nasaBmng200408B1'),
-      B2: rawDataPath('textures.nasaBmng200408B2'),
-      C1: rawDataPath('textures.nasaBmng200408C1'),
-      C2: rawDataPath('textures.nasaBmng200408C2'),
-      D1: rawDataPath('textures.nasaBmng200408D1'),
-      D2: rawDataPath('textures.nasaBmng200408D2'),
-    },
+    id: `nasa-bmng-${BMNG_VINTAGE.stamp}-quadrants`,
+    attribution: BMNG_ATTRIBUTION,
+    quadrantPaths: Object.fromEntries(
+      Object.entries(BMNG_QUADRANT_KEYS).map(([quadrant, key]) => [quadrant, rawDataPath(key)]),
+    ) as Record<BmngQuadrant, string>,
   });
 }
 
@@ -317,14 +322,15 @@ async function deepSource(): Promise<EarthImagerySource> {
  * An explicit flag rather than "use the quadrants if they happen to be on disk":
  * a silent fall-back to the shallow source would emit a pyramid that is complete,
  * valid and four levels short, and nothing downstream can tell that from the
- * intended bake.
+ * intended bake. The `id` therefore names the PUBLICATION, not just the vintage:
+ * both sources are the same month, so 'which one baked this' is the only thing
+ * the manifest can be read for.
  */
 async function devSource(): Promise<EarthImagerySource> {
   return equirectFileSource({
-    id: 'nasa-bmng-200412',
+    id: `nasa-bmng-${BMNG_VINTAGE.stamp}-equirect`,
     rawKey: 'textures.nasaBmng',
-    attribution:
-      'NASA Blue Marble Next Generation, December 2004 topography + bathymetry (public domain, credit NASA Earth Observatory).',
+    attribution: BMNG_ATTRIBUTION,
   });
 }
 

@@ -15,10 +15,6 @@ import {
   type RawDataKey,
   type RawDataEntry,
 } from '../../../../tools/utils/io/rawDataRegistry';
-import {
-  TEXTURE_SOURCES,
-  type TextureSourceEntry,
-} from '../../../../tools/utils/io/textureSources';
 
 describe('rawDataPath resolves mcxc + mscc keys to absolute paths', () => {
   it('mcxc.table resolves to an absolute path ending with the registered relative path', () => {
@@ -59,25 +55,19 @@ describe('textures.* rows', () => {
     }
   });
 
-  it('every row TEXTURE_SOURCES names is driven by the shared fetcher', () => {
-    // Derived from TEXTURE_SOURCES rather than from the `textures.` key prefix:
-    // being IN that table is what makes a row part of the `fetch-textures` pull,
-    // and the prefix no longer implies it — the BMNG quadrant rows are consumed
-    // by `build-earth-tiles`, which is its own 421 MB pull nothing else needs.
-    // Keyed this way the sweep still catches the failure it exists for (a
-    // textured body whose raw the fetcher never downloads) and stops asserting a
-    // fetcher for rows that legitimately have none.
-    const fetched = new Set<RawDataKey>();
-    for (const kinds of Object.values(TEXTURE_SOURCES)) {
-      for (const entry of Object.values(kinds) as readonly TextureSourceEntry[]) {
-        fetched.add(entry.native);
-        if (entry.devKey !== undefined) fetched.add(entry.devKey);
-      }
-    }
-    expect(fetched.size).toBeGreaterThan(0);
-    for (const key of fetched) {
+  it('every gitignored raw texture-source file is driven by the shared fetcher', () => {
+    // Prefix-keyed over the whole `textures.` family rather than derived from
+    // TEXTURE_SOURCES: the BMNG quadrants are not a `(body, kind)` source and
+    // would slip through that view, and "a raw the pipeline reads that no command
+    // can obtain" is exactly the state this assertion exists to forbid — it was
+    // the quadrants' state until they joined the pull. That `fetch-textures`
+    // really does download each one is checked in fetchTextures.test.ts.
+    const rawSources = textureKeys.filter(
+      (key) => RAW_DATA[key].source === 'gitignored' && RAW_DATA[key].kind === 'file',
+    );
+    expect(rawSources.length).toBeGreaterThan(0);
+    for (const key of rawSources) {
       const entry: RawDataEntry = RAW_DATA[key];
-      expect(entry.upstream, key).toBeTruthy();
       expect(entry.fetcher, key).toBe('tools/fetch/fetchTextures.ts');
     }
   });

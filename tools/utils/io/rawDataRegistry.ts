@@ -24,6 +24,8 @@
 
 import { resolve } from 'node:path';
 
+import { BMNG_VINTAGE } from './bmngVintage';
+
 export type RawDataEntry = {
   readonly path: string;
   readonly kind: 'file' | 'directory';
@@ -594,117 +596,115 @@ export const RAW_DATA = {
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
+
+  // ─── BMNG Earth imagery — one vintage, two publications ───────────────
+  //
+  // Every path and URL below takes its month from `BMNG_VINTAGE`, because the
+  // whole-globe equirect (Earth's base texture) and the eight quadrants (the
+  // surface tile pyramid) have to be the SAME month: the tile layer falls back
+  // to the base outside the baked window, so a seasonal mismatch would draw a
+  // snow line along the tile frontier. Reading the month from one constant makes
+  // that agreement structural instead of a rule to remember.
+
   'textures.nasaBmng': {
-    path: 'data/raw/textures/world.topo.bathy.200412.3x21600x10800.jpg',
+    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x10800.jpg`,
     kind: 'file',
     source: 'gitignored',
-    description:
-      'NASA Blue Marble Next Generation, December topo+bathymetry equirect, 21600x10800 JPG (public domain, credit NASA Earth Observatory). Full-res Earth source.',
-    upstream:
-      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-topography-bathymetry/december/world.topo.bathy.200412.3x21600x10800.jpg',
+    description: `NASA Blue Marble Next Generation, ${BMNG_VINTAGE.label} topo+bathymetry equirect, 21600x10800 JPG (public domain, credit NASA Earth Observatory). Full-res Earth source; also the --dev source for the tile bake.`,
+    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x10800.jpg`,
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
   'textures.nasaBmngDev': {
-    path: 'data/raw/textures/world.topo.bathy.200412.3x5400x2700.jpg',
+    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x5400x2700.jpg`,
     kind: 'file',
     source: 'gitignored',
     description:
       'NASA Blue Marble Next Generation, 5400x2700 sibling of the full BMNG Earth equirect (public domain). The --dev quick-fetch subset source.',
-    upstream:
-      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-topography-bathymetry/december/world.topo.bathy.200412.3x5400x2700.jpg',
+    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x5400x2700.jpg`,
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
-  // ─── BMNG August 2004 quadrants (deep Earth-surface tile source) ──────
-  //
-  // NASA publishes each BMNG month as a whole-globe equirect AND as eight
-  // 21600x21600 quadrants that composite to 86400x43200 — about 464 m per
-  // texel, four ladder levels deeper than the equirect (z7 against z5). Only
-  // `build-earth-tiles` consumes them (`tools/textures/bmngQuadrantSource.ts`,
-  // which reads one file per tile and never stitches across two), so they are
-  // not part of the `fetch-textures` pull: 421 MB nobody who is not baking the
-  // pyramid needs. Column letters A-D run west to east from longitude -180,
-  // row digits 1-2 are the northern and southern hemispheres.
 
-  'textures.nasaBmng200408A1': {
-    path: 'data/raw/textures/world.topo.bathy.200408.3x21600x21600.A1.jpg',
+  // The eight 21600x21600 quadrants composite to 86400x43200, about 464 m per
+  // texel and four ladder levels deeper than the equirect (z7 against z5). Only
+  // `build-earth-tiles` reads their pixels (`tools/textures/bmngQuadrantSource.ts`,
+  // one file per tile, never stitching across two), but they ride the same
+  // `fetch-textures` pull as everything else so the 421 MB is obtainable by
+  // command rather than by hand. Column letters A-D run west to east from
+  // longitude -180; row digits 1-2 are the northern and southern hemispheres.
+  // `BMNG_QUADRANT_KEYS` is the one enumeration of the set.
+
+  'textures.nasaBmngQuadrantA1': {
+    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.A1.jpg`,
     kind: 'file',
     source: 'gitignored',
-    description:
-      'BMNG August 2004 topo+bathymetry quadrant A1 — lon -180..-90, lat 0..90 (public domain, credit NASA Earth Observatory).',
-    upstream:
-      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-topography-bathymetry/august/world.topo.bathy.200408.3x21600x21600.A1.jpg',
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant A1 — lon -180..-90, lat 0..90 (public domain, credit NASA Earth Observatory).`,
+    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.A1.jpg`,
+    fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
-  'textures.nasaBmng200408A2': {
-    path: 'data/raw/textures/world.topo.bathy.200408.3x21600x21600.A2.jpg',
+  'textures.nasaBmngQuadrantA2': {
+    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.A2.jpg`,
     kind: 'file',
     source: 'gitignored',
-    description:
-      'BMNG August 2004 topo+bathymetry quadrant A2 — lon -180..-90, lat -90..0 (public domain, credit NASA Earth Observatory).',
-    upstream:
-      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-topography-bathymetry/august/world.topo.bathy.200408.3x21600x21600.A2.jpg',
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant A2 — lon -180..-90, lat -90..0 (public domain, credit NASA Earth Observatory).`,
+    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.A2.jpg`,
+    fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
-  'textures.nasaBmng200408B1': {
-    path: 'data/raw/textures/world.topo.bathy.200408.3x21600x21600.B1.jpg',
+  'textures.nasaBmngQuadrantB1': {
+    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.B1.jpg`,
     kind: 'file',
     source: 'gitignored',
-    description:
-      'BMNG August 2004 topo+bathymetry quadrant B1 — lon -90..0, lat 0..90 (public domain, credit NASA Earth Observatory).',
-    upstream:
-      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-topography-bathymetry/august/world.topo.bathy.200408.3x21600x21600.B1.jpg',
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant B1 — lon -90..0, lat 0..90 (public domain, credit NASA Earth Observatory).`,
+    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.B1.jpg`,
+    fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
-  'textures.nasaBmng200408B2': {
-    path: 'data/raw/textures/world.topo.bathy.200408.3x21600x21600.B2.jpg',
+  'textures.nasaBmngQuadrantB2': {
+    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.B2.jpg`,
     kind: 'file',
     source: 'gitignored',
-    description:
-      'BMNG August 2004 topo+bathymetry quadrant B2 — lon -90..0, lat -90..0 (public domain, credit NASA Earth Observatory).',
-    upstream:
-      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-topography-bathymetry/august/world.topo.bathy.200408.3x21600x21600.B2.jpg',
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant B2 — lon -90..0, lat -90..0 (public domain, credit NASA Earth Observatory).`,
+    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.B2.jpg`,
+    fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
-  'textures.nasaBmng200408C1': {
-    path: 'data/raw/textures/world.topo.bathy.200408.3x21600x21600.C1.jpg',
+  'textures.nasaBmngQuadrantC1': {
+    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.C1.jpg`,
     kind: 'file',
     source: 'gitignored',
-    description:
-      'BMNG August 2004 topo+bathymetry quadrant C1 — lon 0..90, lat 0..90 (public domain, credit NASA Earth Observatory).',
-    upstream:
-      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-topography-bathymetry/august/world.topo.bathy.200408.3x21600x21600.C1.jpg',
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant C1 — lon 0..90, lat 0..90 (public domain, credit NASA Earth Observatory).`,
+    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.C1.jpg`,
+    fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
-  'textures.nasaBmng200408C2': {
-    path: 'data/raw/textures/world.topo.bathy.200408.3x21600x21600.C2.jpg',
+  'textures.nasaBmngQuadrantC2': {
+    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.C2.jpg`,
     kind: 'file',
     source: 'gitignored',
-    description:
-      'BMNG August 2004 topo+bathymetry quadrant C2 — lon 0..90, lat -90..0 (public domain, credit NASA Earth Observatory).',
-    upstream:
-      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-topography-bathymetry/august/world.topo.bathy.200408.3x21600x21600.C2.jpg',
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant C2 — lon 0..90, lat -90..0 (public domain, credit NASA Earth Observatory).`,
+    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.C2.jpg`,
+    fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
-  'textures.nasaBmng200408D1': {
-    path: 'data/raw/textures/world.topo.bathy.200408.3x21600x21600.D1.jpg',
+  'textures.nasaBmngQuadrantD1': {
+    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.D1.jpg`,
     kind: 'file',
     source: 'gitignored',
-    description:
-      'BMNG August 2004 topo+bathymetry quadrant D1 — lon 90..180, lat 0..90 (public domain, credit NASA Earth Observatory).',
-    upstream:
-      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-topography-bathymetry/august/world.topo.bathy.200408.3x21600x21600.D1.jpg',
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant D1 — lon 90..180, lat 0..90 (public domain, credit NASA Earth Observatory).`,
+    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.D1.jpg`,
+    fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
-  'textures.nasaBmng200408D2': {
-    path: 'data/raw/textures/world.topo.bathy.200408.3x21600x21600.D2.jpg',
+  'textures.nasaBmngQuadrantD2': {
+    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.D2.jpg`,
     kind: 'file',
     source: 'gitignored',
-    description:
-      'BMNG August 2004 topo+bathymetry quadrant D2 — lon 90..180, lat -90..0 (public domain, credit NASA Earth Observatory).',
-    upstream:
-      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-topography-bathymetry/august/world.topo.bathy.200408.3x21600x21600.D2.jpg',
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant D2 — lon 90..180, lat -90..0 (public domain, credit NASA Earth Observatory).`,
+    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.D2.jpg`,
+    fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
 

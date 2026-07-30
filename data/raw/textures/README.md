@@ -8,17 +8,22 @@ native tier; `build-textures` then downsamples per
 verification (URLs GET-probed, licence text read, pixel dims confirmed
 2026-07-17) and §10 for the pipeline.
 
+The same pull also carries the eight Blue Marble quadrants that
+`build-earth-tiles` bakes into Earth's surface tile pyramid. Only that bake reads
+them, but they are fetched with everything else so the 421 MB is obtainable by
+command rather than by hand.
+
 | Field      | Value                                                                             |
 | ---------- | --------------------------------------------------------------------------------- |
 | Fetch date | _(pending — filled by the maintainer's first full pull from `main`)_              |
-| Full size  | ~700 MB (all native tiers)                                                        |
+| Full size  | ~1.1 GB (~700 MB of native body tiers + the ~421 MB BMNG quadrant set)            |
 | Dev subset | ~7 MB (`--dev`: 2k SSS variants + 5400×2700 BMNG)                                 |
 | Checksums  | `textures.sha256` — one `<hex>  <filename>` line per file, written on first fetch |
 
 ## How to obtain
 
 ```
-npm run fetch-textures -- --confirm   # full ~700 MB pull (size-gated)
+npm run fetch-textures -- --confirm   # full ~1.1 GB pull (size-gated)
 npm run fetch-textures -- --dev        # ~7 MB visual-check subset, no confirm
 ```
 
@@ -52,17 +57,63 @@ dev subset reuses it (never fetched twice).
 
 ## NASA Blue Marble Next Generation — Earth (public domain; credit "NASA Earth Observatory")
 
-December topography+bathymetry equirect.
+Topography+bathymetry imagery. **Pulled vintage: August 2004.**
 
-| Purpose    | File                                        | Dims        | Size    |
-| ---------- | ------------------------------------------- | ----------- | ------- |
-| Full pull  | `world.topo.bathy.200412.3x21600x10800.jpg` | 21600×10800 | ~30 MB  |
-| Dev subset | `world.topo.bathy.200412.3x5400x2700.jpg`   | 5400×2700   | ~2.4 MB |
+BMNG is a monthly series: twelve whole-globe images, all from 2004, each one a
+cloud-screened composite of many MODIS Terra passes over that month. Which month
+you pull is therefore a visible choice, not a version number. August was picked
+for a green northern hemisphere.
 
-Base:
-`https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-topography-bathymetry/december/`
-(`Access-Control-Allow-Origin: *`). Replaces the retired committed
-`public/images/earth/blue-marble-4k.jpg` — Earth now joins the R2 texture family.
+Every month is published twice over, and skymap uses both publications:
+
+- the **21600×10800 whole-globe equirect**, which `build-textures` tiers into
+  Earth's `surface` map (the whole-globe base texture), and
+- the **eight 21600×21600 quadrants**, which `build-earth-tiles` bakes into the
+  `earth-tiles/` pyramid the runtime virtual texture pages.
+
+Both must be the SAME month. The tile layer falls back to the base texture
+outside its baked level range and wherever the tile atlas runs out of slots, so a
+base from a different month draws a snow line and a vegetation change along the
+tile frontier, the one place the feature is meant to be inspected. The month is
+chosen once, in `tools/utils/io/bmngVintage.ts`, and every registry path, upstream
+URL and attribution string reads it from there.
+
+### Whole-globe equirect (Earth's base texture)
+
+| Purpose    | File                                        | Dims        | Size             |
+| ---------- | ------------------------------------------- | ----------- | ---------------- |
+| Full pull  | `world.topo.bathy.200408.3x21600x10800.jpg` | 21600×10800 | 27,216,225 bytes |
+| Dev subset | `world.topo.bathy.200408.3x5400x2700.jpg`   | 5400×2700   | 2,308,163 bytes  |
+
+### Quadrants (the surface tile pyramid's source)
+
+The eight files composite to 86400×43200, about 464 m per texel and four pyramid
+levels deeper than the equirect (z7 against z5). Column letters A-D run west to
+east from longitude -180; row digits 1 and 2 are the northern and southern
+hemispheres. `bmngQuadrantSource` reads one file per tile and never stitches
+across two, which the 90-degree quadrant boundaries make possible from z2 upward.
+Full pull only, no dev variant: a `--dev` tile bake reads the whole-globe equirect
+instead.
+
+| File                                           | Extent (lon × lat) | Size             |
+| ---------------------------------------------- | ------------------ | ---------------- |
+| `world.topo.bathy.200408.3x21600x21600.A1.jpg` | -180..-90 × 0..90  | 54,280,546 bytes |
+| `world.topo.bathy.200408.3x21600x21600.A2.jpg` | -180..-90 × -90..0 | 24,328,476 bytes |
+| `world.topo.bathy.200408.3x21600x21600.B1.jpg` | -90..0 × 0..90     | 54,137,687 bytes |
+| `world.topo.bathy.200408.3x21600x21600.B2.jpg` | -90..0 × -90..0    | 47,001,732 bytes |
+| `world.topo.bathy.200408.3x21600x21600.C1.jpg` | 0..90 × 0..90      | 89,081,015 bytes |
+| `world.topo.bathy.200408.3x21600x21600.C2.jpg` | 0..90 × -90..0     | 39,324,538 bytes |
+| `world.topo.bathy.200408.3x21600x21600.D1.jpg` | 90..180 × 0..90    | 69,167,032 bytes |
+| `world.topo.bathy.200408.3x21600x21600.D2.jpg` | 90..180 × -90..0   | 43,499,590 bytes |
+
+Quadrant total: 420,820,616 bytes (~421 MB).
+
+Base URL for all nine files (`Access-Control-Allow-Origin: *`, verified live
+2026-07-30):
+
+```
+https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-topography-bathymetry/august/
+```
 
 ### Earth material map — NASA BMNG land/water mask
 
