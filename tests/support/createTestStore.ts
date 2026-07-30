@@ -49,6 +49,7 @@ export const NOOP_RECONCILE: ReconcileEffects = {
   reseedFlow: () => {},
   bakeBias: () => {},
   logCameraState: () => {},
+  applySwapFormat: () => {},
 };
 
 // An engine that has booted and loaded nothing. Empty, not absent: a `#focus=`

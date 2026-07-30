@@ -9,9 +9,9 @@
  * whole range.
  *
  * Presentation only — state keeps the linear multiplier, since that is the space
- * the curve's own parameters (the Reinhard whitepoint, the asinh softness) are
- * expressed in, and anything comparing against them would have to convert back.
- * The inverse is `evToExposure`.
+ * the curve's own parameters (the Reinhard whitepoint, the asinh softness) and
+ * `hdrKnee` are all expressed in, and anything comparing against them would have
+ * to convert back. The inverse is `evToExposure`.
  */
 
 export function exposureToEv(exposure: number): number {

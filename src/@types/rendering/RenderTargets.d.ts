@@ -58,6 +58,13 @@ export type RenderTargets = {
    * once and every offscreen row tracks the new canvas size together.
    */
   resize(size: Size): void;
+  /**
+   * Replace the `swap` row's format in `specs` — the single home for the
+   * live swap-chain format, so a caller that reconfigures the swap chain
+   * (e.g. toggling HDR display output) has one place to update it.
+   * Allocates nothing: the swap row has no backing texture (see `viewOf`).
+   */
+  setSwapFormat(next: GPUTextureFormat): void;
   /** Tear down — releases every allocated offscreen texture. */
   destroy(): void;
 };

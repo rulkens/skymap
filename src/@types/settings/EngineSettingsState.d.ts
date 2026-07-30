@@ -47,6 +47,7 @@ import type { ToneMapCurve } from '../data/ToneMapCurve';
 import type { StructureId } from '../data/structure/StructureId';
 import type { GalaxyCatalogId } from '../data/galaxyCatalog/GalaxyCatalogId';
 import type { FlowSettings } from './FlowSettings';
+import type { HdrSettings } from './HdrSettings';
 import type { LabelSettings } from './LabelSettings';
 import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from './VolumeFieldSettings';
@@ -130,6 +131,9 @@ export type EngineSettingsState = {
     exposure: number;
     curve: ToneMapCurve;
   };
+
+  /** HDR opt-in + extended-range headroom knobs — see `HdrSettings`. */
+  hdr: HdrSettings;
 
   /**
    * Screen-space bloom controls.  One global knob set, read live by the bloom

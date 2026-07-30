@@ -80,6 +80,7 @@ function makeStubContext() {
     context: null as unknown as GPUCanvasContext,
     format: 'rgba16float',
     canvas: null as unknown as HTMLCanvasElement,
+    hdrCapable: false,
   };
 
   return { ctx, calls };

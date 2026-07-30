@@ -7,8 +7,8 @@
  *
  * Holds the observable runtime state the engine reports to the store:
  * lifecycle status, per-source galaxy counts, per-structure counts, load
- * progress, the current scale-bar descriptor, the focused-body distance, and
- * the two curated metadata sidecars.
+ * progress, the current scale-bar descriptor, the focused-body distance, the
+ * live HDR display capability, and the two curated metadata sidecars.
  * Each field is written by a single action creator in `engineSlice`; nothing
  * in this type is computed or derived — derivation is the selector's job.
  *
@@ -48,6 +48,16 @@ export type EngineSliceState = {
    * subscriber.
    */
   focusedBodyDistanceMpc: number | null;
+  /**
+   * True when the ACTIVE display currently reports more than SDR range (the
+   * CSS Media Queries Level 5 `dynamic-range` feature). Written by
+   * `engineHdrCapabilityChanged`: once at boot with `GpuContext.hdrCapable`,
+   * and again on every later `matchMedia` `change` — see `device.ts`'s
+   * `watchHdrCapability`. NOT whether the swap chain currently is the
+   * extended-range surface; that's `hdrActiveOf`, derived from the render
+   * targets' live format.
+   */
+  hdrCapable: boolean;
   sourceCounts: Partial<Record<SourceType, number>>;
   structureCounts: Partial<Record<StructureId, number>>;
   provenanceCounts: Partial<Record<SourceType, ProvenanceCounts>>;

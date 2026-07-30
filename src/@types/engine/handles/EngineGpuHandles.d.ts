@@ -82,6 +82,8 @@ import type { SourceUniformsBgl } from '../../rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../rendering/FocusUniformsBgl';
 import type { FocusUniformBuffer } from '../../rendering/FocusUniformBuffer';
 import type { Compositor } from '../../rendering/Compositor';
+import type { LoadedFontAtlases } from '../../rendering/LoadedFontAtlases';
+import type { GpuContext } from '../../rendering/GpuContext';
 
 export type EngineGpuHandles = {
   renderer: PointRenderer | null;
@@ -178,6 +180,27 @@ export type EngineGpuHandles = {
    * point of use.
    */
   constellationRenderer: ConstellationRenderer | null;
+  /**
+   * The decoded MSDF font atlas (BMFont JSON + bitmap), retained here (not a
+   * local in `initGpu`) so `buildSwapRenderers` can re-run the label
+   * factories on a swap-format rebuild without re-fetching. Null until
+   * `initGpu` resolves the fetch; never released by `destroy()` — decoded
+   * data, not a GPU resource.
+   */
+  fontAtlases: LoadedFontAtlases | null;
+  /**
+   * `device` + `context` + `canvas` for every renderer that targets the swap
+   * chain, retained here for the same reason as `fontAtlases`:
+   * `buildSwapRenderers` rebuilds those renderers from it on a format swap.
+   * Omits `format` (unlike `GpuContext`) because that's the one field that
+   * goes stale the instant a rebuild starts: `initGpu` constructs this field
+   * from its own format-less object literal (not the full `GpuContext` it
+   * builds for other constructors), so no stale format exists to leak, and
+   * `buildSwapRenderers` composes `{ ...uiCtx, format }` with the live value.
+   * Null until `initGpu` constructs it; never released by `destroy()` — no
+   * GPU resource of its own.
+   */
+  uiCtx: Omit<GpuContext, 'format'> | null;
   /**
    * MSDF text label renderer.  Null until `initGpu` completes the
    * `loadFontAtlas()` fetch and constructs the renderer against the
