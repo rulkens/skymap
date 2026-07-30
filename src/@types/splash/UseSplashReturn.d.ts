@@ -6,8 +6,8 @@ import type { SplashError } from './SplashError';
  * `splashVisible` is the render gate App reads.  `blocked` reports whether
  * CTAs should be disabled (loading not yet ready).  `canContinueAnyway`
  * exposes the 8 s timer's expiration so the splash can show the escape
- * link.  `error` is null on the happy path; `famous-meta-failed` leaves
- * the splash usable, the other kinds force the error layout.
+ * link.  `error` is null on the happy path; any non-null kind forces the
+ * error layout.
  *
  * `dismissExplore` / `dismissTour` dismiss the splash (marks it seen at the
  * current version) and reveal the app.  `reopen` (called by the AboutPill)

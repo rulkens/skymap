@@ -158,16 +158,16 @@ describe('createFadeRegistry', () => {
     expect(r.opacityOf(aVoid, 0)).toBeCloseTo(0.75, 5);
   });
 
-  it('serializeFadeId keeps a category-less labelLayer distinct from a per-category one', () => {
+  it('serializeFadeId keeps an item-less labelLayer distinct from a per-item one', () => {
     const r = makeRegistry();
     const bare: FadeId = { kind: 'labelLayer', layer: 'structure' };
-    const perCategory: FadeId = { kind: 'labelLayer', layer: 'structure', category: 'cluster' };
+    const perItem: FadeId = { kind: 'labelLayer', layer: 'structure', item: 'cluster' };
     r.register(bare, 0);
-    r.register(perCategory, 0);
+    r.register(perItem, 0);
     r.fadeTo(bare, 0.2, 0, 0);
-    r.fadeTo(perCategory, 0.8, 0, 0);
+    r.fadeTo(perItem, 0.8, 0, 0);
     expect(r.opacityOf(bare, 0)).toBeCloseTo(0.2, 5);
-    expect(r.opacityOf(perCategory, 0)).toBeCloseTo(0.8, 5);
+    expect(r.opacityOf(perItem, 0)).toBeCloseTo(0.8, 5);
   });
 
   it('serializeFadeId keys the milkyWay label handle', () => {
@@ -175,7 +175,7 @@ describe('createFadeRegistry', () => {
     const h: FadeId = { kind: 'labelLayer', layer: 'milkyWay' };
     r.register(h, 0);
     r.fadeTo(h, 1, 0, 0);
-    // Category-less label handle resolves to its own controller.
+    // Item-less label handle resolves to its own controller.
     expect(r.opacityOf(h, 0)).toBeCloseTo(1, 5);
   });
 

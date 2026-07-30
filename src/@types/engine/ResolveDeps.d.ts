@@ -1,6 +1,6 @@
 import type { GalaxyCatalog } from '../data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogSourceType } from '../data/galaxyCatalog/GalaxyCatalogSourceType';
-import type { FamousMetaEntry } from '../loading/FamousMetaEntry';
+import type { FamousGalaxyMetaEntry } from '../loading/FamousGalaxyMetaEntry';
 import type { StructureInfo } from '../data/structure/StructureInfo';
 import type { StarCatalog } from '../data/starCatalog/StarCatalog';
 
@@ -9,13 +9,13 @@ import type { StarCatalog } from '../data/starCatalog/StarCatalog';
  * SelectionRef into a SelectionRow. Bundled (not threaded individually) so the
  * saga gets the whole bag from `getContext('resolveDeps')()`. It mirrors the
  * existing pick-path `ResolvePickDeps` shape: live catalog lookup, the
- * famous-meta sidecar, and the structure store's by-id resolver. The getters
- * read LIVE engine state each call (the catalogs/structures change as clouds
- * load), so the saga always sees current data.
+ * famous-galaxies meta sidecar, and the structure store's by-id resolver. The
+ * getters read LIVE engine state each call (the catalogs/structures change as
+ * clouds load), so the saga always sees current data.
  */
 export type ResolveDeps = {
   readonly catalogs: { get(source: GalaxyCatalogSourceType): GalaxyCatalog | undefined };
-  readonly famousMeta: readonly FamousMetaEntry[];
+  readonly famousGalaxiesMeta: readonly FamousGalaxyMetaEntry[];
   readonly structures: { byId(id: string): StructureInfo | null };
   // The sole loaded star catalog (v1 ships one starCatalog source, the Gaia
   // bin). Reads LIVE engine state each call like the other getters — null

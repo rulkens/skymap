@@ -20,6 +20,7 @@ import { renderHook } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { SagaContextProvider, useSetSagaContext } from '../../src/store/SagaContextProvider';
 import type { SetSagaContext } from '../../src/store/types';
+import { NOOP_SAGA_CONTEXT } from '../support/createTestStore';
 
 describe('SagaContextProvider / useSetSagaContext', () => {
   it('returns the provided setSagaContext and invokes it correctly', () => {
@@ -34,7 +35,7 @@ describe('SagaContextProvider / useSetSagaContext', () => {
     expect(result.current).toBe(spy);
 
     // Invocability: calling the returned function delegates to the spy.
-    result.current({ reconcile: undefined as never });
+    result.current(NOOP_SAGA_CONTEXT);
     expect(spy).toHaveBeenCalledTimes(1);
   });
 

@@ -1,7 +1,7 @@
 /**
  * famousStarsMetaFetcher — fetches the famous-star `famous_stars_meta.json`
  * sidecar and returns a `{ meta }` payload.  The star twin of
- * `famousMetaFetcher`: the render-critical star row already loaded from the
+ * `famousGalaxiesMetaFetcher`: the render-critical star row already loaded from the
  * catalog bin; these narrative/physical fields arrive lazily here for the
  * InfoCard.
  *
@@ -9,8 +9,8 @@
  *
  * The rejected alternative — swallow 404s into empty values so the card
  * keeps working on developer clones without the build step that emits the
- * sidecar — belongs a layer up: the React hook (`useFamousStarsMeta`) maps
- * a rejection → "feature off" by leaving the empty default in place.
+ * sidecar — belongs a layer up: the slot's subscriber maps a rejection →
+ * "feature off" by reporting an empty array to the engine slice.
  * Keeping the fetcher honest about HTTP status lets any retry policy
  * distinguish "really gone" (404, give up) from "transient flake"
  * (5xx, retry).

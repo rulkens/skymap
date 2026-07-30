@@ -6,7 +6,7 @@
  * them, then restores the capture via `restoreSceneSaga`, which `put`s
  * `mergeSnapshot(snapshot)`. This reducer is that write: replace each cluster the
  * snapshot carries, leave the rest untouched. It stays patch-shaped (a `Partial`
- * snapshot) even though the tour restore always sends all six clusters, so a
+ * snapshot) even though the tour restore always sends all ten clusters, so a
  * narrower patch would merge the same way.
  *
  * The fade that follows is NOT this reducer's concern: `watchFadesSaga` reacts to

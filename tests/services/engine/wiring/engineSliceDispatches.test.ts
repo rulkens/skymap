@@ -194,7 +194,7 @@ function makeProgressState(): EngineState {
       // Real (empty) map: installLoadProgress walks it like points.
       starCatalogs: new Map<SourceType, AssetSlot<unknown, unknown>>(),
       filaments: stubSlot('filaments'),
-      famousMeta: stubSlot('famous-meta'),
+      famousGalaxiesMeta: stubSlot('famous-galaxies-meta'),
       structureCatalog: stubSlot('structure-catalog'),
       pgcAlias: stubSlot('pgc-aliases'),
       cf4Density: stubSlot('cf4Density'),

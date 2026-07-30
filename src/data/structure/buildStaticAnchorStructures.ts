@@ -5,18 +5,16 @@
  *
  * ### Why a separate module?
  *
- * Two consumers want exactly the same id-slug + worldPos mapping:
+ * `services/engine/wiring/wireStructureProjection.ts` writes the result into the
+ * engine's structure store, where the label/ring overlays read it to know where
+ * to draw. It is the only importer, but the mapping it performs is a shared
+ * contract with the URL: `resolveFocusId` decodes `#focus=cluster-virgo-m87`
+ * into `{ type: 'structure', id }` on the id STRING alone, without consulting
+ * any table, so the ref a deep link produces only names a real anchor while the
+ * id rule here stays put. Isolating the mapping in one pure module is what makes
+ * that rule inspectable and testable rather than buried in a bootstrap phase.
  *
- *   1.  `services/engine/wiring/wireStructureProjection.ts` — the engine
- *       bootstrap writes these into the structure store so the label/ring
- *       overlays know where to draw.
- *
- *   2.  `hooks/useUrlSync.ts` — the React-side `#focus=<id>` deep-link drain
- *       needs a `StructureInfo` to dispatch `updateSelectionFocus`, but
- *       App.tsx has no public read-side accessor for the engine's structure
- *       table (the store owns the list).
- *
- * Keeping a single helper here means both call sites agree on:
+ * What the module fixes in one place:
  *
  *   - The id rule: `${category}-${seed.id}`, where `seed.id` is the
  *     curated identifier in `structure_anchors.seed.json`.  Using the seed
@@ -25,8 +23,8 @@
  *     characters or punctuation.
  *
  *   - The worldPos conversion (RA hours / Dec deg / Mpc → equatorial
- *     Cartesian Mpc via `raDecDistToEqCart`), so the record the drain hands
- *     to the camera is the same Vec3 the ring renderer is drawing at.
+ *     Cartesian Mpc via `raDecDistToEqCart`), so the position the camera
+ *     tweens to is the same Vec3 the ring renderer is drawing at.
  *
  *   - The `physicalRadiusMpc` carry-through, which downstream consumers
  *     (cone-search, ring sizing) rely on.
@@ -36,24 +34,11 @@
  *     union has no `abell` field on the supercluster/void/group arms), so
  *     the field never leaks onto a non-cluster anchor.
  *
- * ### Why not expose the engine's structure list directly?
- *
- * The engine's structure table is dynamic — the curated anchors merge with
- * the asynchronously-loaded bulk cluster catalog.  Exposing the merged
- * snapshot as a reactive React state slice would mean threading a new
- * callback through EngineCallbacks and re-rendering App on every catalog
- * load.  For the deep-link drain use case, the static subset is
- * sufficient — `#focus=cluster-virgo-m87` / `#focus=supercluster-coma-sc`
- * / `#focus=void-bootes-void` / `#focus=group-local-group` all live in this
- * table.  Famous-galaxy deep-links (`#focus=famous-…`) are a future
- * extension; the drain leaves the pending id set so a future "famous
- * galaxies ready" subscriber can resolve it.
- *
  * ### Pure
  *
- * No I/O, no engine coupling — safe to import from React, the engine,
- * and tests alike.  The seed JSON is bundled at build time via the Vite
- * JSON import below, so this remains synchronous.
+ * No I/O, no engine coupling — safe to import from the engine and tests
+ * alike.  The seed JSON is bundled at build time via the Vite JSON import
+ * below, so this remains synchronous.
  */
 
 import { raDecDistToEqCart } from '../../utils/math/raDecDistToEqCart';

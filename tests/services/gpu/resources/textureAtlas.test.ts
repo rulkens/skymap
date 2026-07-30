@@ -1,15 +1,24 @@
 import { describe, it, expect, vi } from 'vitest';
-import {
-  TextureAtlas,
-  ATLAS_SIDE,
-  SLOT_SIDE,
-  SLOT_COUNT,
-} from '../../../../src/services/gpu/resources/textureAtlas';
+import { TextureAtlas } from '../../../../src/services/gpu/resources/textureAtlas';
+
+// Test-local geometry, standing in for a real consumer's configuration
+// (e.g. the galaxy thumbnail atlas's 2048/128 or an Earth tile atlas's
+// own values). The state machine under test is agnostic to the actual
+// numbers, so any square grid exercises it.
+const ATLAS_SIDE = 2048;
+const SLOT_SIDE = 128;
+const SLOT_COUNT = (ATLAS_SIDE / SLOT_SIDE) * (ATLAS_SIDE / SLOT_SIDE);
 
 describe('TextureAtlas slot state machine', () => {
-  // Construct without a real GPU device — pass `null as any`. The state-machine
-  // path doesn't touch the device until we call uploadBitmap (Task 5).
-  const newAtlas = () => new TextureAtlas(null as unknown as GPUDevice);
+  // Construct without a real GPU device — pass `null as any`. The
+  // state-machine path doesn't touch the device until we call uploadBitmap.
+  const newAtlas = () =>
+    new TextureAtlas(null as unknown as GPUDevice, {
+      atlasSide: ATLAS_SIDE,
+      slotSide: SLOT_SIDE,
+      format: 'rgba8unorm-srgb',
+      label: 'test-atlas',
+    });
 
   it('allocates sequential slots starting at 0', () => {
     const a = newAtlas();

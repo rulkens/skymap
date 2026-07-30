@@ -43,14 +43,14 @@ import type { ReactNode } from 'react';
 import { usePaletteSearch } from './usePaletteSearch';
 import FeaturedGrid from './FeaturedGrid';
 import ResultsList from './ResultsList';
-import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
+import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
 import styles from './CommandPalette.module.css';
 
 export type CommandPaletteProps = {
-  /** All famous entries to search across.  Loaded from `famous_meta.json`. */
-  readonly entries: readonly FamousMetaEntry[];
+  /** All famous entries to search across.  Loaded from `famous_galaxies_meta.json`. */
+  readonly entries: readonly FamousGalaxyMetaEntry[];
   /**
    * The PGC alias index built by joining `pgc_aliases.json` against
    * the runtime GLADE+2MRS clouds.  Optional — the palette degrades

@@ -16,12 +16,12 @@ import { rankPaletteMatches } from './utils/rankPaletteMatches';
 import { focusIdForRow } from './utils/focusIdForRow';
 import { wrapIndex } from './utils/wrapIndex';
 import type { ScoredRow } from './paletteRowModel';
-import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
+import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
 
 export type UsePaletteSearchInput = {
-  entries: readonly FamousMetaEntry[];
+  entries: readonly FamousGalaxyMetaEntry[];
   aliasIndex?: readonly AliasIndexEntry[];
   structures?: readonly StructureSearchEntry[];
   open: boolean;

@@ -9,8 +9,7 @@
  * The Stars master differs from the Galaxies master: it reflects the real
  * `starCatalogs.enabled` gate (a boolean prop), and derives an `indeterminate`
  * visual only when the gate is on while not every catalog row is enabled
- * ("mixed"). With today's single `gaiaStars` catalog, "mixed" is reachable as
- * gate-on + catalog-off.
+ * ("mixed") — reached here as gate-on with `gaiaStars` off.
  *
  * Tests cover:
  *  - Per-catalog checkbox reflects `items[id].enabled`.
@@ -30,12 +29,14 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
 import { createElement } from 'react';
 import StarsSection from '../../../src/components/SettingsPanel/StarsSection';
-import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
 import type { StarCatalogId } from '../../../src/@types/data/starCatalog/StarCatalogId';
 import type { StarCatalogItemSettings } from '../../../src/@types/settings/StarCatalogItemSettings';
 
 function items(gaiaEnabled: boolean): Record<StarCatalogId, StarCatalogItemSettings> {
-  return { gaiaStars: { enabled: gaiaEnabled, labelEnabled: true } };
+  return {
+    famousStar: { enabled: true, labelEnabled: true },
+    gaiaStars: { enabled: gaiaEnabled, labelEnabled: true },
+  };
 }
 
 function baseProps() {
@@ -50,7 +51,6 @@ function baseProps() {
     exposureMidX: 57,
     exposureFarX: 70,
     aggregateIntensityCap: 0.06,
-    famousStarsEnabled: true,
     onToggleMaster: vi.fn<(enabled: boolean) => void>(),
     onToggleCatalog: vi.fn<(id: StarCatalogId, enabled: boolean) => void>(),
     onSizeChange: vi.fn<(v: number) => void>(),
@@ -61,7 +61,6 @@ function baseProps() {
     onExposureMidXChange: vi.fn<(v: number) => void>(),
     onExposureFarXChange: vi.fn<(v: number) => void>(),
     onAggregateIntensityCapChange: vi.fn<(v: number) => void>(),
-    onToggleFamousStars: vi.fn<(enabled: boolean) => void>(),
   };
 }
 
@@ -88,53 +87,6 @@ describe('StarsSection', () => {
       fireEvent.click(gaia);
       expect(onToggleCatalog).toHaveBeenCalledOnce();
       expect(onToggleCatalog).toHaveBeenCalledWith('gaiaStars', false);
-    });
-  });
-
-  describe('famous-stars row', () => {
-    it('reflects the famousStarsEnabled prop and shows the seeded roster count chip', () => {
-      const { container } = render(
-        createElement(StarsSection, { ...baseProps(), famousStarsEnabled: false }),
-      );
-      const toggle = container.querySelector<HTMLInputElement>('#toggle-famous-stars');
-      expect(toggle).not.toBeNull();
-      expect(toggle!.checked).toBe(false);
-      const label = container.querySelector('label[for="toggle-famous-stars"]')!;
-      expect(label.textContent).toContain('Famous stars');
-      // The chip is the SEEDED roster size (a compile-time constant off the seed
-      // table), styled like the mapped rows' loaded-count chip — derived here so
-      // a reseed can't strand the assertion.
-      const chip = label.querySelector('span');
-      expect(chip).not.toBeNull();
-      expect(chip!.textContent).toBe(SCENE_STARS.length.toLocaleString());
-    });
-
-    it('renders as the FIRST row in the Star catalogs list, ahead of the mapped catalogs', () => {
-      const { container } = render(createElement(StarsSection, baseProps()));
-      // The row toggles carry stable ids; the famous-stars toggle must precede
-      // every mapped `#toggle-star-catalog-*` row in document order.
-      const rowToggles = Array.from(
-        container.querySelectorAll<HTMLInputElement>(
-          '#toggle-famous-stars, [id^="toggle-star-catalog-"]',
-        ),
-      ).map((el) => el.id);
-      expect(rowToggles[0]).toBe('toggle-famous-stars');
-      expect(rowToggles).toContain('toggle-star-catalog-gaiaStars');
-    });
-
-    it('fires onToggleFamousStars(false) when the checked row is clicked', () => {
-      const onToggleFamousStars = vi.fn<(enabled: boolean) => void>();
-      const { container } = render(
-        createElement(StarsSection, {
-          ...baseProps(),
-          famousStarsEnabled: true,
-          onToggleFamousStars,
-        }),
-      );
-      const toggle = container.querySelector<HTMLInputElement>('#toggle-famous-stars')!;
-      fireEvent.click(toggle);
-      expect(onToggleFamousStars).toHaveBeenCalledOnce();
-      expect(onToggleFamousStars).toHaveBeenCalledWith(false);
     });
   });
 

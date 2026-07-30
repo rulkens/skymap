@@ -46,7 +46,7 @@ let starCatalogStub: StarCatalog | null = null;
 const resolveDeps = (): ResolveDeps =>
   ({
     catalogs: { get: () => undefined },
-    famousMeta: undefined,
+    famousGalaxiesMeta: undefined,
     structures: { byId: () => undefined },
     stars: { current: () => starCatalogStub },
   }) as unknown as ResolveDeps;

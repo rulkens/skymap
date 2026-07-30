@@ -34,6 +34,7 @@ const base = (): EngineSliceState => ({
   structureCounts: {},
   provenanceCounts: {},
   loadProgress: null,
+  meta: { famousGalaxies: [], famousStars: [] },
 });
 
 describe('engineSlice — engineStatusChanged', () => {

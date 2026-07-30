@@ -1,58 +1,88 @@
 /**
- * GPU texture atlas for galaxy thumbnails.
+ * GPU texture atlas for square thumbnail/tile grids.
  *
- * Layout: a single 2048×2048 RGBA texture sliced into a 16×16 grid of
- * 128×128 slots — 256 thumbnails total. Each slot is keyed by a string
- * (typically `${ra},${dec}` so the same galaxy across frames hits the same
- * slot).
+ * Layout: a single atlasSide×atlasSide RGBA texture sliced into a square
+ * grid of slotSide×slotSide slots. Each slot is keyed by a string (the
+ * galaxy atlas keys by `${ra},${dec}` so the same galaxy across frames
+ * hits the same slot; other consumers pick their own key shape).
  *
  * Why a fixed-size atlas? WebGPU caps simultaneously-bound textures at ~16,
- * and a per-galaxy GPUTexture would thrash the resource allocator at scale.
+ * and a per-item GPUTexture would thrash the resource allocator at scale.
  * One atlas + one bind group = one draw call for thousands of textured
- * galaxies.
+ * items.
  *
  * Eviction is LRU by `lastSeenFrame`: when full, the slot with the oldest
- * `lastSeenFrame` is replaced. The engine calls `touch(key, frame)` every
- * frame the galaxy is on screen so visible thumbnails stay alive.
+ * `lastSeenFrame` is replaced. The caller calls `touch(key, frame)` every
+ * frame the item is on screen so visible thumbnails stay alive.
  *
- * This file only handles slot bookkeeping.  The GPU-side methods
- * (createTexture, uploadBitmap, getTextureView) land in Task 5.  Until
- * then the constructor accepts the device and stashes it for later — the
- * state-machine path doesn't touch the device, which is what makes this
- * task unit-testable without a GPU mock.
+ * Geometry (atlasSide, slotSide) and pixel format are constructor
+ * configuration, not constants, because more than one atlas exists in the
+ * renderer — e.g. the galaxy thumbnail atlas and an Earth surface tile
+ * atlas — each with its own grid size and format. `slotsPerRow` and
+ * `slotCount` are derived from `atlasSide / slotSide` rather than passed
+ * in, since they're not independent facts.
  */
 
 import type { Vec4 } from '../../../@types/math/Vec4';
 
-export const ATLAS_SIDE = 2048;
-export const SLOT_SIDE = 128;
-const SLOTS_PER_ROW = ATLAS_SIDE / SLOT_SIDE; // 16
-export const SLOT_COUNT = SLOTS_PER_ROW * SLOTS_PER_ROW; // 256
-
 type SlotEntry = { key: string; lastSeenFrame: number };
+
+type TextureAtlasConfig = {
+  /** Side length, in pixels, of the square atlas texture. */
+  readonly atlasSide: number;
+  /** Side length, in pixels, of each square slot within the atlas. */
+  readonly slotSide: number;
+  /** Pixel format of the underlying GPUTexture. */
+  readonly format: GPUTextureFormat;
+  /**
+   * GPU debug label for this atlas, e.g. `'galaxy-atlas'`. Surfaces in
+   * devtools and validation errors, which matters once more than one atlas
+   * is live at once (see the "more than one atlas exists" note above) — a
+   * hardcoded label would misattribute every other consumer's texture. The
+   * texture view derives `${label}-view` from this.
+   */
+  readonly label: string;
+};
 
 import type { AtlasEvictHandler } from '../../../@types/rendering/AtlasEvictHandler';
 
 export class TextureAtlas {
-  // The GPU device is needed only by uploadBitmap (Task 5). Slot management
-  // works without it, which is what the unit tests exercise.
+  // The GPU device is needed only by uploadBitmap and initTexture. Slot
+  // management works without it, which is what the unit tests exercise.
   private readonly device: GPUDevice;
 
-  // Index in [0, SLOT_COUNT) → entry occupying that slot, or undefined if free.
-  private readonly slots: Array<SlotEntry | undefined> = new Array(SLOT_COUNT).fill(undefined);
+  private readonly atlasSide: number;
+  private readonly slotSide: number;
+  private readonly format: GPUTextureFormat;
+  private readonly label: string;
+
+  // Derived from atlasSide / slotSide — not independent inputs.
+  private readonly slotsPerRow: number;
+  private readonly slotCount: number;
+
+  // Index in [0, slotCount) → entry occupying that slot, or undefined if free.
+  private readonly slots: Array<SlotEntry | undefined>;
 
   // Reverse lookup: key → slot index. Lets us idempotently allocate the same
   // key without scanning the slots array.
   private readonly keyToSlot = new Map<string, number>();
 
   // Optional eviction callback — see AtlasEvictHandler.  Stored as a single
-  // function (not an array) because the atlas has exactly one consumer at
-  // present (the thumbnail subsystem).  If we ever grow a second consumer,
-  // promoting this to an array of handlers is a one-line change.
+  // function (not an array) because a given atlas has exactly one consumer
+  // at present (e.g. the thumbnail subsystem for the galaxy atlas).  If an
+  // atlas ever grows a second consumer, promoting this to an array of
+  // handlers is a one-line change.
   private onEvict: AtlasEvictHandler | undefined;
 
-  constructor(device: GPUDevice) {
+  constructor(device: GPUDevice, config: TextureAtlasConfig) {
     this.device = device;
+    this.atlasSide = config.atlasSide;
+    this.slotSide = config.slotSide;
+    this.format = config.format;
+    this.label = config.label;
+    this.slotsPerRow = this.atlasSide / this.slotSide;
+    this.slotCount = this.slotsPerRow * this.slotsPerRow;
+    this.slots = new Array(this.slotCount).fill(undefined);
   }
 
   /**
@@ -72,19 +102,18 @@ export class TextureAtlas {
   // ── GPU resource lifecycle ──────────────────────────────────────────────
   //
   // The atlas's slot bookkeeping (above) works without a GPU.  These three
-  // methods are the GPU side: a single 2048×2048 RGBA8 texture, plus
+  // methods are the GPU side: a single atlasSide×atlasSide texture, plus
   // per-slot copyExternalImageToTexture calls when bitmaps land, plus a
   // view-getter for the quad pipeline's bind group.
   //
   // `initTexture` is separate from the constructor so unit tests can
-  // construct the class without a real GPU device — see Task 4's tests.
-  // In production code the engine calls initTexture exactly once after
-  // constructing the atlas.
+  // construct the class without a real GPU device.  In production code
+  // the engine calls initTexture exactly once after constructing the atlas.
 
   private texture: GPUTexture | undefined;
 
   /**
-   * Create the underlying 2048×2048 RGBA8 texture.  Must be called once
+   * Create the underlying atlasSide×atlasSide texture.  Must be called once
    * after construction, before uploadBitmap or getTextureView.  Separate
    * from the constructor so unit tests can construct without a GPU device
    * and exercise the slot state machine.
@@ -95,9 +124,9 @@ export class TextureAtlas {
   initTexture(): void {
     if (this.texture) return;
     this.texture = this.device.createTexture({
-      label: 'galaxy-atlas',
-      size: [ATLAS_SIDE, ATLAS_SIDE, 1],
-      format: 'rgba8unorm-srgb',
+      label: this.label,
+      size: [this.atlasSide, this.atlasSide, 1],
+      format: this.format,
       // TEXTURE_BINDING — the quad pass samples this texture in fs.
       // COPY_DST       — uploadBitmap writes new slots in.
       // RENDER_ATTACHMENT — lets us clear / re-render the atlas if we ever
@@ -113,9 +142,9 @@ export class TextureAtlas {
 
   /**
    * Upload an ImageBitmap into the given slot.  The bitmap must be exactly
-   * SLOT_SIDE × SLOT_SIDE (128×128) — the fetcher is responsible for
-   * resizing during decode via
-   * `createImageBitmap(blob, { resizeWidth: SLOT_SIDE, resizeHeight: SLOT_SIDE })`.
+   * slotSide × slotSide — the fetcher is responsible for resizing during
+   * decode via
+   * `createImageBitmap(blob, { resizeWidth: slotSide, resizeHeight: slotSide })`.
    *
    * Why `copyExternalImageToTexture` rather than `writeTexture`?  The
    * former takes an ImageBitmap directly without us having to read the
@@ -125,17 +154,17 @@ export class TextureAtlas {
    *
    * `flipY: false` because our quad shader's UVs already follow the
    * convention that v=0 is the top of the atlas, which matches the
-   * ImageBitmap's natural orientation.  Flipping would put galaxies
+   * ImageBitmap's natural orientation.  Flipping would put the image
    * upside-down on screen.
    */
   uploadBitmap(slotIdx: number, bitmap: ImageBitmap): void {
     if (!this.texture) throw new Error('TextureAtlas: call initTexture() first.');
-    const col = slotIdx % SLOTS_PER_ROW;
-    const row = Math.floor(slotIdx / SLOTS_PER_ROW);
+    const col = slotIdx % this.slotsPerRow;
+    const row = Math.floor(slotIdx / this.slotsPerRow);
     this.device.queue.copyExternalImageToTexture(
       { source: bitmap, flipY: false },
-      { texture: this.texture, origin: [col * SLOT_SIDE, row * SLOT_SIDE, 0] },
-      [SLOT_SIDE, SLOT_SIDE, 1],
+      { texture: this.texture, origin: [col * this.slotSide, row * this.slotSide, 0] },
+      [this.slotSide, this.slotSide, 1],
     );
   }
 
@@ -147,7 +176,7 @@ export class TextureAtlas {
    */
   getTextureView(): GPUTextureView {
     if (!this.texture) throw new Error('TextureAtlas: call initTexture() first.');
-    return this.texture.createView({ label: 'galaxy-atlas-view' });
+    return this.texture.createView({ label: `${this.label}-view` });
   }
 
   /**
@@ -162,7 +191,7 @@ export class TextureAtlas {
       return existing;
     }
     // Find a free slot first.
-    for (let i = 0; i < SLOT_COUNT; i++) {
+    for (let i = 0; i < this.slotCount; i++) {
       if (this.slots[i] === undefined) {
         this.slots[i] = { key, lastSeenFrame: frame };
         this.keyToSlot.set(key, i);
@@ -172,7 +201,7 @@ export class TextureAtlas {
     // Atlas full — evict LRU.
     let lruIdx = 0;
     let lruFrame = this.slots[0]!.lastSeenFrame;
-    for (let i = 1; i < SLOT_COUNT; i++) {
+    for (let i = 1; i < this.slotCount; i++) {
       const f = this.slots[i]!.lastSeenFrame;
       if (f < lruFrame) {
         lruIdx = i;
@@ -219,12 +248,13 @@ export class TextureAtlas {
 
   /**
    * UV rectangle [u0, v0, u1, v1] for a slot, in [0,1] texture coords.
-   * Slots are laid out row-major: slot N is at column (N % 16), row (N / 16).
+   * Slots are laid out row-major: slot N is at column (N % slotsPerRow),
+   * row (N / slotsPerRow).
    */
   slotUv(slotIdx: number): Vec4 {
-    const col = slotIdx % SLOTS_PER_ROW;
-    const row = Math.floor(slotIdx / SLOTS_PER_ROW);
-    const slotNorm = SLOT_SIDE / ATLAS_SIDE;
+    const col = slotIdx % this.slotsPerRow;
+    const row = Math.floor(slotIdx / this.slotsPerRow);
+    const slotNorm = this.slotSide / this.atlasSide;
     const u0 = col * slotNorm;
     const v0 = row * slotNorm;
     return [u0, v0, u0 + slotNorm, v0 + slotNorm];

@@ -18,7 +18,7 @@
  * helpers accept just the slice they touch rather than the whole state.
  */
 
-import type { GalaxyAtlasSubsystem } from '../subsystems/GalaxyAtlasSubsystem';
+import type { BitmapStreamSubsystem } from '../subsystems/BitmapStreamSubsystem';
 import type { ProceduralDiskSubsystem } from '../subsystems/ProceduralDiskSubsystem';
 import type { TexturedDiskSubsystem } from '../subsystems/TexturedDiskSubsystem';
 import type { DiskPlannerWalk } from '../subsystems/DiskPlannerWalk';
@@ -38,7 +38,7 @@ import type { Destroyable } from '../../rendering/Destroyable';
 import type { PriorityQueue } from '../../../utils/concurrency/priorityQueue';
 
 export type EngineSubsystemHandles = {
-  galaxyAtlas: GalaxyAtlasSubsystem | null;
+  galaxyAtlas: BitmapStreamSubsystem | null;
   proceduralDisks: ProceduralDiskSubsystem | null;
   texturedDisks: TexturedDiskSubsystem | null;
   /**

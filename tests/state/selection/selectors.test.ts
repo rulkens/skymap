@@ -29,12 +29,14 @@ import {
   selectSelectedFocusable,
   selectFocusedFocusable,
   selectIsSelectionActive,
+  selectHasSelectionIntent,
 } from '../../../src/state/selection/selectors';
 import {
   updateSelectionHover,
   updateSelectionSelect,
   updateSelectionFocus,
 } from '../../../src/state/selection/selectionSlice';
+import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { selectionRoute, selectionRowsRoute } from '../../../src/store/constants';
 import { MILKY_WAY_INFO } from '../../../src/data/milkyWay/milkyWayInfo';
@@ -91,7 +93,13 @@ const stubState = (
   }> = {},
 ) =>
   ({
-    [selectionRoute]: { hover: null, select: null, focus: null, ...selection },
+    [selectionRoute]: {
+      hover: null,
+      select: null,
+      focus: null,
+      pending: { select: null, focus: null },
+      ...selection,
+    },
     [selectionRowsRoute]: { hover: null, select: null, focus: null, ...selectionRows },
   }) as unknown as RootState;
 
@@ -153,6 +161,26 @@ describe('selectIsSelectionActive', () => {
     const { store } = createAppStore();
     store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
     expect(selectIsSelectionActive(store.getState())).toBe(true);
+  });
+});
+
+// --- selectHasSelectionIntent --------------------------------------------------
+
+describe('selectHasSelectionIntent', () => {
+  it('returns false on a virgin state', () => {
+    const { store } = createAppStore();
+    expect(selectHasSelectionIntent(store.getState())).toBe(false);
+  });
+
+  it('returns true when only pending.focus is set — the deferred deep-link case a ref-only guard misses', () => {
+    const { store } = createAppStore();
+    store.dispatch(requestFocus('m31'));
+    // The request is still deferring: the resolved focus ref stays null while
+    // it parks on a catalog pulse, exactly as `resolveFocusRefDeferring` does
+    // for a cold `#focus=m31` load. A guard reading only the ref slots would
+    // see this state as empty.
+    expect(store.getState().selection.focus).toBeNull();
+    expect(selectHasSelectionIntent(store.getState())).toBe(true);
   });
 });
 

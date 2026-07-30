@@ -30,7 +30,7 @@ const EXTRACT_ROW: {
   ) => SelectionRow | null;
 } = {
   galaxyCatalog: (ref, deps) =>
-    extractGalaxyRow(deps.catalogs.get(ref.source), ref.index, ref.source, deps.famousMeta),
+    extractGalaxyRow(deps.catalogs.get(ref.source), ref.index, ref.source, deps.famousGalaxiesMeta),
   structure: (ref, deps) => deps.structures.byId(ref.id),
   milkyWay: () => ({ type: 'milkyWay' as const }),
   // An orbital body (planet, Earth, moon) reads its world position from the
@@ -53,11 +53,7 @@ const EXTRACT_ROW: {
     // (incl. the Sun) are not in it and keep their record `positionMpc` — only
     // `StarBody` carries that field, so `'positionMpc' in body` narrows the arm.
     const state = deriveBodyStates(CONST_J2000).get(body.id);
-    const p = state
-      ? state.positionMpc
-      : 'positionMpc' in body
-        ? body.positionMpc
-        : null;
+    const p = state ? state.positionMpc : 'positionMpc' in body ? body.positionMpc : null;
     if (!p) return null;
     return {
       type: 'body' as const,

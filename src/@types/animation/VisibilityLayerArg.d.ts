@@ -11,7 +11,11 @@
  *
  * Current aggregates:
  *   - `'labels'` — every text label: `surveyLabel` + `structureLabel` +
- *     `milkyWayLabel`. Mirrors the settings-side `setLabelsEnabled` master.
+ *     `milkyWayLabel` + `starCatalogLabel` + `bodyLabel`. The membership list lives in
+ *     `LAYER_GROUPS` (`expandVisibilityLayers`), and it is meant to stay TOTAL
+ *     over the label layers: a cue that says it hid every label must not leave
+ *     one captioning. Nothing enforces that, so a new label-layer key has to be
+ *     added there by hand.
  */
 
 import type { VisibilityLayerKey } from './VisibilityLayerKey';
