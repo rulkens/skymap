@@ -117,15 +117,42 @@ const publishBodyDistanceGate = throttleByTime(250);
 
 /**
  * Idle-tick cadence for a LIVE sim clock, in milliseconds. Live time advances
- * at the real-time rate (one sim day per real day), so the Sun barely moves —
- * the Earth terminator creeps by a fraction of a pixel per second. Pinning the
- * render loop at 60 fps to redraw that would burn the GPU for no visible gain,
- * so live mode is deliberately kept OUT of `shouldKeepTicking`. Instead we ask
- * the scheduler for ONE frame every few seconds: a coarse heartbeat that keeps
- * the terminator honest while letting the loop sleep in between. A few seconds
- * is well below the threshold where terminator drift becomes noticeable, and
- * far above the per-frame cost we are avoiding. The React TimeBar readout runs
- * its own timer, so this heartbeat serves only the 3D scene.
+ * at the real-time rate (one sim day per real day): Earth turns 360° / 24 h ≈
+ * 0.00417°/s, so over one tick of length T the terminator sweeps
+ * `0.00417 * T` degrees, which at the surface is `radiusKm * that angle in
+ * radians` of ground. On screen, that ground distance becomes pixels via the
+ * viewport's vertical span at the camera's standoff altitude h:
+ * `2 * h * tan(fovY / 2)` (`DEFAULT_FOV_Y_RAD` = 60°) mapped onto the canvas's
+ * pixel height.
+ *
+ * That last factor is what sets the cadence, and it is the altitude term that
+ * makes it tight. With Earth a modest part of the screen a multi-second tick is
+ * sub-pixel and would do; but the camera can descend to a 127 km standoff over
+ * streamed surface tiles, where the viewport spans only ~147 km of ground
+ * vertically. At a 3 s tick that is ~1.4 km of terminator drift, ~8 px on a
+ * ~900 px-tall canvas — a visible jump once per tick. Ground drift scales
+ * linearly with tick length and screen-space drift inversely with altitude, so
+ * 500 ms holds the same step under 1.5 px, below the threshold this cadence is
+ * meant to sit under at every reachable altitude. If the standoff floor drops
+ * further, redo this arithmetic rather than retuning the constant by feel.
+ *
+ * This is a real trade, not a free lunch: 500 ms is 2 fps of full-scene
+ * renders while the loop would otherwise sleep (0.33 fps at a 3 s tick) —
+ * negligible next to the 60 fps an interaction drives, but not nothing on a
+ * wide cosmic-web view where a frame is expensive and the camera is merely
+ * parked, not close to Earth. The principled fix would scale the cadence with
+ * the focused body's apparent size (or camera altitude), tightening only when
+ * something close is actually moving on screen — deferred: more code and
+ * another coupling in `runFrame`, for a saving that only matters on an idle
+ * parked camera far from any body.
+ *
+ * Live mode is deliberately kept OUT of `shouldKeepTicking` regardless of this
+ * value — pinning the render loop at 60 fps for a rotation this slow would
+ * burn the GPU for no visible gain even at the tightest altitude. Instead we
+ * ask the scheduler for ONE frame every tick: a coarse heartbeat that keeps
+ * the terminator honest while letting the loop sleep in between. The React
+ * TimeBar readout runs its own timer, so this heartbeat serves only the 3D
+ * scene.
  *
  * A `setInterval` would be the wrong tool: it fires unconditionally, fighting
  * render-on-demand and double-scheduling whenever a real wake (drag, fade) is
@@ -133,7 +160,7 @@ const publishBodyDistanceGate = throttleByTime(250);
  * single one-shot that self-cancels once fired and is ignored while a rAF frame
  * is already queued — so it only ever supplies the frames the busy loop didn't.
  */
-const LIVE_IDLE_TICK_MS = 3_000;
+const LIVE_IDLE_TICK_MS = 500;
 
 /**
  * Run one frame of the render loop. Called every rAF tick by the scheduler in
