@@ -123,6 +123,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Star/body card row tooltips** `ready` — galaxy detail-card rows have hover tooltips explaining each field; the field-star and famous-star/body cards' rows have none — extend the same tooltips.tsx wiring to their row tables.
 - [ ] **Tour-recorder follow-ups** `ready` — small post-merge items from the recorder's final review (observable settle discard, two test/diagnostic tidies). → [details](backlog/2026-07-08-tour-recorder-follow-ups.md)
 - [ ] **Surface-directed zoom** `needs-design` — zoom dollies toward the body centre, so you cannot zoom toward the point under the cursor. → [details](backlog/2026-07-30-surface-directed-zoom.md)
+- [ ] **Cursor-anchored orbit drag** `needs-design` — the ground follows the cursor only at the screen centre, and yaw dies near the poles; same raycast prerequisite as surface-directed zoom. → [details](backlog/2026-07-30-cursor-anchored-orbit-drag.md)
 
 ## Docs & process
 

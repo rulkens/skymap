@@ -471,3 +471,77 @@ describe('attachOrbitControls — the zoom floor stops at a focused body’s sur
     expect(radii).toBeLessThan(1.05);
   });
 });
+
+describe('attachOrbitControls — orbit-drag rate damps near a focused body’s surface', () => {
+  // The flat 0.005 rad/px orbit rate rotates about the pivot's CENTRE, so the
+  // ground distance it sweeps scales with the pivot's radius — irrelevant to
+  // how far the camera actually is from that ground. `orbitRadPerPixel` fixes
+  // that by damping the rate at low altitude (see its docstring for the ~350x
+  // Earth-standoff numbers). These two cases are the regression that matters:
+  // near a surface the same drag must barely turn the camera, and with no
+  // surface to damp against (or far above one) today's flat rate must be
+  // untouched.
+
+  it('the same drag yaws far less near a surface than at the same pivot from afar', () => {
+    const nearCam = makeCamera();
+    nearCam.distance = EARTH_RADIUS_MPC * 1.02; // SURFACE_STANDOFF_RADII floor
+    const { canvas: nearCanvas, rec: nearRec } = makeCanvas();
+    attachOrbitControls(nearCanvas as unknown as HTMLCanvasElement, nearCam, {
+      pivotRadiusMpc: () => EARTH_RADIUS_MPC,
+    });
+
+    const farCam = makeCamera();
+    farCam.distance = EARTH_RADIUS_MPC * 1000; // deep orbital view of the same body
+    const { canvas: farCanvas, rec: farRec } = makeCanvas();
+    attachOrbitControls(farCanvas as unknown as HTMLCanvasElement, farCam, {
+      pivotRadiusMpc: () => EARTH_RADIUS_MPC,
+    });
+
+    // Identical drag (+50 px) on both, driven through the same window — each
+    // attachment tracks its own pointer/drag state independently.
+    nearRec.fire('pointerdown', {
+      pointerId: 1,
+      pointerType: 'touch',
+      button: 0,
+      clientX: 100,
+      clientY: 100,
+    });
+    farRec.fire('pointerdown', {
+      pointerId: 1,
+      pointerType: 'touch',
+      button: 0,
+      clientX: 100,
+      clientY: 100,
+    });
+    win.fire('pointermove', { pointerId: 1, clientX: 150, clientY: 100 });
+
+    // Far above the surface, the damping term hasn't engaged — matches
+    // today's flat rate almost exactly.
+    expect(farCam.yaw).toBeCloseTo(-50 * 0.005, 4);
+
+    // At the standoff floor, the same drag turns the camera a tiny fraction
+    // of that — this is the fix: the ground now tracks the cursor instead of
+    // sweeping a third of a screen width per pixel.
+    expect(Math.abs(nearCam.yaw)).toBeLessThan(Math.abs(farCam.yaw) / 50);
+  });
+
+  it('with no pivot radius, a drag yaws by exactly today’s flat dx * 0.005', () => {
+    // No pivotRadiusMpc option at all ⇒ pivotRadius() resolves to null ⇒
+    // orbitRadPerPixel returns the flat cap unchanged — the deep-space /
+    // unfocused path this change must not touch.
+    const cam = makeCamera();
+    const { canvas, rec } = makeCanvas();
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam);
+
+    rec.fire('pointerdown', {
+      pointerId: 1,
+      pointerType: 'touch',
+      button: 0,
+      clientX: 100,
+      clientY: 100,
+    });
+    win.fire('pointermove', { pointerId: 1, clientX: 150, clientY: 100 });
+
+    expect(cam.yaw).toBeCloseTo(-50 * 0.005, 6);
+  });
+});

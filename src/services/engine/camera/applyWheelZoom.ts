@@ -46,15 +46,16 @@
  * function is the WHEEL half of 'any user zoom'.
  *
  * `pivotRadiusMpc` is the radius of whatever the camera orbits (see the helper
- * of the same name), forwarded to every arm's clamp so the zoom floors just off
- * a focused body's surface instead of the absolute floor. All three arms need it:
- * follow orbits the body by definition, and the autoRotate / resting arms orbit
- * it too whenever the frame loop's pivot-pin is centring them on it.
+ * of the same name), forwarded to every arm's `zoomedDistance` call so the zoom
+ * tapers into just off a focused body's surface instead of scaling raw distance
+ * to the centre. All three arms need it: follow orbits the body by definition,
+ * and the autoRotate / resting arms orbit it too whenever the frame loop's
+ * pivot-pin is centring them on it.
  */
 
 import { autoRotateElapsed } from './cameraClock';
 import { spinAutoRotate } from './spinAutoRotate';
-import { clampDistance } from '../../../utils/camera/clampDistance';
+import { zoomedDistance } from '../../../utils/camera/zoomedDistance';
 import { zoomedPose } from '../../../utils/camera/zoomedPose';
 import type { CameraClock } from '../../../@types/engine/camera/CameraClock';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
@@ -69,7 +70,7 @@ export function applyWheelZoom(
   pivotRadiusMpc: number | null,
 ): CameraPose | null {
   if (prevActiveId === 'followBody' && clock.followDistanceTarget !== null) {
-    clock.followDistanceTarget = clampDistance(clock.followDistanceTarget * factor, pivotRadiusMpc);
+    clock.followDistanceTarget = zoomedDistance(clock.followDistanceTarget, factor, pivotRadiusMpc);
     return null;
   }
   if (prevActiveId === 'autoRotate') {
