@@ -16,7 +16,7 @@
  * filters whatever view it is handed and adds it into an `rgba16float` target.
  * The cloud's aggregate offscreen meets its contract — additively summed, and
  * low-frequency enough that the 4-tap reconstruction costs nothing. This layer
- * draws through its OWN instance (`state.gpu.milkyWayUpsample`), not the
+ * draws through its OWN instance (`state.gpu.milkyWayAggregateUpsample`), not the
  * volume's, so the two subsystems share no handle and neither gate can affect
  * the other.
  *
@@ -62,7 +62,7 @@ export const milkyWayUpsampleLayer: ContentLayer = {
   draw(pass, _view, ctx, state) {
     // Defensive null-check, same pattern as the sibling upsample layers: the
     // gate proved liveness, but a future gate reordering can't silently skip it.
-    if (state.gpu.milkyWayUpsample === null) return;
-    state.gpu.milkyWayUpsample.draw(pass, ctx.renderTargets.viewOf('mw-aggregate'));
+    if (state.gpu.milkyWayAggregateUpsample === null) return;
+    state.gpu.milkyWayAggregateUpsample.draw(pass, ctx.renderTargets.viewOf('mw-aggregate'));
   },
 };

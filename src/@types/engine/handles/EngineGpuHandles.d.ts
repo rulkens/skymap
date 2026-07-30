@@ -345,7 +345,7 @@ export type EngineGpuHandles = {
    * null handle is a silent no-op. Stored here so `destroy()` can release the
    * pipeline + sampler + bind-group-layout via the pass's no-op destroy method.
    */
-  milkyWayUpsample: AdditiveUpsample | null;
+  milkyWayAggregateUpsample: AdditiveUpsample | null;
   /**
    * Half-res-to-HDR survey-star aggregate upsample composite. Reads the
    * `star-aggregates` offscreen the aggregate stream drew LINEAR into,

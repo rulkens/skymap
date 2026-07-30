@@ -443,7 +443,7 @@ function makeInput(
           // nothing, keeping these fixtures free of an upsample blit they
           // don't assert on. The key must EXIST — the layer's guard is
           // `=== null`, which `undefined` would slip past.
-          milkyWayUpsample: null,
+          milkyWayAggregateUpsample: null,
           // Every `ContentLayer.draw` reads its renderer straight off
           // `state.gpu.*` — this is the ONLY place these mock instances are
           // wired in (no top-level `input.*` duplication; see

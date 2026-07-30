@@ -302,7 +302,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         // enabled here and bills its own timed pass; the null handle makes its
         // `draw` self-guard and issue no blit. The key must EXIST — the guard
         // is `=== null`, which `undefined` would slip past.
-        milkyWayUpsample: null,
+        milkyWayAggregateUpsample: null,
         // Every `ContentLayer.draw` reads its renderer straight off
         // `state.gpu.*` — this is the ONLY place these mock instances are
         // wired in (no top-level `input.*` duplication).

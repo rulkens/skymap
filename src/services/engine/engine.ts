@@ -325,7 +325,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       volumeUpsample: null,
       // null until initGpu; excluded from isEngineReady —
       // milkyWayUpsampleLayer null-checks it in draw, so a null no-ops.
-      milkyWayUpsample: null,
+      milkyWayAggregateUpsample: null,
       // null until initGpu; excluded from isEngineReady —
       // starAggregateUpsampleLayer null-checks it in draw, so a null no-ops.
       starAggregateUpsample: null,
@@ -854,8 +854,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.flowFieldRenderer = null;
     state.gpu.volumeUpsample?.destroy();
     state.gpu.volumeUpsample = null;
-    state.gpu.milkyWayUpsample?.destroy();
-    state.gpu.milkyWayUpsample = null;
+    state.gpu.milkyWayAggregateUpsample?.destroy();
+    state.gpu.milkyWayAggregateUpsample = null;
     state.gpu.starAggregateUpsample?.destroy();
     state.gpu.starAggregateUpsample = null;
     state.gpu.bloomPyramid?.destroy();

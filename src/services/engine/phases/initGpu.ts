@@ -49,6 +49,7 @@ import { createRenderTargets } from '../../gpu/renderTargets';
 import { createTexturedDiskRenderer } from '../../gpu/renderers/galaxyCatalog/texturedDiskRenderer';
 import { createProceduralDiskRenderer } from '../../gpu/renderers/galaxyCatalog/proceduralDiskRenderer';
 import { createMilkyWayCloud } from '../../gpu/galaxy/milkyWayCloud';
+import { MILKY_WAY_TUNING_DEFAULTS } from '../../gpu/galaxy/milkyWayCalibration';
 import { createMilkyWayCloudRenderer } from '../../gpu/renderers/milkyWay/milkyWayCloudRenderer';
 import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShell/horizonShellRenderer';
 import { createFilamentRenderer } from '../../gpu/renderers/filaments/filamentRenderer';
@@ -163,10 +164,18 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   const compositor = createCompositor({ device, swapFormat: format, hdrFormat: 'rgba16float' });
   state.gpu.compositor = compositor;
 
-  state.gpu.renderTargets = createRenderTargets(device, format, {
-    width: canvas.width,
-    height: canvas.height,
-  });
+  // The `mw-aggregate` row's divisor is a live knob rather than a table
+  // constant, so the boot value has to be handed in. It comes from the
+  // calibration module (the home of every Milky-Way boot value) rather than
+  // from `state.settings`: this phase seeds the GPU side, and the frame loop
+  // already rebuilds the table whenever the live setting diverges — reading
+  // settings here would add a second path to the same answer.
+  state.gpu.renderTargets = createRenderTargets(
+    device,
+    format,
+    { width: canvas.width, height: canvas.height },
+    MILKY_WAY_TUNING_DEFAULTS.aggregateDivisor,
+  );
 
   // PointRenderer (and the disk renderers below) target the HDR
   // rgba16float texture, not the swap-chain `format`.  Their pipelines
@@ -428,7 +437,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // additive blit of whatever view it is handed). Deliberately not the volume's
   // handle: sharing one would braid two independently-gated subsystems onto a
   // single resource.
-  state.gpu.milkyWayUpsample = createAdditiveUpsample(device, 'rgba16float');
+  state.gpu.milkyWayAggregateUpsample = createAdditiveUpsample(device, 'rgba16float');
 
   // ── Half-res survey-star aggregate upsample composite ─────────────
   //

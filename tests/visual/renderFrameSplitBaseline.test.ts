@@ -282,10 +282,10 @@ describe('renderFrame visual baseline', () => {
       ...makeLoggingRenderer(records, 'milky-way-aggregate', 'drawStars'),
       ...makeLoggingRenderer(records, 'milky-way', 'drawDust'),
     };
-    // milkyWayUpsample is the state.gpu handle milkyWayUpsampleLayer.draw calls
-    // directly, the twin of volumeUpsample below — wired with a logging draw so
-    // the snapshot captures the offscreen's merge back into HDR.
-    const milkyWayUpsample = makeLoggingRenderer(records, 'milky-way-upsample');
+    // milkyWayAggregateUpsample is the state.gpu handle milkyWayUpsampleLayer.draw
+    // calls directly, the twin of volumeUpsample below — wired with a logging
+    // draw so the snapshot captures the offscreen's merge back into HDR.
+    const milkyWayAggregateUpsample = makeLoggingRenderer(records, 'milky-way-upsample');
     const horizonShellRenderer = makeLoggingRenderer(records, 'horizon-shell');
     const proceduralDiskRenderer = makeLoggingRenderer(records, 'procedural-disks');
     const texturedDiskRenderer = makeLoggingRenderer(records, 'textured-disks');
@@ -446,7 +446,7 @@ describe('renderFrame visual baseline', () => {
           // `filamentRenderer`) are the same logging-renderer instances
           // declared above, so their `argShape` entries land in `records`.
           milkyWayCloudRenderer,
-          milkyWayUpsample,
+          milkyWayAggregateUpsample,
           horizonShellRenderer,
           proceduralDiskRenderer,
           texturedDiskRenderer,
