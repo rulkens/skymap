@@ -172,13 +172,13 @@ mutating a row in place (house preference for immutability); `specs` is already
 setSwapFormat(next: GPUTextureFormat): void;
 ```
 
-- [ ] Add the test `setSwapFormat replaces the swap row's format and leaves offscreen rows alone`
+- [x] Add the test `setSwapFormat replaces the swap row's format and leaves offscreen rows alone`
       — assert the `swap` spec's format changed and that `hdr` / `volume` / `foreground:0`
       formats and the offscreen textures are untouched (no reallocation).
-- [ ] Run it, watch it fail.
-- [ ] Implement against the existing `buildSpecs` shape (`renderTargets.ts:161-192`).
-- [ ] `npm test -- renderTargets` → passes. `npm run typecheck` clean.
-- [ ] Commit.
+- [x] Run it, watch it fail.
+- [x] Implement against the existing `buildSpecs` shape (`renderTargets.ts:161-192`).
+- [x] `npm test -- renderTargets` → passes. `npm run typecheck` clean.
+- [x] Commit.
 
 ---
 
