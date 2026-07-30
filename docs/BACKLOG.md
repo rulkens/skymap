@@ -49,6 +49,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Twin selection request sagas** `ready` — `watchRequestFocusSaga`/`watchRequestSelectSaga` are structurally identical; fold into one row-driven saga (keep `takeLatest` per row). → [details](backlog/2026-07-29-twin-request-selection-sagas.md)
 - [ ] **`uiSlice` does boot I/O at module load** `needs-design` — `initialState = buildInitialUiState()` reads `window.location` + localStorage on import; make the fallback lazy. → [details](backlog/2026-07-29-uislice-module-load-boot-reads.md)
 - [ ] **URL seam is a `window` singleton** `needs-design` — the whole test suite shares one address bar; make the URL port a registered capability. → [details](backlog/2026-07-30-url-seam-window-singleton.md)
+- [ ] **`buildAliasIndex` is a non-hook in `src/hooks/`** `ready` — pure helper with one importer; `npm run move-files` it to `src/utils/` (test mirror follows).
 
 ## Rendering
 

@@ -358,21 +358,32 @@ settings, time slices}` and none import back into `state/ui/`. Re-verify after T
       `wireInput.ts:169,207`, `parseHashParams.ts:5`, `hasDeepLink.ts:12`. Two the list
       missed: `urlHashFor.ts:8` (named `computeDesiredHash`) and `CLAUDE.md`'s `hooks/`
       tree line. `hasDeepLink.ts` was already rewritten by T11.
-- [ ] `npm test` → full suite green.
-- [ ] Commit.
+- [x] `npm test` → full suite green.
+- [x] Commit. (`53c213dc`)
 
 ### Task 13: entanglement-radar + Phase B verification
 
-- [ ] Run the `entanglement-radar` skill over the Phase B diff. Specifically check: does
+- [x] Run the `entanglement-radar` skill over the Phase B diff. Specifically check: does
       any row still carry a field only one row uses, and did `writesOn` end up restating
       something a selector already knows?
-- [ ] `npm test` → green. `npm run typecheck` → clean. `npm run format` on touched files.
-- [ ] Confirm no `src/hooks/` file remains that is not a hook.
-- [ ] Open PR 2 (`--base main`, after PR 1 merges).
-- [ ] **Ask the user** for a visual pass: cold `#focus=<galaxy>` load; share a link with a
+      **Answer to both: no.** `read`/`write` are inverses over one wire format and cannot
+      vary independently; `deepLink` has a genuine third consumer (`hasDeepLink`); and
+      `writesOn` states which dispatches can MOVE a value, which no selector encodes.
+      The six-field table stands. The radar's own top finding was elsewhere — per-action
+      publishing — and is fixed in `b5f3712d`.
+- [x] `npm test` → green (882 files / 5829 tests). `npm run typecheck` → clean.
+      `npm run format` on touched files.
+- [x] Confirm no `src/hooks/` file remains that is not a hook. The port left nothing
+      behind; `buildAliasIndex.ts` is a PRE-EXISTING non-hook (extracted 2026-05-06, one
+      importer) and is filed to the backlog rather than folded into this diff.
+- [x] Open PR 2 (`--base main`, after PR 1 merges). → #525
+- [x] **Ask the user** for a visual pass: cold `#focus=<galaxy>` load; share a link with a
       paused clock and confirm the instant restores; `#orientation=galactic` then Back, and
       confirm the frame returns to default (Q8's new behaviour).
-- [ ] `/feature-done` audit BEFORE merge — it gates on the DoD, then relocates this plan
+      Extended after the radar: the checklist was rebuilt around TWO-param URLs, because a
+      one-param check provably cannot see an intermediate publish — every intermediate
+      compose equals the final one and compare-and-skip hides it. Confirmed 2026-07-30.
+- [x] `/feature-done` audit BEFORE merge — it gates on the DoD, then relocates this plan
       and the spec to `plans/completed/` + `specs/completed/`.
 
 ---
