@@ -450,18 +450,18 @@ When `disabled`, the header toggle is non-interactive and the hint is announced 
 Knee and headroom `Slider` rows keep their current ranges and formats. `DisplaySection`'s
 prop list is already wide (>8 fields), so keep the body-destructure form it uses.
 
-- [ ] Add the test `a disabled CollapsibleSection does not fire its header toggle on click`.
-- [ ] Add the test `DisplaySection toggles hdrEnabled via the HDR header toggle` —
+- [x] Add the test `a disabled CollapsibleSection does not fire its header toggle on click`.
+- [x] Add the test `DisplaySection toggles hdrEnabled via the HDR header toggle` —
       `fireEvent.click` on `/toggle hdr/i`, not `.change` (the controlled-checkbox gotcha
       the bloom test at `DisplaySection.test.ts:159-168` documents).
-- [ ] Update the HDR-section comment at `DisplaySection.tsx:217-219`, which says the
+- [x] Update the HDR-section comment at `DisplaySection.tsx:217-219`, which says the
       knobs are inert and shown regardless because the panel cannot know the format.
       That is exactly what this task fixes.
-- [ ] Container: add the `hdrEnabled` / `hdrCapable` selectors and the
+- [x] Container: add the `hdrEnabled` / `hdrCapable` selectors and the
       `onHdrEnabledChange` handler as `useCallback(..., [dispatch])`.
-- [ ] Per the light-tests-for-UI convention, no restyle tests beyond the two above.
-- [ ] `npm test -- SettingsPanel`, `npm run typecheck`, `npm run lint`.
-- [ ] Commit.
+- [x] Per the light-tests-for-UI convention, no restyle tests beyond the two above.
+- [x] `npm test -- SettingsPanel`, `npm run typecheck`, `npm run lint`.
+- [x] Commit.
 
 ---
 

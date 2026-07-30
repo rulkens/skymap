@@ -5,10 +5,10 @@
  *
  * Owns the Display thematic group UI: the orientation and tone-mapping curve
  * dropdowns, the exposure slider, and two nested CollapsibleSections — "Bloom"
- * (master enable on its header, strength/threshold sliders in its body — same
- * header-toggle idiom `FlowSection` uses for its master enable) and "HDR" (the
- * extended-range headroom knobs, no master toggle since the HDR swap chain is
- * opened by URL gate rather than by a setting). Further subgroups (e.g. the Earth
+ * and "HDR" (both use the same master-enable header-toggle idiom `FlowSection`
+ * uses; HDR's toggle is additionally `disabled` when `hdrCapable` is false, so
+ * a user on an SDR display sees why it can't be flipped rather than a toggle
+ * that silently does nothing). Further subgroups (e.g. the Earth
  * atmosphere-exposure disclosure) are passed in as `children` and rendered
  * below, so Display need not drill their props. Isolating this into its own
  * component ensures a change here re-renders ONLY this section rather than
@@ -83,6 +83,12 @@ export type DisplaySectionProps = {
   exposure: number;
   /** Called with the new exposure as the slider drags. */
   onExposureChange: (next: number) => void;
+  /** Whether extended-range HDR output is turned on. */
+  hdrEnabled: boolean;
+  /** Called with the toggled flag when the HDR header toggle is clicked. */
+  onHdrEnabledChange: (next: boolean) => void;
+  /** Whether the active display currently reports more than SDR range. */
+  hdrCapable: boolean;
   /** Post-exposure brightness above which energy spills into display headroom. */
   hdrKnee: number;
   /** Called with the new knee as the slider drags. */
@@ -121,6 +127,9 @@ function DisplaySection({
   onToneMapCurveChange,
   exposure,
   onExposureChange,
+  hdrEnabled,
+  onHdrEnabledChange,
+  hdrCapable,
   hdrKnee,
   onHdrKneeChange,
   hdrHeadroom,
@@ -214,10 +223,17 @@ function DisplaySection({
         </div>
       </CollapsibleSection>
 
-      {/* Both knobs are inert unless the swap chain is the extended-range surface,
-          which today only the `?hdr` URL gate opens. Shown regardless: the panel
-          would otherwise have to learn the swap chain's format to hide them. */}
-      <CollapsibleSection title="HDR">
+      {/* Master toggle drives settings.hdr.enabled, which the swap-chain saga
+          watches to reconfigure the surface at runtime. Disabled + hinted
+          when hdrCapable is false so an SDR display never shows a switch
+          that would silently do nothing if flipped. */}
+      <CollapsibleSection
+        title="HDR"
+        headerToggle={hdrEnabled}
+        onHeaderToggleChange={onHdrEnabledChange}
+        disabled={!hdrCapable}
+        disabledHint="Needs a display with HDR range"
+      >
         <div className={styles.panelRow}>
           {/* The default sits at the Reinhard whitepoint, where the curve
               saturates — below it the spill lifts midtones the curve still had
