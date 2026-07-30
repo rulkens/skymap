@@ -31,9 +31,9 @@
  * streamed straight to disk. Every coarser level is then a 2 x 2 average of
  * four tiles from the level ABOVE, read back off disk. Nothing in the process
  * ever holds a whole-globe raster — which at z11 would be 1.6 TB — and nothing
- * holds a whole level either. A source that reaches only the bake floor — the
- * `--dev` whole-globe equirect — leaves the coarsening loop unexecuted; the
- * quadrant source's z7 runs it down to z5.
+ * holds a whole level either. The `--dev` whole-globe equirect reaches z5 and the
+ * shipped quadrant set z7, so both run the coarsening loop, down to the bake
+ * floor either way.
  *
  * The 2 x 2 average is `sharp`'s own resize at an exact factor of two, which
  * libvips serves with an integer block shrink — a plain average of each 2 x 2
@@ -69,6 +69,7 @@ import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 
 import type { EarthTileKind } from '../../src/@types/data/EarthTileKind';
+import type { Tier } from '../../src/@types/data/Tier';
 import type { EarthTileManifest } from '../../src/@types/scene/EarthTileManifest';
 import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
 import { earthBaseLevelForTier } from '../../src/utils/scene/earthBaseLevelForTier';
@@ -92,19 +93,38 @@ import type { LonLatBox } from './LonLatBox';
 const WEBP_QUALITY = 82;
 
 /**
- * Shallowest level this bake emits: one finer than the base the LARGEST tier
- * delivers, so every tile on disk refines the finest whole-globe texture that
- * ships rather than re-serving it.
- *
- * A bake floor, and nothing else. The runtime learns it from the manifest's
- * `levels.min` and floors its own requests at one finer than the base ITS tier
- * bound, so lowering this — baking z3 and z4 so a `small` or `medium` session
- * gets a continuous ladder from its own base upward — is a re-bake with no code
- * change on the other side. Reading this same number as a runtime request floor
- * is what would make such a re-bake appear to do nothing, which is why it lives
- * here and not beside the ladder constants.
+ * Every tier a session can bind. No shared runtime tiers array is exported — each
+ * builder keeps its own module-local ladder (`clampTier`,
+ * `tiersFittingSourceWidth`, `buildAllBins`) — and the bake floor below is derived
+ * from the whole ladder rather than from the coarsest tier's name, so adding a
+ * tier or moving one's pixel size moves the floor with it.
  */
-const BAKE_MIN_LEVEL = earthBaseLevelForTier('large') + 1;
+const TIER_LADDER: readonly Tier[] = ['small', 'medium', 'large'];
+
+/**
+ * Shallowest level this bake emits: one finer than the COARSEST whole-globe base
+ * any supported session can bind, so every tier gets a continuous ladder from its
+ * own base upward.
+ *
+ * Coarsest, not finest, and that distinction is the entire content of this number.
+ * The runtime floors its own requests at `max(manifest levels.min, baseLevel + 1)`,
+ * so a session never asks for a level its own base already covers — which means a
+ * floor pinned to the `large` tier's z4 base saved nothing and opened a gap
+ * instead: a default `medium` session (base z3) found nothing at z4, a `small` one
+ * (base z2) nothing at z3 or z4, and across that gap the surface falls back to a
+ * base texture two or three levels coarser than the screen is asking for. Silent,
+ * because an unbaked level 404s exactly like ocean does.
+ *
+ * The extra levels are nearly free. The pyramid is a geometric series, so z4 is
+ * 128 tiles and z3 is 32, against z7's 8192.
+ *
+ * A bake floor, and nothing else. The runtime learns what was baked from the
+ * manifest's `levels.min` and never reads this constant, so re-baking at another
+ * depth needs no code change on the other side. Reading this same number as a
+ * runtime request floor is what would make such a re-bake appear to do nothing,
+ * which is why it lives here and not beside the ladder constants.
+ */
+const BAKE_MIN_LEVEL = Math.min(...TIER_LADDER.map(earthBaseLevelForTier)) + 1;
 
 /**
  * The only kind this tool bakes. Surface albedo is where the resolution
@@ -248,12 +268,12 @@ export async function buildEarthTiles(source: EarthImagerySource, outDir: string
   const minLevel = BAKE_MIN_LEVEL;
   const maxLevel = source.maxLevel;
 
-  // Levels at or below the largest tier's base ARE a whole-globe texture that
-  // already ships, so a source that cannot beat it has nothing to contribute and
-  // an empty pyramid would be indistinguishable from a broken one.
+  // Levels at or below the coarsest tier's base ARE a whole-globe texture that
+  // already ships, so a source that cannot beat even that has nothing to
+  // contribute and an empty pyramid would be indistinguishable from a broken one.
   if (maxLevel < minLevel) {
     throw new Error(
-      `buildEarthTiles: source '${source.id}' reaches only z${maxLevel}, at or below the largest tier's whole-globe base at z${minLevel - 1} — nothing to bake`,
+      `buildEarthTiles: source '${source.id}' reaches only z${maxLevel}, at or below the coarsest tier's whole-globe base at z${minLevel - 1} — nothing to bake`,
     );
   }
 
@@ -314,10 +334,11 @@ async function deepSource(): Promise<EarthImagerySource> {
 }
 
 /**
- * `--dev`: the whole-globe equirect, which reaches z5 and therefore bakes the
- * single shallowest level this tool emits. It needs only the raw every
- * contributor's `fetch-textures` already pulls, so it is the way to exercise the
- * pipeline end to end in seconds without the quadrant set's 421 MB.
+ * `--dev`: the whole-globe equirect, which reaches z5 — two levels short of the
+ * shipped quadrant set, and deep enough to exercise the coarsening loop down to
+ * the bake floor. It needs only the raw every contributor's `fetch-textures`
+ * already pulls, so it is the way to exercise the pipeline end to end in seconds
+ * without the quadrant set's 421 MB.
  *
  * An explicit flag rather than "use the quadrants if they happen to be on disk":
  * a silent fall-back to the shallow source would emit a pyramid that is complete,

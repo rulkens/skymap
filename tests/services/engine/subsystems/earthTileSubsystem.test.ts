@@ -1,8 +1,8 @@
 /**
- * Three things this subsystem owns that a stand-in device is enough to see: the
+ * Four things this subsystem owns that a stand-in device is enough to see: the
  * manifest validation in `derivePlannerParams`, the base level it derives from
- * the tier the whole-globe texture is bound at, and the stand-down that happens
- * when the engage rule goes false.
+ * the tier the whole-globe texture is bound at, the terminal frame of a tile's
+ * load fade, and the stand-down that happens when the engage rule goes false.
  *
  * The base level is the one of the three that is invisible when it is wrong. The
  * three tiers bind three different whole-globe images — z2, z3 and z4 on the
@@ -168,9 +168,14 @@ function recordingDevice(writes: Uint8Array[]): GPUDevice {
 
 /**
  * A subsystem with the manifest landed, one tile resident in the atlas, and its
- * fade fully ramped — i.e. a page table that is genuinely painting ground, so
- * "the stand-down blanked it" is distinguishable from "it was blank anyway".
- * Returns the recorded `writeTexture` payloads alongside it.
+ * load fade run all the way out — i.e. a page table that is genuinely painting
+ * ground, so "the stand-down blanked it" is distinguishable from "it was blank
+ * anyway". Returns the recorded `writeTexture` payloads alongside it.
+ *
+ * The frame in the MIDDLE of the fade is what makes the last frame a genuine
+ * terminal one: it flushes the arrival's residency change, so by the frame the
+ * ramp lands on, the fade's own record of what it uploaded is the only thing left
+ * that can ask for the full-weight table.
  */
 async function engagedSubsystem() {
   vi.mocked(fetchEarthTileManifest).mockResolvedValue(surfaceManifest(EARTH_TILE_PX));
@@ -187,10 +192,11 @@ async function engagedSubsystem() {
   await new Promise((resolve) => setTimeout(resolve, 0));
 
   // First engaged frame: allocates, enqueues the tile's fetch, uploads a table
-  // that is still empty. Second, a full fade later: the tile has landed, so the
-  // table it uploads has weight in it.
+  // that is still empty. The tile then lands, stamped with that frame's clock.
   subsystem.update({ plan: ENGAGED, nowMs: 0 });
   await new Promise((resolve) => setTimeout(resolve, 0));
+  // Mid-fade, then the frame the fade lands on.
+  subsystem.update({ plan: ENGAGED, nowMs: EARTH_TILE_FADE_MS / 2 });
   subsystem.update({ plan: ENGAGED, nowMs: EARTH_TILE_FADE_MS });
 
   return { subsystem, writes };
@@ -227,6 +233,33 @@ describe('earthTileSubsystem engage gate', () => {
     // session showed z3 ground while the screen wanted z5.
     expect(await engagesAt(DISENGAGED, 'medium'), 'medium').toBe(true);
     expect(await engagesAt(DISENGAGED, 'large'), 'large').toBe(false);
+  });
+});
+
+/**
+ * The last frame of a load fade, which is the one frame the fade can skip.
+ *
+ * A rebuild condition asking the CLOCK whether a fade is in progress goes false on
+ * the very frame the weights would have reached full: `loadFadeAlpha` saturates
+ * when the elapsed time reaches the duration, "still fading" needs it to be less.
+ * So the terminal table was never uploaded and the settled globe kept blending its
+ * tiles at ~97% against the base — indefinitely, and nearly invisibly, which is
+ * the part that matters: it makes every visual judgement of tile sharpness a
+ * judgement of something slightly other than the shipped picture.
+ */
+describe('earthTileSubsystem load fade', () => {
+  it('uploads the settled, full-weight table on the frame the fade lands', async () => {
+    const { writes } = await engagedSubsystem();
+
+    // A is the blend weight against the whole-globe base, so every fourth byte is
+    // one cell's, and the resident tile's is the only non-zero one. Read out of the
+    // uploaded bytes rather than off an internal flag: what the fragment will
+    // actually blend with is the whole question.
+    const weights = writes.at(-1)!.filter((_, at) => at % 4 === 3);
+    expect(
+      Math.max(...weights),
+      'the last page table uploaded carries a weight short of 255, so a parked camera blends its tiles at less than full strength against the base forever',
+    ).toBe(255);
   });
 });
 

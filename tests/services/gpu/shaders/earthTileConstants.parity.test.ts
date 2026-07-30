@@ -9,6 +9,9 @@
  * lookup clamps against, so a shader still on 128 after the TS side moved to 256
  * would address a quarter of the page table and read someone else's ground for
  * the rest. Same shape as the flow-field parity test beside this one.
+ *
+ * The same parse also guards the shader's debug switch, for the same reason: the
+ * value that ships is a fact about the file that no compiler check can see.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -52,6 +55,17 @@ describe('earth/fragment.wesl ↔ earthTileParams.ts parity', () => {
         tsValue,
       );
     }
+  });
+
+  it('ships with the false-colour tile probe switched off', () => {
+    // `TILE_DEBUG` is a probe a human flips while chasing a window bug, and its
+    // non-zero arms replace the shaded surface with flat false colour. Nothing else
+    // in the suite reads it, so a shader committed with the probe left on renders a
+    // magenta-tinted Earth and every check still passes.
+    expect(
+      parseWeslConstants().get('TILE_DEBUG'),
+      'earth/fragment.wesl has TILE_DEBUG left on — that draws the page table in false colour instead of Earth. Set it back to 0u.',
+    ).toBe(0);
   });
 
   it('the tile edge equals the level-0 equirect width, which is what lets the shader use 1 << zWin', () => {

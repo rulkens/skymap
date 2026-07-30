@@ -159,30 +159,43 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
   const resident = new Map<string, ResidentTile>();
 
   let frameCounter = 0;
-  // The last frame's stamped clock, so the arrival callback and `isAnimating()`
-  // read the frame clock rather than sampling `performance.now()` themselves.
-  // At most one frame stale, which is nothing against a 400 ms fade, and it keeps
-  // the fade deterministic under a stepped recorder clock.
+  // The last frame's stamped clock, so an arrival stamps its `readyMs` from the
+  // frame clock rather than sampling `performance.now()` itself. At most one frame
+  // stale, which is nothing against a 400 ms fade, and it keeps the fade
+  // deterministic under a stepped recorder clock.
   let lastFrameNowMs = 0;
-  // Set by an arrival or an eviction; cleared by an upload. The window moving and
-  // a fade still ramping are the other two reasons to rebuild, and both are read
-  // rather than flagged because they are properties of the current frame.
+  // Set by an arrival or an eviction; cleared by an upload. The window moving is
+  // the other reason to rebuild, and it is read off the frame's plan rather than
+  // flagged because it is a property of the current frame.
   let residencyDirty = false;
-  // The window the page table IN GPU MEMORY was built against — not the latest
-  // plan's. Written only by `uploadPageTable`, so it and the texture's contents
+  // What the page table IN GPU MEMORY holds: the window it was built against —
+  // not the latest plan's — and whether every fade weight in it had reached full.
+  // Written only by `uploadPageTable`, so both facts and the texture's contents
   // are always the same age. That pairing is what the fragment's cell arithmetic
-  // depends on, and it is why this is surfaced through its own accessor rather
-  // than read off the plan at the draw site (see `getUploadedWindow`).
-  let uploadedWindow: {
-    readonly zWin: number;
-    readonly winX0: number;
-    readonly winY0: number;
+  // depends on, and it is why the window is surfaced through its own accessor
+  // rather than read off the plan at the draw site (see `getUploadedWindow`).
+  //
+  // `saturated` is what asks for the terminal frame of a load fade, in place of
+  // asking the clock whether a fade is in progress. The two questions differ by
+  // exactly one frame and the clock answers the wrong one: `loadFadeAlpha` reaches
+  // 1 when the elapsed time REACHES the fade duration, so on that frame "is a fade
+  // in progress?" is already false, no rebuild happens, and the last table ever
+  // written keeps a weight just under 1 — a parked camera blended at ~97% against
+  // the base forever. A record of what was actually uploaded cannot disagree with
+  // itself that way.
+  //
+  // `null` doubles as the stood-down state: only an upload sets this and only
+  // `standDown` clears it, so "has the blank table already gone up for this
+  // disengaged spell?" needs no flag of its own — and a camera parked just outside
+  // the engage altitude still re-uploads its 64 KB of zeroes exactly once.
+  let uploaded: {
+    readonly window: {
+      readonly zWin: number;
+      readonly winX0: number;
+      readonly winY0: number;
+    };
+    readonly saturated: boolean;
   } | null = null;
-  // Whether the all-zero page table has already been uploaded for the current
-  // disengaged spell. The stand-down is a transition, not a per-frame state: a
-  // camera parked just outside the engage altitude would otherwise re-upload the
-  // same 64 KB of zeroes for as long as it sat there.
-  let stoodDown = false;
 
   let destroyed = false;
 
@@ -324,22 +337,38 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     return created;
   }
 
-  function isFading(nowMs: number): boolean {
-    for (const entry of resident.values()) {
-      if (nowMs - entry.readyMs < EARTH_TILE_FADE_MS) return true;
-    }
-    return false;
+  /**
+   * Whether the table in GPU memory still owes an upload for a reason that has
+   * nothing to do with where the camera is: residency changed under it, or the
+   * weights it carries are still mid-fade.
+   *
+   * The rebuild and the keep-ticking vote both read THIS, which is what stops
+   * `isAnimating()` from going quiet one frame before the rebuild it exists to let
+   * happen. The window moving is deliberately not in here: it is a property of the
+   * frame's plan, the camera driver is already voting to keep the loop awake while
+   * it moves, and `isAnimating()` has no plan to compare against.
+   *
+   * No live table means nothing is owed, which is what keeps a disengaged spell
+   * from pinning the loop awake: a tile can still land while the camera sits
+   * outside the engage bracket, and a disengaged frame never rebuilds, so a dirty
+   * flag with nothing to flush into would vote to keep ticking forever. It is left
+   * set for the re-engaging frame to clear.
+   */
+  function rebuildOwed(): boolean {
+    return uploaded !== null && (residencyDirty || !uploaded.saturated);
   }
 
   function uploadPageTable(plan: EarthTilePlan, tilePx: number, nowMs: number): void {
     if (pageTable === null) return;
     const projected: EarthResidentTile[] = [];
+    // Recorded from the weights that actually go into this table. An empty
+    // resident set is saturated vacuously, which is right: there is no fade left
+    // to finish, and the table is as settled as it will get.
+    let saturated = true;
     for (const entry of resident.values()) {
-      projected.push({
-        tile: entry.tile,
-        slot: entry.slot,
-        weight: loadFadeAlpha(entry.readyMs, nowMs, EARTH_TILE_FADE_MS),
-      });
+      const weight = loadFadeAlpha(entry.readyMs, nowMs, EARTH_TILE_FADE_MS);
+      if (weight < 1) saturated = false;
+      projected.push({ tile: entry.tile, slot: entry.slot, weight });
     }
     const table = buildEarthPageTable({
       resident: projected,
@@ -355,8 +384,10 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
       [EARTH_TILE_WINDOW_SIDE, EARTH_TILE_WINDOW_SIDE, 1],
     );
     residencyDirty = false;
-    stoodDown = false;
-    uploadedWindow = { zWin: plan.zWin, winX0: plan.winX0, winY0: plan.winY0 };
+    uploaded = {
+      window: { zWin: plan.zWin, winX0: plan.winX0, winY0: plan.winY0 },
+      saturated,
+    };
   }
 
   /**
@@ -379,19 +410,20 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
    */
   function standDown(): void {
     // Never allocated means nothing to stand down — this is the path a session
-    // that never approaches Earth takes on every frame, and it must stay free.
-    if (pageTable === null || stoodDown) return;
+    // that never approaches Earth takes on every frame, and it must stay free. A
+    // null `uploaded` under an allocated table means the blank has already gone
+    // up, so the stand-down stays a transition rather than a per-frame state.
+    if (pageTable === null || uploaded === null) return;
     device.queue.writeTexture(
       { texture: pageTable },
       new Uint8Array(EARTH_TILE_WINDOW_SIDE * EARTH_TILE_WINDOW_SIDE * 4),
       { bytesPerRow: EARTH_TILE_WINDOW_SIDE * 4, rowsPerImage: EARTH_TILE_WINDOW_SIDE },
       [EARTH_TILE_WINDOW_SIDE, EARTH_TILE_WINDOW_SIDE, 1],
     );
-    stoodDown = true;
     // Nulling this is what re-arms the rebuild: the next engaged frame reads it
     // as a moved window, so the table is re-derived before anything is drawn
     // through it.
-    uploadedWindow = null;
+    uploaded = null;
   }
 
   function update(input: { readonly plan: EarthTilePlan; readonly nowMs: number }): void {
@@ -402,9 +434,9 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     if (active === null) return;
 
     const { plan, nowMs } = input;
-    // Stamped on disengaged frames too, so the arrival callback and
-    // `isAnimating()` keep reading a current clock and fades from the last
-    // engaged spell can finish expiring rather than pinning the loop awake.
+    // Stamped on disengaged frames too: a tile can still land while the camera
+    // sits outside the engage bracket, and its fade should start from a current
+    // clock rather than from whenever the last engaged frame was.
     lastFrameNowMs = nowMs;
 
     if (!(plan.zWin > active.baseLevel)) {
@@ -467,14 +499,15 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     }
 
     const windowMoved =
-      uploadedWindow === null ||
-      uploadedWindow.zWin !== plan.zWin ||
-      uploadedWindow.winX0 !== plan.winX0 ||
-      uploadedWindow.winY0 !== plan.winY0;
-    // A fade in progress means the weights differ from the ones last uploaded, so
-    // the table is rebuilt every frame until the last arrival has ramped out. That
-    // is also what carries the fade visually: nothing else changes during it.
-    if (residencyDirty || windowMoved || isFading(nowMs)) {
+      uploaded === null ||
+      uploaded.window.zWin !== plan.zWin ||
+      uploaded.window.winX0 !== plan.winX0 ||
+      uploaded.window.winY0 !== plan.winY0;
+    // Weights short of full mean the table in memory is mid-fade, so it is rebuilt
+    // every frame until the last arrival has ramped all the way out — including the
+    // frame the ramp lands on, which is the one that puts full weight on screen.
+    // That is also what carries the fade visually: nothing else changes during it.
+    if (windowMoved || rebuildOwed()) {
       uploadPageTable(plan, active.tilePx, nowMs);
     }
   }
@@ -482,7 +515,7 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
   function isAnimating(): boolean {
     if (manifestPending) return true;
     if (stream !== null && stream.inFlightCount() > 0) return true;
-    return isFading(lastFrameNowMs);
+    return rebuildOwed();
   }
 
   function destroy(): void {
@@ -496,14 +529,14 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     manifest = null;
     params = null;
     paramsTier = null;
-    uploadedWindow = null;
+    uploaded = null;
   }
 
   const subsystem: EarthTileSubsystem = {
     plannerParams,
     update,
     getTileResources: () => resources,
-    getUploadedWindow: () => uploadedWindow,
+    getUploadedWindow: () => uploaded?.window ?? null,
     isAnimating,
     destroy,
   };
