@@ -28,12 +28,42 @@
  * The pick radius is FLOORED but the VISUAL sphere each layer's `draw` composes
  * is untouched — only this pick-pass model radius grows, so the hit area widens
  * without changing what the user sees.
+ *
+ * ### Why the floor needs no special case
+ *
+ * The floor is a CPU-side **model radius** inflation applied BEFORE
+ * `composeBodyMvp` bakes the radius into the model scale — not a mesh trick. So
+ * in the local frame the floored sphere simply IS the unit sphere, exactly as the
+ * true-radius sphere is on the visual path: nothing downstream can tell the two
+ * apart, which is why the mesh never knew about the floor and an analytic
+ * silhouette test need not either.
+ *
+ * What that costs is one invariant: `camPosLocal` is a POSITION measured in the
+ * frame the mvp's model scale defines, so both must come from the SAME radius.
+ * Composing them here from the one `pickRadiusMpc` local is what makes that
+ * automatic — a `camPosLocal` divided by the true `radiusMpc` while the mvp used
+ * the floored one would place the ray origin too far out, shrinking the apparent
+ * pick disc back below the floor for exactly the distant bodies the floor exists
+ * to keep clickable.
+ *
+ * ### A second invariant this glosses over: the render origin
+ *
+ * `camPosMpc` and `positionMpc` are both absolute (heliocentric) Mpc, so
+ * feeding them straight into `Math.hypot` above and into `camPosLocal` below
+ * treats them as already sharing one frame. That is only true because
+ * `RENDER_ORIGIN_MPC` (`src/data/renderOrigin.ts`) is `[0, 0, 0]` today —
+ * `composeBodyMvp` separately subtracts it when building the mvp. A dynamic
+ * render origin would move the mvp's frame without moving these two
+ * positions, so both would need reducing to that same origin before either
+ * use below. Left alone deliberately: nothing dynamic exists yet to reduce
+ * against.
  */
 
 import type { BodyPickRenderer } from '../../../@types/rendering/BodyPickRenderer';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
+import { camPosLocal } from '../../../utils/camera/camPosLocal';
 import { composeBodyMvp } from '../../../utils/camera/composeBodyMvp';
 import { minPickRadiusMpc } from './minPickRadiusMpc';
 
@@ -71,5 +101,15 @@ export function drawFlooredSpherePick(
     args.orientation,
     args.oblateness,
   );
-  pickRenderer.drawSphere(pass, { mvp, packedId: args.packedId });
+  // Same `pickRadiusMpc` and same `orientation`/`oblateness` the mvp was composed
+  // with, so the mvp's model frame and this position share one definition of "the
+  // frame where this body is the unit sphere".
+  const camLocal = camPosLocal(
+    args.camPosMpc,
+    args.positionMpc,
+    pickRadiusMpc,
+    args.orientation,
+    args.oblateness,
+  );
+  pickRenderer.drawSphere(pass, { mvp, camPosLocal: camLocal, packedId: args.packedId });
 }

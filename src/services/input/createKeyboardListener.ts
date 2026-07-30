@@ -28,6 +28,20 @@
  *
  * The teardown returned to `eventChannel` unbinds every registered key set when
  * the channel is closed, so `hotkeys` holds no listener once the caller is done.
+ *
+ * ### Headless guard
+ *
+ * `hotkeys-js` binds a `keydown` listener on `document`, so calling it where no
+ * DOM exists (Node — the test suite's default environment, or any SSR pass)
+ * throws `document is not defined`. There is nothing to listen to without a
+ * DOM, so the correct behaviour is a channel that simply never emits: the
+ * consuming saga's `take(channel)` parks forever, exactly as it would in a
+ * browser tab where the user never presses a key. The alternative — letting the
+ * throw escape — would abort `watchKeyboardEventsSaga` and (via redux-saga's
+ * fork tree) any siblings composed under the same `all(...)`, turning "no
+ * keyboard" into "the whole root saga fell over". In a real browser `document`
+ * is always present, so this branch is dead there and changes no user-facing
+ * behaviour; it is purely headless hardening.
  */
 
 import hotkeys from 'hotkeys-js';
@@ -36,6 +50,11 @@ import { eventChannel, type EventChannel } from 'redux-saga';
 import type { KeyboardShortcut } from '../../@types/state/input/KeyboardShortcut';
 
 export function createKeyboardListener(shortcuts: readonly KeyboardShortcut[]): EventChannel<string> {
+  if (typeof document === 'undefined') {
+    // No DOM ⇒ no keydown source. Return a channel that never emits and whose
+    // teardown is a no-op, so `take(channel)` parks and `channel.close()` is safe.
+    return eventChannel<string>(() => () => {});
+  }
   return eventChannel<string>((emit) => {
     for (const shortcut of shortcuts) {
       hotkeys(shortcut.keys, (event, handler) => {

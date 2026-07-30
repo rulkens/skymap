@@ -32,7 +32,7 @@ import { render, fireEvent } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import GalaxiesSectionContainer from '../../../src/components/containers/GalaxiesSectionContainer';
-import { createAppStore } from '../../../src/store/createAppStore';
+import { createTestStore as createAppStore } from '../../support/createTestStore';
 import {
   selectGalaxyCatalogSize,
   selectVisibleSourceMask,

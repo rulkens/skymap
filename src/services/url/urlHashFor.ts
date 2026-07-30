@@ -13,12 +13,12 @@
  * codec has to keep in lockstep.
  */
 
-import type { FocusableTarget } from '../@types/engine/FocusableTarget';
-import type { FocusableTargetType } from '../@types/engine/FocusableTargetType';
-import { selectionToFocusId } from '../services/url/focusUrl';
-import { MILKY_WAY_FOCUS_ID } from '../services/url/milkyWayFocusId';
-import { BODY_FOCUS_PREFIX } from '../services/url/bodyFocusId';
-import { STAR_FOCUS_PREFIX } from '../services/url/starFocusId';
+import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
+import type { FocusableTargetType } from '../../@types/engine/FocusableTargetType';
+import { selectionToFocusId } from './focusUrl';
+import { MILKY_WAY_FOCUS_ID } from './milkyWayFocusId';
+import { BODY_FOCUS_PREFIX } from './bodyFocusId';
+import { STAR_FOCUS_PREFIX } from './starFocusId';
 
 export const URL_HASH_FOR: Record<FocusableTargetType, (t: FocusableTarget) => string | null> = {
   // Galaxy ids ride the codec's priority ladder (famous → PGC → SDSS objID →

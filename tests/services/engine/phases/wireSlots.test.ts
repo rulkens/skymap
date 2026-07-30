@@ -42,8 +42,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Source } from '../../../../src/data/sources';
 import { createAppStore } from '../../../../src/store/createAppStore';
 import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
-import { STAR_CATALOG_IDS } from '../../../../src/data/starCatalog/starCatalogIds';
 import { BODY_IDS } from '../../../../src/data/bodies/bodyIds';
+import { buildInitialSettings } from '../../../../src/state/settings/initialState';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { seedVolumeFields } from '../../../../src/data/volume/volumeFieldDefaults';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/data/defaults';
@@ -121,6 +121,17 @@ vi.mock('../../../../src/services/loading/fetchers/structureCatalogFetcher', () 
 
 vi.mock('../../../../src/services/loading/fetchers/pgcAliasFetcher', () => ({
   pgcAliasFetcher: vi.fn(async () => new Map()),
+}));
+
+// The body-texture atlas row demands unconditionally at boot (`demand: () => true`),
+// so its fetcher fires inside every wireSlots run. The real fetcher hits node's
+// `fetch` with the RELATIVE dataUrl `/data/images/textures/body-atlas.webp`,
+// which undici rejects ("Failed to parse URL" — no base). Mock it to a hollow
+// bitmap: the slot's commit fans out to `earthRenderer`/`texturedBodyRenderer`
+// (both absent in this fixture, so optional-chained to no-ops), so the value is
+// never read here — it just needs to resolve so the slot reaches `ready`.
+vi.mock('../../../../src/services/loading/fetchers/bodyAtlasFetcher', () => ({
+  bodyAtlasFetcher: vi.fn(async () => ({}) as unknown as ImageBitmap),
 }));
 
 // MCPM is default-on, so the demand loop fires its load at boot.  Mock the
@@ -342,6 +353,14 @@ function makeState(
     structureItems[cat] = { enabled: markerVis[cat] ?? true, labelEnabled: labelVis[cat] ?? true };
   }
   const data = createEngineData();
+  // Pull the singleton-overlay + star-catalog slices from the real seed so the
+  // demand loop's `settings.flow.enabled` / `settings.constellations.enabled` /
+  // `settings.starCatalogs.enabled` reads resolve instead of throwing on an
+  // undefined slice (which reevaluateDemand would swallow as a per-row warn).
+  // Flow + constellations default OFF, so no overlay load fires. starCatalogs is
+  // forced OFF here (its Gaia row is registry-visible, so leaving the master gate
+  // on would demand a real star-bin fetch this fixture provides no slot for).
+  const seed = buildInitialSettings();
   return {
     // Top-level data tier — its own root field on EngineState; the source
     // expression `req(state.tier)` reads it, and the synthetic-fallback
@@ -372,14 +391,6 @@ function makeState(
       // seed (always present, unlike the demand-loaded flow/filament rows).
       orbitTrails: { enabled: true },
       volumes: { enabled: true, items: seedVolumeFields() },
-      // seedFades registers a caption handle per label-bearing star catalog, and
-      // the star-catalog demand rows read these `enabled` bits.
-      starCatalogs: {
-        enabled: true,
-        items: Object.fromEntries(
-          STAR_CATALOG_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
-        ),
-      },
       // seedFades registers a caption handle per body row, so these must exist.
       bodies: {
         items: Object.fromEntries(
@@ -389,6 +400,11 @@ function makeState(
       // Overridable so a test can hide every category and pin the bug-fix
       // (structureCatalog must NOT load when nothing structural is visible).
       structures: { enabled: true, items: structureItems },
+      // Singleton overlays (default-off) + star catalogs (master gate forced off
+      // — see the `seed` note above) so every demand row's settings read resolves.
+      flow: seed.flow,
+      constellations: seed.constellations,
+      starCatalogs: { ...seed.starCatalogs, enabled: false },
     },
     bias: {} as never,
     // The synthetic-fallback gate writes `state.requests.add('syntheticFallback')`

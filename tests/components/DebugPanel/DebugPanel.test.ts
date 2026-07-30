@@ -24,7 +24,7 @@ import { render, fireEvent } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import DebugPanel from '../../../src/components/DebugPanel/DebugPanel';
-import { createAppStore } from '../../../src/store/createAppStore';
+import { createTestStore as createAppStore } from '../../support/createTestStore';
 import {
   selectShowPickBuffer,
   selectDisabledPasses,
