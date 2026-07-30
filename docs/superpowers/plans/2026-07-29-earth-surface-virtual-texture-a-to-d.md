@@ -944,15 +944,18 @@ discipline, then on a real iOS device.
 The visual pass against the real August z5-to-z7 pyramid. Recorded because three of these
 cost real time and two are unresolved.
 
-### UNCOMMITTED STATE, deliberate
+### The probe, and how to read it
 
-`fragment.wesl` currently has **`TILE_DEBUG = 1u`** and it is NOT committed. The probe is on
-because the diagnosis below is still open. While it is on, `npm test` fails by exactly one
-assertion — the guard added in the same session for this exact situation. Flip it back to
-`0u` before any commit.
+`TILE_DEBUG` in `fragment.wesl` is at `0u` and the tree is clean. It was flipped to `1u` for
+the diagnosis below and flipped back; the parity guard added in the same session asserts `0u`,
+so `npm test` fails by exactly one assertion whenever the probe is left on. That guard is the
+reason a probe can no longer ship by accident.
 
 Hue map for mode 1, coarse to fine: z3 yellow, z4 cyan, z5 magenta, z6 green, z7 blue, black
-means no tile named.
+means no tile named. Mode 2 maps the weight channel red-to-green instead.
+
+The unresolved item below wants the probe on again. Flipping it is one character and the
+guard tells you when you forget.
 
 ### Resolved: the dev server was serving HTML for z6 and z7
 
