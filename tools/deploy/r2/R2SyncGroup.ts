@@ -1,3 +1,4 @@
+import type { R2Transport } from './R2Transport';
 import type { R2Upload } from './R2Upload';
 
 /**
@@ -14,6 +15,7 @@ import type { R2Upload } from './R2Upload';
 export type R2SyncGroup = {
   readonly label: string;
   readonly files: readonly R2Upload[];
+  readonly transport: R2Transport;
   readonly cacheControl: string;
   readonly purge: boolean;
 };

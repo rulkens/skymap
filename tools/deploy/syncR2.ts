@@ -16,6 +16,7 @@ import { collectExtraFiles, missingExtraFiles } from './r2/collectExtraFiles';
 import { collectHiResImages } from './r2/collectHiResImages';
 import { collectTextureImages } from './r2/collectTextureImages';
 import { purgeCloudflareCache } from './r2/purgeCloudflareCache';
+import { MISSING_CREDENTIALS_HELP, readRcloneCredentials } from './r2/rcloneEnv';
 import { syncGroup, type R2SyncContext } from './r2/syncGroup';
 
 const DATA_DIR = 'public/data';
@@ -38,24 +39,28 @@ function buildGroups(): R2SyncGroup[] {
     {
       label: 'public/data',
       files: collectDataFiles(DATA_DIR),
+      transport: { kind: 'wrangler' },
       cacheControl: DAY,
       purge: true,
     },
     {
       label: 'Hi-res famous-galaxy images',
       files: collectHiResImages(HIRES_DIR),
+      transport: { kind: 'wrangler' },
       cacheControl: DAY,
       purge: true,
     },
     {
       label: 'Planet-surface textures',
       files: collectTextureImages(TEXTURES_DIR),
+      transport: { kind: 'wrangler' },
       cacheControl: DAY,
       purge: true,
     },
     {
       label: 'Extra files',
       files: collectExtraFiles(),
+      transport: { kind: 'wrangler' },
       cacheControl: DAY,
       purge: true,
     },
@@ -70,18 +75,35 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
+  // Fail before the first byte moves rather than part-way through: a run that
+  // uploads some groups and then dies on a missing credential leaves the
+  // bucket in a state no one asked for.
+  const rcloneCredentials = readRcloneCredentials();
+  const needsRclone = groups.some((g) => g.transport.kind === 'bulk' && g.files.length > 0);
+  if (needsRclone && rcloneCredentials === null) {
+    console.error(MISSING_CREDENTIALS_HELP);
+    process.exit(1);
+  }
+
   console.log(
     `Syncing ${total} file(s) to r2://${BUCKET}/data/\n` +
       groups.map((g) => `  ${g.files.length.toString().padStart(6)}  ${g.label}`).join('\n'),
   );
 
-  const ctx: R2SyncContext = { bucket: BUCKET, publicUrl: R2_PUBLIC_URL };
+  const ctx: R2SyncContext = {
+    bucket: BUCKET,
+    publicUrl: R2_PUBLIC_URL,
+    rcloneCredentials,
+  };
   // Every key we wrote that the CDN must be told about. Groups whose content
   // is immutable by construction stay out of this list on purpose.
   const touchedKeys: string[] = [];
   let uploaded = 0;
+  let delegated = 0;
   for (const group of groups) {
-    uploaded += await syncGroup(group, ctx, touchedKeys);
+    const result = await syncGroup(group, ctx, touchedKeys);
+    uploaded += result.uploaded;
+    delegated += result.delegated;
   }
 
   const missing = missingExtraFiles();
@@ -95,7 +117,9 @@ async function main(): Promise<void> {
 
   console.log(
     `\n✓ Synced ${total} file(s) to r2://${BUCKET}/data/` +
-      ` (${uploaded} uploaded, ${total - uploaded} unchanged)`,
+      ` (${uploaded} uploaded, ${total - uploaded - delegated} unchanged` +
+      (delegated > 0 ? `, ${delegated} via rclone — see its stats above` : '') +
+      ')',
   );
 
   console.log('\n--- Cloudflare CDN cache purge ---\n');
