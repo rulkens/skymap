@@ -31,6 +31,14 @@
  * The eviction handler (`setEvictHandler`) is what lets that planner
  * keep its parallel `bitmapReadyTime` map in sync without re-implementing
  * the LRU clock.
+ *
+ * ### `bitmapReady` means "pixels are in the atlas", not "the fetch resolved"
+ *
+ * A key can be evicted while its fetch is in flight; the bitmap that arrives
+ * afterwards has nowhere to go, since its slot now belongs to another key. So
+ * `uploadBitmap` is the single writer of `bitmapReady` — marking a key loaded
+ * on fetch resolution instead would suppress further fetches for a key with no
+ * pixels behind it, a dead end nothing ever retries.
  */
 
 import type {
@@ -52,6 +60,13 @@ export type BitmapStreamDeps = {
   /** GPU debug label for the atlas texture (see `TextureAtlas`). */
   readonly label: string;
   /**
+   * How many bitmap fetches this stream runs at once.  Omitted means
+   * `PriorityQueue`'s own default.  Belongs to the stream, not the queue:
+   * each consumer fetches a different SHAPE of thing against the same shared
+   * browser connection cap, and only the consumer knows which.
+   */
+  readonly concurrency?: number;
+  /**
    * Wake the engine's render loop for the next frame.  Called when a
    * fetch completes (so the bitmap can render) and when a fetch
    * fails (so the still-animating predicate re-checks `inFlightCount`).
@@ -60,7 +75,7 @@ export type BitmapStreamDeps = {
 };
 
 export function createBitmapStreamSubsystem(deps: BitmapStreamDeps): BitmapStreamSubsystem {
-  const { device, atlasSide, slotSide, format, label, requestRender } = deps;
+  const { device, atlasSide, slotSide, format, label, concurrency, requestRender } = deps;
 
   const atlas = new TextureAtlas(device, {
     atlasSide,
@@ -70,7 +85,9 @@ export function createBitmapStreamSubsystem(deps: BitmapStreamDeps): BitmapStrea
   });
   atlas.initTexture();
 
-  const queue = new PriorityQueue();
+  // `undefined` falls through to the queue's own default, so a caller that
+  // has no opinion keeps today's behaviour.
+  const queue = new PriorityQueue(concurrency);
 
   // Set membership: "this bitmap landed".  No timing — that's the
   // load-fade planner's job, layered above this subsystem.
@@ -101,13 +118,17 @@ export function createBitmapStreamSubsystem(deps: BitmapStreamDeps): BitmapStrea
     lastSeenFrame(key) {
       return atlas.lastSeenFrame(key);
     },
-    uploadBitmap(slot, bitmap) {
+    uploadBitmap(key, bitmap) {
+      // Re-asked here rather than trusted from allocate time: the caller has
+      // been holding this key across a network round trip, and its slot may
+      // since have been recycled under a different key.
+      const slot = atlas.slotOf(key);
+      if (slot === undefined) return null;
       atlas.uploadBitmap(slot, bitmap);
-      // The caller's key is what landed; the subsystem doesn't have
-      // the key at this entry point (uploadBitmap takes a slot index),
-      // so isLoaded() is driven by the enqueueFetch wrapper below
-      // which DOES have the key.  Production callers always pair
-      // uploadBitmap with the wrapper, so this split is fine.
+      // The one place `bitmapReady` is written, so "loaded" and "has pixels in
+      // the atlas" are the same fact by construction — see the module header.
+      bitmapReady.add(key);
+      return slot;
     },
     enqueueFetch(input: BitmapStreamFetchInput) {
       // Re-entry guard: don't enqueue keys we've already given up on.
@@ -127,11 +148,13 @@ export function createBitmapStreamSubsystem(deps: BitmapStreamDeps): BitmapStrea
             input.onResult(null);
             return;
           }
-          bitmapReady.add(input.key);
-          // `onResult` is the consumer's hook — they upload via
-          // uploadBitmap() inside this callback and update their
-          // own load-fade timing.
+          // The consumer's hook: uploads via uploadBitmap() inside this
+          // callback (which records the key as loaded) and updates its own
+          // load-fade timing. A consumer that declines leaves the key
+          // unloaded and so still fetchable.
           input.onResult(bitmap);
+          // Unconditional: an upload needs a frame to show, and a declined one
+          // still has to let the keep-ticking predicate re-read inFlightCount.
           requestRender();
         },
       });

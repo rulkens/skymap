@@ -12,8 +12,16 @@
  * items.
  *
  * Eviction is LRU by `lastSeenFrame`: when full, the slot with the oldest
- * `lastSeenFrame` is replaced. The caller calls `touch(key, frame)` every
+ * `lastSeenFrame` is replaced — unless that slot was claimed on the frame
+ * doing the asking, in which case `allocate` returns null instead of eating
+ * its own work (see its docstring). The caller calls `touch(key, frame)` every
  * frame the item is on screen so visible thumbnails stay alive.
+ *
+ * A slot index is a fact about the frame that produced it, not a property of
+ * the key: an evicted key is dropped from the key→slot map entirely, so
+ * re-requesting it later assigns a different slot. Code holding an index
+ * across an await (a bitmap fetch) must re-resolve it through `slotOf` before
+ * writing pixels, or it writes into whichever key has since taken that slot.
  *
  * Geometry (atlasSide, slotSide) and pixel format are constructor
  * configuration, not constants, because more than one atlas exists in the
@@ -146,6 +154,10 @@ export class TextureAtlas {
    * decode via
    * `createImageBitmap(blob, { resizeWidth: slotSide, resizeHeight: slotSide })`.
    *
+   * The slot is taken on trust — nothing here can tell a deliberate write from
+   * a stale index. A caller holding a KEY resolves it through `slotOf`
+   * immediately before calling this (see `bitmapStreamSubsystem.uploadBitmap`).
+   *
    * Why `copyExternalImageToTexture` rather than `writeTexture`?  The
    * former takes an ImageBitmap directly without us having to read the
    * pixel data into a CPU buffer first.  The browser's GPU integration
@@ -181,10 +193,23 @@ export class TextureAtlas {
 
   /**
    * Get the slot for `key`, allocating one if needed. Sets `lastSeenFrame`.
-   * If the atlas is full and `key` is new, evicts the LRU slot.
-   * Returns the slot index (callers use it to compute UVs).
+   * Returns the slot index (callers use it to compute UVs), or `null` when the
+   * atlas is full of slots already claimed on THIS frame.
+   *
+   * A resident key always gets its slot back. Only a NEW key can be refused,
+   * and only when every slot carries `lastSeenFrame === frame`.
+   *
+   * Why refuse rather than evict? A consumer (e.g. the Earth tile planner,
+   * whose demand scales with screen area and pyramid depth) can want more
+   * items than the atlas holds, claim every slot early in the frame, and keep
+   * asking. Evicting there would recycle a slot claimed moments earlier in the
+   * SAME frame — and because a stationary camera re-requests a stable set
+   * every frame, it would repeat forever: evict, refetch, evict. The bounded
+   * answer is to serve what fits (planners order largest-on-screen-first) and
+   * tell the rest the atlas is full. A slot last seen on an EARLIER frame is
+   * genuinely stale and LRU recycles it as usual.
    */
-  allocate(key: string, frame: number): number {
+  allocate(key: string, frame: number): number | null {
     const existing = this.keyToSlot.get(key);
     if (existing !== undefined) {
       this.slots[existing]!.lastSeenFrame = frame;
@@ -208,6 +233,11 @@ export class TextureAtlas {
         lruFrame = f;
       }
     }
+    // Even the least-recently-used slot was claimed this frame, so every slot
+    // is spoken for and there is nothing to take. See the docstring for why
+    // taking one anyway is a refetch loop rather than a cache miss.
+    if (lruFrame === frame) return null;
+
     const evictedKey = this.slots[lruIdx]!.key;
     this.keyToSlot.delete(evictedKey);
     // Fire the eviction handler BEFORE we overwrite the slot, so the
@@ -232,12 +262,14 @@ export class TextureAtlas {
     if (idx !== undefined) this.slots[idx]!.lastSeenFrame = frame;
   }
 
-  /** Manually free a slot (e.g. after a fetch failed permanently). */
-  release(key: string): void {
-    const idx = this.keyToSlot.get(key);
-    if (idx === undefined) return;
-    this.slots[idx] = undefined;
-    this.keyToSlot.delete(key);
+  /**
+   * The slot `key` occupies right now, or undefined if it occupies none — the
+   * question an async writer must ask instead of trusting `allocate`'s return
+   * value (see the module header). Kept read-only: resolving a key that is no
+   * longer resident must not resurrect it.
+   */
+  slotOf(key: string): number | undefined {
+    return this.keyToSlot.get(key);
   }
 
   /** Returns the last-seen frame for `key`, or undefined if not in the atlas. */

@@ -55,6 +55,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **`uiSlice` does boot I/O at module load** `needs-design` — `initialState = buildInitialUiState()` reads `window.location` + localStorage on import; make the fallback lazy. → [details](backlog/2026-07-29-uislice-module-load-boot-reads.md)
 - [ ] **URL seam is a `window` singleton** `needs-design` — the whole test suite shares one address bar; make the URL port a registered capability. → [details](backlog/2026-07-30-url-seam-window-singleton.md)
 - [ ] **`buildAliasIndex` is a non-hook in `src/hooks/`** `ready` — pure helper with one importer; `npm run move-files` it to `src/utils/` (test mirror follows).
+- [ ] **`glade-points` throws "Maximum update depth exceeded"** `needs-repro` — React update loop seen once; the 500 ms heartbeat is the suspect but nothing on that branch touches the loading path. → [details](backlog/2026-07-30-glade-points-update-depth-exceeded.md)
 
 ## Rendering
 
@@ -64,6 +65,16 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Body-texture colour calibration** `needs-design` — Mars reads over-saturated; the `sss` sources are enhanced, not colorimetric, and no target appearance is recorded. → [details](backlog/2026-07-24-mars-texture-colour-calibration.md)
 - [ ] **Body-texture store consolidation** `needs-design` — four renderers (textured, Earth, ring, cloud-shell) each hand-roll map storage + placeholder fallback separately. → [details](backlog/2026-07-24-body-texture-store-consolidation.md)
 - [ ] **Photoreal-Earth follow-ups** `deferred` — drift traps + fidelity gaps from plans A–E (equirect-uv mirror, setMap kind table, shared proxy-sphere idiom). → [details](backlog/2026-07-19-photoreal-earth-followups.md)
+- [ ] **Earth tile polar refinement clamp** `deferred` — plate-carrée refinement over-selects near the poles (~17x vs equator in one simulation); masked until Phase E deepens the pyramid. → [details](backlog/2026-07-30-earth-tile-polar-refinement-clamp.md)
+- [ ] **Earth tile uv-conversion functions have no production caller** `needs-design` — `earthTileXyForUv`/`earthTileCentreUv` are referenced only by each other's test; the flip and wrap are re-implemented inline at six live sites instead. → [details](backlog/2026-07-30-earth-tile-uv-conversion-dead-home.md)
+- [ ] **`EarthTileKind`'s plumbing assumes there is only one kind** `needs-design` — bake, planner, decode and the uniform window all silently break or double up the moment a second kind (normal maps) is added. → [details](backlog/2026-07-30-earth-tile-kind-singularity.md)
+- [ ] **Earth's local frame is derived twice per frame** `needs-design` — `runFrame.ts` and `earthLayer.ts` independently recompute the same MVP/camPosLocal for the tile plan vs the uniforms; nothing keeps them in agreement. → [details](backlog/2026-07-30-earth-frame-derived-twice.md)
+- [ ] **`TextureAtlas` eviction is flat LRU** `needs-design` — van Waveren's finest-mip-first-then-LRU would let coarse, widely-depended-on pages survive over finer ones instead of evicting by recency alone.
+- [ ] **Earth tile `tilePx` can only ever hold one value** `ready` — `derivePlannerParams` refuses any manifest value but the constant, yet it's threaded through six functions and three docstrings promise a re-bake at a different edge is "a data change."
+- [ ] **Earth tile `index.txt` is written and never read** `deferred` — `buildEarthTiles`'s header says a deploy collector walks it; no such collector exists and `syncR2.ts` has no `earth-tiles` sweep. Phase F work.
+- [ ] **Earth page table re-derives the atlas's slot-to-cell decode** `ready` — `TextureAtlas.slotsPerRow` is private; `buildEarthPageTable` and `earthTileSubsystem` each recompute it independently.
+- [ ] **`stoodDown` duplicates `uploadedWindow === null`** in `earthTileSubsystem` `ready` — two fields, one fact, written by the same two call sites.
+- [ ] **`BitmapStreamSubsystem.lastSeenFrame` is production-dead** `ready` — its callers were removed by the slot-resolution fix; `TextureAtlas.lastSeenFrame` underneath is still live LRU state.
 - [ ] **Titan atmosphere** `needs-design` — minimal params-row-over-flat-sphere vs full Venus-style cloud-as-surface + limb treatment (needs a texture through the fetch/build pipeline). → [details](backlog/2026-07-19-titan-atmosphere.md)
 - [ ] **Cloud deck PBR + live coverage** `deferred` — deck is Lambert-lit with no thickness channel (alpha = luminance of RGB); analytic multiple-scattering phase term is cheap, real τ / live GIBS clouds are separable data-layer efforts. → [details](backlog/2026-07-19-cloud-deck-pbr.md)
 - [ ] **Local interstellar-dust volume (Edenhofer 2024)** `needs-design` — Sun-centered per-parsec extinction cube as an SCFD field (MCPM-clone, ~3.2 GB one-time via `dustmaps`); blocked on a sub-kpc render slab (COSMO near-clip = 10 kpc) + emissive-vs-absorptive compositing choice. → [details](backlog/2026-07-18-local-dust-volume.md)
@@ -132,6 +143,8 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Greek letters in star labels** `needs-design` — font atlas lacks Greek glyphs, so Bayer names are spelled out ("Delta Velorum" vs δ Velorum); add the range + swap seed display names. → [details](backlog/2026-07-22-greek-letters-in-star-labels.md)
 - [ ] **Star/body card row tooltips** `ready` — galaxy detail-card rows have hover tooltips explaining each field; the field-star and famous-star/body cards' rows have none — extend the same tooltips.tsx wiring to their row tables.
 - [ ] **Tour-recorder follow-ups** `ready` — small post-merge items from the recorder's final review (observable settle discard, two test/diagnostic tidies). → [details](backlog/2026-07-08-tour-recorder-follow-ups.md)
+- [ ] **Surface-directed zoom** `needs-design` — zoom dollies toward the body centre, so you cannot zoom toward the point under the cursor. → [details](backlog/2026-07-30-surface-directed-zoom.md)
+- [ ] **Cursor-anchored orbit drag** `needs-design` — the ground follows the cursor only at the screen centre, and yaw dies near the poles; same raycast prerequisite as surface-directed zoom. → [details](backlog/2026-07-30-cursor-anchored-orbit-drag.md)
 
 ## Docs & process
 

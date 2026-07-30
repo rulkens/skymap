@@ -258,12 +258,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     get selectionRows() {
       return store.getState().selectionRows;
     },
-    // `state.famousGalaxiesMeta` delegates to the Redux `engine` slice — the
-    // same single-seam pattern as `settings`/`tier`/`selection`/`selectionRows`.
-    // The famous-galaxies meta slot's dispatch is the sole writer; per-frame
-    // readers (hi-res famous subsystem, textured-disk subsystem, ring-layer
-    // pass, `produceFamousLabels`) reach the store here, with no engine-side
-    // mirror to drift.
+    // Same single-seam pattern as `settings`/`tier`/`selectionRows` above — no
+    // engine-side mirror of the store slice to drift.
     get famousGalaxiesMeta() {
       return selectFamousGalaxiesMeta(store.getState());
     },
@@ -406,6 +402,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       diskPlannerWalk: null,
       hiResFamous: null,
       hiResFamousTexture: null,
+
+      // ── Earth surface virtual texture ─────────────────────────────
+      // Null until `wireSlots` constructs it post-GPU init, and holding no
+      // GPU memory even then — the atlas is allocated by the first frame the
+      // tile planner engages on.
+      earthTiles: null,
 
       // ── Bias-correction subsystem ─────────────────────────────────
       // Owns Malmquist-bias mode flags, cached per-source ratios/weights,
@@ -809,6 +811,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.subsystems.diskPlannerWalk = null;
     state.subsystems.galaxyAtlas?.destroy();
     state.subsystems.galaxyAtlas = null;
+    // The Earth tile subsystem owns a 67 MB atlas and a page-table texture
+    // once engaged, neither of which WebGPU releases on GC. Order-independent:
+    // nothing subscribes to it.
+    state.subsystems.earthTiles?.destroy();
+    state.subsystems.earthTiles = null;
     state.subsystems.clickResolver?.destroy();
     state.subsystems.clickResolver = null;
     state.subsystems.loadProgress?.destroy();

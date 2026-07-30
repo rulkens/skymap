@@ -19,14 +19,17 @@ Inside `CUTOFF_MPC = 30` the pipeline replaces the cz-derived position with a Co
 
 All refreshes share one 3-step shape: fetch, build, then `npm run sync-r2-secure` from the **main worktree only** (memory `project_worktree_data_isolation`). The sync step is the deploy path — see [docs/DEPLOY.md](DEPLOY.md).
 
-| Data changed           | 1. Fetch                                            | 2. Build                                                  |
-| ---------------------- | --------------------------------------------------- | --------------------------------------------------------- |
-| CF4 distances          | `fetch-cf4`                                         | `build-tiers` (`2mrs.bin`, `glade-*.bin`)                 |
-| Clusters/superclusters | `fetch-structures` (CDS VizieR, verifies `.sha256`) | `build-structures` (after `build-tiers`) → `structures.*` |
-| DESI                   | `fetch-desi` (four DR1 LSS `.fits`)                 | `build-tiers` (`desi-deep.bin`, the CrB deep cone)        |
-| Planet textures        | `fetch-textures` (~700 MB; `--dev` = 2k subset)     | `build-textures` → `public/data/images/textures/`         |
+| Data changed           | 1. Fetch                                            | 2. Build                                                   |
+| ---------------------- | --------------------------------------------------- | ---------------------------------------------------------- |
+| CF4 distances          | `fetch-cf4`                                         | `build-tiers` (`2mrs.bin`, `glade-*.bin`)                  |
+| Clusters/superclusters | `fetch-structures` (CDS VizieR, verifies `.sha256`) | `build-structures` (after `build-tiers`) → `structures.*`  |
+| DESI                   | `fetch-desi` (four DR1 LSS `.fits`)                 | `build-tiers` (`desi-deep.bin`, the CrB deep cone)         |
+| Planet textures        | `fetch-textures` (~1.1 GB; `--dev` = 2k subset)     | `build-textures` → `public/data/images/textures/`          |
+| Earth surface tiles    | `fetch-textures` (the 8 BMNG quadrants, ~421 MB)    | `build-earth-tiles` → `earth-tiles/` (hours; `--dev` = z5) |
 
 Raw files and built artefacts are gitignored; only provenance `README.md` + `.sha256` sidecars are committed. Full-res texture pull/build/sync runs post-merge from the main worktree.
+
+Earth's whole-globe base texture and its surface tile pyramid are two publications of ONE Blue Marble month (a 21600×10800 equirect and eight 21600×21600 quadrants). The month is chosen in `tools/utils/io/bmngVintage.ts` and every registry path, upstream URL and attribution string reads it from there — because the tile layer falls back to the base outside its baked window, so a vintage split draws a seasonal seam along the tile frontier.
 
 ### MCPM Cosmic Web volume
 
