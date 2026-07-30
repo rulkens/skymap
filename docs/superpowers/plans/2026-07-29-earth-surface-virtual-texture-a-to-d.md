@@ -1047,11 +1047,55 @@ Two lessons worth carrying, both about the verification rather than the bug:
   resolves the right slot. The pixels inside that tile were wrong, which no amount of
   addressing arithmetic can see.
 
+### Q1 (tile the normal map?) — still NO, for a better reason than cost
+
+The visual pass PASSED on desktop 2026-07-30. Asked where the lighting fails against the
+sharpened albedo, the user localised it: **"mostly apparent in the shorelines."**
+
+At a shoreline three maps disagree about resolution. Albedo is now 611 m/texel (z7); the
+`normal` and `material` maps are both bound at tier `medium` (4096 = **9.8 km/texel**), so
+they are **16x coarser than the albedo they are shading**.
+
+**There are two candidate causes and they are not the same fix.** The `material` map's `.g`
+is an ocean mask selecting `oceanRoughness` over land micro-roughness — a large specular
+step, smeared over ~10 km against a sharp coast. The `normal` map's relief is the other.
+Guessing between them is the [[multiple sufficient causes]] trap: fix one, and if it was the
+other the symptom is unchanged. Diagnostic before spending anything — force a constant
+roughness and look at a coastline, then restore it and flatten the normal instead. Two
+one-line shader probes of the `TILE_DEBUG` kind.
+
+**Tiling the normal map cannot close the gap with the sources on disk.** Both maps are
+source-capped, not just tier-capped:
+
+- `gebco_08_rev_elev_21600x10800.png` — the elevation the normal is Sobel-baked from
+- `world.watermask.21600x10800.png` — the NASA water mask behind the ocean channel
+
+Both are 21600 px wide = **1.86 km/texel**. A tile pyramid from a 21600-wide source tops out
+at z5 (`512 * 2^z <= 21600`), i.e. 2.45 km/texel — still 4x short of z7 albedo. So tiling
+buys a second atlas, the LINEAR-format trap, two more bindings and uniform growth, and STILL
+does not match. Matching would need new sources (SRTM-class elevation, a finer water mask),
+which is a data problem, not a rendering one.
+
+**The cheap gain, if the diagnostic points at either map:** `medium` -> `large` on both, one
+registry line each, halving the error to 4.89 km/texel — the sources carry 2.6x more than
+that needs. The catch is VRAM: an 8192 RGBA texture is 268 MB on the GPU and Earth already
+binds three (surface, night, clouds), so this is ~536 MB more. That, rather than the
+registry comment's "a normal map downsamples cleanly, so 4k is the useful ceiling", is
+probably the real constraint — worth confirming, because a stated reason that is not the
+operative one will mislead the next person to weigh it.
+
 ### Still owed
 
-- Re-bake, now for two reasons in one pass: z5 and z6 on disk carry the wrong pixels (the
-  NW-child copy above), and the floor fix is committed but never run, so `manifest.json` still
-  says `min: 5` and medium-tier sessions keep the z4 hole. The bake creates new directories, so
-  it needs a dev-server restart after — otherwise Vite answers z3 and z4 with `text/html`.
-- Delete `public/data/images/earth-tiles.december-z5-backup` once August is confirmed good.
+- A pass on a real iOS device. Never done, and this branch touched the Earth fragment —
+  where a bad shader freezes the canvas with no thrown error.
+- `EARTH_TILE_LOD_BIAS` is 1, which displays every tile at 2x magnification. It was adopted
+  to hold demand inside the atlas, and the measurement above says demand was never the
+  problem at this depth: bias 0 would be visibly 2x sharper between ~240 and ~950 km for an
+  estimated ~44 tiles at 1600x900. Demand scales with screen AREA, so measure at the real
+  window size first — a 2560x1440 window would be ~128 and genuinely over capacity.
+- `glade-points` logged "Maximum update depth exceeded" (a React update loop) with
+  `finalAttempt: 2` during the 2026-07-30 visual session, so that catalog likely failed to
+  load. Cause unknown; nothing in this branch is on the React loading path, but the
+  heartbeat change (3000 -> 500 ms) is the only nearby suspect and reverting it is the way to
+  settle causality.
 - The eight quadrant symlinks in this worktree's `data/raw/textures/` point at main's copies.
