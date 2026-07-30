@@ -34,7 +34,7 @@ describe('tween', () => {
     expect(a.ch).toBe('distance');
     expect(a.to).toBe(100);
     expect(a.over).toBe(5);
-    expect(a.ease).toBe('inOut');
+    expect(a.ease).toBe('easeInOutCubic');
     expect(a.space).toBe('log');
   });
 
@@ -53,14 +53,14 @@ describe('tween', () => {
     expect(a.space).toBe('lin');
   });
 
-  it('ease defaults to "inOut"', () => {
+  it('ease defaults to "easeInOutCubic"', () => {
     const a = tween('pitch', { to: 0, over: 1 });
-    expect(a.ease).toBe('inOut');
+    expect(a.ease).toBe('easeInOutCubic');
   });
 
   it('explicit ease is forwarded', () => {
-    const a = tween('yaw', { to: 1, over: 2, ease: 'out' });
-    expect(a.ease).toBe('out');
+    const a = tween('yaw', { to: 1, over: 2, ease: 'easeOutCubic' });
+    expect(a.ease).toBe('easeOutCubic');
   });
 });
 
@@ -132,9 +132,12 @@ describe('focusOnId', () => {
 
   it('forwards an explicit ease to both camera writers', () => {
     const id = focusId('virgo');
-    const e = focusOnId(id, 3, 'out');
+    const e = focusOnId(id, 3, 'easeOutCubic');
     expect(e).toEqual(
-      seq([focus(id), all([moveTargetId(id, 3, 'out'), dollyToId(id, 3, { ease: 'out' })])]),
+      seq([
+        focus(id),
+        all([moveTargetId(id, 3, 'easeOutCubic'), dollyToId(id, 3, { ease: 'easeOutCubic' })]),
+      ]),
     );
   });
 });

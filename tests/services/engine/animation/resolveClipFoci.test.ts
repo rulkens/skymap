@@ -100,7 +100,9 @@ describe('resolveClipFoci rewrites moveTargetId/dollyToId to concrete camera act
   it('all([moveTargetId, dollyToId]) resolves to all([setVec ch:target, set ch:distance])', () => {
     const id = focusId('cluster-virgo');
     const clip: ClipData = {
-      timeline: [all([moveTargetId(id, 3, 'inOut'), dollyToId(id, 3, { ease: 'inOut' })])],
+      timeline: [
+        all([moveTargetId(id, 3, 'easeInOutCubic'), dollyToId(id, 3, { ease: 'easeInOutCubic' })]),
+      ],
     };
 
     const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE);
@@ -118,7 +120,7 @@ describe('resolveClipFoci rewrites moveTargetId/dollyToId to concrete camera act
       ch: 'target',
       to: EXPECTED_TARGET,
       over: 3,
-      ease: 'inOut',
+      ease: 'easeInOutCubic',
     });
 
     // dollyToId → set ch:'distance'
@@ -127,7 +129,7 @@ describe('resolveClipFoci rewrites moveTargetId/dollyToId to concrete camera act
       ch: 'distance',
       to: EXPECTED_DISTANCE,
       over: 3,
-      ease: 'inOut',
+      ease: 'easeInOutCubic',
     });
   });
 
@@ -148,14 +150,14 @@ describe('resolveClipFoci rewrites moveTargetId/dollyToId to concrete camera act
   it('ease and over are preserved on the resolved action', () => {
     const id = focusId('cluster-virgo');
     const clip: ClipData = {
-      timeline: [moveTargetId(id, 7, 'in')],
+      timeline: [moveTargetId(id, 7, 'easeInCubic')],
     };
     const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE);
     expect(resolved.timeline[0]).toMatchObject({
       kind: 'setVec',
       ch: 'target',
       over: 7,
-      ease: 'in',
+      ease: 'easeInCubic',
     });
   });
 });
@@ -252,7 +254,7 @@ describe('resolveClipFoci rewrites lookAtId to an aimAt bearing', () => {
   it('resolves to concurrent yaw/pitch tweens aiming from the orbit target at the subject', () => {
     // Virgo frames at [10,0,0]. Looking from the origin, the camera must aim
     // along +X: orbitAnglesLookingAlong([1,0,0]) → yaw −π/2, pitch 0.
-    const clip: ClipData = { timeline: [lookAtId(focusId('cluster-virgo'), 3, 'out')] };
+    const clip: ClipData = { timeline: [lookAtId(focusId('cluster-virgo'), 3, 'easeOutCubic')] };
     const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE);
 
     const outer = resolved.timeline[0]!;
@@ -261,10 +263,15 @@ describe('resolveClipFoci rewrites lookAtId to an aimAt bearing', () => {
       kind: 'set',
       ch: 'yaw',
       over: 3,
-      ease: 'out',
+      ease: 'easeOutCubic',
     });
     expect((outer.children[0] as { to: number }).to).toBeCloseTo(-Math.PI / 2, 10);
-    expect(outer.children[1]).toMatchObject({ kind: 'set', ch: 'pitch', over: 3, ease: 'out' });
+    expect(outer.children[1]).toMatchObject({
+      kind: 'set',
+      ch: 'pitch',
+      over: 3,
+      ease: 'easeOutCubic',
+    });
     expect((outer.children[1] as { to: number }).to).toBeCloseTo(0, 10);
   });
 
@@ -290,11 +297,13 @@ describe('resolveClipFoci rewrites strafeId to a lateral moveTarget', () => {
     // Virgo frames at [10,0,0]; from the origin the bearing forward is +X, so
     // bearing-right (forward × worldUp) is +Z. byDeg 45 at pose distance 5 →
     // tan(45°) × 5 = 5 Mpc: the target strafes to [0,0,5].
-    const clip: ClipData = { timeline: [strafeId(focusId('cluster-virgo'), 45, 3, 'out')] };
+    const clip: ClipData = {
+      timeline: [strafeId(focusId('cluster-virgo'), 45, 3, 'easeOutCubic')],
+    };
     const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE);
 
     const eff = resolved.timeline[0]!;
-    expect(eff).toMatchObject({ kind: 'setVec', ch: 'target', over: 3, ease: 'out' });
+    expect(eff).toMatchObject({ kind: 'setVec', ch: 'target', over: 3, ease: 'easeOutCubic' });
     const to = (eff as { to: [number, number, number] }).to;
     expect(to[0]).toBeCloseTo(0, 10);
     expect(to[1]).toBeCloseTo(0, 10);
@@ -359,7 +368,7 @@ describe('resolveClipFoci resolves flyPath waypoints', () => {
       timeline: [
         flyPath(
           [atFocus(focusId('cluster-virgo'), { over: 2 }), atPoint([5, 5, 5], 3, { pitch: 0.2 })],
-          { over: 5, ease: 'inOut' },
+          { over: 5, ease: 'easeInOutCubic' },
         ),
       ],
     };
@@ -384,7 +393,7 @@ describe('resolveClipFoci resolves flyPath waypoints', () => {
 
     // The path-level over/ease pass through.
     expect(fp.over).toBe(5);
-    expect(fp.ease).toBe('inOut');
+    expect(fp.ease).toBe('easeInOutCubic');
   });
 
   it('carries path-level align/rampSec/linger/spline/turnDelay and per-waypoint linger through the rewrite', () => {
@@ -400,7 +409,7 @@ describe('resolveClipFoci resolves flyPath waypoints', () => {
           ],
           {
             over: 5,
-            ease: 'inOut',
+            ease: 'easeInOutCubic',
             align: 1.1,
             rampSec: 0.9,
             linger: 0.4,

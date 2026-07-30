@@ -9,10 +9,11 @@
  */
 
 import type { CameraPose } from './CameraPose';
+import type { Ease } from '../animation/Ease';
 
 export type CameraTweenDescriptor = {
   from: CameraPose;
   to: CameraPose;
   durationMs: number;
-  easing: 'easeOutCubic';
+  easing: Ease;
 };

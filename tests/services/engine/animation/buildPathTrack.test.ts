@@ -272,14 +272,20 @@ describe('buildPathTrack', () => {
       { at: [10, 0, 0] as Vec3, distance: 10 },
       { at: [20, 0, 0] as Vec3, distance: 10 },
     ];
-    // Default cubic inOut is still accelerating at quarter-time; a short ramp
+    // Default easeInOutCubic is still accelerating at quarter-time; a short ramp
     // (0.4s of a 4s take = 10% each end) is already cruising → further along.
-    const inOut = buildPathTrack({ start: START, startSec: 0, over: 4, ease: 'inOut', waypoints });
+    const inOut = buildPathTrack({
+      start: START,
+      startSec: 0,
+      over: 4,
+      ease: 'easeInOutCubic',
+      waypoints,
+    });
     const trap = buildPathTrack({
       start: START,
       startSec: 0,
       over: 4,
-      ease: 'inOut',
+      ease: 'easeInOutCubic',
       waypoints,
       rampSec: 0.4,
     });
@@ -291,7 +297,7 @@ describe('buildPathTrack', () => {
       start: START,
       startSec: 0,
       over: 4,
-      ease: 'inOut',
+      ease: 'easeInOutCubic',
       waypoints,
       rampSec: 0,
     });

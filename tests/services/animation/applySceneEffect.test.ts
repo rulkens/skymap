@@ -228,7 +228,7 @@ describe('applySceneEffect — frameTo', () => {
         fromQuat: matrixToQuaternion(liveBasis),
         to: 'galactic',
         durationMs: 1000,
-        easing: 'inOut',
+        easing: 'easeInOutCubic',
       }),
     );
   });
