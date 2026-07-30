@@ -18,7 +18,7 @@
  * registering a saga's runner (an engine resource the saga calls into) is a
  * DISTINCT capability, kept un-braided from the store by returning it as its own
  * value rather than bolting it onto the store object. The engine calls
- * `setSagaContext({ runTierTransition })` post-construction to inject the
+ * `setSagaContext` post-construction with a bag carrying, among the rest, the
  * tier-transition runner; `getContext('runTierTransition')` inside the running
  * saga reads it back. That `setContext`/`getContext` pair is how an engine
  * resource crosses from engine-land into store-land without the saga importing
@@ -38,6 +38,11 @@
  * fine for the one saga that dispatches unprompted at construction (the hash
  * arrival read). The action is what `watchHashSaga` waits on before it forks
  * either half of the bridge.
+ *
+ * That is why the setter takes a WHOLE `SagaContext` rather than a `Partial`: the
+ * dispatch announces "the capabilities the sagas reach for are registered", and
+ * only a total argument makes the announcement true by construction. See
+ * `SetSagaContext` in `./types` for what a partial registration costs.
  *
  * Notably absent: NO `serializableCheck: false` and NO `enableMapSet`. The whole
  * point of this migration is that the settings state is now fully serializable —
@@ -80,7 +85,7 @@ export function createAppStore(preloadedState?: PreloadedState) {
     // instead of blocking. The action gives it something to `take`. Ordering
     // matters: merge first, announce second, so a saga woken by the announcement
     // already sees the context.
-    setSagaContext: (ctx: Partial<SagaContext>) => {
+    setSagaContext: (ctx: SagaContext) => {
       sagaMiddleware.setContext(ctx);
       store.dispatch(sagaContextRegistered());
     },

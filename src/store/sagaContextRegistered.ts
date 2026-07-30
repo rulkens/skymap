@@ -13,6 +13,13 @@
  * cancels every watcher in it: no wake, no tier transitions, no selection
  * resolution, no keyboard, for the rest of the session.
  *
+ * The signal says "the capabilities are registered", and `setSagaContext` takes a
+ * WHOLE `SagaContext` so it cannot say that falsely. With a `Partial` setter the
+ * two came apart: registering one key still fired this action, and the arrival
+ * read then reached a capability nobody had supplied — the failure described
+ * above, produced by the very mechanism meant to prevent it. Totality is the
+ * cheap fix because production registers everything in one call anyway.
+ *
  * Making the registration observable as an ACTION rather than exposing a promise
  * or a callback from the factory keeps the wait inside the language the sagas
  * already speak: `yield* take(sagaContextRegistered)` needs no new seam, no
