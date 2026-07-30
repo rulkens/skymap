@@ -15,7 +15,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createStarPointRenderer } from '../../../../../src/services/gpu/renderers/bodies/starPointRenderer';
 import type { Renderer } from '../../../../../src/@types/rendering/Renderer';
-import type { StarBody } from '../../../../../src/@types/scene/StarBody';
+import type { PositionedStar } from '../../../../../src/@types/scene/PositionedStar';
 
 function mockDevice(renderPipelines?: GPURenderPipelineDescriptor[]): GPUDevice {
   return {
@@ -43,7 +43,7 @@ function mockPass(): GPURenderPassEncoder {
   } as unknown as GPURenderPassEncoder;
 }
 
-const SUN: StarBody = {
+const SUN: PositionedStar = {
   id: 'sun',
   label: 'Sun',
   positionMpc: [0, 0, 0],
@@ -52,7 +52,7 @@ const SUN: StarBody = {
   radiusKm: 695_700,
 };
 
-const SIRIUS: StarBody = {
+const SIRIUS: PositionedStar = {
   id: 'sirius',
   label: 'Sirius',
   positionMpc: [1.6e-6, 2.1e-6, -0.4e-6],
@@ -89,7 +89,9 @@ describe('createStarPointRenderer', () => {
 
     // Late binding: nothing uploaded yet — no draw call recorded.
     const before = mockPass();
-    expect(() => renderer.draw(before, new Float32Array(16), [1920, 1080], DRAW_OPTS)).not.toThrow();
+    expect(() =>
+      renderer.draw(before, new Float32Array(16), [1920, 1080], DRAW_OPTS),
+    ).not.toThrow();
     expect(before.draw).not.toHaveBeenCalled();
 
     // Two stars uploaded — one instanced draw of 6 vertices × 2 instances.

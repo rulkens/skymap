@@ -71,7 +71,7 @@ import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionE
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { IDENTITY_MAT3 } from '../../../../utils/math/identityMat3';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from '../partitionStarsByResolution';
-import { visibleStars } from '../visibleStars';
+import { positionedVisibleStars } from '../positionedVisibleStars';
 import { seedIndexOfBody } from './seedIndexOfBody';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { drawFlooredSpherePick } from '../../helpers/drawFlooredSpherePick';
@@ -89,7 +89,7 @@ export const starSpheresLayer: ContentLayer = {
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     return (
       partitionStarsByResolution({
-        stars: visibleStars(state),
+        stars: positionedVisibleStars(state, ctx),
         camPosMpc: ctx.drawCamPos,
         thresholdPx: STAR_RESOLVE_PX,
         viewportHeightPx: ctx.canvasSize.height,
@@ -103,7 +103,7 @@ export const starSpheresLayer: ContentLayer = {
     if (renderer === null) return;
 
     const { spheres } = partitionStarsByResolution({
-      stars: visibleStars(state),
+      stars: positionedVisibleStars(state, ctx),
       camPosMpc: view.camPos,
       thresholdPx: STAR_RESOLVE_PX,
       viewportHeightPx: view.viewportPx[1],
@@ -134,7 +134,7 @@ export const starSpheresLayer: ContentLayer = {
   // MVP + packed id, so the sphere picks never collapse onto the last star — the
   // writeBuffer-vs-submit race `bodyPickRenderer` guards with per-draw dynamic
   // offsets). The resolved set is the SAME `partitionStarsByResolution` call
-  // `draw` runs — `visibleStars(state)` split at `STAR_RESOLVE_PX` against
+  // `draw` runs — `positionedVisibleStars` split at `STAR_RESOLVE_PX` against
   // `view.camPos` and `view.viewportPx[1]` — so a star is pickable-as-a-sphere
   // exactly when it draws as a sphere (its complement rides `starPointsLayer`'s
   // point pick), never both and never neither.
@@ -153,7 +153,7 @@ export const starSpheresLayer: ContentLayer = {
     if (pickRenderer === null) return;
 
     const { spheres } = partitionStarsByResolution({
-      stars: visibleStars(state),
+      stars: positionedVisibleStars(state, ctx),
       camPosMpc: view.camPos,
       thresholdPx: STAR_RESOLVE_PX,
       viewportHeightPx: view.viewportPx[1],

@@ -28,6 +28,9 @@ import { seedIndexOfBody } from '../../../../../src/services/engine/frame/passes
 import { IDENTITY_MAT3 } from '../../../../../src/utils/math/identityMat3';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
+import { SCENE_ANCHORS } from '../../../../../src/data/bodies/sceneAnchors';
+import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
+import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../src/data/sources';
@@ -38,6 +41,7 @@ import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { StarBody } from '../../../../../src/@types/scene/StarBody';
+import type { PositionedStar } from '../../../../../src/@types/scene/PositionedStar';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 // Mock composeBodyMvp so the test can (a) assert which vp it consumed by
@@ -50,9 +54,19 @@ import { composeBodyMvp } from '../../../../../src/utils/camera/composeBodyMvp';
 
 const composeMock = composeBodyMvp as unknown as ReturnType<typeof vi.fn>;
 
-const SUN = SCENE_STARS.find((star) => star.id === 'sun')!;
-const PROXIMA = SCENE_STARS.find((star) => star.id === 'proxima-centauri')!;
-const SIRIUS = SCENE_STARS.find((star) => star.id === 'sirius')!;
+// The record + the position this frame resolves for it — the pairing
+// `positionedVisibleStars` builds. A star is an anchor, so the resolved
+// position IS the anchor's array, by reference, which is what lets the compose
+// assertions below check the seam by identity.
+const ANCHOR_POS = new Map(SCENE_ANCHORS.map((anchor) => [anchor.id, anchor.positionMpc]));
+const positioned = (id: string): PositionedStar => {
+  const star = SCENE_STARS.find((s) => s.id === id)!;
+  return { ...star, positionMpc: ANCHOR_POS.get(id)! };
+};
+
+const SUN = positioned('sun');
+const PROXIMA = positioned('proxima-centauri');
+const SIRIUS = positioned('sirius');
 
 const PASS_STUB = {
   setPipeline: vi.fn(),
@@ -83,6 +97,9 @@ function makeCtx(camPos: Readonly<Vec3>): ReadyFrameContext {
     // The drawPick radius floor (`minPickRadiusMpc`) reads this pinhole
     // radian→pixel conversion: 720 / (2·tan(30°)).
     drawPxPerRad: 720 / (2 * Math.tan(Math.PI / 6)),
+    // The instant the star layers resolve their positions at; a star anchor is
+    // static, so any instant gives the same roster.
+    simDays: CONST_J2000,
   } as unknown as ReadyFrameContext;
 }
 
@@ -210,6 +227,24 @@ describe('starSpheresLayer.draw', () => {
     expect(mvp).toBeInstanceOf(Float32Array);
     expect(mvp).toHaveLength(16);
     expect(color).toBe(SUN.color);
+  });
+
+  it('a famous star’s drawn position comes from the snapshot', () => {
+    composeMock.mockClear();
+    // The star record carries no position at all, so the only place the drawn
+    // one can come from is the frame's body snapshot. Pinned by IDENTITY: the
+    // array `composeBodyMvp` receives must be the very `BodyState.positionMpc`
+    // the snapshot holds for Sirius — a re-derivation, a copy, or a lookup
+    // against the wrong id would all miss.
+    const camPos = halfAuFrom(SIRIUS.positionMpc);
+    const state = makeState({ draw: vi.fn() }, [SUN, PROXIMA, SIRIUS]);
+
+    starSpheresLayer.draw(PASS_STUB, makeNear0View(camPos), makeCtx(camPos), state);
+
+    expect(composeMock).toHaveBeenCalledTimes(1);
+    expect(composeMock.mock.calls[0]![1]).toBe(
+      deriveBodyStates(CONST_J2000).get('sirius')!.positionMpc,
+    );
   });
 
   it('starSpheresLayer draws only the resolved stars', () => {

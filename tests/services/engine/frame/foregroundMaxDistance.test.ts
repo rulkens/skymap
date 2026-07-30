@@ -20,12 +20,12 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 
 describe('FOREGROUND_MAX_DISTANCE_MPC', () => {
   it('encloses the farthest seeded body and stays far below galaxy scale', () => {
-    // A body's world position comes from the derived snapshot for orbital bodies
-    // and off the record for stars (which alone keep a baked `positionMpc`).
+    // Every seeded body's world position comes from the derived snapshot —
+    // orbital rows propagated, stars seeded from their anchors.
     const states = deriveBodyStates(CONST_J2000);
     const farthestMpc = Math.max(
       ...SCENE_BODIES.map((body) => {
-        const p = states.get(body.id)?.positionMpc ?? ('positionMpc' in body ? body.positionMpc : [0, 0, 0]);
+        const p = states.get(body.id)!.positionMpc;
         return Math.hypot(p[0], p[1], p[2]);
       }),
     );

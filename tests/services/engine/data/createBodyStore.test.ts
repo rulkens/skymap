@@ -7,7 +7,6 @@ import type { EarthBody } from '../../../../src/@types/scene/EarthBody';
 const star = (id: string): StarBody => ({
   id,
   label: id,
-  positionMpc: [0, 0, 0],
   absMag: 4.83,
   color: [1, 1, 1],
   radiusKm: 696340,

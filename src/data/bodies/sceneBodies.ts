@@ -4,7 +4,8 @@
  * selection-row extractor all iterate / look up this one list. Seeding a new
  * body is a one-line push into its seed table (`sceneEarth`, `sceneStars`,
  * `scenePlanets`) — no parallel list to keep in sync. Consumers only touch the
- * fields the `SceneBody` union shares (`id`, `label`, `positionMpc`, `radiusKm`).
+ * fields the `SceneBody` union shares (`id`, `label`, `radiusKm`); a body's
+ * position is not among them, and comes from the `deriveBodyStates` snapshot.
  */
 
 import { SCENE_EARTH } from './sceneEarth';

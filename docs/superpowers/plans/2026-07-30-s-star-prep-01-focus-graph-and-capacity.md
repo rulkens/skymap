@@ -210,12 +210,12 @@ Signature deltas that follow from this:
 - `StarPointRenderer.setStars(stars: readonly PositionedStar[]): void` (was `readonly StarBody[]`) — `starPointRenderer.ts`'s internal `star.positionMpc[0..2]` reads at `:197-199` need no change, only the type they narrow from.
 - The six call sites in `starPointsLayer.ts`/`starSpheresLayer.ts` swap their `stars: visibleStars(state)` argument for `stars: positionedVisibleStars(state, ctx)` (both functions have `ctx` in scope at every call site: `enabled(state, ctx)`, `draw(pass, view, ctx, state)`, `drawPick(pass, view, ctx, state)`). `starPointsLayer.ts`'s `draw` already builds a camera-relative copy per star (`{ ...star, positionMpc: [...] }`, `:169-181`) — spreading a `PositionedStar` produces another `PositionedStar`, so that map needs no shape change, only its input's type.
 
-- [ ] Add the test `a famous star's drawn position comes from the snapshot` asserting the layer reads the state map, not the record.
-- [ ] Add the test `every famous star seed has a matching anchor` (totality — a seed with no anchor would render at the origin, and is what makes `positionedVisibleStars`'s non-null lookup safe).
-- [ ] Add the test `positionedVisibleStars pairs each visible star with the snapshot's position, not a baked one` — a star whose seed position and snapshot position differ (a synthetic fixture) must read back the snapshot value.
-- [ ] Implement; correct the three stale claims (`sceneBodies.ts:7`, `sceneBodyLabels.ts:167-168,178-179`, `foregroundMaxDistance.ts:21-27`) in the same commit.
-- [ ] `npm test` → green; `FARTHEST_BODY_MPC` still 2300 pc; no camera-behaviour change (Task 3 already guards this).
-- [ ] Commit.
+- [x] Add the test `a famous star's drawn position comes from the snapshot` asserting the layer reads the state map, not the record.
+- [x] Add the test `every famous star seed has a matching anchor` (totality — a seed with no anchor would render at the origin, and is what makes `positionedVisibleStars`'s non-null lookup safe).
+- [x] Add the test `positionedVisibleStars pairs each visible star with the snapshot's position, not a baked one` — a star whose seed position and snapshot position differ (a synthetic fixture) must read back the snapshot value.
+- [x] Implement; correct the three stale claims (`sceneBodies.ts:7`, `sceneBodyLabels.ts:167-168,178-179`, `foregroundMaxDistance.ts:21-27`) in the same commit.
+- [x] `npm test` → green; `FARTHEST_BODY_MPC` still 2300 pc; no camera-behaviour change (Task 3 already guards this).
+- [x] Commit.
 
 ---
 

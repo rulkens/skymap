@@ -31,6 +31,8 @@ import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 import { starExposureRamp } from '../../../../../src/services/gpu/renderers/starCatalog/starExposureRamp';
 import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
+import { SCENE_ANCHORS } from '../../../../../src/data/bodies/sceneAnchors';
+import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
@@ -38,12 +40,22 @@ import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { StarBody } from '../../../../../src/@types/scene/StarBody';
+import type { PositionedStar } from '../../../../../src/@types/scene/PositionedStar';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
-const SUN = SCENE_STARS.find((star) => star.id === 'sun')!;
-const PROXIMA = SCENE_STARS.find((star) => star.id === 'proxima-centauri')!;
-const SIRIUS = SCENE_STARS.find((star) => star.id === 'sirius')!;
+// The record + the position this frame resolves for it — the pairing
+// `positionedVisibleStars` builds. A star is an anchor, so the resolved
+// position IS the anchor's array, by reference.
+const ANCHOR_POS = new Map(SCENE_ANCHORS.map((anchor) => [anchor.id, anchor.positionMpc]));
+const positioned = (id: string): PositionedStar => {
+  const star = SCENE_STARS.find((s) => s.id === id)!;
+  return { ...star, positionMpc: ANCHOR_POS.get(id)! };
+};
+
+const SUN = positioned('sun');
+const PROXIMA = positioned('proxima-centauri');
+const SIRIUS = positioned('sirius');
 
 const PASS_STUB = {
   setPipeline: vi.fn(),
@@ -70,6 +82,9 @@ function makeCtx(camPos: Readonly<Vec3>): ReadyFrameContext {
     drawCamPos: camPos,
     fovYRad: Math.PI / 3,
     canvasSize: { width: 1280, height: 720 },
+    // The instant the star layers resolve their positions at; a star anchor is
+    // static, so any instant gives the same roster.
+    simDays: CONST_J2000,
   } as unknown as ReadyFrameContext;
 }
 
@@ -126,7 +141,7 @@ function makeNear0View(camPos: Vec3): SlabView {
 /** A fresh spy renderer with the StarPointRenderer draw surface. */
 function makeRenderer() {
   return {
-    setStars: vi.fn<(stars: readonly StarBody[]) => void>(),
+    setStars: vi.fn<(stars: readonly PositionedStar[]) => void>(),
     draw: vi.fn<
       (
         pass: GPURenderPassEncoder,
@@ -190,9 +205,7 @@ describe('starPointsLayer.enabled', () => {
     // Renderer + the Sun alone with the camera half an AU off it: the Sun
     // resolves to a sphere, so the points branch is empty.
     const sunOnly = SCENE_STARS.filter((star) => star.id === 'sun');
-    const onSunCtx = makeCtx(
-      halfAuFrom(SCENE_STARS.find((star) => star.id === 'sun')!.positionMpc),
-    );
+    const onSunCtx = makeCtx(halfAuFrom(SUN.positionMpc));
     expect(starPointsLayer.enabled(makeState(renderer, sunOnly), onSunCtx)).toBe(false);
     // Renderer + the full seed inside the gate at 5 kpc: every star — the
     // Sun included — is a sub-pixel point.

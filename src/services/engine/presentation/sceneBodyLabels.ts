@@ -111,11 +111,9 @@ export const SCENE_STAR_LABEL_IDS: ReadonlySet<string> = new Set(
 );
 
 /**
- * Build the common label shape for one body. The position is the caller's —
- * an orbital body's derived snapshot position, a star's record position — so
- * this reads it as a parameter rather than off `body.positionMpc` (the baked
- * record field the orbital bodies no longer position from). The colour is the
- * caller's per-type derivation (spectral colour / albedo / Earth blue), widened
+ * Build the common label shape for one body. The position is the caller's — no
+ * `SceneBody` arm carries one — so this reads it as a parameter. The colour is
+ * the caller's per-type derivation (spectral colour / albedo / Earth blue), widened
  * to straight RGBA at full alpha; `kind` is the caller's structural knowledge of
  * which seed table the body came from.
  */
@@ -159,13 +157,13 @@ function bodyLabel(
  * Build one name label per seeded scene body, positioned relative to
  * `RENDER_ORIGIN_MPC` for the foreground view-projection.
  *
- * Earth + planets read their position from the caller's `bodyStates` snapshot
- * (the per-frame `deriveBodyStates(simDays)` map), so their captions FOLLOW the
- * bodies as the sim clock advances. The caller re-invokes this only when the
- * snapshot actually changes — a paused clock returns the same map by reference,
- * so a fresh instant is the only thing that rebuilds the handful of captions
- * (see `foregroundLabelsLayer`'s memo). Stars are not orbital bodies, so they
- * keep their authored record position regardless of the instant.
+ * Every body reads its position from the caller's `bodyStates` snapshot (the
+ * per-frame `deriveBodyStates(simDays)` map), so Earth's and the planets'
+ * captions FOLLOW them as the sim clock advances; a star's anchor is authored,
+ * so its caption sits still at every instant. The caller re-invokes this only
+ * when the snapshot actually changes — a paused clock returns the same map by
+ * reference, so a fresh instant is the only thing that rebuilds the captions
+ * (see `foregroundLabelsLayer`'s memo).
  */
 export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): ForegroundCaption[] {
   return [
@@ -175,10 +173,13 @@ export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): For
     // label gate, and it must out-rank every other caption in a declutter
     // collision (CAPTION_PRIORITY). The seed table carries no per-star source
     // tag, so the row's `id` is the lookup key that tells the two apart.
-    // Stars sit at their authored record position (no orbital element), so they
-    // read `star.positionMpc` directly rather than the snapshot.
     ...SCENE_STARS.map((star) =>
-      bodyLabel(star, star.positionMpc, star.color, star.id === SUN_ENTRY.id ? 'sun' : 'star'),
+      bodyLabel(
+        star,
+        bodyStates.get(star.id)!.positionMpc,
+        star.color,
+        star.id === SUN_ENTRY.id ? 'sun' : 'star',
+      ),
     ),
     ...SCENE_PLANETS.map((planet) =>
       bodyLabel(planet, bodyStates.get(planet.id)!.positionMpc, planet.albedo, 'planet'),

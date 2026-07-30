@@ -83,7 +83,7 @@ import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { BodyPointPick } from '../../../../@types/rendering/BodyPickRenderer';
 import { NEAR0 } from '../slabs';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from '../partitionStarsByResolution';
-import { visibleStars } from '../visibleStars';
+import { positionedVisibleStars } from '../positionedVisibleStars';
 import { seedIndexOfBody } from './seedIndexOfBody';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
@@ -115,7 +115,7 @@ export const starPointsLayer: ContentLayer = {
     if (fadeBand(SCALE_FADE_BANDS.starBackdrop, camDistMpc) <= 0) return false;
     return (
       partitionStarsByResolution({
-        stars: visibleStars(state),
+        stars: positionedVisibleStars(state, ctx),
         camPosMpc: ctx.drawCamPos,
         thresholdPx: STAR_RESOLVE_PX,
         viewportHeightPx: ctx.canvasSize.height,
@@ -129,7 +129,7 @@ export const starPointsLayer: ContentLayer = {
     if (renderer === null) return;
 
     const { points } = partitionStarsByResolution({
-      stars: visibleStars(state),
+      stars: positionedVisibleStars(state, ctx),
       camPosMpc: view.camPos,
       thresholdPx: STAR_RESOLVE_PX,
       viewportHeightPx: view.viewportPx[1],
@@ -213,8 +213,8 @@ export const starPointsLayer: ContentLayer = {
   // clickable 18 px footprint by `bodyPickRenderer` — these labelled scene stars
   // are click-invited targets), so a sub-pixel star stays easily pickable at its
   // true screen position. The point set is the SAME
-  // `partitionStarsByResolution` call `draw` runs — `visibleStars(state)` split
-  // at `STAR_RESOLVE_PX` against `view.camPos`/`view.viewportPx[1]` — so a star
+  // `partitionStarsByResolution` call `draw` runs — `positionedVisibleStars`
+  // split at `STAR_RESOLVE_PX` against `view.camPos`/`view.viewportPx[1]` — so a star
   // is pickable-as-a-point exactly when it draws as one (its complement rides
   // `starSpheresLayer`'s sphere pick).
   //
@@ -237,7 +237,7 @@ export const starPointsLayer: ContentLayer = {
     if (pickRenderer === null) return;
 
     const { points } = partitionStarsByResolution({
-      stars: visibleStars(state),
+      stars: positionedVisibleStars(state, ctx),
       camPosMpc: view.camPos,
       thresholdPx: STAR_RESOLVE_PX,
       viewportHeightPx: view.viewportPx[1],
