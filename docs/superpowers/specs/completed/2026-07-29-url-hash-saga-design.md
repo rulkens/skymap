@@ -68,8 +68,21 @@ export type HashParamSource = {
   readonly deepLink: boolean;
 
   /** Which dispatched actions can change this row's `write` output. A predicate for
-   *  whole-slice coverage, a list for surgical coverage. See §3.3 for the contract. */
-  readonly writesOn: readonly ActionCreator[] | ((action: Action) => boolean);
+   *  whole-slice coverage, a list for surgical coverage. See §3.3 for the contract.
+   *
+   *  CORRECTED during T6: this said `ActionCreator[]`, which does not compile. No such
+   *  type exists in this repo, and redux's same-named `ActionCreator<A, P>` carries no
+   *  `.match`, so §3.3's `s.writesOn.some((c) => c.match(action))` would be a type error.
+   *  RTK has the right shape internally as `HasMatchFunction` but does not export it, so
+   *  the capability is declared locally in `@types/state/url/ActionMatcher.d.ts`. RTK
+   *  action creators satisfy it structurally.
+   *
+   *  CORRECTED AGAIN, post-T13: the union collapsed to a LIST OF PREDICATES, and
+   *  `ActionMatcher.d.ts` was deleted with it. A creator's `.match` already IS
+   *  `(action) => boolean`, so the two forms were never distinct — they only cost the
+   *  write saga a `typeof` fork and, more importantly, forbade a row from MIXING named
+   *  actions with a computed test. `focus` needs exactly that mix: see §3.2. */
+  readonly writesOn: readonly ((action: Action) => boolean)[];
 
   /** Serialize from the store. `null` omits the param entirely. */
   readonly write: (state: RootState) => string | null;
@@ -102,7 +115,12 @@ const focusSource: HashParamSource = {
   // setSelectionRow is the SOLE writer of selectionRows.focus, which is the only
   // input to selectFocusedFocusable — every resolution path (late catalog, star-count
   // pulse, direct ref write) funnels through it, so upstream actions need no listing.
-  writesOn: [requestFocus, clearSelection, setSelectionRow],
+  //
+  // CORRECTED post-T13: narrowed to the FOCUS SLOT. setSelectionRow writes all three
+  // derived rows, and the hover row is rewritten once per GPU pick readback for as long
+  // as the pointer moves — so the slot-blind action re-admitted, through the derived
+  // cache, the very `selection/*` hot stream §3.3 chose a named list to exclude.
+  writesOn: [requestFocus.match, clearSelection.match, isFocusSlotRow],
   write: (state) => { /* pending id, else resolved target via URL_HASH_FOR; Earth ⇒ null */ },
   read: (value) => [requestSelect(value), requestFocus(value)],
   readAbsent: () => [clearSelection()],
@@ -113,7 +131,7 @@ const timeSource: HashParamSource = {
   deepLink: true,
   // All six timeSlice reducers re-anchor, so the whole slice is the trigger set.
   // Prefix form is drift-proof by construction: a seventh reducer is covered free.
-  writesOn: (action) => action.type.startsWith(`${timeRoute}/`),
+  writesOn: [(action) => action.type.startsWith(`${timeRoute}/`)],
   write: (state) => { /* manual mode ⇒ anchor simDays as ISO; live ⇒ null */ },
   read: (value) => { /* parseable ISO ⇒ manualPausedAtActions(date); else [] */ },
   readAbsent: () => [goLive({ simDays: /* now */, nowMs: performance.now() })],
@@ -125,7 +143,7 @@ const orientationSource: HashParamSource = {
   // mergeSnapshot is the bulk settings restore (tour scene-restore) — the same action
   // watchFadesSaga carries a dedicated second arm for. Prefix form is NOT usable here:
   // settings/* would fire on every slider drag.
-  writesOn: [setOrientation, mergeSnapshot],
+  writesOn: [setOrientation.match, mergeSnapshot.match],
   write: (state) => { /* non-default frame, else null */ },
   read: (value) => (isOrientationFrameId(value) ? [setOrientation(value)] : []),
   readAbsent: () => [setOrientation(DEFAULT_ORIENTATION)],
@@ -178,12 +196,18 @@ function* applyHash(body: string, isInitial: boolean) {
 
 // src/state/url/watchHashWriteSaga.ts
 const WRITE_TRIGGER = (action: Action) =>
-  HASH_PARAM_SOURCES.some((s) =>
-    typeof s.writesOn === 'function' ? s.writesOn(action) : s.writesOn.some((c) => c.match(action)),
-  );
+  HASH_PARAM_SOURCES.some((s) => s.writesOn.some((triggers) => triggers(action)));
 
 export function* watchHashWriteSaga() {
-  yield* takeEvery(WRITE_TRIGGER, function* () {
+  // CORRECTED post-T13: `takeEvery` here was wrong, and the browser found it.
+  // `applyHash` above dispatches ONE ROW AT A TIME and every one of those
+  // actions is a write trigger, so applying a two-param URL published the
+  // half-applied store — `focus=body-mars` while `orientation` was still the
+  // default — and then corrected itself. Both are `pushState`s, and a push
+  // during a Back navigation truncates the forward stack. `write` composes the
+  // WHOLE body, so it is only ever right on a settled store; the publish
+  // belongs on the trailing edge of the burst, not on each trigger.
+  yield* debounce(0, WRITE_TRIGGER, function* () {
     yield* call(writeHashBody, hashBodyFor(yield* select((s: RootState) => s)));
   });
 }
@@ -191,6 +215,9 @@ export function* watchHashWriteSaga() {
 
 Nothing in the 60Hz `commitCameraPose` / `engineBodyDistanceReported` /
 `engineScaleChanged` stream matches `WRITE_TRIGGER`, so the frame path is untouched.
+The debounce does not change that and is not a substitute for it: a 0 ms trailing
+edge is shorter than a frame, so a hot trigger stream would still compose once per
+event. Coalescing bounds a burst; the enumerated trigger is what excludes a stream.
 
 `hashBodyFor(state)` is the table walk that replaces `computeDesiredHash`, minus the
 `matches` half — the compare-and-skip moves into `writeHashBody`, which owns the URL.
@@ -207,9 +234,28 @@ readHashBody(): string                            // '' with no window
 writeHashBody(body: string): void                 // pushState + compare-and-skip; no-op with no window
 ```
 
-`writeHashBody` caches the last body it wrote and compares against that, reading
+~~`writeHashBody` caches the last body it wrote and compares against that, reading
 `window.location.hash` only when the desired body differs. A `hashchange` invalidates
-the cache (the read side already observes it).
+the cache (the read side already observes it).~~
+
+**CORRECTED during T7 — there is no cache.** `writeHashBody` compares against the live
+`readHashBody()` on every call. `window.location` already _is_ that cache: `pushState`
+updates it synchronously and it is never stale, so a remembered copy is a second source of
+truth whose only gain is skipping one property read.
+
+The invalidation listener the cache needs is the hole. Back, Forward and a hand-edited
+address bar all move the URL without this module's knowledge, and a module-level
+`hashchange` subscription registered on first use has no owner and no teardown — unlike the
+read saga's channel, which closes in a `finally`. Under vitest it would bind to whichever
+jsdom `window` existed at first call and survive module-registry resets.
+
+The cache also had a live failure: URL bare, cache `''`, visitor types `#orientation=zzz`.
+The read rejects the junk frame and returns no actions, the write recomposes `''`, hits the
+cache fast-path, and the junk hash is never scrubbed. The live read scrubs it.
+
+Nothing was being optimised. `timeSlice` has no tick action — all six reducers are user
+intent — and `writesOn` already excludes the frame path, so writes fire on selection, clock
+and orientation actions only, never per frame.
 
 **The guards are load-bearing, not SSR insurance.** `createAppStore` runs `mainSaga`, and
 `tests/state/ui/*.test.ts` call it under `environment: 'node'`. `watchHashReadSaga` reads
