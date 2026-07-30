@@ -129,31 +129,17 @@ during navigation. Three shapes, in ascending effort:
 - Depends on the `?hdr` output path (branch `spike/hdr-mode`) landing, or at least on its
   extended-range swap being the assumed output for direction 2/3.
 
-## Prerequisites for productionising the `?hdr` path
+## Carried forward from the `?hdr` productionisation review
 
-Surfaced reviewing the spike; none of them block the tuning sliders, all of them block
-shipping HDR as a real setting.
+The prerequisite list that lived here is now
+[`specs/2026-07-30-hdr-display-toggle.md`](../superpowers/specs/2026-07-30-hdr-display-toggle.md),
+which resolves the mirrored `hdr` flag, the swap-format rebuild seam, the missing
+`matchMedia` listener, the `any` cast, and the offline-harness question. Two items are
+out of that spec's scope and still open here:
 
-- **`hdr` is mirrored three times** — `GpuContext.hdr` (optional, its own doc comment
-  admitting the optionality exists to avoid touching call sites),
-  `EngineGpuHandles.hdr`, `ReadyFrameContext.hdr`. All three are derivable from
-  `format === 'rgba16float'`. Collapse to one question before adding a fourth reader.
-- **A settings toggle is not free.** The swap-chain format is chosen once in `initGpu`
-  and baked into every pipeline targeting it (compositor plus the post-tone-map overlays:
-  labels, marker lines, selection ring). A toggle means either forcing a reload or
-  building a pipeline-rebuild path — decide which, deliberately.
-- **The display can change under you.** `matchMedia('(dynamic-range: high)')` is read
-  once at init with no `change` listener, so dragging the window to an SDR monitor leaves
-  the app in HDR mode. `useIsMobile.ts` has the listener pattern to copy.
-- **`toneMapping: { mode: 'extended' }` is cast through `any`** in `device.ts` — needs an
-  ambient widening of `GPUCanvasConfiguration`, per the `tools/vendor-types/` precedent.
-- **Non-Chrome behaviour is assumed, not verified.** Other implementations will ignore the
-  unknown dict member and give a float swap chain that clamps at 1.0. Probably harmless;
-  check Safari rather than assume.
-- **Unmeasured.** An `rgba16float` swap chain doubles present bandwidth and no
-  `npm run perf` before/after exists for the spike.
-- **Offline harnesses must pin SDR** — `tools/record` (4K tour → mp4) and
-  `tools/site/makeOgImage`. Moot while `?hdr` is opt-in; a real bug the day it defaults on.
 - **Post-tone-map overlays need a headroom policy.** Labels and marker lines draw at white
-  over a scene that can now exceed it, so text over a bright star reads dim. Scale them
-  with the headroom or pin them at paper white as a stated choice.
+  over a scene that can exceed it, so text over a bright star reads dim. Scale them with
+  the headroom or pin them at paper white as a stated choice.
+- **Non-Chrome behaviour is assumed, not verified.** Other implementations will ignore the
+  unknown `toneMapping` dict member and give a float swap chain that clamps at 1.0 — the
+  toggle would then do nothing visible. Check Safari rather than assume.
