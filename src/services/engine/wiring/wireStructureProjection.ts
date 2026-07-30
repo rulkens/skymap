@@ -62,9 +62,9 @@ export function wireStructureProjection(state: EngineState, cb: EngineCallbacks)
   // ── Group 1: static anchors (synchronous) ───────────────────────────
   //
   // The id-slug + worldPos build lives in `data/buildStaticAnchorStructures.ts`
-  // so the React-side `useUrlSync` deep-link drain constructs the same
-  // records without drifting on slug-rule changes.  physicalRadiusMpc comes
-  // from the seed JSON (R_200 / virial radii for clusters, characteristic
+  // so the `${category}-${seed}` ids a `#focus=` deep link decodes to (see
+  // `resolveFocusId`) cannot drift from the ids stored here.  physicalRadiusMpc
+  // comes from the seed JSON (R_200 / virial radii for clusters, characteristic
   // extent for superclusters and voids).
   state.data.structures.setGroup('anchors', buildStaticAnchorStructures());
   emitCounts();

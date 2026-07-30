@@ -48,6 +48,8 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **`?` query gates have no owner** `ready` — four gates read through five helpers at four moments, twice during render; collapse into a `URL_GATES` table seeded into `preloadedState`. → [details](backlog/2026-07-29-url-gates-registry.md)
 - [ ] **Twin selection request sagas** `ready` — `watchRequestFocusSaga`/`watchRequestSelectSaga` are structurally identical; fold into one row-driven saga (keep `takeLatest` per row). → [details](backlog/2026-07-29-twin-request-selection-sagas.md)
 - [ ] **`uiSlice` does boot I/O at module load** `needs-design` — `initialState = buildInitialUiState()` reads `window.location` + localStorage on import; make the fallback lazy. → [details](backlog/2026-07-29-uislice-module-load-boot-reads.md)
+- [ ] **URL seam is a `window` singleton** `needs-design` — the whole test suite shares one address bar; make the URL port a registered capability. → [details](backlog/2026-07-30-url-seam-window-singleton.md)
+- [ ] **`buildAliasIndex` is a non-hook in `src/hooks/`** `ready` — pure helper with one importer; `npm run move-files` it to `src/utils/` (test mirror follows).
 
 ## Rendering
 
@@ -115,6 +117,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Label fade opt-out ADR** `needs-design` — decide whether per-character MSDF label opacity opts out of the per-handle fade bind-group pattern; follow-up to ADR 0001.
 - [ ] **Grand tour: Earth start + scale rungs** `needs-design` — open at Earth and climb solar system → local neighbourhood → Milky Way stars before the existing galactic beats. → [details](backlog/2026-07-22-grand-tour-earth-start.md)
 - [ ] **Reusable structure-visit tour clip** `needs-design` — generalize the hardcoded Virgo/M87 tour beats into a parameterized `structureVisitClip`. Focus-isolation primitive already shipped. → [details](backlog/2026-06-29-structure-visit-tour-clip.md)
+- [ ] **Tour snapshots cannot carry `orientation`** `needs-design` — `SettingsSnapshot` omits it, so no beat can set which pole is up. → [details](backlog/2026-07-29-tour-snapshot-orientation.md)
 - [ ] **`emphasize()` clip cue** `ready` — per-structure spotlight lift composing with `fade` dims (staggered group highlights in the tour's neighbourhood beat). → [details](backlog/2026-07-07-emphasize-clip-cue.md)
 - [ ] **Sun constellation chip renders 'None'** `ready` — the Sun's palette-row / compact-card constellation chip prints its literal seed value 'None'; suppress the chip when constellation is absent.
 - [ ] **Greek letters in star labels** `needs-design` — font atlas lacks Greek glyphs, so Bayer names are spelled out ("Delta Velorum" vs δ Velorum); add the range + swap seed display names. → [details](backlog/2026-07-22-greek-letters-in-star-labels.md)
@@ -130,6 +133,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **refactor CLI follow-ups** `deferred` — runOp dispatch table + extract closure gaps (dropped `//` comments, `export {}` form, import carry) + refusal/error-context polish. → [details](backlog/2026-07-21-refactor-cli-followups.md)
 - [ ] **Dead files in `public/data/`** `ready` — unreachable `desi-deep-NEW.bin`/`desi-deep-OLD.bin` + superseded `clusters.ccat`/`clusters_meta.json` (structures.ccat replaced them); delete all four. `filaments-sdss.bin` is build-input only (`package.json:49`), not runtime-fetchable — keep it.
 - [ ] **`rootSaga` docblock restates its fork array** `ready` — the prose watcher list (`rootSaga.ts:6-23`) must be hand-kept in sync with `all([...])`; every new saga edits both.
+- [ ] **Saga-context boot-ordering argument told nine times** `ready` — one causal chain restated across nine docblocks; keep it in `sagaContextRegistered.ts` and point the rest there. → [details](backlog/2026-07-30-boot-ordering-argument-nine-copies.md)
 
 ## External / blocked
 
