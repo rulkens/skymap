@@ -106,9 +106,10 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **`CatalogDrawEntry` bind-group coverage** `deferred` — a wrong-source `fadeBindGroup`/`sourceBindGroup` on a `catalogStore.entries()` entry would pass every test (the draw test only smoke-checks the command list). → [details](backlog/2026-07-14-catalog-draw-entry-coverage.md)
 - [ ] **Tier-ladder single home** `ready` — one exported TIER_LADDER const (Tier type derived) replacing the copies in clampTier, emittedTiersForBody, tiersFittingSourceWidth, buildAllBins, buildStars.
 - [ ] **Star-bin ↔ MW-cloud crossfade density calibration** `deferred` — calibrate the procedural cloud's inner density/colors to Gaia counts if the v1 hand-tuned crossfade band shows a seam; gated on the star bin shipping. → [details](backlog/2026-07-13-star-bin-crossfade-density-calibration.md)
-- [ ] **Galactic Center place labels** `needs-design` — five POI markers (Sgr A*, central cluster, Arches, Quintuplet, CMZ) so the GC reads as a named place; category fit is the open question. → [details](backlog/2026-07-30-galactic-center-place-labels.md)
+- [ ] **Galactic Center place labels** `needs-design` — five POI markers (Sgr A\*, central cluster, Arches, Quintuplet, CMZ) so the GC reads as a named place; category fit is the open question. → [details](backlog/2026-07-30-galactic-center-place-labels.md)
 - [ ] **Zone of Avoidance visualization + tour beat** `needs-design` — make the galactic-plane galaxy-density gap legible and explain it as dust extinction, not a real void; feature the NIR-only ZoA dwarfs. → [details](backlog/2026-07-21-zone-of-avoidance-visualization.md)
 - [ ] **Filaments + flow field lack scale fade bands** `ready` — both layers gate on user intent alone, with no zoom-based fade like the survey point clouds. → [details](backlog/2026-07-24-filaments-flow-scale-bands.md)
+- [ ] **NEAR0 distance gates mix two camera distances** `needs-design` — both are derived as camera-to-origin bounds and read against camera-to-target `ctx.cam.distance`. → [details](backlog/2026-07-30-camera-target-vs-origin-distance-gates.md)
 
 ## UI & UX
 
@@ -129,7 +130,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Reusable structure-visit tour clip** `needs-design` — generalize the hardcoded Virgo/M87 tour beats into a parameterized `structureVisitClip`. Focus-isolation primitive already shipped. → [details](backlog/2026-06-29-structure-visit-tour-clip.md)
 - [ ] **Tour snapshots cannot carry `orientation`** `needs-design` — `SettingsSnapshot` omits it, so no beat can set which pole is up. → [details](backlog/2026-07-29-tour-snapshot-orientation.md)
 - [ ] **`emphasize()` clip cue** `ready` — per-structure spotlight lift composing with `fade` dims (staggered group highlights in the tour's neighbourhood beat). → [details](backlog/2026-07-07-emphasize-clip-cue.md)
-- [ ] **Sun constellation chip renders 'None'** `ready` — the Sun's palette-row / compact-card constellation chip prints its literal seed value 'None'; suppress the chip when constellation is absent.
 - [ ] **Greek letters in star labels** `needs-design` — font atlas lacks Greek glyphs, so Bayer names are spelled out ("Delta Velorum" vs δ Velorum); add the range + swap seed display names. → [details](backlog/2026-07-22-greek-letters-in-star-labels.md)
 - [ ] **Star/body card row tooltips** `ready` — galaxy detail-card rows have hover tooltips explaining each field; the field-star and famous-star/body cards' rows have none — extend the same tooltips.tsx wiring to their row tables.
 - [ ] **Tour-recorder follow-ups** `ready` — small post-merge items from the recorder's final review (observable settle discard, two test/diagnostic tidies). → [details](backlog/2026-07-08-tour-recorder-follow-ups.md)
