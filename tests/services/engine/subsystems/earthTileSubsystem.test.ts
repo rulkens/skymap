@@ -55,6 +55,7 @@ const MIN_TILE_LEVEL = BASE_LEVEL + 1;
  *  caller — `undefined` standing in for a bake that omitted the field. */
 function surfaceManifest(tilePx: number | undefined): EarthTileManifest {
   return {
+    prefix: 'earth-tiles/v1',
     tilePx,
     levels: { surface: { min: MIN_TILE_LEVEL, max: MIN_TILE_LEVEL + 1 } },
     builtFrom: { surface: 'test-fixture' },

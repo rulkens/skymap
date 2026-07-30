@@ -246,7 +246,11 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
   function update(input: { readonly plan: EarthTilePlan; readonly nowMs: number }): void {
     if (destroyed) return;
     const active = params;
-    if (active === null) return;
+    // `refreshParams` is the sole writer of both, and only ever derives params
+    // from a non-null manifest — reasserting it here keeps the tile prefix a
+    // read of the manifest rather than a second copy that could go stale.
+    if (active === null || manifest === null) return;
+    const prefix = manifest.prefix;
 
     const { plan, nowMs } = input;
     // Stamped on disengaged frames too, so a landing tile still fades from now.
@@ -263,7 +267,7 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
 
     // Requests arrive largest-on-screen-first: decides slot priority AND fetch order.
     for (const request of plan.requests) {
-      const key = earthTilePath(request.tile);
+      const key = earthTilePath(request.tile, prefix);
 
       // Checked BEFORE allocating: an allocated failed key would keep its LRU
       // stamp fresh forever, pinning slots on tiles with no pixels.
@@ -277,7 +281,7 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
         key,
         // Highest-priority-first queue.
         priority: request.screenPx,
-        fetcher: () => fetchEarthTileBitmap(request.tile),
+        fetcher: () => fetchEarthTileBitmap(request.tile, prefix),
         onResult: (bitmap) => {
           if (destroyed || bitmap === null) {
             bitmap?.close();

@@ -21,8 +21,11 @@ const FETCH_DEADLINE_MS = 10_000;
  * fragment multiplies it into the blend weight itself, so premultiplied RGB
  * would darken coastal pixels toward black first.
  */
-export async function fetchEarthTileBitmap(tile: EarthTileId): Promise<ImageBitmap | null> {
-  const url = dataUrl(`images/${earthTilePath(tile)}`);
+export async function fetchEarthTileBitmap(
+  tile: EarthTileId,
+  prefix: string,
+): Promise<ImageBitmap | null> {
+  const url = dataUrl(`images/${earthTilePath(tile, prefix)}`);
   try {
     const res = await fetch(url, {
       mode: 'cors',

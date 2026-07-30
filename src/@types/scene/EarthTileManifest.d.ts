@@ -12,6 +12,13 @@
 import type { EarthTileKind } from '../data/EarthTileKind';
 
 export type EarthTileManifest = {
+  /**
+   * Key prefix the tiles hang off, e.g. `earth-tiles/v1`. Versioned, so a
+   * re-bake writes new keys: the old ones keep serving whatever the CDN
+   * already cached until this pointer flips, instead of a new manifest
+   * naming levels that the edge is still answering with stale pixels.
+   */
+  readonly prefix: string;
   readonly tilePx: number;
   readonly levels: Partial<Record<EarthTileKind, { readonly min: number; readonly max: number }>>;
   /** Source id + attribution + vintage, so a stale or mis-licensed bake is diagnosable. */

@@ -111,7 +111,7 @@ describe('buildEarthPageTable', () => {
     const keys: string[] = [];
     for (let i = 0; i <= 64; i++) {
       const t = tile(7, i % 16, Math.floor(i / 16));
-      const tileKey = earthTilePath(t);
+      const tileKey = earthTilePath(t, 'earth-tiles/v1');
       keys.push(tileKey);
       tileByKey.set(tileKey, t);
       slotByKey.set(tileKey, atlas.allocate(tileKey, i)!);

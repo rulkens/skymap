@@ -18,7 +18,12 @@ export async function fetchEarthTileManifest(): Promise<EarthTileManifest | null
   try {
     const res = await fetch(dataUrl('images/earth-tiles/manifest.json'));
     if (!res.ok) return null;
-    return (await res.json()) as EarthTileManifest;
+    const parsed = (await res.json()) as EarthTileManifest;
+    // A pre-versioning bake has no prefix; taking it on trust would build
+    // every tile URL as "undefined/surface/…" and 404-storm. Folding it into
+    // the null case degrades to base-only instead.
+    if (typeof parsed?.prefix !== 'string' || parsed.prefix === '') return null;
+    return parsed;
   } catch {
     return null;
   }
