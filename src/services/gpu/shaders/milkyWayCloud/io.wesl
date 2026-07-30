@@ -38,7 +38,8 @@
 //   offset 80  : model: mat4x4<f32>   (64 B; per-cloud world placement)
 //   offset 144 : camRight: vec4<f32>  (xyz billboard right + 0)
 //   offset 160 : camUp: vec4<f32>     (xyz billboard up + 0)
-//   offset 176 : params0: vec4<f32>   (fadeAlpha, exposure, modelScale, 0)
+//   offset 176 : params0: vec4<f32>   (fadeAlpha, exposure, modelScale,
+//                                       softness)
 //   offset 192 : params1: vec4<f32>   (starPxMin, starPxMax, starSizeScale,
 //                                       lodApparent)
 //   total: 208 bytes (MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE).
@@ -70,7 +71,7 @@ struct Uniforms {
   // build. vec4 (not vec3) so the two vectors occupy clean 16-byte slots.
   camRight: vec4<f32>,
   camUp: vec4<f32>,
-  // params0 = (fadeAlpha, exposure, modelScale, 0).
+  // params0 = (fadeAlpha, exposure, modelScale, softness).
   //   fadeAlpha  — visibility fade in [0, 1] (apparent-size fade x toggle
   //                opacity, composed CPU-side). Stars multiply it into EMISSION
   //                (a faded star adds no light); dust mixes T toward the
@@ -82,6 +83,11 @@ struct Uniforms {
   //                billboard half-extent (inSize * modelScale). Kept
   //                separate from 'model' so the CPU can scale sprite size
   //                without decomposing the matrix.
+  //   softness   — star-pass fragment profile blend: 0 = the tight core+glow
+  //                falloff, 1 = a broad Gaussian. Both profiles are
+  //                normalised to the same integral over the unit disc, so
+  //                this changes sprite SHAPE without changing how much light
+  //                the sprite emits. Dust ignores it.
   params0: vec4<f32>,
   // params1 = (starPxMin, starPxMax, starSizeScale, lodApparent). The star
   // pass clamps each sprite's on-screen half-extent to the
