@@ -22,6 +22,7 @@ import reducer, {
   writeVolumeField,
   setFlowEnabled,
   setFlow,
+  setHdrEnabled,
   setAtmosphereExposure,
   setAmbientLight,
   setOceanRoughness,
@@ -204,6 +205,15 @@ describe('settingsSlice — flow', () => {
     expect(next.flow.flowSpeed).toBe(9.5);
     // An untouched leaf is preserved.
     expect(next.flow.count).toBe(before.flow.count);
+  });
+});
+
+describe('settingsSlice — hdr', () => {
+  it('setHdrEnabled flips the flag', () => {
+    const before = base();
+    expect(reducer(before, setHdrEnabled(!before.hdr.enabled)).hdr.enabled).toBe(
+      !before.hdr.enabled,
+    );
   });
 });
 

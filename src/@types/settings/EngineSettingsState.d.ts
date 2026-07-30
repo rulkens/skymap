@@ -132,10 +132,7 @@ export type EngineSettingsState = {
     curve: ToneMapCurve;
   };
 
-  /**
-   * Extended-range headroom knobs, gated live on `hdrActiveOf(renderTargets)`
-   * rather than on a field here — see `HdrSettings`.
-   */
+  /** HDR opt-in + extended-range headroom knobs — see `HdrSettings`. */
   hdr: HdrSettings;
 
   /**

@@ -122,6 +122,8 @@ export const selectToneMapCurve = (state: RootState): ToneMapCurve =>
 
 // --- hdr cluster ----------------------------------------------------------
 
+export const selectHdrEnabled = (state: RootState): boolean => selectSettings(state).hdr.enabled;
+
 export const selectHdrKnee = (state: RootState): number => selectSettings(state).hdr.knee;
 
 export const selectHdrHeadroom = (state: RootState): number => selectSettings(state).hdr.headroom;

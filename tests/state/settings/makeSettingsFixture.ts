@@ -51,6 +51,7 @@ import {
   DEFAULT_BRIGHTNESS,
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_EXPOSURE,
+  DEFAULT_HDR_ENABLED,
   DEFAULT_HDR_KNEE,
   DEFAULT_HDR_HEADROOM,
   DEFAULT_FLOW,
@@ -113,6 +114,7 @@ export function makeSettingsFixture(
       curve: DEFAULT_TONE_MAP_CURVE,
     },
     hdr: {
+      enabled: DEFAULT_HDR_ENABLED,
       knee: DEFAULT_HDR_KNEE,
       headroom: DEFAULT_HDR_HEADROOM,
     },

@@ -279,12 +279,13 @@ selectHdrEnabled(state: RootState): boolean;
 Default `false` even on a capable display — spec D1. The `defaults.ts` doc comment should
 carry that reasoning (the viewer chooses; it is not a consequence of their monitor).
 
-- [ ] Add the reducer test `setHdrEnabled flips the flag` mirroring the existing
-      bloom-enabled reducer test.
-- [ ] Implement beside `setHdrKnee` (`settingsSlice.ts:135`) and `selectHdrKnee`
+- [x] Add the reducer test `setHdrEnabled flips the flag` mirroring the existing
+      bloom-enabled reducer test. — no bloom-enabled reducer test exists (plan error);
+      mirrored `setFlowEnabled` / `setStarCatalogEnabled` instead.
+- [x] Implement beside `setHdrKnee` (`settingsSlice.ts:135`) and `selectHdrKnee`
       (`selectors.ts:121`).
-- [ ] `npm test -- settings`, `npm run typecheck`.
-- [ ] Commit.
+- [x] `npm test -- settings`, `npm run typecheck`.
+- [x] Commit.
 
 ---
 

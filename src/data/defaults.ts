@@ -272,6 +272,15 @@ export const DEFAULT_ORBIT_TRAILS_ENABLED: boolean = true;
 // ── HDR tone-mapping ────────────────────────────────────────────────────────
 
 /**
+ * Default state of the viewer's HDR display opt-in — seeds
+ * `settings.hdr.enabled`. `false` even when `GpuContext.hdrCapable` is true:
+ * extended-range output is a choice the viewer makes about how they want the
+ * scene rendered, not a consequence of what their monitor happens to permit,
+ * so boot never turns it on for them.
+ */
+export const DEFAULT_HDR_ENABLED = false;
+
+/**
  * Default tone-map curve — Reinhard-extended.  Smooth highlight roll-off,
  * "natural" look.  Asinh is the filament-friendly alternative; user
  * picks via the dropdown.  See `data/toneMapCurve.ts` for the full set.

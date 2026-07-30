@@ -26,6 +26,7 @@ import {
   DEFAULT_SHOW_PICK_BUFFER,
   DEFAULT_SHOW_DISK_RADIUS_RING,
   DEFAULT_EXPOSURE,
+  DEFAULT_HDR_ENABLED,
   DEFAULT_HDR_KNEE,
   DEFAULT_HDR_HEADROOM,
   DEFAULT_BLOOM_ENABLED,
@@ -119,6 +120,7 @@ export function buildInitialSettings(): EngineSettingsState {
       curve: DEFAULT_TONE_MAP_CURVE,
     },
     hdr: {
+      enabled: DEFAULT_HDR_ENABLED,
       knee: DEFAULT_HDR_KNEE,
       headroom: DEFAULT_HDR_HEADROOM,
     },
