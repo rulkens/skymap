@@ -243,9 +243,14 @@ the moment of the click, nothing on any other frame. `toneMapping` also loses it
 cast here, in favour of an ambient widening of `GPUCanvasConfiguration` per the
 `tools/vendor-types/` precedent.
 
-Reactive, not imperative: the switch is driven by a settings watcher comparing desired
-format against live format, so there is no new effect method on the engine handle and no
-caller that has to remember to invoke it.
+Driven reactively, by the house pattern rather than by a new imperative entry point: a
+saga in `src/store/effects/` watches `setHdrEnabled` and the capability action, computes
+the desired format from the store, and reaches the engine through the `ReconcileEffects`
+closure — the same `getContext('reconcile')` route `watchFlowReseedSaga` uses to keep the
+store layer free of engine imports. That does mean one new `ReconcileEffects` method
+(`applySwapFormat`); the alternative, letting the store layer hold a GPU handle, is worse.
+The desired-vs-live comparison lives engine-side, because only the engine can see the
+live format.
 
 ### 4. The frame gate
 
