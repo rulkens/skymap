@@ -1,0 +1,9 @@
+/* src/components/common/CopyButton/CopyButton.module.css */
+
+/*
+ * All chrome (border, hover, disabled treatment) comes from the shared
+ * Button primitive this component renders through — `.root` exists as the
+ * predictable composition hook, not because CopyButton needs its own rules.
+ */
+.root {
+}
