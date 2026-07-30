@@ -20,6 +20,12 @@
  * over the engine's Earth seed; the empty-value routing is the single
  * expression that makes `HashParamSource.read`'s "never called with an empty
  * value" contract true for every row at once.
+ *
+ * WHEN this saga may run at all is not a decision it makes: `watchHashSaga`
+ * holds it (and the write half) until `sagaContextRegistered` lands. Forking it
+ * bare here is only legitimate because the wait lives up there — asserting the
+ * gate from this file would be asserting it against code that no longer contains
+ * it. `tests/state/url/watchHashSaga.test.ts` covers it where it is.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -45,8 +51,12 @@ import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 /**
  * Boot the saga against a given arrival hash, and hand back the levers a case
  * needs: the actions that reached the store, an emitter standing in for a
- * browser navigation, the running task, and whether the channel's subscriber
- * is still attached (the stand-in for the real DOM listener).
+ * browser navigation, the running task, and whether the channel's subscriber is
+ * still attached (the stand-in for the real DOM listener).
+ *
+ * Forking the saga runs the arrival read to completion, synchronously, before
+ * `run` returns — so a case inspects `recorded` straight after this call, and a
+ * case about a NAVIGATION clears it first.
  */
 function buildHarness(arrivalBody: string) {
   vi.mocked(readHashBody).mockReturnValue(arrivalBody);
@@ -68,13 +78,20 @@ function buildHarness(arrivalBody: string) {
   };
 
   const sagaMiddleware = createSagaMiddleware();
+  // The store is here for the real reducers the saga's `put`s land in and for
+  // the middleware chain; no case reads its state back, so it needs no binding.
   configureStore({
     reducer: rootReducer,
     middleware: (getDefault) => getDefault().concat(recorder, sagaMiddleware),
   });
   const task = sagaMiddleware.run(watchHashReadSaga);
 
-  return { recorded, emit: (body: string) => emit(body), task, isSubscribed: () => subscribed };
+  return {
+    recorded,
+    emit: (body: string) => emit(body),
+    task,
+    isSubscribed: () => subscribed,
+  };
 }
 
 describe('watchHashReadSaga', () => {
@@ -101,6 +118,8 @@ describe('watchHashReadSaga', () => {
 
   it('restores param defaults when a hashchange arrives bare', () => {
     const { recorded, emit } = buildHarness('focus=m31&orientation=galactic');
+    // Only the navigation's own output is the subject; the arrival read's has
+    // already landed by the time the harness returns.
     recorded.length = 0;
 
     emit('');
@@ -129,6 +148,8 @@ describe('watchHashReadSaga', () => {
   });
 
   it('detaches the channel subscriber when cancelled', () => {
+    // Cancelled from the steady state — parked on the channel, the arrival read
+    // behind it — which is where a real engine teardown finds it.
     const { task, isSubscribed } = buildHarness('');
     expect(isSubscribed()).toBe(true);
 

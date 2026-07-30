@@ -5,6 +5,24 @@
  * param means which actions) lives entirely in `HASH_PARAM_SOURCES`; this saga
  * is the uniform pump, exactly as `watchKeyboardEventsSaga` is for keys.
  *
+ * ### Why its dispatches need the engine context to exist
+ *
+ * This is the only saga in the tree that dispatches on its own initiative rather
+ * than in response to an action. The dispatches themselves are ordinary
+ * settings/selection writes, but the watchers they wake reach the engine through
+ * `getContext` — `watchWakeSaga` wants `reconcile.requestRender`, the selection
+ * reconciler wants `resolveDeps`. Reached with an empty context bag they throw,
+ * and redux-saga propagates a watcher's throw to the root, cancelling every OTHER
+ * watcher with it: one deep link would cost the session its wake, tier
+ * transitions, selection resolution, tour and keyboard, and
+ * `/#orientation=galactic` is enough to do it.
+ *
+ * So this saga must not start before the engine has registered those
+ * capabilities. The wait is `watchHashSaga`'s, which holds both halves of the
+ * bridge on the same signal. Forked on its own it reads the URL the instant it
+ * starts — safe only where nothing downstream of its dispatches reaches for the
+ * engine, which is true of its test and of nowhere in the app.
+ *
  * ### Two passes, one flag
  *
  * The boot read and a back/forward navigation differ in precisely one respect:
@@ -20,12 +38,12 @@
  *
  * ### Why the channel is opened before the boot read
  *
- * A hash navigation that lands while the boot read is still dispatching would
- * be lost if the listener were attached afterwards. Opening first cannot
- * misorder anything, because the channel's taker does not exist until the boot
- * read returns and `buffers.none()` drops what nobody is waiting for — so the
- * worst case is an event dropped in favour of the read that was already
- * applying the very same URL.
+ * A hash navigation that lands while the boot read is still dispatching would be
+ * lost if the listener were attached afterwards. Opening first cannot misorder
+ * anything: the channel's taker does not exist until the boot read returns, and
+ * `buffers.none()` drops what nobody is waiting for. What is dropped is never
+ * lost, because `readHashBody` runs AFTER the channel is open — the boot read
+ * always reads the live hash, which already includes any navigation that beat it.
  *
  * ### Why the write half can never feed this one
  *

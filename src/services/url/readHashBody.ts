@@ -16,12 +16,14 @@
  *
  * Skymap does not server-render, which makes this branch look like dead
  * defensive code that a tidy-up could delete. Deleting it breaks the test suite.
- * `createAppStore` forks `mainSaga`, the hash read saga reads the hash at saga
- * *start* rather than lazily on an action, and a large share of the suite boots a
- * real store under vitest's default `node` environment — where `window` is
- * genuinely absent. Without the guard those tests die with `ReferenceError:
- * window is not defined` before reaching their own subject, and the failure
- * surfaces as an unrelated saga falling over rather than as anything about URLs.
+ * `createAppStore` forks `mainSaga`, and the hash read saga performs its arrival
+ * read as soon as the saga context is registered rather than lazily on an action —
+ * so `createTestStore`, which registers one, triggers it. A large share of the
+ * suite boots such a store under vitest's default `node` environment, where
+ * `window` is genuinely absent. Without the guard those tests die with
+ * `ReferenceError: window is not defined` before reaching their own subject, and
+ * the failure surfaces as an unrelated saga falling over rather than as anything
+ * about URLs.
  *
  * Returning `''` rather than throwing is the honest answer, not a fallback: no
  * address bar means no hash, and an empty body is exactly how "no params" is

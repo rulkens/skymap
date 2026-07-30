@@ -12,6 +12,13 @@
  * therefore "stale", never "wrong", which is the contract the table's docblock
  * states and the reason prose discipline is the guard there.
  *
+ * `takeEvery` is live from the instant this saga starts, so WHEN it starts is
+ * load-bearing: publishing before the arrival read has applied the URL would
+ * compose the store's defaults and `pushState` them over the visitor's deep
+ * link. `watchHashSaga` holds both halves until the app that owns the window
+ * exists, which is why this saga carries no such wait of its own — and why
+ * forking it standalone, without a parent doing the waiting, is not safe.
+ *
  * ### Why an enumerated trigger and not `takeEvery('*')`
  *
  * `'*'` would be simpler to write and correct by construction, and it is exactly

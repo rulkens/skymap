@@ -19,6 +19,22 @@
  *    present — otherwise jest-dom's setup throws.
  * 2. Auto-cleanup the React render tree after each test, so leftover
  *    DOM from a prior test can't be matched by a later getByText.
+ * 3. Reset `window.location`'s hash after each test. jsdom gives every
+ *    test in a file the SAME `window.location` — there is no per-`it()`
+ *    navigation reset the way there is a fresh DOM per `render()`. Any
+ *    store wired up with `watchHashWriteSaga` calls the real
+ *    `history.pushState` when selection/clock/orientation state changes,
+ *    so a test that drives such a store leaves its hash sitting on
+ *    `window.location` for every test that runs afterwards in the same
+ *    file. The next test that boots a fresh store runs the URL's arrival
+ *    read against that leaked hash and silently inherits state (e.g. a
+ *    clock mode) it never asked for. This is `afterEach`, not
+ *    `beforeEach`, on purpose: a test that deliberately seeds a hash does
+ *    so at its own start (`window.location.hash = ...`), and a
+ *    `beforeEach` reset would run after that setup and clobber it before
+ *    the test body sees it. Cleaning up only what THIS test may have left
+ *    behind, once it's done with it, is the half of the leave-as-you-
+ *    found-it contract that doesn't fight deliberate setup.
  *
  * If keeping the per-file directive becomes burdensome, promote
  * `environment: 'jsdom'` to a workspace config scoped to
@@ -34,6 +50,13 @@ if (typeof window !== 'undefined') {
   const { cleanup } = await import('@testing-library/react');
   afterEach(() => {
     cleanup();
+
+    // `replaceState`, never `pushState`: a cleanup step must shrink back
+    // to nothing, not grow the history stack test-over-test. The hash
+    // check is just a fast path for the common (unused) case.
+    if (window.location.hash) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
   });
 
   // jsdom omits ResizeObserver, but DiskOverlay observes its SVG to keep

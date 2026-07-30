@@ -224,16 +224,16 @@ Old `hooks/` copies stay in place and keep serving the hook until T12.
 the house style of `watchSelectionRowsSaga.ts:15-21` — a miss is self-healing (stale until
 the next covered action), never wrong.
 
-- [ ] Tests: each row's `read(value)` action output, including `orientation` rejecting a
+- [x] Tests: each row's `read(value)` action output, including `orientation` rejecting a
       junk frame via `isOrientationFrameId` and `t` no-oping on an unparseable ISO string.
-- [ ] Tests: each row's `readAbsent()` output. Freeze time for `t` — `readAbsent` builds
+- [x] Tests: each row's `readAbsent()` output. Freeze time for `t` — `readAbsent` builds
       `goLive({ simDays, nowMs })` and so reads the wall clock.
-- [ ] Tests: `focus.write` returns the pending id while pending, the encoded target once
+- [x] Tests: `focus.write` returns the pending id while pending, the encoded target once
       resolved, and `null` for home-Earth (`EARTH_REF`) — the omit rule that keeps a fresh
       load on a bare URL.
-- [ ] Do NOT test the table's contents as a registry mirror (`conventions/testing.md`).
-- [ ] `npm test -- hashParamSources` → green.
-- [ ] Commit.
+- [x] Do NOT test the table's contents as a registry mirror (`conventions/testing.md`).
+- [x] `npm test -- hashParamSources` → green.
+- [x] Commit. → `05ea588c`
 
 ### Task 7: `services/url/` — the DOM seam
 
@@ -256,11 +256,11 @@ saga _start_. Without the guards the suite breaks.
 `window.location.hash` only when the desired body differs, and a `hashchange` invalidates
 the cache. Uses `pushState` (not `replaceState`) — rationale in spec §3.4.
 
-- [ ] Test `writeHashBody skips a pushState when the body is unchanged`.
-- [ ] Test `writeHashBody drops the '#' entirely for an empty body` — the bare-URL form.
-- [ ] Test that each function no-ops with no `window` (the node-env path).
-- [ ] `npm test -- services/url` → green.
-- [ ] Commit.
+- [x] Test `writeHashBody skips a pushState when the body is unchanged`.
+- [x] Test `writeHashBody drops the '#' entirely for an empty body` — the bare-URL form.
+- [x] Test that each function no-ops with no `window` (the node-env path).
+- [x] `npm test -- services/url` → green.
+- [x] Commit. → `0e6fa11c`
 
 ### Task 8: `hashBodyFor(state)`
 
@@ -271,9 +271,9 @@ the cache. Uses `pushState` (not `replaceState`) — rationale in spec §3.4.
 Replaces `computeDesiredHash` minus its `matches` half (that moved into `writeHashBody`).
 Walks `HASH_PARAM_SOURCES` in table order — order is load-bearing for byte-stable links.
 
-- [ ] Test the empty case, single-param cases, and a multi-param compose asserting **table
+- [x] Test the empty case, single-param cases, and a multi-param compose asserting **table
       order** (`focus=…&t=…&orientation=…`).
-- [ ] Commit.
+- [x] Commit. → `213b953a`
 
 ### Task 9: `watchHashWriteSaga`
 
@@ -287,17 +287,21 @@ only this saga (not `mainSaga`) so the test is scoped.
 `WRITE_TRIGGER` shape in spec §3.3. **This is where Q6's residual risk lives** — one test
 per trigger, dispatching the real action:
 
-- [ ] `requestFocus writes the pending id to the hash`
-- [ ] `setSelectionRow writes the resolved target` — `setSelectionRow` is the sole writer
+- [x] `requestFocus writes the pending id to the hash`
+- [x] `setSelectionRow writes the resolved target` — `setSelectionRow` is the sole writer
       of `selectionRows.focus`, so it stands for every resolution path
-- [ ] `clearSelection empties the hash`
-- [ ] `a time-slice action writes t` — assert via the prefix predicate, not a literal
+- [x] `clearSelection empties the hash`
+- [x] `a time-slice action writes t` — assert via the prefix predicate, not a literal
       action, so a seventh reducer stays covered
-- [ ] `setOrientation writes a non-default frame`
-- [ ] `mergeSnapshot writes the restored orientation` — the tour scene-restore path
-- [ ] `commitCameraPose does NOT trigger a write` — pins the frame-path exclusion that the
+- [x] `setOrientation writes a non-default frame`
+- [x] `mergeSnapshot writes the restored orientation` — the tour scene-restore path.
+      **Withdrawn in `04265447`:** `orientation` sits outside `SettingsSnapshot`, so
+      `mergeSnapshot` provably cannot move the row's `write` output. The trigger was
+      dropped from `writesOn` and the test with it; see
+      `docs/backlog/2026-07-29-tour-snapshot-orientation.md`.
+- [x] `commitCameraPose does NOT trigger a write` — pins the frame-path exclusion that the
       whole `writesOn` design exists to buy
-- [ ] Commit.
+- [x] Commit. → `efe40a05`, `04265447`
 
 ### Task 10: `watchHashReadSaga` + the `watchHashSaga` parent
 
@@ -308,13 +312,13 @@ the pass, not of any row.
 
 Still unforked from `mainSaga`; T12 does that.
 
-- [ ] Test `the initial pass dispatches read actions for present params`.
-- [ ] Test `the initial pass dispatches nothing for absent params` — the mount suppression
+- [x] Test `the initial pass dispatches read actions for present params`.
+- [x] Test `the initial pass dispatches nothing for absent params` — the mount suppression
       that stops a bare load clobbering the engine's Earth seed (`wireInput.ts:204-215`).
-- [ ] Test `a hashchange to a bare hash dispatches readAbsent for every param` — Q8's
+- [x] Test `a hashchange to a bare hash dispatches readAbsent for every param` — Q8's
       behaviour change. Assert `setOrientation(DEFAULT_ORIENTATION)` specifically.
-- [ ] Test `the channel is closed on cancellation` (the `finally` arm).
-- [ ] Commit.
+- [x] Test `the channel is closed on cancellation` (the `finally` arm).
+- [x] Commit. → `50f36e20`
 
 ### Task 11: `hasDeepLink` derives its hash keys from the table
 
@@ -326,11 +330,11 @@ query gates are out of scope (spec §1).
 No import cycle: verified `uiSlice → buildInitialUiState → hashParamSources → {selection,
 settings, time slices}` and none import back into `state/ui/`. Re-verify after T6 lands.
 
-- [ ] Test `#t=<iso> counts as a deep link` — currently false; this is the drift Q2 fixes.
-- [ ] Test `#orientation=galactic does NOT count` — `deepLink: false`, a view preference.
-- [ ] Delete the stale docblock line naming `?debug`, `?volumes`, `?anchors` as gates
+- [x] Test `#t=<iso> counts as a deep link` — currently false; this is the drift Q2 fixes.
+- [x] Test `#orientation=galactic does NOT count` — `deepLink: false`, a view preference.
+- [x] Delete the stale docblock line naming `?debug`, `?volumes`, `?anchors` as gates
       (verified 2026-07-28: none are read anywhere).
-- [ ] Commit.
+- [x] Commit. → `a2bde5cf`
 
 ### Task 12: atomic cutover — fork, delete the hook
 
@@ -338,16 +342,22 @@ settings, time slices}` and none import back into `state/ui/`. Re-verify after T
 `src/hooks/useUrlSync.ts` (delete), `src/hooks/hashParamSources.ts` (delete),
 `src/@types/hooks/HashParamSource.d.ts` (delete), `tests/hooks/useUrlSync.test.ts` (delete)
 
-- [ ] Fork `watchHashSaga()` into `mainSaga`; add its line to the `rootSaga` docblock
+- [x] Fork `watchHashSaga()` into `mainSaga`; add its line to the `rootSaga` docblock
       (`rootSaga.ts:6-23` — the prose list is hand-maintained; a backlog item tracks that).
-- [ ] Drop `useUrlSync()` + its import from `App.tsx:47,94`. Check whether anything else in
+- [x] Drop `useUrlSync()` + its import from `App.tsx:47,94`. Check whether anything else in
       `App.tsx` existed only to feed it, as #507's cutover found for the keyboard hook.
-- [ ] Delete the hook, the old table, the old `@types` file, and the old test file.
-- [ ] Grep for `useUrlSync` / `computeDesiredHash` / `DesiredHashInput` across `src/`,
+      Nothing did: the hook took no arguments and reached the store itself, so App kept no
+      prop, selector or memo on its behalf. Two prose mentions of "URL sync" in the header
+      and the cinema-branch comment went with it.
+- [x] Delete the hook, the old table, the old `@types` file, and the old test file.
+      `src/@types/hooks/` is now empty and removed with them.
+- [x] Grep for `useUrlSync` / `computeDesiredHash` / `DesiredHashInput` across `src/`,
       `tests/`, and `docs/` — #507 needed a follow-up commit for six comments still naming
       a deleted symbol. Fix the comments in **this** commit. Known sites:
       `buildStaticAnchorStructures.ts:14`, `wireStructureProjection.ts:65`,
-      `wireInput.ts:169,207`, `parseHashParams.ts:5`, `hasDeepLink.ts:12`.
+      `wireInput.ts:169,207`, `parseHashParams.ts:5`, `hasDeepLink.ts:12`. Two the list
+      missed: `urlHashFor.ts:8` (named `computeDesiredHash`) and `CLAUDE.md`'s `hooks/`
+      tree line. `hasDeepLink.ts` was already rewritten by T11.
 - [ ] `npm test` → full suite green.
 - [ ] Commit.
 
