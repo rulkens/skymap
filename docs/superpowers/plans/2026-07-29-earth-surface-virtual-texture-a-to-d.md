@@ -936,3 +936,88 @@ discipline, then on a real iOS device.
 - **Phase F** — `collectEarthTiles`, the resumable R2 sync, `docs/DEPLOY.md`, the perf pass.
 - Everything in the spec's "Non-goals", which includes camera surface-directed zoom, geometry
   LOD, elevation displacement, and tiling night/clouds/material.
+
+---
+
+## D6 diagnosis log — 2026-07-30
+
+The visual pass against the real August z5-to-z7 pyramid. Recorded because three of these
+cost real time and two are unresolved.
+
+### UNCOMMITTED STATE, deliberate
+
+`fragment.wesl` currently has **`TILE_DEBUG = 1u`** and it is NOT committed. The probe is on
+because the diagnosis below is still open. While it is on, `npm test` fails by exactly one
+assertion — the guard added in the same session for this exact situation. Flip it back to
+`0u` before any commit.
+
+Hue map for mode 1, coarse to fine: z3 yellow, z4 cyan, z5 magenta, z6 green, z7 blue, black
+means no tile named.
+
+### Resolved: the dev server was serving HTML for z6 and z7
+
+Not a code bug. See [[reference_vite_serves_html_for_new_public_dirs]]. A server started
+before the bake never saw the new `surface/6/` and `surface/7/` directories and answered with
+the SPA fallback at status 200, so `createImageBitmap` failed and nothing deeper than z5 ever
+became resident. Presented as "all tiles the same size" and "falls back to base on approach".
+The fix is restarting the server; the lesson is to check `content_type`, not the status.
+
+### Resolved: the addressing chain is correct
+
+Transcribed the fragment's lookup in TS against the real `planEarthTiles` and
+`buildEarthPageTable` at six altitudes, checking that the tile each uv lands on is the tile
+covering that uv at the level the cell claims. **Zero mismatches at every altitude.** So
+planner, page table and shader agree, and neither the span logic nor the window arithmetic is
+at fault.
+
+One earlier run of that probe reported 63 mismatches. That was the probe's own bug: it
+assigned `slot: i % 64`, so with 196 requests three tiles shared each slot and the reverse
+lookup was ambiguous. Worth remembering that a probe needs verifying as much as the code.
+
+Also worth remembering: an earlier "verification" compared mean RGB per tile across levels
+and passed. **Mean RGB is invariant under a flip**, so that check could not have caught the
+bug it was written to rule out. Comparing against an independent reference (the whole-globe
+equirect, RMSE as-is vs v-flipped) is the honest form, though it is noisy at shallow levels
+because the reference is itself a heavy downsample.
+
+### ROOT CAUSE, needs fixing: the planner emits only leaves
+
+Confirmed by the same probe. Request mix by altitude:
+
+```
+1727 km  zWin=5  6 requests  [z5:6]
+1500 km  zWin=6 13 requests  [z5:1 z6:12]   <- a handoff carries two levels
+1200 km  zWin=6 10 requests  [z6:10]
+```
+
+Nothing ever requests a tile's ANCESTORS, so a cell whose finer tile is in flight has nothing
+resident between it and the whole-globe base. `buildEarthPageTable`'s docstring claims a cell
+"keeps sampling its level-8 ancestor" while a finer tile loads, and its increasing-`z` sort
+order is built to make that work, but the ancestor is never fetched, so the claim is false as
+shipped.
+
+This is one cause behind two user reports: black tiles between layers (probe mode) and detail
+dropping to base on approach (normal mode). Every descent crosses a handoff.
+
+Filed this morning as `docs/backlog/2026-07-30-earth-tile-page-table-ancestor-fallback.md`
+tagged `deferred`, on the reasoning that one level of fallback was enough until Phase E
+deepened the pyramid. **That tag is wrong** — three levels is already enough to make it
+visible on every descent. Re-tag and fix: have the planner emit each leaf's ancestor chain
+down to the session floor, which is about a third more requests since the ancestors are a
+geometric series.
+
+### UNRESOLVED: "z5 and z6 seem to render tiles from z7"
+
+Reported from the browser and not reproduced. The probe says a cell's claimed level and the
+tile in its slot always agree, which is exactly what would have to be false for shallower
+levels to sample finer content. Left open pending a re-check now that the hue map is known:
+does a magenta area show detail finer than a z5 tile should carry? If yes it is a separate
+bug from the ancestor gap.
+
+### Still owed
+
+- Re-bake for z3/z4. The floor fix is committed but not run, so `manifest.json` still says
+  `min: 5` and medium-tier sessions keep the z4 hole. The bake creates new directories, so it
+  needs a dev-server restart after.
+- Delete `public/data/images/earth-tiles.december-z5-backup` once August is confirmed good.
+- The eight quadrant symlinks in this worktree's `data/raw/textures/` point at main's copies.
