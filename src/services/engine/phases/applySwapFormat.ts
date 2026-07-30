@@ -2,10 +2,10 @@
  * applySwapFormat — reconfigure the canvas context, repoint the `swap` row,
  * then rebuild the renderers baking that format, in that order. No-ops when
  * `desired` already matches live (repeated dispatch must not rebuild eight
- * pipelines) — and also before `renderTargets`/`uiCtx` exist: initGpu's boot
- * dispatch of `engineHdrCapabilityChanged` fires before it builds either, and
- * at boot `desired` can only equal the format device.ts already configured
- * (`DEFAULT_HDR_ENABLED` is false), so there is nothing yet to apply.
+ * pipelines) — and also before `renderTargets`/`uiCtx`/`fontAtlases` exist:
+ * initGpu builds them in that order, so a boot-time or leaked-listener call
+ * can land between them, and `buildSwapRenderers` dereferences `fontAtlases`
+ * non-null.
  */
 
 import { buildSwapRenderers } from './buildSwapRenderers';
@@ -14,6 +14,7 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 
 export function applySwapFormat(state: EngineState, desired: GPUTextureFormat): void {
   if (state.gpu.renderTargets === null || state.gpu.uiCtx === null) return;
+  if (state.gpu.fontAtlases === null) return;
 
   const renderTargets = state.gpu.renderTargets;
   const live = renderTargets.specs.find((spec) => spec.id === 'swap')!.format;
@@ -28,4 +29,8 @@ export function applySwapFormat(state: EngineState, desired: GPUTextureFormat): 
   });
   renderTargets.setSwapFormat(desired);
   buildSwapRenderers(state, desired);
+  // context.configure() replaces the drawing buffer; neither trigger
+  // (setHdrEnabled, engineHdrCapabilityChanged) is a wake route, so without
+  // this the canvas stays blank until the next interaction wakes the loop.
+  state.subsystems.scheduler.requestRender();
 }

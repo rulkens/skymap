@@ -127,13 +127,16 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // Live display-capability report: dispatch the boot snapshot now, then
   // keep the engine slice honest as the display's `(dynamic-range: high)`
   // verdict changes later (e.g. the window moves to an SDR monitor) — see
-  // `watchHdrCapability`'s doc comment in `device.ts`. `deps.phaseLocals`
-  // (assigned at the end of this phase) carries the cleanup so
-  // `engine.ts`'s `destroy()` can remove the listener.
+  // `watchHdrCapability`'s doc comment in `device.ts`. `deps.phaseLocals` is
+  // assigned immediately below, not at the end of this (long, throw-capable)
+  // phase, so a later throw here — the font-atlas await, any renderer
+  // constructor — still leaves `engine.ts`'s `destroy()` able to remove the
+  // listener rather than leaking it for the page's lifetime.
   deps.cb.store.dispatch(engineHdrCapabilityChanged(hdrCapable));
   const unwatchHdrCapability = watchHdrCapability((capable) =>
     deps.cb.store.dispatch(engineHdrCapabilityChanged(capable)),
   );
+  deps.phaseLocals = { device, context, unwatchHdrCapability };
 
   // Build the canonical fade + source + focus bind-group layouts ONCE —
   // every renderer pipeline below threads these into createPipelineLayout
@@ -215,9 +218,12 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // resolves well before the much larger per-galaxy-catalog `.bin` fetches.
   // `uiCtx` and the atlas are retained on `state.gpu` (not just local here)
   // so `buildSwapRenderers` can rebuild these eight renderers on a later
-  // swap-format change — see its module header.
+  // swap-format change — see its module header. The two renderer calls
+  // just below need the full `GpuContext` (format included); `state.gpu.uiCtx`
+  // deliberately gets its own format-less literal, matching its narrower
+  // type — see that field's docblock in `EngineGpuHandles`.
   const uiCtx = { device, context, format, canvas, hdrCapable };
-  state.gpu.uiCtx = uiCtx;
+  state.gpu.uiCtx = { device, context, canvas, hdrCapable };
   state.gpu.fontAtlases = await loadFontAtlases();
   buildSwapRenderers(state, format);
 
@@ -598,14 +604,4 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // by the slot machinery. Commit routes `'earth'` today; Plan 02 extends the
   // dispatch to the planet/moon/ring renderers.
   wireBodyTextureSlots(state);
-
-  // Stash phase-locals so subsequent phases (`wireSlots`, `wireInput`,
-  // `startLoop`) can read the IIFE-scoped device/context handles.  The
-  // renderers flow via `state.gpu.*`; this carrier is intentionally
-  // minimal — only what has no `state.gpu.*` home.
-  deps.phaseLocals = {
-    device,
-    context,
-    unwatchHdrCapability,
-  };
 }

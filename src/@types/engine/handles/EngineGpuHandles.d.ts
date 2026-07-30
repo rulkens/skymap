@@ -193,10 +193,12 @@ export type EngineGpuHandles = {
    * chain, retained here for the same reason as `fontAtlases`:
    * `buildSwapRenderers` rebuilds those renderers from it on a format swap.
    * Omits `format` (unlike `GpuContext`) because that's the one field that
-   * goes stale the instant a rebuild starts — `buildSwapRenderers` composes
-   * `{ ...uiCtx, format }` with the live value instead, so a stale format can
-   * never leak through this field. Null until `initGpu` constructs it; never
-   * released by `destroy()` — no GPU resource of its own.
+   * goes stale the instant a rebuild starts: `initGpu` constructs this field
+   * from its own format-less object literal (not the full `GpuContext` it
+   * builds for other constructors), so no stale format exists to leak, and
+   * `buildSwapRenderers` composes `{ ...uiCtx, format }` with the live value.
+   * Null until `initGpu` constructs it; never released by `destroy()` — no
+   * GPU resource of its own.
    */
   uiCtx: Omit<GpuContext, 'format'> | null;
   /**

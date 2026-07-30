@@ -347,6 +347,10 @@ import { initGpu } from '../../../../src/services/engine/phases/initGpu';
 // return value.
 import { watchHdrCapability } from '../../../../src/services/gpu/device';
 import { engineHdrCapabilityChanged } from '../../../../src/state/engine/engineSlice';
+// The mocked `loadFontAtlases` itself: overridden to reject in one test below
+// to prove `deps.phaseLocals.unwatchHdrCapability` survives a throw that
+// happens AFTER the listener is registered but before `initGpu` returns.
+import { loadFontAtlases } from '../../../../src/services/gpu/labelLayout/loadFontAtlases';
 // The mocked label-renderer factory itself: the main `labelRenderer` and the
 // foreground caption renderer are both built through it, so tests index its
 // `mock.results` ordinally (call 0 = main, call 1 = foreground) to prove two
@@ -594,5 +598,21 @@ describe('initGpu — HDR capability dispatch wiring', () => {
     onChange(true);
 
     expect(deps.cb.store.dispatch).toHaveBeenCalledWith(engineHdrCapabilityChanged(true));
+  });
+
+  it('publishes phaseLocals.unwatchHdrCapability even when a later step throws', async () => {
+    // Regression for the leak: phaseLocals used to be assigned only at the
+    // very end of initGpu, so any throw between the listener registration
+    // and that final line (here, the font-atlas fetch) left
+    // `bootstrapDeps.phaseLocals` undefined and `engine.ts`'s destroy() a
+    // no-op — the matchMedia listener (and its closure over the store) then
+    // leaks for the page's lifetime.
+    vi.mocked(loadFontAtlases).mockRejectedValueOnce(new Error('font atlas fetch failed'));
+    const state = makeState();
+    const deps = makeDeps();
+
+    await expect(initGpu(state, deps)).rejects.toThrow('font atlas fetch failed');
+
+    expect(deps.phaseLocals?.unwatchHdrCapability).toBeTypeOf('function');
   });
 });

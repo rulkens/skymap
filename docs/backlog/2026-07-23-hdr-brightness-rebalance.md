@@ -12,7 +12,7 @@ the established tools point to.
 
 The renderer already works in HDR internally: every pass draws into an `rgba16float`
 offscreen and one final compositor pass tone-maps down to an 8-bit swap chain, clamping to
-`[0,1]`. The spike (behind `?hdr` + a `(dynamic-range: high)` display check) makes the swap
+`[0,1]`. The mechanism (a Settings → Display → HDR toggle, gated on `hdrCapable`) makes the swap
 chain `rgba16float` + `toneMapping: { mode: 'extended' }`, and adds an additive "headroom
 spill" in the tone pass so bright sources punch past paper-white:
 
@@ -102,7 +102,7 @@ during navigation. Three shapes, in ascending effort:
 1. **Per-layer HDR gain table (spike-level).** Keep each layer's formula; add an explicit
    per-layer "peak headroom target" knob (galaxy / star / planet / Sun / Milky Way) as
    sliders and tune the ordering by eye on an HDR display. Turns the accidental ordering into
-   an intentional, tunable one. Fast, reversible, extends `?hdr`. Not physical.
+   an intentional, tunable one. Fast, reversible, extends the HDR display toggle. Not physical.
 2. **Auto-exposure only (smallest keystone).** Add scene-adaptive exposure (meter the HDR
    buffer's centre/average luminance, adapt over time, camera-style) on top of today's
    scales. Proves whether adaptation alone makes multi-scale navigation feel right before any
@@ -126,8 +126,8 @@ during navigation. Three shapes, in ascending effort:
   the bloom threshold `2.0` is load-bearing for the Sun; any brightness rebalance must hold or
   re-derive the `DEFAULT_BLOOM_THRESHOLD < STAR_KNEE ≤ STAR_EMISSIVE` ordering
   (`starRenderConstants.ts:14-25`).
-- Depends on the `?hdr` output path (branch `spike/hdr-mode`) landing, or at least on its
-  extended-range swap being the assumed output for direction 2/3.
+- Depends on the HDR display toggle's extended-range swap (see "Carried forward" below)
+  being the assumed output for direction 2/3.
 
 ## Carried forward from the `?hdr` productionisation review
 
