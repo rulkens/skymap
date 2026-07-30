@@ -1,8 +1,8 @@
 import type { Tier } from '../../@types/data/Tier';
 import { BODY_TEXTURE_REGISTRY } from '../../data/bodies/bodyTextureRegistry';
-import { EARTH_EQUIRECT_BASE_WIDTH_PX } from '../../data/bodies/earthTileParams';
 import { clampTier } from '../math/clampTier';
 import { tierToTexturePx } from '../math/tierToTexturePx';
+import { earthLevelFittingWidth } from './earthLevelFittingWidth';
 
 /**
  * earthBaseLevelForTier — the pyramid level the whole-globe surface texture a
@@ -30,22 +30,18 @@ import { tierToTexturePx } from '../math/tierToTexturePx';
  * lowering the ceiling would otherwise leave this reporting a level no bound
  * texture carries, with no error anywhere.
  *
- * ## Integer arithmetic, not `Math.log2`
+ * ## The ladder inversion itself lives elsewhere
  *
- * `floor(log2(widthPx / 512))` is the same formula in floating point, where
- * ECMA-262 only requires an implementation-approximated result — an exact power
- * of two can land one ulp short and floor a level too shallow. That trap already
- * shaped `equirectFileSource`'s shift loop, and the consequence here is worse: a
- * non-integer level makes every `z` in the quadtree walk non-integer, so every
- * tile path is a decimal that 404s and every `1 << (zWin - z)` span in the
- * page-table window is nonsense. A shift loop cannot express a fractional level
- * at all.
+ * `earthLevelFittingWidth` turns a raster width into a level, for this function
+ * and for the build-time imagery sources alike. Its header carries why that
+ * inversion is a shift loop rather than `Math.log2`; the consequence HERE is the
+ * worse of the two, because a non-integer level makes every `z` in the quadtree
+ * walk non-integer, so every tile path is a decimal that 404s and every
+ * `1 << (zWin - z)` span in the page-table window is nonsense.
  */
 export function earthBaseLevelForTier(tier: Tier): number {
   // Non-null: every registry row ships a `surface` kind (the `kinds` map is
   // Partial only because the feature kinds are per-body).
   const widthPx = tierToTexturePx(clampTier(tier, BODY_TEXTURE_REGISTRY.earth.kinds.surface!));
-  let z = 0;
-  while (EARTH_EQUIRECT_BASE_WIDTH_PX << (z + 1) <= widthPx) z++;
-  return z;
+  return earthLevelFittingWidth(widthPx);
 }

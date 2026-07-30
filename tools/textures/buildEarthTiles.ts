@@ -31,10 +31,9 @@
  * streamed straight to disk. Every coarser level is then a 2 x 2 average of
  * four tiles from the level ABOVE, read back off disk. Nothing in the process
  * ever holds a whole-globe raster — which at z11 would be 1.6 TB — and nothing
- * holds a whole level either. At the development pyramid's single level the
- * coarsening loop does not execute at all; it is written correctly anyway,
- * because it is what makes a deep bake possible and a deep bake should not
- * have to rewrite this loop to get it.
+ * holds a whole level either. A source that reaches only the bake floor — the
+ * `--dev` whole-globe equirect — leaves the coarsening loop unexecuted; the
+ * quadrant source's z7 runs it down to z5.
  *
  * The 2 x 2 average is `sharp`'s own resize at an exact factor of two, which
  * libvips serves with an integer block shrink — a plain average of each 2 x 2
@@ -75,6 +74,9 @@ import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
 import { earthBaseLevelForTier } from '../../src/utils/scene/earthBaseLevelForTier';
 import { earthTileColumns } from '../../src/utils/scene/earthTileColumns';
 import { earthTilePath } from '../../src/utils/scene/earthTilePath';
+import { parseFlags } from '../utils/cli/args';
+import { rawDataPath } from '../utils/io/rawDataRegistry';
+import { bmngQuadrantSource } from './bmngQuadrantSource';
 import type { EarthImagerySource } from './EarthImagerySource';
 import { equirectFileSource } from './equirectFileSource';
 import type { LonLatBox } from './LonLatBox';
@@ -283,14 +285,53 @@ export async function buildEarthTiles(source: EarthImagerySource, outDir: string
   process.stderr.write(`  ${written.length} tiles indexed\n`);
 }
 
-async function main(): Promise<void> {
-  const outDir = resolve('public/data/images');
-  const source = await equirectFileSource({
+/**
+ * The shipped source: BMNG's eight-file August 2004 quadrant set, which reaches
+ * z7. Named here rather than inside the source module so the vintage and its
+ * attribution string sit together at the one site that decides what gets baked.
+ */
+async function deepSource(): Promise<EarthImagerySource> {
+  return bmngQuadrantSource({
+    id: 'nasa-bmng-200408',
+    attribution:
+      'NASA Blue Marble Next Generation, August 2004 topography + bathymetry (public domain, credit NASA Earth Observatory).',
+    quadrantPaths: {
+      A1: rawDataPath('textures.nasaBmng200408A1'),
+      A2: rawDataPath('textures.nasaBmng200408A2'),
+      B1: rawDataPath('textures.nasaBmng200408B1'),
+      B2: rawDataPath('textures.nasaBmng200408B2'),
+      C1: rawDataPath('textures.nasaBmng200408C1'),
+      C2: rawDataPath('textures.nasaBmng200408C2'),
+      D1: rawDataPath('textures.nasaBmng200408D1'),
+      D2: rawDataPath('textures.nasaBmng200408D2'),
+    },
+  });
+}
+
+/**
+ * `--dev`: the whole-globe equirect, which reaches z5 and therefore bakes the
+ * single shallowest level this tool emits. It needs only the raw every
+ * contributor's `fetch-textures` already pulls, so it is the way to exercise the
+ * pipeline end to end in seconds without the quadrant set's 421 MB.
+ *
+ * An explicit flag rather than "use the quadrants if they happen to be on disk":
+ * a silent fall-back to the shallow source would emit a pyramid that is complete,
+ * valid and four levels short, and nothing downstream can tell that from the
+ * intended bake.
+ */
+async function devSource(): Promise<EarthImagerySource> {
+  return equirectFileSource({
     id: 'nasa-bmng-200412',
     rawKey: 'textures.nasaBmng',
     attribution:
       'NASA Blue Marble Next Generation, December 2004 topography + bathymetry (public domain, credit NASA Earth Observatory).',
   });
+}
+
+async function main(): Promise<void> {
+  const outDir = resolve('public/data/images');
+  const { '--dev': dev } = parseFlags(process.argv.slice(2), { '--dev': 'bool' });
+  const source = dev ? await devSource() : await deepSource();
   process.stderr.write(`buildEarthTiles: ${source.id} -> ${join(outDir, 'earth-tiles')}\n`);
   await buildEarthTiles(source, outDir);
   process.stderr.write(`done; tiles under ${join(outDir, 'earth-tiles')}\n`);

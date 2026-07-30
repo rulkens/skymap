@@ -14,15 +14,11 @@
  * The deepest honest level is a property of the file on disk: pyramid level
  * `z` has a full equirect width of `EARTH_EQUIRECT_BASE_WIDTH_PX << z`, so the
  * deepest level a source can produce without inventing detail is the largest
- * `z` whose width still fits inside the source's own. Blue Marble at 21600 px
- * gives z5 (16384, a genuine downsample); z6 would be 32768 and would be
- * upscaling a photograph. Deriving that from the file rather than writing 5 in
- * a constant means swapping in a wider equirect deepens the bake by itself,
- * and means a narrower one cannot silently start upscaling.
- *
- * The shift loop is integer arithmetic on purpose. `floor(log2(width / 512))`
- * is the same formula in floating point, where an exactly-power-of-two source
- * width is one ulp away from landing a level too shallow.
+ * `z` whose width still fits inside the source's own — `earthLevelFittingWidth`.
+ * Blue Marble at 21600 px gives z5 (16384, a genuine downsample); z6 would be
+ * 32768 and would be upscaling a photograph. Deriving that from the file rather
+ * than writing 5 in a constant means swapping in a wider equirect deepens the
+ * bake by itself, and means a narrower one cannot silently start upscaling.
  *
  * ## Why the crop re-reads the file per box
  *
@@ -38,16 +34,9 @@
 
 import sharp from 'sharp';
 
-import { EARTH_EQUIRECT_BASE_WIDTH_PX } from '../../src/data/bodies/earthTileParams';
+import { earthLevelFittingWidth } from '../../src/utils/scene/earthLevelFittingWidth';
 import { rawDataPath, type RawDataKey } from '../utils/io/rawDataRegistry';
 import type { EarthImagerySource } from './EarthImagerySource';
-
-/** Deepest pyramid level whose full equirect width still fits in `sourceWidthPx`. */
-function deepestNonUpscaledLevel(sourceWidthPx: number): number {
-  let z = 0;
-  while (EARTH_EQUIRECT_BASE_WIDTH_PX << (z + 1) <= sourceWidthPx) z++;
-  return z;
-}
 
 export async function equirectFileSource(source: {
   /** Stable identifier recorded in the manifest's `builtFrom`, vintage included. */
@@ -74,7 +63,7 @@ export async function equirectFileSource(source: {
   return {
     id: source.id,
     attribution: source.attribution,
-    maxLevel: deepestNonUpscaledLevel(sourceWidth),
+    maxLevel: earthLevelFittingWidth(sourceWidth),
 
     async readBox(box, widthPx, heightPx) {
       // Row 0 of the source is latitude +90, so the box's NORTH edge maps to
