@@ -6,7 +6,7 @@
  * InfoCardContainer, ScaleBarContainer, TimeBarContainer, NavigationPanelContainer,
  * SettingsPanelContainer, TopBarContainer, CommandPaletteContainer,
  * SplashContainer, and `DebugPanel` (memo-boundary, its sections mount their
- * own containers) — plus wires URL sync.
+ * own containers).
  * Each container owns its own store reach; App just arranges them.
  *
  * `handleRef` is a ref, not state: engine hooks call methods on it, and
@@ -44,7 +44,6 @@ import CommandPaletteContainer from '../containers/CommandPaletteContainer';
 import TimeBarContainer from '../containers/TimeBarContainer';
 import SplashContainer from '../containers/SplashContainer';
 import appStyles from './App.module.css';
-import { useUrlSync } from '../../hooks/useUrlSync';
 import { useAppSelector } from '../../store/hooks';
 import { selectSelectedFocusable } from '../../state/selection/selectors';
 import DebugPanel from '../DebugPanel/DebugPanel';
@@ -89,10 +88,6 @@ export function App(): React.ReactElement {
   // is up (to hide the HUD stack / gate TimeBar / mark the canvas inert).
   const splashVisible = useAppSelector(selectSplashVisible);
 
-  // Deep-link hash read + URL write. Reads focus from the store directly;
-  // dispatches `requestFocus` / `clearSelection` for hash changes.
-  useUrlSync();
-
   // Shared between BOTH return branches (cinema + normal) so the `id="c"`
   // contract and the mount-only-while-touring rule each live in one place.
   //
@@ -110,9 +105,9 @@ export function App(): React.ReactElement {
   // the tour overlay (captions + nav), nothing else. The recorder harness
   // screenshots this page, so the HUD chrome must not EXIST in the DOM;
   // CSS-hiding it (the `uiStackHidden` route) would still leave it findable
-  // and able to bleed into captures. Every hook above still runs — the
-  // engine and URL sync are what make the page playable — only the JSX
-  // diverges, which also keeps the hook order unconditional.
+  // and able to bleed into captures. Every hook above still runs — `useEngine`
+  // is what makes the page playable — only the JSX diverges, which also keeps
+  // the hook order unconditional.
   if (isCinemaMode()) {
     return (
       <>

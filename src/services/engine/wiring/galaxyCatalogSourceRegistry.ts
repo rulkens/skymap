@@ -68,10 +68,10 @@ export const GALAXY_CATALOG_SOURCE_REGISTRY: readonly GalaxyCatalogSourceConfig[
     shortName: 'famous',
     fetcher: galaxyCatalogFetcher,
     category: 'curated',
-    // famous_meta.json carries the InfoCard text, CommandPalette entries,
+    // famous_galaxies_meta.json carries the InfoCard text, CommandPalette entries,
     // and URL-focus resolution for hand-picked entries.
     // Tier-agnostic — one load per session.
-    companions: ['famousMeta'],
+    companions: ['famousGalaxiesMeta'],
   },
   {
     source: Source.Milliquas,

@@ -1,8 +1,17 @@
-import type { FamousStarSourceEntry } from '../../@types/data/body/FamousStarSourceEntry';
+import type { SeededStarCatalogSourceEntry } from '../../@types/data/starCatalog/SeededStarCatalogSourceEntry';
 import { Source } from '../source';
 
+/**
+ * The curated, true-scale stellar neighbourhood — the hand-picked nearby-star
+ * map drawn on the final descent.
+ *
+ * The curated twin of the survey-wide Gaia bin (GAIA_STARS_ENTRY): both are
+ * star catalogs the user toggles as a set, so both key
+ * `settings.starCatalogs.items`. This one seeds its records from the body
+ * store instead of a `.bin`, which is what `binBaseName: null` says.
+ */
 export const FAMOUS_STAR_ENTRY = {
-  type: 'famousStar',
+  type: 'starCatalog',
   code: Source.FamousStar,
   id: 'famousStar',
   label: 'Famous Star',
@@ -15,8 +24,16 @@ export const FAMOUS_STAR_ENTRY = {
   // reaches ALL_VISIBLE_MASK (galaxy-catalog rows only), so it's a scene-intent
   // marker, not a bitmask contributor.
   visible: true,
-  // Bodies bypass the COSMO label/marker systems — star captions ship through
-  // the foreground-labels layer — so neither capability flag is set.
-  bearsLabel: false,
+  // The star map captions its members on the final descent, so it bears labels
+  // like any other named source — the foreground-labels layer draws them on the
+  // NEAR0 slab rather than the COSMO one, which is a routing detail, not a
+  // capability difference.
+  bearsLabel: true,
+  labelLayer: 'starCatalog',
   bearsMarker: false,
-} as const satisfies FamousStarSourceEntry;
+  detailLabel: 'Famous Star',
+  shortLabel: 'Star',
+  plural: 'Famous Stars',
+  // Seeded in code from the body store, so no asset ships for it.
+  binBaseName: null,
+} as const satisfies SeededStarCatalogSourceEntry;

@@ -188,9 +188,10 @@ export const starPointsLayer: ContentLayer = {
     const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, camPos));
 
     // The same shared star appearance the survey (Gaia bin) leaf stage reads, so
-    // a famous star obeys the identical sizePx slider and exposure model. NOT
-    // gated on `starCatalogs.enabled` — that flag is the Gaia survey's master
-    // toggle, and the famous layer has its own visibility gate. `brightness`
+    // a famous star obeys the identical sizePx slider and exposure model. These
+    // are the cluster's APPEARANCE knobs, read unconditionally — the cluster's
+    // visibility gate is applied upstream, where `visibleStars` composes
+    // `starCatalogs.enabled` with the famous-star row's own bit. `brightness`
     // folds the SAME scale-dependent `starExposureRamp` `starCatalogLayer`
     // applies: the user trim times the camera-distance ramp, keyed on the
     // camera's heliocentric Mpc distance (the ramp's own input unit).

@@ -16,7 +16,7 @@
  *
  * ### Why throw on 404
  *
- * Same policy as `famousMetaFetcher`: the fetcher stays honest about HTTP
+ * Same policy as `famousGalaxiesMetaFetcher`: the fetcher stays honest about HTTP
  * status so the slot's retry policy can distinguish "really gone" (404, give
  * up — feature off) from "transient flake" (5xx, retry). The decision to
  * degrade gracefully to an empty layer belongs to the slot subscriber, not

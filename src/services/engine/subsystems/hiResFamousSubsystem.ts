@@ -114,7 +114,7 @@ export function createHiResFamousSubsystem(deps: HiResFamousDeps): HiResFamousSu
   function runFrame(input: HiResFamousFrameInput): HiResFamousFrameOutput {
     if (destroyed) return lastOutput;
 
-    const { cam, catalogs, visibleSourceMask, pxPerRad, famousMeta } = input;
+    const { cam, catalogs, visibleSourceMask, pxPerRad, famousGalaxiesMeta } = input;
 
     byFamousIdx.clear();
 
@@ -172,7 +172,7 @@ export function createHiResFamousSubsystem(deps: HiResFamousDeps): HiResFamousSu
       // the curated 128 px tile.  Without this gate, LRU eviction would
       // wipe the texture-side `failed` flag and we'd re-fetch on every
       // subsequent frame the galaxy spent above the trigger band.
-      const famousId = famousMeta[i]?.id;
+      const famousId = famousGalaxiesMeta[i]?.id;
       if (famousId && failedFamousIds.has(famousId)) {
         byFamousIdx.set(i, { hiResLayerIdx: -1, hiResCrossfadeAlpha: 0 });
         continue;

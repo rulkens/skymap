@@ -9,7 +9,7 @@
  * "single command->ref bridge" the saga documents, instead of two of the three
  * rows (alias, Milky Way) bypassing it with a pre-built ref.
  *
- *   - famous   → the curated seed id ('m31'); `resolveFocusId` scans famousMeta.
+ *   - famous   → the curated seed id ('m31'); `resolveFocusId` scans famousGalaxiesMeta.
  *   - alias    → the shared galaxy-id ladder (`encodeGalaxyId`), which yields
  *                'pgc-<n>' for the GLADE/2MRS PGC the alias row carries. We reuse
  *                that encoder rather than re-spell the 'pgc-' grammar here so the

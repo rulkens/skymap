@@ -7,7 +7,8 @@
  *
  * Holds the observable runtime state the engine reports to the store:
  * lifecycle status, per-source galaxy counts, per-structure counts, load
- * progress, the current scale-bar descriptor, and the focused-body distance.
+ * progress, the current scale-bar descriptor, the focused-body distance, and
+ * the two curated metadata sidecars.
  * Each field is written by a single action creator in `engineSlice`; nothing
  * in this type is computed or derived — derivation is the selector's job.
  *
@@ -33,6 +34,8 @@ import type { SourceType } from '../data/SourceType';
 import type { StructureId } from '../data/structure/StructureId';
 import type { LoadProgressState } from '../loading/LoadProgressState';
 import type { ProvenanceCounts } from '../engine/ProvenanceCounts';
+import type { FamousGalaxyMetaEntry } from '../loading/FamousGalaxyMetaEntry';
+import type { FamousStarMetaEntry } from '../loading/FamousStarMetaEntry';
 
 export type EngineSliceState = {
   status: EngineStatus;
@@ -49,4 +52,34 @@ export type EngineSliceState = {
   structureCounts: Partial<Record<StructureId, number>>;
   provenanceCounts: Partial<Record<SourceType, ProvenanceCounts>>;
   loadProgress: LoadProgressState | null;
+  /**
+   * Curated JSON sidecar payloads that the React layer selects — narrative and
+   * physical metadata not carried in a catalog's binary rows. Each field is
+   * written wholesale by its own asset slot when that sidecar's fetch settles,
+   * and is empty both before the slot settles and after a failed fetch, so no
+   * field needs a separate "loaded" flag beside its array.
+   *
+   * Grouping them keeps the qualifier in the key path instead of repeating it
+   * through every symbol, and gives the next sidecar a home rather than another
+   * flat field on `EngineSliceState`. React-read is the criterion, not
+   * curated-ness: `structures_meta.json` is a curated sidecar too, but the
+   * engine is what consumes it, so its payload lives in `structureStore`.
+   */
+  meta: {
+    /**
+     * Famous-galaxy narrative metadata (`famous_galaxies_meta.json`), written wholesale by
+     * `engineFamousGalaxiesMetaReported` when the sidecar's asset slot settles.
+     * Empty until then, and empty again if the fetch failed — the command palette
+     * lists whatever entries it is handed, so an absent sidecar needs no separate
+     * "loaded" flag beside the array.
+     */
+    readonly famousGalaxies: readonly FamousGalaxyMetaEntry[];
+    /**
+     * Famous-star narrative/physical metadata (`famous_stars_meta.json`), on the
+     * same contract as `famousGalaxies` above: written wholesale by
+     * `engineFamousStarsMetaReported`, empty both before the slot settles and
+     * after a failed fetch, which is the InfoCard's headline-alone path.
+     */
+    readonly famousStars: readonly FamousStarMetaEntry[];
+  };
 };

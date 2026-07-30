@@ -43,6 +43,7 @@ import { SCENE_STARS } from '../../../data/bodies/sceneStars';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
+import { SUN_ENTRY } from '../../../data/sources/sun';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { FAMOUS_LABEL_STYLE } from './famousLabelStyle';
@@ -169,12 +170,15 @@ function bodyLabel(
 export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): ForegroundCaption[] {
   return [
     bodyLabel(SCENE_EARTH, bodyStates.get(SCENE_EARTH.id)!.positionMpc, EARTH_TINT, 'earth'),
-    // The Sun rides the star seed table but is its own caption kind — it must
-    // out-rank every other caption in a declutter collision (CAPTION_PRIORITY).
+    // The Sun rides the star seed table but is its own registry row, so it gets
+    // its own caption kind: the kind is what routes the caption to that row's
+    // label gate, and it must out-rank every other caption in a declutter
+    // collision (CAPTION_PRIORITY). The seed table carries no per-star source
+    // tag, so the row's `id` is the lookup key that tells the two apart.
     // Stars sit at their authored record position (no orbital element), so they
     // read `star.positionMpc` directly rather than the snapshot.
     ...SCENE_STARS.map((star) =>
-      bodyLabel(star, star.positionMpc, star.color, star.id === 'sun' ? 'sun' : 'star'),
+      bodyLabel(star, star.positionMpc, star.color, star.id === SUN_ENTRY.id ? 'sun' : 'star'),
     ),
     ...SCENE_PLANETS.map((planet) =>
       bodyLabel(planet, bodyStates.get(planet.id)!.positionMpc, planet.albedo, 'planet'),

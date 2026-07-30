@@ -45,6 +45,8 @@ import type { Action } from '@reduxjs/toolkit';
 import type { VisibilityLayerKey } from '../../@types/animation/VisibilityLayerKey';
 import type { EngineSettingsState } from '../../@types/settings/EngineSettingsState';
 import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
+import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';
+import type { BodyId } from '../../@types/data/body/BodyId';
 import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import {
@@ -57,6 +59,8 @@ import {
   setConstellationsEnabled,
   setGalaxyCatalogVisible,
   setGalaxyCatalogLabelEnabled,
+  setStarCatalogLabelEnabled,
+  setBodyLabelEnabled,
   setStructureItemEnabled,
   setStructureLabelEnabled,
   writeVolumeField,
@@ -99,6 +103,16 @@ export const VISIBILITY_ACTION_ROW: Record<
   surveyLabel: (on, settings) =>
     Object.keys(settings.galaxyCatalogs.items).map((id) =>
       setGalaxyCatalogLabelEnabled({ id: id as GalaxyCatalogId, enabled: on }),
+    ),
+
+  starCatalogLabel: (on, settings) =>
+    Object.keys(settings.starCatalogs.items).map((id) =>
+      setStarCatalogLabelEnabled({ id: id as StarCatalogId, enabled: on }),
+    ),
+
+  bodyLabel: (on, settings) =>
+    Object.keys(settings.bodies.items).map((id) =>
+      setBodyLabelEnabled({ id: id as BodyId, enabled: on }),
     ),
 
   structureRing: (on, settings) =>

@@ -55,7 +55,7 @@ import {
   updateSelectionHover,
   clearSelection,
 } from '../../../state/selection/selectionSlice';
-import { selectSelectedRef, selectFocusRef } from '../../../state/selection/selectors';
+import { selectSelectedRef, selectHasSelectionIntent } from '../../../state/selection/selectors';
 import { selectOrientation } from '../../../state/settings/selectors';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 
@@ -166,17 +166,18 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // the placeholder `base` (yaw 0, distance 0.43) rather than the computed
   // framing pose, causing a visible camera jump on the first frame.
   //
-  // Boot ordering vs the URL orientation frame: `useUrlSync`'s mount read runs
-  // SYNCHRONOUSLY in a React mount effect and dispatches `setOrientation` for a
-  // `#orientation=<frame>` deep link, whereas this seed runs inside the engine's
-  // ASYNC bootstrap IIFE (after the awaited GPU adapter/device). So the URL frame
-  // is always committed before this `commitCameraPose`, and before the first
-  // produced frame — `runFrame` resolves B(t) from `settings.orientation`, so the
-  // first paint is framed in the URL's frame with no roll (the read snaps via
-  // `setOrientation`, never `requestOrientationChange`, so the frame-roll saga
-  // never fires on arrival). Keep this dispatch on the async side of that
-  // boundary: making bootstrap synchronous with mount, or deferring the URL read
-  // past it, would silently regress the boot frame to the default orientation.
+  // Boot ordering vs the URL orientation frame: `watchHashSaga` holds both halves
+  // of the hash bridge on `sagaContextRegistered`, and `createEngine` dispatches
+  // that (via `setSagaContext`) SYNCHRONOUSLY, before it kicks off the async
+  // bootstrap IIFE this phase runs inside. So the read's `#orientation=<frame>`
+  // `setOrientation` is committed before this `commitCameraPose` and before the
+  // first produced frame — `runFrame` resolves B(t) from `settings.orientation`,
+  // so the first paint is framed in the URL's frame with no roll (the read snaps
+  // via `setOrientation`, never `requestOrientationChange`, so the frame-roll
+  // saga never fires on arrival). The load-bearing gap is registration-before-
+  // bootstrap, not construction-before-bootstrap: moving `setSagaContext` into a
+  // bootstrap phase, or making bootstrap synchronous with engine construction,
+  // would silently regress the boot frame to the default orientation.
   //
   // Three writes, in dependency order:
   //   1. `projection` — read off the assembled camera via `projectionOf`.
@@ -201,15 +202,33 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // No tween is planted: `watchFocusTweenSaga` no-ops for follow-driver bodies,
   // so this focus write never competes with a camera animation.
   //
-  // The seed only fills EMPTY slots. This phase runs asynchronously after React
-  // mounts, and a URL-hash focus with a statically-resolvable id (`body-*`,
-  // milkyWay, structures) lands in the store at mount — before this line runs.
-  // An unconditional seed would clobber that deep link (and useUrlSync would
-  // then rewrite the hash to Earth). Deferred ids (galaxies/stars waiting on a
-  // catalog pulse) resolve after this phase and overwrite the seed — exactly as
-  // they already overwrite the boot pose above.
+  // The seed only fires when there is no selection INTENT at all — resolved or
+  // still in flight. This phase runs asynchronously after the store is built, and
+  // a URL-hash focus with a statically-resolvable id (`body-*`, milkyWay,
+  // structures) lands in the store during `watchHashReadSaga`'s arrival read —
+  // before this line runs. An unconditional seed would clobber that deep link,
+  // and `watchHashWriteSaga` would then publish the seeded state — which composes
+  // no `focus` param at all, Earth being the omitted home target — stripping the
+  // link off the address bar.
+  //
+  // A ref-only guard (`selectSelectedRef`/`selectFocusRef` both null) is not
+  // enough: a galaxy/star id defers until its catalog pulse lands
+  // (`resolveFocusRefDeferring` parks it), so the resolved ref slot reads null
+  // for the whole boot window while `selection.pending.focus` already holds
+  // the requested id. That window is exactly where this phase runs, so a
+  // ref-only guard sees "empty" and seeds Earth over a deep link that is
+  // simply still resolving — `resolveRef` then clears the pending id
+  // unconditionally, destroying the in-flight request along with the seed.
+  // `selectHasSelectionIntent` reads the pending slots too, so a parked
+  // request counts as non-empty and the seed defers to it.
+  //
+  // Accepted consequence: a junk `#focus=zzz` that never resolves parks
+  // forever, which permanently suppresses the Earth seed for that session.
+  // That is inherent to honouring intent over resolved state — the seed
+  // cannot tell "still resolving" from "never will" — and a junk deep link is
+  // already a broken URL.
   const rootState = store.getState();
-  if (selectSelectedRef(rootState) === null && selectFocusRef(rootState) === null) {
+  if (!selectHasSelectionIntent(rootState)) {
     store.dispatch(updateSelectionSelect(EARTH_REF));
     store.dispatch(updateSelectionFocus(EARTH_REF));
   }

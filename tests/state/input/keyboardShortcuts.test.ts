@@ -42,6 +42,7 @@ const selection = (select: SelectionRef | null): SelectionState => ({
   hover: null,
   select,
   focus: null,
+  pending: { select: null, focus: null },
 });
 
 const time = (rateIndex: number, paused: boolean): TimeState => ({

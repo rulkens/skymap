@@ -33,7 +33,7 @@ const EXPECTED = clipRegistry[CLIP_ID].data;
 
 const EMPTY_DEPS: ResolveDeps = {
   catalogs: { get: () => undefined },
-  famousMeta: [],
+  famousGalaxiesMeta: [],
   structures: { byId: () => null },
   stars: { current: () => null },
 };

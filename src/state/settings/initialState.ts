@@ -33,7 +33,6 @@ import {
   DEFAULT_GALAXY_SB_SCALE,
   DEFAULT_GALAXY_SB_MAX,
   DEFAULT_GALAXY_FALLOFF_STRENGTH,
-  DEFAULT_FAMOUS_STARS_ENABLED,
   DEFAULT_MILKY_WAY_ENABLED,
   DEFAULT_MILKY_WAY_LABEL_ENABLED,
   DEFAULT_GALAXY_PROVENANCE,
@@ -80,6 +79,8 @@ import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { StructureItemSettings } from '../../@types/settings/StructureItemSettings';
 import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';
 import type { StarCatalogItemSettings } from '../../@types/settings/StarCatalogItemSettings';
+import type { BodyId } from '../../@types/data/body/BodyId';
+import type { BodyItemSettings } from '../../@types/settings/BodyItemSettings';
 
 export function buildInitialSettings(): EngineSettingsState {
   return {
@@ -186,10 +187,10 @@ export function buildInitialSettings(): EngineSettingsState {
     // `galaxyCatalogs`), so the seed can't drift from the star-catalog set, and
     // each row's `enabled` is seeded from that entry's `visible` field —
     // SOURCE_REGISTRY stays the single source of truth for default visibility.
-    // `labelEnabled` is inert for the survey-wide Gaia bin (the star renderer
-    // draws no per-star names); seeded uniformly true for a future label-bearing
-    // famous-star catalog. Per-row "loaded" is the asset slot's own readiness —
-    // no data-layer store.
+    // `labelEnabled` seeds true for every row: it gates the famous-star map's
+    // captions on the final descent, and rides inertly on the survey-wide Gaia
+    // bin (the star renderer draws no per-star names). Per-row "loaded" is the
+    // asset slot's own readiness — no data-layer store.
     starCatalogs: {
       enabled: true,
       sizePx: DEFAULT_STAR_SIZE_PX,
@@ -207,12 +208,18 @@ export function buildInitialSettings(): EngineSettingsState {
         ]),
       ) as Record<StarCatalogId, StarCatalogItemSettings>,
     },
-    // Famous-stars singleton overlay: the master gate on the seeded near-field
-    // star map. A flat `enabled` field like `milkyWay` / `filaments`, seeded
-    // from the SOURCE_REGISTRY famousStar row's `visible` gate. Gates the seeded
-    // map only — the star layers still draw the Sun alone when it's off.
-    famousStars: {
-      enabled: DEFAULT_FAMOUS_STARS_ENABLED,
+    // Body rows are DERIVED from the registry's body entries, so the seed can't
+    // drift from the body set, and each row's `enabled` comes from that entry's
+    // `visible` field — SOURCE_REGISTRY stays the single source of truth for
+    // default visibility. `labelEnabled` seeds true: the captions are the
+    // descent's navigation aids and show until the user mutes them.
+    bodies: {
+      items: Object.fromEntries(
+        SOURCE_ENTRIES.filter((e) => e.type === 'body').map((e) => [
+          e.id,
+          { enabled: e.visible, labelEnabled: true },
+        ]),
+      ) as Record<BodyId, BodyItemSettings>,
     },
     volumes: {
       enabled: DEFAULT_VOLUMES_ENABLED,
@@ -225,10 +232,7 @@ export function buildInitialSettings(): EngineSettingsState {
     flow: { ...DEFAULT_FLOW },
     // Cross-cutting label presentation: focusedOnly default OFF — all enabled
     // labels draw (the guided tour flips it on and its snapshot restores it).
-    // starLabelsEnabled default ON — the local-star captions show on the final
-    // descent until the user mutes them. planetLabelsEnabled default ON — the
-    // Earth + planet captions show on that same descent until muted.
-    labels: { focusedOnly: false, starLabelsEnabled: true, planetLabelsEnabled: true },
+    labels: { focusedOnly: false },
     debug: {
       showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
       showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,

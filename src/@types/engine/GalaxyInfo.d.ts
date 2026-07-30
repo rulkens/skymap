@@ -286,7 +286,7 @@ export type GalaxyInfo = {
   /**
    * Famous-galaxy enrichment block, present only when `source === Source.FamousGalaxy`.
    *
-   * Populated by `buildGalaxyInfo` from the `famous_meta.json` sidecar loaded
+   * Populated by `buildGalaxyInfo` from the `famous_galaxies_meta.json` sidecar loaded
    * at engine startup.  Absent (`undefined`) for SDSS / 2MRS / GLADE / Synthetic
    * rows — those never have curated metadata.
    */

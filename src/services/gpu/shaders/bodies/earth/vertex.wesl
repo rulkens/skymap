@@ -1,10 +1,11 @@
 // earth/vertex.wesl — vertex stage for the true-scale textured Earth.
 //
-// Identical projection wiring to 'star/vertex.wesl' and
-// 'texturedBody/vertex.wesl': multiply each unit-sphere local position by the
-// combined MVP from 'LitBodyUniforms'. The Earth is now lit, so the fragment
-// needs the surface normal in the body's local frame -- and on a unit sphere
-// the local position IS that normal, so it is forwarded unchanged alongside the
+// Identical projection wiring to 'star/vertex.wesl': multiply each unit-sphere
+// local position by the combined MVP from 'LitBodyUniforms'. (The textured
+// bodies share the mesh but inflate it into a ray-tracing proxy, so their
+// vertex stage is no longer a twin of this one.) The Earth is lit, so the
+// fragment needs the surface normal in the body's local frame -- and on a unit
+// sphere the local position IS that normal, so it is forwarded alongside the
 // mesh's equirectangular uv (which the fragment samples the Blue Marble at).
 //
 // ## Bindings

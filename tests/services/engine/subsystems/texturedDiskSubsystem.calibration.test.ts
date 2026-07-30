@@ -27,7 +27,7 @@ import { fallbackOrientation } from '../../../../src/utils/random/fallbackOrient
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
-import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaEntry';
+import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/FamousGalaxyMetaEntry';
 import type { FamousCalibration } from '../../../../src/@types/loading/FamousCalibration';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 
@@ -90,7 +90,7 @@ function makeCam(): OrbitCamera {
 
 function makeInput(
   catalogs: Map<SourceType, GalaxyCatalog>,
-  famousMeta: FamousMetaEntry[] = [],
+  famousGalaxiesMeta: FamousGalaxyMetaEntry[] = [],
   mask = 0xffffffff,
 ) {
   const cam = makeCam();
@@ -99,7 +99,7 @@ function makeInput(
     catalogs,
     visibleSourceMask: mask,
     pxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
-    famousMeta,
+    famousGalaxiesMeta,
     nowMs: 0,
     // Live surface-brightness sliders, needed by the procedural body's
     // frame input; the textured body ignores them.
@@ -109,9 +109,9 @@ function makeInput(
   };
 }
 
-/** One famousMeta record carrying a calibration at local index `idx`. */
-function metaWithCalibration(idx: number, calibration: FamousCalibration): FamousMetaEntry[] {
-  const out: FamousMetaEntry[] = [];
+/** One famousGalaxiesMeta record carrying a calibration at local index `idx`. */
+function metaWithCalibration(idx: number, calibration: FamousCalibration): FamousGalaxyMetaEntry[] {
+  const out: FamousGalaxyMetaEntry[] = [];
   for (let i = 0; i <= idx; i++) {
     out[i] = {
       id: `g${i}`,
@@ -129,7 +129,11 @@ function metaWithCalibration(idx: number, calibration: FamousCalibration): Famou
  * single emitted DiskInstance.  The harness builds one calibrated row at
  * index 0 of a 1-row cloud so the sort order is unambiguous.
  */
-async function emitOne(source: SourceType, cloud: GalaxyCatalog, famousMeta: FamousMetaEntry[]) {
+async function emitOne(
+  source: SourceType,
+  cloud: GalaxyCatalog,
+  famousGalaxiesMeta: FamousGalaxyMetaEntry[],
+) {
   const device = makeFakeDevice();
   const fetcher = vi.fn(async () => makeFakeBitmap());
   const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
@@ -140,9 +144,9 @@ async function emitOne(source: SourceType, cloud: GalaxyCatalog, famousMeta: Fam
     fetcher,
   });
   const clouds = new Map([[source, cloud]]);
-  runTexturedSolo(walk, sys, makeInput(clouds, famousMeta));
+  runTexturedSolo(walk, sys, makeInput(clouds, famousGalaxiesMeta));
   await new Promise((r) => setTimeout(r, 0));
-  const out = runTexturedSolo(walk, sys, makeInput(clouds, famousMeta));
+  const out = runTexturedSolo(walk, sys, makeInput(clouds, famousGalaxiesMeta));
   return out.disks;
 }
 

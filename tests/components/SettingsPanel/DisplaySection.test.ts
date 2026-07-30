@@ -44,6 +44,8 @@ function baseProps(overrides?: Partial<DisplaySectionProps>): DisplaySectionProp
     onOrientationChange: vi.fn<(frame: OrientationFrameId) => void>(),
     toneMapCurve: ToneMapCurve.Reinhard as ToneMapCurveT,
     onToneMapCurveChange: vi.fn<(curve: ToneMapCurveT) => void>(),
+    exposure: 3.0,
+    onExposureChange: vi.fn<(next: number) => void>(),
     bloomEnabled: true,
     onBloomEnabledChange: vi.fn<(next: boolean) => void>(),
     bloomStrength: 0.85,
