@@ -18,6 +18,9 @@
  *   bakeBias       — re-computes the galaxy brightness bias LUT
  *   logCameraState — prints the current orbit-camera pose (debug aid, the
  *                    `l` key)
+ *   applySwapFormat — reconfigures the swap chain to the given format and
+ *                    rebuilds the renderers whose pipelines bake it (the HDR
+ *                    display toggle and display-capability changes)
  *
  * This boundary is kept deliberately small: the tour's scene capture is a pure
  * store read (`captureScene` selector) and its restore is pure Intent
@@ -35,4 +38,5 @@ export type ReconcileEffects = {
   reseedFlow: () => void;
   bakeBias: (mode: BiasMode) => void;
   logCameraState: () => void;
+  applySwapFormat: (desired: GPUTextureFormat) => void;
 };

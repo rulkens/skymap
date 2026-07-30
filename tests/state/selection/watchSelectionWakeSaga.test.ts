@@ -31,6 +31,7 @@ describe('watchSelectionWakeSaga', () => {
       reseedFlow: vi.fn(),
       bakeBias: vi.fn(),
       logCameraState: vi.fn(),
+      applySwapFormat: vi.fn(),
     };
     mw.setContext({ reconcile });
     return s;

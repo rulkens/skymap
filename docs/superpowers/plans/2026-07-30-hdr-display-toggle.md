@@ -366,19 +366,23 @@ The saga takes `setHdrEnabled` **and** `engineHdrCapabilityChanged`, computes
 the store, and hands it over. Both triggers matter: capability can change without the
 setting changing (spec D2).
 
-- [ ] Read `watchFlowReseedSaga.ts` and `ReconcileEffects.ts` and match their shape,
+- [x] Read `watchFlowReseedSaga.ts` and `ReconcileEffects.ts` and match their shape,
       including how the engine registers the closure after construction.
-- [ ] Add the test `the saga asks for rgba16float when the toggle turns on with a capable display`
+- [x] Add the test `the saga asks for rgba16float when the toggle turns on with a capable display`
       — assert the `applySwapFormat` spy on a stub `ReconcileEffects`.
-- [ ] Add the test `losing display capability while enabled asks for the preferred format`
+- [x] Add the test `losing display capability while enabled asks for the preferred format`
       — the D2 interaction, and the case a naive "watch settings only" saga misses.
-- [ ] Add the test `applySwapFormat is a no-op when the desired format already matches` —
+- [x] Add the test `applySwapFormat is a no-op when the desired format already matches` —
       the guard that keeps a repeated dispatch from rebuilding eight pipelines. Assert
       `context.configure` was not called.
-- [ ] Implement. Order matters: reconfigure before the rebuild, because the rebuild's
+- [x] Implement. Order matters: reconfigure before the rebuild, because the rebuild's
       pipelines must target the format the swap chain now has.
-- [ ] `npm test`, `npm run typecheck`, `npm run lint`.
-- [ ] Commit.
+- [x] **Not in the plan, found during execution:** `initGpu` dispatches
+      `engineHdrCapabilityChanged` (`:133`) long before it assigns `renderTargets`
+      (`:179`) or `uiCtx` (`:220`), so the boot dispatch reaches `applySwapFormat` with
+      both null. Guarded engine-side, with a test.
+- [x] `npm test`, `npm run typecheck`, `npm run lint`.
+- [x] Commit.
 
 ---
 
