@@ -1009,18 +1009,49 @@ visible on every descent. Re-tag and fix: have the planner emit each leaf's ance
 down to the session floor, which is about a third more requests since the ancestors are a
 geometric series.
 
-### UNRESOLVED: "z5 and z6 seem to render tiles from z7"
+### RESOLVED: "z5 and z6 seem to render tiles from z7" — the coarsening never averaged
 
-Reported from the browser and not reproduced. The probe says a cell's claimed level and the
-tile in its slot always agree, which is exactly what would have to be false for shallower
-levels to sample finer content. Left open pending a re-check now that the hue map is known:
-does a magenta area show detail finer than a z5 tile should carry? If yes it is a separate
-bug from the ancestor gap.
+The report was right and the runtime was innocent. `bakeCoarserLevel` produced every coarse
+tile as a 1:1 COPY of its north-west child rather than the 2 x 2 average of four, so a z6
+tile painted its NW z7 child's pixels over four times the ground and a z5 tile over sixteen.
+That is also the earlier "tiles are in the wrong locations at z6 and z5"; one cause, two
+reports. z7 was correct throughout because it bakes straight from the source and never
+enters the coarsening path.
+
+The mechanism is `sharp`, not arithmetic: it composites over the ALREADY-PROCESSED image, so
+the `.composite(four 512s at offsets 0/512).resize(512, 512)` chain shrank the 1024 canvas
+FIRST and then laid the children down. The one at offset (0,0) covered the whole shrunk
+canvas 1:1; the three at offset 512 fell outside a 512-wide canvas and libvips clipped them.
+Nothing errored, and sharp's own guard could not catch it — it rejects an overlay LARGER than
+the base, and 512 is not larger than 512.
+
+Confirmed two ways before touching anything: an isolated repro of the exact call shape with
+four solid colours returned the NW colour in all four quadrants, and on disk `z5/16/10` sat
+0.011 mean-abs-diff per channel from `z7/64/40` sampled at 1:1 against 0.676 from the correct
+average.
+
+Fixed by shrinking each child to `tilePx / 2` in its own pipeline and compositing the four at
+`tilePx / 2` offsets, so no `resize` sits in the composite pipeline at all — structurally
+immune rather than merely reordered. Pinned by `tests/tools/textures/buildEarthTiles.test.ts`,
+whose two cases both fail on the old implementation: quadrant colours, and the coastal case
+where a parent missing its NW child used to come out entirely transparent.
+
+Two lessons worth carrying, both about the verification rather than the bug:
+
+- **The geographic check that cleared these levels earlier could not have caught it.** The NW
+  child covers the parent's north-west corner, so "does the coastline look like Siberia" is
+  true of the wrong pixels too. Detecting a scale error needs a quadrant-vs-quadrant pixel
+  comparison against distinct known colours, which is what the new test does.
+- **Verifying the addressing chain proved the wrong layer.** The transcription that found zero
+  mismatches was correct and remains correct: the page table names the right tile, the shader
+  resolves the right slot. The pixels inside that tile were wrong, which no amount of
+  addressing arithmetic can see.
 
 ### Still owed
 
-- Re-bake for z3/z4. The floor fix is committed but not run, so `manifest.json` still says
-  `min: 5` and medium-tier sessions keep the z4 hole. The bake creates new directories, so it
-  needs a dev-server restart after.
+- Re-bake, now for two reasons in one pass: z5 and z6 on disk carry the wrong pixels (the
+  NW-child copy above), and the floor fix is committed but never run, so `manifest.json` still
+  says `min: 5` and medium-tier sessions keep the z4 hole. The bake creates new directories, so
+  it needs a dev-server restart after — otherwise Vite answers z3 and z4 with `text/html`.
 - Delete `public/data/images/earth-tiles.december-z5-backup` once August is confirmed good.
 - The eight quadrant symlinks in this worktree's `data/raw/textures/` point at main's copies.

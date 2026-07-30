@@ -35,9 +35,16 @@
  * shipped quadrant set z7, so both run the coarsening loop, down to the bake
  * floor either way.
  *
- * The 2 x 2 average is `sharp`'s own resize at an exact factor of two, which
- * libvips serves with an integer block shrink — a plain average of each 2 x 2
- * group, no kernel weighting. Re-encoding a WebP per level does accumulate
+ * The 2 x 2 average is `sharp`'s own resize at an exact factor of two, applied
+ * to each child independently before the four are composited onto the parent
+ * canvas — libvips serves an exact halving with an integer block shrink, a
+ * plain average of each 2 x 2 group, no kernel weighting, and that holds
+ * per-child exactly because a 2 x 2 group never straddles a child boundary. The
+ * shrink cannot instead run once, after assembly, in the same pipeline as the
+ * composite: `sharp` composites over the already-processed image, so a `resize`
+ * chained after a `composite` call runs FIRST, and every overlay not already at
+ * the canvas origin lands outside the shrunk frame and is dropped with no
+ * error (`bakeCoarserLevel`). Re-encoding a WebP per level does accumulate
  * generation loss down the pyramid, and that is the accepted price of never
  * materialising a level in memory; the coarse levels are also the ones the
  * planner requests when the ground is far away and small on screen.
@@ -209,7 +216,20 @@ async function bakeDeepestLevel(
  * Child `(2x + i, 2y + j)` at `z + 1` occupies the `(i, j)` quadrant of the
  * parent, with `j = 0` on top: `y` increases south in the grid AND rows run
  * north-first inside a tile, so the two agree and the quadrant offsets are the
- * plain product of the child index and the tile edge.
+ * plain product of the child index and the HALF tile edge (below).
+ *
+ * Each child is shrunk to `tilePx / 2` on its own, before it ever meets the
+ * parent canvas, and the four are then composited onto a `tilePx` canvas at
+ * offsets of `tilePx / 2` — there is no `resize` anywhere in the composite
+ * pipeline. That is a correctness requirement, not a style choice: `sharp`
+ * composites over the ALREADY-PROCESSED image, so a `.resize()` chained after a
+ * `.composite()` in one pipeline runs FIRST regardless of call order, and every
+ * off-origin overlay lands outside the now-shrunk canvas and is clipped with no
+ * error. (Shrinking the assembled 2 x 2 mosaic and shrinking each quadrant
+ * independently agree pixel-for-pixel here only because the halving is exact —
+ * libvips serves it as an integer block shrink, and a 2 x 2 pixel group never
+ * straddles a child boundary — so per-child shrinking is free to take instead
+ * of the pipeline that silently drops three quadrants in four.)
  *
  * A parent with no children at all is not written. A parent with SOME children
  * is written with the missing quadrants transparent, so a coastal tile at a
@@ -218,14 +238,19 @@ async function bakeDeepestLevel(
  *
  * Returns the relative paths written.
  */
-async function bakeCoarserLevel(z: number, tilePx: number, outDir: string): Promise<string[]> {
+export async function bakeCoarserLevel(
+  z: number,
+  tilePx: number,
+  outDir: string,
+): Promise<string[]> {
   const columns = earthTileColumns(z, tilePx);
   const rows = columns / 2;
+  const halfPx = tilePx / 2;
   const written: string[] = [];
 
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < columns; x++) {
-      const quadrants = [
+      const childPaths = [
         { i: 0, j: 0 },
         { i: 1, j: 0 },
         { i: 0, j: 1 },
@@ -233,27 +258,37 @@ async function bakeCoarserLevel(z: number, tilePx: number, outDir: string): Prom
       ]
         .map(({ i, j }) => ({
           input: join(outDir, earthTilePath({ kind: KIND, z: z + 1, x: 2 * x + i, y: 2 * y + j })),
-          left: i * tilePx,
-          top: j * tilePx,
+          left: i * halfPx,
+          top: j * halfPx,
         }))
-        .filter((quadrant) => existsSync(quadrant.input));
-      if (quadrants.length === 0) continue;
+        .filter((child) => existsSync(child.input));
+      if (childPaths.length === 0) continue;
+
+      // Each child is read, ensured to four channels (a fully-opaque WebP may
+      // have lost its alpha PLANE on the way in, per `writeTile`) and shrunk to
+      // half the tile edge in its own pipeline, so nothing here ever chains a
+      // resize after a composite.
+      const quadrants = await Promise.all(
+        childPaths.map(async ({ input, left, top }) => ({
+          input: await sharp(input).ensureAlpha().resize(halfPx, halfPx).raw().toBuffer(),
+          raw: { width: halfPx, height: halfPx, channels: 4 as const },
+          left,
+          top,
+        })),
+      );
 
       const relPath = earthTilePath({ kind: KIND, z, x, y });
       const outPath = join(outDir, relPath);
       mkdirSync(dirname(outPath), { recursive: true });
       await sharp({
         create: {
-          width: 2 * tilePx,
-          height: 2 * tilePx,
+          width: tilePx,
+          height: tilePx,
           channels: 4,
           background: { r: 0, g: 0, b: 0, alpha: 0 },
         },
       })
         .composite(quadrants)
-        // An exact halving, which libvips serves as an integer block shrink:
-        // each output texel is the plain average of its 2 x 2 group.
-        .resize(tilePx, tilePx)
         .webp({ quality: WEBP_QUALITY })
         .toFile(outPath);
       written.push(relPath);
