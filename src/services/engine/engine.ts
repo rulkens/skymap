@@ -88,7 +88,7 @@ import { createClipPathInspector } from './subsystems/clipPathInspector';
 import { CONTENT_LAYERS } from './frame/passes';
 import { logCameraState } from './helpers/logCameraState';
 import { engineStatusChanged } from '../../state/engine/engineSlice';
-import { selectFamousMeta } from '../../state/engine/selectors';
+import { selectFamousGalaxiesMeta } from '../../state/engine/selectors';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { PgcAliasMap } from '../../@types/loading/PgcAliasMap';
 import type { RequestKey } from '../../@types/loading/RequestKey';
@@ -258,14 +258,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     get selectionRows() {
       return store.getState().selectionRows;
     },
-    // `state.famousMeta` delegates to the Redux `engine` slice — the same
-    // single-seam pattern as `settings`/`tier`/`selection`/`selectionRows`.
-    // `famousMetaSlot`'s dispatch is the sole writer; per-frame readers
-    // (hi-res famous subsystem, textured-disk subsystem, ring-layer pass,
-    // `produceFamousLabels`) reach the store here, with no engine-side
+    // `state.famousGalaxiesMeta` delegates to the Redux `engine` slice — the
+    // same single-seam pattern as `settings`/`tier`/`selection`/`selectionRows`.
+    // The famous-galaxies meta slot's dispatch is the sole writer; per-frame
+    // readers (hi-res famous subsystem, textured-disk subsystem, ring-layer
+    // pass, `produceFamousLabels`) reach the store here, with no engine-side
     // mirror to drift.
-    get famousMeta() {
-      return selectFamousMeta(store.getState());
+    get famousGalaxiesMeta() {
+      return selectFamousGalaxiesMeta(store.getState());
     },
     // Per-type data stores. Empty at construction; slot commits fill them.
     data: createEngineData(),
@@ -513,7 +513,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // close over GPU handles (renderer, filamentRenderer,
     // volumeFieldRenderer) for their commit step, all null until initGpu
     // resolves.  Minting them all in one IIFE pass keeps the lifecycle
-    // uniform — even the GPU-handle-free slots (famousMeta, pgcAlias) are
+    // uniform — even the GPU-handle-free slots (famousGalaxiesMeta, pgcAlias) are
     // born there.
     assetSlots: {
       points: new Map(),
@@ -521,7 +521,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // initGpu minting; the star slot's commit null-guards the renderer.
       starCatalogs: new Map(),
       filaments: null,
-      famousMeta: null,
+      famousGalaxiesMeta: null,
       famousStarsMeta: null,
       structureCatalog: null,
       pgcAlias: null,
@@ -638,7 +638,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     catalogs: {
       get: (source: GalaxyCatalogSourceType) => state.data.galaxies.catalogs.get(source),
     },
-    famousMeta: state.famousMeta,
+    famousGalaxiesMeta: state.famousGalaxiesMeta,
     structures: { byId: (id) => state.data.structures.byId(id) },
     // The sole loaded star catalog — the first (only, in v1) committed Gaia
     // catalog off the renderer, or null before the star cloud lands or after

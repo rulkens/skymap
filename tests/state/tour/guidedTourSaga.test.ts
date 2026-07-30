@@ -59,7 +59,7 @@ const CAMERA_RUNTIME: LiveCameraRuntime = {
 // true and waitUntil exits on the first synchronous check.
 const immediateDeps: ResolveDeps = {
   catalogs: { get: () => undefined },
-  famousMeta: [],
+  famousGalaxiesMeta: [],
   structures: { byId: () => null },
   stars: { current: () => null },
 };

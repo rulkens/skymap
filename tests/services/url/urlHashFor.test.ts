@@ -76,7 +76,7 @@ describe('URL_HASH_FOR', () => {
     };
     const deps: ResolveDeps = {
       catalogs: { get: () => undefined },
-      famousMeta: [],
+      famousGalaxiesMeta: [],
       structures: { byId: () => null },
       stars: { current: () => null },
     };

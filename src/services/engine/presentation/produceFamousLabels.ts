@@ -1,7 +1,8 @@
 /**
  * produceFamousLabels — per-frame text labels for the curated famous galaxies,
  * derived from the famous `.bin` catalog in `galaxyStore` joined with the
- * `famousMeta` sidecar read off `state.famousMeta` (the engine slice).
+ * famous-galaxies meta sidecar read off `state.famousGalaxiesMeta` (the
+ * engine slice).
  *
  * Famous galaxies are galaxy data, not structures — their anchor is the galaxy
  * point itself, they emit no ring/halo marker, and their label visibility lives
@@ -20,9 +21,9 @@
  *
  * ### Meta ⋈ catalog alignment
  *
- * `famous.bin` is built in lock-step with `famous_meta.json` (same ordering),
+ * `famous.bin` is built in lock-step with `famous_galaxies_meta.json` (same ordering),
  * so meta entry at index `i` maps to catalog row `i`. The Milky Way is a
- * first-class FocusableTarget, not a famous-meta row, so it never appears here;
+ * first-class FocusableTarget, not a famous-galaxies-meta row, so it never appears here;
  * `produceMilkyWayLabel` labels the user's own position separately.
  *
  * ### galaxy-layer opacity × uniform focus recession bakes into fadeAlpha
@@ -63,7 +64,7 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { LabelProducerOutput } from '../../../@types/engine/subsystems/LabelProducerOutput';
-import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
+import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import { Source } from '../../../data/sources';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
@@ -131,11 +132,11 @@ type FamousLabelInput = {
 
 /**
  * Zip the meta sidecar with the famous catalog rows into label inputs. The
- * meta array is loaded from `famous_meta.json` in lock-step with `famous.bin`,
+ * meta array is loaded from `famous_galaxies_meta.json` in lock-step with `famous.bin`,
  * so row `i` of the meta maps to row `i` of the catalog.
  */
 function deriveFamousLabelInputs(
-  meta: readonly FamousMetaEntry[],
+  meta: readonly FamousGalaxyMetaEntry[],
   catalog: Pick<GalaxyCatalog, 'count' | 'positions' | 'diameterKpc'>,
 ): FamousLabelInput[] {
   const out: FamousLabelInput[] = [];
@@ -177,7 +178,7 @@ export function produceFamousLabels(
     return empty;
   }
 
-  const meta = state.famousMeta;
+  const meta = state.famousGalaxiesMeta;
   const catalog = galaxies.get(Source.FamousGalaxy);
   if (meta.length === 0 || catalog === undefined || catalog.count === 0) return empty;
 

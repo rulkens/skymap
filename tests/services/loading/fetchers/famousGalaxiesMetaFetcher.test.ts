@@ -1,27 +1,27 @@
 import { describe, expect, it } from 'vitest';
 import {
-  famousMetaFetcher,
-  parseFamousMeta,
-} from '../../../../src/services/loading/fetchers/famousMetaFetcher';
+  famousGalaxiesMetaFetcher,
+  parseFamousGalaxiesMeta,
+} from '../../../../src/services/loading/fetchers/famousGalaxiesMetaFetcher';
 import { useFetchMock } from '../../../setup/fetchMock';
 
-describe('parseFamousMeta', () => {
+describe('parseFamousGalaxiesMeta', () => {
   it('parses valid array', () => {
     expect(
-      parseFamousMeta('[{"id":"x","names":["X"],"description":"","type":"galaxy"}]'),
+      parseFamousGalaxiesMeta('[{"id":"x","names":["X"],"description":"","type":"galaxy"}]'),
     ).toHaveLength(1);
   });
   it('throws on non-array root', () => {
-    expect(() => parseFamousMeta('{}')).toThrow();
+    expect(() => parseFamousGalaxiesMeta('{}')).toThrow();
   });
 });
 
-describe('famousMetaFetcher', () => {
+describe('famousGalaxiesMetaFetcher', () => {
   const fetch = useFetchMock();
 
-  it('fetches famous_meta.json and returns the parsed payload', async () => {
+  it('fetches famous_galaxies_meta.json and returns the parsed payload', async () => {
     fetch.mock.mockResolvedValueOnce(new Response('[]', { status: 200 }));
-    const payload = await famousMetaFetcher(
+    const payload = await famousGalaxiesMetaFetcher(
       { tier: 'medium' },
       new AbortController().signal,
       () => {},
@@ -32,14 +32,14 @@ describe('famousMetaFetcher', () => {
   it('rejects on a non-2xx HTTP status', async () => {
     fetch.mock.mockResolvedValue(new Response('boom', { status: 500 }));
     await expect(
-      famousMetaFetcher({ tier: 'medium' }, new AbortController().signal, () => {}),
+      famousGalaxiesMetaFetcher({ tier: 'medium' }, new AbortController().signal, () => {}),
     ).rejects.toThrow();
   });
 
   it('rejects when the JSON body is malformed', async () => {
     fetch.mock.mockResolvedValueOnce(new Response('not-json', { status: 200 }));
     await expect(
-      famousMetaFetcher({ tier: 'medium' }, new AbortController().signal, () => {}),
+      famousGalaxiesMetaFetcher({ tier: 'medium' }, new AbortController().signal, () => {}),
     ).rejects.toThrow();
   });
 
@@ -53,14 +53,12 @@ describe('famousMetaFetcher', () => {
     fetch.mock.mockImplementation((_url, init) => {
       const sig = (init as RequestInit | undefined)?.signal;
       if (sig?.aborted) {
-        return Promise.reject(
-          new DOMException('The operation was aborted.', 'AbortError'),
-        );
+        return Promise.reject(new DOMException('The operation was aborted.', 'AbortError'));
       }
       return Promise.resolve(new Response('[]', { status: 200 }));
     });
     await expect(
-      famousMetaFetcher({ tier: 'medium' }, controller.signal, () => {}),
+      famousGalaxiesMetaFetcher({ tier: 'medium' }, controller.signal, () => {}),
     ).rejects.toThrow();
   });
 });

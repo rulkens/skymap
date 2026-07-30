@@ -7,7 +7,7 @@
  * demand loop decide what actually loads:
  *
  *   1. `buildSlotsFromRegistry` — construct every non-external slot from
- *      `ASSET_WIRING` (sidecars: filaments, famous-meta, cluster catalog,
+ *      `ASSET_WIRING` (sidecars: filaments, famous-galaxies-meta, cluster catalog,
  *      PGC alias, CF-4 + MCPM volumes). Pure: no state writes, no loads.
  *   2. `installSlots` — the single mutation site that writes each built slot
  *      onto its named `state.assetSlots` field.
@@ -37,7 +37,7 @@
  *
  * ### State writes
  *
- *   - `state.assetSlots.{filaments,famousMeta,structureCatalog,pgcAlias,
+ *   - `state.assetSlots.{filaments,famousGalaxiesMeta,structureCatalog,pgcAlias,
  *     cf4Density,mcpm,flow}` (via `installSlots`) + `.syntheticVolumes` (DEV).
  *   - `state.subsystems.{loadProgress, structures}` + the impostor subsystem handles.
  *   - `state.requests` may gain `'syntheticFallback'` (via the gate).
@@ -126,7 +126,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
 
   // The single place loads start: walk the wiring registry and trigger every
   // demanded slot with its tier-derived request.  At boot this loads the
-  // default-visible galaxy catalogs + famous-meta + the default-on MCPM volume +
+  // default-visible galaxy catalogs + famous-galaxies-meta + the default-on MCPM volume +
   // the cluster catalog; filaments / CF-4 / PGC-alias stay idle until their
   // demand flips.  The same loop re-runs on every state change.
   reevaluateDemand(state);

@@ -1,17 +1,18 @@
 /**
- * famousMetaSlot — factory for the famous-galaxy meta sidecar.
+ * createFamousGalaxiesMetaSlot — factory for the famous-galaxy meta sidecar.
  *
- * Carries `famous_meta.json` through the standard asset-slot machinery, the
+ * Carries `famous_galaxies_meta.json` through the standard asset-slot machinery, the
  * galaxy twin of `famousStarsMetaSlot`. The two curated sources — the famous
  * galaxies and the famous stars — load their sidecars by the same path, so
  * neither has a bespoke fetch to reason about.
  *
  * No `commit` step: there's nothing GPU-side to upload — the payload is pure
  * metadata. The subscriber reports it to the engine slice
- * (`engineFamousMetaReported`), which is the one home for the payload: the
- * command palette reads it through `selectFamousMeta`, and the engine reads
- * it each frame through the `state.famousMeta` getter (label production,
- * textured and hi-res disk subsystems, the radius ring). The InfoCard's
+ * (`engineFamousGalaxiesMetaReported`), which is the one home for the
+ * payload: the command palette reads it through `selectFamousGalaxiesMeta`,
+ * and the engine reads it each frame through the `state.famousGalaxiesMeta`
+ * getter (label production, textured and hi-res disk subsystems, the radius
+ * ring). The InfoCard's
  * famous-galaxy text takes the engine-side route instead, via the
  * `selectionRows` slice. The render wake is `installSlotReadyWake`'s job, not
  * the factory's.
@@ -24,26 +25,29 @@
  */
 
 import { createAssetSlot } from '../AssetSlot';
-import { famousMetaFetcher } from '../fetchers/famousMetaFetcher';
-import { engineFamousMetaReported } from '../../../state/engine/engineSlice';
-import type { FamousPayload } from '../../../@types/loading/FamousPayload';
+import { famousGalaxiesMetaFetcher } from '../fetchers/famousGalaxiesMetaFetcher';
+import { engineFamousGalaxiesMetaReported } from '../../../state/engine/engineSlice';
+import type { FamousGalaxiesPayload } from '../../../@types/loading/FamousGalaxiesPayload';
 import type { CompanionAssetReq } from '../../../@types/loading/CompanionAssetReq';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 
-export const createFamousMetaSlot: SlotFactory<FamousPayload, CompanionAssetReq> = (_state, cb) => {
+export const createFamousGalaxiesMetaSlot: SlotFactory<FamousGalaxiesPayload, CompanionAssetReq> = (
+  _state,
+  cb,
+) => {
   const slot = createAssetSlot({
-    name: 'famous-meta',
-    fetch: famousMetaFetcher,
+    name: 'famous-galaxies-meta',
+    fetch: famousGalaxiesMetaFetcher,
   });
   slot.subscribe((s) => {
     if (s.kind === 'ready') {
-      cb.store.dispatch(engineFamousMetaReported(s.value.meta));
+      cb.store.dispatch(engineFamousGalaxiesMetaReported(s.value.meta));
     }
     if (s.kind === 'error') {
       // The slice already defaults to `[]`, but reporting it again here is
       // explicit about the contract: a missing sidecar disables enriched
       // InfoCard text and keeps the engine functional.
-      cb.store.dispatch(engineFamousMetaReported([]));
+      cb.store.dispatch(engineFamousGalaxiesMetaReported([]));
       console.warn('[engine] famous sidecar failed to load:', s.error);
     }
   });

@@ -65,7 +65,7 @@ import type { SourceType } from '../../../../src/@types/data/SourceType';
 //
 // Replace every fetcher with a no-op resolved Promise.  None of our
 // tests trigger an actual network request — the slots whose `.load()`
-// fires inside wireSlots (famousMeta, filaments, cf4Density) need a
+// fires inside wireSlots (famousGalaxiesMeta, filaments, cf4Density) need a
 // fetcher that resolves quickly so the slot transitions to `ready`
 // without timing out the test.  We don't care about the value because
 // no commit step (here) reads it; the slots that have a commit are
@@ -90,8 +90,8 @@ vi.mock('../../../../src/services/loading/fetchers/filamentFetcher', () => ({
   })),
 }));
 
-vi.mock('../../../../src/services/loading/fetchers/famousMetaFetcher', () => ({
-  famousMetaFetcher: vi.fn(async () => ({ meta: [] })),
+vi.mock('../../../../src/services/loading/fetchers/famousGalaxiesMetaFetcher', () => ({
+  famousGalaxiesMetaFetcher: vi.fn(async () => ({ meta: [] })),
 }));
 
 // famousStarsMeta demands unconditionally at boot (like bodyTextureAtlas
@@ -228,7 +228,7 @@ vi.mock('../../../../src/services/engine/subsystems/loadProgressAggregator', () 
 
 // Imported AFTER the mocks so wireSlots picks them up.
 import { wireSlots } from '../../../../src/services/engine/phases/wireSlots';
-import { famousMetaFetcher } from '../../../../src/services/loading/fetchers/famousMetaFetcher';
+import { famousGalaxiesMetaFetcher } from '../../../../src/services/loading/fetchers/famousGalaxiesMetaFetcher';
 import { structureCatalogFetcher } from '../../../../src/services/loading/fetchers/structureCatalogFetcher';
 import { mcpmFetcher } from '../../../../src/services/loading/fetchers/mcpmFetcher';
 import { filamentFetcher } from '../../../../src/services/loading/fetchers/filamentFetcher';
@@ -284,7 +284,7 @@ function makeFakeSlot(name: string): FakeSlot {
 /**
  * Build a boot-shaped points map: SDSS/2MRS/GLADE galaxy catalog fakes left idle
  * (still "loading" — they never fire), plus a Famous fake pre-fired to
- * `loading` so the famous-meta demand predicate (`slotState(Famous) !== 'idle'`)
+ * `loading` so the famous-galaxies-meta demand predicate (`slotState(Famous) !== 'idle'`)
  * reads true.  Idle galaxy catalog fakes keep the synthetic-fallback gate waiting
  * rather than arming + re-running demand — the live-boot shape.
  */
@@ -476,7 +476,7 @@ function makeState(
       // slots here, so the fixture must carry the destination.
       starCatalogs: new Map(),
       filaments: null,
-      famousMeta: null,
+      famousGalaxiesMeta: null,
       structureCatalog: null,
       pgcAlias: null,
       cf4Density: null,
@@ -617,9 +617,9 @@ describe('wireSlots', () => {
     expect(opacityFor({ kind: 'labelLayer', layer: 'scaleBar' })).toBe(1);
   });
 
-  it('demand loop loads the default boot sidecar set (mcpm + structureCatalog + famousMeta) and not the off-by-default ones', async () => {
+  it('demand loop loads the default boot sidecar set (mcpm + structureCatalog + famousGalaxiesMeta) and not the off-by-default ones', async () => {
     // Boot parity: the old imperative boot loop loaded MCPM (default-on volume)
-    // + the cluster catalog (structures visible) + famous-meta but left
+    // + the cluster catalog (structures visible) + famous-galaxies-meta but left
     // filaments (off), CF-4 density (off) and the lazy PGC alias idle.  After
     // the refactor those loads come from reevaluateDemand reading the
     // construction-seeded state — same outcome.  Each sidecar's load is
@@ -627,7 +627,7 @@ describe('wireSlots', () => {
     // module-scoped mocks persist across tests.
     vi.mocked(mcpmFetcher).mockClear();
     vi.mocked(structureCatalogFetcher).mockClear();
-    vi.mocked(famousMetaFetcher).mockClear();
+    vi.mocked(famousGalaxiesMetaFetcher).mockClear();
     vi.mocked(filamentFetcher).mockClear();
     vi.mocked(cf4DensityFetcher).mockClear();
     vi.mocked(pgcAliasFetcher).mockClear();
@@ -642,7 +642,7 @@ describe('wireSlots', () => {
     // Default-on / structures-visible / famous-loading ⇒ fetched.
     expect(mcpmFetcher).toHaveBeenCalled();
     expect(structureCatalogFetcher).toHaveBeenCalled();
-    expect(famousMetaFetcher).toHaveBeenCalled();
+    expect(famousGalaxiesMetaFetcher).toHaveBeenCalled();
     // Default-off / lazy ⇒ never fetched at boot.
     expect(filamentFetcher).not.toHaveBeenCalled();
     expect(cf4DensityFetcher).not.toHaveBeenCalled();
@@ -777,7 +777,7 @@ describe('wireSlots', () => {
     expect(capturedRegistry).toBe(deps.allSlots);
 
     // Registry includes the per-source point slots (by `.name`) plus
-    // the sidecar slots wireSlots itself mints (filaments, famous-meta,
+    // the sidecar slots wireSlots itself mints (filaments, famous-galaxies-meta,
     // pgc-aliases, CF-4, MCPM) plus synthetic fixtures (DEV-only —
     // vitest runs as DEV). Asserted as a superset so additive changes
     // don't break the test for the wrong reason.
@@ -787,7 +787,7 @@ describe('wireSlots', () => {
     expect(names.has('glade-points')).toBe(true);
     expect(names.has('famous-points')).toBe(true);
     expect(names.has('filaments')).toBe(true);
-    expect(names.has('famous-meta')).toBe(true);
+    expect(names.has('famous-galaxies-meta')).toBe(true);
     expect(names.has('structure-catalog')).toBe(true);
     expect(names.has('pgc-aliases')).toBe(true);
   });

@@ -15,7 +15,7 @@ import type { FadeRegistry } from '../../../../src/@types/animation/FadeRegistry
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaEntry';
+import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/FamousGalaxyMetaEntry';
 import type { Label } from '../../../../src/@types/rendering/Label';
 import type { LabelBBox } from '../../../../src/@types/rendering/LabelBBox';
 
@@ -37,7 +37,7 @@ const MEASURED_BBOX: LabelBBox = { minX: -50, minY: -30, maxX: 50, maxY: 12 };
 const TEXT_BOTTOM_BELOW_ANCHOR_PX =
   MEASURED_BBOX.maxY * (FAMOUS_LABEL_STYLE.minPixelSize / ATLAS_FONT_SIZE);
 
-// produceFamousLabels reads `state.famousMeta` for the sidecar records and
+// produceFamousLabels reads `state.famousGalaxiesMeta` for the sidecar records and
 // `state.data.galaxies` for the positional catalog, `state.subsystems.fades`
 // for the `galaxy` layer opacity (read-only),
 // `state.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled` for the
@@ -58,7 +58,7 @@ function makeState(
   const bbox = opts.bbox ?? MEASURED_BBOX;
   return {
     data: createEngineData(),
-    famousMeta: [],
+    famousGalaxiesMeta: [],
     gpu: { labelRenderer: { measure: vi.fn<(label: Label) => LabelBBox>(() => bbox) } },
     subsystems: {
       fades,
@@ -113,8 +113,10 @@ const PX_PER_RAD = 1080 / (2 * Math.tan((30 * Math.PI) / 180));
 const sizePxAt = (diameterKpc: number, distanceMpc: number) =>
   (diameterKpc / (distanceMpc * 1000)) * PX_PER_RAD;
 
-const meta = (...entries: Partial<FamousMetaEntry>[]): FamousMetaEntry[] =>
-  entries.map((e) => ({ id: 'x', names: [], description: '', type: '', ...e }) as FamousMetaEntry);
+const meta = (...entries: Partial<FamousGalaxyMetaEntry>[]): FamousGalaxyMetaEntry[] =>
+  entries.map(
+    (e) => ({ id: 'x', names: [], description: '', type: '', ...e }) as FamousGalaxyMetaEntry,
+  );
 
 const famousCatalog = (positions: number[], diameters: number[]): GalaxyCatalog =>
   ({
@@ -123,20 +125,26 @@ const famousCatalog = (positions: number[], diameters: number[]): GalaxyCatalog 
     diameterKpc: new Float32Array(diameters),
   }) as unknown as GalaxyCatalog;
 
-// `famousMeta` is readonly on `EngineState` (the getter delegates to the
-// Redux store in the real engine); the fixture is a plain object literal, so
-// writing through a mutable-view cast is the direct way to seed it here.
-function setFamousMeta(state: EngineState, entries: Partial<FamousMetaEntry>[]): void {
-  (state as unknown as { famousMeta: FamousMetaEntry[] }).famousMeta = meta(...entries);
+// `famousGalaxiesMeta` is readonly on `EngineState` (the getter delegates to
+// the Redux store in the real engine); the fixture is a plain object
+// literal, so writing through a mutable-view cast is the direct way to seed
+// it here.
+function setFamousGalaxiesMeta(
+  state: EngineState,
+  entries: Partial<FamousGalaxyMetaEntry>[],
+): void {
+  (state as unknown as { famousGalaxiesMeta: FamousGalaxyMetaEntry[] }).famousGalaxiesMeta = meta(
+    ...entries,
+  );
 }
 
 function seed(
   state: EngineState,
-  entries: Partial<FamousMetaEntry>[],
+  entries: Partial<FamousGalaxyMetaEntry>[],
   positions: number[],
   diameters: number[],
 ): void {
-  setFamousMeta(state, entries);
+  setFamousGalaxiesMeta(state, entries);
   state.data.galaxies.setCatalog(Source.FamousGalaxy, famousCatalog(positions, diameters));
 }
 
@@ -292,7 +300,7 @@ describe('produceFamousLabels', () => {
 
   it('emits nothing when the famous catalog is absent or meta is empty', () => {
     const noCatalog = makeState();
-    setFamousMeta(noCatalog, [{ id: 'm31', names: ['M31'] }]);
+    setFamousGalaxiesMeta(noCatalog, [{ id: 'm31', names: ['M31'] }]);
     expect(produceFamousLabels(noCatalog, makeCtx()).labels).toEqual([]);
 
     const noMeta = makeState();

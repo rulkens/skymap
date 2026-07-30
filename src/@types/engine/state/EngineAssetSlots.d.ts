@@ -25,7 +25,7 @@ import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { GalaxyCatalogReq } from '../../loading/GalaxyCatalogReq';
 import type { FilamentCloud } from '../../data/filament/FilamentCloud';
 import type { FilamentReq } from '../../loading/FilamentReq';
-import type { FamousPayload } from '../../loading/FamousPayload';
+import type { FamousGalaxiesPayload } from '../../loading/FamousGalaxiesPayload';
 import type { FamousStarsPayload } from '../../loading/FamousStarsPayload';
 import type { PgcAliasMap } from '../../loading/PgcAliasMap';
 import type { ScalarCube } from '../../data/volume/ScalarCube';
@@ -66,33 +66,33 @@ export type EngineAssetSlots = {
    */
   filaments: AssetSlot<FilamentCloud, FilamentReq> | null;
   /**
-   * Famous-galaxy `famous_meta.json` sidecar routed through a slot for
+   * Famous-galaxy `famous_galaxies_meta.json` sidecar routed through a slot for
    * parity with point loads.  Loaded eagerly at engine boot — the JSON
    * is tiny so the cost is negligible, and the InfoCard depends on
    * `meta` being present whenever a famous galaxy is hovered.  The
    * subscriber dispatches the parsed array into the Redux `engine` slice;
-   * the engine reads it back via `state.famousMeta`.
+   * the engine reads it back via `state.famousGalaxiesMeta`.
    *
    * No `commit` step — there is nothing GPU-side to upload, just the
    * dispatch done by the subscriber.  Null until the IIFE mints it
    * (matches `filaments` for the same lifecycle reason).
    */
-  famousMeta: AssetSlot<FamousPayload, CompanionAssetReq> | null;
+  famousGalaxiesMeta: AssetSlot<FamousGalaxiesPayload, CompanionAssetReq> | null;
   /**
    * Famous-star `famous_stars_meta.json` sidecar — the star twin of
-   * `famousMeta`, routed through the same asset-slot machinery so the two
+   * `famousGalaxiesMeta`, routed through the same asset-slot machinery so the two
    * curated sources load their metadata the same way.  Loaded eagerly at
    * engine boot (`demand: () => true`, like `bodyTextureAtlas`): unlike
-   * `famousMeta`, there is no sibling `.bin` fetch to key the demand off —
+   * `famousGalaxiesMeta`, there is no sibling `.bin` fetch to key the demand off —
    * the famous stars are a seeded catalog compiled straight into the bundle
    * — so the sidecar's own eagerness is the only signal. The subscriber
    * reports the parsed array to the engine Redux slice
    * (`engineFamousStarsMetaReported`), the only place it is read from: unlike
-   * `famousMeta`, no engine code consults these entries, just the InfoCard.
+   * `famousGalaxiesMeta`, no engine code consults these entries, just the InfoCard.
    *
    * No `commit` step — there is nothing GPU-side to upload, just the store
    * dispatch done by the subscriber. Null until the IIFE mints it (matches
-   * `famousMeta` for the same lifecycle reason).
+   * `famousGalaxiesMeta` for the same lifecycle reason).
    */
   famousStarsMeta: AssetSlot<FamousStarsPayload, CompanionAssetReq> | null;
   /**
@@ -103,7 +103,7 @@ export type EngineAssetSlots = {
    * No `commit` step — there is nothing GPU-side to upload.  `wireStructureProjection`
    * subscribes to this slot and converts the ready value into structure records
    * written into the structure store.  Null until the IIFE mints it
-   * (matches `famousMeta` for the same lifecycle reason).
+   * (matches `famousGalaxiesMeta` for the same lifecycle reason).
    */
   structureCatalog: AssetSlot<StructureCatalogPayload, StructureCatalogReq> | null;
   /**

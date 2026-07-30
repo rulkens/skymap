@@ -87,7 +87,7 @@ function makeBody(id: string): BodyInfo {
 /** Deps standing for "nothing has loaded yet" — every resolver misses. */
 const emptyDeps: ResolveDeps = {
   catalogs: { get: () => undefined },
-  famousMeta: [],
+  famousGalaxiesMeta: [],
   structures: { byId: () => null },
   stars: { current: () => null },
 };
@@ -344,7 +344,7 @@ describe('useUrlSync hook integration', () => {
     // link away.
     //
     // The deferral is reproduced faithfully rather than mocked: `resolveDeps`
-    // returns empty catalogs and empty famousMeta, so `resolveFocusId('m31')`
+    // returns empty catalogs and empty famousGalaxiesMeta, so `resolveFocusId('m31')`
     // misses on the famous branch and the saga parks on `take([catalogLoaded, …])`.
     window.location.hash = '#focus=m31';
     const pushSpy = vi.spyOn(window.history, 'pushState');

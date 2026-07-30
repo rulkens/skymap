@@ -31,7 +31,7 @@ import type { SourceType } from '../../@types/data/SourceType';
 import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { LoadProgressState } from '../../@types/loading/LoadProgressState';
 import type { ProvenanceCounts } from '../../@types/engine/ProvenanceCounts';
-import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
+import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import type { FamousStarMetaEntry } from '../../@types/loading/FamousStarMetaEntry';
 
 const selectEngine = (state: RootState): EngineSliceState => state[engineRoute];
@@ -58,12 +58,15 @@ export const selectLoadProgress = (state: RootState): LoadProgressState | null =
  * a failed fetch). An object-reference read: the slot dispatches once, so the
  * array identity is stable and a subscriber sees a single change.
  */
-export const selectFamousMeta = (state: RootState): readonly FamousMetaEntry[] =>
-  selectEngine(state).famousMeta;
+export const selectFamousGalaxiesMeta = (state: RootState): readonly FamousGalaxyMetaEntry[] =>
+  selectEngine(state).meta.famousGalaxies;
 
-/** Famous-star metadata sidecar, on the same contract as `selectFamousMeta`. */
+/**
+ * Famous-star metadata sidecar, on the same contract as
+ * `selectFamousGalaxiesMeta`.
+ */
 export const selectFamousStarsMeta = (state: RootState): readonly FamousStarMetaEntry[] =>
-  selectEngine(state).famousStarsMeta;
+  selectEngine(state).meta.famousStars;
 
 /**
  * Live distance (Mpc) from the camera to the focused scene body, or null when no

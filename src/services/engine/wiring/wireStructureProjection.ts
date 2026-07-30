@@ -15,8 +15,9 @@
  *
  * Famous galaxies are deliberately NOT wired here — they are galaxy data, and
  * `produceFamousLabels` derives their labels per frame from the catalog in
- * `galaxyStore` joined with the `famousMeta` sidecar (the engine slice, via
- * `state.famousMeta`).  There is no structure-store famous group.
+ * `galaxyStore` joined with the famous-galaxies meta sidecar (the engine
+ * slice, via `state.famousGalaxiesMeta`).  There is no structure-store famous
+ * group.
  *
  * ### Structure-count dispatches
  *

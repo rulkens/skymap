@@ -38,7 +38,7 @@ import type { SourceType } from '../../@types/data/SourceType';
 import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { LoadProgressState } from '../../@types/loading/LoadProgressState';
 import type { ProvenanceCounts } from '../../@types/engine/ProvenanceCounts';
-import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
+import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import type { FamousStarMetaEntry } from '../../@types/loading/FamousStarMetaEntry';
 
 /**
@@ -55,8 +55,7 @@ const initialState: EngineSliceState = {
   structureCounts: {},
   provenanceCounts: {},
   loadProgress: null,
-  famousMeta: [],
-  famousStarsMeta: [],
+  meta: { famousGalaxies: [], famousStars: [] },
 };
 
 const engineSlice = createSlice({
@@ -114,15 +113,18 @@ const engineSlice = createSlice({
     // only home, so React and the engine can never see divergent copies. The
     // spread copies the readonly payload into the Immer draft, which wants a
     // mutable array slot even though nothing mutates it.
-    engineFamousMetaReported: (state, action: PayloadAction<readonly FamousMetaEntry[]>) => {
-      state.famousMeta = [...action.payload];
+    engineFamousGalaxiesMetaReported: (
+      state,
+      action: PayloadAction<readonly FamousGalaxyMetaEntry[]>,
+    ) => {
+      state.meta.famousGalaxies = [...action.payload];
     },
 
     engineFamousStarsMetaReported: (
       state,
       action: PayloadAction<readonly FamousStarMetaEntry[]>,
     ) => {
-      state.famousStarsMeta = [...action.payload];
+      state.meta.famousStars = [...action.payload];
     },
 
     // ── scale bar ────────────────────────────────────────────────────────────
@@ -161,7 +163,7 @@ export const {
   engineProvenanceCountsReported,
   engineStructureCountsChanged,
   engineLoadProgressChanged,
-  engineFamousMetaReported,
+  engineFamousGalaxiesMetaReported,
   engineFamousStarsMetaReported,
   engineScaleChanged,
   engineBodyDistanceReported,

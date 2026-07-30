@@ -143,7 +143,7 @@ describe('galaxy-impostor visual baseline', () => {
         walk.runFrame(
           sharedInput,
           procSys.beginFrame(sharedInput),
-          texSys.beginFrame({ ...sharedInput, famousMeta: [], nowMs }),
+          texSys.beginFrame({ ...sharedInput, famousGalaxiesMeta: [], nowMs }),
         );
       };
 

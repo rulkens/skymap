@@ -4,16 +4,16 @@
 
 ## The problem
 
-"`famousMeta` rides the Famous catalog" is one fact, authored three
+"`famousGalaxiesMeta` rides the Famous catalog" is one fact, authored three
 times in three mechanisms that can each be satisfied without the
 others:
 
-1. `companions: ['famousMeta']` on the Famous row of
+1. `companions: ['famousGalaxiesMeta']` on the Famous row of
    `GALAXY_CATALOG_SOURCE_REGISTRY`
    (`src/services/engine/wiring/galaxyCatalogSourceRegistry.ts:74`),
    consumed by `loadCompanionAssets` on tier transition only.
 2. `demand: (ctx) => ctx.slotState(Source.FamousGalaxy) !== 'idle'` on
-   the `famousMeta` row of `ASSET_WIRING` — the boot path, and the only
+   the `famousGalaxiesMeta` row of `ASSET_WIRING` — the boot path, and the only
    one that runs at boot.
 3. `priority: 21`, authored to sit "immediately behind its `.bin` (20)"
    in the fetch-rank table.
@@ -29,7 +29,7 @@ Expressing the relation as a demand predicate over a sibling's slot
 state makes demand a function of the fetch SCHEDULE, not just of user
 intent. With the bounded queue in front of the loads, Famous no longer
 starts in the pass that demands it whenever two higher-ranked rows are
-ahead, so `famousMeta` is not demanded until a later pass. Production
+ahead, so `famousGalaxiesMeta` is not demanded until a later pass. Production
 is fine — `reevaluateDemand` re-runs every frame — but the demand table
 test now has to drive `reevaluateDemand` to a FIXPOINT, draining the
 queue between passes, to state what the boot set is

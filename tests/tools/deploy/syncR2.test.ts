@@ -23,7 +23,7 @@ describe('syncR2 ALLOW', () => {
 
   it('accepts famous_stars_meta.json', () => {
     // The famous-stars metadata sidecar is a gitignored build artefact shipped
-    // only via R2, exactly like famous_meta.json — it must pass the filter.
+    // only via R2, exactly like famous_galaxies_meta.json — it must pass the filter.
     expect(ALLOW('famous_stars_meta.json')).toBe(true);
   });
 

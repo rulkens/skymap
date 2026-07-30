@@ -2,7 +2,7 @@
  * The slot's contract is graceful degradation: the fetcher throws on HTTP
  * failure so a retry policy can branch on status, and the slot's subscriber
  * maps that to "feature off" by reporting an empty array to the engine slice.
- * A deployment without `famous_meta.json` must still render famous galaxies,
+ * A deployment without `famous_galaxies_meta.json` must still render famous galaxies,
  * just without enriched InfoCard text.
  *
  * The slot reports to the store and nowhere else: it dispatches the parsed
@@ -14,8 +14,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
-import { createFamousMetaSlot } from '../../../../src/services/loading/slots/famousMetaSlot';
-import { engineFamousMetaReported } from '../../../../src/state/engine/engineSlice';
+import { createFamousGalaxiesMetaSlot } from '../../../../src/services/loading/slots/famousGalaxiesMetaSlot';
+import { engineFamousGalaxiesMetaReported } from '../../../../src/state/engine/engineSlice';
 import { useFetchMock } from '../../../setup/fetchMock';
 
 // The slot touches nothing on EngineState — it reports through `cb.store`.
@@ -26,7 +26,7 @@ function fakeCb(): { cb: EngineCallbacks; dispatch: ReturnType<typeof vi.fn> } {
   return { cb: { store: { dispatch } } as unknown as EngineCallbacks, dispatch };
 }
 
-describe('createFamousMetaSlot', () => {
+describe('createFamousGalaxiesMetaSlot', () => {
   const fetch = useFetchMock();
 
   it('reports the parsed meta to the engine slice on success', async () => {
@@ -44,11 +44,11 @@ describe('createFamousMetaSlot', () => {
       ),
     );
     const { cb, dispatch } = fakeCb();
-    const slot = createFamousMetaSlot(fakeState, cb);
+    const slot = createFamousGalaxiesMetaSlot(fakeState, cb);
     await slot.load({ tier: 'medium' });
 
     expect(dispatch).toHaveBeenCalledWith(
-      engineFamousMetaReported(
+      engineFamousGalaxiesMetaReported(
         expect.arrayContaining([expect.objectContaining({ id: 'm31' })]) as unknown as never[],
       ),
     );
@@ -57,9 +57,9 @@ describe('createFamousMetaSlot', () => {
   it('reports an empty array when the sidecar is missing', async () => {
     fetch.mock.mockResolvedValue(new Response('not found', { status: 404 }));
     const { cb, dispatch } = fakeCb();
-    const slot = createFamousMetaSlot(fakeState, cb);
+    const slot = createFamousGalaxiesMetaSlot(fakeState, cb);
     await slot.load({ tier: 'medium' }).catch(() => {});
 
-    expect(dispatch).toHaveBeenCalledWith(engineFamousMetaReported([]));
+    expect(dispatch).toHaveBeenCalledWith(engineFamousGalaxiesMetaReported([]));
   });
 });

@@ -1,5 +1,5 @@
 /**
- * famousMetaFetcher — fetches the famous-galaxy `famous_meta.json` sidecar
+ * famousGalaxiesMetaFetcher — fetches the famous-galaxy `famous_galaxies_meta.json` sidecar
  * and returns a `{ meta }` payload.
  *
  * ### Why throw on 404?
@@ -12,33 +12,33 @@
  * "really gone" (404, give up) from "transient flake" (5xx, retry).
  */
 import type { Fetcher } from '../../../@types/loading/Fetcher';
-import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
-import type { FamousPayload } from '../../../@types/loading/FamousPayload';
+import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
+import type { FamousGalaxiesPayload } from '../../../@types/loading/FamousGalaxiesPayload';
 import type { CompanionAssetReq } from '../../../@types/loading/CompanionAssetReq';
 import { HttpError, dataUrl } from '../fetchWithProgress';
 
 /**
- * Parse `famous_meta.json` content. Throws on schema mismatch. Public
+ * Parse `famous_galaxies_meta.json` content. Throws on schema mismatch. Public
  * to allow unit testing without hitting the network.
  */
-export function parseFamousMeta(rawJson: string): FamousMetaEntry[] {
+export function parseFamousGalaxiesMeta(rawJson: string): FamousGalaxyMetaEntry[] {
   const parsed = JSON.parse(rawJson);
   if (!Array.isArray(parsed)) {
-    throw new Error('famous_meta.json: root must be an array');
+    throw new Error('famous_galaxies_meta.json: root must be an array');
   }
-  return parsed as FamousMetaEntry[];
+  return parsed as FamousGalaxyMetaEntry[];
 }
 
-// The `tier` field on the request is ignored — famous_meta.json is a
+// The `tier` field on the request is ignored — famous_galaxies_meta.json is a
 // tier-agnostic resource. The uniform `CompanionAssetReq` shape lets
 // `loadCompanionAssets` dispatch generically across every companion
 // slot without a per-key switch.
-export const famousMetaFetcher: Fetcher<FamousPayload, CompanionAssetReq> = async (
+export const famousGalaxiesMetaFetcher: Fetcher<FamousGalaxiesPayload, CompanionAssetReq> = async (
   _req,
   signal,
 ) => {
-  const res = await fetch(dataUrl('famous_meta.json'), { signal });
-  if (!res.ok) throw new HttpError(res.status, dataUrl('famous_meta.json'));
+  const res = await fetch(dataUrl('famous_galaxies_meta.json'), { signal });
+  if (!res.ok) throw new HttpError(res.status, dataUrl('famous_galaxies_meta.json'));
   const text = await res.text();
-  return { meta: parseFamousMeta(text) };
+  return { meta: parseFamousGalaxiesMeta(text) };
 };

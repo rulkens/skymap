@@ -1,7 +1,7 @@
 /**
  * famousStarsMetaFetcher — fetches the famous-star `famous_stars_meta.json`
  * sidecar and returns a `{ meta }` payload.  The star twin of
- * `famousMetaFetcher`: the render-critical star row already loaded from the
+ * `famousGalaxiesMetaFetcher`: the render-critical star row already loaded from the
  * catalog bin; these narrative/physical fields arrive lazily here for the
  * InfoCard.
  *

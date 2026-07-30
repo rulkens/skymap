@@ -51,7 +51,7 @@ import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
 import type { StructureId } from '../../../@types/data/structure/StructureId';
 import { Source, SOURCE_REGISTRY } from '../../../data/sources';
 import { createFilamentSlot } from '../../loading/slots/filamentSlot';
-import { createFamousMetaSlot } from '../../loading/slots/famousMetaSlot';
+import { createFamousGalaxiesMetaSlot } from '../../loading/slots/famousGalaxiesMetaSlot';
 import { createFamousStarsMetaSlot } from '../../loading/slots/famousStarsMetaSlot';
 import { createStructureCatalogSlot } from '../../loading/slots/structureCatalogSlot';
 import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
@@ -308,8 +308,8 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
   // .bin fetch has begun), so the InfoCard text rides in alongside the
   // binary rather than racing ahead of it.
   {
-    key: 'famousMeta',
-    factory: (deps) => createFamousMetaSlot(deps.state, deps.cb),
+    key: 'famousGalaxiesMeta',
+    factory: (deps) => createFamousGalaxiesMetaSlot(deps.state, deps.cb),
     req: (tier) => ({ tier }),
     demand: (ctx) => ctx.slotState(Source.FamousGalaxy) !== 'idle',
     // Immediately behind its .bin (20) — the companion join wants the text to
@@ -318,7 +318,7 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
   },
 
   // ── Famous-star meta sidecar ──────────────────────────────────────
-  // Unlike famousMeta, there is no sibling `.bin` fetch to key the demand
+  // Unlike famousGalaxiesMeta, there is no sibling `.bin` fetch to key the demand
   // off: the famous stars are a seeded catalog compiled straight into the
   // bundle, not loaded from a survey `.bin`. So this row is unconditionally
   // demanded (mirrors `bodyTextureAtlas` above) rather than joining another
@@ -328,7 +328,7 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     factory: (deps) => createFamousStarsMetaSlot(deps.state, deps.cb),
     req: (tier) => ({ tier }),
     demand: () => true,
-    // Right behind famousMeta: both are tiny curated sidecars wanted early
+    // Right behind famousGalaxiesMeta: both are tiny curated sidecars wanted early
     // so the InfoCard has enriched text the first time either kind is hovered.
     priority: 22,
   },

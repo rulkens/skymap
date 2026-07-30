@@ -43,7 +43,7 @@ function makeCloud(objId: bigint, pos: [number, number, number] = [1, 0, 0]): Ga
 
 // Standard deps: SDSS cloud has one row with objId 1237668393006604288n at
 // position (1, 0, 0) → RA=0°, Dec=0°; GLADE has PGC 99 at the same pos;
-// Famous cloud has row 0 indexed to famousMeta[0] ("m31").
+// Famous cloud has row 0 indexed to famousGalaxiesMeta[0] ("m31").
 const deps: ResolveDeps = {
   catalogs: {
     get: (s) => {
@@ -54,7 +54,7 @@ const deps: ResolveDeps = {
       return undefined;
     },
   },
-  famousMeta: [
+  famousGalaxiesMeta: [
     {
       id: 'm31',
       names: ['M31', 'Andromeda'],

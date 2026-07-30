@@ -2,7 +2,7 @@
  * famousStarsMetaSlot — factory for the famous-star meta sidecar.
  *
  * Carries `famous_stars_meta.json` through the standard asset-slot machinery,
- * the star twin of `famousMetaSlot`. The two curated sources — the famous
+ * the star twin of `createFamousGalaxiesMetaSlot`. The two curated sources — the famous
  * galaxies and the famous stars — load their sidecars by the same path, so
  * neither has a bespoke fetch to reason about.
  *

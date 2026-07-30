@@ -33,7 +33,7 @@
  * both buttons activate together so the user never sees "Tour disabled,
  * Explore enabled" intermediate UI.
  *
- * **Why famous-meta is not a third condition.** The sidecar loads through its
+ * **Why famous-galaxies-meta is not a third condition.** The sidecar loads through its
  * asset slot, and that slot's demand is conditional: it waits for the
  * famous-galaxy `.bin` to leave `idle`, which in turn requires
  * `galaxyCatalogs.items.famousGalaxy.enabled`. With that category switched off
