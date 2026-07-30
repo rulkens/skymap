@@ -6,6 +6,7 @@
  * tests pin the `Renderer` contract, the
  * `draw(pass, instances, count)` arity, the GPU-instancing mechanism (one
  * `writeBuffer` of the caller's array + one `draw(3, count)`), the count guard,
+ * the grow-on-demand instance buffer (no fixed cap — see the module header),
  * and — the divergence from the ring twin — the FULL single-instance-buffer
  * attribute layout: the fullscreen triangle means there is NO per-vertex
  * position buffer, so the instance record is the pipeline's only vertex buffer,
@@ -17,7 +18,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
   createOrbitTrailRenderer,
-  MAX_ORBITS,
   INSTANCE_FLOATS,
   INSTANCE_STRIDE,
 } from '../../../../../src/services/gpu/renderers/bodies/orbitTrailRenderer';
@@ -70,14 +70,16 @@ describe('createOrbitTrailRenderer', () => {
     expect(() => renderer.destroy()).not.toThrow();
   });
 
-  it('allocates an instance buffer sized MAX_ORBITS × 112 bytes', () => {
+  it('allocates no instance buffer at construction — sizing is deferred to the first draw', () => {
+    // Unlike a fixed MAX_ORBITS cap, there is nothing to size the buffer
+    // against until a caller says how many orbits it has. Mirrors
+    // starPointRenderer's setStars: no buffer exists until the first
+    // non-empty call.
     const buffers: BufferDesc[] = [];
     createOrbitTrailRenderer(mockDevice({ buffers }), 'rgba16float');
-    const instance = buffers.find((b) => b.label === 'orbit-trail-instance-vbo');
-    expect(instance).toBeDefined();
+    expect(buffers.find((b) => b.label === 'orbit-trail-instance-vbo')).toBeUndefined();
     expect(INSTANCE_STRIDE).toBe(112);
     expect(INSTANCE_FLOATS).toBe(28);
-    expect(instance!.size).toBe(MAX_ORBITS * 112);
   });
 
   it('pins the FULL instance attribute layout — ONE instance buffer, no position VBO', () => {
@@ -132,7 +134,7 @@ describe('createOrbitTrailRenderer', () => {
     expect(renderer.draw.length).toBe(3);
 
     const pass = mockPass();
-    const instances = new Float32Array(MAX_ORBITS * INSTANCE_FLOATS);
+    const instances = new Float32Array(3 * INSTANCE_FLOATS);
     expect(() => renderer.draw(pass, instances, 3)).not.toThrow();
     expect(pass.draw).toHaveBeenCalledTimes(1);
     // draw(vertexCount, instanceCount): 3 verts (the fullscreen triangle),
@@ -146,7 +148,7 @@ describe('createOrbitTrailRenderer', () => {
     const device = mockDevice();
     const renderer = createOrbitTrailRenderer(device, 'rgba16float');
     const pass = mockPass();
-    const instances = new Float32Array(MAX_ORBITS * INSTANCE_FLOATS);
+    const instances = new Float32Array(4 * INSTANCE_FLOATS);
 
     const writeMock = device.queue.writeBuffer as ReturnType<typeof vi.fn>;
     writeMock.mockClear();
@@ -169,24 +171,56 @@ describe('createOrbitTrailRenderer', () => {
     expect(pass.setBindGroup).not.toHaveBeenCalled();
   });
 
-  it('clamps an over-count to MAX_ORBITS and no-ops a zero count', () => {
+  it('a zero count is a no-op', () => {
     const device = mockDevice();
     const renderer = createOrbitTrailRenderer(device, 'rgba16float');
     const pass = mockPass();
-    const instances = new Float32Array(MAX_ORBITS * INSTANCE_FLOATS);
+    const instances = new Float32Array(4 * INSTANCE_FLOATS);
     const writeMock = device.queue.writeBuffer as ReturnType<typeof vi.fn>;
 
-    // Over-count: clamp to MAX_ORBITS rather than read off the buffer end.
     writeMock.mockClear();
-    renderer.draw(pass, instances, MAX_ORBITS + 5);
-    expect((pass.draw as ReturnType<typeof vi.fn>).mock.calls[0]![1]).toBe(MAX_ORBITS);
-    expect(writeMock.mock.calls[0]![4]).toBe(MAX_ORBITS * INSTANCE_FLOATS);
-
-    // Zero count: nothing uploaded, nothing drawn.
-    writeMock.mockClear();
-    (pass.draw as ReturnType<typeof vi.fn>).mockClear();
     renderer.draw(pass, instances, 0);
     expect(writeMock).not.toHaveBeenCalled();
     expect(pass.draw).not.toHaveBeenCalled();
+  });
+
+  it('the trail buffer grows past the initial capacity', () => {
+    // Regression coverage for the MAX_ORBITS = 24 defect: the orbit table
+    // used to outgrow the buffer silently (Math.min clamp). Now the buffer
+    // itself has no cap — it grows to whatever the caller's count demands,
+    // the same grow-only-reuse pattern starPointRenderer.setStars uses for
+    // its instance buffer.
+    const buffers: BufferDesc[] = [];
+    const device = mockDevice({ buffers });
+    const renderer = createOrbitTrailRenderer(device, 'rgba16float');
+    const pass = mockPass();
+
+    // First draw establishes an initial capacity of 3.
+    renderer.draw(pass, new Float32Array(3 * INSTANCE_FLOATS), 3);
+    const afterFirst = buffers.filter((b) => b.label === 'orbit-trail-instance-vbo');
+    expect(afterFirst).toHaveLength(1);
+    expect(afterFirst[0]!.size).toBe(3 * INSTANCE_STRIDE);
+
+    // A later draw asking for more orbits than that capacity must grow the
+    // buffer (a second allocation), not truncate to the first one's size.
+    renderer.draw(pass, new Float32Array(7 * INSTANCE_FLOATS), 7);
+    const afterSecond = buffers.filter((b) => b.label === 'orbit-trail-instance-vbo');
+    expect(afterSecond).toHaveLength(2);
+    expect(afterSecond[1]!.size).toBe(7 * INSTANCE_STRIDE);
+    // The grown draw actually issues all 7 instances — nothing dropped.
+    const lastDrawCall = (pass.draw as ReturnType<typeof vi.fn>).mock.calls.at(-1)!;
+    expect(lastDrawCall[1]).toBe(7);
+  });
+
+  it('an over-count draw throws rather than silently truncating', () => {
+    // The old clamp (Math.min(count, MAX_ORBITS)) hid a caller bug by
+    // quietly dropping the tail of the batch. A `count` the caller's own
+    // packed array cannot back is a programming error, not a runtime
+    // condition to paper over — it must throw at the call site instead of
+    // reading past the array or silently drawing fewer orbits than asked.
+    const renderer = createOrbitTrailRenderer(mockDevice(), 'rgba16float');
+    const pass = mockPass();
+    const instances = new Float32Array(2 * INSTANCE_FLOATS); // only 2 records
+    expect(() => renderer.draw(pass, instances, 5)).toThrow();
   });
 });

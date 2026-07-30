@@ -80,7 +80,7 @@ import { keplerianEllipse } from '../../../../utils/orbit/keplerianEllipse';
 import { composeOrbitConic } from '../../../../utils/camera/composeOrbitConic';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { sceneBodyStates } from '../sceneBodyStates';
-import { MAX_ORBITS, INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/orbitTrailRenderer';
+import { INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/orbitTrailRenderer';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { resolveLayerOpacity } from '../../presentation/focusRecession';
 
@@ -93,10 +93,13 @@ const CULL_PX = 10;
 const FULL_PX = 20;
 
 // Reused across frames — the engine hot path allocates nothing here. Sized
-// for the renderer's cap; each conic's 28-float record (three Ginv columns +
-// colour/eccentricity + mean anomaly + the two gradient-minor triples) is
-// rewritten in place before the single instanced draw.
-const staging = new Float32Array(MAX_ORBITS * INSTANCE_FLOATS);
+// for the live orbital-elements table (a compile-time constant, so this is a
+// fixed size, not a cap — the renderer itself carries no upper bound, and
+// growing the table just grows this array); each conic's 28-float record
+// (three Ginv columns + colour/eccentricity + mean anomaly + the two
+// gradient-minor triples) is rewritten in place before the single instanced
+// draw.
+const staging = new Float32Array(ORBITAL_ELEMENTS.length * INSTANCE_FLOATS);
 
 // The system's reach from the heliocentric origin: the farthest any orbit
 // point can lie from the origin, over ALL clock times — a TIME-INVARIANT outer
@@ -185,7 +188,7 @@ export const orbitTrailsLayer: ContentLayer = {
     // every trail's mean-anomaly falloff anchor. Reading it — never re-deriving —
     // is what welds each trail to the exact instant its body is drawn at.
     const states = sceneBodyStates(state, ctx);
-    const limit = Math.min(ORBITAL_ELEMENTS.length, MAX_ORBITS);
+    const limit = ORBITAL_ELEMENTS.length;
     const camPos = ctx.drawCamPos;
     const viewportHeightPx = view.viewportPx[1];
 

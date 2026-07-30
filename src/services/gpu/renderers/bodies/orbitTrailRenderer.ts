@@ -46,11 +46,6 @@ import fsCode from '../../shaders/bodies/orbitTrail/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
 
-/** Upper bound on orbit trails drawn per frame. 22 orbits ship today (the eight
- *  major planets + the Moon + Mars/Jupiter/Saturn's major moons); the cap sizes
- *  the instance buffer with headroom for further satellites/dwarfs. */
-export const MAX_ORBITS = 24;
-
 /**
  * Float32 slots per per-instance record: three `vec4<f32>` `Ginv` columns (12)
  * + one `vec4<f32>` `(color.rgb, eccentricity)` (4) + one `vec4<f32>`
@@ -91,21 +86,6 @@ export function createOrbitTrailRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat,
 ): OrbitTrailRenderer {
-  // ── Instance vertex buffer ────────────────────────────────────────────────
-  //
-  // Holds up to MAX_ORBITS 112-byte records (three Ginv columns + trail params
-  // + the two gradient-minor triples).
-  // `draw` overwrites the first `count` records each frame with one
-  // `writeBuffer`; the instance step means every orbit renders with its OWN
-  // matrix — no per-orbit bind, no per-draw uniform for a later write to
-  // clobber. There is no position/index buffer: the geometry is a fullscreen
-  // triangle from `@builtin(vertex_index)` (see the module header).
-  const instanceBuffer = device.createBuffer({
-    label: 'orbit-trail-instance-vbo',
-    size: MAX_ORBITS * INSTANCE_STRIDE,
-    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-  });
-
   // ── Shader modules ────────────────────────────────────────────────────────
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'orbitTrail.vertex');
   const fsModule = createShaderModuleWithDevLog(device, fsCode, 'orbitTrail.fragment');
@@ -158,28 +138,61 @@ export function createOrbitTrailRenderer(
     // NO depthStencil: the hdr target has no depth attachment.
   });
 
+  // ── Orbit instance buffer (grown on demand, never replaced wholesale) ─────
+  //
+  // Mirrors `starPointRenderer.setStars`. A fixed capacity sized to today's
+  // table is the tempting alternative and the wrong one: the count it guards is
+  // an authored-data fact, so the day the table outgrows it the excess trails
+  // vanish with no error. Growth has no such edge.
+  // There is no fixed cap to size against up front, so the buffer starts
+  // unallocated and grows to fit the largest `count` any `draw` call has
+  // passed; a later smaller frame reuses the larger buffer and draws the
+  // smaller subset. `destroy()` on the outgoing buffer is safe even if a prior
+  // frame referenced it — WebGPU defers the actual release until in-flight
+  // work completes.
+  let instanceBuffer: GPUBuffer | null = null;
+  let capacityOrbits = 0;
+
   // ── draw ──────────────────────────────────────────────────────────────────
 
   function draw(pass: GPURenderPassEncoder, instances: Float32Array, count: number): void {
-    // Clamp to the cap so an over-count caller draws MAX_ORBITS rather than off
-    // the end of the buffer. Nothing to do for a zero-length batch.
-    const n = Math.min(Math.max(count, 0), MAX_ORBITS);
-    if (n === 0) return;
+    if (count === 0) return;
+    // `count` must be backed by that many records in the caller's packed
+    // array. Clamping a mismatch to fit would hide the caller's bug in a
+    // dropped trail; throwing surfaces it at the call that got the count wrong
+    // instead of a few files away as a mis-rendered scene.
+    if (count < 0 || count * INSTANCE_FLOATS > instances.length) {
+      throw new Error(
+        `orbitTrailRenderer.draw: count (${count}) does not fit the packed instances array (${instances.length} floats, needs ${count * INSTANCE_FLOATS})`,
+      );
+    }
 
-    // One upload of exactly the first `n` records. The typed-array overload
-    // takes the data offset + size in ELEMENTS (floats), not bytes.
-    device.queue.writeBuffer(instanceBuffer, 0, instances, 0, n * INSTANCE_FLOATS);
+    if (instanceBuffer === null || count > capacityOrbits) {
+      instanceBuffer?.destroy();
+      capacityOrbits = count;
+      instanceBuffer = device.createBuffer({
+        label: 'orbit-trail-instance-vbo',
+        size: capacityOrbits * INSTANCE_STRIDE,
+        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      });
+    }
+
+    // One upload of exactly the first `count` records. The typed-array
+    // overload takes the data offset + size in ELEMENTS (floats), not bytes.
+    device.queue.writeBuffer(instanceBuffer, 0, instances, 0, count * INSTANCE_FLOATS);
 
     pass.setPipeline(pipeline);
     pass.setVertexBuffer(0, instanceBuffer);
-    // Three verts (the oversized triangle), n instances (one per orbit).
-    pass.draw(3, n);
+    // Three verts (the oversized triangle), count instances (one per orbit).
+    pass.draw(3, count);
   }
 
   // ── destroy ───────────────────────────────────────────────────────────────
 
   function destroy(): void {
-    instanceBuffer.destroy();
+    instanceBuffer?.destroy();
+    instanceBuffer = null;
+    capacityOrbits = 0;
   }
 
   const renderer: OrbitTrailRenderer = {

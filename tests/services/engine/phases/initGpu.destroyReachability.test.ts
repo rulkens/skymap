@@ -260,9 +260,10 @@ vi.mock('../../../../src/services/gpu/renderers/bodies/cloudShellRenderer', () =
 vi.mock('../../../../src/services/gpu/renderers/atmosphere/atmosphereShellRenderer', () => ({
   createAtmosphereShellRenderer: vi.fn(() => makeStub('atmosphereShellRenderer')),
 }));
-// Partial mock: planetsLayer.ts imports the real MAX_PLANETS/INSTANCE_FLOATS
-// constants at module scope to size its staging buffer, so only the factory
-// is stubbed — passing those constants through keeps that sizing real.
+// Partial mock: planetsLayer.ts imports the real INSTANCE_FLOATS constant at
+// module scope to size its staging buffer (against SCENE_PLANETS.length —
+// no fixed cap), so only the factory is stubbed — passing INSTANCE_FLOATS
+// through keeps that sizing real.
 vi.mock('../../../../src/services/gpu/renderers/bodies/planetRenderer', async (importOriginal) => ({
   ...(await importOriginal<
     typeof import('../../../../src/services/gpu/renderers/bodies/planetRenderer')
@@ -307,8 +308,9 @@ vi.mock('../../../../src/services/gpu/renderers/bodies/bodyPickRenderer', () => 
 }));
 // Partial mock, same rationale as planetRenderer's above: orbitTrailsLayer.ts
 // (loaded transitively via the frame program's registry import) reads the
-// real MAX_ORBITS / INSTANCE_FLOATS constants at module scope to size its
-// staging buffer, so only the factory is stubbed.
+// real INSTANCE_FLOATS constant at module scope to size its staging buffer
+// (against ORBITAL_ELEMENTS.length — no fixed cap), so only the factory is
+// stubbed.
 vi.mock(
   '../../../../src/services/gpu/renderers/bodies/orbitTrailRenderer',
   async (importOriginal) => ({

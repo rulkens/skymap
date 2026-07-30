@@ -51,9 +51,10 @@
  * every frame the camera does — a membership fingerprint can no longer gate the
  * upload. `draw` therefore re-partitions and `setStars` the point subset every
  * frame. That rebuilds the GPU instance buffer per frame, but the point set is
- * ≤25 seeded stars (anything close enough to resolve becomes a sphere via
- * `starSpheresLayer`), so the create/destroy is trivially cheap — the churn the
- * old fingerprint cache guarded against does not exist at this scale.
+ * the SCENE_STARS roster (119 famous stars incl. the Sun) minus whichever few
+ * resolve to a sphere via `starSpheresLayer`, so the create/destroy is
+ * trivially cheap — the churn the old fingerprint cache guarded against does
+ * not exist at this scale.
  *
  * ### When it draws
  *

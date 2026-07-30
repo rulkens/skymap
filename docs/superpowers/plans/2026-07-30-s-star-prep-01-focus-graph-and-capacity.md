@@ -231,11 +231,11 @@ Signature deltas that follow from this:
 
 **Follow the sibling that is already correct:** `starPointRenderer.ts:172-214` grows its instance buffer when `stars.length > capacityStars`. Match that pattern. Silent truncation becomes a loud failure.
 
-- [ ] Add the test `the trail buffer grows past the initial capacity` driving more orbits than the initial allocation.
-- [ ] Add the test `an over-count draw throws rather than silently truncating`.
-- [ ] Implement.
-- [ ] `npm test -- orbitTrail` → passes.
-- [ ] Commit.
+- [x] Add the test `the trail buffer grows past the initial capacity` driving more orbits than the initial allocation.
+- [x] Add the test `an over-count draw throws rather than silently truncating`.
+- [x] Implement.
+- [x] `npm test -- orbitTrail` → passes.
+- [x] Commit.
 
 ---
 
@@ -252,11 +252,11 @@ Signature deltas that follow from this:
 
 `bodyPickRenderer.ts:142` claims `SCENE_STARS.length ~= 25`; it is 119. Benign, because spheres resolve nearest-one-at-a-time, but correct the comment rather than inherit it.
 
-- [ ] Add the test `the planet buffer grows past the initial capacity`.
-- [ ] Add the test `pick and draw agree on the planet count` — the asymmetry the backlog item names.
-- [ ] Implement; correct the stale comment; delete the backlog item and its index line.
-- [ ] `npm test` → green. `npm run build` → clean.
-- [ ] Commit.
+- [x] Add the test `the planet buffer grows past the initial capacity`.
+- [x] Add the test `pick and draw agree on the planet count` — the asymmetry the backlog item names.
+- [x] Implement; correct the stale comment; delete the backlog item and its index line.
+- [x] `npm test` → green. `npm run build` → clean.
+- [x] Commit.
 
 ---
 

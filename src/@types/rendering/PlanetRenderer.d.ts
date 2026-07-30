@@ -29,8 +29,10 @@ export type PlanetRenderer = Renderer & {
    * staging array across frames; `draw` uploads the first `count` records in
    * ONE `queue.writeBuffer` and issues ONE draw, so there is no per-body
    * uniform for a later write to clobber (the writeBuffer-vs-submit landmine is
-   * avoided by construction). `count` is clamped to the renderer's internal
-   * MAX_PLANETS cap; a zero count is a no-op.
+   * avoided by construction). The instance buffer grows to fit the largest
+   * `count` seen so far — there is no fixed cap on how many planets can be
+   * drawn; `count` must not exceed `instances.length / 24`, or `draw` throws
+   * rather than read past the caller's array. A zero count is a no-op.
    */
   draw(pass: GPURenderPassEncoder, instances: Float32Array, count: number): void;
 };
