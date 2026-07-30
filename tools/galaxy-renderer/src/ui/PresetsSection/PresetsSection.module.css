@@ -23,7 +23,7 @@
 }
 
 .hint {
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-lg);
   color: var(--color-fg-faint);
   line-height: 1.55;
 }

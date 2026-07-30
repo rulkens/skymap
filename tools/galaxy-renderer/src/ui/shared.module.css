@@ -44,7 +44,7 @@
 /* ── Section headers — uppercase, letter-spaced (html:196) ───────────────── */
 
 .sectionHeader {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-md);
   letter-spacing: var(--letter-spacing-widest);
   color: var(--color-fg-dim);
   font-weight: 600;

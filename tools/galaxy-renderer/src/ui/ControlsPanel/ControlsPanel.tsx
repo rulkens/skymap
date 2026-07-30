@@ -214,21 +214,25 @@ function ControlsPanel(): ReactNode {
     <div className={styles.root}>
       <div className={styles.scroll}>
         <Button
-          variant="primary"
           className={styles.randomizeButton}
           onClick={() => {
             const rng = freshRng();
             dispatch(paramsPatched(randomGalaxyParams(rng, { includeSize: false })));
           }}
         >
-          🎲 Randomize everything
+          Randomize
         </Button>
 
-        <div className={styles.morphologyHeader}>MORPHOLOGY · HUBBLE SEQUENCE</div>
-        <TypePicker
-          activeType={galaxy.type}
-          onSelect={(type) => dispatch(paramsPatched(hubbleTypePatch(type)))}
-        />
+        <CollapsibleSection
+          title="MORPHOLOGY · HUBBLE SEQUENCE"
+          open={ui.openSections.morphology}
+          onToggle={() => dispatch(sectionToggled('morphology'))}
+        >
+          <TypePicker
+            activeType={galaxy.type}
+            onSelect={(type) => dispatch(paramsPatched(hubbleTypePatch(type)))}
+          />
+        </CollapsibleSection>
 
         <CollapsibleSection
           title="SHAPE & SIZE"
@@ -236,6 +240,15 @@ function ControlsPanel(): ReactNode {
           onToggle={() => dispatch(sectionToggled('shape'))}
         >
           {shapeSliders.map(renderGalaxySlider)}
+          <Button
+            className={styles.newSeedButton}
+            onClick={() => {
+              const rng = freshRng();
+              dispatch(paramsPatched({ seed: (rng() * 1e9) | 0 } as Partial<GalaxyParams>));
+            }}
+          >
+            ⟲ New random seed
+          </Button>
         </CollapsibleSection>
 
         {armSliders.length > 0 && (
@@ -273,16 +286,6 @@ function ControlsPanel(): ReactNode {
         >
           {GLOB_SLIDERS.map(renderGalaxySlider)}
         </CollapsibleSection>
-
-        <Button
-          className={styles.newSeedButton}
-          onClick={() => {
-            const rng = freshRng();
-            dispatch(paramsPatched({ seed: (rng() * 1e9) | 0 } as Partial<GalaxyParams>));
-          }}
-        >
-          ⟲ New random seed
-        </Button>
 
         <CollapsibleSection
           title="RENDERING"
@@ -348,6 +351,7 @@ function ControlsPanel(): ReactNode {
             step={0.25}
             format={(v) => v.toFixed(2)}
             onChange={(v) => dispatch(renderPatched({ starPxMin: v }))}
+            info="The two px knobs clamp a sprite's on-screen half-extent in pixels of the star target, which the divisor below shrinks — at divisor 2 one unit here is two screen pixels. Softness blends the tight core+glow profile toward a broad Gaussian at equal integral, changing shape without changing emitted light."
           />
           <ParamSlider
             label="Star px cap"
@@ -367,12 +371,6 @@ function ControlsPanel(): ReactNode {
             format={(v) => v.toFixed(2)}
             onChange={(v) => dispatch(renderPatched({ softness: v }))}
           />
-          <div className={styles.lodExplainer}>
-            The two px knobs clamp a sprite&rsquo;s on-screen half-extent in pixels of the STAR
-            TARGET, which the divisor below shrinks — at divisor 2 one unit here is two screen
-            pixels. Softness blends the tight core+glow profile toward a broad Gaussian at equal
-            integral, so it changes shape without changing emitted light.
-          </div>
           <div className={styles.toneWrap}>
             <div className={styles.toneLabel}>Tone mapping</div>
             <TonemapSelect
@@ -438,12 +436,8 @@ function ControlsPanel(): ReactNode {
             step={0.001}
             format={(v) => v.toFixed(3)}
             onChange={(v) => dispatch(lodPatched({ lodApparent: v }))}
+            info="View-dependent: hides sprites smaller than the threshold on screen right now, and brightens the survivors so the field's total light holds. Higher = faster, especially with many galaxies. Fly in and they reappear. 0 disables the cull."
           />
-          <div className={styles.lodExplainer}>
-            View-dependent: hides sprites smaller than the threshold on screen right now, and
-            brightens the survivors so the field&rsquo;s total light holds. Higher = faster,
-            especially with many galaxies. Fly in and they reappear. 0 disables the cull.
-          </div>
           <ParamSlider
             label="Star target divisor"
             value={render.aggregateDivisor}
@@ -452,13 +446,8 @@ function ControlsPanel(): ReactNode {
             step={1}
             format={(v) => String(Math.round(v))}
             onChange={(v) => dispatch(renderPatched({ aggregateDivisor: Math.round(v) }))}
+            info="Stars render into an offscreen at 1/N the canvas and are bilinearly added back into HDR, so their fragment cost — the actual wall — falls as N². 1 is full resolution, the reference the reconstruction has to be judged against. Moving it reallocates that target and rescales the two px knobs above, which clamp in its pixels."
           />
-          <div className={styles.lodExplainer}>
-            Stars render into an offscreen at 1/N the canvas and are bilinearly added back into HDR,
-            so their fragment cost — the actual wall — falls as N². 1 is full resolution, the
-            reference the reconstruction has to be judged against. Moving it reallocates that target
-            and rescales the two px knobs above, which clamp in ITS pixels.
-          </div>
         </CollapsibleSection>
 
         <CollapsibleSection

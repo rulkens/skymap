@@ -36,7 +36,7 @@
 }
 
 .headerBody {
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-xl);
   color: var(--color-fg-muted);
   margin-top: 5px;
   line-height: 1.5;
@@ -53,7 +53,7 @@
   padding: 5px 8px;
   border-radius: 7px;
   font-family: var(--font-family-mono);
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-lg);
   font-weight: 600;
   cursor: pointer;
   background: var(--surface-control);
@@ -100,7 +100,7 @@
   justify-content: center;
   text-align: center;
   padding: 20px;
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-xl);
   font-style: italic;
   color: var(--color-fg-muted);
 }
@@ -112,7 +112,7 @@
   bottom: 0;
   padding: 10px 12px;
   background: linear-gradient(to top, rgba(0, 0, 0, 0.85), transparent);
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-lg);
   color: var(--color-fg-muted);
 }
 
@@ -124,7 +124,7 @@
 }
 
 .type {
-  font-size: 12.5px;
+  font-size: var(--font-size-xl);
   color: var(--color-fg-muted);
   margin-top: 2px;
 }
@@ -144,7 +144,7 @@
 }
 
 .factLabel {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-md);
   letter-spacing: 1px;
   color: var(--color-fg-dim);
 }
@@ -158,7 +158,7 @@
 }
 
 .notable {
-  font-size: 12.5px;
+  font-size: var(--font-size-xl);
   color: var(--color-fg-muted);
   line-height: 1.6;
   margin-top: 14px;
@@ -213,7 +213,7 @@
 }
 
 .fitBody {
-  font-size: 11.5px;
+  font-size: var(--font-size-lg);
   color: var(--color-fg-muted);
   line-height: 1.55;
   margin-top: 6px;
@@ -245,7 +245,7 @@
 
 .noPhotoHint {
   margin-top: 8px;
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-lg);
   color: var(--color-fg-muted);
   text-align: center;
 }
@@ -273,7 +273,7 @@
   justify-content: space-between;
   align-items: center;
   margin-top: 6px;
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-lg);
   color: var(--color-fg-muted);
   font-family: var(--font-family-mono);
 }
@@ -294,7 +294,7 @@
   border: 1px solid var(--border-divider);
   border-radius: 9px;
   padding: 11px 12px;
-  font-size: 11.5px;
+  font-size: var(--font-size-lg);
   font-family: var(--font-family-mono);
   color: var(--color-fg-muted);
 }
@@ -302,7 +302,7 @@
 .reportHeader {
   color: var(--color-fg-dim);
   letter-spacing: 1px;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-md);
   margin-bottom: 7px;
 }
 

@@ -8,6 +8,7 @@ import type { UiState } from '../../@types/state/UiState';
 
 export const DEFAULT_UI_STATE: UiState = {
   openSections: {
+    morphology: true,
     shape: true,
     arms: true,
     pop: true,

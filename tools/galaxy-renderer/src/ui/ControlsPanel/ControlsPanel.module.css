@@ -27,11 +27,6 @@
   margin-bottom: 16px;
 }
 
-.morphologyHeader {
-  composes: sectionHeader from '../shared.module.css';
-  margin-bottom: 12px;
-}
-
 .newSeedButton {
   composes: blockButton from '../shared.module.css';
   margin-top: 4px;
@@ -44,7 +39,7 @@
 
 .toneLabel {
   font-family: var(--font-family-mono);
-  font-size: 12.5px;
+  font-size: var(--font-size-xl);
   color: var(--color-fg-base);
   margin-bottom: 5px;
 }
@@ -58,7 +53,7 @@
   justify-content: space-between;
   margin-top: 6px;
   font-family: var(--font-family-mono);
-  font-size: 12.5px;
+  font-size: var(--font-size-xl);
   color: var(--color-fg-base);
   cursor: pointer;
 }
@@ -72,7 +67,7 @@
 
 .lodExplainer {
   margin-top: 4px;
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-lg);
   color: var(--color-fg-faint);
   line-height: 1.5;
 }

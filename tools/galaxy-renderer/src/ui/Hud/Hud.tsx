@@ -38,7 +38,7 @@ function Hud({ perf, stars, dust }: HudProps): ReactNode {
   return (
     <div className={styles.root}>
       <div className={styles.eyebrow}>SKYMAP · WEBGPU</div>
-      <div className={styles.title}>Galaxy Renderer</div>
+      <div className={styles.title}>Galaxy Zoo</div>
       <div className={styles.badges}>
         <span className={cx(styles.fpsPill, frameGood ? styles.fpsGood : styles.fpsWarn)}>
           {perf.frameMs.toFixed(2)} ms · {Math.round(perf.fps)} fps

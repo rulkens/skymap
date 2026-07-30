@@ -9,7 +9,16 @@
 export type UiState = {
   readonly openSections: Readonly<
     Record<
-      'shape' | 'arms' | 'pop' | 'dust' | 'glob' | 'render' | 'grade' | 'perf' | 'multi',
+      | 'morphology'
+      | 'shape'
+      | 'arms'
+      | 'pop'
+      | 'dust'
+      | 'glob'
+      | 'render'
+      | 'grade'
+      | 'perf'
+      | 'multi',
       boolean
     >
   >; // all true — html:470

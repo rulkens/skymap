@@ -29,3 +29,20 @@
 .seedButton:hover {
   opacity: 0.85;
 }
+
+.infoIcon {
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: help;
+  font-size: 12px;
+  line-height: 1;
+  opacity: 0.55;
+  color: var(--color-fg-faint);
+  flex: none;
+}
+
+.infoIcon:hover,
+.infoIcon:focus-visible {
+  opacity: 0.85;
+}

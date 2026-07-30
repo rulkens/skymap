@@ -6,7 +6,7 @@
   align-items: center;
   justify-content: space-between;
   font-family: var(--font-family-mono);
-  font-size: 12.5px;
+  font-size: var(--font-size-xl);
   color: var(--color-fg-base);
   cursor: pointer;
 }
@@ -32,7 +32,7 @@
 
 .explainer {
   margin-top: 9px;
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-lg);
   color: var(--color-fg-faint);
   line-height: 1.5;
 }

@@ -3,7 +3,7 @@
 
 .rowLabel {
   font-family: var(--font-family-mono);
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-lg);
   color: var(--color-fg-muted);
   margin-bottom: 6px;
 }
@@ -46,7 +46,7 @@
   padding: 5px 0;
   border-radius: 7px;
   font-family: var(--font-family-mono);
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-lg);
   font-weight: 600;
   cursor: pointer;
   background: var(--surface-control);

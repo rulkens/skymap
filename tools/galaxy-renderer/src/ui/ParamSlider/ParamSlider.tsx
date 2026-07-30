@@ -13,6 +13,7 @@
  */
 import type { ReactNode } from 'react';
 import Slider from '../../../../../src/components/common/Slider/Slider';
+import CompactInfoTip from '../../../../../src/components/common/CompactInfoTip/CompactInfoTip';
 import styles from './ParamSlider.module.css';
 
 export type ParamSliderProps = {
@@ -24,6 +25,8 @@ export type ParamSliderProps = {
   readonly format?: (value: number) => string;
   readonly onChange: (value: number) => void;
   readonly onReseed?: () => void;
+  /** Hover/focus explainer, revealed from a ⓘ affordance ahead of the pill. */
+  readonly info?: string;
 };
 
 function ParamSlider({
@@ -35,9 +38,17 @@ function ParamSlider({
   format,
   onChange,
   onReseed,
+  info,
 }: ParamSliderProps): ReactNode {
   return (
     <div className={styles.root}>
+      {info && (
+        <CompactInfoTip label={info}>
+          <button type="button" className={styles.infoIcon} aria-label={`About ${label}`}>
+            ⓘ
+          </button>
+        </CompactInfoTip>
+      )}
       <div className={styles.main}>
         <Slider
           label={label}
