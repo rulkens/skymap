@@ -209,16 +209,16 @@ Still behaviour-neutral: `device.ts` keeps its `?hdr` gate this task (it is remo
 task 6), so the boot format is unchanged and `hdrActiveOf` returns exactly what
 `ctx.hdr` used to.
 
-- [ ] Add the test `hdrActiveOf is true only for an rgba16float swap row` — assert both
+- [x] Add the test `hdrActiveOf is true only for an rgba16float swap row` — assert both
       arms against a stub `RenderTargets`.
-- [ ] Implement `hdrActiveOf`; delete the three boolean declarations and their
+- [x] Implement `hdrActiveOf`; delete the three boolean declarations and their
       assignments; repoint `renderFrame.ts:96-97` at `hdrActiveOf(ctx.renderTargets)`.
-- [ ] `GpuContext.hdrCapable` is **required, not optional** — the old field's optionality
+- [x] `GpuContext.hdrCapable` is **required, not optional** — the old field's optionality
       existed only to avoid touching call sites (its own doc comment says so). Fix the
       call sites.
-- [ ] Update `renderFrame.test.ts`'s fixture (`:304-305`, `:632-648`) for the new shape.
-- [ ] `npm test` (full suite — this touches the frame context) and `npm run typecheck`.
-- [ ] Commit.
+- [x] Update `renderFrame.test.ts`'s fixture (`:304-305`, `:632-648`) for the new shape.
+- [x] `npm test` (full suite — this touches the frame context) and `npm run typecheck`.
+- [x] Commit.
 
 ---
 

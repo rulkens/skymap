@@ -291,7 +291,7 @@ export function createCompositor(init: {
         uniformU32[3] = tone.curve >>> 0;
         uniformU32[4] = 1;
         // 0 unless the caller opted a swap chain into HDR (`renderFrame` only
-        // sets these non-zero when `ctx.hdr` is true).
+        // sets these non-zero when `hdrActiveOf(ctx.renderTargets)` is true).
         uniformF32[6] = tone.hdrKnee;
         uniformF32[7] = tone.hdrHeadroom;
       } else {

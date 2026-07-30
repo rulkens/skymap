@@ -304,7 +304,7 @@ export const DEFAULT_EXPOSURE = 3.0;
  *
  * The five curves saturate anywhere from 1.0 to 7.24, so this default only holds
  * while the curve does — switching curve wants a nudge on the slider. Inert unless
- * the swap chain is the extended-range surface (`GpuContext.hdr`).
+ * the swap chain is the extended-range surface (`hdrActiveOf`).
  */
 export const DEFAULT_HDR_KNEE = toneMapCurveSaturation(DEFAULT_TONE_MAP_CURVE);
 

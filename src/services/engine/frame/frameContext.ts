@@ -149,9 +149,6 @@ export function deriveFrameContext(
   const renderer = state.gpu.renderer;
   const renderTargets = state.gpu.renderTargets;
   const texturedDisks = state.subsystems.texturedDisks;
-  // HDR-output spike: forwarded straight through, same pattern as `renderer`
-  // / `renderTargets` above — see `ReadyFrameContext.hdr`'s doc comment.
-  const hdr = state.gpu.hdr;
 
   // Assemble the full OrbitCamera from the already-produced store pose, the
   // engine's projection Resource, and this frame's orientation basis. The basis
@@ -207,7 +204,6 @@ export function deriveFrameContext(
     focus: ZERO_FOCUS,
     renderer,
     renderTargets,
-    hdr,
     // A fresh empty Set per frame — the executor populates it as it opens the
     // first pass against each target, and a later pass sampling an earlier
     // target's texture reads it to know whether that target actually rendered

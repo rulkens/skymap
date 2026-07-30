@@ -41,7 +41,7 @@ export type ToneMap = {
    * the pixel's own colour ratio rather than per channel, so it lifts brightness
    * without shifting hue — the same contract `lib/starKnee.wesl` upholds one
    * stage earlier. No visible effect unless the swap chain is actually an HDR
-   * surface — see `GpuContext.hdr`.
+   * surface — see `hdrActiveOf`.
    */
   readonly hdrHeadroom: number;
 };

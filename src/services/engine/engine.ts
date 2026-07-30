@@ -278,12 +278,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // All GPU handles populate during the async IIFE below and
       // release in `destroy()`.  See `@types/EngineGpuHandles.d.ts`
       // for the null-until-init lifecycle rationale.
-      //
-      // `hdr` is the one plain-boolean exception to that rationale (see its
-      // doc comment on EngineGpuHandles) — defaults false so a frame drawn
-      // before `initGpu` resolves reads the same "no HDR" answer it would
-      // get after `initGpu` resolves with HDR off.
-      hdr: false,
       renderer: null,
       pickRenderer: null,
       pickProgram: null,

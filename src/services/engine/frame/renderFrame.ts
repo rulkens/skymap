@@ -52,6 +52,7 @@ import { executeFrame } from './executeFrame';
 import { frameProgram } from './frameProgram';
 import { resolveStrategy } from './resolveStrategy';
 import { CONTENT_LAYERS } from './passes';
+import { hdrActiveOf } from '../../../utils/gpu/hdrActiveOf';
 
 /**
  * Encode and submit one frame. Synchronous: by the time it returns, the GPU
@@ -81,6 +82,12 @@ export function renderFrame(input: RenderFrameInput): void {
     state.settings.debug.renderStrategy,
     timingService.enabled,
   );
+  // Zeroed on every SDR frame — `hdrActive` is only true when the swap
+  // chain is currently the `rgba16float` extended-range surface (both the
+  // `?hdr` URL gate and a real `(dynamic-range: high)` display — see
+  // `initGpu` in `device.ts`). Gating here rather than in the shader keeps
+  // the SDR output bit-identical no matter where the sliders sit.
+  const hdrActive = hdrActiveOf(ctx.renderTargets);
   executeFrame({
     encoder,
     ctx,
@@ -89,12 +96,8 @@ export function renderFrame(input: RenderFrameInput): void {
       {
         exposure: state.settings.tonemap.exposure,
         curve: state.settings.tonemap.curve,
-        // Zeroed on every SDR frame — `ctx.hdr` is only true behind BOTH the
-        // `?hdr` URL gate and a real `(dynamic-range: high)` display (see
-        // `initGpu` in `device.ts`). Gating here rather than in the shader
-        // keeps the SDR output bit-identical no matter where the sliders sit.
-        hdrKnee: ctx.hdr ? state.settings.tonemap.hdrKnee : 0,
-        hdrHeadroom: ctx.hdr ? state.settings.tonemap.hdrHeadroom : 0,
+        hdrKnee: hdrActive ? state.settings.tonemap.hdrKnee : 0,
+        hdrHeadroom: hdrActive ? state.settings.tonemap.hdrHeadroom : 0,
       },
       // The master bloom toggle is the ONLY bloom value that shapes the step
       // list; strength/threshold are read live by the bloom layers each draw.

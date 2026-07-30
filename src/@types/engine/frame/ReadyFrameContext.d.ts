@@ -116,16 +116,6 @@ export type ReadyFrameContext = {
    */
   renderTargets: RenderTargets;
   /**
-   * HDR-output spike: forwarded from `state.gpu.hdr` (see its doc comment)
-   * so `renderFrame` can read it off `ctx` like every other per-frame value,
-   * instead of reaching back into `state.gpu.*` for this one flag. Optional
-   * (not `boolean`) so the many hand-built `ReadyFrameContext` fixtures across
-   * the test suite, all predating this field, don't need updating just to
-   * thread a value they don't exercise — `renderFrame` treats "absent" the
-   * same as `false`.
-   */
-  hdr?: boolean;
-  /**
    * The set of render-target ids drawn into so far THIS frame. A later pass
    * that samples an earlier target's texture guards on this — mirroring the
    * executor's composite step, which skips compositing a source that was never

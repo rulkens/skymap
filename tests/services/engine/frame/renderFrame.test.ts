@@ -355,8 +355,6 @@ function makeInput(
     renderer: pointRenderer,
     renderTargets,
     texturedDisks: thumbnails,
-    // HDR-output spike: these fixtures exercise the default SDR path.
-    hdr: false,
   };
 
   return {
@@ -637,9 +635,14 @@ describe('renderFrame', () => {
   it('forwards the settings headroom knobs only when the swap chain is extended-range', () => {
     // The two knobs are live settings but must reach the shader as 0 on an SDR
     // swap chain, where spilled energy would just be clamped back to white. The
-    // gate lives in renderFrame, so flipping ctx.hdr is the whole difference
-    // between the settings values and zeros.
-    fx.input.ctx.hdr = true;
+    // gate lives in renderFrame via `hdrActiveOf`, which reads the `swap` row's
+    // format straight off `renderTargets.specs` — flipping it to the extended-range
+    // format is the whole difference between the settings values and zeros.
+    // Non-null assertion: the mock's `specs` always seeds a 'swap' row (see
+    // `makeMockRenderTargets`) — if that ever stops being true this should
+    // fail loudly here, not as an opaque "set properties of undefined" below.
+    const swapSpec = fx.renderTargets.specs.find((spec: { id: string }) => spec.id === 'swap')!;
+    swapSpec.format = 'rgba16float';
     renderFrame(fx.input);
 
     const draw = fx.compositor.draw as ReturnType<typeof vi.fn>;

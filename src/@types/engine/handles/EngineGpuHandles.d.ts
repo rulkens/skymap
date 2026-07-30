@@ -86,17 +86,6 @@ import type { LoadedFontAtlases } from '../../rendering/LoadedFontAtlases';
 import type { GpuContext } from '../../rendering/GpuContext';
 
 export type EngineGpuHandles = {
-  /**
-   * HDR-output spike: whether the swap chain `initGpu` (`device.ts`)
-   * configured is the extended-range `'rgba16float'` surface. The one
-   * exception to this bag's "null until initGpu, released by destroy()"
-   * lifecycle rule (see the module header): it is a plain boolean known
-   * synchronously from `gpuInitGpu`'s return value, not a GPU resource, so
-   * there is nothing for `destroy()` to release. Defaults `false` so every
-   * reader is correct before `initGpu` runs, same as after it runs with HDR
-   * off. Read by `deriveFrameContext` to stamp `ReadyFrameContext.hdr`.
-   */
-  hdr: boolean;
   renderer: PointRenderer | null;
   pickRenderer: PickRenderer | null;
   /**

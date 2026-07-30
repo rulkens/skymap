@@ -162,7 +162,7 @@ export async function initGpu(canvas: HTMLCanvasElement): Promise<GpuContext> {
     ...(hdr ? ({ toneMapping: { mode: 'extended' } } as any) : {}),
   });
 
-  return { device, context, format, canvas, hdr };
+  return { device, context, format, canvas, hdrCapable: hdr };
 }
 
 // ─── Resize helper ────────────────────────────────────────────────────────────

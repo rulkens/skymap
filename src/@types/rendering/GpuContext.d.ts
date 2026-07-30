@@ -32,9 +32,10 @@ export type GpuContext = {
    * chain take `targetFormat` explicitly, so a layer's target is legible at
    * its renderer's construction site rather than inferred here.
    *
-   * HDR-output spike: when `hdr` is true, this is instead `'rgba16float'` —
-   * the browser's preferred format is always an 8-bit fixed-point format, so
-   * the extended-range swap chain has to ask for the float format directly.
+   * HDR-output spike: `initGpu` (`device.ts`) picks `'rgba16float'` here at
+   * boot when `hdrCapable` permits it — the browser's preferred format is
+   * always an 8-bit fixed-point format, so the extended-range swap chain has
+   * to ask for the float format directly.
    */
   format: GPUTextureFormat;
 
@@ -42,18 +43,11 @@ export type GpuContext = {
   canvas: HTMLCanvasElement;
 
   /**
-   * HDR-output spike: true when the swap chain is the `'rgba16float'`
-   * extended-range surface (both `?hdr` was passed AND the display reports
-   * `(dynamic-range: high)`). False (or absent) on every default page load,
-   * and false on a non-HDR display even with `?hdr` set — see `initGpu` in
-   * `device.ts`.
-   *
-   * Optional, not `boolean`: the many `{ device, context, format, canvas }`
-   * literals built throughout the codebase for renderers that only ever
-   * targeted the swap chain (labels, marker lines, selection ring, …) predate
-   * this field and have no reason to know about HDR. Making it required would
-   * force every one of those call sites (and their tests) to thread a value
-   * they don't use. Treat "absent" the same as `false`.
+   * HDR-output spike: true when the display + `?hdr` URL flag combination
+   * that `initGpu` (`device.ts`) evaluates at boot permits the extended-range
+   * surface — false on every default page load, and false on a non-HDR
+   * display even with `?hdr` set. NOT whether the swap chain currently is
+   * that surface: that's a separate, derived question — see `hdrActiveOf`.
    */
-  readonly hdr?: boolean;
+  readonly hdrCapable: boolean;
 };
