@@ -404,13 +404,13 @@ Both conjuncts are load-bearing: the format switch and the settings write are no
 simultaneous, so a frame can land between them. Headroom 0 is exactly the SDR result, so
 the transitional frame is correct rather than merely safe.
 
-- [ ] Add the test `the tone-map gets zero headroom when the HDR toggle is off even on a float swap chain`
+- [x] Add the test `the tone-map gets zero headroom when the HDR toggle is off even on a float swap chain`
       — the case an `hdrActive`-only gate gets wrong.
-- [ ] Run it, watch it fail against the current one-conjunct gate.
-- [ ] Implement, then **mutation-verify**: revert the `settings.hdr.enabled` conjunct and
+- [x] Run it, watch it fail against the current one-conjunct gate.
+- [x] Implement, then **mutation-verify**: revert the `settings.hdr.enabled` conjunct and
       confirm the new test fails, then restore it.
-- [ ] `npm test -- renderFrame`, `npm run typecheck`.
-- [ ] Commit.
+- [x] `npm test -- renderFrame`, `npm run typecheck`.
+- [x] Commit.
 
 ---
 

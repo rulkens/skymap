@@ -301,6 +301,7 @@ function makeInput(
     focus: { center: [0, 0, 0], apparentRadiusMpc: 0, physicalRadiusMpc: 0, blend: 0 } as const,
     exposure: 1.0,
     toneMapCurve: ToneMapCurve.Reinhard,
+    hdrEnabled: true,
     hdrKnee: 4.0,
     hdrHeadroom: 0.25,
     galaxyTexturesEnabled: true,
@@ -455,6 +456,7 @@ function makeInput(
             curve: settings.toneMapCurve,
           },
           hdr: {
+            enabled: settings.hdrEnabled,
             knee: settings.hdrKnee,
             headroom: settings.hdrHeadroom,
           },
@@ -651,6 +653,22 @@ describe('renderFrame', () => {
     const tone = draw.mock.calls[0]![3];
     expect(tone.hdrKnee).toBe(fx.settings.hdrKnee);
     expect(tone.hdrHeadroom).toBe(fx.settings.hdrHeadroom);
+  });
+
+  it('the tone-map gets zero headroom when the HDR toggle is off even on a float swap chain', () => {
+    // A float swap chain alone isn't sufficient: the format switch and the
+    // `hdr.enabled` write land in separate frames, so a frame can carry an
+    // extended-range swap chain with the viewer's toggle still off. Gating
+    // on `hdrActive` alone would leak the settings knobs into that frame.
+    const fx2 = makeInput({ settings: { hdrEnabled: false } });
+    const swapSpec = fx2.renderTargets.specs.find((spec: { id: string }) => spec.id === 'swap')!;
+    swapSpec.format = 'rgba16float';
+    renderFrame(fx2.input);
+
+    const draw = fx2.compositor.draw as ReturnType<typeof vi.fn>;
+    const tone = draw.mock.calls[0]![3];
+    expect(tone.hdrKnee).toBe(0);
+    expect(tone.hdrHeadroom).toBe(0);
   });
 
   it('records the full frame in canonical order: createEncoder → hdr COSMO pass (points) → hdr NEAR0 pass (milky-way) → composite pass → compositor.draw → finish → submit', () => {
