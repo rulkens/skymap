@@ -51,6 +51,7 @@ const initialState: EngineSliceState = {
   status: { kind: 'initializing' },
   scale: INITIAL_SCALE,
   focusedBodyDistanceMpc: null,
+  hdrCapable: false,
   sourceCounts: {},
   structureCounts: {},
   provenanceCounts: {},
@@ -154,6 +155,16 @@ const engineSlice = createSlice({
         state.focusedBodyDistanceMpc = action.payload;
       }
     },
+
+    // ── HDR display capability ───────────────────────────────────────────────
+    // Live, not a boot snapshot: `initGpu`'s matchMedia `change` listener
+    // (`watchHdrCapability` in `device.ts`) re-dispatches this whenever the
+    // active display's `(dynamic-range: high)` verdict changes — e.g. the
+    // window moves to an SDR monitor — so the Settings → Display HDR section
+    // can disable itself the moment the browser says so.
+    engineHdrCapabilityChanged: (state, action: PayloadAction<boolean>) => {
+      state.hdrCapable = action.payload;
+    },
   },
 });
 
@@ -167,6 +178,7 @@ export const {
   engineFamousStarsMetaReported,
   engineScaleChanged,
   engineBodyDistanceReported,
+  engineHdrCapabilityChanged,
 } = engineSlice.actions;
 
 export default engineSlice.reducer;

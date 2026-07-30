@@ -22,7 +22,10 @@ import { CONTENT_LAYERS } from '../../../../src/services/engine/frame/passes';
 describe('timedSlotsOf — per-render-step group keys', () => {
   // Bloom ON so the derivation covers the single `'bloom'` slot the sub-pipeline
   // adds alongside the per-render-step group keys.
-  const slots = timedSlotsOf(frameProgram({ exposure: 1, curve: 0 }, true), CONTENT_LAYERS);
+  const slots = timedSlotsOf(
+    frameProgram({ exposure: 1, curve: 0, hdrKnee: 0, hdrHeadroom: 0 }, true),
+    CONTENT_LAYERS,
+  );
 
   it('includes the render steps’ group keys — the slots the merged pass bills against', () => {
     // Each maps to a distinct render step in frameProgram(): the cosmological

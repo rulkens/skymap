@@ -55,6 +55,8 @@
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 
+import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
+import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { runCameraDrivers } from '../camera/cameraDrivers';
 import { activeDriverId } from '../camera/activeDriverId';
 import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
@@ -67,7 +69,13 @@ import { produceStructureMarkers } from '../presentation/produceStructureMarkers
 import { deriveFrameContext } from './frameContext';
 import { deriveBodyStates } from './deriveBodyStates';
 import { sceneBodyStates } from './sceneBodyStates';
+import { earthSurfaceTier } from './earthSurfaceTier';
 import { prepareStarCut } from './passes/starCatalogLayer';
+import { earthLayer } from './passes/earthLayer';
+import { NEAR0, slabViewOf } from './slabs';
+import { composeBodyMvp } from '../../../utils/camera/composeBodyMvp';
+import { camPosLocal } from '../../../utils/camera/camPosLocal';
+import { planEarthTiles } from '../../../utils/scene/planEarthTiles';
 import { deriveSourceMasks } from './deriveSourceMasks';
 import { renderFrame } from './renderFrame';
 import { drawPickDebugOverlay } from './drawPickDebugOverlay';
@@ -109,15 +117,21 @@ const publishBodyDistanceGate = throttleByTime(250);
 
 /**
  * Idle-tick cadence for a LIVE sim clock, in milliseconds. Live time advances
- * at the real-time rate (one sim day per real day), so the Sun barely moves —
- * the Earth terminator creeps by a fraction of a pixel per second. Pinning the
- * render loop at 60 fps to redraw that would burn the GPU for no visible gain,
- * so live mode is deliberately kept OUT of `shouldKeepTicking`. Instead we ask
- * the scheduler for ONE frame every few seconds: a coarse heartbeat that keeps
- * the terminator honest while letting the loop sleep in between. A few seconds
- * is well below the threshold where terminator drift becomes noticeable, and
- * far above the per-frame cost we are avoiding. The React TimeBar readout runs
- * its own timer, so this heartbeat serves only the 3D scene.
+ * one sim day per real day, so the terminator sweeps `0.00417° * T` of ground
+ * per tick of length T — on screen that maps to pixels via `2 * h * tan(fovY /
+ * 2)` (h = camera altitude) over the canvas's pixel height.
+ *
+ * The altitude term is what makes the cadence tight: at the 127 km standoff
+ * over streamed surface tiles the viewport spans only ~147 km vertically, so a
+ * 3 s tick is a visible ~8 px jump on a ~900 px-tall canvas. 500 ms holds that
+ * drift under 1.5 px at every reachable altitude — ground drift scales
+ * linearly with tick length, screen-space drift inversely with altitude.
+ *
+ * Kept OUT of `shouldKeepTicking` regardless: pinning the loop at 60 fps for a
+ * rotation this slow would burn the GPU for no visible gain, so instead we ask
+ * the scheduler for ONE frame per tick — a heartbeat that keeps the terminator
+ * honest while the loop sleeps in between. The React TimeBar readout runs its
+ * own timer, so this heartbeat serves only the 3D scene.
  *
  * A `setInterval` would be the wrong tool: it fires unconditionally, fighting
  * render-on-demand and double-scheduling whenever a real wake (drag, fade) is
@@ -125,7 +139,7 @@ const publishBodyDistanceGate = throttleByTime(250);
  * single one-shot that self-cancels once fired and is ignored while a rAF frame
  * is already queued — so it only ever supplies the frames the busy loop didn't.
  */
-const LIVE_IDLE_TICK_MS = 3_000;
+const LIVE_IDLE_TICK_MS = 500;
 
 /**
  * Run one frame of the render loop. Called every rAF tick by the scheduler in
@@ -548,6 +562,61 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     );
   }
 
+  // ── Earth surface virtual texture — the tile planner ──────────────────────
+  // A CPU-side planner, sited with the disk planners above. The gate is
+  // `earthLayer.enabled` itself, not a hand-copied predicate, so the tiles and
+  // the layer they refine can never disagree about whether Earth is on screen.
+  const earthTiles = state.subsystems.earthTiles;
+  const earth = state.data.bodies.earth;
+  if (earthTiles !== null && earth !== null && earthLayer.enabled(state, ctx)) {
+    // `earthSurfaceTier` reads the tier off the committed texture slot, not the
+    // app-wide request, so a tier swap in flight can't make the planner believe
+    // in detail that isn't on the GPU yet. Null until the manifest lands.
+    const params = earthTiles.plannerParams(earthSurfaceTier(state));
+    if (params !== null) {
+      // Same slab resolution `earthLayer.draw` uses (the f64 seam — see its
+      // module header), so the tiles the planner asks for never drift from the
+      // pixels the fragment samples them into.
+      const view = slabViewOf(ctx, NEAR0);
+      const earthState = sceneBodyStates(state, ctx).get(earth.id)!;
+      const radiusMpc = earth.radiusKm * SCALE_UNITS.KM_TO_MPC;
+      const plan = planEarthTiles({
+        ...params,
+        camPosLocal: camPosLocal(
+          view.camPos,
+          earthState.positionMpc,
+          radiusMpc,
+          earthState.orientation,
+        ),
+        viewProjLocal: composeBodyMvp(
+          view.slab.vp,
+          earthState.positionMpc,
+          RENDER_ORIGIN_MPC,
+          radiusMpc,
+          earthState.orientation,
+        ),
+        viewportPx: view.viewportPx,
+      });
+      // Unconditional: engaging/disengaging is the subsystem's own decision
+      // from this plan. `getTileResources()` either side of `update` IS the
+      // null-to-non-null transition, so the renderer's bind group rebuilds
+      // exactly once, at that moment.
+      const engagedBefore = earthTiles.getTileResources() !== null;
+      earthTiles.update({ plan, nowMs: ctx.nowMs });
+      if (!engagedBefore) {
+        const tiles = earthTiles.getTileResources();
+        if (tiles !== null) {
+          state.gpu.earthRenderer?.setTileResources(tiles.pageTable, tiles.atlas);
+        }
+      }
+    }
+  }
+
+  // Read OUTSIDE the gate above: `isAnimating()` is true while the manifest is
+  // in flight, a state entered BEFORE the subsystem can ever engage — voting
+  // only on engaged frames would let a stopped camera sleep the loop mid-fetch.
+  const earthTilesAnimating = earthTiles?.isAnimating() ?? false;
+
   // ── Label director per-frame update ──────────────────────────────────────
   //
   // Runs BEFORE the GPU dispatch so `labelRenderer.setLabels` /
@@ -627,6 +696,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   state.subsystems.fades.tick(nowMs);
   const keepTicking = shouldKeepTicking(state, rootState, nowMs, {
     starFadeAnimating: starCut?.anyNodeFading ?? false,
+    earthTilesAnimating,
   });
 
   if (keepTicking) {

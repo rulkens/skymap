@@ -78,6 +78,17 @@ export type CollapsibleSectionProps = {
    * standard React pattern for the indeterminate-checkbox case.
    */
   readonly headerToggleIndeterminate?: boolean;
+  /**
+   * Marks the header toggle non-interactive without hiding or greying it —
+   * a sighted user still sees the checkbox (so they know the feature exists),
+   * a screen-reader user gets `aria-disabled` instead of silence, and both
+   * get `disabledHint` as the `title` tooltip. Collapse/expand is unaffected:
+   * the knobs underneath stay inspectable even when the master switch can't
+   * be flipped (e.g. HDR sliders on a display that isn't HDR-capable).
+   */
+  readonly disabled?: boolean;
+  /** Tooltip shown on the header toggle when `disabled`. */
+  readonly disabledHint?: string;
 };
 
 function CollapsibleSection({
@@ -87,6 +98,8 @@ function CollapsibleSection({
   headerToggle,
   onHeaderToggleChange,
   headerToggleIndeterminate,
+  disabled,
+  disabledHint,
 }: CollapsibleSectionProps): ReactNode {
   const [open, setOpen] = useState<boolean>(defaultOpen);
 
@@ -138,8 +151,20 @@ function CollapsibleSection({
             type="checkbox"
             className={styles.headerToggle}
             checked={headerToggle}
+            aria-disabled={disabled || undefined}
+            title={disabled ? disabledHint : undefined}
             onChange={(e) => {
               e.stopPropagation();
+              if (disabled) {
+                // React fires onChange for a checkbox click's native toggle
+                // even when the click was preventDefault()'d, and the native
+                // `checked` IDL has already flipped by the time either
+                // handler runs — so undo it here rather than upstream. Not
+                // the native `disabled` attribute: that drops the control
+                // out of the tab order, which defeats announcing the hint.
+                e.target.checked = headerToggle ?? false;
+                return;
+              }
               onHeaderToggleChange(e.target.checked);
             }}
             onClick={(e) => e.stopPropagation()}

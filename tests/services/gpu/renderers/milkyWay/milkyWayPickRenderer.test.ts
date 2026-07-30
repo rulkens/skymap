@@ -16,6 +16,7 @@ const newRenderer = () => {
     context: null as unknown as GPUCanvasContext,
     format: 'rgba16float' as GPUTextureFormat,
     canvas: null as unknown as HTMLCanvasElement,
+    hdrCapable: false,
   };
   return createMilkyWayPickRenderer(ctx, null as unknown as FadeUniformsBgl, false);
 };
@@ -85,6 +86,7 @@ describe('milkyWayPickRenderer (stub device)', () => {
       context: null as unknown as GPUCanvasContext,
       format: 'rgba16float' as GPUTextureFormat,
       canvas: null as unknown as HTMLCanvasElement,
+      hdrCapable: false,
     };
     createMilkyWayPickRenderer(ctx, {} as FadeUniformsBgl, false);
 
@@ -120,6 +122,7 @@ describe('milkyWayPickRenderer (stub device)', () => {
       context: null as unknown as GPUCanvasContext,
       format: 'rgba16float' as GPUTextureFormat,
       canvas: null as unknown as HTMLCanvasElement,
+      hdrCapable: false,
     };
     const r = createMilkyWayPickRenderer(ctx, {} as FadeUniformsBgl, false);
 

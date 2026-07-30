@@ -77,9 +77,9 @@ export function computeInitialCamera({
   frameBasis?: Mat3;
 }): InitialCam {
   // The home distance is `bodyLikeFraming`'s deliberately UNCLAMPED Earth-scale
-  // value — no `clampDistance` here: at ~2e-16 Mpc the Mpc-scale clamp floor
-  // would swallow the framing. The wheel-zoom clamps own the floor
-  // (MIN_DISTANCE_MPC reaches Earth-surface scale); see `bodyLikeFraming`.
+  // value — no `clampDistance` here: it takes a pivot radius the boot pose
+  // hasn't resolved yet, and the absolute floor alone would swallow the framing
+  // at ~2e-16 Mpc. The wheel-zoom clamps own the floor; see `bodyLikeFraming`.
   return {
     ...earthHomePose(simDays, fovYRad, frameBasis),
     fovYRad,

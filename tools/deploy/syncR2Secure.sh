@@ -29,6 +29,15 @@
 #   # Linux (libsecret-tools)
 #   echo -n 'TOKEN'   | secret-tool store --label='Skymap CF API token' service skymap account cloudflare-api-token
 #   echo -n 'ZONE_ID' | secret-tool store --label='Skymap CF zone id'   service skymap account cloudflare-zone-id
+#
+# Bulk groups (the Earth tiles) additionally need R2's *S3 API* credentials,
+# which are a different thing from the Cloudflare API token above — create
+# them under R2 -> Manage API tokens.  They are optional: without them the
+# sync only fails if a bulk group actually has files to move.
+#
+#   security add-generic-password -a "$USER" -s skymap-r2-account-id        -w 'ACCOUNT_ID'
+#   security add-generic-password -a "$USER" -s skymap-r2-access-key-id     -w 'KEY_ID'
+#   security add-generic-password -a "$USER" -s skymap-r2-secret-access-key -w 'SECRET'
 
 set -euo pipefail
 
@@ -69,6 +78,29 @@ elif load_libsecret; then
   backend="libsecret"
 elif use_preset_env; then
   backend="pre-set env"
+fi
+
+# R2 S3-API credentials, loaded best-effort from the same backends.  A missing
+# one is not an error here — syncR2's preflight decides whether this run needs
+# them, and prints setup instructions if it does.
+load_r2_s3_credentials() {
+  if [[ "$OSTYPE" == darwin* ]] && command -v security >/dev/null 2>&1; then
+    R2_ACCOUNT_ID=$(security find-generic-password -a "$USER" -s skymap-r2-account-id -w 2>/dev/null) || true
+    R2_ACCESS_KEY_ID=$(security find-generic-password -a "$USER" -s skymap-r2-access-key-id -w 2>/dev/null) || true
+    R2_SECRET_ACCESS_KEY=$(security find-generic-password -a "$USER" -s skymap-r2-secret-access-key -w 2>/dev/null) || true
+  elif command -v secret-tool >/dev/null 2>&1; then
+    R2_ACCOUNT_ID=$(secret-tool lookup service "$SECRET_TOOL_SERVICE" account r2-account-id 2>/dev/null) || true
+    R2_ACCESS_KEY_ID=$(secret-tool lookup service "$SECRET_TOOL_SERVICE" account r2-access-key-id 2>/dev/null) || true
+    R2_SECRET_ACCESS_KEY=$(secret-tool lookup service "$SECRET_TOOL_SERVICE" account r2-secret-access-key 2>/dev/null) || true
+  fi
+  export R2_ACCOUNT_ID="${R2_ACCOUNT_ID:-}"
+  export R2_ACCESS_KEY_ID="${R2_ACCESS_KEY_ID:-}"
+  export R2_SECRET_ACCESS_KEY="${R2_SECRET_ACCESS_KEY:-}"
+}
+
+load_r2_s3_credentials
+if [ -n "${R2_ACCESS_KEY_ID:-}" ]; then
+  echo "▶ loaded R2 S3-API credentials"
 fi
 
 if [ -n "$backend" ]; then

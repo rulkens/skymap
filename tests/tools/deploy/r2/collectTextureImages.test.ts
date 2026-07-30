@@ -21,7 +21,7 @@ import { describe, expect, it } from 'vitest';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { collectTextureImages } from '../../../tools/deploy/collectTextureImages';
+import { collectTextureImages } from '../../../../tools/deploy/r2/collectTextureImages';
 
 /**
  * Build an isolated public/data/images/textures/-shaped tree under a

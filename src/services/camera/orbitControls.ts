@@ -63,7 +63,8 @@
 import type { OrbitCamera } from '../../@types/camera/OrbitCamera';
 import type { OrbitControlsOptions } from '../../@types/camera/OrbitControlsOptions';
 import { updatePosition } from '../../utils/camera/updatePosition';
-import { clampDistance } from '../../utils/camera/clampDistance';
+import { zoomedDistance } from '../../utils/camera/zoomedDistance';
+import { orbitRadPerPixel } from '../../utils/camera/orbitRadPerPixel';
 import { imagePlaneBasis } from '../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../utils/camera/frameUp';
 import { vec3 } from 'wgpu-matrix';
@@ -191,6 +192,12 @@ export function attachOrbitControls(
 
   /** Squared pixel distance between pointerdown and pointerup. */
   const CLICK_THRESHOLD_SQ = 4 * 4; // 4 px radius → 16 when squared
+
+  // Both zoom paths below (pinch, and a wheel tick during a held gesture) need
+  // the focused body's radius to taper/floor `zoomedDistance` against — read
+  // live through the caller's getter rather than cached, since this module
+  // never sees the scene and focus can change while controls stay attached.
+  const pivotRadius = (): number | null => options?.pivotRadiusMpc?.() ?? null;
 
   // ── Pointer down — begin drag ──────────────────────────────────────────────
 
@@ -347,14 +354,14 @@ export function attachOrbitControls(
       // zoom IN.  Pinch IN does the inverse.  This matches the "grab
       // the world and stretch" mental model that mobile users expect.
       //
-      // Symmetric with the wheel zoom's exponential model — both
-      // produce a constant proportional step regardless of how zoomed
-      // we already are.  No need for a separate sensitivity tuning;
-      // raw pixel ratio is naturally calibrated to the user's hand.
+      // Symmetric with the wheel zoom's exponential model — both feed the same
+      // ratio into `zoomedDistance` (see its module header). No need for a
+      // separate sensitivity tuning; raw pixel ratio is naturally calibrated
+      // to the user's hand.
       if (activePointers.size < 2 || lastPinchDist === 0) return;
       const newDist = currentPinchDistance();
       if (newDist > 0) {
-        cam.distance = clampDistance(cam.distance * (lastPinchDist / newDist));
+        cam.distance = zoomedDistance(cam.distance, lastPinchDist / newDist, pivotRadius());
         lastPinchDist = newDist;
         updatePosition(cam);
         options?.onChange?.();
@@ -450,19 +457,20 @@ export function attachOrbitControls(
     // If we added dx instead, drag-right would swing the camera rightward,
     // which feels like an FPS look — counter-intuitive for an orbiting view.
     //
-    // Sensitivity: 0.005 rad/px means a 100 px drag sweeps ~28.6°, which
-    // covers roughly 1/12 of a full orbit. This feels natural on a typical
-    // laptop trackpad — fast enough to reorient in a few gestures, slow
-    // enough for precise positioning. Exposing this as a tunable constant
-    // (rather than deriving it from fov or canvas size) keeps the feel
-    // consistent regardless of resolution or zoom level.
-    cam.yaw -= dx * 0.005;
+    // Sensitivity: `orbitRadPerPixel` damps the flat rate by altitude above a
+    // focused body's surface so the ground under the cursor tracks the drag
+    // (see the util's module header for the derivation and its limits).
+    const cssHeight = canvas.clientHeight || 1;
+    const radPerPixel = orbitRadPerPixel(cam.fovYRad, cam.distance, cssHeight, pivotRadius());
+
+    cam.yaw -= dx * radPerPixel;
 
     // Pitch (up / down): dragging down (positive dy, because CSS Y grows
     // downward) should tilt the camera upward toward the +Y pole — so we
     // *add* dy to pitch.  Clamp to ±PITCH_LIMIT to prevent the gimbal-lock
-    // singularity at ±π/2 (see PITCH_LIMIT comment above).
-    cam.pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, cam.pitch + dy * 0.005));
+    // singularity at ±π/2 (see PITCH_LIMIT comment above). Same altitude-damped
+    // rate as yaw.
+    cam.pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, cam.pitch + dy * radPerPixel));
 
     // Recalculate cam.position from the updated yaw/pitch/distance.
     // The render loop reads cam.position (via computeViewProj) on the next
@@ -479,7 +487,7 @@ export function attachOrbitControls(
     // passive listeners cannot call `preventDefault()`.
     e.preventDefault();
 
-    // Exponential zoom: multiply distance by e^(δ · k).
+    // Exponential zoom: scale by e^(δ · k) per notch.
     //
     // Why exponential (multiplicative) rather than linear (additive)?
     //
@@ -498,17 +506,18 @@ export function attachOrbitControls(
     //   • Scroll down (positive deltaY) → factor > 1 → distance grows (zoom out).
     //   • Scroll up   (negative deltaY) → factor < 1 → distance shrinks (zoom in).
     //
-    // `clampDistance` enforces the global zoom envelope (see orbitCamera.ts):
-    // a hard floor prevents the camera from flipping through the target into
-    // an inverted scene; a hard ceiling prevents drifting off into the void
-    // beyond the deepest galaxy catalog, where the cloud collapses to a dot.
+    // `zoomedDistance` applies that per-notch factor to altitude above a
+    // pivot's surface rather than raw distance (see its module header); the
+    // ceiling it still enforces via `clampDistance` prevents drifting off into
+    // the void beyond the deepest galaxy catalog, where the cloud collapses to
+    // a dot.
     const factor = Math.exp(e.deltaY * 0.001);
 
     if (activePointers.size > 0) {
       // Wheel DURING a drag/pinch: fold the zoom into the live `cam` register.
       // The `orbitDrag` driver (priority 80) is active and renders `poseOf(cam)`,
       // so the zoom shows immediately and rides the `onGestureEnd` commit.
-      cam.distance = clampDistance(cam.distance * factor);
+      cam.distance = zoomedDistance(cam.distance, factor, pivotRadius());
       updatePosition(cam);
       options?.onChange?.();
       return;

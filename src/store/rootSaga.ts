@@ -6,6 +6,7 @@
  *   watchTierSaga          — runs the tier transition (per-source reload + famous rebuild)
  *   watchWakeSaga          — requests a render frame on every settings write
  *   watchFlowReseedSaga    — reseeds the flow particle field when mode or count changes
+ *   watchSwapFormatSaga    — reconfigures the swap chain on hdr.enabled or display-capability changes
  *   watchBiasBakeSaga      — rebakes the brightness bias LUT when BiasMode changes
  *   watchFadesSaga         — syncs visibility-layer fades via the FADE_ROW table
  *   watchSelectionRowsSaga — keeps the selectionRows derived cache in sync with selection refs
@@ -54,6 +55,7 @@ import { all } from 'typed-redux-saga';
 import { watchTierSaga } from '../state/tier/watchTierSaga';
 import { watchWakeSaga } from './effects/watchWakeSaga';
 import { watchFlowReseedSaga } from './effects/watchFlowReseedSaga';
+import { watchSwapFormatSaga } from './effects/watchSwapFormatSaga';
 import { watchBiasBakeSaga } from './effects/watchBiasBakeSaga';
 import { watchFadesSaga } from './effects/watchFadesSaga';
 import { watchSelectionRowsSaga } from '../state/selectionRows/watchSelectionRowsSaga';
@@ -76,6 +78,7 @@ export function* mainSaga() {
     watchTierSaga(),
     watchWakeSaga(),
     watchFlowReseedSaga(),
+    watchSwapFormatSaga(),
     watchBiasBakeSaga(),
     watchFadesSaga(),
     watchSelectionRowsSaga(),

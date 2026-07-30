@@ -315,7 +315,7 @@ export function timedSlotGroupsOf(
  *
  * The tone values are placeholders: `timedSlotsOf` only reads step kinds and
  * `(target, slab)` — the composite's `tone` never affects a slot NAME — so a
- * fixed `{ exposure: 1, curve: 0 }` yields the same list every real frame's
+ * fixed `PLACEHOLDER_TONE` yields the same list every real frame's
  * `frameProgram(tone)` would.
  *
  * `bloomEnabled = true` so the query-set allocation always includes the `'bloom'`
@@ -323,8 +323,10 @@ export function timedSlotGroupsOf(
  * the `'bloom'` step, and `runBloom` also no-ops on a null `bloomPyramid`, so the
  * pre-allocated slot simply goes unused, like any empty group's slot.
  */
+const PLACEHOLDER_TONE: ToneMap = { exposure: 1, curve: 0, hdrKnee: 0, hdrHeadroom: 0 };
+
 export const TIMED_SLOTS: readonly string[] = timedSlotsOf(
-  frameProgram({ exposure: 1, curve: 0 }, true),
+  frameProgram(PLACEHOLDER_TONE, true),
   CONTENT_LAYERS,
 );
 
@@ -334,7 +336,7 @@ export const TIMED_SLOTS: readonly string[] = timedSlotsOf(
  * `CONTENT_LAYERS` gets a grouped row here with zero DebugPanel edits.
  */
 export const TIMED_SLOT_GROUPS: readonly TimedSlotGroup[] = timedSlotGroupsOf(
-  frameProgram({ exposure: 1, curve: 0 }, true),
+  frameProgram(PLACEHOLDER_TONE, true),
   CONTENT_LAYERS,
 );
 
@@ -345,7 +347,7 @@ export const TIMED_SLOT_GROUPS: readonly TimedSlotGroup[] = timedSlotGroupsOf(
  * walk, so the two lists stay positionally aligned.
  */
 const PASS_GROUP_KEYS: ReadonlyMap<string, string> = new Map(
-  timedSlotRowsOf(frameProgram({ exposure: 1, curve: 0 }, true), CONTENT_LAYERS).map((row) => [
+  timedSlotRowsOf(frameProgram(PLACEHOLDER_TONE, true), CONTENT_LAYERS).map((row) => [
     row.name,
     row.groupKey,
   ]),

@@ -1,6 +1,6 @@
 # Boot load priority — part 2: the body-texture atlas
 
-**Spec:** [`docs/superpowers/specs/2026-07-24-boot-load-priority.md`](../specs/2026-07-24-boot-load-priority.md) §3.
+**Spec:** [`docs/superpowers/specs/completed/2026-07-24-boot-load-priority.md`](../../specs/completed/2026-07-24-boot-load-priority.md) §3.
 **Part 1:** [`2026-07-24-boot-load-priority.md`](2026-07-24-boot-load-priority.md). Its Phase 0
 prep (P3 residency, P4a/P4b placeholder layers) is a hard precondition for everything here.
 Do not start part 2 before part 1's Phase 2 has landed.
