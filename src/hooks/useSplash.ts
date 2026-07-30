@@ -58,7 +58,6 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { UseSplashInput } from '../@types/splash/UseSplashInput';
 import type { UseSplashReturn } from '../@types/splash/UseSplashReturn';
 import type { SplashError } from '../@types/splash/SplashError';
 import { CURRENT_SPLASH_VERSION } from '../state/ui/splashStorage';
@@ -70,9 +69,7 @@ import { dismissSplash, reopenSplash } from '../state/ui/uiSlice';
 /** Milliseconds before the "Continue anyway" escape appears. */
 export const CONTINUE_ANYWAY_DELAY_MS = 8_000;
 
-export function useSplash(input: UseSplashInput): UseSplashReturn {
-  const { famousMetaFailed = false } = input;
-
+export function useSplash(): UseSplashReturn {
   // ── Engine state from the Redux slice ────────────────────────────────────
   //
   // `status` and `loadProgress` come from the engine slice rather than being
@@ -146,9 +143,6 @@ export function useSplash(input: UseSplashInput): UseSplashReturn {
 
   // ── Error mapping ────────────────────────────────────────────────────────
   //
-  // Engine errors (status.kind === 'error') take precedence over famous-meta
-  // failures because an engine error blocks the whole app — the famous-meta
-  // tooltip would be misleading next to a "catalog failed to load" headline.
   // We discriminate engine errors by inspecting the message: anything
   // mentioning "WebGPU" is reported as a webgpu-init failure (since the
   // synchronous "no navigator.gpu at all" case is handled in main.tsx, the
@@ -163,11 +157,8 @@ export function useSplash(input: UseSplashInput): UseSplashReturn {
       }
       return { kind: 'catalog-fetch-failed', message: status.message };
     }
-    if (famousMetaFailed) {
-      return { kind: 'famous-meta-failed' };
-    }
     return null;
-  }, [status, famousMetaFailed]);
+  }, [status]);
 
   return {
     splashVisible,

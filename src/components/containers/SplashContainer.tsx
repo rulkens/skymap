@@ -23,7 +23,7 @@ import { selectLoadProgress } from '../../state/engine/selectors';
 import { startTour } from '../../state/tour/tourActions';
 
 function SplashContainer(): ReactNode {
-  const splash = useSplash({});
+  const splash = useSplash();
   const loadProgress = useAppSelector(selectLoadProgress);
   const dispatch = useAppDispatch();
 
