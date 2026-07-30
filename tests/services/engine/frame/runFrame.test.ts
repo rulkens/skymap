@@ -142,9 +142,11 @@ function makeState(): EngineState {
       bias: { mode: 'off', absMagLimit: -19 },
       thumbnails: { enabled: false },
       // aggregateDivisor is read every frame by the offscreen-rebuild branch
-      // (whenever renderTargets is non-null), so the fixture carries the boot
-      // value rather than leaving the branch to compare against undefined.
-      milkyWay: { enabled: false, aggregateDivisor: 2 },
+      // (whenever renderTargets is non-null), and starCount likewise by the
+      // cloud-regenerate branch (whenever milkyWayCloud is non-null), so the
+      // fixture carries both boot values rather than leaving either branch to
+      // compare against undefined.
+      milkyWay: { enabled: false, aggregateDivisor: 2, starCount: 150000 },
       filaments: { enabled: false, intensity: 1 },
       volumes: { enabled: false },
     },
@@ -698,6 +700,45 @@ describe('runFrame — mw-aggregate divisor', () => {
     // A frame with the setting unchanged must not rebuild again.
     runFrame(state, deps, 16);
     expect(state.gpu.renderTargets).toBe(rebuilt);
+  });
+});
+
+describe('runFrame — milky-way star count', () => {
+  it('regenerates the cloud when starCount moves, and leaves it alone when it does not', () => {
+    // starCount feeds generation, not a uniform or a render target — a
+    // texture-rebuild-shaped fix doesn't apply here, so the only way a drag
+    // reaches the screen is the frame loop noticing the setting has outrun
+    // the buffers on screen and calling regenerate. A knob with no branch
+    // wired to it would silently do nothing, which is the failure this test
+    // exists to catch. The steady-state half matters just as much as the
+    // mw-aggregate divisor test's: comparing against `cloud.starCount()`
+    // (what the CURRENT buffers were generated with) has to settle once the
+    // regenerate lands, or every frame after a drag would regenerate again.
+    const store = makeStore();
+    const state = makeState();
+    const deps = makeDeps(store);
+
+    let currentCount = 150000;
+    const regenerate = vi.fn((count: number) => {
+      currentCount = count;
+    });
+    state.gpu.milkyWayCloud = {
+      buffers: vi.fn(),
+      starCount: () => currentCount,
+      regenerate,
+      destroy: vi.fn(),
+    } as unknown as EngineState['gpu']['milkyWayCloud'];
+
+    state.settings.milkyWay.starCount = 40000;
+    runFrame(state, deps, 0);
+
+    expect(regenerate).toHaveBeenCalledTimes(1);
+    expect(regenerate).toHaveBeenCalledWith(40000);
+    expect(currentCount).toBe(40000);
+
+    // A frame with the setting unchanged must not regenerate again.
+    runFrame(state, deps, 16);
+    expect(regenerate).toHaveBeenCalledTimes(1);
   });
 });
 

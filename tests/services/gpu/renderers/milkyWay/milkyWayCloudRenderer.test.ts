@@ -89,6 +89,10 @@ const TUNING = {
   softness: 0.75,
   lodApparent: 0.005,
   aggregateDivisor: 3,
+  // Never read by the renderer (it feeds generation, not the uniform pack
+  // this draw-args fixture exercises) — present only because `tuning` is
+  // typed as the full `MilkyWayTuning` shape.
+  starCount: 150000,
 };
 
 function drawArgs(withDust: boolean): MilkyWayCloudDrawArgs {

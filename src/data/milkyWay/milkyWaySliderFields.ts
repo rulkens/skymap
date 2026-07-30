@@ -23,10 +23,13 @@
  * `enabled` / `labelEnabled` are deliberately NOT here: boolean visibility
  * axes aren't sliders, and forcing them into a slider row would complect the
  * control kind with the field list. The bar for everything else is that moving
- * it changes the NEXT frame — `aggregateDivisor` clears that bar (the frame
- * loop reallocates the star pass's offscreen when it moves) even though it is
- * not a uniform, while the STAR COUNT misses it: count feeds generation, so a
- * live slider over it would show nothing until the next tier switch.
+ * it changes the NEXT frame. `aggregateDivisor` clears that bar by having the
+ * frame loop reallocate the star pass's offscreen when the setting no longer
+ * matches the table in force, even though it isn't a uniform. `starCount`
+ * clears it the same way — the frame loop compares the live setting against
+ * the count the cloud's current buffers were generated with, and regenerates
+ * on a mismatch — but the reaction is heavier: a full regeneration (destroy +
+ * allocate + compute dispatch) rather than a render-target rebuild.
  */
 import type { MilkyWayTuning } from '../../@types/settings/MilkyWayTuning';
 import type { MilkyWaySliderKey } from '../../@types/data/milkyWay/MilkyWaySliderKey';
@@ -118,7 +121,39 @@ export const MILKY_WAY_SLIDER_FIELDS: readonly MilkyWaySliderField[] = [
     title:
       'Downsample divisor for the mw-aggregate offscreen. Fragment cost falls as its square. pxMin/pxMax clamp in TARGET pixels, so doubling this doubles a clamped sprite on screen.',
   },
+  {
+    key: 'starCount',
+    label: 'count',
+    // `splitStarBudget` floors the TOTAL at 20,000 stars regardless of what's
+    // requested — this IS that floor, not a taste choice. A lower `min` would
+    // let the slider display a number the renderer silently ignores; if the
+    // floor in `splitStarBudget` ever moves, this must move with it.
+    min: 20000,
+    // 4x the medium tier's default budget is already a heavy regenerate (see
+    // the runFrame branch's cost note); past that the count/size trade this
+    // row exists to explore is well into "many tight sprites", the opposite
+    // end from what the smoothness experiment wants.
+    max: 600000,
+    step: 5000,
+    format: (v) => Math.round(v).toLocaleString(),
+    title:
+      'Absolute star count — regenerates the cloud (destroy + allocate + compute dispatch), not a uniform write. splitStarBudget floors the total at 20,000 stars.',
+  },
 ];
+
+/**
+ * The "Celestia end" of the count/size trade-off — few thousand large, dim,
+ * soft splats rather than many tight ones — reached by pushing four of these
+ * rows at once rather than `starCount` alone:
+ *
+ *   starCount      ~20,000  (the floor — as few splats as the renderer allows)
+ *   starSizeScale   way up  (fewer splats need to be much bigger to cover the sky)
+ *   exposure        way down (absolute — nothing dims it for you as size grows)
+ *   lodApparent     0        (disables the cull; the LOD 3x-boosts survivors,
+ *                             which manufactures exactly the graininess a low
+ *                             starCount is meant to test)
+ *   softness        1        (the broad Gaussian profile, not the tight core+glow)
+ */
 
 /**
  * Build a `MilkyWayTuning` patch for one slider field. The cast is sound:

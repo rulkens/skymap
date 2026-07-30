@@ -41,6 +41,7 @@ import {
 import { catalogLoaded } from '../../../src/state/catalog/catalogLoaded';
 import { selectionRoute } from '../../../src/store/constants';
 import { Source } from '../../../src/data/sources';
+import { MILKY_WAY_STARS_PER_TIER } from '../../../src/services/gpu/galaxy/milkyWayCalibration';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import type { RunTierTransition } from '../../../src/store/types';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
@@ -100,6 +101,20 @@ describe('watchTierSaga', () => {
     // 'medium' is the boot default the tier slice seeds; the runner sees the
     // PREVIOUS tier first so its per-source diff stays honest.
     expect(runner).toHaveBeenCalledWith('medium', 'large');
+  });
+
+  it('re-seeds the Milky-Way star count from the new tier budget', async () => {
+    // settings.milkyWay.starCount is an absolute count with no built-in tie to
+    // the tier — this saga's re-seed is what keeps it meaningful across a
+    // tier change. Assert the END state only, after `flush()`: redux-saga
+    // queues nested `put`s, so this saga's own setTier/setMilkyWayTuning pair
+    // is not guaranteed to land in source order relative to other watchers
+    // reacting to `setTier` — but both are guaranteed to have landed by the
+    // time the dispatched worker has run to completion.
+    store.dispatch(requestTier('large'));
+    await flush();
+
+    expect(store.getState().settings.milkyWay.starCount).toBe(MILKY_WAY_STARS_PER_TIER.large);
   });
 
   it('is a no-op for a same-tier request', async () => {

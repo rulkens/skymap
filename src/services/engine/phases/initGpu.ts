@@ -386,13 +386,22 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
 
   // ── Milky-Way point cloud + its two-pass renderer ────────────────────
   //
-  // The GPU-generated star/dust cloud (`milkyWayCloud`) owns the per-tier
-  // instance buffers; the additive-stars + multiplicative-dust renderer
-  // (`milkyWayCloudRenderer`) draws them from `milkyWayLayer`. `state.tier`
-  // folds the current tier's star budget into the first generation; a tier
-  // swap regenerates via `makeRunTierTransition`. Same HDR target
-  // ('rgba16float') as the other overlay renderers.
-  state.gpu.milkyWayCloud = createMilkyWayCloud(device, state.tier);
+  // The GPU-generated star/dust cloud (`milkyWayCloud`) owns the instance
+  // buffers; the additive-stars + multiplicative-dust renderer
+  // (`milkyWayCloudRenderer`) draws them from `milkyWayLayer`. Same HDR
+  // target ('rgba16float') as the other overlay renderers.
+  //
+  // The boot starCount comes from `MILKY_WAY_TUNING_DEFAULTS` (the same
+  // calibration-module source `aggregateDivisor` reads above, for the render
+  // targets table), not from `state.settings`: this phase seeds the GPU
+  // side, and `runFrame` already regenerates the cloud whenever the live
+  // setting diverges from what the current buffers were generated with —
+  // reading settings here would add a second path to the same answer. That
+  // mismatch branch also covers a later tier swap: `watchTierSaga` re-seeds
+  // `settings.milkyWay.starCount` from the new tier's budget, which is just
+  // another live-setting change from the cloud's point of view — it carries
+  // no notion of `Tier` itself (see `MilkyWayCloud`'s docblock).
+  state.gpu.milkyWayCloud = createMilkyWayCloud(device, MILKY_WAY_TUNING_DEFAULTS.starCount);
   state.gpu.milkyWayCloudRenderer = createMilkyWayCloudRenderer({
     device,
     targetFormat: 'rgba16float',

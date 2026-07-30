@@ -31,10 +31,19 @@ import { outerRadiusOf } from './outerRadiusOf';
 export const MILKY_WAY_RADIUS_MPC = MILKY_WAY_DISC_RADIUS_KPC / 1000;
 
 /**
- * Per-tier star budgets. `medium` IS the preset's `starCount` — the tier the
- * preset was tuned against — so it's asserted equal rather than duplicated;
- * `small`/`large` derive from it by half/double rather than carrying three
- * independently-tunable numbers that could quietly drift apart.
+ * Per-tier star-count SEEDS. `medium` IS the preset's `starCount` — the tier
+ * the preset was tuned against — so it's asserted equal rather than
+ * duplicated; `small`/`large` derive from it by half/double rather than
+ * carrying three independently-tunable numbers that could quietly drift
+ * apart.
+ *
+ * Not read by `milkyWayCloud.generate` — the live `settings.milkyWay.starCount`
+ * is an absolute count, not a per-tier multiplier, so generation never
+ * indexes this table directly. It is read by `watchTierSaga`, which re-seeds
+ * `starCount` from here on every explicit tier change (see `MilkyWayTuning`'s
+ * docblock for why: an absolute count would otherwise decouple the cloud from
+ * tier LOD entirely) and by `MILKY_WAY_TUNING_DEFAULTS` below for the boot
+ * value.
  *
  * `GalaxyParams.starCount` is optional on the type (every field but `type`
  * is), even though this particular preset always sets it — the `|| 0`
@@ -105,6 +114,13 @@ export const MILKY_WAY_TUNING_DEFAULTS: MilkyWayTuning = {
   // stated in pixels OF THAT TARGET, so this number and those two are one
   // trade — change it and they move with it.
   aggregateDivisor: 2,
+  // By reference to `MILKY_WAY_STARS_PER_TIER.medium`, never a copied
+  // literal: medium IS the tier the preset was tuned against, and the tier
+  // slice always boots at 'medium' (see `tierSlice.ts`), so this reproduces
+  // exactly what shipped before this knob existed. Moving it live is a
+  // count/size trade-off exploration, not a steady-state look — see
+  // `MILKY_WAY_SLIDER_FIELDS`'s `starCount` row.
+  starCount: MILKY_WAY_STARS_PER_TIER.medium,
 };
 
 /**
