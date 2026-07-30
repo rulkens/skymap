@@ -31,6 +31,20 @@
  * The eviction handler (`setEvictHandler`) is what lets that planner
  * keep its parallel `bitmapReadyTime` map in sync without re-implementing
  * the LRU clock.
+ *
+ * ### `bitmapReady` means "pixels are in the atlas", not "the fetch resolved"
+ *
+ * A landed fetch is not the same event as a populated slot.  A key can be
+ * evicted while its fetch is in flight, and the bitmap that arrives afterwards
+ * has nowhere to go: the slot it was allocated belongs to another key now, and
+ * writing it there would paint one key's pixels under another's UVs.  So
+ * `uploadBitmap` is the single writer of `bitmapReady` — the key becomes
+ * "loaded" if and only if an upload actually happened.
+ *
+ * Recording the key on fetch resolution instead is the tempting shortcut and it
+ * is a dead end for the ground it describes: `isLoaded` suppresses further
+ * fetches, so a key marked loaded with no pixels behind it renders whatever the
+ * consumer's miss path is, forever, and nothing ever asks for it again.
  */
 
 import type {
@@ -115,13 +129,18 @@ export function createBitmapStreamSubsystem(deps: BitmapStreamDeps): BitmapStrea
     lastSeenFrame(key) {
       return atlas.lastSeenFrame(key);
     },
-    uploadBitmap(slot, bitmap) {
+    uploadBitmap(key, bitmap) {
+      // The atlas is re-asked here rather than trusted from allocate time: the
+      // caller has been holding this key across a network round trip, and the
+      // slot it was given N frames ago may since have been recycled under a
+      // different key.
+      const slot = atlas.slotOf(key);
+      if (slot === undefined) return null;
       atlas.uploadBitmap(slot, bitmap);
-      // The caller's key is what landed; the subsystem doesn't have
-      // the key at this entry point (uploadBitmap takes a slot index),
-      // so isLoaded() is driven by the enqueueFetch wrapper below
-      // which DOES have the key.  Production callers always pair
-      // uploadBitmap with the wrapper, so this split is fine.
+      // The one place `bitmapReady` is written, so "loaded" and "has pixels in
+      // the atlas" are the same fact by construction — see the module header.
+      bitmapReady.add(key);
+      return slot;
     },
     enqueueFetch(input: BitmapStreamFetchInput) {
       // Re-entry guard: don't enqueue keys we've already given up on.
@@ -141,11 +160,15 @@ export function createBitmapStreamSubsystem(deps: BitmapStreamDeps): BitmapStrea
             input.onResult(null);
             return;
           }
-          bitmapReady.add(input.key);
           // `onResult` is the consumer's hook — they upload via
-          // uploadBitmap() inside this callback and update their
-          // own load-fade timing.
+          // uploadBitmap() inside this callback, which is what records the key
+          // as loaded, and update their own load-fade timing from its result.
+          // A consumer that declines to upload leaves the key unloaded and so
+          // still fetchable, which is the whole point: the bitmap had nowhere
+          // to go, and the ground it covers still needs pixels.
           input.onResult(bitmap);
+          // Unconditional: an upload needs a frame to show, and a declined one
+          // still has to let the keep-ticking predicate re-read inFlightCount.
           requestRender();
         },
       });

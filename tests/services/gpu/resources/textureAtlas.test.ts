@@ -54,12 +54,25 @@ describe('TextureAtlas slot state machine', () => {
     expect(a.lastSeenFrame('obj-new')).toBe(9999);
   });
 
-  it('release() frees a slot for re-use', () => {
+  // The bug this reproduces: a bitmap fetched for a key that was evicted and
+  // then re-requested landed in the slot the FIRST allocation returned, painting
+  // it over whichever key had taken that slot meanwhile. `slotOf` is what an
+  // async writer asks instead, so it has to track the re-allocation and not the
+  // original.
+  it('slotOf follows a key across an evict-and-return, rather than its first slot', () => {
     const a = newAtlas();
-    const slot = a.allocate('obj-z', 1);
-    a.release('obj-z');
-    expect(a.lastSeenFrame('obj-z')).toBeUndefined();
-    expect(a.allocate('obj-w', 2)).toBe(slot); // reuses freed slot
+    for (let i = 0; i < SLOT_COUNT; i++) a.allocate(`obj-${i}`, i);
+    const firstSlot = a.slotOf('obj-0');
+
+    // Frame 9999 evicts obj-0 (the LRU) and hands its slot to the newcomer.
+    a.allocate('usurper', 9999);
+    expect(a.slotOf('obj-0')).toBeUndefined();
+    expect(a.slotOf('usurper')).toBe(firstSlot);
+
+    // obj-0 comes back and gets whatever is stale NOW — obj-1's slot, not its own.
+    const secondSlot = a.allocate('obj-0', 10000);
+    expect(secondSlot).not.toBe(firstSlot);
+    expect(a.slotOf('obj-0')).toBe(secondSlot);
   });
 
   describe('onEvict handler', () => {

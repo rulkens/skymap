@@ -60,19 +60,48 @@ export type BitmapStreamSubsystem = Destroyable & {
   slotUv(slot: number): readonly [number, number, number, number];
 
   /**
-   * Frame the slot was last allocate()-touched, or undefined if evicted.
-   * Lets fetchers detect "my slot got reassigned during the network
-   * round-trip".
+   * Frame the slot was last allocate()-touched, or undefined if the key holds
+   * no slot.  The LRU clock, read out — which is a weaker fact than "is my
+   * slot still mine", and not a substitute for it: a key that was evicted and
+   * then re-requested reports a fresh frame at a DIFFERENT slot.  Async writers
+   * ask `uploadBitmap` instead.
    */
   lastSeenFrame(key: string): number | undefined;
 
-  /** Upload a bitmap into a previously-allocated slot. */
-  uploadBitmap(slot: number, bitmap: ImageBitmap): void;
+  /**
+   * Upload a bitmap into the slot the atlas holds for `key` RIGHT NOW, and
+   * record the key as loaded.  Returns that slot, or `null` when the key holds
+   * no slot at all — evicted during the fetch's round trip, or never allocated.
+   *
+   * Keyed rather than slot-indexed because a slot index is a fact about the
+   * frame that allocated it (see `TextureAtlas`'s header).  A caller that
+   * captured one before awaiting a fetch and passed it back here would write
+   * pixels into whichever key has since taken that slot: wrong ground under the
+   * other key's UVs, in a slot the atlas believes is already populated and so
+   * never refetches.  Resolving the key at the point of use makes that
+   * unrepresentable rather than merely guarded against.
+   *
+   * The `null` return is the consumer's signal to record nothing — no slot, no
+   * arrival time, no residency entry — and it subsumes any "is my key still
+   * here?" check a caller might otherwise write around this call.
+   */
+  uploadBitmap(key: string, bitmap: ImageBitmap): number | null;
 
-  /** Idempotent — re-enqueueing an in-flight key only refreshes priority. */
+  /**
+   * Idempotent per key.  Re-enqueueing a key that is merely PENDING replaces
+   * its entry, so priority tracks the latest ask; re-enqueueing one that is
+   * already IN FLIGHT does nothing at all, so the `onResult` that eventually
+   * fires is the first one submitted.  That second case is why `onResult` must
+   * not close over anything frame-scoped: later frames get no chance to
+   * correct it (see `uploadBitmap`).
+   */
   enqueueFetch(input: BitmapStreamFetchInput): void;
 
-  /** Reports whether the bitmap has landed in the atlas / failed to fetch. */
+  /**
+   * Reports whether the key's pixels are in the atlas (`isLoaded`, written only
+   * by a successful `uploadBitmap`) / whether its fetch permanently failed.
+   * Both suppress further fetches, so both must mean what they say.
+   */
   isLoaded(key: string): boolean;
   isFailed(key: string): boolean;
 

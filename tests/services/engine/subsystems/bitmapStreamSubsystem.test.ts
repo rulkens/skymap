@@ -9,6 +9,8 @@
  *   - setEvictHandler fires on LRU eviction with the ousted key
  *   - inFlightCount() tracks pending fetches
  *   - destroy() clears the eviction handler
+ *   - uploadBitmap() resolves the key's CURRENT slot, and is the only thing
+ *     that makes a key "loaded" (the recycled-slot describe block)
  *
  * Atlas geometry here (32×32 texture, 8×8 slots → 16 total) is an
  * arbitrary test config, not a real consumer's — this file exercises the
@@ -122,7 +124,7 @@ describe('createBitmapStreamSubsystem', () => {
     expect(evicted[0]).toBe('k0');
   });
 
-  it('isLoaded flips true after uploadBitmap', () => {
+  it('uploadBitmap reports the slot it wrote, and only then is the key loaded', () => {
     const atlas = createBitmapStreamSubsystem({
       device,
       requestRender: () => {},
@@ -130,12 +132,149 @@ describe('createBitmapStreamSubsystem', () => {
     });
     const slot = atlas.allocate('k', 1)!;
     expect(atlas.isLoaded('k')).toBe(false);
-    atlas.uploadBitmap(slot, makeFakeBitmap());
-    // Note: isLoaded reads the subsystem's internal bookkeeping set;
-    // for this test we just confirm uploadBitmap doesn't throw and
-    // slotUv returns four numbers.
-    const uv = atlas.slotUv(slot);
-    expect(uv).toHaveLength(4);
+    expect(atlas.uploadBitmap('k', makeFakeBitmap())).toBe(slot);
+    expect(atlas.isLoaded('k')).toBe(true);
+    // A key that holds no slot has nowhere for pixels to go, and saying so is
+    // the caller's cue to record nothing — not to mark it loaded.
+    expect(atlas.uploadBitmap('never-allocated', makeFakeBitmap())).toBeNull();
+    expect(atlas.isLoaded('never-allocated')).toBe(false);
+  });
+
+  /**
+   * Two bugs from one root cause: a slot index that was true at allocate time,
+   * read as if it were still true when the bitmap arrived N frames later.
+   *
+   * A 2×2 atlas (16 px across, 8 px slots) so "the atlas fills up and the LRU
+   * turns over" is four calls rather than seventeen. Slot origins are what a
+   * blit is observable as: slot 0 → [0,0,0], 1 → [8,0,0], 2 → [0,8,0],
+   * 3 → [8,8,0].
+   */
+  describe('a bitmap arriving after its slot was recycled', () => {
+    const TINY_ATLAS: Omit<BitmapStreamDeps, 'device' | 'requestRender'> = {
+      atlasSide: 16,
+      slotSide: 8,
+      format: 'rgba8unorm-srgb',
+      label: 'test-atlas-tiny',
+    };
+
+    /** A device that records the atlas origin of every slot blit. */
+    function makeRecordingDevice(): { device: GPUDevice; origins: GPUOrigin3D[] } {
+      const origins: GPUOrigin3D[] = [];
+      const fakeTexture = { createView: () => ({}) as GPUTextureView };
+      const device = {
+        createTexture: () => fakeTexture,
+        queue: {
+          copyExternalImageToTexture: (_source: unknown, destination: { origin: GPUOrigin3D }) => {
+            origins.push(destination.origin);
+          },
+        },
+      } as unknown as GPUDevice;
+      return { device, origins };
+    }
+
+    /** A fetch whose resolution the test controls. */
+    function deferredFetch() {
+      let settle!: (bitmap: ImageBitmap | null) => void;
+      const promise = new Promise<ImageBitmap | null>((resolve) => {
+        settle = resolve;
+      });
+      return { fetcher: () => promise, settle };
+    }
+
+    it('writes into the slot the key holds NOW, not the one it was allocated', async () => {
+      const { device: recording, origins } = makeRecordingDevice();
+      const atlas = createBitmapStreamSubsystem({
+        device: recording,
+        requestRender: () => {},
+        ...TINY_ATLAS,
+      });
+
+      // Frame 1: the tile is claimed and its fetch starts.
+      expect(atlas.allocate('K', 1)).toBe(0);
+      const { fetcher, settle } = deferredFetch();
+      const uploadedSlots: Array<number | null> = [];
+      atlas.enqueueFetch({
+        key: 'K',
+        priority: 1,
+        fetcher,
+        onResult: (bitmap) => {
+          if (!bitmap) return;
+          uploadedSlots.push(atlas.uploadBitmap('K', bitmap));
+        },
+      });
+
+      // Frame 2: three other keys take the rest of the atlas.
+      expect([atlas.allocate('a', 2), atlas.allocate('b', 2), atlas.allocate('c', 2)]).toEqual([
+        1, 2, 3,
+      ]);
+
+      // Frame 3: a fourth key arrives, the atlas is full, and K's slot is the
+      // stalest — so K is evicted and slot 0 now belongs to 'd'.
+      expect(atlas.allocate('d', 3)).toBe(0);
+
+      // Frame 4: the camera came back, K is wanted again, and it gets whatever
+      // is stale now — slot 1, taken off 'a'. This is the step that made the old
+      // `lastSeenFrame(key) === undefined` guard useless: K IS in the atlas
+      // again, just not where its fetch thinks it is.
+      expect(atlas.allocate('K', 4)).toBe(1);
+      // Re-enqueueing an in-flight key is a no-op by design (the queue's
+      // dedup), so the callback that eventually fires is the one closed over in
+      // frame 1. Nothing later gets a chance to correct its idea of the slot.
+      const secondFetcher = vi.fn(() => Promise.resolve(makeFakeBitmap()));
+      atlas.enqueueFetch({ key: 'K', priority: 1, fetcher: secondFetcher, onResult: () => {} });
+
+      settle(makeFakeBitmap());
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(secondFetcher).not.toHaveBeenCalled();
+      // The bug: this landed at [0,0,0], over 'd', which then rendered K's
+      // pixels under its own UVs and — being marked loaded — never refetched.
+      expect(origins).toEqual([[8, 0, 0]]);
+      expect(uploadedSlots).toEqual([1]);
+    });
+
+    it('leaves a key unloaded when the arriving bitmap has nowhere to go', async () => {
+      const { device: recording, origins } = makeRecordingDevice();
+      const atlas = createBitmapStreamSubsystem({
+        device: recording,
+        requestRender: () => {},
+        ...TINY_ATLAS,
+      });
+
+      atlas.allocate('K', 1);
+      const { fetcher, settle } = deferredFetch();
+      const uploadedSlots: Array<number | null> = [];
+      atlas.enqueueFetch({
+        key: 'K',
+        priority: 1,
+        fetcher,
+        onResult: (bitmap) => {
+          if (!bitmap) return;
+          uploadedSlots.push(atlas.uploadBitmap('K', bitmap));
+        },
+      });
+
+      // K is evicted mid-fetch and, this time, never asked for again.
+      atlas.allocate('a', 2);
+      atlas.allocate('b', 2);
+      atlas.allocate('c', 2);
+      atlas.allocate('d', 3);
+
+      settle(makeFakeBitmap());
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(uploadedSlots).toEqual([null]);
+      expect(origins).toEqual([]);
+      // The bug: the key was recorded as loaded on fetch RESOLUTION, so with no
+      // slot behind it `isLoaded` suppressed every future fetch and that ground
+      // never got pixels again.
+      expect(atlas.isLoaded('K')).toBe(false);
+      // A refusal to upload is not a failure, either — the fetch succeeded, so
+      // the key must stay eligible rather than being memoised as dead.
+      expect(atlas.isFailed('K')).toBe(false);
+    });
   });
 
   it('destroy clears the eviction handler', () => {

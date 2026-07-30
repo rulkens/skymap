@@ -384,8 +384,12 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
       // the retry storm in the meantime.
       if (atlas.isFailed(key)) continue;
 
-      const slot = atlas.allocate(key, frameCounter);
-      if (slot === null) continue;
+      // The returned index is deliberately dropped: it is true of this frame,
+      // and the fetch below lands several frames later. What the allocation is
+      // for here is the claim itself and its refusal — null means the atlas is
+      // full of slots claimed earlier in this same frame, so this tile is over
+      // budget and the planner's largest-first order decides who loses.
+      if (atlas.allocate(key, frameCounter) === null) continue;
       if (atlas.isLoaded(key)) continue;
 
       atlas.enqueueFetch({
@@ -399,15 +403,16 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
             bitmap?.close();
             return;
           }
-          // The slot may have been recycled under another tile during the round
-          // trip; uploading into it now would paint this tile's pixels under
-          // someone else's page-table entry.
-          if (atlas.lastSeenFrame(key) === undefined) {
-            bitmap.close();
-            return;
-          }
-          atlas.uploadBitmap(slot, bitmap);
+          // The slot is resolved from the key at the moment of the write, and
+          // the answer is whatever the atlas says NOW: the tile may have been
+          // evicted during the round trip, or evicted and re-requested into a
+          // different slot. A null means the atlas holds nothing for this tile
+          // and the pixels have nowhere to go, so nothing is recorded — the
+          // tile stays unloaded, and a later frame that still wants it will ask
+          // again.
+          const slot = atlas.uploadBitmap(key, bitmap);
           bitmap.close();
+          if (slot === null) return;
           resident.set(key, { tile: request.tile, slot, readyMs: lastFrameNowMs });
           residencyDirty = true;
         },

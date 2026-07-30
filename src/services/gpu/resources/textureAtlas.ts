@@ -17,6 +17,16 @@
  * its own work (see its docstring). The caller calls `touch(key, frame)` every
  * frame the item is on screen so visible thumbnails stay alive.
  *
+ * A slot index is therefore a fact about the frame that produced it, not a
+ * property of the key. An evicted key is dropped from the key→slot map
+ * entirely, so re-requesting it later assigns whatever slot happens to be free
+ * THEN — a different one. Code that holds an index across an await (a bitmap
+ * fetch, typically) must re-resolve it through `slotOf` before writing pixels,
+ * or it writes them into whichever key has since taken that slot, under that
+ * key's UVs, in a slot the atlas believes is already populated. `slotOf` is the
+ * authority for "where does this key live now"; `allocate`'s return value only
+ * answers "where did it live when I asked".
+ *
  * Geometry (atlasSide, slotSide) and pixel format are constructor
  * configuration, not constants, because more than one atlas exists in the
  * renderer — e.g. the galaxy thumbnail atlas and an Earth surface tile
@@ -148,6 +158,11 @@ export class TextureAtlas {
    * decode via
    * `createImageBitmap(blob, { resizeWidth: slotSide, resizeHeight: slotSide })`.
    *
+   * The slot is taken on trust: this is the raw blit, and nothing here can tell
+   * a deliberate write from an index that has gone stale.  A caller holding a
+   * KEY resolves it through `slotOf` immediately before calling this — see
+   * `bitmapStreamSubsystem.uploadBitmap`, which is the only production route in.
+   *
    * Why `copyExternalImageToTexture` rather than `writeTexture`?  The
    * former takes an ImageBitmap directly without us having to read the
    * pixel data into a CPU buffer first.  The browser's GPU integration
@@ -255,12 +270,17 @@ export class TextureAtlas {
     if (idx !== undefined) this.slots[idx]!.lastSeenFrame = frame;
   }
 
-  /** Manually free a slot (e.g. after a fetch failed permanently). */
-  release(key: string): void {
-    const idx = this.keyToSlot.get(key);
-    if (idx === undefined) return;
-    this.slots[idx] = undefined;
-    this.keyToSlot.delete(key);
+  /**
+   * The slot `key` occupies right now, or undefined if it occupies none.
+   *
+   * This is the question an async writer has to ask, and it is not the question
+   * `allocate` answered: see the module header on slot indices being frame-scoped
+   * facts. Kept read-only on purpose — resolving a key that is no longer resident
+   * must not resurrect it, because the caller with a bitmap in hand is holding
+   * pixels for ground the atlas has already given away.
+   */
+  slotOf(key: string): number | undefined {
+    return this.keyToSlot.get(key);
   }
 
   /** Returns the last-seen frame for `key`, or undefined if not in the atlas. */
