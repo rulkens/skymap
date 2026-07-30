@@ -42,6 +42,16 @@ import { equirectUvToDirection } from '../math/equirectUvToDirection';
  * at a lower altitude than it would at bias 0. That is the intended effect of
  * the bias, not a side effect of it.
  *
+ * A patch that fails this rule (`required > z`) is refined rather than
+ * emitted — but it is requested too, not just its four children. It is by
+ * construction an ancestor of every leaf beneath it, so it is exactly the
+ * resident tile `buildEarthPageTable` needs to fall back to while a deeper
+ * descendant is still in flight; see that module's "Property two". Emitting
+ * it costs nothing extra to compute — its `screenPx` is already in hand from
+ * this same iteration — and the existing largest-first sort naturally orders
+ * it ahead of its descendants, since an ancestor's `screenPx` always exceeds
+ * a child's.
+ *
  * ## Why the walk floor and the request floor are different levels
  *
  * `baseLevel` is the density the whole-globe base texture already delivers;
@@ -51,9 +61,10 @@ import { equirectUvToDirection } from '../math/equirectUvToDirection';
  * express — it comes out as `zWin === baseLevel` with nothing to fetch — and
  * that is exactly what the engage gate reads. Rooting at `minTileLevel` instead
  * would make `zWin >= minTileLevel` true of every plan, leaving the gate
- * unsatisfiable against its own floor. Leaves that stop at a level shallower
- * than `minTileLevel` are dropped rather than requested: the ground they cover
- * is served by the base texture, and there is no file to fetch for them.
+ * unsatisfiable against its own floor. Both leaves and would-be ancestor
+ * requests at a level shallower than `minTileLevel` are dropped rather than
+ * requested: the ground they cover is served by the base texture, and there is
+ * no file to fetch for them.
  *
  * ## Conservative rejection, deliberately
  *
@@ -219,6 +230,15 @@ export function planEarthTiles(input: {
       Math.max(baseLevel, z + Math.ceil(Math.log2(screenPx / tilePx)) - lodBias),
     );
     if (required > z && z < maxTileLevel) {
+      // Refining THIS patch is what makes it an ancestor of every leaf below
+      // it, and its `screenPx` here is that patch's real projected extent —
+      // not an estimate reconstructed after the fact. Requesting it is what
+      // gives `buildEarthPageTable` a resident tile to fall back to while a
+      // deeper descendant is still in flight (see its "Property two"); the
+      // same `minTileLevel` floor as the leaf branch applies, because a
+      // would-be ancestor at or above the base level has no file to fetch
+      // either. No dedup is needed: the walk visits each (z, x, y) once.
+      if (z >= minTileLevel) requests.push({ tile: { kind, z, x, y }, screenPx });
       stack.push(z + 1, x * 2, y * 2);
       stack.push(z + 1, x * 2 + 1, y * 2);
       stack.push(z + 1, x * 2, y * 2 + 1);

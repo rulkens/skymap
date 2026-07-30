@@ -200,6 +200,28 @@ describe('planEarthTiles', () => {
     expect(plan.requests.length).toBeLessThan(128 * 0.6);
   });
 
+  it('requests every ancestor down to the floor alongside each leaf', () => {
+    // The whole point of the fix: `buildEarthPageTable`'s progressive
+    // refinement (its "Property two") needs a resident ancestor to fall back
+    // to while a deeper tile is still in flight. A leaf with no ancestor
+    // chain behind it has nothing between it and the whole-globe base, which
+    // is the bug this test pins closed.
+    const plan = planEarthTiles(nadirAt(1000));
+    expect(plan.requests.length).toBeGreaterThan(0);
+    const keys = new Set(plan.requests.map((r) => `${r.tile.z}/${r.tile.x}/${r.tile.y}`));
+    for (const { tile } of plan.requests) {
+      let { z, x, y } = tile;
+      while (z > MIN_TILE_LEVEL) {
+        z -= 1;
+        x = Math.floor(x / 2);
+        y = Math.floor(y / 2);
+        expect(keys.has(`${z}/${x}/${y}`), `parent of ${tile.z}/${tile.x}/${tile.y} at z${z}`).toBe(
+          true,
+        );
+      }
+    }
+  });
+
   it('returns an empty plan rather than nonsense when the camera is on the surface', () => {
     const plan = planEarthTiles({ ...nadirAt(1000), camPosLocal: [1, 0, 0] });
     expect(plan.requests).toEqual([]);
