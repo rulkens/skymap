@@ -34,9 +34,15 @@ renderer and React UI are verified visually rather than unit-tested.
 - **`type` aliases, not `interface`** for all TypeScript shapes
   (`export type X = { ... }`).
 - **Arrow functions** for module-level helpers and React components.
-- **Didactic comments** — this project intentionally over-comments,
-  explaining the _why_ and what alternatives were considered, not just
-  the _what_. Match the surrounding style of the file you're editing.
+- **Didactic but budgeted comments** — explain the _why_, never the
+  _what_. A comment earns its place by recording a landmine, a unit, a
+  derivation, or a cross-file contract — something a reader would
+  otherwise rediscover the hard way. Budget: module header ≤ 10 lines,
+  comment lines ≤ half the code lines in the file. Longer rationale
+  belongs in the spec or plan; history belongs in the git log. Older
+  files run well over this and are brought down as they're touched, so
+  match the convention rather than the surrounding file. Details in
+  [`docs/superpowers/conventions/comments.md`](docs/superpowers/conventions/comments.md).
 
 ## How to propose changes
 

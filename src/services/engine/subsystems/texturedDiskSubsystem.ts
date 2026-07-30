@@ -199,17 +199,16 @@ export function createTexturedDiskSubsystem(
                 return;
               }
               if (!bitmap) return; // atlas already memoised the failure
-              if (atlas.lastSeenFrame(key) === undefined) {
-                bitmap.close();
-                return;
-              }
-              atlas.uploadBitmap(slot, bitmap);
+              // The walk is decimated, so the slot allocated above may sit
+              // unrevisited long enough for the LRU to hand it to another
+              // galaxy mid-fetch — resolve by the key's CURRENT slot instead.
+              const uploaded = atlas.uploadBitmap(key, bitmap) !== null;
+              bitmap.close();
               // Arrival stamps quantize to the frame clock so crossfade
               // alphas are a pure function of stamped time (deterministic
               // under a stepped recorder clock); sub-frame precision is
               // irrelevant to a 300 ms crossfade.
-              bitmapReadyTime.set(key, lastFrameNowMs);
-              bitmap.close();
+              if (uploaded) bitmapReadyTime.set(key, lastFrameNowMs);
             },
           });
           return;

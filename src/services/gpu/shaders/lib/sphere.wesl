@@ -279,8 +279,16 @@ struct RingUniforms {
 // that sets how broad the sun glint reads. It is the user-tunable Earth-scoped
 // override of the 'OCEAN_ROUGHNESS' const in 'lib/pbr.wesl' -- that const stays
 // the seed / documentation home (and any future non-Earth water), this slot
-// carries Earth's. So the fragment reads 'u.oceanRoughness', not the const. The
-// row's remaining three slots ('_pad0'..'_pad2') round the struct to 128 bytes.
+// carries Earth's. So the fragment reads 'u.oceanRoughness', not the const.
+//
+// ## The page-table window fills that row's remaining three slots
+//
+// 'zWin' (pyramid level) and 'winX0'/'winY0' (the window's origin tile at that
+// level) let the fragment turn a surface uv into a page-table cell, and they
+// fill the three slots 'oceanRoughness's row already rounded over -- no struct
+// growth needed. They are integers carried as 'f32' (a 'u32' field would force
+// a second typed-array view at the CPU pack site -- a fresh drift risk for no
+// gain). All-zero is the identity: every cell reads 'no tile'.
 //
 // ## Byte layout (uniform address space)
 //
@@ -294,7 +302,9 @@ struct RingUniforms {
 //   offset 104..107: cloudShellRadius    (f32 -- unit-sphere shell radius; unused in A)
 //   offset 108..111: ambientLight        (f32 -- night-side floor; Earth-scoped)
 //   offset 112..115: oceanRoughness      (f32 -- open-water GGX roughness; Earth-scoped)
-//   offset 116..127: _pad0/1/2           (f32 x3 -- rounds the struct to 128 / 16-byte)
+//   offset 116..119: zWin                (f32 -- page-table window level; read as u32)
+//   offset 120..123: winX0               (f32 -- window west column at zWin; as u32)
+//   offset 124..127: winY0               (f32 -- window north row at zWin; as u32)
 //   total: 128 bytes.
 //
 // The CPU side uploads 32 f32s. The single source of truth for that packing is
@@ -312,9 +322,9 @@ struct EarthSurfaceUniforms {
   cloudShellRadius: f32,
   ambientLight: f32,
   oceanRoughness: f32,
-  _pad0: f32,
-  _pad1: f32,
-  _pad2: f32,
+  zWin: f32,
+  winX0: f32,
+  winY0: f32,
 };
 
 // ── CloudShellUniforms ───────────────────────────────────────────────

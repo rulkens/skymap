@@ -84,8 +84,8 @@ export function rankPaletteMatches(
 
   // Seeded scene bodies (Earth, the stars, the planets) are scored like a famous
   // row; they skip the empty-query browse list (like aliases/structures) so
-  // browsing stays famous + Milky Way. The wheel-zoom floor (clampDistance.ts:
-  // MIN_DISTANCE_MPC) reaches Earth-surface scale, so a picked body always
+  // browsing stays famous + Milky Way. The wheel-zoom floor (clampDistance.ts)
+  // is derived from the focused body's own radius, so a picked body always
   // resolves to a reachable, non-sub-pixel focus target.
   //
   // A famous star scores over its full alias list (FAMOUS_STAR_SEARCH), so a

@@ -274,8 +274,11 @@ upstream URLs, and licences live in `tools/utils/io/rawDataRegistry.ts`
 
 All public domain; NASA asks that credit go to the named observatory / program.
 
-- **Earth surface** — Blue Marble Next Generation (December topography +
-  bathymetry) equirect, NASA Earth Observatory (<https://visibleearth.nasa.gov/>).
+- **Earth surface** — Blue Marble Next Generation (August 2004 topography +
+  bathymetry), NASA Earth Observatory (<https://visibleearth.nasa.gov/>). Both the
+  whole-globe base texture and the streamed surface tile pyramid come from this
+  one month, the former from the 21600×10800 equirect and the latter from the
+  eight 21600×21600 quadrants.
 - **Earth night lights** — Black Marble 2016, NASA Earth Observatory / NASA
   Goddard Space Flight Center, Suomi NPP VIIRS.
 - **Earth water mask** (feeds the material/roughness map) — Blue Marble Next

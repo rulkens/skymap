@@ -19,6 +19,7 @@
  */
 
 import type { BitmapStreamSubsystem } from '../subsystems/BitmapStreamSubsystem';
+import type { EarthTileSubsystem } from '../subsystems/EarthTileSubsystem';
 import type { ProceduralDiskSubsystem } from '../subsystems/ProceduralDiskSubsystem';
 import type { TexturedDiskSubsystem } from '../subsystems/TexturedDiskSubsystem';
 import type { DiskPlannerWalk } from '../subsystems/DiskPlannerWalk';
@@ -68,6 +69,13 @@ export type EngineSubsystemHandles = {
    * runs.
    */
   hiResFamousTexture: HiResFamousTexture | null;
+  /**
+   * Earth's surface virtual texture — tile atlas, page table and residency
+   * bookkeeping. Constructed in `wireSlots`; allocates no GPU memory until
+   * the planner says the base texture has started magnifying, so a session
+   * that never approaches Earth pays nothing. Null before `wireSlots` runs.
+   */
+  earthTiles: EarthTileSubsystem | null;
   clickResolver: ClickResolver | null;
   inputBindings: InputBindings | null;
   scheduler: RenderScheduler;
