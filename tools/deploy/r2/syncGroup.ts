@@ -9,40 +9,48 @@ import { uploadViaWrangler } from './uploadViaWrangler';
 export type R2SyncContext = {
   readonly bucket: string;
   readonly publicUrl: string;
-  readonly cacheControl: string;
 };
 
 /**
- * Upload one group, skipping files R2 already holds byte-identical.
+ * Upload one group, skipping files R2 already holds byte-identical, and report
+ * how many actually went up.
+ *
+ * The count is returned rather than derived from `touchedKeys` because a group
+ * with `purge: false` uploads without recording keys — reading the purge list
+ * as an upload tally would report those files as unchanged.
  *
  * Skipping earns its keep beyond bandwidth: it stops a flaky multi-hundred-MB
  * re-upload from aborting the run before the CDN purge, and keeps a few-KB
  * sidecar edit from dragging the whole ~370 MB artefact set across the wire.
- * A skipped file stays out of `touchedKeys` — the edge already matches origin.
  */
 export async function syncGroup(
   group: R2SyncGroup,
   ctx: R2SyncContext,
   touchedKeys: string[],
-): Promise<void> {
-  if (group.files.length === 0) return;
+): Promise<number> {
+  if (group.files.length === 0) return 0;
   console.log(`\n--- ${group.label} (${group.files.length}) ---\n`);
+  let uploaded = 0;
   for (const file of group.files) {
-    await uploadIfChanged(file, ctx, touchedKeys);
+    if (await uploadIfChanged(file, group, ctx, touchedKeys)) uploaded++;
   }
+  return uploaded;
 }
 
+/** True when the file was uploaded, false when R2 already had those bytes. */
 async function uploadIfChanged(
   file: R2Upload,
+  group: R2SyncGroup,
   ctx: R2SyncContext,
   touchedKeys: string[],
-): Promise<void> {
+): Promise<boolean> {
   const remote = await remoteEtag(`${ctx.publicUrl}/${file.r2Key}`);
   if (remote && etagMatches(fileMd5(file.localPath), remote)) {
     const sizeMB = (statSync(file.localPath).size / 1024 / 1024).toFixed(1);
     console.log(`= ${file.localPath} (${sizeMB} MB) unchanged — skip`);
-    return;
+    return false;
   }
-  uploadViaWrangler(file, ctx.bucket, ctx.cacheControl);
-  touchedKeys.push(file.r2Key);
+  uploadViaWrangler(file, ctx.bucket, group.cacheControl);
+  if (group.purge) touchedKeys.push(file.r2Key);
+  return true;
 }

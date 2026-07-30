@@ -24,21 +24,41 @@ const TEXTURES_DIR = 'public/data/images/textures';
 
 const BUCKET = 'skymap-data';
 /**
- * One day. The bins are content-stable but not hash-fingerprinted (the URL is
- * hard-coded in the runtime), so this caps how long a stale catalog can be
- * served if the post-sync purge is skipped.
+ * One day. These artefacts are content-stable but not hash-fingerprinted (the
+ * URL is hard-coded in the runtime), so this caps how long a stale catalog can
+ * be served if the post-sync purge is skipped.
  */
-const CACHE_CONTROL = 'public, max-age=86400';
+const DAY = 'public, max-age=86400';
 
 /** Public URL the CDN serves R2 from — single source of truth in `.env.production`. */
 const R2_PUBLIC_URL = readEnvProductionValue('VITE_DATA_BASE_URL');
 
 function buildGroups(): R2SyncGroup[] {
   return [
-    { label: 'public/data', files: collectDataFiles(DATA_DIR) },
-    { label: 'Hi-res famous-galaxy images', files: collectHiResImages(HIRES_DIR) },
-    { label: 'Planet-surface textures', files: collectTextureImages(TEXTURES_DIR) },
-    { label: 'Extra files', files: collectExtraFiles() },
+    {
+      label: 'public/data',
+      files: collectDataFiles(DATA_DIR),
+      cacheControl: DAY,
+      purge: true,
+    },
+    {
+      label: 'Hi-res famous-galaxy images',
+      files: collectHiResImages(HIRES_DIR),
+      cacheControl: DAY,
+      purge: true,
+    },
+    {
+      label: 'Planet-surface textures',
+      files: collectTextureImages(TEXTURES_DIR),
+      cacheControl: DAY,
+      purge: true,
+    },
+    {
+      label: 'Extra files',
+      files: collectExtraFiles(),
+      cacheControl: DAY,
+      purge: true,
+    },
   ];
 }
 
@@ -55,15 +75,13 @@ async function main(): Promise<void> {
       groups.map((g) => `  ${g.files.length.toString().padStart(6)}  ${g.label}`).join('\n'),
   );
 
-  const ctx: R2SyncContext = {
-    bucket: BUCKET,
-    publicUrl: R2_PUBLIC_URL,
-    cacheControl: CACHE_CONTROL,
-  };
-  // Every key we actually wrote, so the purge below knows what to evict.
+  const ctx: R2SyncContext = { bucket: BUCKET, publicUrl: R2_PUBLIC_URL };
+  // Every key we wrote that the CDN must be told about. Groups whose content
+  // is immutable by construction stay out of this list on purpose.
   const touchedKeys: string[] = [];
+  let uploaded = 0;
   for (const group of groups) {
-    await syncGroup(group, ctx, touchedKeys);
+    uploaded += await syncGroup(group, ctx, touchedKeys);
   }
 
   const missing = missingExtraFiles();
@@ -77,7 +95,7 @@ async function main(): Promise<void> {
 
   console.log(
     `\n✓ Synced ${total} file(s) to r2://${BUCKET}/data/` +
-      ` (${touchedKeys.length} uploaded, ${total - touchedKeys.length} unchanged)`,
+      ` (${uploaded} uploaded, ${total - uploaded} unchanged)`,
   );
 
   console.log('\n--- Cloudflare CDN cache purge ---\n');
