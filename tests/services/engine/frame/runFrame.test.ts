@@ -79,6 +79,7 @@ import { buildCameraDrivers } from '../../../../src/services/engine/camera/camer
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
 import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
+import { createRenderTargets } from '../../../../src/services/gpu/renderTargets';
 import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
 import {
   startCameraTween,
@@ -140,7 +141,10 @@ function makeState(): EngineState {
       tonemap: { exposure: 1, curve: 'linear' },
       bias: { mode: 'off', absMagLimit: -19 },
       thumbnails: { enabled: false },
-      milkyWay: { enabled: false },
+      // aggregateDivisor is read every frame by the offscreen-rebuild branch
+      // (whenever renderTargets is non-null), so the fixture carries the boot
+      // value rather than leaving the branch to compare against undefined.
+      milkyWay: { enabled: false, aggregateDivisor: 2 },
       filaments: { enabled: false, intensity: 1 },
       volumes: { enabled: false },
     },
@@ -654,6 +658,46 @@ describe('runFrame — hover-pick removed from frame body', () => {
     // The frame body must never call pickRenderer.pick — hover picks are
     // now the driver's responsibility, not the frame's.
     expect(pickSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('runFrame — mw-aggregate divisor', () => {
+  it('rebuilds the offscreen table when the divisor setting moves, and leaves it alone when it does not', () => {
+    // The divisor is a DebugPanel slider, but a texture's dimensions are fixed
+    // at creation — so the only way a drag reaches the screen is the frame
+    // loop noticing the mismatch and rebuilding the table. Without that branch
+    // the slider would move a number nothing ever reads. The second half
+    // matters just as much: comparing against the spec row (rather than a
+    // 'last applied' field) has to settle, or every steady-state frame would
+    // throw away and re-allocate every offscreen target.
+    const store = makeStore();
+    const state = makeState();
+    // A device whose createTexture returns the minimum renderTargets touches.
+    const device = {
+      createTexture: vi.fn(() => ({ createView: () => ({}), destroy: vi.fn() })),
+    } as unknown as GPUDevice;
+    const deps: RunFrameDeps = { ...makeDeps(store), device };
+
+    state.gpu.renderTargets = createRenderTargets(
+      device,
+      'bgra8unorm',
+      { width: 800, height: 600 },
+      2,
+    );
+    const built = state.gpu.renderTargets;
+
+    state.settings.milkyWay.aggregateDivisor = 4;
+    runFrame(state, deps, 0);
+
+    const rebuilt = state.gpu.renderTargets!;
+    expect(rebuilt).not.toBe(built);
+    expect(rebuilt.specs.find((s) => s.id === 'mw-aggregate')!.scale).toBe(4);
+    // The rebuild carried the swap format over from the table it replaced.
+    expect(rebuilt.specs.find((s) => s.id === 'swap')!.format).toBe('bgra8unorm');
+
+    // A frame with the setting unchanged must not rebuild again.
+    runFrame(state, deps, 16);
+    expect(state.gpu.renderTargets).toBe(rebuilt);
   });
 });
 

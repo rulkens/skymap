@@ -66,7 +66,7 @@ export const MILKY_WAY_MODEL_SCALE = MILKY_WAY_RADIUS_MPC / outerRadiusOf(MILKY_
  * being read straight from this module by the renderer. The knobs' semantics
  * live on `MilkyWayTuning`; the notes here are why each number is what it is.
  *
- * One object rather than six exported scalars because every one of them has
+ * One object rather than a scalar per knob because every one of them has
  * exactly one consumer — the settings seed. Separate constants would only add
  * a hop between the number and the field it seeds.
  */
@@ -77,8 +77,11 @@ export const MILKY_WAY_TUNING_DEFAULTS: MilkyWayTuning = {
   // fatter here. 0.7 shrinks them back without touching the generated data.
   starSizeScale: 0.7,
   // The tool's tuned starIntensity default (`createGalaxyEngine.ts`'s render
-  // defaults). The app's post chain differs from the tool's, so this is the
-  // knob a visual-gate pass moves first.
+  // defaults), and it transfers as-is: the tool drives the app's own
+  // `createBloomPyramid` + `createCompositor` over the same shaders, so the
+  // same value meets the same tone curve on both sides. What can still pull it
+  // is scene context, not post — the app draws this cloud against the full
+  // point-cloud sky where the tool draws it against black.
   exposure: 0.11,
   // A 1 px floor is the mildest anti-sparkle setting that still stops a
   // distant star from vanishing entirely between frames.
@@ -95,6 +98,13 @@ export const MILKY_WAY_TUNING_DEFAULTS: MilkyWayTuning = {
   // blending serializes the blender per pixel. In NDC (not px) because the
   // hash band was tuned in NDC units in the tool.
   lodApparent: 0.02,
+  // Half resolution for the `mw-aggregate` offscreen — the same halving the
+  // survey's `star-aggregates` row settled on, and for the same reason: it
+  // quarters the star pass's fragments at a reconstruction blur the smooth
+  // summed-glow field hides completely. `starPxMin` / `starPxMax` above are
+  // stated in pixels OF THAT TARGET, so this number and those two are one
+  // trade — change it and they move with it.
+  aggregateDivisor: 2,
 };
 
 /**

@@ -1,7 +1,8 @@
 // src/components/DebugPanel/MilkyWayTuningSection.tsx
 /**
  * MilkyWayTuningSection — DebugPanel subsection exposing the Milky-Way star
- * cloud's look knobs (starSize / exposure / pxMin / pxMax / softness / lod).
+ * cloud's tuning knobs — its look (starSize / exposure / pxMin / pxMax /
+ * softness) and the two perf levers that trade against it (lod / divisor).
  *
  * These decide whether the generated cloud reads as a smooth galaxy or as a
  * field of visible particles, and the answer is only findable by moving them
@@ -12,8 +13,8 @@
  *
  * The rows are driven from `MILKY_WAY_SLIDER_FIELDS`, so the field list,
  * ranges, and value formatting live in one registry rather than re-spelled
- * here. The star COUNT is deliberately not a row: it feeds generation, not the
- * per-frame uniforms, so a slider over it would move nothing.
+ * here. The star COUNT is deliberately not a row: it feeds generation, so
+ * dragging it would change nothing until the next tier switch.
  */
 
 import type { ReactElement } from 'react';

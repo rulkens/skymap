@@ -62,6 +62,7 @@ import { liveBodyPosition } from '../camera/liveBodyPosition';
 import { tweenElapsed, accumulateFollowPan, frameTweenElapsed } from '../camera/cameraClock';
 import { resolveFrameBasis } from '../camera/resolveFrameBasis';
 import { resizeCanvasToDisplay } from '../../gpu/device';
+import { createRenderTargets } from '../../gpu/renderTargets';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
 import { produceStructureMarkers } from '../presentation/produceStructureMarkers';
 import { deriveFrameContext } from './frameContext';
@@ -190,6 +191,42 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   if (resizeCanvasToDisplay(deps.canvas)) {
     state.cameraRuntime.projection.aspect = deps.canvas.width / deps.canvas.height;
     state.gpu.renderTargets?.resize({ width: deps.canvas.width, height: deps.canvas.height });
+  }
+
+  // ── Milky-Way aggregate divisor → offscreen table rebuild ────────────────
+  //
+  // The `mw-aggregate` row's downsample divisor is a live tuning knob (the
+  // strongest perf lever the star cloud has — its fragment cost falls as the
+  // square — and it trades against the `starPxMin` / `starPxMax` clamps, which
+  // are already sliders). A texture's dimensions are fixed at creation, so a
+  // change is answered by rebuilding the table, not by resizing it; this sits
+  // beside the resize branch because it is the same "the targets no longer
+  // match what the frame wants" question, asked about a different input.
+  //
+  // The divisor in force is read back off the spec row, and the swap format off
+  // the old table's `swap` row. Both are already carried there, so the targets
+  // themselves ARE the record of what was applied — a 'last applied' mirror
+  // beside them could only ever drift from the textures it describes.
+  //
+  // Destroying textures an in-flight command buffer may still reference is the
+  // hazard `resize` already takes every time it reallocates, so this needs no
+  // synchronisation the resize path doesn't. Nothing caches a view across
+  // frames either: every consumer resolves through `viewOf` at draw time, and
+  // the upsample passes rebuild their bind group per draw.
+  const targets = state.gpu.renderTargets;
+  if (targets) {
+    const applied = targets.specs.find((s) => s.id === 'mw-aggregate')!.scale;
+    const wanted = state.settings.milkyWay.aggregateDivisor;
+    if (applied !== wanted) {
+      const swapFormat = targets.specs.find((s) => s.id === 'swap')!.format;
+      targets.destroy();
+      state.gpu.renderTargets = createRenderTargets(
+        deps.device,
+        swapFormat,
+        { width: deps.canvas.width, height: deps.canvas.height },
+        wanted,
+      );
+    }
   }
 
   // ── Camera produce → commit-on-edge ──────────────────────────────────────

@@ -75,9 +75,11 @@ function buffers(withDust: boolean): MilkyWayCloudBuffers {
 }
 
 /**
- * Six mutually-distinct tuning values, none equal to any calibration default,
- * so the uniform-packing test below can tell each lane apart — a knob written
- * into the wrong slot would silently change a different aspect of the look.
+ * Mutually-distinct tuning values, none equal to any calibration default, so
+ * the uniform-packing test below can tell each lane apart — a knob written into
+ * the wrong slot would silently change a different aspect of the look.
+ * `aggregateDivisor` sizes the offscreen rather than riding the uniform buffer,
+ * so it is here only to satisfy the type.
  */
 const TUNING = {
   starSizeScale: 3.25,
@@ -86,6 +88,7 @@ const TUNING = {
   starPxMax: 96,
   softness: 0.75,
   lodApparent: 0.005,
+  aggregateDivisor: 3,
 };
 
 function drawArgs(withDust: boolean): MilkyWayCloudDrawArgs {

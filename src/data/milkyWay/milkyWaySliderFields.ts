@@ -22,9 +22,11 @@
  *
  * `enabled` / `labelEnabled` are deliberately NOT here: boolean visibility
  * axes aren't sliders, and forcing them into a slider row would complect the
- * control kind with the field list. The STAR COUNT is absent for a harder
- * reason — it feeds generation, not the per-frame uniforms, so a live slider
- * over it would move nothing until the next tier switch.
+ * control kind with the field list. The bar for everything else is that moving
+ * it changes the NEXT frame — `aggregateDivisor` clears that bar (the frame
+ * loop reallocates the star pass's offscreen when it moves) even though it is
+ * not a uniform, while the STAR COUNT misses it: count feeds generation, so a
+ * live slider over it would show nothing until the next tier switch.
  */
 import type { MilkyWayTuning } from '../../@types/settings/MilkyWayTuning';
 import type { MilkyWaySliderKey } from '../../@types/data/milkyWay/MilkyWaySliderKey';
@@ -100,6 +102,21 @@ export const MILKY_WAY_SLIDER_FIELDS: readonly MilkyWaySliderField[] = [
     step: 0.001,
     format: (v) => v.toFixed(3),
     title: 'Flux-conserving LOD threshold in NDC. 0 disables the vertex-stage cull.',
+  },
+  {
+    key: 'aggregateDivisor',
+    label: 'divisor',
+    // 1 is full resolution — the reference the reduced-resolution row's
+    // reconstruction has to be judged against.
+    min: 1,
+    // 6 already leaves the star pass 1/36th of its fragments; past that the
+    // upsample is reconstructing the disc from a target coarser than the
+    // structure in it, and the smoothness the row exists to buy turns to mush.
+    max: 6,
+    step: 1,
+    format: (v) => String(Math.round(v)),
+    title:
+      'Downsample divisor for the mw-aggregate offscreen. Fragment cost falls as its square. pxMin/pxMax clamp in TARGET pixels, so doubling this doubles a clamped sprite on screen.',
   },
 ];
 

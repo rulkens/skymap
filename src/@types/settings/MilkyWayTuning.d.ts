@@ -10,11 +10,13 @@
  * keeps the visibility intent (`enabled` / `labelEnabled`) off the generic
  * merge path, so a knob patch can never flip the layer off by accident.
  *
- * Every field is read live by `milkyWayCloudRenderer.writeUniforms` and lands
- * in the `params0` / `params1` lanes of `milkyWayCloud/io.wesl`'s `Uniforms`.
- * The STAR COUNT is deliberately absent: it feeds generation
- * (`milkyWayCloud.generate`), not the uniforms, so a live slider over it would
- * silently do nothing until the next tier switch.
+ * What unites the set is that moving any of them changes the NEXT frame. Most
+ * get there via `milkyWayCloudRenderer.writeUniforms`, landing in the `params0`
+ * / `params1` lanes of `milkyWayCloud/io.wesl`'s `Uniforms`; `aggregateDivisor`
+ * gets there by sizing the offscreen the star pass draws into, which the frame
+ * loop reallocates when the number moves. The STAR COUNT is absent for failing
+ * exactly that bar: it feeds generation (`milkyWayCloud.generate`), so a live
+ * slider over it would silently do nothing until the next tier switch.
  */
 
 export type MilkyWayTuning = {
@@ -55,4 +57,15 @@ export type MilkyWayTuning = {
    * brightened to hold the field's total light.
    */
   lodApparent: number;
+  /**
+   * Downsample divisor of the `mw-aggregate` offscreen the additive star pass
+   * draws into: the target is allocated at `floor(canvas / aggregateDivisor)`,
+   * so the pass's fragment cost falls as this number's SQUARE — the strongest
+   * perf lever the cloud has. It trades directly against `starPxMin` /
+   * `starPxMax`, which clamp in TARGET pixels: doubling the divisor doubles a
+   * clamped sprite's on-screen size at the same clamp value. Unlike its
+   * neighbours it reaches the frame by reallocating a render target rather
+   * than by riding the uniform buffer.
+   */
+  aggregateDivisor: number;
 };

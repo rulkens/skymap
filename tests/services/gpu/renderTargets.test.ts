@@ -22,9 +22,19 @@ function mockDevice(): GPUDevice {
 
 const SWAP_FORMAT: GPUTextureFormat = 'bgra8unorm';
 
+// The `mw-aggregate` row's divisor is a caller-supplied live knob, not a table
+// constant. These tests are about allocation mechanics, so they pass the boot
+// value and the row behaves like any other fixed-scale row.
+const MW_DIVISOR = 2;
+
 describe('createRenderTargets', () => {
   it('viewOf returns a live view per offscreen row and throws for swap', () => {
-    const targets = createRenderTargets(mockDevice(), SWAP_FORMAT, { width: 800, height: 600 });
+    const targets = createRenderTargets(
+      mockDevice(),
+      SWAP_FORMAT,
+      { width: 800, height: 600 },
+      MW_DIVISOR,
+    );
     // Offscreen rows resolve to a live view.
     expect(targets.viewOf('hdr')).toBeDefined();
     expect(targets.viewOf('volume')).toBeDefined();
@@ -37,7 +47,12 @@ describe('createRenderTargets', () => {
   it('resize reallocates offscreen textures at size/scale', () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
-    const targets = createRenderTargets(device, SWAP_FORMAT, { width: 900, height: 600 });
+    const targets = createRenderTargets(
+      device,
+      SWAP_FORMAT,
+      { width: 900, height: 600 },
+      MW_DIVISOR,
+    );
 
     // Construction allocated the offscreen rows: hdr @ scale 1 (colour),
     // volume @ scale 3 (colour), star-aggregates @ scale 2 (colour),
@@ -86,7 +101,7 @@ describe('createRenderTargets', () => {
   it('clamps volume to a 1 px minimum when floor(size/scale) is 0', () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
-    createRenderTargets(device, SWAP_FORMAT, { width: 2, height: 2 });
+    createRenderTargets(device, SWAP_FORMAT, { width: 2, height: 2 }, MW_DIVISOR);
     const volDesc = create.mock.calls.find((c) => c[0].label === 'render-target-volume')![0];
     // floor(2 / 3) = 0 → clamped up to 1.
     expect(volDesc.size).toEqual({ width: 1, height: 1 });
@@ -95,7 +110,12 @@ describe('createRenderTargets', () => {
   it('allocates and resizes a depth texture alongside colour for rows that declare depth', () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
-    const targets = createRenderTargets(device, SWAP_FORMAT, { width: 800, height: 600 });
+    const targets = createRenderTargets(
+      device,
+      SWAP_FORMAT,
+      { width: 800, height: 600 },
+      MW_DIVISOR,
+    );
 
     // foreground:0 declares depth → two textures at full resolution: an
     // rgba16float colour attachment and a depth32float depth attachment.
@@ -128,7 +148,12 @@ describe('createRenderTargets', () => {
   });
 
   it('depthViewOf returns the depth view for foreground:0 and throws for depthless rows and swap', () => {
-    const targets = createRenderTargets(mockDevice(), SWAP_FORMAT, { width: 800, height: 600 });
+    const targets = createRenderTargets(
+      mockDevice(),
+      SWAP_FORMAT,
+      { width: 800, height: 600 },
+      MW_DIVISOR,
+    );
     // The one row that declares depth resolves to a live depth view.
     expect(targets.depthViewOf('foreground:0')).toBeDefined();
     // Depthless offscreen rows have no depth attachment.
@@ -142,7 +167,12 @@ describe('createRenderTargets', () => {
   it('destroy destroys every allocated texture', () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
-    const targets = createRenderTargets(device, SWAP_FORMAT, { width: 800, height: 600 });
+    const targets = createRenderTargets(
+      device,
+      SWAP_FORMAT,
+      { width: 800, height: 600 },
+      MW_DIVISOR,
+    );
     targets.destroy();
     // Both offscreen textures had destroy() called.
     for (const result of create.mock.results) {
@@ -155,7 +185,12 @@ describe('createRenderTargets', () => {
   it('destroy destroys depth textures alongside colour', () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
-    const targets = createRenderTargets(device, SWAP_FORMAT, { width: 800, height: 600 });
+    const targets = createRenderTargets(
+      device,
+      SWAP_FORMAT,
+      { width: 800, height: 600 },
+      MW_DIVISOR,
+    );
     const depthResult = create.mock.results.find(
       (_r, i) => create.mock.calls[i]![0].label === 'render-target-foreground:0-depth',
     )!;
