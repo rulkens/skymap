@@ -32,16 +32,22 @@
  * imperative handle.
  *
  * ── writesOn ──
- * The set of dispatched actions that can change this row's `write` output. A
- * predicate covers a whole slice; a list covers named actions surgically. The
- * completeness contract, and the reasoning behind each row's choice of form,
- * live in the table's module docblock — that is the guard, so it belongs beside
- * the declarations it constrains.
+ * The set of dispatched actions that can change this row's `write` output,
+ * stated as a list of PREDICATES over an action — the row triggers if any of
+ * them says yes. One shape, not two: an RTK action creator's `.match` already IS
+ * `(action) => boolean`, so a row that wants three named actions lists three
+ * `.match`es, and a row that wants a whole slice lists one prefix test. The
+ * union this replaced (a list of matchers OR a bare predicate) bought nothing
+ * over that and cost every consumer a `typeof` fork, which is also why a row
+ * could not previously mix the two — the very thing `focus` needs.
+ *
+ * The completeness contract, and the reasoning behind each row's triggers, live
+ * in the table's module docblock — that is the guard, so it belongs beside the
+ * declarations it constrains.
  */
 
 import type { Action } from '@reduxjs/toolkit';
 
-import type { ActionMatcher } from './ActionMatcher';
 import type { RootState } from '../../../store/types';
 
 export type HashParamSource = {
@@ -56,7 +62,7 @@ export type HashParamSource = {
   readonly deepLink: boolean;
 
   /** Which dispatched actions can change this row's `write` output. */
-  readonly writesOn: readonly ActionMatcher[] | ((action: Action) => boolean);
+  readonly writesOn: readonly ((action: Action) => boolean)[];
 
   /** Serialize from the store. `null` omits the param entirely. */
   readonly write: (state: RootState) => string | null;

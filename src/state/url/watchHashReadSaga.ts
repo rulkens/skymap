@@ -51,6 +51,23 @@
  * `hashchange` nor `popstate`. The store→URL and URL→store halves therefore
  * run concurrently over one resource with no cycle between them — which is
  * what lets `watchHashSaga` fork both and forget about them.
+ *
+ * No cycle is not the same as no interaction, and the difference is where the
+ * history stack gets damaged. Every action this saga dispatches is a candidate
+ * hash-write trigger, and `applyHash` dispatches one row's worth at a time — so
+ * a store part-way through the pass is a store that has applied SOME of the URL,
+ * and any write composing from it publishes a hash that was never on any history
+ * entry. A `pushState` during a Back navigation truncates the forward stack, so
+ * that is a history bug rather than a cosmetic one: it is why the write half
+ * coalesces to the trailing edge of the burst instead of answering each trigger
+ * (`watchHashWriteSaga`), and why `tests/state/url/hashHistoryIntegrity` counts
+ * the pushes a navigation is allowed (none).
+ *
+ * The pass makes no attempt to be atomic in exchange. Batching the whole table
+ * into one dispatch would put the sequencing burden here, on the half that has
+ * no idea what a settled store looks like, and it would still not help the hops
+ * the selection reconciler takes AFTER the last row lands. Waiting for quiet is
+ * the write half's question to answer, and it is the only half that can.
  */
 
 import { take, call, put } from 'typed-redux-saga';

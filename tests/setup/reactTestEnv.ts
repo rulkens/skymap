@@ -36,6 +36,16 @@
  *    behind, once it's done with it, is the half of the leave-as-you-
  *    found-it contract that doesn't fight deliberate setup.
  *
+ *    The reset waits a macrotask first, and that wait is load-bearing.
+ *    `watchHashWriteSaga` publishes on the TRAILING EDGE of a burst of
+ *    triggers, so a synchronous test body returns with its URL write still
+ *    a pending timer: reset first and the push lands afterwards, on a
+ *    bar this hook has already cleaned, and the leak survives into a later
+ *    test — arriving mid-test rather than at its start, which is the worse
+ *    version of the same bug. The timer function is captured at module load
+ *    so a test that installed `vi.useFakeTimers()` and did not restore them
+ *    cannot freeze the teardown.
+ *
  * If keeping the per-file directive becomes burdensome, promote
  * `environment: 'jsdom'` to a workspace config scoped to
  * `tests/components/**`.
@@ -43,13 +53,20 @@
 
 import { afterEach } from 'vitest';
 
+// Bound before any test file has had the chance to install fake timers, so
+// the teardown drain below always uses a timer that really fires.
+const realSetTimeout = globalThis.setTimeout.bind(globalThis);
+
 if (typeof window !== 'undefined') {
   // Dynamic-style import inside the gate so node-env tests don't try
   // to load jest-dom's window-dependent setup.
   await import('@testing-library/jest-dom/vitest');
   const { cleanup } = await import('@testing-library/react');
-  afterEach(() => {
+  afterEach(async () => {
     cleanup();
+
+    // Let any trailing-edge hash publish land BEFORE the reset — see (3).
+    await new Promise((resolve) => realSetTimeout(resolve, 0));
 
     // `replaceState`, never `pushState`: a cleanup step must shrink back
     // to nothing, not grow the history stack test-over-test. The hash

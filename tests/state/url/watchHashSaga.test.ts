@@ -48,6 +48,14 @@ import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 const write = vi.mocked(writeHashBody);
 
 /**
+ * A macrotask — the write half's debounce window. The gate's "nothing yet"
+ * assertions do NOT need it (a held saga has no pending worker to wait for), but
+ * asserting the absence of a write without giving one the chance to happen would
+ * be a test that passes for the wrong reason, so both sides settle alike.
+ */
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+/**
  * Boot the whole bridge against a given arrival hash. `register` stands in for
  * `createAppStore`'s `setSagaContext` — nothing here populates a saga context,
  * because no watcher that would read one is forked; the only part of
@@ -82,7 +90,7 @@ describe('watchHashSaga', () => {
     write.mockClear();
   });
 
-  it('holds the arrival read until the saga context is registered', () => {
+  it('holds the arrival read until the saga context is registered', async () => {
     const { recorded, register } = buildHarness('focus=m31');
 
     // `createAppStore` runs the root saga INSIDE the factory, so an ungated
@@ -92,14 +100,16 @@ describe('watchHashSaga', () => {
     // propagate to the root and cancel every sibling watcher, so one deep link
     // costs the session its wake, tier transitions, selection resolution, tour
     // and keyboard.
+    await settle();
     expect(recorded).toEqual([]);
 
     register();
+    await settle();
 
     expect(recorded).toEqual([requestSelect('m31'), requestFocus('m31')]);
   });
 
-  it('holds the write half until the saga context is registered', () => {
+  it('holds the write half until the saga context is registered', async () => {
     const { store, register } = buildHarness('focus=m31');
 
     // A real hash-write trigger that moves no state — the store is already at
@@ -108,10 +118,12 @@ describe('watchHashSaga', () => {
     // and `pushState`ing it over `#focus=m31`. Gating only the read half leaves
     // exactly this open.
     store.dispatch(setOrientation(DEFAULT_ORIENTATION));
+    await settle();
 
     expect(write).not.toHaveBeenCalled();
 
     register();
+    await settle();
 
     // And the deep link survives: whatever the bridge publishes from here on, it
     // is never the default body composed before the arrival read landed.

@@ -24,27 +24,42 @@
  * these lists state; it would be the same claim asserted twice, with the second
  * copy free to drift.
  *
- * ### Prefix predicate vs explicit list
+ * ### How wide a trigger should be
  *
- * A row declares its triggers as a slice-prefix PREDICATE or as an explicit
- * LIST, and the choice turns on what else lives in that slice:
+ * A row's `writesOn` is a list of predicates over an action, so "a whole slice"
+ * and "these three actions" are the same shape and a row can mix them. What
+ * varies is how wide each predicate is allowed to be, and that turns on what
+ * else lives in the slice it covers:
  *
- *  - `t` takes the prefix. Every `time/*` action is clock intent and re-anchors
- *    the sim instant, so the whole slice genuinely is the trigger set — and the
- *    prefix is drift-proof by construction, covering a seventh time reducer for
- *    free with no edit here. Prefer this form wherever it does not pull in a
- *    hot stream.
- *  - `focus` and `orientation` take lists, because their slices do carry hot
- *    streams. A `selection/*` prefix would fire on `updateSelectionHover`,
- *    which the hover pick driver dispatches at pointer-move rate; a `settings/*`
- *    prefix would fire on every frame of a slider drag. Either would put a
- *    `pushState` on a 60 Hz path to republish a value that did not change.
+ *  - `t` takes a slice PREFIX. Every `time/*` action is clock intent and
+ *    re-anchors the sim instant, so the whole slice genuinely is the trigger
+ *    set — and a prefix is drift-proof by construction, covering a seventh time
+ *    reducer for free with no edit here. Prefer this width wherever the slice
+ *    carries no hot stream.
+ *  - `focus` and `orientation` name their actions, because their slices DO carry
+ *    hot streams. A `selection/*` prefix would fire on `updateSelectionHover`,
+ *    which the hover pick driver dispatches once per GPU pick readback for as
+ *    long as the pointer keeps moving; a `settings/*` prefix would fire on every
+ *    frame of a slider drag. Neither would push a history entry — `writeHashBody`
+ *    compares against the live URL and skips an identical body — but each would
+ *    drag a full state read, a table walk, a string compose and a
+ *    `location.hash` read onto a pointer-rate path to republish a value that did
+ *    not change. The write saga's coalescing does not cover for a wide trigger
+ *    here: its window is one macrotask, which is shorter than the gap between
+ *    two pointer events, so a stream of them still composes once apiece.
  *
- * `focus`'s list stays short because `setSelectionRow` is the SOLE writer of
- * `selectionRows.focus`, the only input to `selectFocusedFocusable`. Every
- * resolution path — a late catalog pulse, the star-count pulse, a direct ref
- * write — funnels through the reconciler and comes out as that one action, so
- * the upstream actions need no listing of their own.
+ * `focus` narrows one step further, to `setSelectionRow` FOR THE FOCUS SLOT.
+ * That action is the sole writer of all three derived rows, and the row's
+ * `write` reads exactly one of them (`selectionRows.focus`, via
+ * `selectFocusedFocusable`) — so the hover and select slots re-admit through the
+ * derived cache precisely the pointer-rate stream the named-action list exists
+ * to keep out. Slot-blind, the list would be a `selection/*` prefix wearing a
+ * disguise.
+ *
+ * Naming `setSelectionRow` at all — rather than the actions upstream of it — is
+ * what keeps this list short: every resolution path (a late catalog pulse, the
+ * star-count pulse, a direct ref write) funnels through the reconciler and comes
+ * out as that one action, so the upstream actions need no listing of their own.
  *
  * ### `readAbsent` is not uniformly pure
  *
@@ -53,6 +68,8 @@
  * papered over by threading a clock parameter through the two rows that would
  * never read it.
  */
+
+import type { Action } from '@reduxjs/toolkit';
 
 import type { HashParamSource } from '../../@types/state/url/HashParamSource';
 import { URL_HASH_FOR } from '../../services/url/urlHashFor';
@@ -64,14 +81,23 @@ import { setSelectionRow } from '../selectionRows/selectionRowsSlice';
 import { selectOrientation } from '../settings/selectors';
 import { setOrientation } from '../settings/settingsSlice';
 import { manualPausedAtActions } from '../time/enterManualPausedAt';
+import { goLiveNowAction } from '../time/goLiveNowAction';
 import { selectTimeState } from '../time/selectors';
-import { goLive } from '../time/timeSlice';
 import { timeRoute } from '../../store/constants';
 import { DEFAULT_ORIENTATION } from '../../data/defaults';
 import { EARTH_REF } from '../../data/selection/earthRef';
 import { julianDaysToUnixMs } from '../../utils/time/julianDaysToUnixMs';
-import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import { isOrientationFrameId } from '../../utils/url/isOrientationFrameId';
+
+/**
+ * The `focus` row's third trigger: the derived-cache write, narrowed to the ONE
+ * slot the row reads. Module-scope rather than a `utils/` file because it is not
+ * a general predicate — it encodes which slot this particular row's `write`
+ * depends on, so it belongs beside that `write` and beside the docblock that
+ * justifies the narrowing, where a change to either is visibly a change to both.
+ */
+const isFocusSlotRow = (action: Action): boolean =>
+  setSelectionRow.match(action) && action.payload.slot === 'focus';
 
 /**
  * `focus` — the selected/framed target. The write reuses `URL_HASH_FOR` (the
@@ -86,7 +112,7 @@ import { isOrientationFrameId } from '../../utils/url/isOrientationFrameId';
 const focusSource: HashParamSource = {
   key: 'focus',
   deepLink: true,
-  writesOn: [requestFocus, clearSelection, setSelectionRow],
+  writesOn: [requestFocus.match, clearSelection.match, isFocusSlotRow],
   write: (state) => {
     // An in-flight request outranks the resolved slot — precedence, not
     // fallback. `requestFocus` for a galaxy or star parks inside
@@ -98,6 +124,16 @@ const focusSource: HashParamSource = {
     // focus switch honest: falling back instead would republish the OLD target
     // until the new one resolved, so Back would land on a URL that never
     // matched the screen.
+    //
+    // The ladder is only ever read at rest. `watchHashWriteSaga` composes on the
+    // trailing edge of a burst, so `write` never sees a request part-way through
+    // resolving: both rungs are quiet and the resolved slot below is the answer.
+    // That is what makes the two-rung form safe rather than the rungs happening
+    // to meet — `clearSelection` in particular nulls `pending` in its reducer
+    // while `selectionRows.focus` survives until the reconciler runs, and no
+    // arrangement of this ladder closes that gap. See
+    // `tests/state/url/hashHistoryIntegrity`, which counts the entries a
+    // navigation is allowed (none) with that gap wide open.
     const pendingId = selectPendingFocusId(state);
     if (pendingId !== null) return pendingId;
 
@@ -156,7 +192,7 @@ const focusSource: HashParamSource = {
 const timeSource: HashParamSource = {
   key: 't',
   deepLink: true,
-  writesOn: (action) => action.type.startsWith(`${timeRoute}/`),
+  writesOn: [(action) => action.type.startsWith(`${timeRoute}/`)],
   write: (state) => {
     const time = selectTimeState(state);
     if (time.mode !== 'manual') return null;
@@ -167,7 +203,7 @@ const timeSource: HashParamSource = {
     if (Number.isNaN(unixMs)) return [];
     return manualPausedAtActions(new Date(unixMs));
   },
-  readAbsent: () => [goLive({ simDays: unixMsToJulianDays(Date.now()), nowMs: performance.now() })],
+  readAbsent: () => [goLiveNowAction()],
 };
 
 /**
@@ -195,7 +231,7 @@ const orientationSource: HashParamSource = {
   // (`mergeSnapshot`) provably cannot move it — see
   // docs/backlog/2026-07-29-tour-snapshot-orientation.md. If that ever changes,
   // this list must grow.
-  writesOn: [setOrientation],
+  writesOn: [setOrientation.match],
   write: (state) => {
     const orientation = selectOrientation(state);
     return orientation === DEFAULT_ORIENTATION ? null : orientation;
