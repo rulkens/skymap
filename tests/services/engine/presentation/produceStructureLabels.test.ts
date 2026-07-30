@@ -68,7 +68,7 @@ function makeStructureItems(): EngineState['settings']['structures']['items'] {
 // mid-fade value) where they need a disabled / fading category.
 function registerAllCategories(fades: FadeRegistry): void {
   for (const category of STRUCTURE_IDS) {
-    fades.register({ kind: 'labelLayer', layer: 'structure', category }, 1);
+    fades.register({ kind: 'labelLayer', layer: 'structure', item: category }, 1);
     fades.register({ kind: 'structure', id: category }, 1);
   }
 }
@@ -125,8 +125,8 @@ describe('produceStructureLabels', () => {
     // Both halves of the all-or-nothing skip: the authoritative `labelEnabled`
     // boolean is false AND the labelLayer fade reached 0.
     const fades = makeRegistry();
-    fades.register({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 1);
-    fades.setImmediate({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 0);
+    fades.register({ kind: 'labelLayer', layer: 'structure', item: 'cluster' }, 1);
+    fades.setImmediate({ kind: 'labelLayer', layer: 'structure', item: 'cluster' }, 0);
     const state = makeState({ fades });
     state.settings.structures.items.cluster.labelEnabled = false;
     state.data.structures.setGroup('anchors', [rec('c1', { category: 'cluster' })]);
@@ -137,9 +137,9 @@ describe('produceStructureLabels', () => {
     // Authoritative gate OFF, but the fade hasn't reached 0: the fade-out tail
     // must still emit so the label ramps down to invisible instead of popping.
     const fades = makeRegistry();
-    fades.register({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 1);
+    fades.register({ kind: 'labelLayer', layer: 'structure', item: 'cluster' }, 1);
     fades.register({ kind: 'structure', id: 'cluster' }, 1);
-    fades.setImmediate({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 0.5);
+    fades.setImmediate({ kind: 'labelLayer', layer: 'structure', item: 'cluster' }, 0.5);
     const state = makeState({ fades });
     state.settings.structures.items.cluster.labelEnabled = false;
     state.data.structures.setGroup('anchors', [rec('c1', { category: 'cluster' })]);
@@ -150,7 +150,7 @@ describe('produceStructureLabels', () => {
     // The anchor gate skips only when the ring is BOTH disabled (`enabled`
     // false) AND its markerLayer opacity is exactly 0.
     const fades = makeRegistry();
-    fades.register({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 1);
+    fades.register({ kind: 'labelLayer', layer: 'structure', item: 'cluster' }, 1);
     fades.register({ kind: 'structure', id: 'cluster' }, 1);
     fades.setImmediate({ kind: 'structure', id: 'cluster' }, 0);
     const state = makeState({ fades });
@@ -165,7 +165,7 @@ describe('produceStructureLabels', () => {
     // popping the label while the ring was still visibly fading. Reading the
     // fade handle keeps them in lock-step.
     const fades = makeRegistry();
-    fades.register({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 1);
+    fades.register({ kind: 'labelLayer', layer: 'structure', item: 'cluster' }, 1);
     fades.register({ kind: 'structure', id: 'cluster' }, 1);
     fades.setImmediate({ kind: 'structure', id: 'cluster' }, 0.5);
     const state = makeState({ fades });
@@ -210,7 +210,7 @@ describe('produceStructureLabels', () => {
     const atRestAlpha = produceStructureLabels(atRest, makeCtx()).labels[0]!.fadeAlpha!;
 
     const fades = makeRegistry();
-    fades.register({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 0.5);
+    fades.register({ kind: 'labelLayer', layer: 'structure', item: 'cluster' }, 0.5);
     const dimmed = makeState({ fades });
     dimmed.data.structures.setGroup('anchors', [rec('a')]);
     const dimmedAlpha = produceStructureLabels(dimmed, makeCtx()).labels[0]!.fadeAlpha!;

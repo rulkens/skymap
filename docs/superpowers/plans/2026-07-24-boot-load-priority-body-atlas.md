@@ -339,7 +339,7 @@ flows to the slot's `error` state and every renderer keeps its 1x1 placeholder, 
 before this feature existed. Subscribe a `console.warn` on `error` the way
 `constellationsSlot.ts:54-58` does.
 
-Update the `AssetKey` docblock with a `'bodyTextureAtlas'` bullet alongside `'famousMeta'` /
+Update the `AssetKey` docblock with a `'bodyTextureAtlas'` bullet alongside `'famousGalaxiesMeta'` /
 `'constellations'` / `'flow'`: a singleton sidecar with a named `EngineAssetSlots` field, whose
 one bitmap fans out to 13 placeholder seeds rather than committing to a single consumer.
 

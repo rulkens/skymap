@@ -5,7 +5,8 @@
  * Each row owns one focusable arm: it narrows the target via `t.type` (no
  * cast) and returns the id segment for that arm, or null when the row isn't
  * link-encodable (a Synthetic galaxy has no durable cross-rebuild identity).
- * `computeDesiredHash` wraps a non-null id as `focus=<id>`.
+ * The `focus` row in `HASH_PARAM_SOURCES` calls this, and `hashBodyFor` composes
+ * a non-null id into the body as `focus=<id>`.
  *
  * Dispatching on `t.type` through a `Record<FocusableTargetType, …>` table
  * follows the simplicity convention's table-dispatch rule (item 7): a new

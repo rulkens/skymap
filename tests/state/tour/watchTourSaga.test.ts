@@ -100,7 +100,7 @@ const CAMERA_RUNTIME: LiveCameraRuntime = {
 
 const NARRATION_DEPS: ResolveDeps = {
   catalogs: { get: () => undefined },
-  famousMeta: [],
+  famousGalaxiesMeta: [],
   structures: { byId: () => null },
   stars: { current: () => null },
 };

@@ -195,7 +195,7 @@ function makeState(): EngineState {
     assetSlots: {
       points: new Map(),
       filaments: null,
-      famousMeta: null,
+      famousGalaxiesMeta: null,
       pgcAlias: null,
     },
     // cameraRuntime Resource bag — required for the camera-driver block

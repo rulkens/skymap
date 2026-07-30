@@ -13,7 +13,7 @@ src/
   @types/  one type per file; deep relative imports, no barrels
   components/  React UI shell (InfoCard, SettingsPanel, ScaleBar, StatusBar)
   data/  static data: sources enum, colourIndex spec, binary format
-  hooks/  React hooks (useEngine, useUrlSync, alias/structure indexes, …)
+  hooks/  React hooks (useEngine, useSplash, alias/structure indexes, …)
   services/
     camera/  OrbitCamera, OrbitControls, tweens
     engine/  engine orchestrator, autoLod, cloud loader

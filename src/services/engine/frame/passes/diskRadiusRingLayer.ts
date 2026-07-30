@@ -80,9 +80,7 @@ export const diskRadiusRingLayer: ContentLayer = {
     // deprojected and uncalibrated branches both resolve to the catalog
     // plane, so the ring matches the disk for every famous galaxy.
     const cal =
-      sel.source === Source.FamousGalaxy
-        ? state.data.galaxies.famousMeta[i]?.calibration
-        : undefined;
+      sel.source === Source.FamousGalaxy ? state.famousGalaxiesMeta[i]?.calibration : undefined;
     const catalogPaDeg = catalog.positionAngleDeg[i]!;
     const tilt = cal
       ? effectiveTilt(cal, catalogAxisRatio, catalogPaDeg)

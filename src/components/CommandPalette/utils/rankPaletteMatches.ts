@@ -24,7 +24,7 @@ import { MILKY_WAY_NAMES } from '../paletteRowModel';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { FAMOUS_STAR_SEARCH } from '../../../data/bodies/famousStarsIndex';
 import type { ScoredRow } from '../paletteRowModel';
-import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
+import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../../@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../../@types/engine/StructureSearchEntry';
 
@@ -55,7 +55,7 @@ const MAX_STRUCTURE_RESULTS = 50;
 const PRIMARY_TIEBREAK = 5;
 
 export function rankPaletteMatches(
-  entries: readonly FamousMetaEntry[],
+  entries: readonly FamousGalaxyMetaEntry[],
   aliasIndex: readonly AliasIndexEntry[] | undefined,
   structures: readonly StructureSearchEntry[] | undefined,
   query: string,

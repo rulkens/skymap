@@ -109,9 +109,7 @@ const GLINT_MIN_BRIGHTNESS = 1e-4;
  * pick frame, or the reverse).
  */
 function earthCaptionPickable(state: EngineState, ctx: ReadyFrameContext): boolean {
-  return (
-    state.data.bodies.earth !== null && ctx.cam.distance < SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC
-  );
+  return state.data.bodies.earth !== null && ctx.cam.distance < SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC;
 }
 
 export const bodyGlintsLayer: ContentLayer = {
@@ -238,7 +236,8 @@ export const bodyGlintsLayer: ContentLayer = {
   // mirrored here — but the skip fires only BEYOND the caption range. Pick follows
   // the visible AFFORDANCE, and within SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC the
   // affordance is the body's foreground LABEL. Planet / moon / Earth captions ride
-  // a FLAT `planetLabelsEnabled` toggle in `foregroundLabelsLayer` — full alpha
+  // a FLAT per-body `bodies.items[id].labelEnabled` gate in
+  // `foregroundLabelsLayer` — full alpha
   // (declutter aside) out to the caption gate, with NO distance fade band (unlike
   // the star map, which keys on the star's own pc distance). So the label persists
   // across the ENTIRE `bodyGlintBackdrop` dissolve (which completes ~6 decades

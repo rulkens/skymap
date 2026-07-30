@@ -7,27 +7,32 @@
  * matches `vitest.config.ts` `include` glob `tests/**\/*.test.ts`).
  *
  * The container:
- *  - reads `selectStructureItems`, `selectGalaxyCatalogItems`, and
- *    `selectMilkyWayLabelEnabled` from the store
+ *  - reads `selectStructureItems`, `selectGalaxyCatalogItems`,
+ *    `selectStarCatalogItems`, `selectBodyItems`, and
+ *    `selectMilkyWayLabelEnabled` from the store — one selector per
+ *    label-bearing source-type cluster, plus the milkyWay scalar
  *  - projects them → `labelCategoryVisibility` via
  *    `projectLabelCategoryVisibility`
- *  - routes dispatches to three homes: structure labels → `setStructureLabelEnabled`,
- *    milkyWay singleton → `setMilkyWayLabelEnabled`, galaxy-catalog labels
- *    (famousGalaxy) → `setGalaxyCatalogLabelEnabled`
+ *  - dispatches every label category's write through ONE table lookup,
+ *    `LABEL_HOME_BY_SOURCE_TYPE[SOURCE_TYPE_BY_LABEL_CATEGORY[category]]
+ *    .write(category, enabled)` — the category's registry-declared source
+ *    type picks the home; there is no hand-written per-home branch
  *
- * The CRITICAL tests: three store-backed assertions proving the 3-way dispatch
- * lands on the correct home — toggling a structure-label category flips that
- * structure item's `labelEnabled` flag; toggling `milkyWay` flips
- * `selectMilkyWayLabelEnabled`; toggling `famousGalaxy` flips the galaxy
- * catalog item's `labelEnabled` flag.
+ * The CRITICAL tests: three store-backed assertions proving the table lookup
+ * lands on the correct home for three different source types — toggling a
+ * structure-label category flips that structure item's `labelEnabled` flag;
+ * toggling `milkyWay` flips `selectMilkyWayLabelEnabled`; toggling
+ * `famousGalaxy` flips the galaxy catalog item's `labelEnabled` flag.
  *
- * The master tri-state now folds FOUR non-category rows (star names, planet
- * names, constellations, orbit trails) on top of the COSMO label categories —
- * `constellations` defaults off and every other row defaults on, so the
- * default-state master stays indeterminate whether the row count is three or
- * four; that scenario alone wouldn't catch a miscounted row. `orbitTrailsEnabled`
- * defaults on, so a store-seeded off is what actually pins the fourth row into
- * the tri-state arithmetic.
+ * The master tri-state folds TWO non-category rows (constellations, orbit
+ * trails) on top of the label categories the registry derives — star names
+ * and body names are registry-derived categories themselves now, not
+ * hand-authored rows, so only the two flat singleton guides sit outside that
+ * derivation. `constellations` defaults off and every other row defaults on,
+ * so the default-state master stays indeterminate whether the row count is
+ * one or two; that scenario alone wouldn't catch a miscounted row.
+ * `orbitTrailsEnabled` defaults on, so a store-seeded off is what actually
+ * pins the second row into the tri-state arithmetic.
  *
  * Tests assert on `store.getState()` via selectors — RTK dispatch is
  * synchronous so the store reflects the new value immediately after the
@@ -74,7 +79,7 @@ describe('LabelsAndGuidesSectionContainer', () => {
 
   it('is indeterminate when every row is on except a store-seeded orbit-trails off', () => {
     const { store } = createAppStore();
-    // Flip constellations on and orbit trails off — isolates the fourth row's
+    // Flip constellations on and orbit trails off — isolates the second row's
     // contribution to the master tri-state from the default-state fixture above.
     store.dispatch({ type: 'settings/setConstellationsEnabled', payload: true });
     store.dispatch({ type: 'settings/setOrbitTrailsEnabled', payload: false });
@@ -114,9 +119,9 @@ describe('LabelsAndGuidesSectionContainer', () => {
     expect(clusterCheckbox!.checked).toBe(false);
   });
 
-  // ── CRITICAL: 3-way dispatch tests ────────────────────────────────────────────
+  // ── CRITICAL: label-home dispatch tests ───────────────────────────────────────
 
-  it('[3-way dispatch] toggling a structure label category flips the structure item labelEnabled in the store', () => {
+  it('[label-home dispatch] toggling a structure label category flips the structure item labelEnabled in the store', () => {
     const { store } = createAppStore();
     // Confirm initial state: cluster.labelEnabled is true.
     expect(selectStructureItems(store.getState())['cluster'].labelEnabled).toBe(true);
@@ -138,7 +143,7 @@ describe('LabelsAndGuidesSectionContainer', () => {
     expect(selectStructureItems(store.getState())['cluster'].labelEnabled).toBe(false);
   });
 
-  it('[3-way dispatch] toggling milkyWay label flips selectMilkyWayLabelEnabled in the store', () => {
+  it('[label-home dispatch] toggling milkyWay label flips selectMilkyWayLabelEnabled in the store', () => {
     const { store } = createAppStore();
     // Confirm initial state: milkyWay label is enabled.
     expect(selectMilkyWayLabelEnabled(store.getState())).toBe(true);
@@ -160,7 +165,7 @@ describe('LabelsAndGuidesSectionContainer', () => {
     expect(selectMilkyWayLabelEnabled(store.getState())).toBe(false);
   });
 
-  it('[3-way dispatch] toggling famousGalaxy label flips the galaxy catalog item labelEnabled in the store', () => {
+  it('[label-home dispatch] toggling famousGalaxy label flips the galaxy catalog item labelEnabled in the store', () => {
     const { store } = createAppStore();
     // Confirm initial state: famousGalaxy.labelEnabled is true.
     expect(selectGalaxyCatalogItems(store.getState())['famousGalaxy'].labelEnabled).toBe(true);

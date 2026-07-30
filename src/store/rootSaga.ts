@@ -21,16 +21,28 @@
  *   watchClipPathInspectSaga — samples a clip's camera route into the debug inspector on inspectClipPath/clearClipPath
  *   watchReplayInspectedPathSaga — replays the inspector's pinned route verbatim on replayInspectedPath
  *   watchGoHomeSaga        — pins Earth and tweens to the sunlit home pose on each goHome intent
+ *   watchHashSaga          — the `window.location.hash` bridge, both directions: applies the arrival hash and every back/forward navigation, and republishes the hash whenever a param's source moves
  *
  * Each watcher is one saga per file, named after the saga, authored beside its
  * concern (the tier watcher in `state/tier/watchTierSaga`, the reconcile watchers
  * in `effects/watch*Saga`) and their worker bodies reach the engine via
- * `getContext` lazily. Composing the
- * watchers before the engine registers the saga context is safe: no worker body
- * runs until an action arrives, and the engine registers the context at
- * construction before any settings dispatch can occur. Later phases add watchers
- * the same way — by appending forks to this `all` array, never by re-threading
- * `createSagaMiddleware`/`run` through the factory.
+ * `getContext` lazily.
+ *
+ * Composing the watchers before the engine registers the saga context is safe,
+ * for a reason worth stating exactly. Almost every watcher here is REACTIVE: its
+ * worker body does not run until an action arrives, and by then the engine — which
+ * registers the context synchronously right after building the store — has filled
+ * the bag. One watcher is not reactive. `watchHashSaga`'s read half dispatches on
+ * its own initiative, from the arrival URL, and the store factory runs this root
+ * saga before it returns — so it would otherwise dispatch into watchers whose
+ * context does not exist yet, and a throw in any one of them cancels this whole
+ * `all`. That is why `watchHashSaga` waits for `sagaContextRegistered` before it
+ * forks either half, instead of assuming the context is there. Any future watcher
+ * that dispatches at start-up rather than on an action inherits the same
+ * obligation.
+ *
+ * Later phases add watchers the same way — by appending forks to this `all` array,
+ * never by re-threading `createSagaMiddleware`/`run` through the factory.
  *
  * `all([...])` runs the forked watchers concurrently; typed-redux-saga's
  * `all<T>(effects: T[])` yields once every effect has been started, so the
@@ -57,6 +69,7 @@ import { watchClipSaga } from '../state/camera/watchClipSaga';
 import { watchClipPathInspectSaga } from '../state/camera/watchClipPathInspectSaga';
 import { watchReplayInspectedPathSaga } from '../state/camera/watchReplayInspectedPathSaga';
 import { watchGoHomeSaga } from '../state/selection/watchGoHomeSaga';
+import { watchHashSaga } from '../state/url/watchHashSaga';
 
 export function* mainSaga() {
   yield* all([
@@ -78,5 +91,6 @@ export function* mainSaga() {
     watchClipPathInspectSaga(),
     watchReplayInspectedPathSaga(),
     watchGoHomeSaga(),
+    watchHashSaga(),
   ]);
 }
