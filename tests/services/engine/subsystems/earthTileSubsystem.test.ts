@@ -324,4 +324,40 @@ describe('earthTileSubsystem stand-down', () => {
     expect(subsystem.getTileResources()).toBeNull();
     expect(subsystem.getUploadedWindow()).toBeNull();
   });
+
+  it('allocates nothing when the manifest 404s, even though the plan is engaged', async () => {
+    // The day-one production case: R2 has no manifest yet, so the fetch
+    // resolves null and `params` must stay null regardless of what the
+    // camera is doing. Cleared first: neither mock resets its call history
+    // between tests in this file, and both were driven by earlier cases above.
+    vi.mocked(fetchEarthTileManifest).mockClear();
+    vi.mocked(fetchEarthTileBitmap).mockClear();
+    vi.mocked(fetchEarthTileManifest).mockResolvedValue(null);
+    let touched = false;
+    const device = new Proxy({} as GPUDevice, {
+      get: () => {
+        touched = true;
+        return () => {};
+      },
+    });
+
+    const subsystem = createEarthTileSubsystem({ device, requestRender: () => {} });
+    expect(subsystem.plannerParams('large')).toBeNull();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // A caller that ignored runFrame's `params !== null` gate has to be safe
+    // anyway: engaged frames against a null-manifest session must still be inert.
+    expect(subsystem.plannerParams('large')).toBeNull();
+    for (let frame = 0; frame < 3; frame++) {
+      subsystem.update({ plan: ENGAGED, nowMs: frame * 16 });
+    }
+
+    expect(touched).toBe(false);
+    expect(subsystem.getTileResources()).toBeNull();
+    expect(subsystem.getUploadedWindow()).toBeNull();
+    expect(fetchEarthTileBitmap).not.toHaveBeenCalled();
+    // The one property that actually regresses if this path breaks: a 404
+    // must not re-arm and re-fetch on every subsequent frame.
+    expect(fetchEarthTileManifest).toHaveBeenCalledTimes(1);
+  });
 });
