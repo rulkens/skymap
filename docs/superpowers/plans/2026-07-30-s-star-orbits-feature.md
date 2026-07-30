@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Render the 39 bound S-stars of the Galactic Center as Keplerian bodies orbiting Sgr A\*, animated by the existing solar-system clock.
+**Goal:** Render the 39 bound S-stars of the Galactic Center as Keplerian bodies orbiting Sgr A\*, animated by the existing solar-system clock. "S-star" is used throughout as the collective name for the table's 39 bound rows — two of them, R34 and R44, carry Gillessen's own R designations rather than S.
 
 **Architecture:** The feature half of [the spec](../specs/2026-07-30-s-star-orbits-design.md). Thirty-nine hand-transcribed element rows in their own file, converted by an `sStar` maker into the same `OrbitalElements` shape the planets use, focused on a Sgr A\* anchor, gated by a `galactic-centre` `BodyRegion`. Sgr A\* draws nothing; it is a positioned, labelled, focusable anchor.
 
@@ -87,8 +87,23 @@ export function meanAnomalyAtJ2000(periapsisEpochYr: number, periodYr: number): 
 
 Gillessen tabulates a pericentre epoch `Tp`; `OrbitalElements` wants mean anomaly at J2000. `M = 2π(2000.0 − Tp) / P`, wrapped to `[0, 2π)`.
 
+**Landmine — the wrap is not an edge case.** Over the committed 39 rows, tabulated
+`Tp` runs from 611.0 (S87) to 2132 (S97), and **20 of the 39 have `Tp` after 2000**,
+so `2000 − Tp` is negative and the raw mean anomaly is negative before wrapping.
+JavaScript's `%` preserves the sign of the dividend, so a naive `raw % (2 * Math.PI)`
+leaves those 20 stars negative — more than half the table. Every row's
+`|2000 − Tp|` is under one full period (largest is S91 at 0.93 cycles; S87 is 1389 yr
+against a 1640 yr period, 0.85 cycles), because Gillessen tabulates the pericentre
+passage nearest the observation epoch — so one wrap suffices, but the
+implementation must not _rely_ on that, since a future table row need not honour it.
+
 - [ ] Add the test `a star at pericentre in 2000.0 has mean anomaly zero`.
-- [ ] Add the test `S2 at Tp 2002.33 with P 16.0 wraps into [0, 2π)` — asserting the wrap, which a naive negative result fails.
+- [ ] Add the test `S2 at Tp 2002.33 with P 16.0 wraps into [0, 2π)` — S2 is one of
+      the 20 stars with `Tp` after 2000, so this asserts the wrap, which a naive
+      negative result fails.
+- [ ] Add the test `a star with Tp before 2000 comes out unchanged` — the positive-raw
+      companion to the S2 case above, so the wrap is pinned in both directions rather
+      than only the negative one.
 - [ ] Add the test `advancing by exactly one period returns the same anomaly`.
 - [ ] Implement.
 - [ ] `npm test -- meanAnomalyAtJ2000` → passes.
@@ -183,7 +198,7 @@ Distance modulus is 14.56 at 8178 pc. `M_K = kMag − 14.56 − A_KS_GALACTIC_CE
 | ------------------ | ---------- | ----- |
 | brightest in table | 10.0       | −7.1  |
 | S2                 | 13.95      | −3.1  |
-| faintest in table  | 18.0       | +0.9  |
+| faintest in table  | 17.8       | +0.74 |
 
 S2 landing at −3.1 matches its published B0–2V classification, which sanity-checks the chain end to end — make that the headline test.
 
@@ -439,11 +454,11 @@ Two open backlog items warn this is where registration gets missed — the `LAYE
 - Modify: `src/data/bodies/bodyRegions.ts` (`galactic-centre` gains its members)
 - Test: `tests/services/engine/frame/deriveBodyStates.test.ts`
 
-The `galactic-centre` region was created empty in Plan 02 Task 2 (`memberIds: []`, `extentMpc: 0`); it now gains Sgr A\* plus the 39 S-stars and derives a real extent from their apoapses. **That extent is the max over all 39, and it is not S2's.** S2's apoapsis is 1934 AU (0.0094 pc); the longest-period star in the table runs 3580 yr, so by `a ∝ P^(2/3)` its semi-major axis is roughly 37× S2's and its apoapsis lands **of order 0.3 pc** — one and a half decades further out. Take the real figure from the transcribed table (Task 1), not from this estimate, and never size the region on S2.
+The `galactic-centre` region was created empty in Plan 02 Task 2 (`memberIds: []`, `extentMpc: 0`); it now gains Sgr A\* plus the 39 S-stars and derives a real extent from their apoapses. **That extent is the max over all 39, and it is not S2's.** S2's apoapsis is 1934 AU (0.0094 pc), ~35× smaller than the true figure. S85 has both the widest orbit (`a = 4.6″`) and the longest period (3580 yr) in the table, and its apoapsis (`a(1+e)`, `e = 0.78`) is **0.325 pc** — one and a half decades further out than S2's. Take that figure from the transcribed table (Task 1), and never size the region on S2.
 
 Element count goes 23 → 62, crossing the old `MAX_ORBITS = 24` — which Plan 01 Task 7 already made dynamic. If anything truncates here, that plan's work regressed.
 
-**The NEAR0 far plane is not affected by this task, and was not affected by Task 7 either** — Plan 02 Task 6 derives it from region _extents_ with no anchor position, so a 0.3 pc `galactic-centre` extent is nowhere near `solar-neighbourhood`'s 2300 pc and the global max does not move. Do not re-litigate it; Task 7 carries the one regression test.
+**The NEAR0 far plane is not affected by this task, and was not affected by Task 7 either** — Plan 02 Task 6 derives it from region _extents_ with no anchor position, so a 0.325 pc `galactic-centre` extent is nowhere near `solar-neighbourhood`'s 2300 pc and the global max does not move. Do not re-litigate it; Task 7 carries the one regression test.
 
 What the populated region _does_ drive is content gating: the trails' reach cull and the star-point backdrop band, both keyed on `regionRelativeDistanceMpc` against Sgr A\* (Plan 02 Tasks 3–5).
 
@@ -497,7 +512,7 @@ Task 12's visual pass asks for these rows and nothing before this task budgets t
 
 **An optional field on `BodyInfo`, not a sidecar.** The type's own header (`BodyInfo.d.ts:7-17`) restricts it to what the engine knows **synchronously** from the resolved body, routing anything needing a fetch to the sidecar. `S_STAR_SEEDS` is static TS, compiled in — so orbital rows _satisfy_ that rule rather than bending it. No JSON, no build artefact, no loading state. Update the header to say so; leaving it claiming "position + radius only" would make the next reader treat this as a violation.
 
-`pericentreSchwarzschildRadii` carries the pericentre in R*s alongside AU, as the spec's Contracts block specifies. It divides `pericentreAu` by `SGR_A_STAR_SCHWARZSCHILD_RADIUS_KM` (Task 7) through `SCALE_UNITS`; a division at the call site, not its own helper. The card rows are spelled `pericentre*` throughout; `periapsis*` stays reserved for the orbital \_elements* (`OrbitalElements.argPeriapsisRad`, `SStarSeed.argPeriapsisDeg`/`.periapsisEpochYr`), which is the existing vocabulary.
+`pericentreSchwarzschildRadii` carries the pericentre in R*s alongside AU, as the spec's Contracts block specifies. It divides `pericentreAu` by `SGR_A_STAR_SCHWARZSCHILD_RADIUS_KM` (Task 7) through `SCALE_UNITS`; a division at the call site, not its own helper. The card rows are spelled `pericentre*`throughout;`periapsis*` stays reserved for the orbital \_elements* (`OrbitalElements.argPeriapsisRad`, `SStarSeed.argPeriapsisDeg`/`.periapsisEpochYr`), which is the existing vocabulary.
 
 **The store row is untouched.** `SelectionRow`'s body arm stays `id`/`label`/`positionMpc`/`radiusKm` and `extractSelectionRow` is not edited. `buildFocusable`'s body arm (`buildFocusable.ts:35`) fills `orbit` by static lookup on `row.id` — that function is already pure over static imports and says so in its header, so a compiled-in seed lookup is exactly its shape. This keeps five derived numbers out of RTK state, where they would be re-serialized on every selection for no gain.
 

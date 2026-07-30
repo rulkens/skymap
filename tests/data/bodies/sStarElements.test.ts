@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { S_STAR_SEEDS } from '../../../src/data/bodies/sStarElements';
 
 /**
- * Two structural invariants of a 39-row hand transcription. The element VALUES
+ * Three structural invariants of a 39-row hand transcription. The element VALUES
  * are verified against VizieR once, by the diff recorded with the commit, not
  * re-asserted here — restating them would only mirror the table. A row count is
  * likewise excluded: it restates an authored literal and catches nothing the
@@ -22,5 +22,15 @@ describe('S_STAR_SEEDS', () => {
     // hyperbolic orbit, and `propagateElements` is elliptical-only, so seeding
     // it would put a star at a NaN position with no error.
     expect(S_STAR_SEEDS.map((s) => s.id)).not.toContain('s111');
+  });
+
+  it('gives every seed a positive semi-major axis and eccentricity below 1', () => {
+    // The property that makes `propagateElements` (elliptical-only) applicable
+    // to every row — the machine-checkable generalisation of the S111 exclusion
+    // above, rather than a second test pinned to that one id.
+    for (const seed of S_STAR_SEEDS) {
+      expect(seed.semiMajorArcsec).toBeGreaterThan(0);
+      expect(seed.eccentricity).toBeLessThan(1);
+    }
   });
 });

@@ -1,7 +1,9 @@
 # S-star orbits around Sgr A\*
 
 Render the 39 bound S-stars of the Galactic Center as Keplerian bodies orbiting
-Sgr A\*, driven by the existing solar-system time control. At the `10 yr/s` clock
+Sgr A\*, driven by the existing solar-system time control. "S-star" is used
+throughout as the collective name for the table's 39 bound rows — two of them,
+R34 and R44, carry Gillessen's own R designations rather than S. At the `10 yr/s` clock
 detent, S2 completes a lap in 1.6 seconds, sweeping through pericentre at 119 AU
 and 7,760 km/s — 2.6% of light speed — on a _measured_ orbit.
 
@@ -36,7 +38,8 @@ classical elements with K magnitude and an early/late flag.
 **S111 is excluded.** It carries `a = −12.3″`, `e = 1.092`, and no period: a
 genuinely unbound star escaping the Galactic Center. `propagateElements` is
 elliptical-only, so hyperbolic support would be a separate feature. 39 rows remain,
-of which 30 are early-type, 8 late-type, 2 unclassified.
+of which 30 are early-type, 7 late-type, 2 unclassified — S111 was itself
+late-type, so its exclusion drops the late count to 7, not 8.
 
 Scale conversion, with the GC at 8178 pc (GRAVITY): **1 arcsec = 8178 AU**.
 
@@ -225,9 +228,8 @@ a threshold that is compared against a relative distance — the same category e
 as the per-region predicate, one layer down. Dropping it:
 
 - keeps the value at 0.23 Mpc — `solar-neighbourhood`'s 2300 pc dominates, and
-  `galactic-centre`'s extent (of order 0.3 pc, set by the widest S-star orbit) is
-  negligible — so the 0.6 Mpc coupling is preserved by construction, not by
-  re-tuning;
+  `galactic-centre`'s extent (0.325 pc, set by S85's apoapsis) is negligible —
+  so the 0.6 Mpc coupling is preserved by construction, not by re-tuning;
 - never resolves `sgr-a-star`'s anchor **position** at all, so the sequencing gap
   (nothing seeds that anchor until the feature plan) does not arise, and no
   extent-0 filter is needed to dodge it;
@@ -482,7 +484,7 @@ temperature, absMag` through a small table.
 | ------------------ | ---------- | ----- |
 | brightest in table | 10.0       | −7.1  |
 | S2                 | 13.95      | −3.1  |
-| faintest in table  | 18.0       | +0.9  |
+| faintest in table  | 17.8       | +0.74 |
 
 S2 landing at −3.1 matches its published B0–2V classification, which sanity-checks
 the chain end to end.
