@@ -192,6 +192,19 @@ export function attachOrbitControls(
   /** Squared pixel distance between pointerdown and pointerup. */
   const CLICK_THRESHOLD_SQ = 4 * 4; // 4 px radius → 16 when squared
 
+  // ── Zoom floor ────────────────────────────────────────────────────────────
+  //
+  // Both in-module zoom paths (pinch, and a wheel tick during a held gesture)
+  // dolly `cam.distance` toward the orbit target, which for a framed body is its
+  // CENTRE — so the floor has to know that body's radius or the camera scrolls
+  // through the surface. This module sees only DOM events and the camera
+  // register, never the scene, so it reads the radius through the caller's
+  // getter at the moment of the gesture rather than caching it: focus changes
+  // while the controls stay attached, and a cached copy would be a second source
+  // of truth for something the resolved focus row already owns. No getter ⇒
+  // null ⇒ `clampDistance` falls back to its absolute floor.
+  const pivotRadius = (): number | null => options?.pivotRadiusMpc?.() ?? null;
+
   // ── Pointer down — begin drag ──────────────────────────────────────────────
 
   const onDown = (e: PointerEvent) => {
@@ -354,7 +367,7 @@ export function attachOrbitControls(
       if (activePointers.size < 2 || lastPinchDist === 0) return;
       const newDist = currentPinchDistance();
       if (newDist > 0) {
-        cam.distance = clampDistance(cam.distance * (lastPinchDist / newDist));
+        cam.distance = clampDistance(cam.distance * (lastPinchDist / newDist), pivotRadius());
         lastPinchDist = newDist;
         updatePosition(cam);
         options?.onChange?.();
@@ -498,17 +511,18 @@ export function attachOrbitControls(
     //   • Scroll down (positive deltaY) → factor > 1 → distance grows (zoom out).
     //   • Scroll up   (negative deltaY) → factor < 1 → distance shrinks (zoom in).
     //
-    // `clampDistance` enforces the global zoom envelope (see orbitCamera.ts):
-    // a hard floor prevents the camera from flipping through the target into
-    // an inverted scene; a hard ceiling prevents drifting off into the void
-    // beyond the deepest galaxy catalog, where the cloud collapses to a dot.
+    // `clampDistance` enforces the shared zoom envelope: the floor stops the
+    // camera just off a framed body's surface (and, absent one, keeps it from
+    // collapsing onto the target into an inverted scene); the ceiling prevents
+    // drifting off into the void beyond the deepest galaxy catalog, where the
+    // cloud collapses to a dot.
     const factor = Math.exp(e.deltaY * 0.001);
 
     if (activePointers.size > 0) {
       // Wheel DURING a drag/pinch: fold the zoom into the live `cam` register.
       // The `orbitDrag` driver (priority 80) is active and renders `poseOf(cam)`,
       // so the zoom shows immediately and rides the `onGestureEnd` commit.
-      cam.distance = clampDistance(cam.distance * factor);
+      cam.distance = clampDistance(cam.distance * factor, pivotRadius());
       updatePosition(cam);
       options?.onChange?.();
       return;

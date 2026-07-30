@@ -44,6 +44,12 @@
  * seeds the framing distance; any USER zoom writes the user's distance. The
  * drag path writes it via the recapture edge (a committed base.distance); this
  * function is the WHEEL half of 'any user zoom'.
+ *
+ * `pivotRadiusMpc` is the radius of whatever the camera orbits (see the helper
+ * of the same name), forwarded to every arm's clamp so the zoom floors just off
+ * a focused body's surface instead of the absolute floor. All three arms need it:
+ * follow orbits the body by definition, and the autoRotate / resting arms orbit
+ * it too whenever the frame loop's pivot-pin is centring them on it.
  */
 
 import { autoRotateElapsed } from './cameraClock';
@@ -60,14 +66,15 @@ export function applyWheelZoom(
   factor: number,
   autoRotate: { active: boolean; rate: number },
   nowMs: number,
+  pivotRadiusMpc: number | null,
 ): CameraPose | null {
   if (prevActiveId === 'followBody' && clock.followDistanceTarget !== null) {
-    clock.followDistanceTarget = clampDistance(clock.followDistanceTarget * factor);
+    clock.followDistanceTarget = clampDistance(clock.followDistanceTarget * factor, pivotRadiusMpc);
     return null;
   }
   if (prevActiveId === 'autoRotate') {
     const elapsed = autoRotateElapsed(clock, autoRotate.active, base, nowMs);
-    return zoomedPose(spinAutoRotate(base, autoRotate.rate, elapsed), factor);
+    return zoomedPose(spinAutoRotate(base, autoRotate.rate, elapsed), factor, pivotRadiusMpc);
   }
-  return zoomedPose(base, factor);
+  return zoomedPose(base, factor, pivotRadiusMpc);
 }

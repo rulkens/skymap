@@ -122,7 +122,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Greek letters in star labels** `needs-design` — font atlas lacks Greek glyphs, so Bayer names are spelled out ("Delta Velorum" vs δ Velorum); add the range + swap seed display names. → [details](backlog/2026-07-22-greek-letters-in-star-labels.md)
 - [ ] **Star/body card row tooltips** `ready` — galaxy detail-card rows have hover tooltips explaining each field; the field-star and famous-star/body cards' rows have none — extend the same tooltips.tsx wiring to their row tables.
 - [ ] **Tour-recorder follow-ups** `ready` — small post-merge items from the recorder's final review (observable settle discard, two test/diagnostic tidies). → [details](backlog/2026-07-08-tour-recorder-follow-ups.md)
-- [ ] **Per-body zoom floor** `needs-design` — `clampDistance`'s global floor sits inside Earth, so scrolling in passes through the surface. → [details](backlog/2026-07-29-per-body-zoom-floor.md)
+- [ ] **Surface-directed zoom** `needs-design` — zoom dollies toward the body centre, so you cannot zoom toward the point under the cursor. → [details](backlog/2026-07-30-surface-directed-zoom.md)
 
 ## Docs & process
 

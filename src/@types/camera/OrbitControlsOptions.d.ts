@@ -59,6 +59,23 @@ export type OrbitControlsOptions = {
    */
   onZoom?: (factor: number) => void;
   /**
+   * Read the physical radius (Mpc) of whatever the camera currently orbits — a
+   * focused body or star — or `null` when the pivot has no surface. Called at
+   * the moment of a pinch or a wheel-during-gesture so `clampDistance` can floor
+   * the distance just off that surface instead of at the absolute floor (which
+   * is ~309 km, deep inside Earth).
+   *
+   * A GETTER, not a value: focus changes over the lifetime of one attachment,
+   * and this module holds no scene state. Reading through to the store on demand
+   * keeps the resolved focus row the single source of truth — a cached radius on
+   * the controls (or on the `OrbitCamera` register) would be a second copy to
+   * keep in sync. The engine wires it to `pivotRadiusMpc(selectFocusRow(...))`.
+   *
+   * Omitted (tests, or any caller with no scene) ⇒ the module can only apply the
+   * global floor, which is the honest answer when nothing is known to be framed.
+   */
+  pivotRadiusMpc?: () => number | null;
+  /**
    * Called on the first pointer contact that begins a new gesture (i.e. when
    * `activePointers.size === 1` on `pointerdown`). Subsequent fingers (pinch
    * promotion) do NOT re-fire this.

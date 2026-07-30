@@ -29,6 +29,7 @@
 import { createOrbitCamera } from '../../../utils/camera/createOrbitCamera';
 import { attachOrbitControls } from '../../camera/orbitControls';
 import { applyWheelZoom } from '../camera/applyWheelZoom';
+import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
 import { seedCameraFromBase } from '../../camera/seedCameraFromBase';
 import { createPickRenderer } from '../../gpu/renderers/galaxyCatalog/pickRenderer';
 import { createPickProgram } from '../frame/pickProgram';
@@ -55,7 +56,11 @@ import {
   updateSelectionHover,
   clearSelection,
 } from '../../../state/selection/selectionSlice';
-import { selectSelectedRef, selectFocusRef } from '../../../state/selection/selectors';
+import {
+  selectSelectedRef,
+  selectFocusRef,
+  selectFocusRow,
+} from '../../../state/selection/selectors';
 import { selectOrientation } from '../../../state/settings/selectors';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 
@@ -305,6 +310,13 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       state.subsystems.scheduler.requestRender();
     },
 
+    // The zoom floor's input: the radius of whatever the camera orbits, read
+    // live off the resolved focus row so a pinch (or a wheel during a held
+    // gesture) stops just off a focused body's surface instead of scrolling
+    // through it. Same derivation the `onZoom` path below uses — one rule for
+    // every zoom entry point.
+    pivotRadiusMpc: () => pivotRadiusMpc(selectFocusRow(store.getState())),
+
     // Discrete wheel zoom (no gesture in progress). The zoom goes to whichever
     // driver owns the distance this frame: while a body is followed the
     // followBody driver owns it (scale its distance target in place, so the
@@ -317,7 +329,8 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // `autoRotate` + `performance.now()` feed the auto-rotate branch's spin
     // fold. See `applyWheelZoom` for the ownership split.
     onZoom: (factor) => {
-      const cam = store.getState().camera;
+      const root = store.getState();
+      const cam = root.camera;
       const zoomed = applyWheelZoom(
         state.cameraRuntime.clock,
         state.cameraRuntime.prevActiveId.current,
@@ -325,6 +338,10 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
         factor,
         cam.autoRotate,
         performance.now(),
+        // Floor the zoom just off a focused body's surface — every arm of
+        // applyWheelZoom clamps against it, because the pivot-pin centres the
+        // resting / auto-rotating pose on the body too, not only the follow.
+        pivotRadiusMpc(selectFocusRow(root)),
       );
       if (zoomed !== null) store.dispatch(commitCameraPose(zoomed));
       state.subsystems.scheduler.requestRender();

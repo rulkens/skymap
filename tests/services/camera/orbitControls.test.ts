@@ -36,6 +36,9 @@
  *   - `onGestureEnd` fires exactly when ALL contacts are lifted.
  *   - `onChange` fires after any orbit, pan, pinch, or in-gesture wheel change;
  *     a discrete wheel zoom (no gesture) fires `onZoom` instead.
+ *   - `pivotRadiusMpc` reaches BOTH in-module clamp sites (pinch, and a wheel
+ *     during a held gesture), so a zoom-in on a framed body stops just off its
+ *     surface instead of passing through the centre.
  *
  * Vitest runs in `node` here (no jsdom), so — matching
  * `inputBindings.test.ts` — we hand-roll EventTarget recorders for the
@@ -46,7 +49,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { attachOrbitControls } from '../../../src/services/camera/orbitControls';
 import { createOrbitCamera } from '../../../src/utils/camera/createOrbitCamera';
+import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import type { OrbitCamera } from '../../../src/@types/camera/OrbitCamera';
+
+/** Earth's mean radius (km → Mpc) — the pivot radius for the zoom-floor cases. */
+const EARTH_RADIUS_MPC = 6371 * SCALE_UNITS.KM_TO_MPC;
 
 type Listener = (e: unknown) => void;
 
@@ -395,5 +402,72 @@ describe('attachOrbitControls — gesture hooks (Redux wiring)', () => {
     expect(cam.distance).toBeGreaterThan(before);
     expect(onChange).toHaveBeenCalled();
     expect(onZoom).not.toHaveBeenCalled();
+  });
+});
+
+describe('attachOrbitControls — the zoom floor stops at a focused body’s surface', () => {
+  // Both in-module zoom paths dolly toward the orbit TARGET, which for a framed
+  // body is its CENTRE. The clamp's absolute floor is 0.048 Earth radii, so
+  // without the pivot radius reaching these two sites a zoom-in walks the camera
+  // thousands of km under the crust. Distances are asserted in body radii so the
+  // property reads as "outside the surface, close to it".
+
+  it('pinching in stops just outside the surface', () => {
+    const cam = makeCamera();
+    cam.distance = EARTH_RADIUS_MPC * 4;
+    const { canvas, rec } = makeCanvas();
+
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam, {
+      pivotRadiusMpc: () => EARTH_RADIUS_MPC,
+    });
+
+    rec.fire('pointerdown', {
+      pointerId: 1,
+      pointerType: 'touch',
+      button: 0,
+      clientX: 0,
+      clientY: 0,
+    });
+    rec.fire('pointerdown', {
+      pointerId: 2,
+      pointerType: 'touch',
+      button: 0,
+      clientX: 10,
+      clientY: 0,
+    });
+    // Fingers spreading apart → zoom IN (distance × lastDist / newDist). Three
+    // ×100 steps would land at 4e-6 radii, deep inside the mantle.
+    for (const x of [1000, 100000, 10000000]) {
+      win.fire('pointermove', { pointerId: 2, clientX: x, clientY: 0 });
+    }
+
+    const radii = cam.distance / EARTH_RADIUS_MPC;
+    expect(radii).toBeGreaterThan(1);
+    expect(radii).toBeLessThan(1.05);
+  });
+
+  it('a wheel tick during a held gesture stops just outside the surface', () => {
+    // The wheel-during-gesture path folds into the live `cam` register rather
+    // than going out through onZoom, so it needs its own floor.
+    const cam = makeCamera();
+    cam.distance = EARTH_RADIUS_MPC * 4;
+    const { canvas, rec } = makeCanvas();
+
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam, {
+      pivotRadiusMpc: () => EARTH_RADIUS_MPC,
+    });
+
+    rec.fire('pointerdown', {
+      pointerId: 1,
+      pointerType: 'mouse',
+      button: 0,
+      clientX: 100,
+      clientY: 100,
+    });
+    rec.fire('wheel', { deltaY: -20000, preventDefault: vi.fn() });
+
+    const radii = cam.distance / EARTH_RADIUS_MPC;
+    expect(radii).toBeGreaterThan(1);
+    expect(radii).toBeLessThan(1.05);
   });
 });
