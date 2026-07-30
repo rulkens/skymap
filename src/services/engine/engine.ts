@@ -261,8 +261,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // `state.famousMeta` delegates to the Redux `engine` slice — the same
     // single-seam pattern as `settings`/`tier`/`selection`/`selectionRows`.
     // `famousMetaSlot`'s dispatch is the sole writer; per-frame readers
-    // (hi-res famous subsystem, textured-disk subsystem, ring-layer pass)
-    // reach the store here, with no engine-side mirror to drift.
+    // (hi-res famous subsystem, textured-disk subsystem, ring-layer pass,
+    // `produceFamousLabels`) reach the store here, with no engine-side
+    // mirror to drift.
     get famousMeta() {
       return selectFamousMeta(store.getState());
     },

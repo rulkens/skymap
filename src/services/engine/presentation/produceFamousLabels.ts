@@ -1,7 +1,7 @@
 /**
  * produceFamousLabels — per-frame text labels for the curated famous galaxies,
- * derived entirely from `galaxyStore` (the famous `.bin` catalog joined with
- * its `famousMeta` sidecar).
+ * derived from the famous `.bin` catalog in `galaxyStore` joined with the
+ * `famousMeta` sidecar read off `state.famousMeta` (the engine slice).
  *
  * Famous galaxies are galaxy data, not structures — their anchor is the galaxy
  * point itself, they emit no ring/halo marker, and their label visibility lives

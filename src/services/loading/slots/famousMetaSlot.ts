@@ -8,11 +8,13 @@
  *
  * No `commit` step: there's nothing GPU-side to upload — the payload is pure
  * metadata. The subscriber reports it to the engine slice
- * (`engineFamousMetaReported`), which is the one home for the payload: React
- * reads it through selectors for the InfoCard, and the engine reads it each
- * frame through the `state.famousMeta` getter (label production, textured and
- * hi-res disk subsystems, the radius ring). The render wake is
- * `installSlotReadyWake`'s job, not the factory's.
+ * (`engineFamousMetaReported`), which is the one home for the payload: the
+ * command palette reads it through `selectFamousMeta`, and the engine reads
+ * it each frame through the `state.famousMeta` getter (label production,
+ * textured and hi-res disk subsystems, the radius ring). The InfoCard's
+ * famous-galaxy text takes the engine-side route instead, via the
+ * `selectionRows` slice. The render wake is `installSlotReadyWake`'s job, not
+ * the factory's.
  *
  * **Graceful degradation on error.** The fetcher throws on HTTP failure (so
  * the retry policy distinguishes "really gone" from "transient flake"), and

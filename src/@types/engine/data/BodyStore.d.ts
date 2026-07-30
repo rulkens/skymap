@@ -20,10 +20,9 @@ import type { EarthBody } from '../../scene/EarthBody';
  * because it is the descent's landing target and carries its own textured
  * `EarthBody` form; it is `null` until seeded.
  *
- * Unlike `GalaxyStore`, this store holds no metadata sidecar: the famous-star
- * `famous_stars_meta.json` entries are read only by the InfoCard, so its slot
- * reports them to the engine Redux slice instead. `GalaxyStore.famousMeta`
- * stays where it is because engine code genuinely reads it.
+ * This store holds no metadata sidecar: the famous-star `famous_stars_meta.json`
+ * entries are read only by the InfoCard, so its slot reports them to the
+ * engine Redux slice instead.
  */
 export type BodyStore = {
   /** Seeded stars (chiefly the Sun); empty until the star seed lands. */

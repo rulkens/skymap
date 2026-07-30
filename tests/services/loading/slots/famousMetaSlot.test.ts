@@ -5,9 +5,10 @@
  * A deployment without `famous_meta.json` must still render famous galaxies,
  * just without enriched InfoCard text.
  *
- * The slot reports to the store and nowhere else — the engine reads the same
- * array back through `state.famousMeta`, so a second copy on the body store
- * would be a home with no distinct reader. Asserting on the dispatched action
+ * The slot reports to the store and nowhere else: it dispatches the parsed
+ * payload on success and an empty array on failure, and that single dispatch
+ * is the only route either the command palette or the engine has to the
+ * sidecar, so the two can never diverge. Asserting on the dispatched action
  * is therefore asserting the whole contract.
  */
 import { describe, it, expect, vi } from 'vitest';

@@ -110,10 +110,10 @@ const engineSlice = createSlice({
     // Whole-array replace, dispatched once per sidecar by its asset slot when
     // the fetch settles — success writes the parsed entries, failure writes `[]`
     // so React's fail-soft paths are reached by the same route as "not loaded
-    // yet". The alternative — React fetching the same JSON a second time from
-    // its own hook — put two loaders on one payload, and neither could see the
-    // other's failure. The spread copies the readonly payload into the Immer
-    // draft, which wants a mutable array slot even though nothing mutates it.
+    // yet". The asset slot is the payload's sole writer and this slice is its
+    // only home, so React and the engine can never see divergent copies. The
+    // spread copies the readonly payload into the Immer draft, which wants a
+    // mutable array slot even though nothing mutates it.
     engineFamousMetaReported: (state, action: PayloadAction<readonly FamousMetaEntry[]>) => {
       state.famousMeta = [...action.payload];
     },
