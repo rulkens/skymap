@@ -85,7 +85,7 @@ function encodeGalaxy(
     deps.catalogs.get(ref.source),
     ref.index,
     ref.source,
-    deps.famousMeta,
+    deps.famousGalaxiesMeta,
   );
   // Cloud not loaded or index out of range.  The saga only encodes a LIVE
   // selection (cloud is definitely loaded), so this branch is a safety net

@@ -32,12 +32,11 @@ import { createSlice, current, type PayloadAction } from '@reduxjs/toolkit';
 import { buildInitialSettings } from './initialState';
 import { buildVolumeFieldSettings } from '../../data/volume/volumeFieldDefaults';
 import { mergeSettingsSnapshot } from './mergeSettingsSnapshot';
-import { LABEL_CATEGORIES } from '../../data/structure/labelCategories';
-import { isStructureId } from '../../data/structure/structureIds';
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
 import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';
+import type { BodyId } from '../../@types/data/body/BodyId';
 import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { ClipId } from '../../@types/animation/ClipId';
 import type { SplineMode } from '../../@types/animation/SplineMode';
@@ -164,15 +163,6 @@ const settingsSlice = createSlice({
       settings.milkyWay.labelEnabled = action.payload;
     },
 
-    // ── famous stars ────────────────────────────────────────────────────────
-    // Singleton-overlay master gate on the seeded near-field star map (its own
-    // single writer, like setMilkyWayEnabled). Distinct from
-    // setStarCatalogEnabled (the Gaia survey gate); when off the star layers
-    // fall back to the Sun alone.
-    setFamousStarsEnabled: (settings, action: PayloadAction<boolean>) => {
-      settings.famousStars.enabled = action.payload;
-    },
-
     // ── filaments ───────────────────────────────────────────────────────────
     setFilamentsEnabled: (settings, action: PayloadAction<boolean>) => {
       settings.filaments.enabled = action.payload;
@@ -273,6 +263,17 @@ const settingsSlice = createSlice({
       settings.starCatalogs.items[action.payload.id].labelEnabled = action.payload.enabled;
     },
 
+    // ── bodies (fifth source-type cluster) ──────────────────────────────────
+    // The caption axis is the only WRITABLE one: `bodies.items[id].enabled` is
+    // seeded from the registry row and read by `visibleStars` (the Sun's dot)
+    // and `foregroundLabelsLayer` (the Sun's caption), but no product decision
+    // has been made to expose a "hide this body" control, so no setter exists
+    // to turn it into a knob nothing turns. There is no cluster-level gate
+    // either, for the same reason (see EngineSettingsState).
+    setBodyLabelEnabled: (settings, action: PayloadAction<{ id: BodyId; enabled: boolean }>) => {
+      settings.bodies.items[action.payload.id].labelEnabled = action.payload.enabled;
+    },
+
     // ── volumes ─────────────────────────────────────────────────────────────
     setVolumesEnabled: (settings, action: PayloadAction<boolean>) => {
       settings.volumes.enabled = action.payload;
@@ -314,12 +315,6 @@ const settingsSlice = createSlice({
     // ── labels (cross-cutting presentation) ─────────────────────────────────
     setLabelsFocusedOnly: (settings, action: PayloadAction<boolean>) => {
       settings.labels.focusedOnly = action.payload;
-    },
-    setStarLabelsEnabled: (settings, action: PayloadAction<boolean>) => {
-      settings.labels.starLabelsEnabled = action.payload;
-    },
-    setPlanetLabelsEnabled: (settings, action: PayloadAction<boolean>) => {
-      settings.labels.planetLabelsEnabled = action.payload;
     },
 
     // ── debug ───────────────────────────────────────────────────────────────
@@ -439,22 +434,6 @@ const settingsSlice = createSlice({
       settings.structures.items[action.payload.id].labelEnabled = action.payload.enabled;
     },
 
-    // ── labels (master fan-out) ───────────────────────────────────────────────
-    // Set the text-label axis for EVERY label-bearing category at once. Label
-    // visibility has three authoritative homes (structure items, the famous-
-    // galaxy catalog item, the milkyWay scalar); this routes each LABEL_CATEGORY
-    // to its home, mirroring LabelsAndGuidesSectionContainer's dispatch guard. One
-    // dispatchable action for the panel's tri-state master and for tour setup,
-    // so callers don't hand-roll the per-category loop.
-    setLabelsEnabled: (settings, action: PayloadAction<boolean>) => {
-      const enabled = action.payload;
-      for (const cat of LABEL_CATEGORIES) {
-        if (isStructureId(cat)) settings.structures.items[cat].labelEnabled = enabled;
-        else if (cat === 'milkyWay') settings.milkyWay.labelEnabled = enabled;
-        else settings.galaxyCatalogs.items[cat].labelEnabled = enabled;
-      }
-    },
-
     // ── snapshot merge (tour restore / mid-playback effect) ─────────────────
     // The ONE return-new-state reducer. `mergeSettingsSnapshot` does
     // `{ ...state, ...structuredClone(patch) }`; inside a case reducer `settings`
@@ -490,7 +469,6 @@ export const {
   setThumbnailsEnabled,
   setMilkyWayEnabled,
   setMilkyWayLabelEnabled,
-  setFamousStarsEnabled,
   setFilamentsEnabled,
   setFilamentIntensity,
   setConstellationsEnabled,
@@ -510,6 +488,7 @@ export const {
   setStarCatalogAggregateIntensityCap,
   setStarCatalogVisible,
   setStarCatalogLabelEnabled,
+  setBodyLabelEnabled,
   setVolumesEnabled,
   addVolumeField,
   removeVolumeField,
@@ -536,10 +515,7 @@ export const {
   setClipPathTuningActive,
   setStructureItemEnabled,
   setStructureLabelEnabled,
-  setLabelsEnabled,
   setLabelsFocusedOnly,
-  setStarLabelsEnabled,
-  setPlanetLabelsEnabled,
   mergeSnapshot,
 } = settingsSlice.actions;
 

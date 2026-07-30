@@ -1,7 +1,7 @@
 import type { FamousCalibration } from './FamousCalibration';
 
 /** One famous-galaxy metadata record, indexed by its local position in famous.bin. */
-export type FamousMetaEntry = {
+export type FamousGalaxyMetaEntry = {
   id: string;
   names: string[];
   /**

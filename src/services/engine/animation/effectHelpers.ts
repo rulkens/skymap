@@ -336,7 +336,7 @@ export function fork(child: Effect): Effect & { kind: 'fork' } {
  * `syncVisibilityFades` handles the translation to per-layer fade controllers.
  *
  * `layers` accepts three vocabularies in one list: atomic keys, authoring
- * aggregates (`'labels'` → the three label layers), and `'family:scope'`
+ * aggregates (`'labels'` → every label layer), and `'family:scope'`
  * scoped entries (`'survey:milliquas'`, `'structureRing:group'`,
  * `'label:milkyWay'`) that address ONE item where the bare key would fan over
  * all. `splitVisibilityArgs` resolves the mix at construction: aggregates

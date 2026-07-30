@@ -1,11 +1,11 @@
 /**
  * makeJsonFetcher — composes a Fetcher<T, Req> from a URL builder and a
- * pure parse function. Used by sidecar fetchers (famous-meta, pgc-aliases)
+ * pure parse function. Used by sidecar fetchers (famous-galaxies-meta, pgc-aliases)
  * that share the "GET, check ok, parse JSON, return decoded" shape.
  *
  * ### Why a factory rather than a single shared fetcher?
  *
- * Each sidecar parses into a different runtime shape (FamousMetaEntry[]
+ * Each sidecar parses into a different runtime shape (FamousGalaxyMetaEntry[]
  * vs Map<bigint, string[]>), and the parse step throws on schema
  * mismatch. Encoding that as a fetcher composition keeps the parse
  * logic in the same module as the URL choice and keeps the slot purely

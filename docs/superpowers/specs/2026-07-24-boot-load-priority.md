@@ -73,7 +73,7 @@ Ideal-diff pass run 2026-07-24; this section records its checkpoint, approved by
   already a declarative lifecycle contract carrying `key` / `factory` / `req` / `demand` /
   `release?` / `built?`. One more field.
 - `'bodyTextureAtlas'` on `AssetKey` (`src/@types/loading/AssetKey.d.ts:71-81`). The union
-  already hosts exactly this singleton-sidecar shape (`famousMeta`, `constellations`, `flow`),
+  already hosts exactly this singleton-sidecar shape (`famousGalaxiesMeta`, `constellations`, `flow`),
   each a named field on `EngineAssetSlots`; `installSlots.ts` writes any string key straight to
   `state.assetSlots[key]` and `slotFor.ts:68` reads it back, so both seams widen for free.
 - `QueueEntry` (`src/@types/loading/QueueEntry.d.ts`) already carries `key` and `priority`.
@@ -228,7 +228,7 @@ The authored table (from Q15; lower is fetched first):
 | — | fonts (`cormorant.json` + `.webp`) | 297 KB | Outside the queue; blocks `initGpu` today |
 | 0 | fallback body atlas | ~0.2 MB | Small; unlocks every body visually |
 | 1 | body hi-res textures | varies | Only proximity-demanded ones are queued |
-| 2 | `famous.bin` + `famous_meta.json` | 55 KB | Near-free; exempt from `surveyDeepZoom` |
+| 2 | `famous.bin` + `famous_galaxies_meta.json` | 55 KB | Near-free; exempt from `surveyDeepZoom` |
 | 3 | `structures.ccat`+meta, `constellations.json` | 164 KB | Tiny; visible at Earth when enabled |
 | 4 | `2mrs.bin` | 2.5 MB | Smallest real catalog, local-volume structure |
 | 5 | `stars-medium.bin` | 30 MB | The sky visible at Earth |
@@ -256,7 +256,7 @@ internally uses *N* x 10 + *k*:
 | 0 | `'bodyTextureAtlas'` |
 | 5 | `Source.Synthetic` |
 | 10 | every `bodyTextureRow` (all `ALL_BODY_TEXTURE_KEYS`) |
-| 20 / 21 | `Source.FamousGalaxy` / `'famousMeta'` |
+| 20 / 21 | `Source.FamousGalaxy` / `'famousGalaxiesMeta'` |
 | 30 / 31 | `'structureCatalog'` / `'constellations'` |
 | 40 | `Source.TwoMRS` |
 | 50 | every `starCatalogRow` |

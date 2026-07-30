@@ -55,7 +55,7 @@ function blockingSeam(onCancel: () => void): PlayClipStub {
 // Default deps resolve nothing — fine for focus-free clips like flyout.
 const EMPTY_DEPS: ResolveDeps = {
   catalogs: { get: () => undefined },
-  famousMeta: [],
+  famousGalaxiesMeta: [],
   structures: { byId: () => null },
   stars: { current: () => null },
 };
@@ -155,7 +155,7 @@ describe('watchClipSaga', () => {
     };
     const deps: ResolveDeps = {
       catalogs: { get: () => undefined },
-      famousMeta: [],
+      famousGalaxiesMeta: [],
       structures: { byId: (id) => groups[id] ?? null },
       stars: { current: () => null },
     };

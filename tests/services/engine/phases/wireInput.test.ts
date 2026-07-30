@@ -141,7 +141,7 @@ function makeState(): EngineState {
     // never invoked — an empty galaxies/structures stub is enough.
     data: {
       structures: { byCategory: () => [] },
-      galaxies: { get: () => undefined, famousMeta: [] },
+      galaxies: { get: () => undefined, famousGalaxiesMeta: [] },
     } as never,
     gpu: {
       renderer: {
@@ -178,7 +178,7 @@ function makeState(): EngineState {
     assetSlots: {
       points: new Map(),
       filaments: null,
-      famousMeta: null,
+      famousGalaxiesMeta: null,
       pgcAlias: null,
       cf4Density: null,
     },

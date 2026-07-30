@@ -58,7 +58,7 @@ export const NOOP_RECONCILE: ReconcileEffects = {
 // and a TypeError that cancels the root saga.
 const EMPTY_RESOLVE_DEPS: ResolveDeps = {
   catalogs: { get: () => undefined },
-  famousMeta: [],
+  famousGalaxiesMeta: [],
   structures: { byId: () => null },
   stars: { current: () => null },
 };

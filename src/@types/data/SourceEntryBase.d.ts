@@ -28,10 +28,15 @@ export type SourceEntryBase = {
   /**
    * True if this source carries toggleable on-screen text labels.
    * Drives the label-visibility record and the fade-layer routing in the
-   * label subsystem. The two real label sets are:
-   *   - galaxyNames layer: famousGalaxy
-   *   - structure layer:   cluster, supercluster, void, group
-   * All bulk galaxy catalogs (sdss, glade, 2mrs, milliquas, desiDeep, synthetic) are false.
+   * label subsystem. Bulk galaxy catalogs (sdss, glade, 2mrs, milliquas,
+   * desiDeep, synthetic) and the survey-wide Gaia bin are false: they render
+   * millions of points and no names.
+   *
+   * This is a CAPABILITY, not a routing detail — a source that puts a name on
+   * screen sets it, whichever renderer draws that name. The near-field bodies
+   * and the curated star map caption through `foregroundLabelsLayer` on the
+   * NEAR0 slab rather than the COSMO label director, and they set the flag all
+   * the same; `labelLayer` is where that routing difference is expressed.
    */
   readonly bearsLabel: boolean;
   /**
@@ -43,9 +48,7 @@ export type SourceEntryBase = {
   readonly bearsMarker: boolean;
   /**
    * Which fade layer this source's labels live on. Present iff bearsLabel.
-   *   - 'galaxyNames' — the shared galaxy-name layer (famousGalaxy rows)
-   *   - 'structure'   — the per-structure-category label layer
-   * Absent on non-label-bearing rows (bearsLabel === false).
+   * See `LabelLayerId` for the layer set. Absent on non-label-bearing rows.
    */
   readonly labelLayer?: CategoryLabelLayer;
   /**

@@ -150,7 +150,7 @@ function driveMerged(
   input: ReturnType<typeof makeInput>,
   nowMs: number,
 ): void {
-  const texInput = { ...input, famousMeta: [], nowMs };
+  const texInput = { ...input, famousGalaxiesMeta: [], nowMs };
   rig.walk.runFrame(input, rig.proc.beginFrame(input), rig.tex.beginFrame(texInput));
 }
 
@@ -189,9 +189,9 @@ describe('diskPlannerWalk drives both bodies', () => {
       fetcher: async () => makeFakeBitmap(),
     });
     const texWalk = createDiskPlannerWalk({ decimationFactor: 1 });
-    runTexturedSolo(texWalk, texSolo, { ...input, famousMeta: [], nowMs: 0 });
+    runTexturedSolo(texWalk, texSolo, { ...input, famousGalaxiesMeta: [], nowMs: 0 });
     await tick();
-    runTexturedSolo(texWalk, texSolo, { ...input, famousMeta: [], nowMs: 50 });
+    runTexturedSolo(texWalk, texSolo, { ...input, famousGalaxiesMeta: [], nowMs: 50 });
 
     // Guard against a vacuous [] === [] parity: both bodies actually emitted.
     expect(rig.proc.lastOutput.instances.length).toBeGreaterThan(0);
@@ -259,7 +259,7 @@ describe('diskPlannerWalk drives both bodies', () => {
     walk.runFrame(
       input,
       proc.beginFrame(input),
-      tex.beginFrame({ ...input, famousMeta: [], nowMs: 0 }),
+      tex.beginFrame({ ...input, famousGalaxiesMeta: [], nowMs: 0 }),
     );
     const procWindow1 = new Set(proc.lastOutput.instances.map((d) => d.localIdx));
     const texWindow1 = texWindow();
@@ -274,7 +274,7 @@ describe('diskPlannerWalk drives both bodies', () => {
     walk.runFrame(
       input,
       proc.beginFrame(input),
-      tex.beginFrame({ ...input, famousMeta: [], nowMs: 0 }),
+      tex.beginFrame({ ...input, famousGalaxiesMeta: [], nowMs: 0 }),
     );
     const procAll2 = new Set(proc.lastOutput.instances.map((d) => d.localIdx));
     const procWindow2 = new Set([...procAll2].filter((i) => !procWindow1.has(i)));
@@ -325,7 +325,7 @@ describe('diskPlannerWalk drives both bodies', () => {
       const catalogs = new Map<SourceType, GalaxyCatalog>([
         [source, makeSingletonCloud(rowX, diameterKpc)],
       ]);
-      runTexturedSolo(walk, tex, { ...makeInput(catalogs), famousMeta: [], nowMs: 0 });
+      runTexturedSolo(walk, tex, { ...makeInput(catalogs), famousGalaxiesMeta: [], nowMs: 0 });
       await tick();
       return spy;
     }

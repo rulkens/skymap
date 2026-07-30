@@ -7,7 +7,7 @@ import type { GalaxyCatalogSourceType } from '../data/galaxyCatalog/GalaxyCatalo
  *
  * It is exactly the raw inputs `buildGalaxyInfo` needs — positions, the stored
  * spectroscopic redshift, the five mag slots, diameter, orientation, the
- * per-record class/parent bytes, plus the optional famous-meta block — and
+ * per-record class/parent bytes, plus the optional famous-galaxies-meta block — and
  * nothing derived. Every derived field (sexagesimal, distance, colours, urls,
  * provenance) is a PURE function of these, so it computes React-side.
  *

@@ -19,7 +19,7 @@
  * - `id` is the defensive tail — every valid seed entry has a non-
  *   empty id, so the list always contains at least one valid entry.
  *
- * Structural type rather than importing `FamousMetaEntry` directly,
+ * Structural type rather than importing `FamousGalaxyMetaEntry` directly,
  * so build-side callers (`tools/buildFamous.ts` and friends, which
  * consume `FamousEntry`) can pass their own seed shape too.
  */

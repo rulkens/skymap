@@ -31,7 +31,6 @@ import reducer, {
   setStarCatalogRefineThreshold,
   setStarCatalogGlowOverlap,
   setStarCatalogVisible,
-  setFamousStarsEnabled,
   setPassDisabled,
   setClipPathLinger,
   setClipPathLingerSec,
@@ -41,15 +40,13 @@ import reducer, {
   setClipPathTuningActive,
   setStructureItemEnabled,
   setStructureLabelEnabled,
-  setLabelsEnabled,
   mergeSnapshot,
 } from '../../../src/state/settings/settingsSlice';
 import { selectOrientation } from '../../../src/state/settings/selectors';
 import { buildInitialSettings } from '../../../src/state/settings/initialState';
 import { settingsRoute } from '../../../src/store/constants';
 import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
-import { STRUCTURE_IDS, isStructureId } from '../../../src/data/structure/structureIds';
-import { LABEL_CATEGORIES } from '../../../src/data/structure/labelCategories';
+import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 import type { VolumeFieldId } from '../../../src/@types/data/volume/VolumeFieldId';
 import type { SettingsSnapshot } from '../../../src/@types/engine/settings/SettingsSnapshot';
 import type { RootState } from '../../../src/store/types';
@@ -263,16 +260,6 @@ describe('settingsSlice — star catalogs', () => {
   });
 });
 
-describe('settingsSlice — famous stars', () => {
-  it('setFamousStarsEnabled toggles the map gate without touching the star-catalogs master', () => {
-    // The famous-stars gate is a separate singleton overlay flag from the Gaia
-    // survey master (`starCatalogs.enabled`); flipping it leaves that untouched.
-    const next = reducer(base(), setFamousStarsEnabled(false));
-    expect(next.famousStars.enabled).toBe(false);
-    expect(next.starCatalogs.enabled).toBe(true);
-  });
-});
-
 describe('settingsSlice — mergeSnapshot', () => {
   it('replaces only the clusters the patch carries', () => {
     const before = base();
@@ -306,28 +293,6 @@ describe('settingsSlice — mergeSnapshot', () => {
     // Mutating the patch after dispatch must not bleed into state.
     (patch.galaxyCatalogs as { brightness: number }).brightness = 999;
     expect(next.galaxyCatalogs.brightness).toBe(0.5);
-  });
-});
-
-describe('settingsSlice — setLabelsEnabled (master label fan-out)', () => {
-  // The master routes every label-bearing category to its authoritative home:
-  // structure ids → structures.items, milkyWay → milkyWay scalar, else (famous)
-  // → galaxyCatalogs.items. LABEL_CATEGORIES is exactly the label-bearing set.
-  const labelOf = (state: ReturnType<typeof base>, cat: (typeof LABEL_CATEGORIES)[number]) =>
-    isStructureId(cat)
-      ? state.structures.items[cat].labelEnabled
-      : cat === 'milkyWay'
-        ? state.milkyWay.labelEnabled
-        : state.galaxyCatalogs.items[cat].labelEnabled;
-
-  it('disables labels across every label-bearing category', () => {
-    const next = reducer(base(), setLabelsEnabled(false));
-    for (const cat of LABEL_CATEGORIES) expect(labelOf(next, cat)).toBe(false);
-  });
-
-  it('re-enables labels across every label-bearing category', () => {
-    const on = reducer(reducer(base(), setLabelsEnabled(false)), setLabelsEnabled(true));
-    for (const cat of LABEL_CATEGORIES) expect(labelOf(on, cat)).toBe(true);
   });
 });
 

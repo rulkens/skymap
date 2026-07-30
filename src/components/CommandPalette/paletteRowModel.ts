@@ -7,7 +7,7 @@
  * module would drag React + the CSS-module into a pure util. This module is
  * the shared seam both halves can import.
  */
-import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
+import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
 import type { SceneBody } from '../../@types/scene/SceneBody';
@@ -34,7 +34,7 @@ export const MILKY_WAY_NAMES = [MILKY_WAY_PRIMARY_NAME, 'Galaxy', 'Home'] as con
  * row (see `rankPaletteMatches`).
  */
 export type ScoredRow =
-  | { kind: 'famous'; entry: FamousMetaEntry; score: number }
+  | { kind: 'famous'; entry: FamousGalaxyMetaEntry; score: number }
   | { kind: 'alias'; entry: AliasIndexEntry; score: number }
   | { kind: 'structure'; entry: StructureSearchEntry; score: number }
   | { kind: 'milkyWay'; score: number }

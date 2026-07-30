@@ -91,7 +91,7 @@ function makeFixture(opts?: {
       starCatalogs,
       mcpm,
       // famous companion sidecar — loadCompanionAssets fires `.load` on it.
-      famousMeta: { load: vi.fn() } as SlotStub,
+      famousGalaxiesMeta: { load: vi.fn() } as SlotStub,
     },
     gpu: {
       texturedDiskRenderer: opts?.texturedDiskRenderer ?? null,
