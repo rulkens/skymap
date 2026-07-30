@@ -1,5 +1,13 @@
 # Analytic sphere primitive for body rendering
 
+**Complete 2026-07-30**, shipped across PRs #516 (prep), #520 (pick), #523 (textured body). Four
+places the plan disagreed with the code, kept as its own error record:
+
+1. Tasks 1.1 and 1.2 landed as ONE commit — `drawSphere` has exactly one call site, so a required `camPosLocal` field could not typecheck across the split.
+2. Task 1.3's stated `frag_depth` failure direction was backwards: with front faces culled the proxy depth sits BEHIND the true surface by up to ~2 body radii, not 5% in front of it.
+3. Task 2.3's claim that `sphereTessellation.ts` still cited `inscribedSphereRadiusFactor` was stale — #512 had removed it. The real defect was a dangling link to a deleted backlog file.
+4. Task 3.2's pole-mip mechanism was wrong: `v = asin(cos θ)/π + 0.5 = 1 − θ/π` is exactly linear in colatitude, so the divergent coordinate is `u`, not `v`.
+
 **Spec:** [`docs/superpowers/specs/2026-07-28-analytic-sphere-primitive.md`](../specs/2026-07-28-analytic-sphere-primitive.md)
 **Grill:** [`docs/grill-sessions/analytic-sphere-primitive-2026-07-28.md`](../../grill-sessions/analytic-sphere-primitive-2026-07-28.md)
 **Spike (proven, visually confirmed):** commit `e4bd0dbb`, gated behind `?impostor`.
@@ -96,10 +104,10 @@ literal `package::`; never two `@builtin(position)`-bearing structs in one linke
 Picking up a backlog item removes it in the same change; the detail file seeded the spec and the
 spec is now the source of truth. Never strike through — delete.
 
-- [ ] Delete the `**Atmosphere limb transparent seam**` index line from the Rendering section.
-- [ ] `rm -f docs/backlog/2026-07-24-atmosphere-limb-transparent-seam.md` (bare `rm` prompts
+- [x] Delete the `**Atmosphere limb transparent seam**` index line from the Rendering section.
+- [x] `rm -f docs/backlog/2026-07-24-atmosphere-limb-transparent-seam.md` (bare `rm` prompts
       interactively and hangs).
-- [ ] Commit alongside the spec + this plan, if they are not already committed.
+- [x] Commit alongside the spec + this plan, if they are not already committed.
 
 ### 0.2: Extract `lib/analyticSphere.wesl`
 
@@ -153,16 +161,16 @@ its own header — the grazing fallback and why derivatives run before `discard`
 why `fragDepthFromLocal` applies **no** reversed-Z flip. Move that prose across rather than
 rewriting it, and leave `impostorFragment.wesl`'s header pointing at the lib for the details.
 
-- [ ] No test (standing refusal — GPU-only maths).
-- [ ] Write `lib/analyticSphere.wesl`; one cohesive module, **not** one function per file (WESL
+- [x] No test (standing refusal — GPU-only maths).
+- [x] Write `lib/analyticSphere.wesl`; one cohesive module, **not** one function per file (WESL
       resolves the last path segment as the symbol name — the `lib/math.wesl` precedent).
-- [ ] Repoint `impostorFragment.wesl` at it: four `import package::lib::analyticSphere::…`
+- [x] Repoint `impostorFragment.wesl` at it: four `import package::lib::analyticSphere::…`
       lines at the top, the inline maths deleted, the fragment body otherwise untouched.
-- [ ] `npm run typecheck` clean.
-- [ ] **Visual acceptance:** load with `?impostor`, fly to Mars and to Saturn. The bodies render
+- [x] `npm run typecheck` clean.
+- [x] **Visual acceptance:** load with `?impostor`, fly to Mars and to Saturn. The bodies render
       **exactly** as they did before this task — same silhouette, same texture registration,
       no antimeridian blur line, Saturn's ring shadow unchanged. Console clean.
-- [ ] Commit: the two files.
+- [x] Commit: the two files.
 
 ### 0.3: `camPosLocal` learns about oblateness
 
@@ -195,21 +203,21 @@ divided by `1 − oblateness`, because `composeBodyMvp` scales the polar (model-
 instead. The header must say that, and say that this is the frame an analytic ray-sphere test
 requires; a Lambert/Minnaert **direction** consumer never noticed because it renormalizes.
 
-- [ ] Add the test `leaves the local vector unchanged for a spherical body` — a hand-computed
+- [x] Add the test `leaves the local vector unchanged for a spherical body` — a hand-computed
       expectation, oblateness omitted, asserting the existing result is byte-identical.
-- [ ] Add the test `divides the polar component by 1 − oblateness` — hand-computed, e.g.
+- [x] Add the test `divides the polar component by 1 − oblateness` — hand-computed, e.g.
       oblateness 0.35 with an on-axis camera, asserting z is `1/0.65` times the spherical result
       while x and y are untouched. Compute the expectation on paper, **never** by calling the
       function (no mirror tests).
-- [ ] Implement.
-- [ ] `npm test -- camPosLocal` green; the four existing call sites are unedited and unchanged.
-- [ ] Commit.
+- [x] Implement.
+- [x] `npm test -- camPosLocal` green; the four existing call sites are unedited and unchanged.
+- [x] Commit.
 
 ### 0.4: Prep PR
 
-- [ ] `npm test`, `npm run typecheck`, `npm run build` — all green.
-- [ ] `npm run format` on touched files only.
-- [ ] Open the PR with `--base main`. Merge before starting Phase 1.
+- [x] `npm test`, `npm run typecheck`, `npm run build` — all green.
+- [x] `npm run format` on touched files only.
+- [x] Open the PR with `--base main`. Merge before starting Phase 1.
 
 ---
 
@@ -265,7 +273,7 @@ all (the uniform is bound and unread) and the geometry change is still its own c
       the pick behaves exactly as before. Splitting the layout change from the geometry change
       keeps each bisectable.
 - [x] `npm test -- sphereUniforms bodyPickRenderer` green; `npm run typecheck` clean.
-- [ ] **Visual acceptance:** picking still works — hover and click Mars, the Moon, and a Moon
+- [x] **Visual acceptance:** picking still works — hover and click Mars, the Moon, and a Moon
       overlapping Earth; the InfoCard names the right body each time. Console clean.
 - [x] Commit.
 
@@ -342,7 +350,7 @@ target.
       from `spherePick.wesl` (leave `impostorVertex.wesl`'s local copy alone — Task 2.2 repoints
       it, and touching it here would put a feature edit in the wrong PR).
 - [x] `npm test -- bodyPickRenderer` green; `npm run typecheck` clean.
-- [ ] **Visual acceptance (the pick is invisible — use the debug pick view):** click precisely on
+- [x] **Visual acceptance (the pick is invisible — use the debug pick view):** click precisely on
       the outermost limb pixel of Mars at close approach and confirm it selects; click one pixel
       outside and confirm it does not. Then **the occlusion case**: frame the Moon transiting
       Earth and confirm clicking the Moon selects the Moon, not Earth. Then a far-edge planet
@@ -358,19 +366,20 @@ Not yet the gate (nothing is deleted in this PR), but the cheap early read on th
 primitive. `frag_depth` written alongside an `r32uint` colour target is the specific thing to
 confirm.
 
-- [ ] `SKYMAP_HTTPS=1 npm run dev`, open the LAN HTTPS URL on an iPhone or iPad
+- [x] `SKYMAP_HTTPS=1 npm run dev`, open the LAN HTTPS URL on an iPhone or iPad
       (`vite.config.ts:9-51`; tap through the mkcert warning).
-- [ ] Confirm the scene **presents at all** — the silent failure mode is the whole frame being
+- [x] Confirm the scene **presents at all** — the silent failure mode is the whole frame being
       dropped by a shared-encoder validation error while the loop ticks and the UI updates.
-- [ ] Tap a planet and confirm the InfoCard opens with the right body.
-- [ ] Record the result (device + iOS version) in the PR description.
+- [x] Tap a planet and confirm the InfoCard opens with the right body.
+- [ ] Record the result (device + iOS version) in the PR description. (author-confirmed on iOS;
+      model/version not captured)
 
 ### 1.5: Pick PR
 
-- [ ] `npm test`, `npm run typecheck`, `npm run build` — all green.
-- [ ] `npm run format` on touched files only.
-- [ ] Request code review covering the uniform layout parity and the `frag_depth` occlusion path.
-- [ ] Merge (`gh api ... PUT /merge`, never `gh pr merge --delete-branch` from a worktree).
+- [x] `npm test`, `npm run typecheck`, `npm run build` — all green.
+- [x] `npm run format` on touched files only.
+- [x] Request code review covering the uniform layout parity and the `frag_depth` occlusion path.
+- [x] Merge (`gh api ... PUT /merge`, never `gh pr merge --delete-branch` from a worktree).
 
 ---
 
@@ -390,15 +399,15 @@ Everything else in the renderer is untouched: `UNIFORM_BUFFER_SIZE`, `KIND_CFG`,
 bind-group layout, the sampler, the per-body buffer/bind-group map, `setMap`,
 `setPlaceholderMap`, `clearMap`, `hasMap`, `setRingTexture`, `draw`, `destroy`.
 
-- [ ] No test (standing refusal). Existing `texturedBodyRenderer` tests must pass **unedited**.
-- [ ] Delete the three mesh `.wesl` files; drop the gate and the two `?static` imports for them.
-- [ ] `npm test -- texturedBodyRenderer` green; `npm run typecheck`; `npm run build`.
-- [ ] **Visual acceptance, no URL gate now:** Mars at close approach shows a smooth limb and
+- [x] No test (standing refusal). Existing `texturedBodyRenderer` tests must pass **unedited**.
+- [x] Delete the three mesh `.wesl` files; drop the gate and the two `?static` imports for them.
+- [x] `npm test -- texturedBodyRenderer` green; `npm run typecheck`; `npm run build`.
+- [x] **Visual acceptance, no URL gate now:** Mars at close approach shows a smooth limb and
       **no transparent seam** against its atmosphere shell — that is the feature. Then Saturn
       (ring shadow on the planet, ring in front of the disc), the Moon (normal-mapped craters at
       the terminator), and a body mid-load (placeholder texture, still a smooth sphere). Console
       clean.
-- [ ] Commit.
+- [x] Commit.
 
 ### 2.2: Rename the impostor trio to the canonical names
 
@@ -414,20 +423,20 @@ plants a permanent collision, and a rename that stops half-way is worse than eit
 ts-morph; `.wesl` files are moved by hand, and neither the `?static` import literals in TS nor
 the `package::bodies::texturedBody::…` paths inside the `.wesl` files are rewritten for you.
 
-- [ ] `git mv` the three files.
-- [ ] Update the two `?static` import literals in `texturedBodyRenderer.ts` and the shader-module
+- [x] `git mv` the three files.
+- [x] Update the two `?static` import literals in `texturedBodyRenderer.ts` and the shader-module
       labels (`texturedBody.vertex` / `texturedBody.fragment`).
-- [ ] Update the `package::bodies::texturedBody::impostorIo::ImpostorVSOut` imports inside the
+- [x] Update the `package::bodies::texturedBody::impostorIo::ImpostorVSOut` imports inside the
       renamed vertex + fragment; rename the struct `ImpostorVSOut` → `TexturedBodyVSOut`.
-- [ ] Repoint the vertex at `package::lib::analyticSphere::PROXY_SCALE` and delete its local
+- [x] Repoint the vertex at `package::lib::analyticSphere::PROXY_SCALE` and delete its local
       const (Task 1.3 already moved it).
-- [ ] Sweep the three files' comments for the word "impostor" and for SPIKE / `?impostor`
+- [x] Sweep the three files' comments for the word "impostor" and for SPIKE / `?impostor`
       language; the surviving prose is timeless.
-- [ ] `rg -n "impostor" src/services/gpu/` returns **nothing** under `bodies/`.
-- [ ] `npm run typecheck`; `npm run build`.
-- [ ] **Visual acceptance:** Mars and Saturn render identically to 2.1 — a rename that breaks a
+- [x] `rg -n "impostor" src/services/gpu/` returns **nothing** under `bodies/`.
+- [x] `npm run typecheck`; `npm run build`.
+- [x] **Visual acceptance:** Mars and Saturn render identically to 2.1 — a rename that breaks a
       `?static` literal or a `package::` path fails only at `createShaderModule`. Console clean.
-- [ ] Commit.
+- [x] Commit.
 
 ### 2.3: Rewrite `sphereTessellation.ts`'s header — third time, and the last
 
@@ -453,10 +462,10 @@ match the drawn silhouette" (they now match by construction), it is "the two rem
 renderers must agree, and both proxies must stay coarse enough to be cheap and fine enough that
 `PROXY_SCALE` clears their deficit".
 
-- [ ] No test (constant restatement).
-- [ ] Rewrite the header against the post-feature architecture; the values stay 48 and 24.
-- [ ] `npm run typecheck`.
-- [ ] Commit.
+- [x] No test (constant restatement).
+- [x] Rewrite the header against the post-feature architecture; the values stay 48 and 24.
+- [x] `npm run typecheck`.
+- [x] Commit.
 
 ---
 
@@ -482,18 +491,19 @@ Four things a stricter implementation could reject, all of them new to this path
   host-shareable types — but it is the least-exercised of the four. If WebKit rejects it, encode
   the flag as an `f32` and note it in the lib header.
 
-- [ ] `SKYMAP_HTTPS=1 npm run dev`; open the LAN HTTPS URL on a real iPhone **and** a real iPad
+- [x] `SKYMAP_HTTPS=1 npm run dev`; open the LAN HTTPS URL on a real iPhone **and** a real iPad
       if both are available (`vite.config.ts:9-51`).
-- [ ] Confirm the scene presents and the camera responds — **this is the whole point of the
+- [x] Confirm the scene presents and the camera responds — **this is the whole point of the
       gate**; a blank canvas with a working UI is the exact silent-failure signature.
-- [ ] Fly to Mars: smooth limb, no transparent seam, correctly registered texture, no
+- [x] Fly to Mars: smooth limb, no transparent seam, correctly registered texture, no
       antimeridian blur line.
-- [ ] Fly to Saturn (ring shadow) and the Moon (normal-mapped terminator).
-- [ ] Tap to pick a planet and confirm the right body resolves.
-- [ ] If anything fails: **do not merge.** Diagnose via `createShaderModuleWithDevLog`'s output
+- [x] Fly to Saturn (ring shadow) and the Moon (normal-mapped terminator).
+- [x] Tap to pick a planet and confirm the right body resolves.
+- [x] If anything fails: **do not merge.** Diagnose via `createShaderModuleWithDevLog`'s output
       and fix on the branch. Reverting to a `?mesh` fallback is Option C, which Q6 rejected —
       raise it with the user rather than reinstating it unilaterally.
-- [ ] Record device + iOS version in the PR description.
+- [ ] Record device + iOS version in the PR description. (author-confirmed on iOS; model/version
+      not captured)
 
 ### 3.2: File the deferred items as backlog entries
 
@@ -511,14 +521,26 @@ file, never inline.
 | `analytic-equirect-pole-mip-quality`        | `deferred`     | `v = asin(z)/π` has unbounded derivative at the poles, so the analytic uv degrades mip selection there. Inherent to the approach, **not** fixable with the wrap trick.                                                                                                                                                                                                                                                                    |
 | `planet-renderer-max-planets-cap`           | `ready`        | `MAX_PLANETS = 24`.                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
-- [ ] Write the five detail files and the five index lines (Rendering section).
-- [ ] Commit.
+**Correction found while filing.** The pole row's stated mechanism is wrong:
+`v = asin(dir.z)/π + 0.5` equals `1 − θ/π` for colatitude θ, so its derivative is
+the constant `1/π` per unit arc, poles included — `asin`'s singularity cancels
+against the geometry. The divergent coordinate is `u = atan2(y, x)/TAU`, whose
+gradient goes as `1/sin θ`. The conclusion (inherent to equirect, not fixable with
+the wrap trick) survives; the reason does not. The detail file carries the
+corrected derivation.
+
+- [x] Write the five detail files and the five index lines (Rendering section).
+      Filed under today's date, `docs/backlog/2026-07-29-*.md`. Four are new index
+      lines; `star-renderer-uniform-buffer-race` was **already on the backlog** as
+      "starRenderer per-instance uniforms", so that line was repointed at the new
+      detail file rather than duplicated.
+- [x] Commit.
 
 ### 3.3: `entanglement-radar` review pass
 
 **Files:** none (review).
 
-- [ ] Run the `entanglement-radar` skill over the whole branch diff (house convention). Pay
+- [x] Run the `entanglement-radar` skill over the whole branch diff (house convention). Pay
       attention to: - **`lib/analyticSphere.wesl` is the single home for the sphere maths** — no consumer
       re-derives a uv, a gradient pair, or a depth from clip space locally; - **no second branch on the same discriminant** — one analytic path, not
       analytic-for-round / mesh-for-oblate anywhere (Q3 named this as the trap); - **`PROXY_SCALE` has one home** and is not restated next to the 0.214% deficit it must
@@ -526,17 +548,20 @@ file, never inline.
       four consumers, two of which no longer take their silhouette from it; - **the pick and the visual share the silhouette by construction**, not by two call sites
       reading one constant; - **`camPosLocal`'s oblateness parameter is a frame correction, not an oblateness
       feature** — nothing downstream has grown an "is this body flattened" branch.
-- [ ] Address findings, or record why deferred; keep the suite green.
+- [x] Address findings, or record why deferred; keep the suite green.
+      The equirect dir→uv mirror (`cubeSphereMesh.ts` / `earth/fragment.wesl` /
+      `equirectUvFromDir`) was routed to the existing photoreal-Earth backlog item
+      `docs/backlog/2026-07-19-photoreal-earth-followups.md` §2 rather than fixed here.
 
 ### 3.4: Final review + verification
 
 **Files:** none.
 
-- [ ] `npm test` (full suite green), `npm run typecheck` (both tsconfigs), `npm run build`.
-- [ ] `npm run format` on touched files only.
-- [ ] Request code review (`superpowers:requesting-code-review`) covering the analytic-sphere
+- [x] `npm test` (full suite green), `npm run typecheck` (both tsconfigs), `npm run build`.
+- [x] `npm run format` on touched files only.
+- [x] Request code review (`superpowers:requesting-code-review`) covering the analytic-sphere
       lib, the deleted mesh path, and the pick silhouette/depth agreement.
-- [ ] Confirm the DoD and run `/feature-done` **before** merge — it sweeps the backlog and
+- [x] Confirm the DoD and run `/feature-done` **before** merge — it sweeps the backlog and
       relocates the spec + plan into `specs/completed/` + `plans/completed/`, and that sweep
       rides this PR.
 - [ ] Merge PR 3 (`gh api ... PUT /merge`).

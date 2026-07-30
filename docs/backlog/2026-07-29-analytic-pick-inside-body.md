@@ -52,13 +52,12 @@ the camera to this range — that is why it is filed rather than fixed in #520.
 ## Also noted in the same review
 
 The `0.214%` inscribed-silhouette deficit quoted in several places
-(`sphereTessellation.ts:24-33`, `impostorVertex.wesl:11,44`, the analytic-sphere
-spec and plan) is the **edge-midpoint** figure, where only one of the two 7.5°
-tessellation steps applies. Near a facet diagonal both combine, giving
-`1 − cos(5.3°) ≈ 0.43%`. No conclusion anywhere depends on which figure is used
-(`PROXY_SCALE = 1.05` clears both), and `lib/analyticSphere.wesl` has been
-corrected to state the bound; the remaining sites are worth a sweep if someone is
-in those files anyway.
+(`texturedBody/vertex.wesl`, the analytic-sphere spec and grill session) is the
+**edge-midpoint** figure, where only one of the two 7.5° tessellation steps
+applies. Near a facet diagonal both combine, giving `1 − cos(5.3°) ≈ 0.43%`. No
+conclusion anywhere depends on which figure is used (`PROXY_SCALE = 1.05` clears
+both). `lib/analyticSphere.wesl` and `sphereTessellation.ts` now state the bound;
+the remaining sites are worth a sweep if someone is in those files anyway.
 
 ## Files
 
