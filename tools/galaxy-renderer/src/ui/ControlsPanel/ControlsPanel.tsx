@@ -29,6 +29,7 @@ import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams
 import type { ParamSpecEntry } from '../../../@types/data/ParamSpecEntry';
 import { mulberry32 } from '../../../../../src/utils/random/mulberry32';
 import Button from '../../../../../src/components/common/Button/Button';
+import CompactInfoTip from '../../../../../src/components/common/CompactInfoTip/CompactInfoTip';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { paramsPatched } from '../../state/slices/galaxySlice';
 import { renderPatched } from '../../state/slices/renderSlice';
@@ -408,18 +409,24 @@ function ControlsPanel(): ReactNode {
             step={0.02}
             onChange={(v) => dispatch(renderPatched({ vignette: v }))}
           />
-          <label className={styles.toggleRow}>
-            <span>Gamma encode (pow 1/2.2)</span>
-            <input
-              type="checkbox"
-              className={styles.checkbox}
-              checked={render.gammaEncode}
-              onChange={(e) => dispatch(renderPatched({ gammaEncode: e.target.checked }))}
-            />
-          </label>
-          <div className={styles.lodExplainer}>
-            The app writes tone-mapped linear light straight into a non-sRGB swap chain with no
-            encode. Whether that is right is an open question — this toggle is the A/B.
+          <div className={styles.toggleRow}>
+            <CompactInfoTip
+              label="The app writes tone-mapped linear light straight into a non-sRGB swap chain with no encode. Whether that is right is an open question — this toggle is the A/B."
+              align="start"
+            >
+              <button type="button" className={styles.infoIcon} aria-label="About gamma encode">
+                ⓘ
+              </button>
+            </CompactInfoTip>
+            <label className={styles.toggleLabel}>
+              <span>Gamma encode (pow 1/2.2)</span>
+              <input
+                type="checkbox"
+                className={styles.checkbox}
+                checked={render.gammaEncode}
+                onChange={(e) => dispatch(renderPatched({ gammaEncode: e.target.checked }))}
+              />
+            </label>
           </div>
         </CollapsibleSection>
 

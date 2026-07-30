@@ -21,7 +21,7 @@
   border: none;
   background: transparent;
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--font-size-xl);
   line-height: 1;
   opacity: 0.55;
 }
@@ -35,7 +35,7 @@
   border: none;
   background: transparent;
   cursor: help;
-  font-size: 12px;
+  font-size: var(--font-size-lg);
   line-height: 1;
   opacity: 0.55;
   color: var(--color-fg-faint);

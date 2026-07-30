@@ -43,7 +43,7 @@ function ParamSlider({
   return (
     <div className={styles.root}>
       {info && (
-        <CompactInfoTip label={info}>
+        <CompactInfoTip label={info} align="start">
           <button type="button" className={styles.infoIcon} aria-label={`About ${label}`}>
             ⓘ
           </button>

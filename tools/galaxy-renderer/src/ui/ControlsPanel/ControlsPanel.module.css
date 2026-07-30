@@ -46,12 +46,20 @@
 
 /* Sole remaining consumer is the gamma-encode toggle — the auto-rotate row
    these were named for now renders as `AutoRotateToggle`, a HUD pill, in
-   `App`. */
+   `App`. The ⓘ sits outside `.toggleLabel` rather than inside it: a label's
+   click-forwards-to-control behaviour would fire on the info button too. */
 .toggleRow {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
   margin-top: 6px;
+}
+
+.toggleLabel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   font-family: var(--font-family-mono);
   font-size: var(--font-size-xl);
   color: var(--color-fg-base);
@@ -65,9 +73,19 @@
   cursor: pointer;
 }
 
-.lodExplainer {
-  margin-top: 4px;
+.infoIcon {
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: help;
   font-size: var(--font-size-lg);
+  line-height: 1;
+  opacity: 0.55;
   color: var(--color-fg-faint);
-  line-height: 1.5;
+  flex: none;
+}
+
+.infoIcon:hover,
+.infoIcon:focus-visible {
+  opacity: 0.85;
 }

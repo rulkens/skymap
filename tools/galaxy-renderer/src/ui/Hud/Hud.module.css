@@ -15,7 +15,10 @@
 
 .title {
   font-family: var(--font-family-display);
-  font-size: 23px;
+  /* Splash's own narrow-breakpoint size (48px, dropping to 32px under its
+     media query) — legible as the tool's identity mark without out-shouting
+     the app's actual splash headline. */
+  font-size: 32px;
   font-weight: 600;
   letter-spacing: 0.4px;
   margin-top: 2px;
@@ -29,7 +32,7 @@
   gap: 8px;
   margin-top: 12px;
   font-family: var(--font-family-mono);
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-lg);
 }
 
 .fpsPill {
