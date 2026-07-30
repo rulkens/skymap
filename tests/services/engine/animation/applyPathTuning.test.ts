@@ -28,7 +28,7 @@ describe('applyPathTuning', () => {
   it('injects align + rampSec (seconds) into a top-level flyPath', () => {
     const clip: ClipData = {
       start: 'live',
-      timeline: [flyPath([atPoint([10, 0, 0], 5)], { over: 8, ease: 'inOut' })],
+      timeline: [flyPath([atPoint([10, 0, 0], 5)], { over: 8, ease: 'easeInOutCubic' })],
     };
     const tuned = applyPathTuning(clip, TUNING);
     const node = tuned.timeline[0] as Extract<(typeof tuned.timeline)[number], { kind: 'flyPath' }>;
@@ -45,7 +45,7 @@ describe('applyPathTuning', () => {
   it('reaches a flyPath nested inside seq/all', () => {
     const clip: ClipData = {
       start: 'live',
-      timeline: [seq([all([flyPath([atPoint([1, 2, 3], 4)], { over: 5, ease: 'out' })])])],
+      timeline: [seq([all([flyPath([atPoint([1, 2, 3], 4)], { over: 5, ease: 'easeOutCubic' })])])],
     };
     const tuned = applyPathTuning(clip, TUNING);
     const seqNode = tuned.timeline[0] as Extract<(typeof tuned.timeline)[number], { kind: 'seq' }>;
@@ -78,7 +78,7 @@ describe('applyPathTuning', () => {
   it('leaves a flyPath-free clip unchanged', () => {
     const clip: ClipData = {
       start: 'live',
-      timeline: [dollyTo(100, 6, 'inOut')],
+      timeline: [dollyTo(100, 6, 'easeInOutCubic')],
     };
     expect(applyPathTuning(clip, TUNING)).toEqual(clip);
   });

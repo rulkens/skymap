@@ -36,7 +36,7 @@ describe('dwellDrift', () => {
     if (spin?.kind === 'spin') {
       expect(spin.ch).toBe('yaw');
       expect(spin.over).toBe(10);
-      expect(spin.ease).toBe('inOut');
+      expect(spin.ease).toBe('easeInOutCubic');
       expect(spin.loop).toBeUndefined();
       expect(spin.by).toBeGreaterThan(0);
     }

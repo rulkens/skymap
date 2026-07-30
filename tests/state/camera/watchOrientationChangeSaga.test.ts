@@ -57,7 +57,7 @@ describe('watchOrientationChangeSaga', () => {
     expect(frameTween).not.toBeNull();
     expect(frameTween!.to).toBe('galactic');
     expect(frameTween!.durationMs).toBe(FRAME_TWEEN_MS);
-    expect(frameTween!.easing).toBe('inOut');
+    expect(frameTween!.easing).toBe('easeInOutCubic');
   });
 
   it('requestOrientationChange mid-slerp captures the live basis, not the committed frame', async () => {

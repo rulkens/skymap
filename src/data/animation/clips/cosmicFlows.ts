@@ -79,7 +79,7 @@ export const cosmicFlows: Clip = {
       scene(setFlowEnabled(true)), // load the flow field behind the mask
 
       fork(oscillate('pitch', { amp: 0.09, period: 16 })), // gentle bob throughout the clip
-      fork(rate('yaw', { to: 0.18, over: 1.5, ease: 'in' })), // ease the orbit in; velocity persists
+      fork(rate('yaw', { to: 0.18, over: 1.5, ease: 'easeInCubic' })), // ease the orbit in; velocity persists
 
       hold(2), // I — establish on the MW
 
@@ -88,7 +88,7 @@ export const cosmicFlows: Clip = {
       all([
         // B — 11 s pull-back
         seq([dollyTo(300, 4), hold(3), dollyTo(950, 4)]), //   pull → dwell → pull
-        rate('yaw', { to: 0.025, over: 11, ease: 'inOut' }), //   decelerate orbit across the whole pull
+        rate('yaw', { to: 0.025, over: 11, ease: 'easeInOutCubic' }), //   decelerate orbit across the whole pull
       ]),
 
       hold(5), // C — hold at cosmic-web scale

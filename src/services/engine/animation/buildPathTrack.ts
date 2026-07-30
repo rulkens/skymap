@@ -609,7 +609,7 @@ export function buildPathTrack(params: BuildParams): PathTrack {
 
     // Align-in: 0 → live orientation, 1 → the path aim (splined forward, or the
     // look-ahead direction when `lookAhead` > 0).
-    const w = EASE['inOut'](clamp01(localSec / alignSec));
+    const w = EASE['easeInOutCubic'](clamp01(localSec / alignSec));
     const yawV = blendYaw(liveYaw, aim.yaw, w);
     const pitchV = livePitch + (aim.pitch - livePitch) * w;
 

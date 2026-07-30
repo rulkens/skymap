@@ -84,8 +84,8 @@ export function earthFlyout(simDays: number): Clip {
       },
       timeline: [
         all([
-          dollyTo(29_500, FLIGHT_SEC, 'inOut'), // log-dolly Earth → Hubble radius
-          spin('yaw', { by: 1.1, over: FLIGHT_SEC, ease: 'inOut' }), // gentle turn, as flyout
+          dollyTo(29_500, FLIGHT_SEC, 'easeInOutCubic'), // log-dolly Earth → Hubble radius
+          spin('yaw', { by: 1.1, over: FLIGHT_SEC, ease: 'easeInOutCubic' }), // gentle turn, as flyout
         ]),
       ],
     },
