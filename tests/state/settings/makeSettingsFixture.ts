@@ -111,8 +111,10 @@ export function makeSettingsFixture(
     tonemap: {
       exposure: DEFAULT_EXPOSURE,
       curve: DEFAULT_TONE_MAP_CURVE,
-      hdrKnee: DEFAULT_HDR_KNEE,
-      hdrHeadroom: DEFAULT_HDR_HEADROOM,
+    },
+    hdr: {
+      knee: DEFAULT_HDR_KNEE,
+      headroom: DEFAULT_HDR_HEADROOM,
     },
     bloom: {
       enabled: DEFAULT_BLOOM_ENABLED,

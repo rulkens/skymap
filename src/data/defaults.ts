@@ -291,7 +291,7 @@ export const DEFAULT_EXPOSURE = 3.0;
 /**
  * Default HDR headroom knee — the brightness above which a pixel's over-white
  * energy spills past paper-white into an extended-range swap chain. Seeds
- * `settings.tonemap.hdrKnee`.
+ * `settings.hdr.knee`.
  *
  * Measured in the SAME post-exposure units the tone curve works in, and derived
  * from the default curve's saturation point, because the knee's job is to pick up
@@ -310,7 +310,7 @@ export const DEFAULT_HDR_KNEE = toneMapCurveSaturation(DEFAULT_TONE_MAP_CURVE);
 
 /**
  * Default multiplier on the over-knee energy spilled into display headroom.
- * Seeds `settings.tonemap.hdrHeadroom`. 0 is exactly the SDR result — the tone
+ * Seeds `settings.hdr.headroom`. 0 is exactly the SDR result — the tone
  * curve's compressed output, nothing added — so the knob spans "no headroom" to
  * "aggressive headroom" with no discontinuity at either end. 0.25 is deliberately
  * conservative: available headroom varies per display and with screen brightness,

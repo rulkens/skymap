@@ -47,6 +47,7 @@ import type { ToneMapCurve } from '../data/ToneMapCurve';
 import type { StructureId } from '../data/structure/StructureId';
 import type { GalaxyCatalogId } from '../data/galaxyCatalog/GalaxyCatalogId';
 import type { FlowSettings } from './FlowSettings';
+import type { HdrSettings } from './HdrSettings';
 import type { LabelSettings } from './LabelSettings';
 import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from './VolumeFieldSettings';
@@ -129,19 +130,13 @@ export type EngineSettingsState = {
   tonemap: {
     exposure: number;
     curve: ToneMapCurve;
-    /**
-     * Post-exposure brightness above which over-white energy spills into an
-     * extended-range swap chain's headroom. Same units as the curve's own input,
-     * so it stays aligned with where the curve saturates as exposure moves.
-     * Default `DEFAULT_HDR_KNEE`.
-     */
-    hdrKnee: number;
-    /**
-     * Multiplier on the spilled over-knee energy. 0 is exactly the SDR result.
-     * Default `DEFAULT_HDR_HEADROOM`.
-     */
-    hdrHeadroom: number;
   };
+
+  /**
+   * Extended-range headroom knobs, gated live on `hdrActiveOf(renderTargets)`
+   * rather than on a field here — see `HdrSettings`.
+   */
+  hdr: HdrSettings;
 
   /**
    * Screen-space bloom controls.  One global knob set, read live by the bloom

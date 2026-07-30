@@ -131,10 +131,10 @@ const settingsSlice = createSlice({
       settings.tonemap.curve = action.payload;
     },
     setHdrKnee: (settings, action: PayloadAction<number>) => {
-      settings.tonemap.hdrKnee = action.payload;
+      settings.hdr.knee = action.payload;
     },
     setHdrHeadroom: (settings, action: PayloadAction<number>) => {
-      settings.tonemap.hdrHeadroom = action.payload;
+      settings.hdr.headroom = action.payload;
     },
 
     // ── bloom ───────────────────────────────────────────────────────────────

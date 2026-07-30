@@ -2,7 +2,7 @@
  * buildInitialSettings — assemble the engine's boot-time settings literal.
  *
  * Every settings field lives under a named cluster (galaxy-catalog billboard
- * knobs under `galaxyCatalogs`, HDR controls under `tonemap`, etc.). This
+ * knobs under `galaxyCatalogs`, extended-range headroom under `hdr`, etc.). This
  * function is the *assembly* step that composes the per-field defaults from
  * `data/defaults.ts` (mirroring how those constants are defined one place) plus
  * the registry-derived item rows into the single `EngineSettingsState` that the
@@ -117,8 +117,10 @@ export function buildInitialSettings(): EngineSettingsState {
     tonemap: {
       exposure: DEFAULT_EXPOSURE,
       curve: DEFAULT_TONE_MAP_CURVE,
-      hdrKnee: DEFAULT_HDR_KNEE,
-      hdrHeadroom: DEFAULT_HDR_HEADROOM,
+    },
+    hdr: {
+      knee: DEFAULT_HDR_KNEE,
+      headroom: DEFAULT_HDR_HEADROOM,
     },
     // Screen-space bloom: master gate + the two look knobs, each seeded from its
     // `data/defaults.ts` constant so that file stays the default's single source

@@ -247,16 +247,16 @@ export type HdrSettings = {
 `selectHdrHeadroom`; reducers stay named `setHdrKnee` / `setHdrHeadroom` (only their
 write targets change).
 
-- [ ] Use `npm run refactor -- rename` for the field renames where it applies; the
+- [x] Use `npm run refactor -- rename` for the field renames where it applies; the
       cluster move itself is a hand-edit across the nine sites (grep
       `hdrKnee\|hdrHeadroom` — src has nine, tests have the fixtures).
-- [ ] Update the `DEFAULT_HDR_KNEE` / `DEFAULT_HDR_HEADROOM` doc comments in
+- [x] Update the `DEFAULT_HDR_KNEE` / `DEFAULT_HDR_HEADROOM` doc comments in
       `defaults.ts:304-332`, which name `settings.tonemap.hdrKnee` explicitly.
-- [ ] No new test. This is a rename the compiler enforces; the existing
+- [x] No new test. This is a rename the compiler enforces; the existing
       `renderFrame.test.ts` tone assertions already cover the values reaching the GPU
       struct, and a test that restates the cluster path would fail only on a rename.
-- [ ] `npm test`, `npm run typecheck`, `npm run lint` all clean.
-- [ ] Commit. **This is the last prep commit** — tasks 1–4 should be four separate
+- [x] `npm test`, `npm run typecheck`, `npm run lint` all clean.
+- [x] Commit. **This is the last prep commit** — tasks 1–4 should be four separate
       commits with no behaviour change between them.
 
 ---

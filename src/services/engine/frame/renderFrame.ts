@@ -96,8 +96,8 @@ export function renderFrame(input: RenderFrameInput): void {
       {
         exposure: state.settings.tonemap.exposure,
         curve: state.settings.tonemap.curve,
-        hdrKnee: hdrActive ? state.settings.tonemap.hdrKnee : 0,
-        hdrHeadroom: hdrActive ? state.settings.tonemap.hdrHeadroom : 0,
+        hdrKnee: hdrActive ? state.settings.hdr.knee : 0,
+        hdrHeadroom: hdrActive ? state.settings.hdr.headroom : 0,
       },
       // The master bloom toggle is the ONLY bloom value that shapes the step
       // list; strength/threshold are read live by the bloom layers each draw.

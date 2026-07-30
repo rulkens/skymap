@@ -453,8 +453,10 @@ function makeInput(
           tonemap: {
             exposure: settings.exposure,
             curve: settings.toneMapCurve,
-            hdrKnee: settings.hdrKnee,
-            hdrHeadroom: settings.hdrHeadroom,
+          },
+          hdr: {
+            knee: settings.hdrKnee,
+            headroom: settings.hdrHeadroom,
           },
           // Bloom off by default in these fixtures: the bloom render steps only
           // shape the program when enabled, and no fixture asserts on them.
