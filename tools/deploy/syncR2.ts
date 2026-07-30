@@ -12,6 +12,8 @@ import { fileURLToPath } from 'node:url';
 import { readEnvProductionValue } from '../utils/io/readEnvProductionValue';
 import type { R2SyncGroup } from './r2/R2SyncGroup';
 import { collectDataFiles } from './r2/collectDataFiles';
+import { collectEarthTileManifest } from './r2/collectEarthTileManifest';
+import { collectEarthTiles } from './r2/collectEarthTiles';
 import { collectExtraFiles, missingExtraFiles } from './r2/collectExtraFiles';
 import { collectHiResImages } from './r2/collectHiResImages';
 import { collectTextureImages } from './r2/collectTextureImages';
@@ -22,6 +24,7 @@ import { syncGroup, type R2SyncContext } from './r2/syncGroup';
 const DATA_DIR = 'public/data';
 const HIRES_DIR = 'public/data/images/famous-hires';
 const TEXTURES_DIR = 'public/data/images/textures';
+const IMAGES_DIR = 'public/data/images';
 
 const BUCKET = 'skymap-data';
 /**
@@ -30,6 +33,8 @@ const BUCKET = 'skymap-data';
  * be served if the post-sync purge is skipped.
  */
 const DAY = 'public, max-age=86400';
+/** A given tile key's bytes never change once baked, so it can cache forever. */
+const IMMUTABLE = 'public, max-age=31536000, immutable';
 
 /** Public URL the CDN serves R2 from — single source of truth in `.env.production`. */
 const R2_PUBLIC_URL = readEnvProductionValue('VITE_DATA_BASE_URL');
@@ -60,6 +65,22 @@ function buildGroups(): R2SyncGroup[] {
     {
       label: 'Extra files',
       files: collectExtraFiles(),
+      transport: { kind: 'wrangler' },
+      cacheControl: DAY,
+      purge: true,
+    },
+    {
+      label: 'Earth surface tiles',
+      files: collectEarthTiles(IMAGES_DIR),
+      transport: { kind: 'bulk', localRoot: IMAGES_DIR, keyRoot: 'data/images' },
+      cacheControl: IMMUTABLE,
+      purge: false,
+    },
+    // Must stay last: it's the pointer the runtime reads to discover tiles, so
+    // it must never name tiles that this same run hasn't finished uploading.
+    {
+      label: 'Earth tile manifest',
+      files: collectEarthTileManifest(IMAGES_DIR),
       transport: { kind: 'wrangler' },
       cacheControl: DAY,
       purge: true,
