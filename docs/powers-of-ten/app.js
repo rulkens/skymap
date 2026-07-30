@@ -10,6 +10,11 @@ for (const r of RUNGS) r.images = IMAGES[r.exp] || [];
 // The status filter is a set of currently-visible statuses; start with all on.
 const active = new Set(Object.keys(STATUS));
 
+// Rungs per status — a census of the ladder, so it is computed once and never
+// recomputed on toggle: hiding a status changes what is on screen, not how many
+// rungs carry it. The header count is the one that tracks the filter.
+const STATUS_COUNTS = RUNGS.reduce((n, r) => ((n[r.status] = (n[r.status] || 0) + 1), n), {});
+
 function expHtml(e) {
   // Superscript with a proper minus sign for negatives.
   const sign = e < 0 ? "−" : "";
@@ -90,7 +95,7 @@ function buildFilters() {
     const chip = document.createElement("button");
     chip.className = `chip ${s.cls}`;
     chip.style.setProperty("color", "var(--st)");
-    chip.textContent = s.label;
+    chip.innerHTML = `${s.label}<span class="n">${STATUS_COUNTS[key] || 0}</span>`;
     chip.setAttribute("aria-pressed", "true");
     chip.onclick = () => {
       if (active.has(key)) active.delete(key);
