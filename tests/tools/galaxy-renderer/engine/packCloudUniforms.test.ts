@@ -25,7 +25,11 @@ const TUNING: MilkyWayTuning = {
   starPxMax: 33,
   softness: 0.6,
   lodApparent: 0.5,
+  // Neither of these reaches the uniform buffer — the divisor sizes the
+  // aggregate target and the count carves the layouts — so they are here only
+  // to satisfy the type, and deliberately hold values no lane would match.
   aggregateDivisor: 3,
+  starCount: 123456,
 };
 
 // A distinguishable 4x4 so the floats-0-15 verbatim copy is unambiguous.

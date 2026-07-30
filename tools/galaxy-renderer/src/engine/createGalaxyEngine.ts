@@ -683,9 +683,18 @@ export async function createGalaxyEngine(
    * renamed rather than shared outright: the tool's `starIntensity` is the
    * app's per-sprite `exposure` (the tool already spells `exposure` for the
    * post chain's whole-frame multiplier, a different quantity at a different
-   * stage), and `sizeScale` is `starSizeScale`. `aggregateDivisor` rides along
-   * for completeness even though the uniform ignores it — it reaches the frame
-   * by sizing `aggregateTex`, not through `params0`/`params1`.
+   * stage), and `sizeScale` is `starSizeScale`. `aggregateDivisor` and
+   * `starCount` ride along for completeness even though the uniform ignores
+   * both — the divisor reaches the frame by sizing `aggregateTex`, and the
+   * count by carving the layouts, neither through `params0`/`params1`.
+   *
+   * The count supplied is the carved CAPACITY rather than the number the
+   * generator was asked for. In the app those are the same field, because the
+   * request lives on `MilkyWayTuning` itself; here the request is a
+   * `GalaxyParams` knob (`PARAM_SPEC.starCount`, its own slider) and only the
+   * realised capacity is retained past `setParams`. Since no consumer of this
+   * view reads the field, the honest available number beats retaining a second
+   * copy of the request to satisfy a shape.
    */
   const cloudTuning = (): MilkyWayTuning => ({
     starSizeScale: render.sizeScale,
@@ -695,6 +704,7 @@ export async function createGalaxyEngine(
     softness: render.softness,
     lodApparent: render.lodApparent,
     aggregateDivisor: render.aggregateDivisor,
+    starCount,
   });
 
   /**
