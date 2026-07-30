@@ -329,11 +329,8 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       state.subsystems.scheduler.requestRender();
     },
 
-    // The zoom floor's input: the radius of whatever the camera orbits, read
-    // live off the resolved focus row so a pinch (or a wheel during a held
-    // gesture) stops just off a focused body's surface instead of scrolling
-    // through it. Same derivation the `onZoom` path below uses — one rule for
-    // every zoom entry point.
+    // The zoom floor's input, read live off the resolved focus row — same
+    // derivation the `onZoom` path below uses.
     pivotRadiusMpc: () => pivotRadiusMpc(selectFocusRow(store.getState())),
 
     // Discrete wheel zoom (no gesture in progress). The zoom goes to whichever
@@ -357,9 +354,8 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
         factor,
         cam.autoRotate,
         performance.now(),
-        // Floor the zoom just off a focused body's surface — every arm of
-        // applyWheelZoom clamps against it, because the pivot-pin centres the
-        // resting / auto-rotating pose on the body too, not only the follow.
+        // Floors the zoom just off a focused body's surface for every arm of
+        // applyWheelZoom, not only the follow driver.
         pivotRadiusMpc(selectFocusRow(root)),
       );
       if (zoomed !== null) store.dispatch(commitCameraPose(zoomed));

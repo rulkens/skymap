@@ -4,25 +4,14 @@ import { TEXTURE_PRIME_MERIDIAN_U } from '../../data/bodies/texturePrimeMeridian
 
 /**
  * equirectUvToDirection — the unit direction on the sphere that an
- * equirectangular uv names, in the body's local frame.
- *
- * The exact inverse of what `cubeSphereMesh` and `uvSphereMesh` bake into their
- * vertex uv (`cubeSphereMesh.ts:164-166`), and therefore of the shader's
- * `dirToEquirectUv` (`shaders/bodies/earth/fragment.wesl`), which goes the other
- * way for the cloud-shadow crossing point:
+ * equirectangular uv names, in the body's local frame. Exact inverse of what
+ * `cubeSphereMesh`/`uvSphereMesh` bake into their vertex uv (`cubeSphereMesh.ts:164-166`):
  *
  *   lon = (u - TEXTURE_PRIME_MERIDIAN_U) · 2π     longitude, 0 on +X, +π/2 on +Y
  *   lat = (v - 0.5) · π                            latitude, v = 0 is the SOUTH pole
  *
- * The prime-meridian offset is imported rather than re-spelled as 0.5, because
- * it is a real convention with a real alternative (a raw `u = lon/2π` would put
- * the map's antimeridian on +X and ride every continent on the wrong hemisphere)
- * and it already has a home. The shader re-encodes it only because WGSL cannot
- * import a TS constant.
- *
- * Used by the Earth tile planner to test a tile patch's corners against the
- * horizon and the frustum: those are questions about directions in space, and
- * uv is the only address the tile grid speaks.
+ * The prime-meridian offset is imported, not re-spelled as 0.5: a raw
+ * `u = lon/2π` would put the antimeridian on +X, wrong-hemisphere every continent.
  */
 export function equirectUvToDirection(uv: Readonly<Vec2>): Vec3 {
   const lon = (uv[0] - TEXTURE_PRIME_MERIDIAN_U) * 2 * Math.PI;

@@ -97,16 +97,11 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // disks, procedural disks, hi-res Famous texture + planner).
   wireImpostorSubsystems(state, deps);
 
-  // Earth's surface virtual texture. Constructed here rather than in `initGpu`
-  // beside `earthRenderer` because it is a subsystem, not a renderer: it owns
-  // residency and streaming, and `state.subsystems` is where the engine's
-  // teardown walk looks. Construction is free — it allocates no GPU memory and
-  // fetches nothing until the frame body's tile planner engages — so it costs
-  // a session that never leaves the outer solar system nothing to have it.
-  // It is deliberately NOT folded into `wireImpostorSubsystems`: that module's
-  // five subsystems are one dependency-ordered cluster (the disk planners
-  // subscribe to the atlas's evictions), and this one shares nothing with them
-  // but the device.
+  // Earth's surface virtual texture. A subsystem, not a renderer — it owns
+  // residency and streaming — so it's constructed here, not in `initGpu`.
+  // Construction is free (no GPU memory, no fetch until the tile planner
+  // engages), and kept out of `wireImpostorSubsystems` since it shares nothing
+  // with that dependency-ordered cluster but the device.
   state.subsystems.earthTiles = createEarthTileSubsystem({
     device: deps.phaseLocals!.device,
     requestRender: () => state.subsystems.scheduler.requestRender(),

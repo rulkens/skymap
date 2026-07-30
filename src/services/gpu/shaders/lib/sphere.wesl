@@ -283,22 +283,12 @@ struct RingUniforms {
 //
 // ## The page-table window fills that row's remaining three slots
 //
-// The surface virtual texture addresses tiles through a fixed-size page table
-// whose window slides with the camera, so the fragment cannot turn a surface uv
-// into a page-table cell without knowing where the window sits: its level
-// ('zWin') and its origin tile at that level ('winX0' west column, 'winY0' north
-// row). They land in the three slots 'oceanRoughness's row already rounded over,
-// so the window costs no struct growth -- a fourth 16-byte row would have grown
-// every Earth draw's uniform write for data that fits in existing pad.
-//
-// They are integers carried as 'f32' and read with 'u32(...)'. A 'u32' field
-// would be legal WGSL, but the CPU packer writes one Float32Array, and a u32
-// field would force a second typed-array view over the same buffer at the pack
-// site -- a fresh way for the two halves of a hand-written layout to drift, for
-// no gain: a level below 16 and a tile index below 2^24 are both exactly
-// representable in f32. All-zero is the identity: a page table whose cells all
-// read 'no tile' sends the fragment to the whole-globe base texture and never
-// consults the window.
+// 'zWin' (pyramid level) and 'winX0'/'winY0' (the window's origin tile at that
+// level) let the fragment turn a surface uv into a page-table cell, and they
+// fill the three slots 'oceanRoughness's row already rounded over -- no struct
+// growth needed. They are integers carried as 'f32' (a 'u32' field would force
+// a second typed-array view at the CPU pack site -- a fresh drift risk for no
+// gain). All-zero is the identity: every cell reads 'no tile'.
 //
 // ## Byte layout (uniform address space)
 //

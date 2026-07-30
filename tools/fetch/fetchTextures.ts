@@ -66,14 +66,11 @@ import { RAW_DATA, rawDataPath } from '../utils/io/rawDataRegistry';
 import { TEXTURE_SOURCES, type TextureSourceRow } from '../utils/io/textureSources';
 import { skipIfAlreadyFetched, upsertSha256Sidecar } from './fetchDesi';
 
-/** Approximate size of the body/ring native tiers. The USGS mono GeoTIFFs
- *  (Europa 19631x9816, Callisto 15138x7569) are the bulk; the six 8k SSS JPGs
- *  (~15 MB each) and the 27 MB BMNG equirect make up most of the rest. No HEAD
- *  probe means we can't sum real Content-Lengths, so this is the spec §3
- *  hand-tally. */
+/** Approximate size of the body/ring native tiers (spec §3 hand-tally — no
+ *  HEAD probe means no real Content-Lengths to sum). */
 const BODY_SOURCES_APPROX_MB = 700;
 
-/** Approximate size of the eight BMNG quadrants (real on-disk total, 421 MB). */
+/** Approximate size of the eight BMNG quadrants (real on-disk total). */
 const BMNG_QUADRANTS_APPROX_MB = 421;
 
 /** Approximate size of the full raw pull, printed by the size gate. */
@@ -146,14 +143,12 @@ const TEXTURE_ENTRIES: readonly TextureSourceRow[] = ALL_BODY_TEXTURE_KEYS.map(
 );
 
 /**
- * The eight BMNG quadrants the Earth surface tile pyramid is baked from. They
- * are not a `(body, kind)` source — no whole-globe runtime texture is built from
- * them — so they cannot ride `TEXTURE_SOURCES`, and they were briefly fetched by
- * nothing at all: the 421 MB had to be curl'd by hand. They belong in the full
- * pull for the same reason every other raw does, which is that "obtainable by
- * command" is the property the fetcher exists for; the size gate is what keeps
- * the extra 421 MB from being a surprise. `BMNG_QUADRANT_KEYS` is the one
- * enumeration of the set, shared with the bake.
+ * The eight BMNG quadrants the Earth surface tile pyramid is baked from. Not
+ * a `(body, kind)` source — no whole-globe runtime texture is built from
+ * them — so they can't ride `TEXTURE_SOURCES`; they belong in the full pull
+ * for the same reason every other raw does ("obtainable by command"), with
+ * the size gate keeping the extra 421 MB from being a surprise.
+ * `BMNG_QUADRANT_KEYS` is the one enumeration of the set, shared with the bake.
  */
 const QUADRANT_SOURCES: readonly TextureSource[] = Object.values(BMNG_QUADRANT_KEYS).map((key) => ({
   url: RAW_DATA[key].upstream,
@@ -161,18 +156,14 @@ const QUADRANT_SOURCES: readonly TextureSource[] = Object.values(BMNG_QUADRANT_K
 }));
 
 /**
- * The set of sources to fetch. `dev === false` is the full native pull
- * (every body/ring at its native tier — the SSS maps, the full BMNG Earth
- * equirect, and the four USGS moon GeoTIFFs — plus the eight BMNG quadrants);
- * `dev === true` is the small visual-check subset (each body/ring's dev source:
- * the 2k SSS variants + the NASA 5400x2700 BMNG sibling; the USGS moons and the
- * quadrants have none, and the `--dev` tile bake reads the whole-globe equirect
- * instead).
+ * The set of sources to fetch. `dev === false` is the full native pull (every
+ * body/ring plus the eight BMNG quadrants); `dev === true` is the small
+ * visual-check subset (2k SSS variants + the 5400x2700 BMNG sibling — the
+ * USGS moons and the quadrants have no dev source; `--dev` tile bake reads
+ * the whole-globe equirect instead).
  *
- * Both are derived views over `TEXTURE_SOURCES` — the single home for a body's
- * raw source — so the download set can never drift from the runtime registry.
- * Pure — no filesystem or network side effects — so the subset choice is
- * unit-testable headlessly.
+ * Both derive from `TEXTURE_SOURCES`, so the download set can't drift from
+ * the runtime registry. Pure, so the subset choice is unit-testable headlessly.
  */
 export function textureSourcesFor(dev: boolean): readonly TextureSource[] {
   if (dev) {

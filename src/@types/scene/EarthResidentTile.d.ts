@@ -1,14 +1,8 @@
 /**
- * EarthResidentTile — one atlas-resident tile, as `buildEarthPageTable` needs
- * it: which tile, which slot it occupies, how far into its load fade.
- *
- * All three facts are already owned, together, by whoever manages the atlas —
- * an allocation writes a slot for a tile, and a fade tracks a weight for that
- * same tile. Passing them as one list of structured entries lets the page
- * table read what its caller already has; the alternative, two maps keyed by
- * a formatted tile path, would force the caller to format a key it has no
- * other use for and the callee to invert that same string back into
- * `(z, x, y)` to do its work. A structured id needs no inversion.
+ * EarthResidentTile — one atlas-resident tile, as `buildEarthPageTable`
+ * needs it: which tile, which slot, how far into its load fade. Structured
+ * entries rather than two path-keyed maps, so the callee needs no
+ * `(z, x, y)` inversion.
  */
 
 import type { EarthTileId } from '../data/EarthTileId';

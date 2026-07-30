@@ -199,12 +199,9 @@ export function createTexturedDiskSubsystem(
                 return;
               }
               if (!bitmap) return; // atlas already memoised the failure
-              // The slot allocated above belongs to the frame that allocated
-              // it, and the walk is decimated — this key may not be revisited
-              // for several frames, plenty of room for the LRU to hand that
-              // slot to another galaxy mid-fetch. So the write resolves the
-              // key's CURRENT slot; null means the atlas holds none, the
-              // bitmap has nowhere to go, and there is no arrival to stamp.
+              // The walk is decimated, so the slot allocated above may sit
+              // unrevisited long enough for the LRU to hand it to another
+              // galaxy mid-fetch — resolve by the key's CURRENT slot instead.
               const uploaded = atlas.uploadBitmap(key, bitmap) !== null;
               bitmap.close();
               // Arrival stamps quantize to the frame clock so crossfade

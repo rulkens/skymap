@@ -8,85 +8,33 @@ import { equirectUvToDirection } from '../math/equirectUvToDirection';
 
 /**
  * planEarthTiles — one frame's tile plan: a quadtree refinement over the
- * plate-carrée tile grid, run on the CPU, pure.
- *
- * ## Why CPU-side rather than GPU feedback
- *
- * The textbook virtual-texturing approach has the fragment write the tile ids it
- * wanted into a buffer and the CPU read them back a frame later. It is exact —
- * it accounts for occlusion and for the real derivatives — and it loses here for
- * three reasons. It needs a `mapAsync` round trip plus at least one frame of
- * latency, on a renderer that is render-on-demand and often not running a
- * continuous loop. It needs a second pass or a fragment-stage storage write,
- * which is fresh iOS validation surface on the app's visual centrepiece, where a
- * bad shader freezes the canvas with no thrown error. And its advantage is
- * precision about occlusion, which for a single convex sphere with no
- * self-occlusion beyond the horizon is worth approximately nothing.
- *
- * Being pure is the other half of the argument: this is the one genuinely
- * testable surface in the whole feature.
- *
- * ## The one level rule
+ * plate-carrée tile grid, run on the CPU, pure (see the spec/plan for why not
+ * GPU feedback).
  *
  * A patch at level `z` whose projected extent is `screenPx` needs level
- * `z + ceil(log2(screenPx / tilePx)) - lodBias`. That is stated once, here, and
- * the engage gate elsewhere reads `plan.zWin > baseLevel` rather than
- * re-deriving a distance threshold — the two are the same statement about
- * screen texel density seen from opposite ends, and having two homes for it
- * would be two places to get the exponent wrong. `lodBias` softens the rule
- * away from its 1:1 point to keep the walk's demand inside the atlas; see
- * `EARTH_TILE_LOD_BIAS` for why it is a constant and not a servo. Raising the
- * bias lowers the level the walk settles at for a given `screenPx` — it takes a
- * bigger `screenPx`, i.e. a closer camera, to reach the same depth as bias 0 —
- * so more views settle at `zWin === baseLevel` and the engage gate stands down
- * at a lower altitude than it would at bias 0. That is the intended effect of
- * the bias, not a side effect of it.
+ * `z + ceil(log2(screenPx / tilePx)) - lodBias` (the engage gate elsewhere
+ * reads `plan.zWin > baseLevel` instead of re-deriving this). A patch failing
+ * this rule is refined, not emitted, but requested too: it is an ancestor of
+ * every leaf beneath it, the fallback `buildEarthPageTable` needs while a
+ * finer descendant is in flight.
  *
- * A patch that fails this rule (`required > z`) is refined rather than
- * emitted — but it is requested too, not just its four children. It is by
- * construction an ancestor of every leaf beneath it, so it is exactly the
- * resident tile `buildEarthPageTable` needs to fall back to while a deeper
- * descendant is still in flight; see that module's "Property two". Emitting
- * it costs nothing extra to compute — its `screenPx` is already in hand from
- * this same iteration — and the existing largest-first sort naturally orders
- * it ahead of its descendants, since an ancestor's `screenPx` always exceeds
- * a child's.
+ * The walk roots at `baseLevel`, not the deeper `minTileLevel`, so "the base
+ * is enough here" comes out as `zWin === baseLevel` with nothing to fetch.
+ * Rooting at `minTileLevel` would make `zWin >= minTileLevel` always true,
+ * leaving the engage gate unsatisfiable.
  *
- * ## Why the walk floor and the request floor are different levels
- *
- * `baseLevel` is the density the whole-globe base texture already delivers;
- * `minTileLevel` is the shallowest level with tile files, which is deeper
- * because the base is itself a level of the same pyramid. The walk is rooted at
- * `baseLevel` so that "the base is enough here" is an answer the plan can
- * express — it comes out as `zWin === baseLevel` with nothing to fetch — and
- * that is exactly what the engage gate reads. Rooting at `minTileLevel` instead
- * would make `zWin >= minTileLevel` true of every plan, leaving the gate
- * unsatisfiable against its own floor. Both leaves and would-be ancestor
- * requests at a level shallower than `minTileLevel` are dropped rather than
- * requested: the ground they cover is served by the base texture, and there is
- * no file to fetch for them.
- *
- * ## Conservative rejection, deliberately
- *
- * Both rejection tests err toward KEEPING a patch. Wrongly keeping one costs a
- * fetch that is never sampled; wrongly rejecting one leaves a hole in the middle
- * of the screen. So the horizon test compares the patch's angular radius against
- * the visibility cap rather than testing its corners (four corners can all sit
- * outside a small cap that lies entirely inside the patch — which is exactly the
- * sub-camera tile at low altitude, the one patch that must never be dropped),
- * and the frustum test samples nine points rather than four, so a patch big
- * enough to have its corners behind the camera still registers.
+ * Both rejection tests below err toward KEEPING a patch: the horizon test
+ * compares angular radius rather than corners (a cap can lie entirely inside
+ * a patch whose corners sit outside it), and the frustum test samples nine
+ * points so large patches with corners behind the camera still register.
  */
 export function planEarthTiles(input: {
   readonly kind: EarthTileKind;
-  /** Camera position in Earth's local frame, in body-radii units (the surface
-   *  is the unit sphere), which is what `camPosLocal` already carries into
-   *  `packEarthSurfaceUniforms`. */
+  /** Camera position in Earth's local frame, in body-radii units (surface =
+   *  unit sphere). */
   readonly camPosLocal: Readonly<Vec3>;
-  /** View-projection for that same local frame, column-major — a `Float32Array`
-   *  because that is what `composeBodyMvp` hands the Earth draw. Only the x/y
-   *  extent of a projected point is read, so the depth convention (reversed-Z
-   *  or not) does not matter here. */
+  /** View-projection for that frame, column-major. Only x/y extent is read,
+   *  so the depth convention doesn't matter here. */
   readonly viewProjLocal: Float32Array;
   readonly viewportPx: Readonly<Vec2>;
   /** The level the whole-globe base texture already delivers — the walk's floor. */
@@ -120,14 +68,10 @@ export function planEarthTiles(input: {
   // Camera on or inside the surface: no horizon, nothing sensible to plan.
   if (!(camLen > 1)) return { zWin: baseLevel, winX0: 0, winY0: 0, requests: [] };
   const camDir: Vec3 = [camPosLocal[0] / camLen, camPosLocal[1] / camLen, camPosLocal[2] / camLen];
-  // Angular radius of the visible cap: the horizon lies acos(1/d) from the
-  // sub-camera point on the unit sphere.
+  // Horizon lies acos(1/d) from the sub-camera point on the unit sphere.
   const capAngle = Math.acos(1 / camLen);
 
-  // The three rows of the view-projection this walk reads, hoisted out of a loop
-  // that runs a few thousand times a frame. Column-major, so row r of column c is
-  // element c*4 + r; the z row is never touched, because only screen EXTENT
-  // matters here and depth does not.
+  // Hoisted out of the walk; the z row is never touched.
   const mx0 = viewProjLocal[0]!;
   const mx1 = viewProjLocal[4]!;
   const mx2 = viewProjLocal[8]!;
@@ -144,9 +88,7 @@ export function planEarthTiles(input: {
   const requests: EarthTileRequest[] = [];
   let zWin = baseLevel;
 
-  // Explicit stack of (z, x, y) triples rather than recursion: the walk can go
-  // eight levels deep across hundreds of roots, and a flat number array keeps
-  // the whole thing allocation-free in a per-frame path.
+  // Explicit stack, not recursion: allocation-free in a per-frame path.
   const stack: number[] = [];
   const rootCols = earthTileColumns(baseLevel, tilePx);
   for (let y = 0; y < rootCols / 2; y++) {
@@ -169,8 +111,7 @@ export function planEarthTiles(input: {
     const vMid = (vNorth + vSouth) / 2;
 
     const centre = equirectUvToDirection([uMid, vMid]);
-    // Angular radius of the patch, measured to its corners (the farthest points
-    // from the centre on a lat/lon quad).
+    // Angular radius of the patch, to its corners (farthest from centre).
     const corner = equirectUvToDirection([u0, vNorth]);
     const patchAngle = Math.acos(
       Math.min(
@@ -179,7 +120,7 @@ export function planEarthTiles(input: {
       ),
     );
 
-    // ── 1. Horizon ────────────────────────────────────────────────────────
+    // 1. Horizon
     const centreAngle = Math.acos(
       Math.min(
         1,
@@ -188,15 +129,14 @@ export function planEarthTiles(input: {
     );
     if (centreAngle - patchAngle > capAngle) continue;
 
-    // ── 2. Frustum, and the projected extent that drives everything else ──
+    // 2. Frustum, and the projected extent that drives everything else
     let minX = Infinity;
     let minY = Infinity;
     let maxX = -Infinity;
     let maxY = -Infinity;
     let anyInFront = false;
     for (let i = 0; i < 9; i++) {
-      // Corners, edge midpoints and the centre. Nine rather than four so a patch
-      // large enough to have its corners behind the camera still registers.
+      // Corners, edge midpoints and the centre.
       const su = u0 + ((i % 3) / 2) * (u1 - u0);
       const sv = vNorth + (Math.floor(i / 3) / 2) * (vSouth - vNorth);
       const p = equirectUvToDirection([su, sv]);
@@ -220,24 +160,16 @@ export function planEarthTiles(input: {
     );
     if (!(screenPx > 0)) continue;
 
-    // ── 3 & 4. Refine or emit ─────────────────────────────────────────────
-    // `lodBias` is subtracted AFTER the ceil, not folded into the log argument:
-    // for an integer bias `ceil(x) - bias === ceil(x - bias)`, so the two are
-    // exact, and subtracting after keeps the 1:1 rule intact and legible on its
-    // own rather than baked into the log's operand.
+    // 3 & 4. Refine or emit
+    // `lodBias` is subtracted AFTER the ceil, not folded into the log
+    // argument: for an integer bias `ceil(x) - bias === ceil(x - bias)`.
     const required = Math.min(
       maxTileLevel,
       Math.max(baseLevel, z + Math.ceil(Math.log2(screenPx / tilePx)) - lodBias),
     );
     if (required > z && z < maxTileLevel) {
-      // Refining THIS patch is what makes it an ancestor of every leaf below
-      // it, and its `screenPx` here is that patch's real projected extent —
-      // not an estimate reconstructed after the fact. Requesting it is what
-      // gives `buildEarthPageTable` a resident tile to fall back to while a
-      // deeper descendant is still in flight (see its "Property two"); the
-      // same `minTileLevel` floor as the leaf branch applies, because a
-      // would-be ancestor at or above the base level has no file to fetch
-      // either. No dedup is needed: the walk visits each (z, x, y) once.
+      // Same `minTileLevel` floor as the leaf branch: a would-be ancestor at
+      // or above the base level has no file to fetch either.
       if (z >= minTileLevel) requests.push({ tile: { kind, z, x, y }, screenPx });
       stack.push(z + 1, x * 2, y * 2);
       stack.push(z + 1, x * 2 + 1, y * 2);
@@ -245,22 +177,18 @@ export function planEarthTiles(input: {
       stack.push(z + 1, x * 2 + 1, y * 2 + 1);
       continue;
     }
-    // `zWin` is the finest level the walk REACHED, counting leaves that no bake
-    // covers: it is what the engage gate reads ("does the screen want more than
-    // the base has?") and what the page-table window is sized at, and neither
-    // question is about which files happen to exist.
+    // `zWin` is the finest level the walk REACHED, counting leaves no bake
+    // covers, regardless of which files happen to exist.
     if (z > zWin) zWin = z;
-    // A leaf the base texture already serves is still a leaf — it ends the walk
-    // — but there is no file to fetch for it, so it is not a request.
+    // Served by the base texture, but has no file to fetch.
     if (z < minTileLevel) continue;
     requests.push({ tile: { kind, z, x, y }, screenPx });
   }
 
-  // Largest-on-screen-first: the order residency walks in, and the order the
-  // fetch queue pops in.
+  // Largest-on-screen-first: residency walk order and fetch queue pop order.
   requests.sort((a, b) => b.screenPx - a.screenPx);
 
-  // ── The window, centred on the sub-camera point at the finest level ──────
+  // The window, centred on the sub-camera point at the finest level.
   const winCols = earthTileColumns(zWin, tilePx);
   const winRows = winCols / 2;
   const subUv: Vec2 = [
@@ -269,36 +197,24 @@ export function planEarthTiles(input: {
   ];
   const subX = Math.min(winCols - 1, Math.floor((((subUv[0] % 1) + 1) % 1) * winCols));
   const subY = Math.min(winRows - 1, Math.max(0, Math.floor((1 - subUv[1]) * winRows)));
-  // Longitude wraps, so the window origin does too; latitude does not, so it
-  // clamps — and when the grid is smaller than the window the whole grid IS the
-  // window and the origin is 0.
+  // Longitude wraps, so the window origin does too; latitude clamps. When the
+  // grid is smaller than the window, the whole grid IS the window.
   const winX0 =
     winCols <= windowSide ? 0 : (((subX - windowSide / 2) % winCols) + winCols) % winCols;
   const winY0 =
     winRows <= windowSide ? 0 : Math.min(winRows - windowSide, Math.max(0, subY - windowSide / 2));
 
-  // ── 5. Clip to the window ───────────────────────────────────────────────
-  //
-  // A tile the page table cannot address is a tile that would be fetched,
-  // uploaded and then never sampled, so the clip belongs here rather than in the
-  // shader. Ground beyond the window falls back to the whole-globe base texture,
-  // which is the same identity case an empty atlas produces.
-  //
-  // The test is OVERLAP, not containment: a coarse leaf straddling the window
-  // edge still covers cells inside it, and `buildEarthPageTable` naturally writes
-  // only the cells it has. Demanding full containment would drop such a leaf and
-  // put a resolution seam INSIDE the window rather than at its frontier.
-  //
-  // Longitude wraps and latitude does not, so the two axes are tested
-  // differently — the same asymmetry `earthTileXyForUv` handles, for the same
-  // reason.
+  // 5. Clip to the window: a tile the page table can't address would be
+  // fetched and never sampled. The test is OVERLAP, not containment — a
+  // coarse leaf straddling the edge still covers cells inside it, and
+  // containment would put a resolution seam INSIDE the window.
   const inWindow = requests.filter(({ tile }) => {
     const span = 1 << (zWin - tile.z);
     const y0 = tile.y * span;
     if (y0 + span - 1 < winY0 || y0 > winY0 + windowSide - 1) return false;
     const dx = (((tile.x * span - winX0) % winCols) + winCols) % winCols;
-    // `dx + span > winCols` means the tile wraps past column 0, which is inside
-    // the window by construction.
+    // `dx + span > winCols` means the tile wraps past column 0, which is
+    // inside the window by construction.
     return dx < windowSide || dx + span > winCols;
   });
 

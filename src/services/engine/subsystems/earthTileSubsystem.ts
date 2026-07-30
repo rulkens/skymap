@@ -1,72 +1,16 @@
 /**
  * earthTileSubsystem — the residency half of Earth's surface virtual texture.
+ * `planEarthTiles` (pure, tested) decides which tiles a frame wants;
+ * `bitmapStreamSubsystem` owns the atlas, LRU clock and fetch queue. This
+ * file turns a plan into allocations and fetches, and projects whatever is
+ * resident into the page table the fragment reads.
  *
- * The feature splits cleanly in three and this file is the middle one. Above it,
- * `planEarthTiles` decides which tiles the frame wants and where the page-table
- * window sits; it is pure, and it is where every test lives. Below it,
- * `bitmapStreamSubsystem` owns the atlas texture, the LRU clock, the bounded
- * fetch queue and the ready/failed memoisation, none of which knows what it is
- * streaming. What is left in the middle is exactly this: turn a plan into
- * allocations and fetches, keep an arrival stamp per landed tile so the fade has
- * a start time, and project whatever is currently resident into the page table
- * the fragment reads. Every line of it touches a GPU, a network or a clock, which
- * is why it carries no unit test — the arithmetic it calls is covered in full one
- * layer up.
- *
- * ## Engagement is a state of this subsystem, not a condition at the drive site
- *
- * `update()` runs on every frame Earth's layer draws, and the engage rule —
- * `plan.zWin > baseLevel`, "has the whole-globe base texture started magnifying
- * yet?" — is evaluated in here. It is read off the plan rather than re-derived
- * as an altitude threshold because the planner already decided which level the
- * screen's texel density calls for. The comparison is against `baseLevel` and
- * NOT against the shallowest baked level, which the plan's own floor satisfies
- * by construction; at or below the base there is nothing a tile could add.
- *
- * Siting the gate here rather than around the call is the whole point. As a
- * drive-site `if`, engaging is a thing the caller does and disengaging is a
- * thing that merely stops happening — an asymmetry that hides an entire missing
- * half, and did: a camera that pulled back out left the last uploaded page
- * table on the globe forever, painting ground from wherever it used to be.
- * Owning both sides in one function means the disengaged frame is a frame this
- * file sees, with somewhere to put the stand-down.
- *
- * ## Lazy, because the atlas is 67 MB
- *
- * Construction allocates nothing, and neither does a disengaged frame. The
- * atlas and the page-table texture are created by the first ENGAGED `update()`.
- * A session that never leaves the outer solar system pays for none of it, and
- * `getTileResources()` returning null is the state the renderer draws in until
- * then — which it must be able to do anyway, since a bind-group layout is fixed
- * at pipeline creation and cannot wait for an atlas.
- *
- * Standing down is therefore not the inverse of engaging: it uploads an
- * all-zero page table and stops, keeping the atlas, the resident map and the
- * bind group. A camera that pulls out and comes back finds its tiles still
- * there, the LRU handles genuine pressure, and the placeholder machinery stays
- * what it is — the pre-engage state, not a state to fall back into.
- *
- * ## The page table is rebuilt whole, every time, and never patched
- *
- * `buildEarthPageTable` is a pure projection of the resident set, and this file
- * keeps it that way: on any change it re-derives all 64 KB and uploads the lot.
- * Patching the cells that changed is the tempting alternative and it is precisely
- * the project's recorded "eviction granularity must match slot granularity"
- * landmine — a texel naming a slot that has since been recycled under a different
- * tile. Rebuilding makes that unreachable rather than merely unlikely: no texel
- * survives a rebuild. The window is what makes it affordable; see
- * `EarthTilePlan`.
- *
- * ## One map, not three
- *
- * Residency here is a single `Map<key, { tile, slot, readyMs }>`. The stream
- * subsystem below already owns "did the fetch land or fail?" as set membership;
- * what this layer adds is "which tile is in which slot, and when did it arrive",
- * and those three facts are written together by one event (an upload) and dropped
- * together by another (an eviction). Splitting them into a slot map plus a
- * parallel arrival-time map — the shape the galaxy path grew historically — would
- * be two things that must agree, and `EarthResidentTile` is shaped the way it is
- * precisely so the page-table builder can read them as one.
+ * `update()` owns both sides of engagement (`plan.zWin > baseLevel`), not
+ * just a caller's `if` — a drive-site `if` once left a stale page table bound
+ * after the camera pulled back out, painting ground from wherever it used to
+ * be. Allocation is lazy: the 67 MB atlas and page table are created by the
+ * first engaged `update()`. Standing down uploads an all-zero table and keeps
+ * everything else resident, so a camera that returns finds its tiles intact.
  */
 
 import type { EarthTileId } from '../../../@types/data/EarthTileId';
@@ -95,17 +39,9 @@ import {
   EARTH_TILE_WINDOW_SIDE,
 } from '../../../data/bodies/earthTileParams';
 
-/**
- * The one kind this subsystem pages. Whether relief is tiled too is the spec's
- * Q1, deliberately left to a look judgement made on the working build: answering
- * "yes" means a SECOND instance of this file's machinery, not a branch inside it,
- * because the two kinds have different deepest levels, independently planned
- * residency, and — the part that cannot be folded — different pixel formats. A
- * normal-map atlas must be `rgba8unorm`, never `-srgb`, and `isLinearTextureKind`
- * is already the single home for that distinction; the day this becomes a
- * constructor argument, the format must come from there and not from a second
- * literal.
- */
+// The one kind this subsystem pages today; tiling relief too would need a
+// second instance of this machinery, not a branch inside it (different
+// deepest levels, independent residency, a different pixel format).
 const TILED_KIND: EarthTileKind = 'surface';
 
 const ATLAS_FORMAT: GPUTextureFormat = 'rgba8unorm-srgb';
@@ -119,37 +55,23 @@ type ResidentTile = {
 
 export type EarthTileDeps = {
   readonly device: GPUDevice;
-  /**
-   * Wake the engine's render loop for the next frame. Passed straight through to
-   * the stream subsystem, which calls it when a tile lands or fails. This file
-   * never calls it: everything else it knows about is surfaced through
-   * `isAnimating()` for the keep-ticking predicate to read.
-   */
+  /** Wakes the render loop; passed through to the stream subsystem. This file
+   *  surfaces its own state through `isAnimating()` instead. */
   readonly requestRender: () => void;
 };
 
 export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsystem {
   const { device, requestRender } = deps;
 
-  // ── Manifest ────────────────────────────────────────────────────────────
-  //
-  // Fetched once, on the first `plannerParams()` call. That is earlier than
-  // "when the virtual texture engages" and deliberately so: the engage rule is
-  // `plan.zWin > baseLevel`, `zWin` only exists once the planner has run, and the
-  // planner cannot run without the manifest's tile edge and level range. A fetch
-  // that waited for engagement would be waiting on its own answer. One small JSON,
-  // once per session, and nothing GPU-side rides on it.
+  // Fetched once, on the first `plannerParams()` call — earlier than
+  // engagement, since the engage rule needs the manifest's `zWin`.
   let manifestRequested = false;
   let manifestPending = false;
   let manifest: EarthTileManifest | null = null;
-  // The derived params and the tier they were derived AT, kept together so the
-  // pair can only be read as one. The tier is a live user setting, and the base
-  // level is a fact about the texture that tier binds, so a params object cached
-  // without its tier would keep answering for the previous one after a swap.
+  // Cached with the tier it was derived at, so a swap can't be answered stale.
   let params: EarthTilePlannerParams | null = null;
   let paramsTier: Tier | null = null;
 
-  // ── Lazily-allocated GPU state ──────────────────────────────────────────
   let stream: BitmapStreamSubsystem | null = null;
   let pageTable: GPUTexture | null = null;
   let resources: { readonly pageTable: GPUTextureView; readonly atlas: GPUTextureView } | null =
@@ -159,35 +81,13 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
   const resident = new Map<string, ResidentTile>();
 
   let frameCounter = 0;
-  // The last frame's stamped clock, so an arrival stamps its `readyMs` from the
-  // frame clock rather than sampling `performance.now()` itself. At most one frame
-  // stale, which is nothing against a 400 ms fade, and it keeps the fade
-  // deterministic under a stepped recorder clock.
+  // Frame's stamped clock, so `readyMs` stays deterministic under a stepped clock.
   let lastFrameNowMs = 0;
-  // Set by an arrival or an eviction; cleared by an upload. The window moving is
-  // the other reason to rebuild, and it is read off the frame's plan rather than
-  // flagged because it is a property of the current frame.
   let residencyDirty = false;
-  // What the page table IN GPU MEMORY holds: the window it was built against —
-  // not the latest plan's — and whether every fade weight in it had reached full.
-  // Written only by `uploadPageTable`, so both facts and the texture's contents
-  // are always the same age. That pairing is what the fragment's cell arithmetic
-  // depends on, and it is why the window is surfaced through its own accessor
-  // rather than read off the plan at the draw site (see `getUploadedWindow`).
-  //
-  // `saturated` is what asks for the terminal frame of a load fade, in place of
-  // asking the clock whether a fade is in progress. The two questions differ by
-  // exactly one frame and the clock answers the wrong one: `loadFadeAlpha` reaches
-  // 1 when the elapsed time REACHES the fade duration, so on that frame "is a fade
-  // in progress?" is already false, no rebuild happens, and the last table ever
-  // written keeps a weight just under 1 — a parked camera blended at ~97% against
-  // the base forever. A record of what was actually uploaded cannot disagree with
-  // itself that way.
-  //
-  // `null` doubles as the stood-down state: only an upload sets this and only
-  // `standDown` clears it, so "has the blank table already gone up for this
-  // disengaged spell?" needs no flag of its own — and a camera parked just outside
-  // the engage altitude still re-uploads its 64 KB of zeroes exactly once.
+  // What the page table IN GPU MEMORY holds. `saturated` checks recorded
+  // weights rather than the clock: `loadFadeAlpha` reaches 1 exactly on the
+  // frame the fade completes, so a clock check would skip that frame's
+  // rebuild and park the table just under full weight forever.
   let uploaded: {
     readonly window: {
       readonly zWin: number;
@@ -200,37 +100,12 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
   let destroyed = false;
 
   /**
-   * Turn a fetched manifest plus the tier Earth's surface texture is bound at
-   * into planner inputs, or null if the bake the manifest describes is one this
-   * build cannot address. Every rejection degrades the feature to base-only,
-   * which is the identity case and the same picture Earth draws with no manifest
-   * at all — so a refusal costs a reader nothing to reason about, while the
-   * alternative (adapting) would be silently wrong pixels.
-   *
-   * ## Why the TIER is an argument
-   *
-   * `baseLevel` is a fact about the whole-globe image the session actually
-   * bound, and the three tiers bind three different images (z2 / z3 / z4). The
-   * subsystem has no business knowing which one that is — the drive site reads
-   * it off the texture slot — so it arrives here and is inverted onto the ladder
-   * by `earthBaseLevelForTier`. Everything downstream (the walk floor, the
-   * engage gate, the request floor) then follows from one number instead of
-   * three parallel assumptions.
-   *
-   * ## Why a differently-cut pyramid is REFUSED and not adapted to
-   *
-   * 512 is a property of the tile FORMAT, not a parameter that flows. The
-   * fragment derives the window level's column count from `zWin` alone
-   * (`cols = 1u << zWin`), which is the ladder's `(EARTH_EQUIRECT_BASE_WIDTH_PX
-   * << z) / tilePx` with the two 512s cancelled — an identity that holds at this
-   * tile edge and at no other. Nothing on the GPU side reads `tilePx`, so a
-   * pyramid cut at a different edge is not something the runtime can adapt to: it
-   * would resolve the same uv to a different cell, and every cell in the window
-   * would name the wrong ground with no error anywhere. Hence the manifest's
-   * `tilePx` is a validated ASSERTION rather than an input — absent means "the
-   * format's edge", present-and-different means "not this format". A re-bake at
-   * another edge is a format change, and the format's version is the tile tree
-   * itself.
+   * Turn a fetched manifest plus the bound tier into planner inputs, or null
+   * if the bake is one this build cannot address — every rejection degrades
+   * to base-only, cheaper to reason about than silently adapting to wrong
+   * pixels. `tilePx` is a validated ASSERTION: the fragment derives the
+   * window level's column count from `zWin` alone, an identity that holds
+   * only at the shipped 512 px edge.
    */
   function derivePlannerParams(
     fetched: EarthTileManifest,
@@ -241,14 +116,7 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     const tilePx = fetched.tilePx ?? EARTH_TILE_PX;
     if (tilePx !== EARTH_TILE_PX) return null;
     const baseLevel = earthBaseLevelForTier(tier);
-    // The manifest is authoritative for what was BAKED; the base level is
-    // authoritative for what is already bound. The request floor is the deeper of
-    // the two, because a level at or above the base would re-download detail the
-    // whole-globe image already carries, and a level the bake never emitted is a
-    // 404. Deriving it from THIS session's base rather than a module constant is
-    // what lets a bake that reaches shallower serve a coarser tier: at `small`
-    // (base z2) a z3 tile is a genuine refinement, while at `large` (base z4) the
-    // same file is detail already on screen.
+    // Deeper of manifest-min and base+1: at/above base would re-download detail.
     const minTileLevel = Math.max(levels.min, baseLevel + 1);
     if (!(levels.max >= minTileLevel)) return null;
     return {
@@ -262,13 +130,8 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     };
   }
 
-  /**
-   * Re-derive the params for `tier`, from the manifest if it has landed. The one
-   * writer of the `(params, paramsTier)` pair, so the two cannot describe
-   * different tiers, and the one place a null params comes from — either the
-   * manifest is not here yet or the bake it describes was refused, and neither
-   * is a state the readers need to tell apart.
-   */
+  /** The one writer of the `(params, paramsTier)` pair, so the two can't
+   *  describe different tiers. */
   function refreshParams(tier: Tier): void {
     paramsTier = tier;
     params = manifest === null ? null : derivePlannerParams(manifest, tier);
@@ -282,24 +145,18 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
         manifestPending = false;
         if (destroyed || fetched === null) return;
         manifest = fetched;
-        // Derived here rather than on the next call, so `update()` has params to
-        // work with on the same frame the manifest lands — the drive site's
-        // ordering (params, then plan, then update) is a convention, and this
-        // does not depend on it.
+        // Derived here so `update()` has params ready the same frame.
         refreshParams(paramsTier ?? tier);
       });
     }
-    // Re-derived only on a tier change, so the steady state is one comparison
-    // per frame. Holding the manifest rather than the params alone is what lets
-    // a swap be answered from memory instead of a second fetch.
     if (paramsTier !== tier) refreshParams(tier);
     return params;
   }
 
   /**
-   * Allocate the atlas and the page table. Called by the first engaged frame and
-   * never again — `slotSide` comes from the manifest's tile edge rather than a
-   * literal, so a re-bake at a different edge stays a data change.
+   * Allocate the atlas and the page table. Called by the first engaged frame
+   * and never again — `slotSide` comes from the manifest's tile edge, so a
+   * re-bake at a different edge stays a data change.
    */
   function engage(tilePx: number): BitmapStreamSubsystem {
     slotsPerRow = EARTH_TILE_ATLAS_SIDE / tilePx;
@@ -313,18 +170,14 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
       concurrency: EARTH_TILE_CONCURRENCY,
     });
     created.setEvictHandler((key) => {
-      // The atlas has recycled this slot under another tile, so the entry
-      // describing it is now a lie. Dropping it is what keeps the page table a
-      // pure projection of what is actually in the atlas.
+      // Recycled slot; drop so the page table stays a pure projection of residency.
       if (resident.delete(key)) residencyDirty = true;
     });
 
     pageTable = device.createTexture({
       label: `earth-${TILED_KIND}-page-table`,
       size: [EARTH_TILE_WINDOW_SIDE, EARTH_TILE_WINDOW_SIDE, 1],
-      // Integer channels, read with `textureLoad`: the four values are a slot
-      // column, a slot row, a level and a blend weight, none of which wants
-      // filtering or normalising on the way in.
+      // Integer channels: slot column, slot row, level, blend weight.
       format: 'rgba8uint',
       usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
     });
@@ -337,23 +190,9 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     return created;
   }
 
-  /**
-   * Whether the table in GPU memory still owes an upload for a reason that has
-   * nothing to do with where the camera is: residency changed under it, or the
-   * weights it carries are still mid-fade.
-   *
-   * The rebuild and the keep-ticking vote both read THIS, which is what stops
-   * `isAnimating()` from going quiet one frame before the rebuild it exists to let
-   * happen. The window moving is deliberately not in here: it is a property of the
-   * frame's plan, the camera driver is already voting to keep the loop awake while
-   * it moves, and `isAnimating()` has no plan to compare against.
-   *
-   * No live table means nothing is owed, which is what keeps a disengaged spell
-   * from pinning the loop awake: a tile can still land while the camera sits
-   * outside the engage bracket, and a disengaged frame never rebuilds, so a dirty
-   * flag with nothing to flush into would vote to keep ticking forever. It is left
-   * set for the re-engaging frame to clear.
-   */
+  /** Whether the table owes an upload unrelated to camera position: residency
+   *  changed, or its weights are mid-fade (window movement is `update`'s own
+   *  concern below). */
   function rebuildOwed(): boolean {
     return uploaded !== null && (residencyDirty || !uploaded.saturated);
   }
@@ -361,9 +200,7 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
   function uploadPageTable(plan: EarthTilePlan, tilePx: number, nowMs: number): void {
     if (pageTable === null) return;
     const projected: EarthResidentTile[] = [];
-    // Recorded from the weights that actually go into this table. An empty
-    // resident set is saturated vacuously, which is right: there is no fade left
-    // to finish, and the table is as settled as it will get.
+    // An empty resident set is saturated vacuously: no fade left to finish.
     let saturated = true;
     for (const entry of resident.values()) {
       const weight = loadFadeAlpha(entry.readyMs, nowMs, EARTH_TILE_FADE_MS);
@@ -390,29 +227,11 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     };
   }
 
-  /**
-   * Leave the virtual texture showing nothing, once, on the frame the engage
-   * rule goes false.
-   *
-   * An all-zero page table is the identity: A is the blend weight, so a zeroed
-   * cell tells the fragment to take the whole-globe base texture and nothing
-   * else — the picture Earth draws in a session that never engages at all.
-   * Zeroing the table and reporting a null window from `getUploadedWindow()`
-   * are belt and braces, and either alone would be sufficient: the null window
-   * makes the draw site pack the all-zero identity window, and the zeroed cells
-   * make every cell the fragment could address weightless regardless of what
-   * window it addresses them through.
-   *
-   * Nothing is freed. The atlas costs 67 MB but re-fetching every tile costs a
-   * network round trip each, and the camera that just pulled out of the engage
-   * bracket is the one most likely to come straight back; the LRU is already the
-   * answer to genuine capacity pressure, and `destroy()` to a real teardown.
-   */
+  /** Leave the virtual texture showing nothing, once, when the engage rule
+   *  goes false. All-zero is the identity (alpha = blend weight); nothing is
+   *  freed — the LRU handles real capacity pressure. */
   function standDown(): void {
-    // Never allocated means nothing to stand down — this is the path a session
-    // that never approaches Earth takes on every frame, and it must stay free. A
-    // null `uploaded` under an allocated table means the blank has already gone
-    // up, so the stand-down stays a transition rather than a per-frame state.
+    // Never allocated ⇒ nothing to stand down.
     if (pageTable === null || uploaded === null) return;
     device.queue.writeTexture(
       { texture: pageTable },
@@ -420,23 +239,17 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
       { bytesPerRow: EARTH_TILE_WINDOW_SIDE * 4, rowsPerImage: EARTH_TILE_WINDOW_SIDE },
       [EARTH_TILE_WINDOW_SIDE, EARTH_TILE_WINDOW_SIDE, 1],
     );
-    // Nulling this is what re-arms the rebuild: the next engaged frame reads it
-    // as a moved window, so the table is re-derived before anything is drawn
-    // through it.
+    // Re-arms the rebuild: the next engaged frame reads this as a moved window.
     uploaded = null;
   }
 
   function update(input: { readonly plan: EarthTilePlan; readonly nowMs: number }): void {
     if (destroyed) return;
     const active = params;
-    // Only reachable if the drive site called `update` before `plannerParams`
-    // answered; there is nothing to plan against, so there is nothing to do.
     if (active === null) return;
 
     const { plan, nowMs } = input;
-    // Stamped on disengaged frames too: a tile can still land while the camera
-    // sits outside the engage bracket, and its fade should start from a current
-    // clock rather than from whenever the last engaged frame was.
+    // Stamped on disengaged frames too, so a landing tile still fades from now.
     lastFrameNowMs = nowMs;
 
     if (!(plan.zWin > active.baseLevel)) {
@@ -448,33 +261,21 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
 
     frameCounter++;
 
-    // Requests arrive largest-on-screen-first from the planner, and that order is
-    // load-bearing twice over: it is the order slots are claimed in when the atlas
-    // is over-subscribed, and it is the order the queue pops in.
+    // Requests arrive largest-on-screen-first: decides slot priority AND fetch order.
     for (const request of plan.requests) {
       const key = earthTilePath(request.tile);
 
-      // Checked BEFORE allocating, unlike the galaxy thumbnail path. A land-only
-      // pyramid means most of the grid legitimately 404s, and a failed key that
-      // kept being allocated would hold a slot AND keep its LRU stamp fresh
-      // forever — a descent over ocean could pin all 64 slots on tiles that will
-      // never have pixels. Skipping the allocation lets the slot go stale and be
-      // recycled, and the stream subsystem's failure memoisation is what stops
-      // the retry storm in the meantime.
+      // Checked BEFORE allocating: an allocated failed key would keep its LRU
+      // stamp fresh forever, pinning slots on tiles with no pixels.
       if (atlas.isFailed(key)) continue;
 
-      // The returned index is deliberately dropped: it is true of this frame,
-      // and the fetch below lands several frames later. What the allocation is
-      // for here is the claim itself and its refusal — null means the atlas is
-      // full of slots claimed earlier in this same frame, so this tile is over
-      // budget and the planner's largest-first order decides who loses.
+      // Null means the atlas is already full this frame.
       if (atlas.allocate(key, frameCounter) === null) continue;
       if (atlas.isLoaded(key)) continue;
 
       atlas.enqueueFetch({
         key,
-        // The queue pops highest-priority first, so the projected on-screen extent
-        // goes in unnegated: the tile covering most of the screen loads first.
+        // Highest-priority-first queue.
         priority: request.screenPx,
         fetcher: () => fetchEarthTileBitmap(request.tile),
         onResult: (bitmap) => {
@@ -482,13 +283,7 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
             bitmap?.close();
             return;
           }
-          // The slot is resolved from the key at the moment of the write, and
-          // the answer is whatever the atlas says NOW: the tile may have been
-          // evicted during the round trip, or evicted and re-requested into a
-          // different slot. A null means the atlas holds nothing for this tile
-          // and the pixels have nowhere to go, so nothing is recorded — the
-          // tile stays unloaded, and a later frame that still wants it will ask
-          // again.
+          // Resolved from the key now, not carried: may have been evicted mid-flight.
           const slot = atlas.uploadBitmap(key, bitmap);
           bitmap.close();
           if (slot === null) return;
@@ -503,10 +298,7 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
       uploaded.window.zWin !== plan.zWin ||
       uploaded.window.winX0 !== plan.winX0 ||
       uploaded.window.winY0 !== plan.winY0;
-    // Weights short of full mean the table in memory is mid-fade, so it is rebuilt
-    // every frame until the last arrival has ramped all the way out — including the
-    // frame the ramp lands on, which is the one that puts full weight on screen.
-    // That is also what carries the fade visually: nothing else changes during it.
+    // Rebuilt every frame until the last arrival ramps to full weight.
     if (windowMoved || rebuildOwed()) {
       uploadPageTable(plan, active.tilePx, nowMs);
     }

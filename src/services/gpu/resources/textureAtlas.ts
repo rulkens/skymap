@@ -17,15 +17,11 @@
  * its own work (see its docstring). The caller calls `touch(key, frame)` every
  * frame the item is on screen so visible thumbnails stay alive.
  *
- * A slot index is therefore a fact about the frame that produced it, not a
- * property of the key. An evicted key is dropped from the key→slot map
- * entirely, so re-requesting it later assigns whatever slot happens to be free
- * THEN — a different one. Code that holds an index across an await (a bitmap
- * fetch, typically) must re-resolve it through `slotOf` before writing pixels,
- * or it writes them into whichever key has since taken that slot, under that
- * key's UVs, in a slot the atlas believes is already populated. `slotOf` is the
- * authority for "where does this key live now"; `allocate`'s return value only
- * answers "where did it live when I asked".
+ * A slot index is a fact about the frame that produced it, not a property of
+ * the key: an evicted key is dropped from the key→slot map entirely, so
+ * re-requesting it later assigns a different slot. Code holding an index
+ * across an await (a bitmap fetch) must re-resolve it through `slotOf` before
+ * writing pixels, or it writes into whichever key has since taken that slot.
  *
  * Geometry (atlasSide, slotSide) and pixel format are constructor
  * configuration, not constants, because more than one atlas exists in the
@@ -158,10 +154,9 @@ export class TextureAtlas {
    * decode via
    * `createImageBitmap(blob, { resizeWidth: slotSide, resizeHeight: slotSide })`.
    *
-   * The slot is taken on trust: this is the raw blit, and nothing here can tell
-   * a deliberate write from an index that has gone stale.  A caller holding a
-   * KEY resolves it through `slotOf` immediately before calling this — see
-   * `bitmapStreamSubsystem.uploadBitmap`, which is the only production route in.
+   * The slot is taken on trust — nothing here can tell a deliberate write from
+   * a stale index. A caller holding a KEY resolves it through `slotOf`
+   * immediately before calling this (see `bitmapStreamSubsystem.uploadBitmap`).
    *
    * Why `copyExternalImageToTexture` rather than `writeTexture`?  The
    * former takes an ImageBitmap directly without us having to read the
@@ -201,25 +196,18 @@ export class TextureAtlas {
    * Returns the slot index (callers use it to compute UVs), or `null` when the
    * atlas is full of slots already claimed on THIS frame.
    *
-   * A resident key always gets its slot back, so refreshing what is already on
-   * screen never fails. Only a NEW key can be refused, and only when every slot
-   * carries `lastSeenFrame === frame`.
+   * A resident key always gets its slot back. Only a NEW key can be refused,
+   * and only when every slot carries `lastSeenFrame === frame`.
    *
-   * Why refuse rather than evict? A consumer can want more items than the atlas
-   * holds. The Earth tile planner's demand scales with screen AREA and with
-   * pyramid depth, so it is a viewport-and-bake fact rather than a constant: at
-   * the shipped z3–z7 depth it peaks near a dozen tiles against 64 slots on a
-   * 1600x900 viewport (measured across a nadir descent), and a deeper pyramid or
-   * a larger window pushes it past capacity. Such a consumer claims every slot
-   * early in the frame and keeps asking. Evicting there would
-   * recycle a slot claimed moments earlier in the same frame, undoing work
-   * already done, and because the consumer re-requests a stable set every frame
-   * from a stationary camera it would repeat forever: evict, refetch, evict.
-   * The bounded answer is to serve the requests that fit — the planners order
-   * theirs largest-on-screen-first — and tell the rest the atlas is full.
-   *
-   * A slot last seen on an EARLIER frame is a different story: it is genuinely
-   * stale, nothing this frame depends on it, and LRU recycles it as usual.
+   * Why refuse rather than evict? A consumer (e.g. the Earth tile planner,
+   * whose demand scales with screen area and pyramid depth) can want more
+   * items than the atlas holds, claim every slot early in the frame, and keep
+   * asking. Evicting there would recycle a slot claimed moments earlier in the
+   * SAME frame — and because a stationary camera re-requests a stable set
+   * every frame, it would repeat forever: evict, refetch, evict. The bounded
+   * answer is to serve what fits (planners order largest-on-screen-first) and
+   * tell the rest the atlas is full. A slot last seen on an EARLIER frame is
+   * genuinely stale and LRU recycles it as usual.
    */
   allocate(key: string, frame: number): number | null {
     const existing = this.keyToSlot.get(key);
@@ -275,13 +263,10 @@ export class TextureAtlas {
   }
 
   /**
-   * The slot `key` occupies right now, or undefined if it occupies none.
-   *
-   * This is the question an async writer has to ask, and it is not the question
-   * `allocate` answered: see the module header on slot indices being frame-scoped
-   * facts. Kept read-only on purpose — resolving a key that is no longer resident
-   * must not resurrect it, because the caller with a bitmap in hand is holding
-   * pixels for ground the atlas has already given away.
+   * The slot `key` occupies right now, or undefined if it occupies none — the
+   * question an async writer must ask instead of trusting `allocate`'s return
+   * value (see the module header). Kept read-only: resolving a key that is no
+   * longer resident must not resurrect it.
    */
   slotOf(key: string): number | undefined {
     return this.keyToSlot.get(key);

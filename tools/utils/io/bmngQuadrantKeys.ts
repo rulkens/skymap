@@ -1,23 +1,14 @@
 /**
- * `BMNG_QUADRANT_KEYS` — the raw-data key of each Blue Marble quadrant, keyed by
- * the quadrant's own name.
+ * `BMNG_QUADRANT_KEYS` — the raw-data key of each Blue Marble quadrant, keyed
+ * by the quadrant's own name. `buildEarthTiles` reads their pixels and
+ * `fetchTextures` downloads them; both derive from this one enumeration
+ * rather than each naming the eight files separately (which is exactly how
+ * they once went unfetched — the bake named keys, the fetcher named none).
  *
- * The eight quadrant files have two consumers that must agree: `buildEarthTiles`
- * reads their pixels, and `fetchTextures` downloads them. Enumerating them twice
- * is precisely how they came to be un-fetchable in the first place (the bake
- * named eight registry keys, the fetcher named none, and the 421 MB pull was
- * done by hand) — the same failure `textureSources.ts` exists to prevent for the
- * body maps. So the set is written once, here, and both halves derive from it.
- *
- * `satisfies Record<BmngQuadrant, RawDataKey>` is what makes a forgotten
- * quadrant a compile error rather than a hole in the globe: the key type is the
- * quadrant union the imagery source itself derives from its grid axes, so this
- * table and that grid cannot disagree. The import is TYPE-ONLY, so nothing in
- * `tools/utils/` depends on `tools/textures/` at runtime.
- *
- * The keys are vintage-neutral (`…QuadrantA1`, not `…200408A1`): the month lives
- * in `BMNG_VINTAGE` alone, and a key that spelled it would go on claiming
- * December after the files underneath it became August.
+ * `satisfies Record<BmngQuadrant, RawDataKey>` makes a forgotten quadrant a
+ * compile error rather than a hole in the globe (the import is TYPE-ONLY).
+ * Keys are vintage-neutral (`…QuadrantA1`, not `…200408A1`) — the month lives
+ * in `BMNG_VINTAGE` alone.
  */
 
 import type { BmngQuadrant } from '../../textures/bmngQuadrantSource';

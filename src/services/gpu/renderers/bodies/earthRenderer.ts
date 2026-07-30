@@ -2,153 +2,62 @@
  * earthRenderer — true-scale, texture-mapped Earth drawn into the opaque
  * near-field foreground target.
  *
- * The geometry is a cube-sphere — the six whole level-0 faces of
- * `cubeSphereMesh` concatenated into one indexed mesh — shaded by sampling an
- * equirectangular Blue Marble bitmap and attenuated by the shared sun-relative
- * Lambert term. Earth switched off the shared `uvSphereMesh` (still used by the
- * distant star/planet renderers) because a UV sphere collapses every longitude
- * into a single vertex at each pole: the cap triangles degenerate and the
- * equirectangular map puckers where the continents smear across the pinch. A
- * cube-sphere subdivides each cube face into a uniform quad grid normalized to
- * the unit sphere, so the silhouette stays even and pole-pinch-free at the
- * close-approach descent — and the `(face, level, tileX, tileY)` parameters set
- * up Plan C's terrain quadtree without a later mesh swap. The mesh keeps
- * J2000 / equirect / CCW parity with `uvSphereMesh`, so the orientation and
- * winding notes below carry over unchanged. The shading is the shared
- * physically-based microfacet core (`lib/pbr.wesl`'s `pbrDirect`): a co-registered
- * LINEAR material map (roughness + ocean mask) drives GGX specular, so the smooth
- * ocean returns a tight sun glint while land stays matte, plus the shared
- * `AMBIENT` floor from `lib/bodyLighting.wesl`. It binds `lib/sphere.wesl`'s
- * `EarthSurfaceUniforms` (a 128-byte block: the 80-byte `LitBodyUniforms` prefix
- * — MVP + body-local sun direction — followed by the camera position in the
- * body's local frame and the PBR params `roughnessBase`/`f0`/`sunIrradiance`/
- * `cloudShadowStrength`/`oceanRoughness`) and the `clip_from_local` projection helper with the
- * other sphere renderers, so the CPU-side matrix layout and the GPU-side
- * projection stay a single source of truth. The CPU side packs the uniform
- * through `packEarthSurfaceUniforms`.
+ * The geometry is a cube-sphere (`cubeSphereMesh`'s six level-0 faces
+ * concatenated into one indexed mesh) rather than the shared `uvSphereMesh`: a
+ * UV sphere collapses every longitude into a single vertex at each pole, so
+ * the cap triangles degenerate and the equirectangular map puckers there. The
+ * cube-sphere stays pole-pinch-free, and its `(face, level, tileX, tileY)`
+ * parameters set up a future terrain quadtree without a mesh swap. Shading is
+ * the shared `lib/pbr.wesl` `pbrDirect` microfacet core plus the shared
+ * `AMBIENT` floor; the uniform layout is `lib/sphere.wesl`'s
+ * `EarthSurfaceUniforms` (128 bytes), packed CPU-side by
+ * `packEarthSurfaceUniforms`.
  *
- * **Precondition — draw at most once per frame:** `draw` writes the uniforms
- * into a single non-dynamic uniform buffer before issuing the indexed draw, so
- * a second same-frame `draw` with different uniforms would race
- * `queue.writeBuffer` against the pending `queue.submit` and render both
- * spheres with whichever record won — the caller must issue exactly one Earth
- * draw per frame. Earth is a single body, so this holds by construction.
+ * **Precondition — draw at most once per frame:** the uniform buffer is a
+ * single non-dynamic slot; a second same-frame `draw` with different uniforms
+ * would race `queue.writeBuffer` against the pending `queue.submit`. Earth is
+ * a single body, so this holds by construction.
  *
- * ### Untextured behaviour (placeholder texture)
+ * ### Layered textures, oldest arrival wins nothing
  *
- * The Blue Marble bitmap is fetched asynchronously by the engine's
- * `bodyTextures` slot family (key `'earth:surface'`), so at construction there is
- * nothing to sample. Rather than branch the fragment shader on a "has-texture"
- * flag, the renderer creates a 1×1 mid-blue `rgba8unorm-srgb` texture at
- * construction and binds THAT. The fragment shader always samples a real texture;
- * before the bitmap lands it simply reads back a uniform mid-blue, so the Earth
- * is visible-but-plain (a plain blue ball) rather than black or absent. A second
- * 1×1 LINEAR placeholder (`rgba8unorm`, R=255 G=0 → roughness 1, ocean mask 0)
- * stands in for the material map so the fragment shades a matte, glint-free
- * sphere until the real map arrives. A third 1×1 BLACK `rgba8unorm-srgb`
- * placeholder stands in for the Black Marble night map so the emissive
- * city-lights term contributes nothing (the dark side is lit only by `AMBIENT`)
- * until `setMap('night', …)` lands. A fourth 1×1 FLAT-NORMAL `rgba8unorm` LINEAR
- * placeholder (`[128,128,255,255]` → tangent-space `(0,0,1)`) stands in for the
- * normal map so the shading normal equals the geometric normal — no relief —
- * until `setMap('normal', …)` lands. A fifth 1×1 TRANSPARENT `rgba8unorm-srgb`
- * placeholder (`[0,0,0,0]`) stands in for the cloud map so its alpha reads 0 →
- * the surface fragment's ground shadow and night occlusion (both keyed on cloud
- * alpha) contribute nothing until `setMap('clouds', …)` lands. All five
- * placeholder FORMATS derive from the one `isLinearTextureKind` predicate (only
- * the placeholder COLOUR is per-kind), so a placeholder can never disagree with
- * the real map that later shadows it. When
- * `setMap('surface'|'material'|'night'|'normal'|'clouds', …)` runs it creates a
- * fresh texture sized to the bitmap (format chosen by that same
- * `isLinearTextureKind`), uploads it, generates mips, and rebuilds the fragment
- * bind group to point at the new view. Every `TextureKind` is now wired — no kind
- * is inert.
- *
- * The placeholder for a kind is itself upgradable: `setPlaceholderMap(kind,
- * atlas, rect)` crops one tile out of the shared low-resolution all-bodies atlas
- * — the first asset to land at boot — over that kind's 1×1, so an Earth reached
- * before the multi-megabyte Blue Marble arrives shows a recognisable low-res
- * Earth rather than a featureless blue ball. Only `'surface'` has a tile.
- *
- * The two setters write two DIFFERENT maps (`committed` and `placeholders`), and
- * that is the entire out-of-order-arrival story: neither can free the other's
- * texture, so a tile that arrives after the hi-res map cannot clobber it and no
- * commit path has to ask which one landed first.
+ * Each map (`surface`, `material`, `night`, `normal`, `clouds`) has a 1×1
+ * placeholder created at construction (format from `isLinearTextureKind`, so a
+ * placeholder can never disagree with the real map that later shadows it) —
+ * the fragment always samples something, so Earth is visible-but-plain before
+ * any bitmap lands rather than black or absent. `setMap` uploads the real
+ * bitmap into a separate `committed` map; `setPlaceholderMap` can additionally
+ * upgrade the 1×1 stand-in to a cropped tile of the shared low-res body atlas.
+ * Because the two live in different maps, neither setter can free the other's
+ * texture — a low-res tile landing after the hi-res map can't clobber it, and
+ * no commit path has to ask which arrived first.
  *
  * ### uv / texture orientation
  *
- * `cubeSphereMesh` emits v south-to-north (v=0 south pole, v=1 north pole).
- * Equirectangular Blue Marble imagery stores the north pole in its top row, so
- * the bitmap is uploaded with `flipY: true` — texture v=0 becomes the image's
- * bottom (south) row, matching the mesh's south-first v. So v needs no remap.
- *
- * u needs no remap either. The mesh places longitude on +Y (the equatorial
- * J2000 frame, pole on +Z), so increasing u winds CCW as seen from outside the
- * sphere — matching an equirectangular map's east-increases-left-to-right
- * convention, and the raw u draws the continents in the correct orientation.
- * See `earth/fragment.wesl` for the two-vertex derivation. The sampler still
- * uses `repeat` addressing on u so the mesh's per-triangle seam duplicates wrap
- * cleanly across the longitude seam.
- *
- * ### Pipeline state
- *
- * Colour target: the caller's `targetFormat` (the foreground:0 row's
- * `rgba16float`). Depth: the caller's `depthFormat` (`depth32float`) with
- * `depthWriteEnabled: true` + `depthCompare: 'greater'` (the NEAR0 slab's reversed-Z
- * convention — clear `0.0`, greater-z-wins) so the Earth occludes /
- * is occluded correctly. Front face CCW + `cull: 'back'` matches
- * `cubeSphereMesh`'s outward winding. No blend descriptor = opaque replace; the
- * fragment emits alpha=1 and the foreground composite handles layer blending.
+ * `cubeSphereMesh` emits v south-to-north; bitmaps upload with `flipY: true` so
+ * texture v=0 matches. u needs no remap either — see `earth/fragment.wesl`'s
+ * uv-orientation note for the full derivation.
  *
  * ### Bind group layout
  *
- * An explicit `bindGroupLayout` (not `layout: 'auto'`) so the texture swap in
- * `setMap` can rebuild a bind group against a stable layout object, and to
- * avoid the auto-layout trap documented in `feedback_webgpu_auto_layout_trap`.
- * Binding 0: `EarthSurfaceUniforms` — visible in BOTH stages (the vertex reads
- * `u.mvp`, the fragment reads the sun direction, camera position, and material
- * knobs). Binding 1: sampler (fragment). Binding 2: the 2D Earth albedo texture
- * (fragment). Binding 3: the 2D material (roughness/ocean-mask) texture (fragment).
- * Binding 4: the 2D night (Black Marble city-lights) texture (fragment).
- * Binding 5: the 2D tangent-space normal (relief) texture (fragment).
- * Binding 6: the 2D cloud (coverage-in-alpha) texture (fragment) — sampled for
- * the surface's cloud ground shadow + night-light occlusion.
- * Bindings 7–9: the surface virtual texture — page table, tile atlas, and the
- * atlas's own sampler (all fragment). Nine sampled textures and two samplers,
- * against WebGPU's default limits of 16 and 16.
+ * Explicit `bindGroupLayout`, never `layout: 'auto'`: `setMap` rebuilds the
+ * bind group against a stable layout object when a texture swaps, and an auto
+ * layout does not cross pipelines (`feedback_webgpu_auto_layout_trap`).
+ * Binding 0 is the uniform (both stages); 1 is the shared sampler; 2–6 are the
+ * per-kind textures (from `KIND_CFG`); 7–9 are the surface virtual texture's
+ * page table, atlas, and its own sampler.
  *
- * ### The surface virtual texture (a third texture layer)
+ * ### The surface virtual texture (bindings 7–9)
  *
- * Above `committed` and `placeholders` sits a layer this renderer does not own:
- * `earthTileSubsystem` streams high-resolution surface tiles into an atlas and
- * publishes a page table saying which atlas slot (if any) covers a given cell of
- * the currently-windowed pyramid level. The fragment blends that on top of
- * whatever the two owned layers resolved to, so every failure path — no manifest,
- * no atlas, a 404 on every tile — lands on the picture Earth draws without it.
- *
- * A bind-group layout is fixed at pipeline creation, so bindings 7 and 8 cannot
- * wait for an atlas that most sessions never allocate (it is 67 MB, and
- * `getTileResources()` stays `null` until the first engaged frame). They get 1×1
- * placeholders in the same spirit as the per-kind ones: an all-zero `rgba8uint`
- * page table — its A channel is the blend weight, and A = 0 means "sample the
- * base", which is exactly the identity case — and a 1×1 atlas that the zero
- * weight then makes unreadable. The placeholders are siblings of `KIND_CFG`
- * rather than rows in it: `KIND_CFG` is keyed by `TextureKind`, and neither of
- * these is a kind `setMap` can ever be called with.
- *
- * Binding 9 is a SECOND sampler because the atlas needs different addressing from
- * the whole-globe maps: `clamp-to-edge` on both axes (a slot's neighbour in the
- * atlas is an unrelated tile, so `repeat` on u would bleed a stranger across the
- * seam) and NO mipmap filter (the atlas has one level; the fragment samples it
- * with `textureSampleLevel`).
- *
- * ### Mip generation
- *
- * `setMap` sizes the Earth texture with a full mip chain
- * (`mipLevelCount(w,h)` levels + `RENDER_ATTACHMENT` usage) and runs
- * `generateMipChain` after upload, and the sampler sets `mipmapFilter: 'linear'`
- * — so the surface stops shimmering as Earth shrinks toward the sub-pixel glint
- * handoff during the descent.
+ * `earthTileSubsystem` owns a page table + atlas this renderer does not
+ * allocate; the fragment blends it on top of the two owned layers, and every
+ * failure path (no manifest, no atlas, a 404 on every tile) lands on the
+ * picture Earth draws without it. Bindings 7–8 get 1×1 placeholders in the
+ * same spirit as the per-kind ones, since the bind-group layout is fixed at
+ * pipeline creation while the atlas (67 MB) allocates only once the tile
+ * subsystem first engages. Binding 9 is a SECOND sampler: the atlas needs
+ * `clamp-to-edge` on both axes (a slot's neighbour in the atlas is an
+ * unrelated tile, so `repeat` would bleed a stranger across the seam) and no
+ * mipmap filter (one atlas level; sampled with `textureSampleLevel`).
  *
  * @module
  */
@@ -166,43 +75,30 @@ import vsCode from '../../shaders/bodies/earth/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/earth/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 
-/** Per-face grid subdivision for the cube-sphere: each of the six faces is a
- *  `RES × RES` quad grid, so the whole globe is `6 × 48² ≈ 13.8k` quads — about
- *  12× the old 48×24 UV sphere's 1,152 quads, but still trivial for a single
- *  hero-body draw. The extra density buys even, pole-pinch-free tessellation
- *  (no polar vertex singularity) at the close-approach descent, and (per spec
- *  §11) this is a single fixed subdivision with no runtime LOD. A future
- *  terrain LOD can subdivide per-tile via the generator's `(face, level,
- *  tileX, tileY)` addressing without touching this build. */
+/** Per-face grid subdivision: 6 × 48² ≈ 13.8k quads total, trivial for one
+ *  hero-body draw. Fixed subdivision, no runtime LOD — a future terrain LOD
+ *  can subdivide per-tile via the generator's (face, level, tileX, tileY)
+ *  addressing without touching this build. */
 const CUBESPHERE_FACE_RESOLUTION = 48;
 
-/** `EarthSurfaceUniforms` is 128 bytes (32 f32): the 80-byte `LitBodyUniforms`
- *  prefix (mat4x4<f32> MVP + body-local sun direction, with `roughnessBase`
- *  filling the sun-dir vec3 tail) followed by `camPosLocal` (vec3), `f0`,
- *  `sunIrradiance`, `cloudShadowStrength`, `cloudShellRadius`, `ambientLight`,
- *  `oceanRoughness`, and the virtual texture's page-table window (`zWin`,
- *  `winX0`, `winY0` — the struct's former trailing pad). Size derives from the
- *  packer's f32 count (× 4 bytes) so this can never drift from the layout it writes.
- *  Written from `packEarthSurfaceUniforms`. */
+/** `EarthSurfaceUniforms` is 128 bytes (32 f32) — see `lib/sphere.wesl` for the
+ *  full byte layout. Size derives from the packer's f32 count so this can
+ *  never drift from the layout it writes. Written from
+ *  `packEarthSurfaceUniforms`. */
 const UNIFORM_BUFFER_SIZE = EARTH_SURFACE_UNIFORM_FLOATS * 4;
 
 /**
- * Per-kind map config — the one place a `TextureKind` is tied to a bind-group
- * binding and a 1×1 placeholder texel. The bind-group layout, the placeholder
- * textures, and the bind group are all derived by iterating these rows, so each
- * binding number exists once rather than being restated at all three sites (and
- * `setMap` needs no per-kind branch at all). Mirrors `texturedBodyRenderer`'s
+ * Per-kind map config: ties each `TextureKind` to a bind-group binding and a
+ * 1×1 placeholder texel. The bind-group layout, placeholder textures, and bind
+ * group are all derived by iterating these rows, so a binding number exists
+ * once rather than at three separate sites. Mirrors `texturedBodyRenderer`'s
  * `KIND_CFG`.
  *
- * The FORMAT is deliberately not a row: it comes from `isLinearTextureKind(kind)`,
- * the same predicate `setMap` uses for the real texture, so a placeholder can
- * never allocate a format the real map contradicts. Bindings 0 (uniform) and 1
- * (sampler) are fixed and hand-written; only the map bindings live here.
+ * FORMAT is not a row: it comes from `isLinearTextureKind(kind)`, the same
+ * predicate `setMap` uses, so a placeholder can never contradict the real map.
  *
- * Typed as a total `Record<TextureKind, …>` rather than a `Partial`: Earth binds
- * every kind in the union, so a new kind is a compile error here until it gets a
- * binding — which is the reminder you want, because the fragment shader needs a
- * matching `@binding` anyway.
+ * Typed as a total `Record<TextureKind, …>`: a new kind is a compile error
+ * here until it gets a binding, which the fragment shader needs anyway.
  */
 const KIND_CFG = {
   // Mid-blue, opaque — a visible-but-plain sphere until the Blue Marble lands.
@@ -227,24 +123,18 @@ const KIND_CFG = {
  *  the layout entries, the placeholder textures, and the bind group. */
 const MAP_KINDS = Object.keys(KIND_CFG) as TextureKind[];
 
-/** The surface virtual texture's three bindings, siblings of `KIND_CFG` rather
- *  than rows in it — see the module header. Each is a single, differently-typed
- *  resource (a uint texture, a float texture, a sampler), so there is nothing to
- *  iterate and no shared row shape to invent; the numbers still live in one place
- *  and must match the fragment's `@binding`s. */
+/** The surface virtual texture's three bindings — siblings of `KIND_CFG` rather
+ *  than rows in it (see the module header): each is a single, differently-typed
+ *  resource, so there is no shared row shape to invent. */
 const TILE_PAGE_TABLE_BINDING = 7;
 const TILE_ATLAS_BINDING = 8;
 const TILE_SAMPLER_BINDING = 9;
 
-/** Concatenate the six whole level-0 cube-sphere faces into one indexed mesh.
- *  Each `cubeSphereMesh` call builds a single face tile, so we sum the six
- *  faces' vertex/index counts, then copy each face's positions/uvs/tangents
- *  end-to-end and re-base its indices by the running vertex count so they
- *  address the merged position array. Sizes aren't known up-front (per-triangle
- *  seam duplication appends a variable handful of vertices), hence the two-pass
- *  measure-then-fill. The tangents (the mesh's unit +u=east direction) ride the
- *  same layout as positions — one f32x3 per vertex — and feed Plan C's
- *  tangent-space normal mapping. */
+/** Concatenate the six whole level-0 cube-sphere faces into one indexed mesh:
+ *  sum vertex/index counts, then copy each face's positions/uvs/tangents
+ *  end-to-end and re-base its indices by the running vertex count. Sizes
+ *  aren't known up-front (per-triangle seam duplication appends a variable
+ *  handful of vertices), hence the two-pass measure-then-fill. */
 function concatCubeSphereFaces(resolution: number): {
   positions: Float32Array;
   uvs: Float32Array;
@@ -307,20 +197,10 @@ export function createEarthRenderer(
 ): EarthRenderer {
   // ── Geometry upload ───────────────────────────────────────────────────────
   //
-  // The positions, uvs, and tangents are uploaded (the untextured star/planet
-  // renderers skip uvs + tangents).
-  // They go into three tightly-packed VBOs — positions (f32x3, stride 12) at
-  // slot 0, uvs (f32x2, stride 8) at slot 1, tangents (f32x3, stride 12) at
-  // slot 2 — matching the three vertex-buffer layouts declared on the pipeline.
-  // Three separate buffers (rather than one interleaved) mirror the mesh's three
-  // output arrays with no repack.
-  //
-  // `cubeSphereMesh` builds ONE face tile per call, so the six whole level-0
-  // faces are concatenated here into a single indexed mesh: positions, uvs, and
-  // tangents are appended end-to-end, and each face's indices are offset by the
-  // running vertex count so they address the concatenated position array. The
-  // tangents (the mesh's unit +u=east direction) feed the fragment's tangent-space
-  // normal mapping (Plan C).
+  // Positions (f32x3 @ slot 0), uvs (f32x2 @ slot 1), and tangents (f32x3 @
+  // slot 2) go into three separate VBOs mirroring the mesh's three output
+  // arrays with no repack. Tangents (the mesh's unit +u=east direction) feed
+  // the fragment's tangent-space normal mapping.
   const mesh = concatCubeSphereFaces(CUBESPHERE_FACE_RESOLUTION);
   const indexCount = mesh.indices.length;
 
@@ -338,9 +218,6 @@ export function createEarthRenderer(
   });
   device.queue.writeBuffer(uvBuffer, 0, mesh.uvs);
 
-  // Tangent VBO (slot 2): the mesh's unit +u=east tangent, one f32x3 per vertex.
-  // The fragment Gram-Schmidt-re-orthonormalizes it per-fragment and builds the
-  // tangent-space basis for the normal-map perturbation.
   const tangentBuffer = device.createBuffer({
     label: 'earth-tangent-vbo',
     size: mesh.tangents.byteLength,
@@ -358,9 +235,7 @@ export function createEarthRenderer(
   // ── Uniform buffer (one Earth-surface record) ─────────────────────────────
   //
   // A single Earth is drawn per frame, so one 128-byte `EarthSurfaceUniforms`
-  // block suffices — no multi-slot dynamic-offset buffer needed. `draw`
-  // writes the packed record (MVP + sunDirLocal + camPosLocal + PBR params) here
-  // before issuing the indexed draw.
+  // block suffices — no multi-slot dynamic-offset buffer needed.
   const uniformBuffer = device.createBuffer({
     label: 'earth-uniform-buffer',
     size: UNIFORM_BUFFER_SIZE,
@@ -369,11 +244,10 @@ export function createEarthRenderer(
 
   // ── Sampler ───────────────────────────────────────────────────────────────
   //
-  // Linear filtering for a smooth surface. `mipmapFilter: 'linear'` trilinearly
-  // blends the mip chain `setMap` builds, so the surface stops shimmering as
-  // Earth shrinks toward the sub-pixel glint handoff. `repeat` on u lets the
-  // duplicated seam column blend across the longitude wrap; `clamp-to-edge` on v
-  // avoids sampling past the poles.
+  // `mipmapFilter: 'linear'` trilinearly blends the mip chain `setMap` builds,
+  // so the surface stops shimmering as Earth shrinks toward the sub-pixel
+  // glint handoff. `repeat` on u lets the duplicated seam column blend across
+  // the longitude wrap; `clamp-to-edge` on v avoids sampling past the poles.
   const sampler = device.createSampler({
     label: 'earth-sampler',
     magFilter: 'linear',
@@ -383,13 +257,11 @@ export function createEarthRenderer(
     addressModeV: 'clamp-to-edge',
   });
 
-  // The tile atlas cannot share the sampler above. `repeat` on u is right for an
-  // equirectangular whole-globe map and wrong for an atlas, where the texel past
-  // a slot's edge belongs to an unrelated tile — hence `clamp-to-edge` on both
-  // axes. And the atlas has a single mip level, so there is no chain to blend:
-  // `mipmapFilter` stays at its 'nearest' default and the fragment samples with
-  // `textureSampleLevel`, which also sidesteps the uniformity requirement that
-  // implicit derivatives would impose across a discontinuous atlas uv.
+  // The tile atlas cannot share the sampler above: `repeat` on u is right for
+  // an equirectangular whole-globe map and wrong for an atlas, where the texel
+  // past a slot's edge belongs to an unrelated tile — hence `clamp-to-edge` on
+  // both axes. The atlas has a single mip level, so `mipmapFilter` stays at its
+  // 'nearest' default; the fragment samples with `textureSampleLevel`.
   const tileSampler = device.createSampler({
     label: 'earth-tile-sampler',
     magFilter: 'linear',
@@ -401,14 +273,10 @@ export function createEarthRenderer(
   // ── The two per-kind texture layers ───────────────────────────────────────
   //
   // `placeholders` holds one 1×1 texture per kind, alive from construction to
-  // teardown. `committed` holds the real map for a kind once `setMap` uploads
-  // one, and `buildBindGroup` prefers it. Keeping the placeholder alive under the
-  // committed map (rather than overwriting a single cell) is what makes arrival
-  // order irrelevant — see the module header.
-  //
-  // Surface/night/clouds are sRGB colour (`rgba8unorm-srgb`, hardware de-gammas
-  // on read); material/normal are linear-packed DATA (`rgba8unorm`, raw numeric
-  // channels). That axis lives entirely in `isLinearTextureKind`.
+  // teardown. `committed` holds the real map once `setMap` uploads one, and
+  // `buildBindGroup` prefers it — keeping the placeholder alive underneath
+  // rather than overwriting a single cell is what makes arrival order
+  // irrelevant (see the module header).
   const placeholders = new Map<TextureKind, GPUTexture>();
   for (const kind of MAP_KINDS) {
     const placeholder = device.createTexture({
@@ -430,16 +298,15 @@ export function createEarthRenderer(
 
   // ── Virtual-texture placeholders ──────────────────────────────────────────
   //
-  // Bindings 7 and 8 must be satisfiable from construction, because the layout is
-  // fixed at pipeline creation while the tile subsystem allocates nothing until
-  // the virtual texture first engages (see the module header).
+  // Bindings 7 and 8 must be satisfiable from construction, because the layout
+  // is fixed at pipeline creation while the tile subsystem allocates nothing
+  // until the virtual texture first engages (see the module header).
   //
-  // The page table is `rgba8uint` — slot column, slot row, level, blend weight,
-  // four integers read with `textureLoad`, never filtered or normalised. All-zero
-  // is the identity case: weight 0 means "sample the base", so a renderer that
-  // never sees a real page table draws exactly the picture it draws today. WebGPU
-  // zero-initialises a fresh texture, but the zeros are written explicitly here
-  // because that value is load-bearing rather than incidental.
+  // The page table is `rgba8uint` — slot column, slot row, level, blend
+  // weight, read with `textureLoad`, never filtered or normalised. All-zero is
+  // the identity: weight 0 means "sample the base". WebGPU zero-initialises a
+  // fresh texture, but the zeros are written explicitly here because that
+  // value is load-bearing rather than incidental.
   const placeholderPageTable = device.createTexture({
     label: 'earth-placeholder-tile-page-table',
     size: [1, 1, 1],
@@ -453,10 +320,10 @@ export function createEarthRenderer(
     [1, 1, 1],
   );
 
-  // Same sRGB format as the real atlas (`earthTileSubsystem`'s `ATLAS_FORMAT`),
-  // since tiles are albedo. Its contents are unreachable while the page table
-  // reads weight 0, so the texel value is arbitrary; transparent black is the
-  // value that also stays inert under any blend that ignores the weight.
+  // Same sRGB format as the real atlas (`earthTileSubsystem`'s `ATLAS_FORMAT`).
+  // Its contents are unreachable while the page table reads weight 0, so the
+  // texel value is arbitrary; transparent black also stays inert under any
+  // blend that ignores the weight.
   const placeholderTileAtlas = device.createTexture({
     label: 'earth-placeholder-tile-atlas',
     size: [1, 1, 1],
@@ -470,30 +337,19 @@ export function createEarthRenderer(
     [1, 1, 1],
   );
 
-  // The tile subsystem's views once it has engaged, `null` before. Views rather
-  // than textures because this renderer does not own either resource and must
+  // The tile subsystem's views once it has engaged, `null` before. Views
+  // rather than textures: this renderer does not own either resource and must
   // never destroy them.
   let tilePageTableView: GPUTextureView | null = null;
   let tileAtlasView: GPUTextureView | null = null;
 
   // ── Bind group layout (explicit, not 'auto') ──────────────────────────────
   //
-  // Binding 0: `EarthSurfaceUniforms`, VERTEX (mvp) + FRAGMENT (sun dir, camera,
-  //            material knobs).
-  // Binding 1: the sampler, fragment stage (shared by all five textures).
-  // Bindings 2–6: the map textures, fragment stage (filterable f32) — albedo,
-  //            material (roughness/ocean-mask), night (Black Marble city
-  //            lights), tangent-space normal (relief), and cloud
-  //            (coverage-in-alpha, sampled by the surface for its ground shadow +
-  //            night occlusion). Derived from `KIND_CFG`, which is where those
-  //            numbers live; they must match the fragment's `@binding`s.
-  // Binding 7: the surface virtual texture's page table, fragment stage.
-  //            `sampleType: 'uint'` — integer data, `textureLoad` only, no sampler
-  //            and no filtering (the same rule that keeps normal maps off `-srgb`:
-  //            packed numbers are not colour).
-  // Binding 8: the surface virtual texture's tile atlas, fragment stage. Albedo,
-  //            so filterable float over an `rgba8unorm-srgb` texture.
-  // Binding 9: the tile sampler, fragment stage — clamp-to-edge, no mip filter.
+  // See the module header for why. Binding 0: uniform, both stages. Binding 1:
+  // shared sampler. Bindings 2–6: the map textures (from `KIND_CFG`). Binding
+  // 7: the page table, `sampleType: 'uint'` (integer data, `textureLoad` only —
+  // the same rule that keeps normal maps off `-srgb`). Binding 8: the tile
+  // atlas, filterable float. Binding 9: the tile sampler.
   const bindGroupLayout = device.createBindGroupLayout({
     label: 'earth-bgl',
     entries: [
@@ -530,10 +386,9 @@ export function createEarthRenderer(
     ],
   });
 
-  // Resolve every map binding as committed-over-placeholder. `setMap` rebuilds
-  // the group against a fresh texture, so it lives in a mutable closure slot. The
-  // two virtual-texture bindings resolve the same way, one layer shallower: the
-  // subsystem's view once it has engaged, otherwise the 1×1 stand-in.
+  // Resolve every map binding as committed-over-placeholder; the two
+  // virtual-texture bindings resolve the same way one layer shallower (the
+  // subsystem's view once engaged, otherwise the 1×1 stand-in).
   function buildBindGroup(): GPUBindGroup {
     return device.createBindGroup({
       label: 'earth-bg',
@@ -559,15 +414,11 @@ export function createEarthRenderer(
   }
   let bindGroup = buildBindGroup();
 
-  // ── Shader modules ────────────────────────────────────────────────────────
-  //
   // `createShaderModuleWithDevLog` prints the linked WGSL + getCompilationInfo
-  // errors in dev so a WESL-import failure is diagnosable rather than a generic
-  // "createShaderModule failed".
+  // errors in dev so a WESL-import failure is diagnosable.
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'earth.vertex');
   const fsModule = createShaderModuleWithDevLog(device, fsCode, 'earth.fragment');
 
-  // ── Render pipeline ───────────────────────────────────────────────────────
   const pipeline = device.createRenderPipeline({
     label: 'earth-pipeline',
     layout: device.createPipelineLayout({
@@ -615,23 +466,12 @@ export function createEarthRenderer(
     },
   });
 
-  // ── setMap ─────────────────────────────────────────────────────────────────
-
   function setMap(kind: TextureKind, bitmap: ImageBitmap): void {
-    // Every `TextureKind` has a `KIND_CFG` row: plan A the `surface` (day albedo)
-    // + `material` (roughness/ocean-mask) maps, plan B the `night` (Black Marble
-    // city-lights) map, plan C the `normal` (tangent-space relief) map, and plan D
-    // the `clouds` (coverage-in-alpha) map the surface samples for its ground
-    // shadow + night occlusion. No kind is inert, so there is no early-return
-    // guard.
-
-    // sRGB colour (surface/night/clouds) samples through `rgba8unorm-srgb` so the
-    // hardware de-gammas on read; linear-packed data (material/normal) samples
-    // through plain `rgba8unorm` so its numeric channels (roughness, ocean mask,
-    // tangent-space normal) are read raw, not gamma-shifted. `isLinearTextureKind`
-    // is the single home for that axis — shared with the fetcher's decode path and
-    // the filename helper — so the sRGB-vs-linear decision can never drift between
-    // the consumers.
+    // sRGB colour (surface/night/clouds) samples through `rgba8unorm-srgb` so
+    // the hardware de-gammas on read; linear-packed data (material/normal)
+    // samples through plain `rgba8unorm` so its numeric channels are read raw.
+    // `isLinearTextureKind` is the single home for that axis, shared with the
+    // fetcher's decode path and the filename helper.
     const format: GPUTextureFormat = isLinearTextureKind(kind) ? 'rgba8unorm' : 'rgba8unorm-srgb';
     const levels = mipLevelCount(bitmap.width, bitmap.height);
     const fresh = device.createTexture({
@@ -639,53 +479,39 @@ export function createEarthRenderer(
       size: [bitmap.width, bitmap.height, 1],
       format,
       mipLevelCount: levels,
-      // RENDER_ATTACHMENT is required: generateMipChain renders each level below
-      // 0 as a downsample pass (see its module header).
+      // RENDER_ATTACHMENT is required: generateMipChain renders each level
+      // below 0 as a downsample pass.
       usage:
         GPUTextureUsage.TEXTURE_BINDING |
         GPUTextureUsage.COPY_DST |
         GPUTextureUsage.RENDER_ATTACHMENT,
     });
-    // flipY:true so texture v=0 is the image's bottom (south) row, matching the
-    // mesh's south-first v — see the module header's orientation note. The
-    // material map is co-registered with the albedo, so it takes the same flip
-    // and the fragment samples both at one uv.
+    // flipY:true so texture v=0 is the image's bottom (south) row, matching
+    // the mesh's south-first v. The material map is co-registered with the
+    // albedo, so it takes the same flip.
     device.queue.copyExternalImageToTexture({ source: bitmap, flipY: true }, { texture: fresh }, [
       bitmap.width,
       bitmap.height,
       1,
     ]);
-    // Fill mip levels 1..N-1 so the mipmapFilter:'linear' sampler has a real
-    // chain to trilinearly blend as Earth shrinks toward the glint handoff.
     generateMipChain(device, fresh);
-    // Retire ONLY a prior committed texture of this kind — never the placeholder,
-    // which stays alive under the committed layer for the whole renderer
-    // lifetime. That is the out-of-order-arrival protection: a late low-resolution
-    // tile lands in `committed` and supersedes its predecessor, and no arrival
-    // order can leave a binding pointing at a destroyed texture.
+    // Retire ONLY a prior committed texture of this kind — never the
+    // placeholder, which stays alive under the committed layer for the whole
+    // renderer lifetime (the out-of-order-arrival protection: no arrival order
+    // can leave a binding pointing at a destroyed texture).
     committed.get(kind)?.destroy();
     committed.set(kind, fresh);
     bindGroup = buildBindGroup();
   }
 
-  // ── setPlaceholderMap ─────────────────────────────────────────────────────
-  //
-  // Upgrade ONE kind's stand-in from its 1×1 to a tile of the shared
-  // low-resolution body atlas. Structurally `setMap`, with two differences that
-  // carry the whole design: the texture lands in `placeholders` rather than
-  // `committed`, so a committed hi-res map shadows it whichever order the two
-  // arrive in; and only `rect` of the source bitmap is copied.
-  //
-  // The atlas is a TRANSPORT format, not a sampling format. Cropping the tile at
-  // upload into an ordinary per-kind texture means no shader change, no layout
-  // change, no UV remap, no seam gutters, and no atlas texture bound anywhere —
-  // the alternative (bind the atlas and offset UVs in the fragment) would push
-  // the packing into WGSL and onto iOS's stricter validation for nothing.
-
+  /**
+   * Upgrade ONE kind's stand-in from its 1×1 to a tile of the shared low-res
+   * body atlas — structurally `setMap`, except the texture lands in
+   * `placeholders` rather than `committed` (so a committed hi-res map shadows
+   * it whichever order the two arrive in), and only `rect` of the source
+   * bitmap is copied.
+   */
   function setPlaceholderMap(kind: TextureKind, atlas: ImageBitmap, rect: AtlasTileRect): void {
-    // Same predicate as `setMap`, deliberately: the tile and the map that later
-    // shadows it must agree on sRGB-vs-linear, or the stand-in would shift gamma
-    // the moment the hi-res texture lands.
     const format: GPUTextureFormat = isLinearTextureKind(kind) ? 'rgba8unorm' : 'rgba8unorm-srgb';
     const levels = mipLevelCount(rect.w, rect.h);
     const fresh = device.createTexture({
@@ -693,67 +519,43 @@ export function createEarthRenderer(
       size: [rect.w, rect.h, 1],
       format,
       mipLevelCount: levels,
-      // As in `setMap`: RENDER_ATTACHMENT is what lets generateMipChain render
-      // each level below 0.
       usage:
         GPUTextureUsage.TEXTURE_BINDING |
         GPUTextureUsage.COPY_DST |
         GPUTextureUsage.RENDER_ATTACHMENT,
     });
-    // COORDINATE CONVENTION — `origin` and `flipY` INTERACT, and this is the one
-    // place a wrong assumption survives every test: the mock device rasterises
-    // nothing, so a mirrored or wrong-row crop is green in CI and visibly wrong
-    // on screen.
-    //
-    // `origin` is the minimum corner of the source sub-region in UNFLIPPED source
-    // coordinates — top-left origin, y increasing DOWNWARD, unaffected by `flipY`
-    // (WebGPU §GPUCopyExternalImageSourceInfo: "The origin option is still
-    // relative to the top-left corner of the source image, increasing downward").
-    // That is exactly the space `atlasTileRect` computes in. `flipY: true` is then
-    // applied to the SELECTED REGION alone — the region's bottom row becomes the
-    // destination's first row — so the tile lands with precisely the orientation a
-    // standalone `setMap` upload of that same image would have: texture v=0 is the
-    // tile's south row, matching the mesh's south-first v.
-    //
-    // Rejected: cropping a sub-bitmap with `createImageBitmap(atlas, x, y, w, h)`.
-    // It sidesteps `origin` entirely, but it is asynchronous — this entry point
-    // would have to return a promise, or the crop would move out to its caller —
-    // all to avoid an interaction the spec pins normatively.
+    // `origin` and `flipY` INTERACT: `origin` is the top-left corner of the
+    // source sub-region in UNFLIPPED source coordinates (unaffected by
+    // `flipY` — WebGPU §GPUCopyExternalImageSourceInfo), then `flipY: true`
+    // applies to the SELECTED REGION alone, so the tile lands with the same
+    // orientation a standalone `setMap` upload of that image would have. The
+    // mock device rasterises nothing, so a wrong-row crop here is green in CI
+    // and visibly wrong on screen — this is the one interaction no test catches.
     device.queue.copyExternalImageToTexture(
       { source: atlas, origin: { x: rect.x, y: rect.y }, flipY: true },
       { texture: fresh },
       [rect.w, rect.h, 1],
     );
     generateMipChain(device, fresh);
-    // Retire ONLY the prior PLACEHOLDER for this kind — the construction-time 1×1,
-    // or an earlier tile — and never the committed map. Mirror image of `setMap`'s
-    // rule above; the pair is what makes arrival order a non-question here, where
-    // there is no `clearMap` and nothing is ever evicted.
+    // Retire ONLY the prior PLACEHOLDER for this kind, never the committed map
+    // — mirror image of `setMap`'s rule; there is no `clearMap` and nothing is
+    // ever evicted.
     placeholders.get(kind)?.destroy();
     placeholders.set(kind, fresh);
     bindGroup = buildBindGroup();
   }
 
-  // ── setTileResources ──────────────────────────────────────────────────────
-  //
-  // Point bindings 7 and 8 at the tile subsystem's page table and atlas in place
-  // of the 1×1 stand-ins, and rebuild the bind group — structurally `setMap`'s
-  // tail, minus the ownership: these two views belong to the subsystem that
-  // allocated them, so nothing is destroyed here and nothing is destroyed for
-  // them at teardown.
-  //
-  // CALL ON THE TRANSITION, NOT PER FRAME. `getTileResources()` is stable by
-  // identity once it stops returning `null`, so the caller has exactly one moment
-  // to call this; rebuilding a bind group every frame would be pure waste
-  // producing a group identical to the last one.
-
+  /**
+   * Point bindings 7 and 8 at the tile subsystem's page table and atlas in
+   * place of the 1×1 stand-ins, and rebuild the bind group. Call on the
+   * transition, not per frame: `getTileResources()` is stable by identity once
+   * it stops returning `null`, so rebuilding every frame would be pure waste.
+   */
   function setTileResources(pageTable: GPUTextureView, atlas: GPUTextureView): void {
     tilePageTableView = pageTable;
     tileAtlasView = atlas;
     bindGroup = buildBindGroup();
   }
-
-  // ── draw ────────────────────────────────────────────────────────────────────
 
   function draw(pass: GPURenderPassEncoder, uniforms: Float32Array): void {
     device.queue.writeBuffer(uniformBuffer, 0, uniforms);
@@ -766,25 +568,22 @@ export function createEarthRenderer(
     pass.drawIndexed(indexCount);
   }
 
-  // ── destroy ──────────────────────────────────────────────────────────────
-
   function destroy(): void {
     positionBuffer.destroy();
     uvBuffer.destroy();
     tangentBuffer.destroy();
     indexBuffer.destroy();
     uniformBuffer.destroy();
-    // Both layers: the committed maps and the placeholders that outlived them.
-    // Neither setter frees the other's layer, so teardown is the only place both
-    // are released — and the placeholders are worth clearing too now that one of
-    // them can be a mipped atlas tile rather than a 1×1.
+    // Both layers: the committed maps and the placeholders that outlived them
+    // — neither setter frees the other's layer, so teardown is the only place
+    // both are released.
     for (const texture of committed.values()) texture.destroy();
     for (const placeholder of placeholders.values()) placeholder.destroy();
     committed.clear();
     placeholders.clear();
     // The virtual texture's own stand-ins. Their real counterparts are NOT
-    // released here: `earthTileSubsystem` allocated the page table and the atlas
-    // and destroys them on its own teardown.
+    // released here: `earthTileSubsystem` allocated the page table and the
+    // atlas and destroys them on its own teardown.
     placeholderPageTable.destroy();
     placeholderTileAtlas.destroy();
     tilePageTableView = null;

@@ -2,56 +2,31 @@
  * bmngQuadrantSource — an `EarthImagerySource` over Blue Marble Next
  * Generation's eight-file quadrant tiling.
  *
- * NASA publishes each BMNG month twice over: as one 21600 x 10800 whole-globe
- * equirect, and as eight 21600 x 21600 quadrants that composite to
- * 86400 x 43200 — about 464 m per texel, four ladder levels deeper than the
- * whole-globe file (z7 against z5). Same imagery, same projection, same
- * grading; the only difference is that the deep version arrives cut into eight
- * pieces, and reassembling it on the fly is the whole of what this module does.
- *
- * ## The quadrant grid
+ * NASA publishes each BMNG month twice: one 21600x10800 whole-globe equirect,
+ * and eight 21600x21600 quadrants that composite to 86400x43200 — about
+ * 464 m/texel, four ladder levels deeper than the whole-globe file (z7
+ * against z5). Same imagery, projection and grading; reassembling the
+ * eight-piece version on the fly is the whole of what this module does.
  *
  * Column letters `A B C D` run west to east in 90-degree steps from longitude
- * -180; row digits `1` and `2` are the northern and southern hemispheres. So
- * `A1` is lon [-180, -90] x lat [0, 90] and `D2` is lon [90, 180] x lat
- * [-90, 0]. Row 0 of each file is that file's own NORTH edge, exactly as in the
- * whole-globe equirect, so the north-first raster the tile contract asks for is
- * again a plain crop with no flip anywhere.
+ * -180; row digits `1`/`2` are the northern/southern hemispheres (`A1` = lon
+ * [-180,-90] x lat [0,90], `D2` = lon [90,180] x lat [-90,0]). Row 0 of each
+ * file is its own NORTH edge, so the tile contract's north-first raster is a
+ * plain crop, no flip. Quadrant boundaries sit at multiples of 90 degrees and
+ * the tile grid always divides evenly into that, so every tile lies wholly
+ * inside one quadrant; `readBox` throws rather than silently reading whichever
+ * quadrant a spanning box's west edge landed in.
  *
- * ## No tile can straddle a quadrant, and that is asserted rather than assumed
+ * ## The band cache
  *
- * Quadrant boundaries sit at multiples of 90 degrees, and from z2 upward the
- * tile grid divides 360 into steps that themselves divide 90 (90, 45, 22.5, …),
- * so every tile lies wholly inside one quadrant. That is why this source reads
- * one file per box and never stitches across two. `readBox` throws on a box
- * that spans a boundary instead of quietly reading whichever quadrant its west
- * edge landed in: a partially-wrong crop is a wrong-but-plausible globe, which
- * is the one failure this pipeline cannot detect from its own output.
- *
- * ## Why a band cache, and why it is keyed on the source row range
- *
- * `sharp(file).extract(...)` on a baseline JPEG re-decodes scanlines from row 0
- * on every call, so a naive per-tile crop costs what its region's DEPTH in the
- * file costs: measured on these files, 0.05 s at the top of a quadrant rising to
- * 1.51 s at the bottom, averaging 0.78 s. That is 1h47m for z7's 8192 tiles —
- * correct, and unusable. Extracting a whole tile-row BAND instead (`left: 0`,
- * the quadrant's full width, the tile row's height) costs 0.55 s and 42 MB
- * resident, after which each tile is a sub-crop of memory at about 21 ms. Same
- * pixels, ~5 min for the level.
- *
- * The cache key is `(quadrant, top, height)` of the computed source rect —
- * precisely what consecutive tiles of one tile row share while `left` walks
- * east. Keying on the rect rather than on `(z, y)` is what keeps the level
- * ladder out of this file: the source still answers one question about one box
- * and knows nothing about which level is being baked, or that levels exist.
- *
- * Four bands resident, least-recently-used evicted: one sweep of a tile row
- * crosses all four quadrant columns and then never returns to that row, so four
- * is exactly the working set and the entry a fifth insert drops is the one the
- * sweep has finished with. At z7 that is 4 x 43 MB. A band's height scales with
- * the tile edge measured in source pixels, so a much SHALLOWER deepest level
- * (which is to say a much smaller quadrant set) holds proportionally fatter
- * bands — the point at which a byte budget would have to replace the count.
+ * `sharp(file).extract(...)` on a baseline JPEG re-decodes scanlines from row
+ * 0 every call, so a naive per-tile crop costs its region's DEPTH in the
+ * file: 1h47m for z7's 8192 tiles, measured. Caching a whole tile-row BAND
+ * (full quadrant width) instead brings that to ~5 min, each tile then a
+ * sub-crop of memory. The key, `(quadrant, top, height)` of the source rect,
+ * is what consecutive tiles of one row share — keeping the level ladder out
+ * of this file entirely. Four bands resident, LRU-evicted: one sweep crosses
+ * all four quadrant columns and never returns, so four is the working set.
  */
 
 import { existsSync } from 'node:fs';
@@ -74,26 +49,22 @@ const QUADRANT_ROWS = ['1', '2'] as const;
 /** One of the eight quadrant names: column letter then row digit. */
 export type BmngQuadrant = `${(typeof QUADRANT_COLUMNS)[number]}${(typeof QUADRANT_ROWS)[number]}`;
 
-/** Every quadrant name, as the product of the two axes rather than a hand-written
- *  list, so the grid is stated exactly once. */
+/** Every quadrant name, as the product of the two axes rather than a
+ *  hand-written list, so the grid is stated exactly once. */
 const QUADRANT_NAMES: readonly BmngQuadrant[] = QUADRANT_COLUMNS.flatMap((column) =>
   QUADRANT_ROWS.map((row) => `${column}${row}` as const),
 );
 
-/**
- * Where a box landed: the quadrant that contains it, plus that quadrant's own
- * north-west corner in degrees — the origin every source-pixel offset inside the
- * file is measured from.
- */
+/** Where a box landed: the quadrant, plus its own north-west corner in
+ *  degrees — the origin every source-pixel offset is measured from. */
 type QuadrantPlacement = {
   readonly name: BmngQuadrant;
   readonly westDeg: number;
   readonly northDeg: number;
 };
 
-/** One decoded tile-row band: a full-quadrant-width strip of raw pixels.
- *  The channel count is carried from the decode rather than assumed, because
- *  it is what the sub-crop has to reinterpret the buffer with. */
+/** One decoded tile-row band. Channel count is carried from the decode
+ *  rather than assumed, since the sub-crop has to reinterpret the buffer. */
 type Band = {
   readonly data: Buffer;
   readonly widthPx: number;
@@ -104,16 +75,12 @@ type Band = {
 const BAND_CACHE_SIZE = 4;
 
 /**
- * Index of the one 90-degree band that both edges of a span fall in, or `null`
- * when the span crosses a boundary or leaves the grid.
- *
- * `nearDeg` and `farDeg` are measured from the axis origin — east from longitude
- * -180, south from latitude +90 — which is what lets one function answer both
- * axes instead of two near-copies that can disagree.
- *
- * The far edge is `ceil - 1` rather than `floor`: a span ENDING on a boundary
- * ends in the band it came from, not in the next one. Get that backwards and
- * every tile touching a seam reads the wrong file.
+ * Index of the one 90-degree band both edges of a span fall in, or `null` if
+ * the span crosses a boundary or leaves the grid. `nearDeg`/`farDeg` are
+ * measured from the axis origin (east from -180, south from +90) so one
+ * function answers both axes. The far edge is `ceil - 1`, not `floor`: a span
+ * ENDING on a boundary ends in the band it came from — get that backwards
+ * and every tile touching a seam reads the wrong file.
  */
 function soleBandIndex(nearDeg: number, farDeg: number, bands: number): number | null {
   const first = Math.floor(nearDeg / QUADRANT_SPAN_DEG);
@@ -122,9 +89,9 @@ function soleBandIndex(nearDeg: number, farDeg: number, bands: number): number |
   return first;
 }
 
-/** The quadrant containing `box`, or a throw naming the box if it spans two of
- *  them (or falls off the grid, which for a globally-covering source is a caller
- *  bug and not a no-coverage answer). */
+/** The quadrant containing `box`, or a throw naming it if it spans two (or
+ *  falls off the grid — a caller bug for a globally-covering source, not a
+ *  no-coverage answer). */
 function quadrantForBox(box: LonLatBox): QuadrantPlacement {
   const column = soleBandIndex(box.west + 180, box.east + 180, QUADRANT_COLUMNS.length);
   const row = soleBandIndex(90 - box.north, 90 - box.south, QUADRANT_ROWS.length);
@@ -146,20 +113,13 @@ export async function bmngQuadrantSource(source: {
   readonly id: string;
   /** Verbatim attribution the licence requires. */
   readonly attribution: string;
-  /**
-   * Absolute path per quadrant. Paths rather than registry keys because the
-   * eight files are one raster whose VINTAGE is the caller's choice, the same
-   * reason `equirectFileSource` takes its file as a parameter; keying the record
-   * on the quadrant union then makes a forgotten file a compile error instead of
-   * a hole in the globe.
-   */
+  /** Absolute path per quadrant — paths rather than registry keys because the
+   *  eight files are one raster whose VINTAGE is the caller's choice, same as
+   *  `equirectFileSource`. Keying on the quadrant union makes a forgotten file
+   *  a compile error rather than a hole in the globe. */
   readonly quadrantPaths: Readonly<Record<BmngQuadrant, string>>;
-  /**
-   * Called once per real band decode, which is to say once per cache MISS. The
-   * band cache is the difference between a five-minute deepest level and a
-   * two-hour one, so whether it is hitting is worth being observable rather
-   * than inferred from wall-clock.
-   */
+  /** Called once per cache MISS — the band cache is the difference between a
+   *  5-minute deepest level and a 2-hour one, worth being observable. */
   readonly onBandDecode?: (quadrant: BmngQuadrant, topPx: number) => void;
 }): Promise<EarthImagerySource> {
   const missing = QUADRANT_NAMES.filter((name) => !existsSync(source.quadrantPaths[name]));
@@ -175,9 +135,8 @@ export async function bmngQuadrantSource(source: {
       const meta = await sharp(source.quadrantPaths[name], { limitInputPixels: false }).metadata();
       const width = meta.width ?? 0;
       const height = meta.height ?? 0;
-      // A quadrant spans 90 degrees of longitude by 90 of latitude, so on a
-      // plate-carree grid it is square. Anything else is not this tiling, and
-      // every box would silently sample the wrong ground.
+      // A plate-carree quadrant spanning 90deg x 90deg is square; anything
+      // else isn't this tiling and would sample the wrong ground.
       if (width === 0 || width !== height) {
         throw new Error(
           `bmngQuadrantSource: quadrant ${name} is ${width}x${height}, not a square 90-degree plate-carree quadrant`,
@@ -195,9 +154,8 @@ export async function bmngQuadrantSource(source: {
     );
   }
 
-  /** Insertion-ordered, so the first key is always the least recently used.
-   *  Promises rather than resolved bands: two overlapping calls for one band then
-   *  share the single decode instead of racing to do it twice. */
+  // Insertion-ordered Map (first key = LRU). Promises rather than resolved
+  // bands, so overlapping calls for one band share the single decode.
   const bands = new Map<string, Promise<Band>>();
 
   async function decodeBand(
@@ -212,10 +170,8 @@ export async function bmngQuadrantSource(source: {
       .extract({ left: 0, top: topPx, width: quadrantEdgePx, height: heightPx })
       .raw()
       .toBuffer({ resolveWithObject: true });
-    // Colour imagery decodes to 3 or 4 channels. A single-channel (greyscale)
-    // band would survive every step below and then `ensureAlpha` into a
-    // TWO-channel raster, breaking the one hard promise `readBox` makes about
-    // its length — so it fails here instead, where the cause is legible.
+    // A greyscale (1-channel) band would survive silently and `ensureAlpha`
+    // into a 2-channel raster below, breaking readBox's RGBA promise.
     if (info.channels !== 3 && info.channels !== 4) {
       throw new Error(
         `bmngQuadrantSource: quadrant ${placement.name} decoded to ${info.channels} channels; this source expects RGB or RGBA imagery`,
@@ -228,8 +184,7 @@ export async function bmngQuadrantSource(source: {
     const key = `${placement.name}:${topPx}:${heightPx}`;
     const hit = bands.get(key);
     if (hit !== undefined) {
-      // Re-inserting is the LRU touch: Map iteration is insertion-ordered, so
-      // moving a hit to the end keeps the eviction candidate at the front.
+      // Re-insert to move this hit to the end, keeping the LRU at the front.
       bands.delete(key);
       bands.set(key, hit);
       return hit;
@@ -237,8 +192,8 @@ export async function bmngQuadrantSource(source: {
     source.onBandDecode?.(placement.name, topPx);
     const pending = decodeBand(placement, topPx, heightPx);
     bands.set(key, pending);
-    // A rejected decode must not stay cached, or one transient read error would
-    // be replayed for every remaining tile of that band.
+    // Uncache on rejection, or one transient read error replays for every
+    // remaining tile of that band.
     void pending.catch(() => {
       if (bands.get(key) === pending) bands.delete(key);
     });
@@ -254,10 +209,8 @@ export async function bmngQuadrantSource(source: {
     async readBox(box, widthPx, heightPx) {
       const placement = quadrantForBox(box);
       const pxPerDeg = quadrantEdgePx / QUADRANT_SPAN_DEG;
-      // Offsets are measured from the quadrant's own north-west corner, and row 0
-      // of the file is its north edge — so the box's NORTH edge maps to the
-      // smaller pixel row and the raster comes back north-first, which is what
-      // the tile contract asks for.
+      // Offsets are measured from the quadrant's own north-west corner; row 0
+      // is that corner, so the box's north edge lands at the smaller row.
       const left = Math.round((box.west - placement.westDeg) * pxPerDeg);
       const right = Math.round((box.east - placement.westDeg) * pxPerDeg);
       const top = Math.round((placement.northDeg - box.north) * pxPerDeg);
@@ -275,15 +228,11 @@ export async function bmngQuadrantSource(source: {
             width: Math.min(right, quadrantEdgePx) - left,
             height: band.heightPx,
           })
-          // `fit: 'fill'` for the same reason as the whole-globe source: the caller
-          // asks for a square tile out of a box that is only square at the equator,
-          // and the plate-carree stretch toward the poles is the projection rather
-          // than an aspect error to preserve.
+          // `fit: 'fill'`: the plate-carree stretch toward the poles is the
+          // projection, not an aspect error to preserve (see equirectFileSource).
           .resize(widthPx, heightPx, { fit: 'fill' })
-          // Blue Marble covers the whole globe including bathymetry, so alpha is
-          // 255 everywhere and this source never declines a box — a `null` from
-          // here would be a bug, not a no-data answer. The channel is still
-          // returned, because the runtime's blend is written against its presence.
+          // Blue Marble has no no-data, so this source never declines a box —
+          // ensureAlpha still returns the channel per the readBox contract.
           .ensureAlpha()
           .raw()
           .toBuffer()

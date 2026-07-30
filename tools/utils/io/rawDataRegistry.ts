@@ -601,12 +601,10 @@ export const RAW_DATA = {
 
   // ─── BMNG Earth imagery — one vintage, two publications ───────────────
   //
-  // Every path and URL below takes its month from `BMNG_VINTAGE`, because the
-  // whole-globe equirect (Earth's base texture) and the eight quadrants (the
-  // surface tile pyramid) have to be the SAME month: the tile layer falls back
-  // to the base outside the baked window, so a seasonal mismatch would draw a
-  // snow line along the tile frontier. Reading the month from one constant makes
-  // that agreement structural instead of a rule to remember.
+  // Every path/URL below takes its month from `BMNG_VINTAGE`: the whole-globe
+  // equirect and the eight quadrants have to be the SAME month, since the
+  // tile layer falls back to the base outside the baked window (see
+  // `BMNG_VINTAGE` for why).
 
   'textures.nasaBmng': {
     path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x10800.jpg`,
@@ -628,13 +626,10 @@ export const RAW_DATA = {
     readme: 'textures.readme',
   },
 
-  // The eight 21600x21600 quadrants composite to 86400x43200, about 464 m per
-  // texel and four ladder levels deeper than the equirect (z7 against z5). Only
-  // `build-earth-tiles` reads their pixels (`tools/textures/bmngQuadrantSource.ts`,
-  // one file per tile, never stitching across two), but they ride the same
-  // `fetch-textures` pull as everything else so the 421 MB is obtainable by
-  // command rather than by hand. Column letters A-D run west to east from
-  // longitude -180; row digits 1-2 are the northern and southern hemispheres.
+  // The eight 21600x21600 quadrants composite to 86400x43200, about 464 m/texel
+  // and four ladder levels deeper than the equirect (z7 against z5). Only
+  // `build-earth-tiles` reads their pixels; they ride the same `fetch-textures`
+  // pull as everything else so the 421 MB is obtainable by command, not by hand.
   // `BMNG_QUADRANT_KEYS` is the one enumeration of the set.
 
   'textures.nasaBmngQuadrantA1': {

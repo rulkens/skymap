@@ -1,143 +1,67 @@
 // earth/fragment.wesl — fragment stage for the true-scale textured Earth.
 //
 // Samples an equirectangular Blue Marble albedo at the mesh uv and a co-registered
-// LINEAR material map (roughness in .r, ocean mask in .g), then shades it with the
-// shared physically-based microfacet core ('lib/pbr.wesl' 'pbrDirect') under the
-// sun-relative light direction so the terminator tracks Earth's real position
-// relative to the Sun AND the smooth ocean returns a tight specular glint. The lit
-// colour goes straight into the rgba16float foreground colour target. Before the
-// real bitmaps arrive the bound textures are 1×1 placeholders -- mid-blue albedo
-// and an all-land material (R=1 roughness, G=0 ocean mask) -- so this same path
-// draws a plain lit, glint-free blue sphere: visible-but-plain rather than black
-// or absent (see 'earthRenderer.ts' header).
-//
-// ## Composition (spec §5 + §7.2/§7.3)
+// LINEAR material map (roughness in .r, ocean mask in .g), shaded by the shared
+// 'lib/pbr.wesl' 'pbrDirect' microfacet core under the sun-relative light
+// direction. Before the real bitmaps arrive the bound textures are 1x1
+// placeholders (mid-blue albedo, all-land material), so this same path draws a
+// plain lit, glint-free blue sphere rather than black or absent (see
+// 'earthRenderer.ts' header). Design background:
+// docs/superpowers/plans/completed/2026-07-29-earth-surface-virtual-texture-a-to-d.md.
 //
 //   roughness = mix(clamp(mat.r * roughnessBase, MIN_ROUGHNESS, 1), u.oceanRoughness, mat.g)
-//   direct    = pbrDirect(n, v, l, albedo, roughness, f0)
-//   direct   *= (1 - cloudShadow.a * cloudShadowStrength)  // ground shadow, §7.2
+//   direct    = pbrDirect(n, v, l, albedo, roughness, f0) * (1 - cloudShadow.a * cloudShadowStrength)
 //   colour    = direct * sunIrradiance + ambientLight * albedo
-//   emissive  = nightLights(nightColour, NoL, cloud.a)     // ADDED, not lit; §7.3
+//   emissive  = nightLights(nightColour, NoL, cloud.a)   // added, not lit
 //   return      colour + emissive
 //
-// The Black Marble night map contributes an EMISSIVE city-lights term added on
-// top of the lit result -- 'lib/nightLights.wesl' owns the terminator fade, so
-// the fragment passes the raw Lambert 'NoL' straight in.
+// The cloud shell (binding 6) couples back onto the surface in two places, both
+// sampling the same sRGB cloud map: a ground-shadow ray toward the sun dims the
+// DIRECT term (not the ambient floor, so the shadow self-limits at the
+// terminator) where it exits the shell; and the fragment's own cloud alpha dims
+// 'nightLights' city-lights under overcast. The 1x1 transparent placeholder
+// reports alpha 0 before the bitmap lands, so both couplings are inert.
 //
-// ## Cloud coupling (binding 6, spec §7.2/§7.3)
+// Earth reads a per-draw 'u.ambientLight' uniform rather than the shared
+// 'AMBIENT' const other lit bodies use, so earthshine/moonlight stays
+// user-tunable; it seeds from the same 0.08 the const holds.
 //
-// The cloud shell (plan D) couples back onto the surface in two places, both
-// sampling the SAME sRGB cloud map (alpha = coverage):
+// ## Normal: renormalize before the dot
 //
-//   1. Ground shadow -- a ray from the surface point toward the sun samples cloud
-//      coverage where it exits the shell (radius 'u.cloudShellRadius'), and dims
-//      the DIRECT sun term by 'coverage * u.cloudShadowStrength'. Multiplying the
-//      direct term (not the ambient floor) means the shadow self-limits at the
-//      terminator, where 'direct' already tends to zero. See the inline block.
-//   2. Night occlusion -- cloud coverage at the fragment's OWN uv is passed as
-//      'cloudAlpha' to 'nightLights', dimming city lights under overcast.
+// 'normalLocal' arrives interpolated, which shortens it -- normalize before the
+// Lambert dot or the terminator bands. The geometric normal is then perturbed by
+// the tangent-space normal map (binding 5) via 'lib/normalMap.wesl' 'perturbNormal';
+// its bitangent 'cross(Ng, Tn)' points +v=north, matching 'bakeNormalMap.ts's
+// row/sign convention.
 //
-// Before the cloud bitmap lands the 1x1 transparent placeholder reports alpha 0,
-// so both couplings are inert (no shadow, no extra occlusion) -- branch-free.
+// ## uv orientation
 //
-// The material's ocean mask 'mat.g' selects the smooth open-water roughness
-// ('u.oceanRoughness', the user-tunable Earth-scoped override of the
-// 'OCEAN_ROUGHNESS' const in pbr.wesl) over the land micro-roughness, so the two
-// surfaces get one continuous roughness field. 'pbrDirect' is the DIRECT
-// (sun-lit) term only; the ambient floor 'u.ambientLight' is added here so the
-// night hemisphere never dissolves at the terminator. Unlike every OTHER lit
-// body -- which reads the shared 'AMBIENT' const in 'lib/bodyLighting.wesl' --
-// Earth reads a per-draw uniform so the value is user-tunable (earthshine /
-// moonlight varies); it seeds from the same 0.08 the const holds, so the default
-// look is unchanged. The const stays the floor for the flat + textured planets.
-// 'sunIrradiance' scales the direct term and is set (in 'earthSurfaceParams.ts')
-// to roughly preserve the previous 'litShade' brightness.
-//
-// ## Renormalize the interpolated normal + normal mapping
-//
-// 'normalLocal' arrives interpolated across the triangle face. Linear
-// interpolation of two unit vectors yields a SHORTER vector between them, so a
-// raw dot with the sun direction would under-report the Lambert term mid-face
-// and band the terminator. 'normalize' restores unit length before the dot --
-// the standard per-fragment normal fix for smooth-shaded spheres.
-//
-// The geometric normal 'Ng' is then perturbed by the tangent-space normal map
-// (binding 5, LINEAR RG -- 'bakeNormalMap.ts' stores nx along +u=east in R and
-// ny along +v=north in G; nz is always positive and reconstructed). The shared
-// 'lib/normalMap.wesl' 'perturbNormal' owns the TBN maths: it takes 'Ng', the RAW
-// interpolated +u (east) tangent, and the encoded RG, then Gram-Schmidt-
-// re-orthonormalizes the tangent against 'Ng' (interpolation skews it off
-// perpendicular) and rotates the tangent-space vector into local space. Its
-// bitangent 'cross(Ng, Tn)' points +v = NORTH -- matching the bake's G axis (see
-// bakeNormalMap's row/sign section, the shared contract). The perturbed 'n' feeds
-// 'pbrDirect' in place of 'Ng' so relief catches the sun. The flat-normal
-// placeholder encodes (0,0,1), so before the real map arrives 'perturbNormal'
-// returns 'Ng' unchanged and the shading is identical to the un-perturbed path.
-//
-// ## uv / v-orientation
-//
-// 'cubeSphereMesh' emits v south-to-north: v=0 at the south pole, v=1 at the
-// north pole. A standard equirectangular Blue Marble image stores the north
-// pole in its TOP row. If that bitmap were uploaded unflipped, texture-space
-// v=0 would land on the north pole and the globe would render upside-down
-// against the mesh's south-first v.
-//
-// The renderer therefore uploads the bitmap with 'flipY: true', so texture v=0
-// is the image's BOTTOM row (south) -- which matches the mesh's v=0 south. No
-// v-remap is needed here.
-//
-// ## uv / u-orientation (handedness raw; origin baked in the mesh)
-//
-// HANDEDNESS reads correctly with no flip. 'cubeSphereMesh' places longitude on
-// the +Y axis (equatorial J2000 frame): a vertex at world position
-// cosLat*cosLon (x), cosLat*sinLon (y), sinLat (z), with the pole on +Z. Walk
-// two equatorial vertices to see where increasing u goes for a viewer OUTSIDE
-// the sphere (the camera side, back-face culled):
-//
-//   u=0.50 -> lon=0    -> dir (+1, 0, 0)  = +X   (prime meridian at the map CENTRE)
-//   u=0.75 -> lon=pi/2 -> dir ( 0,+1, 0)  = +Y
-//
-// A camera facing the +X vertex from outside (eye on +X, looking toward the
-// origin, up=+Z the north pole) has screen-right = +Y: right x up = back, and
-// (+Y) x (+Z) = +X = -forward. So the higher-u vertex at +Y lands on the viewer's
-// RIGHT. Increasing u (increasing east longitude) therefore moves the surface
-// point toward screen-right -- CCW seen from outside, matching how equirectangular
-// world maps run east left->right. The ORIGIN is the other half: the mesh bakes
-// u = lon/2pi + 0.5 so the prime meridian (lon 0, the local +x the IAU rotation
-// aims Earth's Greenwich at) samples the map centre u=0.5 -- where Blue Marble
-// paints geographic longitude 0. A raw lon/2pi (prime meridian at u=0) would land
-// the map's antimeridian on +x and rotate every continent 180deg about the pole,
-// reading the day/night terminator inverted against a live clock. So the fragment
-// samples in.uv straight (the mesh carries both the handedness and the +0.5).
+// 'cubeSphereMesh' emits v south-to-north; the renderer uploads Blue Marble with
+// 'flipY: true' so texture v=0 matches the mesh's south-first v -- no remap here.
+// u needs no remap either: longitude rides +Y in the mesh's J2000 frame, which
+// winds CCW as seen from outside and matches an equirectangular map's
+// east-increases-left-to-right convention. The mesh bakes u = lon/2pi + 0.5, so
+// the prime meridian samples the map's centre u=0.5 where Blue Marble paints
+// longitude 0 -- a raw lon/2pi would rotate every continent 180deg about the pole.
 //
 // ## The surface virtual texture (bindings 7-9)
 //
-// Above the whole-globe albedo sits a third texture layer this fragment blends
-// on top of it: a page table (binding 7) saying which atlas slot, if any, covers
-// the cell the fragment's uv falls in, and the tile atlas (binding 8) holding
-// those slots. Everything derives from 'in.uv' -- no new varying, because an
-// extra @location cost this project 1.5 ms once.
-//
-// The whole layer is strictly ADDITIVE, and that is a property of the data
-// rather than of a branch here. The page table's A channel is the blend weight,
-// A = 0 means 'no tile, sample the base', and every degradation path -- no
-// manifest, no atlas, a 404 on every tile, ground beyond the window, the 1x1
-// all-zero placeholder page table bound before the subsystem ever engages --
-// arrives as A = 0. So the failure picture is exactly the picture Earth draws
-// without the feature, and there is no hole state to design around.
-//
-// 'earthTileSubsystem.ts' owns the residency, 'buildEarthPageTable.ts' the
-// projection this reads, and 'planEarthTiles.ts' the window. The window is
-// enforced THERE, not here: a tile outside it is never requested, never
-// resident, and never needs representing.
+// A page table (binding 7) names, per cell of 'in.uv', which atlas slot (binding
+// 8) covers it. Derived from 'in.uv' alone -- no new varying, because an extra
+// @location cost this project 1.5 ms once. The whole layer is strictly ADDITIVE
+// as a property of the DATA, not a branch: the page table's A channel is the
+// blend weight, and every degradation path (no manifest, no atlas, a 404 on
+// every tile, ground beyond the window, the 1x1 all-zero placeholder before the
+// subsystem engages) arrives as A = 0, so there is no hole state to design
+// around. 'earthTileSubsystem.ts' owns residency, 'buildEarthPageTable.ts' the
+// projection this reads, and 'planEarthTiles.ts' the window (enforced there, not
+// here: an out-of-window tile is never requested).
 //
 // ## Blend target
 //
-// Output @location(0) writes to the rgba16float foreground colour target. The
-// foreground composite pass uses straight-alpha OVER blending, so we emit
-// STRAIGHT colour (not premultiplied) with alpha=1 for fully opaque fragments.
-// The texture is 'rgba8unorm-srgb', so the hardware linearises the sample on
-// read -- the value handed to us is already linear, correct for the HDR target.
+// Output @location(0) writes 'rgba16float'; straight-alpha OVER blending means we
+// emit STRAIGHT colour with alpha=1. The albedo/night textures are
+// 'rgba8unorm-srgb' (hardware linearises on read); material/normal are LINEAR.
 
 import package::bodies::earth::io::VSOut;
 import package::lib::sphere::EarthSurfaceUniforms;
@@ -165,18 +89,16 @@ import package::lib::math::TAU;
 @group(0) @binding(8) var tileAtlas: texture_2d<f32>;
 @group(0) @binding(9) var tileSampler: sampler;
 
-// Hand mirrors of 'data/bodies/earthTileParams.ts'. '?static' WESL linking is
-// pure build-time text linking with NO value injection, so a test -- not the
-// compiler -- is what keeps these from drifting from their TS twins
-// ('tests/services/gpu/shaders/earthTileConstants.parity.test.ts').
+// Hand mirrors of 'data/bodies/earthTileParams.ts'; a test, not the compiler,
+// keeps these from drifting from their TS twins ('?static' linking has no value
+// injection) -- see 'earthTileConstants.parity.test.ts'.
 const EARTH_TILE_WINDOW_SIDE: u32 = 128u;
 const EARTH_TILE_PX: f32 = 512.0;
 const EARTH_TILE_ATLAS_SIDE: f32 = 4096.0;
 
-// Derived from the three above rather than written out, so the atlas geometry
-// has one home on this side too. 'TILE_SLOT_SCALE' turns slot-relative
-// coordinates into atlas uv; 'TILE_HALF_TEXEL' is the inset that keeps a
-// bilinear tap at a slot edge inside its own tile.
+// Derived rather than written out, so the atlas geometry has one home here too.
+// 'TILE_SLOT_SCALE' turns slot-relative coordinates into atlas uv;
+// 'TILE_HALF_TEXEL' keeps a bilinear tap at a slot edge inside its own tile.
 const TILE_SLOT_SCALE: f32 = EARTH_TILE_PX / EARTH_TILE_ATLAS_SIDE;
 const TILE_HALF_TEXEL: f32 = 0.5 / EARTH_TILE_PX;
 
@@ -211,26 +133,13 @@ const TILE_HALF_TEXEL: f32 = 0.5 / EARTH_TILE_PX;
 //         than the uniform carries).
 const TILE_DEBUG: u32 = 0u;
 
-// dirToEquirectUv -- map a unit direction on the sphere to the mesh's
-// equirectangular uv, the SAME convention 'cubeSphereMesh' bakes and the cloud
-// map's 'flipY:true' upload expects. So a uv computed here from a direction
-// samples the identical texel a mesh vertex pointing that way would (used for
-// the ground-shadow crossing point, which has no interpolated in.uv to reuse).
-//
-//   u = east longitude / TAU + 0.5. 'cubeSphereMesh' puts longitude on +Y, so
-//       lon = atan2(dir.y, dir.x) (0 at +X, +pi/2 at +Y). The +0.5 is the
-//       TEXTURE_PRIME_MERIDIAN_U convention: the prime meridian (lon 0)
-//       samples the map CENTRE u=0.5, where standard equirectangular planetary
-//       maps paint geographic longitude 0 (see the '## uv / u-orientation' note).
-//       WESL cannot import the TS constant, so this offset is re-encoded here; the
-//       other two sites of the same 0.5 are the meshes that bake it into their
-//       vertex u -- 'cubeSphereMesh.ts' (Earth's, and the TS home that exports
-//       TEXTURE_PRIME_MERIDIAN_U) and 'uvSphereMesh.ts' (every other body plus
-//       this Earth's cloud deck). Grep the token to find all three. 'fract' wraps
-//       to [0, 1) -- the same wrap the sampler's 'repeat' addressing applies.
-//   v = latitude mapped south (0) to north (1): lat = asin(dir.z) in
-//       [-pi/2, pi/2], so v = lat/PI + 0.5 matches the mesh's south-first v
-//       (v=0 south pole, v=1 north pole) that flipY:true co-registers with.
+// dirToEquirectUv -- maps a unit direction to the mesh's equirectangular uv (the
+// same convention 'cubeSphereMesh' bakes and the flipY:true bitmaps expect), for
+// the ground-shadow crossing point, which has no interpolated in.uv to reuse.
+// u = east longitude/TAU + 0.5 (the TEXTURE_PRIME_MERIDIAN_U convention, also
+// baked into 'cubeSphereMesh.ts' and 'uvSphereMesh.ts' -- WESL can't import the
+// TS constant, so it's re-encoded here). v maps latitude south(0)-to-north(1),
+// matching the mesh's south-first v.
 fn dirToEquirectUv(dir: vec3<f32>) -> vec2<f32> {
   let u_uv = fract(atan2(dir.y, dir.x) / TAU + 0.5);
   let v_uv = asin(clamp(dir.z, -1.0, 1.0)) / PI + 0.5;
@@ -249,86 +158,63 @@ fn debugTileLevelTint(level: u32) -> vec3<f32> {
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
-  // Sample the mesh uv directly. With longitude on +Y the equirectangular
-  // texture's east already reads to screen-right for an outside viewer, so no u
-  // flip is needed; v is likewise raw -- both bitmaps are uploaded flipY:true
-  // (see the notes above). The albedo texture is 'rgba8unorm-srgb' (hardware
-  // linearises on read); the material texture is LINEAR 'rgba8unorm' so its
-  // packed roughness (.r) and ocean mask (.g) are read as raw numbers, not
-  // gamma-shifted colour.
+  // Mesh uv sampled directly -- no flip needed (see the header). Albedo is
+  // 'rgba8unorm-srgb' (linearised on read); material is LINEAR 'rgba8unorm' so
+  // its packed roughness (.r) / ocean mask (.g) read as raw numbers, not colour.
   let baseAlbedo = textureSample(earthTexture, earthSampler, in.uv).rgb;
   let mat = textureSample(materialTexture, earthSampler, in.uv).rg;
 
-  // ── The surface virtual texture: one textureLoad, one textureSampleLevel ──
-  //
-  // The window ('u.zWin', 'u.winX0', 'u.winY0') says where the page table sits
-  // on the pyramid: its level, and its origin tile at that level. They are small
-  // integers carried as f32 -- see 'lib/sphere.wesl' for why the uniform is not
-  // declared u32. All-zero is the identity, which is the state before the
-  // subsystem engages and the permanent state of a session that never comes
-  // close to Earth.
+  // ── The surface virtual texture ──────────────────────────────────────────
+  // The window ('u.zWin'/'winX0'/'winY0') says where the page table sits on the
+  // pyramid -- small integers carried as f32 (see 'lib/sphere.wesl'). All-zero is
+  // the identity: the state before the subsystem engages.
   let zWin = u32(u.zWin);
 
-  // Column count at the window level. 'cols = 1 << z' is the ladder's
-  // '(EARTH_EQUIRECT_BASE_WIDTH_PX << z) / tilePx' with the two 512s cancelled,
-  // and it is right BY CONSTRUCTION rather than by luck: the tile edge is a
-  // property of the tile FORMAT, and 'derivePlannerParams'
-  // ('earthTileSubsystem.ts') REFUSES a manifest declaring any other edge rather
-  // than adapting to it. It has to refuse, because nothing on this side reads
-  // 'tilePx' -- a differently-cut pyramid would resolve the same uv to a
-  // different cell, silently, with every cell in the window naming wrong ground.
-  // Rows are half the columns: a plate-carree raster is always exactly twice as
-  // wide as it is tall.
+  // Column count at the window level: 'cols = 1 << z', right by construction
+  // because 'derivePlannerParams' (earthTileSubsystem.ts) REFUSES a manifest
+  // whose tile edge disagrees with EARTH_TILE_PX above -- nothing here reads
+  // tilePx, so a differently-cut pyramid would silently resolve to wrong ground.
+  // Rows are half the columns (a plate-carree raster is always 2x as wide as tall).
   let cols = 1u << zWin;
-  // The mesh's v counts NORTH from the south pole while tile row 0 is the north
-  // edge, hence the '1 - in.uv.y'. That single flip is the feature's most likely
-  // off-by-one and its CPU-side home is 'earthTileXyForUv.ts'; these two must
-  // agree or the surface samples the wrong latitude band, which on a globe reads
-  // as 'the texture is subtly off' rather than as an obvious fault.
+  // Mesh v counts north from the south pole; tile row 0 is the north edge, hence
+  // '1 - in.uv.y'. Must agree with 'earthTileXyForUv.ts' (CPU side) or the
+  // surface samples the wrong latitude band -- reads as "subtly off", not a fault.
   let px = u32(in.uv.x * f32(cols));
   let py = u32((1.0 - in.uv.y) * f32(cols >> 1u));
 
-  // Longitude is periodic, so the window origin comes off modulo 'cols' -- the
-  // same wrapping subtraction 'buildEarthPageTable' performs, and what lets a
-  // window straddle the antimeridian. Latitude is NOT periodic, so its
-  // subtraction is deliberately left to UNDERFLOW: north of the window
-  // 'py - winY0' wraps to a huge u32, so a single unsigned compare per axis
-  // covers both ends of both and the test stays branchless.
+  // Longitude wraps modulo 'cols' (lets a window straddle the antimeridian, same
+  // as 'buildEarthPageTable'). Latitude is NOT periodic, so its subtraction is
+  // deliberately left to UNDERFLOW: north of the window 'py - winY0' wraps huge,
+  // so one unsigned compare per axis covers both ends branch-free.
   let dx = (px + cols - u32(u.winX0)) % cols;
   let dy = py - u32(u.winY0);
   let inWindow = dx < EARTH_TILE_WINDOW_SIDE && dy < EARTH_TILE_WINDOW_SIDE;
   let windowMask = select(0.0, 1.0, inWindow);
 
-  // Out-of-window coordinates are clamped rather than branched around: the load
-  // happens either way, and 'windowMask' is what makes an out-of-window result
-  // contribute nothing. R and G are the atlas slot's column and row, B the level
-  // of the tile occupying that cell, A its blend weight against the base.
+  // Clamped rather than branched: the load happens either way, and 'windowMask'
+  // zeroes an out-of-window result. Cell = (slot col, slot row, tile level, blend
+  // weight).
   let cellXy = vec2<u32>(
     min(dx, EARTH_TILE_WINDOW_SIDE - 1u),
     min(dy, EARTH_TILE_WINDOW_SIDE - 1u)
   );
   let cell = textureLoad(tilePageTable, cellXy, 0);
 
-  // The cell's tile may be COARSER than the window's level. That is not an edge
-  // case but the graceful-degradation path itself: an area whose finer tile is
-  // still in flight keeps sampling its resident ancestor, so refinement is
-  // progressive from the base upward. So the within-tile uv is derived at the
-  // level in B, never at 'zWin'. Rows come from halving the columns rather than
-  // shifting by 'B - 1', which would underflow at B = 0 -- the value every
-  // fragment reads from the 1x1 all-zero placeholder page table before the
-  // subsystem engages.
+  // The cell's tile may be COARSER than the window's level -- not an edge case
+  // but the degradation path itself: refinement is progressive from the base
+  // upward while a finer tile is in flight. So the within-tile uv derives from
+  // the level in B, never 'zWin'; rows halve rather than shift by 'B - 1', which
+  // would underflow at B = 0 (the placeholder page table's value).
   let cellCols = 1u << cell.b;
   let tileUv = vec2<f32>(
     fract(in.uv.x * f32(cellCols)),
     fract((1.0 - in.uv.y) * f32(cellCols >> 1u))
   );
 
-  // Half-texel clamp INSIDE the slot, in place of gutters. The atlas texel past
-  // a slot's edge belongs to an unrelated tile, so a bilinear tap at the edge
-  // would bleed a stranger across it; clamping replicates the tile's own edge
-  // texel instead, which is what 'clamp-to-edge' would do if every slot were its
-  // own texture. Gutters would buy a true neighbour-aware filter at the cost of
-  // baking, storing and uploading a border on every tile in the pyramid.
+  // Half-texel clamp INSIDE the slot, in place of gutters: the atlas texel past a
+  // slot's edge belongs to an unrelated tile, so an unclamped bilinear tap would
+  // bleed a stranger across it. Clamping replicates the tile's own edge texel --
+  // what 'clamp-to-edge' would do if every slot were its own texture.
   let slotUv =
     (vec2<f32>(f32(cell.r), f32(cell.g))
       + clamp(tileUv, vec2<f32>(TILE_HALF_TEXEL), vec2<f32>(1.0 - TILE_HALF_TEXEL)))
@@ -341,63 +227,40 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // 'dpdx' across that jump is garbage.
   let tile = textureSampleLevel(tileAtlas, tileSampler, slotUv, 0.0);
 
-  // Three factors, each of which alone is a complete reason to show the base:
-  // the page table's A (no tile named, or a load fade still ramping), the tile's
-  // own alpha (the LAND MASK -- ocean resolves to the base with no second
-  // texture and no extra sample), and the window test. A is what DRIVES the
-  // blend, and that ordering is load-bearing: the placeholder atlas texel is
-  // transparent black, so a weight keyed on 'tile.a' alone would look correct
-  // against the placeholders and be wrong the moment a real atlas arrived.
+  // Three independent reasons to show the base: page-table A (no tile, or a load
+  // fade ramping), the tile's own alpha (land mask -- ocean falls through to the
+  // base), and the window test. A must drive the blend, not 'tile.a' alone: the
+  // placeholder atlas texel is transparent black, so a weight keyed on tile.a
+  // would look right against placeholders and wrong the moment a real atlas landed.
   let tileWeight = f32(cell.a) / 255.0 * tile.a * windowMask;
   let albedo = mix(baseAlbedo, tile.rgb, tileWeight);
 
-  // Tangent-space normal perturbation (see the '## Renormalize the interpolated
-  // normal + normal mapping' header). The baked map stores nx (R) along +u=east
-  // and ny (G) along +v=north; 'perturbNormal' reconstructs the always-positive
-  // nz, builds a per-fragment TBN from Ng + the raw east tangent, and rotates the
-  // tangent-space vector into local space. Before the real map lands the
-  // placeholder encodes (0,0,1) -> n == Ng, identical to the geometric-normal path.
+  // Normal map: baked nx(R)=+u=east, ny(G)=+v=north; 'perturbNormal'
+  // reconstructs nz and rotates into local space (see the header). Placeholder
+  // encodes (0,0,1) -> n == Ng before the map lands.
   let nEnc = textureSample(normalTexture, earthSampler, in.uv).rg; // LINEAR RG
-  // Geometric normal (renormalized -- interpolation across a face shortens it).
-  let Ng = normalize(in.normalLocal);
-  // Perturb Ng by the tangent-space map. 'lib/normalMap.wesl' owns the TBN maths
-  // (decode -> reconstruct nz -> Gram-Schmidt the raw east tangent against Ng ->
-  // rotate) and the +v=north bitangent sign that pairs with bakeNormalMap.ts.
-  let n = perturbNormal(Ng, in.tangent, nEnc); // perturbed shading normal
-  // View vector: camera minus surface point, both in the body's local frame.
-  // 'normalLocal' doubles as the unit-sphere surface POSITION here, and
-  // 'u.camPosLocal' is the camera in that same frame (body-radii units), so their
-  // difference is the surface->camera direction.
+  let Ng = normalize(in.normalLocal); // renormalized -- interpolation shortens it
+  let n = perturbNormal(Ng, in.tangent, nEnc);
+  // View vector: 'normalLocal' doubles as the unit-sphere surface position here;
+  // 'u.camPosLocal' is the camera in the same local frame.
   let v = normalize(u.camPosLocal - in.normalLocal);
   let l = u.sunDirLocal;
 
-  // Ocean mask selects the smooth open-water roughness ('u.oceanRoughness', the
-  // user-tunable Earth-scoped override of pbr.wesl's OCEAN_ROUGHNESS seed) over
-  // the land micro-roughness; MIN_ROUGHNESS floors the land side away from the
-  // GGX singularity (that const lives in pbr.wesl beside the BRDF that reads it).
+  // Ocean mask selects 'u.oceanRoughness' (Earth-scoped override of pbr.wesl's
+  // OCEAN_ROUGHNESS) over land roughness; MIN_ROUGHNESS floors land away from the
+  // GGX singularity.
   let roughness = mix(clamp(mat.r * u.roughnessBase, MIN_ROUGHNESS, 1.0), u.oceanRoughness, mat.g);
 
-  // Direct (sun-lit) microfacet term, scaled by the body's sun irradiance, plus
-  // the shared ambient floor.
   let directBase = pbrDirect(n, v, l, albedo, roughness, u.f0);
 
-  // Ground shadow (spec §7.2): cast a ray from the surface point toward the sun
-  // and darken the direct term wherever the cloud deck above blocks the sunlight.
-  // 'P' is the GEOMETRIC unit-sphere position (renormalized -- interpolation
-  // shortens it), NOT the TBN-perturbed shading normal 'n': the shadow is cast
-  // from where the point actually SITS, not the direction the relief tilts. 'P'
-  // (|P|=1) is INSIDE the shell (radius u.cloudShellRadius ~= 1.002), and 'l' is
-  // already unit in the local frame (no invModel scaling -- the house
-  // renormalize-after-invModel trap does not apply here), so raySphere's unit-rd
-  // precondition holds. With the origin inside the sphere its miss sentinel is
-  // unreachable: c = |P|^2 - r^2 < 0, so the 'c>0 && b>0' early-out is false and
-  // the discriminant b^2 - c > 0 is always positive -- both roots are real and
-  // the exit root roots.y = -b + sqrt(...) > 0 (verified against lib/util.wesl's
-  // raySphere), so no miss branch is needed. We sample cloud alpha where the ray
-  // exits the shell and dim the direct term by that coverage. Applying this to
-  // 'direct' BEFORE the '* sunIrradiance' combine self-limits at the terminator:
-  // 'direct' already tends to zero there, so the shadow cannot punch a dark hole
-  // into the night side.
+  // Ground shadow (cloud deck above blocks sunlight): cast a ray from 'P', the
+  // GEOMETRIC surface position (not the perturbed shading normal 'n' -- the
+  // shadow follows where the point sits, not how relief tilts it), toward the
+  // sun. 'P' sits inside the shell (radius ~1.002) and 'l' is already unit in the
+  // local frame, so raySphere's unit-rd precondition holds and its miss sentinel
+  // is provably unreachable from inside the sphere -- no miss branch needed.
+  // Dimming 'direct' BEFORE the sunIrradiance scale self-limits at the
+  // terminator, where direct already tends to zero.
   let P = normalize(in.normalLocal);
   let roots = raySphere(P, l, vec3<f32>(0.0), u.cloudShellRadius);
   let crossing = P + roots.y * l;
@@ -406,28 +269,21 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
 
   let colour = direct * u.sunIrradiance + u.ambientLight * albedo;
 
-  // City lights (Black Marble) are EMISSIVE, so 'nightLights' is ADDED to the lit
-  // colour, never multiplied through the Lambert term (see 'lib/nightLights.wesl').
-  // The night texture is 'rgba8unorm-srgb', so the sample is already linear.
-  // 'NoL' is the RAW clamped Lambert term -- 'nightLights' owns the terminator
-  // fade, so we must not pre-shape it here. Before the map lands the night
-  // texture is a 1x1 black placeholder, so 'emissive' is zero.
+  // City lights are EMISSIVE -- added to the lit colour, never multiplied through
+  // Lambert (see 'lib/nightLights.wesl'). 'NoL' is the RAW clamped term;
+  // 'nightLights' owns the terminator fade, so it must not be pre-shaped here.
   let nightColour = textureSample(nightTexture, earthSampler, in.uv).rgb;
   let NoL = max(dot(n, l), 0.0);
-  // Night occlusion (spec §7.3): cloud coverage at this fragment's OWN uv dims
-  // the city lights, the way an overcast deck hides them from orbit. Before the
-  // cloud map lands the 1x1 transparent placeholder reports alpha 0, so
-  // '(1 - cloudAlpha)' inside nightLights is a no-op and the lights show full.
+  // Cloud coverage at this fragment's own uv dims city lights (overcast hides
+  // them from orbit); alpha 0 before the map lands makes this a no-op.
   let cloudAlphaHere = textureSample(cloudTexture, earthSampler, in.uv).a;
   let emissive = nightLights(nightColour, NoL, cloudAlphaHere);
 
-  // The tint probe (see 'TILE_DEBUG' for what a correct picture looks like under
-  // each mode). It sits at the END, replacing the shaded colour rather than
-  // returning early beside the page-table load it probes, for one reason: an
-  // early return would put the remaining 'textureSample' calls after a branch,
-  // and WGSL's uniformity rules for implicit derivatives are not somewhere to
-  // rely on a compiler const-folding a condition. At 0u both arms are dead code
-  // and the shipped shader is unchanged.
+  // Tint probe (see TILE_DEBUG). Placed at the END rather than returning early
+  // beside the page-table load it probes: an early return would put the
+  // remaining 'textureSample' calls after a branch, and WGSL's implicit-derivative
+  // uniformity rules are not something to rely on const-folding to sidestep. At
+  // 0u both arms are dead code.
   if (TILE_DEBUG == 1u) {
     // Black wherever no tile is named, so one picture carries both the tiled
     // footprint and the level bands inside it.

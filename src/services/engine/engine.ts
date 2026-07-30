@@ -258,12 +258,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     get selectionRows() {
       return store.getState().selectionRows;
     },
-    // `state.famousGalaxiesMeta` delegates to the Redux `engine` slice — the
-    // same single-seam pattern as `settings`/`tier`/`selection`/`selectionRows`.
-    // The famous-galaxies meta slot's dispatch is the sole writer; per-frame
-    // readers (hi-res famous subsystem, textured-disk subsystem, ring-layer
-    // pass, `produceFamousLabels`) reach the store here, with no engine-side
-    // mirror to drift.
+    // Same single-seam pattern as `settings`/`tier`/`selectionRows` above — no
+    // engine-side mirror of the store slice to drift.
     get famousGalaxiesMeta() {
       return selectFamousGalaxiesMeta(store.getState());
     },

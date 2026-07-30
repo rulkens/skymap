@@ -3,70 +3,27 @@
  * buildEarthTiles — bake Earth's surface imagery into the `z/x/y` pyramid the
  * runtime virtual texture pages, under `public/data/images/earth-tiles/`.
  *
- * Its own tool rather than another loop inside `buildTextures`. The tiered
- * whole-globe textures build from raws every contributor fetches, in seconds;
- * this bake needs inputs most contributors will not have on disk and, at the
- * levels the shipped pyramid eventually reaches, runs for hours. Folding it in
- * would make `npm run build-textures` fail — or silently skip — for everyone.
- * The drift argument that justified emitting the boot atlas inside
- * `buildTextures` does not transfer either: these tiles derive from a
- * DIFFERENT source than the whole-globe tiers, so re-curating one cannot
- * silently stale the other.
+ * Its own tool rather than a loop inside `buildTextures`: the whole-globe
+ * tiers build from raws every contributor already has, in seconds, while this
+ * bake needs inputs most contributors lack and can run for hours at the
+ * levels the shipped pyramid reaches; folding it in would break (or silently
+ * skip) `build-textures` for everyone, and the two derive from DIFFERENT
+ * sources, so re-curating one cannot stale the other.
  *
- * ## Orientation: row 0 of every tile is its NORTH edge
+ * Row 0 of every tile is its NORTH edge (see `EarthImagerySource` for why).
+ * The deepest level bakes from the imagery source tile by tile, straight to
+ * disk; every coarser level is a 2x2 average of the level above, read back
+ * off disk (see `bakeCoarserLevel` for the sharp/libvips composite-order
+ * landmine that governs how that average is built) — nothing here ever holds
+ * a whole-globe raster (1.6 TB at z11) or a level.
  *
- * The single most consequential line in this file is that tile `y` increases
- * SOUTH and the raster inside each tile is north-first. Tiles therefore upload
- * with `flipY: false`, unlike the whole-globe maps, whose `flipY: true` exists
- * to reconcile a north-first image with the mesh's south-first `v`. Here that
- * reconciliation happens once, in the tile-index arithmetic
- * (`earthTileXyForUv`), rather than being re-derived at every upload. Getting
- * it backwards produces a globe that is per-tile upside down, which does not
- * look like a bad flip — it looks like a shader bug, two phases away from the
- * line that caused it.
- *
- * ## Build order: deepest level first, coarser levels from disk
- *
- * The deepest level is produced from the imagery source, tile by tile,
- * streamed straight to disk. Every coarser level is then a 2 x 2 average of
- * four tiles from the level ABOVE, read back off disk. Nothing in the process
- * ever holds a whole-globe raster — which at z11 would be 1.6 TB — and nothing
- * holds a whole level either. The `--dev` whole-globe equirect reaches z5 and the
- * shipped quadrant set z7, so both run the coarsening loop, down to the bake
- * floor either way.
- *
- * The 2 x 2 average is `sharp`'s own resize at an exact factor of two, applied
- * to each child independently before the four are composited onto the parent
- * canvas — libvips serves an exact halving with an integer block shrink, a
- * plain average of each 2 x 2 group, no kernel weighting, and that holds
- * per-child exactly because a 2 x 2 group never straddles a child boundary. The
- * shrink cannot instead run once, after assembly, in the same pipeline as the
- * composite: `sharp` composites over the already-processed image, so a `resize`
- * chained after a `composite` call runs FIRST, and every overlay not already at
- * the canvas origin lands outside the shrunk frame and is dropped with no
- * error (`bakeCoarserLevel`). Re-encoding a WebP per level does accumulate
- * generation loss down the pyramid, and that is the accepted price of never
- * materialising a level in memory; the coarse levels are also the ones the
- * planner requests when the ground is far away and small on screen.
- *
- * ## What lands on disk
- *
- * - `earth-tiles/surface/<z>/<x>/<y>.webp` — paths from `earthTilePath`, the
- *   SAME function the runtime fetcher builds its URL from. A name constructed
- *   twice is a name that eventually 404s, and here it 404s quietly: a missing
- *   tile degrades to the base texture and simply looks like the feature did
- *   nothing.
- * - `earth-tiles/manifest.json` — tile edge, baked level range, and the source
- *   the pixels came from, so a stale or mis-licensed bake is diagnosable from
- *   the deployed data rather than from the git log.
- * - `earth-tiles/index.txt` — one relative tile path per line. The deploy
- *   collector walks THIS, not the filesystem, so a half-finished bake cannot
- *   upload a partial pyramid that the runtime then treats as complete. It is
- *   emitted here, at the one site that knows what was actually written;
- *   retrofitting it later would mean re-baking.
- *
- * The whole `public/data/` tree is a build artefact and is gitignored, so
- * nothing this tool emits is ever committed.
+ * Lands on disk: `earth-tiles/surface/<z>/<x>/<y>.webp` (`earthTilePath`,
+ * shared with the runtime fetcher's own URL builder — drift 404s quietly,
+ * degrading to the base texture); `earth-tiles/manifest.json` (tile edge,
+ * baked level range, source); `earth-tiles/index.txt` (one path per line,
+ * walked by the deploy collector instead of the filesystem, so a
+ * half-finished bake can't upload a partial pyramid as complete).
+ * `public/data/` is gitignored — nothing here is committed.
  */
 
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -91,62 +48,28 @@ import type { EarthImagerySource } from './EarthImagerySource';
 import { equirectFileSource } from './equirectFileSource';
 import type { LonLatBox } from './LonLatBox';
 
-/**
- * Lossy WebP quality for surface tiles. JPEG cannot carry the alpha channel
- * that doubles as the land mask, and at the object counts a deep pyramid
- * reaches, WebP's ~25% saving over JPEG at matched quality is real money in
- * sync wall-clock rather than a rounding error.
- */
+/** Lossy WebP quality for surface tiles: JPEG can't carry the alpha channel
+ *  that doubles as the land mask. */
 const WEBP_QUALITY = 82;
 
-/**
- * Every tier a session can bind. No shared runtime tiers array is exported — each
- * builder keeps its own module-local ladder (`clampTier`,
- * `tiersFittingSourceWidth`, `buildAllBins`) — and the bake floor below is derived
- * from the whole ladder rather than from the coarsest tier's name, so adding a
- * tier or moving one's pixel size moves the floor with it.
- */
+/** Each builder keeps its own module-local tier ladder; the bake floor below
+ *  moves with it rather than naming a tier. */
 const TIER_LADDER: readonly Tier[] = ['small', 'medium', 'large'];
 
 /**
- * Shallowest level this bake emits: one finer than the COARSEST whole-globe base
- * any supported session can bind, so every tier gets a continuous ladder from its
- * own base upward.
- *
- * Coarsest, not finest, and that distinction is the entire content of this number.
- * The runtime floors its own requests at `max(manifest levels.min, baseLevel + 1)`,
- * so a session never asks for a level its own base already covers — which means a
- * floor pinned to the `large` tier's z4 base saved nothing and opened a gap
- * instead: a default `medium` session (base z3) found nothing at z4, a `small` one
- * (base z2) nothing at z3 or z4, and across that gap the surface falls back to a
- * base texture two or three levels coarser than the screen is asking for. Silent,
- * because an unbaked level 404s exactly like ocean does.
- *
- * The extra levels are nearly free. The pyramid is a geometric series, so z4 is
- * 128 tiles and z3 is 32, against z7's 8192.
- *
- * A bake floor, and nothing else. The runtime learns what was baked from the
- * manifest's `levels.min` and never reads this constant, so re-baking at another
- * depth needs no code change on the other side. Reading this same number as a
- * runtime request floor is what would make such a re-bake appear to do nothing,
- * which is why it lives here and not beside the ladder constants.
+ * Shallowest level this bake emits: one finer than the COARSEST whole-globe
+ * base, not the finest — pinning this to the `large` tier's z4 base would
+ * leave `medium`/`small` sessions falling back to the base texture one or
+ * two levels early (an unbaked level 404s like ocean does).
  */
 const BAKE_MIN_LEVEL = Math.min(...TIER_LADDER.map(earthBaseLevelForTier)) + 1;
 
-/**
- * The only kind this tool bakes. Surface albedo is where the resolution
- * shortfall is: relief stays whole-globe, and clouds, night lights and the
- * material map carry no fine structure worth streaming. `EarthTileKind` is
- * welded to `TextureKind`, so widening the bake to a second kind is a loop
- * over kinds here, not a type rewrite.
- */
+/** The only kind this tool bakes — relief, clouds, night lights and the
+ *  material map carry no fine structure worth streaming. */
 const KIND: EarthTileKind = 'surface';
 
-/**
- * The geographic extent of tile `(z, x, y)`. `x` increases east from longitude
- * -180 and `y` increases SOUTH from latitude +90, so row 0 spans the north
- * polar band — the same convention the emitted raster's row 0 follows.
- */
+/** Geographic extent of tile `(z, x, y)`; `y` increases SOUTH, matching the
+ *  raster's own north-first row order. */
 function tileBox(z: number, x: number, y: number, tilePx: number): LonLatBox {
   const columns = earthTileColumns(z, tilePx);
   const rows = columns / 2;
@@ -161,16 +84,14 @@ function tileBox(z: number, x: number, y: number, tilePx: number): LonLatBox {
 }
 
 /**
- * Encode one RGBA raster as a surface tile and write it, creating its `z/x`
- * directories on the way.
+ * Encode one RGBA raster as a surface tile, creating its `z/x` directories.
  *
- * The raster is four-channel even for a globally-covered source whose alpha is
- * uniformly 255: the runtime's blend is written against the presence of the
- * channel, not against its content. libwebp then drops the alpha PLANE from a
- * fully-opaque image, so such a tile is a 3-channel file on disk — which is
- * harmless, because `createImageBitmap` plus an `rgba8unorm-srgb` upload
- * yields alpha 1 either way. A land-only source's tiles carry real
- * transparency and keep the plane.
+ * The raster is always four-channel, even when alpha is uniformly 255:
+ * libwebp then drops the alpha PLANE from a fully-opaque image, leaving a
+ * 3-channel file on disk — harmless, since `createImageBitmap` plus an
+ * `rgba8unorm-srgb` upload yields alpha 1 either way, but nothing downstream
+ * may assume 4 channels survive to disk. A land-only source's real
+ * transparency does keep the plane.
  */
 async function writeTile(rgba: Uint8Array, tilePx: number, outPath: string): Promise<void> {
   mkdirSync(dirname(outPath), { recursive: true });
@@ -180,12 +101,10 @@ async function writeTile(rgba: Uint8Array, tilePx: number, outPath: string): Pro
 }
 
 /**
- * Bake the deepest level straight from the imagery source, one tile at a time.
- * A source that declines a box (no coverage there) emits no tile at all, which
- * is what makes a land-only pyramid sparse rather than full of empty files;
- * the runtime treats the resulting 404 as a permanent miss and never re-asks.
- *
- * Returns the relative paths written.
+ * Bake the deepest level straight from the imagery source, one tile at a
+ * time. A source that declines a box emits no tile at all — a land-only
+ * pyramid is sparse, not full of empty files, and the runtime treats the
+ * resulting 404 as a permanent miss.
  */
 async function bakeDeepestLevel(
   source: EarthImagerySource,
@@ -210,33 +129,27 @@ async function bakeDeepestLevel(
 }
 
 /**
- * Bake one level as the 2 x 2 average of the level above, reading the children
- * back off disk so no level is ever resident.
+ * Bake one level as the 2x2 average of the level above, reading the children
+ * back off disk so no level is ever resident. Child `(2x + i, 2y + j)` at
+ * `z + 1` occupies the `(i, j)` quadrant of the parent (`j = 0` on top), so
+ * its offset is the child index times the HALF tile edge — `y` increasing
+ * south in the grid agrees with rows running north-first inside a tile.
  *
- * Child `(2x + i, 2y + j)` at `z + 1` occupies the `(i, j)` quadrant of the
- * parent, with `j = 0` on top: `y` increases south in the grid AND rows run
- * north-first inside a tile, so the two agree and the quadrant offsets are the
- * plain product of the child index and the HALF tile edge (below).
+ * Each child is shrunk to `tilePx / 2` on its own BEFORE it meets the parent
+ * canvas; the four are then composited with no `resize` anywhere in that
+ * second pipeline. That ordering is a correctness requirement, not style:
+ * sharp/libvips's `.composite()` applies over the ALREADY-PROCESSED image, so
+ * a `.resize()` chained after a `.composite()` in one pipeline runs FIRST
+ * regardless of call order, and every off-origin overlay lands outside the
+ * now-shrunk canvas, clipped with no error. This was the cause of a full
+ * debugging session: every coarse tile silently came out a 1:1 copy of its
+ * north-west child. Per-child shrinking gives the same pixels as shrinking
+ * the assembled mosaic only because the halving is exact — libvips's integer
+ * block shrink never lets a 2x2 group straddle a child boundary.
  *
- * Each child is shrunk to `tilePx / 2` on its own, before it ever meets the
- * parent canvas, and the four are then composited onto a `tilePx` canvas at
- * offsets of `tilePx / 2` — there is no `resize` anywhere in the composite
- * pipeline. That is a correctness requirement, not a style choice: `sharp`
- * composites over the ALREADY-PROCESSED image, so a `.resize()` chained after a
- * `.composite()` in one pipeline runs FIRST regardless of call order, and every
- * off-origin overlay lands outside the now-shrunk canvas and is clipped with no
- * error. (Shrinking the assembled 2 x 2 mosaic and shrinking each quadrant
- * independently agree pixel-for-pixel here only because the halving is exact —
- * libvips serves it as an integer block shrink, and a 2 x 2 pixel group never
- * straddles a child boundary — so per-child shrinking is free to take instead
- * of the pipeline that silently drops three quadrants in four.)
- *
- * A parent with no children at all is not written. A parent with SOME children
- * is written with the missing quadrants transparent, so a coastal tile at a
- * coarse level still carries its land and lets the base texture through
- * everywhere else.
- *
- * Returns the relative paths written.
+ * A parent with no children is not written; one with SOME children is
+ * written with the missing quadrants transparent, so the base texture
+ * shows through everywhere a coastal tile has none.
  */
 export async function bakeCoarserLevel(
   z: number,
@@ -264,10 +177,8 @@ export async function bakeCoarserLevel(
         .filter((child) => existsSync(child.input));
       if (childPaths.length === 0) continue;
 
-      // Each child is read, ensured to four channels (a fully-opaque WebP may
-      // have lost its alpha PLANE on the way in, per `writeTile`) and shrunk to
-      // half the tile edge in its own pipeline, so nothing here ever chains a
-      // resize after a composite.
+      // ensureAlpha restores a plane a fully-opaque WebP may have dropped (see
+      // writeTile); resize happens here, per child, never after the composite below.
       const quadrants = await Promise.all(
         childPaths.map(async ({ input, left, top }) => ({
           input: await sharp(input).ensureAlpha().resize(halfPx, halfPx).raw().toBuffer(),
@@ -303,9 +214,8 @@ export async function buildEarthTiles(source: EarthImagerySource, outDir: string
   const minLevel = BAKE_MIN_LEVEL;
   const maxLevel = source.maxLevel;
 
-  // Levels at or below the coarsest tier's base ARE a whole-globe texture that
-  // already ships, so a source that cannot beat even that has nothing to
-  // contribute and an empty pyramid would be indistinguishable from a broken one.
+  // A whole-globe texture already ships at or below the coarsest tier's base;
+  // a source that can't beat that has nothing to contribute.
   if (maxLevel < minLevel) {
     throw new Error(
       `buildEarthTiles: source '${source.id}' reaches only z${maxLevel}, at or below the coarsest tier's whole-globe base at z${minLevel - 1} — nothing to bake`,
@@ -334,30 +244,19 @@ export async function buildEarthTiles(source: EarthImagerySource, outDir: string
     `${JSON.stringify(manifest, null, 2)}\n`,
   );
 
-  // Sorted so two bakes of the same pyramid produce the same index, which is
-  // what lets a resumed sync diff one against the other.
+  // Sorted so two bakes of the same pyramid produce the same index, letting a
+  // resumed sync diff one against the other.
   written.sort();
   writeFileSync(join(outDir, 'earth-tiles/index.txt'), `${written.join('\n')}\n`);
 
   process.stderr.write(`  ${written.length} tiles indexed\n`);
 }
 
-/**
- * Verbatim credit for both sources below, because both ARE the same imagery: the
- * quadrants and the whole-globe equirect are two publications of one BMNG month,
- * and Earth's base texture is built from that same month (see `BMNG_VINTAGE`).
- * One string means the manifest's `builtFrom` cannot credit a vintage the pixels
- * did not come from.
- */
+/** Shared: the quadrants and the whole-globe equirect are the SAME BMNG month
+ *  (see `BMNG_VINTAGE`). */
 const BMNG_ATTRIBUTION = `NASA Blue Marble Next Generation, ${BMNG_VINTAGE.label} topography + bathymetry (public domain, credit NASA Earth Observatory).`;
 
-/**
- * The shipped source: BMNG's eight-file quadrant set, which reaches z7. The
- * paths derive from `BMNG_QUADRANT_KEYS`, whose `satisfies Record<BmngQuadrant,
- * …>` already proves the set is complete — which is what makes the assertion
- * below sound, and keeps a forgotten quadrant a compile error rather than a hole
- * in the globe.
- */
+/** The shipped source: BMNG's eight-file quadrant set, reaching z7. */
 async function deepSource(): Promise<EarthImagerySource> {
   return bmngQuadrantSource({
     id: `nasa-bmng-${BMNG_VINTAGE.stamp}-quadrants`,
@@ -369,18 +268,10 @@ async function deepSource(): Promise<EarthImagerySource> {
 }
 
 /**
- * `--dev`: the whole-globe equirect, which reaches z5 — two levels short of the
- * shipped quadrant set, and deep enough to exercise the coarsening loop down to
- * the bake floor. It needs only the raw every contributor's `fetch-textures`
- * already pulls, so it is the way to exercise the pipeline end to end in seconds
- * without the quadrant set's 421 MB.
- *
- * An explicit flag rather than "use the quadrants if they happen to be on disk":
- * a silent fall-back to the shallow source would emit a pyramid that is complete,
- * valid and four levels short, and nothing downstream can tell that from the
- * intended bake. The `id` therefore names the PUBLICATION, not just the vintage:
- * both sources are the same month, so 'which one baked this' is the only thing
- * the manifest can be read for.
+ * `--dev`: the whole-globe equirect, reaching z5 — built from what
+ * `fetch-textures` already pulls (no 421 MB quadrant set). An explicit flag
+ * rather than a silent fallback: the pyramid would otherwise be complete,
+ * valid and four levels short with nothing downstream able to tell.
  */
 async function devSource(): Promise<EarthImagerySource> {
   return equirectFileSource({

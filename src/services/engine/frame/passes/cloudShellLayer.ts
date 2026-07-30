@@ -42,16 +42,11 @@
  * seeded `bodies.earth` record, the shared near-field distance gate
  * (`FOREGROUND_MAX_DISTANCE_MPC`) + sub-pixel cull (`SUB_PIXEL_BODY_CULL_PX`) — the
  * same near-field gate `earthLayer` applies, so the shell appears exactly when the
- * surface does — AND the clouds slot being RESIDENT: until the cloud map commits,
- * the shell would draw a fully transparent sphere, so a row that would add nothing
- * to the frame leaves the pass plan (mirroring the ring's residency gate). It ALSO
- * gates on `cloudDeckFade` reaching 0: as the camera descends toward the surface
- * tiles, the whole-globe cloud map would smear over sharper detail than it can
- * show, so the deck fades out on approach and, once fully faded, leaves the pass
- * plan rather than drawing a fully transparent sphere (same house rule as the
- * residency gate — see that util's header for why altitude drives the fade, not
- * the tile planner's `zWin`). Both `enabled` and `draw` read ONE `cloudShellDraw`
- * derivation, so the gate and the loop can never disagree.
+ * surface does — AND the clouds slot being RESIDENT and `cloudDeckFade` (see its
+ * header) being above 0: a row that would add nothing to the frame — no map yet,
+ * or fully faded on approach to the surface tiles — leaves the pass plan rather
+ * than draw a fully transparent sphere. Both `enabled` and `draw` read ONE
+ * `cloudShellDraw` derivation, so the gate and the loop can never disagree.
  *
  * The shell is non-pickable (spec §8.3): a translucent overlay has no clickable
  * silhouette of its own — clicking Earth hits the opaque surface `earthLayer`
@@ -104,22 +99,16 @@ function cloudShellDraw(state: EngineState, ctx: ReadyFrameContext): CloudShellD
   const dy = earthPos[1] - ctx.drawCamPos[1];
   const dz = earthPos[2] - ctx.drawCamPos[2];
   const distanceMpc = Math.hypot(dx, dy, dz);
-  // The descent fade: computed from the SAME camera-to-centre distance the
-  // sub-pixel cull below uses. A fully-faded deck must leave the pass plan
-  // (the house "opacity 0 ⇒ no render" rule) rather than draw a fully
-  // transparent sphere, so this gate is checked before the sub-pixel cull —
-  // which also sidesteps that cull's distanceMpc === 0 degenerate case: a
-  // camera at the body's exact centre is deep inside the fade-out band, so
-  // deckFade is already 0 there.
+  // Checked before the sub-pixel cull so it also covers that cull's
+  // distanceMpc === 0 degenerate case: a camera at the body's centre is deep
+  // inside the fade-out band already.
   const bodyRadiusMpc = earth.radiusKm * SCALE_UNITS.KM_TO_MPC;
   const deckFade = cloudDeckFade(distanceMpc, bodyRadiusMpc);
   if (deckFade <= 0) return null;
   // Sub-pixel cull on Earth's diameter (the shell is a hair larger, so the
-  // surface gate governs both). A zero camera-to-centre distance means the
-  // camera is INSIDE the body — apparentSizePx defensively returns 0 there,
-  // which would read as sub-pixel, so treat it as resolved. (Only reachable
-  // when bodyRadiusMpc is degenerately non-positive — cloudDeckFade already
-  // returned 0 above for a real Earth radius at distanceMpc === 0.)
+  // surface gate governs both). apparentSizePx returns 0 for a zero
+  // camera-to-centre distance (camera inside the body), which reads as
+  // resolved here since deckFade already handled that case above.
   if (distanceMpc === 0) return { earth, deckFade };
   const diameterPx = apparentSizePx({
     diameterKpc: (2 * earth.radiusKm * SCALE_UNITS.KM_TO_MPC) / SCALE_UNITS.KPC_TO_MPC,
@@ -176,9 +165,8 @@ export const cloudShellLayer: ContentLayer = {
     // uses (single source of truth), so clouds — the brightest real feature — are
     // not dimmer than the ground beneath them. The ambient floor is likewise the
     // SAME live user setting the surface reads (`settings.earth.ambientLight`), so
-    // the deck's night side dims in lockstep with the ground. `deckFade` folds the
-    // descent fade into the opacity multiplier — `cloudShellDraw` already returned
-    // `null` above once it reached 0, so here it is always > 0.
+    // the deck's night side dims in lockstep with the ground. `deckFade` folds
+    // the descent fade into the opacity multiplier; it is always > 0 here.
     renderer.draw(
       pass,
       packCloudShellUniforms(

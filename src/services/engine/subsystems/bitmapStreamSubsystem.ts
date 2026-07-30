@@ -34,17 +34,11 @@
  *
  * ### `bitmapReady` means "pixels are in the atlas", not "the fetch resolved"
  *
- * A landed fetch is not the same event as a populated slot.  A key can be
- * evicted while its fetch is in flight, and the bitmap that arrives afterwards
- * has nowhere to go: the slot it was allocated belongs to another key now, and
- * writing it there would paint one key's pixels under another's UVs.  So
- * `uploadBitmap` is the single writer of `bitmapReady` — the key becomes
- * "loaded" if and only if an upload actually happened.
- *
- * Recording the key on fetch resolution instead is the tempting shortcut and it
- * is a dead end for the ground it describes: `isLoaded` suppresses further
- * fetches, so a key marked loaded with no pixels behind it renders whatever the
- * consumer's miss path is, forever, and nothing ever asks for it again.
+ * A key can be evicted while its fetch is in flight; the bitmap that arrives
+ * afterwards has nowhere to go, since its slot now belongs to another key. So
+ * `uploadBitmap` is the single writer of `bitmapReady` — marking a key loaded
+ * on fetch resolution instead would suppress further fetches for a key with no
+ * pixels behind it, a dead end nothing ever retries.
  */
 
 import type {
@@ -67,14 +61,9 @@ export type BitmapStreamDeps = {
   readonly label: string;
   /**
    * How many bitmap fetches this stream runs at once.  Omitted means
-   * `PriorityQueue`'s own default (`MAX_CONCURRENT_FETCHES`).
-   *
-   * The bound belongs to the stream, not to the queue: each consumer is
-   * fetching a different SHAPE of thing against the same ~6-connection
-   * browser cap, and only the consumer knows which.  Without this field a
-   * second consumer's only route to its own limit would be to reach past
-   * this seam and construct the queue itself, which would drag the atlas
-   * and the memoisation sets out with it.
+   * `PriorityQueue`'s own default.  Belongs to the stream, not the queue:
+   * each consumer fetches a different SHAPE of thing against the same shared
+   * browser connection cap, and only the consumer knows which.
    */
   readonly concurrency?: number;
   /**
@@ -130,10 +119,9 @@ export function createBitmapStreamSubsystem(deps: BitmapStreamDeps): BitmapStrea
       return atlas.lastSeenFrame(key);
     },
     uploadBitmap(key, bitmap) {
-      // The atlas is re-asked here rather than trusted from allocate time: the
-      // caller has been holding this key across a network round trip, and the
-      // slot it was given N frames ago may since have been recycled under a
-      // different key.
+      // Re-asked here rather than trusted from allocate time: the caller has
+      // been holding this key across a network round trip, and its slot may
+      // since have been recycled under a different key.
       const slot = atlas.slotOf(key);
       if (slot === undefined) return null;
       atlas.uploadBitmap(slot, bitmap);
@@ -160,12 +148,10 @@ export function createBitmapStreamSubsystem(deps: BitmapStreamDeps): BitmapStrea
             input.onResult(null);
             return;
           }
-          // `onResult` is the consumer's hook — they upload via
-          // uploadBitmap() inside this callback, which is what records the key
-          // as loaded, and update their own load-fade timing from its result.
-          // A consumer that declines to upload leaves the key unloaded and so
-          // still fetchable, which is the whole point: the bitmap had nowhere
-          // to go, and the ground it covers still needs pixels.
+          // The consumer's hook: uploads via uploadBitmap() inside this
+          // callback (which records the key as loaded) and updates its own
+          // load-fade timing. A consumer that declines leaves the key
+          // unloaded and so still fetchable.
           input.onResult(bitmap);
           // Unconditional: an upload needs a frame to show, and a declined one
           // still has to let the keep-ticking predicate re-read inFlightCount.

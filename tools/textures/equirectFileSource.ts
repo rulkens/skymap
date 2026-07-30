@@ -1,35 +1,19 @@
 /**
  * equirectFileSource — an `EarthImagerySource` over a whole-globe
- * equirectangular image already sitting in `data/raw/`.
+ * equirectangular image already sitting in `data/raw/`. The `--dev` pyramid
+ * source: no download, no external service — a real, correctly-addressed
+ * pyramid good enough to build and visually verify against.
  *
- * This is the development pyramid's source: no download, no external service,
- * no answer needed to the still-open question of which deep imagery source the
- * shipped pyramid is baked from. It produces a real, correctly-addressed
- * pyramid from real imagery, which is all the runtime needs in order to be
- * built and visually verified. The deep sources that replace it later are a
- * different `readBox` and nothing else.
+ * `maxLevel` is derived, not declared: the deepest honest level is the
+ * largest `z` whose full equirect width (`earthLevelFittingWidth`) still
+ * fits the source's own — Blue Marble at 21600 px gives z5 (16384, a genuine
+ * downsample); z6 (32768) would upscale a photograph.
  *
- * ## Why `maxLevel` is derived rather than declared
- *
- * The deepest honest level is a property of the file on disk: pyramid level
- * `z` has a full equirect width of `EARTH_EQUIRECT_BASE_WIDTH_PX << z`, so the
- * deepest level a source can produce without inventing detail is the largest
- * `z` whose width still fits inside the source's own — `earthLevelFittingWidth`.
- * Blue Marble at 21600 px gives z5 (16384, a genuine downsample); z6 would be
- * 32768 and would be upscaling a photograph. Deriving that from the file rather
- * than writing 5 in a constant means swapping in a wider equirect deepens the
- * bake by itself, and means a narrower one cannot silently start upscaling.
- *
- * ## Why the crop re-reads the file per box
- *
- * The obvious alternative is to decode the source once into memory and slice
- * it. For Blue Marble that is a 700 MB resident raster, and it is measurably
- * not worth it: libvips reads a JPEG region-of-interest without materialising
- * the whole image, so a 675 x 675 crop out of the 21600 x 10800 source costs
- * about 170 ms — under two minutes for a whole z5 level, against holding
- * two thirds of a gigabyte for the duration of the bake. Nothing here ever
- * holds a whole-globe raster, which is the same property the build loop's
- * deepest-level-first ordering exists to preserve.
+ * The crop re-reads the file per box rather than decoding once into memory
+ * (700 MB resident for Blue Marble): libvips reads a JPEG region-of-interest
+ * without materialising the whole image, so a crop costs ~170 ms — under two
+ * minutes for a whole z5 level, and nothing here ever holds a whole-globe
+ * raster.
  */
 
 import sharp from 'sharp';
@@ -51,9 +35,8 @@ export async function equirectFileSource(source: {
   const sourceWidth = meta.width ?? 0;
   const sourceHeight = meta.height ?? 0;
 
-  // A 2:1 raster is what makes 'pixel row = latitude' a linear map. Anything
-  // else is not a plate-carree whole-globe equirect, and every box this source
-  // returns would be silently sampling the wrong ground.
+  // A 2:1 raster makes 'pixel row = latitude' a linear map; anything else
+  // isn't a plate-carree whole-globe equirect.
   if (sourceWidth !== sourceHeight * 2) {
     throw new Error(
       `equirectFileSource: ${source.rawKey} is ${sourceWidth}x${sourceHeight}, not a 2:1 equirectangular raster`,
@@ -67,8 +50,7 @@ export async function equirectFileSource(source: {
 
     async readBox(box, widthPx, heightPx) {
       // Row 0 of the source is latitude +90, so the box's NORTH edge maps to
-      // the smaller pixel row and the returned raster is north-first — which
-      // is exactly what the tile contract asks for.
+      // the smaller pixel row and the raster comes back north-first.
       const left = Math.round(((box.west + 180) / 360) * sourceWidth);
       const right = Math.round(((box.east + 180) / 360) * sourceWidth);
       const top = Math.round(((90 - box.north) / 180) * sourceHeight);
@@ -81,14 +63,11 @@ export async function equirectFileSource(source: {
           width: Math.min(right, sourceWidth) - left,
           height: Math.min(bottom, sourceHeight) - top,
         })
-        // `fit: 'fill'` because the caller asks for a square tile out of a box
-        // that is only square at the equator; the plate-carree stretch toward
-        // the poles is the projection, not an aspect error to preserve.
+        // `fit: 'fill'`: the plate-carree stretch toward the poles is the
+        // projection, not an aspect error to preserve.
         .resize(widthPx, heightPx, { fit: 'fill' })
-        // Blue Marble covers the whole globe and has no no-data, so alpha is
-        // 255 everywhere and this source never declines a box. Both the alpha
-        // channel and `readBox`'s null return exist for the land-only sources
-        // of the deep pyramid, whose no-data mask IS the coastline.
+        // Blue Marble has no no-data — this source never declines a box, but
+        // still returns the alpha channel (see EarthImagerySource).
         .ensureAlpha()
         .raw()
         .toBuffer();

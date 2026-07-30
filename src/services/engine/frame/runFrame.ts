@@ -117,42 +117,21 @@ const publishBodyDistanceGate = throttleByTime(250);
 
 /**
  * Idle-tick cadence for a LIVE sim clock, in milliseconds. Live time advances
- * at the real-time rate (one sim day per real day): Earth turns 360° / 24 h ≈
- * 0.00417°/s, so over one tick of length T the terminator sweeps
- * `0.00417 * T` degrees, which at the surface is `radiusKm * that angle in
- * radians` of ground. On screen, that ground distance becomes pixels via the
- * viewport's vertical span at the camera's standoff altitude h:
- * `2 * h * tan(fovY / 2)` (`DEFAULT_FOV_Y_RAD` = 60°) mapped onto the canvas's
- * pixel height.
+ * one sim day per real day, so the terminator sweeps `0.00417° * T` of ground
+ * per tick of length T — on screen that maps to pixels via `2 * h * tan(fovY /
+ * 2)` (h = camera altitude) over the canvas's pixel height.
  *
- * That last factor is what sets the cadence, and it is the altitude term that
- * makes it tight. With Earth a modest part of the screen a multi-second tick is
- * sub-pixel and would do; but the camera can descend to a 127 km standoff over
- * streamed surface tiles, where the viewport spans only ~147 km of ground
- * vertically. At a 3 s tick that is ~1.4 km of terminator drift, ~8 px on a
- * ~900 px-tall canvas — a visible jump once per tick. Ground drift scales
- * linearly with tick length and screen-space drift inversely with altitude, so
- * 500 ms holds the same step under 1.5 px, below the threshold this cadence is
- * meant to sit under at every reachable altitude. If the standoff floor drops
- * further, redo this arithmetic rather than retuning the constant by feel.
+ * The altitude term is what makes the cadence tight: at the 127 km standoff
+ * over streamed surface tiles the viewport spans only ~147 km vertically, so a
+ * 3 s tick is a visible ~8 px jump on a ~900 px-tall canvas. 500 ms holds that
+ * drift under 1.5 px at every reachable altitude — ground drift scales
+ * linearly with tick length, screen-space drift inversely with altitude.
  *
- * This is a real trade, not a free lunch: 500 ms is 2 fps of full-scene
- * renders while the loop would otherwise sleep (0.33 fps at a 3 s tick) —
- * negligible next to the 60 fps an interaction drives, but not nothing on a
- * wide cosmic-web view where a frame is expensive and the camera is merely
- * parked, not close to Earth. The principled fix would scale the cadence with
- * the focused body's apparent size (or camera altitude), tightening only when
- * something close is actually moving on screen — deferred: more code and
- * another coupling in `runFrame`, for a saving that only matters on an idle
- * parked camera far from any body.
- *
- * Live mode is deliberately kept OUT of `shouldKeepTicking` regardless of this
- * value — pinning the render loop at 60 fps for a rotation this slow would
- * burn the GPU for no visible gain even at the tightest altitude. Instead we
- * ask the scheduler for ONE frame every tick: a coarse heartbeat that keeps
- * the terminator honest while letting the loop sleep in between. The React
- * TimeBar readout runs its own timer, so this heartbeat serves only the 3D
- * scene.
+ * Kept OUT of `shouldKeepTicking` regardless: pinning the loop at 60 fps for a
+ * rotation this slow would burn the GPU for no visible gain, so instead we ask
+ * the scheduler for ONE frame per tick — a heartbeat that keeps the terminator
+ * honest while the loop sleeps in between. The React TimeBar readout runs its
+ * own timer, so this heartbeat serves only the 3D scene.
  *
  * A `setInterval` would be the wrong tool: it fires unconditionally, fighting
  * render-on-demand and double-scheduling whenever a real wake (drag, fade) is
@@ -584,38 +563,20 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   }
 
   // ── Earth surface virtual texture — the tile planner ──────────────────────
-  //
-  // A CPU-side planner, sited with the disk planners above because it is the
-  // same kind of step: walk the scene, decide what to stream, hand the result
-  // to a subsystem that owns the atlas — all before the GPU dispatch reads
-  // what it uploaded.
-  //
-  // The gate is `earthLayer.enabled` itself rather than a hand-copied
-  // predicate. The tiles refine exactly the pixels that layer draws, so the two
-  // must not be able to disagree about whether Earth is on screen — and the
-  // layer's gate is already the interesting one (the renderer handle, the
-  // near-field distance bracket, the sub-pixel cull). Anywhere outside the
-  // inner solar system it is false and this whole block is one call.
+  // A CPU-side planner, sited with the disk planners above. The gate is
+  // `earthLayer.enabled` itself, not a hand-copied predicate, so the tiles and
+  // the layer they refine can never disagree about whether Earth is on screen.
   const earthTiles = state.subsystems.earthTiles;
   const earth = state.data.bodies.earth;
   if (earthTiles !== null && earth !== null && earthLayer.enabled(state, ctx)) {
-    // Null until the manifest lands; the first call is what starts that fetch,
-    // and it has to happen before there is any plan at all — the subsystem's
-    // engage rule is stated in terms of a level the manifest supplies.
-    //
-    // The tier goes in because the OTHER half of that level is the whole-globe
-    // texture this session bound, and only the drive site can see which one that
-    // is — `earthSurfaceTier` reads it off the committed texture slot rather than
-    // off the app-wide request, so a tier swap in flight cannot make the planner
-    // believe in detail that is not on the GPU yet.
+    // `earthSurfaceTier` reads the tier off the committed texture slot, not the
+    // app-wide request, so a tier swap in flight can't make the planner believe
+    // in detail that isn't on the GPU yet. Null until the manifest lands.
     const params = earthTiles.plannerParams(earthSurfaceTier(state));
     if (params !== null) {
-      // The SAME slab resolution the executor hands `earthLayer.draw`, and the
-      // same two derivations that draw feeds into `packEarthSurfaceUniforms`:
-      // `composeBodyMvp` off the NEAR0 slab's f64 vp (the f64 seam — see
-      // `earthLayer`'s module header) and `camPosLocal` off the slab camera.
-      // Deriving the plan's frame any other way would let the tiles the planner
-      // asks for drift from the pixels the fragment samples them into.
+      // Same slab resolution `earthLayer.draw` uses (the f64 seam — see its
+      // module header), so the tiles the planner asks for never drift from the
+      // pixels the fragment samples them into.
       const view = slabViewOf(ctx, NEAR0);
       const earthState = sceneBodyStates(state, ctx).get(earth.id)!;
       const radiusMpc = earth.radiusKm * SCALE_UNITS.KM_TO_MPC;
@@ -636,25 +597,14 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
         ),
         viewportPx: view.viewportPx,
       });
-      // Unconditional: whether the virtual texture engages is the subsystem's
-      // own decision, made from this plan. A gate here would make engaging
-      // something this site does and disengaging something that merely stops
-      // happening, which is exactly how the stand-down came to be missing.
-      //
-      // `update` is still the only call that can allocate the atlas and the page
-      // table, so reading `getTileResources()` either side of it IS the
-      // null-to-non-null transition — no "have I wired this yet?" flag has to
-      // exist anywhere, and there is no way for one to get out of step. The
-      // renderer's bind group must be rebuilt exactly once, at that moment: its
-      // layout is fixed at pipeline creation and points at 1×1 placeholders
-      // until then, and the views are identity-stable afterwards, so calling per
-      // frame would rebuild an identical group forever.
+      // Unconditional: engaging/disengaging is the subsystem's own decision
+      // from this plan. `getTileResources()` either side of `update` IS the
+      // null-to-non-null transition, so the renderer's bind group rebuilds
+      // exactly once, at that moment.
       const engagedBefore = earthTiles.getTileResources() !== null;
       earthTiles.update({ plan, nowMs: ctx.nowMs });
       if (!engagedBefore) {
         const tiles = earthTiles.getTileResources();
-        // Still null on every frame before the subsystem first engages; the
-        // check keeps the types honest without restating its rule here.
         if (tiles !== null) {
           state.gpu.earthRenderer?.setTileResources(tiles.pageTable, tiles.atlas);
         }
@@ -662,12 +612,9 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     }
   }
 
-  // The keep-ticking vote, read OUTSIDE the gate above rather than beside the
-  // `update` call. `isAnimating()` is true while the manifest is in flight,
-  // which is a state the subsystem enters BEFORE it can ever engage — so a vote
-  // consulted only on engaged frames would let a camera that stops moving
-  // mid-fetch sleep the loop, and the feature would stay dormant until the next
-  // input event as though the fetch had silently failed.
+  // Read OUTSIDE the gate above: `isAnimating()` is true while the manifest is
+  // in flight, a state entered BEFORE the subsystem can ever engage — voting
+  // only on engaged frames would let a stopped camera sleep the loop mid-fetch.
   const earthTilesAnimating = earthTiles?.isAnimating() ?? false;
 
   // ── Label director per-frame update ──────────────────────────────────────

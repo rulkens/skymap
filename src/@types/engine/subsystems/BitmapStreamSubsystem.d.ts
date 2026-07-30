@@ -44,12 +44,9 @@ export type BitmapStreamSubsystem = Destroyable & {
    * every slot is in use AND none can be evicted.  Bumps the LRU clock
    * for an existing key.
    *
-   * "None can be evicted" means every slot was claimed earlier in this same
-   * frame: taking one would undo work already done this frame, and with a
-   * consumer that re-requests a stable set every frame (a stationary camera
-   * over an over-subscribed atlas) that yields an unbounded refetch loop
-   * rather than a bounded atlas.  Callers skip the refused key and carry on
-   * with the rest of the frame's requests.
+   * "None can be evicted" means every slot was claimed earlier this same
+   * frame — taking one would undo work already done. Callers skip the
+   * refused key and carry on with the rest of the frame's requests.
    */
   allocate(key: string, atFrame: number): number | null;
 
@@ -60,47 +57,36 @@ export type BitmapStreamSubsystem = Destroyable & {
   slotUv(slot: number): readonly [number, number, number, number];
 
   /**
-   * Frame the slot was last allocate()-touched, or undefined if the key holds
-   * no slot.  The LRU clock, read out — which is a weaker fact than "is my
-   * slot still mine", and not a substitute for it: a key that was evicted and
-   * then re-requested reports a fresh frame at a DIFFERENT slot.  Async writers
-   * ask `uploadBitmap` instead.
+   * Frame the slot was last allocate()-touched, or undefined if the key
+   * holds no slot. A key evicted and re-requested reports a fresh frame at
+   * a DIFFERENT slot — not a substitute for "is my slot still mine"; async
+   * writers ask `uploadBitmap` instead.
    */
   lastSeenFrame(key: string): number | undefined;
 
   /**
    * Upload a bitmap into the slot the atlas holds for `key` RIGHT NOW, and
-   * record the key as loaded.  Returns that slot, or `null` when the key holds
-   * no slot at all — evicted during the fetch's round trip, or never allocated.
+   * record the key as loaded.  Returns that slot, or `null` when the key
+   * holds no slot at all — evicted during the fetch's round trip, or never
+   * allocated; the caller then records nothing.
    *
-   * Keyed rather than slot-indexed because a slot index is a fact about the
-   * frame that allocated it (see `TextureAtlas`'s header).  A caller that
-   * captured one before awaiting a fetch and passed it back here would write
-   * pixels into whichever key has since taken that slot: wrong ground under the
-   * other key's UVs, in a slot the atlas believes is already populated and so
-   * never refetches.  Resolving the key at the point of use makes that
-   * unrepresentable rather than merely guarded against.
-   *
-   * The `null` return is the consumer's signal to record nothing — no slot, no
-   * arrival time, no residency entry — and it subsumes any "is my key still
-   * here?" check a caller might otherwise write around this call.
+   * Keyed rather than slot-indexed: a slot index captured before an async
+   * fetch can point at a different key's slot by the time the fetch lands.
+   * Resolving the key at the point of use makes that unrepresentable.
    */
   uploadBitmap(key: string, bitmap: ImageBitmap): number | null;
 
   /**
-   * Idempotent per key.  Re-enqueueing a key that is merely PENDING replaces
-   * its entry, so priority tracks the latest ask; re-enqueueing one that is
-   * already IN FLIGHT does nothing at all, so the `onResult` that eventually
-   * fires is the first one submitted.  That second case is why `onResult` must
-   * not close over anything frame-scoped: later frames get no chance to
-   * correct it (see `uploadBitmap`).
+   * Idempotent per key: re-enqueueing a PENDING key replaces its entry, so
+   * priority tracks the latest ask; re-enqueueing an IN-FLIGHT key does
+   * nothing, so `onResult` must not close over frame-scoped state — a
+   * later frame gets no chance to correct it.
    */
   enqueueFetch(input: BitmapStreamFetchInput): void;
 
   /**
-   * Reports whether the key's pixels are in the atlas (`isLoaded`, written only
-   * by a successful `uploadBitmap`) / whether its fetch permanently failed.
-   * Both suppress further fetches, so both must mean what they say.
+   * Whether the key's pixels are in the atlas (`isLoaded`) or its fetch
+   * permanently failed (`isFailed`). Both suppress further fetches.
    */
   isLoaded(key: string): boolean;
   isFailed(key: string): boolean;
