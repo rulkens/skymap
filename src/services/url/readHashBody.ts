@@ -3,9 +3,16 @@
  *
  * "Body" is the vocabulary the rest of the URL stack already speaks:
  * `parseHashParams` takes one, `composeHashParams` returns one, and a
- * `HashParamSource.write` contributes one param to one. This function is the
- * single place the `#` is removed, so no caller ever has to remember whether the
- * string it holds carries the sigil.
+ * `HashParamSource.write` contributes one param to one. This is where the address
+ * bar enters that vocabulary: everything downstream of this call holds a body, so
+ * no saga has to remember whether the string it is passing around carries the
+ * sigil.
+ *
+ * It is not the only `slice(1)` in the codebase, and does not try to be.
+ * `hasDeepLink` strips its own, because it does not read the window — it takes a
+ * hash and a search string from its caller and normalises both alike, the `#` on
+ * one line and the `?` on the next. Routing half of that pair through a shared
+ * helper would split one two-line normalisation across two files to save nothing.
  *
  * The value passes through raw — no `decodeURIComponent`. That is deliberate and
  * matches `parseHashParams`'s encoding policy: skymap's hashes are un-encoded
