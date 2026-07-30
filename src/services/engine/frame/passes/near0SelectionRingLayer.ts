@@ -77,8 +77,10 @@
  * `deriveBodyStates(simDays)` map the body draw pass already built this frame, so
  * the re-read is free and the ring shares the bodies' exact epoch). It returns
  * null for a non-body row AND for a body-typed row absent from the orbital
- * snapshot (a famous star — static, so its baked row position is already
- * correct); the `?? worldPos` fallback is right for both, not defensive.
+ * snapshot; the `?? worldPos` fallback covers both, and is right rather than
+ * defensive because a row's baked `worldPos` and its snapshot position are the
+ * same authored value for anything static — only a body the clock moves needs
+ * the live re-read at all.
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
@@ -117,8 +119,8 @@ export const near0SelectionRingLayer: ContentLayer = {
 
     // Re-resolve a body row's LIVE position at this frame's sim epoch so the ring
     // tracks the animated planet/moon instead of its stale pick-time snapshot
-    // (see the module header). Null for a non-body row or a static famous star,
-    // where the baked `worldPos` is already correct — hence the fallback.
+    // (see the module header). A row the snapshot cannot place falls back to the
+    // baked `worldPos`, which is the same value for anything static.
     const centreWorld = liveBodyPosition(row, ctx.simDays) ?? worldPos;
 
     // Re-express the ring centre as a small camera-relative vector in f64

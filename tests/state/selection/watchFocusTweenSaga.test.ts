@@ -188,16 +188,15 @@ describe('watchFocusTweenSaga', () => {
     expect(store.getState()[cameraRoute].tween).not.toBeNull();
   });
 
-  // Regression: famous stars are scene BODIES (star-body presence) but are absent
-  // from the orbital body-state snapshot the follow driver activates on — and they
-  // do not move — so they must TWEEN, not be swallowed by the body no-op. The saga
-  // now gates on the follow driver's actual membership (liveBodyPosition), so a
-  // star body falls through to the tween. The PLANET-body-no-tween half is the
-  // 'earth' case above (earth IS in the snapshot).
+  // Regression: famous stars are scene BODIES (star-body presence) but do not
+  // move, so the follow driver leaves them and they must TWEEN rather than being
+  // swallowed by the body no-op. The saga gates on the follow driver's own
+  // predicate (bodyMovesThisFrame), so a star body falls through to the tween.
+  // The PLANET-body-no-tween half is the 'earth' case above.
   it('a famous-star body focus DOES plant a tween (falls through the follow-membership gate)', async () => {
-    // 'sirius' is a StarBody in SCENE_BODIES, absent from deriveBodyStates, so
-    // liveBodyPosition returns null and the saga builds the tween. Its `to` is
-    // framed on the star's fixed world position (stars don't move → a tween is right).
+    // 'sirius' is a StarBody in SCENE_BODIES with no ORBITAL_ELEMENTS row, so the
+    // saga builds the tween. Its `to` is framed on the star's fixed world position
+    // (stars don't move → a tween is right).
     store.dispatch(updateSelectionFocus({ type: 'body', id: 'sirius' }));
     await flush();
     expect(store.getState()[cameraRoute].tween).not.toBeNull();

@@ -46,7 +46,7 @@ Nothing consumes this table yet.
 - [x] Add the test `the Sun anchor is heliocentric zero` — assert `SCENE_ANCHORS` contains `sun` at `[0,0,0]`. Don't assert the module's import list (a source-text-grep-shaped check on an implementation detail, not a behaviour) — the module header carries the "authored, not referenced" rationale instead.
 - [x] Implement the type and the table.
 - [x] `npm test -- sceneAnchors` → passes.
-- [x] Commit. — `40159a10`
+- [x] Commit.
 
 ---
 
@@ -78,7 +78,7 @@ Update every docblock that asserts "`null` is heliocentric" — `OrbitalElements
 - [x] Add the test `every orbital element row names a focus` asserting no row has an empty/absent `focusId`.
 - [x] Perform the rename and the null elimination.
 - [x] `npm run typecheck` → clean. `npm test` → green, with no snapshot or value changes.
-- [x] Commit. — `b878a3e0`
+- [x] Commit.
 
 ---
 
@@ -92,7 +92,8 @@ Update every docblock that asserts "`null` is heliocentric" — `OrbitalElements
 - Modify: `src/state/selection/watchFocusTweenSaga.ts:97` (the tween skip)
 - Modify: `src/services/engine/camera/applyFocusedBodyPivot.ts:42-43` (the pivot pin's own `pivot === null` short-circuit — see below, this is a THIRD site, distinct from `runFrame.ts`)
 - Modify: `src/services/engine/frame/runFrame.ts:382` (the `followingBody` membership read that feeds `accumulateFollowPan`)
-- Modify: `src/services/engine/frame/passes/near0SelectionRingLayer.ts:75-81,118-122` (comment-only — see below)
+- Modify: `src/services/engine/frame/passes/near0SelectionRingLayer.ts:78-81,118-121` (comment-only — see below; `:75-77` is still-true prose)
+- Modify: `src/services/engine/camera/cameraDrivers.ts:182-184` (module header) and `:297` (`followBody.pose`'s position read) — comment-only, but both assert the snapshot-presence contract that stops being true
 - Test: `tests/utils/scene/bodyMovesThisFrame.test.ts`
 
 **Interfaces — Produces:**
@@ -111,11 +112,11 @@ Three call sites currently ask `liveBodyPosition(...) !== null` as a membership 
 
 `liveBodyPosition` keeps returning a position; the membership call sites take their _membership_ from the new predicate and their _position_ from `liveBodyPosition`. Rewrite `liveBodyPosition`'s docblock so it no longer claims to answer the membership question.
 
-- [ ] Add the test `a famous star does not move this frame` and `a planet moves this frame`.
-- [ ] Add the test `the Sun does not move this frame` — this is the case Task 4 would otherwise silently flip.
-- [ ] Extract the predicate; repoint `cameraDrivers.ts:276`, `watchFocusTweenSaga.ts:97`, `runFrame.ts:382` to it; gate `applyFocusedBodyPivot.ts`'s pin on it; correct `near0SelectionRingLayer.ts`'s stale comment.
-- [ ] `npm test` → green, no behaviour change.
-- [ ] Commit.
+- [x] Add the test `a famous star does not move this frame` and `a planet moves this frame`.
+- [x] Add the test `the Sun does not move this frame` — this is the case Task 4 would otherwise silently flip.
+- [x] Extract the predicate; repoint `cameraDrivers.ts:276`, `watchFocusTweenSaga.ts:97`, `runFrame.ts:382` to it; gate `applyFocusedBodyPivot.ts`'s pin on it; correct `near0SelectionRingLayer.ts`'s stale comment.
+- [x] `npm test` → green, no behaviour change.
+- [x] Commit.
 
 ---
 
