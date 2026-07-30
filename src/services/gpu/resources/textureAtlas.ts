@@ -205,9 +205,13 @@ export class TextureAtlas {
    * screen never fails. Only a NEW key can be refused, and only when every slot
    * carries `lastSeenFrame === frame`.
    *
-   * Why refuse rather than evict? A consumer that wants more items than the
-   * atlas holds — the Earth tile planner asks for ~107 tiles against 64 slots —
-   * claims every slot early in the frame and keeps asking. Evicting there would
+   * Why refuse rather than evict? A consumer can want more items than the atlas
+   * holds. The Earth tile planner's demand scales with screen AREA and with
+   * pyramid depth, so it is a viewport-and-bake fact rather than a constant: at
+   * the shipped z3–z7 depth it peaks near a dozen tiles against 64 slots on a
+   * 1600x900 viewport (measured across a nadir descent), and a deeper pyramid or
+   * a larger window pushes it past capacity. Such a consumer claims every slot
+   * early in the frame and keeps asking. Evicting there would
    * recycle a slot claimed moments earlier in the same frame, undoing work
    * already done, and because the consumer re-requests a stable set every frame
    * from a stationary camera it would repeat forever: evict, refetch, evict.
