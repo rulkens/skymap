@@ -2,7 +2,7 @@
  * buildInitialSettings — assemble the engine's boot-time settings literal.
  *
  * Every settings field lives under a named cluster (galaxy-catalog billboard
- * knobs under `galaxyCatalogs`, HDR controls under `tonemap`, etc.). This
+ * knobs under `galaxyCatalogs`, extended-range headroom under `hdr`, etc.). This
  * function is the *assembly* step that composes the per-field defaults from
  * `data/defaults.ts` (mirroring how those constants are defined one place) plus
  * the registry-derived item rows into the single `EngineSettingsState` that the
@@ -26,22 +26,32 @@ import {
   DEFAULT_SHOW_PICK_BUFFER,
   DEFAULT_SHOW_DISK_RADIUS_RING,
   DEFAULT_EXPOSURE,
+  DEFAULT_HDR_ENABLED,
+  DEFAULT_HDR_KNEE,
+  DEFAULT_HDR_HEADROOM,
+  DEFAULT_BLOOM_ENABLED,
+  DEFAULT_BLOOM_STRENGTH,
+  DEFAULT_BLOOM_THRESHOLD,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
-  DEFAULT_FAMOUS_STARS_ENABLED,
+  DEFAULT_GALAXY_SB_SCALE,
+  DEFAULT_GALAXY_SB_MAX,
+  DEFAULT_GALAXY_FALLOFF_STRENGTH,
   DEFAULT_MILKY_WAY_ENABLED,
   DEFAULT_MILKY_WAY_LABEL_ENABLED,
-  DEFAULT_HIGHLIGHT_FALLBACK,
+  DEFAULT_GALAXY_PROVENANCE,
+  DEFAULT_ORBIT_TRAILS_ENABLED,
   DEFAULT_POINT_SIZE_PX,
-  DEFAULT_REAL_ONLY_MODE,
   DEFAULT_STAR_BRIGHTNESS,
   DEFAULT_STAR_GLOW_OVERLAP,
   DEFAULT_STAR_EXPOSURE_NEAR_X,
   DEFAULT_STAR_EXPOSURE_MID_X,
   DEFAULT_STAR_EXPOSURE_FAR_X,
+  DEFAULT_STAR_AGGREGATE_INTENSITY_CAP,
   DEFAULT_STAR_SIZE_PX,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VOLUMES_ENABLED,
   DEFAULT_FLOW,
+  DEFAULT_ORIENTATION,
 } from '../../data/defaults';
 // The "Detail" knob's default is owned by the walk it feeds (single source of
 // truth), so seed the setting straight from it rather than restating 0.05.
@@ -58,6 +68,8 @@ import {
   DEFAULT_PASS_BY_DIR,
 } from '../../services/engine/animation/pathDefaults';
 import { seedVolumeFields } from '../../data/volume/volumeFieldDefaults';
+import { ATMOSPHERE_PARAMS } from '../../data/bodies/atmosphereParams';
+import { EARTH_SURFACE_PARAMS } from '../../data/bodies/earthSurfaceParams';
 import { STRUCTURE_IDS } from '../../data/structure/structureIds';
 import type { EngineSettingsState } from '../../@types/settings/EngineSettingsState';
 import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
@@ -66,9 +78,16 @@ import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { StructureItemSettings } from '../../@types/settings/StructureItemSettings';
 import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';
 import type { StarCatalogItemSettings } from '../../@types/settings/StarCatalogItemSettings';
+import type { BodyId } from '../../@types/data/body/BodyId';
+import type { BodyItemSettings } from '../../@types/settings/BodyItemSettings';
 
 export function buildInitialSettings(): EngineSettingsState {
   return {
+    // Camera orientation frame — the bare scalar "which pole is up" view
+    // preference (spec §3.2). Seeded from `DEFAULT_ORIENTATION` so that file
+    // stays the default's single source of truth (mirroring `tonemap.curve` ←
+    // `DEFAULT_TONE_MAP_CURVE`).
+    orientation: DEFAULT_ORIENTATION,
     // Galaxy catalog layer: master gate on + shared billboard appearance knobs +
     // one item row per galaxy catalog. Rows are DERIVED from the galaxy-catalog
     // registry entries so the seed can't drift from the galaxy catalog set — and,
@@ -85,8 +104,10 @@ export function buildInitialSettings(): EngineSettingsState {
       sizePx: DEFAULT_POINT_SIZE_PX,
       brightness: DEFAULT_BRIGHTNESS,
       depthFade: DEFAULT_DEPTH_FADE_ENABLED,
-      highlightFallback: DEFAULT_HIGHLIGHT_FALLBACK,
-      realOnly: DEFAULT_REAL_ONLY_MODE,
+      provenance: DEFAULT_GALAXY_PROVENANCE,
+      sbScale: DEFAULT_GALAXY_SB_SCALE,
+      sbMax: DEFAULT_GALAXY_SB_MAX,
+      falloffStrength: DEFAULT_GALAXY_FALLOFF_STRENGTH,
       items: Object.fromEntries(
         SOURCE_ENTRIES.filter((e) => e.type === 'galaxyCatalog').map((e) => [
           e.id,
@@ -97,6 +118,20 @@ export function buildInitialSettings(): EngineSettingsState {
     tonemap: {
       exposure: DEFAULT_EXPOSURE,
       curve: DEFAULT_TONE_MAP_CURVE,
+    },
+    hdr: {
+      enabled: DEFAULT_HDR_ENABLED,
+      knee: DEFAULT_HDR_KNEE,
+      headroom: DEFAULT_HDR_HEADROOM,
+    },
+    // Screen-space bloom: master gate + the two look knobs, each seeded from its
+    // `data/defaults.ts` constant so that file stays the default's single source
+    // of truth (mirroring `tonemap`). Read live by the bloom pass; `enabled`
+    // gates the pass at frame-program build.
+    bloom: {
+      enabled: DEFAULT_BLOOM_ENABLED,
+      strength: DEFAULT_BLOOM_STRENGTH,
+      threshold: DEFAULT_BLOOM_THRESHOLD,
     },
     // Bias's user-tunable subset.  Bake-derived fields live on
     // `state.bias` (worker outputs, not settings).  The -19 default is
@@ -118,15 +153,43 @@ export function buildInitialSettings(): EngineSettingsState {
       enabled: SOURCE_REGISTRY[Source.Filaments].visible,
       intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
     },
+    // Constellation stick-figure overlay, seeded from the registry constellations
+    // row (same pattern as `filaments`) so that entry stays the single source of
+    // truth for the default-visible gate + intensity. The one `enabled` toggle
+    // governs both the lines and their name captions.
+    constellations: {
+      enabled: SOURCE_REGISTRY[Source.Constellations].visible,
+      intensity: SOURCE_REGISTRY[Source.Constellations].intensity,
+    },
+    // Orbit-trails singleton overlay: the master gate on the near-field Keplerian
+    // orbit trails, defaulting on (the trails are part of the baseline
+    // solar-system scene). A flat `enabled` field like `milkyWay` / `filaments`.
+    orbitTrails: {
+      enabled: DEFAULT_ORBIT_TRAILS_ENABLED,
+    },
+    // Earth's per-body look dials. Each seeds from its authored data constant so
+    // that file stays the default's single source of truth (the same
+    // relationship the tonemap exposure default has to `DEFAULT_EXPOSURE`):
+    // `atmosphereExposure` from the Earth atmosphere-params row, `ambientLight`
+    // (Earth's night-side floor) + `oceanRoughness` (the ocean glint's GGX
+    // roughness) from the surface params — where each matches the shared WESL
+    // const it mirrors so these Earth-scoped overrides are no-ops at the default.
+    earth: {
+      // `earth` is a definitional row in the atmosphere table, so the indexed
+      // read is non-null here (the `Record<string, …>` index signature widens it).
+      atmosphereExposure: ATMOSPHERE_PARAMS.earth!.exposure,
+      ambientLight: EARTH_SURFACE_PARAMS.ambientLight,
+      oceanRoughness: EARTH_SURFACE_PARAMS.oceanRoughness,
+    },
     // Star-catalog layer: master gate on + one item row per star catalog. Rows
     // are DERIVED from the star-catalog registry entries (mirroring
     // `galaxyCatalogs`), so the seed can't drift from the star-catalog set, and
     // each row's `enabled` is seeded from that entry's `visible` field —
     // SOURCE_REGISTRY stays the single source of truth for default visibility.
-    // `labelEnabled` is inert for the survey-wide Gaia bin (the star renderer
-    // draws no per-star names); seeded uniformly true for a future label-bearing
-    // famous-star catalog. Per-row "loaded" is the asset slot's own readiness —
-    // no data-layer store.
+    // `labelEnabled` seeds true for every row: it gates the famous-star map's
+    // captions on the final descent, and rides inertly on the survey-wide Gaia
+    // bin (the star renderer draws no per-star names). Per-row "loaded" is the
+    // asset slot's own readiness — no data-layer store.
     starCatalogs: {
       enabled: true,
       sizePx: DEFAULT_STAR_SIZE_PX,
@@ -136,6 +199,7 @@ export function buildInitialSettings(): EngineSettingsState {
       exposureNearX: DEFAULT_STAR_EXPOSURE_NEAR_X,
       exposureMidX: DEFAULT_STAR_EXPOSURE_MID_X,
       exposureFarX: DEFAULT_STAR_EXPOSURE_FAR_X,
+      aggregateIntensityCap: DEFAULT_STAR_AGGREGATE_INTENSITY_CAP,
       items: Object.fromEntries(
         SOURCE_ENTRIES.filter((e) => e.type === 'starCatalog').map((e) => [
           e.id,
@@ -143,12 +207,18 @@ export function buildInitialSettings(): EngineSettingsState {
         ]),
       ) as Record<StarCatalogId, StarCatalogItemSettings>,
     },
-    // Famous-stars singleton overlay: the master gate on the seeded near-field
-    // star map. A flat `enabled` field like `milkyWay` / `filaments`, seeded
-    // from the SOURCE_REGISTRY famousStar row's `visible` gate. Gates the seeded
-    // map only — the star layers still draw the Sun alone when it's off.
-    famousStars: {
-      enabled: DEFAULT_FAMOUS_STARS_ENABLED,
+    // Body rows are DERIVED from the registry's body entries, so the seed can't
+    // drift from the body set, and each row's `enabled` comes from that entry's
+    // `visible` field — SOURCE_REGISTRY stays the single source of truth for
+    // default visibility. `labelEnabled` seeds true: the captions are the
+    // descent's navigation aids and show until the user mutes them.
+    bodies: {
+      items: Object.fromEntries(
+        SOURCE_ENTRIES.filter((e) => e.type === 'body').map((e) => [
+          e.id,
+          { enabled: e.visible, labelEnabled: true },
+        ]),
+      ) as Record<BodyId, BodyItemSettings>,
     },
     volumes: {
       enabled: DEFAULT_VOLUMES_ENABLED,
@@ -161,16 +231,16 @@ export function buildInitialSettings(): EngineSettingsState {
     flow: { ...DEFAULT_FLOW },
     // Cross-cutting label presentation: focusedOnly default OFF — all enabled
     // labels draw (the guided tour flips it on and its snapshot restores it).
-    // starLabelsEnabled default ON — the local-star captions show on the final
-    // descent until the user mutes them. planetLabelsEnabled default ON — the
-    // Earth + planet captions show on that same descent until muted.
-    labels: { focusedOnly: false, starLabelsEnabled: true, planetLabelsEnabled: true },
+    labels: { focusedOnly: false },
     debug: {
       showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
       showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,
       // Empty in production: a developer populates it from the DebugPanel's
       // renderer-toggle section. A fresh record per engine — never persisted.
       disabledPasses: {},
+      // 'auto' reproduces the old timing-derived pass shape, so production +
+      // ?gpuTimings stay identical to before Joint 1 (see `resolveStrategy`).
+      renderStrategy: 'auto',
       // Clip-path inspector idle: no clip chosen, scrubber at the start. The
       // overlay stays quiet until the curator clicks "Calculate". The pacing
       // knobs seed from the flyPath defaults but every override is INACTIVE, so a

@@ -30,7 +30,7 @@ import {
 } from '../../../../services/engine/animation/effectHelpers';
 import { focusId } from '../../../../utils/animation/focusId';
 import { dwellDrift } from '../../../../state/tour/dwellDrift';
-import { BOOT_PITCH_RAD, BOOT_YAW_RAD } from '../../../../services/engine/camera/cameraFraming';
+import { GALACTIC_DISC_PITCH_RAD, GALACTIC_DISC_YAW_RAD } from '../../../../services/engine/camera/cameraFraming';
 
 const MILKY_WAY = focusId('milkyWay');
 
@@ -42,7 +42,7 @@ export const homeAgain: ClipData = {
     all([
       moveTargetId(MILKY_WAY, 12),
       dollyToId(MILKY_WAY, 12),
-      aimAt({ yaw: BOOT_YAW_RAD, pitch: BOOT_PITCH_RAD }, 12),
+      aimAt({ yaw: GALACTIC_DISC_YAW_RAD, pitch: GALACTIC_DISC_PITCH_RAD }, 12),
     ]),
     // A gentle drift on the landing — home breathes while the closing
     // caption finishes, then the tour ends on the settle.

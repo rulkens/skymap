@@ -11,6 +11,7 @@ import type { GalaxyRow } from '../../../../../src/@types/engine/GalaxyRow';
 import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
 import { MILKY_WAY_CENTER_WORLD } from '../../../../../src/data/milkyWay/galacticCenter';
+import { makeGalaxyRow } from '../../../../fixtures/makeGalaxyRow';
 
 // ── fixtures ──────────────────────────────────────────────────────
 
@@ -28,9 +29,11 @@ function makeCtx(): ReadyFrameContext {
     vp: Float64Array.from(vp),
     originRelative: false,
     precision: 'f32',
+    reversedZ: false,
   };
   return {
     isReady: true,
+    renderedTargets: new Set<string>(),
     cam: {} as never,
     vp,
     slabs: [cosmoSlab, cosmoSlab],
@@ -38,6 +41,7 @@ function makeCtx(): ReadyFrameContext {
     drawCamPos: [0, 0, 0] as Readonly<[number, number, number]>,
     drawPxPerRad: 720,
     nowMs: 0,
+    simDays: 0,
     fovYRad: (60 * Math.PI) / 180,
     focusBlend: 0,
     visibleSourceMask: 0xffffffff,
@@ -79,27 +83,13 @@ function makeRendererSpy() {
 // A minimal GalaxyRow at a known world position + diameter. The layer reads
 // x/y/z and diameterKpc straight from the row via selectionHalo.
 function galaxyRow(overrides: Partial<GalaxyRow> = {}): GalaxyRow {
-  return {
-    type: 'galaxyCatalog',
+  return makeGalaxyRow({
     source: Source.Glade,
-    index: 0,
-    objId: '1',
-    x: 0,
-    y: 0,
     z: 100, // 100 Mpc away on +z
-    redshift: 0,
-    magU: 0,
-    magG: 0,
-    magR: 0,
-    magI: 0,
-    magZ: 0,
     diameterKpc: 60, // 60 kpc galaxy
     axisRatio: 1,
-    positionAngleDeg: 0,
-    classByte: 0,
-    parentSurveyByte: 0,
     ...overrides,
-  };
+  });
 }
 
 // A structure row — drives the marker pass, never this halo.

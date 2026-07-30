@@ -16,7 +16,6 @@
  * Failure modes:
  *   - webgpu-init-failed   → error box + Reload (no CTAs)
  *   - catalog-fetch-failed → error box + Reload (no CTAs)
- *   - famous-meta-failed   → CTAs stay; Tour disabled with tooltip
  *
  * The synchronous "no navigator.gpu" path is handled in main.tsx
  * before React mounts; the splash never sees it.
@@ -54,11 +53,6 @@ function Splash({
   onReload,
 }: SplashProps): ReactNode {
   const hardError = error?.kind === 'webgpu-init-failed' || error?.kind === 'catalog-fetch-failed';
-  const tourDisabled = blocked || error?.kind === 'famous-meta-failed';
-  const tourTooltip =
-    error?.kind === 'famous-meta-failed'
-      ? 'Tour is unavailable — failed to load the famous-galaxy index.'
-      : undefined;
 
   // Focus trap: move focus inside on mount, cycle on Tab boundaries,
   // dismiss on Esc. Smaller than pulling in focus-trap-react for ≤5
@@ -168,13 +162,7 @@ function Splash({
                 →
               </span>
             </button>
-            <button
-              type="button"
-              className={styles.cta}
-              onClick={onTour}
-              disabled={tourDisabled}
-              title={tourTooltip}
-            >
+            <button type="button" className={styles.cta} onClick={onTour} disabled={blocked}>
               Tour
               <span className={styles.arrow} aria-hidden="true">
                 →

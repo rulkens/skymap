@@ -1,7 +1,7 @@
 /**
  * `Source` enum + `SOURCE_REGISTRY`.
  *
- * The single registry of every data source skymap loads. Eight kinds,
+ * The single registry of every data source skymap loads. Nine kinds,
  * discriminated by `type`:
  *
  *   'galaxyCatalog' — per-point galaxy catalogs (SDSS, GLADE, 2MRS, Famous,
@@ -20,21 +20,26 @@
  *   'flow'          — CF4++ peculiar-velocity field overlay (single
  *                     flowfield.scfd cube). No per-record identity; carries
  *                     its own look/motion defaults.
- *   'famousStar'/'planet'/'earth'
- *                   — near-field true-scale bodies (the curated stellar
- *                     neighbourhood, Solar-System planets, Earth). Seeded records
- *                     drawn by their own content-layer; not persisted (a body's
- *                     identity is its stable seed id), but pickable on the NEAR0
- *                     pick pass via `drawPick`.
- *   'starCatalog'   — survey-wide stellar point clouds (the Gaia bin today).
- *                     Streamed as tiered `.bin` clouds and drawn by the star
- *                     renderer. Leaf stars are pickable on the NEAR0 pick pass
- *                     (the code tags the source there); a star's identity is its
- *                     record index and is not persisted to the `.bin`.
+ *   'body'          — near-field true-scale bodies (Earth, the Solar-System
+ *                     planets, the Sun). Seeded records drawn by their own
+ *                     content-layer; not persisted (a body's identity is its
+ *                     stable seed id) and captioned through the
+ *                     foreground-labels layer. Earth and the planets are
+ *                     pickable on the NEAR0 pick pass via `drawPick`; the Sun's
+ *                     dot is drawn by the star layers, so its picks carry the
+ *                     famousStar code.
+ *   'starCatalog'   — stellar point sets the user toggles as a unit. Two
+ *                     variants, split by `binBaseName`: the SURVEY-wide Gaia bin
+ *                     streams tiered `.bin` clouds from disk, while the curated
+ *                     famous-star map is SEEDED in code from the body store
+ *                     (`binBaseName: null`). Both are pickable on the NEAR0 pick
+ *                     pass — a survey star's identity is its record index, a
+ *                     seeded star's is its stable seed id — and neither is
+ *                     persisted to a `.bin`.
  *
  * Only `'galaxyCatalog'` and `'structure'` codes are persisted to disk / packed into
- * GPU buffers; `'filament'`, `'volume'`, `'milkyWay'`, `'flow'`, `'starCatalog'`, and
- * the body codes (`'famousStar'`, `'planet'`, `'earth'`) exist
+ * GPU buffers; `'filament'`, `'volume'`, `'milkyWay'`, `'flow'`, `'starCatalog'`
+ * and `'body'` exist
  * solely so every data source has one place to look. The visibility-bitmask helpers
  * (`utils/maskHas`, `utils/maskWith`, `utils/maskWithout`) operate on
  * galaxy catalog codes only.
@@ -63,6 +68,7 @@ import { VOID_ENTRY } from './sources/void';
 import { GROUP_ENTRY } from './sources/group';
 import { MILLIQUAS_ENTRY } from './sources/milliquas';
 import { FILAMENTS_ENTRY } from './sources/filaments';
+import { CONSTELLATIONS_ENTRY } from './sources/constellations';
 import { CF4_DENSITY_ENTRY } from './sources/cf4-density';
 import { MCPM_ENTRY } from './sources/mcpm';
 import { DEBUG_GAUSSIAN_ENTRY } from './sources/debug-gaussian';
@@ -76,6 +82,7 @@ import { DESI_SGW_ENTRY } from './sources/desiSgw';
 import { FAMOUS_STAR_ENTRY } from './sources/famous-star';
 import { PLANET_ENTRY } from './sources/planet';
 import { EARTH_ENTRY } from './sources/earth';
+import { SUN_ENTRY } from './sources/sun';
 import { GAIA_STARS_ENTRY } from './sources/gaia-stars';
 
 export { Source } from './source';
@@ -104,9 +111,14 @@ export { Source } from './source';
  *   layout, so labelling rows "(g)" for a 2MRS galaxy would be misleading.
  *   `'—'` (em-dash) marks an empty slot.
  *
- * Key insertion order is load-bearing: `sourceEntries.ts` /
- * `sourceIds.ts` derive `SOURCE_ENTRIES` / `SOURCE_IDS` via
- * `Object.values`, so the order here is the order those arrays carry.
+ * Key insertion order here is cosmetic: every key is a `Source` code, a
+ * non-negative integer, and JS iterates integer-like own keys in ascending
+ * numeric order regardless of where they were written — `sourceEntries.ts` /
+ * `sourceIds.ts` derive `SOURCE_ENTRIES` / `SOURCE_IDS` via `Object.values`,
+ * so those arrays (and anything downstream, e.g. the Labels panel's row
+ * order) are ordered by ascending code value. Changing that order needs
+ * either renumbering codes (forbidden — codes are append-only by value) or a
+ * separate display-order mechanism; neither is a decision this file makes.
  */
 export const SOURCE_REGISTRY = {
   [Source.Synthetic]: SYNTHETIC_ENTRY,
@@ -134,6 +146,8 @@ export const SOURCE_REGISTRY = {
   [Source.Planet]: PLANET_ENTRY,
   [Source.Earth]: EARTH_ENTRY,
   [Source.GaiaStars]: GAIA_STARS_ENTRY,
+  [Source.Constellations]: CONSTELLATIONS_ENTRY,
+  [Source.Sun]: SUN_ENTRY,
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;
 
 // ─── Famous-galaxy high-res LOD ─────────────────────────────────────────────

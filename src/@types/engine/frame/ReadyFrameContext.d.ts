@@ -84,6 +84,15 @@ export type ReadyFrameContext = {
    * animation stays a pure function of the stamped time.
    */
   nowMs: number;
+  /**
+   * This frame's sim-clock instant in Julian days — `deriveSimDays(time, nowMs)`,
+   * sampled ONCE by `runFrame` from the time-intent slice before the camera
+   * produce step. `sceneBodyStates` evaluates the whole body snapshot at THIS
+   * instant, so every per-frame body reader (planets, textured bodies, orbit
+   * trails) shares one epoch and can never draw the same body at two positions.
+   * A paused clock holds it steady; live/manual playback advances it each frame.
+   */
+  simDays: number;
   /** Vertical field-of-view in radians (`cam.fovYRad`) — the source `drawPxPerRad` is derived from. */
   fovYRad: number;
   /** Structure-focus recession blend 0→1, from structureFocus.produceFocusUniforms (ticked once/frame). */
@@ -106,5 +115,14 @@ export type ReadyFrameContext = {
    * (`ctx.renderTargets.viewOf('volume')`) never reach back into `state`.
    */
   renderTargets: RenderTargets;
+  /**
+   * The set of render-target ids drawn into so far THIS frame. A later pass
+   * that samples an earlier target's texture guards on this — mirroring the
+   * executor's composite step, which skips compositing a source that was never
+   * rendered this frame. The near-field caption occlusion reads it to avoid
+   * sampling the `foreground:0` depth on a frame where no body drew (the
+   * executor skips an empty render step, leaving that depth stale/uninitialised).
+   */
+  renderedTargets: ReadonlySet<string>;
   texturedDisks: TexturedDiskSubsystem;
 };

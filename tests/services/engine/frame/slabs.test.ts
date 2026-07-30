@@ -1,8 +1,8 @@
 /**
  * slabs — unit tests for `deriveSlabs` and `slabViewOf`.
  *
- * `deriveSlabs` instantiates the spec's two-row slab table (near-field
- * bodies + cosmological scene) from the live camera and the already-computed
+ * `deriveSlabs` instantiates the two-row slab table (near-field bodies and the
+ * cosmological scene) from the live camera and the already-computed
  * cosmological view-proj. `slabViewOf` is the executor-side lookup that
  * resolves a `slab: number` index (as named by a `FrameStep`) into the
  * `SlabView` a layer's `draw` actually consumes.
@@ -48,8 +48,8 @@ describe('deriveSlabs', () => {
 
   it.each([5, 5000])('every slab has nearMpc < farMpc (cam.distance = %d)', (distance) => {
     const slabs = deriveSlabs(makeCam(distance), makeCosmoVp());
-    for (const slab of slabs) {
-      expect(slab.nearMpc).toBeLessThan(slab.farMpc);
+    for (const index of [NEAR0, COSMO]) {
+      expect(slabs[index]!.nearMpc).toBeLessThan(slabs[index]!.farMpc);
     }
   });
 
@@ -57,8 +57,10 @@ describe('deriveSlabs', () => {
     const slabs = deriveSlabs(makeCam(100), makeCosmoVp());
     expect(slabs[0]?.originRelative).toBe(true);
     expect(slabs[0]?.precision).toBe('f64');
+    expect(slabs[0]?.reversedZ).toBe(true);
     expect(slabs[1]?.originRelative).toBe(false);
     expect(slabs[1]?.precision).toBe('f32');
+    expect(slabs[1]?.reversedZ).toBe(false);
   });
 
   it.each([250, 5000])(
@@ -89,6 +91,10 @@ describe('deriveSlabs', () => {
       aspect: cam.aspect,
       near,
       far,
+      // NEAR0 is reversed-Z (`SLAB_REVERSED_Z[NEAR0] === true`), so the derived
+      // vp must be the infinite-far reversed projection — pin the util with the
+      // same flag deriveSlabs passes, else this equality drifts.
+      reversedZ: true,
     });
     expect(slabs[0]?.vp).toBeInstanceOf(Float64Array);
     expect(Array.from(slabs[0]!.vp)).toEqual(Array.from(expected));
@@ -110,12 +116,14 @@ describe('slabViewOf', () => {
     const slabs = deriveSlabs(cam, cosmoVp);
     return {
       isReady: true,
+      renderedTargets: new Set<string>(),
       cam,
       vp: cosmoVp,
       canvasSize: { width: 1920, height: 1080 },
       drawCamPos: [cam.position[0], cam.position[1], cam.position[2]],
       drawPxPerRad: 1000,
       nowMs: 0,
+      simDays: 0,
       fovYRad: cam.fovYRad,
       focusBlend: 0,
       visibleSourceMask: 0xffffffff,

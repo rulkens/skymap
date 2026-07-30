@@ -54,5 +54,6 @@ export function useStructureMemberCount({
     // `tier` and `sourceCounts` are intentional triggers — the body reads
     // the engine's live catalogs through `getCloud` rather than these
     // values, but a tier swap / catalog landing changes what that returns.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- tier/sourceCounts are recompute triggers, not read in the body (see comment above)
   }, [selected, tier, sourceCounts, visibleSourceMask, engineHandleRef]);
 }

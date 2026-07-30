@@ -26,6 +26,7 @@ export const TWOMRS_ENTRY = {
   iauPrefix: '2MASX',
   // ~44k rows total — small enough to ship intact at every tier; no caps.
   tierTargets: {},
-  intensityFloor: 0.02,
+  // Per-source SB boost — 1.0 = no boost.
+  sbBoost: 1.0,
   falloffHalfMpc: 1000,
 } as const satisfies GalaxyCatalogSourceEntry;

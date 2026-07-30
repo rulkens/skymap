@@ -28,7 +28,8 @@ import { maskHas } from '../../utils/maskHas';
 import { BiasMode } from '../../data/galaxyCatalog/biasMode';
 import type { BiasMode as BiasModeT } from '../../@types/data/galaxyCatalog/BiasMode';
 import type { SourceType } from '../../@types/data/SourceType';
-import { CollapsibleSection } from './CollapsibleSection';
+import CollapsibleSection from './CollapsibleSection';
+import Slider from '../common/Slider/Slider';
 import styles from './SettingsPanel.module.css';
 
 // ── Module-level constants ─────────────────────────────────────────────────────
@@ -80,6 +81,18 @@ type GalaxiesSectionProps = {
   absMagLimit: number;
   /** Called when the user moves the M_lim slider. */
   onAbsMagLimitChange: (absMag: number) => void;
+  /** Overall physical-SB → HDR gain — the "Galaxy brightness" knob. */
+  sbScale: number;
+  /** Called when the user moves the galaxy-brightness slider. */
+  onSbScaleChange: (v: number) => void;
+  /** Bloom ceiling — the max surface-brightness amplitude a compact galaxy can emit. */
+  sbMax: number;
+  /** Called when the user moves the bloom-ceiling slider. */
+  onSbMaxChange: (v: number) => void;
+  /** Readability-falloff exponent — the "Distance falloff" knob. */
+  falloffStrength: number;
+  /** Called when the user moves the distance-falloff slider. */
+  onFalloffStrengthChange: (v: number) => void;
 };
 
 // ── GalaxiesSection ────────────────────────────────────────────────────────────
@@ -102,6 +115,12 @@ function GalaxiesSection({
   onBiasModeChange,
   absMagLimit,
   onAbsMagLimitChange,
+  sbScale,
+  onSbScaleChange,
+  sbMax,
+  onSbMaxChange,
+  falloffStrength,
+  onFalloffStrengthChange,
 }: GalaxiesSectionProps) {
   // ── Master tri-state derivation ──────────────────────────────────────────────
   // Tri-state master = how many TOGGLEABLE_SOURCES are currently enabled.
@@ -150,6 +169,7 @@ function GalaxiesSection({
               <input
                 id={`toggle-source-${s}`}
                 type="checkbox"
+                className={styles.toggle}
                 checked={maskHas(visibleSourceMask, s)}
                 onChange={(e) => onToggleSource(s, e.target.checked)}
               />
@@ -159,20 +179,56 @@ function GalaxiesSection({
       </CollapsibleSection>
 
       <CollapsibleSection title="Advanced">
-        {/* Point size — galaxy-only tunable. */}
+        {/* Point size — galaxy-only tunable.  First in-panel trial of the
+            compact Slider (label + value folded into one pill) in place of the
+            house label-row + range-row + value-span triple. */}
         <div className={styles.panelRow}>
-          <label htmlFor="slider-point-size">Point size</label>
-          <span className={styles.panelValue}>{pointSize.toFixed(1)} px</span>
-        </div>
-        <div className={styles.panelRow}>
-          <input
-            id="slider-point-size"
-            type="range"
+          <Slider
+            label="Point size"
+            value={pointSize}
             min={1.0}
             max={8.0}
             step={0.1}
-            value={pointSize}
-            onChange={(e) => onPointSizeChange(parseFloat(e.target.value))}
+            onChange={onPointSizeChange}
+            format={(v) => `${v.toFixed(1)} px`}
+          />
+        </div>
+
+        {/* Galaxy surface-brightness calibration knobs — overall HDR gain,
+            bloom ceiling, and the resolved-fraction readability falloff. */}
+        <div className={styles.panelRow}>
+          <Slider
+            label="Galaxy brightness"
+            value={sbScale}
+            min={0.5}
+            max={30}
+            step={0.5}
+            onChange={onSbScaleChange}
+            format={(v) => `${v.toFixed(1)}×`}
+          />
+        </div>
+
+        <div className={styles.panelRow}>
+          <Slider
+            label="Bloom ceiling"
+            value={sbMax}
+            min={1}
+            max={100}
+            step={1}
+            onChange={onSbMaxChange}
+            format={(v) => v.toFixed(0)}
+          />
+        </div>
+
+        <div className={styles.panelRow}>
+          <Slider
+            label="Distance falloff"
+            value={falloffStrength}
+            min={0}
+            max={2}
+            step={0.05}
+            onChange={onFalloffStrengthChange}
+            format={(v) => v.toFixed(2)}
           />
         </div>
 
@@ -182,6 +238,7 @@ function GalaxiesSection({
           <input
             id="toggle-depth-fade"
             type="checkbox"
+            className={styles.toggle}
             checked={depthFadeEnabled}
             onChange={(e) => onDepthFadeEnabledChange(e.target.checked)}
           />
@@ -206,23 +263,17 @@ function GalaxiesSection({
           </select>
         </div>
         {biasMode === BiasMode.VolumeLimited && (
-          <>
-            <div className={styles.panelRow}>
-              <label htmlFor="abs-mag-limit">M_lim</label>
-              <span className={styles.panelValue}>{absMagLimit.toFixed(1)}</span>
-            </div>
-            <div className={styles.panelRow}>
-              <input
-                id="abs-mag-limit"
-                type="range"
-                min={-24}
-                max={-15}
-                step={0.1}
-                value={absMagLimit}
-                onChange={(e) => onAbsMagLimitChange(parseFloat(e.target.value))}
-              />
-            </div>
-          </>
+          <div className={styles.panelRow}>
+            <Slider
+              label="M_lim"
+              value={absMagLimit}
+              min={-24}
+              max={-15}
+              step={0.1}
+              onChange={onAbsMagLimitChange}
+              format={(v) => v.toFixed(1)}
+            />
+          </div>
         )}
       </CollapsibleSection>
     </CollapsibleSection>

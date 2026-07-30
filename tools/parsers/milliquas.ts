@@ -13,10 +13,10 @@
  * ---
  * ### Skip rules (spec-z subset only)
  *
- * Drop rows whose Z column is blank, literally `0.000`, rounded to
- * `.X00` (generic photo-z candidate), or rounded to `.XY0` with
- * Zcite=GAIA3 (Gaia DR3 QSOC photo-z).  See the per-rule comments
- * below for the long form.
+ * Drop rows whose Z column is blank, non-positive (`0.000` or a bad
+ * negative measurement), rounded to `.X00` (generic photo-z candidate),
+ * or rounded to `.XY0` with Zcite=GAIA3 (Gaia DR3 QSOC photo-z).  See the
+ * per-rule comments below for the long form.
  *
  * ---
  * ### Why bytes, not strings
@@ -36,6 +36,7 @@ import {
   MILLIQUAS_CLASS_BYTE,
   MILLIQUAS_PARENT_SURVEY_BYTE,
 } from '../../src/data/galaxyCatalog/sourceClass';
+import { isPlausibleMagnitude } from '../utils/math/isPlausibleMagnitude';
 import { nonCommentLines, type ParsedRecord } from './common';
 
 // ─── Byte ranges (1-based inclusive, as published in the upstream ReadMe) ──
@@ -119,11 +120,40 @@ function parentSurveyByteFromName(nameTrimmed: string): number {
   return 0;
 }
 
+/**
+ * Read one Milliquas magnitude cell, returning NaN for "no measurement".
+ *
+ * Two rules compose here, and they are deliberately kept apart.
+ *
+ * The general one is `isPlausibleMagnitude`, shared with every other
+ * parser: it rejects blanks and the numeric sentinels catalogs inherit from
+ * their upstream sources.
+ *
+ * The Milliquas-specific one is the literal `0`. This catalog marks a
+ * missing magnitude with `0`, NOT a blank — the Circinus row reads
+ * `Rmag="10.93" Bmag=" 0 "`, meaning "R measured, B absent". Zero is
+ * catastrophic downstream rather than merely wrong: a 4 Mpc galaxy at m=0
+ * back-solves to M=-28, which the surface-brightness model reads as ~240x a
+ * typical galaxy's luminosity. That is what made Circinus and the Milliquas
+ * copy of Centaurus A render as blown-out white blobs (2169 rows carried
+ * magG=0).
+ *
+ * The zero rule stays local because it is false in general — zero is a
+ * perfectly good magnitude for a bright star (Vega is 0.03) — and true only
+ * for THIS catalog: the brightest known AGN (3C 273) sits at ~12.9, so no
+ * Milliquas row has a legitimate magnitude anywhere near zero.
+ */
+function milliquasMagOrNaN(cell: string): number {
+  const v = parseFloat(cell);
+  if (v === 0) return NaN;
+  return isPlausibleMagnitude(v) ? v : NaN;
+}
+
 export type MilliquasParseResult = {
   records: ParsedRecord[];
   skipped: {
     zMissing: number;
-    zZero: number;
+    zNonPositive: number;
     photoZRounded: number;
     qsocRounded: number;
   };
@@ -133,7 +163,7 @@ export function parseMilliquas(rawText: string): MilliquasParseResult {
   const lines = nonCommentLines(rawText);
 
   const records: ParsedRecord[] = [];
-  const skipped = { zMissing: 0, zZero: 0, photoZRounded: 0, qsocRounded: 0 };
+  const skipped = { zMissing: 0, zNonPositive: 0, photoZRounded: 0, qsocRounded: 0 };
 
   for (const line of lines) {
     if (line.length < MIN_LINE_LEN) continue;
@@ -155,8 +185,15 @@ export function parseMilliquas(rawText: string): MilliquasParseResult {
       skipped.zMissing++;
       continue;
     }
-    if (z === 0) {
-      skipped.zZero++;
+    // A quasar/AGN catalog has no physical z <= 0. A negative or zero
+    // redshift is a bad measurement or a misclassified foreground star, not
+    // a real blueshift — unlike 2MRS, whose Local Group members have genuine
+    // negative cz. Left in, a negative z would run the redshift→distance map
+    // to a negative radius and mirror the object through the origin to a
+    // bogus antipodal position (a mag-8.6 "quasar" at z = -0.001 is the row
+    // that motivated this). Drop any non-positive z.
+    if (z <= 0) {
+      skipped.zNonPositive++;
       continue;
     }
     if (PHOTO_Z_ROUNDED_TO_TENTH.test(zRaw)) {
@@ -168,8 +205,8 @@ export function parseMilliquas(rawText: string): MilliquasParseResult {
       continue;
     }
 
-    const magR = rmagStr === '' ? NaN : parseFloat(rmagStr);
-    const magG = bmagStr === '' ? NaN : parseFloat(bmagStr);
+    const magR = milliquasMagOrNaN(rmagStr);
+    const magG = milliquasMagOrNaN(bmagStr);
 
     const nameTrimmed = nameRaw.trimEnd().trimStart();
     const classByte = classByteFromType(typeRaw);

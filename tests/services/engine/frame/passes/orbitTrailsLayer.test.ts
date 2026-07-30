@@ -28,10 +28,16 @@ import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/
 import { SCENE_ORBIT_CONICS } from '../../../../../src/data/bodies/sceneOrbitConics';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
+import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
+import { ORBITAL_ELEMENTS } from '../../../../../src/data/bodies/orbitalElements';
+import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
+import { propagateElements } from '../../../../../src/utils/orbit/propagateElements';
+import { keplerianEllipse } from '../../../../../src/utils/orbit/keplerianEllipse';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
+import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 // Mock composeOrbitConic so the test can (a) assert which vp it consumed by
 // object identity and (b) hand each conic recognisable Float32Arrays. The real
@@ -72,21 +78,28 @@ function makeCtx(distance: number): ReadyFrameContext {
     drawCamPos: [0, 0, 0],
     canvasSize: { width: 1280, height: 720 },
     fovYRad: Math.PI / 4,
+    nowMs: 0,
   } as unknown as ReadyFrameContext;
 }
 
 // draw reads ctx.drawCamPos + ctx.fovYRad for the per-orbit apparent-size
-// cull/fade. Park the camera a hair off the Sun (render origin): the
-// heliocentric planet orbits then project large (uncalled) while the tiny
-// geocentric moon orbits — centred at their distant planets — stay sub-pixel
-// and cull. No single pose can show every orbit (planets and their moons want
-// opposite zooms), so the test asserts the seam for ALL composed conics and the
-// layout for the first (Mercury, SCENE_ORBIT_CONICS[0], always visible here).
+// cull/fade, and ctx.simDays to re-derive each conic. Evaluate at CONST_J2000 so
+// the propagated elements equal their tabulated values and the derived conics
+// reproduce SCENE_ORBIT_CONICS (the zero-change point). Park the camera a hair
+// off the Sun (render origin): the heliocentric planet orbits then project large
+// (uncalled) while the tiny geocentric moon orbits — centred at their distant
+// planets — stay sub-pixel and cull. No single pose can show every orbit
+// (planets and their moons want opposite zooms), so the test asserts the seam
+// for ALL composed conics and the layout for the first (Mercury,
+// SCENE_ORBIT_CONICS[0], always visible here).
 function makeDrawCtx(): ReadyFrameContext {
   return {
     drawCamPos: [1e-13, 0, 0],
     fovYRad: Math.PI / 4,
     cam: { distance: 1e-13 },
+    simDays: CONST_J2000,
+    focusBlend: 0,
+    nowMs: 0,
   } as unknown as ReadyFrameContext;
 }
 
@@ -105,6 +118,7 @@ function makeNear0View(): SlabView {
     vp: f64Vp,
     originRelative: true,
     precision: 'f64',
+    reversedZ: false,
   };
   return {
     slab,
@@ -120,8 +134,24 @@ function makeRendererSpy() {
   };
 }
 
-function makeState(orbitTrailRenderer: unknown): EngineState {
-  return { gpu: { orbitTrailRenderer } } as unknown as EngineState;
+// The layer reads settings.orbitTrails.enabled + the fade controller's opacity
+// (the hide/show visibility layer) and the clip-opacity channel. Defaults: the
+// toggle on and both fade factors at 1, so the pass behaves exactly as before the
+// layer became hideable. `orbitTrailsEnabled` / `layerOpacity` drive the gating +
+// fade-multiply assertions.
+function makeState(
+  orbitTrailRenderer: unknown,
+  opts: { orbitTrailsEnabled?: boolean; layerOpacity?: number } = {},
+): EngineState {
+  const layerOpacity = opts.layerOpacity ?? 1;
+  return {
+    gpu: { orbitTrailRenderer },
+    settings: { orbitTrails: { enabled: opts.orbitTrailsEnabled ?? true } },
+    subsystems: {
+      fades: { opacityOf: () => layerOpacity },
+      clipPlayer: { clipOpacityOf: () => 1 },
+    },
+  } as unknown as EngineState;
 }
 
 describe('orbitTrailsLayer registry row', () => {
@@ -146,6 +176,34 @@ describe('orbitTrailsLayer.enabled', () => {
     // a decade beyond, both derived so a farther seed growing the gate carries.
     expect(orbitTrailsLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC))).toBe(false);
     expect(orbitTrailsLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC * 10))).toBe(false);
+  });
+
+  it('gates on the orbitTrails visibility intent (opacity-0 ⇒ no render)', () => {
+    // Camera at the origin, inside the foreground gate — the sub-pixel cull is
+    // skipped, so the intent gate alone drives the result here.
+    const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
+    const renderer = makeRendererSpy();
+    // Toggled off AND the fade fully receded → the whole (hdr, NEAR0) pass drops.
+    expect(
+      orbitTrailsLayer.enabled(
+        makeState(renderer, { orbitTrailsEnabled: false, layerOpacity: 0 }),
+        ctx,
+      ),
+    ).toBe(false);
+    // Toggled off but a fade-out tail is still > 0 → keep drawing until it hits 0.
+    expect(
+      orbitTrailsLayer.enabled(
+        makeState(renderer, { orbitTrailsEnabled: false, layerOpacity: 0.3 }),
+        ctx,
+      ),
+    ).toBe(true);
+    // Toggled on → visible regardless of the (idle) fade value.
+    expect(
+      orbitTrailsLayer.enabled(
+        makeState(renderer, { orbitTrailsEnabled: true, layerOpacity: 0 }),
+        ctx,
+      ),
+    ).toBe(true);
   });
 
   it('disables when even the largest orbit is sub-CULL_PX (whole-layer cull)', () => {
@@ -183,11 +241,23 @@ describe('orbitTrailsLayer.draw', () => {
     }
     // Conics compose in table order skipping culled ones, so call 0 is the
     // first conic (Mercury), which is visible from the Sun — check its wiring.
+    // The conic vectors are re-derived per frame (fresh arrays), so compare by
+    // VALUE; at CONST_J2000 they reproduce the static SCENE_ORBIT_CONICS[0].
+    // viewportPx and the render origin still pass through by reference.
     const first = SCENE_ORBIT_CONICS[0]!;
     const call0 = composeMock.mock.calls[0]!;
-    expect(call0[1]).toBe(first.centerMpc);
-    expect(call0[2]).toBe(first.semiMajorMpc);
-    expect(call0[3]).toBe(first.semiMinorMpc);
+    const center0 = call0[1] as unknown as Vec3;
+    const semiMajor0 = call0[2] as unknown as Vec3;
+    const semiMinor0 = call0[3] as unknown as Vec3;
+    expect(center0[0]).toBeCloseTo(first.centerMpc[0], 20);
+    expect(center0[1]).toBeCloseTo(first.centerMpc[1], 20);
+    expect(center0[2]).toBeCloseTo(first.centerMpc[2], 20);
+    expect(semiMajor0[0]).toBeCloseTo(first.semiMajorMpc[0], 20);
+    expect(semiMajor0[1]).toBeCloseTo(first.semiMajorMpc[1], 20);
+    expect(semiMajor0[2]).toBeCloseTo(first.semiMajorMpc[2], 20);
+    expect(semiMinor0[0]).toBeCloseTo(first.semiMinorMpc[0], 20);
+    expect(semiMinor0[1]).toBeCloseTo(first.semiMinorMpc[1], 20);
+    expect(semiMinor0[2]).toBeCloseTo(first.semiMinorMpc[2], 20);
     expect(call0[4]).toBe(view.viewportPx);
     expect(call0[5]).toBe(RENDER_ORIGIN_MPC);
 
@@ -215,6 +285,95 @@ describe('orbitTrailsLayer.draw', () => {
     expect(Array.from(staging.slice(24, 28))).toEqual([201, 202, 203, 0]);
   });
 
+  it('multiplies the whole-layer fade opacity into each per-orbit alpha', () => {
+    // A mid-fade hide (layer opacity 0.5) scales every packed per-orbit alpha:
+    // Mercury's apparent-size alpha saturates at 1 from the Sun, so its packed
+    // alpha must land at exactly 0.5 — the hide/show fade composed with the
+    // apparent-size fade rather than replacing it.
+    const renderer = makeRendererSpy();
+    orbitTrailsLayer.draw(
+      PASS_STUB,
+      makeNear0View(),
+      makeDrawCtx(),
+      makeState(renderer, { orbitTrailsEnabled: false, layerOpacity: 0.5 }),
+    );
+    const [, staging] = renderer.draw.mock.calls[0]!;
+    expect(staging[17]).toBeCloseTo(0.5);
+  });
+
+  it('rides a moon trail centre on its propagated parent, not the J2000 centre', () => {
+    composeMock.mockClear();
+    const renderer = makeRendererSpy();
+    const view = makeNear0View();
+
+    // An instant ~100 days on: Earth has swung ~98° along its orbit, far from
+    // its J2000 spot. The Moon's geocentric trail must ride that moved Earth.
+    const simDays = CONST_J2000 + 100;
+    const snapshot = deriveBodyStates(simDays);
+    const earthPos = snapshot.get('earth')!.positionMpc;
+
+    // Park the camera AT Earth so the tiny geocentric Moon orbit projects large
+    // and survives the apparent-size cull. Heliocentric planet orbits (centred
+    // at the far-off Sun) also compose; the Moon is singled out below by being
+    // the one conic whose centre rides ~1 AU out on Earth.
+    const ctx = {
+      drawCamPos: [earthPos[0], earthPos[1], earthPos[2]],
+      fovYRad: Math.PI / 4,
+      cam: { distance: 1e-13 },
+      simDays,
+      focusBlend: 0,
+      nowMs: 0,
+    } as unknown as ReadyFrameContext;
+
+    orbitTrailsLayer.draw(PASS_STUB, view, ctx, makeState(renderer));
+
+    // Expected Moon centre = Earth's SNAPSHOT position + the Moon's focus-relative
+    // offset at t. The parent position is READ from the snapshot (Task 7), NOT
+    // re-derived, so this pins the rides-the-snapshot-parent contract rather than
+    // re-running the layer's own composition (no mirror). Only the Moon's
+    // focus-relative offset — which the snapshot does not carry — comes from
+    // keplerianEllipse, hand-composed onto the snapshot parent.
+    const moonEl = ORBITAL_ELEMENTS.find((e) => e.id === 'moon')!;
+    const moonOffset = keplerianEllipse(propagateElements(moonEl, simDays)).centerOffsetMpc;
+    const expected: Vec3 = [
+      earthPos[0] + moonOffset[0],
+      earthPos[1] + moonOffset[1],
+      earthPos[2] + moonOffset[2],
+    ];
+
+    // The Moon is the unique composed conic centred ~1 AU from the origin (every
+    // heliocentric orbit centres near the Sun), so the compose call whose centre
+    // sits nearest Earth is the Moon's — independent of whether the layer placed
+    // it correctly.
+    let moonCenter: Vec3 | undefined;
+    let best = Infinity;
+    for (const call of composeMock.mock.calls) {
+      const c = call[1] as unknown as Vec3;
+      const d = Math.hypot(c[0] - earthPos[0], c[1] - earthPos[1], c[2] - earthPos[2]);
+      if (d < best) {
+        best = d;
+        moonCenter = c;
+      }
+    }
+    expect(moonCenter).toBeDefined();
+    const moon = moonCenter!;
+
+    expect(moon[0]).toBeCloseTo(expected[0], 18);
+    expect(moon[1]).toBeCloseTo(expected[1], 18);
+    expect(moon[2]).toBeCloseTo(expected[2], 18);
+
+    // And it MOVED off the frozen J2000 centre — the whole point of re-deriving
+    // at t. Earth swept ~98° in 100 days, so the geocentric centre shifts far
+    // more than the lunar a·e.
+    const j2000Moon = SCENE_ORBIT_CONICS.find((c) => c.id === 'moon')!;
+    const drift = Math.hypot(
+      moon[0] - j2000Moon.centerMpc[0],
+      moon[1] - j2000Moon.centerMpc[1],
+      moon[2] - j2000Moon.centerMpc[2],
+    );
+    expect(drift).toBeGreaterThan(1e-13);
+  });
+
   it('is a no-op when the orbitTrailRenderer handle is null (pre-bootstrap)', () => {
     const view = makeNear0View();
     expect(() => orbitTrailsLayer.draw(PASS_STUB, view, CTX_STUB, makeState(null))).not.toThrow();
@@ -229,6 +388,9 @@ describe('orbitTrailsLayer.draw', () => {
       drawCamPos: [1, 0, 0],
       fovYRad: Math.PI / 4,
       cam: { distance: 1 },
+      simDays: CONST_J2000,
+      focusBlend: 0,
+      nowMs: 0,
     } as unknown as ReadyFrameContext;
     orbitTrailsLayer.draw(PASS_STUB, makeNear0View(), farCtx, makeState(renderer));
     expect(renderer.draw).not.toHaveBeenCalled();

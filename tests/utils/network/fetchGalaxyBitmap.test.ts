@@ -11,7 +11,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchGalaxyBitmap } from '../../../src/utils/network/fetchGalaxyBitmap';
-import { SLOT_SIDE } from '../../../src/services/gpu/resources/textureAtlas';
+import { GALAXY_ATLAS_SLOT_SIDE } from '../../../src/services/engine/subsystems/galaxyAtlasSubsystem';
 
 // Capture originals so we can restore them and not leak across tests
 // (vitest workers are reused across files — see tests/setup/fetchMock.ts
@@ -169,7 +169,12 @@ describe('fetchGalaxyBitmap — deadline signal', () => {
     );
     globalThis.fetch = fetchSpy as unknown as typeof fetch;
     globalThis.createImageBitmap = vi.fn(
-      async () => ({ width: SLOT_SIDE, height: SLOT_SIDE, close() {} }) as unknown as ImageBitmap,
+      async () =>
+        ({
+          width: GALAXY_ATLAS_SLOT_SIDE,
+          height: GALAXY_ATLAS_SLOT_SIDE,
+          close() {},
+        }) as unknown as ImageBitmap,
     ) as unknown as typeof createImageBitmap;
 
     await fetchGalaxyBitmap({ ra: 10, dec: 20 });

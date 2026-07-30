@@ -29,7 +29,7 @@ describe('bodyTextureFetcher', () => {
 
   it('requests the tier-sized JPG url', async () => {
     await bodyTextureFetcher(
-      { bodyId: 'mars', tier: 'small' },
+      { bodyId: 'mars', kind: 'surface', tier: 'small' },
       new AbortController().signal,
       () => {},
     );
@@ -37,13 +37,13 @@ describe('bodyTextureFetcher', () => {
     expect(url.endsWith('images/textures/mars-2048.jpg')).toBe(true);
   });
 
-  it('requests the ring PNG', async () => {
+  it('requests the ring WebP', async () => {
     await bodyTextureFetcher(
-      { bodyId: 'saturn-ring', tier: 'large' },
+      { bodyId: 'saturn-ring', kind: 'surface', tier: 'large' },
       new AbortController().signal,
       () => {},
     );
     const url = String(fetch.mock.mock.calls[0]?.[0]);
-    expect(url.endsWith('images/textures/saturn-ring-8192.png')).toBe(true);
+    expect(url.endsWith('images/textures/saturn-ring-8192.webp')).toBe(true);
   });
 });

@@ -24,12 +24,14 @@ import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { SCENE_RINGS } from '../../../../../src/data/bodies/sceneRings';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
+import { camPosLocal } from '../../../../../src/utils/camera/camPosLocal';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { PlanetBody } from '../../../../../src/@types/scene/PlanetBody';
+import type { BodyState } from '../../../../../src/@types/scene/BodyState';
 import type { Mat3 } from '../../../../../src/@types/math/Mat3';
 
 // Mock composeBodyMvp so the test can assert which vp it consumed by identity.
@@ -39,7 +41,34 @@ vi.mock('../../../../../src/utils/camera/composeBodyMvp', () => ({
 }));
 import { composeBodyMvp } from '../../../../../src/utils/camera/composeBodyMvp';
 
+// The layer reads each body's live position/orientation from the per-frame
+// body-state snapshot (keyed by id). Stub it to a map built from the fixture
+// bodies, REUSING each record's own positionMpc/orientation refs — so the layer
+// sees the exact fixture values (identity-equal), keeping the `toBe(...)`
+// assertions below intact while the reads move off the baked record fields.
+vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
+  sceneBodyStates: vi.fn((state: EngineState): ReadonlyMap<string, BodyState> => {
+    const m = new Map<string, BodyState>();
+    for (const b of (state.data.bodies.planets ?? []) as readonly SeededPlanet[]) {
+      m.set(b.id, { positionMpc: b.positionMpc, orientation: b.orientation, meanAnomalyRad: 0 });
+    }
+    const earth = state.data.bodies.earth as SeededPlanet | null;
+    if (earth)
+      m.set(earth.id, {
+        positionMpc: earth.positionMpc,
+        orientation: earth.orientation,
+        meanAnomalyRad: 0,
+      });
+    return m;
+  }),
+}));
+
 const composeMock = composeBodyMvp as unknown as ReturnType<typeof vi.fn>;
+
+// A test fixture pairing the identity record with the J2000 state the snapshot
+// carries — position + orientation were lifted off the record onto the derive, so
+// the fixture supplies them here (keyed by id, refs reused by the mock above).
+type SeededPlanet = PlanetBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
 
 const PASS_STUB = {
   setPipeline: vi.fn(),
@@ -56,7 +85,7 @@ const IDENTITY_MAT3: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 const SATURN_RING = SCENE_RINGS.find((r) => r.textureId === 'saturn-ring')!;
 
 /** Saturn sitting down +x, firmly resolved on the 720-tall/60° fixture. */
-function saturnBody(orientation: Mat3 = IDENTITY_MAT3): PlanetBody {
+function saturnBody(orientation: Mat3 = IDENTITY_MAT3): SeededPlanet {
   const radiusKm = 58232;
   const distanceKm = radiusKm * 5;
   return {
@@ -90,6 +119,7 @@ function makeNear0View(): SlabView {
     vp: f64Vp,
     originRelative: true,
     precision: 'f64',
+    reversedZ: false,
   };
   return { slab, vp: f32Vp, camPos: [0, 0, 5], viewportPx: [1280, 720] };
 }
@@ -103,8 +133,9 @@ function makeState(
   bodies: readonly PlanetBody[],
   residentIds: readonly string[],
 ): EngineState {
+  // The residency lookup keys on the composite `${id}:surface` slot key.
   const bodyTextures = new Map(
-    residentIds.map((id) => [id, { current: () => ({}) as ImageBitmap }]),
+    residentIds.map((id) => [`${id}:surface`, { current: () => ({}) as ImageBitmap }]),
   );
   return {
     gpu: { ringRenderer: renderer },
@@ -170,7 +201,7 @@ describe('ringsLayer.draw', () => {
     expect(call[4]).toBe(saturn.orientation);
   });
 
-  it('packs the host sun, planetRadiusRatio@19 and innerRatio@20 into a 24-float record', () => {
+  it('packs the host sun, planetRadiusRatio@19, camPosLocal@20 and innerRatio@23 into a 24-float record', () => {
     const renderer = makeRendererSpy();
     const view = makeNear0View();
     const saturn = saturnBody();
@@ -190,9 +221,22 @@ describe('ringsLayer.draw', () => {
     expect(u[16]).toBeCloseTo(expectedSun[0]);
     expect(u[17]).toBeCloseTo(expectedSun[1]);
     expect(u[18]).toBeCloseTo(expectedSun[2]);
-    // planetRadiusRatio = planet / ring outer; innerRatio = ring inner / outer.
+    // planetRadiusRatio = planet / ring outer at float 19.
     expect(u[19]).toBeCloseTo(saturn.radiusKm / SATURN_RING.outerRadiusKm);
-    expect(u[20]).toBeCloseTo(SATURN_RING.innerRadiusKm / SATURN_RING.outerRadiusKm);
+    // camPosLocal at floats 20..22 (recomputed independently — a rotate/pack
+    // drift lands here, as with the sun above).
+    const radiusMpc = saturn.radiusKm * SCALE_UNITS.KM_TO_MPC;
+    const expectedCam = camPosLocal(
+      NEAR_CTX.drawCamPos,
+      saturn.positionMpc,
+      radiusMpc,
+      saturn.orientation,
+    );
+    expect(u[20]).toBeCloseTo(expectedCam[0]);
+    expect(u[21]).toBeCloseTo(expectedCam[1]);
+    expect(u[22]).toBeCloseTo(expectedCam[2]);
+    // innerRatio = ring inner / outer at float 23 (fills camPosLocal's vec3 tail).
+    expect(u[23]).toBeCloseTo(SATURN_RING.innerRadiusKm / SATURN_RING.outerRadiusKm);
   });
 
   it('is a no-op when the ringRenderer handle is null (pre-bootstrap)', () => {

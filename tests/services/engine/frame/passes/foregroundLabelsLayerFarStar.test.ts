@@ -34,6 +34,8 @@ import {
 import { SCALE_FADE_BANDS } from '../../../../../src/services/engine/presentation/scaleFadeBands';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
+import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
+import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { computeForegroundViewProj } from '../../../../../src/utils/camera/computeForegroundViewProj';
 import { foregroundFrustum } from '../../../../../src/utils/camera/foregroundFrustum';
 import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
@@ -50,6 +52,10 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 const PASS_STUB = { draw: vi.fn() } as unknown as GPURenderPassEncoder;
 const SUN_LABEL_ID = sceneBodyLabelId('sun');
+
+// The layer derives captions from the frame's body snapshot at ctx.simDays;
+// these geometry tests pin it at J2000 so the anchors match J2000_STATES.
+const J2000_STATES = deriveBodyStates(CONST_J2000);
 
 function makeRenderer(): LabelRenderer {
   return {
@@ -75,9 +81,20 @@ function makeState(renderer: LabelRenderer, lineRenderer: MarkerLineRenderer): E
   return {
     gpu: { foregroundLabelRenderer: renderer, foregroundMarkerLineRenderer: lineRenderer },
     settings: {
-      labels: { starLabelsEnabled: true, planetLabelsEnabled: true },
-      famousStars: { enabled: true },
+      labels: { focusedOnly: false },
+      bodies: {
+        items: {
+          earth: { enabled: true, labelEnabled: true },
+          planet: { enabled: true, labelEnabled: true },
+          sun: { enabled: true, labelEnabled: true },
+        },
+      },
+      starCatalogs: { enabled: true, items: { famousStar: { enabled: true, labelEnabled: true } } },
     },
+    // No constellation slot: these tests exercise only the far-star body-caption
+    // lift, so the layer reads an empty figure-name set and skips its toggle +
+    // fade reads. The key must exist (the layer reads `.constellations`).
+    assetSlots: { constellations: null },
     subsystems: { scheduler: { requestRender: vi.fn<() => void>() } },
   } as unknown as EngineState;
 }
@@ -88,7 +105,18 @@ function makeCtx(): ReadyFrameContext {
   // (module state) settles exactly on its target — positions are pure geometry
   // regardless, but this keeps the emit set stable across frames.
   clockMs += 60_000;
-  return { cam: { distance: 1e-13 }, fovYRad: 1, nowMs: clockMs } as unknown as ReadyFrameContext;
+  // The layer reads `ctx.renderTargets.depthViewOf('foreground:0')` for the
+  // caption/connector occlusion pass, gated on `renderedTargets.has('foreground:0')`
+  // (the body pass ran this frame); a no-op depth stub plus `foreground:0` in the
+  // rendered set keep these geometry tests from throwing on that seam.
+  return {
+    cam: { distance: 1e-13 },
+    fovYRad: 1,
+    nowMs: clockMs,
+    simDays: CONST_J2000,
+    renderTargets: { depthViewOf: () => ({}) as GPUTextureView },
+    renderedTargets: new Set(['foreground:0']),
+  } as unknown as ReadyFrameContext;
 }
 
 /**
@@ -109,6 +137,7 @@ function makeRealNear0View(eye: Vec3, target: Vec3): SlabView {
     aspect: 1280 / 720,
     near,
     far,
+    reversedZ: false,
   });
   const slab: Slab = {
     index: NEAR0,
@@ -117,6 +146,7 @@ function makeRealNear0View(eye: Vec3, target: Vec3): SlabView {
     vp,
     originRelative: true,
     precision: 'f64',
+    reversedZ: false,
   };
   return {
     slab,
@@ -132,7 +162,7 @@ function makeRealNear0View(eye: Vec3, target: Vec3): SlabView {
 // at ~2300 pc is farther still). Deriving it from the seed keeps the test
 // anchored to real data, not a magic id.
 function farVisibleStar(): { id: string; worldPos: Vec3; distPc: number } {
-  const base = sceneBodyLabels();
+  const base = sceneBodyLabels(J2000_STATES);
   const earth = base.find((l) => l.id === sceneBodyLabelId('earth'))!;
   const cam = earth.worldPos;
   const stars = base
@@ -141,11 +171,8 @@ function farVisibleStar(): { id: string; worldPos: Vec3; distPc: number } {
       id: l.id,
       worldPos: [...l.worldPos] as Vec3,
       distPc:
-        Math.hypot(
-          l.worldPos[0] - cam[0],
-          l.worldPos[1] - cam[1],
-          l.worldPos[2] - cam[2],
-        ) / SCALE_UNITS.PC_TO_MPC,
+        Math.hypot(l.worldPos[0] - cam[0], l.worldPos[1] - cam[1], l.worldPos[2] - cam[2]) /
+        SCALE_UNITS.PC_TO_MPC,
     }))
     .filter((s) => s.distPc <= SCALE_FADE_BANDS.starCaption.fullAt);
   return stars.reduce((a, b) => (b.distPc > a.distPc ? b : a));
@@ -165,7 +192,7 @@ function emittedCaption(renderer: LabelRenderer, starId: string): Label | undefi
 describe('foregroundLabelsLayer — far-star caption/leader stability at Earth zoom', () => {
   it('keeps a far star caption + leader endpoints stable under a sub-parsec camera nudge', () => {
     const star = farVisibleStar();
-    const base = sceneBodyLabels();
+    const base = sceneBodyLabels(J2000_STATES);
     const earth = base.find((l) => l.id === sceneBodyLabelId('earth'))!;
     const eyeA: Vec3 = [...earth.worldPos] as Vec3;
     // Orbit step ~1e-15 Mpc — a fraction of a metre at 1 AU, well below one
@@ -206,7 +233,7 @@ describe('foregroundLabelsLayer — far-star caption/leader stability at Earth z
 
   it('bounds the lifted caption + leader endpoints inside the NEAR0 far plane', () => {
     const star = farVisibleStar();
-    const base = sceneBodyLabels();
+    const base = sceneBodyLabels(J2000_STATES);
     const earth = base.find((l) => l.id === sceneBodyLabelId('earth'))!;
     const eye: Vec3 = [...earth.worldPos] as Vec3;
     const view = makeRealNear0View(eye, star.worldPos);
@@ -244,7 +271,7 @@ describe('foregroundLabelsLayer — far-star caption/leader stability at Earth z
     // 150px ceiling. The fix scales the emitted worldEmMpc by the same ratio,
     // so em/clipW — hence the drawn px size — matches the true-depth value.
     const star = farVisibleStar();
-    const base = sceneBodyLabels();
+    const base = sceneBodyLabels(J2000_STATES);
     const earth = base.find((l) => l.id === sceneBodyLabelId('earth'))!;
     const trueLabel = base.find((l) => l.id === star.id)!;
     const eye: Vec3 = [...earth.worldPos] as Vec3;

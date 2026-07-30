@@ -65,7 +65,6 @@ function resolveRepoRoot(): string {
     // a string here; the cast silences the TypeScript "not defined in
     // global scope" error without requiring a types patch.
     return resolve(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (globalThis as any).__dirname ?? __dirname,
       '../../..',
     );
@@ -146,7 +145,18 @@ export function apiPlugin(): Plugin {
   return {
     name: 'famous-curator-api',
     configureServer(server) {
-      server.middlewares.use(async (req, res, next) => {
+      // Connect middleware must return void; the handler below is async
+      // (every route awaits its handler), so wrap it in a void-returning
+      // shim rather than handing Connect a Promise it will never await.
+      server.middlewares.use((req, res, next) => {
+        void handleRequest(req, res, next);
+      });
+
+      async function handleRequest(
+        req: IncomingMessage,
+        res: ServerResponse,
+        next: () => void,
+      ): Promise<void> {
         const url = req.url ?? '';
         const method = req.method ?? 'GET';
         // Only intercept /api/* — everything else (HTML, JS, HMR socket)
@@ -378,7 +388,7 @@ export function apiPlugin(): Plugin {
           else if (/not an image|missing|must be|invalid/.test(msg)) status = 400;
           sendJson(res, status, { error: msg });
         }
-      });
+      }
     },
   };
 }

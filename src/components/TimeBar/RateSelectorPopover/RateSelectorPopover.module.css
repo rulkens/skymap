@@ -1,0 +1,84 @@
+/*
+ * RateSelectorPopover.module.css — the playback-detent selector popover.
+ *
+ * A small glass panel anchored above the TimeBar's rate label. Shares the HUD's
+ * surface vocabulary with DateEntryPopover via the composed `panel` chrome, then
+ * adds its own vertical-list layout.
+ *
+ * Placement is self-owned via CSS Anchor Positioning against `--time-rate-label`
+ * (declared on TimeBar's .rate button) — the panel aligns to the trigger across
+ * the DOM without prop plumbing or a placement wrapper. The sibling date popover
+ * still uses the container's fixed right-rail wrapper; this one is the sole
+ * anchor-positioned popover, so its placement lives here rather than in shared
+ * chrome.
+ */
+
+.root {
+  composes: panel from '../popoverChrome.module.css';
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+
+  /*
+   * Content-fit: hug the widest detent label rather than stretch. (The old
+   * placement wrapper let the panel spread to the right rail's reserved width.)
+   */
+  width: max-content;
+
+  /*
+   * Anchor to the rate label. Each anchor() carries a fallback for browsers
+   * without anchor positioning (Firefox today; reachable via WebGPU on Windows):
+   * the fallbacks mirror the container's former POPOVER_PLACEMENT, so unsupported
+   * browsers degrade to the toolbar's bottom-right rail exactly as before.
+   */
+  position: fixed;
+  position-anchor: --time-rate-label;
+  /* Sit above the trigger: the panel's bottom rests on the button's top edge,
+   * with margin-bottom adding the gap (anchor() can't be wrapped in calc). */
+  bottom: anchor(top, calc(var(--corner-offset) + var(--time-toolbar-height) + var(--space-3)));
+  margin-bottom: var(--space-2);
+  /* Right-align the panel's right edge to the button's right edge rather than
+   * centering: the toolbar sits near the viewport's right edge, so centering
+   * could overflow off-screen. Fallback pins to the corner rail. */
+  right: anchor(right, var(--corner-offset));
+  z-index: 11;
+
+  color: var(--color-fg-base);
+  font: var(--font-size-md) / var(--line-height-tight) var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Detent rows: chromeless text buttons that tint on hover/focus, mirroring the
+ * toolbar's flat-glyph steppers rather than reading as filled pills.
+ */
+.detent {
+  font: inherit;
+  text-align: right;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--color-fg-muted);
+  letter-spacing: var(--letter-spacing-tight);
+  cursor: pointer;
+  transition: var(--transition-color), background var(--duration-color) ease;
+}
+
+.detent:hover,
+.detent:focus-visible {
+  color: var(--color-accent);
+  background: var(--surface-control);
+}
+
+.detent:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* The lit detent: brighter text on a filled row so the current speed reads at a
+ * glance without relying on colour alone (aria-current carries it for AT). */
+.detentCurrent {
+  color: var(--color-fg);
+  background: var(--surface-control);
+}

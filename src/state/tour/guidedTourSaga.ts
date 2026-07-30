@@ -82,7 +82,7 @@ import type { BeatRange } from '../../@types/animation/tour/BeatRange';
  * the tour on any background orbit-controls event.
  */
 export function* guidedTourSaga(tour: Tour, range?: BeatRange): Generator {
-  // Snapshot the six settings clusters + selection.focus BEFORE any beat plays
+  // Snapshot the ten settings clusters + selection.focus BEFORE any beat plays
   // so restore winds back to the user's pre-tour state including the first
   // beat's establishing strip. A pure store read — no engine context needed.
   const snapshot = yield* select(captureScene);

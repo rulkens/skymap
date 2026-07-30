@@ -33,6 +33,7 @@ import {
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
+import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 
 // ── Fixtures (same idioms as the two subsystem suites) ──────────────────────
 
@@ -64,8 +65,7 @@ function makeDenseCloud(count: number, ar = 0.7, pa = 45): GalaxyCatalog {
     a.fill(v);
     return a;
   };
-  return {
-    count,
+  return makeGalaxyCatalog(count, {
     objIDs: new BigUint64Array(count),
     positions,
     magU: fill(20),
@@ -76,10 +76,7 @@ function makeDenseCloud(count: number, ar = 0.7, pa = 45): GalaxyCatalog {
     axisRatio: fill(ar),
     positionAngleDeg: fill(pa),
     diameterKpc: fill(50),
-    classByte: new Uint8Array(count),
-    parentSurveyByte: new Uint8Array(count),
-    spectroscopicZ: new Float32Array(count),
-  };
+  });
 }
 
 /** A single-row cloud at (x, 0, 0) with a chosen diameter — used to place a row
@@ -87,8 +84,7 @@ function makeDenseCloud(count: number, ar = 0.7, pa = 45): GalaxyCatalog {
 function makeSingletonCloud(x: number, diameterKpc: number): GalaxyCatalog {
   const positions = new Float32Array([x, 0, 0]);
   const fill = (v: number): Float32Array => new Float32Array([v]);
-  return {
-    count: 1,
+  return makeGalaxyCatalog(1, {
     objIDs: new BigUint64Array(1),
     positions,
     magU: fill(20),
@@ -99,10 +95,7 @@ function makeSingletonCloud(x: number, diameterKpc: number): GalaxyCatalog {
     axisRatio: fill(0.7),
     positionAngleDeg: fill(45),
     diameterKpc: fill(diameterKpc),
-    classByte: new Uint8Array(1),
-    parentSurveyByte: new Uint8Array(1),
-    spectroscopicZ: new Float32Array(1),
-  };
+  });
 }
 
 function makeCam(): OrbitCamera {
@@ -125,7 +118,17 @@ function pxPerRadFor(cam: OrbitCamera): number {
 
 function makeInput(catalogs: Map<SourceType, GalaxyCatalog>, mask = 0xffffffff) {
   const cam = makeCam();
-  return { cam, catalogs, visibleSourceMask: mask, pxPerRad: pxPerRadFor(cam) };
+  return {
+    cam,
+    catalogs,
+    visibleSourceMask: mask,
+    pxPerRad: pxPerRadFor(cam),
+    // Live surface-brightness sliders — arbitrary plausible defaults; this
+    // suite is about parity between merged/solo walks, not brightness math.
+    sbScale: 5,
+    sbMax: 30,
+    brightness: 1,
+  };
 }
 
 const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
@@ -147,7 +150,7 @@ function driveMerged(
   input: ReturnType<typeof makeInput>,
   nowMs: number,
 ): void {
-  const texInput = { ...input, famousMeta: [], nowMs };
+  const texInput = { ...input, famousGalaxiesMeta: [], nowMs };
   rig.walk.runFrame(input, rig.proc.beginFrame(input), rig.tex.beginFrame(texInput));
 }
 
@@ -186,9 +189,9 @@ describe('diskPlannerWalk drives both bodies', () => {
       fetcher: async () => makeFakeBitmap(),
     });
     const texWalk = createDiskPlannerWalk({ decimationFactor: 1 });
-    runTexturedSolo(texWalk, texSolo, { ...input, famousMeta: [], nowMs: 0 });
+    runTexturedSolo(texWalk, texSolo, { ...input, famousGalaxiesMeta: [], nowMs: 0 });
     await tick();
-    runTexturedSolo(texWalk, texSolo, { ...input, famousMeta: [], nowMs: 50 });
+    runTexturedSolo(texWalk, texSolo, { ...input, famousGalaxiesMeta: [], nowMs: 50 });
 
     // Guard against a vacuous [] === [] parity: both bodies actually emitted.
     expect(rig.proc.lastOutput.instances.length).toBeGreaterThan(0);
@@ -253,7 +256,11 @@ describe('diskPlannerWalk drives both bodies', () => {
 
     // ── Frame 1: sticky maps are empty, so procedural's lastOutput IS this
     // frame's window; textured enqueues a fetch per freshly-visited row.
-    walk.runFrame(input, proc.beginFrame(input), tex.beginFrame({ ...input, famousMeta: [], nowMs: 0 }));
+    walk.runFrame(
+      input,
+      proc.beginFrame(input),
+      tex.beginFrame({ ...input, famousGalaxiesMeta: [], nowMs: 0 }),
+    );
     const procWindow1 = new Set(proc.lastOutput.instances.map((d) => d.localIdx));
     const texWindow1 = texWindow();
     expect(procWindow1).toEqual(new Set([0, 1, 2]));
@@ -264,7 +271,11 @@ describe('diskPlannerWalk drives both bodies', () => {
     // ── Frame 2: cursor advances. Procedural's sticky map still holds window 1,
     // so the NEWLY-added indices (lastOutput minus frame-1 window) are frame 2's
     // window; textured enqueues only the freshly-visited rows.
-    walk.runFrame(input, proc.beginFrame(input), tex.beginFrame({ ...input, famousMeta: [], nowMs: 0 }));
+    walk.runFrame(
+      input,
+      proc.beginFrame(input),
+      tex.beginFrame({ ...input, famousGalaxiesMeta: [], nowMs: 0 }),
+    );
     const procAll2 = new Set(proc.lastOutput.instances.map((d) => d.localIdx));
     const procWindow2 = new Set([...procAll2].filter((i) => !procWindow1.has(i)));
     const texWindow2 = texWindow();
@@ -314,7 +325,7 @@ describe('diskPlannerWalk drives both bodies', () => {
       const catalogs = new Map<SourceType, GalaxyCatalog>([
         [source, makeSingletonCloud(rowX, diameterKpc)],
       ]);
-      runTexturedSolo(walk, tex, { ...makeInput(catalogs), famousMeta: [], nowMs: 0 });
+      runTexturedSolo(walk, tex, { ...makeInput(catalogs), famousGalaxiesMeta: [], nowMs: 0 });
       await tick();
       return spy;
     }

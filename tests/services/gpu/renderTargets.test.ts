@@ -40,10 +40,11 @@ describe('createRenderTargets', () => {
     const targets = createRenderTargets(device, SWAP_FORMAT, { width: 900, height: 600 });
 
     // Construction allocated the offscreen rows: hdr @ scale 1 (colour),
-    // volume @ scale 3 (colour), star-aggregates @ scale 2 (colour), and
-    // foreground:0 @ scale 1 (colour + depth) → 5 textures. hdr at full size,
-    // volume at floor(size/3), star-aggregates at floor(size/2).
-    expect(create.mock.calls).toHaveLength(5);
+    // volume @ scale 3 (colour), star-aggregates @ scale 2 (colour),
+    // foreground:0 @ scale 1 (colour + depth), and the five bloom-pyramid mips
+    // bloom0..bloom4 @ scale 2/4/8/16/32 (colour only) → 10 textures. hdr at
+    // full size, volume at floor(size/3), star-aggregates at floor(size/2).
+    expect(create.mock.calls).toHaveLength(10);
     const hdrDesc = create.mock.calls.find((c) => c[0].label === 'render-target-hdr')![0];
     const volDesc = create.mock.calls.find((c) => c[0].label === 'render-target-volume')![0];
     const aggDesc = create.mock.calls.find(
@@ -61,8 +62,8 @@ describe('createRenderTargets', () => {
     const aggViewBefore = targets.viewOf('star-aggregates');
     targets.resize({ width: 1200, height: 900 });
 
-    // Each offscreen row reallocated at the new size/scale → 5 more textures.
-    expect(create.mock.calls).toHaveLength(10);
+    // Each offscreen row reallocated at the new size/scale → 10 more textures.
+    expect(create.mock.calls).toHaveLength(20);
     const hdrResized = create.mock.calls
       .filter((c) => c[0].label === 'render-target-hdr')
       .at(-1)![0];
@@ -105,10 +106,11 @@ describe('createRenderTargets', () => {
     expect(fgColour.size).toEqual({ width: 800, height: 600 });
     expect(fgDepth.format).toBe('depth32float');
     expect(fgDepth.size).toEqual({ width: 800, height: 600 });
-    // Depth is never sampled downstream — RENDER_ATTACHMENT only, no
-    // TEXTURE_BINDING (contrast the colour attachment, which the compositor
-    // samples).
-    expect(fgDepth.usage).toBe(GPUTextureUsage.RENDER_ATTACHMENT);
+    // Depth carries RENDER_ATTACHMENT (feeds the depth-test) AND
+    // TEXTURE_BINDING — the near-field caption occlusion pass samples this
+    // depth (via lib/sceneDepth.wesl) to hide captions behind nearer bodies.
+    // Guards that the depth stays sampleable, which the occlusion feature relies on.
+    expect(fgDepth.usage).toBe(GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING);
 
     const depthCallsBefore = create.mock.calls.filter(
       (c) => c[0].label === 'render-target-foreground:0-depth',
@@ -147,6 +149,39 @@ describe('createRenderTargets', () => {
     }
     // After destroy, offscreen views are gone → viewOf throws.
     expect(() => targets.viewOf('hdr')).toThrow();
+  });
+
+  it("setSwapFormat replaces the swap row's format and leaves offscreen rows alone", () => {
+    const device = mockDevice();
+    const create = device.createTexture as ReturnType<typeof vi.fn>;
+    const targets = createRenderTargets(device, SWAP_FORMAT, { width: 800, height: 600 });
+
+    const specsBefore = targets.specs;
+    const hdrSpecBefore = specsBefore.find((s) => s.id === 'hdr')!;
+    const volSpecBefore = specsBefore.find((s) => s.id === 'volume')!;
+    const fgSpecBefore = specsBefore.find((s) => s.id === 'foreground:0')!;
+    const hdrViewBefore = targets.viewOf('hdr');
+    const volViewBefore = targets.viewOf('volume');
+    const fgViewBefore = targets.viewOf('foreground:0');
+    const callsBefore = create.mock.calls.length;
+
+    targets.setSwapFormat('rgba16float');
+
+    // The swap row's format changed...
+    const swapSpec = targets.specs.find((s) => s.id === 'swap')!;
+    expect(swapSpec.format).toBe('rgba16float');
+    // ...via a new specs array (house preference for immutability)...
+    expect(targets.specs).not.toBe(specsBefore);
+    // ...but every offscreen row is the SAME spec object — untouched, not
+    // rebuilt — and has no new texture allocated (the swap row carries no
+    // texture, so this is allocation-free).
+    expect(targets.specs.find((s) => s.id === 'hdr')).toBe(hdrSpecBefore);
+    expect(targets.specs.find((s) => s.id === 'volume')).toBe(volSpecBefore);
+    expect(targets.specs.find((s) => s.id === 'foreground:0')).toBe(fgSpecBefore);
+    expect(create.mock.calls.length).toBe(callsBefore);
+    expect(targets.viewOf('hdr')).toBe(hdrViewBefore);
+    expect(targets.viewOf('volume')).toBe(volViewBefore);
+    expect(targets.viewOf('foreground:0')).toBe(fgViewBefore);
   });
 
   it('destroy destroys depth textures alongside colour', () => {

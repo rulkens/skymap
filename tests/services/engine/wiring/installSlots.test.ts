@@ -34,6 +34,7 @@ function stubSlot(name: string): AssetSlot<unknown, unknown> {
     state: () => ({ kind: 'idle' }),
     subscribe: () => () => {},
     lastRequest: () => null,
+    startedAtMs: () => null,
     forceReload: () => {},
     cancel: () => {},
     release: () => {},
@@ -49,7 +50,7 @@ function makeState(): EngineState {
       points,
       starCatalogs,
       filaments: null,
-      famousMeta: null,
+      famousGalaxiesMeta: null,
       structureCatalog: null,
       pgcAlias: null,
       cf4Density: null,
@@ -62,14 +63,14 @@ describe('installSlots', () => {
   it('writes each sidecar slot to its matching named field', () => {
     const state = makeState();
     const filaments = stubSlot('filaments');
-    const famousMeta = stubSlot('famous-meta');
+    const famousGalaxiesMeta = stubSlot('famous-galaxies-meta');
     const structureCatalog = stubSlot('structure-catalog');
     const pgcAlias = stubSlot('pgc-aliases');
     const cf4Density = stubSlot('cf4Density');
     const mcpm = stubSlot('mcpm');
     const slots = new Map<AssetKey, AssetSlot<unknown, unknown>>([
       ['filaments', filaments],
-      ['famousMeta', famousMeta],
+      ['famousGalaxiesMeta', famousGalaxiesMeta],
       ['structureCatalog', structureCatalog],
       ['pgcAlias', pgcAlias],
       ['cf4Density', cf4Density],
@@ -79,7 +80,7 @@ describe('installSlots', () => {
     installSlots(state, slots);
 
     expect(state.assetSlots.filaments).toBe(filaments);
-    expect(state.assetSlots.famousMeta).toBe(famousMeta);
+    expect(state.assetSlots.famousGalaxiesMeta).toBe(famousGalaxiesMeta);
     expect(state.assetSlots.structureCatalog).toBe(structureCatalog);
     expect(state.assetSlots.pgcAlias).toBe(pgcAlias);
     expect(state.assetSlots.cf4Density).toBe(cf4Density);

@@ -131,6 +131,15 @@ fn valueNoise2(p_in: vec2<f32>, tm: f32) -> f32 {
 //
 // and roots are '-b ± sqrt(b² - c)'. The early-exit checks save the
 // sqrt cost when the ray clearly misses.
+//
+// CPU twin: 'utils/math/raySphereRoots.ts'. It omits the behind-origin
+// 'c > 0 && b > 0' sentinel — callers there inspect the returned root
+// signs themselves rather than relying on the vec2(-1, -1) miss marker.
+//
+// Graduation to 'lib/raycast.wesl' is deliberately deferred: a second
+// WESL consumer now exists (earth/fragment.wesl's cloud shadow), but the
+// geometry domain here is still this one primitive — we move it out once
+// it's part of a coherent suite, not on the first shared caller.
 fn raySphere(ro: vec3<f32>, rd: vec3<f32>, center: vec3<f32>, radius: f32) -> vec2<f32> {
   let m = ro - center;
   let b = dot(m, rd);

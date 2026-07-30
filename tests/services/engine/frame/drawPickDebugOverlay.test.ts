@@ -117,7 +117,7 @@ function makeState({
 
   return {
     settings: {
-      debug: { showPickBuffer },
+      debug: { showPickBuffer, renderStrategy: 'auto' },
     },
     gpu: {
       pickProgram: {

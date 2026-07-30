@@ -16,8 +16,9 @@ const newRenderer = () => {
     context: null as unknown as GPUCanvasContext,
     format: 'rgba16float' as GPUTextureFormat,
     canvas: null as unknown as HTMLCanvasElement,
+    hdrCapable: false,
   };
-  return createMilkyWayPickRenderer(ctx, null as unknown as FadeUniformsBgl);
+  return createMilkyWayPickRenderer(ctx, null as unknown as FadeUniformsBgl, false);
 };
 
 // Stub device with a tracked writeBuffer — lets the construction test
@@ -85,8 +86,9 @@ describe('milkyWayPickRenderer (stub device)', () => {
       context: null as unknown as GPUCanvasContext,
       format: 'rgba16float' as GPUTextureFormat,
       canvas: null as unknown as HTMLCanvasElement,
+      hdrCapable: false,
     };
-    createMilkyWayPickRenderer(ctx, {} as FadeUniformsBgl);
+    createMilkyWayPickRenderer(ctx, {} as FadeUniformsBgl, false);
 
     expect(writeBufferCalls).toHaveLength(1);
     const { offset, data } = writeBufferCalls[0]!;
@@ -120,8 +122,9 @@ describe('milkyWayPickRenderer (stub device)', () => {
       context: null as unknown as GPUCanvasContext,
       format: 'rgba16float' as GPUTextureFormat,
       canvas: null as unknown as HTMLCanvasElement,
+      hdrCapable: false,
     };
-    const r = createMilkyWayPickRenderer(ctx, {} as FadeUniformsBgl);
+    const r = createMilkyWayPickRenderer(ctx, {} as FadeUniformsBgl, false);
 
     writeBufferCalls.length = 0; // discard the construction write
     const pass = makeStubPass();

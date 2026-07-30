@@ -25,7 +25,8 @@ import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { GalaxyCatalogReq } from '../../loading/GalaxyCatalogReq';
 import type { FilamentCloud } from '../../data/filament/FilamentCloud';
 import type { FilamentReq } from '../../loading/FilamentReq';
-import type { FamousPayload } from '../../loading/FamousPayload';
+import type { FamousGalaxiesPayload } from '../../loading/FamousGalaxiesPayload';
+import type { FamousStarsPayload } from '../../loading/FamousStarsPayload';
 import type { PgcAliasMap } from '../../loading/PgcAliasMap';
 import type { ScalarCube } from '../../data/volume/ScalarCube';
 import type { SyntheticVolumeReq } from '../../loading/SyntheticVolumeReq';
@@ -33,12 +34,12 @@ import type { MCPMReq } from '../../loading/MCPMReq';
 import type { CompanionAssetReq } from '../../loading/CompanionAssetReq';
 import type { StructureCatalogPayload } from '../../loading/StructureCatalogPayload';
 import type { StructureCatalogReq } from '../../loading/StructureCatalogReq';
+import type { ConstellationsArtifact } from '../../loading/ConstellationsArtifact';
 import type { StarCatalog } from '../../data/starCatalog/StarCatalog';
 import type { StarCatalogReq } from '../../loading/StarCatalogReq';
 import type { SourceType } from '../../data/SourceType';
 import type { BodyTextureReq } from '../../loading/BodyTextureReq';
-import type { BodyTextureId } from '../../data/BodyTextureId';
-import type { RingTextureId } from '../../data/RingTextureId';
+import type { BodyTextureSlotKey } from '../../data/BodyTextureSlotKey';
 
 export type EngineAssetSlots = {
   points: Map<SourceType, AssetSlot<GalaxyCatalog, GalaxyCatalogReq>>;
@@ -65,18 +66,35 @@ export type EngineAssetSlots = {
    */
   filaments: AssetSlot<FilamentCloud, FilamentReq> | null;
   /**
-   * Famous-galaxy `famous_meta.json` sidecar routed through a slot for
+   * Famous-galaxy `famous_galaxies_meta.json` sidecar routed through a slot for
    * parity with point loads.  Loaded eagerly at engine boot — the JSON
    * is tiny so the cost is negligible, and the InfoCard depends on
    * `meta` being present whenever a famous galaxy is hovered.  The
-   * subscriber writes the parsed array straight into the galaxy store
-   * (`state.data.galaxies.famousMeta`).
+   * subscriber dispatches the parsed array into the Redux `engine` slice;
+   * the engine reads it back via `state.famousGalaxiesMeta`.
    *
-   * No `commit` step — there is nothing GPU-side to upload, just CPU
-   * state mutation done by the subscriber.  Null until the IIFE mints it
+   * No `commit` step — there is nothing GPU-side to upload, just the
+   * dispatch done by the subscriber.  Null until the IIFE mints it
    * (matches `filaments` for the same lifecycle reason).
    */
-  famousMeta: AssetSlot<FamousPayload, CompanionAssetReq> | null;
+  famousGalaxiesMeta: AssetSlot<FamousGalaxiesPayload, CompanionAssetReq> | null;
+  /**
+   * Famous-star `famous_stars_meta.json` sidecar — the star twin of
+   * `famousGalaxiesMeta`, routed through the same asset-slot machinery so the two
+   * curated sources load their metadata the same way.  Loaded eagerly at
+   * engine boot (`demand: () => true`, like `bodyTextureAtlas`): unlike
+   * `famousGalaxiesMeta`, there is no sibling `.bin` fetch to key the demand off —
+   * the famous stars are a seeded catalog compiled straight into the bundle
+   * — so the sidecar's own eagerness is the only signal. The subscriber
+   * reports the parsed array to the engine Redux slice
+   * (`engineFamousStarsMetaReported`), the only place it is read from: unlike
+   * `famousGalaxiesMeta`, no engine code consults these entries, just the InfoCard.
+   *
+   * No `commit` step — there is nothing GPU-side to upload, just the store
+   * dispatch done by the subscriber. Null until the IIFE mints it (matches
+   * `famousGalaxiesMeta` for the same lifecycle reason).
+   */
+  famousStarsMeta: AssetSlot<FamousStarsPayload, CompanionAssetReq> | null;
   /**
    * Cluster/supercluster coverage layer (`structures.ccat` + `structures_meta.json`)
    * routed through a slot for parity with the other CPU-side sidecars.  Loaded
@@ -85,7 +103,7 @@ export type EngineAssetSlots = {
    * No `commit` step — there is nothing GPU-side to upload.  `wireStructureProjection`
    * subscribes to this slot and converts the ready value into structure records
    * written into the structure store.  Null until the IIFE mints it
-   * (matches `famousMeta` for the same lifecycle reason).
+   * (matches `famousGalaxiesMeta` for the same lifecycle reason).
    */
   structureCatalog: AssetSlot<StructureCatalogPayload, StructureCatalogReq> | null;
   /**
@@ -145,17 +163,34 @@ export type EngineAssetSlots = {
    */
   flow: AssetSlot<ScalarCube, void> | null;
   /**
-   * The keyed body-surface texture family — one slot per textured spherical body
-   * (`'earth'`, `'mars'`, …) plus the Saturn ring strip (`'saturn-ring'`),
-   * keyed by `BodyTextureId | RingTextureId`.
+   * True-3D constellation stick-figure artifact (`constellations.json`) routed
+   * through a slot for parity with the other CPU-side sidecars. Opt-in (defaults
+   * off), demand-loaded on the layer's master gate (`settings.constellations.enabled`),
+   * mirroring `flow`.
+   *
+   * The `commit` runs once on artifact-ready: it uploads the segment set to
+   * `constellationRenderer` (a static, tier-agnostic buffer) and kicks
+   * `syncVisibilityFades` for the `constellations` row, ramping the seeded-0
+   * demand-loaded fade up to the master toggle's intent. The pass only draws.
+   * The label producer reads the artifact straight off the slot's ready value.
+   * Null until `wireSlots` mints it (matches `structureCatalog` / `flow` for the
+   * same lifecycle reason). A missing/404 artifact surfaces as a never-fires
+   * commit; the overlay simply stays empty.
+   */
+  constellations: AssetSlot<ConstellationsArtifact, void> | null;
+  /**
+   * The keyed body-texture family — one slot per `(bodyId, kind)` map, keyed by
+   * the composite `BodyTextureSlotKey` (`'earth:surface'`, `'mars:surface'`, the
+   * Saturn ring strip `'saturn-ring:surface'`, and — with the feature PRs —
+   * Earth's `'earth:night'` / `'earth:clouds'`).
    *
    * A keyed Map that mirrors `points`: any consumer looks up a body's texture
-   * slot by id without iterating, and the family shares one fetcher +
-   * demand/release rail rather than a per-body field. Each slot is
+   * slot by its composite key without iterating, and the family shares one
+   * fetcher + demand/release rail rather than a per-body field. Each slot is
    * proximity-gated (demanded inside the body's own load radius, released
    * outside twice it — hysteresis) and re-fetched at the clamped current tier on
    * a data-volume tier change. Earth's former bespoke single-texture path folds
-   * into this family as key `'earth'`.
+   * into this family as key `'earth:surface'`.
    *
    * Unlike `flow` / `cf4Density` (null-then-set named fields minted in
    * `wireSlots`), these are minted in `initGpu` beside the body renderers their
@@ -164,7 +199,24 @@ export type EngineAssetSlots = {
    * consumers need no null check. A 404 / decode failure surfaces as a
    * never-fires commit; the renderer keeps its flat-albedo placeholder.
    */
-  bodyTextures: Map<BodyTextureId | RingTextureId, AssetSlot<ImageBitmap, BodyTextureReq>>;
+  bodyTextures: Map<BodyTextureSlotKey, AssetSlot<ImageBitmap, BodyTextureReq>>;
+  /**
+   * The low-resolution all-bodies surface atlas (`body-atlas.webp`) — one
+   * 512×256 tile per textured body in a single ~160 KB image, fetched first at
+   * boot (`priority: 0`) so every body has its own surface to draw before any
+   * hi-res map lands.
+   *
+   * A singleton sidecar field (like `constellations` / `flow`) rather than a
+   * member of the `bodyTextures` map above, because it is ONE asset for the
+   * whole set: one request, no tier, no proximity gate. Its commit fans the one
+   * decoded bitmap out to every body renderer's PLACEHOLDER layer, which is what
+   * lets it and the per-body maps arrive in either order with no check.
+   *
+   * Null until `wireSlots` mints it (matches the other named sidecars). A 404 /
+   * decode failure surfaces as a never-fires commit; every renderer keeps the
+   * 1×1 placeholder it drew before this asset existed.
+   */
+  bodyTextureAtlas: AssetSlot<ImageBitmap, void> | null;
   /**
    * Dev-only slots for the synthetic test cubes (Gaussian blob,
    * Cartesian grid, spherical grid).  `undefined` (not the slots being

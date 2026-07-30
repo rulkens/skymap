@@ -15,18 +15,17 @@
  *    CollapsibleSection titles render as `<button>` elements and stay mounted
  *    even when the section is collapsed, so `getByRole('button', { name })` is
  *    the correct intent-level query (CSS-grid collapse leaves the DOM intact).
- *  - Clicking "Reset camera" fires the `onResetCamera` callback exactly once.
  *
- * Why these assertions?
+ * Why this assertion?
  *  Without the shell, mounting `SettingsPanel` would fail outright (its type
- *  formerly required ~40 props; the shell requires only 2). With the shell but
+ *  formerly required ~40 props; the shell requires only 1). With the shell but
  *  a missing container, the corresponding section heading would be absent from
- *  the rendered output. These two checks together guarantee the shell composes
- *  all seven containers and wires the footer action correctly.
+ *  the rendered output. This check guarantees the shell composes all seven
+ *  containers.
  */
 
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import { SettingsPanel } from '../../../src/components/SettingsPanel/SettingsPanel';
@@ -40,12 +39,10 @@ function makeWrapper(store: AppStore) {
 describe('SettingsPanel (shell)', () => {
   it('renders all six section headings', () => {
     const { store } = createAppStore();
-    const onResetCamera = vi.fn<() => void>();
 
     render(
       createElement(SettingsPanel, {
         defaultOpen: true,
-        onResetCamera,
       }),
       { wrapper: makeWrapper(store) },
     );
@@ -58,23 +55,5 @@ describe('SettingsPanel (shell)', () => {
     expect(screen.getByRole('button', { name: /structures/i })).toBeDefined();
     expect(screen.getByRole('button', { name: /labels/i })).toBeDefined();
     expect(screen.getByRole('button', { name: /display/i })).toBeDefined();
-  });
-
-  it('calls onResetCamera when "Reset camera" is clicked', () => {
-    const { store } = createAppStore();
-    const onResetCamera = vi.fn<() => void>();
-
-    render(
-      createElement(SettingsPanel, {
-        defaultOpen: true,
-        onResetCamera,
-      }),
-      { wrapper: makeWrapper(store) },
-    );
-
-    const resetButton = screen.getByRole('button', { name: /reset camera/i });
-    fireEvent.click(resetButton);
-
-    expect(onResetCamera).toHaveBeenCalledOnce();
   });
 });

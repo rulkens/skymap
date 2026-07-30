@@ -8,9 +8,9 @@
  *     job is to render the `<canvas>` element with this ref attached;
  *     the engine sets up its own WebGPU context against it.
  *   - `handleRef` — the `EngineHandle` returned by `createEngine`,
- *     stored in a ref so other hooks (useFocusUrlSync, useAliasIndex,
- *     useKeyboardShortcuts) can call methods on it without dependency
- *     gymnastics.
+ *     stored in a ref so other hooks and containers (useFocusUrlSync,
+ *     useAliasIndex, InfoCardContainer, CommandPaletteContainer) can call
+ *     methods on it without dependency gymnastics.
  *
  * All engine-driven state (status, scale, source counts, load progress,
  * structure counts) lives in the Redux `engine` slice, dispatched
@@ -51,6 +51,7 @@ import type { EngineHandle } from '../@types/engine/EngineHandle';
 import type { UseEngineReturn } from '../@types/engine/UseEngineReturn';
 import { useAppStore } from '../store/hooks';
 import { useSetSagaContext } from '../store/SagaContextProvider';
+import { installPerfHook } from '../state/perf/installPerfHook';
 
 export function useEngine(): UseEngineReturn {
   // The injected settings store — created in main.tsx, shared with React via
@@ -75,6 +76,11 @@ export function useEngine(): UseEngineReturn {
     const handle = createEngine(canvas, { store, setSagaContext });
     handleRef.current = handle;
 
+    // Perf harness seam — a no-op unless the page is in `?perf` mode. Installed
+    // here (not main.tsx) because it needs the live engine handle to reach the
+    // GPU timing service via `engine.debug.timingService`.
+    installPerfHook(store, handle);
+
     return () => {
       handle.destroy();
       handleRef.current = null;
@@ -84,7 +90,7 @@ export function useEngine(): UseEngineReturn {
     // render: each is a single instance stable for the app's lifetime
     // (created once in main.tsx). Listing either here would re-create the
     // engine on every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- store/setSagaContext are stable app-lifetime singletons; listing them would re-create the engine on every render
   }, []);
 
   return { canvasRef, handleRef };

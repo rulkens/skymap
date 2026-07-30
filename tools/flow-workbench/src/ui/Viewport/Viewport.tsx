@@ -44,7 +44,6 @@ function Viewport({ store }: ViewportProps): ReactNode {
         h.start();
       })
       .catch((err) => {
-        // eslint-disable-next-line no-console
         console.error('flow-workbench: harness failed to start', err);
       });
 

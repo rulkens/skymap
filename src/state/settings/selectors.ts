@@ -43,6 +43,8 @@ import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { StructureItemSettings } from '../../@types/settings/StructureItemSettings';
 import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';
 import type { StarCatalogItemSettings } from '../../@types/settings/StarCatalogItemSettings';
+import type { BodyId } from '../../@types/data/body/BodyId';
+import type { BodyItemSettings } from '../../@types/settings/BodyItemSettings';
 import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSettings';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
@@ -52,10 +54,22 @@ import type { PassByDir } from '../../@types/animation/PassByDir';
 import type { ClipPathTuningActive } from '../../@types/settings/ClipPathTuningActive';
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
+import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
+import type { GalaxyProvenanceSettings } from '../../@types/settings/GalaxyProvenanceSettings';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../data/sources';
 import { maskWith } from '../../utils/maskWith';
 
 export const selectSettings = (state: RootState) => state[settingsRoute];
+
+// --- orientation (bare scalar) ------------------------------------------------
+
+/**
+ * Camera orientation frame — which astronomical pole is "up". A primitive
+ * (string-union) read, so no memoization; the consuming camera code reads it to
+ * pick the frame-local-to-world basis from `ORIENTATION_FRAMES`.
+ */
+export const selectOrientation = (state: RootState): OrientationFrameId =>
+  selectSettings(state).orientation;
 
 // --- galaxyCatalogs cluster ---------------------------------------------------
 
@@ -68,11 +82,32 @@ export const selectBrightness = (state: RootState): number =>
 export const selectDepthFade = (state: RootState): boolean =>
   selectSettings(state).galaxyCatalogs.depthFade;
 
-export const selectHighlightFallback = (state: RootState): boolean =>
-  selectSettings(state).galaxyCatalogs.highlightFallback;
+export const selectGalaxyProvenance = (state: RootState): GalaxyProvenanceSettings =>
+  selectSettings(state).galaxyCatalogs.provenance;
 
-export const selectRealOnly = (state: RootState): boolean =>
-  selectSettings(state).galaxyCatalogs.realOnly;
+/**
+ * Overall physical-SB → HDR gain — the "Galaxy brightness" knob. A primitive
+ * read, so no memoization. The points draw layer writes it into the
+ * `galaxySbScale` uniform each frame.
+ */
+export const selectGalaxySbScale = (state: RootState): number =>
+  selectSettings(state).galaxyCatalogs.sbScale;
+
+/**
+ * Bloom ceiling — the "Bloom ceiling" knob. A primitive read, so no
+ * memoization. The max baked surface-brightness amplitude a galaxy can emit;
+ * the vertex stage clamps `sbAmp` to it via the `galaxySbMax` uniform.
+ */
+export const selectGalaxySbMax = (state: RootState): number =>
+  selectSettings(state).galaxyCatalogs.sbMax;
+
+/**
+ * Readability-falloff exponent — the "Distance falloff" knob. A primitive read,
+ * so no memoization. The exponent on the resolved-fraction falloff, gated by
+ * the depth-fade toggle; rides the `galaxyFalloffStrength` uniform.
+ */
+export const selectGalaxyFalloffStrength = (state: RootState): number =>
+  selectSettings(state).galaxyCatalogs.falloffStrength;
 
 export const selectGalaxyCatalogItems = (
   state: RootState,
@@ -84,6 +119,25 @@ export const selectExposure = (state: RootState): number => selectSettings(state
 
 export const selectToneMapCurve = (state: RootState): ToneMapCurve =>
   selectSettings(state).tonemap.curve;
+
+// --- hdr cluster ----------------------------------------------------------
+
+export const selectHdrEnabled = (state: RootState): boolean => selectSettings(state).hdr.enabled;
+
+export const selectHdrKnee = (state: RootState): number => selectSettings(state).hdr.knee;
+
+export const selectHdrHeadroom = (state: RootState): number => selectSettings(state).hdr.headroom;
+
+// --- bloom cluster ------------------------------------------------------------
+
+export const selectBloomEnabled = (state: RootState): boolean =>
+  selectSettings(state).bloom.enabled;
+
+export const selectBloomStrength = (state: RootState): number =>
+  selectSettings(state).bloom.strength;
+
+export const selectBloomThreshold = (state: RootState): number =>
+  selectSettings(state).bloom.threshold;
 
 // --- bias cluster -------------------------------------------------------------
 
@@ -105,16 +159,6 @@ export const selectMilkyWayEnabled = (state: RootState): boolean =>
 export const selectMilkyWayLabelEnabled = (state: RootState): boolean =>
   selectSettings(state).milkyWay.labelEnabled;
 
-// --- famousStars cluster ------------------------------------------------------
-
-/**
- * Master gate on the seeded famous-star map. A primitive read, so no
- * memoization. Distinct from `selectStarCatalogs(...).enabled` (the Gaia survey
- * gate) — this gates only the curated near-field scene bodies.
- */
-export const selectFamousStarsEnabled = (state: RootState): boolean =>
-  selectSettings(state).famousStars.enabled;
-
 // --- filaments cluster --------------------------------------------------------
 
 export const selectFilamentsEnabled = (state: RootState): boolean =>
@@ -122,6 +166,30 @@ export const selectFilamentsEnabled = (state: RootState): boolean =>
 
 export const selectFilamentIntensity = (state: RootState): number =>
   selectSettings(state).filaments.intensity;
+
+// --- constellations cluster ---------------------------------------------------
+
+export const selectConstellationsEnabled = (state: RootState): boolean =>
+  selectSettings(state).constellations.enabled;
+
+export const selectConstellationIntensity = (state: RootState): number =>
+  selectSettings(state).constellations.intensity;
+
+// --- orbitTrails cluster -------------------------------------------------------
+
+export const selectOrbitTrailsEnabled = (state: RootState): boolean =>
+  selectSettings(state).orbitTrails.enabled;
+
+// --- earth cluster ------------------------------------------------------------
+
+export const selectAtmosphereExposure = (state: RootState): number =>
+  selectSettings(state).earth.atmosphereExposure;
+
+export const selectAmbientLight = (state: RootState): number =>
+  selectSettings(state).earth.ambientLight;
+
+export const selectOceanRoughness = (state: RootState): number =>
+  selectSettings(state).earth.oceanRoughness;
 
 // --- volumes cluster ----------------------------------------------------------
 
@@ -183,14 +251,6 @@ export const selectClipPathPassByDir = (state: RootState): PassByDir =>
 export const selectClipPathTuningActive = (state: RootState): ClipPathTuningActive =>
   selectSettings(state).debug.clipPathInspect.active;
 
-// --- labels cluster -----------------------------------------------------------
-
-export const selectStarLabelsEnabled = (state: RootState): boolean =>
-  selectSettings(state).labels.starLabelsEnabled;
-
-export const selectPlanetLabelsEnabled = (state: RootState): boolean =>
-  selectSettings(state).labels.planetLabelsEnabled;
-
 // --- structures cluster -------------------------------------------------------
 
 export const selectStructureItems = (
@@ -217,8 +277,30 @@ export const selectStarCatalogs = (
   exposureNearX: number;
   exposureMidX: number;
   exposureFarX: number;
+  aggregateIntensityCap: number;
   items: Record<StarCatalogId, StarCatalogItemSettings>;
 } => selectSettings(state).starCatalogs;
+
+/**
+ * The per-catalog item rows alone — the star-catalog twin of
+ * `selectGalaxyCatalogItems`. The Labels section bundles it into `LabelHomes`
+ * and needs the narrowest stable reference it can get: reading the whole
+ * cluster there would rebuild the projection on every star-brightness drag.
+ */
+export const selectStarCatalogItems = (
+  state: RootState,
+): Record<StarCatalogId, StarCatalogItemSettings> => selectSettings(state).starCatalogs.items;
+
+// --- bodies cluster -----------------------------------------------------------
+
+/**
+ * The per-body item rows — the near-field twin of `selectStarCatalogItems`.
+ * The Labels section bundles it into `LabelHomes`; returning the Immer-stable
+ * `items` reference (not the cluster, and never `state.settings`) keeps the
+ * projection from rebuilding on unrelated writes.
+ */
+export const selectBodyItems = (state: RootState): Record<BodyId, BodyItemSettings> =>
+  selectSettings(state).bodies.items;
 
 /**
  * Star-billboard pixel radius — the star-catalog twin of
@@ -277,6 +359,15 @@ export const selectStarCatalogExposureMidX = (state: RootState): number =>
  */
 export const selectStarCatalogExposureFarX = (state: RootState): number =>
   selectSettings(state).starCatalogs.exposureFarX;
+
+/**
+ * Aggregate surface-brightness cap — the "Fog cap" tuning knob. A primitive
+ * read, so no memoization. The ceiling on an AGGREGATE record's per-pixel peak
+ * intensity (leaves uncapped); the renderer writes it into the shared star
+ * uniform and the vertex stage clamps aggregate peaks to it.
+ */
+export const selectStarCatalogAggregateIntensityCap = (state: RootState): number =>
+  selectSettings(state).starCatalogs.aggregateIntensityCap;
 
 // --- derived ------------------------------------------------------------------
 

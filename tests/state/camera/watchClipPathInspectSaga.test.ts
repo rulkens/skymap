@@ -24,7 +24,7 @@ import { clipRegistry } from '../../../src/data/animation/clips/clipRegistry';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { ClipId } from '../../../src/@types/animation/ClipId';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
-import type { FocusCameraRuntime } from '../../../src/store/types';
+import type { LiveCameraRuntime } from '../../../src/store/types';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -33,14 +33,15 @@ const EXPECTED = clipRegistry[CLIP_ID].data;
 
 const EMPTY_DEPS: ResolveDeps = {
   catalogs: { get: () => undefined },
-  famousMeta: [],
+  famousGalaxiesMeta: [],
   structures: { byId: () => null },
   stars: { current: () => null },
 };
 
-const RUNTIME: FocusCameraRuntime = {
+const RUNTIME: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 },
   fovYRad: 0.8,
+  frameBasisQuat: [0, 0, 0, 1],
 };
 
 function buildHarness() {

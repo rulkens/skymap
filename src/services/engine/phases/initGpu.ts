@@ -36,13 +36,18 @@
  *     `RunFrameDeps` for the frame body.
  *
  * `device` and `context` survive past this phase via the `phaseLocals`
- * carrier (read by `wireSlots` / `wireInput` / `startLoop`); they have no
- * `state.gpu.*` home. Every renderer is stored on `state.gpu.*` directly,
- * which is also how later phases consume them. See `BootstrapDeps` in
- * `bootstrap.ts` for the wiring.
+ * carrier (read by `wireSlots` / `wireInput` / `startLoop`) — that stays the
+ * canonical route for phases that need them directly. `state.gpu.uiCtx` is a
+ * separate, narrower home for the same two values (plus `canvas`), read only
+ * by `buildSwapRenderers` for a later swap-format rebuild. Every renderer is
+ * stored on `state.gpu.*` directly, which is also how later phases consume
+ * them. `phaseLocals` also carries `unwatchHdrCapability` — the sole reader
+ * is `engine.ts`'s `destroy()`, not a later bootstrap phase, but it has no
+ * `state.gpu.*` home either. See `BootstrapDeps` in `bootstrap.ts` for the
+ * `phaseLocals` wiring.
  */
 
-import { initGpu as gpuInitGpu, resizeCanvasToDisplay } from '../../gpu/device';
+import { initGpu as gpuInitGpu, resizeCanvasToDisplay, watchHdrCapability } from '../../gpu/device';
 import { createPointRenderer } from '../../gpu/renderers/galaxyCatalog/pointRenderer';
 import { createCompositor } from '../../gpu/passes/compositor';
 import { createRenderTargets } from '../../gpu/renderTargets';
@@ -52,21 +57,20 @@ import { createMilkyWayCloud } from '../../gpu/galaxy/milkyWayCloud';
 import { createMilkyWayCloudRenderer } from '../../gpu/renderers/milkyWay/milkyWayCloudRenderer';
 import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShell/horizonShellRenderer';
 import { createFilamentRenderer } from '../../gpu/renderers/filaments/filamentRenderer';
-import { createLabelRenderer } from '../../gpu/renderers/labels/labelRenderer';
-import { createMarkerLineRenderer } from '../../gpu/renderers/labels/markerLineRenderer';
-import { createDebugLineRenderer } from '../../gpu/renderers/devTools/debugLineRenderer';
-import { createSelectionRingRenderer } from '../../gpu/renderers/selectionRing/selectionRingRenderer';
+import { createConstellationRenderer } from '../../gpu/renderers/constellations/constellationRenderer';
 import { createStructureMarkerRenderer } from '../../gpu/renderers/structureMarker/structureMarkerRenderer';
 import { createMilkyWayPickRenderer } from '../../gpu/renderers/milkyWay/milkyWayPickRenderer';
 import { createVolumeFieldRenderer } from '../../gpu/renderers/volumeField/volumeFieldRenderer';
 import { createFlowFieldRenderer } from '../../gpu/renderers/flowField/flowFieldRenderer';
 import { createVolumeUpsample } from '../../gpu/passes/volumeUpsample';
 import { createStarAggregateUpsample } from '../../gpu/passes/starAggregateUpsample';
-import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
-import { createDiskRadiusRing } from '../../gpu/renderers/devTools/diskRadiusRing';
+import { createBloomPyramid } from '../../gpu/passes/bloomPyramid';
 import { createEarthRenderer } from '../../gpu/renderers/bodies/earthRenderer';
 import { createTexturedBodyRenderer } from '../../gpu/renderers/bodies/texturedBodyRenderer';
 import { createRingRenderer } from '../../gpu/renderers/bodies/ringRenderer';
+import { createCloudShellRenderer } from '../../gpu/renderers/bodies/cloudShellRenderer';
+import { createAtmosphereShellRenderer } from '../../gpu/renderers/atmosphere/atmosphereShellRenderer';
+import { ATMOSPHERE_PARAMS } from '../../../data/bodies/atmosphereParams';
 import { createStarRenderer } from '../../gpu/renderers/bodies/starRenderer';
 import { createPlanetRenderer } from '../../gpu/renderers/bodies/planetRenderer';
 import { createStarPointRenderer } from '../../gpu/renderers/bodies/starPointRenderer';
@@ -75,11 +79,14 @@ import { createStarCatalogRenderer } from '../../gpu/renderers/starCatalog/starC
 import { createStarCatalogPickRenderer } from '../../gpu/renderers/starCatalog/starCatalogPickRenderer';
 import { createBodyPickRenderer } from '../../gpu/renderers/bodies/bodyPickRenderer';
 import { createOrbitTrailRenderer } from '../../gpu/renderers/bodies/orbitTrailRenderer';
-import { sceneBodyLabels, FOREGROUND_LABEL_CAPACITY } from '../presentation/sceneBodyLabels';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
 import { TIMED_SLOTS } from '../frame/frameProgram';
+import { SLAB_REVERSED_Z, NEAR0, COSMO } from '../frame/slabs';
 import { loadFontAtlases } from '../../gpu/labelLayout/loadFontAtlases';
+import { engineHdrCapabilityChanged } from '../../../state/engine/engineSlice';
+import { buildSwapRenderers } from './buildSwapRenderers';
 import { hasUrlGate } from '../../../utils/url/hasUrlGate';
+import { isPerfMode } from '../../../utils/url/isPerfMode';
 import {
   GALAXY_CATALOG_SOURCE_REGISTRY,
   wireGalaxyCatalogSourceSlot,
@@ -103,8 +110,10 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
  *   - populates `state.assetSlots.points` via the registry loop.
  *
  * Side effects on `deps`:
- *   - attaches a minimal phase-local carrier (`device`, `context`) so
- *     subsequent phases can read them; the renderers flow via `state.gpu`.
+ *   - attaches a minimal phase-local carrier (`device`, `context`,
+ *     `unwatchHdrCapability`) so subsequent phases can read them and
+ *     `engine.ts`'s `destroy()` can remove the HDR media-query listener; the
+ *     renderers flow via `state.gpu`.
  */
 export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const { canvas, cb } = deps;
@@ -113,7 +122,21 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // to WebGPU — otherwise `getCurrentTexture()` may return a 300×150 default.
   resizeCanvasToDisplay(canvas);
 
-  const { device, context, format } = await gpuInitGpu(canvas);
+  const { device, context, format, hdrCapable } = await gpuInitGpu(canvas);
+
+  // Live display-capability report: dispatch the boot snapshot now, then
+  // keep the engine slice honest as the display's `(dynamic-range: high)`
+  // verdict changes later (e.g. the window moves to an SDR monitor) — see
+  // `watchHdrCapability`'s doc comment in `device.ts`. `deps.phaseLocals` is
+  // assigned immediately below, not at the end of this (long, throw-capable)
+  // phase, so a later throw here — the font-atlas await, any renderer
+  // constructor — still leaves `engine.ts`'s `destroy()` able to remove the
+  // listener rather than leaking it for the page's lifetime.
+  deps.cb.store.dispatch(engineHdrCapabilityChanged(hdrCapable));
+  const unwatchHdrCapability = watchHdrCapability((capable) =>
+    deps.cb.store.dispatch(engineHdrCapabilityChanged(capable)),
+  );
+  deps.phaseLocals = { device, context, unwatchHdrCapability };
 
   // Build the canonical fade + source + focus bind-group layouts ONCE —
   // every renderer pipeline below threads these into createPipelineLayout
@@ -184,37 +207,26 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // triggers a per-source bake without any engine-side coordination.
   state.subsystems.biasCorrection.attachRenderer(renderer);
 
-  // ── MSDF label renderer + marker-line renderer ───────────────────────
+  // ── Swap-chain-format renderers (labels, marker lines, debug lines,
+  // selection ring, pick-debug overlay, disk-radius ring, + their NEAR0
+  // foreground twins) ────────────────────────────────────────────────────
   //
-  // Load the font atlas (BMFont JSON + MSDF PNG) and construct the UI
-  // overlay renderers in one block, sequenced after the PointRenderer but
-  // before the GALAXY_CATALOG_SOURCE_REGISTRY loop.  Awaiting the atlas
-  // fetch here keeps the loop below from racing ahead of it; in practice
-  // the ~120 KB atlas resolves well before the much larger per-galaxy-catalog
-  // `.bin` fetches.  All renderers share the `{ device, context, format,
-  // canvas }` GpuContext shape, so building them here keeps GPU-resource
-  // allocation at one site.
-  //
-  // Stored on `state.gpu` so `engine.ts.destroy()` can release their
-  // buffers + atlas texture.  Excluded from `isEngineReady` (same as
-  // `filamentRenderer`): optional async resources, null-checked at use.
-  //
-  // They target the swap-chain format, NOT the HDR target: marker-lines +
-  // labels are swap-target layers, drawn AFTER tone-map onto the swap chain
-  // (see the swap render step in `services/engine/frame/executeFrame.ts`),
-  // so their pipelines need the swap-chain format for the colorAttachment
-  // to validate.
-  const uiCtx = { device, context, format, canvas };
+  // Load the font atlas (BMFont JSON + MSDF PNG) before building anything
+  // that reads it, sequenced after the PointRenderer but before the
+  // GALAXY_CATALOG_SOURCE_REGISTRY loop.  Awaiting the atlas fetch here keeps
+  // the loop below from racing ahead of it; in practice the ~120 KB atlas
+  // resolves well before the much larger per-galaxy-catalog `.bin` fetches.
+  // `uiCtx` and the atlas are retained on `state.gpu` (not just local here)
+  // so `buildSwapRenderers` can rebuild these eight renderers on a later
+  // swap-format change — see its module header. The two renderer calls
+  // just below need the full `GpuContext` (format included); `state.gpu.uiCtx`
+  // deliberately gets its own format-less literal, matching its narrower
+  // type — see that field's docblock in `EngineGpuHandles`.
+  const uiCtx = { device, context, format, canvas, hdrCapable };
+  state.gpu.uiCtx = { device, context, canvas, hdrCapable };
+  state.gpu.fontAtlases = await loadFontAtlases();
+  buildSwapRenderers(state, format);
 
-  const fontAtlases = await loadFontAtlases();
-  state.gpu.labelRenderer = createLabelRenderer(uiCtx, format, fontAtlases);
-  state.gpu.markerLineRenderer = createMarkerLineRenderer(uiCtx, format);
-  // Dedicated debug-line renderer for the clip-path inspector overlay. Same
-  // swap-chain ctx as the marker lines (UI overlay, drawn post-tone-map), but
-  // its own pipeline + buffers so the debug viz never touches the label
-  // director's reconcile path.
-  state.gpu.debugLineRenderer = createDebugLineRenderer(uiCtx, format);
-  state.gpu.selectionRingRenderer = createSelectionRingRenderer(uiCtx, format);
   // HDR pass — writes into the rgba16float offscreen target, NOT the
   // swap chain.  The fadeBgl placeholder at @group(1) must match what the
   // other HDR passes (filaments) bind at the same slot on the shared
@@ -223,22 +235,16 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     uiCtx,
     'rgba16float',
     state.gpu.fadeBgl!,
+    SLAB_REVERSED_Z[COSMO]!,
   );
   // Invisible Milky-Way pick billboard — writes into the r32uint pick
   // texture (NOT the HDR target), so it takes no format param.  Built
   // here alongside the other pick providers; `wireInput` threads it into
   // `createPickRenderer` along with the disk-visibility gate.
-  state.gpu.milkyWayPickRenderer = createMilkyWayPickRenderer(uiCtx, state.gpu.fadeBgl!);
-
-  // Wire the freshly-constructed renderers into the label director, which
-  // was built eagerly in the engine state literal with no renderers yet.
-  // Same `attachRenderer` post-construction pattern `biasCorrectionSubsystem`
-  // uses.  The director owns the renderer refs: all `LabelProducer`s —
-  // milkyWayLabel (produceMilkyWayLabel), structures, future overlays — are
-  // polled by the director, which merges their outputs and flushes once.
-  state.subsystems.labelDirector.attachRenderers(
-    state.gpu.labelRenderer,
-    state.gpu.markerLineRenderer,
+  state.gpu.milkyWayPickRenderer = createMilkyWayPickRenderer(
+    uiCtx,
+    state.gpu.fadeBgl!,
+    SLAB_REVERSED_Z[NEAR0]!,
   );
 
   // ── Per-source asset slots ───────────────────────────────────────────
@@ -262,7 +268,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   //
   // The 7 source slots (6 galaxy catalogs + Synthetic) are built from the
   // `GALAXY_CATALOG_SOURCE_REGISTRY` declarative table; sidecar slots
-  // (filaments, famous-meta, pgc-aliases) stay inline below — see
+  // (filaments, famous-galaxies-meta, pgc-aliases) stay inline below — see
   // `galaxyCatalogSourceRegistry.ts` for why.
   for (const cfg of GALAXY_CATALOG_SOURCE_REGISTRY) {
     wireGalaxyCatalogSourceSlot(state, cfg, { cb });
@@ -291,6 +297,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     targetFormat: 'rgba16float',
     canvas,
     focusBgl: state.gpu.focusBgl!,
+    reversedZ: SLAB_REVERSED_Z[COSMO]!,
   });
   // Observable-universe horizon shell — translucent sphere at the
   // comoving particle-horizon radius (~14.3 Gpc).  Single uniform
@@ -308,6 +315,21 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // returns early on `segmentCount=0`.  Same HDR target as every overlay.
   const filamentRenderer = createFilamentRenderer(device, 'rgba16float', state.gpu.fadeBgl!);
   state.gpu.filamentRenderer = filamentRenderer;
+
+  // ── Constellation stick-figure renderer ──────────────────────────
+  //
+  // Built unconditionally beside filaments (same cheap instanced-quad
+  // pipeline + shared unit-quad VBO + fade uniform). The per-instance buffer
+  // is populated later, when `constellationsLayer` sees the demand-loaded
+  // `constellations.json` artifact ready on its slot and calls `upload` once.
+  // Until then `hasData()` is false and the layer skips its draw. Same HDR
+  // target as every overlay.
+  const constellationRenderer = createConstellationRenderer(
+    device,
+    'rgba16float',
+    state.gpu.fadeBgl!,
+  );
+  state.gpu.constellationRenderer = constellationRenderer;
 
   // Store the thumbnail-related renderers on `state.gpu.*` so
   // `engine.ts.destroy()` can reach them for teardown, and so later
@@ -380,30 +402,27 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // the HDR and the star-aggregates rows share that format.
   state.gpu.starAggregateUpsample = createStarAggregateUpsample(device, 'rgba16float');
 
-  // ── Pick-buffer debug overlay ────────────────────────────────────
+  // ── Bloom mip pyramid (bright / downsample / upsample / fold) ──────
   //
-  // Fullscreen pass that samples the r32uint pick texture and writes a
-  // colour-mapped RGBA image over the tone-mapped swap chain.  Always
-  // constructed (cheap, no GPU buffers until first draw); the per-frame
-  // consumer gates on `state.settings.debug.showPickBuffer`.  Targets the
-  // swap-chain `format` since it draws AFTER tone-map, like marker-lines.
-  state.gpu.pickDebugOverlay = createPickDebugOverlay(device, format);
-
-  // ── Disk-radius debug ring ───────────────────────────────────────
-  //
-  // World-space line-strip drawn in the disk plane around the selected
-  // galaxy at its catalog disk radius (a famous-galaxy calibration aid).
-  // Swap-chain `format` (post-tone-map UI overlay); the per-frame
-  // `diskRadiusRingLayer` gates on `state.settings.debug.showDiskRadiusRing`.
-  state.gpu.diskRadiusRing = createDiskRadiusRing(device, format);
+  // Built unconditionally alongside the other post-process passes; the four
+  // pipelines are cheap and the `bloom0..bloom4` mip textures live on
+  // `renderTargets` (recreated on resize), so nothing here depends on viewport
+  // size. Targets 'rgba16float' — the HDR + every bloom row share that format.
+  // The bloom content layers gate on `state.gpu.bloomPyramid !== null`; the
+  // `settings.bloom.enabled` master toggle gates at frame-program build.
+  state.gpu.bloomPyramid = createBloomPyramid(device, 'rgba16float');
 
   // ── GPU timing service ────────────────────────────────────────────
   //
-  // Always-constructed: the factory returns a no-op stub when the URL
-  // gate is off OR the adapter lacks `timestamp-query`, so consumers gate
-  // behind one `state.gpu.timingService.enabled` check.  The no-op path
-  // allocates no GPU resources.
-  state.gpu.timingService = createGpuTimingService(device, hasUrlGate('gpuTimings'), TIMED_SLOTS);
+  // Always-constructed: the factory returns a no-op stub when neither
+  // `?gpuTimings` nor `?perf` is set, OR the adapter lacks `timestamp-query`,
+  // so consumers gate behind one `state.gpu.timingService.enabled` check.  The
+  // no-op path allocates no GPU resources.
+  state.gpu.timingService = createGpuTimingService(
+    device,
+    hasUrlGate('gpuTimings') || isPerfMode(),
+    TIMED_SLOTS,
+  );
 
   // ── Foreground / anchor renderers (Plans 01+02 — zoom-to-Earth) ──────
   //
@@ -421,8 +440,18 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // instanced draw: each body's MVP + albedo rides in a per-instance vertex
   // record (planetsLayer packs the batch), so the matrices survive to submit
   // without a per-body bind or a mid-frame uniform.
-  state.gpu.starRenderer = createStarRenderer(device, 'rgba16float', 'depth32float');
-  state.gpu.planetRenderer = createPlanetRenderer(device, 'rgba16float', 'depth32float');
+  state.gpu.starRenderer = createStarRenderer(
+    device,
+    'rgba16float',
+    'depth32float',
+    SLAB_REVERSED_Z[NEAR0]!,
+  );
+  state.gpu.planetRenderer = createPlanetRenderer(
+    device,
+    'rgba16float',
+    'depth32float',
+    SLAB_REVERSED_Z[NEAR0]!,
+  );
 
   // starPointRenderer draws the unresolved-partition stars as additive
   // points into the depthless HDR target — no depth format, unlike the
@@ -463,6 +492,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   state.gpu.starCatalogPickRenderer = createStarCatalogPickRenderer(
     device,
     state.gpu.starCatalogRenderer.pickResources(),
+    SLAB_REVERSED_Z[NEAR0]!,
   );
 
   // bodyPickRenderer is the pick provider for the NEAR0 foreground bodies (Earth
@@ -473,49 +503,14 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // writeBuffer/submit race) + point instance buffer, so it needs no other
   // renderer's resources. The body layers' `drawPick` rows (Task 11) drive it; a
   // no-op until a pick pass records into it.
-  state.gpu.bodyPickRenderer = createBodyPickRenderer(device);
+  state.gpu.bodyPickRenderer = createBodyPickRenderer(device, SLAB_REVERSED_Z[NEAR0]!);
 
   // orbitTrailRenderer draws the accurate Keplerian orbit trails (Earth /
   // Jupiter / Moon) as additive screen-space conics into the same depthless
   // HDR target — no depth format, like starPointRenderer above.  Unlike the
-  // stars, no data-delivery step: the conic table (SCENE_ORBIT_CONICS) is a
-  // static module-level derivation of the orbital elements, packed per-frame
-  // by orbitTrailsLayer.
+  // stars, no bootstrap data-delivery step: orbitTrailsLayer derives the conic
+  // geometry per frame from the current body snapshot and packs it itself.
   state.gpu.orbitTrailRenderer = createOrbitTrailRenderer(device, 'rgba16float');
-
-  // foregroundLabelRenderer is a second MSDF label renderer against the
-  // swap-chain `format` (`uiCtx`, like the main `labelRenderer`), holding
-  // the scene-body caption set (Earth + the local star map + the planets),
-  // projecting through the NEAR0 slab view so the captions track bodies that
-  // sit far inside the main camera's near plane. This bootstrap upload primes
-  // the label set (glyph atlas + the count `foregroundLabelsLayer.enabled`
-  // gates on); the layer then RE-uploads the anchors camera-relative each
-  // frame to dodge the f32 origin-distance cancellation that would otherwise
-  // make the captions flicker at deep zoom — see that layer's f64-seam note.
-  // Sized to the whole scene-body roster (FOREGROUND_LABEL_CAPACITY), NOT the
-  // 64-label default: setLabels clamps at maxLabels, so the default would
-  // silently drop captions once the seed table outgrew it (the roster already
-  // exceeds 64 and climbs toward ~130). The derived capacity tracks the roster.
-  state.gpu.foregroundLabelRenderer = createLabelRenderer(
-    uiCtx,
-    format,
-    fontAtlases,
-    FOREGROUND_LABEL_CAPACITY,
-  );
-  state.gpu.foregroundLabelRenderer.setLabels(sceneBodyLabels());
-
-  // foregroundMarkerLineRenderer is the leader-line sibling of the caption
-  // renderer above: a second `createMarkerLineRenderer` against the swap-chain
-  // `format`, drawing the short connectors that hang each caption off its
-  // body. It is SEPARATE from `markerLineRenderer` (the director's COSMO-slab
-  // lines) for the identical reason `foregroundLabelRenderer` is separate from
-  // `labelRenderer` — the connectors project through the NEAR0 slab so they
-  // track bodies far inside the main camera's near plane. `foregroundLabelsLayer`
-  // rebases the connector endpoints camera-relative each frame, the same f32
-  // origin-distance cancellation dodge it applies to the caption anchors. No
-  // bootstrap seed: the connectors are geometry derived per frame from the
-  // caption anchors, not a static set.
-  state.gpu.foregroundMarkerLineRenderer = createMarkerLineRenderer(uiCtx, format);
 
   // ── Earth (Plan 02 — zoom-to-Earth) ──────────────────────────────────
   //
@@ -524,7 +519,12 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // `format` / `depth` in `renderTargets.ts` — the same target↔renderer-
   // profile invariant the sphere bodies above carry, matched by convention
   // + this comment rather than an import.
-  state.gpu.earthRenderer = createEarthRenderer(device, 'rgba16float', 'depth32float');
+  state.gpu.earthRenderer = createEarthRenderer(
+    device,
+    'rgba16float',
+    'depth32float',
+    SLAB_REVERSED_Z[NEAR0]!,
+  );
 
   // ── Textured bodies (Plan 02 — the twelve non-Earth textured bodies) ─
   //
@@ -533,12 +533,13 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // group + surface texture inside the renderer's per-body Map. Same
   // ('rgba16float', 'depth32float') `foreground:0` format invariant as the Earth
   // + sphere-body renderers above. The bodyTextures slot family (minted just
-  // below) routes each non-Earth body's committed bitmap to `setTexture` and its
-  // eviction to `clearTexture`.
+  // below) routes each non-Earth body's committed bitmap to `setMap` and its
+  // per-kind eviction to `clearMap`.
   state.gpu.texturedBodyRenderer = createTexturedBodyRenderer(
     device,
     'rgba16float',
     'depth32float',
+    SLAB_REVERSED_Z[NEAR0]!,
   );
 
   // ── Saturn's rings (Plan 02 — the translucent overlay half) ──────────
@@ -549,7 +550,48 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // (`cullMode: 'none'`), depth-tested but no depth write — so it overlays the
   // opaque spheres already in the target. The `saturn-ring` bodyTextures slot
   // (minted just below) routes the radial strip to `setTexture`.
-  state.gpu.ringRenderer = createRingRenderer(device, 'rgba16float', 'depth32float');
+  state.gpu.ringRenderer = createRingRenderer(
+    device,
+    'rgba16float',
+    'depth32float',
+    SLAB_REVERSED_Z[NEAR0]!,
+  );
+
+  // ── Earth's cloud shell (Plan D — the translucent deck above the surface) ──
+  //
+  // The shell renderer draws the thin translucent sphere of clouds just above the
+  // opaque globe, immediately after `earthLayer` in the (foreground:0, NEAR0)
+  // group. Its pipeline bakes the `foreground:0` format invariant AND the shell
+  // profile: straight-alpha OVER, back-culled closed sphere, depth-tested but no
+  // depth write — so it overlays the opaque surface already in the target. The
+  // `earth:clouds` bodyTextures slot routes the cloud map to `setTexture`; until
+  // then a 1×1 transparent placeholder keeps the shell invisible.
+  state.gpu.cloudShellRenderer = createCloudShellRenderer(
+    device,
+    'rgba16float',
+    'depth32float',
+    SLAB_REVERSED_Z[NEAR0]!,
+  );
+
+  // ── Earth's atmosphere shell (Plan E — the in-scatter halo) ──────────
+  //
+  // The atmosphere renderer draws the translucent proxy sphere at the
+  // atmosphere-top radius, LAST in the (foreground:0, NEAR0) group. Its pipeline
+  // bakes the `foreground:0` format invariant AND the shell profile: straight-alpha
+  // OVER, two-sided (`cullMode: 'none'`, the fragment splits duty by front_facing),
+  // depth-tested but no depth write — so its limb passes over space and is occluded
+  // over the opaque disc. It bakes ONE bundle per `ATMOSPHERE_PARAMS` row (Earth
+  // + six planets) at construction — the view-independent transmittance + multi-scatter
+  // LUTs — while each body's sky-view LUT is re-baked per frame by the
+  // `atmosphereSkyView` compute step. The factory takes the whole table, so a
+  // second atmosphere body is a new params row, no wiring change here.
+  state.gpu.atmosphereShellRenderer = createAtmosphereShellRenderer(
+    device,
+    'rgba16float',
+    'depth32float',
+    SLAB_REVERSED_Z[NEAR0]!,
+    ATMOSPHERE_PARAMS,
+  );
 
   // ── Body-surface texture slot family ─────────────────────────────────
   //
@@ -562,13 +604,4 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // by the slot machinery. Commit routes `'earth'` today; Plan 02 extends the
   // dispatch to the planet/moon/ring renderers.
   wireBodyTextureSlots(state);
-
-  // Stash phase-locals so subsequent phases (`wireSlots`, `wireInput`,
-  // `startLoop`) can read the IIFE-scoped device/context handles.  The
-  // renderers flow via `state.gpu.*`; this carrier is intentionally
-  // minimal — only what has no `state.gpu.*` home.
-  deps.phaseLocals = {
-    device,
-    context,
-  };
 }

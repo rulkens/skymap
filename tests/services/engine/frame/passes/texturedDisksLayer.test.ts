@@ -25,6 +25,7 @@ function makeCtx(): ReadyFrameContext {
   const cam = makeCam();
   return {
     isReady: true,
+    renderedTargets: new Set<string>(),
     cam,
     vp: new Float32Array(16) as unknown as Mat4,
     slabs: [],
@@ -32,6 +33,7 @@ function makeCtx(): ReadyFrameContext {
     drawCamPos: [0, 0, 5] as Readonly<[number, number, number]>,
     drawPxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
     nowMs: 0,
+    simDays: 0,
     fovYRad: (60 * Math.PI) / 180,
     focusBlend: 0,
     visibleSourceMask: 0xffffffff,
@@ -61,6 +63,7 @@ function makeView(ctx: ReadyFrameContext): SlabView {
       vp: new Float64Array(16),
       originRelative: false,
       precision: 'f32',
+      reversedZ: false,
     },
     vp: ctx.vp as unknown as Float32Array,
     camPos: [ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]],

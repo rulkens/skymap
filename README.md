@@ -99,15 +99,15 @@ The renderer fetches `/data/sdss.bin`, `/data/2mrs.bin`, and `/data/glade.bin` a
 
 ### 1. Download the catalogs
 
-| Survey | Source                                                                                     | File / Notes                                                                                   |
-| ------ | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
-| SDSS      | [SkyServer SQL](https://skyserver.sdss.org/dr18/SearchTools/sql)                           | Run the query below; export as CSV.                                                            |
-| 2MRS      | [VizieR J/ApJS/199/26](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=J/ApJS/199/26) | `table3.dat`, 233-byte fixed-width, 44,599 rows, ~10 MB. Drop into `data/raw/2mrs/2mrs_table3.dat`. |
-| GLADE     | [VizieR VII/281](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=VII/281)             | `glade2.3.dat`, 256-byte fixed-width, 3.26 M rows, ~838 MB. Drop into `data/raw/glade/glade2.3.dat`. |
-| Milliquas | [quasars.org](https://quasars.org/milliquas.htm)                                           | Run `npm run fetch-milliquas` — pulls the 31 MB zip, verifies SHA-256, unpacks to `data/raw/milliquas/milliquas.txt`. |
-| Gaia DR3  | [ESA Gaia archive (TAP)](https://gea.esac.esa.int/archive/)                                | Run `npm run fetch-gaia` — pages the `G<14` main catalog + Bailer-Jones distances via ADQL into `data/raw/gaia/gaia_page_*.csv`. ~2 GB total; gated behind a `--yes` (or interactive) size confirmation. |
-| GCNS      | [ESA Gaia archive (TAP)](https://gea.esac.esa.int/archive/)                                | Fetched automatically by `npm run fetch-gaia` — the 100 pc nearby-star supplement to `data/raw/gaia/gcns_main.csv`. |
-| Hipparcos-2 | [VizieR I/311](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=I/311)                | Fetched automatically by `npm run fetch-gaia` — `hip2.dat` (~33 MB) + Gaia cross-match to `data/raw/gaia/`. |
+| Survey      | Source                                                                                     | File / Notes                                                                                                                                                                                             |
+| ----------- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SDSS        | [SkyServer SQL](https://skyserver.sdss.org/dr18/SearchTools/sql)                           | Run the query below; export as CSV.                                                                                                                                                                      |
+| 2MRS        | [VizieR J/ApJS/199/26](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=J/ApJS/199/26) | `table3.dat`, 233-byte fixed-width, 44,599 rows, ~10 MB. Drop into `data/raw/2mrs/2mrs_table3.dat`.                                                                                                      |
+| GLADE       | [VizieR VII/281](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=VII/281)             | `glade2.3.dat`, 256-byte fixed-width, 3.26 M rows, ~838 MB. Drop into `data/raw/glade/glade2.3.dat`.                                                                                                     |
+| Milliquas   | [quasars.org](https://quasars.org/milliquas.htm)                                           | Run `npm run fetch-milliquas` — pulls the 31 MB zip, verifies SHA-256, unpacks to `data/raw/milliquas/milliquas.txt`.                                                                                    |
+| Gaia DR3    | [ESA Gaia archive (TAP)](https://gea.esac.esa.int/archive/)                                | Run `npm run fetch-gaia` — pages the `G<14` main catalog + Bailer-Jones distances via ADQL into `data/raw/gaia/gaia_page_*.csv`. ~2 GB total; gated behind a `--yes` (or interactive) size confirmation. |
+| GCNS        | [ESA Gaia archive (TAP)](https://gea.esac.esa.int/archive/)                                | Fetched automatically by `npm run fetch-gaia` — the 100 pc nearby-star supplement to `data/raw/gaia/gcns_main.csv`.                                                                                      |
+| Hipparcos-2 | [VizieR I/311](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=I/311)                 | Fetched automatically by `npm run fetch-gaia` — `hip2.dat` (~33 MB) + Gaia cross-match to `data/raw/gaia/`.                                                                                              |
 
 GLADE alone subsumes 2MPZ and 6dFGS — the GLADE team has already cross-matched and deduplicated 2MPZ + 2MASS XSC + HyperLEDA + GWGC + SDSS-DR12Q, so a single download replaces what would otherwise be three.
 
@@ -224,7 +224,7 @@ Run order (only if you want the famous-galaxies atlas):
    which the famous build needs for cross-match.
 2. `npm run fetch-famous-images` — downloads + processes thumbnails for any
    entries without a curated override (~30 s). Idempotent; pass `--force` to re-fetch.
-3. `npm run build-famous` — produces `famous.bin` + `famous_meta.json`.
+3. `npm run build-famous` — produces `famous.bin` + `famous_galaxies_meta.json`.
 
 ### Adding more galaxies
 

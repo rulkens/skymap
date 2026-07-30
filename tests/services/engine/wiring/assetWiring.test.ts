@@ -18,10 +18,12 @@ import { describe, it, expect } from 'vitest';
 import { ASSET_WIRING } from '../../../../src/services/engine/wiring/assetWiring';
 import { Source } from '../../../../src/data/sources';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../../src/data/bodies/bodyTextureKeys';
-import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
 import { loadRadiusMpc } from '../../../../src/services/engine/frame/bodyTextureLoadRadius';
+import { distanceMpc } from '../../../../src/utils/math/distanceMpc';
+import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
+import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { hostBodyId } from '../../../../src/utils/scene/hostBodyId';
-import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
+import { bodyTextureSlotKey } from '../../../../src/utils/scene/bodyTextureSlotKey';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
@@ -48,6 +50,7 @@ function makeCtx(over: {
   requests?: Set<RequestKey>;
   slotStates?: Partial<Record<AssetKey, LoadState<unknown>['kind']>>;
   cameraPosMpc?: Vec3;
+  simDays?: number;
 }): DemandCtx {
   return {
     settings: (over.settings ?? {}) as Readonly<EngineSettingsState>,
@@ -56,12 +59,21 @@ function makeCtx(over: {
     // The body-texture rows read the eye position; a far-away default keeps the
     // surface present without demanding any body texture.
     cameraPosMpc: over.cameraPosMpc ?? [Infinity, Infinity, Infinity],
+    // The proximity gate derives host positions at this instant; default to the
+    // epoch so `bodyPosOf` below (also J2000) and the gate agree unless a test
+    // moves the clock.
+    simDays: over.simDays ?? CONST_J2000,
   };
 }
 
-/** The world position a body-texture key's proximity gate is measured from. */
-function bodyPosOf(id: AssetKey): Readonly<Vec3> {
-  return findByIdOrThrow(SCENE_BODIES, hostBodyId(id as never), 'test').positionMpc;
+/**
+ * The world position a body-texture key's proximity gate is measured from at a
+ * given sim instant. Host bodies are all orbital (textured planets / Earth /
+ * moons) and MOVE, so their position comes from the derived snapshot at
+ * `simDays` — the same source the wiring reads.
+ */
+function bodyPosOf(id: string, simDays: number = CONST_J2000): Readonly<Vec3> {
+  return deriveBodyStates(simDays).get(hostBodyId(id as never))!.positionMpc;
 }
 
 describe('ASSET_WIRING membership', () => {
@@ -77,14 +89,17 @@ describe('ASSET_WIRING membership', () => {
       Source.DesiWedge,
       Source.DesiSgw,
       Source.Synthetic,
-      'famousMeta',
+      'famousGalaxiesMeta',
+      'famousStarsMeta',
       'filaments',
       'mcpm',
       'cf4Density',
       'flow',
+      'constellations',
       'structureCatalog',
       'pgcAlias',
-      ...ALL_BODY_TEXTURE_KEYS,
+      'bodyTextureAtlas',
+      ...ALL_BODY_TEXTURE_KEYS.map((e) => bodyTextureSlotKey(e.bodyId, e.kind)),
       Source.GaiaStars,
     ];
     expect(new Set(keys)).toEqual(new Set(expected));
@@ -118,18 +133,19 @@ describe('ASSET_WIRING membership', () => {
     }
     // The sidecar rows are registry-built (no marker).
     expect(rowFor('filaments').built).toBeUndefined();
-    expect(rowFor('famousMeta').built).toBeUndefined();
+    expect(rowFor('famousGalaxiesMeta').built).toBeUndefined();
+    expect(rowFor('famousStarsMeta').built).toBeUndefined();
   });
 
   it('mints one externally-built row per body-texture family key', () => {
-    // Every textured body + the ring is an externally-built row (minted in
-    // initGpu beside its renderer, like the point slots), with a tier-clamped
-    // BodyTextureReq — not a registry-built sidecar.
-    for (const key of ALL_BODY_TEXTURE_KEYS) {
-      const row = rowFor(key);
+    // Every (body, kind) entry + the ring is an externally-built row (minted in
+    // initGpu beside its renderer, like the point slots), keyed by its composite
+    // slot key, with a tier-clamped BodyTextureReq — not a registry-built sidecar.
+    for (const entry of ALL_BODY_TEXTURE_KEYS) {
+      const row = rowFor(bodyTextureSlotKey(entry.bodyId, entry.kind));
       expect(row.built).toBe('external');
-      // req carries { bodyId, tier } clamped to the body ceiling.
-      expect(row.req('large')).toMatchObject({ bodyId: key });
+      // req carries { bodyId, kind, tier } clamped to the (body, kind) ceiling.
+      expect(row.req('large')).toMatchObject({ bodyId: entry.bodyId, kind: entry.kind });
     }
   });
 
@@ -155,14 +171,14 @@ describe('ASSET_WIRING demand predicates', () => {
     expect(sdss.demand(makeCtx({ settings: { galaxyCatalogs: { items: {} } } }))).toBe(false);
   });
 
-  it('famousMeta demands when the Famous slot is not idle', () => {
-    const famousMeta = rowFor('famousMeta');
-    expect(famousMeta.demand(makeCtx({ slotStates: { [Source.FamousGalaxy]: 'loading' } }))).toBe(
-      true,
-    );
-    expect(famousMeta.demand(makeCtx({ slotStates: { [Source.FamousGalaxy]: 'idle' } }))).toBe(
-      false,
-    );
+  it('famousGalaxiesMeta demands when the Famous slot is not idle', () => {
+    const famousGalaxiesMeta = rowFor('famousGalaxiesMeta');
+    expect(
+      famousGalaxiesMeta.demand(makeCtx({ slotStates: { [Source.FamousGalaxy]: 'loading' } })),
+    ).toBe(true);
+    expect(
+      famousGalaxiesMeta.demand(makeCtx({ slotStates: { [Source.FamousGalaxy]: 'idle' } })),
+    ).toBe(false);
   });
 
   it('filaments demand follows settings.filaments.enabled (bug-fix pin)', () => {
@@ -271,7 +287,7 @@ describe('ASSET_WIRING demand predicates', () => {
     // fires outside 2X, and the band between is the hysteresis gap where NEITHER
     // fires — a gap `!demand` could not encode, so a camera dithering at the
     // boundary never thrashes the multi-MB texture load/free cycle.
-    const earth = rowFor('earth');
+    const earth = rowFor('earth:surface');
     const pos = bodyPosOf('earth');
     const r = loadRadiusMpc('earth');
     const at = (d: number): Vec3 => [pos[0] + d, pos[1], pos[2]];
@@ -290,6 +306,30 @@ describe('ASSET_WIRING demand predicates', () => {
     const beyond = makeCtx({ cameraPosMpc: at(2.5 * r) });
     expect(earth.demand(beyond)).toBe(false);
     expect(earth.release!(beyond)).toBe(true);
+  });
+
+  it('body-texture proximity gate reflects the LIVE snapshot position, not J2000', () => {
+    // A host body moves with the clock, so the gate must measure against where
+    // the body sits at `ctx.simDays`, not the epoch. Pick an instant far enough
+    // from J2000 that Earth has swung a good fraction of its orbit, so its
+    // position differs by more than a load radius. Place the camera exactly at
+    // the LIVE Earth position: the gate must demand there and NOT at the (now
+    // distant) J2000 position — a gate still reading J2000 would fail both arms.
+    const earth = rowFor('earth:surface');
+    const simDays = CONST_J2000 + 120; // ~1/3 of an Earth year on
+    const livePos = bodyPosOf('earth', simDays);
+    const j2000Pos = bodyPosOf('earth', CONST_J2000);
+    const r = loadRadiusMpc('earth');
+
+    // Sanity: the two epochs are more than a load radius apart, else the test
+    // proves nothing.
+    expect(distanceMpc(livePos, j2000Pos)).toBeGreaterThan(r);
+
+    // Camera at the live position, clock at the live instant ⇒ demanded.
+    expect(earth.demand(makeCtx({ cameraPosMpc: [...livePos] as Vec3, simDays }))).toBe(true);
+    // Same camera, but the gate reading J2000 would place the body a full orbit
+    // arc away ⇒ NOT demanded. Passing the live simDays is what makes it fire.
+    expect(earth.demand(makeCtx({ cameraPosMpc: [...j2000Pos] as Vec3, simDays }))).toBe(false);
   });
 
   it('pgcAlias demands only when the paletteOpened request is set', () => {
@@ -331,7 +371,8 @@ describe('ASSET_WIRING req builders', () => {
   });
 
   it('tier-aware sidecars carry { tier }', () => {
-    expect(rowFor('famousMeta').req('small')).toEqual({ tier: 'small' });
+    expect(rowFor('famousGalaxiesMeta').req('small')).toEqual({ tier: 'small' });
+    expect(rowFor('famousStarsMeta').req('small')).toEqual({ tier: 'small' });
     expect(rowFor('filaments').req('medium')).toEqual({ tier: 'medium' });
     expect(rowFor('mcpm').req('large')).toEqual({ tier: 'large' });
   });

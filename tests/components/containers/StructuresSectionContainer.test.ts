@@ -31,7 +31,7 @@ import { render, fireEvent } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import StructuresSectionContainer from '../../../src/components/containers/StructuresSectionContainer';
-import { createAppStore } from '../../../src/store/createAppStore';
+import { createTestStore as createAppStore } from '../../support/createTestStore';
 import { selectStructureItems } from '../../../src/state/settings/selectors';
 import { engineStructureCountsChanged } from '../../../src/state/engine/engineSlice';
 import type { AppStore } from '../../../src/store/types';

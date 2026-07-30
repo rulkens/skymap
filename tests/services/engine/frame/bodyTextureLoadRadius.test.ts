@@ -14,8 +14,8 @@
 import { describe, it, expect } from 'vitest';
 
 import { loadRadiusMpc } from '../../../../src/services/engine/frame/bodyTextureLoadRadius';
-import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
-import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
+import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
+import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 
 describe('loadRadiusMpc', () => {
   it('scales with body radius', () => {
@@ -34,12 +34,14 @@ describe('loadRadiusMpc', () => {
     // Approaching Earth must not fire Mars's texture demand: the gate has to be
     // tighter than the seeded Earth–Mars separation, or the per-body proximity
     // scheme collapses into loading every body at once.
-    const earth = findByIdOrThrow(SCENE_BODIES, 'earth', 'test');
-    const mars = findByIdOrThrow(SCENE_BODIES, 'mars', 'test');
+    // Earth + Mars positions come from the derived J2000 body-state snapshot.
+    const states = deriveBodyStates(CONST_J2000);
+    const earth = states.get('earth')!.positionMpc;
+    const mars = states.get('mars')!.positionMpc;
     const earthMarsMpc = Math.hypot(
-      earth.positionMpc[0] - mars.positionMpc[0],
-      earth.positionMpc[1] - mars.positionMpc[1],
-      earth.positionMpc[2] - mars.positionMpc[2],
+      earth[0] - mars[0],
+      earth[1] - mars[1],
+      earth[2] - mars[2],
     );
 
     expect(loadRadiusMpc('earth')).toBeLessThan(earthMarsMpc);

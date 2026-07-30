@@ -3,12 +3,26 @@ import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { rotationFromIau } from '../../../src/utils/orbit/rotationFromIau';
 import { rotationById } from '../../../src/data/bodies/rotationElements';
+import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
+import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 
 const hypot3 = (v: readonly [number, number, number]) => Math.hypot(v[0], v[1], v[2]);
+
+// Earth's position + orientation live in its derived BodyState, not the record.
+const earthState = deriveBodyStates(CONST_J2000).get('earth')!;
 
 describe('SCENE_EARTH', () => {
   it('radius is 6371 km', () => {
     expect(SCENE_EARTH.radiusKm).toBe(6371);
+  });
+
+  it('carries no baked position or orientation (identity-only record)', () => {
+    // The split's on-disk shape: state was lifted off the record onto the derive.
+    expect('positionMpc' in SCENE_EARTH).toBe(false);
+    expect('orientation' in SCENE_EARTH).toBe(false);
+    // The Blue Marble no longer rides a per-body URL either: it joins the keyed
+    // `bodyTextures` slot family.
+    expect('textureUrl' in SCENE_EARTH).toBe(false);
   });
 
   it('sits ~1 AU from the Sun (derived J2000 heliocentric position)', () => {
@@ -17,18 +31,15 @@ describe('SCENE_EARTH', () => {
     // exact derived xyz would be the same restatement one indirection out, so
     // this is a STRUCTURAL band: Earth's heliocentric distance stays within
     // a(1±e) ≈ 0.983–1.017 AU of the Sun — order-of-magnitude proof, not a
-    // value pin. The frame/direction is exercised by the star-direction test.
-    const distAu = hypot3(SCENE_EARTH.positionMpc) / SCALE_UNITS.AU_TO_MPC;
+    // value pin.
+    const distAu = hypot3(earthState.positionMpc) / SCALE_UNITS.AU_TO_MPC;
     expect(distAu).toBeGreaterThan(0.97);
     expect(distAu).toBeLessThan(1.03);
   });
 
-  it('carries a baked orientation and no textureUrl', () => {
+  it('derives a baked orientation from the IAU rotation elements', () => {
     // Earth's facing is baked from its IAU rotation elements through the same
-    // util the maker calls — this pins the wiring, not a matrix restatement.
-    // The Blue Marble no longer rides a per-body URL: it joins the keyed
-    // `bodyTextures` slot family, so `textureUrl` is gone from the record.
-    expect(SCENE_EARTH.orientation).toEqual(rotationFromIau(rotationById('earth')));
-    expect('textureUrl' in SCENE_EARTH).toBe(false);
+    // util the derive calls — this pins the wiring, not a matrix restatement.
+    expect(earthState.orientation).toEqual(rotationFromIau(rotationById('earth')));
   });
 });

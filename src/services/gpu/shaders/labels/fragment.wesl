@@ -44,8 +44,12 @@ fn median3(r: f32, g: f32, b: f32) -> f32 {
   return max(min(r, g), min(max(r, g), b));
 }
 
-@fragment
-fn fs(input: VsOut) -> @location(0) vec4<f32> {
+// The MSDF two-band shading body, factored out of the '@fragment fn fs'
+// entry so a depth-occluding variant (labels/fragmentOcclude.wesl) can
+// reuse the exact same shading after its discard gate — one source of
+// truth for glyph colour, two entry points that differ only in whether
+// they test the scene depth first.
+fn shadeMsdf(input: VsOut) -> vec4<f32> {
   let s = textureSample(atlas, atlasSampler, input.uv, i32(input.fontIndex)).rgb;
   let d = median3(s.r, s.g, s.b) - 0.5;
   let aa = fwidth(d);
@@ -69,4 +73,9 @@ fn fs(input: VsOut) -> @location(0) vec4<f32> {
 
   // Composite over(outline, fill):  result = top + bottom * (1 - top.a)
   return outlinePM + fillPM * (1.0 - outlinePM.a);
+}
+
+@fragment
+fn fs(input: VsOut) -> @location(0) vec4<f32> {
+  return shadeMsdf(input);
 }

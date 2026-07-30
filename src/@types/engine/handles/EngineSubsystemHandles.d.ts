@@ -7,7 +7,7 @@
  *
  * ### Why some fields are null at construction
  *
- *   - Eager (no GPU dep): `scheduler`, `fades` — constructed up-front
+ *   - Eager (no GPU dep): `scheduler`, `fades`, `assetQueue` — constructed up-front
  *     so their callbacks can be captured before the GPU IIFE finishes.
  *   - Lazy (inside the GPU init IIFE): `galaxyAtlas`, `proceduralDisks`,
  *     `texturedDisks`, `clickResolver`, `inputBindings`.
@@ -18,7 +18,8 @@
  * helpers accept just the slice they touch rather than the whole state.
  */
 
-import type { GalaxyAtlasSubsystem } from '../subsystems/GalaxyAtlasSubsystem';
+import type { BitmapStreamSubsystem } from '../subsystems/BitmapStreamSubsystem';
+import type { EarthTileSubsystem } from '../subsystems/EarthTileSubsystem';
 import type { ProceduralDiskSubsystem } from '../subsystems/ProceduralDiskSubsystem';
 import type { TexturedDiskSubsystem } from '../subsystems/TexturedDiskSubsystem';
 import type { DiskPlannerWalk } from '../subsystems/DiskPlannerWalk';
@@ -35,9 +36,10 @@ import type { RenderScheduler } from '../subsystems/RenderScheduler';
 import type { FadeRegistry } from '../../animation/FadeRegistry';
 import type { LoadProgressEmitter } from '../../loading/LoadProgressEmitter';
 import type { Destroyable } from '../../rendering/Destroyable';
+import type { PriorityQueue } from '../../../utils/concurrency/priorityQueue';
 
 export type EngineSubsystemHandles = {
-  galaxyAtlas: GalaxyAtlasSubsystem | null;
+  galaxyAtlas: BitmapStreamSubsystem | null;
   proceduralDisks: ProceduralDiskSubsystem | null;
   texturedDisks: TexturedDiskSubsystem | null;
   /**
@@ -67,6 +69,13 @@ export type EngineSubsystemHandles = {
    * runs.
    */
   hiResFamousTexture: HiResFamousTexture | null;
+  /**
+   * Earth's surface virtual texture — tile atlas, page table and residency
+   * bookkeeping. Constructed in `wireSlots`; allocates no GPU memory until
+   * the planner says the base texture has started magnifying, so a session
+   * that never approaches Earth pays nothing. Null before `wireSlots` runs.
+   */
+  earthTiles: EarthTileSubsystem | null;
   clickResolver: ClickResolver | null;
   inputBindings: InputBindings | null;
   scheduler: RenderScheduler;
@@ -79,6 +88,20 @@ export type EngineSubsystemHandles = {
    * `src/services/animation/fadeRegistry.ts`.
    */
   fades: FadeRegistry;
+  /**
+   * Bounded-concurrency priority queue for boot asset fetches (catalog
+   * `.bin` files, body textures) — see `ASSET_QUEUE_CONCURRENCY` for the
+   * N = 2 rationale. `evaluateRows` enqueues onto this instead of calling
+   * `slot.load()` directly, so a cold boot's demanded rows load in
+   * priority order instead of all racing the connection pool at once.
+   * `T = void` because the queue only gates ordering/concurrency here —
+   * the result the caller cares about is the slot's own state, read via
+   * `slot.state()` inside the enqueued fetcher, not a value threaded back
+   * through `onResult`. Constructed eagerly (no GPU dep) alongside
+   * `scheduler` / `fades`, since `evaluateRows` can fire before the GPU
+   * IIFE finishes.
+   */
+  assetQueue: PriorityQueue<void>;
   /**
    * Malmquist-bias correction subsystem. Owns the bias-mode flags,
    * cached per-source ratios/weights, and the async bake state machine.

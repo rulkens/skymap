@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
  * fetchTextures — download the raw planet-body texture sources (Solar
- * System Scope albedo maps, the NASA Blue Marble Earth equirect, and the
- * USGS Galilean-moon GeoTIFFs) to data/raw/textures/. See
+ * System Scope albedo maps, the NASA Blue Marble Earth equirect and its eight
+ * deep quadrants, and the USGS Galilean-moon GeoTIFFs) to data/raw/textures/. See
  * data/raw/textures/README.md for the per-source provenance table and
  * docs/superpowers/specs/2026-07-17-planet-rendering.md §3 for the URL
  * verification that pins these exact files.
@@ -28,12 +28,13 @@
  *
  * ## Size gate + the --dev subset
  *
- * The full raw pull is ~700 MB (the USGS mono GeoTIFFs dominate). On a
- * constrained network that is not something to kick off by accident
- * (feedback_announce_big_downloads), so the fetcher prints the total and
- * REFUSES the full pull without an explicit `--confirm`. `--dev` fetches
- * only the small subset — each SSS source's 2k variant plus the NASA
- * 5400x2700 sibling, ~7 MB — enough to exercise the whole
+ * The full raw pull is ~1.1 GB: ~700 MB of body/ring maps (the USGS mono
+ * GeoTIFFs dominate) plus the ~421 MB BMNG quadrant set the Earth surface
+ * tile pyramid is baked from. On a constrained network that is not something
+ * to kick off by accident (feedback_announce_big_downloads), so the fetcher
+ * prints the total and REFUSES the full pull without an explicit `--confirm`.
+ * `--dev` fetches only the small subset — each SSS source's 2k variant plus
+ * the NASA 5400x2700 sibling, ~7 MB — enough to exercise the whole
  * fetch -> build -> R2 pipeline and verify the bodies visually without the
  * full download; the dev subset needs no `--confirm`.
  *
@@ -56,15 +57,24 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
 
-import { RAW_DATA, rawDataPath, type RawDataKey } from '../utils/io/rawDataRegistry';
+import type { BodyTextureId } from '../../src/@types/data/BodyTextureId';
+import type { RingTextureId } from '../../src/@types/data/RingTextureId';
+import type { TextureKind } from '../../src/@types/data/TextureKind';
+import { ALL_BODY_TEXTURE_KEYS } from '../../src/data/bodies/bodyTextureKeys';
+import { BMNG_QUADRANT_KEYS } from '../utils/io/bmngQuadrantKeys';
+import { RAW_DATA, rawDataPath } from '../utils/io/rawDataRegistry';
+import { TEXTURE_SOURCES, type TextureSourceRow } from '../utils/io/textureSources';
 import { skipIfAlreadyFetched, upsertSha256Sidecar } from './fetchDesi';
 
-/** Approximate size of the full raw pull (all native tiers). The USGS mono
- *  GeoTIFFs (Europa 19631x9816, Callisto 15138x7569) are the bulk; the six
- *  8k SSS JPGs (~15 MB each) and the 30 MB BMNG equirect make up most of
- *  the rest. Printed by the size gate — no HEAD probe means we can't sum
- *  real Content-Lengths, so this is the spec §3 hand-tally. */
-export const FULL_FETCH_APPROX_MB = 700;
+/** Approximate size of the body/ring native tiers (spec §3 hand-tally — no
+ *  HEAD probe means no real Content-Lengths to sum). */
+const BODY_SOURCES_APPROX_MB = 700;
+
+/** Approximate size of the eight BMNG quadrants (real on-disk total). */
+const BMNG_QUADRANTS_APPROX_MB = 421;
+
+/** Approximate size of the full raw pull, printed by the size gate. */
+export const FULL_FETCH_APPROX_MB = BODY_SOURCES_APPROX_MB + BMNG_QUADRANTS_APPROX_MB;
 
 /** Approximate size of the `--dev` subset (2k SSS variants + 5400x2700 BMNG). */
 export const DEV_FETCH_APPROX_MB = 7;
@@ -75,91 +85,91 @@ export type TextureSource = {
   readonly destPath: string;
 };
 
-/**
- * The SSS body textures: each native (full-res) registry row plus the 2k
- * filename used by the `--dev` subset. For Uranus/Neptune the native row
- * IS the 2k file (near-featureless sources capped at 2k), so `devFilename`
- * matches the native filename and the dev source resolves to the same
- * registry path — never fetched twice.
- *
- * `as const satisfies` (rather than a `readonly SssBody[]` annotation)
- * keeps each `nativeKey` a string LITERAL — so `RAW_DATA[nativeKey]`
- * narrows to a texture row (all of which carry `upstream`) instead of
- * widening to the whole registry union, where `upstream` is optional. Same
- * literal-preserving trick `fetchDesi`'s `DESI_KEYS` uses.
- */
-const SSS_BODIES = [
-  { nativeKey: 'textures.sssMercury8k', devFilename: '2k_mercury.jpg' },
-  { nativeKey: 'textures.sssVenus4k', devFilename: '2k_venus_atmosphere.jpg' },
-  { nativeKey: 'textures.sssMars8k', devFilename: '2k_mars.jpg' },
-  { nativeKey: 'textures.sssJupiter8k', devFilename: '2k_jupiter.jpg' },
-  { nativeKey: 'textures.sssSaturn8k', devFilename: '2k_saturn.jpg' },
-  { nativeKey: 'textures.sssRing', devFilename: '2k_saturn_ring_alpha.png' },
-  { nativeKey: 'textures.sssUranus2k', devFilename: '2k_uranus.jpg' },
-  { nativeKey: 'textures.sssNeptune2k', devFilename: '2k_neptune.jpg' },
-  { nativeKey: 'textures.sssMoon8k', devFilename: '2k_moon.jpg' },
-] as const satisfies readonly { readonly nativeKey: RawDataKey; readonly devFilename: string }[];
-
-type SssBody = (typeof SSS_BODIES)[number];
-
-/** USGS Galilean-moon GeoTIFFs — full pull only (no small dev variant). */
-const USGS_KEYS = [
-  'textures.usgsIo',
-  'textures.usgsEuropa',
-  'textures.usgsGanymede',
-  'textures.usgsCallisto',
-] as const satisfies readonly RawDataKey[];
-
-/** The native (full-res) source for an SSS body: its registered file. */
-function sssFullSource(body: SssBody): TextureSource {
-  return { url: RAW_DATA[body.nativeKey].upstream, destPath: rawDataPath(body.nativeKey) };
+/** The native (full-res) source for a body/ring: its registered file. */
+function fullSource(entry: TextureSourceRow): TextureSource {
+  return { url: RAW_DATA[entry.native].upstream, destPath: rawDataPath(entry.native) };
 }
 
 /**
- * The 2k dev source for an SSS body. The URL is derived from the native
- * upstream by swapping the resolution-prefixed filename (`8k_mars.jpg` ->
- * `2k_mars.jpg`), so the SSS download base stays single-sourced in the
- * registry. When the native file already IS the 2k tier (Uranus/Neptune)
- * the swap is a no-op and the dest is the native registry path — the same
- * source, not a duplicate.
+ * The `--dev` source for a body/ring, or `null` if it has none (the USGS
+ * moons). Two shapes:
+ *
+ *  - `devKey` — the dev source is its OWN registry row (Earth's 5400x2700 BMNG
+ *    sibling): fetch it at its registered path.
+ *  - `devFilename` — the dev source is a loose 2k file in `textures.dir`. Its
+ *    URL is derived from the native upstream by swapping the resolution-prefixed
+ *    filename (`8k_mars.jpg` -> `2k_mars.jpg`), so the SSS download base stays
+ *    single-sourced in the registry. When the native file already IS the 2k
+ *    tier (Uranus/Neptune) the swap is a no-op and the dest is the native
+ *    registry path — the same source, not a duplicate.
  */
-function sssDevSource(body: SssBody): TextureSource {
-  const nativePath = rawDataPath(body.nativeKey);
-  const nativeFilename = basename(nativePath);
-  const nativeUpstream = RAW_DATA[body.nativeKey].upstream;
-  if (nativeFilename === body.devFilename) {
-    return { url: nativeUpstream, destPath: nativePath };
+function devSource(entry: TextureSourceRow): TextureSource | null {
+  if ('devKey' in entry) {
+    return { url: RAW_DATA[entry.devKey].upstream, destPath: rawDataPath(entry.devKey) };
   }
-  return {
-    url: nativeUpstream.replace(nativeFilename, body.devFilename),
-    destPath: join(rawDataPath('textures.dir'), body.devFilename),
-  };
+  if ('devFilename' in entry) {
+    const nativePath = rawDataPath(entry.native);
+    const nativeFilename = basename(nativePath);
+    const nativeUpstream = RAW_DATA[entry.native].upstream;
+    if (nativeFilename === entry.devFilename) {
+      return { url: nativeUpstream, destPath: nativePath };
+    }
+    return {
+      url: nativeUpstream.replace(nativeFilename, entry.devFilename),
+      destPath: join(rawDataPath('textures.dir'), entry.devFilename),
+    };
+  }
+  return null;
 }
 
 /**
- * The set of sources to fetch. `dev === false` is the full native pull
- * (every SSS body at its native tier + the full BMNG Earth equirect + the
- * four USGS moon GeoTIFFs); `dev === true` is the small visual-check subset
- * (each SSS body's 2k variant + the NASA 5400x2700 BMNG sibling).
+ * `TEXTURE_SOURCES` viewed by the wide `(bodyId, kind)` key space
+ * `ALL_BODY_TEXTURE_KEYS` ranges over. The const table's per-body key set is
+ * narrower than the whole `TextureKind` union (today just `surface`), so the
+ * variable-kind lookup below needs this view. Every key `ALL_BODY_TEXTURE_KEYS`
+ * yields is populated — that list is minted from the same registry the table
+ * mirrors — so each access is defined (the `!` asserts it).
+ */
+const SOURCE_TABLE = TEXTURE_SOURCES as Record<
+  BodyTextureId | RingTextureId,
+  Partial<Record<TextureKind, TextureSourceRow>>
+>;
+
+/** The raw source of every `(body, kind)` texture key, in family-key order — one
+ *  entry per map every textured body carries plus each ring's surface. A new map
+ *  kind on a body joins this list via `ALL_BODY_TEXTURE_KEYS`, no edit here. */
+const TEXTURE_ENTRIES: readonly TextureSourceRow[] = ALL_BODY_TEXTURE_KEYS.map(
+  ({ bodyId, kind }) => SOURCE_TABLE[bodyId][kind]!,
+);
+
+/**
+ * The eight BMNG quadrants the Earth surface tile pyramid is baked from. Not
+ * a `(body, kind)` source — no whole-globe runtime texture is built from
+ * them — so they can't ride `TEXTURE_SOURCES`; they belong in the full pull
+ * for the same reason every other raw does ("obtainable by command"), with
+ * the size gate keeping the extra 421 MB from being a surprise.
+ * `BMNG_QUADRANT_KEYS` is the one enumeration of the set, shared with the bake.
+ */
+const QUADRANT_SOURCES: readonly TextureSource[] = Object.values(BMNG_QUADRANT_KEYS).map((key) => ({
+  url: RAW_DATA[key].upstream,
+  destPath: rawDataPath(key),
+}));
+
+/**
+ * The set of sources to fetch. `dev === false` is the full native pull (every
+ * body/ring plus the eight BMNG quadrants); `dev === true` is the small
+ * visual-check subset (2k SSS variants + the 5400x2700 BMNG sibling — the
+ * USGS moons and the quadrants have no dev source; `--dev` tile bake reads
+ * the whole-globe equirect instead).
  *
- * Pure — no filesystem or network side effects — so the subset choice is
- * unit-testable headlessly.
+ * Both derive from `TEXTURE_SOURCES`, so the download set can't drift from
+ * the runtime registry. Pure, so the subset choice is unit-testable headlessly.
  */
 export function textureSourcesFor(dev: boolean): readonly TextureSource[] {
   if (dev) {
-    return [
-      ...SSS_BODIES.map(sssDevSource),
-      {
-        url: RAW_DATA['textures.nasaBmngDev'].upstream,
-        destPath: rawDataPath('textures.nasaBmngDev'),
-      },
-    ];
+    return TEXTURE_ENTRIES.map(devSource).filter((s): s is TextureSource => s !== null);
   }
-  return [
-    ...SSS_BODIES.map(sssFullSource),
-    { url: RAW_DATA['textures.nasaBmng'].upstream, destPath: rawDataPath('textures.nasaBmng') },
-    ...USGS_KEYS.map((key) => ({ url: RAW_DATA[key].upstream, destPath: rawDataPath(key) })),
-  ];
+  return [...TEXTURE_ENTRIES.map(fullSource), ...QUADRANT_SOURCES];
 }
 
 /**

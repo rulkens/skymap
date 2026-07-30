@@ -37,6 +37,9 @@ import type { ScaleInfo } from '../../@types/engine/ScaleInfo';
 import type { SourceType } from '../../@types/data/SourceType';
 import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { LoadProgressState } from '../../@types/loading/LoadProgressState';
+import type { ProvenanceCounts } from '../../@types/engine/ProvenanceCounts';
+import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
+import type { FamousStarMetaEntry } from '../../@types/loading/FamousStarMetaEntry';
 
 /**
  * Initial scale-bar value that renders something sensible before the engine
@@ -47,9 +50,13 @@ const INITIAL_SCALE: ScaleInfo = { label: '…', widthPx: 100 };
 const initialState: EngineSliceState = {
   status: { kind: 'initializing' },
   scale: INITIAL_SCALE,
+  focusedBodyDistanceMpc: null,
+  hdrCapable: false,
   sourceCounts: {},
   structureCounts: {},
+  provenanceCounts: {},
   loadProgress: null,
+  meta: { famousGalaxies: [], famousStars: [] },
 };
 
 const engineSlice = createSlice({
@@ -71,6 +78,19 @@ const engineSlice = createSlice({
       state.sourceCounts[action.payload.source] = action.payload.count;
     },
 
+    // ── per-source provenance counts ─────────────────────────────────────────
+    // A SEPARATE action from `engineSourceCountReported`, not a wider payload
+    // on it: three sagas `take` that action as a bare "a catalog landed"
+    // pulse, keyed on nothing but its dispatch. Folding the provenance tally
+    // into that payload would braid a debug-panel readout into a
+    // load-completion signal those sagas have no reason to depend on.
+    engineProvenanceCountsReported: (
+      state,
+      action: PayloadAction<{ source: SourceType; counts: ProvenanceCounts }>,
+    ) => {
+      state.provenanceCounts[action.payload.source] = action.payload.counts;
+    },
+
     // ── per-structure counts ─────────────────────────────────────────────────
     // Whole-map replace: structure counts are computed once per source load,
     // not incrementally per structure.
@@ -84,6 +104,28 @@ const engineSlice = createSlice({
     // ── load progress ────────────────────────────────────────────────────────
     engineLoadProgressChanged: (state, action: PayloadAction<LoadProgressState | null>) => {
       state.loadProgress = action.payload;
+    },
+
+    // ── curated metadata sidecars ────────────────────────────────────────────
+    // Whole-array replace, dispatched once per sidecar by its asset slot when
+    // the fetch settles — success writes the parsed entries, failure writes `[]`
+    // so React's fail-soft paths are reached by the same route as "not loaded
+    // yet". The asset slot is the payload's sole writer and this slice is its
+    // only home, so React and the engine can never see divergent copies. The
+    // spread copies the readonly payload into the Immer draft, which wants a
+    // mutable array slot even though nothing mutates it.
+    engineFamousGalaxiesMetaReported: (
+      state,
+      action: PayloadAction<readonly FamousGalaxyMetaEntry[]>,
+    ) => {
+      state.meta.famousGalaxies = [...action.payload];
+    },
+
+    engineFamousStarsMetaReported: (
+      state,
+      action: PayloadAction<readonly FamousStarMetaEntry[]>,
+    ) => {
+      state.meta.famousStars = [...action.payload];
     },
 
     // ── scale bar ────────────────────────────────────────────────────────────
@@ -100,15 +142,43 @@ const engineSlice = createSlice({
         state.scale = action.payload;
       }
     },
+
+    // ── focused-body distance ─────────────────────────────────────────────────
+    // DEDUP-ON-WRITE, same rationale as engineScaleChanged: the engine gates
+    // this dispatch behind a throttleByTime(~250 ms) in runFrame, but even a few
+    // Hz would re-fire the InfoCard subscriber when the reported distance is
+    // unchanged (a focused body at rest, or no focus). Skipping the mutation
+    // when the value matches returns the same slice reference, so the selector
+    // does not re-fire.
+    engineBodyDistanceReported: (state, action: PayloadAction<number | null>) => {
+      if (state.focusedBodyDistanceMpc !== action.payload) {
+        state.focusedBodyDistanceMpc = action.payload;
+      }
+    },
+
+    // ── HDR display capability ───────────────────────────────────────────────
+    // Live, not a boot snapshot: `initGpu`'s matchMedia `change` listener
+    // (`watchHdrCapability` in `device.ts`) re-dispatches this whenever the
+    // active display's `(dynamic-range: high)` verdict changes — e.g. the
+    // window moves to an SDR monitor — so the Settings → Display HDR section
+    // can disable itself the moment the browser says so.
+    engineHdrCapabilityChanged: (state, action: PayloadAction<boolean>) => {
+      state.hdrCapable = action.payload;
+    },
   },
 });
 
 export const {
   engineStatusChanged,
   engineSourceCountReported,
+  engineProvenanceCountsReported,
   engineStructureCountsChanged,
   engineLoadProgressChanged,
+  engineFamousGalaxiesMetaReported,
+  engineFamousStarsMetaReported,
   engineScaleChanged,
+  engineBodyDistanceReported,
+  engineHdrCapabilityChanged,
 } = engineSlice.actions;
 
 export default engineSlice.reducer;

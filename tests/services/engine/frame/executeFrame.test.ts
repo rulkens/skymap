@@ -142,11 +142,16 @@ function makeCtx(): ReadyFrameContext {
     vp: new Float64Array(16),
     originRelative: false,
     precision: 'f32',
+    reversedZ: false,
   };
   return {
     slabs: [slab, slab],
     canvasSize: { width: 100, height: 50 },
     drawCamPos: [0, 0, 0] as Readonly<[number, number, number]>,
+    // The executor uses this as its first-touch `touched` set (the same object
+    // it exposes to layers as `renderedTargets`): a fresh empty Set per frame,
+    // populated as passes open. Mirrors `deriveFrameContext`.
+    renderedTargets: new Set<string>(),
     // Offscreen view resolution goes through the target table's viewOf —
     // the executor's viewFor keeps only the swap-vs-offscreen branch. `specs`
     // + `depthViewOf` let the executor discover which target rows declare a
@@ -371,10 +376,36 @@ describe('executeFrame', () => {
     });
     executeFrame(args);
     expect(draw).toHaveBeenCalledTimes(1);
-    // draw(pass, viewFor(source)=HDR_VIEW, blend, tone)
+    // draw(pass, viewFor(source)=HDR_VIEW, blend, tone, dstFormat)
     expect(draw.mock.calls[0]![1]).toBe(HDR_VIEW);
     expect(draw.mock.calls[0]![2]).toBe('replace');
     expect(draw.mock.calls[0]![3]).toBe(null);
+    // dstFormat threaded from the dest target's spec: dest 'swap' → its
+    // swap-chain format, resolved from the target table (not derived from blend).
+    expect(draw.mock.calls[0]![4]).toBe('bgra8unorm');
+  });
+
+  it("threads a non-swap dest's format from the target table", () => {
+    // A composite whose dest is an offscreen row resolves that row's format
+    // (rgba16float for foreground:0) — proving the dstFormat comes from the
+    // dest spec, not a swap-only special case.
+    const draw = vi.fn();
+    const hdr = makeLayer({ name: 'hdr', target: 'hdr' });
+    const program: FrameStep[] = [
+      { kind: 'render', target: 'hdr', slab: COSMO },
+      {
+        kind: 'composite',
+        step: { source: 'hdr', dest: 'foreground:0', blend: 'over', tone: null },
+      },
+    ];
+    const { args } = makeArgs({
+      program,
+      layers: [hdr],
+      state: makeState({ compositor: { draw } }),
+    });
+    executeFrame(args);
+    expect(draw).toHaveBeenCalledTimes(1);
+    expect(draw.mock.calls[0]![4]).toBe('rgba16float');
   });
 
   it('merged strategy opens exactly one pass per non-empty render step', () => {

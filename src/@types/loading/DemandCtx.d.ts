@@ -37,7 +37,7 @@
  *      Used for two patterns described in ADR 0005 §3:
  *
  *        - *Companion join*: an asset that should only start loading after
- *          its companion is `ready` (e.g. the famous-meta JSON waits until
+ *          its companion is `ready` (e.g. the famous-galaxies-meta JSON waits until
  *          the famous `.bin` is committed to avoid a race where the InfoCard
  *          renders with metadata but no galaxy positions).
  *
@@ -96,8 +96,18 @@ export type DemandCtx = {
    * predicates gate on `distanceMpc(cameraPosMpc, bodyPos)` against a per-body
    * load radius, loading a texture as the camera closes on its body and evicting
    * it as the camera leaves the neighbourhood. Derived from the same
-   * `assembleOrbitCamera(pose, projection)` the frame uses for `drawCamPos`, so
-   * demand-time proximity and draw-time position agree.
+   * `assembleOrbitCamera(pose, projection, frameBasis)` the frame uses for
+   * `drawCamPos`, so demand-time proximity and draw-time position agree.
    */
   cameraPosMpc: Readonly<Vec3>;
+  /**
+   * The sim instant (Julian days) the last frame derived its bodies at — the
+   * clock's live position, read from `cameraRuntime.lastRenderedSimDays`. The
+   * proximity gate needs it because a host body MOVES: its world position is
+   * `deriveBodyStates(simDays)`, not a fixed epoch, so the body-texture family's
+   * `distanceMpc(cameraPosMpc, bodyPos)` must measure against where the body sits
+   * NOW. Paired with `cameraPosMpc` (the same last-frame origin) so demand-time
+   * proximity reads the same body positions the frame drew.
+   */
+  simDays: number;
 };

@@ -51,6 +51,7 @@ import { fileURLToPath } from 'node:url';
 import {
   parseFamousStarsSeed,
   selectDedupEntries,
+  selectHipEntries,
   type FamousStarEntry,
 } from '../parsers/famousStarsSeed';
 import type { FamousStarRow } from '../../src/@types/data/FamousStarRow';
@@ -157,26 +158,43 @@ const RUST_GENERATED_BANNER =
   '// Regenerate with:  npm run build-famous-stars\n' +
   '// Source of truth:  data/seeds/famous_stars.seed.json\n' +
   '//\n' +
-  '// FamousStar -> Gaia DR3 ids: the non-null gaiaDr3 values of every seed\n' +
-  '// entry, the scene-body dedup keys the star-bin build subtracts from the\n' +
-  '// Gaia bin.  include!()-d into population.rs so the const lands in that\n' +
-  "// module's namespace, exactly where the hand-maintained array used to live.\n";
+  '// Two dedup key arrays derived from every seed entry, subtracted from the\n' +
+  '// native star bin so a catalogued star never doubles a scene body:\n' +
+  '//   FAMOUS_STAR_GAIA_IDS — the non-null gaiaDr3 values (Gaia DR3 source_ids).\n' +
+  '//   FAMOUS_STAR_HIP_IDS  — the non-null hip values (Hipparcos numbers), which\n' +
+  '//     catch the saturated bright stars Gaia DR3 lacks a row for.\n' +
+  "// include!()-d into population.rs so the consts land in that module's\n" +
+  '// namespace, exactly where the hand-maintained array used to live.\n';
 
 /**
  * Emit the generated `.rs` module text: a `[u64; N]` array of the non-null
- * `gaiaDr3` ids, in seed order, each tagged with its star id as provenance
- * (mirroring the SIMBAD-sourced comments the old hand-maintained array carried).
- * The selection (which entries contribute) lives in `selectDedupEntries` — its
- * one home, shared with the `Set<bigint>` encoder in `buildStars.ts` — so both
- * languages subtract the same stars from the one seed; this function owns only
- * the Rust-text encoding. `N` is the count of contributing entries.
+ * `gaiaDr3` ids followed by a `[u32; M]` array of the non-null `hip` ids, each in
+ * seed order and tagged with its star id as provenance (mirroring the
+ * SIMBAD-sourced comments the old hand-maintained array carried).  Which entries
+ * contribute lives in `selectDedupEntries` / `selectHipEntries` — their one home,
+ * shared with the star-bin builders — so both languages subtract the same stars
+ * from the one seed; this function owns only the Rust-text encoding.  `N` / `M`
+ * are the counts of entries with a non-null gaiaDr3 / hip respectively.
  */
 export function seedToRustConst(entries: readonly FamousStarEntry[]): string {
-  const matched = selectDedupEntries(entries);
-  const rows = matched.map((e) => `    ${e.gaiaDr3}, // ${e.id}`).join('\n');
+  const gaiaMatched = selectDedupEntries(entries);
+  const gaiaRows = gaiaMatched.map((e) => `    ${e.gaiaDr3}, // ${e.id}`).join('\n');
+  // FAMOUS_STAR_HIP_IDS is the seed-order union of every non-null `hip` and its
+  // `hipCompanions`. `selectHipEntries` stays the one home for "which entries
+  // carry a hip"; a companion rides directly after its entry's canonical hip and
+  // is tagged so the Rust provenance stays legible. A multi-component entry (the
+  // Alpha Centauri case: Gaia DR3 lacks both bright components, so one entry maps
+  // to two Hipparcos rows) therefore contributes more than one id.
+  const hipMatched = selectHipEntries(entries);
+  const hipLines = hipMatched.flatMap((e) => [
+    `    ${e.hip}, // ${e.id}`,
+    ...(e.hipCompanions ?? []).map((c) => `    ${c}, // ${e.id} (companion)`),
+  ]);
+  const hipRows = hipLines.join('\n');
   return (
     RUST_GENERATED_BANNER +
-    `pub const FAMOUS_STAR_GAIA_IDS: [u64; ${matched.length}] = [\n${rows}\n];\n`
+    `pub const FAMOUS_STAR_GAIA_IDS: [u64; ${gaiaMatched.length}] = [\n${gaiaRows}\n];\n` +
+    `pub const FAMOUS_STAR_HIP_IDS: [u32; ${hipLines.length}] = [\n${hipRows}\n];\n`
   );
 }
 

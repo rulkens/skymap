@@ -15,7 +15,7 @@
  * texture has not landed yet is `flat` (the plain lit albedo sphere is the
  * placeholder), and slides to `textured` the frame its bitmap commits.
  *
- * ### The ring ratios are DATA on the uniform, not a Saturn-only code path
+ * ### The ring ratios + limb params are DATA on the uniform, not code paths
  *
  * Each textured body packs two ring radii into `TexturedBodyUniforms`, resolved
  * from `SCENE_RINGS` to planet-radius units (ring radius / body radius). Only
@@ -24,6 +24,17 @@
  * the ring-on-planet shadow branch. One uniform layout + one pipeline serve
  * ringed and ringless bodies alike; the ring is a per-body datum, not a fork in
  * the draw path (spec §8).
+ *
+ * The Minnaert limb-darkening params ride the same data-gate: `limbParams` reads
+ * `LIMB_DARKENING_PARAMS` (the giants + Venus) and falls back to
+ * `{ strength: 0, exponent: 1 }` — identity — for every absent body, so
+ * `limbStrength == 0` makes the fragment's limb term a no-op (spec §6.3). The
+ * limb's view cosine needs the camera in the body's local frame, so each body
+ * also packs `camPosLocal` derived through the shared `camPosLocal` util at the
+ * body's SURFACE radius (`radiusKm * KM_TO_MPC` — the fragment's unit sphere, the
+ * SAME inputs `composeBodyMvp` consumes; NOT an atmosphere-top scale). A body
+ * absent from the limb table still packs a real `camPosLocal`, but with
+ * `strength 0` it is never read — cheap and behaviour-neutral.
  *
  * ### The f64 seam — why `view.slab.vp`, NOT `view.vp`
  *
@@ -54,10 +65,13 @@ import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { SCENE_RINGS } from '../../../../data/bodies/sceneRings';
+import { LIMB_DARKENING_PARAMS } from '../../../../data/bodies/limbDarkeningParams';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
+import { camPosLocal } from '../../../../utils/camera/camPosLocal';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { packTexturedBodyUniforms } from '../../../../utils/gpu/packTexturedBodyUniforms';
 import { sceneBodyPartition } from '../sceneBodyPartition';
+import { sceneBodyStates } from '../sceneBodyStates';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 
 /**
@@ -71,6 +85,17 @@ function ringRatios(body: PlanetBody): { inner: number; outer: number } {
   const ring = SCENE_RINGS.find((r) => r.bodyId === body.id);
   if (ring === undefined) return { inner: 0, outer: 0 };
   return { inner: ring.innerRadiusKm / body.radiusKm, outer: ring.outerRadiusKm / body.radiusKm };
+}
+
+/**
+ * Resolve a body's Minnaert limb-darkening params from `LIMB_DARKENING_PARAMS`,
+ * or `{ strength: 0, exponent: 1 }` — the shader identity — when the body has no
+ * row. Sibling of `ringRatios`: the same data-gate the ring branch uses, so a
+ * body absent from the table renders as plain Lambert (`limbStrength == 0` makes
+ * the fragment's limb factor a no-op).
+ */
+function limbParams(body: PlanetBody): { strength: number; exponent: number } {
+  return LIMB_DARKENING_PARAMS[body.id] ?? { strength: 0, exponent: 1 };
 }
 
 export const texturedBodiesLayer: ContentLayer = {
@@ -93,27 +118,45 @@ export const texturedBodiesLayer: ContentLayer = {
     const renderer = state.gpu.texturedBodyRenderer;
     if (renderer === null) return;
 
+    // Live position + orientation from the per-frame snapshot (keyed by id),
+    // resolved ONCE for the whole draw loop — not the baked record fields.
+    const states = sceneBodyStates(state, ctx);
+
     // Draw each textured body once. Unlike planetsLayer's single instanced
     // batch, each body owns its own uniform buffer + surface/ring textures on
     // the renderer, so the draws are per-body — the renderer writes THIS body's
     // buffer immediately before its own draw, and no shared uniform can be
     // clobbered mid-frame (see texturedBodyRenderer's header).
     for (const body of sceneBodyPartition(state, ctx).textured) {
+      const bodyState = states.get(body.id)!;
       // Compose the MVP from the slab's f64 vp — see the header's "f64 seam"
       // note for why `view.slab.vp` and not `view.vp`.
       const mvp = composeBodyMvp(
         view.slab.vp,
-        body.positionMpc,
+        bodyState.positionMpc,
         RENDER_ORIGIN_MPC,
         body.radiusKm * SCALE_UNITS.KM_TO_MPC,
-        body.orientation,
+        bodyState.orientation,
       );
-      // Rotate the sun direction into the body's local frame (its baked
-      // orientation carries any axial tilt) so the fragment's Lambert term stays
-      // a plain co-framed dot product — the same rotate earth/planets do.
-      const sun = sunDirLocal(body.positionMpc, RENDER_ORIGIN_MPC, body.orientation);
+      // Rotate the sun direction into the body's local frame (its orientation
+      // carries any axial tilt) so the fragment's Lambert term stays a plain
+      // co-framed dot product — the same rotate earth/planets do.
+      const sun = sunDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation);
       const { inner, outer } = ringRatios(body);
-      const uniforms = packTexturedBodyUniforms(mvp, sun, inner, outer);
+      // Minnaert limb-darkening: the per-body strength/exponent (identity for a
+      // body absent from `LIMB_DARKENING_PARAMS`), plus the camera in the body's
+      // local frame the fragment's view cosine needs. `camPosLocal` takes the
+      // body's SURFACE radius — the same `radiusKm × KM_TO_MPC` scale
+      // `composeBodyMvp` uses above, so the local camera matches the unit sphere
+      // the fragment shades (NOT an atmosphere-top scale).
+      const { strength, exponent } = limbParams(body);
+      const cam = camPosLocal(
+        view.camPos,
+        bodyState.positionMpc,
+        body.radiusKm * SCALE_UNITS.KM_TO_MPC,
+        bodyState.orientation,
+      );
+      const uniforms = packTexturedBodyUniforms(mvp, sun, inner, outer, strength, exponent, cam);
       // The partition only routes bodies with a BODY_TEXTURE_REGISTRY row into
       // `textured`, so the string id IS a BodyTextureId the renderer accepts.
       renderer.draw(pass, body.id as BodyTextureId, uniforms);

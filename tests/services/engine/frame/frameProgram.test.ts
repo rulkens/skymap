@@ -32,7 +32,7 @@ import type { ContentLayer } from '../../../../src/@types/engine/frame/ContentLa
 import type { FrameStep } from '../../../../src/@types/engine/frame/FrameStep';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 
-const TONE: ToneMap = { exposure: 1.5, curve: 4 };
+const TONE: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0 };
 
 function makeCam(): OrbitCamera {
   return {
@@ -65,55 +65,132 @@ function fakeLayer(name: string, target: string, slab: number): ContentLayer {
 }
 
 describe('frameProgram', () => {
-  it('emits the ten-step main program', () => {
+  it('emits the eleven-step main program', () => {
     // The survey-star AGGREGATE render (into its own half-res offscreen) sits
     // BEFORE the hdr NEAR0 step, so the `star-upsample` layer inside that step
     // can composite it — the twin of the volume render preceding volume-upsample.
-    // The (hdr, NEAR0) step then sits after the cosmological hdr render and
-    // BEFORE the hdr→swap composite, so the stars accumulate into HDR and ride
-    // the same tone-map as the galaxies (COSMO's 0.01 Mpc near plane would clip
-    // their parsec-scale anchors).
-    expect(frameProgram(TONE)).toEqual([
+    // The (hdr, NEAR0) step then sits after the cosmological hdr render, so the
+    // stars accumulate into HDR and ride the same tone-map as the galaxies
+    // (COSMO's 0.01 Mpc near plane would clip their parsec-scale anchors). The
+    // foreground bodies render next and composite OVER hdr in LINEAR space
+    // (tone: null), so their pixels join HDR before the lone hdr→swap tone-map.
+    // The swap overlays draw last, after that single tone-map. The compute
+    // prelude carries TWO steps — the flow integrate and the atmosphere
+    // sky-view LUT bake — both ahead of the foreground render so the atmosphere
+    // shell samples this frame's LUT.
+    // Bloom OFF — the base eleven-step shape (the bloom-enabled program adds ten
+    // render steps between the foreground composite and the tone-map; see the
+    // bloom-gating tests below).
+    expect(frameProgram(TONE, false)).toEqual([
       { kind: 'compute', name: 'flow' },
+      { kind: 'compute', name: 'atmosphereSkyView' },
       { kind: 'render', target: 'volume', slab: COSMO },
       { kind: 'render', target: 'hdr', slab: COSMO },
       { kind: 'render', target: 'star-aggregates', slab: NEAR0 },
       { kind: 'render', target: 'hdr', slab: NEAR0 },
-      { kind: 'composite', step: { source: 'hdr', dest: 'swap', blend: 'replace', tone: TONE } },
-      { kind: 'render', target: 'swap', slab: COSMO },
       { kind: 'render', target: 'foreground:0', slab: NEAR0 },
       {
         kind: 'composite',
-        step: { source: 'foreground:0', dest: 'swap', blend: 'over', tone: TONE },
+        step: { source: 'foreground:0', dest: 'hdr', blend: 'over', tone: null },
       },
+      { kind: 'composite', step: { source: 'hdr', dest: 'swap', blend: 'replace', tone: TONE } },
+      { kind: 'render', target: 'swap', slab: COSMO },
       { kind: 'render', target: 'swap', slab: NEAR0 },
     ]);
   });
 
-  it('the two composites share one tone instance', () => {
-    // The hdr→swap tone-map and the foreground:0→swap OVER must carry the
-    // SAME tone object — identity, not just equal values — so the tone curve
-    // is guaranteed identical across the Sun's limb. This enforces the
-    // shared-curve requirement by reference rather than a constants file.
-    const program = frameProgram(TONE);
-    const [hdrComposite, foregroundComposite] = program.filter((step) => step.kind === 'composite');
-    // Narrow away both the possibly-undefined index result and the FrameStep
-    // union before touching `.step` — the same guard idiom the sibling
-    // composite assertions use.
-    if (hdrComposite?.kind !== 'composite' || foregroundComposite?.kind !== 'composite') {
+  it('exactly one composite is tone-mapped', () => {
+    // The frame now has a SINGLE tone-map. The foreground:0→hdr composite runs
+    // in LINEAR space (tone: null) so the bodies join HDR before the curve; the
+    // hdr→swap replace-composite carries the one real tone object (identity,
+    // not just equal values). Exactly one composite therefore carries a
+    // non-null tone — that lone tone-map is what gives the frame one curve.
+    const program = frameProgram(TONE, false);
+    const composites = program.filter((step) => step.kind === 'composite');
+    const [foregroundComposite, hdrComposite] = composites;
+    if (foregroundComposite?.kind !== 'composite' || hdrComposite?.kind !== 'composite') {
       throw new Error('expected two composite steps');
     }
-    expect(hdrComposite.step.tone).toBe(foregroundComposite.step.tone);
+    expect(foregroundComposite.step).toMatchObject({ source: 'foreground:0', dest: 'hdr' });
+    expect(foregroundComposite.step.tone).toBeNull();
+    expect(hdrComposite.step).toMatchObject({ source: 'hdr', dest: 'swap' });
+    expect(hdrComposite.step.tone).toBe(TONE);
+    expect(
+      composites.filter((step) => step.kind === 'composite' && step.step.tone !== null),
+    ).toHaveLength(1);
   });
 
-  it('references only slabs present in deriveSlabs’ table (NEAR0 and COSMO)', () => {
+  it('foreground:0→hdr composite precedes hdr→swap composite', () => {
+    // Ordering is load-bearing: the foreground bodies must merge into HDR
+    // BEFORE the tone-map, otherwise they'd be double-tonemapped (or skip the
+    // curve entirely). Assert the linear body composite's index is below the
+    // tone-map's.
+    const program = frameProgram(TONE, false);
+    const isComposite = (source: string, dest: string) => (step: FrameStep) =>
+      step.kind === 'composite' && step.step.source === source && step.step.dest === dest;
+    const foregroundIdx = program.findIndex(isComposite('foreground:0', 'hdr'));
+    const toneMapIdx = program.findIndex(isComposite('hdr', 'swap'));
+    expect(foregroundIdx).toBeGreaterThanOrEqual(0);
+    expect(foregroundIdx).toBeLessThan(toneMapIdx);
+  });
+
+  it('every render step references only slabs present in deriveSlabs’ table (NEAR0, COSMO)', () => {
+    // Bloom is now ONE `{ kind: 'bloom' }` step, not N render steps on a
+    // dedicated slab, so every remaining render step projects through NEAR0 or
+    // COSMO — the two rows deriveSlabs returns. A render step naming an index
+    // outside that table would throw in `slabViewOf` the moment it runs.
     const slabs = deriveSlabs(makeCam(), new Float32Array(16) as unknown as Mat4);
-    for (const step of frameProgram(TONE)) {
+    for (const step of frameProgram(TONE, true)) {
       if (step.kind === 'render') {
         expect([NEAR0, COSMO]).toContain(step.slab);
         expect(slabs[step.slab]).toBeDefined();
       }
     }
+  });
+
+  it('bloom enabled: exactly one bloom step, between the foreground merge and the tone-map', () => {
+    // The bright prefilter samples the composited HDR scene, and the fold rides
+    // the lone hdr→swap tone curve — so the single `{ kind: 'bloom' }` step must
+    // sit after the linear foreground:0→hdr composite and before the hdr→swap
+    // tone-map. Exactly one composite still carries a non-null tone.
+    const program = frameProgram(TONE, true);
+    const bloomSteps = program.filter((step) => step.kind === 'bloom');
+    expect(bloomSteps).toHaveLength(1);
+
+    const foregroundIdx = program.findIndex(
+      (step) =>
+        step.kind === 'composite' &&
+        step.step.source === 'foreground:0' &&
+        step.step.dest === 'hdr',
+    );
+    const bloomIdx = program.findIndex((step) => step.kind === 'bloom');
+    const toneMapIdx = program.findIndex(
+      (step) =>
+        step.kind === 'composite' && step.step.source === 'hdr' && step.step.dest === 'swap',
+    );
+    expect(foregroundIdx).toBeGreaterThanOrEqual(0);
+    expect(bloomIdx).toBeGreaterThan(foregroundIdx);
+    expect(bloomIdx).toBeLessThan(toneMapIdx);
+    expect(
+      program.filter((step) => step.kind === 'composite' && step.step.tone !== null),
+    ).toHaveLength(1);
+  });
+
+  it('bloom disabled: no bloom step emitted and program otherwise identical', () => {
+    // Only `enabled` shapes the step list. Bloom-off is the base program; bloom-on
+    // is that base with exactly ONE `{ kind: 'bloom' }` step spliced in between the
+    // foreground composite and the tone-map — nothing else changes.
+    const off = frameProgram(TONE, false);
+    const on = frameProgram(TONE, true);
+
+    const bloomSteps = on.filter((step) => step.kind === 'bloom');
+    expect(bloomSteps).toEqual([{ kind: 'bloom' }]);
+    expect(off.some((step) => step.kind === 'bloom')).toBe(false);
+
+    // Strip the bloom step out of the enabled program: what remains is
+    // byte-identical to the disabled program.
+    const onWithoutBloom = on.filter((step) => step.kind !== 'bloom');
+    expect(onWithoutBloom).toEqual(off);
   });
 });
 
@@ -129,19 +206,31 @@ describe('timedSlotsOf', () => {
       fakeLayer('labels', 'swap', COSMO),
     ];
 
-    // The foreground:0→swap slot is emitted from the program's composite STEP
+    // The composite slots are emitted from the program's composite STEPS
     // independent of the layers fixture (a composite step always contributes
-    // its '<source>→<dest>' slot). This synthetic fixture has no near-field
-    // rows (no (hdr, NEAR0) star points, no foreground bodies, no NEAR0
-    // captions), so those RENDER slots correctly don't appear — but the
-    // composite slot must.
-    expect(timedSlotsOf(frameProgram(TONE), layers)).toEqual([
+    // its '<source>→<dest>' slot): the foreground:0→hdr linear merge precedes
+    // the hdr→swap tone-map. This synthetic fixture has no near-field rows (no
+    // (hdr, NEAR0) star points, no foreground bodies, no NEAR0 captions), so
+    // those RENDER slots correctly contribute no LAYER rows — but each render
+    // STEP still emits its '<target>·<SLAB>' group-key slot (the merged-pass
+    // timing slot), so the empty steps show up as their group key alone and the
+    // matched steps show their layers then the group total. The foreground:0
+    // render now precedes both composites (bodies merge into HDR before the
+    // tone-map), so its group-key slot sits above them.
+    expect(timedSlotsOf(frameProgram(TONE, false), layers)).toEqual([
+      'volume·COSMO',
       'point-sprites',
       'milky-way',
+      'hdr·COSMO',
+      'star-aggregates·NEAR0',
+      'hdr·NEAR0',
+      'foreground:0·NEAR0',
+      'foreground:0→hdr',
       'hdr→swap',
       'selection-ring',
       'labels',
-      'foreground:0→swap',
+      'swap·COSMO',
+      'swap·NEAR0',
       'pick',
     ]);
   });
@@ -151,11 +240,13 @@ describe('timedSlotsOf', () => {
       fakeLayer('point-sprites', 'hdr', COSMO),
       fakeLayer('selection-ring', 'swap', COSMO),
     ];
-    const slots = timedSlotsOf(frameProgram(TONE), layers);
+    // Bloom ON adds the single `'bloom'` slot; every render step now has a
+    // distinct `(target, slab)`, so no slot name collides.
+    const slots = timedSlotsOf(frameProgram(TONE, true), layers);
     expect(new Set(slots).size).toBe(slots.length);
   });
 
-  it('derives the real registry slot list: scalar-volume, eight hdr, star-aggregates, the (hdr, NEAR0) five, hdr→swap, five swap, near-field tail, pick', () => {
+  it('derives the real registry slot list: scalar-volume, eight hdr, star-aggregates, the (hdr, NEAR0) six, foreground bodies, foreground:0→hdr, hdr→swap, five swap, near captions, pick', () => {
     // The real CONTENT_LAYERS registry against the real program — the exact
     // ordered slot list the timing service allocates from and the DebugPanel
     // iterates. scalar-volume leads (the volume render step), then the eight
@@ -164,14 +255,23 @@ describe('timedSlotsOf', () => {
     // orbit-trails + star-catalog + star-upsample (the dedicated (hdr, NEAR0)
     // step before the tone-map — milky-way leads that group so its
     // multiplicative dust never darkens the local starfield, and star-upsample
-    // sits adjacent to the star-catalog leaf draw it composites), the tone-map
-    // composite, the five swap overlays, then the near-field tail (the
-    // foreground:0 body render — one slot per body layer: earth, star-spheres,
-    // focused-field-star-sphere, planets, textured-bodies, then the translucent
-    // rings overlay last — the foreground:0→swap composite, and the (swap, NEAR0)
-    // render group → near0-selection-ring then foreground-labels), and pick last.
-    expect(timedSlotsOf(frameProgram(TONE), CONTENT_LAYERS)).toEqual([
+    // sits adjacent to the star-catalog leaf draw it composites). The
+    // foreground:0 body render now comes NEXT (before the composites) — one
+    // slot per body layer: earth, then Earth's translucent cloud-shell overlay
+    // (drawn right after the opaque surface), star-spheres, field-star-sphere,
+    // planets, textured-bodies, then the translucent rings overlay, then
+    // atmosphere-shell — so the bodies merge into HDR before the tone-map. The
+    // foreground:0→hdr LINEAR composite then precedes the hdr→swap tone-map (the
+    // frame's only tone-map), and the five swap overlays + the (swap, NEAR0)
+    // captions (near0-selection-ring, foreground-labels) draw AFTER it, with
+    // pick last.
+    // Each render STEP trails its layers with its own '<target>·<SLAB>'
+    // group-key slot (the merged-pass timing slot Joint 2 adds), so
+    // 'volume·COSMO' follows scalar-volume, 'hdr·COSMO' follows the eight COSMO
+    // hdr layers, and so on down to 'swap·NEAR0' after the near-field captions.
+    expect(timedSlotsOf(frameProgram(TONE, true), CONTENT_LAYERS)).toEqual([
       'scalar-volume',
+      'volume·COSMO',
       'point-sprites',
       'procedural-disks',
       'textured-disks',
@@ -180,28 +280,45 @@ describe('timedSlotsOf', () => {
       'volume-upsample',
       'horizon-shell',
       'structure-markers',
+      'hdr·COSMO',
       'star-aggregates',
+      'star-aggregates·NEAR0',
       'milky-way',
       'star-points',
       'orbit-trails',
       'body-glints',
       'star-catalog',
       'star-upsample',
+      'constellations',
+      'hdr·NEAR0',
+      'earth',
+      'cloud-shell',
+      'star-spheres',
+      'field-star-sphere',
+      'planets',
+      'textured-bodies',
+      'rings',
+      // Earth's in-scatter atmosphere: the LAST foreground:0 layer in registry
+      // order, so its slot trails the ring's inside the foreground:0 render step
+      // (before that step's foreground:0·NEAR0 group slot and the two
+      // composites).
+      'atmosphere-shell',
+      'foreground:0·NEAR0',
+      'foreground:0→hdr',
+      // The bloom sub-pipeline, spliced between the linear foreground merge and
+      // the tone-map, bills ONE `'bloom'` slot spanning its whole pass sequence
+      // (runBloom opens the ten passes itself — the executor sees a single step).
+      'bloom',
       'hdr→swap',
       'selection-ring',
       'disk-radius-ring',
       'marker-lines',
       'labels',
-      'clip-path-debug',
-      'earth',
-      'star-spheres',
-      'focused-field-star-sphere',
-      'planets',
-      'textured-bodies',
-      'rings',
-      'foreground:0→swap',
+      'swap·COSMO',
       'near0-selection-ring',
       'foreground-labels',
+      'clip-path-debug',
+      'swap·NEAR0',
       'pick',
     ]);
   });
@@ -210,36 +327,47 @@ describe('timedSlotsOf', () => {
 describe('timedSlotGroupsOf', () => {
   it('buckets each render step’s layers under its (target, slab) group title, in the six-group order', () => {
     // Fake layers matched against the REAL program: two hdr·COSMO layers, one
-    // swap·COSMO overlay, one foreground:0·NEAR0 body. The hdr·NEAR0,
-    // star-aggregates and volume steps match nothing, so their groups are
-    // empty and don't appear; the composite steps + trailing pick always do.
+    // swap·COSMO overlay, one foreground:0·NEAR0 body. Every render step now
+    // ALSO emits its '<target>·<SLAB>' group-key row (the merged-pass timing
+    // slot), so even the steps matching no fake layer — volume·COSMO,
+    // star-aggregates·NEAR0, hdr·NEAR0, swap·NEAR0 — contribute their group key
+    // and their titles appear. All six groups therefore show, and each row's
+    // group key buckets it under its step's title.
     const layers: readonly ContentLayer[] = [
       fakeLayer('point-sprites', 'hdr', COSMO),
       fakeLayer('milky-way', 'hdr', COSMO),
       fakeLayer('labels', 'swap', COSMO),
       fakeLayer('earth', 'foreground:0', NEAR0),
     ];
-    const groups = timedSlotGroupsOf(frameProgram(TONE), layers);
+    const groups = timedSlotGroupsOf(frameProgram(TONE, false), layers);
 
-    // Group titles in draw/table order; empty groups (no matched layers)
-    // omitted. The two composites and pick collapse into one trailing group.
+    // Group titles in draw/table order. The two composites and pick collapse
+    // into one trailing group.
     expect(groups.map((g) => g.title)).toEqual([
+      'Volumes & aggregates',
       'Cosmos · HDR',
+      'Near field · HDR',
       'Foreground bodies · depth',
       'Overlays',
       'Composites & pick',
     ]);
 
-    // Rows keep draw order within their group, and carry the groupKey the
-    // producing step stamped.
+    // Rows keep draw order within their group: each matched layer, then its
+    // step's group-key row; the two swap steps merge under Overlays. The
+    // trailing infra group carries both composites (foreground:0→hdr linear
+    // merge, then hdr→swap tone-map) and pick.
     expect(groups.map((g) => g.rows.map((r) => r.name))).toEqual([
-      ['point-sprites', 'milky-way'],
-      ['earth'],
-      ['labels'],
-      ['hdr→swap', 'foreground:0→swap', 'pick'],
+      ['volume·COSMO', 'star-aggregates·NEAR0'],
+      ['point-sprites', 'milky-way', 'hdr·COSMO'],
+      ['hdr·NEAR0'],
+      ['earth', 'foreground:0·NEAR0'],
+      ['labels', 'swap·COSMO', 'swap·NEAR0'],
+      ['foreground:0→hdr', 'hdr→swap', 'pick'],
     ]);
-    expect(groups[0]!.rows[0]!.groupKey).toBe('hdr·COSMO');
-    expect(groups[3]!.rows.map((r) => r.groupKey)).toEqual(['composite', 'composite', 'pick']);
+    // The 'Cosmos · HDR' group's first row (point-sprites) carries the step's
+    // group key; the trailing infra group carries composite/composite/pick.
+    expect(groups[1]!.rows[0]!.groupKey).toBe('hdr·COSMO');
+    expect(groups[5]!.rows.map((r) => r.groupKey)).toEqual(['composite', 'composite', 'pick']);
   });
 
   it('merges scalar-volume + star-aggregates into one group and sinks composites+pick to the last group', () => {
@@ -253,29 +381,44 @@ describe('timedSlotGroupsOf', () => {
       'Cosmos · HDR',
       'Near field · HDR',
       'Foreground bodies · depth',
+      'Bloom',
       'Overlays',
       'Composites & pick',
     ]);
 
     const byTitle = (title: string) => TIMED_SLOT_GROUPS.find((g) => g.title === title)!;
+    // The bloom sub-pipeline buckets under one 'Bloom' group, between Foreground
+    // and Overlays, carrying the single `'bloom'` slot (runBloom owns the ten
+    // passes; the frame sees one step, so one timing row).
+    expect(byTitle('Bloom').rows.map((r) => r.name)).toEqual(['bloom']);
+    // Each render step trails its layers with its '<target>·<SLAB>' group-key
+    // row, so volume·COSMO follows scalar-volume and star-aggregates·NEAR0
+    // follows star-aggregates within this merged group.
     expect(byTitle('Volumes & aggregates').rows.map((r) => r.name)).toEqual([
       'scalar-volume',
+      'volume·COSMO',
       'star-aggregates',
+      'star-aggregates·NEAR0',
     ]);
     // Overlays merges the COSMO swap overlays with the NEAR0 near-field swap
-    // rows (two non-adjacent swap steps).
+    // rows (two non-adjacent swap steps), each trailed by its group-key row.
     expect(byTitle('Overlays').rows.map((r) => r.name)).toEqual([
       'selection-ring',
       'disk-radius-ring',
       'marker-lines',
       'labels',
-      'clip-path-debug',
+      'swap·COSMO',
       'near0-selection-ring',
       'foreground-labels',
+      'clip-path-debug',
+      'swap·NEAR0',
     ]);
+    // Composites and pick emit no group-key rows (only render steps do). The
+    // foreground:0→hdr linear merge now precedes the hdr→swap tone-map, then
+    // pick.
     expect(byTitle('Composites & pick').rows.map((r) => r.name)).toEqual([
+      'foreground:0→hdr',
       'hdr→swap',
-      'foreground:0→swap',
       'pick',
     ]);
   });
@@ -289,7 +432,11 @@ describe('timedSlotGroupsOf', () => {
     const groups = timedSlotGroupsOf(program, [fakeLayer('x', 'foo', COSMO)]);
     expect(groups.map((g) => g.title)).toEqual(['Composites & pick', 'foo·COSMO']);
     const fallback = groups.find((g) => g.title === 'foo·COSMO')!;
-    expect(fallback.rows).toEqual([{ name: 'x', groupKey: 'foo·COSMO' }]);
+    // The layer row, then the step's own group-key row (name === groupKey).
+    expect(fallback.rows).toEqual([
+      { name: 'x', groupKey: 'foo·COSMO' },
+      { name: 'foo·COSMO', groupKey: 'foo·COSMO' },
+    ]);
   });
 });
 

@@ -25,6 +25,9 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { computeForegroundViewProj } from '../../../utils/camera/computeForegroundViewProj';
 import { foregroundFrustum } from '../../../utils/camera/foregroundFrustum';
+import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
+import { frameUp } from '../../../utils/camera/frameUp';
+import type { ImagePlaneBasis } from '../../../@types/camera/ImagePlaneBasis';
 
 /** Near-field slab: origin-relative near-Earth bodies (Sun, Earth), drawn in f64. */
 export const NEAR0 = 0;
@@ -47,10 +50,59 @@ export const SLAB_NAME: Readonly<Record<number, string>> = {
   [COSMO]: 'COSMO',
 };
 
-// The near-field lookAt uses world +Y as the image-plane up. Roll parity with
-// the cosmological slab's `computeViewProj` is deferred alongside the
-// zoom-to-earth series.
-const WORLD_UP: Vec3 = [0, 1, 0];
+/**
+ * The ONE definition of a merged group-timing slot key — the string a render
+ * step's whole layer group is billed against. `timedSlotRowsOf` (frameProgram)
+ * allocates the slot under this key; `executeFrame`'s merged pass resolves it
+ * via `descriptorFor(groupKey)`. The two sites must produce byte-identical
+ * keys, so the format lives here rather than as twin inline templates that
+ * could silently drift. The middle-dot separator (U+00B7) and the
+ * `?? String(slab)` fallback (which keeps the key stable for a slab index
+ * `SLAB_NAME` doesn't cover) are part of that wire format — do not vary them.
+ */
+export function groupKeyOf(target: string, slab: number): string {
+  return `${target}·${SLAB_NAME[slab] ?? String(slab)}`;
+}
+
+/**
+ * The single source of each slab's depth convention: `false` ⇒ the classic
+ * smaller-z-wins / clear-`1.0` / `mat4d.perspective` set; `true` ⇒ reversed-Z
+ * (greater-wins / clear-`0` / `mat4d.perspectiveReverseZ`).
+ *
+ * NEAR0 is `true`: its foreground bracket spans a ~1e8 near/far ratio (Earth's
+ * surface out to Jupiter's orbit), and a finite non-reversed perspective
+ * crowds nearly all its depth resolution against the near plane — so a body at
+ * the far end (the Sun at 1 AU) quantizes onto the far plane and flickers.
+ * Infinite-far reversed-Z spreads reciprocal-depth precision near-uniformly and
+ * removes the far plane entirely, so the whole near-field scene resolves in one
+ * `depth32float` buffer. COSMO stays `false`: its fixed 10 kpc → 50 Gpc bracket
+ * is served fine by the classic convention, and its pick pipelines + clear must
+ * stay smaller-z-wins.
+ *
+ * This one constant is the reversed-Z feature switch: `[NEAR0]` propagates to
+ * every pipeline `depthCompare`, both depth clears, and the foreground
+ * projection builder, because all of those read this constant — either directly
+ * at renderer construction, or via the `reversedZ` flag echoed onto the runtime
+ * `Slab` by `deriveSlabs`. Single-sourcing the convention here is what makes the
+ * flip one constant instead of ~14 scattered sites, and makes a partial
+ * (half-reversed) flip impossible.
+ */
+export const SLAB_REVERSED_Z: Readonly<Record<number, boolean>> = {
+  [NEAR0]: true,
+  [COSMO]: false,
+};
+
+// The near-field lookAt derives its image-plane up through the shared
+// `imagePlaneBasis` seam. The base up is the frame pole (`frameUp(cam.frameBasis)`;
+// world +Y absent a basis). Roll is 0 here — roll parity with the cosmological
+// slab's `computeViewProj` is deferred alongside the zoom-to-earth series.
+
+// Module-scope scratch reused each frame: the forward view direction, the
+// frame-pole reference up, and the roll-adjusted basis. `deriveSlabs` runs once
+// per frame, so all three are hoisted out to avoid per-call allocation.
+const forwardScratch: Vec3 = [0, 0, 0];
+const upRefScratch: Vec3 = [0, 0, 0];
+const basisScratch: ImagePlaneBasis = { rolledUp: [0, 0, 0], right: [0, 0, 0], up: [0, 0, 0] };
 
 // The cosmological slab's near/far are fixed: 10 kpc sits safely below the
 // nearest cosmological content (the closest satellite galaxies at tens of
@@ -88,15 +140,32 @@ export function deriveSlabs(cam: OrbitCamera, cosmoVp: Mat4): readonly Slab[] {
   // `COSMO_NEAR_MPC`/`COSMO_FAR_MPC`: the cosmological scene's depth doesn't
   // change as the user zooms, only the near-field's does.
   const { near: nearMpc, far: farMpc } = foregroundFrustum(cam.distance);
+  // The image-plane up comes from the shared basis seam. At roll 0 `rolledUp`
+  // is exactly the frame pole (`frameUp(cam.frameBasis)`; world +Y absent a
+  // basis), so this tracks the cosmological slab's up through the one seam.
+  const fx = cam.target[0] - cam.position[0];
+  const fy = cam.target[1] - cam.position[1];
+  const fz = cam.target[2] - cam.position[2];
+  const flen = Math.hypot(fx, fy, fz) || 1;
+  forwardScratch[0] = fx / flen;
+  forwardScratch[1] = fy / flen;
+  forwardScratch[2] = fz / flen;
+  const { rolledUp } = imagePlaneBasis(
+    forwardScratch,
+    0,
+    frameUp(cam.frameBasis, upRefScratch),
+    basisScratch,
+  );
   const nearFieldVp = computeForegroundViewProj({
     eyeMpc: cam.position,
     targetMpc: cam.target,
-    up: WORLD_UP,
+    up: rolledUp,
     renderOrigin: RENDER_ORIGIN_MPC,
     fovYRad: cam.fovYRad,
     aspect: cam.aspect,
     near: nearMpc,
     far: farMpc,
+    reversedZ: SLAB_REVERSED_Z[NEAR0]!,
   });
 
   const near0: Slab = {
@@ -112,6 +181,7 @@ export function deriveSlabs(cam: OrbitCamera, cosmoVp: Mat4): readonly Slab[] {
     // `camPos` in `slabViewOf`.
     originRelative: true,
     precision: 'f64',
+    reversedZ: SLAB_REVERSED_Z[NEAR0]!,
   };
   const cosmo: Slab = {
     index: COSMO,
@@ -120,6 +190,7 @@ export function deriveSlabs(cam: OrbitCamera, cosmoVp: Mat4): readonly Slab[] {
     vp: Float64Array.from(cosmoVp),
     originRelative: false,
     precision: 'f32',
+    reversedZ: SLAB_REVERSED_Z[COSMO]!,
   };
   return [near0, cosmo];
 }

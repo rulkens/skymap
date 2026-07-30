@@ -34,6 +34,7 @@ import type { Mat4 } from 'wgpu-matrix';
 function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFrameContext {
   return {
     isReady: true,
+    renderedTargets: new Set<string>(),
     cam: {} as never,
     vp: new Float32Array(16) as unknown as Mat4,
     slabs: [],
@@ -41,6 +42,7 @@ function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFra
     drawCamPos: [0, 0, 5] as Readonly<[number, number, number]>,
     drawPxPerRad: 720,
     nowMs: 0,
+    simDays: 0,
     fovYRad: (60 * Math.PI) / 180,
     focusBlend: 0,
     visibleSourceMask: 0xffffffff,
@@ -64,6 +66,7 @@ function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFra
         throw new Error(`fixture renderTargets: no depth view for '${id}'`);
       },
       resize: vi.fn(),
+      setSwapFormat: vi.fn(),
       destroy: vi.fn(),
     },
     texturedDisks: {} as never,

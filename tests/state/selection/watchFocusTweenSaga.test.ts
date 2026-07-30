@@ -25,7 +25,7 @@ import { resolveStarRecord } from '../../../src/services/engine/helpers/resolveS
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { StarCatalog } from '../../../src/@types/data/starCatalog/StarCatalog';
-import type { FocusCameraRuntime } from '../../../src/store/types';
+import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -46,7 +46,7 @@ let starCatalogStub: StarCatalog | null = null;
 const resolveDeps = (): ResolveDeps =>
   ({
     catalogs: { get: () => undefined },
-    famousMeta: undefined,
+    famousGalaxiesMeta: undefined,
     structures: { byId: () => undefined },
     stars: { current: () => starCatalogStub },
   }) as unknown as ResolveDeps;
@@ -65,13 +65,13 @@ async function makeStarCatalog(): Promise<StarCatalog> {
 
 describe('watchFocusTweenSaga', () => {
   let store: ReturnType<typeof build>;
-  let cameraRuntime: () => FocusCameraRuntime | null;
+  let cameraRuntime: () => LiveCameraRuntime | null;
 
   function build() {
     const mw = createSagaMiddleware();
     const s = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(mw) });
     mw.run(watchFocusTweenSaga);
-    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8 });
+    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, frameBasisQuat: [0, 0, 0, 1] });
     mw.setContext({ resolveDeps, cameraRuntime: () => cameraRuntime() });
     return s;
   }
@@ -119,7 +119,7 @@ describe('watchFocusTweenSaga', () => {
 
     // The camera comes online during wireInput; the engine then emits a status
     // pulse as the first catalog arrives (or the synthetic fallback fires).
-    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8 });
+    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, frameBasisQuat: [0, 0, 0, 1] });
     store.dispatch(engineStatusChanged({ kind: 'ready', count: 1, source: Source.SDSS }));
     await flush();
 
@@ -170,6 +170,37 @@ describe('watchFocusTweenSaga', () => {
     store.dispatch(updateSelectionFocus(null));
     await flush();
     expect(store.getState()[cameraRoute].tween).toBeNull();
+  });
+
+  // A scene body is FOLLOWED by the camera's `followBody` driver, not tweened —
+  // the tween compiles fixed vec3 endpoints and cannot track a body the sim clock
+  // moves. The saga must return before planting a tween for a body row, while a
+  // non-body focus (here the Milky Way) still tweens as before.
+  it('a body focus plants NO tween (the follow driver owns it); a non-body focus still does', async () => {
+    // 'earth' resolves statically off SCENE_BODIES (no catalog needed).
+    store.dispatch(updateSelectionFocus({ type: 'body', id: 'earth' }));
+    await flush();
+    expect(store.getState()[cameraRoute].tween).toBeNull();
+
+    // A non-body focus (Milky Way) still plants a tween through the same saga.
+    store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
+    await flush();
+    expect(store.getState()[cameraRoute].tween).not.toBeNull();
+  });
+
+  // Regression: famous stars are scene BODIES (star-body presence) but are absent
+  // from the orbital body-state snapshot the follow driver activates on — and they
+  // do not move — so they must TWEEN, not be swallowed by the body no-op. The saga
+  // now gates on the follow driver's actual membership (liveBodyPosition), so a
+  // star body falls through to the tween. The PLANET-body-no-tween half is the
+  // 'earth' case above (earth IS in the snapshot).
+  it('a famous-star body focus DOES plant a tween (falls through the follow-membership gate)', async () => {
+    // 'sirius' is a StarBody in SCENE_BODIES, absent from deriveBodyStates, so
+    // liveBodyPosition returns null and the saga builds the tween. Its `to` is
+    // framed on the star's fixed world position (stars don't move → a tween is right).
+    store.dispatch(updateSelectionFocus({ type: 'body', id: 'sirius' }));
+    await flush();
+    expect(store.getState()[cameraRoute].tween).not.toBeNull();
   });
 
   // A minimal clip payload: no camera motion, just timeline structure. The

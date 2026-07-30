@@ -18,6 +18,7 @@ import type { Mat4 } from 'wgpu-matrix';
 function makeCtx(): ReadyFrameContext {
   return {
     isReady: true,
+    renderedTargets: new Set<string>(),
     cam: {} as never,
     vp: new Float32Array(16) as unknown as Mat4,
     slabs: [],
@@ -25,6 +26,7 @@ function makeCtx(): ReadyFrameContext {
     drawCamPos: [0, 0, 5] as Readonly<[number, number, number]>,
     drawPxPerRad: 720,
     nowMs: 0,
+    simDays: 0,
     fovYRad: (60 * Math.PI) / 180,
     focusBlend: 0,
     visibleSourceMask: 0xffffffff,
@@ -50,6 +52,7 @@ function makeView(): SlabView {
       vp: new Float64Array(16),
       originRelative: false,
       precision: 'f32',
+      reversedZ: false,
     },
     vp: new Float32Array(16),
     camPos: [0, 0, 5],

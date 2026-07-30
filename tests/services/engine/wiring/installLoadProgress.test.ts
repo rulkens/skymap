@@ -42,6 +42,7 @@ function stubSlot(name: string): AssetSlot<unknown, unknown> {
     state: () => ({ kind: 'idle' }),
     subscribe: () => () => {},
     lastRequest: () => null,
+    startedAtMs: () => null,
     forceReload: () => {},
     cancel: () => {},
     release: () => {},
@@ -65,7 +66,7 @@ function makeState(): EngineState {
       starCatalogs,
       bodyTextures,
       filaments: stubSlot('filaments'),
-      famousMeta: stubSlot('famous-meta'),
+      famousGalaxiesMeta: stubSlot('famous-galaxies-meta'),
       structureCatalog: stubSlot('structure-catalog'),
       pgcAlias: stubSlot('pgc-aliases'),
       cf4Density: stubSlot('cf4Density'),
@@ -113,7 +114,7 @@ describe('installLoadProgress', () => {
     // bodyTextures map, not a named field).
     expect(names.has('earth-texture')).toBe(true);
     expect(names.has('filaments')).toBe(true);
-    expect(names.has('famous-meta')).toBe(true);
+    expect(names.has('famous-galaxies-meta')).toBe(true);
     expect(names.has('structure-catalog')).toBe(true);
     expect(names.has('pgc-aliases')).toBe(true);
     expect(names.has('cf4Density')).toBe(true);

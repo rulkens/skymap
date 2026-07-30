@@ -15,14 +15,19 @@ describe('BODY_TEXTURE_REGISTRY', () => {
       expect(spec.bodyId).toBe(key);
     }
 
+    // The day-map contract: every textured body must carry a `surface` kind — it
+    // is the default map the fetcher, slot family, and residency checks all key
+    // on. A row missing it would silently fail to texture that body.
+    for (const spec of Object.values(BODY_TEXTURE_REGISTRY)) {
+      expect(spec.kinds.surface).not.toBeUndefined();
+    }
+
     // The mono-USGS-source contract (spec §3): only Europa and Callisto ship a
     // grayscale source that needs a build-time tint. Any other body carrying a
     // tint — or either of those two missing one — is a seed error.
     for (const [key, spec] of Object.entries(BODY_TEXTURE_REGISTRY)) {
       const shouldTint = key === 'europa' || key === 'callisto';
-      expect('grayscaleTint' in spec && spec.grayscaleTint !== undefined).toBe(
-        shouldTint,
-      );
+      expect('grayscaleTint' in spec && spec.grayscaleTint !== undefined).toBe(shouldTint);
     }
 
     // The registry-keyed union IS texture identity: a body is textured iff its id

@@ -38,9 +38,11 @@ function makeCtx(focusBlend: number): ReadyFrameContext {
     vp: Float64Array.from(vp as unknown as Float32Array),
     originRelative: false,
     precision: 'f32',
+    reversedZ: false,
   };
   return {
     isReady: true,
+    renderedTargets: new Set<string>(),
     cam: {} as never,
     vp,
     slabs: [cosmoSlab, cosmoSlab],
@@ -48,6 +50,7 @@ function makeCtx(focusBlend: number): ReadyFrameContext {
     drawCamPos: [0, 0, 5] as Readonly<[number, number, number]>,
     drawPxPerRad: 720,
     nowMs: 0,
+    simDays: 0,
     fovYRad: (60 * Math.PI) / 180,
     focusBlend,
     visibleSourceMask: 0xffffffff,

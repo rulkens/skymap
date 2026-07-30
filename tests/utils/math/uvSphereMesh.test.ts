@@ -104,16 +104,32 @@ describe('uvSphereMesh', () => {
     expect(dot).toBeGreaterThan(0);
   });
 
-  it('uv ranges are within [0,1]', () => {
-    const { uvs } = uvSphereMesh(12, 6);
-    const vertexCount = uvs.length / 2;
-    for (let i = 0; i < vertexCount; i++) {
-      const u = uvs[i * 2] as number;
-      const v = uvs[i * 2 + 1] as number;
-      expect(u).toBeGreaterThanOrEqual(0);
-      expect(u).toBeLessThanOrEqual(1);
-      expect(v).toBeGreaterThanOrEqual(0);
-      expect(v).toBeLessThanOrEqual(1);
-    }
+  it('registers the map centre on the prime meridian (lon 0 → u 0.5)', () => {
+    // Standard planetary maps paint geographic longitude 0 at the image CENTRE,
+    // and the IAU rotation aims a body's prime meridian at local +x (lon 0). A
+    // raw u = lon/2π would land the map's ANTIMERIDIAN there — the whole surface
+    // rotated 180° about the pole (the Moon showing its far side from Earth).
+    const segments = 12;
+    const rings = 6;
+    const { uvs } = uvSphereMesh(segments, rings);
+    const uAt = (r: number, s: number) => uvs[(r * (segments + 1) + s) * 2] as number;
+
+    expect(uAt(0, 0)).toBeCloseTo(0.5); // lon 0 → map centre
+    expect(uAt(3, segments / 4)).toBeCloseTo(0.75); // lon 90°E → a quarter turn east
+    // The seam vertex closes exactly one turn; u stays continuous (never wrapped
+    // back to 0), so the sampler's `repeat` addressing does the wrap and the
+    // quad derivatives stay well-behaved across the antimeridian.
+    expect(uAt(3, segments)).toBeCloseTo(1.5);
+  });
+
+  it('v runs south-to-north over [0,1]', () => {
+    const rings = 6;
+    const segments = 12;
+    const { uvs } = uvSphereMesh(segments, rings);
+    const vAt = (r: number) => uvs[r * (segments + 1) * 2 + 1] as number;
+
+    expect(vAt(0)).toBeCloseTo(0); // south pole
+    expect(vAt(rings / 2)).toBeCloseTo(0.5); // equator
+    expect(vAt(rings)).toBeCloseTo(1); // north pole
   });
 });

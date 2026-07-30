@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createElement } from 'react';
-import { CollapsibleSection } from '../../../src/components/SettingsPanel/CollapsibleSection';
+import CollapsibleSection from '../../../src/components/SettingsPanel/CollapsibleSection';
 
 describe('CollapsibleSection', () => {
   it('toggles aria-expanded on the header button when clicked', async () => {
@@ -37,9 +37,10 @@ describe('CollapsibleSection', () => {
         children: 'body',
       }),
     );
-    expect(
-      screen.getByRole('button', { name: /display/i }),
-    ).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: /display/i })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
   });
 
   it('honors the headerToggleIndeterminate prop on the master checkbox', () => {
@@ -78,9 +79,7 @@ describe('CollapsibleSection', () => {
         children: 'body',
       }),
     );
-    await user.click(
-      screen.getByRole('checkbox', { name: /toggle display/i }),
-    );
+    await user.click(screen.getByRole('checkbox', { name: /toggle display/i }));
     expect(onChange).toHaveBeenCalledOnce();
     expect(onChange).toHaveBeenCalledWith(true);
   });
@@ -101,10 +100,31 @@ describe('CollapsibleSection', () => {
     );
     const header = screen.getByRole('button', { name: /display/i });
     expect(header).toHaveAttribute('aria-expanded', 'true');
-    await user.click(
-      screen.getByRole('checkbox', { name: /toggle display/i }),
-    );
+    await user.click(screen.getByRole('checkbox', { name: /toggle display/i }));
     // Section stays open; only the checkbox flipped.
     expect(header).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('a disabled CollapsibleSection does not fire its header toggle on click', () => {
+    // Controlled checkbox: use fireEvent.click, the click's default action is
+    // what we're asserting gets blocked (see the component's onClick guard).
+    const onChange = vi.fn();
+    render(
+      createElement(CollapsibleSection, {
+        title: 'HDR',
+        defaultOpen: true,
+        headerToggle: false,
+        onHeaderToggleChange: onChange,
+        disabled: true,
+        disabledHint: 'Needs a display with HDR range',
+        children: 'body',
+      }),
+    );
+    const toggle = screen.getByRole('checkbox', { name: /toggle hdr/i }) as HTMLInputElement;
+    expect(toggle).toHaveAttribute('aria-disabled', 'true');
+    expect(toggle).toHaveAttribute('title', 'Needs a display with HDR range');
+    fireEvent.click(toggle);
+    expect(onChange).not.toHaveBeenCalled();
+    expect(toggle.checked).toBe(false);
   });
 });

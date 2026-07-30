@@ -19,6 +19,17 @@
  *     `swap`.
  *   - `'composite'` — merge one target into another via the Compositor,
  *     per the embedded `CompositeStep`.
+ *   - `'bloom'` — a self-contained screen-space bloom sub-pipeline (bright →
+ *     downsample×4 → upsample×4 → fold into HDR) run by `runBloom`. It is one
+ *     step rather than N reused-target render steps because a ping-pong mip
+ *     pyramid writes the same target twice with different ops (a downsample that
+ *     clears, then an additive upsample that loads), which the `(target, slab)`
+ *     render-step model cannot express: the executor re-fires every layer
+ *     matching a step's `(target, slab)`, so a reused-target upsample layer
+ *     would fire prematurely at its target's downsample step and read a
+ *     not-yet-cleared (stale, last-frame) level. `runBloom` opens its ten passes
+ *     in strict order instead, so every source is written earlier in the same
+ *     sequence.
  *
  * A `FrameStep[]` array (the concrete `FRAME` program) is therefore a
  * complete, inspectable, order-sensitive description of a frame — where
@@ -32,4 +43,5 @@ import type { CompositeStep } from './CompositeStep';
 export type FrameStep =
   | { kind: 'compute'; name: string }
   | { kind: 'render'; target: string; slab: number }
-  | { kind: 'composite'; step: CompositeStep };
+  | { kind: 'composite'; step: CompositeStep }
+  | { kind: 'bloom' };

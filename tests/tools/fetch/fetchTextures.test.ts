@@ -10,12 +10,23 @@ import {
   type FetchTransport,
   type TextureSource,
 } from '../../../tools/fetch/fetchTextures';
+import { BMNG_QUADRANT_KEYS } from '../../../tools/utils/io/bmngQuadrantKeys';
+import { BMNG_VINTAGE } from '../../../tools/utils/io/bmngVintage';
+import { rawDataPath } from '../../../tools/utils/io/rawDataRegistry';
+import { TEXTURE_SOURCES } from '../../../tools/utils/io/textureSources';
 
 /** Destination basenames of a source list — the identity we assert on
  *  (paths are absolute, so the filename is the stable, readable key). */
 function filenames(sources: readonly TextureSource[]): string[] {
   return sources.map((s) => basename(s.destPath));
 }
+
+/** The BMNG filenames carry the vintage stamp, and the vintage is a one-constant
+ *  decision (`BMNG_VINTAGE`) — so these expectations interpolate it rather than
+ *  restating a month, which would turn switching vintage into a test edit. What
+ *  is asserted stays the SHAPE of the two subsets: which BMNG publications each
+ *  mode pulls. */
+const bmng = (variant: string): string => `world.topo.bathy.${BMNG_VINTAGE.stamp}.${variant}.jpg`;
 
 describe('textureSourcesFor', () => {
   it('--dev selects exactly the 2k SSS variants + the NASA 5400x2700 sibling', () => {
@@ -31,25 +42,36 @@ describe('textureSourcesFor', () => {
         '2k_uranus.jpg',
         '2k_neptune.jpg',
         '2k_moon.jpg',
-        'world.topo.bathy.200412.3x5400x2700.jpg',
+        bmng('3x5400x2700'),
       ].sort(),
     );
   });
 
-  it('the full pull selects the native tiers + full BMNG + the four USGS moons', () => {
+  it('the full pull selects the native tiers + both BMNG publications + the four USGS moons', () => {
     const full = textureSourcesFor(false);
     expect(filenames(full).sort()).toEqual(
       [
         '8k_mercury.jpg',
         '4k_venus_atmosphere.jpg',
         '8k_mars.jpg',
-        '8k_jupiter.jpg',
-        '8k_saturn.jpg',
+        // Jupiter and Saturn are 4096×2048 despite upstream's `8k_` filename;
+        // the ring beside them genuinely is 8k.
+        '4k_jupiter.jpg',
+        '4k_saturn.jpg',
         '8k_saturn_ring_alpha.png',
         '2k_uranus.jpg',
         '2k_neptune.jpg',
         '8k_moon.jpg',
-        'world.topo.bathy.200412.3x21600x10800.jpg',
+        bmng('3x21600x10800'),
+        // The eight deep quadrants: read only by `build-earth-tiles`, but part of
+        // the full pull, because a raw nothing can download is a raw that gets
+        // curl'd by hand.
+        ...Object.keys(BMNG_QUADRANT_KEYS).map((quadrant) => bmng(`3x21600x21600.${quadrant}`)),
+        'world.watermask.21600x10800.png',
+        'gebco_08_rev_elev_21600x10800.png',
+        'ldem_16_uint.tif',
+        'BlackMarble_2016_3km.jpg',
+        'cloud_combined_8192.tif',
         'Io_GalileoSSI-Voyager_Global_Mosaic_ClrMerge_1km.tif',
         'Europa_Voyager_GalileoSSI_global_mosaic_500m.tif',
         'Ganymede_Voyager_GalileoSSI_Global_ClrMosaic_1435m.tif',
@@ -78,6 +100,20 @@ describe('textureSourcesFor', () => {
     );
     expect(devUranus?.destPath).toBe(fullUranus?.destPath);
     expect(devUranus?.url).toBe(fullUranus?.url);
+  });
+
+  // Drift guard for the (body, kind) rewire: the full pull must fetch the native
+  // raw of EVERY (body, kind) authored in TEXTURE_SOURCES, not just the `surface`
+  // ones. It passes today (every kind is `surface`) and goes red the moment a
+  // non-surface source row (Earth's `material`) is added but the fetch still
+  // iterates surface-only — the exact regression this rewire prevents.
+  it('the full pull covers every (body,kind) native in TEXTURE_SOURCES', () => {
+    const destPaths = new Set(textureSourcesFor(false).map((s) => s.destPath));
+    for (const [bodyId, kinds] of Object.entries(TEXTURE_SOURCES)) {
+      for (const [kind, entry] of Object.entries(kinds)) {
+        expect(destPaths.has(rawDataPath(entry.native)), `${bodyId}:${kind}`).toBe(true);
+      }
+    }
   });
 });
 

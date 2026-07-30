@@ -6,7 +6,7 @@
  * (`captureScene` is the open). `guidedTourSaga` runs it in its `finally`, so it
  * fires on BOTH a natural tour finish and an `exitTour`/supersede cancellation.
  *
- *   1. `put(mergeSnapshot(settings))` — the six clusters land in ONE merge
+ *   1. `put(mergeSnapshot(settings))` — the ten clusters land in ONE merge
  *      dispatch (one transition, one store notification — what wakes React's
  *      settings subscribers). The fade follows REACTIVELY: `watchFadesSaga`
  *      reacts to `mergeSnapshot` and re-fades every layer to the restored intent.

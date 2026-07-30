@@ -16,16 +16,16 @@
  *   2. **Cosmic web** — the diffuse matter between galaxies (volumes + filaments).
  *   3. **Flow** — CF4++ peculiar-velocity overlay, sibling of Cosmic web.
  *   4. **Structures** — clusters / superclusters / voids as marker rings.
- *   5. **Labels** — every text annotation (cluster names, "you are here", …).
+ *   5. **Labels & Guides** — every text annotation (cluster names, "you are
+ *      here", …) plus the overlay guide toggles (constellation stick figures,
+ *      orbit trails).
  *   6. **Display** — power-user tone-curve disclosure (default closed).
  *
  * ### Props
  *
- * Only two props remain — both are beyond the Redux store's reach:
+ * One prop remains, beyond the Redux store's reach:
  *
  *   - `defaultOpen` — initial Panel open/closed state (false on mobile viewports).
- *   - `onResetCamera` — called when the user clicks "Reset camera"; wired in App
- *     to a focus on the Milky Way ("home").
  *
  * Engine counts (`sourceCounts`, `structureCounts`) are now read directly in
  * `GalaxiesSectionContainer` and `StructuresSectionContainer` via the engine
@@ -46,31 +46,27 @@
 import { memo } from 'react';
 import type { ReactNode } from 'react';
 import { Panel } from '../common/Panel/Panel';
-import Button from '../common/Button/Button';
 import TierChipContainer from '../containers/TierChipContainer';
 import GalaxiesSectionContainer from '../containers/GalaxiesSectionContainer';
 import StarsSectionContainer from '../containers/StarsSectionContainer';
 import CosmicWebSectionContainer from '../containers/CosmicWebSectionContainer';
 import FlowSectionContainer from '../containers/FlowSectionContainer';
 import StructuresSectionContainer from '../containers/StructuresSectionContainer';
-import LabelsSectionContainer from '../containers/LabelsSectionContainer';
+import LabelsAndGuidesSectionContainer from '../containers/LabelsAndGuidesSectionContainer';
 import DisplaySectionContainer from '../containers/DisplaySectionContainer';
-import styles from './SettingsPanel.module.css';
+import EarthSectionContainer from '../containers/EarthSectionContainer';
 
 // ── Props ──────────────────────────────────────────────────────────────────────
 
 type SettingsPanelProps = {
   /** Initial Panel open/closed state. App passes `false` on mobile viewports. */
   defaultOpen?: boolean;
-  /** Called when the user clicks "Reset camera". App wires it to a Milky-Way focus. */
-  onResetCamera: () => void;
 };
 
 // ── SettingsPanel ──────────────────────────────────────────────────────────────
 
 export const SettingsPanel = memo(function SettingsPanel({
   defaultOpen,
-  onResetCamera,
 }: SettingsPanelProps): ReactNode {
   return (
     <Panel
@@ -84,12 +80,10 @@ export const SettingsPanel = memo(function SettingsPanel({
       <CosmicWebSectionContainer />
       <FlowSectionContainer />
       <StructuresSectionContainer />
-      <LabelsSectionContainer />
-      <DisplaySectionContainer />
-      <div className={styles.panelDivider} role="separator" />
-      <Button className={styles.resetButton} onClick={onResetCamera}>
-        Reset camera
-      </Button>
+      <LabelsAndGuidesSectionContainer />
+      <DisplaySectionContainer>
+        <EarthSectionContainer />
+      </DisplaySectionContainer>
     </Panel>
   );
 });

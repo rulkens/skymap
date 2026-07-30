@@ -7,7 +7,7 @@ import type { GalaxyCatalogSourceType } from '../data/galaxyCatalog/GalaxyCatalo
  *
  * It is exactly the raw inputs `buildGalaxyInfo` needs — positions, the stored
  * spectroscopic redshift, the five mag slots, diameter, orientation, the
- * per-record class/parent bytes, plus the optional famous-meta block — and
+ * per-record class/parent bytes, plus the optional famous-galaxies-meta block — and
  * nothing derived. Every derived field (sexagesimal, distance, colours, urls,
  * provenance) is a PURE function of these, so it computes React-side.
  *
@@ -33,6 +33,22 @@ export type GalaxyRow = {
   readonly diameterKpc: number;
   readonly axisRatio: number;
   readonly positionAngleDeg: number;
+  /**
+   * True when (axisRatio, positionAngleDeg) is a deterministic hash fallback
+   * rather than a real measurement — the authoritative persisted flag,
+   * threaded straight from `cloud.orientationIsFallback`. Drives the
+   * InfoCard's "measured vs estimated" orientation provenance without
+   * re-hashing from position (which was lossy).
+   */
+  readonly orientationIsFallback: boolean;
+  /**
+   * True when `diameterKpc` is the flat 30 kpc fallback rather than a real
+   * measurement — the authoritative persisted flag, threaded straight from
+   * `cloud.diameterIsFallback`. Drives the InfoCard's diameter provenance tag,
+   * replacing the old `diameterKpc === 30` compare (lossy: a genuinely
+   * measured 30 kpc galaxy would have been mislabeled fallback).
+   */
+  readonly diameterIsFallback: boolean;
   readonly classByte: number;
   readonly parentSurveyByte: number;
   readonly famous?: {

@@ -2,7 +2,7 @@
  * SettingsSnapshot — the whole-cluster capture the cinematic tour takes
  * before it plays an effect, and restores afterwards.
  *
- * ### Why these seven clusters and not the whole settings bag
+ * ### Why these ten clusters and not the whole settings bag
  *
  * The tour captures, mutates, and restores the user's settings around a
  * playback. Only the clusters that carry user-visible *visibility* and
@@ -14,9 +14,18 @@
  *   - `filaments`      — filament-skeleton master gate + intensity.
  *   - `milkyWay`       — Milky-Way disk + label axes.
  *   - `flow`           — CF4++ flow-field overlay gate + look/motion knobs.
+ *   - `orbitTrails`    — near-field Keplerian orbit-trails master gate.
+ *   - `starCatalogs`   — star-catalog gates + per-catalog caption toggles.
+ *   - `bodies`         — per-body visibility + caption toggles.
  *   - `labels`         — cross-cutting label-presentation mode (focusedOnly).
  *
- * The remaining clusters (`tonemap`, `camera`, `bias`, `thumbnails`,
+ * `starCatalogs` brings its shared look knobs (`sizePx`, `brightness`, the
+ * exposure anchors) into the capture along with the gates — this module
+ * already captures whole clusters with zero per-field projection, and
+ * `galaxyCatalogs` does the same today, so pulling the look knobs along for
+ * the ride is consistent with existing policy rather than a new one.
+ *
+ * The remaining clusters (`tonemap`, `bloom`, `camera`, `bias`, `thumbnails`,
  * `debug`) are deliberately excluded: the tour neither drives nor restores
  * them, so capturing them would invite a restore that stomps a value the
  * tour never meant to own.
@@ -33,6 +42,15 @@ import type { EngineSettingsState } from '../../settings/EngineSettingsState';
 export type SettingsSnapshot = Readonly<
   Pick<
     EngineSettingsState,
-    'galaxyCatalogs' | 'structures' | 'volumes' | 'filaments' | 'milkyWay' | 'flow' | 'labels'
+    | 'galaxyCatalogs'
+    | 'structures'
+    | 'volumes'
+    | 'filaments'
+    | 'milkyWay'
+    | 'flow'
+    | 'orbitTrails'
+    | 'starCatalogs'
+    | 'bodies'
+    | 'labels'
   >
 >;

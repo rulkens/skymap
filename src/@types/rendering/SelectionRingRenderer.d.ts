@@ -23,12 +23,20 @@ export type SelectionRingRenderer = {
    * `ringRadiusPx` is the final CSS-pixel radius — the caller has already
    * baked in the halo factor. Must be called inside a `beginRenderPass`
    * block on the swap-chain texture (premultiplied-OVER expects an LDR target).
+   *
+   * `sceneDepthView` is consumed only by an instance created with
+   * `occludeAgainstDepth: 'compare' | 'coverage'`, where it feeds the group(1)
+   * depth joint so fragments behind a nearer solar-system body are discarded
+   * (per-pixel body occlusion).  The mode picks the occluder — `'compare'` for
+   * a same-slab NEAR0 ring, `'coverage'` for the cross-slab COSMO ring.  A
+   * plain instance ignores it.
    */
   draw(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: Vec2,
     selection: { worldPos: Readonly<Vec3>; ringRadiusPx: number } | null,
+    sceneDepthView?: GPUTextureView,
   ): void;
   /** Release all GPU resources. No-op if constructed with a null device. */
   destroy(): void;

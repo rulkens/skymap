@@ -22,6 +22,7 @@ import type { Mat4 } from 'wgpu-matrix';
 
 import { Source } from '../../../../../src/data/sources';
 import { BiasMode } from '../../../../../src/data/galaxyCatalog/biasMode';
+import { DEFAULT_GALAXY_PROVENANCE } from '../../../../../src/data/defaults';
 import {
   CONTENT_LAYERS,
   scalarVolumeLayer,
@@ -36,6 +37,7 @@ import {
   starAggregateUpsampleLayer,
   foregroundLabelsLayer,
   near0SelectionRingLayer,
+  clipPathDebugLayer,
   structureMarkersLayer,
 } from '../../../../../src/services/engine/frame/passes';
 import { COSMO, NEAR0, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
@@ -94,9 +96,11 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     vp: Float64Array.from(vp as unknown as Float32Array),
     originRelative: false,
     precision: 'f32',
+    reversedZ: false,
   };
   return {
     isReady: true,
+    renderedTargets: new Set<string>(),
     cam,
     vp,
     // Index 0 (NEAR0) duplicates the cosmological row: the milky-way draw
@@ -108,6 +112,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     drawCamPos,
     drawPxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
     nowMs: 0,
+    simDays: 0,
     fovYRad: (60 * Math.PI) / 180,
     focusBlend: 0,
     visibleSourceMask: 0xffffffff,
@@ -193,17 +198,13 @@ const HDR_NAMES = [
   'structure-markers',
 ];
 
-// The canonical swap-group (post-tone-map, premultiplied-OVER) name order —
-// see the renderer-unification design's migration table (spec lines
-// 208-212). Selection ring leads so marker-lines and labels composite over
-// its stroke; the debug clip-path overlay trails everything else.
-const SWAP_NAMES = [
-  'selection-ring',
-  'disk-radius-ring',
-  'marker-lines',
-  'labels',
-  'clip-path-debug',
-];
+// The canonical (swap, COSMO) group (post-tone-map, premultiplied-OVER) name
+// order — see the renderer-unification design's migration table (spec lines
+// 208-212). Selection ring leads so marker-lines and labels composite over its
+// stroke. The debug clip-path overlay is NOT here: it projects through NEAR0
+// (so a near-field route clears the cosmological near plane) — see
+// NEAR_SWAP_NAMES below.
+const SWAP_NAMES = ['selection-ring', 'disk-radius-ring', 'marker-lines', 'labels'];
 
 // The near-field foreground group: the true-scale bodies drawn into the
 // depth-bearing `foreground:0` target through the near0 slab — Earth, the Sun
@@ -211,13 +212,14 @@ const SWAP_NAMES = [
 // flat-lit `planets` branch, and its `textured-bodies` branch. Opaque
 // (depth-tested), unlike the additive HDR group and the OVER swap group. The
 // focused-field-star sphere sits right after star-spheres — a selection-gated
-// sibling reusing the same star renderer. The translucent `rings` overlay is
-// NOT in this list: it targets foreground:0 but blends OVER, so it is pinned
-// separately (see the ringsLayer registry-row test below).
+// sibling reusing the same star renderer. The translucent `cloud-shell` and
+// `rings` overlays are NOT in this list: both target foreground:0 but blend
+// OVER, so they are pinned separately (see the ringsLayer registry-row test
+// below).
 const FOREGROUND_NAMES = [
   'earth',
   'star-spheres',
-  'focused-field-star-sphere',
+  'field-star-sphere',
   'planets',
   'textured-bodies',
 ];
@@ -239,6 +241,7 @@ const NEAR_HDR_NAMES = [
   'body-glints',
   'star-catalog',
   'star-upsample',
+  'constellations',
 ];
 
 // The near-field swap group: the overlays that pair the swap target with the
@@ -247,8 +250,12 @@ const NEAR_HDR_NAMES = [
 // near-field content rather than being clipped by the cosmological near plane.
 // Its own (swap, NEAR0) render group, distinct from the (swap, COSMO) overlays
 // above: the star selection ring first (so its stroke sits under the caption,
-// mirroring the COSMO ring→labels order), then the scene-body name captions.
-const NEAR_SWAP_NAMES = ['near0-selection-ring', 'foreground-labels'];
+// mirroring the COSMO ring→labels order), then the scene-body name captions,
+// then the clip-path inspector overlay LAST (so its debug route + gizmo draw on
+// top of everything). The clip-path overlay projects through NEAR0 so a
+// near-field clip's route — Earth-to-parsec, wholly inside COSMO's 10 kpc near
+// plane — is not clipped to nothing.
+const NEAR_SWAP_NAMES = ['near0-selection-ring', 'foreground-labels', 'clip-path-debug'];
 
 // ── Tests ───────────────────────────────────────────────────────────────────
 
@@ -300,7 +307,7 @@ describe('CONTENT_LAYERS migration table (near-field hdr group)', () => {
 
 describe('CONTENT_LAYERS migration table (swap group)', () => {
   it('every swap content layer matches the migration table', () => {
-    // The five post-tone-map UI overlays project through the same
+    // The COSMO post-tone-map UI overlays project through the same
     // cosmological slab as the HDR group but target the swap chain with
     // premultiplied-OVER blending — see the renderer-unification design's
     // migration table (spec lines 208-212).
@@ -331,19 +338,21 @@ describe('CONTENT_LAYERS migration table (foreground group)', () => {
 });
 
 describe('CONTENT_LAYERS migration table (near-field swap group)', () => {
-  it('the star selection ring and scene-body captions draw into swap through the near0 slab, over', () => {
+  it('the star selection ring, scene-body captions, and clip-path overlay draw into swap through the near0 slab, over', () => {
     // The (swap, NEAR0) group: like the COSMO swap overlays these target the
     // swap chain with premultiplied-OVER, but they project through NEAR0 so
     // their anchors track true-scale near-field content (a picked star, a body
-    // caption) rather than being clipped by the cosmological near plane. Drawn
-    // by the program's (swap, NEAR0) render step, filtered here by (target,
-    // slab) so a mis-registered member surfaces — the ring leads the caption.
+    // caption, a near-field clip's route) rather than being clipped by the
+    // cosmological near plane. Drawn by the program's (swap, NEAR0) render step,
+    // filtered here by (target, slab) so a mis-registered member surfaces — the
+    // ring leads the caption, the clip-path overlay trails.
     const nearSwap = CONTENT_LAYERS.filter(
       (layer) => layer.target === 'swap' && layer.slab === NEAR0,
     );
     expect(nearSwap.map((layer) => layer.name)).toEqual(NEAR_SWAP_NAMES);
     expect(nearSwap).toContain(near0SelectionRingLayer);
     expect(nearSwap).toContain(foregroundLabelsLayer);
+    expect(nearSwap).toContain(clipPathDebugLayer);
     for (const layer of nearSwap) {
       expect(layer.slab).toBe(NEAR0);
       expect(layer.target).toBe('swap');
@@ -366,33 +375,52 @@ describe('CONTENT_LAYERS blend legality', () => {
       ) {
         expect(layer.blend).toBe('additive');
       } else if (layer.target === 'foreground:0') {
-        // The `foreground:0` group is opaque bodies EXCEPT the ring: it is the
-        // one translucent overlay there, drawn LAST (after the opaque spheres),
-        // depth-tested against them but writing no depth, straight-alpha OVER
-        // (spec §8 / grill Q9). Its pipeline bakes exactly that profile
-        // (foreground:0 formats, depth read / no write, over blend), so the row
-        // legitimately carries `over` where its siblings carry `opaque` — the
-        // sole target that admits two blends today.
-        if (layer.name === 'rings') {
+        // The `foreground:0` group is opaque bodies EXCEPT the three translucent
+        // overlays — the ring, Earth's cloud shell, and Earth's in-scatter
+        // atmosphere — each drawn AFTER the opaque spheres, depth-tested against
+        // them but writing no depth, straight-alpha OVER (spec §8 / §8.3 / grill
+        // Q9). Their pipelines bake exactly that profile (foreground:0 formats,
+        // depth read / no write, over blend), so those rows legitimately carry
+        // `over` where their siblings carry `opaque` — the sole target that admits
+        // two blends today.
+        if (
+          layer.name === 'rings' ||
+          layer.name === 'cloud-shell' ||
+          layer.name === 'atmosphere-shell'
+        ) {
           expect(layer.blend).toBe('over');
         } else {
           expect(layer.blend).toBe('opaque');
         }
       } else if (layer.target === 'swap') {
         expect(layer.blend).toBe('over');
+      } else if (/^bloom[0-4]$/.test(layer.target)) {
+        // The bloom mip pyramid rows: the bright prefilter and the four
+        // downsample folds OVERWRITE their target (opaque — each is its target's
+        // sole producer), while the four upsample folds accumulate ADDITIVELY
+        // onto the finer level. So a `bloomN` target legitimately admits both
+        // blends, split by which stage draws it: `bloom-up-*` is additive, the
+        // bright + `bloom-down-*` producers are opaque. (The final fold targets
+        // `hdr`, additive — covered by the `hdr` branch above.)
+        if (layer.name.startsWith('bloom-up-')) {
+          expect(layer.blend).toBe('additive');
+        } else {
+          expect(layer.blend).toBe('opaque');
+        }
       } else {
         throw new Error(
           `CONTENT_LAYERS: unexpected target '${layer.target}' on layer '${layer.name}'`,
         );
       }
     }
-    // Eight layers blend OVER: the five COSMO swap overlays, the two (swap,
-    // NEAR0) overlays (the near0 star selection ring and foreground-labels), and
-    // the translucent ring (the sole OVER member of the otherwise-opaque
-    // foreground group). The star-picking branch adds near0-selection-ring and
-    // the planet-rendering branch adds the ring, so both merged in raise the
-    // count from the pre-merge six to eight.
-    expect(CONTENT_LAYERS.filter((layer) => layer.blend === 'over')).toHaveLength(8);
+    // Ten layers blend OVER: the four COSMO swap overlays, the three (swap,
+    // NEAR0) overlays (the near0 star selection ring, foreground-labels, and the
+    // clip-path inspector route — moved here from the COSMO swap group so a
+    // near-field clip's parsec-scale route is not clipped by the cosmological
+    // near plane), and the three translucent foreground members — the ring,
+    // Earth's cloud shell, and Earth's in-scatter atmosphere (the three OVER
+    // members of the otherwise-opaque foreground group).
+    expect(CONTENT_LAYERS.filter((layer) => layer.blend === 'over')).toHaveLength(10);
   });
 });
 
@@ -412,6 +440,52 @@ describe('ringsLayer registry row', () => {
     const idxTextured = CONTENT_LAYERS.findIndex((layer) => layer.name === 'textured-bodies');
     const idxRings = CONTENT_LAYERS.findIndex((layer) => layer.name === 'rings');
     expect(idxRings).toBeGreaterThan(idxTextured);
+  });
+});
+
+describe('cloudShellLayer registry row', () => {
+  it('draws into foreground:0 through NEAR0 with over, AFTER earth', () => {
+    // Earth's cloud deck is the second translucent overlay of the (foreground:0,
+    // NEAR0) group: it blends OVER, so it must be ordered after the opaque surface
+    // earthLayer stamps, to depth-test against its z (far hemisphere occluded). It
+    // is deliberately NOT in FOREGROUND_NAMES (that group's opaque assertion) — it
+    // is the exception, alongside the ring.
+    const cloud = CONTENT_LAYERS.find((layer) => layer.name === 'cloud-shell')!;
+    expect(cloud).toBeDefined();
+    expect(cloud.slab).toBe(NEAR0);
+    expect(cloud.target).toBe('foreground:0');
+    expect(cloud.blend).toBe('over');
+
+    const idxEarth = CONTENT_LAYERS.findIndex((layer) => layer.name === 'earth');
+    const idxCloud = CONTENT_LAYERS.findIndex((layer) => layer.name === 'cloud-shell');
+    expect(idxCloud).toBeGreaterThan(idxEarth);
+  });
+});
+
+describe('atmosphereShellLayer registry row', () => {
+  it('draws into foreground:0 through NEAR0 with over, LAST — after the rings overlay', () => {
+    // Earth's in-scatter atmosphere is the outermost translucent overlay of the
+    // (foreground:0, NEAR0) group (spec §8.3): it blends OVER and must be ordered
+    // AFTER every opaque sphere AND the ring overlay, so it depth-tests against
+    // their stamped z (over-disc occluded, limb over space passes). It is
+    // deliberately NOT in FOREGROUND_NAMES (that group's opaque assertion) — it is
+    // the third exception, alongside the ring and cloud shell. Non-pickable.
+    const atmosphere = CONTENT_LAYERS.find((layer) => layer.name === 'atmosphere-shell')!;
+    expect(atmosphere).toBeDefined();
+    expect(atmosphere.slab).toBe(NEAR0);
+    expect(atmosphere.target).toBe('foreground:0');
+    expect(atmosphere.blend).toBe('over');
+    expect(atmosphere.drawPick).toBeUndefined();
+
+    // It is the LAST foreground:0 layer in registry order (after the ring), so
+    // its draw trails every opaque + translucent sibling in the group.
+    const idxRings = CONTENT_LAYERS.findIndex((layer) => layer.name === 'rings');
+    const idxAtmosphere = CONTENT_LAYERS.findIndex((layer) => layer.name === 'atmosphere-shell');
+    expect(idxAtmosphere).toBeGreaterThan(idxRings);
+    const fgIndices = CONTENT_LAYERS.map((layer, i) => ({ layer, i })).filter(
+      ({ layer }) => layer.target === 'foreground:0' && layer.slab === NEAR0,
+    );
+    expect(fgIndices[fgIndices.length - 1]!.layer).toBe(atmosphere);
   });
 });
 
@@ -671,8 +745,7 @@ const POINT_SPRITES_SETTINGS_STUB = {
   galaxyCatalogs: {
     sizePx: 2.5,
     brightness: 1.0,
-    highlightFallback: true,
-    realOnly: false,
+    provenance: DEFAULT_GALAXY_PROVENANCE,
     depthFade: true,
   },
   bias: {
@@ -830,7 +903,7 @@ describe('drawPick migration-table rows', () => {
       'star-catalog',
       'earth',
       'star-spheres',
-      'focused-field-star-sphere',
+      'field-star-sphere',
       'planets',
     ]);
   });

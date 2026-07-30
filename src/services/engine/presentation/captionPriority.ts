@@ -17,6 +17,14 @@
  * two-field rank) was the smaller change: the helper's contract is untouched
  * and the score is trivially inspectable at the call site.
  *
+ * The constellation figure names ride the LOWEST tier — below every scene body
+ * — because they are a diffuse orientation overlay, not a navigation landmark:
+ * in a collision a body's name (Sun, a planet, a nearby star) must always win
+ * so the descent's aim points stay legible. Their anchors also carry no
+ * apparent size (empty space at a figure centroid), so the within-tier size
+ * tiebreak is 0 for them and a constellation-vs-constellation overlap falls to
+ * the stable emission order.
+ *
  * `satisfies` over the kind union makes the table compiler-complete: adding a
  * `CaptionKind` fails the build until it gets a tier here.
  */
@@ -27,7 +35,7 @@
  * the descent's aim point — it must out-rank every other caption, so a
  * declutter collision essentially cannot drop it.
  */
-export type CaptionKind = 'sun' | 'earth' | 'planet' | 'star';
+export type CaptionKind = 'sun' | 'earth' | 'planet' | 'star' | 'constellation';
 
 /**
  * Tier dominance factor for the composed declutter score. Apparent size is
@@ -42,4 +50,6 @@ export const CAPTION_PRIORITY = {
   earth: 30,
   planet: 20,
   star: 10,
+  // Below every scene body: a figure name always yields to a body caption.
+  constellation: 5,
 } as const satisfies Readonly<Record<CaptionKind, number>>;

@@ -67,8 +67,12 @@ import type { DesiPatch } from './desiPatches';
 import { encodeGalaxyCatalog } from '../../src/data/galaxyCatalog/galaxyCatalogFormat';
 import { raDecZToCartesian } from '../../src/utils/math/index';
 import { raDecDistToCartesian } from '../../src/utils/math/raDecDistToCartesian';
+import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';
 import { fallbackOrientation } from '../../src/utils/random/fallbackOrientation';
 import { catalogDistanceFor } from './catalogDistanceFor';
+import type { LocalVolumeDistanceSeed } from './catalogDistanceFor';
+import { loadLocalVolumeDistanceSeed } from './loadLocalVolumeDistanceSeed';
+import { arcsecToKpc } from '../../src/utils/math/arcsecToKpc';
 import { CUTOFF_MPC } from './localVolumeCutoff';
 import type { Cf4CatalogIndex } from '../parsers/cosmicflows4';
 import { loadCf4CatalogIndex } from '../parsers/cosmicflows4';
@@ -101,6 +105,12 @@ export type { CrossMatchInputs } from './crossMatch';
 export type LocalVolumeOverrides = {
   cf4: Cf4CatalogIndex;
   hyperLeda: HyperLedaShapeMap;
+  /**
+   * Curated redshift-independent distances for galaxies CF4 and the partial
+   * HyperLEDA cache both miss — chiefly the blueshifted 2MRS rows. Checked
+   * first in `catalogDistanceFor`. Empty map when the seed file is absent.
+   */
+  blueshiftSeed: LocalVolumeDistanceSeed;
 };
 
 /**
@@ -141,6 +151,8 @@ export function recordsToCloud(
     classByte: new Uint8Array(count),
     parentSurveyByte: new Uint8Array(count),
     spectroscopicZ: new Float32Array(count),
+    orientationIsFallback: new Uint8Array(count),
+    diameterIsFallback: new Uint8Array(count),
   };
   let overridesApplied = 0;
   for (let i = 0; i < count; i++) {
@@ -151,7 +163,9 @@ export function recordsToCloud(
     let y: number;
     let z: number;
     const overrideHit =
-      overrides !== null ? catalogDistanceFor(r, overrides.cf4, overrides.hyperLeda) : null;
+      overrides !== null
+        ? catalogDistanceFor(r, overrides.cf4, overrides.hyperLeda, overrides.blueshiftSeed)
+        : null;
     if (overrideHit !== null && overrideHit.distMpc < CUTOFF_MPC) {
       // Inside-cutoff catalog match: use the measured distance for the
       // cartesian position. The catalogued z still lands on
@@ -159,6 +173,17 @@ export function recordsToCloud(
       // line keeps showing the published value.
       [x, y, z] = raDecDistToCartesian(r.ra, r.dec, overrideHit.distMpc);
       overridesApplied++;
+    } else if (r.z < 0) {
+      // Blueshifted row with no redshift-independent distance. The cz path
+      // (raDecZToCartesian) would run a negative Hubble distance and mirror
+      // the galaxy through the origin to an antipodal position — wrong
+      // hemisphere, not just wrong distance. Place it in its TRUE direction at
+      // |distance| instead: a wrong distance is far less wrong than a wrong
+      // patch of sky, and it still avoids stacking on the origin. The
+      // local-volume seed already fixes the ones we have real distances for;
+      // this is the safety net for those we don't (heavily-extincted
+      // Zone-of-Avoidance dwarfs with no measured distance anywhere).
+      [x, y, z] = raDecDistToCartesian(r.ra, r.dec, Math.abs(redshiftToDistanceMpc(r.z)));
     } else {
       // No catalog match, or the match is past the cutoff (in which case
       // the Hubble-flow distance is good enough that the extra dependency
@@ -181,13 +206,21 @@ export function recordsToCloud(
     // hash-based orientation so every encoded point has a finite (axisRatio,
     // PA) pair. The hash uses (objID, ra, dec) so reload yields the same
     // tilt every time.
+    //
+    // This branch is the ONE place that knows real-vs-fallback for certain,
+    // so it stamps `orientationIsFallback` here (the single source of truth).
+    // Persisting the byte spares the load side from re-deriving the flag by
+    // re-hashing the baked f32 position and comparing floats — a lossy
+    // round-trip that misclassified ~10 % of fallback rows.
     if (r.axisRatio !== null && r.positionAngleDeg !== null) {
       cloud.axisRatio[i] = r.axisRatio;
       cloud.positionAngleDeg[i] = r.positionAngleDeg;
+      cloud.orientationIsFallback[i] = 0;
     } else {
       const fb = fallbackOrientation(r.objID, r.ra, r.dec);
       cloud.axisRatio[i] = fb.axisRatio;
       cloud.positionAngleDeg[i] = fb.positionAngleDeg;
+      cloud.orientationIsFallback[i] = 1;
     }
     // Diameter: prefer the parser-supplied real measurement (2MRS Riso,
     // GLADE Tully(Bmag), SDSS petroR50_r).  When the parser couldn't
@@ -200,8 +233,28 @@ export function recordsToCloud(
     // wouldn't touch every parser, and (3) the null/finite distinction at
     // the parser boundary doubles as the provenance signal for the
     // InfoCard's "real / Tully / fallback" chip.
-    cloud.diameterKpc[i] =
-      r.diameterKpc !== null && r.diameterKpc > 0 ? r.diameterKpc : DEFAULT_GALAXY_DIAMETER_KPC;
+    // Diameter precedence:
+    //   1. the parser's distance-baked physical diameter (2MRS cz > 0 Riso,
+    //      GLADE Tully, SDSS petroR50), when it produced a finite positive one;
+    //   2. else re-derive from the parser's raw *angular* size against the
+    //      distance we actually adopted above — this is what rescues the
+    //      blueshifted 2MRS rows, whose cz-baked diameterKpc was null but whose
+    //      Riso angular size is real and now pairs with a real seed distance;
+    //   3. else the flat DEFAULT_GALAXY_DIAMETER_KPC = 30.
+    let diameterKpc = r.diameterKpc !== null && r.diameterKpc > 0 ? r.diameterKpc : null;
+    if (diameterKpc === null && r.angularMajorAxisArcsec !== undefined) {
+      const adoptedDistMpc = Math.hypot(x, y, z);
+      const fromAngular = arcsecToKpc(r.angularMajorAxisArcsec, adoptedDistMpc);
+      if (Number.isFinite(fromAngular) && fromAngular > 0) diameterKpc = fromAngular;
+    }
+    // `diameterKpc === null` here means both attempts failed — no measured
+    // size and no angular size to re-derive one — so the row falls through to
+    // the flat DEFAULT_GALAXY_DIAMETER_KPC = 30. Stamp the authoritative
+    // fallback signal on that exact distinction (single source of truth,
+    // mirroring the orientationIsFallback stamp above) so the load side never
+    // has to guess via a lossy `diameterKpc === 30` compare.
+    cloud.diameterIsFallback[i] = diameterKpc === null ? 1 : 0;
+    cloud.diameterKpc[i] = diameterKpc ?? DEFAULT_GALAXY_DIAMETER_KPC;
     // Per-source classification byte (e.g. Milliquas AGN class
     // letter → 1..6).  Every parser that doesn't carry a class
     // signal leaves r.classByte at 0, so we copy unconditionally.
@@ -323,7 +376,7 @@ function loadOrEmpty(path: string | undefined, parser: ParserFn): ParsedRecord[]
 function loadMilliquas(path: string | undefined): MilliquasParseResult {
   const empty: MilliquasParseResult = {
     records: [],
-    skipped: { zMissing: 0, zZero: 0, photoZRounded: 0, qsocRounded: 0 },
+    skipped: { zMissing: 0, zNonPositive: 0, photoZRounded: 0, qsocRounded: 0 },
   };
   if (!path) return empty;
   const full = resolve(path);
@@ -335,12 +388,12 @@ function loadMilliquas(path: string | undefined): MilliquasParseResult {
   const result = parseMilliquas(text);
   const { records, skipped } = result;
   const skippedTotal =
-    skipped.zMissing + skipped.zZero + skipped.photoZRounded + skipped.qsocRounded;
+    skipped.zMissing + skipped.zNonPositive + skipped.photoZRounded + skipped.qsocRounded;
   process.stderr.write(
     `  loaded ${records.length.toLocaleString()} records ` +
       `(skipped ${skippedTotal.toLocaleString()}: ` +
       `z=blank ${skipped.zMissing.toLocaleString()}, ` +
-      `z=0 ${skipped.zZero.toLocaleString()}, ` +
+      `z<=0 ${skipped.zNonPositive.toLocaleString()}, ` +
       `photo-z ${skipped.photoZRounded.toLocaleString()}, ` +
       `GAIA3 QSOC ${skipped.qsocRounded.toLocaleString()})\n`,
   );
@@ -579,7 +632,13 @@ async function runCli(): Promise<void> {
   // tolerant — a fresh checkout without the raw CF4 download still
   // produces .bin outputs, just without the override fired.
   const cf4Index = loadCf4CatalogIndex();
-  const overrides: LocalVolumeOverrides = { cf4: cf4Index, hyperLeda: leda };
+  // Curated redshift-independent distances for the blueshifted local-volume
+  // galaxies CF4 + HyperLEDA miss. Missing-file tolerant (returns empty map).
+  const blueshiftSeed = loadLocalVolumeDistanceSeed();
+  if (blueshiftSeed.size > 0) {
+    process.stderr.write(`loaded ${blueshiftSeed.size} curated local-volume distance(s)\n`);
+  }
+  const overrides: LocalVolumeOverrides = { cf4: cf4Index, hyperLeda: leda, blueshiftSeed };
 
   process.stderr.write('parsing SDSS…\n');
   const sdss = loadOrEmpty(args.sdss, parseSdssCsv);
@@ -725,10 +784,33 @@ async function runCli(): Promise<void> {
   //    survey it draws from (SDSS, Veron, NED, …), so a second dedup
   //    pass would just spend CPU re-discovering the empty intersection.
   //
-  // Add the records straight into the per-source bucket so the per-tier
-  // write loop below treats them like any other survey.
+  // The crossMatch bypass above does NOT extend to the famous-seed dedup.
+  // Milliquas used to be added straight to the bucket here, which meant it
+  // silently skipped `dropFamousMatches` (that runs on the crossMatch output,
+  // which Milliquas is deliberately absent from) — so a famous galaxy with an
+  // active nucleus rendered twice: once as its curated entry, once as a
+  // Milliquas point on top. Centaurus A was the visible case.
+  //
+  // Measured cost of closing the gap: 20 of ~943k Milliquas rows sit within
+  // 30" of a famous-seed position, and only ONE is genuinely a different
+  // object — a ~1 Gpc background quasar shining through the Antennae. The
+  // rest are the host's own nucleus, scattered in distance only by Milliquas'
+  // coarse 3-decimal redshift (z=0.001 quantises to 4.28 Mpc, 0.002 to 8.56,
+  // …). Losing one background AGN to de-duplicate 19 is the accepted trade;
+  // a redshift-agreement test like `crossMatch` uses would save it, at the
+  // cost of a second matching pass for 19 rows.
   if (milliquasResult.records.length > 0) {
-    bySource.set(Source.Milliquas, milliquasResult.records);
+    const { kept: milliquasKept, dropped: milliquasFamousDropped } = dropFamousMatches(
+      milliquasResult.records,
+      famousPositions,
+      30,
+    );
+    if (milliquasFamousDropped > 0) {
+      process.stderr.write(
+        `  famous-seed dedup: dropped ${milliquasFamousDropped.toLocaleString()} Milliquas rows that match a famous-seed position\n`,
+      );
+    }
+    bySource.set(Source.Milliquas, milliquasKept);
   }
 
   // Per-source dedup report. Subtracting kept from input gives the number

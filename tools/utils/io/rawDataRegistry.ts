@@ -24,6 +24,8 @@
 
 import { resolve } from 'node:path';
 
+import { BMNG_VINTAGE } from './bmngVintage';
+
 export type RawDataEntry = {
   readonly path: string;
   readonly kind: 'file' | 'directory';
@@ -139,6 +141,14 @@ export const RAW_DATA = {
       'Hand-authored seed list of featured galaxy clusters, superclusters, and voids. Drives the structure-coverage POI build.',
   },
 
+  'localvolume.distances': {
+    path: 'data/seeds/local_volume_distances.seed.json',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Hand-curated redshift-independent distances (Mpc) for blueshifted local-volume galaxies that CF4 and the partial HyperLEDA cache both miss. Keyed by 2MASS XSC designation; consumed by the local-volume distance override in buildAllBins.',
+  },
+
   // ─── Famous (curated catalog) ──────────────────────────────────────────
 
   'famous.seed': {
@@ -154,6 +164,13 @@ export const RAW_DATA = {
     source: 'committed',
     description:
       'Hand-authored seed list of well-known stars (Sirius, Betelgeuse, the Sun, …). Drives the famous-stars build (generated render table + meta sidecar) and the Gaia dedup.',
+  },
+  'planet-facts.seed': {
+    path: 'data/seeds/planet_facts.seed.json',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Hand-authored fact sheets for every Solar-System body (planets + moons). Drives the planet-facts build (generated BODY_FACTS table for the InfoCard).',
   },
   'famous.curated': {
     path: 'data/seeds/famous_curated_overrides.json',
@@ -487,7 +504,7 @@ export const RAW_DATA = {
   // pulls each body's highest usable native tier (8k SSS JPGs, the 4k
   // Venus atmosphere cap, the 2k featureless ice giants, the BMNG Earth
   // equirect, the USGS Galilean-moon GeoTIFFs); `build-textures` then
-  // downsamples per `BODY_TEXTURE_REGISTRY[id].maxTier` — never upscaling.
+  // downsamples per `BODY_TEXTURE_REGISTRY[id].kinds[kind]` — never upscaling.
   // All raw sources are gitignored build inputs (like the catalog .dat
   // files); the combined `.sha256` sidecar + provenance README are the
   // committed record (covered by the `!/data/raw/**/*.sha256` +
@@ -522,20 +539,22 @@ export const RAW_DATA = {
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
-  'textures.sssJupiter8k': {
-    path: 'data/raw/textures/8k_jupiter.jpg',
+  'textures.sssJupiter4k': {
+    path: 'data/raw/textures/4k_jupiter.jpg',
     kind: 'file',
     source: 'gitignored',
-    description: 'Solar System Scope Jupiter cloud bands, 8k JPG (CC BY 4.0).',
+    description:
+      'Solar System Scope Jupiter cloud bands, 4096x2048 JPG (CC BY 4.0). Named 4k locally though the upstream filename says 8k — the delivered image is 4096x2048, not 8192x4096.',
     upstream: 'https://www.solarsystemscope.com/textures/download/8k_jupiter.jpg',
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
-  'textures.sssSaturn8k': {
-    path: 'data/raw/textures/8k_saturn.jpg',
+  'textures.sssSaturn4k': {
+    path: 'data/raw/textures/4k_saturn.jpg',
     kind: 'file',
     source: 'gitignored',
-    description: 'Solar System Scope Saturn cloud bands, 8k JPG (CC BY 4.0).',
+    description:
+      'Solar System Scope Saturn cloud bands, 4096x2048 JPG (CC BY 4.0). Named 4k locally though the upstream filename says 8k — the delivered image is 4096x2048, not 8192x4096.',
     upstream: 'https://www.solarsystemscope.com/textures/download/8k_saturn.jpg',
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
@@ -579,25 +598,164 @@ export const RAW_DATA = {
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
+
+  // ─── BMNG Earth imagery — one vintage, two publications ───────────────
+  //
+  // Every path/URL below takes its month from `BMNG_VINTAGE`: the whole-globe
+  // equirect and the eight quadrants have to be the SAME month, since the
+  // tile layer falls back to the base outside the baked window (see
+  // `BMNG_VINTAGE` for why).
+
   'textures.nasaBmng': {
-    path: 'data/raw/textures/world.topo.bathy.200412.3x21600x10800.jpg',
+    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x10800.jpg`,
     kind: 'file',
     source: 'gitignored',
-    description:
-      'NASA Blue Marble Next Generation, December topo+bathymetry equirect, 21600x10800 JPG (public domain, credit NASA Earth Observatory). Full-res Earth source.',
-    upstream:
-      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-topography-bathymetry/december/world.topo.bathy.200412.3x21600x10800.jpg',
+    description: `NASA Blue Marble Next Generation, ${BMNG_VINTAGE.label} topo+bathymetry equirect, 21600x10800 JPG (public domain, credit NASA Earth Observatory). Full-res Earth source; also the --dev source for the tile bake.`,
+    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x10800.jpg`,
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
   'textures.nasaBmngDev': {
-    path: 'data/raw/textures/world.topo.bathy.200412.3x5400x2700.jpg',
+    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x5400x2700.jpg`,
     kind: 'file',
     source: 'gitignored',
     description:
       'NASA Blue Marble Next Generation, 5400x2700 sibling of the full BMNG Earth equirect (public domain). The --dev quick-fetch subset source.',
+    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x5400x2700.jpg`,
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+
+  // The eight 21600x21600 quadrants composite to 86400x43200, about 464 m/texel
+  // and four ladder levels deeper than the equirect (z7 against z5). Only
+  // `build-earth-tiles` reads their pixels; they ride the same `fetch-textures`
+  // pull as everything else so the 421 MB is obtainable by command, not by hand.
+  // `BMNG_QUADRANT_KEYS` is the one enumeration of the set.
+
+  'textures.nasaBmngQuadrantA1': {
+    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.A1.jpg`,
+    kind: 'file',
+    source: 'gitignored',
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant A1 — lon -180..-90, lat 0..90 (public domain, credit NASA Earth Observatory).`,
+    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.A1.jpg`,
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.nasaBmngQuadrantA2': {
+    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.A2.jpg`,
+    kind: 'file',
+    source: 'gitignored',
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant A2 — lon -180..-90, lat -90..0 (public domain, credit NASA Earth Observatory).`,
+    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.A2.jpg`,
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.nasaBmngQuadrantB1': {
+    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.B1.jpg`,
+    kind: 'file',
+    source: 'gitignored',
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant B1 — lon -90..0, lat 0..90 (public domain, credit NASA Earth Observatory).`,
+    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.B1.jpg`,
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.nasaBmngQuadrantB2': {
+    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.B2.jpg`,
+    kind: 'file',
+    source: 'gitignored',
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant B2 — lon -90..0, lat -90..0 (public domain, credit NASA Earth Observatory).`,
+    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.B2.jpg`,
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.nasaBmngQuadrantC1': {
+    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.C1.jpg`,
+    kind: 'file',
+    source: 'gitignored',
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant C1 — lon 0..90, lat 0..90 (public domain, credit NASA Earth Observatory).`,
+    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.C1.jpg`,
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.nasaBmngQuadrantC2': {
+    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.C2.jpg`,
+    kind: 'file',
+    source: 'gitignored',
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant C2 — lon 0..90, lat -90..0 (public domain, credit NASA Earth Observatory).`,
+    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.C2.jpg`,
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.nasaBmngQuadrantD1': {
+    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.D1.jpg`,
+    kind: 'file',
+    source: 'gitignored',
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant D1 — lon 90..180, lat 0..90 (public domain, credit NASA Earth Observatory).`,
+    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.D1.jpg`,
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.nasaBmngQuadrantD2': {
+    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.D2.jpg`,
+    kind: 'file',
+    source: 'gitignored',
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant D2 — lon 90..180, lat -90..0 (public domain, credit NASA Earth Observatory).`,
+    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.D2.jpg`,
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+
+  'textures.earthWaterMask': {
+    path: 'data/raw/textures/world.watermask.21600x10800.png',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "NASA Blue Marble Next Generation land/water mask, equirect PNG (land=255, water=0), subsampled to 21600x10800 (public domain, credit NASA Earth Observatory). Feeds Earth's material map. Verified live 2026-07-19 (4.3 MB, original NEO file preserved by the Internet Archive; NASA retired the NEO bluemarble archive and the relocated BMNG collection dropped the mask files).",
     upstream:
-      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-topography-bathymetry/december/world.topo.bathy.200412.3x5400x2700.jpg',
+      'https://web.archive.org/web/20240509231512if_/https://neo.gsfc.nasa.gov/archive/bluemarble/bmng/landmask/world.watermask.21600x10800.png',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.earthNight': {
+    path: 'data/raw/textures/BlackMarble_2016_3km.jpg',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "NASA Black Marble 2016 night lights, 13500x6750 equirect JPG (public domain, credit NASA Earth Observatory / NASA's Goddard Space Flight Center, Suomi NPP VIIRS). Earth night-lights source — full pull only, no dev variant. Verified live 2026-07-19 (8,106,233 bytes, image/jpeg).",
+    upstream:
+      'https://eoimages.gsfc.nasa.gov/images/imagerecords/144000/144898/BlackMarble_2016_3km.jpg',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.earthElevation': {
+    path: 'data/raw/textures/gebco_08_rev_elev_21600x10800.png',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "NASA Visible Earth 'Topography' GEBCO_08-derived grayscale relief (land elevation + bathymetry shading), 21600x10800 equirect PNG (public domain, credit NASA Earth Observatory, imagery by Jesse Allen using GEBCO_08 grid data). Build-only bake input for Earth's normal map — never shipped as a runtime texture. Verified live 2026-07-19 (18,414,843 bytes, image/png).",
+    upstream:
+      'https://eoimages.gsfc.nasa.gov/images/imagerecords/73000/73934/gebco_08_rev_elev_21600x10800.png',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.moonElevation': {
+    path: 'data/raw/textures/ldem_16_uint.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "NASA SVS CGI Moon Kit LOLA elevation, 5760x2880 16-bit uint (half-metres, ref sphere 1737.4 km), centered 0 degrees longitude to match the SSS albedo; build-only bake input for the Moon's normal map, never shipped as a runtime texture; ~31.7 MB.",
+    upstream: 'https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/ldem_16_uint.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.earthClouds': {
+    path: 'data/raw/textures/cloud_combined_8192.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "NASA Visible Earth Blue Marble cloud composite, 8192x4096 equirect TIFF, white-cloud-on-black with no alpha (public domain, credit NASA Goddard Space Flight Center, Reto Stockli). Feeds Earth's cloud shell — build derives alpha from luminance. Full pull only, no dev variant. Verified live 2026-07-19 (35,870,468 bytes, image/tiff).",
+    upstream:
+      'https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57747/cloud_combined_8192.tif',
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
@@ -667,6 +825,39 @@ export const RAW_DATA = {
     source: 'committed',
     description:
       'Provenance for the planet-texture sources — upstream URLs, licences (SSS CC BY 4.0, NASA/USGS public domain), native dims, fetch date, checksums.',
+  },
+
+  // ─── Constellations (d3-celestial stick-figure lines) ─────────────────
+
+  'constellations.lines': {
+    path: 'data/raw/constellations/constellations.lines.json',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'd3-celestial constellation stick-figure lines (GeoJSON FeatureCollection of MultiLineString figures with [ra,dec] vertices). Vendored; resolved to real 3D star positions by the stars-rs constellation build stage.',
+    upstream: 'https://github.com/ofrohn/d3-celestial/blob/master/data/constellations.lines.json',
+    readme: 'constellations.readme',
+  },
+  'constellations.readme': {
+    path: 'data/raw/constellations/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the vendored d3-celestial line data — upstream URL, pinned commit, BSD-3 license, GeoJSON shape, fetch date, checksum.',
+  },
+  'constellations.sha256': {
+    path: 'data/raw/constellations/constellations.lines.json.sha256',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'SHA-256 sidecar for the vendored constellations.lines.json — committed so a drifted or truncated re-fetch is caught.',
+  },
+  'constellation-overrides.seed': {
+    path: 'data/seeds/constellation_overrides.seed.json',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Hand-authored per-vertex overrides (HIP id or explicit position) the stars-rs constellation resolver consults at step 3 when a stick-figure vertex has no famous-seed or population star to anchor to. Extended in response to the build failure that names each unresolvable vertex.',
   },
 
   // ─── StarNet++ weights (famous-galaxy curator) ────────────────────────

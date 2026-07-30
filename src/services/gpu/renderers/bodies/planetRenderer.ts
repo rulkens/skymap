@@ -46,14 +46,14 @@
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { PlanetRenderer } from '../../../../@types/rendering/PlanetRenderer';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
+import {
+  BODY_SPHERE_RINGS,
+  BODY_SPHERE_SEGMENTS,
+} from '../../../../data/bodies/sphereTessellation';
+import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import vsCode from '../../shaders/bodies/planet/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/planet/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
-
-/** UV-sphere tessellation counts — matches `earthRenderer` /
- *  `starRenderer` so every sphere body shares a mesh shape. */
-const SEGMENTS = 48;
-const RINGS = 24;
 
 /** Upper bound on planet/moon spheres drawn per frame. 21 bodies ship today
  *  (the seven non-Earth major planets + the Moon + Mars/Jupiter/Saturn's major
@@ -91,13 +91,20 @@ const INSTANCE_ATTRIBUTES: readonly GPUVertexAttribute[] = [
   { shaderLocation: 6, offset: 80, format: 'float32x4' }, // sunDirLocal (xyz + pad)
 ];
 
+/**
+ * @param reversedZ selects this slab's depth convention (single-sourced in
+ *   `SLAB_REVERSED_Z`): `false` ⇒ smaller-z-wins (`depthCompare: 'less'`),
+ *   `true` ⇒ reversed-Z greater-wins. Resolved through `resolveDepthCompare`
+ *   so this renderer never hardcodes the occlusion direction.
+ */
 export function createPlanetRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat,
   depthFormat: GPUTextureFormat,
+  reversedZ: boolean,
 ): PlanetRenderer {
   // ── Geometry upload (positions + indices; the lambert term needs no uvs) ──
-  const mesh = uvSphereMesh(SEGMENTS, RINGS);
+  const mesh = uvSphereMesh(BODY_SPHERE_SEGMENTS, BODY_SPHERE_RINGS);
   const indexCount = mesh.indices.length;
 
   const positionBuffer = device.createBuffer({
@@ -180,7 +187,7 @@ export function createPlanetRenderer(
     depthStencil: {
       format: depthFormat,
       depthWriteEnabled: true,
-      depthCompare: 'less',
+      depthCompare: resolveDepthCompare('nearer', reversedZ),
     },
   });
 

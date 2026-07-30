@@ -37,6 +37,7 @@ import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
+import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/data/defaults';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { COSMO } from '../../../../src/services/engine/frame/slabs';
@@ -215,10 +216,13 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     vp: Float64Array.from(viewProj as unknown as Float32Array),
     originRelative: false,
     precision: 'f32',
+    reversedZ: false,
   };
 
   const ctx = {
     isReady: true as const,
+    // executor populates this as targets render; a later pass reads which rendered this frame.
+    renderedTargets: new Set<string>(),
     cam,
     vp: viewProj,
     slabs: [cosmoSlab, cosmoSlab],
@@ -241,8 +245,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     brightness: 1.0,
     selected: null as { source: SourceType; localIdx: number } | null,
     visibleSourceMask: 0xffffffff,
-    highlightFallback: true,
-    realOnlyMode: false,
     biasMode: BiasMode.None,
     absMagLimit: -19,
     depthFadeEnabled: true,
@@ -277,6 +279,9 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         earthRenderer: null,
         starRenderer: null,
         planetRenderer: null,
+        // Near-field handle null → atmosphereShellLayer disabled AND the
+        // atmosphereSkyView compute step early-outs, so it bills no work.
+        atmosphereShellRenderer: null,
         starPointRenderer: null,
         orbitTrailRenderer: null,
         starCatalogRenderer: null,
@@ -305,18 +310,20 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         galaxyCatalogs: {
           sizePx: settings.pointSizePx,
           brightness: settings.brightness,
-          highlightFallback: settings.highlightFallback,
-          realOnly: settings.realOnlyMode,
+          provenance: DEFAULT_GALAXY_PROVENANCE,
           depthFade: settings.depthFadeEnabled,
         },
         tonemap: { exposure: settings.exposure, curve: settings.toneMapCurve },
+        // Bloom off: this fixture times the base (non-bloom) program shape.
+        bloom: { enabled: false, strength: 1, threshold: 1 },
         bias: { mode: settings.biasMode, absMagLimit: settings.absMagLimit },
         thumbnails: { enabled: settings.galaxyTexturesEnabled },
         milkyWay: { enabled: settings.milkyWayEnabled },
         filaments: { enabled: settings.filamentsEnabled, intensity: settings.filamentIntensity },
+        constellations: { enabled: false, intensity: 1 },
         volumes: { enabled: settings.volumesEnabled, items: {} },
         flow: { enabled: false },
-        debug: { disabledPasses: {} },
+        debug: { disabledPasses: {}, renderStrategy: 'auto' },
       },
       selection: { select: settings.selected },
       assetSlots: { flow: null },

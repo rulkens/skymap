@@ -14,24 +14,26 @@
  *
  * ### Why it draws AFTER the opaque foreground bodies, OVER not opaque
  *
- * The ring is the sole translucent member of the `(foreground:0, NEAR0)` render
- * group. It is registered AFTER `earth` / `star-spheres` / `planets` /
- * `textured-bodies` so it draws once those opaque spheres have stamped their
- * depth: the ring pipeline depth-TESTS against the planet (`depthCompare: 'less'`)
- * so the far half is correctly occluded, but writes NO depth
- * (`depthWriteEnabled: false`) and blends straight-alpha OVER. That is the one
- * blend exception in the otherwise-opaque foreground group — the ring's row
- * carries `blend: 'over'` where its siblings carry `'opaque'`, and the ring
- * pipeline bakes exactly that profile (`foreground:0` formats, depth read / no
- * write, over blend).
+ * The ring is one of the translucent members of the `(foreground:0, NEAR0)`
+ * render group (the cloud shell is another). It is registered AFTER `earth` /
+ * `star-spheres` / `planets` / `textured-bodies` so it draws once those opaque
+ * spheres have stamped their depth: the ring pipeline depth-TESTS against the
+ * planet (`depthCompare: 'greater'`, the NEAR0 slab's reversed-Z convention —
+ * clear `0.0`, greater-z-wins, so a nearer body stamps a LARGER depth) so the far
+ * half is correctly occluded, but writes NO depth (`depthWriteEnabled: false`) and
+ * blends straight-alpha OVER.
+ * Translucent rows in this group carry `blend: 'over'` where the opaque bodies
+ * carry `'opaque'`, and each such pipeline bakes exactly that profile
+ * (`foreground:0` formats, depth read / no write, over blend).
  *
  * ### The ring rides the host body's frame by construction
  *
- * `composeBodyMvp(view.slab.vp, body.positionMpc, RENDER_ORIGIN_MPC,
- * outerRadiusMpc, body.orientation)` scales the unit ring disc to the ring's
- * OUTER radius and folds in the host body's baked orientation, so the annulus
- * lands in the planet's equatorial plane at the right world size — no
- * ring-specific transform. The sun is rotated into the same local frame, and the
+ * `composeBodyMvp(view.slab.vp, bodyState.positionMpc, RENDER_ORIGIN_MPC,
+ * outerRadiusMpc, bodyState.orientation)` scales the unit ring disc to the ring's
+ * OUTER radius and folds in the host body's orientation (from the per-frame
+ * body-state snapshot), so the annulus lands in the planet's equatorial plane at
+ * the right world size — no ring-specific transform. The sun is rotated into the
+ * same local frame, and the
  * two ring-shape scalars (`planetRadiusRatio`, `innerRatio`) are resolved from
  * the authored km radii; `packRingUniforms` is the layout SSOT.
  *
@@ -57,17 +59,21 @@ import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer'
 import type { EngineState } from '../../../../@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
 import type { PlanetBody } from '../../../../@types/scene/PlanetBody';
+import type { BodyState } from '../../../../@types/scene/BodyState';
 import type { RingSpec } from '../../../../@types/scene/RingSpec';
 import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { SCENE_RINGS } from '../../../../data/bodies/sceneRings';
+import { bodyTextureSlotKey } from '../../../../utils/scene/bodyTextureSlotKey';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
+import { camPosLocal } from '../../../../utils/camera/camPosLocal';
 import { packRingUniforms } from '../../../../utils/gpu/packRingUniforms';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from '../subPixelBodyCullPx';
+import { sceneBodyStates } from '../sceneBodyStates';
 
 /**
  * The rings worth drawing this frame: each `SCENE_RINGS` entry whose radial
@@ -78,19 +84,27 @@ import { SUB_PIXEL_BODY_CULL_PX } from '../subPixelBodyCullPx';
 function drawableRings(
   state: EngineState,
   ctx: ReadyFrameContext,
-): ReadonlyArray<{ ring: RingSpec; body: PlanetBody }> {
-  const out: Array<{ ring: RingSpec; body: PlanetBody }> = [];
+): ReadonlyArray<{ ring: RingSpec; body: PlanetBody; bodyState: BodyState }> {
+  // Live position + orientation from the per-frame snapshot (keyed by id),
+  // resolved ONCE for the whole scan — not the baked record fields.
+  const states = sceneBodyStates(state, ctx);
+  const out: Array<{ ring: RingSpec; body: PlanetBody; bodyState: BodyState }> = [];
   for (const ring of SCENE_RINGS) {
-    // Resident iff the ring's keyed bodyTextures slot holds a committed strip.
-    if (state.assetSlots.bodyTextures.get(ring.textureId)?.current() == null) continue;
+    // Resident iff the ring's surface strip slot holds a committed bitmap.
+    if (
+      state.assetSlots.bodyTextures.get(bodyTextureSlotKey(ring.textureId, 'surface'))?.current() ==
+      null
+    )
+      continue;
     const body = state.data.bodies.planets.find((b) => b.id === ring.bodyId);
     if (body === undefined) continue;
+    const bodyState = states.get(body.id)!;
     // Sub-pixel cull on the ring's outer diameter: below a pixel the annulus
     // cannot resolve. A zero camera-to-centre distance means the camera is inside
     // the body — apparentSizePx defensively returns 0, so treat it as resolved.
-    const dx = body.positionMpc[0] - ctx.drawCamPos[0];
-    const dy = body.positionMpc[1] - ctx.drawCamPos[1];
-    const dz = body.positionMpc[2] - ctx.drawCamPos[2];
+    const dx = bodyState.positionMpc[0] - ctx.drawCamPos[0];
+    const dy = bodyState.positionMpc[1] - ctx.drawCamPos[1];
+    const dz = bodyState.positionMpc[2] - ctx.drawCamPos[2];
     const distanceMpc = Math.hypot(dx, dy, dz);
     if (distanceMpc > 0) {
       const outerDiameterKpc =
@@ -103,7 +117,7 @@ function drawableRings(
       });
       if (diameterPx < SUB_PIXEL_BODY_CULL_PX) continue;
     }
-    out.push({ ring, body });
+    out.push({ ring, body, bodyState });
   }
   return out;
 }
@@ -128,27 +142,32 @@ export const ringsLayer: ContentLayer = {
     const renderer = state.gpu.ringRenderer;
     if (renderer === null) return;
 
-    for (const { ring, body } of drawableRings(state, ctx)) {
+    for (const { ring, body, bodyState } of drawableRings(state, ctx)) {
       // Scale the unit ring disc to the ring's OUTER radius and fold in the host
-      // body's baked orientation, from the slab's f64 vp (the f64 seam). The
-      // annulus then lands in the planet's equatorial plane at the right size.
+      // body's orientation, from the slab's f64 vp (the f64 seam). The annulus
+      // then lands in the planet's equatorial plane at the right size.
       const outerRadiusMpc = ring.outerRadiusKm * SCALE_UNITS.KM_TO_MPC;
       const mvp = composeBodyMvp(
         view.slab.vp,
-        body.positionMpc,
+        bodyState.positionMpc,
         RENDER_ORIGIN_MPC,
         outerRadiusMpc,
-        body.orientation,
+        bodyState.orientation,
       );
       // Sun rotated into the host body's local frame (its orientation carries any
       // axial tilt), so the fragment's two-sided Lambert + shadow ray stay
       // co-framed.
-      const sun = sunDirLocal(body.positionMpc, RENDER_ORIGIN_MPC, body.orientation);
+      const sun = sunDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation);
+      // Camera in the body's local frame, in planet radii (planet = unit sphere)
+      // — the frame the fragment's in-front-of-planet view-ray test runs in, so
+      // the ring keeps its own lit brightness where it occults the disc.
+      const radiusMpc = body.radiusKm * SCALE_UNITS.KM_TO_MPC;
+      const cam = camPosLocal(ctx.drawCamPos, bodyState.positionMpc, radiusMpc, bodyState.orientation);
       // Ring-shape scalars, both relative to the OUTER radius (the disc's unit
       // radius): the planet's size in disc units, and the hole's inner edge.
       const planetRadiusRatio = body.radiusKm / ring.outerRadiusKm;
       const innerRatio = ring.innerRadiusKm / ring.outerRadiusKm;
-      renderer.draw(pass, packRingUniforms(mvp, sun, planetRadiusRatio, innerRatio));
+      renderer.draw(pass, packRingUniforms(mvp, sun, planetRadiusRatio, cam, innerRatio));
     }
   },
 };

@@ -19,8 +19,9 @@
 // ## Why forward the local normal at all
 //
 // On a UNIT sphere the local-space position IS the outward surface normal, so
-// the vertex stage forwards 'position' unchanged as 'normalLocal' (the same
-// trick 'texturedBody/io.wesl' uses). The fragment renormalizes it before the
+// the vertex stage forwards 'position' unchanged as 'normalLocal'. Earth draws
+// its mesh; the ray-traced bodies do not, and derive their normal from the hit
+// instead. The fragment renormalizes it before the
 // Lambert dot -- interpolation across a triangle face shortens the interpolated
 // vector, which would otherwise band the terminator.
 
@@ -32,4 +33,9 @@ struct VSOut {
   // Unit-sphere local-space normal (== the local vertex position). The fragment
   // renormalizes this before lighting -- see the fragment module.
   @location(1) normalLocal: vec3<f32>,
+  // Interpolated unit local-space +u (east) tangent, forwarded raw from the mesh.
+  // The fragment Gram-Schmidt-re-orthonormalizes it against the interpolated
+  // normal (interpolation across a face shortens and skews both vectors), then
+  // builds the tangent-space basis for the normal-map perturbation.
+  @location(2) tangent: vec3<f32>,
 };

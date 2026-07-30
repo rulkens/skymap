@@ -3,11 +3,35 @@
  *
  * Builds a `DemandCtx` once, then walks every `AssetWiringRow`: for each row
  * whose `demand(ctx)` predicate is true AND whose slot is still `idle`, it
- * triggers the slot with the tier-derived request. This is the single place
- * that turns the declarative wiring registry into actual `slot.load()` calls —
- * the same loop runs at boot and on every state change (tier swap, source
- * toggle, settings flip), which keeps load policy in one re-runnable function
- * rather than scattered across dozens of handle setters.
+ * ENQUEUES a load onto the engine's bounded asset queue
+ * (`state.subsystems.assetQueue`) with the tier-derived request. This is the
+ * single place that turns the declarative wiring registry into actual fetch
+ * work — the same loop runs at boot and on every state change (tier swap,
+ * source toggle, settings flip), which keeps load policy in one re-runnable
+ * function rather than scattered across dozens of handle setters.
+ *
+ * ### Why an enqueue rather than a direct `slot.load()`
+ *
+ * A cold boot demands roughly a hundred megabytes across a dozen rows. Firing
+ * every `load()` at once splits one HTTP/2 connection every way at once, so
+ * array order becomes trigger order and completion order is whatever the
+ * network decides. The queue bounds concurrency (`ASSET_QUEUE_CONCURRENCY`) and
+ * orders the rest by each row's authored `priority`, so the assets the boot
+ * view actually draws land first. The queue's own dedup semantics (in-flight
+ * key ⇒ no-op, pending key ⇒ replaced) make this loop's per-frame re-run safe
+ * with no extra bookkeeping here.
+ *
+ * ### Why there are THREE edges, not two
+ *
+ * Enqueueing splits the old load edge in half. A row that is demanded enqueues;
+ * a row that is NOT demanded has to DROP whatever it left pending, and that
+ * cannot ride the evict edge below. A queued-but-unstarted slot is still
+ * `idle`, so `release()` is never called for it and the `ready`-gated evict
+ * branch cannot see it at all. Without the drop, a body texture queued as the
+ * camera approached would still fetch minutes after the camera left. A genuine
+ * `release()` on a `ready` slot reaches this same drop on the next pass, since
+ * releasing returns the slot to `idle` with demand false — one drop site, two
+ * ways of arriving at it.
  *
  * ### Why the idle-guard lives in the loop, not in slot.load()
  *
@@ -36,10 +60,12 @@
  * per row contains the blast radius to the offending asset; the rest of the
  * table still evaluates.
  *
- * The guard also covers a sync throw from `req(tier)` or `slot.load()`. Those
- * would be slot-construction bugs (real fetch errors flow to the slot's `error`
- * state, not a sync throw), so containing rather than aborting is deliberate —
- * such a bug surfaces as a per-row warn rather than a dead load loop.
+ * The guard also covers a sync throw from `slot.release()`. A throw out of
+ * `req(tier)` or `slot.load()` no longer lands here, because both now run
+ * inside the enqueued closure: the queue turns that rejection into an
+ * `onResult(null)` and keeps scheduling. Either way such a bug (real fetch
+ * errors flow to the slot's `error` state, not a sync throw) costs one asset
+ * rather than a dead load loop.
  *
  * `evaluateRows` is factored out of `reevaluateDemand` so tests can drive the
  * loop with a stub row array — the public entry point reads the real
@@ -56,6 +82,7 @@ import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { Tier } from '../../../@types/data/Tier';
 import type { BodyTextureReq } from '../../../@types/loading/BodyTextureReq';
+import type { QueueEntry } from '../../../@types/loading/QueueEntry';
 
 /**
  * Stale-tier evict test for the `bodyTextures` family: a `ready` slot whose
@@ -85,17 +112,61 @@ function staleTierEvict(
  */
 export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]): void {
   const ctx = buildDemandCtx(state);
+  const queue = state.subsystems.assetQueue;
+  // Collected across the whole walk and submitted in ONE call at the end.
+  // Enqueueing inside the loop would start the first `ASSET_QUEUE_CONCURRENCY`
+  // demanded rows the instant they were walked — in `ASSET_WIRING` array order,
+  // before a better-ranked row further down the table had even been evaluated —
+  // leaving `priority` to govern only the slots that free later. See
+  // `PriorityQueue.enqueueMany`.
+  const batch: QueueEntry<void>[] = [];
   for (const row of rows) {
     try {
       const slot = slotFor(state, row.key);
       if (!slot) continue;
       const kind = slot.state().kind;
-      // ── Load edge ────────────────────────────────────────────────────────
-      // Load only an idle slot whose demand is true. A loading/ready/error slot
-      // is left alone — see the module docstring on why the idle-guard lives
-      // here rather than inside load() (which stays a re-fetch primitive).
+      // The queue dedups by string key. `AssetKey` is a union of numeric
+      // `Source` codes and string keys, and no string `AssetKey` is a bare
+      // numeral, so stringifying cannot collide the two spaces.
+      const queueKey = String(row.key);
+      // ── Enqueue edge ─────────────────────────────────────────────────────
+      // Queue only an idle slot whose demand is true. A loading/ready/error
+      // slot is left alone — see the module docstring on why the idle-guard
+      // lives here rather than inside load() (which stays a re-fetch
+      // primitive).
       if (kind === 'idle' && row.demand(ctx)) {
-        slot.load(row.req(state.tier));
+        batch.push({
+          key: queueKey,
+          // NEGATED on purpose. `popHighestPriority` pops the LARGEST
+          // `priority` because the queue's other caller ranks galaxy
+          // thumbnails by on-screen pixel size, where bigger-first is the
+          // natural reading. The wiring rank table reads the other way round
+          // (lower is fetched first), so the flip belongs here, at the one
+          // site whose table disagrees, rather than inside a queue that would
+          // then be wrong for thumbnails.
+          priority: -row.priority,
+          fetcher: async () => {
+            // The SAME idle predicate the enqueue decision used, evaluated at
+            // the other moment that matters: the queue puts a gap between
+            // decision and action, and during that gap a direct `.load()` (a
+            // tier transition, a companion load) may have claimed the slot.
+            // One predicate at two moments, not two copies of a policy.
+            if (slot.state().kind !== 'idle') return;
+            // `state` is live, so building the request HERE yields the request
+            // for the tier in force when the fetch actually runs, not the one
+            // current when it was queued.
+            await slot.load(row.req(state.tier));
+          },
+          onResult: () => {},
+        });
+      }
+      // ── Drop edge ────────────────────────────────────────────────────────
+      // An idle slot whose demand went false may still be sitting in the
+      // queue, unstarted. Nothing else can retract it: `release()` only ever
+      // runs on a `ready` slot (see below), and a pending entry's slot is
+      // idle. See the module docstring for why this is its own edge.
+      else if (kind === 'idle') {
+        queue.drop(queueKey);
       }
       // ── Evict edge ───────────────────────────────────────────────────────
       // Release a ready slot for either reason a resident asset should be
@@ -104,9 +175,10 @@ export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]
       // row is untouched), separate from `demand` to encode hysteresis (load
       // inside X, evict outside 2X — see AssetWiringRow); or (2) a stale
       // committed tier for the bodyTextures family (spec §5.4). Both drop the
-      // slot to idle so the load edge re-demands it (at the new tier for the
-      // stale case). The two edges are mutually exclusive by slot state
-      // (idle XOR ready), so an else-if is exact.
+      // slot to idle, which hands it back to one of the two idle edges above —
+      // re-enqueued at the new tier for the stale case, dropped from the queue
+      // for the distance case. The three edges partition the slot states
+      // (idle-and-demanded, idle, ready), so the else-if chain is exact.
       else if (kind === 'ready' && (staleTierEvict(slot, row, state.tier) || row.release?.(ctx))) {
         slot.release();
       }
@@ -116,6 +188,11 @@ export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]
       console.warn(`reevaluateDemand: row '${String(row.key)}' threw during evaluation`, err);
     }
   }
+  // Outside the per-row guard on purpose: everything policy-shaped (the demand
+  // predicate, slot lookup, release) ran inside it, and all that is left here is
+  // a map insert per entry plus the queue's own scheduling — a throw from that
+  // is an engine bug worth surfacing, not one row's failure to contain.
+  queue.enqueueMany(batch);
 }
 
 /** Re-evaluate the full asset-wiring registry against the current state. */

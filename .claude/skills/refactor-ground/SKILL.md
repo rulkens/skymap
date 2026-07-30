@@ -65,13 +65,18 @@ order:
    type deltas, file list), data delta first.
 2. **Missing joints** — each with its growth/bolt-on verdict and the current
    blocker (`file:line`).
-3. **Prep list** — the refactors that create the joints; each lands as its **own
-   PR before the feature PR**.
+3. **Prep list** — the refactors that create the joints; each is its **own
+   diff, sequenced before the feature commits**. PR packaging (separate prep
+   PR(s) vs everything riding one PR) is NOT decided here — it is part of the
+   ask below, every time.
 4. **Adjacent findings** — knots seen but not required by the ideal diff. Default:
    a `docs/backlog/` detail file. The user may promote one to a separate cleanup PR
    — their call, at this checkpoint, never the agent's call mid-execution.
-5. **The ask** — sign-off on the shape. When the shape has genuine decision
-   branches, escalate to a `grill-me` session instead of a yes/no.
+5. **The ask** — sign-off on the shape, AND the PR-packaging question: "prep as
+   separate PR(s), or everything on one PR?" Ask it explicitly every time —
+   there is no default (`feedback_prep_rides_same_pr_ask`). When the shape has
+   genuine decision branches, escalate to a `grill-me` session instead of a
+   yes/no.
 
 **The null result is first-class.** "Ground is ready — the feature lands as a row
 in X plus one file, because those seams exist" is a complete, successful run: one
@@ -83,9 +88,10 @@ paragraph, still checkpointed. Do not manufacture prep to look thorough.
   existed; record the sketch + verdicts in a "Ground preparation" section.
 - Escalate prep to its own spec/plan when it is independently valuable,
   independently testable, and gates other features too.
-- Prep executes per normal delegation rules, own PR(s), before the feature PR.
-  Prep, adjacent cleanup, and feature are **three different diffs** — never
-  conflated.
+- Prep executes per normal delegation rules, sequenced before the feature
+  commits, packaged per the user's checkpoint answer (separate PR(s) or one
+  PR). Prep, adjacent cleanup, and feature are **three different diffs** —
+  never conflated, whatever PR they ride.
 
 ## Rationalizations
 
@@ -96,7 +102,7 @@ paragraph, still checkpointed. Do not manufacture prep to look thorough.
 | "It's just one small field / one more term"                         | The second special-case term IS the consolidation trigger (#7 in simplicity.md). Smallness is how hand-maintained lists grow.                                                                                    |
 | "There's already a special case doing this — I'll mirror it"        | Existing bolt-ons are triggers to un-braid, not precedent. Mirroring one is adding the second branch.                                                                                                            |
 | "I'll note the refactor in the plan for later"                      | Later = never, and the spec would be written against the wrong shape. Prep lands first.                                                                                                                          |
-| "The prep is only ~15 lines — offer to fold it into the feature PR" | Don't volunteer conflation. A refactor PR that also adds behaviour hides the strand being pulled (simplicity.md), regardless of size. Present prep as its own PR; if the user wants them merged, they'll say so. |
+| "The prep is only ~15 lines — just fold it into the feature commit"| Don't conflate diffs. A refactor commit that also adds behaviour hides the strand being pulled (simplicity.md), regardless of size. Keep prep its own commit(s); PR packaging is the user's checkpoint call, not yours in either direction. |
 | "This adjacent cleanup is right there, fold it in"                  | Backlog by default, or its own cleanup PR if the user promotes it. Never folded into prep or feature diffs.                                                                                                      |
 
 ## Red flags — STOP

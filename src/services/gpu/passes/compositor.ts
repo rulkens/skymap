@@ -71,19 +71,14 @@
 // stays byte-identical.
 import vsCode from '../shaders/compositor/vertex.wesl?static';
 import fsCode from '../shaders/compositor/fragment.wesl?static';
-import { clampExposure } from '../../../utils/clampExposure';
+import { clampExposure } from '../../../utils/tonemap/clampExposure';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../lib/blendStates';
+import { REINHARD_WHITEPOINT, ASINH_SOFTNESS } from '../../../data/toneMapCurve';
 import type { Compositor } from '../../../@types/rendering/Compositor';
 import type { CompositeBlend } from '../../../@types/rendering/CompositeBlend';
 import type { ToneMap } from '../../../@types/rendering/ToneMap';
 import type { Renderer } from '../../../@types/rendering/Renderer';
-
-/** Default whitepoint for Reinhard-extended — input value where the curve reaches 1.0. */
-export const DEFAULT_WHITEPOINT = 4.0;
-
-/** Default softness for asinh stretch — higher = more aggressive low-end lift. */
-export const DEFAULT_ASINH_SOFTNESS = 10.0;
 
 // ─── JS-mirror tone-map curves ────────────────────────────────────────────
 //
@@ -98,7 +93,7 @@ export function linearClamp(c: number, exposure: number): number {
 export function reinhardExtended(
   c: number,
   exposure: number,
-  whitepoint: number = DEFAULT_WHITEPOINT,
+  whitepoint: number = REINHARD_WHITEPOINT,
 ): number {
   const x = c * exposure;
   const wsq = whitepoint * whitepoint;
@@ -115,7 +110,7 @@ export function reinhardExtended(
 export function asinhStretch(
   c: number,
   exposure: number,
-  softness: number = DEFAULT_ASINH_SOFTNESS,
+  softness: number = ASINH_SOFTNESS,
 ): number {
   const x = c * exposure;
   // The Lupton formula `asinh(k·c) / asinh(k)` reaches 1.0 at c=1; for
@@ -180,16 +175,22 @@ const BLEND_TABLE: Record<
 /**
  * createCompositor — build the unified composite primitive.
  *
+ * `swapFormat` / `hdrFormat` are accepted for call-site stability but are no
+ * longer used to derive the dst format: each draw now carries its own
+ * `dstFormat`, resolved by the caller from the composite's dest target (see
+ * `draw`). A blend no longer implies a single format — `over` can target the
+ * swap chain OR the HDR buffer — so the format has to ride in per draw.
+ *
  * @param init.device      GPU device (mockable in tests).
- * @param init.swapFormat  dst format for `replace` and `over` (→ swap chain).
- * @param init.hdrFormat   dst format for `additive` (→ HDR target).
+ * @param init.swapFormat  Retained for signature stability; unused here.
+ * @param init.hdrFormat   Retained for signature stability; unused here.
  */
 export function createCompositor(init: {
   device: GPUDevice;
   swapFormat: GPUTextureFormat;
   hdrFormat: GPUTextureFormat;
 }): Compositor {
-  const { device, swapFormat, hdrFormat } = init;
+  const { device } = init;
 
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'compositor.vertex');
   const fsModule = createShaderModuleWithDevLog(device, fsCode, 'compositor.fragment');
@@ -220,31 +221,29 @@ export function createCompositor(init: {
     bindGroupLayouts: [bindGroupLayout],
   });
 
-  // dst format per blend — the second half of the cache key. `replace`
-  // and `over` target the swap chain; `additive` targets the HDR buffer.
-  const dstFormatFor: Record<CompositeBlend, GPUTextureFormat> = {
-    replace: swapFormat,
-    over: swapFormat,
-    additive: hdrFormat,
-  };
-
   // Lazy pipeline + per-entry uniform-buffer cache. See module header for
-  // both the key composition and the one-buffer-per-entry rationale.
+  // both the key composition and the one-buffer-per-entry rationale. The dst
+  // format is no longer derived from the blend — it arrives per draw from the
+  // dest target, so the same blend can key two entries for two formats.
   const cache = new Map<string, { pipeline: GPURenderPipeline; uniformBuffer: GPUBuffer }>();
 
   // Mixed f32/u32 uniform — pack via two views over one 32-byte
-  // ArrayBuffer. Bytes 24..31 are padding and
-  // stay zero (a fresh ArrayBuffer is zero-filled and we never write
-  // those lanes), satisfying the uniform 16-byte-stride requirement.
+  // ArrayBuffer. Lanes 6 and 7 (bytes 24..31) carry the extended-range
+  // `hdrKnee` / `hdrHeadroom` — see the `if (tone)` / `else` branches
+  // below. They stay zero in the tone-null / SDR case (a fresh ArrayBuffer
+  // is zero-filled), satisfying the uniform 16-byte-stride requirement with
+  // no unused padding left in the buffer.
   const uniformBytes = new ArrayBuffer(32);
   const uniformF32 = new Float32Array(uniformBytes);
   const uniformU32 = new Uint32Array(uniformBytes);
 
-  function entryFor(blend: CompositeBlend): {
+  function entryFor(
+    blend: CompositeBlend,
+    dstFormat: GPUTextureFormat,
+  ): {
     pipeline: GPURenderPipeline;
     uniformBuffer: GPUBuffer;
   } {
-    const dstFormat = dstFormatFor[blend];
     const key = `${blend}:${dstFormat}`;
     const existing = cache.get(key);
     if (existing) return existing;
@@ -279,17 +278,22 @@ export function createCompositor(init: {
       src: GPUTextureView,
       blend: CompositeBlend,
       tone: ToneMap | null,
+      dstFormat: GPUTextureFormat,
     ): void {
-      const entry = entryFor(blend);
+      const entry = entryFor(blend, dstFormat);
 
       if (tone) {
         // Clamp at point of use: the store holds raw intent, this pass
         // owns the HDR-buffer / black-frame limits (see clampExposure).
         uniformF32[0] = clampExposure(tone.exposure);
-        uniformF32[1] = DEFAULT_WHITEPOINT * DEFAULT_WHITEPOINT;
-        uniformF32[2] = DEFAULT_ASINH_SOFTNESS;
+        uniformF32[1] = REINHARD_WHITEPOINT * REINHARD_WHITEPOINT;
+        uniformF32[2] = ASINH_SOFTNESS;
         uniformU32[3] = tone.curve >>> 0;
         uniformU32[4] = 1;
+        // 0 unless the caller opted a swap chain into HDR (`renderFrame` only
+        // sets these non-zero when `hdrActiveOf(ctx.renderTargets)` is true).
+        uniformF32[6] = tone.hdrKnee;
+        uniformF32[7] = tone.hdrHeadroom;
       } else {
         // No tone-map: exposure 1.0, curve params zeroed, toneEnabled 0.
         // The fragment takes the raw pass-through branch.
@@ -298,6 +302,8 @@ export function createCompositor(init: {
         uniformF32[2] = 0;
         uniformU32[3] = 0;
         uniformU32[4] = 0;
+        uniformF32[6] = 0;
+        uniformF32[7] = 0;
       }
       // preserveAlpha comes from the blend table, NOT the caller — alpha
       // handling is a property of the blend mode.

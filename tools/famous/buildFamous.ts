@@ -7,7 +7,7 @@
  *
  * Writes:
  *   - `public/data/famous.bin`         (GalaxyCatalog, normal renderer input)
- *   - `public/data/famous_meta.json`   (per-localIdx → id + names + description)
+ *   - `public/data/famous_galaxies_meta.json`   (per-localIdx → id + names + description)
  *
  * Why two artefacts instead of one fat .bin?  The .bin has to stay in
  * the GalaxyCatalog format so the existing decoder + renderer code paths
@@ -28,7 +28,7 @@ import { encodeGalaxyCatalog } from '../../src/data/galaxyCatalog/galaxyCatalogF
 import { Source } from '../../src/data/sources';
 import { resolveFamousOrientation } from './resolveFamousOrientation';
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { FamousMetaEntry } from '../../src/@types/loading/FamousMetaEntry';
+import type { FamousGalaxyMetaEntry } from '../../src/@types/loading/FamousGalaxyMetaEntry';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { parseRecipe, type Recipe } from '../famous-curator/plugin/recipe';
 import { curatedGalaxyDir } from '../famous-curator/plugin/paths';
@@ -72,7 +72,7 @@ export function readCuratedRecipe(repoRoot: string, id: string): Recipe | undefi
 }
 
 /**
- * Build the `FamousMetaEntry[]` sidecar from the seed entries + resolved
+ * Build the `FamousGalaxyMetaEntry[]` sidecar from the seed entries + resolved
  * axis-ratio array + an injected recipe reader.
  *
  * Injecting `readRecipe` decouples this pure assembler from filesystem I/O,
@@ -83,11 +83,11 @@ export function readCuratedRecipe(repoRoot: string, id: string): Recipe | undefi
  * is called with the same deproject logic the export pipeline used, so the
  * calibration in the JSON exactly matches what the shipped WebP looks like.
  */
-export function assembleFamousMeta(
+export function assembleFamousGalaxiesMeta(
   entries: readonly FamousEntry[],
   axisRatios: ArrayLike<number>,
   readRecipe: (id: string) => Recipe | undefined,
-): FamousMetaEntry[] {
+): FamousGalaxyMetaEntry[] {
   return entries.map((e, i) => {
     const recipe = readRecipe(e.id);
     const disk = recipe?.disk;
@@ -153,6 +153,10 @@ async function main(): Promise<void> {
     classByte: new Uint8Array(count),
     parentSurveyByte: new Uint8Array(count),
     spectroscopicZ: new Float32Array(count),
+    orientationIsFallback: new Uint8Array(count),
+    // Famous entries always carry a curated real diameter (e.diameterKpc), so
+    // no row is a flat-default fallback; every flag stays 0.
+    diameterIsFallback: new Uint8Array(count),
   };
 
   for (let i = 0; i < count; i++) {
@@ -190,6 +194,12 @@ async function main(): Promise<void> {
     });
     cloud.axisRatio[i] = orient.axisRatio;
     cloud.positionAngleDeg[i] = orient.positionAngleDeg;
+    // Provenance flag mirrors the field-by-field resolution above: a row is a
+    // true orientation fallback only when BOTH the axis ratio AND the PA were
+    // synthesised (the seed carried neither). A real axisRatio paired with a
+    // hash-filled PA (the common near-face-on showpiece) stays flagged 0 —
+    // its shape is a real measurement.
+    cloud.orientationIsFallback[i] = e.axisRatio == null && e.positionAngleDeg == null ? 1 : 0;
     // Photometric mapping: HyperLEDA gives B/V/K, the GalaxyCatalog arrays
     // are SDSS-shaped (u/g/r/i/z).  Same shoehorn convention as GLADE:
     // map B→G, V→R, K→I.  magU/magZ stay NaN — HyperLEDA doesn't carry
@@ -201,16 +211,18 @@ async function main(): Promise<void> {
 
   // Build the meta sidecar after the cloud loop so cloud.axisRatio is fully
   // populated (including fallback values) before calibration derivation reads it.
-  const metaByIdx: FamousMetaEntry[] = assembleFamousMeta(entries, cloud.axisRatio, (id) =>
-    readCuratedRecipe(process.cwd(), id),
+  const metaByIdx: FamousGalaxyMetaEntry[] = assembleFamousGalaxiesMeta(
+    entries,
+    cloud.axisRatio,
+    (id) => readCuratedRecipe(process.cwd(), id),
   );
 
   // ── Write the artefacts ──────────────────────────────────────────────
   const binBuf = encodeGalaxyCatalog(cloud);
   writeFileSync(resolve(outDir, 'famous.bin'), Buffer.from(binBuf));
   process.stderr.write(`wrote ${count} points to famous.bin (${binBuf.byteLength} bytes)\n`);
-  writeMetaSidecar(metaByIdx, resolve(outDir, 'famous_meta.json'));
-  process.stderr.write(`wrote famous_meta.json\n`);
+  writeMetaSidecar(metaByIdx, resolve(outDir, 'famous_galaxies_meta.json'));
+  process.stderr.write(`wrote famous_galaxies_meta.json\n`);
 
   // Quick sanity reference: log the Source enum value baked into the
   // renderer.  The renderer keys per-source pipelines on this number,

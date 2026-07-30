@@ -68,6 +68,7 @@ export const neighbourhoodFlythrough: ClipData = {
         atFocus(focusId('m81')), // Bode's — the bearing the M31 dwell landed on
         atFocus(focusId('m101')), // Pinwheel
         atFocus(focusId('m51')), // Whirlpool
+        atFocus(focusId('m88')), // M88
         atFocus(focusId('m104')), // Sombrero — the equator crossing
         atFocus(focusId('m83')), // Southern Pinwheel
         atFocus(CEN_A), // settle

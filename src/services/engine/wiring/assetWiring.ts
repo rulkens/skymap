@@ -51,27 +51,33 @@ import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
 import type { StructureId } from '../../../@types/data/structure/StructureId';
 import { Source, SOURCE_REGISTRY } from '../../../data/sources';
 import { createFilamentSlot } from '../../loading/slots/filamentSlot';
-import { createFamousMetaSlot } from '../../loading/slots/famousMetaSlot';
+import { createFamousGalaxiesMetaSlot } from '../../loading/slots/famousGalaxiesMetaSlot';
+import { createFamousStarsMetaSlot } from '../../loading/slots/famousStarsMetaSlot';
 import { createStructureCatalogSlot } from '../../loading/slots/structureCatalogSlot';
 import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
 import { createFlowFieldSlot } from '../../loading/slots/flowFieldSlot';
+import { createConstellationsSlot } from '../../loading/slots/constellationsSlot';
 import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
 import { createPgcAliasSlot } from '../../loading/slots/pgcAliasSlot';
 import { createStarCatalogSlot } from '../../loading/slots/starCatalogSlot';
+import { createBodyTextureAtlasSlot } from '../../loading/slots/bodyTextureAtlasSlot';
 import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
 import { BODY_TEXTURE_REGISTRY } from '../../../data/bodies/bodyTextureRegistry';
-import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { clampTier } from '../../../utils/math/clampTier';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { hostBodyId } from '../../../utils/scene/hostBodyId';
-import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
+import { bodyTextureSlotKey } from '../../../utils/scene/bodyTextureSlotKey';
+import { deriveBodyStates } from '../frame/deriveBodyStates';
 import { loadRadiusMpc } from '../frame/bodyTextureLoadRadius';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { StarCatalogId } from '../../../@types/data/starCatalog/StarCatalogId';
 import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
 import type { RingTextureId } from '../../../@types/data/RingTextureId';
+import type { BodyTextureKey } from '../../../@types/data/BodyTextureKey';
+import type { TextureKind } from '../../../@types/data/TextureKind';
+import type { Tier } from '../../../@types/data/Tier';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
 /**
@@ -102,8 +108,13 @@ const externalFactory = (): never => {
   );
 };
 
-/** One demand+req row for a point source, marked as externally built. */
-function pointRow(source: SourceType): AssetWiringRow {
+/**
+ * One demand+req row for a point source, marked as externally built.
+ * `priority` is a parameter rather than a constant because the eight galaxy
+ * catalogs do NOT share a rank: Famous outranks every bulk survey, 2MRS
+ * outranks the rest, and the remaining six are ordered small-payload-first.
+ */
+function pointRow(source: SourceType, priority: number): AssetWiringRow {
   // The source → galaxy-catalog-id registry mapping is resolved once at row
   // construction, like the volume-field handles above. The items record is
   // keyed by GalaxyCatalogId but the cast comes from the broader SourceType, so the
@@ -115,19 +126,21 @@ function pointRow(source: SourceType): AssetWiringRow {
     factory: externalFactory,
     req: (tier) => ({ source, tier }),
     demand: (ctx) => ctx.settings.galaxyCatalogs.items[id]?.enabled === true,
+    priority,
   };
 }
 
 /**
- * Star-catalog sources, derived from the registry's `type: 'starCatalog'` rows
- * rather than re-spelled, so a future famous-star catalog joins the demand
- * table automatically — the same auto-widening `STAR_CATALOG_IDS` gives the
- * settings key domain. `code` is the numeric `Source` twin of each row (it IS
- * a `SourceType` at the entry literal; the union type widens it to `number`
- * once read through `SOURCE_ENTRIES`, so the cast re-narrows it).
+ * Star-catalog sources that actually ship an asset, derived from the registry
+ * rather than re-spelled. A SEEDED catalog (`binBaseName: null`, the curated
+ * famous-star map) is built in code and has no `.bin` to demand, so it is
+ * filtered out here — including it would have the fetcher request a filename
+ * assembled from a null stem. `code` is the numeric `Source` twin of each row
+ * (it IS a `SourceType` at the entry literal; the union type widens it to
+ * `number` once read through `SOURCE_ENTRIES`, so the cast re-narrows it).
  */
 const STAR_CATALOG_SOURCES: readonly SourceType[] = SOURCE_ENTRIES.filter(
-  (e) => e.type === 'starCatalog',
+  (e) => e.type === 'starCatalog' && e.binBaseName !== null,
 ).map((e) => e.code);
 
 /**
@@ -147,19 +160,40 @@ function starCatalogRow(source: SourceType): AssetWiringRow {
     req: (tier) => ({ source, tier }),
     demand: (ctx) =>
       ctx.settings.starCatalogs.enabled && ctx.settings.starCatalogs.items[id]?.enabled === true,
+    // Every star catalog shares one rank: they are the Earth boot view's own
+    // scale rung, ahead of the bulk galaxy surveys but behind the bodies and
+    // the two catalogs called out in the ASSET_WIRING header.
+    priority: 50,
   };
 }
 
-/** The body's world position (the ring rides its host body's). */
-function bodyPosOf(id: BodyTextureId | RingTextureId): Readonly<Vec3> {
-  return findByIdOrThrow(SCENE_BODIES, hostBodyId(id), 'bodyTextureRow').positionMpc;
+/**
+ * The host body's world position at the frame's LIVE sim instant. The texture
+ * proximity gates read a host body's world position; every host is an orbital
+ * body that MOVES, so its position comes from `deriveBodyStates(simDays)` — the
+ * same memoized source the render layers read — evaluated at the instant carried
+ * on `DemandCtx.simDays` (the last frame's `cameraRuntime.lastRenderedSimDays`),
+ * not a baked epoch. A paused clock re-reads the same memoized snapshot for free;
+ * a tick re-derives the ~22 Kepler solves once and every proximity row shares it.
+ * The ring rides its host body's position.
+ */
+function bodyPosOf(id: BodyTextureId | RingTextureId, simDays: number): Readonly<Vec3> {
+  const hostId = hostBodyId(id);
+  const state = deriveBodyStates(simDays).get(hostId);
+  if (state === undefined) {
+    throw new Error(`bodyPosOf: texture host '${hostId}' has no derived body state`);
+  }
+  return state.positionMpc;
 }
 
-/** The body's tier ceiling from the texture registry (the ring's is its host's). */
-function ceilingOf(
-  id: BodyTextureId | RingTextureId,
-): (typeof BODY_TEXTURE_REGISTRY)[BodyTextureId]['maxTier'] {
-  return BODY_TEXTURE_REGISTRY[hostBodyId(id)].maxTier;
+/**
+ * The body's per-`kind` tier ceiling from the texture registry (the ring's is
+ * its host's). Every family entry in `ALL_BODY_TEXTURE_KEYS` is enumerated from a
+ * present `kinds` key, so the lookup is total — the assertion encodes that
+ * invariant rather than widening the return to `Tier | undefined`.
+ */
+function ceilingOf(id: BodyTextureId | RingTextureId, kind: TextureKind): Tier {
+  return BODY_TEXTURE_REGISTRY[hostBodyId(id)].kinds[kind]!;
 }
 
 /**
@@ -170,30 +204,90 @@ function ceilingOf(
  * twice that radius. `release` is separate from `!demand` on purpose — the band
  * between `X` and `2X` is the hysteresis gap where neither fires, so a camera
  * dithering at the boundary never thrashes a multi-MB texture load/free cycle
- * (see `AssetWiringRow`). `req` clamps the current tier to the body's ceiling so
- * a body that only ships a `small` texture is never asked for a `large` one.
+ * (see `AssetWiringRow`). `req` clamps the current tier to the `(body, kind)`
+ * ceiling so a body that only ships a `small` texture is never asked for a
+ * `large` one. The row's `key` is the composite `bodyTextureSlotKey`, matching
+ * the slot Map + `AssetKey`; the demand/release gates read `entry.bodyId` (the
+ * ring rides its host body).
  */
-function bodyTextureRow(id: BodyTextureId | RingTextureId): AssetWiringRow {
+function bodyTextureRow(entry: BodyTextureKey): AssetWiringRow {
   return {
-    key: id,
+    key: bodyTextureSlotKey(entry.bodyId, entry.kind),
     built: 'external',
     factory: externalFactory,
-    req: (tier) => ({ bodyId: id, tier: clampTier(tier, ceilingOf(id)) }),
-    demand: (ctx) => distanceMpc(ctx.cameraPosMpc, bodyPosOf(id)) < loadRadiusMpc(id),
-    release: (ctx) => distanceMpc(ctx.cameraPosMpc, bodyPosOf(id)) > 2 * loadRadiusMpc(id),
+    req: (tier) => ({
+      bodyId: entry.bodyId,
+      kind: entry.kind,
+      tier: clampTier(tier, ceilingOf(entry.bodyId, entry.kind)),
+    }),
+    demand: (ctx) =>
+      distanceMpc(ctx.cameraPosMpc, bodyPosOf(entry.bodyId, ctx.simDays)) <
+      loadRadiusMpc(entry.bodyId),
+    release: (ctx) =>
+      distanceMpc(ctx.cameraPosMpc, bodyPosOf(entry.bodyId, ctx.simDays)) >
+      2 * loadRadiusMpc(entry.bodyId),
+    // One rank for the whole family: a body texture is only ever demanded once
+    // the camera is already close enough to see the body, so by the time any of
+    // these enqueue they are the most relevant asset on the wire. Ranking them
+    // against each other would be ranking assets that are rarely co-demanded.
+    priority: 10,
   };
 }
 
+/**
+ * ### Fetch ranks (`priority`, lower first)
+ *
+ * The array order below is grouped for READING (point sources together, overlays
+ * together); the `priority` integers are what decide fetch order, and the two
+ * orders differ on purpose. In particular the six bulk-survey ranks 60–65 are
+ * DISTINCT: `popHighestPriority` breaks ties by first-encountered, so equal ranks
+ * would fall back to this array's order and fetch GLADE (26 MB) before Milliquas
+ * (12.8 MB) — the large-before-small order the ranking exists to prevent. Likewise
+ * the DESI rows read Deep, Wedge, Sgw here but rank Deep (1.6 MB), Sgw (2.4 MB),
+ * Wedge (10.3 MB).
+ *
+ * Two ranks look wrong at a glance and are deliberate:
+ *
+ *   - **Famous galaxies (20) outrank the star catalog (50).** The famous catalog
+ *     is the only exemption from `surveyDeepZoom` in the codebase
+ *     (`pointSpritesLayer.ts`, mirrored on the pick path), so famous objects stay
+ *     visible at close-in scales where every bulk survey has faded out. It is the
+ *     one galaxy asset that can draw at the boot rung.
+ *   - **2MRS (40) outranks the star catalog (50)**, ordering data that is INVISIBLE
+ *     at the Earth boot view ahead of data that is fully visible there. It costs
+ *     about a second of stars-arrive-later and buys local structure already being
+ *     resident the moment the camera pulls back. Accepted knowingly.
+ */
 export const ASSET_WIRING: readonly AssetWiringRow[] = [
+  // ── Low-resolution all-bodies surface atlas ──────────────────────
+  // Rank 0, the head of the table: its entire purpose is to arrive before any
+  // hi-res texture, so a body reached early shows its own surface instead of a
+  // flat albedo sphere. ~160 KB buys a tile for all thirteen textured bodies.
+  //
+  // `demand: () => true` — unconditional at boot, and deliberately NOT
+  // proximity-gated. The per-body rows below gate on the camera because their
+  // payloads are multi-MB; this one is the universal fallback those upgrade, so
+  // gating it would reinstate the very "reached before its texture" gap it
+  // exists to close. Registry-built (no `built: 'external'`): there is no
+  // renderer to co-mint it beside — the commit fans out to several — and
+  // `installSlots` routes its string key to the matching named field.
+  {
+    key: 'bodyTextureAtlas',
+    factory: (deps) => createBodyTextureAtlasSlot(deps.state, deps.cb),
+    req: () => undefined,
+    demand: () => true,
+    priority: 0,
+  },
+
   // ── Point sources (demand+req only; slots minted in initGpu) ──────
-  pointRow(Source.SDSS),
-  pointRow(Source.TwoMRS),
-  pointRow(Source.Glade),
-  pointRow(Source.Milliquas),
-  pointRow(Source.FamousGalaxy),
-  pointRow(Source.DesiDeep),
-  pointRow(Source.DesiWedge),
-  pointRow(Source.DesiSgw),
+  pointRow(Source.SDSS, 60),
+  pointRow(Source.TwoMRS, 40),
+  pointRow(Source.Glade, 62),
+  pointRow(Source.Milliquas, 61),
+  pointRow(Source.FamousGalaxy, 20),
+  pointRow(Source.DesiDeep, 63),
+  pointRow(Source.DesiWedge, 65),
+  pointRow(Source.DesiSgw, 64),
   {
     // Synthetic fallback: loads only when armed by `createSyntheticFallback`,
     // which runs the precise gate (count-aware, hidden-at-boot-aware) at the
@@ -204,6 +298,9 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     factory: externalFactory,
     req: (tier) => ({ source: Source.Synthetic, tier }),
     demand: (ctx) => ctx.request('syntheticFallback'),
+    // Ahead of everything real: it is only ever demanded when the real catalogs
+    // failed, and it is the stand-in that keeps the view from being empty.
+    priority: 5,
   },
 
   // ── Famous-galaxy meta sidecar ───────────────────────────────────
@@ -211,10 +308,29 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
   // .bin fetch has begun), so the InfoCard text rides in alongside the
   // binary rather than racing ahead of it.
   {
-    key: 'famousMeta',
-    factory: (deps) => createFamousMetaSlot(deps.state, deps.cb),
+    key: 'famousGalaxiesMeta',
+    factory: (deps) => createFamousGalaxiesMetaSlot(deps.state, deps.cb),
     req: (tier) => ({ tier }),
     demand: (ctx) => ctx.slotState(Source.FamousGalaxy) !== 'idle',
+    // Immediately behind its .bin (20) — the companion join wants the text to
+    // ride alongside the binary, not to overtake it.
+    priority: 21,
+  },
+
+  // ── Famous-star meta sidecar ──────────────────────────────────────
+  // Unlike famousGalaxiesMeta, there is no sibling `.bin` fetch to key the demand
+  // off: the famous stars are a seeded catalog compiled straight into the
+  // bundle, not loaded from a survey `.bin`. So this row is unconditionally
+  // demanded (mirrors `bodyTextureAtlas` above) rather than joining another
+  // slot's state — the tiny JSON just loads at boot alongside everything else.
+  {
+    key: 'famousStarsMeta',
+    factory: (deps) => createFamousStarsMetaSlot(deps.state, deps.cb),
+    req: (tier) => ({ tier }),
+    demand: () => true,
+    // Right behind famousGalaxiesMeta: both are tiny curated sidecars wanted early
+    // so the InfoCard has enriched text the first time either kind is hovered.
+    priority: 22,
   },
 
   // ── Cosmic-web filament skeleton ─────────────────────────────────
@@ -224,6 +340,8 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     factory: (deps) => createFilamentSlot(deps.state, deps.cb),
     req: (tier) => ({ tier }),
     demand: (ctx) => ctx.settings.filaments.enabled,
+    // Cosmic-web overlays sit behind the catalogs they are drawn over.
+    priority: 80,
   },
 
   // ── MCPM Cosmic Web volume ───────────────────────────────────────
@@ -234,6 +352,8 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     factory: (deps) => createMcpmSlot(deps.state, deps.cb),
     req: (tier) => ({ tier }),
     demand: (ctx) => ctx.settings.volumes.items[MCPM_FIELD]?.enabled === true,
+    // The largest single boot payload, and it only reads at the widest rung.
+    priority: 70,
   },
 
   // ── CF-4 DM density volume ───────────────────────────────────────
@@ -243,6 +363,9 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     factory: (deps) => createCf4DensitySlot(deps.state, deps.cb),
     req: () => undefined,
     demand: (ctx) => ctx.settings.volumes.items[CF4_FIELD]?.enabled === true,
+    // Default-off, so it only ever competes with a boot fetch when a user turns
+    // it on mid-load; last of the cosmic-web overlays.
+    priority: 82,
   },
 
   // ── CF4++ velocity flow field ────────────────────────────────────
@@ -256,6 +379,24 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     factory: (deps) => createFlowFieldSlot(deps.state, deps.cb),
     req: () => undefined,
     demand: (ctx) => ctx.settings.flow.enabled,
+    // Default-off overlay on the same rung as filaments, behind them by size.
+    priority: 81,
+  },
+
+  // ── Constellation stick-figure overlay ───────────────────────────
+  // Single tier-agnostic `constellations.json`. Demand = the layer's master
+  // gate, the singleton-overlay convention shared with filaments / flow.
+  // Opt-in and off by default, so it's demand-loaded on first enable rather
+  // than at boot. The commit uploads the segment buffer to the renderer once
+  // and kicks `syncVisibilityFades` for the row; the label producer reads the
+  // ready artifact straight off the slot.
+  {
+    key: 'constellations',
+    factory: (deps) => createConstellationsSlot(deps.state, deps.cb),
+    req: () => undefined,
+    demand: (ctx) => ctx.settings.constellations.enabled,
+    // Small JSON drawn over the near-sky rung, right behind the marker catalog.
+    priority: 31,
   },
 
   // ── Cluster/supercluster bulk coverage ───────────────────────────
@@ -272,6 +413,9 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
           ctx.settings.structures.items[cat].enabled ||
           ctx.settings.structures.items[cat].labelEnabled,
       ),
+    // A small .ccat that draws rings + labels across many rungs at once, so it
+    // buys visible structure per byte well ahead of any bulk survey.
+    priority: 30,
   },
 
   // ── PGC alias map ────────────────────────────────────────────────
@@ -281,6 +425,9 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     factory: (deps) => createPgcAliasSlot(deps.state, deps.cb),
     req: () => undefined,
     demand: (ctx) => ctx.request('paletteOpened'),
+    // Last: nothing renders from it, and it is only demanded by an explicit
+    // one-shot user action that tolerates a wait.
+    priority: 90,
   },
 
   // ── Body-surface textures (proximity-demanded + released) ────────

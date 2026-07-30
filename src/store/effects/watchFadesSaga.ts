@@ -29,13 +29,17 @@ import {
   setGalaxyCatalogVisible,
   setGalaxyCatalogLabelEnabled,
   setFilamentsEnabled,
+  setOrbitTrailsEnabled,
   setMilkyWayEnabled,
   setMilkyWayLabelEnabled,
+  setStarCatalogLabelEnabled,
+  setBodyLabelEnabled,
   setStructureItemEnabled,
   setStructureLabelEnabled,
   writeVolumeField,
   setVolumesEnabled,
   setFlowEnabled,
+  setConstellationsEnabled,
   mergeSnapshot,
 } from '../../state/settings/settingsSlice';
 import type { VisibilityLayerKey } from '../../@types/animation/VisibilityLayerKey';
@@ -56,13 +60,20 @@ export const FADE_ROW: Partial<Record<string, VisibilityLayerKey>> = {
   [setGalaxyCatalogVisible.type]: 'survey',
   [setGalaxyCatalogLabelEnabled.type]: 'surveyLabel',
   [setFilamentsEnabled.type]: 'filaments',
+  [setOrbitTrailsEnabled.type]: 'orbitTrails',
   [setMilkyWayEnabled.type]: 'milkyWayDisk',
   [setMilkyWayLabelEnabled.type]: 'milkyWayLabel',
+  [setStarCatalogLabelEnabled.type]: 'starCatalogLabel',
+  [setBodyLabelEnabled.type]: 'bodyLabel',
   [setStructureItemEnabled.type]: 'structureRing',
   [setStructureLabelEnabled.type]: 'structureLabel',
   [writeVolumeField.type]: 'volumeField',
   [setVolumesEnabled.type]: 'volumesMaster',
   [setFlowEnabled.type]: 'flow',
+  // Only the ENABLE setter drives the visibility fade. setConstellationIntensity
+  // is a brightness scale with no fade layer — deliberately absent, mirroring
+  // setFilamentIntensity.
+  [setConstellationsEnabled.type]: 'constellations',
 };
 
 export function* watchFadesSaga() {

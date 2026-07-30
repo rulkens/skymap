@@ -15,7 +15,7 @@ import type { FadeRegistry } from '../../../../src/@types/animation/FadeRegistry
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaEntry';
+import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/FamousGalaxyMetaEntry';
 import type { Label } from '../../../../src/@types/rendering/Label';
 import type { LabelBBox } from '../../../../src/@types/rendering/LabelBBox';
 
@@ -37,12 +37,13 @@ const MEASURED_BBOX: LabelBBox = { minX: -50, minY: -30, maxX: 50, maxY: 12 };
 const TEXT_BOTTOM_BELOW_ANCHOR_PX =
   MEASURED_BBOX.maxY * (FAMOUS_LABEL_STYLE.minPixelSize / ATLAS_FONT_SIZE);
 
-// produceFamousLabels reads `state.data.galaxies` for the records,
-// `state.subsystems.fades` for the `galaxyNames` opacity (read-only),
+// produceFamousLabels reads `state.famousGalaxiesMeta` for the sidecar records and
+// `state.data.galaxies` for the positional catalog, `state.subsystems.fades`
+// for the `galaxy` layer opacity (read-only),
 // `state.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled` for the
 // visibility gate, and `state.gpu.labelRenderer.measure` for the caption's ink
-// bbox (which places the leader-line top). The fixture supplies all four; the
-// `galaxyNames` handle is registered at 1 so the at-rest opacity is 1. The
+// bbox (which places the leader-line top). The fixture supplies all five; the
+// `galaxy` handle is registered at 1 so the at-rest opacity is 1. The
 // famous label gate defaults visible.
 function makeState(
   opts: {
@@ -53,10 +54,11 @@ function makeState(
   } = {},
 ): EngineState {
   const fades = opts.fades ?? makeRegistry();
-  fades.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 1);
+  fades.register({ kind: 'labelLayer', layer: 'galaxy' }, 1);
   const bbox = opts.bbox ?? MEASURED_BBOX;
   return {
     data: createEngineData(),
+    famousGalaxiesMeta: [],
     gpu: { labelRenderer: { measure: vi.fn<(label: Label) => LabelBBox>(() => bbox) } },
     subsystems: {
       fades,
@@ -111,8 +113,10 @@ const PX_PER_RAD = 1080 / (2 * Math.tan((30 * Math.PI) / 180));
 const sizePxAt = (diameterKpc: number, distanceMpc: number) =>
   (diameterKpc / (distanceMpc * 1000)) * PX_PER_RAD;
 
-const meta = (...entries: Partial<FamousMetaEntry>[]): FamousMetaEntry[] =>
-  entries.map((e) => ({ id: 'x', names: [], description: '', type: '', ...e }) as FamousMetaEntry);
+const meta = (...entries: Partial<FamousGalaxyMetaEntry>[]): FamousGalaxyMetaEntry[] =>
+  entries.map(
+    (e) => ({ id: 'x', names: [], description: '', type: '', ...e }) as FamousGalaxyMetaEntry,
+  );
 
 const famousCatalog = (positions: number[], diameters: number[]): GalaxyCatalog =>
   ({
@@ -121,13 +125,26 @@ const famousCatalog = (positions: number[], diameters: number[]): GalaxyCatalog 
     diameterKpc: new Float32Array(diameters),
   }) as unknown as GalaxyCatalog;
 
+// `famousGalaxiesMeta` is readonly on `EngineState` (the getter delegates to
+// the Redux store in the real engine); the fixture is a plain object
+// literal, so writing through a mutable-view cast is the direct way to seed
+// it here.
+function setFamousGalaxiesMeta(
+  state: EngineState,
+  entries: Partial<FamousGalaxyMetaEntry>[],
+): void {
+  (state as unknown as { famousGalaxiesMeta: FamousGalaxyMetaEntry[] }).famousGalaxiesMeta = meta(
+    ...entries,
+  );
+}
+
 function seed(
   state: EngineState,
-  entries: Partial<FamousMetaEntry>[],
+  entries: Partial<FamousGalaxyMetaEntry>[],
   positions: number[],
   diameters: number[],
 ): void {
-  state.data.galaxies.setFamousMeta(meta(...entries));
+  setFamousGalaxiesMeta(state, entries);
   state.data.galaxies.setCatalog(Source.FamousGalaxy, famousCatalog(positions, diameters));
 }
 
@@ -203,10 +220,7 @@ describe('produceFamousLabels', () => {
 
     const dot = screenOf([17, 0, 0]);
     const anchor = screenOf(out.labels[0]!.worldPos);
-    expect(dot[1] - anchor[1]).toBeCloseTo(
-      MIN_LABEL_CLEARANCE_PX + TEXT_BOTTOM_BELOW_ANCHOR_PX,
-      2,
-    );
+    expect(dot[1] - anchor[1]).toBeCloseTo(MIN_LABEL_CLEARANCE_PX + TEXT_BOTTOM_BELOW_ANCHOR_PX, 2);
     const tip = screenOf(out.lines[0]!.toWorld);
     expect(tip[1] - anchor[1]).toBeCloseTo(TEXT_BOTTOM_BELOW_ANCHOR_PX + LEADER_LINE_PADDING_PX, 2);
   });
@@ -246,25 +260,25 @@ describe('produceFamousLabels', () => {
   });
 
   it('emits nothing when famous labels are hidden AND the fade-out has completed', () => {
-    // The gate is opacity-aware: hidden alone is not enough — the galaxyNames
+    // The gate is opacity-aware: hidden alone is not enough — the galaxy-layer
     // fade must have reached 0 for the producer to fall silent. Simulate a
     // completed fade-out by forcing the handle to 0.
     const fades = makeRegistry();
-    fades.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 1);
-    fades.setImmediate({ kind: 'labelLayer', layer: 'galaxyNames' }, 0);
+    fades.register({ kind: 'labelLayer', layer: 'galaxy' }, 1);
+    fades.setImmediate({ kind: 'labelLayer', layer: 'galaxy' }, 0);
     const state = makeState({ fades });
     seed(state, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
     state.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled = false;
     expect(produceFamousLabels(state, makeCtx()).labels).toEqual([]);
   });
 
-  it('keeps emitting while the galaxyNames fade-out tail is non-zero (no pop on toggle-out)', () => {
+  it('keeps emitting while the galaxy-layer fade-out tail is non-zero (no pop on toggle-out)', () => {
     // Toggle-off scenario mid-fade: the famous label gate is false but the
-    // galaxyNames opacity is still ramping down (0.5 here). The producer must
+    // galaxy-layer opacity is still ramping down (0.5 here). The producer must
     // KEEP emitting at the reduced alpha so the labels fade out smoothly.
     const midFade = makeRegistry();
-    midFade.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 1);
-    midFade.setImmediate({ kind: 'labelLayer', layer: 'galaxyNames' }, 0.5);
+    midFade.register({ kind: 'labelLayer', layer: 'galaxy' }, 1);
+    midFade.setImmediate({ kind: 'labelLayer', layer: 'galaxy' }, 0.5);
     const fading = makeState({ fades: midFade });
     seed(fading, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
     fading.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled = false;
@@ -276,8 +290,8 @@ describe('produceFamousLabels', () => {
 
     // Once the fade reaches 0, the producer falls silent.
     const done = makeRegistry();
-    done.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 1);
-    done.setImmediate({ kind: 'labelLayer', layer: 'galaxyNames' }, 0);
+    done.register({ kind: 'labelLayer', layer: 'galaxy' }, 1);
+    done.setImmediate({ kind: 'labelLayer', layer: 'galaxy' }, 0);
     const settled = makeState({ fades: done });
     seed(settled, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
     settled.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled = false;
@@ -286,7 +300,7 @@ describe('produceFamousLabels', () => {
 
   it('emits nothing when the famous catalog is absent or meta is empty', () => {
     const noCatalog = makeState();
-    noCatalog.data.galaxies.setFamousMeta(meta({ id: 'm31', names: ['M31'] }));
+    setFamousGalaxiesMeta(noCatalog, [{ id: 'm31', names: ['M31'] }]);
     expect(produceFamousLabels(noCatalog, makeCtx()).labels).toEqual([]);
 
     const noMeta = makeState();
@@ -302,16 +316,16 @@ describe('produceFamousLabels', () => {
     expect(out.labels[0]!.worldEmMpc).toBeCloseTo(0.0125, 6);
   });
 
-  it('bakes galaxyNames opacity into famous label fadeAlpha', () => {
-    // At-rest (galaxyNames at 1) → full distance-fade alpha.
+  it('bakes galaxy-layer opacity into famous label fadeAlpha', () => {
+    // At-rest (galaxy layer at 1) → full distance-fade alpha.
     const atRest = makeState();
     seed(atRest, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
     const atRestAlpha = produceFamousLabels(atRest, makeCtx()).labels[0]!.fadeAlpha!;
 
-    // galaxyNames at 0.5 → half the at-rest alpha for label AND its anchor line.
+    // galaxy layer at 0.5 → half the at-rest alpha for label AND its anchor line.
     const fades = makeRegistry();
-    fades.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 1);
-    fades.setImmediate({ kind: 'labelLayer', layer: 'galaxyNames' }, 0.5);
+    fades.register({ kind: 'labelLayer', layer: 'galaxy' }, 1);
+    fades.setImmediate({ kind: 'labelLayer', layer: 'galaxy' }, 0.5);
     const dimmed = makeState({ fades });
     seed(dimmed, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
     const out = produceFamousLabels(dimmed, makeCtx());
@@ -339,8 +353,8 @@ describe('produceFamousLabels', () => {
     // The connector carries the same × layerAlpha factor as its label, at both
     // a dimmed opacity and under recession.
     const fades = makeRegistry();
-    fades.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 1);
-    fades.setImmediate({ kind: 'labelLayer', layer: 'galaxyNames' }, 0.5);
+    fades.register({ kind: 'labelLayer', layer: 'galaxy' }, 1);
+    fades.setImmediate({ kind: 'labelLayer', layer: 'galaxy' }, 0.5);
     const state = makeState({ fades });
     seed(state, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
     const out = produceFamousLabels(state, makeCtx({ focusBlend: 1 }));
@@ -384,13 +398,42 @@ describe('produceFamousLabels', () => {
     }
   });
 
-  it('at-rest output is unchanged (galaxyNames at 1, blend 0)', () => {
-    // Golden: galaxyNames at 1 × recession 1 (blend 0) ⇒ layerAlpha 1, so the
+  it('at-rest output is unchanged (galaxy layer at 1, blend 0)', () => {
+    // Golden: galaxy layer at 1 × recession 1 (blend 0) ⇒ layerAlpha 1, so the
     // emitted fadeAlpha equals the raw distance-fade value (1 here).
     const state = makeState();
     seed(state, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
     const out = produceFamousLabels(state, makeCtx());
     expect(out.labels[0]!.fadeAlpha).toBe(1);
     expect(out.lines[0]!.fadeAlpha).toBe(1);
+  });
+
+  it('caps a very close companion (e.g. the LMC) to the near-distance pixel ceiling', () => {
+    // Inside the near band (< 0.1 Mpc), the ramp is fully bottomed out at the
+    // 60 px near cap rather than the category's 150 px `maxPixelSize` — the
+    // bug this fixes: a fixed 150 px ceiling let the LMC/SMC tower over the
+    // view from inside the Milky Way.
+    const state = makeState();
+    seed(state, [{ id: 'lmc', names: ['LMC'] }], [0.05, 0, 0], [10]);
+    const out = produceFamousLabels(state, makeCtx());
+    expect(out.labels[0]!.maxPixelSize).toBe(60);
+  });
+
+  it('keeps the full 150 px ceiling for a distant famous galaxy (e.g. M31)', () => {
+    // Beyond the far band (> 1 Mpc), the ramp is fully saturated at the
+    // category's normal `maxPixelSize` — the dramatic close-approach labels
+    // for far companions like M31 must not shrink.
+    const state = makeState();
+    seed(state, [{ id: 'm31', names: ['M31'] }], [3, 0, 0], [40]);
+    const out = produceFamousLabels(state, makeCtx());
+    expect(out.labels[0]!.maxPixelSize).toBe(FAMOUS_LABEL_STYLE.maxPixelSize);
+  });
+
+  it('yields a strictly intermediate ceiling in the near-to-far ramp band', () => {
+    const state = makeState();
+    seed(state, [{ id: 'mid', names: ['Mid'] }], [0.5, 0, 0], [20]);
+    const out = produceFamousLabels(state, makeCtx());
+    expect(out.labels[0]!.maxPixelSize).toBeGreaterThan(60);
+    expect(out.labels[0]!.maxPixelSize).toBeLessThan(FAMOUS_LABEL_STYLE.maxPixelSize);
   });
 });

@@ -71,11 +71,13 @@ function stubPass(): GPURenderPassEncoder & { drawIndexed: ReturnType<typeof vi.
 
 describe('createRingRenderer', () => {
   it('construct does not throw under the mock device', () => {
-    expect(() => createRingRenderer(mockDevice(), 'rgba16float', 'depth32float')).not.toThrow();
+    expect(() =>
+      createRingRenderer(mockDevice(), 'rgba16float', 'depth32float', false),
+    ).not.toThrow();
   });
 
   it('satisfies Renderer — non-empty label + destroy function', () => {
-    const renderer = createRingRenderer(mockDevice(), 'rgba16float', 'depth32float');
+    const renderer = createRingRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
     renderer satisfies Renderer;
     expect(renderer.label.length).toBeGreaterThan(0);
     expect(typeof renderer.destroy).toBe('function');
@@ -83,7 +85,7 @@ describe('createRingRenderer', () => {
   });
 
   it('setTexture / draw are callable with the right arity', () => {
-    const renderer = createRingRenderer(mockDevice(), 'rgba16float', 'depth32float');
+    const renderer = createRingRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
     expect(typeof renderer.setTexture).toBe('function');
     expect(renderer.setTexture.length).toBe(1);
     expect(typeof renderer.draw).toBe('function');
@@ -103,7 +105,12 @@ describe('createRingRenderer', () => {
     // omitting it makes Dawn reject the upload and the ring samples a zeroed
     // strip. This asserts the flag is present on the upload target.
     const textures: GPUTextureDescriptor[] = [];
-    const renderer = createRingRenderer(mockDevice({ textures }), 'rgba16float', 'depth32float');
+    const renderer = createRingRenderer(
+      mockDevice({ textures }),
+      'rgba16float',
+      'depth32float',
+      false,
+    );
     renderer.setTexture({ width: 512, height: 1 } as unknown as ImageBitmap);
     const stripTex = textures.find((t) => Array.isArray(t.size) && t.size[0] === 512);
     expect(stripTex).toBeDefined();
@@ -112,13 +119,15 @@ describe('createRingRenderer', () => {
 
   it('bakes the foreground profile: over blend, two-sided, depth read / no write', () => {
     const renderPipelines: GPURenderPipelineDescriptor[] = [];
-    createRingRenderer(mockDevice({ renderPipelines }), 'rgba16float', 'depth32float');
+    createRingRenderer(mockDevice({ renderPipelines }), 'rgba16float', 'depth32float', false);
     expect(renderPipelines).toHaveLength(1);
     const pipeline = renderPipelines[0]!;
     const target = Array.from(pipeline.fragment!.targets!)[0]!;
     expect(target!.format).toBe('rgba16float');
-    // Straight-alpha OVER — the one translucent member of the foreground group.
-    expect(target!.blend!.color.srcFactor).toBe('src-alpha');
+    // Premultiplied OVER — the fragment premultiplies its reflected colour by
+    // coverage itself (so it can lift that term to full albedo where it occults
+    // the planet), hence 'one', not 'src-alpha'.
+    expect(target!.blend!.color.srcFactor).toBe('one');
     expect(target!.blend!.color.dstFactor).toBe('one-minus-src-alpha');
     // Two-sided annulus.
     expect(pipeline.primitive!.cullMode).toBe('none');
@@ -130,7 +139,7 @@ describe('createRingRenderer', () => {
 
   it('declares a three-binding layout: uniform, sampler, ring strip', () => {
     const bindGroupLayouts: GPUBindGroupLayoutDescriptor[] = [];
-    createRingRenderer(mockDevice({ bindGroupLayouts }), 'rgba16float', 'depth32float');
+    createRingRenderer(mockDevice({ bindGroupLayouts }), 'rgba16float', 'depth32float', false);
     const entries = Array.from(bindGroupLayouts[0]!.entries);
     const byBinding = new Map(entries.map((e) => [e.binding, e]));
     expect(byBinding.get(0)!.buffer!.type).toBe('uniform');
@@ -140,10 +149,11 @@ describe('createRingRenderer', () => {
 });
 
 describe('packRingUniforms byte layout (RingUniforms keep-rule)', () => {
-  it('places sunDirLocal@64, planetRadiusRatio@76, innerRatio@80, size 96', () => {
+  it('places sunDirLocal@64, planetRadiusRatio@76, camPosLocal@80, innerRatio@92, size 96', () => {
     const mvp = Float32Array.from({ length: 16 }, (_, i) => i + 1);
     const sun: [number, number, number] = [0.1, 0.2, 0.3];
-    const u = packRingUniforms(mvp, sun, 0.43, 0.53);
+    const cam: [number, number, number] = [1.5, -2.5, 3.5];
+    const u = packRingUniforms(mvp, sun, 0.43, cam, 0.53);
 
     // 96 bytes = 24 f32.
     expect(u).toHaveLength(24);
@@ -154,13 +164,13 @@ describe('packRingUniforms byte layout (RingUniforms keep-rule)', () => {
     expect(u[16]).toBeCloseTo(0.1);
     expect(u[17]).toBeCloseTo(0.2);
     expect(u[18]).toBeCloseTo(0.3);
-    // planetRadiusRatio at float 19 (byte 76) — a REAL field, the vec3's tail.
+    // planetRadiusRatio at float 19 (byte 76) — fills sunDirLocal's vec3 tail.
     expect(u[19]).toBeCloseTo(0.43);
-    // innerRatio at float 20 (byte 80).
-    expect(u[20]).toBeCloseTo(0.53);
-    // Tail pad zeroed (floats 21..23, byte 84..95).
-    expect(u[21]).toBe(0);
-    expect(u[22]).toBe(0);
-    expect(u[23]).toBe(0);
+    // camPosLocal at floats 20..22 (byte 80) — a 16-byte-aligned vec3.
+    expect(u[20]).toBeCloseTo(1.5);
+    expect(u[21]).toBeCloseTo(-2.5);
+    expect(u[22]).toBeCloseTo(3.5);
+    // innerRatio at float 23 (byte 92) — fills camPosLocal's vec3 tail.
+    expect(u[23]).toBeCloseTo(0.53);
   });
 });

@@ -22,14 +22,17 @@
  * The per-body decision reuses the same apparent-size mechanism the stars and
  * galaxies use for their LOD promotion (`apparentSizePx` feeding a pixel
  * threshold): project the body's physical diameter at its camera distance into
- * pixels, then apply `BODY_GLINT_MAX_PX`. Textured-vs-flat is then a pure
+ * pixels, then apply `BODY_GLINT_MAX_PX`. The diameter reads the body's live
+ * position from the per-frame `bodyStates` snapshot (keyed by id), NOT a baked
+ * record field, so the split tracks the clock. Textured-vs-flat is then a pure
  * registry-membership + residency test — never an `if (id === …)` chain. The
- * function stays pure (a function of the body list, the camera, the projection,
- * and the residency predicate) so it unit-tests headlessly, no GPU device or
- * engine state to stand up.
+ * function stays pure (a function of the body list, the body-state snapshot, the
+ * camera, the projection, and the residency predicate) so it unit-tests
+ * headlessly, no GPU device or engine state to stand up.
  */
 
 import type { PlanetBody } from '../../../@types/scene/PlanetBody';
+import type { BodyState } from '../../../@types/scene/BodyState';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiameterPx';
 import { bodyTextureSpec } from '../../../data/bodies/bodyTextureRegistry';
@@ -47,13 +50,16 @@ export const BODY_GLINT_MAX_PX = 3;
 /**
  * Split `bodies` into the `{ glints, flat, textured }` presentations for the
  * current camera. Seed order is preserved within each branch and the returned
- * arrays reference the input records (no copies) — the mesh layers compose MVPs
- * straight off `positionMpc`.
+ * arrays reference the input identity records (no copies) — the mesh layers
+ * resolve each body's live position/orientation from the same `bodyStates`
+ * snapshot, keyed by id.
  *
- * `isTextureResident(id)` reports whether the body's surface texture is live on
- * the renderer (the `bodyTextures` slot's `current() != null`). A registry body
- * whose texture has not landed yet is `flat` — the flat albedo sphere IS the
- * placeholder, exactly as Earth shows mid-blue before Blue Marble arrives.
+ * `isTextureResident(id)` reports whether a real surface texture is BOUND for the
+ * body — a rendering fact asked of the renderer, never inferred from the loading
+ * system (`sceneBodyPartition` binds it to `texturedBodyRenderer.hasMap`). A
+ * registry body with nothing bound but the shared 1×1 is `flat` — the flat albedo
+ * sphere IS the placeholder, exactly as Earth shows mid-blue before Blue Marble
+ * arrives.
  *
  * A body the camera sits INSIDE (distance 0) resolves unconditionally:
  * `bodyApparentDiameterPx` returns `Infinity` at distance 0 (the camera is
@@ -65,12 +71,17 @@ export const BODY_GLINT_MAX_PX = 3;
  */
 export function partitionBodiesByPresentation(input: {
   bodies: readonly PlanetBody[];
+  bodyStates: ReadonlyMap<string, BodyState>;
   camPosMpc: Readonly<Vec3>;
   viewportHeightPx: number;
   fovYRad: number;
   isTextureResident: (id: string) => boolean;
-}): { glints: readonly PlanetBody[]; flat: readonly PlanetBody[]; textured: readonly PlanetBody[] } {
-  const { bodies, camPosMpc, viewportHeightPx, fovYRad, isTextureResident } = input;
+}): {
+  glints: readonly PlanetBody[];
+  flat: readonly PlanetBody[];
+  textured: readonly PlanetBody[];
+} {
+  const { bodies, bodyStates, camPosMpc, viewportHeightPx, fovYRad, isTextureResident } = input;
   const glints: PlanetBody[] = [];
   const flat: PlanetBody[] = [];
   const textured: PlanetBody[] = [];
@@ -80,7 +91,9 @@ export function partitionBodiesByPresentation(input: {
     // inside the body (that degenerate case is owned by the util, so no per-body
     // branch here). A body resolves to a mesh at/above BODY_GLINT_MAX_PX.
     const diameterPx = bodyApparentDiameterPx({
-      positionMpc: body.positionMpc,
+      // Live position from the per-frame snapshot (keyed by id), not a baked
+      // record field. Every seeded body has a snapshot state, so the lookup holds.
+      positionMpc: bodyStates.get(body.id)!.positionMpc,
       radiusKm: body.radiusKm,
       camPosMpc,
       viewportHeightPx,

@@ -27,7 +27,8 @@ import { createHiResFamousTexture } from '../../../../src/services/gpu/resources
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
-import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaEntry';
+import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/FamousGalaxyMetaEntry';
+import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 
 const LAYER_SIDE = 1024;
 const LAYER_COUNT = 8;
@@ -72,8 +73,7 @@ function makeFamousCloud(count: number, diameterKpc = 50): GalaxyCatalog {
     a.fill(v);
     return a;
   };
-  return {
-    count,
+  return makeGalaxyCatalog(count, {
     objIDs: new BigUint64Array(count),
     positions,
     magU: fill(20),
@@ -84,10 +84,7 @@ function makeFamousCloud(count: number, diameterKpc = 50): GalaxyCatalog {
     axisRatio: fill(0.7),
     positionAngleDeg: fill(45),
     diameterKpc: fill(diameterKpc),
-    classByte: new Uint8Array(count),
-    parentSurveyByte: new Uint8Array(count),
-    spectroscopicZ: new Float32Array(count),
-  };
+  });
 }
 
 /** Camera placed at `[10 - camDist, 0, 0]` (galaxy at `[10, 0, 0]`). */
@@ -114,7 +111,7 @@ function camDistFor(px: number, diameterKpc = 50): number {
 function makeInput(
   catalogs: Map<SourceType, GalaxyCatalog>,
   camDist: number,
-  famousMeta: readonly FamousMetaEntry[],
+  famousGalaxiesMeta: readonly FamousGalaxyMetaEntry[],
   mask = 0xffffffff,
 ) {
   return {
@@ -122,11 +119,11 @@ function makeInput(
     catalogs,
     visibleSourceMask: mask,
     pxPerRad: PX_PER_RAD,
-    famousMeta,
+    famousGalaxiesMeta,
   };
 }
 
-function makeFamousMeta(count: number, idPrefix = 'fg-'): FamousMetaEntry[] {
+function makeFamousGalaxiesMeta(count: number, idPrefix = 'fg-'): FamousGalaxyMetaEntry[] {
   return Array.from({ length: count }, (_, i) => ({
     id: `${idPrefix}${i}`,
     names: [`name-${i}`],
@@ -147,7 +144,7 @@ describe('createHiResFamousSubsystem', () => {
     const sys = createHiResFamousSubsystem({ texture, requestRender: () => {}, fetcher });
     const clouds = new Map([[Source.FamousGalaxy, makeFamousCloud(1)]]);
     // Camera far enough to put apparent size well below 120 px.
-    const out = sys.runFrame(makeInput(clouds, camDistFor(50), makeFamousMeta(1)));
+    const out = sys.runFrame(makeInput(clouds, camDistFor(50), makeFamousGalaxiesMeta(1)));
     expect(out.byFamousIdx.get(0)?.hiResLayerIdx ?? -1).toBe(-1);
     // Below-the-gate galaxies should never have triggered a fetch.
     expect(fetcher).not.toHaveBeenCalled();
@@ -166,7 +163,7 @@ describe('createHiResFamousSubsystem', () => {
     const fetcher = vi.fn(async () => bitmap);
     const sys = createHiResFamousSubsystem({ texture, requestRender: () => {}, fetcher });
     const clouds = new Map([[Source.FamousGalaxy, makeFamousCloud(1)]]);
-    const meta = makeFamousMeta(1);
+    const meta = makeFamousGalaxiesMeta(1);
     const input = makeInput(clouds, camDistFor(140), meta);
 
     // Frame 1 → enters the gate, allocates layer 0, enqueues a fetch.
@@ -217,7 +214,7 @@ describe('createHiResFamousSubsystem', () => {
       // crucially avoids the gate's strict `<` check rejecting the
       // 120 px lower-edge case.
       const camDist = camDistFor(targetPx + 0.01);
-      const out = sys.runFrame(makeInput(clouds, camDist, makeFamousMeta(1)));
+      const out = sys.runFrame(makeInput(clouds, camDist, makeFamousGalaxiesMeta(1)));
       const alpha = out.byFamousIdx.get(0)?.hiResCrossfadeAlpha ?? -1;
       sys.destroy();
       return alpha;
@@ -250,7 +247,7 @@ describe('createHiResFamousSubsystem', () => {
     // SDSS-source cloud, camera close enough that any planner that walked
     // it would fire on every galaxy.  Expect zero emissions and zero fetches.
     const clouds = new Map([[Source.SDSS, makeFamousCloud(3)]]);
-    const out = sys.runFrame(makeInput(clouds, camDistFor(300), makeFamousMeta(3)));
+    const out = sys.runFrame(makeInput(clouds, camDistFor(300), makeFamousGalaxiesMeta(3)));
     expect(out.byFamousIdx.size).toBe(0);
     expect(fetcher).not.toHaveBeenCalled();
     sys.destroy();
@@ -288,8 +285,7 @@ describe('createHiResFamousSubsystem', () => {
       // invariant under test.
       diameters[i] = 220 + i * 10;
     }
-    const cloud: GalaxyCatalog = {
-      count,
+    const cloud: GalaxyCatalog = makeGalaxyCatalog(count, {
       objIDs: new BigUint64Array(count),
       positions,
       magU: new Float32Array(count).fill(20),
@@ -300,12 +296,9 @@ describe('createHiResFamousSubsystem', () => {
       axisRatio: new Float32Array(count).fill(0.7),
       positionAngleDeg: new Float32Array(count).fill(45),
       diameterKpc: diameters,
-      classByte: new Uint8Array(count),
-      parentSurveyByte: new Uint8Array(count),
-      spectroscopicZ: new Float32Array(count),
-    };
+    });
     const clouds = new Map([[Source.FamousGalaxy, cloud]]);
-    const meta = makeFamousMeta(count);
+    const meta = makeFamousGalaxiesMeta(count);
     // Camera close enough that every galaxy clears the 120 px gate —
     // pin to the smallest galaxy (i=0, diameter 220 kpc): cam distance
     // such that diameter 220 gives ~210 px (well above the gate and the
@@ -333,7 +326,7 @@ describe('createHiResFamousSubsystem', () => {
     const fetcher = vi.fn(async () => null);
     const sys = createHiResFamousSubsystem({ texture, requestRender: () => {}, fetcher });
     const clouds = new Map([[Source.FamousGalaxy, makeFamousCloud(1)]]);
-    const meta = makeFamousMeta(1);
+    const meta = makeFamousGalaxiesMeta(1);
     const input = makeInput(clouds, camDistFor(230), meta);
 
     sys.runFrame(input);
@@ -364,7 +357,7 @@ describe('createHiResFamousSubsystem', () => {
     const fetcher = vi.fn(async () => null);
     const sys = createHiResFamousSubsystem({ texture, requestRender: () => {}, fetcher });
     const clouds = new Map([[Source.FamousGalaxy, makeFamousCloud(1)]]);
-    const meta = makeFamousMeta(1);
+    const meta = makeFamousGalaxiesMeta(1);
     const input = makeInput(clouds, camDistFor(230), meta);
 
     // Frame 1: enters the gate, fetcher dispatched, returns null.
@@ -417,7 +410,7 @@ describe('createHiResFamousSubsystem', () => {
     cloud.positions[1 * 3 + 1] = 0.001;
     cloud.positions[2 * 3 + 1] = 0.002;
     const clouds = new Map([[Source.FamousGalaxy, cloud]]);
-    const meta = makeFamousMeta(3);
+    const meta = makeFamousGalaxiesMeta(3);
     sys.runFrame(makeInput(clouds, camDistFor(230), meta));
 
     expect(fetcher).toHaveBeenCalledTimes(3);
@@ -459,7 +452,7 @@ describe('createHiResFamousSubsystem', () => {
     const sys = createHiResFamousSubsystem({ texture, requestRender: () => {}, fetcher });
     expect(sys.lastOutput.byFamousIdx.size).toBe(0);
     const clouds = new Map([[Source.FamousGalaxy, makeFamousCloud(1)]]);
-    const out = sys.runFrame(makeInput(clouds, camDistFor(230), makeFamousMeta(1)));
+    const out = sys.runFrame(makeInput(clouds, camDistFor(230), makeFamousGalaxiesMeta(1)));
     expect(sys.lastOutput).toBe(out);
     expect(sys.lastOutput.byFamousIdx.size).toBe(1);
     sys.destroy();

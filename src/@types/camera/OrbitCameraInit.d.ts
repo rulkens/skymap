@@ -11,6 +11,7 @@
  * `createOrbitCamera` and derive the rest (e.g. `position`) from it.
  */
 import type { Vec3 } from './math/Vec3';
+import type { Mat3 } from '../math/Mat3';
 
 export type OrbitCameraInit = {
   /** World-space point the camera orbits around and looks at. */
@@ -62,6 +63,25 @@ export type OrbitCameraInit = {
    * (synthetic clouds, focus tween, controls) working unchanged.
    */
   roll?: number;
+
+  /**
+   * Frame-local → world orientation basis (column-major 3×3).
+   *
+   * The (yaw, pitch) decode produces a direction in the camera's *frame-local*
+   * space, whose zenith (elevation +π/2) is local +Y. `frameBasis` rotates that
+   * direction into world equatorial-J2000 before the eye is placed, so the pole
+   * the camera treats as "up" is the frame's north pole. The MIDDLE column is
+   * that pole (per `ORIENTATION_FRAMES`).
+   *
+   * Optional: absent ⇒ identity, i.e. the pre-feature decode where local +Y is
+   * world +Y. Every non-engine caller (synthetic clouds, focus tween, dev-tool
+   * cameras) omits it and is byte-for-byte unchanged — mirrors `roll?`.
+   *
+   * Mutable (like `roll`, `yaw`, `pitch`): the engine's drag register
+   * (`state.cam`) has its `frameBasis` overwritten once per frame with the
+   * resolved B(t), so a grab decodes through the current pole.
+   */
+  frameBasis?: Mat3;
 
   /**
    * Vertical field of view in **radians**.

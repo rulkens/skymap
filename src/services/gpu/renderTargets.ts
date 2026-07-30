@@ -72,12 +72,15 @@
  * draws OPAQUE geometry (Earth, Moon, Sun) that must occlude the background
  * by depth-test, and WebGPU runs a depth-test only against a bound depth
  * attachment — so a row that declares depth gets a second texture allocated
- * and resized in lockstep with its colour texture. The depth texture is
- * `RENDER_ATTACHMENT` ONLY (never `TEXTURE_BINDING`): its values feed the
- * depth-test during the pass and are never sampled by a downstream shader,
- * unlike the colour texture the compositor reads back. It renders at full
- * resolution (`scale: 1`) because opaque geometry has hard edges that the
- * bilinear upsample used for the low-frequency volume row would smear.
+ * and resized in lockstep with its colour texture. The depth texture carries
+ * `RENDER_ATTACHMENT` (it feeds the depth-test as the pass draws) AND
+ * `TEXTURE_BINDING`, because it is ALSO sampled downstream: the near-field
+ * caption occlusion pass (`foregroundLabelsLayer`, via `lib/sceneDepth.wesl`)
+ * reads this depth to hide a planet's name behind a nearer body. It renders
+ * at full resolution (`scale: 1`) because opaque geometry has hard edges that
+ * the bilinear upsample used for the low-frequency volume row would smear —
+ * and full-res is also what lets a swap-pass fragment index the depth texel
+ * 1:1 (spec invariant: `foreground:0` and `swap` both render at `scale: 1`).
  *
  * ### Why the swap row has a spec but no texture
  *
@@ -100,6 +103,7 @@
 import type { RenderTargets } from '../../@types/rendering/RenderTargets';
 import type { RenderTargetSpec } from '../../@types/engine/frame/RenderTargetSpec';
 import type { Size } from '../../@types/rendering/Size';
+import { BLOOM_LEVELS } from '../../data/bloomConstants';
 
 /**
  * Per-target first-touch clear values, consumed by the executor: the first
@@ -116,15 +120,26 @@ import type { Size } from '../../@types/rendering/Size';
  * `star-aggregates` clears to a=0 for the same reason `volume` does — its
  * upsample composite adds nothing where no aggregate glow landed.
  *
- * The paired depth clear (`1.0`, the far plane) is NOT table data here — it
- * is the same constant for every depth-bearing row, so the executor supplies
- * it inline when it opens the pass. See `executeFrame`.
+ * The paired depth clear (the far-plane depth — `0.0` under the NEAR0
+ * `foreground:0` row's reversed-Z convention) is NOT table data here — the
+ * executor supplies each depth-bearing row's value via `depthClearValueFor`
+ * when it opens the pass. See `executeFrame`.
  */
 export const TARGET_CLEAR_VALUES: Readonly<Record<string, GPUColor>> = {
   hdr: { r: 0, g: 0, b: 0, a: 1 },
   volume: { r: 0, g: 0, b: 0, a: 0 },
   'star-aggregates': { r: 0, g: 0, b: 0, a: 0 },
   'foreground:0': { r: 0, g: 0, b: 0, a: 0 },
+  // Bloom pyramid mips clear transparent (a=0) — the pyramid accumulates
+  // additively (the upsample fold uses one/one blend), so an untouched texel
+  // must contribute nothing. The bright pass overwrites bloom0 outright, but
+  // the upsample folds add onto bloom0..3, and any level the fold does not
+  // cover has to start from zero coverage. Generated from BLOOM_LEVELS (the
+  // shared pyramid-depth home) so the clear table can never fall out of step
+  // with the `bloomN` spec rows below.
+  ...Object.fromEntries(
+    Array.from({ length: BLOOM_LEVELS }, (_unused, n) => [`bloom${n}`, { r: 0, g: 0, b: 0, a: 0 }]),
+  ),
   swap: { r: 0, g: 0, b: 0, a: 1 },
 };
 
@@ -149,6 +164,22 @@ function buildSpecs(swapFormat: GPUTextureFormat): readonly RenderTargetSpec[] {
     { id: 'volume', format: 'rgba16float', depth: null, scale: 3 },
     { id: 'star-aggregates', format: 'rgba16float', depth: null, scale: STAR_AGGREGATE_DIVISOR },
     { id: 'foreground:0', format: 'rgba16float', depth: 'depth32float', scale: 1 },
+    // Bloom mip pyramid: level 0 at half-res, each further level halving again
+    // (scale 2/4/8/16/32 — that is 2**(n+1)) — an ever-wider glow. rgba16float
+    // mirrors the HDR precision so the additive fold keeps its dynamic range. No
+    // depth: these are fullscreen post passes, not depth-tested geometry. The
+    // rows are generated from BLOOM_LEVELS (the shared pyramid-depth home) so
+    // adding a level is a one-line edit that stays consistent with the uniform
+    // arrays and pass loops that derive from the same number.
+    ...Array.from(
+      { length: BLOOM_LEVELS },
+      (_unused, n): RenderTargetSpec => ({
+        id: `bloom${n}`,
+        format: 'rgba16float',
+        depth: null,
+        scale: 2 ** (n + 1),
+      }),
+    ),
     { id: 'swap', format: swapFormat, depth: null, scale: 1 },
   ];
 }
@@ -158,9 +189,12 @@ export function createRenderTargets(
   swapFormat: GPUTextureFormat,
   size: Size,
 ): RenderTargets {
-  const specs = buildSpecs(swapFormat);
+  // `let`, not `const`: setSwapFormat below replaces this array wholesale
+  // rather than mutating a row in place (house preference for immutability).
+  let specs = buildSpecs(swapFormat);
   // Only offscreen rows get textures — the swap row is executor-resolved
-  // from the acquired frame view (see the module header).
+  // from the acquired frame view (see the module header). Computed once:
+  // setSwapFormat never touches an offscreen row, so this stays valid.
   const offscreenSpecs = specs.filter((s) => s.id !== 'swap');
 
   // Per-row allocation state, keyed by spec id. `destroy()` clears every map
@@ -201,10 +235,13 @@ export function createRenderTargets(
         label: `render-target-${spec.id}-depth`,
         format: spec.depth,
         size: { width, height },
-        // RENDER_ATTACHMENT ONLY — depth values serve the depth-test during
-        // the pass and are never sampled by a downstream shader, so (unlike
-        // the colour target above) no TEXTURE_BINDING.
-        usage: GPUTextureUsage.RENDER_ATTACHMENT,
+        // Both flags: RENDER_ATTACHMENT feeds the depth-test while the
+        // foreground pass draws opaque geometry; TEXTURE_BINDING lets the
+        // near-field caption occlusion fragment shaders sample this same depth
+        // afterwards (via lib/sceneDepth.wesl) to hide captions behind nearer
+        // bodies. WebGPU descriptors can't re-tag usage after creation, so a
+        // texture that is later sampled must be born with TEXTURE_BINDING.
+        usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
       });
       depthTextures.set(spec.id, depthTexture);
       depthViews.set(spec.id, depthTexture.createView());
@@ -214,7 +251,11 @@ export function createRenderTargets(
   for (const spec of offscreenSpecs) allocate(spec, size);
 
   return {
-    specs,
+    // A getter, not a captured value: setSwapFormat reassigns `specs`, and
+    // callers must observe the replacement through the same handle.
+    get specs() {
+      return specs;
+    },
     viewOf(id: string): GPUTextureView {
       const view = views.get(id);
       if (!view) {
@@ -236,6 +277,9 @@ export function createRenderTargets(
     },
     resize(s: Size): void {
       for (const spec of offscreenSpecs) allocate(spec, s);
+    },
+    setSwapFormat(next: GPUTextureFormat): void {
+      specs = specs.map((s) => (s.id === 'swap' ? { ...s, format: next } : s));
     },
     destroy(): void {
       for (const texture of textures.values()) texture.destroy();

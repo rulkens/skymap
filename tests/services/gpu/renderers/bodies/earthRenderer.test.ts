@@ -66,31 +66,37 @@ function mockDevice(recorders?: {
 
 describe('createEarthRenderer', () => {
   it('construct does not throw under the mock device', () => {
-    expect(() => createEarthRenderer(mockDevice(), 'rgba16float', 'depth32float')).not.toThrow();
+    expect(() =>
+      createEarthRenderer(mockDevice(), 'rgba16float', 'depth32float', false),
+    ).not.toThrow();
   });
 
   it('satisfies Renderer — non-empty label + destroy function', () => {
-    const renderer = createEarthRenderer(mockDevice(), 'rgba16float', 'depth32float');
+    const renderer = createEarthRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
     renderer satisfies Renderer;
     expect(renderer.label.length).toBeGreaterThan(0);
     expect(typeof renderer.destroy).toBe('function');
     expect(() => renderer.destroy()).not.toThrow();
   });
 
-  it('setTexture and draw are callable with the right arity', () => {
-    const renderer = createEarthRenderer(mockDevice(), 'rgba16float', 'depth32float');
+  it('setMap and draw are callable with the right arity', () => {
+    const renderer = createEarthRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
 
-    expect(typeof renderer.setTexture).toBe('function');
-    expect(renderer.setTexture.length).toBe(1);
+    expect(typeof renderer.setMap).toBe('function');
+    expect(renderer.setMap.length).toBe(2);
     expect(typeof renderer.draw).toBe('function');
     expect(renderer.draw.length).toBe(2);
 
-    // setTexture accepts an ImageBitmap-shaped value without throwing.
+    // setMap('surface', …) accepts an ImageBitmap-shaped value without throwing.
     const bitmap = { width: 4, height: 2 } as unknown as ImageBitmap;
-    expect(() => renderer.setTexture(bitmap)).not.toThrow();
+    expect(() => renderer.setMap('surface', bitmap)).not.toThrow();
 
-    // draw writes the 80-byte LitBodyUniforms record (20 f32) and records the
-    // indexed draw against a stub pass.
+    // setMap('material', …) accepts an ImageBitmap-shaped value without throwing
+    // (the linear roughness/ocean-mask map now has a real case).
+    expect(() => renderer.setMap('material', bitmap)).not.toThrow();
+
+    // draw writes the 112-byte EarthSurfaceUniforms record (28 f32) and records
+    // the indexed draw against a stub pass.
     const pass = {
       setPipeline: vi.fn(),
       setBindGroup: vi.fn(),
@@ -98,19 +104,19 @@ describe('createEarthRenderer', () => {
       setIndexBuffer: vi.fn(),
       drawIndexed: vi.fn(),
     } as unknown as GPURenderPassEncoder;
-    expect(() => renderer.draw(pass, new Float32Array(20))).not.toThrow();
+    expect(() => renderer.draw(pass, new Float32Array(28))).not.toThrow();
     expect(pass.drawIndexed).toHaveBeenCalledTimes(1);
   });
 
   it('bakes the given targetFormat into the pipeline colour target', () => {
     const renderPipelines: GPURenderPipelineDescriptor[] = [];
-    createEarthRenderer(mockDevice({ renderPipelines }), 'rgba16float', 'depth32float');
+    createEarthRenderer(mockDevice({ renderPipelines }), 'rgba16float', 'depth32float', false);
     expect(renderPipelines).toHaveLength(1);
     const target = Array.from(renderPipelines[0]!.fragment!.targets!)[0]!;
     expect(target!.format).toBe('rgba16float');
   });
 
-  it('setTexture sizes the Earth texture with a full mip chain and runs the downsample passes', () => {
+  it('setMap sizes the Earth texture with a full mip chain and runs the downsample passes', () => {
     // The lit Earth now consumes a mip chain (mipmapFilter linear) so the
     // surface stops shimmering as it shrinks toward the sub-pixel glint handoff.
     // Structural proof: setTexture sizes the texture with mipLevelCount(w,h)
@@ -119,9 +125,9 @@ describe('createEarthRenderer', () => {
     const textures: GPUTextureDescriptor[] = [];
     const encoderCount = { n: 0 };
     const device = mockDevice({ textures, encoderCount });
-    const renderer = createEarthRenderer(device, 'rgba16float', 'depth32float');
+    const renderer = createEarthRenderer(device, 'rgba16float', 'depth32float', false);
     const bitmap = { width: 8, height: 4 } as unknown as ImageBitmap;
-    renderer.setTexture(bitmap);
+    renderer.setMap('surface', bitmap);
     const earthTex = textures.find((t) => Array.isArray(t.size) && t.size[0] === 8);
     expect(earthTex).toBeDefined();
     expect(earthTex!.mipLevelCount).toBe(mipLevelCount(8, 4));

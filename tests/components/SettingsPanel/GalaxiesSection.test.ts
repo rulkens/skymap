@@ -11,10 +11,10 @@
  *    bits are set; `checked` (allOn) when all are set; unchecked (noneOn)
  *    when none are set.
  *  - Per-catalog checkbox reflects `visibleSourceMask`.
- *  - Point-size slider echoes the `pointSize` prop value.
+ *  - Point-size Slider echoes the `pointSize` prop as its aria value.
  *  - Toggling a catalog checkbox fires `onToggleSource` with correct args.
- *  - Moving the point-size slider fires `onPointSizeChange` with the
- *    parsed float value.
+ *  - A keyboard nudge on the point-size Slider fires `onPointSizeChange`
+ *    with the stepped value.
  *
  * Source codes from `src/data/source.ts`:
  *   SDSS=1, TwoMRS=2, Glade=3, FamousGalaxy=4, Milliquas=8, DesiDeep=18, DesiWedge=19, DesiSgw=20
@@ -36,14 +36,7 @@ import { Source } from '../../../src/data/source';
 
 // All TOGGLEABLE_SOURCES bits set: FamousGalaxy(4)|TwoMRS(2)|SDSS(1)|Glade(3)|Milliquas(8)|DesiDeep(18)|DesiWedge(19)|DesiSgw(20)
 const ALL_ON_MASK =
-  (1 << 4) |
-  (1 << 2) |
-  (1 << 1) |
-  (1 << 3) |
-  (1 << 8) |
-  (1 << 18) |
-  (1 << 19) |
-  (1 << 20);
+  (1 << 4) | (1 << 2) | (1 << 1) | (1 << 3) | (1 << 8) | (1 << 18) | (1 << 19) | (1 << 20);
 // Only SDSS + TwoMRS — a strict subset → should produce indeterminate
 const PARTIAL_MASK = (1 << Source.SDSS) | (1 << Source.TwoMRS);
 
@@ -59,6 +52,12 @@ function baseProps() {
     onBiasModeChange: vi.fn<(mode: BiasModeT) => void>(),
     absMagLimit: -19,
     onAbsMagLimitChange: vi.fn<(absMag: number) => void>(),
+    sbScale: 8,
+    onSbScaleChange: vi.fn<(v: number) => void>(),
+    sbMax: 30,
+    onSbMaxChange: vi.fn<(v: number) => void>(),
+    falloffStrength: 0.8,
+    onFalloffStrengthChange: vi.fn<(v: number) => void>(),
   };
 }
 
@@ -126,16 +125,17 @@ describe('GalaxiesSection', () => {
       expect(desiLabel).not.toBeNull();
       expect(desiLabel!.textContent).toContain('DESI Deep Field');
     });
-
   });
 
   describe('point-size slider', () => {
-    it('has value matching the pointSize prop', () => {
+    it('reflects the pointSize prop as the slider value', () => {
       const props = { ...baseProps(), pointSize: 4.5 };
       const { container } = render(createElement(GalaxiesSection, props));
-      const slider = container.querySelector<HTMLInputElement>('#slider-point-size');
-      expect(slider).not.toBeNull();
-      expect(slider!.value).toBe('4.5');
+      // The Slider lives in the (default-collapsed) Advanced section, whose
+      // wrapper is aria-hidden, so a raw DOM query rather than getByRole.
+      const slider = container.querySelector('[role="slider"]')!;
+      expect(slider.getAttribute('aria-valuenow')).toBe('4.5');
+      expect(slider.getAttribute('aria-valuetext')).toBe('4.5 px');
     });
   });
 
@@ -157,16 +157,18 @@ describe('GalaxiesSection', () => {
       expect(onToggleSource).toHaveBeenCalledWith(Source.SDSS, false);
     });
 
-    it('calls onPointSizeChange with the parsed float when the slider moves', () => {
+    it('calls onPointSizeChange with the stepped value on a keyboard nudge', () => {
       const onPointSizeChange = vi.fn<(v: number) => void>();
-      const props = { ...baseProps(), onPointSizeChange };
+      const props = { ...baseProps(), pointSize: 2.5, onPointSizeChange };
       const { container } = render(createElement(GalaxiesSection, props));
 
-      const slider = container.querySelector<HTMLInputElement>('#slider-point-size')!;
-      fireEvent.change(slider, { target: { value: '3.7' } });
+      // The Slider has no native range input; ArrowRight advances by one step
+      // (0.1) from 2.5. Pointer-drag math needs a real layout rect, which jsdom
+      // doesn't provide, so keyboard is the deterministic path here.
+      fireEvent.keyDown(container.querySelector('[role="slider"]')!, { key: 'ArrowRight' });
 
       expect(onPointSizeChange).toHaveBeenCalledOnce();
-      expect(onPointSizeChange).toHaveBeenCalledWith(3.7);
+      expect(onPointSizeChange).toHaveBeenCalledWith(2.6);
     });
 
     it('calls onToggleSource for all TOGGLEABLE_SOURCES when master is toggled from noneOn', () => {

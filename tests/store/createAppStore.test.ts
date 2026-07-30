@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { createAppStore } from '../../src/store/createAppStore';
+import { NOOP_SAGA_CONTEXT } from '../support/createTestStore';
 import { setBrightness } from '../../src/state/settings/settingsSlice';
 import { buildInitialSettings } from '../../src/state/settings/initialState';
 import { settingsRoute, tierRoute, uiRoute } from '../../src/store/constants';
@@ -35,7 +36,13 @@ describe('createAppStore', () => {
   });
 
   it('dispatching a slice action updates state', () => {
-    const { store } = createAppStore();
+    const { store, setSagaContext } = createAppStore();
+    // `setBrightness` is a settings (wake-route) write, so `watchWakeSaga` fires
+    // and reaches `getContext('reconcile')`. Register the inert bag the engine
+    // would register in the real app, so the worker has a render scheduler to
+    // poke instead of dereferencing an undefined context (stderr noise; the
+    // reducer assertion below passes either way).
+    setSagaContext(NOOP_SAGA_CONTEXT);
     store.dispatch(setBrightness(0.25));
     expect(store.getState().settings.galaxyCatalogs.brightness).toBe(0.25);
   });

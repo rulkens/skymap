@@ -286,8 +286,10 @@ function makeInput(
     brightness: 1.0,
     selected: null as SelectionRef | null,
     visibleSourceMask: 0xffffffff,
-    highlightFallback: true,
-    realOnlyMode: false,
+    provenance: {
+      orientation: { highlight: true, filter: 'all' },
+      size: { highlight: false, filter: 'all' },
+    },
     biasMode: BiasMode.None,
     absMagLimit: -19,
     depthFadeEnabled: true,
@@ -299,11 +301,15 @@ function makeInput(
     focus: { center: [0, 0, 0], apparentRadiusMpc: 0, physicalRadiusMpc: 0, blend: 0 } as const,
     exposure: 1.0,
     toneMapCurve: ToneMapCurve.Reinhard,
+    hdrEnabled: true,
+    hdrKnee: 4.0,
+    hdrHeadroom: 0.25,
     galaxyTexturesEnabled: true,
     milkyWayEnabled: true,
     filamentsEnabled: false,
     filamentIntensity: 1,
     volumesEnabled: false,
+    bloomEnabled: false,
     ...(overrides.settings ?? {}),
   };
 
@@ -323,9 +329,11 @@ function makeInput(
     vp: Float64Array.from(viewProj as unknown as Float32Array),
     originRelative: false,
     precision: 'f32',
+    reversedZ: false,
   };
   const ctx = {
     isReady: true as const,
+    renderedTargets: new Set<string>(),
     cam,
     vp: viewProj,
     slabs: [cosmoSlab, cosmoSlab],
@@ -335,6 +343,7 @@ function makeInput(
     >,
     drawPxPerRad: canvasHeight / (2 * Math.tan(cam.fovYRad / 2)),
     nowMs: 0,
+    simDays: 0,
     fovYRad: FIXTURE_FOV_Y_RAD,
     focusBlend: 0,
     visibleSourceMask: 0xffffffff,
@@ -406,6 +415,10 @@ function makeInput(
           earthRenderer: null,
           starRenderer: null,
           planetRenderer: null,
+          // Near-field handle null → atmosphereShellLayer reports enabled=false
+          // AND the atmosphereSkyView compute step early-outs, so these fixtures
+          // stay a pure cosmological-frame trace (like the other body handles).
+          atmosphereShellRenderer: null,
           starPointRenderer: null,
           orbitTrailRenderer: null,
           starCatalogRenderer: null,
@@ -435,18 +448,29 @@ function makeInput(
           galaxyCatalogs: {
             sizePx: settings.pointSizePx,
             brightness: settings.brightness,
-            highlightFallback: settings.highlightFallback,
-            realOnly: settings.realOnlyMode,
+            provenance: settings.provenance,
             depthFade: settings.depthFadeEnabled,
           },
-          tonemap: { exposure: settings.exposure, curve: settings.toneMapCurve },
+          tonemap: {
+            exposure: settings.exposure,
+            curve: settings.toneMapCurve,
+          },
+          hdr: {
+            enabled: settings.hdrEnabled,
+            knee: settings.hdrKnee,
+            headroom: settings.hdrHeadroom,
+          },
+          // Bloom off by default in these fixtures: the bloom render steps only
+          // shape the program when enabled, and no fixture asserts on them.
+          bloom: { enabled: settings.bloomEnabled, strength: 1, threshold: 1 },
           bias: { mode: settings.biasMode, absMagLimit: settings.absMagLimit },
           thumbnails: { enabled: settings.galaxyTexturesEnabled },
           milkyWay: { enabled: settings.milkyWayEnabled },
           filaments: { enabled: settings.filamentsEnabled, intensity: settings.filamentIntensity },
+          constellations: { enabled: false, intensity: 1 },
           volumes: { enabled: settings.volumesEnabled, items: {} },
           flow: { enabled: false },
-          debug: { disabledPasses: overrides.disabledPasses ?? {} },
+          debug: { disabledPasses: overrides.disabledPasses ?? {}, renderStrategy: 'auto' },
         },
         selection: { select: settings.selected },
         assetSlots: { flow: null },
@@ -555,8 +579,7 @@ describe('renderFrame', () => {
     // pxPerRad = h / (2 · tan(fovY/2))
     const expectedPxPerRad = fx.canvasHeight / (2 * Math.tan(fx.cam.fovYRad / 2));
     expect(drawSettings.pxPerRad as number).toBeCloseTo(expectedPxPerRad, 6);
-    expect(drawSettings.highlightFallback).toBe(fx.settings.highlightFallback);
-    expect(drawSettings.realOnlyMode).toBe(fx.settings.realOnlyMode);
+    expect(drawSettings.provenance).toEqual(fx.settings.provenance);
     expect(drawSettings.biasMode).toBe(fx.settings.biasMode);
     expect(drawSettings.absMagLimit).toBe(fx.settings.absMagLimit);
     expect(drawSettings.depthFadeEnabled).toBe(fx.settings.depthFadeEnabled);
@@ -605,7 +628,47 @@ describe('renderFrame', () => {
     const args = draw.mock.calls[0]!;
     expect(args[1]).toBe(fx.hdrTargetView);
     expect(args[2]).toBe('replace');
-    expect(args[3]).toEqual({ exposure: fx.settings.exposure, curve: fx.settings.toneMapCurve });
+    expect(args[3]).toEqual({
+      exposure: fx.settings.exposure,
+      curve: fx.settings.toneMapCurve,
+      hdrKnee: 0,
+      hdrHeadroom: 0,
+    });
+  });
+
+  it('forwards the settings headroom knobs only when the swap chain is extended-range', () => {
+    // The two knobs are live settings but must reach the shader as 0 on an SDR
+    // swap chain, where spilled energy would just be clamped back to white. The
+    // gate lives in renderFrame via `hdrActiveOf`, which reads the `swap` row's
+    // format straight off `renderTargets.specs` — flipping it to the extended-range
+    // format is the whole difference between the settings values and zeros.
+    // Non-null assertion: the mock's `specs` always seeds a 'swap' row (see
+    // `makeMockRenderTargets`) — if that ever stops being true this should
+    // fail loudly here, not as an opaque "set properties of undefined" below.
+    const swapSpec = fx.renderTargets.specs.find((spec: { id: string }) => spec.id === 'swap')!;
+    swapSpec.format = 'rgba16float';
+    renderFrame(fx.input);
+
+    const draw = fx.compositor.draw as ReturnType<typeof vi.fn>;
+    const tone = draw.mock.calls[0]![3];
+    expect(tone.hdrKnee).toBe(fx.settings.hdrKnee);
+    expect(tone.hdrHeadroom).toBe(fx.settings.hdrHeadroom);
+  });
+
+  it('the tone-map gets zero headroom when the HDR toggle is off even on a float swap chain', () => {
+    // A float swap chain alone isn't sufficient: the format switch and the
+    // `hdr.enabled` write land in separate frames, so a frame can carry an
+    // extended-range swap chain with the viewer's toggle still off. Gating
+    // on `hdrActive` alone would leak the settings knobs into that frame.
+    const fx2 = makeInput({ settings: { hdrEnabled: false } });
+    const swapSpec = fx2.renderTargets.specs.find((spec: { id: string }) => spec.id === 'swap')!;
+    swapSpec.format = 'rgba16float';
+    renderFrame(fx2.input);
+
+    const draw = fx2.compositor.draw as ReturnType<typeof vi.fn>;
+    const tone = draw.mock.calls[0]![3];
+    expect(tone.hdrKnee).toBe(0);
+    expect(tone.hdrHeadroom).toBe(0);
   });
 
   it('records the full frame in canonical order: createEncoder → hdr COSMO pass (points) → hdr NEAR0 pass (milky-way) → composite pass → compositor.draw → finish → submit', () => {

@@ -3,12 +3,14 @@ import { near0SelectionRingLayer } from '../../../../../src/services/engine/fram
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
-import type { GalaxyRow } from '../../../../../src/@types/engine/GalaxyRow';
 import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
 import { Source } from '../../../../../src/data/sources';
 import { near0RingRadiusPx } from '../../../../../src/services/engine/helpers/near0RingRadiusPx';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
+import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
+import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
+import { makeGalaxyRow } from '../../../../fixtures/makeGalaxyRow';
 
 // The enable gate never touches ctx — a bare cast stands in for the frame ctx.
 const CTX = {} as unknown as ReadyFrameContext;
@@ -30,26 +32,12 @@ const STAR_ROW: SelectionRow = {
 
 // A galaxy row — yields a NON-null halo, but tagged COSMO. It exercises the
 // distinction between "no halo" and "halo for the other slab".
-const GALAXY_ROW: SelectionRow = {
-  type: 'galaxyCatalog',
+const GALAXY_ROW: SelectionRow = makeGalaxyRow({
   source: Source.Glade,
-  index: 0,
-  objId: '1',
-  x: 0,
-  y: 0,
   z: 100,
-  redshift: 0,
-  magU: 0,
-  magG: 0,
-  magR: 0,
-  magI: 0,
-  magZ: 0,
   diameterKpc: 60,
   axisRatio: 1,
-  positionAngleDeg: 0,
-  classByte: 0,
-  parentSurveyByte: 0,
-} as GalaxyRow;
+});
 
 // A structure row — drives the cluster marker pass, never this halo.
 const STRUCTURE_ROW: StructureInfo = {
@@ -125,6 +113,7 @@ function farClippingView(farMpc: number): SlabView {
       vp: new Float64Array(16),
       originRelative: true,
       precision: 'f64',
+      reversedZ: false,
     },
     vp: new Float32Array(16),
     camPos: [0, 0, 0],
@@ -164,5 +153,46 @@ describe('near0SelectionRingLayer.draw — far-plane clamp regression', () => {
       state.settings.galaxyCatalogs.sizePx,
     );
     expect(opts.ringRadiusPx).toBeCloseTo(expectedPx, 12);
+  });
+});
+
+describe('near0SelectionRingLayer.draw — live body position', () => {
+  // A body's SelectionRow snapshots its position at pick time, but the sim clock
+  // keeps orbiting it. The ring must centre on the LIVE position this frame, not
+  // the stale snapshot. This fails against the old code, which centred on
+  // `halo.worldPos` (= the stale `row.positionMpc`).
+  it('centres on the live snapshot position, not the stale row position', () => {
+    // Advance well past epoch so the derived Earth position is clearly not the
+    // stale row snapshot — the exact reported bug.
+    const simDays = CONST_J2000 + 300;
+    const livePos = deriveBodyStates(simDays).get('earth')!.positionMpc;
+
+    // A deliberately-wrong snapshot: a magnitude/direction the live Earth never
+    // has (Earth's heliocentric offset is ~1 AU ≈ 5e-12 Mpc). Both stay well
+    // inside the far plane below, so neither is length-clamped.
+    const staleRow: SelectionRow = {
+      type: 'body',
+      id: 'earth',
+      label: 'Earth',
+      positionMpc: [1e-6, 0, 0],
+      radiusKm: 6371,
+    };
+
+    const renderer = makeRendererSpy();
+    const state = stateWith(staleRow, renderer);
+    const view = farClippingView(1); // farMpc 1 Mpc ⇒ no clamp at this scale
+    const ctx = { simDays, drawPxPerRad: 1000 } as unknown as ReadyFrameContext;
+
+    near0SelectionRingLayer.draw({} as unknown as GPURenderPassEncoder, view, ctx, state);
+
+    const [, , , opts] = renderer.draw.mock.calls[0]!;
+    const handed = opts.worldPos as [number, number, number];
+
+    // camPos is the origin, so the handed camera-relative centre equals the live
+    // world position — and is NOT the stale [1e-6, 0, 0] snapshot.
+    expect(handed[0]).toBeCloseTo(livePos[0], 15);
+    expect(handed[1]).toBeCloseTo(livePos[1], 15);
+    expect(handed[2]).toBeCloseTo(livePos[2], 15);
+    expect(Math.hypot(handed[0], handed[1], handed[2])).not.toBeCloseTo(1e-6, 9);
   });
 });

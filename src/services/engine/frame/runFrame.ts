@@ -40,6 +40,10 @@
  *      must bake their saturated pose into base on deactivation. `orbitDrag`
  *      and `resting` are excluded (orbitDrag commits via `onGestureEnd`;
  *      resting's pose IS `base`).
+ *   3b. PIVOT-PIN: while a scene body is focused, overwrite the winning driver's
+ *      target with the live body position (for drivers that declare
+ *      `pivotsOnFocusedBody`). The body owns the pivot; the driver owns the orbit
+ *      terms — so a drag / auto-rotate orbits AROUND the moving body.
  *   4. UPDATE Resources: `prevActiveId.current = activeId`,
  *      `lastPose.current = pose`.
  *
@@ -51,29 +55,91 @@
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 
+import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
+import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { runCameraDrivers } from '../camera/cameraDrivers';
 import { activeDriverId } from '../camera/activeDriverId';
-import { tweenElapsed } from '../camera/cameraClock';
+import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
+import { liveBodyPosition } from '../camera/liveBodyPosition';
+import { tweenElapsed, accumulateFollowPan, frameTweenElapsed } from '../camera/cameraClock';
+import { resolveFrameBasis } from '../camera/resolveFrameBasis';
 import { resizeCanvasToDisplay } from '../../gpu/device';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
 import { produceStructureMarkers } from '../presentation/produceStructureMarkers';
 import { deriveFrameContext } from './frameContext';
+import { deriveBodyStates } from './deriveBodyStates';
+import { sceneBodyStates } from './sceneBodyStates';
+import { earthSurfaceTier } from './earthSurfaceTier';
+import { prepareStarCut } from './passes/starCatalogLayer';
+import { earthLayer } from './passes/earthLayer';
+import { NEAR0, slabViewOf } from './slabs';
+import { composeBodyMvp } from '../../../utils/camera/composeBodyMvp';
+import { camPosLocal } from '../../../utils/camera/camPosLocal';
+import { planEarthTiles } from '../../../utils/scene/planEarthTiles';
 import { deriveSourceMasks } from './deriveSourceMasks';
 import { renderFrame } from './renderFrame';
 import { drawPickDebugOverlay } from './drawPickDebugOverlay';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
-import { commitCameraPose, cancelCameraTween } from '../../../state/camera/cameraSlice';
+import {
+  commitCameraPose,
+  cancelCameraTween,
+  clearFrameTween,
+} from '../../../state/camera/cameraSlice';
 import { computeScaleInfo } from '../helpers/scaleBar';
-import { engineScaleChanged } from '../../../state/engine/engineSlice';
+import { engineScaleChanged, engineBodyDistanceReported } from '../../../state/engine/engineSlice';
+import { deriveSimDays } from '../../../utils/time/deriveSimDays';
+import { selectTimeState, selectIsLiveTicking } from '../../../state/time/selectors';
+import { throttleByTime } from '../../../utils/throttle/throttleByTime';
+import { distanceMpc } from '../../../utils/math/distanceMpc';
 
 /**
  * Desired scale-bar width in CSS pixels. The engine computes this per-frame
  * and dispatches the result to the store, so every consumer (ScaleBar, tour
  * sagas) reads a consistent value without a React-side computation callback.
- * 150 px is the design choice: wide enough to read, narrow enough to never
- * collide with the InfoCard.
+ * Capped by the ScaleBar panel's content box: that panel now hugs the TimeBar
+ * pill's mono readout (~145 px content width; see ScaleBar.module.css), so the
+ * legend must stay comfortably under it to avoid clamping. 120 px reads clearly
+ * and leaves margin against the ~145 px box; if that panel width changes, this
+ * ceiling follows.
  */
-const SCALE_TARGET_PX = 150;
+const SCALE_TARGET_PX = 120;
+
+/**
+ * Rate-limit the `engineBodyDistanceReported` publication to ~4 Hz. The store
+ * field it writes feeds the InfoCard's live distance row, which does not need
+ * a 60 Hz firehose — a per-frame dispatch would churn React for a value humans
+ * read at reading speed. The gate is created ONCE at module scope (not per
+ * frame): a fresh `throttleByTime(250)` every call would reset its closure
+ * state and defeat the throttle. It pairs with the reducer's dedup-on-write,
+ * so an unchanged report inside an open window still costs nothing downstream.
+ */
+const publishBodyDistanceGate = throttleByTime(250);
+
+/**
+ * Idle-tick cadence for a LIVE sim clock, in milliseconds. Live time advances
+ * one sim day per real day, so the terminator sweeps `0.00417° * T` of ground
+ * per tick of length T — on screen that maps to pixels via `2 * h * tan(fovY /
+ * 2)` (h = camera altitude) over the canvas's pixel height.
+ *
+ * The altitude term is what makes the cadence tight: at the 127 km standoff
+ * over streamed surface tiles the viewport spans only ~147 km vertically, so a
+ * 3 s tick is a visible ~8 px jump on a ~900 px-tall canvas. 500 ms holds that
+ * drift under 1.5 px at every reachable altitude — ground drift scales
+ * linearly with tick length, screen-space drift inversely with altitude.
+ *
+ * Kept OUT of `shouldKeepTicking` regardless: pinning the loop at 60 fps for a
+ * rotation this slow would burn the GPU for no visible gain, so instead we ask
+ * the scheduler for ONE frame per tick — a heartbeat that keeps the terminator
+ * honest while the loop sleeps in between. The React TimeBar readout runs its
+ * own timer, so this heartbeat serves only the 3D scene.
+ *
+ * A `setInterval` would be the wrong tool: it fires unconditionally, fighting
+ * render-on-demand and double-scheduling whenever a real wake (drag, fade) is
+ * already driving the loop. The scheduler's `requestIdleFrame` instead arms a
+ * single one-shot that self-cancels once fired and is ignored while a rAF frame
+ * is already queued — so it only ever supplies the frames the busy loop didn't.
+ */
+const LIVE_IDLE_TICK_MS = 500;
 
 /**
  * Run one frame of the render loop. Called every rAF tick by the scheduler in
@@ -149,6 +215,31 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // motion progress before we early-return for missing GPU handles.
   const rootState = deps.cb.store.getState();
 
+  // ── Sim-clock instant for this frame (derived ONCE, before produce) ───────
+  //
+  // `deriveSimDays` resolves the sim clock from the time-intent slice plus this
+  // frame's wall-clock sample — pure, no accumulator. We compute it here, above
+  // the camera produce step, for two reasons:
+  //   1. A body-following camera driver (a later feature) runs INSIDE the
+  //      produce step and must aim at where the body is THIS frame, so the body
+  //      snapshot has to exist before `runCameraDrivers` is called.
+  //   2. `deriveFrameContext` stamps `simDays` onto `ctx` (below) so every
+  //      per-frame body reader shares one epoch via `sceneBodyStates(state, ctx)`.
+  //
+  // `deriveBodyStates(simDays)` primes the one-deep memo at this instant so the
+  // pre-produce driver and every post-ready pass reader hit the SAME cached map
+  // by reference — one Kepler solve per frame, not one per reader. The result is
+  // intentionally discarded here; the memo IS the shared snapshot.
+  const simDays = deriveSimDays(selectTimeState(rootState), nowMs);
+  deriveBodyStates(simDays);
+
+  // Record the frame's instant as single-writer state, the exact analogue of
+  // `lastPose.current` for the pose (updated in step 4 below). The pick path
+  // reads THIS — not the derive memo's cached key — so a between-frames
+  // `deriveBodyStates(CONST_J2000)` (extractSelectionRow, construction-time
+  // consts) cannot repoint the epoch the pick sees. runFrame is the only writer.
+  state.cameraRuntime.lastRenderedSimDays.current = simDays;
+
   // ── (1) PRODUCE the pose from the driver table ────────────────────────────
   //
   // One call to `runCameraDrivers` per frame. `pickWinner` is called inside
@@ -171,6 +262,52 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     nowMs,
   );
   const activeId = activeDriverId(deps.drivers, rootState);
+
+  // ── Orientation basis B(t): resolve ONCE, feed every reader ───────────────
+  //
+  // `resolveFrameBasis` is the single authority for 'which way is up this frame'.
+  // At rest it returns the steady registry basis for the current orientation;
+  // during an orientation-frame switch it returns the mid-slerp basis between the
+  // switch's captured `fromQuat` and the destination frame. Called exactly once
+  // here so no two consumers can drift on how a frame roll is interpolated — the
+  // resolved value flows to three readers: the boxed `frameBasis` Resource (read
+  // by the saga context + `applySceneEffect` to seed the next switch's `fromQuat`),
+  // the drag register `state.cam.frameBasis` (so a grab THIS frame decodes through
+  // the same pole), and `deriveFrameContext` below (the draw + demand decode).
+  //
+  // `frameTweenElapsed` (inside `resolveFrameBasis`) is the single per-frame tick
+  // of the frame-roll clock — reference-identity reset, exactly like `tweenElapsed`.
+  const frameBasis = resolveFrameBasis(
+    rootState.settings.orientation,
+    rootState.camera.frameTween,
+    state.cameraRuntime.clock,
+    nowMs,
+  );
+  state.cameraRuntime.frameBasis.current = frameBasis;
+  if (state.cam) {
+    // Pre-bootstrap `cam` is null; a grab is impossible until wireInput attaches
+    // controls, so there is no decode to keep in sync until then.
+    state.cam.frameBasis = frameBasis;
+  }
+
+  // Clear a finished frame roll exactly once, mirroring the camera-tween
+  // completion block below: when the roll's elapsed saturates its duration, the
+  // slerp has landed on the destination basis, so drop the descriptor and let the
+  // steady branch take over next frame. Re-calling `frameTweenElapsed` is safe —
+  // the descriptor reference is unchanged, so the clock-reset branch does not fire
+  // and no double-tick occurs. `EASE` clamps the slerp parameter, so THIS frame's
+  // already-resolved basis is the destination exactly; clearing only affects the
+  // next frame's getState.
+  if (rootState.camera.frameTween !== null) {
+    const rollElapsed = frameTweenElapsed(
+      state.cameraRuntime.clock,
+      rootState.camera.frameTween,
+      nowMs,
+    );
+    if (rollElapsed >= rootState.camera.frameTween.durationMs) {
+      deps.cb.store.dispatch(clearFrameTween());
+    }
+  }
 
   // ── (2) TWEEN COMPLETION: cancel a finished tween exactly once ────────────
   //
@@ -232,6 +369,45 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     renderPose = lastPose.current;
   }
 
+  // ── (3b) PIVOT-PIN: re-centre the pose on a focused body ──────────────────
+  //
+  // Body focus is un-braided into two concerns: the focused body owns the PIVOT
+  // (target), whichever driver won owns the ORBIT terms (yaw/pitch/distance).
+  // Here we apply the body pivot to the winning driver's pose in ONE place, so a
+  // drag orbits around the moving body (no drift), the autoRotate button spins
+  // around it, and the idle follow holds it — without followBody having to win
+  // the whole pose. Only drivers that declare `pivotsOnFocusedBody` are pinned
+  // (clip / tween keyframe a full path including target and opt out). The pin is
+  // absolute (SETS the target), so baking `renderPose` into `base` on the next
+  // commit-on-edge can never double-apply the body translation.
+  //
+  // A right-drag STRAFE while following is folded into the clock's world-frame
+  // `followPanOffset` FIRST (a follow-drag frame is orbitDrag winning over a body
+  // focus), then the pin resolves the pivot to `bodyPosition + followPanOffset`.
+  // The offset — not `cam.target`, which the pin overwrites — is the strafe's home,
+  // so the shifted pivot still translate-follows the body and a fresh focus zeroes
+  // it (in `followElapsed`).
+  // Read the pivot focus off `rootState` (the SAME store snapshot the drivers
+  // resolved against this frame), so the pin and the winner never disagree on
+  // what is focused. A separate `focusRow` local below reads the EngineState
+  // mirror for the structure-focus / time-report sections.
+  const pivotFocus = rootState.selectionRows.focus;
+  const clock = state.cameraRuntime.clock;
+  const followingBody = liveBodyPosition(pivotFocus, simDays) !== null;
+  if (state.cam) {
+    accumulateFollowPan(clock, activeId === 'orbitDrag' && followingBody, state.cam.target);
+  } else {
+    // Pre-bootstrap: no cam, no drag possible — keep the delta chain reset.
+    clock.lastPanTarget = null;
+  }
+  renderPose = applyFocusedBodyPivot(
+    renderPose,
+    deps.drivers.find((d) => d.id === activeId)?.pivotsOnFocusedBody ?? false,
+    pivotFocus,
+    simDays,
+    clock.followPanOffset,
+  );
+
   // ── (4) UPDATE Resources for next frame ───────────────────────────────────
   //
   // `prevActiveId` and `lastPose` are updated AFTER the commit-on-edge so the
@@ -273,8 +449,13 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     deps.canvas,
     renderPose,
     state.cameraRuntime.projection,
+    // This frame's resolved orientation basis B(t) — the same value written to the
+    // `frameBasis` Resource and the drag register above, so the draw/demand decode
+    // shares one pole with the switch surfaces.
+    frameBasis,
     masks.draw,
     nowMs,
+    simDays,
   );
   if (!ctx.isReady) {
     // Essential wake: bootstrap populates cam/GPU handles without waking any
@@ -311,6 +492,28 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   ctx.focusBlend = focusUniforms.blend;
   ctx.focus = focusUniforms;
 
+  // ── Focused-body distance publication (throttled) ─────────────────────────
+  //
+  // Publish the camera→focused-body distance to the store so the InfoCard
+  // reads it off `state.engine.focusedBodyDistanceMpc` without ever touching
+  // the engine snapshot (the store-boundary rule). The ~4 Hz gate keeps this
+  // off the per-frame React path; the reducer dedups an unchanged report.
+  // The distance is from the RENDERED camera position to the focused scene
+  // body's position IN THIS FRAME'S SNAPSHOT — so it tracks the body as the
+  // clock moves it — and is null unless an orbital body (present in the
+  // snapshot) is the current focus. A star or structure focus, or no focus,
+  // reports null.
+  if (publishBodyDistanceGate(nowMs)) {
+    let focusedBodyDistanceMpc: number | null = null;
+    if (focusRow !== null && focusRow.type === 'body') {
+      const bodyState = sceneBodyStates(state, ctx).get(focusRow.id);
+      if (bodyState !== undefined) {
+        focusedBodyDistanceMpc = distanceMpc(ctx.drawCamPos, bodyState.positionMpc);
+      }
+    }
+    deps.cb.store.dispatch(engineBodyDistanceReported(focusedBodyDistanceMpc));
+  }
+
   // ── Per-frame impostor planners ───────────────────────────────────────────
   //
   // CPU-side step that populates the LOD subsystems' `lastOutput` arrays, which
@@ -327,7 +530,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       catalogs: state.data.galaxies.catalogs,
       visibleSourceMask: masks.draw,
       pxPerRad: ctx.drawPxPerRad,
-      famousMeta: state.data.galaxies.famousMeta,
+      famousGalaxiesMeta: state.famousGalaxiesMeta,
     });
   }
   // ONE shared catalog walk drives both disk-planner bodies. It computes each
@@ -345,14 +548,74 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     };
     diskPlannerWalk.runFrame(
       sharedInput,
-      proceduralDisks.beginFrame(sharedInput),
+      proceduralDisks.beginFrame({
+        ...sharedInput,
+        sbScale: state.settings.galaxyCatalogs.sbScale,
+        sbMax: state.settings.galaxyCatalogs.sbMax,
+        brightness: state.settings.galaxyCatalogs.brightness,
+      }),
       texturedDisks.beginFrame({
         ...sharedInput,
-        famousMeta: state.data.galaxies.famousMeta,
+        famousGalaxiesMeta: state.famousGalaxiesMeta,
         nowMs: ctx.nowMs,
       }),
     );
   }
+
+  // ── Earth surface virtual texture — the tile planner ──────────────────────
+  // A CPU-side planner, sited with the disk planners above. The gate is
+  // `earthLayer.enabled` itself, not a hand-copied predicate, so the tiles and
+  // the layer they refine can never disagree about whether Earth is on screen.
+  const earthTiles = state.subsystems.earthTiles;
+  const earth = state.data.bodies.earth;
+  if (earthTiles !== null && earth !== null && earthLayer.enabled(state, ctx)) {
+    // `earthSurfaceTier` reads the tier off the committed texture slot, not the
+    // app-wide request, so a tier swap in flight can't make the planner believe
+    // in detail that isn't on the GPU yet. Null until the manifest lands.
+    const params = earthTiles.plannerParams(earthSurfaceTier(state));
+    if (params !== null) {
+      // Same slab resolution `earthLayer.draw` uses (the f64 seam — see its
+      // module header), so the tiles the planner asks for never drift from the
+      // pixels the fragment samples them into.
+      const view = slabViewOf(ctx, NEAR0);
+      const earthState = sceneBodyStates(state, ctx).get(earth.id)!;
+      const radiusMpc = earth.radiusKm * SCALE_UNITS.KM_TO_MPC;
+      const plan = planEarthTiles({
+        ...params,
+        camPosLocal: camPosLocal(
+          view.camPos,
+          earthState.positionMpc,
+          radiusMpc,
+          earthState.orientation,
+        ),
+        viewProjLocal: composeBodyMvp(
+          view.slab.vp,
+          earthState.positionMpc,
+          RENDER_ORIGIN_MPC,
+          radiusMpc,
+          earthState.orientation,
+        ),
+        viewportPx: view.viewportPx,
+      });
+      // Unconditional: engaging/disengaging is the subsystem's own decision
+      // from this plan. `getTileResources()` either side of `update` IS the
+      // null-to-non-null transition, so the renderer's bind group rebuilds
+      // exactly once, at that moment.
+      const engagedBefore = earthTiles.getTileResources() !== null;
+      earthTiles.update({ plan, nowMs: ctx.nowMs });
+      if (!engagedBefore) {
+        const tiles = earthTiles.getTileResources();
+        if (tiles !== null) {
+          state.gpu.earthRenderer?.setTileResources(tiles.pageTable, tiles.atlas);
+        }
+      }
+    }
+  }
+
+  // Read OUTSIDE the gate above: `isAnimating()` is true while the manifest is
+  // in flight, a state entered BEFORE the subsystem can ever engage — voting
+  // only on engaged frames would let a stopped camera sleep the loop mid-fetch.
+  const earthTilesAnimating = earthTiles?.isAnimating() ?? false;
 
   // ── Label director per-frame update ──────────────────────────────────────
   //
@@ -363,6 +626,22 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // once; it null-checks its renderers, so this is safe before the atlas load
   // completes.
   state.subsystems.labelDirector.runFrame(state, ctx);
+
+  // ── Star-cut planner (primes the per-ctx memo, surfaces the wake vote) ────
+  //
+  // Run the survey-star octree walk + LOD-fade advance ONCE here, as a planner
+  // peer of the disk/label planners above. Two reasons it lives at frame-body
+  // level rather than only inside the star draw:
+  //   1. The three star layers (leaf / aggregate / upsample) hit the per-ctx
+  //      memo during the GPU dispatch, so this call primes it — the walk still
+  //      runs exactly once for the frame.
+  //   2. It surfaces `anyNodeFading` for the keep-ticking predicate below. The
+  //      wake vote used to fire from inside the pass (a `requestRender` scattered
+  //      away from the single authority); now the pass computes the vote and
+  //      `shouldKeepTicking` decides.
+  // `prepareStarCut` is a no-op returning null when the star pass isn't live
+  // (renderer null / master off) — that maps to `starFadeAnimating: false` below.
+  const starCut = prepareStarCut(state, ctx);
 
   // ── Per-frame marker upload ───────────────────────────────────────────────
   //
@@ -415,9 +694,18 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // fade-out in galaxy-catalog visibility changes and tier-swap commits would
   // hang forever.
   state.subsystems.fades.tick(nowMs);
-  const keepTicking = shouldKeepTicking(state, rootState, nowMs);
+  const keepTicking = shouldKeepTicking(state, rootState, nowMs, {
+    starFadeAnimating: starCut?.anyNodeFading ?? false,
+    earthTilesAnimating,
+  });
 
   if (keepTicking) {
     state.subsystems.scheduler.requestRender();
+  } else if (selectIsLiveTicking(rootState)) {
+    // The scene is otherwise at rest, but a live sim clock is advancing. Arm a
+    // coarse heartbeat (see LIVE_IDLE_TICK_MS) so the terminator stays honest
+    // without pinning the loop — the scheduler ignores this while a frame is
+    // already queued and never stacks timers, so it can't fight the wake path.
+    state.subsystems.scheduler.requestIdleFrame(LIVE_IDLE_TICK_MS);
   }
 }

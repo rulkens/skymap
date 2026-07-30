@@ -43,6 +43,34 @@ function makeFakeRaf() {
   return { rafImpl, cafImpl, fireOne, pendingCount };
 }
 
+/**
+ * Build a fake setTimeout / clearTimeout pair backing `requestIdleFrame`. Like
+ * the rAF fake, pending timers are captured rather than fired — `fireTimer()`
+ * runs the oldest one so idle-tick behaviour is deterministic.
+ */
+function makeFakeTimers() {
+  let nextId = 1;
+  const queue: Array<{ id: number; cb: () => void }> = [];
+  const setTimeoutImpl = ((cb: () => void) => {
+    const id = nextId++;
+    queue.push({ id, cb });
+    return id;
+  }) as unknown as typeof setTimeout;
+  const clearTimeoutImpl = ((id: number) => {
+    const idx = queue.findIndex((entry) => entry.id === id);
+    if (idx >= 0) queue.splice(idx, 1);
+  }) as unknown as typeof clearTimeout;
+  function fireTimer(): void {
+    const entry = queue.shift();
+    if (!entry) throw new Error('fakeTimers: no timers queued');
+    entry.cb();
+  }
+  function pendingCount(): number {
+    return queue.length;
+  }
+  return { setTimeoutImpl, clearTimeoutImpl, fireTimer, pendingCount };
+}
+
 describe('createRenderScheduler', () => {
   it('does not schedule a frame until requestRender is called', () => {
     const fake = makeFakeRaf();
@@ -145,6 +173,79 @@ describe('createRenderScheduler', () => {
     // Subsequent requestRender works normally.
     sched.requestRender();
     expect(fake.pendingCount()).toBe(1);
+  });
+
+  it('requestIdleFrame arms one timer that requests a single frame when it fires', () => {
+    const fake = makeFakeRaf();
+    const timers = makeFakeTimers();
+    const onFrame = vi.fn();
+    const sched = createRenderScheduler({
+      onFrame,
+      rafImpl: fake.rafImpl,
+      cafImpl: fake.cafImpl,
+      setTimeoutImpl: timers.setTimeoutImpl,
+      clearTimeoutImpl: timers.clearTimeoutImpl,
+    });
+
+    sched.requestIdleFrame(3000);
+    // Arming does NOT queue a frame — the loop stays asleep until the timer fires.
+    expect(timers.pendingCount()).toBe(1);
+    expect(fake.pendingCount()).toBe(0);
+
+    timers.fireTimer();
+    expect(fake.pendingCount()).toBe(1);
+    fake.fireOne();
+    expect(onFrame).toHaveBeenCalledTimes(1);
+  });
+
+  it('requestIdleFrame does not stack timers — one pending at a time', () => {
+    const fake = makeFakeRaf();
+    const timers = makeFakeTimers();
+    const sched = createRenderScheduler({
+      onFrame: vi.fn(),
+      rafImpl: fake.rafImpl,
+      cafImpl: fake.cafImpl,
+      setTimeoutImpl: timers.setTimeoutImpl,
+      clearTimeoutImpl: timers.clearTimeoutImpl,
+    });
+
+    sched.requestIdleFrame(3000);
+    sched.requestIdleFrame(3000);
+    sched.requestIdleFrame(3000);
+    expect(timers.pendingCount()).toBe(1);
+  });
+
+  it('requestIdleFrame is ignored while a rAF frame is already queued', () => {
+    const fake = makeFakeRaf();
+    const timers = makeFakeTimers();
+    const sched = createRenderScheduler({
+      onFrame: vi.fn(),
+      rafImpl: fake.rafImpl,
+      cafImpl: fake.cafImpl,
+      setTimeoutImpl: timers.setTimeoutImpl,
+      clearTimeoutImpl: timers.clearTimeoutImpl,
+    });
+
+    sched.requestRender(); // loop already awake
+    sched.requestIdleFrame(3000);
+    expect(timers.pendingCount()).toBe(0);
+  });
+
+  it('destroy clears a pending idle timer', () => {
+    const fake = makeFakeRaf();
+    const timers = makeFakeTimers();
+    const sched = createRenderScheduler({
+      onFrame: vi.fn(),
+      rafImpl: fake.rafImpl,
+      cafImpl: fake.cafImpl,
+      setTimeoutImpl: timers.setTimeoutImpl,
+      clearTimeoutImpl: timers.clearTimeoutImpl,
+    });
+
+    sched.requestIdleFrame(3000);
+    expect(timers.pendingCount()).toBe(1);
+    sched.destroy();
+    expect(timers.pendingCount()).toBe(0);
   });
 
   it('isScheduled() reports the current scheduling state', () => {

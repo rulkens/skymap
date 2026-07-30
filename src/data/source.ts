@@ -135,16 +135,18 @@ export const Source = {
    */
   DesiSgw: 20,
   /**
-   * Curated, true-scale stellar neighbourhood (the Sun + the hand-picked
-   * nearby-star map) in the near-field descent — the overlay twin of the
-   * survey-wide Gaia star bin, named for the dedup story (famous stars are the
-   * curated overlay, the Gaia bin is the survey), mirroring FamousGalaxy.
+   * Curated, true-scale stellar neighbourhood — the hand-picked nearby-star map
+   * of the near-field descent, named for the dedup story (famous stars are the
+   * curated overlay, the Gaia bin is the survey), mirroring FamousGalaxy. The
+   * curated star-catalog twin of the survey-wide Gaia bin (code 24). The Sun
+   * shares the map's seed table but not this row: it has its own (code 26), so
+   * muting the neighbourhood leaves the descent's aim point alone.
    * Not persisted to any `.bin` — a body's identity is its stable seed id, not a
-   * record index — but pickable: scene bodies draw into the NEAR0 pick texture
-   * via `drawPick`, tagged with this code. The entry is a body row that renders
-   * through its own content-layer, not the galaxy catalog points pipeline.
-   * Value 21 — the first of the three contiguous body codes. Never renumber the
-   * codes below it.
+   * record index — but pickable: the star layers draw into the NEAR0 pick
+   * texture via `drawPick`, tagged with this code (the Sun's dot included, since
+   * those layers address the one seed table). The entry renders through its own
+   * content-layer, not the galaxy catalog points pipeline. Value 21 — never
+   * renumber the codes below it.
    */
   FamousStar: 21,
   /**
@@ -159,10 +161,9 @@ export const Source = {
    * is the stable seed id) but pickable on the NEAR0 pick pass via `drawPick`;
    * the entry is a body row that renders through its own content-layer, not the
    * galaxy catalog points pipeline.
-   * Value 23, the last of the three contiguous body codes (FamousStar=21, Planet=22,
-   * Earth=23). Codes are append-only by VALUE; the insertion order in this
-   * const is cosmetic, so Earth keeps 23 even though its two siblings are
-   * declared above it. Never renumber the codes below it.
+   * Value 23. Codes are append-only by VALUE; the insertion order in this
+   * const is cosmetic, so Earth keeps 23 even though its siblings are declared
+   * above it. Never renumber the codes below it.
    */
   Earth: 23,
   /**
@@ -174,9 +175,27 @@ export const Source = {
    * stars ARE pickable — but is not persisted to the `.bin` (a star's identity
    * is its record index). The stars render through their own renderer gated by a
    * camera-distance crossfade band, never the galaxy-catalog points pipeline.
-   * Appended at 24,
-   * the first code after the three contiguous body codes (FamousStar=21,
-   * Planet=22, Earth=23). Never renumber the codes below it.
+   * Appended at 24 — never renumber the codes below it.
    */
   GaiaStars: 24,
+  /**
+   * True-3D constellation stick-figure overlay — the classical asterism lines
+   * projected onto the real heliocentric positions of their member stars
+   * (single `constellations.json` artifact, demand-loaded). Registry-key-only
+   * code (not persisted, not pickable); the entry carries the default-visible
+   * master toggle plus the line-intensity multiplier. Appended at 25 — never
+   * renumber the codes below it.
+   */
+  Constellations: 25,
+  /**
+   * The Sun — the descent's aim point and the render origin, a body row in its
+   * own right rather than a member of the curated star map. Modelling it as a
+   * row is what lets the star map's gate be a plain membership test instead of
+   * an id exemption threaded through the star layers and the caption pipeline.
+   * Registry-key-only: the Sun's dot is drawn (and picked) by the star layers
+   * over the shared seed table, so its pick carries the FamousStar code (21) —
+   * nothing stamps this one into the pick texture, and nothing persists it.
+   * Appended at 26 — never renumber the codes below it.
+   */
+  Sun: 26,
 } as const;

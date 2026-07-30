@@ -33,11 +33,13 @@ function mockDevice(renderPipelines?: GPURenderPipelineDescriptor[]): GPUDevice 
 
 describe('createStarRenderer', () => {
   it('construct does not throw under the mock device', () => {
-    expect(() => createStarRenderer(mockDevice(), 'rgba16float', 'depth32float')).not.toThrow();
+    expect(() =>
+      createStarRenderer(mockDevice(), 'rgba16float', 'depth32float', false),
+    ).not.toThrow();
   });
 
   it('satisfies Renderer — non-empty label + destroy function', () => {
-    const renderer = createStarRenderer(mockDevice(), 'rgba16float', 'depth32float');
+    const renderer = createStarRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
     renderer satisfies Renderer;
     expect(renderer.label.length).toBeGreaterThan(0);
     expect(typeof renderer.destroy).toBe('function');
@@ -45,7 +47,7 @@ describe('createStarRenderer', () => {
   });
 
   it('draw is callable with (pass, mvp, color) and records an indexed draw', () => {
-    const renderer = createStarRenderer(mockDevice(), 'rgba16float', 'depth32float');
+    const renderer = createStarRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
 
     expect(typeof renderer.draw).toBe('function');
     expect(renderer.draw.length).toBe(3);
@@ -63,7 +65,7 @@ describe('createStarRenderer', () => {
 
   it('bakes the opaque foreground profile — targetFormat colour target + depth state', () => {
     const renderPipelines: GPURenderPipelineDescriptor[] = [];
-    createStarRenderer(mockDevice(renderPipelines), 'rgba16float', 'depth32float');
+    createStarRenderer(mockDevice(renderPipelines), 'rgba16float', 'depth32float', false);
     expect(renderPipelines).toHaveLength(1);
     const desc = renderPipelines[0]!;
     const target = Array.from(desc.fragment!.targets!)[0]!;

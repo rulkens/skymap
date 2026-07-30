@@ -45,6 +45,7 @@ import type { PickRenderer } from '../../rendering/PickRenderer';
 import type { PickProgram } from '../frame/PickProgram';
 import type { MilkyWayPickRenderer } from '../../rendering/MilkyWayPickRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
+import type { ConstellationRenderer } from '../../rendering/ConstellationRenderer';
 import type { LabelRenderer } from '../../rendering/LabelRenderer';
 import type { MarkerLineRenderer } from '../../rendering/MarkerLineRenderer';
 import type { DebugLineRenderer } from '../../rendering/DebugLineRenderer';
@@ -54,6 +55,7 @@ import type { VolumeFieldRenderer } from '../../rendering/VolumeFieldRenderer';
 import type { FlowFieldRenderer } from '../../rendering/FlowFieldRenderer';
 import type { VolumeUpsample } from '../../rendering/VolumeUpsample';
 import type { StarAggregateUpsample } from '../../rendering/StarAggregateUpsample';
+import type { BloomPyramid } from '../../rendering/BloomPyramid';
 import type { PickDebugOverlay } from '../../rendering/PickDebugOverlay';
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
@@ -67,6 +69,8 @@ import type { StarRenderer } from '../../rendering/StarRenderer';
 import type { PlanetRenderer } from '../../rendering/PlanetRenderer';
 import type { TexturedBodyRenderer } from '../../rendering/TexturedBodyRenderer';
 import type { RingRenderer } from '../../rendering/RingRenderer';
+import type { CloudShellRenderer } from '../../rendering/CloudShellRenderer';
+import type { AtmosphereShellRenderer } from '../../rendering/AtmosphereShellRenderer';
 import type { StarPointRenderer } from '../../rendering/StarPointRenderer';
 import type { BodyGlintRenderer } from '../../rendering/BodyGlintRenderer';
 import type { StarCatalogRenderer } from '../../rendering/StarCatalogRenderer';
@@ -78,6 +82,8 @@ import type { SourceUniformsBgl } from '../../rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../rendering/FocusUniformsBgl';
 import type { FocusUniformBuffer } from '../../rendering/FocusUniformBuffer';
 import type { Compositor } from '../../rendering/Compositor';
+import type { LoadedFontAtlases } from '../../rendering/LoadedFontAtlases';
+import type { GpuContext } from '../../rendering/GpuContext';
 
 export type EngineGpuHandles = {
   renderer: PointRenderer | null;
@@ -164,6 +170,38 @@ export type EngineGpuHandles = {
    */
   filamentRenderer: FilamentRenderer | null;
   /**
+   * True-3D constellation stick-figure renderer. Constructed unconditionally
+   * during GPU init (the pipeline is cheap), stays empty until the
+   * `constellations` slot's commit uploads the ready `constellations.json`
+   * artifact once on artifact-ready (flipping `hasData()` true and kicking the
+   * demand-loaded fade); the pass thereafter only draws. Nullable + excluded
+   * from `isEngineReady`, same rationale as `filamentRenderer`: the overlay is
+   * an optional demand-loaded asset the `constellationsLayer` null-checks at
+   * point of use.
+   */
+  constellationRenderer: ConstellationRenderer | null;
+  /**
+   * The decoded MSDF font atlas (BMFont JSON + bitmap), retained here (not a
+   * local in `initGpu`) so `buildSwapRenderers` can re-run the label
+   * factories on a swap-format rebuild without re-fetching. Null until
+   * `initGpu` resolves the fetch; never released by `destroy()` — decoded
+   * data, not a GPU resource.
+   */
+  fontAtlases: LoadedFontAtlases | null;
+  /**
+   * `device` + `context` + `canvas` for every renderer that targets the swap
+   * chain, retained here for the same reason as `fontAtlases`:
+   * `buildSwapRenderers` rebuilds those renderers from it on a format swap.
+   * Omits `format` (unlike `GpuContext`) because that's the one field that
+   * goes stale the instant a rebuild starts: `initGpu` constructs this field
+   * from its own format-less object literal (not the full `GpuContext` it
+   * builds for other constructors), so no stale format exists to leak, and
+   * `buildSwapRenderers` composes `{ ...uiCtx, format }` with the live value.
+   * Null until `initGpu` constructs it; never released by `destroy()` — no
+   * GPU resource of its own.
+   */
+  uiCtx: Omit<GpuContext, 'format'> | null;
+  /**
    * MSDF text label renderer.  Null until `initGpu` completes the
    * `loadFontAtlas()` fetch and constructs the renderer against the
    * decoded atlas bitmap.  Excluded from the `isEngineReady` predicate
@@ -179,8 +217,9 @@ export type EngineGpuHandles = {
    * captions project through the NEAR0 slab view — whose near plane scales
    * with `cam.distance` so it always contains the bodies — rather than the
    * galaxy-scale `vp` the main labels use, and one renderer draws with one
-   * view-projection.  Holds the static `sceneBodyLabels()` set (Earth, the
-   * local star map, the planets), uploaded once at construction.  Null until
+   * view-projection.  Seeded at construction with the `sceneBodyLabels(<body
+   * snapshot>)` caption set (Earth, the local star map, the planets), which
+   * `foregroundLabelsLayer` then re-uploads camera-relative each frame.  Null until
    * `initGpu` builds it against the font atlas; excluded from
    * `isEngineReady` and null-checked at use, like `labelRenderer`.
    * Released and re-nulled by `destroy()`.
@@ -330,6 +369,18 @@ export type EngineGpuHandles = {
    */
   starAggregateUpsample: StarAggregateUpsample | null;
   /**
+   * Dual-filter bloom mip pyramid — owns the bright / downsample / upsample /
+   * fold pipelines that drive the `bloom0..bloom4` render-target rows and the
+   * strength-scaled fold back into HDR. Null until `initGpu` constructs it
+   * (same phase as `volumeUpsample` / `starAggregateUpsample`). Excluded from
+   * `isEngineReady` — every bloom content layer's `enabled` gate is exactly the
+   * `bloomPyramid !== null` handle-ready check, so a null handle silently drops
+   * the whole bloom sub-program. The `settings.bloom.enabled` toggle gates at
+   * frame-program build, not here. Stored so `destroy()` can release the small
+   * per-level + fold uniform buffers.
+   */
+  bloomPyramid: BloomPyramid | null;
+  /**
    * Pick-buffer debug overlay — fullscreen colour-map of the r32uint
    * pick texture over the tone-mapped frame.  Null until `initGpu`
    * constructs it.  Excluded from `isEngineReady`: it's a debug-only
@@ -401,8 +452,8 @@ export type EngineGpuHandles = {
    * own uniform buffer + bind group + surface texture, so no shared uniform can
    * be clobbered mid-frame. `texturedBodiesLayer` draws the `textured` branch of
    * `partitionBodiesByPresentation` through it; the `bodyTextures` slot family's
-   * commit routes each non-Earth body's bitmap to `setTexture`, and its
-   * onRelease frees that body's texture via `clearTexture`. Same `foreground:0`
+   * commit routes each non-Earth body's bitmap to `setMap`, and its per-kind
+   * onRelease frees that (body, kind)'s texture via `clearMap`. Same `foreground:0`
    * ('rgba16float', 'depth32float') format invariant as `earthRenderer` /
    * `planetRenderer`. Excluded from `isEngineReady` and null-checked at use.
    * Null until `initGpu` constructs it; released and re-nulled by `destroy()`
@@ -423,6 +474,38 @@ export type EngineGpuHandles = {
    * `destroy()` (releases the disc VBO/IBO, uniform buffer, and strip texture).
    */
   ringRenderer: RingRenderer | null;
+  /**
+   * The body-agnostic translucent cloud shell (Earth today; Venus / Titan opt in
+   * later) — a thin closed sphere drawn just ABOVE the opaque surface in the
+   * `(foreground:0, NEAR0)` group, immediately after `earthLayer`. Its
+   * ('rgba16float', 'depth32float') pipeline formats match the `foreground:0` row
+   * like the sphere bodies; it depth-tests against the opaque globe but writes no
+   * depth and blends straight-alpha OVER — the same profile as `ringRenderer`.
+   * `cloudShellLayer` draws it once per frame; the `bodyTextures` family's
+   * `earth:clouds` commit routes the cloud colour+coverage map to `setTexture`.
+   * Until that lands, a 1×1 transparent placeholder keeps the shell invisible.
+   * Excluded from `isEngineReady` and null-checked at use. Null until `initGpu`
+   * constructs it; released and re-nulled by `destroy()` (releases the position +
+   * uv VBOs, index IBO, uniform buffer, and the cloud texture).
+   */
+  cloudShellRenderer: CloudShellRenderer | null;
+  /**
+   * Earth's physically-based in-scatter atmosphere (Earth today; Mars / Venus /
+   * Titan opt in later via their own `ATMOSPHERE_PARAMS` rows + renderer
+   * instances) — the LAST `(foreground:0, NEAR0)` row, a translucent proxy sphere
+   * at the atmosphere-top radius drawn AFTER every opaque sphere and the
+   * rings/cloud-shell, depth-tested against them but writing no depth and blending
+   * straight-alpha OVER — the same profile as `ringRenderer` / `cloudShellRenderer`.
+   * Its ('rgba16float', 'depth32float') pipeline formats match the `foreground:0`
+   * row. It owns three LUT textures (transmittance + multi-scatter baked once at
+   * construction, sky-view re-baked each frame by the `atmosphereSkyView` compute
+   * step). `atmosphereShellLayer` draws it once per frame; it is non-pickable
+   * (a translucent halo has no clickable silhouette). Excluded from `isEngineReady`
+   * and null-checked at use. Null until `initGpu` constructs it; released and
+   * re-nulled by `destroy()` (releases the three LUTs + their pipelines, the proxy
+   * sphere geometry, the shell pipeline, and the three uniform buffers).
+   */
+  atmosphereShellRenderer: AtmosphereShellRenderer | null;
   /**
    * The unresolved stars (the `points` branch of
    * `partitionStarsByResolution`) as additive point sprites into the
@@ -505,9 +588,9 @@ export type EngineGpuHandles = {
    * `orbitTrailsLayer` packs each orbit's f64-composed inverse homography
    * `Ginv` + trail params into a per-instance vertex record, so no per-orbit
    * bind or mid-frame uniform exists for the writeBuffer-vs-submit race to
-   * clobber.  The conic table itself is a static module-level derivation of
-   * the orbital elements (`SCENE_ORBIT_CONICS`), so the renderer needs no data
-   * delivery at all.  Excluded from `isEngineReady` and null-checked at use.
+   * clobber.  `orbitTrailsLayer` derives the conic geometry per frame from the
+   * current body snapshot, so the renderer needs no bootstrap data delivery at
+   * all.  Excluded from `isEngineReady` and null-checked at use.
    * Null until `initGpu` constructs it; released and re-nulled by `destroy()`
    * (releases the instance buffer).
    */

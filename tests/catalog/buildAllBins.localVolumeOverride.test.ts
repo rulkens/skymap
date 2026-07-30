@@ -21,10 +21,7 @@
  *      cloud.spectroscopicZ[idx].
  */
 import { describe, it, expect } from 'vitest';
-import {
-  recordsToCloud,
-  type LocalVolumeOverrides,
-} from '../../tools/catalog/buildAllBins';
+import { recordsToCloud, type LocalVolumeOverrides } from '../../tools/catalog/buildAllBins';
 import { Source } from '../../src/data/sources';
 import type { ParsedRecord } from '../../tools/parsers/common';
 import type { Cf4Record } from '../../tools/parsers/cosmicflows4';
@@ -57,12 +54,24 @@ function rec(partial: Partial<ParsedRecord>): ParsedRecord {
   };
 }
 
-function overrides(cf4Records: ReadonlyArray<Cf4Record>): LocalVolumeOverrides {
+function overrides(
+  cf4Records: ReadonlyArray<Cf4Record>,
+  seed: ReadonlyArray<[string, number]> = [],
+): LocalVolumeOverrides {
   const byPgc = new Map<number, Cf4Record>();
   for (const r of cf4Records) {
     if (r.pgc !== null) byPgc.set(r.pgc, r);
   }
-  return { cf4: { byPgc }, hyperLeda: new Map() };
+  const blueshiftSeed = new Map(seed.map(([massId, distMpc]) => [massId, { distMpc }]));
+  return { cf4: { byPgc }, hyperLeda: new Map(), blueshiftSeed };
+}
+
+/** Recover (RA, Dec) in degrees from a cartesian position, to test direction. */
+function raDecOf(x: number, y: number, z: number): { ra: number; dec: number } {
+  const r = Math.hypot(x, y, z);
+  let ra = (Math.atan2(y, x) * 180) / Math.PI;
+  if (ra < 0) ra += 360;
+  return { ra, dec: (Math.asin(z / r) * 180) / Math.PI };
 }
 
 describe('local-volume override in recordsToCloud', () => {
@@ -138,9 +147,53 @@ describe('local-volume override in recordsToCloud', () => {
     });
     const cloud = recordsToCloud([m31], null);
     const r = Math.hypot(cloud.positions[0]!, cloud.positions[1]!, cloud.positions[2]!);
-    // No override available → the linear-sign fallback in redshiftToDistanceMpc
-    // mirrors M31 to the anti-Andromeda side at ~|cz/H0| ≈ 3 Mpc. Just assert
-    // the position is NOT at the CF4 distance.
+    // No override available → the cz path fires at |cz/H0| ≈ 3 Mpc, not the
+    // CF4 distance. (Direction is now M31's true direction — see the
+    // blueshift-true-direction test below — but this legacy case only pins
+    // that the distance magnitude is the cz value.)
     expect(Math.abs(r - M31_DIST_MPC)).toBeGreaterThan(1);
+  });
+});
+
+describe('blueshifted rows without a redshift-independent distance', () => {
+  const RA = 45;
+  const DEC = 30;
+
+  it('are placed in their TRUE direction, not mirrored to the antipode', () => {
+    // z < 0 with no CF4/HyperLEDA/seed match. The naive cz path would run a
+    // negative Hubble radius and land the galaxy at (RA+180, -DEC). We keep
+    // it in its true direction at |distance| instead.
+    const blue = rec({ objID: 0n, ra: RA, dec: DEC, z: -0.0004, spectroscopicZ: -0.0004 });
+    const cloud = recordsToCloud([blue], overrides([]));
+    const { ra, dec } = raDecOf(cloud.positions[0]!, cloud.positions[1]!, cloud.positions[2]!);
+    expect(ra).toBeCloseTo(RA, 1);
+    expect(dec).toBeCloseTo(DEC, 1);
+    // Distance is the |cz|/H0 magnitude (~1.7 Mpc for cz ≈ -120 km/s), positive.
+    const r = Math.hypot(cloud.positions[0]!, cloud.positions[1]!, cloud.positions[2]!);
+    expect(r).toBeGreaterThan(0.5);
+  });
+
+  it('re-derive physical diameter from the angular size against the ADOPTED distance', () => {
+    // A blueshifted row whose cz-baked diameterKpc is null but which carries a
+    // real angular size. With a seed distance of 13.5 Mpc and a 60" major
+    // axis, diameter = arcsecToKpc(60, 13.5) ≈ 3.93 kpc — NOT the 30 kpc
+    // fallback, and NOT sized against the cz distance.
+    const massId = '12265643+1502507';
+    const seeded = rec({
+      objID: 0n,
+      massId,
+      ra: RA,
+      dec: DEC,
+      z: -0.0004,
+      spectroscopicZ: -0.0004,
+      diameterKpc: null,
+      angularMajorAxisArcsec: 60,
+    });
+    const cloud = recordsToCloud([seeded], overrides([], [[massId, 13.5]]));
+    // Position sits at the seed distance in the true direction.
+    const r = Math.hypot(cloud.positions[0]!, cloud.positions[1]!, cloud.positions[2]!);
+    expect(r).toBeCloseTo(13.5, 2);
+    // Diameter comes from the angular size × 13.5 Mpc, not the 30 kpc default.
+    expect(cloud.diameterKpc[0]).toBeCloseTo(3.93, 1);
   });
 });

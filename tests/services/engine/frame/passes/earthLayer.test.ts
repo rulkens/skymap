@@ -27,15 +27,21 @@ import { earthLayer } from '../../../../../src/services/engine/frame/passes/eart
 import { CONTENT_LAYERS } from '../../../../../src/services/engine/frame/passes';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
+import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
+import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
+import { camPosLocal } from '../../../../../src/utils/camera/camPosLocal';
+import { EARTH_SURFACE_PARAMS } from '../../../../../src/data/bodies/earthSurfaceParams';
+import { CLOUD_SHELL_PARAMS } from '../../../../../src/data/bodies/cloudShellParams';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { EarthBody } from '../../../../../src/@types/scene/EarthBody';
+import type { BodyState } from '../../../../../src/@types/scene/BodyState';
 
 // Mock composeBodyMvp so the test can (a) assert which vp it consumed by
 // object identity and (b) hand the renderer a recognisable Float32Array. The
@@ -44,6 +50,37 @@ vi.mock('../../../../../src/utils/camera/composeBodyMvp', () => ({
   composeBodyMvp: vi.fn<() => Float32Array>(() => new Float32Array(16)),
 }));
 import { composeBodyMvp } from '../../../../../src/utils/camera/composeBodyMvp';
+
+// The layer reads Earth's live position/orientation from the per-frame body-state
+// snapshot (keyed by id). Stub it to a map holding the seeded Earth, REUSING the
+// SeededEarth fixture's own positionMpc/orientation refs — so the layer sees the
+// exact fixture values (identity-equal), keeping the `toBe(...)` assertions below
+// intact while the reads move off the baked record fields.
+vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
+  sceneBodyStates: vi.fn((state: EngineState): ReadonlyMap<string, BodyState> => {
+    const m = new Map<string, BodyState>();
+    const earth = state.data.bodies.earth as SeededEarth | null;
+    if (earth)
+      m.set(earth.id, {
+        positionMpc: earth.positionMpc,
+        orientation: earth.orientation,
+        meanAnomalyRad: 0,
+      });
+    return m;
+  }),
+}));
+
+// A test fixture pairing Earth's identity record with the J2000 state the
+// snapshot carries — position + orientation were lifted off the record onto the
+// derive, so the fixture supplies them here (sourced from the derive, so the
+// values are the real J2000 ones and the refs stay stable across the assertions).
+type SeededEarth = EarthBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
+const EARTH_STATE = deriveBodyStates(CONST_J2000).get('earth')!;
+const SEEDED_EARTH: SeededEarth = {
+  ...SCENE_EARTH,
+  positionMpc: EARTH_STATE.positionMpc,
+  orientation: EARTH_STATE.orientation,
+};
 
 const composeMock = composeBodyMvp as unknown as ReturnType<typeof vi.fn>;
 
@@ -70,9 +107,9 @@ function makeCtx(distance: number): ReadyFrameContext {
   return {
     cam: { distance },
     drawCamPos: [
-      SCENE_EARTH.positionMpc[0] + 1e-13,
-      SCENE_EARTH.positionMpc[1],
-      SCENE_EARTH.positionMpc[2],
+      SEEDED_EARTH.positionMpc[0] + 1e-13,
+      SEEDED_EARTH.positionMpc[1],
+      SEEDED_EARTH.positionMpc[2],
     ],
     canvasSize: { width: 1280, height: 720 },
     fovYRad: (60 * Math.PI) / 180,
@@ -98,6 +135,7 @@ function makeNear0View(): SlabView {
     vp: f64Vp,
     originRelative: true,
     precision: 'f64',
+    reversedZ: false,
   };
   return {
     slab,
@@ -112,6 +150,21 @@ function makeState(earthRenderer: unknown, earth: EarthBody | null): EngineState
   return {
     gpu: { earthRenderer },
     data: { bodies: { earth } },
+    // The tile subsystem is absent until `wireSlots` builds it, and a session
+    // that never approaches Earth never engages it — so `null` here is the
+    // shipped identity case, in which the packed page-table window is all-zero
+    // and the fragment reads the whole-globe base texture alone.
+    subsystems: { earthTiles: null },
+    // earthLayer.draw reads the live night-side floor + ocean-glint roughness
+    // from settings.earth each frame; seed both from EARTH_SURFACE_PARAMS so the
+    // packed tail slots equal the authored defaults (a no-op override, exactly
+    // how the settings slice seeds them).
+    settings: {
+      earth: {
+        ambientLight: EARTH_SURFACE_PARAMS.ambientLight,
+        oceanRoughness: EARTH_SURFACE_PARAMS.oceanRoughness,
+      },
+    },
   } as unknown as EngineState;
 }
 
@@ -123,13 +176,13 @@ describe('earthLayer.enabled', () => {
     // Renderer only (camera inside the gate — the body is the missing gate).
     expect(earthLayer.enabled(makeState(renderer, null), NEAR_CTX)).toBe(false);
     // Body only. Bare ctx: the handle check short-circuits first.
-    expect(earthLayer.enabled(makeState(null, SCENE_EARTH), CTX_STUB)).toBe(false);
+    expect(earthLayer.enabled(makeState(null, SEEDED_EARTH), CTX_STUB)).toBe(false);
     // Both present, camera inside the gate.
-    expect(earthLayer.enabled(makeState(renderer, SCENE_EARTH), NEAR_CTX)).toBe(true);
+    expect(earthLayer.enabled(makeState(renderer, SEEDED_EARTH), NEAR_CTX)).toBe(true);
   });
 
   it('is disabled beyond the foreground gate and enabled below it', () => {
-    const state = makeState({ draw: vi.fn() }, SCENE_EARTH);
+    const state = makeState({ draw: vi.fn() }, SEEDED_EARTH);
     // Below the gate → the handle + body gates decide (both pass).
     expect(earthLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2))).toBe(true);
     // At and above the gate → off, however present the handles are: Earth is
@@ -145,13 +198,13 @@ describe('earthLayer.enabled', () => {
     // ~1e-6 Mpc from Earth — the ~4e-16 Mpc globe subtends ~3e-7 px there,
     // far under SUB_PIXEL_BODY_CULL_PX, so the layer must leave the pass
     // plan: a sub-pixel sphere adds nothing the star backdrop doesn't.
-    const state = makeState({ draw: vi.fn() }, SCENE_EARTH);
+    const state = makeState({ draw: vi.fn() }, SEEDED_EARTH);
     const subPixelCtx = {
       cam: { distance: FOREGROUND_MAX_DISTANCE_MPC / 2 },
       drawCamPos: [
-        SCENE_EARTH.positionMpc[0] + 1e-6,
-        SCENE_EARTH.positionMpc[1],
-        SCENE_EARTH.positionMpc[2],
+        SEEDED_EARTH.positionMpc[0] + 1e-6,
+        SEEDED_EARTH.positionMpc[1],
+        SEEDED_EARTH.positionMpc[2],
       ],
       canvasSize: { width: 1280, height: 720 },
       fovYRad: (60 * Math.PI) / 180,
@@ -171,13 +224,23 @@ describe('the (foreground:0, NEAR0) render group above the foreground gate', () 
       gpu: {
         earthRenderer: { draw: vi.fn() },
         starRenderer: null,
+        // The field-star sphere shares this group; its presence query reads the
+        // catalog off this handle, so a null handle short-circuits its enabled
+        // gate and keeps it out below and above the gate (like the siblings).
+        starCatalogRenderer: null,
         planetRenderer: null,
         texturedBodyRenderer: null,
         // The ring shares this group; its null handle short-circuits enabled, so
         // it stays out of the group below and above the gate (like the siblings).
         ringRenderer: null,
+        // Earth's cloud shell also shares this group; same null-handle
+        // short-circuit keeps it out below and above the gate.
+        cloudShellRenderer: null,
+        // Earth's in-scatter atmosphere shares this group too (drawn last); same
+        // null-handle short-circuit keeps it out below and above the gate.
+        atmosphereShellRenderer: null,
       },
-      data: { bodies: { earth: SCENE_EARTH } },
+      data: { bodies: { earth: SEEDED_EARTH } },
     } as unknown as EngineState;
     const groupAt = (ctx: ReadyFrameContext) =>
       CONTENT_LAYERS.filter(
@@ -199,9 +262,13 @@ describe('earthLayer.draw', () => {
     composeMock.mockClear();
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
     const view = makeNear0View();
-    const state = makeState({ draw: drawSpy }, SCENE_EARTH);
+    const state = makeState({ draw: drawSpy }, SEEDED_EARTH);
 
-    earthLayer.draw(PASS_STUB, view, CTX_STUB, state);
+    // NEAR_CTX, not the bare CTX_STUB: draw now also reads ctx.drawCamPos (the
+    // cloud-shadow descent fade), and NEAR_CTX's camera sits ~1e-13 Mpc from
+    // Earth's centre — hundreds of body radii up, well above the fade band — so
+    // the fade multiplier is 1 and every assertion below is unaffected by it.
+    earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
 
     // Exactly one MVP composed for the single Earth body.
     expect(composeMock).toHaveBeenCalledTimes(1);
@@ -210,19 +277,21 @@ describe('earthLayer.draw', () => {
     expect(call[0]).toBe(view.slab.vp);
     expect(call[0]).not.toBe(view.vp);
     // Position, render origin, and the km→Mpc radius carried through.
-    expect(call[1]).toBe(SCENE_EARTH.positionMpc);
+    expect(call[1]).toBe(SEEDED_EARTH.positionMpc);
     expect(call[2]).toBe(RENDER_ORIGIN_MPC);
-    expect(call[3]).toBe(SCENE_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC);
+    expect(call[3]).toBe(SEEDED_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC);
     // The body's baked orientation is forwarded as the model's rotation factor.
-    expect(call[4]).toBe(SCENE_EARTH.orientation);
+    expect(call[4]).toBe(SEEDED_EARTH.orientation);
 
-    // The renderer receives the pass + the packed length-20 LitBodyUniforms
-    // record (16 mvp + 3 sunDirLocal + 1 pad), not the bare 16-float MVP.
+    // The renderer receives the pass + the packed length-32 EarthSurfaceUniforms
+    // record (16 mvp + 3 sunDirLocal + roughnessBase + 3 camPosLocal + f0 +
+    // sunIrradiance + cloudShadowStrength + cloudShellRadius + ambientLight +
+    // oceanRoughness + 3 pad), not the bare 16-float MVP.
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const [passArg, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
     expect(passArg).toBe(PASS_STUB);
     expect(uniforms).toBeInstanceOf(Float32Array);
-    expect(uniforms).toHaveLength(20);
+    expect(uniforms).toHaveLength(32);
   });
 
   it('packs sunDirLocal into the lit uniform', () => {
@@ -234,21 +303,110 @@ describe('earthLayer.draw', () => {
     composeMock.mockClear();
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
     const view = makeNear0View();
-    const state = makeState({ draw: drawSpy }, SCENE_EARTH);
+    const state = makeState({ draw: drawSpy }, SEEDED_EARTH);
 
-    earthLayer.draw(PASS_STUB, view, CTX_STUB, state);
+    // NEAR_CTX supplies drawCamPos, well above the descent-fade band (see the
+    // note on the previous test).
+    earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
 
     const [, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
-    expect(uniforms).toHaveLength(20);
-    const expected = sunDirLocal(SCENE_EARTH.positionMpc, RENDER_ORIGIN_MPC, SCENE_EARTH.orientation);
+    expect(uniforms).toHaveLength(32);
+    const expected = sunDirLocal(
+      SEEDED_EARTH.positionMpc,
+      RENDER_ORIGIN_MPC,
+      SEEDED_EARTH.orientation,
+    );
     expect(uniforms[16]).toBeCloseTo(expected[0]);
     expect(uniforms[17]).toBeCloseTo(expected[1]);
     expect(uniforms[18]).toBeCloseTo(expected[2]);
   });
 
+  it('packs camPosLocal and the PBR surface params into their tail slots', () => {
+    // The other view-dependent seam: the ocean glint needs the camera in Earth's
+    // local frame (slots 20..22), and the PBR + cloud dials fill the vec3 tails /
+    // trailing scalars — roughnessBase at 19, f0 at 23, sunIrradiance at 24,
+    // cloudShadowStrength at 25, cloudShellRadius at 26. Pinning the scalars by
+    // their named source makes an argument-order swap at the pack call (e.g.
+    // f0 ↔ roughnessBase, or the cloudShadowStrength ↔ cloudShellRadius wiring
+    // this task introduces) a failure here, not a visual-only regression.
+    composeMock.mockClear();
+    const drawSpy = vi.fn<(...args: unknown[]) => void>();
+    const view = makeNear0View();
+    const state = makeState({ draw: drawSpy }, SEEDED_EARTH);
+
+    // NEAR_CTX supplies drawCamPos, well above the descent-fade band (see the
+    // note on the first draw test).
+    earthLayer.draw(PASS_STUB, view, NEAR_CTX, state);
+
+    const [, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
+    expect(uniforms).toHaveLength(32);
+
+    // Independent recompute of the camera-in-local-frame vector. The fixture camera
+    // sits 5 Mpc out while Earth's radius is ~2e-16 Mpc, so the local coords are
+    // astronomically large (~1e16) — toBeCloseTo's absolute tolerance is meaningless
+    // there. The layer and this recompute call the SAME util with identical inputs,
+    // so the f32-narrowed slot equals Math.fround of the recomputed value exactly.
+    const expectedCam = camPosLocal(
+      view.camPos,
+      SEEDED_EARTH.positionMpc,
+      SEEDED_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC,
+      SEEDED_EARTH.orientation,
+    );
+    expect(uniforms[20]).toBe(Math.fround(expectedCam[0]));
+    expect(uniforms[21]).toBe(Math.fround(expectedCam[1]));
+    expect(uniforms[22]).toBe(Math.fround(expectedCam[2]));
+
+    expect(uniforms[19]).toBeCloseTo(EARTH_SURFACE_PARAMS.roughnessBase);
+    expect(uniforms[23]).toBeCloseTo(EARTH_SURFACE_PARAMS.f0);
+    expect(uniforms[24]).toBeCloseTo(EARTH_SURFACE_PARAMS.sunIrradiance);
+    expect(uniforms[25]).toBeCloseTo(EARTH_SURFACE_PARAMS.cloudShadowStrength);
+    // Slot 26 is the cloud shell radius the surface shadow ray intersects — it
+    // must be the real CLOUD_SHELL_PARAMS.radiusRatio, not the placeholder 1.0
+    // this task replaced (the shadow geometry and the drawn deck share it).
+    expect(uniforms[26]).toBeCloseTo(CLOUD_SHELL_PARAMS.radiusRatio);
+    // Slots 27..28 are the live settings overrides the layer now reads from
+    // state.settings.earth — the night-side ambient floor and the open-water GGX
+    // roughness. The fixture seeds both from EARTH_SURFACE_PARAMS (a no-op
+    // override), so the packed slots equal those authored defaults; a stray
+    // ambientLight ↔ oceanRoughness swap at the pack call lands as a failure here.
+    expect(uniforms[27]).toBeCloseTo(EARTH_SURFACE_PARAMS.ambientLight);
+    expect(uniforms[28]).toBeCloseTo(EARTH_SURFACE_PARAMS.oceanRoughness);
+  });
+
+  it('scales cloudShadowStrength by the descent fade as the camera nears the surface', () => {
+    // A future refactor could drop the fade multiply at the pack call and no
+    // OTHER test here would notice — the three tests above all sit far above
+    // the fade band, where the multiplier is 1 and indistinguishable from its
+    // absence. This one plants the camera INSIDE the band (the fade's own
+    // edges from CLOUD_SHELL_PARAMS, not restated literals), so the packed
+    // slot 25 must land strictly between 0 and the authored dial.
+    const drawSpy = vi.fn<(...args: unknown[]) => void>();
+    const view = makeNear0View();
+    const state = makeState({ draw: drawSpy }, SEEDED_EARTH);
+    const radiusMpc = SEEDED_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC;
+    const midAltitudeRadii =
+      (CLOUD_SHELL_PARAMS.fadeStartAltitudeRadii + CLOUD_SHELL_PARAMS.fadeEndAltitudeRadii) / 2;
+    const closeCtx = {
+      cam: { distance: FOREGROUND_MAX_DISTANCE_MPC / 2 },
+      drawCamPos: [
+        SEEDED_EARTH.positionMpc[0] + radiusMpc * (1 + midAltitudeRadii),
+        SEEDED_EARTH.positionMpc[1],
+        SEEDED_EARTH.positionMpc[2],
+      ],
+      canvasSize: { width: 1280, height: 720 },
+      fovYRad: (60 * Math.PI) / 180,
+    } as unknown as ReadyFrameContext;
+
+    earthLayer.draw(PASS_STUB, view, closeCtx, state);
+
+    const [, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
+    expect(uniforms[25]).toBeGreaterThan(0);
+    expect(uniforms[25]).toBeLessThan(EARTH_SURFACE_PARAMS.cloudShadowStrength);
+  });
+
   it('is a no-op when the earthRenderer handle is null (pre-bootstrap)', () => {
     const view = makeNear0View();
-    const state = makeState(null, SCENE_EARTH);
+    const state = makeState(null, SEEDED_EARTH);
     expect(() => earthLayer.draw(PASS_STUB, view, CTX_STUB, state)).not.toThrow();
   });
 

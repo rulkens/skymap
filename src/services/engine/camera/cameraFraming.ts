@@ -1,12 +1,20 @@
 /**
  * cameraFraming — pure helper that produces the engine's initial camera
- * snapshot. Pure constants; no dependency on loaded data so the camera
- * can be built before any galaxy catalog has arrived.
+ * snapshot. The pose is a pure FUNCTION of boot time (the caller supplies
+ * `simDays`); the ephemeris behind it is analytic, so there is still no
+ * dependency on loaded or fetched data and the camera can be built before any
+ * galaxy catalog has arrived.
+ *
+ * ### The boot pose IS the home pose
+ *
+ * The app boots into the same Earth home framing every home entry point
+ * converges on: `earthHomePose(simDays, fovYRad)` supplies target / yaw / pitch
+ * / distance, and this helper wraps it in the near/far/fov envelope the orbit
+ * camera needs. Booting to the home pose means the Home pill / `h` key never
+ * fly the camera away from where it already sits right after load.
  *
  * ### Constants
  *
- *   - `INITIAL_DISTANCE_MPC` — wheel-zoom start point, clamped to the
- *     global zoom envelope.
  *   - `FAR_CLIP_MPC = 50000` — far-clip plane.  Sized so the entire
  *     observable-universe horizon shell (radius 14 300 Mpc, drawn by
  *     `horizonShellRenderer`) stays inside the frustum at every
@@ -17,14 +25,16 @@
  *     ratio fine.
  *   - `near = 0.01` Mpc (10 kpc) — well inside the focus-on tween's
  *     end distance (0.12 Mpc, see `galaxyFocusDistance.ts`).
- *   - `BOOT_YAW_RAD` / `BOOT_PITCH_RAD` — the Milky-Way framing the app
- *     boots with, looking at the galactic disk at first paint. Exported
- *     because the grand tour's opening snaps to the same bearing, so a
- *     tour run always approaches home from the boot orientation.
+ *   - `INITIAL_DISTANCE_MPC` — a Local-Group-scale distance the wheel-zoom
+ *     envelope + the grand tour still reference; no longer the boot distance.
+ *   - `GALACTIC_DISC_YAW_RAD` / `GALACTIC_DISC_PITCH_RAD` — the eye-tuned
+ *     bearing that faces the galactic disk. The grand tour's opening and
+ *     closing beats aim at this bearing (the app now boots at Earth instead).
  */
 
-import { clampDistance } from '../../../utils/camera/clampDistance';
 import type { InitialCam } from '../../../@types/camera/InitialCam';
+import type { Mat3 } from '../../../@types/math/Mat3';
+import { earthHomePose } from './earthHomePose';
 
 /** Initial camera distance in Mpc — sits the viewer inside the Local Group. */
 export const INITIAL_DISTANCE_MPC = 0.14;
@@ -35,22 +45,43 @@ export const FAR_CLIP_MPC = 50000;
 /** Default vertical field-of-view in radians (60°) — the bootstrap lens setting. */
 export const DEFAULT_FOV_Y_RAD = (Math.PI / 180) * 60;
 
-/** Boot orientation — eye-tuned to face the galactic disk at first paint. */
-export const BOOT_YAW_RAD = 4.4889;
-export const BOOT_PITCH_RAD = -0.0644;
+/**
+ * Eye-tuned bearing that faces the galactic disk — aimed at by the tour's
+ * opening/closing beats. Encoded in the ecliptic default frame (the value the
+ * shared decode reads through `ORIENTATION_FRAMES.ecliptic`); it points at the
+ * same world direction the legacy Y-up pair `(4.4889, -0.0644)` did.
+ */
+export const GALACTIC_DISC_YAW_RAD = -1.4208;
+export const GALACTIC_DISC_PITCH_RAD = -0.1783;
 
 /**
- * Compute the initial camera snapshot. Pure constants — no dependency on
- * loaded catalogs, so the camera can be built before any galaxy catalog arrives.
+ * Compute the initial camera snapshot: the Earth home pose at boot time wrapped
+ * in the near/far/fov envelope. Pure function of `simDays` — the ephemeris is
+ * analytic, so no dependency on loaded catalogs and the camera can be built
+ * before any galaxy catalog arrives.
  *
- * @param fovYRad  Vertical field-of-view in radians (e.g. 60° → π/3).
+ * @param fovYRad     Vertical field-of-view in radians (e.g. 60° → π/3).
+ * @param simDays     Boot sim instant (Julian days) — where Earth is at load.
+ * @param frameBasis  The committed orientation basis
+ *   (`ORIENTATION_FRAMES[settings.orientation]`) the boot pose encodes through,
+ *   so first-paint yaw/pitch round-trip under the same frame the render path
+ *   decodes with. Absent ⇒ identity (world-frame angles). See `earthHomePose`.
  */
-export function computeInitialCamera({ fovYRad }: { fovYRad: number }): InitialCam {
+export function computeInitialCamera({
+  fovYRad,
+  simDays,
+  frameBasis,
+}: {
+  fovYRad: number;
+  simDays: number;
+  frameBasis?: Mat3;
+}): InitialCam {
+  // The home distance is `bodyLikeFraming`'s deliberately UNCLAMPED Earth-scale
+  // value — no `clampDistance` here: it takes a pivot radius the boot pose
+  // hasn't resolved yet, and the absolute floor alone would swallow the framing
+  // at ~2e-16 Mpc. The wheel-zoom clamps own the floor; see `bodyLikeFraming`.
   return {
-    target: [0, 0, 0],
-    distance: clampDistance(INITIAL_DISTANCE_MPC),
-    yaw: BOOT_YAW_RAD,
-    pitch: BOOT_PITCH_RAD,
+    ...earthHomePose(simDays, fovYRad, frameBasis),
     fovYRad,
     near: 0.01,
     far: FAR_CLIP_MPC,

@@ -14,13 +14,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { RefObject, KeyboardEvent } from 'react';
 import { rankPaletteMatches } from './utils/rankPaletteMatches';
 import { focusIdForRow } from './utils/focusIdForRow';
+import { wrapIndex } from './utils/wrapIndex';
 import type { ScoredRow } from './paletteRowModel';
-import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
+import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
 
 export type UsePaletteSearchInput = {
-  entries: readonly FamousMetaEntry[];
+  entries: readonly FamousGalaxyMetaEntry[];
   aliasIndex?: readonly AliasIndexEntry[];
   structures?: readonly StructureSearchEntry[];
   open: boolean;
@@ -89,8 +90,9 @@ export function usePaletteSearch({
 
   // ── Keyboard handling ──────────────────────────────────────────────────────
   //
-  // Up/Down arrows navigate, Enter selects, Esc closes.  All other keys
-  // pass through to the input so the user can type.
+  // Up/Down arrows navigate (wrapping past either end so Up on the top row
+  // jumps to the bottom), Enter selects, Esc closes.  All other keys pass
+  // through to the input so the user can type.
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Escape') {
       e.preventDefault();
@@ -99,12 +101,12 @@ export function usePaletteSearch({
     }
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setActiveIdx((i) => Math.min(matches.length - 1, i + 1));
+      setActiveIdx((i) => wrapIndex(i, 1, matches.length));
       return;
     }
     if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setActiveIdx((i) => Math.max(0, i - 1));
+      setActiveIdx((i) => wrapIndex(i, -1, matches.length));
       return;
     }
     if (e.key === 'Enter') {

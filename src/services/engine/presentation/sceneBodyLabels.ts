@@ -37,48 +37,35 @@ import type { Label } from '../../../@types/rendering/Label';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { SceneBody } from '../../../@types/scene/SceneBody';
 import type { CaptionKind } from './captionPriority';
+import type { ForegroundCaption } from './foregroundCaption';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import { SCENE_STARS } from '../../../data/bodies/sceneStars';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
+import type { BodyState } from '../../../@types/scene/BodyState';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
+import { SUN_ENTRY } from '../../../data/sources/sun';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { FAMOUS_LABEL_STYLE } from './famousLabelStyle';
+import { CONSTELLATION_COUNT } from './constellationCaptions';
 
 /**
  * GPU buffer capacity for the foreground caption renderer — the `maxLabels`
  * `initGpu` hands `createLabelRenderer`. `setLabels` silently CLAMPS at
- * `maxLabels` (`Math.min(labels.length, maxLabels)`), so a roster that outgrew
- * a fixed cap would drop captions with NO error: a body would seed, render
- * true-scale in the foreground, and simply never get a name.
+ * `maxLabels` (`Math.min(labels.length, maxLabels)`), so a caption set that
+ * outgrew a fixed cap would drop names with NO error.
  *
- * Deriving the capacity from the roster — one caption per `SCENE_BODIES` entry
- * — and rounding UP to the next power of two keeps the buffer ahead of the seed
- * table by construction. The famous-stars seed climbs toward ~130 bodies across
- * the five expansion batches; each power-of-two step (…, 128, 256, …) absorbs a
- * whole batch of growth without a hand-retuned number, and the constant can
- * never lag the roster because it is computed FROM it at module load.
+ * The layer draws captions from BOTH producers into this one renderer, so the
+ * capacity reserves one slot per `SCENE_BODIES` entry PLUS one per constellation
+ * (`CONSTELLATION_COUNT`), rounded UP to the next power of two so the buffer
+ * stays ahead of both rosters by construction. The famous-stars seed climbs
+ * toward ~130 bodies across the five expansion batches; each power-of-two step
+ * (…, 128, 256, …) absorbs a whole batch of growth without a hand-retuned
+ * number, and the constant can never lag the rosters because it is computed
+ * FROM them at module load.
  */
-export const FOREGROUND_LABEL_CAPACITY = 2 ** Math.ceil(Math.log2(SCENE_BODIES.length));
-
-/**
- * A scene-body caption always authors its tint, em height, and pixel clamps —
- * unlike the general `Label` shape, where those fields are optional and fall
- * back to renderer defaults. Narrowing the return type states that guarantee
- * once at the producer, so consumers that need the fields (the foreground
- * layer feeds them to `liftedLabelPlacement`, whose input requires plain
- * `number`s) read them directly — no per-field `?? default` at the read site
- * that would silently mask a caption built without its colour or clamps.
- *
- * `kind` classifies the caption for the foreground layer's declutter priority
- * and fade routing (`CAPTION_PRIORITY`). It is stamped HERE — where each seed
- * table's identity is structurally known — so no consumer ever re-derives a
- * body's kind by sniffing id strings.
- */
-export type SceneBodyLabel = Label &
-  Required<Pick<Label, 'color' | 'worldEmMpc' | 'minPixelSize' | 'maxPixelSize'>> & {
-    readonly kind: CaptionKind;
-  };
+export const FOREGROUND_LABEL_CAPACITY =
+  2 ** Math.ceil(Math.log2(SCENE_BODIES.length + CONSTELLATION_COUNT));
 
 /**
  * Earth's caption tint. `EarthBody` carries a texture rather than a colour,
@@ -124,14 +111,22 @@ export const SCENE_STAR_LABEL_IDS: ReadonlySet<string> = new Set(
 );
 
 /**
- * Build the common label shape for one body. The colour is the caller's
- * per-type derivation (spectral colour / albedo / Earth blue), widened to
- * straight RGBA at full alpha; `kind` is the caller's structural knowledge of
+ * Build the common label shape for one body. The position is the caller's —
+ * an orbital body's derived snapshot position, a star's record position — so
+ * this reads it as a parameter rather than off `body.positionMpc` (the baked
+ * record field the orbital bodies no longer position from). The colour is the
+ * caller's per-type derivation (spectral colour / albedo / Earth blue), widened
+ * to straight RGBA at full alpha; `kind` is the caller's structural knowledge of
  * which seed table the body came from.
  */
-function bodyLabel(body: SceneBody, tint: Readonly<Vec3>, kind: CaptionKind): SceneBodyLabel {
+function bodyLabel(
+  body: SceneBody,
+  positionMpc: Readonly<Vec3>,
+  tint: Readonly<Vec3>,
+  kind: CaptionKind,
+): ForegroundCaption {
   const o = RENDER_ORIGIN_MPC;
-  const p = body.positionMpc;
+  const p = positionMpc;
   const worldPos: Vec3 = [p[0] - o[0], p[1] - o[1], p[2] - o[2]];
   return {
     id: sceneBodyLabelId(body.id),
@@ -162,15 +157,31 @@ function bodyLabel(body: SceneBody, tint: Readonly<Vec3>, kind: CaptionKind): Sc
 
 /**
  * Build one name label per seeded scene body, positioned relative to
- * `RENDER_ORIGIN_MPC` for the foreground view-projection.  Static — the
- * bodies don't move — so the caller sets these once at construction.
+ * `RENDER_ORIGIN_MPC` for the foreground view-projection.
+ *
+ * Earth + planets read their position from the caller's `bodyStates` snapshot
+ * (the per-frame `deriveBodyStates(simDays)` map), so their captions FOLLOW the
+ * bodies as the sim clock advances. The caller re-invokes this only when the
+ * snapshot actually changes — a paused clock returns the same map by reference,
+ * so a fresh instant is the only thing that rebuilds the handful of captions
+ * (see `foregroundLabelsLayer`'s memo). Stars are not orbital bodies, so they
+ * keep their authored record position regardless of the instant.
  */
-export function sceneBodyLabels(): SceneBodyLabel[] {
+export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): ForegroundCaption[] {
   return [
-    bodyLabel(SCENE_EARTH, EARTH_TINT, 'earth'),
-    // The Sun rides the star seed table but is its own caption kind — it must
-    // out-rank every other caption in a declutter collision (CAPTION_PRIORITY).
-    ...SCENE_STARS.map((star) => bodyLabel(star, star.color, star.id === 'sun' ? 'sun' : 'star')),
-    ...SCENE_PLANETS.map((planet) => bodyLabel(planet, planet.albedo, 'planet')),
+    bodyLabel(SCENE_EARTH, bodyStates.get(SCENE_EARTH.id)!.positionMpc, EARTH_TINT, 'earth'),
+    // The Sun rides the star seed table but is its own registry row, so it gets
+    // its own caption kind: the kind is what routes the caption to that row's
+    // label gate, and it must out-rank every other caption in a declutter
+    // collision (CAPTION_PRIORITY). The seed table carries no per-star source
+    // tag, so the row's `id` is the lookup key that tells the two apart.
+    // Stars sit at their authored record position (no orbital element), so they
+    // read `star.positionMpc` directly rather than the snapshot.
+    ...SCENE_STARS.map((star) =>
+      bodyLabel(star, star.positionMpc, star.color, star.id === SUN_ENTRY.id ? 'sun' : 'star'),
+    ),
+    ...SCENE_PLANETS.map((planet) =>
+      bodyLabel(planet, bodyStates.get(planet.id)!.positionMpc, planet.albedo, 'planet'),
+    ),
   ];
 }

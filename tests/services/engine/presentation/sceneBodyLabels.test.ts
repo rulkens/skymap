@@ -5,12 +5,18 @@ import {
 } from '../../../../src/services/engine/presentation/sceneBodyLabels';
 import { FAMOUS_LABEL_STYLE } from '../../../../src/services/engine/presentation/famousLabelStyle';
 import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
-import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
+import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
+import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
+
+// The caller passes the per-frame body snapshot; these tests use the J2000
+// instant. RENDER_ORIGIN_MPC is the Sun, so worldPos == positionMpc.
+const J2000_STATES = deriveBodyStates(CONST_J2000);
+const EARTH_POS = J2000_STATES.get('earth')!.positionMpc;
 
 describe('sceneBodyLabels', () => {
-  const labels = sceneBodyLabels();
+  const labels = sceneBodyLabels(J2000_STATES);
 
   it('emits one label per seeded scene body (Earth + stars + planets)', () => {
     expect(labels).toHaveLength(SCENE_BODIES.length);
@@ -32,7 +38,26 @@ describe('sceneBodyLabels', () => {
     const sun = labels.find((label) => label.text === 'Sun')!;
     expect(sun.worldPos).toEqual([0, 0, 0]);
     const earth = labels.find((label) => label.text === 'Earth')!;
-    expect(earth.worldPos).toEqual([...SCENE_EARTH.positionMpc]);
+    expect(earth.worldPos).toEqual([...EARTH_POS]);
+  });
+
+  it('a body caption position tracks the snapshot when simDays changes', () => {
+    // Earth + planets read their anchor from the passed snapshot, so a DIFFERENT
+    // sim instant (Earth swept ~120 days along its orbit) moves the Earth caption
+    // to the new world position — the label FOLLOWS the body. Stars carry no
+    // orbital element, so their caption anchor is identical across instants.
+    const laterStates = deriveBodyStates(CONST_J2000 + 120);
+    const laterLabels = sceneBodyLabels(laterStates);
+
+    const earthNow = labels.find((label) => label.id === 'sceneBody-earth')!;
+    const earthLater = laterLabels.find((label) => label.id === 'sceneBody-earth')!;
+    // RENDER_ORIGIN is the Sun, so worldPos == the snapshot position exactly.
+    expect(earthLater.worldPos).toEqual([...laterStates.get('earth')!.positionMpc]);
+    expect(earthLater.worldPos).not.toEqual(earthNow.worldPos);
+
+    const vegaNow = labels.find((label) => label.id === 'sceneBody-vega')!;
+    const vegaLater = laterLabels.find((label) => label.id === 'sceneBody-vega')!;
+    expect(vegaLater.worldPos).toEqual(vegaNow.worldPos);
   });
 
   it('tints each label from its body record (spectral colour / albedo / Earth blue)', () => {

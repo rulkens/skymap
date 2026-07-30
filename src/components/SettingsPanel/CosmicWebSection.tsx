@@ -47,7 +47,8 @@ import type { ScalarFieldPaletteId } from '../../@types/data/volume/ScalarFieldP
 import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
 import { VolumeFieldRow } from './VolumeFieldRow';
-import { CollapsibleSection } from './CollapsibleSection';
+import CollapsibleSection from './CollapsibleSection';
+import Slider from '../common/Slider/Slider';
 import styles from './SettingsPanel.module.css';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -221,23 +222,17 @@ function CosmicWebSection({
           effect otherwise).
         */}
         {filamentsEnabled && (
-          <>
-            <div className={styles.panelRow}>
-              <label htmlFor="filament-intensity">Filament intensity</label>
-              <span className={styles.panelValue}>{filamentIntensity.toFixed(2)}</span>
-            </div>
-            <div className={styles.panelRow}>
-              <input
-                id="filament-intensity"
-                type="range"
-                min="0"
-                max="1"
-                step="0.05"
-                value={filamentIntensity}
-                onChange={(e) => onFilamentIntensityChange(Number(e.target.value))}
-              />
-            </div>
-          </>
+          <div className={styles.panelRow}>
+            <Slider
+              label="Filament intensity"
+              value={filamentIntensity}
+              min={0}
+              max={1}
+              step={0.05}
+              onChange={onFilamentIntensityChange}
+              format={(v) => v.toFixed(2)}
+            />
+          </div>
         )}
 
         {/*

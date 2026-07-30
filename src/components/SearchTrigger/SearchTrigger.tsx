@@ -30,7 +30,7 @@
  * Same frosted-glass surface vocabulary as InfoCard / SettingsPanel:
  * `--surface-card-soft`, `--border-card`, `--blur-card`, the cosmic
  * blue accent.  ~280 px wide on desktop; on mobile it flex-grows
- * inside the parent `.topBar` wrapper (App.module.css).  Positioning
+ * inside the parent `.root` wrapper (TopBarContainer.module.css).  Positioning
  * is owned by that wrapper — the trigger itself no longer carries
  * `position: fixed`.  Hidden behind the palette when it's open so
  * the trigger doesn't peek out behind the modal — `hidden` prop
@@ -88,12 +88,12 @@ function SearchTrigger({ onClick, hidden = false }: SearchTriggerProps): ReactNo
       type="button"
       className={cx(styles.trigger, hidden && styles.hidden)}
       onClick={onClick}
-      aria-label="Search galaxies and clusters"
+      aria-label="Search galaxies, stars, planets, and clusters"
       aria-hidden={hidden || undefined}
       aria-keyshortcuts="Meta+K Control+K /"
     >
       <SearchIcon />
-      <span className={styles.placeholder}>Search galaxies &amp; clusters…</span>
+      <span className={styles.placeholder}>Search the universe…</span>
       <span className={styles.shortcut} aria-hidden="true">
         ⌘K
       </span>

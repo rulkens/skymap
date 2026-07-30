@@ -12,9 +12,11 @@
  *
  * Tests assert:
  *  - The container reads `selectGalaxyCatalogSize` and forwards it to the
- *    point-size slider's `value`. We seed via a pre-render dispatch so the
- *    preloaded-state shape never has to be manually reproduced.
- *  - Moving the slider dispatches `setGalaxyCatalogSize`, so
+ *    point-size Slider's `aria-valuenow`. We seed via a pre-render dispatch so
+ *    the preloaded-state shape never has to be manually reproduced.
+ *  - Nudging the slider (the Slider component has no native range input, so a
+ *    keyboard ArrowRight is the deterministic trigger — see
+ *    GalaxiesSection.test.ts) dispatches `setGalaxyCatalogSize`, so
  *    `selectGalaxyCatalogSize(store.getState())` reflects the new value.
  *  - Toggling a per-catalog checkbox dispatches `setGalaxyCatalogVisible`,
  *    so `selectVisibleSourceMask(store.getState())` changes.
@@ -30,7 +32,7 @@ import { render, fireEvent } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import GalaxiesSectionContainer from '../../../src/components/containers/GalaxiesSectionContainer';
-import { createAppStore } from '../../../src/store/createAppStore';
+import { createTestStore as createAppStore } from '../../support/createTestStore';
 import {
   selectGalaxyCatalogSize,
   selectVisibleSourceMask,
@@ -54,21 +56,24 @@ describe('GalaxiesSectionContainer', () => {
       wrapper: makeWrapper(store),
     });
 
-    const slider = container.querySelector<HTMLInputElement>('#slider-point-size');
+    const slider = container.querySelector<HTMLElement>('[role="slider"]');
     expect(slider).not.toBeNull();
-    expect(slider!.value).toBe('6');
+    expect(slider!.getAttribute('aria-valuenow')).toBe('6');
   });
 
   it('dispatches setGalaxyCatalogSize and updates the store when the slider moves', () => {
     const { store } = createAppStore();
+    // Seed a known value so an ArrowRight (step 0.1) lands on a deterministic
+    // target. The Slider has no native range input; keyboard is the reliable
+    // drive in jsdom (pointer-drag needs a real layout rect).
+    store.dispatch(setGalaxyCatalogSize(5.0));
     const { container } = render(createElement(GalaxiesSectionContainer, null), {
       wrapper: makeWrapper(store),
     });
 
-    const slider = container.querySelector<HTMLInputElement>('#slider-point-size')!;
-    fireEvent.change(slider, { target: { value: '5.2' } });
+    fireEvent.keyDown(container.querySelector('[role="slider"]')!, { key: 'ArrowRight' });
 
-    expect(selectGalaxyCatalogSize(store.getState())).toBeCloseTo(5.2);
+    expect(selectGalaxyCatalogSize(store.getState())).toBeCloseTo(5.1);
   });
 
   it('dispatches setGalaxyCatalogVisible and updates selectVisibleSourceMask when a catalog is toggled', () => {

@@ -10,6 +10,7 @@ const newNullDeviceRenderer = () => {
     context: null as unknown as GPUCanvasContext,
     format: 'bgra8unorm' as GPUTextureFormat,
     canvas: null as unknown as HTMLCanvasElement,
+    hdrCapable: false,
   };
   return createSelectionRingRenderer(ctx, ctx.format);
 };
@@ -42,6 +43,7 @@ function newMockDeviceRenderer(targetFormat?: GPUTextureFormat) {
     context: null as unknown as GPUCanvasContext,
     format: 'bgra8unorm' as GPUTextureFormat,
     canvas: null as unknown as HTMLCanvasElement,
+    hdrCapable: false,
   };
   return {
     renderer: createSelectionRingRenderer(ctx, targetFormat ?? ctx.format),

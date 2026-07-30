@@ -35,6 +35,8 @@ import {
   syncVisibilityFadeItem,
 } from '../../../../src/services/engine/wiring/syncVisibilityFades';
 import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
+import { STAR_CATALOG_IDS } from '../../../../src/data/starCatalog/starCatalogIds';
+import { BODY_IDS } from '../../../../src/data/bodies/bodyIds';
 import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 
 // ── Fixtures ──────────────────────────────────────────────────────────
@@ -197,8 +199,16 @@ function makeBridgeState(): {
   const structureItems: Record<string, { enabled: boolean; labelEnabled: boolean }> = {};
   for (const id of STRUCTURE_IDS) structureItems[id] = { enabled: true, labelEnabled: true };
 
+  const starCatalogItems: Record<string, { enabled: boolean; labelEnabled: boolean }> = {};
+  for (const id of STAR_CATALOG_IDS) starCatalogItems[id] = { enabled: true, labelEnabled: true };
+
+  const bodyItems: Record<string, { enabled: boolean; labelEnabled: boolean }> = {};
+  for (const id of BODY_IDS) bodyItems[id] = { enabled: true, labelEnabled: true };
+
   const settings = {
     galaxyCatalogs: { items: galaxyItems },
+    starCatalogs: { enabled: true, items: starCatalogItems },
+    bodies: { items: bodyItems },
     structures: { enabled: true, items: structureItems },
     milkyWay: { enabled: true, labelEnabled: true },
     // Empty volume items: the volumeField intent reads items[id]?.enabled (→
@@ -207,6 +217,7 @@ function makeBridgeState(): {
     volumes: { enabled: true, items: {} },
     filaments: { enabled: true },
     flow: { enabled: true },
+    orbitTrails: { enabled: true },
   } as unknown as EngineSettingsState;
 
   const state = {
@@ -232,11 +243,14 @@ function makeBridgeState(): {
 const INTENT_KEYS = [
   'survey',
   'surveyLabel',
+  'starCatalogLabel',
+  'bodyLabel',
   'structureRing',
   'structureLabel',
   'volumeField',
   'volumesMaster',
   'filaments',
+  'orbitTrails',
   'milkyWayDisk',
   'milkyWayLabel',
   'flow',
@@ -282,11 +296,14 @@ describe('syncVisibilityFades', () => {
     // rather than against one hardcoded id.
     const intentSamples: Record<Exclude<(typeof INTENT_KEYS)[number], 'volumeField'>, FadeId> = {
       survey: { kind: 'galaxyCatalog', id: GALAXY_CATALOG_IDS[0]! },
-      surveyLabel: { kind: 'labelLayer', layer: 'galaxyNames' },
+      surveyLabel: { kind: 'labelLayer', layer: 'galaxy' },
+      starCatalogLabel: { kind: 'labelLayer', layer: 'starCatalog', item: 'famousStar' },
+      bodyLabel: { kind: 'labelLayer', layer: 'body', item: 'earth' },
       structureRing: { kind: 'structure', id: STRUCTURE_IDS[0]! },
-      structureLabel: { kind: 'labelLayer', layer: 'structure', category: STRUCTURE_IDS[0]! },
+      structureLabel: { kind: 'labelLayer', layer: 'structure', item: STRUCTURE_IDS[0]! },
       volumesMaster: { kind: 'volumesMaster' },
       filaments: { kind: 'filament' },
+      orbitTrails: { kind: 'orbitTrails' },
       milkyWayDisk: { kind: 'milkyWay' },
       milkyWayLabel: { kind: 'labelLayer', layer: 'milkyWay' },
       flow: { kind: 'flow' },

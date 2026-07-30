@@ -50,7 +50,8 @@
  *
  * The same `touched` fact drives depth: a render step whose target row declares
  * `depth` (only `foreground:0` today) attaches a depth texture whose load-op is
- * `'clear'` (to the far plane, 1.0) on first touch and `'load'` after — one
+ * `'clear'` (to this slab's far-plane depth via `depthClearValueFor` — `0.0` under
+ * the NEAR0 `foreground:0` row's reversed-Z convention) on first touch and `'load'` after — one
  * first-touch fact, two attachments — so a second render step or a
  * `perLayerTimed` pass reloads the depth already written and inter-layer
  * occlusion is preserved. Composite steps never attach depth (their dest rows
@@ -64,22 +65,26 @@ import type { ContentLayer } from '../../../@types/engine/frame/ContentLayer';
 import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingService';
-import { slabViewOf } from './slabs';
+import { slabViewOf, groupKeyOf } from './slabs';
 import { encodeFlowCompute } from './encodeFlowCompute';
+import { encodeAtmosphereSkyView } from './encodeAtmosphereSkyView';
+import { runBloom } from './runBloom';
 import { TARGET_CLEAR_VALUES } from '../../gpu/renderTargets';
+import { depthClearValueFor } from '../../../utils/gpu/depthClearValueFor';
 
 /**
- * COMPUTE — the name→fn table a `'compute'` step dispatches through. One row
- * today (`'flow'`); a new compute pre-pass is a new row, not a new branch.
- * Every row takes the uniform `(encoder, ctx, state)` shape even though the
- * flow row ignores `ctx` — so a future compute step that needs the frame
- * context slots in without changing the call site.
+ * COMPUTE — the name→fn table a `'compute'` step dispatches through. Two rows
+ * today (`'flow'` and `'atmosphereSkyView'`); a new compute pre-pass is a new
+ * row, not a new branch. Every row takes the uniform `(encoder, ctx, state)`
+ * shape — `flow` ignores `ctx`, while `atmosphereSkyView` reads the rendered
+ * pose off it so its baked LUT matches what the shell fragment samples.
  */
 const COMPUTE: Record<
   string,
   (encoder: GPUCommandEncoder, ctx: ReadyFrameContext, state: EngineState) => void
 > = {
   flow: (encoder, _ctx, state) => encodeFlowCompute(encoder, state),
+  atmosphereSkyView: (encoder, ctx, state) => encodeAtmosphereSkyView(encoder, ctx, state),
 };
 
 /**
@@ -123,13 +128,17 @@ function depthAttachment(
   ctx: ReadyFrameContext,
   target: string,
   touched: boolean,
+  reversedZ: boolean,
 ): { depthStencilAttachment?: GPURenderPassDepthStencilAttachment } {
   const spec = ctx.renderTargets.specs.find((s) => s.id === target);
   if (!spec?.depth) return {};
   return {
     depthStencilAttachment: {
       view: ctx.renderTargets.depthViewOf(target),
-      depthClearValue: 1,
+      // Clear to the far-plane depth for THIS slab's convention, single-sourced
+      // in depthClearValueFor so the clear and the depthCompare direction can
+      // never disagree (a mismatch fights every fragment of the first draw).
+      depthClearValue: depthClearValueFor(reversedZ),
       depthLoadOp: touched ? 'load' : 'clear',
       depthStoreOp: 'store',
     },
@@ -150,8 +159,12 @@ export function executeFrame(args: ExecuteFrameArgs): void {
 
   // Per-`executeFrame` first-touch bookkeeping: a target id enters this set the
   // first time a pass is opened against it, flipping subsequent passes from
-  // 'clear' to 'load'.
-  const touched = new Set<string>();
+  // 'clear' to 'load'. This is the SAME object exposed on the ready context as
+  // `renderedTargets`: the public type is `ReadonlySet` (the consumer surface),
+  // but the concrete object `deriveFrameContext` builds is a real `Set`, so the
+  // executor populates it here and later layers read which targets rendered this
+  // frame via `ctx.renderedTargets`.
+  const touched = ctx.renderedTargets as Set<string>;
 
   for (const step of program) {
     switch (step.kind) {
@@ -181,6 +194,11 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // The frame's ONLY slab resolution — one SlabView per render step,
         // threaded into every layer in the group.
         const view = slabViewOf(ctx, step.slab);
+        // The merged pass bills its whole group against this one slot. The key
+        // comes from the shared `groupKeyOf` helper (slabs.ts) — the same
+        // definition `timedSlotRowsOf` allocates the slot under — so
+        // `descriptorFor(groupKey)` resolves exactly that slot.
+        const groupKey = groupKeyOf(step.target, step.slab);
         renderGroup(strategy, {
           encoder,
           ctx,
@@ -190,6 +208,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
           target: step.target,
           group,
           view,
+          groupKey,
           alreadyTouched: touched.has(step.target),
         });
         touched.add(step.target);
@@ -218,9 +237,26 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         if (!compositor) {
           throw new Error('executeFrame: compositor missing for composite step');
         }
-        compositor.draw(pass, viewFor(source, ctx, swapView), blend, tone);
+        // The compositor's pipeline bakes its colour-attachment format, so it
+        // needs the dest's format up front (a pass encoder can't be queried for
+        // its own target). Unlike the VIEW — where `swap` is executor-resolved
+        // from the acquired frame texture, not the target table — the FORMAT is
+        // a spec-table fact for every row including `swap` (whose spec carries
+        // the swap-chain format), so it resolves uniformly with no swap branch.
+        const dstFormat = ctx.renderTargets.specs.find((s) => s.id === dest)!.format;
+        compositor.draw(pass, viewFor(source, ctx, swapView), blend, tone, dstFormat);
         pass.end();
         touched.add(dest);
+        break;
+      }
+      case 'bloom': {
+        // The bloom sub-pipeline runs its own strictly-ordered passes (bright →
+        // downsample×4 → upsample×4 → fold), so unlike a `'render'` step it does
+        // not go through the `(target, slab)` layer grouping — a ping-pong mip
+        // pyramid reuses targets, which that grouping cannot express without
+        // stale re-fires. `hdr` is already touched here (the program places
+        // bloom after the body composite), so the fold loads it.
+        runBloom(encoder, ctx, state, timing);
         break;
       }
     }
@@ -239,10 +275,12 @@ function renderGroup(
     target: string;
     group: readonly ContentLayer[];
     view: SlabView;
+    groupKey: string;
     alreadyTouched: boolean;
   },
 ): void {
-  const { encoder, ctx, state, timing, swapView, target, group, view, alreadyTouched } = p;
+  const { encoder, ctx, state, timing, swapView, target, group, view, groupKey, alreadyTouched } =
+    p;
   const targetView = viewFor(target, ctx, swapView);
 
   if (strategy === 'merged') {
@@ -251,7 +289,12 @@ function renderGroup(
     const pass = encoder.beginRenderPass({
       label: `render-${target}`,
       colorAttachments: [colorAttachment(target, targetView, alreadyTouched)],
-      ...depthAttachment(ctx, target, alreadyTouched),
+      ...depthAttachment(ctx, target, alreadyTouched, view.slab.reversedZ),
+      // Bill the whole group against its per-step group slot — the one honest
+      // timing a single-pass shape can give (per-layer slots are the
+      // `perLayerTimed` path's alone). A no-op timing service returns undefined,
+      // so this spreads to nothing in production merged frames.
+      ...timestampSpread(timing, groupKey),
     });
     for (const layer of group) {
       layer.draw(pass, view, ctx, state);
@@ -270,7 +313,7 @@ function renderGroup(
     const pass = encoder.beginRenderPass({
       label: `render-${target}-${layer.name}`,
       colorAttachments: [colorAttachment(target, targetView, touchedBefore)],
-      ...depthAttachment(ctx, target, touchedBefore),
+      ...depthAttachment(ctx, target, touchedBefore, view.slab.reversedZ),
       ...timestampSpread(timing, layer.name),
     });
     layer.draw(pass, view, ctx, state);

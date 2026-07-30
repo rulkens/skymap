@@ -2,11 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { rankPaletteMatches } from '../../../../src/components/CommandPalette/utils/rankPaletteMatches';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { Source } from '../../../../src/data/sources';
-import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaEntry';
+import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../../../src/@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../../../src/@types/engine/StructureSearchEntry';
 
-const M31: FamousMetaEntry = {
+const M31: FamousGalaxyMetaEntry = {
   id: 'm31',
   names: ['M31', 'Andromeda Galaxy'],
   description: 'The nearest large spiral.',
@@ -41,7 +41,7 @@ describe('rankPaletteMatches', () => {
   it('ranks an equally-matching famous row above an alias row (famous tiebreak)', () => {
     // Both the famous name and the alias name are exactly "Foo", so without
     // the tiebreak they would tie on raw score.
-    const famous: FamousMetaEntry = { id: 'foo', names: ['Foo'], description: '', type: '' };
+    const famous: FamousGalaxyMetaEntry = { id: 'foo', names: ['Foo'], description: '', type: '' };
     const rows = rankPaletteMatches([famous], [alias(['Foo'], 7)], [], 'foo');
     const famousIdx = rows.findIndex((r) => r.kind === 'famous');
     const aliasIdx = rows.findIndex((r) => r.kind === 'alias');
@@ -100,6 +100,25 @@ describe('rankPaletteMatches — scene-body rows', () => {
     const hit = rows.find((r) => r.kind === 'body');
     expect(hit?.kind === 'body' && hit.body.id).toBe('earth');
     expect(hit?.kind === 'body' && hit.body).toBe(SCENE_EARTH);
+  });
+
+  it('ranks an exact body match above a famous row that only matched in its description', () => {
+    // A famous entry whose *description* contains 'earth' scores low (~15);
+    // Earth the scene body is an exact *name* match (~1000). The body must
+    // outrank the famous row, even though famous rows are otherwise listed
+    // first — the regression the sectioned concatenation used to cause.
+    const earthlyFamous: FamousGalaxyMetaEntry = {
+      id: 'ngc-earthish',
+      names: ['NGC 9999'],
+      description: 'A galaxy visible from Earth on a clear night.',
+      type: 'Sc',
+    };
+    const rows = rankPaletteMatches([earthlyFamous], [], [], 'earth');
+    const bodyIdx = rows.findIndex((r) => r.kind === 'body' && r.body.id === 'earth');
+    const famousIdx = rows.findIndex((r) => r.kind === 'famous');
+    expect(bodyIdx).toBeGreaterThanOrEqual(0);
+    expect(famousIdx).toBeGreaterThanOrEqual(0);
+    expect(bodyIdx).toBeLessThan(famousIdx);
   });
 
   it('shows no body rows on an empty query (browse = famous + MW)', () => {

@@ -22,14 +22,21 @@
  *
  * ### Behaviour
  *
- *   - At most `MAX_CONCURRENT_FETCHES` tasks run at once.  Browsers cap
- *     HTTP/1.1 at ~6 connections per origin; 4 leaves room for other
- *     resources (the .bin downloads, fonts, etc) without bottlenecking
- *     them when the user zooms in suddenly and we want a flurry of
- *     thumbnails.
+ *   - At most `limit` tasks run at once — a per-instance constructor arg,
+ *     defaulting to `MAX_CONCURRENT_FETCHES`.  Different callers want
+ *     different bounds: the boot asset queue wants 2, so a handful of big
+ *     one-shot fetches (catalog .bin files, body textures) don't flood the
+ *     connection pool at startup, while the thumbnail queue wants 4, since
+ *     it streams many small fetches as the camera moves and can afford
+ *     more parallelism.  Browsers cap HTTP/1.1 at ~6 connections per
+ *     origin, so either bound leaves room for other resources without
+ *     bottlenecking them.
  *   - When a slot frees, we pick the pending entry with the highest
  *     priority — the engine sets priority to the galaxy's apparent
  *     on-screen pixel size, so big galaxies in the foreground load first.
+ *   - `enqueue` starts eagerly, so a caller submitting a whole batch at once
+ *     must use `enqueueMany` for priority to govern the FIRST starts too;
+ *     see that method's docblock.
  *   - Re-enqueueing the same `key` while the entry is still pending
  *     REPLACES the old entry (priority + fetcher updated).  This lets
  *     the engine bump priority each frame for galaxies that are getting
@@ -53,8 +60,53 @@ export class PriorityQueue<T = ImageBitmap | null> {
   private pending = new Map<string, QueueEntry<T>>();
   private inFlight = new Set<string>();
   private drainResolvers: Array<() => void> = [];
+  private readonly limit: number;
+
+  constructor(limit: number = MAX_CONCURRENT_FETCHES) {
+    this.limit = limit;
+  }
 
   enqueue(entry: QueueEntry<T>): void {
+    if (this.admit(entry)) this.tryStart();
+  }
+
+  /**
+   * Admit a whole synchronous batch, THEN start.  The distinction from calling
+   * `enqueue` in a loop is the whole point: `enqueue` starts a task the moment
+   * a slot is free, so in a loop the first `limit` entries walked start
+   * immediately, in ARRAY order, before any later (possibly better-ranked)
+   * entry has even been seen.  Priority then only decides which entry fills a
+   * slot that frees LATER — the head of the queue is chosen by iteration order,
+   * not by rank.  That is exactly how a rank-60 all-sky survey took one of the
+   * boot's two pipes for 22 seconds ahead of every rank-10 asset the opening
+   * view actually draws: it merely sat second in `ASSET_WIRING`.
+   *
+   * Admitting every entry into `pending` first and calling `tryStart` once
+   * restores the invariant callers assume: the first `limit` tasks started are
+   * the `limit` best-ranked entries of the batch, whatever order they arrived
+   * in.
+   *
+   * The rejected alternative was to defer `tryStart` inside `enqueue` to a
+   * microtask, which would give the same guarantee to every caller for free.
+   * It was dropped because it changes semantics for callers that never asked:
+   * the galaxy-thumbnail queue enqueues one entry per frame (nothing to batch,
+   * so it would only gain latency), and both it and the asset wiring rely on a
+   * fetch having actually STARTED by the time the enqueuing call returns.  An
+   * explicit batch API keeps the timing change confined to the caller that
+   * needs it.
+   */
+  enqueueMany(entries: readonly QueueEntry<T>[]): void {
+    let admitted = false;
+    for (const entry of entries) admitted = this.admit(entry) || admitted;
+    if (admitted) this.tryStart();
+  }
+
+  /**
+   * Place an entry in `pending` without starting anything, applying the dedup
+   * rules.  Returns whether the entry newly entered `pending`, i.e. whether a
+   * `tryStart` could possibly have new work to do.
+   */
+  private admit(entry: QueueEntry<T>): boolean {
     // Idempotent: if the same key is already in flight, do nothing — the
     // running fetch's `onResult` will fire when it finishes and the
     // caller's per-frame gate (e.g. bitmapReady / bitmapFailed in the
@@ -75,19 +127,19 @@ export class PriorityQueue<T = ImageBitmap | null> {
     // Priority bumps for already-running fetches are nice-to-have, not
     // necessary; if the caller wants to re-run, it'll get a chance once
     // the current attempt resolves and the per-frame gate clears.
-    if (this.inFlight.has(entry.key)) return;
+    if (this.inFlight.has(entry.key)) return false;
 
     // Already pending?  Update priority + fetcher (latest enqueue wins on
     // priority; e.g., as a galaxy gets bigger on screen the engine bumps
-    // its priority each frame).  Don't tryStart — the existing pending
+    // its priority each frame).  Report "nothing new" — the existing pending
     // entry will be picked up by the next slot release.
     if (this.pending.has(entry.key)) {
       this.pending.set(entry.key, entry);
-      return;
+      return false;
     }
 
     this.pending.set(entry.key, entry);
-    this.tryStart();
+    return true;
   }
 
   /**
@@ -116,8 +168,40 @@ export class PriorityQueue<T = ImageBitmap | null> {
     return this.inFlight.size;
   }
 
+  /**
+   * Remove a pending entry by key.  No-op if the key isn't pending — in
+   * particular, an in-flight entry is left untouched.  We could try to
+   * cancel the in-flight fetch (e.g. AbortController), but responses
+   * aren't resumable and the queue's re-enqueue semantics already treat
+   * "let it finish" as correct (see the module docblock's "never preempt"
+   * note): a caller that no longer wants the result just ignores
+   * `onResult`.  Cancelling would add plumbing for a case that's rare in
+   * practice — the camera moving away mid-fetch costs one wasted request,
+   * not a stuck queue.
+   */
+  drop(key: string): void {
+    this.pending.delete(key);
+  }
+
+  /**
+   * Tear down the queue: clear every pending entry and resolve any
+   * outstanding `drain()` callers.  Exists because every
+   * `EngineSubsystemHandles` field satisfies `Destroyable` — without this,
+   * a `drain()` call made just before teardown would hang forever, since
+   * nothing would ever bring `pending.size` and `inFlight.size` to zero
+   * (the in-flight tasks that ARE still running settle on their own timer
+   * and their `.finally` handlers already null-check nothing that
+   * `destroy()` needs to touch).  In-flight tasks are left to run out
+   * rather than aborted, for the same reason `drop()` doesn't touch them.
+   */
+  destroy(): void {
+    this.pending.clear();
+    const resolvers = this.drainResolvers.splice(0);
+    for (const r of resolvers) r();
+  }
+
   private tryStart(): void {
-    while (this.inFlight.size < MAX_CONCURRENT_FETCHES && this.pending.size > 0) {
+    while (this.inFlight.size < this.limit && this.pending.size > 0) {
       const entry = this.popHighestPriority();
       if (!entry) break;
       this.inFlight.add(entry.key);

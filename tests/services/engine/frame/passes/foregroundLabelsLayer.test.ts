@@ -3,10 +3,16 @@
  *
  * Two things are load-bearing here:
  *
- *   1. The three-clause `enabled` gate: a non-null second label renderer, a
- *      non-empty glyph set, AND a camera closer than the kiloparsec distance
- *      threshold. Above that distance the Sun/Earth are an irrelevant speck at
- *      the galactic centre and the captions would just clutter the normal view.
+ *   1. The `enabled` gate reads DEMAND, never the artifact of the last draw:
+ *      a non-null second label renderer, the distance gates, AND at least one
+ *      settings switch (or fade-registry opacity, or a still-fading caption)
+ *      that could put a caption on screen this frame. It must NEVER read
+ *      `renderer.glyphCount()` — a prior version did, and once every
+ *      caption's fade target hit 0 in the same frame (the labels master
+ *      toggle switching off) `draw`'s `setLabels([])` zeroed the glyph count
+ *      and the gate latched false forever, un-fixable by re-enabling the
+ *      toggle. The regression test below pins a renderer whose LAST set was
+ *      empty returning `enabled() === true` once settings demand it.
  *
  *   2. `draw` feeds the renderer the f64-DERIVED data, mirroring the sphere-body
  *      layers' `composeBodyMvp` seam. The caption anchors sit ~1 AU from the
@@ -18,7 +24,7 @@
  *      the cancellation after the low-order bits are already gone.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { foregroundLabelsLayer } from '../../../../../src/services/engine/frame/passes/foregroundLabelsLayer';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/solarSystemLabelMaxDistance';
@@ -31,11 +37,26 @@ import {
 } from '../../../../../src/services/engine/presentation/sceneBodyLabels';
 import { SCALE_FADE_BANDS } from '../../../../../src/services/engine/presentation/scaleFadeBands';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
+import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
+import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
+import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
+
+// The layer derives its caption set from the frame's body snapshot
+// (`sceneBodyStates(state, ctx)` → `deriveBodyStates(ctx.simDays)`). These tests
+// pin `ctx.simDays` at J2000, so `sceneBodyLabels(J2000_STATES)` reproduces the
+// exact anchors the layer builds (the memo returns the same map by reference).
+const J2000_STATES = deriveBodyStates(CONST_J2000);
 
 // The Sun's caption id — its own file no longer exports one (the layer routes
 // the caption by `kind === 'sun'`, and the Sun now rides a fade band rather
 // than a pinned constant), so the test derives it from the shared id helper.
 const SUN_LABEL_ID = sceneBodyLabelId('sun');
+
+// The `planet`-row caption ids, derived from the seed table rather than named
+// so the per-row mute tests don't pin one planet's presence in the seed.
+const PLANET_LABEL_IDS: ReadonlySet<string> = new Set(
+  SCENE_PLANETS.map((p) => sceneBodyLabelId(p.id)),
+);
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -81,7 +102,25 @@ function makeCtx(distance: number, nowMs?: number): ReadyFrameContext {
   } else {
     testClockMs = Math.max(testClockMs, nowMs);
   }
-  return { cam: { distance }, fovYRad: 1, nowMs } as unknown as ReadyFrameContext;
+  // The layer reads `ctx.renderTargets.depthViewOf('foreground:0')` to thread
+  // the scene depth view into both draws (caption/connector occlusion), gated on
+  // `ctx.renderedTargets.has('foreground:0')` (the body pass ran this frame). A
+  // no-op depth stub plus `foreground:0` in the rendered set keep these tests —
+  // which assert on the rebase/fade seams, not occlusion — on the occluding path.
+  return {
+    cam: { distance },
+    // The constellation gate reads the heliocentric-origin camera distance off
+    // drawCamPos (matching constellationsLayer.enabled); park the eye on +X at
+    // the same distance the body gate reads.
+    drawCamPos: [distance, 0, 0],
+    fovYRad: 1,
+    nowMs,
+    // The layer binds its caption epoch to ctx.simDays via sceneBodyStates; pin
+    // it at J2000 so the anchors match J2000_STATES.
+    simDays: CONST_J2000,
+    renderTargets: { depthViewOf: () => ({}) as GPUTextureView },
+    renderedTargets: new Set(['foreground:0']),
+  } as unknown as ReadyFrameContext;
 }
 
 // A foreground label renderer whose glyphCount is fixed per test. `setLabels`,
@@ -110,22 +149,110 @@ function makeLineRenderer(): MarkerLineRenderer {
   } as unknown as MarkerLineRenderer;
 }
 
+/**
+ * `bodyLabels` seeds ALL body rows from one flag by default, so a test that
+ * only cares whether body captions are on at all passes a bare boolean; the
+ * per-row cases pass the bits separately, which is the axis those rows buy.
+ */
 function makeState(
   renderer: LabelRenderer | null,
   lineRenderer: MarkerLineRenderer | null = makeLineRenderer(),
-  starLabelsEnabled = true,
-  planetLabelsEnabled = true,
-  famousStarsEnabled = true,
+  starMapLabelsEnabled = true,
+  bodyLabels: boolean | { earth: boolean; planet: boolean; sun?: boolean } = true,
+  starMapEnabled = true,
+  sunVisible = true,
+  starCatalogsMasterEnabled = true,
 ): EngineState {
+  const bodies =
+    typeof bodyLabels === 'boolean'
+      ? { earth: bodyLabels, planet: bodyLabels, sun: bodyLabels }
+      : { ...bodyLabels, sun: bodyLabels.sun ?? true };
   return {
     gpu: { foregroundLabelRenderer: renderer, foregroundMarkerLineRenderer: lineRenderer },
     settings: {
-      labels: { starLabelsEnabled, planetLabelsEnabled },
-      famousStars: { enabled: famousStarsEnabled },
+      labels: { focusedOnly: false },
+      // Each caption reads its OWN source's label gate, so the body rows carry
+      // the Earth / planet / Sun caption bits. `sunVisible` is the Sun's
+      // separate VISIBILITY axis (`bodies.items.sun.enabled`) — the same flag
+      // `visibleStars` reads to hide its dot — independent of `labelEnabled`.
+      bodies: {
+        items: {
+          earth: { enabled: true, labelEnabled: bodies.earth },
+          planet: { enabled: true, labelEnabled: bodies.planet },
+          sun: { enabled: sunVisible, labelEnabled: bodies.sun },
+        },
+      },
+      // The cluster master defaults on: the caption's visibility gate requires
+      // it AND the row's own bit, matching how `visibleStars` composes the
+      // pair. `starCatalogsMasterEnabled` lets a test drop the master alone,
+      // independent of the row-level `famousStar.enabled`.
+      starCatalogs: {
+        enabled: starCatalogsMasterEnabled,
+        items: { famousStar: { enabled: starMapEnabled, labelEnabled: starMapLabelsEnabled } },
+      },
     },
+    // No constellation slot by default — the body-caption tests never exercise
+    // the figure-name path, so the layer reads an empty set and skips the toggle
+    // + fade-registry reads entirely (the constellation tests below supply a
+    // ready slot). The layer reads `state.assetSlots.constellations`, so the key
+    // must exist even when null.
+    assetSlots: { constellations: null },
     // The envelope wakes the render loop while alphas ramp — the layer calls
     // this spy on mid-ramp frames and stays quiet once settled.
     subsystems: { scheduler: { requestRender: vi.fn<() => void>() } },
+  } as unknown as EngineState;
+}
+
+// Two figures at parsec-scale anchors, spread on the sky so an identity-ish vp
+// keeps them apart in the declutter. The names are the caption ids.
+const CONSTELLATION_ARTIFACT = {
+  version: 1 as const,
+  constellations: [
+    {
+      name: 'Orion',
+      labelAnchorPc: [200, -50, 100] as Vec3,
+      segments: [{ aPc: [1, 2, 3] as Vec3, aAppMag: 0.5, bPc: [4, 5, 6] as Vec3, bAppMag: 1.2 }],
+    },
+    {
+      name: 'Ursa Major',
+      labelAnchorPc: [-30, 80, 12] as Vec3,
+      segments: [{ aPc: [7, 8, 9] as Vec3, aAppMag: 2, bPc: [10, 11, 12] as Vec3, bAppMag: 2.4 }],
+    },
+  ],
+};
+const CONSTELLATION_IDS = new Set(CONSTELLATION_ARTIFACT.constellations.map((c) => c.name));
+
+// A state whose constellation slot is READY, with the fade-registry opacity
+// under test control. The body-caption toggles are all on so those captions
+// coexist; the constellation-specific assertions filter by CONSTELLATION_IDS.
+function makeConstellationState(opts: { layerFade: number; ready?: boolean }): EngineState {
+  return {
+    gpu: {
+      foregroundLabelRenderer: makeRenderer(6),
+      foregroundMarkerLineRenderer: makeLineRenderer(),
+    },
+    settings: {
+      labels: { focusedOnly: false },
+      bodies: {
+        items: {
+          earth: { enabled: true, labelEnabled: true },
+          planet: { enabled: true, labelEnabled: true },
+          sun: { enabled: true, labelEnabled: true },
+        },
+      },
+      starCatalogs: { enabled: true, items: { famousStar: { enabled: true, labelEnabled: true } } },
+      constellations: {},
+    },
+    assetSlots: {
+      constellations:
+        (opts.ready ?? true)
+          ? { state: () => ({ kind: 'ready', value: CONSTELLATION_ARTIFACT }) }
+          : null,
+    },
+    subsystems: {
+      scheduler: { requestRender: vi.fn<() => void>() },
+      fades: { opacityOf: () => opts.layerFade },
+    },
   } as unknown as EngineState;
 }
 
@@ -143,6 +270,7 @@ function makeNear0View(camPos: Vec3 = [2, 3, 5]): SlabView {
     vp: Float64Array.from({ length: 16 }, (_, i) => i + 0.5),
     originRelative: true,
     precision: 'f64',
+    reversedZ: false,
   };
   return {
     slab,
@@ -161,12 +289,35 @@ function makeSpreadVp(): Float64Array {
   return new Float64Array([1e12, 0, 0, 0, 0, 1e12, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
 }
 
+// `enabled` now folds the module-level `captionAlpha` envelope state into its
+// ENVELOPE TAIL clause, so a test asserting the gate goes dark needs that map
+// genuinely empty rather than carrying a settled `1` left by an unrelated
+// earlier test (the map is a module singleton — see the layer's own header —
+// so it persists across every test in this file). Driving every caption's
+// target to 0 (both body toggles off) with NO constellation slot and a
+// full-clock-advance `makeCtx` settles every currently-tracked id EXACTLY to 0
+// in one draw: `draw`'s own end-of-frame prune deletes any id outside this
+// frame's entry universe (which, with no constellation slot, is body captions
+// only), so a stray constellation id from an earlier test is dropped too.
+function settleAllCaptions(): void {
+  foregroundLabelsLayer.draw(
+    PASS_STUB,
+    makeNear0View([1e6, 1e6, 1e6]),
+    makeCtx(5e-4),
+    makeState(makeRenderer(0), makeLineRenderer(), false, false),
+  );
+}
+
+beforeEach(() => {
+  settleAllCaptions();
+});
+
 describe('foregroundLabelsLayer.enabled', () => {
   it('respects the kiloparsec distance gate', () => {
     const renderer = makeRenderer(6);
     const state = makeState(renderer);
 
-    // Well inside a kiloparsec with glyphs present → captions show.
+    // Well inside a kiloparsec with body-caption toggles on → captions show.
     expect(foregroundLabelsLayer.enabled(state, makeCtx(5e-4))).toBe(true);
 
     // At and above the threshold → captions hidden (no clutter at galaxy scale).
@@ -184,11 +335,56 @@ describe('foregroundLabelsLayer.enabled', () => {
     const betweenGatesMpc = (SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC + FOREGROUND_MAX_DISTANCE_MPC) / 2;
     expect(foregroundLabelsLayer.enabled(state, makeCtx(betweenGatesMpc))).toBe(false);
 
-    // No glyphs → nothing to draw even when close.
-    expect(foregroundLabelsLayer.enabled(makeState(makeRenderer(0)), makeCtx(5e-4))).toBe(false);
-
     // Pre-bootstrap: the second label renderer hasn't been constructed yet.
     expect(foregroundLabelsLayer.enabled(makeState(null), makeCtx(5e-4))).toBe(false);
+  });
+
+  it('regression: an empty last-drawn glyph set does not latch the gate off', () => {
+    // This is the reported bug's exact mechanism: the renderer's LAST
+    // `setLabels` call was empty (as it is right after a demand-drop draw),
+    // yet the settings now demand a caption again — `enabled` must read that
+    // demand fresh rather than the stale artifact. A prior version of the
+    // gate short-circuited on `renderer.glyphCount() === 0` and returned
+    // false here regardless of the toggles, latching the row off forever.
+    const renderer = makeRenderer(0);
+    const state = makeState(renderer, undefined, /* starMapLabelsEnabled */ true, false);
+    expect(foregroundLabelsLayer.enabled(state, makeCtx(5e-4))).toBe(true);
+  });
+
+  it('reads each body-caption toggle as its own source of demand', () => {
+    // Star toggle alone is enough demand, with every body toggle off.
+    expect(
+      foregroundLabelsLayer.enabled(
+        makeState(makeRenderer(0), undefined, true, false),
+        makeCtx(5e-4),
+      ),
+    ).toBe(true);
+    // Planet toggle alone is enough demand, with the star toggle off.
+    expect(
+      foregroundLabelsLayer.enabled(
+        makeState(makeRenderer(0), undefined, false, true),
+        makeCtx(5e-4),
+      ),
+    ).toBe(true);
+    // The Sun's own row alone is enough demand. The Sun rides the star map's
+    // seed table, so a gate that summarised it under the map's switch would
+    // read dark here while `draw` wanted the Sun's name on screen.
+    expect(
+      foregroundLabelsLayer.enabled(
+        makeState(makeRenderer(0), undefined, false, { earth: false, planet: false, sun: true }),
+        makeCtx(5e-4),
+      ),
+    ).toBe(true);
+    // Both off, no constellation slot, and no caption mid-fade (a fresh
+    // module state — see the "settled" test below for the envelope-tail
+    // half of this) → no demand at all, so the row stays off. This is the
+    // "opacity 0 ⇒ no render" house rule applied to the gate itself.
+    expect(
+      foregroundLabelsLayer.enabled(
+        makeState(makeRenderer(0), undefined, false, false),
+        makeCtx(5e-4),
+      ),
+    ).toBe(false);
   });
 });
 
@@ -219,7 +415,7 @@ describe('foregroundLabelsLayer.draw', () => {
     const setSpy = renderer.setLabels as unknown as ReturnType<typeof vi.fn>;
     expect(setSpy).toHaveBeenCalledTimes(1);
     const rebasedLabels = setSpy.mock.calls[0]![0] as readonly Label[];
-    const base = sceneBodyLabels();
+    const base = sceneBodyLabels(J2000_STATES);
     expect(rebasedLabels.length).toBeGreaterThan(0);
     for (const emitted of rebasedLabels) {
       const src = base.find((l) => l.id === emitted.id)!;
@@ -266,7 +462,7 @@ describe('foregroundLabelsLayer.draw', () => {
     const setLinesSpy = lineRenderer.setLines as unknown as ReturnType<typeof vi.fn>;
     expect(setLinesSpy).toHaveBeenCalledTimes(1);
     const lines = setLinesSpy.mock.calls[0]![0] as MarkerLine[];
-    const base = sceneBodyLabels();
+    const base = sceneBodyLabels(J2000_STATES);
     expect(lines.length).toBeGreaterThan(0);
     for (const line of lines) {
       const src = base.find((l) => `${l.id}-anchor` === line.id)!;
@@ -288,24 +484,32 @@ describe('foregroundLabelsLayer.draw', () => {
     expect(lineDrawSpy.mock.calls[0]![1]).not.toBe(view.vp);
   });
 
-  it('suppresses star captions when the toggle is off', () => {
+  it('suppresses the map captions when the star-map label toggle is off, Sun and Earth aside', () => {
     const renderer = makeRenderer(6);
     const lineRenderer = makeLineRenderer();
     // Park the camera ~1e-12 Mpc from Proxima — deep inside the neighbourhood,
-    // so its caption is at full alpha and WOULD show — the toggle-off must drop
-    // it anyway, while Earth/planets keep showing.
-    const base = sceneBodyLabels();
+    // so its caption is at full alpha and WOULD show; the toggle-off must drop
+    // it anyway. The spread vp separates every anchor so the declutter can't be
+    // what removes a caption, leaving the toggle as the only variable.
+    const base = sceneBodyLabels(J2000_STATES);
     const proxima = base.find((l) => l.id === sceneBodyLabelId('proxima-centauri'))!;
     const camPos: Vec3 = [proxima.worldPos[0] - 1e-12, proxima.worldPos[1], proxima.worldPos[2]];
 
-    // Toggle ON: at least one star caption (Proxima) is emitted.
+    // Toggle ON: at least one map star caption (not the Sun) is emitted.
+    rebaseMock.mockReturnValueOnce(makeSpreadVp());
     const onView = makeNear0View(camPos);
     foregroundLabelsLayer.draw(PASS_STUB, onView, makeCtx(5e-4), makeState(renderer, lineRenderer));
     const onSpy = renderer.setLabels as unknown as ReturnType<typeof vi.fn>;
     const onLabels = onSpy.mock.calls[0]![0] as readonly Label[];
-    expect(onLabels.some((l) => SCENE_STAR_LABEL_IDS.has(l.id))).toBe(true);
+    expect(onLabels.some((l) => SCENE_STAR_LABEL_IDS.has(l.id) && l.id !== SUN_LABEL_ID)).toBe(
+      true,
+    );
 
-    // Toggle OFF: no star caption at all (the Sun is a star too), but Earth still shows.
+    // Toggle OFF: no map caption at all, but Earth still shows — and so does the
+    // Sun, which rides the star SEED table yet answers to its own body row. That
+    // last part is the whole point of the Sun having a row: muting the curated
+    // neighbourhood must not silence the descent's aim point.
+    rebaseMock.mockReturnValueOnce(makeSpreadVp());
     const offRenderer = makeRenderer(6);
     const offView = makeNear0View(camPos);
     foregroundLabelsLayer.draw(
@@ -316,17 +520,79 @@ describe('foregroundLabelsLayer.draw', () => {
     );
     const offSpy = offRenderer.setLabels as unknown as ReturnType<typeof vi.fn>;
     const offLabels = offSpy.mock.calls[0]![0] as readonly Label[];
-    expect(offLabels.some((l) => SCENE_STAR_LABEL_IDS.has(l.id))).toBe(false);
+    expect(offLabels.some((l) => SCENE_STAR_LABEL_IDS.has(l.id) && l.id !== SUN_LABEL_ID)).toBe(
+      false,
+    );
+    expect(offLabels.some((l) => l.id === SUN_LABEL_ID)).toBe(true);
     expect(offLabels.some((l) => l.id === sceneBodyLabelId('earth'))).toBe(true);
   });
 
-  it('suppresses the star map but KEEPS the Sun when the famous-stars gate is off', () => {
+  it('mutes only the Sun caption when the sun row’s label is off', () => {
+    // The other half of the split: with the map's labels ON and the Sun's own
+    // row OFF, the neighbourhood keeps captioning and only the Sun goes quiet.
+    // A gate that still routed `sun` to the star-catalog row would mute either
+    // both or neither, with no type error to catch it. The spread vp separates
+    // every anchor so declutter cannot be what removes a caption here.
+    const base = sceneBodyLabels(J2000_STATES);
+    const camPos: Vec3 = [
+      ...base.find((l) => l.id === sceneBodyLabelId('earth'))!.worldPos,
+    ] as Vec3;
+
+    rebaseMock.mockReturnValueOnce(makeSpreadVp());
+    const renderer = makeRenderer(6);
+    foregroundLabelsLayer.draw(
+      PASS_STUB,
+      makeNear0View(camPos),
+      makeCtx(5e-4),
+      makeState(renderer, makeLineRenderer(), true, { earth: true, planet: true, sun: false }),
+    );
+    const drawn = (renderer.setLabels as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0]![0] as readonly Label[];
+    expect(drawn.some((l) => l.id === SUN_LABEL_ID)).toBe(false);
+    expect(drawn.some((l) => SCENE_STAR_LABEL_IDS.has(l.id) && l.id !== SUN_LABEL_ID)).toBe(true);
+  });
+
+  it('mutes the Sun caption when its own visibility row is off, even with its label on', () => {
+    // `visibleStars` hides the Sun's DOT when `bodies.items.sun.enabled` is
+    // false; the caption must not survive that gate and float with nothing to
+    // name. `sunVisible: false` here with the Sun's `labelEnabled` still true
+    // isolates exactly that axis — a gate that read only `labelEnabled` (the
+    // bug this pins) would keep drawing the caption. Unreachable via any
+    // setter today, but a future snapshot restore can write `enabled`
+    // directly, same as the star map's `enabled` already can.
+    const base = sceneBodyLabels(J2000_STATES);
+    const camPos: Vec3 = [
+      ...base.find((l) => l.id === sceneBodyLabelId('earth'))!.worldPos,
+    ] as Vec3;
+
+    rebaseMock.mockReturnValueOnce(makeSpreadVp());
+    const renderer = makeRenderer(6);
+    foregroundLabelsLayer.draw(
+      PASS_STUB,
+      makeNear0View(camPos),
+      makeCtx(5e-4),
+      makeState(
+        renderer,
+        makeLineRenderer(),
+        true,
+        { earth: true, planet: true, sun: true },
+        true,
+        /* sunVisible */ false,
+      ),
+    );
+    const drawn = (renderer.setLabels as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0]![0] as readonly Label[];
+    expect(drawn.some((l) => l.id === SUN_LABEL_ID)).toBe(false);
+    expect(drawn.some((l) => l.id === sceneBodyLabelId('earth'))).toBe(true);
+  });
+
+  it('suppresses the star map but KEEPS the Sun when the famous-star row is off', () => {
     // Camera at Earth (deep inside the neighbourhood), spread vp so declutter
-    // keeps every separated caption. The famousStars gate is a THIRD, independent
-    // mute switch: with it off the seeded star map drops — but the Sun (its own
+    // keeps every separated caption. The row's visibility axis is a THIRD,
+    // independent mute switch: with it off the seeded star map drops — but the Sun (its own
     // `sunCaption` band) and Earth still show. This is the caption twin of the
     // point/sphere layers falling back to the Sun alone.
-    const base = sceneBodyLabels();
+    const base = sceneBodyLabels(J2000_STATES);
     const earthId = sceneBodyLabelId('earth');
     const earth = base.find((l) => l.id === earthId)!;
     const camPos: Vec3 = [...earth.worldPos] as Vec3;
@@ -342,9 +608,11 @@ describe('foregroundLabelsLayer.draw', () => {
     );
     const onSpy = onRenderer.setLabels as unknown as ReturnType<typeof vi.fn>;
     const onLabels = onSpy.mock.calls[0]![0] as readonly Label[];
-    expect(onLabels.some((l) => SCENE_STAR_LABEL_IDS.has(l.id) && l.id !== SUN_LABEL_ID)).toBe(true);
+    expect(onLabels.some((l) => SCENE_STAR_LABEL_IDS.has(l.id) && l.id !== SUN_LABEL_ID)).toBe(
+      true,
+    );
 
-    // Gate OFF (famousStars): no non-Sun star caption, but the Sun + Earth still show.
+    // Gate OFF (the map's own `enabled`): no non-Sun star caption, but the Sun + Earth still show.
     rebaseMock.mockReturnValueOnce(makeSpreadVp());
     const offRenderer = makeRenderer(6);
     foregroundLabelsLayer.draw(
@@ -362,12 +630,86 @@ describe('foregroundLabelsLayer.draw', () => {
     expect(offLabels.some((l) => l.id === earthId)).toBe(true);
   });
 
-  it('suppresses Earth + planet captions when the planet toggle is off', () => {
+  it('mutes the star map when the cluster master is off, even with the row and label on', () => {
+    // `subjectVisible` for the star row is `starCatalogs.enabled &&
+    // items.famousStar.enabled` — a caption must not survive the cluster
+    // master that hid the dot it names. Here the row's own `enabled` and
+    // `labelEnabled` are both on (defaults); only the master is off, isolating
+    // that half of the conjunction.
+    const base = sceneBodyLabels(J2000_STATES);
+    const earthId = sceneBodyLabelId('earth');
+    const camPos: Vec3 = [...base.find((l) => l.id === earthId)!.worldPos] as Vec3;
+
+    rebaseMock.mockReturnValueOnce(makeSpreadVp());
+    const renderer = makeRenderer(6);
+    foregroundLabelsLayer.draw(
+      PASS_STUB,
+      makeNear0View(camPos),
+      makeCtx(5e-4),
+      makeState(
+        renderer,
+        makeLineRenderer(),
+        /* starMapLabelsEnabled */ true,
+        true,
+        /* starMapEnabled (row) */ true,
+        true,
+        /* starCatalogsMasterEnabled */ false,
+      ),
+    );
+    const drawn = (renderer.setLabels as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0]![0] as readonly Label[];
+    expect(drawn.some((l) => SCENE_STAR_LABEL_IDS.has(l.id) && l.id !== SUN_LABEL_ID)).toBe(false);
+    expect(drawn.some((l) => l.id === SUN_LABEL_ID)).toBe(true);
+    expect(drawn.some((l) => l.id === earthId)).toBe(true);
+  });
+
+  it('mutes only the planet captions when the planet row’s label is off', () => {
+    // Earth and the planets are separate registry rows, each with its own label
+    // gate, so muting one must leave the other captioning. A gate that read the
+    // wrong row's bit would mute both together with no type error.
+    const base = sceneBodyLabels(J2000_STATES);
+    const earthId = sceneBodyLabelId('earth');
+    const camPos: Vec3 = [...base.find((l) => l.id === earthId)!.worldPos] as Vec3;
+
+    rebaseMock.mockReturnValueOnce(makeSpreadVp());
+    const renderer = makeRenderer(6);
+    foregroundLabelsLayer.draw(
+      PASS_STUB,
+      makeNear0View(camPos),
+      makeCtx(5e-4),
+      makeState(renderer, makeLineRenderer(), true, { earth: true, planet: false }),
+    );
+    const drawn = (renderer.setLabels as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0]![0] as readonly Label[];
+    expect(drawn.some((l) => PLANET_LABEL_IDS.has(l.id))).toBe(false);
+    expect(drawn.some((l) => l.id === earthId)).toBe(true);
+  });
+
+  it('mutes only the Earth caption when the earth row’s label is off', () => {
+    const base = sceneBodyLabels(J2000_STATES);
+    const earthId = sceneBodyLabelId('earth');
+    const camPos: Vec3 = [...base.find((l) => l.id === earthId)!.worldPos] as Vec3;
+
+    rebaseMock.mockReturnValueOnce(makeSpreadVp());
+    const renderer = makeRenderer(6);
+    foregroundLabelsLayer.draw(
+      PASS_STUB,
+      makeNear0View(camPos),
+      makeCtx(5e-4),
+      makeState(renderer, makeLineRenderer(), true, { earth: false, planet: true }),
+    );
+    const drawn = (renderer.setLabels as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0]![0] as readonly Label[];
+    expect(drawn.some((l) => l.id === earthId)).toBe(false);
+    expect(drawn.some((l) => PLANET_LABEL_IDS.has(l.id))).toBe(true);
+  });
+
+  it('suppresses Earth + planet captions when both body rows’ labels are off', () => {
     // Camera at Earth, spread vp so declutter keeps every separated caption:
-    // with the planet toggle ON the Earth caption emits; with it OFF the Earth
-    // + planet set drops while the star map keeps showing. The two mute switches
-    // are independent.
-    const base = sceneBodyLabels();
+    // with the body label gates ON the Earth caption emits; with them OFF the
+    // Earth + planet set drops while the star map keeps showing. The body and
+    // star-map mute switches are independent.
+    const base = sceneBodyLabels(J2000_STATES);
     const earthId = sceneBodyLabelId('earth');
     const earth = base.find((l) => l.id === earthId)!;
     const camPos: Vec3 = [...earth.worldPos] as Vec3;
@@ -401,7 +743,7 @@ describe('foregroundLabelsLayer.draw', () => {
   });
 
   it('shows the local neighbourhood at full alpha from Earth and none beyond the neighbourhood', () => {
-    const base = sceneBodyLabels();
+    const base = sceneBodyLabels(J2000_STATES);
     const starLabels = (labels: readonly Label[]) =>
       labels.filter((l) => SCENE_STAR_LABEL_IDS.has(l.id));
 
@@ -508,7 +850,7 @@ describe('foregroundLabelsLayer.draw', () => {
     // point, and the pile's survivor is the SUN: the kind tier (sun 40 >
     // earth 30 > planet 20 > star 10) dominates the composed declutter score;
     // apparent size only breaks ties within a tier.
-    const base = sceneBodyLabels();
+    const base = sceneBodyLabels(J2000_STATES);
     const proxima = base.find((l) => l.id === sceneBodyLabelId('proxima-centauri'))!;
     const camPos: Vec3 = [proxima.worldPos[0] - 1e-12, proxima.worldPos[1], proxima.worldPos[2]];
     const renderer = makeRenderer(6);
@@ -525,7 +867,7 @@ describe('foregroundLabelsLayer.draw', () => {
   });
 
   it('eases a declutter flip instead of popping, then settles and goes quiet', () => {
-    const base = sceneBodyLabels();
+    const base = sceneBodyLabels(J2000_STATES);
     const proxima = base.find((l) => l.id === sceneBodyLabelId('proxima-centauri'))!;
     const camPos: Vec3 = [proxima.worldPos[0] - 1e-12, proxima.worldPos[1], proxima.worldPos[2]];
     const renderer = makeRenderer(6);
@@ -614,6 +956,72 @@ describe('foregroundLabelsLayer.draw', () => {
     expect(wakeSpy(settledB)).not.toHaveBeenCalled();
   });
 
+  it('keeps enabled() true through a demand-drop fade-out, then false once settled', () => {
+    // Earth's caption to full alpha. Spread vp so Earth de-collides from the
+    // Sun (their anchors are ~1 AU apart, which the identity vp used by
+    // default would pile onto the same screen point, and the Sun's higher
+    // priority tier would win the declutter, leaving Earth's target at 0
+    // regardless of the toggle this test exercises).
+    const base = sceneBodyLabels(J2000_STATES);
+    const earthId = sceneBodyLabelId('earth');
+    const earth = base.find((l) => l.id === earthId)!;
+    const camPos: Vec3 = [...earth.worldPos] as Vec3;
+    const renderer = makeRenderer(6);
+    rebaseMock.mockReturnValueOnce(makeSpreadVp());
+    foregroundLabelsLayer.draw(
+      PASS_STUB,
+      makeNear0View(camPos),
+      makeCtx(5e-4),
+      makeState(renderer, makeLineRenderer()),
+    );
+    const t0 = testClockMs;
+
+    // Demand drops: the planet toggle switches off, dropping Earth's target to
+    // 0. A short dt later the envelope has only PARTLY eased down — the
+    // caption is still emitted, strictly between 0 and 1.
+    foregroundLabelsLayer.draw(
+      PASS_STUB,
+      makeNear0View(camPos),
+      makeCtx(5e-4, t0 + 20),
+      makeState(renderer, makeLineRenderer(), true, false),
+    );
+    const setSpy = renderer.setLabels as unknown as ReturnType<typeof vi.fn>;
+    const midAlpha = (setSpy.mock.calls.at(-1)![0] as readonly Label[]).find(
+      (l) => l.id === earthId,
+    )?.fadeAlpha;
+    expect(midAlpha).toBeGreaterThan(0);
+    expect(midAlpha).toBeLessThan(1);
+
+    // With demand OFF (both toggles off, camera past the body-caption gate,
+    // no constellation slot) the settings alone say "off" — but the ENVELOPE
+    // TAIL keeps `enabled` true while Earth's caption is still fading out, so
+    // the row draws one more frame instead of popping to invisible.
+    const offSettingsState = makeState(renderer, makeLineRenderer(), false, false);
+    expect(
+      foregroundLabelsLayer.enabled(offSettingsState, makeCtx(SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC)),
+    ).toBe(true);
+
+    // Let the ramp run to completion (a full-clock-advance draw settles every
+    // caption exactly onto its target, per the envelope's settle snap).
+    foregroundLabelsLayer.draw(
+      PASS_STUB,
+      makeNear0View(camPos),
+      makeCtx(5e-4),
+      makeState(renderer, makeLineRenderer(), false, false),
+    );
+    const settledLabels = (renderer.setLabels as unknown as ReturnType<typeof vi.fn>).mock.calls.at(
+      -1,
+    )![0] as readonly Label[];
+    expect(settledLabels.some((l) => l.id === earthId)).toBe(false);
+
+    // Now that nothing is mid-fade AND settings demand nothing, the gate goes
+    // dark — the "opacity 0 ⇒ no render" house rule, applied to the layer's
+    // own enable gate rather than a single caption's draw alpha.
+    expect(
+      foregroundLabelsLayer.enabled(offSettingsState, makeCtx(SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC)),
+    ).toBe(false);
+  });
+
   it('draws captions even when the leader-line renderer is null (bootstrap gap)', () => {
     const renderer = makeRenderer(6);
     const view = makeNear0View();
@@ -628,5 +1036,94 @@ describe('foregroundLabelsLayer.draw', () => {
     const view = makeNear0View();
     const state = makeState(null);
     expect(() => foregroundLabelsLayer.draw(PASS_STUB, view, makeCtx(5e-4), state)).not.toThrow();
+  });
+});
+
+const PC = SCALE_UNITS.PC_TO_MPC;
+
+describe('foregroundLabelsLayer — constellation captions', () => {
+  // A camera distance PAST the body-caption gate but still inside the
+  // constellation band (the band fades to 0 at goneAt, beyond that gate) — the
+  // exact window the old director-registered producer could never reach because
+  // the COSMO near plane clipped the parsec-scale anchors. The row must stay
+  // enabled here on the constellation gate alone.
+  const pastBodyGate =
+    (SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC + SCALE_FADE_BANDS.constellations.goneAt) / 2;
+
+  it('runs the row past the body-caption gate while a figure name could show', () => {
+    expect(pastBodyGate).toBeGreaterThan(SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC);
+
+    // Body-only state (no constellation slot): past the body gate the row is off.
+    expect(foregroundLabelsLayer.enabled(makeState(makeRenderer(6)), makeCtx(pastBodyGate))).toBe(
+      false,
+    );
+
+    // Artifact ready: the constellation gate keeps the row alive at the same
+    // distance — the fix's core.
+    expect(
+      foregroundLabelsLayer.enabled(
+        makeConstellationState({ layerFade: 1 }),
+        makeCtx(pastBodyGate),
+      ),
+    ).toBe(true);
+
+    // Beyond the band's far edge the distance band reads 0 ⇒ off regardless of
+    // the toggle (the "opacity 0 ⇒ no render" house rule, the band-only cull).
+    expect(
+      foregroundLabelsLayer.enabled(
+        makeConstellationState({ layerFade: 1 }),
+        makeCtx(SCALE_FADE_BANDS.constellations.goneAt),
+      ),
+    ).toBe(false);
+  });
+
+  it('reads the fade-registry opacity, not a band-only `1`, for constellation demand', () => {
+    // Past the body-caption gate, so the body toggles (both on in
+    // `makeConstellationState`) contribute no demand of their own — isolating
+    // the constellation term. A prior version of the gate passed
+    // `constellationLayerOpacity` the constant `1` (the band-only cull) and
+    // never the registry's actual toggle opacity, so a constellations-layer
+    // switch-off couldn't drop this term on its own; it relied on the (buggy)
+    // glyph-count latch to eventually zero the row. With the toggle opacity
+    // at 0 the product is 0 despite the distance band being favourable, so
+    // the row goes dark on the toggle alone.
+    expect(
+      foregroundLabelsLayer.enabled(
+        makeConstellationState({ layerFade: 0 }),
+        makeCtx(pastBodyGate),
+      ),
+    ).toBe(false);
+  });
+
+  it('emits a caption per figure at its centroid, fading with band × registry', () => {
+    rebaseMock.mockClear();
+    // Spread vp so every anchor de-collides — the whole set survives the cull.
+    rebaseMock.mockReturnValueOnce(makeSpreadVp());
+    // Eye inside the full-alpha band edge (< fullAt) so the distance factor is 1
+    // and the drawn alpha reduces to the fade-registry opacity alone.
+    const camPos: Vec3 = [5e-4, 0, 0];
+    const state = makeConstellationState({ layerFade: 0.5 });
+    const renderer = state.gpu.foregroundLabelRenderer!;
+    const lineRenderer = state.gpu.foregroundMarkerLineRenderer!;
+
+    foregroundLabelsLayer.draw(PASS_STUB, makeNear0View(camPos), makeCtx(5e-4), state);
+
+    const emitted = (renderer.setLabels as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0]![0] as readonly Label[];
+    const orion = emitted.find((l) => l.id === 'Orion')!;
+    expect(orion).toBeDefined();
+    // Direct emit: the caption sits at its camera-relative centroid with NO
+    // leader-line lift — all three components are the anchor exactly (a body
+    // caption would have a raised Y). Anchor = labelAnchorPc·PC − camPos.
+    expect(orion.worldPos).toEqual([200 * PC - camPos[0], -50 * PC, 100 * PC]);
+    // Band = 1 inside fullAt, so the drawn alpha is the registry opacity.
+    expect(orion.fadeAlpha).toBeCloseTo(0.5);
+
+    // No leader line belongs to a constellation — empty-space anchors get none.
+    const lines = (lineRenderer.setLines as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0]![0] as MarkerLine[];
+    expect(lines.some((line) => CONSTELLATION_IDS.has(line.id.replace(/-anchor$/, '')))).toBe(
+      false,
+    );
   });
 });

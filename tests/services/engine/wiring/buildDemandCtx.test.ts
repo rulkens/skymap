@@ -30,14 +30,15 @@ function makeState(
   opts: {
     requests?: Set<RequestKey>;
     points?: Map<SourceType, AssetSlot<unknown, unknown>>;
-    famousMetaState?: LoadState<unknown>['kind'];
+    famousGalaxiesMetaState?: LoadState<unknown>['kind'];
     pose?: { target: [number, number, number]; yaw: number; pitch: number; distance: number };
+    simDays?: number;
   } = {},
 ): EngineState {
-  const famousMeta =
-    opts.famousMetaState === undefined
+  const famousGalaxiesMeta =
+    opts.famousGalaxiesMetaState === undefined
       ? null
-      : ({ state: () => ({ kind: opts.famousMetaState }) } as unknown as AssetSlot<
+      : ({ state: () => ({ kind: opts.famousGalaxiesMetaState }) } as unknown as AssetSlot<
           unknown,
           unknown
         >);
@@ -56,11 +57,12 @@ function makeState(
     requests: opts.requests ?? new Set<RequestKey>(),
     assetSlots: {
       points: opts.points ?? new Map(),
-      famousMeta,
+      famousGalaxiesMeta,
     },
     cameraRuntime: {
       lastPose: { current: pose },
       projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
+      lastRenderedSimDays: { current: opts.simDays ?? 0 },
     },
   } as unknown as EngineState;
 }
@@ -77,13 +79,13 @@ describe('buildDemandCtx', () => {
     // A not-yet-minted slot (null field, missing map entry) reads as 'idle' —
     // never loaded is exactly what idle means.
     const ctx = buildDemandCtx(makeState());
-    expect(ctx.slotState('famousMeta')).toBe('idle');
+    expect(ctx.slotState('famousGalaxiesMeta')).toBe('idle');
     expect(ctx.slotState(Source.SDSS)).toBe('idle');
   });
 
   it('slotState reflects a present slot', () => {
-    const ctx = buildDemandCtx(makeState({ famousMetaState: 'ready' }));
-    expect(ctx.slotState('famousMeta')).toBe('ready');
+    const ctx = buildDemandCtx(makeState({ famousGalaxiesMetaState: 'ready' }));
+    expect(ctx.slotState('famousGalaxiesMeta')).toBe('ready');
   });
 
   it('request reflects the request flag set', () => {
@@ -106,5 +108,13 @@ describe('buildDemandCtx', () => {
     expect(ctx.cameraPosMpc[0]).toBeCloseTo(1);
     expect(ctx.cameraPosMpc[1]).toBeCloseTo(2);
     expect(ctx.cameraPosMpc[2]).toBeCloseTo(13);
+  });
+
+  it('carries the live sim instant from cameraRuntime.lastRenderedSimDays', () => {
+    // The proximity gate derives host body positions at this instant, so the
+    // builder must forward the clock's last-rendered value verbatim (not the
+    // epoch). A wiring that hard-coded J2000 here would fail.
+    const ctx = buildDemandCtx(makeState({ simDays: 8000 }));
+    expect(ctx.simDays).toBe(8000);
   });
 });

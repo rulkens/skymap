@@ -69,7 +69,11 @@ import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { EngineState } from '../../@types/engine/state/EngineState';
 
 import { createCameraClock } from './camera/cameraClock';
+import { liveFrameBasisQuat } from './camera/liveFrameBasisQuat';
 import type { CameraRuntime } from '../../@types/engine/state/CameraRuntime';
+import { CONST_J2000 } from '../../data/time/constJ2000';
+import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
+import { DEFAULT_ORIENTATION } from '../../data/defaults';
 import { createEngineData } from './data/createEngineData';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
@@ -84,6 +88,7 @@ import { createClipPathInspector } from './subsystems/clipPathInspector';
 import { CONTENT_LAYERS } from './frame/passes';
 import { logCameraState } from './helpers/logCameraState';
 import { engineStatusChanged } from '../../state/engine/engineSlice';
+import { selectFamousGalaxiesMeta } from '../../state/engine/selectors';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { PgcAliasMap } from '../../@types/loading/PgcAliasMap';
 import type { RequestKey } from '../../@types/loading/RequestKey';
@@ -92,12 +97,17 @@ import { awaitSlotReady } from '../loading/awaitSlotReady';
 import { runBootstrapPhases } from './phases/bootstrap';
 import type { BootstrapDeps } from '../../@types/engine/BootstrapDeps';
 import { createDisabledGpuTimingService } from '../gpu/timing/gpuTimingService';
+import { updateFrameStats, IDLE_GAP_MS } from '../../utils/perf/updateFrameStats';
+import { PriorityQueue } from '../../utils/concurrency/priorityQueue';
+import { ASSET_QUEUE_CONCURRENCY } from '../../utils/concurrency/assetQueueConcurrency';
+import type { FrameStats } from '../../@types/engine/FrameStats';
 import { addVolumeField } from './handles/addVolumeField';
 import { removeVolumeField } from './handles/removeVolumeField';
 import { listVolumeFields } from './handles/listVolumeFields';
 import { getVolumeFieldsState } from './handles/getVolumeFieldsState';
 import { makeRunTierTransition } from './wiring/makeRunTierTransition';
 import { makeReconcileEffects } from './wiring/makeReconcileEffects';
+import { assetPriorityBySlotName } from './wiring/assetPriorityBySlotName';
 import { createPlayClip } from './animation/playClip';
 import { createClipPathInspectSeam } from './animation/computeClipPath';
 import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
@@ -171,6 +181,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     },
   };
 
+  // ── Always-on CPU-side frame stats ────────────────────────────────────────
+  //
+  // A mutable tracker the render scheduler's `onFrame` chokepoint folds into
+  // every frame, exposed read-only through `handle.debug.frameStats()`.  Unlike
+  // the GPU timing service this needs no `?gpuTimings` gate and no device — it
+  // times the JS frame body with `performance.now()`, so the DebugPanel can show
+  // an fps + CPU-frame-time line at all times.  `lastStartMs === 0` doubles as
+  // the "no frame has run yet" sentinel that seeds the first interval to 0 (the
+  // idle-gap guard in `updateFrameStats` skips that fold — see its header).
+  const frameStats = { fps: 0, cpuMs: 0, lastStartMs: 0 };
+
   // ── Live camera Resources (cameraRuntime) ────────────────────────────────
   //
   // The animation clock, live projection config, and the commit-on-edge
@@ -191,6 +212,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       current: { ...cb.store.getState().camera.base },
     },
     prevActiveId: { current: 'resting' },
+    // Seeded at J2000, a plausible epoch before the first frame runs. No frame
+    // has run pre-bootstrap, so no pick can fire against it; `runFrame` overwrites
+    // it with the real frame instant before the first pick is possible.
+    lastRenderedSimDays: { current: CONST_J2000 },
+    // Seeded with the default frame's steady basis so a pre-first-frame read is
+    // valid; `runFrame` overwrites it with the resolved B(t) each frame. Copied
+    // so the seed never aliases the shared registry entry.
+    frameBasis: { current: [...ORIENTATION_FRAMES[DEFAULT_ORIENTATION]] },
   };
 
   // ── Settings — the injected Redux store ──────────────────────────
@@ -229,6 +258,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     get selectionRows() {
       return store.getState().selectionRows;
     },
+    // Same single-seam pattern as `settings`/`tier`/`selectionRows` above — no
+    // engine-side mirror of the store slice to drift.
+    get famousGalaxiesMeta() {
+      return selectFamousGalaxiesMeta(store.getState());
+    },
     // Per-type data stores. Empty at construction; slot commits fill them.
     data: createEngineData(),
     picking: {
@@ -259,6 +293,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       renderTargets: null,
       compositor: null,
       filamentRenderer: null,
+      constellationRenderer: null,
+      // fontAtlases + uiCtx: null until initGpu resolves the font-atlas fetch;
+      // read by buildSwapRenderers to rebuild the swap-format renderers below
+      // on a later format change without re-threading bootstrap deps.
+      fontAtlases: null,
+      uiCtx: null,
       // labelRenderer + markerLineRenderer: null until initGpu finishes the
       // font-atlas fetch.  Excluded from isEngineReady (optional async
       // resources, null-checked at use by labelsLayer / markerLinesLayer).
@@ -297,13 +337,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // null until initGpu; excluded from isEngineReady —
       // starAggregateUpsampleLayer null-checks it in draw, so a null no-ops.
       starAggregateUpsample: null,
+      // null until initGpu; excluded from isEngineReady — every bloom content
+      // layer's enable gate is exactly `bloomPyramid !== null`, so a null handle
+      // silently drops the whole bloom sub-program.
+      bloomPyramid: null,
       // Debug overlays. null until initGpu; the per-frame consumer
       // null-checks each together with its `settings.debug.*` toggle.
       pickDebugOverlay: null,
       diskRadiusRing: null,
       // True-scale textured Earth (Plan 02 — zoom-to-Earth). null until initGpu
       // constructs it + mints its 'earth' texture slot in the bodyTextures
-      // family (proximity-demanded, commits via setTexture); excluded from
+      // family (proximity-demanded, commits via setMap); excluded from
       // isEngineReady, null-checked at use by earthLayer.
       earthRenderer: null,
       // Anchor renderers (Plan 02 — zoom-to-Earth): the resolved near star
@@ -315,12 +359,22 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Shared textured-sphere renderer for the twelve non-Earth textured bodies
       // (planets + Moon + Galilean moons). null until initGpu; excluded from
       // isEngineReady, null-checked at use by texturedBodiesLayer; the
-      // bodyTextures family's commit/onRelease call its setTexture/clearTexture.
+      // bodyTextures family's commit/onRelease call its setMap/clearMap.
       texturedBodyRenderer: null,
       // Saturn's rings — the translucent overlay half of the ring system, drawn
       // last in the (foreground:0, NEAR0) group. null until initGpu; excluded
       // from isEngineReady, null-checked at use by ringsLayer.
       ringRenderer: null,
+      // Earth's translucent cloud shell — the thin deck drawn just above the
+      // opaque surface, immediately after earthLayer in the (foreground:0, NEAR0)
+      // group. null until initGpu; excluded from isEngineReady, null-checked at
+      // use by cloudShellLayer.
+      cloudShellRenderer: null,
+      // Earth's in-scatter atmosphere — the outermost translucent shell, drawn
+      // LAST in the (foreground:0, NEAR0) group. null until initGpu; excluded
+      // from isEngineReady, null-checked at use by atmosphereShellLayer and the
+      // atmosphereSkyView compute step.
+      atmosphereShellRenderer: null,
       starPointRenderer: null,
       // Sub-pixel bodies (the glints branch of the body partition) as
       // brightness-scaled additive points on the (hdr, NEAR0) step — the far
@@ -353,6 +407,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       diskPlannerWalk: null,
       hiResFamous: null,
       hiResFamousTexture: null,
+
+      // ── Earth surface virtual texture ─────────────────────────────
+      // Null until `wireSlots` constructs it post-GPU init, and holding no
+      // GPU memory even then — the atlas is allocated by the first frame the
+      // tile planner engages on.
+      earthTiles: null,
 
       // ── Bias-correction subsystem ─────────────────────────────────
       // Owns Malmquist-bias mode flags, cached per-source ratios/weights,
@@ -405,7 +465,24 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // body before any rAF fires.  Anyone capturing the scheduler gets the
       // live one — a deferred shim by reference would break hover-pick on
       // first frames.
-      scheduler: createRenderScheduler({ onFrame: () => frameRef.current() }),
+      // `onFrame` is the single per-frame chokepoint — every rAF the scheduler
+      // fires runs the real body here.  Timing wraps this one site (loop entry →
+      // after the body returns, which is post-submit) so the frame stats stay a
+      // pure measurement: the body is invoked exactly as before, unmodified.
+      scheduler: createRenderScheduler({
+        onFrame: () => {
+          const start = performance.now();
+          const intervalMs = frameStats.lastStartMs === 0 ? 0 : start - frameStats.lastStartMs;
+          frameStats.lastStartMs = start;
+          frameRef.current();
+          const next = updateFrameStats(frameStats, {
+            intervalMs,
+            cpuMs: performance.now() - start,
+          });
+          frameStats.fps = next.fps;
+          frameStats.cpuMs = next.cpuMs;
+        },
+      }),
 
       // ── Fade registry ──────────────────────────────────────────
       // Eager so initGpu can register handles without a null-check. Pure
@@ -413,6 +490,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       fades: createFadeRegistry({
         requestRender: () => state.subsystems.scheduler.requestRender(),
       }),
+
+      // ── Boot asset queue ──────────────────────────────────────────
+      // Bounds how many boot fetches (catalog `.bin` files, body textures)
+      // run at once — see `ASSET_QUEUE_CONCURRENCY` for why 2, not the
+      // thumbnail queue's `MAX_CONCURRENT_FETCHES`. Eager, no GPU dep:
+      // `evaluateRows` (the per-frame demand walk) can enqueue before the
+      // GPU init IIFE below finishes.
+      assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY),
 
       // The rest land later in the IIFE once their deps (GPU device,
       // pickRenderer, scheduler) exist.
@@ -435,7 +520,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // close over GPU handles (renderer, filamentRenderer,
     // volumeFieldRenderer) for their commit step, all null until initGpu
     // resolves.  Minting them all in one IIFE pass keeps the lifecycle
-    // uniform — even the GPU-handle-free slots (famousMeta, pgcAlias) are
+    // uniform — even the GPU-handle-free slots (famousGalaxiesMeta, pgcAlias) are
     // born there.
     assetSlots: {
       points: new Map(),
@@ -443,7 +528,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // initGpu minting; the star slot's commit null-guards the renderer.
       starCatalogs: new Map(),
       filaments: null,
-      famousMeta: null,
+      famousGalaxiesMeta: null,
+      famousStarsMeta: null,
       structureCatalog: null,
       pgcAlias: null,
       cf4Density: null,
@@ -451,10 +537,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       mcpm: null,
       // Default-off velocity flow field; demand-loaded like cf4Density.
       flow: null,
+      // Constellation stick-figure artifact; demand-loaded on its master gate.
+      constellations: null,
       // Keyed body-surface texture family (Earth + planets/moons + Saturn ring),
       // minted in initGpu beside the body renderers. Empty map at construction —
       // proximity-demanded + released per body (mirrors the `points` map).
       bodyTextures: new Map(),
+      // The all-bodies low-res atlas: one boot fetch seeding every body's
+      // placeholder, so no body ever draws untextured while its own map loads.
+      bodyTextureAtlas: null,
     },
     // ── One-shot transient request flags ────────────────────────────────
     //
@@ -468,11 +559,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // ── Register label producers with the director ───────────────────────
   //
   // Registration order = merged label order: milkyWayLabel, then the structure
-  // labels, then the famous-galaxy labels.  The director declutters across
-  // all of them by `prominencePx`, so registration order only sets the
-  // tiebreak for equal-prominence collisions (rare).  All three producers are
-  // pure functions over the state; wrap each as a LabelProducer with a stable
-  // id.  All eager, so this is synchronous before any frame.
+  // labels, then the famous-galaxy labels.  The director declutters across all
+  // of them by `prominencePx`, so registration order only sets the tiebreak for
+  // equal-prominence collisions (rare).  All producers are pure functions over
+  // the state; wrap each as a LabelProducer with a stable id.  All eager, so
+  // this is synchronous before any frame.
+  //
+  // The constellation figure NAMES are deliberately NOT here: their anchors sit
+  // at parsec distances, inside the COSMO slab's fixed 0.01-Mpc near plane the
+  // director projects through, so a director label for them could never draw.
+  // They route through `foregroundLabelsLayer` on the NEAR0 slab instead, beside
+  // the scene-body captions — see `constellationCaptions`.
   state.subsystems.labelDirector.registerProducer({
     id: 'milkyWayLabel',
     produceLabels: produceMilkyWayLabel,
@@ -548,7 +645,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     catalogs: {
       get: (source: GalaxyCatalogSourceType) => state.data.galaxies.catalogs.get(source),
     },
-    famousMeta: state.data.galaxies.famousMeta,
+    famousGalaxiesMeta: state.famousGalaxiesMeta,
     structures: { byId: (id) => state.data.structures.byId(id) },
     // The sole loaded star catalog — the first (only, in v1) committed Gaia
     // catalog off the renderer, or null before the star cloud lands or after
@@ -583,43 +680,51 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // to sample a clip's camera route into the `clipPathInspector` subsystem (read
   // each frame by `clipPathDebugLayer`) and `clear` to drop it. Shares the same
   // live-pose accessor as `playClip` so a `start:'live'` clip samples from the
-  // pose the user sees. 384 samples keeps the route + target polylines smooth
-  // through the tight Catmull-Rom corners of a flyPath (must stay within the
-  // debugLineRenderer's maxLines: 2·(n−1) route+target segments + 9 gizmo).
+  // pose the user sees.
+  //
+  // The sample count must cover the WAYPOINT-DENSEST clip, not just the sparse
+  // demo path: a flyPath threading ~200 waypoints gives 384 samples only ~1.9
+  // per leg — the polyline then draws the raw waypoint-to-waypoint CHORDS and
+  // hides the smooth spline between knots, reading as hard corners everywhere.
+  // 4000 samples is ~20 per leg on such a route, enough to resolve the actual
+  // curve so a smooth stretch reads smooth and only genuinely tight turns
+  // still bend. This must stay within the
+  // debugLineRenderer's maxLines (2·(n−1) route+target segments + 9 gizmo =
+  // 8007 here; the renderer is built with 8192 in `initGpu`).
   const clipPathInspect = createClipPathInspectSeam({
     inspector: state.subsystems.clipPathInspector,
     getLivePose: () => state.cameraRuntime.lastPose.current,
-    sampleCount: 384,
+    sampleCount: 4000,
   });
 
   cb.setSagaContext({
     runTierTransition: makeRunTierTransition(state, bootstrapDeps),
     reconcile: makeReconcileEffects(state),
     resolveDeps,
-    // The live camera Resources `watchFocusTweenSaga` reads to build a focus tween:
-    // the visible from-pose (so a re-focus hands off from what the user sees) and
-    // the lens FOV (for structure screen-fill framing). Null when `state.cam` is
-    // absent — pre-bootstrap or post-destroy — so the focus tween no-ops rather
-    // than tween from a stale pose.
+    // The live camera Resources the focus and orientation sagas read off the
+    // frame loop: the visible from-pose (so a re-focus hands off from what the
+    // user sees), the lens FOV (for structure screen-fill framing), and the
+    // up-basis quaternion resolved THIS frame via `liveFrameBasisQuat`, so a
+    // mid-slerp re-switch captures the live pole rather than snapping to the
+    // committed frame. Null when `state.cam` is absent — pre-bootstrap or
+    // post-destroy — so both sagas no-op rather than seed from a stale pose.
     cameraRuntime: () =>
       state.cam
         ? {
             from: state.cameraRuntime.lastPose.current,
             fovYRad: state.cameraRuntime.projection.fovYRad,
+            frameBasisQuat: liveFrameBasisQuat(state.cameraRuntime),
           }
         : null,
-    // The live Earth record `watchFlyToEarthKeySaga` frames its descent tween
-    // on. Read lazily (like `resolveDeps`) because the scene-body seed installs
-    // Earth after the root saga forks; null until then, so the fly-to key
-    // no-ops rather than tween toward a body that isn't there.
-    earthBody: () => state.data.bodies.earth,
     playClip,
     clipPathInspect,
   });
 
   // The main async IIFE runs the bootstrap phases; all errors are caught
   // and dispatched via `engineStatusChanged({ kind: 'error' })`.  See `runBootstrapPhases`.
-  (async () => {
+  // `void`: nothing awaits engine construction, and the catch below already
+  // routes failures to the status callback rather than an unhandled rejection.
+  void (async () => {
     try {
       await runBootstrapPhases(state, bootstrapDeps);
     } catch (err) {
@@ -680,12 +785,19 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // 1. Cancel the render loop first — every subsequent destroy() must be
     //    safe after the loop has stopped.
     state.subsystems.scheduler.destroy();
+    state.subsystems.assetQueue.destroy();
 
     // 2. Detach DOM listeners before the subsystems they fire into.
     state.subsystems.inputBindings?.destroy();
     state.subsystems.inputBindings = null;
     detachControlsRef.current?.();
     detachControlsRef.current = null;
+    // The HDR-capability matchMedia listener `initGpu` registers via
+    // `watchHdrCapability` — `phaseLocals` is assigned immediately after
+    // registration (not at the end of `initGpu`'s many-hundred-line body),
+    // so this is undefined only if the GPU IIFE errored before that point:
+    // device/context acquisition or the listener registration itself.
+    bootstrapDeps.phaseLocals?.unwatchHdrCapability();
 
     // 3. Walk every other subsystem (order-independent past here).
     state.subsystems.biasCorrection.destroy();
@@ -710,6 +822,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.subsystems.diskPlannerWalk = null;
     state.subsystems.galaxyAtlas?.destroy();
     state.subsystems.galaxyAtlas = null;
+    // The Earth tile subsystem owns a 67 MB atlas and a page-table texture
+    // once engaged, neither of which WebGPU releases on GC. Order-independent:
+    // nothing subscribes to it.
+    state.subsystems.earthTiles?.destroy();
+    state.subsystems.earthTiles = null;
     state.subsystems.clickResolver?.destroy();
     state.subsystems.clickResolver = null;
     state.subsystems.loadProgress?.destroy();
@@ -731,6 +848,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.compositor = null;
     state.gpu.filamentRenderer?.destroy();
     state.gpu.filamentRenderer = null;
+    state.gpu.constellationRenderer?.destroy();
+    state.gpu.constellationRenderer = null;
+    // No GPU resource of their own (decoded atlas data / raw device+context+
+    // canvas refs) — re-nulled for lifecycle symmetry, not released.
+    state.gpu.fontAtlases = null;
+    state.gpu.uiCtx = null;
     state.gpu.labelRenderer?.destroy();
     state.gpu.labelRenderer = null;
     state.gpu.foregroundLabelRenderer?.destroy();
@@ -763,6 +886,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.volumeUpsample = null;
     state.gpu.starAggregateUpsample?.destroy();
     state.gpu.starAggregateUpsample = null;
+    state.gpu.bloomPyramid?.destroy();
+    state.gpu.bloomPyramid = null;
     state.gpu.pickDebugOverlay?.destroy();
     state.gpu.pickDebugOverlay = null;
     state.gpu.diskRadiusRing?.destroy();
@@ -777,6 +902,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.texturedBodyRenderer = null;
     state.gpu.ringRenderer?.destroy();
     state.gpu.ringRenderer = null;
+    state.gpu.cloudShellRenderer?.destroy();
+    state.gpu.cloudShellRenderer = null;
+    state.gpu.atmosphereShellRenderer?.destroy();
+    state.gpu.atmosphereShellRenderer = null;
     state.gpu.starPointRenderer?.destroy();
     state.gpu.starPointRenderer = null;
     state.gpu.bodyGlintRenderer?.destroy();
@@ -844,9 +973,22 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       get timingService() {
         return state.gpu.timingService;
       },
+      // Snapshot the rolling CPU-side frame stats. `fps` is rounded for display;
+      // `idle` is derived here (not stored) from the wall-clock gap since the
+      // last frame, so a sleeping render-on-demand loop reads "idle" rather than
+      // a stale fps. `lastStartMs === 0` means no frame has run yet.
+      frameStats: (): FrameStats => ({
+        fps: Math.round(frameStats.fps),
+        cpuMs: frameStats.cpuMs,
+        idle:
+          frameStats.lastStartMs === 0 || performance.now() - frameStats.lastStartMs > IDLE_GAP_MS,
+      }),
       passOverrides: {
         allNames: CONTENT_LAYERS.filter((l) => l.target !== 'volume').map((p) => p.name),
       },
+      // Re-derived per call off the live state rather than snapshotted: the
+      // slots this joins against are minted by the async IIFE below.
+      assetPriorities: () => assetPriorityBySlotName(state),
     },
 
     destroy,
