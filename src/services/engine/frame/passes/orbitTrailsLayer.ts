@@ -129,7 +129,12 @@ function reachMpcById(): ReadonlyMap<string, number> {
   return reach;
 }
 const REACH_MPC_BY_ID = reachMpcById();
-const MAX_ORBIT_EXTENT_MPC = Math.max(...ORBITAL_ELEMENTS.map((el) => REACH_MPC_BY_ID.get(el.id)!));
+// TEMPORARY export for tests/services/engine/presentation/scaleFadeBands.baseline.test.ts
+// (s-star prep-02 Task 1) — revert to module-private in Task 7 unless Task 5
+// already made this a real export for another reason.
+export const MAX_ORBIT_EXTENT_MPC = Math.max(
+  ...ORBITAL_ELEMENTS.map((el) => REACH_MPC_BY_ID.get(el.id)!),
+);
 
 export const orbitTrailsLayer: ContentLayer = {
   name: 'orbit-trails',

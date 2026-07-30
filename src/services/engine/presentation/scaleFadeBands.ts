@@ -35,7 +35,10 @@ import { SCALE_UNITS } from '../../../data/scaleUnits';
 // the star-caption band, which keys on a star's own distance from the camera in
 // pc. Eta Carinae at ~2300 pc is the current extent; growing the roster carries
 // this and the band edges below with it.
-const FARTHEST_STAR_PC = FARTHEST_BODY_MPC / SCALE_UNITS.PC_TO_MPC;
+// TEMPORARY export for tests/services/engine/presentation/scaleFadeBands.baseline.test.ts
+// (s-star prep-02 Task 1) — revert to module-private in Task 7 unless Task 6
+// already made this a real region-derived export for another reason.
+export const FARTHEST_STAR_PC = FARTHEST_BODY_MPC / SCALE_UNITS.PC_TO_MPC;
 
 // The constellation figures' eye-tuned recede edges, in kpc — the scale the
 // tuning conversation happens at (a 1 kpc solar neighbourhood, a 10 kpc
