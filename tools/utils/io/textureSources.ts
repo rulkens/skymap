@@ -89,8 +89,8 @@ export const TEXTURE_SOURCES = {
     clouds: { native: 'textures.earthClouds' },
   },
   mars: { surface: { native: 'textures.sssMars8k', devFilename: '2k_mars.jpg' } },
-  jupiter: { surface: { native: 'textures.sssJupiter8k', devFilename: '2k_jupiter.jpg' } },
-  saturn: { surface: { native: 'textures.sssSaturn8k', devFilename: '2k_saturn.jpg' } },
+  jupiter: { surface: { native: 'textures.sssJupiter4k', devFilename: '2k_jupiter.jpg' } },
+  saturn: { surface: { native: 'textures.sssSaturn4k', devFilename: '2k_saturn.jpg' } },
   uranus: { surface: { native: 'textures.sssUranus2k', devFilename: '2k_uranus.jpg' } },
   neptune: { surface: { native: 'textures.sssNeptune2k', devFilename: '2k_neptune.jpg' } },
   moon: {

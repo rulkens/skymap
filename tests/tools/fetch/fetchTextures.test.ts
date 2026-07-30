@@ -54,8 +54,10 @@ describe('textureSourcesFor', () => {
         '8k_mercury.jpg',
         '4k_venus_atmosphere.jpg',
         '8k_mars.jpg',
-        '8k_jupiter.jpg',
-        '8k_saturn.jpg',
+        // Jupiter and Saturn are 4096×2048 despite upstream's `8k_` filename;
+        // the ring beside them genuinely is 8k.
+        '4k_jupiter.jpg',
+        '4k_saturn.jpg',
         '8k_saturn_ring_alpha.png',
         '2k_uranus.jpg',
         '2k_neptune.jpg',

@@ -7,7 +7,7 @@
  * JS's Number.MAX_SAFE_INTEGER.
  *
  * The cloud fixture is intentionally minimal: focusIdOf reads exactly
- * objIDs[index], positions[index*3…], and the famousMeta array.
+ * objIDs[index], positions[index*3…], and the famousGalaxiesMeta array.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -48,7 +48,7 @@ const deps: ResolveDeps = {
       return undefined;
     },
   },
-  famousMeta: [
+  famousGalaxiesMeta: [
     { id: 'm31', names: ['M31', 'Andromeda'], description: 'The Andromeda Galaxy', type: 'Sb' },
   ],
   structures: { byId: () => null },

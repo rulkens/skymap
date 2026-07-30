@@ -44,16 +44,20 @@ Attribution required: **Solar System Scope (solarsystemscope.com), CC BY 4.0**
 | Mercury            | `8k_mercury.jpg`           | ~8192×4096  | `2k_mercury.jpg`           | albedo map                                                              |
 | Venus (atmosphere) | `4k_venus_atmosphere.jpg`  | 4096×2048   | `2k_venus_atmosphere.jpg`  | caps at 4k — the 8k SSS variant is the radar surface (wrong appearance) |
 | Mars               | `8k_mars.jpg`              | ~8192×4096  | `2k_mars.jpg`              | albedo map                                                              |
-| Jupiter            | `8k_jupiter.jpg`           | ~8192×4096  | `2k_jupiter.jpg`           | cloud bands                                                             |
-| Saturn             | `8k_saturn.jpg`            | ~8192×4096  | `2k_saturn.jpg`            | cloud bands                                                             |
+| Jupiter            | `4k_jupiter.jpg`           | 4096×2048   | `2k_jupiter.jpg`           | cloud bands; upstream filename says `8k_jupiter.jpg`                    |
+| Saturn             | `4k_saturn.jpg`            | 4096×2048   | `2k_saturn.jpg`            | cloud bands; upstream filename says `8k_saturn.jpg`                     |
 | Saturn ring        | `8k_saturn_ring_alpha.png` | 8k×N RGBA   | `2k_saturn_ring_alpha.png` | radial alpha strip, real alpha; sampled by radius, shipped N×1          |
 | Uranus             | `2k_uranus.jpg`            | 2048×1024   | `2k_uranus.jpg` (same)     | 2k only — near-featureless, never upscaled                              |
 | Neptune            | `2k_neptune.jpg`           | 2048×1024   | `2k_neptune.jpg` (same)    | 2k only — same caveat                                                   |
 | Moon               | `8k_moon.jpg`              | ~8192×4096  | `2k_moon.jpg`              | albedo map                                                              |
 
-No 4k tier exists on SSS except Venus atmosphere; the 4k build tier is always a
-downsample of the 8k raw. Uranus/Neptune's native file _is_ the 2k tier, so the
-dev subset reuses it (never fetched twice).
+Jupiter and Saturn's local filenames are `4k_` rather than the `8k_` their
+upstream URL uses — the delivered image is 4096×2048, not the 8192×4096 the
+upstream name implies, so the fetch keeps the real dimension in the local name
+while leaving the remote URL as Solar System Scope names it. Together with
+Venus atmosphere, that makes three bodies whose "full pull" is already the 4k
+tier, not a downsample of an 8k raw. Uranus/Neptune's native file _is_ the 2k
+tier, so the dev subset reuses it (never fetched twice).
 
 ## NASA Blue Marble Next Generation — Earth (public domain; credit "NASA Earth Observatory")
 

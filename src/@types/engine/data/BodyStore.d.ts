@@ -19,6 +19,10 @@ import type { EarthBody } from '../../scene/EarthBody';
  * reshaping the store. Earth is a distinct getter (not folded into `planets`)
  * because it is the descent's landing target and carries its own textured
  * `EarthBody` form; it is `null` until seeded.
+ *
+ * This store holds no metadata sidecar: the famous-star `famous_stars_meta.json`
+ * entries are read only by the InfoCard, so its slot reports them to the
+ * engine Redux slice instead.
  */
 export type BodyStore = {
   /** Seeded stars (chiefly the Sun); empty until the star seed lands. */

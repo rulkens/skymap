@@ -86,11 +86,16 @@ vi.mock('../../../../src/services/engine/interaction/inputBindings', () => ({
 
 // Imported AFTER the mocks so wireInput picks them up.
 import { wireInput } from '../../../../src/services/engine/phases/wireInput';
-import { selectSelectedRef, selectFocusRef } from '../../../../src/state/selection/selectors';
+import {
+  selectSelectedRef,
+  selectFocusRef,
+  selectPendingFocusId,
+} from '../../../../src/state/selection/selectors';
 import {
   updateSelectionSelect,
   updateSelectionFocus,
 } from '../../../../src/state/selection/selectionSlice';
+import { requestFocus } from '../../../../src/state/selection/requestFocus';
 import { EARTH_REF } from '../../../../src/data/selection/earthRef';
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
@@ -140,7 +145,7 @@ function makeState(): EngineState {
     // never invoked — an empty galaxies/structures stub is enough.
     data: {
       structures: { byCategory: () => [] },
-      galaxies: { get: () => undefined, famousMeta: [] },
+      galaxies: { get: () => undefined, famousGalaxiesMeta: [] },
     } as never,
     gpu: {
       renderer: {
@@ -177,7 +182,7 @@ function makeState(): EngineState {
     assetSlots: {
       points: new Map(),
       filaments: null,
-      famousMeta: null,
+      famousGalaxiesMeta: null,
       pgcAlias: null,
       cf4Density: null,
     },
@@ -290,5 +295,25 @@ describe('wireInput', () => {
       }),
     );
     expect(read!()).toBeCloseTo(6371 * SCALE_UNITS.KM_TO_MPC, 30);
+  });
+
+  it('defers the seed to a galaxy/star id still parked in a deferred resolve', async () => {
+    const state = makeState();
+    const deps = makeDeps();
+
+    // A galaxy/star focus id defers until its catalog pulse lands
+    // (`resolveFocusRefDeferring` parks it), so the resolved `focus` ref
+    // stays null for the whole boot window while `pending.focus` already
+    // holds the id — the extraReducer sets `pending.focus` synchronously,
+    // no saga needed to observe the guard here. A ref-only guard would read
+    // this as "empty" and seed Earth over the still-resolving deep link.
+    deps.cb.store.dispatch(requestFocus('m31'));
+
+    await wireInput(state, deps);
+
+    const root = deps.cb.store.getState();
+    expect(selectSelectedRef(root)).toBeNull();
+    expect(selectFocusRef(root)).toBeNull();
+    expect(selectPendingFocusId(root)).toBe('m31');
   });
 });

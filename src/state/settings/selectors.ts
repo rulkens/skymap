@@ -43,6 +43,8 @@ import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { StructureItemSettings } from '../../@types/settings/StructureItemSettings';
 import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';
 import type { StarCatalogItemSettings } from '../../@types/settings/StarCatalogItemSettings';
+import type { BodyId } from '../../@types/data/body/BodyId';
+import type { BodyItemSettings } from '../../@types/settings/BodyItemSettings';
 import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSettings';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
@@ -149,16 +151,6 @@ export const selectMilkyWayEnabled = (state: RootState): boolean =>
 export const selectMilkyWayLabelEnabled = (state: RootState): boolean =>
   selectSettings(state).milkyWay.labelEnabled;
 
-// --- famousStars cluster ------------------------------------------------------
-
-/**
- * Master gate on the seeded famous-star map. A primitive read, so no
- * memoization. Distinct from `selectStarCatalogs(...).enabled` (the Gaia survey
- * gate) — this gates only the curated near-field scene bodies.
- */
-export const selectFamousStarsEnabled = (state: RootState): boolean =>
-  selectSettings(state).famousStars.enabled;
-
 // --- filaments cluster --------------------------------------------------------
 
 export const selectFilamentsEnabled = (state: RootState): boolean =>
@@ -251,14 +243,6 @@ export const selectClipPathPassByDir = (state: RootState): PassByDir =>
 export const selectClipPathTuningActive = (state: RootState): ClipPathTuningActive =>
   selectSettings(state).debug.clipPathInspect.active;
 
-// --- labels cluster -----------------------------------------------------------
-
-export const selectStarLabelsEnabled = (state: RootState): boolean =>
-  selectSettings(state).labels.starLabelsEnabled;
-
-export const selectPlanetLabelsEnabled = (state: RootState): boolean =>
-  selectSettings(state).labels.planetLabelsEnabled;
-
 // --- structures cluster -------------------------------------------------------
 
 export const selectStructureItems = (
@@ -288,6 +272,27 @@ export const selectStarCatalogs = (
   aggregateIntensityCap: number;
   items: Record<StarCatalogId, StarCatalogItemSettings>;
 } => selectSettings(state).starCatalogs;
+
+/**
+ * The per-catalog item rows alone — the star-catalog twin of
+ * `selectGalaxyCatalogItems`. The Labels section bundles it into `LabelHomes`
+ * and needs the narrowest stable reference it can get: reading the whole
+ * cluster there would rebuild the projection on every star-brightness drag.
+ */
+export const selectStarCatalogItems = (
+  state: RootState,
+): Record<StarCatalogId, StarCatalogItemSettings> => selectSettings(state).starCatalogs.items;
+
+// --- bodies cluster -----------------------------------------------------------
+
+/**
+ * The per-body item rows — the near-field twin of `selectStarCatalogItems`.
+ * The Labels section bundles it into `LabelHomes`; returning the Immer-stable
+ * `items` reference (not the cluster, and never `state.settings`) keeps the
+ * projection from rebuilding on unrelated writes.
+ */
+export const selectBodyItems = (state: RootState): Record<BodyId, BodyItemSettings> =>
+  selectSettings(state).bodies.items;
 
 /**
  * Star-billboard pixel radius — the star-catalog twin of

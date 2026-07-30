@@ -11,7 +11,11 @@
  * ### Two geometries → two OWN pipelines
  *
  *   - `drawSphere` — ONE body sphere per call (Earth, a planet, a resolved
- *     scene-star sphere), same unit-sphere mesh as the visual sphere bodies.
+ *     scene-star sphere). The unit-sphere mesh is uploaded as PROXY geometry
+ *     only: `spherePick.wesl` inflates it, ray-traces the analytic sphere per
+ *     fragment and discards the misses, so the clickable disc is the body's exact
+ *     disc rather than a 48-gon — hence `cullMode: 'front'` and the shader's
+ *     `@builtin(frag_depth)` on this pipeline.
  *   - `drawPoints` — a sub-pixel body POINT partition as one instanced draw of
  *     pick billboards, each expanded to a generous 18 px footprint (these are the
  *     ≤25 labelled scene stars and the sub-pixel solar-system body glints — sparse
@@ -42,7 +46,7 @@
  *
  * **Mechanism chosen: one uniform buffer + 256-byte-aligned DYNAMIC OFFSETS,
  * with a monotonically-advancing per-pass cursor.** Each `drawSphere` writes its
- * `{ mvp, packedId }` into the cursor's OWN slot and binds it via a dynamic
+ * `{ mvp, camPosLocal, packedId }` into the cursor's OWN slot and binds it via a dynamic
  * offset, so no two draws in a pass share bytes — the race cannot happen. The
  * cursor resets to 0 the first time a NEW pass object is seen (`beginPassIfNew`),
  * which is the natural per-pass boundary (each `pick()` / `renderForDebug()`
@@ -89,7 +93,9 @@
  * Both pipelines carry the NEAR0 `depth32float` depth profile
  * (`depthCompare: 'greater'`, `depthWriteEnabled: true`, the NEAR0 slab's reversed-Z
  * convention — clear `0.0`, greater-z-wins) so overlapping bodies — a
- * Moon in front of Earth — resolve nearest-wins, matching visual occlusion. The
+ * Moon in front of Earth — resolve nearest-wins, matching visual occlusion. That
+ * test is only as good as the depth fed into it, which is why the sphere fragment
+ * writes the analytic hit's depth rather than the proxy's. The
  * colour target is `r32uint` (integer formats cannot blend; depth resolves
  * overlaps instead), matching the pick program's NEAR0 attachment formats.
  *
@@ -114,13 +120,21 @@ import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { writeCameraPrefix } from '../../lib/cameraUniforms';
 
 /**
- * `SpherePickUniforms` byte size (spherePick.wesl): mat4x4<f32> (64) + u32 (4),
- * rounded up to the mat4x4's 16-byte alignment = 80. The CPU scratch mirrors it:
- * f32[0..15] = mvp, u32[16] = packedId.
+ * `SpherePickUniforms` byte size (spherePick.wesl): mat4x4<f32> (64) +
+ * vec3<f32> (12) + u32 (4) = 80. The CPU scratch mirrors it:
+ * f32[0..15] = mvp, f32[16..18] = camPosLocal, u32[19] = packedId.
+ *
+ * `packedId` occupies the 4 bytes a `vec3<f32>` leaves behind (12 bytes of data,
+ * 16 bytes of alignment), so the struct carries the camera position for free —
+ * the `RingUniforms.planetRadiusRatio` pad-slot trick. Declaring `camPosLocal`
+ * after `packedId` instead would have opened a fresh 16-byte row and grown the
+ * struct to 96, changing `minBindingSize` and the slot budget below with it.
  */
 const SPHERE_UNIFORM_BYTES = 80;
-/** u32 index of `packedId` in the 80-byte sphere scratch (byte 64 / 4). */
-const SPHERE_PACKED_ID_U32_INDEX = 16;
+/** f32 index of `camPosLocal`'s first component in the sphere scratch (byte 64 / 4). */
+const SPHERE_CAM_POS_LOCAL_F32_INDEX = 16;
+/** u32 index of `packedId` in the 80-byte sphere scratch (byte 76 / 4). */
+const SPHERE_PACKED_ID_U32_INDEX = 19;
 
 /**
  * Upper bound on sphere pick draws recorded into one pass. The real bound is
@@ -196,8 +210,8 @@ export function createBodyPickRenderer(device: GPUDevice, reversedZ: boolean): B
     size: MAX_SPHERE_DRAWS * slotStride,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
-  // One 80-byte ArrayBuffer viewed as both f32 (mvp) and u32 (packedId),
-  // rewritten per draw and uploaded into the cursor's slot.
+  // One 80-byte ArrayBuffer viewed as both f32 (mvp + camPosLocal) and u32
+  // (packedId), rewritten per draw and uploaded into the cursor's slot.
   const sphereScratch = new ArrayBuffer(SPHERE_UNIFORM_BYTES);
   const sphereScratchF32 = new Float32Array(sphereScratch);
   const sphereScratchU32 = new Uint32Array(sphereScratch);
@@ -252,7 +266,12 @@ export function createBodyPickRenderer(device: GPUDevice, reversedZ: boolean): B
     primitive: {
       topology: 'triangle-list',
       frontFace: 'ccw', // matches uvSphereMesh winding + the visual sphere bodies
-      cullMode: 'back',
+      // `front`, not `back`: the mesh is a 5%-inflated PROXY the shader ray-traces
+      // through, so the FAR hemisphere is the one that must rasterise. Culling
+      // back faces instead would drop the body's pick entirely the moment the
+      // camera crossed inside the proxy shell — a legal close approach, 5% of a
+      // body radius above the surface. See `spherePick.wesl`.
+      cullMode: 'front',
     },
     // NEAR0 depth profile — see module header (Moon-in-front-of-Earth resolves).
     depthStencil: {
@@ -409,6 +428,9 @@ export function createBodyPickRenderer(device: GPUDevice, reversedZ: boolean): B
     if (sphereCursor >= MAX_SPHERE_DRAWS) return;
 
     sphereScratchF32.set(args.mvp, 0);
+    // `set` (not three indexed writes) because `camPosLocal` is a Vec3 tuple and
+    // its three components are contiguous at f32 16..18 — the vec3's own slot.
+    sphereScratchF32.set(args.camPosLocal, SPHERE_CAM_POS_LOCAL_F32_INDEX);
     sphereScratchU32[SPHERE_PACKED_ID_U32_INDEX] = args.packedId >>> 0;
 
     const dynamicOffset = sphereCursor * slotStride;

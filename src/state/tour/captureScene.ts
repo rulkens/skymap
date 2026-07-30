@@ -1,5 +1,5 @@
 /**
- * captureScene — a SELECTOR that takes a detached snapshot of both the six
+ * captureScene — a SELECTOR that takes a detached snapshot of both the ten
  * tour-owned settings clusters AND `selection.focus` off the live store state.
  *
  * The cinematic tour captures the scene before playing a beat (which may call
@@ -8,7 +8,7 @@
  * — a pure store read, so capture needs no engine effect at all (the matching
  * restore, by contrast, dispatches and so lives in `restoreSceneSaga`).
  *
- * `captureSettings` handles the deep-clone of the six settings clusters; this
+ * `captureSettings` handles the deep-clone of the ten settings clusters; this
  * selector adds the focus slot on top, making the snapshot wide enough to fully
  * rewind to the pre-beat state.
  *

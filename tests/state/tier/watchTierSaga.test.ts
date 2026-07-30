@@ -125,7 +125,7 @@ describe('watchTierSaga', () => {
 
     const resolveDeps = (): ResolveDeps => ({
       catalogs: { get: (src) => (src === Source.SDSS ? currentCloud : undefined) },
-      famousMeta: [],
+      famousGalaxiesMeta: [],
       structures: { byId: () => null },
       stars: { current: () => null },
     });
@@ -161,7 +161,7 @@ describe('watchTierSaga', () => {
 
     const resolveDeps = (): ResolveDeps => ({
       catalogs: { get: (src) => (src === Source.SDSS ? currentCloud : undefined) },
-      famousMeta: [],
+      famousGalaxiesMeta: [],
       structures: { byId: () => null },
       stars: { current: () => null },
     });
@@ -208,7 +208,7 @@ describe('watchTierSaga', () => {
     let currentCloud = buildCloud(objIDsOld);
     const resolveDeps = (): ResolveDeps => ({
       catalogs: { get: (src) => (src === Source.SDSS ? currentCloud : undefined) },
-      famousMeta: [],
+      famousGalaxiesMeta: [],
       structures: { byId: () => null },
       stars: { current: () => null },
     });

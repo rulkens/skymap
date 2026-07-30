@@ -44,7 +44,7 @@
  *
  * The ALLOW filter mirrors the runtime fetch surface: tier-suffixed
  * SDSS/GLADE bins, the unsuffixed 2mrs.bin / famous.bin / filaments.bin,
- * and the famous JSON sidecars (famous_meta.json + famous_stars_meta.json).
+ * and the famous JSON sidecars (famous_galaxies_meta.json + famous_stars_meta.json).
  * (The pgc_aliases.json palette-search map is
  * also runtime-fetched but ships via EXTRA_FILES — it's a committed data/
  * source artefact, not a public/data build output.)
@@ -146,10 +146,10 @@ export const ALLOW = (name: string): boolean =>
   // full file, used as the mobile-default skeleton.  See
   // cloudLoader.filamentFilenameForTier().
   name === 'filaments-small.bin' ||
-  name === 'famous_meta.json' ||
+  name === 'famous_galaxies_meta.json' ||
   // The famous-stars metadata sidecar — a gitignored build artefact emitted by
   // the star pipeline and fetched by the runtime, shipped only via R2 exactly
-  // like famous_meta.json (never committed, no tier suffix).
+  // like famous_galaxies_meta.json (never committed, no tier suffix).
   name === 'famous_stars_meta.json' ||
   // NB: pgc_aliases.json is NOT here — it's a committed source artefact in
   // data/ (an expensive HyperLEDA pull, not a local build output), so it
@@ -339,7 +339,7 @@ async function remoteEtag(url: string): Promise<string | null> {
  * Upload `localPath` to `key` unless R2 already holds byte-identical content.
  *
  * Skipping unchanged files keeps a metadata-sized change (a few KB of
- * famous_meta.json) from dragging the whole ~370 MB artefact set across the
+ * famous_galaxies_meta.json) from dragging the whole ~370 MB artefact set across the
  * wire each sync — and, because the largest tiers are skipped when unchanged,
  * stops a flaky multi-hundred-MB upload from aborting the run before the CDN
  * purge.  A skipped file is left out of `touchedKeys`: its edge cache already

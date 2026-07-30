@@ -18,7 +18,7 @@
  * registering a saga's runner (an engine resource the saga calls into) is a
  * DISTINCT capability, kept un-braided from the store by returning it as its own
  * value rather than bolting it onto the store object. The engine calls
- * `setSagaContext({ runTierTransition })` post-construction to inject the
+ * `setSagaContext` post-construction with a bag carrying, among the rest, the
  * tier-transition runner; `getContext('runTierTransition')` inside the running
  * saga reads it back. That `setContext`/`getContext` pair is how an engine
  * resource crosses from engine-land into store-land without the saga importing
@@ -31,6 +31,18 @@
  * saga middleware merges them into the running root saga's context where feature
  * sagas can retrieve them with `getContext`. This keeps the store/saga layer free
  * of engine imports while still letting sagas trigger engine effects.
+ *
+ * Registering the context also DISPATCHES `sagaContextRegistered`. `setContext`
+ * alone is invisible from inside a saga — `getContext` yields `undefined` rather
+ * than blocking — which is fine for every watcher woken by an action, and not
+ * fine for the one saga that dispatches unprompted at construction (the hash
+ * arrival read). The action is what `watchHashSaga` waits on before it forks
+ * either half of the bridge.
+ *
+ * That is why the setter takes a WHOLE `SagaContext` rather than a `Partial`: the
+ * dispatch announces "the capabilities the sagas reach for are registered", and
+ * only a total argument makes the announcement true by construction. See
+ * `SetSagaContext` in `./types` for what a partial registration costs.
  *
  * Notably absent: NO `serializableCheck: false` and NO `enableMapSet`. The whole
  * point of this migration is that the settings state is now fully serializable —
@@ -45,6 +57,7 @@ import createSagaMiddleware from 'redux-saga';
 
 import { rootReducer } from './rootReducer';
 import { mainSaga } from './rootSaga';
+import { sagaContextRegistered } from './sagaContextRegistered';
 import type { RootState, SagaContext } from './types';
 
 // The store's preloaded shape is a partial route map: a caller may seed any
@@ -65,6 +78,16 @@ export function createAppStore(preloadedState?: PreloadedState) {
   sagaMiddleware.run(mainSaga);
   return {
     store,
-    setSagaContext: (ctx: Partial<SagaContext>) => sagaMiddleware.setContext(ctx),
+    // The dispatch after the merge is what makes registration OBSERVABLE. A saga
+    // that must dispatch on its own initiative — `watchHashReadSaga`'s arrival
+    // read is the only one — cannot use `getContext` to find out whether the bag
+    // it is about to feed exists yet, because `getContext` returns `undefined`
+    // instead of blocking. The action gives it something to `take`. Ordering
+    // matters: merge first, announce second, so a saga woken by the announcement
+    // already sees the context.
+    setSagaContext: (ctx: SagaContext) => {
+      sagaMiddleware.setContext(ctx);
+      store.dispatch(sagaContextRegistered());
+    },
   };
 }

@@ -58,7 +58,7 @@ describe('mergeSettingsSnapshot', () => {
     expect(next.flow.flowSpeed).toBe(1);
   });
 
-  it('merges all eight clusters when given a full snapshot', () => {
+  it('merges all ten clusters when given a full snapshot', () => {
     const state = makeSettingsFixture();
     const full: SettingsSnapshot = {
       galaxyCatalogs: { ...state.galaxyCatalogs, enabled: !state.galaxyCatalogs.enabled },
@@ -68,6 +68,8 @@ describe('mergeSettingsSnapshot', () => {
       milkyWay: { ...state.milkyWay, enabled: !state.milkyWay.enabled },
       flow: { ...state.flow, flowSpeed: 7 },
       orbitTrails: { ...state.orbitTrails, enabled: !state.orbitTrails.enabled },
+      starCatalogs: { ...state.starCatalogs, enabled: !state.starCatalogs.enabled },
+      bodies: { ...state.bodies },
       labels: { ...state.labels, focusedOnly: !state.labels.focusedOnly },
     };
 
@@ -80,5 +82,7 @@ describe('mergeSettingsSnapshot', () => {
     expect(next.milkyWay.enabled).toBe(full.milkyWay.enabled);
     expect(next.flow.flowSpeed).toBe(7);
     expect(next.orbitTrails.enabled).toBe(full.orbitTrails.enabled);
+    expect(next.starCatalogs.enabled).toBe(full.starCatalogs.enabled);
+    expect(next.bodies).toEqual(full.bodies);
   });
 });

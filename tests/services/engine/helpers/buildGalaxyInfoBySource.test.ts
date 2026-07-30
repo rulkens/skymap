@@ -8,7 +8,7 @@
  * the per-source dispatch (SDSS / 2MRS / GLADE / Famous / Synthetic /
  * Milliquas / DESI Deep) end-to-end
  * so any cross-cut regression in thumbnails, explorer URLs, IAU names,
- * orientation provenance, or the famous-meta block is caught here.
+ * orientation provenance, or the famous-galaxies-meta block is caught here.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -19,7 +19,7 @@ import { DESI_TRACER_CLASS } from '../../../../src/data/galaxyCatalog/sourceClas
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import { fallbackOrientation } from '../../../../src/utils/random/fallbackOrientation';
 import { cartesianToRaDecZ } from '../../../../src/utils/math/cartesianToRaDecZ';
-import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaEntry';
+import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/FamousGalaxyMetaEntry';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 
 // ─── Test helpers ───────────────────────────────────────────────────────────
@@ -44,9 +44,9 @@ function buildInfo(
   cloud: GalaxyCatalog,
   idx: number,
   source: Parameters<typeof extractGalaxyRow>[2],
-  famousMeta?: readonly FamousMetaEntry[],
+  famousGalaxiesMeta?: readonly FamousGalaxyMetaEntry[],
 ) {
-  return buildGalaxyInfo(extractGalaxyRow(cloud, idx, source, famousMeta)!);
+  return buildGalaxyInfo(extractGalaxyRow(cloud, idx, source, famousGalaxiesMeta)!);
 }
 
 // ─── buildGalaxyInfo — common helpers ────────────────────────────────────────
@@ -331,7 +331,7 @@ describe('buildGalaxyInfo — Famous source', () => {
     // a `famous` block with id/names/description pulled from the sidecar.
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 1, 0, 0); // M31-like nearby position
-    const meta: FamousMetaEntry[] = [
+    const meta: FamousGalaxyMetaEntry[] = [
       {
         id: 'm31',
         names: ['M31', 'Andromeda Galaxy'],

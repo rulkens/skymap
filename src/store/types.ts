@@ -31,9 +31,19 @@
  * completes or is cancelled by the engine. `SagaContext` is the bag the
  * running root saga reads them back out of via `getContext`; `SetSagaContext` is
  * the setter the factory hands back so the engine can inject them
- * post-construction (a `Partial`, so each registration site supplies only what it
- * knows). They live here, beside the store types, because the sagas and the
- * factory both depend on them and neither owns the other.
+ * post-construction. They live here, beside the store types, because the sagas
+ * and the factory both depend on them and neither owns the other.
+ *
+ * `SetSagaContext` takes the WHOLE bag, not a `Partial`. Registration is also the
+ * signal `watchHashSaga` waits on before it lets either half of the URL bridge
+ * touch the address bar (see `sagaContextRegistered`), and a partial setter makes
+ * that signal a lie it cannot detect: a caller registering only `reconcile` still
+ * announces "the capabilities are here", and the first `#focus=` arrival then
+ * calls an undefined `resolveDeps`, throws, and takes the whole root saga down
+ * with it. Production has one registration site and it already passes all of them
+ * in one call (`engine.ts`), so requiring the whole bag costs nothing there and
+ * turns a convention into a compiler check. Callers with nothing behind a
+ * capability pass an inert one (`NOOP_SAGA_CONTEXT` in `tests/support`).
  *
  * The imports are type-only, so there is no runtime cycle even though
  * `createAppStore` imports `rootReducer` and this file imports both — `import type`
@@ -113,8 +123,9 @@ export type SagaContext = {
   /**
    * The debug clip-path inspector seam — `watchClipPathInspectSaga` calls
    * `compute` on `inspectClipPath` and `clear` on `clearClipPath`. Engine-
-   * registered at construction; null-safe to omit in non-debug saga setups.
+   * registered at construction; a setup with no inspector registers an inert one
+   * rather than omitting it.
    */
   clipPathInspect: ClipPathInspectSeam;
 };
-export type SetSagaContext = (ctx: Partial<SagaContext>) => void;
+export type SetSagaContext = (ctx: SagaContext) => void;

@@ -8,9 +8,10 @@
  * build it here. The body mirrors the engine's startup construction
  * (`buildInitialSettings`) so the fixture stays a true shape: defaults
  * from `data/defaults.ts`, item rows DERIVED from `GALAXY_CATALOG_IDS` /
- * `STRUCTURE_IDS`, volume items from `seedVolumeFields()`. Deriving the
- * item keys (rather than hand-listing them) means adding a galaxy catalog or category
- * can't silently leave the fixture stale.
+ * `STAR_CATALOG_IDS` / `BODY_IDS` / `STRUCTURE_IDS`, volume items from
+ * `seedVolumeFields()`.
+ * Deriving the item keys (rather than hand-listing them) means adding a
+ * catalog or category can't silently leave the fixture stale.
  *
  * One deliberate divergence from the boot seed: every galaxy catalog row is
  * `enabled: true` here, whereas the real seed derives `enabled` from each
@@ -27,6 +28,7 @@
 import { Source, SOURCE_REGISTRY } from '../../../src/data/sources';
 import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { STAR_CATALOG_IDS } from '../../../src/data/starCatalog/starCatalogIds';
+import { BODY_IDS } from '../../../src/data/bodies/bodyIds';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 import { seedVolumeFields } from '../../../src/data/volume/volumeFieldDefaults';
 import {
@@ -49,7 +51,6 @@ import {
   DEFAULT_BRIGHTNESS,
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_EXPOSURE,
-  DEFAULT_FAMOUS_STARS_ENABLED,
   DEFAULT_FLOW,
   DEFAULT_GALAXY_FALLOFF_STRENGTH,
   DEFAULT_GALAXY_PROVENANCE,
@@ -83,6 +84,8 @@ import type { StructureId } from '../../../src/@types/data/structure/StructureId
 import type { GalaxyCatalogItemSettings } from '../../../src/@types/settings/GalaxyCatalogItemSettings';
 import type { StarCatalogId } from '../../../src/@types/data/starCatalog/StarCatalogId';
 import type { StarCatalogItemSettings } from '../../../src/@types/settings/StarCatalogItemSettings';
+import type { BodyId } from '../../../src/@types/data/body/BodyId';
+import type { BodyItemSettings } from '../../../src/@types/settings/BodyItemSettings';
 import type { StructureItemSettings } from '../../../src/@types/settings/StructureItemSettings';
 
 export function makeSettingsFixture(
@@ -145,10 +148,14 @@ export function makeSettingsFixture(
         STAR_CATALOG_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
       ) as Record<StarCatalogId, StarCatalogItemSettings>,
     },
-    famousStars: { enabled: DEFAULT_FAMOUS_STARS_ENABLED },
+    bodies: {
+      items: Object.fromEntries(
+        BODY_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
+      ) as Record<BodyId, BodyItemSettings>,
+    },
     volumes: { enabled: DEFAULT_VOLUMES_ENABLED, items: seedVolumeFields() },
     flow: { ...DEFAULT_FLOW },
-    labels: { focusedOnly: false, starLabelsEnabled: true, planetLabelsEnabled: true },
+    labels: { focusedOnly: false },
     debug: {
       showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
       showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,
