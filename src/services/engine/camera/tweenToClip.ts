@@ -5,8 +5,10 @@
  *
  * There is ONE camera-evaluation path: `evaluateClip`.
  * A focus tween is the degenerate clip — one `set` segment per scalar channel
- * and one `setVec` for `target`, all with `ease:'easeOutCubic'`. The
- * `cameraDrivers` tween row calls `evaluateClip` via this helper.
+ * and one `setVec` for `target`, all with `ease:'easeOutCubic'` and
+ * `space:'lin'` for `distance` (focus tweens interpolate distance linearly, not
+ * in log space). The `cameraDrivers` tween row calls `evaluateClip` via this
+ * helper.
  *
  * ### Memoisation by descriptor identity
  *
@@ -20,6 +22,13 @@
  *      on every frame.
  *   2. No allocation on steady-state frames (the GC cost is bounded to one
  *      `ClipData` + one `CompiledClip` per tween start).
+ *
+ * ### Distance space
+ *
+ * `dollyTo` / `tween('distance', ...)` defaults to `space:'log'` (the natural
+ * space for camera zooms). Focus tweens use `lerp` — plain linear distance
+ * interpolation. This helper
+ * explicitly passes `space:'lin'` to override the default.
  */
 
 import type { CameraTweenDescriptor } from '../../../@types/camera/CameraTweenDescriptor';
@@ -47,11 +56,18 @@ export function tweenToClip(d: CameraTweenDescriptor): ClipData {
 
   // Build a one-segment clip: all four channels tweened with easeOutCubic
   // from `d.from` (the ClipData start pose) to the matching `d.to` field.
+  // Distance uses space:'lin' so the interpolation is byte-for-byte
+  // identical to the old lerp(from, to, easeOutCubic(t)) path.
   const data: ClipData = {
     start: d.from,
     timeline: [
       all([
-        tween('distance', { to: d.to.distance, over: durationSec, ease: 'easeOutCubic' }),
+        tween('distance', {
+          to: d.to.distance,
+          over: durationSec,
+          ease: 'easeOutCubic',
+          space: 'lin',
+        }),
         tween('yaw', { to: d.to.yaw, over: durationSec, ease: 'easeOutCubic' }),
         tween('pitch', { to: d.to.pitch, over: durationSec, ease: 'easeOutCubic' }),
         moveTarget(d.to.target, durationSec, 'easeOutCubic'),

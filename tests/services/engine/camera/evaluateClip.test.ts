@@ -6,11 +6,9 @@
  * and the `ClipData` shape. All assertions are deterministic; no wall-clock.
  *
  * The final section ('focus tween = one-segment clip') verifies that a
- * one-segment clip with `ease:'easeOutCubic'` reproduces the focus-tween
- * motion exactly — `evaluateClip` via `tweenToClip` is the single
- * camera-evaluation path for both scripted clips and focus tweens. It also
- * pins evaluateClip's `space:'lin'` capability directly (not exercised by
- * focus tweens, which ride distance's default log space).
+ * one-segment clip with `ease:'easeOutCubic'` and `space:'lin'` on distance is
+ * reproduces the focus-tween motion exactly — `evaluateClip` via `tweenToClip`
+ * is the single camera-evaluation path for both scripted clips and focus tweens.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -333,13 +331,16 @@ describe('evaluateClip composes base+vel+osc on one channel', () => {
 // ---------------------------------------------------------------------------
 // Test 9 — focus tween = one-segment clip
 //
-// A focus tween is the degenerate clip: one `set`/`setVec` segment per
-// channel, all with `ease:'easeOutCubic'`. These four cases pin that
-// `evaluateClip` via `tweenToClip` reproduces the focus-tween motion exactly
-// — the single camera-evaluation path for scripted clips and tweens.
+// A focus tween is the degenerate clip: one `set`/`setVec` segment per channel
+// with `ease:'easeOutCubic'` and `space:'lin'` for `distance` (focus
+// tweens use linear distance interpolation, not log-space). These four cases
+// These four cases pin that `evaluateClip` via `tweenToClip` reproduces the
+// focus-tween motion exactly — the single camera-evaluation path for scripted
+// clips and tweens.
 //
 // Helper: build the ClipData that corresponds to a CameraTweenDescriptor with
-// the given from/to/durationMs, mirroring tweenToClip.
+// the given from/to/durationMs. Distance explicitly uses space:'lin' for the
+// focus tween's linear lerp(from, to, t) path — the clip default is 'log'.
 // ---------------------------------------------------------------------------
 
 function makeTweenClip(opts: { from: CameraPose; to: CameraPose; durationMs: number }): ClipData {
@@ -348,7 +349,12 @@ function makeTweenClip(opts: { from: CameraPose; to: CameraPose; durationMs: num
     start: opts.from,
     timeline: [
       all([
-        tween('distance', { to: opts.to.distance, over: durationSec, ease: 'easeOutCubic' }),
+        tween('distance', {
+          to: opts.to.distance,
+          over: durationSec,
+          ease: 'easeOutCubic',
+          space: 'lin',
+        }),
         tween('yaw', { to: opts.to.yaw, over: durationSec, ease: 'easeOutCubic' }),
         tween('pitch', { to: opts.to.pitch, over: durationSec, ease: 'easeOutCubic' }),
         moveTarget(opts.to.target, durationSec, 'easeOutCubic'),
@@ -413,10 +419,9 @@ describe('focus tween = one-segment clip', () => {
     expect(pose.target).not.toBe(TWEEN_TO.target);
   });
 
-  it('evaluateClip interpolates distance linearly when space:lin is requested', () => {
-    // Not exercised by focus tweens (which ride the default log space) — this
-    // pins the space:'lin' capability directly. The two paths diverge when
-    // from !== to.
+  it('evaluateClip keeps focus-tween distance LINEAR via space:lin', () => {
+    // A one-segment clip with `space:'lin'` on distance must interpolate
+    // linearly, not in log space. The two paths diverge when from !== to.
     //
     // At the mid-progress t = 0.5 (ease:'linear' for a clean ratio):
     //   linear midpoint: lerp(from, to, 0.5) = (from + to) / 2

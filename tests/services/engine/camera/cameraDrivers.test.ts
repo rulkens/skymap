@@ -177,8 +177,7 @@ describe('buildCameraDrivers — pose functions', () => {
     //   elapsedMs  = 500  ms → elapsedSec = 0.5 s
     //   t = elapsedSec / durationSec = 0.5
     //   eased = easeOutCubic(0.5) = 1 - (1-0.5)^3 = 1 - 0.125 = 0.875
-    //   distance rides CHANNEL_SPACE['distance'] = 'log':
-    //   distance = exp(lerp(log(10), log(1000), 0.875))
+    //   distance = lerp(10, 1000, 0.875) = 10*(1-0.875) + 1000*0.875 = 876.25
     //
     // A forgotten /1000 would pass 500 s to a 1 s clip → saturated to `to`
     // (distance == 1000); the midpoint + bounds below reject that.
@@ -196,8 +195,8 @@ describe('buildCameraDrivers — pose functions', () => {
     const elapsedMs = 500;
     const result = byId('tween').pose(s, CAM_STUB, elapsedMs);
 
-    // Independent oracle: easeOutCubic(0.5) = 0.875; log-space lerp per distance's channel space.
-    const expectedDistance = Math.exp(lerp(Math.log(10), Math.log(1000), easeOutCubic(0.5)));
+    // Independent oracle: easeOutCubic(0.5) = 0.875; lerp(10, 1000, 0.875) = 876.25
+    const expectedDistance = lerp(10, 1000, easeOutCubic(0.5));
     expect(result.distance).toBeCloseTo(expectedDistance, 5);
 
     // Slip-catching bounds: a forgotten /1000 saturates to 1000; these reject that.
