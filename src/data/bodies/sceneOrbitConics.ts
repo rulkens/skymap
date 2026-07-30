@@ -12,15 +12,15 @@
  * (`keplerianEllipse`, here) derive from that one table. So the body sitting on
  * its own trail is structural, not a sync invariant to remember.
  *
- * ### Parent resolution: focus-relative shape → absolute-world centre
+ * ### Focus resolution: focus-relative shape → absolute-world centre
  *
  * `keplerianEllipse` returns a focus-RELATIVE `centerOffsetMpc` (C − focus) so
  * the same map serves a heliocentric planet and the geocentric Moon without
  * forking. This table folds the focus back in: the absolute centre is
- * `parentWorld + centerOffsetMpc`, where `parentWorld` is resolved from
- * `parentId` — `null` is heliocentric (the render origin, i.e. the Sun) and a
- * body id (the Moon's `'earth'`) resolves to that parent's world position, so
- * the Moon's ellipse rides on Earth by construction.
+ * `focusWorld + centerOffsetMpc`, where `focusWorld` is resolved from
+ * `focusId` — `'sun'` is heliocentric (the render origin) and any other body
+ * id (the Moon's `'earth'`) resolves to that body's world position, so the
+ * Moon's ellipse rides on Earth by construction.
  *
  * ### This is the STATIC J2000 seed — live trails re-derive per frame
  *
@@ -33,10 +33,10 @@
  * snapshot-reading lives in the services layer BY DESIGN: this data-layer file
  * takes no upward, layer-crossing import of a body snapshot.
  *
- * At J2000 there is nothing to propagate, so the parent centre re-derives from
- * the parent's OWN `ORBITAL_ELEMENTS` via `keplerianPositionMpc` — the single
- * formula `heliocentricPlanet` uses to bake the parent, so the two agree
- * bit-for-bit. `parentId` is resolved through `elementsById`, which throws
+ * At J2000 there is nothing to propagate, so the focus centre re-derives from
+ * the focus body's OWN `ORBITAL_ELEMENTS` via `keplerianPositionMpc` — the
+ * single formula `heliocentricPlanet` uses to bake it, so the two agree
+ * bit-for-bit. `focusId` is resolved through `elementsById`, which throws
  * loudly on an unknown id: a typo must fail at derive time, not silently place
  * the orbit at the origin.
  */
@@ -50,16 +50,17 @@ import type { OrbitConic } from '../../@types/scene/OrbitConic';
 import type { Vec3 } from '../../@types/math/Vec3';
 
 /**
- * Resolve an orbit's focus to an absolute-world position: `null` is the render
- * origin (heliocentric); any other id re-derives that parent's world position
- * from its OWN elements (`RENDER_ORIGIN_MPC + keplerianPositionMpc`) — every
- * moon parent is itself heliocentric, so one hop suffices. This builder emits
- * the fixed J2000-epoch geometry, so the parent is taken at its tabulated mean
- * position; `elementsById` throws loudly on an unknown id.
+ * Resolve an orbit's focus to an absolute-world position: `'sun'` is the
+ * render origin (heliocentric); any other id re-derives that body's world
+ * position from its OWN elements (`RENDER_ORIGIN_MPC + keplerianPositionMpc`)
+ * — every moon's focus is itself heliocentric, so one hop suffices. This
+ * builder emits the fixed J2000-epoch geometry, so the focus is taken at its
+ * tabulated mean position; `elementsById` throws loudly on an unknown id (the
+ * `'sun'` case never reaches it — there is no element row for the Sun).
  */
-function parentWorldMpc(parentId: string | null): Readonly<Vec3> {
-  if (parentId === null) return RENDER_ORIGIN_MPC;
-  return addVec3(RENDER_ORIGIN_MPC, keplerianPositionMpc(elementsById(parentId)));
+function focusWorldMpc(focusId: string): Readonly<Vec3> {
+  if (focusId === 'sun') return RENDER_ORIGIN_MPC;
+  return addVec3(RENDER_ORIGIN_MPC, keplerianPositionMpc(elementsById(focusId)));
 }
 
 /**
@@ -74,10 +75,10 @@ function parentWorldMpc(parentId: string | null): Readonly<Vec3> {
 export function deriveOrbitConics(): readonly OrbitConic[] {
   return ORBITAL_ELEMENTS.map((elements) => {
     const { centerOffsetMpc, semiMajorMpc, semiMinorMpc } = keplerianEllipse(elements);
-    const parent = parentWorldMpc(elements.parentId);
+    const focus = focusWorldMpc(elements.focusId);
     return {
       id: elements.id,
-      centerMpc: addVec3(parent, centerOffsetMpc),
+      centerMpc: addVec3(focus, centerOffsetMpc),
       semiMajorMpc,
       semiMinorMpc,
       eccentricity: elements.eccentricity,

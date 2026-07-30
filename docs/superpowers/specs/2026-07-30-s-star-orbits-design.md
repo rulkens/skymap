@@ -96,9 +96,9 @@ bit-for-bit, the same zero-change proof the original derive carried.
 
 ### P2 — Capacity, derived rather than hardcoded
 
-**Bolt-on.** `MAX_ORBITS = 24` (`orbitTrailRenderer.ts:52`) against 23 element rows
+**Bolt-on.** `MAX_ORBITS = 24` (`orbitTrailRenderer.ts:52`) against 22 element rows
 today, with a silent `Math.min(ORBITAL_ELEMENTS.length, MAX_ORBITS)` truncation at
-`orbitTrailsLayer.ts:181`. 23 + 39 = 62. The sibling `MAX_PLANETS = 24`
+`orbitTrailsLayer.ts:181`. 22 + 39 = 61. The sibling `MAX_PLANETS = 24`
 (`planetRenderer.ts:61`) has the identical defect and an open backlog item.
 
 The decisive precedent: **`starPointRenderer.ts:209` already grows its buffer
@@ -368,7 +368,7 @@ vocabulary; no third spelling of either.
 | `src/components/CommandPalette/utils/rankPaletteMatches.ts`   | scores over the widened per-body name lookup                                |
 
 `sStarElements.ts` is its own file rather than 39 more rows in `orbitalElements.ts`,
-which is already ~700 lines for 23 rows (Q4).
+which is already ~700 lines for 22 rows (Q4).
 
 ### The maker
 

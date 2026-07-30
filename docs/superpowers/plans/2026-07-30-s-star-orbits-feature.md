@@ -50,7 +50,7 @@ export type SStarSeed = {
 export const S_STAR_SEEDS: readonly SStarSeed[]; // 39 rows
 ```
 
-Rows go in their own file, **not** appended to `orbitalElements.ts`, which is already ~700 lines for 23 rows.
+Rows go in their own file, **not** appended to `orbitalElements.ts`, which is already ~700 lines for 22 rows.
 
 **Transcription is verified once, mechanically.** Write a throwaway script that queries VizieR TAP and diffs every field against the committed table:
 
@@ -497,7 +497,7 @@ Task 12's visual pass asks for these rows and nothing before this task budgets t
 
 **An optional field on `BodyInfo`, not a sidecar.** The type's own header (`BodyInfo.d.ts:7-17`) restricts it to what the engine knows **synchronously** from the resolved body, routing anything needing a fetch to the sidecar. `S_STAR_SEEDS` is static TS, compiled in — so orbital rows _satisfy_ that rule rather than bending it. No JSON, no build artefact, no loading state. Update the header to say so; leaving it claiming "position + radius only" would make the next reader treat this as a violation.
 
-`pericentreSchwarzschildRadii` carries the pericentre in R_s alongside AU, as the spec's Contracts block specifies. It divides `pericentreAu` by `SGR_A_STAR_SCHWARZSCHILD_RADIUS_KM` (Task 7) through `SCALE_UNITS`; a division at the call site, not its own helper. The card rows are spelled `pericentre*` throughout; `periapsis*` stays reserved for the orbital _elements_ (`OrbitalElements.argPeriapsisRad`, `SStarSeed.argPeriapsisDeg`/`.periapsisEpochYr`), which is the existing vocabulary.
+`pericentreSchwarzschildRadii` carries the pericentre in R*s alongside AU, as the spec's Contracts block specifies. It divides `pericentreAu` by `SGR_A_STAR_SCHWARZSCHILD_RADIUS_KM` (Task 7) through `SCALE_UNITS`; a division at the call site, not its own helper. The card rows are spelled `pericentre*` throughout; `periapsis*` stays reserved for the orbital \_elements* (`OrbitalElements.argPeriapsisRad`, `SStarSeed.argPeriapsisDeg`/`.periapsisEpochYr`), which is the existing vocabulary.
 
 **The store row is untouched.** `SelectionRow`'s body arm stays `id`/`label`/`positionMpc`/`radiusKm` and `extractSelectionRow` is not edited. `buildFocusable`'s body arm (`buildFocusable.ts:35`) fills `orbit` by static lookup on `row.id` — that function is already pure over static imports and says so in its header, so a compiled-in seed lookup is exactly its shape. This keeps five derived numbers out of RTK state, where they would be re-serialized on every selection for no gain.
 

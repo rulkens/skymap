@@ -43,10 +43,10 @@ The table holds one row this task: the Sun, at an **authored** heliocentric `[0,
 
 Nothing consumes this table yet.
 
-- [ ] Add the test `the Sun anchor is heliocentric zero` — assert `SCENE_ANCHORS` contains `sun` at `[0,0,0]`. Don't assert the module's import list (a source-text-grep-shaped check on an implementation detail, not a behaviour) — the module header carries the "authored, not referenced" rationale instead.
-- [ ] Implement the type and the table.
-- [ ] `npm test -- sceneAnchors` → passes.
-- [ ] Commit.
+- [x] Add the test `the Sun anchor is heliocentric zero` — assert `SCENE_ANCHORS` contains `sun` at `[0,0,0]`. Don't assert the module's import list (a source-text-grep-shaped check on an implementation detail, not a behaviour) — the module header carries the "authored, not referenced" rationale instead.
+- [x] Implement the type and the table.
+- [x] `npm test -- sceneAnchors` → passes.
+- [x] Commit. — `40159a10`
 
 ---
 
@@ -55,7 +55,7 @@ Nothing consumes this table yet.
 **Files:**
 
 - Modify: `src/@types/scene/OrbitalElements.d.ts`
-- Modify: `src/data/bodies/orbitalElements.ts` (all 23 rows)
+- Modify: `src/data/bodies/orbitalElements.ts` (all 22 rows)
 - Modify: `src/services/engine/frame/deriveBodyStates.ts:81,96,97,100`
 - Modify: `src/services/engine/frame/passes/orbitTrailsLayer.ts:120,227`
 - Modify: `src/data/bodies/sceneOrbitConics.ts`
@@ -71,14 +71,14 @@ Note: `makers/heliocentricPlanet.ts` and `makers/satelliteBody.ts` do not refere
 //   + readonly focusId: string
 ```
 
-Mechanical rename plus a semantic one: the eight `parentId: null` rows become `focusId: 'sun'`. Every `x === null ? RENDER_ORIGIN_MPC : …` branch becomes an unconditional lookup that will resolve through the anchor map in Task 4 — for this task it may still special-case `'sun'`, because `deriveBodyStates` does not yet seed anchors. Write that as ordinary prose in the comment ("the `'sun'` case resolves through the anchor map once anchors are seeded"); do not leave a `TODO` marker, which the codebase treats as a defect.
+Mechanical rename plus a semantic one: the nine `parentId: null` rows become `focusId: 'sun'` (nine heliocentric — the eight planets plus the EMB — against thirteen satellites, 22 rows in all). Every `x === null ? RENDER_ORIGIN_MPC : …` branch becomes an unconditional lookup that will resolve through the anchor map in Task 4 — for this task it may still special-case `'sun'`, because `deriveBodyStates` does not yet seed anchors. Write that as ordinary prose in the comment ("the `'sun'` case resolves through the anchor map once anchors are seeded"); do not leave a `TODO` marker, which the codebase treats as a defect.
 
 Update every docblock that asserts "`null` is heliocentric" — `OrbitalElements.d.ts:23-26`, `deriveBodyStates.ts:49`, `sceneOrbitConics.ts:19-23`.
 
-- [ ] Add the test `every orbital element row names a focus` asserting no row has an empty/absent `focusId`.
-- [ ] Perform the rename and the null elimination.
-- [ ] `npm run typecheck` → clean. `npm test` → green, with no snapshot or value changes.
-- [ ] Commit.
+- [x] Add the test `every orbital element row names a focus` asserting no row has an empty/absent `focusId`.
+- [x] Perform the rename and the null elimination.
+- [x] `npm run typecheck` → clean. `npm test` → green, with no snapshot or value changes.
+- [x] Commit. — `b878a3e0`
 
 ---
 
@@ -226,7 +226,7 @@ Signature deltas that follow from this:
 - Modify: `src/services/engine/frame/passes/orbitTrailsLayer.ts:181`
 - Test: `tests/services/gpu/renderers/bodies/orbitTrailRenderer.test.ts`
 
-`MAX_ORBITS = 24` against 23 rows today, and `orbitTrailsLayer.ts:181` silently truncates with `Math.min(ORBITAL_ELEMENTS.length, MAX_ORBITS)`. The feature brings the table to 62.
+`MAX_ORBITS = 24` against 22 rows today, and `orbitTrailsLayer.ts:181` silently truncates with `Math.min(ORBITAL_ELEMENTS.length, MAX_ORBITS)`. The feature brings the table to 61.
 
 **Follow the sibling that is already correct:** `starPointRenderer.ts:172-214` grows its instance buffer when `stars.length > capacityStars`. Match that pattern. Silent truncation becomes a loud failure.
 

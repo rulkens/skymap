@@ -42,15 +42,18 @@
  * clock advances monotonically, so the last instant is the only one a frame ever
  * re-reads.
  *
- * ### Planets first, then moons — one parent hop
+ * ### Planets first, then moons — one focus hop
  *
  * A heliocentric body's focus is the render origin (the Sun); a moon's focus is
  * its parent planet's already-derived world position. So the derive runs in two
- * passes: all `parentId: null` bodies first (their state depends on nothing
- * else), then all moons, each resolving its parent from the map built in pass
- * one and adding its own offset. Every moon parent is itself heliocentric —
- * there is no moon-of-a-moon — so one hop suffices, matching
- * `satelliteBody`'s parent-offset resolution.
+ * passes: all `focusId: 'sun'` bodies first (their state depends on nothing
+ * else), then everything else, each resolving its focus from the map built in
+ * pass one and adding its own offset. Every moon's focus is itself heliocentric
+ * — there is no moon-of-a-moon — so one hop suffices, matching
+ * `satelliteBody`'s parent-offset resolution. The `'sun'` id is still
+ * special-cased below rather than resolved through a map, because this derive
+ * does not yet seed the Sun as an anchor — that lands once `SCENE_ANCHORS`
+ * joins the seam.
  */
 
 import type { BodyState } from '../../../@types/scene/BodyState';
@@ -74,11 +77,12 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
 
   const states = new Map<string, BodyState>();
 
-  // Pass one — heliocentric bodies (planets + the EMB). Focus is the render
-  // origin, so the position is origin + the propagated element offset — the same
-  // composition `heliocentricPlanet` performs, evaluated at `simDays`.
+  // Pass one — heliocentric bodies (planets + the EMB), `focusId === 'sun'`.
+  // Focus is the render origin, so the position is origin + the propagated
+  // element offset — the same composition `heliocentricPlanet` performs,
+  // evaluated at `simDays`.
   for (const el of ORBITAL_ELEMENTS) {
-    if (el.parentId !== null) continue;
+    if (el.focusId !== 'sun') continue;
     const propagated = propagateElements(el, simDays);
     states.set(el.id, {
       positionMpc: addVec3(RENDER_ORIGIN_MPC, keplerianPositionMpc(propagated)),
@@ -93,12 +97,10 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
   // performs. Reading the parent from the snapshot, not re-deriving it, is what
   // welds a moon to the exact parent instant every reader of this map sees.
   for (const el of ORBITAL_ELEMENTS) {
-    if (el.parentId === null) continue;
-    const parent = states.get(el.parentId);
+    if (el.focusId === 'sun') continue;
+    const parent = states.get(el.focusId);
     if (parent === undefined) {
-      throw new Error(
-        `deriveBodyStates: moon '${el.id}' names unknown parent '${el.parentId}'`,
-      );
+      throw new Error(`deriveBodyStates: moon '${el.id}' names unknown focus '${el.focusId}'`);
     }
     const propagated = propagateElements(el, simDays);
     states.set(el.id, {

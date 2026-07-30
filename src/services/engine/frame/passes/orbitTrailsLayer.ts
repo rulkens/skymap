@@ -116,8 +116,10 @@ function apoapsisMpc(elements: OrbitalElements): number {
 }
 function maxHeliocentricReachMpc(elements: OrbitalElements): number {
   const own = apoapsisMpc(elements);
-  // Every moon parent is itself heliocentric, so one hop resolves the focus.
-  return elements.parentId === null ? own : apoapsisMpc(elementsById(elements.parentId)) + own;
+  // Every moon's focus is itself heliocentric, so one hop resolves it. The
+  // `'sun'` case is still special-cased rather than looked up — `elementsById`
+  // has no row for the Sun until it joins the table as an anchor.
+  return elements.focusId === 'sun' ? own : apoapsisMpc(elementsById(elements.focusId)) + own;
 }
 const MAX_ORBIT_EXTENT_MPC = Math.max(...ORBITAL_ELEMENTS.map(maxHeliocentricReachMpc));
 
@@ -224,7 +226,7 @@ export const orbitTrailsLayer: ContentLayer = {
       // render origin (the Sun); a moon's focus is its parent's LIVE snapshot
       // position, so its trail rides the moving parent.
       const focus =
-        elements.parentId === null ? RENDER_ORIGIN_MPC : states.get(elements.parentId)!.positionMpc;
+        elements.focusId === 'sun' ? RENDER_ORIGIN_MPC : states.get(elements.focusId)!.positionMpc;
       const centerMpc = centerOffsetMpc;
       centerMpc[0] += focus[0];
       centerMpc[1] += focus[1];
