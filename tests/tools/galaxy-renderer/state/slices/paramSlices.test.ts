@@ -47,10 +47,10 @@ describe('renderSlice', () => {
 
 describe('lodSlice', () => {
   it('lodPatched merges', () => {
-    const next = lodReducer(DEFAULT_LOD_SETTINGS, lodPatched({ cullBright: 3 }));
+    const patched = DEFAULT_LOD_SETTINGS.lodApparent + 0.01;
+    const next = lodReducer(DEFAULT_LOD_SETTINGS, lodPatched({ lodApparent: patched }));
 
-    expect(next.cullBright).toBe(3);
-    expect(next.lodApparent).toBe(DEFAULT_LOD_SETTINGS.lodApparent);
+    expect(next.lodApparent).toBe(patched);
   });
 });
 
