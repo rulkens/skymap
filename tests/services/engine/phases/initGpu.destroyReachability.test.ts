@@ -101,8 +101,12 @@ vi.mock('../../../../src/services/gpu/device', () => ({
     } as unknown as GPUDevice,
     context: { __mockContext: true } as unknown as GPUCanvasContext,
     format: 'bgra8unorm' as GPUTextureFormat,
+    hdrCapable: false,
   })),
   resizeCanvasToDisplay: vi.fn(),
+  // Returns a no-op cleanup — this test asserts renderer reachability, not
+  // the HDR-capability listener wiring (see device.hdrCapability.test.ts).
+  watchHdrCapability: vi.fn(() => () => {}),
 }));
 
 // The canonical BGLs are constructed in initGpu by calling
@@ -337,6 +341,12 @@ vi.mock('../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry', ()
 
 // Imported AFTER the mocks so initGpu picks up the mocked dependencies.
 import { initGpu } from '../../../../src/services/engine/phases/initGpu';
+// The mocked `watchHdrCapability` itself: the HDR-dispatch-wiring tests below
+// read `.mock.calls` to recover the callback `initGpu` actually registered,
+// so they can invoke it directly rather than trusting the mock's own no-op
+// return value.
+import { watchHdrCapability } from '../../../../src/services/gpu/device';
+import { engineHdrCapabilityChanged } from '../../../../src/state/engine/engineSlice';
 // The mocked label-renderer factory itself: the main `labelRenderer` and the
 // foreground caption renderer are both built through it, so tests index its
 // `mock.results` ordinally (call 0 = main, call 1 = foreground) to prove two
@@ -551,5 +561,38 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     // first real draw instead.
     expect(state.gpu.foregroundLabelRenderer!.setLabels).not.toHaveBeenCalled();
     expect(state.gpu.labelRenderer!.setLabels).not.toHaveBeenCalled();
+  });
+});
+
+describe('initGpu — HDR capability dispatch wiring', () => {
+  beforeEach(() => {
+    // `watchHdrCapability` is a module-level mock shared across every test in
+    // this file; clear its call history so `.mock.calls[0]` below indexes
+    // THIS test's registration, not a previous test's leftover.
+    vi.mocked(watchHdrCapability).mockClear();
+  });
+
+  it('dispatches the boot HDR-capability snapshot', async () => {
+    const state = makeState();
+    const deps = makeDeps();
+    await initGpu(state, deps);
+
+    // The mocked `gpuInitGpu` returns `hdrCapable: false` — see the
+    // `services/gpu/device` mock factory above.
+    expect(deps.cb.store.dispatch).toHaveBeenCalledWith(engineHdrCapabilityChanged(false));
+  });
+
+  it("invoking watchHdrCapability's registered callback re-dispatches with the new value", async () => {
+    const state = makeState();
+    const deps = makeDeps();
+    await initGpu(state, deps);
+
+    // Recover the real callback `initGpu` handed to `watchHdrCapability` —
+    // the mock's own `() => () => {}` body ignores it, but `.mock.calls`
+    // still records what was actually passed.
+    const onChange = vi.mocked(watchHdrCapability).mock.calls[0]![0];
+    onChange(true);
+
+    expect(deps.cb.store.dispatch).toHaveBeenCalledWith(engineHdrCapabilityChanged(true));
   });
 });

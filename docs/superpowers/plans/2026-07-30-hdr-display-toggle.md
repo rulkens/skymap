@@ -302,10 +302,12 @@ Three changes that all belong to "the browser's answer reaches the app honestly"
 1. `device.ts` stops gating on `hasUrlGate('hdr')` and stops choosing a format. It
    configures `getPreferredCanvasFormat()` and returns `hdrCapable`. Rewrite the
    `:96-127` comment block — it currently explains a spike gate that no longer exists.
-2. The `toneMapping` `any` cast (`device.ts:162`) becomes an ambient widening of
-   `GPUCanvasConfiguration`, following the `tools/vendor-types/` precedent. `device.ts`
-   no longer sets `toneMapping` at boot at all (boot is SDR); the widening exists for
-   task 7's reconfigure.
+2. The `toneMapping` `any` cast (`device.ts:162`) is deleted. `device.ts` no longer sets
+   `toneMapping` at boot at all (boot is SDR). **No ambient widening** — the plan called
+   for one on the assumption the pinned types lacked the field, but
+   `@webgpu/types@0.1.69` already declares `toneMapping?: GPUCanvasToneMapping`
+   (`index.d.ts:772,780`), and a merging `interface` declaration cannot satisfy the
+   house `type`-never-`interface` lint rule. Dropping the cast alone achieves the goal.
 3. `hdrCapable` lands on the engine slice beside `scale` / `sourceCounts`
    (`engineSlice.ts:50-58`) via `engineHdrCapabilityChanged`, with a
    `selectHdrCapable` selector. **Live, not a boot snapshot:** a `matchMedia` `change`
@@ -313,18 +315,19 @@ Three changes that all belong to "the browser's answer reaches the app honestly"
    `useIsMobile.ts:43-45` is the listener pattern; the listener must be removed on engine
    teardown.
 
-- [ ] Delete the `hasUrlGate('hdr')` read. Check whether `hasUrlGate` still has other
+- [x] Delete the `hasUrlGate('hdr')` read. Check whether `hasUrlGate` still has other
       callers (it does — `?debug`, `?gpuTimings`, `?perf`); leave it in place.
-- [ ] Add the reducer test `engineHdrCapabilityChanged records the display capability`.
-- [ ] Add the test `the media-query listener re-dispatches on change` — assert a
+- [x] Add the reducer test `engineHdrCapabilityChanged records the display capability`.
+- [x] Add the test `the media-query listener re-dispatches on change` — assert a
       dispatched capability update when a stub `MediaQueryList` fires `change`. This is
       the one piece of this task that can silently rot; a listener that is registered but
       never wired to a dispatch looks correct on inspection.
-- [ ] Verify no remaining `?hdr` references: grep `'hdr'` in `src/utils/url/` and
+- [x] Verify no remaining `?hdr` references: grep `'hdr'` in `src/utils/url/` and
       `docs/`, and check `README` / `docs/RENDERER.md` for a documented `?hdr` flag that
-      now needs updating to point at the setting.
-- [ ] `npm test`, `npm run typecheck`, `npm run lint`.
-- [ ] Commit.
+      now needs updating to point at the setting. — `DisplaySection.tsx`'s stale comment
+      is task 9's, per this plan.
+- [x] `npm test`, `npm run typecheck`, `npm run lint`.
+- [x] Commit.
 
 ---
 

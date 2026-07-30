@@ -41,10 +41,13 @@
  * separate, narrower home for the same two values (plus `canvas`), read only
  * by `buildSwapRenderers` for a later swap-format rebuild. Every renderer is
  * stored on `state.gpu.*` directly, which is also how later phases consume
- * them. See `BootstrapDeps` in `bootstrap.ts` for the `phaseLocals` wiring.
+ * them. `phaseLocals` also carries `unwatchHdrCapability` — the sole reader
+ * is `engine.ts`'s `destroy()`, not a later bootstrap phase, but it has no
+ * `state.gpu.*` home either. See `BootstrapDeps` in `bootstrap.ts` for the
+ * `phaseLocals` wiring.
  */
 
-import { initGpu as gpuInitGpu, resizeCanvasToDisplay } from '../../gpu/device';
+import { initGpu as gpuInitGpu, resizeCanvasToDisplay, watchHdrCapability } from '../../gpu/device';
 import { createPointRenderer } from '../../gpu/renderers/galaxyCatalog/pointRenderer';
 import { createCompositor } from '../../gpu/passes/compositor';
 import { createRenderTargets } from '../../gpu/renderTargets';
@@ -80,6 +83,7 @@ import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
 import { TIMED_SLOTS } from '../frame/frameProgram';
 import { SLAB_REVERSED_Z, NEAR0, COSMO } from '../frame/slabs';
 import { loadFontAtlases } from '../../gpu/labelLayout/loadFontAtlases';
+import { engineHdrCapabilityChanged } from '../../../state/engine/engineSlice';
 import { buildSwapRenderers } from './buildSwapRenderers';
 import { hasUrlGate } from '../../../utils/url/hasUrlGate';
 import { isPerfMode } from '../../../utils/url/isPerfMode';
@@ -106,8 +110,10 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
  *   - populates `state.assetSlots.points` via the registry loop.
  *
  * Side effects on `deps`:
- *   - attaches a minimal phase-local carrier (`device`, `context`) so
- *     subsequent phases can read them; the renderers flow via `state.gpu`.
+ *   - attaches a minimal phase-local carrier (`device`, `context`,
+ *     `unwatchHdrCapability`) so subsequent phases can read them and
+ *     `engine.ts`'s `destroy()` can remove the HDR media-query listener; the
+ *     renderers flow via `state.gpu`.
  */
 export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const { canvas, cb } = deps;
@@ -117,6 +123,17 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   resizeCanvasToDisplay(canvas);
 
   const { device, context, format, hdrCapable } = await gpuInitGpu(canvas);
+
+  // Live display-capability report: dispatch the boot snapshot now, then
+  // keep the engine slice honest as the display's `(dynamic-range: high)`
+  // verdict changes later (e.g. the window moves to an SDR monitor) — see
+  // `watchHdrCapability`'s doc comment in `device.ts`. `deps.phaseLocals`
+  // (assigned at the end of this phase) carries the cleanup so
+  // `engine.ts`'s `destroy()` can remove the listener.
+  deps.cb.store.dispatch(engineHdrCapabilityChanged(hdrCapable));
+  const unwatchHdrCapability = watchHdrCapability((capable) =>
+    deps.cb.store.dispatch(engineHdrCapabilityChanged(capable)),
+  );
 
   // Build the canonical fade + source + focus bind-group layouts ONCE —
   // every renderer pipeline below threads these into createPipelineLayout
@@ -589,5 +606,6 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   deps.phaseLocals = {
     device,
     context,
+    unwatchHdrCapability,
   };
 }

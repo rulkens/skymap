@@ -83,10 +83,11 @@ export function renderFrame(input: RenderFrameInput): void {
     timingService.enabled,
   );
   // Zeroed on every SDR frame — `hdrActive` is only true when the swap
-  // chain is currently the `rgba16float` extended-range surface (both the
-  // `?hdr` URL gate and a real `(dynamic-range: high)` display — see
-  // `initGpu` in `device.ts`). Gating here rather than in the shader keeps
-  // the SDR output bit-identical no matter where the sliders sit.
+  // chain is currently the `rgba16float` extended-range surface, which only
+  // happens once the visitor turns the Settings → Display HDR toggle on, on
+  // a capable display (the swap-format reconfigure repoints the row; see
+  // `hdrActiveOf`). Gating here rather than in the shader keeps the SDR
+  // output bit-identical no matter where the sliders sit.
   const hdrActive = hdrActiveOf(ctx.renderTargets);
   executeFrame({
     encoder,

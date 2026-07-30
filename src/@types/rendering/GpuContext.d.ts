@@ -32,10 +32,10 @@ export type GpuContext = {
    * chain take `targetFormat` explicitly, so a layer's target is legible at
    * its renderer's construction site rather than inferred here.
    *
-   * HDR-output spike: `initGpu` (`device.ts`) picks `'rgba16float'` here at
-   * boot when `hdrCapable` permits it — the browser's preferred format is
-   * always an 8-bit fixed-point format, so the extended-range swap chain has
-   * to ask for the float format directly.
+   * `initGpu` (`device.ts`) always configures `getPreferredCanvasFormat()`
+   * here at boot — the extended-range `'rgba16float'` format is chosen later,
+   * only if the visitor turns the Settings → Display HDR toggle on, via the
+   * swap-format reconfigure (`applySwapFormat`), never at boot.
    */
   format: GPUTextureFormat;
 
@@ -43,11 +43,14 @@ export type GpuContext = {
   canvas: HTMLCanvasElement;
 
   /**
-   * HDR-output spike: true when the display + `?hdr` URL flag combination
-   * that `initGpu` (`device.ts`) evaluates at boot permits the extended-range
-   * surface — false on every default page load, and false on a non-HDR
-   * display even with `?hdr` set. NOT whether the swap chain currently is
-   * that surface: that's a separate, derived question — see `hdrActiveOf`.
+   * True when the ACTIVE display reports more than SDR range (the CSS Media
+   * Queries Level 5 `dynamic-range` feature, evaluated at boot by `initGpu`
+   * in `device.ts`). A status the display reports, not a choice — NOT
+   * whether the swap chain currently IS the extended-range surface: that's a
+   * separate, derived question — see `hdrActiveOf`. Also carried live (not
+   * just this boot snapshot) on the engine slice via
+   * `engineHdrCapabilityChanged`, so a later display change is observable
+   * without re-reading `GpuContext`.
    */
   readonly hdrCapable: boolean;
 };

@@ -792,6 +792,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.subsystems.inputBindings = null;
     detachControlsRef.current?.();
     detachControlsRef.current = null;
+    // The HDR-capability matchMedia listener `initGpu` registers via
+    // `watchHdrCapability` — undefined if the GPU IIFE errored before
+    // `initGpu` ran (see `runBootstrapPhases`'s try/catch above).
+    bootstrapDeps.phaseLocals?.unwatchHdrCapability();
 
     // 3. Walk every other subsystem (order-independent past here).
     state.subsystems.biasCorrection.destroy();

@@ -22,6 +22,7 @@ import reducer, {
   engineLoadProgressChanged,
   engineScaleChanged,
   engineBodyDistanceReported,
+  engineHdrCapabilityChanged,
 } from '../../../src/state/engine/engineSlice';
 import type { EngineSliceState } from '../../../src/@types/store/EngineSliceState';
 import { Source } from '../../../src/data/source';
@@ -30,6 +31,7 @@ const base = (): EngineSliceState => ({
   status: { kind: 'initializing' },
   scale: { label: '…', widthPx: 100 },
   focusedBodyDistanceMpc: null,
+  hdrCapable: false,
   sourceCounts: {},
   structureCounts: {},
   provenanceCounts: {},
@@ -139,5 +141,12 @@ describe('engineSlice — engineBodyDistanceReported', () => {
     const s: EngineSliceState = { ...base(), focusedBodyDistanceMpc: null };
     const next = reducer(s, engineBodyDistanceReported(3.4e-6));
     expect(next.focusedBodyDistanceMpc).toBe(3.4e-6);
+  });
+});
+
+describe('engineSlice — engineHdrCapabilityChanged', () => {
+  it('engineHdrCapabilityChanged records the display capability', () => {
+    const next = reducer(base(), engineHdrCapabilityChanged(true));
+    expect(next.hdrCapable).toBe(true);
   });
 });
