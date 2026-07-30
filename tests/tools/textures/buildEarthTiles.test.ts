@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 
 import sharp from 'sharp';
 
-import { bakeCoarserLevel } from '../../../tools/textures/buildEarthTiles';
+import { bakeCoarserLevel, TILE_PREFIX } from '../../../tools/textures/buildEarthTiles';
 import { earthTilePath } from '../../../src/utils/scene/earthTilePath';
 
 const TILE_PX = 512;
@@ -28,7 +28,7 @@ async function writeChild(
   y: number,
   rgba: readonly [number, number, number, number],
 ): Promise<void> {
-  const path = join(outDir, earthTilePath({ kind: 'surface', z, x, y }));
+  const path = join(outDir, earthTilePath({ kind: 'surface', z, x, y }, TILE_PREFIX));
   mkdirSync(dirname(path), { recursive: true });
   await sharp({
     create: {
@@ -95,7 +95,7 @@ describe('bakeCoarserLevel', () => {
 
     await bakeCoarserLevel(1, TILE_PX, dir);
 
-    const parentPath = join(dir, earthTilePath({ kind: 'surface', z: 1, x: 0, y: 0 }));
+    const parentPath = join(dir, earthTilePath({ kind: 'surface', z: 1, x: 0, y: 0 }, TILE_PREFIX));
     const { data } = await sharp(parentPath)
       .ensureAlpha()
       .raw()
@@ -122,7 +122,7 @@ describe('bakeCoarserLevel', () => {
 
     await bakeCoarserLevel(1, TILE_PX, dir);
 
-    const parentPath = join(dir, earthTilePath({ kind: 'surface', z: 1, x: 0, y: 0 }));
+    const parentPath = join(dir, earthTilePath({ kind: 'surface', z: 1, x: 0, y: 0 }, TILE_PREFIX));
     const { data } = await sharp(parentPath)
       .ensureAlpha()
       .raw()
