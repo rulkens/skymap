@@ -138,7 +138,7 @@ import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer'
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { SourceType } from '../../../../@types/data/SourceType';
 import type { StarCatalog } from '../../../../@types/data/starCatalog/StarCatalog';
-import type { StarCatalogSourceEntry } from '../../../../@types/data/starCatalog/StarCatalogSourceEntry';
+import type { SurveyStarCatalogSourceEntry } from '../../../../@types/data/starCatalog/SurveyStarCatalogSourceEntry';
 import type { StarDrawStream } from '../../../../@types/rendering/StarCatalogRenderer';
 import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../@types/engine/state/EngineState';
@@ -415,7 +415,7 @@ function fadeStateFor(catalog: StarCatalog): StarFadeState {
  * reads the direction from the edge ordering — `inner < outer` is a recede
  * fade (full at the low edge).
  */
-function crossfadeOpacity(entry: StarCatalogSourceEntry, camDistPc: number): number {
+function crossfadeOpacity(entry: SurveyStarCatalogSourceEntry, camDistPc: number): number {
   return fadeBand({ fullAt: entry.crossfadePc.inner, goneAt: entry.crossfadePc.outer }, camDistPc);
 }
 
@@ -436,7 +436,10 @@ export function starCatalogVisible(state: EngineState, ctx: ReadyFrameContext): 
 
   for (const { source } of renderer.loadedCatalogs()) {
     const entry = SOURCE_REGISTRY[source];
-    if (entry.type !== 'starCatalog') continue;
+    // Only a SURVEY catalog can be in `loadedCatalogs` (a seeded one ships no
+    // bin), so the `binBaseName` half of the guard is a narrowing device rather
+    // than a live filter — it buys the crossfade band this layer draws by.
+    if (entry.type !== 'starCatalog' || entry.binBaseName === null) continue;
     if (!state.settings.starCatalogs.items[entry.id].enabled) continue;
     if (crossfadeOpacity(entry, camDistPc) > 0) return true;
   }
@@ -707,7 +710,9 @@ function computeStarCut(state: EngineState, ctx: ReadyFrameContext): PreparedSta
 
   for (const { source, catalog } of renderer.loadedCatalogs()) {
     const entry = SOURCE_REGISTRY[source];
-    if (entry.type !== 'starCatalog') continue;
+    // See `starCatalogVisible`: a loaded catalog is always a SURVEY row; the
+    // null check narrows to the variant carrying `drawBudget` / `crossfadePc`.
+    if (entry.type !== 'starCatalog' || entry.binBaseName === null) continue;
     if (!state.settings.starCatalogs.items[entry.id].enabled) continue;
 
     const sourceCrossfade = crossfadeOpacity(entry, camDistPc);

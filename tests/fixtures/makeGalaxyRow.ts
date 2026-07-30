@@ -6,7 +6,7 @@
  *
  * Defaults are neutral zeros / falses; each test passes the values it actually
  * asserts on via `overrides`. `famous` is optional, so it is omitted here and
- * an override supplies it when a test exercises the famous-meta block.
+ * an override supplies it when a test exercises the famous-galaxies-meta block.
  */
 
 import { Source } from '../../src/data/sources';

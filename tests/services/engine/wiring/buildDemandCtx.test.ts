@@ -30,15 +30,15 @@ function makeState(
   opts: {
     requests?: Set<RequestKey>;
     points?: Map<SourceType, AssetSlot<unknown, unknown>>;
-    famousMetaState?: LoadState<unknown>['kind'];
+    famousGalaxiesMetaState?: LoadState<unknown>['kind'];
     pose?: { target: [number, number, number]; yaw: number; pitch: number; distance: number };
     simDays?: number;
   } = {},
 ): EngineState {
-  const famousMeta =
-    opts.famousMetaState === undefined
+  const famousGalaxiesMeta =
+    opts.famousGalaxiesMetaState === undefined
       ? null
-      : ({ state: () => ({ kind: opts.famousMetaState }) } as unknown as AssetSlot<
+      : ({ state: () => ({ kind: opts.famousGalaxiesMetaState }) } as unknown as AssetSlot<
           unknown,
           unknown
         >);
@@ -57,7 +57,7 @@ function makeState(
     requests: opts.requests ?? new Set<RequestKey>(),
     assetSlots: {
       points: opts.points ?? new Map(),
-      famousMeta,
+      famousGalaxiesMeta,
     },
     cameraRuntime: {
       lastPose: { current: pose },
@@ -79,13 +79,13 @@ describe('buildDemandCtx', () => {
     // A not-yet-minted slot (null field, missing map entry) reads as 'idle' —
     // never loaded is exactly what idle means.
     const ctx = buildDemandCtx(makeState());
-    expect(ctx.slotState('famousMeta')).toBe('idle');
+    expect(ctx.slotState('famousGalaxiesMeta')).toBe('idle');
     expect(ctx.slotState(Source.SDSS)).toBe('idle');
   });
 
   it('slotState reflects a present slot', () => {
-    const ctx = buildDemandCtx(makeState({ famousMetaState: 'ready' }));
-    expect(ctx.slotState('famousMeta')).toBe('ready');
+    const ctx = buildDemandCtx(makeState({ famousGalaxiesMetaState: 'ready' }));
+    expect(ctx.slotState('famousGalaxiesMeta')).toBe('ready');
   });
 
   it('request reflects the request flag set', () => {

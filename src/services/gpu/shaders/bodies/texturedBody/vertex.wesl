@@ -1,44 +1,54 @@
 // texturedBody/vertex.wesl — vertex stage for a textured planet or moon.
 //
-// Identical projection wiring to 'earth/vertex.wesl': multiply each
-// unit-sphere local position by the combined MVP from 'TexturedBodyUniforms'.
-// This body is lit, so the fragment needs the surface normal in the body's
-// local frame -- and on a unit sphere the local position IS that normal, so it
-// is forwarded unchanged alongside the equirectangular uv.
+// Rasterises 'uvSphereMesh(48, 24)' (position at @location(0), uv at
+// @location(1)) not as the body's surface but as a coarse PROXY shell that
+// circumscribes it: the fragment recovers the real surface per pixel from a
+// ray-sphere test, so all this stage owes it is a point on each fragment's view
+// ray. The mesh is shared with 'bodyPickRenderer' and the two mesh renderers --
+// 'sphereTessellation.ts' is its single home.
+//
+// ## The proxy is scaled up, and its BACK faces are drawn
+//
+// A tessellated sphere's silhouette is a polygon INSCRIBED in the true circle,
+// short of it by '1 - cos(half-step)'. Drawn at unit radius the proxy's own
+// outline would therefore clip the analytic sphere it exists to reveal, shaving
+// exactly the limb pixels this path recovers. 'PROXY_SCALE' inflates it until it
+// strictly CIRCUMSCRIBES the true sphere at every camera distance; the deficit
+// arithmetic and the 5% margin live with the constant in
+// 'lib/analyticSphere.wesl'.
+//
+// The renderer pairs this with 'cullMode: front', so the FAR hemisphere of the
+// proxy is what rasterises. Front faces would vanish the moment the camera
+// crossed inside the shell (a legal close approach -- 5% of a body radius above
+// the surface) and the body would disappear. Back faces still cover the whole
+// disc from inside the shell, because from in there the near hemisphere is
+// behind the eye and the far hemisphere fills the view.
+//
+// The proxy is never itself visible: every fragment either hits the analytic
+// unit sphere or discards. Its depth is never used either -- the fragment writes
+// '@builtin(frag_depth)' from the analytic hit point.
 //
 // ## Bindings
 //
 // '@group(0) @binding(0)' holds 'TexturedBodyUniforms' (112 bytes), visible in
-// BOTH stages: the vertex reads 'u.mvp', the fragment reads 'u.sunDirLocal' and
-// the ring ratios. The sampler + two textures live at bindings 1..3 for the
-// fragment stage (declared in the fragment module).
-//
-// As with the other sphere bodies, the '@group/@binding' declaration is
-// module-local (WESL has no global state), so we declare 'u' here and pass
-// 'u.mvp' into the imported 'clip_from_local' helper -- the 'pass cam, don't
-// capture' idiom.
-//
-// ## Attribute layout
-//
-//   @location(0) position: vec3<f32>  — unit-sphere local-space vertex
-//                                       (tightly-packed f32x3 VBO, stride 12).
-//   @location(1) uv:       vec2<f32>  — equirectangular texture coordinate
-//                                       (tightly-packed f32x2 VBO, stride 8);
-//                                       'uvSphereMesh' writes u west-to-east,
-//                                       v south-to-north.
+// both stages; this one reads only 'u.mvp'. The declaration is module-local
+// (WESL has no global state), so 'u' is redeclared here and 'u.mvp' passed into
+// 'clip_from_local' -- the 'pass cam, don't capture' idiom.
 
-import package::bodies::texturedBody::io::VSOut;
+import package::bodies::texturedBody::io::TexturedBodyVSOut;
+import package::lib::analyticSphere::PROXY_SCALE;
 import package::lib::sphere::TexturedBodyUniforms;
 import package::lib::sphere::clip_from_local;
 
 @group(0) @binding(0) var<uniform> u: TexturedBodyUniforms;
 
 @vertex
-fn vs(@location(0) position: vec3<f32>, @location(1) uv: vec2<f32>) -> VSOut {
-  var out: VSOut;
-  out.clip = clip_from_local(u.mvp, position);
-  out.uv = uv;
-  // Unit-sphere local position IS the outward normal; the fragment renormalizes.
-  out.normalLocal = position;
+fn vs(@location(0) position: vec3<f32>, @location(1) uv: vec2<f32>) -> TexturedBodyVSOut {
+  var out: TexturedBodyVSOut;
+  // The mesh uv is bound (one vertex-buffer layout serves every consumer of this
+  // mesh) but unread: the uv is derived per fragment from the analytic hit.
+  let proxy = position * PROXY_SCALE;
+  out.clip = clip_from_local(u.mvp, proxy);
+  out.localPos = proxy;
   return out;
 }

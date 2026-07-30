@@ -89,7 +89,7 @@ describe('watchSelectionRowsSaga', () => {
     });
     const deps: ResolveDeps = {
       catalogs: { get: (src) => (cloudPresent && src === Source.SDSS ? makeCloud() : undefined) },
-      famousMeta: [],
+      famousGalaxiesMeta: [],
       structures: { byId: () => null },
       stars: { current: () => starCatalog },
     };

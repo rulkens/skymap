@@ -52,7 +52,7 @@ const structure: StructureInfo = {
 
 const deps: ResolveDeps = {
   catalogs: { get: (s) => (s === Source.SDSS ? makeCloud() : undefined) },
-  famousMeta: [],
+  famousGalaxiesMeta: [],
   structures: { byId: (id) => (id === 'abell-2065' ? structure : null) },
   stars: { current: () => null },
 };

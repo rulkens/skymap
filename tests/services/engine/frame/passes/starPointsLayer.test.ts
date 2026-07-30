@@ -155,12 +155,23 @@ const STAR_CATALOG_SETTINGS = {
 function makeState(
   starPointRenderer: unknown,
   stars: readonly StarBody[],
-  famousStarsEnabled = true,
+  famousStarMapEnabled = true,
 ): EngineState {
   return {
     gpu: { starPointRenderer },
     data: { bodies: { stars } },
-    settings: { starCatalogs: STAR_CATALOG_SETTINGS, famousStars: { enabled: famousStarsEnabled } },
+    settings: {
+      starCatalogs: {
+        ...STAR_CATALOG_SETTINGS,
+        // The cluster master is on: `visibleStars` requires it AND the row's own
+        // bit, so omitting it would silently drive the Sun-alone path.
+        enabled: true,
+        items: { famousStar: { enabled: famousStarMapEnabled } },
+      },
+      // The Sun answers to its own body row, so `visibleStars` reads it here
+      // rather than exempting an id from the map's gate.
+      bodies: { items: { sun: { enabled: true, labelEnabled: true } } },
+    },
   } as unknown as EngineState;
 }
 
@@ -246,7 +257,8 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
       // star-points.
       settings: {
         milkyWay: { enabled: false },
-        famousStars: { enabled: true },
+        starCatalogs: { enabled: true, items: { famousStar: { enabled: true } } },
+        bodies: { items: { sun: { enabled: true, labelEnabled: true } } },
         constellations: { enabled: false, intensity: 1 },
         orbitTrails: { enabled: true },
       },
@@ -423,9 +435,9 @@ describe('starPointsLayer.draw', () => {
     expect(opts.brightness).not.toBeCloseTo(STAR_CATALOG_SETTINGS.brightness, 6);
   });
 
-  it('uploads ONLY the Sun when the famous-stars gate is off', () => {
+  it('uploads ONLY the Sun when the famous-star map gate is off', () => {
     // Mid-band camera so the layer draws; the seed is the full roster but the
-    // famousStars master gate is OFF — the star layers fall back to the Sun
+    // famous-star catalog row is OFF — the star layers fall back to the Sun
     // alone (its map is muted, the descent's aim point kept). The Sun is
     // parsecs-sub-pixel here, so it rides the point branch.
     const camDistMpc =

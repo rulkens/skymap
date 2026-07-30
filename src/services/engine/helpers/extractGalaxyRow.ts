@@ -15,19 +15,20 @@
 import { Source } from '../../../data/sources';
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
-import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
+import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
 import type { GalaxyRow } from '../../../@types/engine/GalaxyRow';
 
 export function extractGalaxyRow(
   cloud: GalaxyCatalog | undefined,
   idx: number,
   source: GalaxyCatalogSourceType,
-  famousMeta?: readonly FamousMetaEntry[],
+  famousGalaxiesMeta?: readonly FamousGalaxyMetaEntry[],
 ): GalaxyRow | null {
   if (!cloud) return null;
   if (idx < 0 || idx >= cloud.count) return null;
 
-  const famousEntry = source === Source.FamousGalaxy && famousMeta ? famousMeta[idx] : undefined;
+  const famousEntry =
+    source === Source.FamousGalaxy && famousGalaxiesMeta ? famousGalaxiesMeta[idx] : undefined;
   const famous = famousEntry
     ? {
         id: famousEntry.id,

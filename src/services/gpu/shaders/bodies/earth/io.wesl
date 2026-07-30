@@ -19,8 +19,9 @@
 // ## Why forward the local normal at all
 //
 // On a UNIT sphere the local-space position IS the outward surface normal, so
-// the vertex stage forwards 'position' unchanged as 'normalLocal' (the same
-// trick 'texturedBody/io.wesl' uses). The fragment renormalizes it before the
+// the vertex stage forwards 'position' unchanged as 'normalLocal'. Earth draws
+// its mesh; the ray-traced bodies do not, and derive their normal from the hit
+// instead. The fragment renormalizes it before the
 // Lambert dot -- interpolation across a triangle face shortens the interpolated
 // vector, which would otherwise band the terminator.
 

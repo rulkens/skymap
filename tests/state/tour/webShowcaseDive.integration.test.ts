@@ -27,7 +27,7 @@
  * which is simpler and faster than running the full saga: the resolved clip is
  * plain data whose structure we can inspect without any async machinery. The
  * deps stub is minimal — Virgo resolves via `structures.byId`, M87 resolves
- * via `famousMeta` + a one-row FamousGalaxy cloud.
+ * via `famousGalaxiesMeta` + a one-row FamousGalaxy cloud.
  *
  * Assertion 3 wires `watchFocusTweenSaga` into a real Redux store via
  * `sagaMiddleware`, then uses `clipStarted` to activate a clip and
@@ -76,7 +76,7 @@ function collectNodes(effects: Effect[]): Effect[] {
 
 // ─── Stubs ───────────────────────────────────────────────────────────────────
 
-/** Minimal one-row FamousGalaxy cloud for resolving 'm87' via famousMeta. */
+/** Minimal one-row FamousGalaxy cloud for resolving 'm87' via famousGalaxiesMeta. */
 const M87_CLOUD: GalaxyCatalog = makeGalaxyCatalog(1, {
   positions: new Float32Array([1, 0, 0]),
   spectroscopicZ: new Float32Array([0.004]),
@@ -92,14 +92,15 @@ const M87_CLOUD: GalaxyCatalog = makeGalaxyCatalog(1, {
 });
 
 /**
- * ResolveDeps stub: Virgo resolves via `structures.byId`, M87 via `famousMeta`
- * + the one-row FamousGalaxy cloud. All other catalogs return undefined.
+ * ResolveDeps stub: Virgo resolves via `structures.byId`, M87 via
+ * `famousGalaxiesMeta` + the one-row FamousGalaxy cloud. All other catalogs
+ * return undefined.
  */
 const DIVE_DEPS: ResolveDeps = {
   catalogs: {
     get: (source) => (source === Source.FamousGalaxy ? M87_CLOUD : undefined),
   },
-  famousMeta: [
+  famousGalaxiesMeta: [
     {
       id: 'm87',
       names: ['M87', 'Virgo A', 'NGC 4486'],

@@ -13,10 +13,16 @@ import type { BodyTextureSlotKey } from '../data/BodyTextureSlotKey';
  *     so a per-source fetch key would be wrong: there is no `structureCatalog`
  *     `Source`, and a single fetch must not trigger three loads.
  *
- *   - `'famousMeta'` — the `famous_meta.json` sidecar that accompanies the
- *     `Famous` `.bin`. It is a distinct network request from the binary, so it
- *     needs its own key in the wiring registry even though its identity source
- *     is `Source.FamousGalaxy`.
+ *   - `'famousGalaxiesMeta'` — the `famous_galaxies_meta.json` sidecar that
+ *     accompanies the `Famous` `.bin`. It is a distinct network request from
+ *     the binary, so it needs its own key in the wiring registry even though
+ *     its identity source is `Source.FamousGalaxy`.
+ *
+ *   - `'famousStarsMeta'` — the `famous_stars_meta.json` sidecar, the star
+ *     twin of `'famousGalaxiesMeta'`. Unlike the famous galaxies, famous stars are a
+ *     SEEDED star catalog (compiled in, no `.bin` fetch), so there is no
+ *     sibling asset to key off — the sidecar is its own eager, tier-agnostic
+ *     load rather than a companion join.
  *
  *   - `'pgcAlias'` — the PGC-alias lookup JSON. It is consumed across galaxy catalog
  *     sources (primarily 2MRS and GLADE) and has no unique `Source` code.
@@ -82,7 +88,8 @@ import type { BodyTextureSlotKey } from '../data/BodyTextureSlotKey';
 export type AssetKey =
   | SourceType
   | 'structureCatalog'
-  | 'famousMeta'
+  | 'famousGalaxiesMeta'
+  | 'famousStarsMeta'
   | 'pgcAlias'
   | 'filaments'
   | 'cf4Density'

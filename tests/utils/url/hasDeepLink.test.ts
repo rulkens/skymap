@@ -37,4 +37,16 @@ describe('hasDeepLink', () => {
   it('handles leading-? and missing-? variants in the search string', () => {
     expect(hasDeepLink({ hash: '', search: 'tour=intro' })).toBe(true);
   });
+
+  it('#t=<instant> counts as a deep link', () => {
+    // A shared link carrying a specific sim instant is exactly the kind of
+    // intent the splash should get out of the way for.
+    expect(hasDeepLink({ hash: '#t=2026-07-29T00:00:00.000Z', search: '' })).toBe(true);
+  });
+
+  it('#orientation=galactic does NOT count as a deep link', () => {
+    // A pole preference is a view setting, not intent worth skipping the
+    // introduction for — matches the `orientation` row's `deepLink: false`.
+    expect(hasDeepLink({ hash: '#orientation=galactic', search: '' })).toBe(false);
+  });
 });

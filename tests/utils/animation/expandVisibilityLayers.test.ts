@@ -12,11 +12,13 @@ describe('expandVisibilityLayers', () => {
     expect(expandVisibilityLayers(['flow', 'filaments'])).toEqual(['flow', 'filaments']);
   });
 
-  it("expands 'labels' into the three label layers", () => {
+  it("expands 'labels' into every label layer", () => {
     expect(expandVisibilityLayers(['labels'])).toEqual([
       'surveyLabel',
       'structureLabel',
       'milkyWayLabel',
+      'starCatalogLabel',
+      'bodyLabel',
     ]);
   });
 
@@ -26,6 +28,8 @@ describe('expandVisibilityLayers', () => {
       'surveyLabel',
       'structureLabel',
       'milkyWayLabel',
+      'starCatalogLabel',
+      'bodyLabel',
       'flow',
     ]);
   });

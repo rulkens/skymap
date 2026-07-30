@@ -11,7 +11,7 @@
  *      quad, disk, procedural-disk) and the HDR offscreen post-process.
  *   2. *Slot wiring.*  Per-source galaxy-catalog slots (via the
  *      `GALAXY_CATALOG_SOURCE_REGISTRY` declarative table) plus three
- *      sidecar slots (filaments, famous-meta, pgc-aliases), the
+ *      sidecar slots (filaments, famous-galaxies-meta, pgc-aliases), the
  *      load-progress emitter, and the all-arrivals gate that the
  *      synthetic fallback is conditional on.
  *   3. *Input wiring.*  Pick renderer, click resolver, orbit camera

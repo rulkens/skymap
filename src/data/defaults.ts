@@ -269,19 +269,6 @@ export const DEFAULT_MILKY_WAY_LABEL_ENABLED: boolean = true;
  */
 export const DEFAULT_ORBIT_TRAILS_ENABLED: boolean = true;
 
-/**
- * Famous-stars overlay default — the seeded near-field star map (the Sun and its
- * ~130 named neighbours) is part of the baseline descent scene, resolving on
- * close approach through the star point/sphere layers, so it defaults ON.
- *
- * Derived from the SOURCE_REGISTRY famousStar row's `visible` gate, mirroring
- * `DEFAULT_MILKY_WAY_ENABLED` — the registry stays the single source of truth
- * for a singleton overlay's default visibility. This gates the seeded map only;
- * the Sun renders regardless (it anchors the descent), so the toggle never
- * hides the solar system — see the star layers' `visibleStars` derivation.
- */
-export const DEFAULT_FAMOUS_STARS_ENABLED = SOURCE_REGISTRY[Source.FamousStar].visible;
-
 // ── HDR tone-mapping ────────────────────────────────────────────────────────
 
 /**

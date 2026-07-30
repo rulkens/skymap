@@ -4,29 +4,32 @@
  * inside the SettingsPanel.
  *
  * Owns the star-catalogs group UI: a master gate toggle on the section header
- * and per-catalog visibility checkboxes (just `gaiaStars` today; the
- * `STAR_CATALOG_IDS.map(...)` row loop is the extension point for a future
- * second catalog), led by a "Famous stars" row — a singleton overlay gate
- * (`settings.famousStars`), not a `starCatalog` row, carrying a count chip of
- * its SEEDED roster size (a compile-time constant, not a fetched count) — plus a
- * default-closed "Advanced" sub-section carrying the
- * shared star-size and star-brightness sliders — the star-catalog twins of the
- * Galaxies section's point-size and brightness controls — plus two lattice
- * controls unique to the octree-cut star renderer: "Detail" (the CPU refine
- * threshold) and "Glow overlap" (the aggregate glow spread). It renders NO
- * per-catalog label toggle — mirroring the
+ * and per-catalog visibility checkboxes, one per `STAR_CATALOG_IDS` entry (the
+ * curated famous-star map and the survey-wide Gaia bin), plus a default-closed
+ * "Advanced" sub-section carrying the shared star-size and star-brightness
+ * sliders — the star-catalog twins of the Galaxies section's point-size and
+ * brightness controls — plus two lattice controls unique to the octree-cut star
+ * renderer: "Detail" (the CPU refine threshold) and "Glow overlap" (the
+ * aggregate glow spread). It renders NO per-catalog label toggle — mirroring the
  * Galaxies section, star-label visibility lives in the separate Labels section.
  *
  * ### Master: a real gate, not a per-source fan-out
  *
  * Unlike `GalaxiesSection`/`StructuresSection` — whose masters derive purely
  * from the per-item flags and fan a click out to every row — the star-catalogs
- * cluster owns a real `enabled` gate (`starCatalogs.enabled`, Task 5). So the
+ * cluster owns a real `enabled` gate (`starCatalogs.enabled`). So the
  * master checkbox reflects that gate directly and flips it on click. The
  * `indeterminate` visual is still derived from the per-item flags: gate-on while
  * some-but-not-all catalogs are individually enabled reads as "mixed", the same
  * affordance the sibling sections show. Deriving it here keeps the summary
  * section-local rather than storing a redundant tri-state field.
+ *
+ * The tri-state is derived over EVERY star-catalog id, which is only honest
+ * because the gate is total: engine-side, every consumer of a star catalog's
+ * visibility requires the master before the row's own bit, so the header
+ * checkbox really can hide each row it summarises. Turning it off leaves the
+ * Sun drawn: the descent's aim point is its own `bodies` row, so it was never
+ * in the set this gate governs.
  *
  * Imports nothing from `store/` or `state/`: a pure function of props and the
  * transient CollapsibleSection open/closed state. Tests supply plain props with
@@ -41,21 +44,11 @@
 import { memo } from 'react';
 import { STAR_CATALOG_IDS } from '../../data/starCatalog/starCatalogIds';
 import { SOURCE_ENTRIES } from '../../data/sourceEntries';
-import { SCENE_STARS } from '../../data/bodies/sceneStars';
 import CollapsibleSection from './CollapsibleSection';
 import Slider from '../common/Slider/Slider';
 import styles from './SettingsPanel.module.css';
 import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';
 import type { StarCatalogItemSettings } from '../../@types/settings/StarCatalogItemSettings';
-
-/**
- * The famous-star map's roster size — a compile-time constant off the seed
- * table (never a hand-typed number), shown in the row's count chip the same way
- * the Gaia rows show their loaded count. Seeded, not fetched, so it needs no
- * store: importing the static seed here matches the module's existing use of
- * `STAR_CATALOG_IDS` / `SOURCE_ENTRIES` registry data.
- */
-const FAMOUS_STARS_COUNT = SCENE_STARS.length;
 
 // ── Props ──────────────────────────────────────────────────────────────────────
 
@@ -86,13 +79,6 @@ type StarsSectionProps = {
   exposureFarX: number;
   /** Current aggregate surface-brightness cap — the "Fog cap" tuning knob. */
   aggregateIntensityCap: number;
-  /**
-   * Whether the seeded famous-star map is shown. Leads the mapped per-catalog
-   * rows, but is a singleton overlay gate (`settings.famousStars`), NOT a
-   * `starCatalog` row. Its count chip shows the SEEDED roster size (a
-   * compile-time constant), so it needs no `counts` entry.
-   */
-  famousStarsEnabled: boolean;
   /** Called when the user toggles the master gate on or off. */
   onToggleMaster: (enabled: boolean) => void;
   /** Called when the user toggles a single star catalog on or off. */
@@ -113,8 +99,6 @@ type StarsSectionProps = {
   onExposureFarXChange: (v: number) => void;
   /** Called when the user moves the Fog cap slider. */
   onAggregateIntensityCapChange: (v: number) => void;
-  /** Called when the user toggles the famous-star map on or off. */
-  onToggleFamousStars: (enabled: boolean) => void;
 };
 
 // ── StarsSection ─────────────────────────────────────────────────────────────
@@ -135,7 +119,6 @@ function StarsSection({
   exposureMidX,
   exposureFarX,
   aggregateIntensityCap,
-  famousStarsEnabled,
   onToggleMaster,
   onToggleCatalog,
   onSizeChange,
@@ -146,7 +129,6 @@ function StarsSection({
   onExposureMidXChange,
   onExposureFarXChange,
   onAggregateIntensityCapChange,
-  onToggleFamousStars,
 }: StarsSectionProps) {
   // Tri-state master: `checked` follows the real gate; `indeterminate` flags
   // "gate on, but not every catalog is individually enabled" (mixed).
@@ -161,26 +143,6 @@ function StarsSection({
       onHeaderToggleChange={onToggleMaster}
     >
       <CollapsibleSection title="Star catalogs" defaultOpen>
-        {/* Famous stars — the FIRST row, ahead of the mapped catalogs. A
-            singleton overlay gate (`settings.famousStars`) rather than a
-            `starCatalog` row, so it toggles the seeded near-field star map (the
-            Sun keeps rendering to anchor the descent). Its count chip is the
-            SEEDED roster size — a compile-time constant off the seed table, not
-            a fetched loaded-count — styled identically to the Gaia rows'. */}
-        <div className={styles.panelRow}>
-          <label htmlFor="toggle-famous-stars">
-            Famous stars
-            <span className={styles.sourceCount}>{FAMOUS_STARS_COUNT.toLocaleString()}</span>
-          </label>
-          <input
-            id="toggle-famous-stars"
-            type="checkbox"
-            className={styles.toggle}
-            checked={famousStarsEnabled}
-            onChange={(e) => onToggleFamousStars(e.target.checked)}
-          />
-        </div>
-
         {STAR_CATALOG_IDS.map((id) => {
           const label = SOURCE_ENTRIES.find((e) => e.id === id)?.label ?? id;
           const count = counts?.[id];

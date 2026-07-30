@@ -3,7 +3,7 @@
  * CommandPaletteContainer — store boundary for the command palette.
  *
  * Owns everything the presentational `CommandPalette` should not reach for
- * itself: the famous-meta + alias-index + structure-index data hooks, the
+ * itself: the famous-galaxies-meta + alias-index + structure-index data hooks, the
  * `paletteOpen` slice read, the close dispatch, and the two selection commands.
  * Every pick (famous, alias, structure, Milky Way) is a durable focus id the
  * palette already built; the container fires both single-purpose commands —
@@ -26,10 +26,10 @@
 import { memo } from 'react';
 import type { RefObject } from 'react';
 import CommandPalette from '../CommandPalette/CommandPalette';
-import { useFamousMeta } from '../../hooks/useFamousMeta';
 import { useAliasIndex } from '../../hooks/useAliasIndex';
 import { useStructureIndex } from '../../hooks/useStructureIndex';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { selectFamousGalaxiesMeta } from '../../state/engine/selectors';
 import { selectPaletteOpen } from '../../state/ui/selectors';
 import { setPaletteOpen } from '../../state/ui/uiSlice';
 import { requestFocus } from '../../state/selection/requestFocus';
@@ -45,12 +45,12 @@ function CommandPaletteContainer({
 }: CommandPaletteContainerProps): React.ReactElement {
   const dispatch = useAppDispatch();
   const paletteOpen = useAppSelector(selectPaletteOpen);
-  const { famousMeta } = useFamousMeta();
+  const famousGalaxiesMeta = useAppSelector(selectFamousGalaxiesMeta);
   const { aliasIndex } = useAliasIndex({ paletteOpen, engineHandleRef });
   const structures = useStructureIndex({ paletteOpen, engineHandleRef });
   return (
     <CommandPalette
-      entries={famousMeta}
+      entries={famousGalaxiesMeta}
       aliasIndex={aliasIndex ?? undefined}
       structures={structures}
       open={paletteOpen}

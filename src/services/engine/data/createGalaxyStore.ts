@@ -1,32 +1,27 @@
 import type { GalaxyStore } from '../../../@types/engine/data/GalaxyStore';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
-import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
 
 /**
  * createGalaxyStore — factory for the galaxy data store.
  *
  * A plain factory closing over private mutable state, not a class: the
  * engine is a singleton, so the only thing a class would add is a `this.`
- * access pattern. Closing over a `Map` + an array and returning a frozen
- * object of accessors keeps the mutable surface tiny and invisible to
- * consumers — they receive `ReadonlyMap` / `readonly[]` views and can only
- * change state through the setters, which the slot commits own.
+ * access pattern. Closing over a `Map` and returning a frozen object of
+ * accessors keeps the mutable surface tiny and invisible to consumers —
+ * they receive a `ReadonlyMap` view and can only change state through the
+ * setters, which the slot commits own.
  *
- * The `catalogs` / `famousMeta` getters return the live private state, so
- * a reader always sees the current contents without the store handing out
- * a defensive copy on every frame.
+ * The `catalogs` getter returns the live private state, so a reader always
+ * sees the current contents without the store handing out a defensive copy
+ * on every frame.
  */
 export function createGalaxyStore(): GalaxyStore {
   const catalogs = new Map<SourceType, GalaxyCatalog>();
-  let famousMeta: readonly FamousMetaEntry[] = [];
 
   return Object.freeze({
     get catalogs(): ReadonlyMap<SourceType, GalaxyCatalog> {
       return catalogs;
-    },
-    get famousMeta(): readonly FamousMetaEntry[] {
-      return famousMeta;
     },
     setCatalog(source: SourceType, catalog: GalaxyCatalog): void {
       catalogs.set(source, catalog);
@@ -36,9 +31,6 @@ export function createGalaxyStore(): GalaxyStore {
     },
     get(source: SourceType): GalaxyCatalog | undefined {
       return catalogs.get(source);
-    },
-    setFamousMeta(meta: readonly FamousMetaEntry[]): void {
-      famousMeta = meta;
     },
   });
 }

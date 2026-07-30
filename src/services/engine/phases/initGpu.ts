@@ -305,7 +305,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   //
   // The 7 source slots (6 galaxy catalogs + Synthetic) are built from the
   // `GALAXY_CATALOG_SOURCE_REGISTRY` declarative table; sidecar slots
-  // (filaments, famous-meta, pgc-aliases) stay inline below — see
+  // (filaments, famous-galaxies-meta, pgc-aliases) stay inline below — see
   // `galaxyCatalogSourceRegistry.ts` for why.
   for (const cfg of GALAXY_CATALOG_SOURCE_REGISTRY) {
     wireGalaxyCatalogSourceSlot(state, cfg, { cb });

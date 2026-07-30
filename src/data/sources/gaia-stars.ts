@@ -1,4 +1,4 @@
-import type { StarCatalogSourceEntry } from '../../@types/data/starCatalog/StarCatalogSourceEntry';
+import type { SurveyStarCatalogSourceEntry } from '../../@types/data/starCatalog/SurveyStarCatalogSourceEntry';
 import { Source } from '../source';
 
 /**
@@ -46,4 +46,4 @@ export const GAIA_STARS_ENTRY = {
   // strength well inside the disk. First-pass eye-tuning from real-data
   // bring-up — this is the knob the tuning task iterates.
   crossfadePc: { inner: 8_000, outer: 25_000 },
-} as const satisfies StarCatalogSourceEntry;
+} as const satisfies SurveyStarCatalogSourceEntry;

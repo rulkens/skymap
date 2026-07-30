@@ -4,33 +4,42 @@
  * settings section.
  *
  * Owns all Redux reach for the Labels & Guides group: reads
- * `selectStructureItems`, `selectGalaxyCatalogItems`, and
- * `selectMilkyWayLabelEnabled`, runs the three-input label-projection, and
- * wraps the 3-way dispatch guard in a `useCallback`. It also owns the
- * foreground caption toggles (star / planet names) and the overlay guide rows
- * — constellations (the stick figures, whose name captions ride the same
- * gate) and orbit trails — flat singleton settings that route straight to
- * their own setters. The presentational `LabelsAndGuidesSection` imports
- * nothing from `store/` or `state/`.
+ * `selectStructureItems`, `selectGalaxyCatalogItems`, `selectStarCatalogItems`,
+ * `selectBodyItems` and `selectMilkyWayLabelEnabled`, bundles them into the
+ * `LabelHomes` the label-projection reads, and wraps the label dispatch in a
+ * `useCallback`. It also owns the overlay guide rows — constellations (the
+ * stick figures, whose name captions ride the same gate) and orbit trails —
+ * flat singleton settings that route straight to their own setters. All of it
+ * is assembled into one uniform `SectionRow` array; the presentational
+ * `LabelsAndGuidesSection` imports nothing from `store/` or `state/` and has
+ * no notion of where any row's bit lives.
  *
  * ### Label-visibility projection
  *
- * Label visibility lives in three authoritative homes — structure items,
- * the galaxy catalog items (famousGalaxy), and the milkyWay scalar. The
+ * Label visibility lives in several authoritative homes — structure items, the
+ * galaxy catalog items (famousGalaxy), the star catalog items (famousStar), the
+ * body items (Earth, the planets, the Sun), and the milkyWay scalar. The
  * projection (`projectLabelCategoryVisibility`) merges them into the flat
- * `Record<LabelCategory, boolean>` the section's checkboxes read. The
- * `useMemo` rebuilds only when any of those stable-reference inputs change.
+ * `Record<LabelCategory, boolean>` the row-building memo below reads. The
+ * `useMemo` rebuilds only when any of those stable-reference inputs change —
+ * each is a per-cluster selector output, never `state.settings` itself, which
+ * Immer re-identifies on every write.
  *
- * ### 3-way dispatch guard
+ * ### Label dispatch
  *
- * A label checkbox toggle dispatches to one of three slices based on the
- * category's type:
- *   - structure ids (cluster, supercluster, void, group) → `setStructureLabelEnabled`
- *   - milkyWay singleton overlay → `setMilkyWayLabelEnabled`
- *   - galaxy-catalog label categories (famousGalaxy) → `setGalaxyCatalogLabelEnabled`
+ * Both directions run off `LABEL_HOME_BY_SOURCE_TYPE`: the category's registry
+ * row names its source type, and that type's row knows both where the bit is
+ * read from and which action writes it. A new label-bearing source type is a
+ * row in that table, not another branch here.
  *
- * The guard order is: `isStructureId` → `=== 'milkyWay'` → else (galaxy catalog).
- * This exact order is preserved from App to keep behaviour byte-identical.
+ * ### Row order
+ *
+ * `LABEL_CATEGORIES` iterates `SOURCE_REGISTRY` in ascending `Source` code
+ * order (registry keys are the numeric codes, and JS iterates integer-keyed
+ * object properties in ascending order regardless of source-file layout) —
+ * there is no separate display-order mechanism, so the panel renders
+ * label-bearing categories in registry-code order, then the two hand-authored
+ * guide rows.
  *
  * ### Why `[dispatch]` only in `useCallback`
  *
@@ -43,74 +52,64 @@
 
 import { memo, useCallback, useMemo } from 'react';
 import LabelsAndGuidesSection from '../SettingsPanel/LabelsAndGuidesSection';
-import type { NonCategoryRow } from '../SettingsPanel/LabelsAndGuidesSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
   selectStructureItems,
   selectGalaxyCatalogItems,
+  selectStarCatalogItems,
+  selectBodyItems,
   selectMilkyWayLabelEnabled,
-  selectStarLabelsEnabled,
-  selectPlanetLabelsEnabled,
   selectConstellationsEnabled,
   selectOrbitTrailsEnabled,
 } from '../../state/settings/selectors';
 import {
-  setStructureLabelEnabled,
-  setMilkyWayLabelEnabled,
-  setGalaxyCatalogLabelEnabled,
-  setStarLabelsEnabled,
-  setPlanetLabelsEnabled,
   setConstellationsEnabled,
   setOrbitTrailsEnabled,
 } from '../../state/settings/settingsSlice';
 import { projectLabelCategoryVisibility } from '../../state/settings/projectLabelCategoryVisibility';
-import { isStructureId } from '../../data/structure/structureIds';
+import { LABEL_HOME_BY_SOURCE_TYPE } from '../../data/labels/labelHomeBySourceType';
+import { SOURCE_TYPE_BY_LABEL_CATEGORY } from '../../data/labels/sourceTypeByLabelCategory';
+import { LABEL_CATEGORIES } from '../../data/structure/labelCategories';
+import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
 import type { LabelCategory } from '../../@types/engine/data/LabelCategory';
+import type { SectionRow } from '../../@types/components/SectionRow';
 
 function LabelsAndGuidesSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();
 
   const structureItems = useAppSelector(selectStructureItems);
   const galaxyCatalogItems = useAppSelector(selectGalaxyCatalogItems);
+  const starCatalogItems = useAppSelector(selectStarCatalogItems);
+  const bodyItems = useAppSelector(selectBodyItems);
   const milkyWayLabelEnabled = useAppSelector(selectMilkyWayLabelEnabled);
-  const starLabelsEnabled = useAppSelector(selectStarLabelsEnabled);
-  const planetLabelsEnabled = useAppSelector(selectPlanetLabelsEnabled);
   const constellationsEnabled = useAppSelector(selectConstellationsEnabled);
   const orbitTrailsEnabled = useAppSelector(selectOrbitTrailsEnabled);
 
-  // Project items → flat label-visibility record. Rebuilds only when any of the
-  // three stable-reference inputs change.
-  const labelCategoryVisibility = useMemo(
-    () => projectLabelCategoryVisibility(structureItems, galaxyCatalogItems, milkyWayLabelEnabled),
-    [structureItems, galaxyCatalogItems, milkyWayLabelEnabled],
+  // Bundle the label homes, then project them → flat label-visibility record.
+  // Both rebuild only when one of the stable-reference inputs changes.
+  const labelHomes = useMemo(
+    () => ({
+      structures: structureItems,
+      galaxyCatalogs: galaxyCatalogItems,
+      starCatalogs: starCatalogItems,
+      bodies: bodyItems,
+      milkyWayLabelEnabled,
+    }),
+    [structureItems, galaxyCatalogItems, starCatalogItems, bodyItems, milkyWayLabelEnabled],
   );
 
-  // 3-way dispatch guard. Narrowing order: structure → milkyWay → galaxy catalog
-  // (else branch covers famousGalaxy and any future label-bearing galaxy catalog
-  // sources).
+  const labelCategoryVisibility = useMemo(
+    () => projectLabelCategoryVisibility(labelHomes),
+    [labelHomes],
+  );
+
+  // One table lookup, not a per-type chain: the registry row's `type` names the
+  // home, and the home knows how to write it.
   const onSetLabelCategoryVisibility = useCallback(
     (category: LabelCategory, enabled: boolean) => {
-      if (isStructureId(category)) {
-        dispatch(setStructureLabelEnabled({ id: category, enabled }));
-      } else if (category === 'milkyWay') {
-        dispatch(setMilkyWayLabelEnabled(enabled));
-      } else {
-        dispatch(setGalaxyCatalogLabelEnabled({ id: category, enabled }));
-      }
-    },
-    [dispatch],
-  );
-
-  const onSetStarLabelsEnabled = useCallback(
-    (enabled: boolean) => {
-      dispatch(setStarLabelsEnabled(enabled));
-    },
-    [dispatch],
-  );
-
-  const onSetPlanetLabelsEnabled = useCallback(
-    (enabled: boolean) => {
-      dispatch(setPlanetLabelsEnabled(enabled));
+      dispatch(
+        LABEL_HOME_BY_SOURCE_TYPE[SOURCE_TYPE_BY_LABEL_CATEGORY[category]].write(category, enabled),
+      );
     },
     [dispatch],
   );
@@ -129,28 +128,19 @@ function LabelsAndGuidesSectionContainer(): React.ReactElement {
     [dispatch],
   );
 
-  // The non-category boolean rows the section renders + folds into its master
-  // tri-state, in render order (star names, planet names, constellations,
-  // orbit trails). Assembling the array here keeps the section free of any
-  // per-row prop plumbing: a new row is one more entry, not a fresh prop pair
-  // threaded through both components. Each `id` is the checkbox element id
-  // (preserved verbatim from the former inline rows). The constellations row
-  // governs both the stick figures and their name captions — there is no
-  // separate names toggle.
-  const nonCategoryRows: ReadonlyArray<NonCategoryRow> = useMemo(
+  // Every checkbox the section renders, in one uniform shape: the label rows
+  // derived from the registry, plus the two hand-authored guide rows. There is
+  // no other way to build a "rows" array — constellations and orbitTrails gate
+  // LINE OVERLAYS, not labels, so they have no registry row's label axis to
+  // derive from and stay hand-authored here.
+  const rows: ReadonlyArray<SectionRow> = useMemo(
     () => [
-      {
-        id: 'toggle-label-stars',
-        label: 'Star names',
-        enabled: starLabelsEnabled,
-        onChange: onSetStarLabelsEnabled,
-      },
-      {
-        id: 'toggle-label-planets',
-        label: 'Planet names',
-        enabled: planetLabelsEnabled,
-        onChange: onSetPlanetLabelsEnabled,
-      },
+      ...LABEL_CATEGORIES.map((cat) => ({
+        id: `toggle-label-${cat}`,
+        label: CATEGORY_DISPLAY_INFO[cat].plural,
+        enabled: labelCategoryVisibility[cat],
+        onChange: (enabled: boolean) => onSetLabelCategoryVisibility(cat, enabled),
+      })),
       {
         id: 'toggle-constellations',
         label: 'Constellations',
@@ -165,10 +155,8 @@ function LabelsAndGuidesSectionContainer(): React.ReactElement {
       },
     ],
     [
-      starLabelsEnabled,
-      onSetStarLabelsEnabled,
-      planetLabelsEnabled,
-      onSetPlanetLabelsEnabled,
+      labelCategoryVisibility,
+      onSetLabelCategoryVisibility,
       constellationsEnabled,
       onToggleConstellations,
       orbitTrailsEnabled,
@@ -176,13 +164,7 @@ function LabelsAndGuidesSectionContainer(): React.ReactElement {
     ],
   );
 
-  return (
-    <LabelsAndGuidesSection
-      labelCategoryVisibility={labelCategoryVisibility}
-      onSetLabelCategoryVisibility={onSetLabelCategoryVisibility}
-      nonCategoryRows={nonCategoryRows}
-    />
-  );
+  return <LabelsAndGuidesSection rows={rows} />;
 }
 
 export default memo(LabelsAndGuidesSectionContainer);

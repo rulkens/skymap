@@ -1,7 +1,8 @@
 /**
  * produceFamousLabels — per-frame text labels for the curated famous galaxies,
- * derived entirely from `galaxyStore` (the famous `.bin` catalog joined with
- * its `famousMeta` sidecar).
+ * derived from the famous `.bin` catalog in `galaxyStore` joined with the
+ * famous-galaxies meta sidecar read off `state.famousGalaxiesMeta` (the
+ * engine slice).
  *
  * Famous galaxies are galaxy data, not structures — their anchor is the galaxy
  * point itself, they emit no ring/halo marker, and their label visibility lives
@@ -12,34 +13,34 @@
  * ### Opacity-aware visibility gate (fades out, doesn't pop)
  *
  * The hidden-state early return is gated on BOTH the famous-galaxy catalog
- * `labelEnabled` being false AND the `galaxyNames` opacity having reached 0 — so
- * a toggle-off keeps
- * emitting at the declining `layerAlpha` until the fade-out ramp completes,
- * rather than popping the labels instantly (mirrors `filamentsLayer.enabled`).
- * The OTHER early returns (meta/catalog absent — nothing to fade) stay hard.
+ * `labelEnabled` being false AND the `galaxy` layer opacity having reached 0 —
+ * so a toggle-off keeps emitting at the declining `layerAlpha` until the
+ * fade-out ramp completes, rather than popping the labels instantly (mirrors
+ * `filamentsLayer.enabled`). The OTHER early returns (meta/catalog absent —
+ * nothing to fade) stay hard.
  *
  * ### Meta ⋈ catalog alignment
  *
- * `famous.bin` is built in lock-step with `famous_meta.json` (same ordering),
+ * `famous.bin` is built in lock-step with `famous_galaxies_meta.json` (same ordering),
  * so meta entry at index `i` maps to catalog row `i`. The Milky Way is a
- * first-class FocusableTarget, not a famous-meta row, so it never appears here;
+ * first-class FocusableTarget, not a famous-galaxies-meta row, so it never appears here;
  * `produceMilkyWayLabel` labels the user's own position separately.
  *
- * ### galaxyNames opacity × uniform focus recession bakes into fadeAlpha
+ * ### galaxy-layer opacity × uniform focus recession bakes into fadeAlpha
  *
  * Each label's final `fadeAlpha` is the apparent-size distance fade multiplied
- * by two composed strands (see `focusRecession.ts`): the `galaxyNames` toggle's
- * opacity (`opacityOf({labelLayer, galaxyNames})`, read from the FadeRegistry)
- * and the focus recession factor. Famous labels reuse the SAME `galaxyNames`
- * handle and recede UNIFORMLY — there is no structure-membership link at this
- * producer, so (unlike `produceStructureLabels`) no famous label is exempt from
- * recession. The layer factor is the same for every famous label, so it's
- * snapshotted once before the loop and folded into both the label's and its
- * anchor line's `fadeAlpha` so the connector fades in lockstep with its label.
+ * by two composed strands (see `focusRecession.ts`): the `galaxy` layer's
+ * toggle opacity (`opacityOf({labelLayer, galaxy})`, read from the
+ * FadeRegistry) and the focus recession factor. Famous labels reuse the SAME
+ * `galaxy` handle and recede UNIFORMLY — there is no structure-membership link
+ * at this producer, so (unlike `produceStructureLabels`) no famous label is
+ * exempt from recession. The layer factor is the same for every famous label,
+ * so it's snapshotted once before the loop and folded into both the label's and
+ * its anchor line's `fadeAlpha` so the connector fades in lockstep with its label.
  *
- * ### Pure reader of the galaxyNames opacity
+ * ### Pure reader of the galaxy-layer opacity
  *
- * This producer only READS `fades.opacityOf({labelLayer, galaxyNames})` — the
+ * This producer only READS `fades.opacityOf({labelLayer, galaxy})` — the
  * visibility bridge (`syncVisibilityFades`) is the sole writer of the layer's
  * intent opacity, seeding and ramping it from the `famousGalaxy.labelEnabled`
  * setting. The producer never drives a fade of its own.
@@ -63,7 +64,7 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { LabelProducerOutput } from '../../../@types/engine/subsystems/LabelProducerOutput';
-import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
+import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import { Source } from '../../../data/sources';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
@@ -131,11 +132,11 @@ type FamousLabelInput = {
 
 /**
  * Zip the meta sidecar with the famous catalog rows into label inputs. The
- * meta array is loaded from `famous_meta.json` in lock-step with `famous.bin`,
+ * meta array is loaded from `famous_galaxies_meta.json` in lock-step with `famous.bin`,
  * so row `i` of the meta maps to row `i` of the catalog.
  */
 function deriveFamousLabelInputs(
-  meta: readonly FamousMetaEntry[],
+  meta: readonly FamousGalaxyMetaEntry[],
   catalog: Pick<GalaxyCatalog, 'count' | 'positions' | 'diameterKpc'>,
 ): FamousLabelInput[] {
   const out: FamousLabelInput[] = [];
@@ -167,17 +168,17 @@ export function produceFamousLabels(
   const fades = state.subsystems.fades;
   const now = ctx.nowMs;
   const empty: LabelProducerOutput = { labels: [], lines: [], awake: false };
-  // Render while the user wants famous labels OR the `galaxyNames` fade-out
+  // Render while the user wants famous labels OR the `galaxy` fade-out
   // tail is still non-zero — so a toggle-off fades out smoothly instead of
   // popping (mirrors `filamentsLayer.enabled`). Once opacity hits 0 we stop.
   if (
     !state.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled &&
-    fades.opacityOf({ kind: 'labelLayer', layer: 'galaxyNames' }, now) === 0
+    fades.opacityOf({ kind: 'labelLayer', layer: 'galaxy' }, now) === 0
   ) {
     return empty;
   }
 
-  const meta = galaxies.famousMeta;
+  const meta = state.famousGalaxiesMeta;
   const catalog = galaxies.get(Source.FamousGalaxy);
   if (meta.length === 0 || catalog === undefined || catalog.count === 0) return empty;
 
@@ -208,16 +209,16 @@ export function produceFamousLabels(
   const labelRenderer = state.gpu.labelRenderer;
 
   // Snapshot the layer opacity × uniform recession × clip factor ONCE — it's
-  // identical for every famous label (the `galaxyNames` handle is shared, and
+  // identical for every famous label (the `galaxy` handle is shared, and
   // there is no per-member focus exemption here). Folded into each label +
   // anchor-line fadeAlpha below. `fades`/`now` were snapshotted at the top for
   // the opacity-aware visibility gate; reuse them rather than re-reading the clock.
   // The clip factor addresses the `'surveyLabel'` key — the VisibilityLayerKey
-  // that `fadeIdToVisibilityKey` maps `galaxyNames` to.
+  // that `fadeIdToVisibilityKey` maps `galaxy` to.
   const clipFactor = state.subsystems.clipPlayer.clipOpacityOf('surveyLabel', now);
   const layerAlpha =
-    fades.opacityOf({ kind: 'labelLayer', layer: 'galaxyNames' }, now) *
-    focusRecession({ kind: 'labelLayer', layer: 'galaxyNames' }, ctx.focusBlend) *
+    fades.opacityOf({ kind: 'labelLayer', layer: 'galaxy' }, now) *
+    focusRecession({ kind: 'labelLayer', layer: 'galaxy' }, ctx.focusBlend) *
     clipFactor;
 
   for (let i = 0; i < inputs.length; i += 1) {

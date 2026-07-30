@@ -24,7 +24,7 @@ const flush = () => new Promise((r) => setTimeout(r, 0));
 
 const FOCUS_REF: SelectionRef = { type: 'structure', id: 'virgo-cluster' };
 
-/** A scene snapshot whose eight clusters differ from the store's initial settings. */
+/** A scene snapshot whose ten clusters differ from the store's initial settings. */
 function makeSnapshot(focus: SelectionRef | null = FOCUS_REF): SceneSnapshot {
   const f = makeSettingsFixture();
   return {
@@ -36,6 +36,8 @@ function makeSnapshot(focus: SelectionRef | null = FOCUS_REF): SceneSnapshot {
       milkyWay: { ...f.milkyWay, enabled: !f.milkyWay.enabled },
       flow: { ...f.flow, flowSpeed: 7 },
       orbitTrails: { ...f.orbitTrails, enabled: !f.orbitTrails.enabled },
+      starCatalogs: { ...f.starCatalogs, enabled: !f.starCatalogs.enabled },
+      bodies: { ...f.bodies },
       labels: { ...f.labels, focusedOnly: !f.labels.focusedOnly },
     },
     focus,
