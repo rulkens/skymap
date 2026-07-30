@@ -148,9 +148,10 @@ re-attaches the label director (`state.subsystems.labelDirector.attachRenderers(
       — assert `attachRenderers` was called with the _second-round_ label and marker-line
       instances. This is the failure that would otherwise be silent until labels vanish.
 - [x] `npm test -- buildSwapRenderers` → both pass. `npm run typecheck` clean.
-- [ ] **Boot the app and confirm labels, marker lines, and the selection ring still
+- [x] **Boot the app and confirm labels, marker lines, and the selection ring still
       draw.** A pure extraction that quietly drops one of eight constructions typechecks
-      fine and only shows up visually. — carried to the end-of-plan visual pass (task 10).
+      fine and only shows up visually. — carried to, and cleared by, the end-of-plan
+      visual pass (task 10).
 - [x] Commit.
 
 ---
@@ -470,14 +471,16 @@ prop list is already wide (>8 fields), so keep the body-destructure form it uses
 **Files:** none for the radar (review only — house convention: bake it into every plan).
 `docs/` only if the radar surfaces something worth recording.
 
-- [ ] Run the `entanglement-radar` skill over the whole diff (`git diff main...HEAD`).
+- [x] Run the `entanglement-radar` skill over the whole diff (`git diff main...HEAD`).
       Pay attention to whether `hdrCapable` and `hdrActive` stayed separate — re-fusing
-      them is the specific regression this design exists to prevent.
-- [ ] Confirm the three deleted booleans have no survivors: grep `\.hdr\b` across `src/`.
-- [ ] `npm test` full suite, `npm run typecheck`, `npm run lint`, `npm run build`.
-- [ ] Retitle PR #497 off "spike(hdr): …" and rewrite its body to describe the shipped
+      them is the specific regression this design exists to prevent. — the split holds;
+      the radar's one finding was `GpuContext.hdrCapable` surviving as a reader-less
+      boot snapshot, left open as a follow-up (it contradicts task 3's text).
+- [x] Confirm the three deleted booleans have no survivors: grep `\.hdr\b` across `src/`.
+- [x] `npm test` full suite, `npm run typecheck`, `npm run lint`, `npm run build`.
+- [x] Retitle PR #497 off "spike(hdr): …" and rewrite its body to describe the shipped
       feature: the toggle, the prep sequence, and the probe evidence for the runtime
       reconfigure.
-- [ ] Push and **stop.** The remaining verification needs an HDR display and a human —
+- [x] Push and **stop.** The remaining verification needs an HDR display and a human —
       hand back the spec's Verification checklist rather than claiming it. Do not run
-      `/feature-done` until the user confirms the visual pass.
+      `/feature-done` until the user confirms the visual pass. — confirmed 2026-07-31.
