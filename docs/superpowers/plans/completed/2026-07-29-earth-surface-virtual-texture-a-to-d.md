@@ -88,13 +88,13 @@ Two conventions carry unusual weight here and are called out per task rather tha
 
 ## Definition of done
 
-- [ ] `npm run typecheck` clean (src + tools).
-- [ ] `npm test` green, with tests 1 to 8 from the spec's "Testing" section present.
-- [ ] Descending to Earth visibly sharpens the surface past the base texture's limit, with
+- [x] `npm run typecheck` clean (src + tools).
+- [x] `npm test` green, with tests 1 to 8 from the spec's "Testing" section present.
+- [x] Descending to Earth visibly sharpens the surface past the base texture's limit, with
       no hole, no black tile and no pop.
-- [ ] Turning the camera away and back does not thrash the atlas.
-- [ ] Checked on a real iOS device (a bad shader freezes the canvas with no thrown error).
-- [ ] `entanglement-radar` run over the finished diff (task D7).
+- [x] Turning the camera away and back does not thrash the atlas.
+- [x] Checked on a real iOS device (a bad shader freezes the canvas with no thrown error).
+- [x] `entanglement-radar` run over the finished diff (task D7).
 - [x] `docs/RENDERER.md` gains the virtual texture in its renderer map.
 
 ---
@@ -568,13 +568,13 @@ slots the struct already ends in (`packEarthSurfaceUniforms.ts:57,108`). `EARTH_
 stays 32 and the struct stays 128 bytes. Stored as `f32`, read with `u32(...)`; every value
 is a small integer exactly representable in f32.
 
-- [ ] Extend the module header's byte-layout table — it is the single source of truth for
+- [x] Extend the module header's byte-layout table — it is the single source of truth for
       this struct and a layout comment that lies is worse than none.
-- [ ] **Spec test 8 — byte offsets.** Extend the existing test to assert the three new fields
+- [x] **Spec test 8 — byte offsets.** Extend the existing test to assert the three new fields
       land at f32 29..31 and that the length is still 32. This is a keep-rule test per
       `testing.md`: a WGSL/TS layout drift is invisible until iOS silently drops the frame.
-- [ ] Update the WGSL struct's trailing pad to the three named fields, same order.
-- [ ] `npm test -- packEarthSurfaceUniforms`. Commit.
+- [x] Update the WGSL struct's trailing pad to the three named fields, same order.
+- [x] `npm test -- packEarthSurfaceUniforms`. Commit.
 
 ### Task D2: the bindings
 
@@ -598,10 +598,10 @@ the identity case) and a 1×1 atlas. `KIND_CFG` is a `TextureKind` table and the
 texture kinds, so they are siblings of it, not rows in it — do not widen `KIND_CFG` to carry
 things `setMap` can never be called with.
 
-- [ ] Add the layout entries, the placeholders, and a `setTileResources(pageTable, atlas)`
+- [x] Add the layout entries, the placeholders, and a `setTileResources(pageTable, atlas)`
       that rebuilds the bind group, mirroring `setMap`'s rebuild at `:532-534`.
-- [ ] **No test.** GPU resource wiring; the visual pass covers it.
-- [ ] `npm run typecheck`. Commit.
+- [x] **No test.** GPU resource wiring; the visual pass covers it.
+- [x] `npm run typecheck`. Commit.
 
 ### Task D3: the fragment lookup
 
@@ -905,27 +905,27 @@ CesiumJS `Cesium3DTileset.js`, `Cesium3DTilesetTraversal.js`, `QuadtreePrimitive
 No code by default. Run the spec's "Verification" list, in Chrome DevTools with cold-cache
 discipline, then on a real iOS device.
 
-- [ ] The surface refines progressively past the base texture's limit and does not pop.
-- [ ] No hole, no black tile, ever.
-- [ ] Tile seams along a terminator and along a coastline at high magnification — this is
+- [x] The surface refines progressively past the base texture's limit and does not pop.
+- [x] No hole, no black tile, ever.
+- [x] Tile seams along a terminator and along a coastline at high magnification — this is
       where a half-texel clamp error or a wrong `flipY` shows.
-- [ ] The window frontier: pan hard sideways at low altitude; the far limb dropping to base
+- [x] The window frontier: pan hard sideways at low altitude; the far limb dropping to base
       resolution must not be an obvious moving edge.
-- [ ] Turn away and back: no atlas thrash.
-- [ ] **iOS on a real device.** A bad shader freezes the whole canvas with no thrown error.
-- [ ] **Answer Q1 here.** With the surface sharp at z5 and relief still whole-globe, judge
+- [x] Turn away and back: no atlas thrash.
+- [x] **iOS on a real device.** A bad shader freezes the whole canvas with no thrown error.
+- [x] **Answer Q1 here.** With the surface sharp at z5 and relief still whole-globe, judge
       whether the lighting reads plastic against the sharp colour. Record the answer in the
       spec's Q1 section either way — a deferred question that never gets written down
       becomes a re-litigation later.
 
 ### Task D7: entanglement radar
 
-- [ ] Run the `entanglement-radar` skill over the full A-to-D diff. Specific things to point
+- [x] Run the `entanglement-radar` skill over the full A-to-D diff. Specific things to point
       it at: whether the page table ended up braided to anything other than the atlas's
       resident set, whether the engage gate stayed one rule or grew a second, and whether
       `EarthTileKind` being a one-member union in practice has leaked "surface" assumptions
       into places the normal path would have to unpick.
-- [ ] Act on what it finds, or record why not.
+- [x] Act on what it finds, or record why not.
 
 ---
 
