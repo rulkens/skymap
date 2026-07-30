@@ -9,15 +9,17 @@
  * `o.r || {}`) and treated as an empty bag.
  *
  * The flat `r` bag is split back into `render` vs `lod` by key — `lodApparent`
- * and `cullBright` are the only two `LodSettings` fields (see
- * `LodSettings.d.ts`); everything else in `r` is a `RenderSettings` field.
+ * is the only `LodSettings` field (see `LodSettings.d.ts`); everything else in
+ * `r` is a `RenderSettings` field. A key belonging to neither (an older
+ * preset's since-removed knob) lands in `render`, where the slice's shallow
+ * merge simply carries it as an unread extra rather than throwing.
  */
 
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import type { RenderSettings } from '../../@types/engine/RenderSettings';
 import type { LodSettings } from '../../@types/engine/LodSettings';
 
-const LOD_KEYS: readonly string[] = ['lodApparent', 'cullBright'];
+const LOD_KEYS: readonly string[] = ['lodApparent'];
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);

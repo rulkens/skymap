@@ -1,18 +1,47 @@
 # WESL linker configuration for the Galaxy Renderer tool.
 #
-# Unlike the flow-workbench (which links against the runtime's canonical
+# Unlike the flow-workbench (which points 'root' at the runtime's canonical
 # shader tree, because it drives the one real flow renderer shared with the
-# main app), this tool's DRAW shaders are entirely its own — star sprites,
-# dust, and an HDR bloom chain that have no runtime counterpart to share
-# with. So 'root' points at this tool's own shader directory rather than up
-# into src/services/gpu/shaders, and imports inside those shaders resolve
-# as package::lib::name against that local root. The one exception is the
-# shared galaxyGen/ generation shaders, which live in the runtime tree
-# (src/services/gpu/shaders/galaxyGen) and appear inside this root through
-# the symlink at src/engine/shaders/galaxyGen — WESL package binding is
-# root-driven, so the file must appear inside the root to be addressable as
-# package::galaxyGen:: (see vite.config.ts's resolve block for the alias +
-# preserveSymlinks that keep the id inside this root).
+# main app), this tool keeps its own root — but almost nothing local is left
+# in it. The tool exists to tune a look that must transfer to the app, and a
+# hand-matched copy of any part of the app's chain drifts the day after it is
+# written, so DRAW and POST shaders alike are the RUNTIME's, reached through
+# symlinks that make them appear inside this root:
+#
+#   src/engine/shaders/galaxyGen        -> src/services/gpu/shaders/galaxyGen
+#   src/engine/shaders/milkyWayCloud    -> .../shaders/milkyWayCloud
+#   src/engine/shaders/additiveUpsample -> .../shaders/additiveUpsample
+#   src/engine/shaders/bloom            -> src/services/gpu/shaders/bloom
+#   src/engine/shaders/compositor       -> src/services/gpu/shaders/compositor
+#   src/engine/shaders/lib/camera.wesl  -> .../shaders/lib/camera.wesl
+#   src/engine/shaders/lib/tonemap.wesl -> src/services/gpu/shaders/lib/tonemap.wesl
+#   src/engine/shaders/lib/cloudSprite.wesl -> .../shaders/lib/cloudSprite.wesl
+#
+# milkyWayCloud is the star + dust billboard pair, shared as a WHOLE DIRECTORY
+# rather than file by file: stars.wesl and dust.wesl both read the single
+# '@group(0) @binding(0)' uniform declared in io.wesl, so sharing one pass
+# without the other would mean packing the app's 208-byte struct for it and a
+# different struct for its sibling. lib/camera.wesl comes along because that
+# struct embeds CameraUniforms, and additiveUpsample because the reduced-
+# resolution star target has to be composited back into HDR the same way the
+# app composites it.
+#
+# WESL package binding is root-driven, so a shared file must appear inside the
+# root to be addressable as package::milkyWayCloud:: / package::bloom:: /
+# package::compositor:: / package::lib::camera (see vite.config.ts's resolve
+# block for the aliases + preserveSymlinks that keep those ids inside this
+# root). The symlinked families' own internal imports — bloom's
+# package::bloom::io, the compositor's package::compositor::io and
+# package::lib::tonemap, milkyWayCloud's package::milkyWayCloud::io and
+# package::lib::cloudSprite — resolve against this root exactly as they do
+# against the runtime's, which is what makes the sharing work with no per-tool
+# shims.
+#
+# The one post shader that stays local is src/engine/shaders/grade.wesl: a
+# saturation/vignette/gamma trailer the app deliberately has no equivalent
+# for. It is skipped entirely at the tool's default (identity) settings, so
+# the default path is the app's path. See its header. lib/fullscreenTri.wesl
+# stays local for the same reason — it is the helper grade.wesl draws with.
 #
 # wesl-plugin locates this file from the explicit 'weslToml' option in
 # vite.config.ts — NOT from the Vite 'root'. By default the plugin reads

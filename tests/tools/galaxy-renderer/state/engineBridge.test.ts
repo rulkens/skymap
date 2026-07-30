@@ -86,7 +86,7 @@ describe('connectEngineBridge', () => {
     expect(mocks.setInsets).toHaveBeenCalledTimes(1);
     expect(mocks.setInsets).toHaveBeenCalledWith(0, 340);
     expect(mocks.setAutoRotate).toHaveBeenCalledTimes(1);
-    expect(mocks.setAutoRotate).toHaveBeenCalledWith(true);
+    expect(mocks.setAutoRotate).toHaveBeenCalledWith(false);
     expect(mocks.setParams).toHaveBeenCalledTimes(1);
     expect(mocks.setParams).toHaveBeenCalledWith(DEFAULT_GALAXY_PARAMS);
 
@@ -130,13 +130,18 @@ describe('connectEngineBridge', () => {
     const { engine, mocks } = makeFakeEngine();
     const disconnect = connectEngineBridge(store, engine);
 
-    store.dispatch(lodPatched({ lodApparent: 0.02 }));
+    // Derived from the default, not a literal: a literal here silently
+    // becomes a no-op the day it coincides with the (seeded) default, and the
+    // failure — one fewer setRender call than expected — reads as a bridge
+    // bug rather than what it actually is, a fixture collision.
+    const patchedLodApparent = DEFAULT_LOD_SETTINGS.lodApparent + 0.01;
+    store.dispatch(lodPatched({ lodApparent: patchedLodApparent }));
 
     expect(mocks.setRender).toHaveBeenCalledTimes(2); // initial sync + this change
     expect(mocks.setRender).toHaveBeenLastCalledWith({
       ...DEFAULT_RENDER_SETTINGS,
       ...DEFAULT_LOD_SETTINGS,
-      lodApparent: 0.02,
+      lodApparent: patchedLodApparent,
     });
     expect(mocks.setParams).toHaveBeenCalledTimes(1); // initial sync only — never scheduled
 

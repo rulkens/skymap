@@ -289,11 +289,15 @@ function ControlsPanel(): ReactNode {
           open={ui.openSections.render}
           onToggle={() => dispatch(sectionToggled('render'))}
         >
+          {/* Exposure / bloom / tone curve mirror the app's own knobs, over the
+              app's own ranges (exposure 0.1–4.0, per DEFAULT_EXPOSURE's
+              docblock) so a value read off this panel can be typed straight
+              into the app's settings. */}
           <ParamSlider
             label="Exposure"
             value={render.exposure}
-            min={0.4}
-            max={2.2}
+            min={0.1}
+            max={4}
             step={0.02}
             onChange={(v) => dispatch(renderPatched({ exposure: v }))}
           />
@@ -306,13 +310,20 @@ function ControlsPanel(): ReactNode {
             onChange={(v) => dispatch(renderPatched({ bloom: v }))}
           />
           <ParamSlider
-            label="Saturation"
-            value={render.saturation}
-            min={0.6}
-            max={1.6}
-            step={0.02}
-            onChange={(v) => dispatch(renderPatched({ saturation: v }))}
+            label="Bloom threshold"
+            value={render.bloomThreshold}
+            min={0}
+            max={6}
+            step={0.05}
+            onChange={(v) => dispatch(renderPatched({ bloomThreshold: v }))}
           />
+          {/* The star-pass block. These are the app's `MilkyWayTuning` knobs,
+              over the app's own ranges (`src/data/milkyWay/milkyWaySliderFields.ts`),
+              driving the app's own `milkyWayCloud/` shaders — so a number read
+              off this panel can be typed straight into the app's DebugPanel.
+              `Star size` and `Star intensity` keep this tool's narrower spike
+              ranges: they predate the shared shaders and are the two knobs the
+              reference-gallery auto-fit drives. */}
           <ParamSlider
             label="Star size"
             value={render.sizeScale}
@@ -320,17 +331,6 @@ function ControlsPanel(): ReactNode {
             max={1.1}
             step={0.05}
             onChange={(v) => dispatch(renderPatched({ sizeScale: v }))}
-          />
-          {/* vignette + starIntensity: RenderSettings fields the spike's engine
-              had but its own UI never exposed — the render slice owns them, so
-              this panel shows them (resolved spec ambiguity, see plan 03 task 12). */}
-          <ParamSlider
-            label="Vignette"
-            value={render.vignette}
-            min={0}
-            max={1}
-            step={0.02}
-            onChange={(v) => dispatch(renderPatched({ vignette: v }))}
           />
           <ParamSlider
             label="Star intensity"
@@ -340,12 +340,88 @@ function ControlsPanel(): ReactNode {
             step={0.01}
             onChange={(v) => dispatch(renderPatched({ starIntensity: v }))}
           />
+          <ParamSlider
+            label="Star px floor"
+            value={render.starPxMin}
+            min={0}
+            max={8}
+            step={0.25}
+            format={(v) => v.toFixed(2)}
+            onChange={(v) => dispatch(renderPatched({ starPxMin: v }))}
+          />
+          <ParamSlider
+            label="Star px cap"
+            value={render.starPxMax}
+            min={1}
+            max={256}
+            step={1}
+            format={(v) => String(Math.round(v))}
+            onChange={(v) => dispatch(renderPatched({ starPxMax: v }))}
+          />
+          <ParamSlider
+            label="Star softness"
+            value={render.softness}
+            min={0}
+            max={1}
+            step={0.01}
+            format={(v) => v.toFixed(2)}
+            onChange={(v) => dispatch(renderPatched({ softness: v }))}
+          />
+          <div className={styles.lodExplainer}>
+            The two px knobs clamp a sprite&rsquo;s on-screen half-extent in pixels of the STAR
+            TARGET, which the divisor below shrinks — at divisor 2 one unit here is two screen
+            pixels. Softness blends the tight core+glow profile toward a broad Gaussian at equal
+            integral, so it changes shape without changing emitted light.
+          </div>
           <div className={styles.toneWrap}>
             <div className={styles.toneLabel}>Tone mapping</div>
             <TonemapSelect
               value={render.tonemap}
               onChange={(mode) => dispatch(renderPatched({ tonemap: mode }))}
             />
+          </div>
+        </CollapsibleSection>
+
+        {/* Saturation, vignette, and the gamma encode have NO app counterpart.
+            They drive the tool-only `grade.wesl` trailer, which is skipped
+            entirely while all three sit at the identity defaults shown here —
+            so out of the box this tool's image is the app's image. They stay
+            available because matching reference astrophotography sometimes
+            wants them; their own section keeps "this is a departure from app
+            parity" visible rather than mixed in with the shared knobs. */}
+        <CollapsibleSection
+          title="TOOL-ONLY GRADE (NOT IN THE APP)"
+          open={ui.openSections.grade}
+          onToggle={() => dispatch(sectionToggled('grade'))}
+        >
+          <ParamSlider
+            label="Saturation"
+            value={render.saturation}
+            min={0.6}
+            max={1.6}
+            step={0.02}
+            onChange={(v) => dispatch(renderPatched({ saturation: v }))}
+          />
+          <ParamSlider
+            label="Vignette"
+            value={render.vignette}
+            min={0}
+            max={1}
+            step={0.02}
+            onChange={(v) => dispatch(renderPatched({ vignette: v }))}
+          />
+          <label className={styles.autoRotateRow}>
+            <span>Gamma encode (pow 1/2.2)</span>
+            <input
+              type="checkbox"
+              className={styles.autoRotateCheckbox}
+              checked={render.gammaEncode}
+              onChange={(e) => dispatch(renderPatched({ gammaEncode: e.target.checked }))}
+            />
+          </label>
+          <div className={styles.lodExplainer}>
+            The app writes tone-mapped linear light straight into a non-sRGB swap chain with no
+            encode. Whether that is right is an open question — this toggle is the A/B.
           </div>
         </CollapsibleSection>
 
@@ -368,22 +444,30 @@ function ControlsPanel(): ReactNode {
             label="LOD · min on-screen size"
             value={lod.lodApparent}
             min={0}
-            max={0.02}
+            max={0.2}
             step={0.001}
             format={(v) => v.toFixed(3)}
             onChange={(v) => dispatch(lodPatched({ lodApparent: v }))}
           />
+          <div className={styles.lodExplainer}>
+            View-dependent: hides sprites smaller than the threshold on screen right now, and
+            brightens the survivors so the field&rsquo;s total light holds. Higher = faster,
+            especially with many galaxies. Fly in and they reappear. 0 disables the cull.
+          </div>
           <ParamSlider
-            label="Cull faint stars"
-            value={lod.cullBright}
-            min={0}
-            max={0.4}
-            step={0.01}
-            onChange={(v) => dispatch(lodPatched({ cullBright: v }))}
+            label="Star target divisor"
+            value={render.aggregateDivisor}
+            min={1}
+            max={6}
+            step={1}
+            format={(v) => String(Math.round(v))}
+            onChange={(v) => dispatch(renderPatched({ aggregateDivisor: Math.round(v) }))}
           />
           <div className={styles.lodExplainer}>
-            View-dependent: hides sprites smaller/fainter than the threshold on screen right now.
-            Higher = faster, especially with many galaxies. Fly in and they reappear.
+            Stars render into an offscreen at 1/N the canvas and are bilinearly added back into HDR,
+            so their fragment cost — the actual wall — falls as N². 1 is full resolution, the
+            reference the reconstruction has to be judged against. Moving it reallocates that target
+            and rescales the two px knobs above, which clamp in ITS pixels.
           </div>
         </CollapsibleSection>
 
