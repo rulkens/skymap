@@ -53,15 +53,17 @@ export type EngineSliceState = {
   provenanceCounts: Partial<Record<SourceType, ProvenanceCounts>>;
   loadProgress: LoadProgressState | null;
   /**
-   * Namespace for curated JSON sidecar payloads — narrative/physical metadata
-   * fetched alongside a catalog rather than parsed from its binary rows. Each
-   * field is written wholesale by its own asset slot when that sidecar's
-   * fetch settles, and is empty both before the slot settles and after a
-   * failed fetch, so no field needs a separate "loaded" flag beside its
-   * array. A future sidecar (e.g. a third famous category, or metadata for a
-   * new source) belongs here as a new field, not as a new flat field on
-   * `EngineSliceState` — this is the one place callers look for "curated
-   * metadata I didn't parse myself".
+   * Curated JSON sidecar payloads that the React layer selects — narrative and
+   * physical metadata not carried in a catalog's binary rows. Each field is
+   * written wholesale by its own asset slot when that sidecar's fetch settles,
+   * and is empty both before the slot settles and after a failed fetch, so no
+   * field needs a separate "loaded" flag beside its array.
+   *
+   * Grouping them keeps the qualifier in the key path instead of repeating it
+   * through every symbol, and gives the next sidecar a home rather than another
+   * flat field on `EngineSliceState`. React-read is the criterion, not
+   * curated-ness: `structures_meta.json` is a curated sidecar too, but the
+   * engine is what consumes it, so its payload lives in `structureStore`.
    */
   meta: {
     /**
