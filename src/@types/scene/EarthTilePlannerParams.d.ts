@@ -23,14 +23,20 @@ export type EarthTilePlannerParams = {
   /** Tile edge in pixels, from the manifest — also the atlas's slot edge. */
   readonly tilePx: number;
   /**
-   * The level the whole-globe base texture already delivers. The planner's walk
+   * The level the whole-globe base texture THIS session bound already delivers —
+   * a property of its tier, via `earthBaseLevelForTier`. The planner's walk
    * floor, and the level the engage gate compares `zWin` against. Distinct from
    * `minTileLevel` because "the base is already as good as the screen needs" and
    * "no tile file exists this shallow" are different facts about different
    * images; see `planEarthTiles`.
    */
   readonly baseLevel: number;
-  /** Shallowest level the bake emitted for this kind — the floor on what may be requested. */
+  /**
+   * Shallowest level that may be requested: one finer than `baseLevel`, or the
+   * shallowest level the manifest says was baked, whichever is deeper. Below the
+   * first there is nothing to gain over the bound image; below the second there
+   * is no file.
+   */
   readonly minTileLevel: number;
   /** Deepest level the bake actually emitted for this kind. */
   readonly maxTileLevel: number;

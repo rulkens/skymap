@@ -61,6 +61,30 @@ Two conventions carry unusual weight here and are called out per task rather tha
    carry both facts: rooting the walk at the shallowest baked level makes
    `zWin >= minTileLevel` true of every plan, so the gate can never fire and no tile is ever
    fetched at any altitude.
+5. **Neither floor is a constant, and correction 4's two names are gone.** Found by the D7
+   radar: `EARTH_TILE_BASE_LEVEL` derived the base level from `tierToTexturePx('large')`,
+   which is Earth's registry CEILING rather than the tier a session runs at. `tierSlice`
+   defaults to `'medium'` = 4096 = **z3**, so on a default session the planner believed the
+   base delivered a level it did not have — the gate stood down one level early and the
+   handoff put a z3 base under a z5 tile, a 4x linear jump where one level of softening
+   (`EARTH_TILE_LOD_BIAS`) was the entire budget. On `'small'` it is three levels and 8x.
+
+   Both constants are deleted. `earthBaseLevelForTier(tier)` returns 2/3/4 by integer shift
+   (never `Math.log2`, whose one-ulp error at an exact power of two would make every `z` in
+   the walk fractional), clamped to the registry ceiling first so it describes the file
+   actually fetched. The tier comes from `earthSurfaceTier(state)`, which reads the asset
+   slot's committed request rather than the app-wide setting, because `lastRequest()` alone
+   reports the tier being FETCHED — only `state().kind === 'ready'` paired with that request
+   names the image on the GPU. The bake floor moved into `buildEarthTiles` as
+   `BAKE_MIN_LEVEL`, its only remaining reader; leaving it in `earthTileParams` would have
+   made a `data/ -> utils/ -> data/` cycle whose correctness depended on declaration order.
+
+   The runtime floor is `Math.max(levels.min, baseLevel + 1)`, NOT bare `levels.min`. This
+   is what makes the planned shallow bake work per tier rather than globally: with a manifest
+   advertising `min: 3`, a `small` session floors at 3, `medium` at 4 and `large` at 5, so
+   each tier requests exactly the levels its own base does not already cover and no session
+   fetches tiles that add nothing. The earlier `Math.max(EARTH_TILE_MIN_LEVEL, levels.min)`
+   would have clamped every session back to 5 and made a shallow bake silently inert.
 
 ## Definition of done
 

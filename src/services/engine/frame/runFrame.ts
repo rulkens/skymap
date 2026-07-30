@@ -69,6 +69,7 @@ import { produceStructureMarkers } from '../presentation/produceStructureMarkers
 import { deriveFrameContext } from './frameContext';
 import { deriveBodyStates } from './deriveBodyStates';
 import { sceneBodyStates } from './sceneBodyStates';
+import { earthSurfaceTier } from './earthSurfaceTier';
 import { prepareStarCut } from './passes/starCatalogLayer';
 import { earthLayer } from './passes/earthLayer';
 import { NEAR0, slabViewOf } from './slabs';
@@ -574,7 +575,13 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     // Null until the manifest lands; the first call is what starts that fetch,
     // and it has to happen before there is any plan at all — the subsystem's
     // engage rule is stated in terms of a level the manifest supplies.
-    const params = earthTiles.plannerParams();
+    //
+    // The tier goes in because the OTHER half of that level is the whole-globe
+    // texture this session bound, and only the drive site can see which one that
+    // is — `earthSurfaceTier` reads it off the committed texture slot rather than
+    // off the app-wide request, so a tier swap in flight cannot make the planner
+    // believe in detail that is not on the GPU yet.
+    const params = earthTiles.plannerParams(earthSurfaceTier(state));
     if (params !== null) {
       // The SAME slab resolution the executor hands `earthLayer.draw`, and the
       // same two derivations that draw feeds into `packEarthSurfaceUniforms`:

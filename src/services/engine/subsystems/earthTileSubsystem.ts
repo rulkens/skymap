@@ -71,6 +71,7 @@
 
 import type { EarthTileId } from '../../../@types/data/EarthTileId';
 import type { EarthTileKind } from '../../../@types/data/EarthTileKind';
+import type { Tier } from '../../../@types/data/Tier';
 import type { EarthTileManifest } from '../../../@types/scene/EarthTileManifest';
 import type { EarthResidentTile } from '../../../@types/scene/EarthResidentTile';
 import type { EarthTilePlan } from '../../../@types/scene/EarthTilePlan';
@@ -80,17 +81,16 @@ import type { BitmapStreamSubsystem } from '../../../@types/engine/subsystems/Bi
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import { createBitmapStreamSubsystem } from './bitmapStreamSubsystem';
 import { buildEarthPageTable } from '../../../utils/scene/buildEarthPageTable';
+import { earthBaseLevelForTier } from '../../../utils/scene/earthBaseLevelForTier';
 import { earthTilePath } from '../../../utils/scene/earthTilePath';
 import { fetchEarthTileManifest } from '../../../utils/scene/fetchEarthTileManifest';
 import { fetchEarthTileBitmap } from '../../../utils/network/fetchEarthTileBitmap';
 import { loadFadeAlpha } from '../../../utils/render/disk/loadFadeAlpha';
 import {
   EARTH_TILE_ATLAS_SIDE,
-  EARTH_TILE_BASE_LEVEL,
   EARTH_TILE_CONCURRENCY,
   EARTH_TILE_FADE_MS,
   EARTH_TILE_LOD_BIAS,
-  EARTH_TILE_MIN_LEVEL,
   EARTH_TILE_PX,
   EARTH_TILE_WINDOW_SIDE,
 } from '../../../data/bodies/earthTileParams';
@@ -141,7 +141,13 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
   // once per session, and nothing GPU-side rides on it.
   let manifestRequested = false;
   let manifestPending = false;
+  let manifest: EarthTileManifest | null = null;
+  // The derived params and the tier they were derived AT, kept together so the
+  // pair can only be read as one. The tier is a live user setting, and the base
+  // level is a fact about the texture that tier binds, so a params object cached
+  // without its tier would keep answering for the previous one after a swap.
   let params: EarthTilePlannerParams | null = null;
+  let paramsTier: Tier | null = null;
 
   // ── Lazily-allocated GPU state ──────────────────────────────────────────
   let stream: BitmapStreamSubsystem | null = null;
@@ -181,11 +187,22 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
   let destroyed = false;
 
   /**
-   * Turn a fetched manifest into planner inputs, or null if the bake it describes
-   * is one this build cannot address. Every rejection degrades the feature to
-   * base-only, which is the identity case and the same picture Earth draws with
-   * no manifest at all — so a refusal costs a reader nothing to reason about,
-   * while the alternative (adapting) would be silently wrong pixels.
+   * Turn a fetched manifest plus the tier Earth's surface texture is bound at
+   * into planner inputs, or null if the bake the manifest describes is one this
+   * build cannot address. Every rejection degrades the feature to base-only,
+   * which is the identity case and the same picture Earth draws with no manifest
+   * at all — so a refusal costs a reader nothing to reason about, while the
+   * alternative (adapting) would be silently wrong pixels.
+   *
+   * ## Why the TIER is an argument
+   *
+   * `baseLevel` is a fact about the whole-globe image the session actually
+   * bound, and the three tiers bind three different images (z2 / z3 / z4). The
+   * subsystem has no business knowing which one that is — the drive site reads
+   * it off the texture slot — so it arrives here and is inverted onto the ladder
+   * by `earthBaseLevelForTier`. Everything downstream (the walk floor, the
+   * engage gate, the request floor) then follows from one number instead of
+   * three parallel assumptions.
    *
    * ## Why a differently-cut pyramid is REFUSED and not adapted to
    *
@@ -202,20 +219,29 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
    * another edge is a format change, and the format's version is the tile tree
    * itself.
    */
-  function derivePlannerParams(manifest: EarthTileManifest): EarthTilePlannerParams | null {
-    const levels = manifest.levels?.[TILED_KIND];
+  function derivePlannerParams(
+    fetched: EarthTileManifest,
+    tier: Tier,
+  ): EarthTilePlannerParams | null {
+    const levels = fetched.levels?.[TILED_KIND];
     if (!levels) return null;
-    const tilePx = manifest.tilePx ?? EARTH_TILE_PX;
+    const tilePx = fetched.tilePx ?? EARTH_TILE_PX;
     if (tilePx !== EARTH_TILE_PX) return null;
-    // The base level IS the whole-globe base texture, so the request floor holds
-    // even if a bake emitted shallower levels — fetching one would re-download an
-    // image already bound.
-    const minTileLevel = Math.max(EARTH_TILE_MIN_LEVEL, levels.min);
+    const baseLevel = earthBaseLevelForTier(tier);
+    // The manifest is authoritative for what was BAKED; the base level is
+    // authoritative for what is already bound. The request floor is the deeper of
+    // the two, because a level at or above the base would re-download detail the
+    // whole-globe image already carries, and a level the bake never emitted is a
+    // 404. Deriving it from THIS session's base rather than a module constant is
+    // what lets a bake that reaches shallower serve a coarser tier: at `small`
+    // (base z2) a z3 tile is a genuine refinement, while at `large` (base z4) the
+    // same file is detail already on screen.
+    const minTileLevel = Math.max(levels.min, baseLevel + 1);
     if (!(levels.max >= minTileLevel)) return null;
     return {
       kind: TILED_KIND,
       tilePx,
-      baseLevel: EARTH_TILE_BASE_LEVEL,
+      baseLevel,
       minTileLevel,
       maxTileLevel: levels.max,
       windowSide: EARTH_TILE_WINDOW_SIDE,
@@ -223,16 +249,37 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     };
   }
 
-  function plannerParams(): EarthTilePlannerParams | null {
+  /**
+   * Re-derive the params for `tier`, from the manifest if it has landed. The one
+   * writer of the `(params, paramsTier)` pair, so the two cannot describe
+   * different tiers, and the one place a null params comes from — either the
+   * manifest is not here yet or the bake it describes was refused, and neither
+   * is a state the readers need to tell apart.
+   */
+  function refreshParams(tier: Tier): void {
+    paramsTier = tier;
+    params = manifest === null ? null : derivePlannerParams(manifest, tier);
+  }
+
+  function plannerParams(tier: Tier): EarthTilePlannerParams | null {
     if (!manifestRequested) {
       manifestRequested = true;
       manifestPending = true;
-      void fetchEarthTileManifest().then((manifest) => {
+      void fetchEarthTileManifest().then((fetched) => {
         manifestPending = false;
-        if (destroyed || manifest === null) return;
-        params = derivePlannerParams(manifest);
+        if (destroyed || fetched === null) return;
+        manifest = fetched;
+        // Derived here rather than on the next call, so `update()` has params to
+        // work with on the same frame the manifest lands — the drive site's
+        // ordering (params, then plan, then update) is a convention, and this
+        // does not depend on it.
+        refreshParams(paramsTier ?? tier);
       });
     }
+    // Re-derived only on a tier change, so the steady state is one comparison
+    // per frame. Holding the manifest rather than the params alone is what lets
+    // a swap be answered from memory instead of a second fetch.
+    if (paramsTier !== tier) refreshParams(tier);
     return params;
   }
 
@@ -446,7 +493,9 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     pageTable = null;
     resources = null;
     resident.clear();
+    manifest = null;
     params = null;
+    paramsTier = null;
     uploadedWindow = null;
   }
 

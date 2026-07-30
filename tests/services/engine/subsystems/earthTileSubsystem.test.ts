@@ -1,7 +1,16 @@
 /**
- * Two things this subsystem owns that a stand-in device is enough to see: the
- * manifest validation in `derivePlannerParams`, and the stand-down that happens
+ * Three things this subsystem owns that a stand-in device is enough to see: the
+ * manifest validation in `derivePlannerParams`, the base level it derives from
+ * the tier the whole-globe texture is bound at, and the stand-down that happens
  * when the engage rule goes false.
+ *
+ * The base level is the one of the three that is invisible when it is wrong. The
+ * three tiers bind three different whole-globe images — z2, z3 and z4 on the
+ * ladder — so a base level that describes only the finest of them makes a
+ * default `medium` session stand down a level early (soft pixels where the
+ * screen wanted more) and hand a z3 base straight to a z5 tile, a 4x linear step
+ * where one level of softening was the entire budget. No error, no 404, nothing
+ * to see but slightly worse ground.
  *
  * The manifest validation is the one part of this subsystem that is neither GPU,
  * network nor clock, and the one that has to be a refusal rather than an
@@ -30,38 +39,45 @@ vi.mock('../../../../src/utils/network/fetchEarthTileBitmap', () => ({
 
 import type { EarthTileManifest } from '../../../../src/@types/scene/EarthTileManifest';
 import type { EarthTilePlan } from '../../../../src/@types/scene/EarthTilePlan';
+import type { Tier } from '../../../../src/@types/data/Tier';
 import { createEarthTileSubsystem } from '../../../../src/services/engine/subsystems/earthTileSubsystem';
 import { fetchEarthTileManifest } from '../../../../src/utils/scene/fetchEarthTileManifest';
 import { fetchEarthTileBitmap } from '../../../../src/utils/network/fetchEarthTileBitmap';
-import {
-  EARTH_TILE_BASE_LEVEL,
-  EARTH_TILE_FADE_MS,
-  EARTH_TILE_MIN_LEVEL,
-  EARTH_TILE_PX,
-} from '../../../../src/data/bodies/earthTileParams';
+import { earthBaseLevelForTier } from '../../../../src/utils/scene/earthBaseLevelForTier';
+import { EARTH_TILE_FADE_MS, EARTH_TILE_PX } from '../../../../src/data/bodies/earthTileParams';
+
+/** The shipped pyramid's reference tier: `large`, whose z4 whole-globe base the
+ *  bake sits one level above. */
+const BASE_LEVEL = earthBaseLevelForTier('large');
+const MIN_TILE_LEVEL = BASE_LEVEL + 1;
 
 /** A manifest describing a usable surface pyramid, with `tilePx` left to the
  *  caller — `undefined` standing in for a bake that omitted the field. */
 function surfaceManifest(tilePx: number | undefined): EarthTileManifest {
   return {
     tilePx,
-    levels: { surface: { min: EARTH_TILE_MIN_LEVEL, max: EARTH_TILE_MIN_LEVEL + 1 } },
+    levels: { surface: { min: MIN_TILE_LEVEL, max: MIN_TILE_LEVEL + 1 } },
     builtFrom: { surface: 'test-fixture' },
   } as unknown as EarthTileManifest;
 }
 
-/** Drive the subsystem to the point where the manifest has landed. Construction
- *  allocates nothing, so a stand-in device never gets touched. */
-async function plannerParamsFor(manifest: EarthTileManifest) {
+/** A subsystem with the manifest landed, on a device that answers nothing —
+ *  enough for every question about params, since construction and a disengaged
+ *  frame allocate nothing. */
+async function subsystemWithManifest(manifest: EarthTileManifest) {
   vi.mocked(fetchEarthTileManifest).mockResolvedValue(manifest);
   const subsystem = createEarthTileSubsystem({
     device: {} as unknown as GPUDevice,
     requestRender: () => {},
   });
   // The first call is what starts the fetch, and it necessarily answers null.
-  subsystem.plannerParams();
+  subsystem.plannerParams('large');
   await new Promise((resolve) => setTimeout(resolve, 0));
-  return subsystem.plannerParams();
+  return subsystem;
+}
+
+async function plannerParamsFor(manifest: EarthTileManifest, tier: Tier = 'large') {
+  return (await subsystemWithManifest(manifest)).plannerParams(tier);
 }
 
 describe('earthTileSubsystem manifest validation', () => {
@@ -73,6 +89,31 @@ describe('earthTileSubsystem manifest validation', () => {
   it('refuses a bake cut at a different tile edge rather than adapting to it', async () => {
     expect(await plannerParamsFor(surfaceManifest(EARTH_TILE_PX / 2))).toBeNull();
     expect(await plannerParamsFor(surfaceManifest(EARTH_TILE_PX * 2))).toBeNull();
+  });
+});
+
+describe('earthTileSubsystem base level', () => {
+  it('reports a base one level coarser per tier step down, off the same manifest', async () => {
+    // The tier has to reach `derivePlannerParams` for this to hold: a base level
+    // computed from the `large` ceiling alone answers z4 for all three, which is
+    // a promise of detail two of them never bound.
+    const manifest = surfaceManifest(EARTH_TILE_PX);
+    const large = await plannerParamsFor(manifest, 'large');
+    const medium = await plannerParamsFor(manifest, 'medium');
+    const small = await plannerParamsFor(manifest, 'small');
+    expect(medium!.baseLevel).toBe(large!.baseLevel - 1);
+    expect(small!.baseLevel).toBe(large!.baseLevel - 2);
+  });
+
+  it('re-derives the base level when the tier changes under one subsystem', async () => {
+    // The params are memoised — one small object per session, not per frame — so
+    // the memo has to be keyed on the tier. Cached without it, a tier swap would
+    // keep planning against the previous session's base for the rest of the
+    // session, with the manifest already in hand and nothing to re-fetch.
+    const subsystem = await subsystemWithManifest(surfaceManifest(EARTH_TILE_PX));
+    const before = subsystem.plannerParams('large')!.baseLevel;
+    expect(subsystem.plannerParams('medium')!.baseLevel).toBe(before - 1);
+    expect(subsystem.plannerParams('large')!.baseLevel).toBe(before);
   });
 });
 
@@ -93,21 +134,37 @@ describe('earthTileSubsystem manifest validation', () => {
  * cell?) come straight back out.
  */
 
-const TILE = { kind: 'surface', z: EARTH_TILE_MIN_LEVEL, x: 0, y: 0 } as const;
+const TILE = { kind: 'surface', z: MIN_TILE_LEVEL, x: 0, y: 0 } as const;
 const ENGAGED: EarthTilePlan = {
-  zWin: EARTH_TILE_MIN_LEVEL,
+  zWin: MIN_TILE_LEVEL,
   winX0: 0,
   winY0: 0,
   requests: [{ tile: TILE, screenPx: EARTH_TILE_PX }],
 };
-/** At the base level exactly: the density the whole-globe texture already
- *  carries, so there is nothing a tile could add. */
+/** At the `large` tier's base level exactly: the density that whole-globe
+ *  texture already carries, so there is nothing a tile could add — and one level
+ *  MORE than a `medium` session's base carries, which is what the engage-gate
+ *  test below turns on. */
 const DISENGAGED: EarthTilePlan = {
-  zWin: EARTH_TILE_BASE_LEVEL,
+  zWin: BASE_LEVEL,
   winX0: 0,
   winY0: 0,
   requests: [],
 };
+
+/** A device that records its page-table uploads and hands back the least it can
+ *  for the atlas allocation. */
+function recordingDevice(writes: Uint8Array[]): GPUDevice {
+  return {
+    createTexture: () => ({ createView: () => ({}), destroy: () => {} }),
+    queue: {
+      // Copied, because the subsystem rebuilds the table into a fresh array each
+      // time but the atlas upload path hands us someone else's buffer.
+      writeTexture: (_target: unknown, data: Uint8Array) => writes.push(new Uint8Array(data)),
+      copyExternalImageToTexture: () => {},
+    },
+  } as unknown as GPUDevice;
+}
 
 /**
  * A subsystem with the manifest landed, one tile resident in the atlas, and its
@@ -122,18 +179,11 @@ async function engagedSubsystem() {
   } as unknown as ImageBitmap);
 
   const writes: Uint8Array[] = [];
-  const device = {
-    createTexture: () => ({ createView: () => ({}), destroy: () => {} }),
-    queue: {
-      // Copied, because the subsystem rebuilds the table into a fresh array each
-      // time but the atlas upload path hands us someone else's buffer.
-      writeTexture: (_target: unknown, data: Uint8Array) => writes.push(new Uint8Array(data)),
-      copyExternalImageToTexture: () => {},
-    },
-  } as unknown as GPUDevice;
-
-  const subsystem = createEarthTileSubsystem({ device, requestRender: () => {} });
-  subsystem.plannerParams();
+  const subsystem = createEarthTileSubsystem({
+    device: recordingDevice(writes),
+    requestRender: () => {},
+  });
+  subsystem.plannerParams('large');
   await new Promise((resolve) => setTimeout(resolve, 0));
 
   // First engaged frame: allocates, enqueues the tile's fetch, uploads a table
@@ -145,6 +195,40 @@ async function engagedSubsystem() {
 
   return { subsystem, writes };
 }
+
+/**
+ * Whether one frame of `plan` engages the virtual texture on a session bound at
+ * `tier`. The atlas and the page table are allocated by the first ENGAGED frame
+ * and by nothing else, so `getTileResources()` going non-null IS the gate's
+ * answer.
+ */
+async function engagesAt(plan: EarthTilePlan, tier: Tier): Promise<boolean> {
+  vi.mocked(fetchEarthTileManifest).mockResolvedValue(surfaceManifest(EARTH_TILE_PX));
+  const subsystem = createEarthTileSubsystem({
+    device: recordingDevice([]),
+    requestRender: () => {},
+  });
+  subsystem.plannerParams(tier);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  subsystem.update({ plan, nowMs: 0 });
+  return subsystem.getTileResources() !== null;
+}
+
+describe('earthTileSubsystem engage gate', () => {
+  it('engages on the very plan a finer-tiered session stands down on', async () => {
+    // One plan, settled exactly at the `large` tier's base level. That density is
+    // already on screen for a session holding the 8192 base — nothing to add, so
+    // stand down — and one level MORE than the 4096 base a default `medium`
+    // session holds, so for that session the screen is asking for detail the base
+    // does not carry and the tiles are the only thing that can supply it.
+    //
+    // This is the whole bug in one assertion: with the base level fixed at the
+    // largest tier's, the second expectation held for both and the default
+    // session showed z3 ground while the screen wanted z5.
+    expect(await engagesAt(DISENGAGED, 'medium'), 'medium').toBe(true);
+    expect(await engagesAt(DISENGAGED, 'large'), 'large').toBe(false);
+  });
+});
 
 describe('earthTileSubsystem stand-down', () => {
   it('blanks the page table once when the camera pulls back out, and re-engages', async () => {
@@ -195,7 +279,7 @@ describe('earthTileSubsystem stand-down', () => {
     });
 
     const subsystem = createEarthTileSubsystem({ device, requestRender: () => {} });
-    subsystem.plannerParams();
+    subsystem.plannerParams('large');
     await new Promise((resolve) => setTimeout(resolve, 0));
     for (let frame = 0; frame < 3; frame++) {
       subsystem.update({ plan: DISENGAGED, nowMs: frame * 16 });

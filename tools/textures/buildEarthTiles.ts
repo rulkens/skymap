@@ -71,7 +71,8 @@ import sharp from 'sharp';
 
 import type { EarthTileKind } from '../../src/@types/data/EarthTileKind';
 import type { EarthTileManifest } from '../../src/@types/scene/EarthTileManifest';
-import { EARTH_TILE_MIN_LEVEL, EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
+import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
+import { earthBaseLevelForTier } from '../../src/utils/scene/earthBaseLevelForTier';
 import { earthTileColumns } from '../../src/utils/scene/earthTileColumns';
 import { earthTilePath } from '../../src/utils/scene/earthTilePath';
 import type { EarthImagerySource } from './EarthImagerySource';
@@ -85,6 +86,21 @@ import type { LonLatBox } from './LonLatBox';
  * sync wall-clock rather than a rounding error.
  */
 const WEBP_QUALITY = 82;
+
+/**
+ * Shallowest level this bake emits: one finer than the base the LARGEST tier
+ * delivers, so every tile on disk refines the finest whole-globe texture that
+ * ships rather than re-serving it.
+ *
+ * A bake floor, and nothing else. The runtime learns it from the manifest's
+ * `levels.min` and floors its own requests at one finer than the base ITS tier
+ * bound, so lowering this — baking z3 and z4 so a `small` or `medium` session
+ * gets a continuous ladder from its own base upward — is a re-bake with no code
+ * change on the other side. Reading this same number as a runtime request floor
+ * is what would make such a re-bake appear to do nothing, which is why it lives
+ * here and not beside the ladder constants.
+ */
+const BAKE_MIN_LEVEL = earthBaseLevelForTier('large') + 1;
 
 /**
  * The only kind this tool bakes. Surface albedo is where the resolution
@@ -222,18 +238,18 @@ async function bakeCoarserLevel(z: number, tilePx: number, outDir: string): Prom
   return written;
 }
 
-/** Bake every level from `source.maxLevel` down to `EARTH_TILE_MIN_LEVEL` into `outDir`. */
+/** Bake every level from `source.maxLevel` down to `BAKE_MIN_LEVEL` into `outDir`. */
 export async function buildEarthTiles(source: EarthImagerySource, outDir: string): Promise<void> {
   const tilePx = EARTH_TILE_PX;
-  const minLevel = EARTH_TILE_MIN_LEVEL;
+  const minLevel = BAKE_MIN_LEVEL;
   const maxLevel = source.maxLevel;
 
-  // Levels at or below the base ARE the whole-globe texture already bound, so
-  // a source that cannot beat it has nothing to contribute and an empty
-  // pyramid would be indistinguishable from a broken one.
+  // Levels at or below the largest tier's base ARE a whole-globe texture that
+  // already ships, so a source that cannot beat it has nothing to contribute and
+  // an empty pyramid would be indistinguishable from a broken one.
   if (maxLevel < minLevel) {
     throw new Error(
-      `buildEarthTiles: source '${source.id}' reaches only z${maxLevel}, at or below the whole-globe base at z${minLevel - 1} — nothing to bake`,
+      `buildEarthTiles: source '${source.id}' reaches only z${maxLevel}, at or below the largest tier's whole-globe base at z${minLevel - 1} — nothing to bake`,
     );
   }
 

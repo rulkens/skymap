@@ -38,6 +38,7 @@
 import type { EarthTilePlan } from '../../scene/EarthTilePlan';
 import type { EarthTilePlannerParams } from '../../scene/EarthTilePlannerParams';
 import type { Destroyable } from '../../rendering/Destroyable';
+import type { Tier } from '../../data/Tier';
 
 export type EarthTileSubsystem = Destroyable & {
   /**
@@ -50,8 +51,15 @@ export type EarthTileSubsystem = Destroyable & {
    * produce without these facts, so a gate that waited for engagement before
    * fetching would be waiting on its own answer. Calling it costs one small JSON
    * per session and nothing after.
+   *
+   * `tier` is the tier Earth's whole-globe SURFACE texture is bound at, which is
+   * what fixes `baseLevel`: the three tiers are three different base images (z2,
+   * z3, z4 on the ladder), so the level the tiles refine on top of is a property
+   * of the session, not of the build. It is an argument rather than something
+   * read in here because "which image is bound?" is a question about an asset
+   * slot, and this subsystem knows nothing about slots.
    */
-  plannerParams(): EarthTilePlannerParams | null;
+  plannerParams(tier: Tier): EarthTilePlannerParams | null;
 
   /**
    * Drive one frame. Call it on EVERY frame Earth's layer draws — the

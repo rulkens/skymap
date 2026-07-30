@@ -27,16 +27,17 @@ import { describe, it, expect } from 'vitest';
 import { mat4 } from 'wgpu-matrix';
 
 import { planEarthTiles } from '../../../src/utils/scene/planEarthTiles';
+import { earthBaseLevelForTier } from '../../../src/utils/scene/earthBaseLevelForTier';
 import { earthTexelMetres } from '../../../src/utils/scene/earthTexelMetres';
 import { earthTileXyForUv } from '../../../src/utils/scene/earthTileXyForUv';
 import { earthTileColumns } from '../../../src/utils/scene/earthTileColumns';
-import {
-  EARTH_TILE_BASE_LEVEL,
-  EARTH_TILE_MIN_LEVEL,
-  EARTH_TILE_PX,
-  EARTH_TILE_WINDOW_SIDE,
-} from '../../../src/data/bodies/earthTileParams';
+import { EARTH_TILE_PX, EARTH_TILE_WINDOW_SIDE } from '../../../src/data/bodies/earthTileParams';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+
+/** A `large`-tier session: the z4 whole-globe base the shipped pyramid sits on,
+ *  and the z5 request floor one level finer than it. */
+const BASE_LEVEL = earthBaseLevelForTier('large');
+const MIN_TILE_LEVEL = BASE_LEVEL + 1;
 
 const EARTH_RADIUS_KM = 6371;
 const FOV_Y_RAD = (40 * Math.PI) / 180;
@@ -62,8 +63,8 @@ function nadirAt(altitudeKm: number, lonDeg = 20, latDeg = 15) {
     camPosLocal,
     viewProjLocal,
     viewportPx: VIEWPORT,
-    baseLevel: EARTH_TILE_BASE_LEVEL,
-    minTileLevel: EARTH_TILE_MIN_LEVEL,
+    baseLevel: BASE_LEVEL,
+    minTileLevel: MIN_TILE_LEVEL,
     maxTileLevel: 13,
     windowSide: EARTH_TILE_WINDOW_SIDE,
     tilePx: EARTH_TILE_PX,
@@ -97,7 +98,7 @@ function nadirAt(altitudeKm: number, lonDeg = 20, latDeg = 15) {
  */
 function expectedLevel(altitudeKm: number): number {
   const gmpp = (altitudeKm * 1000 * 2 * Math.tan(FOV_Y_RAD / 2)) / VIEWPORT[1];
-  let z = EARTH_TILE_BASE_LEVEL;
+  let z = BASE_LEVEL;
   while (earthTexelMetres(z) > gmpp) z++;
   return z;
 }
@@ -135,7 +136,7 @@ describe('planEarthTiles', () => {
     // floor with nothing to fetch, the same shape as the far-altitude
     // stand-down, rather than an underflowed level with no tile behind it.
     const plan = planEarthTiles({ ...nadirAt(1000), lodBias: 1000 });
-    expect(plan.zWin).toBe(EARTH_TILE_BASE_LEVEL);
+    expect(plan.zWin).toBe(BASE_LEVEL);
     expect(plan.requests).toEqual([]);
   });
 
@@ -147,23 +148,23 @@ describe('planEarthTiles', () => {
     // altitude reports zWin = 5, so the drive site's `plan.zWin > baseLevel`
     // never fires and no tile is ever fetched.
     const shipped = {
-      baseLevel: EARTH_TILE_BASE_LEVEL,
-      minTileLevel: EARTH_TILE_MIN_LEVEL,
-      maxTileLevel: EARTH_TILE_MIN_LEVEL,
+      baseLevel: BASE_LEVEL,
+      minTileLevel: MIN_TILE_LEVEL,
+      maxTileLevel: MIN_TILE_LEVEL,
     };
 
     const close = planEarthTiles({ ...nadirAt(1000), ...shipped });
-    expect(close.zWin, 'engages at 1000 km').toBeGreaterThan(EARTH_TILE_BASE_LEVEL);
+    expect(close.zWin, 'engages at 1000 km').toBeGreaterThan(BASE_LEVEL);
     expect(close.requests.length).toBeGreaterThan(0);
     // A leaf left at the base level has no file to fetch, so it must never
     // reach the request list however deep the plan went elsewhere.
-    expect(close.requests.every((r) => r.tile.z >= EARTH_TILE_MIN_LEVEL)).toBe(true);
+    expect(close.requests.every((r) => r.tile.z >= MIN_TILE_LEVEL)).toBe(true);
 
     // The far end of the same rule: from 20 000 km the base texture is already
     // finer than the screen, so the plan bottoms out at the base and asks for
     // nothing.
     const far = planEarthTiles({ ...nadirAt(20_000), ...shipped });
-    expect(far.zWin, 'stands down at 20 000 km').toBe(EARTH_TILE_BASE_LEVEL);
+    expect(far.zWin, 'stands down at 20 000 km').toBe(BASE_LEVEL);
     expect(far.requests).toEqual([]);
   });
 
@@ -184,7 +185,7 @@ describe('planEarthTiles', () => {
     // observable as requests and leaves the horizon test as the only thing that
     // can remove one. With the shipped floor they would all be dropped for
     // having no file, and the cull under test would have nothing to show.
-    const z = EARTH_TILE_BASE_LEVEL;
+    const z = BASE_LEVEL;
     const plan = planEarthTiles({ ...nadirAt(20_000), minTileLevel: z });
     expect(plan.zWin).toBe(z);
 

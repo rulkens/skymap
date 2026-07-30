@@ -15,26 +15,35 @@
  * ## The level ladder
  *
  * Level `z` is the pyramid step whose full equirectangular width is
- * `EARTH_EQUIRECT_BASE_WIDTH_PX << z` texels. Anchoring the ladder on 512 makes
- * `z = 4` come out at exactly 8192 × 4096 — today's whole-globe base texture —
- * which is what lets the virtual texture start at `z = 5` and be strictly
- * additive on top of an image that already exists, rather than replacing it.
- * It also happens to be the WGS84 / EOX `TileMatrixSet` ladder verbatim, so a
- * pyramid baked from either candidate source needs no grid translation.
+ * `EARTH_EQUIRECT_BASE_WIDTH_PX << z` texels. Anchoring the ladder on 512 puts
+ * the three whole-globe surface tiers exactly on it — 2048 is z2, 4096 is z3,
+ * 8192 is z4 — which is what lets the virtual texture be strictly additive on
+ * top of an image that already exists rather than replacing it. It also happens
+ * to be the WGS84 / EOX `TileMatrixSet` ladder verbatim, so a pyramid baked from
+ * either candidate source needs no grid translation.
  *
- * ## Two floors, not one
+ * ## Three floors, none of them a constant here
  *
- * The base level and the shallowest baked level are separate numbers because
- * they answer separate questions. `EARTH_TILE_BASE_LEVEL` is the density the
- * whole-globe base texture already delivers, and it is what "does the screen
- * want more than the base has?" compares against — the planner walks down from
- * it and `earthTileSubsystem` engages on `plan.zWin > baseLevel`.
- * `EARTH_TILE_MIN_LEVEL` is the shallowest level for which tile FILES exist,
- * which is one finer precisely because the base covers everything above it.
- * Folding the two into a single constant would root the planner's walk at the
- * shallowest baked level, so every plan would report at least that level and the
- * engage comparison would be true-by-construction against its own floor — a
- * feature that never turns on at any altitude, with no error to show for it.
+ * The base level, the request floor and the bake floor answer separate
+ * questions, and none of the three is a fact about the ladder alone:
+ *
+ *  - The BASE level is the density the whole-globe texture a session actually
+ *    binds delivers, which is a function of that session's tier —
+ *    `earthBaseLevelForTier`. It is the planner's walk floor and the level the
+ *    engage gate compares `zWin` against.
+ *  - The REQUEST floor is one finer than that base, or the shallowest level the
+ *    manifest says was baked, whichever is deeper: `derivePlannerParams` derives
+ *    it per session. Fetching at or above the base would re-download detail an
+ *    already-bound image carries.
+ *  - The BAKE floor is the shallowest level the tool emits, and it lives in
+ *    `tools/textures/buildEarthTiles.ts` — the manifest is what tells the
+ *    runtime about it, so deepening or shallowing the bake stays a data change.
+ *
+ * Collapsing the walk floor into the request floor is the tempting mistake: it
+ * would root the walk at the shallowest baked level, so every plan would report
+ * at least that level and the engage comparison would be true-by-construction
+ * against its own floor — a feature that never turns on at any altitude, with no
+ * error to show for it.
  *
  * ## Why the tile edge is 512 and not the source grid's 256
  *
@@ -46,34 +55,16 @@
  * so revisiting the choice is a re-bake, not a code change.
  */
 
-import { tierToTexturePx } from '../../utils/math/tierToTexturePx';
-
 /** Full equirectangular width, in texels, of pyramid level 0. Level `z` is
  *  `EARTH_EQUIRECT_BASE_WIDTH_PX << z` wide and half that tall, so `z = 4` is
- *  exactly the 8192 × 4096 whole-globe base texture. (Design 1.) */
+ *  exactly the 8192 × 4096 whole-globe texture the `large` tier binds.
+ *  (Design 1.) */
 export const EARTH_EQUIRECT_BASE_WIDTH_PX = 512;
 
 /** Default tile edge in pixels; the manifest's `tilePx` is authoritative at
  *  runtime. Chosen over the source grid's 256 to quarter the object count.
  *  (Design 1.) */
 export const EARTH_TILE_PX = 512;
-
-/** The level the whole-globe base texture already delivers — the planner's walk
- *  floor, and the level the engage gate compares against. Derived from the
- *  texture that actually ships rather than written as a bare `4`, so the ladder
- *  anchor and the base image cannot drift apart: `'large'` is Earth's `surface`
- *  ceiling in `BODY_TEXTURE_REGISTRY`, and inverting the ladder on its width
- *  recovers the level. A session clamped to a coarser tier binds a coarser base
- *  and is simply under-served above `EARTH_TILE_MIN_LEVEL` — never over-served,
- *  which is the direction that would cost fetches. */
-export const EARTH_TILE_BASE_LEVEL = Math.log2(
-  tierToTexturePx('large') / EARTH_EQUIRECT_BASE_WIDTH_PX,
-);
-
-/** Shallowest level the virtual texture ever requests — one finer than the base,
- *  because the base IS a pyramid level and baking or fetching it would be
- *  re-downloading an image already bound. (Design 6.) */
-export const EARTH_TILE_MIN_LEVEL = EARTH_TILE_BASE_LEVEL + 1;
 
 /** Page-table window edge, in tiles at the finest currently-planned level.
  *  128 tiles across is roughly 2500 km of ground at the altitude where that
