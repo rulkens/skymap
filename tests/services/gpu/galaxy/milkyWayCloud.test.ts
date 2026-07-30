@@ -13,8 +13,8 @@
  * globals (`GPUBufferUsage`) come from `tests/setup/webgpuGlobals.ts`.
  *
  * Expected capacities are DERIVED from `carveStarLayout`/`carveDustLayout`
- * (the single capacity authority) applied to the same per-tier params the
- * factory folds, never hardcoded — the carve fns stay the only source of the
+ * (the single capacity authority) applied to the same starCount the factory
+ * folds directly, never hardcoded — the carve fns stay the only source of the
  * numbers, so a tuning change to the preset re-derives the expectation instead
  * of forcing a test edit.
  */
@@ -29,7 +29,6 @@ import { classifyHubbleType } from '../../../../src/services/gpu/galaxy/classify
 import { splitStarBudget } from '../../../../src/services/gpu/galaxy/splitStarBudget';
 import { GEN_RECORD_BYTES } from '../../../../src/services/gpu/galaxy/genRecordBytes';
 import { GENERATION_UBO } from '../../../../src/services/gpu/galaxy/generationUboLayout';
-import type { Tier } from '../../../../src/@types/data/Tier';
 
 /** A stub GPUBuffer that records its descriptor and whether it was destroyed. */
 type StubBuffer = GPUBuffer & {
@@ -85,9 +84,9 @@ function makeStubDevice() {
   return { device, buffers, writes, submit };
 }
 
-/** Re-derive the carved star/dust capacities for a tier, from the same fold the factory uses. */
-function expectedCapacities(tier: Tier): { readonly star: number; readonly dust: number } {
-  const params = { ...MILKY_WAY_GALAXY_PARAMS, starCount: MILKY_WAY_STARS_PER_TIER[tier] };
+/** Re-derive the carved star/dust capacities for an absolute star count, from the same fold the factory uses. */
+function expectedCapacities(starCount: number): { readonly star: number; readonly dust: number } {
+  const params = { ...MILKY_WAY_GALAXY_PARAMS, starCount };
   const category = classifyHubbleType(params.type);
   const budget = splitStarBudget(category, params);
   return {
@@ -103,9 +102,9 @@ function findByLabel(buffers: readonly StubBuffer[], label: string): StubBuffer[
 describe('createMilkyWayCloud', () => {
   it('creates star and dust VBs with the pinned labels, VERTEX|STORAGE usage, and capacity x GEN_RECORD_BYTES sizes', () => {
     const { device, buffers } = makeStubDevice();
-    createMilkyWayCloud(device, 'medium');
+    createMilkyWayCloud(device, MILKY_WAY_STARS_PER_TIER.medium);
 
-    const expected = expectedCapacities('medium');
+    const expected = expectedCapacities(MILKY_WAY_STARS_PER_TIER.medium);
     // The preset is barred (SBb) with dust > 0, so both layouts carve capacity.
     expect(expected.star).toBeGreaterThan(0);
     expect(expected.dust).toBeGreaterThan(0);
@@ -129,35 +128,31 @@ describe('createMilkyWayCloud', () => {
     expect(ubos[0]!.__desc.usage).toBe(GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST);
   });
 
-  it('medium tier packs the preset starCount and large packs x2', () => {
-    // The per-tier table is the fold's authority: medium IS the preset budget,
-    // large is 2x. The carved star capacity scales with it, and the packed UBO
-    // carries that capacity in its `starCapacity` lane — so reading it back
-    // confirms the tier's starCount reached generation.
-    expect(MILKY_WAY_STARS_PER_TIER.medium).toBe(MILKY_WAY_GALAXY_PARAMS.starCount);
-    expect(MILKY_WAY_STARS_PER_TIER.large).toBe(MILKY_WAY_STARS_PER_TIER.medium * 2);
-
-    const readPackedStarCapacity = (tier: Tier): number => {
+  it('a larger starCount packs a larger carved star capacity into the UBO', () => {
+    // starCount is now a direct pass-through into `GalaxyParams.starCount` —
+    // no tier lookup in between — so reading the packed UBO's starCapacity
+    // lane back confirms the requested count itself reached generation.
+    const readPackedStarCapacity = (starCount: number): number => {
       const { device, writes } = makeStubDevice();
-      createMilkyWayCloud(device, tier);
+      createMilkyWayCloud(device, starCount);
       // One generation => one UBO write.
       expect(writes).toHaveLength(1);
       const u32 = new Uint32Array(writes[0]!.data);
       return u32[GENERATION_UBO.u32.starCapacity]!;
     };
 
-    const mediumCap = readPackedStarCapacity('medium');
-    const largeCap = readPackedStarCapacity('large');
+    const smallCap = readPackedStarCapacity(MILKY_WAY_STARS_PER_TIER.medium);
+    const largeCap = readPackedStarCapacity(MILKY_WAY_STARS_PER_TIER.large);
 
-    expect(mediumCap).toBe(expectedCapacities('medium').star);
-    expect(largeCap).toBe(expectedCapacities('large').star);
-    // Doubling the star budget grows the carved star capacity.
-    expect(largeCap).toBeGreaterThan(mediumCap);
+    expect(smallCap).toBe(expectedCapacities(MILKY_WAY_STARS_PER_TIER.medium).star);
+    expect(largeCap).toBe(expectedCapacities(MILKY_WAY_STARS_PER_TIER.large).star);
+    // A bigger requested count grows the carved star capacity.
+    expect(largeCap).toBeGreaterThan(smallCap);
   });
 
   it('regenerate destroys the old buffers and submits a new generation', () => {
     const { device, submit } = makeStubDevice();
-    const cloud = createMilkyWayCloud(device, 'medium');
+    const cloud = createMilkyWayCloud(device, MILKY_WAY_STARS_PER_TIER.medium);
 
     // Grab the initial generation's buffers before they're replaced.
     const before = cloud.buffers();
@@ -165,7 +160,7 @@ describe('createMilkyWayCloud', () => {
     const oldDust = before.dustBuf as StubBuffer;
     expect(submit).toHaveBeenCalledTimes(1);
 
-    cloud.regenerate('large');
+    cloud.regenerate(MILKY_WAY_STARS_PER_TIER.large);
 
     // Old vertex buffers torn down; a second generation submitted.
     expect(oldStar.destroy).toHaveBeenCalledTimes(1);
@@ -178,9 +173,22 @@ describe('createMilkyWayCloud', () => {
     expect((after.starBuf as StubBuffer).destroy).not.toHaveBeenCalled();
   });
 
+  it('starCount() reports the count the CURRENT buffers were generated with', () => {
+    // runFrame compares this against the live setting to decide whether to
+    // regenerate; if it reported the constructor arg forever (never updating
+    // on regenerate), that comparison would regenerate every single frame
+    // once the two disagreed even once. Pin that it tracks the latest call.
+    const { device } = makeStubDevice();
+    const cloud = createMilkyWayCloud(device, MILKY_WAY_STARS_PER_TIER.medium);
+    expect(cloud.starCount()).toBe(MILKY_WAY_STARS_PER_TIER.medium);
+
+    cloud.regenerate(MILKY_WAY_STARS_PER_TIER.small);
+    expect(cloud.starCount()).toBe(MILKY_WAY_STARS_PER_TIER.small);
+  });
+
   it('destroy releases buffers and UBO', () => {
     const { device, buffers } = makeStubDevice();
-    const cloud = createMilkyWayCloud(device, 'medium');
+    const cloud = createMilkyWayCloud(device, MILKY_WAY_STARS_PER_TIER.medium);
 
     const snapshot = cloud.buffers();
     const star = snapshot.starBuf as StubBuffer;

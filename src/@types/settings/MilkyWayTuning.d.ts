@@ -10,13 +10,18 @@
  * keeps the visibility intent (`enabled` / `labelEnabled`) off the generic
  * merge path, so a knob patch can never flip the layer off by accident.
  *
- * What unites the set is that moving any of them changes the NEXT frame. Most
- * get there via `milkyWayCloudRenderer.writeUniforms`, landing in the `params0`
- * / `params1` lanes of `milkyWayCloud/io.wesl`'s `Uniforms`; `aggregateDivisor`
- * gets there by sizing the offscreen the star pass draws into, which the frame
- * loop reallocates when the number moves. The STAR COUNT is absent for failing
- * exactly that bar: it feeds generation (`milkyWayCloud.generate`), so a live
- * slider over it would silently do nothing until the next tier switch.
+ * What unites the set is that moving any of them changes the NEXT frame — not
+ * that the frame loop reacts by the SAME mechanism. Most get there via
+ * `milkyWayCloudRenderer.writeUniforms`, landing in the `params0` / `params1`
+ * lanes of `milkyWayCloud/io.wesl`'s `Uniforms` — a uniform write.
+ * `aggregateDivisor` gets there by sizing the offscreen the star pass draws
+ * into, which the frame loop reallocates when the number moves — a render-
+ * target rebuild. `starCount` gets there the heaviest way of the three: it
+ * feeds generation directly (`milkyWayCloud.generate` carves the star/dust
+ * layouts and allocates buffers from it), so the frame loop answers a
+ * mismatch by regenerating the cloud outright. All three still clear the same
+ * bar — moving the knob changes the next frame — because "the frame loop
+ * reacts" was never a promise about uniform buffers specifically.
  */
 
 export type MilkyWayTuning = {
@@ -68,4 +73,26 @@ export type MilkyWayTuning = {
    * than by riding the uniform buffer.
    */
   aggregateDivisor: number;
+  /**
+   * Absolute star count fed straight into `milkyWayCloud.generate`'s
+   * `GalaxyParams.starCount` before carving the star/dust layouts. Seeded
+   * from the CURRENT tier's budget (`MILKY_WAY_STARS_PER_TIER[tier]`) at boot
+   * and re-seeded by `watchTierSaga` on every explicit tier change, so an
+   * absolute count doesn't quietly decouple the cloud from tier LOD — a
+   * device that drops to the small tier gets the small tier's budget, not
+   * whatever count a previous tier's panel session left behind. Between tier
+   * changes the DebugPanel slider owns it. The heaviest-reaction knob in the
+   * set: moving it doesn't touch a uniform or a render target, it regenerates
+   * the cloud's instance buffers outright (destroy + allocate + compute
+   * dispatch) — see `runFrame`'s mismatch branch, which mirrors
+   * `aggregateDivisor`'s render-target rebuild but for generated data instead
+   * of a texture.
+   *
+   * `splitStarBudget` floors the total at 20,000 stars — not a taste choice,
+   * a hard floor the renderer always honours regardless of what's requested —
+   * so `MILKY_WAY_SLIDER_FIELDS`'s `starCount` row sets its `min` to that same
+   * floor. Lowering the row's `min` below 20,000 would let the slider display
+   * a number the renderer silently ignores.
+   */
+  starCount: number;
 };

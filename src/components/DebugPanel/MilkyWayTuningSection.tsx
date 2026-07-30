@@ -6,15 +6,17 @@
  *
  * These decide whether the generated cloud reads as a smooth galaxy or as a
  * field of visible particles, and the answer is only findable by moving them
- * against a live frame — they were previously URL query params, which meant a
- * reload (and a fresh judgement of the previous look from memory) per guess.
- * The explorer-facing SettingsPanel surfaces only the Milky-Way visibility
- * toggle; everything here is dev-only.
+ * against a live frame — several were previously URL query params, which
+ * meant a reload (and a fresh judgement of the previous look from memory) per
+ * guess. The explorer-facing SettingsPanel surfaces only the Milky-Way
+ * visibility toggle; everything here is dev-only.
  *
  * The rows are driven from `MILKY_WAY_SLIDER_FIELDS`, so the field list,
  * ranges, and value formatting live in one registry rather than re-spelled
- * here. The star COUNT is deliberately not a row: it feeds generation, so
- * dragging it would change nothing until the next tier switch.
+ * here. That includes the star COUNT (`starCount`): it feeds generation
+ * rather than a uniform, so `runFrame` answers a drag by regenerating the
+ * cloud outright — see that registry's docblock for why the row still counts
+ * as "changes the next frame" despite the heavier reaction.
  */
 
 import type { ReactElement } from 'react';
