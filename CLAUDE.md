@@ -118,3 +118,7 @@ These are **mandatory pre-reading** for the task areas below, not optional backg
 ## Memory
 
 The agent's auto-memory at `~/.claude/projects/-Users-rulkens-Development-js-skymap/memory/` carries cross-session context. Read `MEMORY.md` for the index; update memories whenever project state shifts (plan task completed, convention adopted, catalog re-fetched).
+
+## Compact Instructions
+
+When compacting, always preserve: current branch + HEAD + open PR; every in-flight background agent/task and its state; SDD workspace/ledger paths; open decisions and the immediate next actions. Where an SDD ledger exists (`.superpowers/sdd/<plan>/progress.md`), treat it as the authoritative resume map and keep only a pointer to it, not a re-summary of it.
