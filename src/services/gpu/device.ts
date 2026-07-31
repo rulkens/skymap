@@ -92,12 +92,25 @@ export async function initGpu(canvas: HTMLCanvasElement): Promise<GpuContext> {
   const context = canvas.getContext('webgpu');
   if (!context) throw new Error('Could not get webgpu context.');
 
-  // Choose the swap-chain format the browser prefers for *this* display.
-  // On most systems this is either `'bgra8unorm'` (macOS/Windows) or
-  // `'rgba8unorm'` (Linux/Android). Hardcoding one or the other silently
-  // corrupts colours on the other platform — always use this call.
+  // Boot always configures the browser's preferred 8-bit format — see
+  // `GpuContext.format`'s doc comment for why hardcoding `'bgra8unorm'` or
+  // `'rgba8unorm'` is wrong. The extended-range `'rgba16float'` format is
+  // chosen later, only once the visitor turns the Settings → Display HDR
+  // toggle on (`applySwapFormat`'s reconfigure) — never here, so `initGpu`
+  // never needs store access.
   // See: https://www.w3.org/TR/webgpu/#dom-gpu-getpreferredcanvasformat
   const format = navigator.gpu.getPreferredCanvasFormat();
+
+  // `hdrCapable` is the browser's own answer to "does the ACTIVE display
+  // have more than SDR range?" — the CSS Media Queries Level 5
+  // `dynamic-range` feature. It is carried on `GpuContext` as a status the
+  // display reports, distinct from whether the swap chain is currently
+  // extended-range (`hdrActiveOf`, derived from the live format elsewhere) —
+  // see `GpuContext.hdrCapable`'s doc comment for why the two never fuse.
+  const hdrCapable =
+    typeof window !== 'undefined' &&
+    !!window.matchMedia &&
+    window.matchMedia('(dynamic-range: high)').matches;
 
   // Configure the swap-chain.
   //
@@ -117,9 +130,40 @@ export async function initGpu(canvas: HTMLCanvasElement): Promise<GpuContext> {
   // sky, but `'premultiplied'` keeps options open for the point renderer.
   //
   // See: https://www.w3.org/TR/webgpu/#dom-gpucanvasalphamode-premultiplied
-  context.configure({ device, format, alphaMode: 'premultiplied' });
+  //
+  // No `toneMapping` here — boot is always SDR, and that field only matters
+  // paired with an extended-range format. `applySwapFormat`'s reconfigure
+  // sets it when the visitor turns HDR on.
+  context.configure({
+    device,
+    format,
+    alphaMode: 'premultiplied',
+  });
 
-  return { device, context, format, canvas };
+  return { device, context, format, canvas, hdrCapable };
+}
+
+// ─── Live capability watch ──────────────────────────────────────────────────
+
+/**
+ * Subscribe to the display's `(dynamic-range: high)` verdict changing —
+ * moving the window to a different monitor, or the OS switching HDR mode,
+ * fires `change` with no reload. Mirrors `useIsMobile.ts`'s matchMedia
+ * pattern; unlike that hook this isn't React-owned, so the caller (the
+ * engine's GPU-init phase) must invoke the returned cleanup on teardown.
+ *
+ * No-ops (returns a no-op cleanup) under the same `matchMedia`-absent guard
+ * as the boot-time `hdrCapable` read above.
+ */
+export function watchHdrCapability(onChange: (hdrCapable: boolean) => void): () => void {
+  if (typeof window === 'undefined' || !window.matchMedia) return () => {};
+
+  const mql = window.matchMedia('(dynamic-range: high)');
+  const handleChange = (event: MediaQueryListEvent): void => {
+    onChange(event.matches);
+  };
+  mql.addEventListener('change', handleChange);
+  return () => mql.removeEventListener('change', handleChange);
 }
 
 // ─── Resize helper ────────────────────────────────────────────────────────────

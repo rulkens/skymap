@@ -13,10 +13,10 @@
  *      onto its named `state.assetSlots` field.
  *   3. DEV synthetic-volume fixtures — minted + installed here (not a wiring
  *      row; tree-shaken from production).
- *   4. `wireImpostorSubsystems` / `seedFades` /
- *      `wireStructureProjection` — the thumbnail/disk subsystems, the
- *      whole fade-ownership manifest (every fade handle, seeded), and the
- *      structure-store anchor + bulk projection.
+ *   4. `wireImpostorSubsystems` / `createEarthTileSubsystem` / `seedFades` /
+ *      `wireStructureProjection` — the thumbnail/disk subsystems, Earth's
+ *      surface virtual texture, the whole fade-ownership manifest (every fade
+ *      handle, seeded), and the structure-store anchor + bulk projection.
  *   5. `createSyntheticFallback` — the imperative gate that arms the synthetic
  *      backstop (via the `'syntheticFallback'` request flag) iff every real
  *      galaxy catalog settles without data.
@@ -39,7 +39,8 @@
  *
  *   - `state.assetSlots.{filaments,famousGalaxiesMeta,structureCatalog,pgcAlias,
  *     cf4Density,mcpm,flow}` (via `installSlots`) + `.syntheticVolumes` (DEV).
- *   - `state.subsystems.{loadProgress, structures}` + the impostor subsystem handles.
+ *   - `state.subsystems.{loadProgress, structures, earthTiles}` + the impostor
+ *     subsystem handles.
  *   - `state.requests` may gain `'syntheticFallback'` (via the gate).
  *   - `engineStatusChanged({ kind: 'loading' })` dispatched synchronously.
  *   - Each slot in `deps.allSlots` gains an `installSlotReadyWake` subscriber.
@@ -56,6 +57,7 @@ import { installLoadProgress } from '../wiring/installLoadProgress';
 import { installSlotReadyWake } from '../wiring/installSlotReadyWake';
 import { createSyntheticVolumeSlots } from '../../loading/slots/syntheticVolumeSlots';
 import { wireImpostorSubsystems } from '../wiring/wireImpostorSubsystems';
+import { createEarthTileSubsystem } from '../subsystems/earthTileSubsystem';
 import { seedFades } from '../wiring/fadeLayers';
 import { wireStructureProjection } from '../wiring/wireStructureProjection';
 import { createSyntheticFallback } from '../wiring/createSyntheticFallback';
@@ -94,6 +96,16 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // Build and wire the five impostor subsystems (galaxy atlas, textured
   // disks, procedural disks, hi-res Famous texture + planner).
   wireImpostorSubsystems(state, deps);
+
+  // Earth's surface virtual texture. A subsystem, not a renderer — it owns
+  // residency and streaming — so it's constructed here, not in `initGpu`.
+  // Construction is free (no GPU memory, no fetch until the tile planner
+  // engages), and kept out of `wireImpostorSubsystems` since it shares nothing
+  // with that dependency-ordered cluster but the device.
+  state.subsystems.earthTiles = createEarthTileSubsystem({
+    device: deps.phaseLocals!.device,
+    requestRender: () => state.subsystems.scheduler.requestRender(),
+  });
 
   // Register and seed EVERY fade handle from the manifest — the
   // overlay/volume-master/label/structure rows PLUS the demand-loaded

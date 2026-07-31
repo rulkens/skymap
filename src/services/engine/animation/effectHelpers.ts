@@ -13,7 +13,7 @@
  * require hunting down every literal across every clip; with constructors,
  * there is exactly one place to update.
  *
- * Additionally, constructors encode the defaults — `ease: 'inOut'` and
+ * Additionally, constructors encode the defaults — `ease: 'easeInOutCubic'` and
  * `space` from `CHANNEL_SPACE[ch]` — in one place. A clip author calls
  * `dollyTo(300, 4)` and gets the right `space: 'log'` automatically;
  * they never need to remember which channels are logarithmic.
@@ -80,7 +80,7 @@ import {
  * `'add'` for angles). Pass an explicit `space` to override — e.g.
  * `tween('distance', { to:5, over:1, space:'lin' })` for a linear zoom.
  *
- * `ease` defaults to `'inOut'` (the natural choice for A→B camera moves).
+ * `ease` defaults to `'easeInOutCubic'` (the natural choice for A→B camera moves).
  */
 export function tween(
   ch: 'distance' | 'yaw' | 'pitch',
@@ -91,7 +91,7 @@ export function tween(
     ch,
     to: opts.to,
     over: opts.over,
-    ease: opts.ease ?? 'inOut',
+    ease: opts.ease ?? 'easeInOutCubic',
     space: opts.space ?? CHANNEL_SPACE[ch],
   };
 }
@@ -121,7 +121,7 @@ export function moveTarget(to: Vec3, over: number, ease?: Ease): CameraAction & 
     ch: 'target',
     to,
     over,
-    ease: ease ?? 'inOut',
+    ease: ease ?? 'easeInOutCubic',
     space: 'lin',
   };
 }
@@ -140,7 +140,7 @@ export function moveTargetId(
   over: number,
   ease?: Ease,
 ): FocusBoundEffect & { kind: 'moveTargetId' } {
-  return { kind: 'moveTargetId', id, over, ease: ease ?? 'inOut' };
+  return { kind: 'moveTargetId', id, over, ease: ease ?? 'easeInOutCubic' };
 }
 
 /**
@@ -169,7 +169,7 @@ export function dollyToId(
     kind: 'dollyToId',
     id,
     over,
-    ease: opts?.ease ?? 'inOut',
+    ease: opts?.ease ?? 'easeInOutCubic',
     ...(opts?.scale !== undefined ? { scale: opts.scale } : {}),
   };
 }
@@ -210,7 +210,7 @@ export function spin(
     ch,
     by: opts.by,
     over: opts.over,
-    ease: opts.ease ?? 'inOut',
+    ease: opts.ease ?? 'easeInOutCubic',
     ...(opts.loop !== undefined ? { loop: opts.loop } : {}),
   };
   return action;
@@ -232,7 +232,7 @@ export function rate(
     ch,
     to: opts.to,
     over: opts.over,
-    ease: opts.ease ?? 'inOut',
+    ease: opts.ease ?? 'easeInOutCubic',
   };
 }
 
@@ -259,7 +259,7 @@ export function oscillate(
     ch,
     amp: opts.amp,
     period: opts.period,
-    ease: opts.ease ?? 'inOut',
+    ease: opts.ease ?? 'easeInOutCubic',
     ...(opts.over !== undefined ? { over: opts.over } : {}),
     ...(opts.fade !== undefined ? { fade: opts.fade } : {}),
   };
@@ -412,13 +412,13 @@ export function scene(action: SettingsAction): SceneEffect & { kind: 'scene' } {
  * writes (and the same live-basis capture) the interactive
  * `watchOrientationChangeSaga` performs. A beat that should dwell through the
  * reorientation sequences a `wait(opts.over)` after it; the cue itself adds no
- * awaited time. `ease` defaults to `'inOut'`, the natural S-curve for an A→B roll.
+ * awaited time. `ease` defaults to `'easeInOutCubic'`, the natural S-curve for an A→B roll.
  */
 export function frameTo(
   frame: OrientationFrameId,
   opts: { over: number; ease?: Ease },
 ): SceneEffect & { kind: 'frameTo' } {
-  return { kind: 'frameTo', frame, over: opts.over, ease: opts.ease ?? 'inOut' };
+  return { kind: 'frameTo', frame, over: opts.over, ease: opts.ease ?? 'easeInOutCubic' };
 }
 
 /**
@@ -451,7 +451,7 @@ export function focus(id: FocusId | null): FocusBoundEffect & { kind: 'focusId' 
  * Plain `focus(id)` remains the camera-free half — use it when the clip's own
  * choreography (a flyPath, a spin) already owns the camera.
  */
-export function focusOnId(id: FocusId, over: number, ease: Ease = 'inOut'): Effect {
+export function focusOnId(id: FocusId, over: number, ease: Ease = 'easeInOutCubic'): Effect {
   return seq([focus(id), all([moveTargetId(id, over, ease), dollyToId(id, over, { ease })])]);
 }
 
@@ -481,7 +481,7 @@ export function lookAtId(
   over: number,
   ease?: Ease,
 ): FocusBoundEffect & { kind: 'lookAtId' } {
-  return { kind: 'lookAtId', id, over, ease: ease ?? 'inOut' };
+  return { kind: 'lookAtId', id, over, ease: ease ?? 'easeInOutCubic' };
 }
 
 /**
@@ -511,7 +511,7 @@ export function strafeId(
   over: number,
   ease?: Ease,
 ): FocusBoundEffect & { kind: 'strafeId' } {
-  return { kind: 'strafeId', id, byDeg, over, ease: ease ?? 'inOut' };
+  return { kind: 'strafeId', id, byDeg, over, ease: ease ?? 'easeInOutCubic' };
 }
 
 // ---------------------------------------------------------------------------
@@ -579,7 +579,7 @@ export function flyPath(
     kind: 'flyPath',
     waypoints,
     over: opts.over,
-    ease: opts.ease ?? 'inOut',
+    ease: opts.ease ?? 'easeInOutCubic',
     align: opts.align ?? DEFAULT_ALIGN_SEC,
     rampSec: opts.rampSec ?? DEFAULT_RAMP_SEC,
     linger: opts.linger ?? DEFAULT_LINGER,

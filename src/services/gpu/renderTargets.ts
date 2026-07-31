@@ -227,9 +227,12 @@ export function createRenderTargets(
   size: Size,
   mwAggregateDivisor: number,
 ): RenderTargets {
-  const specs = buildSpecs(swapFormat, mwAggregateDivisor);
+  // `let`, not `const`: setSwapFormat below replaces this array wholesale
+  // rather than mutating a row in place (house preference for immutability).
+  let specs = buildSpecs(swapFormat, mwAggregateDivisor);
   // Only offscreen rows get textures — the swap row is executor-resolved
-  // from the acquired frame view (see the module header).
+  // from the acquired frame view (see the module header). Computed once:
+  // setSwapFormat never touches an offscreen row, so this stays valid.
   const offscreenSpecs = specs.filter((s) => s.id !== 'swap');
 
   // Per-row allocation state, keyed by spec id. `destroy()` clears every map
@@ -286,7 +289,11 @@ export function createRenderTargets(
   for (const spec of offscreenSpecs) allocate(spec, size);
 
   return {
-    specs,
+    // A getter, not a captured value: setSwapFormat reassigns `specs`, and
+    // callers must observe the replacement through the same handle.
+    get specs() {
+      return specs;
+    },
     viewOf(id: string): GPUTextureView {
       const view = views.get(id);
       if (!view) {
@@ -308,6 +315,9 @@ export function createRenderTargets(
     },
     resize(s: Size): void {
       for (const spec of offscreenSpecs) allocate(spec, s);
+    },
+    setSwapFormat(next: GPUTextureFormat): void {
+      specs = specs.map((s) => (s.id === 'swap' ? { ...s, format: next } : s));
     },
     destroy(): void {
       for (const texture of textures.values()) texture.destroy();

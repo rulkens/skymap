@@ -121,6 +121,14 @@ export const selectExposure = (state: RootState): number => selectSettings(state
 export const selectToneMapCurve = (state: RootState): ToneMapCurve =>
   selectSettings(state).tonemap.curve;
 
+// --- hdr cluster ----------------------------------------------------------
+
+export const selectHdrEnabled = (state: RootState): boolean => selectSettings(state).hdr.enabled;
+
+export const selectHdrKnee = (state: RootState): number => selectSettings(state).hdr.knee;
+
+export const selectHdrHeadroom = (state: RootState): number => selectSettings(state).hdr.headroom;
+
 // --- bloom cluster ------------------------------------------------------------
 
 export const selectBloomEnabled = (state: RootState): boolean =>

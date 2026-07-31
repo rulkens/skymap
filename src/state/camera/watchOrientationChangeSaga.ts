@@ -54,7 +54,7 @@ export function* watchOrientationChangeSaga() {
         fromQuat: runtime.frameBasisQuat,
         to: frame,
         durationMs: FRAME_TWEEN_MS,
-        easing: 'inOut',
+        easing: 'easeInOutCubic',
       }),
     );
   });

@@ -317,6 +317,9 @@ function makeInput(
     focus: { center: [0, 0, 0], apparentRadiusMpc: 0, physicalRadiusMpc: 0, blend: 0 } as const,
     exposure: 1.0,
     toneMapCurve: ToneMapCurve.Reinhard,
+    hdrEnabled: true,
+    hdrKnee: 4.0,
+    hdrHeadroom: 0.25,
     galaxyTexturesEnabled: true,
     milkyWayEnabled: true,
     filamentsEnabled: false,
@@ -470,7 +473,15 @@ function makeInput(
             provenance: settings.provenance,
             depthFade: settings.depthFadeEnabled,
           },
-          tonemap: { exposure: settings.exposure, curve: settings.toneMapCurve },
+          tonemap: {
+            exposure: settings.exposure,
+            curve: settings.toneMapCurve,
+          },
+          hdr: {
+            enabled: settings.hdrEnabled,
+            knee: settings.hdrKnee,
+            headroom: settings.hdrHeadroom,
+          },
           // Bloom off by default in these fixtures: the bloom render steps only
           // shape the program when enabled, and no fixture asserts on them.
           bloom: { enabled: settings.bloomEnabled, strength: 1, threshold: 1 },
@@ -641,7 +652,47 @@ describe('renderFrame', () => {
     const args = draw.mock.calls[0]!;
     expect(args[1]).toBe(fx.hdrTargetView);
     expect(args[2]).toBe('replace');
-    expect(args[3]).toEqual({ exposure: fx.settings.exposure, curve: fx.settings.toneMapCurve });
+    expect(args[3]).toEqual({
+      exposure: fx.settings.exposure,
+      curve: fx.settings.toneMapCurve,
+      hdrKnee: 0,
+      hdrHeadroom: 0,
+    });
+  });
+
+  it('forwards the settings headroom knobs only when the swap chain is extended-range', () => {
+    // The two knobs are live settings but must reach the shader as 0 on an SDR
+    // swap chain, where spilled energy would just be clamped back to white. The
+    // gate lives in renderFrame via `hdrActiveOf`, which reads the `swap` row's
+    // format straight off `renderTargets.specs` — flipping it to the extended-range
+    // format is the whole difference between the settings values and zeros.
+    // Non-null assertion: the mock's `specs` always seeds a 'swap' row (see
+    // `makeMockRenderTargets`) — if that ever stops being true this should
+    // fail loudly here, not as an opaque "set properties of undefined" below.
+    const swapSpec = fx.renderTargets.specs.find((spec: { id: string }) => spec.id === 'swap')!;
+    swapSpec.format = 'rgba16float';
+    renderFrame(fx.input);
+
+    const draw = fx.compositor.draw as ReturnType<typeof vi.fn>;
+    const tone = draw.mock.calls[0]![3];
+    expect(tone.hdrKnee).toBe(fx.settings.hdrKnee);
+    expect(tone.hdrHeadroom).toBe(fx.settings.hdrHeadroom);
+  });
+
+  it('the tone-map gets zero headroom when the HDR toggle is off even on a float swap chain', () => {
+    // A float swap chain alone isn't sufficient: the format switch and the
+    // `hdr.enabled` write land in separate frames, so a frame can carry an
+    // extended-range swap chain with the viewer's toggle still off. Gating
+    // on `hdrActive` alone would leak the settings knobs into that frame.
+    const fx2 = makeInput({ settings: { hdrEnabled: false } });
+    const swapSpec = fx2.renderTargets.specs.find((spec: { id: string }) => spec.id === 'swap')!;
+    swapSpec.format = 'rgba16float';
+    renderFrame(fx2.input);
+
+    const draw = fx2.compositor.draw as ReturnType<typeof vi.fn>;
+    const tone = draw.mock.calls[0]![3];
+    expect(tone.hdrKnee).toBe(0);
+    expect(tone.hdrHeadroom).toBe(0);
   });
 
   it('records the full frame in canonical order: createEncoder → hdr COSMO pass (points) → mw-aggregate pass (cloud stars) → hdr NEAR0 pass (cloud dust) → composite pass → compositor.draw → finish → submit', () => {

@@ -5,7 +5,7 @@
  *
  * There is ONE camera-evaluation path: `evaluateClip`.
  * A focus tween is the degenerate clip — one `set` segment per scalar channel
- * and one `setVec` for `target`, all with `ease:'out'` (= easeOutCubic) and
+ * and one `setVec` for `target`, all with `ease:'easeOutCubic'` and
  * `space:'lin'` for `distance` (focus tweens interpolate distance linearly, not
  * in log space). The `cameraDrivers` tween row calls `evaluateClip` via this
  * helper.
@@ -55,17 +55,22 @@ export function tweenToClip(d: CameraTweenDescriptor): ClipData {
   const durationSec = d.durationMs / 1000;
 
   // Build a one-segment clip: all four channels tweened with easeOutCubic
-  // ('out') from `d.from` (the ClipData start pose) to the matching `d.to`
-  // field. Distance uses space:'lin' so the interpolation is byte-for-byte
+  // from `d.from` (the ClipData start pose) to the matching `d.to` field.
+  // Distance uses space:'lin' so the interpolation is byte-for-byte
   // identical to the old lerp(from, to, easeOutCubic(t)) path.
   const data: ClipData = {
     start: d.from,
     timeline: [
       all([
-        tween('distance', { to: d.to.distance, over: durationSec, ease: 'out', space: 'lin' }),
-        tween('yaw', { to: d.to.yaw, over: durationSec, ease: 'out' }),
-        tween('pitch', { to: d.to.pitch, over: durationSec, ease: 'out' }),
-        moveTarget(d.to.target, durationSec, 'out'),
+        tween('distance', {
+          to: d.to.distance,
+          over: durationSec,
+          ease: 'easeOutCubic',
+          space: 'lin',
+        }),
+        tween('yaw', { to: d.to.yaw, over: durationSec, ease: 'easeOutCubic' }),
+        tween('pitch', { to: d.to.pitch, over: durationSec, ease: 'easeOutCubic' }),
+        moveTarget(d.to.target, durationSec, 'easeOutCubic'),
       ]),
     ],
   };

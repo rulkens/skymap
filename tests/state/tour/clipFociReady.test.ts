@@ -74,7 +74,10 @@ const depsM87NotLoaded: ResolveDeps = {
 const m87FlyClip: ClipData = {
   start: 'live',
   timeline: [
-    all([moveTargetId(id('m87'), 5, 'inOut'), dollyToId(id('m87'), 5, { ease: 'inOut' })]),
+    all([
+      moveTargetId(id('m87'), 5, 'easeInOutCubic'),
+      dollyToId(id('m87'), 5, { ease: 'easeInOutCubic' }),
+    ]),
   ],
 };
 
@@ -111,8 +114,8 @@ describe('clipFociReady', () => {
       start: 'live',
       timeline: [
         all([
-          moveTargetId(id('cluster-virgo-m87'), 5, 'inOut'),
-          dollyToId(id('cluster-virgo-m87'), 5, { ease: 'inOut' }),
+          moveTargetId(id('cluster-virgo-m87'), 5, 'easeInOutCubic'),
+          dollyToId(id('cluster-virgo-m87'), 5, { ease: 'easeInOutCubic' }),
           focus(id('cluster-virgo-m87')),
         ]),
       ],

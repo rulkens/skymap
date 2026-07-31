@@ -77,3 +77,11 @@ export const selectFamousStarsMeta = (state: RootState): readonly FamousStarMeta
  */
 export const selectFocusedBodyDistanceMpc = (state: RootState): number | null =>
   selectEngine(state).focusedBodyDistanceMpc;
+
+/**
+ * Live display capability — true when the ACTIVE display currently reports
+ * more than SDR range. Updated by `engineHdrCapabilityChanged`, both at boot
+ * and on a later `matchMedia` `change` (see `device.ts`'s `watchHdrCapability`),
+ * so a monitor swap mid-session is observable, not just the boot snapshot.
+ */
+export const selectHdrCapable = (state: RootState): boolean => selectEngine(state).hdrCapable;

@@ -51,7 +51,7 @@
 
 import { BiasMode } from './galaxyCatalog/biasMode';
 import type { BiasMode as BiasModeT } from '../@types/data/galaxyCatalog/BiasMode';
-import { ToneMapCurve } from './toneMapCurve';
+import { ToneMapCurve, toneMapCurveSaturation } from './toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
 import type { FlowSettings } from '../@types/settings/FlowSettings';
 import type { OrientationFrameId } from '../@types/camera/OrientationFrameId';
@@ -272,6 +272,15 @@ export const DEFAULT_ORBIT_TRAILS_ENABLED: boolean = true;
 // ── HDR tone-mapping ────────────────────────────────────────────────────────
 
 /**
+ * Default state of the viewer's HDR display opt-in — seeds
+ * `settings.hdr.enabled`. `false` even when `GpuContext.hdrCapable` is true:
+ * extended-range output is a choice the viewer makes about how they want the
+ * scene rendered, not a consequence of what their monitor happens to permit,
+ * so boot never turns it on for them.
+ */
+export const DEFAULT_HDR_ENABLED = false;
+
+/**
  * Default tone-map curve — Reinhard-extended.  Smooth highlight roll-off,
  * "natural" look.  Asinh is the filament-friendly alternative; user
  * picks via the dropdown.  See `data/toneMapCurve.ts` for the full set.
@@ -287,6 +296,36 @@ export const DEFAULT_TONE_MAP_CURVE: ToneMapCurveT = ToneMapCurve.Reinhard;
  * cannot reach a value the clamp would have to rescue.
  */
 export const DEFAULT_EXPOSURE = 3.0;
+
+/**
+ * Default HDR headroom knee — the brightness above which a pixel's over-white
+ * energy spills past paper-white into an extended-range swap chain. Seeds
+ * `settings.hdr.knee`.
+ *
+ * Measured in the SAME post-exposure units the tone curve works in, and derived
+ * from the default curve's saturation point, because the knee's job is to pick up
+ * exactly where the curve runs out of range: a pixel at the knee is precisely one
+ * the curve can no longer separate from a brighter one. Sharing the curve's units
+ * keeps the two aligned as the exposure slider moves — raising exposure makes a
+ * dimmer pixel saturate, and the knee follows without re-tuning. (Bloom's threshold
+ * is pre-exposure instead, because bloom reads the raw buffer before the tone map;
+ * the spill runs after it.)
+ *
+ * The five curves saturate anywhere from 1.0 to 7.24, so this default only holds
+ * while the curve does — switching curve wants a nudge on the slider. Inert unless
+ * the swap chain is the extended-range surface (`hdrActiveOf`).
+ */
+export const DEFAULT_HDR_KNEE = toneMapCurveSaturation(DEFAULT_TONE_MAP_CURVE);
+
+/**
+ * Default multiplier on the over-knee energy spilled into display headroom.
+ * Seeds `settings.hdr.headroom`. 0 is exactly the SDR result — the tone
+ * curve's compressed output, nothing added — so the knob spans "no headroom" to
+ * "aggressive headroom" with no discontinuity at either end. 0.25 is deliberately
+ * conservative: available headroom varies per display and with screen brightness,
+ * so the honest default under-uses it rather than clipping on a modest panel.
+ */
+export const DEFAULT_HDR_HEADROOM = 0.25;
 
 // ── Screen-space bloom ───────────────────────────────────────────────────────
 

@@ -43,6 +43,10 @@ export type BitmapStreamSubsystem = Destroyable & {
    * Allocate or refresh an LRU slot.  Returns slot index, or null when
    * every slot is in use AND none can be evicted.  Bumps the LRU clock
    * for an existing key.
+   *
+   * "None can be evicted" means every slot was claimed earlier this same
+   * frame — taking one would undo work already done. Callers skip the
+   * refused key and carry on with the rest of the frame's requests.
    */
   allocate(key: string, atFrame: number): number | null;
 
@@ -53,19 +57,37 @@ export type BitmapStreamSubsystem = Destroyable & {
   slotUv(slot: number): readonly [number, number, number, number];
 
   /**
-   * Frame the slot was last allocate()-touched, or undefined if evicted.
-   * Lets fetchers detect "my slot got reassigned during the network
-   * round-trip".
+   * Frame the slot was last allocate()-touched, or undefined if the key
+   * holds no slot. A key evicted and re-requested reports a fresh frame at
+   * a DIFFERENT slot — not a substitute for "is my slot still mine"; async
+   * writers ask `uploadBitmap` instead.
    */
   lastSeenFrame(key: string): number | undefined;
 
-  /** Upload a bitmap into a previously-allocated slot. */
-  uploadBitmap(slot: number, bitmap: ImageBitmap): void;
+  /**
+   * Upload a bitmap into the slot the atlas holds for `key` RIGHT NOW, and
+   * record the key as loaded.  Returns that slot, or `null` when the key
+   * holds no slot at all — evicted during the fetch's round trip, or never
+   * allocated; the caller then records nothing.
+   *
+   * Keyed rather than slot-indexed: a slot index captured before an async
+   * fetch can point at a different key's slot by the time the fetch lands.
+   * Resolving the key at the point of use makes that unrepresentable.
+   */
+  uploadBitmap(key: string, bitmap: ImageBitmap): number | null;
 
-  /** Idempotent — re-enqueueing an in-flight key only refreshes priority. */
+  /**
+   * Idempotent per key: re-enqueueing a PENDING key replaces its entry, so
+   * priority tracks the latest ask; re-enqueueing an IN-FLIGHT key does
+   * nothing, so `onResult` must not close over frame-scoped state — a
+   * later frame gets no chance to correct it.
+   */
   enqueueFetch(input: BitmapStreamFetchInput): void;
 
-  /** Reports whether the bitmap has landed in the atlas / failed to fetch. */
+  /**
+   * Whether the key's pixels are in the atlas (`isLoaded`) or its fetch
+   * permanently failed (`isFailed`). Both suppress further fetches.
+   */
   isLoaded(key: string): boolean;
   isFailed(key: string): boolean;
 

@@ -46,6 +46,13 @@ function baseProps(overrides?: Partial<DisplaySectionProps>): DisplaySectionProp
     onToneMapCurveChange: vi.fn<(curve: ToneMapCurveT) => void>(),
     exposure: 3.0,
     onExposureChange: vi.fn<(next: number) => void>(),
+    hdrEnabled: false,
+    onHdrEnabledChange: vi.fn<(next: boolean) => void>(),
+    hdrCapable: true,
+    hdrKnee: 4.0,
+    onHdrKneeChange: vi.fn<(next: number) => void>(),
+    hdrHeadroom: 0.25,
+    onHdrHeadroomChange: vi.fn<(next: number) => void>(),
     bloomEnabled: true,
     onBloomEnabledChange: vi.fn<(next: boolean) => void>(),
     bloomStrength: 0.85,
@@ -180,6 +187,25 @@ describe('DisplaySection', () => {
       fireEvent.keyDown(strength, { key: 'ArrowRight' });
       expect(onBloomStrengthChange).toHaveBeenCalledOnce();
       expect(onBloomStrengthChange).toHaveBeenCalledWith(0.9);
+    });
+  });
+
+  describe('HDR controls', () => {
+    // Same controlled-checkbox gotcha as bloom above: fireEvent.click, not
+    // .change. The toggle is HDR's CollapsibleSection header toggle
+    // (aria-label "Toggle HDR"), reachable once Display is open.
+    it('toggles hdrEnabled via the HDR header toggle', () => {
+      const onHdrEnabledChange = vi.fn<(next: boolean) => void>();
+      const { getByRole, getByLabelText } = render(
+        createElement(
+          DisplaySection,
+          baseProps({ hdrEnabled: false, hdrCapable: true, onHdrEnabledChange }),
+        ),
+      );
+      fireEvent.click(getByRole('button', { name: /display/i }));
+      fireEvent.click(getByLabelText(/toggle hdr/i));
+      expect(onHdrEnabledChange).toHaveBeenCalledOnce();
+      expect(onHdrEnabledChange).toHaveBeenCalledWith(true);
     });
   });
 });

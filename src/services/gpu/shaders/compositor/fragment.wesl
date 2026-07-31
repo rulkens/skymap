@@ -81,6 +81,27 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     mapped = applyAces(scaled);
   }
 
+  // Every curve above clamps into [0,1], so 'mapped' can never exceed white and
+  // a pixel past the curve's saturation point is indistinguishable from one far
+  // past it. On an extended-range swap we hand those pixels back their
+  // separation: energy ABOVE the knee is added on top, so bright sources (Sun,
+  // bloom, star cores) climb into the display's headroom instead of flattening
+  // to paper-white. hdrKnee defaults to the curve's own saturation point, so the
+  // spill picks up exactly where the curve gives up. hdrHeadroom of 0 (every SDR
+  // draw) adds nothing and the result is bit-identical to the curve alone.
+  //
+  // Brightness is the MAX CHANNEL, matching the bloom bright-pass ('bloom/
+  // bright.wesl'), so the two passes agree on which pixels count as bright. The
+  // spill then rides the pixel's own colour ratio rather than being added per
+  // channel: a saturated red star gains brightness without drifting toward
+  // white, upholding the hue contract 'lib/starKnee.wesl' establishes upstream.
+  // A per-channel add would re-introduce exactly the channel-at-a-time distortion
+  // that module exists to prevent, one stage later.
+  let lum = max(scaled.r, max(scaled.g, scaled.b));
+  let peak = max(0.0, lum - u.hdrKnee);
+  let tint = scaled / max(lum, 0.0001);
+  let out = mapped + tint * peak * u.hdrHeadroom;
+
   // Alpha depends on the blend the caller picked, packed into
   // 'preserveAlpha':
   //   preserveAlpha == 0 (replace) — force opaque 1.0. The swap chain
@@ -90,5 +111,5 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   //     straight-alpha coverage. It is un-premultiplied: the blend
   //     hardware applies the 'src-alpha' multiply itself, so
   //     premultiplying here too would double-multiply and darken edges.
-  return vec4<f32>(mapped, select(1.0, sample.a, u.preserveAlpha == 1u));
+  return vec4<f32>(out, select(1.0, sample.a, u.preserveAlpha == 1u));
 }

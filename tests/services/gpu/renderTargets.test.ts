@@ -182,6 +182,44 @@ describe('createRenderTargets', () => {
     expect(() => targets.viewOf('hdr')).toThrow();
   });
 
+  it("setSwapFormat replaces the swap row's format and leaves offscreen rows alone", () => {
+    const device = mockDevice();
+    const create = device.createTexture as ReturnType<typeof vi.fn>;
+    const targets = createRenderTargets(
+      device,
+      SWAP_FORMAT,
+      { width: 800, height: 600 },
+      MW_DIVISOR,
+    );
+
+    const specsBefore = targets.specs;
+    const hdrSpecBefore = specsBefore.find((s) => s.id === 'hdr')!;
+    const volSpecBefore = specsBefore.find((s) => s.id === 'volume')!;
+    const fgSpecBefore = specsBefore.find((s) => s.id === 'foreground:0')!;
+    const hdrViewBefore = targets.viewOf('hdr');
+    const volViewBefore = targets.viewOf('volume');
+    const fgViewBefore = targets.viewOf('foreground:0');
+    const callsBefore = create.mock.calls.length;
+
+    targets.setSwapFormat('rgba16float');
+
+    // The swap row's format changed...
+    const swapSpec = targets.specs.find((s) => s.id === 'swap')!;
+    expect(swapSpec.format).toBe('rgba16float');
+    // ...via a new specs array (house preference for immutability)...
+    expect(targets.specs).not.toBe(specsBefore);
+    // ...but every offscreen row is the SAME spec object — untouched, not
+    // rebuilt — and has no new texture allocated (the swap row carries no
+    // texture, so this is allocation-free).
+    expect(targets.specs.find((s) => s.id === 'hdr')).toBe(hdrSpecBefore);
+    expect(targets.specs.find((s) => s.id === 'volume')).toBe(volSpecBefore);
+    expect(targets.specs.find((s) => s.id === 'foreground:0')).toBe(fgSpecBefore);
+    expect(create.mock.calls.length).toBe(callsBefore);
+    expect(targets.viewOf('hdr')).toBe(hdrViewBefore);
+    expect(targets.viewOf('volume')).toBe(volViewBefore);
+    expect(targets.viewOf('foreground:0')).toBe(fgViewBefore);
+  });
+
   it('destroy destroys depth textures alongside colour', () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;

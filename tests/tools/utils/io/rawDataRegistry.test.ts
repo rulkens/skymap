@@ -26,9 +26,9 @@ describe('rawDataPath resolves mcxc + mscc keys to absolute paths', () => {
 
 // The texture pipeline reads every raw source through `rawDataPath('textures.*')`
 // and the fetcher drives each download from the row's `upstream` URL. These are
-// structural invariants — a new textured body that forgets `upstream` or the
-// shared fetcher would fetch nothing and fail silently; the test catches that
-// without restating the URL values.
+// structural invariants — a source with no `upstream` cannot be re-obtained by
+// anyone, and a body source the shared fetcher does not name would download
+// nothing and fail silently; the test catches both without restating URL values.
 describe('textures.* rows', () => {
   const textureKeys = (Object.keys(RAW_DATA) as RawDataKey[]).filter((key) =>
     key.startsWith('textures.'),
@@ -41,14 +41,33 @@ describe('textures.* rows', () => {
     }
   });
 
-  it('every gitignored raw texture-source file carries an upstream URL + the shared fetcher', () => {
+  it('every gitignored raw texture-source file carries an upstream URL', () => {
+    const rawSources = textureKeys.filter(
+      (key) => RAW_DATA[key].source === 'gitignored' && RAW_DATA[key].kind === 'file',
+    );
+    expect(rawSources.length).toBeGreaterThan(0);
+    for (const key of rawSources) {
+      // Widened first: `RAW_DATA` is `as const`, so indexing by the union key
+      // yields a union of literal row types where `upstream` is absent from the
+      // members that lack it, rather than an optional property.
+      const entry: RawDataEntry = RAW_DATA[key];
+      expect(entry.upstream, key).toBeTruthy();
+    }
+  });
+
+  it('every gitignored raw texture-source file is driven by the shared fetcher', () => {
+    // Prefix-keyed over the whole `textures.` family rather than derived from
+    // TEXTURE_SOURCES: the BMNG quadrants are not a `(body, kind)` source and
+    // would slip through that view, and "a raw the pipeline reads that no command
+    // can obtain" is exactly the state this assertion exists to forbid — it was
+    // the quadrants' state until they joined the pull. That `fetch-textures`
+    // really does download each one is checked in fetchTextures.test.ts.
     const rawSources = textureKeys.filter(
       (key) => RAW_DATA[key].source === 'gitignored' && RAW_DATA[key].kind === 'file',
     );
     expect(rawSources.length).toBeGreaterThan(0);
     for (const key of rawSources) {
       const entry: RawDataEntry = RAW_DATA[key];
-      expect(entry.upstream, key).toBeTruthy();
       expect(entry.fetcher, key).toBe('tools/fetch/fetchTextures.ts');
     }
   });

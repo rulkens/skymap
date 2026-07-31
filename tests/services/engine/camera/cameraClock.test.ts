@@ -114,7 +114,7 @@ describe('frameTweenElapsed', () => {
       fromQuat: [0, 0, 0, 1],
       to: 'ecliptic',
       durationMs: 800,
-      easing: 'out',
+      easing: 'easeOutCubic',
       ...overrides,
     };
   }

@@ -9,7 +9,7 @@
  *
  * Yaw and pitch want different things, so they ride different effects:
  *
- *   - Yaw ORBITS: a single finite `spin` over the whole dwell with `ease: 'inOut'`.
+ *   - Yaw ORBITS: a single finite `spin` over the whole dwell with `ease: 'easeInOutCubic'`.
  *     The S-curve accelerates from rest, peaks mid-dwell, and decelerates back to
  *     rest right on the cut — every requirement (gentle start, ease-out before the
  *     next beat) in one node. It rotates BY a net angle and stays there, which is
@@ -80,8 +80,8 @@ export function dwellDrift(
     timeline: [
       all([
         // Yaw: one eased orbit. `by = cruiseRate × durationSec` makes the AVERAGE
-        // angular speed `cruiseRate`; inOut eases in and out and ends at rest.
-        spin('yaw', { by: cruiseRate * durationSec, over: durationSec, ease: 'inOut' }),
+        // angular speed `cruiseRate`; easeInOutCubic eases in and out and ends at rest.
+        spin('yaw', { by: cruiseRate * durationSec, over: durationSec, ease: 'easeInOutCubic' }),
         // Pitch: eased oscillation — a bob whose amplitude fades in/out over the
         // window, zero-mean and cycle-fitted so it returns to centre on the cut.
         oscillate('pitch', { amp: PITCH_AMP, period, over: durationSec, fade }),

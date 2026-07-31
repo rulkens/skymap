@@ -60,7 +60,7 @@ describe('validateSingleWriter isolation', () => {
         startSec: 0,
         endSec: 4,
         to: 300,
-        ease: 'inOut',
+        ease: 'easeInOutCubic',
         space: 'log',
       },
     ];
@@ -76,7 +76,7 @@ describe('validateSingleWriter isolation', () => {
         startSec: 0,
         endSec: 4,
         to: 300,
-        ease: 'inOut',
+        ease: 'easeInOutCubic',
         space: 'log',
       },
       {
@@ -85,7 +85,7 @@ describe('validateSingleWriter isolation', () => {
         startSec: 4,
         endSec: 8,
         to: 950,
-        ease: 'inOut',
+        ease: 'easeInOutCubic',
         space: 'log',
       },
     ];
@@ -101,7 +101,7 @@ describe('validateSingleWriter isolation', () => {
         startSec: 0,
         endSec: 4,
         to: 300,
-        ease: 'inOut',
+        ease: 'easeInOutCubic',
         space: 'log',
       },
       {
@@ -110,7 +110,7 @@ describe('validateSingleWriter isolation', () => {
         startSec: 0,
         endSec: 4,
         to: 950,
-        ease: 'inOut',
+        ease: 'easeInOutCubic',
         space: 'log',
       },
     ];
@@ -127,7 +127,7 @@ describe('validateSingleWriter isolation', () => {
         startSec: 0,
         endSec: 6,
         to: 1,
-        ease: 'inOut',
+        ease: 'easeInOutCubic',
         space: 'add',
       },
       {
@@ -136,7 +136,7 @@ describe('validateSingleWriter isolation', () => {
         startSec: 4,
         endSec: 8,
         to: 2,
-        ease: 'inOut',
+        ease: 'easeInOutCubic',
         space: 'add',
       },
     ];
@@ -155,7 +155,7 @@ describe('validateSingleWriter isolation', () => {
         startSec: 0,
         endSec: 4,
         to: 300,
-        ease: 'inOut',
+        ease: 'easeInOutCubic',
         space: 'log',
       },
     ];
@@ -166,7 +166,7 @@ describe('validateSingleWriter isolation', () => {
         startSec: 0,
         endSec: 4,
         to: 0.5,
-        ease: 'inOut',
+        ease: 'easeInOutCubic',
         space: 'add',
       },
       {
@@ -175,7 +175,7 @@ describe('validateSingleWriter isolation', () => {
         startSec: 0,
         endSec: 4,
         to: 1.0,
-        ease: 'inOut',
+        ease: 'easeInOutCubic',
         space: 'add',
       },
     ];

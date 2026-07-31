@@ -3,8 +3,10 @@
  * DisplaySectionContainer — store boundary for the Display settings section.
  *
  * Owns all Redux reach for the Display group: the orientation frame, the tone-map
- * curve and exposure, and the bloom trio, each dispatch wrapped in `useCallback`. The presentational
- * `DisplaySection` imports nothing from `store/` or `state/`.
+ * curve and exposure, the HDR master toggle + its two headroom knobs, the live
+ * `hdrCapable` read off the engine slice, and the bloom trio — each dispatch
+ * wrapped in `useCallback`. The presentational `DisplaySection` imports nothing
+ * from `store/` or `state/`.
  *
  * Nested subgroups (e.g. `EarthSectionContainer`) are passed in as `children`
  * and forwarded to `DisplaySection`, keeping each subgroup's store reach in its
@@ -26,13 +28,20 @@ import {
   selectOrientation,
   selectToneMapCurve,
   selectExposure,
+  selectHdrEnabled,
+  selectHdrKnee,
+  selectHdrHeadroom,
   selectBloomEnabled,
   selectBloomStrength,
   selectBloomThreshold,
 } from '../../state/settings/selectors';
+import { selectHdrCapable } from '../../state/engine/selectors';
 import {
   setToneMapCurve,
   setExposure,
+  setHdrEnabled,
+  setHdrKnee,
+  setHdrHeadroom,
   setBloomEnabled,
   setBloomStrength,
   setBloomThreshold,
@@ -51,6 +60,10 @@ function DisplaySectionContainer({ children }: DisplaySectionContainerProps): Re
   const orientation = useAppSelector(selectOrientation);
   const toneMapCurve = useAppSelector(selectToneMapCurve);
   const exposure = useAppSelector(selectExposure);
+  const hdrEnabled = useAppSelector(selectHdrEnabled);
+  const hdrCapable = useAppSelector(selectHdrCapable);
+  const hdrKnee = useAppSelector(selectHdrKnee);
+  const hdrHeadroom = useAppSelector(selectHdrHeadroom);
   const bloomEnabled = useAppSelector(selectBloomEnabled);
   const bloomStrength = useAppSelector(selectBloomStrength);
   const bloomThreshold = useAppSelector(selectBloomThreshold);
@@ -67,6 +80,15 @@ function DisplaySectionContainer({ children }: DisplaySectionContainerProps): Re
     [dispatch],
   );
   const onExposureChange = useCallback((next: number) => dispatch(setExposure(next)), [dispatch]);
+  const onHdrEnabledChange = useCallback(
+    (next: boolean) => dispatch(setHdrEnabled(next)),
+    [dispatch],
+  );
+  const onHdrKneeChange = useCallback((next: number) => dispatch(setHdrKnee(next)), [dispatch]);
+  const onHdrHeadroomChange = useCallback(
+    (next: number) => dispatch(setHdrHeadroom(next)),
+    [dispatch],
+  );
   const onBloomEnabledChange = useCallback(
     (next: boolean) => dispatch(setBloomEnabled(next)),
     [dispatch],
@@ -88,6 +110,13 @@ function DisplaySectionContainer({ children }: DisplaySectionContainerProps): Re
       onToneMapCurveChange={onToneMapCurveChange}
       exposure={exposure}
       onExposureChange={onExposureChange}
+      hdrEnabled={hdrEnabled}
+      onHdrEnabledChange={onHdrEnabledChange}
+      hdrCapable={hdrCapable}
+      hdrKnee={hdrKnee}
+      onHdrKneeChange={onHdrKneeChange}
+      hdrHeadroom={hdrHeadroom}
+      onHdrHeadroomChange={onHdrHeadroomChange}
       bloomEnabled={bloomEnabled}
       onBloomEnabledChange={onBloomEnabledChange}
       bloomStrength={bloomStrength}
