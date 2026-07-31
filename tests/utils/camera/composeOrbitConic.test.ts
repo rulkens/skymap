@@ -92,6 +92,132 @@ describe('composeOrbitConic', () => {
   });
 });
 
+// ── Clip basis + ribbon eligibility (screen-space ribbon impostor, spec §2) ──
+//
+// `clipBasis` hands the vertex stage the same (Cc, Ac, Bc) triple the CPU used
+// to build `H` — narrowed, not rederived — and `ribbonEligible` is the verdict
+// that decides between the ribbon impostor and the fullscreen fallback
+// triangle. These tests do NOT re-implement the predicate as an oracle (that
+// would be a mirror); they pin its externally-observable behaviour: the clip
+// basis round-trips through the ordinary projection pipeline, and the verdict
+// is correct at the three poses the predicate exists to distinguish (far/
+// bounded, edge-on/hyperbola, near-plane/huge-but-still-an-ellipse).
+
+describe('composeOrbitConic — clip basis and ribbon eligibility', () => {
+  function cross(a: Readonly<Vec3>, b: Readonly<Vec3>): Vec3 {
+    return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  }
+  function unit(a: Vec3): Vec3 {
+    const L = Math.hypot(a[0], a[1], a[2]);
+    return [a[0] / L, a[1] / L, a[2] / L];
+  }
+  // NDC → pixel, the same viewport convention `projectToPixel` above uses.
+  function ndcToPixel(ndcX: number, ndcY: number): Vec2 {
+    return [(ndcX * 0.5 + 0.5) * viewportPx[0], (0.5 - 0.5 * ndcY) * viewportPx[1]];
+  }
+
+  it('the clip basis reprojects sample orbit points onto their projected pixels', () => {
+    const { clipBasis } = composeOrbitConic(VP, C, A, B, viewportPx, renderOrigin);
+    const [Cc, Ac, Bc] = clipBasis;
+
+    for (const E of [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2, 0.7]) {
+      const cosE = Math.cos(E);
+      const sinE = Math.sin(E);
+      const clipX = Cc[0]! + cosE * Ac[0]! + sinE * Bc[0]!;
+      const clipY = Cc[1]! + cosE * Ac[1]! + sinE * Bc[1]!;
+      const clipW = Cc[2]! + cosE * Ac[2]! + sinE * Bc[2]!;
+      const [px, py] = ndcToPixel(clipX / clipW, clipY / clipW);
+
+      const P: Vec3 = [
+        C[0] + cosE * A[0] + sinE * B[0],
+        C[1] + cosE * A[1] + sinE * B[1],
+        C[2] + cosE * A[2] + sinE * B[2],
+      ];
+      const [expectedPx, expectedPy] = projectToPixel(P);
+
+      expect(px).toBeCloseTo(expectedPx, 3);
+      expect(py).toBeCloseTo(expectedPy, 3);
+    }
+  });
+
+  it('a far view of an orbit is ribbon-eligible', () => {
+    const { ribbonEligible } = composeOrbitConic(VP, C, A, B, viewportPx, renderOrigin);
+    expect(ribbonEligible).toBe(true);
+  });
+
+  it('a camera in the orbit plane is not ribbon-eligible', () => {
+    // The edge-on Earth-zoom pose (this file's gradient-minor fixture, below):
+    // camera ~1e-15 Mpc from a point ON the orbit, looking almost tangentially.
+    // Half the ellipse then projects behind the camera, so clip.w changes sign
+    // around the E-sweep and the projection is genuinely a hyperbola — the
+    // bounded/ellipse clause (wMin > 0) must reject it.
+    const earth = SCENE_ORBIT_CONICS.find((c) => c.id === 'earth')!;
+    const Cw = earth.centerMpc;
+    const Aw = earth.semiMajorMpc;
+    const Bw = earth.semiMinorMpc;
+    const viewport: Vec2 = [1280, 720];
+
+    const N = unit(cross(Aw, Bw));
+    const Q = unit([Bw[0], Bw[1], Bw[2]]);
+    const target: Vec3 = [Cw[0] + Aw[0], Cw[1] + Aw[1], Cw[2] + Aw[2]];
+    const tilt = 0.05;
+    const dir = unit([Q[0] + tilt * N[0], Q[1] + tilt * N[1], Q[2] + tilt * N[2]]);
+    const viewLen = 1e-15;
+    const eye: Vec3 = [
+      target[0] - viewLen * dir[0],
+      target[1] - viewLen * dir[1],
+      target[2] - viewLen * dir[2],
+    ];
+    const magA = Math.hypot(Aw[0], Aw[1], Aw[2]);
+    const vpF64 = mat4d.multiply(
+      mat4d.perspective(Math.PI / 4, viewport[0] / viewport[1], 0.1 * viewLen, 100 * magA),
+      mat4d.lookAt(eye, target, N),
+    ) as Float64Array;
+
+    const { ribbonEligible } = composeOrbitConic(vpF64, Cw, Aw, Bw, viewport, RENDER_ORIGIN_MPC);
+    expect(ribbonEligible).toBe(false);
+  });
+
+  it('an orbit approaching the camera plane falls back before the sign test can flip', () => {
+    // Same construction as the edge-on pose (camera along the orbit's own
+    // tangent, tilted 0.05 rad out of plane) but stopped well short of the
+    // orbit itself, so wMin lands a small POSITIVE fraction of Cc.w — the
+    // bounded clause alone would still call this an ellipse. What disqualifies
+    // it is the huge projected extent (the orbit spans dozens of NDC units at
+    // this near-plane distance). An implementation that only checks
+    // `wMin > 0` passes the first assertion here and fails the second.
+    const N = unit(cross(A, B));
+    const Q = unit(B);
+    const target: Vec3 = [C[0] + A[0], C[1] + A[1], C[2] + A[2]];
+    const tilt = 0.05;
+    const dir = unit([Q[0] + tilt * N[0], Q[1] + tilt * N[1], Q[2] + tilt * N[2]]);
+    const viewLen = 1.4;
+    const eye: Vec3 = [
+      target[0] - viewLen * dir[0],
+      target[1] - viewLen * dir[1],
+      target[2] - viewLen * dir[2],
+    ];
+    const vpNear = mat4d.multiply(
+      mat4d.perspective(Math.PI / 4, viewportPx[0] / viewportPx[1], 0.1, 100),
+      mat4d.lookAt(eye, target, N),
+    ) as Float64Array;
+
+    const { clipBasis, ribbonEligible } = composeOrbitConic(
+      vpNear,
+      C,
+      A,
+      B,
+      viewportPx,
+      renderOrigin,
+    );
+    const [Cc, Ac, Bc] = clipBasis;
+    const wMin = Cc[2]! - Math.hypot(Ac[2]!, Bc[2]!);
+
+    expect(wMin).toBeGreaterThan(0); // bounded clause still says "ellipse"
+    expect(ribbonEligible).toBe(false); // extent clause overrides it
+  });
+});
+
 // ── The gradient-minor hoist: numerical regression at the Earth-zoom edge-on
 //    pose (the speckle bug) ──────────────────────────────────────────────────
 //

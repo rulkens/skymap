@@ -101,6 +101,14 @@
  * cancellation is only exact if the minors are computed from the SAME rescaled
  * matrix that gets narrowed, so they are computed AFTER the rescale loop.
  *
+ * ### Why the return ALSO carries the clip basis and a ribbon verdict
+ *
+ * The ribbon-impostor plan's Task 3 (spec §2): `clipBasis` is `(Cc, Ac, Bc)` —
+ * the same `cC`/`cS`/`cT` triple below, narrowed rather than rederived — so the
+ * vertex stage can bound the orbit with a screen-space ribbon instead of the
+ * fullscreen fallback triangle. `ribbonEligible` is that verdict; its two-
+ * clause predicate is derived beside its code, a few lines below `cC`.
+ *
  * ### Landmine
  *
  * `mat3d.create()` / `mat3d.multiply` / `mat3d.inverse` all operate on the
@@ -117,16 +125,22 @@
  * @param viewportPx       Backing-store viewport `(Wpx, Hpx)` (`SlabView.viewportPx`).
  * @param renderOriginMpc  The render origin the slab VP is relative to.
  * @returns  `ginv` — `Ginv` (pixel → plane) as a 12-element padded
- *           `mat3x3<f32>` (`Float32Array`, column-major std140); and `minorS` /
+ *           `mat3x3<f32>` (`Float32Array`, column-major std140); `minorS` /
  *           `minorT` — the six gradient minors `(M1, M2, M3)` / `(M4, M5, M6)`
- *           as length-4 padded `Float32Array`s (three values + a pad lane),
- *           all composed in f64 and narrowed once at return.
+ *           as length-4 padded `Float32Array`s; `clipBasis` — `(Cc, Ac, Bc)`,
+ *           each length-4 padded, for the ribbon vertex stage; and
+ *           `ribbonEligible` — whether the ribbon impostor bounds this
+ *           projection. All composed in f64 and narrowed once at return.
  */
 
 import { mat3d } from 'wgpu-matrix';
 import type { Vec2 } from '../../@types/math/Vec2';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { narrowMat3 } from '../math/narrowMat3';
+
+// Ribbon-vs-fullscreen NDC extent ceiling — see the predicate derivation
+// beside its code, below, where it's actually applied.
+const RIBBON_MAX_EXTENT_NDC = 20;
 
 export function composeOrbitConic(
   slabVpF64: Float64Array,
@@ -135,7 +149,15 @@ export function composeOrbitConic(
   semiMinorMpc: Readonly<Vec3>,
   viewportPx: Readonly<Vec2>,
   renderOriginMpc: Readonly<Vec3>,
-): { ginv: Float32Array; minorS: Float32Array; minorT: Float32Array } {
+): {
+  ginv: Float32Array;
+  minorS: Float32Array;
+  minorT: Float32Array;
+  /** (Cc, Ac, Bc), each a length-4 padded (clip.x, clip.y, clip.w, 0) — see the record layout. */
+  clipBasis: readonly [Float32Array, Float32Array, Float32Array];
+  /** true ⇒ the ribbon impostor bounds this projection; false ⇒ the fullscreen fallback. */
+  ribbonEligible: boolean;
+} {
   // Origin-relative ellipse centre — the frame the slab VP was built for (same
   // subtraction composeBodyMvp performs). Done in f64 so the ~1e-12 Mpc
   // separation survives the large-VP-translation cancellation downstream.
@@ -157,6 +179,22 @@ export function composeOrbitConic(
   const cS = clipXYW(semiMajorMpc[0], semiMajorMpc[1], semiMajorMpc[2], 0);
   const cT = clipXYW(semiMinorMpc[0], semiMinorMpc[1], semiMinorMpc[2], 0);
   const cC = clipXYW(cx, cy, cz, 1);
+
+  // Ribbon-eligibility predicate (spec §2.1), from the clip columns alone,
+  // before narrowing. clip.w(E) = Cc.w + cos(E)·Ac.w + sin(E)·Bc.w sweeps
+  // [Cc.w − R, Cc.w + R], so wMin > 0 ⇔ no sign change ⇔ a genuine ellipse
+  // (also rejects Cc.w < 0, the whole orbit behind the camera). `extent` is a
+  // conservative NDC half-extent bound (triangle inequality on the sweep); it
+  // subsumes the spec's relative-ε near-parabolic fallback — as the orbit
+  // nears the camera plane, wMin → 0⁺ and extent → ∞ before f64 noise could
+  // flip the sign test — and caps the ribbon's own fill cost (past ~18,000 px
+  // projected radius the widened ribbon rasterizes more pixels than the
+  // fullscreen triangle; 20 NDC units keeps a 4K viewport inside that).
+  const R = Math.hypot(cS[2], cT[2]);
+  const wMin = cC[2] - R;
+  const extent =
+    (Math.hypot(cC[0], cC[1]) + Math.hypot(cS[0], cS[1]) + Math.hypot(cT[0], cT[1])) / wMin;
+  const ribbonEligible = wMin > 0 && extent <= RIBBON_MAX_EXTENT_NDC;
 
   // H = [ cS | cT | cC ] (3×3, column-major). create(v0..v8) fills the padded
   // layout column by column: col0 = cS, col1 = cT, col2 = cC.
@@ -238,11 +276,18 @@ export function composeOrbitConic(
   const m6 = g11 * g22 - g21 * g12;
 
   // Narrow once at the GPU-upload boundary. minorS drives ∂s/∂p, minorT drives
-  // ∂t/∂p; each padded to four lanes so it streams as a float32x4 instance
-  // attribute (the fourth lane is unused pad, like each Ginv column's).
+  // ∂t/∂p; clipBasis carries (Cc, Ac, Bc) for the ribbon vertex stage — each
+  // padded to four lanes so it streams as a float32x4 instance attribute (the
+  // fourth lane is unused pad, like each Ginv column's).
   return {
     ginv: narrowMat3(Ginv),
     minorS: new Float32Array([m1, m2, m3, 0]),
     minorT: new Float32Array([m4, m5, m6, 0]),
+    clipBasis: [
+      new Float32Array([cC[0], cC[1], cC[2], 0]),
+      new Float32Array([cS[0], cS[1], cS[2], 0]),
+      new Float32Array([cT[0], cT[1], cT[2], 0]),
+    ],
+    ribbonEligible,
   };
 }
