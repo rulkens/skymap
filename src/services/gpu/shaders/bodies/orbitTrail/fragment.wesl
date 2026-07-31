@@ -189,17 +189,27 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
 
 // Debug lens ('debug.showOrbitTrailImpostor'): constant-colour passes that
 // make the impostor geometry itself visible, drawn IN ADDITION to 'fs' by the
-// renderer's debug pipelines. 'fsImpostorRibbon' fills the ribbon hull so a
-// gap in its coverage of the stroke shows as a broken arc; 'fsImpostorFallback'
-// washes the fullscreen fallback triangle so a misclassified orbit — a silent
-// perf regression, not a visual one — becomes visible as an extra tinted pass.
+// renderer's debug pipelines. 'fsImpostorRibbon' fills the ribbon hull so a gap
+// in its coverage of the stroke shows as a broken arc; 'fsImpostorFallback'
+// marks an orbit that took the fullscreen path — a silent perf cost, not a
+// visual one.
 
 @fragment
 fn fsImpostorRibbon(in: VSOut) -> @location(0) vec4<f32> {
   return vec4<f32>(0.9, 0.15, 0.9, 1.0); // hull fill: magenta
 }
 
+// A sparse diagonal hatch, NOT a full-viewport wash: the fallback path is the
+// common case at solar-system scales (the camera sits inside every orbit), so
+// one opaque fill per fallback instance stacks additively and buries the scene.
+// The hatch keys off the pixel coordinate alone because the viewport size is
+// not a varying, and it leaves ~95 percent of pixels untouched however many
+// instances draw.
 @fragment
 fn fsImpostorFallback(in: VSOut) -> @location(0) vec4<f32> {
-  return vec4<f32>(0.12, 0.08, 0.0, 1.0); // fallback wash: dim amber
+  let stripe = (in.clip.x + in.clip.y) % 64.0;
+  if (stripe >= 2.0) {
+    discard;
+  }
+  return vec4<f32>(0.25, 0.16, 0.0, 1.0); // fallback hatch: amber
 }
