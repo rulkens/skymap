@@ -77,7 +77,7 @@
  *
  * - `data` and the cached `CompiledClip` are never mutated.
  * - The returned `CameraPose` allocates a fresh `target` triple each call.
- * - Same `(data, elapsedSec, frameBasis)` triple ⇒ deep-equal output.
+ * - Same `(data, elapsedSec, frameBasis, fovYRad)` tuple ⇒ deep-equal output.
  */
 
 import type { ClipData } from '../../../@types/animation/ClipData';
@@ -111,14 +111,25 @@ import { lerp } from '../../../utils/math/lerp';
 // hit the cache, an orientation switch (rare) recompiles once. A basis-free clip
 // (no `flyPath`) recompiles to a byte-identical result, so this never affects a
 // tween / static clip.
-type Cached = { readonly frameBasis: Mat3 | undefined; readonly compiled: CompiledClip };
+type Cached = {
+  readonly frameBasis: Mat3 | undefined;
+  // Keying on fovYRad assumes FOV is stable during a clip/tween's lifetime —
+  // true in practice today; a continuously-varying FOV would thrash this cache.
+  readonly fovYRad: number | undefined;
+  readonly compiled: CompiledClip;
+};
 const compileCache = new WeakMap<ClipData, Cached>();
 
-function getCompiled(data: ClipData, frameBasis: Mat3 | undefined): CompiledClip {
+function getCompiled(
+  data: ClipData,
+  frameBasis: Mat3 | undefined,
+  fovYRad: number | undefined,
+): CompiledClip {
   const cached = compileCache.get(data);
-  if (cached !== undefined && cached.frameBasis === frameBasis) return cached.compiled;
-  const compiled = compileClip(data, frameBasis);
-  compileCache.set(data, { frameBasis, compiled });
+  if (cached !== undefined && cached.frameBasis === frameBasis && cached.fovYRad === fovYRad)
+    return cached.compiled;
+  const compiled = compileClip(data, frameBasis, fovYRad);
+  compileCache.set(data, { frameBasis, fovYRad, compiled });
   return compiled;
 }
 
@@ -471,10 +482,17 @@ function compositePoseAt(tracks: CompositeTrack[], t: number): Partial<CameraPos
  *                    aim through (see `buildPathTrack`). Absent ⇒ identity
  *                    (world-frame aim) — the pre-feature behaviour, so a clip
  *                    with no `flyPath` is unaffected.
+ * @param fovYRad     Vertical FOV in radians. Absent ⇒ DEFAULT_FOV_Y_RAD. Not
+ *                    yet read by any writer.
  * @returns           The camera pose at that instant.
  */
-export function evaluateClip(data: ClipData, elapsedSec: number, frameBasis?: Mat3): CameraPose {
-  const compiled = getCompiled(data, frameBasis);
+export function evaluateClip(
+  data: ClipData,
+  elapsedSec: number,
+  frameBasis?: Mat3,
+  fovYRad?: number,
+): CameraPose {
+  const compiled = getCompiled(data, frameBasis, fovYRad);
   const { start, baseTracks } = compiled;
   const t = elapsedSec;
 

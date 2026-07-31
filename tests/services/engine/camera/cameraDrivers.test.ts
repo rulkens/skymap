@@ -55,6 +55,7 @@ import {
 } from '../../../../src/state/camera/cameraSlice';
 import type { CameraTweenDescriptor } from '../../../../src/@types/camera/CameraTweenDescriptor';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
+import { DEFAULT_FOV_Y_RAD } from '../../../../src/services/engine/camera/cameraFraming';
 
 /** A real-ish store so we can observe dispatches. */
 function makeStore() {
@@ -82,7 +83,12 @@ const CAM_STUB: OrbitCamera = {
   far: 50000,
 } as unknown as OrbitCamera;
 
-const FAKE_ENGINE_STATE = {} as EngineState;
+// `clip` and `tween` pose now read `cameraRuntime.projection.fovYRad` (Task 4)
+// alongside `followBody`'s existing read — the stub needs it wherever a test
+// invokes a real `pose()`, not just `isActive`/`pickWinner`.
+const FAKE_ENGINE_STATE = {
+  cameraRuntime: { projection: { fovYRad: DEFAULT_FOV_Y_RAD } },
+} as unknown as EngineState;
 
 // Minimal ClipData fixture — no effects, just the required timeline field.
 // The clip row only needs `data` to be a non-null object for isActive; the

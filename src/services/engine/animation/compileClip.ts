@@ -99,6 +99,10 @@ type Accum = {
   // encodes its world tangents to (yaw, pitch) through it (see `buildPathTrack`).
   // Absent ⇒ identity (world-frame aim), so every non-frame caller is unchanged.
   readonly frameBasis?: Mat3;
+  // The vertical FOV this clip compiles under. Nothing reads it yet — threaded
+  // through for a future `glide` writer's (u, w) metric. Absent ⇒
+  // DEFAULT_FOV_Y_RAD (cameraFraming.ts).
+  readonly fovYRad?: number;
 };
 
 // ---------------------------------------------------------------------------
@@ -305,13 +309,15 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
  *                    identity (world-frame aim); a clip with no `flyPath` is
  *                    unaffected either way, so `durationSec`-only callers may
  *                    omit it.
+ * @param fovYRad     Vertical FOV in radians. Absent ⇒ DEFAULT_FOV_Y_RAD. Not
+ *                    yet read by any writer.
  * @returns           A `CompiledClip` ready for the evaluator.
  *
  * @throws      Throws via `validateSingleWriter` when a base-layer write clash
  *              is detected on a channel (two overlapping `[start, end)` windows
  *              on the same channel's base track).
  */
-export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
+export function compileClip(data: ClipData, frameBasis?: Mat3, fovYRad?: number): CompiledClip {
   // Resolve the starting pose — 'live' and absent both fall through to the
   // zero placeholder; a concrete CameraPose is used directly.
   const start: CameraPose =
@@ -326,6 +332,7 @@ export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
     compositeTracks: [],
     start,
     frameBasis,
+    fovYRad,
   };
 
   // Walk the timeline, accumulating the cursor across top-level entries. A
