@@ -60,42 +60,51 @@ Same idiom as the current fullscreen triangle: geometry from
   `SEGMENTS × 6` vertices per instance.
 - Per sample: `p = clip(E_i)`; tangent `dp/dE = −sinE·Ac + cosE·Bc`
   projected to NDC; offset the two ribbon edges perpendicular to the NDC
-  tangent by `±(HALF_WIDTH_PX + FEATHER_PX + MARGIN_PX)` (converted to clip
-  via `p.w` and viewport). Width is exact in pixels at every depth — no
+  tangent by `±(STROKE_PX + sagitta_i + MARGIN_PX)` (converted to clip via
+  `p.w` and viewport). Width is exact in pixels at every depth — no
   world-space tube radius, no per-vertex depth scaling.
-- `HALF_WIDTH_PX`/`FEATHER_PX` are the fragment's existing stroke constants —
-  they move to the shared `orbitTrail` WESL module so vertex and fragment read
-  ONE definition (a copied constant here would drift silently).
-- `MARGIN_PX` absorbs hull error: chord sagitta (< 0.5 px at `SEGMENTS = 96`
-  for a viewport-filling orbit) + f32 vertex noise. A few px total.
+- `STROKE_PX` is the fragment's ONE existing stroke constant (discard radius
+  and feather range both) — it moves to a shared `orbitTrail` WESL constants
+  module so vertex and fragment read one definition (a copied constant here
+  would drift silently).
+- The chord sagitta scales with the projected radius (~5 px at a 10 k px
+  close-up orbit), so it cannot be a constant: it is computed **per sample**
+  in the vertex shader from a second difference of the neighbouring samples.
+  `MARGIN_PX` then covers only f32 vertex noise and the per-vertex-normal vs
+  chord-normal mismatch — a couple of px.
 
-### 2.3 Bounded/unbounded classification (CPU, per orbit, per frame)
+### 2.3 Ribbon-eligibility classification (CPU, per orbit, per frame)
 
-The projected conic is an ellipse iff the quadratic part's discriminant is
-negative; near-parabola cases get a relative threshold so f64 noise cannot
-flip the verdict at the boundary:
+`composeOrbitConic` assembles no explicit conic coefficients (the screen conic
+is implicit through `Ginv`), so the test reads straight off the clip basis
+instead of a discriminant. The projection is an ellipse iff the whole curve
+stays strictly on the camera side of the `w = 0` plane:
 
-    bounded ⇔ B² − 4AC < −ε·(A² + B² + C²)      (coefficients from the f64
-                                                  conic already assembled in
-                                                  composeOrbitConic)
+    boundedProjection ⇔ Cw − hypot(Aw, Bw) > ε        (f64, from the clip
+                                                        basis of §2.1)
 
-Unbounded ⇔ the orbit plane passes near the camera — exactly where ribbon
-samples cross `w ≤ 0` and a 2D hull is "wrong or needs a special case"
-(predecessor spec's rejection). Those instances take today's fullscreen path,
-bit-for-bit. Flying through an orbit costs one fullscreen instance; the other
-38 stay cheap. The check is a handful of f64 flops beside the Kepler solve the
-layer already does per orbit.
+— mathematically equivalent to the discriminant sign, with a margin so f64
+noise cannot flip the verdict at the boundary. A second clause guards the
+near-degenerate-but-still-bounded case, where the projection is so large on
+screen that the ribbon (perimeter × width) would cost MORE than the
+fullscreen triangle it replaces: a screen-extent bound on the projected
+ellipse folds both clauses into one `ribbonEligible` verdict.
+
+Ineligible instances take today's fullscreen path, bit-for-bit. Flying
+through an orbit costs one fullscreen instance; the other 38 stay cheap. The
+check is a handful of f64 flops beside the Kepler solve the layer already
+does per orbit.
 
 ### 2.4 Data + draw structure
 
 ```
 INSTANCE_FLOATS 28 → 40   (+ Cc, Ac, Bc at locations 8..10, offsets 112/128/144;
                            stride 160; layout mirrored in vertex.wesl as always)
-composeOrbitConic returns { ginv, minorS, minorT, clipBasis, bounded }
-orbitTrailsLayer pack loop: bounded records from the front of `staging`,
-                            unbounded from the back; both counts to the renderer
+composeOrbitConic returns { ginv, minorS, minorT, clipBasis, ribbonEligible }
+orbitTrailsLayer pack loop: ribbon-eligible records from the front of `staging`,
+                            fallback from the back; both counts to the renderer
 orbitTrailRenderer: ribbonPipeline + fullscreenPipeline, ONE fragment module,
-                    ONE instance VBO; draw(pass, instances, boundedCount,
+                    ONE instance VBO; draw(pass, instances, ribbonCount,
                     fallbackCount) issues ≤2 instanced draws
 ```
 
@@ -135,8 +144,9 @@ pivot-pin fix), and `clearFocus` on `milky-way-outside`/`milky-way-close`
 ## 5. Tests
 
 - `composeOrbitConic`: clip basis reprojects sample ellipse points onto the
-  known screen conic; `bounded` flips only when the orbit plane approaches the
-  camera (far view → true, in-plane view → false).
+  known screen conic; `ribbonEligible` flips only when the orbit plane
+  approaches the camera or the projection outgrows the screen-extent bound
+  (far view → true, in-plane view → false).
 - Renderer: partitioned draw issues ribbon draw for the bounded count,
   fullscreen draw for the fallback count, each skipped at 0; count-vs-array
   guard covers the widened record.
