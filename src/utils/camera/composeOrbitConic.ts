@@ -187,9 +187,11 @@ export function composeOrbitConic(
   // conservative NDC half-extent bound (triangle inequality on the sweep); it
   // subsumes the spec's relative-ε near-parabolic fallback — as the orbit
   // nears the camera plane, wMin → 0⁺ and extent → ∞ before f64 noise could
-  // flip the sign test — and caps the ribbon's own fill cost (past ~18,000 px
-  // projected radius the widened ribbon rasterizes more pixels than the
-  // fullscreen triangle; 20 NDC units keeps a 4K viewport inside that).
+  // flip the sign test — and caps the ribbon's own fill cost (fill break-even
+  // is ~16,500 px projected radius, ~15 NDC on a 4K viewport; RIBBON_MAX_EXTENT_NDC
+  // = 20 sits slightly above that, but extent's conservatism — noted above —
+  // means a projection scoring 20 usually has a true radius well below it, so
+  // this is a perf-tuning knob, not a correctness threshold).
   const R = Math.hypot(cS[2], cT[2]);
   const wMin = cC[2] - R;
   const extent =
