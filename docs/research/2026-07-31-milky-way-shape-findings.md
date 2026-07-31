@@ -269,8 +269,9 @@ type FluxField = { readonly integrate: (o: Vec3, d: Vec3) => RaySegment };
 **MEASURED, current limitation.** The analytic field pass does not model the warp:
 `milkyWayField/field.wesl:10-13` states it, and the reason is that the generator applies the warp
 as a per-star `y` offset **after** placement, which a closed-form integral of an unwarped mixture
-cannot carry. Edge-on views show the analytic field straight where the sprites bend. See §11 for
-the shear result that closes this.
+cannot carry. Edge-on views show the analytic field straight where the sprites bend. §11.1 was
+written expecting a per-component shear to close this; it has since been implemented and
+**measured wrong**. Read §11.1 before attempting it again.
 
 ## 9. Facts about our own code
 
@@ -423,17 +424,48 @@ BH&G's 2.6 ± 0.5 with an honest 1.8–6.0 range. **Do not present any single va
 
 ## 11. Design results worth preserving
 
-### 11.1 A linear warp is a shear, and shears preserve the closed form
+### 11.1 A shear preserves the closed form — but not on an origin-centred Gaussian
 
-**INFERRED (one line of algebra, checkable, not yet implemented).** A linear warp is a shear,
-hence affine. Under a linear substitution `p → S·p`, a Gaussian's quadratic form transforms as
-`M → SᵀMS` — still a quadratic form, so §8's `erfc` integral survives **exactly**, at zero extra
-per-ray cost.
+**MEASURED. The per-component shear was implemented and is WRONG. Do not re-propose it.**
 
-The real warp is not globally affine (it grows as `rel²` and the nodes precess, `generate.wesl:341`).
-But a **per-component shear, evaluated at each Gaussian's characteristic radius**, captures the
-radial growth and the twist **piecewise** — each Gaussian gets its own `S`, and the mixture
-approximates the curve. This is the route that closes §8's stated limitation (`field.wesl:10-13`).
+The algebra that motivated it is sound and still holds: under `p → S·p` a Gaussian's quadratic
+form transforms as `M → SᵀMS`, so §8's `erfc` integral survives exactly at zero per-ray cost, and
+`det(S) = 1` leaves the flux normalisation untouched.
+
+What does not hold is the step from there to "each Gaussian gets its own `S`, and the mixture
+approximates the curve". **Every component in the mixture was centred at the ORIGIN** — the shader
+evaluates `exp(−½ pᵀMp)` about `p = 0`. A shear applied there traces a **straight line through the
+origin**. The generator's warp (`generate.wesl:330-341`) is identically **zero** inside
+`warpStartRadius` and only then bends as `rel²`. No linear function is both.
+
+**MEASURED**, ridge height along a radial line, in units of disc thickness, for the Milky Way
+preset with the six-Gaussian disc:
+
+| R/R_out | true warp | σ=3.4h component | σ=5.0h component |
+| ------- | --------- | ---------------- | ---------------- |
+| 0.20    | 0.00      | −0.00            | **−0.15**        |
+| 0.57    | 0.00      | −0.00            | **−0.42**        |
+| 1.00    | **−1.13** | −0.01            | −0.73            |
+| 1.15    | **−2.74** | −0.01            | −0.84            |
+
+Each component tilts by a different amount, so instead of one warped surface they **fan apart**.
+Rendered edge-on this reads as two faint flat sheets, which is how the user found it.
+
+**The diagnostic trap, recorded because it is what let this ship.** Verifying that the shear
+matches the true warp **at each component's linearisation radius** always passes — that is the one
+point where a tangent is exact by construction. A per-component table of shear magnitudes looked
+healthy for exactly that reason. **The honest check is the ridge across the whole disc**, which is
+the table above; a single-radius check cannot fail.
+
+**The fix requires components to carry a CENTRE**, so that a blob can be localised in radius and a
+shear becomes a linearisation about the blob's own centre rather than about the galaxy's. The warp
+then comes from **where the blobs are placed** — on the warped surface — rather than from bending
+a blob that spans the whole galaxy. In flight, unproven at time of writing; the acceptance test is
+the ridge table above, not a per-component one.
+
+**Consequence beyond the warp.** Centres are a prerequisite for §12's named features in general:
+dust lanes, star-forming regions and globular clusters are all localised objects and none can be
+an origin-centred Gaussian.
 
 ### 11.2 Immersion measure: local mean sprite separation
 
