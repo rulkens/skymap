@@ -12,7 +12,7 @@ import type { GlideTuning } from '../../@types/camera/GlideTuning';
 import type { GlideSliderField } from '../../@types/data/camera/GlideSliderField';
 
 export const GLIDE_SLIDER_FIELDS: readonly GlideSliderField[] = [
-  { key: 'rho', label: 'ρ pan/zoom', min: 0.05, max: 1.6, step: 0.01 },
+  { key: 'rho', label: 'ρ pan/zoom', min: 0.01, max: 1.6, step: 0.01 },
   { key: 'velocity', label: 'V arc/s', min: 2, max: 60, step: 1 },
   { key: 'minSec', label: 'min sec', min: 0.1, max: 2, step: 0.05 },
   { key: 'maxSec', label: 'max sec', min: 0.5, max: 6, step: 0.1 },

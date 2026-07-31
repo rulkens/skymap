@@ -9,7 +9,7 @@ import type { Vec3 } from '../../@types/math/Vec3';
 import type { GlidePath } from '../../@types/camera/GlidePath';
 import type { GlideTuning } from '../../@types/camera/GlideTuning';
 import { zoomPanGeodesic } from './zoomPanGeodesic';
-import { DEFAULT_GLIDE_TUNING } from './glideCalibration';
+import { DEFAULT_GLIDE_TUNING, GLIDE_RHO_MIN } from './glideCalibration';
 import { distanceMpc } from '../math/distanceMpc';
 import { lerp } from '../math/lerp';
 
@@ -22,7 +22,10 @@ export function glidePath(
   // Per-field `??`, not `{ ...DEFAULT_GLIDE_TUNING, ...tuning }`: callers relay
   // an absent knob as an explicit `undefined` (a `glide` effect with no `rho`),
   // and a spread would overwrite the default with it.
-  const rho = tuning.rho ?? DEFAULT_GLIDE_TUNING.rho;
+  // Floored, not just defaulted: ρ = 0 makes the geodesic NaN and a NaN pose is
+  // a dead camera (see GLIDE_RHO_MIN). The limit behaviour is already reached
+  // around 0.05, so the clamp costs nothing anyone would want.
+  const rho = Math.max(GLIDE_RHO_MIN, tuning.rho ?? DEFAULT_GLIDE_TUNING.rho);
   const velocity = tuning.velocity ?? DEFAULT_GLIDE_TUNING.velocity;
   const minSec = tuning.minSec ?? DEFAULT_GLIDE_TUNING.minSec;
   const maxSec = tuning.maxSec ?? DEFAULT_GLIDE_TUNING.maxSec;

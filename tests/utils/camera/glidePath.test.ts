@@ -88,6 +88,23 @@ describe('glidePath', () => {
     expect(narrow.at(0.5).distance).not.toBeCloseTo(wide.at(0.5).distance, 6);
   });
 
+  it('rho = 0 is floored, not passed through as a NaN pose', () => {
+    // rho = 0 is a singularity, not a small value: the metric's zoom term is
+    // 1/rho^2, so length evaluates (Inf - Inf)/0. Nothing downstream rejects a
+    // NaN pose -- it reaches the camera as a dead frame.
+    const from = { target: [0, 0, 0] as Vec3, distance: 10 };
+    const to = { target: [30, 40, 0] as Vec3, distance: 5 };
+    for (const rho of [0, -1]) {
+      const g = glidePath(from, to, FOV_Y, { rho });
+      expect(Number.isFinite(g.durationSec)).toBe(true);
+      for (const frac of [0, 0.5, 1]) {
+        const pose = g.at(frac);
+        expect(Number.isFinite(pose.distance)).toBe(true);
+        expect(pose.target.every(Number.isFinite)).toBe(true);
+      }
+    }
+  });
+
   it('duration is clamped at both ends', () => {
     // Earth-orbit scale to observable-universe scale: unclamped S/V is tens of
     // seconds, far past GLIDE_MAX_SEC.

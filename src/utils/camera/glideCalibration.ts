@@ -12,15 +12,28 @@ import type { GlideTuning } from '../../@types/camera/GlideTuning';
  * Pan/zoom trade-off ρ passed to `zoomPanGeodesic`. Low ρ makes zooming
  * expensive in the metric and panning cheap, so the path stops climbing: the
  * paper's user-study ρ = 1.42 rose to 8.79× the endpoint distance on a galaxy
- * click, which read as an unwanted zoom-out. Here it never rises past its
- * destination. The cost is that a long hop is lateral travel, not a rise.
+ * click, which read as an unwanted zoom-out. The cost is that a long hop is
+ * lateral travel, not a rise.
  *
- * Below ~0.3 the arc length goes BIMODAL — the 1/ρ² weight on the zoom term
- * swamps the pan term, so same-scale moves collapse to ~1 unit and
+ * **The path CONVERGES below ~0.05** — measured identical at 0.05, 0.02, 0.01
+ * and 0.001: no rise at all, and a pure zoom passing through the geometric
+ * mean. So this is the ρ→0 limit, and lowering it further buys nothing.
+ *
+ * Below ~0.3 the arc length also goes BIMODAL — the 1/ρ² weight on the zoom
+ * term swamps the pan term, so same-scale moves collapse to ~1 unit and
  * scale-changing ones explode past 180. Most moves therefore land on a clamp
  * bound rather than on a derived duration; see GLIDE_MIN_SEC / GLIDE_MAX_SEC.
  */
-export const GLIDE_RHO_DEFAULT = 0.15;
+export const GLIDE_RHO_DEFAULT = 0.05;
+
+/**
+ * ρ = 0 is a SINGULARITY, not a small value: the metric's zoom term is 1/ρ²,
+ * so `b` divides by zero, `asinh(∓Infinity)` is ∓Infinity, and `length`
+ * evaluates `(∞−∞)/0` → NaN. A NaN pose is a dead camera, and nothing
+ * downstream rejects one. `glidePath` clamps to this floor so no UI control or
+ * clip author can reach it; the limit behaviour is already had at 0.05.
+ */
+export const GLIDE_RHO_MIN = 0.001;
 
 /** Geodesic arc-length units per second: durationSec = length / V. */
 export const GLIDE_VELOCITY = 20;
@@ -28,7 +41,7 @@ export const GLIDE_VELOCITY = 20;
 export const GLIDE_MIN_SEC = 0.3;
 
 /** A move clamped at either bound is no longer perceptually uniform. */
-export const GLIDE_MAX_SEC = 2.0;
+export const GLIDE_MAX_SEC = 1.5;
 
 /**
  * The four constants above as one record — what `glidePath` falls back to and

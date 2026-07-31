@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildGlideTrack } from '../../../../src/services/engine/animation/buildGlideTrack';
 import { glidePath } from '../../../../src/utils/camera/glidePath';
+import { GLIDE_MIN_SEC, GLIDE_MAX_SEC } from '../../../../src/utils/camera/glideCalibration';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
@@ -40,17 +41,29 @@ describe('buildGlideTrack', () => {
       FOV_Y,
     ).durationSec;
     expect(track.endSec).toBe(track.startSec + derived);
-    // Guard against a "derived === some fixed constant" pass: a longer path must
-    // take longer. Both moves sit inside the clamp, so this is the arc length
-    // talking, not GLIDE_MIN_SEC/GLIDE_MAX_SEC.
-    const farther = buildGlideTrack({
-      start: START,
-      startSec: 0,
-      to: { target: [300, 400, 0], distance: TO.distance },
-      ease: 'linear',
-      fovYRad: FOV_Y,
-    });
-    expect(farther.endSec).toBeGreaterThan(derived);
+    // Guard against a "derived === some fixed constant" pass: a bigger move must
+    // take longer. Vary the destination SCALE, not the separation — at the
+    // shipped ρ the pan term carries almost no weight, so a farther-but-
+    // same-scale move has nearly the same arc length.
+    //
+    // Both endpoints are chosen to land strictly INSIDE the clamp, and that is
+    // asserted: `TO` itself saturates `GLIDE_MAX_SEC`, so comparing against it
+    // would pass vacuously the moment any other move saturated too.
+    const span = (toDistance: number) =>
+      buildGlideTrack({
+        start: START,
+        startSec: 0,
+        to: { target: TO.target, distance: toDistance },
+        ease: 'linear',
+        fovYRad: FOV_Y,
+      }).endSec;
+    const shallow = span(START.distance * 0.7);
+    const deeper = span(START.distance * 0.3);
+    for (const d of [shallow, deeper]) {
+      expect(d).toBeGreaterThan(GLIDE_MIN_SEC);
+      expect(d).toBeLessThan(GLIDE_MAX_SEC);
+    }
+    expect(deeper).toBeGreaterThan(shallow);
   });
 
   it('an explicit over wins over the derived duration', () => {
