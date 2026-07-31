@@ -14,12 +14,15 @@
  * moving one is then a visible, deliberate departure from app parity.
  *
  * The star-pass block is the whole of `MILKY_WAY_TUNING_DEFAULTS`
- * (`src/services/gpu/galaxy/milkyWayCalibration.ts`) minus `lodApparent`,
- * which lives in `DEFAULT_LOD_SETTINGS` instead. Since the tool's boot state
- * became the app's actual Milky Way (`defaultGalaxyParams.ts`) and its star
- * path became the app's star path (the shared `milkyWayCloud/` shaders, the
- * reduced-resolution star target), those are not merely similar knobs — they
- * are the same knobs, so every one is seeded rather than hand-copied.
+ * (`src/services/gpu/galaxy/milkyWayCalibration.ts`) minus two knobs that live
+ * elsewhere: `lodApparent`, which lives in `DEFAULT_LOD_SETTINGS` instead, and
+ * `starCount`, which feeds generation rather than compositing and so lives on
+ * `DEFAULT_GALAXY_PARAMS` (the re-exported `MILKY_WAY_GALAXY_PARAMS`) instead.
+ * Since the tool's boot state became the app's actual Milky Way
+ * (`defaultGalaxyParams.ts`) and its star path became the app's star path
+ * (the shared `milkyWayCloud/` shaders, the reduced-resolution star target),
+ * those are not merely similar knobs — they are the same knobs, so every one
+ * is seeded rather than hand-copied.
  *
  * `starIntensity` is seeded from `MILKY_WAY_TUNING_DEFAULTS.exposure`, which is
  * a DIFFERENT quantity from `DEFAULT_EXPOSURE` above despite the shared word:

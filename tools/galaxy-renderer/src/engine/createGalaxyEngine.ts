@@ -14,7 +14,7 @@
  *  - The STAR and DUST passes are the runtime's `milkyWayCloud/stars.wesl` and
  *    `milkyWayCloud/dust.wesl`, over the runtime's `milkyWayCloud/io.wesl`
  *    uniform struct — the whole family symlinked into this tool's WESL root
- *    (see `wesl.toml`). All seven `MILKY_WAY_TUNING_DEFAULTS` knobs therefore
+ *    (see `wesl.toml`). All eight `MILKY_WAY_TUNING_DEFAULTS` knobs therefore
  *    mean here exactly what they mean in the app.
  *  - The reduced-resolution star target and its additive composite back into
  *    HDR are the app's split too, down to the shared

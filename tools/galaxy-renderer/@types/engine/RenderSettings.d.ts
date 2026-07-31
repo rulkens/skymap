@@ -13,10 +13,14 @@
  * tool-only `grade.wesl` trailer, which is skipped entirely while they sit at
  * their identity defaults (1 and 0). Same for `gammaEncode`.
  *
- * The star-pass block at the bottom is the app's `MilkyWayTuning` under this
- * bag's own names: the tool draws with the app's `milkyWayCloud/` shaders into
- * the app's reduced-resolution star target, so all seven of that type's knobs
- * mean the same thing here. Only two are renamed, because `RenderSettings`
+ * The star-pass block at the bottom is the compositing half of the app's
+ * `MilkyWayTuning` under this bag's own names: the tool draws with the app's
+ * `milkyWayCloud/` shaders into the app's reduced-resolution star target, so
+ * every knob it does carry means the same thing here. Two of that type's eight
+ * are absent, both because they belong to a different stage — `lodApparent` is
+ * view-dependent and so rides `LodSettings`, and `starCount` feeds generation
+ * rather than compositing and so rides `GalaxyParams`. Only two are renamed,
+ * because `RenderSettings`
  * already spells both words for something else — `starIntensity` is the app's
  * per-sprite `exposure` (this file's own `exposure` is the post chain's
  * whole-frame multiplier) and `sizeScale` is `starSizeScale`.
