@@ -4,7 +4,7 @@
 
 **Goal:** Make every scene body's position come from one per-frame state map rooted at explicit anchors, and make the body renderers' capacities derive from their tables instead of hardcoded 24s.
 
-**Architecture:** Two prep refactors (P1, P2) from [the spec](../specs/2026-07-30-s-star-orbits-design.md). Neither adds a feature. P1 replaces the `parentId === null` discriminant with a focus graph whose roots are positioned anchors, un-braids `StarBody`'s baked position, and splits "has a position" from "moves". P2 makes the orbit-trail and planet renderers match `starPointRenderer`, which already grows dynamically.
+**Architecture:** Two prep refactors (P1, P2) from [the spec](../../specs/completed/2026-07-30-s-star-orbits-design.md). Neither adds a feature. P1 replaces the `parentId === null` discriminant with a focus graph whose roots are positioned anchors, un-braids `StarBody`'s baked position, and splits "has a position" from "moves". P2 makes the orbit-trail and planet renderers match `starPointRenderer`, which already grows dynamically.
 
 **Tech Stack:** TypeScript, Vitest. No GPU or shader changes beyond buffer sizing.
 
@@ -16,7 +16,7 @@
 - **Didactic comments.** Multi-paragraph module headers explaining _why_ and _what the alternative was_, matching the surrounding files.
 - **No file moves by hand.** Any rename or relocation goes through `npm run move-files -- <from> <to>` (`--dry` first). Never `git mv` plus hand-edited imports.
 - **Test what can break.** No runtime type tests, no constant restatements. See `docs/superpowers/conventions/testing.md`.
-- Read [docs/RENDERER.md](../../RENDERER.md) before Tasks 7–8.
+- Read [docs/RENDERER.md](../../../RENDERER.md) before Tasks 7–8.
 
 ---
 

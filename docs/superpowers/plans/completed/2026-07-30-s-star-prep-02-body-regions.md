@@ -4,7 +4,7 @@
 
 **Goal:** Make near-field scale gating anchor-relative, so content that is not near the Sun can be gated on how close the camera is to _it_.
 
-**Architecture:** P3 from [the spec](../specs/2026-07-30-s-star-orbits-design.md). `scaleFadeBands.ts:18` records that several band rows key on the camera's distance from the heliocentric render origin (the header at `:13-21` says "three," the table today actually has six — see Task 3). That value is ~8178 pc anywhere at the Galactic Center, and identical 8 kpc the other way, so it cannot express "appears when you are near it". A `BodyRegion` carries an anchor and a derived extent; bands become a shape applied per region and keyed on `|camPos − anchorPos|`.
+**Architecture:** P3 from [the spec](../../specs/completed/2026-07-30-s-star-orbits-design.md). `scaleFadeBands.ts:18` records that several band rows key on the camera's distance from the heliocentric render origin (the header at `:13-21` says "three," the table today actually has six — see Task 3). That value is ~8178 pc anywhere at the Galactic Center, and identical 8 kpc the other way, so it cannot express "appears when you are near it". A `BodyRegion` carries an anchor and a derived extent; bands become a shape applied per region and keyed on `|camPos − anchorPos|`.
 
 **Tech Stack:** TypeScript, Vitest.
 
@@ -18,7 +18,7 @@
 - **The two camera-distance gates stay global scalars** (Task 6). They are compared against `ctx.cam.distance`, which is camera-to-_target_, so a threshold is a scale and not a position — no per-region predicate, no layer retrofit. Only their derivations move.
 - **`type` aliases, never `interface`.** One type per file in `src/@types/`.
 - **Gate at `enabled()`, not at draw.** Opacity 0 must drop the pass; pick follows visibility. See `docs/superpowers/conventions/` and the `orbitTrailsLayer.ts:130-160` precedent.
-- Read [docs/RENDERER.md](../../RENDERER.md) first.
+- Read [docs/RENDERER.md](../../../RENDERER.md) first.
 
 ---
 
@@ -34,10 +34,10 @@ Before anything moves, pin every current edge. This fixture is the contract for 
 
 This is deliberately a constant-restatement test, which the testing convention normally forbids — it is justified here **only** as a temporary refactor harness, and Task 7 deletes it. Say so in the file header so a later reader does not cite it as precedent.
 
-- [ ] Add the two temporary exports (`FARTHEST_STAR_PC`, `MAX_ORBIT_EXTENT_MPC`).
-- [ ] Write the fixture asserting all eight current values.
-- [ ] `npm test -- scaleFadeBands.baseline` → passes.
-- [ ] Commit.
+- [x] Add the two temporary exports (`FARTHEST_STAR_PC`, `MAX_ORBIT_EXTENT_MPC`).
+- [x] Write the fixture asserting all eight current values.
+- [x] `npm test -- scaleFadeBands.baseline` → passes.
+- [x] Commit.
 
 ---
 
@@ -87,14 +87,14 @@ The module header must explain why two regions share one anchor — that is the 
 
 **`label` is a sibling field on the row, not a second parallel map.** `paletteRows.tsx:124` hardcodes `'Solar System'` as the category chip for every non-famous body — the feature plan needs a real per-region string once bodies outside the solar system exist. The codebase's own convention for this (`CATEGORY_DISPLAY_INFO`, `src/data/structure/categoryDisplayInfo.ts:1-16`, and `SOURCE_REGISTRY`'s `id`/`label` sibling fields) is id and label together on one row, never a hand-maintained `Record<Id, string>` beside the id union — `categoryDisplayInfo.ts:6-9` calls that pattern "a second place to edit and a second place to forget". `BodyRegion.label` follows the same rule. This plan does not touch `paletteRows.tsx` itself — that repoint is the feature plan's job — but the field, `memberIds`, and `regionOfBody` must all exist here so the feature plan has them to consume.
 
-- [ ] Add the test `solar-system and solar-neighbourhood share an anchor but not an extent`.
-- [ ] Add the test `an empty region has extent 0, not NaN` — the empty `Math.max` guard.
-- [ ] Add the test `region extents reproduce today's FARTHEST_PLANET_MPC and FARTHEST_BODY_MPC`.
-- [ ] Add the test `every scene body belongs to exactly one region` — totality over `SCENE_BODIES` **and** disjointness, asserted through `regionOfBody`. This is the one the feature plan's chip rests on; it fails by returning `null`, never by throwing.
-- [ ] Add the test `the Sun belongs to the solar system, not to the neighbourhood it anchors` — the placement the chip depends on and the one an implementer will get backwards.
-- [ ] Implement `BODY_REGIONS` and `regionOfBody`.
-- [ ] `npm test -- bodyRegions regionOfBody` → passes; the Task 1 baseline still passes.
-- [ ] Commit.
+- [x] Add the test `solar-system and solar-neighbourhood share an anchor but not an extent`.
+- [x] Add the test `an empty region has extent 0, not NaN` — the empty `Math.max` guard.
+- [x] Add the test `region extents reproduce today's FARTHEST_PLANET_MPC and FARTHEST_BODY_MPC`.
+- [x] Add the test `every scene body belongs to exactly one region` — totality over `SCENE_BODIES` **and** disjointness, asserted through `regionOfBody`. This is the one the feature plan's chip rests on; it fails by returning `null`, never by throwing.
+- [x] Add the test `the Sun belongs to the solar system, not to the neighbourhood it anchors` — the placement the chip depends on and the one an implementer will get backwards.
+- [x] Implement `BODY_REGIONS` and `regionOfBody`.
+- [x] `npm test -- bodyRegions regionOfBody` → passes; the Task 1 baseline still passes.
+- [x] Commit.
 
 ---
 
@@ -122,12 +122,12 @@ The keying quantity changes from `hypot(view.camPos)` to `|camPos − anchorPos|
 
 **Resolved — narrow the scope, don't widen it.** Four of the six (`surveyDeepZoom`, `milkyWayApproach`, `sunCaption`, `constellations`) gate content that genuinely IS about distance from the Sun/origin — the survey point clouds and structure markers receding on deep zoom, the Milky Way impostor's own approach, the Sun's caption (the Sun sits at the origin, so its own distance-from-camera IS that quantity by construction), the constellation figures (Earth's sky, meaningless anywhere but near the Sun). None of them gate content that belongs to a different region's anchor, so origin-keying them is correct, not a latent bug — repointing them at a region would be motion for its own sake. Only `starBackdrop` and `bodyGlintBackdrop` gate region-scoped content (the star map's backdrop, the planet/moon glints) whose relevant distance is "how close is the camera to THIS region," which is exactly what stops being true once a region's content sits somewhere other than the Sun. This task repoints only those two.
 
-- [ ] Add the test `a Sun-anchored region keys identically to hypot(camPos)`.
-- [ ] Add the test `an off-origin region keys on distance to its own anchor` — camera 1 pc from Sgr A\* yields ~1 pc, not ~8178 pc. **This is the test the whole plan exists for.**
-- [ ] Implement `regionRelativeDistanceMpc` and repoint `starBackdrop`'s two reads (`starPointsLayer.ts:115` in `enabled`, `:151` in `draw`) and `bodyGlintBackdrop`'s three reads (`bodyGlintsLayer.ts:135` in `enabled`, `:177,293` in `draw`/`drawPick`) at the `solar-neighbourhood` region (today's dominant Sun-anchored extent — see Task 2's table; `bodyGlintBackdrop` scales off the solar-system's planet extent specifically, so it keys on `solar-system` instead). Same numbers as today; only the two files besides `scaleFadeBands.ts` change.
-- [ ] Fix the stale "three rows" count in `scaleFadeBands.ts`'s module header (`:18-19`) to six, and name which two are region-relative vs. which four stay origin-direct.
-- [ ] `npm test` → green including the Task 1 baseline.
-- [ ] Commit.
+- [x] Add the test `a Sun-anchored region keys identically to hypot(camPos)`.
+- [x] Add the test `an off-origin region keys on distance to its own anchor` — camera 1 pc from Sgr A\* yields ~1 pc, not ~8178 pc. **This is the test the whole plan exists for.**
+- [x] Implement `regionRelativeDistanceMpc` and repoint `starBackdrop`'s two reads (`starPointsLayer.ts:115` in `enabled`, `:151` in `draw`) and `bodyGlintBackdrop`'s three reads (`bodyGlintsLayer.ts:135` in `enabled`, `:177,293` in `draw`/`drawPick`) at the `solar-neighbourhood` region (today's dominant Sun-anchored extent — see Task 2's table; `bodyGlintBackdrop` scales off the solar-system's planet extent specifically, so it keys on `solar-system` instead). Same numbers as today; only the two files besides `scaleFadeBands.ts` change.
+- [x] Fix the stale "three rows" count in `scaleFadeBands.ts`'s module header (`:18-19`) to six, and name which two are region-relative vs. which four stay origin-direct.
+- [x] `npm test` → green including the Task 1 baseline.
+- [x] Commit.
 
 ---
 
@@ -141,10 +141,10 @@ The keying quantity changes from `hypot(view.camPos)` to `|camPos − anchorPos|
 
 Derive both from one shape applied to each region's extent. The two multipliers get one home with a comment explaining what they mean (fully present at twice the region's own extent; gone by ten times it).
 
-- [ ] Add the test `both backdrop bands derive from one shape` — changing the shape moves both.
-- [ ] Implement.
-- [ ] `npm test` → green including the baseline.
-- [ ] Commit.
+- [x] Add the test `both backdrop bands derive from one shape` — changing the shape moves both.
+- [x] Implement.
+- [x] `npm test` → green including the baseline.
+- [x] Commit.
 
 ---
 
@@ -158,11 +158,11 @@ Derive both from one shape applied to each region's extent. The two multipliers 
 
 Reach becomes reach-from-the-region-anchor, and the cull compares against the camera's region-relative distance. Plan 01 Task 5 already routed this function's focus resolution through the anchor seam, so the recursion is gone; this task changes what it measures against.
 
-- [ ] Add the test `a Galactic Centre orbit does not inflate the solar-system trail reach` — the regression this task prevents, using a synthetic far-anchored orbit.
-- [ ] Add the test `the whole-layer cull still drops solar-system trails at galactic distance`.
-- [ ] Implement.
-- [ ] `npm test` → green including the baseline.
-- [ ] Commit.
+- [x] Add the test `a Galactic Centre orbit does not inflate the solar-system trail reach` — the regression this task prevents, using a synthetic far-anchored orbit.
+- [x] Add the test `the whole-layer cull still drops solar-system trails at galactic distance`.
+- [x] Implement.
+- [x] `npm test` → green including the baseline.
+- [x] Commit.
 
 ---
 
@@ -200,13 +200,13 @@ Today `solar-neighbourhood.extentMpc` dominates (`solar-system` is ~30 AU, `gala
 - the near-field property already there (`< 1 Mpc`, `:41`) — keep verbatim;
 - the Milky-Way-label coupling — `FOREGROUND_MAX_DISTANCE_MPC < MILKY_WAY_LABEL_NEAR_MPC`. This is a real cross-module inequality, currently pinned nowhere, and it is precisely what the retired origin-distance derivation broke.
 
-- [ ] Add the test `the far plane stays below the Milky-Way label's near band` — the coupling `foregroundMaxDistance.ts:63-68` documents and nothing asserts.
-- [ ] Delete the enclosure assertion (`foregroundMaxDistance.test.ts:26-37`) and its explaining header text; keep the `< 1 Mpc` case.
-- [ ] Add the test `the far plane is unchanged by a distant region's anchor` — a synthetic region anchored far from the origin with a small extent must not move the result. This is the one that fails against the retired `|anchorPos| + extentMpc` formula, and the one the feature plan's Sgr A\* landmine rests on.
-- [ ] Implement both derivations.
-- [ ] Update `scaleFadeBands.ts:38` and `scaleFadeBands.test.ts:15-18,33` per the Files note above.
-- [ ] `npm test` → green including the baseline (all eight values unmoved). `npm run typecheck` clean.
-- [ ] Commit.
+- [x] Add the test `the far plane stays below the Milky-Way label's near band` — the coupling `foregroundMaxDistance.ts:63-68` documents and nothing asserts.
+- [x] Delete the enclosure assertion (`foregroundMaxDistance.test.ts:26-37`) and its explaining header text; keep the `< 1 Mpc` case.
+- [x] Add the test `the far plane is unchanged by a distant region's anchor` — a synthetic region anchored far from the origin with a small extent must not move the result. This is the one that fails against the retired `|anchorPos| + extentMpc` formula, and the one the feature plan's Sgr A\* landmine rests on.
+- [x] Implement both derivations.
+- [x] Update `scaleFadeBands.ts:38` and `scaleFadeBands.test.ts:15-18,33` per the Files note above.
+- [x] `npm test` → green including the baseline (all eight values unmoved). `npm run typecheck` clean.
+- [x] Commit.
 
 ---
 
@@ -220,10 +220,10 @@ Today `solar-neighbourhood.extentMpc` dominates (`solar-system` is ~30 AU, `gala
 
 The fixture has done its job: it proved eight edges survived five commits (Tasks 2–6) unchanged. Keeping it would leave a constant-restatement test in the suite permanently, which the testing convention forbids and which would fail on any legitimate future re-tuning.
 
-- [ ] Confirm the baseline is green immediately before deleting it.
-- [ ] Delete the test; revert whichever Task 1 export is still module-private-by-design.
-- [ ] `npm test` → green.
-- [ ] Commit.
+- [x] Confirm the baseline is green immediately before deleting it.
+- [x] Delete the test; revert whichever Task 1 export is still module-private-by-design.
+- [x] `npm test` → green.
+- [x] Commit.
 
 ---
 

@@ -4,7 +4,7 @@
 
 **Goal:** Render the 39 bound S-stars of the Galactic Center as Keplerian bodies orbiting Sgr A\*, animated by the existing solar-system clock. "S-star" is used throughout as the collective name for the table's 39 bound rows — two of them, R34 and R44, carry Gillessen's own R designations rather than S.
 
-**Architecture:** The feature half of [the spec](../specs/2026-07-30-s-star-orbits-design.md). Thirty-nine hand-transcribed element rows in their own file, converted by an `sStar` maker into the same `OrbitalElements` shape the planets use, focused on a Sgr A\* anchor, gated by a `galactic-centre` `BodyRegion`. Sgr A\* draws nothing; it is a positioned, labelled, focusable anchor.
+**Architecture:** The feature half of [the spec](../../specs/completed/2026-07-30-s-star-orbits-design.md). Thirty-nine hand-transcribed element rows in their own file, converted by an `sStar` maker into the same `OrbitalElements` shape the planets use, focused on a Sgr A\* anchor, gated by a `galactic-centre` `BodyRegion`. Sgr A\* draws nothing; it is a positioned, labelled, focusable anchor.
 
 **Tech Stack:** TypeScript, Vitest. No new renderers, no shader changes.
 
@@ -18,7 +18,7 @@
 - **`type` aliases, never `interface`.** One type per file in `src/@types/`; one exported function per file in `src/utils/`.
 - **No S-star captions.** No S-star gets a `CaptionKind` or an emission in `sceneBodyLabels`. Only Sgr A\* bears a label — and that costs **one** new `CaptionKind` row, which `CAPTION_PRIORITY` and `CAPTION_FADE_RULES` both fail the build without (Task 7).
 - **Test what can break.** Do **not** write `pericentre === a(1−e)`, `period === 2π/n`, or body-sits-on-its-own-trail assertions — a mirrored orbit passes all three. See Task 6.
-- Read [docs/RENDERER.md](../../RENDERER.md) and [docs/DATA.md](../../DATA.md) first.
+- Read [docs/RENDERER.md](../../../RENDERER.md) and [docs/DATA.md](../../../DATA.md) first.
 
 ---
 
@@ -62,13 +62,13 @@ https://tapvizier.cds.unistra.fr/TAPVizieR/tap/sync
 
 Run it, paste its clean output into the task's commit message, then **delete the script** — it is a one-off check, not standing build machinery.
 
-- [ ] Add the test `S111 is absent from the seed table` (naming why in the assertion message: `e = 1.092`, unbound, and `propagateElements` is elliptical-only). A bare `length === 39` count is a constant restatement of a hand-authored table — testing convention rejects it, and the two structural tests below catch the same transcription slips.
-- [ ] Add the test `every seed has a positive semi-major axis and eccentricity below 1` — the property that makes `propagateElements` applicable.
-- [ ] Add the test `seed ids are unique` — the copy-paste failure a 39-row hand transcription actually produces, and the one that silently collides in every id-keyed lookup downstream.
-- [ ] Transcribe the 39 rows with per-row provenance comments.
-- [ ] Run the VizieR diff script; confirm zero mismatches; delete the script.
-- [ ] `npm test -- sStarElements` → passes.
-- [ ] Commit, with the diff output in the message.
+- [x] Add the test `S111 is absent from the seed table` (naming why in the assertion message: `e = 1.092`, unbound, and `propagateElements` is elliptical-only). A bare `length === 39` count is a constant restatement of a hand-authored table — testing convention rejects it, and the two structural tests below catch the same transcription slips.
+- [x] Add the test `every seed has a positive semi-major axis and eccentricity below 1` — the property that makes `propagateElements` applicable.
+- [x] Add the test `seed ids are unique` — the copy-paste failure a 39-row hand transcription actually produces, and the one that silently collides in every id-keyed lookup downstream.
+- [x] Transcribe the 39 rows with per-row provenance comments.
+- [x] Run the VizieR diff script; confirm zero mismatches; delete the script.
+- [x] `npm test -- sStarElements` → passes.
+- [x] Commit, with the diff output in the message.
 
 ---
 
@@ -97,17 +97,17 @@ against a 1640 yr period, 0.85 cycles), because Gillessen tabulates the pericent
 passage nearest the observation epoch — so one wrap suffices, but the
 implementation must not _rely_ on that, since a future table row need not honour it.
 
-- [ ] Add the test `a star at pericentre in 2000.0 has mean anomaly zero`.
-- [ ] Add the test `S2 at Tp 2002.33 with P 16.0 wraps into [0, 2π)` — S2 is one of
+- [x] Add the test `a star at pericentre in 2000.0 has mean anomaly zero`.
+- [x] Add the test `S2 at Tp 2002.33 with P 16.0 wraps into [0, 2π)` — S2 is one of
       the 20 stars with `Tp` after 2000, so this asserts the wrap, which a naive
       negative result fails.
-- [ ] Add the test `a star with Tp before 2000 comes out unchanged` — the positive-raw
+- [x] Add the test `a star with Tp before 2000 comes out unchanged` — the positive-raw
       companion to the S2 case above, so the wrap is pinned in both directions rather
       than only the negative one.
-- [ ] Add the test `advancing by exactly one period returns the same anomaly`.
-- [ ] Implement.
-- [ ] `npm test -- meanAnomalyAtJ2000` → passes.
-- [ ] Commit.
+- [x] Add the test `advancing by exactly one period returns the same anomaly`.
+- [x] Implement.
+- [x] `npm test -- meanAnomalyAtJ2000` → passes.
+- [x] Commit.
 
 ---
 
@@ -162,14 +162,14 @@ The flip is also the physically legible statement: `i_astro < 90°` means counte
 
 Write the derivation out in the docblocks so a reader can check it. If the derivation and the observations disagree, the recorded fallback is to enumerate the sign and reference combinations, keep the one that reproduces the astrometry, and document the result _as empirical_ rather than presenting it as derived.
 
-- [ ] Add the test `the GC frame's x axis is the East tangent and its y axis is North` — assert against tangent vectors computed independently in the test, not against the function's own output.
-- [ ] Add the test `the frame normal points away from the observer, into the southern hemisphere` — assert `normal` is a unit vector orthogonal to both in-plane axes with `normal[2] < 0` (Dec −29°). Do **not** assert the three components against `raDecDistToCartesian`: that is the same formula (`raDecDistToCartesian.ts:38-42` vs `orbitPlaneFrames.ts:61`), so it is a mirror test, not a check. The one-bit sign is what catches an antipodal pole.
-- [ ] Add the test `the frame basis is right-handed` asserting `xAxis × yAxis ≈ normal` — the fact the whole conversion rests on.
-- [ ] Add the test `a position angle of 0 (due North) maps to the frame's +y` — hand-computed `π/2`; discriminates `90° − Ω` from `Ω − 90°`.
-- [ ] Add the test `a prograde-on-sky inclination maps above 90 degrees in the frame` asserting `skyInclinationToFrameInclination(24.7°) ≈ 155.3°` — the sense flip; a pass-through implementation fails it.
-- [ ] Implement all three; write the derivation into the docblocks.
-- [ ] `npm test -- skyPositionAngle skyInclination orbitPlaneFrames` → passes.
-- [ ] Commit.
+- [x] Add the test `the GC frame's x axis is the East tangent and its y axis is North` — assert against tangent vectors computed independently in the test, not against the function's own output.
+- [x] Add the test `the frame normal points away from the observer, into the southern hemisphere` — assert `normal` is a unit vector orthogonal to both in-plane axes with `normal[2] < 0` (Dec −29°). Do **not** assert the three components against `raDecDistToCartesian`: that is the same formula (`raDecDistToCartesian.ts:38-42` vs `orbitPlaneFrames.ts:61`), so it is a mirror test, not a check. The one-bit sign is what catches an antipodal pole.
+- [x] Add the test `the frame basis is right-handed` asserting `xAxis × yAxis ≈ normal` — the fact the whole conversion rests on.
+- [x] Add the test `a position angle of 0 (due North) maps to the frame's +y` — hand-computed `π/2`; discriminates `90° − Ω` from `Ω − 90°`.
+- [x] Add the test `a prograde-on-sky inclination maps above 90 degrees in the frame` asserting `skyInclinationToFrameInclination(24.7°) ≈ 155.3°` — the sense flip; a pass-through implementation fails it.
+- [x] Implement all three; write the derivation into the docblocks.
+- [x] `npm test -- skyPositionAngle skyInclination orbitPlaneFrames` → passes.
+- [x] Commit.
 
 ---
 
@@ -204,12 +204,12 @@ S2 landing at −3.1 matches its published B0–2V classification, which sanity-
 
 `A_KS_GALACTIC_CENTRE` is **one named constant with its source cited in a comment**, never folded into per-row numbers, because it is a modelling choice that shifts all 39 stars together and will be refined later.
 
-- [ ] Add the test `S2's dereddened M_K matches its published B0-2V classification` asserting ≈ −3.1 — hand-computed `13.95 − 14.56 − 2.5`, and the one end-to-end sanity check on the chain.
-- [ ] Add the test `a one-magnitude difference in apparent K survives as one magnitude absolute` — the map is affine, so a bug that clamps, saturates or rescales the range fails here. (Asserting "the table spans ~8 magnitudes" would instead restate the authored `kMag` column, since an affine map preserves spread identically.)
-- [ ] Add the test `a brighter S-star comes out hotter and larger` — the monotonicity `sStarAppearance` exists to provide, and what makes the brightness spread in the visual pass read. (Asserting "early and late map to distinct temperatures" would restate two rows of the lookup table.)
-- [ ] Implement.
-- [ ] `npm test -- absMagFromGalacticCentreK` → passes.
-- [ ] Commit.
+- [x] Add the test `S2's dereddened M_K matches its published B0-2V classification` asserting ≈ −3.1 — hand-computed `13.95 − 14.56 − 2.5`, and the one end-to-end sanity check on the chain.
+- [x] Add the test `a one-magnitude difference in apparent K survives as one magnitude absolute` — the map is affine, so a bug that clamps, saturates or rescales the range fails here. (Asserting "the table spans ~8 magnitudes" would instead restate the authored `kMag` column, since an affine map preserves spread identically.)
+- [x] Add the test `a brighter S-star comes out hotter and larger` — the monotonicity `sStarAppearance` exists to provide, and what makes the brightness spread in the visual pass read. (Asserting "early and late map to distinct temperatures" would restate two rows of the lookup table.)
+- [x] Implement.
+- [x] `npm test -- absMagFromGalacticCentreK` → passes.
+- [x] Commit.
 
 ---
 
@@ -242,12 +242,12 @@ Lives in `makers/` beside `satellite.ts`, which it mirrors: a maker that convert
 
 The propagator learns nothing new — the per-century rate convention carries mean motion forward, so the same linear affine map that moves a planet moves an S-star.
 
-- [ ] Add the test `S2's semi-major axis converts to 1026 AU` — hand-computed `0.1255 × 8178`.
-- [ ] Add the test `a face-on prograde orbit starts due North and moves East` — build a synthetic seed `(i, Ω, ω) = (0, 0, 0)`, run `keplerianEllipse`, and assert the returned vectors' projections onto the frame basis: `semiMajorMpc · yAxis > 0` (P̂ = North) and `semiMinorMpc · xAxis > 0` (Q̂ = East). `keplerianEllipse` returns **world** vectors (`keplerianEllipse.ts:100-110`), so the assertion must dot against `GALACTIC_CENTRE_SKY_FRAME`'s axes, not read components. The expected orientation comes from the Thiele-Innes convention, not from our own maker, so this is the **unit-level mirror gate**: with the inclination flip dropped, `Q̂` lands on **−x** (West) while `P̂` is unchanged, so the semi-minor sign is the one bit that discriminates.
-- [ ] Add the test `every S-star focuses on sgr-a-star`.
-- [ ] Implement.
-- [ ] `npm test -- sStar` → passes.
-- [ ] Commit.
+- [x] Add the test `S2's semi-major axis converts to 1026 AU` — hand-computed `0.1255 × 8178`.
+- [x] Add the test `a face-on prograde orbit starts due North and moves East` — build a synthetic seed `(i, Ω, ω) = (0, 0, 0)`, run `keplerianEllipse`, and assert the returned vectors' projections onto the frame basis: `semiMajorMpc · yAxis > 0` (P̂ = North) and `semiMinorMpc · xAxis > 0` (Q̂ = East). `keplerianEllipse` returns **world** vectors (`keplerianEllipse.ts:100-110`), so the assertion must dot against `GALACTIC_CENTRE_SKY_FRAME`'s axes, not read components. The expected orientation comes from the Thiele-Innes convention, not from our own maker, so this is the **unit-level mirror gate**: with the inclination flip dropped, `Q̂` lands on **−x** (West) while `P̂` is unchanged, so the semi-minor sign is the one bit that discriminates.
+- [x] Add the test `every S-star focuses on sgr-a-star`.
+- [x] Implement.
+- [x] `npm test -- sStar` → passes.
+- [x] Commit.
 
 **Deliberately not written here:** `the mean-motion rate reproduces the tabulated period`. Propagating by exactly `P` advances `M` by `(2π·100/P)·(P/100) = 2π` — the rate formula restated on both sides of the assertion, which is the `period = 2π/n` mirror the Global Constraints already exclude.
 
@@ -272,12 +272,12 @@ The inclination pair is what makes a mirror error fail rather than pass. A fixtu
 
 Propagate each star to its observation epochs, project to sky offsets (ΔRA·cos δ, ΔDec) relative to Sgr A\*, and assert against the measured values within the quoted uncertainties.
 
-- [ ] Query `table5`; record its column schema; build the fixture with provenance.
-- [ ] Add the test `S2 reproduces its observed sky positions across epochs`.
-- [ ] Add the test `a prograde and a retrograde star both reproduce their observed positions` — **the mirror gate**.
-- [ ] Run. If it fails, mutation-check first: confirm the failure is a systematic reflection rather than a unit slip, then apply the Task 3 fallback and document the convention as empirical.
-- [ ] `npm test -- sStarAstrometry` → passes.
-- [ ] Commit.
+- [x] Query `table5`; record its column schema; build the fixture with provenance.
+- [x] Add the test `S2 reproduces its observed sky positions across epochs`.
+- [x] Add the test `a prograde and a retrograde star both reproduce their observed positions` — **the mirror gate**.
+- [x] Run. If it fails, mutation-check first: confirm the failure is a systematic reflection rather than a unit slip, then apply the Task 3 fallback and document the convention as empirical.
+- [x] `npm test -- sStarAstrometry` → passes.
+- [x] Commit.
 
 ---
 
@@ -321,13 +321,13 @@ What _does_ need a region is S-star **content** gating — the trails' reach cul
 
 `tests/services/engine/frame/foregroundMaxDistance.test.ts` needs **no** edit in this task: Plan 02 Task 6 already replaced its enclosure-over-absolute-positions assertion (a tautology that would have turned into a false assertion here) with the `< 1 Mpc` and `< MILKY_WAY_LABEL_NEAR_MPC` properties. Both must stay green with Sgr A\* in `SCENE_BODIES`; if either goes red, the derivation regressed — do not adjust the test.
 
-- [ ] Add the test `Sgr A* is focusable and labelled but contributes no draw record`.
-- [ ] Add the test `Sgr A*'s position matches its catalogue RA/Dec/distance` — assert the distance from the origin is 8178 pc and the direction round-trips to RA 266.41684 / Dec −29.00781.
-- [ ] Add the test `Sgr A*'s caption survives muting the famous-star catalog` — the specific mis-wiring that riding the `'star'` caption kind produces.
-- [ ] Add the test `seeding Sgr A* does not move the NEAR0 far plane` — assert `FOREGROUND_MAX_DISTANCE_MPC` still sits below `MILKY_WAY_LABEL_NEAR_MPC` with Sgr A\* in the anchor table. Mutation-check it: restore the `|anchorPos| + extentMpc` formula and confirm this test, and only this test, goes red.
-- [ ] Implement.
-- [ ] `npm test` → green, `foregroundMaxDistance.test.ts` included and unedited.
-- [ ] Commit.
+- [x] Add the test `Sgr A* is focusable and labelled but contributes no draw record`.
+- [x] Add the test `Sgr A*'s position matches its catalogue RA/Dec/distance` — assert the distance from the origin is 8178 pc and the direction round-trips to RA 266.41684 / Dec −29.00781.
+- [x] Add the test `Sgr A*'s caption survives muting the famous-star catalog` — the specific mis-wiring that riding the `'star'` caption kind produces.
+- [x] Add the test `seeding Sgr A* does not move the NEAR0 far plane` — assert `FOREGROUND_MAX_DISTANCE_MPC` still sits below `MILKY_WAY_LABEL_NEAR_MPC` with Sgr A\* in the anchor table. Mutation-check it: restore the `|anchorPos| + extentMpc` formula and confirm this test, and only this test, goes red.
+- [x] Implement.
+- [x] `npm test` → green, `foregroundMaxDistance.test.ts` included and unedited.
+- [x] Commit.
 
 ---
 
@@ -389,18 +389,18 @@ export function bodyRowChip(bodyId: string): string | undefined;
 
 Empty-query browse (`rankPaletteMatches.ts:73-76`) shows the famous atlas + Milky Way only; bodies appear once the user types. That is existing design, not a gap.
 
-- [ ] Add the test `Sgr A* is findable by its Sagittarius alias` — the widening's payoff; `"sagittarius"` scores the Sgr A\* row, which label-only matching cannot.
-- [ ] Add the test `a famous star still matches on its Bayer alias` — the existing behaviour the widened lookup must carry over; asserts `"Alpha Canis Majoris"` finds `'sirius'`.
-- [ ] Add the test `the Sgr A* palette row resolves to a body focus id` asserting `focusIdForRow` → `body-sgr-a-star` and `resolveFocusId('body-sgr-a-star')` → a non-null body ref. The decoder returns `null` for any id absent from `SCENE_BODIES` (`resolveFocusId.ts:141`), so this is the test that would have caught Task 7's registration gap.
-- [ ] Add the test `Sgr A*'s palette chip reads Galactic Centre, not Solar System` — the false-label fix.
-- [ ] Add the test `a famous star keeps its constellation chip` — the branch the region path could clobber; asserts `'sirius'` → `'Canis Major'`.
-- [ ] Add the test `the Sun's None sentinel routes it to its region` — asserts `'sun'` → `'Solar System'`, not `'None'`.
-- [ ] Add the test `every scene body resolves a chip` — end-to-end over `SCENE_BODIES`; fails by yielding `undefined`, never by throwing.
-- [ ] Extract `constellationOfBody` and `bodyRowChip`; repoint `paletteRows.tsx:124` and `CompactBodyCard.tsx:34`.
-- [ ] Build `BODY_SEARCH_NAMES` with Sgr A\*'s row; repoint `rankPaletteMatches.ts:96-98` and `paletteRows.tsx:110-111`.
-- [ ] Delete the "Sun constellation chip renders 'None'" line from `docs/BACKLOG.md` in this commit.
-- [ ] `npm test -- constellationOfBody bodyRowChip rankPaletteMatches resolveFocusId` → passes.
-- [ ] Commit.
+- [x] Add the test `Sgr A* is findable by its Sagittarius alias` — the widening's payoff; `"sagittarius"` scores the Sgr A\* row, which label-only matching cannot.
+- [x] Add the test `a famous star still matches on its Bayer alias` — the existing behaviour the widened lookup must carry over; asserts `"Alpha Canis Majoris"` finds `'sirius'`.
+- [x] Add the test `the Sgr A* palette row resolves to a body focus id` asserting `focusIdForRow` → `body-sgr-a-star` and `resolveFocusId('body-sgr-a-star')` → a non-null body ref. The decoder returns `null` for any id absent from `SCENE_BODIES` (`resolveFocusId.ts:141`), so this is the test that would have caught Task 7's registration gap.
+- [x] Add the test `Sgr A*'s palette chip reads Galactic Centre, not Solar System` — the false-label fix.
+- [x] Add the test `a famous star keeps its constellation chip` — the branch the region path could clobber; asserts `'sirius'` → `'Canis Major'`.
+- [x] Add the test `the Sun's None sentinel routes it to its region` — asserts `'sun'` → `'Solar System'`, not `'None'`.
+- [x] Add the test `every scene body resolves a chip` — end-to-end over `SCENE_BODIES`; fails by yielding `undefined`, never by throwing.
+- [x] Extract `constellationOfBody` and `bodyRowChip`; repoint `paletteRows.tsx:124` and `CompactBodyCard.tsx:34`.
+- [x] Build `BODY_SEARCH_NAMES` with Sgr A\*'s row; repoint `rankPaletteMatches.ts:96-98` and `paletteRows.tsx:110-111`.
+- [x] Delete the "Sun constellation chip renders 'None'" line from `docs/BACKLOG.md` in this commit.
+- [x] `npm test -- constellationOfBody bodyRowChip rankPaletteMatches resolveFocusId` → passes.
+- [x] Commit.
 
 ---
 
@@ -436,15 +436,15 @@ This is where the S-stars become _drawn_ content. `SCENE_S_STARS` composes each 
 
 Two open backlog items warn this is where registration gets missed — the `LAYER_GROUPS.labels` totality line in `docs/BACKLOG.md:48` (no detail file), and `docs/backlog/2026-07-29-unread-caption-fade-handles.md`. So:
 
-- [ ] Add the test `the s-star layer is reachable from its LAYER_GROUPS aggregate` — the totality the backlog item says was near-missed twice.
-- [ ] Add the test `the s-star fade handle is actually read by its layer` — the defect the other item names. Note that item's finding: for _label_ layers today the handle is registered and never read, so assert the read, not the registration.
-- [ ] Add the test `s-stars toggle independently of famous stars`.
-- [ ] Add the test `picking an S-star materialises an InfoCard row` — the `SCENE_BODIES` membership above; it fails with a silent `null`, not an error.
-- [ ] Add the test `S2 is findable by name in the command palette` — the free consequence of that same membership (Task 8 established the derivation), and the check that 39 new rows don't swamp unrelated queries.
-- [ ] Add the test `an S-star pick id does not collide with a famous-star pick id` — the two-table stability the pick path rests on.
-- [ ] Implement.
-- [ ] `npm test` → green.
-- [ ] Commit.
+- [x] Add the test `the s-star layer is reachable from its LAYER_GROUPS aggregate` — the totality the backlog item says was near-missed twice.
+- [x] Add the test `the s-star fade handle is actually read by its layer` — the defect the other item names. Note that item's finding: for _label_ layers today the handle is registered and never read, so assert the read, not the registration.
+- [x] Add the test `s-stars toggle independently of famous stars`.
+- [x] Add the test `picking an S-star materialises an InfoCard row` — the `SCENE_BODIES` membership above; it fails with a silent `null`, not an error.
+- [x] Add the test `S2 is findable by name in the command palette` — the free consequence of that same membership (Task 8 established the derivation), and the check that 39 new rows don't swamp unrelated queries.
+- [x] Add the test `an S-star pick id does not collide with a famous-star pick id` — the two-table stability the pick path rests on.
+- [x] Implement.
+- [x] `npm test` → green.
+- [x] Commit.
 
 ---
 
@@ -464,13 +464,13 @@ Element count goes 23 → 62, crossing the old `MAX_ORBITS = 24` — which Plan 
 
 What the populated region _does_ drive is content gating: the trails' reach cull and the star-point backdrop band, both keyed on `regionRelativeDistanceMpc` against Sgr A\* (Plan 02 Tasks 3–5).
 
-- [ ] Add the test `every element row derives a body state` — assert against `ORBITAL_ELEMENTS.length`, not a literal `62`, so it stays a truncation check rather than a count restatement.
-- [ ] Add the test `the galactic-centre region extent covers the widest S-star orbit` — the widest, not S2's; a region sized on S2 fails it by a factor of ~30.
-- [ ] Add the test `S-star trails are gated off when the camera is in the solar system` — the payoff of Plan 02, and the regression `MAX_ORBIT_EXTENT_MPC` would have caused.
-- [ ] Add the test `a Galactic-Centre camera keys the region at parsec scale, not 8 kpc` — `regionRelativeDistanceMpc` against a now-resolvable Sgr A\* anchor; Plan 02 Task 3 could only assert this against a synthetic region.
-- [ ] Implement.
-- [ ] `npm test` → green. `npm run build` → clean.
-- [ ] Commit.
+- [x] Add the test `every element row derives a body state` — assert against `ORBITAL_ELEMENTS.length`, not a literal `62`, so it stays a truncation check rather than a count restatement.
+- [x] Add the test `the galactic-centre region extent covers the widest S-star orbit` — the widest, not S2's; a region sized on S2 fails it by a factor of ~30.
+- [x] Add the test `S-star trails are gated off when the camera is in the solar system` — the payoff of Plan 02, and the regression `MAX_ORBIT_EXTENT_MPC` would have caused.
+- [x] Add the test `a Galactic-Centre camera keys the region at parsec scale, not 8 kpc` — `regionRelativeDistanceMpc` against a now-resolvable Sgr A\* anchor; Plan 02 Task 3 could only assert this against a synthetic region.
+- [x] Implement.
+- [x] `npm test` → green. `npm run build` → clean.
+- [x] Commit.
 
 ---
 
@@ -530,13 +530,13 @@ Kepler's third law already ties `GM` to the star's own `a` and `P`, so vis-viva 
 
 For S2 (`a = 1026 AU`, `e = 0.884`, `P = 16.0 yr`) that gives ~7,700 km/s against a published ~7,650 km/s — the row's own external oracle.
 
-- [ ] Add the test `S2's pericentre speed matches the published 7,650 km/s within 2%` — the external oracle, and the one check that catches an inverted `(1+e)/(1−e)`, a wrong AU/yr→km/s factor, or a dropped `2π`.
-- [ ] Add the test `an eccentric orbit is faster at pericentre than a circular orbit of the same period` — the monotone property; a swapped eccentricity ratio makes it slower.
-- [ ] Add the test `a planet's InfoCard renders no orbital rows` — the optional field's absent path, which is every pre-existing body.
-- [ ] Add the test `an S-star's InfoCard renders period, eccentricity and pericentre` — the end-to-end seam, seed table through to rendered rows.
-- [ ] Implement.
-- [ ] `npm test -- pericentreSpeedKmS BodyDetailCard` → passes. `npm run typecheck` clean.
-- [ ] Commit.
+- [x] Add the test `S2's pericentre speed matches the published 7,650 km/s within 2%` — the external oracle, and the one check that catches an inverted `(1+e)/(1−e)`, a wrong AU/yr→km/s factor, or a dropped `2π`.
+- [x] Add the test `an eccentric orbit is faster at pericentre than a circular orbit of the same period` — the monotone property; a swapped eccentricity ratio makes it slower.
+- [x] Add the test `a planet's InfoCard renders no orbital rows` — the optional field's absent path, which is every pre-existing body.
+- [x] Add the test `an S-star's InfoCard renders period, eccentricity and pericentre` — the end-to-end seam, seed table through to rendered rows.
+- [x] Implement.
+- [x] `npm test -- pericentreSpeedKmS BodyDetailCard` → passes. `npm run typecheck` clean.
+- [x] Commit.
 
 **Deliberately not written here:** `S2's pericentre is 119 AU`. The row _is_ `a(1 − e)`, so asserting it restates the implementation — the mirror the Global Constraints exclude. Task 5 already pins the arcsec→AU leg (`a = 1026 AU`) against a hand-computed value, and the speed test above fails on a wrong `e`; between them the pericentre row has no unguarded degree of freedom left.
 
@@ -558,10 +558,10 @@ Ask the user to look. Specific things to check, in order:
 6. Confirm no S-star captions appear, and that Sgr A\* is labelled.
 7. Type "Sagittarius" into the search box; Sgr A\* comes up chipped **Galactic Centre** (not "Solar System"), and selecting it both pins the InfoCard and flies the camera. Type "Sirius" and confirm its chip still reads "Canis Major". Type "Sun" and confirm its chip reads "Solar System", not "None".
 
-- [ ] Run `npm run dev` (or reuse the running server) and request the visual pass.
-- [ ] Record the frame-conversion outcome — both `Ω_frame = 90° − Ω_astro` and `i_frame = 180° − i_astro` — in the spec.
-- [ ] Run `/feature-done` against all three plans.
-- [ ] Commit.
+- [x] Run `npm run dev` (or reuse the running server) and request the visual pass.
+- [x] Record the frame-conversion outcome — both `Ω_frame = 90° − Ω_astro` and `i_frame = 180° − i_astro` — in the spec.
+- [x] Run `/feature-done` against all three plans.
+- [x] Commit.
 
 ---
 

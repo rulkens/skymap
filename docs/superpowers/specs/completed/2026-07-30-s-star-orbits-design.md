@@ -8,7 +8,7 @@ detent, S2 completes a lap in 1.6 seconds, sweeping through pericentre at 119 AU
 and 7,760 km/s — 2.6% of light speed — on a _measured_ orbit.
 
 Design decisions and their rejected alternatives are recorded in
-[`docs/grill-sessions/s-star-orbits-2026-07-30.md`](../../grill-sessions/s-star-orbits-2026-07-30.md);
+[`docs/grill-sessions/s-star-orbits-2026-07-30.md`](../../../grill-sessions/s-star-orbits-2026-07-30.md);
 this spec cross-references those as **Q1**–**Q10** rather than restating the
 reasoning.
 
@@ -249,7 +249,7 @@ One pre-existing wrinkle is deliberately out of scope: `FOREGROUND_MAX_DISTANCE_
 and `SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC` are both _derived_ as camera-to-origin
 bounds yet _read_ against camera-to-target. Benign while NEAR0 content only exists
 near the origin, so focus targets are near the origin too. Filed as its own item:
-[`docs/backlog/2026-07-30-camera-target-vs-origin-distance-gates.md`](../../backlog/2026-07-30-camera-target-vs-origin-distance-gates.md).
+[`docs/backlog/2026-07-30-camera-target-vs-origin-distance-gates.md`](../../../backlog/2026-07-30-camera-target-vs-origin-distance-gates.md).
 
 P1 and P3 compose rather than overlap: P1's focus-graph resolution retires the
 one-hop recursion in `maxHeliocentricReachMpc` that P3 re-keys.
@@ -566,7 +566,7 @@ iff it is in `SCENE_BODIES` with a non-empty label.**
 
 Decided: Sgr A\* carries `['Sgr A*', 'Sagittarius A*', 'SgrA*']`. Deliberately
 **not** "Galactic Centre" / "Galactic Center" — that name belongs to
-[`docs/backlog/2026-07-30-galactic-center-place-labels.md`](../../backlog/2026-07-30-galactic-center-place-labels.md),
+[`docs/backlog/2026-07-30-galactic-center-place-labels.md`](../../../backlog/2026-07-30-galactic-center-place-labels.md),
 which is already scoped, and claiming it here would collide with it.
 
 Per-body alias lists are an existing seam, not a new one: `rankPaletteMatches`
