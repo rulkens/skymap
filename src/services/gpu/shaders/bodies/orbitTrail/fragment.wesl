@@ -98,16 +98,19 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     discard;
   }
 
-  // Plane coordinates and eccentric anomaly.
-  let s = q.x / q.z;
-  let t = q.y / q.z;
-  let ecc = atan2(t, s); // eccentric anomaly E
+  // Plane coordinates, kept as u = q.xy (O(1) by the CPU-side rescale, see
+  // header) instead of dividing down to s = u.x/z, t = u.y/z. At the near-
+  // fold regime (camera near the orbit, clip w -> 0) z collapses toward 0 and
+  // s, t, and every product built from them overflow f32; u and z alone do
+  // not, so the rest of this function is rebuilt on them.
+  let u = q.xy;
+  let z = q.z;
+  let uLen = length(u);
 
-  // Distance to the orbit, measured in PLANE space (the orbit is the unit
-  // circle s^2 + t^2 = 1) then converted to a constant pixel width. 'r - 1' is
-  // the EXACT Euclidean distance to the orbit in plane coords — no algebraic-
-  // curvature term to flare where the projected conic turns (see header).
-  let r = length(vec2<f32>(s, t));
+  // Eccentric anomaly without the divide: atan2 is scale-invariant, so
+  // atan2(u.y, u.x) equals atan2(t, s) = atan2(u.y/z, u.x/z) once the shared
+  // positive factor 1/z cancels — same angle, no intermediate 1/z.
+  let ecc = atan2(u.y, u.x); // eccentric anomaly E
 
   // Pixel gradients of s = q.x/q.z and t = q.y/q.z via the quotient rule.
   // Written the obvious way, each numerator is a difference of two products
@@ -119,32 +122,33 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // that f32 difference cancels catastrophically -- the tiny true result keeps
   // almost none of f32's significant digits. The loss is set by the condition
   // number, NOT the entry magnitudes: rescaling ginv to O(1) (which
-  // composeOrbitConic does) does not help, so the garbage residual, amplified by
-  // invZ2, is what speckled Earth's orbit fill. So composeOrbitConic hoists the
-  // exactly-cancelling numerators to CPU
-  // f64 as the minors minorS = (M1, M2, M3) and minorT = (M4, M5, M6), and the
-  // fragment just evaluates the affine forms (a multiply-add, no cancellation):
+  // composeOrbitConic does) does not help, so composeOrbitConic hoists the
+  // exactly-cancelling numerators to CPU f64 as the minors minorS = (M1, M2,
+  // M3) and minorT = (M4, M5, M6):
   //   d s/d px numerator = M1*py + M2,   d s/d py numerator = -M1*px + M3
   //   d t/d px numerator = M4*py + M5,   d t/d py numerator = -M4*px + M6
   // The pixel is in.clip.xy (the same @builtin(position) that formed q above);
-  // q.z > 0 here (the behind-camera arc was already discarded).
+  // z > 0 here (the behind-camera arc was already discarded).
   let px = in.clip.x;
   let py = in.clip.y;
-  let invZ2 = 1.0 / (q.z * q.z);
-  let dsdp = vec2<f32>(
-    in.minorS.x * py + in.minorS.y,
-    -in.minorS.x * px + in.minorS.z,
-  ) * invZ2;
-  let dtdp = vec2<f32>(
-    in.minorT.x * py + in.minorT.y,
-    -in.minorT.x * px + in.minorT.z,
-  ) * invZ2;
-  // grad_pixel r = (s * grad s + t * grad t) / r; the pixel distance to the
-  // orbit is abs(r - 1) / |grad_pixel r|. Guard the conic centre (r -> 0) and
-  // the zero-gradient point with tiny epsilons so the stroke never divides by
-  // zero.
-  let gradR = (s * dsdp + t * dtdp) / max(r, 1e-20);
-  let dist = abs(r - 1.0) / max(length(gradR), 1e-20);
+
+  // gradR = (s*dsdp + t*dtdp)/r where dsdp = A_s/z^2, dtdp = A_t/z^2 (A_s,
+  // A_t the affine numerators above) and r = uLen/z. Substituting s = u.x/z,
+  // t = u.y/z collapses every explicit 1/z power into one shared factor:
+  //   gradR = (u.x*A_s + u.y*A_t) / (z^2 * uLen) = gradNum / (z^2 * uLen)
+  // gradNum below IS that numerator, and every term in it is O(1) — it never
+  // overflows, unlike the old invZ2-scaled dsdp/dtdp product it replaces.
+  let gradNum = vec2<f32>(
+    u.x * (in.minorS.x * py + in.minorS.y) + u.y * (in.minorT.x * py + in.minorT.y),
+    u.x * (-in.minorS.x * px + in.minorS.z) + u.y * (-in.minorT.x * px + in.minorT.z),
+  );
+
+  // Distance to the orbit: the same real value as |r-1|/|gradR|, but with the
+  // shared z^2*uLen factor multiplied through instead of divided out, so the
+  // expression never forms the huge intermediates that overflowed f32 near
+  // the fold:
+  //   |r-1|/|gradR| = (|uLen-z|/z) * (z^2*uLen)/|gradNum| = |uLen-z|*z*uLen/|gradNum|
+  let dist = abs(uLen - z) * z * uLen / max(length(gradNum), 1e-30);
 
   // Off-stroke discard. '!(dist < STROKE_PX)' is true when the pixel is beyond
   // the stroke AND when 'dist' is NaN (a NaN comparison is false), so both the
@@ -160,14 +164,19 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // the horizon in the orbit's colour — most visible at grazing angles, where
   // the horizon merges continuously with the real orbit so no simple r cutoff
   // separates them. So VERIFY the estimate: step 'dist' pixels toward the orbit
-  // along -sign(r-1)*n̂ and recompute r. A genuine near-orbit pixel lands on
-  // r≈1; a horizon pixel (where r varies nonlinearly) stays far from 1 — or the
-  // step lands behind the camera — and is discarded.
-  let n = gradR / max(length(gradR), 1e-20);
-  let pStep = in.clip.xy - sign(r - 1.0) * dist * n;
+  // along -sign(uLen-z)*n̂ (same sign as -sign(r-1), since z > 0) and recompute
+  // r. A genuine near-orbit pixel lands on r≈1; a horizon pixel (where r varies
+  // nonlinearly) stays far from 1 — or the step lands behind the camera.
+  let n = gradNum / max(length(gradNum), 1e-30);
+  let pStep = in.clip.xy - sign(uLen - z) * dist * n;
   let qStep = ginv * vec3<f32>(pStep, 1.0);
   let rStep = length(qStep.xy / qStep.z);
-  if (qStep.z <= 0.0 || abs(rStep - 1.0) >= REFINE_TOL) {
+  // Keep-form, not reject-form: a NaN comparison is always false, so the old
+  // reject test 'abs(rStep - 1.0) >= REFINE_TOL' let a non-finite rStep (the
+  // near-fold overflow case) fall through the discard and PAINT at full
+  // brightness. Requiring the KEEP condition true instead means every
+  // non-finite path takes the '!(...)' branch and discards.
+  if (!(qStep.z > 0.0 && abs(rStep - 1.0) < REFINE_TOL)) {
     discard;
   }
 
@@ -195,12 +204,4 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
 @fragment
 fn fsImpostorRibbon(in: VSOut) -> @location(0) vec4<f32> {
   return vec4<f32>(in.color, 1.0); // ribbon hull, flat trail colour
-}
-
-// Deliberately dim: the fallback is a fullscreen triangle and the common case
-// at solar-system scales (the camera sits inside every orbit), so several
-// instances stack additively; a full-strength fill whites out the frame.
-@fragment
-fn fsImpostorFallback(in: VSOut) -> @location(0) vec4<f32> {
-  return vec4<f32>(in.color * 0.08, 1.0);
 }
