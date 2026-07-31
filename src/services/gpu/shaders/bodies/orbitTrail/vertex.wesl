@@ -71,7 +71,7 @@ fn vsRibbon(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
   let viewportPx = vec2<f32>(inst.phase.z, inst.phase.w);
 
   // Segment endpoints (sI, sJ = sI+1) plus the one extra neighbour on each
-  // side that the fully-front path's central-difference tangent reads below.
+  // side that a fully-front corner's central-difference tangent reads below.
   let sI = segment;
   let sJ = (segment + 1u) % SEGMENTS;
   let sIPrev = (sI + SEGMENTS - 1u) % SEGMENTS;
@@ -83,65 +83,84 @@ fn vsRibbon(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
 
   // Per-instance scale-free near-plane epsilon: |cc.z| + hypot(ac.z, bc.z)
   // bounds clip.w's amplitude over every E, so it tracks this orbit's scale.
+  // 1e-6 is load-bearing: it must sit well above f32 relative precision
+  // (~1.2e-7), or a clamped w can round to <= 0 and clipToPixel divides by
+  // zero.
   let epsW = 1e-6 * (abs(inst.cc.z) + length(vec2<f32>(inst.ac.z, inst.bc.z)));
-  let iFront = rawI.z > epsW;
-  let jFront = rawJ.z > epsW;
 
-  if (iFront && jFront && rawIPrev.z > epsW && rawJNext.z > epsW) {
-    // Fully in front, INCLUDING tangent neighbours: today's per-sample math,
-    // byte-identical. Computed per SAMPLE (si) so the two quads sharing si
-    // emit identical corners — no seam at the joint under additive blend.
-    let curRaw = select(rawJ, rawI, offset == 0u);
-    let prevRaw = select(rawI, rawIPrev, offset == 0u);
-    let nextRaw = select(rawJNext, rawJ, offset == 0u);
-    let curPx = clipToPixel(curRaw, viewportPx);
+  // This corner's own sample and its TRUE neighbours (si-1, si+1), never the
+  // segment's other endpoint — classifying on these makes a corner a pure
+  // function of the sample index, so the two segments sharing sample si
+  // always derive the identical corner wherever that matters (see below).
+  let ownRaw = select(rawJ, rawI, offset == 0u);
+  let prevRaw = select(rawI, rawIPrev, offset == 0u);
+  let nextRaw = select(rawJNext, rawJ, offset == 0u);
+  // The CURRENT segment's OTHER endpoint — read only once 'own' is behind,
+  // where a per-segment (not per-sample) answer is deliberately allowed.
+  let partnerRaw = select(rawI, rawJ, offset == 0u);
+
+  let ownFront = ownRaw.z > epsW;
+  let prevFront = prevRaw.z > epsW;
+  let nextFront = nextRaw.z > epsW;
+
+  var outPx: vec2<f32>;
+  var w: f32;
+
+  if (ownFront && prevFront && nextFront) {
+    // Fully in front, INCLUDING both true neighbours: today's central-
+    // difference + sag math, unchanged.
+    let ownPx = clipToPixel(ownRaw, viewportPx);
     let prevPx = clipToPixel(prevRaw, viewportPx);
     let nextPx = clipToPixel(nextRaw, viewportPx);
-
-    // The chord tangent (samples si-1, si+1) needs no projective derivative
-    // and is the direction the strip's edges actually run in.
-    let chord = nextPx - prevPx;
+    let chord = nextPx - prevPx; // needs no projective derivative; the direction the strip's edges actually run in
     let tangent = chord / max(length(chord), 1e-20); // guarded normalize, as the fragment guards its own gradients
     let normal = vec2<f32>(-tangent.y, tangent.x);
     // sag is the second difference of the chord, so a wide/near-degenerate
     // orbit widens its own ribbon; a constant margin cannot.
-    let sag = abs(dot(0.5 * (prevPx + nextPx) - curPx, normal));
+    let sag = abs(dot(0.5 * (prevPx + nextPx) - ownPx, normal));
     let halfWidth = STROKE_PX + MARGIN_PX + sag;
-    let outPx = curPx + side * halfWidth * normal;
-    let w = curRaw.z;
-    out.clip = vec4<f32>((outPx / (0.5 * viewportPx)) * w, 0.0, w);
-  } else if (!iFront && !jFront) {
-    // Both endpoints behind the near plane: collapse the quad to one point.
-    // Zero area means zero fragments no matter where the point lands, so
-    // (0,0,0,1) is chosen only because it needs no divide to reach.
-    out.clip = vec4<f32>(0.0, 0.0, 0.0, 1.0);
-  } else {
-    // One endpoint behind, or a third-sample neighbour is behind (unsafe for
-    // the tangent above): use this segment's own two-point chord instead,
-    // sliding any behind endpoint to the w = epsW crossing. This may disagree
-    // with a neighbour's per-sample corner at a shared sample, but only where
-    // the clamped point is a huge off-viewport coordinate that hardware
-    // clipping removes before rasterization — so the seam is never drawn.
-    var endI = rawI;
-    var endJ = rawJ;
-    if (!iFront) {
-      let t = (epsW - rawI.z) / (rawJ.z - rawI.z);
-      endI = mix(rawI, rawJ, t);
-    } else if (!jFront) {
-      let t = (epsW - rawJ.z) / (rawI.z - rawJ.z);
-      endJ = mix(rawJ, rawI, t);
+    outPx = ownPx + side * halfWidth * normal;
+    w = ownRaw.z;
+  } else if (ownFront) {
+    // Own sample is in front but a TRUE neighbour is behind: one-sided
+    // tangent toward whichever neighbour is still front. Still a pure
+    // function of 'own', so both segments sharing this sample agree.
+    let ownPx = clipToPixel(ownRaw, viewportPx);
+    var chord = vec2<f32>(0.0, 0.0);
+    if (prevFront) {
+      chord = ownPx - clipToPixel(prevRaw, viewportPx);
+    } else if (nextFront) {
+      chord = clipToPixel(nextRaw, viewportPx) - ownPx;
     }
-    let pxI = clipToPixel(endI, viewportPx);
-    let pxJ = clipToPixel(endJ, viewportPx);
-    let chord = pxJ - pxI;
+    let tangent = chord / max(length(chord), 1e-20);
+    let normal = vec2<f32>(-tangent.y, tangent.x);
+    let halfWidth = STROKE_PX + MARGIN_PX; // no sag: the second difference needs both neighbours
+    outPx = ownPx + side * halfWidth * normal;
+    w = ownRaw.z;
+  } else if (partnerRaw.z > epsW) {
+    // Own sample is behind, this segment's OTHER endpoint is in front: clamp
+    // toward it along the segment's own chord to w = epsW. Deliberately
+    // per-SEGMENT — the neighbouring segment clamps toward a different
+    // partner, so the two corners here may differ, but only off-viewport.
+    let t = (epsW - ownRaw.z) / (partnerRaw.z - ownRaw.z);
+    let clampedRaw = mix(ownRaw, partnerRaw, t);
+    let clampedPx = clipToPixel(clampedRaw, viewportPx);
+    let partnerPx = clipToPixel(partnerRaw, viewportPx);
+    let chord = partnerPx - clampedPx;
     let tangent = chord / max(length(chord), 1e-20);
     let normal = vec2<f32>(-tangent.y, tangent.x);
     let halfWidth = STROKE_PX + MARGIN_PX; // no sag term: only two points on this path
-    let anchorPx = select(pxJ, pxI, offset == 0u);
-    let anchorW = select(endJ.z, endI.z, offset == 0u);
-    let outPx = anchorPx + side * halfWidth * normal;
-    out.clip = vec4<f32>((outPx / (0.5 * viewportPx)) * anchorW, 0.0, anchorW);
+    outPx = clampedPx + side * halfWidth * normal;
+    w = epsW;
+  } else {
+    // Both this segment's endpoints are behind: collapse to one point. Zero
+    // area means zero fragments no matter where it lands, so the origin is
+    // chosen only because it needs no divide to reach.
+    outPx = vec2<f32>(0.0, 0.0);
+    w = 1.0;
   }
+
+  out.clip = vec4<f32>((outPx / (0.5 * viewportPx)) * w, 0.0, w);
 
   out.ginv0 = inst.ginv0.xyz;
   out.ginv1 = inst.ginv1.xyz;
