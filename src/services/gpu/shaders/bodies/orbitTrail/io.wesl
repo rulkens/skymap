@@ -2,12 +2,13 @@
 // conic orbit trail. Imported by orbitTrail/vertex.wesl and
 // orbitTrail/fragment.wesl.
 //
-// Each orbit renders as ONE fullscreen triangle (one instance = one orbit): the
-// vertex stage emits an oversized clip-space triangle covering the whole
-// viewport and forwards the per-orbit conic constants; the fragment stage reads
-// its own '@builtin(position)' pixel and evaluates the projected conic
-// analytically from 'Ginv' (spec 3.3). 'VSOut' is the contract between those
-// stages.
+// One instance = one orbit, drawn by ONE of two vertex entry points sharing
+// this file's 'OrbitInstance' input and 'VSOut' output: 'vs' (an oversized
+// fullscreen triangle; the fragment discards off-stroke pixels) or 'vsRibbon'
+// (a screen-space ribbon hugging the projected ellipse). Either way the
+// fragment stage reads its own '@builtin(position)' pixel and evaluates the
+// projected conic analytically from 'Ginv' (spec 3.3); 'VSOut' is the contract
+// between vertex and fragment, and neither entry point changes it.
 //
 // ## Why the struct lives here
 //
@@ -50,4 +51,26 @@ struct VSOut {
   // evaluates each numerator as a plain multiply-add. Per-orbit constant, flat.
   @location(7) @interpolate(flat) minorS: vec3<f32>,
   @location(8) @interpolate(flat) minorT: vec3<f32>,
+};
+
+// Per-instance vertex input, declared ONCE so 'vs' and 'vsRibbon' cannot drift
+// apart on attribute @location. Matches the TS pipeline's instance-buffer
+// descriptor byte-for-byte (see orbitTrailRenderer.ts) — 112 bytes of conic +
+// tint + gradient data that 'vs' needs, followed by 48 bytes of clip-space
+// conic basis that only 'vsRibbon' needs, to walk the ellipse per sample.
+struct OrbitInstance {
+  // Ginv columns (.xyz used, .w pad) — see vertex.wesl's 'vs' doc.
+  @location(1) ginv0: vec4<f32>,
+  @location(2) ginv1: vec4<f32>,
+  @location(3) ginv2: vec4<f32>,
+  @location(4) params: vec4<f32>,   // color.rgb, eccentricity
+  @location(5) phase: vec4<f32>,    // meanAnomalyRad, alpha, viewportPx.w, viewportPx.h
+  @location(6) minorS: vec4<f32>,
+  @location(7) minorT: vec4<f32>,
+  // Clip-space conic basis: p(E) = cc + cos(E)*ac + sin(E)*bc traces the
+  // projected ellipse in (clip.x, clip.y, clip.w) as E runs 0..2*PI. Only
+  // 'vsRibbon' reads these; 'vs' ignores them.
+  @location(8) cc: vec4<f32>,       // clip basis: centre  (x, y, w, pad)
+  @location(9) ac: vec4<f32>,       // clip basis: semi-major
+  @location(10) bc: vec4<f32>,      // clip basis: semi-minor
 };
