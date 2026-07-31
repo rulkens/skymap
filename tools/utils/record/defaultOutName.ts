@@ -1,5 +1,5 @@
 /**
- * defaultOutName — the recorder's default output path: tour id, output size,
+ * defaultOutName — the recorder's default output path: take id, output size,
  * fps, and a local-time timestamp.
  *
  * The timestamp exists because the encode argv passes '-y' (overwrite without
@@ -16,7 +16,7 @@
  * and the exact string is testable.
  */
 export function defaultOutName(opts: {
-  tourId: string;
+  takeId: string;
   width: number;
   height: number;
   fps: number;
@@ -27,5 +27,5 @@ export function defaultOutName(opts: {
   const stamp =
     `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}` +
     `-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-  return `recordings/${opts.tourId}-${opts.width}x${opts.height}-${opts.fps}fps-${stamp}.mp4`;
+  return `recordings/${opts.takeId}-${opts.width}x${opts.height}-${opts.fps}fps-${stamp}.mp4`;
 }

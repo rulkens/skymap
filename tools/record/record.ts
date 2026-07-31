@@ -591,7 +591,7 @@ async function main(): Promise<void> {
   const out =
     options.out ??
     defaultOutName({
-      tourId: tour.id,
+      takeId: tour.id,
       width: options.size.width,
       height: options.size.height,
       fps: options.fps,
