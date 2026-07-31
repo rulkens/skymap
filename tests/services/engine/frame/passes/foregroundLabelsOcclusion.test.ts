@@ -18,6 +18,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { foregroundLabelsLayer } from '../../../../../src/services/engine/frame/passes/foregroundLabelsLayer';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
+import { BODY_IDS } from '../../../../../src/data/bodies/bodyIds';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -37,6 +38,15 @@ vi.mock('../../../../../src/utils/camera/rebaseViewProj', () => ({
 }));
 
 const PASS_STUB = { draw: vi.fn() } as unknown as GPURenderPassEncoder;
+
+// Every body row on, keyed off BODY_IDS rather than hand-listed: a row the
+// fixture omits THROWS inside the per-caption gate rather than failing an
+// assertion, so a hand list breaks these tests confusingly the next time a body
+// is registered. `foregroundLabelsLayer.test.ts` derives its rows the same way,
+// for the same reason.
+const ALL_BODY_ITEMS = Object.fromEntries(
+  BODY_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
+);
 
 let testClockMs = 0;
 function makeCtx(distance: number, nowMs?: number): ReadyFrameContext {
@@ -77,16 +87,7 @@ function makeState(
     gpu: { foregroundLabelRenderer: renderer, foregroundMarkerLineRenderer: lineRenderer },
     settings: {
       labels: { focusedOnly: false },
-      bodies: {
-        items: {
-          earth: { enabled: true, labelEnabled: true },
-          planet: { enabled: true, labelEnabled: true },
-          sun: { enabled: true, labelEnabled: true },
-          // Sgr A*'s caption reads its own row; a missing one throws in the
-          // per-caption gate rather than failing an assertion.
-          'sgr-a-star': { enabled: true, labelEnabled: true },
-        },
-      },
+      bodies: { items: ALL_BODY_ITEMS },
       starCatalogs: { enabled: true, items: { famousStar: { enabled: true, labelEnabled: true } } },
     },
     // No constellation slot: these occlusion tests exercise only the body
