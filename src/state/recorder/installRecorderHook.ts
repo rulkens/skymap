@@ -33,6 +33,25 @@
  * when the SECOND tour finished. Rejecting loudly beats reporting the wrong
  * tour as done; the harness records takes strictly one at a time anyway.
  *
+ * `startClip`'s guard cannot rely SOLELY on `runTour`'s store-state check.
+ * `camera.clip` is only written by `clipStarted`, which `playClip` dispatches
+ * AFTER `watchClipSaga`'s `waitUntil(clipFociReady && cameraRuntime)` clears —
+ * an arbitrarily long window (catalog/structure loads) during which
+ * `selectClipActive` reads false. A second `startClip` in that window would
+ * be accepted, `takeLatest` would cancel worker A while it's still inside
+ * `waitUntil` (before `playClip` ever ran, so no `[CANCEL]` hook fires and A
+ * gets no `clipEnded`), and B's normal activate/end cycle would resolve BOTH
+ * latches — caller A reports success for a clip it never filmed. So `startClip`
+ * ALSO guards on `clipInFlight`, a flag closed over inside
+ * `installRecorderHook` (not module scope — the hook installs once per store,
+ * and a module `let` would leak across installs/tests), set before dispatch
+ * and cleared on every settle path, covering the pre-activation window the
+ * store check misses. `selectClipActive` stays in the check too: a tour beat's
+ * clip (`visitBeatSaga` calls the `playClip` seam directly, bypassing the
+ * `startClip` action) can flip `camera.clip` without ever touching
+ * `clipInFlight`, and the guard still needs to refuse a standalone start
+ * while that's in flight.
+ *
  * The `window` write goes through the `RecorderWindow` cast instead of a
  * `declare global` `interface Window` augmentation — the house style bans
  * `interface`, and the only reader is the harness's untyped `page.evaluate`
@@ -43,11 +62,14 @@ import { isCinemaMode } from '../../utils/url/isCinemaMode';
 import { whenStablyReady } from '../lifecycle/whenStablyReady';
 import { startTour } from '../tour/tourActions';
 import { selectTourActive } from '../tour/selectors';
+import { startClip } from '../camera/clipActions';
+import { selectClipActive } from '../camera/selectors';
 import type { AppStore } from '../../store/types';
 import type { SkymapRecorderHook } from '../../@types/recorder/SkymapRecorderHook';
 import type { RecorderWindow } from '../../@types/recorder/RecorderWindow';
 import type { TourId } from '../../@types/animation/tour/TourId';
 import type { BeatRange } from '../../@types/animation/tour/BeatRange';
+import type { ClipId } from '../../@types/animation/ClipId';
 
 // Dispatch the tour and resolve on the `tour.active` true → false transition.
 // Tracking "seen active" (instead of resolving on any false reading) makes
@@ -77,9 +99,51 @@ function runTour(store: AppStore, id: TourId, beats?: BeatRange): Promise<void> 
 
 export function installRecorderHook(store: AppStore): void {
   if (!isCinemaMode()) return;
+
+  // The in-flight latch — see the module header for why `runClip` cannot use
+  // `selectClipActive` the way `runTour` uses `selectTourActive`.
+  let clipInFlight = false;
+
+  // Same seen-active latch `runTour` uses, guarding against `watchClipSaga`'s
+  // foci/runtime `waitUntil` gate: `camera.clip` stays null across however
+  // many store updates land before the clip activates, so a latch that
+  // resolved on any inactive reading would resolve instantly and film zero
+  // frames. Single-flight checks BOTH `clipInFlight` (covers this window) AND
+  // `selectClipActive` (covers a clip started elsewhere — `visitBeatSaga`
+  // calls the `playClip` seam directly, bypassing the `startClip` action
+  // entirely, so a tour beat's clip flips `camera.clip` without ever touching
+  // `clipInFlight`). `clipInFlight` is set before dispatch and cleared in
+  // `finally` so it covers rejection paths too, not just the resolve one.
+  function runClip(id: ClipId): Promise<void> {
+    if (clipInFlight || selectClipActive(store.getState())) {
+      return Promise.reject(
+        new Error(
+          'startClip called while a clip is already active — await the previous call first',
+        ),
+      );
+    }
+    clipInFlight = true;
+    return new Promise<void>((resolve) => {
+      let seenActive = false;
+      const unsubscribe = store.subscribe(() => {
+        const active = selectClipActive(store.getState());
+        if (active) {
+          seenActive = true;
+        } else if (seenActive) {
+          unsubscribe();
+          resolve();
+        }
+      });
+      store.dispatch(startClip(id));
+    }).finally(() => {
+      clipInFlight = false;
+    });
+  }
+
   const hook: SkymapRecorderHook = {
     ready: whenStablyReady(store),
     startTour: (id: TourId, beats?: BeatRange) => runTour(store, id, beats),
+    startClip: (id: ClipId) => runClip(id),
   };
   (window as RecorderWindow).__skymapRecorder = hook;
 }

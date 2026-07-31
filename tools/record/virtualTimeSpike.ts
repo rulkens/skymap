@@ -307,7 +307,7 @@ async function main(): Promise<void> {
   // by default is stale on that point. If this channel is not installed
   // (npx playwright install chromium), the known-working fallback is the
   // shell with args ['--enable-unsafe-webgpu', '--use-angle=metal'].
-  // Deliberately NO launch fallback here (unlike recordTour's launchChromium):
+  // Deliberately NO launch fallback here (unlike record.ts's launchChromium):
   // the spike diagnoses the canonical channel path, so it must fail on it.
   const browser = await chromium.launch({ channel: 'chromium' });
   let run1: Awaited<ReturnType<typeof captureRun>>;
