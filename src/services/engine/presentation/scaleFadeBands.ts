@@ -23,23 +23,26 @@
  */
 
 import type { FadeBand } from '../../../@types/math/FadeBand';
-import {
-  FARTHEST_BODY_MPC,
-  FARTHEST_PLANET_MPC,
-  FOREGROUND_MAX_DISTANCE_MPC,
-} from '../frame/foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../frame/foregroundMaxDistance';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../frame/solarSystemLabelMaxDistance';
 import { BODY_GLINT_MAX_PX } from '../frame/partitionBodiesByPresentation';
+import { regionById } from '../../../utils/scene/regionById';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 
-// The roster's farthest seed expressed in parsecs — the derivation source for
-// the star-caption band, which keys on a star's own distance from the camera in
-// pc. Eta Carinae at ~2300 pc is the current extent; growing the roster carries
-// this and the band edges below with it.
+// The two extents this table's near-field rows scale off — each read from the
+// region whose content the row gates, so a band cannot end up keyed on a scale
+// that belongs to a different regime.
+const NEIGHBOURHOOD_EXTENT_MPC = regionById('solar-neighbourhood').extentMpc;
+const SOLAR_SYSTEM_EXTENT_MPC = regionById('solar-system').extentMpc;
+
+// The solar neighbourhood's extent in parsecs — the derivation source for the
+// star-caption band, which keys on a star's own distance from the camera in pc.
+// Eta Carinae at ~2300 pc sets it today; growing the roster carries this and the
+// band edges below with it.
 // TEMPORARY export for tests/services/engine/presentation/scaleFadeBands.baseline.test.ts
 // (s-star prep-02 Task 1) — revert to module-private in Task 7 unless Task 6
 // already made this a real region-derived export for another reason.
-export const FARTHEST_STAR_PC = FARTHEST_BODY_MPC / SCALE_UNITS.PC_TO_MPC;
+export const FARTHEST_STAR_PC = NEIGHBOURHOOD_EXTENT_MPC / SCALE_UNITS.PC_TO_MPC;
 
 // The constellation figures' eye-tuned recede edges, in kpc — the scale the
 // tuning conversation happens at (a 1 kpc solar neighbourhood, a 10 kpc
@@ -101,8 +104,8 @@ export const SCALE_FADE_BANDS = {
   // `FARTHEST_STAR_PC * 2` (≈ 4600 pc, so names don't clobber into one pile
   // viewed from far outside the neighbourhood). `goneAt` is tied to the caption
   // gate by the pop-free inequality
-  // `goneAt·PC_TO_MPC + 2·FARTHEST_BODY_MPC ≤ SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC`
-  // (with goneAt = 2·FARTHEST it holds with equality) — so a star's caption
+  // `goneAt·PC_TO_MPC + 2·EXTENT ≤ SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC` over the
+  // same region extent (with goneAt = 2·EXTENT it holds with equality) — so a star's caption
   // always reaches 0 before the layer's gate cuts it, and the cut cannot pop.
   starCaption: { fullAt: FARTHEST_STAR_PC * 1.1, goneAt: FARTHEST_STAR_PC * 2 },
 
@@ -115,9 +118,9 @@ export const SCALE_FADE_BANDS = {
   // it off. `backdropBand` (above) is the shared shape: full ≈ 4.6e-3 Mpc while
   // composing the deep-neighbourhood shot a couple of seed extents out, gone
   // ≈ 0.023 Mpc (~23 kpc), well before Milky-Way framing. The band completing
-  // STRICTLY inside the gate (goneAt ≪ FOREGROUND_MAX_DISTANCE_MPC =
-  // FARTHEST_BODY_MPC × 100) is what makes the gate cut invisible.
-  starBackdrop: backdropBand(FARTHEST_BODY_MPC),
+  // STRICTLY inside the gate (goneAt ≪ FOREGROUND_MAX_DISTANCE_MPC, that same
+  // extent × 100) is what makes the gate cut invisible.
+  starBackdrop: backdropBand(NEIGHBOURHOOD_EXTENT_MPC),
 
   // Keyed on: CAMERA distance from the `solar-system` region's anchor, Mpc (the
   // same `backdropBand` shape as `starBackdrop`, but applied to the SOLAR
@@ -131,13 +134,13 @@ export const SCALE_FADE_BANDS = {
   // ≈ 1.5e-9 Mpc (~10 Neptune orbits) — well before the neighbourhood, let
   // alone the galaxy, frames up. Its sibling `starBackdrop` does the same for
   // the star points one scale-decade out. The band completing STRICTLY inside
-  // the shared gate (`goneAt ≪ FOREGROUND_MAX_DISTANCE_MPC = FARTHEST_BODY_MPC
-  // × 100`) is what makes the hard gate cut invisible; like `starPointsLayer`,
+  // the shared gate (`goneAt ≪ FOREGROUND_MAX_DISTANCE_MPC`, which scales off
+  // the WIDEST region extent) is what makes the hard gate cut invisible; like `starPointsLayer`,
   // `bodyGlintsLayer` DISABLES outright once this reads 0 (the "opacity 0 ⇒ no
   // render" house rule), so the far-dissolve is the binding, smooth gate for
   // the glints. `backdropBand`'s x2 / x10 multipliers are an eye-tuning
   // STARTING POINT — the user tunes them visually.
-  bodyGlintBackdrop: backdropBand(FARTHEST_PLANET_MPC),
+  bodyGlintBackdrop: backdropBand(SOLAR_SYSTEM_EXTENT_MPC),
 
   // Keyed on: CAMERA distance from the heliocentric render origin, Mpc (the Sun
   // sits at the origin, so the Sun caption's own distance-from-camera IS that

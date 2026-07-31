@@ -1,18 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { BODY_REGIONS } from '../../../src/data/bodies/bodyRegions';
 import { SCENE_ANCHORS } from '../../../src/data/bodies/sceneAnchors';
-import {
-  FARTHEST_BODY_MPC,
-  FARTHEST_PLANET_MPC,
-} from '../../../src/services/engine/frame/foregroundMaxDistance';
+import { regionById } from '../../../src/utils/scene/regionById';
 import type { AnchorBody } from '../../../src/@types/scene/AnchorBody';
-import type { BodyRegionId } from '../../../src/@types/data/BodyRegionId';
-
-const regionById = (id: BodyRegionId) => {
-  const region = BODY_REGIONS.find((r) => r.id === id);
-  if (!region) throw new Error(`missing region: ${id}`);
-  return region;
-};
 
 describe('BODY_REGIONS', () => {
   it('solar-system and solar-neighbourhood share an anchor but not an extent', () => {
@@ -38,17 +27,6 @@ describe('BODY_REGIONS', () => {
 
     expect(galacticCentre.memberIds).toEqual([]);
     expect(galacticCentre.extentMpc).toBe(0);
-  });
-
-  it("region extents reproduce today's FARTHEST_PLANET_MPC and FARTHEST_BODY_MPC", () => {
-    // The bridge between the origin-keyed derivation and the region-keyed one.
-    // The two arrive independently — the regions max over a focus-graph
-    // membership around the Sun ANCHOR, the constants max over the whole body
-    // snapshot around `RENDER_ORIGIN_MPC` — so agreement is a claim about the
-    // partition (neither region drops the body that sets its edge) and about the
-    // Sun anchor sitting exactly on the render origin, not an identity.
-    expect(regionById('solar-system').extentMpc).toBe(FARTHEST_PLANET_MPC);
-    expect(regionById('solar-neighbourhood').extentMpc).toBe(FARTHEST_BODY_MPC);
   });
 });
 

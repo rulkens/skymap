@@ -12,26 +12,26 @@
 import { describe, it, expect } from 'vitest';
 
 import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
-import {
-  FARTHEST_BODY_MPC,
-  FARTHEST_PLANET_MPC,
-  FOREGROUND_MAX_DISTANCE_MPC,
-} from '../../../../src/services/engine/frame/foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/services/engine/frame/foregroundMaxDistance';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../src/services/engine/frame/solarSystemLabelMaxDistance';
+import { regionById } from '../../../../src/utils/scene/regionById';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+
+const NEIGHBOURHOOD_EXTENT_MPC = regionById('solar-neighbourhood').extentMpc;
+const SOLAR_SYSTEM_EXTENT_MPC = regionById('solar-system').extentMpc;
 
 describe('star fade bands — pop-free coupling to their gates', () => {
   it('the star caption reaches 0 before its layer gate cuts it', () => {
     // Worst-case star-to-camera distance at the caption gate crossing is
-    // `gate − 2·FARTHEST` (camera `gate` from a target star sitting `FARTHEST`
-    // from the origin, another seed up to `2·FARTHEST` beyond it). For no
+    // `gate − 2·EXTENT` (camera `gate` from a target star sitting `EXTENT` from
+    // the region's anchor, another seed up to `2·EXTENT` beyond it). For no
     // caption to still be fading when the layer switches off, the band's `goneAt`
     // (in Mpc) must not exceed that lower bound — i.e.
-    // `goneAt·PC_TO_MPC + 2·FARTHEST ≤ gate`. A retune that widened the caption
+    // `goneAt·PC_TO_MPC + 2·EXTENT ≤ gate`. A retune that widened the caption
     // band or tightened the gate would surface a half-faded caption with a hard
     // edge at the gate; this catches it.
     const captionGoneMpc = SCALE_FADE_BANDS.starCaption.goneAt * SCALE_UNITS.PC_TO_MPC;
-    expect(captionGoneMpc + 2 * FARTHEST_BODY_MPC).toBeLessThanOrEqual(
+    expect(captionGoneMpc + 2 * NEIGHBOURHOOD_EXTENT_MPC).toBeLessThanOrEqual(
       SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC,
     );
   });
@@ -63,11 +63,11 @@ describe('both backdrop bands derive from one shape', () => {
     // independently of the other's (the bug this shape consolidation removes),
     // the two ratios would diverge and this would fail; retuning the shared
     // shape moves both ratios together and stays green.
-    expect(SCALE_FADE_BANDS.starBackdrop.fullAt / FARTHEST_BODY_MPC).toBe(
-      SCALE_FADE_BANDS.bodyGlintBackdrop.fullAt / FARTHEST_PLANET_MPC,
+    expect(SCALE_FADE_BANDS.starBackdrop.fullAt / NEIGHBOURHOOD_EXTENT_MPC).toBe(
+      SCALE_FADE_BANDS.bodyGlintBackdrop.fullAt / SOLAR_SYSTEM_EXTENT_MPC,
     );
-    expect(SCALE_FADE_BANDS.starBackdrop.goneAt / FARTHEST_BODY_MPC).toBe(
-      SCALE_FADE_BANDS.bodyGlintBackdrop.goneAt / FARTHEST_PLANET_MPC,
+    expect(SCALE_FADE_BANDS.starBackdrop.goneAt / NEIGHBOURHOOD_EXTENT_MPC).toBe(
+      SCALE_FADE_BANDS.bodyGlintBackdrop.goneAt / SOLAR_SYSTEM_EXTENT_MPC,
     );
   });
 });
