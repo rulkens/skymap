@@ -187,29 +187,20 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   return vec4<f32>(in.color * brightness * stroke * in.alpha, 1.0);
 }
 
-// Debug lens ('debug.showOrbitTrailImpostor'): constant-colour passes that
-// make the impostor geometry itself visible, drawn IN ADDITION to 'fs' by the
-// renderer's debug pipelines. 'fsImpostorRibbon' fills the ribbon hull so a gap
-// in its coverage of the stroke shows as a broken arc; 'fsImpostorFallback'
-// marks an orbit that took the fullscreen path — a silent perf cost, not a
-// visual one.
+// Debug lens ('debug.showOrbitTrailImpostor'): fills the impostor geometry
+// with the orbit's own trail colour, so hull and trail can be matched by eye.
+// Both ignore the fade alpha on purpose — geometry that is drawn but faded to
+// nothing still shows, separating "faded out" from "never drawn".
 
 @fragment
 fn fsImpostorRibbon(in: VSOut) -> @location(0) vec4<f32> {
-  return vec4<f32>(0.9, 0.15, 0.9, 1.0); // hull fill: magenta
+  return vec4<f32>(in.color, 1.0); // ribbon hull, flat trail colour
 }
 
-// A sparse diagonal hatch, NOT a full-viewport wash: the fallback path is the
-// common case at solar-system scales (the camera sits inside every orbit), so
-// one opaque fill per fallback instance stacks additively and buries the scene.
-// The hatch keys off the pixel coordinate alone because the viewport size is
-// not a varying, and it leaves ~95 percent of pixels untouched however many
-// instances draw.
+// Deliberately dim: the fallback is a fullscreen triangle and the common case
+// at solar-system scales (the camera sits inside every orbit), so several
+// instances stack additively; a full-strength fill whites out the frame.
 @fragment
 fn fsImpostorFallback(in: VSOut) -> @location(0) vec4<f32> {
-  let stripe = (in.clip.x + in.clip.y) % 64.0;
-  if (stripe >= 2.0) {
-    discard;
-  }
-  return vec4<f32>(0.25, 0.16, 0.0, 1.0); // fallback hatch: amber
+  return vec4<f32>(in.color * 0.08, 1.0);
 }
