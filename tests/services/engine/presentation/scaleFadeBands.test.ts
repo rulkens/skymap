@@ -14,6 +14,7 @@ import { describe, it, expect } from 'vitest';
 import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
 import {
   FARTHEST_BODY_MPC,
+  FARTHEST_PLANET_MPC,
   FOREGROUND_MAX_DISTANCE_MPC,
 } from '../../../../src/services/engine/frame/foregroundMaxDistance';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../src/services/engine/frame/solarSystemLabelMaxDistance';
@@ -51,5 +52,22 @@ describe('star fade bands — pop-free coupling to their gates', () => {
     // blob pop this fix removed (all ~22 glints collapsed onto one dot into
     // Milky-Way framing).
     expect(SCALE_FADE_BANDS.bodyGlintBackdrop.goneAt).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC);
+  });
+});
+
+describe('both backdrop bands derive from one shape', () => {
+  it('starBackdrop and bodyGlintBackdrop apply the same fullAt/goneAt multiple to their own region extent', () => {
+    // Neither ratio is hardcoded here — only that the two bands, each keyed on a
+    // DIFFERENT region extent (solar-neighbourhood vs. solar-system), come out
+    // to the SAME multiple. If a future edit re-inlined one band's multiplier
+    // independently of the other's (the bug this shape consolidation removes),
+    // the two ratios would diverge and this would fail; retuning the shared
+    // shape moves both ratios together and stays green.
+    expect(SCALE_FADE_BANDS.starBackdrop.fullAt / FARTHEST_BODY_MPC).toBe(
+      SCALE_FADE_BANDS.bodyGlintBackdrop.fullAt / FARTHEST_PLANET_MPC,
+    );
+    expect(SCALE_FADE_BANDS.starBackdrop.goneAt / FARTHEST_BODY_MPC).toBe(
+      SCALE_FADE_BANDS.bodyGlintBackdrop.goneAt / FARTHEST_PLANET_MPC,
+    );
   });
 });

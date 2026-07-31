@@ -49,6 +49,17 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
   sceneBodyStates: vi.fn((state: EngineState): ReadonlyMap<string, BodyState> => {
     const m = new Map<string, BodyState>();
+    // The 'solar-system' region's anchor (sceneAnchors.ts authors the Sun at
+    // [0, 0, 0]) — an absent entry reads as Infinity, not 0 (see
+    // regionRelativeDistanceMpc's header), so every case needs it regardless of
+    // which planets it seeds. Orientation is inlined rather than reusing the
+    // module's IDENTITY const: this factory is hoisted above IDENTITY's
+    // declaration and runs at first import, a TDZ hazard.
+    m.set('sun', {
+      positionMpc: [0, 0, 0],
+      orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1] as BodyState['orientation'],
+      meanAnomalyRad: 0,
+    });
     for (const b of (state.data.bodies.planets ?? []) as readonly SeededPlanet[]) {
       m.set(b.id, { positionMpc: b.positionMpc, orientation: b.orientation, meanAnomalyRad: 0 });
     }
@@ -364,18 +375,17 @@ const UNKNOWN = bodyAt('not-a-planet', 1_050_000, [0.5, 0.5, 0.5]);
 function makePickRenderer() {
   return {
     drawSphere: vi.fn(),
-    drawPoints:
-      vi.fn<
-        (
-          pass: GPURenderPassEncoder,
-          args: {
-            vp: Float32Array;
-            viewportPx: readonly [number, number];
-            points: readonly { posRelCamMpc: Vec3; packedId: number; bandClass?: number }[];
-            variant?: 'sceneStar' | 'glint';
-          },
-        ) => void
-      >(),
+    drawPoints: vi.fn<
+      (
+        pass: GPURenderPassEncoder,
+        args: {
+          vp: Float32Array;
+          viewportPx: readonly [number, number];
+          points: readonly { posRelCamMpc: Vec3; packedId: number; bandClass?: number }[];
+          variant?: 'sceneStar' | 'glint';
+        },
+      ) => void
+    >(),
   };
 }
 

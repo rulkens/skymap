@@ -13,12 +13,13 @@
  * ### One table, mixed keying quantities
  *
  * The rows do NOT all key on the same number, and that is deliberate — the
- * distinction is carried per-row by the comment naming WHICH quantity feeds
- * the band, not by splitting the table. Three rows key on the camera's distance
- * from the heliocentric render origin (`hypot(view.camPos)`, Mpc); one keys on
- * a star's OWN distance from the camera (pc); one keys on a scene body's
- * apparent DIAMETER in pixels. Keeping them one table is the point: they are all
- * "the descent's fades", and a reader tuning the descent wants them in one view.
+ * distinction is carried per-row by the comment naming WHICH quantity feeds the
+ * band. Six key on a camera distance in Mpc: four on the heliocentric render
+ * origin directly, and `starBackdrop` / `bodyGlintBackdrop` on the camera's
+ * distance from their content's REGION anchor (`regionRelativeDistanceMpc`,
+ * today the same number — that anchor is the Sun). One keys on a star's OWN
+ * distance from the camera (pc); one on a body's apparent DIAMETER in px. One
+ * table because they are all the descent's fades.
  */
 
 import type { FadeBand } from '../../../@types/math/FadeBand';
@@ -45,6 +46,18 @@ export const FARTHEST_STAR_PC = FARTHEST_BODY_MPC / SCALE_UNITS.PC_TO_MPC;
 // galactic-disc framing), converted to Mpc for the band table below.
 const CONSTELLATIONS_FULL_AT_KPC = 1;
 const CONSTELLATIONS_GONE_AT_KPC = 10;
+
+// The shape `starBackdrop` and `bodyGlintBackdrop` share: full at twice a
+// region's own extent (still composing that region's shot a couple of extents
+// out), gone by ten times it (well before the next scale frames up). One home
+// so the two backdrops' identical shape cannot drift apart independently.
+const BACKDROP_FULL_AT_EXTENT_MULTIPLE = 2;
+const BACKDROP_GONE_AT_EXTENT_MULTIPLE = 10;
+
+export const backdropBand = (regionExtentMpc: number): FadeBand => ({
+  fullAt: regionExtentMpc * BACKDROP_FULL_AT_EXTENT_MULTIPLE,
+  goneAt: regionExtentMpc * BACKDROP_GONE_AT_EXTENT_MULTIPLE,
+});
 
 export const SCALE_FADE_BANDS = {
   // Keyed on: CAMERA distance from the heliocentric render origin, Mpc.
@@ -93,38 +106,38 @@ export const SCALE_FADE_BANDS = {
   // always reaches 0 before the layer's gate cuts it, and the cut cannot pop.
   starCaption: { fullAt: FARTHEST_STAR_PC * 1.1, goneAt: FARTHEST_STAR_PC * 2 },
 
-  // Keyed on: CAMERA distance from the heliocentric render origin, Mpc (same
-  // quantity as `surveyDeepZoom`). Consumer: `starPointsLayer`. The point
+  // Keyed on: CAMERA distance from the `solar-neighbourhood` region's anchor,
+  // Mpc — the Sun, so this is today the same number `surveyDeepZoom` reads off
+  // the render origin. Consumer: `starPointsLayer`. The point
   // backdrop is a minimum-size additive sprite field, so at galaxy framing the
   // whole roster collapses into one bright blob — this band dissolves it
   // smoothly instead of letting the hard `FOREGROUND_MAX_DISTANCE_MPC` gate pop
-  // it off. Full while composing the deep-neighbourhood shot a couple of seed
-  // extents out (`FARTHEST_BODY_MPC * 2` ≈ 4.6e-3 Mpc), fully dissolved by
-  // `FARTHEST_BODY_MPC * 10` ≈ 0.023 Mpc (~23 kpc), well before Milky-Way
-  // framing. The band completing STRICTLY inside the gate (goneAt ≪
-  // FOREGROUND_MAX_DISTANCE_MPC = FARTHEST_BODY_MPC × 100) is what makes the
-  // gate cut invisible.
-  starBackdrop: { fullAt: FARTHEST_BODY_MPC * 2, goneAt: FARTHEST_BODY_MPC * 10 },
+  // it off. `backdropBand` (above) is the shared shape: full ≈ 4.6e-3 Mpc while
+  // composing the deep-neighbourhood shot a couple of seed extents out, gone
+  // ≈ 0.023 Mpc (~23 kpc), well before Milky-Way framing. The band completing
+  // STRICTLY inside the gate (goneAt ≪ FOREGROUND_MAX_DISTANCE_MPC =
+  // FARTHEST_BODY_MPC × 100) is what makes the gate cut invisible.
+  starBackdrop: backdropBand(FARTHEST_BODY_MPC),
 
-  // Keyed on: CAMERA distance from the heliocentric render origin, Mpc (the same
-  // quantity as `starBackdrop`, but scaled off the SOLAR-SYSTEM extent, not the
-  // star roster). Consumer: `bodyGlintsLayer`. The planet/moon glints are
-  // minimum-size additive sprites exactly like the star points, so as the camera
-  // pulls back from the solar system all ~22 of them collapse onto a couple of
-  // pixels into one bright dot — this band dissolves them smoothly instead of
-  // letting them ride full-brightness to the coarse `FOREGROUND_MAX_DISTANCE_MPC`
-  // gate, which sits deep in Milky-Way framing. Full while the camera still frames
-  // the outer planets a couple of Neptune-orbits out (`FARTHEST_PLANET_MPC * 2`),
-  // fully dissolved by `FARTHEST_PLANET_MPC * 10` (~1.5e-9 Mpc, ~10 Neptune
-  // orbits) — well before the neighbourhood, let alone the galaxy, frames up. Its
-  // sibling `starBackdrop` does the same for the star points one scale-decade out.
-  // The band completing STRICTLY inside the shared gate (`goneAt ≪
-  // FOREGROUND_MAX_DISTANCE_MPC = FARTHEST_BODY_MPC × 100`) is what makes the hard
-  // gate cut invisible; like `starPointsLayer`, `bodyGlintsLayer` DISABLES outright
-  // once this reads 0 (the "opacity 0 ⇒ no render" house rule), so the far-dissolve
-  // is the binding, smooth gate for the glints. These x2 / x10 edges are an
-  // eye-tuning STARTING POINT — the user tunes them visually.
-  bodyGlintBackdrop: { fullAt: FARTHEST_PLANET_MPC * 2, goneAt: FARTHEST_PLANET_MPC * 10 },
+  // Keyed on: CAMERA distance from the `solar-system` region's anchor, Mpc (the
+  // same `backdropBand` shape as `starBackdrop`, but applied to the SOLAR
+  // SYSTEM's own extent, not the star roster's). Consumer: `bodyGlintsLayer`.
+  // The planet/moon glints are minimum-size additive sprites exactly like the
+  // star points, so as the camera pulls back from the solar system all ~22 of
+  // them collapse onto a couple of pixels into one bright dot — this band
+  // dissolves them smoothly instead of letting them ride full-brightness to the
+  // coarse `FOREGROUND_MAX_DISTANCE_MPC` gate, which sits deep in Milky-Way
+  // framing. Full ≈ 2.9e-10 Mpc (a couple of Neptune-orbits out), gone
+  // ≈ 1.5e-9 Mpc (~10 Neptune orbits) — well before the neighbourhood, let
+  // alone the galaxy, frames up. Its sibling `starBackdrop` does the same for
+  // the star points one scale-decade out. The band completing STRICTLY inside
+  // the shared gate (`goneAt ≪ FOREGROUND_MAX_DISTANCE_MPC = FARTHEST_BODY_MPC
+  // × 100`) is what makes the hard gate cut invisible; like `starPointsLayer`,
+  // `bodyGlintsLayer` DISABLES outright once this reads 0 (the "opacity 0 ⇒ no
+  // render" house rule), so the far-dissolve is the binding, smooth gate for
+  // the glints. `backdropBand`'s x2 / x10 multipliers are an eye-tuning
+  // STARTING POINT — the user tunes them visually.
+  bodyGlintBackdrop: backdropBand(FARTHEST_PLANET_MPC),
 
   // Keyed on: CAMERA distance from the heliocentric render origin, Mpc (the Sun
   // sits at the origin, so the Sun caption's own distance-from-camera IS that
@@ -140,7 +153,7 @@ export const SCALE_FADE_BANDS = {
   },
 
   // Keyed on: CAMERA distance from the heliocentric render origin, Mpc (the same
-  // quantity as `surveyDeepZoom` / `starBackdrop`). Consumer: `constellationsLayer`.
+  // quantity as `surveyDeepZoom`). Consumer: `constellationsLayer`.
   // The true-3D stick figures read as Earth's familiar sky from within the solar
   // neighbourhood and shear apart as the camera pulls away; this recede band holds
   // them at full presence through the neighbourhood and dissolves them before the

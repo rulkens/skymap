@@ -85,16 +85,24 @@ import type { BodyPointPick } from '../../../../@types/rendering/BodyPickRendere
 import { NEAR0 } from '../slabs';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from '../partitionStarsByResolution';
 import { positionedVisibleStars } from '../positionedVisibleStars';
+import { sceneBodyStates } from '../sceneBodyStates';
 import { seedIndexOfBody } from './seedIndexOfBody';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { fadeBand } from '../../../../utils/math/fadeBand';
+import { regionRelativeDistanceMpc } from '../../../../utils/scene/regionRelativeDistanceMpc';
+import { BODY_REGIONS } from '../../../../data/bodies/bodyRegions';
 import { Source } from '../../../../data/sources';
 import { SCENE_STARS } from '../../../../data/bodies/sceneStars';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
 import { starExposureRamp } from '../../../gpu/renderers/starCatalog/starExposureRamp';
+
+// The scale regime the star backdrop belongs to. Its anchor — not the render
+// origin — is what the dissolve band measures the camera against, so the band
+// keeps meaning the moment a star map is seeded somewhere other than the Sun.
+const STAR_BACKDROP_REGION = BODY_REGIONS.find((region) => region.id === 'solar-neighbourhood')!;
 
 export const starPointsLayer: ContentLayer = {
   name: 'star-points',
@@ -110,10 +118,15 @@ export const starPointsLayer: ContentLayer = {
     // Once the dissolve band has zeroed the backdrop, DISABLE the layer rather
     // than draw black sprites — the "opacity 0 ⇒ no render" house rule, which
     // also empties the (hdr, NEAR0) step so the executor skips it. Keyed on the
-    // camera's distance from the heliocentric origin, the quantity the band
-    // reads (drawCamPos is the absolute-frame eye; the origin is [0,0,0]).
-    const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
-    if (fadeBand(SCALE_FADE_BANDS.starBackdrop, camDistMpc) <= 0) return false;
+    // camera's distance from the star map's own region anchor — the Sun, at
+    // [0,0,0], so this is today the same number as the raw origin distance
+    // (drawCamPos is the absolute-frame eye).
+    const regionDistMpc = regionRelativeDistanceMpc(
+      ctx.drawCamPos,
+      STAR_BACKDROP_REGION,
+      sceneBodyStates(state, ctx),
+    );
+    if (fadeBand(SCALE_FADE_BANDS.starBackdrop, regionDistMpc) <= 0) return false;
     return (
       partitionStarsByResolution({
         stars: positionedVisibleStars(state, ctx),
@@ -145,12 +158,12 @@ export const starPointsLayer: ContentLayer = {
     const camPos = view.camPos;
 
     // The backdrop-dissolve alpha for THIS frame, keyed on the camera's distance
-    // from the heliocentric origin — the same quantity `enabled` gates on, read
-    // here from `view.camPos` (the frames coincide; see the module header). It
-    // scales each star's uploaded colour below.
+    // from the star map's region anchor — the same quantity `enabled` gates on,
+    // read here from `view.camPos` (the frames coincide; see the module header).
+    // It scales each star's uploaded colour below.
     const backdropFade = fadeBand(
       SCALE_FADE_BANDS.starBackdrop,
-      Math.hypot(camPos[0], camPos[1], camPos[2]),
+      regionRelativeDistanceMpc(camPos, STAR_BACKDROP_REGION, sceneBodyStates(state, ctx)),
     );
 
     // Re-express each anchor as a small camera-relative vector, and premultiply
