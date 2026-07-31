@@ -48,4 +48,27 @@ describe('sStar()', () => {
       expect(sStar(seed).focusId).toBe('sgr-a-star');
     }
   });
+
+  it('trails carry their own star’s hue — late-type warm, early-type cool', () => {
+    // The point of deriving the tint rather than flattening all 39 to one blue.
+    // Asserted as a SIGN on (red − blue), not as tint values: the bin
+    // temperatures are tuning knobs, but "a red giant's trail is not blue" is
+    // the property, and it fails the moment the derivation drops the class
+    // flag or reverts to a constant.
+    for (const seed of S_STAR_SEEDS) {
+      const [r, , b] = sStar(seed).color;
+      if (seed.spectralClass === 'early') expect(b).toBeGreaterThan(r);
+      if (seed.spectralClass === 'late') expect(r).toBeGreaterThan(b);
+    }
+  });
+
+  it('no trail tint exceeds the additive-HDR ceiling', () => {
+    // `temperatureToLinearRgb` returns a PURE hue with its brightest channel
+    // pinned to 1.0. Handing that straight to the additive trail draw blows
+    // out; `palette.ts` states the ≲ 0.5 ceiling every hand-authored trail
+    // tint honours, and a derived one has to honour it too.
+    for (const seed of S_STAR_SEEDS) {
+      expect(Math.max(...sStar(seed).color)).toBeLessThanOrEqual(0.5);
+    }
+  });
 });
