@@ -67,6 +67,7 @@
 import package::bodies::orbitTrail::constants::STROKE_PX;
 import package::bodies::orbitTrail::io::VSOut;
 import package::lib::math::PI;
+import package::lib::math::TAU;
 
 // Decay rate of the trail brightness per radian of mean anomaly behind the
 // body. Larger values shrink the visible tail; 1.2 spans roughly a third of
@@ -111,6 +112,20 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // atan2(u.y, u.x) equals atan2(t, s) = atan2(u.y/z, u.x/z) once the shared
   // positive factor 1/z cancels — same angle, no intermediate 1/z.
   let ecc = atan2(u.y, u.x); // eccentric anomaly E
+
+  // E-ownership discard for fold-widened (over-wide) quads: [eLo, eHi) is
+  // half-open and bit-identical across segments (both sides compute
+  // TAU*i/SEGMENTS from the same integer i), so exactly one tested quad ever
+  // owns a given pixel's E, however much widened quads overlap on screen —
+  // no double-add under additive blend, no gap. Untested quads skip this
+  // entirely: their footprint (the abutting invariant) IS their ownership.
+  if (in.eOwn.z > 0.5) {
+    let dE = ecc - in.eOwn.x;
+    let dEw = dE - TAU * floor(dE / TAU);
+    if (dEw >= in.eOwn.y - in.eOwn.x) {
+      discard;
+    }
+  }
 
   // Pixel gradients of s = q.x/q.z and t = q.y/q.z via the quotient rule.
   // Written the obvious way, each numerator is a difference of two products

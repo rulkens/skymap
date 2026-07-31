@@ -34,8 +34,7 @@ import package::bodies::orbitTrail::io::VSOut;
 import package::lib::math::TAU;
 
 // One sample of the projected ellipse in raw clip space (x, y, w) — no divide
-// yet, so callers can test/clamp .z (== clip.w) before it ever lands in a
-// denominator.
+// yet, so callers can test/clamp .z (== clip.w) before it hits a denominator.
 fn ribbonClip(inst: OrbitInstance, si: u32) -> vec3<f32> {
   // E-parametrization clusters samples at periapsis, matching how
   // composeOrbitConic built cc/ac/bc on the CPU side.
@@ -46,10 +45,20 @@ fn ribbonClip(inst: OrbitInstance, si: u32) -> vec3<f32> {
   return inst.cc.xyz + cos(e) * inst.ac.xyz + sin(e) * inst.bc.xyz; // clip (x, y, w)
 }
 
-// Perspective divide, isolated so both the fast (fully-front) and clamped
-// paths below share one conversion. Only valid where clip.z (== clip.w) > 0.
+// Perspective divide; shared by the fully-front, one-sided, and clamped
+// paths below. Only valid where clip.z (== clip.w) > 0.
 fn clipToPixel(clip: vec3<f32>, viewportPx: vec2<f32>) -> vec2<f32> {
   return (clip.xy / clip.z) * 0.5 * viewportPx;
+}
+
+// Twice the farthest viewport corner from anchorPx — guarantees coverage.
+// Only safe where the fragment's eOwn discard stops it double-painting.
+fn foldHalfWidth(anchorPx: vec2<f32>, viewportPx: vec2<f32>) -> f32 {
+  let d00 = length(anchorPx);
+  let dW0 = length(anchorPx - vec2<f32>(viewportPx.x, 0.0));
+  let d0H = length(anchorPx - vec2<f32>(0.0, viewportPx.y));
+  let dWH = length(anchorPx - viewportPx);
+  return 2.0 * max(max(d00, dW0), max(d0H, dWH));
 }
 
 // Rasterizes each orbit as a screen-space ribbon hugging the projected
@@ -82,16 +91,24 @@ fn vsRibbon(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
   let rawJNext = ribbonClip(inst, sJNext);
 
   // Per-instance scale-free near-plane epsilon: |cc.z| + hypot(ac.z, bc.z)
-  // bounds clip.w's amplitude over every E, so it tracks this orbit's scale.
-  // 1e-6 is load-bearing: it must sit well above f32 relative precision
-  // (~1.2e-7), or a clamped w can round to <= 0 and clipToPixel divides by
-  // zero.
+  // bounds clip.w's amplitude over every E. 1e-6 is load-bearing: it must sit
+  // well above f32 relative precision (~1.2e-7), or a clamped w can round to
+  // <= 0 and clipToPixel divides by zero.
   let epsW = 1e-6 * (abs(inst.cc.z) + length(vec2<f32>(inst.ac.z, inst.bc.z)));
+
+  // Fold membership is per QUAD: tested iff any of the four samples above is
+  // behind. eHi does NOT wrap SEGMENTS to 0 (eHi > eLo always) — the
+  // fragment wraps E itself when it tests a pixel.
+  let tested = rawIPrev.z <= epsW || rawI.z <= epsW || rawJ.z <= epsW || rawJNext.z <= epsW;
+  out.eOwn = vec3<f32>(
+    TAU * f32(segment) / f32(SEGMENTS),
+    TAU * f32(segment + 1u) / f32(SEGMENTS),
+    select(0.0, 1.0, tested),
+  );
 
   // This corner's own sample and its TRUE neighbours (si-1, si+1), never the
   // segment's other endpoint — classifying on these makes a corner a pure
-  // function of the sample index, so the two segments sharing sample si
-  // always derive the identical corner wherever that matters (see below).
+  // function of the sample index, so the two quads sharing si always agree.
   let ownRaw = select(rawJ, rawI, offset == 0u);
   let prevRaw = select(rawI, rawIPrev, offset == 0u);
   let nextRaw = select(rawJNext, rawJ, offset == 0u);
@@ -107,8 +124,8 @@ fn vsRibbon(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
   var w: f32;
 
   if (ownFront && prevFront && nextFront) {
-    // Fully in front, INCLUDING both true neighbours: today's central-
-    // difference + sag math, unchanged.
+    // Fully in front: today's central-difference + sag width, UNCHANGED. A
+    // widened corner's quad is always in the tested fold group (see below).
     let ownPx = clipToPixel(ownRaw, viewportPx);
     let prevPx = clipToPixel(prevRaw, viewportPx);
     let nextPx = clipToPixel(nextRaw, viewportPx);
@@ -122,9 +139,8 @@ fn vsRibbon(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
     outPx = ownPx + side * halfWidth * normal;
     w = ownRaw.z;
   } else if (ownFront) {
-    // Own sample is in front but a TRUE neighbour is behind: one-sided
-    // tangent toward whichever neighbour is still front. Still a pure
-    // function of 'own', so both segments sharing this sample agree.
+    // Own front, a TRUE neighbour behind: one-sided tangent toward whichever
+    // neighbour is still front — a pure function of 'own', so both quads agree.
     let ownPx = clipToPixel(ownRaw, viewportPx);
     var chord = vec2<f32>(0.0, 0.0);
     if (prevFront) {
@@ -132,30 +148,36 @@ fn vsRibbon(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
     } else if (nextFront) {
       chord = clipToPixel(nextRaw, viewportPx) - ownPx;
     }
+    // Both true neighbours behind (chord left zero) is reachable — camera
+    // almost exactly on the ring — but then 'own' is itself barely above
+    // epsW, so ownPx is off-viewport by the clamp branch's w-scale argument.
     let tangent = chord / max(length(chord), 1e-20);
     let normal = vec2<f32>(-tangent.y, tangent.x);
-    let halfWidth = STROKE_PX + MARGIN_PX; // no sag: the second difference needs both neighbours
+    // A plain STROKE_PX+MARGIN_PX quad under-covers the true sweep near a
+    // fold; this corner is always inside a tested quad (see membership
+    // above), so widening to guaranteed viewport coverage is safe.
+    let halfWidth = foldHalfWidth(ownPx, viewportPx);
     outPx = ownPx + side * halfWidth * normal;
     w = ownRaw.z;
   } else if (partnerRaw.z > epsW) {
-    // Own sample is behind, this segment's OTHER endpoint is in front: clamp
-    // toward it along the segment's own chord to w = epsW. Deliberately
-    // per-SEGMENT — the neighbouring segment clamps toward a different
-    // partner, so the two corners here may differ, but only off-viewport.
+    // Own behind, this segment's OTHER endpoint in front: clamp toward it
+    // along the segment's own chord to w = epsW. Deliberately per-SEGMENT —
+    // the neighbour clamps toward a different partner, differing off-viewport.
     let t = (epsW - ownRaw.z) / (partnerRaw.z - ownRaw.z);
     let clampedRaw = mix(ownRaw, partnerRaw, t);
     let clampedPx = clipToPixel(clampedRaw, viewportPx);
     let partnerPx = clipToPixel(partnerRaw, viewportPx);
-    let chord = partnerPx - clampedPx;
+    // Increasing-E direction on BOTH offsets, or the two ends of this
+    // segment tangent oppositely and the quad bowties.
+    let chord = select(clampedPx - partnerPx, partnerPx - clampedPx, offset == 0u);
     let tangent = chord / max(length(chord), 1e-20);
     let normal = vec2<f32>(-tangent.y, tangent.x);
-    let halfWidth = STROKE_PX + MARGIN_PX; // no sag term: only two points on this path
+    let halfWidth = foldHalfWidth(clampedPx, viewportPx); // same fold-coverage bound as above; always tested too
     outPx = clampedPx + side * halfWidth * normal;
     w = epsW;
   } else {
-    // Both this segment's endpoints are behind: collapse to one point. Zero
-    // area means zero fragments no matter where it lands, so the origin is
-    // chosen only because it needs no divide to reach.
+    // Both endpoints behind: this arc is entirely behind-camera, so it stays
+    // degenerate — no pixel here needs the fragment's own q.z discard.
     outPx = vec2<f32>(0.0, 0.0);
     w = 1.0;
   }

@@ -49,6 +49,11 @@ struct VSOut {
   // evaluates each numerator as a plain multiply-add. Per-orbit constant, flat.
   @location(7) @interpolate(flat) minorS: vec3<f32>,
   @location(8) @interpolate(flat) minorT: vec3<f32>,
+  // The segment's eccentric-anomaly range and fold-test flag. eLo/eHi are
+  // TAU*i/SEGMENTS for the same integer i on both sides of a shared segment
+  // boundary, so adjacent quads agree on it bit-for-bit; tested > 0.5 marks a
+  // fold-widened quad whose fragment must apply the E-ownership discard.
+  @location(9) @interpolate(flat) eOwn: vec3<f32>,
 };
 
 // Per-instance vertex input, matching the TS pipeline's instance-buffer
