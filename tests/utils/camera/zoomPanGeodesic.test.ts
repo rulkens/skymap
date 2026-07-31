@@ -13,17 +13,13 @@
 
 import { describe, it, expect } from 'vitest';
 import { zoomPanGeodesic } from '../../../src/utils/camera/zoomPanGeodesic';
+import { relErr } from '../../support/relErr';
 
 const RHO = 1.42;
 
 /** w = 2·d·tan(fovY/2) — the caller's conversion, here only to get realistic w. */
 const FOV_Y = (50 * Math.PI) / 180;
 const viewWidth = (distanceMpc: number) => 2 * distanceMpc * Math.tan(FOV_Y / 2);
-
-/** Absolute when the target is 0, relative otherwise. */
-function relErr(got: number, want: number): number {
-  return want === 0 ? Math.abs(got) : Math.abs(got - want) / Math.abs(want);
-}
 
 // Verbatim eq. 9 of the paper, including the forms the implementation replaces.
 const PAPER_EQ9 = (u0: number, w0: number, u1: number, w1: number, rho: number) => {

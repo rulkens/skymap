@@ -602,10 +602,9 @@ export function flyPath(
  *
  * `opts.over` omitted derives the seconds from the geodesic's arc length — a
  * hop across a galaxy and a descent to a planet surface stop taking the same
- * time. `ease` defaults to `'linear'` because constant arc-length velocity IS
- * the feature; an ease-out spends its last decade of scale in its last few
- * frames, and an overshoot curve (`easeInOutBack`, `*Elastic`) walks past the
- * endpoint and flies through the target and back.
+ * time. An omitted `ease` is left absent rather than substituted here, so it
+ * falls through to `GLIDE_EASE_DEFAULT` in `buildGlideTrack` and a clip-authored
+ * glide arrives on the same curve as a focus tween (`glideCalibration.ts`).
  *
  * Like `flyPath`, it starts from the CLIP's start pose, not from wherever the
  * preceding effects left the camera — a glide placed mid-timeline still flies
@@ -618,8 +617,8 @@ export function glide(
   return {
     kind: 'glide',
     to,
-    ease: opts?.ease ?? 'linear',
     ...(opts?.over !== undefined ? { over: opts.over } : {}),
     ...(opts?.rho !== undefined ? { rho: opts.rho } : {}),
+    ...(opts?.ease !== undefined ? { ease: opts.ease } : {}),
   };
 }

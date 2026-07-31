@@ -2,16 +2,13 @@ import { describe, it, expect } from 'vitest';
 import { buildGlideTrack } from '../../../../src/services/engine/animation/buildGlideTrack';
 import { glidePath } from '../../../../src/utils/camera/glidePath';
 import { GLIDE_MIN_SEC, GLIDE_MAX_SEC } from '../../../../src/utils/camera/glideCalibration';
+import { relErr } from '../../../support/relErr';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 const FOV_Y = (50 * Math.PI) / 180;
 const START: CameraPose = { target: [0, 0, 0], yaw: 0.3, pitch: -0.2, distance: 100 };
 const TO: { target: Vec3; distance: number } = { target: [30, 40, 0], distance: 2 };
-
-function relErr(got: number, want: number): number {
-  return want === 0 ? Math.abs(got) : Math.abs(got - want) / Math.abs(want);
-}
 
 describe('buildGlideTrack', () => {
   it('declares exactly target and distance', () => {

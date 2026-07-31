@@ -6,11 +6,10 @@
  * body this frame'. Three callers share it, so that lookup is defined in exactly
  * one place rather than copied per site:
  *
- *   - The `followBody` driver — its `isActive` predicate (a body focus present
- *     in the snapshot) and its `pose` target term both come from here.
- *   - The frame-loop pivot-pin (`applyFocusedBodyPivot`) — re-centres whichever
- *     OTHER orbit driver wins (orbitDrag while dragging, autoRotate while
- *     spinning, resting while idle) on the same live body position.
+ *   - The `followBody` driver's `isActive` predicate — a body focus present in
+ *     the snapshot.
+ *   - `focusedBodyPivot` — the orbit pivot (this plus the pan strafe), read both
+ *     by the frame-loop pin and by `followBody`'s own approach.
  *   - The NEAR0 selection-ring layer — centres the halo on the SELECT row's live
  *     body position so the ring tracks the animated body, not its pick-time pose.
  *

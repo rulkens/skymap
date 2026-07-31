@@ -148,5 +148,7 @@ export type Effect =
       readonly over?: number;
       /** Pan/zoom trade-off. Omit for `GLIDE_RHO_DEFAULT`. */
       readonly rho?: number;
-      readonly ease: Ease;
+      /** Arrival curve. Omit for `GLIDE_EASE_DEFAULT` — the same curve a focus
+       *  tween arrives on (`glideCalibration.ts`). */
+      readonly ease?: Ease;
     };

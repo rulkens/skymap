@@ -365,6 +365,13 @@ export function compileClip(data: ClipData, frameBasis?: Mat3, fovYRad?: number)
 
   const sortedCues: SceneCue[] = [...acc.cues].sort((a, b) => a.atSec - b.atSec);
 
+  // Ascending `startSec` is a property of the compiled clip, not of the instant:
+  // the evaluator applies tracks in array order (so the most recently started
+  // wins a shared channel) and must not re-sort on every frame it draws.
+  const sortedTracks: CompositeTrack[] = [...acc.compositeTracks].sort(
+    (a, b) => a.startSec - b.startSec,
+  );
+
   // Build baseTracks as Record<Channel, BaseSegment[]> with an entry for
   // every channel (sorted ascending by startSec within each channel).
   const baseTracks = Object.fromEntries(
@@ -384,7 +391,7 @@ export function compileClip(data: ClipData, frameBasis?: Mat3, fovYRad?: number)
     velTracks: acc.velRamps,
     oscTracks: acc.oscTracks,
     cues: sortedCues,
-    compositeTracks: acc.compositeTracks,
+    compositeTracks: sortedTracks,
   };
 }
 

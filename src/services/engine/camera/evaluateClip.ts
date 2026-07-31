@@ -437,16 +437,16 @@ function evaluateBaseVec3(segments: BaseSegment[], startVal: Vec3, t: number): V
  *
  * A track governs from its `startSec` onward (not just within its window):
  * once it has started it holds its final pose after `endSec`, so the camera
- * does not snap back to the base layer during a trailing `hold`. Tracks are
- * applied in ascending `startSec`, so where two overlap on a channel the most
- * recently started one wins.
+ * does not snap back to the base layer during a trailing `hold`. Array order IS
+ * ascending `startSec` (`compileClip` sorts once), so where two overlap on a
+ * channel the most recently started one wins.
  *
  * Sampling per track rather than per channel is the point: `sample` does the
  * spline work, a `flyPath` declares all four channels, and this runs per frame.
  */
 function compositePoseAt(tracks: CompositeTrack[], t: number): Partial<CameraPose> {
   const merged: Partial<CameraPose> = {};
-  for (const track of [...tracks].sort((a, b) => a.startSec - b.startSec)) {
+  for (const track of tracks) {
     if (track.startSec > t) continue;
     const localSec = Math.min(t - track.startSec, track.endSec - track.startSec);
     const pose = track.sample(localSec);

@@ -63,7 +63,6 @@ import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RootState } from '../../../store/types';
 import type { CameraClock } from '../../../@types/engine/camera/CameraClock';
-import type { Vec3 } from '../../../@types/math/Vec3';
 import { poseOf } from './poseOf';
 import { tweenToClip } from './tweenToClip';
 import { spinAutoRotate } from './spinAutoRotate';
@@ -73,6 +72,7 @@ import { bodyFocusDistance } from './bodyFocusDistance';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { liveBodyPosition } from './liveBodyPosition';
+import { focusedBodyPivot } from './focusedBodyPivot';
 import { glidePath } from '../../../utils/camera/glidePath';
 import { selectGlideTuning } from '../../../state/settings/selectors';
 import { lerp } from '../../../utils/math/lerp';
@@ -308,12 +308,20 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
       pose: (s, _cam, elapsed) => {
         const focus = s.selectionRows.focus;
         const clock = state.cameraRuntime.clock;
-        // Defensive: pose only runs for the winner, so isActive already proved a
-        // body focus present in the snapshot this same frame — but a null-guard
-        // keeps the arm total, falling back to the resting pose. Resolved through
-        // the shared `liveBodyPosition` site (same call `isActive` uses).
-        const livePos = liveBodyPosition(focus, state.cameraRuntime.lastRenderedSimDays.current);
-        if (focus === null || focus.type !== 'body' || livePos === null) return s.camera.base;
+        // The pivot follow holds: the live body plus the world-frame strafe the
+        // user panned away from it (zeroed on a fresh focus). Read through the
+        // SAME `focusedBodyPivot` the frame-loop pin uses; follow opts out of the
+        // pin only so it can interpolate the pivot, not to author a different one.
+        //
+        // Defensive null-guard: pose only runs for the winner, so isActive already
+        // proved a body focus present in the snapshot this same frame — but the
+        // guard keeps the arm total, falling back to the resting pose.
+        const pivot = focusedBodyPivot(
+          focus,
+          state.cameraRuntime.lastRenderedSimDays.current,
+          clock.followPanOffset,
+        );
+        if (focus === null || focus.type !== 'body' || pivot === null) return s.camera.base;
 
         // Capture the `from` pose ONCE per activation. `followElapsed` nulls it
         // on the edge; the first produce after fills it from the LIVE rendered
@@ -332,12 +340,6 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
         const from = clock.followFrom;
         const base = s.camera.base;
         const fovYRad = state.cameraRuntime.projection.fovYRad;
-
-        // The pivot follow holds: the live body plus the world-frame strafe the
-        // user panned away from it (zeroed on a fresh focus). The pivot-pin used
-        // to add this; opting out of the pin makes it this driver's job.
-        const pan = clock.followPanOffset;
-        const pivot: Vec3 = [livePos[0] + pan[0], livePos[1] + pan[1], livePos[2] + pan[2]];
 
         // Resolve the distance target for this frame (the two-source un-braid).
         if (clock.followDistanceTarget === null) {

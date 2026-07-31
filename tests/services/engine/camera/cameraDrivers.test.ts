@@ -20,6 +20,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { easeOutCubic } from '../../../../src/utils/math/easeOutCubic';
+import { relErr } from '../../../support/relErr';
 
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
@@ -571,9 +572,16 @@ describe('buildCameraDrivers — followBody', () => {
     // `durationSec` would land in [0.3, 2] and make every approach instant.
     expect(approachMs).toBeGreaterThanOrEqual(300);
 
-    // At (and past) saturation the distance is the framing distance.
-    expect(follow.pose(s, CAM_STUB, approachMs).distance).toBeCloseTo(framingDistance, 12);
-    expect(follow.pose(s, CAM_STUB, SATURATED_MS).distance).toBeCloseTo(framingDistance, 12);
+    // At (and past) saturation the distance is the framing distance. RELATIVE:
+    // Earth's framing distance is ~9e-16 Mpc, so `toBeCloseTo(…, 12)`'s absolute
+    // 5e-13 tolerance is 500× the asserted value — it passes for 0 and for a
+    // 100× error alike.
+    expect(relErr(follow.pose(s, CAM_STUB, approachMs).distance, framingDistance)).toBeLessThan(
+      1e-9,
+    );
+    expect(relErr(follow.pose(s, CAM_STUB, SATURATED_MS).distance, framingDistance)).toBeLessThan(
+      1e-9,
+    );
 
     // Monotone convergence: sampling forward in time moves strictly toward the
     // framing distance (Earth's framing distance is tiny, so distance decreases).

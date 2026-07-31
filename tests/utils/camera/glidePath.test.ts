@@ -1,14 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { glidePath } from '../../../src/utils/camera/glidePath';
 import { GLIDE_MIN_SEC, GLIDE_MAX_SEC } from '../../../src/utils/camera/glideCalibration';
+import { relErr } from '../../support/relErr';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 const FOV_Y = (50 * Math.PI) / 180;
-
-/** Absolute when the target is 0, relative otherwise — mirrors zoomPanGeodesic.test.ts. */
-function relErr(got: number, want: number): number {
-  return want === 0 ? Math.abs(got) : Math.abs(got - want) / Math.abs(want);
-}
 
 describe('glidePath', () => {
   it('at(0) and at(1) reproduce from and to', () => {

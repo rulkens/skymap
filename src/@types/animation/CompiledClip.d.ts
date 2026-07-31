@@ -251,9 +251,11 @@ export type CompiledClip = {
   /** Time-ordered (ascending `atSec`) list of scene cues to fire. */
   readonly cues: SceneCue[];
 
-  /** Composite writers (`flyPath`, `glide`), each over its own window. The
-   *  evaluator lets an active track supersede the base layer for its declared
-   *  `channels`; `validateCompositeExclusivity` forbids a base writer
-   *  overlapping one on a channel it declares. */
+  /** Composite writers (`flyPath`, `glide`), each over its own window, ordered
+   *  by `startSec` ASCENDING — the evaluator applies them in array order so the
+   *  most recently started wins a shared channel, and relies on this rather than
+   *  re-sorting per frame. The evaluator lets an active track supersede the base
+   *  layer for its declared `channels`; `validateCompositeExclusivity` forbids a
+   *  base writer overlapping one on a channel it declares. */
   readonly compositeTracks: CompositeTrack[];
 };

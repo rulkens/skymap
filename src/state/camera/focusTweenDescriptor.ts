@@ -22,11 +22,10 @@
  *
  * Every arm preserves the user's orientation — `yaw`/`pitch` carry over from the
  * live `from` pose, only `target` and `distance` change — and every arm takes its
- * duration from the glide's arc length and the live-tuned `ease` (default
- * `linear`: a focus glide's claim is constant velocity, and an ease-out spends
- * its last decade of scale in its last few frames — spec §2.4). The `to` target
- * is always copied into a fresh array so the descriptor never aliases the row's
- * `worldPos` (or the shared `MILKY_WAY_CENTER_WORLD` constant).
+ * duration from the glide's arc length and its arrival curve from the live-tuned
+ * `ease` (`glideCalibration.ts` owns the default). The `to` target is always
+ * copied into a fresh array so the descriptor never aliases the row's `worldPos`
+ * (or the shared `MILKY_WAY_CENTER_WORLD` constant).
  */
 
 import { focusFraming } from '../../services/engine/camera/focusFraming';

@@ -4,8 +4,8 @@
  * contract live in `glidePath`; this adds the clip's timing.
  *
  * `ease` reparametrises the arc WITHOUT deforming the path, so an overshoot
- * curve walks the geodesic past its endpoint — the camera flies through the
- * target and back. Nothing throws; that is why `glide`'s default is `'linear'`.
+ * curve (`easeInOutBack`, `*Elastic`) walks the geodesic past its endpoint —
+ * the camera flies through the target and back, and nothing throws.
  * Spec §2.4: docs/superpowers/specs/2026-07-31-perceptually-uniform-focus-moves.md
  */
 
@@ -15,6 +15,7 @@ import type { CompositeTrack } from '../../../@types/animation/CompiledClip';
 import type { Ease } from '../../../@types/animation/Ease';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { glidePath } from '../../../utils/camera/glidePath';
+import { DEFAULT_GLIDE_TUNING } from '../../../utils/camera/glideCalibration';
 import { EASE } from './ease';
 
 /** yaw and pitch are deliberately absent — angles are scale-free, so they stay
@@ -28,7 +29,8 @@ type BuildParams = {
   /** Omitted ⇒ the arc-length-derived duration. */
   readonly over?: number;
   readonly rho?: number;
-  readonly ease: Ease;
+  /** Omitted ⇒ `GLIDE_EASE_DEFAULT`, the one home for the arrival curve. */
+  readonly ease?: Ease;
   readonly fovYRad: number;
 };
 
@@ -37,7 +39,7 @@ export function buildGlideTrack(params: BuildParams): CompositeTrack {
 
   const path = glidePath({ target: start.target, distance: start.distance }, to, fovYRad, { rho });
   const durationSec = over ?? path.durationSec;
-  const easeFn = EASE[ease];
+  const easeFn = EASE[ease ?? DEFAULT_GLIDE_TUNING.ease];
 
   return {
     startSec,

@@ -30,7 +30,13 @@ import {
   atFocus,
 } from '../../../../src/services/engine/animation/effectHelpers';
 import { focusId } from '../../../../src/utils/animation/focusId';
+import { tweenToClip } from '../../../../src/services/engine/camera/tweenToClip';
+import { DEFAULT_FOV_Y_RAD } from '../../../../src/services/engine/camera/cameraFraming';
+import { glidePath } from '../../../../src/utils/camera/glidePath';
+import { DEFAULT_GLIDE_TUNING } from '../../../../src/utils/camera/glideCalibration';
+import { relErr } from '../../../support/relErr';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 // ---------------------------------------------------------------------------
 // Test 1 — seq accumulates windows
@@ -366,6 +372,66 @@ describe('compileClip glide', () => {
     expect(track.endSec).toBeGreaterThan(0);
     expect(compiled.baseTracks['yaw'][0]!.startSec).toBe(track.endSec);
     expect(compiled.durationSec).toBe(track.endSec + 1);
+  });
+
+  it('an authored glide with no ease arrives on the SAME curve as a focus tween', () => {
+    // The divergence this closes: `glide()` substituted `'linear'` while a focus
+    // tween carried `DEFAULT_GLIDE_TUNING.ease`, so the two producers of one
+    // motion walked the same geodesic on different arrival curves.
+    const to = { target: [30, 40, 0] as Vec3, distance: 2 };
+    const durationSec = glidePath(
+      GLIDE_START,
+      to,
+      DEFAULT_FOV_Y_RAD,
+      DEFAULT_GLIDE_TUNING,
+    ).durationSec;
+    const glideOpts = { over: durationSec, rho: DEFAULT_GLIDE_TUNING.rho };
+
+    const focusTween = compileClip(
+      tweenToClip({
+        from: GLIDE_START,
+        to: { ...to, yaw: GLIDE_START.yaw, pitch: GLIDE_START.pitch },
+        durationMs: durationSec * 1000,
+        easing: DEFAULT_GLIDE_TUNING.ease,
+        rho: DEFAULT_GLIDE_TUNING.rho,
+      }),
+    ).compositeTracks[0]!;
+
+    const authored = compileClip({
+      start: GLIDE_START,
+      timeline: [glide(to, glideOpts)],
+    }).compositeTracks[0]!;
+
+    // Mid-flight is where an arrival curve shows: easeOutQuint(0.5) = 0.969.
+    const mid = durationSec / 2;
+    expect(authored.sample(mid).distance).toBe(focusTween.sample(mid).distance);
+    expect(authored.sample(mid).target).toEqual(focusTween.sample(mid).target);
+
+    // …and it is genuinely eased, so a re-substituted `'linear'` fails here
+    // rather than passing as "both linear".
+    const linear = compileClip({
+      start: GLIDE_START,
+      timeline: [glide(to, { ...glideOpts, ease: 'linear' })],
+    }).compositeTracks[0]!;
+    expect(relErr(authored.sample(mid).distance!, linear.sample(mid).distance!)).toBeGreaterThan(
+      0.1,
+    );
+  });
+
+  it('compositeTracks come out ascending by startSec, not in emission order', () => {
+    // A leading `fork` walks its child FIRST but parks it late, so the walk emits
+    // t=5 before t=0. The evaluator applies tracks in array order to decide which
+    // wins a shared channel, so the ordering has to be established here — it used
+    // to re-sort a copy on every frame it drew.
+    const compiled = compileClip({
+      start: GLIDE_START,
+      timeline: [
+        fork(seq([wait(5), glide({ target: [1, 2, 3], distance: 5 }, { over: 2 })])),
+        glide({ target: [10, 0, 0], distance: 50 }, { over: 2 }),
+      ],
+    });
+
+    expect(compiled.compositeTracks.map((t) => t.startSec)).toEqual([0, 5]);
   });
 
   it('a base distance writer overlapping a glide still throws', () => {
