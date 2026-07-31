@@ -57,6 +57,11 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **`buildAliasIndex` is a non-hook in `src/hooks/`** `ready` — pure helper with one importer; `npm run move-files` it to `src/utils/` (test mirror follows).
 - [ ] **`glade-points` throws "Maximum update depth exceeded"** `needs-repro` — React update loop seen once; the 500 ms heartbeat is the suspect but nothing on that branch touches the loading path. → [details](backlog/2026-07-30-glade-points-update-depth-exceeded.md)
 
+- [ ] **`GlideTuning` is shredded into per-knob params** `ready` — one record becomes nine homes for ρ; the DebugPanel V/min/max sliders already silently miss clip-authored glides. → [details](backlog/2026-07-31-glide-tuning-record-is-shredded.md)
+- [ ] **`CompositeTrack.channels` restates `sample`'s key set** `ready` — over-declaring a channel silently freezes it at the clip's opening value, and nothing guards that direction. → [details](backlog/2026-07-31-composite-track-channels-vs-sample-keys.md)
+- [ ] **Four follow-clock fields share one lifecycle in prose only** `ready` — forces an unreachable `?? 0` that reads as a live branch; fold into one nullable record. → [details](backlog/2026-07-31-follow-clock-fields-share-one-lifecycle.md)
+- [ ] **`fovYRad` threaded for a constant, and keyed into the compile cache** `ready` — the key can only miss, and it would make a future live-FOV recompile fail silently mid-glide. → [details](backlog/2026-07-31-fov-threading-and-its-cache-key.md)
+
 ## Rendering
 
 - [ ] **`CaptionKind` shadows the label-bearing registry** `deferred` — the union is still hand-typed, but it was never 1:1 with `bearsLabel`, so deriving it needs a new registry flag rather than a filter. → [details](backlog/2026-07-29-caption-kind-shadow-registry.md)
