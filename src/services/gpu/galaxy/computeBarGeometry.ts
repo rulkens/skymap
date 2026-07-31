@@ -17,6 +17,10 @@
  * for the same reason (see that module's header) so a barred galaxy's later
  * main-stream draws — the irregular clump / lenticular cloud centres — land
  * in the position the spike's RNG sequence would put them.
+ *
+ * A preset that pins `barAngleDeg` still CONSUMES that draw and throws it
+ * away, for the same reason: skipping it would shift every later main-stream
+ * draw and silently regenerate every other preset's particular stars.
  */
 import { barLengthOf } from './barLengthOf';
 import type { BarGeometry } from '../../../@types/galaxy/BarGeometry';
@@ -28,8 +32,10 @@ export function computeBarGeometry(
   outerRadius: number,
   asymmetry: number,
   barStrength: number | undefined,
+  barAngleDeg?: number,
 ): BarGeometry {
   const barLength = barLengthOf(category, outerRadius, barStrength);
-  const barAngle = (rand() - 0.5) * 0.6 * asymmetry; // small random tilt
+  const drawnAngle = (rand() - 0.5) * 0.6 * asymmetry; // small random tilt
+  const barAngle = barAngleDeg == null ? drawnAngle : (barAngleDeg * Math.PI) / 180;
   return { barLength, cosBar: Math.cos(barAngle), sinBar: Math.sin(barAngle) };
 }

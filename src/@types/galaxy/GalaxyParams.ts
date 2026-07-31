@@ -14,6 +14,7 @@
  * | --- | --- | --- |
  * | starCount | 400000, floored, min 20000 | model.js:89 |
  * | radius / bulgeSize / diskThickness | 1 | model.js:86-88 |
+ * | diskScaleLenFrac | unset = 1/3.2 of `outerRadius` | not a spike knob |
  * | bulgeFalloff / irregularity | 0.5 | model.js:192 / 179 |
  * | armCount | 2 | model.js:288 |
  * | armWinding | 0.5 | model.js:289 |
@@ -25,6 +26,7 @@
  * | armClump | 0.5 | model.js:302 |
  * | armWave | 0 | model.js:294 |
  * | barStrength | 1 | model.js:228 |
+ * | barAngleDeg | unset = drawn from the main stream | model.js:229 |
  * | youngStars | 0.5 | model.js:167 |
  * | hii | 1 | model.js:303 |
  * | metallicity | 0.5 | model.js:131 |
@@ -54,6 +56,12 @@ export type GalaxyParams = {
   readonly bulgeSize?: number;
   readonly bulgeFalloff?: number;
   readonly diskThickness?: number;
+  /**
+   * Disc scale length as a FRACTION of `outerRadius`. Absent means 1/3.2, the
+   * ratio every galaxy type shares (`packGenerationUniforms`); set, it retunes
+   * one galaxy's radial light profile without moving that shared constant.
+   */
+  readonly diskScaleLenFrac?: number;
   readonly irregularity?: number;
   readonly armCount?: number;
   readonly armWinding?: number;
@@ -65,6 +73,13 @@ export type GalaxyParams = {
   readonly armClump?: number;
   readonly armWave?: number;
   readonly barStrength?: number;
+  /**
+   * Bar position angle in DEGREES about the disc pole. Absent (the spike's
+   * behaviour, and every preset that says nothing) means the angle is a small
+   * random tilt off `irregularity`; set, it pins the bar and the RNG draw is
+   * consumed and discarded so no other generated star moves.
+   */
+  readonly barAngleDeg?: number;
   readonly youngStars?: number;
   readonly metallicity?: number;
   readonly hii?: number;

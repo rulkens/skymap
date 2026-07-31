@@ -92,7 +92,9 @@ export function packGenerationUniforms(
 
   // --- Scale constants, per the spike's fixed geometry ratios -------------
   const outerRadius = outerRadiusOf(params);
-  const diskScaleLen = outerRadius / 3.2;
+  // 1/3.2 is the ratio every galaxy type shares; a preset that has a measured
+  // radial light profile to match overrides it via `diskScaleLenFrac`.
+  const diskScaleLen = outerRadius * (params.diskScaleLenFrac ?? 1 / 3.2);
   const bulgeRadius = outerRadius * 0.34 * (params.bulgeSize || 1);
   const diskHeight = 0.055 * outerRadius * (params.diskThickness || 1);
   const grain = grainScale(budget.totalStars);
@@ -113,7 +115,14 @@ export function packGenerationUniforms(
 
   // --- Main stream: bar angle unconditionally, then category-gated centres
   const mainStream = mulberry32((params.seed ?? 0) | 0 || 1);
-  const bar = computeBarGeometry(mainStream, category, outerRadius, asymmetry, params.barStrength);
+  const bar = computeBarGeometry(
+    mainStream,
+    category,
+    outerRadius,
+    asymmetry,
+    params.barStrength,
+    params.barAngleDeg,
+  );
 
   const NUM_IRR_CLUMPS = GENERATION_UBO.arrays.clumpCenters.countVec4;
   const clumpCenters: number[][] = Array.from({ length: NUM_IRR_CLUMPS }, () => [0, 0, 0, 0]);
