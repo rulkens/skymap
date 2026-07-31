@@ -71,7 +71,7 @@ import type { Effect } from '../../../@types/animation/Effect';
 import type { Channel } from '../../../@types/animation/Channel';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { Mat3 } from '../../../@types/math/Mat3';
-import { CHANNEL_SPACE } from './channelSpace';
+import { CHANNEL_SPACE, ALL_CHANNELS } from './channelSpace';
 import { validateSingleWriter } from './validateSingleWriter';
 import { buildPathTrack } from './buildPathTrack';
 
@@ -81,9 +81,6 @@ import { buildPathTrack } from './buildPathTrack';
 // ---------------------------------------------------------------------------
 
 const ZERO_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 0 };
-
-// All four channels, used to build the initial baseTracks record.
-const ALL_CHANNELS: Channel[] = ['distance', 'yaw', 'pitch', 'target'];
 
 // ---------------------------------------------------------------------------
 // Mutable accumulator — threaded through the recursive walk.
@@ -376,14 +373,14 @@ function validateCompositeExclusivity(
   baseTracks: Record<Channel, BaseSegment[]>,
   compositeTracks: CompositeTrack[],
 ): void {
-  for (const path of compositeTracks) {
-    for (const ch of ALL_CHANNELS) {
+  for (const track of compositeTracks) {
+    for (const ch of track.channels) {
       for (const seg of baseTracks[ch]) {
-        const overlaps = seg.startSec < path.endSec && path.startSec < seg.endSec;
+        const overlaps = seg.startSec < track.endSec && track.startSec < seg.endSec;
         if (overlaps) {
           throw new Error(
-            `flyPath window [${path.startSec}, ${path.endSec}) overlaps a base '${ch}' writer ` +
-              `[${seg.startSec}, ${seg.endSec}). A flyPath owns all camera channels for its window — ` +
+            `composite window [${track.startSec}, ${track.endSec}) declaring [${track.channels.join(', ')}] ` +
+              `overlaps a base '${ch}' writer [${seg.startSec}, ${seg.endSec}) — ` +
               `move the conflicting camera action outside it.`,
           );
         }

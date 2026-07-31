@@ -185,8 +185,13 @@ export type PathSample = {
 export type CompositeTrack = {
   readonly startSec: number;
   readonly endSec: number;
-  /** `localSec` is seconds since the track's own `startSec` (0 → `endSec−startSec`). */
-  readonly sample: (localSec: number) => PathSample;
+  /** The channels this writer supersedes the base layer for — a `flyPath`
+   *  declares all four, a `glide` only `target` + `distance`; the evaluator
+   *  merges per channel against this set (`evaluateClip.ts`). */
+  readonly channels: readonly Channel[];
+  /** `localSec` is seconds since the track's own `startSec` (0 → `endSec−startSec`).
+   *  A declared channel absent from the returned partial falls back to the base layer. */
+  readonly sample: (localSec: number) => Partial<CameraPose>;
 };
 
 // ---------------------------------------------------------------------------
@@ -246,8 +251,9 @@ export type CompiledClip = {
   /** Time-ordered (ascending `atSec`) list of scene cues to fire. */
   readonly cues: SceneCue[];
 
-  /** `flyPath` flythroughs, each a composite writer over its own window. The
-   *  evaluator lets an active path supersede the base layer for the four camera
-   *  channels; `validateSingleWriter` forbids a base writer overlapping one. */
+  /** Composite writers (`flyPath`, `glide`), each over its own window. The
+   *  evaluator lets an active track supersede the base layer for its declared
+   *  `channels`; `validateCompositeExclusivity` forbids a base writer
+   *  overlapping one on a channel it declares. */
   readonly compositeTracks: CompositeTrack[];
 };

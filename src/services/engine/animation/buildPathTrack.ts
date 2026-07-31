@@ -1,5 +1,5 @@
 /**
- * buildPathTrack — compile a `flyPath`'s waypoints into an evaluable `PathTrack`.
+ * buildPathTrack — compile a `flyPath`'s waypoints into an evaluable `CompositeTrack`.
  *
  * This is where the flythrough cinematography lives. It runs ONCE at clip
  * compile time and returns a `sample(localSec)` closure the per-frame evaluator
@@ -61,7 +61,7 @@
  */
 
 import type { CameraPose } from '../../../@types/camera/CameraPose';
-import type { CompositeTrack, PathSample } from '../../../@types/animation/CompiledClip';
+import type { PathSample } from '../../../@types/animation/CompiledClip';
 import type { Ease } from '../../../@types/animation/Ease';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { Mat3 } from '../../../@types/math/Mat3';
@@ -78,6 +78,7 @@ import { frameUp } from '../../../utils/camera/frameUp';
 import { lerp } from '../../../utils/math/lerp';
 import { trapezoidEase } from '../../../utils/math/trapezoidEase';
 import { buildDwellWarp } from './buildDwellWarp';
+import { ALL_CHANNELS } from './channelSpace';
 import {
   DEFAULT_ALIGN_SEC,
   DEFAULT_TURN_DELAY,
@@ -216,7 +217,12 @@ function passByDirVec(
   }
 }
 
-export function buildPathTrack(params: BuildParams): CompositeTrack {
+// No `: CompositeTrack` return annotation — that would widen `sample`'s return
+// type to `Partial<CameraPose>` and break direct callers (buildPathTrack.test.ts)
+// that rely on the always-four-channel `PathSample`. The inferred type is still
+// structurally a `CompositeTrack` (PathSample ⊆ Partial<CameraPose>), which is
+// all `compileClip` needs when it pushes the result onto `compositeTracks`.
+export function buildPathTrack(params: BuildParams) {
   const { start, startSec, over, ease, waypoints, align, rampSec, linger, frameBasis } = params;
   // Normalize the basis + its causal-only knobs. centripetal carries neither, so
   // turnDelay is irrelevant and lookAhead is forced to 0 (no lead); the causal
@@ -626,5 +632,5 @@ export function buildPathTrack(params: BuildParams): CompositeTrack {
     };
   };
 
-  return { startSec, endSec: startSec + totalSec, sample };
+  return { startSec, endSec: startSec + totalSec, channels: ALL_CHANNELS, sample };
 }

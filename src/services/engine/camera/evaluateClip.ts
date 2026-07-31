@@ -414,23 +414,42 @@ function evaluateBaseVec3(segments: BaseSegment[], startVal: Vec3, t: number): V
 }
 
 // ---------------------------------------------------------------------------
-// Path layer — a flyPath supersedes the base layer for all four channels.
+// Composite layer — an active composite track supersedes the base layer for
+// each channel it declares (see `CompositeTrack.channels`); channels it does
+// not declare fall through to the base layer.
 // ---------------------------------------------------------------------------
 
 /**
- * activePathAt — the path that governs the base layer at time `t`, or null.
+ * compositePoseAt — the channels the active composite tracks govern at `t`,
+ * merged into one partial pose. Channels no track declares are absent, and the
+ * caller falls through to the base layer for those.
  *
- * A path governs from its `startSec` onward (not just within its window): once a
- * flythrough has started, it holds its final pose after `endSec` so the camera
- * does not snap back to the start pose during a trailing `hold`. When clips
- * chain multiple paths, the most recently started one wins.
+ * A track governs from its `startSec` onward (not just within its window):
+ * once it has started it holds its final pose after `endSec`, so the camera
+ * does not snap back to the base layer during a trailing `hold`. Tracks are
+ * applied in ascending `startSec`, so where two overlap on a channel the most
+ * recently started one wins.
+ *
+ * Sampling per track rather than per channel is the point: `sample` does the
+ * spline work, a `flyPath` declares all four channels, and this runs per frame.
  */
-function activePathAt(paths: CompositeTrack[], t: number): CompositeTrack | null {
-  let best: CompositeTrack | null = null;
-  for (const p of paths) {
-    if (p.startSec <= t && (best === null || p.startSec > best.startSec)) best = p;
+function compositePoseAt(tracks: CompositeTrack[], t: number): Partial<CameraPose> {
+  const merged: Partial<CameraPose> = {};
+  for (const track of [...tracks].sort((a, b) => a.startSec - b.startSec)) {
+    if (track.startSec > t) continue;
+    const localSec = Math.min(t - track.startSec, track.endSec - track.startSec);
+    const pose = track.sample(localSec);
+    // Copy only the DECLARED channels, never whatever keys `sample` happens to
+    // return. `channels` is what `validateCompositeExclusivity` checked against,
+    // so a track returning an extra key would otherwise silently override a base
+    // writer the validator had already allowed. `Channel` is exactly `keyof
+    // CameraPose`, which the index assignment needs spelling out.
+    for (const ch of track.channels) {
+      const value = pose[ch];
+      if (value !== undefined) (merged as Record<Channel, unknown>)[ch] = value;
+    }
   }
-  return best;
+  return merged;
 }
 
 // ---------------------------------------------------------------------------
@@ -459,27 +478,18 @@ export function evaluateClip(data: ClipData, elapsedSec: number, frameBasis?: Ma
   const { start, baseTracks } = compiled;
   const t = elapsedSec;
 
-  // --- Base layer (a flyPath supersedes it for all four channels) ---
-  const path = activePathAt(compiled.compositeTracks, t);
-  let baseDistance: number;
-  let baseYaw: number;
-  let basePitch: number;
-  let baseTarget: Vec3;
-  if (path !== null) {
-    // Clamp into the path's own window: before it starts we never get here
-    // (activePathAt requires startSec ≤ t); after it ends, hold the final pose.
-    const localSec = Math.min(Math.max(t - path.startSec, 0), path.endSec - path.startSec);
-    const pose = path.sample(localSec);
-    baseDistance = pose.distance;
-    baseYaw = pose.yaw;
-    basePitch = pose.pitch;
-    baseTarget = pose.target;
-  } else {
-    baseDistance = evaluateBaseScalar(baseTracks['distance'], start.distance, 'distance', t);
-    baseYaw = evaluateBaseScalar(baseTracks['yaw'], start.yaw, 'yaw', t);
-    basePitch = evaluateBaseScalar(baseTracks['pitch'], start.pitch, 'pitch', t);
-    baseTarget = evaluateBaseVec3(baseTracks['target'], start.target, t);
-  }
+  // --- Base layer; an active composite track supersedes it per declared
+  // channel. The empty case is every ordinary clip and every focus tween, so
+  // it stays allocation-free.
+  const composite: Partial<CameraPose> =
+    compiled.compositeTracks.length === 0 ? {} : compositePoseAt(compiled.compositeTracks, t);
+
+  const baseDistance =
+    composite.distance ?? evaluateBaseScalar(baseTracks['distance'], start.distance, 'distance', t);
+  const baseYaw = composite.yaw ?? evaluateBaseScalar(baseTracks['yaw'], start.yaw, 'yaw', t);
+  const basePitch =
+    composite.pitch ?? evaluateBaseScalar(baseTracks['pitch'], start.pitch, 'pitch', t);
+  const baseTarget = composite.target ?? evaluateBaseVec3(baseTracks['target'], start.target, t);
 
   // --- Velocity layer (displacement, additive) ---
   const velDist = velDisplacement(compiled, 'distance', t);

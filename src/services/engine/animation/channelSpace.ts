@@ -55,6 +55,11 @@ export const CHANNEL_SPACE: Record<Channel, Space> = {
   target: 'lin',
 };
 
+/** Every `Channel`, in the canonical order. `buildPathTrack` needs this to
+ *  declare a `flyPath`'s `CompositeTrack.channels` and can't import it from
+ *  `compileClip` (which imports `buildPathTrack`) without a cycle. */
+export const ALL_CHANNELS: readonly Channel[] = ['distance', 'yaw', 'pitch', 'target'];
+
 /**
  * lerpInSpace — scalar interpolation in the given value space.
  *

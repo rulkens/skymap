@@ -327,13 +327,13 @@ describe('compileClip flyPath', () => {
   });
 
   it('throws when a base writer overlaps the flyPath window (composite exclusivity)', () => {
-    // A flyPath owns all camera channels for [0,4); a concurrent dollyTo on
+    // A flyPath declares all four channels for [0,4); a concurrent dollyTo on
     // `distance` in the same window is a clash, caught at compile time.
     expect(() =>
       compileClip({
         start: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 },
         timeline: [all([flyPath([atPoint([10, 0, 0], 10)], { over: 4 }), dollyTo(50, 4)])],
       }),
-    ).toThrow(/flyPath window/);
+    ).toThrow(/composite window/);
   });
 });
