@@ -44,12 +44,17 @@
  * — so a drag orbits around the moving body, and the autoRotate button spins
  * around it, without the follow driver having to win the whole pose. `followBody`
  * therefore sits LOW (10, below autoRotate): its only remaining job is the
- * initial approach ease + the idle steady hold, which it authors when nothing
- * higher is active. A held drag or an active spin takes the orbit terms; the pin
- * keeps the body centred throughout. The clip@95 and tween@60 rows share ONE
- * evaluator: both produce their pose through `evaluateClip` (the tween via
- * `tweenToClip`), differing only in priority and which `camera.*` descriptor
- * they read; neither pins (they keyframe a full path including the target).
+ * initial approach + the idle steady hold, which it authors when nothing higher
+ * is active. A held drag or an active spin takes the orbit terms; the pin keeps
+ * the body centred throughout.
+ *
+ * Three rows are NOT pinned — clip@95, tween@60 and followBody@10 — for one
+ * shared reason: each keyframes a full path INCLUDING the target, so an absolute
+ * pin would discard it. clip and tween produce theirs through `evaluateClip` (the
+ * tween via `tweenToClip`), differing only in priority and which `camera.*`
+ * descriptor they read. followBody produces its approach through `glidePath`, the
+ * same zoom/pan geodesic, off clock state rather than a store descriptor because
+ * its endpoint is a body the sim clock keeps moving.
  */
 
 import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
@@ -58,6 +63,7 @@ import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RootState } from '../../../store/types';
 import type { CameraClock } from '../../../@types/engine/camera/CameraClock';
+import type { Vec3 } from '../../../@types/math/Vec3';
 import { poseOf } from './poseOf';
 import { tweenToClip } from './tweenToClip';
 import { spinAutoRotate } from './spinAutoRotate';
@@ -66,9 +72,9 @@ import { evaluateClip } from './evaluateClip';
 import { bodyFocusDistance } from './bodyFocusDistance';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { FOCUS_TWEEN_MS } from './focusTweenDuration';
 import { liveBodyPosition } from './liveBodyPosition';
-import { easeOutCubic } from '../../../utils/math/easeOutCubic';
+import { glidePath } from '../../../utils/camera/glidePath';
+import { selectGlideTuning } from '../../../state/settings/selectors';
 import { lerp } from '../../../utils/math/lerp';
 
 /**
@@ -182,18 +188,20 @@ export function runCameraDrivers(
  *     `s.selectionRows.focus` is a body present in this frame's body snapshot
  *     (resolved via the shared `liveBodyPosition` site). Sits BELOW autoRotate
  *     so it only wins when the scene is otherwise idle: its remaining job is the
- *     initial approach ease + the steady hold. On activation it eases the distance
- *     from the captured on-screen pose into the `bodyFocusDistance` framing
- *     distance over `FOCUS_TWEEN_MS`. Once a drag has committed a zoom into `base`
- *     (or a wheel edited `clock.followDistanceTarget` directly), follow eases
- *     toward that user distance instead (the two distance sources are un-braided
- *     via `clock.followDistanceTarget` — see CameraClock), so zoom-while-following
- *     is preserved rather than the framing distance being re-asserted each frame.
+ *     initial approach + the steady hold. On activation it glides `target` and
+ *     `distance` together, from the captured on-screen pose to the live body at
+ *     its `bodyFocusDistance` framing distance, over a duration derived from that
+ *     geodesic's arc length and parked on `clock.followApproachMs`. Once a drag
+ *     has committed a zoom into `base` (or a wheel edited
+ *     `clock.followDistanceTarget` directly), follow holds that user distance
+ *     instead (the two distance sources are un-braided via
+ *     `clock.followDistanceTarget` — see CameraClock), so zoom-while-following is
+ *     preserved rather than the framing distance being re-asserted each frame.
  *     `commitsOnEdge: true` bakes the last follow pose into `base` on
  *     deactivation, so lower drivers resume from where the camera is (no snap-
  *     back). The moving-target problem that once forced follow to own the whole
- *     pose is now solved by the shared pivot-pin, so follow no longer needs to
- *     outrank autoRotate / the drag.
+ *     pose is now solved by the shared pivot-pin for the OTHER orbit drivers, so
+ *     follow no longer needs to outrank autoRotate / the drag.
  *
  *   - `tween` (60) — an in-flight focus tween. Active while `s.camera.tween`
  *     is non-null. Reads `s.camera.tween` + `elapsedMs` from the clock and the
@@ -258,11 +266,12 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
       // follow pose is baked into `base` so lower drivers resume from where the
       // camera actually is rather than snapping back to the pre-focus base.
       commitsOnEdge: true,
-      // followBody is an orbit driver too: the pivot-pin re-centres its steady
-      // hold on the live body (its own `pose` already targets the body, so this
-      // is idempotent — but it keeps the pin's rule uniform across every orbit
-      // driver rather than special-casing followBody out of it).
-      pivotsOnFocusedBody: true,
+      // NO `pivotsOnFocusedBody` — deliberately, and for the same reason clip and
+      // tween opt out: follow keyframes a full path INCLUDING the target. The pin
+      // SETS `target = body + panOffset` absolutely, which would overwrite the
+      // approach's interpolated target every frame and snap the pivot. The strafe
+      // the pin used to add is added by `pose` instead (see below).
+
       // Active when the focus resolves to a scene body present in THIS frame's
       // body snapshot (resolved through the shared `liveBodyPosition` site).
       // The snapshot is the memoized `deriveBodyStates` map at the instant
@@ -282,17 +291,19 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
         return liveBodyPosition(focus, state.cameraRuntime.lastRenderedSimDays.current) !== null;
       },
       // The follow pose. `elapsed` is ms since the approach started (from
-      // `followElapsed`, keyed on the focus row reference). The target term is
-      // always the LIVE body position, so the camera tracks the body the sim
-      // clock is moving. yaw/pitch translate-follow (they ease from the captured
-      // on-screen pose toward the committed base, so a post-follow drag is
-      // honoured while an un-dragged follow keeps its heading).
+      // `followElapsed`, keyed on the focus row reference).
+      //
+      // The APPROACH glides `target` and `distance` together along one zoom/pan
+      // geodesic, so perceived velocity stays constant while the camera crosses
+      // ~15 decades of scale; yaw/pitch stay independent scalar lerps beside it
+      // (spec §5.2 — angles are scale-free). The STEADY HOLD past saturation is
+      // the body plus the pan strafe, at the resolved distance target.
       //
       // Distance has TWO sources, un-braided via `clock.followDistanceTarget`
-      // (see CameraClock): an INITIAL APPROACH eases into the framing distance;
-      // once a drag has committed a zoom into `base`, follow eases toward THAT
-      // committed `base.distance` instead, so the user can zoom while following
-      // rather than having the framing distance re-asserted every frame.
+      // (see CameraClock): an INITIAL APPROACH glides into the framing distance;
+      // once a drag has committed a zoom into `base`, follow holds THAT committed
+      // `base.distance` instead, so the user can zoom while following rather than
+      // having the framing distance re-asserted every frame.
       pose: (s, _cam, elapsed) => {
         const focus = s.selectionRows.focus;
         const clock = state.cameraRuntime.clock;
@@ -305,9 +316,9 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
 
         // Capture the `from` pose ONCE per activation. `followElapsed` nulls it
         // on the edge; the first produce after fills it from the LIVE rendered
-        // pose (the previous frame's, not yet overwritten this frame) so the ease
-        // starts where the camera visibly is — switching focus A→B eases from
-        // framing-A, never jumping back to the committed base first.
+        // pose (the previous frame's, not yet overwritten this frame) so the
+        // approach starts where the camera visibly is — switching focus A→B
+        // glides from framing-A, never jumping back to the committed base first.
         if (clock.followFrom === null) {
           const cur = state.cameraRuntime.lastPose.current;
           clock.followFrom = {
@@ -319,6 +330,13 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
         }
         const from = clock.followFrom;
         const base = s.camera.base;
+        const fovYRad = state.cameraRuntime.projection.fovYRad;
+
+        // The pivot follow holds: the live body plus the world-frame strafe the
+        // user panned away from it (zeroed on a fresh focus). The pivot-pin used
+        // to add this; opting out of the pin makes it this driver's job.
+        const pan = clock.followPanOffset;
+        const pivot: Vec3 = [livePos[0] + pan[0], livePos[1] + pan[1], livePos[2] + pan[2]];
 
         // Resolve the distance target for this frame (the two-source un-braid).
         if (clock.followDistanceTarget === null) {
@@ -328,10 +346,15 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
           // object + target array of which only `.distance` is read here. Computed
           // only in this branch, so the per-frame steady path skips the tan().
           const radiusMpc = focus.radiusKm * SCALE_UNITS.KM_TO_MPC;
-          clock.followDistanceTarget = bodyFocusDistance(
-            radiusMpc,
-            state.cameraRuntime.projection.fovYRad,
-          );
+          const framing = bodyFocusDistance(radiusMpc, fovYRad);
+          clock.followDistanceTarget = framing;
+          // Derive the approach duration ONCE, here, from the activation frame's
+          // geodesic — `shouldKeepTicking` gates the render loop on this same
+          // field, so a duration re-derived per frame would drift out from under
+          // the wake window and freeze the approach part-way.
+          clock.followApproachMs =
+            glidePath(from, { target: pivot, distance: framing }, fovYRad, selectGlideTuning(s))
+              .durationSec * 1000;
         } else if (state.cameraRuntime.prevActiveId.current !== 'followBody') {
           // Follow re-won this frame but was not last frame's winner, and the
           // focus ref is unchanged (else followDistanceTarget would be null): a
@@ -339,19 +362,40 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
           // `base`. Re-capture `base.distance` as the STEADY-STATE target so the
           // user's zoom sticks instead of snapping back to the framing distance.
           clock.followDistanceTarget = base.distance;
+          // …and the approach is OVER. The drag already put the camera where the
+          // user wants it; resuming a half-flown geodesic out of the now-stale
+          // `followFrom` would yank it back to the pre-drag path.
+          clock.followApproachMs = 0;
         }
         const distanceTarget = clock.followDistanceTarget;
+        // `?? 0` — no duration seeded means no approach to run, so hold steady.
+        const approachMs = clock.followApproachMs ?? 0;
 
-        const t = easeOutCubic(elapsed / FOCUS_TWEEN_MS);
+        // Saturated, or ended by the drag edge above ⇒ hold the body steady.
+        if (elapsed >= approachMs) {
+          return { target: pivot, yaw: base.yaw, pitch: base.pitch, distance: distanceTarget };
+        }
+
+        // Re-measured EVERY approach frame, from the FIXED capture to the CURRENT
+        // pivot — the body moves under the approach, and a geodesic re-measured
+        // to a moved endpoint is what absorbs that (van Wijk & Nuij recommend
+        // stateless recomputation for exactly this reason). Geodesics are unique,
+        // so a sub-frame endpoint shift perturbs the curve by the same order.
+        // Only the DURATION is frozen, above — moving the ρ slider mid-approach
+        // therefore re-shapes the path but not its length, which is the same
+        // trade the wake window forces.
+        const t = elapsed / approachMs;
+        const glided = glidePath(
+          from,
+          { target: pivot, distance: distanceTarget },
+          fovYRad,
+          selectGlideTuning(s),
+        ).at(t);
         return {
-          // Alias the live snapshot position (a fresh, immutable per-frame array
-          // downstream reads read-only) — the target is the body, always. (The
-          // frame-loop pivot-pin sets the same value; keeping it here means the
-          // driver's pose is correct in isolation too.)
-          target: livePos,
+          target: glided.target,
           yaw: lerp(from.yaw, base.yaw, t),
           pitch: lerp(from.pitch, base.pitch, t),
-          distance: lerp(from.distance, distanceTarget, t),
+          distance: glided.distance,
         };
       },
     },

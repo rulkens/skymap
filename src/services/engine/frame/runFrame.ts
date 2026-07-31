@@ -374,10 +374,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // Body focus is un-braided into two concerns: the focused body owns the PIVOT
   // (target), whichever driver won owns the ORBIT terms (yaw/pitch/distance).
   // Here we apply the body pivot to the winning driver's pose in ONE place, so a
-  // drag orbits around the moving body (no drift), the autoRotate button spins
-  // around it, and the idle follow holds it — without followBody having to win
-  // the whole pose. Only drivers that declare `pivotsOnFocusedBody` are pinned
-  // (clip / tween keyframe a full path including target and opt out). The pin is
+  // drag orbits around the moving body (no drift) and the autoRotate button spins
+  // around it — without followBody having to win the whole pose. Only drivers that
+  // declare `pivotsOnFocusedBody` are pinned (clip / tween / followBody keyframe a
+  // full path including target and opt out; follow adds the strafe itself). The pin is
   // absolute (SETS the target), so baking `renderPose` into `base` on the next
   // commit-on-edge can never double-apply the body translation.
   //

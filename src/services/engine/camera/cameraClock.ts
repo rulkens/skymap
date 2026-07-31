@@ -51,6 +51,7 @@ export function createCameraClock(): CameraClock {
     lastFollowRef: null,
     followFrom: null,
     followDistanceTarget: null,
+    followApproachMs: null,
     followPanOffset: [0, 0, 0],
     lastPanTarget: null,
   };
@@ -174,13 +175,14 @@ export function clipElapsed(
  * change the ref, so the ease is not restarted on drag-release: the camera
  * resumes its saturated follow instead of re-approaching.
  *
- * On the reset edge it also NULLS `followFrom` AND `followDistanceTarget`,
- * signalling the driver's `pose` to re-capture the live on-screen pose as the
- * `from` the approach eases out of, and to re-seed the distance target to the
- * framing distance (the INITIAL-APPROACH source — see `CameraClock`). The capture
- * is split from this timer because only the driver (closing over `EngineState`)
- * can see the live rendered pose (`lastPose`) and the body radius / FOV; this
- * function sees only the store's focus ref.
+ * On the reset edge it also NULLS `followFrom`, `followDistanceTarget` AND
+ * `followApproachMs`, signalling the driver's `pose` to re-capture the live
+ * on-screen pose as the `from` the approach glides out of, to re-seed the distance
+ * target to the framing distance (the INITIAL-APPROACH source — see `CameraClock`),
+ * and to re-derive the approach duration from the fresh geodesic. The capture is
+ * split from this timer because only the driver (closing over `EngineState`) can
+ * see the live rendered pose (`lastPose`) and the body radius / FOV; this function
+ * sees only the store's focus ref.
  *
  * A freshly-selected body returns 0 on the arrival frame and grows on later
  * frames carrying the same ref. A null focus always returns 0.
@@ -193,10 +195,12 @@ export function followElapsed(
   if (focusRow !== clock.lastFollowRef) {
     clock.lastFollowRef = focusRow;
     clock.followStartMs = focusRow === null ? null : nowMs;
-    // Force the driver to re-capture the `from` pose and re-seed the framing
-    // distance target on the next produce (fresh-approach signal).
+    // Force the driver to re-capture the `from` pose, re-seed the framing
+    // distance target, and re-derive the approach duration on the next produce
+    // (fresh-approach signal).
     clock.followFrom = null;
     clock.followDistanceTarget = null;
+    clock.followApproachMs = null;
     // A NEW focus starts centred: zero the strafe offset and drop the drag-delta
     // chain. (Any focus ROW ref change is a new target, incl. re-selecting the
     // same body — same identity-reset semantics the fields above use.)

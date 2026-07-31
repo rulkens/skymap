@@ -8,9 +8,10 @@
  * pins its target to the live body position here, in one place.
  *
  * Applied only for drivers that declare `pivotsOnFocusedBody` (orbitDrag,
- * autoRotate, followBody, resting — the drivers that author an orbit around a
- * target). clip and tween keyframe a full path including the target, so they
- * opt out and keep their own target term.
+ * autoRotate, resting — the drivers that author an orbit around a target). clip,
+ * tween and followBody keyframe a full path including the target, so they opt out
+ * and keep their own target term; followBody's approach interpolates the pivot
+ * itself, and an absolute pin would overwrite it every frame.
  *
  * The pin is IDEMPOTENT and ABSOLUTE — it SETS the target to `bodyPosition +
  * panOffset`, never adds a delta to the existing target — so it can never
@@ -18,9 +19,9 @@
  * baked on an edge is simply overwritten by the next frame's pin, never accumulated.
  *
  * `panOffset` is the world-frame strafe the user has panned away from the body
- * (zero on a fresh focus); resolving `bodyPosition + panOffset` here keeps the
- * pivot a SINGLE target-resolution home — the strafe is stored on the clock and
- * only READ here, never a second per-driver target path.
+ * (zero on a fresh focus); the pivot resolves to `bodyPosition + panOffset`. The
+ * strafe is stored on the clock and only READ — here for the pinned drivers, and
+ * in `followBody`'s own `pose`, which authors the same sum because it opts out.
  *
  * The result target is a fresh per-frame array (read-only downstream), so no
  * defensive copy of the snapshot position is needed.

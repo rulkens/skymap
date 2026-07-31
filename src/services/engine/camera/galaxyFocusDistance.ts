@@ -1,7 +1,7 @@
 /**
  * galaxyFocusDistance — camera framing-distance derivation for galaxy
- * focus tweens.  Companion to `structureFocusDistance.ts`; tween duration
- * lives in `focusTweenDuration.ts`.
+ * focus tweens.  Companion to `structureFocusDistance.ts`; tween duration is
+ * derived from the glide's arc length (`glidePath`).
  *
  * The galaxy's physical diameter drives the framing.  v4 binary format
  * carries per-galaxy diameters, so we derive the distance per-target.

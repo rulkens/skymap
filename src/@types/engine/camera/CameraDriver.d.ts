@@ -28,9 +28,10 @@
  *     followBody 10 > resting 0; the gaps are deliberate headroom so a future driver can
  *     slot between two existing ones without renumbering. The 95 slot is
  *     occupied by the clip driver. `followBody` (10) sits BELOW autoRotate on
- *     purpose: a body focus pins the pivot (via `pivotsOnFocusedBody`), but
- *     autoRotate / a drag can still win the ORBIT terms and spin around the
- *     body — followBody only authors the initial approach ease + idle hold.
+ *     purpose: a body focus pins the pivot for the orbit drivers (via
+ *     `pivotsOnFocusedBody`), so autoRotate / a drag can win the ORBIT terms and
+ *     spin around the body — followBody only authors the initial approach glide
+ *     + idle hold, and authors its own target for both.
  *
  *   - `isActive(s)` — answers two questions with one predicate. Per-driver
  *     it means "do I want to author the camera pose this frame?", which
@@ -73,8 +74,9 @@ export type CameraDriver = {
   // Drivers that author an ORBIT pose (yaw / pitch / distance around a target)
   // set this so the frame loop re-centres their `target` on the focused scene
   // body while one is focused (the pivot-pin, `applyFocusedBodyPivot`). The body
-  // owns the pivot; the driver owns the orbit terms. clip / tween keyframe a full
-  // path (target included) and leave this unset so their target is honoured.
+  // owns the pivot; the driver owns the orbit terms. clip / tween / followBody
+  // keyframe a full path (target included) and leave this unset so their target
+  // is honoured.
   readonly pivotsOnFocusedBody?: boolean;
   isActive(s: RootState): boolean;
   pose(s: RootState, cam: OrbitCamera, elapsedMs: number): CameraPose;

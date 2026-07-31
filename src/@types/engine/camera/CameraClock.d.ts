@@ -76,6 +76,17 @@ export type CameraClock = {
   // to the framing branch. Non-null with an unchanged focus ref means an approach
   // is (or was) in flight, so a not-follow-previous frame is a drag reactivation.
   followDistanceTarget: number | null;
+  // The approach's duration in ms, derived from the arc length of the geodesic
+  // measured on the activation frame (`glidePath().durationSec`). It is stored
+  // rather than recomputed because TWO readers must agree on it: the driver's
+  // arc fraction, and `shouldKeepTicking`'s wake window. A window that does not
+  // match the duration freezes the approach part-way through and resumes it only
+  // on the next input event. Null until the first `pose()` derives it;
+  // `followElapsed` nulls it again on a focus ROW ref change. The driver also
+  // writes 0 on the drag-interrupt edge — 'the approach is over', so follow holds
+  // the pose the drag left instead of resuming a half-flown path from a stale
+  // `followFrom`.
+  followApproachMs: number | null;
   // ── follow-body pan (strafe) offset ────────────────────────────────────────
   // A right-drag strafe while following a body cannot move `cam.target` (the
   // pivot-pin overwrites it with the body position every frame). Instead the

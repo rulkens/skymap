@@ -50,12 +50,13 @@
  *     renderer; slotReady IS the 'field loaded' truth (the slot dispatches
  *     'ready' only after upload commits), selecting exactly the animating set
  *     with no renderer mirror.
- *   - follow approach ease: `followApproachEaseActive` — the followBody driver's
- *     time-based approach ease (it replaced the body-focus tween, which used to
- *     contribute a wake term; the ease had none). True only while followBody is
- *     the winner and the ease is unsaturated; goes false at saturation so steady
- *     follow does not pin the loop. See the helper for why steady-follow-under-
- *     motion is deliberately excluded.
+ *   - follow approach: `followApproachActive` — the followBody driver's
+ *     time-based approach glide (it replaced the body-focus tween, which used to
+ *     contribute a wake term; the glide had none). True only while followBody is
+ *     the winner and the approach is unsaturated, measured against the duration
+ *     the driver derived for THIS move; goes false at saturation so steady follow
+ *     does not pin the loop. See the helper for why steady-follow-under-motion is
+ *     deliberately excluded.
  *   - `anim.earthTilesAnimating`: Earth's surface virtual texture has its
  *     manifest or a tile in flight, or a landed tile still ramping through its
  *     load fade. The manifest leg is the one that matters: it is in flight
@@ -77,22 +78,26 @@ import { selectCameraActive } from '../../../state/camera/selectors';
 import { selectIsManualPlaying } from '../../../state/time/selectors';
 import { isEngineReady } from './engineReady';
 import { slotReady } from '../../loading/slotReady';
-import { FOCUS_TWEEN_MS } from '../camera/focusTweenDuration';
 
 /**
- * The `followBody` driver's approach ease is a TIME-based animation (easeOutCubic
- * over FOCUS_TWEEN_MS since `clock.followStartMs`) with NO camera-slice flag
+ * The `followBody` driver's approach is a TIME-based animation (a glide over
+ * `clock.followApproachMs` since `clock.followStartMs`) with NO camera-slice flag
  * behind it — unlike a tween, which `selectCameraActive` already covers. It
  * replaced the old body-focus tween, but the tween contributed a `currentTween`
- * wake term and the ease contributed none. Without a wake term the loop renders
- * the focus frame, sleeps, the ease saturates WHILE ASLEEP, and the next
- * interaction reveals a finished (snapped) zoom. This term keeps the loop ticking
- * while followBody is the winner AND the ease is still running; it goes FALSE at
- * saturation so a steady follow does not pin 60 fps.
+ * wake term and the approach contributed none. Without a wake term the loop
+ * renders the focus frame, sleeps, the approach saturates WHILE ASLEEP, and the
+ * next interaction reveals a finished (snapped) zoom. This term keeps the loop
+ * ticking while followBody is the winner AND the approach is still running; it
+ * goes FALSE at saturation so a steady follow does not pin 60 fps.
+ *
+ * The window is `clock.followApproachMs`, the duration the DRIVER derived from
+ * this move's geodesic — not a constant either side could restate. Duration is
+ * per-move now, so a window computed here independently would disagree with the
+ * animation and freeze it part-way, resuming only on the next input event.
  *
  * `prevActiveId.current` holds THIS frame's winner (runFrame writes it before the
- * keep-tick check), and `followStartMs` is maintained by `followElapsed` on every
- * frame followBody wins — so both are current here.
+ * keep-tick check), and both clock fields are written by the driver / by
+ * `followElapsed` on every frame followBody wins — so all are current here.
  *
  * DELIBERATELY NOT a wake term: STEADY follow of a MOVING body after saturation.
  * The pivot-pin only affects a RENDERED frame, so a slept steady-follow re-centres
@@ -103,10 +108,11 @@ import { FOCUS_TWEEN_MS } from '../camera/focusTweenDuration';
  * live rate — so steady follow stays out of this predicate, exactly as live time
  * itself does.
  */
-function followApproachEaseActive(state: EngineState, nowMs: number): boolean {
+function followApproachActive(state: EngineState, nowMs: number): boolean {
   if (state.cameraRuntime.prevActiveId.current !== 'followBody') return false;
-  const start = state.cameraRuntime.clock.followStartMs;
-  return start !== null && nowMs - start < FOCUS_TWEEN_MS;
+  const { followStartMs, followApproachMs } = state.cameraRuntime.clock;
+  if (followStartMs === null || followApproachMs === null) return false;
+  return nowMs - followStartMs < followApproachMs;
 }
 
 export function shouldKeepTicking(
@@ -122,7 +128,7 @@ export function shouldKeepTicking(
     state.subsystems.structureFocus.isAwake(nowMs) ||
     (state.settings.flow.enabled && slotReady(state.assetSlots.flow)) ||
     selectIsManualPlaying(s) ||
-    followApproachEaseActive(state, nowMs) ||
+    followApproachActive(state, nowMs) ||
     anim.starFadeAnimating ||
     anim.earthTilesAnimating
   );
