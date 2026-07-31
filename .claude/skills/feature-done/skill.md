@@ -57,8 +57,10 @@ where the checks are independent.
 - The plan is complete only if every checkbox is `- [x]`, including
   the "Definition of Done" section at the bottom of the plan.
 - If the plan's own DoD section is missing, flag this as a finding:
-  the plan should have been authored with one. Don't fail the audit
-  for it (older plans pre-date the convention) — just note it.
+  the plan should have been authored with one, per the "Definition of
+  Done" section in `docs/superpowers/conventions/plan-style.md`. Don't
+  fail the audit for it (older plans pre-date the convention) — just
+  note it.
 - Backstop: locate the plan's spec (linked in its header, or the
   same-date/slug file in `docs/superpowers/specs/`) and check it has a
   "Ground preparation" section (filled, or "none needed — because X" —
@@ -162,6 +164,13 @@ what's being moved in one line, then do it:
 - If a matching spec exists at `docs/superpowers/specs/<same-date>-<same-slug>*.md`
   (or one the plan links to in its header), `git mv` it to
   `docs/superpowers/specs/completed/` the same way.
+- **Archive the ledger.** If `.superpowers/sdd/<plan-basename>/progress.md`
+  exists — or a flat-era `.superpowers/sdd/progress.md` whose first line
+  names this plan — copy it to
+  `docs/superpowers/plans/completed/<plan-basename>.ledger.md` and stage it
+  with the completion commit (see
+  `docs/superpowers/conventions/sdd-execution.md`). An SDD-executed plan
+  with no ledger found is worth one line in the report.
 - **Sweep the backlog.** The item should already be gone — the
   convention removes a backlog item (its index line **and** its
   `docs/backlog/<date>-<slug>.md` detail file) the moment it's picked
