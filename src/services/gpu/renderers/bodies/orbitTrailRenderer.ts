@@ -44,7 +44,7 @@ const INSTANCE_ATTRIBUTES: readonly GPUVertexAttribute[] = [
   { shaderLocation: 2, offset: 16, format: 'float32x4' }, // Ginv column 1
   { shaderLocation: 3, offset: 32, format: 'float32x4' }, // Ginv column 2
   { shaderLocation: 4, offset: 48, format: 'float32x4' }, // color.rgb + eccentricity
-  { shaderLocation: 5, offset: 64, format: 'float32x4' }, // meanAnomalyRad + fadeAlpha + pad
+  { shaderLocation: 5, offset: 64, format: 'float32x4' }, // meanAnomalyRad + fadeAlpha + viewportPx
   { shaderLocation: 6, offset: 80, format: 'float32x4' }, // gradient minors M1/M2/M3 + pad
   { shaderLocation: 7, offset: 96, format: 'float32x4' }, // gradient minors M4/M5/M6 + pad
   { shaderLocation: 8, offset: 112, format: 'float32x4' }, // clip basis centre Cc
