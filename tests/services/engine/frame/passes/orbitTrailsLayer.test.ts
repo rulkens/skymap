@@ -178,6 +178,7 @@ function makeRendererSpy() {
         instances: Float32Array,
         ribbonCount: number,
         fallbackCount: number,
+        showImpostor?: boolean,
       ) => void
     >(),
   };
@@ -190,12 +191,19 @@ function makeRendererSpy() {
 // fade-multiply assertions.
 function makeState(
   orbitTrailRenderer: unknown,
-  opts: { orbitTrailsEnabled?: boolean; layerOpacity?: number } = {},
+  opts: {
+    orbitTrailsEnabled?: boolean;
+    layerOpacity?: number;
+    showOrbitTrailImpostor?: boolean;
+  } = {},
 ): EngineState {
   const layerOpacity = opts.layerOpacity ?? 1;
   return {
     gpu: { orbitTrailRenderer },
-    settings: { orbitTrails: { enabled: opts.orbitTrailsEnabled ?? true } },
+    settings: {
+      orbitTrails: { enabled: opts.orbitTrailsEnabled ?? true },
+      debug: { showOrbitTrailImpostor: opts.showOrbitTrailImpostor ?? false },
+    },
     subsystems: {
       fades: { opacityOf: () => layerOpacity },
       clipPlayer: { clipOpacityOf: () => 1 },
@@ -595,5 +603,30 @@ describe('orbitTrailsLayer.draw', () => {
     orbitTrailsLayer.draw(PASS_STUB, makeNear0View(), farCtx, makeState(renderer));
     expect(renderer.draw).not.toHaveBeenCalled();
     expect(composeMock).not.toHaveBeenCalled(); // culled before composing Ginv
+  });
+
+  it('the layer forwards the debug flag to the renderer', () => {
+    // `enabled()` never forces the layer on for this flag — draw() just reads
+    // it alongside settings.orbitTrails.enabled and passes it straight through
+    // as renderer.draw's fifth argument.
+    const renderer = makeRendererSpy();
+    const view = makeNear0View();
+
+    orbitTrailsLayer.draw(
+      PASS_STUB,
+      view,
+      makeDrawCtx(),
+      makeState(renderer, { showOrbitTrailImpostor: true }),
+    );
+    expect(renderer.draw.mock.calls[0]![4]).toBe(true);
+
+    renderer.draw.mockClear();
+    orbitTrailsLayer.draw(
+      PASS_STUB,
+      view,
+      makeDrawCtx(),
+      makeState(renderer, { showOrbitTrailImpostor: false }),
+    );
+    expect(renderer.draw.mock.calls[0]![4]).toBe(false);
   });
 });

@@ -268,6 +268,46 @@ describe('createOrbitTrailRenderer', () => {
     expect(drawCalls.at(-1)![1]).toBe(4); // fallback count
   });
 
+  it('the impostor overlay draws the hull and the fallback wash only when enabled', () => {
+    // debug.showOrbitTrailImpostor: the debug pipeline pair builds LAZILY on
+    // first `true` (production pays nothing while the flag stays false), and
+    // the extra draws reuse the SAME vertex counts / firstInstance offsets as
+    // the production pair — the overlay is a lens over the real geometry, not
+    // an independently-derived footprint.
+    const renderPipelines: GPURenderPipelineDescriptor[] = [];
+    const device = mockDevice({ renderPipelines });
+    const renderer = createOrbitTrailRenderer(device, 'rgba16float');
+    const pass = mockPass();
+    const slots = 10;
+    const instances = new Float32Array(slots * INSTANCE_FLOATS);
+    const ribbonCount = 3;
+    const fallbackCount = 4;
+
+    // Flag omitted (defaults false) — only the two production pipelines exist,
+    // and only the two production draws are issued.
+    renderer.draw(pass, instances, ribbonCount, fallbackCount);
+    expect(renderPipelines).toHaveLength(2);
+    expect((pass.draw as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(2);
+
+    (pass.draw as ReturnType<typeof vi.fn>).mockClear();
+
+    // Flag true — the two debug pipelines are built now (first enable), and
+    // exactly two ADDITIONAL draws land, matching the production pair's
+    // vertex counts and firstInstance offsets exactly.
+    renderer.draw(pass, instances, ribbonCount, fallbackCount, true);
+    expect(renderPipelines).toHaveLength(4);
+    const calls = (pass.draw as ReturnType<typeof vi.fn>).mock.calls;
+    expect(calls).toHaveLength(4);
+    expect(calls[0]).toEqual([RIBBON_SEGMENTS * 6, ribbonCount, 0, 0]);
+    expect(calls[1]).toEqual([3, fallbackCount, 0, slots - fallbackCount]);
+    expect(calls[2]).toEqual([RIBBON_SEGMENTS * 6, ribbonCount, 0, 0]);
+    expect(calls[3]).toEqual([3, fallbackCount, 0, slots - fallbackCount]);
+
+    // A later enabled call does not rebuild the debug pipelines again.
+    renderer.draw(pass, instances, ribbonCount, fallbackCount, true);
+    expect(renderPipelines).toHaveLength(4);
+  });
+
   it('counts that overrun the packed array throw', () => {
     // A count pair the caller's own packed array cannot back is a
     // programming error, not a runtime condition to paper over — it must

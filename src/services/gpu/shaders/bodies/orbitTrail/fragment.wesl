@@ -186,3 +186,20 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // comfortably above the cull threshold, ramping to 0 as they shrink toward it.
   return vec4<f32>(in.color * brightness * stroke * in.alpha, 1.0);
 }
+
+// Debug lens ('debug.showOrbitTrailImpostor'): constant-colour passes that
+// make the impostor geometry itself visible, drawn IN ADDITION to 'fs' by the
+// renderer's debug pipelines. 'fsImpostorRibbon' fills the ribbon hull so a
+// gap in its coverage of the stroke shows as a broken arc; 'fsImpostorFallback'
+// washes the fullscreen fallback triangle so a misclassified orbit — a silent
+// perf regression, not a visual one — becomes visible as an extra tinted pass.
+
+@fragment
+fn fsImpostorRibbon(in: VSOut) -> @location(0) vec4<f32> {
+  return vec4<f32>(0.9, 0.15, 0.9, 1.0); // hull fill: magenta
+}
+
+@fragment
+fn fsImpostorFallback(in: VSOut) -> @location(0) vec4<f32> {
+  return vec4<f32>(0.12, 0.08, 0.0, 1.0); // fallback wash: dim amber
+}

@@ -29,11 +29,20 @@ export type OrbitTrailRenderer = Renderer & {
    * `fallbackCount` slots. `ribbonCount + fallbackCount` must not exceed
    * `instances.length / 40` — the renderer throws rather than read past the
    * caller's array; either count may be 0, and both 0 is a no-op.
+   *
+   * `showImpostor` (default `false`, the `debug.showOrbitTrailImpostor`
+   * toggle) issues two ADDITIONAL debug draws — the ribbon hull's flat fill
+   * and the fallback triangle's dim wash — with the SAME vertex counts and
+   * `firstInstance` offsets as the production pair, so the overlay lands
+   * exactly on the real geometry as a lens over it, never a replacement. The
+   * debug pipelines build lazily on first `true`, so leaving the flag off
+   * costs production nothing.
    */
   draw(
     pass: GPURenderPassEncoder,
     instances: Float32Array,
     ribbonCount: number,
     fallbackCount: number,
+    showImpostor?: boolean,
   ): void;
 };

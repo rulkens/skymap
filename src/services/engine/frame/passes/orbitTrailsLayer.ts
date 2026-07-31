@@ -335,7 +335,13 @@ export const orbitTrailsLayer: ContentLayer = {
       staging.set(clipBasis[2], base + 36); // clip basis Bc → floats 36..39
     }
     if (ribbonCount > 0 || fallbackCount > 0) {
-      renderer.draw(pass, staging, ribbonCount, fallbackCount);
+      renderer.draw(
+        pass,
+        staging,
+        ribbonCount,
+        fallbackCount,
+        state.settings.debug.showOrbitTrailImpostor,
+      );
     }
   },
 };

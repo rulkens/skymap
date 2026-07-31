@@ -98,6 +98,31 @@ export function createOrbitTrailRenderer(
     primitive,
   });
 
+  // The `debug.showOrbitTrailImpostor` overlay's pair, over the SAME vertex
+  // stages/buffers/profile as the production pipelines but the constant-
+  // colour `fsImpostor*` entry points. Built LAZILY on first enable — the
+  // overlay is off in production, so an unused pipeline pair is pure init
+  // cost nobody pays for.
+  let debugRibbonPipeline: GPURenderPipeline | null = null;
+  let debugFallbackPipeline: GPURenderPipeline | null = null;
+  function ensureDebugPipelines(): void {
+    if (debugRibbonPipeline !== null) return;
+    debugRibbonPipeline = device.createRenderPipeline({
+      label: 'orbit-trail-debug-ribbon-pipeline',
+      layout: pipelineLayout,
+      vertex: { module: vsModule, entryPoint: 'vsRibbon', buffers: vertexBuffers },
+      fragment: { module: fsModule, entryPoint: 'fsImpostorRibbon', targets: fragmentTargets },
+      primitive,
+    });
+    debugFallbackPipeline = device.createRenderPipeline({
+      label: 'orbit-trail-debug-fallback-pipeline',
+      layout: pipelineLayout,
+      vertex: { module: vsModule, entryPoint: 'vs', buffers: vertexBuffers },
+      fragment: { module: fsModule, entryPoint: 'fsImpostorFallback', targets: fragmentTargets },
+      primitive,
+    });
+  }
+
   // Grown on demand, sized by SLOTS (`instances.length / INSTANCE_FLOATS`),
   // not by either draw count — the buffer must hold every record either
   // partition might reference, including the unwritten middle. No fixed
@@ -112,6 +137,7 @@ export function createOrbitTrailRenderer(
     instances: Float32Array,
     ribbonCount: number,
     fallbackCount: number,
+    showImpostor = false,
   ): void {
     // Both zero is a whole-call no-op — no upload, no draw.
     if (ribbonCount === 0 && fallbackCount === 0) return;
@@ -153,6 +179,22 @@ export function createOrbitTrailRenderer(
       // BACK of the shared VBO, so this is what lets both partitions read
       // one buffer with no compaction pass.
       pass.draw(3, fallbackCount, 0, slots - fallbackCount);
+    }
+
+    // The debug overlay is a LENS over the real trails, not a replacement —
+    // these draws are IN ADDITION to the production pair above, reusing the
+    // exact same vertex counts and firstInstance offsets so the overlay lands
+    // on the real geometry rather than some independently-derived footprint.
+    if (showImpostor) {
+      ensureDebugPipelines();
+      if (ribbonCount > 0) {
+        pass.setPipeline(debugRibbonPipeline!);
+        pass.draw(RIBBON_SEGMENTS * 6, ribbonCount, 0, 0);
+      }
+      if (fallbackCount > 0) {
+        pass.setPipeline(debugFallbackPipeline!);
+        pass.draw(3, fallbackCount, 0, slots - fallbackCount);
+      }
     }
   }
 
