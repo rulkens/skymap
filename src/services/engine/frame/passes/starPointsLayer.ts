@@ -82,6 +82,8 @@
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
 import type { EngineState } from '../../../../@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
+import type { BodyRegionId } from '../../../../@types/data/BodyRegionId';
+import type { Vec2 } from '../../../../@types/math/Vec2';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { BodyPointPick } from '../../../../@types/rendering/BodyPickRenderer';
 import { NEAR0 } from '../slabs';
@@ -95,42 +97,41 @@ import { fadeBand } from '../../../../utils/math/fadeBand';
 import { regionRelativeDistanceMpc } from '../../../../utils/scene/regionRelativeDistanceMpc';
 import { BODY_REGIONS } from '../../../../data/bodies/bodyRegions';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
-import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../solarSystemLabelMaxDistance';
 import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
+import { sgrAStarCaptionTarget } from '../../presentation/sgrAStarCaptionTarget';
 import { starExposureRamp } from '../../../gpu/renderers/starCatalog/starExposureRamp';
 import { SGR_A_STAR } from '../../../../data/bodies/sceneSgrAStar';
-import { SGR_A_STAR_ENTRY } from '../../../../data/sources/sgr-a-star';
 import { Source } from '../../../../data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
-import { distanceMpc } from '../../../../utils/math/distanceMpc';
+import { FAMOUS_STAR_PICK_RADIUS_PX } from '../../../../data/famousStarPickRadiusPx';
+import { regionOfBody } from '../../../../utils/scene/regionOfBody';
+import { projectToScreenPx } from '../../../../utils/camera/projectToScreenPx';
 
 // The scale regime the star backdrop belongs to. Its anchor — not the render
 // origin — is what the dissolve band measures the camera against, so the band
 // keeps meaning the moment a star map is seeded somewhere other than the Sun.
 const STAR_BACKDROP_REGION = BODY_REGIONS.find((region) => region.id === 'solar-neighbourhood')!;
 
+/** The anchor's own regime — the satellites its pick footprint may claim. */
+const GALACTIC_CENTRE_REGION_ID: BodyRegionId = 'galactic-centre';
+
 /**
- * The one fact "Sgr A*'s caption invites a click" — the whole of what makes the
- * Galactic Centre clickable, since it draws NOTHING at any zoom. `pickEnabled`
- * (admit this layer on a frame with no star points) and `drawPick` (emit the
- * stamp) must AGREE on it, so it is spelled once here — the same discipline
- * `bodyGlintsLayer`'s `earthCaptionPickable` keeps for Earth.
+ * The one fact "the Galactic Centre's caption invites a click" — the whole of
+ * what makes the anchor clickable, since it draws NOTHING at any zoom.
+ * `pickEnabled` (admit this layer on a frame with no star points) and `drawPick`
+ * (emit the stamp) must AGREE on it, so it is spelled once here — the same
+ * discipline `bodyGlintsLayer`'s `earthCaptionPickable` keeps for Earth.
  *
- * The three terms reproduce exactly when `foregroundLabelsLayer` puts the name
- * on screen: its caption gate, the body row's own label toggle, and the
- * approach band `CAPTION_FADE_RULES.sgrAStar` reads from the same table. Pick
- * follows the visible AFFORDANCE — with the label off there is no mark at all,
- * so an invisible 18 px target in empty sky would be a trap.
+ * `sgrAStarCaptionTarget` IS the caption's own fade target, off the same rules
+ * row `foregroundLabelsLayer` indexes, so pick follows the visible AFFORDANCE by
+ * construction rather than by two gates kept in step. With the label off there
+ * is no mark at all, and an invisible 18 px target in empty sky would be a trap.
+ * The shared foreground gate rides alongside it: past that the whole NEAR0 group
+ * is skipped, so a stamp there could never be rasterised anyway.
  */
 function sgrAStarCaptionPickable(state: EngineState, ctx: ReadyFrameContext): boolean {
-  if (ctx.cam.distance >= SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC) return false;
-  if (!state.settings.bodies.items[SGR_A_STAR_ENTRY.id].labelEnabled) return false;
-  const states = sceneBodyStates(state, ctx);
-  const anchor = states.get(SGR_A_STAR.id);
-  if (anchor === undefined) return false;
-  return (
-    fadeBand(SCALE_FADE_BANDS.sgrAStarCaption, distanceMpc(ctx.drawCamPos, anchor.positionMpc)) > 0
-  );
+  if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
+  return sgrAStarCaptionTarget(state.settings, ctx.drawCamPos, ctx.cam.distance) > 0;
 }
 
 export const starPointsLayer: ContentLayer = {
@@ -303,27 +304,33 @@ export const starPointsLayer: ContentLayer = {
 
     const camPos = view.camPos;
     const pickPoints: BodyPointPick[] = [];
+    const relToCam = (positionMpc: Readonly<Vec3>): Vec3 => [
+      positionMpc[0] - camPos[0],
+      positionMpc[1] - camPos[1],
+      positionMpc[2] - camPos[2],
+    ];
 
-    // Sgr A*'s stamp — the ONLY thing that makes the Galactic Centre clickable.
-    // It draws nothing at any zoom (an invisible anchor by design), so unlike
+    // Fold the eye offset into the vp so it pairs with the camera-relative
+    // anchors — narrowed at the GPU-upload boundary, exactly as `draw` does.
+    // Hoisted above the pack loop because the satellite test below projects
+    // through it.
+    const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, camPos));
+
+    // The Galactic Centre's stamp — the ONLY thing that makes the anchor
+    // clickable. It draws nothing at any zoom (invisible by design), so unlike
     // every other id in this list there is no sprite whose footprint the pick
     // widens; the caption IS the target, and `sgrAStarCaptionPickable` above is
     // the whole gate. Emitted here rather than in a row of its own because this
     // is the layer already live at the Galactic Centre, stamping the S-stars
     // that orbit it, and `bodyPickRenderer.drawPoints` takes one array per
     // caller per pass — so the anchor rides its satellites' single draw.
-    //
-    // It shares the scene-star depth band with those satellites, so an S-star
-    // crossing in front wins the pixel on true depth: the black hole takes the
-    // click only where nothing orbits.
+    let anchorScreenPx: Vec2 | null = null;
     if (sgrAStarCaptionPickable(state, ctx)) {
       const anchorPos = sceneBodyStates(state, ctx).get(SGR_A_STAR.id)!.positionMpc;
+      const anchorRel = relToCam(anchorPos);
+      anchorScreenPx = projectToScreenPx(anchorRel, rebasedVp, view.viewportPx);
       pickPoints.push({
-        posRelCamMpc: [
-          anchorPos[0] - camPos[0],
-          anchorPos[1] - camPos[1],
-          anchorPos[2] - camPos[2],
-        ] as Vec3,
+        posRelCamMpc: anchorRel,
         packedId: packSelection(Source.SgrAStar, 0 + PICK_SENTINEL_OFFSET),
       });
     }
@@ -331,19 +338,31 @@ export const starPointsLayer: ContentLayer = {
     for (const star of points) {
       const packedId = starPickId(star.id);
       if (packedId === null) continue; // in neither seed table — see starPickId.
-      pickPoints.push({
-        posRelCamMpc: [
-          star.positionMpc[0] - camPos[0],
-          star.positionMpc[1] - camPos[1],
-          star.positionMpc[2] - camPos[2],
-        ] as Vec3,
-        packedId,
-      });
+      const posRelCamMpc = relToCam(star.positionMpc);
+      // A satellite inside its own anchor's click target is not separately
+      // aimable, so it must not take the anchor's click. Zoomed out, all 39
+      // S-star orbits collapse well inside the anchor's 18 px footprint and one
+      // of them would win the centre pixel on true depth — the black hole is
+      // unclickable exactly where it is the only thing you could mean. Zoomed
+      // in, each orbit clears the footprint and its star becomes aimable again,
+      // outermost first, so the handoff needs no threshold of its own.
+      //
+      // Scoped to the anchor's OWN region rather than to every overlapping
+      // point: a famous star that merely lines up with Sagittarius from Earth is
+      // a different object at a different distance and keeps its click.
+      if (anchorScreenPx !== null && regionOfBody(star.id)?.id === GALACTIC_CENTRE_REGION_ID) {
+        const screenPx = projectToScreenPx(posRelCamMpc, rebasedVp, view.viewportPx);
+        if (
+          screenPx !== null &&
+          Math.hypot(screenPx[0] - anchorScreenPx[0], screenPx[1] - anchorScreenPx[1]) <
+            FAMOUS_STAR_PICK_RADIUS_PX
+        ) {
+          continue;
+        }
+      }
+      pickPoints.push({ posRelCamMpc, packedId });
     }
 
-    // Fold the eye offset into the vp so it pairs with the camera-relative
-    // anchors — narrowed at the GPU-upload boundary, exactly as `draw` does.
-    const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, camPos));
     pickRenderer.drawPoints(pass, {
       vp: rebasedVp,
       viewportPx: view.viewportPx,
