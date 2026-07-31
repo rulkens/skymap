@@ -54,6 +54,7 @@ import { createRenderTargets } from '../../gpu/renderTargets';
 import { createTexturedDiskRenderer } from '../../gpu/renderers/galaxyCatalog/texturedDiskRenderer';
 import { createProceduralDiskRenderer } from '../../gpu/renderers/galaxyCatalog/proceduralDiskRenderer';
 import { createMilkyWayCloud } from '../../gpu/galaxy/milkyWayCloud';
+import { MILKY_WAY_TUNING_DEFAULTS } from '../../gpu/galaxy/milkyWayCalibration';
 import { createMilkyWayCloudRenderer } from '../../gpu/renderers/milkyWay/milkyWayCloudRenderer';
 import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShell/horizonShellRenderer';
 import { createFilamentRenderer } from '../../gpu/renderers/filaments/filamentRenderer';
@@ -62,7 +63,7 @@ import { createStructureMarkerRenderer } from '../../gpu/renderers/structureMark
 import { createMilkyWayPickRenderer } from '../../gpu/renderers/milkyWay/milkyWayPickRenderer';
 import { createVolumeFieldRenderer } from '../../gpu/renderers/volumeField/volumeFieldRenderer';
 import { createFlowFieldRenderer } from '../../gpu/renderers/flowField/flowFieldRenderer';
-import { createVolumeUpsample } from '../../gpu/passes/volumeUpsample';
+import { createAdditiveUpsample } from '../../gpu/passes/additiveUpsample';
 import { createStarAggregateUpsample } from '../../gpu/passes/starAggregateUpsample';
 import { createBloomPyramid } from '../../gpu/passes/bloomPyramid';
 import { createEarthRenderer } from '../../gpu/renderers/bodies/earthRenderer';
@@ -181,10 +182,18 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   const compositor = createCompositor({ device, swapFormat: format, hdrFormat: 'rgba16float' });
   state.gpu.compositor = compositor;
 
-  state.gpu.renderTargets = createRenderTargets(device, format, {
-    width: canvas.width,
-    height: canvas.height,
-  });
+  // The `mw-aggregate` row's divisor is a live knob rather than a table
+  // constant, so the boot value has to be handed in. It comes from the
+  // calibration module (the home of every Milky-Way boot value) rather than
+  // from `state.settings`: this phase seeds the GPU side, and the frame loop
+  // already rebuilds the table whenever the live setting diverges — reading
+  // settings here would add a second path to the same answer.
+  state.gpu.renderTargets = createRenderTargets(
+    device,
+    format,
+    { width: canvas.width, height: canvas.height },
+    MILKY_WAY_TUNING_DEFAULTS.aggregateDivisor,
+  );
 
   // PointRenderer (and the disk renderers below) target the HDR
   // rgba16float texture, not the swap-chain `format`.  Their pipelines
@@ -350,13 +359,22 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
 
   // ── Milky-Way point cloud + its two-pass renderer ────────────────────
   //
-  // The GPU-generated star/dust cloud (`milkyWayCloud`) owns the per-tier
-  // instance buffers; the additive-stars + multiplicative-dust renderer
-  // (`milkyWayCloudRenderer`) draws them from `milkyWayLayer`. `state.tier`
-  // folds the current tier's star budget into the first generation; a tier
-  // swap regenerates via `makeRunTierTransition`. Same HDR target
-  // ('rgba16float') as the other overlay renderers.
-  state.gpu.milkyWayCloud = createMilkyWayCloud(device, state.tier);
+  // The GPU-generated star/dust cloud (`milkyWayCloud`) owns the instance
+  // buffers; the additive-stars + multiplicative-dust renderer
+  // (`milkyWayCloudRenderer`) draws them from `milkyWayLayer`. Same HDR
+  // target ('rgba16float') as the other overlay renderers.
+  //
+  // The boot starCount comes from `MILKY_WAY_TUNING_DEFAULTS` (the same
+  // calibration-module source `aggregateDivisor` reads above, for the render
+  // targets table), not from `state.settings`: this phase seeds the GPU
+  // side, and `runFrame` already regenerates the cloud whenever the live
+  // setting diverges from what the current buffers were generated with —
+  // reading settings here would add a second path to the same answer. That
+  // mismatch branch also covers a later tier swap: `watchTierSaga` re-seeds
+  // `settings.milkyWay.starCount` from the new tier's budget, which is just
+  // another live-setting change from the cloud's point of view — it carries
+  // no notion of `Tier` itself (see `MilkyWayCloud`'s docblock).
+  state.gpu.milkyWayCloud = createMilkyWayCloud(device, MILKY_WAY_TUNING_DEFAULTS.starCount);
   state.gpu.milkyWayCloudRenderer = createMilkyWayCloudRenderer({
     device,
     targetFormat: 'rgba16float',
@@ -393,7 +411,15 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   //
   // Built unconditionally; the pipeline is cheap and the 1/3-scale target
   // lives on `renderTargets`, so nothing here depends on viewport size.
-  state.gpu.volumeUpsample = createVolumeUpsample(device, 'rgba16float');
+  state.gpu.volumeUpsample = createAdditiveUpsample(device, 'rgba16float');
+
+  // ── Reduced-res-to-HDR Milky Way star-field composite ─────────────
+  //
+  // A SECOND instance of the same factory (which is generic — a filtered
+  // additive blit of whatever view it is handed). Deliberately not the volume's
+  // handle: sharing one would braid two independently-gated subsystems onto a
+  // single resource.
+  state.gpu.milkyWayAggregateUpsample = createAdditiveUpsample(device, 'rgba16float');
 
   // ── Half-res survey-star aggregate upsample composite ─────────────
   //

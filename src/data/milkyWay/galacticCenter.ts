@@ -53,8 +53,9 @@ export const MILKY_WAY_CENTER_WORLD: Vec3 = SGR_A_STAR_ANCHOR.positionMpc as Vec
  * `MILKY_WAY_FADE_FULL_PX` on screen — here it fills the view) and
  * several times the disc radius (`MILKY_WAY_DISC_RADIUS_KPC`), so the
  * whole spiral is framed from outside rather than seen edge-on from
- * within. This is also the "home" framing: the Home pill and the `h`
- * hotkey focus the Milky Way, landing the camera right here.
+ * within. Reached by focusing the Milky Way — the `#focus=milkyWay`
+ * deep-link, or its Command Palette row. Not the Home pill or the `h`/`e`
+ * keys: those dispatch `goHome`, which flies to the sunlit Earth pose.
  */
 export const MILKY_WAY_VIEW_DISTANCE_MPC = 0.15;
 

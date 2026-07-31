@@ -1,12 +1,9 @@
 .root {
   position: fixed;
   inset: 0;
-  background: #04050a;
-  color: #e8ecf5;
-  font-family:
-    system-ui,
-    -apple-system,
-    sans-serif;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-family-mono);
 }
 
 .canvas {
@@ -36,7 +33,7 @@
   width: 34px;
   height: 34px;
   border: 2px solid rgba(255, 255, 255, 0.15);
-  border-top-color: #7fb8ff;
+  border-top-color: var(--color-accent);
   border-radius: 50%;
   animation: spin 0.9s linear infinite;
 }
@@ -48,8 +45,8 @@
 }
 
 .loadingLabel {
-  font-size: 13px;
-  color: #aab3c9;
+  font-size: var(--font-size-xl);
+  color: var(--color-fg-muted);
   letter-spacing: 0.3px;
 }
 
@@ -60,17 +57,17 @@
   align-items: center;
   justify-content: center;
   padding: 32px;
-  background: radial-gradient(ellipse at center, #0a0e1c 0%, #04050a 70%);
+  background: radial-gradient(ellipse at center, #0a0e1c 0%, var(--color-bg) 70%);
 }
 
 .fallbackCard {
   max-width: 520px;
   text-align: center;
-  background: rgba(16, 20, 34, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface-panel);
+  border: 1px solid var(--border-divider);
   border-radius: 18px;
   padding: 40px 36px;
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(var(--blur-card));
 }
 
 .fallbackGlyph {
@@ -88,23 +85,23 @@
 .fallbackBody {
   font-size: 14px;
   line-height: 1.6;
-  color: #aab3c9;
+  color: var(--color-fg-muted);
 }
 
 .fallbackHints {
   margin: 18px 0 0;
   padding: 14px 16px 14px 32px;
-  font-size: 13px;
+  font-size: var(--font-size-xl);
   line-height: 1.7;
-  color: #9aa3b3;
+  color: var(--color-fg-muted);
   text-align: left;
   background: rgba(0, 0, 0, 0.25);
-  border-radius: 10px;
+  border-radius: var(--radius-2xl);
 }
 
 .fallbackDetail {
   margin-top: 16px;
-  font-family: ui-monospace, monospace;
-  font-size: 11px;
-  color: #5a6a82;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-md);
+  color: var(--color-fg-faint);
 }

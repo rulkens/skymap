@@ -20,10 +20,16 @@ import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/R
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
-/** Toggle on, no fade tail — so both gates reduce to the camera distance. */
+/**
+ * Toggle on and fully faded in — so both gates reduce to the camera distance.
+ *
+ * `opacityOf` is a MULTIPLIER in `deriveMilkyWayCloudAlpha`, not a fade-tail
+ * fallback OR'd against the toggle, so 0 here would zero the whole gate and
+ * make every case below vacuously unpickable.
+ */
 const STATE = {
   settings: { milkyWay: { enabled: true } },
-  subsystems: { fades: { opacityOf: vi.fn(() => 0) } },
+  subsystems: { fades: { opacityOf: vi.fn(() => 1) } },
 } as unknown as EngineState;
 
 function makeCtx(camDistMpc: number): ReadyFrameContext {

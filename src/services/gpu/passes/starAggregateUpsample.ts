@@ -4,17 +4,16 @@
  * target, re-applying the star pass's hue-preserving knee to the summed
  * aggregate field on the way.
  *
- * ### Why a sibling of `volumeUpsample` rather than a shared factory
+ * ### Why a sibling of `additiveUpsample` rather than another of its instances
  *
  * The two passes share their whole shape — a linear-sampled fullscreen blit of
  * a half-res offscreen, additive into HDR — but differ in the fragment math:
- * the volume upsample is a 4-tap low-pass blit (its offscreen carries
- * per-fragment raymarch jitter), while this one is a single-tap composite that
- * knees the SUMMED scalar (carried in the offscreen alpha; see the shader).
- * Folding both into one parameterised factory would thread a "which fragment
- * shader" discriminant through a one-shape helper for no reuse win — two thin
- * sibling factories keep each single-purpose, the same reasoning
- * `volumeUpsample`'s header states.
+ * `additiveUpsample` is a 4-tap low-pass blit that reconstructs its source
+ * unchanged, while this one is a single-tap composite that knees the SUMMED
+ * scalar (carried in the offscreen alpha; see the shader). Folding both into one
+ * parameterised factory would thread a "which fragment shader" discriminant
+ * through a one-shape helper for no reuse win — two thin sibling factories keep
+ * each single-purpose, the same reasoning `additiveUpsample`'s header states.
  *
  * ### Why additive blend + a linear sampler
  *

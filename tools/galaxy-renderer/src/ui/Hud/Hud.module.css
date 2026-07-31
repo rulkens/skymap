@@ -7,25 +7,32 @@
 }
 
 .eyebrow {
-  font-size: 12px;
+  font-size: var(--font-size-lg);
   letter-spacing: 3px;
-  color: var(--label);
+  color: var(--color-fg-dim);
   font-weight: 600;
 }
 
 .title {
-  font-size: 23px;
+  font-family: var(--font-family-display);
+  /* Splash's own narrow-breakpoint size (48px, dropping to 32px under its
+     media query) — legible as the tool's identity mark without out-shouting
+     the app's actual splash headline. */
+  font-size: 32px;
   font-weight: 600;
   letter-spacing: 0.4px;
   margin-top: 2px;
+  /* Matches Splash's marquee title exactly (raw white, not a --color-fg
+     token) — both are the app's one-and-only display-serif headline. */
+  color: #ffffff;
 }
 
 .badges {
   display: flex;
   gap: 8px;
   margin-top: 12px;
-  font-family: var(--mono);
-  font-size: 11px;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-lg);
 }
 
 .fpsPill {
@@ -37,19 +44,19 @@
 .fpsGood {
   background: rgba(46, 160, 110, 0.18);
   border: 1px solid rgba(70, 200, 140, 0.4);
-  color: var(--good);
+  color: var(--tool-status-good);
 }
 
 .fpsWarn {
   background: rgba(210, 150, 60, 0.18);
   border: 1px solid rgba(220, 170, 90, 0.4);
-  color: #e6b866;
+  color: var(--tool-status-warn);
 }
 
 .badge {
   padding: 4px 9px;
   border-radius: 20px;
-  background: rgba(16, 20, 34, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #aab3c9;
+  background: var(--surface-panel);
+  border: 1px solid var(--border-divider);
+  color: var(--color-fg-muted);
 }

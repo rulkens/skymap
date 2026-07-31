@@ -76,7 +76,7 @@ describe('packGenerationUniforms', () => {
 
     // Float32 truncation is expected once starSize round-trips through the
     // packed buffer, so compare with tolerance rather than exact equality
-    // (same rationale as packCameraUniforms.test.ts's params assertions).
+    // (same rationale as packCloudUniforms.test.ts's params assertions).
     const grain = grainScale(budget.totalStars);
     expect(f32[GENERATION_UBO.f32.starSize]).toBeCloseTo(0.016 * 20 * grain, 6);
   });

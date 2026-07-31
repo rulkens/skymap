@@ -1,7 +1,13 @@
 /**
- * VolumeUpsample — fullscreen pass that samples the half-resolution
- * scalar-volume target with bilinear filtering and additively blends
- * the result into the HDR target.
+ * AdditiveUpsample — fullscreen pass that reads a reduced-resolution
+ * offscreen through a filtered low-pass and additively blends the result
+ * into the HDR target.
+ *
+ * The handle carries no knowledge of what the offscreen holds; the
+ * source subsystem is fixed by which view its owner passes to `draw`.
+ * Several instances coexist (the scalar volume's, the Milky Way cloud
+ * aggregate's), each owned by the subsystem that feeds it, so one
+ * subsystem's gate can never suppress another's composite.
  *
  * Owned by the engine alongside the other fullscreen blits (compositor,
  * pick-debug overlay) with the same lifetime; constructed once at
@@ -11,20 +17,20 @@
  *
  * The render pipeline is built with additive blending
  * '{ srcFactor: "one", dstFactor: "one", operation: "add" }' for BOTH
- * color and alpha.  This matches the scalar-volume pipeline's blend
- * state byte-for-byte — the upsampled half-res sample is added to the
- * HDR destination, exactly as if every field had drawn directly into
- * the HDR target.
+ * color and alpha.  That matches the blend state the producing pipeline
+ * used to fill the offscreen — the offscreen holds a per-fragment SUM,
+ * and adding a reconstruction of that sum to the HDR destination is what
+ * drawing every contributor straight into HDR would have produced.
  *
  * ### Why no `resize` method
  *
  * The pipeline is viewport-independent (the covering triangle covers
- * any viewport) and the half-res texture view is rebound on every
+ * any viewport) and the offscreen's texture view is rebound on every
  * `draw` call (passed in as a parameter rather than cached) so a
- * resize of the half-res target needs no bookkeeping here.
+ * resize of that target needs no bookkeeping here.
  */
 
-export type VolumeUpsample = {
+export type AdditiveUpsample = {
   /**
    * Encode the fullscreen upsample draw into an already-open render
    * pass against the HDR target.  The caller is responsible for the
@@ -34,9 +40,9 @@ export type VolumeUpsample = {
    * @param pass          The render pass encoder writing into the HDR
    *                      target.  Must have been opened against the
    *                      HDR colour attachment with an additive-compatible
-   *                      `loadOp` (typically `'load'` after the volume
-   *                      pre-step has emitted its target).
-   * @param halfResView   The half-resolution offscreen view to sample.
+   *                      `loadOp` (typically `'load'`, after the pre-step
+   *                      that filled the offscreen has emitted it).
+   * @param halfResView   The reduced-resolution offscreen view to sample.
    *                      Bound fresh on every draw because the view
    *                      changes on canvas resize.
    */

@@ -15,6 +15,7 @@ import { computeDescriptor } from '../../../../tools/galaxy-renderer/src/matcher
 import { loadImageDescriptor } from '../../../../tools/galaxy-renderer/src/matcher/loadImageDescriptor';
 import { createGalaxyStore } from '../../../../tools/galaxy-renderer/src/state/createStore';
 import { fitStopRequested } from '../../../../tools/galaxy-renderer/src/state/slices/compareSlice';
+import { autoRotateSet } from '../../../../tools/galaxy-renderer/src/state/slices/uiSlice';
 import { DEFAULT_GALAXY_PARAMS } from '../../../../tools/galaxy-renderer/src/data/defaultGalaxyParams';
 import type { GalaxyEngineHandle } from '../../../../tools/galaxy-renderer/@types/engine/GalaxyEngineHandle';
 import type { GalaxyDescriptor } from '../../../../tools/galaxy-renderer/@types/matcher/GalaxyDescriptor';
@@ -149,7 +150,8 @@ describe('runCompareFit', () => {
 
   it('disables auto-rotate for the run and restores the store setting after', async () => {
     const { engine, mocks } = makeFakeEngine();
-    const store = createGalaxyStore(); // ui.autoRotate defaults true
+    const store = createGalaxyStore();
+    store.dispatch(autoRotateSet(true)); // seed a non-default value to prove restore, not just disable
     const loadDescriptor = makeLoadDescriptor();
 
     expect(store.getState().ui.autoRotate).toBe(true);

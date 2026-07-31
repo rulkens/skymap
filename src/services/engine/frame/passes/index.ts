@@ -201,6 +201,8 @@ import { filamentsLayer } from './filamentsLayer';
 import { flowFieldLayer } from './flowFieldLayer';
 import { volumeUpsampleLayer } from './volumeUpsampleLayer';
 import { milkyWayLayer } from './milkyWayLayer';
+import { milkyWayAggregateLayer } from './milkyWayAggregateLayer';
+import { milkyWayUpsampleLayer } from './milkyWayUpsampleLayer';
 import { horizonShellLayer } from './horizonShellLayer';
 import { structureMarkersLayer } from './structureMarkersLayer';
 import { selectionRingLayer } from './selectionRingLayer';
@@ -253,7 +255,20 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   // multiplicative, and leading the group keeps the local starfield below out of
   // that multiply (see the header) — then star points, the conic orbit trails,
   // and the survey (Gaia bin) star streams. All the HDR members are additive, so
-  // their relative order is a listing choice, not a compositing one.
+  // their relative order is a listing choice, not a compositing one — with the
+  // one exception noted on the Milky Way rows below.
+  //
+  // The Milky Way cloud is three rows, and their order IS load-bearing. The
+  // star billboards draw into the reduced-resolution `mw-aggregate` offscreen
+  // by their own render step (a different target, so their position here is a
+  // listing choice); `milky-way-upsample` then composites that offscreen into
+  // HDR; and only then does `milky-way`'s MULTIPLICATIVE dust pass run, so the
+  // dust darkens the cloud's own starlight as well as the cosmological
+  // accumulation — exactly what the single-pass version did when stars and dust
+  // shared one encoder. Swapping the last two would leave the cloud's stars
+  // un-extincted.
+  milkyWayAggregateLayer,
+  milkyWayUpsampleLayer,
   milkyWayLayer,
   starPointsLayer,
   orbitTrailsLayer,
@@ -353,6 +368,8 @@ export { filamentsLayer } from './filamentsLayer';
 export { flowFieldLayer } from './flowFieldLayer';
 export { volumeUpsampleLayer } from './volumeUpsampleLayer';
 export { milkyWayLayer } from './milkyWayLayer';
+export { milkyWayAggregateLayer } from './milkyWayAggregateLayer';
+export { milkyWayUpsampleLayer } from './milkyWayUpsampleLayer';
 export { horizonShellLayer } from './horizonShellLayer';
 export { structureMarkersLayer } from './structureMarkersLayer';
 export { selectionRingLayer } from './selectionRingLayer';

@@ -3,9 +3,11 @@
  * GPU and hands the resulting instance buffers to the draw side. It is the
  * app-side reduction of `createGalaxyEngine.ts`'s central-galaxy generation
  * (`setParams`, ~lines 520-566) to the one fixed preset the Milky Way needs:
- * `MILKY_WAY_GALAXY_PARAMS` with the current tier's star budget folded in.
+ * `MILKY_WAY_GALAXY_PARAMS` with the live `starCount` folded in. `starCount`
+ * is an absolute count, not tier-derived — see `MilkyWayCloud`'s docblock for
+ * why this module carries no notion of `Tier` at all.
  *
- * ## The generation flow (one tier's worth), mirroring `setParams`
+ * ## The generation flow (one count's worth), mirroring `setParams`
  *
  *   carve star + dust layouts  (pure CPU arithmetic — cheap, on this thread)
  *        │
@@ -29,11 +31,11 @@
  *
  * The two generation compute pipelines (`createGenerationPipelines`) and the
  * generation UBO are built ONCE at factory time and reused by every
- * `regenerate`: the pipelines are pure shader compilation with no per-tier
- * state, and the UBO is `GENERATION_UBO.byteLength` — a fixed size — so a tier
- * switch only rewrites its contents in place rather than reallocating it. Only
- * the star/dust vertex buffers, whose size IS the tier's carved capacity, get
- * destroyed and recreated per generation.
+ * `regenerate`: the pipelines are pure shader compilation with no per-count
+ * state, and the UBO is `GENERATION_UBO.byteLength` — a fixed size — so a
+ * count change only rewrites its contents in place rather than reallocating
+ * it. Only the star/dust vertex buffers, whose size IS the carved capacity,
+ * get destroyed and recreated per generation.
  *
  * ## `extra = null` — placement is draw-side, not baked in
  *
@@ -48,11 +50,9 @@
  * included) — see `MilkyWayCloudBuffers`'s docblock and `setParams` for why
  * that is correct rather than wasteful.
  */
-import type { Tier } from '../../../@types/data/Tier';
 import type { MilkyWayCloud } from '../../../@types/galaxy/MilkyWayCloud';
 import type { MilkyWayCloudBuffers } from '../../../@types/galaxy/MilkyWayCloudBuffers';
 import { MILKY_WAY_GALAXY_PARAMS } from '../../../data/milkyWay/milkyWayGalaxyParams';
-import { MILKY_WAY_STARS_PER_TIER } from './milkyWayCalibration';
 import { carveDustLayout } from './carveDustLayout';
 import { carveStarLayout } from './carveStarLayout';
 import { classifyHubbleType } from './classifyHubbleType';
@@ -63,7 +63,7 @@ import { GENERATION_UBO } from './generationUboLayout';
 import { packGenerationUniforms } from './packGenerationUniforms';
 import { splitStarBudget } from './splitStarBudget';
 
-export function createMilkyWayCloud(device: GPUDevice, tier: Tier): MilkyWayCloud {
+export function createMilkyWayCloud(device: GPUDevice, starCount: number): MilkyWayCloud {
   // Built once, reused by every regenerate: pipelines are stateless shader
   // compilation, and the UBO is a fixed size that only ever gets rewritten.
   const pipelines = createGenerationPipelines(device);
@@ -73,11 +73,15 @@ export function createMilkyWayCloud(device: GPUDevice, tier: Tier): MilkyWayClou
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
-  // Carve the preset (with the tier's star budget), allocate the tier's
-  // star/dust buffers, pack + write the UBO, then dispatch generation into a
-  // fresh encoder and submit. Returns the freshly-generated buffer snapshot.
-  function generate(t: Tier): MilkyWayCloudBuffers {
-    const params = { ...MILKY_WAY_GALAXY_PARAMS, starCount: MILKY_WAY_STARS_PER_TIER[t] };
+  // Carve the preset (with the live starCount knob folded straight in —
+  // absolute, not a tier-relative multiplier), allocate the star/dust
+  // buffers, pack + write the UBO, then dispatch generation into a fresh
+  // encoder and submit. Returns the freshly-generated buffer snapshot.
+  function generate(count: number): MilkyWayCloudBuffers {
+    const params = {
+      ...MILKY_WAY_GALAXY_PARAMS,
+      starCount: count,
+    };
     const category = classifyHubbleType(params.type);
     const budget = splitStarBudget(category, params);
     const starLayout = carveStarLayout(category, params, budget);
@@ -119,21 +123,31 @@ export function createMilkyWayCloud(device: GPUDevice, tier: Tier): MilkyWayClou
     };
   }
 
-  // The one mutable cell: the current generation's buffers, replaced wholesale
-  // on each regenerate rather than mutated field-by-field.
-  let current = generate(tier);
+  // The two mutable cells: the current generation's buffers and the
+  // starCount that produced them, both replaced wholesale on each regenerate
+  // rather than mutated field-by-field. `currentCount` is what lets `runFrame`
+  // detect a stale generation without keeping its own shadow copy of the
+  // value — the generator is the one place that fact is true.
+  let current = generate(starCount);
+  let currentCount = starCount;
   let destroyed = false;
 
   function buffers(): MilkyWayCloudBuffers {
     return current;
   }
 
-  function regenerate(t: Tier): void {
+  function starCountOf(): number {
+    return currentCount;
+  }
+
+  function regenerate(count: number): void {
     // Tear down only the vertex buffers — the UBO is reused (fixed size,
-    // rewritten by `generate`). Then dispatch the new tier's generation.
+    // rewritten by `generate`). Then dispatch the new generation at the given
+    // count.
     current.starBuf.destroy();
     current.dustBuf?.destroy();
-    current = generate(t);
+    current = generate(count);
+    currentCount = count;
   }
 
   function destroy(): void {
@@ -144,5 +158,5 @@ export function createMilkyWayCloud(device: GPUDevice, tier: Tier): MilkyWayClou
     ubo.destroy();
   }
 
-  return { buffers, regenerate, destroy };
+  return { buffers, starCount: starCountOf, regenerate, destroy };
 }

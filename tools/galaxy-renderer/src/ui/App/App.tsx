@@ -12,7 +12,7 @@
  * disconnects the previous bridge before attaching a new one (or none),
  * whichever direction the handle changes.
  *
- * `fps`/`stats` are per-frame telemetry, not app state — they live in
+ * `perf`/`stats` are engine telemetry, not app state — they live in
  * local `useState` and feed `Hud` directly, never the store (see
  * `HudProps`'s docblock for why).
  */
@@ -20,9 +20,12 @@ import { useRef, useState, type ReactNode } from 'react';
 import cx from 'classnames';
 import type { GalaxyEngineHandle } from '../../../@types/engine/GalaxyEngineHandle';
 import type { EngineStats } from '../../../@types/engine/EngineStats';
+import type { PerfReport } from '../../../@types/engine/PerfReport';
 import { useAppDispatch, useAppSelector, useAppStore } from '../../state/hooks';
 import { connectEngineBridge } from '../../state/engineBridge';
 import { comparePanelToggled } from '../../state/slices/compareSlice';
+import { autoRotateSet } from '../../state/slices/uiSlice';
+import AutoRotateToggle from '../../../../../src/components/AutoRotateToggle/AutoRotateToggle';
 import Viewport from '../Viewport/Viewport';
 import Hud from '../Hud/Hud';
 import ComparePanel from '../ComparePanel/ComparePanel';
@@ -30,14 +33,18 @@ import ControlsPanel from '../ControlsPanel/ControlsPanel';
 import styles from './App.module.css';
 
 const NO_STATS: EngineStats = { stars: 0, dust: 0 };
+// Pre-first-report placeholder. `timingEnabled: false` here only means "no
+// report yet"; the engine's first `onPerf` carries the real gate state.
+const NO_PERF: PerfReport = { frameMs: 0, fps: 0, passes: [], timingEnabled: false };
 
 function App(): ReactNode {
   const dispatch = useAppDispatch();
   const store = useAppStore();
   const compareOpen = useAppSelector((state) => state.compare.open);
+  const autoRotate = useAppSelector((state) => state.ui.autoRotate);
 
   const [engine, setEngine] = useState<GalaxyEngineHandle | null>(null);
-  const [fps, setFps] = useState(0);
+  const [perf, setPerf] = useState<PerfReport>(NO_PERF);
   const [stats, setStats] = useState<EngineStats>(NO_STATS);
   const disconnectRef = useRef<(() => void) | null>(null);
 
@@ -49,8 +56,14 @@ function App(): ReactNode {
 
   return (
     <div className={styles.root}>
-      <Viewport onEngine={handleEngine} onFps={setFps} onStats={setStats} />
-      <Hud fps={fps} stars={stats.stars} dust={stats.dust} />
+      <Viewport onEngine={handleEngine} onPerf={setPerf} onStats={setStats} />
+      <Hud perf={perf} stars={stats.stars} dust={stats.dust} />
+      <div className={styles.autoRotatePill}>
+        <AutoRotateToggle
+          playing={autoRotate}
+          onToggle={() => dispatch(autoRotateSet(!autoRotate))}
+        />
+      </div>
       <button
         type="button"
         className={cx(styles.compareToggle, compareOpen && styles.compareToggleActive)}

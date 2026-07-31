@@ -30,14 +30,28 @@ import styles from './CompactInfoTip.module.css';
 export type CompactInfoTipProps = {
   readonly label: string;
   readonly placement?: 'top' | 'bottom';
+  readonly align?: 'center' | 'start' | 'end';
   readonly children?: ReactNode;
 };
 
-function CompactInfoTip({ label, placement = 'top', children }: CompactInfoTipProps): ReactNode {
+function CompactInfoTip({
+  label,
+  placement = 'top',
+  align = 'center',
+  children,
+}: CompactInfoTipProps): ReactNode {
   return (
     <span className={styles.root}>
       {children}
-      <span role="tooltip" className={cx(styles.tip, placement === 'bottom' && styles.tipBottom)}>
+      <span
+        role="tooltip"
+        className={cx(
+          styles.tip,
+          placement === 'bottom' && styles.tipBottom,
+          align === 'start' && styles.tipStart,
+          align === 'end' && styles.tipEnd,
+        )}
+      >
         {label}
       </span>
     </span>

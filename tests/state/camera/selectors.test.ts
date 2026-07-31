@@ -52,7 +52,7 @@ const frameTween: FrameTween = {
   fromQuat: [0, 0, 0, 1],
   to: 'galactic',
   durationMs: 800,
-  easing: 'inOut',
+  easing: 'easeInOutCubic',
 };
 
 describe('selectCameraBase', () => {

@@ -1,13 +1,19 @@
 /**
- * ParamSlider — one tunable galaxy parameter: label, mono readout, range
- * input, and an optional reseed die.
+ * ParamSlider — one tunable galaxy parameter: the app's `Slider` pill, plus
+ * an optional reseed die.
  *
  * The 20 px die slot always renders, even when `onReseed` is absent, so a
  * column of sliders — some seed-linked (irregularity, arm clumping), most
- * not — keeps its range inputs flush-left instead of the seeded rows
- * jogging narrower than their neighbours (html:199-208's `hasSeed` slot).
+ * not — keeps its pills flush-left instead of the seeded rows jogging
+ * narrower than their neighbours (html:199-208's `hasSeed` slot).
+ *
+ * Label + value used to be a row this component drew itself; `Slider`
+ * already folds both into the pill, so drawing them again here would
+ * double them up.
  */
 import type { ReactNode } from 'react';
+import Slider from '../../../../../src/components/common/Slider/Slider';
+import CompactInfoTip from '../../../../../src/components/common/CompactInfoTip/CompactInfoTip';
 import styles from './ParamSlider.module.css';
 
 export type ParamSliderProps = {
@@ -19,9 +25,9 @@ export type ParamSliderProps = {
   readonly format?: (value: number) => string;
   readonly onChange: (value: number) => void;
   readonly onReseed?: () => void;
+  /** Hover/focus explainer, revealed from a ⓘ affordance ahead of the pill. */
+  readonly info?: string;
 };
-
-const defaultFormat = (value: number): string => value.toFixed(2);
 
 function ParamSlider({
   label,
@@ -29,25 +35,29 @@ function ParamSlider({
   min,
   max,
   step,
-  format = defaultFormat,
+  format,
   onChange,
   onReseed,
+  info,
 }: ParamSliderProps): ReactNode {
   return (
     <div className={styles.root}>
+      {info && (
+        <CompactInfoTip label={info} align="start">
+          <button type="button" className={styles.infoIcon} aria-label={`About ${label}`}>
+            ⓘ
+          </button>
+        </CompactInfoTip>
+      )}
       <div className={styles.main}>
-        <div className={styles.head}>
-          <span className={styles.label}>{label}</span>
-          <span className={styles.value}>{format(value)}</span>
-        </div>
-        <input
-          type="range"
-          className={styles.range}
+        <Slider
+          label={label}
+          value={value}
           min={min}
           max={max}
           step={step}
-          value={value}
-          onChange={(e) => onChange(parseFloat(e.target.value))}
+          format={format}
+          onChange={onChange}
         />
       </div>
       <div className={styles.seedSlot}>

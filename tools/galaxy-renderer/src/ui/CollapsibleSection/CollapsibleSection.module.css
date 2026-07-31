@@ -10,16 +10,16 @@
   margin: 4px 0 14px;
   padding: 16px 0 0;
   border: none;
-  border-top: 1px solid var(--panel-line);
+  border-top: 1px solid var(--border-divider);
   background: transparent;
-  font-family: var(--font);
+  font-family: var(--font-family-mono);
   cursor: pointer;
   user-select: none;
   text-align: left;
 }
 
 .chevron {
-  font-size: 9px;
+  font-size: var(--font-size-xs);
   opacity: 0.7;
 }
 

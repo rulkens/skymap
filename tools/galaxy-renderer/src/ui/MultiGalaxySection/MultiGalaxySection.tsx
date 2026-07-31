@@ -13,8 +13,10 @@
  * component dumb.
  */
 import type { ReactNode } from 'react';
+import Button from '../../../../../src/components/common/Button/Button';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { extrasToggled, extrasCountSet, extrasRegenerated } from '../../state/slices/extrasSlice';
+import ParamSlider from '../ParamSlider/ParamSlider';
 import styles from './MultiGalaxySection.module.css';
 
 function MultiGalaxySection(): ReactNode {
@@ -37,28 +39,18 @@ function MultiGalaxySection(): ReactNode {
 
       {extras.enabled && (
         <div className={styles.body}>
-          <div className={styles.sliderRow}>
-            <div className={styles.sliderHead}>
-              <span className={styles.sliderLabel}>Distant galaxies</span>
-              <span className={styles.sliderValue}>{extras.count}</span>
-            </div>
-            <input
-              type="range"
-              className={styles.range}
-              min={1}
-              max={200}
-              step={1}
-              value={extras.count}
-              onChange={(e) => dispatch(extrasCountSet(parseInt(e.target.value, 10)))}
-            />
-          </div>
-          <button
-            type="button"
-            className={styles.regenButton}
-            onClick={() => dispatch(extrasRegenerated())}
-          >
+          <ParamSlider
+            label="Distant galaxies"
+            value={extras.count}
+            min={1}
+            max={200}
+            step={1}
+            format={(v) => String(Math.round(v))}
+            onChange={(v) => dispatch(extrasCountSet(Math.round(v)))}
+          />
+          <Button className={styles.regenButton} onClick={() => dispatch(extrasRegenerated())}>
             ⟲ Regenerate distant galaxies
-          </button>
+          </Button>
           <div className={styles.explainer}>
             Each is a random galaxy (40–200k stars). Zoom out to see them; watch the FPS badge.
           </div>

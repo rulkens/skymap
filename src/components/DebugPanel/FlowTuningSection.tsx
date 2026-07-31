@@ -10,8 +10,8 @@
  * field list, ranges, and value formatting live in one registry rather than
  * re-spelled here.  Each slider owns its `max`; a new debug knob is one registry row.
  *
- * Idiom: a default-closed `DebugSection` with a local `Slider` component that
- * DRYs the labelled rows.
+ * Idiom: a default-closed `DebugSection` filled with `DebugSlider` rows — the
+ * shared row shape every dev-panel tuning section uses.
  */
 
 import type { ReactElement } from 'react';
@@ -19,37 +19,7 @@ import type { FlowSettings } from '../../@types/settings/FlowSettings';
 import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
 import { FLOW_SLIDER_FIELDS, flowSliderPatch } from '../../data/flow/flowFields';
 import DebugSection from './DebugSection';
-import styles from './FlowTuningSection.module.css';
-
-type SliderProps = {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  /** Pre-formatted value readout (e.g. `toFixed(3)` or an integer string). */
-  readout: string;
-  onChange: (v: number) => void;
-};
-
-function Slider({ label, value, min, max, step, readout, onChange }: SliderProps): ReactElement {
-  return (
-    <div className={styles.root}>
-      <span className={styles.label}>{label}</span>
-      <span className={styles.readout}>{readout}</span>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        aria-label={label}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className={styles.range}
-      />
-    </div>
-  );
-}
+import DebugSlider from './DebugSlider';
 
 export type FlowTuningSectionProps = {
   flow: FlowSettings;
@@ -63,7 +33,7 @@ export function FlowTuningSection({ flow, onChange }: FlowTuningSectionProps): R
   return (
     <DebugSection title="Flow tuning">
       {DEBUG_SLIDERS.map((f) => (
-        <Slider
+        <DebugSlider
           key={f.key}
           label={f.label}
           value={flow[f.key]}
@@ -71,6 +41,7 @@ export function FlowTuningSection({ flow, onChange }: FlowTuningSectionProps): R
           max={f.max}
           step={f.step}
           readout={f.format(flow[f.key])}
+          title={f.title}
           onChange={(v) => onChange(flowSliderPatch(f.key, v))}
         />
       ))}

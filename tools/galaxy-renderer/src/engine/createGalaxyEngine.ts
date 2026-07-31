@@ -3,7 +3,67 @@
  * device, every pipeline and buffer, the orbit camera + input, and the
  * per-frame render loop. A straight port of the spike's `galaxy-engine.js`
  * (`createGalaxyRenderer`), with all math delegated to the five tested pure
- * helpers and all seven shaders pulled in as build-time-linked WESL strings.
+ * helpers and every shader pulled in as a build-time-linked WESL string.
+ *
+ * ## The whole chain is the APP's, not this tool's
+ *
+ * This tool only earns its keep if a look tuned here survives the trip into
+ * the runtime, and that only holds while the two chains are the same chain.
+ * So they are the same chain, by construction rather than by hand-matching:
+ *
+ *  - The STAR and DUST passes are the runtime's `milkyWayCloud/stars.wesl` and
+ *    `milkyWayCloud/dust.wesl`, over the runtime's `milkyWayCloud/io.wesl`
+ *    uniform struct — the whole family symlinked into this tool's WESL root
+ *    (see `wesl.toml`). All eight `MILKY_WAY_TUNING_DEFAULTS` knobs therefore
+ *    mean here exactly what they mean in the app.
+ *  - The reduced-resolution star target and its additive composite back into
+ *    HDR are the app's split too, down to the shared
+ *    `createAdditiveUpsample` (see "Why the stars render small" below).
+ *  - The bloom pyramid is the runtime's `createBloomPyramid`, the tone-map
+ *    composite is the runtime's `createCompositor`, and the shaders behind
+ *    both are the runtime's `shaders/bloom/` and `shaders/compositor/` trees.
+ *
+ * Editing any of those shaders changes both apps. The swap chain is configured
+ * with the same format + `alphaMode` as `services/gpu/device.ts`, and no
+ * gamma encode is applied — matching the runtime, which writes tone-mapped
+ * linear light straight into a non-sRGB `bgra8unorm` surface.
+ *
+ * What could NOT be shared is the ORCHESTRATION. The runtime's `runBloom`
+ * takes a `ReadyFrameContext` and drives a `renderTargets` table and a GPU
+ * timing service that exist only inside the engine's frame executor; this
+ * tool has neither. So `encodeBloom` below is a deliberate ~25-line duplicate
+ * of `runBloom`'s pass sequence (bright -> descending downsample -> ascending
+ * additive upsample -> strength-scaled fold back into HDR), calling the same
+ * shared pyramid object. Keep the two in step: a change to the runtime's pass
+ * ORDER has to be mirrored here, while a change to any bloom/compositor
+ * SHADER or pipeline arrives here for free. The same split applies to the
+ * cloud: `createMilkyWayCloudRenderer` could not be reused because it bakes
+ * `MILKY_WAY_MODEL_SCALE` into the uniform and writes one uniform buffer per
+ * draw (this tool draws N background extras through the same pipeline), so
+ * the pipelines are built here against the shared modules and the uniforms
+ * packed by `packCloudUniforms` — see its header.
+ *
+ * ## Why the stars render small
+ *
+ * The star pass draws into `aggregateTex`, an offscreen at
+ * `floor(canvas / aggregateDivisor)`, which is then bilinearly upsampled and
+ * ADDED into the HDR scene. That is the app's `mw-aggregate` row, for the
+ * app's reason: a summed additive glow field is low-frequency, so it
+ * reconstructs from a coarser target for free while its fragment cost — the
+ * actual wall, measured — drops by the square of the divisor.
+ *
+ * DUST stays full-res in `sceneTex`, also matching the app: its multiplicative
+ * transmittance has to land on the real accumulation, and it is not the
+ * fill-bound half.
+ *
+ * The load-bearing detail is `viewportPx`. `stars.wesl` clamps each sprite's
+ * on-screen half-extent to `[starPxMin, starPxMax]` PIXELS, converted from NDC
+ * through the uniform's `viewportPx` — pixels of the TARGET. The star pass
+ * therefore packs the aggregate's dimensions there while the dust pass packs
+ * the canvas's, which is also why the two passes need two uniform BUFFERS:
+ * `queue.writeBuffer` is ordered against `queue.submit`, not against the
+ * passes encoded in between, so two writes to one buffer in a frame would both
+ * land before either pass ran and the second would win for both.
  *
  * ## The pass chain
  *
@@ -24,8 +84,13 @@
  *                     (one queue.submit, no CPU readback)
  *                              │
  *                              ▼ (every later drawFrame, same queue)
- *   ┌─ scene pass (HDR, clear black) ──────────────────────────────────┐
+ *   ┌─ star pass (aggregateTex, clear a=0) ────────────────────────────┐
  *   │   star pipe  (additive one/one) : central galaxy + every extra   │
+ *   └──────────────────────────────────────────────────────────────────┘
+ *                              │ aggregateTex (rgba16float, 1/divisor)
+ *                              ▼
+ *   ┌─ scene pass (HDR, clear black) ──────────────────────────────────┐
+ *   │   additive upsample : aggregateTex ──► sceneTex, 4-tap, one/one  │
  *   │   dust pipe  (transmittance)    : central galaxy + every extra   │
  *   └──────────────────────────────────────────────────────────────────┘
  *                              │ sceneTex (rgba16float)
@@ -37,13 +102,45 @@
  *   upsample 3..0  (loadOp 'load', additive) ──► fold each coarse mip
  *                              │                  back onto the finer one
  *                              ▼
- *   composite pass ──► canvas : sceneTex + bloomMip0, exposure → tonemap
- *                              → saturation → vignette → gamma
+ *   fold pass  ──► sceneTex : += bloomMip0 * strength, additive, loadOp
+ *                              │  'load'. The glow rejoins the HDR scene
+ *                              │  BEFORE the tone curve, so it rides that
+ *                              ▼  one curve instead of being added after it.
+ *   compositor ──► swap chain : exposure → one tone curve. Nothing else —
+ *                              │  no grade, no gamma encode. This is the
+ *                              │  runtime's compositor pass verbatim.
+ *                              ▼
+ *   grade pass (SKIPPED at default settings) ──► swap chain : saturation,
+ *                                 vignette, optional gamma encode. Only
+ *                                 present when a tool-only knob is off
+ *                                 identity; then the compositor writes an
+ *                                 LDR intermediate and this pass finishes.
  *
  * There is no depth attachment: stars are additive (order-independent) and
  * dust is order-independent transmittance, so nothing needs a Z buffer. That
  * is also why the projection's [0,1] vs [-1,1] depth convention is
  * cosmetic here — see the `proj` construction below.
+ *
+ * ## Measuring it: wall clock leads, timestamps follow
+ *
+ * Two independent instruments feed one `PerfReport`, and their ORDER of
+ * authority is the point. `createFrameTimer` holds a median of recent
+ * rAF-to-rAF deltas: total wall time per displayed frame, everything included,
+ * additive, and the only number that answers "did this change make it faster".
+ * The GPU timestamp slots below are the second instrument and are ordinal only
+ * — this is a tile-based deferred GPU, the driver overlaps passes, and a
+ * per-pass begin/end pair therefore measures a window in which other passes
+ * were also running. Summing them over-counts (roughly 3x on Apple Silicon in
+ * the app's own harness, and the handful of passes here gives the effect MORE
+ * room, not less). They rank passes; they do not total a frame.
+ *
+ * The timestamp half rides the runtime's `gpuTimingService` unmodified — it has
+ * no engine coupling, slot names are plain strings, and it degrades to a stub
+ * that hands back `undefined` descriptors when `timestamp-query` is missing, so
+ * every `descriptorFor` call below is unconditional. It is gated behind
+ * `?gpuTimings` (the app's spelling) because attaching `timestampWrites` to a
+ * pass is not free on a TBDR driver, and the default frame has to leave the
+ * wall clock unperturbed.
  *
  * ## Why extras fold their transform into generation
  *
@@ -91,18 +188,24 @@ import { mat4 } from 'wgpu-matrix';
 import type { GalaxyEngineHandle } from '../../@types/engine/GalaxyEngineHandle';
 import type { GalaxyEngineOptions } from '../../@types/engine/GalaxyEngineOptions';
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
+import type { PassTiming } from '../../@types/engine/PassTiming';
 import type { RenderSettings } from '../../@types/engine/RenderSettings';
 import type { LodSettings } from '../../@types/engine/LodSettings';
 import type { ViewPose } from '../../@types/engine/ViewPose';
 import type { ExtraGalaxySpec } from '../../../../src/@types/galaxy/ExtraGalaxySpec';
+import type { MilkyWayTuning } from '../../../../src/@types/settings/MilkyWayTuning';
+import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 import { createShaderModuleWithDevLog } from '../../../../src/services/gpu/shaderCompileLogger';
+import { createGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
+import { hasUrlGate } from '../../../../src/utils/url/hasUrlGate';
 
+import { createFrameTimer } from './createFrameTimer';
 import { orbitEye } from './orbitEye';
 import { panAxes } from './panAxes';
 import { lensShift } from './lensShift';
-import { packCameraUniforms } from './packCameraUniforms';
+import { CLOUD_UNIFORM_FLOATS, packCloudUniforms } from './packCloudUniforms';
 import { createGenerationPipelines } from '../../../../src/services/gpu/galaxy/createGenerationPipelines';
 import { encodeGeneration } from '../../../../src/services/gpu/galaxy/encodeGeneration';
 import { packGenerationUniforms } from '../../../../src/services/gpu/galaxy/packGenerationUniforms';
@@ -112,19 +215,75 @@ import { carveStarLayout } from '../../../../src/services/gpu/galaxy/carveStarLa
 import { carveDustLayout } from '../../../../src/services/gpu/galaxy/carveDustLayout';
 import { classifyHubbleType } from '../../../../src/services/gpu/galaxy/classifyHubbleType';
 import { splitStarBudget } from '../../../../src/services/gpu/galaxy/splitStarBudget';
+import { createBloomPyramid } from '../../../../src/services/gpu/passes/bloomPyramid';
+import { createCompositor } from '../../../../src/services/gpu/passes/compositor';
+import { createAdditiveUpsample } from '../../../../src/services/gpu/passes/additiveUpsample';
+import { ADDITIVE_BLEND } from '../../../../src/services/gpu/lib/blendStates';
+import { MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE } from '../../../../src/services/gpu/renderers/milkyWay/milkyWayCloudRenderer';
+import { BLOOM_LEVELS } from '../../../../src/data/bloomConstants';
+import { DEFAULT_RENDER_SETTINGS } from '../data/defaultRenderSettings';
 
-import starWgsl from './shaders/star.wesl?static';
-import dustWgsl from './shaders/dust.wesl?static';
-import brightWgsl from './shaders/bloomBright.wesl?static';
-import downsampleWgsl from './shaders/bloomDownsample.wesl?static';
-import upsampleWgsl from './shaders/bloomUpsample.wesl?static';
-import compositeWgsl from './shaders/composite.wesl?static';
+import starWgsl from './shaders/milkyWayCloud/stars.wesl?static';
+import dustWgsl from './shaders/milkyWayCloud/dust.wesl?static';
+import gradeWgsl from './shaders/grade.wesl?static';
 
-/** Multi-scale (mip pyramid) bloom: N downsample levels. galaxy-engine.js:32. */
-const BLOOM_MIPS = 5;
-
-/** HDR working format for the scene + bloom pyramid. galaxy-engine.js:17. */
+/** HDR working format for the scene + bloom pyramid — the runtime's `hdr` row. */
 const HDR: GPUTextureFormat = 'rgba16float';
+
+/**
+ * Resolution divisor for bloom level `n`, mirroring the runtime's `bloomN`
+ * render-target rows (`renderTargets.ts`: `scale: 2 ** (n + 1)` — level 0 at
+ * half-res, halving again each level). The rows themselves can't be reused
+ * here without dragging in the whole `renderTargets` table (volume, aggregate,
+ * and foreground rows this tool has no use for), so the one-line divisor is
+ * restated; the KERNELS and pipelines that consume it are shared.
+ */
+const bloomScale = (level: number): number => 2 ** (level + 1);
+
+/**
+ * The GPU-timing slots this tool bills, in frame-encode order — the order the
+ * HUD lists them in, and the order `gpuTimingService` allocates query-set index
+ * pairs in.
+ *
+ * A timestamp pair can only bracket a whole pass, so the split between slots
+ * is the split between passes — not a choice:
+ *
+ *  - `'stars'` is the additive star pass alone, because the reduced-resolution
+ *    `aggregateTex` is its own attachment and therefore its own pass. This is
+ *    the fill-bound half and the number the divisor / sprite-size knobs move,
+ *    so having it isolated is most of the point of the split.
+ *  - `'scene'` is the full-res HDR pass: the aggregate's additive upsample
+ *    followed by the dust billboards. Those two share an attachment and so
+ *    share a pass; separating them would mean ending the HDR pass and
+ *    reopening it with `loadOp: 'load'`, which on a tile-based GPU is a full
+ *    tile store plus reload of the whole HDR target — more cost than the
+ *    measurement is worth, and enough to corrupt the wall clock that outranks
+ *    it.
+ *  - `'bloom'` is the whole pyramid as ONE span (begin on the bright pass, end
+ *    on the fold), which is exactly how the app's frame program bills it (see
+ *    `frameProgram.ts`'s `'bloom'` step and `runBloom`). Matching keeps a
+ *    number read here comparable to the same number read in the app.
+ *
+ * `'grade'` only appears on frames where the tool-only grade trailer actually
+ * ran; the timing service drops slots whose `descriptorFor` went unconsumed.
+ */
+const TIMING_SLOTS: readonly string[] = ['stars', 'scene', 'bloom', 'composite', 'grade'];
+
+/** rAF deltas kept for the median — one second at 60 Hz. */
+const FRAME_WINDOW = 60;
+
+/** Timestamp spans kept per slot for its rolling mean — same window. */
+const PASS_WINDOW = 60;
+
+/**
+ * Frames a slot may go unreported before its row is dropped. The query set
+ * retains a gated-off pass's last tick values, so a row that stops running has
+ * to disappear rather than freeze at a stale-but-plausible number.
+ */
+const PASS_STALE_FRAMES = 30;
+
+/** How often the engine hands a `PerfReport` to the UI. */
+const PERF_REPORT_INTERVAL_MS = 500;
 
 /**
  * A single generated extra galaxy: its GPU-filled star/dust vertex buffers,
@@ -149,10 +308,28 @@ export async function createGalaxyEngine(
   if (!navigator.gpu) throw new Error('no-webgpu');
   const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
   if (!adapter) throw new Error('no-adapter');
-  const device = await adapter.requestDevice();
+  // WebGPU features are opt-in both ways: asking for one the adapter lacks
+  // makes `requestDevice` throw, and NOT asking leaves it off the device even
+  // where the adapter has it. So mirror the adapter's advertised set for the
+  // one optional feature this tool wants, exactly as `services/gpu/device.ts`
+  // does. On an adapter without it the array stays empty, the device comes back
+  // fine, and `createGpuTimingService` takes its no-op branch on
+  // `device.features.has('timestamp-query')` — nothing else changes.
+  const requiredFeatures: GPUFeatureName[] = [];
+  if (adapter.features.has('timestamp-query')) requiredFeatures.push('timestamp-query');
+  const device = await adapter.requestDevice({ requiredFeatures });
   const ctx = canvas.getContext('webgpu') as GPUCanvasContext;
+  // Swap-chain config copied from the runtime's `services/gpu/device.ts`, down
+  // to the alphaMode: `getPreferredCanvasFormat()` is a NON-sRGB format
+  // (`bgra8unorm` on macOS), so nothing between the compositor's output and the
+  // display applies a transfer function. The runtime relies on that — its
+  // compositor returns the tone-mapped value with no encode — and so does this
+  // tool. `alphaMode: 'premultiplied'` (rather than the tool's former
+  // 'opaque') is part of the copy; with the compositor forcing alpha 1.0 on a
+  // 'replace' composite the two behave identically, but matching removes one
+  // more place the two chains could quietly diverge.
   const format = navigator.gpu.getPreferredCanvasFormat();
-  ctx.configure({ device, format, alphaMode: 'opaque' });
+  ctx.configure({ device, format, alphaMode: 'premultiplied' });
 
   // ---- static fullscreen-billboard quad (galaxy-engine.js:20-22) ----
   const quad = device.createBuffer({
@@ -164,43 +341,47 @@ export async function createGalaxyEngine(
   new Float32Array(quad.getMappedRange()).set([-1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1]);
   quad.unmap();
 
-  // ---- uniform buffers (galaxy-engine.js:25-34) ----
-  const camBuf = device.createBuffer({
-    label: 'galaxy:cam',
-    size: 112,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-  const brightBuf = device.createBuffer({
-    label: 'galaxy:bright',
+  // ---- cloud uniform buffers: ONE PER PASS ----
+  // Both hold `milkyWayCloud/io.wesl`'s `Uniforms`, and every lane but
+  // `viewportPx` is identical between them — but that one lane differs (the
+  // star pass renders into the reduced-resolution aggregate, the dust pass
+  // full-res) and `queue.writeBuffer` is ordered against `queue.submit`, not
+  // against the passes encoded in between. Two writes to one buffer in a frame
+  // would both land before either pass executed and the second would win for
+  // BOTH, silently handing the star pass the canvas viewport and scaling every
+  // px-clamped sprite by the divisor. The app splits them for the same reason.
+  const makeCloudUniformBuffer = (label: string): GPUBuffer =>
+    device.createBuffer({
+      label,
+      size: MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+  const starUbo = makeCloudUniformBuffer('galaxy:starUniforms');
+  const dustUbo = makeCloudUniformBuffer('galaxy:dustUniforms');
+  // Tool-only grade trailer: [saturation, vignette, gammaEncode, 0]. The bloom
+  // and compositor uniforms are owned by their shared factories below.
+  const gradeBuf = device.createBuffer({
+    label: 'galaxy:grade',
     size: 16,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-  const compBuf = device.createBuffer({
-    label: 'galaxy:composite',
-    size: 32,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-  // One texel-size uniform per bloom level: [1/w, 1/h, karisFlag, 0].
-  const mipTexelBufs = Array.from({ length: BLOOM_MIPS }, (_, i) =>
-    device.createBuffer({
-      label: `galaxy:mipTexel${i}`,
-      size: 16,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    }),
-  );
-  // bright-pass prefilter: x = threshold, y = knee. Seeded once.
-  device.queue.writeBuffer(brightBuf, 0, new Float32Array([0.22, 0.5, 0, 0]));
-
-  const sampler = device.createSampler({
-    label: 'galaxy:sampler',
-    magFilter: 'linear',
-    minFilter: 'linear',
   });
 
   const makeShader = (code: string, label: string): GPUShaderModule =>
     createShaderModuleWithDevLog(device, code, label);
 
-  // ---- star pipeline (additive billboards) — galaxy-engine.js:39-56 ----
+  // ---- star pipeline (additive billboards) ----
+  // The module is the runtime's `milkyWayCloud/stars.wesl`. It must stay a
+  // SEPARATE GPUShaderModule from the dust pass even though the two share
+  // `io.wesl`: WebGPU's `auto` pipeline layout derives its bind-group layout
+  // from the entry points a module exposes, and two pipelines sharing a module
+  // that references the binding with divergent stage visibility fail the
+  // group-equivalent check. `io.wesl`'s header spells this out; the runtime's
+  // `milkyWayCloudRenderer` keeps them disjoint for exactly this reason.
+  //
+  // The instance layout is unchanged from the tool's own former star pass —
+  // both read `pos@0, color@12, (size, brightness)@24` off the same
+  // `generate.wesl`-written record, which is what makes the shader swap a
+  // shader swap and nothing more.
   const starMod = makeShader(starWgsl, 'galaxy:star');
   const starPipe = device.createRenderPipeline({
     label: 'galaxy:starPipe',
@@ -224,20 +405,21 @@ export async function createGalaxyEngine(
     fragment: {
       module: starMod,
       entryPoint: 'fs',
-      targets: [
-        {
-          format: HDR,
-          blend: {
-            color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-            alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-          },
-        },
-      ],
+      // The aggregate offscreen is `rgba16float` like `sceneTex`, so one HDR
+      // format still describes both cloud pipelines. `ADDITIVE_BLEND` is the
+      // runtime's shared descriptor — the same one `milkyWayCloudRenderer`
+      // hands its star pipeline, and the same algebra `createAdditiveUpsample`
+      // composites the result back with (that pairing is what makes the
+      // reduced-res detour mathematically equal to drawing straight into HDR).
+      targets: [{ format: HDR, blend: ADDITIVE_BLEND }],
     },
     primitive: { topology: 'triangle-list' },
   });
 
-  // ---- dust pipeline (transmittance billboards) — galaxy-engine.js:58-76 ----
+  // ---- dust pipeline (transmittance billboards) ----
+  // The runtime's `milkyWayCloud/dust.wesl`, drawn FULL-RES into `sceneTex`
+  // (not the aggregate) — the app's split, because multiplicative
+  // transmittance has to land on the real accumulation.
   const dustMod = makeShader(dustWgsl, 'galaxy:dust');
   const dustPipe = device.createRenderPipeline({
     label: 'galaxy:dustPipe',
@@ -275,41 +457,39 @@ export async function createGalaxyEngine(
     primitive: { topology: 'triangle-list' },
   });
 
-  // ---- post pipelines (galaxy-engine.js:78-93) ----
-  const mkPost = (code: string, label: string, targetFmt: GPUTextureFormat): GPURenderPipeline => {
-    const mod = makeShader(code, label);
-    return device.createRenderPipeline({
-      label,
-      layout: 'auto',
-      vertex: { module: mod, entryPoint: 'vs' },
-      fragment: { module: mod, entryPoint: 'fs', targets: [{ format: targetFmt }] },
-      primitive: { topology: 'triangle-list' },
-    });
-  };
-  const brightPipe = mkPost(brightWgsl, 'galaxy:brightPipe', HDR); // scene -> pyramid level 0
-  const downPipe = mkPost(downsampleWgsl, 'galaxy:downPipe', HDR); // level i-1 -> level i
-  // upsample folds level i+1 additively onto level i.
-  const upMod = makeShader(upsampleWgsl, 'galaxy:upsample');
-  const upPipe = device.createRenderPipeline({
-    label: 'galaxy:upPipe',
+  // ---- the aggregate composite: the RUNTIME's additive upsample ----
+  // Fully generic — a covering-triangle 4-tap low-pass of whatever view it is
+  // handed, additively blended into an `rgba16float` target. The star pass
+  // meets its contract exactly (an additive SUM, low-frequency relative to the
+  // reduced-resolution target), which is the whole argument for rendering the
+  // stars small. Its `draw` rebuilds its bind group per call, so a
+  // reallocated aggregate view needs no invalidation here.
+  const aggregateUpsample = createAdditiveUpsample(device, HDR);
+
+  // ---- post chain: the RUNTIME's bloom pyramid + compositor ----
+  // Both factories own their pipelines, samplers, and uniform buffers, and
+  // both link the runtime's shaders (symlinked into this tool's WESL root).
+  // Nothing about the glow or the tone curve is re-implemented here.
+  const bloomPyramid = createBloomPyramid(device, HDR);
+  const compositor = createCompositor({ device, swapFormat: format, hdrFormat: HDR });
+
+  // ---- the one tool-only post pipeline: the grade trailer ----
+  // See `shaders/grade.wesl` — saturation / vignette / optional gamma encode,
+  // none of which the app has. Skipped entirely at identity settings, which is
+  // the default, so it costs nothing in the app-parity configuration.
+  const gradeMod = makeShader(gradeWgsl, 'galaxy:grade');
+  const gradePipe = device.createRenderPipeline({
+    label: 'galaxy:gradePipe',
     layout: 'auto',
-    vertex: { module: upMod, entryPoint: 'vs' },
-    fragment: {
-      module: upMod,
-      entryPoint: 'fs',
-      targets: [
-        {
-          format: HDR,
-          blend: {
-            color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-            alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-          },
-        },
-      ],
-    },
+    vertex: { module: gradeMod, entryPoint: 'vs' },
+    fragment: { module: gradeMod, entryPoint: 'fs', targets: [{ format }] },
     primitive: { topology: 'triangle-list' },
   });
-  const compPipe = mkPost(compositeWgsl, 'galaxy:compPipe', format);
+  const gradeSampler = device.createSampler({
+    label: 'galaxy:gradeSampler',
+    magFilter: 'nearest',
+    minFilter: 'nearest',
+  });
 
   // ---- generation pipelines + UBO (compute dispatch — see setParams below) ----
   // One `genUbo` buffer for the CENTRAL galaxy only: `setParams` rewrites it
@@ -331,6 +511,15 @@ export async function createGalaxyEngine(
     format,
     usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
   });
+  // LDR scratch for `sample`'s readback, so the offscreen path runs the SAME
+  // `encodePost` as the on-screen frame — grade trailer included when it is
+  // active. Sized to match debugTex; unused (but harmless) at default settings.
+  const debugScratchTex = device.createTexture({
+    label: 'galaxy:debugScratchTex',
+    size: [64, 64],
+    format,
+    usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+  });
   const dbgBuf = device.createBuffer({
     label: 'galaxy:debugBuf',
     size: 64 * 256,
@@ -344,33 +533,82 @@ export async function createGalaxyEngine(
   let dustCount = 0;
   let extras: Extra[] = []; // background galaxies, each GPU-generated in world space
 
-  // Per-pipeline bind groups: `layout:'auto'` groups are pipeline-specific and
-  // never cross pipelines, so the SAME cam buffer needs one group for the star
-  // pipe and a separate one for the dust pipe. (galaxy-engine.js:117-118)
-  const camBG = device.createBindGroup({
-    label: 'galaxy:camBG-star',
+  // Per-pipeline bind groups. `layout: 'auto'` groups are pipeline-specific
+  // and never cross pipelines, so each pass needs its own group even where the
+  // buffer is the same — and here the buffers differ too (see
+  // `makeCloudUniformBuffer` above on why the two passes cannot share one).
+  const starBG = device.createBindGroup({
+    label: 'galaxy:cloudBG-star',
     layout: starPipe.getBindGroupLayout(0),
-    entries: [{ binding: 0, resource: { buffer: camBuf } }],
+    entries: [{ binding: 0, resource: { buffer: starUbo } }],
   });
-  const camBGdust = device.createBindGroup({
-    label: 'galaxy:camBG-dust',
+  const dustBG = device.createBindGroup({
+    label: 'galaxy:cloudBG-dust',
     layout: dustPipe.getBindGroupLayout(0),
-    entries: [{ binding: 0, resource: { buffer: camBuf } }],
+    entries: [{ binding: 0, resource: { buffer: dustUbo } }],
   });
 
-  // ---- size-dependent targets: HDR scene + bloom mip pyramid ----
+  // ---- size-dependent targets: HDR scene + star aggregate + bloom mips + LDR ----
+  //
+  // The runtime keeps these in its `renderTargets` table, which also carries
+  // volume / foreground rows this tool never draws — so the tool allocates its
+  // own equivalents of the `hdr`, `mw-aggregate` and `bloom0..4` rows, at the
+  // same formats and the same divisors. `ldrTex` has no runtime counterpart at
+  // all: it only exists as the intermediate the tool-only grade trailer reads,
+  // and is allocated lazily-by-configuration (every resize) but bound only on
+  // frames the trailer actually runs.
+  //
+  // Bind groups are NOT cached here: every shared factory rebuilds its own per
+  // draw from the source view it is handed, which is exactly what makes a
+  // resize (or an aggregate reallocation) need no bookkeeping in this function.
   let sceneTex: GPUTexture;
+  let ldrTex: GPUTexture;
+  let aggregateTex: GPUTexture;
   let bloomMips: GPUTexture[] = [];
-  let brightBG: GPUBindGroup;
-  let downBG: GPUBindGroup[] = [];
-  let upBG: GPUBindGroup[] = [];
-  let compBG: GPUBindGroup;
   const RA_TB = GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING;
+
+  /**
+   * Pixel size of the reduced-resolution star target — `floor(canvas / scale)`
+   * clamped to 1 px per axis, the SAME formula and the same clamp the runtime's
+   * `renderTargets.allocate` uses. `floor` (not `round`) is deliberate there:
+   * it is what the upsample shader's sample-at-uv semantics assume. The clamp
+   * guards a tiny canvas, where `floor` would otherwise ask for an illegal
+   * 0-dimension texture.
+   *
+   * This is also the number the star pass writes into `viewportPx`, which is
+   * why it is a function rather than two inline expressions — the allocation
+   * and the uniform read it from the same place and so cannot disagree, the
+   * same discipline `milkyWayAggregateLayer` follows by reading the divisor off
+   * the shared spec row.
+   */
+  const aggregateSize = (): Vec2 => {
+    const scale = render.aggregateDivisor;
+    return [
+      Math.max(1, Math.floor(canvas.width / scale)),
+      Math.max(1, Math.floor(canvas.height / scale)),
+    ];
+  };
+
+  // Split out of `buildTargets` because the divisor is a live slider: moving it
+  // has to reallocate this one target without disturbing the scene, the LDR
+  // scratch, or the bloom pyramid. Reallocating outright (rather than pooling a
+  // few sizes) is the right trade for a 1..6 integer knob dragged by hand.
+  function buildAggregateTarget(): void {
+    const [w, h] = aggregateSize();
+    if (aggregateTex) aggregateTex.destroy();
+    aggregateTex = device.createTexture({
+      label: 'galaxy:aggregateTex',
+      size: [w, h],
+      format: HDR,
+      usage: RA_TB,
+    });
+  }
 
   function buildTargets(): void {
     const w = canvas.width;
     const h = canvas.height;
     if (sceneTex) sceneTex.destroy();
+    if (ldrTex) ldrTex.destroy();
     for (const m of bloomMips) m.destroy();
     sceneTex = device.createTexture({
       label: 'galaxy:sceneTex',
@@ -378,77 +616,38 @@ export async function createGalaxyEngine(
       format: HDR,
       usage: RA_TB,
     });
-    // Pyramid: level 0 = half-res, each further level halves again -> ever-wider glow.
-    bloomMips = [];
-    let mw = Math.max(1, w >> 1);
-    let mh = Math.max(1, h >> 1);
-    for (let i = 0; i < BLOOM_MIPS; i++) {
-      const levelW = Math.max(1, mw);
-      const levelH = Math.max(1, mh);
-      bloomMips.push(
-        device.createTexture({
-          label: `galaxy:bloomMip${i}`,
-          size: [levelW, levelH],
-          format: HDR,
-          usage: RA_TB,
-        }),
-      );
-      device.queue.writeBuffer(
-        mipTexelBufs[i]!,
-        0,
-        new Float32Array([1 / levelW, 1 / levelH, i === 0 ? 1 : 0, 0]),
-      );
-      mw = Math.max(1, mw >> 1);
-      mh = Math.max(1, mh >> 1);
-    }
-    // bright-pass: scene -> level 0
-    brightBG = device.createBindGroup({
-      label: 'galaxy:brightBG',
-      layout: brightPipe.getBindGroupLayout(0),
-      entries: [
-        { binding: 0, resource: sampler },
-        { binding: 1, resource: sceneTex.createView() },
-        { binding: 2, resource: { buffer: brightBuf } },
-      ],
+    ldrTex = device.createTexture({
+      label: 'galaxy:ldrTex',
+      size: [w, h],
+      format,
+      usage: RA_TB,
     });
-    // downsample: produce level i from level i-1 (uses i-1's texel size)
-    downBG = [];
-    for (let i = 1; i < BLOOM_MIPS; i++) {
-      downBG[i] = device.createBindGroup({
-        label: `galaxy:downBG${i}`,
-        layout: downPipe.getBindGroupLayout(0),
-        entries: [
-          { binding: 0, resource: sampler },
-          { binding: 1, resource: bloomMips[i - 1]!.createView() },
-          { binding: 2, resource: { buffer: mipTexelBufs[i - 1]! } },
-        ],
+    buildAggregateTarget();
+    // Pyramid: level 0 = half-res, each further level halves again -> ever-wider
+    // glow. `Math.floor(size / scale)` clamped to 1 px, matching the runtime's
+    // `renderTargets.allocate`.
+    bloomMips = Array.from({ length: BLOOM_LEVELS }, (_unused, level) => {
+      const scale = bloomScale(level);
+      return device.createTexture({
+        label: `galaxy:bloomMip${level}`,
+        size: [Math.max(1, Math.floor(w / scale)), Math.max(1, Math.floor(h / scale))],
+        format: HDR,
+        usage: RA_TB,
       });
-    }
-    // upsample: fold level i+1 additively back onto level i (uses i+1's texel size)
-    upBG = [];
-    for (let i = 0; i < BLOOM_MIPS - 1; i++) {
-      upBG[i] = device.createBindGroup({
-        label: `galaxy:upBG${i}`,
-        layout: upPipe.getBindGroupLayout(0),
-        entries: [
-          { binding: 0, resource: sampler },
-          { binding: 1, resource: bloomMips[i + 1]!.createView() },
-          { binding: 2, resource: { buffer: mipTexelBufs[i + 1]! } },
-        ],
-      });
-    }
-    // composite: scene + accumulated bloom (level 0)
-    compBG = device.createBindGroup({
-      label: 'galaxy:compBG',
-      layout: compPipe.getBindGroupLayout(0),
-      entries: [
-        { binding: 0, resource: sampler },
-        { binding: 1, resource: sceneTex.createView() },
-        { binding: 2, resource: bloomMips[0]!.createView() },
-        { binding: 3, resource: { buffer: compBuf } },
-      ],
     });
   }
+
+  /**
+   * Texel size of bloom level `level` — `1 / source-pixel-size` per axis, which
+   * is `scale / viewportPx` because every level is a sub-scale of the one
+   * viewport. Mirrors the runtime's `bloomSrcTexelSize`, which can't be reused
+   * directly: it reads the divisor off a `ReadyFrameContext`'s render-target
+   * specs, and this tool has no frame context.
+   */
+  const bloomTexelSize = (level: number): Vec2 => [
+    bloomScale(level) / canvas.width,
+    bloomScale(level) / canvas.height,
+  ];
 
   // ---- camera state (orbit) — galaxy-engine.js:159-166 ----
   const cam = { az: 0.5, el: 1.05, dist: 31, target: [0, 0, 0] as Vec3, fov: (45 * Math.PI) / 180 };
@@ -459,21 +658,54 @@ export async function createGalaxyEngine(
   let lastInteract = performance.now();
 
   // One internal render bag merged by setRender (the spike's Object.assign).
+  // Seeded from DEFAULT_RENDER_SETTINGS so this bag can't drift from the store
+  // slice + preset envelope that also seed from it — and, through it, from the
+  // app's own defaults. `sizeScale` is the one exception: the engine's spike
+  // default is 1.0 where the UI seeds 0.3, and the bridge pushes the UI value
+  // on its first sync anyway.
   const render = {
-    exposure: 0.92,
-    bloom: 0.85,
-    saturation: 1.26,
-    vignette: 0.5,
+    ...DEFAULT_RENDER_SETTINGS,
     sizeScale: 1.0,
-    starIntensity: 0.11,
-    tonemap: 0 as number,
     lodApparent: 0,
-    cullBright: 0,
   };
 
   // Reused scratch for the per-frame uniform packs — no per-frame allocation.
-  const camData = new Float32Array(28);
-  const compData = new Float32Array(8);
+  // One scratch serves both cloud passes: each pack writes every lane before
+  // its `writeBuffer`, so nothing of the star pass's fill survives into the
+  // dust pass's. (The BUFFERS still have to be separate — see
+  // `makeCloudUniformBuffer`.)
+  const cloudData = new Float32Array(CLOUD_UNIFORM_FLOATS);
+  const gradeData = new Float32Array(4);
+
+  /**
+   * The tool's render bag, viewed as the app's `MilkyWayTuning` — the shape
+   * `packCloudUniforms` and the shared shaders speak. Only two knobs are
+   * renamed rather than shared outright: the tool's `starIntensity` is the
+   * app's per-sprite `exposure` (the tool already spells `exposure` for the
+   * post chain's whole-frame multiplier, a different quantity at a different
+   * stage), and `sizeScale` is `starSizeScale`. `aggregateDivisor` and
+   * `starCount` ride along for completeness even though the uniform ignores
+   * both — the divisor reaches the frame by sizing `aggregateTex`, and the
+   * count by carving the layouts, neither through `params0`/`params1`.
+   *
+   * The count supplied is the carved CAPACITY rather than the number the
+   * generator was asked for. In the app those are the same field, because the
+   * request lives on `MilkyWayTuning` itself; here the request is a
+   * `GalaxyParams` knob (`PARAM_SPEC.starCount`, its own slider) and only the
+   * realised capacity is retained past `setParams`. Since no consumer of this
+   * view reads the field, the honest available number beats retaining a second
+   * copy of the request to satisfy a shape.
+   */
+  const cloudTuning = (): MilkyWayTuning => ({
+    starSizeScale: render.sizeScale,
+    exposure: render.starIntensity,
+    starPxMin: render.starPxMin,
+    starPxMax: render.starPxMax,
+    softness: render.softness,
+    lodApparent: render.lodApparent,
+    aggregateDivisor: render.aggregateDivisor,
+    starCount,
+  });
 
   /**
    * setParams — regenerate the central galaxy as a GPU compute dispatch
@@ -565,8 +797,16 @@ export async function createGalaxyEngine(
     opts.onStats?.({ stars: plannedStars, dust: dustLayout.capacity });
   }
 
+  // Every knob here reaches the next frame through the uniform pack, so a
+  // merge is all that is needed — except `aggregateDivisor`, which sizes the
+  // star pass's own render target. That one has to reallocate, and only when
+  // it actually moved: the bridge re-pushes the whole bag on any render/lod
+  // change, so an unconditional rebuild would churn a texture on every
+  // exposure tick.
   function setRender(patch: Partial<RenderSettings & LodSettings>): void {
+    const previousDivisor = render.aggregateDivisor;
     Object.assign(render, patch);
+    if (render.aggregateDivisor !== previousDivisor) buildAggregateTarget();
   }
 
   // Replace the set of background galaxies. Each extra is generated GPU-side
@@ -722,15 +962,244 @@ export async function createGalaxyEngine(
   ro.observe(canvas);
   resize();
 
+  // ---- perf instrumentation (see "Measuring it" in the header) ----
+
+  // The honest instrument: wall time between consecutive rAF callbacks. Fed
+  // from `loop` rather than `drawFrame`, so the matcher's offscreen frames
+  // (`sample`, `grab`, `step`) never enter the window — those render off the
+  // rAF cadence and would read as impossibly fast frames.
+  const frameTimer = createFrameTimer(FRAME_WINDOW);
+
+  // The ordinal instrument: the runtime's timing service, imported whole. It
+  // allocates nothing when the gate is off or the adapter lacks the feature.
+  const timing = createGpuTimingService(device, hasUrlGate('gpuTimings'), TIMING_SLOTS);
+
+  // Per-slot rolling means, accumulated off the service's subscription. The
+  // service delivers a frame's decoded spans 1-2 frames after its submit (the
+  // staging buffer maps asynchronously); nothing here waits on that, the next
+  // periodic report just picks up whatever has landed.
+  type PassWindow = { samples: number[]; lastSeenFrame: number };
+  const passWindows = new Map<string, PassWindow>();
+  const unsubscribeTiming = timing.subscribe((frame) => {
+    for (const [slot, ms] of frame.perPassMs) {
+      let window = passWindows.get(slot);
+      if (!window) {
+        window = { samples: [], lastSeenFrame: frame.frameIndex };
+        passWindows.set(slot, window);
+      }
+      window.samples.push(ms);
+      if (window.samples.length > PASS_WINDOW) window.samples.shift();
+      window.lastSeenFrame = frame.frameIndex;
+    }
+    for (const [slot, window] of passWindows) {
+      if (frame.frameIndex - window.lastSeenFrame > PASS_STALE_FRAMES) passWindows.delete(slot);
+    }
+  });
+
+  // Rows come out in `TIMING_SLOTS` order rather than Map-insertion order: a
+  // slot that only starts running later (the grade trailer) would otherwise
+  // insert at the end and pin itself there, shuffling the HUD's row order
+  // against the frame's actual pass order.
+  const passTimings = (): readonly PassTiming[] =>
+    TIMING_SLOTS.flatMap((slot) => {
+      const window = passWindows.get(slot);
+      if (!window || window.samples.length === 0) return [];
+      const mean = window.samples.reduce((sum, ms) => sum + ms, 0) / window.samples.length;
+      return [{ slot, ms: mean }];
+    });
+
+  // ---- post chain encoding ----
+
+  /**
+   * encodeBloom — a deliberate duplicate of the runtime's `runBloom` pass
+   * sequence, calling the SAME shared `bloomPyramid`. Only the orchestration is
+   * copied: `runBloom` reads its targets off a `ReadyFrameContext`'s
+   * `renderTargets` table and brackets the sequence in a GPU-timing slot,
+   * neither of which exists in this tool. The pass ORDER is the load-bearing
+   * part and must stay in step with `runBloom` — every pass reads a level
+   * written earlier in this same sequence, which is what keeps a level from
+   * ever sampling last frame's stored contents (the cross-frame feedback that
+   * ramps the whole screen to white).
+   *
+   *   bright        hdr      -> bloom0          (clear)
+   *   downsample L  bloomL-1 -> bloomL          (clear), Karis on L=1 only
+   *   upsample   L  bloomL+1 -> bloomL          (load, additive)
+   *   fold          bloom0   -> hdr             (load, additive, x strength)
+   *
+   * The fold is what puts the glow back into the HDR scene BEFORE the tone
+   * curve, so bloom rides that one curve. Adding it inside the composite
+   * instead — as this tool used to — puts the same sum through the same curve
+   * arithmetically, but leaves the composite carrying a second texture bind and
+   * a strength knob that the shared compositor has no slot for, which is
+   * exactly the divergence that made the shared shader unusable here.
+   */
+  function encodeBloom(enc: GPUCommandEncoder): void {
+    const hdrView = sceneTex.createView();
+    const clear = { r: 0, g: 0, b: 0, a: 0 };
+    const open = (
+      level: number,
+      loadOp: 'clear' | 'load',
+      timestampWrites?: GPURenderPassTimestampWrites,
+    ): GPURenderPassEncoder =>
+      enc.beginRenderPass({
+        label: `galaxy:bloom${level}`,
+        colorAttachments: [
+          loadOp === 'clear'
+            ? { view: bloomMips[level]!.createView(), loadOp, storeOp: 'store', clearValue: clear }
+            : { view: bloomMips[level]!.createView(), loadOp, storeOp: 'store' },
+        ],
+        ...(timestampWrites ? { timestampWrites } : {}),
+      });
+
+    // One `'bloom'` span across the whole pyramid, the app's billing: the begin
+    // timestamp rides the bright pass and the end rides the fold, both writing
+    // the same query pair. The decoder reads two absolute tick values at fixed
+    // indices and subtracts, so splitting the pair across passes yields the
+    // honest cross-pass span.
+    const ts = timing.descriptorFor('bloom');
+    const beginWrites = ts
+      ? { querySet: ts.querySet, beginningOfPassWriteIndex: ts.beginningOfPassWriteIndex }
+      : undefined;
+    const endWrites = ts
+      ? { querySet: ts.querySet, endOfPassWriteIndex: ts.endOfPassWriteIndex }
+      : undefined;
+
+    const brightPass = open(0, 'clear', beginWrites);
+    bloomPyramid.bright(brightPass, hdrView, render.bloomThreshold);
+    brightPass.end();
+
+    for (let level = 1; level < BLOOM_LEVELS; level++) {
+      const pass = open(level, 'clear');
+      bloomPyramid.downsample(
+        pass,
+        bloomMips[level - 1]!.createView(),
+        level,
+        bloomTexelSize(level - 1),
+        level === 1,
+      );
+      pass.end();
+    }
+
+    for (let level = BLOOM_LEVELS - 2; level >= 0; level--) {
+      const pass = open(level, 'load');
+      bloomPyramid.upsample(
+        pass,
+        bloomMips[level + 1]!.createView(),
+        level,
+        bloomTexelSize(level + 1),
+      );
+      pass.end();
+    }
+
+    const foldPass = enc.beginRenderPass({
+      label: 'galaxy:bloomFold',
+      colorAttachments: [{ view: hdrView, loadOp: 'load', storeOp: 'store' }],
+      ...(endWrites ? { timestampWrites: endWrites } : {}),
+    });
+    bloomPyramid.fold(foldPass, bloomMips[0]!.createView(), render.bloom);
+    foldPass.end();
+  }
+
+  /**
+   * Is the tool-only grade trailer doing anything? At its identity defaults it
+   * is not, and the whole pass is then skipped so the chain is the app's chain
+   * exactly — one composite from HDR straight to the destination.
+   */
+  const gradeIsActive = (): boolean =>
+    render.saturation !== 1 || render.vignette !== 0 || render.gammaEncode;
+
+  /**
+   * encodePost — sceneTex through the shared compositor (exposure + one tone
+   * curve) into `dstView`, then, only if a tool-only grade knob is off
+   * identity, through the local grade trailer. `scratchView` is the LDR
+   * intermediate the trailer reads; it must match `dstView`'s size and format,
+   * and is untouched when the trailer is skipped.
+   *
+   * `timed` is false for the offscreen readback paths (`sample`, `grab`). They
+   * run this same chain a second time into their own target, outside the frame
+   * the timing service is bracketing; letting them attach `timestampWrites`
+   * would overwrite the on-screen composite's ticks with an offscreen pass's,
+   * and would mark slots consumed on a frame they didn't belong to.
+   */
+  function encodePost(
+    enc: GPUCommandEncoder,
+    dstView: GPUTextureView,
+    scratchView: GPUTextureView,
+    timed: boolean,
+  ): void {
+    const graded = gradeIsActive();
+    const compositeWrites = timed ? timing.descriptorFor('composite') : undefined;
+    const tonePass = enc.beginRenderPass({
+      label: 'galaxy:compositePass',
+      colorAttachments: [
+        {
+          view: graded ? scratchView : dstView,
+          loadOp: 'clear',
+          storeOp: 'store',
+          clearValue: { r: 0, g: 0, b: 0, a: 1 },
+        },
+      ],
+      ...(compositeWrites ? { timestampWrites: compositeWrites } : {}),
+    });
+    compositor.draw(
+      tonePass,
+      sceneTex.createView(),
+      'replace',
+      // Both HDR fields zero: the tool configures an SDR swap chain, where
+      // spilled over-white energy would just clamp back to 1.0. The app's own
+      // SDR path passes the same zeros — see ToneMap's field docs.
+      { exposure: render.exposure, curve: render.tonemap, hdrKnee: 0, hdrHeadroom: 0 },
+      format,
+    );
+    tonePass.end();
+    if (!graded) return;
+
+    gradeData[0] = render.saturation;
+    gradeData[1] = render.vignette;
+    gradeData[2] = render.gammaEncode ? 1 : 0;
+    device.queue.writeBuffer(gradeBuf, 0, gradeData);
+    // Reached only when the trailer is live, so the `'grade'` slot is consumed
+    // exactly on the frames the pass runs — which is what makes the row vanish
+    // from the HUD (rather than freeze) when the knobs return to identity.
+    const gradeWrites = timed ? timing.descriptorFor('grade') : undefined;
+    const gradePass = enc.beginRenderPass({
+      label: 'galaxy:gradePass',
+      colorAttachments: [
+        {
+          view: dstView,
+          loadOp: 'clear',
+          storeOp: 'store',
+          clearValue: { r: 0, g: 0, b: 0, a: 1 },
+        },
+      ],
+      ...(gradeWrites ? { timestampWrites: gradeWrites } : {}),
+    });
+    gradePass.setPipeline(gradePipe);
+    gradePass.setBindGroup(
+      0,
+      device.createBindGroup({
+        label: 'galaxy:gradeBG',
+        layout: gradePipe.getBindGroupLayout(0),
+        entries: [
+          { binding: 0, resource: gradeSampler },
+          { binding: 1, resource: scratchView },
+          { binding: 2, resource: { buffer: gradeBuf } },
+        ],
+      }),
+    );
+    gradePass.draw(3);
+    gradePass.end();
+  }
+
   // ---- frame loop (galaxy-engine.js:266-345) ----
   let raf = 0;
   let running = true;
   let prev = performance.now();
-  let fpsAcc = 0;
-  let fpsN = 0;
-  let fpsT = 0;
 
   function drawFrame(now: number): void {
+    // Clamped so a long stall (tab restore, shader recompile) can't teleport
+    // the damped camera. The perf median deliberately reads the UNCLAMPED rAF
+    // delta instead — see `loop`.
     const dt = Math.min(0.05, (now - prev) / 1000);
     prev = now;
     // idle auto-rotate
@@ -748,28 +1217,66 @@ export async function createGalaxyEngine(
     proj[8] = lensShift(insetL, insetR, canvas.clientWidth); // lens shift to centre in the visible area
     const vp = mat4.multiply(proj, view);
 
-    packCameraUniforms(
-      vp,
-      view,
-      {
-        sizeScale: render.sizeScale,
-        starIntensity: render.starIntensity,
-        lodApparent: render.lodApparent,
-        cullBright: render.cullBright,
-      },
-      camData,
-    );
-    device.queue.writeBuffer(camBuf, 0, camData);
-    compData[0] = render.exposure;
-    compData[1] = render.bloom;
-    compData[2] = render.saturation;
-    compData[3] = render.vignette;
-    compData[4] = render.tonemap;
-    device.queue.writeBuffer(compBuf, 0, compData);
+    // Two packs of the same struct, differing only in `viewportPx`: the star
+    // pass gets the AGGREGATE's dimensions (what `stars.wesl` clamps sprite
+    // half-extents against), the dust pass the canvas's. Both writes happen
+    // before either pass is encoded, which is safe precisely because they
+    // target different buffers.
+    const tuning = cloudTuning();
+    const aggregatePx = aggregateSize();
+    packCloudUniforms(vp, view, aggregatePx, tuning, cloudData);
+    device.queue.writeBuffer(starUbo, 0, cloudData);
+    packCloudUniforms(vp, view, [canvas.width, canvas.height], tuning, cloudData);
+    device.queue.writeBuffer(dustUbo, 0, cloudData);
+    // The post chain's uniforms are written by the shared factories at draw
+    // time (bloom thresholds/texel sizes, compositor exposure + curve), so
+    // there is nothing else to pack here.
 
+    const timingCtx = timing.beginFrame();
     const enc = device.createCommandEncoder({ label: 'galaxy:frame' });
-    // scene: additive stars (central + extras) then transmittance dust (central + extras)
+    // Star pass: additive billboards (central + extras) into the reduced-
+    // resolution aggregate. Cleared to a=0 like the app's `mw-aggregate` row —
+    // the additive composite below must treat an untouched texel as "no light",
+    // and an opaque clear would inject a full alpha into the sum.
+    //
+    // No `setViewport` call: the pass's only attachment IS `aggregateTex`, and
+    // a pass's default viewport is its attachment's full size, which is the
+    // same `floor(canvas / divisor)` the uniform above was packed with.
     {
+      const starWrites = timing.descriptorFor('stars');
+      const pass = enc.beginRenderPass({
+        label: 'galaxy:starPass',
+        colorAttachments: [
+          {
+            view: aggregateTex.createView(),
+            clearValue: { r: 0, g: 0, b: 0, a: 0 },
+            loadOp: 'clear',
+            storeOp: 'store',
+          },
+        ],
+        ...(starWrites ? { timestampWrites: starWrites } : {}),
+      });
+      pass.setPipeline(starPipe);
+      pass.setBindGroup(0, starBG);
+      pass.setVertexBuffer(0, quad);
+      if (starBuf) {
+        pass.setVertexBuffer(1, starBuf);
+        pass.draw(6, starCount);
+      }
+      for (const e of extras) {
+        pass.setVertexBuffer(1, e.starBuf);
+        pass.draw(6, e.starCount);
+      }
+      pass.end();
+    }
+    // Scene pass: the aggregate folded into HDR, then transmittance dust over
+    // it. The order matters and matches the app's HDR content order — dust
+    // multiplies the upsampled starlight, which is what silhouettes a lane
+    // against the glow it blocks.
+    {
+      // One `'scene'` slot for the upsample AND dust — they share this pass,
+      // and a timestamp pair brackets a pass. See TIMING_SLOTS.
+      const sceneWrites = timing.descriptorFor('scene');
       const pass = enc.beginRenderPass({
         label: 'galaxy:scenePass',
         colorAttachments: [
@@ -780,20 +1287,11 @@ export async function createGalaxyEngine(
             storeOp: 'store',
           },
         ],
+        ...(sceneWrites ? { timestampWrites: sceneWrites } : {}),
       });
-      pass.setPipeline(starPipe);
-      pass.setBindGroup(0, camBG);
-      pass.setVertexBuffer(0, quad);
-      if (starBuf) {
-        pass.setVertexBuffer(1, starBuf);
-        pass.draw(6, starCount);
-      }
-      for (const e of extras) {
-        pass.setVertexBuffer(1, e.starBuf);
-        pass.draw(6, e.starCount);
-      }
+      aggregateUpsample.draw(pass, aggregateTex.createView());
       pass.setPipeline(dustPipe);
-      pass.setBindGroup(0, camBGdust);
+      pass.setBindGroup(0, dustBG);
       pass.setVertexBuffer(0, quad);
       if (dustBuf) {
         pass.setVertexBuffer(1, dustBuf);
@@ -807,89 +1305,42 @@ export async function createGalaxyEngine(
       }
       pass.end();
     }
-    // --- multi-scale bloom ---
-    // 1) bright-pass the scene into pyramid level 0
-    {
-      const pass = enc.beginRenderPass({
-        label: 'galaxy:brightPass',
-        colorAttachments: [
-          {
-            view: bloomMips[0]!.createView(),
-            loadOp: 'clear',
-            storeOp: 'store',
-            clearValue: { r: 0, g: 0, b: 0, a: 1 },
-          },
-        ],
-      });
-      pass.setPipeline(brightPipe);
-      pass.setBindGroup(0, brightBG);
-      pass.draw(3);
-      pass.end();
-    }
-    // 2) downsample chain (progressively wider, softer glow)
-    for (let i = 1; i < BLOOM_MIPS; i++) {
-      const pass = enc.beginRenderPass({
-        label: `galaxy:downPass${i}`,
-        colorAttachments: [
-          {
-            view: bloomMips[i]!.createView(),
-            loadOp: 'clear',
-            storeOp: 'store',
-            clearValue: { r: 0, g: 0, b: 0, a: 1 },
-          },
-        ],
-      });
-      pass.setPipeline(downPipe);
-      pass.setBindGroup(0, downBG[i]!);
-      pass.draw(3);
-      pass.end();
-    }
-    // 3) upsample chain: additively fold each coarse level back into the finer one
-    for (let i = BLOOM_MIPS - 2; i >= 0; i--) {
-      const pass = enc.beginRenderPass({
-        label: `galaxy:upPass${i}`,
-        colorAttachments: [{ view: bloomMips[i]!.createView(), loadOp: 'load', storeOp: 'store' }],
-      });
-      pass.setPipeline(upPipe);
-      pass.setBindGroup(0, upBG[i]!);
-      pass.draw(3);
-      pass.end();
-    }
-    // composite -> canvas
-    {
-      const pass = enc.beginRenderPass({
-        label: 'galaxy:compositePass',
-        colorAttachments: [
-          {
-            view: ctx.getCurrentTexture().createView(),
-            loadOp: 'clear',
-            storeOp: 'store',
-            clearValue: { r: 0, g: 0, b: 0, a: 1 },
-          },
-        ],
-      });
-      pass.setPipeline(compPipe);
-      pass.setBindGroup(0, compBG);
-      pass.draw(3);
-      pass.end();
-    }
+    // bloom pyramid, folded back into sceneTex before the tone curve
+    encodeBloom(enc);
+    // tone-map composite -> canvas (+ the tool-only grade trailer, if active)
+    encodePost(enc, ctx.getCurrentTexture().createView(), ldrTex.createView(), true);
+    // Resolve + copy the query set into this frame's staging buffer. Must be
+    // recorded into the encoder before it is finished, and the service's own
+    // `mapAsync` is deferred to a microtask so it lands after this submit —
+    // don't add synchronisation of any kind around it.
+    timing.endFrame(timingCtx, enc);
     device.queue.submit([enc.finish()]);
-
-    // fps
-    fpsAcc += dt;
-    fpsN++;
-    fpsT += dt;
-    if (fpsT >= 0.5) {
-      opts.onFps?.(Math.round(fpsN / fpsAcc));
-      fpsAcc = 0;
-      fpsN = 0;
-      fpsT = 0;
-    }
   }
+
+  // The rAF-delta clock. `lastRafMs` starts at 0 to mark "no previous
+  // callback": the first tick has nothing to subtract from, and `performance
+  // .now()` at construction would instead measure engine boot as a frame.
+  let lastRafMs = 0;
+  let lastPerfReportMs = 0;
 
   function loop(now: number): void {
     if (!running) return;
+    if (lastRafMs !== 0) frameTimer.push(now - lastRafMs);
+    lastRafMs = now;
     drawFrame(now);
+    // Report on a timer, not per frame: `onPerf` drives React state, and a
+    // per-frame dispatch would have the readout's own re-render inside the
+    // number it is reporting.
+    if (now - lastPerfReportMs >= PERF_REPORT_INTERVAL_MS) {
+      lastPerfReportMs = now;
+      const frameMs = frameTimer.medianMs();
+      opts.onPerf?.({
+        frameMs,
+        fps: frameMs > 0 ? 1000 / frameMs : 0,
+        passes: passTimings(),
+        timingEnabled: timing.enabled,
+      });
+    }
     raf = requestAnimationFrame(loop);
   }
   raf = requestAnimationFrame(loop);
@@ -905,20 +1356,7 @@ export async function createGalaxyEngine(
     async sample() {
       drawFrame(performance.now());
       const enc = device.createCommandEncoder({ label: 'galaxy:samplePass' });
-      const pass = enc.beginRenderPass({
-        colorAttachments: [
-          {
-            view: debugTex.createView(),
-            loadOp: 'clear',
-            storeOp: 'store',
-            clearValue: { r: 0, g: 0, b: 0, a: 1 },
-          },
-        ],
-      });
-      pass.setPipeline(compPipe);
-      pass.setBindGroup(0, compBG);
-      pass.draw(3);
-      pass.end();
+      encodePost(enc, debugTex.createView(), debugScratchTex.createView(), false);
       enc.copyTextureToBuffer(
         { texture: debugTex },
         { buffer: dbgBuf, bytesPerRow: 256, rowsPerImage: 64 },
@@ -955,6 +1393,25 @@ export async function createGalaxyEngine(
         format,
         usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
       });
+      // LDR scratch so the grab runs the SAME `encodePost` as the on-screen
+      // frame; only bound when the grade trailer is active. The descriptor
+      // matcher compares grabs against reference photographs, so a grab that
+      // skipped a live grade would be scoring a different image than the one
+      // being tuned.
+      //
+      // Note the shared compositor samples NEAREST (correct for its own
+      // job — its source and dst are always the same size), so a grab into a
+      // smaller S point-samples the full-res scene rather than filtering it.
+      // The descriptor is a coarse radial/azimuthal summary and the previous
+      // bilinear tap was barely less aliased at these ratios, so this is left
+      // alone; if auto-fit ever gets noisy, a mip-chain downscale before the
+      // readback is the fix, not a second sampler in the shared pass.
+      const scratch = device.createTexture({
+        label: 'galaxy:grabScratchTex',
+        size: [S, S],
+        format,
+        usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+      });
       const bpr = Math.ceil((S * 4) / 256) * 256;
       const buf = device.createBuffer({
         label: 'galaxy:grabBuf',
@@ -962,20 +1419,7 @@ export async function createGalaxyEngine(
         usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
       });
       const enc = device.createCommandEncoder({ label: 'galaxy:grabPass' });
-      const pass = enc.beginRenderPass({
-        colorAttachments: [
-          {
-            view: tex.createView(),
-            loadOp: 'clear',
-            storeOp: 'store',
-            clearValue: { r: 0, g: 0, b: 0, a: 1 },
-          },
-        ],
-      });
-      pass.setPipeline(compPipe);
-      pass.setBindGroup(0, compBG);
-      pass.draw(3);
-      pass.end();
+      encodePost(enc, tex.createView(), scratch.createView(), false);
       enc.copyTextureToBuffer(
         { texture: tex },
         { buffer: buf, bytesPerRow: bpr, rowsPerImage: S },
@@ -1005,11 +1449,20 @@ export async function createGalaxyEngine(
       buf.unmap();
       buf.destroy();
       tex.destroy();
+      scratch.destroy();
       return { S, data: out };
     },
     dispose(): void {
       running = false;
       cancelAnimationFrame(raf);
+      unsubscribeTiming();
+      timing.destroy();
+      bloomPyramid.destroy();
+      compositor.destroy();
+      aggregateUpsample.destroy();
+      starUbo.destroy();
+      dustUbo.destroy();
+      gradeBuf.destroy();
       ro.disconnect();
       canvas.removeEventListener('pointerdown', onDown);
       canvas.removeEventListener('pointermove', onMove);

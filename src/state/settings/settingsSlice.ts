@@ -45,6 +45,7 @@ import type { ClipPathTuningKnob } from '../../@types/settings/ClipPathTuningKno
 import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSettings';
 import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
+import type { MilkyWayTuning } from '../../@types/settings/MilkyWayTuning';
 import type { SettingsSnapshot } from '../../@types/engine/settings/SettingsSnapshot';
 import type { RenderStrategy } from '../../@types/engine/frame/RenderStrategy';
 import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
@@ -170,6 +171,13 @@ const settingsSlice = createSlice({
     },
     setMilkyWayLabelEnabled: (settings, action: PayloadAction<boolean>) => {
       settings.milkyWay.labelEnabled = action.payload;
+    },
+    // Star-cloud look knobs, patched leaf-by-leaf from the DebugPanel sliders.
+    // The payload is `MilkyWayTuning`, not `MilkyWaySettings`, so the two
+    // visibility axes keep their own single writers above and can never be
+    // flipped by a knob patch — the same split `setFlow` makes.
+    setMilkyWayTuning: (settings, action: PayloadAction<Partial<MilkyWayTuning>>) => {
+      Object.assign(settings.milkyWay, action.payload);
     },
 
     // ── filaments ───────────────────────────────────────────────────────────
@@ -481,6 +489,7 @@ export const {
   setThumbnailsEnabled,
   setMilkyWayEnabled,
   setMilkyWayLabelEnabled,
+  setMilkyWayTuning,
   setFilamentsEnabled,
   setFilamentIntensity,
   setConstellationsEnabled,

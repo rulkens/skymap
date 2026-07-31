@@ -49,6 +49,7 @@ import type { GalaxyCatalogId } from '../data/galaxyCatalog/GalaxyCatalogId';
 import type { FlowSettings } from './FlowSettings';
 import type { HdrSettings } from './HdrSettings';
 import type { LabelSettings } from './LabelSettings';
+import type { MilkyWaySettings } from './MilkyWaySettings';
 import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from './VolumeFieldSettings';
 import type { StructureItemSettings } from './StructureItemSettings';
@@ -168,19 +169,12 @@ export type EngineSettingsState = {
   };
 
   /**
-   * Milky-Way singleton overlay — two independent visibility axes, mirroring
-   * how the `structures` cluster separates ring/marker from label:
-   *   - `enabled` — the screen-aligned disk overlay at the world origin.
-   *   - `labelEnabled` — the "You are here" text label.
-   * The two are fully independent: the label can show with the disk hidden and
-   * vice-versa.  (Unlike `structures`, milkyWay is a singleton overlay rather
-   * than a per-record catalog, so both axes are flat fields here — there is no
-   * `items` row.)
+   * Milky-Way singleton overlay controls — the two independent visibility axes
+   * (disk / label) plus the star-cloud look knobs the cloud renderer reads
+   * every frame. Shape + per-field docs live on `MilkyWaySettings`; the knobs
+   * themselves on `MilkyWayTuning`.
    */
-  milkyWay: {
-    enabled: boolean;
-    labelEnabled: boolean;
-  };
+  milkyWay: MilkyWaySettings;
 
   /**
    * Filament-skeleton overlay controls.  Master toggle + intensity scale

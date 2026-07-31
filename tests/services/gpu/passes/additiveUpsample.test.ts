@@ -1,5 +1,5 @@
 /**
- * volumeUpsample — unit tests for the half-res-to-HDR upsample pass
+ * additiveUpsample — unit tests for the offscreen-to-HDR upsample pass
  * factory.  Mocks GPUDevice so the test runs in Vitest without a real
  * GPU.  Covers:
  *
@@ -11,7 +11,7 @@
  *   - destroy() doesn't throw
  */
 import { describe, it, expect, vi } from 'vitest';
-import { createVolumeUpsample } from '../../../../src/services/gpu/passes/volumeUpsample';
+import { createAdditiveUpsample } from '../../../../src/services/gpu/passes/additiveUpsample';
 
 function mockDevice(): GPUDevice {
   const renderPipelineDescs: GPURenderPipelineDescriptor[] = [];
@@ -45,10 +45,10 @@ function mockDevice(): GPUDevice {
   } as unknown as GPUDevice;
 }
 
-describe('createVolumeUpsample', () => {
+describe('createAdditiveUpsample', () => {
   it('builds a pipeline with additive blend for color and alpha', () => {
     const device = mockDevice();
-    createVolumeUpsample(device, 'rgba16float');
+    createAdditiveUpsample(device, 'rgba16float');
     const descs = (device as any).__renderPipelineDescs as GPURenderPipelineDescriptor[];
     expect(descs).toHaveLength(1);
     const target = (descs[0]!.fragment as GPUFragmentState).targets![0]!;
@@ -60,7 +60,7 @@ describe('createVolumeUpsample', () => {
 
   it('uses a linear sampler so the GPU performs the bilinear filter', () => {
     const device = mockDevice();
-    createVolumeUpsample(device, 'rgba16float');
+    createAdditiveUpsample(device, 'rgba16float');
     const samplers = (device as any).__samplerDescs as GPUSamplerDescriptor[];
     expect(samplers).toHaveLength(1);
     expect(samplers[0]!.magFilter).toBe('linear');
@@ -69,7 +69,7 @@ describe('createVolumeUpsample', () => {
 
   it('draw() records setPipeline, setBindGroup(0, ...), draw(3, 1, 0, 0) with halfResView bound', () => {
     const device = mockDevice();
-    const upsample = createVolumeUpsample(device, 'rgba16float');
+    const upsample = createAdditiveUpsample(device, 'rgba16float');
     const pass = {
       setPipeline: vi.fn(),
       setBindGroup: vi.fn(),
@@ -99,7 +99,7 @@ describe('createVolumeUpsample', () => {
 
   it('destroy() does not throw', () => {
     const device = mockDevice();
-    const upsample = createVolumeUpsample(device, 'rgba16float');
+    const upsample = createAdditiveUpsample(device, 'rgba16float');
     expect(() => upsample.destroy()).not.toThrow();
   });
 });
