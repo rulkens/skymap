@@ -56,7 +56,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **URL seam is a `window` singleton** `needs-design` — the whole test suite shares one address bar; make the URL port a registered capability. → [details](backlog/2026-07-30-url-seam-window-singleton.md)
 - [ ] **`buildAliasIndex` is a non-hook in `src/hooks/`** `ready` — pure helper with one importer; `npm run move-files` it to `src/utils/` (test mirror follows).
 - [ ] **`glade-points` throws "Maximum update depth exceeded"** `needs-repro` — React update loop seen once; the 500 ms heartbeat is the suspect but nothing on that branch touches the loading path. → [details](backlog/2026-07-30-glade-points-update-depth-exceeded.md)
-- [ ] **`followBody` is a third, independent camera-interpolation path** `needs-design` — hand-rolls its own lerp outside `evaluateClip` and wakes via a duration-coupled predicate instead of a presence flag. → [details](backlog/2026-07-31-followbody-third-interpolation-path.md)
 
 ## Rendering
 

@@ -24,17 +24,35 @@ duration from the geodesic's length instead of pinning every move at 600 ms.
 
 ### Non-goals (deferred, named — see §7)
 
-- `followBody`, the third interpolation path. Approaching a followed body keeps the old feel.
 - Anything that makes a leaf star grow before its sphere handoff.
 
-### What this does NOT fix
+(`followBody` was here, and was pulled into scope after the first visual pass — see below.)
 
-Named up front because the brief that seeded this spec expected otherwise. **Approaching a
-planet is not on this path.** `watchFocusTweenSaga.ts:97` short-circuits any focus row that
-`liveBodyPosition` resolves — every body in `deriveBodyStates`, so every planet — before a
-tween descriptor is ever built. The planet approach is `followBody`'s hand-rolled
-`lerp(from.distance, distanceTarget, easeOutCubic(t))` (`cameraDrivers.ts:339-349`), which
-has the same root cause and is out of scope here (§7).
+### Planets — pulled INTO scope after the first visual pass
+
+Originally deferred to §7 as a second code path with the same root cause. The visual pass
+overturned that: with galaxy moves smooth, the planet snap read as a defect rather than a
+known gap, and the feature does not land without it.
+
+**Approaching a planet never reaches the focus tween.** `watchFocusTweenSaga.ts:97`
+short-circuits any focus row that `liveBodyPosition` resolves — every body in
+`deriveBodyStates` — before a descriptor is built. `followBody` drives it instead.
+
+The snap is not where it first appears. `followBody` declares `pivotsOnFocusedBody`, so
+`applyFocusedBodyPivot` **absolutely sets** `target = bodyPosition + panOffset` after the
+driver runs; the driver's own `target: livePos` is dead code, and any interpolation inside the
+driver would be discarded. **The snap lives in the pin.**
+
+Two shapes were considered, and they are not equivalent:
+
+| shape                                                                      | verdict                                                                                                                                                                  |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| make the pin interpolate the pivot                                         | Rejected. Preserves the body-owns-the-pivot un-braid, but leaves `distance` independently eased — it relocates this feature's defect to planets rather than removing it. |
+| `followBody` opts out of the pin and authors its full pose through a glide | **Chosen.** Exactly what `clip` and `tween` already do, and for the same stated reason: they keyframe a full path including the target.                                  |
+
+Cost, accepted: `followBody` must add `panOffset` itself, and a drag _mid-approach_ snaps the
+pivot (today it cannot, because the target is already pinned). `orbitDrag`, `autoRotate` and
+`resting` keep the pin unchanged — they author orbit terms only, which is what it is for.
 
 ---
 
@@ -418,11 +436,10 @@ work, and the rewiring are three different diffs regardless.
 
 ## 7. Out of scope — named so the boundary is legible
 
-- **`followBody`** (`cameraDrivers.ts:290-350`, ease at `:339-349`) is a third interpolation
-  path outside `evaluateClip`, with its own progress state on `CameraClock` and a bespoke
-  duration-coupled wake predicate (`shouldKeepTicking.ts:106-110`). Untouched here, so every
-  focus on an orbital body — every planet — keeps the old feel, per §1.
-  → [`docs/backlog/2026-07-31-followbody-third-interpolation-path.md`](../../backlog/2026-07-31-followbody-third-interpolation-path.md)
+- ~~**`followBody`**~~ — **no longer out of scope.** Pulled in after the first visual pass; see
+  §1. Its duration-coupled wake predicate (`shouldKeepTicking.ts:106-110`) is the specific
+  hazard: a derived duration that the wake window does not match freezes the approach part-way
+  and resumes it only on the next input event.
 - **The leaf-star sprite floor.** A leaf star's drawn radius is
   `max(STAR_GLOW_MIN_PX, 0) · sizeScale · overlap` (`starCatalog/vertex.wesl:347`,
   `STAR_GLOW_MIN_PX = 1.5` at `shaders/lib/starPhotometry.wesl:42`) — **no distance
