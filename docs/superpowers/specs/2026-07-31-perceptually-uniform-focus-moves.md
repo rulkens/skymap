@@ -248,14 +248,42 @@ and were calibrated together (§5.1).
 
 ## 4. Measured expectations — state these honestly
 
-- **The Milky Way pull-back stops being a position reversal.** Prototyped star → Milky Way:
-  0 camera-position reversals. The pull-back itself persists — it must, since
-  `MILKY_WAY_VIEW_DISTANCE_MPC = 0.15` is ~18× the 8.2e-3 Mpc journey, so the camera has to
-  finish far behind where it began — but it lives in `w` rather than as a direction flip.
-  **Unreconciled:** the prototype reports "1 reversal today", while `e7acdc55`'s own
-  measurement says the current linear-space path is monotone and it was log space that
-  introduced the reversal. Re-measure before writing the pinning test; do not encode either
-  number until they agree.
+- **RECONCILED — and the reversal metric is a dead end. Do not build a test on it.**
+  Re-measured in full 3-D with real constants, sweeping the angle between the view direction
+  and the direction of travel. `e7acdc55` was right and the earlier prototype was wrong:
+  **today's path has 0 reversals at every angle, and `path length / net displacement` is
+  exactly 1.0000** — it is a perfectly straight line. That is forced, not lucky:
+
+  ```
+  cam(t) = target₀ + e(t)·Δ·û − (d₀ + e(t)·(d₁−d₀))·F        (yaw/pitch unchanged ⇒ F fixed)
+         = cam(0)  + e(t)·[Δ·û − (d₁−d₀)·F]
+  ```
+
+  A fixed vector scaled by a monotone scalar. No ease and no view angle can bend it. The
+  reverted log-space variant is the only one that reverses (1 reversal, `path/net` 1.0858,
+  and only when `F` is parallel to travel). **The geodesic also scores 0**, so the metric
+  cannot distinguish the models and must not become the pinning test.
+
+- **What actually differs is perceived velocity — this is the metric to pin.** Under the
+  paper's own metric `ds/dt = sqrt((ρ²/w²)u̇² + (1/(ρ²w²))ẇ²)`, which the geodesic holds
+  constant by construction:
+
+  | move                | today (lin + `easeOutCubic`) | today (lin + linear ease) | glide              |
+  | ------------------- | ---------------------------- | ------------------------- | ------------------ |
+  | star → Milky Way    | max/min 1.28e11, CV 15.30    | 8.00e3, CV 13.66          | **1.00, CV 0.000** |
+  | Earth → nearby star | 5.04e9, CV 3.64              | 1.08e2, CV 1.97           | **1.00, CV 0.000** |
+  | MW → Virgo          | 1.58e9, CV 2.49              | 3.32e1, CV 1.25           | **1.00, CV 0.000** |
+  | galaxy → galaxy     | 4.80e7, CV 0.89              | **1.00, CV 0.000**        | **1.00, CV 0.000** |
+
+  So the "wobble" was never a direction flip — it is an eleven-order-of-magnitude swing in
+  how fast the scene appears to move along a dead-straight path.
+
+- **The middle column carries a second result worth acting on.** For galaxy → galaxy the
+  current channel model is _already_ perfectly uniform once the ease is linear (CV 0.000);
+  `easeOutCubic` alone is what inflates it to 4.80e7. For the most common focus click in the
+  app, the ease is the entire defect and the geodesic changes nothing. This is independent
+  confirmation of the `'linear'` default in §2.4, and it means the ease change should land as
+  its own commit so its effect is separately visible.
 - **The star case improves modestly as a fraction, hugely in absolute terms.** Above the 4 px
   sphere-handoff threshold for 12.2 % of the move, vs 2.0 % today. Not the ~36 % a naive
   gap-decay model predicts, because the geodesic spends real time zoomed out doing the pan.
@@ -428,6 +456,16 @@ source. Do the same with eq. 9.
   which is otherwise silent.
 - `w` is unimodal along the path (rises to the bow-out apex, then falls) for a pan-dominated
   move; monotone for a pure zoom.
+- **Constant perceived velocity** — the property the whole feature buys (§4). Sample
+  `ds/dt = sqrt((ρ²/w²)u̇² + (1/(ρ²w²))ẇ²)` along the path and assert its coefficient of
+  variation is ~0. This is the one assertion that fails if the geodesic is replaced by any
+  plausible-looking interpolation, including a well-chosen ease on the old two channels — so
+  it is the test that actually guards the feature. Measured 0.000 for the glide against
+  15.30 / 3.64 / 2.49 / 0.89 for the four sampled moves today.
+
+**Do NOT write a camera-position-reversal test.** §4 measured it: today's path scores 0 and
+so does the glide, because today's path is a dead-straight line by construction. The metric
+looks meaningful and distinguishes nothing.
 
 **Existing tests that encode the independent-channel model** (each verified):
 
