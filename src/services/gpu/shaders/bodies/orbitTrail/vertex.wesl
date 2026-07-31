@@ -97,8 +97,7 @@ fn vsRibbon(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
   let epsW = 1e-6 * (abs(inst.cc.z) + length(vec2<f32>(inst.ac.z, inst.bc.z)));
 
   // Fold membership is per QUAD: tested iff any of the four samples above is
-  // behind. eHi does NOT wrap SEGMENTS to 0 (eHi > eLo always) — the
-  // fragment wraps E itself when it tests a pixel.
+  // behind. eOwn carries [eLo, eHi) — see the ownership test in fragment.wesl.
   let tested = rawIPrev.z <= epsW || rawI.z <= epsW || rawJ.z <= epsW || rawJNext.z <= epsW;
   out.eOwn = vec3<f32>(
     TAU * f32(segment) / f32(SEGMENTS),

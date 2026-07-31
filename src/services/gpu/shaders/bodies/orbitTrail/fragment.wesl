@@ -64,9 +64,9 @@
 // the off-stroke pixels and any non-finite one, so the triangle can only ever
 // deposit light on the ring itself, never a filled blob.
 
+import package::bodies::orbitTrail::constants::SEGMENTS;
 import package::bodies::orbitTrail::constants::STROKE_PX;
 import package::bodies::orbitTrail::io::VSOut;
-import package::lib::math::PI;
 import package::lib::math::TAU;
 
 // Decay rate of the trail brightness per radian of mean anomaly behind the
@@ -99,18 +99,15 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     discard;
   }
 
-  // Plane coordinates, kept as u = q.xy (O(1) by the CPU-side rescale, see
-  // header) instead of dividing down to s = u.x/z, t = u.y/z. At the near-
-  // fold regime (camera near the orbit, clip w -> 0) z collapses toward 0 and
-  // s, t, and every product built from them overflow f32; u and z alone do
-  // not, so the rest of this function is rebuilt on them.
+  // Plane coordinates, kept as u = q.xy (ginv is rescaled to max entry 1, so
+  // u and z stay pixel-scale, ~1e4) instead of dividing down to s = u.x/z,
+  // t = u.y/z: at the near-fold regime (clip w -> 0) z collapses toward 0 and
+  // s, t, and their products overflow f32; u and z alone do not.
   let u = q.xy;
   let z = q.z;
   let uLen = length(u);
 
-  // Eccentric anomaly without the divide: atan2 is scale-invariant, so
-  // atan2(u.y, u.x) equals atan2(t, s) = atan2(u.y/z, u.x/z) once the shared
-  // positive factor 1/z cancels — same angle, no intermediate 1/z.
+  // atan2 is scale-invariant: atan2(u.y, u.x) equals atan2(t, s), no divide needed.
   let ecc = atan2(u.y, u.x); // eccentric anomaly E
 
   // E-ownership discard for fold-widened (over-wide) quads: [eLo, eHi) is
@@ -119,31 +116,28 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // owns a given pixel's E, however much widened quads overlap on screen —
   // no double-add under additive blend, no gap. Untested quads skip this
   // entirely: their footprint (the abutting invariant) IS their ownership.
+  // The window span is the shared TAU/SEGMENTS, not eHi - eLo: the last
+  // segment's eHi (TAU*96/96) can round a sub-ulp shy of TAU, leaving a seam.
   if (in.eOwn.z > 0.5) {
     let dE = ecc - in.eOwn.x;
     let dEw = dE - TAU * floor(dE / TAU);
-    if (dEw >= in.eOwn.y - in.eOwn.x) {
+    if (dEw >= TAU / f32(SEGMENTS)) {
       discard;
     }
   }
 
-  // Pixel gradients of s = q.x/q.z and t = q.y/q.z via the quotient rule.
-  // Written the obvious way, each numerator is a difference of two products
-  // (e.g. ginv[0].x * q.z - q.x * ginv[0].z). Expand q = ginv * (px, py, 1) and
-  // the top-degree px (resp. py) terms cancel IDENTICALLY, leaving a numerator
-  // that is AFFINE in the pixel with a 2x2-minor coefficient. At the near-edge-
-  // on Earth-zoom pose the plane-to-pixel homography is ILL-CONDITIONED (its
-  // condition number reaches ~1e15), so the two products are nearly equal and
-  // that f32 difference cancels catastrophically -- the tiny true result keeps
-  // almost none of f32's significant digits. The loss is set by the condition
-  // number, NOT the entry magnitudes: rescaling ginv to O(1) (which
-  // composeOrbitConic does) does not help, so composeOrbitConic hoists the
-  // exactly-cancelling numerators to CPU f64 as the minors minorS = (M1, M2,
-  // M3) and minorT = (M4, M5, M6):
+  // Pixel gradients of s = q.x/q.z, t = q.y/q.z via the quotient rule. Each
+  // numerator (e.g. ginv[0].x*q.z - q.x*ginv[0].z, with q = ginv*(px,py,1))
+  // has its top-degree px/py terms cancel IDENTICALLY, leaving one AFFINE in
+  // the pixel with a 2x2-minor coefficient. At the near-edge-on Earth-zoom
+  // pose the homography is ILL-CONDITIONED (~1e15), so computing that
+  // difference directly in f32 cancels catastrophically — rescaling ginv
+  // doesn't help, since the loss is set by the condition number, not the
+  // entry magnitudes. So composeOrbitConic hoists the exactly-cancelling
+  // numerators to CPU f64 as minorS = (M1, M2, M3), minorT = (M4, M5, M6):
   //   d s/d px numerator = M1*py + M2,   d s/d py numerator = -M1*px + M3
   //   d t/d px numerator = M4*py + M5,   d t/d py numerator = -M4*px + M6
-  // The pixel is in.clip.xy (the same @builtin(position) that formed q above);
-  // z > 0 here (the behind-camera arc was already discarded).
+  // The pixel is in.clip.xy; z > 0 here (behind-camera arc already discarded).
   let px = in.clip.x;
   let py = in.clip.y;
 
@@ -151,17 +145,17 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // A_t the affine numerators above) and r = uLen/z. Substituting s = u.x/z,
   // t = u.y/z collapses every explicit 1/z power into one shared factor:
   //   gradR = (u.x*A_s + u.y*A_t) / (z^2 * uLen) = gradNum / (z^2 * uLen)
-  // gradNum below IS that numerator, and every term in it is O(1) — it never
-  // overflows, unlike the old invZ2-scaled dsdp/dtdp product it replaces.
+  // gradNum below IS that numerator: with ginv entries <= 1 and u, z ~1e4, it
+  // reaches ~1e8 — far under f32's 3.4e38 ceiling, the load-bearing bound.
   let gradNum = vec2<f32>(
     u.x * (in.minorS.x * py + in.minorS.y) + u.y * (in.minorT.x * py + in.minorT.y),
     u.x * (-in.minorS.x * px + in.minorS.z) + u.y * (-in.minorT.x * px + in.minorT.z),
   );
 
   // Distance to the orbit: the same real value as |r-1|/|gradR|, but with the
-  // shared z^2*uLen factor multiplied through instead of divided out, so the
-  // expression never forms the huge intermediates that overflowed f32 near
-  // the fold:
+  // shared z^2*uLen factor multiplied through instead of divided out — its
+  // largest intermediate (z^2*uLen*|uLen-z|) reaches ~1e13, still far under
+  // f32's ceiling, unlike the old divided-out form that overflowed near the fold:
   //   |r-1|/|gradR| = (|uLen-z|/z) * (z^2*uLen)/|gradNum| = |uLen-z|*z*uLen/|gradNum|
   let dist = abs(uLen - z) * z * uLen / max(length(gradNum), 1e-30);
 
@@ -202,8 +196,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // non-negative even when meanAnomaly - m is negative.
   let m = ecc - in.eccentricity * sin(ecc);
   let raw = in.meanAnomaly - m;
-  let twoPi = 2.0 * PI;
-  let delta = raw - twoPi * floor(raw / twoPi);
+  let delta = raw - TAU * floor(raw / TAU);
   let brightness = TRAIL_FLOOR + (1.0 - TRAIL_FLOOR) * exp(-TRAIL_DECAY * delta);
 
   // 'in.alpha' is the per-orbit apparent-size fade (CPU-side): full for orbits
@@ -213,7 +206,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
 
 // Debug lens ('debug.showOrbitTrailImpostor'): fills the impostor geometry
 // with the orbit's own trail colour, so hull and trail can be matched by eye.
-// Both ignore the fade alpha on purpose — geometry that is drawn but faded to
+// Ignores the fade alpha on purpose — geometry that is drawn but faded to
 // nothing still shows, separating "faded out" from "never drawn".
 
 @fragment
