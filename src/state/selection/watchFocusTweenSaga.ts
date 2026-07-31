@@ -44,7 +44,7 @@
  * watchTierSaga, because the engine registers its saga context AFTER the root saga
  * forks.
  */
-import { takeLatest, take, getContext, put } from 'typed-redux-saga';
+import { takeLatest, take, getContext, put, select } from 'typed-redux-saga';
 
 import { updateSelectionFocus } from './selectionSlice';
 import { startCameraTween } from '../camera/cameraSlice';
@@ -54,6 +54,7 @@ import { liveBodyPosition } from '../../services/engine/camera/liveBodyPosition'
 import { CONST_J2000 } from '../../data/time/constJ2000';
 import { suspendDuringClip } from './suspendDuringClip';
 import { engineStatusChanged, engineSourceCountReported } from '../engine/engineSlice';
+import { selectGlideTuning } from '../settings/selectors';
 import type { SagaContext } from '../../store/types';
 
 export function* watchFocusTweenSaga() {
@@ -108,7 +109,13 @@ export function* watchFocusTweenSaga() {
         runtime = cameraRuntime();
       }
 
-      yield* put(startCameraTween(focusTweenDescriptor(row, runtime.from, runtime.fovYRad)));
+      // Read AFTER the waits above, so a tween deferred through bootstrap still
+      // picks up whatever the DebugPanel's glide sliders say at dispatch time.
+      const tuning = yield* select(selectGlideTuning);
+
+      yield* put(
+        startCameraTween(focusTweenDescriptor(row, runtime.from, runtime.fovYRad, tuning)),
+      );
     }),
   );
 }

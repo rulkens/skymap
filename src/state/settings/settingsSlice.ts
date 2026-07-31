@@ -48,6 +48,7 @@ import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults
 import type { SettingsSnapshot } from '../../@types/engine/settings/SettingsSnapshot';
 import type { RenderStrategy } from '../../@types/engine/frame/RenderStrategy';
 import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
+import type { GlideTuning } from '../../@types/camera/GlideTuning';
 import type { ProvenanceAxisId } from '../../@types/settings/ProvenanceAxisId';
 import type { ProvenanceFilter } from '../../@types/settings/ProvenanceFilter';
 
@@ -428,6 +429,11 @@ const settingsSlice = createSlice({
     ) => {
       settings.debug.clipPathInspect.active[action.payload.knob] = action.payload.active;
     },
+    // Live focus-glide calibration. Leaf-by-leaf merge like `setFlow`, so the
+    // slider registry can patch one knob without restating the other three.
+    setGlideTuning: (settings, action: PayloadAction<Partial<GlideTuning>>) => {
+      Object.assign(settings.debug.glide, action.payload);
+    },
 
     // ── structures ──────────────────────────────────────────────────────────
     setStructureItemEnabled: (
@@ -525,6 +531,7 @@ export const {
   setClipPathPassByOffset,
   setClipPathPassByDir,
   setClipPathTuningActive,
+  setGlideTuning,
   setStructureItemEnabled,
   setStructureLabelEnabled,
   setLabelsFocusedOnly,

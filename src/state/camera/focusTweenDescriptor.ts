@@ -34,6 +34,7 @@ import { glidePath } from '../../utils/camera/glidePath';
 import type { SelectionRow } from '../../@types/engine/SelectionRow';
 import type { CameraPose } from '../../@types/camera/CameraPose';
 import type { CameraTweenDescriptor } from '../../@types/camera/CameraTweenDescriptor';
+import type { GlideTuning } from '../../@types/camera/GlideTuning';
 
 /**
  * Build the focus tween's `from → to` descriptor.
@@ -42,11 +43,14 @@ import type { CameraTweenDescriptor } from '../../@types/camera/CameraTweenDescr
  * in-flight tween hands off smoothly when the user re-focuses mid-animation.
  * `fovYRad` is the projection FOV the structure and body arms need to frame
  * their subject to screen-fill; the galaxy and Milky Way arms ignore it.
+ * `tuning` arrives as an argument (the saga selects it) rather than being read
+ * from the store here, so this stays pure.
  */
 export function focusTweenDescriptor(
   row: SelectionRow,
   from: CameraPose,
   fovYRad: number,
+  tuning: GlideTuning,
 ): CameraTweenDescriptor {
   const to = { yaw: from.yaw, pitch: from.pitch, ...focusFraming(row, fovYRad) };
   return {
@@ -54,7 +58,10 @@ export function focusTweenDescriptor(
     to,
     // The same geodesic the glide will walk, so a hop across a galaxy and a
     // descent to a planet surface stop taking the same 600 ms.
-    durationMs: glidePath(from, to, fovYRad).durationSec * 1000,
+    durationMs: glidePath(from, to, fovYRad, tuning).durationSec * 1000,
     easing: 'linear',
+    // ρ rides the descriptor so `tweenToClip` compiles the SAME geodesic this
+    // duration was measured on.
+    rho: tuning.rho,
   };
 }

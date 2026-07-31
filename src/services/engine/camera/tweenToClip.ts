@@ -37,9 +37,12 @@ export function tweenToClip(d: CameraTweenDescriptor): ClipData {
         // `over` explicitly: the producer already derived this duration from the
         // same geodesic, so letting the builder re-derive it would risk two
         // answers for one move.
+        // `rho` explicitly too: the producer measured `durationSec` on the
+        // geodesic THIS ρ draws, so compiling the path at any other ρ would
+        // pace a different curve than the one that was timed.
         glide(
           { target: d.to.target, distance: d.to.distance },
-          { over: durationSec, ease: d.easing },
+          { over: durationSec, rho: d.rho, ease: d.easing },
         ),
         tween('yaw', { to: d.to.yaw, over: durationSec, ease: d.easing }),
         tween('pitch', { to: d.to.pitch, over: durationSec, ease: d.easing }),

@@ -55,6 +55,7 @@ import type { ClipPathTuningActive } from '../../@types/settings/ClipPathTuningA
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
 import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
+import type { GlideTuning } from '../../@types/camera/GlideTuning';
 import type { GalaxyProvenanceSettings } from '../../@types/settings/GalaxyProvenanceSettings';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../data/sources';
 import { maskWith } from '../../utils/maskWith';
@@ -250,6 +251,9 @@ export const selectClipPathPassByDir = (state: RootState): PassByDir =>
 
 export const selectClipPathTuningActive = (state: RootState): ClipPathTuningActive =>
   selectSettings(state).debug.clipPathInspect.active;
+
+export const selectGlideTuning = (state: RootState): GlideTuning =>
+  selectSettings(state).debug.glide;
 
 // --- structures cluster -------------------------------------------------------
 

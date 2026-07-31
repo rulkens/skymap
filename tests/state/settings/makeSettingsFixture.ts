@@ -78,6 +78,7 @@ import {
   DEFAULT_VOLUMES_ENABLED,
 } from '../../../src/data/defaults';
 import { DEFAULT_REFINE_THRESHOLD } from '../../../src/services/gpu/renderers/starCatalog/walkStarOctreeCut';
+import { DEFAULT_GLIDE_TUNING } from '../../../src/utils/camera/glideCalibration';
 import { ATMOSPHERE_PARAMS } from '../../../src/data/bodies/atmosphereParams';
 import { EARTH_SURFACE_PARAMS } from '../../../src/data/bodies/earthSurfaceParams';
 
@@ -192,6 +193,7 @@ export function makeSettingsFixture(
           passBy: false,
         },
       },
+      glide: { ...DEFAULT_GLIDE_TUNING },
     },
     structures: {
       enabled: true,

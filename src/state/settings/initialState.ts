@@ -67,6 +67,7 @@ import {
   DEFAULT_PASS_BY_OFFSET,
   DEFAULT_PASS_BY_DIR,
 } from '../../services/engine/animation/pathDefaults';
+import { DEFAULT_GLIDE_TUNING } from '../../utils/camera/glideCalibration';
 import { seedVolumeFields } from '../../data/volume/volumeFieldDefaults';
 import { ATMOSPHERE_PARAMS } from '../../data/bodies/atmosphereParams';
 import { EARTH_SURFACE_PARAMS } from '../../data/bodies/earthSurfaceParams';
@@ -266,6 +267,10 @@ export function buildInitialSettings(): EngineSettingsState {
           passBy: false,
         },
       },
+      // Seeded straight from the calibration module so `glideCalibration` stays
+      // the four numbers' single source of truth (same move as
+      // `DEFAULT_REFINE_THRESHOLD` above).
+      glide: { ...DEFAULT_GLIDE_TUNING },
     },
     // Structure overlay: master gate on + one item row per category, each
     // ring + label default-on. Keys are DERIVED from `STRUCTURE_IDS`

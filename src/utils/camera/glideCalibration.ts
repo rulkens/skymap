@@ -6,6 +6,8 @@
  * docs/superpowers/specs/2026-07-31-perceptually-uniform-focus-moves.md
  */
 
+import type { GlideTuning } from '../../@types/camera/GlideTuning';
+
 /**
  * Pan/zoom trade-off ρ passed to `zoomPanGeodesic`. Low ρ makes zooming
  * expensive in the metric and panning cheap, so the path stops climbing: the
@@ -27,3 +29,15 @@ export const GLIDE_MIN_SEC = 0.3;
 
 /** A move clamped at either bound is no longer perceptually uniform. */
 export const GLIDE_MAX_SEC = 2.0;
+
+/**
+ * The four constants above as one record — what `glidePath` falls back to and
+ * what the DebugPanel's live-tuning sliders seed from, so the numbers stay
+ * spelled once.
+ */
+export const DEFAULT_GLIDE_TUNING: GlideTuning = {
+  rho: GLIDE_RHO_DEFAULT,
+  velocity: GLIDE_VELOCITY,
+  minSec: GLIDE_MIN_SEC,
+  maxSec: GLIDE_MAX_SEC,
+};

@@ -35,7 +35,7 @@ type BuildParams = {
 export function buildGlideTrack(params: BuildParams): CompositeTrack {
   const { start, startSec, to, over, rho, ease, fovYRad } = params;
 
-  const path = glidePath({ target: start.target, distance: start.distance }, to, fovYRad, rho);
+  const path = glidePath({ target: start.target, distance: start.distance }, to, fovYRad, { rho });
   const durationSec = over ?? path.durationSec;
   const easeFn = EASE[ease];
 

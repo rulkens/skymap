@@ -1,0 +1,11 @@
+/*
+ * GlideTuningSection — a vertical stack of `Slider` pills, which already carry
+ * their own label + readout, so this file only owns the spacing between them.
+ */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}

@@ -4,7 +4,8 @@
  * Sections: `AssetLoadingSection` (slot-progress rows),
  * `GpuTimingsSection` (per-pass GPU timing live readout),
  * `RenderTogglesSectionContainer` (per-pass on/off checkboxes for visual
- * debugging), `FlowTuningSectionContainer`, `DebugOverlaysSectionContainer`
+ * debugging), `FlowTuningSectionContainer`, `GlideTuningSectionContainer`
+ * (live focus-glide calibration), `DebugOverlaysSectionContainer`
  * (pick-buffer / disk-radius-ring toggles), `GalaxyProvenanceSectionContainer`
  * (a per-axis table of missing / highlight / show controls over measured-vs-
  * estimated tallies), and `ClipTriggersSectionContainer` (play/stop a registered clip
@@ -43,6 +44,7 @@ import { FrameStatsRow } from './FrameStatsRow';
 import { GpuTimingsSection } from './GpuTimingsSection';
 import RenderTogglesSectionContainer from '../containers/RenderTogglesSectionContainer';
 import FlowTuningSectionContainer from '../containers/FlowTuningSectionContainer';
+import GlideTuningSectionContainer from '../containers/GlideTuningSectionContainer';
 import DebugOverlaysSectionContainer from '../containers/DebugOverlaysSectionContainer';
 import GalaxyProvenanceSectionContainer from '../containers/GalaxyProvenanceSectionContainer';
 import ClipTriggersSectionContainer from '../containers/ClipTriggersSectionContainer';
@@ -81,6 +83,7 @@ function DebugPanel({
       <GpuTimingsSection service={timingService} />
       <RenderTogglesSectionContainer passNames={passNames} />
       <FlowTuningSectionContainer />
+      <GlideTuningSectionContainer />
       <DebugOverlaysSectionContainer />
       <GalaxyProvenanceSectionContainer />
       <ClipTriggersSectionContainer />

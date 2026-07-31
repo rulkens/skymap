@@ -63,6 +63,7 @@ import type { PassByDir } from '../animation/PassByDir';
 import type { ClipPathTuningActive } from './ClipPathTuningActive';
 import type { RenderStrategy } from '../engine/frame/RenderStrategy';
 import type { OrientationFrameId } from '../camera/OrientationFrameId';
+import type { GlideTuning } from '../camera/GlideTuning';
 import type { GalaxyProvenanceSettings } from './GalaxyProvenanceSettings';
 
 export type EngineSettingsState = {
@@ -486,6 +487,16 @@ export type EngineSettingsState = {
       /** Per-knob override gate — only an active knob is baked into the clip. */
       active: ClipPathTuningActive;
     };
+    /**
+     * Live calibration of the focus/home camera glide, seeded from
+     * `DEFAULT_GLIDE_TUNING`. Dev-only: the four numbers were tuned by editing
+     * `glideCalibration` and rebuilding, which is a poor loop for a feel knob.
+     * `rho` reaches BOTH the duration derivation and the compiled path (it rides
+     * the `CameraTweenDescriptor`); `velocity` / `minSec` / `maxSec` only convert
+     * arc length to seconds, so they stop at the producers. Shape + per-field
+     * docs live on `GlideTuning`.
+     */
+    glide: GlideTuning;
   };
 
   /**

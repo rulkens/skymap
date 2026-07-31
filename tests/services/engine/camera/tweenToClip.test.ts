@@ -53,3 +53,18 @@ describe("tweenToClip carries the descriptor's easing onto every channel", () =>
     expect(eased.target[2]).not.toBeCloseTo(linear.target[2], 3);
   });
 });
+
+describe("tweenToClip carries the descriptor's rho onto the glide", () => {
+  it('two descriptors differing only in rho walk a different mid-arc distance', () => {
+    const halfSec = DURATION_MS / 2 / 1000;
+    const at = (rho: number) =>
+      evaluateClip(tweenToClip({ ...descriptor('linear'), rho }), halfSec);
+
+    // ρ is the pan/zoom trade-off in the geodesic's metric, so it re-shapes the
+    // curve — without `rho: d.rho` in tweenToClip the descriptor's ρ would only
+    // reach the duration and both of these would sample the same path. Distance
+    // is the probe: the target rides a straight segment whose midpoint
+    // parameter happens to coincide across ρ for this pair.
+    expect(at(1.4).distance).not.toBeCloseTo(at(0.1).distance, 3);
+  });
+});

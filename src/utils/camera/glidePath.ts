@@ -7,13 +7,9 @@
 
 import type { Vec3 } from '../../@types/math/Vec3';
 import type { GlidePath } from '../../@types/camera/GlidePath';
+import type { GlideTuning } from '../../@types/camera/GlideTuning';
 import { zoomPanGeodesic } from './zoomPanGeodesic';
-import {
-  GLIDE_RHO_DEFAULT,
-  GLIDE_VELOCITY,
-  GLIDE_MIN_SEC,
-  GLIDE_MAX_SEC,
-} from './glideCalibration';
+import { DEFAULT_GLIDE_TUNING } from './glideCalibration';
 import { distanceMpc } from '../math/distanceMpc';
 import { lerp } from '../math/lerp';
 
@@ -21,8 +17,16 @@ export function glidePath(
   from: { readonly target: Vec3; readonly distance: number },
   to: { readonly target: Vec3; readonly distance: number },
   fovYRad: number,
-  rho: number = GLIDE_RHO_DEFAULT,
+  tuning: Partial<GlideTuning> = {},
 ): GlidePath {
+  // Per-field `??`, not `{ ...DEFAULT_GLIDE_TUNING, ...tuning }`: callers relay
+  // an absent knob as an explicit `undefined` (a `glide` effect with no `rho`),
+  // and a spread would overwrite the default with it.
+  const rho = tuning.rho ?? DEFAULT_GLIDE_TUNING.rho;
+  const velocity = tuning.velocity ?? DEFAULT_GLIDE_TUNING.velocity;
+  const minSec = tuning.minSec ?? DEFAULT_GLIDE_TUNING.minSec;
+  const maxSec = tuning.maxSec ?? DEFAULT_GLIDE_TUNING.maxSec;
+
   // w = 2·distance·tan(fovY/2) — fovY, not fovX, no aspect factor (§2.1).
   const halfTanFovY = Math.tan(fovYRad / 2);
   const w0 = 2 * from.distance * halfTanFovY;
@@ -30,10 +34,7 @@ export function glidePath(
   const du = distanceMpc(from.target, to.target);
 
   const geodesic = zoomPanGeodesic(0, w0, du, w1, rho);
-  const durationSec = Math.max(
-    GLIDE_MIN_SEC,
-    Math.min(GLIDE_MAX_SEC, geodesic.length / GLIDE_VELOCITY),
-  );
+  const durationSec = Math.max(minSec, Math.min(maxSec, geodesic.length / velocity));
 
   return {
     durationSec,

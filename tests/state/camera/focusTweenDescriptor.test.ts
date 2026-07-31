@@ -7,7 +7,11 @@ import {
   MILKY_WAY_CENTER_WORLD,
   MILKY_WAY_VIEW_DISTANCE_MPC,
 } from '../../../src/data/milkyWay/galacticCenter';
-import { GLIDE_MIN_SEC, GLIDE_MAX_SEC } from '../../../src/utils/camera/glideCalibration';
+import {
+  DEFAULT_GLIDE_TUNING,
+  GLIDE_MIN_SEC,
+  GLIDE_MAX_SEC,
+} from '../../../src/utils/camera/glideCalibration';
 import { makeGalaxyRow } from '../../fixtures/makeGalaxyRow';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { GalaxyRow } from '../../../src/@types/engine/GalaxyRow';
@@ -43,7 +47,7 @@ const structureRow = (over: Partial<StructureInfo> = {}): StructureInfo =>
 
 describe('focusTweenDescriptor', () => {
   it('carries the live from-pose and a linear ease on every arm', () => {
-    const d = focusTweenDescriptor(galaxyRow(), FROM, FOVY);
+    const d = focusTweenDescriptor(galaxyRow(), FROM, FOVY, DEFAULT_GLIDE_TUNING);
     expect(d.from).toBe(FROM);
     expect(d.easing).toBe('linear');
     // The duration is derived, so the only thing that can be asserted without
@@ -58,8 +62,8 @@ describe('focusTweenDescriptor', () => {
     // lever at the shipped ρ — the pan term carries almost no weight there, so
     // two galaxies 1 Gpc apart both pin to GLIDE_MIN_SEC and the assertion goes
     // blind. It is the SCALE CHANGE that the arc length is sensitive to.
-    const small = focusTweenDescriptor(galaxyRow(), FROM, FOVY);
-    const big = focusTweenDescriptor(structureRow(), FROM, FOVY);
+    const small = focusTweenDescriptor(galaxyRow(), FROM, FOVY, DEFAULT_GLIDE_TUNING);
+    const big = focusTweenDescriptor(structureRow(), FROM, FOVY, DEFAULT_GLIDE_TUNING);
     expect(big.durationMs).not.toBeCloseTo(small.durationMs, 6);
     for (const d of [small, big]) {
       expect(d.durationMs).toBeGreaterThanOrEqual(GLIDE_MIN_SEC * 1000);
@@ -68,7 +72,12 @@ describe('focusTweenDescriptor', () => {
   });
 
   it('a galaxy row targets its position and frames on its diameter, keeping yaw/pitch', () => {
-    const d = focusTweenDescriptor(galaxyRow({ x: 1, y: 2, z: 3, diameterKpc: 40 }), FROM, FOVY);
+    const d = focusTweenDescriptor(
+      galaxyRow({ x: 1, y: 2, z: 3, diameterKpc: 40 }),
+      FROM,
+      FOVY,
+      DEFAULT_GLIDE_TUNING,
+    );
     expect(d.to.target).toEqual([1, 2, 3]);
     expect(d.to.distance).toBe(galaxyFocusDistance(40));
     expect(d.to.yaw).toBe(FROM.yaw);
@@ -76,7 +85,12 @@ describe('focusTweenDescriptor', () => {
   });
 
   it('a structure row frames on its apparent radius via the lens FOV', () => {
-    const d = focusTweenDescriptor(structureRow({ apparentRadiusMpc: 5 }), FROM, FOVY);
+    const d = focusTweenDescriptor(
+      structureRow({ apparentRadiusMpc: 5 }),
+      FROM,
+      FOVY,
+      DEFAULT_GLIDE_TUNING,
+    );
     expect(d.to.target).toEqual([10, -20, 30]);
     expect(d.to.distance).toBe(structureFocusDistance(5, FOVY));
   });
@@ -86,12 +100,13 @@ describe('focusTweenDescriptor', () => {
       structureRow({ apparentRadiusMpc: undefined, physicalRadiusMpc: 2 }),
       FROM,
       FOVY,
+      DEFAULT_GLIDE_TUNING,
     );
     expect(d.to.distance).toBe(structureFocusDistance(2, FOVY));
   });
 
   it('the Milky Way arm targets the galactic centre at the fixed view distance', () => {
-    const d = focusTweenDescriptor({ type: 'milkyWay' }, FROM, FOVY);
+    const d = focusTweenDescriptor({ type: 'milkyWay' }, FROM, FOVY, DEFAULT_GLIDE_TUNING);
     expect(d.to.target).toEqual([
       MILKY_WAY_CENTER_WORLD[0],
       MILKY_WAY_CENTER_WORLD[1],
@@ -101,9 +116,20 @@ describe('focusTweenDescriptor', () => {
     expect(d.to.yaw).toBe(FROM.yaw);
   });
 
+  it('the tuning reaches BOTH the duration and the descriptor rho', () => {
+    // The DebugPanel's ρ slider is only honest if it changes the path too, and
+    // `tweenToClip` compiles the path from `d.rho` alone — so a descriptor that
+    // timed itself at one ρ and reports another would pace the wrong curve.
+    const tuning = { ...DEFAULT_GLIDE_TUNING, rho: 1.4, velocity: 4 };
+    const d = focusTweenDescriptor(structureRow(), FROM, FOVY, tuning);
+    expect(d.rho).toBe(tuning.rho);
+    const base = focusTweenDescriptor(structureRow(), FROM, FOVY, DEFAULT_GLIDE_TUNING);
+    expect(d.durationMs).not.toBeCloseTo(base.durationMs, 6);
+  });
+
   it('copies the target into a fresh array — never aliases the source Vec3', () => {
     const struct = structureRow({ worldPos: [10, -20, 30] });
-    const d = focusTweenDescriptor(struct, FROM, FOVY);
+    const d = focusTweenDescriptor(struct, FROM, FOVY, DEFAULT_GLIDE_TUNING);
     expect(d.to.target).not.toBe(struct.worldPos);
   });
 });

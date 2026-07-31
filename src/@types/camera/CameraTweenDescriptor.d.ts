@@ -16,4 +16,12 @@ export type CameraTweenDescriptor = {
   to: CameraPose;
   durationMs: number;
   easing: Ease;
+  /**
+   * The pan/zoom trade-off the producer derived `durationMs` under. It rides the
+   * descriptor for the same reason `easing` does — `tweenToClip` compiles the
+   * glide with no store access, and the shape the camera walks then cannot
+   * disagree with the arc length its duration came from. Omitted ⇒
+   * `GLIDE_RHO_DEFAULT`, matching the `glide` effect's own optional `rho`.
+   */
+  rho?: number;
 };
