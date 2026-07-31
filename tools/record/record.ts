@@ -48,7 +48,7 @@
  * `hook.startTour(...)` resolves when the tour ends, but awaiting it inline
  * would deadlock: the evaluate would block while the loop that grants the
  * virtual time the tour needs never runs. The kick evaluate instead attaches
- * .then/.catch handlers that write a `window.__recorderTourStatus` flag, and
+ * .then/.catch handlers that write a `window.__recorderTakeStatus` flag, and
  * the frame loop polls that flag at each frame boundary. The alternative —
  * bridging the resolution out via `page.exposeFunction` — would deliver it as
  * an out-of-band CDP message racing the frame loop in real time, making a
@@ -110,7 +110,7 @@ type RecordOptions = {
   tourId: string;
   beats: BeatRange | undefined;
   fps: number;
-  /** OUTPUT film resolution — the page viewport is size/dpr (see captureTour). */
+  /** OUTPUT film resolution — the page viewport is size/dpr (see captureTake). */
   size: { width: number; height: number };
   /** deviceScaleFactor for the page; --size stays the output resolution. */
   dpr: number;
@@ -119,14 +119,16 @@ type RecordOptions = {
   url: string;
 };
 
+type Take = { kind: 'tour'; id: TourId; beats: BeatRange };
+
 /**
  * The in-page flag the kick evaluate writes and the frame loop polls — see
  * the module header's "promise bridge" section for why this exists instead
  * of awaiting startTour inline or bridging via exposeFunction.
  */
-type TourStatus = { done: boolean; error: string | null };
+type TakeStatus = { done: boolean; error: string | null };
 
-type RecorderPageWindow = RecorderWindow & { __recorderTourStatus?: TourStatus };
+type RecorderPageWindow = RecorderWindow & { __recorderTakeStatus?: TakeStatus };
 
 /**
  * Bespoke argv loop rather than tools/utils/cli/args.ts: parseFlags is
@@ -142,7 +144,7 @@ function parseArgs(argv: readonly string[]): RecordOptions {
     size: parseSize('3840x2160'),
     // Default 2, not 1: DOM captions are authored in CSS pixels, and a
     // designer judges them on a 2x display — see the didactic block at the
-    // viewport derivation in captureTour for the full proportion argument.
+    // viewport derivation in captureTake for the full proportion argument.
     dpr: 2,
     // No fixed default name: main derives a timestamped one via
     // defaultOutName so successive default-flag takes never overwrite each
@@ -356,15 +358,15 @@ async function awaitCaptureReady(page: Page, url: string): Promise<void> {
 
 /**
  * The capture side of the pipeline, decoupled from encoding: boot the cinema
- * page in real time, pause virtual time, kick the tour, then step
+ * page in real time, pause virtual time, kick the take, then step
  * grant → captureScreenshot → writePng until the in-page status flag reports
- * the tour ended. Returns the number of frames captured. Encoding enters only
+ * the take ended. Returns the number of frames captured. Encoding enters only
  * through the injected writePng, so this function knows nothing about ffmpeg.
  */
-async function captureTour(
+async function captureTake(
   browser: Browser,
   options: RecordOptions,
-  range: BeatRange,
+  take: Take,
   frameCap: number,
   writePng: (png: Buffer) => Promise<void>,
 ): Promise<number> {
@@ -432,28 +434,25 @@ async function captureTour(
   const session = await context.newCDPSession(page);
   await session.send('Emulation.setVirtualTimePolicy', { policy: 'pause' });
 
-  // Kick the tour under paused virtual time (finding 3: evaluate, never a
+  // Kick the take under paused virtual time (finding 3: evaluate, never a
   // locator action). The evaluate returns immediately — the startTour promise
-  // is deliberately NOT awaited; its outcome lands in __recorderTourStatus.
-  await page.evaluate(
-    ({ id, from, to }) => {
-      const w = window as unknown as RecorderPageWindow;
-      const hook = w.__skymapRecorder;
-      if (hook === undefined) throw new Error('__skymapRecorder missing');
-      const status: TourStatus = { done: false, error: null };
-      w.__recorderTourStatus = status;
-      hook.startTour(id as TourId, { from, to }).then(
-        () => {
-          status.done = true;
-        },
-        (err: unknown) => {
-          status.error = err instanceof Error ? err.message : String(err);
-          status.done = true;
-        },
-      );
-    },
-    { id: options.tourId, from: range.from, to: range.to },
-  );
+  // is deliberately NOT awaited; its outcome lands in __recorderTakeStatus.
+  await page.evaluate((take) => {
+    const w = window as unknown as RecorderPageWindow;
+    const hook = w.__skymapRecorder;
+    if (hook === undefined) throw new Error('__skymapRecorder missing');
+    const status: TakeStatus = { done: false, error: null };
+    w.__recorderTakeStatus = status;
+    hook.startTour(take.id, take.beats).then(
+      () => {
+        status.done = true;
+      },
+      (err: unknown) => {
+        status.error = err instanceof Error ? err.message : String(err);
+        status.done = true;
+      },
+    );
+  }, take);
 
   // A windowed take (from > 0) opens with the saga's reconstruction fold plus
   // its FOLD_SETTLE_MS delay: the visibility bridge and label-fade envelope
@@ -463,7 +462,7 @@ async function captureTour(
   // film's first frame is the settled scene, not the reconstruction dissolve.
   // Full takes skip this: beat 0's fold equals the live baseline. The frame
   // cap below applies to CAPTURED frames only; these discards sit outside it.
-  if (range.from > 0) {
+  if (take.beats.from > 0) {
     const settleFrames = Math.ceil((FOLD_SETTLE_MS / 1000) * options.fps);
     console.log(`settling scene reconstruction: discarding ${settleFrames} frames`);
     for (let settle = 0; settle < settleFrames; settle++) {
@@ -478,21 +477,21 @@ async function captureTour(
   let frame = 0;
   while (true) {
     // Poll the bridge at the frame boundary (module header: deterministic
-    // stop frame). Checked BEFORE granting so a tour that ends inside grant N
+    // stop frame). Checked BEFORE granting so a take that ends inside grant N
     // yields exactly N captured frames, the last one showing the final pose.
     const status = await page.evaluate(
-      () => (window as unknown as RecorderPageWindow).__recorderTourStatus,
+      () => (window as unknown as RecorderPageWindow).__recorderTakeStatus,
     );
     if (status === undefined) {
-      throw new Error('__recorderTourStatus vanished — did the page reload mid-take?');
+      throw new Error('__recorderTakeStatus vanished — did the page reload mid-take?');
     }
     if (status.error !== null) throw new Error(`startTour rejected in-page: ${status.error}`);
     if (status.done) break;
     if (frame >= frameCap) {
       throw new Error(
-        `aborting at frame ${frame}: cap ${frameCap} exceeded and the tour has not ended — ` +
-          'likely a beat stuck on a waitUntil readiness gate (catalog focus never loaded?). ' +
-          'Check the [page] warnings above.',
+        `aborting at frame ${frame}: cap ${frameCap} exceeded and '${take.kind} ${take.id}' ` +
+          'has not ended — likely a beat stuck on a waitUntil readiness gate (catalog focus ' +
+          'never loaded?). Check the [page] warnings above.',
       );
     }
     await grantAndAwaitExpiry(session, 1000 / options.fps, `frame ${frame}`);
@@ -580,6 +579,7 @@ async function main(): Promise<void> {
     );
   }
   const frameCap = tourFrameCap(slicedBeats, options.fps);
+  const take: Take = { kind: 'tour', id: tour.id, beats: range };
 
   // Default output name = tour + size + fps + timestamp, so successive
   // default-flag takes (or a smoke against a different tour) never silently
@@ -597,7 +597,7 @@ async function main(): Promise<void> {
     });
 
   console.log(
-    `record-tour — '${tour.id}' beats ${range.from}..${range.to} ` +
+    `record-tour — '${tour.id}' beats ${take.beats.from}..${take.beats.to} ` +
       `(${slicedBeats.length} of ${tour.beats.length})`,
   );
   console.log(
@@ -613,7 +613,7 @@ async function main(): Promise<void> {
   try {
     const browser = await launchChromium();
     try {
-      frames = await captureTour(browser, options, range, frameCap, (png) =>
+      frames = await captureTake(browser, options, take, frameCap, (png) =>
         writeFrame(ffmpeg.stdin, png),
       );
     } finally {
