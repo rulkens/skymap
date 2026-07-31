@@ -65,15 +65,17 @@ import type {
   VelRamp,
   OscTrack,
   SceneCue,
-  PathTrack,
+  CompositeTrack,
 } from '../../../@types/animation/CompiledClip';
 import type { Effect } from '../../../@types/animation/Effect';
 import type { Channel } from '../../../@types/animation/Channel';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { Mat3 } from '../../../@types/math/Mat3';
-import { CHANNEL_SPACE } from './channelSpace';
+import { CHANNEL_SPACE, ALL_CHANNELS } from './channelSpace';
 import { validateSingleWriter } from './validateSingleWriter';
 import { buildPathTrack } from './buildPathTrack';
+import { buildGlideTrack } from './buildGlideTrack';
+import { DEFAULT_FOV_Y_RAD } from '../camera/cameraFraming';
 
 // ---------------------------------------------------------------------------
 // Zero pose — used when start is 'live' or absent (placeholder; resolved by
@@ -81,9 +83,6 @@ import { buildPathTrack } from './buildPathTrack';
 // ---------------------------------------------------------------------------
 
 const ZERO_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 0 };
-
-// All four channels, used to build the initial baseTracks record.
-const ALL_CHANNELS: Channel[] = ['distance', 'yaw', 'pitch', 'target'];
 
 // ---------------------------------------------------------------------------
 // Mutable accumulator — threaded through the recursive walk.
@@ -94,7 +93,7 @@ type Accum = {
   readonly velRamps: VelRamp[];
   readonly oscTracks: OscTrack[];
   readonly cues: SceneCue[];
-  readonly pathTracks: PathTrack[];
+  readonly compositeTracks: CompositeTrack[];
   // The resolved clip start pose — a `flyPath` flies out of it (it is the first
   // spline knot), so the walk needs it when it reaches a `flyPath` leaf.
   readonly start: CameraPose;
@@ -102,6 +101,10 @@ type Accum = {
   // encodes its world tangents to (yaw, pitch) through it (see `buildPathTrack`).
   // Absent ⇒ identity (world-frame aim), so every non-frame caller is unchanged.
   readonly frameBasis?: Mat3;
+  // The vertical FOV this clip compiles under — a `glide`'s (u, w) metric is
+  // defined through it (`w = 2·distance·tan(fovY/2)`). Absent ⇒
+  // DEFAULT_FOV_Y_RAD (cameraFraming.ts).
+  readonly fovYRad?: number;
 };
 
 // ---------------------------------------------------------------------------
@@ -215,10 +218,28 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
         passBy: effect.passBy,
         frameBasis: acc.frameBasis,
       });
-      acc.pathTracks.push(track);
+      acc.compositeTracks.push(track);
       // A dwell (`linger` + `lingerSec`) ADDS time, so the real duration is the
       // track's — not the authored `over` (the cruise budget). Return it so the
       // cursor and the single-writer window land on the true end.
+      return track.endSec - atSec;
+    }
+
+    // --- Camera leaves: zoom/pan geodesic over target + distance ---
+    case 'glide': {
+      const track = buildGlideTrack({
+        start: acc.start,
+        startSec: atSec,
+        to: effect.to,
+        over: effect.over,
+        rho: effect.rho,
+        ease: effect.ease,
+        fovYRad: acc.fovYRad ?? DEFAULT_FOV_Y_RAD,
+      });
+      acc.compositeTracks.push(track);
+      // Without an authored `over` the duration only exists once the geodesic
+      // has been measured, so the cursor must move by the TRACK's span —
+      // `effect.over` would leave every following effect at the wrong time.
       return track.endSec - atSec;
     }
 
@@ -308,13 +329,15 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
  *                    identity (world-frame aim); a clip with no `flyPath` is
  *                    unaffected either way, so `durationSec`-only callers may
  *                    omit it.
+ * @param fovYRad     Vertical FOV in radians, read by a `glide`'s (u, w)
+ *                    metric. Absent ⇒ DEFAULT_FOV_Y_RAD.
  * @returns           A `CompiledClip` ready for the evaluator.
  *
  * @throws      Throws via `validateSingleWriter` when a base-layer write clash
  *              is detected on a channel (two overlapping `[start, end)` windows
  *              on the same channel's base track).
  */
-export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
+export function compileClip(data: ClipData, frameBasis?: Mat3, fovYRad?: number): CompiledClip {
   // Resolve the starting pose — 'live' and absent both fall through to the
   // zero placeholder; a concrete CameraPose is used directly.
   const start: CameraPose =
@@ -326,9 +349,10 @@ export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
     velRamps: [],
     oscTracks: [],
     cues: [],
-    pathTracks: [],
+    compositeTracks: [],
     start,
     frameBasis,
+    fovYRad,
   };
 
   // Walk the timeline, accumulating the cursor across top-level entries. A
@@ -351,7 +375,7 @@ export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
   ) as Record<Channel, BaseSegment[]>;
 
   validateSingleWriter(baseTracks);
-  validatePathExclusivity(baseTracks, acc.pathTracks);
+  validateCompositeExclusivity(baseTracks, acc.compositeTracks);
 
   return {
     start,
@@ -360,30 +384,30 @@ export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
     velTracks: acc.velRamps,
     oscTracks: acc.oscTracks,
     cues: sortedCues,
-    pathTracks: acc.pathTracks,
+    compositeTracks: acc.compositeTracks,
   };
 }
 
 /**
- * validatePathExclusivity — a `flyPath` is a COMPOSITE base writer: it drives
- * all four camera channels over its window. So just like two `set`s on the same
- * channel clash, a base segment that overlaps a path window is a clash too — the
- * evaluator would let the path silently win, which is a footgun, not a feature.
- * Catch it at registration time with the same loud-throw discipline as
+ * validateCompositeExclusivity — a composite writer drives several camera
+ * channels over its window. So just like two `set`s on the same channel clash,
+ * a base segment that overlaps a composite window is a clash too — the
+ * evaluator would let the composite silently win, which is a footgun, not a
+ * feature. Catch it at registration time with the same loud-throw discipline as
  * `validateSingleWriter`.
  */
-function validatePathExclusivity(
+function validateCompositeExclusivity(
   baseTracks: Record<Channel, BaseSegment[]>,
-  pathTracks: PathTrack[],
+  compositeTracks: CompositeTrack[],
 ): void {
-  for (const path of pathTracks) {
-    for (const ch of ALL_CHANNELS) {
+  for (const track of compositeTracks) {
+    for (const ch of track.channels) {
       for (const seg of baseTracks[ch]) {
-        const overlaps = seg.startSec < path.endSec && path.startSec < seg.endSec;
+        const overlaps = seg.startSec < track.endSec && track.startSec < seg.endSec;
         if (overlaps) {
           throw new Error(
-            `flyPath window [${path.startSec}, ${path.endSec}) overlaps a base '${ch}' writer ` +
-              `[${seg.startSec}, ${seg.endSec}). A flyPath owns all camera channels for its window — ` +
+            `composite window [${track.startSec}, ${track.endSec}) declaring [${track.channels.join(', ')}] ` +
+              `overlaps a base '${ch}' writer [${seg.startSec}, ${seg.endSec}) — ` +
               `move the conflicting camera action outside it.`,
           );
         }

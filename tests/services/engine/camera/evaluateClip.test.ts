@@ -19,6 +19,7 @@ import {
   oscillate,
   tween,
   moveTarget,
+  glide,
   all,
   seq,
   wait,
@@ -329,18 +330,12 @@ describe('evaluateClip composes base+vel+osc on one channel', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Test 9 — focus tween = one-segment clip
+// Test 9 — one `set`/`setVec` segment per channel, all four in one `all`
 //
-// A focus tween is the degenerate clip: one `set`/`setVec` segment per channel
-// with `ease:'easeOutCubic'` and `space:'lin'` for `distance` (focus
-// tweens use linear distance interpolation, not log-space). These four cases
-// These four cases pin that `evaluateClip` via `tweenToClip` reproduces the
-// focus-tween motion exactly — the single camera-evaluation path for scripted
-// clips and tweens.
-//
-// Helper: build the ClipData that corresponds to a CameraTweenDescriptor with
-// the given from/to/durationMs. Distance explicitly uses space:'lin' for the
-// focus tween's linear lerp(from, to, t) path — the clip default is 'log'.
+// The per-channel writer path: endpoints, saturation past the segment end, and
+// `space:'lin'` overriding `distance`'s log default. (Focus tweens no longer
+// compile to this shape — `tweenToClip` emits a `glide` for target+distance —
+// but authored clips still write channels this way.)
 // ---------------------------------------------------------------------------
 
 function makeTweenClip(opts: { from: CameraPose; to: CameraPose; durationMs: number }): ClipData {
@@ -368,7 +363,7 @@ const TWEEN_TO: CameraPose = { target: [10, 0, 0], yaw: 1.0, pitch: 0.2, distanc
 const DURATION_MS = 600;
 const DURATION_SEC = DURATION_MS / 1000;
 
-describe('focus tween = one-segment clip', () => {
+describe('a one-segment all() of per-channel writers', () => {
   it('evaluateClip matches the old tween at t=0', () => {
     // At elapsed=0, the pose must equal `from` on all channels.
     const data = makeTweenClip({ from: TWEEN_FROM, to: TWEEN_TO, durationMs: DURATION_MS });
@@ -419,7 +414,7 @@ describe('focus tween = one-segment clip', () => {
     expect(pose.target).not.toBe(TWEEN_TO.target);
   });
 
-  it('evaluateClip keeps focus-tween distance LINEAR via space:lin', () => {
+  it("evaluateClip keeps a `set` segment's distance LINEAR via space:lin", () => {
     // A one-segment clip with `space:'lin'` on distance must interpolate
     // linearly, not in log space. The two paths diverge when from !== to.
     //
@@ -456,5 +451,57 @@ describe('focus tween = one-segment clip', () => {
     // Log midpoint for contrast: sqrt(10 * 1000) ≈ 100, which is far from 505.
     // Asserting the result is well above 200 rules out the log path decisively.
     expect(pose.distance).toBeGreaterThan(200);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A composite track owning a SUBSET of the channels — the merge a `flyPath`
+// (which declares all four) can never exercise.
+// ---------------------------------------------------------------------------
+
+describe('evaluateClip merges a composite track per declared channel', () => {
+  it('a glide owns target and distance while yaw and pitch stay on the base layer', () => {
+    const GLIDE_FOV_Y = (50 * Math.PI) / 180;
+    const from: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
+    const to = { target: [30, 40, 0] as const, distance: 2 };
+    const over = 2;
+
+    const data: ClipData = {
+      start: from,
+      timeline: [
+        all([
+          glide({ target: [...to.target], distance: to.distance }, { over, ease: 'linear' }),
+          tween('yaw', { to: 1.0, over, ease: 'linear' }),
+          tween('pitch', { to: 0.5, over, ease: 'linear' }),
+        ]),
+      ],
+    };
+
+    // Compiling at all is half the assertion: `validateCompositeExclusivity`
+    // throws if the composite track claims a channel a base writer also drives,
+    // so a glide that declared all four would never get past here.
+    expect(() => evaluateClip(data, 0, undefined, GLIDE_FOV_Y)).not.toThrow();
+
+    const pose = evaluateClip(data, over / 2, undefined, GLIDE_FOV_Y);
+
+    // yaw/pitch came from their OWN scalar tweens — linear ease at half the
+    // window is exactly half the delta.
+    expect(pose.yaw).toBeCloseTo(0.5, 12);
+    expect(pose.pitch).toBeCloseTo(0.25, 12);
+
+    // distance came from the geodesic, not the base layer (which would hold
+    // `from`), and not from any independent-channel interpolation of the two
+    // endpoints: the linear midpoint is 51, the log midpoint sqrt(200) ≈ 14.1.
+    expect(pose.distance).not.toBeCloseTo(100, 5);
+    expect(pose.distance).not.toBeCloseTo(51, 5);
+    expect(pose.distance).not.toBeCloseTo(Math.sqrt(200), 5);
+
+    // The geodesic's signature is the COUPLING: this zoom-dominated move has
+    // all but ~2% of the pan done at half time while the zoom still has an
+    // order of magnitude to go. Two independently-eased channels sit at 50/50.
+    const panFraction = pose.target[0] / to.target[0];
+    expect(pose.target[1] / to.target[1]).toBeCloseTo(panFraction, 12);
+    expect(panFraction).toBeGreaterThan(0.9);
+    expect(pose.distance).toBeGreaterThan(5 * to.distance);
   });
 });

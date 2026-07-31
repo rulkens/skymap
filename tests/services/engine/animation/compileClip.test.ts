@@ -11,6 +11,7 @@ import { describe, it, expect } from 'vitest';
 import { compileClip } from '../../../../src/services/engine/animation/compileClip';
 import {
   dollyTo,
+  tween,
   moveTargetId,
   spin,
   rate,
@@ -24,10 +25,12 @@ import {
   fork,
   wait,
   flyPath,
+  glide,
   atPoint,
   atFocus,
 } from '../../../../src/services/engine/animation/effectHelpers';
 import { focusId } from '../../../../src/utils/animation/focusId';
+import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 
 // ---------------------------------------------------------------------------
 // Test 1 — seq accumulates windows
@@ -312,9 +315,9 @@ describe('compileClip flyPath', () => {
         flyPath([atPoint([10, 0, 0], 10), atPoint([20, 0, 0], 100)], { over: 6, linger: 0 }),
       ],
     });
-    expect(compiled.pathTracks).toHaveLength(1);
-    expect(compiled.pathTracks[0]!.startSec).toBe(0);
-    expect(compiled.pathTracks[0]!.endSec).toBe(6);
+    expect(compiled.compositeTracks).toHaveLength(1);
+    expect(compiled.compositeTracks[0]!.startSec).toBe(0);
+    expect(compiled.compositeTracks[0]!.endSec).toBe(6);
     expect(compiled.durationSec).toBe(6);
   });
 
@@ -327,13 +330,50 @@ describe('compileClip flyPath', () => {
   });
 
   it('throws when a base writer overlaps the flyPath window (composite exclusivity)', () => {
-    // A flyPath owns all camera channels for [0,4); a concurrent dollyTo on
+    // A flyPath declares all four channels for [0,4); a concurrent dollyTo on
     // `distance` in the same window is a clash, caught at compile time.
     expect(() =>
       compileClip({
         start: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 },
         timeline: [all([flyPath([atPoint([10, 0, 0], 10)], { over: 4 }), dollyTo(50, 4)])],
       }),
-    ).toThrow(/flyPath window/);
+    ).toThrow(/composite window/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test 10 — glide: the derived duration is the timeline's, and it still fences
+// off the channels it declares
+// ---------------------------------------------------------------------------
+
+const GLIDE_START: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
+
+describe('compileClip glide', () => {
+  it("a glide's derived duration advances the timeline cursor", () => {
+    const compiled = compileClip({
+      start: GLIDE_START,
+      // yaw is a channel the glide does NOT declare, so a cursor that failed to
+      // advance shows up as a misplaced segment rather than an exclusivity throw.
+      timeline: [
+        seq([glide({ target: [30, 40, 0], distance: 2 }), tween('yaw', { to: 1, over: 1 })]),
+      ],
+    });
+
+    const track = compiled.compositeTracks[0]!;
+    // No `over` was authored, so the only source of truth for the glide's span
+    // is the track it built — a cursor moved by `effect.over` (undefined → 0)
+    // would put the tween at 0 and the clip's duration at 1.
+    expect(track.endSec).toBeGreaterThan(0);
+    expect(compiled.baseTracks['yaw'][0]!.startSec).toBe(track.endSec);
+    expect(compiled.durationSec).toBe(track.endSec + 1);
+  });
+
+  it('a base distance writer overlapping a glide still throws', () => {
+    expect(() =>
+      compileClip({
+        start: GLIDE_START,
+        timeline: [all([glide({ target: [30, 40, 0], distance: 2 }, { over: 4 }), dollyTo(50, 4)])],
+      }),
+    ).toThrow(/composite window/);
   });
 });

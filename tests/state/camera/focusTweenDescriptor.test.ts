@@ -7,7 +7,7 @@ import {
   MILKY_WAY_CENTER_WORLD,
   MILKY_WAY_VIEW_DISTANCE_MPC,
 } from '../../../src/data/milkyWay/galacticCenter';
-import { FOCUS_TWEEN_MS } from '../../../src/services/engine/camera/focusTweenDuration';
+import { GLIDE_MIN_SEC, GLIDE_MAX_SEC } from '../../../src/utils/camera/glideCalibration';
 import { makeGalaxyRow } from '../../fixtures/makeGalaxyRow';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { GalaxyRow } from '../../../src/@types/engine/GalaxyRow';
@@ -42,11 +42,29 @@ const structureRow = (over: Partial<StructureInfo> = {}): StructureInfo =>
   }) as StructureInfo;
 
 describe('focusTweenDescriptor', () => {
-  it('carries the live from-pose, FOCUS_TWEEN_MS, and easeOutCubic on every arm', () => {
+  it('carries the live from-pose and a linear ease on every arm', () => {
     const d = focusTweenDescriptor(galaxyRow(), FROM, FOVY);
     expect(d.from).toBe(FROM);
-    expect(d.durationMs).toBe(FOCUS_TWEEN_MS);
-    expect(d.easing).toBe('easeOutCubic');
+    expect(d.easing).toBe('linear');
+    // The duration is derived, so the only thing that can be asserted without
+    // recomputing it is the calibrated envelope it must land inside.
+    expect(d.durationMs).toBeGreaterThanOrEqual(GLIDE_MIN_SEC * 1000);
+    expect(d.durationMs).toBeLessThanOrEqual(GLIDE_MAX_SEC * 1000);
+  });
+
+  it('the duration tracks the move, not a constant', () => {
+    // Two subjects whose destination FRAMING differs by orders of magnitude: a
+    // 40 kpc galaxy nearby vs a 2 Mpc structure. Separation alone is the wrong
+    // lever at the shipped ρ — the pan term carries almost no weight there, so
+    // two galaxies 1 Gpc apart both pin to GLIDE_MIN_SEC and the assertion goes
+    // blind. It is the SCALE CHANGE that the arc length is sensitive to.
+    const small = focusTweenDescriptor(galaxyRow(), FROM, FOVY);
+    const big = focusTweenDescriptor(structureRow(), FROM, FOVY);
+    expect(big.durationMs).not.toBeCloseTo(small.durationMs, 6);
+    for (const d of [small, big]) {
+      expect(d.durationMs).toBeGreaterThanOrEqual(GLIDE_MIN_SEC * 1000);
+      expect(d.durationMs).toBeLessThanOrEqual(GLIDE_MAX_SEC * 1000);
+    }
   });
 
   it('a galaxy row targets its position and frames on its diameter, keeping yaw/pitch', () => {

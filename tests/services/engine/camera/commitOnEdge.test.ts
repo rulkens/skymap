@@ -267,7 +267,13 @@ describe('commitOnEdge — tween settles', () => {
     expect(base.yaw).toBeCloseTo(TO.yaw, 6);
     expect(base.pitch).toBeCloseTo(TO.pitch, 6);
     expect(base.distance).toBeCloseTo(TO.distance, 6);
-    expect(Array.from(base.target as number[])).toEqual([5, 10, 15]);
+    // toBeCloseTo, not toEqual: `target` now arrives via the glide, whose
+    // endpoint is exact to a few ulp rather than bit-exact (cosh/sinh are not
+    // correctly rounded). What this pins is that base got TO, not the from-pose.
+    const target = Array.from(base.target as number[]);
+    expect(target[0]).toBeCloseTo(TO.target[0], 6);
+    expect(target[1]).toBeCloseTo(TO.target[1], 6);
+    expect(target[2]).toBeCloseTo(TO.target[2], 6);
   });
 
   it('the deactivation frame RENDERS the committed pose, not the stale base (no edge flicker)', () => {

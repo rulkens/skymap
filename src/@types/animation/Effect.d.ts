@@ -55,6 +55,12 @@
  *     unlike the `FocusBoundEffect` arms it is NOT consumed away: the resolved
  *     `flyPath` (all waypoints in `at`-form) survives into `compileClip`.
  *
+ *   - `glide` — a focus move along a van Wijk & Nuij zoom/pan geodesic. The
+ *     second composite writer, owning `target` + `distance` only (yaw/pitch stay
+ *     ordinary scalar tweens beside it). Both are `Effect` arms rather than
+ *     `CameraAction`s because every `CameraAction` carries a single `ch` and is a
+ *     per-channel writer.
+ *
  * ### Alternative rejected: separate `CameraEffect` and `SceneEffect` timelines
  *
  * Two parallel arrays would let the player split without discriminating on `kind`,
@@ -70,6 +76,7 @@ import type { PathWaypoint } from './PathWaypoint';
 import type { Ease } from './Ease';
 import type { SplineConfig } from './SplineConfig';
 import type { PassByConfig } from './PassByConfig';
+import type { Vec3 } from '../math/Vec3';
 
 export type Effect =
   | CameraAction
@@ -131,4 +138,15 @@ export type Effect =
        * untouched). See `PassByConfig`.
        */
       readonly passBy?: PassByConfig;
+    }
+  | {
+      readonly kind: 'glide';
+      readonly to: { readonly target: Vec3; readonly distance: number };
+      /** Travel seconds. Omitted ⇒ derived from the geodesic's arc length
+       *  (`GlidePath.durationSec`), so the timeline cursor only knows the real
+       *  span after the track is built. */
+      readonly over?: number;
+      /** Pan/zoom trade-off. Omit for `GLIDE_RHO_DEFAULT`. */
+      readonly rho?: number;
+      readonly ease: Ease;
     };

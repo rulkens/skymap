@@ -26,12 +26,12 @@
  * never disagree (invariant 1 of the frame-ordering contract).
  *
  * `buildCameraDrivers` produces the six-row table that reads directly from the
- * Redux store. Most drivers' `isActive` and `pose` read only `s.camera.*`; `cam`
- * is forwarded to the `orbitDrag` driver, which reads `state.cam` (the gesture
- * register) for its live yaw/pitch/distance. The `followBody` driver is the one
- * that needs the engine snapshot, so `buildCameraDrivers(state)` closes over
- * `EngineState`: follow reads the per-frame body-state snapshot (primed by
- * `runFrame` before produce), the live lens FOV, and the follow ease clock.
+ * Redux store. Most drivers' `isActive` read only `s.camera.*`; `cam` is
+ * forwarded to the `orbitDrag` driver, which reads `state.cam` (the gesture
+ * register) for its live yaw/pitch/distance. `buildCameraDrivers(state)` closes
+ * over `EngineState` for the live lens FOV (`clip`, `tween` and `followBody`
+ * all read `state.cameraRuntime.projection.fovYRad`) and, for `followBody`
+ * alone, the per-frame body-state snapshot and the follow ease clock.
  *
  * Priorities: clip 95 > orbitDrag 80 > tween 60 > autoRotate 20 > followBody 10
  * > resting 0. The gap between each step is deliberate headroom so a future
@@ -197,8 +197,9 @@ export function runCameraDrivers(
  *     outrank autoRotate / the drag.
  *
  *   - `tween` (60) — an in-flight focus tween. Active while `s.camera.tween`
- *     is non-null. Pure: reads `s.camera.tween` + `elapsedMs` from the clock,
- *     converts descriptor via `tweenToClip`, calls `evaluateClip(data, elapsed/1000)`.
+ *     is non-null. Reads `s.camera.tween` + `elapsedMs` from the clock and the
+ *     live `fovYRad`, converts descriptor via `tweenToClip`, calls
+ *     `evaluateClip(data, elapsed/1000, undefined, fovYRad)`.
  *
  *   - `autoRotate` (20) — the idle drift. Active while
  *     `s.camera.autoRotate.active` is true. Pure: returns
@@ -229,7 +230,12 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
       // (yaw, pitch) through the committed frame the render path decodes with —
       // a world-invariant aim (see buildPathTrack / orbitAnglesLookingAlong).
       pose: (s, _cam, elapsed) =>
-        evaluateClip(s.camera.clip!.data, elapsed, ORIENTATION_FRAMES[s.settings.orientation]),
+        evaluateClip(
+          s.camera.clip!.data,
+          elapsed,
+          ORIENTATION_FRAMES[s.settings.orientation],
+          state.cameraRuntime.projection.fovYRad,
+        ),
     },
     {
       id: 'orbitDrag',
@@ -353,7 +359,13 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
       // `tweenToClip` converts the descriptor to a ClipData (memoised by
       // reference) so `evaluateClip`'s compile cache reuses tracks across frames.
       // `elapsedMs / 1000` converts to the seconds unit `evaluateClip` expects.
-      pose: (s, _cam, elapsedMs) => evaluateClip(tweenToClip(s.camera.tween!), elapsedMs / 1000),
+      pose: (s, _cam, elapsedMs) =>
+        evaluateClip(
+          tweenToClip(s.camera.tween!),
+          elapsedMs / 1000,
+          undefined,
+          state.cameraRuntime.projection.fovYRad,
+        ),
     },
     {
       id: 'autoRotate',

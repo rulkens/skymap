@@ -77,7 +77,7 @@
  *
  * - `data` and the cached `CompiledClip` are never mutated.
  * - The returned `CameraPose` allocates a fresh `target` triple each call.
- * - Same `(data, elapsedSec, frameBasis)` triple ⇒ deep-equal output.
+ * - Same `(data, elapsedSec, frameBasis, fovYRad)` tuple ⇒ deep-equal output.
  */
 
 import type { ClipData } from '../../../@types/animation/ClipData';
@@ -85,7 +85,7 @@ import type {
   CompiledClip,
   BaseSegment,
   VelRamp,
-  PathTrack,
+  CompositeTrack,
 } from '../../../@types/animation/CompiledClip';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { Channel } from '../../../@types/animation/Channel';
@@ -111,14 +111,25 @@ import { lerp } from '../../../utils/math/lerp';
 // hit the cache, an orientation switch (rare) recompiles once. A basis-free clip
 // (no `flyPath`) recompiles to a byte-identical result, so this never affects a
 // tween / static clip.
-type Cached = { readonly frameBasis: Mat3 | undefined; readonly compiled: CompiledClip };
+type Cached = {
+  readonly frameBasis: Mat3 | undefined;
+  // Keying on fovYRad assumes FOV is stable during a clip/tween's lifetime —
+  // true in practice today; a continuously-varying FOV would thrash this cache.
+  readonly fovYRad: number | undefined;
+  readonly compiled: CompiledClip;
+};
 const compileCache = new WeakMap<ClipData, Cached>();
 
-function getCompiled(data: ClipData, frameBasis: Mat3 | undefined): CompiledClip {
+function getCompiled(
+  data: ClipData,
+  frameBasis: Mat3 | undefined,
+  fovYRad: number | undefined,
+): CompiledClip {
   const cached = compileCache.get(data);
-  if (cached !== undefined && cached.frameBasis === frameBasis) return cached.compiled;
-  const compiled = compileClip(data, frameBasis);
-  compileCache.set(data, { frameBasis, compiled });
+  if (cached !== undefined && cached.frameBasis === frameBasis && cached.fovYRad === fovYRad)
+    return cached.compiled;
+  const compiled = compileClip(data, frameBasis, fovYRad);
+  compileCache.set(data, { frameBasis, fovYRad, compiled });
   return compiled;
 }
 
@@ -414,23 +425,44 @@ function evaluateBaseVec3(segments: BaseSegment[], startVal: Vec3, t: number): V
 }
 
 // ---------------------------------------------------------------------------
-// Path layer — a flyPath supersedes the base layer for all four channels.
+// Composite layer — an active composite track supersedes the base layer for
+// each channel it declares (see `CompositeTrack.channels`); channels it does
+// not declare fall through to the base layer.
 // ---------------------------------------------------------------------------
 
 /**
- * activePathAt — the path that governs the base layer at time `t`, or null.
+ * compositePoseAt — the channels the active composite tracks govern at `t`,
+ * merged into one partial pose. Channels no track declares are absent, and the
+ * caller falls through to the base layer for those.
  *
- * A path governs from its `startSec` onward (not just within its window): once a
- * flythrough has started, it holds its final pose after `endSec` so the camera
- * does not snap back to the start pose during a trailing `hold`. When clips
- * chain multiple paths, the most recently started one wins.
+ * A track governs from its `startSec` onward (not just within its window):
+ * once it has started it holds its final pose after `endSec`, so the camera
+ * does not snap back to the base layer during a trailing `hold`. Tracks are
+ * applied in ascending `startSec`, so where two overlap on a channel the most
+ * recently started one wins.
+ *
+ * Sampling per track rather than per channel is the point: `sample` does the
+ * spline work, a `flyPath` declares all four channels, and this runs per frame.
  */
-function activePathAt(paths: PathTrack[], t: number): PathTrack | null {
-  let best: PathTrack | null = null;
-  for (const p of paths) {
-    if (p.startSec <= t && (best === null || p.startSec > best.startSec)) best = p;
+function compositePoseAt(tracks: CompositeTrack[], t: number): Partial<CameraPose> {
+  const merged: Partial<CameraPose> = {};
+  for (const track of [...tracks].sort((a, b) => a.startSec - b.startSec)) {
+    if (track.startSec > t) continue;
+    const localSec = Math.min(t - track.startSec, track.endSec - track.startSec);
+    const pose = track.sample(localSec);
+    // Copy only the DECLARED channels, never whatever keys `sample` happens to
+    // return: `channels` is what `validateCompositeExclusivity` checked, so an
+    // over-returning track would silently override a base writer the validator
+    // had already allowed. Both current builders return exactly what they
+    // declare (pinned in their own tests), so this is the backstop for a THIRD
+    // builder drifting — no test here can fail today. `Channel` is exactly
+    // `keyof CameraPose`; the index assignment needs that spelled out.
+    for (const ch of track.channels) {
+      const value = pose[ch];
+      if (value !== undefined) (merged as Record<Channel, unknown>)[ch] = value;
+    }
   }
-  return best;
+  return merged;
 }
 
 // ---------------------------------------------------------------------------
@@ -452,34 +484,32 @@ function activePathAt(paths: PathTrack[], t: number): PathTrack | null {
  *                    aim through (see `buildPathTrack`). Absent ⇒ identity
  *                    (world-frame aim) — the pre-feature behaviour, so a clip
  *                    with no `flyPath` is unaffected.
+ * @param fovYRad     Vertical FOV in radians, read by a `glide`'s (u, w)
+ *                    metric. Absent ⇒ DEFAULT_FOV_Y_RAD.
  * @returns           The camera pose at that instant.
  */
-export function evaluateClip(data: ClipData, elapsedSec: number, frameBasis?: Mat3): CameraPose {
-  const compiled = getCompiled(data, frameBasis);
+export function evaluateClip(
+  data: ClipData,
+  elapsedSec: number,
+  frameBasis?: Mat3,
+  fovYRad?: number,
+): CameraPose {
+  const compiled = getCompiled(data, frameBasis, fovYRad);
   const { start, baseTracks } = compiled;
   const t = elapsedSec;
 
-  // --- Base layer (a flyPath supersedes it for all four channels) ---
-  const path = activePathAt(compiled.pathTracks, t);
-  let baseDistance: number;
-  let baseYaw: number;
-  let basePitch: number;
-  let baseTarget: Vec3;
-  if (path !== null) {
-    // Clamp into the path's own window: before it starts we never get here
-    // (activePathAt requires startSec ≤ t); after it ends, hold the final pose.
-    const localSec = Math.min(Math.max(t - path.startSec, 0), path.endSec - path.startSec);
-    const pose = path.sample(localSec);
-    baseDistance = pose.distance;
-    baseYaw = pose.yaw;
-    basePitch = pose.pitch;
-    baseTarget = pose.target;
-  } else {
-    baseDistance = evaluateBaseScalar(baseTracks['distance'], start.distance, 'distance', t);
-    baseYaw = evaluateBaseScalar(baseTracks['yaw'], start.yaw, 'yaw', t);
-    basePitch = evaluateBaseScalar(baseTracks['pitch'], start.pitch, 'pitch', t);
-    baseTarget = evaluateBaseVec3(baseTracks['target'], start.target, t);
-  }
+  // --- Base layer; an active composite track supersedes it per declared
+  // channel. The empty case is every ordinary clip and every focus tween, so
+  // it stays allocation-free.
+  const composite: Partial<CameraPose> =
+    compiled.compositeTracks.length === 0 ? {} : compositePoseAt(compiled.compositeTracks, t);
+
+  const baseDistance =
+    composite.distance ?? evaluateBaseScalar(baseTracks['distance'], start.distance, 'distance', t);
+  const baseYaw = composite.yaw ?? evaluateBaseScalar(baseTracks['yaw'], start.yaw, 'yaw', t);
+  const basePitch =
+    composite.pitch ?? evaluateBaseScalar(baseTracks['pitch'], start.pitch, 'pitch', t);
+  const baseTarget = composite.target ?? evaluateBaseVec3(baseTracks['target'], start.target, t);
 
   // --- Velocity layer (displacement, additive) ---
   const velDist = velDisplacement(compiled, 'distance', t);

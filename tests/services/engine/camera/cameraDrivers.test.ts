@@ -20,7 +20,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { easeOutCubic } from '../../../../src/utils/math/easeOutCubic';
-import { lerp } from '../../../../src/utils/math/lerp';
 
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
@@ -55,6 +54,7 @@ import {
 } from '../../../../src/state/camera/cameraSlice';
 import type { CameraTweenDescriptor } from '../../../../src/@types/camera/CameraTweenDescriptor';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
+import { DEFAULT_FOV_Y_RAD } from '../../../../src/services/engine/camera/cameraFraming';
 
 /** A real-ish store so we can observe dispatches. */
 function makeStore() {
@@ -82,7 +82,12 @@ const CAM_STUB: OrbitCamera = {
   far: 50000,
 } as unknown as OrbitCamera;
 
-const FAKE_ENGINE_STATE = {} as EngineState;
+// `clip` and `tween` pose now read `cameraRuntime.projection.fovYRad` (Task 4)
+// alongside `followBody`'s existing read — the stub needs it wherever a test
+// invokes a real `pose()`, not just `isActive`/`pickWinner`.
+const FAKE_ENGINE_STATE = {
+  cameraRuntime: { projection: { fovYRad: DEFAULT_FOV_Y_RAD } },
+} as unknown as EngineState;
 
 // Minimal ClipData fixture — no effects, just the required timeline field.
 // The clip row only needs `data` to be a non-null object for isActive; the
@@ -163,24 +168,31 @@ describe('buildCameraDrivers — pose functions', () => {
     const s = store.getState() as unknown as RootState;
     const elapsedMs = 300;
     const result = byId('tween').pose(s, CAM_STUB, elapsedMs);
-    expect(result).toEqual(evaluateClip(tweenToClip(TWEEN_DESC), elapsedMs / 1000));
+    expect(result).toEqual(
+      evaluateClip(tweenToClip(TWEEN_DESC), elapsedMs / 1000, undefined, DEFAULT_FOV_Y_RAD),
+    );
   });
 
   it('tween row converts ms→sec correctly', () => {
-    // Oracle independent of evaluateClip / tweenToClip — a 1000× unit slip
-    // (passing elapsedMs instead of elapsedMs/1000) would saturate the clip to
-    // its `to` pose (500 s >> 1 s duration), making distance == 1000.
-    // The midpoint + bounds assertions below catch that slip.
+    // Oracle independent of evaluateClip / tweenToClip / glidePath.
     //
-    // Derivation:
+    // The descriptor is a PURE ZOOM (target unchanged), so it walks the
+    // geodesic's degenerate branch: w(s) = w₀·exp(±ρs) over an arc of length
+    // |ln(w₁/w₀)|/ρ, hence w at arc fraction f is w₀·(w₁/w₀)^f — ρ cancels.
+    // `w` is proportional to distance at a fixed FOV, so
+    //   distance(f) = d₀·(d₁/d₀)^f
+    // and the ease reparametrises the arc, so f = easeOutCubic(0.5) = 0.875:
+    //   10·(1000/10)^0.875 = 10·10^1.75 ≈ 562.34
+    // (at f = 0.5 the same form gives √(d₀·d₁) = 100 — a pure-zoom geodesic is
+    // a straight line in log distance.)
+    //
+    // Derivation of f:
     //   durationMs = 1000 ms → duration = 1 s
-    //   elapsedMs  = 500  ms → elapsedSec = 0.5 s
-    //   t = elapsedSec / durationSec = 0.5
-    //   eased = easeOutCubic(0.5) = 1 - (1-0.5)^3 = 1 - 0.125 = 0.875
-    //   distance = lerp(10, 1000, 0.875) = 10*(1-0.875) + 1000*0.875 = 876.25
+    //   elapsedMs  = 500  ms → elapsedSec = 0.5 s → t = 0.5
+    //   easeOutCubic(0.5) = 1 - (1-0.5)^3 = 0.875
     //
     // A forgotten /1000 would pass 500 s to a 1 s clip → saturated to `to`
-    // (distance == 1000); the midpoint + bounds below reject that.
+    // (distance == 1000); the bounds below reject that.
     const UNIT_SLIP_DESC: CameraTweenDescriptor = {
       from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 },
       to: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1000 },
@@ -195,8 +207,7 @@ describe('buildCameraDrivers — pose functions', () => {
     const elapsedMs = 500;
     const result = byId('tween').pose(s, CAM_STUB, elapsedMs);
 
-    // Independent oracle: easeOutCubic(0.5) = 0.875; lerp(10, 1000, 0.875) = 876.25
-    const expectedDistance = lerp(10, 1000, easeOutCubic(0.5));
+    const expectedDistance = 10 * (1000 / 10) ** easeOutCubic(0.5);
     expect(result.distance).toBeCloseTo(expectedDistance, 5);
 
     // Slip-catching bounds: a forgotten /1000 saturates to 1000; these reject that.
@@ -312,11 +323,13 @@ describe('runCameraDrivers — elapsed dispatch', () => {
     // First call — tween starts here, elapsed = 0 on first frame.
     const pose0 = runCameraDrivers(drivers, s, CAM_STUB, clock, nowMs);
     // tween wins; elapsedMs == 0 on first-ever call for a fresh descriptor.
-    expect(pose0).toEqual(evaluateClip(tweenToClip(TWEEN_DESC), 0));
+    expect(pose0).toEqual(evaluateClip(tweenToClip(TWEEN_DESC), 0, undefined, DEFAULT_FOV_Y_RAD));
 
     // Second call at nowMs + 200 — same descriptor reference, elapsedMs = 200.
     const pose200 = runCameraDrivers(drivers, s, CAM_STUB, clock, nowMs + 200);
-    expect(pose200).toEqual(evaluateClip(tweenToClip(TWEEN_DESC), 200 / 1000));
+    expect(pose200).toEqual(
+      evaluateClip(tweenToClip(TWEEN_DESC), 200 / 1000, undefined, DEFAULT_FOV_Y_RAD),
+    );
   });
 
   it('passes 0 elapsed to orbitDrag (pose does not use elapsed)', () => {

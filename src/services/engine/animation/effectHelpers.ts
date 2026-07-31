@@ -593,3 +593,33 @@ export function flyPath(
     passBy: opts.passBy ?? DEFAULT_PASS_BY_CONFIG,
   };
 }
+
+/**
+ * glide — fly `target` + `distance` together along a van Wijk & Nuij zoom/pan
+ * geodesic, so perceived velocity stays constant across a scale change. The
+ * composite writer for a focus move; `yaw`/`pitch` are NOT owned, so compose
+ * scalar tweens for them in the same `all`.
+ *
+ * `opts.over` omitted derives the seconds from the geodesic's arc length — a
+ * hop across a galaxy and a descent to a planet surface stop taking the same
+ * time. `ease` defaults to `'linear'` because constant arc-length velocity IS
+ * the feature; an ease-out spends its last decade of scale in its last few
+ * frames, and an overshoot curve (`easeInOutBack`, `*Elastic`) walks past the
+ * endpoint and flies through the target and back.
+ *
+ * Like `flyPath`, it starts from the CLIP's start pose, not from wherever the
+ * preceding effects left the camera — a glide placed mid-timeline still flies
+ * out of the clip's opening pose.
+ */
+export function glide(
+  to: { target: Vec3; distance: number },
+  opts?: { over?: number; rho?: number; ease?: Ease },
+): Effect & { kind: 'glide' } {
+  return {
+    kind: 'glide',
+    to,
+    ease: opts?.ease ?? 'linear',
+    ...(opts?.over !== undefined ? { over: opts.over } : {}),
+    ...(opts?.rho !== undefined ? { rho: opts.rho } : {}),
+  };
+}
