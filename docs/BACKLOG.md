@@ -120,6 +120,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Zone of Avoidance visualization + tour beat** `needs-design` — make the galactic-plane galaxy-density gap legible and explain it as dust extinction, not a real void; feature the NIR-only ZoA dwarfs. → [details](backlog/2026-07-21-zone-of-avoidance-visualization.md)
 - [ ] **Filaments + flow field lack scale fade bands** `ready` — both layers gate on user intent alone, with no zoom-based fade like the survey point clouds. → [details](backlog/2026-07-24-filaments-flow-scale-bands.md)
 - [ ] **NEAR0 distance gates mix two camera distances** `needs-design` — both are derived as camera-to-origin bounds and read against camera-to-target `ctx.cam.distance`. → [details](backlog/2026-07-30-camera-target-vs-origin-distance-gates.md)
+- [ ] **MW approach fade is keyed on the Sun** `needs-design` — alpha stays 1.0 to the black hole, so the impostor is blown out at the Galactic Centre. → [details](backlog/2026-07-31-milky-way-approach-fade-keyed-on-the-sun.md)
 
 ## UI & UX
 

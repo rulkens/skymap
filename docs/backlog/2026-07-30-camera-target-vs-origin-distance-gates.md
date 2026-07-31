@@ -67,5 +67,12 @@ than assumed.
 
 ## Related
 
-- `docs/superpowers/specs/2026-07-30-s-star-orbits-design.md` — the far-plane
-  section that surfaced this, and which deliberately does not fix it.
+- `docs/superpowers/specs/completed/2026-07-30-s-star-orbits-design.md` — the
+  far-plane section that surfaced this, and which deliberately does not fix it.
+- [`2026-07-31-milky-way-approach-fade-keyed-on-the-sun`](2026-07-31-milky-way-approach-fade-keyed-on-the-sun.md)
+  — the same family, filed separately because it is a live visual bug rather
+  than a decision to record: that band is derived AND read consistently against
+  origin distance, so it has none of the mismatch this item is about; it just
+  asks the wrong question. This item's "when it stops being benign" section
+  predicted the Galactic Centre; that one is what actually arrived. Worth
+  settling both in one sweep of the origin-keyed gates.
