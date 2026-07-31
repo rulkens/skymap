@@ -134,6 +134,31 @@ degenerate closed form to 9 decimals from Δu = 1e-3 downward, and `u(S)` stays 
 throughout. Only `Δu === 0` produces NaN. Branch on exact equality; do not invent a
 tolerance.
 
+### 2.3b The recurring hazard: never subtract two large numbers to get a small one
+
+Three separate bugs in this feature were the **same** bug, and a fourth will be too if the
+principle is not stated once rather than re-learned:
+
+| where                    | the cancellation                              | symptom                                         |
+| ------------------------ | --------------------------------------------- | ----------------------------------------------- |
+| `rᵢ` (landmine 1)        | `−b + √(b²+1)` for `b` up to 1e37             | `−Infinity`; 52 % of real endpoint pairs broken |
+| `u(s)` (landmine 2)      | `cosh(r₀)·tanh(…) − sinh(r₀)`, terms ~1e18    | returns exactly `u₀`; Δu vanishes entirely      |
+| the target (`glidePath`) | `lerp(from, to, u/du)` = `from + (to−from)·t` | target quantised to one ULP of the SEPARATION   |
+
+The third is the one that reached a user: on Andromeda → Earth the target quantised to
+1.73e-16 Mpc — **0.84 Earth radii** — and jumped 3.3× the camera-to-target distance between
+frames while the camera sat 9e-16 Mpc away.
+
+**The rule.** Over a 19-decade range, any quantity that becomes small near an endpoint must be
+computed _directly_, never as the difference of two large ones. Each fix is the same move:
+find an algebraically equal form whose small answer is small at every step — `asinh`, the
+`sinh/cosh` identity, and the geodesic run in reverse so the offset is measured from whichever
+endpoint is nearer.
+
+**None of these fail loudly.** They return finite, plausible, wrong values, so a smoke test
+passes. Each needs an assertion that binds the small quantity to something physical (an
+endpoint, a body radius, the camera's own distance) rather than to an absolute tolerance.
+
 ### 2.4 Animation
 
 `s = V·t`, so `duration = S/V` — distance-proportional, derived rather than chosen.
@@ -160,8 +185,8 @@ the camera simply flies through the target and back.
   magnitude; we span 19+. `V` was re-derived and clamped — §5.1, §5.3.
 - **ρ**: 1.42 (sd 0.47) is the value their users chose; ρ = 6^(1/4) ≈ 1.565 is derived from
   RMS perceived velocity. The paper notes √2 "is possibly an optimal value, but we have not
-  found yet a model to explain this." We keep 1.42, but see §5.1 — for skymap's moves ρ turns
-  out to be a far weaker knob than the paper's framing suggests.
+  found yet a model to explain this." Neither value survived contact with skymap — see §5.2;
+  1.42 bows out 8.79x on a galaxy click, and the shipped value is 0.18.
 - The optimality argument assumes **uniform visual density at every scale** — the paper
   admits this "can only be met by artificial imagery with fractal characteristics". Skymap
   has vast empty voids, so this is violated in a specific way: a geodesic can bow out into
@@ -254,13 +279,13 @@ and were calibrated together (§5.1).
 
 ### 3.5 Rewiring
 
-| Site                         | Change                                                          |
-| ---------------------------- | --------------------------------------------------------------- |
-| `tweenToClip.ts:61-76`       | one `glide` + the existing `yaw`/`pitch` tweens (§5.2)          |
-| `focusTweenDescriptor.ts:52` | `durationMs` derived from path length, not `FOCUS_TWEEN_MS`     |
-| `watchGoHomeSaga.ts:81`      | second `startCameraTween` producer; same derivation             |
-| `compileClip.ts:375-393`     | `validatePathExclusivity` validates against declared channels   |
-| `focusTweenDuration.ts`      | `FOCUS_TWEEN_MS` becomes a clamp bound, not the duration (§5.3) |
+| Site                         | Change                                                        |
+| ---------------------------- | ------------------------------------------------------------- |
+| `tweenToClip.ts:61-76`       | one `glide` + the existing `yaw`/`pitch` tweens (§5.5)        |
+| `focusTweenDescriptor.ts:52` | `durationMs` derived from path length, not `FOCUS_TWEEN_MS`   |
+| `watchGoHomeSaga.ts:81`      | second `startCameraTween` producer; same derivation           |
+| `compileClip.ts:375-393`     | `validatePathExclusivity` validates against declared channels |
+| `focusTweenDuration.ts`      | DELETED — its last two readers moved to derived durations     |
 
 ---
 
@@ -312,66 +337,102 @@ and were calibrated together (§5.1).
 
 ---
 
-## 5. Calibration (settled) and the one open decision
+## 5. Calibration — settled by measurement, then overturned by eye
 
-### 5.1 ρ and V — SETTLED: ρ = 1.42, V = 6, duration clamped to [0.4 s, 4 s]
+### 5.1 What shipped
 
-Swept ρ ∈ [0.8, 3.0] against real skymap constants (`scratchpad/calib.mjs`). The headline: **ρ
-is near-irrelevant for the case that motivated this work.** Star → Milky Way peaks at exactly
-1.00× its endpoint distance at every ρ, because the destination view (`w₁` ≈ 0.173 Mpc) is
-already ~21× wider than the 8.2 kpc journey — the endpoint frames the whole path, so no
-geodesic bows out. The wobble is fixed by the _coupling_, not by the pull-back. ρ only bites
-when both endpoints are close-in and far apart:
+```
+ρ = 0.18   V = 20   duration = clamp(S / V, 0.6 s, 2.2 s)   ease = easeOutQuint
+```
 
-| case                          | peak pull-back, ρ = 0.8 → 3.0 |
-| ----------------------------- | ----------------------------- |
-| star → Milky Way              | 1.00× at every ρ              |
-| Earth → observable universe   | 1.00× … 3.96×                 |
-| MW → Virgo                    | 1.19× … 12.9×                 |
-| galaxy → galaxy, 50 Mpc apart | 2.95× … 39.0×                 |
-| Earth → nearby star           | 3.6e6× … 5.2e7×               |
+Every one of those is live-tunable at runtime (DebugPanel → Glide tuning), because the
+calibration turned out to be a **feel** question that no amount of measurement settles. Two
+full rounds of numbers were derived, argued and then rejected on sight; the sliders exist so
+the third round cost a drag instead of a rebuild.
 
-Earth → star's 1.14e-6 Mpc peak at ρ = 1.42 is near-forced, not a tuning artifact: framing a
-1.301e-6 Mpc separation at all requires distance ≥ 1.13e-6 Mpc. Both endpoints hug their
-bodies' surfaces, so the camera has to go there whatever the metric says. Lowering ρ to 0.8
-buys 3.2× less pull-back and pays for it in low-altitude panning.
+Measured at the shipped values:
 
-At ρ = 1.42, `S` spans 4.03 (galaxy → galaxy) to 31.3 (Earth → universe), so `S/V` cannot
-serve both ends without a clamp. V = 6 puts the common galaxy click at 0.67 s — matching the
-600 ms `FOCUS_TWEEN_MS` the InfoCard list was tuned around — and the deep descents at 3.3–5.2 s.
+| move                        | duration | peak pull-back | arrival dwell |
+| --------------------------- | -------- | -------------- | ------------- |
+| galaxy → galaxy (50 Mpc)    | 0.60 s   | 1.01×          | 100 %         |
+| MW → Virgo                  | 0.98 s   | 1.00×          | 100 %         |
+| star → Milky Way            | 2.20 s   | 1.00×          | 100 %         |
+| Andromeda → Earth           | 2.20 s   | 1.00×          | 44 % (0.96 s) |
+| Earth → observable universe | 2.20 s   | 1.00×          | 100 %         |
 
-### 5.2 Does yaw/pitch stay independent? — OPEN
+"Arrival dwell" is the fraction of wall-clock time the destination spends between 0.6× and 1×
+of its final apparent size — the number §5.3 is really about.
 
-The proposed shape keeps them as ordinary scalar tweens beside the glide. V&N does not model
-orientation, and angles are scale-free so they do not suffer the 1/d problem that motivates
-the whole change. But the pull-back and the turn would then be timed independently — the same
-class of composition the feature exists to remove, one axis over. Focus moves currently carry
-yaw/pitch through unchanged (`focusTweenDescriptor.ts:51`), so today the question is moot for
-focus and live only for authored clips.
+### 5.2 Why the paper's own constants lost
 
-### 5.3 Duration clamp — SETTLED: [0.4 s, 4 s]
+The first calibration took ρ = 1.42 (the paper's user-study mean) and derived V = 6 and a
+[0.4 s, 4 s] clamp from it. It was internally consistent and **wrong on sight**: at ρ = 1.42 a
+galaxy click rises to **8.79×** its endpoint distance, which reads as an unwanted zoom-out
+rather than as an efficient path. The paper optimises for a 2-D map over ~4 decades; we span
+19, and the bow-out that is efficient there is a detour here.
 
-The paper's V = 0.9 gives 22–35 s moves at our scale range; their user study covered 2D maps
-over ~4 decades, we span 19. V is not transferable and needed its own derivation (§5.1).
+Low ρ makes zooming expensive in the metric and panning cheap, so the path stops climbing.
+The knob is strong and monotone — galaxy → galaxy peak pull-back against ρ:
 
-The clamp's cost is explicit: a clamped move is no longer perceptually uniform, because time
-stops tracking `S`. At V = 6 only Earth → universe (5.21 s) and Earth → star (4.53 s) hit the
-4 s ceiling, so uniformity survives for every move short of a full-scale-ladder descent. A 2.5 s
-ceiling was rejected for clamping three of five sampled cases to an identical duration —
-discarding uniformity exactly where the feature was supposed to earn it.
+| ρ    | 1.42  | 1.0   | 0.8   | 0.6   | 0.35  | 0.25  | 0.15  |
+| ---- | ----- | ----- | ----- | ----- | ----- | ----- | ----- |
+| peak | 8.79× | 4.44× | 2.95× | 1.85× | 1.13× | 1.04× | 1.00× |
 
-Resulting durations at ρ = 1.42, V = 6:
+Two boundaries worth knowing:
 
-| case                        | duration                   |
-| --------------------------- | -------------------------- |
-| galaxy → galaxy             | 0.67 s                     |
-| MW → Virgo                  | 0.83 s                     |
-| star → Milky Way            | 3.29 s                     |
-| Earth → nearby star         | 4.00 s (clamped from 4.53) |
-| Earth → observable universe | 4.00 s (clamped from 5.21) |
+- **The path converges below ρ ≈ 0.05** — measured identical at 0.05, 0.02, 0.01 and 0.001. That
+  is the ρ→0 limit; lowering further buys nothing.
+- **ρ = 0 is a singularity, not a small value.** The zoom term is 1/ρ², so `b` divides by zero
+  and `length` evaluates `(∞−∞)/0` → NaN. A NaN pose is a dead camera and nothing downstream
+  rejects one, so `glidePath` floors ρ at `GLIDE_RHO_MIN`.
 
-The 0.4 s floor preserves what `focusTweenDuration.ts`'s docblock protects — rapid clicking
-through the InfoCard list must not feel sluggish.
+**Rejected: a strictly monotone path** (straight in `u`, `log w`) that can never rise. Arc
+length 3.7e9 for star → Milky Way against the geodesic's 19.8, and 1.4e17 for Earth → universe:
+panning at low altitude across a huge separation costs enormous perceived distance, which is
+exactly what the bow-out exists to avoid. The bow-out is load-bearing at large scale ratios; ρ
+is the right lever, not a different path.
+
+### 5.3 The ease — and why `'linear'` lost too
+
+The first calibration argued hard for `'linear'`: constant arc-length velocity IS the model's
+claim, and an ease-out is what produced the original "arrives too fast" symptom. That argument
+was **right about the old code and wrong about the new**. The old `easeOutCubic` was harmful
+because it was applied to two INDEPENDENTLY eased channels in linear distance space,
+back-loading distance while the target ran on its own schedule. Applied to arc length along a
+coupled geodesic it is a pure time-warp (§2.4) — it cannot desync anything.
+
+So the ease became a free aesthetic choice, and uniform velocity turned out not to be what the
+eye wants on arrival. Time with the target between 0.6× and 1× of final size, on a deep descent:
+
+| ease           | dwell  |
+| -------------- | ------ |
+| `linear`       | 8.8 %  |
+| `easeOutSine`  | 26.9 % |
+| `easeOutCubic` | 44.5 % |
+| `easeOutQuart` | 54.5 % |
+| `easeOutQuint` | 61.5 % |
+| `easeOutExpo`  | 65.0 % |
+
+`easeOutQuint` shipped. **Overshoot curves (`*Back`, `*Elastic`) are excluded from the
+selector**: on a geodesic an overshoot walks the arc PAST its endpoint, so the camera flies
+through the target and back. Nothing throws.
+
+### 5.4 Two costs the clamp carries
+
+At ρ = 0.18 the arc length is close to bimodal — the 1/ρ² weight on the zoom term swamps the
+pan term, so same-scale moves collapse toward one bound and scale-changing ones toward the
+other. Most moves therefore land ON a clamp bound rather than on a derived duration, which
+means **the arc-length duration derivation is doing less work than §1's goal implies**. It is
+the price of a path that does not climb; both were the user's call, made by eye.
+
+The second cost is on the tests, and it bit four times in one session — see §8.
+
+### 5.5 Does yaw/pitch stay independent? — SETTLED: yes
+
+They stay ordinary scalar tweens beside the glide, on the same curve. V&N does not model
+orientation, and angles are scale-free so they never had the 1/d problem that motivates the
+change. Recorded at `tweenToClip.ts` and `buildGlideTrack.ts`; `followBody` applies the same
+eased `t` to its yaw/pitch lerps so orientation and position never run on different curves.
 
 ---
 
@@ -502,6 +563,30 @@ looks meaningful and distinguishes nothing.
 **Not tested:** the ρ/V constants restated; `CompositeTrack.channels` contents mirrored back;
 the `flyPath`-declares-all-four fact (`compileClip`'s own validation is the enforcement).
 
+### 8.1 Assertions that go blind under re-tuning — four caught in one session
+
+Every calibration change during this work silently disarmed a test. None failed; they kept
+passing while proving nothing. The count is the point: this is systematic, not four slips.
+
+| assertion                                             | how it went blind                                                              |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `expect(d.easing).toBe('linear')`                     | Restated the default. Would pass even if the producer ignored the tuning.      |
+| `glidePath` FOV test comparing two `durationSec`      | Both pinned to the same clamp bound; could no longer see a dropped `2·tan`.    |
+| `buildGlideTrack`'s "a longer path takes longer" (×2) | Endpoints saturated the clamp, so it compared a bound against itself.          |
+| `toBeCloseTo(distance, 6)` at Earth framing           | Absolute 5e-7 tolerance against ~1e-13 values calls every pair of poses equal. |
+
+Two rules fall out, and they are cheap:
+
+1. **If a value can be clamped, assert it is not.** A comparison between two clamped values is
+   a comparison of the clamp with itself. Where the property is about derivation, pick inputs
+   inside the bounds _and assert that they are_.
+2. **Never use an absolute tolerance on a quantity that spans decades.** `toBeCloseTo` is
+   absolute; across a 19-decade range it is meaningless at one end and vacuous at the other.
+   Compare relative error, or bind the value to something physical.
+
+The general check, worth running against any assertion in this area: **would this still fail if
+someone re-tuned the calibration?** If not, it is pinning the constants, not the behaviour.
+
 ---
 
 ## 9. Delivery
@@ -510,5 +595,5 @@ One PR, commits in order: P1 (composite track), P2 (FOV through compile), `zoomP
 tests, `buildGlideTrack` + the `glide` arm, rewiring of the two `startCameraTween` producers
 and `tweenToClip`, duration derivation + clamp.
 
-§5.1 and §5.3 are settled (ρ = 1.42, V = 6, clamp [0.4 s, 4 s]) — implementation takes them as
-given. §5.2 remains open and is settled when `tweenToClip` is rewritten.
+All of §5 is settled — see §5.1 for what shipped, and §5.2/§5.3 for why the first two
+calibrations were rejected by eye rather than by measurement.

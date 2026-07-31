@@ -7,6 +7,24 @@ Ten tasks, one PR, in commit order. Tasks 2–4 are prep (spec §6); each is its
 each is behaviour-neutral except Task 1, which is a deliberate behaviour change landed early
 so its effect is separately observable (§4).
 
+**COMPLETE.** All ten tasks shipped, plus four things the plan did not anticipate — each
+driven by a visual pass, which is the part no amount of planning substitutes for:
+
+1. **`followBody` pulled into scope.** Planned as out-of-scope with a backlog item. Once the
+   galaxy moves were smooth the planet target-snap read as a defect, not a known gap. The fix
+   was not where it looked: the snap lives in `applyFocusedBodyPivot`, and the driver's own
+   `target` line was already dead code (spec §1).
+2. **A DebugPanel tuning section** (ρ, V, min, max, ease). Two fully-derived calibrations were
+   rejected on sight; the sliders exist so the third round cost a drag, not a rebuild.
+3. **`easeOutQuint` over `'linear'`.** The plan argued for `linear` on the model's own terms,
+   and was right about the old code and wrong about the new — see spec §5.3.
+4. **The Earth-scale arrival stutter**, the third instance of one cancellation hazard, now
+   written up once as spec §2.3b rather than a third landmine comment.
+
+The calibration in "Global constraints" below is the FIRST one (ρ = 1.42, V = 6). It is left
+as authored, because the plan is the record of what was planned; spec §5.1 carries what
+shipped, and §5.2/§5.3 carry why this one lost.
+
 ---
 
 ## Global constraints
@@ -128,19 +146,19 @@ and its effect must be observable before the geodesic lands.
 **never read** — `tweenToClip.ts:65-73` hardcodes `'easeOutCubic'` on all four channels. So the
 descriptor field is decorative today. Fix that first, then the producers control the curve.
 
-- [ ] Add `tests/services/engine/camera/tweenToClip.test.ts` with
+- [x] Add `tests/services/engine/camera/tweenToClip.test.ts` with
       `tweenToClip carries the descriptor's easing onto every channel` — build two descriptors
       differing only in `easing` (`'linear'` vs `'easeOutCubic'`), same `from`/`to`/`durationMs`,
       and assert `evaluateClip(…, half the duration)` gives **different** distance/yaw/pitch/
       target values, with the linear one equal to the hand-computed arithmetic midpoint. Fails
       today (both descriptors produce the identical easeOutCubic pose).
-- [ ] Make `tweenToClip` pass `d.easing` on all four channels.
-- [ ] Flip `focusTweenDescriptor.ts:53` and `watchGoHomeSaga.ts:82` to `easing: 'linear'`.
+- [x] Make `tweenToClip` pass `d.easing` on all four channels.
+- [x] Flip `focusTweenDescriptor.ts:53` and `watchGoHomeSaga.ts:82` to `easing: 'linear'`.
       Record the §2.4 reason in one line: constant velocity is the whole claim, and an ease-out
       spends its last decade of scale in its last few frames.
-- [ ] Update `tests/state/camera/focusTweenDescriptor.test.ts:49` to expect `'linear'`.
-- [ ] `npm test -- tweenToClip focusTweenDescriptor evaluateClip cameraDrivers` green.
-- [ ] Commit.
+- [x] Update `tests/state/camera/focusTweenDescriptor.test.ts:49` to expect `'linear'`.
+- [x] `npm test -- tweenToClip focusTweenDescriptor evaluateClip cameraDrivers` green.
+- [x] Commit.
 
 ---
 
@@ -154,18 +172,18 @@ git's rename detection and `git blame` intact). 14 references to `pathTracks`, 8
 `tests/services/engine/animation/compileClip.test.ts`,
 `tests/data/animation/clips/flyPathDemo.test.ts`.
 
-- [ ] `npm run refactor -- rename src/@types/animation/CompiledClip.d.ts#PathTrack CompositeTrack --dry`,
+- [x] `npm run refactor -- rename src/@types/animation/CompiledClip.d.ts#PathTrack CompositeTrack --dry`,
       read the blast radius, then run for real. (The file basename is `CompiledClip`, not
       `PathTrack`, so no file rename is triggered; pass `--no-file-rename` if the dry run
       disagrees.)
-- [ ] Hand-rename the `CompiledClip.compositeTracks` **field** and the local `acc.compositeTracks`
+- [x] Hand-rename the `CompiledClip.compositeTracks` **field** and the local `acc.compositeTracks`
       / `validatePathExclusivity` → `validateCompositeExclusivity` — the CLI renames exported
       symbols, not object properties or module-private functions. `PathSample` stays as-is
       (Task 3 explains why).
-- [ ] Update the `PathTrack` docblock (`CompiledClip.d.ts:167-183`) and `compileClip.ts:367-373`
+- [x] Update the `PathTrack` docblock (`CompiledClip.d.ts:167-183`) and `compileClip.ts:367-373`
       to describe a composite writer generally rather than "a flyPath". Keep them under budget.
-- [ ] `npm run typecheck` and `npm test` fully green — this commit changes no behaviour.
-- [ ] Commit.
+- [x] `npm run typecheck` and `npm test` fully green — this commit changes no behaviour.
+- [x] Commit.
 
 ---
 
@@ -193,15 +211,15 @@ export type CompositeTrack = {
 `src/services/engine/animation/compileClip.ts`, `src/services/engine/animation/buildPathTrack.ts`,
 `src/services/engine/camera/evaluateClip.ts`, `tests/services/engine/animation/compileClip.test.ts`.
 
-- [ ] Move `ALL_CHANNELS` out of `compileClip.ts:86` into `src/services/engine/animation/channelSpace.ts`
+- [x] Move `ALL_CHANNELS` out of `compileClip.ts:86` into `src/services/engine/animation/channelSpace.ts`
       (the canonical Channel-table home; `compileClip` already imports `CHANNEL_SPACE` from it).
       It must **not** live in `compileClip.ts`, which `buildPathTrack` cannot import without a
       cycle.
-- [ ] `buildPathTrack` returns `channels: ALL_CHANNELS` on its track. Keep `PathSample` as
+- [x] `buildPathTrack` returns `channels: ALL_CHANNELS` on its track. Keep `PathSample` as
       `buildPathTrack`'s own return type — it is structurally assignable to `Partial<CameraPose>`
       and is used by `tests/services/engine/animation/buildPathTrack.test.ts`; folding it into
       `CameraPose` is churn with no behaviour behind it.
-- [ ] `evaluateClip`'s base arm (`evaluateClip.ts:462-482`) stops being all-or-nothing and merges
+- [x] `evaluateClip`'s base arm (`evaluateClip.ts:462-482`) stops being all-or-nothing and merges
       per channel: for each channel, the **latest-started** composite track with
       `startSec <= t` that declares that channel wins; otherwise the base layer.
       **Perf contract:** each active track's `sample` is invoked **at most once** per
@@ -210,18 +228,18 @@ export type CompositeTrack = {
       (`evaluateClip.ts:471`: clamp into `[0, endSec − startSec]`, so a finished track holds its
       final pose).
       A declared channel whose sample value is `undefined` falls back to the base layer.
-- [ ] `validateCompositeExclusivity` (`compileClip.ts:375-393`) loops `track.channels`, not
+- [x] `validateCompositeExclusivity` (`compileClip.ts:375-393`) loops `track.channels`, not
       `ALL_CHANNELS`. Reword the throw: it currently says "A flyPath owns all camera channels
       for its window", which will be false for a glide. Name the offending channel and the
       track's declared set.
-- [ ] Add to `tests/services/engine/animation/compileClip.test.ts`:
+- [x] Add to `tests/services/engine/animation/compileClip.test.ts`:
       `a base writer on a channel the composite track does NOT declare is allowed` — the
       inverse of the existing exclusivity throw. Cannot be authored through `Effect` yet, so
       assert it against a hand-built `CompiledClip`-shaped input if `validateCompositeExclusivity`
       is exported for the test, **or** defer this single assertion to Task 7 and say so in the
       commit message. Do not export a function purely to test it if Task 7 covers it end-to-end.
-- [ ] Full `npm test` green, unchanged. `npm run typecheck` green.
-- [ ] Commit.
+- [x] Full `npm test` green, unchanged. `npm run typecheck` green.
+- [x] Commit.
 
 ---
 
@@ -248,14 +266,14 @@ existing caller — `clipPlayer.ts:165`, `computeClipPath.ts:77`, `visitBeatSaga
 **Files:** `src/services/engine/animation/compileClip.ts`, `src/services/engine/camera/evaluateClip.ts`,
 `src/services/engine/camera/cameraDrivers.ts`, plus the EngineState fixtures named below.
 
-- [ ] Extend the compile cache `Cached` record (`evaluateClip.ts:114-123`) to key on
+- [x] Extend the compile cache `Cached` record (`evaluateClip.ts:114-123`) to key on
       `(ClipData, frameBasis, fovYRad)`. One line of comment: the cache key is where the
       "FOV is stable in practice" assumption now lives — a continuously-varying FOV would thrash
       it (§6 P2).
-- [ ] Thread `fovYRad` onto the `Accum` beside `frameBasis` (`compileClip.ts:104`).
-- [ ] Both driver rows pass it: `cameraDrivers.ts:231` (clip) and `:362` (tween), read lazily
+- [x] Thread `fovYRad` onto the `Accum` beside `frameBasis` (`compileClip.ts:104`).
+- [x] Both driver rows pass it: `cameraDrivers.ts:231` (clip) and `:362` (tween), read lazily
       inside `pose` from `state.cameraRuntime.projection.fovYRad`.
-- [ ] **Expected fallout, and P2's entire visible footprint:** `buildCameraDrivers` is called
+- [x] **Expected fallout, and P2's entire visible footprint:** `buildCameraDrivers` is called
       with a stub `EngineState` in four test files —
       `tests/services/engine/camera/cameraDrivers.test.ts:85` (`{} as EngineState`),
       `tests/services/engine/camera/commitOnEdge.test.ts`,
@@ -263,8 +281,8 @@ existing caller — `clipPlayer.ts:165`, `computeClipPath.ts:77`, `visitBeatSaga
       `tests/services/engine/frame/runFrame.test.ts:237`. Any of these that reaches a clip/tween
       `pose` call now needs `cameraRuntime.projection.fovYRad` on its stub. Extend each stub;
       do **not** add optional chaining in `cameraDrivers.ts` to paper over a missing field.
-- [ ] Full `npm test` green. `npm run typecheck` green.
-- [ ] Commit.
+- [x] Full `npm test` green. `npm run typecheck` green.
+- [x] Commit.
 
 ---
 
@@ -304,7 +322,7 @@ else. `u` is scalar; lifting it back onto `û` is the caller's job (Task 6).
 
 Write the tests first, all six, from the transcribed eq. 9 (see "Oracle strategy" above):
 
-- [ ] `endpoints are exact` — `at(0)` returns `(u₀, w₀)` and `at(length)` returns `(u₁, w₁)`,
+- [x] `endpoints are exact` — `at(0)` returns `(u₀, w₀)` and `at(length)` returns `(u₁, w₁)`,
       across cases including `Δu = 1e-9` Mpc. **This is the assertion that fails on landmine 2**
       (the literal `u(s)` returns 0 instead of Δu there).
       **Assert a RELATIVE error ≤ 1e-12, not `toBe`.** Measured on five real endpoint pairs the
@@ -312,32 +330,32 @@ Write the tests first, all six, from the transcribed eq. 9 (see "Oracle strategy
       bit-exact, because `cosh`/`sinh` are not correctly-rounded. `toBe`/`toEqual` here would
       flake per-platform. `toBeCloseTo` is also wrong: it is absolute, and `w` ranges over 19
       decades, so it is meaningless at both ends. Compare `Math.abs(got − want) / Math.abs(want)`.
-- [ ] `length matches the degenerate closed form as Δu → 0` — sweep Δu from 1e-3 down on a
+- [x] `length matches the degenerate closed form as Δu → 0` — sweep Δu from 1e-3 down on a
       10 → 1000 Mpc zoom and assert `length` agrees with `|ln(w₁/w₀)|/ρ` to 9 decimals. Catches
       a wrong degenerate branch or a wrong ρ exponent.
-- [ ] `no non-finite output across the full scale range` — endpoints spanning Earth-surface
+- [x] `no non-finite output across the full scale range` — endpoints spanning Earth-surface
       (~2e-16 Mpc) to observable-universe scales, every combination; assert `Number.isFinite`
       on `length` and on `u`/`w` at ~50 sampled `s`. **This is the assertion that fails on
       landmine 1.**
-- [ ] `a move with u₁ > u₀ ends at u₁, not −u₁` — catches the `(−1)ⁱ` sign flip, which is
+- [x] `a move with u₁ > u₀ ends at u₁, not −u₁` — catches the `(−1)ⁱ` sign flip, which is
       otherwise silent.
-- [ ] `w is unimodal for a pan-dominated move and monotone for a pure zoom` — sample `w` along
+- [x] `w is unimodal for a pan-dominated move and monotone for a pure zoom` — sample `w` along
       `s`, count sign changes of the first difference: ≤ 1 for the pan case, 0 for `u₀ === u₁`.
-- [ ] `perceived velocity is constant` — **the assertion that guards the feature** (§4, §8).
+- [x] `perceived velocity is constant` — **the assertion that guards the feature** (§4, §8).
       Sample `ds/dt = sqrt((ρ²/w²)·u̇² + (1/(ρ²w²))·ẇ²)` by finite differences at uniform `s`
       across the four spec cases (star → Milky Way, Earth → nearby star, MW → Virgo,
       galaxy → galaxy) and assert the coefficient of variation is ~0 (a small tolerance for the
       finite-difference error; do not pin it to a measured constant). This is the one assertion
       that fails if the geodesic is swapped for any plausible-looking interpolation — including
       a well-chosen ease on the old two channels.
-- [ ] `a zero-length move samples its endpoint` — `from === to` gives `length === 0` and an
+- [x] `a zero-length move samples its endpoint` — `from === to` gives `length === 0` and an
       `at()` that returns the endpoint rather than NaN (a NaN pose here is a dead camera).
-- [ ] Implement. `Math.asinh(−b)`; the restructured `u(s)`; sign `+` for i = 0, `−` for i = 1;
+- [x] Implement. `Math.asinh(−b)`; the restructured `u(s)`; sign `+` for i = 0, `−` for i = 1;
       the `u₀ === u₁` branch on **exact** equality. Two comments earn their place: landmines 1
       and 2, each one or two lines, each stating the failure mode so nobody "fixes" it back to
       the paper's literal.
-- [ ] `npm test -- zoomPanGeodesic` green.
-- [ ] Commit.
+- [x] `npm test -- zoomPanGeodesic` green.
+- [x] Commit.
 
 ---
 
@@ -372,22 +390,22 @@ Reuse `src/utils/math/distanceMpc.ts` for `Δu`; do not write a new one.
 
 **Files:** the two above (new), `tests/utils/camera/glidePath.test.ts` (new).
 
-- [ ] `at(0)` and `at(1)` reproduce `from` and `to` exactly (target components and distance),
+- [x] `at(0)` and `at(1)` reproduce `from` and `to` exactly (target components and distance),
       including a pure-zoom case (`from.target === to.target`) and an Earth-surface-scale case.
       Hand-computed from the inputs, not from `zoomPanGeodesic`.
-- [ ] `the target path is a straight line` — `at(arcFrac).target` for several `arcFrac` lies on
+- [x] `the target path is a straight line` — `at(arcFrac).target` for several `arcFrac` lies on
       the segment `target₀ → target₁` (cross product with `û` ≈ 0, and the projection onto `û`
       is monotone increasing). The geodesic bows in `w`, never in world space (§2.1).
-- [ ] `w uses the FOV, not the raw distance` — the same `from`/`to` at two different `fovYRad`
+- [x] `w uses the FOV, not the raw distance` — the same `from`/`to` at two different `fovYRad`
       produce different `durationSec`. Fails if the `2·tan(fovY/2)` factor is dropped. Do not
       assert either duration's value.
-- [ ] `duration is clamped at both ends` — the Earth → observable-universe case returns
+- [x] `duration is clamped at both ends` — the Earth → observable-universe case returns
       `GLIDE_MAX_SEC`; a sub-pixel move returns `GLIDE_MIN_SEC`. (Not a clamp-boundary test —
       these are inputs well past each bound, where `min`/`max` genuinely differ from the
       unclamped value.)
-- [ ] Implement.
-- [ ] `npm test -- glidePath` green.
-- [ ] Commit.
+- [x] Implement.
+- [x] `npm test -- glidePath` green.
+- [x] Commit.
 
 ---
 
@@ -435,27 +453,27 @@ the target and back. Nothing throws; that is why the default is `'linear'`.
 (new), `tests/services/engine/animation/buildGlideTrack.test.ts` (new),
 `tests/services/engine/animation/compileClip.test.ts`, `tests/services/engine/camera/evaluateClip.test.ts`.
 
-- [ ] `buildGlideTrack` tests:
+- [x] `buildGlideTrack` tests:
       `declares exactly target and distance`; `endSec − startSec is the derived duration when
-    over is omitted`; `an explicit over wins over the derived duration`;
+  over is omitted`; `an explicit over wins over the derived duration`;
       `sample(0) is the start pose and sample(duration) is the destination`.
-- [ ] `compileClip` walk arm for `'glide'`, following the `'flyPath'` precedent
+- [x] `compileClip` walk arm for `'glide'`, following the `'flyPath'` precedent
       (`compileClip.ts:194-223`): build from `acc.start` + `acc.fovYRad`, push to
       `acc.compositeTracks`, and **return `track.endSec − atSec`**, not `effect.over` — the
       derived duration must move the timeline cursor. Same `acc.start` caveat `flyPath` has:
       it is the CLIP start pose, so a glide mid-timeline flies from the clip's start, not from
       the pose the preceding effects left. Note it in the `glide` helper docblock.
-- [ ] `compileClip` test: `a glide's derived duration advances the timeline cursor` — a
+- [x] `compileClip` test: `a glide's derived duration advances the timeline cursor` — a
       `seq([glide(...), set(...)])` puts the `set` segment's `startSec` at the glide's `endSec`.
-- [ ] `evaluateClip` test (**this is where P1's subset merge is proven end-to-end**):
+- [x] `evaluateClip` test (**this is where P1's subset merge is proven end-to-end**):
       `a glide owns target and distance while yaw and pitch stay on the base layer` — an
       `all([glide(...), tween('yaw'), tween('pitch')])` compiles without throwing, and at
       mid-time the yaw/pitch come from their own eased tweens while distance follows the
       geodesic (assert distance ≠ the linear midpoint, and yaw === the tween's own value).
-- [ ] `compileClip` test: `a base distance writer overlapping a glide still throws` — the
+- [x] `compileClip` test: `a base distance writer overlapping a glide still throws` — the
       exclusivity rule survives for the channels a composite track DOES declare.
-- [ ] `npm test -- buildGlideTrack compileClip evaluateClip` green; full suite green.
-- [ ] Commit.
+- [x] `npm test -- buildGlideTrack compileClip evaluateClip` green; full suite green.
+- [x] Commit.
 
 ---
 
@@ -466,8 +484,8 @@ the target and back. Nothing throws; that is why the default is `'linear'`.
 `tests/state/camera/focusTweenDescriptor.test.ts`, `tests/services/engine/camera/evaluateClip.test.ts`,
 `tests/state/selection/watchGoHomeSaga.test.ts`.
 
-- [ ] `tweenToClip` (`tweenToClip.ts:61-76`) emits `all([ glide(d.to, { over: durationSec,
-    ease: d.easing }), tween('yaw'), tween('pitch') ])` — one composite writer plus the two
+- [x] `tweenToClip` (`tweenToClip.ts:61-76`) emits `all([ glide(d.to, { over: durationSec,
+  ease: d.easing }), tween('yaw'), tween('pitch') ])` — one composite writer plus the two
       scalar tweens it does not own. `over` is passed explicitly (the producer already derived
       it, so the builder must not re-derive), and the yaw/pitch tweens keep the same
       `durationSec`. Rewrite the module docblock: the "focus tweens interpolate distance
@@ -475,36 +493,36 @@ the target and back. Nothing throws; that is why the default is `'linear'`.
       **This settles spec §5.2** (yaw/pitch stay independent scalar tweens); record the decision
       in one line — V&N does not model orientation and angles are scale-free, and focus moves
       carry yaw/pitch through unchanged anyway (`focusTweenDescriptor.ts:51`).
-- [ ] `focusTweenDescriptor.ts:52`: `durationMs = glidePath(from, to, fovYRad).durationSec * 1000`.
+- [x] `focusTweenDescriptor.ts:52`: `durationMs = glidePath(from, to, fovYRad).durationSec * 1000`.
       `fovYRad` is already a parameter (`:47`) — no signature change. Drop the `FOCUS_TWEEN_MS`
       import.
-- [ ] `watchGoHomeSaga.ts:81`: same derivation, using `runtime.fovYRad` (already read at `:80`)
+- [x] `watchGoHomeSaga.ts:81`: same derivation, using `runtime.fovYRad` (already read at `:80`)
       and the `earthHomePose(...)` result as `to`. Drop the `FOCUS_TWEEN_MS` import. Leave
       `focusTweenDuration.ts` alone — see "Spec corrections".
-- [ ] Repair `tests/state/camera/focusTweenDescriptor.test.ts:48`: assert the derived duration.
+- [x] Repair `tests/state/camera/focusTweenDescriptor.test.ts:48`: assert the derived duration.
       Independent oracle — assert it is **within** `[GLIDE_MIN_SEC, GLIDE_MAX_SEC] × 1000` and
       that two rows at very different separations give different durations. Do not restate a
       computed number.
-- [ ] Repair `tests/services/engine/camera/cameraDrivers.test.ts:169-205` (the unit-slip
+- [x] Repair `tests/services/engine/camera/cameraDrivers.test.ts:169-205` (the unit-slip
       oracle). Its descriptor is a pure zoom (`target [0,0,0] → [0,0,0]`), so it lands on the
       degenerate branch and the expected value becomes exponential, not `lerp(10, 1000, 0.875)
-    = 876.25`. **The unit-slip property is still worth keeping — rewrite the oracle, do not
+  = 876.25`. **The unit-slip property is still worth keeping — rewrite the oracle, do not
       delete the test.** New oracle: transcribe `w(s) = w₀·exp(kρs)` for the degenerate branch
       and invert to distance, or assert the geometric-mean midpoint that a pure-zoom geodesic
       must produce; keep the slip-catching bounds (`> 10`, `< 1000`), which are what actually
       catch a forgotten `/1000`.
-- [ ] Repair `cameraDrivers.test.ts:158-167` and `:303-319`: their expectation calls
+- [x] Repair `cameraDrivers.test.ts:158-167` and `:303-319`: their expectation calls
       `evaluateClip(tweenToClip(desc), …)` without the `fovYRad` the driver now passes. Pass the
       same value the stub `EngineState` carries.
-- [ ] Rename `tests/services/engine/camera/evaluateClip.test.ts:422` — 'keeps focus-tween
+- [x] Rename `tests/services/engine/camera/evaluateClip.test.ts:422` — 'keeps focus-tween
       distance LINEAR via space:lin'. It does **not** break (it builds its `ClipData` inline at
       `:439-449`, never through `tweenToClip`), but "focus-tween" is no longer what it
       exercises. Rename to describe `space:'lin'` on a `set` segment; do not rewrite it.
-- [ ] Check `tests/state/selection/watchGoHomeSaga.test.ts` and
+- [x] Check `tests/state/selection/watchGoHomeSaga.test.ts` and
       `tests/state/selection/watchFocusTweenSaga.test.ts` for duration assertions (none found
       at plan time — confirm after the change).
-- [ ] Full `npm test` green. `npm run typecheck` green.
-- [ ] Commit.
+- [x] Full `npm test` green. `npm run typecheck` green.
+- [x] Commit.
 
 ---
 
@@ -513,8 +531,8 @@ the target and back. Nothing throws; that is why the default is `'linear'`.
 House convention: bake the simplicity review into the plan
 ([`simplicity.md`](../conventions/simplicity.md)).
 
-- [ ] Run the `entanglement-radar` skill over the full branch diff.
-- [ ] Named candidates to judge, at minimum: - `w = 2·d·tan(fovY/2)` now exists in `glidePath` and, as an inline expression, in
+- [x] Run the `entanglement-radar` skill over the full branch diff.
+- [x] Named candidates to judge, at minimum: - `w = 2·d·tan(fovY/2)` now exists in `glidePath` and, as an inline expression, in
       `scaleBar.ts:96`, `orbitControls.ts:427` and `cameraGizmoLines.ts:56`. **Surface this to
       the user before folding** — extracting a shared `viewHeightMpc` touches three
       pre-existing call sites and is scope beyond this spec. - `PathSample` vs `CameraPose` — structurally identical; kept deliberately (Task 3).
@@ -522,26 +540,26 @@ House convention: bake the simplicity review into the plan
       `followBody` is explicitly out of scope (§7) and already has a backlog file — check the
       diff has not quietly grown a fourth. - `elapsedForWinner`'s ms-vs-seconds split (`cameraDrivers.ts:107-111`) now carries a
       derived duration through it; verify the unit note still reads true.
-- [ ] Apply only the un-braidings that stay inside this spec's scope; file the rest in
+- [x] Apply only the un-braidings that stay inside this spec's scope; file the rest in
       `docs/BACKLOG.md` with a terse index line.
-- [ ] Commit (or note "no changes needed" in the PR).
+- [x] Commit (or note "no changes needed" in the PR).
 
 ---
 
 ## Task 10 — Verification and close-out
 
-- [ ] `npm run typecheck` and full `npm test` green.
-- [ ] Grep for stragglers the AST rename cannot see: `pathTracks`, `PathTrack`,
+- [x] `npm run typecheck` and full `npm test` green.
+- [x] Grep for stragglers the AST rename cannot see: `pathTracks`, `PathTrack`,
       `validatePathExclusivity`, `FOCUS_TWEEN_MS` — string literals, `vi.mock` paths and
       `.wesl` imports are refactor blind spots.
-- [ ] **Visual pass — ask the user, do not self-certify.** The things to look at, in order:
+- [x] **Visual pass — ask the user, do not self-certify.** The things to look at, in order:
       (1) a galaxy click from the InfoCard list still feels like ~600 ms and no longer "arrives
       too fast"; (2) rapid clicking down the list is not sluggish (the 0.4 s floor);
       (3) star → Milky Way now takes ~3.3 s and reads as one continuous move rather than a
       wobble; (4) `h` / Home still lands sunlit-side with the terminator raking, and the
       tween → follow handoff is still seamless (`watchGoHomeSaga`'s docblock, `:15-26`);
       (5) an authored clip with a `flyPath` is unchanged.
-- [ ] Run `/feature-done` before merge (relocates plan + spec to `*/completed/`, sweeps the
+- [x] Run `/feature-done` before merge (relocates plan + spec to `*/completed/`, sweeps the
       backlog).
 
 ---
