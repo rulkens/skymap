@@ -79,8 +79,8 @@ import { glintBandClass } from './glintBandClass';
 import { bodyApparentDiameterPx } from '../../../../utils/scene/bodyApparentDiameterPx';
 import { bodyGlintBrightness } from '../../../../utils/scene/bodyGlintBrightness';
 import { fadeBand } from '../../../../utils/math/fadeBand';
+import { regionById } from '../../../../utils/scene/regionById';
 import { regionRelativeDistanceMpc } from '../../../../utils/scene/regionRelativeDistanceMpc';
-import { BODY_REGIONS } from '../../../../data/bodies/bodyRegions';
 import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
@@ -104,7 +104,7 @@ const GLINT_MIN_BRIGHTNESS = 1e-4;
 // The scale regime the glints belong to. Both the band's edges (the planet
 // extent) and the distance it keys on come from this one region, so the fade
 // stays attached to the content it dissolves rather than to the render origin.
-const GLINT_BACKDROP_REGION = BODY_REGIONS.find((region) => region.id === 'solar-system')!;
+const GLINT_BACKDROP_REGION = regionById('solar-system');
 
 /**
  * The one fact "the Earth caption invites a click": the seeded Earth exists AND

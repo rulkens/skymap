@@ -95,7 +95,6 @@ import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { fadeBand } from '../../../../utils/math/fadeBand';
 import { regionRelativeDistanceMpc } from '../../../../utils/scene/regionRelativeDistanceMpc';
-import { BODY_REGIONS } from '../../../../data/bodies/bodyRegions';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
 import { sgrAStarCaptionTarget } from '../../presentation/sgrAStarCaptionTarget';
@@ -104,13 +103,14 @@ import { SGR_A_STAR } from '../../../../data/bodies/sceneSgrAStar';
 import { Source } from '../../../../data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { FAMOUS_STAR_PICK_RADIUS_PX } from '../../../../data/famousStarPickRadiusPx';
+import { regionById } from '../../../../utils/scene/regionById';
 import { regionOfBody } from '../../../../utils/scene/regionOfBody';
 import { projectToScreenPx } from '../../../../utils/camera/projectToScreenPx';
 
 // The scale regime the star backdrop belongs to. Its anchor — not the render
 // origin — is what the dissolve band measures the camera against, so the band
 // keeps meaning the moment a star map is seeded somewhere other than the Sun.
-const STAR_BACKDROP_REGION = BODY_REGIONS.find((region) => region.id === 'solar-neighbourhood')!;
+const STAR_BACKDROP_REGION = regionById('solar-neighbourhood');
 
 /** The anchor's own regime — the satellites its pick footprint may claim. */
 const GALACTIC_CENTRE_REGION_ID: BodyRegionId = 'galactic-centre';
