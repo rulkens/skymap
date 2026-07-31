@@ -19,10 +19,11 @@
 // reference distance + its fly-through floor, the calibrated exposure baseline,
 // and the peak-from-flux relation (starPeakIntensity). A leaf drawn by either
 // stage from the same (absMag, colour, camera distance) and the same user
-// sizePx / brightness therefore deposits the same integrated screen luminance
-// through the same-shaped dot. The fragment stages share the rim-zeroed
-// Gaussian profile (whose disc integral is K_GAUSS below) and the hue-preserving
-// knee (lib/starKnee.wesl), completing the equal-pixels guarantee.
+// sizePx / brightness therefore deposits the same screen luminance per unit
+// solid angle through the same-shaped dot. The fragment stages share the
+// rim-zeroed Gaussian profile (whose disc integral is K_GAUSS below) and the
+// hue-preserving knee (lib/starKnee.wesl), completing the equal-pixels
+// guarantee.
 //
 // The constants live here rather than in either consumer so the two can never
 // drift a value apart and silently break the parity — the same single-source
@@ -108,25 +109,43 @@ const MIN_D2_MPC2: f32 = 1e-14; // (1e-7)^2
 // THE exposure knob (eye-tuned via HMR, on top of the live 'brightness' slider).
 // A record deposits screen luminance STAR_FLUX_EXPOSURE * brightness * fluxApp,
 // where fluxApp is the APPARENT flux -- the intrinsic LUT flux dimmed by
-// inverse-square (D_REF^2/d2). The 6000.0 baseline folds the user's eye-tuned
-// near-field display exposure (15x over the raw inverse-square calibration, was
+// inverse-square (D_REF^2/d2). The 2400.0 baseline folds the user's eye-tuned
+// near-field display exposure (6x over the raw inverse-square calibration of
 // 400.0) into the constant, so brightness-slider 1.0 IS the tuned near-field
-// look. The scale DEPENDENCE of that display exposure -- ~15x near rising to
-// ~70x at whole-galaxy scale, a legibility need a monitor can't meet by
+// look. The scale DEPENDENCE of that display exposure -- ~6x near rising to
+// ~28x at whole-galaxy scale, a legibility need a monitor can't meet by
 // dark-adapting like the eye -- rides in on the 'brightness' the layer forwards
 // (starExposureRamp multiplies a camera-distance ramp into it). Every other
 // constant here is structural.
-const STAR_FLUX_EXPOSURE: f32 = 6000.0;
+const STAR_FLUX_EXPOSURE: f32 = 2400.0;
+
+// Canvas height the exposure baseline above is calibrated at. Radii are
+// converted to this reference unit (toRefPx) before the peak, so a record
+// deposits light per unit SOLID ANGLE rather than per device pixel -- without
+// it, halving canvas height quadrupled deposited luminance (measured 270p at
+// 3.6x the mean luminance of 1080p, same scene). Trades off exactly against
+// STAR_FLUX_EXPOSURE -- moving one is equivalent to rescaling the other, one
+// degree of freedom between the pair -- so STAR_FLUX_EXPOSURE alone is the
+// look knob; this stays fixed.
+const REF_VIEWPORT_PX_Y: f32 = 1080.0;
+
+// Converts a device-pixel radius into REF_VIEWPORT_PX_Y-relative reference px,
+// the resolution-independent unit starPeakIntensity's peak is calibrated in.
+// Both vertex stages MUST route their radius through this before the peak, or
+// the pixel-parity contract between them breaks.
+fn toRefPx(rPx: f32, viewportPxY: f32) -> f32 {
+  return rPx * (REF_VIEWPORT_PX_Y / viewportPxY);
+}
 
 // ── starPeakIntensity ────────────────────────────────────────────────────────
 //
 // The peak amplitude that makes a dot's INTEGRATED screen luminance equal
-// STAR_FLUX_EXPOSURE * brightness * fluxApp regardless of its pixel radius:
-// I_peak * K_GAUSS * rPx^2 == EXPOSURE * fluxApp * brightness. So drawing a
-// record at any radius deposits the same total light (a wider dot just spreads a
-// fixed luminance thinner) -- the invariance the survey stage leans on for
-// LOD-invisible aggregate sizing, and the reason the famous-star sprite obeys
-// the size slider without changing brightness.
+// STAR_FLUX_EXPOSURE * brightness * fluxApp regardless of canvas size:
+// I_peak * K_GAUSS * rRefPx^2 == EXPOSURE * fluxApp * brightness. So drawing a
+// record at any reference-px radius deposits the same light PER UNIT SOLID
+// ANGLE (a wider dot just spreads a fixed luminance thinner) -- the invariance
+// the survey stage leans on for LOD-invisible aggregate sizing, and the reason
+// the famous-star sprite obeys the size slider without changing brightness.
 //
 //   brightness -- the user's exposure trim on top of the calibrated baseline
 //                 (1.0 = identity), carrying the scale-dependent display ramp
@@ -134,14 +153,15 @@ const STAR_FLUX_EXPOSURE: f32 = 6000.0;
 //   fluxApp    -- the inverse-square-dimmed apparent flux
 //                 (10^(-0.4*absMag) * D_REF^2 / max(d2, MIN_D2_MPC2), times the
 //                 survey aggregate's subtreeStarCount where it applies).
-//   rPx        -- the PRE-CEILING glow radius in px. Both stages pass the
-//                 radius from BEFORE the STAR_GLOW_MAX_PX clamp, so a
-//                 radius-capped source freezes its surface brightness at the
-//                 ceiling instead of over-concentrating (see STAR_GLOW_MAX_PX).
+//   rRefPx     -- the PRE-CEILING glow radius, in reference px (toRefPx).
+//                 Both stages pass the radius from BEFORE the
+//                 STAR_GLOW_MAX_PX clamp, so a radius-capped source freezes
+//                 its surface brightness at the ceiling instead of
+//                 over-concentrating (see STAR_GLOW_MAX_PX).
 //
 // Both vertex stages call this with the identical expression, so an equal
-// (brightness, fluxApp, rPx) yields an equal peak -- the numeric half of the
-// pixel-parity contract.
-fn starPeakIntensity(brightness: f32, fluxApp: f32, rPx: f32) -> f32 {
-  return STAR_FLUX_EXPOSURE * brightness * fluxApp / (K_GAUSS * rPx * rPx);
+// (brightness, fluxApp, rRefPx) yields an equal peak -- the numeric half of
+// the pixel-parity contract.
+fn starPeakIntensity(brightness: f32, fluxApp: f32, rRefPx: f32) -> f32 {
+  return STAR_FLUX_EXPOSURE * brightness * fluxApp / (K_GAUSS * rRefPx * rRefPx);
 }
