@@ -79,7 +79,7 @@
     "perf": "tsx tools/perf/measurePerf.ts",
     "preview": "vite preview",
     "r2-cors": "npx wrangler r2 bucket cors set skymap-data --file tools/deploy/r2Cors.json",
-    "record-tour": "tsx tools/record/recordTour.ts",
+    "record-tour": "tsx tools/record/record.ts",
     "refactor": "tsx tools/refactor/refactor.ts",
     "spike-virtual-time": "tsx tools/record/virtualTimeSpike.ts",
     "sync-r2": "tsx tools/deploy/syncR2.ts",

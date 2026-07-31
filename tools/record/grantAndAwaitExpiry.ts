@@ -1,7 +1,7 @@
 /**
  * grantAndAwaitExpiry — grant one CDP virtual-time budget and await its
  * expiry event. The single stepping primitive shared by the recorder harness
- * (recordTour.ts) and the gate spike (virtualTimeSpike.ts).
+ * (record.ts) and the gate spike (virtualTimeSpike.ts).
  *
  * Impure by design — this is CDP I/O, not a pure helper, so it lives here in
  * tools/record/ rather than tools/utils/ (whose one-function-per-file rule

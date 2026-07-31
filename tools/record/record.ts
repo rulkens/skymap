@@ -1,5 +1,5 @@
 /**
- * recordTour — the offline tour recorder: play a skymap tour under CDP
+ * record — the offline tour recorder: play a skymap tour under CDP
  * virtual time in headless Chromium and encode the captured frames straight
  * to an mp4.
  *
