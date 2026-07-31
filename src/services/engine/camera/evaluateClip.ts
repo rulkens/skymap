@@ -451,10 +451,12 @@ function compositePoseAt(tracks: CompositeTrack[], t: number): Partial<CameraPos
     const localSec = Math.min(t - track.startSec, track.endSec - track.startSec);
     const pose = track.sample(localSec);
     // Copy only the DECLARED channels, never whatever keys `sample` happens to
-    // return. `channels` is what `validateCompositeExclusivity` checked against,
-    // so a track returning an extra key would otherwise silently override a base
-    // writer the validator had already allowed. `Channel` is exactly `keyof
-    // CameraPose`, which the index assignment needs spelling out.
+    // return: `channels` is what `validateCompositeExclusivity` checked, so an
+    // over-returning track would silently override a base writer the validator
+    // had already allowed. Both current builders return exactly what they
+    // declare (pinned in their own tests), so this is the backstop for a THIRD
+    // builder drifting — no test here can fail today. `Channel` is exactly
+    // `keyof CameraPose`; the index assignment needs that spelled out.
     for (const ch of track.channels) {
       const value = pose[ch];
       if (value !== undefined) (merged as Record<Channel, unknown>)[ch] = value;
@@ -482,8 +484,8 @@ function compositePoseAt(tracks: CompositeTrack[], t: number): Partial<CameraPos
  *                    aim through (see `buildPathTrack`). Absent ⇒ identity
  *                    (world-frame aim) — the pre-feature behaviour, so a clip
  *                    with no `flyPath` is unaffected.
- * @param fovYRad     Vertical FOV in radians. Absent ⇒ DEFAULT_FOV_Y_RAD. Not
- *                    yet read by any writer.
+ * @param fovYRad     Vertical FOV in radians, read by a `glide`'s (u, w)
+ *                    metric. Absent ⇒ DEFAULT_FOV_Y_RAD.
  * @returns           The camera pose at that instant.
  */
 export function evaluateClip(

@@ -74,6 +74,8 @@ import type { Mat3 } from '../../../@types/math/Mat3';
 import { CHANNEL_SPACE, ALL_CHANNELS } from './channelSpace';
 import { validateSingleWriter } from './validateSingleWriter';
 import { buildPathTrack } from './buildPathTrack';
+import { buildGlideTrack } from './buildGlideTrack';
+import { DEFAULT_FOV_Y_RAD } from '../camera/cameraFraming';
 
 // ---------------------------------------------------------------------------
 // Zero pose — used when start is 'live' or absent (placeholder; resolved by
@@ -99,8 +101,8 @@ type Accum = {
   // encodes its world tangents to (yaw, pitch) through it (see `buildPathTrack`).
   // Absent ⇒ identity (world-frame aim), so every non-frame caller is unchanged.
   readonly frameBasis?: Mat3;
-  // The vertical FOV this clip compiles under. Nothing reads it yet — threaded
-  // through for a future `glide` writer's (u, w) metric. Absent ⇒
+  // The vertical FOV this clip compiles under — a `glide`'s (u, w) metric is
+  // defined through it (`w = 2·distance·tan(fovY/2)`). Absent ⇒
   // DEFAULT_FOV_Y_RAD (cameraFraming.ts).
   readonly fovYRad?: number;
 };
@@ -223,6 +225,24 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
       return track.endSec - atSec;
     }
 
+    // --- Camera leaves: zoom/pan geodesic over target + distance ---
+    case 'glide': {
+      const track = buildGlideTrack({
+        start: acc.start,
+        startSec: atSec,
+        to: effect.to,
+        over: effect.over,
+        rho: effect.rho,
+        ease: effect.ease,
+        fovYRad: acc.fovYRad ?? DEFAULT_FOV_Y_RAD,
+      });
+      acc.compositeTracks.push(track);
+      // Without an authored `over` the duration only exists once the geodesic
+      // has been measured, so the cursor must move by the TRACK's span —
+      // `effect.over` would leave every following effect at the wrong time.
+      return track.endSec - atSec;
+    }
+
     // --- Camera leaves: velocity ramp ---
     case 'rate': {
       acc.velRamps.push({
@@ -309,8 +329,8 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
  *                    identity (world-frame aim); a clip with no `flyPath` is
  *                    unaffected either way, so `durationSec`-only callers may
  *                    omit it.
- * @param fovYRad     Vertical FOV in radians. Absent ⇒ DEFAULT_FOV_Y_RAD. Not
- *                    yet read by any writer.
+ * @param fovYRad     Vertical FOV in radians, read by a `glide`'s (u, w)
+ *                    metric. Absent ⇒ DEFAULT_FOV_Y_RAD.
  * @returns           A `CompiledClip` ready for the evaluator.
  *
  * @throws      Throws via `validateSingleWriter` when a base-layer write clash

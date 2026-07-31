@@ -19,6 +19,7 @@ import {
   oscillate,
   tween,
   moveTarget,
+  glide,
   all,
   seq,
   wait,
@@ -456,5 +457,57 @@ describe('focus tween = one-segment clip', () => {
     // Log midpoint for contrast: sqrt(10 * 1000) ≈ 100, which is far from 505.
     // Asserting the result is well above 200 rules out the log path decisively.
     expect(pose.distance).toBeGreaterThan(200);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A composite track owning a SUBSET of the channels — the merge a `flyPath`
+// (which declares all four) can never exercise.
+// ---------------------------------------------------------------------------
+
+describe('evaluateClip merges a composite track per declared channel', () => {
+  it('a glide owns target and distance while yaw and pitch stay on the base layer', () => {
+    const GLIDE_FOV_Y = (50 * Math.PI) / 180;
+    const from: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
+    const to = { target: [30, 40, 0] as const, distance: 2 };
+    const over = 2;
+
+    const data: ClipData = {
+      start: from,
+      timeline: [
+        all([
+          glide({ target: [...to.target], distance: to.distance }, { over, ease: 'linear' }),
+          tween('yaw', { to: 1.0, over, ease: 'linear' }),
+          tween('pitch', { to: 0.5, over, ease: 'linear' }),
+        ]),
+      ],
+    };
+
+    // Compiling at all is half the assertion: `validateCompositeExclusivity`
+    // throws if the composite track claims a channel a base writer also drives,
+    // so a glide that declared all four would never get past here.
+    expect(() => evaluateClip(data, 0, undefined, GLIDE_FOV_Y)).not.toThrow();
+
+    const pose = evaluateClip(data, over / 2, undefined, GLIDE_FOV_Y);
+
+    // yaw/pitch came from their OWN scalar tweens — linear ease at half the
+    // window is exactly half the delta.
+    expect(pose.yaw).toBeCloseTo(0.5, 12);
+    expect(pose.pitch).toBeCloseTo(0.25, 12);
+
+    // distance came from the geodesic, not the base layer (which would hold
+    // `from`), and not from any independent-channel interpolation of the two
+    // endpoints: the linear midpoint is 51, the log midpoint sqrt(200) ≈ 14.1.
+    expect(pose.distance).not.toBeCloseTo(100, 5);
+    expect(pose.distance).not.toBeCloseTo(51, 5);
+    expect(pose.distance).not.toBeCloseTo(Math.sqrt(200), 5);
+
+    // The geodesic's signature is the COUPLING: this zoom-dominated move has
+    // all but ~2% of the pan done at half time while the zoom still has an
+    // order of magnitude to go. Two independently-eased channels sit at 50/50.
+    const panFraction = pose.target[0] / to.target[0];
+    expect(pose.target[1] / to.target[1]).toBeCloseTo(panFraction, 12);
+    expect(panFraction).toBeGreaterThan(0.9);
+    expect(pose.distance).toBeGreaterThan(5 * to.distance);
   });
 });
