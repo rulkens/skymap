@@ -72,7 +72,10 @@ fn ribbonSample(inst: OrbitInstance, viewportPx: vec2<f32>, si: u32) -> vec3<f32
   // E-parametrization clusters samples at periapsis, matching how
   // composeOrbitConic built cc/ac/bc on the CPU side.
   let e = TAU * f32(si) / f32(SEGMENTS);
-  let p = inst.cc.xyw + cos(e) * inst.ac.xyw + sin(e) * inst.bc.xyw; // clip (x, y, w)
+  // The padded vec4 stores clip.w in its THIRD slot - (x, y, w, 0) - so the
+  // swizzle is .xyz, never .xyw: the .w lane is the zero pad, and reading it
+  // makes p.z zero, which silently collapses every vertex to (0,0,0,0).
+  let p = inst.cc.xyz + cos(e) * inst.ac.xyz + sin(e) * inst.bc.xyz; // clip (x, y, w)
   let px = (p.xy / p.z) * 0.5 * viewportPx; // isotropic pixel space
   return vec3<f32>(px, p.z);
 }
