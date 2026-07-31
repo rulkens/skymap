@@ -164,6 +164,13 @@ what's being moved in one line, then do it:
 - If a matching spec exists at `docs/superpowers/specs/<same-date>-<same-slug>*.md`
   (or one the plan links to in its header), `git mv` it to
   `docs/superpowers/specs/completed/` the same way.
+- **Archive the ledger.** If `.superpowers/sdd/<plan-basename>/progress.md`
+  exists — or a flat-era `.superpowers/sdd/progress.md` whose first line
+  names this plan — copy it to
+  `docs/superpowers/plans/completed/<plan-basename>.ledger.md` and stage it
+  with the completion commit (see
+  `docs/superpowers/conventions/sdd-execution.md`). An SDD-executed plan
+  with no ledger found is worth one line in the report.
 - **Sweep the backlog.** The item should already be gone — the
   convention removes a backlog item (its index line **and** its
   `docs/backlog/<date>-<slug>.md` detail file) the moment it's picked
