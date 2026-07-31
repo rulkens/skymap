@@ -554,7 +554,7 @@ Ask the user to look. Specific things to check, in order:
 2. Run the clock at `1 yr/s`, then `10 yr/s`. S2 laps in ~16 s and ~1.6 s. Motion is smooth, the body stays on its own trail.
 3. Brightness spread reads — S2 and the bright stars clearly visible, the faint tail dim. **The check is "can I see the bright ones", not "can I see all 39."**
 4. Fly back toward the Sun. S-stars and their trails fade out; famous stars and planet trails behave exactly as before.
-5. Pick a star. The InfoCard shows its label plus Task 11's rows — period, eccentricity, pericentre in AU and Schwarzschild radii, pericentre speed. For S2: 16.0 yr, 0.884, 119 AU = 1404 R_s, ~7,700 km/s. Pick a planet too and confirm its card is unchanged.
+5. Pick a star. The InfoCard shows its label plus Task 11's rows — period, eccentricity, pericentre in AU and Schwarzschild radii, pericentre speed. For S2: 16.0 yr, 0.884, 119 AU = 1,405 R_s, ~7,700 km/s. Pick a planet too and confirm its card is unchanged.
 6. Confirm no S-star captions appear, and that Sgr A\* is labelled.
 7. Type "Sagittarius" into the search box; Sgr A\* comes up chipped **Galactic Centre** (not "Solar System"), and selecting it both pins the InfoCard and flies the camera. Type "Sirius" and confirm its chip still reads "Canis Major". Type "Sun" and confirm its chip reads "Solar System", not "None".
 

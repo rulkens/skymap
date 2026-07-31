@@ -46,7 +46,7 @@ Scale conversion, with the GC at 8178 pc (GRAVITY): **1 arcsec = 8178 AU**.
 | quantity                      | value                             |
 | ----------------------------- | --------------------------------- |
 | S2 semi-major axis            | 0.1255″ = 1026 AU                 |
-| S2 pericentre                 | 119 AU = 1404 Schwarzschild radii |
+| S2 pericentre                 | 119 AU = 1405 Schwarzschild radii |
 | S2 apoapsis                   | 1934 AU                           |
 | S2 period                     | 16.0 yr                           |
 | Sgr A\* Schwarzschild radius  | 0.085 AU = 12.69 × 10⁶ km         |
