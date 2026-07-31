@@ -67,6 +67,7 @@ import package::lib::starPhotometry::STAR_GLOW_MAX_PX;
 import package::lib::starPhotometry::D_REF_MPC;
 import package::lib::starPhotometry::MIN_D2_MPC2;
 import package::lib::starPhotometry::starPeakIntensity;
+import package::lib::starPhotometry::toRefPx;
 
 @group(0) @binding(0) var<uniform> u: StarPointUniforms;
 
@@ -100,10 +101,11 @@ fn vs(
   let d2 = dot(position, position);
   let fluxApp = pow(10.0, -0.4 * absMag) * (D_REF_MPC * D_REF_MPC) / max(d2, MIN_D2_MPC2);
 
-  // Peak from the pre-ceiling radius, so the dot's INTEGRATED luminance equals
-  // EXPOSURE * brightness * fluxApp wherever the ceiling is not biting —
-  // the shared convention with the survey stage (lib/starPhotometry.wesl).
-  let intensity = starPeakIntensity(u.brightness, fluxApp, rPxRaw);
+  // Peak from the pre-ceiling radius, converted to reference px (toRefPx) so
+  // the dot's luminance per unit SOLID ANGLE equals EXPOSURE * brightness *
+  // fluxApp wherever the ceiling is not biting — the shared convention with
+  // the survey stage (lib/starPhotometry.wesl).
+  let intensity = starPeakIntensity(u.brightness, fluxApp, toRefPx(rPxRaw, u.cam.viewportPx.y));
 
   let offset = expandBillboardScreen(u.cam, center, rPx, corner);
 

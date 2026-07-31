@@ -296,9 +296,9 @@ export type EngineSettingsState = {
    * distance anchors (1 pc, 3 kpc, 10 kpc). Unlike `brightness` (a flat trim),
    * these shape the cross-scale ramp: the layer feeds all three to
    * `starExposureRamp` per frame. Live so the ramp can be re-eye-tuned against
-   * the current star bins' local flux; defaults 15 / 57 / 70. 15 is also baked
+   * the current star bins' local flux; defaults 6 / 23 / 28. 6 is also baked
    * into the shader's STAR_FLUX_EXPOSURE, so the ramp returns 1.0 at the near
-   * anchor there; the 57 mid anchor sits on the old near→far continuation, so the
+   * anchor there; the 23 mid anchor sits on the old near→far continuation, so the
    * defaults reproduce the two-anchor look and pulling `exposureMidX` down bends
    * only the intermediate few-kpc segment.
    *
