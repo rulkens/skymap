@@ -96,8 +96,8 @@ fn vsRibbon(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
   // <= 0 and clipToPixel divides by zero.
   let epsW = 1e-6 * (abs(inst.cc.z) + length(vec2<f32>(inst.ac.z, inst.bc.z)));
 
-  // Fold membership is per QUAD: tested iff any of the four samples above is
-  // behind. eOwn carries [eLo, eHi) — see the ownership test in fragment.wesl.
+  // Fold membership per QUAD: tested iff any of the four samples above is
+  // behind; eOwn carries [eLo, eHi) for fragment.wesl's ownership test.
   let tested = rawIPrev.z <= epsW || rawI.z <= epsW || rawJ.z <= epsW || rawJNext.z <= epsW;
   out.eOwn = vec3<f32>(
     TAU * f32(segment) / f32(SEGMENTS),
@@ -153,15 +153,18 @@ fn vsRibbon(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
     let tangent = chord / max(length(chord), 1e-20);
     let normal = vec2<f32>(-tangent.y, tangent.x);
     // A plain STROKE_PX+MARGIN_PX quad under-covers the true sweep near a
-    // fold; this corner is always inside a tested quad (see membership
-    // above), so widening to guaranteed viewport coverage is safe.
+    // fold; this corner is always tested (see membership above), so widening.
     let halfWidth = foldHalfWidth(ownPx, viewportPx);
-    outPx = ownPx + side * halfWidth * normal;
+    // Box-extend along the tangent too: normal-only left the quad thin along
+    // the tangent, so a camera turn could sweep the real trail outside it.
+    // Keying the sign on 'offset' breaks per-sample corner identity, but
+    // only between two TESTED quads, so ownership covers the gap.
+    let tangentSign = select(-1.0, 1.0, offset == 1u);
+    outPx = ownPx + side * halfWidth * normal + tangentSign * halfWidth * tangent;
     w = ownRaw.z;
   } else if (partnerRaw.z > epsW) {
     // Own behind, this segment's OTHER endpoint in front: clamp toward it
-    // along the segment's own chord to w = epsW. Deliberately per-SEGMENT —
-    // the neighbour clamps toward a different partner, differing off-viewport.
+    // along the segment's own chord to w = epsW (per-SEGMENT, off-viewport).
     let t = (epsW - ownRaw.z) / (partnerRaw.z - ownRaw.z);
     let clampedRaw = mix(ownRaw, partnerRaw, t);
     let clampedPx = clipToPixel(clampedRaw, viewportPx);
@@ -172,7 +175,8 @@ fn vsRibbon(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
     let tangent = chord / max(length(chord), 1e-20);
     let normal = vec2<f32>(-tangent.y, tangent.x);
     let halfWidth = foldHalfWidth(clampedPx, viewportPx); // same fold-coverage bound as above; always tested too
-    outPx = clampedPx + side * halfWidth * normal;
+    let tangentSign = select(-1.0, 1.0, offset == 1u); // same box extension as the one-sided branch above
+    outPx = clampedPx + side * halfWidth * normal + tangentSign * halfWidth * tangent;
     w = epsW;
   } else {
     // Both endpoints behind: this arc is entirely behind-camera, so it stays
