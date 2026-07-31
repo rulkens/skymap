@@ -57,8 +57,10 @@ where the checks are independent.
 - The plan is complete only if every checkbox is `- [x]`, including
   the "Definition of Done" section at the bottom of the plan.
 - If the plan's own DoD section is missing, flag this as a finding:
-  the plan should have been authored with one. Don't fail the audit
-  for it (older plans pre-date the convention) — just note it.
+  the plan should have been authored with one, per the "Definition of
+  Done" section in `docs/superpowers/conventions/plan-style.md`. Don't
+  fail the audit for it (older plans pre-date the convention) — just
+  note it.
 - Backstop: locate the plan's spec (linked in its header, or the
   same-date/slug file in `docs/superpowers/specs/`) and check it has a
   "Ground preparation" section (filled, or "none needed — because X" —
