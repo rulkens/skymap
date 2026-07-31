@@ -53,14 +53,18 @@ describe('focusTweenDescriptor', () => {
   });
 
   it('the duration tracks the move, not a constant', () => {
-    // Same subject (identical destination framing) at two separations from
-    // `from` — ~12 Mpc and ~1 Gpc, both well inside the clamp. A fixed duration
-    // returns the same number for both.
-    const near = focusTweenDescriptor(galaxyRow(), FROM, FOVY);
-    const far = focusTweenDescriptor(galaxyRow({ x: 900, y: -400, z: 250 }), FROM, FOVY);
-    expect(far.durationMs).toBeGreaterThan(near.durationMs);
-    expect(near.durationMs).toBeGreaterThan(GLIDE_MIN_SEC * 1000);
-    expect(far.durationMs).toBeLessThan(GLIDE_MAX_SEC * 1000);
+    // Two subjects whose destination FRAMING differs by orders of magnitude: a
+    // 40 kpc galaxy nearby vs a 2 Mpc structure. Separation alone is the wrong
+    // lever at the shipped ρ — the pan term carries almost no weight there, so
+    // two galaxies 1 Gpc apart both pin to GLIDE_MIN_SEC and the assertion goes
+    // blind. It is the SCALE CHANGE that the arc length is sensitive to.
+    const small = focusTweenDescriptor(galaxyRow(), FROM, FOVY);
+    const big = focusTweenDescriptor(structureRow(), FROM, FOVY);
+    expect(big.durationMs).not.toBeCloseTo(small.durationMs, 6);
+    for (const d of [small, big]) {
+      expect(d.durationMs).toBeGreaterThanOrEqual(GLIDE_MIN_SEC * 1000);
+      expect(d.durationMs).toBeLessThanOrEqual(GLIDE_MAX_SEC * 1000);
+    }
   });
 
   it('a galaxy row targets its position and frames on its diameter, keeping yaw/pitch', () => {

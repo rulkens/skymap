@@ -79,9 +79,13 @@ describe('glidePath', () => {
   it('w uses the FOV, not the raw distance', () => {
     const from = { target: [0, 0, 0] as Vec3, distance: 10 };
     const to = { target: [30, 40, 0] as Vec3, distance: 5 };
-    const narrow = glidePath(from, to, (20 * Math.PI) / 180).durationSec;
-    const wide = glidePath(from, to, (100 * Math.PI) / 180).durationSec;
-    expect(narrow).not.toBeCloseTo(wide, 6);
+    const narrow = glidePath(from, to, (20 * Math.PI) / 180);
+    const wide = glidePath(from, to, (100 * Math.PI) / 180);
+
+    // Probe the PATH, not the duration: the duration clamp can pin two
+    // different FOVs to the same bound and blind this test entirely — it did,
+    // at the calibration this shipped with. The mid-arc pose cannot be clamped.
+    expect(narrow.at(0.5).distance).not.toBeCloseTo(wide.at(0.5).distance, 6);
   });
 
   it('duration is clamped at both ends', () => {
