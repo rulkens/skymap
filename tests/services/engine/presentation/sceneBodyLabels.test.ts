@@ -8,6 +8,7 @@ import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_S_STARS } from '../../../../src/data/bodies/sceneSStars';
+import { SGR_A_STAR_ENTRY } from '../../../../src/data/sources/sgr-a-star';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 
@@ -29,13 +30,16 @@ describe('sceneBodyLabels', () => {
     expect(labels).toHaveLength(1 + SCENE_STARS.length + SCENE_PLANETS.length + 1);
   });
 
-  it("gives Sgr A* its own caption kind, not the star map's", () => {
-    // Sgr A* draws nothing, so this caption is the whole object on screen — and
+  it("gives the Galactic Centre its own caption kind, not the star map's", () => {
+    // It draws nothing, so this caption is the whole object on screen — and
     // riding `'star'` would route it through the famous-star catalog's gates and
-    // a 2.3 kpc band it sits 8 kpc outside.
+    // a 2.3 kpc band it sits 8 kpc outside. The text is the PLACE name, which is
+    // the whole point of the caption for a reader who has not met "Sgr A*";
+    // read off the registry row so a rename carries rather than fails here.
     const sgrA = labels.find((label) => label.id === 'sceneBody-sgr-a-star')!;
     expect(sgrA.kind).toBe('sgrAStar');
-    expect(sgrA.text).toBe('Sgr A*');
+    expect(sgrA.text).toBe(SGR_A_STAR_ENTRY.label);
+    expect(sgrA.text).not.toContain('Sgr');
   });
 
   it('fits inside the foreground label renderer capacity (no silent caption drop)', () => {

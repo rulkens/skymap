@@ -13,10 +13,15 @@
 import { FAMOUS_STARS_GENERATED } from './famousStars.generated';
 import { SGR_A_STAR_ENTRY } from '../sources/sgr-a-star';
 
-// "Galactic Centre" is deliberately absent: it names a place rather than this
-// body, and is claimed by the galactic-centre place-labels backlog item.
+// The place name now leads (it IS the row's label — see the registry row), with
+// the designation and its spellings behind it, so both "galactic centre" and
+// "Sgr A*" find the same body. Both the British and American spellings are
+// listed because a query matches a NAME verbatim, not a normalised form.
 const AUTHORED: readonly (readonly [string, readonly string[]])[] = [
-  [SGR_A_STAR_ENTRY.id, [SGR_A_STAR_ENTRY.label, 'Sagittarius A*', 'SgrA*']],
+  [
+    SGR_A_STAR_ENTRY.id,
+    [SGR_A_STAR_ENTRY.label, 'Galactic Center', 'Sagittarius A*', 'Sgr A*', 'SgrA*'],
+  ],
 ];
 
 export const BODY_SEARCH_NAMES: ReadonlyMap<string, readonly string[]> = new Map([

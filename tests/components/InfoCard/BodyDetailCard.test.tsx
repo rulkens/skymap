@@ -14,6 +14,7 @@ import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import BodyDetailCard from '../../../src/components/InfoCard/BodyDetailCard/BodyDetailCard';
 import { buildFocusable } from '../../../src/services/engine/helpers/buildFocusable';
+import { SGR_A_STAR_ENTRY } from '../../../src/data/sources/sgr-a-star';
 import type { BodyInfo } from '../../../src/@types/engine/BodyInfo';
 import type { FamousStarMetaEntry } from '../../../src/@types/loading/FamousStarMetaEntry';
 
@@ -129,8 +130,9 @@ describe('BodyDetailCard', () => {
 
     const { container } = render(createElement(BodyDetailCard, { target, famousStarsMeta: [] }));
 
-    // The focus the elements are fitted against, named rather than implied.
-    expect(screen.getByText('Sgr A*')).toBeInTheDocument();
+    // The focus the elements are fitted against, named rather than implied — as
+    // the reader sees it named everywhere else, off the registry row.
+    expect(screen.getByText(SGR_A_STAR_ENTRY.label)).toBeInTheDocument();
     // Straight off the Gillessen row — wrong star ⇒ wrong period and eccentricity.
     expect(screen.getByText('16.0 yr')).toBeInTheDocument();
     expect(screen.getByText('0.884')).toBeInTheDocument();

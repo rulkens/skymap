@@ -109,7 +109,7 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
   body: (m) => {
     if (m.kind !== 'body') return EMPTY_ROW_VIEW;
     const aliases = (BODY_SEARCH_NAMES.get(m.body.id) ?? []).slice(1);
-    const chip = bodyRowChip(m.body.id);
+    const chip = bodyRowChip(m.body.id, m.body.label);
     return {
       key: `body:${m.body.id}`,
       testid: `body-row-${m.body.id}`,
