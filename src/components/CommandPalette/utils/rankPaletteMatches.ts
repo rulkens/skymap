@@ -22,7 +22,7 @@ import { scoreFamousMatch } from './scoreFamousMatch';
 import { scoreAliasMatch } from './scoreAliasMatch';
 import { MILKY_WAY_NAMES } from '../paletteRowModel';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
-import { FAMOUS_STAR_SEARCH } from '../../../data/bodies/famousStarsIndex';
+import { BODY_SEARCH_NAMES } from '../../../data/bodies/bodySearchNames';
 import type { ScoredRow } from '../paletteRowModel';
 import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../../@types/engine/AliasIndexEntry';
@@ -88,16 +88,13 @@ export function rankPaletteMatches(
   // is derived from the focused body's own radius, so a picked body always
   // resolves to a reachable, non-sub-pixel focus target.
   //
-  // A famous star scores over its full alias list (FAMOUS_STAR_SEARCH), so a
-  // Bayer designation ("Alpha Canis Majoris") surfaces the same row as the
-  // common name ("Sirius"). Earth/planets aren't in the map and fall back to
-  // their single label.
+  // A body scores over its full alias list (BODY_SEARCH_NAMES), so a Bayer
+  // designation ("Alpha Canis Majoris") surfaces the same row as the common
+  // name ("Sirius"). Earth/planets aren't in the map and fall back to their
+  // single label.
   const bodyScored: ScoredRow[] = SCENE_BODIES.map<ScoredRow>((body) => {
-    const search = FAMOUS_STAR_SEARCH.get(body.id);
-    const raw = scoreFamousMatch(
-      { id: body.id, names: search ? search.names : [body.label], description: '' },
-      query,
-    );
+    const names = BODY_SEARCH_NAMES.get(body.id) ?? [body.label];
+    const raw = scoreFamousMatch({ id: body.id, names, description: '' }, query);
     return { kind: 'body', body, score: raw > 0 ? raw + PRIMARY_TIEBREAK : 0 };
   }).filter((s) => s.score > 0);
 
