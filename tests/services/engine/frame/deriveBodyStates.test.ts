@@ -28,6 +28,21 @@ describe('deriveBodyStates', () => {
     }
   });
 
+  it('every element row derives a body state', () => {
+    // The truncation gate for the table crossing the old MAX_ORBITS = 24, which
+    // prep-01 made dynamic: asserted against ORBITAL_ELEMENTS.length so it stays
+    // a check rather than a restatement of today's roster. The finiteness half is
+    // what presence alone misses — a row whose unit/frame conversion produced NaN
+    // still lands in the map under its own id, so `has` goes green on garbage.
+    expect(ORBITAL_ELEMENTS.filter((el) => states.has(el.id))).toHaveLength(
+      ORBITAL_ELEMENTS.length,
+    );
+    for (const el of ORBITAL_ELEMENTS) {
+      const { positionMpc } = states.get(el.id)!;
+      expect(positionMpc.every(Number.isFinite), `position for '${el.id}'`).toBe(true);
+    }
+  });
+
   it('J2000 snapshot is unchanged after the anchor rewrite', () => {
     // The fixture holds the J2000 body snapshot at full f64 precision, and the
     // comparison is exact — a tolerance would hide the very drift this exists to

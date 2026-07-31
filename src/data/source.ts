@@ -206,4 +206,17 @@ export const Source = {
    * codes below it.
    */
   SgrAStar: 27,
+  /**
+   * The 39 bound S-stars orbiting Sgr A\*. Their own body row rather than
+   * members of the curated star map, so the Galactic Centre toggles apart from
+   * the solar neighbourhood — and their own CODE because the packed pick id is
+   * an index INTO a seed table: sharing FamousStar's code would renumber every
+   * famous star. The star layers draw both sets and stamp whichever code the
+   * star's table dictates (`starPickId`). Not persisted. Appended at 28.
+   *
+   * BUDGET: the pick texture's source field is 5 bits with 31 reserved as the
+   * all-ones sentinel (`selectionEncoding.ts`), so after this row only 29 and
+   * 30 remain. The next-but-two source addition needs a wider field.
+   */
+  SStar: 28,
 } as const;

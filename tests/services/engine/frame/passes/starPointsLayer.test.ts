@@ -32,6 +32,7 @@ import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 import { starExposureRamp } from '../../../../../src/services/gpu/renderers/starCatalog/starExposureRamp';
 import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
 import { SCENE_ANCHORS } from '../../../../../src/data/bodies/sceneAnchors';
+import { makeBodyItems } from '../../../../fixtures/makeBodyItems';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
@@ -183,9 +184,10 @@ function makeState(
         enabled: true,
         items: { famousStar: { enabled: famousStarMapEnabled } },
       },
-      // The Sun answers to its own body row, so `visibleStars` reads it here
-      // rather than exempting an id from the map's gate.
-      bodies: { items: { sun: { enabled: true, labelEnabled: true } } },
+      // The Sun and the S-stars each answer to their own body row, so
+      // `visibleStars` reads them here rather than exempting ids from the map's
+      // gate. Derived from BODY_IDS: a missing row throws inside the gate.
+      bodies: { items: makeBodyItems() },
     },
   } as unknown as EngineState;
 }
@@ -271,7 +273,7 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
       settings: {
         milkyWay: { enabled: false },
         starCatalogs: { enabled: true, items: { famousStar: { enabled: true } } },
-        bodies: { items: { sun: { enabled: true, labelEnabled: true } } },
+        bodies: { items: makeBodyItems() },
         constellations: { enabled: false, intensity: 1 },
         orbitTrails: { enabled: true },
       },

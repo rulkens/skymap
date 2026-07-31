@@ -65,14 +65,11 @@ import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer'
 import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
-import { Source } from '../../../../data/sources';
-import { SCENE_STARS } from '../../../../data/bodies/sceneStars';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { IDENTITY_MAT3 } from '../../../../utils/math/identityMat3';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from '../partitionStarsByResolution';
 import { positionedVisibleStars } from '../positionedVisibleStars';
-import { seedIndexOfBody } from './seedIndexOfBody';
+import { starPickId } from './starPickId';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { drawFlooredSpherePick } from '../../helpers/drawFlooredSpherePick';
 
@@ -139,10 +136,10 @@ export const starSpheresLayer: ContentLayer = {
   // exactly when it draws as a sphere (its complement rides `starPointsLayer`'s
   // point pick), never both and never neither.
   //
-  // The packed id carries each star's STABLE `SCENE_STARS` index, NOT its slot
-  // in the sphere partition (which shifts as a star crosses `STAR_RESOLVE_PX` —
-  // see `seedIndexOfBody`). A star id absent from the seed table returns −1 and
-  // is skipped: a packed id from −1 would alias body 0. The MVP folds
+  // The packed id carries each star's STABLE seed-table index, NOT its slot in
+  // the sphere partition (which shifts as a star crosses `STAR_RESOLVE_PX` —
+  // see `seedIndexOfBody`). `starPickId` picks the table and drops an id in
+  // neither: a packed id from −1 would alias body 0. The MVP folds
   // `oblateness` the same way `draw` does, so the pick silhouette matches.
   //
   // This row self-binds its own @group(0) pick camera inside `drawSphere` (the
@@ -161,13 +158,13 @@ export const starSpheresLayer: ContentLayer = {
     });
 
     for (const star of spheres) {
-      const seedIndex = seedIndexOfBody(star.id, SCENE_STARS);
-      if (seedIndex < 0) continue; // unknown id: a packed id from −1 would alias body 0.
+      const packedId = starPickId(star.id);
+      if (packedId === null) continue; // in neither seed table — see starPickId.
       // Floor the PICK radius to the shared min footprint (visual sphere
       // untouched) via the shared `drawFlooredSpherePick` recipe: a just-resolved
       // star near STAR_RESOLVE_PX is only a few pixels across. A resolved star is
       // a rotation-invariant emissive sphere (IDENTITY_MAT3) that carries its
-      // measured `oblateness`; its identity is the stable SCENE_STARS seed index.
+      // measured `oblateness`; its identity is the stable seed-table index.
       drawFlooredSpherePick(pickRenderer, pass, {
         vp: view.slab.vp,
         positionMpc: star.positionMpc,
@@ -176,7 +173,7 @@ export const starSpheresLayer: ContentLayer = {
         drawPxPerRad: ctx.drawPxPerRad,
         orientation: IDENTITY_MAT3,
         oblateness: star.oblateness,
-        packedId: packSelection(Source.FamousStar, seedIndex + PICK_SENTINEL_OFFSET),
+        packedId,
       });
     }
   },

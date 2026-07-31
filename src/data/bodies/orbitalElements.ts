@@ -73,6 +73,8 @@
 
 import { SCALE_UNITS } from '../scaleUnits';
 import { satellite } from './makers/satellite';
+import { sStar } from './makers/sStar';
+import { S_STAR_SEEDS } from './sStarElements';
 import { moonRatesFromSiderealPeriods } from '../../utils/orbit/moonRatesFromSiderealPeriods';
 import {
   MERCURY_GREY,
@@ -608,4 +610,10 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     poleDecDeg: 78.9,
     color: SAT_ROCK,
   }),
+  // The 39 bound S-stars arrive mapped rather than written out: one publication,
+  // one uniform row shape, so the per-row facts stay in `sStarElements.ts` beside
+  // their verbatim Gillessen lines and the conversions stay in the `sStar` maker.
+  // Spelling them here would repeat that maker 39 times. Their focus is
+  // `sgr-a-star`, so they join the `galactic-centre` region by existing.
+  ...S_STAR_SEEDS.map(sStar),
 ];

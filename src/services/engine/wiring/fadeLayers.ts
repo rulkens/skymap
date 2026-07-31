@@ -101,6 +101,14 @@ const LABEL_BEARING_STAR_CATALOG_IDS = SOURCE_ENTRIES.filter(
   (e) => e.type === 'starCatalog' && e.bearsLabel,
 ).map((e) => e.id);
 
+// The same narrowing for bodies, and here the COMPILER insists: the handle's
+// `item` must be a `LabelCategory`, which derives from `bearsLabel`. The
+// S-stars are the first body row that captions nothing, so `BODY_IDS` — the
+// settings key domain — is wider than the caption key domain.
+const LABEL_BEARING_BODY_IDS = SOURCE_ENTRIES.filter((e) => e.type === 'body' && e.bearsLabel).map(
+  (e) => e.id,
+);
+
 // The DEV-only runtime-generated fixtures (`binBaseName: null`) — exempt from
 // the volumeField row's demand-loaded guard because their lazy-load is
 // triggered by that row's own `post`, which a false guard would skip.
@@ -186,8 +194,10 @@ export const FADE_LAYERS = [
     seed: (s, id) => (s.starCatalogs.items[id].labelEnabled ? 1 : 0),
     intent: (s, id) => s.starCatalogs.items[id].labelEnabled,
   }),
-  // scene-body captions — per BodyId, settings-derived seed (bodies are seeded
-  // in code, so no demand-loaded guard).
+  // scene-body captions — per LABEL-BEARING BodyId, settings-derived seed
+  // (bodies are seeded in code, so no demand-loaded guard). Not every body row
+  // captions itself: the S-stars draw 39 dots and no names, and a handle for a
+  // caption that cannot exist would be worse than the unread ones below.
   //
   // Same no-consumer gap as `starCatalogLabel` above: `foregroundLabelsLayer`
   // reads `bodies.items[id].labelEnabled` directly for Earth/planet/Sun
@@ -197,7 +207,7 @@ export const FADE_LAYERS = [
   // fade it drives.
   layer({
     key: 'bodyLabel',
-    expand: () => BODY_IDS,
+    expand: () => LABEL_BEARING_BODY_IDS,
     handle: (id) => ({ kind: 'labelLayer', layer: 'body', item: id }),
     seed: (s, id) => (s.bodies.items[id].labelEnabled ? 1 : 0),
     intent: (s, id) => s.bodies.items[id].labelEnabled,

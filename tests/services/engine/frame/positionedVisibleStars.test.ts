@@ -15,6 +15,7 @@ import { describe, it, expect } from 'vitest';
 import { positionedVisibleStars } from '../../../../src/services/engine/frame/positionedVisibleStars';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
+import { makeBodyItems } from '../../../fixtures/makeBodyItems';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 
@@ -30,7 +31,9 @@ const STATE = {
   data: { bodies: { stars: [MOVING_STAR] } },
   settings: {
     starCatalogs: { enabled: true, items: { famousStar: { enabled: true } } },
-    bodies: { items: { sun: { enabled: true, labelEnabled: true } } },
+    // Derived from BODY_IDS: `visibleStars` reads the Sun's and the S-stars'
+    // rows unguarded, so a row a hand list omits throws rather than asserts.
+    bodies: { items: makeBodyItems() },
   },
 } as unknown as EngineState;
 

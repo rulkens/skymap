@@ -51,7 +51,7 @@
  * every frame the camera does — a membership fingerprint can no longer gate the
  * upload. `draw` therefore re-partitions and `setStars` the point subset every
  * frame. That rebuilds the GPU instance buffer per frame, but the point set is
- * the SCENE_STARS roster (119 famous stars incl. the Sun) minus whichever few
+ * the seeded roster (119 famous stars incl. the Sun, plus 39 S-stars) minus whichever few
  * resolve to a sphere via `starSpheresLayer`, so the create/destroy is
  * trivially cheap — the churn the old fingerprint cache guarded against does
  * not exist at this scale.
@@ -86,15 +86,12 @@ import { NEAR0 } from '../slabs';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from '../partitionStarsByResolution';
 import { positionedVisibleStars } from '../positionedVisibleStars';
 import { sceneBodyStates } from '../sceneBodyStates';
-import { seedIndexOfBody } from './seedIndexOfBody';
+import { starPickId } from './starPickId';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { fadeBand } from '../../../../utils/math/fadeBand';
 import { regionRelativeDistanceMpc } from '../../../../utils/scene/regionRelativeDistanceMpc';
 import { BODY_REGIONS } from '../../../../data/bodies/bodyRegions';
-import { Source } from '../../../../data/sources';
-import { SCENE_STARS } from '../../../../data/bodies/sceneStars';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
 import { starExposureRamp } from '../../../gpu/renderers/starCatalog/starExposureRamp';
@@ -238,10 +235,10 @@ export const starPointsLayer: ContentLayer = {
   // neither races `writeBuffer` against submit. This layer calls it exactly once
   // per `drawPick`.
   //
-  // Each point's packed id carries its STABLE `SCENE_STARS` index, NOT its slot
-  // in the point partition (which shifts as a star crosses `STAR_RESOLVE_PX` —
-  // see `seedIndexOfBody`); a star id absent from the seed table returns −1 and
-  // is dropped (a packed id from −1 would alias body 0). Anchors are rebased
+  // Each point's packed id carries its STABLE seed-table index, NOT its slot in
+  // the point partition (which shifts as a star crosses `STAR_RESOLVE_PX` — see
+  // `seedIndexOfBody`); `starPickId` picks the table and drops an id in neither
+  // (a packed id from −1 would alias body 0). Anchors are rebased
   // into the camera-relative frame in f64 before narrowing, the SAME seam
   // `draw` uses — the backdrop-dissolve colour scale is a visual-only concern
   // the pick omits (pick has no opacity; the `enabled` gate already drops the
@@ -261,15 +258,15 @@ export const starPointsLayer: ContentLayer = {
     const camPos = view.camPos;
     const pickPoints: BodyPointPick[] = [];
     for (const star of points) {
-      const seedIndex = seedIndexOfBody(star.id, SCENE_STARS);
-      if (seedIndex < 0) continue; // unknown id: a packed id from −1 would alias body 0.
+      const packedId = starPickId(star.id);
+      if (packedId === null) continue; // in neither seed table — see starPickId.
       pickPoints.push({
         posRelCamMpc: [
           star.positionMpc[0] - camPos[0],
           star.positionMpc[1] - camPos[1],
           star.positionMpc[2] - camPos[2],
         ] as Vec3,
-        packedId: packSelection(Source.FamousStar, seedIndex + PICK_SENTINEL_OFFSET),
+        packedId,
       });
     }
 

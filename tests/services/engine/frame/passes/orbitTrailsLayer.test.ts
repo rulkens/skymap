@@ -246,9 +246,10 @@ describe('orbitTrailsLayer.enabled', () => {
 });
 
 // Synthetic two-anchor scene: the Sun at the render origin and a Sgr A*-like
-// anchor 8.178e-3 Mpc away, one orbit hanging off each. `'sgr-a-star'` is not
-// seeded yet, so the far-anchored orbit is built here rather than read from
-// ORBITAL_ELEMENTS.
+// anchor 8.178e-3 Mpc away, one orbit hanging off each. Synthetic rather than
+// the real roster because `orbitReachByRegion` takes its tables as parameters
+// precisely so the far-anchored case is pinned by hand-computed apoapses, not by
+// whatever the seeded S-star table currently holds.
 const SYNTHETIC_ANCHORS: readonly AnchorBody[] = [
   { id: 'sun', positionMpc: [0, 0, 0] },
   { id: 'sgr-a-star', positionMpc: [8.178e-3, 0, 0] },
@@ -442,6 +443,30 @@ describe('orbitTrailsLayer.draw', () => {
       moon[2] - j2000Moon.centerMpc[2],
     );
     expect(drift).toBeGreaterThan(1e-13);
+  });
+
+  it('S-star trails are gated off when the camera is in the solar system', () => {
+    // The payoff of the per-region reach. A camera at the Sun draws the planet
+    // trails and must pack none of the 39 S-star conics: they sit 8.178e-3 Mpc
+    // away and the widest of them subtends ~0.04 px there, deep under CULL_PX.
+    // A single scene-wide orbit extent would have handed the whole table the
+    // S-stars' envelope and kept them in the batch from every near-Sun pose.
+    composeMock.mockClear();
+    const renderer = makeRendererSpy();
+    orbitTrailsLayer.draw(PASS_STUB, makeNear0View(), makeDrawCtx(), makeState(renderer));
+
+    // Every S-star conic centres within its own a·e of Sgr A* (1.4e-7 Mpc at the
+    // widest), so a 1e-4 Mpc window around the anchor catches all 39 and no
+    // heliocentric or geocentric orbit — those centre within ~1.5e-9 Mpc of the
+    // render origin, four decades of separation away.
+    const sgrAPos = deriveBodyStates(CONST_J2000).get('sgr-a-star')!.positionMpc;
+    const galacticCentreConics = composeMock.mock.calls.filter((call) => {
+      const c = call[1] as unknown as Vec3;
+      return Math.hypot(c[0] - sgrAPos[0], c[1] - sgrAPos[1], c[2] - sgrAPos[2]) < 1e-4;
+    });
+
+    expect(composeMock.mock.calls.length).toBeGreaterThan(0);
+    expect(galacticCentreConics).toHaveLength(0);
   });
 
   it('is a no-op when the orbitTrailRenderer handle is null (pre-bootstrap)', () => {

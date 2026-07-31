@@ -29,6 +29,7 @@ import { IDENTITY_MAT3 } from '../../../../../src/utils/math/identityMat3';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
 import { SCENE_ANCHORS } from '../../../../../src/data/bodies/sceneAnchors';
+import { makeBodyItems } from '../../../../fixtures/makeBodyItems';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
@@ -155,9 +156,10 @@ function makeState(
     // bit, so a fixture that omitted it would silently drive the Sun-alone path.
     settings: {
       starCatalogs: { enabled: true, items: { famousStar: { enabled: famousStarMapEnabled } } },
-      // The Sun answers to its own body row, so `visibleStars` reads it here
-      // rather than exempting an id from the map's gate.
-      bodies: { items: { sun: { enabled: true, labelEnabled: true } } },
+      // The Sun and the S-stars each answer to their own body row, so
+      // `visibleStars` reads them here rather than exempting ids from the map's
+      // gate. Derived from BODY_IDS: a missing row throws inside the gate.
+      bodies: { items: makeBodyItems() },
     },
   } as unknown as EngineState;
 }
@@ -339,7 +341,7 @@ describe('starSpheresLayer.drawPick', () => {
       data: { bodies: { stars: [SUN, PROXIMA, SIRIUS] } },
       settings: {
         starCatalogs: { enabled: true, items: { famousStar: { enabled: true } } },
-        bodies: { items: { sun: { enabled: true, labelEnabled: true } } },
+        bodies: { items: makeBodyItems() },
       },
     } as unknown as EngineState;
 

@@ -39,7 +39,7 @@ import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { computeForegroundViewProj } from '../../../../../src/utils/camera/computeForegroundViewProj';
 import { foregroundFrustum } from '../../../../../src/utils/camera/foregroundFrustum';
 import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
-import { BODY_IDS } from '../../../../../src/data/bodies/bodyIds';
+import { makeBodyItems } from '../../../../fixtures/makeBodyItems';
 
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
@@ -53,15 +53,6 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 const PASS_STUB = { draw: vi.fn() } as unknown as GPURenderPassEncoder;
 const SUN_LABEL_ID = sceneBodyLabelId('sun');
-
-// Every body row on, keyed off BODY_IDS rather than hand-listed: a row the
-// fixture omits THROWS inside the per-caption gate rather than failing an
-// assertion, so a hand list breaks these geometry tests confusingly the next
-// time a body is registered. `foregroundLabelsLayer.test.ts` derives its rows
-// the same way, for the same reason.
-const ALL_BODY_ITEMS = Object.fromEntries(
-  BODY_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
-);
 
 // The layer derives captions from the frame's body snapshot at ctx.simDays;
 // these geometry tests pin it at J2000 so the anchors match J2000_STATES.
@@ -92,7 +83,7 @@ function makeState(renderer: LabelRenderer, lineRenderer: MarkerLineRenderer): E
     gpu: { foregroundLabelRenderer: renderer, foregroundMarkerLineRenderer: lineRenderer },
     settings: {
       labels: { focusedOnly: false },
-      bodies: { items: ALL_BODY_ITEMS },
+      bodies: { items: makeBodyItems() },
       starCatalogs: { enabled: true, items: { famousStar: { enabled: true, labelEnabled: true } } },
     },
     // No constellation slot: these tests exercise only the far-star body-caption

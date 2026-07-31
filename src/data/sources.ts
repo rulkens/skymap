@@ -21,7 +21,7 @@
  *                     flowfield.scfd cube). No per-record identity; carries
  *                     its own look/motion defaults.
  *   'body'          — true-scale scene bodies (Earth, the Solar-System
- *                     planets, the Sun, Sgr A*). Seeded records drawn by their own
+ *                     planets, the Sun, Sgr A*, the S-stars). Seeded records drawn by their own
  *                     content-layer; not persisted (a body's identity is its
  *                     stable seed id) and captioned through the
  *                     foreground-labels layer. Earth and the planets are
@@ -84,6 +84,7 @@ import { PLANET_ENTRY } from './sources/planet';
 import { EARTH_ENTRY } from './sources/earth';
 import { SUN_ENTRY } from './sources/sun';
 import { SGR_A_STAR_ENTRY } from './sources/sgr-a-star';
+import { S_STAR_ENTRY } from './sources/s-star';
 import { GAIA_STARS_ENTRY } from './sources/gaia-stars';
 
 export { Source } from './source';
@@ -150,6 +151,7 @@ export const SOURCE_REGISTRY = {
   [Source.Constellations]: CONSTELLATIONS_ENTRY,
   [Source.Sun]: SUN_ENTRY,
   [Source.SgrAStar]: SGR_A_STAR_ENTRY,
+  [Source.SStar]: S_STAR_ENTRY,
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;
 
 // ─── Famous-galaxy high-res LOD ─────────────────────────────────────────────

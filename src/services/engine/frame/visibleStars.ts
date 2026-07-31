@@ -9,16 +9,17 @@
  * the drawn set from ever disagreeing — the same one-partition-consumed-twice
  * discipline the partition module keeps.
  *
- * ### Two gates, no exemption
+ * ### Three gates, no exemption
  *
- * The seed table holds the curated map AND the Sun, but they answer to
- * different registry rows: the map contributes iff its star-catalog row is on,
- * the Sun iff `bodies.items.sun.enabled`. Muting the neighbourhood therefore
- * leaves the descent's aim point on screen as a consequence of MEMBERSHIP — the
- * Sun is simply not in the set the map's gate governs — rather than a hardcoded
- * id exemption threaded through every gate the table touches. The filter runs
- * over the ≤130 static seed bodies, cheap enough per frame; no cached array to
- * keep in sync with a reseed.
+ * The store's star list holds the curated map, the Sun and the Galactic-Centre
+ * S-stars, each answering to its own registry row: the map iff its star-catalog
+ * row is on, the Sun iff `bodies.items.sun.enabled`, an S-star iff
+ * `bodies.items['s-star'].enabled`. Muting the neighbourhood therefore leaves
+ * the descent's aim point and the S-stars on screen as a consequence of
+ * MEMBERSHIP — neither is in the set the map's gate governs — rather than a
+ * hardcoded id exemption threaded through every gate the list touches. The
+ * filter runs over the ≤200 static seed bodies, cheap enough per frame; no
+ * cached array to keep in sync with a reseed.
  *
  * ### Both halves of the map's visibility axis
  *
@@ -40,13 +41,30 @@
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { StarBody } from '../../../@types/scene/StarBody';
 import { SUN_ENTRY } from '../../../data/sources/sun';
+import { S_STAR_ENTRY } from '../../../data/sources/s-star';
+import { SCENE_S_STARS } from '../../../data/bodies/sceneSStars';
+
+/** Which registry row governs a star, when it is not the curated map's. */
+type StarGate = 'sun' | 'sStar';
+
+// The store's star list is a flat concatenation with no per-star source tag, so
+// membership is what routes a star to its gate. A DATA table rather than a
+// predicate chain: the Sun was the first exception and the S-stars are the
+// second, which is the point at which a branch pair becomes a lookup.
+const GATE_BY_STAR_ID: ReadonlyMap<string, StarGate> = new Map<string, StarGate>([
+  [SUN_ENTRY.id, 'sun'],
+  ...SCENE_S_STARS.map((star) => [star.id, 'sStar' as const] as const),
+]);
 
 export function visibleStars(state: EngineState): readonly StarBody[] {
   const starCatalogs = state.settings.starCatalogs;
   const mapOn = starCatalogs.enabled && starCatalogs.items.famousStar.enabled;
-  const sunOn = state.settings.bodies.items.sun.enabled;
-  // The seed table is a flat star list with no per-star source tag, so the id
-  // is how a reader tells the Sun's row from the map's — a lookup key against
-  // the registry row, not an exemption.
-  return state.data.bodies.stars.filter((star) => (star.id === SUN_ENTRY.id ? sunOn : mapOn));
+  const gateOn: Readonly<Record<StarGate, boolean>> = {
+    sun: state.settings.bodies.items[SUN_ENTRY.id].enabled,
+    sStar: state.settings.bodies.items[S_STAR_ENTRY.id].enabled,
+  };
+  return state.data.bodies.stars.filter((star) => {
+    const gate = GATE_BY_STAR_ID.get(star.id);
+    return gate === undefined ? mapOn : gateOn[gate];
+  });
 }

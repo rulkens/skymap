@@ -39,7 +39,7 @@ import { SCALE_FADE_BANDS } from '../../../../../src/services/engine/presentatio
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
-import { BODY_IDS } from '../../../../../src/data/bodies/bodyIds';
+import { makeBodyItems } from '../../../../fixtures/makeBodyItems';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 
 // The layer derives its caption set from the frame's body snapshot
@@ -151,28 +151,6 @@ function makeLineRenderer(): MarkerLineRenderer {
 }
 
 /**
- * `settings.bodies.items`, keyed off BODY_IDS rather than a hand-listed four.
- * The hand list pinned every row it did not name at `labelEnabled: true`, so
- * Sgr A* — a body row registered after these fixtures were written — stayed on
- * through every "all captions off" state: it held the `enabled` gate's fold over
- * `bodies.items` true, and kept its own caption alive in `settleAllCaptions`.
- * Deriving the keys means the next body row cannot be forgotten the same way.
- * `sunVisible` is the Sun's separate VISIBILITY axis (`items.sun.enabled`) — the
- * same flag `visibleStars` reads to hide its dot — independent of `labelEnabled`.
- */
-function makeBodyItems(
-  labelEnabledOf: (bodyId: string) => boolean,
-  sunVisible: boolean,
-): Record<string, { enabled: boolean; labelEnabled: boolean }> {
-  return Object.fromEntries(
-    BODY_IDS.map((id) => [
-      id,
-      { enabled: id === 'sun' ? sunVisible : true, labelEnabled: labelEnabledOf(id) },
-    ]),
-  );
-}
-
-/**
  * `bodyLabels` seeds ALL body rows from one flag by default, so a test that
  * only cares whether body captions are on at all passes a bare boolean; the
  * per-row cases pass the bits separately, which is the axis those rows buy. A
@@ -195,7 +173,15 @@ function makeState(
     gpu: { foregroundLabelRenderer: renderer, foregroundMarkerLineRenderer: lineRenderer },
     settings: {
       labels: { focusedOnly: false },
-      bodies: { items: makeBodyItems((id) => named[id] ?? unnamed, sunVisible) },
+      // `sunVisible` is the Sun's separate VISIBILITY axis (`items.sun.enabled`)
+      // — the same flag `visibleStars` reads to hide its dot — independent of
+      // `labelEnabled`. Every other row keeps the fixture's all-on baseline.
+      bodies: {
+        items: makeBodyItems((id) => ({
+          ...(id === 'sun' ? { enabled: sunVisible } : {}),
+          labelEnabled: named[id] ?? unnamed,
+        })),
+      },
       // The cluster master defaults on: the caption's visibility gate requires
       // it AND the row's own bit, matching how `visibleStars` composes the
       // pair. `starCatalogsMasterEnabled` lets a test drop the master alone,
@@ -247,7 +233,7 @@ function makeConstellationState(opts: { layerFade: number; ready?: boolean }): E
     },
     settings: {
       labels: { focusedOnly: false },
-      bodies: { items: makeBodyItems(() => true, true) },
+      bodies: { items: makeBodyItems() },
       starCatalogs: { enabled: true, items: { famousStar: { enabled: true, labelEnabled: true } } },
       constellations: {},
     },

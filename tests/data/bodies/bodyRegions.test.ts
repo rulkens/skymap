@@ -2,7 +2,12 @@ import { describe, it, expect, vi } from 'vitest';
 import { SCENE_ANCHORS } from '../../../src/data/bodies/sceneAnchors';
 import { SGR_A_STAR_ANCHOR } from '../../../src/data/bodies/sceneSgrAStar';
 import { BODY_REGIONS } from '../../../src/data/bodies/bodyRegions';
+import { elementsById } from '../../../src/data/bodies/orbitalElements';
+import { CONST_J2000 } from '../../../src/data/time/constJ2000';
+import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { regionById } from '../../../src/utils/scene/regionById';
+import { regionRelativeDistanceMpc } from '../../../src/utils/scene/regionRelativeDistanceMpc';
+import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 describe('BODY_REGIONS', () => {
   it('solar-system and solar-neighbourhood share an anchor but not an extent', () => {
@@ -43,6 +48,46 @@ describe('BODY_REGIONS', () => {
     expect(neighbourhood.memberIds).not.toContain('sgr-a-star');
     expect(neighbourhood.extentMpc).toBeLessThan(Math.hypot(...SGR_A_STAR_ANCHOR.positionMpc));
   });
+
+  it('the galactic-centre region extent covers the widest S-star orbit, not S2', () => {
+    // The far S-stars are what set this regime's scale. S85 is the widest orbit
+    // in Gillessen's table (a = 4.6″, e = 0.78 ⇒ apoapsis 0.325 pc = 3.25e-7 Mpc)
+    // and S2 — the star every reader reaches for — is ~35× tighter at 1934 AU.
+    // Sizing the region on S2 is the failure this pins, and it fails here by an
+    // order of magnitude rather than a hair.
+    //
+    // The floor is deliberately well under that 35×: `extentMpc` is the max
+    // member distance in the J2000 SNAPSHOT, not an apoapsis envelope, so the
+    // stars are wherever their phase puts them at the epoch and the figure lands
+    // at ~12× S2's apoapsis (R34, near its own apoapsis, sets it) rather than 35×.
+    // A derivation that switched to the apoapsis envelope would only raise it.
+    const galacticCentre = regionById('galactic-centre');
+    const s2 = elementsById('s2');
+    const s2ApoapsisMpc = s2.semiMajorMpc * (1 + s2.eccentricity);
+
+    expect(galacticCentre.memberIds).toContain('s85');
+    expect(galacticCentre.extentMpc).toBeGreaterThan(s2ApoapsisMpc * 10);
+  });
+
+  it('a Galactic-Centre camera keys the region at parsec scale, not 8 kpc', () => {
+    // What the populated region buys the near-field bands: a camera one parsec
+    // off Sgr A* reads one parsec, not the 8.178 kpc `hypot(camPos)` gives — the
+    // render origin is the Sun, so an origin-keyed band would read this camera as
+    // deep-field and switch every galactic-centre-scoped layer off.
+    const states = deriveBodyStates(CONST_J2000);
+    const galacticCentre = regionById('galactic-centre');
+    const anchorPos = states.get(galacticCentre.anchorId)!.positionMpc;
+    const ONE_PARSEC_MPC = 1e-6;
+    const camPos: Vec3 = [anchorPos[0] + ONE_PARSEC_MPC, anchorPos[1], anchorPos[2]];
+
+    expect(regionRelativeDistanceMpc(camPos, galacticCentre, states)).toBeCloseTo(
+      ONE_PARSEC_MPC,
+      12,
+    );
+    expect(regionRelativeDistanceMpc(camPos, galacticCentre, states)).toBeLessThan(
+      Math.hypot(...camPos) / 1000,
+    );
+  });
 });
 
 /**
@@ -60,10 +105,24 @@ describe('BODY_REGIONS — a region whose anchor is not seeded', () => {
     // tolerate (its anchor id is authored ahead of any seed). Emptiness must be
     // answered BEFORE the anchor is read, or the row resolves a position nothing
     // seeds and throws at import, taking the whole file with it.
+    //
+    // "Ahead of the seed" means ahead of BOTH halves of it: with the anchor gone
+    // but the 39 S-star rows still focused on it, `focusResolveOrder` throws on
+    // the dangling focus before any region is built, so the element table is
+    // mocked in step with the anchor table.
     vi.resetModules();
     vi.doMock('../../../src/data/bodies/sceneAnchors', () => ({
       SCENE_ANCHORS: SCENE_ANCHORS.filter((anchor) => anchor.id !== 'sgr-a-star'),
     }));
+    vi.doMock('../../../src/data/bodies/orbitalElements', async () => {
+      const actual = await vi.importActual<
+        typeof import('../../../src/data/bodies/orbitalElements')
+      >('../../../src/data/bodies/orbitalElements');
+      return {
+        ...actual,
+        ORBITAL_ELEMENTS: actual.ORBITAL_ELEMENTS.filter((el) => el.focusId !== 'sgr-a-star'),
+      };
+    });
     const { BODY_REGIONS: unseeded } = await import('../../../src/data/bodies/bodyRegions');
     const galacticCentre = unseeded.find((region) => region.id === 'galactic-centre')!;
 
@@ -71,6 +130,7 @@ describe('BODY_REGIONS — a region whose anchor is not seeded', () => {
     expect(galacticCentre.extentMpc).toBe(0);
 
     vi.doUnmock('../../../src/data/bodies/sceneAnchors');
+    vi.doUnmock('../../../src/data/bodies/orbitalElements');
     vi.resetModules();
   });
 });

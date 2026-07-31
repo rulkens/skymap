@@ -7,6 +7,7 @@ import { FAMOUS_LABEL_STYLE } from '../../../../src/services/engine/presentation
 import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
+import { SCENE_S_STARS } from '../../../../src/data/bodies/sceneSStars';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 
@@ -18,10 +19,13 @@ const EARTH_POS = J2000_STATES.get('earth')!.positionMpc;
 describe('sceneBodyLabels', () => {
   const labels = sceneBodyLabels(J2000_STATES);
 
-  it('emits one label per seeded scene body (Earth + stars + planets + Sgr A*)', () => {
-    expect(labels).toHaveLength(SCENE_BODIES.length);
-    // Spelled out per producer so a body that joins SCENE_BODIES without joining
-    // the emission (or the reverse) fails here rather than agreeing with itself.
+  it('emits one label per CAPTION-BEARING scene body (Earth + stars + planets + Sgr A*)', () => {
+    // Not one per SCENE_BODIES row: the S-stars are drawn scene bodies that
+    // caption nothing (39 names inside a few arcseconds would be a smear), so
+    // the registry is deliberately wider than the emission. Spelled out per
+    // producer as well, so a body that joins SCENE_BODIES and DOES want a name
+    // still fails here rather than agreeing with itself.
+    expect(labels).toHaveLength(SCENE_BODIES.length - SCENE_S_STARS.length);
     expect(labels).toHaveLength(1 + SCENE_STARS.length + SCENE_PLANETS.length + 1);
   });
 

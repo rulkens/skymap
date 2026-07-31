@@ -366,7 +366,6 @@ import { createPlanetRenderer } from '../../../../src/services/gpu/renderers/bod
 // partition for setStars; the seeded planet list drives planetsLayer), so the
 // state fixture carries the real construction-time seeds.
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
-import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 
 /**
  * Build a minimal `EngineState` covering the slices `initGpu` reads and
@@ -547,8 +546,11 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     const uploaded = stubs.starPointRenderer!.setStars.mock.calls[0]![0] as ReadonlyArray<{
       id: string;
     }>;
-    expect(uploaded).toHaveLength(SCENE_STARS.length);
-    expect(uploaded.map((star) => star.id)).toContain('sun');
+    // Compared against the SEEDED list rather than one seed table, so the claim
+    // stays "the whole star set" as more tables land in the store.
+    const seededIds = state.data.bodies.stars.map((star) => star.id);
+    expect(uploaded.map((star) => star.id)).toEqual(seededIds);
+    expect(seededIds).toContain('sun');
     // Both label renderers come from the same createLabelRenderer factory,
     // so index its call results ordinally: call 0 built the main
     // `labelRenderer`, call 1 the foreground caption renderer.  Asserting
