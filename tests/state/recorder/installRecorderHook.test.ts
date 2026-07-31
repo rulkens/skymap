@@ -228,14 +228,33 @@ describe('installRecorderHook', () => {
       settled = true;
     });
 
-    // `watchClipSaga` blocks on `waitUntil(clipFociReady && cameraRuntime)`
-    // BEFORE the clip becomes active, so `camera.clip` stays null across an
-    // unbounded run of unrelated store updates (catalog pulses, load-progress
-    // updates, tier swaps). A latch that resolved on any inactive reading
-    // would resolve here — instantly, filming zero frames.
+    // See `runClip`'s comment in installRecorderHook.ts for why this window exists.
     store.dispatch(engineLoadProgressChanged({ loadedBytes: 1, totalBytes: 10, inFlightCount: 1 }));
     await Promise.resolve();
     expect(settled).toBe(false);
+  });
+
+  it('startClip rejects a second start before the first clip activates', async () => {
+    vi.mocked(isCinemaMode).mockReturnValue(true);
+    const { store, actions } = buildStore();
+    installRecorderHook(store);
+    const hook = getHook();
+    if (!hook) throw new Error('hook not installed');
+
+    // Clip A is dispatched but never activates — `clipStarted` is never
+    // driven, mirroring the unbounded pre-activation window. A guard reading
+    // `selectClipActive` would see `false` here and wave a second call
+    // through; the fix is an in-flight flag set at dispatch time instead.
+    const first = hook.startClip('flyout');
+    void first.catch(() => {});
+    const dispatchedBefore = actions.filter((action) => action.type === startClip.type).length;
+
+    await expect(hook.startClip('earthFlyout')).rejects.toThrow(
+      'startClip called while a clip is already active',
+    );
+
+    const dispatchedAfter = actions.filter((action) => action.type === startClip.type).length;
+    expect(dispatchedAfter).toBe(dispatchedBefore);
   });
 
   it('startClip rejects when a clip is already active', async () => {

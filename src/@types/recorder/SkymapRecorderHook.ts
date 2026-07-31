@@ -9,8 +9,8 @@
  * the tour-ended signal fires — no polling loops on the harness side, no
  * store access from `page.evaluate`. The alternative (the harness importing
  * selectors and reaching into the store from evaluated snippets) would couple
- * the harness to the store's internal layout; two promises keep the whole
- * coupling surface to this one type.
+ * the harness to the store's internal layout; this one type — `ready` plus
+ * the two `start*` promises — keeps the whole coupling surface in one place.
  */
 
 import type { TourId } from '../animation/tour/TourId';
@@ -28,7 +28,9 @@ export type SkymapRecorderHook = {
   readonly startTour: (id: TourId, beats?: BeatRange) => Promise<void>;
   /**
    * Plays one standalone clip; resolves when the clip ends. Single-flight:
-   * rejects if a clip is already active.
+   * rejects if a clip is already active. Never settles if the clip's foci
+   * never resolve (no timeout on that wait) or if the saga throws; the
+   * harness's frame cap is the real backstop.
    */
   readonly startClip: (id: ClipId) => Promise<void>;
 };
