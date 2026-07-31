@@ -321,8 +321,8 @@ type RecordOptions = {
 - [x] Record `earthFlyout` — the one instant-dependent clip — twice with the same `--sim-time`, and confirm the opening frame shows the same Earth. This is the take the pin exists for.
 - [x] Record one `cosmicFlows` take and confirm it shows the boot scene for its ~2 s lead-in `wait`, then the dressing (flow field mask, cosmic-web layers hidden) lands the instant the cues fire at t=2s — demonstrating that cue POSITION on the timeline, not just instant `over: 0`, determines what frame 0 shows.
 - [x] Confirm `npm run record-tour -- demo --beats 0..0 --size 640x360 --fps 10 --out /tmp/tour-smoke.mp4` still works end to end.
-- [ ] Report the frame counts, the mp4 sizes, and anything surprising in the banner. **User visual pass:** ask the user to watch `/tmp/clip-flyout.mp4` and `/tmp/clip-earthflyout.mp4` before the PR is marked ready — nothing in this plan can tell whether a take _looks_ right.
-- [ ] Run the `/feature-done` audit **before** merging; it gates the DoD then relocates this plan to `plans/completed/`.
+- [x] Report the frame counts, the mp4 sizes, and anything surprising in the banner. **User visual pass:** ask the user to watch `/tmp/clip-flyout.mp4` and `/tmp/clip-earthflyout.mp4` before the PR is marked ready — nothing in this plan can tell whether a take _looks_ right.
+- [x] Run the `/feature-done` audit **before** merging; it gates the DoD then relocates this plan to `plans/completed/`.
 
 ---
 
@@ -347,7 +347,7 @@ type RecordOptions = {
 - [x] A clip take lands at `recordings/<clipId>-<w>x<h>-<fps>fps-<stamp>.mp4` when `--out` is omitted.
 - [x] Loud failures: a positional tour id together with `--clip`; `--beats` together with `--clip`; a `--url` carrying `?` or `#`; an unknown clip id, whose error lists the registry keys.
 - [x] `npm run record-tour -- demo --beats 0..0 --size 640x360 --fps 10` still works end to end.
-- [ ] The user has watched a `flyout` and an `earthFlyout` take.
+- [x] The user has watched a `flyout` and an `earthFlyout` take.
 
 ### Deferral boundary
 
