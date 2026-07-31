@@ -85,7 +85,7 @@ import type {
   CompiledClip,
   BaseSegment,
   VelRamp,
-  PathTrack,
+  CompositeTrack,
 } from '../../../@types/animation/CompiledClip';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { Channel } from '../../../@types/animation/Channel';
@@ -425,8 +425,8 @@ function evaluateBaseVec3(segments: BaseSegment[], startVal: Vec3, t: number): V
  * does not snap back to the start pose during a trailing `hold`. When clips
  * chain multiple paths, the most recently started one wins.
  */
-function activePathAt(paths: PathTrack[], t: number): PathTrack | null {
-  let best: PathTrack | null = null;
+function activePathAt(paths: CompositeTrack[], t: number): CompositeTrack | null {
+  let best: CompositeTrack | null = null;
   for (const p of paths) {
     if (p.startSec <= t && (best === null || p.startSec > best.startSec)) best = p;
   }
@@ -460,7 +460,7 @@ export function evaluateClip(data: ClipData, elapsedSec: number, frameBasis?: Ma
   const t = elapsedSec;
 
   // --- Base layer (a flyPath supersedes it for all four channels) ---
-  const path = activePathAt(compiled.pathTracks, t);
+  const path = activePathAt(compiled.compositeTracks, t);
   let baseDistance: number;
   let baseYaw: number;
   let basePitch: number;

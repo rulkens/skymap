@@ -5,7 +5,7 @@
  *
  * These tests drive `evaluateClip` end-to-end (compile → evaluate) with a clip
  * whose only camera motion is a `flyPath`, proving the evaluator reads the
- * compiled `pathTracks` rather than freezing on the start pose.
+ * compiled `compositeTracks` rather than freezing on the start pose.
  */
 
 import { describe, it, expect } from 'vitest';

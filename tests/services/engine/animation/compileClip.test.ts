@@ -312,9 +312,9 @@ describe('compileClip flyPath', () => {
         flyPath([atPoint([10, 0, 0], 10), atPoint([20, 0, 0], 100)], { over: 6, linger: 0 }),
       ],
     });
-    expect(compiled.pathTracks).toHaveLength(1);
-    expect(compiled.pathTracks[0]!.startSec).toBe(0);
-    expect(compiled.pathTracks[0]!.endSec).toBe(6);
+    expect(compiled.compositeTracks).toHaveLength(1);
+    expect(compiled.compositeTracks[0]!.startSec).toBe(0);
+    expect(compiled.compositeTracks[0]!.endSec).toBe(6);
     expect(compiled.durationSec).toBe(6);
   });
 

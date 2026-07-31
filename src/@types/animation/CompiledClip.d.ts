@@ -149,13 +149,13 @@ export type OscTrack = {
 };
 
 // ---------------------------------------------------------------------------
-// Path track — covers the `flyPath` leaf (a multi-waypoint spline flythrough).
+// Composite track — a writer that drives several channels from one parameter.
 // ---------------------------------------------------------------------------
 
 /**
- * PathSample — the camera pose a path produces at one instant: the four
- * channels a `flyPath` drives, evaluated together (they share one path
- * parameter, so they cannot be split into independent per-channel tracks).
+ * PathSample — the camera pose a `flyPath` produces at one instant: the four
+ * channels it drives, evaluated together (they share one path parameter, so
+ * they cannot be split into independent per-channel tracks).
  */
 export type PathSample = {
   readonly target: Vec3;
@@ -165,26 +165,27 @@ export type PathSample = {
 };
 
 /**
- * PathTrack — one `flyPath` flattened to an evaluable window.
+ * CompositeTrack — a writer that owns several channels at once, flattened to an
+ * evaluable window.
  *
- * Unlike `BaseSegment`/`VelRamp`/`OscTrack`, a path cannot be a per-channel
- * scalar track: a Catmull-Rom needs neighbouring waypoints (not a `from→to`)
- * and its arc-length reparametrisation COUPLES the four channels through one
- * shared path parameter. So a path is a single composite writer that supersedes
- * the base layer for `target`/`distance`/`yaw`/`pitch` over `[startSec, endSec)`
- * (velocity and oscillation layers still add on top).
+ * Unlike `BaseSegment`/`VelRamp`/`OscTrack`, some writers cannot be per-channel
+ * scalar tracks, because one shared parameter COUPLES the channels: a
+ * `flyPath`'s arc-length reparametrisation drives all four, a `glide`'s
+ * geodesic drives `target` + `distance`. So a composite track supersedes the
+ * base layer for the channels it owns over `[startSec, endSec)` (velocity and
+ * oscillation layers still add on top).
  *
  * `sample(localSec)` is a closure bound at compile time over the precomputed
- * geometry (arc-length table), timing curve, and global ease — `compileClip`
- * does all the spline math once, the per-frame evaluator just calls it.
- * Carrying a function is intentional and specific to this artifact: a
- * `CompiledClip` lives only in the in-memory compile cache (a `WeakMap`); it is
- * never serialised, unlike the plain-data `ClipData`/`Effect` authoring forms.
+ * geometry, timing curve, and global ease — `compileClip` does the math once,
+ * the per-frame evaluator just calls it. Carrying a function is intentional and
+ * specific to this artifact: a `CompiledClip` lives only in the in-memory
+ * compile cache (a `WeakMap`); it is never serialised, unlike the plain-data
+ * `ClipData`/`Effect` authoring forms.
  */
-export type PathTrack = {
+export type CompositeTrack = {
   readonly startSec: number;
   readonly endSec: number;
-  /** `localSec` is seconds since the path's own `startSec` (0 → `endSec−startSec`). */
+  /** `localSec` is seconds since the track's own `startSec` (0 → `endSec−startSec`). */
   readonly sample: (localSec: number) => PathSample;
 };
 
@@ -248,5 +249,5 @@ export type CompiledClip = {
   /** `flyPath` flythroughs, each a composite writer over its own window. The
    *  evaluator lets an active path supersede the base layer for the four camera
    *  channels; `validateSingleWriter` forbids a base writer overlapping one. */
-  readonly pathTracks: PathTrack[];
+  readonly compositeTracks: CompositeTrack[];
 };

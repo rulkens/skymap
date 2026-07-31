@@ -61,7 +61,7 @@
  */
 
 import type { CameraPose } from '../../../@types/camera/CameraPose';
-import type { PathTrack, PathSample } from '../../../@types/animation/CompiledClip';
+import type { CompositeTrack, PathSample } from '../../../@types/animation/CompiledClip';
 import type { Ease } from '../../../@types/animation/Ease';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { Mat3 } from '../../../@types/math/Mat3';
@@ -216,7 +216,7 @@ function passByDirVec(
   }
 }
 
-export function buildPathTrack(params: BuildParams): PathTrack {
+export function buildPathTrack(params: BuildParams): CompositeTrack {
   const { start, startSec, over, ease, waypoints, align, rampSec, linger, frameBasis } = params;
   // Normalize the basis + its causal-only knobs. centripetal carries neither, so
   // turnDelay is irrelevant and lookAhead is forced to 0 (no lead); the causal

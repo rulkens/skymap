@@ -65,7 +65,7 @@ import type {
   VelRamp,
   OscTrack,
   SceneCue,
-  PathTrack,
+  CompositeTrack,
 } from '../../../@types/animation/CompiledClip';
 import type { Effect } from '../../../@types/animation/Effect';
 import type { Channel } from '../../../@types/animation/Channel';
@@ -94,7 +94,7 @@ type Accum = {
   readonly velRamps: VelRamp[];
   readonly oscTracks: OscTrack[];
   readonly cues: SceneCue[];
-  readonly pathTracks: PathTrack[];
+  readonly compositeTracks: CompositeTrack[];
   // The resolved clip start pose — a `flyPath` flies out of it (it is the first
   // spline knot), so the walk needs it when it reaches a `flyPath` leaf.
   readonly start: CameraPose;
@@ -215,7 +215,7 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
         passBy: effect.passBy,
         frameBasis: acc.frameBasis,
       });
-      acc.pathTracks.push(track);
+      acc.compositeTracks.push(track);
       // A dwell (`linger` + `lingerSec`) ADDS time, so the real duration is the
       // track's — not the authored `over` (the cruise budget). Return it so the
       // cursor and the single-writer window land on the true end.
@@ -326,7 +326,7 @@ export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
     velRamps: [],
     oscTracks: [],
     cues: [],
-    pathTracks: [],
+    compositeTracks: [],
     start,
     frameBasis,
   };
@@ -351,7 +351,7 @@ export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
   ) as Record<Channel, BaseSegment[]>;
 
   validateSingleWriter(baseTracks);
-  validatePathExclusivity(baseTracks, acc.pathTracks);
+  validateCompositeExclusivity(baseTracks, acc.compositeTracks);
 
   return {
     start,
@@ -360,23 +360,23 @@ export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
     velTracks: acc.velRamps,
     oscTracks: acc.oscTracks,
     cues: sortedCues,
-    pathTracks: acc.pathTracks,
+    compositeTracks: acc.compositeTracks,
   };
 }
 
 /**
- * validatePathExclusivity — a `flyPath` is a COMPOSITE base writer: it drives
- * all four camera channels over its window. So just like two `set`s on the same
- * channel clash, a base segment that overlaps a path window is a clash too — the
- * evaluator would let the path silently win, which is a footgun, not a feature.
- * Catch it at registration time with the same loud-throw discipline as
+ * validateCompositeExclusivity — a composite writer drives several camera
+ * channels over its window. So just like two `set`s on the same channel clash,
+ * a base segment that overlaps a composite window is a clash too — the
+ * evaluator would let the composite silently win, which is a footgun, not a
+ * feature. Catch it at registration time with the same loud-throw discipline as
  * `validateSingleWriter`.
  */
-function validatePathExclusivity(
+function validateCompositeExclusivity(
   baseTracks: Record<Channel, BaseSegment[]>,
-  pathTracks: PathTrack[],
+  compositeTracks: CompositeTrack[],
 ): void {
-  for (const path of pathTracks) {
+  for (const path of compositeTracks) {
     for (const ch of ALL_CHANNELS) {
       for (const seg of baseTracks[ch]) {
         const overlaps = seg.startSec < path.endSec && path.startSec < seg.endSec;
