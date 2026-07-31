@@ -122,17 +122,28 @@ tolerance.
 
 An `ease` applied as `s = S · EASE(t/T)` reshapes **timing along** the geodesic without
 deforming the geodesic itself, since the path is the image of `s ↦ (u(s), w(s))` and easing
-only reparametrises it. So keeping an `ease` on the move costs nothing structurally; what
-value it should carry is part of §5.1.
+only reparametrises it. So keeping an `ease` on the move costs nothing structurally.
+
+**Default to `'linear'`.** Constant `s` velocity is what makes perceived velocity constant —
+it is the entire claim of the model, and it is precisely the property the current
+`easeOutCubic` destroys (an ease-out spends its last decade of scale in its last few frames,
+which is the "arrives too fast / grows in the last two frames" symptom). Any non-linear ease
+trades the feature's premise for softer endpoints. Authored clips may still opt in; focus
+moves should not.
+
+Overshoot curves (`easeInOutBack`, `*Elastic`) are unsafe here for an unusual reason: `s > S`
+or `s < 0` walks the geodesic _past_ its endpoint. That is well-defined, so nothing throws —
+the camera simply flies through the target and back.
 
 ### 2.5 The paper's own caveats, and ours
 
-- **V = 0.9 is unusable here.** Measured `S` for skymap-scale moves is 3–25; at V = 0.9 that
-  is 4–28 second animations. Their user study covered 2-D map browsing over ~4 orders of
-  magnitude; we span 19+. `V` needs its own derivation plus a clamp (§5.3).
+- **V = 0.9 is unusable here.** Measured `S` for skymap-scale moves is 4–31; at V = 0.9 that
+  is 4–35 second animations. Their user study covered 2-D map browsing over ~4 orders of
+  magnitude; we span 19+. `V` was re-derived and clamped — §5.1, §5.3.
 - **ρ**: 1.42 (sd 0.47) is the value their users chose; ρ = 6^(1/4) ≈ 1.565 is derived from
   RMS perceived velocity. The paper notes √2 "is possibly an optimal value, but we have not
-  found yet a model to explain this."
+  found yet a model to explain this." We keep 1.42, but see §5.1 — for skymap's moves ρ turns
+  out to be a far weaker knob than the paper's framing suggests.
 - The optimality argument assumes **uniform visual density at every scale** — the paper
   admits this "can only be met by artificial imagery with fractal characteristics". Skymap
   has vast empty voids, so this is violated in a specific way: a geodesic can bow out into
@@ -218,15 +229,20 @@ already threads `acc.start` for that reason (`compileClip.ts:98-100`).
 `fovYRad` is a new input to the compile path. `buildPathTrack` does not need it; `glide`
 does, because `w` is defined through it.
 
+When `over` is absent the builder derives it from the geodesic it just computed:
+`clamp(S / GLIDE_VELOCITY, GLIDE_MIN_SEC, GLIDE_MAX_SEC)`. Those three constants plus
+`GLIDE_RHO_DEFAULT` live in one module beside `zoomPanGeodesic` — they are meaningless apart
+and were calibrated together (§5.1).
+
 ### 3.5 Rewiring
 
-| Site                         | Change                                                                |
-| ---------------------------- | --------------------------------------------------------------------- |
-| `tweenToClip.ts:61-76`       | one `glide` + the existing `yaw`/`pitch` tweens (§5.2)                |
-| `focusTweenDescriptor.ts:52` | `durationMs` derived from path length, not `FOCUS_TWEEN_MS`           |
-| `watchGoHomeSaga.ts:81`      | second `startCameraTween` producer; same derivation                   |
-| `compileClip.ts:375-393`     | `validatePathExclusivity` validates against declared channels         |
-| `focusTweenDuration.ts`      | `FOCUS_TWEEN_MS` survives as the clamp floor (§5.3), not the duration |
+| Site                         | Change                                                          |
+| ---------------------------- | --------------------------------------------------------------- |
+| `tweenToClip.ts:61-76`       | one `glide` + the existing `yaw`/`pitch` tweens (§5.2)          |
+| `focusTweenDescriptor.ts:52` | `durationMs` derived from path length, not `FOCUS_TWEEN_MS`     |
+| `watchGoHomeSaga.ts:81`      | second `startCameraTween` producer; same derivation             |
+| `compileClip.ts:375-393`     | `validatePathExclusivity` validates against declared channels   |
+| `focusTweenDuration.ts`      | `FOCUS_TWEEN_MS` becomes a clamp bound, not the duration (§5.3) |
 
 ---
 
@@ -240,25 +256,45 @@ does, because `w` is defined through it.
   measurement says the current linear-space path is monotone and it was log space that
   introduced the reversal. Re-measure before writing the pinning test; do not encode either
   number until they agree.
-- **The star case improves modestly, not dramatically.** Above the 4 px sphere-handoff
-  threshold for 12.2 % of the move, vs 2.0 % today (~0.7 frames at 600 ms). Not the ~36 % a
-  naive gap-decay model predicts, because the geodesic spends real time zoomed out doing the
-  pan. §7 explains the hard ceiling on this number.
+- **The star case improves modestly as a fraction, hugely in absolute terms.** Above the 4 px
+  sphere-handoff threshold for 12.2 % of the move, vs 2.0 % today. Not the ~36 % a naive
+  gap-decay model predicts, because the geodesic spends real time zoomed out doing the pan.
+  §7 explains the hard ceiling on the fraction. But the fraction is the wrong number to judge
+  by: with the duration settled (§5.3) the same move runs 4.0 s rather than 600 ms, so the
+  star is resolved for **~0.49 s ≈ 29 frames at 60 fps, against ~0.7 frames today.** Most of
+  the win comes from the duration, not the path.
 
 ---
 
-## 5. Open decisions — for the user to settle during implementation
+## 5. Calibration (settled) and the one open decision
 
-### 5.1 ρ and V calibration
+### 5.1 ρ and V — SETTLED: ρ = 1.42, V = 6, duration clamped to [0.4 s, 4 s]
 
-ρ governs how far the path bows out. At ρ = 1.42, an Earth → nearby-star move pulls back to
-~1.1e-6 Mpc — roughly the full interstellar separation — so "focus this star" rockets out to
-see both endpoints before coming in. That may be exactly right for a cosmic-scale browser, or
-exactly wrong for a UI click. It is a product decision, not an engineering one, and it is
-entangled with V (§5.3) and with the `ease` default (§2.4): a bow-out that reads as
-purposeful at one speed reads as a detour at another.
+Swept ρ ∈ [0.8, 3.0] against real skymap constants (`scratchpad/calib.mjs`). The headline: **ρ
+is near-irrelevant for the case that motivated this work.** Star → Milky Way peaks at exactly
+1.00× its endpoint distance at every ρ, because the destination view (`w₁` ≈ 0.173 Mpc) is
+already ~21× wider than the 8.2 kpc journey — the endpoint frames the whole path, so no
+geodesic bows out. The wobble is fixed by the _coupling_, not by the pull-back. ρ only bites
+when both endpoints are close-in and far apart:
 
-### 5.2 Does yaw/pitch stay independent?
+| case                          | peak pull-back, ρ = 0.8 → 3.0 |
+| ----------------------------- | ----------------------------- |
+| star → Milky Way              | 1.00× at every ρ              |
+| Earth → observable universe   | 1.00× … 3.96×                 |
+| MW → Virgo                    | 1.19× … 12.9×                 |
+| galaxy → galaxy, 50 Mpc apart | 2.95× … 39.0×                 |
+| Earth → nearby star           | 3.6e6× … 5.2e7×               |
+
+Earth → star's 1.14e-6 Mpc peak at ρ = 1.42 is near-forced, not a tuning artifact: framing a
+1.301e-6 Mpc separation at all requires distance ≥ 1.13e-6 Mpc. Both endpoints hug their
+bodies' surfaces, so the camera has to go there whatever the metric says. Lowering ρ to 0.8
+buys 3.2× less pull-back and pays for it in low-altitude panning.
+
+At ρ = 1.42, `S` spans 4.03 (galaxy → galaxy) to 31.3 (Earth → universe), so `S/V` cannot
+serve both ends without a clamp. V = 6 puts the common galaxy click at 0.67 s — matching the
+600 ms `FOCUS_TWEEN_MS` the InfoCard list was tuned around — and the deep descents at 3.3–5.2 s.
+
+### 5.2 Does yaw/pitch stay independent? — OPEN
 
 The proposed shape keeps them as ordinary scalar tweens beside the glide. V&N does not model
 orientation, and angles are scale-free so they do not suffer the 1/d problem that motivates
@@ -267,12 +303,29 @@ class of composition the feature exists to remove, one axis over. Focus moves cu
 yaw/pitch through unchanged (`focusTweenDescriptor.ts:51`), so today the question is moot for
 focus and live only for authored clips.
 
-### 5.3 Duration clamp
+### 5.3 Duration clamp — SETTLED: [0.4 s, 4 s]
 
-Pure `S/V` at the paper's V gives 4–28 s. A clamp is required. Its lower bound interacts with
-the case `focusTweenDuration.ts`'s docblock protects: 600 ms was chosen so rapid clicking
-through the InfoCard list never feels sluggish, and that reason still holds for short hops.
-The upper bound is a taste call on the longest move in the app.
+The paper's V = 0.9 gives 22–35 s moves at our scale range; their user study covered 2D maps
+over ~4 decades, we span 19. V is not transferable and needed its own derivation (§5.1).
+
+The clamp's cost is explicit: a clamped move is no longer perceptually uniform, because time
+stops tracking `S`. At V = 6 only Earth → universe (5.21 s) and Earth → star (4.53 s) hit the
+4 s ceiling, so uniformity survives for every move short of a full-scale-ladder descent. A 2.5 s
+ceiling was rejected for clamping three of five sampled cases to an identical duration —
+discarding uniformity exactly where the feature was supposed to earn it.
+
+Resulting durations at ρ = 1.42, V = 6:
+
+| case                        | duration                   |
+| --------------------------- | -------------------------- |
+| galaxy → galaxy             | 0.67 s                     |
+| MW → Virgo                  | 0.83 s                     |
+| star → Milky Way            | 3.29 s                     |
+| Earth → nearby star         | 4.00 s (clamped from 4.53) |
+| Earth → observable universe | 4.00 s (clamped from 5.21) |
+
+The 0.4 s floor preserves what `focusTweenDuration.ts`'s docblock protects — rapid clicking
+through the InfoCard list must not feel sluggish.
 
 ---
 
@@ -402,5 +455,5 @@ One PR, commits in order: P1 (composite track), P2 (FOV through compile), `zoomP
 tests, `buildGlideTrack` + the `glide` arm, rewiring of the two `startCameraTween` producers
 and `tweenToClip`, duration derivation + clamp.
 
-The §5 decisions are settled during implementation, at the point each first bites: §5.1 and
-§5.3 when the duration lands, §5.2 when `tweenToClip` is rewritten.
+§5.1 and §5.3 are settled (ρ = 1.42, V = 6, clamp [0.4 s, 4 s]) — implementation takes them as
+given. §5.2 remains open and is settled when `tweenToClip` is rewritten.
