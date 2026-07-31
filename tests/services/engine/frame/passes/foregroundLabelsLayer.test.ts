@@ -40,6 +40,7 @@ import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { makeBodyItems } from '../../../../fixtures/makeBodyItems';
+import { SGR_A_STAR_ENTRY } from '../../../../../src/data/sources/sgr-a-star';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 
 // The layer derives its caption set from the frame's body snapshot
@@ -161,7 +162,9 @@ function makeState(
   renderer: LabelRenderer | null,
   lineRenderer: MarkerLineRenderer | null = makeLineRenderer(),
   starMapLabelsEnabled = true,
-  bodyLabels: boolean | { earth: boolean; planet: boolean; sun?: boolean } = true,
+  // `true`/`false` sets every row at once; a record names the rows that deviate
+  // from an all-on baseline (the Sun included, which defaults on).
+  bodyLabels: boolean | Readonly<Record<string, boolean>> = true,
   starMapEnabled = true,
   sunVisible = true,
   starCatalogsMasterEnabled = true,
@@ -225,6 +228,15 @@ const CONSTELLATION_IDS = new Set(CONSTELLATION_ARTIFACT.constellations.map((c) 
 // A state whose constellation slot is READY, with the fade-registry opacity
 // under test control. The body-caption toggles are all on so those captions
 // coexist; the constellation-specific assertions filter by CONSTELLATION_IDS.
+/**
+ * `makeBodyItems` deviation muting the Galactic Centre's caption. It is the one
+ * body caption whose reach extends past `SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC`,
+ * so any test asserting "the row is off out here" has to silence it or it is
+ * asserting against a caption that is legitimately still on.
+ */
+const GALACTIC_CENTRE_LABEL_OFF = (id: string) =>
+  id === SGR_A_STAR_ENTRY.id ? { labelEnabled: false } : {};
+
 function makeConstellationState(opts: { layerFade: number; ready?: boolean }): EngineState {
   return {
     gpu: {
@@ -233,7 +245,10 @@ function makeConstellationState(opts: { layerFade: number; ready?: boolean }): E
     },
     settings: {
       labels: { focusedOnly: false },
-      bodies: { items: makeBodyItems() },
+      // The Galactic Centre's caption reaches past the body gate on its own
+      // (`captionFadeRules`), so these tests — which isolate the CONSTELLATION
+      // demand term out there — must mute it or they measure both at once.
+      bodies: { items: makeBodyItems(GALACTIC_CENTRE_LABEL_OFF) },
       starCatalogs: { enabled: true, items: { famousStar: { enabled: true, labelEnabled: true } } },
       constellations: {},
     },
@@ -311,7 +326,13 @@ beforeEach(() => {
 describe('foregroundLabelsLayer.enabled', () => {
   it('respects the kiloparsec distance gate', () => {
     const renderer = makeRenderer(6);
-    const state = makeState(renderer);
+    // Every body label on EXCEPT the Galactic Centre's: its caption reaches past
+    // this gate by design (see `captionFadeRules`), so leaving it on would keep
+    // the row alive out here for a reason that has nothing to do with the
+    // solar-system gate under test.
+    const state = makeState(renderer, makeLineRenderer(), true, {
+      [SGR_A_STAR_ENTRY.id]: false,
+    });
 
     // Well inside a kiloparsec with body-caption toggles on → captions show.
     expect(foregroundLabelsLayer.enabled(state, makeCtx(5e-4))).toBe(true);
@@ -321,6 +342,11 @@ describe('foregroundLabelsLayer.enabled', () => {
       false,
     );
     expect(foregroundLabelsLayer.enabled(state, makeCtx(1e-2))).toBe(false);
+
+    // …and the Galactic Centre's own caption is exactly what carries the row
+    // past that gate, which is the whole point of its separate reach.
+    const withGalacticCentre = makeState(renderer);
+    expect(foregroundLabelsLayer.enabled(withGalacticCentre, makeCtx(1e-2))).toBe(true);
 
     // The two distance gates compose, and the caption gate is the TIGHTER
     // one: between them (bodies/backdrop already on, captions not yet) the
@@ -1049,10 +1075,15 @@ describe('foregroundLabelsLayer — constellation captions', () => {
   it('runs the row past the body-caption gate while a figure name could show', () => {
     expect(pastBodyGate).toBeGreaterThan(SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC);
 
-    // Body-only state (no constellation slot): past the body gate the row is off.
-    expect(foregroundLabelsLayer.enabled(makeState(makeRenderer(6)), makeCtx(pastBodyGate))).toBe(
-      false,
-    );
+    // Body-only state (no constellation slot): past the body gate the row is
+    // off. The Galactic Centre's caption is muted here for the reason
+    // `GALACTIC_CENTRE_LABEL_OFF` records — it reaches past this gate by design.
+    expect(
+      foregroundLabelsLayer.enabled(
+        makeState(makeRenderer(6), makeLineRenderer(), true, { [SGR_A_STAR_ENTRY.id]: false }),
+        makeCtx(pastBodyGate),
+      ),
+    ).toBe(false);
 
     // Artifact ready: the constellation gate keeps the row alive at the same
     // distance — the fix's core.

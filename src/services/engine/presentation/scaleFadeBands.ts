@@ -30,6 +30,7 @@ import { BODY_GLINT_MAX_PX } from '../frame/partitionBodiesByPresentation';
 import { regionById } from '../../../utils/scene/regionById';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { SGR_A_STAR_ANCHOR } from '../../../data/bodies/sceneSgrAStar';
+import { MILKY_WAY_RADIUS_MPC } from '../../gpu/galaxy/milkyWayCalibration';
 
 // The two extents this table's near-field rows scale off — each read from the
 // region whose content the row gates, so a band cannot end up keyed on a scale
@@ -159,23 +160,30 @@ export const SCALE_FADE_BANDS = {
     goneAt: SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC,
   },
 
-  // Keyed on: the CAPTION's own distance from the camera, Mpc — Sgr A*'s
-  // approach band. Both edges come off R₀, the Galactic Centre's distance from
-  // the render origin, read from the seed so they cannot drift from it: the
-  // name is exactly 0 from the solar system and reaches full alpha halfway
-  // across. R₀ (8.178e-3 Mpc) is inside `foregroundLabelsLayer`'s caption gate
-  // (9.2e-3), so on an approach focused here the name is already 0 when the
-  // gate opens and the cut cannot pop. Consumers: `captionFadeRules.sgrAStar`
-  // and `starPointsLayer`'s pick stamp — Sgr A* draws nothing, so this band is
-  // the whole of what invites the click, and pick reads it rather than
-  // restating the edges.
+  // Keyed on: the CAPTION's own distance from the camera, Mpc — the Galactic
+  // Centre's approach band, and the ONLY reach the caption has (its row carries
+  // no layer-gate term; see `captionFadeRules`). Consumers:
+  // `captionFadeRules.sgrAStar` and `starPointsLayer`'s pick stamp — the anchor
+  // draws nothing, so this band is the whole of what invites the click, and pick
+  // reads it rather than restating the edges.
+  //
+  // `fullAt` is R₀ itself, the Sun's own distance from the Centre: the name is
+  // at FULL alpha from Earth and stays there all the way in. An earlier
+  // {R₀/2, R₀} pair reached 0 exactly at the Sun, which kept the name out of the
+  // solar-system view — but it also kept it out of every view that frames the
+  // galaxy, which is the one that most needs it.
+  //
+  // `goneAt` is a disc DIAMETER out, so the name persists while the galaxy is
+  // the subject and dissolves as it becomes one object among many. Tied to
+  // `MILKY_WAY_RADIUS_MPC` rather than to another R₀ multiple because what the
+  // far edge tracks is the galaxy's own size.
   //
   // NOT derived from `galactic-centre.extentMpc`: that measures the S-star
-  // orbits, three orders of magnitude tighter, and would put the name's onset
+  // orbits, five orders of magnitude tighter, and would put the name's onset
   // inside the cluster it labels.
   sgrAStarCaption: {
-    fullAt: SGR_A_STAR_R0_MPC / 2,
-    goneAt: SGR_A_STAR_R0_MPC,
+    fullAt: SGR_A_STAR_R0_MPC,
+    goneAt: MILKY_WAY_RADIUS_MPC * 2,
   },
 
   // Keyed on: CAMERA distance from the heliocentric render origin, Mpc (the same
