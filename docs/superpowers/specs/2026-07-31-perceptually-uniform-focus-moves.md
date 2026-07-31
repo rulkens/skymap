@@ -167,12 +167,15 @@ An `ease` applied as `s = S · EASE(t/T)` reshapes **timing along** the geodesic
 deforming the geodesic itself, since the path is the image of `s ↦ (u(s), w(s))` and easing
 only reparametrises it. So keeping an `ease` on the move costs nothing structurally.
 
-**Default to `'linear'`.** Constant `s` velocity is what makes perceived velocity constant —
-it is the entire claim of the model, and it is precisely the property the current
-`easeOutCubic` destroys (an ease-out spends its last decade of scale in its last few frames,
-which is the "arrives too fast / grows in the last two frames" symptom). Any non-linear ease
-trades the feature's premise for softer endpoints. Authored clips may still opt in; focus
-moves should not.
+**The ease is a free choice — the coupling is what was load-bearing.** This section originally
+argued for `'linear'`, on the grounds that constant `s` velocity is the model's entire claim
+and an ease-out is what produced the "arrives too fast" symptom. That was **right about the old
+code and wrong about the new**: the old `easeOutCubic` was applied to two INDEPENDENTLY eased
+channels in linear distance space, back-loading `distance` while `target` ran on its own
+schedule. On a coupled geodesic the same curve is a pure time-warp and cannot desync anything.
+
+`easeOutQuint` shipped, for the arrival dwell it buys — §5.3 has the measurements and the
+reasoning. One home for the value: `GLIDE_EASE_DEFAULT`.
 
 Overshoot curves (`easeInOutBack`, `*Elastic`) are unsafe here for an unusual reason: `s > S`
 or `s < 0` walks the geodesic _past_ its endpoint. That is well-defined, so nothing throws —
@@ -324,9 +327,10 @@ and were calibrated together (§5.1).
 - **The middle column carries a second result worth acting on.** For galaxy → galaxy the
   current channel model is _already_ perfectly uniform once the ease is linear (CV 0.000);
   `easeOutCubic` alone is what inflates it to 4.80e7. For the most common focus click in the
-  app, the ease is the entire defect and the geodesic changes nothing. This is independent
-  confirmation of the `'linear'` default in §2.4, and it means the ease change should land as
-  its own commit so its effect is separately visible.
+  app, the ease is the entire defect and the geodesic changes nothing — so the ease change
+  landed as its own commit, ahead of the geodesic, with its effect separately visible.
+  (It was read at the time as confirming a `'linear'` default. It confirmed something narrower:
+  that an ease applied to INDEPENDENT channels is destructive. §2.4 and §5.3 carry the rest.)
 - **The star case improves modestly as a fraction, hugely in absolute terms.** Above the 4 px
   sphere-handoff threshold for 12.2 % of the move, vs 2.0 % today. Not the ~36 % a naive
   gap-decay model predicts, because the geodesic spends real time zoomed out doing the pan.
