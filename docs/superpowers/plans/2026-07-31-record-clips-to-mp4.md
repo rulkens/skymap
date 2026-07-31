@@ -97,15 +97,15 @@ Untouched, deliberately: `Clip`, `ClipId`, `clipRegistry`/`clipFactories`, `clip
 
 **THE RENAME MUST USE `npm run move-files`.** Do not use `git mv` + hand-edited imports.
 
-- [ ] Dry run first:
+- [x] Dry run first:
       `npm run move-files -- --dry tools/record/recordTour.ts tools/record/record.ts`
-- [ ] Perform it:
+- [x] Perform it:
       `npm run move-files -- tools/record/recordTour.ts tools/record/record.ts`
-- [ ] Update the npm script in `package.json`: `"record-tour": "tsx tools/record/record.ts"`.
-- [ ] `move-files` rewrites relative imports only — it does **not** touch string literals or comments. Grep for stragglers: `grep -rn "recordTour" src tools package.json docs/superpowers/conventions tools/record/README.md`. Known live references to update: `src/@types/recorder/RecorderWindow.ts:9`, `src/state/tour/guidedTourSaga.ts:147`, `tools/record/grantAndAwaitExpiry.ts:4`, `tools/record/virtualTimeSpike.ts:310`, `tools/perf/measurePerf.ts:25,189,220`, and the module header of the moved file itself.
-- [ ] **Leave `docs/superpowers/plans/completed/` and `docs/superpowers/specs/completed/` alone** — those are shipped artifacts describing what was built then; rewriting them is rewriting history.
-- [ ] Verify: `npm run typecheck` and `npm test` green; `npm run record-tour -- --help`-style typo smoke is not available, so instead confirm the script resolves: `npx tsx tools/record/record.ts --bogus` prints the unknown-flag error (not a module-not-found).
-- [ ] Commit.
+- [x] Update the npm script in `package.json`: `"record-tour": "tsx tools/record/record.ts"`.
+- [x] `move-files` rewrites relative imports only — it does **not** touch string literals or comments. Grep for stragglers: `grep -rn "recordTour" src tools package.json docs/superpowers/conventions tools/record/README.md`. Known live references to update: `src/@types/recorder/RecorderWindow.ts:9`, `src/state/tour/guidedTourSaga.ts:147`, `tools/record/grantAndAwaitExpiry.ts:4`, `tools/record/virtualTimeSpike.ts:310`, `tools/perf/measurePerf.ts:25,189,220`, and the module header of the moved file itself.
+- [x] **Leave `docs/superpowers/plans/completed/` and `docs/superpowers/specs/completed/` alone** — those are shipped artifacts describing what was built then; rewriting them is rewriting history.
+- [x] Verify: `npm run typecheck` and `npm test` green; `npm run record-tour -- --help`-style typo smoke is not available, so instead confirm the script resolves: `npx tsx tools/record/record.ts --bogus` prints the unknown-flag error (not a module-not-found).
+- [x] Commit.
 
 ---
 
@@ -131,13 +131,13 @@ async function captureTake(
 ): Promise<number>;
 ```
 
-- [ ] Rename `captureTour` → `captureTake`, `TourStatus` → `TakeStatus`, `window.__recorderTourStatus` → `__recorderTakeStatus` (three sites: the kick evaluate at `recordTour.ts:438-456`, the poll at `:483-485`, the vanished-flag error at `:486`).
-- [ ] Replace the `range: BeatRange` parameter with `take: Take`. The three subject-specific sites become explicit reads off `take`: the kick evaluate's `hook.startTour(take.id, take.beats)`, the settle gate `take.beats.from > 0` (`:466`), and the progress/abort messages.
-- [ ] `take` is passed into `page.evaluate` as its serializable argument — keep it plain data (no functions, no class instances) so structured-clone across CDP stays trivially safe.
-- [ ] Generalize the frame-cap abort message (`:491-496`): it currently says "the tour has not ended". Make it name the take (`'${take.kind} ${take.id}' has not ended`) — a clip take stuck on `clipFociReady` must not report itself as a stuck tour.
-- [ ] `main()` builds the `Take` after the registry lookup and passes it down; the local `range` variable stays only where the beat-slice arithmetic needs it.
-- [ ] Verify: `npm run typecheck`; `npm test`. Then a real smoke, since the capture core has no unit tests: with `npm run dev` running, `npx tsx tools/record/record.ts demo --size 640x360 --fps 10 --beats 0..0 --out /tmp/p2-smoke.mp4` produces a playable mp4 and the DONE banner.
-- [ ] Commit.
+- [x] Rename `captureTour` → `captureTake`, `TourStatus` → `TakeStatus`, `window.__recorderTourStatus` → `__recorderTakeStatus` (three sites: the kick evaluate at `recordTour.ts:438-456`, the poll at `:483-485`, the vanished-flag error at `:486`).
+- [x] Replace the `range: BeatRange` parameter with `take: Take`. The three subject-specific sites become explicit reads off `take`: the kick evaluate's `hook.startTour(take.id, take.beats)`, the settle gate `take.beats.from > 0` (`:466`), and the progress/abort messages.
+- [x] `take` is passed into `page.evaluate` as its serializable argument — keep it plain data (no functions, no class instances) so structured-clone across CDP stays trivially safe.
+- [x] Generalize the frame-cap abort message (`:491-496`): it currently says "the tour has not ended". Make it name the take (`'${take.kind} ${take.id}' has not ended`) — a clip take stuck on `clipFociReady` must not report itself as a stuck tour.
+- [x] `main()` builds the `Take` after the registry lookup and passes it down; the local `range` variable stays only where the beat-slice arithmetic needs it.
+- [x] Verify: `npm run typecheck`; `npm test`. Then a real smoke, since the capture core has no unit tests: with `npm run dev` running, `npx tsx tools/record/record.ts demo --size 640x360 --fps 10 --beats 0..0 --out /tmp/p2-smoke.mp4` produces a playable mp4 and the DONE banner.
+- [x] Commit.
 
 ---
 
@@ -150,11 +150,11 @@ Verified no existing helper: `tools/utils/record/` holds only `buildFfmpegArgs`,
 **Signature:** `frameCapFor(authoredSec: number, fps: number): number`
 **Behaviour:** `Math.ceil((authoredSec * 1.25 + 10) * fps)`. The ×1.25 (authored length is a lower bound — real playback burns extra time on `waitUntil` readiness gates and load-dissolve tails) and the +10 s flat margin (sized to the whole take, so a short subject is not starved by a percentage of a small number) move here with their rationale from `tourFrameCap.ts:14-22`.
 
-- [ ] Create `frameCapFor.ts` with the formula and the margin rationale (module header ≤ 10 lines).
-- [ ] `tourFrameCap` keeps the beat-summing (`clipDurationSec` over enter + dwell) and delegates the margin. Its header keeps the caller-slices-first contract and loses the duplicated margin prose (link, don't restate).
-- [ ] **Add no new test for `frameCapFor`.** The existing `tourFrameCap` test asserts a hand-computed `788` and is not a mirror, so it already proves the delegation end-to-end; a second test of the same arithmetic is a restatement.
-- [ ] Verify: `npm test -- tourFrameCap` green unchanged; `npm run typecheck`.
-- [ ] Commit.
+- [x] Create `frameCapFor.ts` with the formula and the margin rationale (module header ≤ 10 lines).
+- [x] `tourFrameCap` keeps the beat-summing (`clipDurationSec` over enter + dwell) and delegates the margin. Its header keeps the caller-slices-first contract and loses the duplicated margin prose (link, don't restate).
+- [x] **Add no new test for `frameCapFor`.** The existing `tourFrameCap` test asserts a hand-computed `788` and is not a mirror, so it already proves the delegation end-to-end; a second test of the same arithmetic is a restatement.
+- [x] Verify: `npm test -- tourFrameCap` green unchanged; `npm run typecheck`.
+- [x] Commit.
 
 ---
 
@@ -164,11 +164,11 @@ Verified no existing helper: `tools/utils/record/` holds only `buildFfmpegArgs`,
 
 **Signature:** `defaultOutName(opts: { takeId: string; width: number; height: number; fps: number; now: Date }): string` — output format unchanged (`recordings/<takeId>-<w>x<h>-<fps>fps-<YYYYMMDD-HHMMSS>.mp4`).
 
-- [ ] Rename the field and update the module header (the timestamp rationale stays; `tourId`'s name is the only lie).
-- [ ] Update the two existing tests' call sites only — their asserted strings do not change.
-- [ ] Update the caller at `record.ts` (`recordTour.ts:589-597`).
-- [ ] Verify: `npm test -- defaultOutName`; `npm run typecheck`.
-- [ ] Commit.
+- [x] Rename the field and update the module header (the timestamp rationale stays; `tourId`'s name is the only lie).
+- [x] Update the two existing tests' call sites only — their asserted strings do not change.
+- [x] Update the caller at `record.ts` (`recordTour.ts:589-597`).
+- [x] Verify: `npm test -- defaultOutName`; `npm run typecheck`.
+- [x] Commit.
 
 ---
 
@@ -197,12 +197,12 @@ readonly startClip: (id: ClipId) => Promise<void>;
 - `startClip does not resolve on store updates before the clip becomes active` — dispatch an unrelated store change (e.g. `engineLoadProgressChanged({...})`, already imported by this suite) after `startClip` and before any `clipStarted`; assert not settled. This is the foci-wait case above; it fails on exactly the latch bug that "resolve on the first inactive reading" would introduce.
 - `startClip rejects when a clip is already active` — seed `clipStarted(clipData)`, then assert the rejection message and that **no** superseding `clip/start` was dispatched (count actions before/after, same shape as the existing `startTour` rejection test).
 
-- [ ] Write the three failing tests.
-- [ ] Add `startClip` to `SkymapRecorderHook` with its docstring; add `runClip` + the hook field in `installRecorderHook`.
-- [ ] Extend the installer's module header with the clip single-flight reason **and note it differs from the tour's**: a superseding `startClip` _does_ emit `clipEnded` through `playClip`'s `[CANCEL]` hook, so the danger is resolving on the handoff rather than never resolving. Keep it inside the comment budget.
-- [ ] Leave the existing "exposes the hook in cinema mode" test alone — do **not** add a `typeof hook.startClip === 'function'` assertion; `tsc` already proves that (no runtime type tests).
-- [ ] Verify: `npm test -- installRecorderHook`; `npm run typecheck`.
-- [ ] Commit.
+- [x] Write the three failing tests.
+- [x] Add `startClip` to `SkymapRecorderHook` with its docstring; add `runClip` + the hook field in `installRecorderHook`.
+- [x] Extend the installer's module header with the clip single-flight reason **and note it differs from the tour's**: a superseding `startClip` _does_ emit `clipEnded` through `playClip`'s `[CANCEL]` hook, so the danger is resolving on the handoff rather than never resolving. Keep it inside the comment budget.
+- [x] Leave the existing "exposes the hook in cinema mode" test alone — do **not** add a `typeof hook.startClip === 'function'` assertion; `tsc` already proves that (no runtime type tests).
+- [x] Verify: `npm test -- installRecorderHook`; `npm run typecheck`.
+- [x] Commit.
 
 ---
 
@@ -217,10 +217,10 @@ Why the same ×1.25 + 10 s shape holds for a single clip: the padding's job is t
 
 **Test:** `clipFrameCap pads the compiled clip duration by the shared margin` — build a fixture `ClipData` with a single `hold(8)` (from `src/services/engine/animation/effectHelpers.ts:279`) and assert `clipFrameCap(fixture, 30) === 600`, hand-computed as `ceil((8 × 1.25 + 10) × 30) = ceil(600)`. Do not re-derive the expectation with `frameCapFor`.
 
-- [ ] Write the failing test.
-- [ ] Implement; module header states the runaway-guard purpose and links `frameCapFor` for the margin (do not restate the margin rationale — comment budget).
-- [ ] Verify: `npm test -- clipFrameCap`; `npm run typecheck`.
-- [ ] Commit.
+- [x] Write the failing test.
+- [x] Implement; module header states the runaway-guard purpose and links `frameCapFor` for the margin (do not restate the margin rationale — comment budget).
+- [x] Verify: `npm test -- clipFrameCap`; `npm run typecheck`.
+- [x] Commit.
 
 ---
 
@@ -242,10 +242,10 @@ The throw is the point (landmine 1's URL half). Today `--url` is only stripped o
 - `buildCaptureUrl composes the cinema gate and the pinned instant` — `{ base: 'http://localhost:5173', simTime: new Date(Date.UTC(2026, 6, 31, 12, 0, 0)) }` → `'http://localhost:5173/?cinema#t=2026-07-31T12:00:00.000Z'`.
 - `buildCaptureUrl rejects a base carrying its own query or hash` — both `'http://localhost:5173/?cinema'` and `'http://localhost:5173#t=x'` throw, with a message naming `--url`.
 
-- [ ] Write the failing tests.
-- [ ] Implement.
-- [ ] Verify: `npm test -- buildCaptureUrl`; `npm run typecheck`.
-- [ ] Commit.
+- [x] Write the failing tests.
+- [x] Implement.
+- [x] Verify: `npm test -- buildCaptureUrl`; `npm run typecheck`.
+- [x] Commit.
 
 ---
 
@@ -274,24 +274,24 @@ type RecordOptions = {
 };
 ```
 
-- [ ] **argv.** Add `--clip <id>` and `--sim-time <ISO>` to the value-taking flag list and to the unknown-flag error's "known:" list. `--sim-time` validates inline like `--fps` does: `Date.parse` → throw on `NaN` naming the expected ISO 8601 shape. Two mutual-exclusion errors, both in `parseArgs`:
+- [x] **argv.** Add `--clip <id>` and `--sim-time <ISO>` to the value-taking flag list and to the unknown-flag error's "known:" list. `--sim-time` validates inline like `--fps` does: `Date.parse` → throw on `NaN` naming the expected ISO 8601 shape. Two mutual-exclusion errors, both in `parseArgs`:
   - an explicit positional tour id **and** `--clip` → "a take is either a tour or a clip, not both".
   - `--beats` **and** `--clip` → "--beats windows a tour take; a clip take is played whole".
-- [ ] **Take resolution in `main()`.** When `clipId` is set: look it up in `clipRegistry` (`src/data/animation/clips/clipRegistry.ts:85`); unknown id throws listing `Object.keys(clipRegistry)`, mirroring the tour lookup's error at `recordTour.ts:565-569`. `frameCap = clipFrameCap(clip.data, options.fps)`. Use the `clipRegistry` snapshot (factories resolved at J2000), not `clipFactories[id](...)`: only the _start pose_ depends on the instant (`src/data/animation/clips/earthFlyout.ts:68-69`), the authored durations do not, so the cap is instant-independent.
-- [ ] **Sim-time pin, always.** `const simTime = options.simTime ?? new Date()`, resolved once in `main()` before anything spawns, and used for both the goto URL and the banner. This applies to **tour takes too** — that is Q3's decision, and it is a deliberate behaviour change for existing tour takes: they previously ran on a live clock and now run manual + paused at the pinned instant (`manualPausedAtActions`, reached through the `t` row's `read`). The grand tour's beats are cosmic-scale, so nothing visibly moves; a solar-system beat added later would now be frozen, which is the intended property.
-- [ ] **URL.** Replace the inline concatenation with `buildCaptureUrl({ base: options.url, simTime })`, and log the composed URL verbatim so the banner and the `loading …` line agree.
-- [ ] **Kick evaluate.** One branch inside the evaluate, everything else shared:
+- [x] **Take resolution in `main()`.** When `clipId` is set: look it up in `clipRegistry` (`src/data/animation/clips/clipRegistry.ts:85`); unknown id throws listing `Object.keys(clipRegistry)`, mirroring the tour lookup's error at `recordTour.ts:565-569`. `frameCap = clipFrameCap(clip.data, options.fps)`. Use the `clipRegistry` snapshot (factories resolved at J2000), not `clipFactories[id](...)`: only the _start pose_ depends on the instant (`src/data/animation/clips/earthFlyout.ts:68-69`), the authored durations do not, so the cap is instant-independent.
+- [x] **Sim-time pin, always.** `const simTime = options.simTime ?? new Date()`, resolved once in `main()` before anything spawns, and used for both the goto URL and the banner. This applies to **tour takes too** — that is Q3's decision, and it is a deliberate behaviour change for existing tour takes: they previously ran on a live clock and now run manual + paused at the pinned instant (`manualPausedAtActions`, reached through the `t` row's `read`). The grand tour's beats are cosmic-scale, so nothing visibly moves; a solar-system beat added later would now be frozen, which is the intended property.
+- [x] **URL.** Replace the inline concatenation with `buildCaptureUrl({ base: options.url, simTime })`, and log the composed URL verbatim so the banner and the `loading …` line agree.
+- [x] **Kick evaluate.** One branch inside the evaluate, everything else shared:
       `const p = take.kind === 'tour' ? hook.startTour(take.id, take.beats) : hook.startClip(take.id);`
       then the existing `.then/.catch` writes to `__recorderTakeStatus`. Keep the payload plain data.
-- [ ] **Settle gate.** `FOLD_SETTLE_MS` burns only for `take.kind === 'tour' && take.beats.from > 0`. Add one comment line stating that a clip take has no analogous settle **and why** (landmine 2) — pointing at the README's authoring rule rather than restating it.
-- [ ] **Out name.** `defaultOutName({ takeId: take.id, … })` — clip takes land at `recordings/<clipId>-<size>-<fps>fps-<stamp>.mp4`.
-- [ ] **Banner.** Print, for a clip take, the clip id + `label`, the resolved size/fps/viewport line unchanged, and a new line for the pin — `sim time pinned: <ISO>  (re-take with --sim-time <ISO>)`. Printing the copy-paste re-take flag is the whole point of Q3's Option A.
-- [ ] Update the module header: the second usage line (`npm run record-clip -- flyout`), the `Take` union in the "why a harness outside the app" framing, and the sim/frame clock distinction (landmine 1) in one or two lines. Header stays ≤ 10 lines of _new_ material; move anything longer to the README.
-- [ ] Verify (no unit tests — see below): with `npm run dev` running,
+- [x] **Settle gate.** `FOLD_SETTLE_MS` burns only for `take.kind === 'tour' && take.beats.from > 0`. Add one comment line stating that a clip take has no analogous settle **and why** (landmine 2) — pointing at the README's authoring rule rather than restating it.
+- [x] **Out name.** `defaultOutName({ takeId: take.id, … })` — clip takes land at `recordings/<clipId>-<size>-<fps>fps-<stamp>.mp4`.
+- [x] **Banner.** Print, for a clip take, the clip id + `label`, the resolved size/fps/viewport line unchanged, and a new line for the pin — `sim time pinned: <ISO>  (re-take with --sim-time <ISO>)`. Printing the copy-paste re-take flag is the whole point of Q3's Option A.
+- [x] Update the module header: the second usage line (`npm run record-clip -- flyout`), the `Take` union in the "why a harness outside the app" framing, and the sim/frame clock distinction (landmine 1) in one or two lines. Header stays ≤ 10 lines of _new_ material; move anything longer to the README.
+- [x] Verify (no unit tests — see below): with `npm run dev` running,
       `npx tsx tools/record/record.ts --clip flyout --size 640x360 --fps 10 --out /tmp/f4-clip.mp4`
       produces a playable mp4 whose ffprobe line reports 640x360 and a nonzero frame count, and the banner shows the pinned instant. Then `npx tsx tools/record/record.ts demo --beats 0..0 --size 640x360 --fps 10 --out /tmp/f4-tour.mp4` still works.
-- [ ] `npm run typecheck`; `npm test` (nothing should have moved).
-- [ ] Commit.
+- [x] `npm run typecheck`; `npm test` (nothing should have moved).
+- [x] Commit.
 
 **Why `parseArgs` stays unexported and untested:** it has never been exported or tested, and the two new validations fail loudly on the operator's own terminal within milliseconds. Exporting it solely to unit-test flag rejection would add test surface that mostly mirrors the argv loop's structure; the value-shaped logic that _can_ silently produce a wrong film (URL composition, frame cap, out name) lives in the tested helpers F2/F3/P3/P4 instead. If a future task grows a third mutually-exclusive flag, revisit — that is the point at which a `resolveTake` helper earns its test.
 
@@ -301,14 +301,14 @@ type RecordOptions = {
 
 **Files:** `package.json` (modify), `tools/record/README.md` (modify).
 
-- [ ] Scripts: `"record-tour": "tsx tools/record/record.ts"` (kept working — docs and muscle memory point at it, Q4's sub-decision) and `"record-clip": "tsx tools/record/record.ts --clip"`. The trailing `--clip` means `npm run record-clip -- flyout --fps 30` expands to `… record.ts --clip flyout --fps 30`; `npm run record-clip` with no argument fails with the flag's own "requires a value" error, which is a clear enough prompt.
-- [ ] README — retitle from "Tour recorder" to cover both subjects; keep every existing section (prerequisites, dpr/pixel contract, how long a take takes, the spike, the cold-cache note) intact. Add:
+- [x] Scripts: `"record-tour": "tsx tools/record/record.ts"` (kept working — docs and muscle memory point at it, Q4's sub-decision) and `"record-clip": "tsx tools/record/record.ts --clip"`. The trailing `--clip` means `npm run record-clip -- flyout --fps 30` expands to `… record.ts --clip flyout --fps 30`; `npm run record-clip` with no argument fails with the flag's own "requires a value" error, which is a clear enough prompt.
+- [x] README — retitle from "Tour recorder" to cover both subjects; keep every existing section (prerequisites, dpr/pixel contract, how long a take takes, the spike, the cold-cache note) intact. Add:
   - a **Clip takes** section: `npm run record-clip -- flyout`, where clip ids come from (`src/@types/animation/ClipId.ts` / `clipRegistry`), that the six standalone ids are the interesting ones (the `tourXxx` ids are grand-tour beats and are better filmed as a tour window), and that a clip take is played whole (`--beats` is a tour-only flag).
   - a **Reproducibility** subsection: every take pins the sim clock via `#t=<ISO>`; the banner prints the instant; `--sim-time <ISO>` re-takes it exactly. State landmine 1 in one sentence — the pin is the _sim_ clock, the CDP budget is the _frame_ clock, and a reproducible take needs both.
   - a **Frame 0 and scene dressing** subsection: landmine 2 verbatim in operator terms — the film opens on whatever `?cinema` booted into; dressing a clip is done with instant `scene()`/`show()`/`hide()` cues placed ahead of any lead-in `wait` on the clip's own timeline; `cosmicFlows` shows the cue shape but lands its cues 2 s in, behind its own lead-in `wait(2)`, so it is a counter-example for literal frame 0, not the worked example; there is deliberately no `--settle` for clips, because the virtual time it would burn is the clip's opening.
   - a flag-table row for `--clip` and `--sim-time`, and a note that `--url` must carry no query or hash.
-- [ ] Verify: `npm run format` on the two touched files; re-read the README top to bottom for LLM tells and for claims that are now false.
-- [ ] Commit.
+- [x] Verify: `npm run format` on the two touched files; re-read the README top to bottom for LLM tells and for claims that are now false.
+- [x] Commit.
 
 ---
 
@@ -316,11 +316,11 @@ type RecordOptions = {
 
 **Files:** none. Do not commit any mp4 (`recordings/` is gitignored; write to `/tmp`).
 
-- [ ] With `npm run dev` running in this worktree, record `flyout` at low res: `npm run record-clip -- flyout --size 960x540 --fps 24 --out /tmp/clip-flyout.mp4`. Note the pinned instant from the banner.
-- [ ] Re-take with the printed instant: `npm run record-clip -- flyout --size 960x540 --fps 24 --sim-time <ISO> --out /tmp/clip-flyout-2.mp4`. The two ffprobe frame counts must match. (Pixel-level comparison is the standing job of `npm run spike-virtual-time`, not this task.)
-- [ ] Record `earthFlyout` — the one instant-dependent clip — twice with the same `--sim-time`, and confirm the opening frame shows the same Earth. This is the take the pin exists for.
-- [ ] Record one `cosmicFlows` take and confirm it shows the boot scene for its ~2 s lead-in `wait`, then the dressing (flow field mask, cosmic-web layers hidden) lands the instant the cues fire at t=2s — demonstrating that cue POSITION on the timeline, not just instant `over: 0`, determines what frame 0 shows.
-- [ ] Confirm `npm run record-tour -- demo --beats 0..0 --size 640x360 --fps 10 --out /tmp/tour-smoke.mp4` still works end to end.
+- [x] With `npm run dev` running in this worktree, record `flyout` at low res: `npm run record-clip -- flyout --size 960x540 --fps 24 --out /tmp/clip-flyout.mp4`. Note the pinned instant from the banner.
+- [x] Re-take with the printed instant: `npm run record-clip -- flyout --size 960x540 --fps 24 --sim-time <ISO> --out /tmp/clip-flyout-2.mp4`. The two ffprobe frame counts must match. (Pixel-level comparison is the standing job of `npm run spike-virtual-time`, not this task.)
+- [x] Record `earthFlyout` — the one instant-dependent clip — twice with the same `--sim-time`, and confirm the opening frame shows the same Earth. This is the take the pin exists for.
+- [x] Record one `cosmicFlows` take and confirm it shows the boot scene for its ~2 s lead-in `wait`, then the dressing (flow field mask, cosmic-web layers hidden) lands the instant the cues fire at t=2s — demonstrating that cue POSITION on the timeline, not just instant `over: 0`, determines what frame 0 shows.
+- [x] Confirm `npm run record-tour -- demo --beats 0..0 --size 640x360 --fps 10 --out /tmp/tour-smoke.mp4` still works end to end.
 - [ ] Report the frame counts, the mp4 sizes, and anything surprising in the banner. **User visual pass:** ask the user to watch `/tmp/clip-flyout.mp4` and `/tmp/clip-earthflyout.mp4` before the PR is marked ready — nothing in this plan can tell whether a take _looks_ right.
 - [ ] Run the `/feature-done` audit **before** merging; it gates the DoD then relocates this plan to `plans/completed/`.
 
@@ -330,23 +330,23 @@ type RecordOptions = {
 
 ### Deliverable inventory
 
-- [ ] `tools/record/record.ts` is the single entry point; no `recordTour.ts` remains, and no `recordTour` string survives in `src/`, `tools/`, `package.json` or the README (shipped artifacts under `*/completed/` excepted).
-- [ ] `SkymapRecorderHook.startClip(id: ClipId): Promise<void>` exists on the seam and is installed by `installRecorderHook`, single-flight against `selectClipActive`.
-- [ ] New helpers, one exported symbol each with a mirrored test where the plan calls for one: `tools/utils/record/frameCapFor.ts`, `clipFrameCap.ts`, `buildCaptureUrl.ts`. `tourFrameCap` delegates the margin to `frameCapFor` rather than restating it.
-- [ ] `defaultOutName` takes `takeId`; no caller or test still passes `tourId`.
-- [ ] `RecordOptions` carries `clipId` and `simTime`; `--clip <id>` and `--sim-time <ISO>` are in the value-taking flag list and in the unknown-flag error's "known:" list.
-- [ ] `package.json` has `record-clip` and a still-working `record-tour`, both pointing at `record.ts`.
-- [ ] `tools/record/README.md` covers both subjects and carries the three new sections — Clip takes, Reproducibility, Frame 0 and scene dressing — plus flag-table rows for `--clip` and `--sim-time` and the "`--url` carries no query or hash" note.
+- [x] `tools/record/record.ts` is the single entry point; no `recordTour.ts` remains, and no `recordTour` string survives in `src/`, `tools/`, `package.json` or the README (shipped artifacts under `*/completed/` excepted).
+- [x] `SkymapRecorderHook.startClip(id: ClipId): Promise<void>` exists on the seam and is installed by `installRecorderHook`, single-flight against `selectClipActive`.
+- [x] New helpers, one exported symbol each with a mirrored test where the plan calls for one: `tools/utils/record/frameCapFor.ts`, `clipFrameCap.ts`, `buildCaptureUrl.ts`. `tourFrameCap` delegates the margin to `frameCapFor` rather than restating it.
+- [x] `defaultOutName` takes `takeId`; no caller or test still passes `tourId`.
+- [x] `RecordOptions` carries `clipId` and `simTime`; `--clip <id>` and `--sim-time <ISO>` are in the value-taking flag list and in the unknown-flag error's "known:" list.
+- [x] `package.json` has `record-clip` and a still-working `record-tour`, both pointing at `record.ts`.
+- [x] `tools/record/README.md` covers both subjects and carries the three new sections — Clip takes, Reproducibility, Frame 0 and scene dressing — plus flag-table rows for `--clip` and `--sim-time` and the "`--url` carries no query or hash" note.
 
 ### Named observable behaviours (manual smoke)
 
-- [ ] `npm run record-clip -- flyout --size 960x540 --fps 24` produces a playable mp4 whose ffprobe line reports 960x540 and a nonzero frame count.
-- [ ] The banner prints `sim time pinned: <ISO>` with the copy-paste `--sim-time` re-take flag; re-taking with that ISO yields a matching frame count.
-- [ ] Two `earthFlyout` takes at the same `--sim-time` open on the same Earth.
-- [ ] A `cosmicFlows` take shows the boot scene through its ~2 s lead-in `wait`, then dresses the instant its cues fire at t=2s — cue position, not just `over: 0`, determines what frame 0 shows.
-- [ ] A clip take lands at `recordings/<clipId>-<w>x<h>-<fps>fps-<stamp>.mp4` when `--out` is omitted.
-- [ ] Loud failures: a positional tour id together with `--clip`; `--beats` together with `--clip`; a `--url` carrying `?` or `#`; an unknown clip id, whose error lists the registry keys.
-- [ ] `npm run record-tour -- demo --beats 0..0 --size 640x360 --fps 10` still works end to end.
+- [x] `npm run record-clip -- flyout --size 960x540 --fps 24` produces a playable mp4 whose ffprobe line reports 960x540 and a nonzero frame count.
+- [x] The banner prints `sim time pinned: <ISO>` with the copy-paste `--sim-time` re-take flag; re-taking with that ISO yields a matching frame count.
+- [x] Two `earthFlyout` takes at the same `--sim-time` open on the same Earth.
+- [x] A `cosmicFlows` take shows the boot scene through its ~2 s lead-in `wait`, then dresses the instant its cues fire at t=2s — cue position, not just `over: 0`, determines what frame 0 shows.
+- [x] A clip take lands at `recordings/<clipId>-<w>x<h>-<fps>fps-<stamp>.mp4` when `--out` is omitted.
+- [x] Loud failures: a positional tour id together with `--clip`; `--beats` together with `--clip`; a `--url` carrying `?` or `#`; an unknown clip id, whose error lists the registry keys.
+- [x] `npm run record-tour -- demo --beats 0..0 --size 640x360 --fps 10` still works end to end.
 - [ ] The user has watched a `flyout` and an `earthFlyout` take.
 
 ### Deferral boundary
@@ -358,3 +358,9 @@ Decided against in the grill; a reviewer must not chase these.
 - A harness-side scene-preset registry or `--scene` (Q2 B).
 - Any change to the `Clip` type — no opening-scene field, no caption field (Q5 C, Q6 C).
 - Pixel-level determinism between two takes. Frame counts must match; comparing pixels is `npm run spike-virtual-time`'s standing job.
+
+## Completion note
+
+Shipped on branch `worktree-record-clips-to-mp4`, PR #534. Verified: `flyout` films 529 frames at 960x540/24 (its authored 22.0 s), a re-take at the printed `--sim-time` matches frame counts, `demo` beat 0 still yields the same 131 frames it did before the change, and all four flag/id rejections fire.
+
+Outstanding: the user's visual pass, and an intermittent `earthFlyout` virtual-time stall (`docs/backlog/2026-07-31-earthflyout-virtual-time-stall.md`). Not a regression — `grantAndAwaitExpiry` is untouched; the clip path merely made that clip reachable by the recorder for the first time.
