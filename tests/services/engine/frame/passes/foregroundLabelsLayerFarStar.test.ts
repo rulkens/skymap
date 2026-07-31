@@ -87,6 +87,9 @@ function makeState(renderer: LabelRenderer, lineRenderer: MarkerLineRenderer): E
           earth: { enabled: true, labelEnabled: true },
           planet: { enabled: true, labelEnabled: true },
           sun: { enabled: true, labelEnabled: true },
+          // Sgr A*'s caption reads its own row; a missing one throws in the
+          // per-caption gate rather than failing an assertion.
+          'sgr-a-star': { enabled: true, labelEnabled: true },
         },
       },
       starCatalogs: { enabled: true, items: { famousStar: { enabled: true, labelEnabled: true } } },

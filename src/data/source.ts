@@ -198,4 +198,12 @@ export const Source = {
    * Appended at 26 — never renumber the codes below it.
    */
   Sun: 26,
+  /**
+   * Sagittarius A\* — the Galactic Centre anchor the S-star orbits focus on. A
+   * body row that draws NOTHING: it is positioned, captioned, focusable and
+   * selectable, so nothing ever stamps this code into the pick texture and
+   * nothing persists it. Registry-key-only. Appended at 27 — never renumber the
+   * codes below it.
+   */
+  SgrAStar: 27,
 } as const;

@@ -39,6 +39,7 @@ import { SCALE_FADE_BANDS } from '../../../../../src/services/engine/presentatio
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
+import { BODY_IDS } from '../../../../../src/data/bodies/bodyIds';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 
 // The layer derives its caption set from the frame's body snapshot
@@ -150,9 +151,33 @@ function makeLineRenderer(): MarkerLineRenderer {
 }
 
 /**
+ * `settings.bodies.items`, keyed off BODY_IDS rather than a hand-listed four.
+ * The hand list pinned every row it did not name at `labelEnabled: true`, so
+ * Sgr A* — a body row registered after these fixtures were written — stayed on
+ * through every "all captions off" state: it held the `enabled` gate's fold over
+ * `bodies.items` true, and kept its own caption alive in `settleAllCaptions`.
+ * Deriving the keys means the next body row cannot be forgotten the same way.
+ * `sunVisible` is the Sun's separate VISIBILITY axis (`items.sun.enabled`) — the
+ * same flag `visibleStars` reads to hide its dot — independent of `labelEnabled`.
+ */
+function makeBodyItems(
+  labelEnabledOf: (bodyId: string) => boolean,
+  sunVisible: boolean,
+): Record<string, { enabled: boolean; labelEnabled: boolean }> {
+  return Object.fromEntries(
+    BODY_IDS.map((id) => [
+      id,
+      { enabled: id === 'sun' ? sunVisible : true, labelEnabled: labelEnabledOf(id) },
+    ]),
+  );
+}
+
+/**
  * `bodyLabels` seeds ALL body rows from one flag by default, so a test that
  * only cares whether body captions are on at all passes a bare boolean; the
- * per-row cases pass the bits separately, which is the axis those rows buy.
+ * per-row cases pass the bits separately, which is the axis those rows buy. A
+ * row the object form does not name stays on — only the boolean form means
+ * "every body caption off", which is what the demand-gate tests assert against.
  */
 function makeState(
   renderer: LabelRenderer | null,
@@ -163,25 +188,14 @@ function makeState(
   sunVisible = true,
   starCatalogsMasterEnabled = true,
 ): EngineState {
-  const bodies =
-    typeof bodyLabels === 'boolean'
-      ? { earth: bodyLabels, planet: bodyLabels, sun: bodyLabels }
-      : { ...bodyLabels, sun: bodyLabels.sun ?? true };
+  const named: Record<string, boolean> =
+    typeof bodyLabels === 'boolean' ? {} : { ...bodyLabels, sun: bodyLabels.sun ?? true };
+  const unnamed = typeof bodyLabels === 'boolean' ? bodyLabels : true;
   return {
     gpu: { foregroundLabelRenderer: renderer, foregroundMarkerLineRenderer: lineRenderer },
     settings: {
       labels: { focusedOnly: false },
-      // Each caption reads its OWN source's label gate, so the body rows carry
-      // the Earth / planet / Sun caption bits. `sunVisible` is the Sun's
-      // separate VISIBILITY axis (`bodies.items.sun.enabled`) — the same flag
-      // `visibleStars` reads to hide its dot — independent of `labelEnabled`.
-      bodies: {
-        items: {
-          earth: { enabled: true, labelEnabled: bodies.earth },
-          planet: { enabled: true, labelEnabled: bodies.planet },
-          sun: { enabled: sunVisible, labelEnabled: bodies.sun },
-        },
-      },
+      bodies: { items: makeBodyItems((id) => named[id] ?? unnamed, sunVisible) },
       // The cluster master defaults on: the caption's visibility gate requires
       // it AND the row's own bit, matching how `visibleStars` composes the
       // pair. `starCatalogsMasterEnabled` lets a test drop the master alone,
@@ -233,13 +247,7 @@ function makeConstellationState(opts: { layerFade: number; ready?: boolean }): E
     },
     settings: {
       labels: { focusedOnly: false },
-      bodies: {
-        items: {
-          earth: { enabled: true, labelEnabled: true },
-          planet: { enabled: true, labelEnabled: true },
-          sun: { enabled: true, labelEnabled: true },
-        },
-      },
+      bodies: { items: makeBodyItems(() => true, true) },
       starCatalogs: { enabled: true, items: { famousStar: { enabled: true, labelEnabled: true } } },
       constellations: {},
     },
@@ -294,11 +302,13 @@ function makeSpreadVp(): Float64Array {
 // genuinely empty rather than carrying a settled `1` left by an unrelated
 // earlier test (the map is a module singleton — see the layer's own header —
 // so it persists across every test in this file). Driving every caption's
-// target to 0 (both body toggles off) with NO constellation slot and a
-// full-clock-advance `makeCtx` settles every currently-tracked id EXACTLY to 0
-// in one draw: `draw`'s own end-of-frame prune deletes any id outside this
-// frame's entry universe (which, with no constellation slot, is body captions
-// only), so a stray constellation id from an earlier test is dropped too.
+// target to 0 (the star map's label gate and EVERY body row's off — the boolean
+// `bodyLabels` form, which is why that form has to reach rows no test names)
+// with NO constellation slot and a full-clock-advance `makeCtx` settles every
+// currently-tracked id EXACTLY to 0 in one draw: `draw`'s own end-of-frame prune
+// deletes any id outside this frame's entry universe (which, with no
+// constellation slot, is body captions only), so a stray constellation id from
+// an earlier test is dropped too.
 function settleAllCaptions(): void {
   foregroundLabelsLayer.draw(
     PASS_STUB,

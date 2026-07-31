@@ -34,9 +34,12 @@
 
 import type { CaptionKind } from './captionPriority';
 import type { EngineSettingsState } from '../../../@types/settings/EngineSettingsState';
+import type { FadeBand } from '../../../@types/math/FadeBand';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from './scaleFadeBands';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
+import { SGR_A_STAR_ENTRY } from '../../../data/sources/sgr-a-star';
+import { SGR_A_STAR_ANCHOR } from '../../../data/bodies/sceneSgrAStar';
 
 /**
  * One caption kind's fade routing. `distanceMpc` is the caption anchor's
@@ -62,6 +65,26 @@ const NO_BAND = (): number => 1;
  * neighbouring kind's band — silence beats a plausible-looking wrong pace.
  */
 const PRODUCER_SUPPLIED = (): number => 0;
+
+/**
+ * Sgr A*'s approach band, keyed (like every `fadeTarget`) on the caption's own
+ * distance from the camera. Both edges come off R₀ — the Galactic Centre's
+ * distance from the render origin, read from the seed so it cannot drift from
+ * it: the name is exactly 0 from the solar system and reaches full alpha
+ * halfway across. R₀ (8.178e-3 Mpc) is inside the layer's caption gate
+ * (9.2e-3), so on an approach focused here the name is already 0 when the gate
+ * opens and the cut cannot pop.
+ *
+ * NOT derived from `galactic-centre.extentMpc`: that is 0 until the S-stars are
+ * seeded and 0.325 pc after — degenerate now, and a band no one could find
+ * later. Its structural home is `SCALE_FADE_BANDS` beside `sunCaption`; it sits
+ * here only while that table is frozen for the prep-02 refactor.
+ */
+const SGR_A_STAR_R0_MPC = Math.hypot(...SGR_A_STAR_ANCHOR.positionMpc);
+const SGR_A_STAR_CAPTION_BAND: FadeBand = {
+  fullAt: SGR_A_STAR_R0_MPC / 2,
+  goneAt: SGR_A_STAR_R0_MPC,
+};
 
 export const CAPTION_FADE_RULES = {
   /**
@@ -113,8 +136,29 @@ export const CAPTION_FADE_RULES = {
   },
 
   /**
+   * The Galactic Centre's aim point. Its own body row governs the name — riding
+   * the `star` row above would hide Sgr A* whenever the famous-star catalog is
+   * muted, and would key its band on a 2.3 kpc star map that Sgr A* sits 8 kpc
+   * outside. No visibility axis: it draws nothing, so there is no dot the
+   * caption could outlive (`bodies.items['sgr-a-star'].enabled` gates nothing —
+   * see that registry row).
+   *
+   * It does NOT take Earth's and the planets' bandless row. Those name bodies
+   * that sit inside the caption gate by construction; this one marks a point
+   * 8 kpc away with nothing drawn at it, so bandless it would hang a permanent
+   * name (and a leader line to empty space) in the solar-system view and hold
+   * its declutter tier over the star map's names at every zoom. It fades in on
+   * approach instead, the way the Sun's caption does on the descent.
+   */
+  sgrAStar: {
+    labelEnabled: (settings) => settings.bodies.items[SGR_A_STAR_ENTRY.id].labelEnabled,
+    subjectVisible: UNGATED,
+    fadeTarget: (distanceMpc) => fadeBand(SGR_A_STAR_CAPTION_BAND, distanceMpc),
+  },
+
+  /**
    * The stick-figure names. They never reach the body-caption pipeline this
-   * table drives — `sceneBodyLabels` emits only the four body kinds above, and
+   * table drives — `sceneBodyLabels` emits only the body kinds above, and
    * `constellationCaptions` appends the figure names further down with their own
    * per-frame target (`constellationLayerOpacity`: the layer's distance band ×
    * the fade-registry toggle, keyed on the camera's origin distance, not on an

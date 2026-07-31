@@ -35,7 +35,7 @@
  * the descent's aim point — it must out-rank every other caption, so a
  * declutter collision essentially cannot drop it.
  */
-export type CaptionKind = 'sun' | 'earth' | 'planet' | 'star' | 'constellation';
+export type CaptionKind = 'sun' | 'earth' | 'planet' | 'star' | 'sgrAStar' | 'constellation';
 
 /**
  * Tier dominance factor for the composed declutter score. Apparent size is
@@ -49,6 +49,12 @@ export const CAPTION_PRIORITY = {
   sun: 40,
   earth: 30,
   planet: 20,
+  // Above the star map, below the solar system: Sgr A* is the Galactic Centre's
+  // aim point, and it draws NOTHING — losing its caption to a dot's name loses
+  // the object entirely, where a decluttered star still shows as a point. Its
+  // within-tier size tiebreak is a Schwarzschild radius at 8 kpc, i.e. 0, so it
+  // would lose every collision on size alone.
+  sgrAStar: 15,
   star: 10,
   // Below every scene body: a figure name always yields to a body caption.
   constellation: 5,

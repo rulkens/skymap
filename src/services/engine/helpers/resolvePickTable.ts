@@ -9,6 +9,7 @@ import { resolveStructureFromPick } from './resolveStructureFromPick';
 import { SCENE_STARS } from '../../../data/bodies/sceneStars';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
+import { SGR_A_STAR } from '../../../data/bodies/sceneSgrAStar';
 import type { SourceEntry } from '../../../@types/data/SourceEntry';
 import type { PickResult } from '../../../@types/data/PickResult';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';
@@ -35,6 +36,11 @@ const PICK_SEEDS_BY_BODY_ID: Readonly<Record<BodyId, readonly { readonly id: str
   earth: [SCENE_EARTH],
   planet: SCENE_PLANETS,
   sun: SCENE_STARS,
+  // Total-by-obligation like the Sun's row, for the stronger reason: Sgr A*
+  // draws nothing, so no layer stamps its code into the pick texture at all and
+  // this arm is unreachable today. Its single-element table is still the honest
+  // answer — only index 0 names it, and any other localIdx falls off the end.
+  'sgr-a-star': [SGR_A_STAR],
 };
 
 export const RESOLVE_PICK: Partial<

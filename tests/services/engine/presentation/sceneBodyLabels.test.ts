@@ -18,9 +18,20 @@ const EARTH_POS = J2000_STATES.get('earth')!.positionMpc;
 describe('sceneBodyLabels', () => {
   const labels = sceneBodyLabels(J2000_STATES);
 
-  it('emits one label per seeded scene body (Earth + stars + planets)', () => {
+  it('emits one label per seeded scene body (Earth + stars + planets + Sgr A*)', () => {
     expect(labels).toHaveLength(SCENE_BODIES.length);
-    expect(labels).toHaveLength(1 + SCENE_STARS.length + SCENE_PLANETS.length);
+    // Spelled out per producer so a body that joins SCENE_BODIES without joining
+    // the emission (or the reverse) fails here rather than agreeing with itself.
+    expect(labels).toHaveLength(1 + SCENE_STARS.length + SCENE_PLANETS.length + 1);
+  });
+
+  it("gives Sgr A* its own caption kind, not the star map's", () => {
+    // Sgr A* draws nothing, so this caption is the whole object on screen — and
+    // riding `'star'` would route it through the famous-star catalog's gates and
+    // a 2.3 kpc band it sits 8 kpc outside.
+    const sgrA = labels.find((label) => label.id === 'sceneBody-sgr-a-star')!;
+    expect(sgrA.kind).toBe('sgrAStar');
+    expect(sgrA.text).toBe('Sgr A*');
   });
 
   it('fits inside the foreground label renderer capacity (no silent caption drop)', () => {
