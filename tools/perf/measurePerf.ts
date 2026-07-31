@@ -186,7 +186,7 @@ function parseArgs(argv: readonly string[]): PerfOptions {
 }
 
 /**
- * Launch pattern mirrored from record: the 'chromium' channel first (full
+ * Launch pattern mirrored from record.ts: the 'chromium' channel first (full
  * build, WebGPU with no flags), falling back to the headless shell with the
  * WebGPU flags only if the channel is not installed.
  */
@@ -217,7 +217,7 @@ async function launchChromium(): Promise<Browser> {
  *
  * Page errors are collected rather than warned inline: a noisy page would spam
  * stderr and (in --json mode) risk leaking onto stdout. The formatters collapse
- * them to a ⚠ summary; JSON mode surfaces them raw. Mirrors record's
+ * them to a ⚠ summary; JSON mode surfaces them raw. Mirrors record.ts's
  * handlers, but stores instead of printing. The returned `pageErrors` array is
  * live — it keeps filling as the page runs, so callers read it AFTER sampling.
  */

@@ -437,13 +437,13 @@ async function captureTake(
   // Kick the take under paused virtual time (finding 3: evaluate, never a
   // locator action). The evaluate returns immediately — the startTour promise
   // is deliberately NOT awaited; its outcome lands in __recorderTakeStatus.
-  await page.evaluate((take) => {
+  await page.evaluate(({ id, beats }) => {
     const w = window as unknown as RecorderPageWindow;
     const hook = w.__skymapRecorder;
     if (hook === undefined) throw new Error('__skymapRecorder missing');
     const status: TakeStatus = { done: false, error: null };
     w.__recorderTakeStatus = status;
-    hook.startTour(take.id, take.beats).then(
+    hook.startTour(id, beats).then(
       () => {
         status.done = true;
       },
@@ -485,12 +485,14 @@ async function captureTake(
     if (status === undefined) {
       throw new Error('__recorderTakeStatus vanished — did the page reload mid-take?');
     }
-    if (status.error !== null) throw new Error(`startTour rejected in-page: ${status.error}`);
+    if (status.error !== null) {
+      throw new Error(`the take's start promise rejected in-page: ${status.error}`);
+    }
     if (status.done) break;
     if (frame >= frameCap) {
       throw new Error(
         `aborting at frame ${frame}: cap ${frameCap} exceeded and '${take.kind} ${take.id}' ` +
-          'has not ended — likely a beat stuck on a waitUntil readiness gate (catalog focus ' +
+          'has not ended — likely something stuck on a waitUntil readiness gate (catalog focus ' +
           'never loaded?). Check the [page] warnings above.',
       );
     }

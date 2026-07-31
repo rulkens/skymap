@@ -169,7 +169,7 @@ function collectTimings(engine: EngineHandle, frames: number): Promise<PerfSampl
 // Ask for a tier change (the COMMAND — the saga owns the `setTier` write and
 // the eviction/reload), then resolve once the new tier's bins are loaded and
 // committed. Awaiting a FRESH `whenStablyReady` reuses the boot-ready predicate
-// rather than inventing a per-source wait (record precedent): the same
+// rather than inventing a per-source wait (record.ts precedent): the same
 // engine-ready + loads-settled debounce that gates boot also detects a tier
 // reload completing. A same-tier request no-ops in the saga; the fresh wait then
 // just resolves after the stability window — correct behaviour, no special case.
