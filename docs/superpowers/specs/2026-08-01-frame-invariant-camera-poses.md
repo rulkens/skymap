@@ -170,23 +170,44 @@ lands. A re-switch mid-roll would leave `base` expressed in a basis that is neit
 endpoint, requiring a special case for exactly that path. Re-encoding at every
 switch start has no such asymmetry.
 
-### Clip output re-encodes into the current pose space
+### A clip pins its basis at clip start
 
-`CompiledClip` already carries the basis it compiled against, so the clip driver
-maps its output forward:
+`evaluateClip`'s compile cache keys on the basis it is handed
+(`evaluateClip.ts:114-123`), and the clip driver hands it
+`ORIENTATION_FRAMES[s.settings.orientation]` fresh every frame
+(`cameraDrivers.ts:232`). So the clip's basis _tracks the setting_: a switch
+mid-clip silently recompiles the clip under the new pole and reinterprets every
+authored `yaw` against it. There is no lag to correct — there is a moving
+reference where a fixed one is needed.
+
+The clip descriptor gains the frame it started under:
 
 ```ts
-pose: (s, _cam, elapsed) =>
-  reencodePose(
-    evaluateClip(s.camera.clip!.data, elapsed, compiled.frameBasis),
-    compiled.frameBasis,
-    ORIENTATION_FRAMES[s.settings.orientation],
-  ),
+// src/@types/camera/CameraState.d.ts
+clip: { data: ClipData; frame: OrientationFrameId } | null;
 ```
 
-This is what makes `frameTo` legal mid-clip: the clip goes on aiming where it was
-authored while the pole rolls beneath it. The same applies to the focus-tween
-driver, whose descriptor poses were captured under the pre-switch basis.
+captured by whoever dispatches `playClip` (`visitBeatSaga.ts:97` already selects
+the orientation to resolve foci — the same value). The driver then evaluates
+against the pinned basis and maps the result into the current pose space:
+
+```ts
+pose: (s, _cam, elapsed) => {
+  const from = ORIENTATION_FRAMES[s.camera.clip!.frame];
+  return reencodePose(
+    evaluateClip(s.camera.clip!.data, elapsed, from),
+    from,
+    ORIENTATION_FRAMES[s.settings.orientation],
+  );
+};
+```
+
+Two consequences: the clip compiles once for its whole run instead of
+recompiling on a switch, and a `frameTo` mid-clip becomes a pure roll — the clip
+goes on aiming where it was authored while the pole turns beneath it.
+
+The focus-tween driver needs the same pinning, for the same reason: its
+descriptor's `from`/`to` poses were captured under the basis live at capture time.
 
 ### `spinToId` — bearings become geometry
 
