@@ -317,8 +317,13 @@ Ask the user to look. Spec §4's list, in order — the first three are the comm
 4. The edge-on Earth-zoom pose from `docs/backlog/2026-07-18-orbit-trail-residual-speckle.md` — thinnest ribbon. The pre-existing speckle is **out of scope** and must look neither better nor worse (the fragment math did not change); what to check is that the arc is not _broken_.
 5. Camera inside an orbit — the fallback path; must render exactly as today.
 
-- [ ] Request the visual pass on all five.
-- [ ] If a coverage gap appears, do not widen `MARGIN_PX` reflexively — identify whether it is a joint (per-segment quantity crept in), a chord (sagitta term), or a classification miss (an orbit taking the ribbon path that should have fallen back).
+**Two predicted fold artifacts to look for specifically.** Task 4's review derived both from the ribbon formula this plan mandates; the user's call (2026-07-31) was to confirm them visually before deciding a fix, so this pass is where they get judged. Both live at the two **turning points** (the ends of the projected major axis), not at arbitrary joints:
+
+1. **Double-add pip** — the offset ribbon self-intersects wherever the projected radius of curvature `B²/A` drops below the ribbon half-width (≥ 4.5 px), so two quads cover the same stroke pixels and the one/one blend adds twice. Trigger is roughly a 15:1 projected aspect, i.e. near-edge-on. Look for a bright spot at each end of the major axis on pose 4, and on any near-edge-on planet orbit in pose 1. If it reads: the prepared fix is a third `ribbonEligible` clause rejecting `minCurvatureRadiusPx ≤ STROKE_PX + MARGIN_PX` to the fullscreen path, which restores today's rendering exactly for those orbits.
+2. **Cap nick** — on projections whose long axis exceeds ~8400 px the quad degenerates at the fold and under-covers the stroke cap by ~0.25 px. Look for a broken or flattened cap at the ends of the major axis on pose 2 (Moon close-up). If it reads: raise `SEGMENTS`, which shrinks the sagitta directly.
+
+- [ ] Request the visual pass on all five poses, naming the two artifacts above and where they would appear.
+- [ ] If a coverage gap appears, do not widen `MARGIN_PX` reflexively — identify whether it is a joint (per-segment quantity crept in), a chord (sagitta term), a fold (the two artifacts above), or a classification miss (an orbit taking the ribbon path that should have fallen back). The Task 10 overlay distinguishes the last one directly.
 
 ---
 
