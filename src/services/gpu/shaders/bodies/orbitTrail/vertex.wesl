@@ -65,19 +65,23 @@ fn vs(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
   return out;
 }
 
-// One sample of the projected ellipse in isotropic pixel space. Returns
-// (px.x, px.y, clip.w) — the third component rides along in .z so callers can
-// rebuild a valid clip-space output without re-deriving p(E).
-fn ribbonSample(inst: OrbitInstance, viewportPx: vec2<f32>, si: u32) -> vec3<f32> {
+// One sample of the projected ellipse in raw clip space (x, y, w) — no divide
+// yet, so callers can test/clamp .z (== clip.w) before it ever lands in a
+// denominator.
+fn ribbonClip(inst: OrbitInstance, si: u32) -> vec3<f32> {
   // E-parametrization clusters samples at periapsis, matching how
   // composeOrbitConic built cc/ac/bc on the CPU side.
   let e = TAU * f32(si) / f32(SEGMENTS);
   // The padded vec4 stores clip.w in its THIRD slot - (x, y, w, 0) - so the
   // swizzle is .xyz, never .xyw: the .w lane is the zero pad, and reading it
   // makes p.z zero, which silently collapses every vertex to (0,0,0,0).
-  let p = inst.cc.xyz + cos(e) * inst.ac.xyz + sin(e) * inst.bc.xyz; // clip (x, y, w)
-  let px = (p.xy / p.z) * 0.5 * viewportPx; // isotropic pixel space
-  return vec3<f32>(px, p.z);
+  return inst.cc.xyz + cos(e) * inst.ac.xyz + sin(e) * inst.bc.xyz; // clip (x, y, w)
+}
+
+// Perspective divide, isolated so both the fast (fully-front) and clamped
+// paths below share one conversion. Only valid where clip.z (== clip.w) > 0.
+fn clipToPixel(clip: vec3<f32>, viewportPx: vec2<f32>) -> vec2<f32> {
+  return (clip.xy / clip.z) * 0.5 * viewportPx;
 }
 
 // Rasterizes each orbit as a screen-space ribbon hugging the projected
@@ -99,34 +103,78 @@ fn vsRibbon(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
 
   let viewportPx = vec2<f32>(inst.phase.z, inst.phase.w);
 
-  // sample = i and i+1; % SEGMENTS folds sample SEGMENTS back to 0 so the
-  // strip closes. Every quantity below is computed per SAMPLE (si), never per
-  // segment: the two quads sharing sample si then emit identical corners, so
-  // the strip abuts exactly under additive blend with no seam at the joint.
-  let si = (segment + offset) % SEGMENTS;
-  let siPrev = (si + SEGMENTS - 1u) % SEGMENTS;
-  let siNext = (si + 1u) % SEGMENTS;
+  // Segment endpoints (sI, sJ = sI+1) plus the one extra neighbour on each
+  // side that the fully-front path's central-difference tangent reads below.
+  let sI = segment;
+  let sJ = (segment + 1u) % SEGMENTS;
+  let sIPrev = (sI + SEGMENTS - 1u) % SEGMENTS;
+  let sJNext = (sJ + 1u) % SEGMENTS;
+  let rawIPrev = ribbonClip(inst, sIPrev);
+  let rawI = ribbonClip(inst, sI);
+  let rawJ = ribbonClip(inst, sJ);
+  let rawJNext = ribbonClip(inst, sJNext);
 
-  let cur = ribbonSample(inst, viewportPx, si);
-  let prev = ribbonSample(inst, viewportPx, siPrev);
-  let next = ribbonSample(inst, viewportPx, siNext);
+  // Per-instance scale-free near-plane epsilon: |cc.z| + hypot(ac.z, bc.z)
+  // bounds clip.w's amplitude over every E, so it tracks this orbit's scale.
+  let epsW = 1e-6 * (abs(inst.cc.z) + length(vec2<f32>(inst.ac.z, inst.bc.z)));
+  let iFront = rawI.z > epsW;
+  let jFront = rawJ.z > epsW;
 
-  // The chord tangent (samples si-1, si+1) needs no projective derivative and
-  // is the direction the strip's edges actually run in.
-  let chord = next.xy - prev.xy;
-  let tangent = chord / max(length(chord), 1e-20); // guarded normalize, as the fragment guards its own gradients
-  let normal = vec2<f32>(-tangent.y, tangent.x);
+  if (iFront && jFront && rawIPrev.z > epsW && rawJNext.z > epsW) {
+    // Fully in front, INCLUDING tangent neighbours: today's per-sample math,
+    // byte-identical. Computed per SAMPLE (si) so the two quads sharing si
+    // emit identical corners — no seam at the joint under additive blend.
+    let curRaw = select(rawJ, rawI, offset == 0u);
+    let prevRaw = select(rawI, rawIPrev, offset == 0u);
+    let nextRaw = select(rawJNext, rawJ, offset == 0u);
+    let curPx = clipToPixel(curRaw, viewportPx);
+    let prevPx = clipToPixel(prevRaw, viewportPx);
+    let nextPx = clipToPixel(nextRaw, viewportPx);
 
-  // sag is the second difference of the chord, so a wide/near-degenerate
-  // orbit widens its own ribbon; a constant margin cannot.
-  let sag = abs(dot(0.5 * (prev.xy + next.xy) - cur.xy, normal));
-  let halfWidth = STROKE_PX + MARGIN_PX + sag;
-  let outPx = cur.xy + side * halfWidth * normal;
-
-  // clip.z = 0: the pipeline is depthless, so 0 <= 0 <= w holds for every
-  // w > 0, which ribbonEligible guarantees at every sample of this instance.
-  let w = cur.z;
-  out.clip = vec4<f32>((outPx / (0.5 * viewportPx)) * w, 0.0, w);
+    // The chord tangent (samples si-1, si+1) needs no projective derivative
+    // and is the direction the strip's edges actually run in.
+    let chord = nextPx - prevPx;
+    let tangent = chord / max(length(chord), 1e-20); // guarded normalize, as the fragment guards its own gradients
+    let normal = vec2<f32>(-tangent.y, tangent.x);
+    // sag is the second difference of the chord, so a wide/near-degenerate
+    // orbit widens its own ribbon; a constant margin cannot.
+    let sag = abs(dot(0.5 * (prevPx + nextPx) - curPx, normal));
+    let halfWidth = STROKE_PX + MARGIN_PX + sag;
+    let outPx = curPx + side * halfWidth * normal;
+    let w = curRaw.z;
+    out.clip = vec4<f32>((outPx / (0.5 * viewportPx)) * w, 0.0, w);
+  } else if (!iFront && !jFront) {
+    // Both endpoints behind the near plane: collapse the quad to one point.
+    // Zero area means zero fragments no matter where the point lands, so
+    // (0,0,0,1) is chosen only because it needs no divide to reach.
+    out.clip = vec4<f32>(0.0, 0.0, 0.0, 1.0);
+  } else {
+    // One endpoint behind, or a third-sample neighbour is behind (unsafe for
+    // the tangent above): use this segment's own two-point chord instead,
+    // sliding any behind endpoint to the w = epsW crossing. This may disagree
+    // with a neighbour's per-sample corner at a shared sample, but only where
+    // the clamped point is a huge off-viewport coordinate that hardware
+    // clipping removes before rasterization — so the seam is never drawn.
+    var endI = rawI;
+    var endJ = rawJ;
+    if (!iFront) {
+      let t = (epsW - rawI.z) / (rawJ.z - rawI.z);
+      endI = mix(rawI, rawJ, t);
+    } else if (!jFront) {
+      let t = (epsW - rawJ.z) / (rawI.z - rawJ.z);
+      endJ = mix(rawJ, rawI, t);
+    }
+    let pxI = clipToPixel(endI, viewportPx);
+    let pxJ = clipToPixel(endJ, viewportPx);
+    let chord = pxJ - pxI;
+    let tangent = chord / max(length(chord), 1e-20);
+    let normal = vec2<f32>(-tangent.y, tangent.x);
+    let halfWidth = STROKE_PX + MARGIN_PX; // no sag term: only two points on this path
+    let anchorPx = select(pxJ, pxI, offset == 0u);
+    let anchorW = select(endJ.z, endI.z, offset == 0u);
+    let outPx = anchorPx + side * halfWidth * normal;
+    out.clip = vec4<f32>((outPx / (0.5 * viewportPx)) * anchorW, 0.0, anchorW);
+  }
 
   out.ginv0 = inst.ginv0.xyz;
   out.ginv1 = inst.ginv1.xyz;
