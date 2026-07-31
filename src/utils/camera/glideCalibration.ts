@@ -7,6 +7,7 @@
  */
 
 import type { GlideTuning } from '../../@types/camera/GlideTuning';
+import type { Ease } from '../../@types/animation/Ease';
 
 /**
  * Pan/zoom trade-off ρ passed to `zoomPanGeodesic`. Low ρ makes zooming
@@ -44,13 +45,21 @@ export const GLIDE_MIN_SEC = 0.3;
 export const GLIDE_MAX_SEC = 1.5;
 
 /**
- * The four constants above as one record — what `glidePath` falls back to and
- * what the DebugPanel's live-tuning sliders seed from, so the numbers stay
- * spelled once.
+ * `'linear'` — constant arc-length velocity IS the feature (see `glide`'s
+ * docblock in `effectHelpers.ts`); an eased arrival is an opt-in the
+ * DebugPanel's ease selector makes live-tunable, not the shipped default.
+ */
+export const GLIDE_EASE_DEFAULT: Ease = 'linear';
+
+/**
+ * The constants above as one record — what `glidePath` falls back to and what
+ * the DebugPanel's live-tuning sliders seed from, so the numbers stay spelled
+ * once.
  */
 export const DEFAULT_GLIDE_TUNING: GlideTuning = {
   rho: GLIDE_RHO_DEFAULT,
   velocity: GLIDE_VELOCITY,
   minSec: GLIDE_MIN_SEC,
   maxSec: GLIDE_MAX_SEC,
+  ease: GLIDE_EASE_DEFAULT,
 };

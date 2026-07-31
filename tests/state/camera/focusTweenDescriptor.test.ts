@@ -132,4 +132,12 @@ describe('focusTweenDescriptor', () => {
     const d = focusTweenDescriptor(struct, FROM, FOVY, DEFAULT_GLIDE_TUNING);
     expect(d.to.target).not.toBe(struct.worldPos);
   });
+
+  it('the tuned ease reaches the descriptor, not just the default linear', () => {
+    // The DebugPanel's ease <select> is only honest if a non-default choice
+    // actually rides the descriptor `tweenToClip` compiles from.
+    const tuning = { ...DEFAULT_GLIDE_TUNING, ease: 'easeOutCubic' as const };
+    const d = focusTweenDescriptor(galaxyRow(), FROM, FOVY, tuning);
+    expect(d.easing).toBe('easeOutCubic');
+  });
 });

@@ -9,3 +9,15 @@
   gap: 4px;
   margin-top: 4px;
 }
+
+.easeRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+.easeSelect {
+  font-size: 12px;
+}

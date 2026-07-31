@@ -87,8 +87,8 @@ export function* watchGoHomeSaga() {
         // Arc-length duration off the same geodesic the glide walks — home from
         // deep space is a full scale-ladder descent, home from orbit is a hop.
         durationMs: glidePath(runtime.from, to, runtime.fovYRad, tuning).durationSec * 1000,
-        // linear — same reasoning as focusTweenDescriptor.ts's easing choice.
-        easing: 'linear',
+        // Live-tuned ease — same reasoning as focusTweenDescriptor.ts's easing choice.
+        easing: tuning.ease,
         rho: tuning.rho,
       }),
     );

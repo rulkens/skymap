@@ -8,6 +8,7 @@
  * the arc length goes bimodal (see `glideCalibration`), and the point of the
  * slider is to feel that, so the low end is deliberately reachable.
  */
+import type { Ease } from '../../@types/animation/Ease';
 import type { GlideTuning } from '../../@types/camera/GlideTuning';
 import type { GlideSliderField } from '../../@types/data/camera/GlideSliderField';
 
@@ -19,12 +20,36 @@ export const GLIDE_SLIDER_FIELDS: readonly GlideSliderField[] = [
 ];
 
 /**
- * Build a `GlideTuning` patch for one slider. The cast is sound — every key of
- * `GlideTuning` is number-valued — but a computed-key literal widens to
- * `{ [k: string]: number }`, which the compiler won't narrow on its own.
- * Localising the cast here keeps the section type-clean (mirrors
+ * GLIDE_EASE_OPTIONS — the curated subset of the 31-member `Ease` union worth
+ * tuning a focus arrival with. Every overshoot family (`*Back`, `*Elastic`) is
+ * deliberately EXCLUDED: on a geodesic an overshoot walks the arc PAST its
+ * endpoint, so the camera flies through the target and back out — nothing
+ * throws, it just looks broken.
+ */
+export const GLIDE_EASE_OPTIONS: readonly Ease[] = [
+  'linear',
+  'easeOutSine',
+  'easeOutQuad',
+  'easeOutCubic',
+  'easeOutQuart',
+  'easeOutQuint',
+  'easeOutExpo',
+  'easeInOutSine',
+  'easeInOutCubic',
+  'easeInOutQuart',
+];
+
+/**
+ * Build a `GlideTuning` patch for one slider. The cast is sound — every field
+ * `GLIDE_SLIDER_FIELDS` can name (`GlideSliderField['key']` excludes `ease`,
+ * the one non-numeric leaf) is number-valued — but a computed-key literal
+ * widens to `{ [k: string]: number }`, which the compiler won't narrow on its
+ * own. Localising the cast here keeps the section type-clean (mirrors
  * `flowSliderPatch`).
  */
-export function glideSliderPatch(key: keyof GlideTuning, value: number): Partial<GlideTuning> {
+export function glideSliderPatch(
+  key: GlideSliderField['key'],
+  value: number,
+): Partial<GlideTuning> {
   return { [key]: value } as Partial<GlideTuning>;
 }

@@ -21,6 +21,7 @@ import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFra
 import { selectOrientation } from '../../../src/state/settings/selectors';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { setSimDays, pause } from '../../../src/state/time/timeSlice';
+import { setGlideTuning } from '../../../src/state/settings/settingsSlice';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { cameraRoute, selectionRoute, timeRoute } from '../../../src/store/constants';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
@@ -74,6 +75,16 @@ describe('watchGoHomeSaga', () => {
     const simDays = deriveSimDays(store.getState()[timeRoute], performance.now());
     const frameBasis = ORIENTATION_FRAMES[selectOrientation(store.getState())];
     expect(tween!.to).toEqual(earthHomePose(simDays, FOV, frameBasis));
+  });
+
+  it('the tuned ease reaches the home tween, not a hardcoded linear', async () => {
+    // watchGoHomeSaga builds its descriptor inline (not through
+    // focusTweenDescriptor), so this is a separate hardcode site — assert it
+    // directly rather than assuming the fix generalised.
+    store.dispatch(setGlideTuning({ ease: 'easeOutCubic' }));
+    store.dispatch(goHome());
+    await flush();
+    expect(store.getState()[cameraRoute].tween!.easing).toBe('easeOutCubic');
   });
 
   it('goHome is a no-op when the camera runtime is null', async () => {

@@ -43,6 +43,7 @@ import { distanceMpc } from '../../../../src/utils/math/distanceMpc';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
+import { setGlideTuning } from '../../../../src/state/settings/settingsSlice';
 import { rootReducer } from '../../../../src/store/rootReducer';
 import {
   beginDrag,
@@ -655,6 +656,44 @@ describe('buildCameraDrivers — followBody', () => {
       return targetFrac - distFrac;
     });
     expect(Math.max(...gaps)).toBeGreaterThan(0.15);
+  });
+
+  it('the DebugPanel ease reaches the follow-approach sample, not just the tween', () => {
+    // The bug this guards: `followBody` used to sample `glidePath(...).at(t)`
+    // with raw linear progress, so the DebugPanel's ease selector would change
+    // nothing for a planet approach even though it worked for a focus tween.
+    const store = makeStore();
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
+    store.dispatch(setGlideTuning({ ease: 'easeOutCubic' }));
+    const s = store.getState() as unknown as RootState;
+
+    const engineState = makeFollowEngineState({
+      simDays: FOLLOW_SIM_DAYS,
+      fovYRad: FOLLOW_FOV,
+      lastPose: BASE_POSE,
+      followFrom: APPROACH_FROM,
+    });
+    const follow = buildCameraDrivers(engineState).find((d) => d.id === 'followBody')!;
+    const approachMs = deriveApproachMs(follow, s, engineState);
+
+    const linearStore = makeStore();
+    linearStore.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
+    const sLinear = linearStore.getState() as unknown as RootState;
+    const linearEngineState = makeFollowEngineState({
+      simDays: FOLLOW_SIM_DAYS,
+      fovYRad: FOLLOW_FOV,
+      lastPose: BASE_POSE,
+      followFrom: APPROACH_FROM,
+    });
+    const linearFollow = buildCameraDrivers(linearEngineState).find((d) => d.id === 'followBody')!;
+    deriveApproachMs(linearFollow, sLinear, linearEngineState);
+
+    // Mid-approach, easeOutCubic(0.5) = 0.875 ≠ 0.5 — the eased sample must
+    // differ from the default-linear sample at the SAME elapsed fraction.
+    const easedMid = follow.pose(s, CAM_STUB, approachMs * 0.5);
+    const linearMid = linearFollow.pose(sLinear, CAM_STUB, approachMs * 0.5);
+    expect(easedMid.distance).not.toBeCloseTo(linearMid.distance, 6);
+    expect(easedMid.target).not.toEqual(linearMid.target);
   });
 
   it('the pan strafe rides along: follow targets body + panOffset', () => {

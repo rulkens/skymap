@@ -76,6 +76,7 @@ import { liveBodyPosition } from './liveBodyPosition';
 import { glidePath } from '../../../utils/camera/glidePath';
 import { selectGlideTuning } from '../../../state/settings/selectors';
 import { lerp } from '../../../utils/math/lerp';
+import { EASE } from '../animation/ease';
 
 /**
  * Pick the highest-priority active driver. A pure max-scan over `drivers`:
@@ -385,16 +386,24 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
         // therefore re-shapes the path but not its length, which is the same
         // trade the wake window forces.
         const t = elapsed / approachMs;
+        const tuning = selectGlideTuning(s);
+        // The eased fraction, not raw `t`: glidePath.at() takes an arc-length
+        // FRACTION with no ease baked in (see glidePath.ts), so the driver must
+        // reparametrise it itself — `tweenToClip`'s glide gets this for free from
+        // `buildGlideTrack`, but the follow driver samples `glidePath` directly.
+        // Applied to yaw/pitch too, matching tweenToClip's uniform ease across
+        // target/distance/yaw/pitch for a focus tween.
+        const easedT = EASE[tuning.ease](t);
         const glided = glidePath(
           from,
           { target: pivot, distance: distanceTarget },
           fovYRad,
-          selectGlideTuning(s),
-        ).at(t);
+          tuning,
+        ).at(easedT);
         return {
           target: glided.target,
-          yaw: lerp(from.yaw, base.yaw, t),
-          pitch: lerp(from.pitch, base.pitch, t),
+          yaw: lerp(from.yaw, base.yaw, easedT),
+          pitch: lerp(from.pitch, base.pitch, easedT),
           distance: glided.distance,
         };
       },

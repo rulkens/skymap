@@ -1,8 +1,9 @@
 import type { GlideTuning } from '../../camera/GlideTuning';
 
-/** UI metadata for one focus-glide calibration slider, iterated by the DebugPanel. */
+/** UI metadata for one focus-glide calibration slider, iterated by the DebugPanel.
+ *  `ease` is excluded — it is not a numeric range, it gets its own `<select>` row. */
 export type GlideSliderField = {
-  key: keyof GlideTuning;
+  key: Exclude<keyof GlideTuning, 'ease'>;
   label: string;
   /** Inclusive min for the slider. */
   min: number;
