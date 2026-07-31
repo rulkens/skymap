@@ -501,10 +501,9 @@ work, and the rewiring are three different diffs regardless.
 
 ## 7. Out of scope — named so the boundary is legible
 
-- ~~**`followBody`**~~ — **no longer out of scope.** Pulled in after the first visual pass; see
-  §1. Its duration-coupled wake predicate (`shouldKeepTicking.ts:106-110`) is the specific
-  hazard: a derived duration that the wake window does not match freezes the approach part-way
-  and resumes it only on the next input event.
+(`followBody` was listed here and was pulled INTO scope after the first visual pass — §1. Its
+duration-coupled wake predicate was the specific hazard: a derived duration the wake window
+does not match freezes the approach part-way and resumes it only on the next input event.)
 - **The leaf-star sprite floor.** A leaf star's drawn radius is
   `max(STAR_GLOW_MIN_PX, 0) · sizeScale · overlap` (`starCatalog/vertex.wesl:347`,
   `STAR_GLOW_MIN_PX = 1.5` at `shaders/lib/starPhotometry.wesl:42`) — **no distance
