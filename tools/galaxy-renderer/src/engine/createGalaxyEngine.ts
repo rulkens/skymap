@@ -187,12 +187,14 @@ import { mat4 } from 'wgpu-matrix';
 
 import type { GalaxyEngineHandle } from '../../@types/engine/GalaxyEngineHandle';
 import type { GalaxyEngineOptions } from '../../@types/engine/GalaxyEngineOptions';
+import type { MilkyWayFadeReadout } from '../../@types/engine/MilkyWayFadeReadout';
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import type { PassTiming } from '../../@types/engine/PassTiming';
 import type { RenderSettings } from '../../@types/engine/RenderSettings';
 import type { LodSettings } from '../../@types/engine/LodSettings';
 import type { ViewPose } from '../../@types/engine/ViewPose';
 import type { ExtraGalaxySpec } from '../../../../src/@types/galaxy/ExtraGalaxySpec';
+import type { GalaxyFieldComponent } from '../../../../src/@types/galaxy/GalaxyFieldComponent';
 import type { MilkyWayTuning } from '../../../../src/@types/settings/MilkyWayTuning';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -202,13 +204,21 @@ import { createGpuTimingService } from '../../../../src/services/gpu/timing/gpuT
 import { hasUrlGate } from '../../../../src/utils/url/hasUrlGate';
 
 import { createFrameTimer } from './createFrameTimer';
+import { deriveMilkyWayFade } from './deriveMilkyWayFade';
 import { orbitEye } from './orbitEye';
 import { panAxes } from './panAxes';
 import { lensShift } from './lensShift';
 import { CLOUD_UNIFORM_FLOATS, packCloudUniforms } from './packCloudUniforms';
+import {
+  FIELD_UNIFORM_BUFFER_SIZE,
+  FIELD_UNIFORM_FLOATS,
+  packFieldUniforms,
+} from './packFieldUniforms';
 import { createGenerationPipelines } from '../../../../src/services/gpu/galaxy/createGenerationPipelines';
 import { encodeGeneration } from '../../../../src/services/gpu/galaxy/encodeGeneration';
 import { packGenerationUniforms } from '../../../../src/services/gpu/galaxy/packGenerationUniforms';
+import { readGalaxyFieldGeometry } from '../../../../src/services/gpu/galaxy/readGalaxyFieldGeometry';
+import { buildGalaxyFieldMixture } from '../../../../src/data/galaxy/galaxyFieldMixture';
 import { GENERATION_UBO } from '../../../../src/services/gpu/galaxy/generationUboLayout';
 import { GEN_RECORD_BYTES } from '../../../../src/services/gpu/galaxy/genRecordBytes';
 import { carveStarLayout } from '../../../../src/services/gpu/galaxy/carveStarLayout';
@@ -225,6 +235,7 @@ import { DEFAULT_RENDER_SETTINGS } from '../data/defaultRenderSettings';
 
 import starWgsl from './shaders/milkyWayCloud/stars.wesl?static';
 import dustWgsl from './shaders/milkyWayCloud/dust.wesl?static';
+import fieldWgsl from './shaders/milkyWayField/field.wesl?static';
 import gradeWgsl from './shaders/grade.wesl?static';
 
 /** HDR working format for the scene + bloom pyramid — the runtime's `hdr` row. */
@@ -284,6 +295,14 @@ const PASS_STALE_FRAMES = 30;
 
 /** How often the engine hands a `PerfReport` to the UI. */
 const PERF_REPORT_INTERVAL_MS = 500;
+
+/**
+ * How often the engine hands a `MilkyWayFadeReadout` to the UI. Five times the
+ * perf cadence: the fade tracks the camera, so at the perf interval a wheel
+ * zoom would land a half-second before the numbers explaining it did. Still a
+ * throttle rather than per-frame, because it drives React state.
+ */
+const FADE_REPORT_INTERVAL_MS = 100;
 
 /**
  * A single generated extra galaxy: its GPU-filled star/dust vertex buffers,
@@ -358,6 +377,14 @@ export async function createGalaxyEngine(
     });
   const starUbo = makeCloudUniformBuffer('galaxy:starUniforms');
   const dustUbo = makeCloudUniformBuffer('galaxy:dustUniforms');
+  // The analytic field's own buffer, own struct — see `packFieldUniforms`.
+  // It cannot share the cloud UBO: nothing in the 208-byte cloud layout is a
+  // ray, and this pass reads none of the billboard lanes.
+  const fieldUbo = device.createBuffer({
+    label: 'galaxy:fieldUniforms',
+    size: FIELD_UNIFORM_BUFFER_SIZE,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
   // Tool-only grade trailer: [saturation, vignette, gammaEncode, 0]. The bloom
   // and compositor uniforms are owned by their shared factories below.
   const gradeBuf = device.createBuffer({
@@ -411,6 +438,30 @@ export async function createGalaxyEngine(
       // hands its star pipeline, and the same algebra `createAdditiveUpsample`
       // composites the result back with (that pairing is what makes the
       // reduced-res detour mathematically equal to drawing straight into HDR).
+      targets: [{ format: HDR, blend: ADDITIVE_BLEND }],
+    },
+    primitive: { topology: 'triangle-list' },
+  });
+
+  // ---- analytic field pipeline (SPIKE: closed-form Gaussian mixture) ----
+  // A fullscreen covering triangle drawn into the SAME `aggregateTex`, with
+  // the SAME `ADDITIVE_BLEND`, in the same pass as the sprites — so the two
+  // representations of the same emission sum, and either can be switched off
+  // to see the other alone. No vertex buffers: `fullscreenTri.wesl`
+  // synthesises its three vertices from `vertex_index`.
+  //
+  // Its own module and its own UBO, not a second entry point on the star
+  // module: `layout: 'auto'` derives the bind-group layout from the module's
+  // entry points, and two pipelines sharing a module that reads the binding
+  // with divergent stage visibility fail the group-equivalent check.
+  const fieldMod = makeShader(fieldWgsl, 'galaxy:field');
+  const fieldPipe = device.createRenderPipeline({
+    label: 'galaxy:fieldPipe',
+    layout: 'auto',
+    vertex: { module: fieldMod, entryPoint: 'vs' },
+    fragment: {
+      module: fieldMod,
+      entryPoint: 'fs',
       targets: [{ format: HDR, blend: ADDITIVE_BLEND }],
     },
     primitive: { topology: 'triangle-list' },
@@ -532,6 +583,11 @@ export async function createGalaxyEngine(
   let dustBuf: GPUBuffer | null = null;
   let dustCount = 0;
   let extras: Extra[] = []; // background galaxies, each GPU-generated in world space
+  // The analytic field's Gaussian mixture for the CENTRAL galaxy — rebuilt in
+  // `setParams` from the same derived geometry generation just ran with, so it
+  // tracks every preset/knob change the sprites do. Empty until the first
+  // `setParams`, which draws a field of zero components: nothing, not stale.
+  let fieldMixture: readonly GalaxyFieldComponent[] = [];
 
   // Per-pipeline bind groups. `layout: 'auto'` groups are pipeline-specific
   // and never cross pipelines, so each pass needs its own group even where the
@@ -546,6 +602,11 @@ export async function createGalaxyEngine(
     label: 'galaxy:cloudBG-dust',
     layout: dustPipe.getBindGroupLayout(0),
     entries: [{ binding: 0, resource: { buffer: dustUbo } }],
+  });
+  const fieldBG = device.createBindGroup({
+    label: 'galaxy:fieldBG',
+    layout: fieldPipe.getBindGroupLayout(0),
+    entries: [{ binding: 0, resource: { buffer: fieldUbo } }],
   });
 
   // ---- size-dependent targets: HDR scene + star aggregate + bloom mips + LDR ----
@@ -675,6 +736,7 @@ export async function createGalaxyEngine(
   // dust pass's. (The BUFFERS still have to be separate — see
   // `makeCloudUniformBuffer`.)
   const cloudData = new Float32Array(CLOUD_UNIFORM_FLOATS);
+  const fieldData = new Float32Array(FIELD_UNIFORM_FLOATS);
   const gradeData = new Float32Array(4);
 
   /**
@@ -778,7 +840,12 @@ export async function createGalaxyEngine(
     }
     dustCount = dustLayout.capacity;
 
-    device.queue.writeBuffer(genUbo, 0, packGenerationUniforms(p, budget, null));
+    const genUniforms = packGenerationUniforms(p, budget, null);
+    device.queue.writeBuffer(genUbo, 0, genUniforms);
+    // Read back rather than re-derive: the bar and bulge tilts are single RNG
+    // draws off the packer's streams, so this is the only way the analytic
+    // field can be sure it is oriented like the sprites it sums with.
+    fieldMixture = buildGalaxyFieldMixture(readGalaxyFieldGeometry(genUniforms, starLayout));
 
     const enc = device.createCommandEncoder({ label: 'galaxy:generate' });
     encodeGeneration({
@@ -892,6 +959,15 @@ export async function createGalaxyEngine(
 
   function setAutoRotate(on: boolean): void {
     autoRotate = on;
+    // Both halves make the toggle immediate. Starting clears the idle gate in
+    // `drawFrame`: that gate exists so the spin does not fight a live drag, not
+    // to delay a deliberate button press, and a press right after a drag would
+    // otherwise sit still for 2.5 s. Stopping snaps the damped shadow onto the
+    // live angle — while rotating, `camAnim.az` trails `cam.az` by a constant
+    // offset, and letting that offset unwind reads as a coast after the button
+    // already said stop.
+    if (on) lastInteract = Number.NEGATIVE_INFINITY;
+    else camAnim.az = cam.az;
   }
 
   function setInsets(left: number, right: number): void {
@@ -937,8 +1013,27 @@ export async function createGalaxyEngine(
   };
   const onWheel = (e: WheelEvent): void => {
     e.preventDefault();
-    cam.dist *= Math.exp(e.deltaY * 0.0011);
-    cam.dist = Math.max(3, Math.min(400, cam.dist));
+    // Exponential, so a notch is a constant RATIO — the only zoom that behaves
+    // the same at 3000 units out and at 0.02. The rate is up from the old
+    // short-range value to keep a full traverse a similar number of notches now
+    // that the range spans five decades instead of two.
+    cam.dist *= Math.exp(e.deltaY * 0.0018);
+    // The floor is deep inside the disc, where sprites resolve into individual
+    // billboards — the regime the app hits on descent and the one worth tuning
+    // against. It works only because the near plane tracks `dist` below.
+    //
+    // The CEILING is set by the apparent-size fade band, not by taste: the disc
+    // is 21 generator units across, so at 400 it still spans tens of pixels and
+    // the band (edges at 12 / 8 px) could not fire at any reachable zoom. 3000
+    // puts both edges inside the range, which is what makes the FADE section
+    // testable. The far plane below still contains the cloud there.
+    // The ceiling exists so the apparent-size fade band is reachable, and that
+    // band is keyed on PIXELS: apparent diameter is ~25.35 * viewportHeight /
+    // dist, so a taller canvas needs a further camera to reach the same px. At
+    // dpr 2 an 8 px disc is ~5700 units, so a 3000 ceiling would leave the band
+    // never firing on a retina display. 8000 clears it with margin, and the far
+    // plane (dist * 2 + 200) still contains the cloud there.
+    cam.dist = Math.max(0.02, Math.min(8000, cam.dist));
     lastInteract = performance.now();
   };
   const onContextMenu = (e: Event): void => e.preventDefault(); // allow right-drag to pan
@@ -950,9 +1045,12 @@ export async function createGalaxyEngine(
 
   // ---- resize (galaxy-engine.js:253-264) ----
   const dpr = Math.min(window.devicePixelRatio || 1, 2); // full native resolution
+  const backingSize = (): Vec2 => [
+    Math.max(1, Math.floor(canvas.clientWidth * dpr)),
+    Math.max(1, Math.floor(canvas.clientHeight * dpr)),
+  ];
   function resize(): void {
-    const w = Math.max(1, Math.floor(canvas.clientWidth * dpr));
-    const h = Math.max(1, Math.floor(canvas.clientHeight * dpr));
+    const [w, h] = backingSize();
     if (w === canvas.width && h === canvas.height) return;
     canvas.width = w;
     canvas.height = h;
@@ -960,7 +1058,18 @@ export async function createGalaxyEngine(
   }
   const ro = new ResizeObserver(resize);
   ro.observe(canvas);
-  resize();
+  // Adopt the backing size and allocate UNCONDITIONALLY rather than leaning on
+  // `resize` to do it as a side effect: an HMR remount hands the new engine the
+  // SAME canvas node, already at the right size, so `resize`'s early return
+  // would leave this engine with no targets at all and the first `drawFrame`
+  // would throw on `aggregateTex`. Every input `buildTargets` reads — the
+  // device, the backing size, `render.aggregateDivisor` — is live by here.
+  // `resize` keeps its early return, which stays correct: it now guards only a
+  // genuine no-op, and cannot double-allocate against this call.
+  const [initialW, initialH] = backingSize();
+  canvas.width = initialW;
+  canvas.height = initialH;
+  buildTargets();
 
   // ---- perf instrumentation (see "Measuring it" in the header) ----
 
@@ -1195,6 +1304,11 @@ export async function createGalaxyEngine(
   let raf = 0;
   let running = true;
   let prev = performance.now();
+  // Last frame's fade, published by `loop` on its own cadence. Null until the
+  // first `drawFrame`; the offscreen paths (`sample`, `grab`, `step`) write it
+  // too, which is harmless — they render the same camera the on-screen frame
+  // does.
+  let lastFade: MilkyWayFadeReadout | null = null;
 
   function drawFrame(now: number): void {
     // Clamped so a long stall (tab restore, shader recompile) can't teleport
@@ -1212,10 +1326,28 @@ export async function createGalaxyEngine(
 
     const eye = orbitEye(camAnim.az, camAnim.el, camAnim.dist, cam.target);
     const view = mat4.lookAt(eye, cam.target, [0, 1, 0]);
-    // Depth maps to [0, 1] (WebGPU); no depth attachment, so this is cosmetic. See header.
-    const proj = mat4.perspective(cam.fov, canvas.width / canvas.height, 0.1, 400);
-    proj[8] = lensShift(insetL, insetR, canvas.clientWidth); // lens shift to centre in the visible area
+    // Near/far track orbit distance, the same adaptation the app's NEAR0 slab
+    // makes and for the same reason: a fixed near plane slices through the disc
+    // once you descend into it. There is no depth attachment, so the usual
+    // precision cost of a tiny near plane does not apply — these only clip.
+    // Far keeps the whole cloud in view from inside the disc as well as from
+    // outside it; the sprite shaders clamp clip-z against exactly this hazard.
+    const near = Math.max(1e-4, camAnim.dist * 0.002);
+    const far = camAnim.dist * 2 + 200;
+    const aspect = canvas.width / canvas.height;
+    const proj = mat4.perspective(cam.fov, aspect, near, far);
+    const shiftX = lensShift(insetL, insetR, canvas.clientWidth);
+    proj[8] = shiftX; // lens shift to centre in the visible area
     const vp = mat4.multiply(proj, view);
+
+    // The app's visibility fade, against this frame's camera. It multiplies
+    // into BOTH representations of the cloud below, so the two keep summing to
+    // the same image as they fade — the comparison the spike exists for has to
+    // survive the fade, not be interrupted by it. `canvas.height`, not the
+    // aggregate's, for the same reason the app passes `ctx.canvasSize.height`:
+    // the band asks how big the disc looks to the USER.
+    const fade = deriveMilkyWayFade(eye, cam.fov, canvas.height, render);
+    lastFade = fade;
 
     // Two packs of the same struct, differing only in `viewportPx`: the star
     // pass gets the AGGREGATE's dimensions (what `stars.wesl` clamps sprite
@@ -1224,10 +1356,34 @@ export async function createGalaxyEngine(
     // target different buffers.
     const tuning = cloudTuning();
     const aggregatePx = aggregateSize();
-    packCloudUniforms(vp, view, aggregatePx, tuning, cloudData);
+    packCloudUniforms(vp, view, aggregatePx, tuning, fade.alpha, cloudData);
     device.queue.writeBuffer(starUbo, 0, cloudData);
-    packCloudUniforms(vp, view, [canvas.width, canvas.height], tuning, cloudData);
+    packCloudUniforms(vp, view, [canvas.width, canvas.height], tuning, fade.alpha, cloudData);
     device.queue.writeBuffer(dustUbo, 0, cloudData);
+    // The analytic field's ray basis. `aspect` is the PROJECTION's (the
+    // canvas's), not the aggregate's: the fullscreen triangle covers the
+    // aggregate, but the frustum it must reconstruct is the one `proj` was
+    // built with.
+    packFieldUniforms(
+      {
+        eye,
+        view,
+        fov: cam.fov,
+        aspect,
+        lensShiftX: shiftX,
+        // The mixture is calibrated to the sprite field's total flux in
+        // record units (see `emissionScale`), which leaves the star pass's own
+        // two multipliers to apply here: its per-sprite `exposure`, and
+        // `starSizeScale` SQUARED because a sprite's light goes as its quad
+        // area. Multiplying them in is what keeps `analyticExposure` 1.0
+        // meaning parity as those sliders move, rather than only at defaults.
+        exposure:
+          render.analyticExposure * render.starIntensity * render.sizeScale ** 2 * fade.alpha,
+      },
+      fieldMixture,
+      fieldData,
+    );
+    device.queue.writeBuffer(fieldUbo, 0, fieldData);
     // The post chain's uniforms are written by the shared factories at draw
     // time (bloom thresholds/texel sizes, compositor exposure + curve), so
     // there is nothing else to pack here.
@@ -1256,16 +1412,30 @@ export async function createGalaxyEngine(
         ],
         ...(starWrites ? { timestampWrites: starWrites } : {}),
       });
-      pass.setPipeline(starPipe);
-      pass.setBindGroup(0, starBG);
-      pass.setVertexBuffer(0, quad);
-      if (starBuf) {
-        pass.setVertexBuffer(1, starBuf);
-        pass.draw(6, starCount);
+      // The sprite half of the comparison. Skipping the draws (rather than
+      // zeroing an intensity) is what makes "sprites off" also mean "sprite
+      // cost off", so the two representations can be timed as well as looked
+      // at.
+      if (render.spriteField) {
+        pass.setPipeline(starPipe);
+        pass.setBindGroup(0, starBG);
+        pass.setVertexBuffer(0, quad);
+        if (starBuf) {
+          pass.setVertexBuffer(1, starBuf);
+          pass.draw(6, starCount);
+        }
+        for (const e of extras) {
+          pass.setVertexBuffer(1, e.starBuf);
+          pass.draw(6, e.starCount);
+        }
       }
-      for (const e of extras) {
-        pass.setVertexBuffer(1, e.starBuf);
-        pass.draw(6, e.starCount);
+      // The analytic half. Same target, same additive blend, so the sum of the
+      // two is exactly what either alone would have been at double weight —
+      // which is the whole point of drawing them side by side.
+      if (render.analyticField) {
+        pass.setPipeline(fieldPipe);
+        pass.setBindGroup(0, fieldBG);
+        pass.draw(3);
       }
       pass.end();
     }
@@ -1322,12 +1492,20 @@ export async function createGalaxyEngine(
   // .now()` at construction would instead measure engine boot as a frame.
   let lastRafMs = 0;
   let lastPerfReportMs = 0;
+  let lastFadeReportMs = 0;
 
   function loop(now: number): void {
     if (!running) return;
     if (lastRafMs !== 0) frameTimer.push(now - lastRafMs);
     lastRafMs = now;
     drawFrame(now);
+    // Same reason `onPerf` is throttled: this drives React state, and a
+    // per-frame dispatch would put the readout's own re-render inside the frame
+    // it is describing.
+    if (lastFade && now - lastFadeReportMs >= FADE_REPORT_INTERVAL_MS) {
+      lastFadeReportMs = now;
+      opts.onFade?.(lastFade);
+    }
     // Report on a timer, not per frame: `onPerf` drives React state, and a
     // per-frame dispatch would have the readout's own re-render inside the
     // number it is reporting.
@@ -1462,6 +1640,7 @@ export async function createGalaxyEngine(
       aggregateUpsample.destroy();
       starUbo.destroy();
       dustUbo.destroy();
+      fieldUbo.destroy();
       gradeBuf.destroy();
       ro.disconnect();
       canvas.removeEventListener('pointerdown', onDown);

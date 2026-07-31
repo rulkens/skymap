@@ -89,7 +89,8 @@ describe('packCloudUniforms', () => {
   it('params0/params1 carry the tuning knobs at their io.wesl lanes', () => {
     const out = packCloudUniforms(VIEW_PROJ, VIEW, [800, 600], TUNING);
     // params0 = (fadeAlpha, exposure, modelScale, softness). The tool has no
-    // visibility fade and no scene placement, so lanes x and z are pinned 1.
+    // scene placement, so lane z is pinned 1; lane x defaults to 1 when no
+    // visibility fade is supplied.
     expect(out[44]).toBe(1);
     expect(out[45]).toBeCloseTo(TUNING.exposure, 6);
     expect(out[46]).toBe(1);
@@ -105,7 +106,7 @@ describe('packCloudUniforms', () => {
     // The frame loop hands the same scratch to both passes every frame, so a
     // lane left unwritten would silently carry the other pass's value.
     const dst = new Float32Array(CLOUD_UNIFORM_FLOATS).fill(-7);
-    const out = packCloudUniforms(VIEW_PROJ, VIEW, [800, 600], TUNING, dst);
+    const out = packCloudUniforms(VIEW_PROJ, VIEW, [800, 600], TUNING, 1, dst);
     expect(out).toBe(dst);
     expect(Array.from(dst).some((v) => v === -7)).toBe(false);
   });

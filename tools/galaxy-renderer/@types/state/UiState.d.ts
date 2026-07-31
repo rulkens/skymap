@@ -16,6 +16,8 @@ export type UiState = {
       | 'dust'
       | 'glob'
       | 'render'
+      | 'field'
+      | 'fade'
       | 'grade'
       | 'perf'
       | 'multi',

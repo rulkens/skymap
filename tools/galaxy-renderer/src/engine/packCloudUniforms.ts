@@ -84,12 +84,16 @@ const IDENTITY_MODEL = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 
  * @param viewportPx Pixel size of the TARGET this pass draws into, not the
  *                   canvas (see the module header).
  * @param tuning     The live look knobs, the app's own `MilkyWayTuning`.
+ * @param fadeAlpha  The composed visibility fade (`deriveMilkyWayFade`).
+ *                   Defaults to 1 — no fade — which is what this packer emitted
+ *                   before the fade was ported.
  */
 export function packCloudUniforms(
   viewProj: Float32Array,
   view: Float32Array,
   viewportPx: Vec2,
   tuning: MilkyWayTuning,
+  fadeAlpha = 1,
   dst?: Float32Array,
 ): Float32Array {
   const out = dst ?? new Float32Array(CLOUD_UNIFORM_FLOATS);
@@ -118,11 +122,9 @@ export function packCloudUniforms(
   out[43] = 0;
 
   // params0 44..47 = (fadeAlpha, exposure, modelScale, softness).
-  // fadeAlpha is 1: the app fades the cloud out by apparent size as the camera
-  // leaves the Local Group, and this tool has no such visibility axis — the
-  // cloud is the whole subject. modelScale is 1 for the same reason `model` is
-  // the identity.
-  out[44] = 1;
+  // modelScale is 1 for the same reason `model` is the identity: this tool has
+  // no scene to place the cloud into.
+  out[44] = fadeAlpha;
   out[45] = tuning.exposure;
   out[46] = 1;
   out[47] = tuning.softness;

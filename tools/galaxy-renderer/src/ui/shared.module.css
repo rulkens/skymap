@@ -41,6 +41,35 @@
   cursor: pointer;
 }
 
+/* ── Checkbox rows — a label that fills the row with its control right-aligned.
+   The ⓘ affordance sits OUTSIDE `.toggleLabel` at every call site: a label
+   forwards clicks to its control, which would fire on the info button too. ── */
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.toggleLabel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xl);
+  color: var(--color-fg-base);
+  cursor: pointer;
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
 /* ── Section headers — uppercase, letter-spaced (html:196) ───────────────── */
 
 .sectionHeader {

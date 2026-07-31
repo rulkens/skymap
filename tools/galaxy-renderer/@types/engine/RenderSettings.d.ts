@@ -27,6 +27,7 @@
  */
 
 import type { ToneMapCurve } from '../../../../src/@types/data/ToneMapCurve';
+import type { FadeAnchor } from './FadeAnchor';
 
 export type RenderSettings = {
   /** Linear multiplier applied before the tone curve. Seeded from the app's DEFAULT_EXPOSURE. */
@@ -56,4 +57,30 @@ export type RenderSettings = {
   readonly softness: number;
   /** Downsample divisor of the star pass's offscreen — the app's `MilkyWayTuning.aggregateDivisor`. The one knob here that reaches the frame by reallocating a texture rather than by riding the uniform, and the one `starPxMin`/`starPxMax` are stated in the pixels of. */
   readonly aggregateDivisor: number;
+
+  /** SPIKE, tool-only: draw the sprite star field. Off isolates the analytic field. */
+  readonly spriteField: boolean;
+  /** SPIKE, tool-only: draw the analytic Gaussian-mixture field into the same target. */
+  readonly analyticField: boolean;
+  /** SPIKE, tool-only: whole-field intensity multiplier for the analytic pass, where 1.0 emits the sprite field's own total flux. */
+  readonly analyticExposure: number;
+
+  /**
+   * The app's Milky-Way visibility fade, ported so the cloud can be tuned in
+   * the regime the app actually shows it in. Off = the tool's historical
+   * behaviour, alpha pinned at 1. The band edges are tunable here where the app
+   * has them as constants; they SEED from the app's own values, so leaving them
+   * alone is app parity. See `deriveMilkyWayFade`.
+   */
+  readonly fadeEnabled: boolean;
+  /** Which point the bands measure the camera's distance from — the load-bearing knob. */
+  readonly fadeAnchor: FadeAnchor;
+  /** Near-side approach band's full edge, GENERATOR units (app: 0.002 Mpc). */
+  readonly fadeApproachFullAt: number;
+  /** Near-side approach band's gone edge, GENERATOR units (app: 0.0002 Mpc). */
+  readonly fadeApproachGoneAt: number;
+  /** Far-side apparent-size band's full edge, canvas px (app: MILKY_WAY_FADE_FULL_PX). */
+  readonly fadeFullPx: number;
+  /** Far-side apparent-size band's gone edge, canvas px (app: MILKY_WAY_FADE_GONE_PX). */
+  readonly fadeGonePx: number;
 };

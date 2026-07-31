@@ -31,6 +31,9 @@
  * the tuning `exposure` is the Milky Way star sprite's own emission factor.
  * Two knobs, two stages of the pipeline, one shared English word — conflating
  * them would point `starIntensity` at the wrong constant.
+ *
+ * The fade block seeds from the app's own band edges for the same reason: the
+ * tool is only useful while "leave the sliders alone" means "what the app does".
  */
 
 import type { RenderSettings } from '../../@types/engine/RenderSettings';
@@ -40,7 +43,13 @@ import {
   DEFAULT_EXPOSURE,
   DEFAULT_TONE_MAP_CURVE,
 } from '../../../../src/data/defaults';
-import { MILKY_WAY_TUNING_DEFAULTS } from '../../../../src/services/gpu/galaxy/milkyWayCalibration';
+import {
+  MILKY_WAY_FADE_FULL_PX,
+  MILKY_WAY_FADE_GONE_PX,
+  MILKY_WAY_MODEL_SCALE,
+  MILKY_WAY_TUNING_DEFAULTS,
+} from '../../../../src/services/gpu/galaxy/milkyWayCalibration';
+import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
 
 export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   exposure: DEFAULT_EXPOSURE,
@@ -56,4 +65,26 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   starPxMax: MILKY_WAY_TUNING_DEFAULTS.starPxMax,
   softness: MILKY_WAY_TUNING_DEFAULTS.softness,
   aggregateDivisor: MILKY_WAY_TUNING_DEFAULTS.aggregateDivisor,
+  // Analytic-field spike: both halves visible at boot, because the question it
+  // exists to answer is how they compare. 1.0 is not a taste setting — the
+  // mixture is calibrated so that exposure emits the sprite field's own total
+  // flux (see `emissionScale`), so boot draws the two at parity and each
+  // toggle alone shows the same amount of light.
+  spriteField: true,
+  analyticField: true,
+  analyticExposure: 1.0,
+  // ON at boot, which costs nothing: at the boot camera both bands read 1, so
+  // the first frame is the same frame it always was. A fade that had to be
+  // found and switched on would leave the tool tuning a regime the app never
+  // shows, which is what this port exists to stop.
+  fadeEnabled: true,
+  // The app's own keying quantity, bug included — see `FadeAnchor`.
+  fadeAnchor: 'sun',
+  // The app's band, converted Mpc → generator units, because that is the unit
+  // the tool's camera and its readout speak. 1.2 / 0.12 units at the current
+  // model scale.
+  fadeApproachFullAt: SCALE_FADE_BANDS.milkyWayApproach.fullAt / MILKY_WAY_MODEL_SCALE,
+  fadeApproachGoneAt: SCALE_FADE_BANDS.milkyWayApproach.goneAt / MILKY_WAY_MODEL_SCALE,
+  fadeFullPx: MILKY_WAY_FADE_FULL_PX,
+  fadeGonePx: MILKY_WAY_FADE_GONE_PX,
 };

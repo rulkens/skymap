@@ -15,6 +15,14 @@ export const DEFAULT_UI_STATE: UiState = {
     dust: true,
     glob: true,
     render: true,
+    // The analytic-field spike starts EXPANDED: its two toggles are the
+    // comparison the section exists for, and a collapsed section would hide
+    // the only way to see either half alone.
+    field: true,
+    // Expanded: its live readout is the only place the fade's two factors are
+    // visible, and a collapsed section would let the cloud dim with no
+    // explanation on screen.
+    fade: true,
     // The tool-only grade section starts COLLAPSED, unlike every other
     // section: it holds the three knobs the app has no equivalent for, and a
     // collapsed section is a quieter default than three sliders inviting a

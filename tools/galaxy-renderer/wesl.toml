@@ -10,12 +10,15 @@
 #
 #   src/engine/shaders/galaxyGen        -> src/services/gpu/shaders/galaxyGen
 #   src/engine/shaders/milkyWayCloud    -> .../shaders/milkyWayCloud
+#   src/engine/shaders/milkyWayField    -> .../shaders/milkyWayField
 #   src/engine/shaders/additiveUpsample -> .../shaders/additiveUpsample
 #   src/engine/shaders/bloom            -> src/services/gpu/shaders/bloom
 #   src/engine/shaders/compositor       -> src/services/gpu/shaders/compositor
 #   src/engine/shaders/lib/camera.wesl  -> .../shaders/lib/camera.wesl
 #   src/engine/shaders/lib/tonemap.wesl -> src/services/gpu/shaders/lib/tonemap.wesl
 #   src/engine/shaders/lib/cloudSprite.wesl -> .../shaders/lib/cloudSprite.wesl
+#   src/engine/shaders/lib/fullscreenTri.wesl -> .../shaders/lib/fullscreenTri.wesl
+#   src/engine/shaders/lib/gaussianIntegral.wesl -> .../lib/gaussianIntegral.wesl
 #
 # milkyWayCloud is the star + dust billboard pair, shared as a WHOLE DIRECTORY
 # rather than file by file: stars.wesl and dust.wesl both read the single
@@ -40,8 +43,13 @@
 # The one post shader that stays local is src/engine/shaders/grade.wesl: a
 # saturation/vignette/gamma trailer the app deliberately has no equivalent
 # for. It is skipped entirely at the tool's default (identity) settings, so
-# the default path is the app's path. See its header. lib/fullscreenTri.wesl
-# stays local for the same reason — it is the helper grade.wesl draws with.
+# the default path is the app's path. See its header.
+#
+# lib/fullscreenTri.wesl used to be local too, on the reasoning that only
+# grade.wesl drew with it. milkyWayField/field.wesl is a second consumer and
+# lives in the runtime tree, so the helper moved there and comes back through
+# a symlink like camera.wesl and tonemap.wesl — grade.wesl's
+# 'package::lib::fullscreenTri' import is unchanged.
 #
 # wesl-plugin locates this file from the explicit 'weslToml' option in
 # vite.config.ts — NOT from the Vite 'root'. By default the plugin reads

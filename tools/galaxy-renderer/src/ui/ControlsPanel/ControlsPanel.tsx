@@ -26,6 +26,7 @@
  */
 import { type ReactNode } from 'react';
 import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';
+import type { MilkyWayFadeReadout } from '../../../@types/engine/MilkyWayFadeReadout';
 import type { ParamSpecEntry } from '../../../@types/data/ParamSpecEntry';
 import { mulberry32 } from '../../../../../src/utils/random/mulberry32';
 import Button from '../../../../../src/components/common/Button/Button';
@@ -40,6 +41,7 @@ import { hubbleTypePatch } from '../../data/hubbleStagePatches';
 import { randomGalaxyParams } from '../../data/randomGalaxyParams';
 import { classifyHubbleType } from '../../../../../src/services/gpu/galaxy/classifyHubbleType';
 import CollapsibleSection from '../CollapsibleSection/CollapsibleSection';
+import FadeSection from '../FadeSection/FadeSection';
 import ParamSlider from '../ParamSlider/ParamSlider';
 import TonemapSelect from '../TonemapSelect/TonemapSelect';
 import TypePicker from '../TypePicker/TypePicker';
@@ -171,7 +173,17 @@ function freshRng(): () => number {
   return mulberry32((Math.random() * 1e9) | 0);
 }
 
-function ControlsPanel(): ReactNode {
+export type ControlsPanelProps = {
+  /**
+   * Live fade telemetry, prop-drilled from `App` rather than dispatched into
+   * the store — the same treatment `perf`/`stats` get, and for the same reason
+   * (see `HudProps`): it is engine output on a 10 Hz cadence that exactly one
+   * subtree reads.
+   */
+  readonly fade: MilkyWayFadeReadout | null;
+};
+
+function ControlsPanel({ fade }: ControlsPanelProps): ReactNode {
   const dispatch = useAppDispatch();
   const galaxy = useAppSelector((state) => state.galaxy);
   const render = useAppSelector((state) => state.render);
@@ -380,6 +392,58 @@ function ControlsPanel(): ReactNode {
             />
           </div>
         </CollapsibleSection>
+
+        {/* SPIKE. The analytic field is a closed-form line integral of a
+            Gaussian mixture, evaluated per fragment in one fullscreen pass
+            into the SAME reduced-resolution target the sprites draw into, with
+            the same additive blend. Both are on by default so they sum; the
+            two toggles are how either is seen alone, which is the comparison
+            the whole spike exists for. The mixture itself is derived from the
+            generator's own geometry in `src/data/galaxy/galaxyFieldMixture.ts`
+            — its tuning constants live there, it has no UI. */}
+        <CollapsibleSection
+          title="ANALYTIC FIELD (SPIKE)"
+          open={ui.openSections.field}
+          onToggle={() => dispatch(sectionToggled('field'))}
+        >
+          <div className={styles.toggleRow}>
+            <label className={styles.toggleLabel}>
+              <span>Sprite field</span>
+              <input
+                type="checkbox"
+                className={styles.checkbox}
+                checked={render.spriteField}
+                onChange={(e) => dispatch(renderPatched({ spriteField: e.target.checked }))}
+              />
+            </label>
+          </div>
+          <div className={styles.toggleRow}>
+            <label className={styles.toggleLabel}>
+              <span>Analytic field</span>
+              <input
+                type="checkbox"
+                className={styles.checkbox}
+                checked={render.analyticField}
+                onChange={(e) => dispatch(renderPatched({ analyticField: e.target.checked }))}
+              />
+            </label>
+          </div>
+          <ParamSlider
+            label="Analytic exposure"
+            value={render.analyticExposure}
+            min={0}
+            max={3}
+            step={0.01}
+            format={(v) => v.toFixed(2)}
+            onChange={(v) => dispatch(renderPatched({ analyticExposure: v }))}
+            info="Whole-field multiplier on the integrated mixture. 1.0 is parity: the mixture is calibrated to emit the same total light as the sprite population it stands in for, at whatever the sprite exposure and size sliders are set to."
+          />
+        </CollapsibleSection>
+
+        {/* The app's visibility fade, which multiplies into BOTH halves of the
+            spike above — so the sprite/analytic comparison holds as the cloud
+            dims instead of being interrupted by it. */}
+        <FadeSection readout={fade} />
 
         {/* Saturation, vignette, and the gamma encode have NO app counterpart.
             They drive the tool-only `grade.wesl` trailer, which is skipped
