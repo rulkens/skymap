@@ -64,12 +64,10 @@
 // the off-stroke pixels and any non-finite one, so the triangle can only ever
 // deposit light on the ring itself, never a filled blob.
 
+import package::bodies::orbitTrail::constants::STROKE_PX;
 import package::bodies::orbitTrail::io::VSOut;
 import package::lib::math::PI;
 
-// Stroke width in PIXELS — the plane-space distance below is converted to a
-// pixel distance, so this is a fixed screen constant at every zoom (spec 3.3).
-const STROKE_PX: f32 = 2.5;
 // Decay rate of the trail brightness per radian of mean anomaly behind the
 // body. Larger values shrink the visible tail; 1.2 spans roughly a third of
 // the orbit before bottoming out at TRAIL_FLOOR.
