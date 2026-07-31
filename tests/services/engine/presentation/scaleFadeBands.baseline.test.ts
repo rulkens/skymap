@@ -28,7 +28,11 @@ import {
   SCALE_FADE_BANDS,
   FARTHEST_STAR_PC,
 } from '../../../../src/services/engine/presentation/scaleFadeBands';
-import { MAX_ORBIT_EXTENT_MPC } from '../../../../src/services/engine/frame/passes/orbitTrailsLayer';
+import { orbitReachByRegion } from '../../../../src/services/engine/frame/passes/orbitTrailsLayer';
+import { SCENE_ANCHORS } from '../../../../src/data/bodies/sceneAnchors';
+import { ORBITAL_ELEMENTS } from '../../../../src/data/bodies/orbitalElements';
+import { BODY_REGIONS } from '../../../../src/data/bodies/bodyRegions';
+import { regionOfBody } from '../../../../src/utils/scene/regionOfBody';
 
 // Relative check for values whose magnitude (down to ~1e-10 Mpc, the
 // solar-system's own AU-to-lunar scale) makes a decimal-digit `toBeCloseTo`
@@ -62,8 +66,12 @@ describe('near-field band edges — Task 1 regression baseline (TEMPORARY, delet
     expectCloseRelative(SCALE_FADE_BANDS.bodyGlintBackdrop.goneAt, 1.4601279654459127e-9);
   });
 
-  it('MAX_ORBIT_EXTENT_MPC — Neptune apoapsis a·(1+e), the chain-wide reach envelope', () => {
-    expectCloseRelative(MAX_ORBIT_EXTENT_MPC, 1.4703544623962364e-10);
+  it('orbitReachByRegion(solar-system) — Neptune apoapsis a·(1+e), the chain-wide reach envelope', () => {
+    const solarSystemRegion = BODY_REGIONS.find((region) => region.id === 'solar-system')!;
+    const reach = orbitReachByRegion(SCENE_ANCHORS, ORBITAL_ELEMENTS, regionOfBody).get(
+      solarSystemRegion,
+    )!;
+    expectCloseRelative(reach, 1.4703544623962364e-10);
   });
 
   it('FARTHEST_STAR_PC — FARTHEST_BODY_MPC round-tripped back through PC_TO_MPC', () => {

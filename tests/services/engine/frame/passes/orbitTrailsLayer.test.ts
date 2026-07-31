@@ -15,15 +15,18 @@
  *      dropped from the batch entirely.
  *
  * Plus the handle gates: `enabled` is renderer-presence AND the shared
- * foreground distance gate AND the whole-layer sub-pixel bound (the largest
- * orbit's apparent size at the camera's nearest possible approach — the
- * conservative envelope of the per-orbit cull), and `draw` no-ops on a null
- * handle. The conic table is a static module-level seed.
+ * foreground distance gate AND the whole-layer sub-pixel bound (per REGION: the
+ * largest of that region's orbits at the camera's nearest possible approach to
+ * it — the conservative envelope of the per-orbit cull), and `draw` no-ops on a
+ * null handle. The conic table is a static module-level seed.
  */
 
 import { describe, it, expect, vi } from 'vitest';
 
-import { orbitTrailsLayer } from '../../../../../src/services/engine/frame/passes/orbitTrailsLayer';
+import {
+  orbitTrailsLayer,
+  orbitReachByRegion,
+} from '../../../../../src/services/engine/frame/passes/orbitTrailsLayer';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { SCENE_ORBIT_CONICS } from '../../../../../src/data/bodies/sceneOrbitConics';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
@@ -33,6 +36,9 @@ import { ORBITAL_ELEMENTS } from '../../../../../src/data/bodies/orbitalElements
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { propagateElements } from '../../../../../src/utils/orbit/propagateElements';
 import { keplerianEllipse } from '../../../../../src/utils/orbit/keplerianEllipse';
+import type { AnchorBody } from '../../../../../src/@types/scene/AnchorBody';
+import type { BodyRegion } from '../../../../../src/@types/scene/BodyRegion';
+import type { OrbitalElements } from '../../../../../src/@types/scene/OrbitalElements';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -220,6 +226,70 @@ describe('orbitTrailsLayer.enabled', () => {
       fovYRad: Math.PI / 4,
     } as unknown as ReadyFrameContext;
     expect(orbitTrailsLayer.enabled(state, ctx)).toBe(false);
+  });
+
+  it('the whole-layer cull still drops solar-system trails at galactic distance', () => {
+    // 8.178e-3 Mpc from the Sun — the Galactic Centre's own distance, and the pose
+    // a Sgr A* visit parks at. Well inside the shared foreground gate, so only the
+    // region cull can drop the layer; the AU-to-lunar trails are ~1e-5 px there.
+    const state = makeState(makeRendererSpy());
+    const ctx = {
+      cam: { distance: 8.178e-3 },
+      drawCamPos: [8.178e-3, 0, 0],
+      canvasSize: { width: 1280, height: 720 },
+      fovYRad: Math.PI / 4,
+      simDays: CONST_J2000,
+    } as unknown as ReadyFrameContext;
+    expect(ctx.cam.distance).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC);
+    expect(orbitTrailsLayer.enabled(state, ctx)).toBe(false);
+  });
+});
+
+// Synthetic two-anchor scene: the Sun at the render origin and a Sgr A*-like
+// anchor 8.178e-3 Mpc away, one orbit hanging off each. `'sgr-a-star'` is not
+// seeded yet, so the far-anchored orbit is built here rather than read from
+// ORBITAL_ELEMENTS.
+const SYNTHETIC_ANCHORS: readonly AnchorBody[] = [
+  { id: 'sun', positionMpc: [0, 0, 0] },
+  { id: 'sgr-a-star', positionMpc: [8.178e-3, 0, 0] },
+];
+
+function makeElements(id: string, focusId: string, semiMajorMpc: number): OrbitalElements {
+  return {
+    id,
+    focusId,
+    semiMajorMpc,
+    eccentricity: 0.5,
+    inclinationRad: 0,
+    ascendingNodeRad: 0,
+    argPeriapsisRad: 0,
+    meanAnomalyRad: 0,
+    color: [1, 1, 1],
+  };
+}
+
+function makeRegion(id: BodyRegion['id'], anchorId: string, memberIds: string[]): BodyRegion {
+  return { id, label: id, anchorId, memberIds, extentMpc: 0 };
+}
+
+describe('orbitReachByRegion', () => {
+  it('a Galactic Centre orbit does not inflate the solar-system trail reach', () => {
+    const nearOrbit = makeElements('neptune', 'sun', 1e-10);
+    const farOrbit = makeElements('s2', 'sgr-a-star', 3e-9);
+    const solarSystem = makeRegion('solar-system', 'sun', ['sun', 'neptune']);
+    const galacticCentre = makeRegion('galactic-centre', 'sgr-a-star', ['sgr-a-star', 's2']);
+    const regionOf = (bodyId: string): BodyRegion | null =>
+      [solarSystem, galacticCentre].find((region) => region.memberIds.includes(bodyId)) ?? null;
+
+    const reach = orbitReachByRegion(SYNTHETIC_ANCHORS, [nearOrbit, farOrbit], regionOf);
+
+    // The solar system's reach is its OWN orbits' apoapsis, untouched by the far
+    // region's twenty-times-larger one: a single scene-wide maximum would hand it
+    // 4.5e-9 and collapse `enabled`'s cull for every camera near the Sun.
+    expect(reach.get(solarSystem)).toBeCloseTo(1.5e-10, 20);
+    // And the far region's reach is measured from ITS anchor — an apoapsis, not
+    // the 8.178e-3 Mpc that anchor sits at from the render origin.
+    expect(reach.get(galacticCentre)).toBeCloseTo(4.5e-9, 20);
   });
 });
 

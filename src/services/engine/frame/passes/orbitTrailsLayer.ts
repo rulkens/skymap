@@ -74,6 +74,10 @@ import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { ORBITAL_ELEMENTS } from '../../../../data/bodies/orbitalElements';
 import { SCENE_ANCHORS } from '../../../../data/bodies/sceneAnchors';
 import { focusResolveOrder } from '../../../../utils/scene/focusResolveOrder';
+import { regionOfBody } from '../../../../utils/scene/regionOfBody';
+import { regionRelativeDistanceMpc } from '../../../../utils/scene/regionRelativeDistanceMpc';
+import type { AnchorBody } from '../../../../@types/scene/AnchorBody';
+import type { BodyRegion } from '../../../../@types/scene/BodyRegion';
 import type { OrbitalElements } from '../../../../@types/scene/OrbitalElements';
 import { propagateElements } from '../../../../utils/orbit/propagateElements';
 import { keplerianEllipse } from '../../../../utils/orbit/keplerianEllipse';
@@ -101,40 +105,59 @@ const FULL_PX = 20;
 // draw.
 const staging = new Float32Array(ORBITAL_ELEMENTS.length * INSTANCE_FLOATS);
 
-// The system's reach from the heliocentric origin: the farthest any orbit
-// point can lie from the origin, over ALL clock times — a TIME-INVARIANT outer
-// envelope. A bound orbit's farthest point from its focus is its apoapsis
-// a·(1+e); its focus in turn sits within its OWN focus's reach, so summing
-// apoapsis along the whole focus chain up to the anchor root bounds every
-// point on the orbit for every t (worst case: every body in the chain at
-// apoapsis, aligned through the origin). Walked via `focusResolveOrder` — the
-// same dependency order `deriveBodyStates` resolves anchors through — so a
-// chain of any depth is covered, not just satellite → planet.
-// Sourced from the static ORBITAL_ELEMENTS a/e, NOT the conic CENTRES: once a
-// clock animates the trails a moon centre rides its moving parent, so a
-// centre-derived bound would go stale, whereas this element-derived envelope
-// holds for every t. Precomputed once so `enabled` bounds EVERY orbit's
-// apparent size with one comparison instead of walking the table per frame.
-// The bound is conservative (never drops a visible orbit) and only ever ≥ the
-// old centre-based value — the intended slight extra slack for moving centres.
+// A bound orbit's farthest point from its focus is its apoapsis a·(1+e); its
+// focus in turn sits within its OWN focus's reach, so summing apoapsis along the
+// focus chain bounds every point on the orbit for every t (worst case: every body
+// in the chain at apoapsis, aligned outward). Sourced from the static
+// ORBITAL_ELEMENTS a/e, NOT the conic CENTRES: once a clock animates the trails a
+// moon centre rides its moving parent, so a centre-derived bound would go stale,
+// whereas this element-derived envelope holds for every t.
 function apoapsisMpc(elements: OrbitalElements): number {
   return elements.semiMajorMpc * (1 + elements.eccentricity);
 }
-const ANCHOR_IDS = new Set(SCENE_ANCHORS.map((anchor) => anchor.id));
-const FOCUS_ORDER = focusResolveOrder(SCENE_ANCHORS, ORBITAL_ELEMENTS);
-function reachMpcById(): ReadonlyMap<string, number> {
-  const reach = new Map<string, number>();
-  for (const id of ANCHOR_IDS) reach.set(id, 0); // an anchor has no orbit to extend the envelope
-  for (const el of FOCUS_ORDER) reach.set(el.id, apoapsisMpc(el) + reach.get(el.focusId)!);
-  return reach;
+
+/**
+ * Each region's orbital reach FROM ITS OWN ANCHOR: the farthest any of that
+ * region's orbit points can lie from the anchor, over ALL clock times — a
+ * TIME-INVARIANT outer envelope. Regions with no orbits are absent from the map,
+ * so nothing here ever resolves an anchor that carries no trails.
+ *
+ * Per region, not one scene-wide maximum, because a reach is only ever subtracted
+ * from a camera distance measured against the SAME anchor. The two collapse into
+ * one number only while every orbit hangs off the origin-anchored Sun; fold a
+ * Galactic Centre orbit into a single maximum and the solar-system trails inherit
+ * ITS envelope, so `enabled`'s cull stops firing for cameras nowhere near it.
+ *
+ * The tables are parameters, not this module's own imports, so the far-anchored
+ * case is testable before such an orbit is seeded. `focusResolveOrder` is the
+ * dependency order `deriveBodyStates` resolves anchors through, so a focus chain
+ * of any depth is covered, not just satellite → planet.
+ */
+export function orbitReachByRegion(
+  anchors: readonly AnchorBody[],
+  elements: readonly OrbitalElements[],
+  regionOf: (bodyId: string) => BodyRegion | null,
+): ReadonlyMap<BodyRegion, number> {
+  const reachMpc = new Map<string, number>();
+  // An anchor has no orbit of its own to extend the envelope.
+  for (const anchor of anchors) reachMpc.set(anchor.id, 0);
+  for (const el of focusResolveOrder(anchors, elements)) {
+    reachMpc.set(el.id, apoapsisMpc(el) + reachMpc.get(el.focusId)!);
+  }
+  const byRegion = new Map<BodyRegion, number>();
+  for (const el of elements) {
+    const region = regionOf(el.id);
+    if (region === null) continue;
+    byRegion.set(region, Math.max(byRegion.get(region) ?? 0, reachMpc.get(el.id)!));
+  }
+  return byRegion;
 }
-const REACH_MPC_BY_ID = reachMpcById();
-// TEMPORARY export for tests/services/engine/presentation/scaleFadeBands.baseline.test.ts
-// (s-star prep-02 Task 1) — revert to module-private in Task 7 unless Task 5
-// already made this a real export for another reason.
-export const MAX_ORBIT_EXTENT_MPC = Math.max(
-  ...ORBITAL_ELEMENTS.map((el) => REACH_MPC_BY_ID.get(el.id)!),
-);
+
+// Precomputed once so `enabled` bounds every orbit's apparent size with one
+// comparison per region instead of walking the table per frame. The bound is
+// conservative (never drops a visible orbit) and only ever ≥ a centre-based
+// value — the intended slight extra slack for moving centres.
+const ORBIT_REACH_BY_REGION = orbitReachByRegion(SCENE_ANCHORS, ORBITAL_ELEMENTS, regionOfBody);
 
 export const orbitTrailsLayer: ContentLayer = {
   name: 'orbit-trails',
@@ -146,8 +169,8 @@ export const orbitTrailsLayer: ContentLayer = {
     // Handle first (pre-bootstrap fixtures carry a bare ctx), then the shared
     // near-field distance gate. `ORBITAL_ELEMENTS` is a compile-time table
     // (always present), so there is no data condition — and the apoapsis-derived
-    // MAX_ORBIT_EXTENT_MPC bound below is TIME-INVARIANT, so this gate needs no
-    // per-frame derivation even though the drawn conics do.
+    // reaches below are TIME-INVARIANT, so this gate needs no per-frame
+    // derivation even though the drawn conics do.
     if (state.gpu.orbitTrailRenderer === null) return false;
     // Layer-visibility intent, mirroring filamentsLayer: the toggle is the user's
     // intent, opacityOf > 0 is the visual tail. Render whenever EITHER holds so a
@@ -162,27 +185,31 @@ export const orbitTrailsLayer: ContentLayer = {
     }
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     // Whole-layer sub-pixel cull, the conservative bound of the per-orbit
-    // CULL_PX loop in `draw`: at the camera's NEAREST possible distance to
-    // any orbit point (origin distance minus the system's reach — clamped to
-    // 0 when the camera is at/inside the reach, which always stays enabled),
-    // even the LARGEST orbit's apparent diameter is an upper bound for every
-    // orbit. Below CULL_PX for that bound, the draw loop would cull every
-    // conic anyway — gating here lets the executor drop the layer instead of
-    // packing zero records.
-    const nearestMpc = Math.max(
-      Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]) - MAX_ORBIT_EXTENT_MPC,
-      0,
-    );
-    if (nearestMpc > 0) {
+    // CULL_PX loop in `draw`, asked once PER REGION: at the camera's NEAREST
+    // possible distance to any of that region's orbit points (its distance from
+    // the region's OWN anchor minus that region's reach — clamped to 0 when the
+    // camera is at/inside the reach, which always stays enabled), even the
+    // LARGEST of its orbits is an upper bound for all of them. Keyed on the eye
+    // position (`drawCamPos`), NOT `cam.distance`, which measures to the orbit
+    // TARGET. No region above CULL_PX means the draw loop would cull every conic
+    // anyway — dropping the layer here lets the executor skip the whole
+    // (hdr, NEAR0) step instead of packing zero records.
+    const states = sceneBodyStates(state, ctx);
+    for (const [region, reachMpc] of ORBIT_REACH_BY_REGION) {
+      const nearestMpc = Math.max(
+        regionRelativeDistanceMpc(ctx.drawCamPos, region, states) - reachMpc,
+        0,
+      );
+      if (nearestMpc === 0) return true;
       const maxDiameterPx = apparentSizePx({
-        diameterKpc: 2 * MAX_ORBIT_EXTENT_MPC * 1000,
+        diameterKpc: 2 * reachMpc * 1000,
         distanceMpc: nearestMpc,
         viewportHeightPx: ctx.canvasSize.height,
         fovYRad: ctx.fovYRad,
       });
-      if (maxDiameterPx < CULL_PX) return false;
+      if (maxDiameterPx >= CULL_PX) return true;
     }
-    return true;
+    return false;
   },
 
   draw(pass, view, ctx, state) {
