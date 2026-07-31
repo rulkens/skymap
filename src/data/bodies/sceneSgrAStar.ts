@@ -9,10 +9,10 @@
  * The position is a plain `raDecDistToCartesian` of the radio source's
  * catalogue coordinates — the same right-handed equatorial J2000 conversion
  * `starAnchor` uses, so Sgr A* is not rotated against the sky the catalogues
- * paint. `MILKY_WAY_CENTER_WORLD` (`data/milkyWay/galacticCenter.ts`) is the
- * same direction at deliberately rounded precision: it places the Milky-Way
- * impostor's model matrix, a ~2%-tolerant use, while the S-star orbits are
- * fitted against THIS distance and cannot round.
+ * paint. `MILKY_WAY_CENTER_WORLD` reads `SGR_A_STAR_ANCHOR` rather than
+ * re-transcribing the coordinates, so the impostor's hub and the black hole it
+ * is the hub of cannot drift apart; the rounded pair that file used to carry put
+ * them 178 pc apart, plainly visible once both were on screen together.
  */
 
 import { raDecDistToCartesian } from '../../utils/math/raDecDistToCartesian';
