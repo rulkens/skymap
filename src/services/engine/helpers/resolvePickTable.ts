@@ -37,10 +37,9 @@ const PICK_SEEDS_BY_BODY_ID: Readonly<Record<BodyId, readonly { readonly id: str
   earth: [SCENE_EARTH],
   planet: SCENE_PLANETS,
   sun: SCENE_STARS,
-  // Total-by-obligation like the Sun's row, for the stronger reason: Sgr A*
-  // draws nothing, so no layer stamps its code into the pick texture at all and
-  // this arm is unreachable today. Its single-element table is still the honest
-  // answer — only index 0 names it, and any other localIdx falls off the end.
+  // Sgr A* draws nothing at any zoom, so its pick coverage is a caption-range
+  // stamp `starPointsLayer` emits at the anchor — that is what reaches this arm.
+  // Only index 0 names it; any other localIdx falls off the end.
   'sgr-a-star': [SGR_A_STAR],
   // The one body row whose arm is genuinely REACHABLE: the star layers stamp
   // `Source.SStar` for any star drawn out of `SCENE_S_STARS` (`starPickId`), so

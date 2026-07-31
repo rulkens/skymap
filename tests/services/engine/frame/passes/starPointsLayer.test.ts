@@ -32,6 +32,10 @@ import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 import { starExposureRamp } from '../../../../../src/services/gpu/renderers/starCatalog/starExposureRamp';
 import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
 import { SCENE_ANCHORS } from '../../../../../src/data/bodies/sceneAnchors';
+import { SGR_A_STAR_ANCHOR } from '../../../../../src/data/bodies/sceneSgrAStar';
+import { SGR_A_STAR_ENTRY } from '../../../../../src/data/sources/sgr-a-star';
+import { Source } from '../../../../../src/data/sources';
+import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../../src/data/selectionEncoding';
 import { makeBodyItems } from '../../../../fixtures/makeBodyItems';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
@@ -172,9 +176,10 @@ function makeState(
   starPointRenderer: unknown,
   stars: readonly StarBody[],
   famousStarMapEnabled = true,
+  bodyItems: Record<string, unknown> = makeBodyItems(),
 ): EngineState {
   return {
-    gpu: { starPointRenderer },
+    gpu: { starPointRenderer, bodyPickRenderer: { drawPoints: vi.fn() } },
     data: { bodies: { stars } },
     settings: {
       starCatalogs: {
@@ -187,7 +192,7 @@ function makeState(
       // The Sun and the S-stars each answer to their own body row, so
       // `visibleStars` reads them here rather than exempting ids from the map's
       // gate. Derived from BODY_IDS: a missing row throws inside the gate.
-      bodies: { items: makeBodyItems() },
+      bodies: { items: bodyItems },
     },
   } as unknown as EngineState;
 }
@@ -471,5 +476,70 @@ describe('starPointsLayer.draw', () => {
     const view = makeNear0View([0, 0, 5]);
     const state = { gpu: { starPointRenderer: null } } as unknown as EngineState;
     expect(() => starPointsLayer.draw(PASS_STUB, view, CTX_STUB, state)).not.toThrow();
+  });
+});
+
+/**
+ * Sgr A* draws NOTHING at any zoom, so this stamp is the entire mechanism that
+ * makes the Galactic Centre clickable — delete it and the black hole silently
+ * becomes selectable only from the command palette, with no visual symptom to
+ * catch it. Its gate is the caption's, because the caption is the only mark on
+ * screen inviting the click.
+ */
+describe('the Sgr A* pick stamp', () => {
+  // A camera sitting on the Galactic Centre: |camPos| is R₀ (8.178e-3 Mpc),
+  // inside the caption gate, and the caption's own distance is ~0 so the
+  // approach band reads full.
+  const AT_GALACTIC_CENTRE = SGR_A_STAR_ANCHOR.positionMpc as Vec3;
+
+  const stampedIds = (state: EngineState, camPos: Vec3): number[] => {
+    starPointsLayer.drawPick!(PASS_STUB, makeNear0View(camPos), makeCtx(camPos), state);
+    const renderer = state.gpu.bodyPickRenderer as unknown as {
+      drawPoints: ReturnType<typeof vi.fn>;
+    };
+    const { points } = renderer.drawPoints.mock.calls[0]![1] as { points: { packedId: number }[] };
+    return points.map((point) => point.packedId);
+  };
+
+  it('stamps the anchor at the Galactic Centre and nowhere near the Sun', () => {
+    const expected = packSelection(Source.SgrAStar, 0 + PICK_SENTINEL_OFFSET);
+
+    expect(stampedIds(makeState(makeRenderer(), SCENE_STARS), AT_GALACTIC_CENTRE)).toContain(
+      expected,
+    );
+    // From the solar neighbourhood the name has not begun to fade in, so
+    // nothing marks the spot and an 18 px target there would be a trap on
+    // empty sky.
+    expect(stampedIds(makeState(makeRenderer(), SCENE_STARS), [0, 0, 5e-3] as Vec3)).not.toContain(
+      expected,
+    );
+  });
+
+  it('follows the label toggle — pick tracks the affordance, not the anchor', () => {
+    const labelsOff = makeState(
+      makeRenderer(),
+      SCENE_STARS,
+      true,
+      makeBodyItems((id) => (id === SGR_A_STAR_ENTRY.id ? { labelEnabled: false } : {})),
+    );
+    expect(stampedIds(labelsOff, AT_GALACTIC_CENTRE)).not.toContain(
+      packSelection(Source.SgrAStar, 0 + PICK_SENTINEL_OFFSET),
+    );
+  });
+
+  it('keeps the row in the pick pass when the star partition is empty', () => {
+    // Every star row muted: `enabled` goes false (nothing to draw, and the
+    // visual step must not carry a zero-star row), but the caption is still on
+    // screen — so `pickEnabled` must admit the layer anyway or the stamp never
+    // reaches the pick texture.
+    const allStarsMuted = makeState(
+      makeRenderer(),
+      SCENE_STARS,
+      false,
+      makeBodyItems((id) => (id === 'sun' || id === 's-star' ? { enabled: false } : {})),
+    );
+    const ctx = makeCtx(AT_GALACTIC_CENTRE);
+    expect(starPointsLayer.enabled(allStarsMuted, ctx)).toBe(false);
+    expect(starPointsLayer.pickEnabled!(allStarsMuted, ctx)).toBe(true);
   });
 });

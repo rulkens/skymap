@@ -17,9 +17,10 @@
  * band. Six key on a camera distance in Mpc: four on the heliocentric render
  * origin directly, and `starBackdrop` / `bodyGlintBackdrop` on the camera's
  * distance from their content's REGION anchor (`regionRelativeDistanceMpc`,
- * today the same number — that anchor is the Sun). One keys on a star's OWN
- * distance from the camera (pc); one on a body's apparent DIAMETER in px. One
- * table because they are all the descent's fades.
+ * today the same number — that anchor is the Sun). Two key on the SUBJECT's own
+ * distance from the camera (`starCaption` in pc, `sgrAStarCaption` in Mpc); one
+ * on a body's apparent DIAMETER in px. One table because they are all the
+ * descent's fades.
  */
 
 import type { FadeBand } from '../../../@types/math/FadeBand';
@@ -28,6 +29,7 @@ import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../frame/solarSystemLabelMa
 import { BODY_GLINT_MAX_PX } from '../frame/partitionBodiesByPresentation';
 import { regionById } from '../../../utils/scene/regionById';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
+import { SGR_A_STAR_ANCHOR } from '../../../data/bodies/sceneSgrAStar';
 
 // The two extents this table's near-field rows scale off — each read from the
 // region whose content the row gates, so a band cannot end up keyed on a scale
@@ -51,6 +53,11 @@ const CONSTELLATIONS_GONE_AT_KPC = 10;
 // region's own extent (still composing that region's shot a couple of extents
 // out), gone by ten times it (well before the next scale frames up). One home
 // so the two backdrops' identical shape cannot drift apart independently.
+// R₀ — the Galactic Centre's distance from the render origin, off the same seed
+// the S-star orbits are scaled by, so the caption band below cannot drift from
+// the position it labels.
+const SGR_A_STAR_R0_MPC = Math.hypot(...SGR_A_STAR_ANCHOR.positionMpc);
+
 const BACKDROP_FULL_AT_EXTENT_MULTIPLE = 2;
 const BACKDROP_GONE_AT_EXTENT_MULTIPLE = 10;
 
@@ -150,6 +157,25 @@ export const SCALE_FADE_BANDS = {
   sunCaption: {
     fullAt: SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC / 2,
     goneAt: SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC,
+  },
+
+  // Keyed on: the CAPTION's own distance from the camera, Mpc — Sgr A*'s
+  // approach band. Both edges come off R₀, the Galactic Centre's distance from
+  // the render origin, read from the seed so they cannot drift from it: the
+  // name is exactly 0 from the solar system and reaches full alpha halfway
+  // across. R₀ (8.178e-3 Mpc) is inside `foregroundLabelsLayer`'s caption gate
+  // (9.2e-3), so on an approach focused here the name is already 0 when the
+  // gate opens and the cut cannot pop. Consumers: `captionFadeRules.sgrAStar`
+  // and `starPointsLayer`'s pick stamp — Sgr A* draws nothing, so this band is
+  // the whole of what invites the click, and pick reads it rather than
+  // restating the edges.
+  //
+  // NOT derived from `galactic-centre.extentMpc`: that measures the S-star
+  // orbits, three orders of magnitude tighter, and would put the name's onset
+  // inside the cluster it labels.
+  sgrAStarCaption: {
+    fullAt: SGR_A_STAR_R0_MPC / 2,
+    goneAt: SGR_A_STAR_R0_MPC,
   },
 
   // Keyed on: CAMERA distance from the heliocentric render origin, Mpc (the same

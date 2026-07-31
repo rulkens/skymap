@@ -34,12 +34,10 @@
 
 import type { CaptionKind } from './captionPriority';
 import type { EngineSettingsState } from '../../../@types/settings/EngineSettingsState';
-import type { FadeBand } from '../../../@types/math/FadeBand';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from './scaleFadeBands';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { SGR_A_STAR_ENTRY } from '../../../data/sources/sgr-a-star';
-import { SGR_A_STAR_ANCHOR } from '../../../data/bodies/sceneSgrAStar';
 
 /**
  * One caption kind's fade routing. `distanceMpc` is the caption anchor's
@@ -65,26 +63,6 @@ const NO_BAND = (): number => 1;
  * neighbouring kind's band — silence beats a plausible-looking wrong pace.
  */
 const PRODUCER_SUPPLIED = (): number => 0;
-
-/**
- * Sgr A*'s approach band, keyed (like every `fadeTarget`) on the caption's own
- * distance from the camera. Both edges come off R₀ — the Galactic Centre's
- * distance from the render origin, read from the seed so it cannot drift from
- * it: the name is exactly 0 from the solar system and reaches full alpha
- * halfway across. R₀ (8.178e-3 Mpc) is inside the layer's caption gate
- * (9.2e-3), so on an approach focused here the name is already 0 when the gate
- * opens and the cut cannot pop.
- *
- * NOT derived from `galactic-centre.extentMpc`: that is 0 until the S-stars are
- * seeded and 0.325 pc after — degenerate now, and a band no one could find
- * later. Its structural home is `SCALE_FADE_BANDS` beside `sunCaption`; it sits
- * here only while that table is frozen for the prep-02 refactor.
- */
-const SGR_A_STAR_R0_MPC = Math.hypot(...SGR_A_STAR_ANCHOR.positionMpc);
-const SGR_A_STAR_CAPTION_BAND: FadeBand = {
-  fullAt: SGR_A_STAR_R0_MPC / 2,
-  goneAt: SGR_A_STAR_R0_MPC,
-};
 
 export const CAPTION_FADE_RULES = {
   /**
@@ -153,7 +131,7 @@ export const CAPTION_FADE_RULES = {
   sgrAStar: {
     labelEnabled: (settings) => settings.bodies.items[SGR_A_STAR_ENTRY.id].labelEnabled,
     subjectVisible: UNGATED,
-    fadeTarget: (distanceMpc) => fadeBand(SGR_A_STAR_CAPTION_BAND, distanceMpc),
+    fadeTarget: (distanceMpc) => fadeBand(SCALE_FADE_BANDS.sgrAStarCaption, distanceMpc),
   },
 
   /**

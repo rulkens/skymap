@@ -80,6 +80,8 @@
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { EngineState } from '../../../../@types/engine/state/EngineState';
+import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { BodyPointPick } from '../../../../@types/rendering/BodyPickRenderer';
 import { NEAR0 } from '../slabs';
@@ -93,13 +95,43 @@ import { fadeBand } from '../../../../utils/math/fadeBand';
 import { regionRelativeDistanceMpc } from '../../../../utils/scene/regionRelativeDistanceMpc';
 import { BODY_REGIONS } from '../../../../data/bodies/bodyRegions';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
+import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../solarSystemLabelMaxDistance';
 import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
 import { starExposureRamp } from '../../../gpu/renderers/starCatalog/starExposureRamp';
+import { SGR_A_STAR } from '../../../../data/bodies/sceneSgrAStar';
+import { SGR_A_STAR_ENTRY } from '../../../../data/sources/sgr-a-star';
+import { Source } from '../../../../data/sources';
+import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
+import { distanceMpc } from '../../../../utils/math/distanceMpc';
 
 // The scale regime the star backdrop belongs to. Its anchor — not the render
 // origin — is what the dissolve band measures the camera against, so the band
 // keeps meaning the moment a star map is seeded somewhere other than the Sun.
 const STAR_BACKDROP_REGION = BODY_REGIONS.find((region) => region.id === 'solar-neighbourhood')!;
+
+/**
+ * The one fact "Sgr A*'s caption invites a click" — the whole of what makes the
+ * Galactic Centre clickable, since it draws NOTHING at any zoom. `pickEnabled`
+ * (admit this layer on a frame with no star points) and `drawPick` (emit the
+ * stamp) must AGREE on it, so it is spelled once here — the same discipline
+ * `bodyGlintsLayer`'s `earthCaptionPickable` keeps for Earth.
+ *
+ * The three terms reproduce exactly when `foregroundLabelsLayer` puts the name
+ * on screen: its caption gate, the body row's own label toggle, and the
+ * approach band `CAPTION_FADE_RULES.sgrAStar` reads from the same table. Pick
+ * follows the visible AFFORDANCE — with the label off there is no mark at all,
+ * so an invisible 18 px target in empty sky would be a trap.
+ */
+function sgrAStarCaptionPickable(state: EngineState, ctx: ReadyFrameContext): boolean {
+  if (ctx.cam.distance >= SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC) return false;
+  if (!state.settings.bodies.items[SGR_A_STAR_ENTRY.id].labelEnabled) return false;
+  const states = sceneBodyStates(state, ctx);
+  const anchor = states.get(SGR_A_STAR.id);
+  if (anchor === undefined) return false;
+  return (
+    fadeBand(SCALE_FADE_BANDS.sgrAStarCaption, distanceMpc(ctx.drawCamPos, anchor.positionMpc)) > 0
+  );
+}
 
 export const starPointsLayer: ContentLayer = {
   name: 'star-points',
@@ -133,6 +165,20 @@ export const starPointsLayer: ContentLayer = {
         fovYRad: ctx.fovYRad,
       }).points.length > 0
     );
+  },
+
+  // Pick gate — WIDER than `enabled`: this layer also carries Sgr A*'s pick
+  // stamp (see `drawPick`), which hangs off the caption rather than the star
+  // partition. Deep in the Galactic Centre with the famous-star map muted the
+  // partition can be empty while the name is still on screen, and `enabled`
+  // stays partition-only so no zero-star row enters the VISUAL pass plan.
+  // Composed over `enabled` rather than restating its gates. The handle guard
+  // is `drawPick`'s, checked first so a pre-bootstrap frame never reaches the
+  // body-state snapshot. See `ContentLayer.pickEnabled`.
+  pickEnabled(state, ctx) {
+    if (state.gpu.bodyPickRenderer === null) return false;
+    if (starPointsLayer.enabled(state, ctx)) return true;
+    return sgrAStarCaptionPickable(state, ctx);
   },
 
   draw(pass, view, ctx, state) {
@@ -257,6 +303,31 @@ export const starPointsLayer: ContentLayer = {
 
     const camPos = view.camPos;
     const pickPoints: BodyPointPick[] = [];
+
+    // Sgr A*'s stamp — the ONLY thing that makes the Galactic Centre clickable.
+    // It draws nothing at any zoom (an invisible anchor by design), so unlike
+    // every other id in this list there is no sprite whose footprint the pick
+    // widens; the caption IS the target, and `sgrAStarCaptionPickable` above is
+    // the whole gate. Emitted here rather than in a row of its own because this
+    // is the layer already live at the Galactic Centre, stamping the S-stars
+    // that orbit it, and `bodyPickRenderer.drawPoints` takes one array per
+    // caller per pass — so the anchor rides its satellites' single draw.
+    //
+    // It shares the scene-star depth band with those satellites, so an S-star
+    // crossing in front wins the pixel on true depth: the black hole takes the
+    // click only where nothing orbits.
+    if (sgrAStarCaptionPickable(state, ctx)) {
+      const anchorPos = sceneBodyStates(state, ctx).get(SGR_A_STAR.id)!.positionMpc;
+      pickPoints.push({
+        posRelCamMpc: [
+          anchorPos[0] - camPos[0],
+          anchorPos[1] - camPos[1],
+          anchorPos[2] - camPos[2],
+        ] as Vec3,
+        packedId: packSelection(Source.SgrAStar, 0 + PICK_SENTINEL_OFFSET),
+      });
+    }
+
     for (const star of points) {
       const packedId = starPickId(star.id);
       if (packedId === null) continue; // in neither seed table — see starPickId.
