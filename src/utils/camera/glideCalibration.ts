@@ -25,7 +25,7 @@ import type { Ease } from '../../@types/animation/Ease';
  * scale-changing ones explode past 180. Most moves therefore land on a clamp
  * bound rather than on a derived duration; see GLIDE_MIN_SEC / GLIDE_MAX_SEC.
  */
-export const GLIDE_RHO_DEFAULT = 0.05;
+export const GLIDE_RHO_DEFAULT = 0.18;
 
 /**
  * ρ = 0 is a SINGULARITY, not a small value: the metric's zoom term is 1/ρ²,
@@ -39,17 +39,17 @@ export const GLIDE_RHO_MIN = 0.001;
 /** Geodesic arc-length units per second: durationSec = length / V. */
 export const GLIDE_VELOCITY = 20;
 
-export const GLIDE_MIN_SEC = 0.3;
+export const GLIDE_MIN_SEC = 0.6;
 
 /** A move clamped at either bound is no longer perceptually uniform. */
-export const GLIDE_MAX_SEC = 1.5;
+export const GLIDE_MAX_SEC = 2.2;
 
 /**
  * `'linear'` — constant arc-length velocity IS the feature (see `glide`'s
  * docblock in `effectHelpers.ts`); an eased arrival is an opt-in the
  * DebugPanel's ease selector makes live-tunable, not the shipped default.
  */
-export const GLIDE_EASE_DEFAULT: Ease = 'linear';
+export const GLIDE_EASE_DEFAULT: Ease = 'easeOutQuint';
 
 /**
  * The constants above as one record — what `glidePath` falls back to and what

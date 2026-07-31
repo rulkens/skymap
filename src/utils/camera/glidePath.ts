@@ -11,7 +11,6 @@ import type { GlideTuning } from '../../@types/camera/GlideTuning';
 import { zoomPanGeodesic } from './zoomPanGeodesic';
 import { DEFAULT_GLIDE_TUNING, GLIDE_RHO_MIN } from './glideCalibration';
 import { distanceMpc } from '../math/distanceMpc';
-import { lerp } from '../math/lerp';
 
 export function glidePath(
   from: { readonly target: Vec3; readonly distance: number },
@@ -39,20 +38,52 @@ export function glidePath(
   const geodesic = zoomPanGeodesic(0, w0, du, w1, rho);
   const durationSec = Math.max(minSec, Math.min(maxSec, geodesic.length / velocity));
 
+  // The SAME curve measured from the far end. `u` is an offset along the
+  // segment, so near the destination the forward `u` is a large number whose
+  // useful part is its last few bits: `lerp(from, to, u/du)` then quantises the
+  // target to one ULP of `du`. Measured Andromeda → Earth, that is 1.7e-16 Mpc
+  // — 0.84 EARTH RADII — so the target visibly jumps frame to frame while the
+  // camera is only 9e-16 Mpc away. Reading the offset from whichever endpoint
+  // is nearer keeps it a small number computed directly, never a difference of
+  // two large ones. Same class of fix as `zoomPanGeodesic`'s landmine 2.
+  const reverse = du === 0 ? null : zoomPanGeodesic(0, w1, du, w0, rho);
+  const dir: Vec3 =
+    du === 0
+      ? [0, 0, 0]
+      : [
+          (to.target[0] - from.target[0]) / du,
+          (to.target[1] - from.target[1]) / du,
+          (to.target[2] - from.target[2]) / du,
+        ];
+
   return {
     durationSec,
     at: (arcFrac: number) => {
-      const { u, w } = geodesic.at(arcFrac * geodesic.length);
-      // du === 0 ⇒ u stays u0 (=0) throughout — the degenerate branch never
-      // moves along the target segment, so lifting u/du here would be 0/0.
-      const t = du === 0 ? 0 : u / du;
+      const s = arcFrac * geodesic.length;
+      const { u, w } = geodesic.at(s);
+      const distance = w / (2 * halfTanFovY);
+
+      // Degenerate (pure zoom): the target never moves off `from`.
+      if (reverse === null) return { target: [...from.target] as Vec3, distance };
+
+      if (2 * u <= du) {
+        return {
+          target: [
+            from.target[0] + dir[0] * u,
+            from.target[1] + dir[1] * u,
+            from.target[2] + dir[2] * u,
+          ],
+          distance,
+        };
+      }
+      const back = reverse.at(geodesic.length - s).u;
       return {
         target: [
-          lerp(from.target[0], to.target[0], t),
-          lerp(from.target[1], to.target[1], t),
-          lerp(from.target[2], to.target[2], t),
+          to.target[0] - dir[0] * back,
+          to.target[1] - dir[1] * back,
+          to.target[2] - dir[2] * back,
         ],
-        distance: w / (2 * halfTanFovY),
+        distance,
       };
     },
   };

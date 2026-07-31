@@ -57,8 +57,8 @@ describe('buildGlideTrack', () => {
         ease: 'linear',
         fovYRad: FOV_Y,
       }).endSec;
-    const shallow = span(START.distance * 0.7);
-    const deeper = span(START.distance * 0.3);
+    const shallow = span(START.distance * 0.1);
+    const deeper = span(START.distance * 0.02);
     for (const d of [shallow, deeper]) {
       expect(d).toBeGreaterThan(GLIDE_MIN_SEC);
       expect(d).toBeLessThan(GLIDE_MAX_SEC);

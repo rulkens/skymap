@@ -46,10 +46,16 @@ const structureRow = (over: Partial<StructureInfo> = {}): StructureInfo =>
   }) as StructureInfo;
 
 describe('focusTweenDescriptor', () => {
-  it('carries the live from-pose and a linear ease on every arm', () => {
-    const d = focusTweenDescriptor(galaxyRow(), FROM, FOVY, DEFAULT_GLIDE_TUNING);
+  it("carries the live from-pose and the tuning's ease on every arm", () => {
+    // An explicit non-default ease, not DEFAULT_GLIDE_TUNING's: restating the
+    // default would pass even if the producer hardcoded a curve, which is the
+    // bug this guards (it did hardcode `'linear'` before the selector landed).
+    const d = focusTweenDescriptor(galaxyRow(), FROM, FOVY, {
+      ...DEFAULT_GLIDE_TUNING,
+      ease: 'easeInOutSine',
+    });
     expect(d.from).toBe(FROM);
-    expect(d.easing).toBe('linear');
+    expect(d.easing).toBe('easeInOutSine');
     // The duration is derived, so the only thing that can be asserted without
     // recomputing it is the calibrated envelope it must land inside.
     expect(d.durationMs).toBeGreaterThanOrEqual(GLIDE_MIN_SEC * 1000);

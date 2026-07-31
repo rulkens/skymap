@@ -678,6 +678,10 @@ describe('buildCameraDrivers — followBody', () => {
 
     const linearStore = makeStore();
     linearStore.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
+    // Set 'linear' EXPLICITLY rather than leaning on the default: the shipped
+    // default ease is a tunable, and when it stopped being 'linear' this
+    // comparison silently became eased-vs-eased.
+    linearStore.dispatch(setGlideTuning({ ease: 'linear' }));
     const sLinear = linearStore.getState() as unknown as RootState;
     const linearEngineState = makeFollowEngineState({
       simDays: FOLLOW_SIM_DAYS,
@@ -689,10 +693,16 @@ describe('buildCameraDrivers — followBody', () => {
     deriveApproachMs(linearFollow, sLinear, linearEngineState);
 
     // Mid-approach, easeOutCubic(0.5) = 0.875 ≠ 0.5 — the eased sample must
-    // differ from the default-linear sample at the SAME elapsed fraction.
+    // differ from the linear sample at the SAME elapsed fraction.
     const easedMid = follow.pose(s, CAM_STUB, approachMs * 0.5);
     const linearMid = linearFollow.pose(sLinear, CAM_STUB, approachMs * 0.5);
-    expect(easedMid.distance).not.toBeCloseTo(linearMid.distance, 6);
+    // RELATIVE, not `toBeCloseTo`: an approach ends at Earth-framing distance
+    // (~1e-13 Mpc), where `toBeCloseTo(…, 6)`'s absolute 5e-7 tolerance calls
+    // every pair of poses equal and the assertion proves nothing.
+    const spread =
+      Math.abs(easedMid.distance - linearMid.distance) /
+      Math.max(easedMid.distance, linearMid.distance);
+    expect(spread).toBeGreaterThan(0.1);
     expect(easedMid.target).not.toEqual(linearMid.target);
   });
 

@@ -105,6 +105,37 @@ describe('glidePath', () => {
     }
   });
 
+  it('the target stays smooth into an Earth-scale arrival', () => {
+    // Andromeda -> Earth: 0.78 Mpc of separation, arriving 9e-16 Mpc out.
+    // Computing the target as lerp(from, to, u/du) quantises it to one ULP of
+    // du -- 1.7e-16 Mpc, or 0.84 Earth radii -- so it visibly jumps frame to
+    // frame while the camera is closer to Earth than that. The step must stay
+    // small RELATIVE TO THE CAMERA DISTANCE, which is what the eye judges.
+    const AU_ISH = 0.78;
+    const EARTH_FOCUS = 8.94e-16;
+    const g = glidePath(
+      { target: [AU_ISH, 0, 0], distance: 0.05 },
+      { target: [0, 0, 0], distance: EARTH_FOCUS },
+      FOV_Y,
+    );
+    let previous = g.at(0.9).target;
+    let worst = 0;
+    for (let i = 1; i <= 60; i++) {
+      const frac = 0.9 + (0.1 * i) / 60;
+      const { target, distance } = g.at(frac);
+      const step = Math.hypot(
+        target[0] - previous[0],
+        target[1] - previous[1],
+        target[2] - previous[2],
+      );
+      worst = Math.max(worst, step / distance);
+      previous = target;
+    }
+    // Forward-only lerp measures ~1.5e-2 here, and far worse under an ease that
+    // lingers near arrival; the two-ended form measures ~1e-12.
+    expect(worst).toBeLessThan(1e-6);
+  });
+
   it('duration is clamped at both ends', () => {
     // Earth-orbit scale to observable-universe scale: unclamped S/V is tens of
     // seconds, far past GLIDE_MAX_SEC.
