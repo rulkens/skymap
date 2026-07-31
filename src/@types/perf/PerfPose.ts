@@ -24,4 +24,13 @@ export type PerfPose = {
   distance: number;
   /** Per-frame yaw advance; omitted → the installer's PERF_AUTO_ROTATE_RATE fallback. */
   rate?: number;
+  /**
+   * Clear the body focus before committing the pose. The boot flow focuses
+   * Earth, and every orbit driver pivots on a focused body — the pivot-pin
+   * overwrites the pose `target` with the live body each frame, so a non-Earth
+   * target only holds if the focus is cleared first. Opt-in per scenario:
+   * clearing unconditionally would change what the historical Earth-target
+   * scenarios measure (selection ring, follow framing).
+   */
+  clearFocus?: boolean;
 };
