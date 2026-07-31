@@ -23,7 +23,14 @@ import type { ParamSpecEntry } from '../../@types/data/ParamSpecEntry';
 
 export const PARAM_SPEC: Readonly<Partial<Record<keyof GalaxyParams & string, ParamSpecEntry>>> = {
   radius: { min: 0.4, max: 1.8, step: 0.05 },
-  starCount: { min: 100000, max: 1000000, step: 50000 },
+  // The floor is `splitStarBudget`'s own `Math.max(20000, ...)`, which this
+  // tool shares with the runtime — below it the slider would show a count the
+  // generator does not honour. The spike's 100k floor sat well clear of that,
+  // so the clamp never showed; reaching the few-thousand-splat regime the
+  // count/size trade lives in means going down to it. The step drops with the
+  // floor: a range steps FROM its minimum, so the spike's 50k step would have
+  // put the second stop at 70k and made the whole low end unreachable.
+  starCount: { min: 20000, max: 1000000, step: 5000 },
   bulgeSize: { min: 0.2, max: 2, step: 0.05 },
   bulgeFalloff: { min: 0, max: 1, step: 0.02 },
   diskThickness: { min: 0.35, max: 1.8, step: 0.05 },

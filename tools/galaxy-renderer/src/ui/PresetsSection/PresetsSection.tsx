@@ -18,6 +18,7 @@
  * `CollapsibleSection`.
  */
 import { useRef, type ChangeEvent, type ReactNode } from 'react';
+import Button from '../../../../../src/components/common/Button/Button';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { paramsPatched } from '../../state/slices/galaxySlice';
 import { renderPatched } from '../../state/slices/renderSlice';
@@ -89,19 +90,15 @@ function PresetsSection(): ReactNode {
     <div className={styles.root}>
       <div className={styles.header}>PRESETS</div>
       <div className={styles.row}>
-        <button type="button" className={styles.button} onClick={handleDownload}>
+        <Button className={styles.button} onClick={handleDownload}>
           ⭳ Download
-        </button>
-        <button
-          type="button"
-          className={styles.button}
-          onClick={() => fileInputRef.current?.click()}
-        >
+        </Button>
+        <Button className={styles.button} onClick={() => fileInputRef.current?.click()}>
           ⭱ Upload
-        </button>
-        <button type="button" className={styles.button} onClick={() => void handleCopy()}>
+        </Button>
+        <Button className={styles.button} onClick={() => void handleCopy()}>
           {copyFeedback || '⧉ Copy'}
-        </button>
+        </Button>
       </div>
       <input
         ref={fileInputRef}

@@ -209,8 +209,8 @@ vi.mock('../../../../src/services/gpu/renderers/flowField/flowFieldRenderer', ()
   createFlowFieldRenderer: vi.fn(() => makeStub('flowFieldRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/passes/volumeUpsample', () => ({
-  createVolumeUpsample: vi.fn(() => makeStub('volumeUpsample')),
+vi.mock('../../../../src/services/gpu/passes/additiveUpsample', () => ({
+  createAdditiveUpsample: vi.fn(() => makeStub('additiveUpsample')),
 }));
 
 vi.mock('../../../../src/services/gpu/passes/starAggregateUpsample', () => ({

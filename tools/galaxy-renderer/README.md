@@ -152,20 +152,82 @@ in the spiral's own rotational sense. Both are live-tuned knobs at the top of
 
 ## Rendering
 
-Each frame draws in five passes: additive stars, then absorptive dust
-(multiplicative transmittance, so it darkens and reddens whatever's behind
-it), then a bright-pass extracts the HDR highlights, which feed a 5-level
-dual-filter bloom pyramid (Karis firefly-suppressed averaging on level 0
-only, plain box averaging on the deeper levels), and a final composite pass
-adds the bloom back onto the scene, tone-maps, grades, and gamma-encodes to
-the canvas.
+**The whole chain is the main app's, not this tool's.** The tool is only
+useful if a look tuned here transfers, so nothing about the image is
+hand-matched: the shaders are the runtime's `shaders/milkyWayCloud/`,
+`shaders/additiveUpsample/`, `shaders/bloom/` and `shaders/compositor/` trees,
+symlinked into this tool's WESL root (see `wesl.toml`), and the passes that
+drive them are the runtime's `createAdditiveUpsample`, `createBloomPyramid`
+and `createCompositor`. Editing any of those shaders changes both apps.
 
-Every constant in the pass chain — screen-size clamps, LOD hashes, blend
-weights, tonemap curves — is a verbatim, cited port of the spike's
-`galaxy-engine.js` (camera, uniforms, pipelines, frame loop) and
-`galaxy-shaders.js` (the WGSL shipped inline in the spike, now split into
-the seven WESL files under `src/engine/shaders/`); see the shader/engine
-source comments and
+The scene draws in two passes. First, additive star billboards into a
+reduced-resolution offscreen at `floor(canvas / divisor)` — the app's
+`mw-aggregate` row, for the app's reason: a summed additive glow field is
+low-frequency, so it reconstructs from a coarser target for free while its
+fragment cost (the actual wall, measured) falls as the divisor's square. Then
+that offscreen is bilinearly added into the `rgba16float` HDR target and
+absorptive dust (multiplicative transmittance, so it darkens and reddens
+whatever's behind it) draws over it at FULL resolution — also the app's split,
+because dust has to multiply the real accumulation and is not the fill-bound
+half.
+
+All seven of the app's `MILKY_WAY_TUNING_DEFAULTS` knobs therefore mean the
+same thing here: `sizeScale` / `starIntensity` (spelled `starSizeScale` /
+`exposure` in the app), the `starPxMin` / `starPxMax` sprite clamp, `softness`,
+`lodApparent`, and the star target's `aggregateDivisor`. The two px knobs clamp
+in pixels OF THE STAR TARGET, so the divisor and they are one trade — at
+divisor 2 a clamp of 48 is 96 screen pixels.
+
+From HDR onward:
+bright-pass → 5-level dual-filter pyramid (Karis firefly-suppressed averaging
+on level 0 only) → the glow folded back into HDR **before** the tone curve →
+one composite applying exposure and one of the app's five curves, straight to
+a non-sRGB swap chain with no gamma encode. Every app-side default (exposure,
+bloom strength, bloom threshold, tone curve) is imported from
+`src/data/defaults.ts` rather than restated.
+
+One post pass is deliberately tool-only: `grade.wesl` (saturation, vignette,
+optional `pow(1/2.2)` encode), under the collapsed **TOOL-ONLY GRADE** panel
+section. It is SKIPPED entirely at its identity defaults, so out of the box
+this tool's pass chain is the app's pass chain exactly; moving one of those
+three knobs is a visible departure from parity, kept available because
+matching reference astrophotography sometimes wants it.
+
+## Measuring performance
+
+The HUD's first badge is **ms per frame, with fps second** — a rolling median
+of the last 60 requestAnimationFrame deltas. That is the honest number: total
+wall time per displayed frame, everything included, and the only reading here
+that is additive or convertible to a frame rate. Compare two variants on it.
+The median (rather than a mean) is what keeps one GC pause or shader recompile
+from parking the readout several milliseconds high for a second afterwards.
+
+Adding **`?gpuTimings`** to the URL turns on per-pass GPU timestamps, listed
+under the badges: `stars` (the additive star pass into the reduced-resolution
+target — the fill-bound half, and the one the sprite-size and divisor knobs
+move), `scene` (the full-res HDR pass: the aggregate's upsample plus the dust
+billboards, which share one render pass), `bloom` (the whole pyramid as one
+span, exactly how the app's frame program bills it), `composite`, and `grade`
+on frames the tool-only trailer ran. A timestamp pair can only bracket a whole
+pass, which is what decides that split. They come from the runtime's
+`gpuTimingService`, imported rather than copied.
+
+**Those per-pass numbers are ordinal.** A tile-based deferred GPU — every
+Apple Silicon machine — overlaps passes, so a pass's begin/end timestamps
+bracket wall time in which other passes were also executing. The spans rank
+passes against each other and against their own history; they do not sum to a
+frame and none converts to fps. There is deliberately no total rendered next
+to them. The gate is off by default because attaching `timestampWrites`
+perturbs a TBDR driver, and the wall clock has to stay clean.
+
+Generation is not in the list: it dispatches once per `setParams`, not per
+frame, so it never appears in a frame's measurement.
+
+The engine around the passes — camera, orbit input, frame loop — is a
+verbatim, cited port of the spike's `galaxy-engine.js`. The draw shaders it
+once carried (`galaxy-shaders.js`, ported to a local `star.wesl` / `dust.wesl`)
+have since been superseded by the runtime's `milkyWayCloud/` pair, which grew
+out of them; see the shader/engine source comments and
 [`docs/superpowers/plans/2026-07-02-galaxy-renderer-02-engine-and-shaders.md`](../../docs/superpowers/plans/2026-07-02-galaxy-renderer-02-engine-and-shaders.md)
 for the full line-cited port map.
 

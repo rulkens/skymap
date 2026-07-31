@@ -18,12 +18,12 @@
  *    `/images/famous-curated/...` for descriptor-based auto-fit — one asset
  *    source, no copy to keep in sync.
  *
- * Unlike the flow-workbench (which links against the runtime's canonical
- * shader tree because it drives the real flow renderer), this tool's DRAW
- * shaders (star/dust sprites, bloom chain, composite) are entirely its own,
- * living under `src/engine/shaders/` (see `wesl.toml`). The one exception is
- * the shared `galaxyGen/` generation shaders, which live in the runtime tree
- * and reach this build through a symlink — see the `resolve:` block below.
+ * Almost every shader it draws with belongs to the runtime: the `galaxyGen/`,
+ * `milkyWayCloud/`, `additiveUpsample/`, `bloom/` and `compositor/` trees plus
+ * `lib/camera.wesl`, `lib/cloudSprite.wesl` and `lib/tonemap.wesl` all live in
+ * `src/services/gpu/shaders/` and reach this build through symlinks — see the
+ * `resolve:` block below and `wesl.toml`. Only the tool-only grade trailer
+ * (`grade.wesl`) and the fullscreen helper it draws with are local.
  *
  * `weslToml` is passed EXPLICITLY because the plugin otherwise reads
  * `<process.cwd()>/wesl.toml` — and `npm run galaxy-renderer` keeps cwd at
@@ -43,25 +43,32 @@ export default defineConfig({
   publicDir: resolve(__dirname, '../../public'),
   server: { port: 5400 },
   resolve: {
-    // Cross-root WESL: the shared galaxyGen shaders live under the MAIN app's
-    // wesl root (src/services/gpu/shaders/galaxyGen) and are reached here
-    // through the symlink at src/engine/shaders/galaxyGen — one source, no
-    // copy. WESL package paths are root-driven (an include glob alone can
-    // discover a file outside the root but cannot bind package::galaxyGen::,
-    // and two viteWesl instances conflict — the first claims every ?static
-    // load), so the file must APPEAR inside this tool's root. The alias
-    // rewrites any import targeting .../shaders/galaxyGen/*.wesl onto the
-    // symlinked path so the wesl-plugin sees an id inside its root and names
-    // the module package::galaxyGen::...; preserveSymlinks stops Vite from
-    // realpath-ing that id back out to src/services/..., which would undo
-    // the alias.
+    // Cross-root WESL: the shared shader families live under the MAIN app's
+    // wesl root (src/services/gpu/shaders/<family>) and are reached here
+    // through symlinks at src/engine/shaders/<family> — one source, no copy.
+    // WESL package paths are root-driven (an include glob alone can discover a
+    // file outside the root but cannot bind package::<family>::, and two
+    // viteWesl instances conflict — the first claims every ?static load), so
+    // the file must APPEAR inside this tool's root. Each alias rewrites an
+    // import targeting .../shaders/<family>/*.wesl onto the symlinked path so
+    // the wesl-plugin sees an id inside its root and names the module
+    // package::<family>::...; preserveSymlinks stops Vite from realpath-ing
+    // that id back out to src/services/..., which would undo the alias.
+    //
+    // The aliases are needed because the RUNTIME modules this tool reuses
+    // (createGenerationPipelines, bloomPyramid, compositor, additiveUpsample,
+    // and — for its uniform-buffer size const — milkyWayCloudRenderer) spell
+    // their `?static` imports relative to the runtime tree. A shader this tool
+    // imports by its own relative path is already inside the root and needs no
+    // alias — that is why `lib/camera.wesl` and `lib/tonemap.wesl`, reached
+    // only through the linker's `package::lib::…`, have no entry here.
     preserveSymlinks: true,
-    alias: [
-      {
-        find: /^(.*)\/shaders\/galaxyGen\/(.+\.wesl(\?.+)?)$/,
-        replacement: `${resolve(__dirname, 'src/engine/shaders/galaxyGen')}/$2`,
-      },
-    ],
+    alias: ['galaxyGen', 'milkyWayCloud', 'additiveUpsample', 'bloom', 'compositor'].map(
+      (family) => ({
+        find: new RegExp(`^(.*)/shaders/${family}/(.+\\.wesl(\\?.+)?)$`),
+        replacement: `${resolve(__dirname, `src/engine/shaders/${family}`)}/$2`,
+      }),
+    ),
   },
   plugins: [
     viteWesl({

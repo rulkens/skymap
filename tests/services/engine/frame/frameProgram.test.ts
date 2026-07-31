@@ -65,10 +65,12 @@ function fakeLayer(name: string, target: string, slab: number): ContentLayer {
 }
 
 describe('frameProgram', () => {
-  it('emits the eleven-step main program', () => {
-    // The survey-star AGGREGATE render (into its own half-res offscreen) sits
-    // BEFORE the hdr NEAR0 step, so the `star-upsample` layer inside that step
-    // can composite it — the twin of the volume render preceding volume-upsample.
+  it('emits the twelve-step main program', () => {
+    // The two reduced-resolution AGGREGATE renders (survey stars into
+    // `star-aggregates`, the Milky-Way cloud's star billboards into
+    // `mw-aggregate`) both sit BEFORE the hdr NEAR0 step, so the `star-upsample`
+    // and `milky-way-upsample` layers inside that step can composite them — the
+    // twin of the volume render preceding volume-upsample.
     // The (hdr, NEAR0) step then sits after the cosmological hdr render, so the
     // stars accumulate into HDR and ride the same tone-map as the galaxies
     // (COSMO's 0.01 Mpc near plane would clip their parsec-scale anchors). The
@@ -78,8 +80,8 @@ describe('frameProgram', () => {
     // prelude carries TWO steps — the flow integrate and the atmosphere
     // sky-view LUT bake — both ahead of the foreground render so the atmosphere
     // shell samples this frame's LUT.
-    // Bloom OFF — the base eleven-step shape (the bloom-enabled program adds ten
-    // render steps between the foreground composite and the tone-map; see the
+    // Bloom OFF — the base twelve-step shape (the bloom-enabled program splices
+    // one bloom step between the foreground composite and the tone-map; see the
     // bloom-gating tests below).
     expect(frameProgram(TONE, false)).toEqual([
       { kind: 'compute', name: 'flow' },
@@ -87,6 +89,7 @@ describe('frameProgram', () => {
       { kind: 'render', target: 'volume', slab: COSMO },
       { kind: 'render', target: 'hdr', slab: COSMO },
       { kind: 'render', target: 'star-aggregates', slab: NEAR0 },
+      { kind: 'render', target: 'mw-aggregate', slab: NEAR0 },
       { kind: 'render', target: 'hdr', slab: NEAR0 },
       { kind: 'render', target: 'foreground:0', slab: NEAR0 },
       {
@@ -210,19 +213,20 @@ describe('timedSlotsOf', () => {
     // independent of the layers fixture (a composite step always contributes
     // its '<source>→<dest>' slot): the foreground:0→hdr linear merge precedes
     // the hdr→swap tone-map. This synthetic fixture has no near-field rows (no
-    // (hdr, NEAR0) star points, no foreground bodies, no NEAR0 captions), so
-    // those RENDER slots correctly contribute no LAYER rows — but each render
-    // STEP still emits its '<target>·<SLAB>' group-key slot (the merged-pass
-    // timing slot), so the empty steps show up as their group key alone and the
-    // matched steps show their layers then the group total. The foreground:0
-    // render now precedes both composites (bodies merge into HDR before the
-    // tone-map), so its group-key slot sits above them.
+    // aggregate offscreens, no (hdr, NEAR0) star points, no foreground bodies,
+    // no NEAR0 captions), so those RENDER slots correctly contribute no LAYER
+    // rows — but each render STEP still emits its '<target>·<SLAB>' group-key
+    // slot (the merged-pass timing slot), so the empty steps show up as their
+    // group key alone and the matched steps show their layers then the group
+    // total. The foreground:0 render now precedes both composites (bodies merge
+    // into HDR before the tone-map), so its group-key slot sits above them.
     expect(timedSlotsOf(frameProgram(TONE, false), layers)).toEqual([
       'volume·COSMO',
       'point-sprites',
       'milky-way',
       'hdr·COSMO',
       'star-aggregates·NEAR0',
+      'mw-aggregate·NEAR0',
       'hdr·NEAR0',
       'foreground:0·NEAR0',
       'foreground:0→hdr',
@@ -246,16 +250,19 @@ describe('timedSlotsOf', () => {
     expect(new Set(slots).size).toBe(slots.length);
   });
 
-  it('derives the real registry slot list: scalar-volume, eight hdr, star-aggregates, the (hdr, NEAR0) six, foreground bodies, foreground:0→hdr, hdr→swap, five swap, near captions, pick', () => {
+  it('derives the real registry slot list: scalar-volume, eight hdr, the two aggregate offscreens, the (hdr, NEAR0) group, foreground bodies, foreground:0→hdr, hdr→swap, five swap, near captions, pick', () => {
     // The real CONTENT_LAYERS registry against the real program — the exact
     // ordered slot list the timing service allocates from and the DebugPanel
     // iterates. scalar-volume leads (the volume render step), then the eight
-    // COSMO hdr layers in registry order, then star-aggregates (its OWN NEAR0
-    // render step, before the hdr NEAR0 step), then milky-way + star-points +
-    // orbit-trails + star-catalog + star-upsample (the dedicated (hdr, NEAR0)
-    // step before the tone-map — milky-way leads that group so its
-    // multiplicative dust never darkens the local starfield, and star-upsample
-    // sits adjacent to the star-catalog leaf draw it composites). The
+    // COSMO hdr layers in registry order, then the two aggregate offscreens,
+    // each its OWN NEAR0 render step ahead of the hdr NEAR0 step:
+    // star-aggregates, then milky-way-aggregate. The (hdr, NEAR0) step follows
+    // with milky-way-upsample + milky-way + star-points + orbit-trails +
+    // star-catalog + star-upsample before the tone-map — milky-way-upsample
+    // precedes milky-way so the dust extincts the cloud's own starlight, that
+    // pair leads the group so the multiplicative dust never darkens the local
+    // starfield, and star-upsample sits adjacent to the star-catalog leaf draw
+    // it composites. The
     // foreground:0 body render now comes NEXT (before the composites) — one
     // slot per body layer: earth, then Earth's translucent cloud-shell overlay
     // (drawn right after the opaque surface), star-spheres, field-star-sphere,
@@ -283,6 +290,9 @@ describe('timedSlotsOf', () => {
       'hdr·COSMO',
       'star-aggregates',
       'star-aggregates·NEAR0',
+      'milky-way-aggregate',
+      'mw-aggregate·NEAR0',
+      'milky-way-upsample',
       'milky-way',
       'star-points',
       'orbit-trails',
@@ -330,9 +340,10 @@ describe('timedSlotGroupsOf', () => {
     // swap·COSMO overlay, one foreground:0·NEAR0 body. Every render step now
     // ALSO emits its '<target>·<SLAB>' group-key row (the merged-pass timing
     // slot), so even the steps matching no fake layer — volume·COSMO,
-    // star-aggregates·NEAR0, hdr·NEAR0, swap·NEAR0 — contribute their group key
-    // and their titles appear. All six groups therefore show, and each row's
-    // group key buckets it under its step's title.
+    // star-aggregates·NEAR0, mw-aggregate·NEAR0, hdr·NEAR0, swap·NEAR0 —
+    // contribute their group key and their titles appear. All six groups
+    // therefore show, and each row's group key buckets it under its step's
+    // title.
     const layers: readonly ContentLayer[] = [
       fakeLayer('point-sprites', 'hdr', COSMO),
       fakeLayer('milky-way', 'hdr', COSMO),
@@ -357,7 +368,7 @@ describe('timedSlotGroupsOf', () => {
     // trailing infra group carries both composites (foreground:0→hdr linear
     // merge, then hdr→swap tone-map) and pick.
     expect(groups.map((g) => g.rows.map((r) => r.name))).toEqual([
-      ['volume·COSMO', 'star-aggregates·NEAR0'],
+      ['volume·COSMO', 'star-aggregates·NEAR0', 'mw-aggregate·NEAR0'],
       ['point-sprites', 'milky-way', 'hdr·COSMO'],
       ['hdr·NEAR0'],
       ['earth', 'foreground:0·NEAR0'],
@@ -370,12 +381,13 @@ describe('timedSlotGroupsOf', () => {
     expect(groups[5]!.rows.map((r) => r.groupKey)).toEqual(['composite', 'composite', 'pick']);
   });
 
-  it('merges scalar-volume + star-aggregates into one group and sinks composites+pick to the last group', () => {
+  it('merges scalar-volume + the two aggregate offscreens into one group and sinks composites+pick to the last group', () => {
     // The real registry against the real program — the value the DebugPanel
-    // consumes. scalar-volume (volume·COSMO) and star-aggregates
-    // (star-aggregates·NEAR0) are non-adjacent steps that both map to
-    // "Volumes & aggregates"; the two composites and pick — scattered through
-    // execution order — collapse into the trailing "Composites & pick".
+    // consumes. scalar-volume (volume·COSMO), star-aggregates
+    // (star-aggregates·NEAR0) and milky-way-aggregate (mw-aggregate·NEAR0) are
+    // non-adjacent steps that all map to "Volumes & aggregates"; the two
+    // composites and pick — scattered through execution order — collapse into
+    // the trailing "Composites & pick".
     expect(TIMED_SLOT_GROUPS.map((g) => g.title)).toEqual([
       'Volumes & aggregates',
       'Cosmos · HDR',
@@ -392,13 +404,16 @@ describe('timedSlotGroupsOf', () => {
     // passes; the frame sees one step, so one timing row).
     expect(byTitle('Bloom').rows.map((r) => r.name)).toEqual(['bloom']);
     // Each render step trails its layers with its '<target>·<SLAB>' group-key
-    // row, so volume·COSMO follows scalar-volume and star-aggregates·NEAR0
-    // follows star-aggregates within this merged group.
+    // row, so volume·COSMO follows scalar-volume, star-aggregates·NEAR0 follows
+    // star-aggregates, and mw-aggregate·NEAR0 follows milky-way-aggregate
+    // within this merged group.
     expect(byTitle('Volumes & aggregates').rows.map((r) => r.name)).toEqual([
       'scalar-volume',
       'volume·COSMO',
       'star-aggregates',
       'star-aggregates·NEAR0',
+      'milky-way-aggregate',
+      'mw-aggregate·NEAR0',
     ]);
     // Overlays merges the COSMO swap overlays with the NEAR0 near-field swap
     // rows (two non-adjacent swap steps), each trailed by its group-key row.

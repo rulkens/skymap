@@ -84,11 +84,16 @@ export function makeRunTierTransition(
       void slot.load({ source, tier: nextTier });
     }
 
-    // The Milky-Way point cloud folds the tier's star budget into its
-    // generation, so a tier swap regenerates it (destroy old star/dust VBs →
-    // carve + dispatch the new budget). The handle is null until initGpu
-    // constructs it, so `?.` IS the pre-bootstrap guard — no device check needed.
-    state.gpu.milkyWayCloud?.regenerate(nextTier);
+    // No direct Milky-Way regenerate call here, deliberately — this runner
+    // used to carry one when the cloud's star count was tier-derived, but
+    // `watchTierSaga` now re-seeds `settings.milkyWay.starCount` from the new
+    // tier's budget as part of the same tier change (see that saga), and
+    // `runFrame`'s per-frame mismatch check (`cloud.starCount()` vs. the live
+    // setting) already regenerates the cloud whenever they disagree — which a
+    // re-seed reliably produces. Calling `regenerate` here too would race
+    // that check: both would try to answer the same tier change, and the
+    // cloud no longer needs to know `Tier` at all (see `MilkyWayCloud`'s
+    // docblock) to do so.
 
     // The hi-res LOD-3 famous-galaxy texture is tier-aware on its layerSide.
     // WebGPU textures are immutable in shape, so a tier flip destroys + recreates

@@ -24,7 +24,7 @@ what does each pass cost, is a pass fragment- or vertex-bound, what does a catal
 ## Usage
 
 ```bash
-npm run perf                                        # all 6 scenarios, 30 frames, dpr 2
+npm run perf                                        # all 8 scenarios, 30 frames, dpr 2
 npm run perf -- --scenario solar-system --frames 60 # one scenario (repeatable flag)
 npm run perf -- --tier large                        # measure at a specific catalog tier
 npm run perf -- --compare-tiers                     # each scenario at small/medium/large
@@ -65,7 +65,7 @@ Progress goes to stderr in both modes, so stdout is pure JSON.
 
 ## Scenarios
 
-Poses live in `tools/perf/perfScenarios.ts` — six regimes from `earth-surface` to `full-survey`,
+Poses live in `tools/perf/perfScenarios.ts` — eight regimes from `earth-surface` to `full-survey`,
 captured from real flights via the in-app `l` (logState) key. To add one: fly there, press `l`,
 copy the dumped pose into a new entry. Keep poses stable — the value of the harness is comparing
 runs across commits, which dies if the poses drift.

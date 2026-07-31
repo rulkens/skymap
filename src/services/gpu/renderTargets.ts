@@ -66,6 +66,34 @@
  * carries the pre-knee scalar), fixing the LOD compression asymmetry between
  * a concentrated bright leaf and a stack of sub-knee aggregate quads.
  *
+ * ### Why the mw-aggregate row renders at reduced resolution
+ *
+ * The Milky Way cloud stands in for ~1e11 stars with a budget in the hundreds
+ * of thousands, so at any framing where the disc covers real screen area the
+ * sprites are sub-pixel and the field reads as discrete particles rather than
+ * as a galaxy. The only cure is more overlap per pixel — bigger, softer, fewer
+ * sprites — and measurement says that wall is FILL, not vertex count: at ~5x
+ * the baseline sprite area the frame rate collapses while the instance count is
+ * going DOWN.
+ *
+ * That is the same shape the `star-aggregates` row exists for, and the same
+ * remedy applies: a smooth summed-glow field is low-frequency, so rendering it
+ * at 1/scale and bilinearly upsampling is visually free while the fragment cost
+ * drops by the square of the divisor. The DUST pass stays full-res in HDR — its
+ * multiplicative transmittance has to land on the real cosmological
+ * accumulation, and it is not the fill-bound half.
+ *
+ * This is the one row whose divisor is NOT a constant here: it arrives as the
+ * `mwAggregateDivisor` argument, carrying `settings.milkyWay.aggregateDivisor`.
+ * The divisor trades directly against the star shader's `starPxMin` /
+ * `starPxMax` clamps, which are stated in TARGET pixels and are already live
+ * sliders, so the three have to be findable together against a moving frame.
+ * A target's dimensions are fixed at creation, so the frame loop answers a
+ * change by rebuilding this table (see `runFrame`) — the divisor currently in
+ * force is readable straight off this row's `scale`, which is why no separate
+ * 'last applied' record exists anywhere. `MILKY_WAY_TUNING_DEFAULTS` is the
+ * home of its boot value.
+ *
  * ### Why the foreground row carries a depth texture
  *
  * `foreground:0` is the first row to declare `depth`. The foreground pass
@@ -129,6 +157,10 @@ export const TARGET_CLEAR_VALUES: Readonly<Record<string, GPUColor>> = {
   hdr: { r: 0, g: 0, b: 0, a: 1 },
   volume: { r: 0, g: 0, b: 0, a: 0 },
   'star-aggregates': { r: 0, g: 0, b: 0, a: 0 },
+  // Same reason as `volume` and `star-aggregates`: the Milky Way's star
+  // billboards draw additively into this row, so an untouched texel must
+  // contribute nothing when the upsample composites it back into HDR.
+  'mw-aggregate': { r: 0, g: 0, b: 0, a: 0 },
   'foreground:0': { r: 0, g: 0, b: 0, a: 0 },
   // Bloom pyramid mips clear transparent (a=0) — the pyramid accumulates
   // additively (the upsample fold uses one/one blend), so an untouched texel
@@ -153,16 +185,21 @@ const STAR_AGGREGATE_DIVISOR = 2;
 
 /**
  * Build the concrete target table for this frame configuration. A function
- * (not a module constant) because the swap row's format is the runtime
- * swap-chain format (`bgra8unorm` on macOS, `rgba8unorm` elsewhere).
- * Rows per the renderer-unification design's concrete target table; the
- * pick rows arrive in a later plan phase.
+ * (not a module constant) because two rows are runtime-decided: the swap row's
+ * format is the runtime swap-chain format (`bgra8unorm` on macOS, `rgba8unorm`
+ * elsewhere), and the `mw-aggregate` row's divisor is a live tuning knob (see
+ * the module header). Rows per the renderer-unification design's concrete
+ * target table; the pick rows arrive in a later plan phase.
  */
-function buildSpecs(swapFormat: GPUTextureFormat): readonly RenderTargetSpec[] {
+function buildSpecs(
+  swapFormat: GPUTextureFormat,
+  mwAggregateDivisor: number,
+): readonly RenderTargetSpec[] {
   return [
     { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
     { id: 'volume', format: 'rgba16float', depth: null, scale: 3 },
     { id: 'star-aggregates', format: 'rgba16float', depth: null, scale: STAR_AGGREGATE_DIVISOR },
+    { id: 'mw-aggregate', format: 'rgba16float', depth: null, scale: mwAggregateDivisor },
     { id: 'foreground:0', format: 'rgba16float', depth: 'depth32float', scale: 1 },
     // Bloom mip pyramid: level 0 at half-res, each further level halving again
     // (scale 2/4/8/16/32 — that is 2**(n+1)) — an ever-wider glow. rgba16float
@@ -188,10 +225,11 @@ export function createRenderTargets(
   device: GPUDevice,
   swapFormat: GPUTextureFormat,
   size: Size,
+  mwAggregateDivisor: number,
 ): RenderTargets {
   // `let`, not `const`: setSwapFormat below replaces this array wholesale
   // rather than mutating a row in place (house preference for immutability).
-  let specs = buildSpecs(swapFormat);
+  let specs = buildSpecs(swapFormat, mwAggregateDivisor);
   // Only offscreen rows get textures — the swap row is executor-resolved
   // from the acquired frame view (see the module header). Computed once:
   // setSwapFormat never touches an offscreen row, so this stays valid.

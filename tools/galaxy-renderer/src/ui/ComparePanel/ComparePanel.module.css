@@ -1,3 +1,9 @@
+/* Glass chrome matches `src/components/common/Panel` (background, blur
+   strength, edge colour) — reproduced here rather than adopting `Panel`
+   itself, because the two don't share semantics: `Panel` is a fixed-width
+   floating card that manages its own collapse state, where this is a
+   full-height docked column, always open, with its own scroll body and a
+   header the panel doesn't have a slot for. */
 .root {
   position: absolute;
   top: 0;
@@ -5,9 +11,9 @@
   bottom: 0;
   width: 390px;
   max-width: 88vw;
-  background: var(--panel);
-  backdrop-filter: blur(16px);
-  border-right: 1px solid var(--panel-line);
+  background: var(--surface-panel);
+  backdrop-filter: blur(var(--blur-panel));
+  border-right: 1px solid var(--border-default);
   display: flex;
   flex-direction: column;
   z-index: 20;
@@ -15,7 +21,7 @@
 
 .header {
   padding: 20px 22px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid var(--border-divider);
 }
 
 .eyebrow {
@@ -23,14 +29,15 @@
 }
 
 .headline {
-  font-size: 16px;
+  font-size: var(--font-size-input);
   font-weight: 600;
   margin-top: 4px;
+  color: var(--color-fg);
 }
 
 .headerBody {
-  font-size: 12px;
-  color: var(--muted);
+  font-size: var(--font-size-xl);
+  color: var(--color-fg-muted);
   margin-top: 5px;
   line-height: 1.5;
 }
@@ -45,20 +52,20 @@
 .chip {
   padding: 5px 8px;
   border-radius: 7px;
-  font-family: var(--mono);
-  font-size: 11px;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-lg);
   font-weight: 600;
   cursor: pointer;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #aab3c9;
+  background: var(--surface-control);
+  border: 1px solid var(--border-control);
+  color: var(--color-fg-muted);
   transition: all 0.15s ease;
 }
 
 .chipActive {
-  background: var(--accent);
-  border-color: var(--accent-line);
-  color: #fff;
+  background: var(--surface-control-active);
+  border-color: var(--border-hover);
+  color: var(--color-fg);
 }
 
 .body {
@@ -71,7 +78,7 @@
   position: relative;
   border-radius: 12px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-divider);
   background: #05070e;
   aspect-ratio: 1 / 1;
 }
@@ -93,9 +100,9 @@
   justify-content: center;
   text-align: center;
   padding: 20px;
-  font-size: 12px;
+  font-size: var(--font-size-xl);
   font-style: italic;
-  color: var(--muted);
+  color: var(--color-fg-muted);
 }
 
 .credit {
@@ -105,19 +112,20 @@
   bottom: 0;
   padding: 10px 12px;
   background: linear-gradient(to top, rgba(0, 0, 0, 0.85), transparent);
-  font-size: 11px;
-  color: #aab3c9;
+  font-size: var(--font-size-lg);
+  color: var(--color-fg-muted);
 }
 
 .name {
   margin-top: 16px;
   font-size: 19px;
   font-weight: 600;
+  color: var(--color-fg);
 }
 
 .type {
-  font-size: 12.5px;
-  color: #9aa4bc;
+  font-size: var(--font-size-xl);
+  color: var(--color-fg-muted);
   margin-top: 2px;
 }
 
@@ -129,28 +137,29 @@
 }
 
 .fact {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--surface-control);
+  border: 1px solid var(--border-divider);
   border-radius: 9px;
   padding: 9px 11px;
 }
 
 .factLabel {
-  font-size: 10px;
+  font-size: var(--font-size-md);
   letter-spacing: 1px;
-  color: var(--label);
+  color: var(--color-fg-dim);
 }
 
 .factValue {
   font-size: 14px;
   font-weight: 600;
   margin-top: 3px;
-  font-family: var(--mono);
+  font-family: var(--font-family-mono);
+  color: var(--color-fg-base);
 }
 
 .notable {
-  font-size: 12.5px;
-  color: #aab3c9;
+  font-size: var(--font-size-xl);
+  color: var(--color-fg-muted);
   line-height: 1.6;
   margin-top: 14px;
 }
@@ -162,19 +171,17 @@
 }
 
 .loadButton {
-  composes: btnPrimary from '../shared.module.css';
   flex: 1;
 }
 
 .matchButton {
-  composes: btnGhost from '../shared.module.css';
   flex: 1;
 }
 
 .fitSection {
   margin-top: 18px;
   padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--border-divider);
 }
 
 .fitHead {
@@ -184,49 +191,62 @@
 }
 
 .score {
-  font-size: 16px;
+  font-size: var(--font-size-input);
   font-weight: 700;
-  font-family: var(--mono);
+  font-family: var(--font-family-mono);
 }
 
 .scoreNeutral {
-  color: var(--accent-lite);
+  color: var(--color-accent);
 }
 
 .scoreGood {
-  color: var(--good);
+  color: var(--tool-status-good);
 }
 
 .scoreWarn {
-  color: var(--warn);
+  color: var(--tool-status-warn);
 }
 
 .scoreBad {
-  color: #e08a6a;
+  color: var(--tool-status-bad);
 }
 
 .fitBody {
-  font-size: 11.5px;
-  color: var(--muted);
+  font-size: var(--font-size-lg);
+  color: var(--color-fg-muted);
   line-height: 1.55;
   margin-top: 6px;
 }
 
 .fitButton {
-  composes: btnGood btnBlock from '../shared.module.css';
+  composes: blockButton from '../shared.module.css';
   margin-top: 12px;
 }
 
-.fitButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  filter: none;
+/*
+ * Green has no equivalent in the app's Button (primary/secondary/ghost) —
+ * this button kicks off a multi-second hill-climb, not a simple state
+ * change, so a distinct "run this" colour earns its keep rather than
+ * reusing the accent CTA colour used for ordinary primary actions.
+ * Nested under `.fitSection` for specificity over Button's own `.root`
+ * rules regardless of CSS-file load order (mirrors TimeBar's `.pill .step`).
+ */
+.fitSection .fitButton {
+  background: #2f8f5f;
+  border-color: #3aa86f;
+  color: var(--color-fg);
+}
+
+.fitSection .fitButton:hover:not(:disabled) {
+  background: #37a06a;
+  border-color: #45bb7d;
 }
 
 .noPhotoHint {
   margin-top: 8px;
-  font-size: 11px;
-  color: var(--muted);
+  font-size: var(--font-size-lg);
+  color: var(--color-fg-muted);
   text-align: center;
 }
 
@@ -236,15 +256,15 @@
 
 .progressTrack {
   height: 5px;
-  border-radius: 3px;
-  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  background: var(--surface-control);
   overflow: hidden;
 }
 
 .progressFill {
   height: 100%;
-  background: var(--good);
-  border-radius: 3px;
+  background: var(--tool-status-good);
+  border-radius: var(--radius-sm);
   transition: width 0.2s;
 }
 
@@ -253,9 +273,9 @@
   justify-content: space-between;
   align-items: center;
   margin-top: 6px;
-  font-size: 11px;
-  color: var(--muted);
-  font-family: var(--mono);
+  font-size: var(--font-size-lg);
+  color: var(--color-fg-muted);
+  font-family: var(--font-family-mono);
 }
 
 .stopButton {
@@ -264,25 +284,25 @@
   padding: 0;
   font-family: inherit;
   font-size: inherit;
-  color: #e08a6a;
+  color: var(--tool-status-bad);
   cursor: pointer;
 }
 
 .report {
   margin-top: 12px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--surface-control);
+  border: 1px solid var(--border-divider);
   border-radius: 9px;
   padding: 11px 12px;
-  font-size: 11.5px;
-  font-family: var(--mono);
-  color: #aab3c9;
+  font-size: var(--font-size-lg);
+  font-family: var(--font-family-mono);
+  color: var(--color-fg-muted);
 }
 
 .reportHeader {
-  color: var(--label);
+  color: var(--color-fg-dim);
   letter-spacing: 1px;
-  font-size: 10px;
+  font-size: var(--font-size-md);
   margin-bottom: 7px;
 }
 
@@ -293,5 +313,5 @@
 }
 
 .reportValue {
-  color: var(--accent-lite2);
+  color: var(--color-accent-bright);
 }

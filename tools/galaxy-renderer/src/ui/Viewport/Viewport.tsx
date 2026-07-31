@@ -3,7 +3,7 @@
  * live handle to its parent.
  *
  * On mount it creates the engine against the canvas, seeds it with the
- * spike's boot defaults (`DEFAULT_RENDER_SETTINGS` + `DEFAULT_LOD_SETTINGS`
+ * tool's boot defaults (`DEFAULT_RENDER_SETTINGS` + `DEFAULT_LOD_SETTINGS`
  * merged into one `setRender` patch, then `setParams(DEFAULT_GALAXY_PARAMS)`
  * to trigger the first generation), and only then reports the handle via
  * `onEngine` — a caller that reaches for the handle before that point would
@@ -21,6 +21,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { GalaxyEngineHandle } from '../../../@types/engine/GalaxyEngineHandle';
 import type { EngineStats } from '../../../@types/engine/EngineStats';
+import type { PerfReport } from '../../../@types/engine/PerfReport';
 import { createGalaxyEngine } from '../../engine/createGalaxyEngine';
 import { DEFAULT_GALAXY_PARAMS } from '../../data/defaultGalaxyParams';
 import { DEFAULT_RENDER_SETTINGS } from '../../data/defaultRenderSettings';
@@ -29,7 +30,7 @@ import styles from './Viewport.module.css';
 
 export type ViewportProps = {
   readonly onEngine?: (engine: GalaxyEngineHandle | null) => void;
-  readonly onFps?: (fps: number) => void;
+  readonly onPerf?: (report: PerfReport) => void;
   readonly onStats?: (stats: EngineStats) => void;
 };
 
@@ -43,7 +44,7 @@ function statusFromError(err: unknown): BootStatus {
   return 'error';
 }
 
-function Viewport({ onEngine, onFps, onStats }: ViewportProps): ReactNode {
+function Viewport({ onEngine, onPerf, onStats }: ViewportProps): ReactNode {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [status, setStatus] = useState<BootStatus>('loading');
   const [errorDetail, setErrorDetail] = useState('');
@@ -55,7 +56,7 @@ function Viewport({ onEngine, onFps, onStats }: ViewportProps): ReactNode {
     let disposed = false;
     let handle: GalaxyEngineHandle | null = null;
 
-    createGalaxyEngine(canvas, { autoRotate: true, onFps, onStats })
+    createGalaxyEngine(canvas, { autoRotate: true, onPerf, onStats })
       .then(async (engine) => {
         if (disposed) {
           engine.dispose();
@@ -82,7 +83,7 @@ function Viewport({ onEngine, onFps, onStats }: ViewportProps): ReactNode {
       handle?.dispose();
       onEngine?.(null);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- boot-once effect: onEngine/onFps/onStats are read only inside the one-time engine construction above; listing them would re-run the boot on every new inline callback from the parent
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- boot-once effect: onEngine/onPerf/onStats are read only inside the one-time engine construction above; listing them would re-run the boot on every new inline callback from the parent
   }, []);
 
   const showFallback = status === 'no-webgpu' || status === 'no-adapter' || status === 'error';

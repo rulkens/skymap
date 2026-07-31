@@ -4,5 +4,13 @@
     "types": ["node", "@webgpu/types", "vite/client", "wesl-plugin/suffixes"],
     "lib": ["ES2022", "DOM", "DOM.Iterable"]
   },
-  "include": ["@types", "src", "../../src", "../../tools/utils"]
+  "include": ["@types", "src", "../../src", "../../tools/utils"],
+  // The root config carries `exclude: ["tools"]` so its own src+tests program
+  // never compiles the sub-tools. Exclude patterns resolve against the config
+  // that DECLARES them, not the one that extends it, so that pattern points at
+  // the repo's `tools/` directory — i.e. at everything `include` above just
+  // named. Inheriting it leaves a program with zero of this tool's files, which
+  // reports zero errors while checking nothing. Restating an empty exclude
+  // drops it, the same move `tsconfig.tools.json` makes.
+  "exclude": []
 }

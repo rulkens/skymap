@@ -40,8 +40,8 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
     expect(raw.p).toEqual(DEFAULT_GALAXY_PARAMS);
     expect(raw.r).toMatchObject({
       exposure: DEFAULT_RENDER_SETTINGS.exposure,
+      aggregateDivisor: DEFAULT_RENDER_SETTINGS.aggregateDivisor,
       lodApparent: DEFAULT_LOD_SETTINGS.lodApparent,
-      cullBright: DEFAULT_LOD_SETTINGS.cullBright,
     });
   });
 

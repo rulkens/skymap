@@ -1,4 +1,5 @@
-// volumeUpsample/io.wesl — shared structs for the half-res-to-HDR upsample pass.
+// additiveUpsample/io.wesl — shared structs for the offscreen-to-HDR
+// upsample pass.
 //
 // The upsample pass mirrors the tone-map pass's shape (covering-triangle
 // vertex stage emitting a UV, fragment stage sampling one texture).  We

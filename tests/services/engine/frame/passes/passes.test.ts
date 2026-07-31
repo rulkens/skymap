@@ -160,6 +160,13 @@ const STATE_STUB = {
       isAnyAnimating: () => false,
     },
   },
+  // The Milky-Way rows' `draw` now goes through the same
+  // `deriveMilkyWayCloudAlpha` gate their `enabled` does (one liveness
+  // projection shared by the aggregate producer, its upsample consumer, and
+  // the dust pass), and that gate reads `settings.milkyWay.enabled` — so the
+  // baseline stub has to carry it or `draw` throws before reaching the
+  // renderer. Tests that need the toggle off override `settings` wholesale.
+  settings: { milkyWay: { enabled: true } },
   // pointSpritesLayer / disk layers bind the shared focus group off
   // state.gpu.focusUniform; an opaque bind group is all they read.
   // The nullable GPU renderer fields default to null (pre-bootstrap
@@ -228,13 +235,16 @@ const FOREGROUND_NAMES = [
 // near0 slab — additive like every hdr row, but projected through NEAR0 so
 // kpc-to-AU-scale anchors clear the near plane. One (hdr, NEAR0) render
 // group, driven by the program's dedicated step before the tone-map: the
-// Milky-Way impostor first (its multiplicative dust must never darken the
-// local starfield drawn after it), then the far-partition star points, the
-// orbit trails, the survey star LEAF catalog, and the survey aggregate
-// UPSAMPLE composite (adjacent to the leaf draw it composites). The survey
-// aggregate STREAM itself targets 'star-aggregates', not hdr, so it is not in
-// this group.
+// Milky-Way cloud's UPSAMPLE composite first, then the cloud's dust pass (its
+// multiplicative transmittance must land on the upsampled starlight, and must
+// never darken the local starfield drawn after it), then the far-partition
+// star points, the orbit trails, the survey star LEAF catalog, and the survey
+// aggregate UPSAMPLE composite (adjacent to the leaf draw it composites).
+// Neither aggregate STREAM is here — the Milky Way's star billboards target
+// 'mw-aggregate' and the survey's target 'star-aggregates', so both sit
+// outside the hdr group.
 const NEAR_HDR_NAMES = [
+  'milky-way-upsample',
   'milky-way',
   'star-points',
   'orbit-trails',
@@ -278,16 +288,18 @@ describe('CONTENT_LAYERS migration table (hdr group)', () => {
 });
 
 describe('CONTENT_LAYERS migration table (near-field hdr group)', () => {
-  it('the (hdr, NEAR0) group holds milky-way, star-points, orbit-trails, star-catalog, additive', () => {
-    // The hdr rows outside the cosmological slab: the Milky-Way impostor,
-    // the far-partition neighbourhood stars, and the orbit trails, projected
-    // through NEAR0 (COSMO's FIXED 0.01 Mpc near plane would clip their
-    // kpc-to-AU-scale anchors — for the Milky Way it clipped the disc
-    // mid-descent before the approach fade completed) but accumulating into
-    // the same HDR target so they ride the galaxies' tone-map. Drawn by the
-    // program's dedicated (hdr, NEAR0) step before the hdr→swap composite.
-    // Milky-way MUST lead: its dust pass is multiplicative, and drawing it
-    // first keeps the local starfield out of that multiply.
+  it('the (hdr, NEAR0) group holds milky-way-upsample, milky-way, star-points, orbit-trails, star-catalog, additive', () => {
+    // The hdr rows outside the cosmological slab: the Milky-Way cloud's
+    // upsample + dust, the far-partition neighbourhood stars, and the orbit
+    // trails, projected through NEAR0 (COSMO's FIXED 0.01 Mpc near plane would
+    // clip their kpc-to-AU-scale anchors — for the Milky Way it clipped the
+    // disc mid-descent before the approach fade completed) but accumulating
+    // into the same HDR target so they ride the galaxies' tone-map. Drawn by
+    // the program's dedicated (hdr, NEAR0) step before the hdr→swap composite.
+    // The two Milky-Way rows MUST lead, in this order: the upsample adds the
+    // cloud's own starlight into HDR, then the multiplicative dust extincts it
+    // along with the cosmological accumulation behind it — and leading the
+    // group keeps the local starfield drawn after out of that multiply.
     const nearHdr = CONTENT_LAYERS.filter(
       (layer) => layer.target === 'hdr' && layer.slab === NEAR0,
     );
@@ -371,8 +383,15 @@ describe('CONTENT_LAYERS blend legality', () => {
       if (
         layer.target === 'hdr' ||
         layer.target === 'volume' ||
-        layer.target === 'star-aggregates'
+        layer.target === 'star-aggregates' ||
+        layer.target === 'mw-aggregate'
       ) {
+        // The three reduced-resolution offscreens accumulate the same way
+        // their contents would have accumulated straight into HDR — the
+        // raymarched volume, the survey aggregate glow, and the Milky Way
+        // cloud's star billboards are all additive sums, which is what makes
+        // "render small, bilinearly upsample, add" equivalent to drawing them
+        // full-res.
         expect(layer.blend).toBe('additive');
       } else if (layer.target === 'foreground:0') {
         // The `foreground:0` group is opaque bodies EXCEPT the three translucent
@@ -648,7 +667,7 @@ describe('milkyWayLayer.enabled', () => {
 });
 
 describe('milkyWayLayer.draw', () => {
-  it('calls state.gpu.milkyWayCloudRenderer.draw with the packed args when the disc is above the FULL apparent size', () => {
+  it('calls state.gpu.milkyWayCloudRenderer.drawDust with the packed args when the disc is above the FULL apparent size', () => {
     // Half the FULL-threshold distance → apparent diameter is twice
     // MILKY_WAY_FADE_FULL_PX — fadeAlpha should be 1.0.
     const drawSpy = vi.fn();
@@ -661,11 +680,13 @@ describe('milkyWayLayer.draw', () => {
     const view = slabViewOf(ctx, NEAR0);
     const state = {
       ...STATE_STUB,
-      gpu: { ...STATE_STUB.gpu, milkyWayCloudRenderer: { draw: drawSpy } },
+      gpu: { ...STATE_STUB.gpu, milkyWayCloudRenderer: { drawDust: drawSpy } },
     } as unknown as EngineState;
     milkyWayLayer.draw(PASS_STUB, view, ctx, state);
     expect(drawSpy).toHaveBeenCalledTimes(1);
-    // New two-pass renderer signature: draw(pass, MilkyWayCloudDrawArgs).
+    // This row draws ONLY the dust pass now — the additive star pass moved to
+    // milkyWayAggregateLayer, which renders it into the reduced-resolution
+    // `mw-aggregate` offscreen. Signature: drawDust(pass, MilkyWayCloudDrawArgs).
     const [passArg, args] = drawSpy.mock.calls[0]!;
     expect(passArg).toBe(PASS_STUB);
     expect(args.vp).toBe(view.vp);

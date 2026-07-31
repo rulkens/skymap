@@ -10,7 +10,7 @@
  * The pyramid's TEXTURES are not owned here — they are `renderTargets` rows
  * (`bloom0..bloom4`), recreated on resize. Each draw takes the source view as a
  * parameter and rebuilds its bind group, so a resize needs no bookkeeping in
- * this factory (same reasoning as `volumeUpsample` / `starAggregateUpsample`).
+ * this factory (same reasoning as `additiveUpsample` / `starAggregateUpsample`).
  *
  * ### Why per-level uniform buffers, NOT one shared buffer
  *

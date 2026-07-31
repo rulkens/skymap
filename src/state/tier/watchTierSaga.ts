@@ -33,6 +33,19 @@
  * needed to be cancellable under 'takeLatest' (e.g. a long load the next request
  * should abort).
  *
+ * ### Milky-Way star-count re-seed
+ *
+ * `settings.milkyWay.starCount` is an absolute star count, not a multiplier on
+ * the tier's budget — nothing ties it to the tier automatically. Left alone,
+ * that would decouple the Milky Way point cloud from the data-resolution tier
+ * entirely: a device that drops to the small tier would keep whatever count a
+ * previous DebugPanel session left dialled in on a larger tier. Re-seeding it
+ * here, from `MILKY_WAY_STARS_PER_TIER[tier]`, on every confirmed tier change
+ * keeps the tier meaningful for the star cloud while still letting the panel
+ * own the value BETWEEN tier changes. `runFrame`'s per-frame mismatch check
+ * (`cloud.starCount()` vs. this setting) is what actually regenerates the
+ * cloud once the write lands — this saga only owns the seed.
+ *
  * ### Galaxy selection re-anchor
  *
  * A galaxy SelectionRef is POSITIONAL (source + index). When a tier swap evicts
@@ -63,8 +76,10 @@ import { selectTier } from './selectors';
 import { captureGalaxyFocusIds } from '../selection/captureGalaxyFocusIds';
 import { SELECTION_WRITE_BY_SLOT } from '../selection/selectionWriteBySlot';
 import { updateSelectionHover } from '../selection/selectionSlice';
+import { setMilkyWayTuning } from '../settings/settingsSlice';
 import { resolveFocusId } from '../../services/url/resolveFocusId';
 import { catalogLoaded } from '../catalog/catalogLoaded';
+import { MILKY_WAY_STARS_PER_TIER } from '../../services/gpu/galaxy/milkyWayCalibration';
 import type { RootState, RunTierTransition, SagaContext } from '../../store/types';
 
 export function* watchTierSaga() {
@@ -89,6 +104,11 @@ export function* watchTierSaga() {
 
     const run = yield* getContext<RunTierTransition>('runTierTransition');
     yield* put(setTier(action.payload));
+    // Re-seed the Milky-Way star count from the new tier's budget — see the
+    // "Milky-Way star-count re-seed" section above for why an absolute count
+    // needs this. `runFrame` picks up the write on its own next-frame
+    // mismatch check, so nothing here talks to the GPU cloud directly.
+    yield* put(setMilkyWayTuning({ starCount: MILKY_WAY_STARS_PER_TIER[action.payload] }));
     run?.(prev, action.payload); // eviction + reload starts (fire-and-forget)
 
     // Re-anchor each captured galaxy slot once its source's new cloud lands.
