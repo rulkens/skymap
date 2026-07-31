@@ -33,6 +33,11 @@
  * when the SECOND tour finished. Rejecting loudly beats reporting the wrong
  * tour as done; the harness records takes strictly one at a time anyway.
  *
+ * `startClip` mirrors `startTour`'s latch but for the OPPOSITE reason: a
+ * superseding `startClip` DOES emit `clipEnded` (`playClip`'s `[CANCEL]` hook
+ * calls `clipPlayer.stop()`), so an unguarded overlap would resolve on the
+ * handoff rather than never — single-flight still rejects loudly instead.
+ *
  * The `window` write goes through the `RecorderWindow` cast instead of a
  * `declare global` `interface Window` augmentation — the house style bans
  * `interface`, and the only reader is the harness's untyped `page.evaluate`
@@ -43,11 +48,14 @@ import { isCinemaMode } from '../../utils/url/isCinemaMode';
 import { whenStablyReady } from '../lifecycle/whenStablyReady';
 import { startTour } from '../tour/tourActions';
 import { selectTourActive } from '../tour/selectors';
+import { startClip } from '../camera/clipActions';
+import { selectClipActive } from '../camera/selectors';
 import type { AppStore } from '../../store/types';
 import type { SkymapRecorderHook } from '../../@types/recorder/SkymapRecorderHook';
 import type { RecorderWindow } from '../../@types/recorder/RecorderWindow';
 import type { TourId } from '../../@types/animation/tour/TourId';
 import type { BeatRange } from '../../@types/animation/tour/BeatRange';
+import type { ClipId } from '../../@types/animation/ClipId';
 
 // Dispatch the tour and resolve on the `tour.active` true → false transition.
 // Tracking "seen active" (instead of resolving on any false reading) makes
@@ -75,11 +83,37 @@ function runTour(store: AppStore, id: TourId, beats?: BeatRange): Promise<void> 
   });
 }
 
+// Same seen-active latch, guarding against `watchClipSaga`'s foci/runtime
+// `waitUntil` gate: `camera.clip` stays null across however many store
+// updates land before the clip activates, so a latch that resolved on any
+// inactive reading would resolve instantly and film zero frames.
+function runClip(store: AppStore, id: ClipId): Promise<void> {
+  if (selectClipActive(store.getState())) {
+    return Promise.reject(
+      new Error('startClip called while a clip is already active — await the previous call first'),
+    );
+  }
+  return new Promise((resolve) => {
+    let seenActive = false;
+    const unsubscribe = store.subscribe(() => {
+      const active = selectClipActive(store.getState());
+      if (active) {
+        seenActive = true;
+      } else if (seenActive) {
+        unsubscribe();
+        resolve();
+      }
+    });
+    store.dispatch(startClip(id));
+  });
+}
+
 export function installRecorderHook(store: AppStore): void {
   if (!isCinemaMode()) return;
   const hook: SkymapRecorderHook = {
     ready: whenStablyReady(store),
     startTour: (id: TourId, beats?: BeatRange) => runTour(store, id, beats),
+    startClip: (id: ClipId) => runClip(store, id),
   };
   (window as RecorderWindow).__skymapRecorder = hook;
 }

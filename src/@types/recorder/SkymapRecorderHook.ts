@@ -15,6 +15,7 @@
 
 import type { TourId } from '../animation/tour/TourId';
 import type { BeatRange } from '../animation/tour/BeatRange';
+import type { ClipId } from '../animation/ClipId';
 
 export type SkymapRecorderHook = {
   /** Resolves once the engine is running and registered loading slots have settled. */
@@ -25,4 +26,9 @@ export type SkymapRecorderHook = {
    * previous call first.
    */
   readonly startTour: (id: TourId, beats?: BeatRange) => Promise<void>;
+  /**
+   * Plays one standalone clip; resolves when the clip ends. Single-flight:
+   * rejects if a clip is already active.
+   */
+  readonly startClip: (id: ClipId) => Promise<void>;
 };
