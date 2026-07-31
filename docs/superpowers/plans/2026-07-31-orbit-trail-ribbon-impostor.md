@@ -332,6 +332,47 @@ Ask the user to look. Spec §4's list, in order — the first three are the comm
 
 ---
 
+### Task 10: Debug overlay — see the impostor
+
+Requested by the user during execution (2026-07-31). Executes **after Task 6** (it needs the two pipelines and the packed partition); it is not on the critical path to Task 7's perf gate.
+
+**Files:**
+
+- Modify: `src/@types/settings/EngineSettingsState.d.ts` (one boolean in the `debug` cluster)
+- Modify: `src/data/defaults.ts`, `src/state/settings/initialState.ts`, `src/state/settings/settingsSlice.ts`, `src/state/settings/selectors.ts`
+- Modify: `src/components/DebugPanel/DebugOverlaysSection.tsx`, `src/components/containers/DebugOverlaysSectionContainer.tsx`
+- Modify: `src/services/gpu/shaders/bodies/orbitTrail/fragment.wesl` (two new entry points — the production `fs` body is untouched)
+- Modify: `src/services/gpu/renderers/bodies/orbitTrailRenderer.ts`, `src/@types/rendering/OrbitTrailRenderer.d.ts`
+- Modify: `src/services/engine/frame/passes/orbitTrailsLayer.ts`
+- Test: the renderer and layer test files
+
+**What it shows and why that.** The overlay answers the two questions this feature can fail on, which are invisible in the production render: _is the ribbon hull actually covering the stroke_ (a gap shows as a broken arc, but only if you happen to be at the pose where it breaks), and _which orbits took the fallback_ (a classification miss is a silent perf regression, not a visual one). So the overlay draws the ribbon hull as a flat translucent fill in one tint, and the fallback instances as a much dimmer full-viewport wash in a second tint — a wash is the honest picture of what a fallback instance actually rasterizes, and its presence is the signal.
+
+**Settings.** `debug.showOrbitTrailImpostor: boolean`, default `false`, mirroring `showDiskRadiusRing` at every hop: `DEFAULT_SHOW_ORBIT_TRAIL_IMPOSTOR` in `defaults.ts`, the `initialState.debug` entry, a `setShowOrbitTrailImpostor` reducer (`settings.debug.showOrbitTrailImpostor = action.payload`, exported from the slice's action list), `selectShowOrbitTrailImpostor` in `selectors.ts`, a third checkbox row labelled "Show orbit-trail impostor" in `DebugOverlaysSection.tsx` with its prop pair, wired in the container. Extend the `debug` cluster's docblock with the same one-entry-per-flag style already there.
+
+**Rendering.** Two new fragment entry points beside `fs`, each a constant-colour one-liner — the production fragment path must not grow a debug branch:
+
+```wgsl
+@fragment fn fsImpostorRibbon(in: VSOut) -> @location(0) vec4<f32>;    // hull tint
+@fragment fn fsImpostorFallback(in: VSOut) -> @location(0) vec4<f32>;  // wash tint, much dimmer
+```
+
+Two entry points rather than one plus a varying: `VSOut` is a cross-task contract and the fragment cannot otherwise tell which vertex stage ran. Both take the unchanged `VSOut` so they pair with the existing `vsRibbon`/`vs` without touching either.
+
+The renderer gains two debug pipelines (`vsRibbon`+`fsImpostorRibbon`, `vs`+`fsImpostorFallback`) sharing the one vertex-buffer layout and the additive/depthless profile. **Build them lazily on first enable**, not at construction — the overlay is off in production and an unused pipeline is pure init cost. `draw` takes an optional fifth parameter `showImpostor = false`; when true it issues the two debug draws with the same vertex counts and `firstInstance` offsets as the production pair, **in addition to** the production draws, so the overlay is a lens over the real geometry rather than a replacement for it.
+
+The layer reads the selector alongside the settings it already reads and forwards the flag; `enabled()` is untouched (the overlay never forces the layer on).
+
+- [ ] Add the test `the impostor overlay draws the hull and the fallback wash only when enabled` — asserts no debug pipeline is created and no extra draw issued while the flag is false, and that enabling it adds exactly two draws with the production vertex counts and `firstInstance` offsets.
+- [ ] Add the test `the layer forwards the debug flag to the renderer`.
+- [ ] Implement; keep every existing renderer/layer test green.
+- [ ] `npm test -- orbitTrailRenderer orbitTrailsLayer`, `npm run build`.
+- [ ] Commit.
+
+Not in scope: a wireframe outline mode, per-orbit labels, or any overlay for the conic math itself.
+
+---
+
 ## Definition of Done
 
 **Deliverable inventory**
@@ -341,6 +382,7 @@ Ask the user to look. Spec §4's list, in order — the first three are the comm
 - `io.wesl` declares `OrbitInstance` once; `vertex.wesl` exposes `vs` **and** `vsRibbon`; `fragment.wesl` has no math change.
 - `orbitTrailRenderer` builds two pipelines over one fragment module, one vertex-buffer layout and one instance VBO; `draw(pass, instances, ribbonCount, fallbackCount)`; `INSTANCE_FLOATS` 40 / `INSTANCE_STRIDE` 160.
 - `orbitTrailsLayer` packs ribbon records front, fallback records back, and passes both counts.
+- A `debug.showOrbitTrailImpostor` toggle in the DebugPanel's Debug Overlays section draws the ribbon hull and the fallback wash over the real trails, with its pipelines built lazily so production pays nothing (Task 10).
 
 **Named observable behaviours** (Task 8)
 
@@ -376,4 +418,5 @@ T1 (baselines + draft PR)
 - **T4 ∥ T5** — disjoint files (`.wesl` vs `.ts`); both need T2's `SEGMENTS`/`RIBBON_SEGMENTS`, and the `'vsRibbon'` entry-point name is pinned in this plan so they cannot drift apart. T5 additionally needs T3 only for the record layout, which is also pinned here — not for code.
 - **T6** needs T3 (the returned fields) and T5 (the `draw` signature); it is the only task touching the layer.
 - **T7 ∥ T8** may run together once T6 lands; T9 is last.
+- **T10** (debug overlay, added during execution) needs T6 and runs ∥ T7; it should land before T8 so the visual pass can use it.
 - Every task owns a disjoint file set, so reviews pipeline freely (`sdd-execution.md` Rule 2). The one shared-file hazard is Task 3's defensive touch of the layer test's mock — if it happens, Task 6 must re-read that file rather than trust the plan.
