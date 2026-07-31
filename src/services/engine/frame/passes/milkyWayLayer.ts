@@ -42,6 +42,12 @@
  *      unpickable) — coherent, but a behaviour the pick program inherits
  *      for free from the shared gate.
  *
+ * ### The one place draw and pick DO diverge: `pickEnabled` closes earlier
+ *
+ * `pickEnabled` is `enabled` AND a floor on the camera's origin distance —
+ * the ONE gate where the pick set is NARROWER than the draw set (see
+ * `MILKY_WAY_PICK_MIN_DISTANCE_MPC`).
+ *
  * All three gates live in `enabled` so that when the camera flies well
  * beyond the local volume — or all the way inside the disc toward the
  * Sun — the whole layer is skipped: no `beginRenderPass`, no tile-RAM
@@ -106,6 +112,25 @@ import { milkyWayModelMatrix } from '../../../gpu/galaxy/milkyWayModelMatrix';
 // products per draw.
 let milkyWayModel: Float32Array | null = null;
 
+/**
+ * Camera origin distance (Mpc) below which the impostor stops taking clicks —
+ * the camera is inside the galaxy and its hit target has swallowed the view.
+ *
+ * The pick billboard is ONE disc sized from `MILKY_WAY_RADIUS_MPC` (17.5 kpc),
+ * so its screen radius grows as the camera closes: by ~27 kpc it already spans
+ * more than the viewport height and every click that isn't a star lands on the
+ * Milky Way. Worse, the impostor is on NEAR0 and the cross-slab fold
+ * (`frontmostPick`) is SLAB-ordered, not depth-ordered — so a NEAR0 hit beats
+ * every COSMO galaxy and structure marker outright, and the backdrop's
+ * "ultimate fallback" depth band (`lib/pickDepthBands.wesl`) only ranks it
+ * within its own slab. Inside this distance the impostor is scenery you are
+ * flying through, not a target, so pick reverts to the content in front of it.
+ *
+ * Eye-tuned by the user, not derived: this is where the disc's click target
+ * stopped being useful in practice.
+ */
+const MILKY_WAY_PICK_MIN_DISTANCE_MPC = 0.0271;
+
 export const milkyWayLayer: ContentLayer = {
   name: 'milky-way',
   // NEAR0, not COSMO: the fixed 10 kpc cosmological near plane clips the disc
@@ -128,6 +153,18 @@ export const milkyWayLayer: ContentLayer = {
     // band above — this is the only gate that shuts at kpc range.
     const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
     return fadeBand(SCALE_FADE_BANDS.milkyWayApproach, camDistMpc) > 0;
+  },
+
+  // Pick gate — NARROWER than `enabled`, the only row in the registry that way
+  // round (see `ContentLayer.pickEnabled`). The disc stays DRAWN all the way
+  // down to the 200 pc approach fade, but stops taking clicks once the camera
+  // is inside it: `MILKY_WAY_PICK_MIN_DISTANCE_MPC` above carries the why.
+  // Composed over `enabled` rather than restating its three terms, so the
+  // shared gates cannot drift and pick stays a strict subset of draw.
+  pickEnabled(state, ctx) {
+    if (!milkyWayLayer.enabled(state, ctx)) return false;
+    const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
+    return camDistMpc >= MILKY_WAY_PICK_MIN_DISTANCE_MPC;
   },
 
   draw(pass, view, ctx, state) {
