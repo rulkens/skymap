@@ -3,10 +3,10 @@
  * a region-scoped near-field band keys on. `hypot(camPos)` answers that only
  * while the anchor is the Sun at the render origin.
  *
- * An unresolved anchor (a region authored ahead of its seed, as
- * `galactic-centre` is today) yields Infinity, not 0: the region-scoped bands
- * are full at their small-distance edge, so 0 would switch absent content fully
- * ON. Infinity sits at the off end and cannot pass for a real reading.
+ * An unresolved anchor — a region authored ahead of the seed that gives its
+ * anchor a position — yields Infinity, not 0: the region-scoped bands are full
+ * at their small-distance edge, so 0 would switch absent content fully ON.
+ * Infinity sits at the off end and cannot pass for a real reading.
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
