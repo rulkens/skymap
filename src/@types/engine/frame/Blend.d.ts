@@ -9,13 +9,14 @@
  * are opaque and depth-tested; screen-space overlays (rings, labels) draw
  * Porter-Duff OVER on top of whatever is already composited. Those three
  * physics are essential and stay distinct — a layer's `blend` must match
- * the profile baked into the renderer pipeline its `draw` calls. Today
- * that match holds by construction (every layer sharing a `target` also
- * shares a `blend`), so the field is consumed only as a human-readable
- * contract; nothing checks it against the pipeline at runtime. A
- * layer↔pipeline parity check is the intended guardrail once a target's
- * layers stop agreeing on blend — see `ContentLayer.d.ts`'s `blend` field
- * for when that first happens.
+ * the profile baked into the renderer pipeline its `draw` calls, and
+ * nothing checks it against the pipeline at runtime. The `hdr` target
+ * already mixes two: most `hdr` layers accumulate additively, but the
+ * Milky Way dust pass (`milkyWayLayer`) is genuinely multiplicative
+ * per-channel transmittance, and it must draw AFTER the emission it
+ * darkens — order, not just blend mode, is part of the contract there.
+ * A layer↔pipeline parity check is the intended guardrail for this kind
+ * of mismatch — see `ContentLayer.d.ts`'s `blend` field.
  *
  * Distinct from `CompositeBlend` (`src/@types/rendering/CompositeBlend.d.ts`):
  * `Blend` describes how a content layer draws its own fragments into a
@@ -25,4 +26,4 @@
  * different operations and are not interchangeable.
  */
 
-export type Blend = 'additive' | 'opaque' | 'over';
+export type Blend = 'additive' | 'opaque' | 'over' | 'multiply';
