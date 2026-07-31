@@ -42,11 +42,11 @@ const structureRow = (over: Partial<StructureInfo> = {}): StructureInfo =>
   }) as StructureInfo;
 
 describe('focusTweenDescriptor', () => {
-  it('carries the live from-pose, FOCUS_TWEEN_MS, and easeOutCubic on every arm', () => {
+  it('carries the live from-pose, FOCUS_TWEEN_MS, and a linear ease on every arm', () => {
     const d = focusTweenDescriptor(galaxyRow(), FROM, FOVY);
     expect(d.from).toBe(FROM);
     expect(d.durationMs).toBe(FOCUS_TWEEN_MS);
-    expect(d.easing).toBe('easeOutCubic');
+    expect(d.easing).toBe('linear');
   });
 
   it('a galaxy row targets its position and frames on its diameter, keeping yaw/pitch', () => {

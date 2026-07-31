@@ -22,9 +22,11 @@
  *
  * Every arm preserves the user's orientation — `yaw`/`pitch` carry over from the
  * live `from` pose, only `target` and `distance` change — and every arm uses the
- * project-wide `FOCUS_TWEEN_MS` duration and the `easeOutCubic` curve. The `to`
- * target is always copied into a fresh array so the descriptor never aliases the
- * row's `worldPos` (or the shared `MILKY_WAY_CENTER_WORLD` constant).
+ * project-wide `FOCUS_TWEEN_MS` duration and a `linear` ease: a focus glide's
+ * claim is constant velocity, and an ease-out spends its last decade of scale in
+ * its last few frames (spec §2.4). The `to` target is always copied into a fresh
+ * array so the descriptor never aliases the row's `worldPos` (or the shared
+ * `MILKY_WAY_CENTER_WORLD` constant).
  */
 
 import { FOCUS_TWEEN_MS } from '../../services/engine/camera/focusTweenDuration';
@@ -50,6 +52,6 @@ export function focusTweenDescriptor(
     from,
     to: { yaw: from.yaw, pitch: from.pitch, ...focusFraming(row, fovYRad) },
     durationMs: FOCUS_TWEEN_MS,
-    easing: 'easeOutCubic',
+    easing: 'linear',
   };
 }

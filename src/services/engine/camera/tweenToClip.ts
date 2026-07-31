@@ -5,10 +5,9 @@
  *
  * There is ONE camera-evaluation path: `evaluateClip`.
  * A focus tween is the degenerate clip — one `set` segment per scalar channel
- * and one `setVec` for `target`, all with `ease:'easeOutCubic'` and
- * `space:'lin'` for `distance` (focus tweens interpolate distance linearly, not
- * in log space). The `cameraDrivers` tween row calls `evaluateClip` via this
- * helper.
+ * and one `setVec` for `target`, all sharing `d.easing` and `space:'lin'` for
+ * `distance` (focus tweens interpolate distance linearly, not in log space).
+ * The `cameraDrivers` tween row calls `evaluateClip` via this helper.
  *
  * ### Memoisation by descriptor identity
  *
@@ -54,10 +53,10 @@ export function tweenToClip(d: CameraTweenDescriptor): ClipData {
 
   const durationSec = d.durationMs / 1000;
 
-  // Build a one-segment clip: all four channels tweened with easeOutCubic
-  // from `d.from` (the ClipData start pose) to the matching `d.to` field.
-  // Distance uses space:'lin' so the interpolation is byte-for-byte
-  // identical to the old lerp(from, to, easeOutCubic(t)) path.
+  // Build a one-segment clip: all four channels tweened with the descriptor's
+  // own `easing` from `d.from` (the ClipData start pose) to the matching
+  // `d.to` field. Distance uses space:'lin', not the channel's default
+  // log space, so a focus tween interpolates distance linearly.
   const data: ClipData = {
     start: d.from,
     timeline: [
@@ -65,12 +64,12 @@ export function tweenToClip(d: CameraTweenDescriptor): ClipData {
         tween('distance', {
           to: d.to.distance,
           over: durationSec,
-          ease: 'easeOutCubic',
+          ease: d.easing,
           space: 'lin',
         }),
-        tween('yaw', { to: d.to.yaw, over: durationSec, ease: 'easeOutCubic' }),
-        tween('pitch', { to: d.to.pitch, over: durationSec, ease: 'easeOutCubic' }),
-        moveTarget(d.to.target, durationSec, 'easeOutCubic'),
+        tween('yaw', { to: d.to.yaw, over: durationSec, ease: d.easing }),
+        tween('pitch', { to: d.to.pitch, over: durationSec, ease: d.easing }),
+        moveTarget(d.to.target, durationSec, d.easing),
       ]),
     ],
   };

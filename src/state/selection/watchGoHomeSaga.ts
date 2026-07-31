@@ -79,7 +79,8 @@ export function* watchGoHomeSaga() {
         from: runtime.from,
         to: earthHomePose(simDays, runtime.fovYRad, frameBasis),
         durationMs: FOCUS_TWEEN_MS,
-        easing: 'easeOutCubic',
+        // linear — same reasoning as focusTweenDescriptor.ts's easing choice.
+        easing: 'linear',
       }),
     );
   }
