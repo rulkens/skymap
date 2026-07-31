@@ -21,9 +21,9 @@
  *     the mesh still draws: at 3 px the glint is ~0 (the mesh carries), by 1 px it
  *     is full (the mesh is about to cull at `SUB_PIXEL_BODY_CULL_PX`), a popless
  *     handoff. This is the NEAR handoff to the resolved sphere.
- *   - `bodyGlintBackdrop`, keyed on the camera's heliocentric distance. The FAR
- *     dissolve: the glints are minimum-size additive sprites (like the star
- *     points), so as the camera pulls back from the solar system all ~22 collapse
+ *   - `bodyGlintBackdrop`, keyed on the camera's distance from the solar system's
+ *     own region anchor. The FAR dissolve: the glints are minimum-size additive
+ *     sprites (like the star points), so as the camera pulls back all ~22 collapse
  *     onto one bright dot. This band fades the whole field out a few solar-system
  *     radii out, so glints stop mattering long before Milky-Way framing rather
  *     than riding full-brightness to the coarse foreground gate — the sibling of
@@ -79,6 +79,8 @@ import { glintBandClass } from './glintBandClass';
 import { bodyApparentDiameterPx } from '../../../../utils/scene/bodyApparentDiameterPx';
 import { bodyGlintBrightness } from '../../../../utils/scene/bodyGlintBrightness';
 import { fadeBand } from '../../../../utils/math/fadeBand';
+import { regionById } from '../../../../utils/scene/regionById';
+import { regionRelativeDistanceMpc } from '../../../../utils/scene/regionRelativeDistanceMpc';
 import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
@@ -98,6 +100,11 @@ const staging = new Float32Array(MAX_GLINTS * INSTANCE_FLOATS);
 // range (within it the label carries the click — see `drawPick`). The opacity-0
 // house rule, deferred to the label where a label still invites the click.
 const GLINT_MIN_BRIGHTNESS = 1e-4;
+
+// The scale regime the glints belong to. Both the band's edges (the planet
+// extent) and the distance it keys on come from this one region, so the fade
+// stays attached to the content it dissolves rather than to the render origin.
+const GLINT_BACKDROP_REGION = regionById('solar-system');
 
 /**
  * The one fact "the Earth caption invites a click": the seeded Earth exists AND
@@ -127,12 +134,19 @@ export const bodyGlintsLayer: ContentLayer = {
     // Once the far-dissolve band has zeroed the glint backdrop, DISABLE the layer
     // rather than pack invisible points — the "opacity 0 ⇒ no render" house rule,
     // mirroring `starPointsLayer`'s `starBackdrop` gate (which also empties the
-    // (hdr, NEAR0) step so the executor skips it). Keyed on the camera's
-    // heliocentric distance, the quantity the band reads. `bodyGlintBackdrop`
-    // completes deep inside `FOREGROUND_MAX_DISTANCE_MPC`, so this is the binding —
-    // and smooth — gate for the glints; without it they draw at full additive
-    // brightness all the way to the coarse gate, into Milky-Way framing.
-    if (fadeBand(SCALE_FADE_BANDS.bodyGlintBackdrop, ctx.cam.distance) <= 0) return false;
+    // (hdr, NEAR0) step so the executor skips it). Keyed on the camera's distance
+    // from the solar system's own anchor — the eye position (`drawCamPos`), NOT
+    // `cam.distance`, which measures to the orbit TARGET and so read a different
+    // number whenever the camera framed something outside the region.
+    // `bodyGlintBackdrop` completes deep inside `FOREGROUND_MAX_DISTANCE_MPC`, so
+    // this is the binding — and smooth — gate for the glints; without it they draw
+    // at full additive brightness all the way to the coarse gate.
+    const regionDistMpc = regionRelativeDistanceMpc(
+      ctx.drawCamPos,
+      GLINT_BACKDROP_REGION,
+      sceneBodyStates(state, ctx),
+    );
+    if (fadeBand(SCALE_FADE_BANDS.bodyGlintBackdrop, regionDistMpc) <= 0) return false;
     return sceneBodyPartition(state, ctx).glints.length > 0;
   },
 
@@ -169,12 +183,16 @@ export const bodyGlintsLayer: ContentLayer = {
     const camPos = view.camPos;
 
     // The far-dissolve alpha for THIS frame — the glint backdrop keyed on the
-    // camera's heliocentric distance. Per-frame constant (every glint shares one
-    // camera), so it is hoisted OUT of the per-body loop. It scales every glint's
-    // brightness so the whole sub-pixel body field dissolves as the camera pulls
-    // back from the solar system, mirroring `starPointsLayer`'s backdrop fade.
-    // `enabled` already dropped the layer once this hit 0, so here it is > 0.
-    const backdropFade = fadeBand(SCALE_FADE_BANDS.bodyGlintBackdrop, ctx.cam.distance);
+    // camera's distance from the solar system's anchor. Per-frame constant (every
+    // glint shares one camera), so it is hoisted OUT of the per-body loop. It
+    // scales every glint's brightness so the whole sub-pixel body field dissolves
+    // as the camera pulls back from the solar system, mirroring
+    // `starPointsLayer`'s backdrop fade. `enabled` already dropped the layer once
+    // this hit 0, so here it is > 0.
+    const backdropFade = fadeBand(
+      SCALE_FADE_BANDS.bodyGlintBackdrop,
+      regionRelativeDistanceMpc(camPos, GLINT_BACKDROP_REGION, states),
+    );
 
     // Pack one 7-float record per glint whose brightness survives the phase +
     // cross-fade, skipping the rest (the opacity-0 house rule). `count` tracks
@@ -286,11 +304,15 @@ export const bodyGlintsLayer: ContentLayer = {
     const camPos = view.camPos;
     // The same far-dissolve alpha `draw` folds into each glint's brightness, so the
     // per-body skip below recomputes `draw`'s EXACT brightness. Per-frame constant,
-    // hoisted out of the loop. Beyond the caption gate this reads 0 (the band is
-    // long gone by then), so the skip drops EVERY glint there — no orphan pick on a
-    // glint that renders nothing. Within the caption gate the label carries the
-    // click regardless, so the skip never fires and this value is inert (see below).
-    const backdropFade = fadeBand(SCALE_FADE_BANDS.bodyGlintBackdrop, ctx.cam.distance);
+    // hoisted out of the loop. Once the camera has left the region this reads 0, so
+    // beyond the caption gate — where no label invites the click — the skip drops
+    // EVERY glint and no orphan pick survives on a glint that renders nothing.
+    // Within the caption gate the label carries the click regardless, so the skip
+    // never fires and this value is inert (see below).
+    const backdropFade = fadeBand(
+      SCALE_FADE_BANDS.bodyGlintBackdrop,
+      regionRelativeDistanceMpc(camPos, GLINT_BACKDROP_REGION, states),
+    );
     const pickPoints: BodyGlintPick[] = [];
 
     // Emit the Earth glint stamp with the EARTH priority class (0), the shallowest

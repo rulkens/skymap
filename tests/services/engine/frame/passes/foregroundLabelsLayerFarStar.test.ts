@@ -39,6 +39,7 @@ import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { computeForegroundViewProj } from '../../../../../src/utils/camera/computeForegroundViewProj';
 import { foregroundFrustum } from '../../../../../src/utils/camera/foregroundFrustum';
 import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
+import { makeBodyItems } from '../../../../fixtures/makeBodyItems';
 
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
@@ -82,13 +83,7 @@ function makeState(renderer: LabelRenderer, lineRenderer: MarkerLineRenderer): E
     gpu: { foregroundLabelRenderer: renderer, foregroundMarkerLineRenderer: lineRenderer },
     settings: {
       labels: { focusedOnly: false },
-      bodies: {
-        items: {
-          earth: { enabled: true, labelEnabled: true },
-          planet: { enabled: true, labelEnabled: true },
-          sun: { enabled: true, labelEnabled: true },
-        },
-      },
+      bodies: { items: makeBodyItems() },
       starCatalogs: { enabled: true, items: { famousStar: { enabled: true, labelEnabled: true } } },
     },
     // No constellation slot: these tests exercise only the far-star body-caption

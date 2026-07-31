@@ -1,7 +1,8 @@
 /**
  * deriveBodyStates — derive every scene body's time-varying `BodyState`
- * (position, orientation, orbital phase) from the one Keplerian element table,
- * keyed by id. The clock-driven half of the bodies, computed instead of baked.
+ * (position, orientation, orbital phase) from the anchor table and the one
+ * Keplerian element table, keyed by id. The clock-driven half of the bodies,
+ * computed instead of baked.
  *
  * ### Why a derive, not baked records
  *
@@ -12,7 +13,7 @@
  * recomputes each body's state from `ORBITAL_ELEMENTS` (the single source of
  * truth both the bodies and their orbit trails already read), exactly the way
  * `heliocentricPlanet` / `satelliteBody` compute it today — same
- * `keplerianPositionMpc` evaluation, same render-origin anchor, same
+ * `keplerianPositionMpc` evaluation, same focus composition, same
  * `orientationForBody` gate. `deriveBodyStates(CONST_J2000)` therefore
  * reproduces the current baked values bit-for-bit (the prep zero-change proof):
  * at the epoch `propagateElements` is the identity map, so the propagated
@@ -42,24 +43,31 @@
  * clock advances monotonically, so the last instant is the only one a frame ever
  * re-reads.
  *
- * ### Planets first, then moons — one parent hop
+ * ### Anchors first, then rows in focus order
  *
- * A heliocentric body's focus is the render origin (the Sun); a moon's focus is
- * its parent planet's already-derived world position. So the derive runs in two
- * passes: all `parentId: null` bodies first (their state depends on nothing
- * else), then all moons, each resolving its parent from the map built in pass
- * one and adding its own offset. Every moon parent is itself heliocentric —
- * there is no moon-of-a-moon — so one hop suffices, matching
- * `satelliteBody`'s parent-offset resolution.
+ * `SCENE_ANCHORS` seeds the map with the bodies whose position is authored
+ * rather than orbited. Every element row then reads its focus back out of that
+ * same map and adds its own propagated offset — the composition
+ * `heliocentricPlanet` / `satelliteBody` perform — walking the order
+ * `focusResolveOrder` computes from the authored graph, so a focus chain of any
+ * depth resolves. Taking the focus from the snapshot rather than re-deriving it
+ * is what welds a body to the exact focus instant every reader of this map sees.
  */
 
 import type { BodyState } from '../../../@types/scene/BodyState';
 import { ORBITAL_ELEMENTS } from '../../../data/bodies/orbitalElements';
+import { SCENE_ANCHORS } from '../../../data/bodies/sceneAnchors';
 import { orientationForBody } from '../../../data/bodies/orientationForBody';
-import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { propagateElements } from '../../../utils/orbit/propagateElements';
 import { keplerianPositionMpc } from '../../../utils/orbit/keplerianPositionMpc';
+import { focusResolveOrder } from '../../../utils/scene/focusResolveOrder';
 import { addVec3 } from '../../../utils/math/addVec3';
+
+// The focus graph is authored, static data, so its order is resolved once at
+// module load and replayed every instant: the per-frame cost stays one linear
+// pass, and a cycle or a dangling focus fails at import — where an authoring
+// mistake belongs — instead of on whichever frame first reaches the bad row.
+const FOCUS_ORDER = focusResolveOrder(SCENE_ANCHORS, ORBITAL_ELEMENTS);
 
 // The last computed snapshot, keyed by the instant it was computed at. A frame
 // re-reads the same instant from several passes and a paused clock re-reads it
@@ -74,35 +82,27 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
 
   const states = new Map<string, BodyState>();
 
-  // Pass one — heliocentric bodies (planets + the EMB). Focus is the render
-  // origin, so the position is origin + the propagated element offset — the same
-  // composition `heliocentricPlanet` performs, evaluated at `simDays`.
-  for (const el of ORBITAL_ELEMENTS) {
-    if (el.parentId !== null) continue;
-    const propagated = propagateElements(el, simDays);
-    states.set(el.id, {
-      positionMpc: addVec3(RENDER_ORIGIN_MPC, keplerianPositionMpc(propagated)),
-      orientation: orientationForBody(el.id, simDays),
-      meanAnomalyRad: propagated.meanAnomalyRad,
+  // The roots: position authored, not orbited. They still go through
+  // `orientationForBody` so the texture-keyed facing gate stays one gate for
+  // every body, and carry M = 0 — an anchor has no orbit for a trail to fade
+  // along. The authored position is shared by reference rather than copied: it
+  // is never mutated, and a copy would allocate per instant for nothing.
+  for (const anchor of SCENE_ANCHORS) {
+    states.set(anchor.id, {
+      positionMpc: anchor.positionMpc,
+      orientation: orientationForBody(anchor.id, simDays),
+      meanAnomalyRad: 0,
     });
   }
 
-  // Pass two — moons. Focus is the parent's already-derived SNAPSHOT position
-  // (one hop; every parent is heliocentric, resolved in pass one), plus the
-  // moon's own propagated offset — the same composition `satelliteBody`
-  // performs. Reading the parent from the snapshot, not re-deriving it, is what
-  // welds a moon to the exact parent instant every reader of this map sees.
-  for (const el of ORBITAL_ELEMENTS) {
-    if (el.parentId === null) continue;
-    const parent = states.get(el.parentId);
-    if (parent === undefined) {
-      throw new Error(
-        `deriveBodyStates: moon '${el.id}' names unknown parent '${el.parentId}'`,
-      );
-    }
+  // Every element row, focus before dependant. The focus is already in the map
+  // by construction of `FOCUS_ORDER`, which is also where an unknown focus id
+  // throws — so the lookup here is total.
+  for (const el of FOCUS_ORDER) {
+    const focus = states.get(el.focusId)!;
     const propagated = propagateElements(el, simDays);
     states.set(el.id, {
-      positionMpc: addVec3(parent.positionMpc, keplerianPositionMpc(propagated)),
+      positionMpc: addVec3(focus.positionMpc, keplerianPositionMpc(propagated)),
       orientation: orientationForBody(el.id, simDays),
       meanAnomalyRad: propagated.meanAnomalyRad,
     });

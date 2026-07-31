@@ -10,7 +10,8 @@
  * distance<=0 guard returns 0) the star the camera sits inside resolves
  * unconditionally.
  *
- * Fixtures come from the real `SCENE_STARS` seed so the predicate is
+ * Fixtures come from the real `SCENE_STARS` seed, paired with the real
+ * `SCENE_ANCHORS` positions the frame resolves, so the predicate is
  * exercised against real solar radii and parsec-scale positions rather
  * than round numbers a unit bug could accidentally satisfy.
  */
@@ -22,12 +23,23 @@ import {
   STAR_RESOLVE_PX,
 } from '../../../../src/services/engine/frame/partitionStarsByResolution';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
+import { SCENE_ANCHORS } from '../../../../src/data/bodies/sceneAnchors';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import type { PositionedStar } from '../../../../src/@types/scene/PositionedStar';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
-const SUN = SCENE_STARS.find((star) => star.id === 'sun')!;
-const PROXIMA = SCENE_STARS.find((star) => star.id === 'proxima-centauri')!;
-const SIRIUS = SCENE_STARS.find((star) => star.id === 'sirius')!;
+const ANCHOR_POS = new Map(SCENE_ANCHORS.map((anchor) => [anchor.id, anchor.positionMpc]));
+
+/** The record + the position the frame resolves for it, as the layers pair them. */
+const POSITIONED: readonly PositionedStar[] = SCENE_STARS.map((star) => ({
+  ...star,
+  positionMpc: ANCHOR_POS.get(star.id)!,
+}));
+
+const byId = (id: string) => POSITIONED.find((star) => star.id === id)!;
+const SUN = byId('sun');
+const PROXIMA = byId('proxima-centauri');
+const SIRIUS = byId('sirius');
 
 const VIEWPORT_HEIGHT_PX = 720;
 const FOV_Y_RAD = Math.PI / 3;
@@ -85,7 +97,7 @@ describe('partitionStarsByResolution', () => {
     // so a bare size test would demote the star the camera sits inside — the
     // narrow degenerate guard keeps it a sphere.
     const { spheres, points } = partitionStarsByResolution({
-      stars: SCENE_STARS,
+      stars: POSITIONED,
       camPosMpc: SUN.positionMpc,
       thresholdPx: STAR_RESOLVE_PX,
       viewportHeightPx: VIEWPORT_HEIGHT_PX,
@@ -94,7 +106,7 @@ describe('partitionStarsByResolution', () => {
 
     expect(spheres).toEqual([SUN]);
     // Disjoint + exhaustive: everyone else is a point, nobody is dropped.
-    expect(points).toHaveLength(SCENE_STARS.length - 1);
+    expect(points).toHaveLength(POSITIONED.length - 1);
     expect(points).not.toContain(SUN);
   });
 });

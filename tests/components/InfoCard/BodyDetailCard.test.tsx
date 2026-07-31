@@ -13,6 +13,8 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import BodyDetailCard from '../../../src/components/InfoCard/BodyDetailCard/BodyDetailCard';
+import { buildFocusable } from '../../../src/services/engine/helpers/buildFocusable';
+import { SGR_A_STAR_ENTRY } from '../../../src/data/sources/sgr-a-star';
 import type { BodyInfo } from '../../../src/@types/engine/BodyInfo';
 import type { FamousStarMetaEntry } from '../../../src/@types/loading/FamousStarMetaEntry';
 
@@ -102,6 +104,41 @@ describe('BodyDetailCard', () => {
     expect(container.textContent).not.toMatch(/Spectral/);
     expect(container.textContent).not.toMatch(/Constellation/);
     expect(container.textContent).not.toMatch(/R☉|L☉/);
+  });
+
+  it('renders no orbital rows for a body that carries no elements', () => {
+    // The optional field's absent path — every pre-existing body. A block that
+    // rendered unconditionally would print empty or NaN rows on every planet.
+    const { container } = render(
+      createElement(BodyDetailCard, { target: jupiterTarget, famousStarsMeta: [] }),
+    );
+
+    expect(container.textContent).not.toMatch(/Eccentricity|Pericentre|Orbits/);
+  });
+
+  it("renders an S-star's period, eccentricity, pericentre and pericentre speed", () => {
+    // End to end through the real seam: a stored body row for S2 goes through
+    // buildFocusable's static seed lookup and out as rendered rows, so a missing
+    // lookup or an unwired card block fails here rather than only in the browser.
+    const target = buildFocusable({
+      type: 'body',
+      id: 's2',
+      label: 'S2',
+      positionMpc: [0, 0, 0],
+      radiusKm: 1e6,
+    }) as BodyInfo;
+
+    const { container } = render(createElement(BodyDetailCard, { target, famousStarsMeta: [] }));
+
+    // The focus the elements are fitted against, named rather than implied — as
+    // the reader sees it named everywhere else, off the registry row.
+    expect(screen.getByText(SGR_A_STAR_ENTRY.label)).toBeInTheDocument();
+    // Straight off the Gillessen row — wrong star ⇒ wrong period and eccentricity.
+    expect(screen.getByText('16.0 yr')).toBeInTheDocument();
+    expect(screen.getByText('0.884')).toBeInTheDocument();
+    // Derived rows: the AU/Schwarzschild pair and the speed the block exists for.
+    expect(container.textContent).toMatch(/119 AU \(1,40\d Schwarzschild radii\)/);
+    expect(container.textContent).toMatch(/7,69\d km\/s/);
   });
 
   it('omits absent optional properties', () => {

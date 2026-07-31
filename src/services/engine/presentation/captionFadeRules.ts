@@ -23,9 +23,11 @@
  * target". The alternative — a `switch` for the gates plus a nested ternary for
  * the target — encodes the SAME per-kind dispatch twice in two different
  * shapes, so a kind could get an entry in one and fall through to
- * another kind's arm in the other. `satisfies` over the kind union makes this
- * table compiler-complete: adding a `CaptionKind` fails the build until it gets
- * a row, and the fall-through cannot come back.
+ * another kind's arm in the other. The `Record<CaptionKind, …>` annotation makes
+ * this table compiler-complete: adding a `CaptionKind` fails the build until it
+ * gets a row, and the fall-through cannot come back. An annotation rather than
+ * `as const satisfies` because the const form pins each row's INFERRED arity, so
+ * a row reading only `distanceMpc` would reject a caller passing both arguments.
  *
  * The rows are pure functions of an explicit settings bag — nothing here closes
  * over a frame's locals — so the table is a module-level constant the per-label
@@ -37,23 +39,39 @@ import type { EngineSettingsState } from '../../../@types/settings/EngineSetting
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from './scaleFadeBands';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
+import { SGR_A_STAR_ENTRY } from '../../../data/sources/sgr-a-star';
+import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../frame/solarSystemLabelMaxDistance';
 
 /**
  * One caption kind's fade routing. `distanceMpc` is the caption anchor's
  * distance from the camera — for the Sun that IS the camera's distance from the
- * heliocentric origin, which is exactly what its band keys on.
+ * heliocentric origin, which is exactly what its band keys on. `camDistMpc` is
+ * the camera's own orbit distance, the quantity the layer gate reads; only the
+ * kinds whose REACH is the solar system's consult it (see `SOLAR_SYSTEM_REACH`).
  */
 export type CaptionFadeRule = {
   readonly labelEnabled: (settings: EngineSettingsState) => boolean;
   readonly subjectVisible: (settings: EngineSettingsState) => boolean;
-  readonly fadeTarget: (distanceMpc: number) => number;
+  readonly fadeTarget: (distanceMpc: number, camDistMpc: number) => number;
 };
 
 /** An axis a kind doesn't carry: the gate is permanently open. */
 const UNGATED = (): boolean => true;
 
-/** No distance band — inside its gates the caption is simply on. */
-const NO_BAND = (): number => 1;
+/**
+ * On inside the solar system's caption range, off outside it — the bound Earth's
+ * and the planets' bandless captions always had, now carried by the ROW rather
+ * than by `foregroundLabelsLayer`'s enable gate.
+ *
+ * It had to move: the layer gate is a single number for every kind, and the
+ * Galactic Centre's reach is not the solar neighbourhood's — its name has to
+ * survive out past the disc while these two must not. A layer-wide AND cannot
+ * express two reaches, so the reach became per-kind and the gate became a
+ * demand summary (the OR that admits the row when ANY kind could be nonzero).
+ * The step keeps these two bit-identical to the gate they used to ride.
+ */
+const SOLAR_SYSTEM_REACH = (_distanceMpc: number, camDistMpc: number): number =>
+  camDistMpc < SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC ? 1 : 0;
 
 /**
  * The caption's target is supplied by its PRODUCER, not by this table: it is a
@@ -63,7 +81,7 @@ const NO_BAND = (): number => 1;
  */
 const PRODUCER_SUPPLIED = (): number => 0;
 
-export const CAPTION_FADE_RULES = {
+export const CAPTION_FADE_RULES: Readonly<Record<CaptionKind, CaptionFadeRule>> = {
   /**
    * The descent's aim point. Its own body row governs the name, so muting the
    * curated neighbourhood leaves the Sun captioning; `bodies.items.sun.enabled`
@@ -79,21 +97,21 @@ export const CAPTION_FADE_RULES = {
     fadeTarget: (distanceMpc) => fadeBand(SCALE_FADE_BANDS.sunCaption, distanceMpc),
   },
 
-  /** Inside the caption gate Earth is simply on — no band, no visibility axis. */
+  /** Inside the caption range Earth is simply on — no band, no visibility axis. */
   earth: {
     labelEnabled: (settings) => settings.bodies.items.earth.labelEnabled,
     subjectVisible: UNGATED,
-    fadeTarget: NO_BAND,
+    fadeTarget: SOLAR_SYSTEM_REACH,
   },
 
   /**
    * The Moon rides the 'planet' kind, so it follows this row. Like Earth: on
-   * inside the caption gate.
+   * inside the caption range.
    */
   planet: {
     labelEnabled: (settings) => settings.bodies.items.planet.labelEnabled,
     subjectVisible: UNGATED,
-    fadeTarget: NO_BAND,
+    fadeTarget: SOLAR_SYSTEM_REACH,
   },
 
   /**
@@ -113,8 +131,28 @@ export const CAPTION_FADE_RULES = {
   },
 
   /**
+   * The Galactic Centre's aim point. Its own body row governs the name — riding
+   * the `star` row above would hide it whenever the famous-star catalog is
+   * muted, and would key its band on a 2.3 kpc star map it sits 8 kpc outside.
+   * No visibility axis: it draws nothing, so there is no dot the caption could
+   * outlive (`bodies.items['sgr-a-star'].enabled` gates nothing — see that
+   * registry row).
+   *
+   * It does NOT take Earth's and the planets' `SOLAR_SYSTEM_REACH` row: this is
+   * the one caption that must survive OUTSIDE the solar system's range, since
+   * the thing it names is 8 kpc away and the view that most needs it is the one
+   * framing the whole galaxy. Its band is the reach, and it is the reason the
+   * reach became per-kind at all.
+   */
+  sgrAStar: {
+    labelEnabled: (settings) => settings.bodies.items[SGR_A_STAR_ENTRY.id].labelEnabled,
+    subjectVisible: UNGATED,
+    fadeTarget: (distanceMpc) => fadeBand(SCALE_FADE_BANDS.sgrAStarCaption, distanceMpc),
+  },
+
+  /**
    * The stick-figure names. They never reach the body-caption pipeline this
-   * table drives — `sceneBodyLabels` emits only the four body kinds above, and
+   * table drives — `sceneBodyLabels` emits only the body kinds above, and
    * `constellationCaptions` appends the figure names further down with their own
    * per-frame target (`constellationLayerOpacity`: the layer's distance band ×
    * the fade-registry toggle, keyed on the camera's origin distance, not on an
@@ -130,4 +168,4 @@ export const CAPTION_FADE_RULES = {
     subjectVisible: UNGATED,
     fadeTarget: PRODUCER_SUPPLIED,
   },
-} as const satisfies Readonly<Record<CaptionKind, CaptionFadeRule>>;
+};

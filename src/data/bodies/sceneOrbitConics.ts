@@ -12,15 +12,16 @@
  * (`keplerianEllipse`, here) derive from that one table. So the body sitting on
  * its own trail is structural, not a sync invariant to remember.
  *
- * ### Parent resolution: focus-relative shape → absolute-world centre
+ * ### Focus resolution: focus-relative shape → absolute-world centre
  *
  * `keplerianEllipse` returns a focus-RELATIVE `centerOffsetMpc` (C − focus) so
  * the same map serves a heliocentric planet and the geocentric Moon without
  * forking. This table folds the focus back in: the absolute centre is
- * `parentWorld + centerOffsetMpc`, where `parentWorld` is resolved from
- * `parentId` — `null` is heliocentric (the render origin, i.e. the Sun) and a
- * body id (the Moon's `'earth'`) resolves to that parent's world position, so
- * the Moon's ellipse rides on Earth by construction.
+ * `focusWorld + centerOffsetMpc`, where `focusWorld` comes from walking the
+ * `focusId` graph — `SCENE_ANCHORS` (the Sun) are the roots, and every element
+ * row's own world position is folded in once its focus is placed, via
+ * `focusResolveOrder`. A chain of any depth resolves this way, the same seam
+ * `deriveBodyStates` walks per instant.
  *
  * ### This is the STATIC J2000 seed — live trails re-derive per frame
  *
@@ -31,35 +32,45 @@
  * frame's `simDays`, reading each moon's parent centre and each body's mean
  * anomaly from the per-frame body snapshot (`sceneBodyStates`). That
  * snapshot-reading lives in the services layer BY DESIGN: this data-layer file
- * takes no upward, layer-crossing import of a body snapshot.
+ * takes no upward, layer-crossing import of a body snapshot — it walks the
+ * focus graph itself, at the tabulated J2000 elements.
  *
- * At J2000 there is nothing to propagate, so the parent centre re-derives from
- * the parent's OWN `ORBITAL_ELEMENTS` via `keplerianPositionMpc` — the single
- * formula `heliocentricPlanet` uses to bake the parent, so the two agree
- * bit-for-bit. `parentId` is resolved through `elementsById`, which throws
- * loudly on an unknown id: a typo must fail at derive time, not silently place
- * the orbit at the origin.
+ * At J2000 there is nothing to propagate, so each focus centre re-derives from
+ * that body's OWN `ORBITAL_ELEMENTS` via `keplerianPositionMpc` — the single
+ * formula `heliocentricPlanet` uses to bake it, so the two agree bit-for-bit.
+ * `focusResolveOrder` throws loudly on an unknown or cyclic focus: a typo must
+ * fail at derive time, not silently place the orbit at the origin.
  */
 
-import { RENDER_ORIGIN_MPC } from '../renderOrigin';
-import { ORBITAL_ELEMENTS, elementsById } from './orbitalElements';
+import { ORBITAL_ELEMENTS } from './orbitalElements';
+import { SCENE_ANCHORS } from './sceneAnchors';
+import { focusResolveOrder } from '../../utils/scene/focusResolveOrder';
 import { keplerianEllipse } from '../../utils/orbit/keplerianEllipse';
 import { keplerianPositionMpc } from '../../utils/orbit/keplerianPositionMpc';
 import { addVec3 } from '../../utils/math/addVec3';
 import type { OrbitConic } from '../../@types/scene/OrbitConic';
+import type { OrbitalElements } from '../../@types/scene/OrbitalElements';
+import type { AnchorBody } from '../../@types/scene/AnchorBody';
 import type { Vec3 } from '../../@types/math/Vec3';
 
 /**
- * Resolve an orbit's focus to an absolute-world position: `null` is the render
- * origin (heliocentric); any other id re-derives that parent's world position
- * from its OWN elements (`RENDER_ORIGIN_MPC + keplerianPositionMpc`) — every
- * moon parent is itself heliocentric, so one hop suffices. This builder emits
- * the fixed J2000-epoch geometry, so the parent is taken at its tabulated mean
- * position; `elementsById` throws loudly on an unknown id.
+ * Every focus id's absolute-world position at J2000: anchors seeded outright,
+ * then every element row's own position folded in once its focus is already
+ * placed (`focusResolveOrder` walks ancestors first, so a chain of any depth
+ * resolves — not just a planet's own moon). Elements read at their tabulated
+ * mean values, no propagation: this is the fixed epoch seed the animated
+ * per-frame derivation (`deriveBodyStates`) reproduces bit-for-bit at J2000.
  */
-function parentWorldMpc(parentId: string | null): Readonly<Vec3> {
-  if (parentId === null) return RENDER_ORIGIN_MPC;
-  return addVec3(RENDER_ORIGIN_MPC, keplerianPositionMpc(elementsById(parentId)));
+function worldPositionsMpc(
+  anchors: readonly AnchorBody[],
+  elements: readonly OrbitalElements[],
+): ReadonlyMap<string, Readonly<Vec3>> {
+  const positions = new Map<string, Readonly<Vec3>>();
+  for (const anchor of anchors) positions.set(anchor.id, anchor.positionMpc);
+  for (const el of focusResolveOrder(anchors, elements)) {
+    positions.set(el.id, addVec3(positions.get(el.focusId)!, keplerianPositionMpc(el)));
+  }
+  return positions;
 }
 
 /**
@@ -70,19 +81,26 @@ function parentWorldMpc(parentId: string | null): Readonly<Vec3> {
  * elements are read at their tabulated J2000 mean values. The per-frame,
  * clock-driven derivation is `orbitTrailsLayer`'s (which reads the body
  * snapshot); this stays a data-layer builder of the fixed epoch geometry.
+ *
+ * `anchors`/`elements` default to the real tables; a test can inject a
+ * synthetic pair — mirroring `focusResolveOrder`'s own signature — to exercise
+ * an anchor focus without seeding one into shipped data.
  */
-export function deriveOrbitConics(): readonly OrbitConic[] {
-  return ORBITAL_ELEMENTS.map((elements) => {
-    const { centerOffsetMpc, semiMajorMpc, semiMinorMpc } = keplerianEllipse(elements);
-    const parent = parentWorldMpc(elements.parentId);
+export function deriveOrbitConics(
+  anchors: readonly AnchorBody[] = SCENE_ANCHORS,
+  elements: readonly OrbitalElements[] = ORBITAL_ELEMENTS,
+): readonly OrbitConic[] {
+  const worldPositions = worldPositionsMpc(anchors, elements);
+  return elements.map((el) => {
+    const { centerOffsetMpc, semiMajorMpc, semiMinorMpc } = keplerianEllipse(el);
     return {
-      id: elements.id,
-      centerMpc: addVec3(parent, centerOffsetMpc),
+      id: el.id,
+      centerMpc: addVec3(worldPositions.get(el.focusId)!, centerOffsetMpc),
       semiMajorMpc,
       semiMinorMpc,
-      eccentricity: elements.eccentricity,
-      meanAnomalyRad: elements.meanAnomalyRad,
-      color: elements.color,
+      eccentricity: el.eccentricity,
+      meanAnomalyRad: el.meanAnomalyRad,
+      color: el.color,
     };
   });
 }

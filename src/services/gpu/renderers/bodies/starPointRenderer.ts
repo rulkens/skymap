@@ -58,7 +58,7 @@
 
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { StarPointRenderer } from '../../../../@types/rendering/StarPointRenderer';
-import type { StarBody } from '../../../../@types/scene/StarBody';
+import type { PositionedStar } from '../../../../@types/scene/PositionedStar';
 import type { Vec2 } from '../../../../@types/math/Vec2';
 import vsCode from '../../shaders/bodies/starPoints/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/starPoints/fragment.wesl?static';
@@ -180,7 +180,7 @@ export function createStarPointRenderer(
   let capacityStars = 0;
   let starCount = 0;
 
-  function setStars(stars: readonly StarBody[]): void {
+  function setStars(stars: readonly PositionedStar[]): void {
     starCount = stars.length;
     // Empty set clears the renderer to the no-op draw state; keep any
     // existing buffer allocated (it is bounded, and a later non-empty set

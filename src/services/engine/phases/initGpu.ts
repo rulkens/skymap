@@ -80,6 +80,8 @@ import { createStarCatalogRenderer } from '../../gpu/renderers/starCatalog/starC
 import { createStarCatalogPickRenderer } from '../../gpu/renderers/starCatalog/starCatalogPickRenderer';
 import { createBodyPickRenderer } from '../../gpu/renderers/bodies/bodyPickRenderer';
 import { createOrbitTrailRenderer } from '../../gpu/renderers/bodies/orbitTrailRenderer';
+import { deriveBodyStates } from '../frame/deriveBodyStates';
+import { CONST_J2000 } from '../../../data/time/constJ2000';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
 import { TIMED_SLOTS } from '../frame/frameProgram';
 import { SLAB_REVERSED_Z, NEAR0, COSMO } from '../frame/slabs';
@@ -488,8 +490,18 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // partition. It only covers the window before the first frame — from the
   // first draw on, starPointsLayer owns the point-set membership via the
   // partition and re-uploads per frame.
+  //
+  // Positions come from the fixed-epoch body snapshot, the construction-time
+  // twin of the per-frame `sceneBodyStates` seam the layer reads: a star is a
+  // static anchor, so the epoch cannot move it.
+  const bootBodyStates = deriveBodyStates(CONST_J2000);
   state.gpu.starPointRenderer = createStarPointRenderer(device, 'rgba16float');
-  state.gpu.starPointRenderer.setStars(state.data.bodies.stars);
+  state.gpu.starPointRenderer.setStars(
+    state.data.bodies.stars.map((star) => ({
+      ...star,
+      positionMpc: bootBodyStates.get(star.id)!.positionMpc,
+    })),
+  );
 
   // bodyGlintRenderer draws the sub-pixel scene bodies (the glints branch of the
   // body partition) as brightness-scaled additive points into the same depthless

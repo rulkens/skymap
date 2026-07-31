@@ -49,6 +49,17 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
   sceneBodyStates: vi.fn((state: EngineState): ReadonlyMap<string, BodyState> => {
     const m = new Map<string, BodyState>();
+    // The 'solar-system' region's anchor (sceneAnchors.ts authors the Sun at
+    // [0, 0, 0]) — an absent entry reads as Infinity, not 0 (see
+    // regionRelativeDistanceMpc's header), so every case needs it regardless of
+    // which planets it seeds. Orientation is inlined rather than reusing the
+    // module's IDENTITY const: this factory is hoisted above IDENTITY's
+    // declaration and runs at first import, a TDZ hazard.
+    m.set('sun', {
+      positionMpc: [0, 0, 0],
+      orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1] as BodyState['orientation'],
+      meanAnomalyRad: 0,
+    });
     for (const b of (state.data.bodies.planets ?? []) as readonly SeededPlanet[]) {
       m.set(b.id, { positionMpc: b.positionMpc, orientation: b.orientation, meanAnomalyRad: 0 });
     }
@@ -176,7 +187,9 @@ describe('bodyGlintsLayer.enabled', () => {
     expect(bodyGlintsLayer.enabled(state, makeCtx(CAM_POS))).toBe(true);
     // At galaxy scale the whole neighbourhood is far below a pixel: the shared
     // gate turns the glints off before the partition even matters.
-    expect(bodyGlintsLayer.enabled(state, makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC]))).toBe(false);
+    expect(bodyGlintsLayer.enabled(state, makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC]))).toBe(
+      false,
+    );
   });
 });
 
@@ -292,7 +305,9 @@ describe('bodyGlintsLayer.pickEnabled (Bug B — Earth-stamp-only frame stays in
   it('is false with no Earth and no glints, and false beyond the caption gate', () => {
     expect(bodyGlintsLayer.pickEnabled!(stampState(null), makeCtx(camWithin))).toBe(false);
     // Earth seeded but the camera is past the caption gate → no stamp to admit for.
-    expect(bodyGlintsLayer.pickEnabled!(stampState(earthWithinGate), makeCtx(camBeyond))).toBe(false);
+    expect(bodyGlintsLayer.pickEnabled!(stampState(earthWithinGate), makeCtx(camBeyond))).toBe(
+      false,
+    );
   });
 });
 
@@ -360,8 +375,17 @@ const UNKNOWN = bodyAt('not-a-planet', 1_050_000, [0.5, 0.5, 0.5]);
 function makePickRenderer() {
   return {
     drawSphere: vi.fn(),
-    drawPoints:
-      vi.fn<(pass: GPURenderPassEncoder, args: { vp: Float32Array; viewportPx: readonly [number, number]; points: readonly { posRelCamMpc: Vec3; packedId: number; bandClass?: number }[]; variant?: 'sceneStar' | 'glint' }) => void>(),
+    drawPoints: vi.fn<
+      (
+        pass: GPURenderPassEncoder,
+        args: {
+          vp: Float32Array;
+          viewportPx: readonly [number, number];
+          points: readonly { posRelCamMpc: Vec3; packedId: number; bandClass?: number }[];
+          variant?: 'sceneStar' | 'glint';
+        },
+      ) => void
+    >(),
   };
 }
 
@@ -543,7 +567,11 @@ describe('bodyGlintsLayer.drawPick', () => {
     const noEarth = makePickState(pickRenderer, [JUPITER], { earth: null });
     bodyGlintsLayer.drawPick!(PASS_STUB, makeNear0View(CAM_POS), makeCtx(CAM_POS), noEarth);
     const [, argsA] = pickRenderer.drawPoints.mock.calls[0]!;
-    expect(argsA.points.some((p) => p.packedId === packSelection(Source.Earth, 0 + PICK_SENTINEL_OFFSET))).toBe(false);
+    expect(
+      argsA.points.some(
+        (p) => p.packedId === packSelection(Source.Earth, 0 + PICK_SENTINEL_OFFSET),
+      ),
+    ).toBe(false);
     expect(argsA.points).toHaveLength(1);
 
     // Camera beyond the caption gate (2× the gate distance) even with a seeded
@@ -554,7 +582,11 @@ describe('bodyGlintsLayer.drawPick', () => {
     const farEarth = makePickState(pickRenderer2, [], { earth: EARTH_RESOLVED });
     bodyGlintsLayer.drawPick!(PASS_STUB, makeNear0View(camFar), makeCtx(camFar), farEarth);
     const [, argsB] = pickRenderer2.drawPoints.mock.calls[0]!;
-    expect(argsB.points.some((p) => p.packedId === packSelection(Source.Earth, 0 + PICK_SENTINEL_OFFSET))).toBe(false);
+    expect(
+      argsB.points.some(
+        (p) => p.packedId === packSelection(Source.Earth, 0 + PICK_SENTINEL_OFFSET),
+      ),
+    ).toBe(false);
   });
 
   it('emits the Earth stamp beyond the 1 px sphere cull while inside the caption gate (Bug B)', () => {
@@ -593,7 +625,7 @@ describe('bodyGlintsLayer.drawPick', () => {
     // A planet plus two of its moons, all lit. Priority is the per-instance
     // bandClass — the planet's 1 out-picks the moons' 2 as an unconditional depth
     // win — so the load-bearing datum is the CLASS each carries, whatever order the
-    // list happens to be in. Classified through the element table (parentId).
+    // list happens to be in. Classified through the element table (focusId).
     const IO_LIT = bodyAt('io', 1_120_000, [0.8, 0.8, 0.8]); // index 10, moon of Jupiter
     const EUROPA_LIT = bodyAt('europa', 1_140_000, [0.8, 0.8, 0.8]); // index 11, moon of Jupiter
     const pickRenderer = makePickRenderer();
@@ -602,8 +634,9 @@ describe('bodyGlintsLayer.drawPick', () => {
 
     const [, args] = pickRenderer.drawPoints.mock.calls[0]!;
     const classOf = (idx: number) =>
-      args.points.find((p) => p.packedId === packSelection(Source.Planet, idx + PICK_SENTINEL_OFFSET))!
-        .bandClass;
+      args.points.find(
+        (p) => p.packedId === packSelection(Source.Planet, idx + PICK_SENTINEL_OFFSET),
+      )!.bandClass;
     expect(classOf(3)).toBe(1); // Jupiter — heliocentric planet
     expect(classOf(10)).toBe(2); // Io — satellite moon
     expect(classOf(11)).toBe(2); // Europa — satellite moon

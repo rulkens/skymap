@@ -16,7 +16,7 @@ const cross = (a: Vec3, b: Vec3): Vec3 => [
 // ids / parent are irrelevant to the geometry under test.
 const base: OrbitalElements = {
   id: 'test',
-  parentId: null,
+  focusId: 'sun',
   semiMajorMpc: 2,
   eccentricity: 0,
   inclinationRad: 0,

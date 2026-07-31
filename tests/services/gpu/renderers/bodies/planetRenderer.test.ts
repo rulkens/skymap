@@ -7,7 +7,8 @@
  * contract (non-empty `label`, `destroy`), the `draw(pass, instances, count)`
  * arity, the GPU-instancing mechanism (one `writeBuffer` of the caller's
  * array + one `drawIndexed(indexCount, count)`, so one draw paints N planets
- * without the writeBuffer-vs-submit race), the count guard, and the opaque
+ * without the writeBuffer-vs-submit race), the count guard, the grow-on-demand
+ * instance buffer (no fixed cap — see the module header), and the opaque
  * foreground pipeline profile (caller's `targetFormat` on the colour target,
  * depth state present).
  */
@@ -15,7 +16,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
   createPlanetRenderer,
-  MAX_PLANETS,
   INSTANCE_FLOATS,
   INSTANCE_STRIDE,
 } from '../../../../../src/services/gpu/renderers/bodies/planetRenderer';
@@ -71,13 +71,17 @@ describe('createPlanetRenderer', () => {
     expect(() => renderer.destroy()).not.toThrow();
   });
 
-  it('allocates an instance buffer sized MAX_PLANETS × 96 bytes', () => {
+  it('allocates the geometry buffers but no instance buffer at construction', () => {
+    // Position + index geometry is fixed-size (one uv-sphere mesh) and
+    // allocated eagerly. The instance buffer has nothing to size against
+    // until a caller says how many planets it has — deferred to the first
+    // draw, mirroring starPointRenderer's setStars.
     const buffers: BufferDesc[] = [];
     createPlanetRenderer(mockDevice({ buffers }), 'rgba16float', 'depth32float', false);
-    const instance = buffers.find((b) => b.label === 'planet-instance-vbo');
-    expect(instance).toBeDefined();
+    expect(buffers.find((b) => b.label === 'planet-position-vbo')).toBeDefined();
+    expect(buffers.find((b) => b.label === 'planet-index-ibo')).toBeDefined();
+    expect(buffers.find((b) => b.label === 'planet-instance-vbo')).toBeUndefined();
     expect(INSTANCE_STRIDE).toBe(96);
-    expect(instance!.size).toBe(MAX_PLANETS * 96);
   });
 
   it('draw is callable with (pass, instances, count) and records ONE indexed draw', () => {
@@ -86,7 +90,7 @@ describe('createPlanetRenderer', () => {
     expect(renderer.draw.length).toBe(3);
 
     const pass = mockPass();
-    const instances = new Float32Array(MAX_PLANETS * INSTANCE_FLOATS);
+    const instances = new Float32Array(2 * INSTANCE_FLOATS);
     expect(() => renderer.draw(pass, instances, 2)).not.toThrow();
     expect(pass.drawIndexed).toHaveBeenCalledTimes(1);
     // drawIndexed(indexCount, instanceCount): second arg is the planet count.
@@ -97,7 +101,7 @@ describe('createPlanetRenderer', () => {
     const device = mockDevice();
     const renderer = createPlanetRenderer(device, 'rgba16float', 'depth32float', false);
     const pass = mockPass();
-    const instances = new Float32Array(MAX_PLANETS * INSTANCE_FLOATS);
+    const instances = new Float32Array(5 * INSTANCE_FLOATS);
 
     const writeMock = device.queue.writeBuffer as ReturnType<typeof vi.fn>;
     writeMock.mockClear(); // drop the construction-time geometry uploads
@@ -119,25 +123,58 @@ describe('createPlanetRenderer', () => {
     expect(pass.setBindGroup).not.toHaveBeenCalled();
   });
 
-  it('clamps an over-count to MAX_PLANETS and no-ops a zero count', () => {
+  it('a zero count is a no-op', () => {
     const device = mockDevice();
     const renderer = createPlanetRenderer(device, 'rgba16float', 'depth32float', false);
     const pass = mockPass();
-    const instances = new Float32Array(MAX_PLANETS * INSTANCE_FLOATS);
+    const instances = new Float32Array(5 * INSTANCE_FLOATS);
     const writeMock = device.queue.writeBuffer as ReturnType<typeof vi.fn>;
 
-    // Over-count: clamp to MAX_PLANETS rather than read off the buffer end.
     writeMock.mockClear();
-    renderer.draw(pass, instances, MAX_PLANETS + 5);
-    expect((pass.drawIndexed as ReturnType<typeof vi.fn>).mock.calls[0]![1]).toBe(MAX_PLANETS);
-    expect(writeMock.mock.calls[0]![4]).toBe(MAX_PLANETS * INSTANCE_FLOATS);
-
-    // Zero count: nothing uploaded, nothing drawn.
-    writeMock.mockClear();
-    (pass.drawIndexed as ReturnType<typeof vi.fn>).mockClear();
     renderer.draw(pass, instances, 0);
     expect(writeMock).not.toHaveBeenCalled();
     expect(pass.drawIndexed).not.toHaveBeenCalled();
+  });
+
+  it('the planet buffer grows past the initial capacity', () => {
+    // Regression coverage for the MAX_PLANETS = 24 defect: the planet table
+    // used to outgrow the buffer silently (Math.min clamp). Now the buffer
+    // itself has no cap — it grows to whatever the caller's count demands,
+    // the same grow-only-reuse pattern starPointRenderer.setStars uses for
+    // its instance buffer.
+    const buffers: BufferDesc[] = [];
+    const device = mockDevice({ buffers });
+    const renderer = createPlanetRenderer(device, 'rgba16float', 'depth32float', false);
+    const pass = mockPass();
+
+    // First draw establishes an initial capacity of 3.
+    renderer.draw(pass, new Float32Array(3 * INSTANCE_FLOATS), 3);
+    const afterFirst = buffers.filter((b) => b.label === 'planet-instance-vbo');
+    expect(afterFirst).toHaveLength(1);
+    expect(afterFirst[0]!.size).toBe(3 * INSTANCE_STRIDE);
+
+    // A later draw asking for more planets than that capacity must grow the
+    // buffer (a second allocation), not truncate to the first one's size.
+    renderer.draw(pass, new Float32Array(7 * INSTANCE_FLOATS), 7);
+    const afterSecond = buffers.filter((b) => b.label === 'planet-instance-vbo');
+    expect(afterSecond).toHaveLength(2);
+    expect(afterSecond[1]!.size).toBe(7 * INSTANCE_STRIDE);
+    // The grown draw actually issues all 7 instances — nothing dropped.
+    const lastCall = (pass.drawIndexed as ReturnType<typeof vi.fn>).mock.calls.at(-1)!;
+    expect(lastCall[1]).toBe(7);
+  });
+
+  it('an over-count draw throws rather than silently truncating', () => {
+    // The old clamp (Math.min(count, MAX_PLANETS)) hid a caller bug by
+    // quietly dropping the tail of the batch — the exact "draw caps, pick
+    // does not" asymmetry the backlog item named. A `count` the caller's own
+    // packed array cannot back is a programming error, not a runtime
+    // condition to paper over — it must throw at the call site instead of
+    // reading past the array or silently drawing fewer planets than asked.
+    const renderer = createPlanetRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
+    const pass = mockPass();
+    const instances = new Float32Array(2 * INSTANCE_FLOATS); // only 2 records
+    expect(() => renderer.draw(pass, instances, 5)).toThrow();
   });
 
   it('bakes the opaque foreground profile — targetFormat colour target + depth state', () => {

@@ -16,10 +16,10 @@
  *     planets, so it cannot be told apart from them by orbital elements; its
  *     class-0 status is a property of it being the descent's focus body, so it
  *     is special-cased here rather than derived.
- *   - `1` (planet) — a heliocentric major planet (`parentId === null`).
- *   - `2` (moon)   — a satellite (`parentId` names its parent planet).
+ *   - `1` (planet) — a heliocentric major planet (`focusId === 'sun'`).
+ *   - `2` (moon)   — a satellite (`focusId` names its parent planet).
  *
- * Classified by `parentId` through the one `ORBITAL_ELEMENTS` table (the same
+ * Classified by `focusId` through the one `ORBITAL_ELEMENTS` table (the same
  * source the seeds derive from), NOT a hardcoded id list — a new moon added to
  * the table classifies correctly for free.
  *
@@ -39,14 +39,14 @@ import { elementsById } from '../../../../data/bodies/orbitalElements';
 
 /** Glint priority class — the Earth stamp (the descent's focus body). Shallowest band. */
 export const GLINT_CLASS_EARTH = 0;
-/** Glint priority class — a heliocentric major planet (`parentId === null`). */
+/** Glint priority class — a heliocentric major planet (`focusId === 'sun'`). */
 export const GLINT_CLASS_PLANET = 1;
-/** Glint priority class — a satellite (a moon; `parentId` names its parent). Deepest band. */
+/** Glint priority class — a satellite (a moon; `focusId` names its parent). Deepest band. */
 export const GLINT_CLASS_MOON = 2;
 
 export function glintBandClass(bodyId: string): number {
   // the focus body — class earth, not derivable from elements
   if (bodyId === 'earth') return GLINT_CLASS_EARTH;
   // heliocentric planet : satellite moon
-  return elementsById(bodyId).parentId === null ? GLINT_CLASS_PLANET : GLINT_CLASS_MOON;
+  return elementsById(bodyId).focusId === 'sun' ? GLINT_CLASS_PLANET : GLINT_CLASS_MOON;
 }

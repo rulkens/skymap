@@ -50,8 +50,7 @@ import { updateSelectionFocus } from './selectionSlice';
 import { startCameraTween } from '../camera/cameraSlice';
 import { focusTweenDescriptor } from '../camera/focusTweenDescriptor';
 import { extractSelectionRow } from '../../services/engine/helpers/extractSelectionRow';
-import { liveBodyPosition } from '../../services/engine/camera/liveBodyPosition';
-import { CONST_J2000 } from '../../data/time/constJ2000';
+import { bodyMovesThisFrame } from '../../utils/scene/bodyMovesThisFrame';
 import { suspendDuringClip } from './suspendDuringClip';
 import { engineStatusChanged, engineSourceCountReported } from '../engine/engineSlice';
 import type { SagaContext } from '../../store/types';
@@ -85,16 +84,12 @@ export function* watchFocusTweenSaga() {
       // A body the `followBody` driver WILL handle is followed, not tweened — the
       // tween compiles fixed vec3 endpoints and cannot track a body the sim clock
       // moves. But 'body row' is BROADER than 'followed body': famous stars are
-      // scene bodies too (star-body presence), yet they are deliberately absent
-      // from the orbital body-state snapshot the follow driver activates on, and
-      // they do not move — so they must fall through to the tween. Gate on the
-      // SAME membership the follow driver uses, via the shared `liveBodyPosition`
-      // resolution, rather than a bare `row.type === 'body'` that would swallow a
-      // famous-star focus into a no-op neither mechanism honours. Membership is
-      // instant-independent (the snapshot's id set is the same at every epoch), and
-      // CONST_J2000 reuses the exact memo key `extractSelectionRow` just primed
-      // above — no extra Kepler solve.
-      if (liveBodyPosition(row, CONST_J2000) !== null) return;
+      // scene bodies too (star-body presence), yet they are static, so the follow
+      // driver leaves them and they must fall through to the tween. Gate on the
+      // SAME predicate the follow driver activates on, rather than a bare
+      // `row.type === 'body'` that would swallow a famous-star focus into a no-op
+      // neither mechanism honours.
+      if (bodyMovesThisFrame(row)) return;
 
       // A focus that resolves during bootstrap can outrun the camera: the ref is
       // known but `state.cam` (hence `cameraRuntime()`) isn't built until wireInput

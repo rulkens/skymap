@@ -68,6 +68,7 @@ import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames'
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { FOCUS_TWEEN_MS } from './focusTweenDuration';
 import { liveBodyPosition } from './liveBodyPosition';
+import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { easeOutCubic } from '../../../utils/math/easeOutCubic';
 import { lerp } from '../../../utils/math/lerp';
 
@@ -179,8 +180,8 @@ export function runCameraDrivers(
  *     (no drift) rather than a frozen point.
  *
  *   - `followBody` (10) — a focus on a moving scene body. Active while
- *     `s.selectionRows.focus` is a body present in this frame's body snapshot
- *     (resolved via the shared `liveBodyPosition` site). Sits BELOW autoRotate
+ *     `s.selectionRows.focus` is a body the sim clock propagates (the shared
+ *     `bodyMovesThisFrame` predicate). Sits BELOW autoRotate
  *     so it only wins when the scene is otherwise idle: its remaining job is the
  *     initial approach ease + the steady hold. On activation it eases the distance
  *     from the captured on-screen pose into the `bodyFocusDistance` framing
@@ -257,24 +258,16 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
       // is idempotent — but it keeps the pin's rule uniform across every orbit
       // driver rather than special-casing followBody out of it).
       pivotsOnFocusedBody: true,
-      // Active when the focus resolves to a scene body present in THIS frame's
-      // body snapshot (resolved through the shared `liveBodyPosition` site).
-      // The snapshot is the memoized `deriveBodyStates` map at the instant
-      // `runFrame` derived this frame's bodies (`lastRenderedSimDays.current`,
-      // written before produce) — a same-instant call returns the cached Map for
-      // free. A star / structure / galaxy focus is not a body, so this stays
-      // false. Priority 10 (below autoRotate 20) means followBody only wins when
-      // idle: autoRotate or a drag takes the orbit terms while the pivot-pin
-      // keeps the body centred, so the autoRotate button spins AROUND a focused
-      // body instead of being blocked by follow.
-      // Short-circuit on a non-body focus BEFORE touching the snapshot resource,
-      // so this stays cheap (and null-safe pre-bootstrap) for the common
-      // no-body-focus frame; only a body focus resolves the live position.
-      isActive: (s) => {
-        const focus = s.selectionRows.focus;
-        if (focus === null || focus.type !== 'body') return false;
-        return liveBodyPosition(focus, state.cameraRuntime.lastRenderedSimDays.current) !== null;
-      },
+      // Active when the focus resolves to a scene body the sim clock MOVES
+      // (`bodyMovesThisFrame` — an `ORBITAL_ELEMENTS` row). Following is a
+      // response to motion, so a static focus (a famous star, the Sun) does not
+      // activate it even though the body snapshot carries its position; a star /
+      // structure / galaxy focus is not a body at all. Priority 10 (below
+      // autoRotate 20) means followBody only wins when idle: autoRotate or a
+      // drag takes the orbit terms while the pivot-pin keeps the body centred,
+      // so the autoRotate button spins AROUND a focused body instead of being
+      // blocked by follow.
+      isActive: (s) => bodyMovesThisFrame(s.selectionRows.focus),
       // The follow pose. `elapsed` is ms since the approach started (from
       // `followElapsed`, keyed on the focus row reference). The target term is
       // always the LIVE body position, so the camera tracks the body the sim
@@ -291,9 +284,10 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
         const focus = s.selectionRows.focus;
         const clock = state.cameraRuntime.clock;
         // Defensive: pose only runs for the winner, so isActive already proved a
-        // body focus present in the snapshot this same frame — but a null-guard
-        // keeps the arm total, falling back to the resting pose. Resolved through
-        // the shared `liveBodyPosition` site (same call `isActive` uses).
+        // moving body focus this same frame, and a moving body is in the snapshot
+        // by construction — but a null-guard keeps the arm total, falling back to
+        // the resting pose. The position itself comes from the shared
+        // `liveBodyPosition` site.
         const livePos = liveBodyPosition(focus, state.cameraRuntime.lastRenderedSimDays.current);
         if (focus === null || focus.type !== 'body' || livePos === null) return s.camera.base;
 
