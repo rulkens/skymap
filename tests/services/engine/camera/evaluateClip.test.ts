@@ -330,18 +330,12 @@ describe('evaluateClip composes base+vel+osc on one channel', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Test 9 — focus tween = one-segment clip
+// Test 9 — one `set`/`setVec` segment per channel, all four in one `all`
 //
-// A focus tween is the degenerate clip: one `set`/`setVec` segment per channel
-// with `ease:'easeOutCubic'` and `space:'lin'` for `distance` (focus
-// tweens use linear distance interpolation, not log-space). These four cases
-// These four cases pin that `evaluateClip` via `tweenToClip` reproduces the
-// focus-tween motion exactly — the single camera-evaluation path for scripted
-// clips and tweens.
-//
-// Helper: build the ClipData that corresponds to a CameraTweenDescriptor with
-// the given from/to/durationMs. Distance explicitly uses space:'lin' for the
-// focus tween's linear lerp(from, to, t) path — the clip default is 'log'.
+// The per-channel writer path: endpoints, saturation past the segment end, and
+// `space:'lin'` overriding `distance`'s log default. (Focus tweens no longer
+// compile to this shape — `tweenToClip` emits a `glide` for target+distance —
+// but authored clips still write channels this way.)
 // ---------------------------------------------------------------------------
 
 function makeTweenClip(opts: { from: CameraPose; to: CameraPose; durationMs: number }): ClipData {
@@ -369,7 +363,7 @@ const TWEEN_TO: CameraPose = { target: [10, 0, 0], yaw: 1.0, pitch: 0.2, distanc
 const DURATION_MS = 600;
 const DURATION_SEC = DURATION_MS / 1000;
 
-describe('focus tween = one-segment clip', () => {
+describe('a one-segment all() of per-channel writers', () => {
   it('evaluateClip matches the old tween at t=0', () => {
     // At elapsed=0, the pose must equal `from` on all channels.
     const data = makeTweenClip({ from: TWEEN_FROM, to: TWEEN_TO, durationMs: DURATION_MS });
@@ -420,7 +414,7 @@ describe('focus tween = one-segment clip', () => {
     expect(pose.target).not.toBe(TWEEN_TO.target);
   });
 
-  it('evaluateClip keeps focus-tween distance LINEAR via space:lin', () => {
+  it("evaluateClip keeps a `set` segment's distance LINEAR via space:lin", () => {
     // A one-segment clip with `space:'lin'` on distance must interpolate
     // linearly, not in log space. The two paths diverge when from !== to.
     //

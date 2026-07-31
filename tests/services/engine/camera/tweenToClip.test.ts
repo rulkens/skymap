@@ -2,7 +2,8 @@
  * tweenToClip — carries the descriptor's `easing` onto every channel.
  *
  * `CameraTweenDescriptor.easing` (CameraTweenDescriptor.d.ts) must actually
- * reach all four channels the descriptor drives, not just be a decorative field.
+ * reach every writer the descriptor compiles to — the `glide` over
+ * target+distance and the two scalar tweens — not just be a decorative field.
  */
 import { describe, it, expect } from 'vitest';
 
@@ -25,18 +26,25 @@ describe("tweenToClip carries the descriptor's easing onto every channel", () =>
     const linear = evaluateClip(tweenToClip(descriptor('linear')), halfSec);
     const eased = evaluateClip(tweenToClip(descriptor('easeOutCubic')), halfSec);
 
-    // Hand-computed: distance and target both interpolate in linear space for a
-    // focus tween (tweenToClip forces space:'lin'), so under a linear ease every
-    // channel sits at the plain arithmetic mean of from/to at t=0.5.
-    expect(linear.distance).toBeCloseTo((FROM.distance + TO.distance) / 2, 9);
+    // yaw/pitch are plain scalar tweens, so a linear ease puts them at the
+    // arithmetic mean of from/to at t = 0.5. Hand-computed.
     expect(linear.yaw).toBeCloseTo((FROM.yaw + TO.yaw) / 2, 9);
     expect(linear.pitch).toBeCloseTo((FROM.pitch + TO.pitch) / 2, 9);
-    expect(linear.target[0]).toBeCloseTo((FROM.target[0] + TO.target[0]) / 2, 9);
-    expect(linear.target[1]).toBeCloseTo((FROM.target[1] + TO.target[1]) / 2, 9);
-    expect(linear.target[2]).toBeCloseTo((FROM.target[2] + TO.target[2]) / 2, 9);
+
+    // target + distance ride the glide instead, which spaces scale
+    // logarithmically: half the ARC LENGTH is not half the interval, so the
+    // halfway distance sits strictly below the arithmetic mean a lerp gives.
+    expect(linear.distance).toBeGreaterThan(FROM.distance);
+    expect(linear.distance).toBeLessThan((FROM.distance + TO.distance) / 2);
+    // The target still travels the straight segment origin → TO.target, so the
+    // components stay in the 1 : 2 : 3 ratio while the parameter is not 0.5.
+    expect(linear.target[0]).toBeGreaterThan(0);
+    expect(linear.target[0]).toBeLessThan(TO.target[0]);
+    expect(linear.target[1]).toBeCloseTo(linear.target[0] * 2, 9);
+    expect(linear.target[2]).toBeCloseTo(linear.target[0] * 3, 9);
 
     // The two descriptors differ ONLY in `easing` — every channel must diverge,
-    // proving `d.easing` reaches all four, not just a subset.
+    // proving `d.easing` reaches the glide and both scalar tweens.
     expect(eased.distance).not.toBeCloseTo(linear.distance, 3);
     expect(eased.yaw).not.toBeCloseTo(linear.yaw, 3);
     expect(eased.pitch).not.toBeCloseTo(linear.pitch, 3);

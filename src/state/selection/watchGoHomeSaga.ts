@@ -51,7 +51,7 @@ import { earthHomePose } from '../../services/engine/camera/earthHomePose';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { selectOrientation } from '../settings/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
-import { FOCUS_TWEEN_MS } from '../../services/engine/camera/focusTweenDuration';
+import { glidePath } from '../../utils/camera/glidePath';
 import type { RootState, SagaContext } from '../../store/types';
 
 export function* watchGoHomeSaga() {
@@ -72,13 +72,17 @@ export function* watchGoHomeSaga() {
     // through the same frame the render path decodes with (see `earthHomePose`).
     const frameBasis = ORIENTATION_FRAMES[yield* select(selectOrientation)];
 
+    const to = earthHomePose(simDays, runtime.fovYRad, frameBasis);
+
     yield* put(updateSelectionSelect(EARTH_REF));
     yield* put(updateSelectionFocus(EARTH_REF));
     yield* put(
       startCameraTween({
         from: runtime.from,
-        to: earthHomePose(simDays, runtime.fovYRad, frameBasis),
-        durationMs: FOCUS_TWEEN_MS,
+        to,
+        // Arc-length duration off the same geodesic the glide walks — home from
+        // deep space is a full scale-ladder descent, home from orbit is a hop.
+        durationMs: glidePath(runtime.from, to, runtime.fovYRad).durationSec * 1000,
         // linear — same reasoning as focusTweenDescriptor.ts's easing choice.
         easing: 'linear',
       }),

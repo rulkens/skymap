@@ -7,7 +7,7 @@ import {
   MILKY_WAY_CENTER_WORLD,
   MILKY_WAY_VIEW_DISTANCE_MPC,
 } from '../../../src/data/milkyWay/galacticCenter';
-import { FOCUS_TWEEN_MS } from '../../../src/services/engine/camera/focusTweenDuration';
+import { GLIDE_MIN_SEC, GLIDE_MAX_SEC } from '../../../src/utils/camera/glideCalibration';
 import { makeGalaxyRow } from '../../fixtures/makeGalaxyRow';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { GalaxyRow } from '../../../src/@types/engine/GalaxyRow';
@@ -42,11 +42,25 @@ const structureRow = (over: Partial<StructureInfo> = {}): StructureInfo =>
   }) as StructureInfo;
 
 describe('focusTweenDescriptor', () => {
-  it('carries the live from-pose, FOCUS_TWEEN_MS, and a linear ease on every arm', () => {
+  it('carries the live from-pose and a linear ease on every arm', () => {
     const d = focusTweenDescriptor(galaxyRow(), FROM, FOVY);
     expect(d.from).toBe(FROM);
-    expect(d.durationMs).toBe(FOCUS_TWEEN_MS);
     expect(d.easing).toBe('linear');
+    // The duration is derived, so the only thing that can be asserted without
+    // recomputing it is the calibrated envelope it must land inside.
+    expect(d.durationMs).toBeGreaterThanOrEqual(GLIDE_MIN_SEC * 1000);
+    expect(d.durationMs).toBeLessThanOrEqual(GLIDE_MAX_SEC * 1000);
+  });
+
+  it('the duration tracks the move, not a constant', () => {
+    // Same subject (identical destination framing) at two separations from
+    // `from` — ~12 Mpc and ~1 Gpc, both well inside the clamp. A fixed duration
+    // returns the same number for both.
+    const near = focusTweenDescriptor(galaxyRow(), FROM, FOVY);
+    const far = focusTweenDescriptor(galaxyRow({ x: 900, y: -400, z: 250 }), FROM, FOVY);
+    expect(far.durationMs).toBeGreaterThan(near.durationMs);
+    expect(near.durationMs).toBeGreaterThan(GLIDE_MIN_SEC * 1000);
+    expect(far.durationMs).toBeLessThan(GLIDE_MAX_SEC * 1000);
   });
 
   it('a galaxy row targets its position and frames on its diameter, keeping yaw/pitch', () => {
