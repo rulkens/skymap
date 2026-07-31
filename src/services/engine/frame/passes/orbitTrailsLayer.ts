@@ -48,10 +48,11 @@
  * orbit is culled or faded PER-ORBIT by its apparent on-screen diameter: below
  * `CULL_PX` it is skipped from the draw entirely (deep sub-pixel aliasing, not
  * a legible path), and from there up to `FULL_PX` its brightness ramps in so it
- * does not pop. The degenerate case (camera on/inside an orbit, so the
- * projected conic fills the viewport) is handled in the fragment, which
- * discards every off-stroke, horizon, and non-finite pixel, so a degenerate
- * orbit paints only its (possibly huge) arc, never a filled blob.
+ * does not pop. The degenerate case (camera on/inside an orbit) is handled in
+ * the ribbon vertex stage, which near-plane-clamps every segment so the
+ * ribbon still hugs the (possibly huge) projected arc rather than needing a
+ * separate fallback; the fragment's off-stroke/horizon/non-finite discards
+ * still guard against a filled blob at a non-finite `Ginv`.
  *
  * ### Conics re-derive at the frame instant
  *
@@ -102,9 +103,8 @@ const FULL_PX = 20;
 // growing the table just grows this array); each conic's 40-float record
 // (three Ginv columns + colour/eccentricity + mean anomaly/fade/viewport +
 // the two gradient-minor triples + the three clip-basis vec4s) is rewritten
-// in place before the ribbon/fallback partitioned draw. One slot per table
-// row is also exactly what the front/back partition needs: ribbon and
-// fallback records together never exceed `ORBITAL_ELEMENTS.length` writes.
+// in place before the single packed draw. One slot per table row is enough
+// since at most `ORBITAL_ELEMENTS.length` records are ever packed.
 const staging = new Float32Array(ORBITAL_ELEMENTS.length * INSTANCE_FLOATS);
 
 // A bound orbit's farthest point from its focus is its apoapsis a·(1+e); its
@@ -257,15 +257,11 @@ export const orbitTrailsLayer: ContentLayer = {
     // The fragment's Newton horizon rejection is what keeps a near-edge-on
     // orbit a thin line, not a blob.
     //
-    // Ribbon-eligible records pack from the FRONT of `staging` (ribbonCount
-    // grows toward the middle), fallback records from the BACK (fallbackCount
-    // grows toward the middle from `limit - 1`) — the two counters can never
-    // together exceed `limit` (one increments per loop iteration that reaches
-    // this point, at most `limit` iterations), so the two partitions can never
-    // collide. `renderer.draw`'s own `firstInstance = slots - fallbackCount`
-    // is why the fallback partition MUST anchor at the back.
-    let ribbonCount = 0;
-    let fallbackCount = 0;
+    // Every visible record packs front-to-back into `staging` behind one
+    // counter — the ribbon vertex stage near-plane-clamps every segment
+    // (Task 11), so it covers a camera-inside-orbit projection like any other,
+    // and there is no second partition to keep separate.
+    let count = 0;
     for (let i = 0; i < limit; i++) {
       const elements = ORBITAL_ELEMENTS[i]!;
       // Re-derive the conic AT the frame instant: propagate the elements to
@@ -302,7 +298,7 @@ export const orbitTrailsLayer: ContentLayer = {
       // Per-orbit apparent-size fade × the whole-layer opacity (hide/show fade).
       const alpha = Math.min(1, (diameterPx - CULL_PX) / (FULL_PX - CULL_PX)) * layerOpacity;
 
-      const { ginv, minorS, minorT, clipBasis, ribbonEligible } = composeOrbitConic(
+      const { ginv, minorS, minorT, clipBasis } = composeOrbitConic(
         view.slab.vp,
         centerMpc,
         semiMajorMpc,
@@ -310,13 +306,7 @@ export const orbitTrailsLayer: ContentLayer = {
         view.viewportPx,
         RENDER_ORIGIN_MPC,
       );
-      // Partition: this orbit's record lands at the next FRONT slot if the
-      // ribbon impostor bounds its projection, else the next BACK slot (the
-      // fullscreen fallback) — see the loop-header comment for why the two
-      // partitions cannot collide.
-      const base = ribbonEligible
-        ? ribbonCount++ * INSTANCE_FLOATS
-        : (limit - 1 - fallbackCount++) * INSTANCE_FLOATS;
+      const base = count++ * INSTANCE_FLOATS;
       staging.set(ginv, base); // Ginv columns → floats 0..11
       staging[base + 12] = elements.color[0];
       staging[base + 13] = elements.color[1];
@@ -334,14 +324,8 @@ export const orbitTrailsLayer: ContentLayer = {
       staging.set(clipBasis[1], base + 32); // clip basis Ac → floats 32..35
       staging.set(clipBasis[2], base + 36); // clip basis Bc → floats 36..39
     }
-    if (ribbonCount > 0 || fallbackCount > 0) {
-      renderer.draw(
-        pass,
-        staging,
-        ribbonCount,
-        fallbackCount,
-        state.settings.debug.showOrbitTrailImpostor,
-      );
+    if (count > 0) {
+      renderer.draw(pass, staging, count, state.settings.debug.showOrbitTrailImpostor);
     }
   },
 };

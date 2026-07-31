@@ -1,22 +1,16 @@
 // orbitTrail/vertex.wesl — vertex stage for the instanced screen-space conic
-// orbit trail. Two entry points share one 'OrbitInstance' input (io.wesl):
-// 'vs', an oversized fullscreen triangle, and 'vsRibbon', a screen-space
-// ribbon hugging the projected ellipse. Both forward the same 'VSOut'
-// unchanged; the fragment cannot tell which one ran.
+// orbit trail. One entry point, 'vsRibbon', consuming one 'OrbitInstance'
+// input (io.wesl) and forwarding one 'VSOut' (io.wesl) to the shared
+// fragment module.
 //
-// ## Why a fullscreen triangle, not a projected bounding quad ('vs')
+// ## Why a screen-space ribbon, near-plane-clamped
 //
-// A Keplerian ellipse under perspective is a general conic, and when the orbit
-// plane passes near the camera the projected conic becomes a hyperbola open to
-// infinity — a finite screen-space bounding box is then either wrong or needs a
-// special case exactly at that degeneracy (spec 2 rejected the bounding quad).
-// A fullscreen triangle is robust for every conic type: the fragment discards
-// pixels off the stroke, so covering the whole viewport costs only fragment
-// work, and with a handful of additive orbits over a near-field scene that is
-// cheap. The classic three-vertex oversized triangle (corners at (-1,-1),
-// (3,-1), (-1,3)) covers the [-1,1] NDC square with a single primitive and no
-// index buffer. 'vsRibbon' (below) instead rasterizes only the stroke's own
-// footprint, trading this robustness for far less fragment work.
+// A Keplerian ellipse's perspective projection is a general conic; near the
+// orbit plane it turns into a hyperbola with points behind the camera
+// (clip.w <= 0). Each segment endpoint below a per-orbit near-plane epsilon
+// is CLAMPED to its w = epsW crossing instead of dropped, so one ribbon
+// covers every projection — including a camera sitting inside the orbit —
+// with no separate fallback geometry.
 //
 // ## Why per-instance attributes, not a per-draw uniform
 //
@@ -39,32 +33,6 @@ import package::bodies::orbitTrail::io::OrbitInstance;
 import package::bodies::orbitTrail::io::VSOut;
 import package::lib::math::TAU;
 
-@vertex
-fn vs(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
-  var out: VSOut;
-  // Oversized triangle covering the whole NDC square in one primitive.
-  var p = array<vec2<f32>, 3>(
-    vec2<f32>(-1.0, -1.0),
-    vec2<f32>(3.0, -1.0),
-    vec2<f32>(-1.0, 3.0),
-  );
-  out.clip = vec4<f32>(p[vid], 0.0, 1.0);
-
-  // Forward the per-orbit conic constants flat (the .xyz of each padded Ginv
-  // column is the real data; the .w lanes are alignment pad).
-  out.ginv0 = inst.ginv0.xyz;
-  out.ginv1 = inst.ginv1.xyz;
-  out.ginv2 = inst.ginv2.xyz;
-  out.color = inst.params.xyz;
-  out.eccentricity = inst.params.w;
-  out.meanAnomaly = inst.phase.x;
-  out.alpha = inst.phase.y;
-  // The affine Sampson-gradient minors (padded vec4, .xyz is the real data).
-  out.minorS = inst.minorS.xyz;
-  out.minorT = inst.minorT.xyz;
-  return out;
-}
-
 // One sample of the projected ellipse in raw clip space (x, y, w) — no divide
 // yet, so callers can test/clamp .z (== clip.w) before it ever lands in a
 // denominator.
@@ -85,11 +53,10 @@ fn clipToPixel(clip: vec3<f32>, viewportPx: vec2<f32>) -> vec2<f32> {
 }
 
 // Rasterizes each orbit as a screen-space ribbon hugging the projected
-// ellipse, replacing 'vs's fullscreen triangle. vid -> (segment, corner) with
-// segment = vid / 6u, corner = vid % 6u; the quad for segment i spans samples
-// i and i+1, and sample SEGMENTS wraps to 0 so the strip closes. Two
-// triangles per quad, keyed by (sample offset 0|1, side -1|+1) below; winding
-// is irrelevant ('cullMode: none').
+// ellipse. vid -> (segment, corner) with segment = vid / 6u, corner = vid % 6u;
+// the quad for segment i spans samples i and i+1, and sample SEGMENTS wraps
+// to 0 so the strip closes. Two triangles per quad, keyed by (sample offset
+// 0|1, side -1|+1) below; winding is irrelevant ('cullMode: none').
 @vertex
 fn vsRibbon(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
   var out: VSOut;

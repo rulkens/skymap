@@ -2,13 +2,11 @@
 // conic orbit trail. Imported by orbitTrail/vertex.wesl and
 // orbitTrail/fragment.wesl.
 //
-// One instance = one orbit, drawn by ONE of two vertex entry points sharing
-// this file's 'OrbitInstance' input and 'VSOut' output: 'vs' (an oversized
-// fullscreen triangle; the fragment discards off-stroke pixels) or 'vsRibbon'
-// (a screen-space ribbon hugging the projected ellipse). Either way the
-// fragment stage reads its own '@builtin(position)' pixel and evaluates the
-// projected conic analytically from 'Ginv' (spec 3.3); 'VSOut' is the contract
-// between vertex and fragment, and neither entry point changes it.
+// One instance = one orbit, drawn by 'vsRibbon' — a screen-space ribbon
+// hugging the projected ellipse, near-plane-clamped so it bounds every
+// projection. The fragment stage reads its own '@builtin(position)' pixel
+// and evaluates the projected conic analytically from 'Ginv' (spec 3.3);
+// 'VSOut' is the contract between vertex and fragment.
 //
 // ## Why the struct lives here
 //
@@ -16,9 +14,9 @@
 // drift structurally impossible — the same reasoning 'planet/io.wesl' states.
 // EVERY varying below is per-orbit constant (the three
 // 'Ginv' columns, the tint, the eccentricity, the mean anomaly), so all are
-// '@interpolate(flat)': there is nothing to interpolate under either vertex
-// stage, and declaring the flat qualifier once here means it cannot silently
-// diverge between the stages.
+// '@interpolate(flat)': there is nothing to interpolate across the ribbon's
+// own vertices, and declaring the flat qualifier once here means it cannot
+// silently diverge between the stages.
 //
 // ## Why Ginv streams as three vec3 columns
 //
@@ -53,13 +51,12 @@ struct VSOut {
   @location(8) @interpolate(flat) minorT: vec3<f32>,
 };
 
-// Per-instance vertex input, declared ONCE so 'vs' and 'vsRibbon' cannot drift
-// apart on attribute @location. Matches the TS pipeline's instance-buffer
-// descriptor byte-for-byte (see orbitTrailRenderer.ts) — 112 bytes of conic +
-// tint + gradient data that 'vs' needs, followed by 48 bytes of clip-space
-// conic basis that only 'vsRibbon' needs, to walk the ellipse per sample.
+// Per-instance vertex input, matching the TS pipeline's instance-buffer
+// descriptor byte-for-byte (see orbitTrailRenderer.ts): 112 bytes of conic +
+// tint + gradient data, followed by 48 bytes of clip-space conic basis that
+// 'vsRibbon' walks per sample to trace the ellipse.
 struct OrbitInstance {
-  // Ginv columns (.xyz used, .w pad) — see vertex.wesl's 'vs' doc.
+  // Ginv columns (.xyz used, .w pad) — see vertex.wesl's 'vsRibbon' doc.
   @location(1) ginv0: vec4<f32>,
   @location(2) ginv1: vec4<f32>,
   @location(3) ginv2: vec4<f32>,
@@ -68,8 +65,7 @@ struct OrbitInstance {
   @location(6) minorS: vec4<f32>,
   @location(7) minorT: vec4<f32>,
   // Clip-space conic basis: p(E) = cc + cos(E)*ac + sin(E)*bc traces the
-  // projected ellipse in (clip.x, clip.y, clip.w) as E runs 0..2*PI. Only
-  // 'vsRibbon' reads these; 'vs' ignores them.
+  // projected ellipse in (clip.x, clip.y, clip.w) as E runs 0..2*PI.
   @location(8) cc: vec4<f32>,       // clip basis: centre  (x, y, w, pad)
   @location(9) ac: vec4<f32>,       // clip basis: semi-major
   @location(10) bc: vec4<f32>,      // clip basis: semi-minor

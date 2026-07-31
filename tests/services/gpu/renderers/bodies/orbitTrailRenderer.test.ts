@@ -5,12 +5,11 @@
  * renderer issues at construction returns a plausibly-shaped stand-in. These
  * tests pin the `Renderer` contract, the widened 40-float / 160-byte instance
  * record (locations 1..10, the ribbon impostor's clip-basis addition at
- * 8/9/10), the two-pipeline-one-module-one-VBO construction (ribbon vs
- * fullscreen fallback, sharing `fsModule`), the partitioned two-draw `draw`
- * call (`draw(pass, instances, ribbonCount, fallbackCount)` — ribbon records
- * at the front of the shared VBO, fallback records at the back via
- * `firstInstance`), the count guard, the grow-on-slots instance buffer, and
- * the additive depthless hdr pipeline profile shared by both pipelines.
+ * 8/9/10), the one-pipeline-one-module-one-VBO construction (the near-plane-
+ * clamped ribbon covers every projection, so there is no fallback pipeline),
+ * the single-count `draw` call (`draw(pass, instances, count)`), the count
+ * guard, the grow-on-slots instance buffer, and the additive depthless hdr
+ * pipeline profile.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -86,14 +85,14 @@ describe('createOrbitTrailRenderer', () => {
     // colour+eccentricity at location 4 (offset 48), meanAnomaly+fade at
     // location 5 (offset 64), the two gradient-minor triples at locations
     // 6/7 (offsets 80/96), and the ribbon impostor's clip-basis vec4s
-    // Cc/Ac/Bc at locations 8/9/10 (offsets 112/128/144). Neither pipeline
-    // has a location-0 position buffer — both generate geometry from
-    // @builtin(vertex_index), so this instance buffer is the pipeline's
-    // only vertex buffer. A drifted offset silently reads garbage on real
-    // hardware, so every field is pinned here, for BOTH pipelines.
+    // Cc/Ac/Bc at locations 8/9/10 (offsets 112/128/144). The pipeline has no
+    // location-0 position buffer — geometry comes from
+    // @builtin(vertex_index), so this instance buffer is the pipeline's only
+    // vertex buffer. A drifted offset silently reads garbage on real
+    // hardware, so every field is pinned here.
     const renderPipelines: GPURenderPipelineDescriptor[] = [];
     createOrbitTrailRenderer(mockDevice({ renderPipelines }), 'rgba16float');
-    expect(renderPipelines).toHaveLength(2);
+    expect(renderPipelines).toHaveLength(1);
 
     const expectedAttributes = [
       { shaderLocation: 1, offset: 0, format: 'float32x4' }, // Ginv col 0
@@ -108,106 +107,74 @@ describe('createOrbitTrailRenderer', () => {
       { shaderLocation: 10, offset: 144, format: 'float32x4' }, // clip basis semi-minor Bc
     ];
 
-    for (const desc of renderPipelines) {
-      const vbs = Array.from(desc.vertex.buffers!);
-      expect(vbs).toHaveLength(1);
-      expect(vbs[0]!.arrayStride).toBe(INSTANCE_STRIDE);
-      expect(vbs[0]!.stepMode).toBe('instance');
-      expect(Array.from(vbs[0]!.attributes)).toEqual(expectedAttributes);
-    }
+    const desc = renderPipelines[0]!;
+    const vbs = Array.from(desc.vertex.buffers!);
+    expect(vbs).toHaveLength(1);
+    expect(vbs[0]!.arrayStride).toBe(INSTANCE_STRIDE);
+    expect(vbs[0]!.stepMode).toBe('instance');
+    expect(Array.from(vbs[0]!.attributes)).toEqual(expectedAttributes);
   });
 
-  it('builds a ribbon pipeline and a fullscreen pipeline from one fragment module', () => {
+  it('builds one production ribbon pipeline — vsRibbon + fs, no fallback pipeline', () => {
     const renderPipelines: GPURenderPipelineDescriptor[] = [];
     createOrbitTrailRenderer(mockDevice({ renderPipelines }), 'rgba16float');
-    expect(renderPipelines).toHaveLength(2);
-
-    const ribbon = renderPipelines.find((d) => d.vertex.entryPoint === 'vsRibbon');
-    const fallback = renderPipelines.find((d) => d.vertex.entryPoint === 'vs');
-    expect(ribbon).toBeDefined();
-    expect(fallback).toBeDefined();
-    // Same fragment module instance shared by both pipelines.
-    expect(ribbon!.fragment!.module).toBe(fallback!.fragment!.module);
+    expect(renderPipelines).toHaveLength(1);
+    expect(renderPipelines[0]!.vertex.entryPoint).toBe('vsRibbon');
+    expect(renderPipelines[0]!.fragment!.entryPoint).toBe('fs');
   });
 
-  it('bakes the additive depthless hdr profile — one/one blend, no depthStencil, cull none — for BOTH pipelines', () => {
+  it('bakes the additive depthless hdr profile — one/one blend, no depthStencil, cull none', () => {
     const renderPipelines: GPURenderPipelineDescriptor[] = [];
     createOrbitTrailRenderer(mockDevice({ renderPipelines }), 'rgba16float');
-    expect(renderPipelines).toHaveLength(2);
+    expect(renderPipelines).toHaveLength(1);
 
-    for (const desc of renderPipelines) {
-      const target = Array.from(desc.fragment!.targets!)[0]!;
-      expect(target!.format).toBe('rgba16float');
-      expect(target!.blend).toEqual({
-        color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-        alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-      });
-      // Depthless: the hdr target has no depth attachment; declaring a depth
-      // format would be a validation error.
-      expect(desc.depthStencil).toBeUndefined();
-      // The orbital plane is viewed from both sides — never cull.
-      expect(desc.primitive?.cullMode).toBe('none');
-    }
+    const desc = renderPipelines[0]!;
+    const target = Array.from(desc.fragment!.targets!)[0]!;
+    expect(target!.format).toBe('rgba16float');
+    expect(target!.blend).toEqual({
+      color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
+      alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
+    });
+    // Depthless: the hdr target has no depth attachment; declaring a depth
+    // format would be a validation error.
+    expect(desc.depthStencil).toBeUndefined();
+    // The orbital plane is viewed from both sides — never cull.
+    expect(desc.primitive?.cullMode).toBe('none');
   });
 
-  it('draw is callable with (pass, instances, ribbonCount, fallbackCount)', () => {
+  it('draw is callable with (pass, instances, count)', () => {
     const renderer = createOrbitTrailRenderer(mockDevice(), 'rgba16float');
     expect(typeof renderer.draw).toBe('function');
-    expect(renderer.draw.length).toBe(4);
+    expect(renderer.draw.length).toBe(3);
   });
 
-  it('issues the ribbon draw for the ribbon count and the fullscreen draw for the fallback count', () => {
+  it('issues one ribbon draw for the whole count', () => {
     const renderer = createOrbitTrailRenderer(mockDevice(), 'rgba16float');
     const pass = mockPass();
     const slots = 10;
     const instances = new Float32Array(slots * INSTANCE_FLOATS);
-    const ribbonCount = 3;
-    const fallbackCount = 4;
+    const count = 7;
 
-    renderer.draw(pass, instances, ribbonCount, fallbackCount);
+    renderer.draw(pass, instances, count);
 
     const calls = (pass.draw as ReturnType<typeof vi.fn>).mock.calls;
-    expect(calls).toHaveLength(2);
-    // Ribbon: RIBBON_SEGMENTS * 6 verts, ribbonCount instances, firstInstance 0.
-    expect(calls[0]).toEqual([RIBBON_SEGMENTS * 6, ribbonCount, 0, 0]);
-    // Fallback: 3 verts (fullscreen triangle), fallbackCount instances,
-    // firstInstance = slots - fallbackCount (the back of the shared VBO).
-    expect(calls[1]).toEqual([3, fallbackCount, 0, slots - fallbackCount]);
+    expect(calls).toHaveLength(1);
+    // RIBBON_SEGMENTS * 6 verts, `count` instances, firstInstance 0.
+    expect(calls[0]).toEqual([RIBBON_SEGMENTS * 6, count, 0, 0]);
   });
 
-  it('a zero count skips its own draw', () => {
+  it('a zero count is a whole-call no-op, including the upload', () => {
+    const device = mockDevice();
+    const renderer = createOrbitTrailRenderer(device, 'rgba16float');
+    const pass = mockPass();
     const slots = 5;
-    const makeInstances = () => new Float32Array(slots * INSTANCE_FLOATS);
+    const writeMock = device.queue.writeBuffer as ReturnType<typeof vi.fn>;
+    writeMock.mockClear();
 
-    // Only ribbon count is nonzero — exactly one draw call.
-    {
-      const renderer = createOrbitTrailRenderer(mockDevice(), 'rgba16float');
-      const pass = mockPass();
-      renderer.draw(pass, makeInstances(), 2, 0);
-      expect((pass.draw as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
-      expect((pass.draw as ReturnType<typeof vi.fn>).mock.calls[0]![0]).toBe(RIBBON_SEGMENTS * 6);
-    }
+    renderer.draw(pass, new Float32Array(slots * INSTANCE_FLOATS), 0);
 
-    // Only fallback count is nonzero — exactly one draw call.
-    {
-      const renderer = createOrbitTrailRenderer(mockDevice(), 'rgba16float');
-      const pass = mockPass();
-      renderer.draw(pass, makeInstances(), 0, 2);
-      expect((pass.draw as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
-      expect((pass.draw as ReturnType<typeof vi.fn>).mock.calls[0]![0]).toBe(3);
-    }
-
-    // Both zero — the whole call is a no-op, including the upload.
-    {
-      const device = mockDevice();
-      const renderer = createOrbitTrailRenderer(device, 'rgba16float');
-      const pass = mockPass();
-      const writeMock = device.queue.writeBuffer as ReturnType<typeof vi.fn>;
-      writeMock.mockClear();
-      renderer.draw(pass, makeInstances(), 0, 0);
-      expect(pass.draw).not.toHaveBeenCalled();
-      expect(writeMock).not.toHaveBeenCalled();
-    }
+    expect(pass.draw).not.toHaveBeenCalled();
+    expect(writeMock).not.toHaveBeenCalled();
   });
 
   it('draw does exactly one writeBuffer covering every slot, and sets the vertex buffer once', () => {
@@ -219,23 +186,20 @@ describe('createOrbitTrailRenderer', () => {
 
     const writeMock = device.queue.writeBuffer as ReturnType<typeof vi.fn>;
     writeMock.mockClear();
-    renderer.draw(pass, instances, 2, 3);
+    renderer.draw(pass, instances, 4);
 
     expect(writeMock).toHaveBeenCalledTimes(1);
     const [, byteOffset, data, dataOffset, size] = writeMock.mock.calls[0]!;
     expect(byteOffset).toBe(0);
     expect(data).toBe(instances); // the caller's array, uploaded directly
     expect(dataOffset).toBe(0);
-    // Every slot uploads, including the unwritten middle (1 ribbon-eligible +
-    // fallback slots don't fill all 6, but the whole packed array covers both
-    // partitions — no compaction pass).
+    // The whole packed array uploads, including any unwritten tail slots.
     expect(size).toBe(instances.length);
 
-    // Exactly one vertex buffer bound, even though two draws are issued.
     expect((pass.setVertexBuffer as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0])).toEqual(
       [0],
     );
-    // No bind group — the pipelines read nothing from the uniform space.
+    // No bind group — the pipeline reads nothing from the uniform space.
     expect(pass.setBindGroup).not.toHaveBeenCalled();
   });
 
@@ -243,81 +207,75 @@ describe('createOrbitTrailRenderer', () => {
     // Regression coverage for the MAX_ORBITS = 24 defect (pre-ribbon): the
     // buffer itself has no cap — it grows to whatever slots = instances.length
     // / INSTANCE_FLOATS demands, the same grow-only-reuse pattern
-    // starPointRenderer.setStars uses for its instance buffer. Sized on
-    // SLOTS, not on either draw count, since both partitions read one buffer.
+    // starPointRenderer.setStars uses for its instance buffer.
     const buffers: BufferDesc[] = [];
     const device = mockDevice({ buffers });
     const renderer = createOrbitTrailRenderer(device, 'rgba16float');
     const pass = mockPass();
 
     // First draw establishes an initial capacity of 3 slots.
-    renderer.draw(pass, new Float32Array(3 * INSTANCE_FLOATS), 1, 2);
+    renderer.draw(pass, new Float32Array(3 * INSTANCE_FLOATS), 3);
     const afterFirst = buffers.filter((b) => b.label === 'orbit-trail-instance-vbo');
     expect(afterFirst).toHaveLength(1);
     expect(afterFirst[0]!.size).toBe(3 * INSTANCE_STRIDE);
 
     // A later draw asking for more slots than that capacity must grow the
     // buffer (a second allocation), not truncate to the first one's size.
-    renderer.draw(pass, new Float32Array(7 * INSTANCE_FLOATS), 3, 4);
+    renderer.draw(pass, new Float32Array(7 * INSTANCE_FLOATS), 7);
     const afterSecond = buffers.filter((b) => b.label === 'orbit-trail-instance-vbo');
     expect(afterSecond).toHaveLength(2);
     expect(afterSecond[1]!.size).toBe(7 * INSTANCE_STRIDE);
-    // The grown draw actually issues all instances — nothing dropped.
+    // The grown draw actually issues every instance — nothing dropped.
     const drawCalls = (pass.draw as ReturnType<typeof vi.fn>).mock.calls;
-    expect(drawCalls.at(-2)![1]).toBe(3); // ribbon count
-    expect(drawCalls.at(-1)![1]).toBe(4); // fallback count
+    expect(drawCalls.at(-1)![1]).toBe(7);
   });
 
-  it('the impostor overlay draws the hull and the fallback wash only when enabled', () => {
-    // debug.showOrbitTrailImpostor: the debug pipeline pair builds LAZILY on
+  it('the impostor overlay draws the ribbon hull only when enabled', () => {
+    // debug.showOrbitTrailImpostor: the debug pipeline builds LAZILY on
     // first `true` (production pays nothing while the flag stays false), and
-    // the extra draws reuse the SAME vertex counts / firstInstance offsets as
-    // the production pair — the overlay is a lens over the real geometry, not
-    // an independently-derived footprint.
+    // the extra draw reuses the SAME vertex count as the production draw —
+    // the overlay is a lens over the real geometry, not an independently-
+    // derived footprint.
     const renderPipelines: GPURenderPipelineDescriptor[] = [];
     const device = mockDevice({ renderPipelines });
     const renderer = createOrbitTrailRenderer(device, 'rgba16float');
     const pass = mockPass();
     const slots = 10;
     const instances = new Float32Array(slots * INSTANCE_FLOATS);
-    const ribbonCount = 3;
-    const fallbackCount = 4;
+    const count = 7;
 
-    // Flag omitted (defaults false) — only the two production pipelines exist,
-    // and only the two production draws are issued.
-    renderer.draw(pass, instances, ribbonCount, fallbackCount);
-    expect(renderPipelines).toHaveLength(2);
-    expect((pass.draw as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(2);
+    // Flag omitted (defaults false) — only the one production pipeline
+    // exists, and only the one production draw is issued.
+    renderer.draw(pass, instances, count);
+    expect(renderPipelines).toHaveLength(1);
+    expect((pass.draw as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
 
     (pass.draw as ReturnType<typeof vi.fn>).mockClear();
 
-    // Flag true — the two debug pipelines are built now (first enable), and
-    // exactly two ADDITIONAL draws land, matching the production pair's
-    // vertex counts and firstInstance offsets exactly.
-    renderer.draw(pass, instances, ribbonCount, fallbackCount, true);
-    expect(renderPipelines).toHaveLength(4);
+    // Flag true — the debug pipeline is built now (first enable), and
+    // exactly one ADDITIONAL draw lands, matching the production draw's
+    // vertex count exactly.
+    renderer.draw(pass, instances, count, true);
+    expect(renderPipelines).toHaveLength(2);
     const calls = (pass.draw as ReturnType<typeof vi.fn>).mock.calls;
-    expect(calls).toHaveLength(4);
-    expect(calls[0]).toEqual([RIBBON_SEGMENTS * 6, ribbonCount, 0, 0]);
-    expect(calls[1]).toEqual([3, fallbackCount, 0, slots - fallbackCount]);
-    expect(calls[2]).toEqual([RIBBON_SEGMENTS * 6, ribbonCount, 0, 0]);
-    expect(calls[3]).toEqual([3, fallbackCount, 0, slots - fallbackCount]);
+    expect(calls).toHaveLength(2);
+    expect(calls[0]).toEqual([RIBBON_SEGMENTS * 6, count, 0, 0]);
+    expect(calls[1]).toEqual([RIBBON_SEGMENTS * 6, count, 0, 0]);
 
-    // A later enabled call does not rebuild the debug pipelines again.
-    renderer.draw(pass, instances, ribbonCount, fallbackCount, true);
-    expect(renderPipelines).toHaveLength(4);
+    // A later enabled call does not rebuild the debug pipeline again.
+    renderer.draw(pass, instances, count, true);
+    expect(renderPipelines).toHaveLength(2);
   });
 
-  it('counts that overrun the packed array throw', () => {
-    // A count pair the caller's own packed array cannot back is a
-    // programming error, not a runtime condition to paper over — it must
-    // throw at the call site instead of reading past the array or silently
-    // drawing fewer instances than asked.
+  it('a count that overruns the packed array throws', () => {
+    // A count the caller's own packed array cannot back is a programming
+    // error, not a runtime condition to paper over — it must throw at the
+    // call site instead of reading past the array or silently drawing fewer
+    // instances than asked.
     const renderer = createOrbitTrailRenderer(mockDevice(), 'rgba16float');
     const pass = mockPass();
     const instances = new Float32Array(4 * INSTANCE_FLOATS); // only 4 slots
-    expect(() => renderer.draw(pass, instances, 3, 3)).toThrow(); // 6 > 4
-    expect(() => renderer.draw(pass, instances, -1, 2)).toThrow(); // negative
-    expect(() => renderer.draw(pass, instances, 2, -1)).toThrow(); // negative
+    expect(() => renderer.draw(pass, instances, 5)).toThrow(); // 5 > 4
+    expect(() => renderer.draw(pass, instances, -1)).toThrow(); // negative
   });
 });
