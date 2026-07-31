@@ -33,7 +33,9 @@ export const PARAM_SPEC: Readonly<Partial<Record<keyof GalaxyParams & string, Pa
   starCount: { min: 20000, max: 1000000, step: 5000 },
   bulgeSize: { min: 0.2, max: 2, step: 0.05 },
   bulgeFalloff: { min: 0, max: 1, step: 0.02 },
-  diskThickness: { min: 0.35, max: 1.8, step: 0.05 },
+  // Floor is below the Milky Way's calibrated 0.33: a slider whose minimum
+  // excludes a shipped preset renders pinned and jumps on first drag.
+  diskThickness: { min: 0.3, max: 1.8, step: 0.05 },
   irregularity: { min: 0, max: 1, step: 0.02 },
   armCount: { min: 1, max: 8, step: 1 },
   armWinding: { min: 0, max: 1, step: 0.02 },

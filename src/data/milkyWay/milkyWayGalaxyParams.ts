@@ -6,33 +6,35 @@
  * One object means the tool and the app can never quietly drift onto two
  * different "Milky Way"s — tune it here and both pick up the change.
  *
- * The knobs themselves (SBb, 4 arms, bar, warp) are the tool's hand-dialled
- * approximation of the real galaxy: a central bar tilted ~45° to the
- * Sun–centre line, four main arm segments (Norma, Scutum–Centaurus,
- * Sagittarius, Perseus), and a warped, twisted outer disk matching the
- * Cepheid-mapped warp (Chen et al. 2019). See `referenceGalaxies.ts`'s
- * `mw` entry for the prose description shown in the tool's UI.
+ * Most knobs (arms, dust, bulge, brightness) are hand-dialled to look right;
+ * the ones measured against the real Galaxy carry their derivation inline.
  */
 import type { GalaxyParams } from '../../@types/galaxy/GalaxyParams';
+import { MILKY_WAY_DISC_RADIUS_KPC } from './galacticCenter';
 
 /**
  * Fixed generation seed. `packGenerationUniforms.ts` derives an undefined
- * `params.seed` as `((seed ?? 0) | 0 || 1)` (see its `mainStream`/`seed`
- * locals) — so leaving `seed` unset was already, implicitly, seed 1. Every
- * "Milky Way" render anyone has looked at in the tool so far used that
- * default; pinning it to `1` here makes the implicit explicit rather than
+ * `params.seed` as `((seed ?? 0) | 0 || 1)`, so leaving `seed` unset was
+ * already, implicitly, seed 1 — pinning it makes that explicit rather than
  * changing what gets drawn.
  */
 export const MILKY_WAY_GENERATION_SEED = 1;
 
 /**
- * SBb, 4 arms, bar, warp — the tool's hand-dialled `mw` knobs, with the
- * generation seed made explicit (see `MILKY_WAY_GENERATION_SEED`) and
- * `globularCount` calibrated at the app's visual gate (the tool's gallery
- * shares this object, so it shows the same count). `starCount` is the
- * MEDIUM-tier star budget, also visual-gate calibrated; the per-tier table
- * in `milkyWayCalibration.ts` derives small/large as x0.5/x2 of this value
- * rather than carrying three independently-tunable variants.
+ * Exponential scale length of the disc's LIGHT, kpc (Freudenreich 1998).
+ * `buildDisk` weights an exp(-R/diskScaleLen) surface density by
+ * `diskFalloff(R, 1.7)`, so the emitted light falls off 1 + 1/1.7 times
+ * faster than the density does — and an additive point cloud integrates
+ * light, not star counts, so it is the light profile that must match.
+ */
+const DISC_LIGHT_SCALE_KPC = 2.605;
+const DENSITY_PER_LIGHT_SCALE = 1 + 1 / 1.7;
+
+/**
+ * SBb, 4 arms, bar, warp. `globularCount` and `starCount` are visual-gate
+ * calibrated (the tool's gallery shares this object, so it shows the same);
+ * `starCount` is the MEDIUM-tier budget, off which `milkyWayCalibration.ts`
+ * derives small/large as x0.5/x2 rather than carrying three variants.
  */
 export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams = {
   type: 'SBb',
@@ -46,6 +48,12 @@ export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams = {
   armClump: 0.62,
   armWave: 0.94,
   barStrength: 0.6,
+  // The long bar's angle to the Sun–centre line (Wegg & Gerhard 2013; Wegg,
+  // Gerhard & Portail 2015), NOT Freudenreich 1998's 13.79°, which describes
+  // the boxy bulge alone. Pinned rather than drawn because the draw landed at
+  // 2.6°, all but along our line of sight — the one orientation the real bar
+  // is known not to have. `barStrength` still sets the LENGTH (4.41 kpc here).
+  barAngleDeg: 27,
   bulgeSize: 0.45,
   bulgeFalloff: 0.7,
   dust: 0.5,
@@ -54,9 +62,23 @@ export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams = {
   hii: 1.35,
   youngStars: 0.56,
   metallicity: 0.56,
-  diskThickness: 0.5,
+  // F98's vertical profile is sech²(Z / 0.346 kpc); the Gaussian of equal
+  // variance (π²h²/12) has σ = 0.314 kpc, and `packGenerationUniforms` builds
+  // the disc at diskHeight = 0.055 * outerRadius * this — 0.188 units here.
+  diskThickness: 0.33,
+  // A fraction of `outerRadius`, which `milkyWayCalibration.ts` maps onto
+  // MILKY_WAY_DISC_RADIUS_KPC — so a ratio of two kpc lengths is already the
+  // ratio in generator units, no conversion needed. h_light = 2.605 kpc.
+  diskScaleLenFrac: (DENSITY_PER_LIGHT_SCALE * DISC_LIGHT_SCALE_KPC) / MILKY_WAY_DISC_RADIUS_KPC,
+  // 1.05 kpc of vertical bend at the disc edge. UNVERIFIED: a plausible
+  // ballpark, with no published amplitude retrieved to check it against.
   warpStrength: 0.15,
-  warpTwist: 2.4,
+  // 0.35 rad = 20°: the line of nodes Chen et al. 2019 map with Cepheids
+  // (mean 17.5°, flat beyond ~14 kpc), not a full turn of precession.
+  warpTwist: 0.35,
+  // Warp onset at ~10 kpc, outside the Sun's 8 kpc orbit; the shared 0.3
+  // default would start bending the disc at 5.25 kpc, well inside it.
+  warpStart: 0.57,
   irregularity: 0.6,
   globularCount: 30,
   radius: 1.05,

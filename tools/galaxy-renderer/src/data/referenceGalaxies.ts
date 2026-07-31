@@ -233,7 +233,7 @@ export const REFERENCE_GALAXIES: readonly ReferenceGalaxy[] = [
     arms: '~4 (Norma, Scutum–Centaurus, Sagittarius, Perseus)',
     viewLabel: 'no external photo exists',
     notable:
-      'Our own galaxy: a barred spiral with a central bar (~45° to the Sun line), four main arm segments, and a WARPED, twisted outer disk — the twist mapped directly by Cepheids (Chen et al. 2019).',
+      'Our own galaxy: a barred spiral with a central bar (~27° to the Sun line), four main arm segments, and a WARPED, twisted outer disk — the twist mapped directly by Cepheids (Chen et al. 2019).',
     credit: 'model — no face-on photograph of the Milky Way is possible',
     img: null,
     // Single source of truth: src/data/milkyWay/milkyWayGalaxyParams.ts. The
