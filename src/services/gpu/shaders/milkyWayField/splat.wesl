@@ -1,10 +1,10 @@
-// milkyWayField/splat.wesl — the analytic field as one instanced quad PER
-// COMPONENT instead of field.wesl's one fullscreen pass over all of them.
+// milkyWayField/splat.wesl — the analytic Milky Way field: one instanced
+// quad PER COMPONENT, each covering its own Gaussian's screen footprint.
 // Emission is additive and order-independent (no depth test, no depth
-// sort), so this sums to exactly the same image wherever a quad covers its
-// own component's support: cost moves from pixels x N to sum of covered
-// area, which is the point for the N~300+ mixtures field.wesl measures slow
-// on. See field.wesl for the ray-reconstruction math this fragment repeats.
+// sort), so overlapping quads sum to the mixture's true integral wherever a
+// quad covers its own component's support: cost is sum of covered screen
+// area rather than pixels x componentCount, which is what makes N~300+
+// mixtures affordable.
 
 import package::lib::billboard::quadCorner;
 import package::lib::gaussianIntegral::gaussianRayIntegral;
@@ -49,10 +49,10 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> Spl
   // below is what actually has to hold for the sqrt below to be real, and
   // subsumes it (cut > 1.3).
   // 4.5, not 3: the quad edge clips the Gaussian at the cut, and for the
-  // wide disc and halo components a 3-sigma clip is a visible 1 percent step
-  // against the loop path (the eye reads a hard edge in a smooth HDR
-  // gradient long before it reads the level). exp(-10.1) at 4.5 sigma is
-  // 4e-5 -- below anything the target can show.
+  // wide disc and halo components a 3-sigma clip truncates at a visible
+  // 1 percent step (the eye reads a hard edge in a smooth HDR gradient long
+  // before it reads the level). exp(-10.1) at 4.5 sigma is 4e-5 -- below
+  // anything the target can show.
   let cut = 4.5;
   let bound = cut * r;
   // Fully behind the camera: the forward ray never gets within cut sigma of
@@ -90,8 +90,8 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> Spl
   let tyLo = (yv * zv - sY) / denom;
   let tyHi = (yv * zv + sY) / denom;
 
-  // Tangent space -> NDC via the same tanHalfFov/aspect/shift split
-  // field.wesl's fragment ray inverts.
+  // Tangent space -> NDC via the same tanHalfFov/aspect/shift split the
+  // fragment stage below inverts back into a ray.
   let ndcXLo = txLo / (tanHalfFov * aspect) - shift;
   let ndcXHi = txHi / (tanHalfFov * aspect) - shift;
   let ndcYLo = tyLo / tanHalfFov;
@@ -107,9 +107,9 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> Spl
 
 @fragment
 fn fs(input: SplatOut) -> @location(0) vec4<f32> {
-  // Same ray reconstruction as field.wesl's fragment stage, repeated (not
-  // imported) because it is three lines and importing across a shared
-  // struct field would cost more indirection than it saves.
+  // Reconstructs the world-space ray from the interpolated NDC rather than
+  // passing one down from the vertex stage: cheap (three lines) and avoids
+  // an extra varying.
   let tanHalfFov = u.params.x;
   let aspect = u.params.y;
   let shift = u.params.z;
@@ -127,6 +127,9 @@ fn fs(input: SplatOut) -> @location(0) vec4<f32> {
   let po = o - g3.xyz;
   let sum = g2.xyz * (g0.w * gaussianRayIntegral(po, d, g0.xyz, g1.xyz));
 
-  // Alpha 0 — see field.wesl for why.
+  // Alpha 0: the aggregate's alpha channel feeds nothing — the additive
+  // upsample folds it into HDR and the compositor forces 1.0 — and a quad
+  // writing coverage would swamp the sprites' own alpha for no reader's
+  // benefit.
   return vec4<f32>(sum * u.params.w, 0.0);
 }

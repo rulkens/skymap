@@ -506,17 +506,6 @@ function ControlsPanel({ fade }: ControlsPanelProps): ReactNode {
             onChange={(v) => dispatch(renderPatched({ analyticExposure: v }))}
             info="Whole-field multiplier on the integrated mixture. 1.0 is parity: the mixture is calibrated to emit the same total light as the sprite population it stands in for, at whatever the sprite exposure and size sliders are set to."
           />
-          <div className={styles.toggleRow}>
-            <label className={styles.toggleLabel}>
-              <span>Splat path</span>
-              <input
-                type="checkbox"
-                className={styles.checkbox}
-                checked={render.fieldSplat}
-                onChange={(e) => dispatch(renderPatched({ fieldSplat: e.target.checked }))}
-              />
-            </label>
-          </div>
         </CollapsibleSection>
 
         {/* The warped outer disc rings' own tuning surface — see

@@ -10,8 +10,8 @@
 import type { Vec3 } from '../../@types/math/Vec3';
 
 /**
- * M0 = Q^T*D*Q is the tilted diagonal form (Q is `field.wesl`'s old world ->
- * component rotation, x' = ct*x + st*z, z' = ct*z - st*x). The shear is
+ * M0 = Q^T*D*Q is the tilted diagonal form (Q is the world -> component
+ * rotation, x' = ct*x + st*z, z' = ct*z - st*x). The shear is
  * S = I + e_y*(shearX, 0, shearZ), so M = S^T*M0*S; because M0's y row and
  * column are (0, d1, 0), that congruence collapses to the entries below
  * rather than a general 3x3 product.

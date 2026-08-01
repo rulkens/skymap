@@ -241,7 +241,6 @@ import { DEFAULT_RENDER_SETTINGS } from '../data/defaultRenderSettings';
 
 import starWgsl from './shaders/milkyWayCloud/stars.wesl?static';
 import dustWgsl from './shaders/milkyWayCloud/dust.wesl?static';
-import fieldWgsl from './shaders/milkyWayField/field.wesl?static';
 import splatWgsl from './shaders/milkyWayField/splat.wesl?static';
 import gradeWgsl from './shaders/grade.wesl?static';
 
@@ -270,13 +269,9 @@ const bloomScale = (level: number): number => 2 ** (level + 1);
  *    `aggregateTex` is its own attachment and therefore its own pass. This is
  *    the fill-bound half and the number the divisor / sprite-size knobs move,
  *    so having it isolated is most of the point of the split.
- *  - `'field'` is the analytic Gaussian-mixture pass. It shares `aggregateTex`
- *    with the sprites and so needs its own `loadOp: 'load'` pass to be timed —
- *    the very reopening cost this list refuses to pay for `'scene'`. The trade
- *    differs because the aggregate is reduced-resolution, so its tile store and
- *    reload is a fraction of the full-res HDR target's, while the number bought
- *    is the one the whole analytic-vs-sprite comparison turns on. It is a real
- *    cost all the same: the two slots will not sum to the single-pass total.
+ *  - `'field'` is the analytic Gaussian-mixture pass, into its OWN
+ *    reduced-resolution `fieldTex` (cleared, not loaded — no tile-reload tax),
+ *    so its pass and therefore its slot come free with the private target.
  *    Only encoded when the analytic field is on, so the slot self-drops.
  *  - `'scene'` is the full-res HDR pass: the aggregate's additive upsample
  *    followed by the dust billboards. Those two share an attachment and so
@@ -458,36 +453,20 @@ export async function createGalaxyEngine(
     primitive: { topology: 'triangle-list' },
   });
 
-  // ---- analytic field pipeline (SPIKE: closed-form Gaussian mixture) ----
-  // A fullscreen covering triangle drawn into the SAME `aggregateTex`, with
-  // the SAME `ADDITIVE_BLEND`, in the same pass as the sprites — so the two
-  // representations of the same emission sum, and either can be switched off
-  // to see the other alone. No vertex buffers: `fullscreenTri.wesl`
-  // synthesises its three vertices from `vertex_index`.
+  // ---- splat pipeline (analytic field: one instanced quad per component) ----
+  // Draws the closed-form Gaussian-mixture field additively into its OWN
+  // reduced-resolution `fieldTex`, which the scene pass upsamples into HDR
+  // alongside the sprites' aggregate — so the two representations of the same
+  // emission sum. One billboard PER
+  // COMPONENT rather than a fullscreen pass over all of them — see
+  // `splat.wesl`'s header for why that wins at N~300+ mixtures. No vertex
+  // buffers: `quadCorner`/the per-instance `comps` lookup both come off
+  // `vertex_index`/`instance_index` alone.
   //
   // Its own module and its own UBO, not a second entry point on the star
   // module: `layout: 'auto'` derives the bind-group layout from the module's
   // entry points, and two pipelines sharing a module that reads the binding
   // with divergent stage visibility fail the group-equivalent check.
-  const fieldMod = makeShader(fieldWgsl, 'galaxy:field');
-  const fieldPipe = device.createRenderPipeline({
-    label: 'galaxy:fieldPipe',
-    layout: 'auto',
-    vertex: { module: fieldMod, entryPoint: 'vs' },
-    fragment: {
-      module: fieldMod,
-      entryPoint: 'fs',
-      targets: [{ format: HDR, blend: ADDITIVE_BLEND }],
-    },
-    primitive: { topology: 'triangle-list' },
-  });
-
-  // ---- splat pipeline (SPIKE: one instanced quad per component) ----
-  // The A/B alternative to `fieldPipe`: same math, same target, same blend,
-  // but one billboard PER COMPONENT instead of a fullscreen loop over all of
-  // them — see `splat.wesl`'s header. No vertex buffers, same as `fieldPipe`:
-  // `quadCorner`/the per-instance `comps` lookup both come off `vertex_index`
-  // / `instance_index` alone.
   const splatMod = makeShader(splatWgsl, 'galaxy:splat');
   const splatPipe = device.createRenderPipeline({
     label: 'galaxy:splatPipe',
@@ -644,17 +623,10 @@ export async function createGalaxyEngine(
     layout: dustPipe.getBindGroupLayout(0),
     entries: [{ binding: 0, resource: { buffer: dustUbo } }],
   });
-  const fieldBG = device.createBindGroup({
-    label: 'galaxy:fieldBG',
-    layout: fieldPipe.getBindGroupLayout(0),
-    entries: [{ binding: 0, resource: { buffer: fieldUbo } }],
-  });
-  // Same `fieldUbo` buffer as `fieldBG`, but its OWN bind group: `splatPipe`
-  // is a different `layout: 'auto'` pipeline, so its auto-derived
-  // GPUBindGroupLayout is a distinct identity even though the WGSL binding
-  // is byte-identical — a bind group built against one pipeline's layout
-  // fails the other's draw-time compatibility check (see `starBG`/`dustBG`'s
-  // comment just above for the same rule).
+  // The auto-layout bind group reading `fieldUbo` (see `starBG`/`dustBG`'s
+  // comment just above: a bind group is built against ONE pipeline's
+  // `layout: 'auto'` GPUBindGroupLayout and fails another pipeline's
+  // draw-time compatibility check even for a byte-identical WGSL binding).
   const splatBG = device.createBindGroup({
     label: 'galaxy:splatBG',
     layout: splatPipe.getBindGroupLayout(0),
@@ -1535,19 +1507,9 @@ export async function createGalaxyEngine(
         ],
         ...(fieldWrites ? { timestampWrites: fieldWrites } : {}),
       });
-      // Same pass, same timing slot either way — the toggle IS the A/B: one
-      // fullscreen loop over every component (`fieldPipe`) against one
-      // instanced quad per component (`splatPipe`), both summing to the same
-      // additive image.
-      if (render.fieldSplat) {
-        pass.setPipeline(splatPipe);
-        pass.setBindGroup(0, splatBG);
-        pass.draw(6, Math.min(fieldMixture.length, GALAXY_FIELD_MAX_COMPONENTS));
-      } else {
-        pass.setPipeline(fieldPipe);
-        pass.setBindGroup(0, fieldBG);
-        pass.draw(3);
-      }
+      pass.setPipeline(splatPipe);
+      pass.setBindGroup(0, splatBG);
+      pass.draw(6, Math.min(fieldMixture.length, GALAXY_FIELD_MAX_COMPONENTS));
       pass.end();
     }
     // Scene pass: the aggregate folded into HDR, then transmittance dust over

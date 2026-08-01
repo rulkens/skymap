@@ -46,11 +46,10 @@
 # for. It is skipped entirely at the tool's default (identity) settings, so
 # the default path is the app's path. See its header.
 #
-# lib/fullscreenTri.wesl used to be local too, on the reasoning that only
-# grade.wesl drew with it. milkyWayField/field.wesl is a second consumer and
-# lives in the runtime tree, so the helper moved there and comes back through
-# a symlink like camera.wesl and tonemap.wesl — grade.wesl's
-# 'package::lib::fullscreenTri' import is unchanged.
+# lib/fullscreenTri.wesl lives in the runtime tree and comes back through a
+# symlink like camera.wesl and tonemap.wesl, so grade.wesl's
+# 'package::lib::fullscreenTri' import resolves the same way any other
+# shared lib import does.
 #
 # wesl-plugin locates this file from the explicit 'weslToml' option in
 # vite.config.ts — NOT from the Vite 'root'. By default the plugin reads

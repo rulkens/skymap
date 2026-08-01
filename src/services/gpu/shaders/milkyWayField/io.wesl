@@ -1,7 +1,7 @@
 // milkyWayField/io.wesl — uniform layout for the ANALYTIC Milky Way field:
-// a Gaussian mixture whose line integral is evaluated per fragment in one
-// fullscreen pass, as the closed-form alternative to sampling the same
-// density with sprites.
+// a Gaussian mixture whose line integral is evaluated per fragment, one
+// instanced quad per component, as the closed-form alternative to sampling
+// the same density with sprites.
 //
 // Its own struct, deliberately NOT milkyWayCloud's: nothing here is a
 // billboard, so viewProj, the billboard basis and the px clamps are all
@@ -36,8 +36,7 @@
 // warp shear (buildGalaxyFieldMixture, linearised about its centre) tilts it
 // out of any axis-aligned frame. Index 1 of M is the DISC POLE (+Y).
 // boundRadius (world-space max sigma, warp-inflated — see
-// GalaxyFieldComponent) is a billboard sizing hint for splat.wesl's
-// per-instance quad; field.wesl's fullscreen pass never reads it.
+// GalaxyFieldComponent) sizes splat.wesl's per-instance quad.
 
 struct FieldUniforms {
   eye: vec4<f32>,
