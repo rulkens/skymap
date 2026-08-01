@@ -15,8 +15,6 @@ export type GalaxyFieldTuning = {
   readonly discEnabled: boolean;
   /** Master toggle for `pushArmRidges`, mirrored to the section header checkbox. */
   readonly armsEnabled: boolean;
-  /** Blobs per arm, spaced uniformly in log-radius from `armStartRadius` to that arm's own `fadeRadius`. */
-  readonly armBlobsPerArm: number;
   /** Multiplies every blob's across-arm (radial) sigma; 1 matches `armWidthFactor`'s own scale. */
   readonly armWidthScale: number;
   /** Whole-arm-population flux multiplier over the un-folded `armFraction` share; 1 is parity with the sprite arms. */

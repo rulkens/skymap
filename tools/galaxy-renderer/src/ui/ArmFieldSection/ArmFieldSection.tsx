@@ -28,16 +28,6 @@ function ArmFieldSection(): ReactNode {
     >
       <div className={styles.root}>
         <ParamSlider
-          label="Blobs per arm"
-          value={fieldTuning.armBlobsPerArm}
-          min={8}
-          max={64}
-          step={1}
-          format={(v) => v.toFixed(0)}
-          onChange={(v) => dispatch(fieldTuningPatched({ armBlobsPerArm: v }))}
-          info="Blobs per arm, spaced uniformly in log-radius from the arm's start to its own fade radius. Cost is arms x blobs, evaluated per pixel."
-        />
-        <ParamSlider
           label="Arm width"
           value={fieldTuning.armWidthScale}
           min={0.3}

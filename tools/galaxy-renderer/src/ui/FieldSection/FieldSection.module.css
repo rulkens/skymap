@@ -7,9 +7,3 @@
   line-height: 1.4;
   opacity: 0.55;
 }
-
-.readoutOverflow {
-  composes: readout;
-  color: #ff6b6b;
-  opacity: 0.9;
-}

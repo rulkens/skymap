@@ -26,12 +26,11 @@ import type { Vec3 } from '../../@types/math/Vec3';
  * Uniform slots the shader reserves — `milkyWayField/io.wesl`'s
  * `comps: array<vec4<f32>, 4000>` is 4 vec4 per component, so raising this
  * means widening that array too (the linker will not catch a mismatch).
- * The arm slider's worst case is 192 fixed ring blobs + 8 arms x 64 blobs +
- * 8 other populations = 712, under this cap today, but `packFieldUniforms`
- * CLAMPS silently past whatever the cap is, so a slider range raised past it
- * drops components with no warning; `FieldSection`'s readout surfaces that
- * instead of leaving it silent. Raise the cap and `io.wesl`'s array together
- * or not at all.
+ * `pushArmRidges` derives its own per-arm blob count from ridge curvature and
+ * budgets it against this cap (`perArmBudget`), so arm overflow is impossible
+ * by construction; `packFieldUniforms` still CLAMPS silently if some other
+ * population pushes past it. Raise the cap and `io.wesl`'s array together or
+ * not at all.
  *
  * The bound that actually bites is WebGPU's guaranteed 64 KiB uniform
  * binding: header (96 B) + N x 64 B <= 65536 B caps N at 1022, and the
@@ -270,7 +269,6 @@ export const WARP_RING_COUNT = 8;
 export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
   discEnabled: true,
   armsEnabled: true,
-  armBlobsPerArm: 28,
   // Eyeballed sprite-arm parity at the Milky Way preset. Boost 0.5 against
   // ARM_BRIGHTNESS = 1.9 nets ~0.95: the mirrored sprite factor double-counts
   // brightness already carried by armFraction. Both knobs are slated to become
@@ -427,10 +425,21 @@ function armRidgeAngle(logR: number, geometry: GalaxyFieldGeometry, arm: GalaxyF
   );
 }
 
-/** The arm's true warped centre at (radius, its own ridge angle) — armStarSample's `x`/`y`/`z` before scatter. */
-function armCurvePos(radius: number, geometry: GalaxyFieldGeometry, arm: GalaxyFieldArmRecord): Vec3 {
-  const angle = armRidgeAngle(Math.log(radius / geometry.armStartRadius), geometry, arm);
+/**
+ * Ridge position at a given log-radius — armStarSample's `x`/`y`/`z` before
+ * scatter, the exact curve blobs are placed on. Shared by the dense
+ * curvature sample (`deriveArmBlobCount`) and the actual placement below so
+ * both agree on what "the ridge" is by construction, not by staying in sync.
+ */
+function armRidgeCurvePoint(logR: number, geometry: GalaxyFieldGeometry, arm: GalaxyFieldArmRecord): Vec3 {
+  const radius = geometry.armStartRadius * Math.exp(logR);
+  const angle = armRidgeAngle(logR, geometry, arm);
   return [radius * Math.cos(angle), warpHeight(radius, angle, geometry), radius * Math.sin(angle)];
+}
+
+/** The arm's true warped centre at a given radius — see `armRidgeCurvePoint`. */
+function armCurvePos(radius: number, geometry: GalaxyFieldGeometry, arm: GalaxyFieldArmRecord): Vec3 {
+  return armRidgeCurvePoint(Math.log(radius / geometry.armStartRadius), geometry, arm);
 }
 
 /** armStarSample's inner/outer smoothstep brightness envelope, this arm's own fadeRadius (rec0.w). */
@@ -451,6 +460,85 @@ function armClumpMod(logR: number, geometry: GalaxyFieldGeometry, arm: GalaxyFie
 /** armStarSample's gap-survival fraction for non-HII stars — the smooth stand-in for the WGSL gate's coin flip. */
 function armSurvival(clumpMod: number, geometry: GalaxyFieldGeometry): number {
   return geometry.clumpAmount > 0 ? Math.min(1, 0.4 + 0.6 * clumpMod) : 1;
+}
+
+/** This arm's cross-section sigma at a radius — same formula the blob placement's `sigmas.across` uses. */
+function armCrossSigma(radius: number, geometry: GalaxyFieldGeometry, tuning: GalaxyFieldTuning): number {
+  return geometry.armWidthFactor * radius * 0.5 * tuning.armWidthScale;
+}
+
+/** Points to densely re-sample the ridge at, to estimate curvature — see `deriveArmBlobCount`. */
+const ARM_CURVATURE_SAMPLES = 192;
+
+/**
+ * Straight-chord sag tolerance, as a fraction of the local cross-arm sigma:
+ * sag = (chord step)^2 * curvature / 8 is the standard circular-arc/chord
+ * deviation, and bounding it against sigma_across rather than an absolute
+ * length means a narrow, tightly-wound arm earns more blobs while a broad,
+ * gentle one doesn't pay for headroom it doesn't need. Calibrated so the
+ * Milky Way preset lands near the previously approved ~28 blobs/arm, and
+ * tightening pitch or narrowing width raises the count automatically.
+ */
+const ARM_SAG_TOLERANCE = 0.3;
+
+/** Floor below which an arm reads as a dashed line no matter how straight it is. */
+const ARM_BLOBS_MIN = 12;
+
+/**
+ * Derives this arm's blob count from ridge curvature instead of a fixed
+ * tuning knob: densely sample the ridge, and at each interior sample use the
+ * Menger curvature kappa of its neighbouring triple (kappa = 4*area /
+ * (|a||b||c|), the reciprocal of the circumradius) plus a central-difference
+ * ds/du to bound the largest uniform-in-logR blob spacing whose straight-line
+ * chord would sag past ARM_SAG_TOLERANCE * sigma_across at that point. The
+ * tightest interval wins; `perArmBudget` is the hard cap under
+ * GALAXY_FIELD_MAX_COMPONENTS this arm may spend (see call site).
+ */
+function deriveArmBlobCount(
+  logStart: number,
+  logEnd: number,
+  geometry: GalaxyFieldGeometry,
+  arm: GalaxyFieldArmRecord,
+  tuning: GalaxyFieldTuning,
+  perArmBudget: number,
+): number {
+  const totalLogSpan = logEnd - logStart;
+  const n = ARM_CURVATURE_SAMPLES;
+  const duSample = totalLogSpan / (n - 1);
+  const points: Vec3[] = [];
+  const radii: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const logR = logStart + duSample * i;
+    points.push(armRidgeCurvePoint(logR, geometry, arm));
+    radii.push(geometry.armStartRadius * Math.exp(logR));
+  }
+
+  let duMax = Infinity;
+  for (let i = 1; i < n - 1; i++) {
+    const p0 = points[i - 1]!;
+    const p1 = points[i]!;
+    const p2 = points[i + 1]!;
+    const sideA = distance3(p0, p1);
+    const sideB = distance3(p1, p2);
+    const sideC = distance3(p0, p2); // also the central-difference chord for ds/du at i
+    const dsDu = sideC / (2 * duSample);
+    if (dsDu <= 1e-9) continue; // stationary point — no arc-length bound here
+
+    const v1: Vec3 = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]];
+    const v2: Vec3 = [p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]];
+    const cross = cross3(v1, v2);
+    const area = 0.5 * Math.hypot(cross[0], cross[1], cross[2]);
+    const kappa = sideA > 1e-12 && sideB > 1e-12 && sideC > 1e-12 ? (4 * area) / (sideA * sideB * sideC) : 0;
+    if (kappa <= 1e-9) continue; // straight here — no curvature bound, any spacing sags 0
+
+    const sigma = armCrossSigma(radii[i]!, geometry, tuning);
+    // sag = (dsDu * du)^2 * kappa / 8 <= tol * sigma, solved for du.
+    const duBound = Math.sqrt((8 * ARM_SAG_TOLERANCE * sigma) / kappa) / dsDu;
+    duMax = Math.min(duMax, duBound);
+  }
+
+  const nArm = Number.isFinite(duMax) ? Math.ceil(totalLogSpan / duMax) + 1 : ARM_BLOBS_MIN;
+  return Math.min(perArmBudget, Math.max(ARM_BLOBS_MIN, nArm));
 }
 
 /**
@@ -479,8 +567,7 @@ function pushArmRidges(
   tuning: GalaxyFieldTuning,
 ): void {
   if (!tuning.armsEnabled || geometry.armFraction <= 0 || geometry.numArms <= 0) return;
-  const { armStartRadius, diskHeight, armWidthFactor } = geometry;
-  const blobsPerArm = Math.max(2, Math.round(tuning.armBlobsPerArm));
+  const { armStartRadius, diskHeight } = geometry;
   const sharpness = Math.max(1, tuning.armBlobSharpness);
   const color = armColor(geometry.youngFraction);
 
@@ -489,6 +576,10 @@ function pushArmRidges(
   if (weightSum <= 0) return;
 
   const totalFlux = emissionScale(geometry) * geometry.armFraction * ARM_BRIGHTNESS * tuning.armFluxBoost;
+  // Components already pushed (disc + warped outer disc) bound what arms may
+  // still spend, split evenly across them — makes cap overflow structurally
+  // impossible rather than a silent packFieldUniforms clamp.
+  const perArmBudget = Math.floor((GALAXY_FIELD_MAX_COMPONENTS - out.length) / geometry.numArms);
 
   for (const arm of geometry.arms) {
     const rStart = armStartRadius * 1.05;
@@ -496,6 +587,7 @@ function pushArmRidges(
     if (rEnd <= rStart) continue;
     const logStart = Math.log(rStart / armStartRadius);
     const logEnd = Math.log(rEnd / armStartRadius);
+    const blobsPerArm = deriveArmBlobCount(logStart, logEnd, geometry, arm, tuning, perArmBudget);
 
     // Centres first, uniform steps in log-radius — every other per-blob
     // quantity (spacing, flux, tangent) is derived from this curve.
@@ -505,12 +597,10 @@ function pushArmRidges(
     const centers: Vec3[] = [];
     for (let k = 0; k < blobsPerArm; k++) {
       const logR = logStart + ((logEnd - logStart) * k) / (blobsPerArm - 1);
-      const radius = armStartRadius * Math.exp(logR);
-      const angle = armRidgeAngle(logR, geometry, arm);
       logRs.push(logR);
-      radii.push(radius);
-      angles.push(angle);
-      centers.push([radius * Math.cos(angle), warpHeight(radius, angle, geometry), radius * Math.sin(angle)]);
+      radii.push(armStartRadius * Math.exp(logR));
+      angles.push(armRidgeAngle(logR, geometry, arm));
+      centers.push(armRidgeCurvePoint(logR, geometry, arm));
     }
 
     // Per-blob line density x arc-spacing, in one pass since both the flux
@@ -552,7 +642,7 @@ function pushArmRidges(
 
       const sigmas = {
         along: (spacings[k]! * RING_AZIMUTHAL_OVERLAP) / sharpness,
-        across: (armWidthFactor * radius * 0.5 * tuning.armWidthScale) / sharpness,
+        across: armCrossSigma(radius, geometry, tuning) / sharpness,
         pole: (diskHeight * 0.8) / sharpness,
       };
       const blobFlux = armTargetFlux * (rawFlux[k]! / armRawSum);
@@ -667,20 +757,17 @@ function pushHalo(
 
 /**
  * Component count is `WARP_RING_COUNT * RING_BLOBS_PER_RING` (192, fixed)
- * PLUS `tuning.numArms * tuning.armBlobsPerArm`: at the arm slider's ceiling
- * that is 4 inner disc + 192 ring + 8*64 arm + 2 bulge + 1 bar + 1 halo = 712,
- * under the shader's 1000 (`GALAXY_FIELD_MAX_COMPONENTS`) — `FieldSection`'s
- * readout still surfaces `packFieldUniforms`' silent clamp in case a future
- * slider range pushes it back over. That ceiling is a TUNING range, not a
- * target — it's the fixed size of the `comps` uniform array in
- * `milkyWayField/io.wesl` (4000 vec4 slots = 1000 components), unrelated to
- * render cost: the splat path draws one quad per component, so cost tracks
- * covered screen area, not component count. Structure the closed form still
- * cannot carry (the lopsided modulation, sub-arm spurs, the irregular bar
- * offset, HII knots) is folded into the axisymmetric populations or dropped;
- * the warp survives as blob placement (`pushWarpedOuterDisc`,
- * `pushArmRidges`) plus each component's own linearised shear (`shapeOf`) or
- * true surface frame.
+ * PLUS each arm's own `deriveArmBlobCount`, individually budget-clamped
+ * against `GALAXY_FIELD_MAX_COMPONENTS` so the grand total can never exceed
+ * the shader's 1000 — that ceiling is the fixed size of the `comps` uniform
+ * array in `milkyWayField/io.wesl` (4000 vec4 slots = 1000 components),
+ * unrelated to render cost: the splat path draws one quad per component, so
+ * cost tracks covered screen area, not component count. Structure the closed
+ * form still cannot carry (the lopsided modulation, sub-arm spurs, the
+ * irregular bar offset, HII knots) is folded into the axisymmetric
+ * populations or dropped; the warp survives as blob placement
+ * (`pushWarpedOuterDisc`, `pushArmRidges`) plus each component's own
+ * linearised shear (`shapeOf`) or true surface frame.
  */
 export function buildGalaxyFieldMixture(
   geometry: GalaxyFieldGeometry,
