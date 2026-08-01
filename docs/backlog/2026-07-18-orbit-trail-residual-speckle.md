@@ -26,6 +26,11 @@ the minors it replaced — the residual speckle below may already be gone.
 Re-check on hardware at the next visual pass before continuing to carry this
 item.
 
+**Re-checked 2026-08-01** (visible-arc redesign visual pass): the family
+survives as dashed/dotted rendering on near-edge-on trails — two dashed
+orbits at the solar-system pose, seen from within their own plane. User
+verdict: accepted over the perf win; still polish, not a blocker.
+
 ## What remains (ranked suspects from the 2026-07-18 investigation)
 
 The residual speckle survives the gradient fix, so it comes from the other
@@ -55,6 +60,14 @@ f32 stages of the per-fragment reconstruction:
   Sampson structure changes.
 - **Soften the discards** (suspect 3) — cheap, worth trying first; may
   suffice visually.
+- **Interpolated-varying stroke** (the visible-arc redesign's unbuilt third
+  dial, 2026-08-01): the CPU already clips each orbit to its visible E-arc
+  and the ribbon vertices already know their exact E and signed pixel offset
+  from the curve — pass those as varyings and derive stroke distance and
+  Kepler phase by interpolation instead of per-fragment back-projection. The
+  ill-conditioned `ginv` chain leaves the fragment entirely; accuracy then
+  rests on sample density (pairs naturally with adaptive-in-curvature
+  sampling, the unbuilt second dial). Biggest rewrite, strongest fix.
 - **f32 error-compensated evaluation** (two-sum / Kahan-style on `q`) — ruled
   out 2026-07-31: hardware-proven DEAD on this toolchain, Dawn/Metal
   fast-math breaks the error-free transformations it depends on (see
