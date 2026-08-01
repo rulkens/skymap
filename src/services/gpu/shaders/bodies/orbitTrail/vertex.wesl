@@ -149,7 +149,11 @@ fn vsRibbon(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
     let axisOut = axisChord / max(length(axisChord), 1e-20); // guarded; zero if anchors coincide (segment projects to a point)
     let axisNormal = vec2<f32>(-axisOut.y, axisOut.x);
     let h = foldHalfWidth(ownAnchor, viewportPx);
-    outPx = ownAnchor + h * axisOut + side * h * axisNormal;
+    // axisOut flips sign between the two quad ends (it points outward at
+    // each), so axisNormal flips with it; 'side' must flip too or the two
+    // triangles bowtie and shed a viewport-scale wedge.
+    let sideOut = select(-side, side, offset == 1u);
+    outPx = ownAnchor + h * axisOut + sideOut * h * axisNormal;
     w = ownRaw.z;
   } else if (partnerRaw.z > epsW) {
     // Own behind, this segment's OTHER endpoint in front: clamp toward it
@@ -167,7 +171,8 @@ fn vsRibbon(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
     let axisOut = axisChord / max(length(axisChord), 1e-20);
     let axisNormal = vec2<f32>(-axisOut.y, axisOut.x);
     let h = foldHalfWidth(ownAnchor, viewportPx); // same shared-axis frame as the one-sided branch above
-    outPx = ownAnchor + h * axisOut + side * h * axisNormal;
+    let sideOut = select(-side, side, offset == 1u); // same per-end flip as above
+    outPx = ownAnchor + h * axisOut + sideOut * h * axisNormal;
     w = epsW;
   } else {
     // Both endpoints behind: this arc is entirely behind-camera, so it stays
