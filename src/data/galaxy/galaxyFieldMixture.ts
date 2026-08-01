@@ -431,8 +431,10 @@ function smoothstep01(t: number): number {
   return c * c * (3 - 2 * c);
 }
 
+// Exported so the SF-event catalog (`sfEventCatalog.ts`) and the dust network
+// share the same ridge truth by import, not by re-deriving the curve.
 /** armStarSample's ridge angle: log-spiral phase + meander + (gated) high-frequency wave. */
-function armRidgeAngle(
+export function armRidgeAngle(
   logR: number,
   geometry: GalaxyFieldGeometry,
   arm: GalaxyFieldArmRecord,
@@ -458,7 +460,7 @@ function armRidgeAngle(
  * curvature sample (`deriveArmBlobCount`) and the actual placement below so
  * both agree on what "the ridge" is by construction, not by staying in sync.
  */
-function armRidgeCurvePoint(
+export function armRidgeCurvePoint(
   logR: number,
   geometry: GalaxyFieldGeometry,
   arm: GalaxyFieldArmRecord,
@@ -478,7 +480,7 @@ function armCurvePos(
 }
 
 /** armStarSample's inner/outer smoothstep brightness envelope, this arm's own fadeRadius (rec0.w). */
-function armFadeEnvelope(
+export function armFadeEnvelope(
   radius: number,
   geometry: GalaxyFieldGeometry,
   arm: GalaxyFieldArmRecord,
@@ -519,7 +521,7 @@ const ARM_WIDTH_FLOOR_H = 0.017;
 const ARM_WIDTH_SLOPE = 0.036;
 
 /** This arm's cross-section sigma at a radius — same formula the blob placement's `sigmas.across` uses. */
-function armCrossSigma(
+export function armCrossSigma(
   radius: number,
   geometry: GalaxyFieldGeometry,
   tuning: GalaxyFieldTuning,

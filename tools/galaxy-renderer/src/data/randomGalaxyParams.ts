@@ -88,6 +88,21 @@ export function randomGalaxyParams(
     tau: 0.2 + rng() * 0.8,
     scaleLenRatio: 1.4 + rng() * 0.35,
     heightRatio: 0.25 + rng() * 0.5,
+    network: {
+      armContrast: 2 + rng() * 3,
+      sfActivity: 0.3 + rng() * 1.7,
+      texture: 0.2 + rng() * 0.5,
+      spurStrength: 0.3 + rng() * 0.7,
+      // Refiners are taste scalers, not galaxy properties — randomize leaves
+      // them at their literature/neutral value rather than rolling them.
+      laneWidth: 1,
+      laneOffset: 1,
+      spurSpacing: 1,
+      spurLength: 1,
+      bubbleScale: 1,
+      bubbleRimStrength: 0.5,
+      beadShare: 0.5,
+    },
   };
 
   return { type, ...sampled, hii, seed, asymSeed, clumpSeed, waveSeed, dust };
