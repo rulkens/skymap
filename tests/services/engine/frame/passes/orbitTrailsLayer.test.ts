@@ -534,6 +534,36 @@ describe('orbitTrailsLayer.draw', () => {
     expect(composeMock).not.toHaveBeenCalled(); // culled before composing Ginv
   });
 
+  it('an eSpan <= 0 arc (whole orbit behind the camera) drops that one instance from the packed count', () => {
+    // The mock normally hands back a constant [601, 602] arc, so this pins
+    // the layer's OWN `if (arc[1] <= 0) continue`, not composeOrbitConic's
+    // real math (covered separately).
+    const renderer = makeRendererSpy();
+    const view = makeNear0View();
+    composeMock.mockClear();
+    renderer.draw.mockClear();
+
+    orbitTrailsLayer.draw(PASS_STUB, view, makeDrawCtx(), makeState(renderer));
+    const baselineCount = renderer.draw.mock.calls[0]![2] as number;
+    expect(baselineCount).toBeGreaterThan(1); // need a second composed orbit to single out below
+
+    const defaultImpl = composeMock.getMockImplementation() as unknown as (
+      ...args: unknown[]
+    ) => ConicOut;
+    let call = 0;
+    composeMock.mockImplementation((...args: unknown[]) => {
+      call++;
+      const out = defaultImpl(...args);
+      return call === 2 ? { ...out, arc: [0, 0] } : out;
+    });
+    renderer.draw.mockClear();
+
+    orbitTrailsLayer.draw(PASS_STUB, view, makeDrawCtx(), makeState(renderer));
+    expect(renderer.draw.mock.calls[0]![2]).toBe(baselineCount - 1);
+
+    composeMock.mockImplementation(defaultImpl); // restore the default for later tests
+  });
+
   it('the layer forwards the debug flag to the renderer', () => {
     // `enabled()` never forces the layer on for this flag — draw() just reads
     // it alongside settings.orbitTrails.enabled and passes it straight through

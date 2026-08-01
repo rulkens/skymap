@@ -130,3 +130,79 @@ describe('composeOrbitConic — clip basis', () => {
   });
 });
 
+// ── Visible arc (CPU closed-form near-plane clip, spec Task 11) ─────────────
+//
+// `w(E) = Cc.z + cos(E)*Ac.z + sin(E)*Bc.z` (index 2 of each padded clip
+// column, per the .xyz-not-.xyw landmine `vertex.wesl` documents) is the same
+// sinusoid the vertex stage samples. These tests reconstruct it from the
+// returned `clipBasis` rather than asserting numbers — a sign slip in `phi`
+// or a swapped `eStart`/`eSpan` should fail one of these, not just the
+// existing round-trip tests above (which only sample E = 0, pi/2, pi, ...
+// and never look at the arc bounds).
+
+describe('composeOrbitConic — visible arc', () => {
+  function perspectiveLookAt(eye: Vec3, target: Vec3): Float64Array {
+    return mat4d.multiply(
+      mat4d.perspective(Math.PI / 4, viewportPx[0] / viewportPx[1], 0.1, 100),
+      mat4d.lookAt(eye, target, [0, 1, 0]),
+    ) as Float64Array;
+  }
+
+  function wAt(clipBasis: readonly [Float32Array, Float32Array, Float32Array], E: number): number {
+    const [Cc, Ac, Bc] = clipBasis;
+    return Cc[2]! + Math.cos(E) * Ac[2]! + Math.sin(E) * Bc[2]!;
+  }
+
+  it('an orbit entirely in front of the camera is fully visible', () => {
+    // The shared fixture camera above looks straight at C from outside the
+    // ellipse — every sample is in front.
+    const { arc } = composeOrbitConic(VP, C, A, B, viewportPx, renderOrigin);
+    expect(arc[1]).toBeCloseTo(2 * Math.PI, 10);
+  });
+
+  it('an orbit entirely behind the camera is culled', () => {
+    // Eye well past the ellipse along +A, looking further away from it —
+    // every orbit point sits behind the eye along the view direction.
+    const eye: Vec3 = [C[0] + 5 * A[0], C[1] + 5 * A[1], C[2] + 5 * A[2]];
+    const target: Vec3 = [eye[0] + A[0], eye[1] + A[1], eye[2] + A[2]];
+    const { arc } = composeOrbitConic(perspectiveLookAt(eye, target), C, A, B, viewportPx, renderOrigin);
+    expect(arc[1]).toBe(0);
+  });
+
+  it("a straddling orbit's arc is exactly the in-front interval", () => {
+    // Eye inside the orbit's own plane (offset from C along A, short of
+    // periapsis), looking further along A: A and B are world-orthogonal in
+    // this fixture (A.B == 0), so w(E) is exactly proportional to
+    // (cos(E) - 0.5) here — negative over roughly half the orbit.
+    const eye: Vec3 = [C[0] + 0.5 * A[0], C[1] + 0.5 * A[1], C[2] + 0.5 * A[2]];
+    const target: Vec3 = [eye[0] + A[0] * 10, eye[1] + A[1] * 10, eye[2] + A[2] * 10];
+    const { arc, clipBasis } = composeOrbitConic(
+      perspectiveLookAt(eye, target),
+      C,
+      A,
+      B,
+      viewportPx,
+      renderOrigin,
+    );
+    const [eStart, eSpan] = arc;
+
+    // Genuinely straddling — neither the fully-open nor fully-closed branch.
+    expect(eSpan).toBeGreaterThan(0);
+    expect(eSpan).toBeLessThan(2 * Math.PI - 1e-3);
+
+    const delta = 1e-3;
+    // In front at both ends and at interior samples.
+    expect(wAt(clipBasis, eStart)).toBeGreaterThan(0);
+    expect(wAt(clipBasis, eStart + eSpan)).toBeGreaterThan(0);
+    for (const t of [0.25, 0.5, 0.75]) {
+      expect(wAt(clipBasis, eStart + t * eSpan)).toBeGreaterThan(0);
+    }
+    // Just outside either end, w has dropped below the boundary value —
+    // cos(E - phi) is strictly decreasing moving away from phi across this
+    // span, so this pins the endpoints as the true crossings, not a random
+    // interval that happens to also satisfy "positive inside".
+    expect(wAt(clipBasis, eStart - delta)).toBeLessThan(wAt(clipBasis, eStart));
+    expect(wAt(clipBasis, eStart + eSpan + delta)).toBeLessThan(wAt(clipBasis, eStart + eSpan));
+  });
+});
+

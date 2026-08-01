@@ -3,9 +3,9 @@
 // orbitTrail/fragment.wesl.
 //
 // One instance = one orbit, drawn by 'vsRibbon' — a screen-space ribbon
-// hugging the projected ellipse, near-plane-clamped so it bounds every
-// projection. The fragment stage reads its own '@builtin(position)' pixel
-// and evaluates the projected conic analytically from 'Ginv' (spec 3.3);
+// hugging the projected ellipse across its CPU-clipped in-front-of-camera
+// arc. The fragment stage reads its own '@builtin(position)' pixel and
+// evaluates the projected conic analytically from 'Ginv' (spec 3.3);
 // 'VSOut' is the contract between vertex and fragment.
 //
 // ## Why the struct lives here
@@ -46,8 +46,8 @@ struct VSOut {
 
 // Per-instance vertex input, matching the TS pipeline's instance-buffer
 // descriptor byte-for-byte (see orbitTrailRenderer.ts): 80 bytes of conic +
-// tint data, followed by 48 bytes of clip-space conic basis that 'vsRibbon'
-// walks per sample to trace the ellipse.
+// tint data, 48 bytes of clip-space conic basis 'vsRibbon' walks per sample
+// to trace the ellipse, then 8 bytes of visible-arc interval — 136 total.
 struct OrbitInstance {
   // Ginv columns (.xyz used, .w pad) — see vertex.wesl's 'vsRibbon' doc.
   @location(1) ginv0: vec4<f32>,

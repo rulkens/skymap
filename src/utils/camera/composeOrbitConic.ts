@@ -48,10 +48,10 @@
  * hugely-projected orbit.
  *
  * The ribbon-impostor plan's Task 3 (spec §2) is why the second return field,
- * `clipBasis`, is `(Cc, Ac, Bc)` —
- * the same `cC`/`cS`/`cT` triple below, narrowed rather than rederived — so the
- * vertex stage can bound the orbit with a screen-space ribbon, near-plane-
- * clamped (Task 11) to cover every projection with no separate fallback.
+ * `clipBasis`, is `(Cc, Ac, Bc)` — the same `cC`/`cS`/`cT` triple below,
+ * narrowed rather than rederived — so the vertex stage can walk a screen-space
+ * ribbon across exactly the third return field, `arc`: the in-front-of-camera
+ * E-interval this function clips to in closed form (see its own doc below).
  *
  * ### Landmine
  *
@@ -94,9 +94,11 @@ export function composeOrbitConic(
    * The in-front-of-camera arc as `[eStart, eSpan]` (radians). Clip-w along the
    * orbit is `w(E) = Cw + R·cos(E − φ)` — a pure sinusoid — so the visible part
    * is EXACTLY one E-interval, computed here in closed form (f64). `eSpan` is
-   * `TAU` when the whole orbit is in front, `0` when none of it is (cull); the
-   * vertex stage samples only inside the interval, so geometry for the
-   * behind-camera arc never exists.
+   * `TAU` when the whole orbit is in front (also the fallthrough for a
+   * non-finite `Cw`/`R`, contained downstream: NaN vertices drop the
+   * primitive and the fragment's guards fail closed), `0` when none of it is
+   * (cull); the vertex stage samples only inside the interval, so geometry
+   * for the behind-camera arc never exists.
    */
   arc: readonly [number, number];
 } {

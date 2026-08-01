@@ -2,11 +2,11 @@
  * orbitTrailRenderer — Keplerian orbit trails as screen-space conics in the
  * depthless HDR accumulation (spec 2026-07-11 §6; ribbon impostor spec
  * 2026-07-31 §2.2/§2.4/§Task 12). ONE production pipeline (`vsRibbon` + `fs`)
- * over one fragment module and one instance VBO — the near-plane-clamped
- * ribbon (Task 11) covers every projection, so there is no second fallback
- * pipeline. Same profile as `planetRenderer` otherwise — additive, depthless,
- * cull-none, explicit empty layout, no bind groups (every quantity rides the
- * per-instance record).
+ * over one fragment module and one instance VBO — the CPU clips every orbit
+ * to its in-front-of-camera arc, so the vertex stage never needs a second
+ * fallback pipeline for the behind-camera case. Same profile as
+ * `planetRenderer` otherwise — additive, depthless, cull-none, explicit
+ * empty layout, no bind groups (every quantity rides the per-instance record).
  * @module
  */
 
@@ -34,11 +34,11 @@ export const INSTANCE_STRIDE = INSTANCE_FLOATS * 4; // 136 bytes
 
 /**
  * Per-instance vertex attributes at `@location`s 1..9 — the three `Ginv`
- * columns, colour+eccentricity, mean anomaly+fade, the three
- * clip-basis vec4s, then the visible-arc interval. There is no `@location(0)`: `vsRibbon` generates its own
- * geometry from `@builtin(vertex_index)`, so this instance buffer is the
- * pipeline's ONLY vertex buffer. Byte offsets must match
- * `orbitTrail/io.wesl`'s `OrbitInstance` exactly.
+ * columns, colour+eccentricity, mean anomaly+fade, the three clip-basis
+ * vec4s, then the visible-arc interval. There is no `@location(0)`:
+ * `vsRibbon` generates its own geometry from `@builtin(vertex_index)`,
+ * so this instance buffer is the pipeline's ONLY vertex buffer. Byte
+ * offsets must match `orbitTrail/io.wesl`'s `OrbitInstance` exactly.
  */
 const INSTANCE_ATTRIBUTES: readonly GPUVertexAttribute[] = [
   { shaderLocation: 1, offset: 0, format: 'float32x4' }, // Ginv column 0 (.xyz + pad)

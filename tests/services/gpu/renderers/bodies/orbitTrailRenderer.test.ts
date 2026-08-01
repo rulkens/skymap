@@ -4,12 +4,12 @@
  * Vitest runs in Node without a WebGPU surface, so every `create*` call the
  * renderer issues at construction returns a plausibly-shaped stand-in. These
  * tests pin the `Renderer` contract, the 34-float / 136-byte instance
- * record (locations 1..8, the ribbon impostor's clip-basis addition at
- * 6/7/8), the one-pipeline-one-module-one-VBO construction (the near-plane-
- * clamped ribbon covers every projection, so there is no fallback pipeline),
- * the single-count `draw` call (`draw(pass, instances, count)`), the count
- * guard, the grow-on-slots instance buffer, and the additive depthless hdr
- * pipeline profile.
+ * record (locations 1..9, the ribbon impostor's clip-basis addition at
+ * 6/7/8 and the visible-arc interval at 9), the one-pipeline-one-module-
+ * one-VBO construction (every orbit is CPU-clipped to its in-front-of-
+ * camera arc, so there is no fallback pipeline), the single-count `draw`
+ * call (`draw(pass, instances, count)`), the count guard, the grow-on-slots
+ * instance buffer, and the additive depthless hdr pipeline profile.
  */
 
 import { describe, it, expect, vi } from 'vitest';
