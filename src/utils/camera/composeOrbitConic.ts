@@ -181,10 +181,13 @@ export function composeOrbitConic(
   // Visible arc in closed form, in f64. w(E) = Cw + Aw·cosE + Bw·sinE
   // = Cw + R·cos(E − φ); the arc is where w exceeds epsW, the same threshold
   // the vertex stage's unguarded clip.w divide depends on staying positive.
-  // 1e-4, not 1e-6: at the worst pose (cw ≈ 0) f32-narrowing eStart/eSpan
-  // alone spends ~75% of a 1e-6 budget, and WGSL only guarantees sin/cos to
-  // 2^-11 absolute — 1e-4 buys back two orders of margin, at the cost of
-  // ≤1e-4 rad of arc that was already >1e4 px off-screen.
+  // epsW is a RELATIVE fraction of the clip-w swing (|cw| + wAmp), unrelated
+  // to vertex.wesl's CLOSED_SPAN_EPS (radians of E) despite the coincident
+  // 1e-4 magnitude. 1e-4, not 1e-6: at the worst pose (cw ≈ 0) f32-narrowing
+  // eStart/eSpan alone spends ~75% of a 1e-6 budget, and WGSL only
+  // guarantees sin/cos to 2^-11 absolute — 1e-4 buys back two orders of
+  // margin, at the cost of ≤1e-4 rad of arc that was already >1e4 px
+  // off-screen.
   const cw = cC[2];
   const aw = cS[2];
   const bw = cT[2];

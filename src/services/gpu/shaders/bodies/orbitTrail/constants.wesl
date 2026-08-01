@@ -10,3 +10,7 @@
 const STROKE_PX: f32 = 2.5;
 const SEGMENTS: u32 = 96u;    // E-steps around the ribbon; 6 verts each
 const MARGIN_PX: f32 = 2.0;   // f32 vertex noise + per-vertex-normal slack ONLY (see Task 4)
+
+// Radians of eccentric anomaly E within TAU counted as "closed". Unrelated to
+// composeOrbitConic's epsW (a relative clip-w fraction) despite the same 1e-4.
+const CLOSED_SPAN_EPS: f32 = 1e-4;

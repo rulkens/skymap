@@ -9,6 +9,7 @@
 // Ribbon widening is bounded by clamping each neighbour's reach before use,
 // not by any fold/clamp on the samples themselves — see clampReach below.
 
+import package::bodies::orbitTrail::constants::CLOSED_SPAN_EPS;
 import package::bodies::orbitTrail::constants::MARGIN_PX;
 import package::bodies::orbitTrail::constants::SEGMENTS;
 import package::bodies::orbitTrail::constants::STROKE_PX;
@@ -55,7 +56,7 @@ fn vsRibbon(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
   let side = cornerSide[corner];
 
   let viewportPx = vec2<f32>(inst.phase.z, inst.phase.w);
-  let closed = inst.arc.y >= TAU - 1e-4;
+  let closed = inst.arc.y >= TAU - CLOSED_SPAN_EPS;
 
   // Own sample and its true neighbours. Closed strips index modulo SEGMENTS
   // (sample SEGMENTS is then BIT-IDENTICAL to sample 0, keeping the seam
