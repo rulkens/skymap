@@ -66,6 +66,13 @@ export type RenderSettings = {
   readonly analyticField: boolean;
   /** SPIKE, tool-only: whole-field intensity multiplier for the analytic pass, where 1.0 emits the sprite field's own total flux. */
   readonly analyticExposure: number;
+  /**
+   * DUST (LEGACY) header pill: off forces the sprite generator's dust knobs
+   * (`spriteDust`, `dustRingStrength`) to 0 in the copy handed to the engine,
+   * leaving the stored `galaxy` params (and the sliders showing them)
+   * untouched — see the gate in `engineBridge.ts`.
+   */
+  readonly legacyDustEnabled: boolean;
 
   /**
    * The app's Milky-Way visibility fade, ported so the cloud can be tuned in

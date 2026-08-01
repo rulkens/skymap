@@ -34,11 +34,21 @@
 
 import type { AppStore } from './createStore';
 import type { GalaxyEngineHandle } from '../../@types/engine/GalaxyEngineHandle';
+import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
+import type { RenderSettings } from '../../@types/engine/RenderSettings';
 import { buildExtraSpecs } from '../data/buildExtraSpecs';
 
 const COMPARE_OPEN_INSET_PX = 390; // html:493
 const COMPARE_CLOSED_INSET_PX = 0;
 const REFERENCE_INSET_PX = 340; // html:597 — the reference thumbnail strip, constant regardless of open/closed
+
+// DUST (LEGACY) pill gate: patches the OUTGOING copy handed to the engine,
+// never the stored `galaxy` params — toggling the pill back on must restore
+// exactly the values the sliders still show while it was off.
+function paramsForEngine(galaxy: GalaxyParams, render: RenderSettings): GalaxyParams {
+  if (render.legacyDustEnabled) return galaxy;
+  return { ...galaxy, spriteDust: 0, dustRingStrength: 0 };
+}
 
 export function connectEngineBridge(
   store: AppStore,
@@ -58,13 +68,16 @@ export function connectEngineBridge(
     REFERENCE_INSET_PX,
   );
   engine.setAutoRotate(prev.ui.autoRotate);
-  void engine.setParams(prev.galaxy);
+  void engine.setParams(paramsForEngine(prev.galaxy, prev.render));
 
   const unsubscribe = store.subscribe(() => {
     const next = store.getState();
 
-    if (next.galaxy !== prev.galaxy) {
-      void engine.setParams(next.galaxy);
+    if (
+      next.galaxy !== prev.galaxy ||
+      next.render.legacyDustEnabled !== prev.render.legacyDustEnabled
+    ) {
+      void engine.setParams(paramsForEngine(next.galaxy, next.render));
     }
 
     if (next.render !== prev.render || next.lod !== prev.lod) {

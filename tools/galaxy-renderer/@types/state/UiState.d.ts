@@ -16,6 +16,7 @@ export type UiState = {
       | 'armField'
       | 'pop'
       | 'dust'
+      | 'analyticDust'
       | 'glob'
       | 'render'
       | 'field'
