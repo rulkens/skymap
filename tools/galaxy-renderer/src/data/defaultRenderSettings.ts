@@ -74,6 +74,12 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // `MILKY_WAY_TUNING_DEFAULTS` counterpart yet — the runtime has no analytic
   // field to size a target for.
   fieldDivisor: 6,
+  // The dust map's OWN divisor, far finer than the field's: it carries the
+  // particle-cloud tier (dustParticleCloud.ts) and the lane/spur/bubble/bead
+  // network, both cloud-scale detail rather than the smooth field's kpc-scale
+  // Gaussians, so it is sized against ITS OWN content instead of inheriting
+  // the field's fill-bound compromise — see io.wesl's DUST MAP doc.
+  dustDivisor: 2,
   // Both legacy halves OFF at boot: the star bag and its sprite dust are
   // scheduled for deletion (research doc s12), so the analytic field alone is
   // now the subject rather than one side of a comparison — and an

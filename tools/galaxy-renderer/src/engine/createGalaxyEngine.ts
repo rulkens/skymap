@@ -329,17 +329,20 @@ const bloomScale = (level: number): number => 2 ** (level + 1);
  *    so having it isolated is most of the point of the split.
  *  - `'dustMap'` is the dust-column splat — Gaussian dust components then
  *    the detail-tier feature network, two pipelines in one pass — into its
- *    OWN full-res `dustMapTex` (cleared, not loaded). Only encoded when
- *    there is dust or a feature to splat OR the JWST view needs a fresh map
- *    (see `drawFrame`'s gate), so the slot drops on a dustless galaxy
- *    exactly like `'field'` drops when the model is off.
- *  - `'field'` is whichever pass filled `fieldTex` this frame: the analytic
- *    Gaussian-mixture splat normally, or the JWST dustPresent pass when
- *    `render.dustView` is on — both write the SAME reduced-resolution
- *    `fieldTex` (cleared, not loaded — no tile-reload tax), so sharing one
- *    slot between the two answers the same question ("what did this pass
- *    cost") regardless of which one ran. Only encoded when the analytic
- *    field is on, so the slot self-drops.
+ *    OWN reduced-resolution `dustMapTex` (cleared, not loaded), sized to its
+ *    own `dustDivisor` rather than the field's. Only encoded when there is
+ *    dust or a feature to splat OR the JWST view needs a fresh map (see
+ *    `drawFrame`'s gate), so the slot drops on a dustless galaxy exactly
+ *    like `'field'` drops when the model is off.
+ *  - `'field'` is whichever pass filled the field/dust-view target this
+ *    frame: the analytic Gaussian-mixture splat into `fieldTex` normally, or
+ *    the JWST dustPresent pass into its own `dustViewTex` when
+ *    `render.dustView` is on (the two ride independent divisors now, so they
+ *    are no longer the same texture — see `dustMapTex`'s declaration
+ *    comment). Both targets are cleared, not loaded — no tile-reload tax —
+ *    so sharing one slot between the two answers the same question ("what
+ *    did this pass cost") regardless of which one ran. Only encoded when the
+ *    analytic field is on, so the slot self-drops.
  *  - `'scene'` is the full-res HDR pass: the aggregate's additive upsample
  *    followed by the dust billboards. Those two share an attachment and so
  *    share a pass; separating them would mean ending the HDR pass and
@@ -635,8 +638,8 @@ export async function createGalaxyEngine(
   // `milkyWayField/dustMap.wesl`: one instanced quad per PRIMARY dust
   // component (splat.wesl's own silhouette math via `lib/splatSilhouette`),
   // additively accumulating four depth-sliced optical depths into
-  // `dustMapTex`, at fieldTex's own divisor-matched resolution (see
-  // `dustMapTex`'s declaration below).
+  // `dustMapTex`, at its own divisor-matched resolution (see `dustMapTex`'s
+  // declaration below).
   // Replaces splat.wesl's former per-fragment dust loop with a texture read
   // — see splat.wesl's header and the grill-session doc's N1.
   // Its own module (not a second entry point on `splatMod`) and its own
@@ -684,7 +687,7 @@ export async function createGalaxyEngine(
   // mapping its column to a hot palette. Drawn INSTEAD of `splatPipe`'s
   // emission draw when `render.dustView` is on — see `drawFrame`'s field
   // pass. No blend: it is the pass's only draw into a freshly cleared
-  // `fieldTex`, so a straight overwrite is correct.
+  // `dustViewTex`, so a straight overwrite is correct.
   const dustPresentMod = makeShader(dustPresentWgsl, 'galaxy:dustPresent');
   const dustPresentPipe = device.createRenderPipeline({
     label: 'galaxy:dustPresentPipe',
@@ -724,6 +727,17 @@ export async function createGalaxyEngine(
     addressModeU: 'repeat',
     addressModeV: 'repeat',
     addressModeW: 'repeat',
+    magFilter: 'linear',
+    minFilter: 'linear',
+  });
+  // splat.wesl's own sampler for `dustMapTex` (io.wesl binding 6) — a plain
+  // filtering sampler, no address-mode wrap needed since the UV it is fed is
+  // always clamped to the [0,1] the field pass's own fragment coords cover.
+  // `rgba16float` is filterable in WebGPU core. See io.wesl's DUST MAP doc
+  // for why this pass needs a filtered sample where dustPresent.wesl still
+  // gets away with a 1:1 texel load.
+  const dustMapSampler = device.createSampler({
+    label: 'galaxy:dustMapSampler',
     magFilter: 'linear',
     minFilter: 'linear',
   });
@@ -905,10 +919,13 @@ export async function createGalaxyEngine(
   // the one shader among the four that share io.wesl (splat/dustMap/
   // dustFeature/dustPresent) that actually imports them — `layout: 'auto'`
   // derives each pipeline's bind-group layout from what its OWN shader
-  // references, so `splatBG`/`dustFeatureBG` below stay their existing
-  // two-entry shape untouched. `dustPresentBG` doesn't even import io.wesl
-  // (its own tiny module declares `dustMapTex` at binding 0 directly), so
-  // it was never in scope for this either.
+  // references, so `dustFeatureBG` below stays its existing two-entry shape
+  // untouched. `dustPresentBG` doesn't even import io.wesl (its own tiny
+  // module declares `dustMapTex` at binding 0 directly), so it was never in
+  // scope for this either. Binding 6 (dustMapSmp) goes ONLY into `splatBG`
+  // below, for the mirror-image reason: splat.wesl's fs is the one reader
+  // that samples `dustMapTex` through a filtered UV rather than a 1:1 load —
+  // see `dustMapTex`'s own declaration comment.
   let dustMapBG = buildDustMapBindGroup();
   function buildDustMapBindGroup(): GPUBindGroup {
     return device.createBindGroup({
@@ -946,6 +963,10 @@ export async function createGalaxyEngine(
         { binding: 0, resource: { buffer: fieldUbo } },
         { binding: 1, resource: { buffer: fieldCompsBuf } },
         { binding: 2, resource: dustMapTex.createView() },
+        // Binding 6: dustMapSmp — splat.wesl's fs now samples dustMapTex
+        // through a filtered UV rather than a 1:1 texel load (see
+        // dustMapTex's own declaration comment for why the divisors split).
+        { binding: 6, resource: dustMapSampler },
       ],
     });
   }
@@ -987,16 +1008,28 @@ export async function createGalaxyEngine(
   /**
    * The dust-column map (see dustMap.wesl): screen-space, four depth-sliced
    * optical-depth channels (io.wesl's dustSlices doc) accumulated for the
-   * primary galaxy's dust slice. Sized to MATCH
-   * `fieldTex` exactly — `reducedSize(render.fieldDivisor)`, not the canvas —
-   * because both of this map's consumers (splat.wesl's fs, dustPresent.wesl)
-   * render INTO fieldTex and read it back via a 1:1 `input.pos.xy` texel
-   * lookup, not a UV sample. A resolution mismatch here is invisible in
-   * types and silent at runtime: it either decimates thin lanes into beads
-   * (dustMapTex finer than fieldTex) or misregisters the whole map toward
-   * one corner (any other mismatch) — see `buildDustMapTarget`.
+   * primary galaxy's dust slice. Sized to ITS OWN divisor,
+   * `reducedSize(render.dustDivisor)` — much finer than fieldTex's, because
+   * the dust splat (particle cloud + lane/spur/bubble/bead network) carries
+   * far higher-frequency structure than the smooth emission field it used to
+   * share a target with (that sharing once decimated thin lanes into beads —
+   * see `buildDustMapTarget`). dustPresent.wesl (the JWST view) still reads
+   * it via a 1:1 `input.pos.xy` texel lookup, but into its OWN divisor-
+   * matched target (`dustViewTex`, not `fieldTex` — see `buildDustViewTarget`);
+   * splat.wesl's fs, which runs at fieldTex's coarser resolution, instead
+   * samples it through a linear sampler (`dustMapSmp`) at a normalized UV —
+   * see splat.wesl's fs comment for why that is a deliberate, imperfect
+   * trade rather than an oversight.
    */
   let dustMapTex: GPUTexture;
+  /**
+   * The JWST-view's own presentation target (dustPresent.wesl), divisor-
+   * matched to `dustMapTex` rather than `fieldTex` — see `dustMapTex`'s own
+   * comment above. Only allocated/used while `render.dustView` is on; the
+   * scene pass picks whichever of `fieldTex`/`dustViewTex` this frame
+   * actually filled (see `drawFrame`).
+   */
+  let dustViewTex: GPUTexture;
   let bloomMips: GPUTexture[] = [];
   const RA_TB = GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING;
 
@@ -1045,20 +1078,16 @@ export async function createGalaxyEngine(
     });
   }
 
-  // Recreated on resize AND whenever `render.fieldDivisor` moves (see
-  // `setRender`) — `dustMapTex` is sized to `reducedSize(render.fieldDivisor)`,
-  // the SAME extent as `fieldTex`, because that is the rate its only two
-  // consumers (splat.wesl's fs, dustPresent.wesl) ever read it at: both
-  // render INTO fieldTex, so a size mismatch here means their 1:1
-  // `input.pos.xy` texel read silently samples the wrong texel (previously a
-  // full-canvas map decimated under a reduced fieldTex, which is what turned
-  // sub-pixel-wide lanes into beads no upstream lane-shape fix could touch).
-  // Both bind groups that reference `dustMapTex` are tied to the specific
-  // GPUTexture they were built against (same `layout: 'auto'` discipline as
-  // every other bind group here), so a recreation has to rebuild both
-  // immediately, not wait for the next `repackFieldComponents`.
+  // Recreated on resize AND whenever `render.dustDivisor` moves (see
+  // `setRender`) — its OWN divisor now, independent of `fieldTex`'s (see
+  // `dustMapTex`'s declaration comment for why the dust splat outgrew
+  // sharing the field's coarser target). Both bind groups that reference
+  // `dustMapTex` are tied to the specific GPUTexture they were built against
+  // (same `layout: 'auto'` discipline as every other bind group here), so a
+  // recreation has to rebuild both immediately, not wait for the next
+  // `repackFieldComponents`.
   function buildDustMapTarget(): void {
-    const [w, h] = reducedSize(render.fieldDivisor);
+    const [w, h] = reducedSize(render.dustDivisor);
     if (dustMapTex) dustMapTex.destroy();
     dustMapTex = device.createTexture({
       label: 'galaxy:dustMapTex',
@@ -1068,6 +1097,21 @@ export async function createGalaxyEngine(
     });
     splatBG = buildSplatBindGroup();
     dustPresentBG = buildDustPresentBindGroup();
+  }
+
+  // dustPresent.wesl's own target, sized like `dustMapTex` (same divisor) so
+  // its 1:1 texel read stays valid now that `dustMapTex` no longer shares
+  // `fieldTex`'s extent — see `dustMapTex`'s declaration comment. Rebuilt on
+  // the same two triggers as `dustMapTex`: resize and `render.dustDivisor`.
+  function buildDustViewTarget(): void {
+    const [w, h] = reducedSize(render.dustDivisor);
+    if (dustViewTex) dustViewTex.destroy();
+    dustViewTex = device.createTexture({
+      label: 'galaxy:dustViewTex',
+      size: [w, h],
+      format: HDR,
+      usage: RA_TB,
+    });
   }
 
   function buildTargets(): void {
@@ -1091,6 +1135,7 @@ export async function createGalaxyEngine(
     buildAggregateTarget();
     buildFieldTarget();
     buildDustMapTarget();
+    buildDustViewTarget();
     // Pyramid: level 0 = half-res, each further level halves again -> ever-wider
     // glow. `Math.floor(size / scale)` clamped to 1 px, matching the runtime's
     // `renderTargets.allocate`.
@@ -1445,15 +1490,17 @@ export async function createGalaxyEngine(
   function setRender(patch: Partial<RenderSettings & LodSettings>): void {
     const previousDivisor = render.aggregateDivisor;
     const previousFieldDivisor = render.fieldDivisor;
+    const previousDustDivisor = render.dustDivisor;
     Object.assign(render, patch);
     if (render.aggregateDivisor !== previousDivisor) buildAggregateTarget();
-    // dustMapTex rides fieldTex's own divisor (see its declaration comment),
-    // so the two rebuild together — leaving dustMapTex behind here would
-    // silently reintroduce the resolution-mismatch bug the divisor-matched
-    // contract exists to prevent.
-    if (render.fieldDivisor !== previousFieldDivisor) {
-      buildFieldTarget();
+    if (render.fieldDivisor !== previousFieldDivisor) buildFieldTarget();
+    // dustMapTex and dustViewTex share dustDivisor (see dustMapTex's
+    // declaration comment), so the two rebuild together — leaving either
+    // behind here would silently reintroduce the resolution-mismatch bug the
+    // divisor-matched contract exists to prevent.
+    if (render.dustDivisor !== previousDustDivisor) {
       buildDustMapTarget();
+      buildDustViewTarget();
     }
   }
 
@@ -2035,12 +2082,17 @@ export async function createGalaxyEngine(
       fieldDustCount,
       fieldPrimaryCount,
       fieldFeatCount,
-      // dustMapTex's own pixel height — reducedSize(render.fieldDivisor)[1],
-      // the SAME extent buildDustMapTarget sizes the texture to. Read by
-      // dustMap.wesl's dust-noise multiplier to band-limit its four baked
-      // octaves against the fragment's own world-space pixel footprint —
-      // see io.wesl's counts2.y doc.
-      reducedSize(render.fieldDivisor)[1],
+      // dustMapTex's own pixel height — reducedSize(render.dustDivisor)[1],
+      // the extent buildDustMapTarget now sizes the texture to (its own
+      // divisor, independent of fieldTex's). Read by dustMap.wesl's dust-noise
+      // multiplier to band-limit its four baked octaves against the
+      // fragment's own world-space pixel footprint — see io.wesl's counts2.y
+      // doc.
+      reducedSize(render.dustDivisor)[1],
+      // fieldTex's own pixel size — splat.wesl's fs needs this to build the
+      // normalized UV it now samples dustMapTex through, since the two maps
+      // no longer share a resolution (see io.wesl's counts2.zw doc).
+      reducedSize(render.fieldDivisor),
       // The CCM89 extinction law for currentDust.rV — cached by
       // rebuildDustMixture, not recomputed here every frame.
       currentDustExtinctionRgb,
@@ -2111,7 +2163,7 @@ export async function createGalaxyEngine(
     // target buys: no tile reload, and the timing slot is then honest.
     if (render.analyticField) {
       // Dust-column map: splat the primary's dust slice into `dustMapTex`, at
-      // fieldTex's own divisor-matched resolution — Gaussian dust splats
+      // its own divisor-matched resolution — Gaussian dust splats
       // (`dustMapPipe`) then the detail-tier feature network
       // (`dustFeaturePipe`), both additive into the same target, ONE render
       // pass with two pipelines rather than two passes (cheaper on a
@@ -2150,22 +2202,23 @@ export async function createGalaxyEngine(
 
       if (render.dustView) {
         // JWST view mode: present the dust map directly INSTEAD OF the
-        // emission splat draw below, into fieldTex — the SAME target the
-        // splat draw writes. The scene pass's existing upsample
-        // (`aggregateUpsample.draw(pass, fieldTex.createView())` just below)
-        // already folds whatever fieldTex holds into HDR, so swapping what
-        // fills it is the entire integration; nothing else changes.
+        // emission splat draw below, into `dustViewTex` — its OWN target,
+        // divisor-matched to `dustMapTex` rather than to `fieldTex` (see
+        // `dustMapTex`'s declaration comment), so its 1:1 texel read of the
+        // map stays valid at the map's now-finer resolution. The scene
+        // pass's upsample picks this texture over `fieldTex` for exactly
+        // this branch (see the scene pass below).
         //
         // Rides the 'field' timing slot (see TIMING_SLOTS): both this pass
-        // and the splat draw below fill the same fieldTex, so the slot
-        // answers "what did filling fieldTex cost" regardless of which mode
-        // is active.
+        // and the splat draw below fill whichever target is live this frame,
+        // so the slot answers "what did filling the field/dust-view target
+        // cost" regardless of which mode is active.
         const fieldWrites = timing.descriptorFor('field');
         const pass = enc.beginRenderPass({
           label: 'galaxy:dustPresentPass',
           colorAttachments: [
             {
-              view: fieldTex.createView(),
+              view: dustViewTex.createView(),
               clearValue: { r: 0, g: 0, b: 0, a: 0 },
               loadOp: 'clear',
               storeOp: 'store',
@@ -2227,8 +2280,13 @@ export async function createGalaxyEngine(
       // Second draw, same pipeline and same additive blend, so the two reduced
       // targets sum in HDR exactly as they did when they shared one. A draw
       // rather than a pass: the blend does the compositing, so no extra
-      // attachment switch.
-      if (render.analyticField) aggregateUpsample.draw(pass, fieldTex.createView());
+      // attachment switch. Picks `dustViewTex` over `fieldTex` while the JWST
+      // view is on — that mode fills `dustViewTex` instead (see the field
+      // pass above), and the two are no longer the same texture now that
+      // they ride independent divisors.
+      if (render.analyticField) {
+        aggregateUpsample.draw(pass, (render.dustView ? dustViewTex : fieldTex).createView());
+      }
       pass.setPipeline(dustPipe);
       pass.setBindGroup(0, dustBG);
       pass.setVertexBuffer(0, quad);

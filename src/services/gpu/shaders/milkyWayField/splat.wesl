@@ -32,6 +32,7 @@ import package::lib::gaussianIntegral::GAUSS_PI;
 import package::milkyWayField::io::u;
 import package::milkyWayField::io::comps;
 import package::milkyWayField::io::dustMapTex;
+import package::milkyWayField::io::dustMapSmp;
 
 // sliceTransmitRatio — (1 - exp(-x)) / x per channel, the exact closed form
 // for emission spread UNIFORMLY through a homogeneous slab of per-channel
@@ -120,18 +121,24 @@ fn fs(input: SplatOut) -> @location(0) vec4<f32> {
   // io.wesl): an extra's dust must never darken the primary, and this gate
   // is what keeps that true without extras carrying their own dust yet.
   //
-  // The dust column comes from dustMapTex, not a per-component loop:
-  // framebuffer pixel coords index the map exactly, a direct 1:1 texel
-  // read, no sampler and no uv-flip trap — because dustMapTex is sized to
-  // THIS pass's own target extent by construction (createGalaxyEngine.ts's
-  // buildDustMapTarget, rebuilt on every render.fieldDivisor change). A
-  // resolution mismatch here is invisible in types and silently
-  // misregisters the attenuation (it once decimated thin lanes into beads —
-  // see dustMapTex's own declaration comment). The four channels are the
-  // depth-sliced optical depths tau_0..tau_3 (io.wesl's dustSlices doc), not
-  // a single column any more.
+  // The dust column comes from dustMapTex, not a per-component loop. This
+  // pass runs at fieldTex's own (coarser) resolution while dustMapTex is now
+  // sized to its OWN divisor (io.wesl's DUST MAP doc) — no longer the same
+  // extent, so a direct framebuffer-coord texel load is no longer valid.
+  // counts2.zw (fieldSizePx) turns this fragment's own coords into a
+  // normalized UV, sampled through dustMapSmp with an EXPLICIT level (0.0,
+  // not textureSample): this read sits inside 'if (input.inst <
+  // primaryCount)' and the 'dustApplies' branch below, both non-uniform
+  // control flow, where implicit-derivative sampling is a WGSL validation
+  // error. Bilinear is not a correct box downsample of a finer source, so
+  // fine dust structure can shimmer under camera motion — a mip chain
+  // sampled at the resolution ratio's LOD would fix that; a deliberate,
+  // not-yet-done follow-up, not an oversight (see io.wesl's DUST MAP doc).
+  // The four channels are the depth-sliced optical depths tau_0..tau_3
+  // (io.wesl's dustSlices doc), not a single column any more.
   if (input.inst < primaryCount) {
-    let texel = textureLoad(dustMapTex, vec2<i32>(input.pos.xy), 0);
+    let dustUv = input.pos.xy / u.counts2.zw;
+    let texel = textureSampleLevel(dustMapTex, dustMapSmp, dustUv, 0.0);
     // Bubbles (dustFeature.wesl kind 1) write a SIGNED tau into whichever
     // ONE slice contains their plane-crossing depth — clamp each channel at
     // this consumer: a nested hole/rim overshoot must read as clean dust in

@@ -20,7 +20,7 @@
 //   offset 48  : camFwd: vec4
 //   offset 64  : params: vec4   (tanHalfFov, aspect, lensShiftX, exposure)
 //   offset 80  : counts: vec4   (emissionCount, dustOffset, dustCount, primaryCount)
-//   offset 96  : counts2: vec4  (featCount, dustMapHeightPx, reserved, reserved)
+//   offset 96  : counts2: vec4  (featCount, dustMapHeightPx, fieldWidthPx, fieldHeightPx)
 //   offset 112 : dustExtinction: vec4 (A_lambda/A_V per channel, w unused)
 //   offset 128 : dustNoise: vec4 (tileUnits, amplitude, cloudOffset, unused)
 //   offset 144 : dustSlices: vec4 (t1, t2, t3, unused)
@@ -45,13 +45,18 @@
 // mean one of the two readers interpreting the other's bytes as its own
 // shape. counts2.y is dustMapHeightPx, dustMapTex's own pixel height
 // (createGalaxyEngine.ts's buildDustMapTarget sizes it to
-// reducedSize(render.fieldDivisor), the SAME extent as fieldTex — see the
-// DUST MAP entry below) — UNREAD by dustFeature.wesl (its sub-pixel width
-// clamp uses fwidth() instead) but read by dustMap.wesl's dust-noise
-// multiplier below, to band-limit the baked volume's four octaves against
-// the fragment's own world-space pixel footprint — the octave band-limiting
-// this lane was reserved for. counts2.zw are reserved (spurs/bubbles/beads
-// land their own counts here rather than growing the header again).
+// reducedSize(render.dustDivisor) — see the DUST MAP entry below; dustMapTex
+// no longer shares fieldTex's extent) — UNREAD by dustFeature.wesl (its
+// sub-pixel width clamp uses fwidth() instead) but read by dustMap.wesl's
+// dust-noise multiplier below, to band-limit the baked volume's four octaves
+// against the fragment's own world-space pixel footprint — the octave
+// band-limiting this lane was reserved for. counts2.zw is fieldSizePx
+// (fieldWidthPx, fieldHeightPx), fieldTex's own pixel size
+// (reducedSize(render.fieldDivisor)) — splat.wesl's fs is the one reader: it
+// runs at the FIELD's resolution but samples dustMapTex at the DUST map's own
+// (now different, usually finer) resolution, so it needs its own target's
+// extent to turn 'input.pos.xy' into a normalized UV instead of a direct
+// texel index — see the DUST MAP entry below.
 //
 // dustNoise (offset 128) erodes the PARTICLE-CLOUD tier of the primary's
 // dust slice only (dustMap.wesl's fs) — never the smooth 4-component disc
@@ -141,17 +146,31 @@
 // loop (see splat.wesl's header and the grill-session doc's N1). Purely
 // additive and order-independent like the single-column map it replaced —
 // each channel is still just an optical-depth sum, only partitioned by depth
-// now instead of collapsed to one mean. DIVISOR-MATCHED BY CONSTRUCTION: the
-// backing texture is sized to reducedSize(render.fieldDivisor) — the SAME
-// extent as fieldTex, the target every reader of this map (splat.wesl,
-// dustPresent.wesl) renders into and reads back from via a 1:1
-// framebuffer-coord texel load, not a UV sample (createGalaxyEngine.ts's
-// buildDustMapTarget rebuilds it, and both dependent bind groups, on every
-// fieldDivisor change). A resolution mismatch here is invisible in types: it
-// silently decimates any lane thinner than the mismatch into beads, or
-// misregisters the whole map toward one corner. Only bound by the emission
-// splat pipeline (splat.wesl imports it); the two splat passes that WRITE it
-// never read it.
+// now instead of collapsed to one mean. Sized to
+// reducedSize(render.dustDivisor) — its OWN divisor
+// (createGalaxyEngine.ts's buildDustMapTarget), independent of fieldTex's:
+// the dust splat (particle cloud + lane/spur/bubble/bead network) is far
+// higher-frequency than the smooth emission field, and sharing fieldTex's
+// coarser target decimated thin lanes into beads — the bug that motivated
+// giving it a divisor of its own.
+//
+// dustPresent.wesl (the JWST view) renders into its OWN target, dustViewTex,
+// ALSO sized to reducedSize(render.dustDivisor) (createGalaxyEngine.ts's
+// buildDustViewTarget) — so its 1:1 framebuffer-coord texel load stays valid
+// despite the two maps no longer sharing fieldTex's extent. A resolution
+// mismatch there is still invisible in types: it silently decimates any lane
+// thinner than the mismatch into beads, or misregisters the whole map toward
+// one corner.
+//
+// splat.wesl runs at fieldTex's (coarser) resolution instead, so its 1:1
+// texel load no longer applies — it reads this map through 'dustMapSmp'
+// (binding 6), a normalized-UV, linearly filtered sample built from
+// counts2.zw (fieldSizePx) above. Bilinear is not a correct box downsample
+// of a finer source, so fine dust structure can shimmer under camera
+// motion; a mip chain sampled at the resolution ratio's LOD would fix that
+// and is a deliberate, not-yet-done follow-up. Only bound by the emission
+// splat pipeline (splat.wesl imports it, along with dustMapSmp); the two
+// splat passes that WRITE it never read it.
 //
 // FEATS (read-only storage, binding 3) — the detail-tier dust splat network
 // (dustFeature.wesl), one record per feature, five vec4 each. 'kind' (last
@@ -206,8 +225,17 @@ struct FieldUniforms {
 // Bindings 4/5: the baked ridged-noise volume (dustNoiseBake.wesl) — ONLY
 // dustMap.wesl imports these two. Every pipeline here uses 'layout: auto'
 // (createGalaxyEngine.ts), which derives a bind-group layout from the
-// bindings the SHADER actually references, so splat.wesl / dustFeature.wesl
-// importing 'u'/'comps'/'feats' from this same file never gain entries 4/5
-// — their bind groups stay two/two entries, unaffected by this file growing.
+// bindings the SHADER actually references, so dustFeature.wesl (importing
+// only 'u'/'feats') never gains entries 4/5, and splat.wesl (importing
+// 'u'/'comps'/'dustMapTex') never gains them either — each pipeline's bind
+// group stays exactly the bindings its own shader references, unaffected by
+// this file growing.
 @group(0) @binding(4) var dustNoiseTex: texture_3d<f32>;
 @group(0) @binding(5) var dustNoiseSmp: sampler;
+// Binding 6: dustMapTex's own sampler — ONLY splat.wesl imports it (see the
+// DUST MAP entry above for why its fs needs a filtered UV sample where
+// dustMap.wesl/dustFeature.wesl write-only and dustPresent.wesl's still-1:1
+// read of its own divisor-matched target do not). rgba16float is filterable
+// in WebGPU core, so a plain 'filtering' sampler suffices — no comparison,
+// no manual mip selection.
+@group(0) @binding(6) var dustMapSmp: sampler;

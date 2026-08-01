@@ -38,6 +38,7 @@
 
 import type { GalaxyDustFeature } from '../../../../src/@types/galaxy/GalaxyDustFeature';
 import type { GalaxyFieldComponent } from '../../../../src/@types/galaxy/GalaxyFieldComponent';
+import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 /** Float count of `io.wesl`'s `FieldUniforms` header — 10 vec4, camera + params + counts + counts2 + dustExtinction + dustNoise + dustSlices. */
@@ -122,10 +123,16 @@ export type FieldDustSlices = {
  * tier dust feature draw's own instance count, into the SEPARATE `feats`
  * storage array (io.wesl's counts2.x) — unrelated to `comps` sizing.
  * `dustMapHeightPx` is `dustMapTex`'s own pixel height (see
- * `buildDustMapTarget`, which sizes it to `reducedSize(render.fieldDivisor)`,
- * the SAME extent as `fieldTex`) — read by dustMap.wesl's dust-noise
- * multiplier to band-limit its four baked octaves against the fragment's own
- * world-space pixel footprint (see io.wesl's counts2.y doc).
+ * `buildDustMapTarget`, which sizes it to `reducedSize(render.dustDivisor)`,
+ * its own divisor, independent of `fieldTex`'s) — read by dustMap.wesl's
+ * dust-noise multiplier to band-limit its four baked octaves against the
+ * fragment's own world-space pixel footprint (see io.wesl's counts2.y doc).
+ *
+ * `fieldSizePx` is fieldTex's own pixel size (`reducedSize(render.fieldDivisor)`)
+ * — splat.wesl's fs is the one reader: it runs at fieldTex's resolution but
+ * samples dustMapTex at the dust map's own (now independently-divisored)
+ * resolution, so it needs its own target's extent to build a normalized UV
+ * rather than a direct texel index (see io.wesl's DUST MAP doc).
  *
  * `dustNoise` is `FieldDustNoise` above — cached by `rebuildDustMixture`,
  * not re-derived here, same discipline as `dustExtinctionRgb`. `dustSlices`
@@ -140,6 +147,7 @@ export function packFieldHeaderUniforms(
   primaryCount: number,
   featCount: number,
   dustMapHeightPx: number,
+  fieldSizePx: Vec2,
   dustExtinctionRgb: Vec3,
   dustNoise: FieldDustNoise,
   dustSlices: FieldDustSlices,
@@ -183,11 +191,11 @@ export function packFieldHeaderUniforms(
   out[22] = dustCount;
   out[23] = primaryCount;
 
-  // counts2 24..27 = (featCount, dustMapHeightPx, reserved, reserved).
+  // counts2 24..27 = (featCount, dustMapHeightPx, fieldWidthPx, fieldHeightPx).
   out[24] = featCount;
   out[25] = dustMapHeightPx;
-  out[26] = 0;
-  out[27] = 0;
+  out[26] = fieldSizePx[0];
+  out[27] = fieldSizePx[1];
 
   // dustExtinction 28..31 = (A_lambda/A_V per channel, unused).
   out[28] = dustExtinctionRgb[0];

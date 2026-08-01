@@ -569,6 +569,16 @@ function ControlsPanel({ fade }: ControlsPanelProps): ReactNode {
             onChange={(v) => dispatch(renderPatched({ fieldDivisor: Math.round(v) }))}
             info="The same trade for the ANALYTIC field, on its own target. It goes coarser than the sprites can: the field is a sum of wide Gaussians with no point-like detail to lose, and it is fill-bound, so cost falls as N². The ceiling is bloom fireflies zoomed out, not blur — the ray integral is a POINT sample with no pixel-footprint filtering, so a core narrower than a texel aliases into a value that crosses the bloom threshold."
           />
+          <ParamSlider
+            label="Dust divisor"
+            value={render.dustDivisor}
+            min={1}
+            max={8}
+            step={1}
+            format={(v) => String(Math.round(v))}
+            onChange={(v) => dispatch(renderPatched({ dustDivisor: Math.round(v) }))}
+            info="Its own divisor, separate from the field's: the dust splat (Gaussian lanes plus the lane/spur/bubble/bead network) is much higher-frequency than the smooth emission field, so it needs a finer target to avoid decimating thin lanes into beads."
+          />
         </CollapsibleSection>
 
         <CollapsibleSection
