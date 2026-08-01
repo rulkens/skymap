@@ -10,18 +10,13 @@
  * PURITY INVARIANT: pure `(geometry, dust, seed) -> flat data`, no
  * Math.random/Date/engine state — a Worker/compute-pass candidate.
  */
+import { buildClusteredDiscPlacement, type CloudFrame } from './clusteredDiscPlacement';
 import { buildDustBubblePlacements, pcToUnits } from './dustBubblePlacements';
-import { armAgeWeight, armOffsetFrameAt } from './dustLaneFeatures';
+import { armOffsetFrameAt } from './dustLaneFeatures';
 import { clampedDustCloudShare, dustDiscShape, dustSigmaR } from './galaxyDustMixture';
-import {
-  armCrossSigma,
-  armFadeEnvelope,
-  DISC_SIGMA_RATIOS,
-  DISC_SURFACE_WEIGHTS,
-} from './galaxyFieldMixture';
+import { armCrossSigma, DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './galaxyFieldMixture';
 import { dustExtinctionRgb } from '../../utils/galaxy/dustExtinctionRgb';
 import { inverseCovarianceFromFrame } from '../../utils/galaxy/inverseCovarianceFromFrame';
-import { warpSurfaceFrame } from '../../utils/galaxy/warpSurfaceFrame';
 import { gaussian } from '../../utils/random/gaussian';
 import { mulberry32 } from '../../utils/random/mulberry32';
 import type { GalaxyDustParams } from '../../@types/galaxy/GalaxyDustParams';
@@ -81,10 +76,7 @@ const COMPLEX_SPREAD_PC = 250;
 
 /** Clouds are flattened relative to their in-plane extent. */
 const CLOUD_POLE_RATIO = 0.6;
-const CHILD_POLE_RATIO = 0.4;
 
-/** Bounded rejection sampling against `armFadeEnvelope` when seeding a complex on the arm lane. */
-const ARM_FADE_REJECTION_TRIES = 24;
 /** A cavity's swept rim lands just past its edge, not exactly on it. */
 const RIM_OVERSHOOT = 0.15;
 /** Below this a particle-to-bubble-centre vector is too degenerate to normalise; fall back to a random direction. */
@@ -93,8 +85,6 @@ const CARVE_EPSILON = 1e-6;
 const TAU_ROOT3 = (2 * Math.PI) ** 1.5;
 /** `armCrossSigma`/`armOffsetFrameAt` only read `.armWidthScale`; this builder has no field tuning of its own to hand them. */
 const ARM_WIDTH_TUNING = { armWidthScale: 1 } as GalaxyFieldTuning;
-
-type CloudFrame = { readonly along: Vec3; readonly across: Vec3; readonly pole: Vec3 };
 
 type CloudParticle = {
   center: Vec3;
@@ -137,98 +127,28 @@ export function buildDustParticleCloud(
   const shape = dustDiscShape(geometry, dust);
   const extinctionRgb = dustExtinctionRgb(dust.rV);
   const sigmaZCloud = shape.sigmaZ * cloud.heightRatio;
-  const childrenPerComplex = Math.max(1, Math.round(1 + 15 * cloud.clumpiness));
-
-  const canUseArms = geometry.numArms > 0;
-  const armWeights = geometry.arms.map((arm) => armAgeWeight(arm));
-  const armWeightSum = armWeights.reduce((s, w) => s + w, 0);
 
   const rng = mulberry32(seed ^ 0x44555354); // "DUST"
 
-  function pickWeighted(weights: readonly number[], sum: number): number {
-    const r = rng() * sum;
-    let acc = 0;
-    for (let i = 0; i < weights.length; i++) {
-      acc += weights[i]!;
-      if (r <= acc) return i;
-    }
-    return weights.length - 1;
-  }
-
-  /** A complex seeded on an arm's dust lane, or null if this arm has no valid span (falls back to the smooth disc). */
-  function placeArmLaneComplex(): { center: Vec3; frame: CloudFrame } | null {
-    const armIndex = pickWeighted(armWeights, armWeightSum);
-    const arm = geometry.arms[armIndex]!;
-    const logMin = Math.log(1.05);
-    const logMax = Math.log(arm.fadeRadius / geometry.armStartRadius);
-    if (!(logMax > logMin)) return null;
-
-    let logR = logMin;
-    let radius = geometry.armStartRadius;
-    for (let tries = 0; tries < ARM_FADE_REJECTION_TRIES; tries++) {
-      logR = logMin + rng() * (logMax - logMin);
-      radius = geometry.armStartRadius * Math.exp(logR);
-      if (rng() < armFadeEnvelope(radius, geometry, arm)) break;
-    }
-
-    const frame = armOffsetFrameAt(logR, geometry, dust, arm);
-    const laneSpread =
-      armCrossSigma(radius, geometry, ARM_WIDTH_TUNING) * 0.25 * dust.network.laneWidth;
-    // ONE scalar offset per axis, shared across x/y/z — not redrawn per component.
-    const acrossOffset = gaussian(rng) * laneSpread;
-    const poleOffset = gaussian(rng) * sigmaZCloud;
-    const center: Vec3 = [
-      frame.point[0] + frame.across[0] * acrossOffset + frame.pole[0] * poleOffset,
-      frame.point[1] + frame.across[1] * acrossOffset + frame.pole[1] * poleOffset,
-      frame.point[2] + frame.across[2] * acrossOffset + frame.pole[2] * poleOffset,
-    ];
-    return { center, frame: { along: frame.along, across: frame.across, pole: frame.pole } };
-  }
-
-  function placeSmoothDiscComplex(): { center: Vec3; frame: CloudFrame } {
-    const k = pickWeighted(DISC_SURFACE_WEIGHTS, shape.sumW);
-    const sigmaR = dustSigmaR(k, shape);
-    const x = gaussian(rng) * sigmaR;
-    const z = gaussian(rng) * sigmaR;
-    const y = gaussian(rng) * sigmaZCloud;
-    const radius = Math.hypot(x, z);
-    const frame = warpSurfaceFrame(radius, Math.atan2(z, x), geometry);
-    return { center: [x, y, z], frame };
-  }
-
-  const particles: CloudParticle[] = [];
-  let placed = 0;
-  while (placed < count) {
-    const childCount = Math.min(childrenPerComplex, count - placed);
-    // Arm bias re-rolled per complex, not per particle — a complex (and its
-    // children) is the hierarchical unit real GMC associations form at.
-    const armRoll = rng();
-    const placement =
-      (canUseArms && armRoll < cloud.armBias ? placeArmLaneComplex() : null) ??
-      placeSmoothDiscComplex();
-
-    for (let c = 0; c < childCount; c++) {
-      const along = gaussian(rng) * complexSpread * cloud.elongation;
-      const across = gaussian(rng) * complexSpread;
-      const pole = gaussian(rng) * complexSpread * CHILD_POLE_RATIO;
-      const center: Vec3 = [
-        placement.center[0] +
-          placement.frame.along[0] * along +
-          placement.frame.across[0] * across +
-          placement.frame.pole[0] * pole,
-        placement.center[1] +
-          placement.frame.along[1] * along +
-          placement.frame.across[1] * across +
-          placement.frame.pole[1] * pole,
-        placement.center[2] +
-          placement.frame.along[2] * along +
-          placement.frame.across[2] * across +
-          placement.frame.pole[2] * pole,
-      ];
-      particles.push({ center, frame: placement.frame, radius: sampleRadius(rng()) });
-    }
-    placed += childCount;
-  }
+  const particles: CloudParticle[] = buildClusteredDiscPlacement<{ radius: number }>(
+    {
+      geometry,
+      rng,
+      count,
+      armBias: cloud.armBias,
+      clumpiness: cloud.clumpiness,
+      complexSpread,
+      elongation: cloud.elongation,
+      sigmaZComplex: sigmaZCloud,
+      laneFrameAt: (arm, logR) => armOffsetFrameAt(logR, geometry, dust, arm),
+      crossLaneSigma: (radius) =>
+        armCrossSigma(radius, geometry, ARM_WIDTH_TUNING) * 0.25 * dust.network.laneWidth,
+      discSigmaR: (k) => dustSigmaR(k, shape),
+      discWeights: DISC_SURFACE_WEIGHTS,
+      discWeightSum: shape.sumW,
+    },
+    (childRng) => ({ radius: sampleRadius(childRng()) }),
+  );
 
   // ---- 4d: bubble carving — swept-up shells, not just holes -----------------
   const bubbles = buildDustBubblePlacements(geometry, dust, seed);
