@@ -43,6 +43,7 @@ import { classifyHubbleType } from '../../../../../src/services/gpu/galaxy/class
 import ArmFieldSection from '../ArmFieldSection/ArmFieldSection';
 import CollapsibleSection from '../CollapsibleSection/CollapsibleSection';
 import DustSection from '../DustSection/DustSection';
+import DustNetworkSection from '../DustNetworkSection/DustNetworkSection';
 import FadeSection from '../FadeSection/FadeSection';
 import FieldSection from '../FieldSection/FieldSection';
 import ParamSlider from '../ParamSlider/ParamSlider';
@@ -305,6 +306,7 @@ function ControlsPanel({ fade }: ControlsPanelProps): ReactNode {
         <FieldSection />
         <ArmFieldSection />
         <DustSection />
+        <DustNetworkSection />
 
         <CollapsibleSection
           title="MORPHOLOGY · HUBBLE SEQUENCE"

@@ -24,6 +24,9 @@ export const DEFAULT_UI_STATE: UiState = {
     // Expanded, same rationale as `armField`/`field`: the analytic dust lane
     // is the current work, not a settings drawer to tuck away.
     analyticDust: true,
+    // Expanded, same rationale as `analyticDust`: the filament/bubble network
+    // is the current work.
+    dustNetwork: true,
     glob: false,
     render: false,
     // FLUX FIELD (exposure, part toggles, ring tuning) starts EXPANDED for the
