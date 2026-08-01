@@ -94,6 +94,7 @@ function makeFakeEngine(blackOnCall?: number): {
   const engine: GalaxyEngineHandle = {
     setParams,
     setRender: vi.fn<GalaxyEngineHandle['setRender']>(),
+    setFieldTuning: vi.fn<GalaxyEngineHandle['setFieldTuning']>(),
     setView: vi.fn<GalaxyEngineHandle['setView']>(),
     setAutoRotate: vi.fn<GalaxyEngineHandle['setAutoRotate']>(),
     setInsets: vi.fn<GalaxyEngineHandle['setInsets']>(),

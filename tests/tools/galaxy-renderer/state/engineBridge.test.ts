@@ -37,6 +37,7 @@ import type { GalaxyEngineHandle } from '../../../../tools/galaxy-renderer/@type
 type EngineMocks = {
   readonly setParams: ReturnType<typeof vi.fn<GalaxyEngineHandle['setParams']>>;
   readonly setRender: ReturnType<typeof vi.fn<GalaxyEngineHandle['setRender']>>;
+  readonly setFieldTuning: ReturnType<typeof vi.fn<GalaxyEngineHandle['setFieldTuning']>>;
   readonly setView: ReturnType<typeof vi.fn<GalaxyEngineHandle['setView']>>;
   readonly setAutoRotate: ReturnType<typeof vi.fn<GalaxyEngineHandle['setAutoRotate']>>;
   readonly setInsets: ReturnType<typeof vi.fn<GalaxyEngineHandle['setInsets']>>;
@@ -47,6 +48,7 @@ function makeFakeEngine(): { engine: GalaxyEngineHandle; mocks: EngineMocks } {
   const mocks: EngineMocks = {
     setParams: vi.fn<GalaxyEngineHandle['setParams']>().mockResolvedValue(undefined),
     setRender: vi.fn<GalaxyEngineHandle['setRender']>(),
+    setFieldTuning: vi.fn<GalaxyEngineHandle['setFieldTuning']>(),
     setView: vi.fn<GalaxyEngineHandle['setView']>(),
     setAutoRotate: vi.fn<GalaxyEngineHandle['setAutoRotate']>(),
     setInsets: vi.fn<GalaxyEngineHandle['setInsets']>(),

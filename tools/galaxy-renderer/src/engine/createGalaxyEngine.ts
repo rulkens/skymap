@@ -195,6 +195,8 @@ import type { LodSettings } from '../../@types/engine/LodSettings';
 import type { ViewPose } from '../../@types/engine/ViewPose';
 import type { ExtraGalaxySpec } from '../../../../src/@types/galaxy/ExtraGalaxySpec';
 import type { GalaxyFieldComponent } from '../../../../src/@types/galaxy/GalaxyFieldComponent';
+import type { GalaxyFieldGeometry } from '../../../../src/@types/galaxy/GalaxyFieldGeometry';
+import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFieldTuning';
 import type { MilkyWayTuning } from '../../../../src/@types/settings/MilkyWayTuning';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -218,7 +220,10 @@ import { createGenerationPipelines } from '../../../../src/services/gpu/galaxy/c
 import { encodeGeneration } from '../../../../src/services/gpu/galaxy/encodeGeneration';
 import { packGenerationUniforms } from '../../../../src/services/gpu/galaxy/packGenerationUniforms';
 import { readGalaxyFieldGeometry } from '../../../../src/services/gpu/galaxy/readGalaxyFieldGeometry';
-import { buildGalaxyFieldMixture } from '../../../../src/data/galaxy/galaxyFieldMixture';
+import {
+  buildGalaxyFieldMixture,
+  DEFAULT_GALAXY_FIELD_TUNING,
+} from '../../../../src/data/galaxy/galaxyFieldMixture';
 import { GENERATION_UBO } from '../../../../src/services/gpu/galaxy/generationUboLayout';
 import { GEN_RECORD_BYTES } from '../../../../src/services/gpu/galaxy/genRecordBytes';
 import { carveStarLayout } from '../../../../src/services/gpu/galaxy/carveStarLayout';
@@ -259,10 +264,18 @@ const bloomScale = (level: number): number => 2 ** (level + 1);
  * A timestamp pair can only bracket a whole pass, so the split between slots
  * is the split between passes — not a choice:
  *
- *  - `'stars'` is the additive star pass alone, because the reduced-resolution
+ *  - `'stars'` is the additive SPRITE pass alone, because the reduced-resolution
  *    `aggregateTex` is its own attachment and therefore its own pass. This is
  *    the fill-bound half and the number the divisor / sprite-size knobs move,
  *    so having it isolated is most of the point of the split.
+ *  - `'field'` is the analytic Gaussian-mixture pass. It shares `aggregateTex`
+ *    with the sprites and so needs its own `loadOp: 'load'` pass to be timed —
+ *    the very reopening cost this list refuses to pay for `'scene'`. The trade
+ *    differs because the aggregate is reduced-resolution, so its tile store and
+ *    reload is a fraction of the full-res HDR target's, while the number bought
+ *    is the one the whole analytic-vs-sprite comparison turns on. It is a real
+ *    cost all the same: the two slots will not sum to the single-pass total.
+ *    Only encoded when the analytic field is on, so the slot self-drops.
  *  - `'scene'` is the full-res HDR pass: the aggregate's additive upsample
  *    followed by the dust billboards. Those two share an attachment and so
  *    share a pass; separating them would mean ending the HDR pass and
@@ -278,7 +291,7 @@ const bloomScale = (level: number): number => 2 ** (level + 1);
  * `'grade'` only appears on frames where the tool-only grade trailer actually
  * ran; the timing service drops slots whose `descriptorFor` went unconsumed.
  */
-const TIMING_SLOTS: readonly string[] = ['stars', 'scene', 'bloom', 'composite', 'grade'];
+const TIMING_SLOTS: readonly string[] = ['stars', 'field', 'scene', 'bloom', 'composite', 'grade'];
 
 /** rAF deltas kept for the median — one second at 60 Hz. */
 const FRAME_WINDOW = 60;
@@ -588,6 +601,13 @@ export async function createGalaxyEngine(
   // tracks every preset/knob change the sprites do. Empty until the first
   // `setParams`, which draws a field of zero components: nothing, not stale.
   let fieldMixture: readonly GalaxyFieldComponent[] = [];
+  // Cached alongside the mixture so `setFieldTuning` can rebuild it without a
+  // regenerate: null until the first `setParams`, at which point every later
+  // `setFieldTuning` call rebuilds from this same geometry. A tuning change
+  // that arrives before any `setParams` just updates `fieldTuning` below —
+  // the next `setParams` reads it and there is nothing yet to rebuild.
+  let fieldGeometry: GalaxyFieldGeometry | null = null;
+  let fieldTuning: GalaxyFieldTuning = DEFAULT_GALAXY_FIELD_TUNING;
 
   // Per-pipeline bind groups. `layout: 'auto'` groups are pipeline-specific
   // and never cross pipelines, so each pass needs its own group even where the
@@ -625,6 +645,16 @@ export async function createGalaxyEngine(
   let sceneTex: GPUTexture;
   let ldrTex: GPUTexture;
   let aggregateTex: GPUTexture;
+  /**
+   * The analytic field's OWN reduced-resolution target, deliberately not the
+   * star aggregate. Both are additive glow folded into HDR by the same
+   * upsample, but their spatial frequency is not the same: sprites carry
+   * point-like detail that a coarse divisor destroys, while the field is a
+   * sum of wide Gaussians that survives 5x downsampling with no visible
+   * change. Sharing one target forced the field to pay the sprites' pixel
+   * rate — and it is FILL-bound, so that was most of its cost.
+   */
+  let fieldTex: GPUTexture;
   let bloomMips: GPUTexture[] = [];
   const RA_TB = GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING;
 
@@ -642,23 +672,31 @@ export async function createGalaxyEngine(
    * same discipline `milkyWayAggregateLayer` follows by reading the divisor off
    * the shared spec row.
    */
-  const aggregateSize = (): Vec2 => {
-    const scale = render.aggregateDivisor;
-    return [
-      Math.max(1, Math.floor(canvas.width / scale)),
-      Math.max(1, Math.floor(canvas.height / scale)),
-    ];
-  };
+  const reducedSize = (scale: number): Vec2 => [
+    Math.max(1, Math.floor(canvas.width / scale)),
+    Math.max(1, Math.floor(canvas.height / scale)),
+  ];
 
   // Split out of `buildTargets` because the divisor is a live slider: moving it
   // has to reallocate this one target without disturbing the scene, the LDR
   // scratch, or the bloom pyramid. Reallocating outright (rather than pooling a
   // few sizes) is the right trade for a 1..6 integer knob dragged by hand.
   function buildAggregateTarget(): void {
-    const [w, h] = aggregateSize();
+    const [w, h] = reducedSize(render.aggregateDivisor);
     if (aggregateTex) aggregateTex.destroy();
     aggregateTex = device.createTexture({
       label: 'galaxy:aggregateTex',
+      size: [w, h],
+      format: HDR,
+      usage: RA_TB,
+    });
+  }
+
+  function buildFieldTarget(): void {
+    const [w, h] = reducedSize(render.fieldDivisor);
+    if (fieldTex) fieldTex.destroy();
+    fieldTex = device.createTexture({
+      label: 'galaxy:fieldTex',
       size: [w, h],
       format: HDR,
       usage: RA_TB,
@@ -684,6 +722,7 @@ export async function createGalaxyEngine(
       usage: RA_TB,
     });
     buildAggregateTarget();
+    buildFieldTarget();
     // Pyramid: level 0 = half-res, each further level halves again -> ever-wider
     // glow. `Math.floor(size / scale)` clamped to 1 px, matching the runtime's
     // `renderTargets.allocate`.
@@ -845,7 +884,8 @@ export async function createGalaxyEngine(
     // Read back rather than re-derive: the bar and bulge tilts are single RNG
     // draws off the packer's streams, so this is the only way the analytic
     // field can be sure it is oriented like the sprites it sums with.
-    fieldMixture = buildGalaxyFieldMixture(readGalaxyFieldGeometry(genUniforms, starLayout));
+    fieldGeometry = readGalaxyFieldGeometry(genUniforms, starLayout);
+    fieldMixture = buildGalaxyFieldMixture(fieldGeometry, fieldTuning);
 
     const enc = device.createCommandEncoder({ label: 'galaxy:generate' });
     encodeGeneration({
@@ -872,8 +912,21 @@ export async function createGalaxyEngine(
   // exposure tick.
   function setRender(patch: Partial<RenderSettings & LodSettings>): void {
     const previousDivisor = render.aggregateDivisor;
+    const previousFieldDivisor = render.fieldDivisor;
     Object.assign(render, patch);
     if (render.aggregateDivisor !== previousDivisor) buildAggregateTarget();
+    if (render.fieldDivisor !== previousFieldDivisor) buildFieldTarget();
+  }
+
+  // Rebuilds `fieldMixture` from the CACHED geometry rather than dispatching a
+  // regenerate: the ring layout is a pure function of geometry + tuning, so a
+  // slider drag is a CPU-only mixture rebuild picked up by next frame's
+  // `packFieldUniforms`, same as every other render knob above. No cached
+  // geometry yet (before the first `setParams`) just leaves the merged
+  // `fieldTuning` for that first `setParams` to read.
+  function setFieldTuning(patch: Partial<GalaxyFieldTuning>): void {
+    fieldTuning = { ...fieldTuning, ...patch };
+    if (fieldGeometry) fieldMixture = buildGalaxyFieldMixture(fieldGeometry, fieldTuning);
   }
 
   // Replace the set of background galaxies. Each extra is generated GPU-side
@@ -1355,7 +1408,7 @@ export async function createGalaxyEngine(
     // before either pass is encoded, which is safe precisely because they
     // target different buffers.
     const tuning = cloudTuning();
-    const aggregatePx = aggregateSize();
+    const aggregatePx = reducedSize(render.aggregateDivisor);
     packCloudUniforms(vp, view, aggregatePx, tuning, fade.alpha, cloudData);
     device.queue.writeBuffer(starUbo, 0, cloudData);
     packCloudUniforms(vp, view, [canvas.width, canvas.height], tuning, fade.alpha, cloudData);
@@ -1429,14 +1482,30 @@ export async function createGalaxyEngine(
           pass.draw(6, e.starCount);
         }
       }
-      // The analytic half. Same target, same additive blend, so the sum of the
-      // two is exactly what either alone would have been at double weight —
-      // which is the whole point of drawing them side by side.
-      if (render.analyticField) {
-        pass.setPipeline(fieldPipe);
-        pass.setBindGroup(0, fieldBG);
-        pass.draw(3);
-      }
+      pass.end();
+    }
+    // The analytic half, into its OWN target at its OWN divisor. Both halves
+    // are still additive glow summed into the same HDR scene below, so drawing
+    // both still gives exactly what either alone would at double weight — the
+    // point of the side-by-side. Clearing (not loading) is what a private
+    // target buys: no tile reload, and the timing slot is then honest.
+    if (render.analyticField) {
+      const fieldWrites = timing.descriptorFor('field');
+      const pass = enc.beginRenderPass({
+        label: 'galaxy:fieldPass',
+        colorAttachments: [
+          {
+            view: fieldTex.createView(),
+            clearValue: { r: 0, g: 0, b: 0, a: 0 },
+            loadOp: 'clear',
+            storeOp: 'store',
+          },
+        ],
+        ...(fieldWrites ? { timestampWrites: fieldWrites } : {}),
+      });
+      pass.setPipeline(fieldPipe);
+      pass.setBindGroup(0, fieldBG);
+      pass.draw(3);
       pass.end();
     }
     // Scene pass: the aggregate folded into HDR, then transmittance dust over
@@ -1460,6 +1529,11 @@ export async function createGalaxyEngine(
         ...(sceneWrites ? { timestampWrites: sceneWrites } : {}),
       });
       aggregateUpsample.draw(pass, aggregateTex.createView());
+      // Second draw, same pipeline and same additive blend, so the two reduced
+      // targets sum in HDR exactly as they did when they shared one. A draw
+      // rather than a pass: the blend does the compositing, so no extra
+      // attachment switch.
+      if (render.analyticField) aggregateUpsample.draw(pass, fieldTex.createView());
       pass.setPipeline(dustPipe);
       pass.setBindGroup(0, dustBG);
       pass.setVertexBuffer(0, quad);
@@ -1526,6 +1600,7 @@ export async function createGalaxyEngine(
   return {
     setParams,
     setRender,
+    setFieldTuning,
     setView,
     setAutoRotate,
     setInsets,

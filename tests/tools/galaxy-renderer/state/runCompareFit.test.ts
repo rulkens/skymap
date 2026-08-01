@@ -89,6 +89,7 @@ function makeFakeEngine(): {
   const engine: GalaxyEngineHandle = {
     setParams,
     setRender: vi.fn<GalaxyEngineHandle['setRender']>(),
+    setFieldTuning: vi.fn<GalaxyEngineHandle['setFieldTuning']>(),
     setView,
     setAutoRotate,
     setInsets: vi.fn<GalaxyEngineHandle['setInsets']>(),

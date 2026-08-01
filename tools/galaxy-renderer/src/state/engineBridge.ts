@@ -52,6 +52,7 @@ export function connectEngineBridge(
   // Initial sync — the boot render, fired immediately like every other
   // reaction below.
   engine.setRender({ ...prev.render, ...prev.lod });
+  engine.setFieldTuning(prev.fieldTuning);
   engine.setInsets(
     prev.compare.open ? COMPARE_OPEN_INSET_PX : COMPARE_CLOSED_INSET_PX,
     REFERENCE_INSET_PX,
@@ -68,6 +69,10 @@ export function connectEngineBridge(
 
     if (next.render !== prev.render || next.lod !== prev.lod) {
       engine.setRender({ ...next.render, ...next.lod });
+    }
+
+    if (next.fieldTuning !== prev.fieldTuning) {
+      engine.setFieldTuning(next.fieldTuning);
     }
 
     if (next.ui.autoRotate !== prev.ui.autoRotate) {

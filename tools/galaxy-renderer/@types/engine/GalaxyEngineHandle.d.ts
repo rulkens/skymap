@@ -9,6 +9,7 @@
  */
 
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
+import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFieldTuning';
 import type { RenderSettings } from './RenderSettings';
 import type { LodSettings } from './LodSettings';
 import type { ViewPose } from './ViewPose';
@@ -17,6 +18,7 @@ import type { ExtraGalaxySpec } from '../../../../src/@types/galaxy/ExtraGalaxyS
 export type GalaxyEngineHandle = {
   setParams(params: GalaxyParams): Promise<void>; // pack UBO, dispatch generation compute
   setRender(patch: Partial<RenderSettings & LodSettings>): void; // live, no regen
+  setFieldTuning(patch: Partial<GalaxyFieldTuning>): void; // live, rebuilds fieldMixture from cached geometry
   setView(pose: Partial<ViewPose>): void;
   setAutoRotate(on: boolean): void;
   setInsets(left: number, right: number): void; // CSS px of overlaid panels

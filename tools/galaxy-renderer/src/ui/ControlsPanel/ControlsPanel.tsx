@@ -42,6 +42,7 @@ import { randomGalaxyParams } from '../../data/randomGalaxyParams';
 import { classifyHubbleType } from '../../../../../src/services/gpu/galaxy/classifyHubbleType';
 import CollapsibleSection from '../CollapsibleSection/CollapsibleSection';
 import FadeSection from '../FadeSection/FadeSection';
+import FieldSection from '../FieldSection/FieldSection';
 import ParamSlider from '../ParamSlider/ParamSlider';
 import TonemapSelect from '../TonemapSelect/TonemapSelect';
 import TypePicker from '../TypePicker/TypePicker';
@@ -393,16 +394,16 @@ function ControlsPanel({ fade }: ControlsPanelProps): ReactNode {
           </div>
         </CollapsibleSection>
 
-        {/* SPIKE. The analytic field is a closed-form line integral of a
-            Gaussian mixture, evaluated per fragment in one fullscreen pass
-            into the SAME reduced-resolution target the sprites draw into, with
-            the same additive blend. Both are on by default so they sum; the
-            two toggles are how either is seen alone, which is the comparison
-            the whole spike exists for. The mixture itself is derived from the
-            generator's own geometry in `src/data/galaxy/galaxyFieldMixture.ts`
-            — its tuning constants live there, it has no UI. */}
+        {/* The analytic flux field is a closed-form line integral of a Gaussian
+            mixture, evaluated per fragment in one fullscreen pass into its OWN
+            reduced-resolution target, additively blended into HDR alongside the
+            sprites'. Both are on by default so they sum; the two toggles are how
+            either is seen alone, which is the comparison this exists for. The
+            mixture is derived from the generator's own geometry in
+            `src/data/galaxy/galaxyFieldMixture.ts`; its ring layout is live-tunable
+            in the section below. */}
         <CollapsibleSection
-          title="ANALYTIC FIELD (SPIKE)"
+          title="ANALYTIC FLUX FIELD"
           open={ui.openSections.field}
           onToggle={() => dispatch(sectionToggled('field'))}
         >
@@ -439,6 +440,11 @@ function ControlsPanel({ fade }: ControlsPanelProps): ReactNode {
             info="Whole-field multiplier on the integrated mixture. 1.0 is parity: the mixture is calibrated to emit the same total light as the sprite population it stands in for, at whatever the sprite exposure and size sliders are set to."
           />
         </CollapsibleSection>
+
+        {/* The warped outer disc rings' own tuning surface — see
+            `FieldSection`'s header for why this rebuilds the mixture without
+            a regenerate. */}
+        <FieldSection />
 
         {/* The app's visibility fade, which multiplies into BOTH halves of the
             spike above — so the sprite/analytic comparison holds as the cloud
@@ -518,6 +524,16 @@ function ControlsPanel({ fade }: ControlsPanelProps): ReactNode {
             format={(v) => String(Math.round(v))}
             onChange={(v) => dispatch(renderPatched({ aggregateDivisor: Math.round(v) }))}
             info="Stars render into an offscreen at 1/N the canvas and are bilinearly added back into HDR, so their fragment cost — the actual wall — falls as N². 1 is full resolution, the reference the reconstruction has to be judged against. Moving it reallocates that target and rescales the two px knobs above, which clamp in its pixels."
+          />
+          <ParamSlider
+            label="Field target divisor"
+            value={render.fieldDivisor}
+            min={1}
+            max={8}
+            step={1}
+            format={(v) => String(Math.round(v))}
+            onChange={(v) => dispatch(renderPatched({ fieldDivisor: Math.round(v) }))}
+            info="The same trade for the ANALYTIC field, on its own target. It goes coarser than the sprites can: the field is a sum of wide Gaussians with no point-like detail to lose, and it is fill-bound, so cost falls as N². The ceiling is bloom fireflies zoomed out, not blur — the ray integral is a POINT sample with no pixel-footprint filtering, so a core narrower than a texel aliases into a value that crosses the bloom threshold."
           />
         </CollapsibleSection>
 

@@ -19,6 +19,9 @@ export const DEFAULT_UI_STATE: UiState = {
     // comparison the section exists for, and a collapsed section would hide
     // the only way to see either half alone.
     field: true,
+    // The ring-tuning sliders start expanded for the same reason: this is the
+    // whole point of the section, not a settings drawer to tuck away.
+    ringTuning: true,
     // Expanded: its live readout is the only place the fade's two factors are
     // visible, and a collapsed section would let the cloud dim with no
     // explanation on screen.

@@ -5,10 +5,10 @@
  * Viewport mount), and a shared module-singleton store would leak one run's
  * params into the next.
  *
- * All six `AppState` routes are mounted: the three param slices
- * (`galaxy`/`render`/`lod`) plus the UI-adjacent trio (`compare`/`extras`/
- * `ui`). `AppStore`/`AppDispatch` are both DERIVED from the reducer map
- * (never hand-typed against `AppState` directly) so they can't drift from
+ * All seven `AppState` routes are mounted: the four param slices
+ * (`galaxy`/`render`/`lod`/`fieldTuning`) plus the UI-adjacent trio
+ * (`compare`/`extras`/`ui`). `AppStore`/`AppDispatch` are both DERIVED from
+ * the reducer map (never hand-typed against `AppState` directly) so they can't drift from
  * what's actually combined below; the `_rootStateMatchesAppState` trip-wire
  * a few lines down catches the opposite drift — `AppState.d.ts` gaining or
  * losing a field without a matching edit here.
@@ -22,6 +22,7 @@ import { combineReducers, configureStore } from '@reduxjs/toolkit';
 import galaxyReducer from './slices/galaxySlice';
 import renderReducer from './slices/renderSlice';
 import lodReducer from './slices/lodSlice';
+import fieldTuningReducer from './slices/fieldTuningSlice';
 import compareReducer from './slices/compareSlice';
 import extrasReducer from './slices/extrasSlice';
 import uiReducer from './slices/uiSlice';
@@ -31,6 +32,7 @@ const rootReducer = combineReducers({
   galaxy: galaxyReducer,
   render: renderReducer,
   lod: lodReducer,
+  fieldTuning: fieldTuningReducer,
   compare: compareReducer,
   extras: extrasReducer,
   ui: uiReducer,

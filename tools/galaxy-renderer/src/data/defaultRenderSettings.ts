@@ -65,6 +65,16 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   starPxMax: MILKY_WAY_TUNING_DEFAULTS.starPxMax,
   softness: MILKY_WAY_TUNING_DEFAULTS.softness,
   aggregateDivisor: MILKY_WAY_TUNING_DEFAULTS.aggregateDivisor,
+  // The analytic field's own target divisor, coarser than the sprites' because
+  // the field is FILL-bound and a sum of wide Gaussians survives it: measured
+  // 2.5-3 ms at the sprite divisor against under 1 ms at 5, with no visible
+  // difference. The ceiling is not blur but bloom FIREFLIES zoomed far out —
+  // the closed-form integral point-samples the ray with no pixel-footprint
+  // filtering, so once the bulge core is narrower than a texel it aliases into
+  // a value that trips the bloom threshold and pops as the camera moves. No
+  // `MILKY_WAY_TUNING_DEFAULTS` counterpart yet — the runtime has no analytic
+  // field to size a target for.
+  fieldDivisor: 6,
   // Analytic-field spike: both halves visible at boot, because the question it
   // exists to answer is how they compare. 1.0 is not a taste setting — the
   // mixture is calibrated so that exposure emits the sprite field's own total

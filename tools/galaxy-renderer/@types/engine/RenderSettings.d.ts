@@ -57,6 +57,8 @@ export type RenderSettings = {
   readonly softness: number;
   /** Downsample divisor of the star pass's offscreen — the app's `MilkyWayTuning.aggregateDivisor`. The one knob here that reaches the frame by reallocating a texture rather than by riding the uniform, and the one `starPxMin`/`starPxMax` are stated in the pixels of. */
   readonly aggregateDivisor: number;
+  /** Downsample divisor of the ANALYTIC field's own offscreen. Separate from `aggregateDivisor` because the field is fill-bound and low-frequency: it takes a far coarser target than sprites do without a visible difference. Also reallocates rather than riding the uniform. */
+  readonly fieldDivisor: number;
 
   /** SPIKE, tool-only: draw the sprite star field. Off isolates the analytic field. */
   readonly spriteField: boolean;
