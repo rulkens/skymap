@@ -232,11 +232,13 @@ import {
   GALAXY_FIELD_MAX_COMPONENTS,
 } from '../../../../src/data/galaxy/galaxyFieldMixture';
 import { buildGalaxyDustMixture } from '../../../../src/data/galaxy/galaxyDustMixture';
+import { buildDustParticleCloud } from '../../../../src/data/galaxy/dustParticleCloud';
 import {
   buildDustNetworkFeatures,
   DUST_NETWORK_FEATURE_CAP,
 } from '../../../../src/data/galaxy/dustNetworkFeatures';
 import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../src/data/galaxy/defaultGalaxyDustParams';
+import { dustExtinctionRgb } from '../../../../src/utils/galaxy/dustExtinctionRgb';
 import { transformGalaxyFieldComponent } from '../../../../src/utils/galaxy/transformGalaxyFieldComponent';
 import { GENERATION_UBO } from '../../../../src/services/gpu/galaxy/generationUboLayout';
 import { GEN_RECORD_BYTES } from '../../../../src/services/gpu/galaxy/genRecordBytes';
@@ -437,10 +439,10 @@ export async function createGalaxyEngine(
   const dustUbo = makeCloudUniformBuffer('galaxy:dustUniforms');
   // The analytic field's own buffer, own struct — see `packFieldUniforms`.
   // It cannot share the cloud UBO: nothing in the 208-byte cloud layout is a
-  // ray, and this pass reads none of the billboard lanes. Camera/params only
-  // now — the mixture itself rides `fieldCompsBuf` below, a separate storage
-  // binding, so this uniform stays a fixed 96 bytes regardless of how many
-  // galaxies are on screen.
+  // ray, and this pass reads none of the billboard lanes. Camera/params/dust-
+  // law only now — the mixture itself rides `fieldCompsBuf` below, a separate
+  // storage binding, so this uniform stays a fixed 128 bytes regardless of
+  // how many galaxies are on screen.
   const fieldUbo = device.createBuffer({
     label: 'galaxy:fieldUniforms',
     size: FIELD_HEADER_BUFFER_SIZE,
@@ -754,6 +756,12 @@ export async function createGalaxyEngine(
   // `GalaxyParams` of its own, so a dustEnabled toggle needs this cached copy
   // to rebuild `dustMixture` without a regenerate.
   let currentDust: GalaxyDustParams = DEFAULT_GALAXY_DUST_PARAMS;
+  // The CCM89 law for `currentDust.rV`, cached alongside it (recomputed in
+  // `rebuildDustMixture`, not per frame in `drawFrame`) — `packFieldHeaderUniforms`
+  // needs this every frame now that the primary galaxy's attenuation reads
+  // it from the header rather than a per-component colour lane (see
+  // io.wesl's dust-component comment).
+  let currentDustExtinctionRgb = dustExtinctionRgb(DEFAULT_GALAXY_DUST_PARAMS.rV);
   // The detail-tier dust splat network (design doc N1/N2 #1), CENTRAL galaxy
   // only like `dustMixture` above, cached + rebuilt on the same two triggers
   // (`setParams`, `setFieldTuning`) — see `rebuildDustFeatures`.
@@ -1080,11 +1088,23 @@ export async function createGalaxyEngine(
    * `setParams` (new geometry or dust params arrived) and `setFieldTuning`
    * (toggle, or any tuning-driven geometry that later feeds dust) — the same
    * two repack triggers `fieldMixture` itself uses.
+   *
+   * The particle cloud (`buildDustParticleCloud`) rides the SAME slot: it is
+   * volumetric detail layered on the flat lane, drawn through the identical
+   * dustMap splat pipeline, so appending it here — rather than threading a
+   * third mixture through `repackFieldComponents` — is what lets `dustCount`
+   * downstream stay a single number. `currentSeed`, not a literal, for the
+   * same reason `rebuildDustFeatures` below reads it: both need this galaxy's
+   * placement to be reproducible from `setParams`'s params alone.
    */
   function rebuildDustMixture(): void {
+    currentDustExtinctionRgb = dustExtinctionRgb(currentDust.rV);
     dustMixture =
       fieldGeometry && fieldTuning.dustEnabled
-        ? buildGalaxyDustMixture(fieldGeometry, currentDust)
+        ? [
+            ...buildGalaxyDustMixture(fieldGeometry, currentDust),
+            ...buildDustParticleCloud(fieldGeometry, currentDust, currentSeed),
+          ]
         : [];
   }
 
@@ -1864,6 +1884,9 @@ export async function createGalaxyEngine(
       // see io.wesl's counts2.y doc); kept plumbed for the detail tier's
       // future octave band-limiting.
       reducedSize(render.fieldDivisor)[1],
+      // The CCM89 extinction law for currentDust.rV — cached by
+      // rebuildDustMixture, not recomputed here every frame.
+      currentDustExtinctionRgb,
       fieldData,
     );
     device.queue.writeBuffer(fieldUbo, 0, fieldData);

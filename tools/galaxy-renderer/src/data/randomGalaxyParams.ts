@@ -13,6 +13,7 @@
 
 import type { GalaxyDustParams } from '../../../../src/@types/galaxy/GalaxyDustParams';
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
+import { DEFAULT_GALAXY_DUST_CLOUD_PARAMS } from '../../../../src/data/galaxy/defaultGalaxyDustCloudParams';
 import { PARAM_SPEC } from './paramSpec';
 import { classifyHubbleType } from '../../../../src/services/gpu/galaxy/classifyHubbleType';
 
@@ -88,6 +89,10 @@ export function randomGalaxyParams(
     tau: 0.2 + rng() * 0.8,
     scaleLenRatio: 1.4 + rng() * 0.35,
     heightRatio: 0.25 + rng() * 0.5,
+    // R_V is a real galaxy-to-galaxy dust-grain property (unlike the taste
+    // scalers below, left fixed) — spans diffuse-ISM to dense-cloud MW-like
+    // sightlines (2.4-4.0), short of SMC/starburst territory.
+    rV: 2.4 + rng() * 1.6,
     network: {
       armContrast: 2 + rng() * 3,
       sfActivity: 0.3 + rng() * 1.7,
@@ -102,6 +107,16 @@ export function randomGalaxyParams(
       bubbleScale: 1,
       bubbleRimStrength: 0.5,
       beadShare: 0.5,
+    },
+    cloud: {
+      ...DEFAULT_GALAXY_DUST_CLOUD_PARAMS,
+      // Only the three knobs that read as a galaxy's own ISM character get
+      // rolled: how richly it is resolved into clouds, how hierarchically
+      // those cluster, and how large its complexes run. The rest are taste
+      // scalers, left at their calibrated value like the network refiners.
+      count: Math.round(6000 + rng() * 12000),
+      clumpiness: 0.35 + rng() * 0.55,
+      sizeScale: 0.7 + rng() * 0.9,
     },
   };
 

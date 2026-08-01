@@ -24,6 +24,7 @@
  * instead of losing a priority fight.
  */
 import { mulberry32 } from '../../utils/random/mulberry32';
+import { buildDustBubblePlacementDetails, pcToUnits } from './dustBubblePlacements';
 import {
   armAgeWeight,
   armLaneWidthAndAmplitude,
@@ -35,10 +36,8 @@ import {
   NOISE_WAVELENGTH_FRACTION,
   TAPER_FRACTION,
 } from './dustLaneFeatures';
-import { armFadeEnvelope, armRidgeAngle, armRidgeCurvePoint } from './galaxyFieldMixture';
+import { armFadeEnvelope } from './galaxyFieldMixture';
 import { dustFaceOnColumn } from './galaxyDustMixture';
-import { buildSfEventCatalog } from './sfEventCatalog';
-import { warpSurfaceFrame } from '../../utils/galaxy/warpSurfaceFrame';
 import type { ArmOffsetFrame } from './dustLaneFeatures';
 import type { GalaxyDustFeature } from '../../@types/galaxy/GalaxyDustFeature';
 import type { GalaxyDustParams } from '../../@types/galaxy/GalaxyDustParams';
@@ -58,19 +57,13 @@ export const DUST_NETWORK_FEATURE_CAP = 1024;
 const LANE_BUDGET = DUST_LANE_FEATURE_CAP;
 /** 160 chains x 3 segments — second priority (N2 #2). */
 const SPUR_BUDGET = 480;
-/** Third priority (N2 #3); bubbles are sparse, large-footprint features. */
-const BUBBLE_BUDGET = 120;
 /** Remainder of the 1024 total — lowest priority, highest-candidate-count class (N2 #4). */
 const BEAD_BUDGET = 168;
 // LANE_BUDGET + SPUR_BUDGET + BUBBLE_BUDGET + BEAD_BUDGET === DUST_NETWORK_FEATURE_CAP
 // (256 + 480 + 120 + 168 === 1024) — keep them summing exactly so
 // `buildDustNetworkFeatures`'s closing slice stays a pure safety net.
-
-/** 1 generator unit = 1.6667 kpc — `galacticCenter.ts`'s own conversion, restated here to turn pc-scale literature radii into world units. */
-const KPC_PER_UNIT = 1.6667;
-function pcToUnits(pc: number): number {
-  return pc / (KPC_PER_UNIT * 1000);
-}
+// BUBBLE_BUDGET (third priority, N2 #3) now lives in `dustBubblePlacements.ts`,
+// which owns the whole bubble placement pass — imported above.
 
 // ---- Shared arm-curve walk (spurs + beads) --------------------------------
 
@@ -264,86 +257,34 @@ function buildSpurFeatures(
 
 // ---- Bubbles (N2 #3) ------------------------------------------------------
 
-/** age01 <= this gate are future HII knots (#20), not yet swept dust cavities — see `SfEvent.age01`'s own doc. */
-const BUBBLE_AGE_GATE = 0.35;
 /** Hole depth as a fraction of the local lane-ish column. */
 const BUBBLE_HOLE_DEPTH_FRACTION = 0.6;
 
+/** Placement (age-gated event -> center/radius, largest-first budget cap) lives in `dustBubblePlacements.ts`, shared with the particle cloud's carving pass; this class only shapes the flat rim/hole record. */
 function buildBubbleFeatures(
   geometry: GalaxyFieldGeometry,
   dust: GalaxyDustParams,
   seed: number,
 ): GalaxyDustFeature[] {
-  if (dust.tau <= 0 || geometry.numArms <= 0 || dust.network.bubbleScale <= 0) return [];
-
-  const events = buildSfEventCatalog(geometry, dust.network, seed);
-  const out: GalaxyDustFeature[] = [];
-  for (const event of events) {
-    if (event.age01 <= BUBBLE_AGE_GATE) continue;
-    const arm = geometry.arms[event.armIndex];
-    if (!arm) continue;
-
-    const radius = geometry.armStartRadius * Math.exp(event.logR);
-    const angle = armRidgeAngle(event.logR, geometry, arm);
-    const ridge = armRidgeCurvePoint(event.logR, geometry, arm);
-    const frame = warpSurfaceFrame(radius, angle, geometry);
-    // ON the warp surface: `frame.across` is a tangent to the warped disc at
-    // this point (not a flat horizontal offset), the same technique the
-    // lane/spur curve uses for its own offset points.
-    const center: Vec3 = [
-      ridge[0] + frame.across[0] * event.acrossOffset,
-      ridge[1] + frame.across[1] * event.acrossOffset,
-      ridge[2] + frame.across[2] * event.acrossOffset,
-    ];
-
-    const age01n = (event.age01 - BUBBLE_AGE_GATE) / (1 - BUBBLE_AGE_GATE);
-    // Quadratic-plus bias approximating the measured -2.2 size power law's
-    // many-small/few-big shape from the catalog's own UNIFORM age draws —
-    // not a resampled power-law distribution.
-    const radiusPc = 6 + 546 * Math.pow(age01n, 2.5);
-    const R = pcToUnits(radiusPc) * dust.network.bubbleScale;
-    if (R <= 0) continue;
-
-    const fade = armFadeEnvelope(radius, geometry, arm);
-    const ageWeight = armAgeWeight(arm);
-    const { amplitude: laneAmplitude } = armLaneWidthAndAmplitude(
-      radius,
-      geometry,
-      dust,
-      ageWeight,
-      fade,
-    );
-    if (laneAmplitude <= 0) continue;
-
-    out.push({
-      p0: center,
-      // p1 unused for kind >= 1 (disc primitives) — a throwaway unit offset
-      // so the shader's unguarded fragment-side `seg/len` division never
-      // sees zero (see dustFeature.wesl's kind branch).
-      p1: [center[0] + 1, center[1], center[2]],
-      normal: frame.pole,
-      width: R,
-      amplitude: laneAmplitude * BUBBLE_HOLE_DEPTH_FRACTION,
-      edgeSharpness: EDGE_SHARPNESS,
-      noiseSeed: 0,
-      // rimGain rides this lane for kind 1 — see io.wesl's FEATS table.
-      noiseAmp: dust.network.bubbleRimStrength,
-      noiseFreq: 0,
-      kind: 1,
-      sOffset: 0,
-      taperIn: 0,
-      taperOut: 0,
-    });
-  }
-
-  // Budget: over BUBBLE_BUDGET, keep the LARGEST radii — small bubbles
-  // vanish first, matching how a resolution-limited budget resolves
-  // visually (the smallest are what a viewer loses to pixel scale anyway).
-  if (out.length > BUBBLE_BUDGET) {
-    out.sort((a, b) => b.width - a.width);
-    return out.slice(0, BUBBLE_BUDGET);
-  }
-  return out;
+  return buildDustBubblePlacementDetails(geometry, dust, seed).map((placement) => ({
+    p0: placement.center,
+    // p1 unused for kind >= 1 (disc primitives) — a throwaway unit offset
+    // so the shader's unguarded fragment-side `seg/len` division never
+    // sees zero (see dustFeature.wesl's kind branch).
+    p1: [placement.center[0] + 1, placement.center[1], placement.center[2]],
+    normal: placement.pole,
+    width: placement.radius,
+    amplitude: placement.laneAmplitude * BUBBLE_HOLE_DEPTH_FRACTION,
+    edgeSharpness: EDGE_SHARPNESS,
+    noiseSeed: 0,
+    // rimGain rides this lane for kind 1 — see io.wesl's FEATS table.
+    noiseAmp: dust.network.bubbleRimStrength,
+    noiseFreq: 0,
+    kind: 1,
+    sOffset: 0,
+    taperIn: 0,
+    taperOut: 0,
+  }));
 }
 
 // ---- GMC beads (N2 #4) -----------------------------------------------------

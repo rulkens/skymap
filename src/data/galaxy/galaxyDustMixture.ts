@@ -7,6 +7,7 @@
  */
 import { armCarriedFraction } from '../../utils/galaxy/armCarriedFraction';
 import { discLightScaleLength } from '../../utils/galaxy/discLightScaleLength';
+import { dustExtinctionRgb } from '../../utils/galaxy/dustExtinctionRgb';
 import { armCrossSigma, DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './galaxyFieldMixture';
 import type { GalaxyDustNetworkParams } from '../../@types/galaxy/GalaxyDustNetworkParams';
 import type { GalaxyDustParams } from '../../@types/galaxy/GalaxyDustParams';
@@ -14,23 +15,28 @@ import type { GalaxyFieldComponent } from '../../@types/galaxy/GalaxyFieldCompon
 import type { GalaxyFieldGeometry } from '../../@types/galaxy/GalaxyFieldGeometry';
 import type { GalaxyFieldTuning } from '../../@types/galaxy/GalaxyFieldTuning';
 
-// CCM89 Table 3 A_lambda/A_V, interpolated in 1/lambda to the sRGB primaries
-// (~612/549/465 nm). Rides the colour lane so a future preset can carry a
-// different (e.g. greyer starburst) law with no shader change.
-export const DUST_EXTINCTION_RGB: readonly [number, number, number] = [0.88, 1.0, 1.25];
-
 const TAU_ROOT = Math.sqrt(2 * Math.PI);
 const ORIGIN: readonly [number, number, number] = [0, 0, 0];
 
 /** `armCrossSigma` only reads `.armWidthScale`; the dust ledger has no field tuning of its own to hand it. */
 const ARM_WIDTH_TUNING = { armWidthScale: 1 } as GalaxyFieldTuning;
 
-type DustDiscShape = {
+/** Exported so `dustParticleCloud.ts` sizes its mass budget off the SAME disc profile rather than re-deriving it. */
+export type DustDiscShape = {
   readonly hDust: number;
   readonly sigmaZ: number;
   readonly sigmaRCap: number;
   readonly sumW: number;
 };
+
+/**
+ * `dust.cloud.share`, clamped to a valid probability: the ledger below splits
+ * one tau budget three ways (particles / flat features / smooth field) and
+ * the three must never sum past the measured total.
+ */
+export function clampedDustCloudShare(dust: GalaxyDustParams): number {
+  return Math.min(1, Math.max(0, dust.cloud.share));
+}
 
 /**
  * This mixture is flat (grill Q5); the disc itself isn't past warpStartRadius.
@@ -40,7 +46,10 @@ type DustDiscShape = {
  * deferred to the dust-map detail tier, where ring-placed blobs are affordable.
  * sigmaZ (and so the face-on central tau, which depends only on sigmaZ) is untouched.
  */
-function dustDiscShape(geometry: GalaxyFieldGeometry, dust: GalaxyDustParams): DustDiscShape {
+export function dustDiscShape(
+  geometry: GalaxyFieldGeometry,
+  dust: GalaxyDustParams,
+): DustDiscShape {
   return {
     hDust: dust.scaleLenRatio * discLightScaleLength(geometry),
     sigmaZ: dust.heightRatio * geometry.diskHeight,
@@ -49,8 +58,8 @@ function dustDiscShape(geometry: GalaxyFieldGeometry, dust: GalaxyDustParams): D
   };
 }
 
-/** Component i's radial sigma, capped at the flat-model validity boundary — shared by the mixture builder and `dustFaceOnColumn` below. */
-function dustSigmaR(i: number, shape: DustDiscShape): number {
+/** Component i's radial sigma, capped at the flat-model validity boundary — shared by the mixture builder, `dustFaceOnColumn` below, and `dustParticleCloud.ts`. */
+export function dustSigmaR(i: number, shape: DustDiscShape): number {
   return Math.min(DISC_SIGMA_RATIOS[i]! * shape.hDust, shape.sigmaRCap);
 }
 
@@ -74,7 +83,10 @@ export function dustFaceOnColumn(
     const sigmaR = dustSigmaR(i, shape);
     sigma += DISC_SURFACE_WEIGHTS[i]! * Math.exp(-(radius * radius) / (2 * sigmaR * sigmaR));
   }
-  return (dust.tau / shape.sumW) * sigma;
+  // Debited by the cloud's own share so the flat feature tier reading this
+  // column (`dustLaneFeatures.ts`) never double-counts what the particles
+  // already carry — see `clampedDustCloudShare`.
+  return (dust.tau / shape.sumW) * sigma * (1 - clampedDustCloudShare(dust));
 }
 
 /**
@@ -117,10 +129,15 @@ export function buildGalaxyDustMixture(
   if (geometry.discFraction <= 0 || dust.tau <= 0) return [];
 
   const shape = dustDiscShape(geometry, dust);
-  // Debited by the arm-carried share so the network's concentrated lanes
-  // (`dustLaneFeatures.ts`) and this smooth field don't sum to more than the
-  // measured central tau — see `armCarriedDustFraction`'s header.
-  const scale = 1 - armCarriedDustFraction(geometry, dust.network);
+  // Debited by the arm-carried share AND the cloud's own share so the three
+  // tiers (smooth field / flat network lanes / particle cloud) never
+  // double-count the same measured central tau — see `armCarriedDustFraction`'s
+  // header and `clampedDustCloudShare`. This function does NOT go through
+  // `dustFaceOnColumn` (which already carries the cloud debit), so applying
+  // it again here is correct, not a duplicate.
+  const scale =
+    (1 - armCarriedDustFraction(geometry, dust.network)) * (1 - clampedDustCloudShare(dust));
+  const extinctionRgb = dustExtinctionRgb(dust.rV);
 
   const out: GalaxyFieldComponent[] = [];
   for (let i = 0; i < DISC_SIGMA_RATIOS.length; i++) {
@@ -140,7 +157,7 @@ export function buildGalaxyDustMixture(
       invCovOffDiagonal: [0, 0, 0],
       // Extinction RATIOS, not an emission tint — splat.wesl reads this as
       // tauRGB's per-channel weight, never multiplied into a colour.
-      color: DUST_EXTINCTION_RGB,
+      color: extinctionRgb,
       center: ORIGIN,
       boundRadius: Math.max(sigmaR, shape.sigmaZ),
     });

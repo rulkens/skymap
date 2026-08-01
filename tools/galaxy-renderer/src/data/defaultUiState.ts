@@ -27,6 +27,9 @@ export const DEFAULT_UI_STATE: UiState = {
     // Expanded, same rationale as `analyticDust`: the filament/bubble network
     // is the current work.
     dustNetwork: true,
+    // Expanded, same rationale as `dustNetwork`: the particle cloud is the
+    // current work.
+    dustCloud: true,
     glob: false,
     render: false,
     // FLUX FIELD (exposure, part toggles, ring tuning) starts EXPANDED for the

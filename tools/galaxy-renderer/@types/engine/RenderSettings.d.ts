@@ -79,6 +79,12 @@ export type RenderSettings = {
    * untouched — see the gate in `engineBridge.ts`.
    */
   readonly legacyDustEnabled: boolean;
+  /**
+   * DUST CLOUD header pill: off forces `dust.cloud.count` to 0 in the copy
+   * handed to the engine, same "outgoing copy only" idiom as
+   * `legacyDustEnabled` — see the gate in `engineBridge.ts`.
+   */
+  readonly dustCloudEnabled: boolean;
 
   /**
    * The app's Milky-Way visibility fade, ported so the cloud can be tuned in

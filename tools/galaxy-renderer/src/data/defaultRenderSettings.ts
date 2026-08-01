@@ -87,6 +87,7 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // presentation of the dust map, which is not the default look.
   dustView: false,
   legacyDustEnabled: true,
+  dustCloudEnabled: true,
   // ON at boot, which costs nothing: at the boot camera both bands read 1, so
   // the first frame is the same frame it always was. A fade that had to be
   // found and switched on would leave the tool tuning a regime the app never

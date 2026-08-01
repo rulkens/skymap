@@ -1,10 +1,11 @@
 /**
- * DustSection — the analytic dust lane's three knobs (`GalaxyParams.dust`):
- * face-on optical depth and its scale-length/thickness ratios to the
- * stellar disc. Nested under `params.dust` rather than a flat `GalaxyParams`
- * field, so it can't ride the generic `renderGalaxySlider` path (see
- * `GalaxySliderKey`'s exclusion in `ControlsPanel.tsx`) — each slider spreads
- * the current dust object by hand instead. Same fold/pill idiom as
+ * DustSection — the analytic dust lane's four knobs (`GalaxyParams.dust`):
+ * face-on optical depth, the CCM89 extinction law's R_V, and the scale-
+ * length/thickness ratios to the stellar disc. Nested under `params.dust`
+ * rather than a flat `GalaxyParams` field, so it can't ride the generic
+ * `renderGalaxySlider` path (see `GalaxySliderKey`'s exclusion in
+ * `ControlsPanel.tsx`) — each slider spreads the current dust object by hand
+ * instead. Same fold/pill idiom as
  * `ArmFieldSection`: `ui.openSections.analyticDust` for the fold,
  * `fieldTuning.dustEnabled` for the header pill.
  */
@@ -43,11 +44,21 @@ function DustSection(): ReactNode {
           label="Face-on optical depth"
           value={dust.tau}
           min={0}
-          max={2.5}
+          max={8}
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchDust({ tau: v })}
-          info="Central face-on tau_V; measured 0.5-1 for spirals (Xilouris et al. 1999, De Geyter et al. 2014)."
+          info="Central face-on tau_V; measured 0.5-1 for spirals (Xilouris et al. 1999, De Geyter et al. 2014). The range above that is deliberate exploration headroom, not a measured span."
+        />
+        <ParamSlider
+          label="Extinction R_V"
+          value={dust.rV}
+          min={1.5}
+          max={8}
+          step={0.1}
+          format={(v) => v.toFixed(1)}
+          onChange={(v) => patchDust({ rV: v })}
+          info="Total-to-selective extinction A_V/E(B-V); sets how much bluer light dims relative to red. Milky Way diffuse ISM 3.1 (greyer above, more reddening below)."
         />
         <ParamSlider
           label="Scale length × disc"

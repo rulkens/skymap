@@ -8,12 +8,20 @@
  * `scaleLenRatio`: dust/stellar-light radial scale-length ratio (measured
  * 1.4–1.75). `heightRatio`: dust/stellar vertical sigma ratio (measured
  * 0.25–0.75; the Milky Way's own is ~0.35).
+ * `rV`: total-to-selective extinction R_V = A_V / E(B-V), the CCM89
+ * extinction LAW's one free parameter (see `dustExtinctionRgb`) — diffuse
+ * Milky Way ISM ~3.1, dense molecular clouds up to ~5.5 (greyer), SMC/
+ * starburst sightlines ~2–2.5 (more strongly reddening).
  */
+import type { GalaxyDustCloudParams } from './GalaxyDustCloudParams';
 import type { GalaxyDustNetworkParams } from './GalaxyDustNetworkParams';
 
 export type GalaxyDustParams = {
   readonly tau: number;
   readonly scaleLenRatio: number;
   readonly heightRatio: number;
+  readonly rV: number;
   readonly network: GalaxyDustNetworkParams;
+  /** The 3D particle-cloud tier layered under `network`'s flat features — see `GalaxyDustCloudParams`. */
+  readonly cloud: GalaxyDustCloudParams;
 };

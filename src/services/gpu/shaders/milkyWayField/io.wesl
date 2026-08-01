@@ -21,7 +21,8 @@
 //   offset 64  : params: vec4   (tanHalfFov, aspect, lensShiftX, exposure)
 //   offset 80  : counts: vec4   (emissionCount, dustOffset, dustCount, primaryCount)
 //   offset 96  : counts2: vec4  (featCount, dustMapHeightPx, reserved, reserved)
-//   total: 112 bytes.
+//   offset 112 : dustExtinction: vec4 (A_lambda/A_V per channel, w unused)
+//   total: 128 bytes.
 //
 // counts.x is the live EMISSION component count — the central galaxy's plus
 // every extra's, drawn one quad each (see splat.wesl). counts.y/.z locate
@@ -84,10 +85,16 @@
 // re-readings, not two new lanes: [4i].w (amplitude for emission) is the
 // component's central V-band extinction density, per unit length; [4i+2].xyz
 // (color for emission) is the per-channel A_lambda/A_V extinction ratio
-// (galaxyDustMixture.ts's DUST_EXTINCTION_RGB), not a tint. [4i+1].w
-// (boundRadius) and [4i+3].xyz (center) mean the same thing they do for an
-// emission component. Dust components are consumed by dustMap.wesl's own
-// splat pass now, not looped over inside splat.wesl's fs — see binding 2.
+// (galaxyDustMixture.ts's dustExtinctionRgb), not a tint — carried per
+// component for a future per-extra dust loop, but NOT what the primary
+// galaxy's attenuation actually reads: dustMap.wesl sums every dust
+// component down to a single scalar tau column before splat.wesl ever sees
+// it, so the per-component colour lane has nowhere left to apply for the
+// primary. The law splat.wesl uses instead arrives per-frame, in this
+// header's own dustExtinction lane below. [4i+1].w (boundRadius) and
+// [4i+3].xyz (center) mean the same thing they do for an emission
+// component. Dust components are consumed by dustMap.wesl's own splat pass
+// now, not looped over inside splat.wesl's fs — see binding 2.
 //
 // DUST MAP (binding 2) — the screen-space (tau, tau*tPeak) accumulation
 // dustMap.wesl and dustFeature.wesl both splat the PRIMARY galaxy's dust
@@ -145,6 +152,7 @@ struct FieldUniforms {
   params: vec4<f32>,
   counts: vec4<f32>,
   counts2: vec4<f32>,
+  dustExtinction: vec4<f32>,
 };
 
 @group(0) @binding(0) var<uniform> u: FieldUniforms;

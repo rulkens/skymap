@@ -36,18 +36,24 @@ import type { AppStore } from './createStore';
 import type { GalaxyEngineHandle } from '../../@types/engine/GalaxyEngineHandle';
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import type { RenderSettings } from '../../@types/engine/RenderSettings';
+import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../src/data/galaxy/defaultGalaxyDustParams';
 import { buildExtraSpecs } from '../data/buildExtraSpecs';
 
 const COMPARE_OPEN_INSET_PX = 390; // html:493
 const COMPARE_CLOSED_INSET_PX = 0;
 const REFERENCE_INSET_PX = 340; // html:597 — the reference thumbnail strip, constant regardless of open/closed
 
-// DUST (LEGACY) pill gate: patches the OUTGOING copy handed to the engine,
-// never the stored `galaxy` params — toggling the pill back on must restore
-// exactly the values the sliders still show while it was off.
+// DUST (LEGACY) / DUST CLOUD pill gates: both patch the OUTGOING copy handed
+// to the engine, never the stored `galaxy` params — toggling a pill back on
+// must restore exactly the values the sliders still show while it was off.
 function paramsForEngine(galaxy: GalaxyParams, render: RenderSettings): GalaxyParams {
-  if (render.legacyDustEnabled) return galaxy;
-  return { ...galaxy, spriteDust: 0, dustRingStrength: 0 };
+  let out = galaxy;
+  if (!render.legacyDustEnabled) out = { ...out, spriteDust: 0, dustRingStrength: 0 };
+  if (!render.dustCloudEnabled) {
+    const dust = out.dust ?? DEFAULT_GALAXY_DUST_PARAMS;
+    out = { ...out, dust: { ...dust, cloud: { ...dust.cloud, count: 0 } } };
+  }
+  return out;
 }
 
 export function connectEngineBridge(
@@ -75,7 +81,8 @@ export function connectEngineBridge(
 
     if (
       next.galaxy !== prev.galaxy ||
-      next.render.legacyDustEnabled !== prev.render.legacyDustEnabled
+      next.render.legacyDustEnabled !== prev.render.legacyDustEnabled ||
+      next.render.dustCloudEnabled !== prev.render.dustCloudEnabled
     ) {
       void engine.setParams(paramsForEngine(next.galaxy, next.render));
     }

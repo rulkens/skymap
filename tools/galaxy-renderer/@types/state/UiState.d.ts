@@ -18,6 +18,7 @@ export type UiState = {
       | 'dust'
       | 'analyticDust'
       | 'dustNetwork'
+      | 'dustCloud'
       | 'glob'
       | 'render'
       | 'field'

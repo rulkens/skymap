@@ -40,8 +40,8 @@ import type { GalaxyDustFeature } from '../../../../src/@types/galaxy/GalaxyDust
 import type { GalaxyFieldComponent } from '../../../../src/@types/galaxy/GalaxyFieldComponent';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
-/** Float count of `io.wesl`'s `FieldUniforms` header — 7 vec4, camera + params + counts + counts2. */
-export const FIELD_HEADER_FLOATS = 28;
+/** Float count of `io.wesl`'s `FieldUniforms` header — 8 vec4, camera + params + counts + counts2 + dustExtinction. */
+export const FIELD_HEADER_FLOATS = 32;
 
 /** Byte size of the header struct, for `createBuffer`. */
 export const FIELD_HEADER_BUFFER_SIZE = FIELD_HEADER_FLOATS * 4;
@@ -68,11 +68,19 @@ export type FieldCamera = {
 };
 
 /**
- * packFieldHeaderUniforms — camera basis + params + the four live counts,
- * into the 96-byte uniform. Called every `drawFrame`; all four counts are
- * whatever `repackFieldComponents` (createGalaxyEngine.ts) last sized the
- * storage buffer to (the two packers are called from different sites, so
- * the counts travel as plain arguments rather than being re-derived here).
+ * packFieldHeaderUniforms — camera basis + params + the four live counts +
+ * the dust extinction law, into the 128-byte uniform. Called every
+ * `drawFrame`; all four counts are whatever `repackFieldComponents`
+ * (createGalaxyEngine.ts) last sized the storage buffer to (the two packers
+ * are called from different sites, so the counts travel as plain arguments
+ * rather than being re-derived here).
+ *
+ * `dustExtinctionRgb` rides the header, not the per-component colour lane,
+ * because the primary galaxy's attenuation no longer reads per-component
+ * colour at all — dustMap.wesl collapses every dust component to a scalar
+ * (tau, tau*tPeak) column before splat.wesl ever sees it (see io.wesl's
+ * dust-component comment), so the law has to arrive some other way, once
+ * per frame, for the whole primary galaxy.
  *
  * `emissionCount` (the former `componentCount`) is the draw call's own
  * instance count — dust components are never drawn as quads. `dustOffset`
@@ -97,6 +105,7 @@ export function packFieldHeaderUniforms(
   primaryCount: number,
   featCount: number,
   dustMapHeightPx: number,
+  dustExtinctionRgb: Vec3,
   dst?: Float32Array,
 ): Float32Array {
   const out = dst ?? new Float32Array(FIELD_HEADER_FLOATS);
@@ -142,6 +151,12 @@ export function packFieldHeaderUniforms(
   out[25] = dustMapHeightPx;
   out[26] = 0;
   out[27] = 0;
+
+  // dustExtinction 28..31 = (A_lambda/A_V per channel, unused).
+  out[28] = dustExtinctionRgb[0];
+  out[29] = dustExtinctionRgb[1];
+  out[30] = dustExtinctionRgb[2];
+  out[31] = 0;
 
   return out;
 }

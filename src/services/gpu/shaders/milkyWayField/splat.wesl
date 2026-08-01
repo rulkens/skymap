@@ -27,15 +27,6 @@ import package::milkyWayField::io::u;
 import package::milkyWayField::io::comps;
 import package::milkyWayField::io::dustMapTex;
 
-// CCM89 Table 3 A_lambda/A_V, collapsed to one constant for the primary: the
-// dust map sums every dust component's column before this fragment ever
-// reads it, so a per-component extinction ratio has nowhere left to apply —
-// see galaxyDustMixture.ts's DUST_EXTINCTION_RGB, the per-component source
-// these numbers are pinned to (identical today; only the map's collapse is
-// new). Per-component ratios still ride the packed dust records, for a
-// future per-extra loop that reads them directly.
-const DUST_EXTINCTION_RGB = vec3<f32>(0.88, 1.0, 1.25);
-
 struct SplatOut {
   @builtin(position) pos: vec4<f32>,
   @location(0) ndc: vec2<f32>,
@@ -126,7 +117,7 @@ fn fs(input: SplatOut) -> @location(0) vec4<f32> {
     dustApplies = tau > 1e-6;
     if (dustApplies) {
       let tD = max(texel.g / tau, 0.0);
-      let tauRGB = tau * DUST_EXTINCTION_RGB;
+      let tauRGB = tau * u.dustExtinction.xyz;
       let transmittance = exp(-tauRGB);
 
       let ec = gaussianRayCoeffs(po, d, g0.xyz, g1.xyz);

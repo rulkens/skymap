@@ -98,6 +98,8 @@ export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams = {
     tau: 0.5,
     scaleLenRatio: 1.5,
     heightRatio: 0.35,
+    // Diffuse Milky Way ISM canonical value (Cardelli, Clayton & Mathis 1989).
+    rV: 3.1,
     // Not yet visually calibrated — same values as DEFAULT_GALAXY_DUST_NETWORK_PARAMS.
     network: {
       armContrast: 3,
@@ -111,6 +113,17 @@ export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams = {
       bubbleScale: 1,
       bubbleRimStrength: 0.5,
       beadShare: 0.5,
+    },
+    // Not yet visually calibrated — same values as DEFAULT_GALAXY_DUST_CLOUD_PARAMS.
+    cloud: {
+      count: 6000,
+      share: 0.6,
+      armBias: 0.75,
+      clumpiness: 0.6,
+      sizeScale: 1,
+      elongation: 2.5,
+      heightRatio: 0.5,
+      bubbleCarve: 0.8,
     },
   },
 };
