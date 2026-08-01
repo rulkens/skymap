@@ -9,7 +9,10 @@
  * dispatch, just a CPU-side rebuild picked up by next frame's uniform pack.
  */
 import type { ReactNode } from 'react';
-import { GALAXY_FIELD_MAX_COMPONENTS } from '../../../../../src/data/galaxy/galaxyFieldMixture';
+import {
+  GALAXY_FIELD_MAX_COMPONENTS,
+  RING_BLOBS_PER_RING,
+} from '../../../../../src/data/galaxy/galaxyFieldMixture';
 import { GENERATION_UBO } from '../../../../../src/services/gpu/galaxy/generationUboLayout';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { fieldTuningPatched } from '../../state/slices/fieldTuningSlice';
@@ -29,7 +32,7 @@ function FieldSection(): ReactNode {
   const tuning = useAppSelector((state) => state.fieldTuning);
   const galaxy = useAppSelector((state) => state.galaxy);
   const open = useAppSelector((state) => state.ui.openSections.ringTuning);
-  const ringBlobs = Math.max(1, Math.round(tuning.ringCount)) * tuning.ringBlobsPerRing;
+  const ringBlobs = Math.max(1, Math.round(tuning.ringCount)) * RING_BLOBS_PER_RING;
   const numArms = Math.min(Math.max(1, Math.round(galaxy.armCount ?? 2)), MAX_ARMS);
   const armBlobs = tuning.armsEnabled ? numArms * tuning.armBlobsPerArm : 0;
   const totalComponents = ringBlobs + armBlobs + OTHER_COMPONENTS;
@@ -50,64 +53,7 @@ function FieldSection(): ReactNode {
           step={1}
           format={(v) => v.toFixed(0)}
           onChange={(v) => dispatch(fieldTuningPatched({ ringCount: v }))}
-          info="Two rings can only bracket the warp with two straight segments. More rings, each still a valid linearisation about its own centre, follow the real bend more closely. Cost is rings x blobs, every one evaluated per pixel — 12 x 48 is deliberately past the point where it stays interactive."
-        />
-        <ParamSlider
-          label="Inner ring radius"
-          value={tuning.ringInnerRadiusFrac}
-          min={0.55}
-          max={0.95}
-          step={0.01}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => dispatch(fieldTuningPatched({ ringInnerRadiusFrac: v }))}
-        />
-        <ParamSlider
-          label="Outer ring radius"
-          value={tuning.ringOuterRadiusFrac}
-          min={0.8}
-          max={1.3}
-          step={0.01}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => dispatch(fieldTuningPatched({ ringOuterRadiusFrac: v }))}
-        />
-        <ParamSlider
-          label="Blobs per ring"
-          value={tuning.ringBlobsPerRing}
-          min={6}
-          max={48}
-          step={1}
-          format={(v) => v.toFixed(0)}
-          onChange={(v) => dispatch(fieldTuningPatched({ ringBlobsPerRing: v }))}
-          info="Each blob stands in for an arc of the ring; too few and the ring reads as a pointed star instead of smooth."
-        />
-        <ParamSlider
-          label="Radial sigma"
-          value={tuning.ringRadialSigmaFrac}
-          min={0.04}
-          max={0.35}
-          step={0.01}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => dispatch(fieldTuningPatched({ ringRadialSigmaFrac: v }))}
-        />
-        <ParamSlider
-          label="Azimuthal overlap"
-          value={tuning.ringAzimuthalOverlap}
-          min={0.3}
-          max={1.2}
-          step={0.05}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => dispatch(fieldTuningPatched({ ringAzimuthalOverlap: v }))}
-          info="How much a blob's azimuthal Gaussian overlaps its neighbours' — too low beads the ring, too high smears it into a solid annulus."
-        />
-        <ParamSlider
-          label="Flux falloff"
-          value={tuning.ringFluxFalloff}
-          min={0.1}
-          max={1}
-          step={0.05}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => dispatch(fieldTuningPatched({ ringFluxFalloff: v }))}
-          info="Each ring's flux as a fraction of the previous (inner) ring's — 1.0 splits flux evenly across every ring, lower makes the inner rings dominate."
+          info="Two rings can only bracket the warp with two straight segments. More rings, each still a valid linearisation about its own centre, follow the real bend more closely. Cost is rings x blobs, every one evaluated per pixel."
         />
         <ParamSlider
           label="Blob sharpness"
@@ -121,7 +67,7 @@ function FieldSection(): ReactNode {
         />
         <p className={overflow ? styles.readoutOverflow : styles.readout}>
           {ringBlobs} ring blobs ({Math.max(1, Math.round(tuning.ringCount))} x{' '}
-          {tuning.ringBlobsPerRing}) + {armBlobs} arm blobs ({numArms} x {tuning.armBlobsPerArm}) +{' '}
+          {RING_BLOBS_PER_RING}) + {armBlobs} arm blobs ({numArms} x {tuning.armBlobsPerArm}) +{' '}
           {OTHER_COMPONENTS} other = {totalComponents} components, each evaluated per pixel
           {overflow &&
             ` — OVER the ${GALAXY_FIELD_MAX_COMPONENTS} cap, packFieldUniforms is silently dropping the rest`}
