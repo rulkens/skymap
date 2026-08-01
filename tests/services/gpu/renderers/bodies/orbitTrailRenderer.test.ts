@@ -82,8 +82,8 @@ describe('createOrbitTrailRenderer', () => {
   it('pins the FULL instance attribute layout — ONE instance buffer, no position VBO', () => {
     // The byte-for-byte contract with orbitTrail/io.wesl's OrbitInstance:
     // three Ginv columns at locations 1..3 (offsets 0/16/32), then
-    // colour+eccentricity at location 4 (offset 48), meanAnomaly+fade at
-    // location 5 (offset 64), and the ribbon impostor's clip-basis vec4s
+    // colour+eccentricity at location 4 (offset 48), meanAnomaly+fade+
+    // viewportPx at location 5 (offset 64), and the ribbon impostor's clip-basis vec4s
     // Cc/Ac/Bc at locations 6/7/8 (offsets 80/96/112), then the CPU-clipped
     // visible arc at location 9 (offset 128). The pipeline has no
     // location-0 position buffer — geometry comes from
@@ -99,7 +99,7 @@ describe('createOrbitTrailRenderer', () => {
       { shaderLocation: 2, offset: 16, format: 'float32x4' }, // Ginv col 1
       { shaderLocation: 3, offset: 32, format: 'float32x4' }, // Ginv col 2
       { shaderLocation: 4, offset: 48, format: 'float32x4' }, // color + eccentricity
-      { shaderLocation: 5, offset: 64, format: 'float32x4' }, // meanAnomaly + fade + pad
+      { shaderLocation: 5, offset: 64, format: 'float32x4' }, // meanAnomaly + fade + viewportPx
       { shaderLocation: 6, offset: 80, format: 'float32x4' }, // clip basis centre Cc
       { shaderLocation: 7, offset: 96, format: 'float32x4' }, // clip basis semi-major Ac
       { shaderLocation: 8, offset: 112, format: 'float32x4' }, // clip basis semi-minor Bc

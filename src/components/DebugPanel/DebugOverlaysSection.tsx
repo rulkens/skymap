@@ -5,7 +5,7 @@
  * "Show pick buffer" paints the picker's colour-mapped RGBA layer over the
  * tone-mapped frame; "Show disk radius ring" outlines each famous-galaxy
  * thumbnail's disk-radius footprint; "Show orbit-trail impostor" draws the
- * ribbon impostor's hull + fallback wash over the real trails. All three used
+ * ribbon impostor's hull as a flat fill tint over the real trails. All three used
  * to sit as bare `<label>`s directly in `DebugPanel` — this section gives
  * them the same collapsible chrome as the panel's other toggle groups.
  */

@@ -114,8 +114,8 @@ export const PERF_SCENARIOS: readonly PerfScenario[] = [
   // Inside the S-star cluster: at 5e-7 Mpc every one of the 39 S-star orbits
   // clears the orbit-trails CULL_PX gate (all pass below 6.66e-7 Mpc at this
   // viewport), so this pose is the max-instance-count regime for the
-  // fullscreen-triangle-per-orbit trail renderer. `clearFocus` because the
-  // boot Earth focus would otherwise pivot-pin the target back to Earth.
+  // ribbon-impostor trail renderer. `clearFocus` because the boot Earth
+  // focus would otherwise pivot-pin the target back to Earth.
   {
     name: 'galactic-centre',
     pose: {

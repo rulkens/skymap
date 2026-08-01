@@ -8,11 +8,11 @@
  *      `view.vp` (identity-pinned via a mocked `composeOrbitConic`).
  *   2. The packed draw — ONE `renderer.draw(pass, staging, count)` paints
  *      every VISIBLE conic, with conic i's trail params packed at instance
- *      stride 32 floats (Ginv at floats base+0..11, colour + eccentricity at
+ *      stride 34 floats (Ginv at floats base+0..11, colour + eccentricity at
  *      base+12..15, mean anomaly at base+16, apparent-size fade alpha at
- *      base+17, viewportPx at base+18..19, and the clip basis Cc/Ac/Bc at
- *      base+20..31) front-to-back, and orbits below the cull threshold
- *      dropped from the batch entirely.
+ *      base+17, viewportPx at base+18..19, the clip basis Cc/Ac/Bc at
+ *      base+20..31, and the visible arc at base+32..33) front-to-back, and
+ *      orbits below the cull threshold dropped from the batch entirely.
  *
  * Plus the handle gates: `enabled` is renderer-presence AND the shared
  * foreground distance gate AND the whole-layer sub-pixel bound (per REGION: the
@@ -362,7 +362,7 @@ describe('orbitTrailsLayer.draw', () => {
     expect(count).toBe(n);
     expect(staging).toBeInstanceOf(Float32Array);
 
-    // Staging layout for the first conic (instance 0, stride 32): colour +
+    // Staging layout for the first conic (instance 0, stride 34): colour +
     // eccentricity at floats 12..15, mean anomaly at 16, fade alpha at 17
     // (saturated — Mercury's orbit is large from the Sun), then the viewport
     // (was a zeroed pad; now the ribbon vertex stage's divisor), then the

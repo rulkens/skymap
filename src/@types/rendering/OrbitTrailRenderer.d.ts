@@ -6,14 +6,16 @@
  * ### Why `draw` takes a raw `Float32Array` + one count
  *
  * The caller packs one per-instance record per orbit — `Ginv` (three padded
- * `mat3x3` columns), the trail params, and the clip basis `Cc`/`Ac`/`Bc` —
- * into one flat `Float32Array`. The renderer streams it as instance-step
- * vertex attributes and issues one instanced draw — the near-plane-clamped
- * screen-space ribbon, which covers every projection including a camera
- * inside the orbit (Task 11), so there is no second fallback pipeline — with
- * ONE `writeBuffer`, so there is no per-orbit uniform for a later write to
- * clobber (the writeBuffer-vs-submit landmine). The GPU-side instance buffer
- * grows to fit the largest slot count seen so far — no fixed cap.
+ * `mat3x3` columns), the trail params, the clip basis `Cc`/`Ac`/`Bc`, and the
+ * CPU-clipped visible arc `[eStart, eSpan]` — into one flat `Float32Array`.
+ * The renderer streams it as instance-step vertex attributes and issues one
+ * instanced draw — a screen-space ribbon sampled only across each orbit's
+ * closed-form in-front-of-camera arc, which covers every projection
+ * including a camera inside the orbit, so there is no second fallback
+ * pipeline — with ONE `writeBuffer`, so there is no per-orbit uniform for a
+ * later write to clobber (the writeBuffer-vs-submit landmine). The GPU-side
+ * instance buffer grows to fit the largest slot count seen so far — no fixed
+ * cap.
  */
 
 import type { Renderer } from './Renderer';
