@@ -10,6 +10,7 @@
  * Colours stay eyeball values.
  */
 
+import { discLightScaleLength } from '../../utils/galaxy/discLightScaleLength';
 import { discWarpShear } from '../../utils/galaxy/discWarpShear';
 import { galaxyFieldInverseCovariance } from '../../utils/galaxy/galaxyFieldInverseCovariance';
 import { inverseCovarianceFromFrame } from '../../utils/galaxy/inverseCovarianceFromFrame';
@@ -136,25 +137,15 @@ const HALO_BRIGHTNESS = 0.5;
  * and 5.0 are no longer rendered as origin-centred blobs here (see
  * `pushWarpedOuterDisc`), but their weight share still anchors that
  * function's flux budget, so only the surviving four are listed.
+ *
+ * Exported: `galaxyDustMixture.ts` reuses this exact fit, evaluated at the
+ * dust disc's own scale length — same dimensionless profile, different h.
  */
-const DISC_SIGMA_RATIOS = [0.35, 0.65, 1.15, 1.9] as const;
-const DISC_SURFACE_WEIGHTS = [0.1667, 0.3065, 0.2131, 0.1365] as const;
-
-/**
- * `buildDisk` samples exp(-R/diskScaleLen) but then multiplies brightness by
- * diskFalloff(radius, 1.7) = exp(-R / (1.7 * diskScaleLen)). Light is what an
- * additive field integrates, so the mixture's scale length is the product's,
- * a factor 1/(1 + 1/1.7) shorter than the one stars are drawn at.
- */
-const DISK_BRIGHTNESS_TAPER = 1.7;
+export const DISC_SIGMA_RATIOS = [0.35, 0.65, 1.15, 1.9] as const;
+export const DISC_SURFACE_WEIGHTS = [0.1667, 0.3065, 0.2131, 0.1365] as const;
 
 /** `buildDisk`'s vertical flare: diskHeight * (0.6 + bulgeRadius/(R + bulgeRadius)). */
 const DISC_FLARE_FLOOR = 0.6;
-
-/** The light-weighted scale length `pushDisc` samples at — shared with `pushArmRidges`' contrast law, which needs the same Sigma_disc(R) the ridge is an excess OVER. */
-function discLightScaleLength(geometry: GalaxyFieldGeometry): number {
-  return geometry.diskScaleLen / (1 + 1 / DISK_BRIGHTNESS_TAPER);
-}
 
 /**
  * The disc's azimuthally-averaged surface brightness at R, from the disc

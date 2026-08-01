@@ -49,15 +49,19 @@ fn expHalfErfc(q: f32, x: f32) -> f32 {
   return exp(-0.5 * q) * (2.0 - erfcPoly(-x) * exp(-x * x));
 }
 
-// gaussianRayIntegral — the integral above for a general symmetric M, split
-// as mDiag = (m00, m11, m22) and mOff = (m01, m02, m12). The amplitude A is
-// left to the caller so a component can carry colour through the same
-// multiply.
-fn gaussianRayIntegral(o: vec3<f32>, d: vec3<f32>, mDiag: vec3<f32>, mOff: vec3<f32>) -> f32 {
+// gaussianRayCoeffs — the ray-quadratic's three coefficients (a, b, q) for a
+// general symmetric M, split as mDiag = (m00, m11, m22) and
+// mOff = (m01, m02, m12). Split out of gaussianRayIntegral so the dust
+// splat's finite-bound split (splat.wesl's fs) can evaluate the SAME
+// quadratic at a truncation point x1 rather than only x0's full-ray form.
+// a < 1e-12 (ray direction in M's null space) returns vec3(0.0); callers
+// must check .x themselves before dividing by it, same discipline
+// gaussianRayIntegral applies below.
+fn gaussianRayCoeffs(o: vec3<f32>, d: vec3<f32>, mDiag: vec3<f32>, mOff: vec3<f32>) -> vec3<f32> {
   // v^T M v = dot(v*v, mDiag) + 2*dot((vx*vy, vx*vz, vy*vz), mOff), and the
   // mixed form u^T M v symmetrises each cross term.
   let a = dot(d * d, mDiag) + 2.0 * dot(vec3<f32>(d.x * d.y, d.x * d.z, d.y * d.z), mOff);
-  if (a < 1e-12) { return 0.0; }
+  if (a < 1e-12) { return vec3<f32>(0.0); }
   let b = dot(o * d, mDiag)
     + dot(
       vec3<f32>(o.x * d.y + o.y * d.x, o.x * d.z + o.z * d.x, o.y * d.z + o.z * d.y),
@@ -69,5 +73,15 @@ fn gaussianRayIntegral(o: vec3<f32>, d: vec3<f32>, mDiag: vec3<f32>, mOff: vec3<
   // cancellation between c and b*b/a can put it a hair under zero at grazing
   // incidence, and a negative q turns the exp into a blowup.
   let q = max(c - b * b / a, 0.0);
-  return sqrt(GAUSS_PI / (2.0 * a)) * expHalfErfc(q, b / sqrt(2.0 * a));
+  return vec3<f32>(a, b, q);
+}
+
+// gaussianRayIntegral — the full 0->infinity line integral, built on
+// gaussianRayCoeffs. The amplitude A is left to the caller so a component
+// can carry colour through the same multiply.
+fn gaussianRayIntegral(o: vec3<f32>, d: vec3<f32>, mDiag: vec3<f32>, mOff: vec3<f32>) -> f32 {
+  let coeffs = gaussianRayCoeffs(o, d, mDiag, mOff);
+  let a = coeffs.x;
+  if (a < 1e-12) { return 0.0; }
+  return sqrt(GAUSS_PI / (2.0 * a)) * expHalfErfc(coeffs.z, coeffs.y / sqrt(2.0 * a));
 }

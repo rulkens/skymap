@@ -194,6 +194,7 @@ import type { RenderSettings } from '../../@types/engine/RenderSettings';
 import type { LodSettings } from '../../@types/engine/LodSettings';
 import type { ViewPose } from '../../@types/engine/ViewPose';
 import type { ExtraGalaxySpec } from '../../../../src/@types/galaxy/ExtraGalaxySpec';
+import type { GalaxyDustParams } from '../../../../src/@types/galaxy/GalaxyDustParams';
 import type { GalaxyFieldComponent } from '../../../../src/@types/galaxy/GalaxyFieldComponent';
 import type { GalaxyFieldGeometry } from '../../../../src/@types/galaxy/GalaxyFieldGeometry';
 import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFieldTuning';
@@ -227,6 +228,8 @@ import {
   DEFAULT_GALAXY_FIELD_TUNING,
   GALAXY_FIELD_MAX_COMPONENTS,
 } from '../../../../src/data/galaxy/galaxyFieldMixture';
+import { buildGalaxyDustMixture } from '../../../../src/data/galaxy/galaxyDustMixture';
+import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../src/data/galaxy/defaultGalaxyDustParams';
 import { transformGalaxyFieldComponent } from '../../../../src/utils/galaxy/transformGalaxyFieldComponent';
 import { GENERATION_UBO } from '../../../../src/services/gpu/galaxy/generationUboLayout';
 import { GEN_RECORD_BYTES } from '../../../../src/services/gpu/galaxy/genRecordBytes';
@@ -635,6 +638,15 @@ export async function createGalaxyEngine(
   // the next `setParams` reads it and there is nothing yet to rebuild.
   let fieldGeometry: GalaxyFieldGeometry | null = null;
   let fieldTuning: GalaxyFieldTuning = DEFAULT_GALAXY_FIELD_TUNING;
+  // The analytic dust lane's mixture, CENTRAL galaxy only (grill session Q6:
+  // extras get dust in a follow-up, zero rework — the packed layout already
+  // carries per-galaxy dustOffset/dustCount). Cached like `fieldMixture` so
+  // `setFieldTuning` can rebuild it without a regenerate.
+  let dustMixture: readonly GalaxyFieldComponent[] = [];
+  // The dust params `setParams` was last handed — `setFieldTuning` has no
+  // `GalaxyParams` of its own, so a dustEnabled toggle needs this cached copy
+  // to rebuild `dustMixture` without a regenerate.
+  let currentDust: GalaxyDustParams = DEFAULT_GALAXY_DUST_PARAMS;
 
   // Per-pipeline bind groups. `layout: 'auto'` groups are pipeline-specific
   // and never cross pipelines, so each pass needs its own group even where the
@@ -848,20 +860,44 @@ export async function createGalaxyEngine(
     starCount,
   });
 
-  // Instances the field pass actually draws this frame — the live length of
-  // the last `repackFieldComponents` concatenation, NOT `fieldCompsCapacity`
-  // (which only grows, and can outsize the current total after extras
-  // shrink). Read by `drawFrame`'s draw call and by the header pack's
-  // `counts.x`.
-  let fieldTotalComponents = 0;
+  // The live counts from the last `repackFieldComponents` concatenation —
+  // NOT `fieldCompsCapacity` (which only grows, and can outsize the current
+  // total after extras shrink). `fieldEmissionCount` is what `drawFrame`'s
+  // splat draw call instances (dust rides the same buffer but is never drawn
+  // as its own quad); `fieldPrimaryCount`/`fieldDustCount` locate the central
+  // galaxy's dust slice for the header pack's `counts` lanes.
+  let fieldEmissionCount = 0;
+  let fieldPrimaryCount = 0;
+  let fieldDustCount = 0;
 
   /**
-   * repackFieldComponents — flattens the central galaxy's mixture and every
-   * extra's (each already carried into world space by
-   * `transformGalaxyFieldComponent` at the point it was built) into one list
-   * and rewrites `fieldCompsBuf`. Called whenever any mixture changes —
-   * `setParams`, `setExtras`, `setFieldTuning` — never per frame, unlike the
-   * header (see `packFieldUniforms`'s header for why the two are split).
+   * rebuildDustMixture — the central galaxy's dust mixture from the CACHED
+   * geometry + dust params, gated on `fieldTuning.dustEnabled` the same way
+   * `discEnabled`/`armsEnabled` gate their own shader loops (an off pill
+   * skips the shader work entirely, not just zeroes tau). Called from
+   * `setParams` (new geometry or dust params arrived) and `setFieldTuning`
+   * (toggle, or any tuning-driven geometry that later feeds dust) — the same
+   * two repack triggers `fieldMixture` itself uses.
+   */
+  function rebuildDustMixture(): void {
+    dustMixture =
+      fieldGeometry && fieldTuning.dustEnabled
+        ? buildGalaxyDustMixture(fieldGeometry, currentDust)
+        : [];
+  }
+
+  /**
+   * repackFieldComponents — flattens the central galaxy's emission mixture,
+   * every extra's (each already carried into world space by
+   * `transformGalaxyFieldComponent` at the point it was built), then the
+   * central galaxy's dust mixture LAST, into one list and rewrites
+   * `fieldCompsBuf`. Called whenever any mixture changes — `setParams`,
+   * `setExtras`, `setFieldTuning` — never per frame, unlike the header (see
+   * `packFieldUniforms`'s header for why the two are split).
+   *
+   * Dust trails every emission component (never interleaved) so
+   * `dustOffset == fieldEmissionCount` always holds without a separate
+   * bookkeeping pass — see io.wesl's layout comment.
    *
    * Grows (and rebuilds `splatBG`, since an 'auto'-layout bind group is tied
    * to the specific GPUBuffer it was built against) only when the new total
@@ -872,11 +908,15 @@ export async function createGalaxyEngine(
    * that often would be pure churn.
    */
   function repackFieldComponents(): void {
-    const combined: GalaxyFieldComponent[] = [...fieldMixture];
-    for (const e of extras) combined.push(...e.fieldMixture);
-    fieldTotalComponents = combined.length;
-    if (fieldTotalComponents > fieldCompsCapacity) {
-      fieldCompsCapacity = fieldTotalComponents;
+    const emission: GalaxyFieldComponent[] = [...fieldMixture];
+    for (const e of extras) emission.push(...e.fieldMixture);
+    fieldPrimaryCount = fieldMixture.length;
+    fieldEmissionCount = emission.length;
+    fieldDustCount = dustMixture.length;
+    const combined = fieldDustCount > 0 ? [...emission, ...dustMixture] : emission;
+    const total = combined.length;
+    if (total > fieldCompsCapacity) {
+      fieldCompsCapacity = total;
       fieldCompsBuf.destroy();
       fieldCompsBuf = device.createBuffer({
         label: 'galaxy:fieldComps',
@@ -885,7 +925,7 @@ export async function createGalaxyEngine(
       });
       splatBG = buildSplatBindGroup();
     }
-    if (fieldTotalComponents > 0) {
+    if (total > 0) {
       device.queue.writeBuffer(fieldCompsBuf, 0, packFieldComponents(combined));
     }
   }
@@ -968,6 +1008,8 @@ export async function createGalaxyEngine(
     // field can be sure it is oriented like the sprites it sums with.
     fieldGeometry = readGalaxyFieldGeometry(genUniforms, starLayout);
     fieldMixture = buildGalaxyFieldMixture(fieldGeometry, fieldTuning);
+    currentDust = p.dust ?? DEFAULT_GALAXY_DUST_PARAMS;
+    rebuildDustMixture();
     repackFieldComponents();
 
     const enc = device.createCommandEncoder({ label: 'galaxy:generate' });
@@ -1013,6 +1055,10 @@ export async function createGalaxyEngine(
   // structure has to track it exactly like the central one's, then land back
   // in world space via `transformGalaxyFieldComponent` before `comps` is
   // repacked.
+  //
+  // Also rebuilds `dustMixture` (central galaxy only — see
+  // `rebuildDustMixture`), which is how a `dustEnabled` toggle takes effect
+  // without a regenerate.
   function setFieldTuning(patch: Partial<GalaxyFieldTuning>): void {
     fieldTuning = { ...fieldTuning, ...patch };
     if (fieldGeometry) fieldMixture = buildGalaxyFieldMixture(fieldGeometry, fieldTuning);
@@ -1022,6 +1068,7 @@ export async function createGalaxyEngine(
         transformGalaxyFieldComponent(c, e.transform),
       ),
     }));
+    rebuildDustMixture();
     repackFieldComponents();
   }
 
@@ -1550,7 +1597,10 @@ export async function createGalaxyEngine(
         exposure:
           render.analyticExposure * render.starIntensity * render.sizeScale ** 2 * fade.alpha,
       },
-      fieldTotalComponents,
+      fieldEmissionCount,
+      fieldEmissionCount,
+      fieldDustCount,
+      fieldPrimaryCount,
       fieldData,
     );
     device.queue.writeBuffer(fieldUbo, 0, fieldData);
@@ -1622,11 +1672,13 @@ export async function createGalaxyEngine(
       });
       pass.setPipeline(splatPipe);
       pass.setBindGroup(0, splatBG);
-      // One draw for the WHOLE flat list `repackFieldComponents` wrote —
+      // One draw for the WHOLE emission list `repackFieldComponents` wrote —
       // central galaxy's components then every extra's — so the field pass's
       // timing slot honestly reports the analytic cost of everything on
-      // screen, not just the central galaxy's share.
-      pass.draw(6, fieldTotalComponents);
+      // screen, not just the central galaxy's share. `fieldEmissionCount`,
+      // NOT the packed total: the trailing dust slice is never drawn as its
+      // own quad, only read from inside a primary emission fragment.
+      pass.draw(6, fieldEmissionCount);
       pass.end();
     }
     // Scene pass: the aggregate folded into HDR, then transmittance dust over

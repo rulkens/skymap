@@ -19,17 +19,29 @@
 //   offset 32  : camUp: vec4
 //   offset 48  : camFwd: vec4
 //   offset 64  : params: vec4   (tanHalfFov, aspect, lensShiftX, exposure)
-//   offset 80  : counts: vec4   (componentCount, 0, 0, 0)
+//   offset 80  : counts: vec4   (emissionCount, dustOffset, dustCount, primaryCount)
 //   total: 96 bytes.
 //
+// counts.x is the live EMISSION component count — the central galaxy's plus
+// every extra's, drawn one quad each (see splat.wesl). counts.y/.z locate
+// the dust slice that follows them: dustOffset == emissionCount (dust is
+// always appended AFTER every emission component), dustCount its length.
+// Dust components are NEVER drawn as quads — the draw call's instance count
+// is counts.x, not counts.x + counts.z — each primary emission fragment
+// instead walks the dust slice itself (splat.wesl's fs). counts.w is
+// primaryCount, the CENTRAL galaxy's own emission share of counts.x (its
+// components are packed first): the gate 'instanceIndex < primaryCount'
+// is what keeps an extra's emission from ever reading the primary's dust.
+//
 // COMPS (read-only storage, binding 1) — every mixture's components back to
-// back (the central galaxy's, then each background extra's, already carried
-// into world space — see transformGalaxyFieldComponent.ts), four vec4 each.
-// A storage array has no fixed capacity the way a uniform array does, which
-// is the whole reason this lives in its own binding: a uniform's 64 KiB
-// caps it near 1000 components (~3 galaxies' worth), and N extras must be
-// able to outgrow that. counts.x carries how many are live; the CPU packer
-// sizes the backing GPUBuffer to match (growing, never per-frame).
+// back (the central galaxy's emission, then each background extra's,
+// already carried into world space — see transformGalaxyFieldComponent.ts —
+// then the central galaxy's dust slice last), four vec4 each. A storage
+// array has no fixed capacity the way a uniform array does, which is the
+// whole reason this lives in its own binding: a uniform's 64 KiB caps it
+// near 1000 components (~3 galaxies' worth), and N extras must be able to
+// outgrow that. The CPU packer sizes the backing GPUBuffer to counts.x +
+// counts.z (growing, never per-frame).
 //
 // The ray comes from a camera BASIS plus tanHalfFov/aspect rather than an
 // inverse view-projection: the engine already holds the basis (it packs the
@@ -49,6 +61,14 @@
 // out of any axis-aligned frame. Index 1 of M is the DISC POLE (+Y).
 // boundRadius (world-space max sigma, warp-inflated — see
 // GalaxyFieldComponent) sizes splat.wesl's per-instance quad.
+//
+// Dust components (past dustOffset) reuse this exact 4-vec4 record with two
+// re-readings, not two new lanes: [4i].w (amplitude for emission) is the
+// component's central V-band extinction density, per unit length; [4i+2].xyz
+// (color for emission) is the per-channel A_lambda/A_V extinction ratio
+// (galaxyDustMixture.ts's DUST_EXTINCTION_RGB), not a tint. [4i+1].w
+// (boundRadius) and [4i+3].xyz (center) mean the same thing they do for an
+// emission component.
 
 struct FieldUniforms {
   eye: vec4<f32>,

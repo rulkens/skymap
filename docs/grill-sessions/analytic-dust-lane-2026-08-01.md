@@ -209,6 +209,115 @@ rolls the galaxy, never the model tuning.
 
 ---
 
+# Part 2 — the filament/bubble network (same day, second session)
+
+Asked for by the user after seeing the step-1..3 roadmap: design the full
+PHANGS-style network now so it can be implemented in the same push. Two
+standing constraints arrived during this session: (1) the user has seen JWST
+M74/NGC 628 — the bar is sharp lanes and fine detail, "I'm afraid you'll come
+back with a blobby mess"; (2) every builder must be movable to a Worker or a
+GPU compute pass later (real-time generation while navigating), so placement
+code stays pure `(params, geometry, seed) → flat data`, no engine state, no
+per-frame CPU work.
+
+## N1: Scaling architecture — dust gets its own splat pass
+
+**The question:** step 1 evaluates ~4 dust Gaussians analytically inside every
+emission fragment. A network is hundreds of components — a per-fragment
+multiplier the emission side escaped by splatting. How does the network scale?
+
+**Considerations:**
+
+- **Option A (screen-space dust-column map):** splat dust components into an
+  offscreen target accumulating (τ_V, τ·t̄) per pixel; emission fragments
+  sample it once — t_d = moment ratio, T = exp(−τ·rgbRatios), split as
+  designed. Dust count decouples from emission cost; negative splats (bubbles)
+  become possible; the JWST view mode is literally this target through a
+  palette. Caveat: per-screen, so per-galaxy attenuation needs the analytic
+  loop anyway — extras keep it; the map serves the primary (an LOD split, not
+  a hack).
+- **Option B (analytic loop only):** caps the network at a few dozen comps;
+  bubbles effectively out.
+
+**Decision:** A. The user's sharpness worry is answered by the architecture
+itself: (1) splat cost = covered area, so thin/sharp is the CHEAP direction;
+(2) the map is rasterized, not analytically integrated — a detail splat can
+evaluate ANY 2.5D density at its ray's disc-plane crossing (super-Gaussian
+sharp-edged lane profiles, fractal along-lane modulation, hard bubble rims), so
+frequency content is bounded by pixels, not component count; (3) the map runs
+at FULL render resolution — dust is where the high frequencies live. Division
+by view angle: the smooth Gaussian lane owns edge-on (detail is foreshortened
+there anyway); the plane-crossing detail tier owns face-on/inclined and fades
+by incidence where its approximation degrades.
+
+## N1b: LOD (user asked: "could have LOD splat passes as well?")
+
+Four mechanisms adopted: per-tier resolution (smooth half-res, detail
+full-res); width-clamped splats with COLUMN-conserving amplitude (the star
+renderer's clampFluxScale identity — receding filaments fade correctly instead
+of shimmering); noise-octave band-limiting against projected pixel scale; and
+the load-bearing one — **zero-mean detail tiers**: each feature class encodes
+fluctuation around the tier below (the lane's amplitude carries its beads' and
+gaps' azimuthal average; beads/gaps are paired excess/deficit), so instance-
+culling sub-pixel features is unbiased and the far view converges exactly to
+the step-1 analytic lane. Same ledger discipline as the arm-excess disc debit,
+applied recursively. Built in from the start — hard to retrofit.
+
+## N2: Feature inventory and priority
+
+Four classes, ordered by visual impact (user: "highest visual impact first"):
+1. **Arm dust lanes** — sharp-edged ridges on the arms' inner edges, (1−age)
+   weighted, along-lane fractal modulation.
+2. **Spurs/feathers** — quasi-regular filaments peeling into inter-arm space;
+   they are what makes inter-arm space read as structured (why they outrank
+   bubbles).
+3. **Bubbles** — negative splats + swept-up rims, SF-driven, on/near young
+   arms.
+4. **GMC beads** — dark knots strung along lanes and spurs.
+
+## N3: Shared star-formation event catalog
+
+**Decision (user: "a, great idea"):** one seeded per-galaxy SF-event catalog
+(pure function: seed → array of {arm, logR, across-offset, age, strength}),
+consumed by the dust network now (old events = bubbles, rim strength by age)
+and by #20 later (young events = HII knots at older events' rims) and
+eventually the M82 preset. One placement truth so cavities and glow correlate
+the way PHANGS shows, instead of two independent sprinkles. Rejected: private
+per-feature placement — visibly uncorrelated once #20 lands, and reconciling
+later re-seeds features the user has already approved.
+
+## N4: Knob surface
+
+Masters (randomize rolls these; physical anchors): `armContrast` (dust
+concentration into lanes, molecular arm/interarm ~2–5 — deliberately larger
+than the stellar K≈1.3), `sfActivity` (event-catalog rate; later tied to
+colour by the survey map), `texture` (zero-mean small-scale amplitude),
+`spurStrength`. Per-feature refiners (user asked for feature-level tuning; all
+are ×measured-default scalers, 1.0 = the literature): `laneWidth`,
+`laneOffset` (density-wave shock displacement from the stellar ridge),
+`spurSpacing`, `spurLength`, `bubbleScale` (power law itself frozen),
+`bubbleRimStrength`, `beadShare`. Not exposed: bubble size-distribution slope,
+spur spacing law's form, noise octave counts (anti-aliasing, not look). UI: a
+DUST NETWORK section beside DUST under ANALYTIC MODEL.
+
+## Measured anchors for the network (fetch-verified 2026-08-01)
+
+From the literature pass (V = primary-verified, S = secondary): spur spacing
+300–800 pc quasi-regular (S; theory 0.5–1 kpc, Kim & Ostriker family), pitch
+~60° to the arm (S), lengths 1–5 kpc (S), present in 83% of galaxies WITH a
+well-defined primary dust lane vs 20% overall (V, La Vigne, Vogel & Ostriker
+2006 ApJ 650, 818) — so spurs GATE ON LANE STRENGTH, not type. Bubbles:
+1694 in NGC 628, radii 6–552 pc, size power law −2.2±0.1, 31% nested, radii
+grow downstream of the arm, elongated along it (all V, Watkins et al. 2023
+ApJL 944, L24); HI holes 100 pc–2 kpc, slope ≈−2.9 (V, Bagetakos et al. 2011
+AJ 141, 23). GMC beads: diameters ~40–100 pc (S), Σ ≈ 170 M⊙/pc² (S, Solomon
+et al. 1987), central A_V ~10 (S via Bohlin conversion) — cores genuinely
+opaque; arm clouds 2.5× interarm mass (V, Rosolowsky et al. 2021). GAP: no
+primary-verified dust-lane WIDTH; lane-to-tracer offsets ~150–315 pc (S only).
+laneWidth default is therefore an eyeball-vs-M74 call, flagged honest.
+
+---
+
 ## Step-1 scope (as dispatched)
 
 Flat analytic dust lane: `GalaxyDustParams` + `spriteDust` rename + dust

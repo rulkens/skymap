@@ -64,15 +64,26 @@ export type FieldCamera = {
 };
 
 /**
- * packFieldHeaderUniforms — camera basis + params + live component count,
- * into the 96-byte uniform. Called every `drawFrame`; `componentCount` is
- * whatever `packFieldComponents` last sized the storage buffer to (the two
- * packers are called from different sites, so the count travels as a plain
- * argument rather than being re-derived here).
+ * packFieldHeaderUniforms — camera basis + params + the four live counts,
+ * into the 96-byte uniform. Called every `drawFrame`; all four counts are
+ * whatever `repackFieldComponents` (createGalaxyEngine.ts) last sized the
+ * storage buffer to (the two packers are called from different sites, so
+ * the counts travel as plain arguments rather than being re-derived here).
+ *
+ * `emissionCount` (the former `componentCount`) is the draw call's own
+ * instance count — dust components are never drawn as quads. `dustOffset`
+ * locates the dust slice within `comps` (always `emissionCount`, since dust
+ * is appended last — see io.wesl); `dustCount` its length. `primaryCount` is
+ * the CENTRAL galaxy's own share of `emissionCount` (its components are
+ * packed first), which the shader gates dust application on: an extra's
+ * emission must never read the primary's dust.
  */
 export function packFieldHeaderUniforms(
   cam: FieldCamera,
-  componentCount: number,
+  emissionCount: number,
+  dustOffset: number,
+  dustCount: number,
+  primaryCount: number,
   dst?: Float32Array,
 ): Float32Array {
   const out = dst ?? new Float32Array(FIELD_HEADER_FLOATS);
@@ -107,24 +118,26 @@ export function packFieldHeaderUniforms(
   out[18] = cam.lensShiftX;
   out[19] = cam.exposure;
 
-  // counts 20..23 — only .x is read; the rest are reserved.
-  out[20] = componentCount;
-  out[21] = 0;
-  out[22] = 0;
-  out[23] = 0;
+  // counts 20..23 = (emissionCount, dustOffset, dustCount, primaryCount).
+  out[20] = emissionCount;
+  out[21] = dustOffset;
+  out[22] = dustCount;
+  out[23] = primaryCount;
 
   return out;
 }
 
 /**
  * packFieldComponents — one galaxy-agnostic flat list of components (the
- * caller concatenates the central galaxy's mixture with every extra's,
- * already transformed into world space — see
- * `transformGalaxyFieldComponent.ts`) into the storage buffer's bytes.
- * Unlike the old uniform packer, there is no tail to zero: the draw call
- * always instances exactly `mixture.length` quads, so bytes past the live
- * count are never read even when the backing GPUBuffer's capacity (grown,
- * never shrunk) is larger.
+ * caller concatenates the central galaxy's emission mixture, every extra's
+ * — already transformed into world space, see `transformGalaxyFieldComponent.ts`
+ * — then the central galaxy's dust mixture last) into the storage buffer's
+ * bytes. Unlike the old uniform packer, there is no tail to zero: bytes past
+ * `mixture.length` are never read even when the backing GPUBuffer's capacity
+ * (grown, never shrunk) is larger. The draw call instances `emissionCount`
+ * quads, NOT `mixture.length` — dust components ride this same buffer but
+ * are read only from inside a primary emission fragment (splat.wesl's `fs`),
+ * never drawn as their own quad.
  */
 export function packFieldComponents(
   mixture: readonly GalaxyFieldComponent[],

@@ -1,13 +1,22 @@
 // milkyWayField/splat.wesl — the analytic Milky Way field: one instanced
-// quad PER COMPONENT, each covering its own Gaussian's screen footprint.
-// Emission is additive and order-independent (no depth test, no depth
-// sort), so overlapping quads sum to the mixture's true integral wherever a
-// quad covers its own component's support: cost is sum of covered screen
-// area rather than pixels x componentCount, which is what makes N~300+
-// mixtures affordable.
+// quad PER EMISSION COMPONENT, each covering its own Gaussian's screen
+// footprint. Emission is additive and order-independent (no depth test, no
+// depth sort), so overlapping quads sum to the mixture's true integral
+// wherever a quad covers its own component's support: cost is sum of
+// covered screen area rather than pixels x componentCount, which is what
+// makes N~300+ mixtures affordable.
+//
+// Dust components live in the SAME 'comps' array, past every emission
+// component (see io.wesl's layout comment), but are never drawn as quads —
+// the draw call's instance count is the emission count only. Each primary
+// emission fragment instead walks the dust slice itself and splits its own
+// ray integral at the dust's depth centroid (see 'fs's dust branch).
 
 import package::lib::billboard::quadCorner;
 import package::lib::gaussianIntegral::gaussianRayIntegral;
+import package::lib::gaussianIntegral::gaussianRayCoeffs;
+import package::lib::gaussianIntegral::expHalfErfc;
+import package::lib::gaussianIntegral::GAUSS_PI;
 import package::milkyWayField::io::u;
 import package::milkyWayField::io::comps;
 
@@ -126,11 +135,85 @@ fn fs(input: SplatOut) -> @location(0) vec4<f32> {
   let g2 = comps[4u * input.inst + 2u];
   let g3 = comps[4u * input.inst + 3u];
   let po = o - g3.xyz;
-  let sum = g2.xyz * (g0.w * gaussianRayIntegral(po, d, g0.xyz, g1.xyz));
+
+  // counts.x is the emission count (this draw's own instance count, unused
+  // here); .y/.z/.w are the dust slice's offset/count and the primary
+  // galaxy's own emission count — see io.wesl's layout comment.
+  let dustOffset = u32(u.counts.y);
+  let dustCount = u32(u.counts.z);
+  let primaryCount = u32(u.counts.w);
+
+  var emission = vec3<f32>(0.0);
+  var dustApplies = false;
+  // Dust attenuates only the PRIMARY galaxy's own emission splats (index <
+  // primaryCount, since the primary's components are packed first — see
+  // io.wesl): an extra's dust must never darken the primary, and this gate
+  // is what keeps that true without extras carrying their own dust yet.
+  if (input.inst < primaryCount && dustCount > 0u) {
+    // This ray's total dust column: scalarTau (grey depth, locates the
+    // split point), tauRGB (per-channel, becomes the transmittance),
+    // depthMoment (tau-weighted depth, the split point itself) — closed
+    // forms per dust component j, same quadratic machinery as the emission
+    // integral below. See the module's grill-session doc for the derivation.
+    var scalarTau = 0.0;
+    var tauRGB = vec3<f32>(0.0);
+    var depthMoment = 0.0;
+    for (var j = dustOffset; j < dustOffset + dustCount; j = j + 1u) {
+      let dg0 = comps[4u * j];
+      let dg1 = comps[4u * j + 1u];
+      let dg2 = comps[4u * j + 2u];
+      let dg3 = comps[4u * j + 3u];
+      let dc = gaussianRayCoeffs(o - dg3.xyz, d, dg0.xyz, dg1.xyz);
+      let da = dc.x;
+      if (da < 1e-12) { continue; }
+      let tauJ = dg0.w * sqrt(GAUSS_PI / (2.0 * da)) * expHalfErfc(dc.z, dc.y / sqrt(2.0 * da));
+      // -b/a is this component's own closest-approach depth along the ray;
+      // clamped to 0 because a component whose peak is behind the eye still
+      // contributes column density in front of it.
+      let tPeak = max(-dc.y / da, 0.0);
+      scalarTau += tauJ;
+      tauRGB += tauJ * dg2.xyz;
+      depthMoment += tauJ * tPeak;
+    }
+    dustApplies = scalarTau > 1e-6;
+    if (dustApplies) {
+      let tD = max(depthMoment / scalarTau, 0.0);
+      let transmittance = exp(-tauRGB);
+
+      let ec = gaussianRayCoeffs(po, d, g0.xyz, g1.xyz);
+      let ea = ec.x;
+      // ea < 1e-12 (ray in this component's covariance null space) leaves
+      // 'emission' at its zero default rather than falling back to the
+      // plain path — 'dustApplies' is already true, and a null-space ray
+      // integrates to 0 either way.
+      if (ea >= 1e-12) {
+        let sqrtHalfA = sqrt(2.0 * ea);
+        let x0 = ec.y / sqrtHalfA;
+        let x1 = (ec.y + ea * tD) / sqrtHalfA;
+        let full = expHalfErfc(ec.z, x0);
+        let behind = expHalfErfc(ec.z, x1);
+        // full - (1-T)*behind = E(0->t_d) + T*E(t_d->infinity): t_d clamped
+        // >= 0 keeps x1 >= x0, so behind <= full and this stays >= 0.
+        // full/behind broadcast to vec3 explicitly: WGSL has no scalar-minus-
+        // vector overload (only * and / broadcast a scalar), and this needs
+        // one number PER CHANNEL once (1-T) varies by channel.
+        let perChannel = vec3<f32>(full) - (vec3<f32>(1.0) - transmittance) * behind;
+        emission = g2.xyz * (g0.w * sqrt(GAUSS_PI / (2.0 * ea)) * perChannel);
+      }
+    }
+  }
+  if (!dustApplies) {
+    emission = g2.xyz * (g0.w * gaussianRayIntegral(po, d, g0.xyz, g1.xyz));
+  }
 
   // Alpha 0: the aggregate's alpha channel feeds nothing — the additive
   // upsample folds it into HDR and the compositor forces 1.0 — and a quad
   // writing coverage would swamp the sprites' own alpha for no reader's
   // benefit.
-  return vec4<f32>(sum * u.params.w, 0.0);
+  //
+  // Exposure (params.w) multiplies emission only, never the attenuation
+  // above: the dust column is physical (a property of the galaxy's own
+  // geometry), not a look knob that should brighten or dim with the field's
+  // whole-frame exposure.
+  return vec4<f32>(emission * u.params.w, 0.0);
 }
