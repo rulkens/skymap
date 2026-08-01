@@ -14,6 +14,7 @@ export type UiState = {
       | 'starBudget'
       | 'arms'
       | 'armField'
+      | 'armCloud'
       | 'pop'
       | 'dust'
       | 'analyticDust'

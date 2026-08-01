@@ -57,56 +57,6 @@ function ArmFieldSection(): ReactNode {
           onChange={(v) => dispatch(fieldTuningPatched({ armBlobSharpness: v }))}
           info="Debug only: shrinks every blob's three sigmas together at constant flux, so the ridge breaks into countable blobs whose tilt shows the surface frame they were placed on. 1 is the real field."
         />
-        <ParamSlider
-          label="Cloud share"
-          value={fieldTuning.armCloudShare}
-          min={0}
-          max={1}
-          step={0.02}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => dispatch(fieldTuningPatched({ armCloudShare: v }))}
-          info="Fraction of the arm excess carried by stochastic sprites instead of the deterministic ridge chain. The two totals always sum to the same excess; 0 is today's ridge-only look."
-        />
-        <ParamSlider
-          label="Cloud count"
-          value={fieldTuning.armCloudCount}
-          min={0}
-          max={400}
-          step={10}
-          format={(v) => String(Math.round(v))}
-          onChange={(v) => dispatch(fieldTuningPatched({ armCloudCount: Math.round(v) }))}
-          info="Arm sprite budget. Raising it borrows component slots from the ridge chain's own budget, not from GALAXY_FIELD_MAX_COMPONENTS directly."
-        />
-        <ParamSlider
-          label="Cloud clumpiness"
-          value={fieldTuning.armCloudClumpiness}
-          min={0}
-          max={1}
-          step={0.02}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => dispatch(fieldTuningPatched({ armCloudClumpiness: v }))}
-          info="Hierarchical clustering amplitude — 0 = Poisson-scattered along the ridge, 1 = strongly hierarchical complexes."
-        />
-        <ParamSlider
-          label="Cloud size scale"
-          value={fieldTuning.armCloudSizeScale}
-          min={0.2}
-          max={4}
-          step={0.05}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => dispatch(fieldTuningPatched({ armCloudSizeScale: v }))}
-          info="Multiplier on each sprite's size draw, itself a fraction of the LOCAL arm width — so this scales with the arm's own flare rather than an absolute parsec span."
-        />
-        <ParamSlider
-          label="Cloud elongation"
-          value={fieldTuning.armCloudElongation}
-          min={1}
-          max={8}
-          step={0.1}
-          format={(v) => v.toFixed(1)}
-          onChange={(v) => dispatch(fieldTuningPatched({ armCloudElongation: v }))}
-          info="sigma_along / sigma_across — how stretched each sprite is along the arm's own flow."
-        />
       </div>
     </CollapsibleSection>
   );

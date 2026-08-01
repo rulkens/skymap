@@ -28,16 +28,25 @@ export type GalaxyFieldTuning = {
    * so the ridge breaks into countable oriented blobs. 1 is the real field.
    */
   readonly armBlobSharpness: number;
+  /** Master toggle for the arm particle-cloud tier (`armParticleCloud.ts`) — same role `dustEnabled` plays for the dust cloud. Off skips both the sprites and their component-budget reservation. */
+  readonly armCloudEnabled: boolean;
   /**
    * 0..1 share of the arm excess (`pushArmRidges`'s `armExcessFlux`) carried
    * by stochastic emission sprites (`armParticleCloud.ts`) instead of the
    * deterministic ridge chain — the two totals still sum to the same excess,
-   * so this redistributes brightness rather than adding any. 0 = today's
-   * ridge-only look.
+   * so this redistributes brightness rather than adding any.
    */
   readonly armCloudShare: number;
-  /** Arm particle-cloud sprite budget, clamped against `ARM_CLOUD_MAX_COUNT`. */
-  readonly armCloudCount: number;
+  /**
+   * Dimensionless covering factor for the arm particle cloud: the sprite
+   * COUNT is not a knob here — it is derived from arm geometry (ridge arc
+   * length x local cross-section width, divided by mean sprite footprint;
+   * see `deriveArmCloudCount` in `armParticleCloud.ts`) — so pitch, arm
+   * width, arm length and arm count all move it without a re-tune. This
+   * multiplies that derived count. 1 = one sprite-footprint of coverage per
+   * unit arm area on average (sprites still overlap/gap stochastically).
+   */
+  readonly armCloudCoverage: number;
   /** 0..1 hierarchical clustering for the arm particle cloud — see `GalaxyDustCloudParams.clumpiness` for the same knob on the dust tier. */
   readonly armCloudClumpiness: number;
   /** Multiplier on the arm particle cloud's local-cross-section size draw. */

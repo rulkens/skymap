@@ -14,7 +14,7 @@
  * `armRidgeGeometry.ts`, so this import is one-directional.
  */
 
-import { ARM_CLOUD_MAX_COUNT, buildArmParticleCloud } from './armParticleCloud';
+import { buildArmParticleCloud, deriveArmCloudCount } from './armParticleCloud';
 import {
   armColor,
   armCrossSigma,
@@ -293,10 +293,13 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
   // `pushArmRidges`.
   armContrast: 1.3,
   armBlobSharpness: 1,
-  // 0 keeps the boot image identical to the ridge-only look; the particle
-  // cloud is opt-in.
-  armCloudShare: 0,
-  armCloudCount: 220,
+  armCloudEnabled: true,
+  // The tier is under active tuning, so it defaults ON at a visible share
+  // rather than 0 — a new section whose every slider does nothing until
+  // some OTHER slider is raised first reads as broken. This is a deliberate
+  // boot-image change, not a neutral default.
+  armCloudShare: 0.35,
+  armCloudCoverage: 1,
   armCloudClumpiness: 0.4,
   armCloudSizeScale: 1,
   armCloudElongation: 3,
@@ -811,11 +814,14 @@ export function buildGalaxyFieldMixture(
   // The particle cloud's own budget is reserved the SAME way: computed
   // before `pushArmRidges` runs so its `perArmBudget` shrinks to leave room,
   // rather than the cloud starving the ridge chain (or vice versa) via a
-  // silent `packFieldUniforms` clamp. 0 whenever the cloud is off, so the
-  // default (`armCloudShare` 0) leaves the ridge budget untouched.
+  // silent `packFieldUniforms` clamp. `deriveArmCloudCount` is also what
+  // `buildArmParticleCloud` itself calls to size the cloud it actually
+  // builds below, so the reservation and the build can never disagree. 0
+  // whenever the cloud is disabled or its share is 0, leaving the ridge
+  // budget untouched.
   const armCloudReserve =
-    tuning.armsEnabled && clampedArmCloudShare(tuning) > 0
-      ? Math.min(Math.max(0, Math.round(tuning.armCloudCount)), ARM_CLOUD_MAX_COUNT)
+    tuning.armsEnabled && tuning.armCloudEnabled && clampedArmCloudShare(tuning) > 0
+      ? deriveArmCloudCount(geometry, tuning)
       : 0;
   const armExcessFlux = pushArmRidges(
     geometry,

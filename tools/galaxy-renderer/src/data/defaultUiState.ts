@@ -19,6 +19,9 @@ export const DEFAULT_UI_STATE: UiState = {
     arms: true,
     // Expanded: this is the current work, same as `field` below.
     armField: true,
+    // Expanded, same rationale as `armField`: its sprite count now derives
+    // from arm geometry and is the current work being visually tuned.
+    armCloud: true,
     pop: false,
     dust: false,
     // Expanded, same rationale as `armField`/`field`: the analytic dust lane

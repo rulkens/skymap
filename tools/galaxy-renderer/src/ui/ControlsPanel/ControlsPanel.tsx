@@ -40,6 +40,7 @@ import { PARAM_SPEC } from '../../data/paramSpec';
 import { hubbleTypePatch } from '../../data/hubbleStagePatches';
 import { randomGalaxyParams } from '../../data/randomGalaxyParams';
 import { classifyHubbleType } from '../../../../../src/services/gpu/galaxy/classifyHubbleType';
+import ArmCloudSection from '../ArmCloudSection/ArmCloudSection';
 import ArmFieldSection from '../ArmFieldSection/ArmFieldSection';
 import CollapsibleSection from '../CollapsibleSection/CollapsibleSection';
 import DustSection from '../DustSection/DustSection';
@@ -306,6 +307,7 @@ function ControlsPanel({ fade }: ControlsPanelProps): ReactNode {
 
         <FieldSection />
         <ArmFieldSection />
+        <ArmCloudSection />
         <DustSection />
         <DustNetworkSection />
         <DustCloudSection />
