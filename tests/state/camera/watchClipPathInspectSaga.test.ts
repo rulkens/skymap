@@ -21,15 +21,21 @@ import {
   clearClipPath,
 } from '../../../src/state/settings/settingsSlice';
 import { clipRegistry } from '../../../src/data/animation/clips/clipRegistry';
+import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
+import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { ClipId } from '../../../src/@types/animation/ClipId';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { LiveCameraRuntime } from '../../../src/store/types';
+import type { Mat3 } from '../../../src/@types/math/Mat3';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
 const CLIP_ID: ClipId = 'flyout';
 const EXPECTED = clipRegistry[CLIP_ID].data;
+// The saga resolves `ORIENTATION_FRAMES[settings.orientation]` and threads it
+// into the seam call — the default store's orientation seeds `DEFAULT_ORIENTATION`.
+const EXPECTED_FRAME_BASIS = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 
 const EMPTY_DEPS: ResolveDeps = {
   catalogs: { get: () => undefined },
@@ -45,8 +51,8 @@ const RUNTIME: LiveCameraRuntime = {
 };
 
 function buildHarness() {
-  const compute = vi.fn<(clipId: ClipId, resolved: ClipData) => void>();
-  const recompute = vi.fn<(clipId: ClipId, resolved: ClipData) => void>();
+  const compute = vi.fn<(clipId: ClipId, resolved: ClipData, frameBasis?: Mat3) => void>();
+  const recompute = vi.fn<(clipId: ClipId, resolved: ClipData, frameBasis?: Mat3) => void>();
   const clear = vi.fn<() => void>();
   const sagaMiddleware = createSagaMiddleware();
   const store = configureStore({
@@ -78,7 +84,7 @@ describe('watchClipPathInspectSaga', () => {
     await flush();
 
     expect(compute).toHaveBeenCalledTimes(1);
-    expect(compute).toHaveBeenCalledWith(CLIP_ID, EXPECTED);
+    expect(compute).toHaveBeenCalledWith(CLIP_ID, EXPECTED, EXPECTED_FRAME_BASIS);
   });
 
   it('routes recalcClipPath to recompute (keep-start), not compute', async () => {
@@ -87,7 +93,7 @@ describe('watchClipPathInspectSaga', () => {
     await flush();
 
     expect(recompute).toHaveBeenCalledTimes(1);
-    expect(recompute).toHaveBeenCalledWith(CLIP_ID, EXPECTED);
+    expect(recompute).toHaveBeenCalledWith(CLIP_ID, EXPECTED, EXPECTED_FRAME_BASIS);
     expect(compute).not.toHaveBeenCalled();
   });
 

@@ -102,8 +102,8 @@ function* sampleInspected(clipId: ClipId, keepStart: boolean) {
     ...(active.passBy ? { passBy: passByCfg } : {}),
   };
   const tuned = applyPathTuning(resolved, tuning);
-  if (keepStart) seam.recompute(clipId, tuned);
-  else seam.compute(clipId, tuned);
+  if (keepStart) seam.recompute(clipId, tuned, frameBasis);
+  else seam.compute(clipId, tuned, frameBasis);
 }
 
 export function* watchClipPathInspectSaga() {

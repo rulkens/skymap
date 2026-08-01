@@ -59,6 +59,7 @@ import type { CameraPose } from '../@types/camera/CameraPose';
 import type { Vec4 } from '../@types/math/Vec4';
 import type { ClipData } from '../@types/animation/ClipData';
 import type { ClipId } from '../@types/animation/ClipId';
+import type { Mat3 } from '../@types/math/Mat3';
 
 export type RootState = ReturnType<typeof rootReducer>;
 export type AppStore = ReturnType<typeof createAppStore>['store'];
@@ -94,10 +95,15 @@ export type LiveCameraRuntime = { from: CameraPose; fovYRad: number; frameBasisQ
  * `compute` produced (null before the first / after `clear`). It is the replay
  * source: `watchReplayInspectedPathSaga` plays it verbatim so the flown route is
  * the inspected overlay exactly, with no fresh `start: 'live'` resolution.
+ *
+ * `frameBasis` is the STEADY orientation-frame basis the watch saga already
+ * resolved for `resolveClipFoci` (`ORIENTATION_FRAMES[settings.orientation]`) —
+ * threaded through so the sampled eye decodes through the same basis the
+ * renderer's `evaluateClip` call does (see `sampleClipPath`).
  */
 export type ClipPathInspectSeam = {
-  compute: (clipId: ClipId, resolved: ClipData) => void;
-  recompute: (clipId: ClipId, resolved: ClipData) => void;
+  compute: (clipId: ClipId, resolved: ClipData, frameBasis?: Mat3) => void;
+  recompute: (clipId: ClipId, resolved: ClipData, frameBasis?: Mat3) => void;
   clear: () => void;
   pinnedClip: () => ClipData | null;
 };

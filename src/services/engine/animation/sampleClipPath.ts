@@ -25,12 +25,33 @@ import type { ClipData } from '../../../@types/animation/ClipData';
 import type { ClipId } from '../../../@types/animation/ClipId';
 import type { ClipPathSnapshot } from '../../../@types/engine/debug/ClipPathSnapshot';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Mat3 } from '../../../@types/math/Mat3';
 import { evaluateClip } from '../camera/evaluateClip';
 import { yawPitchToDir } from '../../../utils/camera/yawPitchToDir';
 
+// Frame-local → world rotation for a `yawPitchToDir` decode. Mirrors
+// `updatePosition.ts`'s tight column-major product over the 9-float registry
+// `Mat3` (not wgpu-matrix's vec4-padded layout, which would read garbage from
+// this tuple) — same shape as `buildPathTrack.ts`'s `rotateByFrame`.
+function rotateByFrame(dir: Vec3, frameBasis: Mat3 | undefined): Vec3 {
+  if (frameBasis === undefined) return dir;
+  const [x, y, z] = dir;
+  return [
+    frameBasis[0] * x + frameBasis[3] * y + frameBasis[6] * z,
+    frameBasis[1] * x + frameBasis[4] * y + frameBasis[7] * z,
+    frameBasis[2] * x + frameBasis[5] * y + frameBasis[8] * z,
+  ];
+}
+
 /** Reconstruct the eye position from a pose via the orbit convention. */
-function eyeOf(target: Vec3, distance: number, yaw: number, pitch: number): Vec3 {
-  const dir = yawPitchToDir(yaw, pitch);
+function eyeOf(
+  target: Vec3,
+  distance: number,
+  yaw: number,
+  pitch: number,
+  frameBasis: Mat3 | undefined,
+): Vec3 {
+  const dir = rotateByFrame(yawPitchToDir(yaw, pitch), frameBasis);
   return [
     target[0] + distance * dir[0],
     target[1] + distance * dir[1],
@@ -43,6 +64,7 @@ export function sampleClipPath(
   data: ClipData,
   durationSec: number,
   sampleCount: number,
+  frameBasis?: Mat3,
 ): ClipPathSnapshot {
   const n = Math.max(2, Math.floor(sampleCount));
 
@@ -53,9 +75,9 @@ export function sampleClipPath(
   const distance: number[] = new Array(n);
   for (let i = 0; i < n; i++) {
     const ti = (i / (n - 1)) * durationSec;
-    const pose = evaluateClip(data, ti);
+    const pose = evaluateClip(data, ti, frameBasis);
     t[i] = ti;
-    eye[i] = eyeOf(pose.target, pose.distance, pose.yaw, pose.pitch);
+    eye[i] = eyeOf(pose.target, pose.distance, pose.yaw, pose.pitch, frameBasis);
     target[i] = pose.target;
     distance[i] = pose.distance;
   }

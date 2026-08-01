@@ -38,6 +38,7 @@ import { sampleClipPath } from './sampleClipPath';
 import type { ClipData } from '../../../@types/animation/ClipData';
 import type { ClipId } from '../../../@types/animation/ClipId';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
+import type { Mat3 } from '../../../@types/math/Mat3';
 import type { ClipPathInspector } from '../../../@types/engine/subsystems/ClipPathInspector';
 import type { ClipPathInspectSeam } from '../../../store/types';
 
@@ -71,21 +72,26 @@ export function createClipPathInspectSeam(deps: ClipPathInspectSeamDeps): ClipPa
   // route keeps its original origin while the curator views it from elsewhere.
   let lastStart: CameraPose | null = null;
 
-  const sampleInto = (clipId: ClipId, resolved: ClipData, startPose: CameraPose): void => {
+  const sampleInto = (
+    clipId: ClipId,
+    resolved: ClipData,
+    startPose: CameraPose,
+    frameBasis: Mat3 | undefined,
+  ): void => {
     const started = resolveClipStart(resolved, startPose);
     pinned = started;
-    const durationSec = compileClip(started).durationSec;
-    inspector.setSnapshot(sampleClipPath(clipId, started, durationSec, sampleCount));
+    const durationSec = compileClip(started, frameBasis).durationSec;
+    inspector.setSnapshot(sampleClipPath(clipId, started, durationSec, sampleCount, frameBasis));
   };
 
   return {
-    compute(clipId: ClipId, resolved: ClipData): void {
+    compute(clipId: ClipId, resolved: ClipData, frameBasis?: Mat3): void {
       lastStart = getLivePose();
-      sampleInto(clipId, resolved, lastStart);
+      sampleInto(clipId, resolved, lastStart, frameBasis);
     },
-    recompute(clipId: ClipId, resolved: ClipData): void {
+    recompute(clipId: ClipId, resolved: ClipData, frameBasis?: Mat3): void {
       // Keep the last captured start (fall back to live if nothing computed yet).
-      sampleInto(clipId, resolved, lastStart ?? getLivePose());
+      sampleInto(clipId, resolved, lastStart ?? getLivePose(), frameBasis);
     },
     clear(): void {
       pinned = null;
