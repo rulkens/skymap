@@ -642,6 +642,7 @@ function pushArmRidges(
   out: GalaxyFieldComponent[],
   tuning: GalaxyFieldTuning,
   discFlux: number,
+  reservedComponents: number,
 ): number {
   if (!tuning.armsEnabled || geometry.numArms <= 0 || discFlux <= 0) return 0;
   const { armStartRadius, diskHeight } = geometry;
@@ -650,10 +651,14 @@ function pushArmRidges(
   const hLight = discLightScaleLength(geometry);
   const K = tuning.armContrast;
 
-  // Components already pushed (disc + warped outer disc) bound what arms may
-  // still spend, split evenly across them — makes cap overflow structurally
-  // impossible rather than a silent packFieldUniforms clamp.
-  const perArmBudget = Math.floor((GALAXY_FIELD_MAX_COMPONENTS - out.length) / geometry.numArms);
+  // Components already pushed PLUS the caller's reservation (the disc is
+  // built in a local array and appended after the arms — see
+  // `buildGalaxyFieldMixture`) bound what arms may still spend, split evenly
+  // across them — makes cap overflow structurally impossible rather than a
+  // silent packFieldUniforms clamp.
+  const perArmBudget = Math.floor(
+    (GALAXY_FIELD_MAX_COMPONENTS - out.length - reservedComponents) / geometry.numArms,
+  );
 
   let armExcessFlux = 0;
 
@@ -865,21 +870,44 @@ export function buildGalaxyFieldMixture(
   tuning: GalaxyFieldTuning = DEFAULT_GALAXY_FIELD_TUNING,
 ): readonly GalaxyFieldComponent[] {
   const out: GalaxyFieldComponent[] = [];
-  const discFlux = pushDisc(geometry, out, tuning) + pushWarpedOuterDisc(geometry, out, tuning);
-  const discComponentCount = out.length;
+
+  // `pushArmRidges`' contrast law needs a disc to measure its excess against
+  // even when the FLUX FIELD pill has hidden the disc itself — the disc
+  // components go into a LOCAL array, built with discEnabled forced on, and
+  // only land in `out` (below) when the pill says so. Bulge/bar/halo have no
+  // such independent pill and stay gated on `tuning.discEnabled` directly:
+  // the FLUX FIELD pill is the smooth-field master for them; arms are the
+  // only layer with a pill of their own.
+  const discOut: GalaxyFieldComponent[] = [];
+  const discTuning: GalaxyFieldTuning = tuning.discEnabled
+    ? tuning
+    : { ...tuning, discEnabled: true };
+  const discFlux =
+    pushDisc(geometry, discOut, discTuning) + pushWarpedOuterDisc(geometry, discOut, discTuning);
 
   // The disc mixture was fit to the azimuthally averaged profile, which
   // already contains the arm light, so the arm excess has to be debited back
   // out of the disc components just pushed — otherwise the two double-count
-  // the same light (see `pushArmRidges`'s docblock).
-  const armExcessFlux = pushArmRidges(geometry, out, tuning, discFlux);
+  // the same light (see `pushArmRidges`'s docblock). Measured against the
+  // disc the galaxy WOULD have, arms keep their calibrated flux even with
+  // the disc itself hidden.
+  // Reservation only when the disc will actually land in `out` — with the
+  // disc hidden its components never spend the cap, so arms may use it all.
+  const armExcessFlux = pushArmRidges(
+    geometry,
+    out,
+    tuning,
+    discFlux,
+    tuning.discEnabled ? discOut.length : 0,
+  );
   if (discFlux > 0 && armExcessFlux > 0) {
     const debit = Math.min(armExcessFlux, discFlux * ARM_DISC_DEBIT_CLAMP_FRACTION);
     const scale = (discFlux - debit) / discFlux;
-    for (let i = 0; i < discComponentCount; i++) {
-      out[i] = { ...out[i]!, amplitude: out[i]!.amplitude * scale };
+    for (let i = 0; i < discOut.length; i++) {
+      discOut[i] = { ...discOut[i]!, amplitude: discOut[i]!.amplitude * scale };
     }
   }
+  if (tuning.discEnabled) out.push(...discOut);
 
   pushBulge(geometry, out, tuning);
   pushBar(geometry, out, tuning);
