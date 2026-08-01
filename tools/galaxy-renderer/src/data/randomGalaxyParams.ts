@@ -110,13 +110,15 @@ export function randomGalaxyParams(
     },
     cloud: {
       ...DEFAULT_GALAXY_DUST_CLOUD_PARAMS,
-      // Only the three knobs that read as a galaxy's own ISM character get
+      // Only the four knobs that read as a galaxy's own ISM character get
       // rolled: how richly it is resolved into clouds, how hierarchically
-      // those cluster, and how large its complexes run. The rest are taste
-      // scalers, left at their calibrated value like the network refiners.
+      // those cluster, how large its complexes run, and how eroded their
+      // silhouettes are. The rest are taste scalers, left at their
+      // calibrated value like the network refiners.
       count: Math.round(6000 + rng() * 12000),
       clumpiness: 0.35 + rng() * 0.55,
       sizeScale: 0.7 + rng() * 0.9,
+      texture: 0.4 + rng() * 0.6,
     },
   };
 

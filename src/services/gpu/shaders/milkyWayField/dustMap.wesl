@@ -24,6 +24,8 @@ import package::lib::gaussianIntegral::expHalfErfc;
 import package::lib::gaussianIntegral::GAUSS_PI;
 import package::milkyWayField::io::u;
 import package::milkyWayField::io::comps;
+import package::milkyWayField::io::dustNoiseTex;
+import package::milkyWayField::io::dustNoiseSmp;
 
 struct DustMapOut {
   @builtin(position) pos: vec4<f32>,
@@ -64,6 +66,53 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> Dus
   out.pos = vec4<f32>(ndc, 0.0, 1.0);
   out.ndc = ndc;
   return out;
+}
+
+// dustNoiseMultiplier — erodes the PARTICLE-CLOUD tier's smooth column with
+// the baked ridged-fbm volume (dustNoiseBake.wesl); never called for the
+// smooth 4-component disc mixture — see io.wesl's dustNoise doc for why.
+// 'p' is the ray's world-space closest-approach point to this Gaussian,
+// 'depth' its distance along the ray (both already computed by the caller
+// as o + d*tPeak / tPeak). Sampled at explicit LOD 0, no derivatives: this
+// is a splat quad, so neighbouring fragments can belong to wildly different
+// depths, and hardware-derivative LOD would pick the wrong footprint for at
+// least one of them.
+fn dustNoiseMultiplier(p: vec3<f32>, depth: f32) -> f32 {
+  let bands = textureSampleLevel(dustNoiseTex, dustNoiseSmp, p / u.dustNoise.x, 0.0);
+
+  // dustMapHeightPx (counts2.y) is dustMapTex's own pixel height (io.wesl);
+  // tanHalfFov (params.x) times depth is the world-space HALF-height of the
+  // view frustum at this depth, so 2x that over the pixel height converts
+  // to world units per pixel — this fragment's own footprint at 'depth'.
+  let pxWorld = 2.0 * depth * u.params.x / u.counts2.y;
+  if (pxWorld <= 0.0) {
+    return 1.0;
+  }
+
+  // Four bands at 1x/2x/4x/8x the base tile frequency (dustNoiseBake.wesl),
+  // weighted by a rough 1/f falloff (0.5/0.25/0.15/0.10) then REQUIRED to be
+  // band-limited: at galaxy-wide zoom the high bands are far sub-pixel, and
+  // sampling them unfiltered crawls badly under camera motion. A band's
+  // weight ramps to zero once its wavelength has shrunk under ~2 world-space
+  // pixels, and holds its full base weight once comfortably resolved.
+  let w0 = 0.5 * clamp(u.dustNoise.x / (2.0 * pxWorld) - 1.0, 0.0, 1.0);
+  let w1 = 0.25 * clamp((u.dustNoise.x / 2.0) / (2.0 * pxWorld) - 1.0, 0.0, 1.0);
+  let w2 = 0.15 * clamp((u.dustNoise.x / 4.0) / (2.0 * pxWorld) - 1.0, 0.0, 1.0);
+  let w3 = 0.10 * clamp((u.dustNoise.x / 8.0) / (2.0 * pxWorld) - 1.0, 0.0, 1.0);
+
+  let wSum = w0 + w1 + w2 + w3;
+  let weighted = bands.x * w0 + bands.y * w1 + bands.z * w2 + bands.w * w3;
+  let n = weighted / max(wSum, 1e-6);
+  // n has mean ~0.5 by construction (each ridged band averages ~0.5 over a
+  // tile), so this multiplier has mean 1 — the three-way tau split
+  // (galaxyDustMixture.ts's clampedDustCloudShare) still holds in
+  // expectation. The max(0, ...) clamp biases that mean very slightly
+  // upward at amplitudes above 1 (it can only clip the low tail, never the
+  // high one, since n in [0,1] bounds the unclamped term to [1-amp, 1+amp]);
+  // accepted rather than corrected — the slider tops out at 1.5, so the
+  // bias is small and the alternative (renormalising after the clamp) would
+  // cost a second pass over the same four samples for no visible gain.
+  return max(0.0, 1.0 + u.dustNoise.y * (2.0 * n - 1.0));
 }
 
 @fragment
@@ -108,5 +157,18 @@ fn fs(input: DustMapOut) -> @location(0) vec2<f32> {
   // additive contribution divide back out to the tau-weighted mean depth in
   // splat.wesl's fs (green / red).
   let tPeak = max(-dc.y / a, 0.0);
-  return vec2<f32>(tau, tau * tPeak);
+
+  // Erosion applies ONLY to the particle-cloud tier — input.inst is this
+  // draw's index within the dust slice (see 'base' above), and cloudOffset
+  // (dustNoise.z) is where the cloud components start within that same
+  // slice (io.wesl's dustNoise doc), so components before it are the smooth
+  // disc mixture and skip the branch entirely rather than sampling a noise
+  // texture whose whole rationale (kpc-scale components read as one blotch)
+  // doesn't apply to them.
+  var tauOut = tau;
+  let noiseAmp = u.dustNoise.y;
+  if (noiseAmp > 0.0 && input.inst >= u32(u.dustNoise.z)) {
+    tauOut = tau * dustNoiseMultiplier(o + d * tPeak, tPeak);
+  }
+  return vec2<f32>(tauOut, tauOut * tPeak);
 }

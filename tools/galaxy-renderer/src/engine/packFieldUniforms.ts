@@ -40,8 +40,8 @@ import type { GalaxyDustFeature } from '../../../../src/@types/galaxy/GalaxyDust
 import type { GalaxyFieldComponent } from '../../../../src/@types/galaxy/GalaxyFieldComponent';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
-/** Float count of `io.wesl`'s `FieldUniforms` header — 8 vec4, camera + params + counts + counts2 + dustExtinction. */
-export const FIELD_HEADER_FLOATS = 32;
+/** Float count of `io.wesl`'s `FieldUniforms` header — 9 vec4, camera + params + counts + counts2 + dustExtinction + dustNoise. */
+export const FIELD_HEADER_FLOATS = 36;
 
 /** Byte size of the header struct, for `createBuffer`. */
 export const FIELD_HEADER_BUFFER_SIZE = FIELD_HEADER_FLOATS * 4;
@@ -68,12 +68,28 @@ export type FieldCamera = {
 };
 
 /**
+ * The dust-noise erosion lane (io.wesl's `dustNoise`), packed as its own
+ * argument rather than folded into `FieldCamera`: unlike the camera/exposure
+ * lanes, these three values are cached in `createGalaxyEngine.ts`'s
+ * `rebuildDustMixture` (they only change when the dust params or geometry
+ * do), not re-derived every `drawFrame`.
+ */
+export type FieldDustNoise = {
+  /** World units spanned by one full wrap of the baked noise volume (dustParticleCloud.ts's `dustNoiseTileUnits`). */
+  readonly tileUnits: number;
+  /** Erosion strength — 0 disables the multiplier and the shader branches out entirely (`GalaxyDustCloudParams.texture`). */
+  readonly amplitude: number;
+  /** Index WITHIN the dust slice (relative to `dustOffset`) where the particle-cloud components start — the smooth lane mixture's own length. */
+  readonly cloudOffset: number;
+};
+
+/**
  * packFieldHeaderUniforms — camera basis + params + the four live counts +
- * the dust extinction law, into the 128-byte uniform. Called every
- * `drawFrame`; all four counts are whatever `repackFieldComponents`
- * (createGalaxyEngine.ts) last sized the storage buffer to (the two packers
- * are called from different sites, so the counts travel as plain arguments
- * rather than being re-derived here).
+ * the dust extinction law + the dust-noise lane, into the 144-byte uniform.
+ * Called every `drawFrame`; all four counts are whatever
+ * `repackFieldComponents` (createGalaxyEngine.ts) last sized the storage
+ * buffer to (the two packers are called from different sites, so the counts
+ * travel as plain arguments rather than being re-derived here).
  *
  * `dustExtinctionRgb` rides the header, not the per-component colour lane,
  * because the primary galaxy's attenuation no longer reads per-component
@@ -93,9 +109,12 @@ export type FieldCamera = {
  * storage array (io.wesl's counts2.x) — unrelated to `comps` sizing.
  * `dustMapHeightPx` is `dustMapTex`'s own pixel height (see
  * `buildDustMapTarget`, which sizes it to `reducedSize(render.fieldDivisor)`,
- * the SAME extent as `fieldTex`) — plumbed through but currently unread by
- * dustFeature.wesl (its width clamp uses `fwidth()` instead, see io.wesl's
- * counts2.y doc); reserved for the detail tier's future octave band-limiting.
+ * the SAME extent as `fieldTex`) — read by dustMap.wesl's dust-noise
+ * multiplier to band-limit its four baked octaves against the fragment's own
+ * world-space pixel footprint (see io.wesl's counts2.y doc).
+ *
+ * `dustNoise` is `FieldDustNoise` above — cached by `rebuildDustMixture`,
+ * not re-derived here, same discipline as `dustExtinctionRgb`.
  */
 export function packFieldHeaderUniforms(
   cam: FieldCamera,
@@ -106,6 +125,7 @@ export function packFieldHeaderUniforms(
   featCount: number,
   dustMapHeightPx: number,
   dustExtinctionRgb: Vec3,
+  dustNoise: FieldDustNoise,
   dst?: Float32Array,
 ): Float32Array {
   const out = dst ?? new Float32Array(FIELD_HEADER_FLOATS);
@@ -157,6 +177,12 @@ export function packFieldHeaderUniforms(
   out[29] = dustExtinctionRgb[1];
   out[30] = dustExtinctionRgb[2];
   out[31] = 0;
+
+  // dustNoise 32..35 = (tileUnits, amplitude, cloudOffset, unused).
+  out[32] = dustNoise.tileUnits;
+  out[33] = dustNoise.amplitude;
+  out[34] = dustNoise.cloudOffset;
+  out[35] = 0;
 
   return out;
 }

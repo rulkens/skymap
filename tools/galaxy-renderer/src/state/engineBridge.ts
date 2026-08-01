@@ -33,6 +33,7 @@
  */
 
 import type { AppStore } from './createStore';
+import type { ExtraGalaxySpec } from '../../../../src/@types/galaxy/ExtraGalaxySpec';
 import type { GalaxyEngineHandle } from '../../@types/engine/GalaxyEngineHandle';
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import type { RenderSettings } from '../../@types/engine/RenderSettings';
@@ -54,6 +55,21 @@ function paramsForEngine(galaxy: GalaxyParams, render: RenderSettings): GalaxyPa
     out = { ...out, dust: { ...dust, cloud: { ...dust.cloud, count: 0 } } };
   }
   return out;
+}
+
+/**
+ * The same pill gates, applied to every background extra. Extras carry their
+ * own randomly-drawn `GalaxyParams` and never pass through `paramsForEngine`,
+ * so without this they keep rendering legacy sprite dust after the pill turns
+ * it off — the scatter and the hero galaxy visibly disagree about what dust
+ * is. Extras have no analytic dust of their own yet (it is primary-gated in
+ * splat.wesl), so with the legacy pill off they currently render dustless.
+ */
+function extrasForEngine(
+  specs: readonly ExtraGalaxySpec[],
+  render: RenderSettings,
+): ExtraGalaxySpec[] {
+  return specs.map((spec) => ({ ...spec, params: paramsForEngine(spec.params, render) }));
 }
 
 export function connectEngineBridge(
@@ -112,14 +128,16 @@ export function connectEngineBridge(
 
     if (next.extras.enabled !== prev.extras.enabled) {
       if (next.extras.enabled) {
-        void engine.setExtras(buildExtraSpecs(next.extras.count, rng));
+        void engine.setExtras(
+          extrasForEngine(buildExtraSpecs(next.extras.count, rng), next.render),
+        );
       } else {
         void engine.setExtras([]);
       }
     } else if (next.extras.regenNonce !== prev.extras.regenNonce) {
-      void engine.setExtras(buildExtraSpecs(next.extras.count, rng));
+      void engine.setExtras(extrasForEngine(buildExtraSpecs(next.extras.count, rng), next.render));
     } else if (next.extras.enabled && next.extras.count !== prev.extras.count) {
-      void engine.setExtras(buildExtraSpecs(next.extras.count, rng));
+      void engine.setExtras(extrasForEngine(buildExtraSpecs(next.extras.count, rng), next.render));
     }
 
     prev = next;

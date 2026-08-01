@@ -75,18 +75,18 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // `MILKY_WAY_TUNING_DEFAULTS` counterpart yet — the runtime has no analytic
   // field to size a target for.
   fieldDivisor: 6,
-  // Analytic-field spike: both halves visible at boot, because the question it
-  // exists to answer is how they compare. 1.0 is not a taste setting — the
-  // mixture is calibrated so that exposure emits the sprite field's own total
-  // flux (see `emissionScale`), so boot draws the two at parity and each
-  // toggle alone shows the same amount of light.
-  spriteField: true,
+  // Both legacy halves OFF at boot: the star bag and its sprite dust are
+  // scheduled for deletion (research doc s12), so the analytic field alone is
+  // now the subject rather than one side of a comparison — and an
+  // unattenuated sprite field sitting in front of the dust map actively
+  // misreads what the dust is doing. Their pills stay for the A/B.
+  spriteField: false,
   analyticField: true,
   analyticExposure: 1.0,
   // Off at boot: the JWST view replaces the emission draw with a debug
   // presentation of the dust map, which is not the default look.
   dustView: false,
-  legacyDustEnabled: true,
+  legacyDustEnabled: false,
   dustCloudEnabled: true,
   // ON at boot, which costs nothing: at the boot camera both bands read 1, so
   // the first frame is the same frame it always was. A fade that had to be

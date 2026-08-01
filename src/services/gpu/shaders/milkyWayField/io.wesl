@@ -22,7 +22,8 @@
 //   offset 80  : counts: vec4   (emissionCount, dustOffset, dustCount, primaryCount)
 //   offset 96  : counts2: vec4  (featCount, dustMapHeightPx, reserved, reserved)
 //   offset 112 : dustExtinction: vec4 (A_lambda/A_V per channel, w unused)
-//   total: 128 bytes.
+//   offset 128 : dustNoise: vec4 (tileUnits, amplitude, cloudOffset, unused)
+//   total: 144 bytes.
 //
 // counts.x is the live EMISSION component count — the central galaxy's plus
 // every extra's, drawn one quad each (see splat.wesl). counts.y/.z locate
@@ -44,13 +45,28 @@
 // shape. counts2.y is dustMapHeightPx, dustMapTex's own pixel height
 // (createGalaxyEngine.ts's buildDustMapTarget sizes it to
 // reducedSize(render.fieldDivisor), the SAME extent as fieldTex — see the
-// DUST MAP entry below) — plumbed through but currently UNREAD:
-// dustFeature.wesl's sub-pixel width clamp uses fwidth(), which already
-// sees inclination and distance, so a depth-only pixel size wasn't needed
-// there. Reserved for the detail tier's octave band-limiting instead — the
-// noise LOD will need a pixel metric. counts2.zw are reserved
-// (spurs/bubbles/beads land their own counts here rather than growing the
-// header again).
+// DUST MAP entry below) — UNREAD by dustFeature.wesl (its sub-pixel width
+// clamp uses fwidth() instead) but read by dustMap.wesl's dust-noise
+// multiplier below, to band-limit the baked volume's four octaves against
+// the fragment's own world-space pixel footprint — the octave band-limiting
+// this lane was reserved for. counts2.zw are reserved (spurs/bubbles/beads
+// land their own counts here rather than growing the header again).
+//
+// dustNoise (offset 128) erodes the PARTICLE-CLOUD tier of the primary's
+// dust slice only (dustMap.wesl's fs) — never the smooth 4-component disc
+// mixture, whose components are kiloparsecs across, so one noise sample at
+// a component's closest-approach point would modulate an entire diffuse
+// column by a single value and read as a giant blotch, not erosion.
+// tileUnits (.x) is the world span of one full wrap of dustNoiseBake.wesl's
+// baked volume; amplitude (.y) is the erosion strength — 0 disables it, and
+// the shader branches out entirely rather than sampling for a no-op 1.0;
+// cloudOffset (.z) is the index WITHIN the dust slice (relative to
+// dustOffset, matching dustMap.wesl's own 'input.inst') where the particle
+// cloud starts — the smooth lane mixture's own length, captured where
+// createGalaxyEngine.ts's rebuildDustMixture concatenates the two. The
+// multiplier rides THIS accumulation pass rather than a consumer
+// (splat.wesl, dustPresent.wesl): both read the eroded column from here
+// with no second code path.
 //
 // COMPS (read-only storage, binding 1) — every mixture's components back to
 // back (the central galaxy's emission, then each background extra's,
@@ -153,9 +169,18 @@ struct FieldUniforms {
   counts: vec4<f32>,
   counts2: vec4<f32>,
   dustExtinction: vec4<f32>,
+  dustNoise: vec4<f32>,
 };
 
 @group(0) @binding(0) var<uniform> u: FieldUniforms;
 @group(0) @binding(1) var<storage, read> comps: array<vec4<f32>>;
 @group(0) @binding(2) var dustMapTex: texture_2d<f32>;
 @group(0) @binding(3) var<storage, read> feats: array<vec4<f32>>;
+// Bindings 4/5: the baked ridged-noise volume (dustNoiseBake.wesl) — ONLY
+// dustMap.wesl imports these two. Every pipeline here uses 'layout: auto'
+// (createGalaxyEngine.ts), which derives a bind-group layout from the
+// bindings the SHADER actually references, so splat.wesl / dustFeature.wesl
+// importing 'u'/'comps'/'feats' from this same file never gain entries 4/5
+// — their bind groups stay two/two entries, unaffected by this file growing.
+@group(0) @binding(4) var dustNoiseTex: texture_3d<f32>;
+@group(0) @binding(5) var dustNoiseSmp: sampler;

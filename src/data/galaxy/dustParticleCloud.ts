@@ -50,6 +50,26 @@ const SIZE_MIN_PC = 15;
 const SIZE_MAX_PC = 200;
 const GMC_SIZE_POWER = 2.2;
 
+/**
+ * Base world span of one full wrap of the baked ridged-noise volume
+ * (dustNoiseBake.wesl), parsecs, before `textureScale`. Its four octave
+ * bands sit at 500/250/125/62 pc wavelengths — straddling the 15-200 pc
+ * measured cloud-size span above, which is the point: the erosion has to
+ * bite at the same scale the clouds themselves live at, not far above or
+ * below it.
+ */
+export const DUST_NOISE_TILE_PC = 500;
+
+/**
+ * World-unit tile size for the baked noise volume at a given
+ * `textureScale` — the one place `pcToUnits` combines with
+ * `DUST_NOISE_TILE_PC`, so `createGalaxyEngine.ts` doesn't restate the
+ * kpc-per-unit conversion.
+ */
+export function dustNoiseTileUnits(textureScale: number): number {
+  return pcToUnits(DUST_NOISE_TILE_PC) * textureScale;
+}
+
 /** GMC associations run 300-800 pc (the same scale as the measured spur spacing); this is the child scatter's one-sigma, before elongation. */
 const COMPLEX_SPREAD_PC = 250;
 

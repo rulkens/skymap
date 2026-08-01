@@ -124,6 +124,8 @@ export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams = {
       elongation: 2.5,
       heightRatio: 0.5,
       bubbleCarve: 0.8,
+      texture: 0.7,
+      textureScale: 1,
     },
   },
 };

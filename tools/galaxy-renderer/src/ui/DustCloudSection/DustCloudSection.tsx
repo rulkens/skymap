@@ -121,6 +121,26 @@ function DustCloudSection(): ReactNode {
           onChange={(v) => patchCloud({ bubbleCarve: v })}
           info="0 = clouds ignore star-forming bubbles, 1 = fully swept out of them."
         />
+        <ParamSlider
+          label="Texture erosion"
+          value={cloud.texture}
+          min={0}
+          max={1.5}
+          step={0.05}
+          format={(v) => v.toFixed(2)}
+          onChange={(v) => patchCloud({ texture: v })}
+          info="0 = smooth analytic ellipsoids, higher = clouds eroded into wispy filaments by the baked noise volume."
+        />
+        <ParamSlider
+          label="Texture scale"
+          value={cloud.textureScale}
+          min={0.25}
+          max={4}
+          step={0.05}
+          format={(v) => v.toFixed(2)}
+          onChange={(v) => patchCloud({ textureScale: v })}
+          info="Multiplier on the noise volume's world-space tile size."
+        />
       </div>
     </CollapsibleSection>
   );

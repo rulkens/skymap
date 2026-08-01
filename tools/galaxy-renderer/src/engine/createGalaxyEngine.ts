@@ -222,6 +222,7 @@ import {
   packFieldFeatures,
   packFieldHeaderUniforms,
 } from './packFieldUniforms';
+import type { FieldDustNoise } from './packFieldUniforms';
 import { createGenerationPipelines } from '../../../../src/services/gpu/galaxy/createGenerationPipelines';
 import { encodeGeneration } from '../../../../src/services/gpu/galaxy/encodeGeneration';
 import { packGenerationUniforms } from '../../../../src/services/gpu/galaxy/packGenerationUniforms';
@@ -232,7 +233,10 @@ import {
   GALAXY_FIELD_MAX_COMPONENTS,
 } from '../../../../src/data/galaxy/galaxyFieldMixture';
 import { buildGalaxyDustMixture } from '../../../../src/data/galaxy/galaxyDustMixture';
-import { buildDustParticleCloud } from '../../../../src/data/galaxy/dustParticleCloud';
+import {
+  buildDustParticleCloud,
+  dustNoiseTileUnits,
+} from '../../../../src/data/galaxy/dustParticleCloud';
 import {
   buildDustNetworkFeatures,
   DUST_NETWORK_FEATURE_CAP,
@@ -260,6 +264,7 @@ import splatWgsl from './shaders/milkyWayField/splat.wesl?static';
 import dustMapWgsl from './shaders/milkyWayField/dustMap.wesl?static';
 import dustFeatureWgsl from './shaders/milkyWayField/dustFeature.wesl?static';
 import dustPresentWgsl from './shaders/milkyWayField/dustPresent.wesl?static';
+import dustNoiseBakeWgsl from './shaders/milkyWayField/dustNoiseBake.wesl?static';
 import gradeWgsl from './shaders/grade.wesl?static';
 
 /** HDR working format for the scene + bloom pyramid — the runtime's `hdr` row. */
@@ -271,6 +276,17 @@ const HDR: GPUTextureFormat = 'rgba16float';
  * column that has no natural upper bound the way a normalized colour does.
  */
 const DUST_MAP_FORMAT: GPUTextureFormat = 'rg16float';
+
+/**
+ * Edge length of the baked ridged-noise volume (dustNoiseBake.wesl) —
+ * 128^3 rgba8unorm, one ridged band per channel. Baked ONCE at construction
+ * (view- and param-independent: four fixed octave bands, no camera/galaxy
+ * input), never inside the per-frame encoder.
+ */
+const DUST_NOISE_TEX_SIZE = 128;
+
+/** Matches dustNoiseBake.wesl's `@workgroup_size(4, 4, 4)`. */
+const DUST_NOISE_WORKGROUP_SIZE = 4;
 
 /**
  * Resolution divisor for bloom level `n`, mirroring the runtime's `bloomN`
@@ -660,6 +676,55 @@ export async function createGalaxyEngine(
     primitive: { topology: 'triangle-list' },
   });
 
+  // ---- dust-noise bake: 128^3 ridged-fbm volume, baked ONCE ----
+  // dustNoiseBake.wesl — see its header for why ridged (not plain value
+  // noise) and why the tileable lattice hash lives inside that file rather
+  // than growing a shared lib for one consumer. View- and param-independent
+  // (four fixed octave bands, no camera/galaxy input), so this bakes here,
+  // once, into its own one-shot encoder — NOT inside `drawFrame`'s.
+  // `dustMapMod` already imports `dustNoiseTex`/`dustNoiseSmp` from io.wesl
+  // (see dustMap.wesl), which is what gives `dustMapPipe`'s `layout: 'auto'`
+  // bind-group layout entries 4/5 below.
+  const dustNoiseBakeMod = makeShader(dustNoiseBakeWgsl, 'galaxy:dustNoiseBake');
+  const dustNoiseBakePipe = device.createComputePipeline({
+    label: 'galaxy:dustNoiseBakePipe',
+    layout: 'auto',
+    compute: { module: dustNoiseBakeMod, entryPoint: 'cs' },
+  });
+  const dustNoiseTex = device.createTexture({
+    label: 'galaxy:dustNoiseTex',
+    size: [DUST_NOISE_TEX_SIZE, DUST_NOISE_TEX_SIZE, DUST_NOISE_TEX_SIZE],
+    dimension: '3d',
+    format: 'rgba8unorm',
+    usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
+  });
+  // 'repeat' on all three axes is what makes the bake tile seamlessly in
+  // world space: dustMap.wesl samples at world-position / tileUnits with no
+  // manual wrap, relying entirely on this addressing mode.
+  const dustNoiseSampler = device.createSampler({
+    label: 'galaxy:dustNoiseSampler',
+    addressModeU: 'repeat',
+    addressModeV: 'repeat',
+    addressModeW: 'repeat',
+    magFilter: 'linear',
+    minFilter: 'linear',
+  });
+  {
+    const bakeBG = device.createBindGroup({
+      label: 'galaxy:dustNoiseBakeBG',
+      layout: dustNoiseBakePipe.getBindGroupLayout(0),
+      entries: [{ binding: 0, resource: dustNoiseTex.createView() }],
+    });
+    const bakeEnc = device.createCommandEncoder({ label: 'galaxy:dustNoiseBake' });
+    const bakePass = bakeEnc.beginComputePass({ label: 'galaxy:dustNoiseBakePass' });
+    bakePass.setPipeline(dustNoiseBakePipe);
+    bakePass.setBindGroup(0, bakeBG);
+    const dispatch = DUST_NOISE_TEX_SIZE / DUST_NOISE_WORKGROUP_SIZE;
+    bakePass.dispatchWorkgroups(dispatch, dispatch, dispatch);
+    bakePass.end();
+    device.queue.submit([bakeEnc.finish()]);
+  }
+
   // ---- the aggregate composite: the RUNTIME's additive upsample ----
   // Fully generic — a covering-triangle 4-tap low-pass of whatever view it is
   // handed, additively blended into an `rgba16float` target. The star pass
@@ -762,6 +827,13 @@ export async function createGalaxyEngine(
   // it from the header rather than a per-component colour lane (see
   // io.wesl's dust-component comment).
   let currentDustExtinctionRgb = dustExtinctionRgb(DEFAULT_GALAXY_DUST_PARAMS.rV);
+  // The dust-noise erosion lane (io.wesl's `dustNoise`), cached alongside
+  // `currentDustExtinctionRgb` for the same reason — `packFieldHeaderUniforms`
+  // needs it every `drawFrame` but it only changes when `rebuildDustMixture`
+  // runs. `cloudOffset` is the length of `buildGalaxyDustMixture(...)`'s
+  // return — captured where `rebuildDustMixture` concatenates the two
+  // mixtures below, never recomputed by filtering `dustMixture` back apart.
+  let currentDustNoise: FieldDustNoise = { tileUnits: 1, amplitude: 0, cloudOffset: 0 };
   // The detail-tier dust splat network (design doc N1/N2 #1), CENTRAL galaxy
   // only like `dustMixture` above, cached + rebuilt on the same two triggers
   // (`setParams`, `setFieldTuning`) — see `rebuildDustFeatures`.
@@ -803,6 +875,14 @@ export async function createGalaxyEngine(
   // `repackFieldComponents`'s regrow branch when `fieldCompsBuf` grows;
   // `splatBG`/`dustPresentBG` rebuild again whenever `dustMapTex` itself is
   // recreated (`buildDustMapTarget`, on every resize).
+  // Bindings 4/5 (dustNoiseTex/dustNoiseSmp) go ONLY here: dustMap.wesl is
+  // the one shader among the four that share io.wesl (splat/dustMap/
+  // dustFeature/dustPresent) that actually imports them — `layout: 'auto'`
+  // derives each pipeline's bind-group layout from what its OWN shader
+  // references, so `splatBG`/`dustFeatureBG` below stay their existing
+  // two-entry shape untouched. `dustPresentBG` doesn't even import io.wesl
+  // (its own tiny module declares `dustMapTex` at binding 0 directly), so
+  // it was never in scope for this either.
   let dustMapBG = buildDustMapBindGroup();
   function buildDustMapBindGroup(): GPUBindGroup {
     return device.createBindGroup({
@@ -811,6 +891,8 @@ export async function createGalaxyEngine(
       entries: [
         { binding: 0, resource: { buffer: fieldUbo } },
         { binding: 1, resource: { buffer: fieldCompsBuf } },
+        { binding: 4, resource: dustNoiseTex.createView() },
+        { binding: 5, resource: dustNoiseSampler },
       ],
     });
   }
@@ -1096,16 +1178,27 @@ export async function createGalaxyEngine(
    * downstream stay a single number. `currentSeed`, not a literal, for the
    * same reason `rebuildDustFeatures` below reads it: both need this galaxy's
    * placement to be reproducible from `setParams`'s params alone.
+   *
+   * Also rebuilds `currentDustNoise` (io.wesl's `dustNoise` lane): the lane
+   * mixture's own length becomes `cloudOffset` (where the particle cloud
+   * starts within the dust slice), captured right here at the concatenation
+   * point rather than re-derived later by filtering `dustMixture` apart.
    */
   function rebuildDustMixture(): void {
     currentDustExtinctionRgb = dustExtinctionRgb(currentDust.rV);
-    dustMixture =
-      fieldGeometry && fieldTuning.dustEnabled
-        ? [
-            ...buildGalaxyDustMixture(fieldGeometry, currentDust),
-            ...buildDustParticleCloud(fieldGeometry, currentDust, currentSeed),
-          ]
-        : [];
+    if (fieldGeometry && fieldTuning.dustEnabled) {
+      const laneMixture = buildGalaxyDustMixture(fieldGeometry, currentDust);
+      const cloudMixture = buildDustParticleCloud(fieldGeometry, currentDust, currentSeed);
+      dustMixture = [...laneMixture, ...cloudMixture];
+      currentDustNoise = {
+        tileUnits: dustNoiseTileUnits(currentDust.cloud.textureScale),
+        amplitude: currentDust.cloud.texture,
+        cloudOffset: laneMixture.length,
+      };
+    } else {
+      dustMixture = [];
+      currentDustNoise = { tileUnits: 1, amplitude: 0, cloudOffset: 0 };
+    }
   }
 
   /**
@@ -1879,14 +1972,16 @@ export async function createGalaxyEngine(
       fieldPrimaryCount,
       fieldFeatCount,
       // dustMapTex's own pixel height — reducedSize(render.fieldDivisor)[1],
-      // the SAME extent buildDustMapTarget sizes the texture to. Currently
-      // unread by dustFeature.wesl (its width clamp uses fwidth() instead —
-      // see io.wesl's counts2.y doc); kept plumbed for the detail tier's
-      // future octave band-limiting.
+      // the SAME extent buildDustMapTarget sizes the texture to. Read by
+      // dustMap.wesl's dust-noise multiplier to band-limit its four baked
+      // octaves against the fragment's own world-space pixel footprint —
+      // see io.wesl's counts2.y doc.
       reducedSize(render.fieldDivisor)[1],
       // The CCM89 extinction law for currentDust.rV — cached by
       // rebuildDustMixture, not recomputed here every frame.
       currentDustExtinctionRgb,
+      // The dust-noise erosion lane — also cached by rebuildDustMixture.
+      currentDustNoise,
       fieldData,
     );
     device.queue.writeBuffer(fieldUbo, 0, fieldData);
@@ -2254,6 +2349,7 @@ export async function createGalaxyEngine(
       fieldUbo.destroy();
       fieldCompsBuf.destroy();
       fieldFeatsBuf.destroy();
+      dustNoiseTex.destroy();
       gradeBuf.destroy();
       ro.disconnect();
       canvas.removeEventListener('pointerdown', onDown);

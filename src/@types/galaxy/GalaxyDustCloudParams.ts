@@ -22,4 +22,8 @@ export type GalaxyDustCloudParams = {
   readonly heightRatio: number;
   /** 0..1 probability that a particle inside an SF bubble is swept out to its rim. */
   readonly bubbleCarve: number;
+  /** 0..1+ ridged-noise erosion strength multiplying the cloud tier's tau (dustNoiseBake.wesl, dustMap.wesl). 0 = smooth analytic ellipsoids. */
+  readonly texture: number;
+  /** Multiplier on the noise volume's world-space tile size (dustParticleCloud.ts's DUST_NOISE_TILE_PC). */
+  readonly textureScale: number;
 };
