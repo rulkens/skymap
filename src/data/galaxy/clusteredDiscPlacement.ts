@@ -16,7 +16,6 @@
  *
  * PURITY INVARIANT: pure given its `rng`, no Math.random/Date/engine state.
  */
-import { armFadeEnvelope } from './armRidgeGeometry';
 import { armAgeWeight } from './dustLaneFeatures';
 import { warpSurfaceFrame } from '../../utils/galaxy/warpSurfaceFrame';
 import { gaussian } from '../../utils/random/gaussian';
@@ -52,6 +51,18 @@ export type ClusteredDiscPlacementConfig = {
   readonly sigmaZComplex: number;
   /** The lane/ridge frame at one arm's log-radius, or null when this draw has no valid point there (falls back to the smooth disc). */
   readonly laneFrameAt: (arm: GalaxyFieldArmRecord, logR: number) => LaneFrame | null;
+  /**
+   * Rejection-sampling acceptance for a complex proposed at this radius on
+   * this arm, in [0,1] — the along-arm placement density, up to a constant.
+   * MUST NOT exceed 1: rejection sampling silently flattens the excess into
+   * a uniform tail rather than erroring.
+   *
+   * A callback rather than the fade envelope it usually is, because a
+   * consumer may want to weight WHERE its particles land differently from
+   * how bright the arm is there (`armParticleCloud.ts` tilts its sprites
+   * outward and cancels the tilt in flux). Dust passes the bare envelope.
+   */
+  readonly laneAcceptance: (arm: GalaxyFieldArmRecord, radius: number) => number;
   /** Cross-lane (across-arm) one-sigma spread at a radius — already whatever fraction of the arm's own width the caller wants. */
   readonly crossLaneSigma: (radius: number) => number;
   /** Smooth-disc fallback: component k's radial sigma. */
@@ -104,7 +115,7 @@ export function buildClusteredDiscPlacement<TPayload>(
     for (let tries = 0; tries < ARM_FADE_REJECTION_TRIES; tries++) {
       logR = logMin + rng() * (logMax - logMin);
       radius = geometry.armStartRadius * Math.exp(logR);
-      if (rng() < armFadeEnvelope(radius, geometry, arm)) break;
+      if (rng() < config.laneAcceptance(arm, radius)) break;
     }
 
     const frame = config.laneFrameAt(arm, logR);

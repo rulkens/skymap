@@ -50,6 +50,16 @@ function ArmCloudSection(): ReactNode {
           info="Sprite count is DERIVED from arm length, width and pitch, not a fixed budget — this scales that derived count. 1 is one sprite-footprint per unit arm area if the sprites were scattered independently; clumpiness piles them into complexes instead, so the setting that actually FILLS an arm is several times higher."
         />
         <ParamSlider
+          label="Radial bias"
+          value={fieldTuning.armCloudRadialBias}
+          min={0}
+          max={3}
+          step={0.1}
+          format={(v) => v.toFixed(1)}
+          onChange={(v) => dispatch(fieldTuningPatched({ armCloudRadialBias: v }))}
+          info="Pushes sprites outward along the arm — 0 spends them by coverage demand, which crowds the inner arm where they are small and lost under the bulge. Brightness-neutral: the tier's radial light profile does not move, so the extra outer sprites split the same light and stay dim."
+        />
+        <ParamSlider
           label="Clumpiness"
           value={fieldTuning.armCloudClumpiness}
           min={0}

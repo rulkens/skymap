@@ -47,6 +47,19 @@ export type GalaxyFieldTuning = {
    * unit arm area on average (sprites still overlap/gap stochastically).
    */
   readonly armCloudCoverage: number;
+  /**
+   * Tilts the arm cloud's sprites outward along the arm: the placement
+   * density gains a `(radius / outermost fadeRadius) ** bias` factor, so 0
+   * is pure coverage-demand placement and larger values starve the inner
+   * arm, where sprites are small, crowded, and lost under the bulge anyway.
+   *
+   * BRIGHTNESS-NEUTRAL by construction — `armParticleCloud.ts` divides the
+   * same factor back out of each sprite's flux, so the tier's radial light
+   * profile is invariant to this knob. It moves where the cloud's GRAIN is,
+   * not where its light is; the extra outer sprites split the outer arm's
+   * existing flux rather than adding any, which is what keeps them dim.
+   */
+  readonly armCloudRadialBias: number;
   /** 0..1 hierarchical clustering for the arm particle cloud — see `GalaxyDustCloudParams.clumpiness` for the same knob on the dust tier. */
   readonly armCloudClumpiness: number;
   /** Multiplier on the arm particle cloud's local-cross-section size draw. */

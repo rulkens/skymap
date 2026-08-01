@@ -304,6 +304,12 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
   // boot-image change, not a neutral default.
   armCloudShare: 0.35,
   armCloudCoverage: 1,
+  // Coverage-demand placement alone puts ~80% of the sprites inside the
+  // arm's inner half: sprites there are small (the width law's floor), so
+  // it takes many to cover a strip, and that is also where the bulge glare
+  // buries them. The tilt spends them further out instead, at no cost to
+  // the arm's light profile (see `armCloudRadialBias`'s docblock).
+  armCloudRadialBias: 1.5,
   armCloudClumpiness: 0.4,
   armCloudSizeScale: 1,
   armCloudElongation: 3,

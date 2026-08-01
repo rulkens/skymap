@@ -107,6 +107,13 @@ function distance3(a: Vec3, b: Vec3): number {
  * leaving `2 * coverage * fade(r) / (PI * elongation * sizeScale^2 *
  * MEAN_SIZE_FRAC_SQ * armCrossSigma(r)) ds`, evaluated by trapezoid over a
  * dense log-radius ridge sample and summed across arms.
+ *
+ * `armCloudRadialBias` is deliberately NOT in this integral: it redistributes
+ * the sprites rather than resizing the arm, so the whole-arm demand this
+ * solves for is the same. The practical consequence is that raising the bias
+ * over-covers the outer arm and under-covers the inner one at a fixed
+ * `coverage` — which is the point, and is why a tilted cloud needs a LOWER
+ * coverage setting to read as filled where it counts.
  */
 export function deriveArmCloudCount(
   geometry: GalaxyFieldGeometry,
@@ -153,6 +160,45 @@ export function deriveArmCloudCount(
 
 type CloudParticle = { center: Vec3; readonly frame: CloudFrame; readonly radius: number };
 
+/**
+ * Reference radius for the radial tilt: the outermost arm's own fade radius,
+ * so `(radius / this) ** bias` never exceeds 1 anywhere a complex can be
+ * proposed. That bound is load-bearing — the sampler rejection-tests against
+ * this weight, and a weight above 1 silently flattens into a uniform tail
+ * instead of erroring.
+ *
+ * ONE reference across all arms, not each arm's own fadeRadius, so the tilt
+ * cannot redistribute light BETWEEN arms of different lengths: a per-arm
+ * reference would normalise each arm's tilt separately and hand the short
+ * arms a brightness offset that grows with `bias`.
+ */
+function tiltReferenceRadius(geometry: GalaxyFieldGeometry): number {
+  let max = 0;
+  for (const arm of geometry.arms) max = Math.max(max, arm.fadeRadius);
+  return max > 0 ? max : geometry.armStartRadius;
+}
+
+/**
+ * Floor on the radial tilt, and so a ceiling of 1/this on how much flux one
+ * sprite can be handed relative to an outer one. The tilt suppresses inner
+ * placements and the flux weight divides the same factor back out, which is
+ * exact in EXPECTATION but unbounded in variance: at bias 3 an inner sprite
+ * survives with probability ~0.007 and would then carry ~138x an outer
+ * sprite's flux, so one unlucky complex took a third of the tier's light and
+ * read as a bright knot inside the bulge — the opposite of the knob's point.
+ *
+ * Applied to BOTH sides, so the cancellation stays exact; what it costs is
+ * that the tilt saturates in the inner arm at high bias rather than
+ * continuing to bite.
+ */
+const TILT_FLOOR = 0.05;
+
+/** The radial tilt at a radius — ONE definition, read by the placement acceptance and the flux weight that cancels it, so the two cannot drift apart. */
+function radialTilt(radius: number, referenceRadius: number, bias: number): number {
+  if (bias <= 0) return 1;
+  return Math.max(TILT_FLOOR, (Math.max(radius, 0) / referenceRadius) ** bias);
+}
+
 export function buildArmParticleCloud(
   geometry: GalaxyFieldGeometry,
   tuning: GalaxyFieldTuning,
@@ -176,6 +222,8 @@ export function buildArmParticleCloud(
   const discWeightSum = DISC_SURFACE_WEIGHTS.reduce((s, w) => s + w, 0);
 
   const rng = mulberry32(seed ^ 0x41524d43); // "ARMC"
+  const bias = Math.max(0, tuning.armCloudRadialBias);
+  const rTilt = tiltReferenceRadius(geometry);
 
   const particles: CloudParticle[] = buildClusteredDiscPlacement<{ radius: number }>(
     {
@@ -188,18 +236,19 @@ export function buildArmParticleCloud(
       elongation: tuning.armCloudElongation,
       sigmaZComplex,
       laneFrameAt: (arm, logR) => armRidgeFrameAt(logR, geometry, arm),
+      laneAcceptance: (arm, radius) =>
+        armFadeEnvelope(radius, geometry, arm) * radialTilt(radius, rTilt, bias),
       crossLaneSigma: (radius) => armCrossSigma(radius, geometry, tuning),
       discSigmaR: (k) => DISC_SIGMA_RATIOS[k]! * hLight,
       discWeights: DISC_SURFACE_WEIGHTS,
       discWeightSum,
     },
     (childRng, center) => {
-      // The along-arm brightness shading (fade/clump/survival) already
-      // happened at SAMPLING time — `armFadeEnvelope`'s rejection inside
-      // the shared placement sampler biases WHERE particles land, not how
-      // bright each one is — so every particle gets an equal R^2 share of
-      // the tier's flux below, and the tier reads as smoothly graded rather
-      // than clumped on top of its own clustering.
+      // The along-arm brightness shading is carried by the SAMPLING density
+      // (`laneAcceptance`'s fade envelope), not by per-particle flux, so the
+      // tier reads as smoothly graded rather than clumped on top of its own
+      // clustering. The radial tilt is the one part of that density that
+      // ISN'T brightness, which is why the flux weight below cancels it.
       const radiusAtParticle = Math.hypot(center[0], center[2]);
       const sizeFrac = SIZE_MIN_RATIO + childRng() * (SIZE_MAX_RATIO - SIZE_MIN_RATIO);
       const radius =
@@ -208,18 +257,32 @@ export function buildArmParticleCloud(
     },
   );
 
-  let sumR2 = 0;
-  for (const p of particles) sumR2 += p.radius * p.radius;
-  if (!(sumR2 > 0)) return [];
-  const fluxPerR2 = totalFlux / sumR2;
+  // Per-particle flux weight. The R^2 term holds SURFACE brightness constant
+  // across the size draw (flux/R^2 fixed, so amplitude ~ 1/R) — a big sprite
+  // is a wider cloud, not a brighter one, which is what stops the size draw
+  // from reading as a brightness lottery.
+  //
+  // Dividing by `radialTilt` cancels exactly the factor `laneAcceptance`
+  // multiplied into the placement density, so the tier's radial LIGHT
+  // profile is whatever it was at bias 0 however far the tilt pushes the
+  // sprites. Without it the tilt would drag the arm's light outward with its
+  // grain: the outer arm would gain both more sprites AND each of them
+  // brighter, which is the failure the knob exists to avoid.
+  const weights = particles.map(
+    (p) => (p.radius * p.radius) / radialTilt(Math.hypot(p.center[0], p.center[2]), rTilt, bias),
+  );
+  let weightSum = 0;
+  for (const w of weights) weightSum += w;
+  if (!(weightSum > 0)) return [];
+  const fluxPerWeight = totalFlux / weightSum;
 
-  return particles.map((p) => {
+  return particles.map((p, i) => {
     const sigmas = {
       along: p.radius * tuning.armCloudElongation,
       across: p.radius,
       pole: p.radius * SPRITE_POLE_RATIO,
     };
-    const flux = fluxPerR2 * p.radius * p.radius;
+    const flux = fluxPerWeight * weights[i]!;
     const amplitude = flux / (TAU_ROOT3 * sigmas.along * sigmas.across * sigmas.pole);
     return {
       amplitude,

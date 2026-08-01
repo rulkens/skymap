@@ -11,7 +11,7 @@
  * PURITY INVARIANT: pure `(geometry, dust, seed) -> flat data`, no
  * Math.random/Date/engine state — a Worker/compute-pass candidate.
  */
-import { armCrossSigma } from './armRidgeGeometry';
+import { armCrossSigma, armFadeEnvelope } from './armRidgeGeometry';
 import { buildClusteredDiscPlacement, type CloudFrame } from './clusteredDiscPlacement';
 import { DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './discSurfaceFit';
 import { buildDustBubblePlacements, pcToUnits } from './dustBubblePlacements';
@@ -143,6 +143,7 @@ export function buildDustParticleCloud(
       elongation: cloud.elongation,
       sigmaZComplex: sigmaZCloud,
       laneFrameAt: (arm, logR) => armOffsetFrameAt(logR, geometry, dust, arm),
+      laneAcceptance: (arm, radius) => armFadeEnvelope(radius, geometry, arm),
       crossLaneSigma: (radius) =>
         armCrossSigma(radius, geometry, ARM_WIDTH_TUNING) * 0.25 * dust.cloud.laneWidth,
       discSigmaR: (k) => dustSigmaR(k, shape),
