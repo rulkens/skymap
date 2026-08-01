@@ -87,6 +87,7 @@ import {
   commitCameraPose,
   startFrameTween,
 } from '../../../../src/state/camera/cameraSlice';
+import { setOrientation } from '../../../../src/state/settings/settingsSlice';
 import {
   ORIENTATION_FRAMES,
   ORIENTATION_FRAME_QUATERNIONS,
@@ -477,6 +478,60 @@ describe('runFrame — orientation-frame roll', () => {
     // Completion clears the descriptor exactly once: after the saturating frame
     // the store's frameTween is null, so the steady branch takes over next frame.
     expect(store.getState().camera.frameTween).toBeNull();
+  });
+
+  it('during a frame roll the assembled camera position is unchanged while its up rotates', () => {
+    // The branch's rule: a frame switch changes only which way is up. `poseBasis`
+    // is the COMMITTED frame (`ORIENTATION_FRAMES[orientation]`), which
+    // `watchOrientationChangeSaga` sets to the destination the instant a switch
+    // starts — so it does not move for the roll's whole duration — while
+    // `upBasis` is the live, mid-slerp `B(t)`. This test drives the drag
+    // register's two fields (what `runFrame` actually writes) through
+    // `assembleOrbitCamera` and asserts the split: position holds, up rotates.
+    const store = makeStore();
+    const state = makeCamState();
+    const deps = makeCamDeps(state, store);
+
+    const BASE: CameraPose = { target: [0, 0, 0], yaw: 0.7, pitch: 0.3, distance: 100 };
+    store.dispatch(commitCameraPose(BASE));
+    state.cameraRuntime.lastPose.current = BASE;
+
+    // Mirrors watchOrientationChangeSaga: setOrientation commits the
+    // destination immediately, startFrameTween rolls the up-basis toward it.
+    store.dispatch(setOrientation('galactic'));
+    store.dispatch(
+      startFrameTween({
+        fromQuat: [...ORIENTATION_FRAME_QUATERNIONS.ecliptic],
+        to: 'galactic',
+        durationMs: 1000,
+        easing: 'linear',
+      }),
+    );
+
+    const projection = state.cameraRuntime.projection;
+
+    runFrame(state, deps, 250);
+    const cam1 = assembleOrbitCamera(
+      state.cameraRuntime.lastPose.current,
+      projection,
+      state.cam!.poseBasis!,
+      state.cam!.upBasis!,
+    );
+
+    runFrame(state, deps, 500);
+    const cam2 = assembleOrbitCamera(
+      state.cameraRuntime.lastPose.current,
+      projection,
+      state.cam!.poseBasis!,
+      state.cam!.upBasis!,
+    );
+
+    // The eye holds still: poseBasis is the committed 'galactic' frame at both
+    // samples (it never moved), and the pose (target/yaw/pitch/distance) is
+    // unchanged too (resting driver), so position is bit-for-bit identical.
+    expect(cam2.position).toEqual(cam1.position);
+    // The horizon rotates: upBasis is still mid-slerp between t=250 and t=500.
+    expect(frameUp(cam2.upBasis)).not.toEqual(frameUp(cam1.upBasis));
   });
 
   it('a switch into a near-pole-aligned view resolves to a finite pose at the clamp, not NaN', () => {

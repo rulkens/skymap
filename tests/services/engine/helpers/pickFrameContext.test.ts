@@ -126,8 +126,10 @@ describe('pickFrameContext', () => {
       canvas,
       state.cameraRuntime.lastPose.current,
       state.cameraRuntime.projection,
-      // Same steady basis `pickFrameContext` resolves internally, so the two
-      // cameras decode position through the same pole and their vp matches.
+      // Same steady basis `pickFrameContext` resolves internally for BOTH
+      // halves, so the two cameras decode position and screen-up through the
+      // same pole and their vp matches.
+      ORIENTATION_FRAMES[state.settings.orientation],
       ORIENTATION_FRAMES[state.settings.orientation],
       deriveSourceMasks(state).pick,
       0,
