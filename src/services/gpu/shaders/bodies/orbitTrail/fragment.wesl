@@ -69,7 +69,6 @@
 // so the ribbon can only ever deposit light on the ring itself, never a
 // filled blob.
 
-import package::bodies::orbitTrail::constants::SEGMENTS;
 import package::bodies::orbitTrail::constants::STROKE_PX;
 import package::bodies::orbitTrail::io::VSOut;
 import package::lib::math::TAU;
@@ -115,22 +114,6 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
 
   // atan2 is scale-invariant: atan2(u.y, u.x) equals atan2(t, s), no divide needed.
   let ecc = atan2(u.y, u.x); // eccentric anomaly E
-
-  // E-ownership discard for fold-widened (over-wide) quads: [eLo, eHi) is
-  // half-open and bit-identical across segments (both sides compute
-  // TAU*i/SEGMENTS from the same integer i), so exactly one tested quad ever
-  // owns a given pixel's E, however much widened quads overlap on screen —
-  // no double-add under additive blend, no gap. Untested quads skip this
-  // entirely: their footprint (the abutting invariant) IS their ownership.
-  // The window span is the shared TAU/SEGMENTS, not eHi - eLo: the last
-  // segment's eHi (TAU*96/96) can round a sub-ulp shy of TAU, leaving a seam.
-  if (in.eOwn.z > 0.5) {
-    let dE = ecc - in.eOwn.x;
-    let dEw = dE - TAU * floor(dE / TAU);
-    if (dEw >= TAU / f32(SEGMENTS)) {
-      discard;
-    }
-  }
 
   // r is O(1) near the stroke, so measuring its gradient with the hardware's
   // screen-space derivatives differences it ACROSS the fragment's 2x2 quad,
@@ -198,23 +181,6 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
 
 @fragment
 fn fsImpostorRibbon(in: VSOut) -> @location(0) vec4<f32> {
-  // Fold hulls are viewport-sized boxes (tangent extension), so a flat
-  // full-strength fill saturates to white wherever a few orbits stack. Mirror
-  // fs's ownership discard for tested quads - each orbit then contributes at
-  // most one layer per pixel - and dim: the overlay shows where the
-  // production fragment MAY paint, per orbit, not the raw geometry.
-  let ginv = mat3x3<f32>(in.ginv0, in.ginv1, in.ginv2);
-  let q = ginv * vec3<f32>(in.clip.xy, 1.0);
-  if (q.z <= 0.0) {
-    discard;
-  }
-  if (in.eOwn.z > 0.5) {
-    let ecc = atan2(q.y, q.x);
-    let dE = ecc - in.eOwn.x;
-    let dEw = dE - TAU * floor(dE / TAU);
-    if (dEw >= TAU / f32(SEGMENTS)) {
-      discard;
-    }
-  }
+  // Dimmed so overlapping sag-widened hulls read as layers, not a white wash.
   return vec4<f32>(in.color * 0.2, 1.0);
 }

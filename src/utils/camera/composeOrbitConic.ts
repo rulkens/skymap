@@ -90,6 +90,15 @@ export function composeOrbitConic(
   ginv: Float32Array;
   /** (Cc, Ac, Bc), each a length-4 padded (clip.x, clip.y, clip.w, 0) — see the record layout. */
   clipBasis: readonly [Float32Array, Float32Array, Float32Array];
+  /**
+   * The in-front-of-camera arc as `[eStart, eSpan]` (radians). Clip-w along the
+   * orbit is `w(E) = Cw + R·cos(E − φ)` — a pure sinusoid — so the visible part
+   * is EXACTLY one E-interval, computed here in closed form (f64). `eSpan` is
+   * `TAU` when the whole orbit is in front, `0` when none of it is (cull); the
+   * vertex stage samples only inside the interval, so geometry for the
+   * behind-camera arc never exists.
+   */
+  arc: readonly [number, number];
 } {
   // Origin-relative ellipse centre — the frame the slab VP was built for (same
   // subtraction composeBodyMvp performs). Done in f64 so the ~1e-12 Mpc
@@ -167,6 +176,27 @@ export function composeOrbitConic(
     for (const i of realIndices) Ginv[i]! /= maxAbs;
   }
 
+  // Visible arc in closed form, in f64. w(E) = Cw + Aw·cosE + Bw·sinE
+  // = Cw + R·cos(E − φ); the arc is where w exceeds the same scale-free
+  // epsilon the vertex stage's endpoint samples inherit (1e-6 sits well above
+  // f32 relative precision, so a narrowed endpoint w cannot round to ≤ 0).
+  const cw = cC[2];
+  const aw = cS[2];
+  const bw = cT[2];
+  const wAmp = Math.hypot(aw, bw);
+  const epsW = 1e-6 * (Math.abs(cw) + wAmp);
+  const TAU = 2 * Math.PI;
+  let eStart = 0;
+  let eSpan = TAU;
+  if (cw + wAmp <= epsW) {
+    eSpan = 0; // entirely behind — the caller culls the instance
+  } else if (cw - wAmp <= epsW) {
+    const phi = Math.atan2(bw, aw);
+    const alpha = Math.acos(Math.min(1, Math.max(-1, (epsW - cw) / wAmp)));
+    eStart = phi - alpha;
+    eSpan = 2 * alpha;
+  }
+
   // Narrow once at the GPU-upload boundary. clipBasis carries (Cc, Ac, Bc)
   // for the ribbon vertex stage — each padded to four lanes so it streams as
   // a float32x4 instance attribute (the fourth lane is unused pad, like each
@@ -178,5 +208,6 @@ export function composeOrbitConic(
       new Float32Array([cS[0], cS[1], cS[2], 0]),
       new Float32Array([cT[0], cT[1], cT[2], 0]),
     ],
+    arc: [eStart, eSpan],
   };
 }

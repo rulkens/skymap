@@ -42,9 +42,6 @@ struct VSOut {
   // Per-orbit apparent-size fade (CPU-side): 1 well above the cull threshold,
   // ramping to 0 as the orbit shrinks toward it. Multiplies the final colour.
   @location(6) @interpolate(flat) alpha: f32,
-  // Segment's [eLo, eHi) eccentric-anomaly range + fold-test flag — see the
-  // ownership test in fragment.wesl.
-  @location(7) @interpolate(flat) eOwn: vec3<f32>,
 };
 
 // Per-instance vertex input, matching the TS pipeline's instance-buffer
@@ -63,4 +60,8 @@ struct OrbitInstance {
   @location(6) cc: vec4<f32>,       // clip basis: centre  (x, y, w, pad)
   @location(7) ac: vec4<f32>,       // clip basis: semi-major
   @location(8) bc: vec4<f32>,       // clip basis: semi-minor
+  // The CPU-clipped in-front-of-camera arc (composeOrbitConic, closed form):
+  // eStart, eSpan. vsRibbon samples ONLY inside it, so no sample is ever
+  // behind the camera; eSpan == TAU means the whole orbit (wrap the strip).
+  @location(9) arc: vec2<f32>,
 };

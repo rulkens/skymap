@@ -294,7 +294,7 @@ export const orbitTrailsLayer: ContentLayer = {
       // Per-orbit apparent-size fade × the whole-layer opacity (hide/show fade).
       const alpha = Math.min(1, (diameterPx - CULL_PX) / (FULL_PX - CULL_PX)) * layerOpacity;
 
-      const { ginv, clipBasis } = composeOrbitConic(
+      const { ginv, clipBasis, arc } = composeOrbitConic(
         view.slab.vp,
         centerMpc,
         semiMajorMpc,
@@ -302,6 +302,7 @@ export const orbitTrailsLayer: ContentLayer = {
         view.viewportPx,
         RENDER_ORIGIN_MPC,
       );
+      if (arc[1] <= 0) continue; // whole orbit behind the camera — no geometry
       const base = count++ * INSTANCE_FLOATS;
       staging.set(ginv, base); // Ginv columns → floats 0..11
       staging[base + 12] = elements.color[0];
@@ -317,6 +318,8 @@ export const orbitTrailsLayer: ContentLayer = {
       staging.set(clipBasis[0], base + 20); // clip basis Cc → floats 20..23
       staging.set(clipBasis[1], base + 24); // clip basis Ac → floats 24..27
       staging.set(clipBasis[2], base + 28); // clip basis Bc → floats 28..31
+      staging[base + 32] = arc[0]; // visible arc eStart → float 32
+      staging[base + 33] = arc[1]; // visible arc eSpan → float 33
     }
     if (count > 0) {
       renderer.draw(pass, staging, count, state.settings.debug.showOrbitTrailImpostor);

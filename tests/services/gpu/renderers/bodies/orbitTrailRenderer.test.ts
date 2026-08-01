@@ -3,7 +3,7 @@
  *
  * Vitest runs in Node without a WebGPU surface, so every `create*` call the
  * renderer issues at construction returns a plausibly-shaped stand-in. These
- * tests pin the `Renderer` contract, the 32-float / 128-byte instance
+ * tests pin the `Renderer` contract, the 34-float / 136-byte instance
  * record (locations 1..8, the ribbon impostor's clip-basis addition at
  * 6/7/8), the one-pipeline-one-module-one-VBO construction (the near-plane-
  * clamped ribbon covers every projection, so there is no fallback pipeline),
@@ -75,8 +75,8 @@ describe('createOrbitTrailRenderer', () => {
     const buffers: BufferDesc[] = [];
     createOrbitTrailRenderer(mockDevice({ buffers }), 'rgba16float');
     expect(buffers.find((b) => b.label === 'orbit-trail-instance-vbo')).toBeUndefined();
-    expect(INSTANCE_STRIDE).toBe(128);
-    expect(INSTANCE_FLOATS).toBe(32);
+    expect(INSTANCE_STRIDE).toBe(136);
+    expect(INSTANCE_FLOATS).toBe(34);
   });
 
   it('pins the FULL instance attribute layout — ONE instance buffer, no position VBO', () => {
@@ -84,7 +84,8 @@ describe('createOrbitTrailRenderer', () => {
     // three Ginv columns at locations 1..3 (offsets 0/16/32), then
     // colour+eccentricity at location 4 (offset 48), meanAnomaly+fade at
     // location 5 (offset 64), and the ribbon impostor's clip-basis vec4s
-    // Cc/Ac/Bc at locations 6/7/8 (offsets 80/96/112). The pipeline has no
+    // Cc/Ac/Bc at locations 6/7/8 (offsets 80/96/112), then the CPU-clipped
+    // visible arc at location 9 (offset 128). The pipeline has no
     // location-0 position buffer — geometry comes from
     // @builtin(vertex_index), so this instance buffer is the pipeline's only
     // vertex buffer. A drifted offset silently reads garbage on real
@@ -102,6 +103,7 @@ describe('createOrbitTrailRenderer', () => {
       { shaderLocation: 6, offset: 80, format: 'float32x4' }, // clip basis centre Cc
       { shaderLocation: 7, offset: 96, format: 'float32x4' }, // clip basis semi-major Ac
       { shaderLocation: 8, offset: 112, format: 'float32x4' }, // clip basis semi-minor Bc
+      { shaderLocation: 9, offset: 128, format: 'float32x2' }, // visible arc eStart, eSpan
     ];
 
     const desc = renderPipelines[0]!;

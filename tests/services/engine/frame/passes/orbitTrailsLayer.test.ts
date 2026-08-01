@@ -53,6 +53,7 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 type ConicOut = {
   ginv: Float32Array;
   clipBasis: readonly [Float32Array, Float32Array, Float32Array];
+  arc: readonly [number, number];
 };
 vi.mock('../../../../../src/utils/camera/composeOrbitConic', () => ({
   composeOrbitConic: vi.fn<() => ConicOut>(() => ({
@@ -62,6 +63,7 @@ vi.mock('../../../../../src/utils/camera/composeOrbitConic', () => ({
       new Float32Array([401, 402, 403, 0]),
       new Float32Array([501, 502, 503, 0]),
     ],
+    arc: [601, 602],
   })),
 }));
 import { composeOrbitConic } from '../../../../../src/utils/camera/composeOrbitConic';
@@ -364,7 +366,7 @@ describe('orbitTrailsLayer.draw', () => {
     // eccentricity at floats 12..15, mean anomaly at 16, fade alpha at 17
     // (saturated — Mercury's orbit is large from the Sun), then the viewport
     // (was a zeroed pad; now the ribbon vertex stage's divisor), then the
-    // clip basis at 20..31.
+    // clip basis at 20..31 and the visible arc at 32..33.
     expect(staging[12]).toBeCloseTo(first.color[0]);
     expect(staging[13]).toBeCloseTo(first.color[1]);
     expect(staging[14]).toBeCloseTo(first.color[2]);
@@ -392,6 +394,8 @@ describe('orbitTrailsLayer.draw', () => {
     expect(Array.from(staging.slice(20, 24))).toEqual([301, 302, 303, 0]);
     expect(Array.from(staging.slice(24, 28))).toEqual([401, 402, 403, 0]);
     expect(Array.from(staging.slice(28, 32))).toEqual([501, 502, 503, 0]);
+    expect(staging[32]).toBe(601);
+    expect(staging[33]).toBe(602);
   });
 
   it('multiplies the whole-layer fade opacity into each per-orbit alpha', () => {

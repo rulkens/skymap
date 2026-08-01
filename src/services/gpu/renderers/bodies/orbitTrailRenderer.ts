@@ -22,19 +22,20 @@ import { RIBBON_SEGMENTS } from '../../../../data/bodies/orbitTrailConstants';
  * Float32 slots per per-instance record: three `Ginv` columns (12) + colour
  * + eccentricity (4) + mean anomaly + fade + pad (4) + three clip-basis
  * vec4s `Cc`/`Ac`/`Bc` (12, the ribbon impostor's addition —
- * centre/semi-major/semi-minor of the world ellipse, projected) = 32. The
- * caller writes each orbit's record at `i * INSTANCE_FLOATS`.
+ * centre/semi-major/semi-minor of the world ellipse, projected), then the
+ * CPU-clipped visible arc `eStart`/`eSpan` (2) = 34. The caller writes each
+ * orbit's record at `i * INSTANCE_FLOATS`.
  */
-export const INSTANCE_FLOATS = 32;
+export const INSTANCE_FLOATS = 34;
 
-/** Per-instance byte stride: 32 × 4 = 128. Must match the pipeline's
+/** Per-instance byte stride: 34 × 4 = 136. Must match the pipeline's
  * instance-buffer descriptor AND `orbitTrail/io.wesl`'s `OrbitInstance`. */
-export const INSTANCE_STRIDE = INSTANCE_FLOATS * 4; // 128 bytes
+export const INSTANCE_STRIDE = INSTANCE_FLOATS * 4; // 136 bytes
 
 /**
- * Per-instance vertex attributes at `@location`s 1..8 — the three `Ginv`
- * columns, colour+eccentricity, mean anomaly+fade, then the three
- * clip-basis vec4s. There is no `@location(0)`: `vsRibbon` generates its own
+ * Per-instance vertex attributes at `@location`s 1..9 — the three `Ginv`
+ * columns, colour+eccentricity, mean anomaly+fade, the three
+ * clip-basis vec4s, then the visible-arc interval. There is no `@location(0)`: `vsRibbon` generates its own
  * geometry from `@builtin(vertex_index)`, so this instance buffer is the
  * pipeline's ONLY vertex buffer. Byte offsets must match
  * `orbitTrail/io.wesl`'s `OrbitInstance` exactly.
@@ -48,6 +49,7 @@ const INSTANCE_ATTRIBUTES: readonly GPUVertexAttribute[] = [
   { shaderLocation: 6, offset: 80, format: 'float32x4' }, // clip basis centre Cc
   { shaderLocation: 7, offset: 96, format: 'float32x4' }, // clip basis semi-major Ac
   { shaderLocation: 8, offset: 112, format: 'float32x4' }, // clip basis semi-minor Bc
+  { shaderLocation: 9, offset: 128, format: 'float32x2' }, // visible arc eStart, eSpan
 ];
 
 export function createOrbitTrailRenderer(
