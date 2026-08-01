@@ -21,6 +21,7 @@
 #   src/engine/shaders/lib/billboard.wesl     -> .../shaders/lib/billboard.wesl
 #   src/engine/shaders/lib/gaussianIntegral.wesl -> .../lib/gaussianIntegral.wesl
 #   src/engine/shaders/lib/splatSilhouette.wesl  -> .../lib/splatSilhouette.wesl
+#   src/engine/shaders/lib/valueNoise.wesl       -> .../lib/valueNoise.wesl
 #
 # milkyWayCloud is the star + dust billboard pair, shared as a WHOLE DIRECTORY
 # rather than file by file: stars.wesl and dust.wesl both read the single

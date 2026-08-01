@@ -18,15 +18,14 @@ fn vs(@builtin(vertex_index) vi: u32) -> FullscreenOut {
 
 @fragment
 fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
-  // dustMapTex is full canvas resolution; this pass's own target (fieldTex)
-  // runs at a coarser divisor (FieldSection's field-target-divisor slider),
-  // so the covering triangle's UV — not this fragment's own pixel position —
-  // is what locates the matching dustMap texel. textureLoad (not a sampler)
-  // keeps this a point sample: the map's high-frequency detail is the whole
-  // reason it exists, and a bilinear blur here would soften it one pass
-  // before the viewer ever sees it.
-  let dims = vec2<f32>(textureDimensions(dustMapTex));
-  let coord = vec2<i32>(input.uv * dims);
+  // dustMapTex is divisor-matched to THIS pass's target (fieldTex) by
+  // construction — createGalaxyEngine.ts's buildDustMapTarget sizes it to
+  // reducedSize(render.fieldDivisor) and rebuilds it whenever that divisor
+  // moves — so framebuffer coords ARE map texels, a direct 1:1 load. A UV
+  // rescale here previously papered over a resolution MISMATCH (dustMapTex
+  // at full canvas res, this target at a coarser divisor); that decimated
+  // any lane thinner than the divisor into beads, which is why it's gone.
+  let coord = vec2<i32>(input.pos.xy);
   let tau = textureLoad(dustMapTex, coord, 0).r;
 
   // Presentation palette, NOT physics: intensity saturates smoothly with

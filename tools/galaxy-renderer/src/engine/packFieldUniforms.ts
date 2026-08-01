@@ -36,17 +36,21 @@
  * opens — a divergence that looks like a projection bug, not a framing one.
  */
 
+import type { GalaxyDustFeature } from '../../../../src/@types/galaxy/GalaxyDustFeature';
 import type { GalaxyFieldComponent } from '../../../../src/@types/galaxy/GalaxyFieldComponent';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
-/** Float count of `io.wesl`'s `FieldUniforms` header — 6 vec4, camera + params + counts. */
-export const FIELD_HEADER_FLOATS = 24;
+/** Float count of `io.wesl`'s `FieldUniforms` header — 7 vec4, camera + params + counts + counts2. */
+export const FIELD_HEADER_FLOATS = 28;
 
 /** Byte size of the header struct, for `createBuffer`. */
 export const FIELD_HEADER_BUFFER_SIZE = FIELD_HEADER_FLOATS * 4;
 
 /** Floats per `comps` entry — four vec4, as `io.wesl`'s layout comment documents. */
 export const FIELD_COMPONENT_FLOATS = 16;
+
+/** Floats per `feats` entry — five vec4, as `io.wesl`'s FEATS layout comment documents. */
+export const FIELD_FEATURE_FLOATS = 20;
 
 export type FieldCamera = {
   /** Camera world position — the ray origin. */
@@ -76,7 +80,14 @@ export type FieldCamera = {
  * is appended last — see io.wesl); `dustCount` its length. `primaryCount` is
  * the CENTRAL galaxy's own share of `emissionCount` (its components are
  * packed first), which the shader gates dust application on: an extra's
- * emission must never read the primary's dust.
+ * emission must never read the primary's dust. `featCount` is the detail-
+ * tier dust feature draw's own instance count, into the SEPARATE `feats`
+ * storage array (io.wesl's counts2.x) — unrelated to `comps` sizing.
+ * `dustMapHeightPx` is `dustMapTex`'s own pixel height (see
+ * `buildDustMapTarget`, which sizes it to `reducedSize(render.fieldDivisor)`,
+ * the SAME extent as `fieldTex`) — plumbed through but currently unread by
+ * dustFeature.wesl (its width clamp uses `fwidth()` instead, see io.wesl's
+ * counts2.y doc); reserved for the detail tier's future octave band-limiting.
  */
 export function packFieldHeaderUniforms(
   cam: FieldCamera,
@@ -84,6 +95,8 @@ export function packFieldHeaderUniforms(
   dustOffset: number,
   dustCount: number,
   primaryCount: number,
+  featCount: number,
+  dustMapHeightPx: number,
   dst?: Float32Array,
 ): Float32Array {
   const out = dst ?? new Float32Array(FIELD_HEADER_FLOATS);
@@ -124,6 +137,12 @@ export function packFieldHeaderUniforms(
   out[22] = dustCount;
   out[23] = primaryCount;
 
+  // counts2 24..27 = (featCount, dustMapHeightPx, reserved, reserved).
+  out[24] = featCount;
+  out[25] = dustMapHeightPx;
+  out[26] = 0;
+  out[27] = 0;
+
   return out;
 }
 
@@ -163,6 +182,49 @@ export function packFieldComponents(
     out[base + 13] = c.center[1];
     out[base + 14] = c.center[2];
     out[base + 15] = 0;
+  }
+  return out;
+}
+
+/**
+ * packFieldFeatures — the detail-tier dust splat network's own flat list
+ * (`dustLaneFeatures.ts` today; spurs/bubbles/beads land in the same array
+ * later, per `kind`), into the `feats` storage buffer's bytes — see
+ * io.wesl's FEATS layout comment for the five-vec4 shape. Primary galaxy
+ * only (design doc Q6); there is no per-extra concatenation the way
+ * `packFieldComponents` does.
+ */
+export function packFieldFeatures(
+  features: readonly GalaxyDustFeature[],
+  dst?: Float32Array,
+): Float32Array {
+  const out = dst ?? new Float32Array(FIELD_FEATURE_FLOATS * features.length);
+  for (let i = 0; i < features.length; i++) {
+    const f = features[i]!;
+    const base = FIELD_FEATURE_FLOATS * i;
+    out[base] = f.p0[0];
+    out[base + 1] = f.p0[1];
+    out[base + 2] = f.p0[2];
+    out[base + 3] = f.width;
+    out[base + 4] = f.p1[0];
+    out[base + 5] = f.p1[1];
+    out[base + 6] = f.p1[2];
+    out[base + 7] = f.amplitude;
+    out[base + 8] = f.normal[0];
+    out[base + 9] = f.normal[1];
+    out[base + 10] = f.normal[2];
+    out[base + 11] = f.edgeSharpness;
+    out[base + 12] = f.noiseSeed;
+    out[base + 13] = f.noiseAmp;
+    out[base + 14] = f.noiseFreq;
+    out[base + 15] = f.kind;
+    // Joints must butt seamlessly — per-segment tapering is what produced
+    // the dashed-lane defect; taperIn/taperOut are now 0 at every interior
+    // joint and only nonzero at a chain's two free ends.
+    out[base + 16] = f.sOffset;
+    out[base + 17] = f.taperIn;
+    out[base + 18] = f.taperOut;
+    out[base + 19] = 0;
   }
   return out;
 }

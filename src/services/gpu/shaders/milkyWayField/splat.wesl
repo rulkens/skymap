@@ -107,12 +107,16 @@ fn fs(input: SplatOut) -> @location(0) vec4<f32> {
   // is what keeps that true without extras carrying their own dust yet.
   //
   // The dust column comes from dustMapTex, not a per-component loop:
-  // framebuffer pixel coords index the same-sized map exactly (both this
-  // pass and the map run at full canvas resolution — see
-  // createGalaxyEngine.ts), so no sampler and no uv-flip trap. tau is the
-  // map's grey column depth (red channel); dividing the green channel
-  // (tau*tPeak) by tau recovers tD, the tau-weighted depth moment — see
-  // dustMap.wesl's fs for the two channels' definitions.
+  // framebuffer pixel coords index the map exactly, a direct 1:1 texel
+  // read, no sampler and no uv-flip trap — because dustMapTex is sized to
+  // THIS pass's own target extent by construction (createGalaxyEngine.ts's
+  // buildDustMapTarget, rebuilt on every render.fieldDivisor change). A
+  // resolution mismatch here is invisible in types and silently
+  // misregisters the attenuation (it once decimated thin lanes into beads —
+  // see dustMapTex's own declaration comment). tau is the map's grey column
+  // depth (red channel); dividing the green channel (tau*tPeak) by tau
+  // recovers tD, the tau-weighted depth moment — see dustMap.wesl's fs for
+  // the two channels' definitions.
   if (input.inst < primaryCount) {
     let texel = textureLoad(dustMapTex, vec2<i32>(input.pos.xy), 0);
     let tau = texel.r;

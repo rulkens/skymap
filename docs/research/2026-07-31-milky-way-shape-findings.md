@@ -702,6 +702,30 @@ clouds 2.5× interarm mass (Rosolowsky et al. 2021). **GAP, flagged:** no primar
 dust-lane WIDTH exists in what we could fetch; lane-to-tracer offsets ~150–315 pc are
 secondary-only. `laneWidth`'s default is an eyeball-vs-M74 call and says so.
 
+### 17.1 The beaded-lane debugging chain (2026-08-01) — read before touching map resolutions
+
+**MEASURED, four probes.** The first arm dust lanes rendered as beaded dashes instead of
+continuous ridges. Three model-based fixes (per-segment taper removal, joint s-bounding,
+sub-pixel width clamps — first depth-based, then fwidth-based) were each individually CORRECT
+and each left the beads untouched. The probe chain that found the truth: (1) flat tau per quad
+→ continuous, so geometry/records/indexing fine; (2) profile alone → beads; (3) pass muted →
+beads gone, so this pass owns them; (4) camera zoomed 2x → perfect continuous crinkly lanes
+WITH the same shaders. Zoom-dependence + immunity-to-shader-math meant the defect was
+downstream of shading: **dustMapTex was full-canvas resolution while its only consumers
+(splat.wesl's attenuation read and dustPresent's JWST view) run at fieldTex's REDUCED
+`fieldDivisor` resolution** — nearest-point reads decimated a ~1.5 px lane into beads, and the
+attenuation read was silently misregistered (reduced-res coords indexing a full-res texture
+unscaled).
+
+**The standing rule this leaves:** a map rendered at higher resolution than its consumer is not
+extra quality — it is a decimation trap. Size shared offscreen maps to their CONSUMER's rate
+(the engine now rebuilds dustMapTex alongside fieldTex on every divisor change), and 1:1
+`textureLoad(pos.xy)` reads are only valid under an explicitly-documented equal-extent
+contract (now stated in io.wesl). The three earlier fixes were kept: they were real defects the
+probes exposed on the way (dashed tapering, joint double-counting, and the missing
+column-conserving AA floor — `fwidth(n)`-based, since a depth-only pixel size cannot see disc
+foreshortening under an inclined camera).
+
 ## Related
 
 - [`2026-07-30-galaxy-rendering-primitives.md`](2026-07-30-galaxy-rendering-primitives.md) —

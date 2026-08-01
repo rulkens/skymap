@@ -20,7 +20,8 @@
 //   offset 48  : camFwd: vec4
 //   offset 64  : params: vec4   (tanHalfFov, aspect, lensShiftX, exposure)
 //   offset 80  : counts: vec4   (emissionCount, dustOffset, dustCount, primaryCount)
-//   total: 96 bytes.
+//   offset 96  : counts2: vec4  (featCount, dustMapHeightPx, reserved, reserved)
+//   total: 112 bytes.
 //
 // counts.x is the live EMISSION component count — the central galaxy's plus
 // every extra's, drawn one quad each (see splat.wesl). counts.y/.z locate
@@ -32,6 +33,23 @@
 // primaryCount, the CENTRAL galaxy's own emission share of counts.x (its
 // components are packed first): the gate 'instanceIndex < primaryCount'
 // is what keeps an extra's emission from ever reading the primary's dust.
+//
+// counts2.x is featCount, the detail-tier dust FEATURE draw's own instance
+// count (dustFeature.wesl) — a second population living in its own 'feats'
+// storage array (binding 3), not appended to 'comps': a feature's four-vec4
+// record shape (p0/p1/normal/etc, see below) has nothing in common with a
+// Gaussian's inverse-covariance layout, so packing them into one array would
+// mean one of the two readers interpreting the other's bytes as its own
+// shape. counts2.y is dustMapHeightPx, dustMapTex's own pixel height
+// (createGalaxyEngine.ts's buildDustMapTarget sizes it to
+// reducedSize(render.fieldDivisor), the SAME extent as fieldTex — see the
+// DUST MAP entry below) — plumbed through but currently UNREAD:
+// dustFeature.wesl's sub-pixel width clamp uses fwidth(), which already
+// sees inclination and distance, so a depth-only pixel size wasn't needed
+// there. Reserved for the detail tier's octave band-limiting instead — the
+// noise LOD will need a pixel metric. counts2.zw are reserved
+// (spurs/bubbles/beads land their own counts here rather than growing the
+// header again).
 //
 // COMPS (read-only storage, binding 1) — every mixture's components back to
 // back (the central galaxy's emission, then each background extra's,
@@ -72,11 +90,41 @@
 // splat pass now, not looped over inside splat.wesl's fs — see binding 2.
 //
 // DUST MAP (binding 2) — the screen-space (tau, tau*tPeak) accumulation
-// dustMap.wesl splats the PRIMARY galaxy's dust slice into, full canvas
-// resolution, one texel lookup replacing splat.wesl's former per-fragment
-// dust loop (see splat.wesl's header and the grill-session doc's N1). Only
-// bound by the emission splat pipeline (splat.wesl imports it); dustMap.wesl
-// itself never reads it, only writes it as a render target.
+// dustMap.wesl and dustFeature.wesl both splat the PRIMARY galaxy's dust
+// into, additively, one texel lookup replacing splat.wesl's former
+// per-fragment dust loop (see splat.wesl's header and the grill-session
+// doc's N1). DIVISOR-MATCHED BY CONSTRUCTION: the backing texture is sized
+// to reducedSize(render.fieldDivisor) — the SAME extent as fieldTex, the
+// target every reader of this map (splat.wesl, dustPresent.wesl) renders
+// into and reads back from via a 1:1 framebuffer-coord texel load, not a UV
+// sample (createGalaxyEngine.ts's buildDustMapTarget rebuilds it, and both
+// dependent bind groups, on every fieldDivisor change). A resolution
+// mismatch here is invisible in types: it silently decimates any lane
+// thinner than the mismatch into beads, or misregisters the whole map
+// toward one corner. Only bound by the emission splat pipeline (splat.wesl
+// imports it); the two splat passes that WRITE it never read it.
+//
+// FEATS (read-only storage, binding 3) — the detail-tier dust splat network
+// (dustFeature.wesl), one oriented world-space segment quad per record, five
+// vec4 each:
+//   [5i]   = (p0.x, p0.y, p0.z, width)
+//   [5i+1] = (p1.x, p1.y, p1.z, amplitude)
+//   [5i+2] = (normal.x, normal.y, normal.z, edgeSharpness)
+//   [5i+3] = (noiseSeed, noiseAmp, noiseFreq, kind)
+//   [5i+4] = (sOffset, taperIn, taperOut, unused)
+// p0/p1 are the segment's world-space endpoints (already offset to the arm's
+// inner edge — see dustLaneFeatures.ts), 'normal' the local disc-plane normal
+// the fragment shader intersects its view ray against. width is the
+// across-lane super-Gaussian sigma; amplitude its peak tau. kind is reserved
+// (0 = lane segment; spurs/bubbles/beads reuse this shape with other values
+// — see GalaxyDustFeature.ts). sOffset is this segment's start arc-length
+// along its whole chain (noiseFreq's argument adds it in, so the noise
+// pattern stays phase-continuous across a joint instead of restarting).
+// taperIn/taperOut are world-space taper lengths at this segment's own two
+// ends; 0 butts seamlessly against a neighbour — only a chain's two free
+// ends taper, never an interior joint (per-segment tapering at every joint
+// is what produced a beaded-dash look instead of a continuous ridge).
+// Grown like 'comps', never shrunk.
 
 struct FieldUniforms {
   eye: vec4<f32>,
@@ -85,8 +133,10 @@ struct FieldUniforms {
   camFwd: vec4<f32>,
   params: vec4<f32>,
   counts: vec4<f32>,
+  counts2: vec4<f32>,
 };
 
 @group(0) @binding(0) var<uniform> u: FieldUniforms;
 @group(0) @binding(1) var<storage, read> comps: array<vec4<f32>>;
 @group(0) @binding(2) var dustMapTex: texture_2d<f32>;
+@group(0) @binding(3) var<storage, read> feats: array<vec4<f32>>;

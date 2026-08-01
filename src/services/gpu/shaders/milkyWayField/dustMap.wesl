@@ -1,7 +1,9 @@
 // milkyWayField/dustMap.wesl — splats the PRIMARY galaxy's dust slice into a
 // screen-space column map: one instanced quad per dust component, additively
-// accumulating (tau, tau*tPeak) per pixel, full canvas resolution. This is
-// the scaling backbone a filament network needs (grill-session doc, N1):
+// accumulating (tau, tau*tPeak) per pixel, at fieldTex's own divisor-matched
+// resolution (see createGalaxyEngine.ts's dustMapTex declaration — NOT full
+// canvas res, its readers' target rate). This is the scaling backbone a
+// filament network needs (grill-session doc, N1):
 // dust component count decouples from emission fragment cost the same way
 // splat.wesl's own quad-per-component scheme decoupled emission from it.
 //

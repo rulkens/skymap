@@ -5,11 +5,14 @@
  * Measured anchors, cited in full on `GalaxyDustParams`: scale-length ratio
  * 1.4-1.75, height ratio 0.25-0.75, central face-on tau_V 0.5-1.
  */
+import { armCarriedFraction } from '../../utils/galaxy/armCarriedFraction';
 import { discLightScaleLength } from '../../utils/galaxy/discLightScaleLength';
-import { DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './galaxyFieldMixture';
+import { armCrossSigma, DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './galaxyFieldMixture';
+import type { GalaxyDustNetworkParams } from '../../@types/galaxy/GalaxyDustNetworkParams';
 import type { GalaxyDustParams } from '../../@types/galaxy/GalaxyDustParams';
 import type { GalaxyFieldComponent } from '../../@types/galaxy/GalaxyFieldComponent';
 import type { GalaxyFieldGeometry } from '../../@types/galaxy/GalaxyFieldGeometry';
+import type { GalaxyFieldTuning } from '../../@types/galaxy/GalaxyFieldTuning';
 
 // CCM89 Table 3 A_lambda/A_V, interpolated in 1/lambda to the sRGB primaries
 // (~612/549/465 nm). Rides the colour lane so a future preset can carry a
@@ -19,6 +22,93 @@ export const DUST_EXTINCTION_RGB: readonly [number, number, number] = [0.88, 1.0
 const TAU_ROOT = Math.sqrt(2 * Math.PI);
 const ORIGIN: readonly [number, number, number] = [0, 0, 0];
 
+/** `armCrossSigma` only reads `.armWidthScale`; the dust ledger has no field tuning of its own to hand it. */
+const ARM_WIDTH_TUNING = { armWidthScale: 1 } as GalaxyFieldTuning;
+
+type DustDiscShape = {
+  readonly hDust: number;
+  readonly sigmaZ: number;
+  readonly sigmaRCap: number;
+  readonly sumW: number;
+};
+
+/**
+ * This mixture is flat (grill Q5); the disc itself isn't past warpStartRadius.
+ * Capping sigmaR there is a flat-model VALIDITY boundary, not a physical dust
+ * truncation — it stops the widest component's 2-sigma tail from reaching into
+ * the warped ring band and visibly disagreeing with it. Warped outer dust is
+ * deferred to the dust-map detail tier, where ring-placed blobs are affordable.
+ * sigmaZ (and so the face-on central tau, which depends only on sigmaZ) is untouched.
+ */
+function dustDiscShape(geometry: GalaxyFieldGeometry, dust: GalaxyDustParams): DustDiscShape {
+  return {
+    hDust: dust.scaleLenRatio * discLightScaleLength(geometry),
+    sigmaZ: dust.heightRatio * geometry.diskHeight,
+    sigmaRCap: geometry.warpStrength > 0 ? geometry.warpStartRadius * 0.5 : Infinity,
+    sumW: DISC_SURFACE_WEIGHTS.reduce((sum, w) => sum + w, 0),
+  };
+}
+
+/** Component i's radial sigma, capped at the flat-model validity boundary — shared by the mixture builder and `dustFaceOnColumn` below. */
+function dustSigmaR(i: number, shape: DustDiscShape): number {
+  return Math.min(DISC_SIGMA_RATIOS[i]! * shape.hDust, shape.sigmaRCap);
+}
+
+/**
+ * dustFaceOnColumn — the global lane's azimuthally-symmetric face-on V-band
+ * column Sigma(R): the same sum-of-Gaussians `buildGalaxyDustMixture` packs
+ * as GPU components, evaluated in closed form on the CPU instead. Exported
+ * so `dustLaneFeatures.ts` can read "how much column exists at this radius
+ * to redistribute into a lane" without re-deriving the profile — see its
+ * ledger comment.
+ */
+export function dustFaceOnColumn(
+  radius: number,
+  geometry: GalaxyFieldGeometry,
+  dust: GalaxyDustParams,
+): number {
+  if (geometry.discFraction <= 0 || dust.tau <= 0) return 0;
+  const shape = dustDiscShape(geometry, dust);
+  let sigma = 0;
+  for (let i = 0; i < DISC_SIGMA_RATIOS.length; i++) {
+    const sigmaR = dustSigmaR(i, shape);
+    sigma += DISC_SURFACE_WEIGHTS[i]! * Math.exp(-(radius * radius) / (2 * sigmaR * sigmaR));
+  }
+  return (dust.tau / shape.sumW) * sigma;
+}
+
+/**
+ * armCarriedDustFraction — the ledger debit `buildGalaxyDustMixture` applies
+ * to the smooth global lane once the filament network concentrates part of
+ * it into arm-hugging lanes (design doc N1b's zero-mean discipline): without
+ * it the two layers double-count the same dust. `armContrast` is a measured
+ * arm/interarm ratio over the ARM's own physical footprint (`armCrossSigma`,
+ * unscaled), not the narrower absorption lane `dustLaneFeatures.ts` actually
+ * draws inside that footprint — the same "lanes are a fraction of the arm
+ * width" distinction that function's own width comment makes.
+ *
+ * v1 uses ONE radius-averaged fraction — evaluated at the disc's own
+ * light-weighted scale length, a single representative "mean lane geometry"
+ * — rather than `dustLaneFeatures.ts`'s own per-segment f_arm(R):
+ * conservative (one global scale factor can't distort a particular radius
+ * the way a wrong per-annulus curve could) and simple. A per-annulus debit
+ * is future work if the flat disc's radial profile ever visibly fights the
+ * lanes it's supposed to feed.
+ */
+export function armCarriedDustFraction(
+  geometry: GalaxyFieldGeometry,
+  network: GalaxyDustNetworkParams,
+): number {
+  if (geometry.numArms <= 0) return 0;
+  const hLight = discLightScaleLength(geometry);
+  const armWidth = armCrossSigma(hLight, geometry, ARM_WIDTH_TUNING);
+  return armCarriedFraction(
+    network.armContrast,
+    geometry.numArms * 2 * armWidth,
+    2 * Math.PI * hLight,
+  );
+}
+
 /** [] when there's no disc, or no dust — `tuning.dustEnabled` gates the shader loop, not this fn. */
 export function buildGalaxyDustMixture(
   geometry: GalaxyFieldGeometry,
@@ -26,33 +116,33 @@ export function buildGalaxyDustMixture(
 ): readonly GalaxyFieldComponent[] {
   if (geometry.discFraction <= 0 || dust.tau <= 0) return [];
 
-  const hDust = dust.scaleLenRatio * discLightScaleLength(geometry);
-  // No vertical flare (unlike the stellar disc): thin, measured-flat layer.
-  const sigmaZ = dust.heightRatio * geometry.diskHeight;
-  // This mixture is flat (grill Q5); the disc itself isn't past warpStartRadius.
-  // Capping sigmaR there is a flat-model VALIDITY boundary, not a physical dust
-  // truncation — it stops the widest component's 2-sigma tail from reaching into
-  // the warped ring band and visibly disagreeing with it. Warped outer dust is
-  // deferred to the dust-map detail tier, where ring-placed blobs are affordable.
-  // sigmaZ (and so the face-on central tau, which depends only on sigmaZ) is untouched.
-  const sigmaRCap = geometry.warpStrength > 0 ? geometry.warpStartRadius * 0.5 : Infinity;
+  const shape = dustDiscShape(geometry, dust);
+  // Debited by the arm-carried share so the network's concentrated lanes
+  // (`dustLaneFeatures.ts`) and this smooth field don't sum to more than the
+  // measured central tau — see `armCarriedDustFraction`'s header.
+  const scale = 1 - armCarriedDustFraction(geometry, dust.network);
 
-  const sumW = DISC_SURFACE_WEIGHTS.reduce((sum, w) => sum + w, 0);
   const out: GalaxyFieldComponent[] = [];
   for (let i = 0; i < DISC_SIGMA_RATIOS.length; i++) {
-    const sigmaR = Math.min(DISC_SIGMA_RATIOS[i]! * hDust, sigmaRCap);
+    const sigmaR = dustSigmaR(i, shape);
     // Component k's face-on (R=0) column is amplitude*sqrt(2*PI)*sigmaZ; this
-    // amplitude makes that column tau*w_k/sumW, so summing over k gives tau.
-    const amplitude = (dust.tau * DISC_SURFACE_WEIGHTS[i]!) / (TAU_ROOT * sigmaZ * sumW);
+    // amplitude makes that column tau*w_k/sumW*scale, so summing over k gives
+    // tau*scale — tau with the arm-carried share already removed.
+    const amplitude =
+      (dust.tau * DISC_SURFACE_WEIGHTS[i]! * scale) / (TAU_ROOT * shape.sigmaZ * shape.sumW);
     out.push({
       amplitude,
-      invCovDiagonal: [1 / (sigmaR * sigmaR), 1 / (sigmaZ * sigmaZ), 1 / (sigmaR * sigmaR)],
+      invCovDiagonal: [
+        1 / (sigmaR * sigmaR),
+        1 / (shape.sigmaZ * shape.sigmaZ),
+        1 / (sigmaR * sigmaR),
+      ],
       invCovOffDiagonal: [0, 0, 0],
       // Extinction RATIOS, not an emission tint — splat.wesl reads this as
       // tauRGB's per-channel weight, never multiplied into a colour.
       color: DUST_EXTINCTION_RGB,
       center: ORIGIN,
-      boundRadius: Math.max(sigmaR, sigmaZ),
+      boundRadius: Math.max(sigmaR, shape.sigmaZ),
     });
   }
   return out;
