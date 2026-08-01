@@ -410,6 +410,11 @@ These were checked. **Add no others to this table without checking them.**
 | **Sormani et al. 2022**                                                                                                                      | 39-parameter **analytical** model of the 3D bar including the X/peanut shape, fitted to the made-to-measure model of Portail et al. 2017.                                                                                                                                                                                                  |
 | **Gaia Collaboration, Drimmel et al. 2022** (DR3 disc mapping)                                                                               | Bar length, orientation angle and pattern speed **still not well constrained**.                                                                                                                                                                                                                                                            |
 
+| **Reid et al. 2019**, ApJ 885, 131, [10.3847/1538-4357/ab4a11](https://doi.org/10.3847/1538-4357/ab4a11) | Maser parallaxes. Per-arm Gaussian widths at reference radii: 3-kpc 0.18, Norma 0.14, Sct–Cen 0.23, Sgr–Car 0.27, Local 0.31, Perseus 0.35, Outer 0.65 kpc. Width law **w(R) = 336 + 36·(R − 8.15 kpc) pc** (their own R₀ = 8.15). Young/maser tracer — a **floor** for old-star arm width; neither Reid paper measures the old-star arm. |
+| **Reid et al. 2014**, ApJ 783, 130, [10.1088/0004-637X/783/2/130](https://doi.org/10.1088/0004-637X/783/2/130) | Earlier fit of the same programme: widths 0.17–0.63 kpc, slope **42 pc/kpc** over R 5–13 kpc. Superseded by 2019 where they differ. |
+| **Rix & Zaritsky 1995**, ApJ 447, 82, [arXiv:astro-ph/9505111](https://arxiv.org/abs/astro-ph/9505111) | K′-band, 18 face-on spirals: ~half have strong two-armed spirals with arm/interarm contrast **"of order unity"** (≈ factor 2) — the grand-design ceiling for the contrast dial. |
+| **Antoja et al. 2011**, MNRAS 418, 1423, [10.1111/j.1365-2966.2011.19190.x](https://doi.org/10.1111/j.1365-2966.2011.19190.x) | **SECONDARY carrier** for two numbers whose primaries resisted fetching: Drimmel & Spergel 2001's MW K-band arm–interarm ratio **K = 1.32 (A₂ = 0.14)** (D&S themselves flag it as possibly a lower limit), and GLIMPSE/Benjamin et al. 2005's **20–30% stellar count excess** at arm maxima (K ≈ 1.3, independent corroboration). D&S's *two-armed old-star structure* claim is primary-verified from their abstract. |
+
 **LITERATURE, attribution incomplete — flagged deliberately.** Gaia red-clump work (~8.4M stars)
 finds a **broken** disc profile: steep inside R ~ 3 kpc, a near-flat plateau 3–7 kpc, exponential
 decline past the solar radius to ~13 kpc, sharper drop beyond ~13 kpc. **We do not have a precise
@@ -571,6 +576,71 @@ Consequences for what is worth investing in:
   is not written down anywhere in the repo.
 - **Whether the raymarch would in fact have been the wrong first call** (§1). Never measured
   against the split.
+
+## 14. The arm ridge is a measured object (2026-08-01)
+
+The arms went from inherited sprite-budget quantities to measured ones. Three results worth
+keeping beyond the git log:
+
+**Width.** Reid 2019's law re-expresses dimensionlessly as **σ(R) = 0.017·h + 0.036·R** (h = disc
+scale length; 2.605 kpc for the MW reproduces 336 pc at R₀ exactly). A positive intercept — arms
+do not taper to zero at the centre — and a scale-free slope (~2° wedge), so the same law serves
+any galaxy the survey map draws. The measured law is the *young* arm; `armWidthScale` (default 1)
+carries old-population broadening as an explicit, honest modelling choice, not a fudge.
+
+**Flux.** Arm light now derives from contrast, not from a share of the sprite budget:
+λ(R) = (K−1)·Σ_disc(R)·√(2π)·σ(R) along the ridge, with the disc debited by exactly the added
+excess (both sides of the §11.4 double-counting ledger analytic). At K = 1.3 with two young arms
+the excess is **3.3% of disc flux** — verified independently of the code's own bookkeeping.
+Thin arms at real contrast are a small *disc-integrated* term even when locally prominent; if
+that reads as "too subtle," the honest dials are K (→ 2.2 grand-design) and age, not a boost.
+
+**The double-count the user's eye found.** Sprite-parity calibration landed at flux ×0.5 against
+the code's mirrored `ARM_BRIGHTNESS = 1.9` — and 1.9 × 0.5 = 0.95. The mirror factor was already
+inside the un-folded `armFraction`; the eyeball measurement exposed a 2× double-count that the
+derivation had hidden. Deleted with the parameterization it indicted.
+
+**Per-arm age reconciles two-vs-four.** The MW's old-star (K-band) light is two-armed while young
+tracers ride four arms (§10: D&S primary-verified). One per-arm scalar in armTable lane 7
+(padding until now) resolves it: four geometric arms, ages [1.0, 0.2, 1.0, 0.2], contrast weighted
+by age → two-armed old-star light on four-armed geometry, with SFRs/dust later riding the young
+pair. No preset hack; the structure falls out of the parameter.
+
+## 15. Sampling lessons — blob counts and the ring seam (2026-08-01)
+
+**Blob count is a sag bound, not a knob.** Between ridge blobs the linearised chain sags below
+the true curve by chord²·κ/8. Bounding that against the local σ_across (tolerance 0.3) derives
+the per-arm count: ~19–22 at the MW preset (vs the previously eyeballed 28), growing automatically
+with tighter pitch, narrower width, or stronger meander. Budgeting the count against the component
+cap makes overflow impossible by construction — the readout's warning became dead code.
+
+**More rings is NOT a free smoothness upgrade.** The derived ring sigma is proportional to ring
+*spacing*, so raising ring count narrows every ring — which keeps the band gapless internally but
+**sharpens the band's edges**. Freezing the count at 8 (on a "warp fidelity is nearly free"
+argument) produced a single faint visible ring at the band's inner edge against the origin discs;
+the visually settled value was 2, where the derivation reproduces the approved σ = 0.13 exactly.
+The derivation guarantees gaplessness *inside* the band and says nothing about blending at its
+boundaries. Warp fidelity inside the band is bounded by ring count; at 2 the settled look accepts
+that trade knowingly.
+
+## 16. Decisions log (2026-08-01)
+
+- **Splat path is the only field renderer.** Loop deleted after the A/B: 0.3–0.4 ms vs 1 ms at
+  defaults; cost tracks covered area, not pixels × components.
+- **comps moved uniform → storage buffer**; background extras render analytically (per-extra
+  mixtures, world-transformed CPU-side, one instanced draw). Amplitude transforms as **A/s**:
+  extras scale sprite *size* (flux ∝ s²) against the Gaussian's s³ volume.
+- **Rings de-featured**: six of eight ring knobs frozen/derived (σ from spacing at 13/23 overlap;
+  per-ring flux from closed-form annulus integrals of exp(−R/h) — the geometric-falloff trap died
+  with its slider). Rings ride the disc's enable; they are warp plumbing, not a layer.
+- **Colour architecture decided** (not yet built): colour belongs to *populations* (SSP-grounded
+  palette registry), variation belongs to *features* (per-channel dust reddening, SFR knots), the
+  smooth field stays colour-smooth — unresolved light averages, so blob-level colour jitter is a
+  rendering artifact, never realism. Survey closure: the model's integrated colour must match the
+  galaxy's own measured catalog colour index.
+- **Survey-to-parameters map** drafted (`docs/superpowers/specs/2026-08-01-survey-to-params-map-design.md`):
+  fetch-verified range table; headline pipeline find — 2MRS carries ZCAT T-types for ~21k galaxies
+  that the parser currently drops; `classByte` is the documented landing slot.
 
 ## Related
 
