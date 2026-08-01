@@ -70,7 +70,8 @@ function* sampleInspected(clipId: ClipId, keepStart: boolean) {
   // carries the FOV resolveClipFoci needs) exists — same gate as watchClipSaga.
   yield* call(waitUntil, () => clipFociReady(clip.data, resolveDeps()) && cameraRuntime() !== null);
   const rt = cameraRuntime()!;
-  const frameBasis = ORIENTATION_FRAMES[yield* select(selectOrientation)];
+  const orientation = yield* select(selectOrientation);
+  const frameBasis = ORIENTATION_FRAMES[orientation];
   const resolved = resolveClipFoci(clip.data, resolveDeps(), rt.fovYRad, rt.from, frameBasis);
   // Bake only the ACTIVATED pacing knobs into the flyPath nodes before
   // sampling, so the overlay AND the pinned (replayable) clip carry the
@@ -102,8 +103,8 @@ function* sampleInspected(clipId: ClipId, keepStart: boolean) {
     ...(active.passBy ? { passBy: passByCfg } : {}),
   };
   const tuned = applyPathTuning(resolved, tuning);
-  if (keepStart) seam.recompute(clipId, tuned);
-  else seam.compute(clipId, tuned);
+  if (keepStart) seam.recompute(clipId, tuned, frameBasis, orientation);
+  else seam.compute(clipId, tuned, frameBasis, orientation);
 }
 
 export function* watchClipPathInspectSaga() {

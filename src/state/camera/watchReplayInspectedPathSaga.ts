@@ -19,6 +19,14 @@
  * player. If nothing has been calculated yet, `pinnedClip()` is null and the
  * dispatch is a harmless no-op.
  *
+ * ### The frame comes from the seam, not a fresh `select`
+ *
+ * `pinnedFrame()` returns the id Calculate baked the route's lookAt/flyPath
+ * bearings under. Nothing gates `settings.orientation` between Calculate and
+ * Play, so re-selecting it here would decode Calculate-baked bearings as
+ * though they were authored under whatever frame is live now — the exact
+ * defect `camera.clip.frame` exists to prevent, relocated to between clicks.
+ *
  * ### Why race against stopClip
  *
  * Same teardown contract as `watchClipSaga`: a `stopClip` (the panel's Stop
@@ -42,10 +50,15 @@ export function* watchReplayInspectedPathSaga() {
     const inspect = yield* getContext<SagaContext['clipPathInspect']>('clipPathInspect');
 
     const clip = inspect.pinnedClip();
-    if (clip === null) return; // nothing calculated yet — no-op
+    // `frame` is the Calculate-time id, not a fresh `select(selectOrientation)`
+    // — see the module header's "The frame comes from the seam" section. The
+    // two are set/cleared together (computeClipPath.ts), so either both are
+    // non-null or this is a harmless no-op alongside the `clip === null` case.
+    const frame = inspect.pinnedFrame();
+    if (clip === null || frame === null) return; // nothing calculated yet — no-op
 
     yield* race({
-      run: call(playClipSeam, clip),
+      run: call(playClipSeam, clip, frame),
       stop: take(stopClip),
     });
   });

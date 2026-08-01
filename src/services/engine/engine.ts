@@ -219,7 +219,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // Seeded with the default frame's steady basis so a pre-first-frame read is
     // valid; `runFrame` overwrites it with the resolved B(t) each frame. Copied
     // so the seed never aliases the shared registry entry.
-    frameBasis: { current: [...ORIENTATION_FRAMES[DEFAULT_ORIENTATION]] },
+    upBasis: { current: [...ORIENTATION_FRAMES[DEFAULT_ORIENTATION]] },
   };
 
   // ── Settings — the injected Redux store ──────────────────────────

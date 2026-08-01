@@ -70,7 +70,10 @@ export function* watchGoHomeSaga() {
 
     // The steady committed orientation basis, so the home pose encodes its aim
     // through the same frame the render path decodes with (see `earthHomePose`).
-    const frameBasis = ORIENTATION_FRAMES[yield* select(selectOrientation)];
+    // The bare id is also stamped onto the descriptor (`frame`) so the tween
+    // driver can re-express the pose if the setting changes mid-flight.
+    const frame = yield* select(selectOrientation);
+    const frameBasis = ORIENTATION_FRAMES[frame];
 
     yield* put(updateSelectionSelect(EARTH_REF));
     yield* put(updateSelectionFocus(EARTH_REF));
@@ -80,6 +83,7 @@ export function* watchGoHomeSaga() {
         to: earthHomePose(simDays, runtime.fovYRad, frameBasis),
         durationMs: FOCUS_TWEEN_MS,
         easing: 'easeOutCubic',
+        frame,
       }),
     );
   }

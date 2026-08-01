@@ -69,14 +69,14 @@ describe('earthHomePose', () => {
   const aim: Vec3 = [c * s[0] + sn * t[0], c * s[1] + sn * t[1], c * s[2] + sn * t[2]];
 
   // Decode a pose the way the render path does — eye = target + distance·dir
-  // through `frameBasis` — and return the camera's aim (target→...→ −dir, unit).
+  // through `poseBasis` — and return the camera's aim (target→...→ −dir, unit).
   const decodeAim = (p: ReturnType<typeof earthHomePose>): Vec3 => {
     const cam = {
       yaw: p.yaw,
       pitch: p.pitch,
       distance: 1,
       target: [0, 0, 0] as Vec3,
-      frameBasis: ORIENTATION_FRAMES.ecliptic,
+      poseBasis: ORIENTATION_FRAMES.ecliptic,
       position: [0, 0, 0] as Vec3,
     } as unknown as OrbitCamera;
     updatePosition(cam);

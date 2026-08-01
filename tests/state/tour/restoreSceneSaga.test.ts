@@ -1,11 +1,14 @@
 /**
  * restoreSceneSaga — integration tests over a real store + saga middleware.
  *
- * The saga is pure Intent: it `put`s `mergeSnapshot(settings)` then
- * `updateSelectionFocus(focus)` — no engine context, no fade call. (The fade is a
- * reactive consequence of the merge, owned by `watchFadesSaga` and tested there.)
- * Each test runs the saga directly (`sagaMiddleware.run`) against a real
- * `rootReducer` store and asserts both writes landed, settings before focus.
+ * The saga is pure Intent: it `put`s `mergeSnapshot(settings)`, then
+ * `requestOrientationChange(orientation)`, then `updateSelectionFocus(focus)` —
+ * no engine context, no fade call. (The fade is a reactive consequence of the
+ * merge, owned by `watchFadesSaga` and tested there.) Most tests run the saga
+ * directly (`sagaMiddleware.run`) against a real `rootReducer` store; the
+ * orientation tests additionally run `watchOrientationChangeSaga` so the
+ * request actually resolves, proving the restore doesn't take the raw
+ * `mergeSnapshot` shortcut for that field.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -16,6 +19,8 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { restoreSceneSaga } from '../../../src/state/tour/restoreSceneSaga';
 import { mergeSnapshot } from '../../../src/state/settings/settingsSlice';
 import { updateSelectionFocus } from '../../../src/state/selection/selectionSlice';
+import { watchOrientationChangeSaga } from '../../../src/state/camera/watchOrientationChangeSaga';
+import { requestOrientationChange } from '../../../src/state/camera/orientationActions';
 import { makeSettingsFixture } from '../settings/makeSettingsFixture';
 import type { SelectionRef } from '../../../src/@types/engine/SelectionRef';
 import type { SceneSnapshot } from '../../../src/@types/engine/settings/SceneSnapshot';
@@ -40,6 +45,7 @@ function makeSnapshot(focus: SelectionRef | null = FOCUS_REF): SceneSnapshot {
       bodies: { ...f.bodies },
       labels: { ...f.labels, focusedOnly: !f.labels.focusedOnly },
     },
+    orientation: f.orientation,
     focus,
   };
 }
@@ -104,5 +110,60 @@ describe('restoreSceneSaga', () => {
 
     expect(order).toEqual(['merge', 'focus']);
     expect(store.getState().settings.flow.flowSpeed).toBe(7);
+  });
+
+  it("a tour that changed the orientation restores the viewer's frame", async () => {
+    const sagaMiddleware = createSagaMiddleware();
+    const store = configureStore({
+      reducer: rootReducer,
+      middleware: (g) => g().concat(sagaMiddleware),
+    });
+    // A null runtime still lands `settings.orientation` (see
+    // watchOrientationChangeSaga.test.ts's "null cameraRuntime" case) — this
+    // exercises the restore's dispatch without fabricating a camera pose.
+    sagaMiddleware.setContext({ cameraRuntime: () => null });
+    sagaMiddleware.run(watchOrientationChangeSaga);
+
+    const before = store.getState().settings.orientation;
+    expect(before).not.toBe('galactic');
+
+    // Stand in for the next task's tour-authored `frameTo` cue: it switches
+    // frames mid-run through the same production action an interactive
+    // switch uses.
+    store.dispatch(requestOrientationChange('galactic'));
+    await flush();
+    expect(store.getState().settings.orientation).toBe('galactic');
+
+    sagaMiddleware.run(restoreSceneSaga, makeSnapshot());
+    await flush();
+
+    expect(store.getState().settings.orientation).toBe(before);
+  });
+
+  it('restores orientation through requestOrientationChange, not a raw settings write', async () => {
+    const seen: { mergePayload?: unknown; orientationRequest?: unknown } = {};
+    const sagaMiddleware = createSagaMiddleware();
+    const recorder = () => (next: (a: unknown) => unknown) => (action: unknown) => {
+      const a = action as { type: string; payload?: unknown };
+      if (a.type === mergeSnapshot({}).type) seen.mergePayload = a.payload;
+      if (a.type === requestOrientationChange('ecliptic').type) seen.orientationRequest = a.payload;
+      return next(action);
+    };
+    const store = configureStore({
+      reducer: rootReducer,
+      middleware: (g) => g().concat(recorder, sagaMiddleware),
+    });
+
+    const snapshot = makeSnapshot();
+    sagaMiddleware.run(restoreSceneSaga, snapshot);
+    await flush();
+
+    // The merge patch must not carry `orientation` — writing it there would
+    // reach `mergeSettingsSnapshot`'s raw field assignment and strand
+    // `camera.base` in the old basis (see settingsSlice's `mergeSnapshot`).
+    expect(seen.mergePayload).not.toHaveProperty('orientation');
+    // Instead it goes through the same request path an interactive switch
+    // uses, carrying the captured pre-tour frame.
+    expect(seen.orientationRequest).toBe(snapshot.orientation);
   });
 });

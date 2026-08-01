@@ -17,7 +17,7 @@ import {
   accumulateFollowPan,
 } from '../../../../src/services/engine/camera/cameraClock';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
-import type { ClipData } from '../../../../src/@types/animation/ClipData';
+import type { CameraState } from '../../../../src/@types/camera/CameraState';
 import type { CameraTweenDescriptor } from '../../../../src/@types/camera/CameraTweenDescriptor';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { FrameTween } from '../../../../src/@types/camera/FrameTween';
@@ -28,6 +28,7 @@ function makeDescriptor(overrides?: Partial<CameraTweenDescriptor>): CameraTween
     to: { target: [10, 0, 0], yaw: 1.0, pitch: 0.2, distance: 50 },
     durationMs: 600,
     easing: 'easeOutCubic',
+    frame: 'equatorial',
     ...overrides,
   };
 }
@@ -229,8 +230,8 @@ describe('autoRotateElapsed', () => {
 
 describe('clipElapsed', () => {
   // Minimal clip ref fixture — ClipData requires only `timeline`.
-  function makeClipRef(): { data: ClipData } {
-    return { data: { timeline: [] } };
+  function makeClipRef(): NonNullable<CameraState['clip']> {
+    return { data: { timeline: [] }, frame: 'equatorial' };
   }
 
   it('returns 0 for null clip', () => {

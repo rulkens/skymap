@@ -18,17 +18,19 @@
 
 import type { ClipData } from '../../../../@types/animation/ClipData';
 import {
-  aimAt,
+  aimAlong,
   all,
   dollyTo,
   focusOnId,
+  frameTo,
   hide,
   moveTargetId,
   scene,
 } from '../../../../services/engine/animation/effectHelpers';
 import { focusId } from '../../../../utils/animation/focusId';
 import { setLabelsFocusedOnly } from '../../../../state/settings/settingsSlice';
-import { GALACTIC_DISC_PITCH_RAD, GALACTIC_DISC_YAW_RAD } from '../../../../services/engine/camera/cameraFraming';
+import { GALACTIC_DISC_FORWARD } from '../../../../services/engine/camera/cameraFraming';
+import { FRAME_ROLL_SEC } from './frameRollSec';
 
 const MW = focusId('milkyWay');
 
@@ -61,19 +63,23 @@ export const openingTitle: ClipData = {
     // draws. The snapshot/restore winds it back on exit; a beat that wants
     // many labels at once flips it off with another scene() cue.
     scene(setLabelsFocusedOnly(true)),
+    // The tour authors its own pole (docs/tour/implementation-notes.md): the
+    // Milky Way reads horizontal under galactic, not the ecliptic default.
+    // Ordered before the snap below for robustness (both are 0-duration cues
+    // landing in the same tick, so this ordering is inert today — the pinned
+    // `clip.frame` and baked aimAlong both resolve before either cue fires),
+    // not because the roll is visible either way: the sprite is sub-pixel at
+    // this distance regardless of pole.
+    frameTo('galactic', { over: FRAME_ROLL_SEC }),
     // Cold open: snap far out on the Milky-Way bearing (zero-duration cues
     // — target, distance, and yaw/pitch are different channels, so one `all`
-    // is legal). The aim snaps to the BOOT orientation: the clip starts
-    // 'live', so without it the approach direction — and beat 1's landing —
+    // is legal). `aimAlong` snaps to a fixed WORLD sightline rather than a
+    // `lookAtId` bearing: the clip starts 'live', so a target-relative bearing
     // would inherit whatever pose the viewer wandered into before starting
     // the tour. Snapping makes every run identical, and the first frame is
     // empty space (the sprite is sub-pixel at this distance), so the jump
     // itself is invisible.
-    all([
-      moveTargetId(MW, 0),
-      dollyTo(FAR_OPEN_MPC, 0),
-      aimAt({ yaw: GALACTIC_DISC_YAW_RAD, pitch: GALACTIC_DISC_PITCH_RAD }, 0),
-    ]),
+    all([moveTargetId(MW, 0), dollyTo(FAR_OPEN_MPC, 0), aimAlong(GALACTIC_DISC_FORWARD, 0)]),
     // …then the approach. Log-space dolly: three decades in, decelerating
     // onto the framing distance as the sprite swells from nothing.
     focusOnId(MW, 7),

@@ -12,6 +12,8 @@ import {
   tween,
   moveTargetId,
   dollyToId,
+  spinToId,
+  aimAlong,
   show,
   hide,
   focus,
@@ -139,6 +141,48 @@ describe('focusOnId', () => {
         all([moveTargetId(id, 3, 'easeOutCubic'), dollyToId(id, 3, { ease: 'easeOutCubic' })]),
       ]),
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// spinToId
+// ---------------------------------------------------------------------------
+
+describe('spinToId', () => {
+  it('emits kind:spinToId carrying id/over/ease, with turns omitted by default', () => {
+    const id = focusId('m81');
+    const e = spinToId(id, { over: 4 });
+    expect(e.kind).toBe('spinToId');
+    expect(e.id).toBe(id);
+    expect(e.over).toBe(4);
+    expect(e.ease).toBe('easeInOutCubic');
+    expect('turns' in e).toBe(false);
+  });
+
+  it('forwards an explicit ease and turns', () => {
+    const id = focusId('m81');
+    const e = spinToId(id, { over: 4, turns: -1, ease: 'easeOutCubic' });
+    expect(e.ease).toBe('easeOutCubic');
+    expect(e.turns).toBe(-1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// aimAlong
+// ---------------------------------------------------------------------------
+
+describe('aimAlong', () => {
+  it('emits kind:aimAlong carrying forward/over/ease, defaulting ease', () => {
+    const e = aimAlong([1, 0, 0], 4);
+    expect(e.kind).toBe('aimAlong');
+    expect(e.forward).toEqual([1, 0, 0]);
+    expect(e.over).toBe(4);
+    expect(e.ease).toBe('easeInOutCubic');
+  });
+
+  it('forwards an explicit ease', () => {
+    const e = aimAlong([0, 1, 0], 2, 'easeOutCubic');
+    expect(e.ease).toBe('easeOutCubic');
   });
 });
 

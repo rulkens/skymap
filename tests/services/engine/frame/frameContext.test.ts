@@ -2,16 +2,20 @@
  * frameContext — unit tests for the per-frame derived snapshot.
  *
  * `deriveFrameContext` receives an already-produced `CameraPose`, a
- * `CameraProjection`, and the frame's orientation `frameBasis` (the engine
- * Resources), assembles the full `OrbitCamera` via `assembleOrbitCamera`, and
- * pre-computes the view-projection matrix, camera-position tuple, and
- * pixel-per-radian scalar. These tests pin both halves: the branching shape
- * (ready vs not-ready) and the arithmetic.
+ * `CameraProjection`, and the frame's two orientation bases (`poseBasis`,
+ * `upBasis` — the engine Resources), assembles the full `OrbitCamera` via
+ * `assembleOrbitCamera`, and pre-computes the view-projection matrix,
+ * camera-position tuple, and pixel-per-radian scalar. These tests pin both
+ * halves: the branching shape (ready vs not-ready) and the arithmetic. They
+ * use the SAME value for both basis arguments (`BASIS`) throughout — this
+ * file exercises the assembly arithmetic, not the poseBasis/upBasis split
+ * itself, which `runFrame.test.ts`'s orientation-frame-roll suite covers.
  *
  * The threaded-pose variant (binding decision 1) means `deriveFrameContext`
  * does NOT re-call `runCameraDrivers` internally; it only calls
- * `assembleOrbitCamera(pose, projection, frameBasis)` + `computeViewProj`. The
- * `cam` on the ready context is the assembled camera, NOT `state.cam`.
+ * `assembleOrbitCamera(pose, projection, poseBasis, upBasis)` +
+ * `computeViewProj`. The `cam` on the ready context is the assembled camera,
+ * NOT `state.cam`.
  *
  * Tests also verify the bootstrap gate still works (cam=null → not-ready) even
  * though the rendered camera comes from the assembled pose, not `state.cam`.
@@ -45,7 +49,8 @@ const BASIS: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
  *
  * `state.cam` is only used by the `isEngineReady` bootstrap gate (non-null
  * check); the rendered camera comes from
- * `assembleOrbitCamera(pose, projection, frameBasis)` passed as arguments.
+ * `assembleOrbitCamera(pose, projection, poseBasis, upBasis)` passed as
+ * arguments.
  */
 function makeState(
   overrides: {
@@ -94,6 +99,7 @@ describe('deriveFrameContext — not-ready branch', () => {
       RESTING_POSE,
       PROJECTION,
       BASIS,
+      BASIS,
       0xffffffff,
       0,
       CONST_J2000,
@@ -107,6 +113,7 @@ describe('deriveFrameContext — not-ready branch', () => {
       makeCanvas(),
       RESTING_POSE,
       PROJECTION,
+      BASIS,
       BASIS,
       0xffffffff,
       0,
@@ -122,6 +129,7 @@ describe('deriveFrameContext — not-ready branch', () => {
       RESTING_POSE,
       PROJECTION,
       BASIS,
+      BASIS,
       0xffffffff,
       0,
       CONST_J2000,
@@ -135,6 +143,7 @@ describe('deriveFrameContext — not-ready branch', () => {
       makeCanvas(),
       RESTING_POSE,
       PROJECTION,
+      BASIS,
       BASIS,
       0xffffffff,
       0,
@@ -153,6 +162,7 @@ describe('deriveFrameContext — ready branch', () => {
       makeCanvas(),
       pose,
       projection,
+      BASIS,
       BASIS,
       0xffffffff,
       0,
@@ -178,6 +188,7 @@ describe('deriveFrameContext — ready branch', () => {
       RESTING_POSE,
       projection,
       BASIS,
+      BASIS,
       0xffffffff,
       0,
       CONST_J2000,
@@ -196,6 +207,7 @@ describe('deriveFrameContext — ready branch', () => {
       RESTING_POSE,
       projection,
       BASIS,
+      BASIS,
       0xffffffff,
       0,
       CONST_J2000,
@@ -207,7 +219,7 @@ describe('deriveFrameContext — ready branch', () => {
     expect(ctx.drawPxPerRad).toBeCloseTo(expected, 6);
   });
 
-  it('ctx.vp matches computeViewProj(assembleOrbitCamera(pose, projection, basis))', () => {
+  it('ctx.vp matches computeViewProj(assembleOrbitCamera(pose, projection, poseBasis, upBasis))', () => {
     const pose: CameraPose = { target: [0, 0, 0], yaw: 0.3, pitch: 0.1, distance: 100 };
     const ctx = deriveFrameContext(
       makeState(),
@@ -215,13 +227,14 @@ describe('deriveFrameContext — ready branch', () => {
       pose,
       PROJECTION,
       BASIS,
+      BASIS,
       0xffffffff,
       0,
       CONST_J2000,
     );
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
-    const expected = computeViewProj(assembleOrbitCamera(pose, PROJECTION, BASIS));
+    const expected = computeViewProj(assembleOrbitCamera(pose, PROJECTION, BASIS, BASIS));
     expect(Array.from(ctx.vp)).toEqual(Array.from(expected));
   });
 
@@ -233,13 +246,14 @@ describe('deriveFrameContext — ready branch', () => {
       pose,
       PROJECTION,
       BASIS,
+      BASIS,
       0xffffffff,
       0,
       CONST_J2000,
     );
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
-    const cam = assembleOrbitCamera(pose, PROJECTION, BASIS);
+    const cam = assembleOrbitCamera(pose, PROJECTION, BASIS, BASIS);
     const expected = deriveSlabs(cam, computeViewProj(cam));
     expect(ctx.slabs).toHaveLength(2);
     expect(ctx.slabs[0]?.index).toBe(NEAR0);
@@ -254,6 +268,7 @@ describe('deriveFrameContext — ready branch', () => {
       makeCanvas(800, 600),
       RESTING_POSE,
       PROJECTION,
+      BASIS,
       BASIS,
       0xffffffff,
       0,
@@ -274,6 +289,7 @@ describe('deriveFrameContext — ready branch', () => {
       RESTING_POSE,
       PROJECTION,
       BASIS,
+      BASIS,
       0xffffffff,
       0,
       CONST_J2000,
@@ -293,6 +309,7 @@ describe('deriveFrameContext — ready branch', () => {
       RESTING_POSE,
       PROJECTION,
       BASIS,
+      BASIS,
       mask,
       0,
       CONST_J2000,
@@ -309,6 +326,7 @@ describe('deriveFrameContext — ready branch', () => {
       makeCanvas(),
       RESTING_POSE,
       PROJECTION,
+      BASIS,
       BASIS,
       0xffffffff,
       1234.5,
@@ -330,6 +348,7 @@ describe('deriveFrameContext — ready branch', () => {
       makeCanvas(),
       RESTING_POSE,
       PROJECTION,
+      BASIS,
       BASIS,
       0xffffffff,
       0,

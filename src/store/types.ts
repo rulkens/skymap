@@ -59,6 +59,8 @@ import type { CameraPose } from '../@types/camera/CameraPose';
 import type { Vec4 } from '../@types/math/Vec4';
 import type { ClipData } from '../@types/animation/ClipData';
 import type { ClipId } from '../@types/animation/ClipId';
+import type { Mat3 } from '../@types/math/Mat3';
+import type { OrientationFrameId } from '../@types/camera/OrientationFrameId';
 
 export type RootState = ReturnType<typeof rootReducer>;
 export type AppStore = ReturnType<typeof createAppStore>['store'];
@@ -94,12 +96,32 @@ export type LiveCameraRuntime = { from: CameraPose; fovYRad: number; frameBasisQ
  * `compute` produced (null before the first / after `clear`). It is the replay
  * source: `watchReplayInspectedPathSaga` plays it verbatim so the flown route is
  * the inspected overlay exactly, with no fresh `start: 'live'` resolution.
+ *
+ * `frameBasis` is the STEADY orientation-frame basis the watch saga already
+ * resolved for `resolveClipFoci` (`ORIENTATION_FRAMES[settings.orientation]`) —
+ * threaded through so the sampled eye decodes through the same basis the
+ * renderer's `evaluateClip` call does (see `sampleClipPath`). `frame` is that
+ * same basis's id, stored (not re-derived) so `pinnedFrame` can hand it back —
+ * `watchReplayInspectedPathSaga` MUST replay under the frame Calculate baked
+ * the route's bearings under, not whatever orientation is live at Play time;
+ * nothing gates the setting between the two clicks.
  */
 export type ClipPathInspectSeam = {
-  compute: (clipId: ClipId, resolved: ClipData) => void;
-  recompute: (clipId: ClipId, resolved: ClipData) => void;
+  compute: (
+    clipId: ClipId,
+    resolved: ClipData,
+    frameBasis?: Mat3,
+    frame?: OrientationFrameId,
+  ) => void;
+  recompute: (
+    clipId: ClipId,
+    resolved: ClipData,
+    frameBasis?: Mat3,
+    frame?: OrientationFrameId,
+  ) => void;
   clear: () => void;
   pinnedClip: () => ClipData | null;
+  pinnedFrame: () => OrientationFrameId | null;
 };
 export type SagaContext = {
   runTierTransition: RunTierTransition; // already present — drives per-source data load on tier change
@@ -116,10 +138,13 @@ export type SagaContext = {
    * Plays a data clip and resolves when the clip completes or is cancelled.
    * The tour saga awaits this Promise for the establishing fly and races it
    * (as dwellDrift) against the dwell timer during the interactive dwell.
+   * `frame` is the orientation frame the CALLER is under right now — pinned
+   * onto `camera.clip` so a later orientation switch re-expresses the clip's
+   * pose instead of reinterpreting it (see the clip row in cameraDrivers.ts).
    * The engine registers this at construction via `createPlayClip` +
    * `setSagaContext`; tests inject a stub via `sagaMiddleware.setContext`.
    */
-  playClip: (clip: ClipData) => Promise<void>;
+  playClip: (clip: ClipData, frame: OrientationFrameId) => Promise<void>;
   /**
    * The debug clip-path inspector seam — `watchClipPathInspectSaga` calls
    * `compute` on `inspectClipPath` and `clear` on `clearClipPath`. Engine-

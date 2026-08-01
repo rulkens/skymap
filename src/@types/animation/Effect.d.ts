@@ -70,6 +70,7 @@ import type { PathWaypoint } from './PathWaypoint';
 import type { Ease } from './Ease';
 import type { SplineConfig } from './SplineConfig';
 import type { PassByConfig } from './PassByConfig';
+import type { Vec3 } from '../math/Vec3';
 
 export type Effect =
   | CameraAction
@@ -80,6 +81,21 @@ export type Effect =
   | { readonly kind: 'seq'; readonly children: Effect[] }
   | { readonly kind: 'all'; readonly children: Effect[] }
   | { readonly kind: 'fork'; readonly child: Effect }
+  | {
+      /**
+       * aimAlong — the UNRESOLVED form of a fixed WORLD-space sightline (as
+       * opposed to `lookAtId`'s bearing-to-a-catalog-subject, which is
+       * relative to the live orbit target and therefore wrong for a cold-open
+       * snap where that target is arbitrary). `resolveClipFoci` rewrites it to
+       * a concrete `aimAt` via `orbitAnglesLookingAlong(forward, frameBasis)`
+       * — same mechanism `lookAtId`/`spinToId` use, minus the target lookup.
+       * `compileClip` throws if one reaches it unresolved.
+       */
+      readonly kind: 'aimAlong';
+      readonly forward: Vec3;
+      readonly over: number;
+      readonly ease: Ease;
+    }
   | {
       readonly kind: 'flyPath';
       readonly waypoints: PathWaypoint[];

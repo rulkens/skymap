@@ -14,6 +14,26 @@ Newest first. Primitives: [`../animation/clip-primitives.md`](../animation/clip-
 
 ## Log
 
+- **The tour owns its pole** (`openingTitle`/`approachM31`/`homeAgain` `frameTo`
+  cues): screen-up is the orientation frame's pole, so a yaw drift — and
+  `dwellDrift` is a yaw spin, the dwell in nearly every beat — rolls the image
+  by `sin(|pitch|)` per radian of drift: a horizontal pan at the frame's
+  equator, a pure roll near its pole. The default frame (`ecliptic`) puts most
+  of the tour's subjects at 30–60° latitude, so most of every dwell's motion
+  read as roll instead of orbit. The ladder galactic (opening, holds through
+  you-are-here) → supergalactic (M31 approach outward — the tour is a tour of
+  the local supercluster, which defines that plane) → galactic (home again)
+  holds every subject much closer to its frame's equator; full per-subject
+  latitude/roll-fraction table in the frame-invariant-camera-poses spec/plan
+  (`docs/superpowers/specs/completed/2026-08-01-frame-invariant-camera-poses.md`).
+  `frameTo` goes IN the clip, never on the beat, and fires as early as
+  possible in each beat that changes frame — the roll itself is invisible
+  during the opening's cold-open (sprite sub-pixel) and, for the other two,
+  settles well before the beat's own end so it never fights the tour-end
+  restore's own `requestOrientationChange` back to the viewer's pre-tour frame
+  (`restoreSceneSaga`, unconditional). Roll duration is a per-clip constant
+  (`FRAME_ROLL_SEC`, 3× the interactive switch's `FRAME_TWEEN_MS` feel) — an
+  untuned starting point, not a derived value.
 - **Inserting a beat mid-tour is a renumber, plus a bearing-chain re-check**
   (beat 03, `localGroup`): stage docs and debugger labels are ordinal, so an
   insertion renames every later `stages/NN-*.md` (+ `.facts.md`, their

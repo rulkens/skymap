@@ -12,9 +12,10 @@
  * disjoint synthetic position sets when this tool was built).
  *
  * So the rewrite is:
- *   - `moveTargetId` / `dollyToId` / `lookAtId` / `strafeId` → `hold` of the
- *     same `over`. A hold writes no camera channel, so it can never trip the
- *     single-writer validation that the genuinely-resolved clip passes.
+ *   - `moveTargetId` / `dollyToId` / `lookAtId` / `strafeId` / `spinToId` /
+ *     `aimAlong` → `hold` of the same `over`. A hold writes no camera
+ *     channel, so it can never trip the single-writer validation that the
+ *     genuinely-resolved clip passes.
  *   - `focusId` → a zero-length `wait` (resolution makes it a point cue).
  *   - id-form `flyPath` waypoints → at-form with deterministic synthetic
  *     positions (spread out so the spline never degenerates).
@@ -61,6 +62,8 @@ function stubEffect(effect: Effect, counter: { n: number }): Effect {
     case 'dollyToId':
     case 'lookAtId':
     case 'strafeId':
+    case 'spinToId':
+    case 'aimAlong':
       return { kind: 'hold', sec: effect.over };
     // Resolves to a point-in-time focus cue — zero awaited duration.
     case 'focusId':

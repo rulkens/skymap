@@ -227,10 +227,14 @@ const timeSource: HashParamSource = {
 const orientationSource: HashParamSource = {
   key: 'orientation',
   deepLink: false,
-  // `orientation` sits outside `SettingsSnapshot`, so the bulk settings restore
-  // (`mergeSnapshot`) provably cannot move it — see
-  // docs/backlog/2026-07-29-tour-snapshot-orientation.md. If that ever changes,
-  // this list must grow.
+  // `orientation` lives on `SceneSnapshot`, not `SettingsSnapshot` (see that
+  // type's header), so the bulk settings restore (`mergeSnapshot`) provably
+  // cannot move it — a raw settings patch of that shape has no `orientation`
+  // key to carry. The tour's own restore (`restoreSceneSaga`) and its
+  // beat-boundary reconstruction (`guidedTourSaga`) both go through
+  // `requestOrientationChange` → `setOrientation` instead, which IS covered
+  // below. If `orientation` ever moves back onto `SettingsSnapshot`, this
+  // list must grow to include `mergeSnapshot`.
   writesOn: [setOrientation.match],
   write: (state) => {
     const orientation = selectOrientation(state);

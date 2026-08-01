@@ -66,9 +66,12 @@ export function pickFrameContext(
     state.cameraRuntime.lastPose.current,
     state.cameraRuntime.projection,
     // Pick is a demand read at rest (between frames), so the steady
-    // `ORIENTATION_FRAMES[orientation]` is the correct basis — the same reasoning
-    // as `buildDemandCtx`'s `cameraPosMpc`. The pick camera decodes its position
-    // through the pole the frame drew with.
+    // `ORIENTATION_FRAMES[orientation]` is the correct basis for BOTH halves —
+    // the same reasoning as `buildDemandCtx`'s `cameraPosMpc`. At rest the live
+    // `upBasis` a real frame would resolve equals this steady value anyway, so
+    // there is nothing to diverge; the pick camera decodes both position and
+    // screen-up through the pole the frame drew with.
+    ORIENTATION_FRAMES[state.settings.orientation],
     ORIENTATION_FRAMES[state.settings.orientation],
     // Pick mask, not draw mask: pickability follows intent (see docblock).
     deriveSourceMasks(state).pick,

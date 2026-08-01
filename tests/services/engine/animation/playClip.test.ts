@@ -26,6 +26,7 @@ import { clipStarted, clipEnded } from '../../../../src/state/camera/cameraSlice
 import { createPlayClip } from '../../../../src/services/engine/animation/playClip';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
+import type { OrientationFrameId } from '../../../../src/@types/camera/OrientationFrameId';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -34,6 +35,10 @@ import type { ClipData } from '../../../../src/@types/animation/ClipData';
 const LIVE_POSE: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 50 };
 
 const FIXED_POSE: CameraPose = { target: [10, 20, 30], yaw: 1.0, pitch: 0.2, distance: 100 };
+
+// The frame `playClip`'s caller is under — arbitrary, distinct from the store's
+// default orientation, so a test that mixed the two up would visibly diverge.
+const FRAME: OrientationFrameId = 'galactic';
 
 /** A minimal 1-second clip used by most tests. */
 function makeClip(start?: CameraPose | 'live'): ClipData {
@@ -99,7 +104,7 @@ describe('playClip', () => {
       getLivePose: () => LIVE_POSE,
     });
 
-    const p = playClip(makeClip('live'));
+    const p = playClip(makeClip('live'), FRAME);
 
     // Before the clip ends the Promise is still pending.
     let settled = false;
@@ -131,7 +136,7 @@ describe('playClip', () => {
       getLivePose: () => LIVE_POSE,
     });
 
-    const p = playClip(makeClip('live'));
+    const p = playClip(makeClip('live'), FRAME);
 
     // Invoke the [CANCEL] hook — what redux-saga's middleware does when a race
     // sibling wins and the task owning this Promise is cancelled. CANCEL is
@@ -161,11 +166,11 @@ describe('playClip', () => {
     });
 
     const originalClip = makeClip('live');
-    playClip(originalClip);
+    playClip(originalClip, FRAME);
 
     // Find the clipStarted dispatch and inspect its payload.
     const startClipCall = dispatchSpy.mock.calls.find(
-      (c) => (c[0] as { type?: string }).type === clipStarted(originalClip).type,
+      (c) => (c[0] as { type?: string }).type === clipStarted.type,
     );
     expect(startClipCall).toBeDefined();
 
@@ -173,12 +178,16 @@ describe('playClip', () => {
     const payload = dispatched.payload;
 
     // start must be the concrete LIVE_POSE, not the 'live' sentinel.
-    expect(payload.start).toEqual(LIVE_POSE);
-    expect(payload.start).not.toBe('live');
+    expect(payload.data.start).toEqual(LIVE_POSE);
+    expect(payload.data.start).not.toBe('live');
 
-    // The payload must be a FRESH object — not the same reference as originalClip.
-    // This is the clock-reset trigger: clipElapsed keys on reference identity.
-    expect(payload).not.toBe(originalClip);
+    // frame is the caller's orientation at dispatch time — pinned verbatim.
+    expect(payload.frame).toBe(FRAME);
+
+    // The payload's `data` must be a FRESH object — not the same reference as
+    // originalClip. This is the clock-reset trigger: clipElapsed keys on
+    // reference identity.
+    expect(payload.data).not.toBe(originalClip);
   });
 
   it('with a fixed start passes it through unchanged', () => {
@@ -193,10 +202,10 @@ describe('playClip', () => {
     });
 
     const originalClip = makeClip(FIXED_POSE);
-    playClip(originalClip);
+    playClip(originalClip, FRAME);
 
     const startClipCall = dispatchSpy.mock.calls.find(
-      (c) => (c[0] as { type?: string }).type === clipStarted(originalClip).type,
+      (c) => (c[0] as { type?: string }).type === clipStarted.type,
     );
     expect(startClipCall).toBeDefined();
 
@@ -204,10 +213,10 @@ describe('playClip', () => {
     const payload = dispatched.payload;
 
     // The concrete start pose must be forwarded verbatim (value equality).
-    expect(payload.start).toEqual(FIXED_POSE);
+    expect(payload.data.start).toEqual(FIXED_POSE);
 
-    // The returned object is still FRESH (resolveClipStart always spreads),
-    // so the clock-reset trigger fires even for a replay of the same static clip.
-    expect(payload).not.toBe(originalClip);
+    // The returned `data` is still FRESH (resolveClipStart always spreads), so
+    // the clock-reset trigger fires even for a replay of the same static clip.
+    expect(payload.data).not.toBe(originalClip);
   });
 });

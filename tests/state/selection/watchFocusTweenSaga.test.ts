@@ -9,11 +9,13 @@ import {
   updateSelectionSelect,
 } from '../../../src/state/selection/selectionSlice';
 import { clipStarted } from '../../../src/state/camera/cameraSlice';
+import { setOrientation } from '../../../src/state/settings/settingsSlice';
 import {
   engineStatusChanged,
   engineSourceCountReported,
 } from '../../../src/state/engine/engineSlice';
 import { Source } from '../../../src/data/sources';
+import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { cameraRoute } from '../../../src/store/constants';
 import { MILKY_WAY_VIEW_DISTANCE_MPC } from '../../../src/data/milkyWay/galacticCenter';
 import { buildStarOctree } from '../../../tools/stars/buildStarOctree';
@@ -208,7 +210,7 @@ describe('watchFocusTweenSaga', () => {
   const MINIMAL_CLIP: ClipData = { start: 'live', timeline: [] };
 
   it('watchFocusTweenSaga plants no tween while a clip is active', async () => {
-    store.dispatch(clipStarted(MINIMAL_CLIP));
+    store.dispatch(clipStarted({ data: MINIMAL_CLIP, frame: DEFAULT_ORIENTATION }));
     store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
     await flush();
     expect(store.getState()[cameraRoute].tween).toBeNull();
@@ -224,5 +226,17 @@ describe('watchFocusTweenSaga', () => {
     expect(tween!.from).toEqual(FROM);
     expect(tween!.to.distance).toBe(MILKY_WAY_VIEW_DISTANCE_MPC);
     expect(tween!.to.yaw).toBe(FROM.yaw);
+  });
+
+  // The descriptor must carry the orientation live AT DISPATCH TIME (not
+  // DEFAULT_ORIENTATION, not whatever it later becomes) — the tween driver
+  // re-expresses the pose against this pinned frame on a later switch.
+  it('stamps the descriptor with settings.orientation live at dispatch time', async () => {
+    store.dispatch(setOrientation('galactic'));
+    store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
+    await flush();
+
+    const tween = store.getState()[cameraRoute].tween;
+    expect(tween!.frame).toBe('galactic');
   });
 });

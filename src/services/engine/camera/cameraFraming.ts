@@ -27,13 +27,14 @@
  *     end distance (0.12 Mpc, see `galaxyFocusDistance.ts`).
  *   - `INITIAL_DISTANCE_MPC` — a Local-Group-scale distance the wheel-zoom
  *     envelope + the grand tour still reference; no longer the boot distance.
- *   - `GALACTIC_DISC_YAW_RAD` / `GALACTIC_DISC_PITCH_RAD` — the eye-tuned
- *     bearing that faces the galactic disk. The grand tour's opening and
- *     closing beats aim at this bearing (the app now boots at Earth instead).
+ *   - `GALACTIC_DISC_FORWARD` — the eye-tuned WORLD-space direction that faces
+ *     the galactic disk. The grand tour's opening and closing beats aim along
+ *     it (via `aimAlong`, resolved live) instead of the app booting there.
  */
 
 import type { InitialCam } from '../../../@types/camera/InitialCam';
 import type { Mat3 } from '../../../@types/math/Mat3';
+import type { Vec3 } from '../../../@types/math/Vec3';
 import { earthHomePose } from './earthHomePose';
 
 /** Initial camera distance in Mpc — sits the viewer inside the Local Group. */
@@ -46,13 +47,14 @@ export const FAR_CLIP_MPC = 50000;
 export const DEFAULT_FOV_Y_RAD = (Math.PI / 180) * 60;
 
 /**
- * Eye-tuned bearing that faces the galactic disk — aimed at by the tour's
- * opening/closing beats. Encoded in the ecliptic default frame (the value the
- * shared decode reads through `ORIENTATION_FRAMES.ecliptic`); it points at the
- * same world direction the legacy Y-up pair `(4.4889, -0.0644)` did.
+ * Eye-tuned WORLD-space direction that faces the galactic disk — aimed along
+ * by the tour's opening/closing beats via `aimAlong` (`orbitAnglesLookingAlong`
+ * resolves it through whichever orientation frame is live, so it decodes to
+ * the same world direction under any frame). Points the same way the legacy
+ * ecliptic-frame angle pair `(yaw: -1.4208, pitch: -0.1783)` did — magnitude is
+ * irrelevant, `orbitAnglesLookingAlong` normalises.
  */
-export const GALACTIC_DISC_YAW_RAD = -1.4208;
-export const GALACTIC_DISC_PITCH_RAD = -0.1783;
+export const GALACTIC_DISC_FORWARD: Vec3 = [0.973096, 0.064379, 0.221222];
 
 /**
  * Compute the initial camera snapshot: the Earth home pose at boot time wrapped

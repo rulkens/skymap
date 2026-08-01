@@ -15,18 +15,15 @@
  * centre — before the fly recentres onto M31. Composable because they write
  * different channels: the strafe moves `target`, the aim moves yaw/pitch.
  *
- * The dwell's orbit is SIZED TO LAND on a chosen bearing: its net yaw
- * carries the camera from the arrival bearing to the M81 Group's
- * direction, which the Local-Group
- * beat inherits untouched — its enter writes only target/distance — so the
- * pull-back there separates home and Andromeda on screen instead of
- * stacking them. Both bearings are pure seed geometry
- * (orbitAnglesLookingAlong convention):
- * arrival yaw is the lookAtId(M31) bearing from the Milky-Way target
- * (nothing after it rotates — strafe/moveTarget write `target`, dolly writes
- * `distance`), and the exit yaw looks along M31 → M81 Group. Constants, not
- * runtime lookups, because the subjects' positions are static catalog seeds;
- * re-derive if the enter clip is re-blocked onto a different aim.
+ * The dwell's orbit is SIZED TO LAND on the M81 Group's bearing, which the
+ * Local-Group beat inherits untouched — its enter writes only
+ * target/distance — so the pull-back there separates home and Andromeda on
+ * screen instead of stacking them. `spinToId` resolves that landing live
+ * (a sightline, not a stored angle), so it lands on the same subject under
+ * whichever orientation frame is committed. `turns: -1` takes the long way
+ * round — the short way is a +107.6° swing, the backward −252.4° path
+ * matches the earlier beats' spin sense and reads brisker close in; the
+ * landing is the invariant, the sweep is the visual tuning knob.
  */
 
 import type { ClipData } from '../../../../@types/animation/ClipData';
@@ -34,6 +31,7 @@ import {
   all,
   dollyToId,
   focus,
+  frameTo,
   hold,
   lookAtId,
   moveTargetId,
@@ -42,27 +40,27 @@ import {
 } from '../../../../services/engine/animation/effectHelpers';
 import { focusId } from '../../../../utils/animation/focusId';
 import { dwellDrift } from '../../../../state/tour/dwellDrift';
+import { FRAME_ROLL_SEC } from './frameRollSec';
 
 const M31 = focusId('m31');
 
 const DWELL_SEC = 10;
-// Ecliptic-frame yaws (the default the shared decode reads through
-// ORIENTATION_FRAMES.ecliptic) of the same two world sightlines.
-const ARRIVAL_YAW_RAD = -1.074327; // lookAtId(M31) bearing from the MW target (−61.55°)
-const EXIT_YAW_RAD = 0.804001; // M81 Group centre-frame beyond M31 (+46.07°)
-// Ecliptic short way is +107.6°; the '- 2π' below takes the backward −252.4°
-// path instead — same spin sense as the earlier beats, brisker close in. Both
-// paths land on the exit bearing; the landing is the invariant, the sweep the
-// visual tuning knob.
-const NET_YAW_RAD = EXIT_YAW_RAD - ARRIVAL_YAW_RAD - Math.PI * 2;
 
 export const approachM31Dwell: ClipData = dwellDrift(DWELL_SEC, {
-  cruiseRate: NET_YAW_RAD / DWELL_SEC,
+  spinTo: focusId('group-m81-group'),
+  turns: -1,
 });
 
 export const approachM31: ClipData = {
   start: 'live',
   timeline: [
+    // supergalactic from here outward: the local supercluster is the plane
+    // this stretch of the tour is a tour OF (docs/tour/implementation-notes.md).
+    // This is the tour's first act boundary, so — unlike the opening's roll
+    // over empty space — this one plays out over a visible scene; it rides
+    // alongside the 3s lookAtId turn below so the tilt and the turn to face
+    // Andromeda read as one continuous move, not two.
+    frameTo('supergalactic', { over: FRAME_ROLL_SEC }),
     show(['survey:famousGalaxy'], 1),
     all([lookAtId(M31, 3), strafeId(M31, 10, 3)]),
     focus(M31),

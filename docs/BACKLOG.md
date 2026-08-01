@@ -47,6 +47,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Two label layers register fade handles nothing reads** `ready` — `starCatalogLabel`/`bodyLabel` have `FADE_LAYERS` rows and clip addresses, but `foregroundLabelsLayer` reads settings directly, so `fade(['bodyLabel'],0,2)` animates nothing. → [details](backlog/2026-07-29-unread-caption-fade-handles.md)
 - [ ] **`galaxyCatalogs.enabled` + `structures.enabled` are dead** `ready` — writable via reducer, read by nothing; either gate their clusters like `volumes.enabled` does or delete both fields.
 - [ ] **`LAYER_GROUPS.labels` totality is unchecked** `ready` — a new label layer must be hand-added or the `'labels'` aggregate silently skips it; near-missed twice while the body/star label layers landed.
+- [ ] **Two `FocusBoundEffect` switches swallow new kinds** `ready` — `clipFociReady` and `stubResolveClipFoci` dispatch through a silent `default:` instead of `compileClip`'s `never` guard, so adding `spinToId` compiled clean while both ignored it (premature ready → crash; `tour-length` throw).
 - [ ] **Font atlas load blocks `initGpu`** `needs-design` — the ~297 KB Cormorant fetch is awaited before every renderer + catalog fetch in `initGpu` starts; make label rendering tolerate a missing atlas instead. → [details](backlog/2026-07-24-font-atlas-blocks-initgpu.md)
 - [ ] **Direct `slot.load()` sites bypass the asset queue** `needs-design` — five call sites fetch outside the bounded queue, so `ASSET_QUEUE_CONCURRENCY` is not the system-wide bound it reads as. → [details](backlog/2026-07-24-direct-loads-bypass-asset-queue.md)
 - [ ] **Sidecar-meta getters sit on `EngineState`** `ready` — `famousGalaxiesMeta` is loaded data delegating from a top-level key; move it onto `GalaxyStore` (and the star twin onto the body store). → [details](backlog/2026-07-30-meta-getters-belong-on-the-data-stores.md)
@@ -56,6 +57,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **`uiSlice` does boot I/O at module load** `needs-design` — `initialState = buildInitialUiState()` reads `window.location` + localStorage on import; make the fallback lazy. → [details](backlog/2026-07-29-uislice-module-load-boot-reads.md)
 - [ ] **URL seam is a `window` singleton** `needs-design` — the whole test suite shares one address bar; make the URL port a registered capability. → [details](backlog/2026-07-30-url-seam-window-singleton.md)
 - [ ] **`buildAliasIndex` is a non-hook in `src/hooks/`** `ready` — pure helper with one importer; `npm run move-files` it to `src/utils/` (test mirror follows).
+- [ ] **`frameBasisQuat` is a half-rename** `ready` — `liveFrameBasisQuat` + `LiveCameraRuntime.frameBasisQuat` kept the old noun when `CameraRuntime.frameBasis` became `upBasis`; finish it.
 - [ ] **`glade-points` throws "Maximum update depth exceeded"** `needs-repro` — React update loop seen once; the 500 ms heartbeat is the suspect but nothing on that branch touches the loading path. → [details](backlog/2026-07-30-glade-points-update-depth-exceeded.md)
 
 ## Rendering
@@ -142,7 +144,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Label fade opt-out ADR** `needs-design` — decide whether per-character MSDF label opacity opts out of the per-handle fade bind-group pattern; follow-up to ADR 0001.
 - [ ] **Grand tour: Earth start + scale rungs** `needs-design` — open at Earth and climb solar system → local neighbourhood → Milky Way stars before the existing galactic beats. → [details](backlog/2026-07-22-grand-tour-earth-start.md)
 - [ ] **Reusable structure-visit tour clip** `needs-design` — generalize the hardcoded Virgo/M87 tour beats into a parameterized `structureVisitClip`. Focus-isolation primitive already shipped. → [details](backlog/2026-06-29-structure-visit-tour-clip.md)
-- [ ] **Tour snapshots cannot carry `orientation`** `needs-design` — `SettingsSnapshot` omits it, so no beat can set which pole is up. → [details](backlog/2026-07-29-tour-snapshot-orientation.md)
 - [ ] **`emphasize()` clip cue** `ready` — per-structure spotlight lift composing with `fade` dims (staggered group highlights in the tour's neighbourhood beat). → [details](backlog/2026-07-07-emphasize-clip-cue.md)
 - [ ] **Greek letters in star labels** `needs-design` — font atlas lacks Greek glyphs, so Bayer names are spelled out ("Delta Velorum" vs δ Velorum); add the range + swap seed display names. → [details](backlog/2026-07-22-greek-letters-in-star-labels.md)
 - [ ] **Star/body card row tooltips** `ready` — galaxy detail-card rows have hover tooltips explaining each field; the field-star and famous-star/body cards' rows have none — extend the same tooltips.tsx wiring to their row tables.
@@ -162,6 +163,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Saga-context boot-ordering argument told nine times** `ready` — one causal chain restated across nine docblocks; keep it in `sagaContextRegistered.ts` and point the rest there. → [details](backlog/2026-07-30-boot-ordering-argument-nine-copies.md)
 - [ ] **Plan `Needs:` lines for wave dispatch** `needs-design` — SDD serializes plans; mined dependency graphs from completed plans understate real depth, so the DAG must be authored, not mined. → [details](backlog/2026-07-31-plan-needs-lines-wave-dispatch.md)
 - [ ] **CLAUDE.md compaction pass** `ready` — the file has grown; tighten it without losing load-bearing content.
+- [ ] **`frameTo` missing from the scene-effects table** `ready` — `clip-primitives.md` documents every other scene cue; the frame-ladder cue shipped undocumented there.
 
 ## External / blocked
 

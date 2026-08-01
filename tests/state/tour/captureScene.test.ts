@@ -1,12 +1,15 @@
 /**
  * captureScene — unit tests for the widened tour scene-snapshot capture.
  *
- * A tour beat may mutate both the ten settings clusters AND `selection.focus`;
- * restore must wind both back. These tests pin the two properties that make
- * the scene-level capture sound:
+ * A tour beat may mutate the ten settings clusters, `settings.orientation`
+ * (via a `frameTo` cue), AND `selection.focus`; restore must wind all three
+ * back. These tests pin the properties that make the scene-level capture
+ * sound:
  *
- *   1. *Scope* — the snapshot carries all ten settings clusters AND the focus
- *      ref from `state.selection.focus`.
+ *   1. *Scope* — the snapshot carries all ten settings clusters (via
+ *      `snap.settings`), `orientation` as a SIBLING of `settings` (not inside
+ *      it — see `SceneSnapshot`'s header for why), AND the focus ref from
+ *      `state.selection.focus`.
  *   2. *Detachment* — the settings half is a deep clone (via `captureSettings`);
  *      the focus half is a reference copy of an immutable identity value. A
  *      later write to `state.selection.focus` (a new ref object replacing the
@@ -50,6 +53,7 @@ function makeState(focus: SelectionRef | null = FOCUS_REF) {
       orbitTrails: { enabled: true },
       starCatalogs: { enabled: true, items: {} },
       bodies: { items: {} },
+      orientation: 'galactic',
       tonemap: { exposure: 1.2 },
     },
     selection: { hover: null, select: null, focus },
@@ -57,17 +61,22 @@ function makeState(focus: SelectionRef | null = FOCUS_REF) {
 }
 
 describe('captureScene', () => {
-  it('captures the ten settings clusters + selection.focus', () => {
+  it('captures the ten settings clusters + orientation + selection.focus', () => {
     const state = makeState(FOCUS_REF);
     const snap = captureScene(state);
 
-    // Settings half carries exactly the ten tour-owned clusters.
+    // Settings half carries exactly the ten tour-owned clusters — orientation
+    // is NOT among them.
     expect(Object.keys(snap.settings).sort()).toEqual(SNAPSHOT_SETTINGS_KEYS);
+    expect(snap.settings).not.toHaveProperty('orientation');
     for (const key of SNAPSHOT_SETTINGS_KEYS) {
       expect((snap.settings as Record<string, unknown>)[key]).toEqual(
         (state.settings as unknown as Record<string, unknown>)[key],
       );
     }
+
+    // Orientation rides as a sibling of settings.
+    expect(snap.orientation).toBe('galactic');
 
     // Focus half carries the captured ref.
     expect(snap.focus).toEqual(FOCUS_REF);

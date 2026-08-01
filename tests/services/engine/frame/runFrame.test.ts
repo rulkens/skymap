@@ -87,6 +87,7 @@ import {
   commitCameraPose,
   startFrameTween,
 } from '../../../../src/state/camera/cameraSlice';
+import { setOrientation } from '../../../../src/state/settings/settingsSlice';
 import {
   ORIENTATION_FRAMES,
   ORIENTATION_FRAME_QUATERNIONS,
@@ -103,7 +104,7 @@ import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../src/data/sources';
-import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/data/defaults';
+import { DEFAULT_GALAXY_PROVENANCE, DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 
 /** Build a real Redux store from the production root reducer. */
 function makeStore() {
@@ -216,7 +217,7 @@ function makeState(): EngineState {
       lastRenderedSimDays: { current: 0 },
       // runFrame resolves B(t) once per frame and writes it here — the box must
       // exist for that assignment. Seeded with the ecliptic (default) basis.
-      frameBasis: { current: [...ORIENTATION_FRAMES.ecliptic] },
+      upBasis: { current: [...ORIENTATION_FRAMES.ecliptic] },
     },
   } as unknown as EngineState;
 }
@@ -323,6 +324,7 @@ describe('runFrame — camera drivers (regression)', () => {
         to: { target: [0, 0, 0], yaw: 1.5, pitch: 0, distance: 50 },
         durationMs: 1000,
         easing: 'easeOutCubic',
+        frame: DEFAULT_ORIENTATION,
       }),
     );
 
@@ -398,18 +400,24 @@ describe('runFrame — orientation-frame roll', () => {
     return Math.acos(Math.min(1, Math.max(-1, c)));
   };
 
-  it('an idle frame switch holds the subject (target + distance) and rolls only the up-vector', () => {
-    // Q4 guarantee, reconciled against the decode math. With the resting driver
-    // winning, the base pose (target, yaw, pitch, distance) is returned unchanged
-    // every frame; only B(t) slerps. The decode is
-    //   position = target + distance · (B(t) · dir_local(yaw, pitch)).
-    // So the SUBJECT is invariant — target is fixed and |position − target| stays
-    // exactly `distance` — while the up-vector (frame pole) rotates old → new. The
-    // eye ORBITS the target along the slerp arc (a distance-preserving roll about
-    // the view axis), it does NOT translate. Full position-constancy would require
-    // the resting driver to re-encode the pose against B(t) each frame, which it
-    // does not; the invariant the produce path actually upholds is target-fixed +
-    // distance-fixed + up-rotating, which is what we assert.
+  it('a full orientation-frame roll: B(t) reaches the destination pole monotonically and the descriptor clears on completion', () => {
+    // NOT a produce-path test — see 'during a frame roll the assembled camera
+    // position is unchanged...' below for what `runFrame` actually feeds
+    // `state.cam.poseBasis` / `.upBasis`, and the position-holds-still
+    // invariant that follows. This test instead drives a real frameTween
+    // through `runFrame` end to end and reads a SYNTHETIC probe camera —
+    // `assembleOrbitCamera(pose, projection, B, B)` with the SAME live B(t)
+    // fed to both slots — purely to turn the resolved basis into a vector
+    // (frameUp) and confirm two things nothing else pins: (1) B(t) rotates
+    // MONOTONICALLY from the old pole to the new one across a full 0→1000ms
+    // sweep of real ticks (`resolveFrameBasis.test.ts` checks orthonormality
+    // and endpoints at isolated samples, not that the interpolation never
+    // backtracks — a slerp-direction bug could pass that and fail this); and
+    // (2) `runFrame`'s completion branch dispatches `clearFrameTween` exactly
+    // once when elapsed saturates. The target-fixed / distance-preserved
+    // assertions below are incidental byproducts of B(t) being a rotation
+    // matrix (already implied by orthonormality), not a separate claim about
+    // the produce path.
     const store = makeStore();
     const state = makeCamState();
     const deps = makeCamDeps(state, store);
@@ -435,8 +443,8 @@ describe('runFrame — orientation-frame roll', () => {
     const samples: { t: number; target: number[]; position: number[]; up: number[] }[] = [];
     for (const t of [0, 250, 500, 750, 1000]) {
       runFrame(state, deps, t);
-      const B = state.cameraRuntime.frameBasis.current;
-      const cam = assembleOrbitCamera(state.cameraRuntime.lastPose.current, projection, B);
+      const B = state.cameraRuntime.upBasis.current;
+      const cam = assembleOrbitCamera(state.cameraRuntime.lastPose.current, projection, B, B);
       samples.push({
         t,
         target: [...cam.target],
@@ -449,10 +457,11 @@ describe('runFrame — orientation-frame roll', () => {
     for (const s of samples) {
       // Target is fixed across the whole transition.
       expect(norm(sub(s.target, first.target))).toBeLessThan(1e-6);
-      // Distance (|position − target|) is preserved — the eye orbits, never
-      // translates toward or away from the subject. Relative tolerance: the basis
-      // slerp runs in float32, so absolute error scales with `distance` (~1e-5 at
-      // 100); the invariant is that the *ratio* holds to float32 precision.
+      // Distance (|position − target|) is preserved — B(t) is a rotation matrix
+      // at every sample, so the synthetic probe's eye orbits at constant radius.
+      // Relative tolerance: the basis slerp runs in float32, so absolute error
+      // scales with `distance` (~1e-5 at 100); the invariant is that the *ratio*
+      // holds to float32 precision.
       const rel = Math.abs(norm(sub(s.position, s.target)) - BASE.distance) / BASE.distance;
       expect(rel).toBeLessThan(1e-6);
     }
@@ -470,13 +479,67 @@ describe('runFrame — orientation-frame roll', () => {
     for (let i = 1; i < anglesFromStart.length; i++) {
       expect(anglesFromStart[i]!).toBeGreaterThan(anglesFromStart[i - 1]!);
     }
-    // And the eye genuinely moved (orbited) — proving the up-roll is a real
-    // world-space change, not a no-op.
+    // And the synthetic probe's eye genuinely moved (orbited) — proving the
+    // up-roll is a real world-space change, not a no-op.
     expect(norm(sub(samples[samples.length - 1]!.position, first.position))).toBeGreaterThan(1);
 
     // Completion clears the descriptor exactly once: after the saturating frame
     // the store's frameTween is null, so the steady branch takes over next frame.
     expect(store.getState().camera.frameTween).toBeNull();
+  });
+
+  it('during a frame roll the assembled camera position is unchanged while its up rotates', () => {
+    // The branch's rule: a frame switch changes only which way is up. `poseBasis`
+    // is the COMMITTED frame (`ORIENTATION_FRAMES[orientation]`), which
+    // `watchOrientationChangeSaga` sets to the destination the instant a switch
+    // starts — so it does not move for the roll's whole duration — while
+    // `upBasis` is the live, mid-slerp `B(t)`. This test drives the drag
+    // register's two fields (what `runFrame` actually writes) through
+    // `assembleOrbitCamera` and asserts the split: position holds, up rotates.
+    const store = makeStore();
+    const state = makeCamState();
+    const deps = makeCamDeps(state, store);
+
+    const BASE: CameraPose = { target: [0, 0, 0], yaw: 0.7, pitch: 0.3, distance: 100 };
+    store.dispatch(commitCameraPose(BASE));
+    state.cameraRuntime.lastPose.current = BASE;
+
+    // Mirrors watchOrientationChangeSaga: setOrientation commits the
+    // destination immediately, startFrameTween rolls the up-basis toward it.
+    store.dispatch(setOrientation('galactic'));
+    store.dispatch(
+      startFrameTween({
+        fromQuat: [...ORIENTATION_FRAME_QUATERNIONS.ecliptic],
+        to: 'galactic',
+        durationMs: 1000,
+        easing: 'linear',
+      }),
+    );
+
+    const projection = state.cameraRuntime.projection;
+
+    runFrame(state, deps, 250);
+    const cam1 = assembleOrbitCamera(
+      state.cameraRuntime.lastPose.current,
+      projection,
+      state.cam!.poseBasis!,
+      state.cam!.upBasis!,
+    );
+
+    runFrame(state, deps, 500);
+    const cam2 = assembleOrbitCamera(
+      state.cameraRuntime.lastPose.current,
+      projection,
+      state.cam!.poseBasis!,
+      state.cam!.upBasis!,
+    );
+
+    // The eye holds still: poseBasis is the committed 'galactic' frame at both
+    // samples (it never moved), and the pose (target/yaw/pitch/distance) is
+    // unchanged too (resting driver), so position is bit-for-bit identical.
+    expect(cam2.position).toEqual(cam1.position);
+    // The horizon rotates: upBasis is still mid-slerp between t=250 and t=500.
+    expect(frameUp(cam2.upBasis)).not.toEqual(frameUp(cam1.upBasis));
   });
 
   it('a switch into a near-pole-aligned view resolves to a finite pose at the clamp, not NaN', () => {
@@ -513,7 +576,12 @@ describe('runFrame — orientation-frame roll', () => {
       expect(Number.isFinite(pose.pitch)).toBe(true);
       expect(Math.abs(pose.pitch)).toBeLessThanOrEqual(PITCH_LIMIT + 1e-9);
 
-      const cam = assembleOrbitCamera(pose, projection, state.cameraRuntime.frameBasis.current);
+      const cam = assembleOrbitCamera(
+        pose,
+        projection,
+        state.cameraRuntime.upBasis.current,
+        state.cameraRuntime.upBasis.current,
+      );
       for (const c of cam.position) expect(Number.isFinite(c)).toBe(true);
       // The view-projection is where a degenerate near-pole lookAt would surface
       // NaN; assert every entry is finite.

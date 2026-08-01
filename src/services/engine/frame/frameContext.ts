@@ -79,7 +79,7 @@
  * a second time (which would advance the clock twice on the same frame — the
  * clock is idempotent for the same descriptor reference, but two calls is still
  * conceptually wrong). `deriveFrameContext` is therefore side-effect-free again:
- * it only calls `assembleOrbitCamera(pose, projection, frameBasis)`,
+ * it only calls `assembleOrbitCamera(pose, projection, poseBasis, upBasis)`,
  * `computeViewProj`, and `deriveSlabs` to build the frame's slab table.
  */
 
@@ -100,11 +100,14 @@ import { deriveSlabs } from './slabs';
  *
  * `pose` is the pose that `runFrame` produced earlier in the same frame (via
  * `runCameraDrivers`); `projection` is the live engine Resource that carries
- * fovYRad, aspect, near, and far; `frameBasis` is this frame's frame-local →
- * world orientation basis (which pole is "up"). The three are merged into a full
- * `OrbitCamera` via `assembleOrbitCamera`, which `computeViewProj` then
- * projects. Threading the basis here means the demand-time proximity read
- * (`buildDemandCtx`) and the draw-time camera decode through the same pole.
+ * fovYRad, aspect, near, and far; `poseBasis` and `upBasis` are this frame's
+ * two orientation bases, forwarded straight into `assembleOrbitCamera`:
+ * `poseBasis` (the committed `ORIENTATION_FRAMES[orientation]`, which does not
+ * move during a roll) decodes the eye position, `upBasis` (the live, possibly
+ * mid-slerp `resolveFrameBasis` result) decodes screen-up. Splitting them here
+ * is what makes an orientation-frame switch roll the horizon instead of
+ * sweeping the whole view — see `runFrame`'s basis-resolution block for why
+ * each reader gets the value it gets.
  *
  * The bootstrap gate still reads `state.cam` for non-null (it is non-null once
  * `wireInput` runs); `state.cam` is the drag register, NOT the source of the
@@ -133,7 +136,8 @@ export function deriveFrameContext(
   canvas: HTMLCanvasElement,
   pose: CameraPose,
   projection: CameraProjection,
-  frameBasis: Mat3,
+  poseBasis: Mat3,
+  upBasis: Mat3,
   visibleSourceMask: number,
   nowMs: number,
   simDays: number,
@@ -151,12 +155,13 @@ export function deriveFrameContext(
   const texturedDisks = state.subsystems.texturedDisks;
 
   // Assemble the full OrbitCamera from the already-produced store pose, the
-  // engine's projection Resource, and this frame's orientation basis. The basis
-  // is written onto the camera before its position is derived, so every derived
-  // quantity below (vp, slabs, drawCamPos) decodes through the same pole the
-  // draw uses. The returned camera is a fresh object — it does NOT alias
+  // engine's projection Resource, and this frame's two orientation bases. The
+  // bases are written onto the camera before its position is derived: position
+  // decodes through `poseBasis` (committed, roll-invariant), every derived
+  // quantity below that reads screen-up (vp, slabs) decodes through `upBasis`
+  // (live, rolls). The returned camera is a fresh object — it does NOT alias
   // `state.cam` (the drag register) or any frozen store array.
-  const cam = assembleOrbitCamera(pose, projection, frameBasis);
+  const cam = assembleOrbitCamera(pose, projection, poseBasis, upBasis);
 
   // Snapshot-derive everything the caller would otherwise compute locally.
   // `runFrame` and `renderFrame` both read these off `ctx`, so the two

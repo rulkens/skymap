@@ -42,8 +42,8 @@
  *
  * The snapshot is a pure store read — `yield* select(captureScene)` — so capture
  * needs no engine context here. The matching restore DISPATCHES (settings merge +
- * focus revert), so it lives in `restoreSceneSaga`, which reads its own engine
- * context for the fade pass. This saga therefore reaches no `getContext` itself.
+ * orientation restore + focus revert), so it lives in `restoreSceneSaga`. This
+ * saga therefore reaches no `getContext` itself.
  */
 
 import { call, put, select, take, race, cancelled, delay } from 'typed-redux-saga';
