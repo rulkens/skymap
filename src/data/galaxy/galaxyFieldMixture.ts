@@ -278,12 +278,14 @@ const RING_AZIMUTHAL_OVERLAP = 0.55;
 const RING_RADIAL_OVERLAP = 13 / 23;
 
 /**
- * Ring count, frozen: enough rings that the piecewise-linear patches follow
- * the warp smoothly. On the splat path cost tracks covered band area, and
- * the derived radial sigma above keeps the band gapless at any count, so the
- * count itself is nearly free — raising it further buys smoothness, not cost.
+ * Ring count, frozen at the visually settled value. NOT a smoothness dial to
+ * raise: the derived sigma above narrows with spacing, so more rings sharpen
+ * the band's inner edge into a visible seam against the origin discs (8 rings
+ * showed exactly that). Two wide rings blend into their neighbours; warp
+ * fidelity inside the band is bounded by ring count, and at 2 the settled
+ * look accepts that trade.
  */
-export const WARP_RING_COUNT = 8;
+export const WARP_RING_COUNT = 2;
 
 /**
  * `buildGalaxyFieldMixture`'s default when no tuning is supplied.
