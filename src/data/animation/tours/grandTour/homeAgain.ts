@@ -32,20 +32,19 @@ import {
 import { focusId } from '../../../../utils/animation/focusId';
 import { dwellDrift } from '../../../../state/tour/dwellDrift';
 import { GALACTIC_DISC_FORWARD } from '../../../../services/engine/camera/cameraFraming';
+import { FRAME_ROLL_SEC } from './frameRollSec';
 
 const MILKY_WAY = focusId('milkyWay');
-
-// See openingTitle's FRAME_ROLL_SEC for the derivation. Fired first, so it's
-// long settled (~14s of runway left) before the beat's own settle ends the
-// tour — `restoreSceneSaga` fires its own requestOrientationChange back to
-// the viewer's pre-tour frame unconditionally on exit, and a still-animating
-// roll here would fight that one for the up-basis.
-const FRAME_ROLL_SEC = 3;
 
 export const homeAgain: ClipData = {
   start: 'live',
   timeline: [
-    // galactic again — home again (docs/tour/implementation-notes.md).
+    // galactic again — home again (docs/tour/implementation-notes.md). Fired
+    // first (settles by t≈3s of this ~17s clip) so the tilt rides the calm
+    // early part of the rush home, well before the exit — not to dodge a
+    // conflict with the tour-end restore's own roll: there is no overlap to
+    // begin with, and startFrameTween reseeds from the live basis, so even an
+    // overlapping roll would compose rather than fight.
     frameTo('galactic', { over: FRAME_ROLL_SEC }),
     show(['label:milkyWay'], 1),
     focus(MILKY_WAY),

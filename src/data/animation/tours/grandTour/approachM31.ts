@@ -40,17 +40,11 @@ import {
 } from '../../../../services/engine/animation/effectHelpers';
 import { focusId } from '../../../../utils/animation/focusId';
 import { dwellDrift } from '../../../../state/tour/dwellDrift';
+import { FRAME_ROLL_SEC } from './frameRollSec';
 
 const M31 = focusId('m31');
 
 const DWELL_SEC = 10;
-
-// See openingTitle's FRAME_ROLL_SEC for the derivation. This is the tour's
-// first act boundary (Milky Way → the local supercluster), so — unlike the
-// opening's roll over empty space — this one plays out over a visible scene;
-// it rides alongside the 3s lookAtId turn below so the tilt and the turn to
-// face Andromeda read as one continuous move, not two.
-const FRAME_ROLL_SEC = 3;
 
 export const approachM31Dwell: ClipData = dwellDrift(DWELL_SEC, {
   spinTo: focusId('group-m81-group'),
@@ -62,6 +56,10 @@ export const approachM31: ClipData = {
   timeline: [
     // supergalactic from here outward: the local supercluster is the plane
     // this stretch of the tour is a tour OF (docs/tour/implementation-notes.md).
+    // This is the tour's first act boundary, so — unlike the opening's roll
+    // over empty space — this one plays out over a visible scene; it rides
+    // alongside the 3s lookAtId turn below so the tilt and the turn to face
+    // Andromeda read as one continuous move, not two.
     frameTo('supergalactic', { over: FRAME_ROLL_SEC }),
     show(['survey:famousGalaxy'], 1),
     all([lookAtId(M31, 3), strafeId(M31, 10, 3)]),
