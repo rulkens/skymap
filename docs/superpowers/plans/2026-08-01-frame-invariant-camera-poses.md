@@ -125,7 +125,7 @@ The two fields diverge for the first time. Only during a roll.
 
 - [ ] Add `during a frame roll the assembled camera position is unchanged while its up rotates` — drive a store with a `frameTween` in flight and a fixed `base`, run two frames, assert `cam.position` identical across them and `frameUp(cam.upBasis)` different.
 - [ ] `npm test -- runFrame` → RED.
-- [ ] Feed `poseBasis = ORIENTATION_FRAMES[rootState.settings.orientation]` and `upBasis = resolveFrameBasis(...)` to `deriveFrameContext` and to `state.cam`. `state.cameraRuntime.frameBasis.current` keeps taking `B(t)` — it seeds the next switch's `fromQuat` and must stay the live basis.
+- [ ] Feed `poseBasis = ORIENTATION_FRAMES[rootState.settings.orientation]` and `upBasis = resolveFrameBasis(...)` to `deriveFrameContext` and to `state.cam`. `state.cameraRuntime.frameBasis.current` keeps taking `B(t)` — it seeds the next switch's `fromQuat` and must stay the live basis. (It was renamed `upBasis` at the end of the branch, once it was clear that is exclusively what it holds.)
 - [ ] `npm test -- runFrame frameContext` → GREEN.
 - [ ] Commit.
 
@@ -267,12 +267,14 @@ Without this a tour `frameTo` permanently changes the viewer's setting.
 
 **Files:**
 
-- Modify: `src/state/tour/captureSettings.ts`, `src/@types/engine/settings/SettingsSnapshot.d.ts`, the restore path in `src/state/tour/restoreSceneSaga.ts`
-- Test: `tests/state/tour/captureSettings.test.ts`, `tests/state/tour/restoreSceneSaga.test.ts`
+- Modify: `src/@types/engine/tour/SceneSnapshot.ts`, `src/state/tour/captureScene.ts`, the restore path in `src/state/tour/restoreSceneSaga.ts`
+- Test: `tests/state/tour/captureScene.test.ts`, `tests/state/tour/restoreSceneSaga.test.ts`, `tests/state/tour/guidedTourSaga.test.ts`
 
 - [ ] Add `a tour that changed the orientation restores the viewer's frame` — end-to-end through capture and restore.
-- [ ] `npm test -- captureSettings restoreSceneSaga` → RED.
-- [ ] Add `orientation` to the snapshot. It is a scalar, not one of the ten clusters, so it does not ride the whole-cluster clone policy described in the module header — extend the header rather than leaving that policy statement false.
+- [ ] `npm test -- captureScene restoreSceneSaga` → RED.
+- [ ] Carry `orientation` on `SceneSnapshot`, beside `focus` — NOT on `SettingsSnapshot`. `guidedTourSaga` merges a settings snapshot before every beat and `mergeSettingsSnapshot` spreads every key, so a scalar living there is raw-written back at each boundary and reverts the pole the previous beat authored. `src/state/tier/tierSlice.ts:5-12` records lifting `tier` out of settings for exactly this reason.
+- [ ] Restore must dispatch `requestOrientationChange`, never write the setting — a raw write leaves `camera.base` in the outgoing basis.
+- [ ] Add the `guidedTourSaga`-level guard: no `mergeSnapshot` payload carries `orientation`. Verify RED.
 - [ ] → GREEN. Commit.
 
 ---
@@ -302,7 +304,7 @@ Without this a tour `frameTo` permanently changes the viewer's setting.
 - `OrbitCamera.poseBasis` and `OrbitCamera.upBasis`; no `frameBasis` field remains on the camera.
 - `spinToId` in `effectHelpers.ts` with a resolver arm in `resolveClipFoci.ts`.
 - `CameraState['clip']` and `CameraTweenDescriptor` each carry an `OrientationFrameId`.
-- `SettingsSnapshot` carries `orientation`.
+- `SceneSnapshot` carries `orientation` (NOT `SettingsSnapshot` — the per-beat merge would revert an authored pole), and restore dispatches `requestOrientationChange`.
 - Zero frame-local bearing constants under `src/data/animation/tours/` or in `cameraFraming.ts`.
 - `frameTo` cues in the opening, M31-approach, and home-again clips.
 - A `docs/tour/implementation-notes.md` entry for the frame ladder.

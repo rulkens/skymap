@@ -262,8 +262,21 @@ you-are-here, and home-again beats (galactic centre at 0% roll, disc horizontal)
 `supergalactic` from the M31 approach outward. Median roll fraction across the tour
 drops from ~55% to ~15%.
 
-`captureSettings` must snapshot `orientation` alongside its ten clusters, or the
-tour's `frameTo` permanently changes the viewer's setting.
+The tour must snapshot `orientation` and restore it, or its `frameTo` permanently
+changes the viewer's setting.
+
+**It must NOT ride `SettingsSnapshot`**, which is where this spec first put it.
+`guidedTourSaga` merges a settings snapshot before EVERY beat, and
+`mergeSettingsSnapshot` spreads every key of the patch — so a scalar living there
+is raw-written back at each beat boundary, undoing the pole the previous beat
+authored. Beats 03–09 played under the viewer's pre-tour frame until this was
+caught by the whole-branch review.
+
+It rides `SceneSnapshot` instead, beside `focus`. `tierSlice` records lifting
+`tier` out of settings for exactly this reason; the same trap caught the same
+shape of value twice. Restore dispatches `requestOrientationChange` rather than
+writing the setting, because a raw write leaves `camera.base` expressed in the
+outgoing basis — the defect this spec opens by removing.
 
 ### `buildPathTrack` — the basis omission
 
@@ -308,7 +321,11 @@ omission in the debug inspector's eye reconstruction.
   plausible wrong one; it must go red against a live-basis `from`.
 - `spinToId` resolves to a `spin` whose `by` lands the authored bearing, under two
   different bases (the point of the arm is that the basis drops out).
-- `captureSettings` round-trips `orientation`.
+- The tour round-trips `orientation` via `SceneSnapshot`, and no `mergeSnapshot`
+  payload carries it — the per-beat merge must not be able to revert an authored
+  pole. Assert the EFFECTIVE orientation per beat, not the authored literals: a
+  test that reads the `frameTo` cues passes while the ladder is being reverted
+  underneath it.
 
 Per the testing convention, no test restates the frame registry or asserts the
 clamp boundaries of `pitch`.
