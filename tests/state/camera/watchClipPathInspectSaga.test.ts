@@ -28,6 +28,7 @@ import type { ClipId } from '../../../src/@types/animation/ClipId';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
+import type { OrientationFrameId } from '../../../src/@types/camera/OrientationFrameId';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -50,9 +51,16 @@ const RUNTIME: LiveCameraRuntime = {
   frameBasisQuat: [0, 0, 0, 1],
 };
 
+type ComputeFn = (
+  clipId: ClipId,
+  resolved: ClipData,
+  frameBasis?: Mat3,
+  frame?: OrientationFrameId,
+) => void;
+
 function buildHarness() {
-  const compute = vi.fn<(clipId: ClipId, resolved: ClipData, frameBasis?: Mat3) => void>();
-  const recompute = vi.fn<(clipId: ClipId, resolved: ClipData, frameBasis?: Mat3) => void>();
+  const compute = vi.fn<ComputeFn>();
+  const recompute = vi.fn<ComputeFn>();
   const clear = vi.fn<() => void>();
   const sagaMiddleware = createSagaMiddleware();
   const store = configureStore({
@@ -65,6 +73,7 @@ function buildHarness() {
       recompute,
       clear,
       pinnedClip: vi.fn<() => ClipData | null>(() => null),
+      pinnedFrame: vi.fn<() => OrientationFrameId | null>(() => null),
     },
     resolveDeps: () => EMPTY_DEPS,
     cameraRuntime: () => RUNTIME,
@@ -84,7 +93,12 @@ describe('watchClipPathInspectSaga', () => {
     await flush();
 
     expect(compute).toHaveBeenCalledTimes(1);
-    expect(compute).toHaveBeenCalledWith(CLIP_ID, EXPECTED, EXPECTED_FRAME_BASIS);
+    expect(compute).toHaveBeenCalledWith(
+      CLIP_ID,
+      EXPECTED,
+      EXPECTED_FRAME_BASIS,
+      DEFAULT_ORIENTATION,
+    );
   });
 
   it('routes recalcClipPath to recompute (keep-start), not compute', async () => {
@@ -93,7 +107,12 @@ describe('watchClipPathInspectSaga', () => {
     await flush();
 
     expect(recompute).toHaveBeenCalledTimes(1);
-    expect(recompute).toHaveBeenCalledWith(CLIP_ID, EXPECTED, EXPECTED_FRAME_BASIS);
+    expect(recompute).toHaveBeenCalledWith(
+      CLIP_ID,
+      EXPECTED,
+      EXPECTED_FRAME_BASIS,
+      DEFAULT_ORIENTATION,
+    );
     expect(compute).not.toHaveBeenCalled();
   });
 

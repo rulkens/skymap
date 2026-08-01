@@ -100,13 +100,28 @@ export type LiveCameraRuntime = { from: CameraPose; fovYRad: number; frameBasisQ
  * `frameBasis` is the STEADY orientation-frame basis the watch saga already
  * resolved for `resolveClipFoci` (`ORIENTATION_FRAMES[settings.orientation]`) —
  * threaded through so the sampled eye decodes through the same basis the
- * renderer's `evaluateClip` call does (see `sampleClipPath`).
+ * renderer's `evaluateClip` call does (see `sampleClipPath`). `frame` is that
+ * same basis's id, stored (not re-derived) so `pinnedFrame` can hand it back —
+ * `watchReplayInspectedPathSaga` MUST replay under the frame Calculate baked
+ * the route's bearings under, not whatever orientation is live at Play time;
+ * nothing gates the setting between the two clicks.
  */
 export type ClipPathInspectSeam = {
-  compute: (clipId: ClipId, resolved: ClipData, frameBasis?: Mat3) => void;
-  recompute: (clipId: ClipId, resolved: ClipData, frameBasis?: Mat3) => void;
+  compute: (
+    clipId: ClipId,
+    resolved: ClipData,
+    frameBasis?: Mat3,
+    frame?: OrientationFrameId,
+  ) => void;
+  recompute: (
+    clipId: ClipId,
+    resolved: ClipData,
+    frameBasis?: Mat3,
+    frame?: OrientationFrameId,
+  ) => void;
   clear: () => void;
   pinnedClip: () => ClipData | null;
+  pinnedFrame: () => OrientationFrameId | null;
 };
 export type SagaContext = {
   runTierTransition: RunTierTransition; // already present — drives per-source data load on tier change

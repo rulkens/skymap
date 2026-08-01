@@ -88,6 +88,7 @@ export const NOOP_SAGA_CONTEXT: SagaContext = {
     recompute: () => {},
     clear: () => {},
     pinnedClip: () => null,
+    pinnedFrame: () => null,
   },
 };
 

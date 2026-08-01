@@ -30,6 +30,13 @@
  * duration. `compileClip` already computes `durationSec` as a by-product of
  * flattening the effect tree; we compile once here (cheap, and memoised by clip
  * identity inside `compileClip`) purely to read that scalar.
+ *
+ * ### `frame` alongside `frameBasis`
+ *
+ * `frame` (the `OrientationFrameId`) is stored verbatim, not re-derived from
+ * `frameBasis` (the `Mat3` sampling needs) — `pinnedFrame()` hands it back to
+ * `watchReplayInspectedPathSaga` so a replay pins to the frame Calculate baked
+ * the route's bearings under, never the live setting at Play time.
  */
 
 import { resolveClipStart } from '../../../state/camera/cameraSlice';
@@ -39,6 +46,7 @@ import type { ClipData } from '../../../@types/animation/ClipData';
 import type { ClipId } from '../../../@types/animation/ClipId';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { Mat3 } from '../../../@types/math/Mat3';
+import type { OrientationFrameId } from '../../../@types/camera/OrientationFrameId';
 import type { ClipPathInspector } from '../../../@types/engine/subsystems/ClipPathInspector';
 import type { ClipPathInspectSeam } from '../../../store/types';
 
@@ -71,6 +79,9 @@ export function createClipPathInspectSeam(deps: ClipPathInspectSeamDeps): ClipPa
   // The start pose the last `compute` captured — `recompute` re-uses it so the
   // route keeps its original origin while the curator views it from elsewhere.
   let lastStart: CameraPose | null = null;
+  // The frame `pinned`'s bearings were baked under — see the module header's
+  // "`frame` alongside `frameBasis`" section.
+  let pinnedFrameId: OrientationFrameId | null = null;
 
   const sampleInto = (
     clipId: ClipId,
@@ -85,21 +96,37 @@ export function createClipPathInspectSeam(deps: ClipPathInspectSeamDeps): ClipPa
   };
 
   return {
-    compute(clipId: ClipId, resolved: ClipData, frameBasis?: Mat3): void {
+    compute(
+      clipId: ClipId,
+      resolved: ClipData,
+      frameBasis?: Mat3,
+      frame?: OrientationFrameId,
+    ): void {
       lastStart = getLivePose();
+      pinnedFrameId = frame ?? null;
       sampleInto(clipId, resolved, lastStart, frameBasis);
     },
-    recompute(clipId: ClipId, resolved: ClipData, frameBasis?: Mat3): void {
+    recompute(
+      clipId: ClipId,
+      resolved: ClipData,
+      frameBasis?: Mat3,
+      frame?: OrientationFrameId,
+    ): void {
       // Keep the last captured start (fall back to live if nothing computed yet).
+      pinnedFrameId = frame ?? null;
       sampleInto(clipId, resolved, lastStart ?? getLivePose(), frameBasis);
     },
     clear(): void {
       pinned = null;
       lastStart = null;
+      pinnedFrameId = null;
       inspector.clear();
     },
     pinnedClip(): ClipData | null {
       return pinned;
+    },
+    pinnedFrame(): OrientationFrameId | null {
+      return pinnedFrameId;
     },
   };
 }
