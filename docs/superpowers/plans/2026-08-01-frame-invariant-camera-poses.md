@@ -140,12 +140,14 @@ The two fields diverge for the first time. Only during a roll.
 
 **Interfaces:**
 
-- Produces: `LiveCameraRuntime` gains `frameBasis: Mat3` alongside the existing `frameBasisQuat`. The saga dispatches, in order: `setOrientation(frame)`, `commitCameraPose(reencodePose(base, runtime.frameBasis, ORIENTATION_FRAMES[frame]))`, `startFrameTween({...})`.
+- Produces: the saga selects the outgoing orientation and `camera.base` BEFORE any write, then dispatches `setOrientation(frame)`, `commitCameraPose(reencodePose(base, ORIENTATION_FRAMES[previous], ORIENTATION_FRAMES[frame]))`, and — only if the camera runtime is non-null — `startFrameTween({...})`.
 
-The `from` argument is the **live** basis, not `ORIENTATION_FRAMES[previous]` — same reason `startFrameTween` seeds `fromQuat` from the live basis (`watchOrientationChangeSaga.ts:11-16`). A switch fired mid-roll then composes continuously instead of snapping.
+The `from` argument is the **outgoing registry frame**, NOT the live basis. A stored pose's angles are only valid in a committed frame (`poseBasis` never mid-slerps), so the live blend is a basis `base` was never expressed in. The two agree unless a switch fires during a roll, which is exactly the case that breaks. `fromQuat` keeps the live basis — it governs the up vector's slerp start, a different question. Do not unify them.
+
+The re-encode goes ABOVE the null-runtime bail: it needs no camera, and below it a pre-bootstrap switch would persist the frame while leaving `base` in the old basis.
 
 - [ ] Add `a switch commits a pose whose world eye direction is unchanged` — assert the `commitCameraPose` payload re-decodes to the pre-switch world direction.
-- [ ] Add `a switch fired mid-roll re-expresses from the live basis, not the committed frame` — seed a runtime whose live basis is neither endpoint; assert the committed pose preserves the live direction.
+- [ ] Add `a switch fired mid-roll re-expresses from the outgoing registry frame` — fire a second switch during an in-flight roll whose live basis is genuinely neither endpoint, and assert the committed pose's EYE POSITION (decoded through `ORIENTATION_FRAMES[destination]` the way `updatePosition` does) matches the pre-switch eye decoded through `ORIENTATION_FRAMES[previous]`. Verify it goes RED against a live-basis `from`; if it does not, the fixture's live basis is not distinct enough — fix the fixture, not the assertion.
 - [ ] `npm test -- watchOrientationChangeSaga` → RED.
 - [ ] Implement; the null-runtime path still degrades to `setOrientation` alone (nothing to re-express without a camera).
 - [ ] `npm test -- watchOrientationChangeSaga` → GREEN.

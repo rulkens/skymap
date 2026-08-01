@@ -157,13 +157,32 @@ round-trip is exact by construction.
 `setOrientation`:
 
 ```ts
+const previous = yield * select(selectOrientation); // BEFORE the write below
 yield * put(setOrientation(frame));
-yield * put(commitCameraPose(reencodePose(base, runtime.frameBasis, ORIENTATION_FRAMES[frame])));
+yield *
+  put(
+    commitCameraPose(reencodePose(base, ORIENTATION_FRAMES[previous], ORIENTATION_FRAMES[frame])),
+  );
 ```
 
-The `from` basis is the **live** resolved basis, not the committed frame's — the
-same reason `startFrameTween` seeds `fromQuat` from the live basis. A switch fired
-while a roll is already in flight then composes continuously.
+The `from` basis is the **outgoing registry frame**, not the live resolved basis.
+A stored pose's angles are only ever valid in a _committed_ frame, because
+`poseBasis` is `ORIENTATION_FRAMES[settings.orientation]` and never mid-slerps. The
+two choices agree whenever nothing is rolling — which is why the distinction is easy
+to miss — and diverge exactly when a switch fires during a roll: there the live
+basis is a blend of two frames that `base` was never expressed in, so feeding it as
+`from` moves the eye. That is the defect this section exists to prevent.
+
+`startFrameTween`'s `fromQuat` keeps reading the **live** basis, and must. It
+governs where the up vector's slerp starts, so a re-switch composes visually from
+wherever the pole currently is. Two different questions, two different sources —
+the same `poseBasis` / `upBasis` split applied to the switch itself. Do not unify
+them.
+
+The re-encode sits ABOVE the null-runtime bail. It is pure store work (store pose,
+registry bases), so it needs no camera; only the roll does. Below the bail, a switch
+fired pre-bootstrap would persist the new orientation while leaving `base` expressed
+in the old basis — wrong the moment the camera boots.
 
 The rejected alternative was holding the pose space at the old basis until the roll
 lands. A re-switch mid-roll would leave `base` expressed in a basis that is neither
@@ -283,7 +302,10 @@ omission in the debug inspector's eye reconstruction.
   earns its place as a guard against fixing only one of the two sites.
 - `watchOrientationChangeSaga` — a switch dispatches `commitCameraPose` with a pose
   whose world eye direction equals the pre-switch one.
-- A switch mid-roll composes from the live basis rather than a committed one.
+- A switch fired mid-roll re-expresses from the OUTGOING REGISTRY frame: the
+  committed pose's eye position is preserved, with a live basis that is neither
+  endpoint. This is the test that separates a correct implementation from a
+  plausible wrong one; it must go red against a live-basis `from`.
 - `spinToId` resolves to a `spin` whose `by` lands the authored bearing, under two
   different bases (the point of the arm is that the basis drops out).
 - `captureSettings` round-trips `orientation`.
