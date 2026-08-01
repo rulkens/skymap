@@ -28,4 +28,6 @@ export type GalaxyFieldTuning = {
    * so the ridge breaks into countable oriented blobs. 1 is the real field.
    */
   readonly armBlobSharpness: number;
+  /** Master toggle for the analytic dust lane's shader loop. */
+  readonly dustEnabled: boolean;
 };

@@ -63,7 +63,7 @@ const SEED: GalaxyParams = {
   armWinding: 0.5,
   armWidth: 1,
   armStrength: 1,
-  dust: 1,
+  spriteDust: 1,
   hii: 1,
   youngStars: 0.5,
   diskThickness: 1,

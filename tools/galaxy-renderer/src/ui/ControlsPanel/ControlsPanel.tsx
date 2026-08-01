@@ -51,12 +51,12 @@ import MultiGalaxySection from '../MultiGalaxySection/MultiGalaxySection';
 import PresetsSection from '../PresetsSection/PresetsSection';
 import styles from './ControlsPanel.module.css';
 
-// Every GalaxyParams field except the Hubble-type string and the per-arm
-// `armAges` array is a plain number — this narrows `keyof GalaxyParams` down
-// to the subset a single-value slider can actually drive. `armAges` has no
-// UI surface yet (pin it in a preset object instead, per barAngleDeg's
-// pattern).
-type GalaxySliderKey = Exclude<keyof GalaxyParams, 'type' | 'armAges'>;
+// Every GalaxyParams field except the Hubble-type string, the per-arm
+// `armAges` array, and the nested analytic `dust` section is a plain number
+// — this narrows `keyof GalaxyParams` down to the subset a single-value
+// slider can actually drive. `armAges` and `dust` have no UI surface yet
+// (pin them in a preset object instead, per barAngleDeg's pattern).
+type GalaxySliderKey = Exclude<keyof GalaxyParams, 'type' | 'armAges' | 'dust'>;
 
 type SliderSpec = {
   readonly key: GalaxySliderKey;
@@ -162,7 +162,7 @@ function buildPopSliders(category: ReturnType<typeof classifyHubbleType>): Slide
 function buildDustSliders(category: ReturnType<typeof classifyHubbleType>): SliderSpec[] {
   if (category === 'elliptical') return [];
   const specs: SliderSpec[] = [
-    { key: 'dust', label: 'Dust density' },
+    { key: 'spriteDust', label: 'Dust density' },
     { key: 'dustNoise', label: 'Dust patchiness' },
     { key: 'dustNoiseScale', label: 'Dust noise scale' },
   ];

@@ -305,6 +305,8 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
   // `pushArmRidges`.
   armContrast: 1.3,
   armBlobSharpness: 1,
+  // Gates the analytic dust lane's shader loop.
+  dustEnabled: true,
 };
 
 /** The removed pair's share of the disc's flux budget — see DISC_SIGMA_RATIOS' fit note. */
@@ -328,7 +330,8 @@ function ringAnnulusWeights(radii: readonly number[], spacing: number, h: number
   bounds.push(radii[radii.length - 1]! + spacing / 2);
 
   const raw = radii.map(
-    (_, r) => discSurfaceIntegral(bounds[r + 1]!, h) - discSurfaceIntegral(Math.max(0, bounds[r]!), h),
+    (_, r) =>
+      discSurfaceIntegral(bounds[r + 1]!, h) - discSurfaceIntegral(Math.max(0, bounds[r]!), h),
   );
   const sum = raw.reduce((a, b) => a + b, 0);
   return raw.map((w) => w / sum);
@@ -438,16 +441,23 @@ function smoothstep01(t: number): number {
 }
 
 /** armStarSample's ridge angle: log-spiral phase + meander + (gated) high-frequency wave. */
-function armRidgeAngle(logR: number, geometry: GalaxyFieldGeometry, arm: GalaxyFieldArmRecord): number {
+function armRidgeAngle(
+  logR: number,
+  geometry: GalaxyFieldGeometry,
+  arm: GalaxyFieldArmRecord,
+): number {
   const angle =
-    arm.phase + arm.pitch * logR + arm.meanderAmp * Math.sin(arm.meanderFreq * logR * 2 + arm.meanderPhase);
+    arm.phase +
+    arm.pitch * logR +
+    arm.meanderAmp * Math.sin(arm.meanderFreq * logR * 2 + arm.meanderPhase);
   // waveAmount is 0 for most presets, in which case this term is 0 too — no
   // separate gate needed, unlike the WGSL source's `if` (a branch that only
   // exists there to skip four sin() calls per star).
   return (
     angle +
     geometry.waveAmount *
-      (Math.sin(arm.waveF1 * logR + arm.waveP1) * 0.16 + Math.sin(arm.waveF2 * logR + arm.waveP2) * 0.09)
+      (Math.sin(arm.waveF1 * logR + arm.waveP1) * 0.16 +
+        Math.sin(arm.waveF2 * logR + arm.waveP2) * 0.09)
   );
 }
 
@@ -457,29 +467,47 @@ function armRidgeAngle(logR: number, geometry: GalaxyFieldGeometry, arm: GalaxyF
  * curvature sample (`deriveArmBlobCount`) and the actual placement below so
  * both agree on what "the ridge" is by construction, not by staying in sync.
  */
-function armRidgeCurvePoint(logR: number, geometry: GalaxyFieldGeometry, arm: GalaxyFieldArmRecord): Vec3 {
+function armRidgeCurvePoint(
+  logR: number,
+  geometry: GalaxyFieldGeometry,
+  arm: GalaxyFieldArmRecord,
+): Vec3 {
   const radius = geometry.armStartRadius * Math.exp(logR);
   const angle = armRidgeAngle(logR, geometry, arm);
   return [radius * Math.cos(angle), warpHeight(radius, angle, geometry), radius * Math.sin(angle)];
 }
 
 /** The arm's true warped centre at a given radius — see `armRidgeCurvePoint`. */
-function armCurvePos(radius: number, geometry: GalaxyFieldGeometry, arm: GalaxyFieldArmRecord): Vec3 {
+function armCurvePos(
+  radius: number,
+  geometry: GalaxyFieldGeometry,
+  arm: GalaxyFieldArmRecord,
+): Vec3 {
   return armRidgeCurvePoint(Math.log(radius / geometry.armStartRadius), geometry, arm);
 }
 
 /** armStarSample's inner/outer smoothstep brightness envelope, this arm's own fadeRadius (rec0.w). */
-function armFadeEnvelope(radius: number, geometry: GalaxyFieldGeometry, arm: GalaxyFieldArmRecord): number {
+function armFadeEnvelope(
+  radius: number,
+  geometry: GalaxyFieldGeometry,
+  arm: GalaxyFieldArmRecord,
+): number {
   const innerT = (radius - geometry.armStartRadius) / geometry.armInnerRampW;
-  const outerT = (radius - geometry.armFullRadius) / Math.max(0.001, arm.fadeRadius - geometry.armFullRadius);
+  const outerT =
+    (radius - geometry.armFullRadius) / Math.max(0.001, arm.fadeRadius - geometry.armFullRadius);
   return smoothstep01(innerT) * (1 - smoothstep01(outerT));
 }
 
 /** armStarSample's along-arm low-frequency modulation; 1 (no modulation) when clumpAmount is 0. */
-function armClumpMod(logR: number, geometry: GalaxyFieldGeometry, arm: GalaxyFieldArmRecord): number {
+function armClumpMod(
+  logR: number,
+  geometry: GalaxyFieldGeometry,
+  arm: GalaxyFieldArmRecord,
+): number {
   if (geometry.clumpAmount <= 0) return 1;
   const noise =
-    Math.sin(logR * arm.clumpF1 + arm.clumpP1) * 0.6 + Math.sin(logR * arm.clumpF2 + arm.clumpP2) * 0.4;
+    Math.sin(logR * arm.clumpF1 + arm.clumpP1) * 0.6 +
+    Math.sin(logR * arm.clumpF2 + arm.clumpP2) * 0.4;
   return 1 - geometry.clumpAmount * (0.5 - 0.5 * noise);
 }
 
@@ -500,8 +528,14 @@ const ARM_WIDTH_FLOOR_H = 0.017;
 const ARM_WIDTH_SLOPE = 0.036;
 
 /** This arm's cross-section sigma at a radius — same formula the blob placement's `sigmas.across` uses. */
-function armCrossSigma(radius: number, geometry: GalaxyFieldGeometry, tuning: GalaxyFieldTuning): number {
-  return (ARM_WIDTH_FLOOR_H * geometry.diskScaleLen + ARM_WIDTH_SLOPE * radius) * tuning.armWidthScale;
+function armCrossSigma(
+  radius: number,
+  geometry: GalaxyFieldGeometry,
+  tuning: GalaxyFieldTuning,
+): number {
+  return (
+    (ARM_WIDTH_FLOOR_H * geometry.diskScaleLen + ARM_WIDTH_SLOPE * radius) * tuning.armWidthScale
+  );
 }
 
 /** Points to densely re-sample the ridge at, to estimate curvature — see `deriveArmBlobCount`. */
@@ -565,7 +599,8 @@ function deriveArmBlobCount(
     const v2: Vec3 = [p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]];
     const cross = cross3(v1, v2);
     const area = 0.5 * Math.hypot(cross[0], cross[1], cross[2]);
-    const kappa = sideA > 1e-12 && sideB > 1e-12 && sideC > 1e-12 ? (4 * area) / (sideA * sideB * sideC) : 0;
+    const kappa =
+      sideA > 1e-12 && sideB > 1e-12 && sideC > 1e-12 ? (4 * area) / (sideA * sideB * sideC) : 0;
     if (kappa <= 1e-9) continue; // straight here — no curvature bound, any spacing sags 0
 
     const sigma = armCrossSigma(radii[i]!, geometry, tuning);

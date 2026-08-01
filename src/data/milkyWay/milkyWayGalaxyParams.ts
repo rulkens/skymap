@@ -62,7 +62,7 @@ export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams = {
   armAges: [1.0, 0.2, 1.0, 0.2],
   bulgeSize: 0.45,
   bulgeFalloff: 0.7,
-  dust: 0.5,
+  spriteDust: 0.5,
   dustNoise: 0.5,
   dustNoiseScale: 1.65,
   hii: 1.35,
@@ -90,4 +90,13 @@ export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams = {
   radius: 1.05,
   starCount: 150000,
   seed: MILKY_WAY_GENERATION_SEED,
+  // tau at the floor of the measured 0.5–1 face-on range — a deliberately
+  // subtle start. heightRatio 0.35 because the MW's dust layer is notably
+  // thin: ~100–134 pc scale height vs the ~314 pc stellar sigma (Drimmel &
+  // Spergel 2001; Misiriotis et al. 2006).
+  dust: {
+    tau: 0.5,
+    scaleLenRatio: 1.5,
+    heightRatio: 0.35,
+  },
 };

@@ -3,7 +3,7 @@
  * populations the generation compute shaders draw, mirroring
  * `carveStarLayout`'s shape (see its docblock for why carving lives here,
  * CPU-side, ahead of any GPU dispatch). Every dust population is gated on
- * the same outer condition that governs dust at all — `(params.dust ?? 1) >
+ * the same outer condition that governs dust at all — `(params.spriteDust ?? 1) >
  * 0 && category !== 'elliptical'` — so an ineligible combination returns the
  * empty layout up front rather than evaluating a table of formulas that
  * would all come out zero anyway.
@@ -18,20 +18,20 @@
  * so the shader always emits ~budget particles regardless of how sparse the
  * accept rate is — a deliberate departure from a candidate cap, which would
  * under-emit in seed-limited regimes.
- *  - armDust: `floor(30000*dust/g^2)` for spiral/barred with a nonzero arm
+ *  - armDust: `floor(30000*spriteDust/g^2)` for spiral/barred with a nonzero arm
  *    budget. The `armStarCount > 0` gate mirrors the shader, which reads its
  *    candidate space from the spiralArms star range and dies when that range
  *    is absent — reserving budget slots for a galaxy with no arm seeds to
  *    sample would be pure dead capacity.
- *  - barDust: `floor(9000*dust/g^2)` when the barred bar has nonzero length
+ *  - barDust: `floor(9000*spriteDust/g^2)` when the barred bar has nonzero length
  *    — gated on the bar geometry rather than `category` directly, mirroring
  *    the shader population's own `barLength > 0` guard.
- *  - lenticularNucDust: `floor(12000*dust/g^2)` for lenticular galaxies,
+ *  - lenticularNucDust: `floor(12000*spriteDust/g^2)` for lenticular galaxies,
  *    independent of the ring gate below.
  *  - lenticularRingDust: `floor(34000*dustRingStrength/g^2)` for lenticular
  *    galaxies, only when `dustRingStrength > 0` — a Sombrero-style ring is
- *    driven by its own strength knob, not `dust`.
- *  - irregularDust: `floor(16000*dust/g^2)` for irregular galaxies with a
+ *    driven by its own strength knob, not `spriteDust`.
+ *  - irregularDust: `floor(16000*spriteDust/g^2)` for irregular galaxies with a
  *    nonzero clump budget, the same resample-to-budget and
  *    `armStarCount > 0` gate as armDust above (the clump seeds live in the
  *    irregularClumps star range, sized by `armStarCount`).
@@ -65,7 +65,7 @@ const DUST_RANGE_SPECS: readonly DustRangeSpec[] = [
     stride: 1,
     iterations: (category, params, budget, g) =>
       (category === 'spiral' || category === 'barred') && budget.armStarCount > 0
-        ? Math.floor((30000 * (params.dust ?? 1)) / (g * g))
+        ? Math.floor((30000 * (params.spriteDust ?? 1)) / (g * g))
         : 0,
   },
   {
@@ -73,14 +73,14 @@ const DUST_RANGE_SPECS: readonly DustRangeSpec[] = [
     stride: 1,
     iterations: (category, params, _budget, g) =>
       barLengthOf(category, outerRadiusOf(params), params.barStrength) > 0
-        ? Math.floor((9000 * (params.dust ?? 1)) / (g * g))
+        ? Math.floor((9000 * (params.spriteDust ?? 1)) / (g * g))
         : 0,
   },
   {
     popId: POPULATION_IDS.lenticularNucDust,
     stride: 1,
     iterations: (category, params, _budget, g) =>
-      category === 'lenticular' ? Math.floor((12000 * (params.dust ?? 1)) / (g * g)) : 0,
+      category === 'lenticular' ? Math.floor((12000 * (params.spriteDust ?? 1)) / (g * g)) : 0,
   },
   {
     popId: POPULATION_IDS.lenticularRingDust,
@@ -95,7 +95,7 @@ const DUST_RANGE_SPECS: readonly DustRangeSpec[] = [
     stride: 1,
     iterations: (category, params, budget, g) =>
       category === 'irregular' && budget.armStarCount > 0
-        ? Math.floor((16000 * (params.dust ?? 1)) / (g * g))
+        ? Math.floor((16000 * (params.spriteDust ?? 1)) / (g * g))
         : 0,
   },
 ];
@@ -105,7 +105,7 @@ export function carveDustLayout(
   params: GalaxyParams,
   budget: StarBudget,
 ): GenerationLayout {
-  const dustAmount = params.dust ?? 1;
+  const dustAmount = params.spriteDust ?? 1;
   if (!(dustAmount > 0) || category === 'elliptical') {
     return { ranges: [], capacity: 0 };
   }

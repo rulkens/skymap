@@ -31,7 +31,7 @@
  * | youngStars | 0.5 | model.js:167 |
  * | hii | 1 | model.js:303 |
  * | metallicity | 0.5 | model.js:131 |
- * | dust | 1 | model.js:488 |
+ * | spriteDust | 1 | model.js:488 |
  * | dustNoise | 0.6 | model.js:505 |
  * | dustNoiseScale | 1 | model.js:506 |
  * | dustRing | 0.72 | model.js:572 |
@@ -47,7 +47,12 @@
  * | asymSeed | `((asymSeed\|0) \|\| 331) >>> 0` | model.js:180 |
  * | clumpSeed | 911 | model.js:296 |
  * | waveSeed | 777 | model.js:295 |
+ *
+ * `dust` (the analytic dust-lane section) has no row above: absent means the
+ * point-of-use default, `DEFAULT_GALAXY_DUST_PARAMS`, not a spike knob.
  */
+
+import type { GalaxyDustParams } from './GalaxyDustParams';
 
 export type GalaxyParams = {
   /** Hubble type: 'Sa'..'Sc', 'SBa'..'SBc', 'E0'..'E7', 'S0', 'Irr'. */
@@ -94,12 +99,18 @@ export type GalaxyParams = {
   readonly youngStars?: number;
   readonly metallicity?: number;
   readonly hii?: number;
-  readonly dust?: number;
+  /**
+   * Legacy sprite-generator dust density (model.js:488). Renamed off the bare
+   * `dust` name so the analytic dust-lane section below can own it instead.
+   */
+  readonly spriteDust?: number;
   readonly dustNoise?: number;
   readonly dustNoiseScale?: number;
   readonly dustRing?: number;
   readonly dustRingWidth?: number;
   readonly dustRingStrength?: number;
+  /** Analytic dust lane. Absent means `DEFAULT_GALAXY_DUST_PARAMS` (point of use). */
+  readonly dust?: GalaxyDustParams;
   readonly globularCount?: number;
   readonly globularSize?: number;
   readonly globularBright?: number;

@@ -14,10 +14,11 @@
  * for the same reasoning on the tool side).
  *
  * `dustBuf` is nullable: a galaxy category ineligible for dust (elliptical, or
- * `dust <= 0`) carves an empty dust layout and gets no buffer. The Milky Way
- * preset (SBb, `dust = 0.5`) always carves dust, so this is null-in-principle
- * rather than null-in-practice — but the type stays honest so a future preset
- * change can't silently produce an invalid zero-size buffer.
+ * `spriteDust <= 0`) carves an empty dust layout and gets no buffer. The
+ * Milky Way preset (SBb, `spriteDust = 0.5`) always carves dust, so this is
+ * null-in-principle rather than null-in-practice — but the type stays honest
+ * so a future preset change can't silently produce an invalid zero-size
+ * buffer.
  */
 export type MilkyWayCloudBuffers = {
   readonly starBuf: GPUBuffer;

@@ -16,14 +16,14 @@ import type { GalaxyCategory } from '../../../../src/@types/galaxy/GalaxyCategor
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 
 describe('carveDustLayout', () => {
-  it('Sc default params: armDust iterations = floor(30000*dust/grainScale^2) (the budget, not the candidate cap)', () => {
+  it('Sc default params: armDust iterations = floor(30000*spriteDust/grainScale^2) (the budget, not the candidate cap)', () => {
     const category: GalaxyCategory = 'spiral';
     const params: GalaxyParams = { type: 'Sc', starCount: 400000 };
     const budget = splitStarBudget(category, params);
     const layout = carveDustLayout(category, params, budget);
 
     const g = grainScale(budget.totalStars);
-    const dustAmount = params.dust ?? 1;
+    const dustAmount = params.spriteDust ?? 1;
     // Resample-to-budget: one output slot per budgeted particle, no min() cap
     // against armStarCount — the GPU resamples the candidate space per slot.
     const expected = Math.floor((30000 * dustAmount) / (g * g));
@@ -43,8 +43,8 @@ describe('carveDustLayout', () => {
     expect(layout.ranges.some((r) => r.popId === POPULATION_IDS.armDust)).toBe(false);
   });
 
-  it('elliptical or dust 0 gives an empty layout with capacity 0', () => {
-    const paramsZeroDust: GalaxyParams = { type: 'Sc', starCount: 400000, dust: 0 };
+  it('elliptical or spriteDust 0 gives an empty layout with capacity 0', () => {
+    const paramsZeroDust: GalaxyParams = { type: 'Sc', starCount: 400000, spriteDust: 0 };
     const budgetZeroDust = splitStarBudget('spiral', paramsZeroDust);
     expect(carveDustLayout('spiral', paramsZeroDust, budgetZeroDust)).toEqual({
       ranges: [],
@@ -96,14 +96,14 @@ describe('carveDustLayout', () => {
     ]);
   });
 
-  it('Irr has only irregularDust sized to floor(16000*dust/g^2) (budget, not the candidate cap)', () => {
+  it('Irr has only irregularDust sized to floor(16000*spriteDust/g^2) (budget, not the candidate cap)', () => {
     const category: GalaxyCategory = 'irregular';
     const params: GalaxyParams = { type: 'Irr', starCount: 400000 };
     const budget = splitStarBudget(category, params);
     const layout = carveDustLayout(category, params, budget);
 
     const g = grainScale(budget.totalStars);
-    const dustAmount = params.dust ?? 1;
+    const dustAmount = params.spriteDust ?? 1;
     // Resample-to-budget: the full budget, not min(armStarCount, budget).
     const expected = Math.floor((16000 * dustAmount) / (g * g));
 

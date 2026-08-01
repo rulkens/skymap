@@ -185,7 +185,7 @@ describe('packGenerationUniforms', () => {
   });
 
   it('star and dust range lanes mirror the carve fns', () => {
-    const params: GalaxyParams = { type: 'SBb', starCount: 150000, dust: 0.5 };
+    const params: GalaxyParams = { type: 'SBb', starCount: 150000, spriteDust: 0.5 };
     const category = classifyHubbleType(params.type);
     const budget = splitStarBudget(category, params);
     const starLayout = carveStarLayout(category, params, budget);

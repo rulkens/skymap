@@ -11,6 +11,7 @@
  * package, model layer included: never own your own entropy source.
  */
 
+import type { GalaxyDustParams } from '../../../../src/@types/galaxy/GalaxyDustParams';
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import { PARAM_SPEC } from './paramSpec';
 import { classifyHubbleType } from '../../../../src/services/gpu/galaxy/classifyHubbleType';
@@ -80,5 +81,14 @@ export function randomGalaxyParams(
   const clumpSeed = (rng() * 1e9) | 0;
   const waveSeed = (rng() * 1e9) | 0;
 
-  return { type, ...sampled, hii, seed, asymSeed, clumpSeed, waveSeed };
+  // The randomizer stays inside the MEASURED ranges (GalaxyDustParams'
+  // docblock); the sliders' wider spans exist for exploration, not for this
+  // draw.
+  const dust: GalaxyDustParams = {
+    tau: 0.2 + rng() * 0.8,
+    scaleLenRatio: 1.4 + rng() * 0.35,
+    heightRatio: 0.25 + rng() * 0.5,
+  };
+
+  return { type, ...sampled, hii, seed, asymSeed, clumpSeed, waveSeed, dust };
 }

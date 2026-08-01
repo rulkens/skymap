@@ -47,7 +47,7 @@ export const PARAM_SPEC: Readonly<Partial<Record<keyof GalaxyParams & string, Pa
   armClump: { min: 0, max: 1, step: 0.02 },
   armWave: { min: 0, max: 1, step: 0.02 },
   barStrength: { min: 0.4, max: 1.6, step: 0.05 },
-  dust: { min: 0, max: 0.7, step: 0.05 },
+  spriteDust: { min: 0, max: 0.7, step: 0.05 },
   dustNoise: { min: 0, max: 1, step: 0.02 },
   dustNoiseScale: { min: 0.3, max: 3, step: 0.05 },
   youngStars: { min: 0, max: 1, step: 0.02 },

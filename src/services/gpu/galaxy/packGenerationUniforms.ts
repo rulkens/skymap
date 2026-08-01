@@ -227,7 +227,7 @@ export function packGenerationUniforms(
   const armInnerRampW = Math.max(bulgeRadius * 0.6, outerRadius * 0.14);
 
   // --- Dust scalar group, shared by every dust population the shader draws
-  const dustAmount = params.dust ?? 1;
+  const dustAmount = params.spriteDust ?? 1;
   const dustNoiseAmt = params.dustNoise ?? 0.6;
   const noiseFreq = (2.4 * (params.dustNoiseScale ?? 1)) / outerRadius;
   const clumpAmount = params.armClump ?? 0.5;

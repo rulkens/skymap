@@ -15,8 +15,8 @@ import { classifyHubbleType } from '../../../../src/services/gpu/galaxy/classify
 export function hubbleTypePatch(type: string): Partial<GalaxyParams> {
   const category = classifyHubbleType(type);
 
-  if (category === 'lenticular') return { type, dust: 0.15 };
-  if (category === 'elliptical') return { type, dust: 0 };
+  if (category === 'lenticular') return { type, spriteDust: 0.15 };
+  if (category === 'elliptical') return { type, spriteDust: 0 };
   if (category === 'irregular') return { type, hii: 0.1 };
 
   if (category === 'spiral' || category === 'barred') {
