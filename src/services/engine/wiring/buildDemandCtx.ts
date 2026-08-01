@@ -42,10 +42,13 @@ export function buildDemandCtx(state: EngineState): DemandCtx {
     // The previous frame's produced world eye position — the one proximity read
     // surface (see DemandCtx surface 4). `lastPose` is constructed +
     // placeholder-seeded in `engine.ts`, so it is never null. Derived with the
-    // SAME `assembleOrbitCamera(pose, projection, frameBasis)` the frame runs for
-    // `drawCamPos` (see frameContext.ts), so a proximity demand/release
+    // SAME `assembleOrbitCamera(pose, projection, poseBasis, upBasis)` the frame
+    // runs for `drawCamPos` (see frameContext.ts), so a proximity demand/release
     // predicate's demand-time read agrees byte-for-byte with the draw-time camera
     // — deriving it a second way here would risk the two silently diverging.
+    // `.position` only ever decodes through `poseBasis`, so `upBasis` is a
+    // don't-care here — passed the same steady value for symmetry with the draw
+    // path's call shape, not because this read depends on it.
     // `.position` is a fresh writable tuple per call; widening it to
     // `Readonly<Vec3>` hands predicates a read-only view without a copy.
     //
@@ -58,6 +61,7 @@ export function buildDemandCtx(state: EngineState): DemandCtx {
     cameraPosMpc: assembleOrbitCamera(
       state.cameraRuntime.lastPose.current,
       state.cameraRuntime.projection,
+      ORIENTATION_FRAMES[state.settings.orientation],
       ORIENTATION_FRAMES[state.settings.orientation],
     ).position,
     // The instant the last frame derived its bodies at — the single-writer live

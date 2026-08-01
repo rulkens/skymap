@@ -436,7 +436,7 @@ describe('runFrame — orientation-frame roll', () => {
     for (const t of [0, 250, 500, 750, 1000]) {
       runFrame(state, deps, t);
       const B = state.cameraRuntime.frameBasis.current;
-      const cam = assembleOrbitCamera(state.cameraRuntime.lastPose.current, projection, B);
+      const cam = assembleOrbitCamera(state.cameraRuntime.lastPose.current, projection, B, B);
       samples.push({
         t,
         target: [...cam.target],
@@ -513,7 +513,12 @@ describe('runFrame — orientation-frame roll', () => {
       expect(Number.isFinite(pose.pitch)).toBe(true);
       expect(Math.abs(pose.pitch)).toBeLessThanOrEqual(PITCH_LIMIT + 1e-9);
 
-      const cam = assembleOrbitCamera(pose, projection, state.cameraRuntime.frameBasis.current);
+      const cam = assembleOrbitCamera(
+        pose,
+        projection,
+        state.cameraRuntime.frameBasis.current,
+        state.cameraRuntime.frameBasis.current,
+      );
       for (const c of cam.position) expect(Number.isFinite(c)).toBe(true);
       // The view-projection is where a degenerate near-pole lookAt would surface
       // NaN; assert every entry is finite.

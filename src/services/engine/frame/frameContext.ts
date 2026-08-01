@@ -79,7 +79,7 @@
  * a second time (which would advance the clock twice on the same frame — the
  * clock is idempotent for the same descriptor reference, but two calls is still
  * conceptually wrong). `deriveFrameContext` is therefore side-effect-free again:
- * it only calls `assembleOrbitCamera(pose, projection, frameBasis)`,
+ * it only calls `assembleOrbitCamera(pose, projection, frameBasis, frameBasis)`,
  * `computeViewProj`, and `deriveSlabs` to build the frame's slab table.
  */
 
@@ -101,10 +101,13 @@ import { deriveSlabs } from './slabs';
  * `pose` is the pose that `runFrame` produced earlier in the same frame (via
  * `runCameraDrivers`); `projection` is the live engine Resource that carries
  * fovYRad, aspect, near, and far; `frameBasis` is this frame's frame-local →
- * world orientation basis (which pole is "up"). The three are merged into a full
- * `OrbitCamera` via `assembleOrbitCamera`, which `computeViewProj` then
- * projects. Threading the basis here means the demand-time proximity read
- * (`buildDemandCtx`) and the draw-time camera decode through the same pole.
+ * world orientation basis (which pole is "up"). It is fed into
+ * `assembleOrbitCamera` as BOTH `poseBasis` and `upBasis` — this function
+ * takes only one basis value because nothing upstream produces two yet; a
+ * later task feeds `deriveFrameContext` the steady committed basis and the
+ * live mid-slerp `B(t)` separately. Threading the basis here means the
+ * demand-time proximity read (`buildDemandCtx`) and the draw-time camera
+ * decode through the same pole.
  *
  * The bootstrap gate still reads `state.cam` for non-null (it is non-null once
  * `wireInput` runs); `state.cam` is the drag register, NOT the source of the
@@ -156,7 +159,7 @@ export function deriveFrameContext(
   // quantity below (vp, slabs, drawCamPos) decodes through the same pole the
   // draw uses. The returned camera is a fresh object — it does NOT alias
   // `state.cam` (the drag register) or any frozen store array.
-  const cam = assembleOrbitCamera(pose, projection, frameBasis);
+  const cam = assembleOrbitCamera(pose, projection, frameBasis, frameBasis);
 
   // Snapshot-derive everything the caller would otherwise compute locally.
   // `runFrame` and `renderFrame` both read these off `ctx`, so the two

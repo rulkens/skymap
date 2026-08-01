@@ -345,8 +345,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // here so no two consumers can drift on how a frame roll is interpolated — the
   // resolved value flows to three readers: the boxed `frameBasis` Resource (read
   // by the saga context + `applySceneEffect` to seed the next switch's `fromQuat`),
-  // the drag register `state.cam.frameBasis` (so a grab THIS frame decodes through
-  // the same pole), and `deriveFrameContext` below (the draw + demand decode).
+  // the drag register `state.cam.poseBasis` / `state.cam.upBasis` (so a grab THIS
+  // frame decodes through the same pole), and `deriveFrameContext` below (the
+  // draw + demand decode). Both `state.cam` fields get the same value here — see
+  // `OrbitCameraInit.d.ts` for why they're split at all.
   //
   // `frameTweenElapsed` (inside `resolveFrameBasis`) is the single per-frame tick
   // of the frame-roll clock — reference-identity reset, exactly like `tweenElapsed`.
@@ -360,7 +362,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   if (state.cam) {
     // Pre-bootstrap `cam` is null; a grab is impossible until wireInput attaches
     // controls, so there is no decode to keep in sync until then.
-    state.cam.frameBasis = frameBasis;
+    state.cam.poseBasis = frameBasis;
+    state.cam.upBasis = frameBasis;
   }
 
   // Clear a finished frame roll exactly once, mirroring the camera-tween

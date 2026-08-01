@@ -15,7 +15,7 @@ import { rotateVec3ByTightMat3 } from '../math/rotateVec3ByTightMat3';
 
 // Module-scope scratch reused every call so the per-frame path never allocates.
 // `scratchDir` holds the frame-local decode; `scratchWorld` holds it rotated
-// into world by `frameBasis` (a separate buffer because the matrix–vector
+// into world by `poseBasis` (a separate buffer because the matrix–vector
 // product reads all three input components while writing the output).
 const scratchDir: Vec3 = [0, 0, 0];
 const scratchWorld: Vec3 = [0, 0, 0];
@@ -39,12 +39,14 @@ const scratchWorld: Vec3 = [0, 0, 0];
  *
  * `yawPitchToDir` decodes into the camera's *frame-local* space, whose zenith is
  * local +Y. `rotateVec3ByTightMat3` rotates that direction into world by
- * `cam.frameBasis` (dir_world = frameBasis · dir_local), or passes it through
+ * `cam.poseBasis` (dir_world = poseBasis · dir_local), or passes it through
  * unchanged when no basis is set — see that module for why the registry's
  * TIGHT 9-float `Mat3` can't go through wgpu-matrix's `vec3.transformMat3`.
  * Absent a basis the path stays exactly the pre-feature `yawPitchToDir` →
  * `addScaled` two-liner (byte-identical for every caller that never sets a
- * frame).
+ * frame). Deliberately `poseBasis`, not `upBasis`: this decode must stay
+ * pinned to the steady committed frame even while `upBasis` mid-slerps during
+ * an orientation switch (see `OrbitCameraInit.d.ts`).
  *
  * @param cam  The camera to update in-place.
  */
@@ -53,7 +55,7 @@ export function updatePosition(cam: OrbitCamera): void {
   // rotated into world — both written into module scratch so the per-frame
   // path stays allocation-free.
   const dir = yawPitchToDir(cam.yaw, cam.pitch, scratchDir);
-  const world = rotateVec3ByTightMat3(dir, cam.frameBasis, scratchWorld);
+  const world = rotateVec3ByTightMat3(dir, cam.poseBasis, scratchWorld);
   // position = target + distance*world. vec3.addScaled(a, b, scale, dst)
   // computes  dst = a + b*scale.
   vec3.addScaled(cam.target, world, cam.distance, cam.position);

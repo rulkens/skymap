@@ -96,8 +96,8 @@ export type DemandCtx = {
    * predicates gate on `distanceMpc(cameraPosMpc, bodyPos)` against a per-body
    * load radius, loading a texture as the camera closes on its body and evicting
    * it as the camera leaves the neighbourhood. Derived from the same
-   * `assembleOrbitCamera(pose, projection, frameBasis)` the frame uses for
-   * `drawCamPos`, so demand-time proximity and draw-time position agree.
+   * `assembleOrbitCamera(pose, projection, poseBasis, upBasis)` the frame uses
+   * for `drawCamPos`, so demand-time proximity and draw-time position agree.
    */
   cameraPosMpc: Readonly<Vec3>;
   /**

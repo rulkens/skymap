@@ -10,8 +10,10 @@
  *
  * The threaded-pose variant (binding decision 1) means `deriveFrameContext`
  * does NOT re-call `runCameraDrivers` internally; it only calls
- * `assembleOrbitCamera(pose, projection, frameBasis)` + `computeViewProj`. The
- * `cam` on the ready context is the assembled camera, NOT `state.cam`.
+ * `assembleOrbitCamera(pose, projection, frameBasis, frameBasis)` (the same
+ * resolved basis feeds both `poseBasis` and `upBasis` — see
+ * `OrbitCameraInit.d.ts`) + `computeViewProj`. The `cam` on the ready context
+ * is the assembled camera, NOT `state.cam`.
  *
  * Tests also verify the bootstrap gate still works (cam=null → not-ready) even
  * though the rendered camera comes from the assembled pose, not `state.cam`.
@@ -221,7 +223,7 @@ describe('deriveFrameContext — ready branch', () => {
     );
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
-    const expected = computeViewProj(assembleOrbitCamera(pose, PROJECTION, BASIS));
+    const expected = computeViewProj(assembleOrbitCamera(pose, PROJECTION, BASIS, BASIS));
     expect(Array.from(ctx.vp)).toEqual(Array.from(expected));
   });
 
@@ -239,7 +241,7 @@ describe('deriveFrameContext — ready branch', () => {
     );
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
-    const cam = assembleOrbitCamera(pose, PROJECTION, BASIS);
+    const cam = assembleOrbitCamera(pose, PROJECTION, BASIS, BASIS);
     const expected = deriveSlabs(cam, computeViewProj(cam));
     expect(ctx.slabs).toHaveLength(2);
     expect(ctx.slabs[0]?.index).toBe(NEAR0);

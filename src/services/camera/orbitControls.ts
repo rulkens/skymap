@@ -405,14 +405,14 @@ export function attachOrbitControls(
       // the orthonormal `up` axis (`right × forward`, recomputed orthogonal
       // to forward + right rather than blindly using world-up, so it handles
       // tilt cases correctly when pitch is non-zero). Roll is 0 here; the
-      // reference up is the frame pole (`frameUp(cam.frameBasis)`; world +Y
+      // reference up is the frame pole (`frameUp(cam.upBasis)`; world +Y
       // absent a basis), so the drag pan tracks whichever frame is active.
       vec3.subtract(cam.target, cam.position, forwardScratch);
       vec3.normalize(forwardScratch, forwardScratch);
       const basis = imagePlaneBasis(
         forwardScratch,
         0,
-        frameUp(cam.frameBasis, upRefScratch),
+        frameUp(cam.upBasis, upRefScratch),
         basisScratch,
       );
 
