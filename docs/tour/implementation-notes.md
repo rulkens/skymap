@@ -25,7 +25,7 @@ Newest first. Primitives: [`../animation/clip-primitives.md`](../animation/clip-
   the local supercluster, which defines that plane) → galactic (home again)
   holds every subject much closer to its frame's equator; full per-subject
   latitude/roll-fraction table in the frame-invariant-camera-poses spec/plan
-  (`docs/superpowers/specs/2026-08-01-frame-invariant-camera-poses.md`).
+  (`docs/superpowers/specs/completed/2026-08-01-frame-invariant-camera-poses.md`).
   `frameTo` goes IN the clip, never on the beat, and fires as early as
   possible in each beat that changes frame — the roll itself is invisible
   during the opening's cold-open (sprite sub-pixel) and, for the other two,

@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript, Vitest, redux-toolkit + typed-redux-saga, wgpu-matrix.
 
-**Spec:** [`docs/superpowers/specs/2026-08-01-frame-invariant-camera-poses.md`](../specs/2026-08-01-frame-invariant-camera-poses.md)
+**Spec:** [`docs/superpowers/specs/completed/2026-08-01-frame-invariant-camera-poses.md`](../../specs/completed/2026-08-01-frame-invariant-camera-poses.md)
 
 ## Global Constraints
 
@@ -32,12 +32,12 @@ The aim is encoded through `frameBasis` (`orbitAnglesLookingAlong`, lines 353 an
 
 **Interfaces:** no signature change — `BuildParams.frameBasis` already exists and is already threaded in.
 
-- [ ] Add `flyPath starts at the live eye under a non-identity frame`: build a track with `frameBasis: ORIENTATION_FRAMES.ecliptic`, `start = { target: [0,0,0], distance: 10, yaw: 0.3, pitch: 0.1 }`, waypoints `[{ at: [100,20,0], distance: 5 }, { at: [200,-40,60], distance: 8 }]`. Reconstruct the eye the renderer does — `target + distance · (frameBasis · yawPitchToDir(yaw, pitch))` — from `sample(0)` and assert it equals the live eye `[2.9, 1.0, 9.5]` (3 dp).
-- [ ] Add `flyPath settles at the framing distance from its destination under a non-identity frame`: same track, assert the reconstructed eye at `sample(totalSec)` is 8.0 from `[200,-40,60]` (3 dp).
-- [ ] `npm test -- buildPathTrack` → RED on the settle assertion (≈14.6). The `t=0` assertion does NOT go red: the two omissions cancel there (align-in weight 0 ⇒ the aim is the live pose and the spline sits on knot 0, so the wrong knot and wrong target subtract out). Keep it as a guard against fixing only one of the two sites.
-- [ ] Rotate the frame-local direction through `frameBasis` at both sites, reusing the tight column-major product spelled out at `updatePosition.ts:69-71` (the registry `Mat3` is 9-float, not wgpu-matrix's 12-float padded layout — `vec3.transformMat3` would read garbage).
-- [ ] `npm test -- buildPathTrack` → GREEN, and the pre-existing identity-frame cases unchanged.
-- [ ] Commit.
+- [x] Add `flyPath starts at the live eye under a non-identity frame`: build a track with `frameBasis: ORIENTATION_FRAMES.ecliptic`, `start = { target: [0,0,0], distance: 10, yaw: 0.3, pitch: 0.1 }`, waypoints `[{ at: [100,20,0], distance: 5 }, { at: [200,-40,60], distance: 8 }]`. Reconstruct the eye the renderer does — `target + distance · (frameBasis · yawPitchToDir(yaw, pitch))` — from `sample(0)` and assert it equals the live eye `[2.9, 1.0, 9.5]` (3 dp).
+- [x] Add `flyPath settles at the framing distance from its destination under a non-identity frame`: same track, assert the reconstructed eye at `sample(totalSec)` is 8.0 from `[200,-40,60]` (3 dp).
+- [x] `npm test -- buildPathTrack` → RED on the settle assertion (≈14.6). The `t=0` assertion does NOT go red: the two omissions cancel there (align-in weight 0 ⇒ the aim is the live pose and the spline sits on knot 0, so the wrong knot and wrong target subtract out). Keep it as a guard against fixing only one of the two sites.
+- [x] Rotate the frame-local direction through `frameBasis` at both sites, reusing the tight column-major product spelled out at `updatePosition.ts:69-71` (the registry `Mat3` is 9-float, not wgpu-matrix's 12-float padded layout — `vec3.transformMat3` would read garbage).
+- [x] `npm test -- buildPathTrack` → GREEN, and the pre-existing identity-frame cases unchanged.
+- [x] Commit.
 
 ---
 
@@ -54,11 +54,11 @@ Same omission, debug-inspector side. `eyeOf` (`sampleClipPath.ts:32-39`) draws t
 
 - Produces: `sampleClipPath(clipId, data, durationSec, sampleCount, frameBasis?: Mat3): ClipPathSnapshot`
 
-- [ ] Add `inspector eye matches the rendered eye under a non-identity frame` — same reconstruction as Task 1, one sample.
-- [ ] `npm test -- sampleClipPath` → RED.
-- [ ] Thread the basis into `eyeOf` and pass it from the saga; `evaluateClip` inside already takes one.
-- [ ] `npm test -- sampleClipPath watchClipPathInspectSaga` → GREEN.
-- [ ] Commit.
+- [x] Add `inspector eye matches the rendered eye under a non-identity frame` — same reconstruction as Task 1, one sample.
+- [x] `npm test -- sampleClipPath` → RED.
+- [x] Thread the basis into `eyeOf` and pass it from the saga; `evaluateClip` inside already takes one.
+- [x] `npm test -- sampleClipPath watchClipPathInspectSaga` → GREEN.
+- [x] Commit.
 
 ---
 
@@ -84,11 +84,11 @@ Behaviour-neutral. Both fields are fed the same value; this task only creates th
 
 `npm run refactor -- rename` does **not** apply here: it resolves exported declarations only (`tools/utils/refactor/resolveSymbol.ts:48`), and `frameBasis` is a property of an exported type. Rename it by hand or via the editor's rename-symbol. The type checker is the safety net — every read site of a renamed property is a type error, so a green `npm run typecheck` means none were missed.
 
-- [ ] Rename the property on `OrbitCamera` and update every read/write site; then grep for `frameBasis` to catch what the type checker cannot see (`.wesl` sources, string literals, `vi.mock` factories, comments).
-- [ ] Add `upBasis` to `OrbitCamera` and to `assembleOrbitCamera`'s parameters; every caller passes the same value for both.
-- [ ] Reroute the five draw-time sites in the table to `cam.upBasis`.
-- [ ] `npm run typecheck && npm test` → GREEN. Test fixtures that construct an `OrbitCamera` need the field renamed too — that is expected. What must NOT change is any test's expected **values**: if an assertion's expected number or vector moves, the split changed behaviour. Stop and find out why.
-- [ ] Commit.
+- [x] Rename the property on `OrbitCamera` and update every read/write site; then grep for `frameBasis` to catch what the type checker cannot see (`.wesl` sources, string literals, `vi.mock` factories, comments).
+- [x] Add `upBasis` to `OrbitCamera` and to `assembleOrbitCamera`'s parameters; every caller passes the same value for both.
+- [x] Reroute the five draw-time sites in the table to `cam.upBasis`.
+- [x] `npm run typecheck && npm test` → GREEN. Test fixtures that construct an `OrbitCamera` need the field renamed too — that is expected. What must NOT change is any test's expected **values**: if an assertion's expected number or vector moves, the split changed behaviour. Stop and find out why.
+- [x] Commit.
 
 ---
 
@@ -105,12 +105,12 @@ Behaviour-neutral. Both fields are fed the same value; this task only creates th
 
 **Behaviour:** re-expresses `yaw`/`pitch` so the world direction from `target` toward the eye is unchanged. `target` and `distance` pass through. `from === to` (including both `undefined`) returns the input **by reference** — the identity case is the common one and must not allocate. Composition of `yawPitchToDir` under `from` and `orbitAnglesLookingAlong` under `to`; no new math.
 
-- [ ] Add `preserves the world eye direction across a basis change` — assert `to · dir(out)` equals `from · dir(in)` componentwise for an ecliptic → galactic pair.
-- [ ] Add `returns the input by reference when the bases are identical` — assert `toBe`, not `toEqual`.
-- [ ] `npm test -- reencodePose` → RED.
-- [ ] Implement.
-- [ ] `npm test -- reencodePose` → GREEN.
-- [ ] Commit.
+- [x] Add `preserves the world eye direction across a basis change` — assert `to · dir(out)` equals `from · dir(in)` componentwise for an ecliptic → galactic pair.
+- [x] Add `returns the input by reference when the bases are identical` — assert `toBe`, not `toEqual`.
+- [x] `npm test -- reencodePose` → RED.
+- [x] Implement.
+- [x] `npm test -- reencodePose` → GREEN.
+- [x] Commit.
 
 ---
 
@@ -123,11 +123,11 @@ The two fields diverge for the first time. Only during a roll.
 - Modify: `src/services/engine/frame/runFrame.ts:353-364`, `:520-532`
 - Test: `tests/services/engine/frame/runFrame.test.ts`
 
-- [ ] Add `during a frame roll the assembled camera position is unchanged while its up rotates` — drive a store with a `frameTween` in flight and a fixed `base`, run two frames, assert `cam.position` identical across them and `frameUp(cam.upBasis)` different.
-- [ ] `npm test -- runFrame` → RED.
-- [ ] Feed `poseBasis = ORIENTATION_FRAMES[rootState.settings.orientation]` and `upBasis = resolveFrameBasis(...)` to `deriveFrameContext` and to `state.cam`. `state.cameraRuntime.frameBasis.current` keeps taking `B(t)` — it seeds the next switch's `fromQuat` and must stay the live basis. (It was renamed `upBasis` at the end of the branch, once it was clear that is exclusively what it holds.)
-- [ ] `npm test -- runFrame frameContext` → GREEN.
-- [ ] Commit.
+- [x] Add `during a frame roll the assembled camera position is unchanged while its up rotates` — drive a store with a `frameTween` in flight and a fixed `base`, run two frames, assert `cam.position` identical across them and `frameUp(cam.upBasis)` different.
+- [x] `npm test -- runFrame` → RED.
+- [x] Feed `poseBasis = ORIENTATION_FRAMES[rootState.settings.orientation]` and `upBasis = resolveFrameBasis(...)` to `deriveFrameContext` and to `state.cam`. `state.cameraRuntime.frameBasis.current` keeps taking `B(t)` — it seeds the next switch's `fromQuat` and must stay the live basis. (It was renamed `upBasis` at the end of the branch, once it was clear that is exclusively what it holds.)
+- [x] `npm test -- runFrame frameContext` → GREEN.
+- [x] Commit.
 
 ---
 
@@ -146,12 +146,12 @@ The `from` argument is the **outgoing registry frame**, NOT the live basis. A st
 
 The re-encode goes ABOVE the null-runtime bail: it needs no camera, and below it a pre-bootstrap switch would persist the frame while leaving `base` in the old basis.
 
-- [ ] Add `a switch commits a pose whose world eye direction is unchanged` — assert the `commitCameraPose` payload re-decodes to the pre-switch world direction.
-- [ ] Add `a switch fired mid-roll re-expresses from the outgoing registry frame` — fire a second switch during an in-flight roll whose live basis is genuinely neither endpoint, and assert the committed pose's EYE POSITION (decoded through `ORIENTATION_FRAMES[destination]` the way `updatePosition` does) matches the pre-switch eye decoded through `ORIENTATION_FRAMES[previous]`. Verify it goes RED against a live-basis `from`; if it does not, the fixture's live basis is not distinct enough — fix the fixture, not the assertion.
-- [ ] `npm test -- watchOrientationChangeSaga` → RED.
-- [ ] Implement; the null-runtime path still degrades to `setOrientation` alone (nothing to re-express without a camera).
-- [ ] `npm test -- watchOrientationChangeSaga` → GREEN.
-- [ ] Commit.
+- [x] Add `a switch commits a pose whose world eye direction is unchanged` — assert the `commitCameraPose` payload re-decodes to the pre-switch world direction.
+- [x] Add `a switch fired mid-roll re-expresses from the outgoing registry frame` — fire a second switch during an in-flight roll whose live basis is genuinely neither endpoint, and assert the committed pose's EYE POSITION (decoded through `ORIENTATION_FRAMES[destination]` the way `updatePosition` does) matches the pre-switch eye decoded through `ORIENTATION_FRAMES[previous]`. Verify it goes RED against a live-basis `from`; if it does not, the fixture's live basis is not distinct enough — fix the fixture, not the assertion.
+- [x] `npm test -- watchOrientationChangeSaga` → RED.
+- [x] Implement; the null-runtime path still degrades to `setOrientation` alone (nothing to re-express without a camera).
+- [x] `npm test -- watchOrientationChangeSaga` → GREEN.
+- [x] Commit.
 
 ---
 
@@ -168,11 +168,11 @@ The re-encode goes ABOVE the null-runtime bail: it needs no camera, and below it
 
 - Produces: `CameraState['clip']` becomes `{ data: ClipData; frame: OrientationFrameId } | null`. The clip driver's `pose` evaluates against `ORIENTATION_FRAMES[clip.frame]` and re-encodes the result into `ORIENTATION_FRAMES[settings.orientation]`.
 
-- [ ] Add `a clip playing across an orientation switch keeps its world aim` — evaluate the same clip at the same elapsed under `orientation: 'ecliptic'` and `'galactic'` with `clip.frame: 'ecliptic'`; assert both poses decode (through their respective settings bases) to the same world direction.
-- [ ] `npm test -- cameraDrivers` → RED.
-- [ ] Add the field, thread it from the dispatch sites, and re-encode in the driver row.
-- [ ] `npm test -- cameraDrivers cameraSlice watchClipSaga visitBeatSaga` → GREEN.
-- [ ] Commit.
+- [x] Add `a clip playing across an orientation switch keeps its world aim` — evaluate the same clip at the same elapsed under `orientation: 'ecliptic'` and `'galactic'` with `clip.frame: 'ecliptic'`; assert both poses decode (through their respective settings bases) to the same world direction.
+- [x] `npm test -- cameraDrivers` → RED.
+- [x] Add the field, thread it from the dispatch sites, and re-encode in the driver row.
+- [x] `npm test -- cameraDrivers cameraSlice watchClipSaga visitBeatSaga` → GREEN.
+- [x] Commit.
 
 ---
 
@@ -189,11 +189,11 @@ The re-encode goes ABOVE the null-runtime bail: it needs no camera, and below it
 
 - Produces: `CameraTweenDescriptor` gains `frame: OrientationFrameId`, captured where the descriptor is built. The tween driver re-encodes its evaluated pose from that frame into the current one.
 
-- [ ] Add `a focus tween running across an orientation switch keeps its world aim` — same shape as Task 7's test.
-- [ ] `npm test -- focusTweenDescriptor` → RED.
-- [ ] Implement.
-- [ ] `npm test -- focusTweenDescriptor watchFocusTweenSaga watchGoHomeSaga` → GREEN.
-- [ ] Commit.
+- [x] Add `a focus tween running across an orientation switch keeps its world aim` — same shape as Task 7's test.
+- [x] `npm test -- focusTweenDescriptor` → RED.
+- [x] Implement.
+- [x] `npm test -- focusTweenDescriptor watchFocusTweenSaga watchGoHomeSaga` → GREEN.
+- [x] Commit.
 
 ---
 
@@ -210,13 +210,13 @@ The re-encode goes ABOVE the null-runtime bail: it needs no camera, and below it
 
 **Behaviour:** an unresolved effect, rewritten by `resolveClipFoci` into `spin('yaw', { by, over, ease })` where `by = bearing − liveYaw + turns · 2π`. `bearing` comes from `orbitAnglesLookingAlong(focusPos − livePose.target, frameBasis)`. `turns` defaults to 0; negative values take the long way round (the tour's existing idiom — see the `- Math.PI * 2` at `approachM31.ts:57`). Resolution follows the `lookAtId` arm at `resolveClipFoci.ts:155-165`; `compileClip` must throw on an unresolved `spinToId` exactly as it does for the other five focus-bound kinds (`compileClip.ts:277-283`).
 
-- [ ] Add `spinToId resolves to a spin whose landing yaw faces the focus` — assert `liveYaw + by` decodes to the focus direction.
-- [ ] Add `spinToId lands the same world bearing under two different bases` — resolve the same effect under ecliptic and galactic; assert both landings decode to the same world direction. This is the whole point of the arm.
-- [ ] Add `spinToId honours turns` — `turns: -1` yields a `by` exactly `2π` less than `turns: 0`.
-- [ ] Add `compileClip throws on an unresolved spinToId`.
-- [ ] `npm test -- resolveClipFoci effectHelpers compileClip` → RED.
-- [ ] Implement.
-- [ ] → GREEN. Commit.
+- [x] Add `spinToId resolves to a spin whose landing yaw faces the focus` — assert `liveYaw + by` decodes to the focus direction.
+- [x] Add `spinToId lands the same world bearing under two different bases` — resolve the same effect under ecliptic and galactic; assert both landings decode to the same world direction. This is the whole point of the arm.
+- [x] Add `spinToId honours turns` — `turns: -1` yields a `by` exactly `2π` less than `turns: 0`.
+- [x] Add `compileClip throws on an unresolved spinToId`.
+- [x] `npm test -- resolveClipFoci effectHelpers compileClip` → RED.
+- [x] Implement.
+- [x] → GREEN. Commit.
 
 ---
 
@@ -235,10 +235,10 @@ The re-encode goes ABOVE the null-runtime bail: it needs no camera, and below it
 
 **Behaviour:** with `spinTo` set, the yaw layer becomes `spinToId(spinTo, { over: durationSec, turns, ease: 'easeInOutCubic' })` and `cruiseRate` is ignored; the pitch bob is untouched. Without it, byte-identical to today. `spinTo` and `cruiseRate` together is an authoring error — throw, rather than silently picking one (the named-options header at `dwellDrift.ts:36-41` records why this file is strict about ambiguous knobs).
 
-- [ ] Add `dwellDrift with spinTo emits an unresolved spinToId on the yaw layer` and `dwellDrift with both spinTo and cruiseRate throws`.
-- [ ] `npm test -- dwellDrift` → RED.
-- [ ] Implement.
-- [ ] `npm test -- dwellDrift` → GREEN. Commit.
+- [x] Add `dwellDrift with spinTo emits an unresolved spinToId on the yaw layer` and `dwellDrift with both spinTo and cruiseRate throws`.
+- [x] `npm test -- dwellDrift` → RED.
+- [x] Implement.
+- [x] `npm test -- dwellDrift` → GREEN. Commit.
 
 ---
 
@@ -253,11 +253,11 @@ Deleted: `ARRIVAL_YAW_RAD` and `EXIT_YAW_RAD` in both `approachM31.ts` and `loca
 
 `REVEAL_NET_YAW_RAD` (`neighbourhoodReveal.ts`) was expected to survive — it is a rate, not a bearing. It did not, and the reason is worth recording: the M81 landing turned out to belong on `neighbourhoodReveal`'s dwell rather than `localGroup`'s, because the invariant is "facing M81 when the flythrough starts". Once that dwell resolves its own landing through `spinTo`, the rate it used to run at has nothing left to express, and the cross-beat coupling `localGroup` encoded by subtracting it disappears with it.
 
-- [ ] Replace the two dwell `cruiseRate` computations with `dwellDrift(DWELL_SEC, { spinTo: focusId('group-m81-group'), turns: -1 })`, preserving each beat's existing sweep direction and duration. `turns: -1` reproduces the `- Math.PI * 2` both beats apply today.
-- [ ] Replace `aimAt({ yaw: GALACTIC_DISC_YAW_RAD, pitch: GALACTIC_DISC_PITCH_RAD }, …)` in `openingTitle.ts` and `homeAgain.ts` with a `lookAtId`-style resolution of the same sightline. The opening's zero-duration `aimAt` must still snap (the cold-open idiom), and the two beats must resolve to the SAME pose — `homeAgain` exists to land back on the opening framing.
-- [ ] Update the beat module headers: the paragraphs explaining re-derivation of the constants describe machinery that no longer exists.
-- [ ] `npm run typecheck && npm test` → GREEN.
-- [ ] Commit.
+- [x] Replace the two dwell `cruiseRate` computations with `dwellDrift(DWELL_SEC, { spinTo: focusId('group-m81-group'), turns: -1 })`, preserving each beat's existing sweep direction and duration. `turns: -1` reproduces the `- Math.PI * 2` both beats apply today.
+- [x] Replace `aimAt({ yaw: GALACTIC_DISC_YAW_RAD, pitch: GALACTIC_DISC_PITCH_RAD }, …)` in `openingTitle.ts` and `homeAgain.ts` with a `lookAtId`-style resolution of the same sightline. The opening's zero-duration `aimAt` must still snap (the cold-open idiom), and the two beats must resolve to the SAME pose — `homeAgain` exists to land back on the opening framing.
+- [x] Update the beat module headers: the paragraphs explaining re-derivation of the constants describe machinery that no longer exists.
+- [x] `npm run typecheck && npm test` → GREEN.
+- [x] Commit.
 
 ---
 
@@ -270,12 +270,12 @@ Without this a tour `frameTo` permanently changes the viewer's setting.
 - Modify: `src/@types/engine/tour/SceneSnapshot.ts`, `src/state/tour/captureScene.ts`, the restore path in `src/state/tour/restoreSceneSaga.ts`
 - Test: `tests/state/tour/captureScene.test.ts`, `tests/state/tour/restoreSceneSaga.test.ts`, `tests/state/tour/guidedTourSaga.test.ts`
 
-- [ ] Add `a tour that changed the orientation restores the viewer's frame` — end-to-end through capture and restore.
-- [ ] `npm test -- captureScene restoreSceneSaga` → RED.
-- [ ] Carry `orientation` on `SceneSnapshot`, beside `focus` — NOT on `SettingsSnapshot`. `guidedTourSaga` merges a settings snapshot before every beat and `mergeSettingsSnapshot` spreads every key, so a scalar living there is raw-written back at each boundary and reverts the pole the previous beat authored. `src/state/tier/tierSlice.ts:5-12` records lifting `tier` out of settings for exactly this reason.
-- [ ] Restore must dispatch `requestOrientationChange`, never write the setting — a raw write leaves `camera.base` in the outgoing basis.
-- [ ] Add the `guidedTourSaga`-level guard: no `mergeSnapshot` payload carries `orientation`. Verify RED.
-- [ ] → GREEN. Commit.
+- [x] Add `a tour that changed the orientation restores the viewer's frame` — end-to-end through capture and restore.
+- [x] `npm test -- captureScene restoreSceneSaga` → RED.
+- [x] Carry `orientation` on `SceneSnapshot`, beside `focus` — NOT on `SettingsSnapshot`. `guidedTourSaga` merges a settings snapshot before every beat and `mergeSettingsSnapshot` spreads every key, so a scalar living there is raw-written back at each boundary and reverts the pole the previous beat authored. `src/state/tier/tierSlice.ts:5-12` records lifting `tier` out of settings for exactly this reason.
+- [x] Restore must dispatch `requestOrientationChange`, never write the setting — a raw write leaves `camera.base` in the outgoing basis.
+- [x] Add the `guidedTourSaga`-level guard: no `mergeSnapshot` payload carries `orientation`. Verify RED.
+- [x] → GREEN. Commit.
 
 ---
 
@@ -288,11 +288,11 @@ Without this a tour `frameTo` permanently changes the viewer's setting.
 
 `frameTo` goes in the clip, never on the beat. Assignment: `galactic` for the opening (holds through you-are-here), `supergalactic` from the M31 approach outward, `galactic` again for home-again. Roll duration is the visual knob; start from the existing `FRAME_TWEEN_MS` feel and expect to tune it against the user's pass.
 
-- [ ] Add `frameTo('galactic', { over })` to the opening beat's clip, before the pose snap.
-- [ ] Add `frameTo('supergalactic', { over })` to the M31-approach clip; add `frameTo('galactic', { over })` to home-again.
-- [ ] Add an entry to `docs/tour/implementation-notes.md`: the tour owns its pole, why (dwell roll fraction), and where the ladder is declared.
-- [ ] `npm run typecheck && npm test` → GREEN.
-- [ ] Commit.
+- [x] Add `frameTo('galactic', { over })` to the opening beat's clip, before the pose snap.
+- [x] Add `frameTo('supergalactic', { over })` to the M31-approach clip; add `frameTo('galactic', { over })` to home-again.
+- [x] Add an entry to `docs/tour/implementation-notes.md`: the tour owns its pole, why (dwell roll fraction), and where the ladder is declared.
+- [x] `npm run typecheck && npm test` → GREEN.
+- [x] Commit.
 
 ---
 
