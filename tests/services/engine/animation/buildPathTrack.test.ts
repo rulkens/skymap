@@ -788,8 +788,9 @@ describe('buildPathTrack', () => {
 
   // ── Frame-basis aim decode: the live eye and the derived look-at target must
   // decode through the SAME frameBasis the aim was encoded through
-  // (orbitAnglesLookingAlong), or a non-identity orientation frame pops the
-  // camera off its live position / off the destination it just framed.
+  // (orbitAnglesLookingAlong). The settle-distance test below is where a
+  // missing rotation is actually visible; the t=0 test below it is a
+  // symmetry guard, not a placement guard — see its own comment.
   describe('frame-basis aim decode', () => {
     const frameBasis = ORIENTATION_FRAMES.ecliptic;
     const start: CameraPose = { target: [0, 0, 0], distance: 10, yaw: 0.3, pitch: 0.1 };
@@ -807,12 +808,19 @@ describe('buildPathTrack', () => {
         frameBasis,
       });
 
-    it('flyPath starts at the live eye under a non-identity frame', () => {
+    // At localSec=0 the align-in weight is exactly 0, so the reported aim IS
+    // the live pose and the spline sits exactly on knot 0 — the knot-0
+    // rotation and the derived-target rotation cancel algebraically no matter
+    // which convention they share, so this assertion is INVARIANT to the
+    // original both-sites-bare bug (it passes whether both sites rotate or
+    // neither does). What it actually guards is the two decode sites staying
+    // in sync: rotate only one of them and the cancellation breaks, so this
+    // still catches a future asymmetric regression — the same shape as the
+    // bug this task fixes. The settle-distance test below is the real
+    // differentiator for the bug itself.
+    it('keeps the knot-0 eye and the derived-target decode sites symmetric under a non-identity frame', () => {
       const track = build();
       const eye = eyeUnderFrame(track.sample(0), frameBasis);
-      // Ground truth computed directly from `start`, through the same
-      // rotation — independent of buildPathTrack's own knot-0 construction,
-      // so this only passes when BOTH sites rotate consistently.
       const liveEye = eyeUnderFrame(start, frameBasis);
       expect(eye[0]).toBeCloseTo(liveEye[0], 5);
       expect(eye[1]).toBeCloseTo(liveEye[1], 5);

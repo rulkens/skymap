@@ -28,20 +28,7 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import { evaluateClip } from '../camera/evaluateClip';
 import { yawPitchToDir } from '../../../utils/camera/yawPitchToDir';
-
-// Frame-local → world rotation for a `yawPitchToDir` decode. Mirrors
-// `updatePosition.ts`'s tight column-major product over the 9-float registry
-// `Mat3` (not wgpu-matrix's vec4-padded layout, which would read garbage from
-// this tuple) — same shape as `buildPathTrack.ts`'s `rotateByFrame`.
-function rotateByFrame(dir: Vec3, frameBasis: Mat3 | undefined): Vec3 {
-  if (frameBasis === undefined) return dir;
-  const [x, y, z] = dir;
-  return [
-    frameBasis[0] * x + frameBasis[3] * y + frameBasis[6] * z,
-    frameBasis[1] * x + frameBasis[4] * y + frameBasis[7] * z,
-    frameBasis[2] * x + frameBasis[5] * y + frameBasis[8] * z,
-  ];
-}
+import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
 
 /** Reconstruct the eye position from a pose via the orbit convention. */
 function eyeOf(
@@ -51,7 +38,7 @@ function eyeOf(
   pitch: number,
   frameBasis: Mat3 | undefined,
 ): Vec3 {
-  const dir = rotateByFrame(yawPitchToDir(yaw, pitch), frameBasis);
+  const dir = rotateVec3ByTightMat3(yawPitchToDir(yaw, pitch), frameBasis);
   return [
     target[0] + distance * dir[0],
     target[1] + distance * dir[1],
