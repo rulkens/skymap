@@ -3,11 +3,11 @@
 // (io.wesl) and forwarding one 'VSOut' to the shared fragment module.
 //
 // The CPU hands every instance its in-front-of-camera arc [eStart, eSpan]
-// (composeOrbitConic, closed-form near-plane clip), so EVERY sample here has
-// clip.w > 0 by construction — no fold handling, no clamping, no oversized
-// coverage geometry can exist. A closed orbit (eSpan == TAU) wraps its strip
-// exactly; an open arc runs end to end with one-sided tangents at its ends,
-// whose huge off-screen endpoint positions the hardware clipper removes.
+// (composeOrbitConic, closed-form near-plane clip), so every sample here has
+// clip.w > 0 by construction. A closed orbit (eSpan == TAU) wraps its strip
+// exactly; an open arc runs end to end with one-sided tangents at its ends.
+// Ribbon widening is bounded by clamping each neighbour's reach before use,
+// not by any fold/clamp on the samples themselves — see clampReach below.
 
 import package::bodies::orbitTrail::constants::MARGIN_PX;
 import package::bodies::orbitTrail::constants::SEGMENTS;
@@ -31,9 +31,15 @@ fn clipToPixel(clip: vec3<f32>, viewportPx: vec2<f32>) -> vec2<f32> {
   return (clip.xy / clip.z) * 0.5 * viewportPx;
 }
 
-// Rasterizes each orbit arc as a screen-space ribbon hugging the projected
-// curve. vid -> (segment, corner) with segment = vid / 6u, corner = vid % 6u;
-// the quad for segment i spans samples i and i+1. Two triangles per quad,
+// Bounded neighbour reach — inert for any on-screen orbit; only bites at an
+// open arc's end, where the outermost sample sits thousands of viewports away.
+fn clampReach(neighbourPx: vec2<f32>, ownPx: vec2<f32>, maxPx: f32) -> vec2<f32> {
+  let d = neighbourPx - ownPx;
+  let len = length(d);
+  return select(neighbourPx, ownPx + d * (maxPx / len), len > maxPx);
+}
+
+// Rasterizes each orbit arc as a screen-space ribbon. Two triangles per quad,
 // keyed by (sample offset 0|1, side -1|+1); winding is irrelevant
 // ('cullMode: none'). Corner positions are a pure function of the sample
 // index, so the two quads sharing a sample abut exactly — no additive seam.
@@ -62,8 +68,11 @@ fn vsRibbon(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
 
   let ownRaw = ribbonClip(inst, si);
   let ownPx = clipToPixel(ownRaw, viewportPx);
-  let prevPx = clipToPixel(ribbonClip(inst, prevIdx), viewportPx);
-  let nextPx = clipToPixel(ribbonClip(inst, nextIdx), viewportPx);
+  var prevPx = clipToPixel(ribbonClip(inst, prevIdx), viewportPx);
+  var nextPx = clipToPixel(ribbonClip(inst, nextIdx), viewportPx);
+  let maxReachPx = 4.0 * length(viewportPx);
+  prevPx = clampReach(prevPx, ownPx, maxReachPx);
+  nextPx = clampReach(nextPx, ownPx, maxReachPx);
 
   let chord = nextPx - prevPx;
   let tangent = chord / max(length(chord), 1e-20);

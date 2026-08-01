@@ -177,14 +177,17 @@ export function composeOrbitConic(
   }
 
   // Visible arc in closed form, in f64. w(E) = Cw + Aw·cosE + Bw·sinE
-  // = Cw + R·cos(E − φ); the arc is where w exceeds the same scale-free
-  // epsilon the vertex stage's endpoint samples inherit (1e-6 sits well above
-  // f32 relative precision, so a narrowed endpoint w cannot round to ≤ 0).
+  // = Cw + R·cos(E − φ); the arc is where w exceeds epsW, the same threshold
+  // the vertex stage's unguarded clip.w divide depends on staying positive.
+  // 1e-4, not 1e-6: at the worst pose (cw ≈ 0) f32-narrowing eStart/eSpan
+  // alone spends ~75% of a 1e-6 budget, and WGSL only guarantees sin/cos to
+  // 2^-11 absolute — 1e-4 buys back two orders of margin, at the cost of
+  // ≤1e-4 rad of arc that was already >1e4 px off-screen.
   const cw = cC[2];
   const aw = cS[2];
   const bw = cT[2];
   const wAmp = Math.hypot(aw, bw);
-  const epsW = 1e-6 * (Math.abs(cw) + wAmp);
+  const epsW = 1e-4 * (Math.abs(cw) + wAmp);
   const TAU = 2 * Math.PI;
   let eStart = 0;
   let eSpan = TAU;
