@@ -37,6 +37,7 @@ import {
   engineLoadProgressChanged,
 } from '../../../src/state/engine/engineSlice';
 import { Source } from '../../../src/data/sources';
+import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { isCinemaMode } from '../../../src/utils/url/isCinemaMode';
 import type { SkymapRecorderHook } from '../../../src/@types/recorder/SkymapRecorderHook';
 import type { RecorderWindow } from '../../../src/@types/recorder/RecorderWindow';
@@ -206,7 +207,7 @@ describe('installRecorderHook', () => {
     expect(dispatched?.payload).toBe('flyout');
 
     // Activation must not resolve it...
-    store.dispatch(clipStarted(clipData));
+    store.dispatch(clipStarted({ data: clipData, frame: DEFAULT_ORIENTATION }));
     await Promise.resolve();
     expect(settled).toBe(false);
 
@@ -266,7 +267,7 @@ describe('installRecorderHook', () => {
 
     const clipData: ClipData = { timeline: [] };
     // Clip A is running (the player's activation write, driven directly).
-    store.dispatch(clipStarted(clipData));
+    store.dispatch(clipStarted({ data: clipData, frame: DEFAULT_ORIENTATION }));
     const dispatchedBefore = actions.filter((action) => action.type === startClip.type).length;
 
     await expect(hook.startClip('earthFlyout')).rejects.toThrow(

@@ -60,6 +60,7 @@ import type { Vec4 } from '../@types/math/Vec4';
 import type { ClipData } from '../@types/animation/ClipData';
 import type { ClipId } from '../@types/animation/ClipId';
 import type { Mat3 } from '../@types/math/Mat3';
+import type { OrientationFrameId } from '../@types/camera/OrientationFrameId';
 
 export type RootState = ReturnType<typeof rootReducer>;
 export type AppStore = ReturnType<typeof createAppStore>['store'];
@@ -122,10 +123,13 @@ export type SagaContext = {
    * Plays a data clip and resolves when the clip completes or is cancelled.
    * The tour saga awaits this Promise for the establishing fly and races it
    * (as dwellDrift) against the dwell timer during the interactive dwell.
+   * `frame` is the orientation frame the CALLER is under right now — pinned
+   * onto `camera.clip` so a later orientation switch re-expresses the clip's
+   * pose instead of reinterpreting it (see the clip row in cameraDrivers.ts).
    * The engine registers this at construction via `createPlayClip` +
    * `setSagaContext`; tests inject a stub via `sagaMiddleware.setContext`.
    */
-  playClip: (clip: ClipData) => Promise<void>;
+  playClip: (clip: ClipData, frame: OrientationFrameId) => Promise<void>;
   /**
    * The debug clip-path inspector seam — `watchClipPathInspectSaga` calls
    * `compute` on `inspectClipPath` and `clear` on `clearClipPath`. Engine-

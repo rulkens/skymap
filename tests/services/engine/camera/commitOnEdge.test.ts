@@ -48,6 +48,7 @@ import {
   clipStarted,
   clipEnded,
 } from '../../../../src/state/camera/cameraSlice';
+import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import {
   buildCameraDrivers,
@@ -411,8 +412,10 @@ describe('commitOnEdge — clip deactivation', () => {
     const START_POSE: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 80 };
     const clip: ClipData = { start: START_POSE, timeline: [] };
 
-    // Activate the clip driver.
-    store.dispatch(clipStarted(clip));
+    // Activate the clip driver. `frame` matches the store's default orientation
+    // so the driver's re-encode is a no-op — this test only cares about the
+    // commit-on-edge boolean, not the pose value.
+    store.dispatch(clipStarted({ data: clip, frame: DEFAULT_ORIENTATION }));
     // Seed prevActiveId so there's no spurious commit on the first frame.
     state.cameraRuntime.prevActiveId.current = 'clip';
 

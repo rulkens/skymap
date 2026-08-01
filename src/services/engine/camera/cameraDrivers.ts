@@ -63,6 +63,7 @@ import { tweenToClip } from './tweenToClip';
 import { spinAutoRotate } from './spinAutoRotate';
 import { tweenElapsed, autoRotateElapsed, clipElapsed, followElapsed } from './cameraClock';
 import { evaluateClip } from './evaluateClip';
+import { reencodePose } from '../../../utils/camera/reencodePose';
 import { bodyFocusDistance } from './bodyFocusDistance';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
@@ -224,12 +225,22 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
       commitsOnEdge: true,
       isActive: (s) => s.camera.clip !== null,
       // elapsed here is SECONDS from clipElapsed (not ms) — evaluateClip
-      // takes elapsedSec. See the UNIT NOTE in elapsedForWinner. The STEADY
-      // orientation basis is passed so a flyPath's world tangents encode to
-      // (yaw, pitch) through the committed frame the render path decodes with —
-      // a world-invariant aim (see buildPathTrack / orbitAnglesLookingAlong).
-      pose: (s, _cam, elapsed) =>
-        evaluateClip(s.camera.clip!.data, elapsed, ORIENTATION_FRAMES[s.settings.orientation]),
+      // takes elapsedSec. See the UNIT NOTE in elapsedForWinner. `clip.frame`
+      // (pinned at dispatch time, never the live setting) is the STEADY basis
+      // a flyPath's world tangents encode through — a fixed reference is what
+      // makes `evaluateClip`'s compile cache stable across an in-flight
+      // orientation switch (see evaluateClip's Cached type). The evaluated pose
+      // is then re-encoded forward into the CURRENT frame — reencodePose returns
+      // it by reference when the two bases match, the overwhelmingly common case.
+      pose: (s, _cam, elapsed) => {
+        const clip = s.camera.clip!;
+        const evaluated = evaluateClip(clip.data, elapsed, ORIENTATION_FRAMES[clip.frame]);
+        return reencodePose(
+          evaluated,
+          ORIENTATION_FRAMES[clip.frame],
+          ORIENTATION_FRAMES[s.settings.orientation],
+        );
+      },
     },
     {
       id: 'orbitDrag',

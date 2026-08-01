@@ -52,6 +52,7 @@ import { put, take, race, delay, fork, cancel, getContext } from 'typed-redux-sa
 import { advanceTour, prevBeat, togglePause } from './tourActions';
 import { setPaused } from './tourSlice';
 import type { ClipData } from '../../@types/animation/ClipData';
+import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
 import type { SagaContext } from '../../store/types';
 
 /** The steering signal the outer tour loop reads: advance forward or step back. */
@@ -64,11 +65,15 @@ export type BeatOutcome = 'next' | 'prev';
  *
  * `dwellClip` must already be RESOLVED (no id-bearing cues) — `visitBeatSaga`
  * resolves it alongside the establishing clip. `dwellSec` is its compiled
- * duration, passed in so this saga never compiles.
+ * duration, passed in so this saga never compiles. `frame` is the orientation
+ * `visitBeatSaga` resolved `dwellClip`'s foci under — passed straight through
+ * to `playClip` so each replay pins the SAME frame, not whatever is live when
+ * a post-pause slice restarts it.
  */
 export function* pausableDwellSaga(
   dwellClip: ClipData,
   dwellSec: number,
+  frame: OrientationFrameId,
 ): Generator<unknown, BeatOutcome> {
   // Read context inside the saga — the engine sets it after root-saga forks.
   const playClip = yield* getContext<SagaContext['playClip']>('playClip');
@@ -79,7 +84,7 @@ export function* pausableDwellSaga(
   while (true) {
     // The ambient clip runs only while the clock runs. A post-pause slice
     // replays it from the start (see the module header for the trade-off).
-    const driftTask = paused ? null : yield* fork(playClip, dwellClip);
+    const driftTask = paused ? null : yield* fork(playClip, dwellClip, frame);
     const sliceStartedAt = Date.now();
 
     // One race. The `timeout` arm is present only while running; when paused the

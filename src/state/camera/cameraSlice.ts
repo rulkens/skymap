@@ -55,6 +55,7 @@ import type { CameraPose } from '../../@types/camera/CameraPose';
 import type { CameraTweenDescriptor } from '../../@types/camera/CameraTweenDescriptor';
 import type { ClipData } from '../../@types/animation/ClipData';
 import type { FrameTween } from '../../@types/camera/FrameTween';
+import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
 
 // `base` is a placeholder; bootstrap overwrites via `commitCameraPose` once
 // `computeInitialCamera` has run. 0.43 mirrors `cameraFraming.INITIAL_DISTANCE_MPC`,
@@ -103,19 +104,22 @@ const cameraSlice = createSlice({
     },
 
     // ── clip lifecycle ──────────────────────────────────────────────────────
-    // `clipStarted` stores a FRESH `{ data }` wrapper so Task 8's clock saga can
-    // detect a new clip by reference inequality (`prev !== next`) without
-    // comparing deep descriptor equality. The payload must already be resolved
-    // (no `start: 'live'` sentinel) — call `resolveClipStart` at the dispatch
-    // site before putting this action, mirroring `focusTweenSaga`'s pattern of
-    // baking the tween `from` before `put(startCameraTween)`.
+    // `clipStarted` stores a FRESH `{ data, frame }` wrapper so Task 8's clock
+    // saga can detect a new clip by reference inequality (`prev !== next`)
+    // without comparing deep descriptor equality. `data` must already be
+    // resolved (no `start: 'live'` sentinel) — call `resolveClipStart` at the
+    // dispatch site before putting this action, mirroring `focusTweenSaga`'s
+    // pattern of baking the tween `from` before `put(startCameraTween)`. `frame`
+    // is the orientation frame live at dispatch time — the driver evaluates and
+    // holds the clip against THIS frame for its whole run, then re-encodes into
+    // the current one each tick (see cameraDrivers.ts's clip row).
     //
     // Past-tense `clipStarted`/`clipEnded` (not `startClip`/`endClip`): these are
     // the low-level lifecycle WRITES. The user-facing request action that names a
     // clip to play is `startClip(id)` in `clipActions.ts` — the saga resolves it
     // and dispatches `clipStarted` here.
-    clipStarted: (camera, action: PayloadAction<ClipData>) => {
-      camera.clip = { data: action.payload };
+    clipStarted: (camera, action: PayloadAction<{ data: ClipData; frame: OrientationFrameId }>) => {
+      camera.clip = action.payload;
     },
     // `clipEnded` clears BOTH `clip` and `tween`. A tween planted before or
     // during the clip (e.g. by a focus saga) is dormant while the clip@95

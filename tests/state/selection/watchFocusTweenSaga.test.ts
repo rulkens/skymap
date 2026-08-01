@@ -14,6 +14,7 @@ import {
   engineSourceCountReported,
 } from '../../../src/state/engine/engineSlice';
 import { Source } from '../../../src/data/sources';
+import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { cameraRoute } from '../../../src/store/constants';
 import { MILKY_WAY_VIEW_DISTANCE_MPC } from '../../../src/data/milkyWay/galacticCenter';
 import { buildStarOctree } from '../../../tools/stars/buildStarOctree';
@@ -208,7 +209,7 @@ describe('watchFocusTweenSaga', () => {
   const MINIMAL_CLIP: ClipData = { start: 'live', timeline: [] };
 
   it('watchFocusTweenSaga plants no tween while a clip is active', async () => {
-    store.dispatch(clipStarted(MINIMAL_CLIP));
+    store.dispatch(clipStarted({ data: MINIMAL_CLIP, frame: DEFAULT_ORIENTATION }));
     store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
     await flush();
     expect(store.getState()[cameraRoute].tween).toBeNull();

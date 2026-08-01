@@ -19,7 +19,7 @@
 
 import type { CameraTweenDescriptor } from '../../camera/CameraTweenDescriptor';
 import type { CameraPose } from '../../camera/CameraPose';
-import type { ClipData } from '../../animation/ClipData';
+import type { CameraState } from '../../camera/CameraState';
 import type { SelectionRow } from '../SelectionRow';
 import type { FrameTween } from '../../camera/FrameTween';
 import type { Vec3 } from '../../math/Vec3';
@@ -102,9 +102,9 @@ export type CameraClock = {
   // the stale accumulated time (which would jump the camera on resume).
   lastBaseRef: CameraPose | null;
   // The clip clock keys on the `camera.clip` REFERENCE, not its contents.
-  // A `startClip` dispatch installs a NEW `{ data: ClipData }` object each time,
+  // A `startClip` dispatch installs a NEW `{ data, frame }` object each time,
   // so `!==` fires the zero exactly once on the transition frame — the same
   // identity-reset pattern used by `lastTweenRef` for tweens.
   clipStartMs: number | null;
-  lastClipRef: { data: ClipData } | null;
+  lastClipRef: CameraState['clip'];
 };

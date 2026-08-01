@@ -31,9 +31,10 @@
  * read inside the worker (when the action arrives), not at fork time — the same
  * pattern as `watchClipSaga` / `watchClipPathInspectSaga`.
  */
-import { call, race, take, takeLatest, getContext } from 'typed-redux-saga';
+import { call, race, take, takeLatest, getContext, select } from 'typed-redux-saga';
 
 import { replayInspectedPath, stopClip } from './clipActions';
+import { selectOrientation } from '../settings/selectors';
 import type { SagaContext } from '../../store/types';
 
 export function* watchReplayInspectedPathSaga() {
@@ -44,8 +45,12 @@ export function* watchReplayInspectedPathSaga() {
     const clip = inspect.pinnedClip();
     if (clip === null) return; // nothing calculated yet — no-op
 
+    // The frame the replay STARTS under — the live setting at this dispatch,
+    // same contract as every other playClip call site (see playClip.ts).
+    const orientation = yield* select(selectOrientation);
+
     yield* race({
-      run: call(playClipSeam, clip),
+      run: call(playClipSeam, clip, orientation),
       stop: take(stopClip),
     });
   });

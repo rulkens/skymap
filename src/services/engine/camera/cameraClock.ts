@@ -27,7 +27,7 @@ import type { CameraClock } from '../../../@types/engine/camera/CameraClock';
 import type { CameraTweenDescriptor } from '../../../@types/camera/CameraTweenDescriptor';
 import type { FrameTween } from '../../../@types/camera/FrameTween';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
-import type { ClipData } from '../../../@types/animation/ClipData';
+import type { CameraState } from '../../../@types/camera/CameraState';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
@@ -148,14 +148,10 @@ export function autoRotateElapsed(
  * always returns 0.
  *
  * Reference identity is the correct signal: a `startClip` dispatch installs a
- * new `{ data: ClipData }` object, so `!==` fires exactly once on the
+ * new `{ data, frame }` object, so `!==` fires exactly once on the
  * transition frame — same pattern as `tweenElapsed`.
  */
-export function clipElapsed(
-  clock: CameraClock,
-  clip: { data: ClipData } | null,
-  nowMs: number,
-): number {
+export function clipElapsed(clock: CameraClock, clip: CameraState['clip'], nowMs: number): number {
   if (clip !== clock.lastClipRef) {
     clock.lastClipRef = clip;
     clock.clipStartMs = clip === null ? null : nowMs;
