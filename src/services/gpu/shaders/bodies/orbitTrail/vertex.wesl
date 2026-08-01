@@ -51,14 +51,11 @@ fn clipToPixel(clip: vec3<f32>, viewportPx: vec2<f32>) -> vec2<f32> {
   return (clip.xy / clip.z) * 0.5 * viewportPx;
 }
 
-// Twice the farthest viewport corner from anchorPx — guarantees coverage.
+// Twice the farthest corner of the CENTRED viewport box (clipToPixel's own
+// space, [-W/2, W/2] x [-H/2, H/2], NOT [0, W] x [0, H]) from anchorPx.
 // Only safe where the fragment's eOwn discard stops it double-painting.
 fn foldHalfWidth(anchorPx: vec2<f32>, viewportPx: vec2<f32>) -> f32 {
-  let d00 = length(anchorPx);
-  let dW0 = length(anchorPx - vec2<f32>(viewportPx.x, 0.0));
-  let d0H = length(anchorPx - vec2<f32>(0.0, viewportPx.y));
-  let dWH = length(anchorPx - viewportPx);
-  return 2.0 * max(max(d00, dW0), max(d0H, dWH));
+  return 2.0 * length(abs(anchorPx) + 0.5 * viewportPx);
 }
 
 // Rasterizes each orbit as a screen-space ribbon hugging the projected
@@ -79,8 +76,7 @@ fn vsRibbon(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
 
   let viewportPx = vec2<f32>(inst.phase.z, inst.phase.w);
 
-  // Segment endpoints (sI, sJ = sI+1) plus the one extra neighbour on each
-  // side that a fully-front corner's central-difference tangent reads below.
+  // Segment endpoints (sI, sJ = sI+1) plus one extra neighbour each side.
   let sI = segment;
   let sJ = (segment + 1u) % SEGMENTS;
   let sIPrev = (sI + SEGMENTS - 1u) % SEGMENTS;
@@ -111,8 +107,9 @@ fn vsRibbon(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
   let ownRaw = select(rawJ, rawI, offset == 0u);
   let prevRaw = select(rawI, rawIPrev, offset == 0u);
   let nextRaw = select(rawJNext, rawJ, offset == 0u);
-  // The CURRENT segment's OTHER endpoint — read only once 'own' is behind,
-  // where a per-segment (not per-sample) answer is deliberately allowed.
+  // The CURRENT segment's OTHER endpoint — the fold-widening axis below
+  // reads this on both the one-sided and clamp branches (per-segment, not
+  // per-sample, is deliberately allowed for fold-widened corners).
   let partnerRaw = select(rawI, rawJ, offset == 0u);
 
   let ownFront = ownRaw.z > epsW;
@@ -138,45 +135,39 @@ fn vsRibbon(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
     outPx = ownPx + side * halfWidth * normal;
     w = ownRaw.z;
   } else if (ownFront) {
-    // Own front, a TRUE neighbour behind: one-sided tangent toward whichever
-    // neighbour is still front — a pure function of 'own', so both quads agree.
-    let ownPx = clipToPixel(ownRaw, viewportPx);
-    var chord = vec2<f32>(0.0, 0.0);
-    if (prevFront) {
-      chord = ownPx - clipToPixel(prevRaw, viewportPx);
-    } else if (nextFront) {
-      chord = clipToPixel(nextRaw, viewportPx) - ownPx;
+    // Own front, a TRUE neighbour behind: fold-widened below via the shared
+    // axis frame (see the comment on that frame in the branch below).
+    let ownAnchor = clipToPixel(ownRaw, viewportPx);
+    // The segment's OTHER end, as this quad sees it: front position, or its
+    // w = epsW crossing toward 'own' — the branch below's own clamp, mirrored.
+    var otherAnchor = clipToPixel(partnerRaw, viewportPx);
+    if (partnerRaw.z <= epsW) {
+      let t = (epsW - partnerRaw.z) / (ownRaw.z - partnerRaw.z);
+      otherAnchor = clipToPixel(mix(partnerRaw, ownRaw, t), viewportPx);
     }
-    // Both true neighbours behind (chord left zero) is reachable — camera
-    // almost exactly on the ring — but then 'own' is itself barely above
-    // epsW, so ownPx is off-viewport by the clamp branch's w-scale argument.
-    let tangent = chord / max(length(chord), 1e-20);
-    let normal = vec2<f32>(-tangent.y, tangent.x);
-    // A plain STROKE_PX+MARGIN_PX quad under-covers the true sweep near a
-    // fold; this corner is always tested (see membership above), so widening.
-    let halfWidth = foldHalfWidth(ownPx, viewportPx);
-    // Box-extend along the tangent too: normal-only left the quad thin along
-    // the tangent, so a camera turn could sweep the real trail outside it.
-    // Keying the sign on 'offset' breaks per-sample corner identity, but
-    // only between two TESTED quads, so ownership covers the gap.
-    let tangentSign = select(-1.0, 1.0, offset == 1u);
-    outPx = ownPx + side * halfWidth * normal + tangentSign * halfWidth * tangent;
+    let axisChord = ownAnchor - otherAnchor;
+    let axisOut = axisChord / max(length(axisChord), 1e-20); // guarded; zero if anchors coincide (segment projects to a point)
+    let axisNormal = vec2<f32>(-axisOut.y, axisOut.x);
+    let h = foldHalfWidth(ownAnchor, viewportPx);
+    outPx = ownAnchor + h * axisOut + side * h * axisNormal;
     w = ownRaw.z;
   } else if (partnerRaw.z > epsW) {
     // Own behind, this segment's OTHER endpoint in front: clamp toward it
     // along the segment's own chord to w = epsW (per-SEGMENT, off-viewport).
     let t = (epsW - ownRaw.z) / (partnerRaw.z - ownRaw.z);
     let clampedRaw = mix(ownRaw, partnerRaw, t);
-    let clampedPx = clipToPixel(clampedRaw, viewportPx);
-    let partnerPx = clipToPixel(partnerRaw, viewportPx);
-    // Increasing-E direction on BOTH offsets, or the two ends of this
-    // segment tangent oppositely and the quad bowties.
-    let chord = select(clampedPx - partnerPx, partnerPx - clampedPx, offset == 0u);
-    let tangent = chord / max(length(chord), 1e-20);
-    let normal = vec2<f32>(-tangent.y, tangent.x);
-    let halfWidth = foldHalfWidth(clampedPx, viewportPx); // same fold-coverage bound as above; always tested too
-    let tangentSign = select(-1.0, 1.0, offset == 1u); // same box extension as the one-sided branch above
-    outPx = clampedPx + side * halfWidth * normal + tangentSign * halfWidth * tangent;
+    let ownAnchor = clipToPixel(clampedRaw, viewportPx);
+    let otherAnchor = clipToPixel(partnerRaw, viewportPx); // always front in this branch
+    // ONE shared axis per quad end, not each end's own local tangent: two
+    // per-end tangents can diverge >=90deg near a fold and each cover only
+    // half the viewport or none. Mismatch with the adjacent quad's version
+    // of this shared corner is covered by E-ownership (both quads tested),
+    // not abutment — same as the one-sided branch above.
+    let axisChord = ownAnchor - otherAnchor;
+    let axisOut = axisChord / max(length(axisChord), 1e-20);
+    let axisNormal = vec2<f32>(-axisOut.y, axisOut.x);
+    let h = foldHalfWidth(ownAnchor, viewportPx); // same shared-axis frame as the one-sided branch above
+    outPx = ownAnchor + h * axisOut + side * h * axisNormal;
     w = epsW;
   } else {
     // Both endpoints behind: this arc is entirely behind-camera, so it stays
