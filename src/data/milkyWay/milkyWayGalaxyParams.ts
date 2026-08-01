@@ -121,6 +121,7 @@ export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams = {
       armBias: 0.75,
       clumpiness: 0.6,
       sizeScale: 1,
+      sizeFloorPc: 15,
       elongation: 2.5,
       heightRatio: 0.5,
       bubbleCarve: 0.8,

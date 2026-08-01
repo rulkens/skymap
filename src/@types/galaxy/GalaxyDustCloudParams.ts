@@ -16,6 +16,8 @@ export type GalaxyDustCloudParams = {
   readonly clumpiness: number;
   /** Multiplier on the physical cloud-size range (GMC size function). */
   readonly sizeScale: number;
+  /** Parsecs; floors the GMC size sampler (dustParticleCloud.ts's SIZE_MIN_PC). */
+  readonly sizeFloorPc: number;
   /** sigma_along / sigma_across — how far clouds are sheared along the local flow. */
   readonly elongation: number;
   /** Particle-centre vertical scatter as a fraction of the dust layer's own sigma_z. Clouds sit in a THINNER layer than the mean dust. */

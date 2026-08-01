@@ -1,3 +1,4 @@
+import { SIZE_MIN_PC } from './dustParticleCloud';
 import type { GalaxyDustCloudParams } from '../../@types/galaxy/GalaxyDustCloudParams';
 
 // `count` and `elongation` are set against the covering factor, not by eye:
@@ -10,6 +11,7 @@ export const DEFAULT_GALAXY_DUST_CLOUD_PARAMS: GalaxyDustCloudParams = {
   armBias: 0.75,
   clumpiness: 0.6,
   sizeScale: 1,
+  sizeFloorPc: SIZE_MIN_PC,
   elongation: 2.5,
   heightRatio: 0.5,
   bubbleCarve: 0.8,

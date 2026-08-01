@@ -82,6 +82,16 @@ function DustCloudSection(): ReactNode {
           info="Hierarchical clustering amplitude — 0 = Poisson-scattered, 1 = strongly hierarchical."
         />
         <ParamSlider
+          label="Size floor (pc)"
+          value={cloud.sizeFloorPc}
+          min={15}
+          max={120}
+          step={5}
+          format={(v) => v.toFixed(0)}
+          onChange={(v) => patchCloud({ sizeFloorPc: v })}
+          info="Low end of the GMC size sampler. Measured clouds start at 15 pc; raising it trades per-cloud darkness for coverage, since the total column is renormalised."
+        />
+        <ParamSlider
           label="Size scale"
           value={cloud.sizeScale}
           min={0.2}

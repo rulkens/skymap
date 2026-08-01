@@ -45,8 +45,14 @@ const MAX_PARTICLE_COUNT = 40000;
  * honest, and the tier reads as a smooth haze — the failure this replaces.
  * f around 2-3 is the target: dark enough per cloud to see, overlapping enough
  * along the arms to mottle rather than dot.
+ *
+ * `SIZE_MIN_PC` doubles as `sizeFloorPc`'s slider default and lower clamp —
+ * raising the floor at fixed `count` raises mean R^2, which raises f (mass is
+ * renormalised to the tier's total, `massPerR2 = totalMass / sumR2`), which
+ * makes every cloud FAINTER even as it grows. Pull `count` down with the
+ * floor to hold per-cloud contrast.
  */
-const SIZE_MIN_PC = 15;
+export const SIZE_MIN_PC = 15;
 const SIZE_MAX_PC = 200;
 const GMC_SIZE_POWER = 2.2;
 
@@ -113,7 +119,10 @@ export function buildDustParticleCloud(
   }
   const count = Math.min(cloud.count, MAX_PARTICLE_COUNT);
 
-  const sizeMin = pcToUnits(SIZE_MIN_PC) * cloud.sizeScale;
+  // Clamped below at SIZE_MIN_PC: under the measured span is unphysical AND
+  // makes the speckle this knob exists to fix worse, not better.
+  const floorPc = Math.min(Math.max(cloud.sizeFloorPc, SIZE_MIN_PC), SIZE_MAX_PC * 0.9);
+  const sizeMin = pcToUnits(floorPc) * cloud.sizeScale;
   const sizeMax = pcToUnits(SIZE_MAX_PC) * cloud.sizeScale;
   if (!(sizeMin > 0) || !(sizeMax > sizeMin)) return [];
 
