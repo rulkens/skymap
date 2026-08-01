@@ -25,6 +25,7 @@ import {
   all,
   dollyToId,
   focus,
+  frameTo,
   moveTargetId,
   show,
 } from '../../../../services/engine/animation/effectHelpers';
@@ -34,9 +35,18 @@ import { GALACTIC_DISC_FORWARD } from '../../../../services/engine/camera/camera
 
 const MILKY_WAY = focusId('milkyWay');
 
+// See openingTitle's FRAME_ROLL_SEC for the derivation. Fired first, so it's
+// long settled (~14s of runway left) before the beat's own settle ends the
+// tour — `restoreSceneSaga` fires its own requestOrientationChange back to
+// the viewer's pre-tour frame unconditionally on exit, and a still-animating
+// roll here would fight that one for the up-basis.
+const FRAME_ROLL_SEC = 3;
+
 export const homeAgain: ClipData = {
   start: 'live',
   timeline: [
+    // galactic again — home again (docs/tour/implementation-notes.md).
+    frameTo('galactic', { over: FRAME_ROLL_SEC }),
     show(['label:milkyWay'], 1),
     focus(MILKY_WAY),
     all([

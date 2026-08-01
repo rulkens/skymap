@@ -22,6 +22,7 @@ import {
   all,
   dollyTo,
   focusOnId,
+  frameTo,
   hide,
   moveTargetId,
   scene,
@@ -35,6 +36,11 @@ const MW = focusId('milkyWay');
 // Far enough that the Milky-Way sprite (~0.03 Mpc across) is sub-pixel —
 // the open reads as empty space, not a small galaxy.
 const FAR_OPEN_MPC = 100;
+
+// 3x the interactive switch's ~1s feel (FRAME_TWEEN_MS) — slow enough to read
+// as deliberate, comfortably done before the sprite grows past sub-pixel in
+// the 7s approach below. Starting point for the tour's visual pass.
+const FRAME_ROLL_SEC = 3;
 
 export const openingTitle: ClipData = {
   start: 'live',
@@ -61,6 +67,13 @@ export const openingTitle: ClipData = {
     // draws. The snapshot/restore winds it back on exit; a beat that wants
     // many labels at once flips it off with another scene() cue.
     scene(setLabelsFocusedOnly(true)),
+    // The tour authors its own pole (docs/tour/implementation-notes.md): the
+    // Milky Way reads horizontal under galactic, not the ecliptic default.
+    // Fired before the snap below — the eye/aim is reencode-invariant to the
+    // frame either way (aimAlong bakes a world sightline), so this only
+    // decides WHEN the up-basis starts rolling, and earliest is safest: it
+    // settles while the sprite is still sub-pixel, never visible mid-roll.
+    frameTo('galactic', { over: FRAME_ROLL_SEC }),
     // Cold open: snap far out on the Milky-Way bearing (zero-duration cues
     // — target, distance, and yaw/pitch are different channels, so one `all`
     // is legal). `aimAlong` snaps to a fixed WORLD sightline rather than a
