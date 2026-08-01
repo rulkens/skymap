@@ -11,6 +11,7 @@
 import { describe, it, expect } from 'vitest';
 import { dwellDrift } from '../../../src/state/tour/dwellDrift';
 import type { Effect } from '../../../src/@types/animation/Effect';
+import { focusId } from '../../../src/utils/animation/focusId';
 
 /** The two channel effects inside the clip's top-level `all`. */
 function effectsOf(clip: ReturnType<typeof dwellDrift>): Effect[] | null {
@@ -82,5 +83,37 @@ describe('dwellDrift', () => {
     // rather than a fraction of a slow one.
     const osc6 = effectsOf(dwellDrift(6))!.find((e) => e.kind === 'osc');
     if (osc6?.kind === 'osc') expect(osc6.period).toBeCloseTo(6);
+  });
+
+  it('with spinTo emits an unresolved spinToId on the yaw layer', () => {
+    const id = focusId('m31');
+    const effects = effectsOf(dwellDrift(10, { spinTo: id, turns: -1 }));
+    expect(effects).not.toBeNull();
+    expect(effects).toHaveLength(2);
+
+    // No plain 'spin' layer — spinTo replaces it, leaving resolution to
+    // resolveClipFoci at play time (same as any other *Id effect).
+    expect(effects!.find((e) => e.kind === 'spin')).toBeUndefined();
+
+    const spinTo = effects!.find((e) => e.kind === 'spinToId');
+    expect(spinTo).toBeDefined();
+    if (spinTo?.kind === 'spinToId') {
+      expect(spinTo.id).toBe(id);
+      expect(spinTo.over).toBe(10);
+      expect(spinTo.turns).toBe(-1);
+      expect(spinTo.ease).toBe('easeInOutCubic');
+    }
+
+    // Pitch bob is untouched by spinTo.
+    const osc = effects!.find((e) => e.kind === 'osc');
+    expect(osc).toBeDefined();
+    if (osc?.kind === 'osc') {
+      expect(osc.ch).toBe('pitch');
+      expect(osc.over).toBe(10);
+    }
+  });
+
+  it('with both spinTo and cruiseRate throws', () => {
+    expect(() => dwellDrift(10, { spinTo: focusId('m31'), cruiseRate: 0.2 })).toThrow();
   });
 });
