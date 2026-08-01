@@ -82,14 +82,19 @@ export function createOrbitTrailRenderer(
   const primitive: GPUPrimitiveState = { topology: 'triangle-list', cullMode: 'none' };
 
   // NO depthStencil: the hdr target has no depth attachment, and declaring a
-  // depth format for a depthless pass errors.
-  const ribbonPipeline = device.createRenderPipeline({
-    label: 'orbit-trail-ribbon-pipeline',
-    layout: pipelineLayout,
-    vertex: { module: vsModule, entryPoint: 'vsRibbon', buffers: vertexBuffers },
-    fragment: { module: fsModule, entryPoint: 'fs', targets: fragmentTargets },
-    primitive,
-  });
+  // depth format for a depthless pass errors. Production and debug share
+  // every field but label and fragment entry point — one factory for both.
+  function makeRibbonPipeline(label: string, fsEntryPoint: string): GPURenderPipeline {
+    return device.createRenderPipeline({
+      label,
+      layout: pipelineLayout,
+      vertex: { module: vsModule, entryPoint: 'vsRibbon', buffers: vertexBuffers },
+      fragment: { module: fsModule, entryPoint: fsEntryPoint, targets: fragmentTargets },
+      primitive,
+    });
+  }
+
+  const ribbonPipeline = makeRibbonPipeline('orbit-trail-ribbon-pipeline', 'fs');
 
   // The `debug.showOrbitTrailImpostor` overlay, over the SAME vertex stage/
   // buffers/profile as the production pipeline but the constant-colour
@@ -99,13 +104,7 @@ export function createOrbitTrailRenderer(
   let debugRibbonPipeline: GPURenderPipeline | null = null;
   function ensureDebugPipelines(): void {
     if (debugRibbonPipeline !== null) return;
-    debugRibbonPipeline = device.createRenderPipeline({
-      label: 'orbit-trail-debug-ribbon-pipeline',
-      layout: pipelineLayout,
-      vertex: { module: vsModule, entryPoint: 'vsRibbon', buffers: vertexBuffers },
-      fragment: { module: fsModule, entryPoint: 'fsImpostorRibbon', targets: fragmentTargets },
-      primitive,
-    });
+    debugRibbonPipeline = makeRibbonPipeline('orbit-trail-debug-ribbon-pipeline', 'fsImpostorRibbon');
   }
 
   // Grown on demand, sized by SLOTS (`instances.length / INSTANCE_FLOATS`),
