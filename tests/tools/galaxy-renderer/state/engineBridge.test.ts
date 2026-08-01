@@ -69,6 +69,16 @@ function makeFakeEngine(): { engine: GalaxyEngineHandle; mocks: EngineMocks } {
   return { engine, mocks };
 }
 
+/**
+ * What the engine actually receives at boot. The DUST (LEGACY) pill is off by
+ * default, and the bridge gates it on the OUTGOING copy rather than in the
+ * stored `galaxy` slice — so the engine sees the two legacy-dust lanes zeroed
+ * while the sliders still hold the values a re-enable must restore. Spelled
+ * out rather than routed back through `paramsForEngine`, which would only
+ * restate the implementation.
+ */
+const ENGINE_PARAMS = { ...DEFAULT_GALAXY_PARAMS, spriteDust: 0, dustRingStrength: 0 };
+
 describe('connectEngineBridge', () => {
   let store: AppStore;
 
@@ -90,7 +100,7 @@ describe('connectEngineBridge', () => {
     expect(mocks.setAutoRotate).toHaveBeenCalledTimes(1);
     expect(mocks.setAutoRotate).toHaveBeenCalledWith(false);
     expect(mocks.setParams).toHaveBeenCalledTimes(1);
-    expect(mocks.setParams).toHaveBeenCalledWith(DEFAULT_GALAXY_PARAMS);
+    expect(mocks.setParams).toHaveBeenCalledWith(ENGINE_PARAMS);
 
     disconnect();
   });
@@ -102,11 +112,11 @@ describe('connectEngineBridge', () => {
 
     store.dispatch(paramsPatched({ armCount: 3 }));
     expect(mocks.setParams).toHaveBeenCalledTimes(2);
-    expect(mocks.setParams).toHaveBeenLastCalledWith({ ...DEFAULT_GALAXY_PARAMS, armCount: 3 });
+    expect(mocks.setParams).toHaveBeenLastCalledWith({ ...ENGINE_PARAMS, armCount: 3 });
 
     store.dispatch(paramsPatched({ armCount: 4 }));
     expect(mocks.setParams).toHaveBeenCalledTimes(3);
-    expect(mocks.setParams).toHaveBeenLastCalledWith({ ...DEFAULT_GALAXY_PARAMS, armCount: 4 });
+    expect(mocks.setParams).toHaveBeenLastCalledWith({ ...ENGINE_PARAMS, armCount: 4 });
 
     disconnect();
   });
