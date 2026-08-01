@@ -1,21 +1,12 @@
 /**
- * reencodePose — re-express a `CameraPose`'s yaw/pitch from one orientation
- * frame's basis to another's, keeping the world-space eye direction fixed.
+ * reencodePose — re-express a `CameraPose`'s (yaw, pitch) from one
+ * orientation frame's basis to another's, keeping the world-space eye
+ * direction fixed. Composes `yawPitchToDir` (decode under `from`) with
+ * `orbitAnglesLookingAlong` (re-encode under `to`); no new math.
  *
- * A pose's (yaw, pitch) are frame-LOCAL angles (`yawPitchToDir`'s domain);
- * switching the active orientation frame must change how they're READ, never
- * where the camera actually points. This composes the two existing halves:
- * decode under `from` to a world target→eye direction, then re-encode that
- * SAME world direction under `to`. `target` and `distance` carry no frame
- * dependence and pass through untouched.
- *
- * `orbitAnglesLookingAlong` takes the direction the camera AIMS along — the
- * NEGATION of the target→eye direction `yawPitchToDir` decodes. The sign flip
- * happens once here, at the seam between the two conventions.
- *
- * @param pose  Source pose, its angles read under `from`.
- * @param from  Source frame's basis, or `undefined` for the identity frame.
- * @param to    Destination frame's basis, or `undefined` for the identity frame.
+ * Landmine: `orbitAnglesLookingAlong` takes the camera's AIM direction, the
+ * NEGATION of the target→eye direction `yawPitchToDir` decodes — the sign
+ * flips once here, at the seam between the two conventions.
  */
 
 import type { CameraPose } from '../../@types/camera/CameraPose';
@@ -39,5 +30,12 @@ export function reencodePose(
   const aim: Vec3 = [-world[0], -world[1], -world[2]];
   const { yaw, pitch } = orbitAnglesLookingAlong(aim, to);
 
-  return { target: pose.target, yaw, pitch, distance: pose.distance };
+  return {
+    // Fresh target copy — the identity branch above returns the caller's own
+    // object, but this branch constructs a NEW pose that must own its array.
+    target: [pose.target[0], pose.target[1], pose.target[2]],
+    yaw,
+    pitch,
+    distance: pose.distance,
+  };
 }
