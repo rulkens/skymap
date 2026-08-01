@@ -1,20 +1,26 @@
 /**
- * DEFAULT_UI_STATE — the spike's boot app-chrome state
- * (`Galaxy Renderer.dc.html:467,470`): every control-panel section starts
- * expanded, no copy/paste feedback message yet, auto-rotate off.
+ * DEFAULT_UI_STATE — the boot app-chrome state: which control-panel sections
+ * start expanded, no copy/paste feedback message yet, auto-rotate off.
  */
 
 import type { UiState } from '../../@types/state/UiState';
 
 export const DEFAULT_UI_STATE: UiState = {
+  // The generator-era sections start COLLAPSED, the flux-field-era ones
+  // EXPANDED: the current work is the analytic field and the sections being
+  // built beside it, and eight open legacy sections push those below the fold.
   openSections: {
-    morphology: true,
-    shape: true,
+    morphology: false,
+    shape: false,
+    // Its own section, and doomed: the star bag is scheduled for deletion,
+    // and giving its budget knob a section makes the eventual removal a
+    // section delete instead of a surgical slider extraction.
+    starBudget: false,
     arms: true,
-    pop: true,
-    dust: true,
-    glob: true,
-    render: true,
+    pop: false,
+    dust: false,
+    glob: false,
+    render: false,
     // The analytic-field spike starts EXPANDED: its two toggles are the
     // comparison the section exists for, and a collapsed section would hide
     // the only way to see either half alone.

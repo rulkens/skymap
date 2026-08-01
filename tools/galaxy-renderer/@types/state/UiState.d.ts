@@ -11,6 +11,7 @@ export type UiState = {
     Record<
       | 'morphology'
       | 'shape'
+      | 'starBudget'
       | 'arms'
       | 'pop'
       | 'dust'

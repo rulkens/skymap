@@ -85,12 +85,20 @@ function specFor(key: GalaxySliderKey): ParamSpecEntry {
   return entry;
 }
 
-// html:749-758 — always radius/starCount/irregularity; bulge/disk/warp
+/**
+ * The sprite budget, alone in its own section rather than under SHAPE & SIZE:
+ * the star bag is scheduled for deletion (research doc §12), and a section
+ * holding nothing else deletes with it.
+ */
+const STAR_BUDGET_SLIDERS: SliderSpec[] = [
+  { key: 'starCount', label: 'Star density', format: (v) => `${Math.round(v / 1000)}k` },
+];
+
+// html:749-758 — always radius/irregularity; bulge/disk/warp
 // knobs drop out one by one as the category loses that structure.
 function buildShapeSliders(category: ReturnType<typeof classifyHubbleType>): SliderSpec[] {
   const specs: SliderSpec[] = [
     { key: 'radius', label: 'Galaxy size', format: (v) => `${v.toFixed(2)}×` },
-    { key: 'starCount', label: 'Star density', format: (v) => `${Math.round(v / 1000)}k` },
   ];
   if (category !== 'elliptical') specs.push({ key: 'bulgeSize', label: 'Central bulge' });
   if (category !== 'irregular') specs.push({ key: 'bulgeFalloff', label: 'Bulge falloff' });
@@ -263,6 +271,14 @@ function ControlsPanel({ fade }: ControlsPanelProps): ReactNode {
           >
             ⟲ New random seed
           </Button>
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="STAR BUDGET (TO BE DELETED)"
+          open={ui.openSections.starBudget}
+          onToggle={() => dispatch(sectionToggled('starBudget'))}
+        >
+          {STAR_BUDGET_SLIDERS.map(renderGalaxySlider)}
         </CollapsibleSection>
 
         {armSliders.length > 0 && (

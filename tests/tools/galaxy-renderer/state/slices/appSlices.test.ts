@@ -135,8 +135,10 @@ describe('uiSlice', () => {
   it('sectionToggled flips exactly one section', () => {
     const next = uiReducer(DEFAULT_UI_STATE, sectionToggled('dust'));
 
-    expect(next.openSections.dust).toBe(false);
-    expect(next.openSections.arms).toBe(true);
+    // Relative to the defaults, not literal booleans: which sections BOOT
+    // open is a product decision this test has no stake in.
+    expect(next.openSections.dust).toBe(!DEFAULT_UI_STATE.openSections.dust);
+    expect(next.openSections.arms).toBe(DEFAULT_UI_STATE.openSections.arms);
   });
 
   it('copyFeedbackSet writes and clears the message', () => {
