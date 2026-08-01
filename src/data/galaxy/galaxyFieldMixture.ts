@@ -190,8 +190,12 @@ const BULGE_BODY_SIGMA_RATIO = Math.sqrt(
  * mixture tracks whatever the generator was handed, so do not hardcode F98's
  * numbers back in here.
  */
-function pushDisc(geometry: GalaxyFieldGeometry, out: GalaxyFieldComponent[]): void {
-  if (geometry.discFraction <= 0) return;
+function pushDisc(
+  geometry: GalaxyFieldGeometry,
+  out: GalaxyFieldComponent[],
+  tuning: GalaxyFieldTuning,
+): void {
+  if (!tuning.discEnabled || geometry.discFraction <= 0) return;
   const scale = emissionScale(geometry);
   const scaleLen = geometry.diskScaleLen / (1 + 1 / DISK_BRIGHTNESS_TAPER);
   const central = (geometry.discFraction * DISC_BRIGHTNESS) / (2 * Math.PI * scaleLen * scaleLen);
@@ -256,8 +260,10 @@ const RING_RADIAL_OVERLAP = 13 / 23;
  * patching this object.
  */
 export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
+  discEnabled: true,
   ringCount: 2,
   ringBlobSharpness: 1,
+  ringsEnabled: true,
   armsEnabled: true,
   armBlobsPerArm: 28,
   armWidthScale: 1,
@@ -324,7 +330,7 @@ function pushDiscRings(
   out: GalaxyFieldComponent[],
   tuning: GalaxyFieldTuning,
 ): void {
-  if (geometry.discFraction <= 0) return;
+  if (!tuning.ringsEnabled || geometry.discFraction <= 0) return;
   const { outerRadius, bulgeRadius, diskHeight, diskScaleLen } = geometry;
   const ringCount = Math.max(1, Math.round(tuning.ringCount));
   const blobsPerRing = RING_BLOBS_PER_RING;
@@ -573,8 +579,12 @@ function pushArmRidges(
 }
 
 /** buildBulge's two radial branches, squashed by flattening / bulgeAxisZ and rotated. */
-function pushBulge(geometry: GalaxyFieldGeometry, out: GalaxyFieldComponent[]): void {
-  if (geometry.bulgeFraction <= 0) return;
+function pushBulge(
+  geometry: GalaxyFieldGeometry,
+  out: GalaxyFieldComponent[],
+  tuning: GalaxyFieldTuning,
+): void {
+  if (!tuning.discEnabled || geometry.bulgeFraction <= 0) return;
   const { outerRadius, bulgeRadius, bulgeConcentration } = geometry;
   const sigma = spheroidEmissionSigma(
     geometry.category === 'elliptical'
@@ -618,8 +628,12 @@ function pushBulge(geometry: GalaxyFieldGeometry, out: GalaxyFieldComponent[]): 
 }
 
 /** buildBar — absent for every category whose barLength is zero. */
-function pushBar(geometry: GalaxyFieldGeometry, out: GalaxyFieldComponent[]): void {
-  if (geometry.barFraction <= 0 || geometry.barLength <= 0) return;
+function pushBar(
+  geometry: GalaxyFieldGeometry,
+  out: GalaxyFieldComponent[],
+  tuning: GalaxyFieldTuning,
+): void {
+  if (!tuning.discEnabled || geometry.barFraction <= 0 || geometry.barLength <= 0) return;
   const sigmaAlong = BAR_ALONG_RATIO * geometry.barLength;
   const sigmaAcross = BAR_ACROSS_RATIO * geometry.barLength;
   const sigmaPole = BAR_HEIGHT_FACTOR * geometry.diskHeight;
@@ -634,8 +648,12 @@ function pushBar(geometry: GalaxyFieldGeometry, out: GalaxyFieldComponent[]): vo
 }
 
 /** buildHalo — the faint envelope, squashed along the pole by the same flattening. */
-function pushHalo(geometry: GalaxyFieldGeometry, out: GalaxyFieldComponent[]): void {
-  if (geometry.haloFraction <= 0) return;
+function pushHalo(
+  geometry: GalaxyFieldGeometry,
+  out: GalaxyFieldComponent[],
+  tuning: GalaxyFieldTuning,
+): void {
+  if (!tuning.discEnabled || geometry.haloFraction <= 0) return;
   const { outerRadius } = geometry;
   const sigma = spheroidEmissionSigma({
     scale: outerRadius * 0.3,
@@ -677,11 +695,11 @@ export function buildGalaxyFieldMixture(
   tuning: GalaxyFieldTuning = DEFAULT_GALAXY_FIELD_TUNING,
 ): readonly GalaxyFieldComponent[] {
   const out: GalaxyFieldComponent[] = [];
-  pushDisc(geometry, out);
+  pushDisc(geometry, out, tuning);
   pushDiscRings(geometry, out, tuning);
   pushArmRidges(geometry, out, tuning);
-  pushBulge(geometry, out);
-  pushBar(geometry, out);
-  pushHalo(geometry, out);
+  pushBulge(geometry, out, tuning);
+  pushBar(geometry, out, tuning);
+  pushHalo(geometry, out, tuning);
   return out;
 }

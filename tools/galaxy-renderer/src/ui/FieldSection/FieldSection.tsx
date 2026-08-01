@@ -1,12 +1,14 @@
 /**
- * FieldSection — live sliders for the analytic field's warped outer disc
- * rings (`pushDiscRings` in `src/data/galaxy/galaxyFieldMixture.ts`), so a
- * ring's shape can be eyeballed without editing constants and refreshing.
+ * FieldSection — the FLUX FIELD group: the analytic field's exposure, its
+ * three mixture-part toggles (base disc via the header pill, outer disc
+ * rings via the row below, arms live in `ArmFieldSection`), and the ring
+ * shape sliders (`pushDiscRings` in `src/data/galaxy/galaxyFieldMixture.ts`).
  *
- * Values live in the `fieldTuning` slice; `engineBridge` forwards every
- * change to `engine.setFieldTuning`, which rebuilds the mixture from the
- * geometry the last `setParams` cached — no regenerate, no GPU compute
- * dispatch, just a CPU-side rebuild picked up by next frame's uniform pack.
+ * Values live in the `fieldTuning`/`render` slices; `engineBridge` forwards
+ * every change to `engine.setFieldTuning` / the field pass, which rebuilds
+ * the mixture from the geometry the last `setParams` cached — no
+ * regenerate, no GPU compute dispatch, just a CPU-side rebuild picked up by
+ * next frame's uniform pack.
  */
 import type { ReactNode } from 'react';
 import {
@@ -16,6 +18,7 @@ import {
 import { GENERATION_UBO } from '../../../../../src/services/gpu/galaxy/generationUboLayout';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { fieldTuningPatched } from '../../state/slices/fieldTuningSlice';
+import { renderPatched } from '../../state/slices/renderSlice';
 import { sectionToggled } from '../../state/slices/uiSlice';
 import CollapsibleSection from '../CollapsibleSection/CollapsibleSection';
 import ParamSlider from '../ParamSlider/ParamSlider';
@@ -31,20 +34,45 @@ function FieldSection(): ReactNode {
   const dispatch = useAppDispatch();
   const tuning = useAppSelector((state) => state.fieldTuning);
   const galaxy = useAppSelector((state) => state.galaxy);
-  const open = useAppSelector((state) => state.ui.openSections.ringTuning);
-  const ringBlobs = Math.max(1, Math.round(tuning.ringCount)) * RING_BLOBS_PER_RING;
+  const render = useAppSelector((state) => state.render);
+  const open = useAppSelector((state) => state.ui.openSections.field);
+  const ringBlobs = tuning.ringsEnabled
+    ? Math.max(1, Math.round(tuning.ringCount)) * RING_BLOBS_PER_RING
+    : 0;
   const numArms = Math.min(Math.max(1, Math.round(galaxy.armCount ?? 2)), MAX_ARMS);
   const armBlobs = tuning.armsEnabled ? numArms * tuning.armBlobsPerArm : 0;
-  const totalComponents = ringBlobs + armBlobs + OTHER_COMPONENTS;
+  const otherComponents = tuning.discEnabled ? OTHER_COMPONENTS : 0;
+  const totalComponents = ringBlobs + armBlobs + otherComponents;
   const overflow = totalComponents > GALAXY_FIELD_MAX_COMPONENTS;
 
   return (
     <CollapsibleSection
-      title="OUTER DISC RINGS (LIVE)"
+      title="FLUX FIELD"
       open={open}
-      onToggle={() => dispatch(sectionToggled('ringTuning'))}
+      onToggle={() => dispatch(sectionToggled('field'))}
+      headerToggle={tuning.discEnabled}
+      onHeaderToggleChange={(value) => dispatch(fieldTuningPatched({ discEnabled: value }))}
     >
       <div className={styles.root}>
+        <ParamSlider
+          label="Analytic exposure"
+          value={render.analyticExposure}
+          min={0}
+          max={3}
+          step={0.01}
+          format={(v) => v.toFixed(2)}
+          onChange={(v) => dispatch(renderPatched({ analyticExposure: v }))}
+          info="Whole-field multiplier on the integrated mixture. 1.0 is parity: the mixture is calibrated to emit the same total light as the sprite population it stands in for, at whatever the sprite exposure and size sliders are set to."
+        />
+        <label className={styles.ringsToggleRow}>
+          <input
+            type="checkbox"
+            className={styles.pillToggle}
+            checked={tuning.ringsEnabled}
+            onChange={(e) => dispatch(fieldTuningPatched({ ringsEnabled: e.target.checked }))}
+          />
+          <span>Outer disc rings</span>
+        </label>
         <ParamSlider
           label="Ring count"
           value={tuning.ringCount}
@@ -68,7 +96,7 @@ function FieldSection(): ReactNode {
         <p className={overflow ? styles.readoutOverflow : styles.readout}>
           {ringBlobs} ring blobs ({Math.max(1, Math.round(tuning.ringCount))} x{' '}
           {RING_BLOBS_PER_RING}) + {armBlobs} arm blobs ({numArms} x {tuning.armBlobsPerArm}) +{' '}
-          {OTHER_COMPONENTS} other = {totalComponents} components, each evaluated per pixel
+          {otherComponents} other = {totalComponents} components, each evaluated per pixel
           {overflow &&
             ` — OVER the ${GALAXY_FIELD_MAX_COMPONENTS} cap, packFieldUniforms is silently dropping the rest`}
         </p>

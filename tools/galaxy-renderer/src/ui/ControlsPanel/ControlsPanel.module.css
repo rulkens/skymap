@@ -78,6 +78,27 @@
   composes: pillToggle from '../../../../../src/components/SettingsPanel/pillToggle.module.css';
 }
 
+/* One level above a CollapsibleSection header (`sectionHeader` in
+   shared.module.css): brighter text, a size step up, and a stronger top
+   border, so ANALYTIC MODEL reads as the group the sections below belong
+   to rather than a peer of FLUX FIELD/ARM OVERDENSITIES. */
+.groupHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 12px 0 14px;
+  padding: 18px 0 0;
+  border-top: 1px solid var(--border-default);
+}
+
+.groupHeaderTitle {
+  font-size: var(--font-size-lg);
+  letter-spacing: var(--letter-spacing-widest);
+  text-transform: uppercase;
+  color: var(--color-fg-base);
+  font-weight: 600;
+}
+
 .infoIcon {
   padding: 0;
   border: none;

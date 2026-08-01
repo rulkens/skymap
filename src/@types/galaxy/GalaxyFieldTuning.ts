@@ -6,6 +6,8 @@
  * constants exactly (see `DEFAULT_GALAXY_FIELD_TUNING`).
  */
 export type GalaxyFieldTuning = {
+  /** Master toggle for the 8 unconditional base pushes (inner disc, bulge, bar, halo). */
+  readonly discEnabled: boolean;
   /** Number of rings, evenly spaced between the (fixed) inner and outer radius fractions. */
   readonly ringCount: number;
   /**
@@ -13,6 +15,8 @@ export type GalaxyFieldTuning = {
    * the ring separates into countable oriented blobs. 1 is the real field.
    */
   readonly ringBlobSharpness: number;
+  /** Master toggle for `pushDiscRings`, mirrored to the section header checkbox. */
+  readonly ringsEnabled: boolean;
   /** Master toggle for `pushArmRidges`, mirrored to the section header checkbox. */
   readonly armsEnabled: boolean;
   /** Blobs per arm, spaced uniformly in log-radius from `armStartRadius` to that arm's own `fadeRadius`. */

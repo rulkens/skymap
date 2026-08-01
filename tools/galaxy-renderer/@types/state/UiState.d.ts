@@ -19,7 +19,6 @@ export type UiState = {
       | 'glob'
       | 'render'
       | 'field'
-      | 'ringTuning'
       | 'fade'
       | 'grade'
       | 'perf'

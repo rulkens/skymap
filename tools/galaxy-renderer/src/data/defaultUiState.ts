@@ -17,19 +17,16 @@ export const DEFAULT_UI_STATE: UiState = {
     // section delete instead of a surgical slider extraction.
     starBudget: false,
     arms: true,
-    // Expanded: this is the current work, same as `field`/`ringTuning` below.
+    // Expanded: this is the current work, same as `field` below.
     armField: true,
     pop: false,
     dust: false,
     glob: false,
     render: false,
-    // The analytic-field spike starts EXPANDED: its two toggles are the
-    // comparison the section exists for, and a collapsed section would hide
-    // the only way to see either half alone.
+    // FLUX FIELD (exposure, part toggles, ring tuning) starts EXPANDED for the
+    // same reason `armField` does: this is the current work, not a settings
+    // drawer to tuck away.
     field: true,
-    // The ring-tuning sliders start expanded for the same reason: this is the
-    // whole point of the section, not a settings drawer to tuck away.
-    ringTuning: true,
     // Expanded: its live readout is the only place the fade's two factors are
     // visible, and a collapsed section would let the cloud dim with no
     // explanation on screen.

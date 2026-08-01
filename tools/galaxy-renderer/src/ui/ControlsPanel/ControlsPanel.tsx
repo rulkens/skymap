@@ -35,12 +35,12 @@ import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { paramsPatched } from '../../state/slices/galaxySlice';
 import { renderPatched } from '../../state/slices/renderSlice';
 import { lodPatched } from '../../state/slices/lodSlice';
-import { fieldTuningPatched } from '../../state/slices/fieldTuningSlice';
 import { sectionToggled } from '../../state/slices/uiSlice';
 import { PARAM_SPEC } from '../../data/paramSpec';
 import { hubbleTypePatch } from '../../data/hubbleStagePatches';
 import { randomGalaxyParams } from '../../data/randomGalaxyParams';
 import { classifyHubbleType } from '../../../../../src/services/gpu/galaxy/classifyHubbleType';
+import ArmFieldSection from '../ArmFieldSection/ArmFieldSection';
 import CollapsibleSection from '../CollapsibleSection/CollapsibleSection';
 import FadeSection from '../FadeSection/FadeSection';
 import FieldSection from '../FieldSection/FieldSection';
@@ -199,7 +199,6 @@ function ControlsPanel({ fade }: ControlsPanelProps): ReactNode {
   const render = useAppSelector((state) => state.render);
   const lod = useAppSelector((state) => state.lod);
   const ui = useAppSelector((state) => state.ui);
-  const fieldTuning = useAppSelector((state) => state.fieldTuning);
 
   const category = classifyHubbleType(galaxy.type);
   const shapeSliders = buildShapeSliders(category);
@@ -262,6 +261,30 @@ function ControlsPanel({ fade }: ControlsPanelProps): ReactNode {
           <span>Legacy sprite stars</span>
         </label>
 
+        {/* The analytic field is a closed-form line integral of a Gaussian
+            mixture, evaluated into its OWN reduced-resolution target and
+            additively blended into HDR alongside the sprites' — derived from
+            the generator's own geometry in `galaxyFieldMixture.ts`. This
+            group header, not a CollapsibleSection, never folds; it just
+            labels everything below it as one family. Its pill is the whole
+            field GPU pass's master (`render.analyticField`) — the one-click
+            A/B against the legacy sprite pill above — while each section
+            underneath (FLUX FIELD, ARM OVERDENSITIES) has its OWN pill
+            choosing which mixture part builds. */}
+        <div className={styles.groupHeader}>
+          <span className={styles.groupHeaderTitle}>Analytic model</span>
+          <input
+            type="checkbox"
+            className={styles.pillToggle}
+            checked={render.analyticField}
+            onChange={(e) => dispatch(renderPatched({ analyticField: e.target.checked }))}
+            aria-label="Toggle analytic model"
+          />
+        </div>
+
+        <FieldSection />
+        <ArmFieldSection />
+
         <CollapsibleSection
           title="MORPHOLOGY · HUBBLE SEQUENCE"
           open={ui.openSections.morphology}
@@ -307,59 +330,6 @@ function ControlsPanel({ fade }: ControlsPanelProps): ReactNode {
             {armSliders.map(renderGalaxySlider)}
           </CollapsibleSection>
         )}
-
-        {/* The analytic field's own arm ridge — Gaussian blobs placed along
-            the SAME log-spiral curve `armStarSample` draws sprite stars
-            around (`pushArmRidges` in `galaxyFieldMixture.ts`), so the two
-            renderings' arms land on top of each other. On/off lives in the
-            header, same master-toggle idiom as ANALYTIC FLUX FIELD above. */}
-        <CollapsibleSection
-          title="ARM OVERDENSITIES"
-          open={ui.openSections.armField}
-          onToggle={() => dispatch(sectionToggled('armField'))}
-          headerToggle={fieldTuning.armsEnabled}
-          onHeaderToggleChange={(value) => dispatch(fieldTuningPatched({ armsEnabled: value }))}
-        >
-          <ParamSlider
-            label="Blobs per arm"
-            value={fieldTuning.armBlobsPerArm}
-            min={8}
-            max={64}
-            step={1}
-            format={(v) => v.toFixed(0)}
-            onChange={(v) => dispatch(fieldTuningPatched({ armBlobsPerArm: v }))}
-            info="Blobs per arm, spaced uniformly in log-radius from the arm's start to its own fade radius. Cost is arms x blobs, evaluated per pixel."
-          />
-          <ParamSlider
-            label="Arm width"
-            value={fieldTuning.armWidthScale}
-            min={0.3}
-            max={3}
-            step={0.05}
-            format={(v) => v.toFixed(2)}
-            onChange={(v) => dispatch(fieldTuningPatched({ armWidthScale: v }))}
-          />
-          <ParamSlider
-            label="Flux boost"
-            value={fieldTuning.armFluxBoost}
-            min={0}
-            max={3}
-            step={0.05}
-            format={(v) => v.toFixed(2)}
-            onChange={(v) => dispatch(fieldTuningPatched({ armFluxBoost: v }))}
-            info="Whole-arm-population flux multiplier over the share readGalaxyFieldGeometry un-folded from the disc. 1.0 is parity with the sprite arms."
-          />
-          <ParamSlider
-            label="Blob sharpness"
-            value={fieldTuning.armBlobSharpness}
-            min={1}
-            max={12}
-            step={0.5}
-            format={(v) => v.toFixed(1)}
-            onChange={(v) => dispatch(fieldTuningPatched({ armBlobSharpness: v }))}
-            info="Debug only: shrinks every blob's three sigmas together at constant flux, so the ridge breaks into countable blobs whose tilt shows the surface frame they were placed on. 1 is the real field."
-          />
-        </CollapsibleSection>
 
         <CollapsibleSection
           title="POPULATIONS"
@@ -479,39 +449,6 @@ function ControlsPanel({ fade }: ControlsPanelProps): ReactNode {
             />
           </div>
         </CollapsibleSection>
-
-        {/* The analytic flux field is a closed-form line integral of a Gaussian
-            mixture, evaluated into its OWN reduced-resolution target and
-            additively blended into HDR alongside the sprites'. Its on/off lives
-            in the section HEADER (the app SettingsPanel's master-toggle idiom);
-            the legacy sprite path's switch sits at the top of the panel, so the
-            two halves of the comparison are one click each. The mixture is
-            derived from the generator's own geometry in
-            `src/data/galaxy/galaxyFieldMixture.ts`; its ring layout is
-            live-tunable in the section below. */}
-        <CollapsibleSection
-          title="ANALYTIC FLUX FIELD"
-          open={ui.openSections.field}
-          onToggle={() => dispatch(sectionToggled('field'))}
-          headerToggle={render.analyticField}
-          onHeaderToggleChange={(value) => dispatch(renderPatched({ analyticField: value }))}
-        >
-          <ParamSlider
-            label="Analytic exposure"
-            value={render.analyticExposure}
-            min={0}
-            max={3}
-            step={0.01}
-            format={(v) => v.toFixed(2)}
-            onChange={(v) => dispatch(renderPatched({ analyticExposure: v }))}
-            info="Whole-field multiplier on the integrated mixture. 1.0 is parity: the mixture is calibrated to emit the same total light as the sprite population it stands in for, at whatever the sprite exposure and size sliders are set to."
-          />
-        </CollapsibleSection>
-
-        {/* The warped outer disc rings' own tuning surface — see
-            `FieldSection`'s header for why this rebuilds the mixture without
-            a regenerate. */}
-        <FieldSection />
 
         {/* The app's visibility fade, which multiplies into BOTH halves of the
             spike above — so the sprite/analytic comparison holds as the cloud
