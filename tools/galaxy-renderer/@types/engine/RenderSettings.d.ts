@@ -67,6 +67,12 @@ export type RenderSettings = {
   /** SPIKE, tool-only: whole-field intensity multiplier for the analytic pass, where 1.0 emits the sprite field's own total flux. */
   readonly analyticExposure: number;
   /**
+   * "JWST" view mode: present the primary galaxy's dust-column map directly
+   * (a hot MIRI-ish palette) in place of the emission splat draw. Requires
+   * `analyticField` — it replaces that pass's own draw, not a separate one.
+   */
+  readonly dustView: boolean;
+  /**
    * DUST (LEGACY) header pill: off forces the sprite generator's dust knobs
    * (`spriteDust`, `dustRingStrength`) to 0 in the copy handed to the engine,
    * leaving the stored `galaxy` params (and the sliders showing them)

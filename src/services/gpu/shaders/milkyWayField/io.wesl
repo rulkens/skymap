@@ -68,7 +68,15 @@
 // (color for emission) is the per-channel A_lambda/A_V extinction ratio
 // (galaxyDustMixture.ts's DUST_EXTINCTION_RGB), not a tint. [4i+1].w
 // (boundRadius) and [4i+3].xyz (center) mean the same thing they do for an
-// emission component.
+// emission component. Dust components are consumed by dustMap.wesl's own
+// splat pass now, not looped over inside splat.wesl's fs — see binding 2.
+//
+// DUST MAP (binding 2) — the screen-space (tau, tau*tPeak) accumulation
+// dustMap.wesl splats the PRIMARY galaxy's dust slice into, full canvas
+// resolution, one texel lookup replacing splat.wesl's former per-fragment
+// dust loop (see splat.wesl's header and the grill-session doc's N1). Only
+// bound by the emission splat pipeline (splat.wesl imports it); dustMap.wesl
+// itself never reads it, only writes it as a render target.
 
 struct FieldUniforms {
   eye: vec4<f32>,
@@ -81,3 +89,4 @@ struct FieldUniforms {
 
 @group(0) @binding(0) var<uniform> u: FieldUniforms;
 @group(0) @binding(1) var<storage, read> comps: array<vec4<f32>>;
+@group(0) @binding(2) var dustMapTex: texture_2d<f32>;

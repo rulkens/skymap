@@ -8,17 +8,33 @@
 //
 // Dust components live in the SAME 'comps' array, past every emission
 // component (see io.wesl's layout comment), but are never drawn as quads —
-// the draw call's instance count is the emission count only. Each primary
-// emission fragment instead walks the dust slice itself and splits its own
-// ray integral at the dust's depth centroid (see 'fs's dust branch).
+// the draw call's instance count is the emission count only. The PRIMARY
+// galaxy's dust no longer walks that slice per-fragment (a per-fragment loop
+// does not scale to a filament network's component count, per the
+// grill-session doc's N1); it instead reads dustMap.wesl's screen-space
+// (tau, tau*tPeak) accumulation, one texel lookup regardless of dust
+// component count. A future per-EXTRA dust slice would come back as a
+// bounded loop for extra instances (extras have no dust map yet, and their
+// attenuation must stay per-galaxy — see io.wesl's primaryCount gate).
 
 import package::lib::billboard::quadCorner;
+import package::lib::splatSilhouette::splatNdc;
 import package::lib::gaussianIntegral::gaussianRayIntegral;
 import package::lib::gaussianIntegral::gaussianRayCoeffs;
 import package::lib::gaussianIntegral::expHalfErfc;
 import package::lib::gaussianIntegral::GAUSS_PI;
 import package::milkyWayField::io::u;
 import package::milkyWayField::io::comps;
+import package::milkyWayField::io::dustMapTex;
+
+// CCM89 Table 3 A_lambda/A_V, collapsed to one constant for the primary: the
+// dust map sums every dust component's column before this fragment ever
+// reads it, so a per-component extinction ratio has nowhere left to apply —
+// see galaxyDustMixture.ts's DUST_EXTINCTION_RGB, the per-component source
+// these numbers are pinned to (identical today; only the map's collapse is
+// new). Per-component ratios still ride the packed dust records, for a
+// future per-extra loop that reads them directly.
+const DUST_EXTINCTION_RGB = vec3<f32>(0.88, 1.0, 1.25);
 
 struct SplatOut {
   @builtin(position) pos: vec4<f32>,
@@ -50,66 +66,7 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> Spl
 
   var out: SplatOut;
   out.inst = inst;
-
-  // A silhouette cone only exists once the eye clears the blob's bounding
-  // sphere by a margin (cut sigma); inside that margin — including "behind"
-  // — every ray through the pixel can still graze the ellipsoid, so the
-  // correct footprint is the whole screen. zv < 1.3*r is the cheap,
-  // conceptually-named version of that same test; the cut*r check right
-  // below is what actually has to hold for the sqrt below to be real, and
-  // subsumes it (cut > 1.3).
-  // 4.5, not 3: the quad edge clips the Gaussian at the cut, and for the
-  // wide disc and halo components a 3-sigma clip truncates at a visible
-  // 1 percent step (the eye reads a hard edge in a smooth HDR gradient long
-  // before it reads the level). exp(-10.1) at 4.5 sigma is 4e-5 -- below
-  // anything the target can show.
-  let cut = 4.5;
-  let bound = cut * r;
-  // Fully behind the camera: the forward ray never gets within cut sigma of
-  // the blob, so its contribution is below the truncation the cut already
-  // accepts. Collapse the quad to nothing rather than falling through to the
-  // fullscreen branch — from inside the disc, half the mixture is behind the
-  // eye at any moment, and each one would otherwise cost a fullscreen pass.
-  if (zv < -bound) {
-    out.pos = vec4<f32>(2.0, 2.0, 2.0, 1.0);
-    out.ndc = vec2<f32>(0.0, 0.0);
-    return out;
-  }
-  // Eye inside or nearly inside the bounding sphere, or inside either
-  // per-axis tangent cylinder: no silhouette exists and the honest footprint
-  // is the whole screen.
-  let discX = xv * xv + zv * zv - bound * bound;
-  let discY = yv * yv + zv * zv - bound * bound;
-  let denom = zv * zv - bound * bound;
-  if (zv < 1.3 * r || denom <= 1e-6 || discX <= 0.0 || discY <= 0.0) {
-    out.pos = vec4<f32>(corner, 0.0, 1.0);
-    out.ndc = corner;
-    return out;
-  }
-
-  // Exact per-axis silhouette of the bounding sphere: the two tangent lines
-  // from the eye to the circle of radius bound centred (xv, zv) in the
-  // x-z plane have slopes (xv*zv +- bound*sqrt(discX)) / denom, and same in
-  // y-z. This replaces the on-axis approximation r/(zv*tan), which
-  // under-covers off-axis blobs by up to 1/cos^2(theta) and read as the
-  // field darkening toward the screen edges.
-  let sX = bound * sqrt(discX);
-  let sY = bound * sqrt(discY);
-  let txLo = (xv * zv - sX) / denom;
-  let txHi = (xv * zv + sX) / denom;
-  let tyLo = (yv * zv - sY) / denom;
-  let tyHi = (yv * zv + sY) / denom;
-
-  // Tangent space -> NDC via the same tanHalfFov/aspect/shift split the
-  // fragment stage below inverts back into a ray.
-  let ndcXLo = txLo / (tanHalfFov * aspect) - shift;
-  let ndcXHi = txHi / (tanHalfFov * aspect) - shift;
-  let ndcYLo = tyLo / tanHalfFov;
-  let ndcYHi = tyHi / tanHalfFov;
-  let mid = vec2<f32>(ndcXLo + ndcXHi, ndcYLo + ndcYHi) * 0.5;
-  let half = vec2<f32>(ndcXHi - ndcXLo, ndcYHi - ndcYLo) * 0.5;
-  let ndc = mid + corner * half;
-
+  let ndc = splatNdc(corner, xv, yv, zv, r, tanHalfFov, aspect, shift);
   out.pos = vec4<f32>(ndc, 0.0, 1.0);
   out.ndc = ndc;
   return out;
@@ -137,10 +94,9 @@ fn fs(input: SplatOut) -> @location(0) vec4<f32> {
   let po = o - g3.xyz;
 
   // counts.x is the emission count (this draw's own instance count, unused
-  // here); .y/.z/.w are the dust slice's offset/count and the primary
-  // galaxy's own emission count — see io.wesl's layout comment.
-  let dustOffset = u32(u.counts.y);
-  let dustCount = u32(u.counts.z);
+  // here); .w is the primary galaxy's own emission count — see io.wesl's
+  // layout comment. .y/.z (the dust slice's offset/count) are consumed by
+  // dustMap.wesl's own draw now, not read here.
   let primaryCount = u32(u.counts.w);
 
   var emission = vec3<f32>(0.0);
@@ -149,35 +105,21 @@ fn fs(input: SplatOut) -> @location(0) vec4<f32> {
   // primaryCount, since the primary's components are packed first — see
   // io.wesl): an extra's dust must never darken the primary, and this gate
   // is what keeps that true without extras carrying their own dust yet.
-  if (input.inst < primaryCount && dustCount > 0u) {
-    // This ray's total dust column: scalarTau (grey depth, locates the
-    // split point), tauRGB (per-channel, becomes the transmittance),
-    // depthMoment (tau-weighted depth, the split point itself) — closed
-    // forms per dust component j, same quadratic machinery as the emission
-    // integral below. See the module's grill-session doc for the derivation.
-    var scalarTau = 0.0;
-    var tauRGB = vec3<f32>(0.0);
-    var depthMoment = 0.0;
-    for (var j = dustOffset; j < dustOffset + dustCount; j = j + 1u) {
-      let dg0 = comps[4u * j];
-      let dg1 = comps[4u * j + 1u];
-      let dg2 = comps[4u * j + 2u];
-      let dg3 = comps[4u * j + 3u];
-      let dc = gaussianRayCoeffs(o - dg3.xyz, d, dg0.xyz, dg1.xyz);
-      let da = dc.x;
-      if (da < 1e-12) { continue; }
-      let tauJ = dg0.w * sqrt(GAUSS_PI / (2.0 * da)) * expHalfErfc(dc.z, dc.y / sqrt(2.0 * da));
-      // -b/a is this component's own closest-approach depth along the ray;
-      // clamped to 0 because a component whose peak is behind the eye still
-      // contributes column density in front of it.
-      let tPeak = max(-dc.y / da, 0.0);
-      scalarTau += tauJ;
-      tauRGB += tauJ * dg2.xyz;
-      depthMoment += tauJ * tPeak;
-    }
-    dustApplies = scalarTau > 1e-6;
+  //
+  // The dust column comes from dustMapTex, not a per-component loop:
+  // framebuffer pixel coords index the same-sized map exactly (both this
+  // pass and the map run at full canvas resolution — see
+  // createGalaxyEngine.ts), so no sampler and no uv-flip trap. tau is the
+  // map's grey column depth (red channel); dividing the green channel
+  // (tau*tPeak) by tau recovers tD, the tau-weighted depth moment — see
+  // dustMap.wesl's fs for the two channels' definitions.
+  if (input.inst < primaryCount) {
+    let texel = textureLoad(dustMapTex, vec2<i32>(input.pos.xy), 0);
+    let tau = texel.r;
+    dustApplies = tau > 1e-6;
     if (dustApplies) {
-      let tD = max(depthMoment / scalarTau, 0.0);
+      let tD = max(texel.g / tau, 0.0);
+      let tauRGB = tau * DUST_EXTINCTION_RGB;
       let transmittance = exp(-tauRGB);
 
       let ec = gaussianRayCoeffs(po, d, g0.xyz, g1.xyz);

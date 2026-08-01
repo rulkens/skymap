@@ -287,6 +287,21 @@ function ControlsPanel({ fade }: ControlsPanelProps): ReactNode {
           />
         </div>
 
+        {/* The JWST view mode: replaces the field pass's emission draw with
+            a direct presentation of the primary's dust-column map (see
+            dustMap.wesl / dustPresent.wesl). Only has an effect while the
+            analytic model pill above is on — it swaps out THAT pass's own
+            draw, it doesn't add a separate one. */}
+        <label className={styles.legacyToggleRow}>
+          <input
+            type="checkbox"
+            className={styles.pillToggle}
+            checked={render.dustView}
+            onChange={(e) => dispatch(renderPatched({ dustView: e.target.checked }))}
+          />
+          <span>Dust view (JWST)</span>
+        </label>
+
         <FieldSection />
         <ArmFieldSection />
         <DustSection />

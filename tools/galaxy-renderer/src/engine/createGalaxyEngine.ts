@@ -248,10 +248,19 @@ import { DEFAULT_RENDER_SETTINGS } from '../data/defaultRenderSettings';
 import starWgsl from './shaders/milkyWayCloud/stars.wesl?static';
 import dustWgsl from './shaders/milkyWayCloud/dust.wesl?static';
 import splatWgsl from './shaders/milkyWayField/splat.wesl?static';
+import dustMapWgsl from './shaders/milkyWayField/dustMap.wesl?static';
+import dustPresentWgsl from './shaders/milkyWayField/dustPresent.wesl?static';
 import gradeWgsl from './shaders/grade.wesl?static';
 
 /** HDR working format for the scene + bloom pyramid — the runtime's `hdr` row. */
 const HDR: GPUTextureFormat = 'rgba16float';
+
+/**
+ * Format of `dustMapTex`, the dust-column map: two channels (tau,
+ * tau*tPeak — see dustMap.wesl's fs), `float16` for headroom on a summed
+ * column that has no natural upper bound the way a normalized colour does.
+ */
+const DUST_MAP_FORMAT: GPUTextureFormat = 'rg16float';
 
 /**
  * Resolution divisor for bloom level `n`, mirroring the runtime's `bloomN`
@@ -275,10 +284,17 @@ const bloomScale = (level: number): number => 2 ** (level + 1);
  *    `aggregateTex` is its own attachment and therefore its own pass. This is
  *    the fill-bound half and the number the divisor / sprite-size knobs move,
  *    so having it isolated is most of the point of the split.
- *  - `'field'` is the analytic Gaussian-mixture pass, into its OWN
- *    reduced-resolution `fieldTex` (cleared, not loaded — no tile-reload tax),
- *    so its pass and therefore its slot come free with the private target.
- *    Only encoded when the analytic field is on, so the slot self-drops.
+ *  - `'dustMap'` is the dust-column splat, into its OWN full-res `dustMapTex`
+ *    (cleared, not loaded). Only encoded when there is dust to splat OR the
+ *    JWST view needs a fresh map (see `drawFrame`'s gate), so the slot drops
+ *    on a dustless galaxy exactly like `'field'` drops when the model is off.
+ *  - `'field'` is whichever pass filled `fieldTex` this frame: the analytic
+ *    Gaussian-mixture splat normally, or the JWST dustPresent pass when
+ *    `render.dustView` is on — both write the SAME reduced-resolution
+ *    `fieldTex` (cleared, not loaded — no tile-reload tax), so sharing one
+ *    slot between the two answers the same question ("what did this pass
+ *    cost") regardless of which one ran. Only encoded when the analytic
+ *    field is on, so the slot self-drops.
  *  - `'scene'` is the full-res HDR pass: the aggregate's additive upsample
  *    followed by the dust billboards. Those two share an attachment and so
  *    share a pass; separating them would mean ending the HDR pass and
@@ -294,7 +310,15 @@ const bloomScale = (level: number): number => 2 ** (level + 1);
  * `'grade'` only appears on frames where the tool-only grade trailer actually
  * ran; the timing service drops slots whose `descriptorFor` went unconsumed.
  */
-const TIMING_SLOTS: readonly string[] = ['stars', 'field', 'scene', 'bloom', 'composite', 'grade'];
+const TIMING_SLOTS: readonly string[] = [
+  'stars',
+  'dustMap',
+  'field',
+  'scene',
+  'bloom',
+  'composite',
+  'grade',
+];
 
 /** rAF deltas kept for the median — one second at 60 Hz. */
 const FRAME_WINDOW = 60;
@@ -551,6 +575,44 @@ export async function createGalaxyEngine(
     primitive: { topology: 'triangle-list' },
   });
 
+  // ---- dust-column map pipeline (screen-space dust splat) ----
+  // `milkyWayField/dustMap.wesl`: one instanced quad per PRIMARY dust
+  // component (splat.wesl's own silhouette math via `lib/splatSilhouette`),
+  // additively accumulating (tau, tau*tPeak) into `dustMapTex`, full canvas
+  // resolution. Replaces splat.wesl's former per-fragment dust loop with a
+  // texture read — see splat.wesl's header and the grill-session doc's N1.
+  // Its own module (not a second entry point on `splatMod`) and its own
+  // pipeline, for the same `layout: 'auto'` reason every other pass pair
+  // here is split: two pipelines sharing a module that reads a binding with
+  // divergent stage visibility fail the group-equivalent check.
+  const dustMapMod = makeShader(dustMapWgsl, 'galaxy:dustMap');
+  const dustMapPipe = device.createRenderPipeline({
+    label: 'galaxy:dustMapPipe',
+    layout: 'auto',
+    vertex: { module: dustMapMod, entryPoint: 'vs' },
+    fragment: {
+      module: dustMapMod,
+      entryPoint: 'fs',
+      targets: [{ format: DUST_MAP_FORMAT, blend: ADDITIVE_BLEND }],
+    },
+    primitive: { topology: 'triangle-list' },
+  });
+
+  // ---- dust-map presentation pipeline ("JWST" view) ----
+  // `milkyWayField/dustPresent.wesl`: a fullscreen triangle over `dustMapTex`,
+  // mapping its column to a hot palette. Drawn INSTEAD of `splatPipe`'s
+  // emission draw when `render.dustView` is on — see `drawFrame`'s field
+  // pass. No blend: it is the pass's only draw into a freshly cleared
+  // `fieldTex`, so a straight overwrite is correct.
+  const dustPresentMod = makeShader(dustPresentWgsl, 'galaxy:dustPresent');
+  const dustPresentPipe = device.createRenderPipeline({
+    label: 'galaxy:dustPresentPipe',
+    layout: 'auto',
+    vertex: { module: dustPresentMod, entryPoint: 'vs' },
+    fragment: { module: dustPresentMod, entryPoint: 'fs', targets: [{ format: HDR }] },
+    primitive: { topology: 'triangle-list' },
+  });
+
   // ---- the aggregate composite: the RUNTIME's additive upsample ----
   // Fully generic — a covering-triangle 4-tap low-pass of whatever view it is
   // handed, additively blended into an `rgba16float` target. The star pass
@@ -669,7 +731,29 @@ export async function createGalaxyEngine(
   // binding). `let`, not `const`: `fieldCompsBuf` grows (see
   // `repackFieldComponents`), and a bind group is bound to the specific
   // GPUBuffer it was built against — a resized buffer needs a new group.
-  let splatBG = buildSplatBindGroup();
+  //
+  // `dustMapBG` (dustMap.wesl's own pass — reads only `fieldUbo` +
+  // `fieldCompsBuf`, same two bindings, its own pipeline) can build eagerly
+  // right here, same as the old `splatBG` used to. `splatBG` itself cannot:
+  // splat.wesl's fs now ALSO reads `dustMapTex` (binding 2), which does not
+  // exist yet at this point in construction — its first build is deferred to
+  // `buildDustMapTarget()` below, alongside `dustPresentBG` (dustMapTex is
+  // that bind group's ONLY binding). All three rebuild in
+  // `repackFieldComponents`'s regrow branch when `fieldCompsBuf` grows;
+  // `splatBG`/`dustPresentBG` rebuild again whenever `dustMapTex` itself is
+  // recreated (`buildDustMapTarget`, on every resize).
+  let dustMapBG = buildDustMapBindGroup();
+  function buildDustMapBindGroup(): GPUBindGroup {
+    return device.createBindGroup({
+      label: 'galaxy:dustMapBG',
+      layout: dustMapPipe.getBindGroupLayout(0),
+      entries: [
+        { binding: 0, resource: { buffer: fieldUbo } },
+        { binding: 1, resource: { buffer: fieldCompsBuf } },
+      ],
+    });
+  }
+  let splatBG: GPUBindGroup;
   function buildSplatBindGroup(): GPUBindGroup {
     return device.createBindGroup({
       label: 'galaxy:splatBG',
@@ -677,7 +761,16 @@ export async function createGalaxyEngine(
       entries: [
         { binding: 0, resource: { buffer: fieldUbo } },
         { binding: 1, resource: { buffer: fieldCompsBuf } },
+        { binding: 2, resource: dustMapTex.createView() },
       ],
+    });
+  }
+  let dustPresentBG: GPUBindGroup;
+  function buildDustPresentBindGroup(): GPUBindGroup {
+    return device.createBindGroup({
+      label: 'galaxy:dustPresentBG',
+      layout: dustPresentPipe.getBindGroupLayout(0),
+      entries: [{ binding: 0, resource: dustMapTex.createView() }],
     });
   }
 
@@ -707,6 +800,15 @@ export async function createGalaxyEngine(
    * rate — and it is FILL-bound, so that was most of its cost.
    */
   let fieldTex: GPUTexture;
+  /**
+   * The dust-column map (see dustMap.wesl): screen-space (tau, tau*tPeak)
+   * accumulation for the primary galaxy's dust slice. Unlike `fieldTex`, this
+   * runs at FULL canvas resolution, not a divisor of it — dust is where the
+   * high-frequency detail lives (grill-session doc, N1b), and splat.wesl's fs
+   * reads it back at exact framebuffer pixel coordinates, which only lines up
+   * pixel-for-pixel if the two passes share a resolution.
+   */
+  let dustMapTex: GPUTexture;
   let bloomMips: GPUTexture[] = [];
   const RA_TB = GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING;
 
@@ -755,6 +857,27 @@ export async function createGalaxyEngine(
     });
   }
 
+  // Recreated on resize exactly like `buildFieldTarget`/`buildAggregateTarget`
+  // above, but at the CANVAS's own size (see `dustMapTex`'s declaration for
+  // why it cannot ride a divisor). Both bind groups that reference
+  // `dustMapTex` are tied to the specific GPUTexture they were built against
+  // (same `layout: 'auto'` discipline as every other bind group here), so a
+  // recreation has to rebuild both immediately, not wait for the next
+  // `repackFieldComponents`.
+  function buildDustMapTarget(): void {
+    const w = canvas.width;
+    const h = canvas.height;
+    if (dustMapTex) dustMapTex.destroy();
+    dustMapTex = device.createTexture({
+      label: 'galaxy:dustMapTex',
+      size: [w, h],
+      format: DUST_MAP_FORMAT,
+      usage: RA_TB,
+    });
+    splatBG = buildSplatBindGroup();
+    dustPresentBG = buildDustPresentBindGroup();
+  }
+
   function buildTargets(): void {
     const w = canvas.width;
     const h = canvas.height;
@@ -775,6 +898,7 @@ export async function createGalaxyEngine(
     });
     buildAggregateTarget();
     buildFieldTarget();
+    buildDustMapTarget();
     // Pyramid: level 0 = half-res, each further level halves again -> ever-wider
     // glow. `Math.floor(size / scale)` clamped to 1 px, matching the runtime's
     // `renderTargets.allocate`.
@@ -899,12 +1023,12 @@ export async function createGalaxyEngine(
    * `dustOffset == fieldEmissionCount` always holds without a separate
    * bookkeeping pass — see io.wesl's layout comment.
    *
-   * Grows (and rebuilds `splatBG`, since an 'auto'-layout bind group is tied
-   * to the specific GPUBuffer it was built against) only when the new total
-   * exceeds the current capacity, and never shrinks — the same grow-only
-   * discipline `instancedQuadRenderer` uses for its 'grow' capacity
+   * Grows (and rebuilds `splatBG` + `dustMapBG`, since an 'auto'-layout bind
+   * group is tied to the specific GPUBuffer it was built against) only when
+   * the new total exceeds the current capacity, and never shrinks — the same
+   * grow-only discipline `instancedQuadRenderer` uses for its 'grow' capacity
    * strategy, and for the same reason here: `setFieldTuning` fires on every
-   * frame a tuning slider is dragged, and recreating the buffer + bind group
+   * frame a tuning slider is dragged, and recreating the buffer + bind groups
    * that often would be pure churn.
    */
   function repackFieldComponents(): void {
@@ -924,6 +1048,7 @@ export async function createGalaxyEngine(
         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
       });
       splatBG = buildSplatBindGroup();
+      dustMapBG = buildDustMapBindGroup();
     }
     if (total > 0) {
       device.queue.writeBuffer(fieldCompsBuf, 0, packFieldComponents(combined));
@@ -1640,7 +1765,12 @@ export async function createGalaxyEngine(
         pass.setPipeline(starPipe);
         pass.setBindGroup(0, starBG);
         pass.setVertexBuffer(0, quad);
-        if (starBuf) {
+        // Skipped for the primary (not for extras) while the JWST dust view
+        // is on: that mode replaces the field pass's emission draw with a
+        // direct presentation of the dust map, and the primary's own sprite
+        // glow would otherwise wash additively over it in the scene pass
+        // below. Extras aren't the dust map's subject, so their sprites stay.
+        if (starBuf && !render.dustView) {
           pass.setVertexBuffer(1, starBuf);
           pass.draw(6, starCount);
         }
@@ -1657,29 +1787,89 @@ export async function createGalaxyEngine(
     // point of the side-by-side. Clearing (not loading) is what a private
     // target buys: no tile reload, and the timing slot is then honest.
     if (render.analyticField) {
-      const fieldWrites = timing.descriptorFor('field');
-      const pass = enc.beginRenderPass({
-        label: 'galaxy:fieldPass',
-        colorAttachments: [
-          {
-            view: fieldTex.createView(),
-            clearValue: { r: 0, g: 0, b: 0, a: 0 },
-            loadOp: 'clear',
-            storeOp: 'store',
-          },
-        ],
-        ...(fieldWrites ? { timestampWrites: fieldWrites } : {}),
-      });
-      pass.setPipeline(splatPipe);
-      pass.setBindGroup(0, splatBG);
-      // One draw for the WHOLE emission list `repackFieldComponents` wrote —
-      // central galaxy's components then every extra's — so the field pass's
-      // timing slot honestly reports the analytic cost of everything on
-      // screen, not just the central galaxy's share. `fieldEmissionCount`,
-      // NOT the packed total: the trailing dust slice is never drawn as its
-      // own quad, only read from inside a primary emission fragment.
-      pass.draw(6, fieldEmissionCount);
-      pass.end();
+      // Dust-column map: splat the primary's dust slice into `dustMapTex`,
+      // full canvas res. Feeds splat.wesl's fs (the grey/RGB split) when the
+      // JWST view is off, or IS the presented image when it's on — so it has
+      // to run whenever either consumer needs it: `dustView` (the image
+      // itself) or a nonzero dust slice (splat.wesl's fs will read it). An
+      // untouched `dustMapTex` reads back all zero, same effect as skipping
+      // the pass, so the `fieldDustCount === 0 && !dustView` case is a
+      // harmless no-op either way — this gate just avoids the redundant clear
+      // + zero-instance draw.
+      if (fieldDustCount > 0 || render.dustView) {
+        const dustMapWrites = timing.descriptorFor('dustMap');
+        const dustMapPass = enc.beginRenderPass({
+          label: 'galaxy:dustMapPass',
+          colorAttachments: [
+            {
+              view: dustMapTex.createView(),
+              clearValue: { r: 0, g: 0, b: 0, a: 0 },
+              loadOp: 'clear',
+              storeOp: 'store',
+            },
+          ],
+          ...(dustMapWrites ? { timestampWrites: dustMapWrites } : {}),
+        });
+        dustMapPass.setPipeline(dustMapPipe);
+        dustMapPass.setBindGroup(0, dustMapBG);
+        dustMapPass.draw(6, fieldDustCount);
+        dustMapPass.end();
+      }
+
+      if (render.dustView) {
+        // JWST view mode: present the dust map directly INSTEAD OF the
+        // emission splat draw below, into fieldTex — the SAME target the
+        // splat draw writes. The scene pass's existing upsample
+        // (`aggregateUpsample.draw(pass, fieldTex.createView())` just below)
+        // already folds whatever fieldTex holds into HDR, so swapping what
+        // fills it is the entire integration; nothing else changes.
+        //
+        // Rides the 'field' timing slot (see TIMING_SLOTS): both this pass
+        // and the splat draw below fill the same fieldTex, so the slot
+        // answers "what did filling fieldTex cost" regardless of which mode
+        // is active.
+        const fieldWrites = timing.descriptorFor('field');
+        const pass = enc.beginRenderPass({
+          label: 'galaxy:dustPresentPass',
+          colorAttachments: [
+            {
+              view: fieldTex.createView(),
+              clearValue: { r: 0, g: 0, b: 0, a: 0 },
+              loadOp: 'clear',
+              storeOp: 'store',
+            },
+          ],
+          ...(fieldWrites ? { timestampWrites: fieldWrites } : {}),
+        });
+        pass.setPipeline(dustPresentPipe);
+        pass.setBindGroup(0, dustPresentBG);
+        pass.draw(3);
+        pass.end();
+      } else {
+        const fieldWrites = timing.descriptorFor('field');
+        const pass = enc.beginRenderPass({
+          label: 'galaxy:fieldPass',
+          colorAttachments: [
+            {
+              view: fieldTex.createView(),
+              clearValue: { r: 0, g: 0, b: 0, a: 0 },
+              loadOp: 'clear',
+              storeOp: 'store',
+            },
+          ],
+          ...(fieldWrites ? { timestampWrites: fieldWrites } : {}),
+        });
+        pass.setPipeline(splatPipe);
+        pass.setBindGroup(0, splatBG);
+        // One draw for the WHOLE emission list `repackFieldComponents` wrote —
+        // central galaxy's components then every extra's — so the field pass's
+        // timing slot honestly reports the analytic cost of everything on
+        // screen, not just the central galaxy's share. `fieldEmissionCount`,
+        // NOT the packed total: the trailing dust slice is never drawn as its
+        // own quad, only read from inside a primary emission fragment.
+        pass.draw(6, fieldEmissionCount);
+        pass.end();
+      }
     }
     // Scene pass: the aggregate folded into HDR, then transmittance dust over
     // it. The order matters and matches the app's HDR content order — dust
@@ -1710,7 +1900,10 @@ export async function createGalaxyEngine(
       pass.setPipeline(dustPipe);
       pass.setBindGroup(0, dustBG);
       pass.setVertexBuffer(0, quad);
-      if (dustBuf) {
+      // Same primary-only skip as the star pass above, same reason: the
+      // JWST view presents the dust MAP, so the legacy sprite dust's own
+      // multiplicative darkening over the primary would fight it.
+      if (dustBuf && !render.dustView) {
         pass.setVertexBuffer(1, dustBuf);
         pass.draw(6, dustCount);
       }
