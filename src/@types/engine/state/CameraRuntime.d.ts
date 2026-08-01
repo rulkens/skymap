@@ -49,9 +49,13 @@
  *                    can never poison the pick epoch (the value-and-place braid the
  *                    old module-level memo accessor carried).
  *
- *   `frameBasis`   — this frame's resolved orientation basis B(t): the steady
- *                    registry basis at rest, or the mid-slerp basis while an
- *                    orientation-frame switch is in flight. Boxed for the same
+ *   `upBasis`      — this frame's resolved UP basis B(t): the steady registry
+ *                    basis at rest, or the mid-slerp basis while an
+ *                    orientation-frame switch is in flight. (Named for what it
+ *                    IS, not the generic `frameBasis` clip-authoring parameter
+ *                    used elsewhere for "which basis a clip's world-space
+ *                    content decodes through" — a different, wider concept;
+ *                    do not conflate the two.) Boxed for the same
  *                    in-place-update reason as `lastPose`, so the saga context and
  *                    `applySceneEffect` (which read it to seed a switch's `fromQuat`)
  *                    share the live reference. `runFrame` resolves it ONCE per frame
@@ -88,5 +92,5 @@ export type CameraRuntime = {
    * (saga context + `applySceneEffect`) read the live value. Single-writer: only
    * `runFrame` writes it, once per frame from `resolveFrameBasis`.
    */
-  frameBasis: { current: Mat3 };
+  upBasis: { current: Mat3 };
 };

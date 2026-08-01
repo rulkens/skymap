@@ -346,7 +346,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   //
   // `upBasis` is `resolveFrameBasis`'s live B(t), resolved exactly once here.
   //
-  // `state.cameraRuntime.frameBasis.current` gets `upBasis`, NOT `poseBasis`: it
+  // `state.cameraRuntime.upBasis.current` gets `upBasis`, NOT `poseBasis`: it
   // seeds the NEXT switch's `fromQuat` (`watchOrientationChangeSaga`), and a
   // re-switch mid-roll must compose from the live pole, not the committed one.
   //
@@ -360,7 +360,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     state.cameraRuntime.clock,
     nowMs,
   );
-  state.cameraRuntime.frameBasis.current = upBasis;
+  state.cameraRuntime.upBasis.current = upBasis;
   if (state.cam) {
     // Pre-bootstrap `cam` is null; a grab is impossible until wireInput attaches
     // controls, so there is no decode to keep in sync until then.

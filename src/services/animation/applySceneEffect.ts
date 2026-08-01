@@ -54,6 +54,14 @@
  * firing mid-roll composes continuously instead of snapping back to a steady
  * pole. Unlike the interactive saga there is no null-runtime bail: inside a
  * running clip the frame loop has already resolved `frameBasis.current`.
+ *
+ * Deliberately NOT a third dispatch: `watchOrientationChangeSaga` also
+ * re-encodes `camera.base` (`commitCameraPose(reencodePose(...))`); this cue
+ * does not need to, because the clip driver that is necessarily active
+ * whenever a `frameTo` fires re-derives its pose from scratch every frame
+ * against the CURRENT `settings.orientation` (see `SceneEffect`'s `frameTo`
+ * doc and `cameraDrivers.ts`'s `clip` row) — `base` is never what's rendered
+ * nor what commit-on-edge bakes while a clip is winning.
  */
 
 import type { SceneEffect } from '../../@types/animation/SceneEffect';

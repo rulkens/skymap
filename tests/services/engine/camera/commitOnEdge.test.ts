@@ -93,7 +93,7 @@ function makeEngineState(): {
       lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 } as CameraPose },
       prevActiveId: { current: 'resting' as string },
       lastRenderedSimDays: { current: 0 },
-      frameBasis: { current: ORIENTATION_FRAMES.ecliptic },
+      upBasis: { current: ORIENTATION_FRAMES.ecliptic },
     },
   };
 

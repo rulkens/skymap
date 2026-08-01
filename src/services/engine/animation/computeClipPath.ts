@@ -28,8 +28,11 @@
  *
  * `sampleClipPath` walks the clip uniformly in TIME, so it needs the total
  * duration. `compileClip` already computes `durationSec` as a by-product of
- * flattening the effect tree; we compile once here (cheap, and memoised by clip
- * identity inside `compileClip`) purely to read that scalar.
+ * flattening the effect tree; we compile once here (cheap — `compileClip`
+ * itself is UNCACHED) purely to read that scalar. The memoised compile path
+ * (a `WeakMap` keyed on `ClipData` identity + orientation basis) lives in
+ * `evaluateClip.ts`'s `compileCache`, gated behind evaluating a pose each
+ * frame — this call site never goes through it.
  *
  * ### `frame` alongside `frameBasis`
  *

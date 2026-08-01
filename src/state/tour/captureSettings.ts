@@ -21,10 +21,12 @@
  * user), so a whole-cluster capture is what keeps a body's dot and its
  * caption restoring in lockstep rather than one outliving the other.
  *
- * `orientation` rides along too, though it is a bare scalar, not one of the
- * ten clusters: a tour's `frameTo` cue can switch it mid-run, so the restore
- * needs a captured pre-tour value. Unlike the clusters, its restore does NOT
- * go through the whole-cluster merge — see `restoreSceneSaga`.
+ * `orientation` does NOT ride along, despite being captured at the same time
+ * `captureScene` calls this function: it is a bare scalar, not one of the ten
+ * clusters, and a tour's `frameTo` cue can switch it mid-run through the
+ * SAME `mergeSnapshot` write path the clusters here restore through — see
+ * `SceneSnapshot`'s header for why that makes it unsafe to fold into this
+ * type. `captureScene` captures it separately, alongside `focus`.
  *
  * Reads `RootState`, not `EngineState`: this is a pure store read with no
  * engine dependency, so it lives in `state/tour/` beside `captureScene`
@@ -46,7 +48,6 @@ export function captureSettings(state: Pick<RootState, 'settings'>): SettingsSna
     starCatalogs,
     bodies,
     labels,
-    orientation,
   } = state.settings;
   return structuredClone({
     galaxyCatalogs,
@@ -59,6 +60,5 @@ export function captureSettings(state: Pick<RootState, 'settings'>): SettingsSna
     starCatalogs,
     bodies,
     labels,
-    orientation,
   });
 }

@@ -5,9 +5,10 @@
  * mutates them, then restores the capture. These tests pin the properties
  * that make that round-trip sound:
  *
- *   1. *Scope* — exactly the ten tour-owned clusters plus the `orientation`
- *      scalar are captured, and excluded clusters (e.g. `tonemap`) never
- *      leak into the snapshot.
+ *   1. *Scope* — exactly the ten tour-owned clusters are captured, and
+ *      excluded fields (e.g. `tonemap`, `orientation`) never leak into the
+ *      snapshot. `orientation` is captured separately by `captureScene` onto
+ *      `SceneSnapshot` — see that type's header for why it must not ride here.
  *   2. *Detachment* — the snapshot is a deep, independent copy; a later
  *      mutation of the live `state.settings` (top-level or nested) must
  *      not change the captured value.
@@ -30,7 +31,6 @@ const SNAPSHOT_KEYS = [
   'labels',
   'milkyWay',
   'orbitTrails',
-  'orientation',
   'starCatalogs',
   'structures',
   'volumes',
@@ -64,13 +64,18 @@ function makeState() {
 }
 
 describe('captureSettings', () => {
-  it('clones exactly the ten tour-owned clusters plus the orientation scalar', () => {
+  it('clones exactly the ten tour-owned clusters', () => {
     const state = makeState();
     const snap = captureSettings(state);
 
     expect(Object.keys(snap).sort()).toEqual(SNAPSHOT_KEYS);
     // Excluded cluster dropped.
     expect(snap).not.toHaveProperty('tonemap');
+    // `orientation` must never reach this snapshot — it rides `SceneSnapshot`
+    // instead, precisely so a beat-boundary `mergeSnapshot` dispatch built from
+    // this type cannot revert the tour's live-authored pole (see
+    // `SceneSnapshot`'s header).
+    expect(snap).not.toHaveProperty('orientation');
     // The ten captured clusters deep-equal their source.
     for (const key of SNAPSHOT_KEYS) {
       expect((snap as Record<string, unknown>)[key]).toEqual(

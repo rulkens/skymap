@@ -30,11 +30,18 @@
  * flythrough was built not to have. `neighbourhoodReveal`'s dwell, right
  * before the flythrough and with a STATIONARY target across its own window,
  * owns that exact landing instead (see its header). This dwell is a plain
- * `cruiseRate` — a RATE, not a bearing, so it stays frame-invariant without
- * needing to resolve anything — tuned to cover most of the shared backward
- * revolution the two dwells' pacing was originally split across, leaving
- * `neighbourhoodReveal`'s `spinToId` to close whatever arc remains onto M81,
- * exactly, regardless of where this dwell happens to stop.
+ * `cruiseRate` — a RATE, not a bearing, so its MAGNITUDE (radians covered)
+ * needs no resolution against any subject. Its AXIS is not frame-invariant,
+ * though: `spin('yaw', …)` still turns about whichever orientation frame is
+ * live when the clip plays (there is no clip-local orbit axis — a deferred
+ * item, see the spec), so the same authored rate sweeps a physically
+ * different arc in world space under a different committed pole. This beat's
+ * frame is pinned supergalactic for the whole outward stretch (see
+ * `approachM31`'s `frameTo`), so today the rate is tuned once against that
+ * one axis — tuned to cover most of the shared backward revolution the two
+ * dwells' pacing was originally split across, leaving `neighbourhoodReveal`'s
+ * `spinToId` to close whatever arc remains onto M81, exactly, regardless of
+ * where this dwell happens to stop.
  *
  * The first real survey reveal rides this beat's opening: 2MRS fades in
  * with the group ring, so the family shot reads as a populated region and
@@ -78,11 +85,15 @@ export const localGroup: ClipData = {
 };
 
 const DWELL_SEC = 14;
-// Orbit speed, not a bearing — a pure rate stays frame-invariant with no
-// resolution needed. Preserves the pacing this dwell has always had: most of
-// the shared backward revolution toward the M81 Group, leaving
-// `neighbourhoodReveal`'s `spinToId` to land on it exactly (see this file's
-// header and that file's for the split).
+// Orbit speed, not a bearing — the MAGNITUDE (radians covered) is frame-
+// invariant, needing no resolution against a subject. The axis it turns
+// about is still the live orientation frame's pole (see the header) — not
+// pinned to this clip, so this number is tuned against whichever frame is
+// committed while this beat plays (supergalactic — see `approachM31`).
+// Preserves the pacing this dwell has always had: most of the shared
+// backward revolution toward the M81 Group, leaving `neighbourhoodReveal`'s
+// `spinToId` to land on it exactly (see this file's header and that file's
+// for the split).
 const NET_YAW_RAD = -4.733715;
 
 export const localGroupDwell: ClipData = dwellDrift(DWELL_SEC, {

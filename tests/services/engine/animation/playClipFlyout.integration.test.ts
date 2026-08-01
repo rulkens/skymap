@@ -117,7 +117,7 @@ function makeEngineState(startDistance: number): {
       },
       prevActiveId: { current: 'resting' as string },
       lastRenderedSimDays: { current: 0 },
-      frameBasis: { current: ORIENTATION_FRAMES.ecliptic },
+      upBasis: { current: ORIENTATION_FRAMES.ecliptic },
     },
   };
 

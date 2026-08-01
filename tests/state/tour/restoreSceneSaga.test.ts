@@ -44,8 +44,8 @@ function makeSnapshot(focus: SelectionRef | null = FOCUS_REF): SceneSnapshot {
       starCatalogs: { ...f.starCatalogs, enabled: !f.starCatalogs.enabled },
       bodies: { ...f.bodies },
       labels: { ...f.labels, focusedOnly: !f.labels.focusedOnly },
-      orientation: f.orientation,
     },
+    orientation: f.orientation,
     focus,
   };
 }
@@ -164,6 +164,6 @@ describe('restoreSceneSaga', () => {
     expect(seen.mergePayload).not.toHaveProperty('orientation');
     // Instead it goes through the same request path an interactive switch
     // uses, carrying the captured pre-tour frame.
-    expect(seen.orientationRequest).toBe(snapshot.settings.orientation);
+    expect(seen.orientationRequest).toBe(snapshot.orientation);
   });
 });

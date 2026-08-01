@@ -13,12 +13,12 @@
  *      reacts to `mergeSnapshot` and re-fades every layer to the restored intent.
  *      So this saga drives no fade itself — settings-write → fade is the
  *      watcher's one job, the same as for every other settings write.
- *      `orientation` is split out of `settings` here and does NOT ride this
- *      dispatch: `mergeSnapshot`'s reducer is a raw field assignment (see
- *      `mergeSettingsSnapshot`), and a raw write to `orientation` would leave
- *      `camera.base` expressed in the OLD basis while the pole flips under it
- *      — the same "eye jumps" landmine `watchOrientationChangeSaga` re-expresses
- *      `base` to avoid on every interactive switch.
+ *      `orientation` lives on `SceneSnapshot` (not inside `settings`), so it
+ *      cannot ride this dispatch even by accident — see `SceneSnapshot`'s
+ *      header. A raw write to `orientation` would leave `camera.base`
+ *      expressed in the OLD basis while the pole flips under it — the same
+ *      "eye jumps" landmine `watchOrientationChangeSaga` re-expresses `base`
+ *      to avoid on every interactive switch.
  *
  *   2. `put(requestOrientationChange(orientation))` — the captured pre-tour
  *      frame restores through the SAME request path an interactive switch
@@ -54,8 +54,7 @@ import { requestOrientationChange } from '../camera/orientationActions';
 import type { SceneSnapshot } from '../../@types/engine/settings/SceneSnapshot';
 
 export function* restoreSceneSaga(snapshot: SceneSnapshot): Generator {
-  const { orientation, ...visualSettings } = snapshot.settings;
-  yield* put(mergeSnapshot(visualSettings));
-  yield* put(requestOrientationChange(orientation));
+  yield* put(mergeSnapshot(snapshot.settings));
+  yield* put(requestOrientationChange(snapshot.orientation));
   yield* put(updateSelectionFocus(snapshot.focus));
 }

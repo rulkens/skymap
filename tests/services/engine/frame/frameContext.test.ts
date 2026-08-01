@@ -219,7 +219,7 @@ describe('deriveFrameContext — ready branch', () => {
     expect(ctx.drawPxPerRad).toBeCloseTo(expected, 6);
   });
 
-  it('ctx.vp matches computeViewProj(assembleOrbitCamera(pose, projection, basis))', () => {
+  it('ctx.vp matches computeViewProj(assembleOrbitCamera(pose, projection, poseBasis, upBasis))', () => {
     const pose: CameraPose = { target: [0, 0, 0], yaw: 0.3, pitch: 0.1, distance: 100 };
     const ctx = deriveFrameContext(
       makeState(),

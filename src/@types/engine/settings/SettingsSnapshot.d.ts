@@ -30,13 +30,15 @@
  * them, so capturing them would invite a restore that stomps a value the
  * tour never meant to own.
  *
- * `orientation` also rides in the snapshot, despite being a bare scalar
- * rather than one of the ten clusters: a tour's `frameTo` cue can switch it
- * mid-run, so restore needs a captured pre-tour value to return to. It does
- * NOT restore through the whole-cluster `mergeSnapshot` write the clusters
- * above use — see `restoreSceneSaga`, which re-dispatches it through the
- * same request path an interactive switch takes, so `camera.base` gets
- * re-expressed into the restored frame instead of stranding it.
+ * `orientation` is deliberately NOT here, even though it is a `mergeSnapshot`
+ * payload's sibling concern conceptually: it rides on `SceneSnapshot` instead,
+ * beside `focus` — see that type's header for why. The precedent is
+ * `tierSlice` (`src/state/tier/tierSlice.ts`), which was pulled out of
+ * `settings` for the identical reason: a scalar that lives inside a
+ * `Pick<EngineSettingsState, …>` a whole-cluster restore can reach gets swept
+ * as a side effect of an unrelated merge. Keeping `orientation` off this type
+ * makes that failure mode a compile error, not a runtime landmine — see
+ * `mergeSettingsSnapshot`'s reducer, which spreads whatever this type allows.
  *
  * ### Why Readonly
  *
@@ -60,6 +62,5 @@ export type SettingsSnapshot = Readonly<
     | 'starCatalogs'
     | 'bodies'
     | 'labels'
-    | 'orientation'
   >
 >;

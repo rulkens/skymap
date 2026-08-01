@@ -217,7 +217,7 @@ function makeState(): EngineState {
       lastRenderedSimDays: { current: 0 },
       // runFrame resolves B(t) once per frame and writes it here — the box must
       // exist for that assignment. Seeded with the ecliptic (default) basis.
-      frameBasis: { current: [...ORIENTATION_FRAMES.ecliptic] },
+      upBasis: { current: [...ORIENTATION_FRAMES.ecliptic] },
     },
   } as unknown as EngineState;
 }
@@ -443,7 +443,7 @@ describe('runFrame — orientation-frame roll', () => {
     const samples: { t: number; target: number[]; position: number[]; up: number[] }[] = [];
     for (const t of [0, 250, 500, 750, 1000]) {
       runFrame(state, deps, t);
-      const B = state.cameraRuntime.frameBasis.current;
+      const B = state.cameraRuntime.upBasis.current;
       const cam = assembleOrbitCamera(state.cameraRuntime.lastPose.current, projection, B, B);
       samples.push({
         t,
@@ -579,8 +579,8 @@ describe('runFrame — orientation-frame roll', () => {
       const cam = assembleOrbitCamera(
         pose,
         projection,
-        state.cameraRuntime.frameBasis.current,
-        state.cameraRuntime.frameBasis.current,
+        state.cameraRuntime.upBasis.current,
+        state.cameraRuntime.upBasis.current,
       );
       for (const c of cam.position) expect(Number.isFinite(c)).toBe(true);
       // The view-projection is where a degenerate near-pole lookAt would surface
