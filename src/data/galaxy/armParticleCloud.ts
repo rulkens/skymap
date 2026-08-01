@@ -25,6 +25,7 @@
 import {
   armColor,
   armCrossSigma,
+  armExcessSurfaceShape,
   armFadeEnvelope,
   armRidgeCurvePoint,
   armRidgeFrameAt,
@@ -268,8 +269,24 @@ export function buildArmParticleCloud(
   // sprites. Without it the tilt would drag the arm's light outward with its
   // grain: the outer arm would gain both more sprites AND each of them
   // brighter, which is the failure the knob exists to avoid.
+  //
+  // `armExcessSurfaceShape` is what sets that profile, and is the SAME
+  // function the ridge chain's `lambda` uses. Without it this tier had no
+  // radial law at all: the placement density's fade/width terms cancelled to
+  // near-flat surface brightness along the arm, so the cloud kept shining
+  // where the ridge had already faded and `armCloudShare` moved the arms'
+  // light outward instead of just re-graining it.
+  const shape = (p: CloudParticle): number =>
+    armExcessSurfaceShape(
+      Math.hypot(p.center[0], p.center[2]),
+      geometry,
+      hLight,
+      tuning.armExcessScaleRatio,
+    );
   const weights = particles.map(
-    (p) => (p.radius * p.radius) / radialTilt(Math.hypot(p.center[0], p.center[2]), rTilt, bias),
+    (p) =>
+      (p.radius * p.radius * shape(p)) /
+      radialTilt(Math.hypot(p.center[0], p.center[2]), rTilt, bias),
   );
   let weightSum = 0;
   for (const w of weights) weightSum += w;

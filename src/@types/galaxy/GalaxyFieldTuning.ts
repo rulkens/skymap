@@ -24,6 +24,15 @@ export type GalaxyFieldTuning = {
    */
   readonly armContrast: number;
   /**
+   * The arm excess's exponential scale length in units of the disc's own —
+   * 1 holds the arm/interarm contrast `armContrast` constant with radius,
+   * above 1 lets it grow outward. Governs BOTH arm tiers, so it is the
+   * radial profile of the arms as such, not of one tier. See
+   * `armExcessSurfaceShape` for the pivot and for what is and isn't measured
+   * about the value.
+   */
+  readonly armExcessScaleRatio: number;
+  /**
    * Debug knob: divides all three of an arm blob's sigmas, holding its flux,
    * so the ridge breaks into countable oriented blobs. 1 is the real field.
    */

@@ -18,6 +18,7 @@ import { buildArmParticleCloud, deriveArmCloudCount } from './armParticleCloud';
 import {
   armColor,
   armCrossSigma,
+  armExcessSurfaceShape,
   armFadeEnvelope,
   armRidgeCurvePoint,
   armRidgeFrameAt,
@@ -296,6 +297,12 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
   // al. 2011; corroborated by GLIMPSE's 20-30% count excess) — see
   // `pushArmRidges`.
   armContrast: 1.3,
+  // Arms outrun the disc: their light is gas-and-young-star light, and those
+  // discs are the more extended ones. 1 (contrast flat with radius) left the
+  // ridge chain with 3% of its flux beyond r=8 on the Milky Way preset —
+  // arms that stop before the disc does. Not a measured ratio; see
+  // `armExcessSurfaceShape`.
+  armExcessScaleRatio: 1.8,
   armBlobSharpness: 1,
   armCloudEnabled: true,
   // The tier is under active tuning, so it defaults ON at a visible share
@@ -648,10 +655,17 @@ function pushArmRidges(
         across: sigmaAcross / sharpness,
         pole: (diskHeight * 0.8) / sharpness,
       };
-      // Sigma_disc(R): the interarm floor this arm's excess is measured
-      // against. lambda_i(R): the Gaussian tube's cross-section integral of
-      // that excess (sqrt(2*pi)*sigmaAcross is a 1D Gaussian's own integral).
-      const sigmaDisc = discSurfaceBrightness(radius, discFlux, hLight);
+      // Sigma_disc: the interarm floor this arm's excess is measured against,
+      // read at the PIVOT radius and carried outward by the arm's own radial
+      // shape rather than the disc's. At armExcessScaleRatio 1 the shape IS
+      // the disc's exponential, so this is identical to sampling Sigma_disc
+      // at `radius` directly — the form only differs once the arms are
+      // allowed their own scale length. lambda_i(R): the Gaussian tube's
+      // cross-section integral of that excess (sqrt(2*pi)*sigmaAcross is a 1D
+      // Gaussian's own integral).
+      const sigmaDisc =
+        discSurfaceBrightness(geometry.armFullRadius, discFlux, hLight) *
+        armExcessSurfaceShape(radius, geometry, hLight, tuning.armExcessScaleRatio);
       const lambda = (Ki - 1) * sigmaDisc * TAU_ROOT * sigmaAcross;
       const blobFlux = lambda * spacings[k]! * (mods[k]! / modMean);
       armExcessFlux += blobFlux; // full excess — see `renderedShare`'s comment above

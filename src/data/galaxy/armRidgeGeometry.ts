@@ -147,6 +147,41 @@ export function armFadeEnvelope(
 const ARM_WIDTH_FLOOR_H = 0.017;
 const ARM_WIDTH_SLOPE = 0.036;
 
+/**
+ * The arm excess's own radial surface-brightness shape, exp(-(R - R_full) /
+ * (hLight * scaleRatio)), normalised to 1 at `armFullRadius` — the radius
+ * where the fade envelope first reaches full strength, chosen as the pivot so
+ * that turning the knob brightens the outer arm instead of rescaling the
+ * whole arm system against the disc it is measured out of.
+ *
+ * `scaleRatio` is the arm excess's exponential scale length in units of the
+ * DISC's, and is the one place the two arm tiers' radial profiles are
+ * decided. At 1 the excess tracks the disc exactly, which is the same thing
+ * as holding the arm/interarm contrast K constant with radius. Above 1 the
+ * excess falls off more slowly than the disc, i.e. K GROWS outward.
+ *
+ * Growth is the observed direction: arm/interarm contrast rising with radius
+ * is a common result in resolved spiral photometry, and the mechanism is not
+ * subtle — the arms are traced by gas and young stars, whose discs are
+ * measurably more extended than the old stellar disc (UV and HI discs
+ * routinely outrun the optical one). The specific ratio here is NOT measured
+ * and is a look knob; only its direction is defended.
+ *
+ * Shared by both arm tiers (`pushArmRidges` and `armParticleCloud.ts`) so
+ * that `armCloudShare` redistributes GRAIN at a fixed radial profile. It used
+ * to redistribute the profile too — the ridge carried this exponential and
+ * the cloud carried none, so the same excess was shaped two different ways
+ * and the share slider slid the arms' light outward as a side effect.
+ */
+export function armExcessSurfaceShape(
+  radius: number,
+  geometry: GalaxyFieldGeometry,
+  hLight: number,
+  scaleRatio: number,
+): number {
+  return Math.exp(-(radius - geometry.armFullRadius) / (hLight * Math.max(scaleRatio, 1e-3)));
+}
+
 /** This arm's cross-section sigma at a radius — same formula the blob placement's `sigmas.across` uses. */
 export function armCrossSigma(
   radius: number,
