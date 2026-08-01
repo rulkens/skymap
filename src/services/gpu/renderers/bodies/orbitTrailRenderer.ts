@@ -38,9 +38,10 @@ export const INSTANCE_STRIDE = INSTANCE_FLOATS * 4; // 136 bytes
  * vec4s, then the visible-arc interval. There is no `@location(0)`:
  * `vsRibbon` generates its own geometry from `@builtin(vertex_index)`,
  * so this instance buffer is the pipeline's ONLY vertex buffer. Byte
- * offsets must match `orbitTrail/io.wesl`'s `OrbitInstance` exactly.
+ * offsets must match `orbitTrail/io.wesl`'s `OrbitInstance` exactly — pinned
+ * against that struct by orbitTrailConstants.parity.test.ts.
  */
-const INSTANCE_ATTRIBUTES: readonly GPUVertexAttribute[] = [
+export const INSTANCE_ATTRIBUTES: readonly GPUVertexAttribute[] = [
   { shaderLocation: 1, offset: 0, format: 'float32x4' }, // Ginv column 0 (.xyz + pad)
   { shaderLocation: 2, offset: 16, format: 'float32x4' }, // Ginv column 1
   { shaderLocation: 3, offset: 32, format: 'float32x4' }, // Ginv column 2

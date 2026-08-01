@@ -18,6 +18,11 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { RIBBON_SEGMENTS } from '../../../../src/data/bodies/orbitTrailConstants';
+import {
+  INSTANCE_ATTRIBUTES,
+  INSTANCE_FLOATS,
+  INSTANCE_STRIDE,
+} from '../../../../src/services/gpu/renderers/bodies/orbitTrailRenderer';
 
 /**
  * Extract every `const NAME: (u32|f32) = <number>;` from
@@ -48,5 +53,72 @@ describe('orbitTrail/constants.wesl ↔ orbitTrailConstants.ts parity', () => {
       weslValue,
       `WESL SEGMENTS (${weslValue}) does not match TS RIBBON_SEGMENTS (${RIBBON_SEGMENTS})`,
     ).toBe(RIBBON_SEGMENTS);
+  });
+});
+
+/** One `OrbitInstance` field: its `@location`, name, and WESL-type float count. */
+type WeslField = { location: number; name: string; floats: number };
+
+/**
+ * Extract every `@location(N) name: <type>,` field from io.wesl's
+ * `OrbitInstance` struct body. Types are `vecK<f32>` or bare `f32` — the only
+ * shapes the record uses — mapped to their float count.
+ */
+function parseOrbitInstanceFields(): WeslField[] {
+  const path = join(
+    process.cwd(),
+    'src/services/gpu/shaders/bodies/orbitTrail/io.wesl',
+  );
+  const text = readFileSync(path, 'utf-8');
+  const structMatch = text.match(/struct OrbitInstance \{([\s\S]*?)\n\};/);
+  if (!structMatch) throw new Error('OrbitInstance struct not found in io.wesl');
+  const body = structMatch[1]!;
+  const re = /@location\((\d+)\)\s+(\w+)\s*:\s*(vec([234])<f32>|f32)\s*,/g;
+  const fields: WeslField[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(body)) !== null) {
+    const floats = m[4] ? parseInt(m[4], 10) : 1;
+    fields.push({ location: parseInt(m[1]!, 10), name: m[2]!, floats });
+  }
+  return fields;
+}
+
+/** `float32x4` -> 4, `float32x2` -> 2, `float32` -> 1. */
+function floatsOfFormat(format: GPUVertexFormat): number {
+  const m = /^float32x?([234])?$/.exec(format);
+  if (!m) throw new Error(`Unrecognised vertex format in parity test: ${format}`);
+  return m[1] ? parseInt(m[1], 10) : 1;
+}
+
+describe('orbitTrail/io.wesl OrbitInstance ↔ orbitTrailRenderer INSTANCE_ATTRIBUTES parity', () => {
+  // This is the F1 drift the radar caught live: the record grew 28 -> 40 ->
+  // 32 -> 34 floats over the branch, and one hand-maintained site (the public
+  // .d.ts) was already stale. Regexing both sides and comparing catches a
+  // missing/renamed field or a changed format at test time instead of on
+  // hardware, where a drifted offset just reads garbage.
+  const fields = parseOrbitInstanceFields();
+  const attrs = INSTANCE_ATTRIBUTES;
+
+  it('every WESL @location has a matching INSTANCE_ATTRIBUTES entry, and vice versa', () => {
+    const weslLocations = fields.map((f) => f.location).sort((a, b) => a - b);
+    const tsLocations = attrs.map((a) => a.shaderLocation).sort((a, b) => a - b);
+    expect(weslLocations).toEqual(tsLocations);
+  });
+
+  it('each field\'s WESL type implies the same float count as its attribute format', () => {
+    for (const field of fields) {
+      const attr = attrs.find((a) => a.shaderLocation === field.location);
+      expect(attr, `no INSTANCE_ATTRIBUTES entry for @location(${field.location})`).toBeDefined();
+      expect(
+        floatsOfFormat(attr!.format),
+        `@location(${field.location}) '${field.name}' is ${field.floats} floats in WESL but attribute format is '${attr!.format}'`,
+      ).toBe(field.floats);
+    }
+  });
+
+  it('the field floats sum to INSTANCE_FLOATS, and INSTANCE_STRIDE is INSTANCE_FLOATS * 4', () => {
+    const total = fields.reduce((sum, f) => sum + f.floats, 0);
+    expect(total).toBe(INSTANCE_FLOATS);
+    expect(INSTANCE_STRIDE).toBe(INSTANCE_FLOATS * 4);
   });
 });
