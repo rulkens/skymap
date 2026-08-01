@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Stop rasterizing a fullscreen triangle per orbit trail. Rasterize a screen-space ribbon that hugs the projected ellipse instead, keeping the fullscreen triangle as a per-instance fallback for projections the ribbon cannot bound. Target: orbit-trails from **7.6 ms → < 1.5 ms real** at the `galactic-centre` scenario (39 S-star instances, fill-bound, sweep exponent 0.94).
+**Goal:** Stop rasterizing a fullscreen triangle per orbit trail. Rasterize a screen-space ribbon that hugs the projected ellipse instead, keeping the fullscreen triangle as a per-instance fallback for projections the ribbon cannot bound (**superseded 2026-08-01 — see the Amendment before Task 11: the fallback is deleted, not kept; the ribbon absorbs its job via a near-plane clamp. The clamp was itself superseded the same day — see Amendment 2: the CPU computes each orbit's visible E-arc in closed form and the shader never sees a behind-camera sample**). Target: orbit-trails from **7.6 ms → < 1.5 ms real** at the `galactic-centre` scenario (39 S-star instances, fill-bound, sweep exponent 0.94).
 
 **Architecture:** [The spec](../specs/2026-07-31-orbit-trail-ribbon-impostor.md) — read it first; §2.1–2.4 is the design and this plan does not restate it. **Ground preparation: see spec §3** ("none needed" — every touchpoint is growth at an existing seam). The fragment shader's conic math is **unchanged**; only which pixels invoke it changes.
 
@@ -10,7 +10,7 @@
 
 ## Global constraints
 
-- **The fragment shader's math does not change.** `fragment.wesl`'s `Ginv` back-projection, Sampson distance, gradient minors and Newton horizon rejection are correct and load-bearing (see `composeOrbitConic`'s header for the f64 hoist that made them correct). The only edit any task makes to `fragment.wesl` is Task 2's constant move.
+- **The fragment shader's math does not change.** `fragment.wesl`'s `Ginv` back-projection, Sampson distance, gradient minors and Newton horizon rejection are correct and load-bearing (see `composeOrbitConic`'s header for the f64 hoist that made them correct). The only edit any task makes to `fragment.wesl` is Task 2's constant move. (**Amended 2026-08-01:** hardware showed the analytic gradient minors cancel catastrophically at hugely-projected orbits — sub-pixel dotted bands. The stroke gradient is now measured with `dpdx`/`dpdy` on `r = uLen/z` and the minors machinery is deleted end-to-end; see Amendment 2. The `Ginv` back-projection, Kepler falloff and Newton rejection stand.)
 - **No bind group.** The renderer's deliberate no-bind-group design (`orbitTrailRenderer.ts:93-104`) stands. Anything the ribbon vertex stage needs per-frame — including the viewport size — arrives as a per-instance vertex attribute.
 - **The f64 seam is unchanged.** `orbitTrailsLayer` still feeds `view.slab.vp` (the `Float64Array`), never `view.vp`. The clip basis is composed in the same f64 pass as `Ginv` and narrowed once at return.
 - **Coverage must be conservative** (spec §2): every pixel where the fragment would _keep_ a sample must lie inside the ribbon. A gap shows as a broken/speckled arc, most visibly edge-on.
@@ -32,6 +32,8 @@ If the user rejects (2) or (3), stop and re-checkpoint the spec — they change 
 ---
 
 ## Record layout (the cross-file contract)
+
+> **Amendment 2 (2026-08-01):** the shipped layout is **34 floats / stride 136**, not the 40/160 below. The two gradient-minor vec4s (locations 6/7) were deleted with the analytic gradient, shifting the clip basis to locations 6..8 at bytes 80/96/112, and the visible-arc redesign appended `arc = (eStart, eSpan)` as a `float32x2` at location 9, byte 128. The three-site byte-for-byte contract (renderer attributes ↔ `OrbitInstance` ↔ pack loop) is unchanged in kind; consult `io.wesl`'s `OrbitInstance` for the authoritative shipped table.
 
 `INSTANCE_FLOATS 28 → 40`, `INSTANCE_STRIDE 112 → 160`. Pinned in three places that must agree byte-for-byte: `orbitTrailRenderer.INSTANCE_ATTRIBUTES`, the WESL instance struct, and the layer's pack loop.
 
@@ -147,6 +149,8 @@ Everything about `ginv`/`minorS`/`minorT` — the f64 hoist, the rescale, the mi
 - [ ] `npm run typecheck` — the layer destructures a subset of the return, so it still compiles; if `vi.mock`'s factory in `tests/services/engine/frame/passes/orbitTrailsLayer.test.ts` type-checks against the real signature, add the two new fields to that mock **in this task** (Task 6 rewrites it properly).
 - [ ] Commit.
 
+> **Amendment (2026-08-01):** `ribbonEligible` and `RIBBON_MAX_EXTENT_NDC`, added by this task, are removed by Task 12 — the near-plane clamp (Task 11) makes every projection ribbon-safe, so the verdict this task introduces becomes dead weight rather than a permanent classifier. The three eligibility tests this task adds are deleted in Task 12; `the clip basis reprojects sample orbit points onto their projected pixels` and the gradient-minor regression test are not.
+
 ---
 
 ### Task 4: The ribbon vertex stage
@@ -260,6 +264,8 @@ The module header's "Geometry is a fullscreen triangle" section becomes the two-
 - [ ] `npm test -- orbitTrailRenderer` → passes.
 - [ ] Commit.
 
+> **Amendment (2026-08-01):** the two-pipeline / two-count `draw` this task establishes is replaced by a single pipeline and a single count in Task 12 — the fallback pipeline and every test above keyed on `fallbackCount` are removed there, not extended. Read Task 12's file list before touching this renderer again.
+
 ---
 
 ### Task 6: The layer packs the partition
@@ -287,6 +293,8 @@ The pack loop (`orbitTrailsLayer.ts:254-315`) keeps every gate it has — `CULL_
 - [ ] `npm test -- orbitTrailsLayer` → passes; then `npm test` whole-suite green.
 - [ ] Commit.
 
+> **Amendment (2026-08-01):** the front/back partition this task builds is removed by Task 12 — every visible orbit packs into one run with one count, since `ribbonEligible` no longer exists to split on. The test `packs ribbon records from the front and fallback records from the back` is deleted there, not extended.
+
 ---
 
 ### Task 7: Perf verification — the acceptance gate
@@ -302,8 +310,10 @@ Acceptance, from spec §4:
 - Quote MERGED numbers and floor-subtracted per-layer "real" values; never raw PER-LAYER rows.
 
 - [ ] Re-run `galactic-centre` and `solar-system`; save both to the scratchpad beside the baselines.
-- [ ] If `galactic-centre` misses < 1.5 ms, re-run `--sweep` on it before changing anything: an exponent that has dropped toward 0 means the remaining cost is vertex/CPU-bound and `SEGMENTS` is the lever; an exponent still near 1 means coverage is wider than intended (suspect the sagitta term or a fallback firing on orbits that should be ribbons — log the ribbon/fallback split at the pose).
+- [ ] If `galactic-centre` misses < 1.5 ms, re-run `--sweep` on it before changing anything: an exponent that has dropped toward 0 means the remaining cost is vertex/CPU-bound and `SEGMENTS` is the lever; an exponent still near 1 means coverage is wider than intended (suspect the sagitta term).
 - [ ] Record both before/after numbers in the PR description.
+
+> **Amendment (2026-08-01):** the "log the ribbon/fallback split at the pose" diagnostic above is obsolete after Task 12 — there is no split left to log, every orbit takes the one `vsRibbon` path. Likewise `RIBBON_MAX_EXTENT_NDC`'s tuning note (ledger: "OPEN TUNING ITEM for T7") is moot; the constant it tunes is deleted. Task 7 must be **re-run against Task 12's HEAD**: the numbers already recorded in the ledger measured the fallback-present architecture (and `solar-system`, all-fallback at the time, never saw the win `galactic-centre` did) — they do not stand in for this task once Task 12 lands. Re-run the acceptance bullets above in full, and additionally confirm `solar-system` issues zero fullscreen fallback draws (see the updated DoD).
 
 ---
 
@@ -317,13 +327,15 @@ Ask the user to look. Spec §4's list, in order — the first three are the comm
 4. The edge-on Earth-zoom pose from `docs/backlog/2026-07-18-orbit-trail-residual-speckle.md` — thinnest ribbon. The pre-existing speckle is **out of scope** and must look neither better nor worse (the fragment math did not change); what to check is that the arc is not _broken_.
 5. Camera inside an orbit — the fallback path; must render exactly as today.
 
+> **Amendment (2026-08-01):** pose 5 above describes the fallback-present architecture. After Task 12 there is no fallback path — a camera-inside-orbit pose (the `solar-system` scenario's normal viewing regime) draws the same near-plane-clamped `vsRibbon` as every other orbit. Re-run this whole task against Task 12's HEAD with pose 5 reworded to: "Camera inside an orbit — ribbon path, near-plane-clamped; check for a visible seam or gap at the clamp boundary, and confirm the Task 10 overlay shows a ribbon hull (not a fallback wash — that pipeline no longer exists) on all 9 solar-system orbits."
+
 **Two predicted fold artifacts to look for specifically.** Task 4's review derived both from the ribbon formula this plan mandates; the user's call (2026-07-31) was to confirm them visually before deciding a fix, so this pass is where they get judged. Both live at the two **turning points** (the ends of the projected major axis), not at arbitrary joints:
 
-1. **Double-add pip** — the offset ribbon self-intersects wherever the projected radius of curvature `B²/A` drops below the ribbon half-width (≥ 4.5 px), so two quads cover the same stroke pixels and the one/one blend adds twice. Trigger is roughly a 15:1 projected aspect, i.e. near-edge-on. Look for a bright spot at each end of the major axis on pose 4, and on any near-edge-on planet orbit in pose 1. If it reads: the prepared fix is a third `ribbonEligible` clause rejecting `minCurvatureRadiusPx ≤ STROKE_PX + MARGIN_PX` to the fullscreen path, which restores today's rendering exactly for those orbits.
+1. **Double-add pip** — the offset ribbon self-intersects wherever the projected radius of curvature `B²/A` drops below the ribbon half-width (≥ 4.5 px), so two quads cover the same stroke pixels and the one/one blend adds twice. Trigger is roughly a 15:1 projected aspect, i.e. near-edge-on. Look for a bright spot at each end of the major axis on pose 4, and on any near-edge-on planet orbit in pose 1. If it reads: the prepared fix was a third `ribbonEligible` clause routing to the fullscreen path — **no longer available after Task 12** (`ribbonEligible` is deleted); a fix at that point needs a different mechanism (e.g. clamping the offset itself to the local curvature radius) and should be re-scoped with the user rather than assumed.
 2. **Cap nick** — on projections whose long axis exceeds ~8400 px the quad degenerates at the fold and under-covers the stroke cap by ~0.25 px. Look for a broken or flattened cap at the ends of the major axis on pose 2 (Moon close-up). If it reads: raise `SEGMENTS`, which shrinks the sagitta directly.
 
 - [ ] Request the visual pass on all five poses, naming the two artifacts above and where they would appear.
-- [ ] If a coverage gap appears, do not widen `MARGIN_PX` reflexively — identify whether it is a joint (per-segment quantity crept in), a chord (sagitta term), a fold (the two artifacts above), or a classification miss (an orbit taking the ribbon path that should have fallen back). The Task 10 overlay distinguishes the last one directly.
+- [ ] If a coverage gap appears, do not widen `MARGIN_PX` reflexively — identify whether it is a joint (per-segment quantity crept in), a chord (sagitta term), a fold (the two artifacts above), or (pre-Task-12 only) a classification miss. The Task 10 overlay distinguishes the last one directly.
 
 ---
 
@@ -374,7 +386,104 @@ The layer reads the selector alongside the settings it already reads and forward
 - [ ] `npm test -- orbitTrailRenderer orbitTrailsLayer`, `npm run build`.
 - [ ] Commit.
 
+> **Amendment (2026-08-01):** `fsImpostorFallback` and its debug pipeline, added by this task, are deleted by Task 12 along with the production fallback — the overlay narrows to the one hull tint (`fsImpostorRibbon`). The settings/selector/UI chain (`showOrbitTrailImpostor` and its DebugPanel row) is untouched, since it carries one boolean with no pipeline-count knowledge.
+
 Not in scope: a wireframe outline mode, per-orbit labels, or any overlay for the conic math itself.
+
+---
+
+## Amendment (2026-08-01) — the fallback is eliminated, not tolerated
+
+USER DECISION 2026-08-01: camera-inside-orbit is the NORMAL solar-system viewing regime, not an edge case, so the fullscreen fallback is the problem, not an acceptable cost. Task 7's paired measurement already showed why: fixing the ribbon's zero-area-draw bug dropped `galactic-centre`'s MERGED total by ~29 ms — far more than orbit-trails' own line item — the working explanation being that the fallback's N additive fullscreen quads saturate tile bandwidth and inflate every other pass. `solar-system` (camera inside every orbit, all-fallback) never got that win.
+
+The clip basis `clip(E) = Cc + cos(E)·Ac + sin(E)·Bc` is exact for every `E`, including behind-camera samples — it is `P·V` applied to the ellipse parametrization, and `w`'s sign only marks behind-camera. Only the screen-space division and the pixel widening break at `w ≤ 0`. So the fix is a near-plane clamp inside `vsRibbon` (Task 11), then wholesale deletion of the fallback machinery (Task 12) — no new instance data, no CPU math changes, the 40-float record layout untouched.
+
+This supersedes every place above that describes the fullscreen fallback as permanent — Task 3's `ribbonEligible` verdict, Task 5/6's front/back partition, Task 8's pose 5 ("the fallback path; must render exactly as today"), and Task 10's `fsImpostorFallback` debug pipeline. Those tasks are already shipped and their text is left as-is (it was correct when written); Task 12 is where each of those surfaces gets removed. Do not re-derive or "fix" them in place — see Task 12's file list.
+
+> **Amendment 2 (2026-08-01):** the near-plane clamp this section prescribes shipped, but on hardware it grew four rounds of follow-on fold machinery (viewport fold boxes, E-ownership discard, tangent extension) and still leaked oversized triangles at live poses. Amendment 2 (below, before the DoD) replaced the whole family: the CPU clips the visible arc in closed form and `vsRibbon` never samples behind the camera. Task 11's contract is retained as history only.
+
+---
+
+### Task 11: Near-plane clamping in `vsRibbon` — the ribbon absorbs the fallback's job
+
+**Files:** Modify: `src/services/gpu/shaders/bodies/orbitTrail/vertex.wesl`
+
+**Contract** — per-instance scale-free epsilon:
+
+```
+εw(inst) = 1e-6 · (|Cc.w| + hypot(Ac.w, Bc.w))
+```
+
+(or an equivalently scale-free form; if a different form is used, state it exactly in the WGSL comment). For a segment spanning samples `i`, `j = i+1` (each already reduced to clip `(x, y, w)`):
+
+- **Both `w > εw`** (fully in front): behavior byte-identical to today's `ribbonSample`/`vsRibbon` — the per-sample abutting invariant (the two quads sharing sample `si` emit identical corners) holds exactly as it does now.
+- **Exactly one behind** (`w ≤ εw`): slide the behind endpoint along the segment's CLIP-space chord to the `w = εw` crossing — linear interpolation, `t = (εw − w_i) / (w_j − w_i)` — then widen at the clamped point with the same pixel-width formula (offset in `clip.xy = (px / (0.5·viewport)) · w`, exact screen width at any `w > 0`). The tangent for such a boundary segment comes from the segment's own clamped screen-space chord — the existing central-difference tangent needs neighbour samples that may themselves be behind, so it cannot be reused here.
+- **Both behind**: emit a degenerate quad — all six corners at one point, zero area, zero fragments.
+- An orbit entirely behind the camera therefore costs zero fragments, with no CPU-side classification required.
+- Seam mismatch at a clamped boundary is acceptable: the clamped endpoint's screen position is enormous and off-viewport, so hardware clipping removes it before rasterization.
+
+Comment budget applies (module header ≤ 10 lines, comment lines ≤ half the code lines touched); the WGSL comment must record WHY per-segment clamping is allowed to break the per-sample invariant ONLY off-screen — the fragment never sees an off-screen pixel, so the invariant's purpose (no additive seam) is preserved everywhere it matters.
+
+**Verification.** WESL does not run under Vitest, so there is no failing-test-first step. `npx vite build` must link (a broken import surfaces at `createShaderModule`, not at build — check the dev console / `createShaderModuleWithDevLog` output too). The clamp's actual effect on hardware is not independently visible after this task alone: `ribbonEligible` (Task 3) still gates the ribbon pipeline as of this task, so no camera-inside-orbit instance reaches `vsRibbon` with a `w ≤ εw` sample in production yet — that only happens once Task 12 removes the gate. Hardware confirmation of this task's clamp is therefore folded into Task 12's visual check (solar-system pose, Task 10's debug overlay, all planet/moon orbit hulls drawing as ribbons with no fallback wash and no gap at the fold).
+
+- [ ] Implement the clamp in `ribbonSample` and/or `vsRibbon` per the contract above.
+- [ ] `npm run build` clean; confirm no `Invalid ShaderModule` cascade in the dev console.
+- [ ] Commit.
+
+---
+
+### Task 12: Delete the fallback path (growth by deletion)
+
+**Depends on Task 11** — deleting the fallback before the ribbon can absorb inside-orbit projections would leave those orbits undrawn.
+
+**Files:**
+
+- Modify: `src/utils/camera/composeOrbitConic.ts` — remove `ribbonEligible`, `RIBBON_MAX_EXTENT_NDC`, and the extent computation; the return type keeps `clipBasis` unconditionally, `ginv`/`minorS`/`minorT` untouched.
+- Modify: `tests/utils/camera/composeOrbitConic.test.ts` — remove the three eligibility-discrimination tests (`a far view of an orbit is ribbon-eligible`, `a camera in the orbit plane is not ribbon-eligible`, `an orbit approaching the camera plane falls back before the sign test can flip`); keep `the clip basis reprojects sample orbit points onto their projected pixels` and the gradient-minor regression test (`describe('composeOrbitConic — gradient-minor hoist at the edge-on Earth pose')`) untouched.
+- Modify: `src/services/engine/frame/passes/orbitTrailsLayer.ts` — remove the front/back partition; pack every visible record front-to-back in a single counter; one `renderer.draw` call.
+- Modify: `tests/services/engine/frame/passes/orbitTrailsLayer.test.ts` — remove `packs ribbon records from the front and fallback records from the back`; update `composes each visible conic from view.slab.vp and issues ONE partitioned draw` and `the clip basis and viewport reach the packed record` for the single-count draw.
+- Modify: `src/services/gpu/renderers/bodies/orbitTrailRenderer.ts` — remove the fullscreen (`vs`) production pipeline and the `fsImpostorFallback` debug pipeline; `draw(pass, instances, count, showImpostor = false)` (one count).
+- Modify: `src/@types/rendering/OrbitTrailRenderer.d.ts` — update `draw`'s signature and doc to match.
+- Modify: `tests/services/gpu/renderers/bodies/orbitTrailRenderer.test.ts` — remove/rewrite the two-count tests (`builds a ribbon pipeline and a fullscreen pipeline from one fragment module`, `issues the ribbon draw for the ribbon count and the fullscreen draw for the fallback count`, the two-count cases of `a zero count skips its own draw`, the pair case of `counts that overrun the packed array throw`) for the one-count signature; keep the layout/profile/growth tests, narrowed to the surviving pipeline pair (production ribbon + debug ribbon).
+- Modify: `src/services/gpu/shaders/bodies/orbitTrail/vertex.wesl` — delete the `vs` fullscreen entry point; rewrite the module header (the "Why a fullscreen triangle, not a projected bounding quad" section describes deleted code — replace it with the ribbon + near-plane-clamp design, ≤ 10 lines).
+- Modify: `src/services/gpu/shaders/bodies/orbitTrail/io.wesl` — its header and `OrbitInstance`/`VSOut` docblocks reference `vs` and the fullscreen triangle; correct.
+- Modify: `src/services/gpu/shaders/bodies/orbitTrail/fragment.wesl` — delete `fsImpostorFallback`; keep `fs` and `fsImpostorRibbon` unchanged.
+
+**Signature after this task:**
+
+```ts
+draw(
+  pass: GPURenderPassEncoder,
+  instances: Float32Array,
+  count: number,
+  showImpostor?: boolean,
+): void;
+```
+
+Not in scope: any change to the fragment's conic math, or to the debug overlay's settings/UI chain — `debug.showOrbitTrailImpostor` and its DebugPanel row (`src/components/DebugPanel/DebugOverlaysSection.tsx`, `DebugOverlaysSectionContainer.tsx`) carry one boolean with no pipeline-count knowledge and need no edit; the toggle now lenses one production pipeline instead of two.
+
+- [ ] Update the test files named above first — remove assertions for code being deleted; where a removed code path leaves a genuine behavioral claim to re-test (e.g. the single-count draw shape), write that test before the implementation changes.
+- [ ] Implement the deletions in dependency order: `composeOrbitConic.ts` → `orbitTrailsLayer.ts` → `orbitTrailRenderer.ts` + `.d.ts` → `vertex.wesl` → `fragment.wesl` — each step's caller stops referencing the removed symbol before the symbol goes.
+- [ ] Grep the branch for `ribbonEligible`, `fallbackCount`, `RIBBON_MAX_EXTENT_NDC`, and the `'vs'` entry-point string to confirm no other touchpoint was missed.
+- [ ] `npm test -- composeOrbitConic orbitTrailsLayer orbitTrailRenderer` → passes; then `npm test` whole-suite green.
+- [ ] `npm run typecheck` && `npm run build` clean.
+- [ ] Commit.
+
+---
+
+## Amendment 2 (2026-08-01) — CPU closed-form visible arc; fold geometry deleted
+
+Task 11's in-shader near-plane clamp could not be made robust: uniform-in-E GPU sampling cannot cover unbounded near-fold projections with bounded per-segment geometry, and every hardware round (near-plane clamp → viewport fold boxes → E-ownership discard → tangent extension → a reviewed wedge-clip design, never built) was a special case forced by that mismatch. The user's live verdict — oversized triangles still tanking frame rate — triggered the redesign.
+
+The replacement moves visibility to the CPU, in closed form. Clip-w along the orbit is a pure sinusoid, `w(E) = Cc.w + R·cos(E − φ)` with `R = hypot(Ac.w, Bc.w)`, so the in-front-of-camera portion is exactly ONE E-interval, computed in f64 in `composeOrbitConic` and returned as `arc: [eStart, eSpan]`:
+
+- `eSpan = 0` (orbit fully behind) ⇒ the layer culls the instance on the CPU — zero vertices;
+- `eSpan = TAU` ⇒ closed strip, `vsRibbon` wraps sample indices mod `SEGMENTS` (seam bit-identical);
+- otherwise an open arc: neighbour indices clamp at the ends (one-sided tangents), and the near-degenerate endpoints land far off-viewport where the hardware clipper removes them.
+
+`vsRibbon` samples only inside the arc, so a behind-camera sample cannot exist and ALL fold machinery is deleted — no clamp, no fold boxes, no E-ownership varying, no `eOwn` discard in the fragment. Alongside this, the fragment's analytic gradient minors were replaced by hardware screen-space derivatives on `r = uLen/z` (they cancelled catastrophically at hugely-projected orbits) and the minors machinery deleted end-to-end; the record layout is **34 floats / stride 136** with `arc` at location 9. Landed at `83ce420f` (minors deletion), `bce92c55` (derivative gradient), `6e2e1d84` (visible arc).
+
+Residual accepted by the user (2026-08-01 live pass): dashed/dotted rendering on near-edge-on trails at the solar-system pose — the pre-existing fragment-numerics family (`docs/backlog/2026-07-18-orbit-trail-residual-speckle.md`), not fold geometry. Optional follow-up dials, deliberately NOT built: adaptive (curvature-weighted) sample spacing, and an interpolated-varying fragment replacing the analytic conic evaluation.
 
 ---
 
@@ -383,22 +492,23 @@ Not in scope: a wireframe outline mode, per-orbit labels, or any overlay for the
 **Deliverable inventory**
 
 - `src/services/gpu/shaders/bodies/orbitTrail/constants.wesl` with `STROKE_PX` (moved, not copied — `fragment.wesl` declares it nowhere), `SEGMENTS`, `MARGIN_PX`; `src/data/bodies/orbitTrailConstants.ts` exporting `RIBBON_SEGMENTS`, pinned to the WESL twin by a parity test.
-- `composeOrbitConic` returns `clipBasis` + `ribbonEligible` alongside the unchanged `ginv`/`minorS`/`minorT`.
-- `io.wesl` declares `OrbitInstance` once; `vertex.wesl` exposes `vs` **and** `vsRibbon`; `fragment.wesl` has no math change.
-- `orbitTrailRenderer` builds two pipelines over one fragment module, one vertex-buffer layout and one instance VBO; `draw(pass, instances, ribbonCount, fallbackCount)`; `INSTANCE_FLOATS` 40 / `INSTANCE_STRIDE` 160.
-- `orbitTrailsLayer` packs ribbon records front, fallback records back, and passes both counts.
-- A `debug.showOrbitTrailImpostor` toggle in the DebugPanel's Debug Overlays section draws the ribbon hull and the fallback wash over the real trails, with its pipelines built lazily so production pays nothing (Task 10).
+- `composeOrbitConic` returns `ginv`, `clipBasis`, and the closed-form visible arc `arc: [eStart, eSpan]` — no eligibility verdict, no gradient minors (Amendment 2).
+- `io.wesl` declares `OrbitInstance` once; `vertex.wesl` exposes a single `vsRibbon` entry point sampling only the CPU-clipped visible arc (Amendment 2); no `vs` fullscreen entry point remains (Task 12). `fragment.wesl`'s `fs` keeps the `Ginv` back-projection, Kepler falloff and Newton rejection; its stroke gradient is measured with `dpdx`/`dpdy` (Amendment 2).
+- `orbitTrailRenderer` builds one production pipeline (`vsRibbon` + `fs`) over one fragment module, one vertex-buffer layout and one instance VBO; `draw(pass, instances, count, showImpostor?)`; `INSTANCE_FLOATS` 34 / `INSTANCE_STRIDE` 136.
+- `orbitTrailsLayer` packs every visible orbit into one run with one count (culling `eSpan = 0` instances); no front/back partition.
+- A `debug.showOrbitTrailImpostor` toggle in the DebugPanel's Debug Overlays section draws the ribbon hull over the real trails (one debug pipeline, `fsImpostorRibbon`; `fsImpostorFallback` is deleted with the fallback), built lazily so production pays nothing (Task 10, narrowed by Task 12).
 
 **Named observable behaviours** (Task 8)
 
 - Solar-system planets, the Moon close-up, the S-star cluster and the edge-on Earth zoom all draw **unbroken** trails with unchanged colour, tail falloff and fade behaviour.
 - No segment joint reads brighter than its neighbours (additive double-add) and none reads as a notch (gap).
-- A camera inside an orbit renders that trail exactly as today (fallback path), while the other orbits keep the ribbon path.
+- A camera inside an orbit draws that trail as an open-arc ribbon like every other orbit — no fullscreen wash, no oversized triangles at any pose (Amendment 2; supersedes both the original "fallback path" wording and the near-plane-clamp wording).
 - The hide/show fade, the apparent-size fade-in, and the whole-layer `enabled()` cull behave exactly as before.
 
-**Measured** (Task 7)
+**Measured** (Task 7, re-run at the Amendment 2 HEAD)
 
-- `galactic-centre` orbit-trails < 1.5 ms real, down from 7.6; `solar-system` within ±0.5 ms.
+- `galactic-centre` orbit-trails < 1.5 ms real, down from 7.6 (unchanged target).
+- `solar-system` orbit-trails also drops, and issues **zero fullscreen fallback draws** — the pose the first amendment exists for; no longer just a ±0.5 ms noise-band check.
 
 **Deferral boundary — out of scope**
 
@@ -417,11 +527,21 @@ T1 (baselines + draft PR)
       +--> T3 (composeOrbitConic) -+--> T5 (renderer)  ------------+--> T6 (layer) --> T7 (perf)
                                    |                                                     |
                                    +-----------------------------------------------------+--> T8 (visual) --> T9 (radar + close-out)
+
+T6 --> T10 (debug overlay) --+
+                              +--> T11 (near-plane clamp) --> T12 (delete fallback) --> T7' (re-measure) --> T8' (re-visual) --> T9 (radar + close-out)
+T4 -----------------------------> T11
+
+T12 --> [fold-fix rounds, superseded] --> A2 (visible-arc redesign, Amendment 2) --> T7'' --> T8'' --> T9
 ```
+
+T9 moves to the end of the amended chain — `/feature-done` and the entanglement-radar pass must review the branch's FINAL shape, and Task 12 is what makes it final. Running T9 at its original position (after the first T8) would radar-review and close out a state the plan no longer ships.
 
 - **T2 ∥ T3** — disjoint files, no shared symbol.
 - **T4 ∥ T5** — disjoint files (`.wesl` vs `.ts`); both need T2's `SEGMENTS`/`RIBBON_SEGMENTS`, and the `'vsRibbon'` entry-point name is pinned in this plan so they cannot drift apart. T5 additionally needs T3 only for the record layout, which is also pinned here — not for code.
 - **T6** needs T3 (the returned fields) and T5 (the `draw` signature); it is the only task touching the layer.
 - **T7 ∥ T8** may run together once T6 lands; T9 is last.
 - **T10** (debug overlay, added during execution) needs T6 and runs ∥ T7; it should land before T8 so the visual pass can use it.
-- Every task owns a disjoint file set, so reviews pipeline freely (`sdd-execution.md` Rule 2). The one shared-file hazard is Task 3's defensive touch of the layer test's mock — if it happens, Task 6 must re-read that file rather than trust the plan.
+- **T11** (near-plane clamp, added 2026-08-01) touches only `vertex.wesl`; needs T4 for the file to exist, nothing else — it can run any time after T4, independent of T5–T10.
+- **T12** (delete the fallback, added 2026-08-01) needs T11 (the ribbon must handle inside-orbit projections before the fallback that used to cover them is removed) and touches every file T3/T5/T6/T10 touched, so it must run after all of them land. T7 and T8 (already executed once, per the ledger) both need re-running against T12's HEAD — the earlier numbers and visual confirms covered the fallback-present architecture, not this one.
+- Every task owns a disjoint file set, so reviews pipeline freely (`sdd-execution.md` Rule 2). The one shared-file hazard is Task 3's defensive touch of the layer test's mock — if it happens, Task 6 must re-read that file rather than trust the plan. Task 12 is the exception: it touches nearly every file the earlier tasks own, by design (it is undoing their fallback half), so it does not pipeline with anything and should run alone.
