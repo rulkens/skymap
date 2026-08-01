@@ -29,13 +29,18 @@
 // constant-width band then fans out into rays around that turn (the flare).
 //
 // Instead we measure distance in PLANE space, where the orbit is simply the
-// unit circle 's^2 + t^2 = 1'. There 'r - 1' (with 'r = length(vec2(s, t))') is
-// the EXACT Euclidean distance to the orbit — a true distance function, with no
-// algebraic-curvature term to blow up. Dividing by the pixel gradient of 'r'
-// (chain rule through q = Ginv * pixel, s = q.x/q.z, t = q.y/q.z) converts it to
-// a constant screen-space pixel width. At well-conditioned poses this equals
-// Sampson to the pixel; at the edge-on pose it stays a thin line where Sampson
-// flared (verified numerically over the earth / jupiter / moon conics).
+// unit circle 's^2 + t^2 = 1'. There 'r - 1' (with 'r = uLen / z') is the EXACT
+// Euclidean distance to the orbit — a true distance function, with no
+// algebraic-curvature term to blow up. The pixel gradient of 'r' is measured
+// EMPIRICALLY with the hardware's screen-space derivatives 'dpdx'/'dpdy'
+// rather than derived analytically: 'r' is O(1) near the stroke, so the
+// hardware's finite difference across the fragment's 2x2 quad happens AFTER
+// the divide and cannot suffer the f32 cancellation an analytic pixel-space
+// gradient does for a hugely-projected orbit (see 'gradPx' below). Dividing
+// '|r-1|' by that gradient's length converts it to a constant screen-space
+// pixel width. At well-conditioned poses this equals Sampson to the pixel; at
+// the edge-on pose it stays a thin line where Sampson flared (verified
+// numerically over the earth / jupiter / moon conics).
 //
 // ## Why forward Kepler M = E - e*sin(E)
 //
@@ -54,15 +59,15 @@
 //
 // ## Why the off-stroke discard (NOT a zero write)
 //
-// The fullscreen triangle covers the whole viewport, so EVERY pixel runs this
-// fragment. Writing 0 off the stroke would be transparent under additive
-// blend — fine in the well-conditioned case. But at a near-degenerate pose the
-// inverse homography 'Ginv' can carry non-finite entries, and then 'q' and
-// 'dist' are NaN across the triangle's whole in-front-of-camera region; an
-// additive NaN write paints a solid black ellipse (bounded by the q.z=0 curve).
-// Guarding with '!(dist < STROKE_PX)' — which is TRUE for NaN — DISCARDS both
-// the off-stroke pixels and any non-finite one, so the triangle can only ever
-// deposit light on the ring itself, never a filled blob.
+// Every pixel the ribbon impostor rasterizes runs this fragment, so writing 0
+// off the stroke would be transparent under additive blend — fine in the
+// well-conditioned case. But at a near-degenerate pose the inverse homography
+// 'Ginv' can carry non-finite entries, and then 'q' and 'dist' are NaN across
+// the ribbon's whole in-front-of-camera footprint; an additive NaN write
+// paints a solid black smear. Guarding with '!(dist < STROKE_PX)' — which is
+// TRUE for NaN — DISCARDS both the off-stroke pixels and any non-finite one,
+// so the ribbon can only ever deposit light on the ring itself, never a
+// filled blob.
 
 import package::bodies::orbitTrail::constants::SEGMENTS;
 import package::bodies::orbitTrail::constants::STROKE_PX;
@@ -126,43 +131,24 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     }
   }
 
-  // Pixel gradients of s = q.x/q.z, t = q.y/q.z via the quotient rule. Each
-  // numerator (e.g. ginv[0].x*q.z - q.x*ginv[0].z, with q = ginv*(px,py,1))
-  // has its top-degree px/py terms cancel IDENTICALLY, leaving one AFFINE in
-  // the pixel with a 2x2-minor coefficient. At the near-edge-on Earth-zoom
-  // pose the homography is ILL-CONDITIONED (~1e15), so computing that
-  // difference directly in f32 cancels catastrophically — rescaling ginv
-  // doesn't help, since the loss is set by the condition number, not the
-  // entry magnitudes. So composeOrbitConic hoists the exactly-cancelling
-  // numerators to CPU f64 as minorS = (M1, M2, M3), minorT = (M4, M5, M6):
-  //   d s/d px numerator = M1*py + M2,   d s/d py numerator = -M1*px + M3
-  //   d t/d px numerator = M4*py + M5,   d t/d py numerator = -M4*px + M6
-  // The pixel is in.clip.xy; z > 0 here (behind-camera arc already discarded).
-  let px = in.clip.x;
-  let py = in.clip.y;
-
-  // gradR = (s*dsdp + t*dtdp)/r where dsdp = A_s/z^2, dtdp = A_t/z^2 (A_s,
-  // A_t the affine numerators above) and r = uLen/z. Substituting s = u.x/z,
-  // t = u.y/z collapses every explicit 1/z power into one shared factor:
-  //   gradR = (u.x*A_s + u.y*A_t) / (z^2 * uLen) = gradNum / (z^2 * uLen)
-  // gradNum below IS that numerator: with ginv entries <= 1 and u, z ~1e4, it
-  // reaches ~1e8 — far under f32's 3.4e38 ceiling, the load-bearing bound.
-  let gradNum = vec2<f32>(
-    u.x * (in.minorS.x * py + in.minorS.y) + u.y * (in.minorT.x * py + in.minorT.y),
-    u.x * (-in.minorS.x * px + in.minorS.z) + u.y * (-in.minorT.x * px + in.minorT.z),
-  );
-
-  // Distance to the orbit: the same real value as |r-1|/|gradR|, but with the
-  // shared z^2*uLen factor multiplied through instead of divided out — its
-  // largest intermediate (z^2*uLen*|uLen-z|) reaches ~1e13, still far under
-  // f32's ceiling, unlike the old divided-out form that overflowed near the fold:
-  //   |r-1|/|gradR| = (|uLen-z|/z) * (z^2*uLen)/|gradNum| = |uLen-z|*z*uLen/|gradNum|
-  let dist = abs(uLen - z) * z * uLen / max(length(gradNum), 1e-30);
+  // r is O(1) near the stroke, so measuring its gradient with the hardware's
+  // screen-space derivatives differences it ACROSS the fragment's 2x2 quad,
+  // AFTER the divide by z — it cannot suffer the cancellation that killed the
+  // old analytic pixel-space gradient for a hugely-projected orbit (S-stars at
+  // the galactic centre, Neptune seen from Earth: sub-pixel dotted bands on
+  // hardware, with the Newton check below killing nearly every pixel).
+  // Compensated arithmetic (Dekker/TwoSum) is NOT an alternative here: the
+  // WGSL compiler's fast-math on this toolchain breaks the error-free
+  // transformations it depends on (hardware-verified), so it silently
+  // recovers nothing.
+  let r = uLen / z;
+  let gradPx = vec2<f32>(dpdx(r), dpdy(r));
+  let dist = abs(r - 1.0) / max(length(gradPx), 1e-30);
 
   // Off-stroke discard. '!(dist < STROKE_PX)' is true when the pixel is beyond
   // the stroke AND when 'dist' is NaN (a NaN comparison is false), so both the
   // empty interior and any non-finite pixel from a degenerate 'Ginv' write
-  // nothing — the triangle can only light the ring, never a filled blob.
+  // nothing — the ribbon can only light the ring, never a filled blob.
   if (!(dist < STROKE_PX)) {
     discard;
   }
@@ -173,11 +159,11 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // the horizon in the orbit's colour — most visible at grazing angles, where
   // the horizon merges continuously with the real orbit so no simple r cutoff
   // separates them. So VERIFY the estimate: step 'dist' pixels toward the orbit
-  // along -sign(uLen-z)*n̂ (same sign as -sign(r-1), since z > 0) and recompute
+  // along -sign(r-1)*n̂ (same sign as -sign(uLen-z), since z > 0) and recompute
   // r. A genuine near-orbit pixel lands on r≈1; a horizon pixel (where r varies
   // nonlinearly) stays far from 1 — or the step lands behind the camera.
-  let n = gradNum / max(length(gradNum), 1e-30);
-  let pStep = in.clip.xy - sign(uLen - z) * dist * n;
+  let n = gradPx / max(length(gradPx), 1e-30);
+  let pStep = in.clip.xy - sign(r - 1.0) * dist * n;
   let qStep = ginv * vec3<f32>(pStep, 1.0);
   let rStep = length(qStep.xy / qStep.z);
   // Keep-form, not reject-form: a NaN comparison is always false, so the old
@@ -211,5 +197,23 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
 
 @fragment
 fn fsImpostorRibbon(in: VSOut) -> @location(0) vec4<f32> {
-  return vec4<f32>(in.color, 1.0); // ribbon hull, flat trail colour
+  // Fold hulls are viewport-sized boxes (tangent extension), so a flat
+  // full-strength fill saturates to white wherever a few orbits stack. Mirror
+  // fs's ownership discard for tested quads - each orbit then contributes at
+  // most one layer per pixel - and dim: the overlay shows where the
+  // production fragment MAY paint, per orbit, not the raw geometry.
+  let ginv = mat3x3<f32>(in.ginv0, in.ginv1, in.ginv2);
+  let q = ginv * vec3<f32>(in.clip.xy, 1.0);
+  if (q.z <= 0.0) {
+    discard;
+  }
+  if (in.eOwn.z > 0.5) {
+    let ecc = atan2(q.y, q.x);
+    let dE = ecc - in.eOwn.x;
+    let dEw = dE - TAU * floor(dE / TAU);
+    if (dEw >= TAU / f32(SEGMENTS)) {
+      discard;
+    }
+  }
+  return vec4<f32>(in.color * 0.2, 1.0);
 }
