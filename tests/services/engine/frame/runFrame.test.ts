@@ -399,18 +399,24 @@ describe('runFrame — orientation-frame roll', () => {
     return Math.acos(Math.min(1, Math.max(-1, c)));
   };
 
-  it('an idle frame switch holds the subject (target + distance) and rolls only the up-vector', () => {
-    // Q4 guarantee, reconciled against the decode math. With the resting driver
-    // winning, the base pose (target, yaw, pitch, distance) is returned unchanged
-    // every frame; only B(t) slerps. The decode is
-    //   position = target + distance · (B(t) · dir_local(yaw, pitch)).
-    // So the SUBJECT is invariant — target is fixed and |position − target| stays
-    // exactly `distance` — while the up-vector (frame pole) rotates old → new. The
-    // eye ORBITS the target along the slerp arc (a distance-preserving roll about
-    // the view axis), it does NOT translate. Full position-constancy would require
-    // the resting driver to re-encode the pose against B(t) each frame, which it
-    // does not; the invariant the produce path actually upholds is target-fixed +
-    // distance-fixed + up-rotating, which is what we assert.
+  it('a full orientation-frame roll: B(t) reaches the destination pole monotonically and the descriptor clears on completion', () => {
+    // NOT a produce-path test — see 'during a frame roll the assembled camera
+    // position is unchanged...' below for what `runFrame` actually feeds
+    // `state.cam.poseBasis` / `.upBasis`, and the position-holds-still
+    // invariant that follows. This test instead drives a real frameTween
+    // through `runFrame` end to end and reads a SYNTHETIC probe camera —
+    // `assembleOrbitCamera(pose, projection, B, B)` with the SAME live B(t)
+    // fed to both slots — purely to turn the resolved basis into a vector
+    // (frameUp) and confirm two things nothing else pins: (1) B(t) rotates
+    // MONOTONICALLY from the old pole to the new one across a full 0→1000ms
+    // sweep of real ticks (`resolveFrameBasis.test.ts` checks orthonormality
+    // and endpoints at isolated samples, not that the interpolation never
+    // backtracks — a slerp-direction bug could pass that and fail this); and
+    // (2) `runFrame`'s completion branch dispatches `clearFrameTween` exactly
+    // once when elapsed saturates. The target-fixed / distance-preserved
+    // assertions below are incidental byproducts of B(t) being a rotation
+    // matrix (already implied by orthonormality), not a separate claim about
+    // the produce path.
     const store = makeStore();
     const state = makeCamState();
     const deps = makeCamDeps(state, store);
@@ -450,10 +456,11 @@ describe('runFrame — orientation-frame roll', () => {
     for (const s of samples) {
       // Target is fixed across the whole transition.
       expect(norm(sub(s.target, first.target))).toBeLessThan(1e-6);
-      // Distance (|position − target|) is preserved — the eye orbits, never
-      // translates toward or away from the subject. Relative tolerance: the basis
-      // slerp runs in float32, so absolute error scales with `distance` (~1e-5 at
-      // 100); the invariant is that the *ratio* holds to float32 precision.
+      // Distance (|position − target|) is preserved — B(t) is a rotation matrix
+      // at every sample, so the synthetic probe's eye orbits at constant radius.
+      // Relative tolerance: the basis slerp runs in float32, so absolute error
+      // scales with `distance` (~1e-5 at 100); the invariant is that the *ratio*
+      // holds to float32 precision.
       const rel = Math.abs(norm(sub(s.position, s.target)) - BASE.distance) / BASE.distance;
       expect(rel).toBeLessThan(1e-6);
     }
@@ -471,8 +478,8 @@ describe('runFrame — orientation-frame roll', () => {
     for (let i = 1; i < anglesFromStart.length; i++) {
       expect(anglesFromStart[i]!).toBeGreaterThan(anglesFromStart[i - 1]!);
     }
-    // And the eye genuinely moved (orbited) — proving the up-roll is a real
-    // world-space change, not a no-op.
+    // And the synthetic probe's eye genuinely moved (orbited) — proving the
+    // up-roll is a real world-space change, not a no-op.
     expect(norm(sub(samples[samples.length - 1]!.position, first.position))).toBeGreaterThan(1);
 
     // Completion clears the descriptor exactly once: after the saturating frame

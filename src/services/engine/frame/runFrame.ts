@@ -339,35 +339,20 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // ── Orientation basis: two readers, two different values ─────────────────
   //
-  // `poseBasis` is the COMMITTED frame — `ORIENTATION_FRAMES[orientation]`. It
-  // never moves during a roll: `watchOrientationChangeSaga` writes the
-  // destination into `settings.orientation` the instant a switch starts, so
-  // this is the destination frame for the roll's entire duration, not the
-  // frame the roll departed from. `updatePosition` (via `assembleOrbitCamera`)
-  // decodes yaw/pitch through it, so the eye holds still while a roll is in
-  // flight — a frame switch changes only which way is up, per the branch's
-  // rule.
+  // `poseBasis` is the COMMITTED frame (`ORIENTATION_FRAMES[orientation]`).
+  // `watchOrientationChangeSaga` writes the DESTINATION into `settings.orientation`
+  // the instant a switch starts, so this never moves during a roll — the eye,
+  // decoded through it via `updatePosition`, holds still; only up rotates.
   //
-  // `upBasis` is `resolveFrameBasis`'s live B(t) — the steady registry basis at
-  // rest, or the mid-slerp basis while a switch is in flight. `resolveFrameBasis`
-  // stays the single authority for 'which way is up this frame': called exactly
-  // once here so no two consumers can drift on how a roll is interpolated.
+  // `upBasis` is `resolveFrameBasis`'s live B(t), resolved exactly once here.
   //
-  // Both flow to three readers, but NOT the same value to each:
-  //   - `state.cameraRuntime.frameBasis.current` takes the LIVE upBasis. It
-  //     seeds the saga context's `frameBasisQuat` and `applySceneEffect`'s
-  //     `fromQuat` for the NEXT switch (see `watchOrientationChangeSaga`) — a
-  //     re-switch mid-roll must compose from wherever the pole is right now, so
-  //     this must stay B(t), never the committed pose basis.
-  //   - the drag register `state.cam.poseBasis` / `state.cam.upBasis` get
-  //     `poseBasis` / `upBasis` respectively, so a grab THIS frame decodes its
-  //     position through the committed pole while its screen-axis maths uses
-  //     the live one — see `OrbitCameraInit.d.ts` for why the two fields exist.
-  //   - `deriveFrameContext` below takes both, split the same way, for the
-  //     draw + demand decode.
+  // `state.cameraRuntime.frameBasis.current` gets `upBasis`, NOT `poseBasis`: it
+  // seeds the NEXT switch's `fromQuat` (`watchOrientationChangeSaga`), and a
+  // re-switch mid-roll must compose from the live pole, not the committed one.
   //
-  // `frameTweenElapsed` (inside `resolveFrameBasis`) is the single per-frame tick
-  // of the frame-roll clock — reference-identity reset, exactly like `tweenElapsed`.
+  // `state.cam` and `deriveFrameContext` below both take the same split —
+  // committed basis for position decode, live basis for up — see
+  // `OrbitCameraInit.d.ts` for why the two camera fields exist.
   const poseBasis = ORIENTATION_FRAMES[rootState.settings.orientation];
   const upBasis = resolveFrameBasis(
     rootState.settings.orientation,

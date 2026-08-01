@@ -29,9 +29,10 @@ import { updatePosition } from '../../../utils/camera/updatePosition';
  * `poseBasis` and `upBasis` are the two halves of the former single
  * `frameBasis` field (see `OrbitCameraInit.d.ts`): `poseBasis` is what
  * `updatePosition` decodes yaw/pitch through, `upBasis` is what draw-time
- * screen-up reads. Every current caller passes the same resolved basis for
- * both — the split exists so a future mid-slerp `upBasis` can diverge from the
- * steady `poseBasis` without touching this signature again.
+ * screen-up reads. At rest they're equal; during an orientation-frame roll
+ * `runFrame` feeds the committed `poseBasis` (holds still) and the live
+ * mid-slerp `upBasis` (rotates), which is what makes a roll turn the horizon
+ * without moving the eye.
  */
 export function assembleOrbitCamera(
   pose: CameraPose,
