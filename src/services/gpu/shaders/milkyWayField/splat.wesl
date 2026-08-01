@@ -9,6 +9,7 @@
 import package::lib::billboard::quadCorner;
 import package::lib::gaussianIntegral::gaussianRayIntegral;
 import package::milkyWayField::io::u;
+import package::milkyWayField::io::comps;
 
 struct SplatOut {
   @builtin(position) pos: vec4<f32>,
@@ -19,8 +20,8 @@ struct SplatOut {
 @vertex
 fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> SplatOut {
   let corner = quadCorner(vi);
-  let g1 = u.comps[4u * inst + 1u];
-  let g3 = u.comps[4u * inst + 3u];
+  let g1 = comps[4u * inst + 1u];
+  let g3 = comps[4u * inst + 3u];
   let center = g3.xyz;
   let r = g1.w;
 
@@ -120,10 +121,10 @@ fn fs(input: SplatOut) -> @location(0) vec4<f32> {
   );
   let o = u.eye.xyz;
 
-  let g0 = u.comps[4u * input.inst];
-  let g1 = u.comps[4u * input.inst + 1u];
-  let g2 = u.comps[4u * input.inst + 2u];
-  let g3 = u.comps[4u * input.inst + 3u];
+  let g0 = comps[4u * input.inst];
+  let g1 = comps[4u * input.inst + 1u];
+  let g2 = comps[4u * input.inst + 2u];
+  let g3 = comps[4u * input.inst + 3u];
   let po = o - g3.xyz;
   let sum = g2.xyz * (g0.w * gaussianRayIntegral(po, d, g0.xyz, g1.xyz));
 

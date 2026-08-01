@@ -212,9 +212,11 @@ import { panAxes } from './panAxes';
 import { lensShift } from './lensShift';
 import { CLOUD_UNIFORM_FLOATS, packCloudUniforms } from './packCloudUniforms';
 import {
-  FIELD_UNIFORM_BUFFER_SIZE,
-  FIELD_UNIFORM_FLOATS,
-  packFieldUniforms,
+  FIELD_COMPONENT_FLOATS,
+  FIELD_HEADER_BUFFER_SIZE,
+  FIELD_HEADER_FLOATS,
+  packFieldComponents,
+  packFieldHeaderUniforms,
 } from './packFieldUniforms';
 import { createGenerationPipelines } from '../../../../src/services/gpu/galaxy/createGenerationPipelines';
 import { encodeGeneration } from '../../../../src/services/gpu/galaxy/encodeGeneration';
@@ -225,6 +227,7 @@ import {
   DEFAULT_GALAXY_FIELD_TUNING,
   GALAXY_FIELD_MAX_COMPONENTS,
 } from '../../../../src/data/galaxy/galaxyFieldMixture';
+import { transformGalaxyFieldComponent } from '../../../../src/utils/galaxy/transformGalaxyFieldComponent';
 import { GENERATION_UBO } from '../../../../src/services/gpu/galaxy/generationUboLayout';
 import { GEN_RECORD_BYTES } from '../../../../src/services/gpu/galaxy/genRecordBytes';
 import { carveStarLayout } from '../../../../src/services/gpu/galaxy/carveStarLayout';
@@ -320,6 +323,11 @@ const FADE_REPORT_INTERVAL_MS = 100;
  * The UBO is retained (not destroyed right after the generation submit) so its
  * lifetime brackets the vertex buffers it produced — the whole triple is torn
  * down together on the next `setExtras`.
+ *
+ * `fieldGeometry` + `transform` are cached (like the central galaxy's
+ * `fieldGeometry`) so `setFieldTuning` can rebuild `fieldMixture` — this
+ * extra's world-space analytic mixture, already carried through
+ * `transformGalaxyFieldComponent` — without a regenerate.
  */
 type Extra = {
   starBuf: GPUBuffer;
@@ -327,6 +335,9 @@ type Extra = {
   dustBuf: GPUBuffer | null;
   dustCount: number;
   ubo: GPUBuffer;
+  fieldGeometry: GalaxyFieldGeometry;
+  transform: Pick<ExtraGalaxySpec, 'pos' | 'scale' | 'rotY' | 'tiltX'>;
+  fieldMixture: readonly GalaxyFieldComponent[];
 };
 
 export async function createGalaxyEngine(
@@ -389,11 +400,27 @@ export async function createGalaxyEngine(
   const dustUbo = makeCloudUniformBuffer('galaxy:dustUniforms');
   // The analytic field's own buffer, own struct — see `packFieldUniforms`.
   // It cannot share the cloud UBO: nothing in the 208-byte cloud layout is a
-  // ray, and this pass reads none of the billboard lanes.
+  // ray, and this pass reads none of the billboard lanes. Camera/params only
+  // now — the mixture itself rides `fieldCompsBuf` below, a separate storage
+  // binding, so this uniform stays a fixed 96 bytes regardless of how many
+  // galaxies are on screen.
   const fieldUbo = device.createBuffer({
     label: 'galaxy:fieldUniforms',
-    size: FIELD_UNIFORM_BUFFER_SIZE,
+    size: FIELD_HEADER_BUFFER_SIZE,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  // `comps` (io.wesl binding 1): every mixture's Gaussians, central galaxy
+  // then each extra, already world-transformed — a read-only STORAGE array,
+  // not a uniform, specifically so N background extras can push the total
+  // component count past a uniform's ~1000-component cap. Grown, never
+  // shrunk (see `repackFieldComponents`); starts at
+  // `GALAXY_FIELD_MAX_COMPONENTS` so a single central galaxy never forces a
+  // regrow on its first `setParams`.
+  let fieldCompsCapacity = GALAXY_FIELD_MAX_COMPONENTS;
+  let fieldCompsBuf = device.createBuffer({
+    label: 'galaxy:fieldComps',
+    size: fieldCompsCapacity * FIELD_COMPONENT_FLOATS * 4,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
   });
   // Tool-only grade trailer: [saturation, vignette, gammaEncode, 0]. The bloom
   // and compositor uniforms are owned by their shared factories below.
@@ -623,15 +650,24 @@ export async function createGalaxyEngine(
     layout: dustPipe.getBindGroupLayout(0),
     entries: [{ binding: 0, resource: { buffer: dustUbo } }],
   });
-  // The auto-layout bind group reading `fieldUbo` (see `starBG`/`dustBG`'s
-  // comment just above: a bind group is built against ONE pipeline's
-  // `layout: 'auto'` GPUBindGroupLayout and fails another pipeline's
-  // draw-time compatibility check even for a byte-identical WGSL binding).
-  const splatBG = device.createBindGroup({
-    label: 'galaxy:splatBG',
-    layout: splatPipe.getBindGroupLayout(0),
-    entries: [{ binding: 0, resource: { buffer: fieldUbo } }],
-  });
+  // The auto-layout bind group reading `fieldUbo` + `fieldCompsBuf` (see
+  // `starBG`/`dustBG`'s comment just above: a bind group is built against
+  // ONE pipeline's `layout: 'auto'` GPUBindGroupLayout and fails another
+  // pipeline's draw-time compatibility check even for a byte-identical WGSL
+  // binding). `let`, not `const`: `fieldCompsBuf` grows (see
+  // `repackFieldComponents`), and a bind group is bound to the specific
+  // GPUBuffer it was built against — a resized buffer needs a new group.
+  let splatBG = buildSplatBindGroup();
+  function buildSplatBindGroup(): GPUBindGroup {
+    return device.createBindGroup({
+      label: 'galaxy:splatBG',
+      layout: splatPipe.getBindGroupLayout(0),
+      entries: [
+        { binding: 0, resource: { buffer: fieldUbo } },
+        { binding: 1, resource: { buffer: fieldCompsBuf } },
+      ],
+    });
+  }
 
   // ---- size-dependent targets: HDR scene + star aggregate + bloom mips + LDR ----
   //
@@ -779,7 +815,7 @@ export async function createGalaxyEngine(
   // dust pass's. (The BUFFERS still have to be separate — see
   // `makeCloudUniformBuffer`.)
   const cloudData = new Float32Array(CLOUD_UNIFORM_FLOATS);
-  const fieldData = new Float32Array(FIELD_UNIFORM_FLOATS);
+  const fieldData = new Float32Array(FIELD_HEADER_FLOATS);
   const gradeData = new Float32Array(4);
 
   /**
@@ -811,6 +847,48 @@ export async function createGalaxyEngine(
     aggregateDivisor: render.aggregateDivisor,
     starCount,
   });
+
+  // Instances the field pass actually draws this frame — the live length of
+  // the last `repackFieldComponents` concatenation, NOT `fieldCompsCapacity`
+  // (which only grows, and can outsize the current total after extras
+  // shrink). Read by `drawFrame`'s draw call and by the header pack's
+  // `counts.x`.
+  let fieldTotalComponents = 0;
+
+  /**
+   * repackFieldComponents — flattens the central galaxy's mixture and every
+   * extra's (each already carried into world space by
+   * `transformGalaxyFieldComponent` at the point it was built) into one list
+   * and rewrites `fieldCompsBuf`. Called whenever any mixture changes —
+   * `setParams`, `setExtras`, `setFieldTuning` — never per frame, unlike the
+   * header (see `packFieldUniforms`'s header for why the two are split).
+   *
+   * Grows (and rebuilds `splatBG`, since an 'auto'-layout bind group is tied
+   * to the specific GPUBuffer it was built against) only when the new total
+   * exceeds the current capacity, and never shrinks — the same grow-only
+   * discipline `instancedQuadRenderer` uses for its 'grow' capacity
+   * strategy, and for the same reason here: `setFieldTuning` fires on every
+   * frame a tuning slider is dragged, and recreating the buffer + bind group
+   * that often would be pure churn.
+   */
+  function repackFieldComponents(): void {
+    const combined: GalaxyFieldComponent[] = [...fieldMixture];
+    for (const e of extras) combined.push(...e.fieldMixture);
+    fieldTotalComponents = combined.length;
+    if (fieldTotalComponents > fieldCompsCapacity) {
+      fieldCompsCapacity = fieldTotalComponents;
+      fieldCompsBuf.destroy();
+      fieldCompsBuf = device.createBuffer({
+        label: 'galaxy:fieldComps',
+        size: fieldCompsCapacity * FIELD_COMPONENT_FLOATS * 4,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+      });
+      splatBG = buildSplatBindGroup();
+    }
+    if (fieldTotalComponents > 0) {
+      device.queue.writeBuffer(fieldCompsBuf, 0, packFieldComponents(combined));
+    }
+  }
 
   /**
    * setParams — regenerate the central galaxy as a GPU compute dispatch
@@ -890,6 +968,7 @@ export async function createGalaxyEngine(
     // field can be sure it is oriented like the sprites it sums with.
     fieldGeometry = readGalaxyFieldGeometry(genUniforms, starLayout);
     fieldMixture = buildGalaxyFieldMixture(fieldGeometry, fieldTuning);
+    repackFieldComponents();
 
     const enc = device.createCommandEncoder({ label: 'galaxy:generate' });
     encodeGeneration({
@@ -928,9 +1007,22 @@ export async function createGalaxyEngine(
   // `packFieldUniforms`, same as every other render knob above. No cached
   // geometry yet (before the first `setParams`) just leaves the merged
   // `fieldTuning` for that first `setParams` to read.
+  //
+  // Rebuilds every EXTRA's mixture too, from ITS cached geometry + transform
+  // — a tuning change is a global look knob, so a background galaxy's ring
+  // structure has to track it exactly like the central one's, then land back
+  // in world space via `transformGalaxyFieldComponent` before `comps` is
+  // repacked.
   function setFieldTuning(patch: Partial<GalaxyFieldTuning>): void {
     fieldTuning = { ...fieldTuning, ...patch };
     if (fieldGeometry) fieldMixture = buildGalaxyFieldMixture(fieldGeometry, fieldTuning);
+    extras = extras.map((e) => ({
+      ...e,
+      fieldMixture: buildGalaxyFieldMixture(e.fieldGeometry, fieldTuning).map((c) =>
+        transformGalaxyFieldComponent(c, e.transform),
+      ),
+    }));
+    repackFieldComponents();
   }
 
   // Replace the set of background galaxies. Each extra is generated GPU-side
@@ -983,7 +1075,8 @@ export async function createGalaxyEngine(
         size: GENERATION_UBO.byteLength,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
       });
-      device.queue.writeBuffer(ubo, 0, packGenerationUniforms(spec.params, budget, spec));
+      const genUniforms = packGenerationUniforms(spec.params, budget, spec);
+      device.queue.writeBuffer(ubo, 0, genUniforms);
 
       encodeGeneration({
         device,
@@ -996,15 +1089,35 @@ export async function createGalaxyEngine(
         dustLayout,
       });
 
+      // Same analytic mixture the central galaxy gets in `setParams`, built
+      // from this extra's OWN geometry then carried into world space with
+      // the SAME rigid transform `applyExtraTransform` bakes into the
+      // sprites (see `transformGalaxyFieldComponent`'s header) — so the two
+      // representations of this background galaxy register with each other.
+      const geometry = readGalaxyFieldGeometry(genUniforms, starLayout);
+      const transform: Pick<ExtraGalaxySpec, 'pos' | 'scale' | 'rotY' | 'tiltX'> = {
+        pos: spec.pos,
+        scale: spec.scale,
+        rotY: spec.rotY,
+        tiltX: spec.tiltX,
+      };
+      const extraFieldMixture = buildGalaxyFieldMixture(geometry, fieldTuning).map((c) =>
+        transformGalaxyFieldComponent(c, transform),
+      );
+
       extras.push({
         starBuf: starBufExtra,
         starCount: starLayout.capacity,
         dustBuf: dustBufExtra,
         dustCount: dustLayout.capacity,
         ubo,
+        fieldGeometry: geometry,
+        transform,
+        fieldMixture: extraFieldMixture,
       });
     }
     device.queue.submit([enc.finish()]);
+    repackFieldComponents();
   }
 
   function setView(pose: Partial<ViewPose>): void {
@@ -1421,7 +1534,7 @@ export async function createGalaxyEngine(
     // canvas's), not the aggregate's: the fullscreen triangle covers the
     // aggregate, but the frustum it must reconstruct is the one `proj` was
     // built with.
-    packFieldUniforms(
+    packFieldHeaderUniforms(
       {
         eye,
         view,
@@ -1437,7 +1550,7 @@ export async function createGalaxyEngine(
         exposure:
           render.analyticExposure * render.starIntensity * render.sizeScale ** 2 * fade.alpha,
       },
-      fieldMixture,
+      fieldTotalComponents,
       fieldData,
     );
     device.queue.writeBuffer(fieldUbo, 0, fieldData);
@@ -1509,7 +1622,11 @@ export async function createGalaxyEngine(
       });
       pass.setPipeline(splatPipe);
       pass.setBindGroup(0, splatBG);
-      pass.draw(6, Math.min(fieldMixture.length, GALAXY_FIELD_MAX_COMPONENTS));
+      // One draw for the WHOLE flat list `repackFieldComponents` wrote —
+      // central galaxy's components then every extra's — so the field pass's
+      // timing slot honestly reports the analytic cost of everything on
+      // screen, not just the central galaxy's share.
+      pass.draw(6, fieldTotalComponents);
       pass.end();
     }
     // Scene pass: the aggregate folded into HDR, then transmittance dust over
@@ -1720,6 +1837,7 @@ export async function createGalaxyEngine(
       starUbo.destroy();
       dustUbo.destroy();
       fieldUbo.destroy();
+      fieldCompsBuf.destroy();
       gradeBuf.destroy();
       ro.disconnect();
       canvas.removeEventListener('pointerdown', onDown);

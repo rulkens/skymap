@@ -1,9 +1,22 @@
 /**
- * packFieldUniforms — the packer for the analytic Milky Way field pass,
- * matching `milkyWayField/io.wesl`'s `FieldUniforms` byte-for-byte (see
- * `FIELD_UNIFORM_BUFFER_SIZE` below for the live size). THAT FILE'S HEADER IS
- * THE OFFSET AUTHORITY; a wrong index here produces no error, just silently
- * garbage uniforms.
+ * packFieldUniforms — the packers for the analytic Milky Way field pass,
+ * matching `milkyWayField/io.wesl`'s `FieldUniforms` header and `comps`
+ * storage array byte-for-byte. THAT FILE'S HEADER IS THE OFFSET AUTHORITY; a
+ * wrong index here produces no error, just silently garbage uniforms.
+ *
+ * Two packers, not one, because the header and the components change at
+ * different rates: `packFieldHeaderUniforms` runs every `drawFrame` (its
+ * `exposure` lane tracks the per-frame visibility fade), while
+ * `packFieldComponents` only needs to run when a mixture actually changes —
+ * a galaxy (re)generated, an extra set replaced, or the field tuning
+ * dragged. Baking both into one packed buffer, as this module used to,
+ * meant repacking every background galaxy's Gaussians on every frame for no
+ * reader. The split also drops the component cap a uniform array forced: the
+ * old layout's 64 KiB uniform held at most ~1000 components (~3 galaxies'
+ * worth); `comps` is now a read-only storage array with no such ceiling, so
+ * N background extras can outgrow it (`createGalaxyEngine.ts` sizes and
+ * grows the backing GPUBuffer; `GALAXY_FIELD_MAX_COMPONENTS` remains only
+ * the PER-GALAXY cap `buildGalaxyFieldMixture` enforces).
  *
  * ## Why a camera BASIS and not an inverse view-projection
  *
@@ -21,25 +34,19 @@
  * That term subtracts from x_ndc, so the shader adds it back; omitting it
  * would slide the analytic field against the sprites whenever a side panel
  * opens — a divergence that looks like a projection bug, not a framing one.
- *
- * The mixture rides the same buffer as a fixed-size array. It only changes
- * when the galaxy is regenerated (or the ring tuning changes), but writing it
- * every frame removes any "did the mixture change" bookkeeping; the buffer is
- * rewritten per frame for the camera lanes regardless.
  */
 
 import type { GalaxyFieldComponent } from '../../../../src/@types/galaxy/GalaxyFieldComponent';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import { GALAXY_FIELD_MAX_COMPONENTS } from '../../../../src/data/galaxy/galaxyFieldMixture';
 
-/** Float count of `io.wesl`'s `FieldUniforms` — 6 vec4 + 4 vec4 per component, up to `GALAXY_FIELD_MAX_COMPONENTS`. */
-export const FIELD_UNIFORM_FLOATS = 24 + 4 * 4 * GALAXY_FIELD_MAX_COMPONENTS;
+/** Float count of `io.wesl`'s `FieldUniforms` header — 6 vec4, camera + params + counts. */
+export const FIELD_HEADER_FLOATS = 24;
 
-/** Byte size of the same struct, for `createBuffer`. */
-export const FIELD_UNIFORM_BUFFER_SIZE = FIELD_UNIFORM_FLOATS * 4;
+/** Byte size of the header struct, for `createBuffer`. */
+export const FIELD_HEADER_BUFFER_SIZE = FIELD_HEADER_FLOATS * 4;
 
-/** First float index of the `comps` array — 6 vec4 of camera/params precede it. */
-const COMPS_BASE = 24;
+/** Floats per `comps` entry — four vec4, as `io.wesl`'s layout comment documents. */
+export const FIELD_COMPONENT_FLOATS = 16;
 
 export type FieldCamera = {
   /** Camera world position — the ray origin. */
@@ -56,12 +63,19 @@ export type FieldCamera = {
   readonly exposure: number;
 };
 
-export function packFieldUniforms(
+/**
+ * packFieldHeaderUniforms — camera basis + params + live component count,
+ * into the 96-byte uniform. Called every `drawFrame`; `componentCount` is
+ * whatever `packFieldComponents` last sized the storage buffer to (the two
+ * packers are called from different sites, so the count travels as a plain
+ * argument rather than being re-derived here).
+ */
+export function packFieldHeaderUniforms(
   cam: FieldCamera,
-  mixture: readonly GalaxyFieldComponent[],
+  componentCount: number,
   dst?: Float32Array,
 ): Float32Array {
-  const out = dst ?? new Float32Array(FIELD_UNIFORM_FLOATS);
+  const out = dst ?? new Float32Array(FIELD_HEADER_FLOATS);
   const { view } = cam;
 
   // eye 0..3.
@@ -94,16 +108,32 @@ export function packFieldUniforms(
   out[19] = cam.exposure;
 
   // counts 20..23 — only .x is read; the rest are reserved.
-  const count = Math.min(mixture.length, GALAXY_FIELD_MAX_COMPONENTS);
-  out[20] = count;
+  out[20] = componentCount;
   out[21] = 0;
   out[22] = 0;
   out[23] = 0;
 
-  // comps 24.. — four vec4 per component, laid out as io.wesl documents.
-  for (let i = 0; i < count; i++) {
+  return out;
+}
+
+/**
+ * packFieldComponents — one galaxy-agnostic flat list of components (the
+ * caller concatenates the central galaxy's mixture with every extra's,
+ * already transformed into world space — see
+ * `transformGalaxyFieldComponent.ts`) into the storage buffer's bytes.
+ * Unlike the old uniform packer, there is no tail to zero: the draw call
+ * always instances exactly `mixture.length` quads, so bytes past the live
+ * count are never read even when the backing GPUBuffer's capacity (grown,
+ * never shrunk) is larger.
+ */
+export function packFieldComponents(
+  mixture: readonly GalaxyFieldComponent[],
+  dst?: Float32Array,
+): Float32Array {
+  const out = dst ?? new Float32Array(FIELD_COMPONENT_FLOATS * mixture.length);
+  for (let i = 0; i < mixture.length; i++) {
     const c = mixture[i]!;
-    const base = COMPS_BASE + 16 * i;
+    const base = FIELD_COMPONENT_FLOATS * i;
     out[base] = c.invCovDiagonal[0];
     out[base + 1] = c.invCovDiagonal[1];
     out[base + 2] = c.invCovDiagonal[2];
@@ -121,10 +151,5 @@ export function packFieldUniforms(
     out[base + 14] = c.center[2];
     out[base + 15] = 0;
   }
-  // Unused slots are zeroed rather than left as last frame's bytes: `dst` is a
-  // reused scratch, and a stale amplitude past `count` would come back to life
-  // the moment the table shrinks.
-  out.fill(0, COMPS_BASE + 16 * count, FIELD_UNIFORM_FLOATS);
-
   return out;
 }

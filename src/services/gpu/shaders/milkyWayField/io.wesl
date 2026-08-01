@@ -1,5 +1,5 @@
-// milkyWayField/io.wesl — uniform layout for the ANALYTIC Milky Way field:
-// a Gaussian mixture whose line integral is evaluated per fragment, one
+// milkyWayField/io.wesl — layout for the ANALYTIC Milky Way field: a
+// Gaussian mixture whose line integral is evaluated per fragment, one
 // instanced quad per component, as the closed-form alternative to sampling
 // the same density with sprites.
 //
@@ -10,14 +10,26 @@
 //
 // ## Byte layout (canonical — the offset authority for the CPU packer)
 //
+// HEADER (uniform, binding 0) — camera + params only, unchanged every frame
+// in shape though its bytes are rewritten every frame (the fade/exposure
+// terms in 'params' track the camera):
+//
 //   offset 0   : eye: vec4      (xyz camera world position, w unused)
 //   offset 16  : camRight: vec4 (world-space camera basis, w unused)
 //   offset 32  : camUp: vec4
 //   offset 48  : camFwd: vec4
 //   offset 64  : params: vec4   (tanHalfFov, aspect, lensShiftX, exposure)
 //   offset 80  : counts: vec4   (componentCount, 0, 0, 0)
-//   offset 96  : comps: array<vec4, 4000>  (FOUR vec4 per component, 1000 max)
-//   total: 64096 bytes.
+//   total: 96 bytes.
+//
+// COMPS (read-only storage, binding 1) — every mixture's components back to
+// back (the central galaxy's, then each background extra's, already carried
+// into world space — see transformGalaxyFieldComponent.ts), four vec4 each.
+// A storage array has no fixed capacity the way a uniform array does, which
+// is the whole reason this lives in its own binding: a uniform's 64 KiB
+// caps it near 1000 components (~3 galaxies' worth), and N extras must be
+// able to outgrow that. counts.x carries how many are live; the CPU packer
+// sizes the backing GPUBuffer to match (growing, never per-frame).
 //
 // The ray comes from a camera BASIS plus tanHalfFov/aspect rather than an
 // inverse view-projection: the engine already holds the basis (it packs the
@@ -45,10 +57,7 @@ struct FieldUniforms {
   camFwd: vec4<f32>,
   params: vec4<f32>,
   counts: vec4<f32>,
-  // 4000 slots = GALAXY_FIELD_MAX_COMPONENTS (1000) x 4 vec4. Fixed size
-  // because a uniform array cannot be runtime-sized; counts.x says how many
-  // are live, and the rest are never read.
-  comps: array<vec4<f32>, 4000>,
 };
 
 @group(0) @binding(0) var<uniform> u: FieldUniforms;
+@group(0) @binding(1) var<storage, read> comps: array<vec4<f32>>;
