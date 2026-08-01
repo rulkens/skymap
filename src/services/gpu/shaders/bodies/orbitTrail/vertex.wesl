@@ -17,8 +17,7 @@ import package::bodies::orbitTrail::io::OrbitInstance;
 import package::bodies::orbitTrail::io::VSOut;
 import package::lib::math::TAU;
 
-// One sample of the projected ellipse in raw clip space (x, y, w) — no divide
-// yet. The padded vec4 stores clip.w in its THIRD slot - (x, y, w, 0) - so the
+// The padded vec4 stores clip.w in its THIRD slot - (x, y, w, 0) - so the
 // swizzle is .xyz, never .xyw: the .w lane is the zero pad, and reading it
 // makes p.z zero, which silently collapses every vertex to (0,0,0,0).
 fn ribbonClip(inst: OrbitInstance, si: u32) -> vec3<f32> {
@@ -27,13 +26,14 @@ fn ribbonClip(inst: OrbitInstance, si: u32) -> vec3<f32> {
 }
 
 // Perspective divide; valid everywhere here — the CPU arc clip guarantees
-// clip.z (== clip.w) > 0 for every sample index.
+// clip.z (== clip.w) > 0 for every sample index. Pixels here are centre-
+// origin, y-up, unlike the fragment's top-left, y-down framebuffer (V) —
+// an isometry apart, so widths agree; never add a directional quantity here.
 fn clipToPixel(clip: vec3<f32>, viewportPx: vec2<f32>) -> vec2<f32> {
   return (clip.xy / clip.z) * 0.5 * viewportPx;
 }
 
-// Bounded neighbour reach — inert for any on-screen orbit; only bites at an
-// open arc's end, where the outermost sample sits thousands of viewports away.
+// Bounded neighbour reach — only bites at an open arc's end, far off-screen.
 fn clampReach(neighbourPx: vec2<f32>, ownPx: vec2<f32>, maxPx: f32) -> vec2<f32> {
   let d = neighbourPx - ownPx;
   let len = length(d);
