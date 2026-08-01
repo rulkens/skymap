@@ -32,6 +32,7 @@ import {
   focus,
   lookAtId,
   strafeId,
+  spinToId,
   seq,
   all,
   fork,
@@ -43,10 +44,15 @@ import {
 } from '../../../../src/services/engine/animation/effectHelpers';
 import { focusId } from '../../../../src/utils/animation/focusId';
 import { structureFocusDistance } from '../../../../src/services/engine/camera/structureFocusDistance';
+import { yawPitchToDir } from '../../../../src/utils/camera/yawPitchToDir';
+import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
+import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import type { ResolveDeps } from '../../../../src/@types/engine/ResolveDeps';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { Mat3 } from '../../../../src/@types/math/Mat3';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 // ---------------------------------------------------------------------------
 // Test fixtures
@@ -441,3 +447,124 @@ describe('resolveClipFoci resolves flyPath waypoints', () => {
     expect(w0.radius).toBe(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Test 8 — spinToId resolves to a bearing-aware yaw spin
+// ---------------------------------------------------------------------------
+
+describe('resolveClipFoci rewrites spinToId to a bearing-aware yaw spin', () => {
+  it('the landing yaw (liveYaw + by) faces the focus', () => {
+    // Virgo sits at [10,0,0]; from the origin that is world +X. A nonzero live
+    // yaw makes this a real test of `by`, not a coincidence of yaw already
+    // being 0.
+    const id = focusId('cluster-virgo');
+    const livePose: CameraPose = { ...POSE, yaw: 0.5 };
+    const clip: ClipData = { timeline: [spinToId(id, { over: 3 })] };
+
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, livePose);
+    const eff = resolved.timeline[0]!;
+    if (eff.kind !== 'spin') throw new Error('expected a spin effect');
+    expect(eff.ch).toBe('yaw');
+    expect(eff.over).toBe(3);
+    expect(eff.ease).toBe('easeInOutCubic');
+
+    const landingYaw = livePose.yaw + eff.by;
+    const dir = yawPitchToDir(landingYaw, livePose.pitch); // target→eye
+    const aim: Vec3 = [-dir[0], -dir[1], -dir[2]];
+    expect(aim[0]).toBeCloseTo(1, 10);
+    expect(aim[1]).toBeCloseTo(0, 10);
+    expect(aim[2]).toBeCloseTo(0, 10);
+  });
+
+  it('honours turns: turns:-1 yields a by exactly 2π less than turns:0', () => {
+    const id = focusId('cluster-virgo');
+    const livePose: CameraPose = { ...POSE, yaw: 0.5 };
+
+    const byDefault = resolveSpinBy(spinToId(id, { over: 3 }), livePose);
+    const byLongWay = resolveSpinBy(spinToId(id, { over: 3, turns: -1 }), livePose);
+
+    expect(byLongWay).toBeCloseTo(byDefault - Math.PI * 2, 10);
+  });
+
+  it('lands the same world bearing under two different bases — the basis drops out', () => {
+    // The cross product of two frames' poles is orthogonal to BOTH poles.
+    // Placing the focus along it makes the bearing's pitch exactly 0 under
+    // EITHER basis, so decoding the landing yaw at pitch 0 recovers the aim
+    // exactly regardless of which basis resolved it — a ground-truth
+    // expectation built from the poles, not from calling the resolver twice
+    // and comparing its own output to itself.
+    const poleOf = (basis: Mat3): Vec3 => [basis[3]!, basis[4]!, basis[5]!];
+    const cross = (a: Vec3, b: Vec3): Vec3 => [
+      a[1] * b[2] - a[2] * b[1],
+      a[2] * b[0] - a[0] * b[2],
+      a[0] * b[1] - a[1] * b[0],
+    ];
+    const poleEcliptic = poleOf(ORIENTATION_FRAMES.ecliptic);
+    const poleGalactic = poleOf(ORIENTATION_FRAMES.galactic);
+    const raw = cross(poleEcliptic, poleGalactic);
+    const m = Math.hypot(raw[0], raw[1], raw[2]);
+    const forward: Vec3 = [raw[0] / m, raw[1] / m, raw[2] / m];
+
+    const northStar: StructureInfo = {
+      type: 'structure',
+      category: 'cluster',
+      id: 'cluster-northstar',
+      name: 'North Star',
+      worldPos: [forward[0] * 10, forward[1] * 10, forward[2] * 10],
+      featured: true,
+      physicalRadiusMpc: 3,
+    } as StructureInfo;
+    const deps: ResolveDeps = {
+      ...DEPS,
+      structures: { byId: (sid) => (sid === 'cluster-northstar' ? northStar : null) },
+    };
+
+    const id = focusId('cluster-northstar');
+    const livePose: CameraPose = { target: [0, 0, 0], yaw: 1.0, pitch: 0, distance: 5 };
+    const clip: ClipData = { timeline: [spinToId(id, { over: 3 })] };
+
+    const resolvedEcliptic = resolveClipFoci(
+      clip,
+      deps,
+      FOV_Y,
+      livePose,
+      ORIENTATION_FRAMES.ecliptic,
+    );
+    const resolvedGalactic = resolveClipFoci(
+      clip,
+      deps,
+      FOV_Y,
+      livePose,
+      ORIENTATION_FRAMES.galactic,
+    );
+    const effE = resolvedEcliptic.timeline[0]!;
+    const effG = resolvedGalactic.timeline[0]!;
+    if (effE.kind !== 'spin' || effG.kind !== 'spin') throw new Error('expected spin effects');
+
+    const decodeWorld = (yaw: number, pitch: number, basis: Mat3): Vec3 =>
+      rotateVec3ByTightMat3(yawPitchToDir(yaw, pitch), basis);
+
+    const dirE = decodeWorld(livePose.yaw + effE.by, livePose.pitch, ORIENTATION_FRAMES.ecliptic);
+    const dirG = decodeWorld(livePose.yaw + effG.by, livePose.pitch, ORIENTATION_FRAMES.galactic);
+
+    // Both landings decode to the SAME world direction — the basis dropped out.
+    expect(dirG[0]).toBeCloseTo(dirE[0], 6);
+    expect(dirG[1]).toBeCloseTo(dirE[1], 6);
+    expect(dirG[2]).toBeCloseTo(dirE[2], 6);
+
+    // And that shared direction is the true world sightline to the focus
+    // (aim = -dir), computed independently from the poles above.
+    expect(-dirE[0]).toBeCloseTo(forward[0], 6);
+    expect(-dirE[1]).toBeCloseTo(forward[1], 6);
+    expect(-dirE[2]).toBeCloseTo(forward[2], 6);
+  });
+});
+
+/** Resolve a single spinToId effect and return its `by` delta. */
+function resolveSpinBy(effect: ReturnType<typeof spinToId>, livePose: CameraPose): number {
+  const clip: ClipData = { timeline: [effect] };
+  const resolved = resolveClipFoci(clip, DEPS, FOV_Y, livePose);
+  const eff = resolved.timeline[0]!;
+  if (eff.kind !== 'spin') throw new Error('expected a spin effect');
+  return eff.by;
+}

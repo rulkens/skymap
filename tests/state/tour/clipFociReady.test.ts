@@ -21,6 +21,7 @@ import {
   focus,
   lookAtId,
   strafeId,
+  spinToId,
   hold,
   seq,
   all,
@@ -104,6 +105,22 @@ describe('clipFociReady', () => {
       timeline: [lookAtId(id('cluster-virgo-m87'), 3)],
     };
     expect(clipFociReady(virgoLookClip, emptyDeps)).toBe(true);
+  });
+
+  it('clipFociReady gates spinToId like the other id-bearing arms', () => {
+    // Same shape as lookAtId/strafeId above — an unloaded famous id blocks
+    // readiness, a structure id never does. Without this case the walk falls
+    // through to the pass-through default and reports ready prematurely,
+    // which would make resolveClipFoci's throw the caller's first signal
+    // instead of the saga polling until the catalog loads.
+    const m87SpinClip: ClipData = { start: 'live', timeline: [spinToId(id('m87'), { over: 3 })] };
+    expect(clipFociReady(m87SpinClip, depsM87NotLoaded)).toBe(false);
+
+    const virgoSpinClip: ClipData = {
+      start: 'live',
+      timeline: [spinToId(id('cluster-virgo-m87'), { over: 3 })],
+    };
+    expect(clipFociReady(virgoSpinClip, emptyDeps)).toBe(true);
   });
 
   it('clipFociReady is true for a structure id', () => {

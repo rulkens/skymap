@@ -34,6 +34,14 @@
  *     angular sidestep that reads the same at every scale. Same baked-at-
  *     resolve caveat as `lookAtId`.
  *
+ *   - `spinToId(id, { over, turns, ease })` → `spin('yaw', { by, over, ease })`
+ *     `by` is the SHORTEST signed arc from the live yaw to the subject's
+ *     bearing (through `frameBasis`, same as `lookAtId`), plus `turns` full
+ *     revolutions. Unlike `lookAtId` it writes only yaw — pitch/target/
+ *     distance are untouched — so it composes with `dwellDrift`'s pitch bob.
+ *     The primitive this whole task adds: a bearing stored as a world
+ *     sightline instead of a frame-local radian constant.
+ *
  *   - `focusId(id)` or `focusId(null)` → `{ kind: 'focus', ref }`
  *     `null` maps to `{ kind: 'focus', ref: null }`.  A non-null id resolves
  *     through `resolveFocusId` to a `SelectionRef`.  There is no `focus()`
@@ -65,20 +73,22 @@ import type { SceneEffect } from '../../../@types/animation/SceneEffect';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
-import { moveTarget, dollyTo, aimAt } from './effectHelpers';
+import { moveTarget, dollyTo, aimAt, spin } from './effectHelpers';
 import { resolveFocusId } from '../../url/resolveFocusId';
 import { extractSelectionRow } from '../helpers/extractSelectionRow';
 import { focusFraming } from '../camera/focusFraming';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/frameUp';
+import { lerpAngleShortest } from '../../../utils/math/lerpAngleShortest';
 
 /**
  * Rewrite every id-bearing leaf in `data` to its concrete equivalent, given
  * the live catalog state in `deps`, the camera's current vertical FOV in
  * radians, and the live camera pose (`lookAtId` bearings are measured from
- * its target; `strafeId` scales degrees into Mpc by its distance — callers
- * pass `cameraRuntime.from`).
+ * its target; `strafeId` scales degrees into Mpc by its distance; `spinToId`
+ * measures its bearing from the same target and its yaw delta from `from.yaw`
+ * — callers pass `cameraRuntime.from`).
  *
  * `frameBasis` is the STEADY orientation-frame basis
  * (`ORIENTATION_FRAMES[settings.orientation]`) resolved at this clip boundary.
@@ -190,6 +200,27 @@ function walkEffect(
         from.target[2] + right[2] * byMpc,
       ];
       return moveTarget(displaced, effect.over, effect.ease);
+    }
+    // A bearing is a world sightline, not a frame-local number: `by` is the
+    // shortest signed arc from the LIVE yaw to the subject's bearing (through
+    // `frameBasis`, same encode as `lookAtId`), so the same authored effect
+    // lands on the same subject under any orientation frame. `turns` (default
+    // 0) folds in extra whole revolutions on top of that shortest arc —
+    // negative takes the long way round, matching the `- Math.PI * 2` idiom
+    // `approachM31.ts`'s NET_YAW_RAD established for the same reason. Reusing
+    // `lerpAngleShortest`'s fold (its result at t=1 IS `from.yaw` plus the
+    // shortest delta) avoids re-deriving the mod-2π formula a second time.
+    case 'spinToId': {
+      const { target } = resolveFraming(effect.id, deps, fovYRad);
+      const forward: Vec3 = [
+        target[0] - from.target[0],
+        target[1] - from.target[1],
+        target[2] - from.target[2],
+      ];
+      const { yaw: bearingYaw } = orbitAnglesLookingAlong(forward, frameBasis);
+      const shortest = lerpAngleShortest(from.yaw, bearingYaw, 1) - from.yaw;
+      const by = shortest + (effect.turns ?? 0) * Math.PI * 2;
+      return spin('yaw', { by, over: effect.over, ease: effect.ease });
     }
     // ── flyPath — resolve each id-bearing waypoint; pass at-form through ──────
     //

@@ -514,6 +514,35 @@ export function strafeId(
   return { kind: 'strafeId', id, byDeg, over, ease: ease ?? 'easeInOutCubic' };
 }
 
+/**
+ * spinToId — orbit the yaw channel until it faces the structure or galaxy
+ * identified by `id`, touching only yaw (pitch/target/distance untouched).
+ *
+ * The bearing-aware counterpart to a raw `spin('yaw', { by, ... })`: instead
+ * of an author-supplied radian delta pinned to one orientation frame,
+ * `resolveClipFoci` derives `by` from the LIVE yaw to the subject's world
+ * sightline at resolve time, through whichever frame basis is steady at that
+ * clip boundary. The same authored effect therefore lands on the same
+ * subject regardless of which frame is active — a bearing is a sightline,
+ * not a frame-local number.
+ *
+ * `opts.turns` (default 0) adds extra full revolutions on top of the
+ * shortest-arc delta: negative takes the long way round, the idiom
+ * `approachM31.ts`'s `NET_YAW_RAD` established with a literal `- Math.PI * 2`.
+ */
+export function spinToId(
+  id: FocusId,
+  opts: { over: number; turns?: number; ease?: Ease },
+): FocusBoundEffect & { kind: 'spinToId' } {
+  return {
+    kind: 'spinToId',
+    id,
+    over: opts.over,
+    ease: opts.ease ?? 'easeInOutCubic',
+    ...(opts.turns !== undefined ? { turns: opts.turns } : {}),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Path helpers — waypoints + the flythrough that flies a spline through them
 // ---------------------------------------------------------------------------

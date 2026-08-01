@@ -278,6 +278,7 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
     case 'dollyToId':
     case 'lookAtId':
     case 'strafeId':
+    case 'spinToId':
     case 'focusId': {
       throw new Error(`resolveClipFoci must run before compileClip (unresolved ${effect.kind})`);
     }
