@@ -33,6 +33,7 @@ import {
   lookAtId,
   strafeId,
   spinToId,
+  aimAlong,
   seq,
   all,
   fork,
@@ -568,3 +569,77 @@ function resolveSpinBy(effect: ReturnType<typeof spinToId>, livePose: CameraPose
   if (eff.kind !== 'spin') throw new Error('expected a spin effect');
   return eff.by;
 }
+
+// ---------------------------------------------------------------------------
+// Test 4d — aimAlong resolves to an aimAt bearing along a FIXED world
+// direction, independent of the live pose (unlike lookAtId).
+// ---------------------------------------------------------------------------
+
+describe('resolveClipFoci rewrites aimAlong to an aimAt bearing', () => {
+  it('resolves to concurrent yaw/pitch tweens aiming along the given world direction', () => {
+    // Forward [1,0,0] under identity: dir = -forward, yaw = atan2(-1,0) = -π/2.
+    const clip: ClipData = { timeline: [aimAlong([1, 0, 0], 3, 'easeOutCubic')] };
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE);
+
+    const outer = resolved.timeline[0]!;
+    if (outer.kind !== 'all') throw new Error('expected aimAt to produce an all block');
+    expect(outer.children[0]).toMatchObject({
+      kind: 'set',
+      ch: 'yaw',
+      over: 3,
+      ease: 'easeOutCubic',
+    });
+    expect((outer.children[0] as { to: number }).to).toBeCloseTo(-Math.PI / 2, 10);
+    expect(outer.children[1]).toMatchObject({
+      kind: 'set',
+      ch: 'pitch',
+      over: 3,
+      ease: 'easeOutCubic',
+    });
+    expect((outer.children[1] as { to: number }).to).toBeCloseTo(0, 10);
+  });
+
+  it('the bearing does NOT depend on the live pose target — unlike lookAtId', () => {
+    // Two wildly different `from` poses (target AND yaw both differ) must
+    // resolve to the identical bearing: aimAlong carries no target lookup, so
+    // it is safe for a cold-open snap where the pre-clip pose is arbitrary.
+    const clip: ClipData = { timeline: [aimAlong([1, 0, 0], 3)] };
+    const nearby = resolveClipFoci(clip, DEPS, FOV_Y, POSE);
+    const farAway = resolveClipFoci(clip, DEPS, FOV_Y, {
+      target: [500, -300, 900],
+      yaw: 2.7,
+      pitch: -0.4,
+      distance: 4000,
+    });
+
+    const yawOf = (r: ClipData): number => {
+      const outer = r.timeline[0]!;
+      if (outer.kind !== 'all') throw new Error('expected an all block');
+      return (outer.children[0] as { to: number }).to;
+    };
+    expect(yawOf(farAway)).toBeCloseTo(yawOf(nearby), 12);
+  });
+
+  it('lands the same world bearing under two different bases — the basis drops out', () => {
+    const forward: Vec3 = [0.973096, 0.064379, 0.221222];
+    const clip: ClipData = { timeline: [aimAlong(forward, 3)] };
+
+    const resolvedEcliptic = resolveClipFoci(clip, DEPS, FOV_Y, POSE, ORIENTATION_FRAMES.ecliptic);
+    const resolvedGalactic = resolveClipFoci(clip, DEPS, FOV_Y, POSE, ORIENTATION_FRAMES.galactic);
+    const effE = resolvedEcliptic.timeline[0]!;
+    const effG = resolvedGalactic.timeline[0]!;
+    if (effE.kind !== 'all' || effG.kind !== 'all') throw new Error('expected all blocks');
+
+    const bearingOf = (outer: typeof effE, basis: Mat3) => {
+      const yaw = (outer.children[0] as { to: number }).to;
+      const pitch = (outer.children[1] as { to: number }).to;
+      return rotateVec3ByTightMat3(yawPitchToDir(yaw, pitch), basis);
+    };
+    const dirE = bearingOf(effE, ORIENTATION_FRAMES.ecliptic);
+    const dirG = bearingOf(effG, ORIENTATION_FRAMES.galactic);
+
+    expect(dirG[0]).toBeCloseTo(dirE[0], 6);
+    expect(dirG[1]).toBeCloseTo(dirE[1], 6);
+    expect(dirG[2]).toBeCloseTo(dirE[2], 6);
+  });
+});

@@ -16,13 +16,17 @@
  * releases the recession (400 ms blend), so the neighbourhood brightens
  * as the camera pulls away.
  *
- * The drift continues the revolution the Local-Group dwell began: the two
- * dwells share one full backward orbit that lands facing the M81 Group
- * (the flythrough's first knot). This beat owns its share — a gentle
- * default-rate drift over its window, exported so the Local-Group dwell
- * can take exactly the remainder. Tuning this beat's length or rate
- * automatically rebalances the earlier dwell; the landing bearing is the
- * invariant, the split is not.
+ * The drift continues the spin sense the Local-Group dwell held: that dwell
+ * now resolves its OWN landing geometrically (`spinToId` onto the M81
+ * Group's bearing, live under whichever orientation frame is committed), so
+ * by the time this beat starts the camera already faces M81. This beat's
+ * `REVEAL_NET_YAW_RAD` is a RATE, not a shared-revolution remainder — it
+ * carries the camera PAST that landing by a fixed amount while the pull-back
+ * plays, so the flythrough actually launches a little past dead-on-M81
+ * rather than exactly on it. Re-tuning it no longer rebalances the earlier
+ * dwell (there is nothing to rebalance); it only changes how far past M81
+ * the launch bearing sits — see `localGroup.ts`'s header for the composition
+ * this replaced.
  */
 
 import type { ClipData } from '../../../../@types/animation/ClipData';

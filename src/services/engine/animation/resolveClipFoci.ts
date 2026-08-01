@@ -170,6 +170,14 @@ function walkEffect(
       ];
       return aimAt(orbitAnglesLookingAlong(forward, frameBasis), effect.over, effect.ease);
     }
+    // A fixed world sightline, not a subject bearing: no target lookup, no
+    // dependency on `from` at all — just the live `frameBasis`. This is what
+    // makes it safe for a cold-open snap, where `from` is whatever pose the
+    // camera happened to hold before the clip started (see the `aimAlong`
+    // helper's docstring).
+    case 'aimAlong': {
+      return aimAt(orbitAnglesLookingAlong(effect.forward, frameBasis), effect.over, effect.ease);
+    }
     // A lateral tracking move: displace the live orbit target along the
     // horizontal right axis of the bearing toward the subject. That axis is
     // the `right` of `imagePlaneBasis(forward, 0, frameUp(frameBasis))` — the

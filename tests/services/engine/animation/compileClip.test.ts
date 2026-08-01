@@ -13,6 +13,7 @@ import {
   dollyTo,
   moveTargetId,
   spinToId,
+  aimAlong,
   spin,
   rate,
   oscillate,
@@ -284,6 +285,14 @@ describe('compileClip throws on an unresolved focus-bound effect', () => {
     expect(() =>
       compileClip({
         timeline: [spinToId(focusId('m87'), { over: 5 })],
+      }),
+    ).toThrow('resolveClipFoci');
+  });
+
+  it('compileClip throws on an unresolved aimAlong', () => {
+    expect(() =>
+      compileClip({
+        timeline: [aimAlong([1, 0, 0], 5)],
       }),
     ).toThrow('resolveClipFoci');
   });

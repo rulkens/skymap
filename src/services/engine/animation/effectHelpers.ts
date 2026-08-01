@@ -485,6 +485,24 @@ export function lookAtId(
 }
 
 /**
+ * aimAlong — swing the view to face a FIXED WORLD-space direction, resolved
+ * through whichever orientation frame is live at clip start
+ * (`orbitAnglesLookingAlong`, same mechanism `lookAtId` uses).
+ *
+ * Unlike `lookAtId`, the bearing is NOT measured from the live orbit
+ * target — there is no subject to look up, so `forward` alone determines the
+ * aim. That makes it the right primitive for a pose that must be
+ * reproducible regardless of where the camera happened to be before the clip
+ * started (a cold-open snap, or a return-to-opening-framing beat): `lookAtId`
+ * would silently depend on that unknown prior pose, `aimAlong` does not.
+ *
+ * `over: 0` is a legal snap, same as `aimAt`.
+ */
+export function aimAlong(forward: Vec3, over: number, ease?: Ease): Effect & { kind: 'aimAlong' } {
+  return { kind: 'aimAlong', forward, over, ease: ease ?? 'easeInOutCubic' };
+}
+
+/**
  * strafeId — slide the camera rig sideways relative to the bearing toward the
  * subject identified by `id`, WITHOUT turning. The lateral tracking move.
  *

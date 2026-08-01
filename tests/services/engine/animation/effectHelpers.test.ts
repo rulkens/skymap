@@ -13,6 +13,7 @@ import {
   moveTargetId,
   dollyToId,
   spinToId,
+  aimAlong,
   show,
   hide,
   focus,
@@ -163,6 +164,25 @@ describe('spinToId', () => {
     const e = spinToId(id, { over: 4, turns: -1, ease: 'easeOutCubic' });
     expect(e.ease).toBe('easeOutCubic');
     expect(e.turns).toBe(-1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// aimAlong
+// ---------------------------------------------------------------------------
+
+describe('aimAlong', () => {
+  it('emits kind:aimAlong carrying forward/over/ease, defaulting ease', () => {
+    const e = aimAlong([1, 0, 0], 4);
+    expect(e.kind).toBe('aimAlong');
+    expect(e.forward).toEqual([1, 0, 0]);
+    expect(e.over).toBe(4);
+    expect(e.ease).toBe('easeInOutCubic');
+  });
+
+  it('forwards an explicit ease', () => {
+    const e = aimAlong([0, 1, 0], 2, 'easeOutCubic');
+    expect(e.ease).toBe('easeOutCubic');
   });
 });
 
