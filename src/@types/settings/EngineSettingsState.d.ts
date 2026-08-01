@@ -404,6 +404,10 @@ export type EngineSettingsState = {
    *     disk-radius footprint so the developer can calibrate the
    *     placement against the underlying billboard.  Gated behind the
    *     DebugPanel.
+   *   - `showOrbitTrailImpostor` — draws the orbit-trail ribbon impostor's
+   *     hull as a flat fill tint IN ADDITION to the real trails, so a
+   *     developer can see whether the stroke pokes outside the ribbon (a
+   *     coverage gap). Gated behind the DebugPanel.
    *   - `disabledPasses` — content-layer names the developer has manually
    *     toggled off in the renderer-toggle section.  Membership is
    *     `[name] === true`; a name absent from the record (or mapped to
@@ -418,6 +422,7 @@ export type EngineSettingsState = {
   debug: {
     showPickBuffer: boolean;
     showDiskRadiusRing: boolean;
+    showOrbitTrailImpostor: boolean;
     disabledPasses: Record<string, boolean>;
     /**
      * Render-strategy override — decouples the frame's pass SHAPE from whether

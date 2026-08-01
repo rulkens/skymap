@@ -2,12 +2,11 @@
 // conic orbit trail. Imported by orbitTrail/vertex.wesl and
 // orbitTrail/fragment.wesl.
 //
-// Each orbit renders as ONE fullscreen triangle (one instance = one orbit): the
-// vertex stage emits an oversized clip-space triangle covering the whole
-// viewport and forwards the per-orbit conic constants; the fragment stage reads
-// its own '@builtin(position)' pixel and evaluates the projected conic
-// analytically from 'Ginv' (spec 3.3). 'VSOut' is the contract between those
-// stages.
+// One instance = one orbit, drawn by 'vsRibbon' — a screen-space ribbon
+// hugging the projected ellipse across its CPU-clipped in-front-of-camera
+// arc. The fragment stage reads its own '@builtin(position)' pixel and
+// evaluates the projected conic analytically from 'Ginv' (spec 3.3);
+// 'VSOut' is the contract between vertex and fragment.
 //
 // ## Why the struct lives here
 //
@@ -15,9 +14,9 @@
 // drift structurally impossible — the same reasoning 'planet/io.wesl' states.
 // EVERY varying below is per-orbit constant (the three
 // 'Ginv' columns, the tint, the eccentricity, the mean anomaly), so all are
-// '@interpolate(flat)': there is nothing to interpolate across the fullscreen
-// triangle, and declaring the flat qualifier once here means it cannot silently
-// diverge between the stages.
+// '@interpolate(flat)': there is nothing to interpolate across the ribbon's
+// own vertices, and declaring the flat qualifier once here means it cannot
+// silently diverge between the stages.
 //
 // ## Why Ginv streams as three vec3 columns
 //
@@ -43,11 +42,26 @@ struct VSOut {
   // Per-orbit apparent-size fade (CPU-side): 1 well above the cull threshold,
   // ramping to 0 as the orbit shrinks toward it. Multiplies the final colour.
   @location(6) @interpolate(flat) alpha: f32,
-  // The gradient minors that make the fragment's Sampson gradient AFFINE in the
-  // pixel, hoisted to CPU f64 to kill the old difference-of-products
-  // cancellation (see composeOrbitConic's header). 'minorS' = (M1, M2, M3)
-  // drives d s/d p, 'minorT' = (M4, M5, M6) drives d t/d p; the fragment
-  // evaluates each numerator as a plain multiply-add. Per-orbit constant, flat.
-  @location(7) @interpolate(flat) minorS: vec3<f32>,
-  @location(8) @interpolate(flat) minorT: vec3<f32>,
+};
+
+// Per-instance vertex input, matching the TS pipeline's instance-buffer
+// descriptor byte-for-byte (see orbitTrailRenderer.ts): 80 bytes of conic +
+// tint data, 48 bytes of clip-space conic basis 'vsRibbon' walks per sample
+// to trace the ellipse, then 8 bytes of visible-arc interval — 136 total.
+struct OrbitInstance {
+  // Ginv columns (.xyz used, .w pad) — see vertex.wesl's 'vsRibbon' doc.
+  @location(1) ginv0: vec4<f32>,
+  @location(2) ginv1: vec4<f32>,
+  @location(3) ginv2: vec4<f32>,
+  @location(4) params: vec4<f32>,   // color.rgb, eccentricity
+  @location(5) phase: vec4<f32>,    // meanAnomalyRad, alpha, viewportPx.w, viewportPx.h
+  // Clip-space conic basis: p(E) = cc + cos(E)*ac + sin(E)*bc traces the
+  // projected ellipse in (clip.x, clip.y, clip.w) as E runs 0..2*PI.
+  @location(6) cc: vec4<f32>,       // clip basis: centre  (x, y, w, pad)
+  @location(7) ac: vec4<f32>,       // clip basis: semi-major
+  @location(8) bc: vec4<f32>,       // clip basis: semi-minor
+  // The CPU-clipped in-front-of-camera arc (composeOrbitConic, closed form):
+  // eStart, eSpan. vsRibbon samples ONLY inside it, so no sample is ever
+  // behind the camera; eSpan == TAU means the whole orbit (wrap the strip).
+  @location(9) arc: vec2<f32>,
 };

@@ -48,10 +48,11 @@
  * orbit is culled or faded PER-ORBIT by its apparent on-screen diameter: below
  * `CULL_PX` it is skipped from the draw entirely (deep sub-pixel aliasing, not
  * a legible path), and from there up to `FULL_PX` its brightness ramps in so it
- * does not pop. The degenerate case (camera on/inside an orbit, so the
- * projected conic fills the viewport) is handled in the fragment, which
- * discards every off-stroke, horizon, and non-finite pixel, so a degenerate
- * orbit paints only its (possibly huge) arc, never a filled blob.
+ * does not pop. The degenerate case (camera on/inside an orbit) is handled
+ * on the CPU: `composeOrbitConic` clips every orbit to its in-front-of-
+ * camera arc in closed form, so the vertex stage samples only inside it and
+ * needs no fallback; the fragment's off-stroke/horizon/non-finite discards
+ * still guard against a filled blob at a non-finite `Ginv`.
  *
  * ### Conics re-derive at the frame instant
  *
@@ -99,10 +100,11 @@ const FULL_PX = 20;
 // Reused across frames — the engine hot path allocates nothing here. Sized
 // for the live orbital-elements table (a compile-time constant, so this is a
 // fixed size, not a cap — the renderer itself carries no upper bound, and
-// growing the table just grows this array); each conic's 28-float record
-// (three Ginv columns + colour/eccentricity + mean anomaly + the two
-// gradient-minor triples) is rewritten in place before the single instanced
-// draw.
+// growing the table just grows this array); each conic's 34-float record
+// (three Ginv columns + colour/eccentricity + mean anomaly/fade/viewport +
+// the three clip-basis vec4s + the visible-arc eStart/eSpan) is rewritten in
+// place before the single packed draw. One slot per table row is enough
+// since at most `ORBITAL_ELEMENTS.length` records are ever packed.
 const staging = new Float32Array(ORBITAL_ELEMENTS.length * INSTANCE_FLOATS);
 
 // A bound orbit's farthest point from its focus is its apoapsis a·(1+e); its
@@ -236,22 +238,27 @@ export const orbitTrailsLayer: ContentLayer = {
       state.subsystems.clipPlayer,
     );
 
-    // Pack one 28-float instance record per VISIBLE conic (byte offsets mirror
+    // Pack one 34-float instance record per VISIBLE conic (byte offsets mirror
     // the renderer's INSTANCE_ATTRIBUTES):
     //   floats 0..11  — the three Ginv columns (loc1/2/3 at byte 0/16/32),
     //                    composed from the slab's f64 vp (the hard invariant
     //                    in the module header),
     //   floats 12..15 — colour.rgb + eccentricity (loc4 at byte 48),
-    //   floats 16..19 — mean anomaly + fade alpha + pad×2 (loc5 at byte 64),
-    //   floats 20..23 — gradient minors M1/M2/M3 + pad (loc6 at byte 80),
-    //   floats 24..27 — gradient minors M4/M5/M6 + pad (loc7 at byte 96).
-    // The minors are the CPU-f64 hoist that keeps the fragment's Sampson
-    // gradient affine (no f32 difference-of-products cancellation).
+    //   floats 16..19 — mean anomaly + fade alpha + viewportPx.xy (loc5 at byte 64,
+    //                    the ribbon vertex stage's divisor — see composeOrbitConic),
+    //   floats 20..31 — clip basis Cc/Ac/Bc (loc6/7/8 at byte 80/96/112),
+    //                    the ribbon vertex stage's screen-space bound,
+    //   floats 32..33 — the visible arc eStart/eSpan (loc9 at byte 128), the
+    //                    CPU closed-form clip composeOrbitConic returns.
     // Orbits below the apparent-size cull threshold are skipped entirely (not
-    // drawn), so `n` counts only the packed records; the rest fade in via the
-    // alpha the fragment multiplies through. The fragment's Newton horizon
-    // rejection is what keeps a near-edge-on orbit a thin line, not a blob.
-    let n = 0;
+    // drawn); the rest fade in via the alpha the fragment multiplies through.
+    // The fragment's Newton horizon rejection is what keeps a near-edge-on
+    // orbit a thin line, not a blob.
+    //
+    // Every visible record packs front-to-back into `staging` behind one
+    // counter — each orbit is independently clipped to its own visible arc
+    // (composeOrbitConic), so there is no second partition to keep separate.
+    let count = 0;
     for (let i = 0; i < limit; i++) {
       const elements = ORBITAL_ELEMENTS[i]!;
       // Re-derive the conic AT the frame instant: propagate the elements to
@@ -288,7 +295,7 @@ export const orbitTrailsLayer: ContentLayer = {
       // Per-orbit apparent-size fade × the whole-layer opacity (hide/show fade).
       const alpha = Math.min(1, (diameterPx - CULL_PX) / (FULL_PX - CULL_PX)) * layerOpacity;
 
-      const { ginv, minorS, minorT } = composeOrbitConic(
+      const { ginv, clipBasis, arc } = composeOrbitConic(
         view.slab.vp,
         centerMpc,
         semiMajorMpc,
@@ -296,7 +303,8 @@ export const orbitTrailsLayer: ContentLayer = {
         view.viewportPx,
         RENDER_ORIGIN_MPC,
       );
-      const base = n * INSTANCE_FLOATS;
+      if (arc[1] <= 0) continue; // whole orbit behind the camera — no geometry
+      const base = count++ * INSTANCE_FLOATS;
       staging.set(ginv, base); // Ginv columns → floats 0..11
       staging[base + 12] = elements.color[0];
       staging[base + 13] = elements.color[1];
@@ -306,12 +314,16 @@ export const orbitTrailsLayer: ContentLayer = {
       // where the body actually is at `t`, so the trail fades behind IT.
       staging[base + 16] = states.get(elements.id)!.meanAnomalyRad;
       staging[base + 17] = alpha;
-      staging[base + 18] = 0; // trailing pad — kept zeroed across frames
-      staging[base + 19] = 0;
-      staging.set(minorS, base + 20); // gradient minors M1/M2/M3 + pad → floats 20..23
-      staging.set(minorT, base + 24); // gradient minors M4/M5/M6 + pad → floats 24..27
-      n++;
+      staging[base + 18] = view.viewportPx[0]; // ribbon vertex stage's divisor
+      staging[base + 19] = view.viewportPx[1];
+      staging.set(clipBasis[0], base + 20); // clip basis Cc → floats 20..23
+      staging.set(clipBasis[1], base + 24); // clip basis Ac → floats 24..27
+      staging.set(clipBasis[2], base + 28); // clip basis Bc → floats 28..31
+      staging[base + 32] = arc[0]; // visible arc eStart → float 32
+      staging[base + 33] = arc[1]; // visible arc eSpan → float 33
     }
-    if (n > 0) renderer.draw(pass, staging, n);
+    if (count > 0) {
+      renderer.draw(pass, staging, count, state.settings.debug.showOrbitTrailImpostor);
+    }
   },
 };

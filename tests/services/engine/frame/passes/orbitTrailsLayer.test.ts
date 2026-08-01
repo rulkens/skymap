@@ -6,13 +6,13 @@
  *   1. The f64 seam — every conic's Ginv composes from the slab's
  *      `Float64Array` view-projection (`view.slab.vp`), NOT the f32-narrowed
  *      `view.vp` (identity-pinned via a mocked `composeOrbitConic`).
- *   2. The single instanced draw — ONE `renderer.draw(pass, staging, n)`
- *      paints every VISIBLE conic, with conic i's trail params packed at
- *      instance stride 28 floats (Ginv at floats base+0..11, colour +
- *      eccentricity at base+12..15, mean anomaly at base+16, apparent-size fade
- *      alpha at base+17, pad at base+18..19, and the two gradient-minor triples
- *      at base+20..23 / base+24..27), and orbits below the cull threshold
- *      dropped from the batch entirely.
+ *   2. The packed draw — ONE `renderer.draw(pass, staging, count)` paints
+ *      every VISIBLE conic, with conic i's trail params packed at instance
+ *      stride 34 floats (Ginv at floats base+0..11, colour + eccentricity at
+ *      base+12..15, mean anomaly at base+16, apparent-size fade alpha at
+ *      base+17, viewportPx at base+18..19, the clip basis Cc/Ac/Bc at
+ *      base+20..31, and the visible arc at base+32..33) front-to-back, and
+ *      orbits below the cull threshold dropped from the batch entirely.
  *
  * Plus the handle gates: `enabled` is renderer-presence AND the shared
  * foreground distance gate AND the whole-layer sub-pixel bound (per REGION: the
@@ -48,14 +48,22 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 // Mock composeOrbitConic so the test can (a) assert which vp it consumed by
 // object identity and (b) hand each conic recognisable Float32Arrays. The real
 // composition math is covered by composeOrbitConic's own tests. Ginv is a
-// 12-float padded mat3; minorS/minorT are 4-float padded triples (the gradient-
-// minor hoist). Distinct sentinel values so the packing offsets are pinned.
-type ConicOut = { ginv: Float32Array; minorS: Float32Array; minorT: Float32Array };
+// 12-float padded mat3; clipBasis is the (Cc, Ac, Bc) triple the ribbon vertex
+// stage consumes. Distinct sentinel values so the packing offsets are pinned.
+type ConicOut = {
+  ginv: Float32Array;
+  clipBasis: readonly [Float32Array, Float32Array, Float32Array];
+  arc: readonly [number, number];
+};
 vi.mock('../../../../../src/utils/camera/composeOrbitConic', () => ({
   composeOrbitConic: vi.fn<() => ConicOut>(() => ({
     ginv: new Float32Array(12),
-    minorS: new Float32Array([101, 102, 103, 0]),
-    minorT: new Float32Array([201, 202, 203, 0]),
+    clipBasis: [
+      new Float32Array([301, 302, 303, 0]),
+      new Float32Array([401, 402, 403, 0]),
+      new Float32Array([501, 502, 503, 0]),
+    ],
+    arc: [601, 602],
   })),
 }));
 import { composeOrbitConic } from '../../../../../src/utils/camera/composeOrbitConic';
@@ -136,7 +144,14 @@ function makeNear0View(): SlabView {
 
 function makeRendererSpy() {
   return {
-    draw: vi.fn<(pass: GPURenderPassEncoder, instances: Float32Array, count: number) => void>(),
+    draw: vi.fn<
+      (
+        pass: GPURenderPassEncoder,
+        instances: Float32Array,
+        count: number,
+        showImpostor?: boolean,
+      ) => void
+    >(),
   };
 }
 
@@ -147,12 +162,19 @@ function makeRendererSpy() {
 // fade-multiply assertions.
 function makeState(
   orbitTrailRenderer: unknown,
-  opts: { orbitTrailsEnabled?: boolean; layerOpacity?: number } = {},
+  opts: {
+    orbitTrailsEnabled?: boolean;
+    layerOpacity?: number;
+    showOrbitTrailImpostor?: boolean;
+  } = {},
 ): EngineState {
   const layerOpacity = opts.layerOpacity ?? 1;
   return {
     gpu: { orbitTrailRenderer },
-    settings: { orbitTrails: { enabled: opts.orbitTrailsEnabled ?? true } },
+    settings: {
+      orbitTrails: { enabled: opts.orbitTrailsEnabled ?? true },
+      debug: { showOrbitTrailImpostor: opts.showOrbitTrailImpostor ?? false },
+    },
     subsystems: {
       fades: { opacityOf: () => layerOpacity },
       clipPlayer: { clipOpacityOf: () => 1 },
@@ -295,7 +317,7 @@ describe('orbitReachByRegion', () => {
 });
 
 describe('orbitTrailsLayer.draw', () => {
-  it('composes each visible conic from view.slab.vp and issues ONE instanced draw', () => {
+  it('composes each visible conic from view.slab.vp and issues ONE packed draw', () => {
     composeMock.mockClear();
     const renderer = makeRendererSpy();
     const view = makeNear0View();
@@ -332,28 +354,48 @@ describe('orbitTrailsLayer.draw', () => {
     expect(call0[4]).toBe(view.viewportPx);
     expect(call0[5]).toBe(RENDER_ORIGIN_MPC);
 
-    // Exactly one draw for the whole batch, count == number composed.
+    // Exactly one draw for the whole batch, one packed record per composed
+    // conic — count == number composed.
     expect(renderer.draw).toHaveBeenCalledTimes(1);
     const [passArg, staging, count] = renderer.draw.mock.calls[0]!;
     expect(passArg).toBe(PASS_STUB);
     expect(count).toBe(n);
     expect(staging).toBeInstanceOf(Float32Array);
 
-    // Staging layout for the first conic (instance 0, stride 28): colour +
+    // Staging layout for the first conic (instance 0, stride 34): colour +
     // eccentricity at floats 12..15, mean anomaly at 16, fade alpha at 17
-    // (saturated — Mercury's orbit is large from the Sun), pad at 18..19, then
-    // the two gradient-minor triples at 20..23 and 24..27 (the CPU-f64 hoist).
+    // (saturated — Mercury's orbit is large from the Sun), then the viewport
+    // (was a zeroed pad; now the ribbon vertex stage's divisor), then the
+    // clip basis at 20..31 and the visible arc at 32..33.
     expect(staging[12]).toBeCloseTo(first.color[0]);
     expect(staging[13]).toBeCloseTo(first.color[1]);
     expect(staging[14]).toBeCloseTo(first.color[2]);
     expect(staging[15]).toBeCloseTo(first.eccentricity);
     expect(staging[16]).toBeCloseTo(first.meanAnomalyRad);
     expect(staging[17]).toBe(1);
-    expect(staging[18]).toBe(0);
-    expect(staging[19]).toBe(0);
-    // minorS (M1/M2/M3 + pad) → floats 20..23, minorT (M4/M5/M6 + pad) → 24..27.
-    expect(Array.from(staging.slice(20, 24))).toEqual([101, 102, 103, 0]);
-    expect(Array.from(staging.slice(24, 28))).toEqual([201, 202, 203, 0]);
+    expect(staging[18]).toBe(view.viewportPx[0]);
+    expect(staging[19]).toBe(view.viewportPx[1]);
+  });
+
+  it('the clip basis and viewport reach the packed record', () => {
+    // Task 6's other new floats: 20..31 (Cc/Ac/Bc, the ribbon vertex stage's
+    // screen-space bound) and 18..19 (viewportPx, its divisor — a landmine if
+    // left zeroed: the ribbon vertex shader divides by it, so a stray zero
+    // turns every ribbon vertex NaN with no visible error anywhere).
+    const renderer = makeRendererSpy();
+    const view = makeNear0View();
+
+    orbitTrailsLayer.draw(PASS_STUB, view, makeDrawCtx(), makeState(renderer));
+
+    const [, staging] = renderer.draw.mock.calls[0]!;
+    expect(staging[18]).toBe(view.viewportPx[0]);
+    expect(staging[19]).toBe(view.viewportPx[1]);
+    // clipBasis = [Cc, Ac, Bc], each a length-4 padded sentinel from the mock.
+    expect(Array.from(staging.slice(20, 24))).toEqual([301, 302, 303, 0]);
+    expect(Array.from(staging.slice(24, 28))).toEqual([401, 402, 403, 0]);
+    expect(Array.from(staging.slice(28, 32))).toEqual([501, 502, 503, 0]);
+    expect(staging[32]).toBe(601);
+    expect(staging[33]).toBe(602);
   });
 
   it('multiplies the whole-layer fade opacity into each per-orbit alpha', () => {
@@ -490,5 +532,60 @@ describe('orbitTrailsLayer.draw', () => {
     orbitTrailsLayer.draw(PASS_STUB, makeNear0View(), farCtx, makeState(renderer));
     expect(renderer.draw).not.toHaveBeenCalled();
     expect(composeMock).not.toHaveBeenCalled(); // culled before composing Ginv
+  });
+
+  it('an eSpan <= 0 arc (whole orbit behind the camera) drops that one instance from the packed count', () => {
+    // The mock normally hands back a constant [601, 602] arc, so this pins
+    // the layer's OWN `if (arc[1] <= 0) continue`, not composeOrbitConic's
+    // real math (covered separately).
+    const renderer = makeRendererSpy();
+    const view = makeNear0View();
+    composeMock.mockClear();
+    renderer.draw.mockClear();
+
+    orbitTrailsLayer.draw(PASS_STUB, view, makeDrawCtx(), makeState(renderer));
+    const baselineCount = renderer.draw.mock.calls[0]![2] as number;
+    expect(baselineCount).toBeGreaterThan(1); // need a second composed orbit to single out below
+
+    const defaultImpl = composeMock.getMockImplementation() as unknown as (
+      ...args: unknown[]
+    ) => ConicOut;
+    let call = 0;
+    composeMock.mockImplementation((...args: unknown[]) => {
+      call++;
+      const out = defaultImpl(...args);
+      return call === 2 ? { ...out, arc: [0, 0] } : out;
+    });
+    renderer.draw.mockClear();
+
+    orbitTrailsLayer.draw(PASS_STUB, view, makeDrawCtx(), makeState(renderer));
+    expect(renderer.draw.mock.calls[0]![2]).toBe(baselineCount - 1);
+
+    composeMock.mockImplementation(defaultImpl); // restore the default for later tests
+  });
+
+  it('the layer forwards the debug flag to the renderer', () => {
+    // `enabled()` never forces the layer on for this flag — draw() just reads
+    // it alongside settings.orbitTrails.enabled and passes it straight through
+    // as renderer.draw's fourth argument.
+    const renderer = makeRendererSpy();
+    const view = makeNear0View();
+
+    orbitTrailsLayer.draw(
+      PASS_STUB,
+      view,
+      makeDrawCtx(),
+      makeState(renderer, { showOrbitTrailImpostor: true }),
+    );
+    expect(renderer.draw.mock.calls[0]![3]).toBe(true);
+
+    renderer.draw.mockClear();
+    orbitTrailsLayer.draw(
+      PASS_STUB,
+      view,
+      makeDrawCtx(),
+      makeState(renderer, { showOrbitTrailImpostor: false }),
+    );
+    expect(renderer.draw.mock.calls[0]![3]).toBe(false);
   });
 });
