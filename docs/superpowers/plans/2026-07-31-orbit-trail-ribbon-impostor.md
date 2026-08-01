@@ -62,9 +62,9 @@ Clip basis, per spec §2.1: `clip(E) = Cc + cos(E)·Ac + sin(E)·Bc`. Only the *
 
 The measurement scaffolding is **already committed** on this branch: `cc3cdee7` (`PerfPose.clearFocus`) and `9afd0f2e` (the `galactic-centre` scenario + `clearFocus` on `milky-way-outside`/`milky-way-close`). Do not re-do it.
 
-- [ ] Open the draft PR for the branch (house convention: draft PR at execution start).
-- [ ] Confirm the before-baselines exist and are on this branch's build: `galactic-centre` (orbit-trails ≈ **7.6 ms real**, `hdr·NEAR0` 7.6 ms, MERGED total 43.2 ms) and `solar-system`. They are in this session's scratchpad; if the session rotated, re-take them from `HEAD` **before** any Task 2–6 commit lands, per the `perf` skill (`--url http://localhost:<your port>`, `--frames 30`).
-- [ ] Record both file paths in the plan's ledger so Task 7 compares like with like.
+- [x] Open the draft PR for the branch (house convention: draft PR at execution start).
+- [x] Confirm the before-baselines exist and are on this branch's build: `galactic-centre` (orbit-trails ≈ **7.6 ms real**, `hdr·NEAR0` 7.6 ms, MERGED total 43.2 ms) and `solar-system`. They are in this session's scratchpad; if the session rotated, re-take them from `HEAD` **before** any Task 2–6 commit lands, per the `perf` skill (`--url http://localhost:<your port>`, `--frames 30`).
+- [x] Record both file paths in the plan's ledger so Task 7 compares like with like.
 
 ---
 
@@ -95,10 +95,10 @@ export const RIBBON_SEGMENTS = 96; // MUST equal SEGMENTS in orbitTrail/constant
 
 `STROKE_PX` and `MARGIN_PX` have no TS consumer and get no TS twin; scope the parity test to `SEGMENTS` and let its no-orphans direction name them as known shader-only.
 
-- [ ] Add the test `SEGMENTS in orbitTrail/constants.wesl equals RIBBON_SEGMENTS` — the mismatch is invisible to the compiler and produces a partly-drawn or garbage-cornered ribbon on hardware.
-- [ ] Create `constants.wesl`; delete `STROKE_PX` from `fragment.wesl` and import it (one identifier per import line, at the top of the file).
-- [ ] `npm test -- orbitTrailConstants` → passes. `npm run build` → the fragment still links (a broken import fails at `createShaderModule`, not at build — check the dev console too, or the linked output via `createShaderModuleWithDevLog`).
-- [ ] Commit.
+- [x] Add the test `SEGMENTS in orbitTrail/constants.wesl equals RIBBON_SEGMENTS` — the mismatch is invisible to the compiler and produces a partly-drawn or garbage-cornered ribbon on hardware.
+- [x] Create `constants.wesl`; delete `STROKE_PX` from `fragment.wesl` and import it (one identifier per import line, at the top of the file).
+- [x] `npm test -- orbitTrailConstants` → passes. `npm run build` → the fragment still links (a broken import fails at `createShaderModule`, not at build — check the dev console too, or the linked output via `createShaderModuleWithDevLog`).
+- [x] Commit.
 
 ---
 
@@ -140,14 +140,14 @@ ribbonEligible ⇔ wMin > 0 ∧ extent ≤ RIBBON_MAX_EXTENT_NDC      (RIBBON_MA
 
 Everything about `ginv`/`minorS`/`minorT` — the f64 hoist, the rescale, the minor derivation — is untouched. Do not reorder the rescale loop.
 
-- [ ] Add the test `the clip basis reprojects sample orbit points onto their projected pixels` — reuse the existing fixture's independent forward projection (`projectToPixel`, `composeOrbitConic.test.ts:45-56`): for several `E`, `Cc + cos(E)·Ac + sin(E)·Bc` divided through by its `w` and mapped NDC → pixel must equal `projectToPixel(C + cos(E)·A + sin(E)·B)`. Not a mirror — the expectation comes from the ordinary projection pipeline, not from the basis under test.
+- [x] Add the test `the clip basis reprojects sample orbit points onto their projected pixels` — reuse the existing fixture's independent forward projection (`projectToPixel`, `composeOrbitConic.test.ts:45-56`): for several `E`, `Cc + cos(E)·Ac + sin(E)·Bc` divided through by its `w` and mapped NDC → pixel must equal `projectToPixel(C + cos(E)·A + sin(E)·B)`. Not a mirror — the expectation comes from the ordinary projection pipeline, not from the basis under test.
 - [ ] Add the test `a far view of an orbit is ribbon-eligible` using the module's existing camera fixture.
 - [ ] Add the test `a camera in the orbit plane is not ribbon-eligible` — reuse the edge-on Earth-zoom pose already built at `composeOrbitConic.test.ts:155-171`, the pose where the projection is genuinely a hyperbola.
 - [ ] Add the test `an orbit approaching the camera plane falls back before the sign test can flip` — a pose with `wMin` a small positive fraction of `Cc.w`; asserts the extent clause fires while the bounded clause still says "ellipse". This is the clause a `wMin > 0`-only implementation fails.
 - [ ] Implement; document both clauses and both constants in the module header (budget: header ≤ 10 lines — put the derivation beside the code, not in the header).
-- [ ] `npm test -- composeOrbitConic` → passes, **including the pre-existing gradient-minor regression test** (it must be untouched and still green).
-- [ ] `npm run typecheck` — the layer destructures a subset of the return, so it still compiles; if `vi.mock`'s factory in `tests/services/engine/frame/passes/orbitTrailsLayer.test.ts` type-checks against the real signature, add the two new fields to that mock **in this task** (Task 6 rewrites it properly).
-- [ ] Commit.
+- [x] `npm test -- composeOrbitConic` → passes, **including the pre-existing gradient-minor regression test** (it must be untouched and still green).
+- [x] `npm run typecheck` — the layer destructures a subset of the return, so it still compiles; if `vi.mock`'s factory in `tests/services/engine/frame/passes/orbitTrailsLayer.test.ts` type-checks against the real signature, add the two new fields to that mock **in this task** (Task 6 rewrites it properly).
+- [x] Commit.
 
 > **Amendment (2026-08-01):** `ribbonEligible` and `RIBBON_MAX_EXTENT_NDC`, added by this task, are removed by Task 12 — the near-plane clamp (Task 11) makes every projection ribbon-safe, so the verdict this task introduces becomes dead weight rather than a permanent classifier. The three eligibility tests this task adds are deleted in Task 12; `the clip basis reprojects sample orbit points onto their projected pixels` and the gradient-minor regression test are not.
 
@@ -211,10 +211,10 @@ Why this exact shape, in one line each (put these in the file, not more):
 
 **No test file.** WESL does not run under Vitest and a TS re-implementation of this math would be a mirror. Verification is `npm run typecheck` + `npm run build`, the dev-mode shader compile log at first draw, and Task 8.
 
-- [ ] Add `OrbitInstance` to `io.wesl`; repoint `vs` at it.
-- [ ] Add `vsRibbon` per the contract above, importing `SEGMENTS`, `STROKE_PX` and `MARGIN_PX` from `constants.wesl` (one identifier per import, at the top).
-- [ ] `npm run build` clean; load the dev server and confirm no `Invalid ShaderModule` cascade (the trails draw at the solar-system pose — that exercises `vs`; `vsRibbon` is not exercised until Task 5+6 land, so a compile error there surfaces at module creation, not at draw).
-- [ ] Commit.
+- [x] Add `OrbitInstance` to `io.wesl`; repoint `vs` at it.
+- [x] Add `vsRibbon` per the contract above, importing `SEGMENTS`, `STROKE_PX` and `MARGIN_PX` from `constants.wesl` (one identifier per import, at the top).
+- [x] `npm run build` clean; load the dev server and confirm no `Invalid ShaderModule` cascade (the trails draw at the solar-system pose — that exercises `vs`; `vsRibbon` is not exercised until Task 5+6 land, so a compile error there surfaces at module creation, not at draw).
+- [x] Commit.
 
 ---
 
@@ -254,15 +254,15 @@ Upload: keep it to ONE `writeBuffer`. Uploading all `slots` records (60 × 160 B
 
 The module header's "Geometry is a fullscreen triangle" section becomes the two-path story: which path an instance takes, and that the fragment module is shared. Keep it inside the comment budget — the _why_ lives in the spec, link it.
 
-- [ ] Update the existing layout test `pins the FULL instance attribute layout` for the widened record: locations 1..10, offsets 0/16/32/48/64/80/96/**112/128/144**, `arrayStride` 160, still exactly ONE vertex buffer.
+- [x] Update the existing layout test `pins the FULL instance attribute layout` for the widened record: locations 1..10, offsets 0/16/32/48/64/80/96/**112/128/144**, `arrayStride` 160, still exactly ONE vertex buffer.
 - [ ] Add the test `builds a ribbon pipeline and a fullscreen pipeline from one fragment module` — both descriptors present, `fragment.module` identical, vertex `entryPoint` `'vsRibbon'` vs `'vs'`.
 - [ ] Add the test `issues the ribbon draw for the ribbon count and the fullscreen draw for the fallback count` — asserts both `draw` calls including `firstInstance`: `(RIBBON_SEGMENTS*6, r, 0, 0)` and `(3, f, 0, slots - f)`.
 - [ ] Add the test `a zero count skips its own draw` — `(r>0, f=0)` issues one draw, `(r=0, f>0)` issues one draw, `(0, 0)` issues none and no `writeBuffer`.
 - [ ] Add the test `counts that overrun the packed array throw` — extend the existing over-count test to the pair.
-- [ ] Keep the existing profile test (additive/depthless/cull-none) green for **both** pipelines.
-- [ ] Implement.
-- [ ] `npm test -- orbitTrailRenderer` → passes.
-- [ ] Commit.
+- [x] Keep the existing profile test (additive/depthless/cull-none) green for **both** pipelines.
+- [x] Implement.
+- [x] `npm test -- orbitTrailRenderer` → passes.
+- [x] Commit.
 
 > **Amendment (2026-08-01):** the two-pipeline / two-count `draw` this task establishes is replaced by a single pipeline and a single count in Task 12 — the fallback pipeline and every test above keyed on `fallbackCount` are removed there, not extended. Read Task 12's file list before touching this renderer again.
 
@@ -287,11 +287,11 @@ The pack loop (`orbitTrailsLayer.ts:254-315`) keeps every gate it has — `CULL_
 
 - [ ] Update the existing mock of `composeOrbitConic` to return `clipBasis` + `ribbonEligible`, with distinct sentinel values per field (the existing mock's `101/102/103` idiom) so the pack offsets stay pinned.
 - [ ] Add the test `packs ribbon records from the front and fallback records from the back` — mock `ribbonEligible` per call so both partitions are non-empty; assert both counts reach `draw` and that the sentinel records land at instance 0 and at instance `limit - 1`.
-- [ ] Add the test `the clip basis and viewport reach the packed record` — floats 28..39 carry the mocked basis, floats 18/19 carry `view.viewportPx`. (The existing assertion that floats 18/19 are zero is now wrong — replace it, don't delete the line.)
-- [ ] Keep every existing test green: the `view.slab.vp` seam, the moon-rides-its-parent case, the S-star region gate, the fade multiply, the null-handle no-op, the all-culled skip (which must now issue **no** draw at all, both counts zero).
-- [ ] Implement.
-- [ ] `npm test -- orbitTrailsLayer` → passes; then `npm test` whole-suite green.
-- [ ] Commit.
+- [x] Add the test `the clip basis and viewport reach the packed record` — floats 28..39 carry the mocked basis, floats 18/19 carry `view.viewportPx`. (The existing assertion that floats 18/19 are zero is now wrong — replace it, don't delete the line.)
+- [x] Keep every existing test green: the `view.slab.vp` seam, the moon-rides-its-parent case, the S-star region gate, the fade multiply, the null-handle no-op, the all-culled skip (which must now issue **no** draw at all, both counts zero).
+- [x] Implement.
+- [x] `npm test -- orbitTrailsLayer` → passes; then `npm test` whole-suite green.
+- [x] Commit.
 
 > **Amendment (2026-08-01):** the front/back partition this task builds is removed by Task 12 — every visible orbit packs into one run with one count, since `ribbonEligible` no longer exists to split on. The test `packs ribbon records from the front and fallback records from the back` is deleted there, not extended.
 
@@ -309,9 +309,9 @@ Acceptance, from spec §4:
 - `solar-system`: no regression beyond ~0.5 ms run-to-run noise.
 - Quote MERGED numbers and floor-subtracted per-layer "real" values; never raw PER-LAYER rows.
 
-- [ ] Re-run `galactic-centre` and `solar-system`; save both to the scratchpad beside the baselines.
+- [x] Re-run `galactic-centre` and `solar-system`; save both to the scratchpad beside the baselines.
 - [ ] If `galactic-centre` misses < 1.5 ms, re-run `--sweep` on it before changing anything: an exponent that has dropped toward 0 means the remaining cost is vertex/CPU-bound and `SEGMENTS` is the lever; an exponent still near 1 means coverage is wider than intended (suspect the sagitta term).
-- [ ] Record both before/after numbers in the PR description.
+- [x] Record both before/after numbers in the PR description.
 
 > **Amendment (2026-08-01):** the "log the ribbon/fallback split at the pose" diagnostic above is obsolete after Task 12 — there is no split left to log, every orbit takes the one `vsRibbon` path. Likewise `RIBBON_MAX_EXTENT_NDC`'s tuning note (ledger: "OPEN TUNING ITEM for T7") is moot; the constant it tunes is deleted. Task 7 must be **re-run against Task 12's HEAD**: the numbers already recorded in the ledger measured the fallback-present architecture (and `solar-system`, all-fallback at the time, never saw the win `galactic-centre` did) — they do not stand in for this task once Task 12 lands. Re-run the acceptance bullets above in full, and additionally confirm `solar-system` issues zero fullscreen fallback draws (see the updated DoD).
 
@@ -334,8 +334,8 @@ Ask the user to look. Spec §4's list, in order — the first three are the comm
 1. **Double-add pip** — the offset ribbon self-intersects wherever the projected radius of curvature `B²/A` drops below the ribbon half-width (≥ 4.5 px), so two quads cover the same stroke pixels and the one/one blend adds twice. Trigger is roughly a 15:1 projected aspect, i.e. near-edge-on. Look for a bright spot at each end of the major axis on pose 4, and on any near-edge-on planet orbit in pose 1. If it reads: the prepared fix was a third `ribbonEligible` clause routing to the fullscreen path — **no longer available after Task 12** (`ribbonEligible` is deleted); a fix at that point needs a different mechanism (e.g. clamping the offset itself to the local curvature radius) and should be re-scoped with the user rather than assumed.
 2. **Cap nick** — on projections whose long axis exceeds ~8400 px the quad degenerates at the fold and under-covers the stroke cap by ~0.25 px. Look for a broken or flattened cap at the ends of the major axis on pose 2 (Moon close-up). If it reads: raise `SEGMENTS`, which shrinks the sagitta directly.
 
-- [ ] Request the visual pass on all five poses, naming the two artifacts above and where they would appear.
-- [ ] If a coverage gap appears, do not widen `MARGIN_PX` reflexively — identify whether it is a joint (per-segment quantity crept in), a chord (sagitta term), a fold (the two artifacts above), or (pre-Task-12 only) a classification miss. The Task 10 overlay distinguishes the last one directly.
+- [x] Request the visual pass on all five poses, naming the two artifacts above and where they would appear.
+- [x] If a coverage gap appears, do not widen `MARGIN_PX` reflexively — identify whether it is a joint (per-segment quantity crept in), a chord (sagitta term), a fold (the two artifacts above), or (pre-Task-12 only) a classification miss. The Task 10 overlay distinguishes the last one directly.
 
 ---
 
@@ -343,8 +343,8 @@ Ask the user to look. Spec §4's list, in order — the first three are the comm
 
 **Files:** `docs/BACKLOG.md` if the radar surfaces a follow-up.
 
-- [ ] Run the `entanglement-radar` skill over the full branch diff. Specific things to ask it: does `ribbonEligible` braid "is an ellipse" with "is worth a ribbon" in a way that will need un-braiding later; is the front/back partition convention stated in exactly one place or restated in three; do the record layout's three sites (renderer attributes, `OrbitInstance`, pack loop) have a single named contract or three parallel comment tables.
-- [ ] File anything it names that is not fixed in this branch as a `docs/BACKLOG.md` line (terse index line + detail file if design-bearing).
+- [x] Run the `entanglement-radar` skill over the full branch diff. Specific things to ask it: does `ribbonEligible` braid "is an ellipse" with "is worth a ribbon" in a way that will need un-braiding later; is the front/back partition convention stated in exactly one place or restated in three; do the record layout's three sites (renderer attributes, `OrbitInstance`, pack loop) have a single named contract or three parallel comment tables.
+- [x] File anything it names that is not fixed in this branch as a `docs/BACKLOG.md` line (terse index line + detail file if design-bearing).
 - [ ] Run `/feature-done` against this plan; relocate plan + spec to `plans/completed/` + `specs/completed/`.
 
 ---
@@ -380,11 +380,11 @@ The renderer gains two debug pipelines (`vsRibbon`+`fsImpostorRibbon`, `vs`+`fsI
 
 The layer reads the selector alongside the settings it already reads and forwards the flag; `enabled()` is untouched (the overlay never forces the layer on).
 
-- [ ] Add the test `the impostor overlay draws the hull and the fallback wash only when enabled` — asserts no debug pipeline is created and no extra draw issued while the flag is false, and that enabling it adds exactly two draws with the production vertex counts and `firstInstance` offsets.
-- [ ] Add the test `the layer forwards the debug flag to the renderer`.
-- [ ] Implement; keep every existing renderer/layer test green.
-- [ ] `npm test -- orbitTrailRenderer orbitTrailsLayer`, `npm run build`.
-- [ ] Commit.
+- [x] Add the test `the impostor overlay draws the hull and the fallback wash only when enabled` — asserts no debug pipeline is created and no extra draw issued while the flag is false, and that enabling it adds exactly two draws with the production vertex counts and `firstInstance` offsets.
+- [x] Add the test `the layer forwards the debug flag to the renderer`.
+- [x] Implement; keep every existing renderer/layer test green.
+- [x] `npm test -- orbitTrailRenderer orbitTrailsLayer`, `npm run build`.
+- [x] Commit.
 
 > **Amendment (2026-08-01):** `fsImpostorFallback` and its debug pipeline, added by this task, are deleted by Task 12 along with the production fallback — the overlay narrows to the one hull tint (`fsImpostorRibbon`). The settings/selector/UI chain (`showOrbitTrailImpostor` and its DebugPanel row) is untouched, since it carries one boolean with no pipeline-count knowledge.
 
@@ -462,12 +462,12 @@ draw(
 
 Not in scope: any change to the fragment's conic math, or to the debug overlay's settings/UI chain — `debug.showOrbitTrailImpostor` and its DebugPanel row (`src/components/DebugPanel/DebugOverlaysSection.tsx`, `DebugOverlaysSectionContainer.tsx`) carry one boolean with no pipeline-count knowledge and need no edit; the toggle now lenses one production pipeline instead of two.
 
-- [ ] Update the test files named above first — remove assertions for code being deleted; where a removed code path leaves a genuine behavioral claim to re-test (e.g. the single-count draw shape), write that test before the implementation changes.
-- [ ] Implement the deletions in dependency order: `composeOrbitConic.ts` → `orbitTrailsLayer.ts` → `orbitTrailRenderer.ts` + `.d.ts` → `vertex.wesl` → `fragment.wesl` — each step's caller stops referencing the removed symbol before the symbol goes.
-- [ ] Grep the branch for `ribbonEligible`, `fallbackCount`, `RIBBON_MAX_EXTENT_NDC`, and the `'vs'` entry-point string to confirm no other touchpoint was missed.
-- [ ] `npm test -- composeOrbitConic orbitTrailsLayer orbitTrailRenderer` → passes; then `npm test` whole-suite green.
-- [ ] `npm run typecheck` && `npm run build` clean.
-- [ ] Commit.
+- [x] Update the test files named above first — remove assertions for code being deleted; where a removed code path leaves a genuine behavioral claim to re-test (e.g. the single-count draw shape), write that test before the implementation changes.
+- [x] Implement the deletions in dependency order: `composeOrbitConic.ts` → `orbitTrailsLayer.ts` → `orbitTrailRenderer.ts` + `.d.ts` → `vertex.wesl` → `fragment.wesl` — each step's caller stops referencing the removed symbol before the symbol goes.
+- [x] Grep the branch for `ribbonEligible`, `fallbackCount`, `RIBBON_MAX_EXTENT_NDC`, and the `'vs'` entry-point string to confirm no other touchpoint was missed.
+- [x] `npm test -- composeOrbitConic orbitTrailsLayer orbitTrailRenderer` → passes; then `npm test` whole-suite green.
+- [x] `npm run typecheck` && `npm run build` clean.
+- [x] Commit.
 
 ---
 
