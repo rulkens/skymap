@@ -1,6 +1,7 @@
 // milkyWayField/dustMap.wesl — splats the PRIMARY galaxy's dust slice into a
 // screen-space column map: one instanced quad per dust component, additively
-// accumulating (tau, tau*tPeak) per pixel, at fieldTex's own divisor-matched
+// accumulating FOUR depth-sliced optical-depth channels (tau_0..tau_3, see
+// io.wesl's dustSlices doc) per pixel, at fieldTex's own divisor-matched
 // resolution (see createGalaxyEngine.ts's dustMapTex declaration — NOT full
 // canvas res, its readers' target rate). This is the scaling backbone a
 // filament network needs (grill-session doc, N1):
@@ -9,8 +10,8 @@
 //
 // splat.wesl's fs reads this map with one textureLoad per primary emission
 // fragment, replacing its former per-fragment dust loop. The JWST view mode
-// (dustPresent.wesl) reads it too, presenting the column directly through a
-// palette instead of using it to attenuate emission.
+// (dustPresent.wesl) reads it too, summing the four channels to present the
+// total column through a palette instead of using it to attenuate emission.
 //
 // Vertex geometry is splat.wesl's exact silhouette math (see
 // lib/splatSilhouette.wesl) — a dust component is a Gaussian with a
@@ -116,7 +117,7 @@ fn dustNoiseMultiplier(p: vec3<f32>, depth: f32) -> f32 {
 }
 
 @fragment
-fn fs(input: DustMapOut) -> @location(0) vec2<f32> {
+fn fs(input: DustMapOut) -> @location(0) vec4<f32> {
   // Reconstructs the world-space ray from the interpolated NDC, exactly as
   // splat.wesl's fs does — the two must agree pixel-for-pixel since the map
   // is later read back at the SAME framebuffer coordinates.
@@ -143,19 +144,41 @@ fn fs(input: DustMapOut) -> @location(0) vec2<f32> {
   // blend means "contribute nothing" is the correct default, not a fallback
   // path (there's no other estimate to fall back to for one instance).
   if (a < 1e-12) {
-    return vec2<f32>(0.0, 0.0);
+    return vec4<f32>(0.0);
   }
-  // This component's own full-ray column, same closed form splat.wesl's
-  // former per-fragment loop used per dust component. amplitude (dg0.w) is
-  // the component's central V-band extinction density — see io.wesl's
-  // layout comment.
-  let tau = dg0.w * sqrt(GAUSS_PI / (2.0 * a)) * expHalfErfc(dc.z, dc.y / sqrt(2.0 * a));
+  // tail(t) is this component's own column from depth t to infinity, the
+  // same closed form splat.wesl's former per-fragment loop used for the
+  // whole ray (t=0). amplitude (dg0.w) is the component's central V-band
+  // extinction density — see io.wesl's layout comment. x(t) = (b + a*t) /
+  // sqrt(2a) is expHalfErfc's own lower-limit argument (gaussianIntegral.wesl);
+  // x0 is x(0), and each further edge just adds a*t_k/sqrtHalfA to it.
+  let sqrtHalfA = sqrt(2.0 * a);
+  let coeff = dg0.w * sqrt(GAUSS_PI / (2.0 * a));
+  let x0 = dc.y / sqrtHalfA;
+  let aOverSqrtHalfA = a / sqrtHalfA;
+  let tail0 = coeff * expHalfErfc(dc.z, x0);
+  let tail1 = coeff * expHalfErfc(dc.z, x0 + aOverSqrtHalfA * u.dustSlices.x);
+  let tail2 = coeff * expHalfErfc(dc.z, x0 + aOverSqrtHalfA * u.dustSlices.y);
+  let tail3 = coeff * expHalfErfc(dc.z, x0 + aOverSqrtHalfA * u.dustSlices.z);
+  // Slice k's own column is the tail mass BETWEEN its two edges (tail(t4 =
+  // infinity) is 0, folded in directly rather than a fourth expHalfErfc
+  // call). Each difference of two close tail values loses precision as the
+  // slice narrows (the erfc rational approximation is not bit-exact
+  // monotonic across its two branches — gaussianIntegral.wesl's erfc x>=0/
+  // x<0 split); clamped at 0 so that cancellation noise never becomes a
+  // small negative tau feeding the additive accumulation, rather than
+  // trusting it to stay non-negative on every GPU's math library.
+  var slices = vec4<f32>(
+    max(tail0 - tail1, 0.0),
+    max(tail1 - tail2, 0.0),
+    max(tail2 - tail3, 0.0),
+    max(tail3, 0.0),
+  );
+
   // -b/a is this component's own closest-approach depth along the ray;
   // clamped to 0 because a component whose peak is behind the eye still
-  // contributes column density in front of it. Weighting by tau (rather than
-  // writing tPeak directly) is what makes the SUM of every dust component's
-  // additive contribution divide back out to the tau-weighted mean depth in
-  // splat.wesl's fs (green / red).
+  // contributes column density in front of it. Used only to place the
+  // erosion sample below — the depth SLICING above needs no such peak.
   let tPeak = max(-dc.y / a, 0.0);
 
   // Erosion applies ONLY to the particle-cloud tier — input.inst is this
@@ -164,11 +187,11 @@ fn fs(input: DustMapOut) -> @location(0) vec2<f32> {
   // slice (io.wesl's dustNoise doc), so components before it are the smooth
   // disc mixture and skip the branch entirely rather than sampling a noise
   // texture whose whole rationale (kpc-scale components read as one blotch)
-  // doesn't apply to them.
-  var tauOut = tau;
+  // doesn't apply to them. It is a DENSITY modulation, not a depth-dependent
+  // one, so the same scalar multiplies all four slices.
   let noiseAmp = u.dustNoise.y;
   if (noiseAmp > 0.0 && input.inst >= u32(u.dustNoise.z)) {
-    tauOut = tau * dustNoiseMultiplier(o + d * tPeak, tPeak);
+    slices = slices * dustNoiseMultiplier(o + d * tPeak, tPeak);
   }
-  return vec2<f32>(tauOut, tauOut * tPeak);
+  return slices;
 }

@@ -23,7 +23,8 @@
 //   offset 96  : counts2: vec4  (featCount, dustMapHeightPx, reserved, reserved)
 //   offset 112 : dustExtinction: vec4 (A_lambda/A_V per channel, w unused)
 //   offset 128 : dustNoise: vec4 (tileUnits, amplitude, cloudOffset, unused)
-//   total: 144 bytes.
+//   offset 144 : dustSlices: vec4 (t1, t2, t3, unused)
+//   total: 160 bytes.
 //
 // counts.x is the live EMISSION component count — the central galaxy's plus
 // every extra's, drawn one quad each (see splat.wesl). counts.y/.z locate
@@ -68,6 +69,27 @@
 // (splat.wesl, dustPresent.wesl): both read the eroded column from here
 // with no second code path.
 //
+// dustSlices (offset 144) is the VIEW-DEPENDENT depth partition the dust map
+// accumulates into instead of one whole-ray column — a single mean depth put
+// a hard 50% floor on obscuration (everything nearer than the mean read as
+// unobscured no matter how much dust existed), because the dust's own tau
+// centroid sits INSIDE the emitting material both for an edge-on lane over
+// the disc and for the view from inside it. Four slices [0,t1), [t1,t2),
+// [t2,t3), [t3,inf) fix that by attenuating each slice's own emission by only
+// the tau in front of IT, so opacity can go to 100% as tau does.
+// createGalaxyEngine.ts's drawFrame computes t1..t3 once per frame from
+// D = distance(eye, origin) and R = the dust's own reach (3x its widest
+// component's sigmaR, cached by rebuildDustMixture): tNear = max(D-R,
+// 0.02*R), tFar = D+R, t_k = tNear*(tFar/tNear)^(k/4). Geometric, not linear,
+// spacing: from OUTSIDE the galaxy D-R is large and the [tNear,tFar] band is
+// thin, where geometric spacing degenerates to linear across exactly the
+// span the dust occupies; from INSIDE, D-R goes negative, the 0.02*R floor
+// engages, and the spacing turns logarithmic — right for a view where dust
+// in the observer's own arm matters as much as dust 8 kpc away. Packed once
+// here so dustMap.wesl (which writes the slices), dustFeature.wesl (which
+// writes into whichever one slice its plane-crossing depth falls in) and
+// splat.wesl (which reads all four back) agree on the same edges.
+//
 // COMPS (read-only storage, binding 1) — every mixture's components back to
 // back (the central galaxy's emission, then each background extra's,
 // already carried into world space — see transformGalaxyFieldComponent.ts —
@@ -104,28 +126,32 @@
 // (galaxyDustMixture.ts's dustExtinctionRgb), not a tint — carried per
 // component for a future per-extra dust loop, but NOT what the primary
 // galaxy's attenuation actually reads: dustMap.wesl sums every dust
-// component down to a single scalar tau column before splat.wesl ever sees
-// it, so the per-component colour lane has nowhere left to apply for the
+// component down to four depth-sliced tau columns before splat.wesl ever
+// sees it, so the per-component colour lane has nowhere left to apply for the
 // primary. The law splat.wesl uses instead arrives per-frame, in this
 // header's own dustExtinction lane below. [4i+1].w (boundRadius) and
 // [4i+3].xyz (center) mean the same thing they do for an emission
 // component. Dust components are consumed by dustMap.wesl's own splat pass
 // now, not looped over inside splat.wesl's fs — see binding 2.
 //
-// DUST MAP (binding 2) — the screen-space (tau, tau*tPeak) accumulation
-// dustMap.wesl and dustFeature.wesl both splat the PRIMARY galaxy's dust
-// into, additively, one texel lookup replacing splat.wesl's former
-// per-fragment dust loop (see splat.wesl's header and the grill-session
-// doc's N1). DIVISOR-MATCHED BY CONSTRUCTION: the backing texture is sized
-// to reducedSize(render.fieldDivisor) — the SAME extent as fieldTex, the
-// target every reader of this map (splat.wesl, dustPresent.wesl) renders
-// into and reads back from via a 1:1 framebuffer-coord texel load, not a UV
-// sample (createGalaxyEngine.ts's buildDustMapTarget rebuilds it, and both
-// dependent bind groups, on every fieldDivisor change). A resolution
-// mismatch here is invisible in types: it silently decimates any lane
-// thinner than the mismatch into beads, or misregisters the whole map
-// toward one corner. Only bound by the emission splat pipeline (splat.wesl
-// imports it); the two splat passes that WRITE it never read it.
+// DUST MAP (binding 2) — the screen-space depth-sliced optical-depth
+// accumulation dustMap.wesl and dustFeature.wesl both splat the PRIMARY
+// galaxy's dust into, additively: (tau_0, tau_1, tau_2, tau_3), one channel
+// per dustSlices bin above, replacing splat.wesl's former per-fragment dust
+// loop (see splat.wesl's header and the grill-session doc's N1). Purely
+// additive and order-independent like the single-column map it replaced —
+// each channel is still just an optical-depth sum, only partitioned by depth
+// now instead of collapsed to one mean. DIVISOR-MATCHED BY CONSTRUCTION: the
+// backing texture is sized to reducedSize(render.fieldDivisor) — the SAME
+// extent as fieldTex, the target every reader of this map (splat.wesl,
+// dustPresent.wesl) renders into and reads back from via a 1:1
+// framebuffer-coord texel load, not a UV sample (createGalaxyEngine.ts's
+// buildDustMapTarget rebuilds it, and both dependent bind groups, on every
+// fieldDivisor change). A resolution mismatch here is invisible in types: it
+// silently decimates any lane thinner than the mismatch into beads, or
+// misregisters the whole map toward one corner. Only bound by the emission
+// splat pipeline (splat.wesl imports it); the two splat passes that WRITE it
+// never read it.
 //
 // FEATS (read-only storage, binding 3) — the detail-tier dust splat network
 // (dustFeature.wesl), one record per feature, five vec4 each. 'kind' (last
@@ -170,6 +196,7 @@ struct FieldUniforms {
   counts2: vec4<f32>,
   dustExtinction: vec4<f32>,
   dustNoise: vec4<f32>,
+  dustSlices: vec4<f32>,
 };
 
 @group(0) @binding(0) var<uniform> u: FieldUniforms;

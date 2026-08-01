@@ -222,7 +222,7 @@ import {
   packFieldFeatures,
   packFieldHeaderUniforms,
 } from './packFieldUniforms';
-import type { FieldDustNoise } from './packFieldUniforms';
+import type { FieldDustNoise, FieldDustSlices } from './packFieldUniforms';
 import { createGenerationPipelines } from '../../../../src/services/gpu/galaxy/createGenerationPipelines';
 import { encodeGeneration } from '../../../../src/services/gpu/galaxy/encodeGeneration';
 import { packGenerationUniforms } from '../../../../src/services/gpu/galaxy/packGenerationUniforms';
@@ -230,9 +230,14 @@ import { readGalaxyFieldGeometry } from '../../../../src/services/gpu/galaxy/rea
 import {
   buildGalaxyFieldMixture,
   DEFAULT_GALAXY_FIELD_TUNING,
+  DISC_SIGMA_RATIOS,
   GALAXY_FIELD_MAX_COMPONENTS,
 } from '../../../../src/data/galaxy/galaxyFieldMixture';
-import { buildGalaxyDustMixture } from '../../../../src/data/galaxy/galaxyDustMixture';
+import {
+  buildGalaxyDustMixture,
+  dustDiscShape,
+  dustSigmaR,
+} from '../../../../src/data/galaxy/galaxyDustMixture';
 import {
   buildDustParticleCloud,
   dustNoiseTileUnits,
@@ -271,11 +276,23 @@ import gradeWgsl from './shaders/grade.wesl?static';
 const HDR: GPUTextureFormat = 'rgba16float';
 
 /**
- * Format of `dustMapTex`, the dust-column map: two channels (tau,
- * tau*tPeak — see dustMap.wesl's fs), `float16` for headroom on a summed
- * column that has no natural upper bound the way a normalized colour does.
+ * Format of `dustMapTex`, the dust-column map: four channels, one optical
+ * depth per depth slice (tau_0..tau_3 — see io.wesl's dustSlices doc and
+ * dustMap.wesl's fs), `float16` for headroom on a summed column that has no
+ * natural upper bound the way a normalized colour does. Was `rg16float`
+ * (tau, tau*tPeak) before the depth-sliced attenuation fix — a single
+ * tau-weighted mean depth put a hard 50% floor on obscuration.
  */
-const DUST_MAP_FORMAT: GPUTextureFormat = 'rg16float';
+const DUST_MAP_FORMAT: GPUTextureFormat = 'rgba16float';
+
+/**
+ * Floor for the dust's own reach R (io.wesl's dustSlices doc) — small next
+ * to any real galaxy's scale (generator units where `cam.dist` alone ranges
+ * 0.02..8000), just enough to keep `tNear = max(D-R, 0.02*R)` and
+ * `tFar = D+R` from collapsing to the same value when R itself is ~0 (a
+ * disc-less category, or dust tuned to a vanishing scale length).
+ */
+const DUST_REACH_FLOOR = 1e-3;
 
 /**
  * Edge length of the baked ridged-noise volume (dustNoiseBake.wesl) —
@@ -457,8 +474,8 @@ export async function createGalaxyEngine(
   // It cannot share the cloud UBO: nothing in the 208-byte cloud layout is a
   // ray, and this pass reads none of the billboard lanes. Camera/params/dust-
   // law only now — the mixture itself rides `fieldCompsBuf` below, a separate
-  // storage binding, so this uniform stays a fixed 128 bytes regardless of
-  // how many galaxies are on screen.
+  // storage binding, so this uniform stays `FIELD_HEADER_BUFFER_SIZE`
+  // regardless of how many galaxies are on screen.
   const fieldUbo = device.createBuffer({
     label: 'galaxy:fieldUniforms',
     size: FIELD_HEADER_BUFFER_SIZE,
@@ -617,8 +634,9 @@ export async function createGalaxyEngine(
   // ---- dust-column map pipeline (screen-space dust splat) ----
   // `milkyWayField/dustMap.wesl`: one instanced quad per PRIMARY dust
   // component (splat.wesl's own silhouette math via `lib/splatSilhouette`),
-  // additively accumulating (tau, tau*tPeak) into `dustMapTex`, at fieldTex's
-  // own divisor-matched resolution (see `dustMapTex`'s declaration below).
+  // additively accumulating four depth-sliced optical depths into
+  // `dustMapTex`, at fieldTex's own divisor-matched resolution (see
+  // `dustMapTex`'s declaration below).
   // Replaces splat.wesl's former per-fragment dust loop with a texture read
   // — see splat.wesl's header and the grill-session doc's N1.
   // Its own module (not a second entry point on `splatMod`) and its own
@@ -834,6 +852,14 @@ export async function createGalaxyEngine(
   // return — captured where `rebuildDustMixture` concatenates the two
   // mixtures below, never recomputed by filtering `dustMixture` back apart.
   let currentDustNoise: FieldDustNoise = { tileUnits: 1, amplitude: 0, cloudOffset: 0 };
+  // The dust's own reach R (io.wesl's dustSlices doc): 3x the widest smooth
+  // disc component's radial sigma, cached here for the same reason
+  // `currentDustNoise` is — `drawFrame` needs it every frame (it feeds the
+  // VIEW-dependent slice edges, which DO change every frame with the
+  // camera), but R itself only changes when `rebuildDustMixture` runs.
+  // Floored well above 0 so a disc-less galaxy (diskScaleLen 0) can't
+  // collapse the geometric slice spacing below to a degenerate 0-width band.
+  let currentDustReachR = DUST_REACH_FLOOR;
   // The detail-tier dust splat network (design doc N1/N2 #1), CENTRAL galaxy
   // only like `dustMixture` above, cached + rebuilt on the same two triggers
   // (`setParams`, `setFieldTuning`) — see `rebuildDustFeatures`.
@@ -959,8 +985,9 @@ export async function createGalaxyEngine(
    */
   let fieldTex: GPUTexture;
   /**
-   * The dust-column map (see dustMap.wesl): screen-space (tau, tau*tPeak)
-   * accumulation for the primary galaxy's dust slice. Sized to MATCH
+   * The dust-column map (see dustMap.wesl): screen-space, four depth-sliced
+   * optical-depth channels (io.wesl's dustSlices doc) accumulated for the
+   * primary galaxy's dust slice. Sized to MATCH
    * `fieldTex` exactly — `reducedSize(render.fieldDivisor)`, not the canvas —
    * because both of this map's consumers (splat.wesl's fs, dustPresent.wesl)
    * render INTO fieldTex and read it back via a 1:1 `input.pos.xy` texel
@@ -1183,9 +1210,29 @@ export async function createGalaxyEngine(
    * mixture's own length becomes `cloudOffset` (where the particle cloud
    * starts within the dust slice), captured right here at the concatenation
    * point rather than re-derived later by filtering `dustMixture` apart.
+   *
+   * And `currentDustReachR` (io.wesl's dustSlices doc): computed from
+   * `dustDiscShape`/`dustSigmaR` — the SAME smooth-lane shape
+   * `buildGalaxyDustMixture` itself derives — rather than from `dustMixture`
+   * after the fact, since the particle cloud's own components don't carry a
+   * comparable radial sigma to max over. Computed unconditionally (even with
+   * `dustEnabled` off, or `dust.tau` at 0) because R sizes the SLICE
+   * geometry `drawFrame` packs every frame regardless of whether any dust
+   * component exists to populate it — an empty dust slice into degenerate
+   * slice edges is still wrong header state, not a harmless no-op.
    */
   function rebuildDustMixture(): void {
     currentDustExtinctionRgb = dustExtinctionRgb(currentDust.rV);
+    if (fieldGeometry) {
+      const shape = dustDiscShape(fieldGeometry, currentDust);
+      let maxSigmaR = 0;
+      for (let i = 0; i < DISC_SIGMA_RATIOS.length; i++) {
+        maxSigmaR = Math.max(maxSigmaR, dustSigmaR(i, shape));
+      }
+      currentDustReachR = Math.max(3 * maxSigmaR, DUST_REACH_FLOOR);
+    } else {
+      currentDustReachR = DUST_REACH_FLOOR;
+    }
     if (fieldGeometry && fieldTuning.dustEnabled) {
       const laneMixture = buildGalaxyDustMixture(fieldGeometry, currentDust);
       const cloudMixture = buildDustParticleCloud(fieldGeometry, currentDust, currentSeed);
@@ -1946,6 +1993,23 @@ export async function createGalaxyEngine(
     device.queue.writeBuffer(starUbo, 0, cloudData);
     packCloudUniforms(vp, view, [canvas.width, canvas.height], tuning, fade.alpha, cloudData);
     device.queue.writeBuffer(dustUbo, 0, cloudData);
+    // Depth-slice edges for the dust map (io.wesl's dustSlices doc) — VIEW-
+    // dependent, so recomputed every frame unlike `currentDustReachR`. D is
+    // the eye's distance to the primary galaxy's centre (the tool's origin,
+    // not `cam.target` — the two differ once the camera pans); the geometric
+    // spacing between tNear and tFar is what turns linear from outside the
+    // galaxy and logarithmic from inside it — see io.wesl for the full
+    // derivation of the 0.02*R floor.
+    const dustD = Math.hypot(eye[0], eye[1], eye[2]);
+    const dustTNear = Math.max(dustD - currentDustReachR, 0.02 * currentDustReachR);
+    const dustTFar = dustD + currentDustReachR;
+    const dustRatio = dustTFar / dustTNear;
+    const dustSlices: FieldDustSlices = {
+      t1: dustTNear * dustRatio ** 0.25,
+      t2: dustTNear * dustRatio ** 0.5,
+      t3: dustTNear * dustRatio ** 0.75,
+    };
+
     // The analytic field's ray basis. `aspect` is the PROJECTION's (the
     // canvas's), not the aggregate's: the fullscreen triangle covers the
     // aggregate, but the frustum it must reconstruct is the one `proj` was
@@ -1982,6 +2046,9 @@ export async function createGalaxyEngine(
       currentDustExtinctionRgb,
       // The dust-noise erosion lane — also cached by rebuildDustMixture.
       currentDustNoise,
+      // The dust-slice edges computed just above — VIEW-dependent, unlike
+      // every other packFieldHeaderUniforms argument past `cam` itself.
+      dustSlices,
       fieldData,
     );
     device.queue.writeBuffer(fieldUbo, 0, fieldData);

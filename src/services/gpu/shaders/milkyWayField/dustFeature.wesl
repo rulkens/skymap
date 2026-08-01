@@ -1,11 +1,15 @@
 // milkyWayField/dustFeature.wesl — the detail-tier dust splat network (design
 // doc N1/N2): one oriented world-space quad per record, additively
-// accumulating (tau, tau*tPeak) into the SAME dustMapTex dustMap.wesl's
-// Gaussian dust splats already write — same two-channel convention (see
-// dustMap.wesl's fs), so all populations sum into one map for splat.wesl's fs
-// to read back with no changes there. 'kind' (io.wesl's FEATS table) selects
-// a lane/spur segment (0) or a bubble/bead disc (1/2, signed-tau hole+rim or
-// area-conserving knot) — see the fs's kind branch below.
+// accumulating into the SAME dustMapTex dustMap.wesl's Gaussian dust splats
+// already write — same four depth-sliced tau channels (io.wesl's dustSlices
+// doc), so all populations sum into one map for splat.wesl's fs to read back
+// with no changes there. Unlike a Gaussian's whole-ray column, a feature has
+// one well-defined plane-crossing depth, so its own contribution lands
+// entirely in whichever ONE slice contains that depth (sliceOutput below) —
+// zero in the other three, rather than a tail split. 'kind' (io.wesl's FEATS
+// table) selects a lane/spur segment (0) or a bubble/bead disc (1/2,
+// signed-tau hole+rim or area-conserving knot) — see the fs's kind branch
+// below.
 //
 // Where dustMap.wesl integrates a closed-form Gaussian along the whole ray,
 // this pass intersects the ray against ONE PLANE per feature (the local
@@ -119,8 +123,26 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> Dus
   return out;
 }
 
+// sliceOutput — routes a feature's own scalar tau (signed, for a bubble
+// hole) into the ONE depth slice containing its plane-crossing depth 't',
+// zero in the other three: a flat feature has a single well-defined depth
+// (the plane it sits on), unlike a Gaussian dust component's whole-ray
+// column, so there is no tail integral to split here — just a bucket pick.
+// Callers only reach this past the 't < 0.0' guard below, so 't' is always
+// a valid forward depth to bucket against u.dustSlices' edges.
+fn sliceOutput(tau: f32, t: f32) -> vec4<f32> {
+  if (t < u.dustSlices.x) {
+    return vec4<f32>(tau, 0.0, 0.0, 0.0);
+  } else if (t < u.dustSlices.y) {
+    return vec4<f32>(0.0, tau, 0.0, 0.0);
+  } else if (t < u.dustSlices.z) {
+    return vec4<f32>(0.0, 0.0, tau, 0.0);
+  }
+  return vec4<f32>(0.0, 0.0, 0.0, tau);
+}
+
 @fragment
-fn fs(input: DustFeatureOut) -> @location(0) vec2<f32> {
+fn fs(input: DustFeatureOut) -> @location(0) vec4<f32> {
   // Ray reconstruction, identical to dustMap.wesl's fs — the two passes
   // must agree pixel-for-pixel since their outputs sum into one map.
   let tanHalfFov = u.params.x;
@@ -190,10 +212,10 @@ fn fs(input: DustFeatureOut) -> @location(0) vec2<f32> {
   // is 0.06, so past this guard abs(denom) > 0.06 is guaranteed.
   let fade = smoothstep(0.06, 0.2, abs(denom));
   if (fade <= 0.0) {
-    return vec2<f32>(0.0, 0.0);
+    return vec4<f32>(0.0);
   }
   if (t < 0.0) {
-    return vec2<f32>(0.0, 0.0);
+    return vec4<f32>(0.0);
   }
 
   if (kind >= 0.5) {
@@ -205,15 +227,15 @@ fn fs(input: DustFeatureOut) -> @location(0) vec2<f32> {
     if (kind < 1.5) {
       // Kind 1 (bubble): a hole plus a swept rim, summed SIGNED — the map
       // accumulates signed tau so a bubble can carve into the smooth field
-      // it sits on top of. splat.wesl/dustPresent.wesl clamp the summed
-      // column at >= 0 at the point of use; a nested overshoot has to read
-      // as clean dust there, never as negative absorption.
+      // it sits on top of. splat.wesl/dustPresent.wesl clamp each slice at
+      // >= 0 at the point of use; a nested overshoot has to read as clean
+      // dust there, never as negative absorption.
       let hole = exp(-pow(r2d / max(0.8 * R, aaFloor), 4.0));
       let rim = exp(-pow((r2d - R) / max(0.25 * R, aaFloor), 2.0));
       // rimGain rides noiseAmp's lane for this kind — see io.wesl's table.
       let rimGain = noiseAmp;
       let tauDelta = amplitude * (rimGain * rim - hole);
-      return vec2<f32>(tauDelta * fade, tauDelta * fade * max(t, 0.0));
+      return sliceOutput(tauDelta * fade, t);
     }
     // Kind 2 (bead): a disc's column conserves by AREA, not width, so
     // shrinking the radius to the AA floor needs a SQUARED amplitude
@@ -222,7 +244,7 @@ fn fs(input: DustFeatureOut) -> @location(0) vec2<f32> {
     let widthEffR = max(R, aaFloor);
     let conserveR = (R / widthEffR) * (R / widthEffR);
     let tau = amplitude * conserveR * exp(-pow(r2d / widthEffR, 4.0));
-    return vec2<f32>(tau * fade, tau * fade * max(t, 0.0));
+    return sliceOutput(tau * fade, t);
   }
 
   // Kind 0 (lane/spur segment) below. Segments butt exactly at joints; the
@@ -232,7 +254,7 @@ fn fs(input: DustFeatureOut) -> @location(0) vec2<f32> {
   // in the overlap, which is what made the joints read as bright beads
   // rather than a continuous ridge.
   if (s < 0.0 || s > len) {
-    return vec2<f32>(0.0, 0.0);
+    return vec4<f32>(0.0);
   }
 
   // Only a chain's two free ends taper (taperIn/taperOut > 0 there, 0 at
@@ -274,5 +296,5 @@ fn fs(input: DustFeatureOut) -> @location(0) vec2<f32> {
   // longer path, more column, up to the floor where 'fade' has already
   // taken over.
   let tau = (amplitude * profile * window * max(noise, 0.0) * conserve) / max(abs(denom), 0.25);
-  return vec2<f32>(tau * fade, tau * fade * max(t, 0.0));
+  return sliceOutput(tau * fade, t);
 }

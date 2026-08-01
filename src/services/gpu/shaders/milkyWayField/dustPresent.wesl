@@ -26,10 +26,16 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   // at full canvas res, this target at a coarser divisor); that decimated
   // any lane thinner than the divisor into beads, which is why it's gone.
   let coord = vec2<i32>(input.pos.xy);
-  // Bubbles (dustFeature.wesl kind 1) write a SIGNED tau — clamp here too,
-  // same reason as splat.wesl's fs: a nested overshoot must present as
-  // clean dust, never as a negative (nonsensical for this palette) column.
-  let tau = max(textureLoad(dustMapTex, coord, 0).r, 0.0);
+  // dustMapTex now carries four depth-sliced optical depths (io.wesl's
+  // dustSlices doc), not one column — this presentation has no notion of
+  // depth, so it sums them back into the total tau a single-column map
+  // would have held. Bubbles (dustFeature.wesl kind 1) write a SIGNED tau
+  // into whichever ONE slice contains their depth — clamp each channel
+  // here too, same reason as splat.wesl's fs: a nested overshoot must
+  // present as clean dust, never as a negative (nonsensical for this
+  // palette) column.
+  let texel = max(textureLoad(dustMapTex, coord, 0), vec4<f32>(0.0));
+  let tau = texel.x + texel.y + texel.z + texel.w;
 
   // Presentation palette, NOT physics: intensity saturates smoothly with
   // column depth, then ramps black -> deep red -> orange -> white. Tuned by

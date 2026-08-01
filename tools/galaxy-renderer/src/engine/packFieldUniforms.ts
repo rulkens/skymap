@@ -40,8 +40,8 @@ import type { GalaxyDustFeature } from '../../../../src/@types/galaxy/GalaxyDust
 import type { GalaxyFieldComponent } from '../../../../src/@types/galaxy/GalaxyFieldComponent';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
-/** Float count of `io.wesl`'s `FieldUniforms` header — 9 vec4, camera + params + counts + counts2 + dustExtinction + dustNoise. */
-export const FIELD_HEADER_FLOATS = 36;
+/** Float count of `io.wesl`'s `FieldUniforms` header — 10 vec4, camera + params + counts + counts2 + dustExtinction + dustNoise + dustSlices. */
+export const FIELD_HEADER_FLOATS = 40;
 
 /** Byte size of the header struct, for `createBuffer`. */
 export const FIELD_HEADER_BUFFER_SIZE = FIELD_HEADER_FLOATS * 4;
@@ -84,17 +84,31 @@ export type FieldDustNoise = {
 };
 
 /**
+ * The dust map's depth-slice edges (io.wesl's `dustSlices`) — VIEW-dependent
+ * (a function of the eye's distance to the origin), so unlike `FieldDustNoise`
+ * this is recomputed every `drawFrame` rather than cached by
+ * `rebuildDustMixture`; only `R`, the dust's own reach, is cached there. See
+ * io.wesl's `dustSlices` doc for the geometric-spacing derivation and why it
+ * degenerates to linear from outside the galaxy and logarithmic from inside.
+ */
+export type FieldDustSlices = {
+  readonly t1: number;
+  readonly t2: number;
+  readonly t3: number;
+};
+
+/**
  * packFieldHeaderUniforms — camera basis + params + the four live counts +
- * the dust extinction law + the dust-noise lane, into the 144-byte uniform.
- * Called every `drawFrame`; all four counts are whatever
- * `repackFieldComponents` (createGalaxyEngine.ts) last sized the storage
- * buffer to (the two packers are called from different sites, so the counts
- * travel as plain arguments rather than being re-derived here).
+ * the dust extinction law + the dust-noise lane + the dust depth-slice edges,
+ * into the 160-byte uniform. Called every `drawFrame`; all four counts are
+ * whatever `repackFieldComponents` (createGalaxyEngine.ts) last sized the
+ * storage buffer to (the two packers are called from different sites, so the
+ * counts travel as plain arguments rather than being re-derived here).
  *
  * `dustExtinctionRgb` rides the header, not the per-component colour lane,
  * because the primary galaxy's attenuation no longer reads per-component
- * colour at all — dustMap.wesl collapses every dust component to a scalar
- * (tau, tau*tPeak) column before splat.wesl ever sees it (see io.wesl's
+ * colour at all — dustMap.wesl collapses every dust component to four
+ * depth-sliced tau columns before splat.wesl ever sees it (see io.wesl's
  * dust-component comment), so the law has to arrive some other way, once
  * per frame, for the whole primary galaxy.
  *
@@ -114,7 +128,9 @@ export type FieldDustNoise = {
  * world-space pixel footprint (see io.wesl's counts2.y doc).
  *
  * `dustNoise` is `FieldDustNoise` above — cached by `rebuildDustMixture`,
- * not re-derived here, same discipline as `dustExtinctionRgb`.
+ * not re-derived here, same discipline as `dustExtinctionRgb`. `dustSlices`
+ * is `FieldDustSlices` above — recomputed every call, since it tracks the
+ * live camera distance.
  */
 export function packFieldHeaderUniforms(
   cam: FieldCamera,
@@ -126,6 +142,7 @@ export function packFieldHeaderUniforms(
   dustMapHeightPx: number,
   dustExtinctionRgb: Vec3,
   dustNoise: FieldDustNoise,
+  dustSlices: FieldDustSlices,
   dst?: Float32Array,
 ): Float32Array {
   const out = dst ?? new Float32Array(FIELD_HEADER_FLOATS);
@@ -183,6 +200,12 @@ export function packFieldHeaderUniforms(
   out[33] = dustNoise.amplitude;
   out[34] = dustNoise.cloudOffset;
   out[35] = 0;
+
+  // dustSlices 36..39 = (t1, t2, t3, unused).
+  out[36] = dustSlices.t1;
+  out[37] = dustSlices.t2;
+  out[38] = dustSlices.t3;
+  out[39] = 0;
 
   return out;
 }
