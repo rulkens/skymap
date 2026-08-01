@@ -34,7 +34,7 @@ The aim is encoded through `frameBasis` (`orbitAnglesLookingAlong`, lines 353 an
 
 - [ ] Add `flyPath starts at the live eye under a non-identity frame`: build a track with `frameBasis: ORIENTATION_FRAMES.ecliptic`, `start = { target: [0,0,0], distance: 10, yaw: 0.3, pitch: 0.1 }`, waypoints `[{ at: [100,20,0], distance: 5 }, { at: [200,-40,60], distance: 8 }]`. Reconstruct the eye the renderer does — `target + distance · (frameBasis · yawPitchToDir(yaw, pitch))` — from `sample(0)` and assert it equals the live eye `[2.9, 1.0, 9.5]` (3 dp).
 - [ ] Add `flyPath settles at the framing distance from its destination under a non-identity frame`: same track, assert the reconstructed eye at `sample(totalSec)` is 8.0 from `[200,-40,60]` (3 dp).
-- [ ] `npm test -- buildPathTrack` → RED. Expect ≈`[2.9, -9.1, -2.9]` and ≈14.6 respectively.
+- [ ] `npm test -- buildPathTrack` → RED on the settle assertion (≈14.6). The `t=0` assertion does NOT go red: the two omissions cancel there (align-in weight 0 ⇒ the aim is the live pose and the spline sits on knot 0, so the wrong knot and wrong target subtract out). Keep it as a guard against fixing only one of the two sites.
 - [ ] Rotate the frame-local direction through `frameBasis` at both sites, reusing the tight column-major product spelled out at `updatePosition.ts:69-71` (the registry `Mat3` is 9-float, not wgpu-matrix's 12-float padded layout — `vec3.transformMat3` would read garbage).
 - [ ] `npm test -- buildPathTrack` → GREEN, and the pre-existing identity-frame cases unchanged.
 - [ ] Commit.

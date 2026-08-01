@@ -257,22 +257,30 @@ frame.
 
 Measured on a two-waypoint path, start distance 10, destination framing distance 8:
 
-| basis    | eye at t=0                                | eye at t=end              |
-| -------- | ----------------------------------------- | ------------------------- |
-| identity | `[2.9, 1.0, 9.5]` — the live eye, correct | 8.0 from the destination  |
-| ecliptic | `[2.9, −9.1, −2.9]` — 16 units off        | 14.6 from the destination |
+| basis    | eye at t=end              |
+| -------- | ------------------------- |
+| identity | 8.0 from the destination  |
+| ecliptic | 14.6 from the destination |
 
-Every `flyPath` in the tour currently pops at clip start and settles mis-framed.
-`sampleClipPath.ts:33` carries the same omission in the debug inspector's eye
-reconstruction.
+**The two omissions cancel exactly at `t=0`.** There the align-in weight is 0, so
+the aim is still the live pose and the spline sits on knot 0 — the wrong knot and
+the wrong derived target subtract to the correct rendered eye. The defect is that
+knot 0 itself is wrong, so the _spline_ is fitted through a wrong start; that shows
+up everywhere except the one instant where it cancels. The end-framing distance is
+the differentiator, and a `t=0` assertion is not.
+
+Every `flyPath` in the tour therefore flies a curve built from the wrong first knot
+and settles mis-framed on its destination. `sampleClipPath.ts:33` carries the same
+omission in the debug inspector's eye reconstruction.
 
 ## Testing
 
 - `reencodePose` — world direction preserved across a basis pair; identity returns
   the input by reference.
-- `buildPathTrack` under a non-identity basis — the reconstructed eye lands on the
-  live eye at t=0 and at the framing distance from the destination at t=end. Red
-  first, against the measurements above.
+- `buildPathTrack` under a non-identity basis — the reconstructed eye settles at the
+  framing distance from the destination. Red first, against the measurement above.
+  A `t=0` assertion cannot go red for this bug (see the cancellation note); it still
+  earns its place as a guard against fixing only one of the two sites.
 - `watchOrientationChangeSaga` — a switch dispatches `commitCameraPose` with a pose
   whose world eye direction equals the pre-switch one.
 - A switch mid-roll composes from the live basis rather than a committed one.
