@@ -139,14 +139,10 @@ fn fs(input: SplatOut) -> @location(0) vec4<f32> {
   if (input.inst < primaryCount) {
     let dustUv = input.pos.xy / u.counts2.zw;
     let texel = textureSampleLevel(dustMapTex, dustMapSmp, dustUv, 0.0);
-    // Bubbles (dustFeature.wesl kind 1) write a SIGNED tau into whichever
-    // ONE slice contains their plane-crossing depth — clamp each channel at
-    // this consumer: a nested hole/rim overshoot must read as clean dust in
-    // ITS slice, never as negative absorption.
-    let tau0 = max(texel.x, 0.0);
-    let tau1 = max(texel.y, 0.0);
-    let tau2 = max(texel.z, 0.0);
-    let tau3 = max(texel.w, 0.0);
+    let tau0 = texel.x;
+    let tau1 = texel.y;
+    let tau2 = texel.z;
+    let tau3 = texel.w;
     dustApplies = (tau0 + tau1 + tau2 + tau3) > 1e-6;
     if (dustApplies) {
       let K = u.dustExtinction.xyz;

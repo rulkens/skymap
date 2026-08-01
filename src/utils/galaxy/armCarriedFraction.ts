@@ -5,10 +5,8 @@
  * interarm floor: a length-weighted mix, `contrast*laneWidth` against the
  * interarm's `circumference - laneWidth` (floored at `laneWidth` itself so a
  * lane wider than the ring's own remaining interarm can't push the fraction
- * past what a length-weighted mix means). Shared by `dustLaneFeatures.ts`
- * (evaluated per segment, at that segment's own radius) and
- * `galaxyDustMixture.ts`'s `armCarriedDustFraction` (one radius-averaged
- * call) — same formula, different radius.
+ * past what a length-weighted mix means). `dustLaneFeatures.ts` evaluates it
+ * at each caller's own radius.
  */
 export function armCarriedFraction(
   contrast: number,

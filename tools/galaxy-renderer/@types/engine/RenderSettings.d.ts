@@ -59,7 +59,7 @@ export type RenderSettings = {
   readonly aggregateDivisor: number;
   /** Downsample divisor of the ANALYTIC field's own offscreen. Separate from `aggregateDivisor` because the field is fill-bound and low-frequency: it takes a far coarser target than sprites do without a visible difference. Also reallocates rather than riding the uniform. */
   readonly fieldDivisor: number;
-  /** Downsample divisor of the dust-column map's own offscreen. Separate from `fieldDivisor` because the dust splat (Gaussian lanes + the detail-tier feature network) is much higher-frequency than the smooth emission field it used to share a target with — see `defaultRenderSettings.ts`. Also reallocates rather than riding the uniform. */
+  /** Downsample divisor of the dust-column map's own offscreen. Separate from `fieldDivisor` because the dust splat is much higher-frequency than the smooth emission field it used to share a target with — see `defaultRenderSettings.ts`. Also reallocates rather than riding the uniform. */
   readonly dustDivisor: number;
 
   /** SPIKE, tool-only: draw the sprite star field. Off isolates the analytic field. */

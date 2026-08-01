@@ -75,10 +75,10 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // field to size a target for.
   fieldDivisor: 6,
   // The dust map's OWN divisor, finer than the field's: it carries the
-  // particle-cloud tier (dustParticleCloud.ts) and the lane/spur/bubble/bead
-  // network, both cloud-scale detail rather than the smooth field's kpc-scale
-  // Gaussians, so it is sized against ITS OWN content rather than inheriting
-  // the field's compromise — see io.wesl's DUST MAP doc.
+  // particle-cloud tier (dustParticleCloud.ts), cloud-scale detail rather
+  // than the smooth field's kpc-scale Gaussians, so it is sized against ITS
+  // OWN content rather than inheriting the field's compromise — see
+  // io.wesl's DUST MAP doc.
   //
   // Only ONE step finer, though, because this pass is fill-bound the way the
   // field is: thousands of cloud splats, and diving toward the galactic centre

@@ -44,7 +44,6 @@ import ArmCloudSection from '../ArmCloudSection/ArmCloudSection';
 import ArmFieldSection from '../ArmFieldSection/ArmFieldSection';
 import CollapsibleSection from '../CollapsibleSection/CollapsibleSection';
 import DustSection from '../DustSection/DustSection';
-import DustNetworkSection from '../DustNetworkSection/DustNetworkSection';
 import DustCloudSection from '../DustCloudSection/DustCloudSection';
 import FadeSection from '../FadeSection/FadeSection';
 import FieldSection from '../FieldSection/FieldSection';
@@ -309,7 +308,6 @@ function ControlsPanel({ fade }: ControlsPanelProps): ReactNode {
         <ArmFieldSection />
         <ArmCloudSection />
         <DustSection />
-        <DustNetworkSection />
         <DustCloudSection />
 
         <CollapsibleSection
@@ -579,7 +577,7 @@ function ControlsPanel({ fade }: ControlsPanelProps): ReactNode {
             step={1}
             format={(v) => String(Math.round(v))}
             onChange={(v) => dispatch(renderPatched({ dustDivisor: Math.round(v) }))}
-            info="Its own divisor, separate from the field's: the dust splat (Gaussian lanes plus the lane/spur/bubble/bead network) is much higher-frequency than the smooth emission field, so it needs a finer target to avoid decimating thin lanes into beads."
+            info="Its own divisor, separate from the field's: the dust splat is much higher-frequency than the smooth emission field, so it needs a finer target to avoid decimating thin lanes into beads."
           />
         </CollapsibleSection>
 

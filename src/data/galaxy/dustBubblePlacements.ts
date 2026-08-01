@@ -1,8 +1,7 @@
 /**
  * buildDustBubblePlacements — the SF-event catalog's bubble subset, resolved
- * to world centres and physical radii: the ONE placement both the flat
- * dust-feature tier (rim/hole rendering) and the particle cloud (bubble
- * carving) read, so a bubble sits in the same place in both.
+ * to the world centres and physical radii the particle cloud carves its
+ * cavities against.
  *
  * PURITY INVARIANT: pure `(geometry, dust, seed) -> flat data`, no engine
  * state, no Math.random — same discipline as `sfEventCatalog.ts`.
@@ -18,7 +17,7 @@ import type { Vec3 } from '../../@types/math/Vec3';
 /** age01 <= this gate are future HII knots (#20), not yet swept dust cavities — see `SfEvent.age01`'s own doc. */
 const BUBBLE_AGE_GATE = 0.35;
 
-/** Third priority (N2 #3) in the flat feature budget; also this module's own placement cap — bubbles are sparse, large-footprint features. */
+/** Placement cap — bubbles are sparse, large-footprint features. */
 export const BUBBLE_BUDGET = 120;
 
 /** 1 generator unit = 1.6667 kpc — `galacticCenter.ts`'s own conversion, restated here to turn pc-scale literature radii into world units. */
@@ -32,26 +31,15 @@ export type DustBubblePlacement = {
   readonly radius: number;
 };
 
-/** Placement plus the arm-local shading truth `dustNetworkFeatures.ts` needs for a rim/hole record — `laneAmplitude` already folds in age weight and radial fade, so it doesn't need to recompute either. */
-export type DustBubblePlacementDetail = DustBubblePlacement & {
-  readonly pole: Vec3;
-  readonly laneAmplitude: number;
-};
-
-/**
- * buildDustBubblePlacementDetails — the flat feature tier's own entry point;
- * `buildDustBubblePlacements` below strips this down to the particle cloud's
- * plain center/radius contract.
- */
-export function buildDustBubblePlacementDetails(
+export function buildDustBubblePlacements(
   geometry: GalaxyFieldGeometry,
   dust: GalaxyDustParams,
   seed: number,
-): readonly DustBubblePlacementDetail[] {
-  if (dust.tau <= 0 || geometry.numArms <= 0 || dust.network.bubbleScale <= 0) return [];
+): readonly DustBubblePlacement[] {
+  if (dust.tau <= 0 || geometry.numArms <= 0 || dust.cloud.bubbleScale <= 0) return [];
 
-  const events = buildSfEventCatalog(geometry, dust.network, seed);
-  const out: DustBubblePlacementDetail[] = [];
+  const events = buildSfEventCatalog(geometry, dust.cloud, seed);
+  const out: DustBubblePlacement[] = [];
   for (const event of events) {
     if (event.age01 <= BUBBLE_AGE_GATE) continue;
     const arm = geometry.arms[event.armIndex];
@@ -62,8 +50,8 @@ export function buildDustBubblePlacementDetails(
     const ridge = armRidgeCurvePoint(event.logR, geometry, arm);
     const frame = warpSurfaceFrame(armRadius, angle, geometry);
     // ON the warp surface: `frame.across` is a tangent to the warped disc at
-    // this point (not a flat horizontal offset), the same technique the
-    // lane/spur curve uses for its own offset points.
+    // this point (not a flat horizontal offset), the same technique
+    // `armOffsetFrameAt` uses for its own offset points.
     const center: Vec3 = [
       ridge[0] + frame.across[0] * event.acrossOffset,
       ridge[1] + frame.across[1] * event.acrossOffset,
@@ -75,21 +63,23 @@ export function buildDustBubblePlacementDetails(
     // many-small/few-big shape from the catalog's own UNIFORM age draws —
     // not a resampled power-law distribution.
     const radiusPc = 6 + 546 * Math.pow(age01n, 2.5);
-    const radius = pcToUnits(radiusPc) * dust.network.bubbleScale;
+    const radius = pcToUnits(radiusPc) * dust.cloud.bubbleScale;
     if (radius <= 0) continue;
 
+    // A bubble only exists where the arm actually carries dust to sweep: the
+    // lane amplitude folds in this arm's age weight and its radial fade, so
+    // a zero there means an event past the arm's own reach, not a small one.
     const fade = armFadeEnvelope(armRadius, geometry, arm);
-    const ageWeight = armAgeWeight(arm);
     const { amplitude: laneAmplitude } = armLaneWidthAndAmplitude(
       armRadius,
       geometry,
       dust,
-      ageWeight,
+      armAgeWeight(arm),
       fade,
     );
     if (laneAmplitude <= 0) continue;
 
-    out.push({ center, radius, pole: frame.pole, laneAmplitude });
+    out.push({ center, radius });
   }
 
   // Budget: over BUBBLE_BUDGET, keep the LARGEST radii — small bubbles
@@ -100,15 +90,4 @@ export function buildDustBubblePlacementDetails(
     return out.slice(0, BUBBLE_BUDGET);
   }
   return out;
-}
-
-export function buildDustBubblePlacements(
-  geometry: GalaxyFieldGeometry,
-  dust: GalaxyDustParams,
-  seed: number,
-): readonly DustBubblePlacement[] {
-  return buildDustBubblePlacementDetails(geometry, dust, seed).map(({ center, radius }) => ({
-    center,
-    radius,
-  }));
 }

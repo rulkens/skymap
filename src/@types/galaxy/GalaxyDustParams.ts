@@ -1,7 +1,7 @@
 /**
  * GalaxyDustParams — the analytic dust lane's flat-lane knobs plus the
- * filament/bubble network layered on top (`network`, see
- * `GalaxyDustNetworkParams`).
+ * volumetric particle cloud layered on top (`cloud`, see
+ * `GalaxyDustCloudParams`).
  *
  * `tau`: central face-on V-band optical depth (measured ~0.5–1 for spirals;
  * Xilouris et al. 1999, De Geyter et al. 2014 CALIFA mean 0.76±0.6).
@@ -14,14 +14,12 @@
  * starburst sightlines ~2–2.5 (more strongly reddening).
  */
 import type { GalaxyDustCloudParams } from './GalaxyDustCloudParams';
-import type { GalaxyDustNetworkParams } from './GalaxyDustNetworkParams';
 
 export type GalaxyDustParams = {
   readonly tau: number;
   readonly scaleLenRatio: number;
   readonly heightRatio: number;
   readonly rV: number;
-  readonly network: GalaxyDustNetworkParams;
-  /** The 3D particle-cloud tier layered under `network`'s flat features — see `GalaxyDustCloudParams`. */
+  /** The 3D particle-cloud tier layered on the smooth mixture — see `GalaxyDustCloudParams`. */
   readonly cloud: GalaxyDustCloudParams;
 };

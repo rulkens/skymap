@@ -5,7 +5,8 @@
  * density, so every cloud peaks at roughly the same tau — sharp, separated
  * clouds, not a haze); the R^-2.2 GMC size function (Watkins+2023); ISM
  * hierarchical clustering, as a two-level complex/children placement. Bubble
- * carving (4d) reuses `dustBubblePlacements.ts` so a cavity there is one here.
+ * carving (4d) sweeps particles onto the rims of `dustBubblePlacements.ts`'s
+ * SF cavities.
  *
  * PURITY INVARIANT: pure `(geometry, dust, seed) -> flat data`, no
  * Math.random/Date/engine state — a Worker/compute-pass candidate.
@@ -143,7 +144,7 @@ export function buildDustParticleCloud(
       sigmaZComplex: sigmaZCloud,
       laneFrameAt: (arm, logR) => armOffsetFrameAt(logR, geometry, dust, arm),
       crossLaneSigma: (radius) =>
-        armCrossSigma(radius, geometry, ARM_WIDTH_TUNING) * 0.25 * dust.network.laneWidth,
+        armCrossSigma(radius, geometry, ARM_WIDTH_TUNING) * 0.25 * dust.cloud.laneWidth,
       discSigmaR: (k) => dustSigmaR(k, shape),
       discWeights: DISC_SURFACE_WEIGHTS,
       discWeightSum: shape.sumW,

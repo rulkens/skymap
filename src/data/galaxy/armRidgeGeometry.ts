@@ -43,7 +43,7 @@ function smoothstep01(t: number): number {
   return c * c * (3 - 2 * c);
 }
 
-// Exported so the SF-event catalog (`sfEventCatalog.ts`) and the dust network
+// Exported so the SF-event catalog (`sfEventCatalog.ts`) and the dust lane
 // share the same ridge truth by import, not by re-deriving the curve.
 /** armStarSample's ridge angle: log-spiral phase + meander + (gated) high-frequency wave. */
 export function armRidgeAngle(

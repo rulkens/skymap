@@ -101,20 +101,6 @@ export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams = {
     scaleLenRatio: 1.5,
     heightRatio: 0.35,
     rV: 2.3,
-    // Not yet visually calibrated — same values as DEFAULT_GALAXY_DUST_NETWORK_PARAMS.
-    network: {
-      armContrast: 3,
-      sfActivity: 1,
-      texture: 0.35,
-      spurStrength: 0.6,
-      laneWidth: 1,
-      laneOffset: 1,
-      spurSpacing: 1,
-      spurLength: 1,
-      bubbleScale: 1,
-      bubbleRimStrength: 0.5,
-      beadShare: 0.5,
-    },
     // Not yet visually calibrated — same values as DEFAULT_GALAXY_DUST_CLOUD_PARAMS.
     cloud: {
       count: 6000,
@@ -129,6 +115,11 @@ export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams = {
       texture: 0.7,
       textureScale: 1,
       textureContrast: 1,
+      armContrast: 3,
+      sfActivity: 1,
+      laneWidth: 1,
+      laneOffset: 1,
+      bubbleScale: 1,
     },
   },
 };

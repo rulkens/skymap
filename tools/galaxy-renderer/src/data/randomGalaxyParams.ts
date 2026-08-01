@@ -93,32 +93,19 @@ export function randomGalaxyParams(
     // scalers below, left fixed) — spans diffuse-ISM to dense-cloud MW-like
     // sightlines (2.4-4.0), short of SMC/starburst territory.
     rV: 2.4 + rng() * 1.6,
-    network: {
-      armContrast: 2 + rng() * 3,
-      sfActivity: 0.3 + rng() * 1.7,
-      texture: 0.2 + rng() * 0.5,
-      spurStrength: 0.3 + rng() * 0.7,
-      // Refiners are taste scalers, not galaxy properties — randomize leaves
-      // them at their literature/neutral value rather than rolling them.
-      laneWidth: 1,
-      laneOffset: 1,
-      spurSpacing: 1,
-      spurLength: 1,
-      bubbleScale: 1,
-      bubbleRimStrength: 0.5,
-      beadShare: 0.5,
-    },
     cloud: {
       ...DEFAULT_GALAXY_DUST_CLOUD_PARAMS,
-      // Only the four knobs that read as a galaxy's own ISM character get
-      // rolled: how richly it is resolved into clouds, how hierarchically
-      // those cluster, how large its complexes run, and how eroded their
-      // silhouettes are. The rest are taste scalers, left at their
-      // calibrated value like the network refiners.
+      // Only the knobs that read as a galaxy's own ISM character get rolled:
+      // how richly it is resolved into clouds, how hierarchically those
+      // cluster, how large its complexes run, how eroded their silhouettes
+      // are, and the arm lane's own contrast and star-formation rate. The
+      // rest are taste scalers, left at their calibrated value.
       count: Math.round(6000 + rng() * 12000),
       clumpiness: 0.35 + rng() * 0.55,
       sizeScale: 0.7 + rng() * 0.9,
       texture: 0.4 + rng() * 0.6,
+      armContrast: 2 + rng() * 3,
+      sfActivity: 0.3 + rng() * 1.7,
     },
   };
 

@@ -194,7 +194,6 @@ import type { RenderSettings } from '../../@types/engine/RenderSettings';
 import type { LodSettings } from '../../@types/engine/LodSettings';
 import type { ViewPose } from '../../@types/engine/ViewPose';
 import type { ExtraGalaxySpec } from '../../../../src/@types/galaxy/ExtraGalaxySpec';
-import type { GalaxyDustFeature } from '../../../../src/@types/galaxy/GalaxyDustFeature';
 import type { GalaxyDustParams } from '../../../../src/@types/galaxy/GalaxyDustParams';
 import type { GalaxyFieldComponent } from '../../../../src/@types/galaxy/GalaxyFieldComponent';
 import type { GalaxyFieldGeometry } from '../../../../src/@types/galaxy/GalaxyFieldGeometry';
@@ -215,11 +214,9 @@ import { lensShift } from './lensShift';
 import { CLOUD_UNIFORM_FLOATS, packCloudUniforms } from './packCloudUniforms';
 import {
   FIELD_COMPONENT_FLOATS,
-  FIELD_FEATURE_FLOATS,
   FIELD_HEADER_BUFFER_SIZE,
   FIELD_HEADER_FLOATS,
   packFieldComponents,
-  packFieldFeatures,
   packFieldHeaderUniforms,
 } from './packFieldUniforms';
 import type { FieldDustNoise, FieldDustSlices } from './packFieldUniforms';
@@ -242,10 +239,6 @@ import {
   buildDustParticleCloud,
   dustNoiseTileUnits,
 } from '../../../../src/data/galaxy/dustParticleCloud';
-import {
-  buildDustNetworkFeatures,
-  DUST_NETWORK_FEATURE_CAP,
-} from '../../../../src/data/galaxy/dustNetworkFeatures';
 import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../src/data/galaxy/defaultGalaxyDustParams';
 import { dustExtinctionRgb } from '../../../../src/utils/galaxy/dustExtinctionRgb';
 import { transformGalaxyFieldComponent } from '../../../../src/utils/galaxy/transformGalaxyFieldComponent';
@@ -267,7 +260,6 @@ import starWgsl from './shaders/milkyWayCloud/stars.wesl?static';
 import dustWgsl from './shaders/milkyWayCloud/dust.wesl?static';
 import splatWgsl from './shaders/milkyWayField/splat.wesl?static';
 import dustMapWgsl from './shaders/milkyWayField/dustMap.wesl?static';
-import dustFeatureWgsl from './shaders/milkyWayField/dustFeature.wesl?static';
 import dustPresentWgsl from './shaders/milkyWayField/dustPresent.wesl?static';
 import dustNoiseBakeWgsl from './shaders/milkyWayField/dustNoiseBake.wesl?static';
 import gradeWgsl from './shaders/grade.wesl?static';
@@ -327,13 +319,12 @@ const bloomScale = (level: number): number => 2 ** (level + 1);
  *    `aggregateTex` is its own attachment and therefore its own pass. This is
  *    the fill-bound half and the number the divisor / sprite-size knobs move,
  *    so having it isolated is most of the point of the split.
- *  - `'dustMap'` is the dust-column splat — Gaussian dust components then
- *    the detail-tier feature network, two pipelines in one pass — into its
- *    OWN reduced-resolution `dustMapTex` (cleared, not loaded), sized to its
- *    own `dustDivisor` rather than the field's. Only encoded when there is
- *    dust or a feature to splat OR the JWST view needs a fresh map (see
- *    `drawFrame`'s gate), so the slot drops on a dustless galaxy exactly
- *    like `'field'` drops when the model is off.
+ *  - `'dustMap'` is the dust-column splat — one quad per Gaussian dust
+ *    component — into its OWN reduced-resolution `dustMapTex` (cleared, not
+ *    loaded), sized to its own `dustDivisor` rather than the field's. Only
+ *    encoded when there is dust to splat OR the JWST view needs a fresh map
+ *    (see `drawFrame`'s gate), so the slot drops on a dustless galaxy
+ *    exactly like `'field'` drops when the model is off.
  *  - `'field'` is whichever pass filled the field/dust-view target this
  *    frame: the analytic Gaussian-mixture splat into `fieldTex` normally, or
  *    the JWST dustPresent pass into its own `dustViewTex` when
@@ -497,17 +488,6 @@ export async function createGalaxyEngine(
     size: fieldCompsCapacity * FIELD_COMPONENT_FLOATS * 4,
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
   });
-  // `feats` (io.wesl binding 3): the detail-tier dust splat network's own
-  // records — see `repackFieldFeatures`. Same grow-only discipline as
-  // `fieldCompsBuf` above; starts at `dustNetworkFeatures.ts`'s own
-  // FEATURE_CAP (lanes + spurs + bubbles + beads combined) so the primary
-  // galaxy's network never forces a regrow on its first `setParams`.
-  let fieldFeatsCapacity = DUST_NETWORK_FEATURE_CAP;
-  let fieldFeatsBuf = device.createBuffer({
-    label: 'galaxy:fieldFeats',
-    size: fieldFeatsCapacity * FIELD_FEATURE_FLOATS * 4,
-    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-  });
   // Tool-only grade trailer: [saturation, vignette, gammaEncode, 0]. The bloom
   // and compositor uniforms are owned by their shared factories below.
   const gradeBuf = device.createBuffer({
@@ -653,29 +633,6 @@ export async function createGalaxyEngine(
     vertex: { module: dustMapMod, entryPoint: 'vs' },
     fragment: {
       module: dustMapMod,
-      entryPoint: 'fs',
-      targets: [{ format: DUST_MAP_FORMAT, blend: ADDITIVE_BLEND }],
-    },
-    primitive: { topology: 'triangle-list' },
-  });
-
-  // ---- dust-feature pipeline (detail-tier lane/spur/bubble/bead splat) ----
-  // `milkyWayField/dustFeature.wesl`: one instanced quad per FEATURE record
-  // (`dustNetworkFeatures.ts`), additively accumulating into the SAME
-  // `dustMapTex` `dustMapPipe` just wrote — see `drawFrame`'s dust-map pass,
-  // which draws this pipeline right after `dustMapPipe` inside ONE render
-  // pass rather than opening a second pass for it (cheaper on a tile-based
-  // GPU, and the two populations only ever sum into one map). Own module and
-  // pipeline for the usual `layout: 'auto'` reason: it reads `feats`
-  // (binding 3), a binding `dustMapMod` never references, so sharing a
-  // module would fail the group-equivalent check.
-  const dustFeatureMod = makeShader(dustFeatureWgsl, 'galaxy:dustFeature');
-  const dustFeaturePipe = device.createRenderPipeline({
-    label: 'galaxy:dustFeaturePipe',
-    layout: 'auto',
-    vertex: { module: dustFeatureMod, entryPoint: 'vs' },
-    fragment: {
-      module: dustFeatureMod,
       entryPoint: 'fs',
       targets: [{ format: DUST_MAP_FORMAT, blend: ADDITIVE_BLEND }],
     },
@@ -879,10 +836,6 @@ export async function createGalaxyEngine(
   // Floored well above 0 so a disc-less galaxy (diskScaleLen 0) can't
   // collapse the geometric slice spacing below to a degenerate 0-width band.
   let currentDustReachR = DUST_REACH_FLOOR;
-  // The detail-tier dust splat network (design doc N1/N2 #1), CENTRAL galaxy
-  // only like `dustMixture` above, cached + rebuilt on the same two triggers
-  // (`setParams`, `setFieldTuning`) — see `rebuildDustFeatures`.
-  let dustFeatures: readonly GalaxyDustFeature[] = [];
   // `(params.seed ?? 0) | 0 || 1` is `packGenerationUniforms`'s own seed
   // normalisation; cached here for the same reason `currentDust` is — a
   // `setFieldTuning` rebuild has no `GalaxyParams` of its own to re-read it from.
@@ -921,12 +874,11 @@ export async function createGalaxyEngine(
   // `splatBG`/`dustPresentBG` rebuild again whenever `dustMapTex` itself is
   // recreated (`buildDustMapTarget`, on every resize).
   // Bindings 4/5 (dustNoiseTex/dustNoiseSmp) go ONLY here: dustMap.wesl is
-  // the one shader among the four that share io.wesl (splat/dustMap/
-  // dustFeature/dustPresent) that actually imports them — `layout: 'auto'`
-  // derives each pipeline's bind-group layout from what its OWN shader
-  // references, so `dustFeatureBG` below stays its existing two-entry shape
-  // untouched. `dustPresentBG` doesn't even import io.wesl (its own tiny
-  // module declares `dustMapTex` at binding 0 directly), so it was never in
+  // the one shader among the three that share io.wesl (splat/dustMap/
+  // dustPresent) that actually imports them — `layout: 'auto'` derives each
+  // pipeline's bind-group layout from what its OWN shader references.
+  // `dustPresentBG` doesn't even import io.wesl (its own tiny module
+  // declares `dustMapTex` at binding 0 directly), so it was never in
   // scope for this either. Binding 6 (dustMapSmp) goes ONLY into `splatBG`
   // below, for the mirror-image reason: splat.wesl's fs is the one reader
   // that samples `dustMapTex` through a filtered UV rather than a 1:1 load —
@@ -941,21 +893,6 @@ export async function createGalaxyEngine(
         { binding: 1, resource: { buffer: fieldCompsBuf } },
         { binding: 4, resource: dustNoiseTex.createView() },
         { binding: 5, resource: dustNoiseSampler },
-      ],
-    });
-  }
-  // `dustFeatureBG` reads `fieldUbo` + `fieldFeatsBuf` only (dustFeature.wesl
-  // never references `comps` or `dustMapTex`), so — like `dustMapBG` — it can
-  // build eagerly here rather than waiting on `buildDustMapTarget()`. `let`:
-  // rebuilds whenever `repackFieldFeatures` grows `fieldFeatsBuf`.
-  let dustFeatureBG = buildDustFeatureBindGroup();
-  function buildDustFeatureBindGroup(): GPUBindGroup {
-    return device.createBindGroup({
-      label: 'galaxy:dustFeatureBG',
-      layout: dustFeaturePipe.getBindGroupLayout(0),
-      entries: [
-        { binding: 0, resource: { buffer: fieldUbo } },
-        { binding: 3, resource: { buffer: fieldFeatsBuf } },
       ],
     });
   }
@@ -1015,10 +952,9 @@ export async function createGalaxyEngine(
    * optical-depth channels (io.wesl's dustSlices doc) accumulated for the
    * primary galaxy's dust slice. Sized to ITS OWN divisor,
    * `reducedSize(render.dustDivisor)` — much finer than fieldTex's, because
-   * the dust splat (particle cloud + lane/spur/bubble/bead network) carries
-   * far higher-frequency structure than the smooth emission field it used to
-   * share a target with (that sharing once decimated thin lanes into beads —
-   * see `buildDustMapTarget`). dustPresent.wesl (the JWST view) still reads
+   * the dust splat carries far higher-frequency structure than the smooth
+   * emission field it used to share a target with (that sharing once
+   * decimated thin lanes into beads — see `buildDustMapTarget`). dustPresent.wesl (the JWST view) still reads
    * it via a 1:1 `input.pos.xy` texel lookup, but into its OWN divisor-
    * matched target (`dustViewTex`, not `fieldTex` — see `buildDustViewTarget`);
    * splat.wesl's fs, which runs at fieldTex's coarser resolution, instead
@@ -1245,9 +1181,6 @@ export async function createGalaxyEngine(
   let fieldEmissionCount = 0;
   let fieldPrimaryCount = 0;
   let fieldDustCount = 0;
-  // The live count from the last `repackFieldFeatures` pack — `drawFrame`'s
-  // own detail-tier draw call instance count (io.wesl's counts2.x).
-  let fieldFeatCount = 0;
 
   /**
    * rebuildDustMixture — the central galaxy's dust mixture from the CACHED
@@ -1261,10 +1194,10 @@ export async function createGalaxyEngine(
    * The particle cloud (`buildDustParticleCloud`) rides the SAME slot: it is
    * volumetric detail layered on the flat lane, drawn through the identical
    * dustMap splat pipeline, so appending it here — rather than threading a
-   * third mixture through `repackFieldComponents` — is what lets `dustCount`
-   * downstream stay a single number. `currentSeed`, not a literal, for the
-   * same reason `rebuildDustFeatures` below reads it: both need this galaxy's
-   * placement to be reproducible from `setParams`'s params alone.
+   * second mixture through `repackFieldComponents` — is what lets `dustCount`
+   * downstream stay a single number. `currentSeed`, not a literal, so this
+   * galaxy's particle placement is reproducible from `setParams`'s params
+   * alone.
    *
    * Also rebuilds `currentDustNoise` (io.wesl's `dustNoise` lane): the lane
    * mixture's own length becomes `cloudOffset` (where the particle cloud
@@ -1315,21 +1248,6 @@ export async function createGalaxyEngine(
   }
 
   /**
-   * rebuildDustFeatures — the detail-tier splat network (lanes, spurs,
-   * bubbles, beads) from the same cached geometry + dust params
-   * `rebuildDustMixture` reads, plus `currentSeed` (the network's placement
-   * is seeded, unlike the flat lane). Same two call sites, same
-   * `dustEnabled` gate: there is no separate "network enabled" toggle
-   * (design doc Q9's master pill covers both tiers).
-   */
-  function rebuildDustFeatures(): void {
-    dustFeatures =
-      fieldGeometry && fieldTuning.dustEnabled
-        ? buildDustNetworkFeatures(fieldGeometry, currentDust, currentSeed)
-        : [];
-  }
-
-  /**
    * repackFieldComponents — flattens the central galaxy's emission mixture,
    * every extra's (each already carried into world space by
    * `transformGalaxyFieldComponent` at the point it was built), then the
@@ -1371,29 +1289,6 @@ export async function createGalaxyEngine(
     }
     if (total > 0) {
       device.queue.writeBuffer(fieldCompsBuf, 0, packFieldComponents(combined));
-    }
-  }
-
-  /**
-   * repackFieldFeatures — rewrites `fieldFeatsBuf` from `dustFeatures`
-   * (CENTRAL galaxy only — design doc Q6, no per-extra concatenation the way
-   * `repackFieldComponents` does). Same grow-only discipline, called from the
-   * same two sites right after `rebuildDustFeatures`.
-   */
-  function repackFieldFeatures(): void {
-    fieldFeatCount = dustFeatures.length;
-    if (fieldFeatCount > fieldFeatsCapacity) {
-      fieldFeatsCapacity = fieldFeatCount;
-      fieldFeatsBuf.destroy();
-      fieldFeatsBuf = device.createBuffer({
-        label: 'galaxy:fieldFeats',
-        size: fieldFeatsCapacity * FIELD_FEATURE_FLOATS * 4,
-        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-      });
-      dustFeatureBG = buildDustFeatureBindGroup();
-    }
-    if (fieldFeatCount > 0) {
-      device.queue.writeBuffer(fieldFeatsBuf, 0, packFieldFeatures(dustFeatures));
     }
   }
 
@@ -1482,8 +1377,6 @@ export async function createGalaxyEngine(
     currentSeed = (p.seed ?? 0) | 0 || 1;
     rebuildDustMixture();
     repackFieldComponents();
-    rebuildDustFeatures();
-    repackFieldFeatures();
 
     const enc = device.createCommandEncoder({ label: 'galaxy:generate' });
     encodeGeneration({
@@ -1538,9 +1431,9 @@ export async function createGalaxyEngine(
   // in world space via `transformGalaxyFieldComponent` before `comps` is
   // repacked.
   //
-  // Also rebuilds `dustMixture` and `dustFeatures` (central galaxy only —
-  // see `rebuildDustMixture`/`rebuildDustFeatures`), which is how a
-  // `dustEnabled` toggle takes effect without a regenerate.
+  // Also rebuilds `dustMixture` (central galaxy only — see
+  // `rebuildDustMixture`), which is how a `dustEnabled` toggle takes effect
+  // without a regenerate.
   function setFieldTuning(patch: Partial<GalaxyFieldTuning>): void {
     fieldTuning = { ...fieldTuning, ...patch };
     if (fieldGeometry) fieldMixture = buildGalaxyFieldMixture(fieldGeometry, fieldTuning);
@@ -1552,8 +1445,6 @@ export async function createGalaxyEngine(
     }));
     rebuildDustMixture();
     repackFieldComponents();
-    rebuildDustFeatures();
-    repackFieldFeatures();
   }
 
   // Replace the set of background galaxies. Each extra is generated GPU-side
@@ -2102,7 +1993,6 @@ export async function createGalaxyEngine(
       fieldEmissionCount,
       fieldDustCount,
       fieldPrimaryCount,
-      fieldFeatCount,
       // dustMapTex's own pixel height — reducedSize(render.dustDivisor)[1],
       // the extent buildDustMapTarget now sizes the texture to (its own
       // divisor, independent of fieldTex's). Read by dustMap.wesl's dust-noise
@@ -2184,15 +2074,11 @@ export async function createGalaxyEngine(
     // target buys: no tile reload, and the timing slot is then honest.
     if (render.analyticField) {
       // Dust-column map: splat the primary's dust slice into `dustMapTex`, at
-      // its own divisor-matched resolution — Gaussian dust splats
-      // (`dustMapPipe`) then the detail-tier feature network
-      // (`dustFeaturePipe`), both additive into the same target, ONE render
-      // pass with two pipelines rather than two passes (cheaper on a
-      // tile-based GPU; the two populations only ever sum together, never
-      // separately). Feeds splat.wesl's fs (the grey/RGB split) when the
-      // JWST view is off, or IS the presented image when it's on — so it has
-      // to run whenever any consumer needs it: `dustView` (the image
-      // itself), a nonzero dust slice, or a nonzero feature count.
+      // its own divisor-matched resolution (`dustMapPipe`, additive). Feeds
+      // splat.wesl's fs (the grey/RGB split) when the JWST view is off, or
+      // IS the presented image when it's on — so it has to run whenever any
+      // consumer needs it: `dustView` (the image itself) or a nonzero dust
+      // slice.
       //
       // `dustMapPopulated` is what makes skipping SAFE, and it is load-bearing:
       // a skipped pass leaves whatever the last frame wrote, and the texture is
@@ -2202,7 +2088,7 @@ export async function createGalaxyEngine(
       // bound, and splat.wesl goes on attenuating with dust that no longer
       // exists. One clearing pass on the transition costs a clear; getting it
       // wrong reads as "the dust never regenerates".
-      const dustMapHasContent = fieldDustCount > 0 || fieldFeatCount > 0;
+      const dustMapHasContent = fieldDustCount > 0;
       if (dustMapHasContent || render.dustView || dustMapPopulated) {
         const dustMapWrites = timing.descriptorFor('dustMap');
         const dustMapPass = enc.beginRenderPass({
@@ -2220,11 +2106,6 @@ export async function createGalaxyEngine(
         dustMapPass.setPipeline(dustMapPipe);
         dustMapPass.setBindGroup(0, dustMapBG);
         dustMapPass.draw(6, fieldDustCount);
-        if (fieldFeatCount > 0) {
-          dustMapPass.setPipeline(dustFeaturePipe);
-          dustMapPass.setBindGroup(0, dustFeatureBG);
-          dustMapPass.draw(6, fieldFeatCount);
-        }
         dustMapPass.end();
         dustMapPopulated = dustMapHasContent;
       }
@@ -2502,7 +2383,6 @@ export async function createGalaxyEngine(
       dustUbo.destroy();
       fieldUbo.destroy();
       fieldCompsBuf.destroy();
-      fieldFeatsBuf.destroy();
       dustNoiseTex.destroy();
       gradeBuf.destroy();
       ro.disconnect();

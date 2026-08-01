@@ -30,12 +30,8 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   // dustMapTex now carries four depth-sliced optical depths (io.wesl's
   // dustSlices doc), not one column — this presentation has no notion of
   // depth, so it sums them back into the total tau a single-column map
-  // would have held. Bubbles (dustFeature.wesl kind 1) write a SIGNED tau
-  // into whichever ONE slice contains their depth — clamp each channel
-  // here too, same reason as splat.wesl's fs: a nested overshoot must
-  // present as clean dust, never as a negative (nonsensical for this
-  // palette) column.
-  let texel = max(textureLoad(dustMapTex, coord, 0), vec4<f32>(0.0));
+  // would have held.
+  let texel = textureLoad(dustMapTex, coord, 0);
   let tau = texel.x + texel.y + texel.z + texel.w;
 
   // Presentation palette, NOT physics: intensity saturates smoothly with

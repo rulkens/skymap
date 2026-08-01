@@ -1,14 +1,19 @@
 /**
- * GalaxyDustCloudParams — the structured 3D dust particle cloud layered
- * under the flat dust-feature tier: thousands of small anisotropic
- * Gaussians standing in for individual GMC/cloud complexes, giving the dust
- * field actual volumetric depth instead of plane-crossing quads.
- * See `dustParticleCloud.ts` for the size/mass/placement model.
+ * GalaxyDustCloudParams — the structured 3D dust particle cloud layered on
+ * the smooth analytic dust lane: thousands of small anisotropic Gaussians
+ * standing in for individual GMC/cloud complexes, giving the dust field
+ * actual volumetric depth. See `dustParticleCloud.ts` for the
+ * size/mass/placement model.
+ *
+ * The arm-lane group at the end (`armContrast` onward) describes the lane
+ * the particles are SEEDED on rather than the particles themselves; they
+ * live here because the cloud is their only client. Refiners are
+ * ×measured-default scalers where 1.0 reproduces the literature value.
  */
 export type GalaxyDustCloudParams = {
   /** Particle budget. 0 disables the cloud entirely. */
   readonly count: number;
-  /** 0..1 share of the galaxy's total tau carried by particles rather than the smooth field + flat features. */
+  /** 0..1 share of the galaxy's total tau carried by particles rather than the smooth field. */
   readonly share: number;
   /** 0..1 share of particles seeded on the arm dust lanes; the rest follow the smooth disc profile. */
   readonly armBias: number;
@@ -30,4 +35,12 @@ export type GalaxyDustCloudParams = {
   readonly textureScale: number;
   /** Shapes the erosion noise about its own midpoint — 1 = identity, higher = harder filament edges (dustMap.wesl's `dustNoiseMultiplier`). */
   readonly textureContrast: number;
+  /** Molecular arm/interarm contrast (measured ~2–5); deliberately larger than the stellar K≈1.3. */
+  readonly armContrast: number;
+  /** Star-formation event rate scale; drives the bubble catalog now, HII knots later. */
+  readonly sfActivity: number;
+  readonly laneWidth: number;
+  /** Density-wave shock displacement from the stellar ridge. */
+  readonly laneOffset: number;
+  readonly bubbleScale: number;
 };

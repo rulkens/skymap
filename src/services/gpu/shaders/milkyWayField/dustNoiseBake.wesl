@@ -16,11 +16,9 @@
 // tileUnits. A non-tiling bake would show a hard seam at every tile
 // boundary — the one defect here that looks broken and isn't a quick fix.
 //
-// The hash lives in this file rather than growing lib/valueNoise.wesl
-// (1D only) or lib/util.wesl's hash21/valueNoise2 (2D, non-tileable,
-// tuned for screen-space dither) into a third variant for this one 3D
-// tileable consumer — see valueNoise.wesl's own header for the same call
-// against flow.wesl's hash.
+// The hash lives in this file rather than growing lib/util.wesl's
+// hash21/valueNoise2 (2D, non-tileable, tuned for screen-space dither) into
+// a second variant for this one 3D tileable consumer.
 
 @group(0) @binding(0) var dst: texture_storage_3d<rgba8unorm, write>;
 

@@ -27,10 +27,7 @@ export const DEFAULT_UI_STATE: UiState = {
     // Expanded, same rationale as `armField`/`field`: the analytic dust lane
     // is the current work, not a settings drawer to tuck away.
     analyticDust: true,
-    // Expanded, same rationale as `analyticDust`: the filament/bubble network
-    // is the current work.
-    dustNetwork: true,
-    // Expanded, same rationale as `dustNetwork`: the particle cloud is the
+    // Expanded, same rationale as `analyticDust`: the particle cloud is the
     // current work.
     dustCloud: true,
     glob: false,
