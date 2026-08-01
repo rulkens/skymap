@@ -45,7 +45,7 @@ export function* watchOrientationChangeSaga() {
 
     yield* put(
       startFrameTween({
-        fromQuat: runtime.frameBasisQuat,
+        fromQuat: runtime.upBasisQuat,
         to: frame,
         durationMs: FRAME_TWEEN_MS,
         easing: 'easeInOutCubic',

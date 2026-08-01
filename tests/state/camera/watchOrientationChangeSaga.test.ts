@@ -59,7 +59,7 @@ describe('watchOrientationChangeSaga', () => {
       middleware: (getDefault) => getDefault().concat(middleware),
     });
     middleware.run(watchOrientationChangeSaga);
-    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, frameBasisQuat: LIVE_QUAT });
+    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, upBasisQuat: LIVE_QUAT });
     middleware.setContext({ cameraRuntime: () => cameraRuntime() });
     return created;
   }
@@ -127,7 +127,7 @@ describe('watchOrientationChangeSaga', () => {
     // re-encode reads; if it were, the eye would jump (see task-6-report.md).
     expect(LIVE_BASIS).not.toEqual(ORIENTATION_FRAMES.galactic);
     expect(LIVE_BASIS).not.toEqual(ORIENTATION_FRAMES.supergalactic);
-    cameraRuntime = () => ({ from: afterFirstSwitch, fovYRad: 0.8, frameBasisQuat: LIVE_QUAT });
+    cameraRuntime = () => ({ from: afterFirstSwitch, fovYRad: 0.8, upBasisQuat: LIVE_QUAT });
 
     const correctDir = worldEyeDir(afterFirstSwitch, ORIENTATION_FRAMES.galactic);
     const wrongDir = worldEyeDir(afterFirstSwitch, LIVE_BASIS);

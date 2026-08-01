@@ -81,7 +81,7 @@ function makeStore() {
  * cue-by-cue during real playback.
  *
  * The `cameraRuntime` stub only needs to satisfy `frameTo`'s
- * `liveFrameBasisQuat` read (`upBasis.current`, an identity Mat3 is fine —
+ * `liveUpBasisQuat` read (`upBasis.current`, an identity Mat3 is fine —
  * the roll's seed quaternion is not under test here).
  */
 function fireFrameToCues(store: ReturnType<typeof makeStore>, clip: ClipData | undefined): void {

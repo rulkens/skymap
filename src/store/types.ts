@@ -72,12 +72,12 @@ export type RunTierTransition = (prevTier: Tier, nextTier: Tier) => void;
  * loop. `watchFocusTweenSaga` seeds a camera tween from the visible `from` pose
  * (what the user sees this frame, so a re-focus hands off smoothly) and the
  * projection FOV (the structure arm frames a cluster to screen-fill).
- * `watchOrientationChangeSaga` seeds a frame roll from `frameBasisQuat`: the
+ * `watchOrientationChangeSaga` seeds a frame roll from `upBasisQuat`: the
  * up-basis quaternion resolved THIS frame, so a re-switch mid-slerp composes
  * continuously instead of snapping the pole back to the committed frame. The
  * name is frame-agnostic (not `Focus…`) because both sagas share the snapshot.
  */
-export type LiveCameraRuntime = { from: CameraPose; fovYRad: number; frameBasisQuat: Vec4 };
+export type LiveCameraRuntime = { from: CameraPose; fovYRad: number; upBasisQuat: Vec4 };
 /**
  * The debug clip-path inspector seam — the non-reactive bridge the
  * `watchClipPathInspectSaga` calls to (re)sample a clip's camera route into the

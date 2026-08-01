@@ -57,7 +57,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **`uiSlice` does boot I/O at module load** `needs-design` — `initialState = buildInitialUiState()` reads `window.location` + localStorage on import; make the fallback lazy. → [details](backlog/2026-07-29-uislice-module-load-boot-reads.md)
 - [ ] **URL seam is a `window` singleton** `needs-design` — the whole test suite shares one address bar; make the URL port a registered capability. → [details](backlog/2026-07-30-url-seam-window-singleton.md)
 - [ ] **`buildAliasIndex` is a non-hook in `src/hooks/`** `ready` — pure helper with one importer; `npm run move-files` it to `src/utils/` (test mirror follows).
-- [ ] **`frameBasisQuat` is a half-rename** `ready` — `liveFrameBasisQuat` + `LiveCameraRuntime.frameBasisQuat` kept the old noun when `CameraRuntime.frameBasis` became `upBasis`; finish it.
 - [ ] **`glade-points` throws "Maximum update depth exceeded"** `needs-repro` — React update loop seen once; the 500 ms heartbeat is the suspect but nothing on that branch touches the loading path. → [details](backlog/2026-07-30-glade-points-update-depth-exceeded.md)
 
 ## Rendering
@@ -163,7 +162,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Saga-context boot-ordering argument told nine times** `ready` — one causal chain restated across nine docblocks; keep it in `sagaContextRegistered.ts` and point the rest there. → [details](backlog/2026-07-30-boot-ordering-argument-nine-copies.md)
 - [ ] **Plan `Needs:` lines for wave dispatch** `needs-design` — SDD serializes plans; mined dependency graphs from completed plans understate real depth, so the DAG must be authored, not mined. → [details](backlog/2026-07-31-plan-needs-lines-wave-dispatch.md)
 - [ ] **CLAUDE.md compaction pass** `ready` — the file has grown; tighten it without losing load-bearing content.
-- [ ] **`frameTo` missing from the scene-effects table** `ready` — `clip-primitives.md` documents every other scene cue; the frame-ladder cue shipped undocumented there.
 
 ## External / blocked
 

@@ -43,7 +43,7 @@ describe('watchGoHomeSaga', () => {
     const mw = createSagaMiddleware();
     const s = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(mw) });
     mw.run(watchGoHomeSaga);
-    cameraRuntime = () => ({ from: FROM, fovYRad: FOV, frameBasisQuat: [0, 0, 0, 1] });
+    cameraRuntime = () => ({ from: FROM, fovYRad: FOV, upBasisQuat: [0, 0, 0, 1] });
     mw.setContext({ cameraRuntime: () => cameraRuntime() });
     return s;
   }

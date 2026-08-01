@@ -1,5 +1,5 @@
 /**
- * liveFrameBasisQuat — the live orientation basis B(t) as a unit quaternion
+ * liveUpBasisQuat — the live up-basis B(t) as a unit quaternion
  * (x, y, z, w).
  *
  * `upBasis.current` is the tight 9-float column-major Mat3 `runFrame`
@@ -13,6 +13,6 @@ import type { CameraRuntime } from '../../../@types/engine/state/CameraRuntime';
 import type { Vec4 } from '../../../@types/math/Vec4';
 import { matrixToQuaternion } from '../../../utils/math/matrixToQuaternion';
 
-export function liveFrameBasisQuat(cameraRuntime: CameraRuntime): Vec4 {
+export function liveUpBasisQuat(cameraRuntime: CameraRuntime): Vec4 {
   return matrixToQuaternion(cameraRuntime.upBasis.current);
 }
