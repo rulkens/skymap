@@ -10,11 +10,12 @@
  * PURITY INVARIANT: pure `(geometry, dust, seed) -> flat data`, no
  * Math.random/Date/engine state — a Worker/compute-pass candidate.
  */
+import { armCrossSigma } from './armRidgeGeometry';
 import { buildClusteredDiscPlacement, type CloudFrame } from './clusteredDiscPlacement';
+import { DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './discSurfaceFit';
 import { buildDustBubblePlacements, pcToUnits } from './dustBubblePlacements';
 import { armOffsetFrameAt } from './dustLaneFeatures';
 import { clampedDustCloudShare, dustDiscShape, dustSigmaR } from './galaxyDustMixture';
-import { armCrossSigma, DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './galaxyFieldMixture';
 import { dustExtinctionRgb } from '../../utils/galaxy/dustExtinctionRgb';
 import { inverseCovarianceFromFrame } from '../../utils/galaxy/inverseCovarianceFromFrame';
 import { gaussian } from '../../utils/random/gaussian';

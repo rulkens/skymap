@@ -22,14 +22,9 @@
  * PURITY INVARIANT: pure `(geometry, tuning, totalFlux, seed) -> flat data`,
  * no Math.random/Date/engine state.
  */
+import { armColor, armCrossSigma, armRidgeFrameAt } from './armRidgeGeometry';
 import { buildClusteredDiscPlacement, type CloudFrame } from './clusteredDiscPlacement';
-import {
-  armColor,
-  armCrossSigma,
-  armRidgeFrameAt,
-  DISC_SIGMA_RATIOS,
-  DISC_SURFACE_WEIGHTS,
-} from './galaxyFieldMixture';
+import { DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './discSurfaceFit';
 import { discLightScaleLength } from '../../utils/galaxy/discLightScaleLength';
 import { inverseCovarianceFromFrame } from '../../utils/galaxy/inverseCovarianceFromFrame';
 import { mulberry32 } from '../../utils/random/mulberry32';

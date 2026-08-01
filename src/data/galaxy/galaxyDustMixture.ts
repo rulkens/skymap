@@ -5,10 +5,11 @@
  * Measured anchors, cited in full on `GalaxyDustParams`: scale-length ratio
  * 1.4-1.75, height ratio 0.25-0.75, central face-on tau_V 0.5-1.
  */
+import { armCrossSigma } from './armRidgeGeometry';
+import { DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './discSurfaceFit';
 import { armCarriedFraction } from '../../utils/galaxy/armCarriedFraction';
 import { discLightScaleLength } from '../../utils/galaxy/discLightScaleLength';
 import { dustExtinctionRgb } from '../../utils/galaxy/dustExtinctionRgb';
-import { armCrossSigma, DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './galaxyFieldMixture';
 import type { GalaxyDustNetworkParams } from '../../@types/galaxy/GalaxyDustNetworkParams';
 import type { GalaxyDustParams } from '../../@types/galaxy/GalaxyDustParams';
 import type { GalaxyFieldComponent } from '../../@types/galaxy/GalaxyFieldComponent';

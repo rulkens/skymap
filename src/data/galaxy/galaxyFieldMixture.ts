@@ -7,14 +7,23 @@
  * Each sigma mirrors a `galaxyGen/generate.wesl` builder, cited on the line;
  * each amplitude is an emission share over the component's own Gaussian
  * volume, scaled to the sprite field's total flux (see `emissionScale`).
- * Colours stay eyeball values. Imports `armParticleCloud.ts`, which imports
- * back (ridge helpers) — both sides only touch it inside function bodies,
- * never at module-eval time, so the cycle resolves; it exists so the arm
- * cloud's component budget can be reserved before the ridge chain spends it,
- * with no third caller (the engine) to reserve it for them instead.
+ * Colours stay eyeball values. Imports `armParticleCloud.ts` to reserve the
+ * arm cloud's component budget before the ridge chain spends it, with no
+ * third caller (the engine) to reserve it for them instead — the shared
+ * ridge-curve/width/colour vocabulary both sides need lives in
+ * `armRidgeGeometry.ts`, so this import is one-directional.
  */
 
 import { ARM_CLOUD_MAX_COUNT, buildArmParticleCloud } from './armParticleCloud';
+import {
+  armColor,
+  armCrossSigma,
+  armFadeEnvelope,
+  armRidgeCurvePoint,
+  armRidgeFrameAt,
+  cross3,
+} from './armRidgeGeometry';
+import { DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './discSurfaceFit';
 import { discLightScaleLength } from '../../utils/galaxy/discLightScaleLength';
 import { discWarpShear } from '../../utils/galaxy/discWarpShear';
 import { galaxyFieldInverseCovariance } from '../../utils/galaxy/galaxyFieldInverseCovariance';
@@ -131,23 +140,6 @@ const DISC_BRIGHTNESS = 1.35;
 const BULGE_BRIGHTNESS = 0.85;
 const BAR_BRIGHTNESS = 0.9;
 const HALO_BRIGHTNESS = 0.5;
-
-/**
- * A sum of Gaussians fitted (ridge-regularised NNLS) to exp(-R/h) over R in
- * [0, 7h]: sigmas in units of h, weights as central surface densities, both
- * dimensionless so the fit re-scales to any disc. Flux-weighted (by R, then
- * by the target itself so the R~1h peak doesn't swamp the faint R>5h tail)
- * and constrained to sum(weight_i * sigma_i^2) == 1, matching this mixture's
- * flux to the exponential's, over the FULL six-term fit — sigma ratios 3.4
- * and 5.0 are no longer rendered as origin-centred blobs here (see
- * `pushWarpedOuterDisc`), but their weight share still anchors that
- * function's flux budget, so only the surviving four are listed.
- *
- * Exported: `galaxyDustMixture.ts` reuses this exact fit, evaluated at the
- * dust disc's own scale length — same dimensionless profile, different h.
- */
-export const DISC_SIGMA_RATIOS = [0.35, 0.65, 1.15, 1.9] as const;
-export const DISC_SURFACE_WEIGHTS = [0.1667, 0.3065, 0.2131, 0.1365] as const;
 
 /** `buildDisk`'s vertical flare: diskHeight * (0.6 + bulgeRadius/(R + bulgeRadius)). */
 const DISC_FLARE_FLOOR = 0.6;
@@ -412,129 +404,8 @@ function pushWarpedOuterDisc(
   return totalFlux;
 }
 
-/** Hot blue-white, nudged bluer with youngFraction — eyeball, echoing tempColorRamp(0.6 + 0.36*youngFraction)'s direction without matching its curve. */
-const ARM_COLOR_OLD: Readonly<Vec3> = [0.8, 0.86, 1.0];
-const ARM_COLOR_YOUNG: Readonly<Vec3> = [0.65, 0.78, 1.0];
-
-/** Exported so `armParticleCloud.ts`'s sprites match the ridge chain's own colour exactly, rather than re-deriving it. */
-export function armColor(youngFraction: number): Vec3 {
-  const t = Math.min(1, Math.max(0, youngFraction));
-  return [
-    ARM_COLOR_OLD[0] + (ARM_COLOR_YOUNG[0] - ARM_COLOR_OLD[0]) * t,
-    ARM_COLOR_OLD[1] + (ARM_COLOR_YOUNG[1] - ARM_COLOR_OLD[1]) * t,
-    ARM_COLOR_OLD[2] + (ARM_COLOR_YOUNG[2] - ARM_COLOR_OLD[2]) * t,
-  ];
-}
-
-function normalize3(v: Vec3): Vec3 {
-  const len = Math.hypot(v[0], v[1], v[2]) || 1;
-  return [v[0] / len, v[1] / len, v[2] / len];
-}
-
-function cross3(a: Vec3, b: Vec3): Vec3 {
-  return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
-}
-
 function distance3(a: Vec3, b: Vec3): number {
   return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
-}
-
-function smoothstep01(t: number): number {
-  const c = Math.min(1, Math.max(0, t));
-  return c * c * (3 - 2 * c);
-}
-
-// Exported so the SF-event catalog (`sfEventCatalog.ts`) and the dust network
-// share the same ridge truth by import, not by re-deriving the curve.
-/** armStarSample's ridge angle: log-spiral phase + meander + (gated) high-frequency wave. */
-export function armRidgeAngle(
-  logR: number,
-  geometry: GalaxyFieldGeometry,
-  arm: GalaxyFieldArmRecord,
-): number {
-  const angle =
-    arm.phase +
-    arm.pitch * logR +
-    arm.meanderAmp * Math.sin(arm.meanderFreq * logR * 2 + arm.meanderPhase);
-  // waveAmount is 0 for most presets, in which case this term is 0 too — no
-  // separate gate needed, unlike the WGSL source's `if` (a branch that only
-  // exists there to skip four sin() calls per star).
-  return (
-    angle +
-    geometry.waveAmount *
-      (Math.sin(arm.waveF1 * logR + arm.waveP1) * 0.16 +
-        Math.sin(arm.waveF2 * logR + arm.waveP2) * 0.09)
-  );
-}
-
-/**
- * Ridge position at a given log-radius — armStarSample's `x`/`y`/`z` before
- * scatter, the exact curve blobs are placed on. Shared by the dense
- * curvature sample (`deriveArmBlobCount`) and the actual placement below so
- * both agree on what "the ridge" is by construction, not by staying in sync.
- */
-export function armRidgeCurvePoint(
-  logR: number,
-  geometry: GalaxyFieldGeometry,
-  arm: GalaxyFieldArmRecord,
-): Vec3 {
-  const radius = geometry.armStartRadius * Math.exp(logR);
-  const angle = armRidgeAngle(logR, geometry, arm);
-  return [radius * Math.cos(angle), warpHeight(radius, angle, geometry), radius * Math.sin(angle)];
-}
-
-/** The arm's true warped centre at a given radius — see `armRidgeCurvePoint`. */
-function armCurvePos(
-  radius: number,
-  geometry: GalaxyFieldGeometry,
-  arm: GalaxyFieldArmRecord,
-): Vec3 {
-  return armRidgeCurvePoint(Math.log(radius / geometry.armStartRadius), geometry, arm);
-}
-
-export type ArmRidgeFrame = { readonly point: Vec3 } & {
-  readonly along: Vec3;
-  readonly across: Vec3;
-  readonly pole: Vec3;
-};
-
-/**
- * The ridge's own orthonormal frame at a log-radius — `point` is
- * `armRidgeCurvePoint`, `along` its tangent (central difference, matching
- * `armOffsetFrameAt`'s in `dustLaneFeatures.ts`), `across`/`pole` the
- * surface-tangent pair Gram-Schmidt'd off it. Shared by `pushArmRidges`' own
- * per-blob placement and `armParticleCloud.ts`'s lane-frame provider, so
- * both agree on what "the ridge" is by construction rather than by staying
- * in sync across two copies. Unlike `armOffsetFrameAt`, there is no lane
- * offset here — this IS the ridge, not the dust lane hugging its inner edge.
- */
-export function armRidgeFrameAt(
-  logR: number,
-  geometry: GalaxyFieldGeometry,
-  arm: GalaxyFieldArmRecord,
-): ArmRidgeFrame {
-  const radius = geometry.armStartRadius * Math.exp(logR);
-  const angle = armRidgeAngle(logR, geometry, arm);
-  const point = armRidgeCurvePoint(logR, geometry, arm);
-  const ahead = armCurvePos(radius * 1.01, geometry, arm);
-  const behind = armCurvePos(radius * 0.99, geometry, arm);
-  const along = normalize3([ahead[0] - behind[0], ahead[1] - behind[1], ahead[2] - behind[2]]);
-  const surfacePole = warpSurfaceFrame(radius, angle, geometry).pole;
-  const across = normalize3(cross3(surfacePole, along));
-  const pole = cross3(along, across); // re-orthonormalise: surfacePole need not be perpendicular to `along`
-  return { point, along, across, pole };
-}
-
-/** armStarSample's inner/outer smoothstep brightness envelope, this arm's own fadeRadius (rec0.w). */
-export function armFadeEnvelope(
-  radius: number,
-  geometry: GalaxyFieldGeometry,
-  arm: GalaxyFieldArmRecord,
-): number {
-  const innerT = (radius - geometry.armStartRadius) / geometry.armInnerRampW;
-  const outerT =
-    (radius - geometry.armFullRadius) / Math.max(0.001, arm.fadeRadius - geometry.armFullRadius);
-  return smoothstep01(innerT) * (1 - smoothstep01(outerT));
 }
 
 /** armStarSample's along-arm low-frequency modulation; 1 (no modulation) when clumpAmount is 0. */
@@ -553,28 +424,6 @@ function armClumpMod(
 /** armStarSample's gap-survival fraction for non-HII stars — the smooth stand-in for the WGSL gate's coin flip. */
 function armSurvival(clumpMod: number, geometry: GalaxyFieldGeometry): number {
   return geometry.clumpAmount > 0 ? Math.min(1, 0.4 + 0.6 * clumpMod) : 1;
-}
-
-/**
- * Reid et al. 2019's measured Milky Way maser-arm width law, w(R) = 336 pc +
- * 36 pc/kpc x (R - 8.15 kpc), re-expressed in units of the disc scale length
- * (h = 2.605 kpc for the MW) so it scales to any galaxy: w/h = FLOOR_H +
- * SLOPE*(R/h), i.e. w = FLOOR_H*h + SLOPE*R. This is the width of the YOUNG
- * maser arm — a verified floor for old-star arms, with `tuning.armWidthScale`
- * carrying any old-population broadening (1 = the measured law exactly).
- */
-const ARM_WIDTH_FLOOR_H = 0.017;
-const ARM_WIDTH_SLOPE = 0.036;
-
-/** This arm's cross-section sigma at a radius — same formula the blob placement's `sigmas.across` uses. */
-export function armCrossSigma(
-  radius: number,
-  geometry: GalaxyFieldGeometry,
-  tuning: GalaxyFieldTuning,
-): number {
-  return (
-    (ARM_WIDTH_FLOOR_H * geometry.diskScaleLen + ARM_WIDTH_SLOPE * radius) * tuning.armWidthScale
-  );
 }
 
 /** Points to densely re-sample the ridge at, to estimate curvature — see `deriveArmBlobCount`. */

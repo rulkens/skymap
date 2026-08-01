@@ -16,8 +16,8 @@
  *
  * PURITY INVARIANT: pure given its `rng`, no Math.random/Date/engine state.
  */
+import { armFadeEnvelope } from './armRidgeGeometry';
 import { armAgeWeight } from './dustLaneFeatures';
-import { armFadeEnvelope } from './galaxyFieldMixture';
 import { warpSurfaceFrame } from '../../utils/galaxy/warpSurfaceFrame';
 import { gaussian } from '../../utils/random/gaussian';
 import type { GalaxyFieldArmRecord } from '../../@types/galaxy/GalaxyFieldArmRecord';

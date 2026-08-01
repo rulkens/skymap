@@ -15,15 +15,15 @@
  * every bit of variation comes from `seed`. Violating this makes a repack
  * order-dependent in a way that would only show up as a flicker in the field.
  */
-import { discLightScaleLength } from '../../utils/galaxy/discLightScaleLength';
-import { armCarriedFraction } from '../../utils/galaxy/armCarriedFraction';
-import { warpSurfaceFrame } from '../../utils/galaxy/warpSurfaceFrame';
 import {
   armCrossSigma,
   armFadeEnvelope,
   armRidgeAngle,
   armRidgeCurvePoint,
-} from './galaxyFieldMixture';
+} from './armRidgeGeometry';
+import { discLightScaleLength } from '../../utils/galaxy/discLightScaleLength';
+import { armCarriedFraction } from '../../utils/galaxy/armCarriedFraction';
+import { warpSurfaceFrame } from '../../utils/galaxy/warpSurfaceFrame';
 import { dustFaceOnColumn } from './galaxyDustMixture';
 import type { GalaxyDustFeature } from '../../@types/galaxy/GalaxyDustFeature';
 import type { GalaxyDustParams } from '../../@types/galaxy/GalaxyDustParams';

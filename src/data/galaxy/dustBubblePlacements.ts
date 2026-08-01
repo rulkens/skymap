@@ -7,8 +7,8 @@
  * PURITY INVARIANT: pure `(geometry, dust, seed) -> flat data`, no engine
  * state, no Math.random — same discipline as `sfEventCatalog.ts`.
  */
+import { armFadeEnvelope, armRidgeAngle, armRidgeCurvePoint } from './armRidgeGeometry';
 import { armAgeWeight, armLaneWidthAndAmplitude } from './dustLaneFeatures';
-import { armFadeEnvelope, armRidgeAngle, armRidgeCurvePoint } from './galaxyFieldMixture';
 import { buildSfEventCatalog } from './sfEventCatalog';
 import { warpSurfaceFrame } from '../../utils/galaxy/warpSurfaceFrame';
 import type { GalaxyDustParams } from '../../@types/galaxy/GalaxyDustParams';

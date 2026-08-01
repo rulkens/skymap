@@ -230,9 +230,9 @@ import { readGalaxyFieldGeometry } from '../../../../src/services/gpu/galaxy/rea
 import {
   buildGalaxyFieldMixture,
   DEFAULT_GALAXY_FIELD_TUNING,
-  DISC_SIGMA_RATIOS,
   GALAXY_FIELD_MAX_COMPONENTS,
 } from '../../../../src/data/galaxy/galaxyFieldMixture';
+import { DISC_SIGMA_RATIOS } from '../../../../src/data/galaxy/discSurfaceFit';
 import {
   buildGalaxyDustMixture,
   dustDiscShape,

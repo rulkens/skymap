@@ -24,6 +24,7 @@
  * instead of losing a priority fight.
  */
 import { mulberry32 } from '../../utils/random/mulberry32';
+import { armFadeEnvelope } from './armRidgeGeometry';
 import { buildDustBubblePlacementDetails, pcToUnits } from './dustBubblePlacements';
 import {
   armAgeWeight,
@@ -36,7 +37,6 @@ import {
   NOISE_WAVELENGTH_FRACTION,
   TAPER_FRACTION,
 } from './dustLaneFeatures';
-import { armFadeEnvelope } from './galaxyFieldMixture';
 import { dustFaceOnColumn } from './galaxyDustMixture';
 import type { ArmOffsetFrame } from './dustLaneFeatures';
 import type { GalaxyDustFeature } from '../../@types/galaxy/GalaxyDustFeature';

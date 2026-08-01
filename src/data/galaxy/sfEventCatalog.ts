@@ -8,12 +8,8 @@
  * their glow correlate instead of being two independent sprinkles.
  */
 import { mulberry32 } from '../../utils/random/mulberry32';
-import {
-  armCrossSigma,
-  armFadeEnvelope,
-  armRidgeCurvePoint,
-  DEFAULT_GALAXY_FIELD_TUNING,
-} from './galaxyFieldMixture';
+import { armCrossSigma, armFadeEnvelope, armRidgeCurvePoint } from './armRidgeGeometry';
+import { DEFAULT_GALAXY_FIELD_TUNING } from './galaxyFieldMixture';
 import type { GalaxyDustNetworkParams } from '../../@types/galaxy/GalaxyDustNetworkParams';
 import type { GalaxyFieldGeometry } from '../../@types/galaxy/GalaxyFieldGeometry';
 import type { SfEvent } from '../../@types/galaxy/SfEvent';
