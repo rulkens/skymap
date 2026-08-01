@@ -45,8 +45,16 @@ import type { Vec3 } from '../../@types/math/Vec3';
  * before sizing the ridge chain, so a geometry that derives a huge count
  * (see `deriveArmCloudCount`) clamps here rather than overflowing
  * `GALAXY_FIELD_MAX_COMPONENTS`.
+ *
+ * Sized so the COVERAGE knob leads and this stays a backstop across the
+ * slider's range — at 400 the Milky Way preset saturated at coverage ~2.7,
+ * which read as the slider going dead rather than as a budget being hit.
+ * Clustered placement is why coverage has to reach so high: the sampler
+ * huddles `1 + 15*clumpiness` sprites into one complex, so the sprites
+ * `deriveArmCloudCount` counts overlap heavily instead of tiling the arm,
+ * and the covering factor it solves for is only literal at clumpiness 0.
  */
-export const ARM_CLOUD_MAX_COUNT = 400;
+export const ARM_CLOUD_MAX_COUNT = 2000;
 
 /** Sprite radius as a fraction of the LOCAL `armCrossSigma`, drawn uniform — see this module's docblock for why this is a ratio and not an absolute span. */
 const SIZE_MIN_RATIO = 0.35;

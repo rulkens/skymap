@@ -43,11 +43,11 @@ function ArmCloudSection(): ReactNode {
           label="Coverage"
           value={fieldTuning.armCloudCoverage}
           min={0.2}
-          max={4}
-          step={0.05}
+          max={12}
+          step={0.1}
           format={(v) => v.toFixed(2)}
           onChange={(v) => dispatch(fieldTuningPatched({ armCloudCoverage: v }))}
-          info="Sprite count is DERIVED from arm length, width and pitch, not a fixed budget — this scales that derived count. 1 is roughly one sprite-footprint of coverage per unit arm area."
+          info="Sprite count is DERIVED from arm length, width and pitch, not a fixed budget — this scales that derived count. 1 is one sprite-footprint per unit arm area if the sprites were scattered independently; clumpiness piles them into complexes instead, so the setting that actually FILLS an arm is several times higher."
         />
         <ParamSlider
           label="Clumpiness"

@@ -38,21 +38,25 @@ import type { GalaxyFieldTuning } from '../../@types/galaxy/GalaxyFieldTuning';
 import type { Vec3 } from '../../@types/math/Vec3';
 
 /**
- * Uniform slots the shader reserves — `milkyWayField/io.wesl`'s
- * `comps: array<vec4<f32>, 4000>` is 4 vec4 per component, so raising this
- * means widening that array too (the linker will not catch a mismatch).
- * `pushArmRidges` derives its own per-arm blob count from ridge curvature and
- * budgets it against this cap (`perArmBudget`), so arm overflow is impossible
- * by construction; `packFieldUniforms` still CLAMPS silently if some other
- * population pushes past it. Raise the cap and `io.wesl`'s array together or
- * not at all.
+ * PER-GALAXY component cap. Not a shader limit: `io.wesl`'s `comps` is a
+ * runtime-sized `array<vec4<f32>>` storage binding whose backing buffer
+ * `createGalaxyEngine.ts` grows on demand, so this bounds ONE mixture, not
+ * the scene (N background extras sum past it freely).
  *
- * The bound that actually bites is WebGPU's guaranteed 64 KiB uniform
- * binding: header (96 B) + N x 64 B <= 65536 B caps N at 1022, and the
- * fullscreen pass evaluates EVERY component in EVERY fragment (see
- * `buildGalaxyFieldMixture`), so 1000 is a cost ceiling as much as a byte one.
+ * Nor is it a fill-cost ceiling any more: the splat path draws one quad per
+ * component covering only that Gaussian's own silhouette, so cost tracks
+ * covered screen AREA — which the tiers' own coverage/contrast knobs set —
+ * rather than component count. What a component still costs is one instance
+ * and 64 B; the cap exists so a pathological geometry cannot make either
+ * unbounded.
+ *
+ * `pushArmRidges` derives its per-arm blob count from ridge curvature and
+ * budgets it against this cap (`perArmBudget`, net of the arm cloud's
+ * reservation), so arm overflow is impossible by construction;
+ * `packFieldUniforms` still CLAMPS silently if some other population pushes
+ * past it.
  */
-export const GALAXY_FIELD_MAX_COMPONENTS = 1000;
+export const GALAXY_FIELD_MAX_COMPONENTS = 3000;
 
 /** Every population but the outer-disc rings sits at the origin. */
 const ORIGIN: Vec3 = [0, 0, 0];
@@ -768,10 +772,8 @@ const ARM_DISC_DEBIT_CLAMP_FRACTION = 0.5;
  * Component count is `WARP_RING_COUNT * RING_BLOBS_PER_RING` (192, fixed)
  * PLUS each arm's own `deriveArmBlobCount`, individually budget-clamped
  * against `GALAXY_FIELD_MAX_COMPONENTS` so the grand total can never exceed
- * the shader's 1000 — that ceiling is the fixed size of the `comps` uniform
- * array in `milkyWayField/io.wesl` (4000 vec4 slots = 1000 components),
- * unrelated to render cost: the splat path draws one quad per component, so
- * cost tracks covered screen area, not component count. Structure the closed
+ * that per-galaxy cap (see its own docblock for what the cap does and does
+ * not bound). Structure the closed
  * form still cannot carry (the lopsided modulation, sub-arm spurs, the
  * irregular bar offset, HII knots) is folded into the axisymmetric
  * populations or dropped; the warp survives as blob placement
