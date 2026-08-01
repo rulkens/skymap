@@ -110,5 +110,6 @@ export function readGalaxyFieldGeometry(
     arms,
     starSize: f32[F.starSize]!,
     modelledStars: modelled,
+    seed: u32[GENERATION_UBO.u32.seed]!,
   };
 }

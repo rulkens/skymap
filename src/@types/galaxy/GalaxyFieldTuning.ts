@@ -28,6 +28,22 @@ export type GalaxyFieldTuning = {
    * so the ridge breaks into countable oriented blobs. 1 is the real field.
    */
   readonly armBlobSharpness: number;
+  /**
+   * 0..1 share of the arm excess (`pushArmRidges`'s `armExcessFlux`) carried
+   * by stochastic emission sprites (`armParticleCloud.ts`) instead of the
+   * deterministic ridge chain — the two totals still sum to the same excess,
+   * so this redistributes brightness rather than adding any. 0 = today's
+   * ridge-only look.
+   */
+  readonly armCloudShare: number;
+  /** Arm particle-cloud sprite budget, clamped against `ARM_CLOUD_MAX_COUNT`. */
+  readonly armCloudCount: number;
+  /** 0..1 hierarchical clustering for the arm particle cloud — see `GalaxyDustCloudParams.clumpiness` for the same knob on the dust tier. */
+  readonly armCloudClumpiness: number;
+  /** Multiplier on the arm particle cloud's local-cross-section size draw. */
+  readonly armCloudSizeScale: number;
+  /** sigma_along / sigma_across for the arm particle cloud — how stretched each sprite is along its arm. */
+  readonly armCloudElongation: number;
   /** Master toggle for the analytic dust lane's shader loop. */
   readonly dustEnabled: boolean;
 };

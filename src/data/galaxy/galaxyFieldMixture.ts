@@ -7,9 +7,14 @@
  * Each sigma mirrors a `galaxyGen/generate.wesl` builder, cited on the line;
  * each amplitude is an emission share over the component's own Gaussian
  * volume, scaled to the sprite field's total flux (see `emissionScale`).
- * Colours stay eyeball values.
+ * Colours stay eyeball values. Imports `armParticleCloud.ts`, which imports
+ * back (ridge helpers) — both sides only touch it inside function bodies,
+ * never at module-eval time, so the cycle resolves; it exists so the arm
+ * cloud's component budget can be reserved before the ridge chain spends it,
+ * with no third caller (the engine) to reserve it for them instead.
  */
 
+import { ARM_CLOUD_MAX_COUNT, buildArmParticleCloud } from './armParticleCloud';
 import { discLightScaleLength } from '../../utils/galaxy/discLightScaleLength';
 import { discWarpShear } from '../../utils/galaxy/discWarpShear';
 import { galaxyFieldInverseCovariance } from '../../utils/galaxy/galaxyFieldInverseCovariance';
@@ -296,6 +301,13 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
   // `pushArmRidges`.
   armContrast: 1.3,
   armBlobSharpness: 1,
+  // 0 keeps the boot image identical to the ridge-only look; the particle
+  // cloud is opt-in.
+  armCloudShare: 0,
+  armCloudCount: 220,
+  armCloudClumpiness: 0.4,
+  armCloudSizeScale: 1,
+  armCloudElongation: 3,
   // Gates the analytic dust lane's shader loop.
   dustEnabled: true,
 };
@@ -404,7 +416,8 @@ function pushWarpedOuterDisc(
 const ARM_COLOR_OLD: Readonly<Vec3> = [0.8, 0.86, 1.0];
 const ARM_COLOR_YOUNG: Readonly<Vec3> = [0.65, 0.78, 1.0];
 
-function armColor(youngFraction: number): Vec3 {
+/** Exported so `armParticleCloud.ts`'s sprites match the ridge chain's own colour exactly, rather than re-deriving it. */
+export function armColor(youngFraction: number): Vec3 {
   const t = Math.min(1, Math.max(0, youngFraction));
   return [
     ARM_COLOR_OLD[0] + (ARM_COLOR_YOUNG[0] - ARM_COLOR_OLD[0]) * t,
@@ -477,6 +490,39 @@ function armCurvePos(
   arm: GalaxyFieldArmRecord,
 ): Vec3 {
   return armRidgeCurvePoint(Math.log(radius / geometry.armStartRadius), geometry, arm);
+}
+
+export type ArmRidgeFrame = { readonly point: Vec3 } & {
+  readonly along: Vec3;
+  readonly across: Vec3;
+  readonly pole: Vec3;
+};
+
+/**
+ * The ridge's own orthonormal frame at a log-radius — `point` is
+ * `armRidgeCurvePoint`, `along` its tangent (central difference, matching
+ * `armOffsetFrameAt`'s in `dustLaneFeatures.ts`), `across`/`pole` the
+ * surface-tangent pair Gram-Schmidt'd off it. Shared by `pushArmRidges`' own
+ * per-blob placement and `armParticleCloud.ts`'s lane-frame provider, so
+ * both agree on what "the ridge" is by construction rather than by staying
+ * in sync across two copies. Unlike `armOffsetFrameAt`, there is no lane
+ * offset here — this IS the ridge, not the dust lane hugging its inner edge.
+ */
+export function armRidgeFrameAt(
+  logR: number,
+  geometry: GalaxyFieldGeometry,
+  arm: GalaxyFieldArmRecord,
+): ArmRidgeFrame {
+  const radius = geometry.armStartRadius * Math.exp(logR);
+  const angle = armRidgeAngle(logR, geometry, arm);
+  const point = armRidgeCurvePoint(logR, geometry, arm);
+  const ahead = armCurvePos(radius * 1.01, geometry, arm);
+  const behind = armCurvePos(radius * 0.99, geometry, arm);
+  const along = normalize3([ahead[0] - behind[0], ahead[1] - behind[1], ahead[2] - behind[2]]);
+  const surfacePole = warpSurfaceFrame(radius, angle, geometry).pole;
+  const across = normalize3(cross3(surfacePole, along));
+  const pole = cross3(along, across); // re-orthonormalise: surfacePole need not be perpendicular to `along`
+  return { point, along, across, pole };
 }
 
 /** armStarSample's inner/outer smoothstep brightness envelope, this arm's own fadeRadius (rec0.w). */
@@ -616,6 +662,16 @@ const ARM_AGE_CONTRAST_FLOOR = 0.25;
 const ARM_AGE_CONTRAST_SPAN = 0.75;
 
 /**
+ * `tuning.armCloudShare`, clamped to a valid probability: `pushArmRidges`
+ * and `armParticleCloud.ts` split one arm-excess budget two ways and the
+ * two shares must never sum past the measured total — see `pushArmRidges`'
+ * docblock for the ledger this feeds.
+ */
+export function clampedArmCloudShare(tuning: GalaxyFieldTuning): number {
+  return Math.min(1, Math.max(0, tuning.armCloudShare));
+}
+
+/**
  * Spiral-arm RIDGE blobs, placed along the exact log-spiral curve
  * `armStarSample` draws stars around (`generate.wesl` lines ~652-771, cited
  * per-function above) so the analytic arms land ON the sprite arms rather
@@ -636,6 +692,13 @@ const ARM_AGE_CONTRAST_SPAN = 0.75;
  * contrast, scaled by its own age) times the disc's own local surface
  * brightness. `buildGalaxyFieldMixture` debits the returned total back out
  * of the disc components so the two don't double-count the same light.
+ *
+ * The returned total is the FULL excess regardless of `armCloudShare`: this
+ * function renders only `1 - clampedArmCloudShare(tuning)` of it (see
+ * `renderedShare` below), and `buildGalaxyFieldMixture` hands the rest to
+ * `armParticleCloud.ts` as that tier's own flux budget — the two rendered
+ * totals still sum to this return value, so the disc debit (which uses the
+ * full value) stays correct either way.
  */
 function pushArmRidges(
   geometry: GalaxyFieldGeometry,
@@ -650,6 +713,10 @@ function pushArmRidges(
   const color = armColor(geometry.youngFraction);
   const hLight = discLightScaleLength(geometry);
   const K = tuning.armContrast;
+  // The RENDERED share of each blob's flux — `armExcessFlux` below stays the
+  // FULL, unscaled excess (the disc debit and the particle cloud's own share
+  // both key off that full total; see `buildGalaxyFieldMixture`'s docblock).
+  const renderedShare = 1 - clampedArmCloudShare(tuning);
 
   // Components already pushed PLUS the caller's reservation (the disc is
   // built in a local array and appended after the arms — see
@@ -675,13 +742,11 @@ function pushArmRidges(
     // quantity (spacing, flux, tangent) is derived from this curve.
     const logRs: number[] = [];
     const radii: number[] = [];
-    const angles: number[] = [];
     const centers: Vec3[] = [];
     for (let k = 0; k < blobsPerArm; k++) {
       const logR = logStart + ((logEnd - logStart) * k) / (blobsPerArm - 1);
       logRs.push(logR);
       radii.push(armStartRadius * Math.exp(logR));
-      angles.push(armRidgeAngle(logR, geometry, arm));
       centers.push(armRidgeCurvePoint(logR, geometry, arm));
     }
 
@@ -713,12 +778,7 @@ function pushArmRidges(
     for (let k = 0; k < blobsPerArm; k++) {
       const radius = radii[k]!;
       const center = centers[k]!;
-      const ahead = armCurvePos(radius * 1.01, geometry, arm);
-      const behind = armCurvePos(radius * 0.99, geometry, arm);
-      const along = normalize3([ahead[0] - behind[0], ahead[1] - behind[1], ahead[2] - behind[2]]);
-      const surfacePole = warpSurfaceFrame(radius, angles[k]!, geometry).pole;
-      const across = normalize3(cross3(surfacePole, along));
-      const pole = cross3(along, across); // re-orthonormalise: surfacePole need not be perpendicular to `along`
+      const { along, across, pole } = armRidgeFrameAt(logRs[k]!, geometry, arm);
 
       const sigmaAcross = armCrossSigma(radius, geometry, tuning);
       const sigmas = {
@@ -732,8 +792,9 @@ function pushArmRidges(
       const sigmaDisc = discSurfaceBrightness(radius, discFlux, hLight);
       const lambda = (Ki - 1) * sigmaDisc * TAU_ROOT * sigmaAcross;
       const blobFlux = lambda * spacings[k]! * (mods[k]! / modMean);
-      armExcessFlux += blobFlux;
-      const amplitude = blobFlux / (TAU_ROOT3 * sigmas.along * sigmas.across * sigmas.pole);
+      armExcessFlux += blobFlux; // full excess — see `renderedShare`'s comment above
+      const amplitude =
+        (blobFlux * renderedShare) / (TAU_ROOT3 * sigmas.along * sigmas.across * sigmas.pole);
       const boundRadius = Math.max(sigmas.along, sigmas.across, sigmas.pole);
 
       out.push({
@@ -864,6 +925,11 @@ const ARM_DISC_DEBIT_CLAMP_FRACTION = 0.5;
  * populations or dropped; the warp survives as blob placement
  * (`pushWarpedOuterDisc`, `pushArmRidges`) plus each component's own
  * linearised shear (`shapeOf`) or true surface frame.
+ *
+ * `armParticleCloud.ts`'s sprites share this same cap: `armCloudReserve`
+ * below is computed BEFORE `pushArmRidges` runs and folded into its
+ * `reservedComponents`, so the ridge chain's own budget shrinks to leave
+ * room rather than the two tiers racing for the same slots.
  */
 export function buildGalaxyFieldMixture(
   geometry: GalaxyFieldGeometry,
@@ -893,12 +959,21 @@ export function buildGalaxyFieldMixture(
   // the disc itself hidden.
   // Reservation only when the disc will actually land in `out` — with the
   // disc hidden its components never spend the cap, so arms may use it all.
+  // The particle cloud's own budget is reserved the SAME way: computed
+  // before `pushArmRidges` runs so its `perArmBudget` shrinks to leave room,
+  // rather than the cloud starving the ridge chain (or vice versa) via a
+  // silent `packFieldUniforms` clamp. 0 whenever the cloud is off, so the
+  // default (`armCloudShare` 0) leaves the ridge budget untouched.
+  const armCloudReserve =
+    tuning.armsEnabled && clampedArmCloudShare(tuning) > 0
+      ? Math.min(Math.max(0, Math.round(tuning.armCloudCount)), ARM_CLOUD_MAX_COUNT)
+      : 0;
   const armExcessFlux = pushArmRidges(
     geometry,
     out,
     tuning,
     discFlux,
-    tuning.discEnabled ? discOut.length : 0,
+    (tuning.discEnabled ? discOut.length : 0) + armCloudReserve,
   );
   if (discFlux > 0 && armExcessFlux > 0) {
     const debit = Math.min(armExcessFlux, discFlux * ARM_DISC_DEBIT_CLAMP_FRACTION);
@@ -908,6 +983,13 @@ export function buildGalaxyFieldMixture(
     }
   }
   if (tuning.discEnabled) out.push(...discOut);
+
+  if (armCloudReserve > 0) {
+    const cloudFlux = armExcessFlux * clampedArmCloudShare(tuning);
+    if (cloudFlux > 0) {
+      out.push(...buildArmParticleCloud(geometry, tuning, cloudFlux, geometry.seed));
+    }
+  }
 
   pushBulge(geometry, out, tuning);
   pushBar(geometry, out, tuning);

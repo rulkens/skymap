@@ -42,6 +42,7 @@ const GEOMETRY: GalaxyFieldGeometry = {
   arms: [],
   starSize: 0.02,
   modelledStars: 100000,
+  seed: 1,
 };
 
 describe('warpHeight', () => {

@@ -65,4 +65,6 @@ export type GalaxyFieldGeometry = {
   readonly starSize: number;
   /** What the fractions above are shares OF — globular members excluded, dead slots included. */
   readonly modelledStars: number;
+  /** The generation UBO's own `seed` (`packGenerationUniforms`'s `params.seed`), for field-side stochastic tiers (e.g. the arm particle cloud) that need the SAME seed the sprites were drawn with, not a re-derivation. */
+  readonly seed: number;
 };
