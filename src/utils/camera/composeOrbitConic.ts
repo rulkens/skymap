@@ -35,75 +35,20 @@
  * clip-x, clip-y, clip-w — is exact, not an approximation.  This is what makes
  * the homography a clean 3×3 rather than a 4×4 with a discarded row.
  *
- * ### Why the return is `Ginv` PLUS the six gradient minors
+ * ### Why the return is `Ginv` PLUS the clip basis
  *
  * `Ginv` is the only per-orbit matrix the fragment needs to back-project a
  * pixel: from the single product `q = Ginv·(px, py, 1)` it derives the
  * behind-camera clip (`q.z = 1/w`), the plane coords / eccentric anomaly
  * (`s = q.x/q.z`, `t = q.y/q.z`, `E = atan2(t, s)`) and the stroke `r = √(s²+t²)`.
- * But the ANTIALIASING needs `∂s/∂p` and `∂t/∂p` (the pixel gradient of `r`),
- * and computing those on the GPU straight from `Ginv` is a numerical trap.
+ * The pixel gradient of `r` that the antialiasing needs is measured
+ * EMPIRICALLY on the GPU with screen-space derivatives (`dpdx`/`dpdy` of `r` in
+ * the fragment), not derived analytically here — see `fragment.wesl`'s header
+ * for why that sidesteps the f32 cancellation an analytic gradient hit for a
+ * hugely-projected orbit.
  *
- * The old fragment formed each gradient numerator as a difference of two
- * products, e.g. `∂s/∂pₓ ∝ Ginv[0].x·q.z − q.x·Ginv[0].z`.  Expand
- * `q = Ginv·(px, py, 1)`: the top-degree `px` terms are `(a·g − a·g)·px` and
- * cancel IDENTICALLY, leaving a numerator that is AFFINE in `(px, py)` with a
- * 2×2-minor coefficient.  Algebraically exact — but on the near-edge-on
- * Earth-zoom pose the plane→pixel homography is ILL-CONDITIONED (condition
- * number ~1e15), so the two products are nearly equal and their f32 difference
- * cancels catastrophically: the tiny true minor keeps almost none of f32's
- * significant digits.  The loss is set by the CONDITION NUMBER, not the entry
- * magnitudes — rescaling `Ginv` to O(1) (which the code does below, so `q` stays
- * in f32's precise range) does NOT fix it — so the residual is garbage, `invZ2`
- * amplifies it, the Sampson `dist` goes noisy, and the two hard discards flip
- * per-pixel coverage across the flared band — the reported speckle in Earth's
- * orbit fill.
- *
- * So we eliminate the cancellation SYMBOLICALLY here, in f64, and hand the
- * fragment the six affine coefficients directly.  Each is a 2×2 minor of
- * `Ginv`; the six that survive are (entries written `Ginv[col].row` to match the
- * WESL `ginv[c].r` access, and grouped by the gradient they drive):
- *
- *     ∂s/∂pₓ numerator = M1·py + M2,   ∂s/∂pᵧ numerator = −M1·px + M3
- *     ∂t/∂pₓ numerator = M4·py + M5,   ∂t/∂pᵧ numerator = −M4·px + M6
- *
- *     M1 = g00·g12 − g10·g02   M2 = g00·g22 − g20·g02   M3 = g10·g22 − g20·g12
- *     M4 = g01·g12 − g11·g02   M5 = g01·g22 − g21·g02   M6 = g11·g22 − g21·g12
- *
- * The cross-minor `M1` (resp. `M4`) appears once positive and once negated —
- * six DISTINCT coefficients, packed as `minorS = (M1, M2, M3)` (the `s`-row) and
- * `minorT = (M4, M5, M6)` (the `t`-row).  The fragment evaluates
- * `numerator · invZ2` with two multiply-adds instead of a cancelling
- * difference, so its f32 stays affine and clean.
- *
- * ### Why computing the minors in f64 CURES the cancellation (adj identity)
- *
- * `adj(Ginv) = det(Ginv)·Ginv⁻¹ = det(Ginv)·G`, and a 3×3 adjugate's entries
- * are exactly these signed 2×2 cofactor minors.  So each `Mᵢ` equals
- * `± det(Ginv)` times an entry of the WELL-CONDITIONED forward homography `G`
- * (plane → pixel, entries ~pixel scale).  Computing it in f64 from the f64
- * `Ginv` therefore lands on the true minor with ~6e-8 RELATIVE error; the old
- * f32 path's error was ~6e-8 of the two nearly-equal products, and because they
- * nearly cancel that absolute error swamps the tiny true difference — an
- * unbounded RELATIVE error, the condition number (~1e15) made visible (rescaling
- * the products to O(1) does not change the cancellation).  The minors narrow to
- * f32 last, at the upload boundary, carrying only that ~6e-8 relative error into
- * the shader.
- *
- * ### Why the minors come from the RESCALED `Ginv` (normalization consistency)
- *
- * Below, `Ginv` is rescaled by `k = 1/maxAbs` before narrowing so its f32
- * entries stay O(1).  Every fragment quantity is scale-invariant, and this holds
- * for the gradient too — BUT only if the two halves scale consistently.  A minor
- * is QUADRATIC in `Ginv`, so rescaling by `k` scales each `Mᵢ` by `k²`; the
- * fragment's `invZ2 = 1/q.z²` uses `q = (k·Ginv)·pixel`, so it scales by `1/k²`;
- * their product `Mᵢ·invZ2` is invariant — the true gradient at every pose.  That
- * cancellation is only exact if the minors are computed from the SAME rescaled
- * matrix that gets narrowed, so they are computed AFTER the rescale loop.
- *
- * ### Why the return ALSO carries the clip basis
- *
- * The ribbon-impostor plan's Task 3 (spec §2): `clipBasis` is `(Cc, Ac, Bc)` —
+ * The ribbon-impostor plan's Task 3 (spec §2) is why the second return field,
+ * `clipBasis`, is `(Cc, Ac, Bc)` —
  * the same `cC`/`cS`/`cT` triple below, narrowed rather than rederived — so the
  * vertex stage can bound the orbit with a screen-space ribbon, near-plane-
  * clamped (Task 11) to cover every projection with no separate fallback.
@@ -124,11 +69,9 @@
  * @param viewportPx       Backing-store viewport `(Wpx, Hpx)` (`SlabView.viewportPx`).
  * @param renderOriginMpc  The render origin the slab VP is relative to.
  * @returns  `ginv` — `Ginv` (pixel → plane) as a 12-element padded
- *           `mat3x3<f32>` (`Float32Array`, column-major std140); `minorS` /
- *           `minorT` — the six gradient minors `(M1, M2, M3)` / `(M4, M5, M6)`
- *           as length-4 padded `Float32Array`s; `clipBasis` — `(Cc, Ac, Bc)`,
- *           each length-4 padded, for the ribbon vertex stage. All composed
- *           in f64 and narrowed once at return.
+ *           `mat3x3<f32>` (`Float32Array`, column-major std140); `clipBasis` —
+ *           `(Cc, Ac, Bc)`, each length-4 padded, for the ribbon vertex stage.
+ *           Both composed in f64 and narrowed once at return.
  */
 
 import { mat3d } from 'wgpu-matrix';
@@ -145,8 +88,6 @@ export function composeOrbitConic(
   renderOriginMpc: Readonly<Vec3>,
 ): {
   ginv: Float32Array;
-  minorS: Float32Array;
-  minorT: Float32Array;
   /** (Cc, Ac, Bc), each a length-4 padded (clip.x, clip.y, clip.w, 0) — see the record layout. */
   clipBasis: readonly [Float32Array, Float32Array, Float32Array];
 } {
@@ -226,39 +167,12 @@ export function composeOrbitConic(
     for (const i of realIndices) Ginv[i]! /= maxAbs;
   }
 
-  // The six gradient minors, computed in f64 from the RESCALED Ginv so the
-  // fragment's affine ∂s/∂p, ∂t/∂p stay consistent with its rescaled `q`
-  // (see the "normalization consistency" header section). Entries are read at
-  // the padded-column indices (col0 = 0,1,2 / col1 = 4,5,6 / col2 = 8,9,10),
-  // so gCR names the entry in padded column C, row R — matching the WESL
-  // `ginv[C].R` access exactly. Forming each minor here in double precision
-  // eliminates the catastrophic f32 cancellation of the old difference-of-
-  // products form (see the "adj identity" header section).
-  const g00 = Ginv[0]!;
-  const g01 = Ginv[1]!;
-  const g02 = Ginv[2]!;
-  const g10 = Ginv[4]!;
-  const g11 = Ginv[5]!;
-  const g12 = Ginv[6]!;
-  const g20 = Ginv[8]!;
-  const g21 = Ginv[9]!;
-  const g22 = Ginv[10]!;
-
-  const m1 = g00 * g12 - g10 * g02;
-  const m2 = g00 * g22 - g20 * g02;
-  const m3 = g10 * g22 - g20 * g12;
-  const m4 = g01 * g12 - g11 * g02;
-  const m5 = g01 * g22 - g21 * g02;
-  const m6 = g11 * g22 - g21 * g12;
-
-  // Narrow once at the GPU-upload boundary. minorS drives ∂s/∂p, minorT drives
-  // ∂t/∂p; clipBasis carries (Cc, Ac, Bc) for the ribbon vertex stage — each
-  // padded to four lanes so it streams as a float32x4 instance attribute (the
-  // fourth lane is unused pad, like each Ginv column's).
+  // Narrow once at the GPU-upload boundary. clipBasis carries (Cc, Ac, Bc)
+  // for the ribbon vertex stage — each padded to four lanes so it streams as
+  // a float32x4 instance attribute (the fourth lane is unused pad, like each
+  // Ginv column's).
   return {
     ginv: narrowMat3(Ginv),
-    minorS: new Float32Array([m1, m2, m3, 0]),
-    minorT: new Float32Array([m4, m5, m6, 0]),
     clipBasis: [
       new Float32Array([cC[0], cC[1], cC[2], 0]),
       new Float32Array([cS[0], cS[1], cS[2], 0]),

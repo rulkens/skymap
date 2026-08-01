@@ -42,22 +42,15 @@ struct VSOut {
   // Per-orbit apparent-size fade (CPU-side): 1 well above the cull threshold,
   // ramping to 0 as the orbit shrinks toward it. Multiplies the final colour.
   @location(6) @interpolate(flat) alpha: f32,
-  // The gradient minors that make the fragment's Sampson gradient AFFINE in the
-  // pixel, hoisted to CPU f64 to kill the old difference-of-products
-  // cancellation (see composeOrbitConic's header). 'minorS' = (M1, M2, M3)
-  // drives d s/d p, 'minorT' = (M4, M5, M6) drives d t/d p; the fragment
-  // evaluates each numerator as a plain multiply-add. Per-orbit constant, flat.
-  @location(7) @interpolate(flat) minorS: vec3<f32>,
-  @location(8) @interpolate(flat) minorT: vec3<f32>,
   // Segment's [eLo, eHi) eccentric-anomaly range + fold-test flag — see the
   // ownership test in fragment.wesl.
-  @location(9) @interpolate(flat) eOwn: vec3<f32>,
+  @location(7) @interpolate(flat) eOwn: vec3<f32>,
 };
 
 // Per-instance vertex input, matching the TS pipeline's instance-buffer
-// descriptor byte-for-byte (see orbitTrailRenderer.ts): 112 bytes of conic +
-// tint + gradient data, followed by 48 bytes of clip-space conic basis that
-// 'vsRibbon' walks per sample to trace the ellipse.
+// descriptor byte-for-byte (see orbitTrailRenderer.ts): 80 bytes of conic +
+// tint data, followed by 48 bytes of clip-space conic basis that 'vsRibbon'
+// walks per sample to trace the ellipse.
 struct OrbitInstance {
   // Ginv columns (.xyz used, .w pad) — see vertex.wesl's 'vsRibbon' doc.
   @location(1) ginv0: vec4<f32>,
@@ -65,11 +58,9 @@ struct OrbitInstance {
   @location(3) ginv2: vec4<f32>,
   @location(4) params: vec4<f32>,   // color.rgb, eccentricity
   @location(5) phase: vec4<f32>,    // meanAnomalyRad, alpha, viewportPx.w, viewportPx.h
-  @location(6) minorS: vec4<f32>,
-  @location(7) minorT: vec4<f32>,
   // Clip-space conic basis: p(E) = cc + cos(E)*ac + sin(E)*bc traces the
   // projected ellipse in (clip.x, clip.y, clip.w) as E runs 0..2*PI.
-  @location(8) cc: vec4<f32>,       // clip basis: centre  (x, y, w, pad)
-  @location(9) ac: vec4<f32>,       // clip basis: semi-major
-  @location(10) bc: vec4<f32>,      // clip basis: semi-minor
+  @location(6) cc: vec4<f32>,       // clip basis: centre  (x, y, w, pad)
+  @location(7) ac: vec4<f32>,       // clip basis: semi-major
+  @location(8) bc: vec4<f32>,       // clip basis: semi-minor
 };

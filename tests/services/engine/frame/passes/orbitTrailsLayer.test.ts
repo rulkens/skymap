@@ -8,12 +8,11 @@
  *      `view.vp` (identity-pinned via a mocked `composeOrbitConic`).
  *   2. The packed draw — ONE `renderer.draw(pass, staging, count)` paints
  *      every VISIBLE conic, with conic i's trail params packed at instance
- *      stride 40 floats (Ginv at floats base+0..11, colour + eccentricity at
+ *      stride 32 floats (Ginv at floats base+0..11, colour + eccentricity at
  *      base+12..15, mean anomaly at base+16, apparent-size fade alpha at
- *      base+17, viewportPx at base+18..19, the two gradient-minor triples at
- *      base+20..23 / base+24..27, and the clip basis Cc/Ac/Bc at base+28..39)
- *      front-to-back, and orbits below the cull threshold dropped from the
- *      batch entirely.
+ *      base+17, viewportPx at base+18..19, and the clip basis Cc/Ac/Bc at
+ *      base+20..31) front-to-back, and orbits below the cull threshold
+ *      dropped from the batch entirely.
  *
  * Plus the handle gates: `enabled` is renderer-presence AND the shared
  * foreground distance gate AND the whole-layer sub-pixel bound (per REGION: the
@@ -49,20 +48,15 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 // Mock composeOrbitConic so the test can (a) assert which vp it consumed by
 // object identity and (b) hand each conic recognisable Float32Arrays. The real
 // composition math is covered by composeOrbitConic's own tests. Ginv is a
-// 12-float padded mat3; minorS/minorT are 4-float padded triples (the gradient-
-// minor hoist); clipBasis is the (Cc, Ac, Bc) triple the ribbon vertex stage
-// consumes. Distinct sentinel values so the packing offsets are pinned.
+// 12-float padded mat3; clipBasis is the (Cc, Ac, Bc) triple the ribbon vertex
+// stage consumes. Distinct sentinel values so the packing offsets are pinned.
 type ConicOut = {
   ginv: Float32Array;
-  minorS: Float32Array;
-  minorT: Float32Array;
   clipBasis: readonly [Float32Array, Float32Array, Float32Array];
 };
 vi.mock('../../../../../src/utils/camera/composeOrbitConic', () => ({
   composeOrbitConic: vi.fn<() => ConicOut>(() => ({
     ginv: new Float32Array(12),
-    minorS: new Float32Array([101, 102, 103, 0]),
-    minorT: new Float32Array([201, 202, 203, 0]),
     clipBasis: [
       new Float32Array([301, 302, 303, 0]),
       new Float32Array([401, 402, 403, 0]),
@@ -366,11 +360,11 @@ describe('orbitTrailsLayer.draw', () => {
     expect(count).toBe(n);
     expect(staging).toBeInstanceOf(Float32Array);
 
-    // Staging layout for the first conic (instance 0, stride 40): colour +
+    // Staging layout for the first conic (instance 0, stride 32): colour +
     // eccentricity at floats 12..15, mean anomaly at 16, fade alpha at 17
     // (saturated — Mercury's orbit is large from the Sun), then the viewport
-    // (was a zeroed pad; now the ribbon vertex stage's divisor), then the two
-    // gradient-minor triples at 20..23 and 24..27 (the CPU-f64 hoist).
+    // (was a zeroed pad; now the ribbon vertex stage's divisor), then the
+    // clip basis at 20..31.
     expect(staging[12]).toBeCloseTo(first.color[0]);
     expect(staging[13]).toBeCloseTo(first.color[1]);
     expect(staging[14]).toBeCloseTo(first.color[2]);
@@ -379,13 +373,10 @@ describe('orbitTrailsLayer.draw', () => {
     expect(staging[17]).toBe(1);
     expect(staging[18]).toBe(view.viewportPx[0]);
     expect(staging[19]).toBe(view.viewportPx[1]);
-    // minorS (M1/M2/M3 + pad) → floats 20..23, minorT (M4/M5/M6 + pad) → 24..27.
-    expect(Array.from(staging.slice(20, 24))).toEqual([101, 102, 103, 0]);
-    expect(Array.from(staging.slice(24, 28))).toEqual([201, 202, 203, 0]);
   });
 
   it('the clip basis and viewport reach the packed record', () => {
-    // Task 6's other new floats: 28..39 (Cc/Ac/Bc, the ribbon vertex stage's
+    // Task 6's other new floats: 20..31 (Cc/Ac/Bc, the ribbon vertex stage's
     // screen-space bound) and 18..19 (viewportPx, its divisor — a landmine if
     // left zeroed: the ribbon vertex shader divides by it, so a stray zero
     // turns every ribbon vertex NaN with no visible error anywhere).
@@ -398,9 +389,9 @@ describe('orbitTrailsLayer.draw', () => {
     expect(staging[18]).toBe(view.viewportPx[0]);
     expect(staging[19]).toBe(view.viewportPx[1]);
     // clipBasis = [Cc, Ac, Bc], each a length-4 padded sentinel from the mock.
-    expect(Array.from(staging.slice(28, 32))).toEqual([301, 302, 303, 0]);
-    expect(Array.from(staging.slice(32, 36))).toEqual([401, 402, 403, 0]);
-    expect(Array.from(staging.slice(36, 40))).toEqual([501, 502, 503, 0]);
+    expect(Array.from(staging.slice(20, 24))).toEqual([301, 302, 303, 0]);
+    expect(Array.from(staging.slice(24, 28))).toEqual([401, 402, 403, 0]);
+    expect(Array.from(staging.slice(28, 32))).toEqual([501, 502, 503, 0]);
   });
 
   it('multiplies the whole-layer fade opacity into each per-orbit alpha', () => {

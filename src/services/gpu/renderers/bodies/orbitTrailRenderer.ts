@@ -20,25 +20,24 @@ import { RIBBON_SEGMENTS } from '../../../../data/bodies/orbitTrailConstants';
 
 /**
  * Float32 slots per per-instance record: three `Ginv` columns (12) + colour
- * + eccentricity (4) + mean anomaly + fade + pad (4) + two gradient-minor
- * triples (8) + three clip-basis vec4s `Cc`/`Ac`/`Bc` (12, the ribbon
- * impostor's addition — centre/semi-major/semi-minor of the world ellipse,
- * projected) = 40. The caller writes each orbit's record at
- * `i * INSTANCE_FLOATS`.
+ * + eccentricity (4) + mean anomaly + fade + pad (4) + three clip-basis
+ * vec4s `Cc`/`Ac`/`Bc` (12, the ribbon impostor's addition —
+ * centre/semi-major/semi-minor of the world ellipse, projected) = 32. The
+ * caller writes each orbit's record at `i * INSTANCE_FLOATS`.
  */
-export const INSTANCE_FLOATS = 40;
+export const INSTANCE_FLOATS = 32;
 
-/** Per-instance byte stride: 40 × 4 = 160. Must match the pipeline's
+/** Per-instance byte stride: 32 × 4 = 128. Must match the pipeline's
  * instance-buffer descriptor AND `orbitTrail/io.wesl`'s `OrbitInstance`. */
-export const INSTANCE_STRIDE = INSTANCE_FLOATS * 4; // 160 bytes
+export const INSTANCE_STRIDE = INSTANCE_FLOATS * 4; // 128 bytes
 
 /**
- * Per-instance vertex attributes at `@location`s 1..10 — the three `Ginv`
- * columns, colour+eccentricity, mean anomaly+fade, the two gradient-minor
- * triples, then the three clip-basis vec4s. There is no `@location(0)`:
- * `vsRibbon` generates its own geometry from `@builtin(vertex_index)`, so
- * this instance buffer is the pipeline's ONLY vertex buffer. Byte offsets
- * must match `orbitTrail/io.wesl`'s `OrbitInstance` exactly.
+ * Per-instance vertex attributes at `@location`s 1..8 — the three `Ginv`
+ * columns, colour+eccentricity, mean anomaly+fade, then the three
+ * clip-basis vec4s. There is no `@location(0)`: `vsRibbon` generates its own
+ * geometry from `@builtin(vertex_index)`, so this instance buffer is the
+ * pipeline's ONLY vertex buffer. Byte offsets must match
+ * `orbitTrail/io.wesl`'s `OrbitInstance` exactly.
  */
 const INSTANCE_ATTRIBUTES: readonly GPUVertexAttribute[] = [
   { shaderLocation: 1, offset: 0, format: 'float32x4' }, // Ginv column 0 (.xyz + pad)
@@ -46,11 +45,9 @@ const INSTANCE_ATTRIBUTES: readonly GPUVertexAttribute[] = [
   { shaderLocation: 3, offset: 32, format: 'float32x4' }, // Ginv column 2
   { shaderLocation: 4, offset: 48, format: 'float32x4' }, // color.rgb + eccentricity
   { shaderLocation: 5, offset: 64, format: 'float32x4' }, // meanAnomalyRad + fadeAlpha + viewportPx
-  { shaderLocation: 6, offset: 80, format: 'float32x4' }, // gradient minors M1/M2/M3 + pad
-  { shaderLocation: 7, offset: 96, format: 'float32x4' }, // gradient minors M4/M5/M6 + pad
-  { shaderLocation: 8, offset: 112, format: 'float32x4' }, // clip basis centre Cc
-  { shaderLocation: 9, offset: 128, format: 'float32x4' }, // clip basis semi-major Ac
-  { shaderLocation: 10, offset: 144, format: 'float32x4' }, // clip basis semi-minor Bc
+  { shaderLocation: 6, offset: 80, format: 'float32x4' }, // clip basis centre Cc
+  { shaderLocation: 7, offset: 96, format: 'float32x4' }, // clip basis semi-major Ac
+  { shaderLocation: 8, offset: 112, format: 'float32x4' }, // clip basis semi-minor Bc
 ];
 
 export function createOrbitTrailRenderer(

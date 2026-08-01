@@ -21,9 +21,9 @@ import type { Renderer } from './Renderer';
 export type OrbitTrailRenderer = Renderer & {
   /**
    * Draw `count` orbit trails into the caller's additive HDR pass.
-   * `instances` is a packed 40-float / 160-byte-stride record per orbit (see
+   * `instances` is a packed 32-float / 128-byte-stride record per orbit (see
    * the renderer's instance-attribute table); `count` must not exceed
-   * `instances.length / 40` — the renderer throws rather than read past the
+   * `instances.length / 32` — the renderer throws rather than read past the
    * caller's array; `count` may be 0, which is a no-op.
    *
    * `showImpostor` (default `false`, the `debug.showOrbitTrailImpostor`

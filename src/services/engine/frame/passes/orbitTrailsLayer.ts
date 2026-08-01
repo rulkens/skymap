@@ -100,11 +100,11 @@ const FULL_PX = 20;
 // Reused across frames — the engine hot path allocates nothing here. Sized
 // for the live orbital-elements table (a compile-time constant, so this is a
 // fixed size, not a cap — the renderer itself carries no upper bound, and
-// growing the table just grows this array); each conic's 40-float record
+// growing the table just grows this array); each conic's 32-float record
 // (three Ginv columns + colour/eccentricity + mean anomaly/fade/viewport +
-// the two gradient-minor triples + the three clip-basis vec4s) is rewritten
-// in place before the single packed draw. One slot per table row is enough
-// since at most `ORBITAL_ELEMENTS.length` records are ever packed.
+// the three clip-basis vec4s) is rewritten in place before the single packed
+// draw. One slot per table row is enough since at most
+// `ORBITAL_ELEMENTS.length` records are ever packed.
 const staging = new Float32Array(ORBITAL_ELEMENTS.length * INSTANCE_FLOATS);
 
 // A bound orbit's farthest point from its focus is its apoapsis a·(1+e); its
@@ -238,7 +238,7 @@ export const orbitTrailsLayer: ContentLayer = {
       state.subsystems.clipPlayer,
     );
 
-    // Pack one 40-float instance record per VISIBLE conic (byte offsets mirror
+    // Pack one 32-float instance record per VISIBLE conic (byte offsets mirror
     // the renderer's INSTANCE_ATTRIBUTES):
     //   floats 0..11  — the three Ginv columns (loc1/2/3 at byte 0/16/32),
     //                    composed from the slab's f64 vp (the hard invariant
@@ -246,12 +246,8 @@ export const orbitTrailsLayer: ContentLayer = {
     //   floats 12..15 — colour.rgb + eccentricity (loc4 at byte 48),
     //   floats 16..19 — mean anomaly + fade alpha + viewportPx.xy (loc5 at byte 64,
     //                    the ribbon vertex stage's divisor — see composeOrbitConic),
-    //   floats 20..23 — gradient minors M1/M2/M3 + pad (loc6 at byte 80),
-    //   floats 24..27 — gradient minors M4/M5/M6 + pad (loc7 at byte 96),
-    //   floats 28..39 — clip basis Cc/Ac/Bc (loc8/9/10 at byte 112/128/144),
+    //   floats 20..31 — clip basis Cc/Ac/Bc (loc6/7/8 at byte 80/96/112),
     //                    the ribbon vertex stage's screen-space bound.
-    // The minors are the CPU-f64 hoist that keeps the fragment's Sampson
-    // gradient affine (no f32 difference-of-products cancellation).
     // Orbits below the apparent-size cull threshold are skipped entirely (not
     // drawn); the rest fade in via the alpha the fragment multiplies through.
     // The fragment's Newton horizon rejection is what keeps a near-edge-on
@@ -298,7 +294,7 @@ export const orbitTrailsLayer: ContentLayer = {
       // Per-orbit apparent-size fade × the whole-layer opacity (hide/show fade).
       const alpha = Math.min(1, (diameterPx - CULL_PX) / (FULL_PX - CULL_PX)) * layerOpacity;
 
-      const { ginv, minorS, minorT, clipBasis } = composeOrbitConic(
+      const { ginv, clipBasis } = composeOrbitConic(
         view.slab.vp,
         centerMpc,
         semiMajorMpc,
@@ -318,11 +314,9 @@ export const orbitTrailsLayer: ContentLayer = {
       staging[base + 17] = alpha;
       staging[base + 18] = view.viewportPx[0]; // ribbon vertex stage's divisor
       staging[base + 19] = view.viewportPx[1];
-      staging.set(minorS, base + 20); // gradient minors M1/M2/M3 + pad → floats 20..23
-      staging.set(minorT, base + 24); // gradient minors M4/M5/M6 + pad → floats 24..27
-      staging.set(clipBasis[0], base + 28); // clip basis Cc → floats 28..31
-      staging.set(clipBasis[1], base + 32); // clip basis Ac → floats 32..35
-      staging.set(clipBasis[2], base + 36); // clip basis Bc → floats 36..39
+      staging.set(clipBasis[0], base + 20); // clip basis Cc → floats 20..23
+      staging.set(clipBasis[1], base + 24); // clip basis Ac → floats 24..27
+      staging.set(clipBasis[2], base + 28); // clip basis Bc → floats 28..31
     }
     if (count > 0) {
       renderer.draw(pass, staging, count, state.settings.debug.showOrbitTrailImpostor);

@@ -190,7 +190,5 @@ fn vsRibbon(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
   out.eccentricity = inst.params.w;
   out.meanAnomaly = inst.phase.x;
   out.alpha = inst.phase.y;
-  out.minorS = inst.minorS.xyz;
-  out.minorT = inst.minorT.xyz;
   return out;
 }
