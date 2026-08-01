@@ -233,9 +233,9 @@ import {
 } from '../../../../src/data/galaxy/galaxyFieldMixture';
 import { buildGalaxyDustMixture } from '../../../../src/data/galaxy/galaxyDustMixture';
 import {
-  buildDustLaneFeatures,
-  DUST_LANE_FEATURE_CAP,
-} from '../../../../src/data/galaxy/dustLaneFeatures';
+  buildDustNetworkFeatures,
+  DUST_NETWORK_FEATURE_CAP,
+} from '../../../../src/data/galaxy/dustNetworkFeatures';
 import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../src/data/galaxy/defaultGalaxyDustParams';
 import { transformGalaxyFieldComponent } from '../../../../src/utils/galaxy/transformGalaxyFieldComponent';
 import { GENERATION_UBO } from '../../../../src/services/gpu/galaxy/generationUboLayout';
@@ -461,10 +461,10 @@ export async function createGalaxyEngine(
   });
   // `feats` (io.wesl binding 3): the detail-tier dust splat network's own
   // records — see `repackFieldFeatures`. Same grow-only discipline as
-  // `fieldCompsBuf` above; starts at `dustLaneFeatures.ts`'s own FEATURE_CAP
-  // so the primary galaxy's lane count never forces a regrow on its first
-  // `setParams`.
-  let fieldFeatsCapacity = DUST_LANE_FEATURE_CAP;
+  // `fieldCompsBuf` above; starts at `dustNetworkFeatures.ts`'s own
+  // FEATURE_CAP (lanes + spurs + bubbles + beads combined) so the primary
+  // galaxy's network never forces a regrow on its first `setParams`.
+  let fieldFeatsCapacity = DUST_NETWORK_FEATURE_CAP;
   let fieldFeatsBuf = device.createBuffer({
     label: 'galaxy:fieldFeats',
     size: fieldFeatsCapacity * FIELD_FEATURE_FLOATS * 4,
@@ -622,7 +622,7 @@ export async function createGalaxyEngine(
 
   // ---- dust-feature pipeline (detail-tier lane/spur/bubble/bead splat) ----
   // `milkyWayField/dustFeature.wesl`: one instanced quad per FEATURE record
-  // (`dustLaneFeatures.ts` today), additively accumulating into the SAME
+  // (`dustNetworkFeatures.ts`), additively accumulating into the SAME
   // `dustMapTex` `dustMapPipe` just wrote — see `drawFrame`'s dust-map pass,
   // which draws this pipeline right after `dustMapPipe` inside ONE render
   // pass rather than opening a second pass for it (cheaper on a tile-based
@@ -1089,16 +1089,17 @@ export async function createGalaxyEngine(
   }
 
   /**
-   * rebuildDustFeatures — the detail-tier splat network from the same cached
-   * geometry + dust params `rebuildDustMixture` reads, plus `currentSeed`
-   * (the network's placement is seeded, unlike the flat lane). Same two
-   * call sites, same `dustEnabled` gate: there is no separate "network
-   * enabled" toggle (design doc Q9's master pill covers both tiers).
+   * rebuildDustFeatures — the detail-tier splat network (lanes, spurs,
+   * bubbles, beads) from the same cached geometry + dust params
+   * `rebuildDustMixture` reads, plus `currentSeed` (the network's placement
+   * is seeded, unlike the flat lane). Same two call sites, same
+   * `dustEnabled` gate: there is no separate "network enabled" toggle
+   * (design doc Q9's master pill covers both tiers).
    */
   function rebuildDustFeatures(): void {
     dustFeatures =
       fieldGeometry && fieldTuning.dustEnabled
-        ? buildDustLaneFeatures(fieldGeometry, currentDust, currentSeed)
+        ? buildDustNetworkFeatures(fieldGeometry, currentDust, currentSeed)
         : [];
   }
 

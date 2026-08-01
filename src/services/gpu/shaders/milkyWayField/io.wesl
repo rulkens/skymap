@@ -105,25 +105,36 @@
 // imports it); the two splat passes that WRITE it never read it.
 //
 // FEATS (read-only storage, binding 3) — the detail-tier dust splat network
-// (dustFeature.wesl), one oriented world-space segment quad per record, five
-// vec4 each:
+// (dustFeature.wesl), one record per feature, five vec4 each. 'kind' (last
+// lane of [5i+3]) selects which of the two shapes below the rest of the
+// record means:
 //   [5i]   = (p0.x, p0.y, p0.z, width)
 //   [5i+1] = (p1.x, p1.y, p1.z, amplitude)
 //   [5i+2] = (normal.x, normal.y, normal.z, edgeSharpness)
 //   [5i+3] = (noiseSeed, noiseAmp, noiseFreq, kind)
 //   [5i+4] = (sOffset, taperIn, taperOut, unused)
-// p0/p1 are the segment's world-space endpoints (already offset to the arm's
-// inner edge — see dustLaneFeatures.ts), 'normal' the local disc-plane normal
-// the fragment shader intersects its view ray against. width is the
-// across-lane super-Gaussian sigma; amplitude its peak tau. kind is reserved
-// (0 = lane segment; spurs/bubbles/beads reuse this shape with other values
-// — see GalaxyDustFeature.ts). sOffset is this segment's start arc-length
-// along its whole chain (noiseFreq's argument adds it in, so the noise
-// pattern stays phase-continuous across a joint instead of restarting).
-// taperIn/taperOut are world-space taper lengths at this segment's own two
-// ends; 0 butts seamlessly against a neighbour — only a chain's two free
-// ends taper, never an interior joint (per-segment tapering at every joint
-// is what produced a beaded-dash look instead of a continuous ridge).
+//
+// kind 0 (lane/spur segment, dustNetworkFeatures.ts): p0/p1 are the
+// segment's world-space endpoints (offset to the arm's inner edge for
+// lanes, a free-standing chain for spurs), 'normal' the local disc-plane
+// normal the fragment shader intersects its view ray against. width is the
+// across-lane super-Gaussian sigma; amplitude its peak tau. sOffset is this
+// segment's start arc-length along its whole chain (noiseFreq's argument
+// adds it in, so the noise pattern stays phase-continuous across a joint
+// instead of restarting). taperIn/taperOut are world-space taper lengths at
+// this segment's own two ends; 0 butts seamlessly against a neighbour —
+// only a chain's two free ends taper, never an interior joint (per-segment
+// tapering at every joint is what produced a beaded-dash look instead of a
+// continuous ridge).
+//
+// kind 1 (bubble disc) / kind 2 (bead disc): p0 is the disc CENTRE, width is
+// its RADIUS R, p1 is UNUSED (set to p0 plus a unit offset so the shader's
+// unguarded fragment-side segment-length division never sees zero), normal
+// the local disc-plane normal as for a lane. noiseAmp is REPURPOSED as
+// rimGain (kind 1 only, 0..1 — GalaxyDustNetworkParams.bubbleRimStrength);
+// noiseSeed/noiseFreq/sOffset/taperIn/taperOut/edgeSharpness are unused for
+// both disc kinds (dustFeature.wesl hardcodes their hole/rim/bead exponents).
+//
 // Grown like 'comps', never shrunk.
 
 struct FieldUniforms {

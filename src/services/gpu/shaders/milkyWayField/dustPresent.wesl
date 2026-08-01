@@ -26,7 +26,10 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   // at full canvas res, this target at a coarser divisor); that decimated
   // any lane thinner than the divisor into beads, which is why it's gone.
   let coord = vec2<i32>(input.pos.xy);
-  let tau = textureLoad(dustMapTex, coord, 0).r;
+  // Bubbles (dustFeature.wesl kind 1) write a SIGNED tau — clamp here too,
+  // same reason as splat.wesl's fs: a nested overshoot must present as
+  // clean dust, never as a negative (nonsensical for this palette) column.
+  let tau = max(textureLoad(dustMapTex, coord, 0).r, 0.0);
 
   // Presentation palette, NOT physics: intensity saturates smoothly with
   // column depth, then ramps black -> deep red -> orange -> white. Tuned by

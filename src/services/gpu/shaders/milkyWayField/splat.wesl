@@ -119,7 +119,10 @@ fn fs(input: SplatOut) -> @location(0) vec4<f32> {
   // the two channels' definitions.
   if (input.inst < primaryCount) {
     let texel = textureLoad(dustMapTex, vec2<i32>(input.pos.xy), 0);
-    let tau = texel.r;
+    // Bubbles (dustFeature.wesl kind 1) write a SIGNED tau — clamp at this
+    // consumer: a nested hole/rim overshoot must read as clean dust, never
+    // as negative absorption.
+    let tau = max(texel.r, 0.0);
     dustApplies = tau > 1e-6;
     if (dustApplies) {
       let tD = max(texel.g / tau, 0.0);
