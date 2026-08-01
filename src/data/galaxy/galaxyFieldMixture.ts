@@ -26,8 +26,8 @@ import type { Vec3 } from '../../@types/math/Vec3';
  * Uniform slots the shader reserves — `milkyWayField/io.wesl`'s
  * `comps: array<vec4<f32>, 4000>` is 4 vec4 per component, so raising this
  * means widening that array too (the linker will not catch a mismatch).
- * Sliders' worst case is now 12 rings x 24 fixed blobs + 8 arms x 64 blobs +
- * 8 other populations = 808, under this cap today, but `packFieldUniforms`
+ * The arm slider's worst case is 192 fixed ring blobs + 8 arms x 64 blobs +
+ * 8 other populations = 712, under this cap today, but `packFieldUniforms`
  * CLAMPS silently past whatever the cap is, so a slider range raised past it
  * drops components with no warning; `FieldSection`'s readout surfaces that
  * instead of leaving it silent. Raise the cap and `io.wesl`'s array together
@@ -135,8 +135,8 @@ const HALO_BRIGHTNESS = 0.5;
  * and constrained to sum(weight_i * sigma_i^2) == 1, matching this mixture's
  * flux to the exponential's, over the FULL six-term fit — sigma ratios 3.4
  * and 5.0 are no longer rendered as origin-centred blobs here (see
- * `pushDiscRings`), but their weight share still anchors the ring flux
- * budget below, so only the surviving four are listed.
+ * `pushWarpedOuterDisc`), but their weight share still anchors that
+ * function's flux budget, so only the surviving four are listed.
  */
 const DISC_SIGMA_RATIOS = [0.35, 0.65, 1.15, 1.9] as const;
 const DISC_SURFACE_WEIGHTS = [0.1667, 0.3065, 0.2131, 0.1365] as const;
@@ -182,7 +182,7 @@ const BULGE_BODY_SIGMA_RATIO = Math.sqrt(
  * All four radii sit inside `warpStartRadius` for every shipped preset
  * (`MEAN_RADIUS_PER_SIGMA * 1.9 * scaleLen` is still well short of a typical
  * warp onset), so `shapeOf`'s shear is zero for them and the plain unsheared
- * Gaussian is exact — the warp lives entirely in `pushDiscRings`.
+ * Gaussian is exact — the warp lives entirely in `pushWarpedOuterDisc`.
  *
  * Freudenreich 1998 gives the real Milky Way a 2.605 kpc disc scale length
  * (1.563 generator units) where the MW preset samples 3.281. That gap is a
@@ -217,11 +217,10 @@ function pushDisc(
 
 /**
  * Ring geometry the two removed disc Gaussians (sigma ratios 3.4h, 5.0h) are
- * replaced by. Two rings bracket the warp onset; `pushDiscRings` generalises
- * to any ring COUNT — see `GalaxyFieldTuning.ringCount` — with these four
- * constants as the fixed band/overlap the count slider plays inside of.
- */
-/**
+ * replaced by — the outer disc's warp support, not a tunable layer. All of
+ * these, `WARP_RING_COUNT` included, are frozen: `pushWarpedOuterDisc` places
+ * that many locally-linear ring patches within this band.
+ *
  * Inner/outer band the rings span, a fraction of the disc's `outerRadius`.
  * Calibrated by eye against the sprite field, not derived — a property of
  * the model (every preset's warp bracket), not a per-galaxy knob.
@@ -247,23 +246,29 @@ export const RING_BLOBS_PER_RING = 24;
 const RING_AZIMUTHAL_OVERLAP = 0.55;
 /**
  * Each ring's radial sigma is derived, not tuned: `ringSpacing * this`, where
- * ringSpacing is the band divided across the live ring count (see
- * `pushDiscRings`). Chosen so the two-ring DEFAULT (spacing 0.23) reproduces
- * the old calibrated sigma of 0.13*outerRadius: 0.13 / 0.23 = 13/23.
+ * ringSpacing is the band divided across `WARP_RING_COUNT` rings (see
+ * `pushWarpedOuterDisc`). Value inherited from when the ring count was a
+ * live 2-ring default (spacing 0.23) reproducing the old calibrated sigma of
+ * 0.13*outerRadius: 0.13 / 0.23 = 13/23 — kept as-is now that the count sits
+ * fixed at a higher value; the annulus split still tracks the disc profile.
  */
 const RING_RADIAL_OVERLAP = 13 / 23;
 
 /**
- * `buildGalaxyFieldMixture`'s default when no tuning is supplied — the
- * two-ring field the constants above already describe. `galaxy-renderer`'s
- * FieldSection is the only other producer of a `GalaxyFieldTuning`, built by
- * patching this object.
+ * Ring count, frozen: enough rings that the piecewise-linear patches follow
+ * the warp smoothly. On the splat path cost tracks covered band area, and
+ * the derived radial sigma above keeps the band gapless at any count, so the
+ * count itself is nearly free — raising it further buys smoothness, not cost.
+ */
+export const WARP_RING_COUNT = 8;
+
+/**
+ * `buildGalaxyFieldMixture`'s default when no tuning is supplied.
+ * `galaxy-renderer`'s FieldSection is the only other producer of a
+ * `GalaxyFieldTuning`, built by patching this object.
  */
 export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
   discEnabled: true,
-  ringCount: 2,
-  ringBlobSharpness: 1,
-  ringsEnabled: true,
   armsEnabled: true,
   armBlobsPerArm: 28,
   armWidthScale: 1,
@@ -299,74 +304,57 @@ function ringAnnulusWeights(radii: readonly number[], spacing: number, h: number
 }
 
 /**
- * The warped outer disc, built from blobs placed at their OWN true warped
- * height (`warpHeight`) rather than from shearing an origin-centred
- * Gaussian: a shear traces a straight line through the origin, but the real
- * warp is flat inside `warpStartRadius` and only then bends as rel^2 — no
- * shear of an origin-centred blob can reproduce that shape. Once a blob has
- * its own centre, `discWarpShear` (evaluated at the blob's ring radius) is a
- * legitimate linearisation of the warp about that centre, not a stand-in for
- * displacement, so it still shapes each blob's tilt.
+ * The outer disc's warp support. A single anisotropic Gaussian cannot bend,
+ * so this piecewise-linearises the warped outer disc into `WARP_RING_COUNT`
+ * rings, each a locally-linear patch of the warp surface — an implementation
+ * detail of the disc, not a layer of their own. Blobs sit at their OWN true
+ * warped height (`warpHeight`) rather than at a sheared origin-centred
+ * position: the warp is flat inside `warpStartRadius` and only then bends as
+ * rel^2, a shape no shear of an origin-centred blob can reproduce.
  *
- * Ring COUNT is a tunable, not a fixed pair: two rings can only bracket the
- * warp with two straight-line segments, and a real warp bends continuously,
- * so more rings (each still a valid linearisation about its OWN centre) is
- * the fix, not a richer per-ring shape. Radii are evenly spaced between the
- * inner and outer fractions; each ring's flux is that ring's own share of
- * `Σ(R) = exp(-R/diskScaleLen)` integrated over its annulus (see
- * `ringAnnulusWeights` above), so the split follows the disc's real profile
- * at any ring count instead of a hand-picked ratio.
+ * Each ring's frame comes from `warpSurfaceFrame` — the real tangent plane
+ * at that ring's (radius, azimuth) — NOT from `discWarpShear`, which is the
+ * chord to the warped ring (slope of a plane through the ORIGIN) rather than
+ * its tangent: with the warp growing as rel^2 the tangent is
+ * `2/(R - warpStartRadius)` against the chord's `1/R`, several times steeper
+ * at a typical ring radius. Blobs tilted by the chord read as flat pancakes
+ * fanning out of the disc instead of a continuous bending sheet. `discWarpShear`
+ * still linearises each blob's OWN tilt about its own centre (via `shapeOf`
+ * elsewhere in this file), which is a different, legitimate use.
  *
- * Orientation comes from `warpSurfaceFrame` — the real tangent plane at each
- * blob's own (radius, azimuth) — NOT from `discWarpShear`. That shear is the
- * slope of a plane through the ORIGIN, which is the chord to the warped ring
- * rather than the tangent at it: with the warp growing as rel^2 the tangent
- * is `2/(R - warpStartRadius)` against the chord's `1/R`, several times
- * steeper at a typical ring radius. Blobs tilted by the chord read as flat
- * pancakes fanning out of the disc instead of a continuous bending sheet.
+ * Each ring's flux is that ring's own share of `Σ(R) = exp(-R/diskScaleLen)`
+ * integrated over its annulus (see `ringAnnulusWeights` above), so the split
+ * follows the disc's real profile rather than a hand-picked ratio.
  */
-function pushDiscRings(
+function pushWarpedOuterDisc(
   geometry: GalaxyFieldGeometry,
   out: GalaxyFieldComponent[],
   tuning: GalaxyFieldTuning,
 ): void {
-  if (!tuning.ringsEnabled || geometry.discFraction <= 0) return;
+  if (!tuning.discEnabled || geometry.discFraction <= 0) return;
   const { outerRadius, bulgeRadius, diskHeight, diskScaleLen } = geometry;
-  const ringCount = Math.max(1, Math.round(tuning.ringCount));
   const blobsPerRing = RING_BLOBS_PER_RING;
   const totalFlux =
     emissionScale(geometry) * geometry.discFraction * DISC_BRIGHTNESS * REMOVED_OUTER_DISC_WEIGHT;
 
   // One spacing drives both the radial sigma and the annulus weights below —
-  // the band split N-1 ways, or (one ring) the band's own half-width.
-  const spacingFrac =
-    ringCount === 1
-      ? (RING_OUTER_RADIUS_FRAC - RING_INNER_RADIUS_FRAC) / 2
-      : (RING_OUTER_RADIUS_FRAC - RING_INNER_RADIUS_FRAC) / (ringCount - 1);
+  // the band split N-1 ways across the WARP_RING_COUNT rings.
+  const spacingFrac = (RING_OUTER_RADIUS_FRAC - RING_INNER_RADIUS_FRAC) / (WARP_RING_COUNT - 1);
   const radialSigma = spacingFrac * outerRadius * RING_RADIAL_OVERLAP;
 
   const radii: number[] = [];
-  for (let r = 0; r < ringCount; r++) {
-    const frac =
-      ringCount === 1
-        ? (RING_INNER_RADIUS_FRAC + RING_OUTER_RADIUS_FRAC) / 2
-        : RING_INNER_RADIUS_FRAC + spacingFrac * r;
-    radii.push(frac * outerRadius);
+  for (let r = 0; r < WARP_RING_COUNT; r++) {
+    radii.push((RING_INNER_RADIUS_FRAC + spacingFrac * r) * outerRadius);
   }
   const weights = ringAnnulusWeights(radii, spacingFrac * outerRadius, diskScaleLen);
 
-  for (let r = 0; r < ringCount; r++) {
+  for (let r = 0; r < WARP_RING_COUNT; r++) {
     const radius = radii[r]!;
     const blobFlux = (totalFlux * weights[r]!) / blobsPerRing;
-    // Sharpness shrinks all three axes together, so a blob keeps its aspect
-    // ratio (and therefore reads as an ORIENTED cigar, not a dot) while the
-    // ring separates into countable blobs. Flux per blob is held fixed, which
-    // is why amplitude is recomputed from the shrunken sigmas.
-    const sharpness = Math.max(1, tuning.ringBlobSharpness);
     const sigmas = {
-      along: (((2 * Math.PI * radius) / blobsPerRing) * RING_AZIMUTHAL_OVERLAP) / sharpness,
-      across: radialSigma / sharpness,
-      pole: (diskHeight * (DISC_FLARE_FLOOR + bulgeRadius / (radius + bulgeRadius))) / sharpness,
+      along: ((2 * Math.PI * radius) / blobsPerRing) * RING_AZIMUTHAL_OVERLAP,
+      across: radialSigma,
+      pole: diskHeight * (DISC_FLARE_FLOOR + bulgeRadius / (radius + bulgeRadius)),
     };
     const amplitude = blobFlux / (TAU_ROOT3 * sigmas.along * sigmas.across * sigmas.pole);
     // No extra warp-shear inflation here (unlike `shapeOf`): each blob already
@@ -674,21 +662,21 @@ function pushHalo(
 }
 
 /**
- * Component count rides `tuning.ringCount * RING_BLOBS_PER_RING` PLUS
- * `tuning.numArms * tuning.armBlobsPerArm`: at every slider's ceiling that is
- * 4 inner disc + 12*24 ring + 8*64 arm + 2 bulge + 1 bar + 1 halo = 808, under
- * the shader's 1000 (`GALAXY_FIELD_MAX_COMPONENTS`) now that ring blob count
- * is fixed — `FieldSection`'s readout still surfaces `packFieldUniforms`'
- * silent clamp in case a future slider range pushes it back over. That
- * ceiling is a TUNING range, not a target — it's the fixed size of the
- * `comps` uniform array in `milkyWayField/io.wesl` (4000 vec4 slots = 1000
- * components), unrelated to render cost: the splat path draws one quad per
- * component, so cost tracks covered screen area, not component count.
- * Structure the closed form still cannot carry (the lopsided modulation,
- * sub-arm spurs, the irregular bar offset, HII knots) is folded into the
- * axisymmetric populations or dropped; the warp survives as blob placement
- * (`pushDiscRings`, `pushArmRidges`) plus each component's own linearised
- * shear (`shapeOf`) or true surface frame.
+ * Component count is `WARP_RING_COUNT * RING_BLOBS_PER_RING` (192, fixed)
+ * PLUS `tuning.numArms * tuning.armBlobsPerArm`: at the arm slider's ceiling
+ * that is 4 inner disc + 192 ring + 8*64 arm + 2 bulge + 1 bar + 1 halo = 712,
+ * under the shader's 1000 (`GALAXY_FIELD_MAX_COMPONENTS`) — `FieldSection`'s
+ * readout still surfaces `packFieldUniforms`' silent clamp in case a future
+ * slider range pushes it back over. That ceiling is a TUNING range, not a
+ * target — it's the fixed size of the `comps` uniform array in
+ * `milkyWayField/io.wesl` (4000 vec4 slots = 1000 components), unrelated to
+ * render cost: the splat path draws one quad per component, so cost tracks
+ * covered screen area, not component count. Structure the closed form still
+ * cannot carry (the lopsided modulation, sub-arm spurs, the irregular bar
+ * offset, HII knots) is folded into the axisymmetric populations or dropped;
+ * the warp survives as blob placement (`pushWarpedOuterDisc`,
+ * `pushArmRidges`) plus each component's own linearised shear (`shapeOf`) or
+ * true surface frame.
  */
 export function buildGalaxyFieldMixture(
   geometry: GalaxyFieldGeometry,
@@ -696,7 +684,7 @@ export function buildGalaxyFieldMixture(
 ): readonly GalaxyFieldComponent[] {
   const out: GalaxyFieldComponent[] = [];
   pushDisc(geometry, out, tuning);
-  pushDiscRings(geometry, out, tuning);
+  pushWarpedOuterDisc(geometry, out, tuning);
   pushArmRidges(geometry, out, tuning);
   pushBulge(geometry, out, tuning);
   pushBar(geometry, out, tuning);

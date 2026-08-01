@@ -1,25 +1,6 @@
 .root {
 }
 
-/* Same row idiom as ControlsPanel's legacy-sprites switch — a plain label
-   wrapping the shared pill, not a full CollapsibleSection, since this is
-   one mixture part's on/off, not a foldable group of its own. */
-.ringsToggleRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 2px 0 10px;
-  font-size: var(--font-size-xs);
-  letter-spacing: var(--letter-spacing-widest);
-  text-transform: uppercase;
-  cursor: pointer;
-  user-select: none;
-}
-
-.pillToggle {
-  composes: pillToggle from '../../../../../src/components/SettingsPanel/pillToggle.module.css';
-}
-
 .readout {
   margin: 6px 0 0;
   font-size: 10px;
