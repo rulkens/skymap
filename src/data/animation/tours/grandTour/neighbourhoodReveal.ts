@@ -16,17 +16,19 @@
  * releases the recession (400 ms blend), so the neighbourhood brightens
  * as the camera pulls away.
  *
- * The drift continues the spin sense the Local-Group dwell held: that dwell
- * now resolves its OWN landing geometrically (`spinToId` onto the M81
- * Group's bearing, live under whichever orientation frame is committed), so
- * by the time this beat starts the camera already faces M81. This beat's
- * `REVEAL_NET_YAW_RAD` is a RATE, not a shared-revolution remainder — it
- * carries the camera PAST that landing by a fixed amount while the pull-back
- * plays, so the flythrough actually launches a little past dead-on-M81
- * rather than exactly on it. Re-tuning it no longer rebalances the earlier
- * dwell (there is nothing to rebalance); it only changes how far past M81
- * the launch bearing sits — see `localGroup.ts`'s header for the composition
- * this replaced.
+ * THIS beat's dwell — not the Local-Group dwell before it — is the one that
+ * lands facing the M81 Group: `spinToId` resolves that bearing live (a
+ * sightline, not a stored angle), landing on the same subject under
+ * whichever orientation frame is committed. It belongs here rather than on
+ * the Local-Group dwell because this beat's `target` never moves across its
+ * own window — the enter clip's `focus(null)` fires INSIDE this dwell's
+ * `all`, not before it, so nothing displaces the orbit target the bearing is
+ * measured from — and because landing here means `neighbourhoodFlythrough`
+ * launches with zero gap between the aim it inherits and the aim its first
+ * waypoint needs: no post-landing beat rotates further before the flythrough
+ * reads the pose. `turns` is left at its default (0, the shortest arc): the
+ * Local-Group dwell's cruiseRate already covers most of the shared backward
+ * revolution, so what is left to close here is a short arc, not another lap.
  */
 
 import type { ClipData } from '../../../../@types/animation/ClipData';
@@ -37,12 +39,10 @@ import {
   seq,
   wait,
 } from '../../../../services/engine/animation/effectHelpers';
+import { focusId } from '../../../../utils/animation/focusId';
 import { dwellDrift } from '../../../../state/tour/dwellDrift';
 
 export const REVEAL_DWELL_SEC = 12;
-// The default dwellDrift rate, negated to keep the shared orbit's backward
-// spin. Exported (with the duration) for the Local-Group dwell's remainder.
-export const REVEAL_NET_YAW_RAD = -((Math.PI * 2) / 45) * REVEAL_DWELL_SEC;
 
 // Where the pull-out lands: wide enough that the neighbouring groups' scale
 // reads (the flythrough's subjects sit ~3.5 Mpc out), eye-tuned from there.
@@ -52,8 +52,7 @@ export const neighbourhoodReveal: ClipData = {
   start: 'live',
   timeline: [
     all([
-      ...dwellDrift(REVEAL_DWELL_SEC, { cruiseRate: REVEAL_NET_YAW_RAD / REVEAL_DWELL_SEC })
-        .timeline,
+      ...dwellDrift(REVEAL_DWELL_SEC, { spinTo: focusId('group-m81-group') }).timeline,
       // A beat of stillness, then release the focus and pull; the drift
       // outlasts the dolly so the wide shot breathes before the flythrough
       // launches.

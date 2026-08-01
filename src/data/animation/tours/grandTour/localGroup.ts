@@ -23,18 +23,18 @@
  *
  * The dwell orbits the family — the only subject we are INSIDE, so the
  * sweep shows the dwarfs strung between the two big spirals from every
- * side. `spinToId` sends it all the way round to the M81 Group's bearing —
- * the flythrough's first knot — resolved live (a sightline, not a stored
- * angle) so it lands on the same subject under whichever orientation frame
- * is committed. `turns: -1` keeps the backward spin sense the earlier dwells
- * share (the short way is a −7.2° sliver; a whole negative revolution makes
- * the orbit the beat's actual content).
- *
- * NOTE: the neighbourhood-reveal beat right after this one ALSO drifts
- * (its own `REVEAL_NET_YAW_RAD`, unrelated to this dwell now that the
- * landing resolves geometrically instead of splitting one shared
- * revolution across both beats) — see that beat's header for the
- * consequence.
+ * side. It does NOT land on the M81 Group's bearing itself — that would put
+ * the exact landing two beats before the flythrough that needs it, and a
+ * yaw change that far out also swings the flyPath's launch EYE (target +
+ * distance·dir) around a wide orbit, reintroducing an opening whip-pan the
+ * flythrough was built not to have. `neighbourhoodReveal`'s dwell, right
+ * before the flythrough and with a STATIONARY target across its own window,
+ * owns that exact landing instead (see its header). This dwell is a plain
+ * `cruiseRate` — a RATE, not a bearing, so it stays frame-invariant without
+ * needing to resolve anything — tuned to cover most of the shared backward
+ * revolution the two dwells' pacing was originally split across, leaving
+ * `neighbourhoodReveal`'s `spinToId` to close whatever arc remains onto M81,
+ * exactly, regardless of where this dwell happens to stop.
  *
  * The first real survey reveal rides this beat's opening: 2MRS fades in
  * with the group ring, so the family shot reads as a populated region and
@@ -78,8 +78,13 @@ export const localGroup: ClipData = {
 };
 
 const DWELL_SEC = 14;
+// Orbit speed, not a bearing — a pure rate stays frame-invariant with no
+// resolution needed. Preserves the pacing this dwell has always had: most of
+// the shared backward revolution toward the M81 Group, leaving
+// `neighbourhoodReveal`'s `spinToId` to land on it exactly (see this file's
+// header and that file's for the split).
+const NET_YAW_RAD = -4.733715;
 
 export const localGroupDwell: ClipData = dwellDrift(DWELL_SEC, {
-  spinTo: focusId('group-m81-group'),
-  turns: -1,
+  cruiseRate: NET_YAW_RAD / DWELL_SEC,
 });

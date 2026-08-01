@@ -48,6 +48,13 @@
  *     helper that builds the resolved arm — `focus()` in `effectHelpers.ts`
  *     builds the UNRESOLVED `kind:'focusId'` arm.
  *
+ *   - `aimAlong(forward, over, ease)` → `aimAt({ yaw, pitch }, over, ease)`
+ *     Same `orbitAnglesLookingAlong(forward, frameBasis)` encode as `lookAtId`,
+ *     but `forward` is an authored WORLD vector, not a subject id — no target
+ *     lookup, no dependency on `from` at all. Not a `FocusBoundEffect` (it
+ *     carries no `FocusId`), but still unresolved until this pass runs; see
+ *     the `aimAlong` helper's docstring for why `lookAtId` cannot substitute.
+ *
  * ### Why throw on a null resolution instead of silently dropping?
  *
  * The readiness gate (Task 5 `clipFociReady`) guarantees every id resolves
@@ -59,11 +66,9 @@
  * ### Walk invariants
  *
  * `seq` / `all` recurse into their `children` arrays; `fork` recurses into its
- * single `child`. All other arms (`hold`, `wait`, scalar camera actions, scene
- * effects) pass through unchanged — they carry no focus ids to resolve.
- * `FocusBoundEffect` arms can only appear as leaf nodes (the type system
- * prevents them from carrying sub-children), so the walk is safe to pass
- * through any non-FocusBound leaf unchanged.
+ * single `child`. `FocusBoundEffect` arms and `aimAlong` are rewritten as
+ * above. Every other arm (`hold`, `wait`, scalar camera actions, scene
+ * effects) passes through unchanged — it carries nothing this pass resolves.
  */
 
 import type { ClipData } from '../../../@types/animation/ClipData';

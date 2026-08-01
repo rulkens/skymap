@@ -20,9 +20,13 @@
  * (structures have radius 0 and get flown through-centre, which reads as
  * drifting through empty space).
  *
- * The first knot is Bode's Galaxy because the Local-Group dwell LANDS
- * facing the M81 Group's bearing — the launch continues straight along the
- * aim the viewer already holds, no opening swing. Waypoint order follows the
+ * The first knot is Bode's Galaxy because `neighbourhoodReveal`'s dwell —
+ * the beat immediately before this one — LANDS facing the M81 Group's
+ * bearing: the launch continues straight along the aim the viewer already
+ * holds, no opening swing. (Not the Local-Group dwell two beats back: a
+ * landing there would also swing the flyPath's launch EYE, not just the aim,
+ * since the eye is `target + distance·dir` — see `localGroup.ts`'s header.)
+ * Waypoint order follows the
  * famousFlythrough turn-minimisation insight: the set straddles both
  * celestial hemispheres, so one sharp (~100°) equator crossing is the
  * geometric floor — it lands at the Sombrero, where the banked pass-by turn
@@ -65,7 +69,7 @@ export const neighbourhoodFlythrough: ClipData = {
     scene(setLabelsFocusedOnly(false)),
     flyPath(
       [
-        atFocus(focusId('m81')), // Bode's — the bearing the M31 dwell landed on
+        atFocus(focusId('m81')), // Bode's — the bearing neighbourhoodReveal's dwell landed on
         atFocus(focusId('m101')), // Pinwheel
         atFocus(focusId('m51')), // Whirlpool
         atFocus(focusId('m88')), // M88

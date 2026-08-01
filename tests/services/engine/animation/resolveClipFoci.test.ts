@@ -48,6 +48,7 @@ import { structureFocusDistance } from '../../../../src/services/engine/camera/s
 import { yawPitchToDir } from '../../../../src/utils/camera/yawPitchToDir';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
+import { GALACTIC_DISC_FORWARD } from '../../../../src/services/engine/camera/cameraFraming';
 import type { ResolveDeps } from '../../../../src/@types/engine/ResolveDeps';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
@@ -621,8 +622,11 @@ describe('resolveClipFoci rewrites aimAlong to an aimAt bearing', () => {
   });
 
   it('lands the same world bearing under two different bases — the basis drops out', () => {
-    const forward: Vec3 = [0.973096, 0.064379, 0.221222];
-    const clip: ClipData = { timeline: [aimAlong(forward, 3)] };
+    // Uses the real production constant (not an arbitrary literal) so this
+    // test also exercises the exact value both `openingTitle` and
+    // `homeAgain` depend on — precision itself is pinned separately in
+    // cameraFraming.test.ts (the derivation-guard test).
+    const clip: ClipData = { timeline: [aimAlong(GALACTIC_DISC_FORWARD, 3)] };
 
     const resolvedEcliptic = resolveClipFoci(clip, DEPS, FOV_Y, POSE, ORIENTATION_FRAMES.ecliptic);
     const resolvedGalactic = resolveClipFoci(clip, DEPS, FOV_Y, POSE, ORIENTATION_FRAMES.galactic);
