@@ -10,6 +10,7 @@
  * field against the sprites.
  */
 import type { GalaxyCategory } from './GalaxyCategory';
+import type { GalaxyFieldArmRecord } from './GalaxyFieldArmRecord';
 
 export type GalaxyFieldGeometry = {
   readonly category: GalaxyCategory;
@@ -37,11 +38,31 @@ export type GalaxyFieldGeometry = {
   readonly warpStartRadius: number;
   /** Bar in-plane rotation about the pole, radians — an RNG draw, not a formula. */
   readonly barTiltRad: number;
-  /** Fraction of the modelled star budget in the smooth disc (arms and clumps folded in). */
+  /** Fraction of the modelled star budget in the smooth disc (clumps folded in; arms are `armFraction`). */
   readonly discFraction: number;
   readonly bulgeFraction: number;
   readonly barFraction: number;
   readonly haloFraction: number;
+  /** Fraction of the modelled star budget in the spiral arms — un-folded from `discFraction` so a ridge pass doesn't double the disc's own share. */
+  readonly armFraction: number;
+  /** Number of arms the generator drew, `gen.armTable`'s live prefix (max 8). */
+  readonly numArms: number;
+  /** Radius below which every arm is flat/absent — `armStarSample`'s smooth-start floor. */
+  readonly armStartRadius: number;
+  /** Radial span over which an arm's brightness ramps up from `armStartRadius`. */
+  readonly armInnerRampW: number;
+  /** Radius past which an arm's brightness begins its outer fade toward its own `fadeRadius`. */
+  readonly armFullRadius: number;
+  /** Perpendicular/angular scatter factor shared by every arm's cross-section. */
+  readonly armWidthFactor: number;
+  /** High-frequency wave-modulation amount added to every arm's ridge angle. */
+  readonly waveAmount: number;
+  /** Along-arm clump/gap modulation amount; 0 disables both `clumpMod` and the gap-survival term. */
+  readonly clumpAmount: number;
+  /** Blue-star fraction, also nudges the ridge blobs' colour young/old. */
+  readonly youngFraction: number;
+  /** Per-arm phase/pitch/weight/meander/clump/wave records, `numArms` long. */
+  readonly arms: readonly GalaxyFieldArmRecord[];
   /** Base sprite half-extent in generator units, before each star's size jitter. */
   readonly starSize: number;
   /** What the fractions above are shares OF — globular members excluded, dead slots included. */

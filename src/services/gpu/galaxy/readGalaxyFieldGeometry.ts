@@ -12,12 +12,39 @@ import { CATEGORY_CODE } from './packGenerationUniforms';
 import { GENERATION_UBO } from './generationUboLayout';
 import { POPULATION_IDS } from './populationIds';
 import type { GalaxyCategory } from '../../../@types/galaxy/GalaxyCategory';
+import type { GalaxyFieldArmRecord } from '../../../@types/galaxy/GalaxyFieldArmRecord';
 import type { GalaxyFieldGeometry } from '../../../@types/galaxy/GalaxyFieldGeometry';
 import type { GenerationLayout } from '../../../@types/galaxy/GenerationLayout';
 
 const CATEGORY_BY_CODE: readonly GalaxyCategory[] = (
   Object.keys(CATEGORY_CODE) as GalaxyCategory[]
 ).sort((a, b) => CATEGORY_CODE[a] - CATEGORY_CODE[b]);
+
+/**
+ * Reads one `gen.armTable` record — 16 floats at `armBase + arm*16`, in the
+ * exact order `packGenerationUniforms` writes and `armStarSample` consumes
+ * (lane 7 is padding, never a field).
+ */
+function readArmRecord(f32: Float32Array, armBase: number, arm: number): GalaxyFieldArmRecord {
+  const base = armBase + arm * 16;
+  return {
+    phase: f32[base]!,
+    pitch: f32[base + 1]!,
+    weight: f32[base + 2]!,
+    fadeRadius: f32[base + 3]!,
+    meanderAmp: f32[base + 4]!,
+    meanderFreq: f32[base + 5]!,
+    meanderPhase: f32[base + 6]!,
+    clumpF1: f32[base + 8]!,
+    clumpP1: f32[base + 9]!,
+    clumpF2: f32[base + 10]!,
+    clumpP2: f32[base + 11]!,
+    waveF1: f32[base + 12]!,
+    waveP1: f32[base + 13]!,
+    waveF2: f32[base + 14]!,
+    waveP2: f32[base + 15]!,
+  };
+}
 
 export function readGalaxyFieldGeometry(
   genUniforms: ArrayBuffer,
@@ -35,12 +62,18 @@ export function readGalaxyFieldGeometry(
   const bulge = iterations(POPULATION_IDS.bulge);
   const bar = iterations(POPULATION_IDS.bar);
   const halo = iterations(POPULATION_IDS.halo);
-  const disc =
-    iterations(POPULATION_IDS.disk) +
-    iterations(POPULATION_IDS.spiralArms) +
-    iterations(POPULATION_IDS.irregularClumps);
-  const modelled = bulge + bar + halo + disc;
+  const armStars = iterations(POPULATION_IDS.spiralArms);
+  // Un-folded from `disc`: pushArmRidges carries this share itself now, so
+  // leaving armStars in the disc numerator would double-count it once ridge
+  // blobs exist alongside the axisymmetric disc (see galaxyFieldMixture.ts).
+  const disc = iterations(POPULATION_IDS.disk) + iterations(POPULATION_IDS.irregularClumps);
+  const modelled = bulge + bar + halo + disc + armStars;
   const share = (count: number): number => (modelled > 0 ? count / modelled : 0);
+
+  const numArms = u32[GENERATION_UBO.u32.numArms]!;
+  const armBase = GENERATION_UBO.arrays.armTable.offsetVec4 * 4;
+  const arms: GalaxyFieldArmRecord[] = [];
+  for (let a = 0; a < numArms; a++) arms.push(readArmRecord(f32, armBase, a));
 
   return {
     category: CATEGORY_BY_CODE[u32[GENERATION_UBO.u32.category]!] ?? 'spiral',
@@ -61,6 +94,16 @@ export function readGalaxyFieldGeometry(
     bulgeFraction: share(bulge),
     barFraction: share(bar),
     haloFraction: share(halo),
+    armFraction: share(armStars),
+    numArms,
+    armStartRadius: f32[F.armStartRadius]!,
+    armInnerRampW: f32[F.armInnerRampW]!,
+    armFullRadius: f32[F.armFullRadius]!,
+    armWidthFactor: f32[F.armWidthFactor]!,
+    waveAmount: f32[F.waveAmount]!,
+    clumpAmount: f32[F.clumpAmount]!,
+    youngFraction: f32[F.youngFraction]!,
+    arms,
     starSize: f32[F.starSize]!,
     modelledStars: modelled,
   };

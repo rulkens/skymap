@@ -16,6 +16,7 @@ import { inverseCovarianceFromFrame } from '../../utils/galaxy/inverseCovariance
 import { spheroidEmissionSigma } from '../../utils/galaxy/spheroidEmissionSigma';
 import { warpHeight } from '../../utils/galaxy/warpHeight';
 import { warpSurfaceFrame } from '../../utils/galaxy/warpSurfaceFrame';
+import type { GalaxyFieldArmRecord } from '../../@types/galaxy/GalaxyFieldArmRecord';
 import type { GalaxyFieldComponent } from '../../@types/galaxy/GalaxyFieldComponent';
 import type { GalaxyFieldGeometry } from '../../@types/galaxy/GalaxyFieldGeometry';
 import type { GalaxyFieldTuning } from '../../@types/galaxy/GalaxyFieldTuning';
@@ -23,19 +24,21 @@ import type { Vec3 } from '../../@types/math/Vec3';
 
 /**
  * Uniform slots the shader reserves — `milkyWayField/io.wesl`'s
- * `comps: array<vec4<f32>, 2400>` is 4 vec4 per component, so raising this
- * means widening that array too (the linker will not catch a mismatch). Set
- * to cover the ring sliders' worst case (12 rings x 48 blobs = 576) plus the
- * other populations (8), with headroom. `packFieldUniforms` CLAMPS to this
- * silently, so a slider ceiling above it drops components with no warning —
- * raise the two together or not at all.
+ * `comps: array<vec4<f32>, 4000>` is 4 vec4 per component, so raising this
+ * means widening that array too (the linker will not catch a mismatch).
+ * Sliders' worst case is now 12 rings x 48 blobs + 8 arms x 64 blobs + 8
+ * other populations = 1096, past this cap — `packFieldUniforms` CLAMPS
+ * silently past whatever the cap is, so a slider ceiling above it drops
+ * components with no warning; `FieldSection`'s readout surfaces that instead
+ * of leaving it silent. Raise the cap and `io.wesl`'s array together or not
+ * at all.
  *
- * The bound that actually bites is not this one: at 600 components the
- * uniform is 38 KB, comfortably inside WebGPU's guaranteed 64 KB binding,
- * while the fullscreen pass evaluates EVERY component in EVERY fragment (see
- * `buildGalaxyFieldMixture`).
+ * The bound that actually bites is WebGPU's guaranteed 64 KiB uniform
+ * binding: header (96 B) + N x 64 B <= 65536 B caps N at 1022, and the
+ * fullscreen pass evaluates EVERY component in EVERY fragment (see
+ * `buildGalaxyFieldMixture`), so 1000 is a cost ceiling as much as a byte one.
  */
-export const GALAXY_FIELD_MAX_COMPONENTS = 600;
+export const GALAXY_FIELD_MAX_COMPONENTS = 1000;
 
 /** Every population but the outer-disc rings sits at the origin. */
 const ORIGIN: Vec3 = [0, 0, 0];
@@ -255,6 +258,11 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
   ringAzimuthalOverlap: RING_AZIMUTHAL_OVERLAP,
   ringFluxFalloff: RING_FLUX_SPLIT[1] / RING_FLUX_SPLIT[0],
   ringBlobSharpness: 1,
+  armsEnabled: true,
+  armBlobsPerArm: 28,
+  armWidthScale: 1,
+  armFluxBoost: 1,
+  armBlobSharpness: 1,
 };
 
 /** The removed pair's share of the disc's flux budget — see DISC_SIGMA_RATIOS' fit note. */
@@ -347,6 +355,198 @@ function pushDiscRings(
   }
 }
 
+// buildArmSlot: randomLuminosity * 1.9 * armFade * clumpMod — the ridge's own
+// brightness multiplier, off spiralArms' regular (non-HII) arm star line.
+const ARM_BRIGHTNESS = 1.9;
+
+/** Hot blue-white, nudged bluer with youngFraction — eyeball, echoing tempColorRamp(0.6 + 0.36*youngFraction)'s direction without matching its curve. */
+const ARM_COLOR_OLD: Readonly<Vec3> = [0.8, 0.86, 1.0];
+const ARM_COLOR_YOUNG: Readonly<Vec3> = [0.65, 0.78, 1.0];
+
+function armColor(youngFraction: number): Vec3 {
+  const t = Math.min(1, Math.max(0, youngFraction));
+  return [
+    ARM_COLOR_OLD[0] + (ARM_COLOR_YOUNG[0] - ARM_COLOR_OLD[0]) * t,
+    ARM_COLOR_OLD[1] + (ARM_COLOR_YOUNG[1] - ARM_COLOR_OLD[1]) * t,
+    ARM_COLOR_OLD[2] + (ARM_COLOR_YOUNG[2] - ARM_COLOR_OLD[2]) * t,
+  ];
+}
+
+function normalize3(v: Vec3): Vec3 {
+  const len = Math.hypot(v[0], v[1], v[2]) || 1;
+  return [v[0] / len, v[1] / len, v[2] / len];
+}
+
+function cross3(a: Vec3, b: Vec3): Vec3 {
+  return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+}
+
+function distance3(a: Vec3, b: Vec3): number {
+  return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+}
+
+function smoothstep01(t: number): number {
+  const c = Math.min(1, Math.max(0, t));
+  return c * c * (3 - 2 * c);
+}
+
+/** armStarSample's ridge angle: log-spiral phase + meander + (gated) high-frequency wave. */
+function armRidgeAngle(logR: number, geometry: GalaxyFieldGeometry, arm: GalaxyFieldArmRecord): number {
+  const angle =
+    arm.phase + arm.pitch * logR + arm.meanderAmp * Math.sin(arm.meanderFreq * logR * 2 + arm.meanderPhase);
+  // waveAmount is 0 for most presets, in which case this term is 0 too — no
+  // separate gate needed, unlike the WGSL source's `if` (a branch that only
+  // exists there to skip four sin() calls per star).
+  return (
+    angle +
+    geometry.waveAmount *
+      (Math.sin(arm.waveF1 * logR + arm.waveP1) * 0.16 + Math.sin(arm.waveF2 * logR + arm.waveP2) * 0.09)
+  );
+}
+
+/** The arm's true warped centre at (radius, its own ridge angle) — armStarSample's `x`/`y`/`z` before scatter. */
+function armCurvePos(radius: number, geometry: GalaxyFieldGeometry, arm: GalaxyFieldArmRecord): Vec3 {
+  const angle = armRidgeAngle(Math.log(radius / geometry.armStartRadius), geometry, arm);
+  return [radius * Math.cos(angle), warpHeight(radius, angle, geometry), radius * Math.sin(angle)];
+}
+
+/** armStarSample's inner/outer smoothstep brightness envelope, this arm's own fadeRadius (rec0.w). */
+function armFadeEnvelope(radius: number, geometry: GalaxyFieldGeometry, arm: GalaxyFieldArmRecord): number {
+  const innerT = (radius - geometry.armStartRadius) / geometry.armInnerRampW;
+  const outerT = (radius - geometry.armFullRadius) / Math.max(0.001, arm.fadeRadius - geometry.armFullRadius);
+  return smoothstep01(innerT) * (1 - smoothstep01(outerT));
+}
+
+/** armStarSample's along-arm low-frequency modulation; 1 (no modulation) when clumpAmount is 0. */
+function armClumpMod(logR: number, geometry: GalaxyFieldGeometry, arm: GalaxyFieldArmRecord): number {
+  if (geometry.clumpAmount <= 0) return 1;
+  const noise =
+    Math.sin(logR * arm.clumpF1 + arm.clumpP1) * 0.6 + Math.sin(logR * arm.clumpF2 + arm.clumpP2) * 0.4;
+  return 1 - geometry.clumpAmount * (0.5 - 0.5 * noise);
+}
+
+/** armStarSample's gap-survival fraction for non-HII stars — the smooth stand-in for the WGSL gate's coin flip. */
+function armSurvival(clumpMod: number, geometry: GalaxyFieldGeometry): number {
+  return geometry.clumpAmount > 0 ? Math.min(1, 0.4 + 0.6 * clumpMod) : 1;
+}
+
+/**
+ * Spiral-arm RIDGE blobs, placed along the exact log-spiral curve
+ * `armStarSample` draws stars around (`generate.wesl` lines ~652-771, cited
+ * per-function above) so the analytic arms land ON the sprite arms rather
+ * than approximating their pitch from the outside.
+ *
+ * Deliberately SKIPPED this pass, each because it complicates the ridge
+ * curve rather than the cross-section: `applyLopsided` (post-ridge radius
+ * modulation), the `isSubArm` spur branch, and HII knots/newborns (those
+ * stay sprites by design — research doc s11.4/s12). Also left out of the
+ * cross-section: the angle-feather scatter
+ * (`genNormal*armWidthFactor*(1+armStartRadius/radius)`), which is mostly
+ * ALONG the arm rather than across it — fold it into `across`'s sigma in a
+ * later pass, not this one.
+ *
+ * Flux bookkeeping: `readGalaxyFieldGeometry` un-folds spiralArms iterations
+ * out of `discFraction` into `armFraction`, so this function spends the
+ * arms' OWN share — adding it on top of an unchanged disc would double the
+ * arms' light (see that file's comment on the trap).
+ */
+function pushArmRidges(
+  geometry: GalaxyFieldGeometry,
+  out: GalaxyFieldComponent[],
+  tuning: GalaxyFieldTuning,
+): void {
+  if (!tuning.armsEnabled || geometry.armFraction <= 0 || geometry.numArms <= 0) return;
+  const { armStartRadius, diskHeight, armWidthFactor } = geometry;
+  const blobsPerArm = Math.max(2, Math.round(tuning.armBlobsPerArm));
+  const sharpness = Math.max(1, tuning.armBlobSharpness);
+  const color = armColor(geometry.youngFraction);
+
+  let weightSum = 0;
+  for (const arm of geometry.arms) weightSum += arm.weight;
+  if (weightSum <= 0) return;
+
+  const totalFlux = emissionScale(geometry) * geometry.armFraction * ARM_BRIGHTNESS * tuning.armFluxBoost;
+
+  for (const arm of geometry.arms) {
+    const rStart = armStartRadius * 1.05;
+    const rEnd = arm.fadeRadius;
+    if (rEnd <= rStart) continue;
+    const logStart = Math.log(rStart / armStartRadius);
+    const logEnd = Math.log(rEnd / armStartRadius);
+
+    // Centres first, uniform steps in log-radius — every other per-blob
+    // quantity (spacing, flux, tangent) is derived from this curve.
+    const logRs: number[] = [];
+    const radii: number[] = [];
+    const angles: number[] = [];
+    const centers: Vec3[] = [];
+    for (let k = 0; k < blobsPerArm; k++) {
+      const logR = logStart + ((logEnd - logStart) * k) / (blobsPerArm - 1);
+      const radius = armStartRadius * Math.exp(logR);
+      const angle = armRidgeAngle(logR, geometry, arm);
+      logRs.push(logR);
+      radii.push(radius);
+      angles.push(angle);
+      centers.push([radius * Math.cos(angle), warpHeight(radius, angle, geometry), radius * Math.sin(angle)]);
+    }
+
+    // Per-blob line density x arc-spacing, in one pass since both the flux
+    // weight and the along-arm sigma need the same consecutive-centre
+    // distance (forward difference, backward at the open end — the arm
+    // isn't periodic like a ring).
+    const spacings: number[] = [];
+    const rawFlux: number[] = [];
+    let armRawSum = 0;
+    for (let k = 0; k < blobsPerArm; k++) {
+      const spacing =
+        k < blobsPerArm - 1
+          ? distance3(centers[k]!, centers[k + 1]!)
+          : distance3(centers[k - 1]!, centers[k]!);
+      spacings.push(spacing);
+      const fade = armFadeEnvelope(radii[k]!, geometry, arm);
+      const clump = armClumpMod(logRs[k]!, geometry, arm);
+      const survival = armSurvival(clump, geometry);
+      const flux = fade * clump * survival * spacing;
+      rawFlux.push(flux);
+      armRawSum += flux;
+    }
+    if (armRawSum <= 0) continue;
+
+    // This arm's share of the total, then each blob's share of THAT — the
+    // two normalisations `w_a / sum(w)` and `rawFlux_k / armRawSum` compose
+    // into a mixture whose grand total is exactly `totalFlux`.
+    const armTargetFlux = totalFlux * (arm.weight / weightSum);
+
+    for (let k = 0; k < blobsPerArm; k++) {
+      const radius = radii[k]!;
+      const center = centers[k]!;
+      const ahead = armCurvePos(radius * 1.01, geometry, arm);
+      const behind = armCurvePos(radius * 0.99, geometry, arm);
+      const along = normalize3([ahead[0] - behind[0], ahead[1] - behind[1], ahead[2] - behind[2]]);
+      const surfacePole = warpSurfaceFrame(radius, angles[k]!, geometry).pole;
+      const across = normalize3(cross3(surfacePole, along));
+      const pole = cross3(along, across); // re-orthonormalise: surfacePole need not be perpendicular to `along`
+
+      const sigmas = {
+        along: (spacings[k]! * tuning.ringAzimuthalOverlap) / sharpness,
+        across: (armWidthFactor * radius * 0.5 * tuning.armWidthScale) / sharpness,
+        pole: (diskHeight * 0.8) / sharpness,
+      };
+      const blobFlux = armTargetFlux * (rawFlux[k]! / armRawSum);
+      const amplitude = blobFlux / (TAU_ROOT3 * sigmas.along * sigmas.across * sigmas.pole);
+      const boundRadius = Math.max(sigmas.along, sigmas.across, sigmas.pole);
+
+      out.push({
+        amplitude,
+        ...inverseCovarianceFromFrame({ along, across, pole }, sigmas),
+        color,
+        center,
+        boundRadius,
+      });
+    }
+  }
+}
+
 /** buildBulge's two radial branches, squashed by flattening / bulgeAxisZ and rotated. */
 function pushBulge(geometry: GalaxyFieldGeometry, out: GalaxyFieldComponent[]): void {
   if (geometry.bulgeFraction <= 0) return;
@@ -431,16 +631,18 @@ function pushHalo(geometry: GalaxyFieldGeometry, out: GalaxyFieldComponent[]): v
 }
 
 /**
- * Component count now rides `tuning.ringCount * tuning.ringBlobsPerRing`: at
- * both sliders' ceiling that is 4 inner disc + 12*48 ring + 2 bulge + 1 bar +
- * 1 halo = 584, inside the shader's 600 (`GALAXY_FIELD_MAX_COMPONENTS`);
- * `packFieldUniforms` clamps if that ever changes. That ceiling is a TUNING
- * range, not a target — `milkyWayField/field.wesl` is one fullscreen pass
- * evaluating every component in every fragment, so cost is linear in this
- * number. Structure the closed form cannot carry (spiral arms, the lopsided
- * modulation, the irregular bar offset) is folded into the axisymmetric disc
- * or dropped; the warp survives as blob placement (`pushDiscRings`) plus each
- * component's own linearised shear (`shapeOf`).
+ * Component count now rides `tuning.ringCount * tuning.ringBlobsPerRing` PLUS
+ * `tuning.numArms * tuning.armBlobsPerArm`: at every slider's ceiling that is
+ * 4 inner disc + 12*48 ring + 8*64 arm + 2 bulge + 1 bar + 1 halo = 1104,
+ * past the shader's 1000 (`GALAXY_FIELD_MAX_COMPONENTS`) — `packFieldUniforms`
+ * clamps silently if that happens, which `FieldSection`'s readout surfaces.
+ * That ceiling is a TUNING range, not a target — `milkyWayField/field.wesl`
+ * is one fullscreen pass evaluating every component in every fragment, so
+ * cost is linear in this number. Structure the closed form still cannot
+ * carry (the lopsided modulation, sub-arm spurs, the irregular bar offset,
+ * HII knots) is folded into the axisymmetric populations or dropped; the
+ * warp survives as blob placement (`pushDiscRings`, `pushArmRidges`) plus
+ * each component's own linearised shear (`shapeOf`) or true surface frame.
  */
 export function buildGalaxyFieldMixture(
   geometry: GalaxyFieldGeometry,
@@ -449,6 +651,7 @@ export function buildGalaxyFieldMixture(
   const out: GalaxyFieldComponent[] = [];
   pushDisc(geometry, out);
   pushDiscRings(geometry, out, tuning);
+  pushArmRidges(geometry, out, tuning);
   pushBulge(geometry, out);
   pushBar(geometry, out);
   pushHalo(geometry, out);

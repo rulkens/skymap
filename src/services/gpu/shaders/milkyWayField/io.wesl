@@ -16,8 +16,8 @@
 //   offset 48  : camFwd: vec4
 //   offset 64  : params: vec4   (tanHalfFov, aspect, lensShiftX, exposure)
 //   offset 80  : counts: vec4   (componentCount, 0, 0, 0)
-//   offset 96  : comps: array<vec4, 2400>  (FOUR vec4 per component, 600 max)
-//   total: 38496 bytes.
+//   offset 96  : comps: array<vec4, 4000>  (FOUR vec4 per component, 1000 max)
+//   total: 64096 bytes.
 //
 // The ray comes from a camera BASIS plus tanHalfFov/aspect rather than an
 // inverse view-projection: the engine already holds the basis (it packs the
@@ -46,10 +46,10 @@ struct FieldUniforms {
   camFwd: vec4<f32>,
   params: vec4<f32>,
   counts: vec4<f32>,
-  // 2400 slots = GALAXY_FIELD_MAX_COMPONENTS (600) x 4 vec4. Fixed size
+  // 4000 slots = GALAXY_FIELD_MAX_COMPONENTS (1000) x 4 vec4. Fixed size
   // because a uniform array cannot be runtime-sized; counts.x says how many
   // are live, and the rest are never read.
-  comps: array<vec4<f32>, 2400>,
+  comps: array<vec4<f32>, 4000>,
 };
 
 @group(0) @binding(0) var<uniform> u: FieldUniforms;
