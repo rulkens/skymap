@@ -6,6 +6,20 @@ approach this spec optimises; its math and fragment shader are unchanged)
 **Benchmark:** `npm run perf -- --scenario galactic-centre` (added 2026-07-31,
 this branch)
 
+> **Amendment (2026-08-01) — shipped design differs from what follows.** This
+> spec is preserved as the record of what was proposed; the plan's
+> `Amendment (2026-08-01) — the fallback is eliminated, not tolerated` and
+> `Amendment 2 (2026-08-01) — CPU closed-form visible arc; fold geometry
+> deleted` carry the full history. Superseded passages below are marked
+> inline. In short: `ribbonEligible` and the fullscreen-fallback pipeline are
+> gone (every orbit takes the ribbon path, one pipeline, one draw count); the
+> analytic gradient minors (`minorS`/`minorT`) are gone (the fragment
+> measures its stroke gradient with `dpdx`/`dpdy`); the record shipped as
+> **34 floats / stride 136**, not 40/160, with the closed-form visible arc
+> `arc = [eStart, eSpan]` at `@location(9)` — added because clip-w along an
+> orbit is a sinusoid in eccentric anomaly, so the in-front-of-camera part is
+> always a single interval, decidable once on the CPU.
+
 ## 1. Problem
 
 The conic orbit-trail renderer draws every visible orbit as a **fullscreen
@@ -32,6 +46,8 @@ unbounded projections. The fragment shader — `Ginv` back-projection, Sampson
 distance, gradient minors, Newton horizon rejection — is **unchanged in both
 paths**; the impostor only changes which pixels invoke it. Coverage must be
 conservative: every pixel the stroke could touch lies inside the ribbon.
+(Amended 2026-08-01: the gradient minors did not survive — see the amendment
+at the top.)
 
 ### 2.1 The clip-space basis — why no VP bind group is needed
 
@@ -75,6 +91,10 @@ Same idiom as the current fullscreen triangle: geometry from
 
 ### 2.3 Ribbon-eligibility classification (CPU, per orbit, per frame)
 
+> **Amended 2026-08-01:** this whole section is deleted. There is no
+> eligibility predicate and no fullscreen fallback — every orbit takes the
+> ribbon path. See the amendment at the top.
+
 `composeOrbitConic` assembles no explicit conic coefficients (the screen conic
 is implicit through `Ginv`), so the test reads straight off the clip basis
 instead of a discriminant. The projection is an ellipse iff the whole curve
@@ -96,6 +116,15 @@ check is a handful of f64 flops beside the Kepler solve the layer already
 does per orbit.
 
 ### 2.4 Data + draw structure
+
+> **Amended 2026-08-01:** the block below describes the proposed 40-float /
+> stride-160 record with a ribbon/fallback partition and two pipelines. None
+> of it shipped. The actual record is **34 floats / stride 136**:
+> `ginv0/1/2` (locations 1..3), `params`, `phase` (4..5), the clip basis
+> `cc`/`ac`/`bc` (6..8, no `minorS`/`minorT`), and the closed-form visible
+> arc `arc = [eStart, eSpan]` (`float32x2` at location 9). One production
+> pipeline, one instance VBO, one draw count — see `io.wesl`'s
+> `OrbitInstance` for the authoritative table.
 
 ```
 INSTANCE_FLOATS 28 → 40   (+ Cc, Ac, Bc at locations 8..10, offsets 112/128/144;
@@ -140,8 +169,16 @@ pivot-pin fix), and `clearFocus` on `milky-way-outside`/`milky-way-close`
   the ribbon is thinnest, so coverage gaps would show there first. The speckle
   itself is pre-existing and out of scope (fragment math unchanged).
 - Camera inside an orbit (fallback path): trail renders exactly as today.
+  (Amended 2026-08-01: there is no fallback path; a camera inside an orbit
+  draws that trail as an open-arc ribbon like every other orbit.)
 
 ## 5. Tests
+
+> **Amended 2026-08-01:** `ribbonEligible` and the ribbon/fallback partition
+> below were deleted with the design that produced them (see the amendment
+> at the top). The shipped tests instead pin the closed-form visible arc
+> (`arc = [eStart, eSpan]`) and the 34-float record's name/location/offset
+> contract.
 
 - `composeOrbitConic`: clip basis reprojects sample ellipse points onto the
   known screen conic; `ribbonEligible` flips only when the orbit plane
