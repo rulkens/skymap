@@ -18,6 +18,7 @@
 #   src/engine/shaders/lib/tonemap.wesl -> src/services/gpu/shaders/lib/tonemap.wesl
 #   src/engine/shaders/lib/cloudSprite.wesl -> .../shaders/lib/cloudSprite.wesl
 #   src/engine/shaders/lib/fullscreenTri.wesl -> .../shaders/lib/fullscreenTri.wesl
+#   src/engine/shaders/lib/billboard.wesl     -> .../shaders/lib/billboard.wesl
 #   src/engine/shaders/lib/gaussianIntegral.wesl -> .../lib/gaussianIntegral.wesl
 #
 # milkyWayCloud is the star + dust billboard pair, shared as a WHOLE DIRECTORY

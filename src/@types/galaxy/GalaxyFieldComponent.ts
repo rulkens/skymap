@@ -25,4 +25,10 @@ export type GalaxyFieldComponent = {
   readonly color: Readonly<Vec3>;
   /** World-space centre of exp(-0.5*(p-center)^T*M*(p-center)); [0,0,0] for an origin-centred component. */
   readonly center: Readonly<Vec3>;
+  /**
+   * World-space bounding radius (max sigma, warp-inflated where applicable) —
+   * a billboard sizing hint for the splat render path, not part of the
+   * Gaussian's own math. See `galaxyFieldMixture.ts`'s push sites.
+   */
+  readonly boundRadius: number;
 };

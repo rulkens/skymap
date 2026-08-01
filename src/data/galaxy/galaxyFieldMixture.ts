@@ -60,17 +60,25 @@ function shapeOf(
   sigmaPole: number,
   sigmaAcross: number,
   tiltRad: number,
-): Pick<GalaxyFieldComponent, 'invCovDiagonal' | 'invCovOffDiagonal'> {
+): Pick<GalaxyFieldComponent, 'invCovDiagonal' | 'invCovOffDiagonal' | 'boundRadius'> {
   const radius = MEAN_RADIUS_PER_SIGMA * Math.sqrt(sigmaAlong * sigmaAcross);
   const [shearX, shearZ] = discWarpShear(radius, geometry);
-  return galaxyFieldInverseCovariance({
-    sigmaAlong,
-    sigmaPole,
-    sigmaAcross,
-    tiltRad,
-    shearX,
-    shearZ,
-  });
+  // The shear S^-1 stretches the unsheared ellipsoid by at most this factor
+  // (S = I + e_y*(shearX, shearZ), operator norm bounded by 1 + |shear|), so
+  // the splat path's billboard has to grow by it too or it clips the blob.
+  const boundRadius =
+    Math.max(sigmaAlong, sigmaPole, sigmaAcross) * (1 + Math.hypot(shearX, shearZ));
+  return {
+    ...galaxyFieldInverseCovariance({
+      sigmaAlong,
+      sigmaPole,
+      sigmaAcross,
+      tiltRad,
+      shearX,
+      shearZ,
+    }),
+    boundRadius,
+  };
 }
 
 /**
@@ -322,6 +330,10 @@ function pushDiscRings(
       pole: (diskHeight * (DISC_FLARE_FLOOR + bulgeRadius / (radius + bulgeRadius))) / sharpness,
     };
     const amplitude = blobFlux / (TAU_ROOT3 * sigmas.along * sigmas.across * sigmas.pole);
+    // No extra warp-shear inflation here (unlike `shapeOf`): each blob already
+    // sits at its own true warped centre and orientation, so its sigmas alone
+    // bound it.
+    const boundRadius = Math.max(sigmas.along, sigmas.across, sigmas.pole);
     for (let k = 0; k < blobsPerRing; k++) {
       const phi = (k / blobsPerRing) * Math.PI * 2;
       out.push({
@@ -329,6 +341,7 @@ function pushDiscRings(
         ...inverseCovarianceFromFrame(warpSurfaceFrame(radius, phi, geometry), sigmas),
         color: DISC_COLOR,
         center: [radius * Math.cos(phi), warpHeight(radius, phi, geometry), radius * Math.sin(phi)],
+        boundRadius,
       });
     }
   }

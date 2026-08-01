@@ -83,6 +83,9 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   spriteField: true,
   analyticField: true,
   analyticExposure: 1.0,
+  // Default OFF: the fullscreen loop (`fieldPipe`) is the reference the
+  // splat path is judged against, not the boot experience.
+  fieldSplat: false,
   // ON at boot, which costs nothing: at the boot camera both bands read 1, so
   // the first frame is the same frame it always was. A fade that had to be
   // found and switched on would leave the tool tuning a regime the app never

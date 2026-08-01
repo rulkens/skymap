@@ -111,7 +111,7 @@ export function packFieldUniforms(
     out[base + 4] = c.invCovOffDiagonal[0];
     out[base + 5] = c.invCovOffDiagonal[1];
     out[base + 6] = c.invCovOffDiagonal[2];
-    out[base + 7] = 0;
+    out[base + 7] = c.boundRadius;
     out[base + 8] = c.color[0];
     out[base + 9] = c.color[1];
     out[base + 10] = c.color[2];

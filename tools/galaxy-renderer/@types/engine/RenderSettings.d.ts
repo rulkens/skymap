@@ -66,6 +66,8 @@ export type RenderSettings = {
   readonly analyticField: boolean;
   /** SPIKE, tool-only: whole-field intensity multiplier for the analytic pass, where 1.0 emits the sprite field's own total flux. */
   readonly analyticExposure: number;
+  /** SPIKE, tool-only: draw the analytic field as one instanced quad per component instead of the fullscreen per-fragment loop. Same math per pixel; cost scales with covered screen area instead of pixels x componentCount. */
+  readonly fieldSplat: boolean;
 
   /**
    * The app's Milky-Way visibility fade, ported so the cloud can be tuned in

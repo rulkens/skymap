@@ -223,6 +223,7 @@ import { readGalaxyFieldGeometry } from '../../../../src/services/gpu/galaxy/rea
 import {
   buildGalaxyFieldMixture,
   DEFAULT_GALAXY_FIELD_TUNING,
+  GALAXY_FIELD_MAX_COMPONENTS,
 } from '../../../../src/data/galaxy/galaxyFieldMixture';
 import { GENERATION_UBO } from '../../../../src/services/gpu/galaxy/generationUboLayout';
 import { GEN_RECORD_BYTES } from '../../../../src/services/gpu/galaxy/genRecordBytes';
@@ -241,6 +242,7 @@ import { DEFAULT_RENDER_SETTINGS } from '../data/defaultRenderSettings';
 import starWgsl from './shaders/milkyWayCloud/stars.wesl?static';
 import dustWgsl from './shaders/milkyWayCloud/dust.wesl?static';
 import fieldWgsl from './shaders/milkyWayField/field.wesl?static';
+import splatWgsl from './shaders/milkyWayField/splat.wesl?static';
 import gradeWgsl from './shaders/grade.wesl?static';
 
 /** HDR working format for the scene + bloom pyramid — the runtime's `hdr` row. */
@@ -480,6 +482,25 @@ export async function createGalaxyEngine(
     primitive: { topology: 'triangle-list' },
   });
 
+  // ---- splat pipeline (SPIKE: one instanced quad per component) ----
+  // The A/B alternative to `fieldPipe`: same math, same target, same blend,
+  // but one billboard PER COMPONENT instead of a fullscreen loop over all of
+  // them — see `splat.wesl`'s header. No vertex buffers, same as `fieldPipe`:
+  // `quadCorner`/the per-instance `comps` lookup both come off `vertex_index`
+  // / `instance_index` alone.
+  const splatMod = makeShader(splatWgsl, 'galaxy:splat');
+  const splatPipe = device.createRenderPipeline({
+    label: 'galaxy:splatPipe',
+    layout: 'auto',
+    vertex: { module: splatMod, entryPoint: 'vs' },
+    fragment: {
+      module: splatMod,
+      entryPoint: 'fs',
+      targets: [{ format: HDR, blend: ADDITIVE_BLEND }],
+    },
+    primitive: { topology: 'triangle-list' },
+  });
+
   // ---- dust pipeline (transmittance billboards) ----
   // The runtime's `milkyWayCloud/dust.wesl`, drawn FULL-RES into `sceneTex`
   // (not the aggregate) — the app's split, because multiplicative
@@ -626,6 +647,17 @@ export async function createGalaxyEngine(
   const fieldBG = device.createBindGroup({
     label: 'galaxy:fieldBG',
     layout: fieldPipe.getBindGroupLayout(0),
+    entries: [{ binding: 0, resource: { buffer: fieldUbo } }],
+  });
+  // Same `fieldUbo` buffer as `fieldBG`, but its OWN bind group: `splatPipe`
+  // is a different `layout: 'auto'` pipeline, so its auto-derived
+  // GPUBindGroupLayout is a distinct identity even though the WGSL binding
+  // is byte-identical — a bind group built against one pipeline's layout
+  // fails the other's draw-time compatibility check (see `starBG`/`dustBG`'s
+  // comment just above for the same rule).
+  const splatBG = device.createBindGroup({
+    label: 'galaxy:splatBG',
+    layout: splatPipe.getBindGroupLayout(0),
     entries: [{ binding: 0, resource: { buffer: fieldUbo } }],
   });
 
@@ -1503,9 +1535,19 @@ export async function createGalaxyEngine(
         ],
         ...(fieldWrites ? { timestampWrites: fieldWrites } : {}),
       });
-      pass.setPipeline(fieldPipe);
-      pass.setBindGroup(0, fieldBG);
-      pass.draw(3);
+      // Same pass, same timing slot either way — the toggle IS the A/B: one
+      // fullscreen loop over every component (`fieldPipe`) against one
+      // instanced quad per component (`splatPipe`), both summing to the same
+      // additive image.
+      if (render.fieldSplat) {
+        pass.setPipeline(splatPipe);
+        pass.setBindGroup(0, splatBG);
+        pass.draw(6, Math.min(fieldMixture.length, GALAXY_FIELD_MAX_COMPONENTS));
+      } else {
+        pass.setPipeline(fieldPipe);
+        pass.setBindGroup(0, fieldBG);
+        pass.draw(3);
+      }
       pass.end();
     }
     // Scene pass: the aggregate folded into HDR, then transmittance dust over

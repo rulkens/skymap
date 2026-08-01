@@ -29,12 +29,15 @@
 // Per component, four vec4 carry the WORLD-space inverse covariance M of
 // exp(-0.5*(p-center)^T*M*(p-center)), plus amplitude, colour and a centre:
 //   [4i]   = (m00, m11, m22, amplitude)
-//   [4i+1] = (m01, m02, m12, unused)
+//   [4i+1] = (m01, m02, m12, boundRadius)
 //   [4i+2] = (colorR, colorG, colorB, unused)
 //   [4i+3] = (cx, cy, cz, unused)
 // Six independent M entries, not three sigmas and a tilt: a component's own
 // warp shear (buildGalaxyFieldMixture, linearised about its centre) tilts it
 // out of any axis-aligned frame. Index 1 of M is the DISC POLE (+Y).
+// boundRadius (world-space max sigma, warp-inflated — see
+// GalaxyFieldComponent) is a billboard sizing hint for splat.wesl's
+// per-instance quad; field.wesl's fullscreen pass never reads it.
 
 struct FieldUniforms {
   eye: vec4<f32>,
