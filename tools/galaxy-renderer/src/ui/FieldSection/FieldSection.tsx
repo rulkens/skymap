@@ -9,6 +9,8 @@
  * dispatch, just a CPU-side rebuild picked up by next frame's uniform pack.
  */
 import type { ReactNode } from 'react';
+import { GALAXY_FIELD_MAX_COMPONENTS } from '../../../../../src/data/galaxy/galaxyFieldMixture';
+import { GENERATION_UBO } from '../../../../../src/services/gpu/galaxy/generationUboLayout';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { fieldTuningPatched } from '../../state/slices/fieldTuningSlice';
 import { sectionToggled } from '../../state/slices/uiSlice';
@@ -16,11 +18,22 @@ import CollapsibleSection from '../CollapsibleSection/CollapsibleSection';
 import ParamSlider from '../ParamSlider/ParamSlider';
 import styles from './FieldSection.module.css';
 
+// Same table the generator itself clamps armCount into (`packGenerationUniforms`) —
+// an estimate, not a read of the live geometry, since the store only holds the
+// SLIDER value, not what the last generate() rounded it to.
+const MAX_ARMS = GENERATION_UBO.arrays.armTable.countVec4 / 4;
+const OTHER_COMPONENTS = 8; // 4 inner disc + 2 bulge + 1 bar + 1 halo, unconditional
+
 function FieldSection(): ReactNode {
   const dispatch = useAppDispatch();
   const tuning = useAppSelector((state) => state.fieldTuning);
+  const galaxy = useAppSelector((state) => state.galaxy);
   const open = useAppSelector((state) => state.ui.openSections.ringTuning);
   const ringBlobs = Math.max(1, Math.round(tuning.ringCount)) * tuning.ringBlobsPerRing;
+  const numArms = Math.min(Math.max(1, Math.round(galaxy.armCount ?? 2)), MAX_ARMS);
+  const armBlobs = tuning.armsEnabled ? numArms * tuning.armBlobsPerArm : 0;
+  const totalComponents = ringBlobs + armBlobs + OTHER_COMPONENTS;
+  const overflow = totalComponents > GALAXY_FIELD_MAX_COMPONENTS;
 
   return (
     <CollapsibleSection
@@ -106,10 +119,12 @@ function FieldSection(): ReactNode {
           onChange={(v) => dispatch(fieldTuningPatched({ ringBlobSharpness: v }))}
           info="Debug only: shrinks every blob's three sigmas together at constant flux, so the ring breaks into countable blobs whose tilt shows the surface frame they were placed on. 1 is the real field."
         />
-        <p className={styles.readout}>
+        <p className={overflow ? styles.readoutOverflow : styles.readout}>
           {ringBlobs} ring blobs ({Math.max(1, Math.round(tuning.ringCount))} x{' '}
-          {tuning.ringBlobsPerRing}) + 8 other = {ringBlobs + 8} components, each evaluated per
-          pixel
+          {tuning.ringBlobsPerRing}) + {armBlobs} arm blobs ({numArms} x {tuning.armBlobsPerArm}) +{' '}
+          {OTHER_COMPONENTS} other = {totalComponents} components, each evaluated per pixel
+          {overflow &&
+            ` — OVER the ${GALAXY_FIELD_MAX_COMPONENTS} cap, packFieldUniforms is silently dropping the rest`}
         </p>
       </div>
     </CollapsibleSection>

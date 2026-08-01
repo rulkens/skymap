@@ -13,6 +13,7 @@ export type UiState = {
       | 'shape'
       | 'starBudget'
       | 'arms'
+      | 'armField'
       | 'pop'
       | 'dust'
       | 'glob'

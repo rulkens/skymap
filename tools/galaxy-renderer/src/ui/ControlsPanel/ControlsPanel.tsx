@@ -35,6 +35,7 @@ import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { paramsPatched } from '../../state/slices/galaxySlice';
 import { renderPatched } from '../../state/slices/renderSlice';
 import { lodPatched } from '../../state/slices/lodSlice';
+import { fieldTuningPatched } from '../../state/slices/fieldTuningSlice';
 import { sectionToggled } from '../../state/slices/uiSlice';
 import { PARAM_SPEC } from '../../data/paramSpec';
 import { hubbleTypePatch } from '../../data/hubbleStagePatches';
@@ -198,6 +199,7 @@ function ControlsPanel({ fade }: ControlsPanelProps): ReactNode {
   const render = useAppSelector((state) => state.render);
   const lod = useAppSelector((state) => state.lod);
   const ui = useAppSelector((state) => state.ui);
+  const fieldTuning = useAppSelector((state) => state.fieldTuning);
 
   const category = classifyHubbleType(galaxy.type);
   const shapeSliders = buildShapeSliders(category);
@@ -305,6 +307,59 @@ function ControlsPanel({ fade }: ControlsPanelProps): ReactNode {
             {armSliders.map(renderGalaxySlider)}
           </CollapsibleSection>
         )}
+
+        {/* The analytic field's own arm ridge — Gaussian blobs placed along
+            the SAME log-spiral curve `armStarSample` draws sprite stars
+            around (`pushArmRidges` in `galaxyFieldMixture.ts`), so the two
+            renderings' arms land on top of each other. On/off lives in the
+            header, same master-toggle idiom as ANALYTIC FLUX FIELD above. */}
+        <CollapsibleSection
+          title="ARM OVERDENSITIES"
+          open={ui.openSections.armField}
+          onToggle={() => dispatch(sectionToggled('armField'))}
+          headerToggle={fieldTuning.armsEnabled}
+          onHeaderToggleChange={(value) => dispatch(fieldTuningPatched({ armsEnabled: value }))}
+        >
+          <ParamSlider
+            label="Blobs per arm"
+            value={fieldTuning.armBlobsPerArm}
+            min={8}
+            max={64}
+            step={1}
+            format={(v) => v.toFixed(0)}
+            onChange={(v) => dispatch(fieldTuningPatched({ armBlobsPerArm: v }))}
+            info="Blobs per arm, spaced uniformly in log-radius from the arm's start to its own fade radius. Cost is arms x blobs, evaluated per pixel."
+          />
+          <ParamSlider
+            label="Arm width"
+            value={fieldTuning.armWidthScale}
+            min={0.3}
+            max={3}
+            step={0.05}
+            format={(v) => v.toFixed(2)}
+            onChange={(v) => dispatch(fieldTuningPatched({ armWidthScale: v }))}
+          />
+          <ParamSlider
+            label="Flux boost"
+            value={fieldTuning.armFluxBoost}
+            min={0}
+            max={3}
+            step={0.05}
+            format={(v) => v.toFixed(2)}
+            onChange={(v) => dispatch(fieldTuningPatched({ armFluxBoost: v }))}
+            info="Whole-arm-population flux multiplier over the share readGalaxyFieldGeometry un-folded from the disc. 1.0 is parity with the sprite arms."
+          />
+          <ParamSlider
+            label="Blob sharpness"
+            value={fieldTuning.armBlobSharpness}
+            min={1}
+            max={12}
+            step={0.5}
+            format={(v) => v.toFixed(1)}
+            onChange={(v) => dispatch(fieldTuningPatched({ armBlobSharpness: v }))}
+            info="Debug only: shrinks every blob's three sigmas together at constant flux, so the ridge breaks into countable blobs whose tilt shows the surface frame they were placed on. 1 is the real field."
+          />
+        </CollapsibleSection>
 
         <CollapsibleSection
           title="POPULATIONS"

@@ -17,6 +17,8 @@ export const DEFAULT_UI_STATE: UiState = {
     // section delete instead of a surgical slider extraction.
     starBudget: false,
     arms: true,
+    // Expanded: this is the current work, same as `field`/`ringTuning` below.
+    armField: true,
     pop: false,
     dust: false,
     glob: false,
