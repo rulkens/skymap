@@ -72,8 +72,14 @@ describe('watchGoHomeSaga', () => {
     // The pose is encoded through the store's committed orientation basis (not
     // legacy identity) — recomputing with that basis proves the saga threads it.
     const simDays = deriveSimDays(store.getState()[timeRoute], performance.now());
-    const frameBasis = ORIENTATION_FRAMES[selectOrientation(store.getState())];
+    const orientation = selectOrientation(store.getState());
+    const frameBasis = ORIENTATION_FRAMES[orientation];
     expect(tween!.to).toEqual(earthHomePose(simDays, FOV, frameBasis));
+
+    // The descriptor pins the orientation live at dispatch time, mirroring
+    // `clip.frame` and `focusTweenDescriptor`'s `frame` — the driver re-expresses
+    // the pose against it on a later switch.
+    expect(tween!.frame).toBe(orientation);
   });
 
   it('goHome is a no-op when the camera runtime is null', async () => {

@@ -199,7 +199,9 @@ export function runCameraDrivers(
  *
  *   - `tween` (60) — an in-flight focus tween. Active while `s.camera.tween`
  *     is non-null. Pure: reads `s.camera.tween` + `elapsedMs` from the clock,
- *     converts descriptor via `tweenToClip`, calls `evaluateClip(data, elapsed/1000)`.
+ *     converts descriptor via `tweenToClip`, calls `evaluateClip(data, elapsed/1000)`
+ *     against `tween.frame` (the pinned start frame), then re-encodes forward
+ *     into the current `settings.orientation` — same pinning contract as `clip`.
  *
  *   - `autoRotate` (20) — the idle drift. Active while
  *     `s.camera.autoRotate.active` is true. Pure: returns
@@ -359,12 +361,29 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
       priority: 60,
       // Bake the tween's final pose into `base` on deactivation so that a
       // tween-to-focus lands cleanly rather than snapping to the pre-tween base.
+      // The baked pose is already re-encoded into the CURRENT frame below, so
+      // commit-on-edge never bakes a stale pinned-frame reading.
       commitsOnEdge: true,
       isActive: (s) => s.camera.tween !== null,
-      // `tweenToClip` converts the descriptor to a ClipData (memoised by
-      // reference) so `evaluateClip`'s compile cache reuses tracks across frames.
-      // `elapsedMs / 1000` converts to the seconds unit `evaluateClip` expects.
-      pose: (s, _cam, elapsedMs) => evaluateClip(tweenToClip(s.camera.tween!), elapsedMs / 1000),
+      // `tween.frame` (pinned at dispatch time, same contract as `clip.frame`)
+      // is the STEADY basis `from`/`to` were captured through. `tweenToClip`
+      // converts the descriptor to a ClipData (memoised by reference) so
+      // `evaluateClip`'s compile cache reuses tracks across frames; the result
+      // is then re-encoded forward into the CURRENT frame — reencodePose
+      // returns it by reference when the two bases match, the common case.
+      pose: (s, _cam, elapsedMs) => {
+        const tween = s.camera.tween!;
+        const evaluated = evaluateClip(
+          tweenToClip(tween),
+          elapsedMs / 1000,
+          ORIENTATION_FRAMES[tween.frame],
+        );
+        return reencodePose(
+          evaluated,
+          ORIENTATION_FRAMES[tween.frame],
+          ORIENTATION_FRAMES[s.settings.orientation],
+        );
+      },
     },
     {
       id: 'autoRotate',

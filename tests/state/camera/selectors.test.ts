@@ -48,6 +48,7 @@ const tween: CameraTweenDescriptor = {
   to: pose,
   durationMs: 1200,
   easing: 'easeOutCubic',
+  frame: DEFAULT_ORIENTATION,
 };
 
 const frameTween: FrameTween = {

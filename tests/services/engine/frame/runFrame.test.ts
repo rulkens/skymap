@@ -104,7 +104,7 @@ import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../src/data/sources';
-import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/data/defaults';
+import { DEFAULT_GALAXY_PROVENANCE, DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 
 /** Build a real Redux store from the production root reducer. */
 function makeStore() {
@@ -324,6 +324,7 @@ describe('runFrame — camera drivers (regression)', () => {
         to: { target: [0, 0, 0], yaw: 1.5, pitch: 0, distance: 50 },
         durationMs: 1000,
         easing: 'easeOutCubic',
+        frame: DEFAULT_ORIENTATION,
       }),
     );
 

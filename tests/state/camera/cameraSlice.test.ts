@@ -49,11 +49,14 @@ const base = () => reducer(undefined, { type: '@@init' });
 
 const pose: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: -0.3, distance: 10 };
 
+const tweenFrame: OrientationFrameId = 'ecliptic';
+
 const tween: CameraTweenDescriptor = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 0.43 },
   to: pose,
   durationMs: 1200,
   easing: 'easeOutCubic',
+  frame: tweenFrame,
 };
 
 describe('cameraSlice — commitCameraPose', () => {

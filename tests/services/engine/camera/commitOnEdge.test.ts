@@ -169,6 +169,7 @@ describe('commitOnEdge — tween settles', () => {
         to: { target: [10, 0, 0], yaw: 1, pitch: 0, distance: 50 },
         durationMs: 1000,
         easing: 'easeOutCubic',
+        frame: DEFAULT_ORIENTATION,
       }),
     );
     // Seed prevActiveId to 'tween' so the tween is treated as already active
@@ -197,6 +198,7 @@ describe('commitOnEdge — tween settles', () => {
         to: { target: [0, 0, 0], yaw: 1, pitch: 0, distance: 50 },
         durationMs: 200,
         easing: 'easeOutCubic',
+        frame: DEFAULT_ORIENTATION,
       }),
     );
     state.cameraRuntime.prevActiveId.current = 'tween';
@@ -228,6 +230,7 @@ describe('commitOnEdge — tween settles', () => {
         to: { target: [0, 0, 0], yaw: 1, pitch: 0, distance: 50 },
         durationMs: 200,
         easing: 'easeOutCubic',
+        frame: DEFAULT_ORIENTATION,
       }),
     );
     state.cameraRuntime.prevActiveId.current = 'tween';
@@ -256,6 +259,7 @@ describe('commitOnEdge — tween settles', () => {
         to: TO,
         durationMs: 200,
         easing: 'easeOutCubic',
+        frame: DEFAULT_ORIENTATION,
       }),
     );
     state.cameraRuntime.prevActiveId.current = 'tween';
@@ -284,7 +288,13 @@ describe('commitOnEdge — tween settles', () => {
 
     store.dispatch(commitCameraPose(PRE));
     store.dispatch(
-      startCameraTween({ from: PRE, to: TO, durationMs: 200, easing: 'easeOutCubic' }),
+      startCameraTween({
+        from: PRE,
+        to: TO,
+        durationMs: 200,
+        easing: 'easeOutCubic',
+        frame: DEFAULT_ORIENTATION,
+      }),
     );
     state.cameraRuntime.prevActiveId.current = 'tween';
 
@@ -346,6 +356,7 @@ describe('commitOnEdge — no-jump-on-grab', () => {
         to: { target: [10, 0, 0], yaw: 1, pitch: 0, distance: 50 },
         durationMs: 1000,
         easing: 'easeOutCubic',
+        frame: DEFAULT_ORIENTATION,
       }),
     );
     state.cameraRuntime.prevActiveId.current = 'tween';
@@ -377,6 +388,7 @@ describe('commitOnEdge — no-jump-on-grab', () => {
         to: { target: [10, 0, 0], yaw: 1, pitch: 0, distance: 50 },
         durationMs: 1000,
         easing: 'easeOutCubic',
+        frame: DEFAULT_ORIENTATION,
       }),
     );
     state.cameraRuntime.prevActiveId.current = 'tween';

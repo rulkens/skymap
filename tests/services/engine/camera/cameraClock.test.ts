@@ -28,6 +28,7 @@ function makeDescriptor(overrides?: Partial<CameraTweenDescriptor>): CameraTween
     to: { target: [10, 0, 0], yaw: 1.0, pitch: 0.2, distance: 50 },
     durationMs: 600,
     easing: 'easeOutCubic',
+    frame: 'equatorial',
     ...overrides,
   };
 }

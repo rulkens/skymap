@@ -44,7 +44,7 @@
  * watchTierSaga, because the engine registers its saga context AFTER the root saga
  * forks.
  */
-import { takeLatest, take, getContext, put } from 'typed-redux-saga';
+import { takeLatest, take, getContext, put, select } from 'typed-redux-saga';
 
 import { updateSelectionFocus } from './selectionSlice';
 import { startCameraTween } from '../camera/cameraSlice';
@@ -53,6 +53,7 @@ import { extractSelectionRow } from '../../services/engine/helpers/extractSelect
 import { bodyMovesThisFrame } from '../../utils/scene/bodyMovesThisFrame';
 import { suspendDuringClip } from './suspendDuringClip';
 import { engineStatusChanged, engineSourceCountReported } from '../engine/engineSlice';
+import { selectOrientation } from '../settings/selectors';
 import type { SagaContext } from '../../store/types';
 
 export function* watchFocusTweenSaga() {
@@ -103,7 +104,8 @@ export function* watchFocusTweenSaga() {
         runtime = cameraRuntime();
       }
 
-      yield* put(startCameraTween(focusTweenDescriptor(row, runtime.from, runtime.fovYRad)));
+      const frame = yield* select(selectOrientation);
+      yield* put(startCameraTween(focusTweenDescriptor(row, runtime.from, runtime.fovYRad, frame)));
     }),
   );
 }
