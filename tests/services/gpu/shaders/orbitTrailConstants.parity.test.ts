@@ -121,4 +121,44 @@ describe('orbitTrail/io.wesl OrbitInstance ↔ orbitTrailRenderer INSTANCE_ATTRI
     expect(total).toBe(INSTANCE_FLOATS);
     expect(INSTANCE_STRIDE).toBe(INSTANCE_FLOATS * 4);
   });
+
+  // Locations and float-widths alone let two fields trade @location numbers
+  // without moving anything else — sets, counts and sums are all unchanged,
+  // yet the vertex stage now reads e.g. Ac where it meant Cc. This is the ONE
+  // place the record's field ORDER is asserted; it is deliberately a literal,
+  // not derived from either side, so it can't agree with a swap on both ends.
+  it('WESL field names map to the expected @location order', () => {
+    const expectedOrder = [
+      { location: 1, name: 'ginv0' },
+      { location: 2, name: 'ginv1' },
+      { location: 3, name: 'ginv2' },
+      { location: 4, name: 'params' },
+      { location: 5, name: 'phase' },
+      { location: 6, name: 'cc' },
+      { location: 7, name: 'ac' },
+      { location: 8, name: 'bc' },
+      { location: 9, name: 'arc' },
+    ];
+    const actualOrder = fields
+      .map((f) => ({ location: f.location, name: f.name }))
+      .sort((a, b) => a.location - b.location);
+    expect(actualOrder).toEqual(expectedOrder);
+  });
+
+  // A location swap that also swaps byte offsets in lockstep would slip past
+  // the name↔location check above; this ties offset to location independent
+  // of name, catching a reordered OR mis-offset attribute either side.
+  it('each attribute offset equals 4 × the total floats of all lower-numbered locations', () => {
+    const sorted = [...fields].sort((a, b) => a.location - b.location);
+    let runningFloats = 0;
+    for (const field of sorted) {
+      const attr = attrs.find((a) => a.shaderLocation === field.location);
+      expect(attr, `no INSTANCE_ATTRIBUTES entry for @location(${field.location})`).toBeDefined();
+      expect(
+        attr!.offset,
+        `@location(${field.location}) '${field.name}' expected byte offset ${runningFloats * 4}, got ${attr!.offset}`,
+      ).toBe(runningFloats * 4);
+      runningFloats += field.floats;
+    }
+  });
 });

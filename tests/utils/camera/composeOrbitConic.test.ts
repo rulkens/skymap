@@ -197,12 +197,14 @@ describe('composeOrbitConic — visible arc', () => {
     for (const t of [0.25, 0.5, 0.75]) {
       expect(wAt(clipBasis, eStart + t * eSpan)).toBeGreaterThan(0);
     }
-    // Just outside either end, w has dropped below the boundary value —
-    // cos(E - phi) is strictly decreasing moving away from phi across this
-    // span, so this pins the endpoints as the true crossings, not a random
-    // interval that happens to also satisfy "positive inside".
-    expect(wAt(clipBasis, eStart - delta)).toBeLessThan(wAt(clipBasis, eStart));
-    expect(wAt(clipBasis, eStart + eSpan + delta)).toBeLessThan(wAt(clipBasis, eStart + eSpan));
+    // `w` decreasing just past either end is NOT enough to pin the endpoints:
+    // any sub-interval of the true arc also satisfies "positive inside,
+    // smaller further out" (w is monotone moving away from phi on either
+    // side). The property that actually locates the crossing is that w has
+    // gone NON-POSITIVE just outside — behind the camera — which a truncated
+    // arc (e.g. eSpan cut in half) would fail here.
+    expect(wAt(clipBasis, eStart - delta)).toBeLessThanOrEqual(0);
+    expect(wAt(clipBasis, eStart + eSpan + delta)).toBeLessThanOrEqual(0);
   });
 });
 
