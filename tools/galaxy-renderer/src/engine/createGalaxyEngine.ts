@@ -1023,6 +1023,14 @@ export async function createGalaxyEngine(
    */
   let dustMapTex: GPUTexture;
   /**
+   * Whether `dustMapTex` currently holds anything but zeros. `drawFrame` skips
+   * the dust-map pass when there is no dust to draw, and a skipped pass leaves
+   * the last frame's contents — so this is what lets the skip stay correct
+   * across the nonzero -> zero transition (an elliptical, or tau pulled to 0)
+   * instead of stranding the previous galaxy's dust in front of the new one.
+   */
+  let dustMapPopulated = false;
+  /**
    * The JWST-view's own presentation target (dustPresent.wesl), divisor-
    * matched to `dustMapTex` rather than `fieldTex` — see `dustMapTex`'s own
    * comment above. Only allocated/used while `render.dustView` is on; the
@@ -1097,6 +1105,8 @@ export async function createGalaxyEngine(
     });
     splatBG = buildSplatBindGroup();
     dustPresentBG = buildDustPresentBindGroup();
+    // A fresh texture is zero-initialised, so the stale-map latch resets with it.
+    dustMapPopulated = false;
   }
 
   // dustPresent.wesl's own target, sized like `dustMapTex` (same divisor) so
@@ -2171,11 +2181,18 @@ export async function createGalaxyEngine(
       // separately). Feeds splat.wesl's fs (the grey/RGB split) when the
       // JWST view is off, or IS the presented image when it's on — so it has
       // to run whenever any consumer needs it: `dustView` (the image
-      // itself), a nonzero dust slice, or a nonzero feature count. An
-      // untouched `dustMapTex` reads back all zero, same effect as skipping
-      // the pass, so the all-empty case is a harmless no-op either way —
-      // this gate just avoids the redundant clear + zero-instance draws.
-      if (fieldDustCount > 0 || fieldFeatCount > 0 || render.dustView) {
+      // itself), a nonzero dust slice, or a nonzero feature count.
+      //
+      // `dustMapPopulated` is what makes skipping SAFE, and it is load-bearing:
+      // a skipped pass leaves whatever the last frame wrote, and the texture is
+      // only all-zero while it has never been drawn into. Without the latch, a
+      // galaxy whose dust count drops to zero — switch the category to
+      // elliptical, or pull tau to 0 — keeps the PREVIOUS galaxy's dust map
+      // bound, and splat.wesl goes on attenuating with dust that no longer
+      // exists. One clearing pass on the transition costs a clear; getting it
+      // wrong reads as "the dust never regenerates".
+      const dustMapHasContent = fieldDustCount > 0 || fieldFeatCount > 0;
+      if (dustMapHasContent || render.dustView || dustMapPopulated) {
         const dustMapWrites = timing.descriptorFor('dustMap');
         const dustMapPass = enc.beginRenderPass({
           label: 'galaxy:dustMapPass',
@@ -2198,6 +2215,7 @@ export async function createGalaxyEngine(
           dustMapPass.draw(6, fieldFeatCount);
         }
         dustMapPass.end();
+        dustMapPopulated = dustMapHasContent;
       }
 
       if (render.dustView) {
