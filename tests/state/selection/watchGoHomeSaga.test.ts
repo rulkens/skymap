@@ -21,6 +21,7 @@ import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFra
 import { selectOrientation } from '../../../src/state/settings/selectors';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { setSimDays, pause } from '../../../src/state/time/timeSlice';
+import { setOrientation } from '../../../src/state/settings/settingsSlice';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { cameraRoute, selectionRoute, timeRoute } from '../../../src/store/constants';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
@@ -57,6 +58,11 @@ describe('watchGoHomeSaga', () => {
     const now = performance.now();
     store.dispatch(setSimDays({ simDays: CONST_J2000 + 300, nowMs: now }));
     store.dispatch(pause({ nowMs: now }));
+
+    // Off the default orientation, dispatched BEFORE goHome — so the `frame`
+    // assertion below can only pass if the saga actually captures the live
+    // setting rather than a hardcoded default.
+    store.dispatch(setOrientation('galactic'));
 
     store.dispatch(goHome());
     await flush();
