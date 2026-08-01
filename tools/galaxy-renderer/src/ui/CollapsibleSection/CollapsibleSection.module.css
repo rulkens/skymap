@@ -18,6 +18,21 @@
   text-align: left;
 }
 
+/* The app SettingsPanel's pill-toggle vocabulary, composed across the tree
+ * rather than copied: the tool boots the app's global.css, so every token the
+ * pill references resolves here too, and a retune of the app's control look
+ * follows automatically. */
+.headerToggle {
+  composes: pillToggle from '../../../../../src/components/SettingsPanel/pillToggle.module.css';
+  margin-right: 8px;
+}
+
+/* Pushes the chevron to the far edge now that the header can hold three
+ * children; with no checkbox present it changes nothing. */
+.headerTitle {
+  flex: 1;
+}
+
 .chevron {
   font-size: var(--font-size-xs);
   opacity: 0.7;

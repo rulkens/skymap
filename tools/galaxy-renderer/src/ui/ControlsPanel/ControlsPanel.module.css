@@ -59,6 +59,25 @@
   composes: checkbox from '../shared.module.css';
 }
 
+/* The top-of-panel legacy-sprites switch: the app's pill toggle (same
+ * cross-tree compose as CollapsibleSection's header toggle) in a plain label
+ * row, sitting outside every section by design — see the JSX comment. */
+.legacyToggleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 10px;
+  font-size: var(--font-size-xs);
+  letter-spacing: var(--letter-spacing-widest);
+  text-transform: uppercase;
+  cursor: pointer;
+  user-select: none;
+}
+
+.pillToggle {
+  composes: pillToggle from '../../../../../src/components/SettingsPanel/pillToggle.module.css';
+}
+
 .infoIcon {
   padding: 0;
   border: none;

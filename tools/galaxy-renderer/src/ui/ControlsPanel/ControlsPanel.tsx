@@ -245,6 +245,21 @@ function ControlsPanel({ fade }: ControlsPanelProps): ReactNode {
           Randomize
         </Button>
 
+        {/* At the very top, outside any section: the one-click A/B against the
+            sprite path the flux field is replacing. "Legacy" in the label is
+            the point — the star bag is scheduled for deletion (research doc
+            s12), and this switch is how its remaining usefulness (a reference
+            to compare against) is reached without scrolling. */}
+        <label className={styles.legacyToggleRow}>
+          <input
+            type="checkbox"
+            className={styles.pillToggle}
+            checked={render.spriteField}
+            onChange={(e) => dispatch(renderPatched({ spriteField: e.target.checked }))}
+          />
+          <span>Legacy sprite stars</span>
+        </label>
+
         <CollapsibleSection
           title="MORPHOLOGY · HUBBLE SEQUENCE"
           open={ui.openSections.morphology}
@@ -411,40 +426,21 @@ function ControlsPanel({ fade }: ControlsPanelProps): ReactNode {
         </CollapsibleSection>
 
         {/* The analytic flux field is a closed-form line integral of a Gaussian
-            mixture, evaluated per fragment in one fullscreen pass into its OWN
-            reduced-resolution target, additively blended into HDR alongside the
-            sprites'. Both are on by default so they sum; the two toggles are how
-            either is seen alone, which is the comparison this exists for. The
-            mixture is derived from the generator's own geometry in
-            `src/data/galaxy/galaxyFieldMixture.ts`; its ring layout is live-tunable
-            in the section below. */}
+            mixture, evaluated into its OWN reduced-resolution target and
+            additively blended into HDR alongside the sprites'. Its on/off lives
+            in the section HEADER (the app SettingsPanel's master-toggle idiom);
+            the legacy sprite path's switch sits at the top of the panel, so the
+            two halves of the comparison are one click each. The mixture is
+            derived from the generator's own geometry in
+            `src/data/galaxy/galaxyFieldMixture.ts`; its ring layout is
+            live-tunable in the section below. */}
         <CollapsibleSection
           title="ANALYTIC FLUX FIELD"
           open={ui.openSections.field}
           onToggle={() => dispatch(sectionToggled('field'))}
+          headerToggle={render.analyticField}
+          onHeaderToggleChange={(value) => dispatch(renderPatched({ analyticField: value }))}
         >
-          <div className={styles.toggleRow}>
-            <label className={styles.toggleLabel}>
-              <span>Sprite field</span>
-              <input
-                type="checkbox"
-                className={styles.checkbox}
-                checked={render.spriteField}
-                onChange={(e) => dispatch(renderPatched({ spriteField: e.target.checked }))}
-              />
-            </label>
-          </div>
-          <div className={styles.toggleRow}>
-            <label className={styles.toggleLabel}>
-              <span>Analytic field</span>
-              <input
-                type="checkbox"
-                className={styles.checkbox}
-                checked={render.analyticField}
-                onChange={(e) => dispatch(renderPatched({ analyticField: e.target.checked }))}
-              />
-            </label>
-          </div>
           <ParamSlider
             label="Analytic exposure"
             value={render.analyticExposure}
@@ -455,6 +451,17 @@ function ControlsPanel({ fade }: ControlsPanelProps): ReactNode {
             onChange={(v) => dispatch(renderPatched({ analyticExposure: v }))}
             info="Whole-field multiplier on the integrated mixture. 1.0 is parity: the mixture is calibrated to emit the same total light as the sprite population it stands in for, at whatever the sprite exposure and size sliders are set to."
           />
+          <div className={styles.toggleRow}>
+            <label className={styles.toggleLabel}>
+              <span>Splat path</span>
+              <input
+                type="checkbox"
+                className={styles.checkbox}
+                checked={render.fieldSplat}
+                onChange={(e) => dispatch(renderPatched({ fieldSplat: e.target.checked }))}
+              />
+            </label>
+          </div>
         </CollapsibleSection>
 
         {/* The warped outer disc rings' own tuning surface — see
