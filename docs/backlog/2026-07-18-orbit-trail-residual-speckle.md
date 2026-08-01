@@ -34,7 +34,15 @@ verdict: accepted over the perf win; still polish, not a blocker.
 ## What remains (ranked suspects from the 2026-07-18 investigation)
 
 The residual speckle survives the gradient fix, so it comes from the other
-f32 stages of the per-fragment reconstruction:
+f32 stages of the per-fragment reconstruction. **Note (2026-08-01):** this
+attribution is unverified against the project's "multiple sufficient causes"
+rule — the ribbon-impostor branch introduced a second sufficient cause with
+an identical symptom: the fixed 96-segment ribbon can under-cover a strongly
+foreshortened (near-edge-on) trail, where a segment's curve deviates from its
+chord by more than `halfWidth`. Rule this out FIRST — it is far cheaper to
+test than 1-3 below: raise `SEGMENTS`/`RIBBON_SEGMENTS` to 384 and look; if
+the dashes move or vanish, it is coverage, not numerics, and suspects 1-3 are
+aimed at the wrong subsystem.
 
 1. **`q.z` noise near the horizon line** — `q = ginv · (px, py, 1)` is f32;
    near the horizon `q.z → 0`, so `s = q.x/q.z`, `t = q.y/q.z`, and hence
@@ -71,7 +79,7 @@ f32 stages of the per-fragment reconstruction:
 - **f32 error-compensated evaluation** (two-sum / Kahan-style on `q`) — ruled
   out 2026-07-31: hardware-proven DEAD on this toolchain, Dawn/Metal
   fast-math breaks the error-free transformations it depends on (see
-  fragment.wesl's header).
+  `docs/references/orbit-trail-fragment-math.md`).
 
 Reproduce: zoom fully to Earth, orbit until the camera is in Earth's orbit
 plane; the blue stroke band flares and stipples (user screenshot in the

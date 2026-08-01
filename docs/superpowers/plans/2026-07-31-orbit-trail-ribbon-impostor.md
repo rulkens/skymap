@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Stop rasterizing a fullscreen triangle per orbit trail. Rasterize a screen-space ribbon that hugs the projected ellipse instead, keeping the fullscreen triangle as a per-instance fallback for projections the ribbon cannot bound (**superseded 2026-08-01 — see the Amendment before Task 11: the fallback is deleted, not kept; the ribbon absorbs its job via a near-plane clamp. The clamp was itself superseded the same day — see Amendment 2: the CPU computes each orbit's visible E-arc in closed form and the shader never sees a behind-camera sample**). Target: orbit-trails from **7.6 ms → < 1.5 ms real** at the `galactic-centre` scenario (39 S-star instances, fill-bound, sweep exponent 0.94).
+**Goal:** Stop rasterizing a fullscreen triangle per orbit trail. Rasterize a screen-space ribbon that hugs the projected ellipse instead, keeping the fullscreen triangle as a per-instance fallback for projections the ribbon cannot bound (**superseded 2026-08-01 — see the Amendment before Task 11: the fallback is deleted, not kept; the ribbon absorbs its job via a near-plane clamp. The clamp was itself superseded the same day — see Amendment 2: the CPU computes each orbit's visible E-arc in closed form and the shader never sees a behind-camera sample**). Target: orbit-trails from **4.3 ms → < 1.5 ms real** at the `galactic-centre` scenario (39 S-star instances, fill-bound, sweep exponent 0.94). (**Corrected 2026-08-01:** the originally-quoted 7.6 ms baseline was taken on a loaded machine and is retracted as contaminated — see the ledger's CAUTION line; 4.3 ms is the honest paired-A/B figure. The `< 1.5 ms` gate is unchanged and still passes comfortably.)
 
 **Architecture:** [The spec](../specs/2026-07-31-orbit-trail-ribbon-impostor.md) — read it first; §2.1–2.4 is the design and this plan does not restate it. **Ground preparation: see spec §3** ("none needed" — every touchpoint is growth at an existing seam). The fragment shader's conic math is **unchanged**; only which pixels invoke it changes.
 
@@ -502,12 +502,12 @@ Residual accepted by the user (2026-08-01 live pass): dashed/dotted rendering on
 
 - Solar-system planets, the Moon close-up, the S-star cluster and the edge-on Earth zoom all draw **unbroken** trails with unchanged colour, tail falloff and fade behaviour.
 - No segment joint reads brighter than its neighbours (additive double-add) and none reads as a notch (gap).
-- A camera inside an orbit draws that trail as an open-arc ribbon like every other orbit — no fullscreen wash, no oversized triangles at any pose (Amendment 2; supersedes both the original "fallback path" wording and the near-plane-clamp wording).
+- A camera inside an orbit draws that trail as an open-arc ribbon like every other orbit — no fullscreen wash (Amendment 2; supersedes both the original "fallback path" wording and the near-plane-clamp wording). (**Corrected 2026-08-01:** "no oversized triangles at any pose" overstated the guarantee — `clampReach` bounds each neighbour's reach to `maxReachPx = 4 · length(viewportPx)`, so `halfWidth` can still reach ~4.6 viewport diagonals and a quad ~9 screen widths in principle; hardware-verified not hit at either production pose.)
 - The hide/show fade, the apparent-size fade-in, and the whole-layer `enabled()` cull behave exactly as before.
 
 **Measured** (Task 7, re-run at the Amendment 2 HEAD)
 
-- `galactic-centre` orbit-trails < 1.5 ms real, down from 7.6 (unchanged target).
+- `galactic-centre` orbit-trails < 1.5 ms real, down from **4.3** (unchanged target; the originally-quoted 7.6 ms was retracted as contaminated — see the ledger's CAUTION line).
 - `solar-system` orbit-trails also drops, and issues **zero fullscreen fallback draws** — the pose the first amendment exists for; no longer just a ±0.5 ms noise-band check.
 
 **Deferral boundary — out of scope**

@@ -184,10 +184,12 @@ export function composeOrbitConic(
   // epsW is a RELATIVE fraction of the clip-w swing (|cw| + wAmp), unrelated
   // to vertex.wesl's CLOSED_SPAN_EPS (radians of E) despite the coincident
   // 1e-4 magnitude. 1e-4, not 1e-6: at the worst pose (cw ≈ 0) f32-narrowing
-  // eStart/eSpan alone spends ~75% of a 1e-6 budget, and WGSL only
-  // guarantees sin/cos to 2^-11 absolute — 1e-4 buys back two orders of
-  // margin, at the cost of ≤1e-4 rad of arc that was already >1e4 px
-  // off-screen.
+  // eStart/eSpan alone spends ~75% of a 1e-6 budget, leaving ~50-180× margin
+  // (measured, worst to best endpoint) against the shader re-sampling w(E)
+  // from the narrowed basis. That margin rests on real hardware trig being
+  // ~1 ulp, NOT on WGSL's guaranteed-but-loose 2^-11 sin/cos floor, which
+  // this epsW would not clear — at the cost of ≤1e-4 rad of arc that was
+  // already >1e4 px off-screen.
   const cw = cC[2];
   const aw = cS[2];
   const bw = cT[2];
