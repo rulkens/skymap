@@ -29,11 +29,18 @@ export function buildGalaxyDustMixture(
   const hDust = dust.scaleLenRatio * discLightScaleLength(geometry);
   // No vertical flare (unlike the stellar disc): thin, measured-flat layer.
   const sigmaZ = dust.heightRatio * geometry.diskHeight;
+  // This mixture is flat (grill Q5); the disc itself isn't past warpStartRadius.
+  // Capping sigmaR there is a flat-model VALIDITY boundary, not a physical dust
+  // truncation — it stops the widest component's 2-sigma tail from reaching into
+  // the warped ring band and visibly disagreeing with it. Warped outer dust is
+  // deferred to the dust-map detail tier, where ring-placed blobs are affordable.
+  // sigmaZ (and so the face-on central tau, which depends only on sigmaZ) is untouched.
+  const sigmaRCap = geometry.warpStrength > 0 ? geometry.warpStartRadius * 0.5 : Infinity;
 
   const sumW = DISC_SURFACE_WEIGHTS.reduce((sum, w) => sum + w, 0);
   const out: GalaxyFieldComponent[] = [];
   for (let i = 0; i < DISC_SIGMA_RATIOS.length; i++) {
-    const sigmaR = DISC_SIGMA_RATIOS[i]! * hDust;
+    const sigmaR = Math.min(DISC_SIGMA_RATIOS[i]! * hDust, sigmaRCap);
     // Component k's face-on (R=0) column is amplitude*sqrt(2*PI)*sigmaZ; this
     // amplitude makes that column tau*w_k/sumW, so summing over k gives tau.
     const amplitude = (dust.tau * DISC_SURFACE_WEIGHTS[i]!) / (TAU_ROOT * sigmaZ * sumW);
