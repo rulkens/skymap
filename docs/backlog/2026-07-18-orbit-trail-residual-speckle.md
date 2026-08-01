@@ -7,18 +7,24 @@ a correctness blocker.
 
 ## What was already fixed (don't re-do)
 
-The trail draws one fullscreen triangle per orbit and reconstructs the conic
-per fragment via the narrowed inverse homography `ginv`
+The trail draws a screen-space ribbon impostor per orbit and reconstructs the
+conic per fragment via the narrowed inverse homography `ginv`
 (`src/services/gpu/shaders/bodies/orbitTrail/fragment.wesl`). At Earth zoom
 the camera lies on Earth's orbit plane, so `G` is near-singular
 (condition number ~1e15). Commit `f00c2df4` removed the catastrophic
 difference-of-products cancellation in the Sampson gradient by hoisting the
-exactly-cancelling numerators to CPU f64 as 2×2 minors of `Ginv`
-(`src/utils/camera/composeOrbitConic.ts` returns `{ ginv, minorS, minorT }`;
-the fragment's `dsdp`/`dtdp` are now affine). Verified: at the edge-on pose
-the old f32 gradient erred ~54 %, the minors path tracks f64 to ~2.5e-5
-(`tests/utils/camera/composeOrbitConic.test.ts`). A math-critical review
-independently re-derived the algebra and confirmed the k² rescale invariance.
+exactly-cancelling numerators to CPU f64 as 2×2 minors of `Ginv`. That hoist
+was itself replaced 2026-07-31: the fragment now measures the gradient
+empirically with screen-space derivatives (`dpdx`/`dpdy` of `r = uLen/z`)
+instead, and `composeOrbitConic` returns `{ ginv, clipBasis }` — the minors
+are gone entirely. Verified on real hardware at the edge-on Earth pose and at
+two even more extreme poses (S-stars at the galactic centre, Neptune seen
+from Earth).
+
+**Note (2026-07-31):** the derivative gradient is the same numeric family as
+the minors it replaced — the residual speckle below may already be gone.
+Re-check on hardware at the next visual pass before continuing to carry this
+item.
 
 ## What remains (ranked suspects from the 2026-07-18 investigation)
 
@@ -49,8 +55,10 @@ f32 stages of the per-fragment reconstruction:
   Sampson structure changes.
 - **Soften the discards** (suspect 3) — cheap, worth trying first; may
   suffice visually.
-- **f32 error-compensated evaluation** (two-sum / Kahan-style on `q`) —
-  middle ground, WGSL-verbose.
+- **f32 error-compensated evaluation** (two-sum / Kahan-style on `q`) — ruled
+  out 2026-07-31: hardware-proven DEAD on this toolchain, Dawn/Metal
+  fast-math breaks the error-free transformations it depends on (see
+  fragment.wesl's header).
 
 Reproduce: zoom fully to Earth, orbit until the camera is in Earth's orbit
 plane; the blue stroke band flares and stipples (user screenshot in the

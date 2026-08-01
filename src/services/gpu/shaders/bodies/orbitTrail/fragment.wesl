@@ -106,8 +106,9 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
 
   // Plane coordinates, kept as u = q.xy (ginv is rescaled to max entry 1, so
   // u and z stay pixel-scale, ~1e4) instead of dividing down to s = u.x/z,
-  // t = u.y/z: at the near-fold regime (clip w -> 0) z collapses toward 0 and
-  // s, t, and their products overflow f32; u and z alone do not.
+  // t = u.y/z: atan2 below is scale-invariant, so ecc needs no divide at all.
+  // r = uLen/z DOES divide (below); a non-finite r near the fold fails closed
+  // through both the off-stroke and Newton-keep-form guards.
   let u = q.xy;
   let z = q.z;
   let uLen = length(u);
