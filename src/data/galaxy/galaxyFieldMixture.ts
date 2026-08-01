@@ -271,8 +271,12 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
   discEnabled: true,
   armsEnabled: true,
   armBlobsPerArm: 28,
-  armWidthScale: 1,
-  armFluxBoost: 1,
+  // Eyeballed sprite-arm parity at the Milky Way preset. Boost 0.5 against
+  // ARM_BRIGHTNESS = 1.9 nets ~0.95: the mirrored sprite factor double-counts
+  // brightness already carried by armFraction. Both knobs are slated to become
+  // measured quantities (width at R0 + flaring; arm-interarm contrast).
+  armWidthScale: 1.3,
+  armFluxBoost: 0.5,
   armBlobSharpness: 1,
 };
 
