@@ -22,7 +22,7 @@
 //   offset 80  : counts: vec4   (emissionCount, dustOffset, dustCount, primaryCount)
 //   offset 96  : counts2: vec4  (featCount, dustMapHeightPx, fieldWidthPx, fieldHeightPx)
 //   offset 112 : dustExtinction: vec4 (A_lambda/A_V per channel, w unused)
-//   offset 128 : dustNoise: vec4 (tileUnits, amplitude, cloudOffset, unused)
+//   offset 128 : dustNoise: vec4 (tileUnits, amplitude, cloudOffset, contrastExp)
 //   offset 144 : dustSlices: vec4 (t1, t2, t3, unused)
 //   total: 160 bytes.
 //
@@ -72,7 +72,11 @@
 // createGalaxyEngine.ts's rebuildDustMixture concatenates the two. The
 // multiplier rides THIS accumulation pass rather than a consumer
 // (splat.wesl, dustPresent.wesl): both read the eroded column from here
-// with no second code path.
+// with no second code path. contrastExp (.w) is dustMap.wesl's signed power
+// exponent shaping the noise about its own midpoint — 1/textureContrast,
+// inverted CPU-side (createGalaxyEngine.ts's rebuildDustMixture) so a HIGHER
+// contrast slider value maps to a SMALLER exponent (harder filament edges)
+// with the shader itself doing one plain pow().
 //
 // dustSlices (offset 144) is the VIEW-DEPENDENT depth partition the dust map
 // accumulates into instead of one whole-ray column — a single mean depth put

@@ -865,7 +865,12 @@ export async function createGalaxyEngine(
   // runs. `cloudOffset` is the length of `buildGalaxyDustMixture(...)`'s
   // return — captured where `rebuildDustMixture` concatenates the two
   // mixtures below, never recomputed by filtering `dustMixture` back apart.
-  let currentDustNoise: FieldDustNoise = { tileUnits: 1, amplitude: 0, cloudOffset: 0 };
+  let currentDustNoise: FieldDustNoise = {
+    tileUnits: 1,
+    amplitude: 0,
+    cloudOffset: 0,
+    contrastExp: 1,
+  };
   // The dust's own reach R (io.wesl's dustSlices doc): 3x the widest smooth
   // disc component's radial sigma, cached here for the same reason
   // `currentDustNoise` is — `drawFrame` needs it every frame (it feeds the
@@ -1296,10 +1301,16 @@ export async function createGalaxyEngine(
         tileUnits: dustNoiseTileUnits(currentDust.cloud.textureScale),
         amplitude: currentDust.cloud.texture,
         cloudOffset: laneMixture.length,
+        // Inverted here, not in the shader, so dustMap.wesl stays one plain
+        // pow(): a higher slider value means a SMALLER exponent (pushes
+        // |s| toward 1, hardening filament edges). Floored well above 0 —
+        // the slider's own range never reaches it, but 1/0 would still be
+        // an infinite exponent reaching this uniform.
+        contrastExp: 1 / Math.max(currentDust.cloud.textureContrast, 1e-3),
       };
     } else {
       dustMixture = [];
-      currentDustNoise = { tileUnits: 1, amplitude: 0, cloudOffset: 0 };
+      currentDustNoise = { tileUnits: 1, amplitude: 0, cloudOffset: 0, contrastExp: 1 };
     }
   }
 

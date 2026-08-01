@@ -17,4 +17,5 @@ export const DEFAULT_GALAXY_DUST_CLOUD_PARAMS: GalaxyDustCloudParams = {
   bubbleCarve: 0.8,
   texture: 0.7,
   textureScale: 1,
+  textureContrast: 1,
 };

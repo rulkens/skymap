@@ -82,6 +82,8 @@ export type FieldDustNoise = {
   readonly amplitude: number;
   /** Index WITHIN the dust slice (relative to `dustOffset`) where the particle-cloud components start — the smooth lane mixture's own length. */
   readonly cloudOffset: number;
+  /** Signed-power exponent shaping the noise about its midpoint (dustMap.wesl's `dustNoiseMultiplier`) — `1 / GalaxyDustCloudParams.textureContrast`, inverted here so a higher slider value hardens filament edges. */
+  readonly contrastExp: number;
 };
 
 /**
@@ -203,11 +205,11 @@ export function packFieldHeaderUniforms(
   out[30] = dustExtinctionRgb[2];
   out[31] = 0;
 
-  // dustNoise 32..35 = (tileUnits, amplitude, cloudOffset, unused).
+  // dustNoise 32..35 = (tileUnits, amplitude, cloudOffset, contrastExp).
   out[32] = dustNoise.tileUnits;
   out[33] = dustNoise.amplitude;
   out[34] = dustNoise.cloudOffset;
-  out[35] = 0;
+  out[35] = dustNoise.contrastExp;
 
   // dustSlices 36..39 = (t1, t2, t3, unused).
   out[36] = dustSlices.t1;

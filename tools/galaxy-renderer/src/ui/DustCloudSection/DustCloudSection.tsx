@@ -151,6 +151,16 @@ function DustCloudSection(): ReactNode {
           onChange={(v) => patchCloud({ textureScale: v })}
           info="Multiplier on the noise volume's world-space tile size."
         />
+        <ParamSlider
+          label="Texture contrast"
+          value={cloud.textureContrast}
+          min={0.25}
+          max={4}
+          step={0.05}
+          format={(v) => v.toFixed(2)}
+          onChange={(v) => patchCloud({ textureContrast: v })}
+          info="Shapes the noise about its midpoint, so higher values harden filament edges while leaving the mean — and the tier's share of the optical depth — unchanged."
+        />
       </div>
     </CollapsibleSection>
   );

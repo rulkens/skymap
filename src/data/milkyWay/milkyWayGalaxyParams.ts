@@ -128,6 +128,7 @@ export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams = {
       bubbleCarve: 0.8,
       texture: 0.7,
       textureScale: 1,
+      textureContrast: 1,
     },
   },
 };

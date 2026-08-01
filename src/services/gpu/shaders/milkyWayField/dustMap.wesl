@@ -105,15 +105,23 @@ fn dustNoiseMultiplier(p: vec3<f32>, depth: f32) -> f32 {
   let weighted = bands.x * w0 + bands.y * w1 + bands.z * w2 + bands.w * w3;
   let n = weighted / max(wSum, 1e-6);
   // n has mean ~0.5 by construction (each ridged band averages ~0.5 over a
-  // tile), so this multiplier has mean 1 — the three-way tau split
-  // (galaxyDustMixture.ts's clampedDustCloudShare) still holds in
-  // expectation. The max(0, ...) clamp biases that mean very slightly
-  // upward at amplitudes above 1 (it can only clip the low tail, never the
-  // high one, since n in [0,1] bounds the unclamped term to [1-amp, 1+amp]);
-  // accepted rather than corrected — the slider tops out at 1.5, so the
-  // bias is small and the alternative (renormalising after the clamp) would
-  // cost a second pass over the same four samples for no visible gain.
-  return max(0.0, 1.0 + u.dustNoise.y * (2.0 * n - 1.0));
+  // tile), so 's' below has mean ~0. Contrast is applied as a SIGNED power
+  // of 's' rather than a plain pow(n, g) on n itself, specifically to stay
+  // odd about s=0: an odd function preserves mean(s)=0 for a symmetric s,
+  // so the multiplier keeps mean 1 at ANY contrast setting — the three-way
+  // tau split (galaxyDustMixture.ts's clampedDustCloudShare) still holds in
+  // expectation. This only preserves the mean as well as n's own ~0.5
+  // assumption already does (ridged fbm is not exactly symmetric); no new
+  // debt beyond that pre-existing approximation. The max(0, ...) clamp
+  // biases that mean very slightly upward at amplitudes above 1 (it can
+  // only clip the low tail, never the high one, since n in [0,1] bounds the
+  // unclamped term to [1-amp, 1+amp]); accepted rather than corrected — the
+  // slider tops out at 1.5, so the bias is small and the alternative
+  // (renormalising after the clamp) would cost a second pass over the same
+  // four samples for no visible gain.
+  let s = 2.0 * n - 1.0;
+  let shaped = sign(s) * pow(abs(s), u.dustNoise.w);
+  return max(0.0, 1.0 + u.dustNoise.y * shaped);
 }
 
 @fragment

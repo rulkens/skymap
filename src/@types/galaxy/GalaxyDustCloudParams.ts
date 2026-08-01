@@ -28,4 +28,6 @@ export type GalaxyDustCloudParams = {
   readonly texture: number;
   /** Multiplier on the noise volume's world-space tile size (dustParticleCloud.ts's DUST_NOISE_TILE_PC). */
   readonly textureScale: number;
+  /** Shapes the erosion noise about its own midpoint — 1 = identity, higher = harder filament edges (dustMap.wesl's `dustNoiseMultiplier`). */
+  readonly textureContrast: number;
 };
