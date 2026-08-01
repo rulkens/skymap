@@ -90,16 +90,17 @@ export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams = {
   radius: 1.05,
   starCount: 150000,
   seed: MILKY_WAY_GENERATION_SEED,
-  // tau at the floor of the measured 0.5–1 face-on range — a deliberately
-  // subtle start. heightRatio 0.35 because the MW's dust layer is notably
-  // thin: ~100–134 pc scale height vs the ~314 pc stellar sigma (Drimmel &
-  // Spergel 2001; Misiriotis et al. 2006).
+  // tau above the measured 0.5–1 face-on range, and R_V below the diffuse-ISM
+  // 3.1 (Cardelli, Clayton & Mathis 1989) — both departures are deliberate and
+  // both pull the same way; see DEFAULT_GALAXY_DUST_PARAMS for the reasoning.
+  // heightRatio 0.35 because the MW's dust layer is notably thin: ~100–134 pc
+  // scale height vs the ~314 pc stellar sigma (Drimmel & Spergel 2001;
+  // Misiriotis et al. 2006).
   dust: {
-    tau: 0.5,
+    tau: 1.25,
     scaleLenRatio: 1.5,
     heightRatio: 0.35,
-    // Diffuse Milky Way ISM canonical value (Cardelli, Clayton & Mathis 1989).
-    rV: 3.1,
+    rV: 2.3,
     // Not yet visually calibrated — same values as DEFAULT_GALAXY_DUST_NETWORK_PARAMS.
     network: {
       armContrast: 3,
