@@ -6,8 +6,9 @@
  * stars in (for the Milky Way preset 1 unit = 1.6667 kpc). The disc plane is
  * XZ and the pole is +Y.
  *
- * The shape is carried as the inverse covariance M of exp(-0.5 * p^T*M*p)
- * rather than as sigmas plus a tilt: the disc warp shears a component out of
+ * The shape is carried as the inverse covariance M of
+ * exp(-0.5*(p-center)^T*M*(p-center)) rather than as sigmas plus a tilt: a
+ * component's own warp shear (linearised about ITS centre) tilts it out of
  * any axis-aligned frame, and a general symmetric M is the only form that
  * stays closed under that (see `galaxyFieldInverseCovariance`).
  */
@@ -22,4 +23,6 @@ export type GalaxyFieldComponent = {
   readonly invCovOffDiagonal: Readonly<Vec3>;
   /** Linear RGB tint, multiplied into this component's integrated emission. */
   readonly color: Readonly<Vec3>;
+  /** World-space centre of exp(-0.5*(p-center)^T*M*(p-center)); [0,0,0] for an origin-centred component. */
+  readonly center: Readonly<Vec3>;
 };

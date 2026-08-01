@@ -16,8 +16,8 @@
 //   offset 48  : camFwd: vec4
 //   offset 64  : params: vec4   (tanHalfFov, aspect, lensShiftX, exposure)
 //   offset 80  : counts: vec4   (componentCount, 0, 0, 0)
-//   offset 96  : comps: array<vec4, 36>  (THREE vec4 per component, 12 max)
-//   total: 672 bytes.
+//   offset 96  : comps: array<vec4, 2400>  (FOUR vec4 per component, 600 max)
+//   total: 38496 bytes.
 //
 // The ray comes from a camera BASIS plus tanHalfFov/aspect rather than an
 // inverse view-projection: the engine already holds the basis (it packs the
@@ -26,14 +26,15 @@
 // off-centre framing the engine writes into proj[8]; without it the
 // analytic field slides against the sprites whenever a side panel is open.
 //
-// Per component, three vec4 carry the WORLD-space inverse covariance M of
-// exp(-0.5 * p^T*M*p), plus amplitude and colour:
-//   [3i]   = (m00, m11, m22, amplitude)
-//   [3i+1] = (m01, m02, m12, unused)
-//   [3i+2] = (colorR, colorG, colorB, unused)
-// Six independent entries, not three sigmas and a tilt: the disc warp shears
-// each component (buildGalaxyFieldMixture), and a sheared Gaussian has no
-// axis-aligned frame to name sigmas in. Index 1 of M is the DISC POLE (+Y).
+// Per component, four vec4 carry the WORLD-space inverse covariance M of
+// exp(-0.5*(p-center)^T*M*(p-center)), plus amplitude, colour and a centre:
+//   [4i]   = (m00, m11, m22, amplitude)
+//   [4i+1] = (m01, m02, m12, unused)
+//   [4i+2] = (colorR, colorG, colorB, unused)
+//   [4i+3] = (cx, cy, cz, unused)
+// Six independent M entries, not three sigmas and a tilt: a component's own
+// warp shear (buildGalaxyFieldMixture, linearised about its centre) tilts it
+// out of any axis-aligned frame. Index 1 of M is the DISC POLE (+Y).
 
 struct FieldUniforms {
   eye: vec4<f32>,
@@ -42,10 +43,10 @@ struct FieldUniforms {
   camFwd: vec4<f32>,
   params: vec4<f32>,
   counts: vec4<f32>,
-  // 36 slots = GALAXY_FIELD_MAX_COMPONENTS (12) x 3 vec4. Fixed size
+  // 2400 slots = GALAXY_FIELD_MAX_COMPONENTS (600) x 4 vec4. Fixed size
   // because a uniform array cannot be runtime-sized; counts.x says how many
   // are live, and the rest are never read.
-  comps: array<vec4<f32>, 36>,
+  comps: array<vec4<f32>, 2400>,
 };
 
 @group(0) @binding(0) var<uniform> u: FieldUniforms;

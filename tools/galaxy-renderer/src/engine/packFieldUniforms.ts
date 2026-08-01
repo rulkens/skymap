@@ -1,8 +1,9 @@
 /**
- * packFieldUniforms — the 672-byte packer for the analytic Milky Way field
- * pass, matching `milkyWayField/io.wesl`'s `FieldUniforms` byte-for-byte.
- * THAT FILE'S HEADER IS THE OFFSET AUTHORITY; a wrong index here produces no
- * error, just silently garbage uniforms.
+ * packFieldUniforms — the packer for the analytic Milky Way field pass,
+ * matching `milkyWayField/io.wesl`'s `FieldUniforms` byte-for-byte (see
+ * `FIELD_UNIFORM_BUFFER_SIZE` below for the live size). THAT FILE'S HEADER IS
+ * THE OFFSET AUTHORITY; a wrong index here produces no error, just silently
+ * garbage uniforms.
  *
  * ## Why a camera BASIS and not an inverse view-projection
  *
@@ -22,8 +23,8 @@
  * opens — a divergence that looks like a projection bug, not a framing one.
  *
  * The mixture rides the same buffer as a fixed-size array. It only changes
- * when the galaxy is regenerated, but writing it every frame costs a memcpy of
- * 576 bytes and removes any "did the mixture change" bookkeeping; the buffer is
+ * when the galaxy is regenerated (or the ring tuning changes), but writing it
+ * every frame removes any "did the mixture change" bookkeeping; the buffer is
  * rewritten per frame for the camera lanes regardless.
  */
 
@@ -31,8 +32,8 @@ import type { GalaxyFieldComponent } from '../../../../src/@types/galaxy/GalaxyF
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { GALAXY_FIELD_MAX_COMPONENTS } from '../../../../src/data/galaxy/galaxyFieldMixture';
 
-/** Float count of `io.wesl`'s `FieldUniforms` — 6 vec4 + 36 vec4 of mixture. */
-export const FIELD_UNIFORM_FLOATS = 24 + 4 * 3 * GALAXY_FIELD_MAX_COMPONENTS;
+/** Float count of `io.wesl`'s `FieldUniforms` — 6 vec4 + 4 vec4 per component, up to `GALAXY_FIELD_MAX_COMPONENTS`. */
+export const FIELD_UNIFORM_FLOATS = 24 + 4 * 4 * GALAXY_FIELD_MAX_COMPONENTS;
 
 /** Byte size of the same struct, for `createBuffer`. */
 export const FIELD_UNIFORM_BUFFER_SIZE = FIELD_UNIFORM_FLOATS * 4;
@@ -99,10 +100,10 @@ export function packFieldUniforms(
   out[22] = 0;
   out[23] = 0;
 
-  // comps 24.. — three vec4 per component, laid out as io.wesl documents.
+  // comps 24.. — four vec4 per component, laid out as io.wesl documents.
   for (let i = 0; i < count; i++) {
     const c = mixture[i]!;
-    const base = COMPS_BASE + 12 * i;
+    const base = COMPS_BASE + 16 * i;
     out[base] = c.invCovDiagonal[0];
     out[base + 1] = c.invCovDiagonal[1];
     out[base + 2] = c.invCovDiagonal[2];
@@ -115,11 +116,15 @@ export function packFieldUniforms(
     out[base + 9] = c.color[1];
     out[base + 10] = c.color[2];
     out[base + 11] = 0;
+    out[base + 12] = c.center[0];
+    out[base + 13] = c.center[1];
+    out[base + 14] = c.center[2];
+    out[base + 15] = 0;
   }
   // Unused slots are zeroed rather than left as last frame's bytes: `dst` is a
   // reused scratch, and a stale amplitude past `count` would come back to life
   // the moment the table shrinks.
-  out.fill(0, COMPS_BASE + 12 * count, FIELD_UNIFORM_FLOATS);
+  out.fill(0, COMPS_BASE + 16 * count, FIELD_UNIFORM_FLOATS);
 
   return out;
 }

@@ -43,10 +43,14 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   var sum = vec3<f32>(0.0, 0.0, 0.0);
   let count = u32(u.counts.x);
   for (var i = 0u; i < count; i = i + 1u) {
-    let g0 = u.comps[3u * i];
-    let g1 = u.comps[3u * i + 1u];
-    let g2 = u.comps[3u * i + 2u];
-    sum = sum + g2.xyz * (g0.w * gaussianRayIntegral(o, d, g0.xyz, g1.xyz));
+    let g0 = u.comps[4u * i];
+    let g1 = u.comps[4u * i + 1u];
+    let g2 = u.comps[4u * i + 2u];
+    let g3 = u.comps[4u * i + 3u];
+    // M is defined about the component's OWN centre, not the origin — shift
+    // the ray origin into that frame; the direction is translation-invariant.
+    let po = o - g3.xyz;
+    sum = sum + g2.xyz * (g0.w * gaussianRayIntegral(po, d, g0.xyz, g1.xyz));
   }
 
   // Alpha 0: the aggregate's alpha channel feeds nothing — the additive
