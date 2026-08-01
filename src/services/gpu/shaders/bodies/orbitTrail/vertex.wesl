@@ -45,7 +45,7 @@ fn ribbonClip(inst: OrbitInstance, si: u32) -> vec3<f32> {
   return inst.cc.xyz + cos(e) * inst.ac.xyz + sin(e) * inst.bc.xyz; // clip (x, y, w)
 }
 
-// Perspective divide; shared by the fully-front, one-sided, and clamped
+// Perspective divide; shared by the fully-front, straddle, mixed, and clamp
 // paths below. Only valid where clip.z (== clip.w) > 0.
 fn clipToPixel(clip: vec3<f32>, viewportPx: vec2<f32>) -> vec2<f32> {
   return (clip.xy / clip.z) * 0.5 * viewportPx;
@@ -60,9 +60,8 @@ fn foldHalfWidth(anchorPx: vec2<f32>, viewportPx: vec2<f32>) -> f32 {
 
 // Rasterizes each orbit as a screen-space ribbon hugging the projected
 // ellipse. vid -> (segment, corner) with segment = vid / 6u, corner = vid % 6u;
-// the quad for segment i spans samples i and i+1, and sample SEGMENTS wraps
-// to 0 so the strip closes. Two triangles per quad, keyed by (sample offset
-// 0|1, side -1|+1) below; winding is irrelevant ('cullMode: none').
+// the quad for segment i spans samples i and i+1, sample SEGMENTS wrapping to
+// 0 so the strip closes. Two triangles per quad; winding is irrelevant.
 @vertex
 fn vsRibbon(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
   var out: VSOut;
@@ -93,7 +92,9 @@ fn vsRibbon(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
   let epsW = 1e-6 * (abs(inst.cc.z) + length(vec2<f32>(inst.ac.z, inst.bc.z)));
 
   // Fold membership per QUAD: tested iff any of the four samples above is
-  // behind; eOwn carries [eLo, eHi) for fragment.wesl's ownership test.
+  // behind; eOwn carries [eLo, eHi) for the ownership test. Only the fully-
+  // front branch below is per-sample — any other branch's corner has a
+  // behind sample inside BOTH quads sharing it, so E-ownership covers it.
   let tested = rawIPrev.z <= epsW || rawI.z <= epsW || rawJ.z <= epsW || rawJNext.z <= epsW;
   out.eOwn = vec3<f32>(
     TAU * f32(segment) / f32(SEGMENTS),
@@ -102,8 +103,8 @@ fn vsRibbon(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
   );
 
   // This corner's own sample and its TRUE neighbours (si-1, si+1), never the
-  // segment's other endpoint — classifying on these makes a corner a pure
-  // function of the sample index, so the two quads sharing si always agree.
+  // segment's other endpoint — a pure function of the sample index (see the
+  // ownership note above for how branches below diverge from there).
   let ownRaw = select(rawJ, rawI, offset == 0u);
   let prevRaw = select(rawI, rawIPrev, offset == 0u);
   let nextRaw = select(rawJNext, rawJ, offset == 0u);
@@ -152,12 +153,15 @@ fn vsRibbon(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
     w = ownRaw.z;
   } else if (ownFront) {
     // MIXED: endpoints front, but the corner's OUTER neighbour is behind —
-    // narrow ribbon (see straddle branch above for why). One-sided tangent
-    // toward the FRONT true neighbour, a pure function of 'own' — so both
-    // quads sharing this sample agree. No sag; any sliver joins the straddle.
+    // narrow ribbon, not per-sample (see the ownership note above). One-
+    // sided tangent toward the FRONT true neighbour; no sag.
     let ownPx = clipToPixel(ownRaw, viewportPx);
-    var chord = clipToPixel(nextRaw, viewportPx) - ownPx;
-    if (prevFront) {
+    // partner IS a true neighbour here (offset 0: next; offset 1: prev), so
+    // the OTHER neighbour is the one behind — never divides by it below.
+    var chord: vec2<f32>;
+    if (!prevFront) {
+      chord = clipToPixel(nextRaw, viewportPx) - ownPx;
+    } else {
       chord = ownPx - clipToPixel(prevRaw, viewportPx);
     }
     let tangent = chord / max(length(chord), 1e-20);
@@ -174,8 +178,7 @@ fn vsRibbon(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
     let otherAnchor = clipToPixel(partnerRaw, viewportPx); // always front in this branch
     // ONE shared axis per quad end, not each end's own local tangent (two
     // per-end tangents can diverge >=90deg near a fold and miss the
-    // viewport). Mismatch with the adjacent quad's version of this shared
-    // corner is covered by E-ownership (both quads tested), not abutment.
+    // viewport); mismatch at the shared corner is E-ownership's job.
     let axisChord = ownAnchor - otherAnchor;
     let axisOut = axisChord / max(length(axisChord), 1e-20);
     let axisNormal = vec2<f32>(-axisOut.y, axisOut.x);
