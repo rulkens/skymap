@@ -249,7 +249,9 @@ The re-encode goes ABOVE the null-runtime bail: it needs no camera, and below it
 - Modify: `src/data/animation/tours/grandTour/approachM31.ts:48-61`, `src/data/animation/tours/grandTour/localGroup.ts:82-92`, `src/data/animation/tours/grandTour/openingTitle.ts:75`, `src/data/animation/tours/grandTour/homeAgain.ts:45`, `src/services/engine/camera/cameraFraming.ts:50-55`
 - Test: `tests/data/animation/tours/` (existing beat tests), `tests/services/engine/camera/cameraFraming.test.ts`
 
-Deleted: `ARRIVAL_YAW_RAD` and `EXIT_YAW_RAD` in both `approachM31.ts` and `localGroup.ts`; `GALACTIC_DISC_YAW_RAD` and `GALACTIC_DISC_PITCH_RAD` in `cameraFraming.ts`. `REVEAL_NET_YAW_RAD` (`neighbourhoodReveal.ts:41`) is a rate, not a bearing — it stays.
+Deleted: `ARRIVAL_YAW_RAD` and `EXIT_YAW_RAD` in both `approachM31.ts` and `localGroup.ts`; `GALACTIC_DISC_YAW_RAD` and `GALACTIC_DISC_PITCH_RAD` in `cameraFraming.ts`.
+
+`REVEAL_NET_YAW_RAD` (`neighbourhoodReveal.ts`) was expected to survive — it is a rate, not a bearing. It did not, and the reason is worth recording: the M81 landing turned out to belong on `neighbourhoodReveal`'s dwell rather than `localGroup`'s, because the invariant is "facing M81 when the flythrough starts". Once that dwell resolves its own landing through `spinTo`, the rate it used to run at has nothing left to express, and the cross-beat coupling `localGroup` encoded by subtracting it disappears with it.
 
 - [ ] Replace the two dwell `cruiseRate` computations with `dwellDrift(DWELL_SEC, { spinTo: focusId('group-m81-group'), turns: -1 })`, preserving each beat's existing sweep direction and duration. `turns: -1` reproduces the `- Math.PI * 2` both beats apply today.
 - [ ] Replace `aimAt({ yaw: GALACTIC_DISC_YAW_RAD, pitch: GALACTIC_DISC_PITCH_RAD }, …)` in `openingTitle.ts` and `homeAgain.ts` with a `lookAtId`-style resolution of the same sightline. The opening's zero-duration `aimAt` must still snap (the cold-open idiom), and the two beats must resolve to the SAME pose — `homeAgain` exists to land back on the opening framing.
