@@ -54,6 +54,12 @@ export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams = {
   // 2.6°, all but along our line of sight — the one orientation the real bar
   // is known not to have. `barStrength` still sets the LENGTH (4.41 kpc here).
   barAngleDeg: 27,
+  // Old-star (K-band) light traces only TWO arms — Scutum-Centaurus and
+  // Perseus — while young tracers (HII/CO/masers) ride all four (Drimmel &
+  // Spergel 2001). armCount is 4 for the young structure, and armTable's
+  // arms alternate phase by construction, so pinning ages [old, young, old,
+  // young] puts the two K-band arms opposite each other, matching the sky.
+  armAges: [1.0, 0.2, 1.0, 0.2],
   bulgeSize: 0.45,
   bulgeFalloff: 0.7,
   dust: 0.5,

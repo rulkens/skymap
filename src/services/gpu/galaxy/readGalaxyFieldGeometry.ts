@@ -22,8 +22,9 @@ const CATEGORY_BY_CODE: readonly GalaxyCategory[] = (
 
 /**
  * Reads one `gen.armTable` record — 16 floats at `armBase + arm*16`, in the
- * exact order `packGenerationUniforms` writes and `armStarSample` consumes
- * (lane 7 is padding, never a field).
+ * exact order `packGenerationUniforms` writes. Lanes 0-6 are what
+ * `armStarSample` consumes; lane 7 (`age`) is analytic-field-only, never
+ * read by the sprite shader.
  */
 function readArmRecord(f32: Float32Array, armBase: number, arm: number): GalaxyFieldArmRecord {
   const base = armBase + arm * 16;
@@ -35,6 +36,7 @@ function readArmRecord(f32: Float32Array, armBase: number, arm: number): GalaxyF
     meanderAmp: f32[base + 4]!,
     meanderFreq: f32[base + 5]!,
     meanderPhase: f32[base + 6]!,
+    age: f32[base + 7]!,
     clumpF1: f32[base + 8]!,
     clumpP1: f32[base + 9]!,
     clumpF2: f32[base + 10]!,
@@ -62,12 +64,15 @@ export function readGalaxyFieldGeometry(
   const bulge = iterations(POPULATION_IDS.bulge);
   const bar = iterations(POPULATION_IDS.bar);
   const halo = iterations(POPULATION_IDS.halo);
-  const armStars = iterations(POPULATION_IDS.spiralArms);
-  // Un-folded from `disc`: pushArmRidges carries this share itself now, so
-  // leaving armStars in the disc numerator would double-count it once ridge
-  // blobs exist alongside the axisymmetric disc (see galaxyFieldMixture.ts).
-  const disc = iterations(POPULATION_IDS.disk) + iterations(POPULATION_IDS.irregularClumps);
-  const modelled = bulge + bar + halo + disc + armStars;
+  // Arms' iterations stay folded into disc: the ridge's flux is now derived
+  // from measured arm/interarm contrast against the disc profile (see
+  // `pushArmRidges` in galaxyFieldMixture.ts), not from a share of the star
+  // budget, so there is no separate arm numerator to un-fold any more.
+  const disc =
+    iterations(POPULATION_IDS.disk) +
+    iterations(POPULATION_IDS.irregularClumps) +
+    iterations(POPULATION_IDS.spiralArms);
+  const modelled = bulge + bar + halo + disc;
   const share = (count: number): number => (modelled > 0 ? count / modelled : 0);
 
   const numArms = u32[GENERATION_UBO.u32.numArms]!;
@@ -94,7 +99,6 @@ export function readGalaxyFieldGeometry(
     bulgeFraction: share(bulge),
     barFraction: share(bar),
     haloFraction: share(halo),
-    armFraction: share(armStars),
     numArms,
     armStartRadius: f32[F.armStartRadius]!,
     armInnerRampW: f32[F.armInnerRampW]!,

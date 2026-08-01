@@ -28,23 +28,24 @@ function ArmFieldSection(): ReactNode {
     >
       <div className={styles.root}>
         <ParamSlider
-          label="Arm width"
+          label="Width × measured law"
           value={fieldTuning.armWidthScale}
-          min={0.3}
-          max={3}
+          min={0.5}
+          max={2.5}
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => dispatch(fieldTuningPatched({ armWidthScale: v }))}
+          info="1.0 is Reid et al. 2019's maser-arm width law (336 pc at the solar circle, widening 36 pc/kpc). Old stellar arms are plausibly broader, so >1 is physical, not a fudge."
         />
         <ParamSlider
-          label="Flux boost"
-          value={fieldTuning.armFluxBoost}
-          min={0}
-          max={3}
-          step={0.05}
+          label="Arm contrast K"
+          value={fieldTuning.armContrast}
+          min={1.05}
+          max={2.2}
+          step={0.01}
           format={(v) => v.toFixed(2)}
-          onChange={(v) => dispatch(fieldTuningPatched({ armFluxBoost: v }))}
-          info="Whole-arm-population flux multiplier over the share readGalaxyFieldGeometry un-folded from the disc. 1.0 is parity with the sprite arms."
+          onChange={(v) => dispatch(fieldTuningPatched({ armContrast: v }))}
+          info="Arm/interarm surface-brightness ratio in old stellar light. The Milky Way measures ~1.3 (Drimmel & Spergel 2001, GLIMPSE); strong grand designs reach ~2 (Rix & Zaritsky 1995). Per-arm age scales it: old arms carry the full contrast, young arms fade toward 1."
         />
         <ParamSlider
           label="Blob sharpness"

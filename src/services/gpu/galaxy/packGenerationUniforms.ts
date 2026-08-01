@@ -24,8 +24,8 @@
  *
  *  - `asymStream` (seeded by `asymSeed`): the four asymmetry values, then —
  *    only when arms would be built (`armStarCount > 0 && category !==
- *    'irregular'`) — seven more draws per arm (phase, pitch, weight,
- *    meanderAmp, meanderFreq, meanderPhase, fadeRadius). The `weightSum`
+ *    'irregular'`) — eight more draws per arm (phase, pitch, weight,
+ *    meanderAmp, meanderFreq, meanderPhase, fadeRadius, age). The `weightSum`
  *    field (stored in the arms scalar group) accumulates the weight draws
  *    from this stream, making it part of the asymmetry family even though
  *    it lives in a different field group.
@@ -70,6 +70,15 @@ export const CATEGORY_CODE: Record<GalaxyCategory, number> = {
   barred: 3,
   irregular: 4,
 };
+
+/**
+ * Per-arm age bands: alternating old/young by parity, each with its own
+ * jitter range, so a 4-arm galaxy naturally lands two old arms roughly
+ * opposite two young ones rather than a uniform contrast on every arm.
+ */
+const ARM_AGE_EVEN_BASE = 0.7;
+const ARM_AGE_ODD_BASE = 0.1;
+const ARM_AGE_JITTER_RANGE = 0.3;
 
 /** Write four consecutive floats starting at a vec4-aligned float index. */
 function writeVec4(
@@ -182,6 +191,12 @@ export function packGenerationUniforms(
         armFullRadius * 1.3,
         armFadeRadius * (1 + (asymStream() * 2 - 1) * 0.55 * armLengthVar),
       );
+      // Pinning still consumes the draw (see GalaxyParams.armAges doc) so a
+      // later arm's phase/pitch/weight never shifts depending on whether
+      // THIS arm's age happened to be pinned.
+      const ageJitter = asymStream();
+      const ageBase = a % 2 === 0 ? ARM_AGE_EVEN_BASE : ARM_AGE_ODD_BASE;
+      const age = params.armAges?.[a] ?? ageBase + ARM_AGE_JITTER_RANGE * ageJitter;
       armTable[a] = [
         phase,
         pitch,
@@ -190,7 +205,7 @@ export function packGenerationUniforms(
         meanderAmp,
         meanderFreq,
         meanderPhase,
-        0,
+        age,
         clumpF1,
         clumpP1,
         clumpF2,

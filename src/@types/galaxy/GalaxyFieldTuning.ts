@@ -15,10 +15,14 @@ export type GalaxyFieldTuning = {
   readonly discEnabled: boolean;
   /** Master toggle for `pushArmRidges`, mirrored to the section header checkbox. */
   readonly armsEnabled: boolean;
-  /** Multiplies every blob's across-arm (radial) sigma; 1 matches `armWidthFactor`'s own scale. */
+  /** Multiplies Reid et al. 2019's measured maser-arm width law; 1 is that law exactly. */
   readonly armWidthScale: number;
-  /** Whole-arm-population flux multiplier over the un-folded `armFraction` share; 1 is parity with the sprite arms. */
-  readonly armFluxBoost: number;
+  /**
+   * K: the arm/interarm surface-brightness ratio in old stellar light.
+   * Drives `pushArmRidges`' contrast law, scaled per arm by that arm's own
+   * `age`. 1.3 is the Milky Way's measured value (Drimmel & Spergel 2001).
+   */
+  readonly armContrast: number;
   /**
    * Debug knob: divides all three of an arm blob's sigmas, holding its flux,
    * so the ridge breaks into countable oriented blobs. 1 is the real field.

@@ -27,6 +27,7 @@
  * | armWave | 0 | model.js:294 |
  * | barStrength | 1 | model.js:228 |
  * | barAngleDeg | unset = drawn from the main stream | model.js:229 |
+ * | armAges | unset = alternating derived from the asym stream | not a spike knob |
  * | youngStars | 0.5 | model.js:167 |
  * | hii | 1 | model.js:303 |
  * | metallicity | 0.5 | model.js:131 |
@@ -80,6 +81,16 @@ export type GalaxyParams = {
    * consumed and discarded so no other generated star moves.
    */
   readonly barAngleDeg?: number;
+  /**
+   * Per-arm age in [0,1] (0 = young gas arm, 1 = old stellar arm), indexed by
+   * arm number. Absent (every preset that says nothing) means each arm's age
+   * is derived from the asymmetry stream: alternating strong/weak bands (even
+   * arms old, odd arms young) with jitter, so a random galaxy naturally shows
+   * a mix of arm ages rather than one uniform contrast. Set, an entry pins
+   * that arm's age and the RNG draw is still consumed and discarded, same
+   * discipline as `barAngleDeg`.
+   */
+  readonly armAges?: readonly number[];
   readonly youngStars?: number;
   readonly metallicity?: number;
   readonly hii?: number;

@@ -31,7 +31,6 @@ const GEOMETRY: GalaxyFieldGeometry = {
   bulgeFraction: 0.2,
   barFraction: 0,
   haloFraction: 0.1,
-  armFraction: 0,
   numArms: 0,
   armStartRadius: 1,
   armInnerRampW: 1,

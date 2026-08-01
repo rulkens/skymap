@@ -51,10 +51,12 @@ import MultiGalaxySection from '../MultiGalaxySection/MultiGalaxySection';
 import PresetsSection from '../PresetsSection/PresetsSection';
 import styles from './ControlsPanel.module.css';
 
-// Every GalaxyParams field except the Hubble-type string itself is a
-// plain number — this narrows `keyof GalaxyParams` down to the subset a
-// slider can actually drive.
-type GalaxySliderKey = Exclude<keyof GalaxyParams, 'type'>;
+// Every GalaxyParams field except the Hubble-type string and the per-arm
+// `armAges` array is a plain number — this narrows `keyof GalaxyParams` down
+// to the subset a single-value slider can actually drive. `armAges` has no
+// UI surface yet (pin it in a preset object instead, per barAngleDeg's
+// pattern).
+type GalaxySliderKey = Exclude<keyof GalaxyParams, 'type' | 'armAges'>;
 
 type SliderSpec = {
   readonly key: GalaxySliderKey;

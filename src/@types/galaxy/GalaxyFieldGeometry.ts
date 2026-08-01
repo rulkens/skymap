@@ -38,13 +38,11 @@ export type GalaxyFieldGeometry = {
   readonly warpStartRadius: number;
   /** Bar in-plane rotation about the pole, radians — an RNG draw, not a formula. */
   readonly barTiltRad: number;
-  /** Fraction of the modelled star budget in the smooth disc (clumps folded in; arms are `armFraction`). */
+  /** Fraction of the modelled star budget in the smooth disc (clumps AND spiral arms folded in — the arm ridge's flux is derived from disc contrast, not a star-budget share). */
   readonly discFraction: number;
   readonly bulgeFraction: number;
   readonly barFraction: number;
   readonly haloFraction: number;
-  /** Fraction of the modelled star budget in the spiral arms — un-folded from `discFraction` so a ridge pass doesn't double the disc's own share. */
-  readonly armFraction: number;
   /** Number of arms the generator drew, `gen.armTable`'s live prefix (max 8). */
   readonly numArms: number;
   /** Radius below which every arm is flat/absent — `armStarSample`'s smooth-start floor. */

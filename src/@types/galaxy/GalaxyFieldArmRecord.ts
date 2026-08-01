@@ -2,6 +2,11 @@
  * GalaxyFieldArmRecord — one arm's personality/meander/clump/wave lanes, read
  * back out of `gen.armTable` (`generationUboLayout.ts`'s `armTable` array) in
  * the exact field order `generate.wesl`'s `armStarSample` consumes them.
+ *
+ * `age` (lane 7) is the one field the sprite shader does NOT consume — it
+ * used to be padding. It exists for the analytic field's contrast law
+ * (`pushArmRidges` in `galaxyFieldMixture.ts`): 0 = young gas arm, 1 = old
+ * stellar arm.
  */
 export type GalaxyFieldArmRecord = {
   readonly phase: number;
@@ -11,6 +16,8 @@ export type GalaxyFieldArmRecord = {
   readonly meanderAmp: number;
   readonly meanderFreq: number;
   readonly meanderPhase: number;
+  /** [0,1]; 0 = young gas arm, 1 = old stellar arm. Not read by `armStarSample`. */
+  readonly age: number;
   readonly clumpF1: number;
   readonly clumpP1: number;
   readonly clumpF2: number;

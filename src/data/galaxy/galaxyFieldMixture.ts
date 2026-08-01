@@ -151,6 +151,23 @@ const DISK_BRIGHTNESS_TAPER = 1.7;
 /** `buildDisk`'s vertical flare: diskHeight * (0.6 + bulgeRadius/(R + bulgeRadius)). */
 const DISC_FLARE_FLOOR = 0.6;
 
+/** The light-weighted scale length `pushDisc` samples at — shared with `pushArmRidges`' contrast law, which needs the same Sigma_disc(R) the ridge is an excess OVER. */
+function discLightScaleLength(geometry: GalaxyFieldGeometry): number {
+  return geometry.diskScaleLen / (1 + 1 / DISK_BRIGHTNESS_TAPER);
+}
+
+/**
+ * The disc's azimuthally-averaged surface brightness at R, from the disc
+ * family's OWN total flux (`discFlux`, accumulated at push time — see
+ * `buildGalaxyFieldMixture`) and its light-weighted scale length: Sigma(R) =
+ * F / (2*pi*h^2) * exp(-R/h), normalised so integral(Sigma * 2*pi*R dR) = F.
+ * `pushArmRidges` treats this as the interarm floor the contrast ratio K is
+ * measured against.
+ */
+function discSurfaceBrightness(radius: number, discFlux: number, hLight: number): number {
+  return (discFlux / (2 * Math.PI * hLight * hLight)) * Math.exp(-radius / hLight);
+}
+
 // buildBar: alongBar = genNormal * 0.44, brightness *= exp(-alongBar^2 * 1.3).
 // Two Gaussians in the same variable, so the emitted length is their product.
 const BAR_ALONG_SPREAD = 0.44;
@@ -193,25 +210,32 @@ function pushDisc(
   geometry: GalaxyFieldGeometry,
   out: GalaxyFieldComponent[],
   tuning: GalaxyFieldTuning,
-): void {
-  if (!tuning.discEnabled || geometry.discFraction <= 0) return;
+): number {
+  if (!tuning.discEnabled || geometry.discFraction <= 0) return 0;
   const scale = emissionScale(geometry);
-  const scaleLen = geometry.diskScaleLen / (1 + 1 / DISK_BRIGHTNESS_TAPER);
+  const scaleLen = discLightScaleLength(geometry);
   const central = (geometry.discFraction * DISC_BRIGHTNESS) / (2 * Math.PI * scaleLen * scaleLen);
+  let fluxTotal = 0;
   for (let i = 0; i < DISC_SIGMA_RATIOS.length; i++) {
     const sigmaR = DISC_SIGMA_RATIOS[i]! * scaleLen;
     const sigmaPole =
       geometry.diskHeight *
       (DISC_FLARE_FLOOR + geometry.bulgeRadius / (sigmaR + geometry.bulgeRadius));
+    // Divided by sigmaPole alone: the fitted weights are SURFACE densities,
+    // and it is the surface density the flare must leave untouched.
+    const amplitude = (scale * DISC_SURFACE_WEIGHTS[i]! * central) / (sigmaPole * TAU_ROOT);
     out.push({
-      // Divided by sigmaPole alone: the fitted weights are SURFACE densities,
-      // and it is the surface density the flare must leave untouched.
-      amplitude: (scale * DISC_SURFACE_WEIGHTS[i]! * central) / (sigmaPole * TAU_ROOT),
+      amplitude,
       ...shapeOf(geometry, sigmaR, sigmaPole, sigmaR, 0),
       color: DISC_COLOR,
       center: ORIGIN,
     });
+    // This component's own 3D integral — summed rather than hand-derived
+    // from `discFraction`, so `pushArmRidges`' contrast ledger tracks
+    // whatever flux actually landed in `out`, not a recomputation of it.
+    fluxTotal += amplitude * TAU_ROOT3 * sigmaR * sigmaR * sigmaPole;
   }
+  return fluxTotal;
 }
 
 /**
@@ -269,12 +293,15 @@ export const WARP_RING_COUNT = 8;
 export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
   discEnabled: true,
   armsEnabled: true,
-  // Eyeballed sprite-arm parity at the Milky Way preset. Boost 0.5 against
-  // ARM_BRIGHTNESS = 1.9 nets ~0.95: the mirrored sprite factor double-counts
-  // brightness already carried by armFraction. Both knobs are slated to become
-  // measured quantities (width at R0 + flaring; arm-interarm contrast).
-  armWidthScale: 1.3,
-  armFluxBoost: 0.5,
+  // 1 = Reid et al. 2019's measured Milky Way maser-arm width law exactly
+  // (see `armCrossSigma`); old stellar arms are plausibly broader, so >1 is
+  // physical, not a fudge.
+  armWidthScale: 1,
+  // K, the arm/interarm surface-brightness ratio in old stellar light. 1.3
+  // is the Milky Way's measured value (Drimmel & Spergel 2001 via Antoja et
+  // al. 2011; corroborated by GLIMPSE's 20-30% count excess) — see
+  // `pushArmRidges`.
+  armContrast: 1.3,
   armBlobSharpness: 1,
 };
 
@@ -332,8 +359,8 @@ function pushWarpedOuterDisc(
   geometry: GalaxyFieldGeometry,
   out: GalaxyFieldComponent[],
   tuning: GalaxyFieldTuning,
-): void {
-  if (!tuning.discEnabled || geometry.discFraction <= 0) return;
+): number {
+  if (!tuning.discEnabled || geometry.discFraction <= 0) return 0;
   const { outerRadius, bulgeRadius, diskHeight, diskScaleLen } = geometry;
   const blobsPerRing = RING_BLOBS_PER_RING;
   const totalFlux =
@@ -374,11 +401,8 @@ function pushWarpedOuterDisc(
       });
     }
   }
+  return totalFlux;
 }
-
-// buildArmSlot: randomLuminosity * 1.9 * armFade * clumpMod — the ridge's own
-// brightness multiplier, off spiralArms' regular (non-HII) arm star line.
-const ARM_BRIGHTNESS = 1.9;
 
 /** Hot blue-white, nudged bluer with youngFraction — eyeball, echoing tempColorRamp(0.6 + 0.36*youngFraction)'s direction without matching its curve. */
 const ARM_COLOR_OLD: Readonly<Vec3> = [0.8, 0.86, 1.0];
@@ -462,9 +486,20 @@ function armSurvival(clumpMod: number, geometry: GalaxyFieldGeometry): number {
   return geometry.clumpAmount > 0 ? Math.min(1, 0.4 + 0.6 * clumpMod) : 1;
 }
 
+/**
+ * Reid et al. 2019's measured Milky Way maser-arm width law, w(R) = 336 pc +
+ * 36 pc/kpc x (R - 8.15 kpc), re-expressed in units of the disc scale length
+ * (h = 2.605 kpc for the MW) so it scales to any galaxy: w/h = FLOOR_H +
+ * SLOPE*(R/h), i.e. w = FLOOR_H*h + SLOPE*R. This is the width of the YOUNG
+ * maser arm — a verified floor for old-star arms, with `tuning.armWidthScale`
+ * carrying any old-population broadening (1 = the measured law exactly).
+ */
+const ARM_WIDTH_FLOOR_H = 0.017;
+const ARM_WIDTH_SLOPE = 0.036;
+
 /** This arm's cross-section sigma at a radius — same formula the blob placement's `sigmas.across` uses. */
 function armCrossSigma(radius: number, geometry: GalaxyFieldGeometry, tuning: GalaxyFieldTuning): number {
-  return geometry.armWidthFactor * radius * 0.5 * tuning.armWidthScale;
+  return (ARM_WIDTH_FLOOR_H * geometry.diskScaleLen + ARM_WIDTH_SLOPE * radius) * tuning.armWidthScale;
 }
 
 /** Points to densely re-sample the ridge at, to estimate curvature — see `deriveArmBlobCount`. */
@@ -542,6 +577,15 @@ function deriveArmBlobCount(
 }
 
 /**
+ * Per arm i, the contrast law scales K by that arm's own `age` (0 = young
+ * gas arm, 1 = old stellar arm): the floor (0.25) keeps young arms faintly
+ * present in old-star light rather than absent, and the full contrast only
+ * applies at age 1.
+ */
+const ARM_AGE_CONTRAST_FLOOR = 0.25;
+const ARM_AGE_CONTRAST_SPAN = 0.75;
+
+/**
  * Spiral-arm RIDGE blobs, placed along the exact log-spiral curve
  * `armStarSample` draws stars around (`generate.wesl` lines ~652-771, cited
  * per-function above) so the analytic arms land ON the sprite arms rather
@@ -556,30 +600,32 @@ function deriveArmBlobCount(
  * ALONG the arm rather than across it — fold it into `across`'s sigma in a
  * later pass, not this one.
  *
- * Flux bookkeeping: `readGalaxyFieldGeometry` un-folds spiralArms iterations
- * out of `discFraction` into `armFraction`, so this function spends the
- * arms' OWN share — adding it on top of an unchanged disc would double the
- * arms' light (see that file's comment on the trap).
+ * Flux bookkeeping: the disc mixture was fit to the AZIMUTHALLY AVERAGED
+ * profile, which already contains the arm light, so an arm's flux here is
+ * not a separate budget but an EXCESS over that average — K_i (this arm's
+ * contrast, scaled by its own age) times the disc's own local surface
+ * brightness. `buildGalaxyFieldMixture` debits the returned total back out
+ * of the disc components so the two don't double-count the same light.
  */
 function pushArmRidges(
   geometry: GalaxyFieldGeometry,
   out: GalaxyFieldComponent[],
   tuning: GalaxyFieldTuning,
-): void {
-  if (!tuning.armsEnabled || geometry.armFraction <= 0 || geometry.numArms <= 0) return;
+  discFlux: number,
+): number {
+  if (!tuning.armsEnabled || geometry.numArms <= 0 || discFlux <= 0) return 0;
   const { armStartRadius, diskHeight } = geometry;
   const sharpness = Math.max(1, tuning.armBlobSharpness);
   const color = armColor(geometry.youngFraction);
+  const hLight = discLightScaleLength(geometry);
+  const K = tuning.armContrast;
 
-  let weightSum = 0;
-  for (const arm of geometry.arms) weightSum += arm.weight;
-  if (weightSum <= 0) return;
-
-  const totalFlux = emissionScale(geometry) * geometry.armFraction * ARM_BRIGHTNESS * tuning.armFluxBoost;
   // Components already pushed (disc + warped outer disc) bound what arms may
   // still spend, split evenly across them — makes cap overflow structurally
   // impossible rather than a silent packFieldUniforms clamp.
   const perArmBudget = Math.floor((GALAXY_FIELD_MAX_COMPONENTS - out.length) / geometry.numArms);
+
+  let armExcessFlux = 0;
 
   for (const arm of geometry.arms) {
     const rStart = armStartRadius * 1.05;
@@ -588,6 +634,7 @@ function pushArmRidges(
     const logStart = Math.log(rStart / armStartRadius);
     const logEnd = Math.log(rEnd / armStartRadius);
     const blobsPerArm = deriveArmBlobCount(logStart, logEnd, geometry, arm, tuning, perArmBudget);
+    const Ki = 1 + (K - 1) * (ARM_AGE_CONTRAST_FLOOR + ARM_AGE_CONTRAST_SPAN * arm.age);
 
     // Centres first, uniform steps in log-radius — every other per-blob
     // quantity (spacing, flux, tangent) is derived from this curve.
@@ -603,13 +650,12 @@ function pushArmRidges(
       centers.push(armRidgeCurvePoint(logR, geometry, arm));
     }
 
-    // Per-blob line density x arc-spacing, in one pass since both the flux
-    // weight and the along-arm sigma need the same consecutive-centre
-    // distance (forward difference, backward at the open end — the arm
-    // isn't periodic like a ring).
+    // Arc-spacing (for both the along-arm sigma and Delta s_k below) and the
+    // fade/clump/survival modulation, in one pass — forward difference,
+    // backward at the open end, since the arm isn't periodic like a ring.
     const spacings: number[] = [];
-    const rawFlux: number[] = [];
-    let armRawSum = 0;
+    const mods: number[] = [];
+    let modSum = 0;
     for (let k = 0; k < blobsPerArm; k++) {
       const spacing =
         k < blobsPerArm - 1
@@ -619,16 +665,15 @@ function pushArmRidges(
       const fade = armFadeEnvelope(radii[k]!, geometry, arm);
       const clump = armClumpMod(logRs[k]!, geometry, arm);
       const survival = armSurvival(clump, geometry);
-      const flux = fade * clump * survival * spacing;
-      rawFlux.push(flux);
-      armRawSum += flux;
+      const mod = fade * clump * survival;
+      mods.push(mod);
+      modSum += mod;
     }
-    if (armRawSum <= 0) continue;
-
-    // This arm's share of the total, then each blob's share of THAT — the
-    // two normalisations `w_a / sum(w)` and `rawFlux_k / armRawSum` compose
-    // into a mixture whose grand total is exactly `totalFlux`.
-    const armTargetFlux = totalFlux * (arm.weight / weightSum);
+    if (modSum <= 0) continue;
+    // Renormalised to mean 1 so the modulation shapes the arm's brightness
+    // along its length without moving its calibrated total (the contrast
+    // law below, not this shape, sets that total).
+    const modMean = modSum / blobsPerArm;
 
     for (let k = 0; k < blobsPerArm; k++) {
       const radius = radii[k]!;
@@ -640,12 +685,19 @@ function pushArmRidges(
       const across = normalize3(cross3(surfacePole, along));
       const pole = cross3(along, across); // re-orthonormalise: surfacePole need not be perpendicular to `along`
 
+      const sigmaAcross = armCrossSigma(radius, geometry, tuning);
       const sigmas = {
         along: (spacings[k]! * RING_AZIMUTHAL_OVERLAP) / sharpness,
-        across: armCrossSigma(radius, geometry, tuning) / sharpness,
+        across: sigmaAcross / sharpness,
         pole: (diskHeight * 0.8) / sharpness,
       };
-      const blobFlux = armTargetFlux * (rawFlux[k]! / armRawSum);
+      // Sigma_disc(R): the interarm floor this arm's excess is measured
+      // against. lambda_i(R): the Gaussian tube's cross-section integral of
+      // that excess (sqrt(2*pi)*sigmaAcross is a 1D Gaussian's own integral).
+      const sigmaDisc = discSurfaceBrightness(radius, discFlux, hLight);
+      const lambda = (Ki - 1) * sigmaDisc * TAU_ROOT * sigmaAcross;
+      const blobFlux = lambda * spacings[k]! * (mods[k]! / modMean);
+      armExcessFlux += blobFlux;
       const amplitude = blobFlux / (TAU_ROOT3 * sigmas.along * sigmas.across * sigmas.pole);
       const boundRadius = Math.max(sigmas.along, sigmas.across, sigmas.pole);
 
@@ -658,6 +710,7 @@ function pushArmRidges(
       });
     }
   }
+  return armExcessFlux;
 }
 
 /** buildBulge's two radial branches, squashed by flattening / bulgeAxisZ and rotated. */
@@ -756,6 +809,14 @@ function pushHalo(
 }
 
 /**
+ * A contrast that would consume over half the disc means the parameterization
+ * is being driven outside its meaning (K way past the ~2 grand-design
+ * ceiling, or a preset with an implausibly narrow disc) — clamp the debit and
+ * carry on rather than let the disc go negative or inverted.
+ */
+const ARM_DISC_DEBIT_CLAMP_FRACTION = 0.5;
+
+/**
  * Component count is `WARP_RING_COUNT * RING_BLOBS_PER_RING` (192, fixed)
  * PLUS each arm's own `deriveArmBlobCount`, individually budget-clamped
  * against `GALAXY_FIELD_MAX_COMPONENTS` so the grand total can never exceed
@@ -774,9 +835,22 @@ export function buildGalaxyFieldMixture(
   tuning: GalaxyFieldTuning = DEFAULT_GALAXY_FIELD_TUNING,
 ): readonly GalaxyFieldComponent[] {
   const out: GalaxyFieldComponent[] = [];
-  pushDisc(geometry, out, tuning);
-  pushWarpedOuterDisc(geometry, out, tuning);
-  pushArmRidges(geometry, out, tuning);
+  const discFlux = pushDisc(geometry, out, tuning) + pushWarpedOuterDisc(geometry, out, tuning);
+  const discComponentCount = out.length;
+
+  // The disc mixture was fit to the azimuthally averaged profile, which
+  // already contains the arm light, so the arm excess has to be debited back
+  // out of the disc components just pushed — otherwise the two double-count
+  // the same light (see `pushArmRidges`'s docblock).
+  const armExcessFlux = pushArmRidges(geometry, out, tuning, discFlux);
+  if (discFlux > 0 && armExcessFlux > 0) {
+    const debit = Math.min(armExcessFlux, discFlux * ARM_DISC_DEBIT_CLAMP_FRACTION);
+    const scale = (discFlux - debit) / discFlux;
+    for (let i = 0; i < discComponentCount; i++) {
+      out[i] = { ...out[i]!, amplitude: out[i]!.amplitude * scale };
+    }
+  }
+
   pushBulge(geometry, out, tuning);
   pushBar(geometry, out, tuning);
   pushHalo(geometry, out, tuning);
