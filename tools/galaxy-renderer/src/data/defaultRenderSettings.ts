@@ -32,8 +32,9 @@
  * Two knobs, two stages of the pipeline, one shared English word — conflating
  * them would point `starIntensity` at the wrong constant.
  *
- * The fade block seeds from the app's own band edges for the same reason: the
- * tool is only useful while "leave the sliders alone" means "what the app does".
+ * The fade block is the ONE deliberate exception to the seed-from-the-app rule
+ * — see its own comment below for why parity there would mean tuning a band
+ * that never closes.
  */
 
 import type { RenderSettings } from '../../@types/engine/RenderSettings';
@@ -46,10 +47,8 @@ import {
 import {
   MILKY_WAY_FADE_FULL_PX,
   MILKY_WAY_FADE_GONE_PX,
-  MILKY_WAY_MODEL_SCALE,
   MILKY_WAY_TUNING_DEFAULTS,
 } from '../../../../src/services/gpu/galaxy/milkyWayCalibration';
-import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
 
 export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   exposure: DEFAULT_EXPOSURE,
@@ -93,13 +92,16 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // found and switched on would leave the tool tuning a regime the app never
   // shows, which is what this port exists to stop.
   fadeEnabled: true,
-  // The app's own keying quantity, bug included — see `FadeAnchor`.
-  fadeAnchor: 'sun',
-  // The app's band, converted Mpc → generator units, because that is the unit
-  // the tool's camera and its readout speak. 1.2 / 0.12 units at the current
-  // model scale.
-  fadeApproachFullAt: SCALE_FADE_BANDS.milkyWayApproach.fullAt / MILKY_WAY_MODEL_SCALE,
-  fadeApproachGoneAt: SCALE_FADE_BANDS.milkyWayApproach.goneAt / MILKY_WAY_MODEL_SCALE,
+  // The one place this file DELIBERATELY breaks app parity. The app keys the
+  // approach band on distance from the SUN, so flying to the galactic centre
+  // still leaves the camera ~8 kpc out and the band never closes — the tool
+  // would be tuning a fade that never fires. Anchored at the centre, and
+  // widened to a band that spans the whole approach (full at 10 u, gone at the
+  // centre itself) so the handoff is visible while it is being tuned. The
+  // `sun` option stays in `FadeAnchor` to reproduce the app's behaviour.
+  fadeAnchor: 'galacticCentre',
+  fadeApproachFullAt: 10,
+  fadeApproachGoneAt: 0,
   fadeFullPx: MILKY_WAY_FADE_FULL_PX,
   fadeGonePx: MILKY_WAY_FADE_GONE_PX,
 };

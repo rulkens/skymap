@@ -14,7 +14,6 @@ import type { MilkyWayFadeReadout } from '../../../@types/engine/MilkyWayFadeRea
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { renderPatched } from '../../state/slices/renderSlice';
 import { sectionToggled } from '../../state/slices/uiSlice';
-import { UNITS_TO_KPC } from '../../engine/deriveMilkyWayFade';
 import CollapsibleSection from '../CollapsibleSection/CollapsibleSection';
 import ParamSlider from '../ParamSlider/ParamSlider';
 import styles from './FadeSection.module.css';
@@ -37,8 +36,9 @@ function kpc(value: number): string {
   return `${value.toFixed(4)} kpc`;
 }
 
+/** Units only — the kpc twin doubled the readout's width and pushed the slider track to a stub. The conversion still rides the slider's `info`. */
 function units(value: number): string {
-  return `${value.toFixed(2)} u · ${(value * UNITS_TO_KPC).toFixed(2)} kpc`;
+  return `${value.toFixed(2)} u`;
 }
 
 function FadeSection({ readout }: FadeSectionProps): ReactNode {
