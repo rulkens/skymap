@@ -82,10 +82,12 @@ Behaviour-neutral. Both fields are fed the same value; this task only creates th
 | `computeViewProj:98`, `cameraBillboardBasis:66`, `horizonShellRenderer:161`, `slabs:156`, `orbitControls:415` | `upBasis`   |
 | `resolveClipFoci:185`, `buildPathTrack:190` (strafe / pass-by lateral axes)                                   | `poseBasis` |
 
-- [ ] Rename the field repo-wide: `npm run refactor -- rename OrbitCamera.frameBasis poseBasis` (dry-run first; check the `.wesl` and string-literal blind spots by grepping for `frameBasis` afterwards).
+`npm run refactor -- rename` does **not** apply here: it resolves exported declarations only (`tools/utils/refactor/resolveSymbol.ts:48`), and `frameBasis` is a property of an exported type. Rename it by hand or via the editor's rename-symbol. The type checker is the safety net — every read site of a renamed property is a type error, so a green `npm run typecheck` means none were missed.
+
+- [ ] Rename the property on `OrbitCamera` and update every read/write site; then grep for `frameBasis` to catch what the type checker cannot see (`.wesl` sources, string literals, `vi.mock` factories, comments).
 - [ ] Add `upBasis` to `OrbitCamera` and to `assembleOrbitCamera`'s parameters; every caller passes the same value for both.
 - [ ] Reroute the five draw-time sites in the table to `cam.upBasis`.
-- [ ] `npm run typecheck && npm test` → GREEN with zero test edits. A test that needed changing means the split moved behaviour; stop and find out why.
+- [ ] `npm run typecheck && npm test` → GREEN. Test fixtures that construct an `OrbitCamera` need the field renamed too — that is expected. What must NOT change is any test's expected **values**: if an assertion's expected number or vector moves, the split changed behaviour. Stop and find out why.
 - [ ] Commit.
 
 ---
