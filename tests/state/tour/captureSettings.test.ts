@@ -5,8 +5,9 @@
  * mutates them, then restores the capture. These tests pin the properties
  * that make that round-trip sound:
  *
- *   1. *Scope* — exactly the ten tour-owned clusters are captured, and
- *      excluded clusters (e.g. `tonemap`) never leak into the snapshot.
+ *   1. *Scope* — exactly the ten tour-owned clusters plus the `orientation`
+ *      scalar are captured, and excluded clusters (e.g. `tonemap`) never
+ *      leak into the snapshot.
  *   2. *Detachment* — the snapshot is a deep, independent copy; a later
  *      mutation of the live `state.settings` (top-level or nested) must
  *      not change the captured value.
@@ -29,6 +30,7 @@ const SNAPSHOT_KEYS = [
   'labels',
   'milkyWay',
   'orbitTrails',
+  'orientation',
   'starCatalogs',
   'structures',
   'volumes',
@@ -54,6 +56,7 @@ function makeState() {
       starCatalogs: { enabled: true, items: {} },
       bodies: { items: {} },
       labels: { focusedOnly: false },
+      orientation: 'galactic',
       // Excluded — must NOT appear in the snapshot.
       tonemap: { exposure: 1.2, curve: 'aces' },
     },
@@ -61,7 +64,7 @@ function makeState() {
 }
 
 describe('captureSettings', () => {
-  it('clones exactly the ten tour-owned clusters', () => {
+  it('clones exactly the ten tour-owned clusters plus the orientation scalar', () => {
     const state = makeState();
     const snap = captureSettings(state);
 

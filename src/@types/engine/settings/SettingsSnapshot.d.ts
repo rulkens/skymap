@@ -30,6 +30,14 @@
  * them, so capturing them would invite a restore that stomps a value the
  * tour never meant to own.
  *
+ * `orientation` also rides in the snapshot, despite being a bare scalar
+ * rather than one of the ten clusters: a tour's `frameTo` cue can switch it
+ * mid-run, so restore needs a captured pre-tour value to return to. It does
+ * NOT restore through the whole-cluster `mergeSnapshot` write the clusters
+ * above use — see `restoreSceneSaga`, which re-dispatches it through the
+ * same request path an interactive switch takes, so `camera.base` gets
+ * re-expressed into the restored frame instead of stranding it.
+ *
  * ### Why Readonly
  *
  * A captured snapshot is a frozen baseline — restore reads it, nothing
@@ -52,5 +60,6 @@ export type SettingsSnapshot = Readonly<
     | 'starCatalogs'
     | 'bodies'
     | 'labels'
+    | 'orientation'
   >
 >;

@@ -5,8 +5,8 @@
  * restore must wind both back. These tests pin the two properties that make
  * the scene-level capture sound:
  *
- *   1. *Scope* — the snapshot carries all ten settings clusters AND the focus
- *      ref from `state.selection.focus`.
+ *   1. *Scope* — the snapshot carries all ten settings clusters, the
+ *      `orientation` scalar, AND the focus ref from `state.selection.focus`.
  *   2. *Detachment* — the settings half is a deep clone (via `captureSettings`);
  *      the focus half is a reference copy of an immutable identity value. A
  *      later write to `state.selection.focus` (a new ref object replacing the
@@ -26,6 +26,7 @@ const SNAPSHOT_SETTINGS_KEYS = [
   'labels',
   'milkyWay',
   'orbitTrails',
+  'orientation',
   'starCatalogs',
   'structures',
   'volumes',
@@ -50,6 +51,7 @@ function makeState(focus: SelectionRef | null = FOCUS_REF) {
       orbitTrails: { enabled: true },
       starCatalogs: { enabled: true, items: {} },
       bodies: { items: {} },
+      orientation: 'galactic',
       tonemap: { exposure: 1.2 },
     },
     selection: { hover: null, select: null, focus },

@@ -71,6 +71,7 @@ describe('mergeSettingsSnapshot', () => {
       starCatalogs: { ...state.starCatalogs, enabled: !state.starCatalogs.enabled },
       bodies: { ...state.bodies },
       labels: { ...state.labels, focusedOnly: !state.labels.focusedOnly },
+      orientation: state.orientation,
     };
 
     const next = mergeSettingsSnapshot(state, full);
