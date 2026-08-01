@@ -107,9 +107,8 @@ fn vsRibbon(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
   let ownRaw = select(rawJ, rawI, offset == 0u);
   let prevRaw = select(rawI, rawIPrev, offset == 0u);
   let nextRaw = select(rawJNext, rawJ, offset == 0u);
-  // The CURRENT segment's OTHER endpoint — the fold-widening axis below
-  // reads this on both the one-sided and clamp branches (per-segment, not
-  // per-sample, is deliberately allowed for fold-widened corners).
+  // The CURRENT segment's OTHER endpoint — read by the straddle and clamp
+  // branches below (per-segment, not per-sample, deliberately allowed there).
   let partnerRaw = select(rawI, rawJ, offset == 0u);
 
   let ownFront = ownRaw.z > epsW;
@@ -134,26 +133,37 @@ fn vsRibbon(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
     let halfWidth = STROKE_PX + MARGIN_PX + sag;
     outPx = ownPx + side * halfWidth * normal;
     w = ownRaw.z;
-  } else if (ownFront) {
-    // Own front, a TRUE neighbour behind: fold-widened below via the shared
-    // axis frame (see the comment on that frame in the branch below).
+  } else if (ownFront && partnerRaw.z <= epsW) {
+    // The segment STRADDLES the near plane: unbounded viewport-box coverage
+    // is needed only here (a straddling stroke's screen extent is itself
+    // unbounded). Widening every fold-adjacent corner this way cost ~4
+    // viewport quads per near-plane crossing per orbit — a fill catastrophe.
     let ownAnchor = clipToPixel(ownRaw, viewportPx);
-    // The segment's OTHER end, as this quad sees it: front position, or its
-    // w = epsW crossing toward 'own' — the branch below's own clamp, mirrored.
-    var otherAnchor = clipToPixel(partnerRaw, viewportPx);
-    if (partnerRaw.z <= epsW) {
-      let t = (epsW - partnerRaw.z) / (ownRaw.z - partnerRaw.z);
-      otherAnchor = clipToPixel(mix(partnerRaw, ownRaw, t), viewportPx);
-    }
+    let t = (epsW - partnerRaw.z) / (ownRaw.z - partnerRaw.z);
+    let otherAnchor = clipToPixel(mix(partnerRaw, ownRaw, t), viewportPx);
     let axisChord = ownAnchor - otherAnchor;
     let axisOut = axisChord / max(length(axisChord), 1e-20); // guarded; zero if anchors coincide (segment projects to a point)
     let axisNormal = vec2<f32>(-axisOut.y, axisOut.x);
     let h = foldHalfWidth(ownAnchor, viewportPx);
-    // axisOut flips sign between the two quad ends (it points outward at
-    // each), so axisNormal flips with it; 'side' must flip too or the two
-    // triangles bowtie and shed a viewport-scale wedge.
+    // axisOut flips sign per quad end (points outward at each), so 'side'
+    // must flip with it or the two triangles bowtie and shed a wedge.
     let sideOut = select(-side, side, offset == 1u);
     outPx = ownAnchor + h * axisOut + sideOut * h * axisNormal;
+    w = ownRaw.z;
+  } else if (ownFront) {
+    // MIXED: endpoints front, but the corner's OUTER neighbour is behind —
+    // narrow ribbon (see straddle branch above for why). One-sided tangent
+    // toward the FRONT true neighbour, a pure function of 'own' — so both
+    // quads sharing this sample agree. No sag; any sliver joins the straddle.
+    let ownPx = clipToPixel(ownRaw, viewportPx);
+    var chord = clipToPixel(nextRaw, viewportPx) - ownPx;
+    if (prevFront) {
+      chord = ownPx - clipToPixel(prevRaw, viewportPx);
+    }
+    let tangent = chord / max(length(chord), 1e-20);
+    let normal = vec2<f32>(-tangent.y, tangent.x);
+    let halfWidth = STROKE_PX + MARGIN_PX;
+    outPx = ownPx + side * halfWidth * normal;
     w = ownRaw.z;
   } else if (partnerRaw.z > epsW) {
     // Own behind, this segment's OTHER endpoint in front: clamp toward it
@@ -162,15 +172,14 @@ fn vsRibbon(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
     let clampedRaw = mix(ownRaw, partnerRaw, t);
     let ownAnchor = clipToPixel(clampedRaw, viewportPx);
     let otherAnchor = clipToPixel(partnerRaw, viewportPx); // always front in this branch
-    // ONE shared axis per quad end, not each end's own local tangent: two
-    // per-end tangents can diverge >=90deg near a fold and each cover only
-    // half the viewport or none. Mismatch with the adjacent quad's version
-    // of this shared corner is covered by E-ownership (both quads tested),
-    // not abutment — same as the one-sided branch above.
+    // ONE shared axis per quad end, not each end's own local tangent (two
+    // per-end tangents can diverge >=90deg near a fold and miss the
+    // viewport). Mismatch with the adjacent quad's version of this shared
+    // corner is covered by E-ownership (both quads tested), not abutment.
     let axisChord = ownAnchor - otherAnchor;
     let axisOut = axisChord / max(length(axisChord), 1e-20);
     let axisNormal = vec2<f32>(-axisOut.y, axisOut.x);
-    let h = foldHalfWidth(ownAnchor, viewportPx); // same shared-axis frame as the one-sided branch above
+    let h = foldHalfWidth(ownAnchor, viewportPx); // same shared-axis frame as the straddle branch above
     let sideOut = select(-side, side, offset == 1u); // same per-end flip as above
     outPx = ownAnchor + h * axisOut + sideOut * h * axisNormal;
     w = epsW;
