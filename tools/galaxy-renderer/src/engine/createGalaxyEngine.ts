@@ -199,6 +199,7 @@ import type { GalaxyFieldComponent } from '../../../../src/@types/galaxy/GalaxyF
 import type { GalaxyFieldGeometry } from '../../../../src/@types/galaxy/GalaxyFieldGeometry';
 import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFieldTuning';
 import type { GalaxySfMap } from '../../../../src/@types/galaxy/GalaxySfMap';
+import type { GalaxySfMapOrientation } from '../../../../src/@types/galaxy/GalaxySfMapOrientation';
 import type { MilkyWayTuning } from '../../../../src/@types/settings/MilkyWayTuning';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -252,6 +253,7 @@ import {
 import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../src/data/galaxy/defaultGalaxyDustParams';
 import { dustExtinctionRgb } from '../../../../src/utils/galaxy/dustExtinctionRgb';
 import { transformGalaxyFieldComponent } from '../../../../src/utils/galaxy/transformGalaxyFieldComponent';
+import { f16ToFloat } from '../../../../src/utils/math/f16ToFloat';
 import { GENERATION_UBO } from '../../../../src/services/gpu/galaxy/generationUboLayout';
 import { GEN_RECORD_BYTES } from '../../../../src/services/gpu/galaxy/genRecordBytes';
 import { carveStarLayout } from '../../../../src/services/gpu/galaxy/carveStarLayout';
@@ -944,12 +946,26 @@ export async function createGalaxyEngine(
   // storage textures for r32/rgba8/rgba16/rgba32 formats, not 2-component
   // ones, and sfMapOrientationCoherence.wesl's final pass writes this
   // directly (no more CPU upload) — see that shader's own header. .zw sit
-  // unused; orientationPresent.wesl reads only .xy either way.
+  // unused; orientationPresent.wesl reads only .xy either way. COPY_SRC is
+  // for `scheduleOrientationReadback`'s CPU readback, same role
+  // `sfMapTex`'s own COPY_SRC plays for `scheduleSfMapReadback`.
   const orientationTex = device.createTexture({
     label: 'galaxy:orientationTex',
     size: [SF_MAP_AZ, SF_MAP_RINGS],
     format: 'rgba16float',
-    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING,
+    usage:
+      GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.COPY_SRC,
+  });
+  // rgba16float = 4 lanes * 2 bytes; only .xy (cos2theta, sin2theta) are
+  // read back, .zw are copied along for free since a texture copy can't
+  // pick channels. Computed rather than hard-coded for the same reason
+  // `SF_MAP_READBACK_BYTES_PER_ROW` is: 768*8=6144 already is a multiple of
+  // 256, but a future grid width might not be.
+  const ORIENTATION_READBACK_BYTES_PER_ROW = Math.ceil((SF_MAP_AZ * 8) / 256) * 256;
+  const orientationReadbackBuf = device.createBuffer({
+    label: 'galaxy:orientationReadbackBuf',
+    size: ORIENTATION_READBACK_BYTES_PER_ROW * SF_MAP_RINGS,
+    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
   });
   // rMin/rMax only, same shape as sfMapGridUbo — written once per
   // rebuildSfMapOrientationIfNeeded, not every frame. Doubles as
@@ -1264,8 +1280,19 @@ export async function createGalaxyEngine(
   // the buffer is still mapped from a PREVIOUS readback, and a fast
   // setFieldTuning slider drag on `sfMap.*` can call rebuildSfMap again
   // before the last one's map lands. Each call chains onto this promise
-  // instead of racing it.
+  // instead of racing it. `scheduleOrientationReadback` chains onto this
+  // SAME promise (not a second chain of its own) — both copy operations
+  // then serialize through one queue, which is what keeps an overlapping
+  // sfMap rebuild from submitting into a buffer either one still has mapped.
   let sfMapReadbackChain: Promise<void> = Promise.resolve();
+  // `orientationTex`'s CPU-side readback (`scheduleOrientationReadback`),
+  // same lifecycle as `sfMapData` above but its own token: the orientation
+  // chain dispatches independently of the sfMap one (`setRender`'s
+  // `orientationView` toggle, or `setFieldTuning`'s `sfMapDustSeeding`
+  // toggle, neither of which touch `sfMapData`), so sharing one token would
+  // let an unrelated trigger wrongly supersede a still-pending readback.
+  let orientationData: GalaxySfMapOrientation | null = null;
+  let orientationReadbackToken = 0;
 
   // Per-pipeline bind groups. `layout: 'auto'` groups are pipeline-specific
   // and never cross pipelines, so each pass needs its own group even where the
@@ -1774,27 +1801,91 @@ export async function createGalaxyEngine(
   }
 
   /**
+   * scheduleOrientationReadback — the CPU copy of `orientationTex`, same
+   * one-per-dispatch discipline as `scheduleSfMapReadback` (whose own
+   * docblock explains why the copy/submit/map/unmap has to live INSIDE the
+   * chain rather than run eagerly). Chained onto `sfMapReadbackChain` —
+   * `rebuildSfMapOrientationIfNeeded`'s own docblock explains why a second,
+   * independent chain would be unsafe here. Gated by its caller on
+   * `fieldTuning.sfMapDustSeeding`: this is the only consumer of the CPU
+   * copy, the debug overlay samples `orientationTex` on the GPU directly.
+   */
+  function scheduleOrientationReadback(grid: GalaxySfMapGridRadius): void {
+    const token = ++orientationReadbackToken;
+    sfMapReadbackChain = sfMapReadbackChain
+      .then(async () => {
+        if (token !== orientationReadbackToken) return;
+        const enc = device.createCommandEncoder({ label: 'galaxy:orientationReadback' });
+        enc.copyTextureToBuffer(
+          { texture: orientationTex },
+          {
+            buffer: orientationReadbackBuf,
+            bytesPerRow: ORIENTATION_READBACK_BYTES_PER_ROW,
+            rowsPerImage: SF_MAP_RINGS,
+          },
+          [SF_MAP_AZ, SF_MAP_RINGS, 1],
+        );
+        device.queue.submit([enc.finish()]);
+
+        await orientationReadbackBuf.mapAsync(GPUMapMode.READ);
+        let data: Float32Array;
+        try {
+          // rgba16float, u16 lanes: only .xy (cos2theta, sin2theta) matter —
+          // see orientationTex's own comment on why .zw are unused.
+          const padded = new Uint16Array(orientationReadbackBuf.getMappedRange());
+          const rowStrideU16 = ORIENTATION_READBACK_BYTES_PER_ROW / 2; // 2 bytes/u16
+          data = new Float32Array(SF_MAP_AZ * SF_MAP_RINGS * 2);
+          for (let row = 0; row < SF_MAP_RINGS; row++) {
+            for (let a = 0; a < SF_MAP_AZ; a++) {
+              const src = row * rowStrideU16 + a * 4; // 4 u16 lanes/texel
+              const dst = (row * SF_MAP_AZ + a) * 2;
+              data[dst] = f16ToFloat(padded[src]!);
+              data[dst + 1] = f16ToFloat(padded[src + 1]!);
+            }
+          }
+        } finally {
+          orientationReadbackBuf.unmap();
+        }
+        if (token !== orientationReadbackToken) return;
+        orientationData = { az: SF_MAP_AZ, rings: SF_MAP_RINGS, rMin: grid.rMin, rMax: grid.rMax, data };
+        if (fieldTuning.sfMapDustSeeding) {
+          rebuildDustMixture();
+          repackFieldComponents();
+        }
+      })
+      .catch((err) => {
+        console.error('galaxy: orientation readback failed', err);
+      });
+  }
+
+  /**
    * rebuildSfMapOrientationIfNeeded — dispatches the GPU structure-tensor
    * pass chain (sfMapOrientationField -> Tensor -> TensorBlur -> Coherence,
    * see that quartet's own headers) over the CURRENT `sfMapTex`, but ONLY
-   * while `render.orientationView` is on. Unlike the deleted CPU build this
-   * needs no readback to run FROM — sfMapTex is a GPU texture already, and
-   * WebGPU zero-initialises it, so this is safe to call even before
-   * `rebuildSfMap` has ever populated it. Still edge-triggered rather than
-   * unconditional, from exactly two places:
+   * while `render.orientationView` is on OR `fieldTuning.sfMapDustSeeding`
+   * is — the debug overlay and the dust placement's CPU readback
+   * (`scheduleOrientationReadback`, called below when seeding is on) are
+   * two independent consumers of the same six-pass chain, either one enough
+   * to justify running it. Unlike the deleted CPU build this needs no
+   * readback to run FROM — sfMapTex is a GPU texture already, and WebGPU
+   * zero-initialises it, so this is safe to call even before `rebuildSfMap`
+   * has ever populated it. Still edge-triggered rather than unconditional,
+   * from three places:
    *
    *  - `rebuildSfMap`'s own two exits, right after the compute submit that
    *    (re)writes `sfMapTex` — a new automaton state is a new field to
-   *    dispatch this chain over, if the view is on to consume it.
+   *    dispatch this chain over, if either consumer wants it.
    *  - `setRender`, only when the incoming patch actually flips
    *    `orientationView` on or moves either sigma while it is already on —
    *    see that function's own comment. `setRender` runs on every
    *    render-bag change (the bridge re-pushes the whole bag on any knob),
    *    so calling this unconditionally there would redispatch the chain on
    *    an unrelated exposure drag.
+   *  - `setFieldTuning`, only when the incoming patch flips
+   *    `sfMapDustSeeding` on — see that function's own comment.
    */
   function rebuildSfMapOrientationIfNeeded(): void {
-    if (!render.orientationView) return;
+    if (!render.orientationView && !fieldTuning.sfMapDustSeeding) return;
     const grid = fieldGeometry ? sfMapGridRadius(fieldGeometry) : { rMin: 1e-3, rMax: 1 };
     device.queue.writeBuffer(orientationGridUbo, 0, new Float32Array([grid.rMin, grid.rMax, 0, 0]));
     device.queue.writeBuffer(
@@ -1831,6 +1922,7 @@ export async function createGalaxyEngine(
     pass.dispatchWorkgroups(dispatchX, dispatchY);
     pass.end();
     device.queue.submit([enc.finish()]);
+    if (fieldTuning.sfMapDustSeeding) scheduleOrientationReadback(grid);
   }
 
   /**
@@ -1885,6 +1977,7 @@ export async function createGalaxyEngine(
         fieldTuning,
         currentSeed,
         sfMapData,
+        orientationData,
       );
       dustMixture = [...laneMixture, ...cloudMixture];
       currentDustNoise = {
@@ -2224,8 +2317,10 @@ export async function createGalaxyEngine(
     // Null it here, before rebuildDustMixture below reads it, rather than
     // waiting for rebuildSfMap's own async readback to overwrite it — see
     // scheduleSfMapReadback's determinism comment for why that first,
-    // unseeded dust build is the point, not a bug.
+    // unseeded dust build is the point, not a bug. Same reasoning for
+    // `orientationData`, one grid dimension `sampleSfMapOrientation` shares.
     sfMapData = null;
+    orientationData = null;
     fieldMixture = buildGalaxyFieldMixture(fieldGeometry, fieldTuning);
     currentDust = p.dust ?? DEFAULT_GALAXY_DUST_PARAMS;
     // Same `geometry.seed` `buildHiiRegions` was called with when it still
@@ -2326,6 +2421,7 @@ export async function createGalaxyEngine(
     // make dragging any OTHER slider pay this pass's cost too — a follow-up
     // if that dependency ever needs to be exact).
     const sfMapTouched = patch.sfMap !== undefined;
+    const previousSfMapDustSeeding = fieldTuning.sfMapDustSeeding;
     fieldTuning = { ...fieldTuning, ...patch };
     if (fieldGeometry) {
       fieldMixture = buildGalaxyFieldMixture(fieldGeometry, fieldTuning);
@@ -2350,7 +2446,16 @@ export async function createGalaxyEngine(
     rebuildDustMixture();
     repackFieldComponents();
     repackHiiComponents();
-    if (sfMapTouched) rebuildSfMap();
+    if (sfMapTouched) {
+      rebuildSfMap(); // its own two exits already dispatch+readback orientation
+    } else if (fieldTuning.sfMapDustSeeding && !previousSfMapDustSeeding) {
+      // sfMap itself wasn't touched, so rebuildSfMap won't run — but seeding
+      // just turned on and the chain may never have dispatched (orientationView
+      // could be, and usually is, off), so `orientationData` would otherwise
+      // stay null forever. `rebuildDustMixture` above already ran once against
+      // whatever `orientationData` was cached; this brings it current.
+      rebuildSfMapOrientationIfNeeded();
+    }
   }
 
   // Replace the set of background galaxies. Each extra is generated GPU-side

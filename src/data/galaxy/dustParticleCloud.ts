@@ -8,10 +8,11 @@
  * carving (4d) sweeps particles onto the rims of `dustBubblePlacements.ts`'s
  * SF cavities.
  *
- * PURITY INVARIANT: pure `(geometry, dust, tuning, seed, sfMap) -> flat
- * data`, no Math.random/Date/engine state — a Worker/compute-pass candidate.
- * `sfMap` is a plain sampled array (see `GalaxySfMap`), so this stays a data
- * argument like every other one, not an engine dependency.
+ * PURITY INVARIANT: pure `(geometry, dust, tuning, seed, sfMap,
+ * sfMapOrientation) -> flat data`, no Math.random/Date/engine state — a
+ * Worker/compute-pass candidate. `sfMap`/`sfMapOrientation` are plain
+ * sampled arrays (see `GalaxySfMap`/`GalaxySfMapOrientation`), so both stay
+ * data arguments like every other one, not an engine dependency.
  */
 import { armCrossSigma, armFadeEnvelope, armRidgeCurvePoint } from './armRidgeGeometry';
 import { buildClusteredDiscPlacement, type CloudFrame } from './clusteredDiscPlacement';
@@ -34,6 +35,7 @@ import type { GalaxyFieldComponent } from '../../@types/galaxy/GalaxyFieldCompon
 import type { GalaxyFieldGeometry } from '../../@types/galaxy/GalaxyFieldGeometry';
 import type { GalaxyFieldTuning } from '../../@types/galaxy/GalaxyFieldTuning';
 import type { GalaxySfMap } from '../../@types/galaxy/GalaxySfMap';
+import type { GalaxySfMapOrientation } from '../../@types/galaxy/GalaxySfMapOrientation';
 import type { Vec3 } from '../../@types/math/Vec3';
 
 const MAX_PARTICLE_COUNT = 40000;
@@ -117,6 +119,7 @@ export function buildDustParticleCloud(
   tuning: GalaxyFieldTuning,
   seed: number,
   sfMap: GalaxySfMap | null,
+  sfMapOrientation: GalaxySfMapOrientation | null,
 ): readonly GalaxyFieldComponent[] {
   const { cloud } = dust;
   if (geometry.discFraction <= 0 || dust.tau <= 0 || cloud.count <= 0 || cloud.share <= 0) {
@@ -179,6 +182,9 @@ export function buildDustParticleCloud(
       discSigmaR: (k) => dustSigmaR(k, shape),
       discWeights: DISC_SURFACE_WEIGHTS,
       discWeightSum: shape.sumW,
+      // Same gate as `laneAcceptance` above: OFF (the default) is a no-op,
+      // so a caller with the map already sampled needn't re-check the flag.
+      sfMapOrientation: tuning.sfMapDustSeeding ? sfMapOrientation : null,
     },
     (childRng) => ({ radius: sampleRadius(childRng()) }),
   );

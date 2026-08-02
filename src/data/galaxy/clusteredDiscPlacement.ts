@@ -17,10 +17,12 @@
  * PURITY INVARIANT: pure given its `rng`, no Math.random/Date/engine state.
  */
 import { armAgeWeight } from './dustLaneFeatures';
+import { sampleSfMapOrientation } from '../../utils/galaxy/sampleSfMapOrientation';
 import { warpSurfaceFrame } from '../../utils/galaxy/warpSurfaceFrame';
 import { gaussian } from '../../utils/random/gaussian';
 import type { GalaxyFieldArmRecord } from '../../@types/galaxy/GalaxyFieldArmRecord';
 import type { GalaxyFieldGeometry } from '../../@types/galaxy/GalaxyFieldGeometry';
+import type { GalaxySfMapOrientation } from '../../@types/galaxy/GalaxySfMapOrientation';
 import type { Vec3 } from '../../@types/math/Vec3';
 
 /** Bounded rejection sampling against `armFadeEnvelope` when seeding a complex on an arm lane. */
@@ -70,6 +72,14 @@ export type ClusteredDiscPlacementConfig = {
   /** Smooth-disc fallback: DISC_SURFACE_WEIGHTS-shaped weights to pick k with, and their sum. */
   readonly discWeights: readonly number[];
   readonly discWeightSum: number;
+  /**
+   * The SSPSF automaton's measured filament orientation, coherence-weighted
+   * so a texel with no measured structure reproduces today's frame exactly —
+   * see `rotateFrameToOrientation`. `null` (the default, and every caller's
+   * `sfMapDustSeeding`-off path) is a pure no-op: no extra work, no extra
+   * `rng` draw, so the gated-off placement stays byte-identical.
+   */
+  readonly sfMapOrientation?: GalaxySfMapOrientation | null;
 };
 
 export type PlacedParticle<TPayload> = { center: Vec3; readonly frame: CloudFrame } & TPayload;
@@ -82,6 +92,68 @@ function pickWeighted(rng: () => number, weights: readonly number[], sum: number
     if (r <= acc) return i;
   }
   return weights.length - 1;
+}
+
+function dot3(a: Vec3, b: Vec3): number {
+  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+
+function cross3(a: Vec3, b: Vec3): Vec3 {
+  return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+}
+
+/**
+ * rotateFrameToOrientation — bends a lane/disc frame's in-plane axes
+ * (`along`/`across`) toward the SF-map automaton's measured filament
+ * orientation, coherence-weighted so a texel with no measured structure
+ * (coherence 0) reproduces `frame` exactly. `pole` never moves.
+ *
+ * The measured angle is relative to the AZIMUTHAL/RADIAL axes
+ * (`warpSurfaceFrame`'s own `along`/`across` at this point), never to
+ * `frame`'s own axes: `armOffsetFrameAt`'s `along` runs along the WOUND arm
+ * tangent, not azimuthally, so `frame` and the reference frame generally
+ * disagree about where angle zero is.
+ *
+ * `across`'s handedness relative to `pole x along` varies by caller
+ * (`armOffsetFrameAt` flips it to point inward) — `s` below recovers
+ * whichever sign is live so the frame turns the same physical direction the
+ * measured angle was defined in, not its mirror image.
+ */
+function rotateFrameToOrientation(
+  frame: CloudFrame,
+  radius: number,
+  angle: number,
+  geometry: GalaxyFieldGeometry,
+  orientation: GalaxySfMapOrientation | null | undefined,
+): CloudFrame {
+  if (!orientation) return frame;
+  const sample = sampleSfMapOrientation(orientation, radius, angle);
+  if (sample.coherence <= 0) return frame;
+
+  const ref = warpSurfaceFrame(radius, angle, geometry);
+  const currentAngle = Math.atan2(dot3(frame.along, ref.across), dot3(frame.along, ref.along));
+  // A filament orientation wraps at PI (no head/tail) — wrap the
+  // DIFFERENCE, not the absolute angles, or a +80/-100deg pair (the SAME
+  // ellipse) reads as a ~180deg raw delta and the coherence blend below
+  // lands on a bogus partial rotation instead of ~0.
+  const rawDelta = sample.angle - currentAngle;
+  const delta = sample.coherence * (rawDelta - Math.PI * Math.round(rawDelta / Math.PI));
+
+  const rot90 = cross3(frame.pole, frame.along); // pole x along — see header
+  const s = dot3(frame.across, rot90) >= 0 ? 1 : -1;
+  const cos = Math.cos(delta);
+  const sin = Math.sin(delta) * s;
+  const along: Vec3 = [
+    frame.along[0] * cos + frame.across[0] * sin,
+    frame.along[1] * cos + frame.across[1] * sin,
+    frame.along[2] * cos + frame.across[2] * sin,
+  ];
+  const across: Vec3 = [
+    frame.across[0] * cos - frame.along[0] * sin,
+    frame.across[1] * cos - frame.along[1] * sin,
+    frame.across[2] * cos - frame.along[2] * sin,
+  ];
+  return { along, across, pole: frame.pole };
 }
 
 /**
@@ -129,7 +201,20 @@ export function buildClusteredDiscPlacement<TPayload>(
       frame.point[1] + frame.across[1] * acrossOffset + frame.pole[1] * poleOffset,
       frame.point[2] + frame.across[2] * acrossOffset + frame.pole[2] * poleOffset,
     ];
-    return { center, frame: { along: frame.along, across: frame.across, pole: frame.pole } };
+    // The RETURNED frame — not `center` above, which stays on the true
+    // lane geometry — is what elongation ultimately reads, so only it turns
+    // toward the measured filament. Sampled at `frame.point` itself (not the
+    // un-offset ridge, which this shared config type doesn't carry): the
+    // lane offset is a small fraction of `discLightScaleLength`, well under
+    // the automaton grid's own resolution.
+    const orientedFrame = rotateFrameToOrientation(
+      { along: frame.along, across: frame.across, pole: frame.pole },
+      Math.hypot(frame.point[0], frame.point[2]),
+      Math.atan2(frame.point[2], frame.point[0]),
+      geometry,
+      config.sfMapOrientation,
+    );
+    return { center, frame: orientedFrame };
   }
 
   function placeSmoothDiscComplex(): { center: Vec3; frame: CloudFrame } {
@@ -139,7 +224,14 @@ export function buildClusteredDiscPlacement<TPayload>(
     const z = gaussian(rng) * sigmaR;
     const y = gaussian(rng) * sigmaZComplex;
     const radius = Math.hypot(x, z);
-    const frame = warpSurfaceFrame(radius, Math.atan2(z, x), geometry);
+    const angle = Math.atan2(z, x);
+    const frame = rotateFrameToOrientation(
+      warpSurfaceFrame(radius, angle, geometry),
+      radius,
+      angle,
+      geometry,
+      config.sfMapOrientation,
+    );
     return { center: [x, y, z], frame };
   }
 

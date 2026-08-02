@@ -21,10 +21,16 @@ describe('f16ToFloat', () => {
     expect(Number.isNaN(f16ToFloat(0x7e00))).toBe(true);
   });
 
-  it('round-trips floatToF16 across [0, 1]', () => {
-    for (let i = 0; i <= 10; i++) {
+  it('round-trips floatToF16 across [0, 1], including negatives and zero', () => {
+    for (let i = -10; i <= 10; i++) {
       const v = i / 10;
       expect(f16ToFloat(floatToF16(v))).toBeCloseTo(v, 2);
+    }
+  });
+
+  it('round-trips subnormals (below f16 normal range, 2^-14)', () => {
+    for (const v of [3e-5, -3e-5, 1e-5, -1e-5]) {
+      expect(f16ToFloat(floatToF16(v))).toBeCloseTo(v, 6);
     }
   });
 });
