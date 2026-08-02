@@ -18,7 +18,13 @@ const RINGS: u32 = 256u;
 // eye, distinct from the percolation parameters the params contract exposes
 // as sliders (baseIgnition/spread/...).
 const OLD_ACTIVITY_DECAY: f32 = 0.985;
-const OLD_ACTIVITY_GAIN: f32 = 0.35;
+// Steady state for a cell igniting every T steps is GAIN/(1 - DECAY^T), and
+// sfMapPack clamps the channel to [0,1]. Refractory 7 plus gas recovery gives
+// T ~ 17, so the previous 0.35 settled at ~1.55 and pinned the channel FLAT
+// across the whole active disc. That is not cosmetic: buildSfMapOrientation
+// reads this channel, and a clamped-flat field has zero gradient, so the
+// structure tensor would report coherence 0 everywhere.
+const OLD_ACTIVITY_GAIN: f32 = 0.05;
 
 struct SfMapConstants {
   rMin: f32,
