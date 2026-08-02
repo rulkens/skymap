@@ -2618,12 +2618,21 @@ export async function createGalaxyEngine(
   function setFieldTuning(patch: Partial<GalaxyFieldTuning>): void {
     // The automaton rebuild is N compute dispatches (rebuildSfMap's own
     // docblock) — far more expensive than the CPU mixture rebuilds below, so
-    // it only reruns when the caller actually touched `sfMap`, not on every
-    // unrelated slider (armWidthScale etc. technically also feed the ridge
-    // the forcing field bakes, but re-triggering on every tuning field would
-    // make dragging any OTHER slider pay this pass's cost too — a follow-up
-    // if that dependency ever needs to be exact).
-    const sfMapTouched = patch.sfMap !== undefined;
+    // it only reruns when `sfMap` itself changed, not on every unrelated
+    // slider (armWidthScale etc. technically also feed the ridge the forcing
+    // field bakes, but re-triggering on every tuning field would make
+    // dragging any OTHER slider pay this pass's cost too — a follow-up if
+    // that dependency ever needs to be exact).
+    //
+    // The bridge (`connectEngineBridge`) pushes the WHOLE `fieldTuning` slice
+    // on every change, so `patch.sfMap !== undefined` is true unconditionally
+    // and can't gate anything — identity is the only signal `sfMap` changed.
+    // That identity is trustworthy because the sole writer
+    // (`fieldTuningSlice`'s `Object.assign` under RTK/immer) only replaces
+    // `sfMap` when a patch supplies it, and the sole UI producer
+    // (`SfMapSection`'s `patchSfMap`) always builds a fresh `{ ...sfMap,
+    // ...patch }` object — so the reference changes exactly when a value did.
+    const sfMapTouched = patch.sfMap !== undefined && patch.sfMap !== fieldTuning.sfMap;
     const previousSfMapDustSeeding = fieldTuning.sfMapDustSeeding;
     fieldTuning = { ...fieldTuning, ...patch };
     if (fieldGeometry) {
