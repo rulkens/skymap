@@ -32,7 +32,7 @@ export function fitPlan(category: GalaxyCategory, q: number): FitPlan {
       params: [
         ['hii', 0, 2],
         ['youngStars', 0.1, 1],
-        ['dust', 0, 1.6],
+        ['spriteDust', 0, 1.6],
         ['diskThickness', 0.5, 1.8],
         ['bulgeSize', 0.1, 0.8],
       ],
@@ -44,7 +44,7 @@ export function fitPlan(category: GalaxyCategory, q: number): FitPlan {
       w: { profile: 6, q: 4.5, color: 1.6, arm: 0.4, dust: 2.2 },
       params: [
         ['bulgeSize', 0.4, 1.8],
-        ['dust', 0, 1.6],
+        ['spriteDust', 0, 1.6],
         ['dustRing', 0.4, 1.0],
         ['diskThickness', 0.4, 1.4],
       ],
@@ -58,7 +58,7 @@ export function fitPlan(category: GalaxyCategory, q: number): FitPlan {
     ['armWinding', 0, 1],
     ['armWidth', 0.4, 1.8],
     ['armStrength', 0.25, 1.5],
-    ['dust', 0, 2],
+    ['spriteDust', 0, 2],
     ['hii', 0, 2],
     ['youngStars', 0.15, 1],
     ['diskThickness', 0.5, 1.6],

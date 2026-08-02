@@ -36,12 +36,15 @@ import { descriptorLoss } from './descriptorLoss';
 type MutableGalaxyParams = { -readonly [K in keyof GalaxyParams]: GalaxyParams[K] };
 
 /**
- * `fitPlan`'s param keys are `keyof GalaxyParams & string`, i.e. a union of
- * specific field names — but the field being read/written is only known at
- * runtime (it comes off the plan's table), so plain dotted access can't be
- * statically typed here. These two helpers localise the one unsafe cast the
- * generic access needs; every param `fitPlan` ever names is numeric, so the
- * cast reflects an actual invariant, not a type-system workaround.
+ * `fitPlan`'s param keys are `FitParamRange`'s `NumericGalaxyParamKey` — a
+ * key filtered, at the type level, to fields whose value is a `number` — but
+ * the field being read/written is only known at runtime (it comes off the
+ * plan's table), so plain dotted access can't be statically typed here.
+ * These two helpers localise the one unsafe cast the generic access needs;
+ * `FitParamRange` is what makes the cast reflect an actual invariant rather
+ * than a type-system workaround — widen that type (e.g. back to a bare
+ * `keyof GalaxyParams`) and a key naming a nested object field (`dust`,
+ * `GalaxyDustParams`) would again compile and get clobbered by a scalar.
  */
 function paramValue(p: GalaxyParams, key: keyof GalaxyParams & string): number {
   return (p as unknown as Record<string, number>)[key]!;
