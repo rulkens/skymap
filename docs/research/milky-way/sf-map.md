@@ -242,6 +242,23 @@ makes ignitions per arm passage radius-independent and sends corotation to
 zero. A hard clamp at 1 texel/step puts the deficit band at r ~ 5.6-12.6 — far
 too wide — so `armFluxRef` is a tunable.
 
+**CONFIRMED 2026-08-02.** Applied, and the ring is gone. That promotes the
+residence-time account from plausible to verified: it is the one cause that
+survived after the material-frame rewrite removed every resampling artifact,
+and removing it removed the ring.
+
+Worth keeping for whoever tunes this next: the ring had **two independent
+causes**, and each was individually sufficient to produce it. Before the
+reframe it was the bilinear blend degenerating to an exact read at the one
+radius where the shear offset vanishes. After the reframe it was residence
+time. Fixing either alone left the symptom looking identical, which is exactly
+why the first fix appeared to do nothing.
+
+At the calibrated defaults (`corotationRadius` 7.9, `shearRate` 0.16,
+`armFluxRef` 0.5, AZ 768) the weight crosses half strength at **r ~ 7.18 and
+~8.79** and reaches full forcing by r ~ 5 inward and ~12 outward — a deficit
+band about 1.6 units wide.
+
 **Open, literature-backed alternative:** Dobbs & Baba 2014's transient/dynamic
 spirals have a pattern speed that DECREASES with radius, so the arms roughly
 corotate everywhere and there is no single corotation ring to suppress. That
