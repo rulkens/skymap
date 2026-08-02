@@ -198,6 +198,7 @@ import type { GalaxyDustParams } from '../../../../src/@types/galaxy/GalaxyDustP
 import type { GalaxyFieldComponent } from '../../../../src/@types/galaxy/GalaxyFieldComponent';
 import type { GalaxyFieldGeometry } from '../../../../src/@types/galaxy/GalaxyFieldGeometry';
 import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFieldTuning';
+import type { GalaxySfMap } from '../../../../src/@types/galaxy/GalaxySfMap';
 import type { MilkyWayTuning } from '../../../../src/@types/settings/MilkyWayTuning';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -236,6 +237,7 @@ import {
   SF_MAP_AZ,
   SF_MAP_RINGS,
 } from '../../../../src/data/galaxy/galaxySfMapArmForcing';
+import type { GalaxySfMapGridRadius } from '../../../../src/data/galaxy/galaxySfMapArmForcing';
 import { DISC_SIGMA_RATIOS } from '../../../../src/data/galaxy/discSurfaceFit';
 import {
   buildGalaxyDustMixture,
@@ -831,12 +833,26 @@ export async function createGalaxyEngine(
   const sfMapStateB = makeSfMapStateTex('galaxy:sfMapStateB');
   // The packed, presentable output (sfMapPack.wesl): gas / recent SF / older
   // SF. Exposed on the engine handle (getSfMapTexture) for the sibling UI
-  // and future consumers — see the research doc §19's staging note.
+  // and future consumers — see the research doc §19's staging note. COPY_SRC
+  // is for `scheduleSfMapReadback`'s CPU readback (getSfMapData) below.
   const sfMapTex = device.createTexture({
     label: 'galaxy:sfMapTex',
     size: [SF_MAP_AZ, SF_MAP_RINGS],
     format: 'rgba8unorm',
-    usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
+    usage:
+      GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC,
+  });
+  // `copyTextureToBuffer` requires `bytesPerRow` to be a multiple of 256.
+  // 768px * 4 bytes = 3072 already is, but this is computed rather than
+  // hard-coded so a future grid width that ISN'T a clean multiple doesn't
+  // silently corrupt the readback — `scheduleSfMapReadback` copies out only
+  // the first `SF_MAP_AZ * 4` bytes of each padded row, so the padding (if
+  // any) never leaks into `GalaxySfMap.data`.
+  const SF_MAP_READBACK_BYTES_PER_ROW = Math.ceil((SF_MAP_AZ * 4) / 256) * 256;
+  const sfMapReadbackBuf = device.createBuffer({
+    label: 'galaxy:sfMapReadbackBuf',
+    size: SF_MAP_READBACK_BYTES_PER_ROW * SF_MAP_RINGS,
+    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
   });
   // Constant-across-one-rebuild parameters (rMin/rMax + every sfMap tuning
   // knob) — rewritten once per rebuildSfMap, unlike sfMapStepIndexBuf below.
@@ -1007,6 +1023,23 @@ export async function createGalaxyEngine(
   // normalisation; cached here for the same reason `currentDust` is — a
   // `setFieldTuning` rebuild has no `GalaxyParams` of its own to re-read it from.
   let currentSeed = 1;
+  // The SSPSF automaton's CPU-side readback (`scheduleSfMapReadback`), null
+  // until the first one lands OR whenever a NEW galaxy's `setParams` has made
+  // the previous readback's grid (rMin/rMax, tied to `fieldGeometry`) stale —
+  // see setParams's own comment on why it nulls this before rebuilding dust.
+  let sfMapData: GalaxySfMap | null = null;
+  // Bumped by every `scheduleSfMapReadback` call; a landing promise checks it
+  // against its own captured value before touching `sfMapData`; a mismatch
+  // means a LATER rebuild superseded this one, so the result is stale and
+  // dropped rather than clobbering data a still-pending later readback is
+  // about to overwrite anyway.
+  let sfMapReadbackToken = 0;
+  // Serializes readbacks: `sfMapReadbackBuf.mapAsync` throws if called while
+  // the buffer is still mapped from a PREVIOUS readback, and a fast
+  // setFieldTuning slider drag on `sfMap.*` can call rebuildSfMap again
+  // before the last one's map lands. Each call chains onto this promise
+  // instead of racing it.
+  let sfMapReadbackChain: Promise<void> = Promise.resolve();
 
   // Per-pipeline bind groups. `layout: 'auto'` groups are pipeline-specific
   // and never cross pipelines, so each pass needs its own group even where the
@@ -1422,6 +1455,80 @@ export async function createGalaxyEngine(
   let hiiEmissionCount = 0;
 
   /**
+   * scheduleSfMapReadback — the ONE-PER-GENERATION CPU copy of `sfMapTex`
+   * (research doc §19's staged architecture: never a per-frame readback,
+   * never a CPU mirror of the automaton). Called from `rebuildSfMap`'s own
+   * two exits with the grid it just wrote, so `GalaxySfMap.rMin/rMax` always
+   * matches the CONTENT being copied.
+   *
+   * Does not block the caller: `copyTextureToBuffer` + `submit` happen
+   * synchronously here, but `mapAsync` resolves later on the microtask queue,
+   * chained onto `sfMapReadbackChain` so overlapping rebuilds (a dragged
+   * slider) never call `mapAsync` on a still-mapped buffer.
+   *
+   * DETERMINISM: `sfMapData` lands asynchronously, so the dust mixture built
+   * synchronously inside `setParams`/`setFieldTuning` (which both run BEFORE
+   * this promise can resolve — a GPU readback always crosses at least one
+   * frame) never sees the map from the rebuild that triggered it. Rather
+   * than defer the dust build until a map is ready (which would leave a
+   * blank tool on first load), this REBUILDS the dust mixture a second time
+   * once the map lands, gated on the same `sfMapDustSeeding` flag. Either
+   * choice reaches the same final state for a given (params, tuning, seed);
+   * this one keeps the tool always showing something.
+   */
+  function scheduleSfMapReadback(grid: GalaxySfMapGridRadius): void {
+    const token = ++sfMapReadbackToken;
+    const enc = device.createCommandEncoder({ label: 'galaxy:sfMapReadback' });
+    enc.copyTextureToBuffer(
+      { texture: sfMapTex },
+      {
+        buffer: sfMapReadbackBuf,
+        bytesPerRow: SF_MAP_READBACK_BYTES_PER_ROW,
+        rowsPerImage: SF_MAP_RINGS,
+      },
+      [SF_MAP_AZ, SF_MAP_RINGS, 1],
+    );
+    device.queue.submit([enc.finish()]);
+    sfMapReadbackChain = sfMapReadbackChain
+      .then(() => sfMapReadbackBuf.mapAsync(GPUMapMode.READ))
+      .then(() => {
+        const padded = new Uint8Array(sfMapReadbackBuf.getMappedRange());
+        // Strip the 256-byte row alignment back out into a tightly packed
+        // array — see SF_MAP_READBACK_BYTES_PER_ROW's own comment.
+        const packed = new Uint8Array(SF_MAP_AZ * SF_MAP_RINGS * 4);
+        for (let row = 0; row < SF_MAP_RINGS; row++) {
+          packed.set(
+            padded.subarray(
+              row * SF_MAP_READBACK_BYTES_PER_ROW,
+              row * SF_MAP_READBACK_BYTES_PER_ROW + SF_MAP_AZ * 4,
+            ),
+            row * SF_MAP_AZ * 4,
+          );
+        }
+        sfMapReadbackBuf.unmap();
+        // A later rebuildSfMap re-tokened while this map was pending; its own
+        // readback is already chained behind this one, so this result is
+        // superseded — drop it rather than clobber sfMapData with data a
+        // still-pending later readback is about to overwrite anyway.
+        if (token !== sfMapReadbackToken) return;
+        sfMapData = {
+          az: SF_MAP_AZ,
+          rings: SF_MAP_RINGS,
+          rMin: grid.rMin,
+          rMax: grid.rMax,
+          data: packed,
+        };
+        if (fieldTuning.sfMapDustSeeding) {
+          rebuildDustMixture();
+          repackFieldComponents();
+        }
+      })
+      .catch((err) => {
+        console.error('galaxy: sfMap readback failed', err);
+      });
+  }
+
+  /**
    * rebuildDustMixture — the central galaxy's dust mixture from the CACHED
    * geometry + dust params, gated on `fieldTuning.dustEnabled` the same way
    * `discEnabled`/`armsEnabled` gate their own shader loops (an off pill
@@ -1472,6 +1579,7 @@ export async function createGalaxyEngine(
         currentDust,
         fieldTuning,
         currentSeed,
+        sfMapData,
       );
       dustMixture = [...laneMixture, ...cloudMixture];
       currentDustNoise = {
@@ -1510,6 +1618,10 @@ export async function createGalaxyEngine(
    * write every step's index ONCE, at its own (device-aligned) offset in one
    * buffer, and give each step its OWN bind group with a STATIC offset into
    * that slot — no rewrite between dispatches, so ordering can't collapse.
+   *
+   * Both exits schedule `scheduleSfMapReadback(grid)` — the disabled branch
+   * too, so `sfMapData` reflects the cleared (all-zero-gas) texture it just
+   * wrote rather than holding some earlier galaxy's map.
    */
   function rebuildSfMap(): void {
     const sfMap = fieldTuning.sfMap;
@@ -1534,6 +1646,7 @@ export async function createGalaxyEngine(
         { bytesPerRow: SF_MAP_AZ * 4 },
         [SF_MAP_AZ, SF_MAP_RINGS],
       );
+      scheduleSfMapReadback(grid);
       return;
     }
 
@@ -1626,6 +1739,7 @@ export async function createGalaxyEngine(
     packPass.end();
 
     device.queue.submit([enc.finish()]);
+    scheduleSfMapReadback(grid);
   }
 
   /**
@@ -1779,6 +1893,14 @@ export async function createGalaxyEngine(
     // draws off the packer's streams, so this is the only way the analytic
     // field can be sure it is oriented like the sprites it sums with.
     fieldGeometry = readGalaxyFieldGeometry(genUniforms, starLayout);
+    // A NEW galaxy means a new grid (sfMapGridRadius depends on
+    // fieldGeometry), so the readback still in `sfMapData` — if any — is the
+    // PREVIOUS galaxy's map and would misregister against this one's radii.
+    // Null it here, before rebuildDustMixture below reads it, rather than
+    // waiting for rebuildSfMap's own async readback to overwrite it — see
+    // scheduleSfMapReadback's determinism comment for why that first,
+    // unseeded dust build is the point, not a bug.
+    sfMapData = null;
     fieldMixture = buildGalaxyFieldMixture(fieldGeometry, fieldTuning);
     currentDust = p.dust ?? DEFAULT_GALAXY_DUST_PARAMS;
     // Same `geometry.seed` `buildHiiRegions` was called with when it still
@@ -2851,6 +2973,10 @@ export async function createGalaxyEngine(
     // yet but sfMapPresent.wesl's own overlay; exposed here for the sibling
     // UI and future consumers per the research doc §19's staging note.
     getSfMapTexture: (): GPUTexture => sfMapTex,
+    // The CPU-side readback of the same output (`scheduleSfMapReadback`):
+    // null until the first one lands. Consumed by `buildDustParticleCloud`
+    // via `sfMapDustSeeding` today; exposed here for future consumers too.
+    getSfMapData: (): GalaxySfMap | null => sfMapData,
     async grab(size?: number) {
       const S = size ?? 480;
       drawFrame(performance.now());
@@ -2936,6 +3062,7 @@ export async function createGalaxyEngine(
       sfMapStateA.destroy();
       sfMapStateB.destroy();
       sfMapTex.destroy();
+      sfMapReadbackBuf.destroy();
       sfMapConstUbo.destroy();
       sfMapGridUbo.destroy();
       sfMapStepIndexBuf?.destroy();

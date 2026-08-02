@@ -10,6 +10,7 @@
 
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFieldTuning';
+import type { GalaxySfMap } from '../../../../src/@types/galaxy/GalaxySfMap';
 import type { RenderSettings } from './RenderSettings';
 import type { LodSettings } from './LodSettings';
 import type { ViewPose } from './ViewPose';
@@ -32,5 +33,9 @@ export type GalaxyEngineHandle = {
   // Consumed by nothing but its own overlay yet; exposed for the sibling UI
   // and future consumers.
   getSfMapTexture(): GPUTexture;
+  // The same output read back to the CPU, once per generation — null until
+  // the first readback lands. Feeds `sfMapDustSeeding` in
+  // `buildDustParticleCloud` (createGalaxyEngine.ts's `scheduleSfMapReadback`).
+  getSfMapData(): GalaxySfMap | null;
   dispose(): void;
 };

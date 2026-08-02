@@ -8,10 +8,12 @@
  * carving (4d) sweeps particles onto the rims of `dustBubblePlacements.ts`'s
  * SF cavities.
  *
- * PURITY INVARIANT: pure `(geometry, dust, seed) -> flat data`, no
- * Math.random/Date/engine state — a Worker/compute-pass candidate.
+ * PURITY INVARIANT: pure `(geometry, dust, tuning, seed, sfMap) -> flat
+ * data`, no Math.random/Date/engine state — a Worker/compute-pass candidate.
+ * `sfMap` is a plain sampled array (see `GalaxySfMap`), so this stays a data
+ * argument like every other one, not an engine dependency.
  */
-import { armCrossSigma, armFadeEnvelope } from './armRidgeGeometry';
+import { armCrossSigma, armFadeEnvelope, armRidgeCurvePoint } from './armRidgeGeometry';
 import { buildClusteredDiscPlacement, type CloudFrame } from './clusteredDiscPlacement';
 import { DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './discSurfaceFit';
 import {
@@ -24,12 +26,14 @@ import { clampedDustCloudShare, dustDiscShape, dustSigmaR } from './galaxyDustMi
 import { dustExtinctionRgb } from '../../utils/galaxy/dustExtinctionRgb';
 import { inverseCovarianceFromFrame } from '../../utils/galaxy/inverseCovarianceFromFrame';
 import { pcToUnits } from '../../utils/galaxy/pcToUnits';
+import { sampleGalaxySfMap } from '../../utils/galaxy/sampleGalaxySfMap';
 import { gaussian } from '../../utils/random/gaussian';
 import { mulberry32 } from '../../utils/random/mulberry32';
 import type { GalaxyDustParams } from '../../@types/galaxy/GalaxyDustParams';
 import type { GalaxyFieldComponent } from '../../@types/galaxy/GalaxyFieldComponent';
 import type { GalaxyFieldGeometry } from '../../@types/galaxy/GalaxyFieldGeometry';
 import type { GalaxyFieldTuning } from '../../@types/galaxy/GalaxyFieldTuning';
+import type { GalaxySfMap } from '../../@types/galaxy/GalaxySfMap';
 import type { Vec3 } from '../../@types/math/Vec3';
 
 const MAX_PARTICLE_COUNT = 40000;
@@ -112,6 +116,7 @@ export function buildDustParticleCloud(
   dust: GalaxyDustParams,
   tuning: GalaxyFieldTuning,
   seed: number,
+  sfMap: GalaxySfMap | null,
 ): readonly GalaxyFieldComponent[] {
   const { cloud } = dust;
   if (geometry.discFraction <= 0 || dust.tau <= 0 || cloud.count <= 0 || cloud.share <= 0) {
@@ -151,7 +156,24 @@ export function buildDustParticleCloud(
       elongation: cloud.elongation,
       sigmaZComplex: sigmaZCloud,
       laneFrameAt: (arm, logR) => armOffsetFrameAt(logR, geometry, dust, arm),
-      laneAcceptance: (arm, radius) => armFadeEnvelope(radius, geometry, arm),
+      // Gas MODULATES the envelope, never replaces it (dust.md's settled
+      // point): the envelope still owns the exponential arm falloff, gas
+      // only thins it where the automaton shows a recently-emptied cavity.
+      // sfMapDustSeeding gates this so the OFF path (the default) is
+      // byte-identical to before the map existed.
+      //
+      // NOT wired to `buildDustBubblePlacements`/`buildHiiCavityPlacements`/
+      // `cloud.bubbleCarve` below — those already carve holes from the SAME
+      // gas depletion this reads, and running both would double-carve. Out
+      // of scope for this plumbing pass; left exactly as it was.
+      laneAcceptance: (arm, radius) => {
+        const envelope = armFadeEnvelope(radius, geometry, arm);
+        if (!tuning.sfMapDustSeeding || !sfMap) return envelope;
+        const logR = Math.log(radius / geometry.armStartRadius);
+        const ridgePoint = armRidgeCurvePoint(logR, geometry, arm);
+        const angle = Math.atan2(ridgePoint[2], ridgePoint[0]);
+        return envelope * sampleGalaxySfMap(sfMap, radius, angle).gas;
+      },
       crossLaneSigma: (radius) =>
         armCrossSigma(radius, geometry, ARM_WIDTH_TUNING) * 0.25 * dust.cloud.laneWidth,
       discSigmaR: (k) => dustSigmaR(k, shape),

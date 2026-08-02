@@ -1,2 +1,10 @@
 .root {
 }
+
+.toggleRow {
+  composes: toggleRow from '../shared.module.css';
+}
+
+.checkbox {
+  composes: checkbox from '../shared.module.css';
+}

@@ -114,6 +114,19 @@ function SfMapSection(): ReactNode {
           onChange={(v) => patchSfMap({ shearRate: v })}
           info="Angular offset scale per step, in radians at unit (1/r - 1/corotationRadius)."
         />
+        {/* Lives on `fieldTuning` directly, not `sfMap`, since it gates a
+            CONSUMER (the dust cloud) reading this tier's output rather than
+            a parameter of the automaton itself — see GalaxyFieldTuning's
+            own docblock. */}
+        <label className={styles.toggleRow}>
+          <span>Seed dust from gas</span>
+          <input
+            type="checkbox"
+            className={styles.checkbox}
+            checked={fieldTuning.sfMapDustSeeding}
+            onChange={(e) => dispatch(fieldTuningPatched({ sfMapDustSeeding: e.target.checked }))}
+          />
+        </label>
       </div>
     </CollapsibleSection>
   );

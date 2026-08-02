@@ -65,6 +65,7 @@ function makeFakeEngine(): { engine: GalaxyEngineHandle; mocks: EngineMocks } {
       .mockResolvedValue({ S: 0, data: new Uint8ClampedArray() }),
     getCamera: vi.fn<GalaxyEngineHandle['getCamera']>().mockReturnValue({ az: 0, el: 0, dist: 1 }),
     getSfMapTexture: vi.fn<GalaxyEngineHandle['getSfMapTexture']>(),
+    getSfMapData: vi.fn<GalaxyEngineHandle['getSfMapData']>(),
     dispose: vi.fn<GalaxyEngineHandle['dispose']>(),
   };
   return { engine, mocks };
