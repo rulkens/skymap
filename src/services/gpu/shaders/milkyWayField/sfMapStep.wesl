@@ -11,20 +11,6 @@
 
 import package::milkyWayField::sfMapShear::sfMapShearTexels;
 
-// The trailing 'old activity' wake's own decay/gain — a look pair, tuned by
-// eye, distinct from the percolation parameters the params contract exposes
-// as sliders (baseIgnition/spread/...).
-const OLD_ACTIVITY_DECAY: f32 = 0.985;
-// Steady state for a cell igniting every T steps is GAIN/(1 - DECAY^T), and
-// sfMapPack clamps the channel to [0,1]. This has to survive BOTH ends: at
-// 0.35 a busy cell (T ~ 17) settled at ~1.55 and pinned the channel flat, but
-// too low and a cell that ignites once a run is invisible, since a single
-// ignition only ever reaches GAIN itself. 0.15 keeps one ignition legible and
-// only clamps below T ~ 10. Both failures matter beyond looks:
-// sfMapOrientationField.wesl reads this channel, and flat OR black both mean
-// zero gradient and coherence 0 everywhere.
-const OLD_ACTIVITY_GAIN: f32 = 0.15;
-
 struct SfMapConstants {
   rMin: f32,
   rMax: f32,
@@ -37,6 +23,10 @@ struct SfMapConstants {
   refractorySteps: f32,
   seed: f32,
   armFluxRef: f32,
+  // 'oldActivity' trace decay/gain — see GalaxySfMapParams.ts for the
+  // steady-state derivation; formerly baked-in consts, now sliders.
+  activityDecay: f32,
+  activityGain: f32,
 }
 
 // A single scalar, but its own struct/binding: it is the one uniform that
@@ -192,14 +182,14 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
       0.0,
       0.0,
       u.refractorySteps,
-      oldActivity * OLD_ACTIVITY_DECAY + OLD_ACTIVITY_GAIN,
+      oldActivity * u.activityDecay + u.activityGain,
     );
   } else {
     next = vec4<f32>(
       min(1.0, gas + u.gasRegen),
       age + 1.0,
       max(0.0, refractory - 1.0),
-      oldActivity * OLD_ACTIVITY_DECAY,
+      oldActivity * u.activityDecay,
     );
   }
   textureStore(nextTex, vec2<i32>(i32(az), i32(ring)), next);

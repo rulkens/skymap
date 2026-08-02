@@ -863,7 +863,7 @@ export async function createGalaxyEngine(
   // knob) — rewritten once per rebuildSfMap, unlike sfMapStepIndexBuf below.
   const sfMapConstUbo = device.createBuffer({
     label: 'galaxy:sfMapConstUbo',
-    size: 48, // 12 f32 lanes (11 used) — see SfMapConstants in sfMapStep.wesl
+    size: 64, // 16 f32 lanes (13 used) — see SfMapConstants in sfMapStep.wesl
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
   // rMin/rMax only — sfMapPresent.wesl's own small uniform, separate from
@@ -2156,6 +2156,10 @@ export async function createGalaxyEngine(
         sfMap.refractorySteps,
         currentSeed,
         sfMap.armFluxRef,
+        sfMap.activityDecay,
+        sfMap.activityGain,
+        0,
+        0,
         0,
       ]),
     );

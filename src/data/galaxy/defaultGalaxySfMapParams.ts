@@ -49,4 +49,9 @@ export const DEFAULT_GALAXY_SF_MAP_PARAMS: GalaxySfMapParams = {
   // corotationRadius, not the whole disc (a hard clamp at 1 texel/step
   // would span r ~ 5.6-12.6).
   armFluxRef: 0.5,
+  // Formerly OLD_ACTIVITY_DECAY/OLD_ACTIVITY_GAIN consts in sfMapStep.wesl,
+  // now live sliders — these two values reproduce that build's behaviour
+  // exactly, so promoting them to params is behaviour-neutral by itself.
+  activityDecay: 0.985,
+  activityGain: 0.15,
 };

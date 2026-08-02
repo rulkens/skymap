@@ -90,11 +90,31 @@ function SfMapSection({ diagnostics }: SfMapSectionProps): ReactNode {
           label="Gas regen"
           value={sfMap.gasRegen}
           min={0}
-          max={0.2}
-          step={0.005}
+          max={0.1}
+          step={0.002}
           format={(v) => v.toFixed(3)}
           onChange={(v) => patchSfMap({ gasRegen: v })}
           info="Gas recovered per step as a fraction of full — the star/gas feedback the original stars-only model lacked. Recovery takes 1/gasRegen steps, so this is the CONTRAST knob: it sets how long a burnt void stays a void rather than simmering back."
+        />
+        <ParamSlider
+          label="Activity decay"
+          value={sfMap.activityDecay}
+          min={0.9}
+          max={1}
+          step={0.001}
+          format={(v) => v.toFixed(3)}
+          onChange={(v) => patchSfMap({ activityDecay: v })}
+          info="Per-step multiplier on the trailing 'old activity' trace the overlay's structure is mostly made of. At 1.0 the channel integrates the WHOLE run, everywhere a front ever passed; below that it forgets with half-life ln(0.5)/ln(decay) steps. Raising this toward 1 without lowering gain saturates the channel to flat white — and flat white reads as 'no structure' exactly like flat black does."
+        />
+        <ParamSlider
+          label="Activity gain"
+          value={sfMap.activityGain}
+          min={0.005}
+          max={0.5}
+          step={0.005}
+          format={(v) => v.toFixed(3)}
+          onChange={(v) => patchSfMap({ activityGain: v })}
+          info="Added to the activity trace on each ignition. Its steady state at firing period T is gain/(1 - decay^T), so this is NOT independent of decay: a sparse regime (long T) needs a much bigger gain than a busy one just to stay visible, and too much saturates the channel flat instead."
         />
         <ParamSlider
           label="Arm forcing"
