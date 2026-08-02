@@ -2399,16 +2399,20 @@ export async function createGalaxyEngine(
     // draws off the packer's streams, so this is the only way the analytic
     // field can be sure it is oriented like the sprites it sums with.
     fieldGeometry = readGalaxyFieldGeometry(genUniforms, starLayout);
-    // A NEW galaxy means a new grid (sfMapGridRadius depends on
-    // fieldGeometry), so the readback still in `sfMapData` — if any — is the
-    // PREVIOUS galaxy's map and would misregister against this one's radii.
-    // Null it here, before rebuildDustMixture below reads it, rather than
-    // waiting for rebuildSfMap's own async readback to overwrite it — see
-    // scheduleSfMapReadback's determinism comment for why that first,
-    // unseeded dust build is the point, not a bug. Same reasoning for
-    // `orientationData`, one grid dimension `sampleSfMapOrientation` shares.
-    sfMapData = null;
-    orientationData = null;
+    // Discard the cached readbacks ONLY when the grid they were sampled over
+    // actually moved. `sfMapGridRadius` depends on `fieldGeometry` alone, so
+    // most params — dust `share`, cloud counts, colours — leave it untouched,
+    // and nulling on every `setParams` made a slider DRAG flip the dust
+    // between its map-seeded and unseeded builds once per frame: the
+    // synchronous rebuild below saw no map, then the async readback landed a
+    // frame or two later and rebuilt it again. Registration is what the map
+    // has to be right about (rMin/rMax ride the readback for exactly this
+    // check); one frame of stale CONTENT is invisible next to that flicker.
+    const nextGrid = sfMapGridRadius(fieldGeometry);
+    const gridMoved = (m: { rMin: number; rMax: number } | null): boolean =>
+      m !== null && (m.rMin !== nextGrid.rMin || m.rMax !== nextGrid.rMax);
+    if (gridMoved(sfMapData)) sfMapData = null;
+    if (gridMoved(orientationData)) orientationData = null;
     fieldMixture = buildGalaxyFieldMixture(fieldGeometry, fieldTuning);
     currentDust = p.dust ?? DEFAULT_GALAXY_DUST_PARAMS;
     // Same `geometry.seed` `buildHiiRegions` was called with when it still
