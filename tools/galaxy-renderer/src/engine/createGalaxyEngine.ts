@@ -1539,10 +1539,10 @@ export async function createGalaxyEngine(
    * two exits with the grid it just wrote, so `GalaxySfMap.rMin/rMax` always
    * matches the CONTENT being copied.
    *
-   * Does not block the caller: `copyTextureToBuffer` + `submit` happen
-   * synchronously here, but `mapAsync` resolves later on the microtask queue,
-   * chained onto `sfMapReadbackChain` so overlapping rebuilds (a dragged
-   * slider) never call `mapAsync` on a still-mapped buffer.
+   * Does not block the caller: the ENTIRE copy/submit/map/unmap sequence is
+   * chained onto `sfMapReadbackChain`, so overlapping rebuilds (a dragged
+   * slider) can neither submit into nor map a buffer another readback still
+   * holds. Chaining only `mapAsync` is not enough and was the original bug.
    *
    * DETERMINISM: `sfMapData` lands asynchronously, so the dust mixture built
    * synchronously inside `setParams`/`setFieldTuning` (which both run BEFORE
@@ -1556,34 +1556,53 @@ export async function createGalaxyEngine(
    */
   function scheduleSfMapReadback(grid: GalaxySfMapGridRadius): void {
     const token = ++sfMapReadbackToken;
-    const enc = device.createCommandEncoder({ label: 'galaxy:sfMapReadback' });
-    enc.copyTextureToBuffer(
-      { texture: sfMapTex },
-      {
-        buffer: sfMapReadbackBuf,
-        bytesPerRow: SF_MAP_READBACK_BYTES_PER_ROW,
-        rowsPerImage: SF_MAP_RINGS,
-      },
-      [SF_MAP_AZ, SF_MAP_RINGS, 1],
-    );
-    device.queue.submit([enc.finish()]);
     sfMapReadbackChain = sfMapReadbackChain
-      .then(() => sfMapReadbackBuf.mapAsync(GPUMapMode.READ))
-      .then(() => {
-        const padded = new Uint8Array(sfMapReadbackBuf.getMappedRange());
-        // Strip the 256-byte row alignment back out into a tightly packed
-        // array — see SF_MAP_READBACK_BYTES_PER_ROW's own comment.
-        const packed = new Uint8Array(SF_MAP_AZ * SF_MAP_RINGS * 4);
-        for (let row = 0; row < SF_MAP_RINGS; row++) {
-          packed.set(
-            padded.subarray(
-              row * SF_MAP_READBACK_BYTES_PER_ROW,
-              row * SF_MAP_READBACK_BYTES_PER_ROW + SF_MAP_AZ * 4,
-            ),
-            row * SF_MAP_AZ * 4,
-          );
+      .then(async () => {
+        // The copy and the submit belong INSIDE the chain. Running them
+        // eagerly serialized the mapping but not the submitting, so a second
+        // rebuild (a dragged slider) submitted into a buffer the first had
+        // mapped and not yet unmapped — 'used in submit while mapped'.
+        //
+        // Returning here rather than submitting also coalesces a drag down to
+        // one readback instead of one per dragged frame: every superseded
+        // rebuild skips the GPU work entirely. Grid/content stay paired
+        // because the copy now happens immediately before its own map, and
+        // rebuildSfMap always re-tokens when it re-renders the texture.
+        if (token !== sfMapReadbackToken) return;
+        const enc = device.createCommandEncoder({ label: 'galaxy:sfMapReadback' });
+        enc.copyTextureToBuffer(
+          { texture: sfMapTex },
+          {
+            buffer: sfMapReadbackBuf,
+            bytesPerRow: SF_MAP_READBACK_BYTES_PER_ROW,
+            rowsPerImage: SF_MAP_RINGS,
+          },
+          [SF_MAP_AZ, SF_MAP_RINGS, 1],
+        );
+        device.queue.submit([enc.finish()]);
+
+        await sfMapReadbackBuf.mapAsync(GPUMapMode.READ);
+        // try/finally, not a bare unmap: anything thrown between the map and
+        // the unmap strands the buffer mapped forever, turning a one-shot
+        // error into a permanently dead readback.
+        let packed: Uint8Array;
+        try {
+          const padded = new Uint8Array(sfMapReadbackBuf.getMappedRange());
+          // Strip the 256-byte row alignment back out into a tightly packed
+          // array — see SF_MAP_READBACK_BYTES_PER_ROW's own comment.
+          packed = new Uint8Array(SF_MAP_AZ * SF_MAP_RINGS * 4);
+          for (let row = 0; row < SF_MAP_RINGS; row++) {
+            packed.set(
+              padded.subarray(
+                row * SF_MAP_READBACK_BYTES_PER_ROW,
+                row * SF_MAP_READBACK_BYTES_PER_ROW + SF_MAP_AZ * 4,
+              ),
+              row * SF_MAP_AZ * 4,
+            );
+          }
+        } finally {
+          sfMapReadbackBuf.unmap();
         }
-        sfMapReadbackBuf.unmap();
         // A later rebuildSfMap re-tokened while this map was pending; its own
         // readback is already chained behind this one, so this result is
         // superseded — drop it rather than clobber sfMapData with data a
