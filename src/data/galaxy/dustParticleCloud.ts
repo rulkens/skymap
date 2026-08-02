@@ -117,16 +117,17 @@ type CloudParticle = {
 
 /**
  * Peak `sfMapDustDensity` over the whole sampled grid, once per map.
- * Load-bearing: `recentSf` is small over most of the grid, so rejection
+ * Load-bearing: `oldActivity` is small over most of the grid, so rejection
  * sampling on the raw (unnormalised) product would reject nearly everything
  * and silently degenerate to the analytic fallback — the bug this
- * replaces, just quieter.
+ * replaces, just quieter. Channel 2 (blue) is `oldActivity`; channel 1 is
+ * `recentSf`, which this deliberately does NOT read (see `sfMapDustDensity`).
  */
 function maxSfMapDustDensity(map: GalaxySfMap, sfWeight: number): number {
   let max = 0;
   const { data } = map;
-  for (let i = 0; i + 1 < data.length; i += 4) {
-    const density = sfMapDustDensity(data[i]! / 255, data[i + 1]! / 255, sfWeight);
+  for (let i = 0; i + 2 < data.length; i += 4) {
+    const density = sfMapDustDensity(data[i]! / 255, data[i + 2]! / 255, sfWeight);
     if (density > max) max = density;
   }
   return max;
@@ -174,13 +175,13 @@ export function buildDustParticleCloud(
 
   const rng = mulberry32(seed ^ 0x44555354); // "DUST"
 
-  // Seeding ON: the map IS the placement density (a gas x recent-SF blend,
-  // `sfMapDustDensity`, normalised by its own grid MAXIMUM so a mostly-quiet
-  // grid doesn't rejection-sample down to nothing) and `armBias`/the analytic
-  // envelope play no part — `buildClusteredDiscPlacement` routes every
-  // complex through `mapDensityAt` instead. Seeding OFF (the default):
-  // `mapDensityAt` stays null, and the placement is byte-identical to before
-  // the map existed.
+  // Seeding ON: the map IS the placement density (a gas x accumulated-activity
+  // blend, `sfMapDustDensity`, normalised by its own grid MAXIMUM so a
+  // mostly-quiet grid doesn't rejection-sample down to nothing) and
+  // `armBias`/the analytic envelope play no part —
+  // `buildClusteredDiscPlacement` routes every complex through
+  // `mapDensityAt` instead. Seeding OFF: `mapDensityAt` stays null, and the
+  // placement is byte-identical to before the map existed.
   //
   // NOT wired to `buildDustBubblePlacements`/`buildHiiCavityPlacements`/
   // `cloud.bubbleCarve` below — those already carve holes from the same gas
@@ -192,8 +193,15 @@ export function buildDustParticleCloud(
     const maxDensity = maxSfMapDustDensity(sfMap, sfWeight);
     if (maxDensity > 0) {
       mapDensityAt = (radius, angle) => {
+        // Outside the grid's radial support the map has NO DATA, and
+        // `sampleGalaxySfMap` CLAMPS rather than reporting that — so every
+        // radius below rMin reads ring 0. Left to clamp, the centrally-peaked
+        // proposal distribution piles the whole cloud into the inner hole at
+        // ring 0's (unburnt, therefore high) density, which is why the dust
+        // collected in the central circle the overlay draws as black.
+        if (radius < sfMap.rMin || radius > sfMap.rMax) return 0;
         const sample = sampleGalaxySfMap(sfMap, radius, angle);
-        return sfMapDustDensity(sample.gas, sample.recentSf, sfWeight) / maxDensity;
+        return sfMapDustDensity(sample.gas, sample.oldActivity, sfWeight) / maxDensity;
       };
     }
   }

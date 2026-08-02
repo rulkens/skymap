@@ -46,9 +46,12 @@ export type GalaxyDustCloudParams = {
   /**
    * SF-map seeded placement density blend (only read while
    * `GalaxyFieldTuning.sfMapDustSeeding` is on): 0 = pure gas channel, 1 =
-   * `gas * recentSf`, which peaks at the leading edge of an active front —
-   * where real dust lanes sit relative to HII regions, not at `recentSf`'s
-   * own peak (the just-swept cavity).
+   * `gas * oldActivity`, the automaton's accumulated trace of every front
+   * that passed. Below 1 leaves a `(1 - sfWeight)` FLOOR that gas — near 1
+   * over most of a quiet disc — multiplies into a near-uniform pedestal, so
+   * the structure washes out fast: 0.7 gives only ~1.6:1 contrast against
+   * never-burnt disc. See `sfMapDustDensity` for why the channel is
+   * `oldActivity` and not `recentSf`.
    */
   readonly sfMapSfWeight: number;
 };
