@@ -1,14 +1,13 @@
 /**
- * DustCloudSection — the volumetric particle cloud layered on the smooth
- * analytic dust lane (`GalaxyParams.dust.cloud`, thousands of small
- * GMC-scale Gaussians giving the dust clumpy, parallaxing depth), plus the
- * arm-lane knobs that place it. Same nested-patch idiom as `DustSection`:
- * `params.dust.cloud` needs its own spreading handler rather than the
- * generic single-value slider path. The header pill is
- * `render.dustCloudEnabled` (`ControlsPanel` owns the dispatch,
- * `DustSection`'s `render.legacyDustEnabled` pattern) rather than
- * `fieldTuning.dustEnabled` — the cloud is an A/B lever against the older
- * dust tiers, not a sub-toggle of the master dust pill.
+ * DustCloudSection — the volumetric particle cloud (`GalaxyParams.dust.cloud`,
+ * thousands of small GMC-scale Gaussians giving the dust clumpy, parallaxing
+ * depth) — the galaxy's ONLY dust tier, plus the arm-lane knobs that place
+ * it. Same nested-patch idiom as `DustSection`: `params.dust.cloud` needs
+ * its own spreading handler rather than the generic single-value slider
+ * path. The header pill is `render.dustCloudEnabled` (`ControlsPanel` owns
+ * the dispatch, `DustSection`'s `render.legacyDustEnabled` pattern) rather
+ * than `fieldTuning.dustEnabled` — the cloud is an A/B lever against the
+ * legacy sprite dust, not a sub-toggle of the master dust pill.
  */
 import type { ReactNode } from 'react';
 import type { GalaxyDustCloudParams } from '../../../../../src/@types/galaxy/GalaxyDustCloudParams';
@@ -51,16 +50,6 @@ function DustCloudSection(): ReactNode {
           format={(v) => String(Math.round(v))}
           onChange={(v) => patchCloud({ count: Math.round(v) })}
           info="Particle budget for the volumetric dust cloud. 0 disables it."
-        />
-        <ParamSlider
-          label="Cloud share"
-          value={cloud.share}
-          min={0}
-          max={1}
-          step={0.02}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => patchCloud({ share: v })}
-          info="Fraction of the total optical depth carried by particles vs the flat lane."
         />
         <ParamSlider
           label="Arm bias"

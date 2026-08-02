@@ -247,11 +247,7 @@ import {
 } from '../../../../src/data/galaxy/galaxySfMapArmForcing';
 import type { GalaxySfMapGridRadius } from '../../../../src/data/galaxy/galaxySfMapArmForcing';
 import { DISC_SIGMA_RATIOS } from '../../../../src/data/galaxy/discSurfaceFit';
-import {
-  buildGalaxyDustMixture,
-  dustDiscShape,
-  dustSigmaR,
-} from '../../../../src/data/galaxy/galaxyDustMixture';
+import { dustDiscShape, dustSigmaR } from '../../../../src/data/galaxy/galaxyDustMixture';
 import {
   buildDustParticleCloud,
   dustNoiseTileUnits,
@@ -1251,9 +1247,10 @@ export async function createGalaxyEngine(
   // The dust-noise erosion lane (io.wesl's `dustNoise`), cached alongside
   // `currentDustExtinctionRgb` for the same reason — `packFieldHeaderUniforms`
   // needs it every `drawFrame` but it only changes when `rebuildDustMixture`
-  // runs. `cloudOffset` is the length of `buildGalaxyDustMixture(...)`'s
-  // return — captured where `rebuildDustMixture` concatenates the two
-  // mixtures below, never recomputed by filtering `dustMixture` back apart.
+  // runs. `cloudOffset` is always 0 now: it used to be the smooth lane
+  // tier's own length (deleted — see `galaxyDustMixture.ts`'s header), the
+  // index within the dust slice where the particle cloud started; with the
+  // cloud as the only tier it starts at index 0.
   let currentDustNoise: FieldDustNoise = {
     tileUnits: 1,
     amplitude: 0,
@@ -2003,23 +2000,19 @@ export async function createGalaxyEngine(
    * (toggle, or any tuning-driven geometry that later feeds dust) — the same
    * two repack triggers `fieldMixture` itself uses.
    *
-   * The particle cloud (`buildDustParticleCloud`) rides the SAME slot: it is
-   * volumetric detail layered on the flat lane, drawn through the identical
-   * dustMap splat pipeline, so appending it here — rather than threading a
-   * second mixture through `repackFieldComponents` — is what lets `dustCount`
-   * downstream stay a single number. `currentSeed`, not a literal, so this
-   * galaxy's particle placement is reproducible from `setParams`'s params
-   * alone.
+   * `buildDustParticleCloud` is the ONLY dust tier (the smooth analytic lane
+   * it used to be layered on was deleted — see `galaxyDustMixture.ts`'s
+   * header), drawn through the dustMap splat pipeline. `currentSeed`, not a
+   * literal, so this galaxy's particle placement is reproducible from
+   * `setParams`'s params alone.
    *
-   * Also rebuilds `currentDustNoise` (io.wesl's `dustNoise` lane): the lane
-   * mixture's own length becomes `cloudOffset` (where the particle cloud
-   * starts within the dust slice), captured right here at the concatenation
-   * point rather than re-derived later by filtering `dustMixture` apart.
+   * Also rebuilds `currentDustNoise` (io.wesl's `dustNoise` lane):
+   * `cloudOffset` is always 0 now (see its own declaration comment above).
    *
    * And `currentDustReachR` (io.wesl's dustSlices doc): computed from
-   * `dustDiscShape`/`dustSigmaR` — the SAME smooth-lane shape
-   * `buildGalaxyDustMixture` itself derives — rather than from `dustMixture`
-   * after the fact, since the particle cloud's own components don't carry a
+   * `dustDiscShape`/`dustSigmaR` — the same disc shape the particle cloud's
+   * mass budget is anchored to — rather than from `dustMixture` after the
+   * fact, since the particle cloud's own components don't carry a
    * comparable radial sigma to max over. Computed unconditionally (even with
    * `dustEnabled` off, or `dust.tau` at 0) because R sizes the SLICE
    * geometry `drawFrame` packs every frame regardless of whether any dust
@@ -2052,7 +2045,6 @@ export async function createGalaxyEngine(
       maxAbsDeltaDeg: 0,
     };
     if (fieldGeometry && fieldTuning.dustEnabled) {
-      const laneMixture = buildGalaxyDustMixture(fieldGeometry, currentDust);
       const cloudMixture = buildDustParticleCloud(
         fieldGeometry,
         currentDust,
@@ -2062,11 +2054,11 @@ export async function createGalaxyEngine(
         orientationData,
         orientationDeltaStats,
       );
-      dustMixture = [...laneMixture, ...cloudMixture];
+      dustMixture = [...cloudMixture];
       currentDustNoise = {
         tileUnits: dustNoiseTileUnits(currentDust.cloud.textureScale),
         amplitude: currentDust.cloud.texture,
-        cloudOffset: laneMixture.length,
+        cloudOffset: 0,
         // Inverted here, not in the shader, so dustMap.wesl stays one plain
         // pow(): a higher slider value means a SMALLER exponent (pushes
         // |s| toward 1, hardening filament edges). Floored well above 0 —

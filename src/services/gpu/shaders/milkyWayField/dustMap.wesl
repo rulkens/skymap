@@ -69,9 +69,9 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> Dus
   return out;
 }
 
-// dustNoiseMultiplier — erodes the PARTICLE-CLOUD tier's smooth column with
-// the baked ridged-fbm volume (dustNoiseBake.wesl); never called for the
-// smooth 4-component disc mixture — see io.wesl's dustNoise doc for why.
+// dustNoiseMultiplier — erodes the particle cloud's own column with
+// the baked ridged-fbm volume (dustNoiseBake.wesl) — see io.wesl's
+// dustNoise doc for why every dust component takes this branch now.
 // 'p' is the ray's world-space closest-approach point to this Gaussian,
 // 'depth' its distance along the ray (both already computed by the caller
 // as o + d*tPeak / tPeak). Sampled at explicit LOD 0, no derivatives: this
@@ -108,9 +108,9 @@ fn dustNoiseMultiplier(p: vec3<f32>, depth: f32) -> f32 {
   // tile), so 's' below has mean ~0. Contrast is applied as a SIGNED power
   // of 's' rather than a plain pow(n, g) on n itself, specifically to stay
   // odd about s=0: an odd function preserves mean(s)=0 for a symmetric s,
-  // so the multiplier keeps mean 1 at ANY contrast setting — the three-way
-  // tau split (galaxyDustMixture.ts's clampedDustCloudShare) still holds in
-  // expectation. This only preserves the mean as well as n's own ~0.5
+  // so the multiplier keeps mean 1 at ANY contrast setting — the cloud's
+  // total measured tau still holds in expectation, erosion only redistributes
+  // it. This only preserves the mean as well as n's own ~0.5
   // assumption already does (ridged fbm is not exactly symmetric); no new
   // debt beyond that pre-existing approximation. The max(0, ...) clamp
   // biases that mean very slightly upward at amplitudes above 1 (it can
@@ -189,14 +189,14 @@ fn fs(input: DustMapOut) -> @location(0) vec4<f32> {
   // erosion sample below — the depth SLICING above needs no such peak.
   let tPeak = max(-dc.y / a, 0.0);
 
-  // Erosion applies ONLY to the particle-cloud tier — input.inst is this
-  // draw's index within the dust slice (see 'base' above), and cloudOffset
+  // Erosion applies to every dust component — input.inst is this draw's
+  // index within the dust slice (see 'base' above), and cloudOffset
   // (dustNoise.z) is where the cloud components start within that same
-  // slice (io.wesl's dustNoise doc), so components before it are the smooth
-  // disc mixture and skip the branch entirely rather than sampling a noise
-  // texture whose whole rationale (kpc-scale components read as one blotch)
-  // doesn't apply to them. It is a DENSITY modulation, not a depth-dependent
-  // one, so the same scalar multiplies all four slices.
+  // slice (io.wesl's dustNoise doc); it is always 0 now that the particle
+  // cloud is the only dust tier, so this gate never skips. Kept rather than
+  // deleted since the uniform layout still reserves the field. It is a
+  // DENSITY modulation, not a depth-dependent one, so the same scalar
+  // multiplies all four slices.
   let noiseAmp = u.dustNoise.y;
   if (noiseAmp > 0.0 && input.inst >= u32(u.dustNoise.z)) {
     slices = slices * dustNoiseMultiplier(o + d * tPeak, tPeak);

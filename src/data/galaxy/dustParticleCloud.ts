@@ -1,12 +1,14 @@
 /**
- * buildDustParticleCloud — small anisotropic 3D Gaussians standing in for
- * GMC/cloud complexes, appended to the mixture `dustMap.wesl` splats. Three
- * anchors: Larson's third law (mass ~ R^2 at ~constant cloud surface
- * density, so every cloud peaks at roughly the same tau — sharp, separated
- * clouds, not a haze); the R^-2.2 GMC size function (Watkins+2023); ISM
- * hierarchical clustering, as a two-level complex/children placement. Bubble
- * carving (4d) sweeps particles onto the rims of `dustBubblePlacements.ts`'s
- * SF cavities.
+ * buildDustParticleCloud — the galaxy's ONLY dust tier (the smooth analytic
+ * lane it used to be layered on was deleted — see `galaxyDustMixture.ts`'s
+ * header): small anisotropic 3D Gaussians standing in for GMC/cloud
+ * complexes, splatted through `dustMap.wesl`, carrying the galaxy's FULL
+ * `dust.tau` rather than a share of it. Three anchors: Larson's third law
+ * (mass ~ R^2 at ~constant cloud surface density, so every cloud peaks at
+ * roughly the same tau — sharp, separated clouds, not a haze); the R^-2.2
+ * GMC size function (Watkins+2023); ISM hierarchical clustering, as a
+ * two-level complex/children placement. Bubble carving (4d) sweeps
+ * particles onto the rims of `dustBubblePlacements.ts`'s SF cavities.
  *
  * PURITY INVARIANT: pure `(geometry, dust, tuning, seed, sfMap,
  * sfMapOrientation) -> flat data`, no Math.random/Date/engine state — a
@@ -30,7 +32,7 @@ import {
   type DustBubblePlacement,
 } from './dustBubblePlacements';
 import { armOffsetFrameAt } from './dustLaneFeatures';
-import { clampedDustCloudShare, dustDiscShape, dustSigmaR } from './galaxyDustMixture';
+import { dustDiscShape, dustSigmaR } from './galaxyDustMixture';
 import { dustExtinctionRgb } from '../../utils/galaxy/dustExtinctionRgb';
 import { inverseCovarianceFromFrame } from '../../utils/galaxy/inverseCovarianceFromFrame';
 import { pcToUnits } from '../../utils/galaxy/pcToUnits';
@@ -55,8 +57,8 @@ const MAX_PARTICLE_COUNT = 40000;
  * gets the same clouds as a giant, just fewer of them.
  *
  * These bound the whole tier's CONTRAST, which is why they are calibration and
- * not taste. Per-cloud peak tau = (the cloud tier's tau share) / f, with the
- * covering factor f = N * 2*PI * elongation * <R^2> / A_disc. Oversized clouds
+ * not taste. Per-cloud peak tau = dust.tau (the galaxy's full column) / f,
+ * with the covering factor f = N * 2*PI * elongation * <R^2> / A_disc. Oversized clouds
  * drive f into the tens, every cloud fades to invisibility to keep the total
  * honest, and the tier reads as a smooth haze — the failure this replaces.
  * f around 2-3 is the target: dark enough per cloud to see, overlapping enough
@@ -149,7 +151,7 @@ export function buildDustParticleCloud(
   orientationDeltaStats?: OrientationDeltaStats,
 ): readonly GalaxyFieldComponent[] {
   const { cloud } = dust;
-  if (geometry.discFraction <= 0 || dust.tau <= 0 || cloud.count <= 0 || cloud.share <= 0) {
+  if (geometry.discFraction <= 0 || dust.tau <= 0 || cloud.count <= 0) {
     return [];
   }
   const count = Math.min(cloud.count, MAX_PARTICLE_COUNT);
@@ -277,7 +279,10 @@ export function buildDustParticleCloud(
   for (let i = 0; i < DISC_SIGMA_RATIOS.length; i++) {
     weightedSigma2 += (DISC_SURFACE_WEIGHTS[i]! / shape.sumW) * dustSigmaR(i, shape) ** 2;
   }
-  const totalMass = clampedDustCloudShare(dust) * dust.tau * 2 * Math.PI * weightedSigma2;
+  // dust.tau in FULL — there is no longer a smooth-tier share to debit it by
+  // (see galaxyDustMixture.ts's header), so the cloud reads heavier than it
+  // did when this was one of two tiers splitting the same measured column.
+  const totalMass = dust.tau * 2 * Math.PI * weightedSigma2;
   let sumR2 = 0;
   for (const p of particles) sumR2 += p.radius * p.radius;
   if (!(totalMass > 0) || !(sumR2 > 0)) return [];

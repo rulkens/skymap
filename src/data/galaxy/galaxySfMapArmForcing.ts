@@ -39,12 +39,27 @@ export type GalaxySfMapGridRadius = { readonly rMin: number; readonly rMax: numb
  * `armStartRadius` floors the inner edge; forcing is identically zero below
  * it (this file's own `r <= geometry.armStartRadius` skip), so the margin
  * below it exists only so percolation can leak inward rather than hard-stop
- * exactly at the arm start. `outerRadius` caps the outer edge, matching the
- * disc the sprites themselves are drawn out to.
+ * exactly at the arm start. The outer edge covers the OUTERMOST arm's own
+ * `fadeRadius` (falling back to `outerRadius` when there are no arms) rather
+ * than stopping at `outerRadius` itself: with dust now SF-map-seeded only
+ * where this grid has data (the smooth analytic tier that used to cover the
+ * rest was deleted — see `galaxyDustMixture.ts`'s header), a truncation at
+ * `outerRadius` was a visible hard edge mid-arm (`outerRadius` ~10.5 vs
+ * per-arm `fadeRadius` 9.24-15.87, `armFadeEnvelope` still ~19% of peak at
+ * `outerRadius`).
+ *
+ * COST: rings are log-spaced over [rMin, rMax] at a fixed `SF_MAP_RINGS`, so
+ * widening rMax spends radial resolution on the newly-covered outer arm —
+ * roughly 20% fewer rings across the inner disc for ~43% more coverage.
+ * Raise `SF_MAP_RINGS` if inner detail starts to suffer.
  */
 export function sfMapGridRadius(geometry: GalaxyFieldGeometry): GalaxySfMapGridRadius {
   const rMin = Math.max(geometry.armStartRadius * 0.6, 1e-3);
-  const rMax = Math.max(geometry.outerRadius, rMin * 2);
+  const outerArmRadius =
+    geometry.numArms > 0 && geometry.arms.length > 0
+      ? Math.max(...geometry.arms.map((arm) => arm.fadeRadius))
+      : geometry.outerRadius;
+  const rMax = Math.max(outerArmRadius, rMin * 2);
   return { rMin, rMax };
 }
 

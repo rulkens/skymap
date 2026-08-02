@@ -104,7 +104,6 @@ export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams = {
     // Not yet visually calibrated — same values as DEFAULT_GALAXY_DUST_CLOUD_PARAMS.
     cloud: {
       count: 6000,
-      share: 0.6,
       armBias: 0.75,
       clumpiness: 0.6,
       sizeScale: 1,

@@ -77,7 +77,7 @@ export type GalaxyFieldTuning = {
   readonly armCloudSizeScale: number;
   /** sigma_along / sigma_across for the arm particle cloud — how stretched each sprite is along its arm. */
   readonly armCloudElongation: number;
-  /** Master toggle for the analytic dust lane's shader loop. */
+  /** Master toggle for the whole analytic dust tier's shader loop (the particle cloud — see `GalaxyDustCloudParams`). */
   readonly dustEnabled: boolean;
   /** Master toggle for the HII-region tier (`hiiRegions.ts`) — off skips the sprites, their cavities and their component-budget reservation. */
   readonly hiiEnabled: boolean;

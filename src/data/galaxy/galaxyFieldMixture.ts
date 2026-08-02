@@ -321,7 +321,7 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
   armCloudClumpiness: 0.4,
   armCloudSizeScale: 1,
   armCloudElongation: 3,
-  // Gates the analytic dust lane's shader loop.
+  // Gates the whole analytic dust tier's shader loop.
   dustEnabled: true,
   hiiEnabled: true,
   hiiBrightness: 1,

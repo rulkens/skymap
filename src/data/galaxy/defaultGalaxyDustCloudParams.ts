@@ -10,7 +10,6 @@ import type { GalaxyDustCloudParams } from '../../@types/galaxy/GalaxyDustCloudP
 // centred, and every refiner starts at its literature value (1.0).
 export const DEFAULT_GALAXY_DUST_CLOUD_PARAMS: GalaxyDustCloudParams = {
   count: 6000,
-  share: 0.6,
   armBias: 0.75,
   clumpiness: 0.6,
   sizeScale: 1,

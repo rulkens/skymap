@@ -54,18 +54,19 @@
 // extent to turn 'input.pos.xy' into a normalized UV instead of a direct
 // texel index — see the DUST MAP entry below.
 //
-// dustNoise (offset 128) erodes the PARTICLE-CLOUD tier of the primary's
-// dust slice only (dustMap.wesl's fs) — never the smooth 4-component disc
-// mixture, whose components are kiloparsecs across, so one noise sample at
-// a component's closest-approach point would modulate an entire diffuse
-// column by a single value and read as a giant blotch, not erosion.
+// dustNoise (offset 128) erodes the primary's whole dust slice
+// (dustMap.wesl's fs) — the particle cloud is the ONLY dust tier now (the
+// smooth analytic disc mixture this loop used to skip past was deleted; see
+// galaxyDustMixture.ts's header on the CPU side), so there is no longer a
+// kiloparsec-scale component whose single noise sample would read as a
+// giant blotch rather than erosion.
 // tileUnits (.x) is the world span of one full wrap of dustNoiseBake.wesl's
 // baked volume; amplitude (.y) is the erosion strength — 0 disables it, and
 // the shader branches out entirely rather than sampling for a no-op 1.0;
 // cloudOffset (.z) is the index WITHIN the dust slice (relative to
 // dustOffset, matching dustMap.wesl's own 'input.inst') where the particle
-// cloud starts — the smooth lane mixture's own length, captured where
-// createGalaxyEngine.ts's rebuildDustMixture concatenates the two. The
+// cloud starts — always 0 now that it's the only tier, kept as a live field
+// rather than deleted since the byte layout below still reserves it. The
 // multiplier rides THIS accumulation pass rather than a consumer
 // (splat.wesl, dustPresent.wesl): both read the eroded column from here
 // with no second code path. contrastExp (.w) is dustMap.wesl's signed power

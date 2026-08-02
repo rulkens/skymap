@@ -1,7 +1,9 @@
 /**
- * GalaxyDustParams — the analytic dust lane's flat-lane knobs plus the
- * volumetric particle cloud layered on top (`cloud`, see
- * `GalaxyDustCloudParams`).
+ * GalaxyDustParams — the dust disc's shape knobs, plus the volumetric
+ * particle cloud that renders all of it (`cloud`, see
+ * `GalaxyDustCloudParams`). No separate smooth analytic tier exists: `tau`
+ * below is the galaxy's ENTIRE measured optical depth, carried in full by
+ * the particle cloud.
  *
  * `tau`: central face-on V-band optical depth (measured ~0.5–1 for spirals;
  * Xilouris et al. 1999, De Geyter et al. 2014 CALIFA mean 0.76±0.6).
@@ -20,6 +22,6 @@ export type GalaxyDustParams = {
   readonly scaleLenRatio: number;
   readonly heightRatio: number;
   readonly rV: number;
-  /** The 3D particle-cloud tier layered on the smooth mixture — see `GalaxyDustCloudParams`. */
+  /** The 3D particle cloud that renders ALL of `tau` — see `GalaxyDustCloudParams`. */
   readonly cloud: GalaxyDustCloudParams;
 };

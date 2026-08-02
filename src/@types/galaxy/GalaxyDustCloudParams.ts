@@ -1,8 +1,10 @@
 /**
- * GalaxyDustCloudParams — the structured 3D dust particle cloud layered on
- * the smooth analytic dust lane: thousands of small anisotropic Gaussians
- * standing in for individual GMC/cloud complexes, giving the dust field
- * actual volumetric depth. See `dustParticleCloud.ts` for the
+ * GalaxyDustCloudParams — the structured 3D dust particle cloud: thousands
+ * of small anisotropic Gaussians standing in for individual GMC/cloud
+ * complexes, giving the dust field actual volumetric depth. This is the
+ * galaxy's ONLY dust tier — the smooth analytic lane it used to be layered
+ * on was deleted (`galaxyDustMixture.ts`'s header) — so it carries the
+ * galaxy's FULL measured `tau`. See `dustParticleCloud.ts` for the
  * size/mass/placement model.
  *
  * The arm-lane group at the end (`armContrast` onward) describes the lane
@@ -13,8 +15,6 @@
 export type GalaxyDustCloudParams = {
   /** Particle budget. 0 disables the cloud entirely. */
   readonly count: number;
-  /** 0..1 share of the galaxy's total tau carried by particles rather than the smooth field. */
-  readonly share: number;
   /** 0..1 share of particles seeded on the arm dust lanes; the rest follow the smooth disc profile. */
   readonly armBias: number;
   /** 0..1 hierarchical clustering: 0 = every particle independent, 1 = ~16 children per cloud complex. */

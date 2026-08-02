@@ -11,8 +11,8 @@ const DISK_BRIGHTNESS_TAPER = 1.7;
 /**
  * The light-weighted scale length `pushDisc` samples at — shared with
  * `pushArmRidges`' contrast law (needs the same Sigma_disc(R) the ridge is an
- * excess OVER) and with `buildGalaxyDustMixture` (the dust disc's own scale
- * length is a ratio of this, not of the raw sampled `diskScaleLen`).
+ * excess OVER) and with `dustDiscShape` (the dust disc's own scale length is
+ * a ratio of this, not of the raw sampled `diskScaleLen`).
  */
 export function discLightScaleLength(geometry: GalaxyFieldGeometry): number {
   return geometry.diskScaleLen / (1 + 1 / DISK_BRIGHTNESS_TAPER);
