@@ -5,11 +5,13 @@
  * The three ignition terms are all PER-STEP PROBABILITIES summed into one `p`,
  * so each is far smaller than intuition suggests.
  *
- * `spread`'s critical value is derivable, not empirical: `p` is evaluated at the
- * RECEIVER over a Moore 8-neighbourhood, so a just-ignited cell has mean
- * offspring `8 * spread` and criticality sits at 1/8 = 0.125. Above it the field
- * saturates exponentially. Gerola & Seiden's classical ~0.18 is 1/6 — the same
- * law for their 6-cell equal-area neighbourhood, NOT a value to copy across.
+ * `spread` has a derivable LOWER bound, not a derivable value: `p` is evaluated
+ * at the RECEIVER over a Moore 8-neighbourhood, so mean offspring is
+ * `N_eligible * spread`. With all eight eligible that puts criticality at 1/8 =
+ * 0.125 — but the refractory gate and gas depletion make the cells behind a
+ * front ineligible, so only its leading edge propagates and the true threshold
+ * is higher. Gerola & Seiden's ~0.18 is 1/6, the same law for their 6-cell
+ * equal-area neighbourhood, NOT a value to copy across.
  *
  * `armForcing` is a bias, not a driver: at 0.15 an arm cell ignited with 15%
  * probability per step from forcing ALONE, saturating the arms whatever
@@ -24,10 +26,12 @@ export const DEFAULT_GALAXY_SF_MAP_PARAMS: GalaxySfMapParams = {
   // far fewer iterations — and rebuild latency is linear in this.
   steps: 100,
   baseIgnition: 0.0002,
-  // Just under the 1/8 branching threshold — see the header. Nudge UP for
-  // travelling fronts, DOWN for isolated flocculent patches; the interesting
-  // band is narrow and sits entirely below 0.125.
-  spread: 0.11,
+  // 1/8 is a LOWER BOUND on criticality, not the value: it assumes all eight
+  // neighbours are eligible, but in a real front the cells behind it are
+  // refractory and gas-depleted, so only the leading edge can ignite and the
+  // effective branching ratio is roughly half. Found by eye at 0.164, which is
+  // consistent with an eligible neighbourhood of ~4-5 rather than 8.
+  spread: 0.164,
   refractorySteps: 7,
   gasRegen: 0.06,
   // A light touch: the arms only need to bias the automaton, not drive it.

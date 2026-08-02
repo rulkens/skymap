@@ -183,14 +183,25 @@ stays connected instead of fragmenting.
 
 ## The percolation threshold is 1/N, and the classical 0.18 is not our number
 
-**INFERRED (derivation), confirmed against the user's own saturation
-observations 2026-08-02.** `p = (baseIgnition + spread * ignitedNeighbours +
-armForcing * armF) * gas` is evaluated at the RECEIVER over a Moore
-8-neighbourhood. A just-ignited cell is seen as ignited by all 8 of its
-neighbours, each of which then ignites with probability ~`spread`. Mean
-offspring per active cell is therefore **8 * spread**, and criticality — one
-offspring per parent — sits at exactly **spread = 1/8 = 0.125**. Above it the
-field saturates exponentially; the whole useful band is below.
+**INFERRED (derivation), and CORRECTED 2026-08-02 — it is a BOUND, not a
+value.** `p = (baseIgnition + spread * ignitedNeighbours + armForcing * armF) *
+gas` is evaluated at the RECEIVER over a Moore 8-neighbourhood, so mean
+offspring per active cell is `N_eligible * spread` and criticality is
+`1/N_eligible`.
+
+The first pass took `N_eligible = 8` and reported criticality as exactly 0.125.
+That is a **lower bound**, because it ignores the two terms that make most of a
+neighbourhood ineligible: `ignite` requires `refractory <= 0`, and `p` is
+multiplied by `gas`, which a just-ignited cell has spent. In a propagating
+front the cells BEHIND it are both refractory and gas-poor, so only the leading
+edge can ignite and `N_eligible` is roughly half of 8.
+
+**MEASURED.** The user settled on `spread` **0.164** by eye — consistent with
+`N_eligible ~ 4-5`, and comfortably above the 0.125 bound the mean-field form
+predicts. Do not "correct" the default back down to it.
+
+The bound is still the useful object: it says saturation is IMPOSSIBLE below
+0.125 and possible above, which brackets the search. It does not name the edge.
 
 **The correction that matters: Gerola & Seiden's classical ~0.18 is 1/6.** It
 is the SAME branching law for THEIR 6-cell equal-area neighbourhood, not a

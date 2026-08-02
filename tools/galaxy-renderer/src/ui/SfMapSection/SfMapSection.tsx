@@ -62,7 +62,7 @@ function SfMapSection(): ReactNode {
           step={0.002}
           format={(v) => v.toFixed(3)}
           onChange={(v) => patchSfMap({ spread: v })}
-          info="Added ignition probability per already-ignited neighbour. Mean offspring per active cell is 8*spread over the Moore neighbourhood, so criticality is exactly 1/8 = 0.125 — above it the disc saturates exponentially. The whole useful band is below that mark."
+          info="Added ignition probability per already-ignited neighbour. Mean offspring is (eligible neighbours)*spread, so 1/8 = 0.125 is a LOWER bound on criticality — the cells behind a front are refractory and gas-depleted, leaving only its leading edge eligible, which puts the real threshold higher. Above it the disc saturates exponentially."
         />
         <ParamSlider
           label="Refractory steps"
