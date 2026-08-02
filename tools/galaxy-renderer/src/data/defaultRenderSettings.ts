@@ -124,6 +124,10 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   sfMapGasWeight: 1,
   sfMapRecentWeight: 1,
   sfMapActivityWeight: 1,
+  // 0 at boot, same rationale as the other two debug-view crossfades — and
+  // the pass gate: the placement rebuild only runs while this is above 0
+  // (see createGalaxyEngine.ts's rebuildBubblePlacements).
+  bubbleViewIntensity: 0,
   legacyDustEnabled: false,
   dustCloudEnabled: true,
   // ON at boot, which costs nothing: at the boot camera both bands read 1, so

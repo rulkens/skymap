@@ -106,6 +106,16 @@ function DebugViewsSection(): ReactNode {
           onChange={(v) => dispatch(renderPatched({ orientationSigmaIntegTexels: v }))}
           info="Gaussian sigma (sfMap grid texels) for the tensor-smoothing stage, after Jxx/Jxy/Jyy are built. Conventionally 2-3x the derivative sigma. Only reachable while the orientation view is above 0."
         />
+        <ParamSlider
+          label="Bubble view"
+          value={render.bubbleViewIntensity}
+          min={0}
+          max={1}
+          step={0.05}
+          format={(v) => v.toFixed(2)}
+          onChange={(v) => dispatch(renderPatched({ bubbleViewIntensity: v }))}
+          info="Crossfades in the SF-event catalog's own bubble/cavity placements — a second, independent star-formation model nobody has ever seen, resolved from the same events the SSPSF automaton never reads. Amber shells are old relic bubbles, cyan shells are actively-swept HII cavities. The only way to compare this model against the SF map view above."
+        />
       </div>
     </CollapsibleSection>
   );

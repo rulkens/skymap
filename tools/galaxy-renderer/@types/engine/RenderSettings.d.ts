@@ -136,6 +136,17 @@ export type RenderSettings = {
    */
   readonly sfMapActivityWeight: number;
   /**
+   * Bubble-view crossfade weight: 0 = pure galaxy, 1 = the SF-event
+   * catalog's own bubble/cavity placements alone (dustBubblePlacements.ts),
+   * same seam as `sfMapViewIntensity`/`orientationViewIntensity`. That
+   * catalog is a SECOND, independent star-formation model — resolved from
+   * the same `sfEventCatalog.ts` events the SSPSF automaton never sees —
+   * and this is the only way to compare the two side by side. Also this
+   * layer's own gate: the placement rebuild only runs while this is above
+   * 0, see `createGalaxyEngine.ts`'s `rebuildBubblePlacements`.
+   */
+  readonly bubbleViewIntensity: number;
+  /**
    * DUST (LEGACY) header pill: off forces the sprite generator's dust knobs
    * (`spriteDust`, `dustRingStrength`) to 0 in the copy handed to the engine,
    * leaving the stored `galaxy` params (and the sliders showing them)

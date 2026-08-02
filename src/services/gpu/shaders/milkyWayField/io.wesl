@@ -26,7 +26,8 @@
 //   offset 144 : dustSlices: vec4 (t1, t2, t3, unused)
 //   offset 160 : debugView: vec4 (dustViewIntensity, sfMapViewIntensity, orientationViewIntensity, galaxyWeight)
 //   offset 176 : sfMapChannels: vec4 (gasWeight, recentSfWeight, activityWeight, unused)
-//   total: 192 bytes.
+//   offset 192 : bubbleView: vec4 (intensity, unused, unused, unused)
+//   total: 208 bytes.
 //
 // counts.x is the live EMISSION component count — the central galaxy's plus
 // every extra's, drawn one quad each (see splat.wesl). counts.y/.z locate
@@ -112,6 +113,14 @@
 // visible there was no way to tell which one you were looking at. Each
 // weight independently scales its channel before the palette multiply, so
 // zeroing two isolates the third.
+//
+// bubbleView (offset 192) is bubblePresent.wesl's own crossfade weight —
+// the SF-event catalog's (dustBubblePlacements.ts) bubble/cavity overlay, a
+// SECOND, independent star-formation model drawn alongside sfMap's own view
+// so the two can be compared directly. Not folded into debugView: that vec4
+// is full (dust/sfMap/orientation/galaxyWeight), and reusing
+// sfMapChannels.w would name a bubble weight after an unrelated automaton
+// channel. Only .x is live; .yzw are reserved the same way counts2.x is.
 //
 // COMPS (read-only storage, binding 1) — every mixture's components back to
 // back (the central galaxy's emission, then each background extra's,
@@ -204,6 +213,7 @@ struct FieldUniforms {
   dustSlices: vec4<f32>,
   debugView: vec4<f32>,
   sfMapChannels: vec4<f32>,
+  bubbleView: vec4<f32>,
 };
 
 @group(0) @binding(0) var<uniform> u: FieldUniforms;

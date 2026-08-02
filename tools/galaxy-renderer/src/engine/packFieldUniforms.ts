@@ -40,8 +40,8 @@ import type { GalaxyFieldComponent } from '../../../../src/@types/galaxy/GalaxyF
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
-/** Float count of `io.wesl`'s `FieldUniforms` header — 12 vec4, camera + params + counts + counts2 + dustExtinction + dustNoise + dustSlices + debugView + sfMapChannels. */
-export const FIELD_HEADER_FLOATS = 48;
+/** Float count of `io.wesl`'s `FieldUniforms` header — 13 vec4, camera + params + counts + counts2 + dustExtinction + dustNoise + dustSlices + debugView + sfMapChannels + bubbleView. */
+export const FIELD_HEADER_FLOATS = 52;
 
 /** Byte size of the header struct, for `createBuffer`. */
 export const FIELD_HEADER_BUFFER_SIZE = FIELD_HEADER_FLOATS * 4;
@@ -172,6 +172,10 @@ export type SfMapChannelWeights = {
  * from `render`. `sfMapChannels` is `SfMapChannelWeights` above — the three
  * per-channel isolation sliders for the SF-map view specifically, same
  * "recomputed every call from `render`" discipline as `debugView`.
+ * `bubbleViewIntensity` is the SF-event bubble/cavity overlay's own
+ * crossfade weight (io.wesl's `bubbleView.x`) — a single scalar, not an
+ * object like `debugView`/`sfMapChannels`, since it has no per-channel
+ * split. bubblePresent.wesl is the only reader.
  */
 export function packFieldHeaderUniforms(
   cam: FieldCamera,
@@ -186,6 +190,7 @@ export function packFieldHeaderUniforms(
   dustSlices: FieldDustSlices,
   debugView: DebugViewWeights,
   sfMapChannels: SfMapChannelWeights,
+  bubbleViewIntensity: number,
   dst?: Float32Array,
 ): Float32Array {
   const out = dst ?? new Float32Array(FIELD_HEADER_FLOATS);
@@ -261,6 +266,12 @@ export function packFieldHeaderUniforms(
   out[45] = sfMapChannels.recentSfWeight;
   out[46] = sfMapChannels.activityWeight;
   out[47] = 0;
+
+  // bubbleView 48..51 = (intensity, unused, unused, unused).
+  out[48] = bubbleViewIntensity;
+  out[49] = 0;
+  out[50] = 0;
+  out[51] = 0;
 
   return out;
 }

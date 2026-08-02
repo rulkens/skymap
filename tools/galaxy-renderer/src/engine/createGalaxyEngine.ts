@@ -239,6 +239,12 @@ import {
 } from '../../../../src/data/galaxy/galaxyFieldMixture';
 import { buildHiiRegions, HII_MAX_COUNT } from '../../../../src/data/galaxy/hiiRegions';
 import {
+  buildDustBubblePlacements,
+  buildHiiCavityPlacements,
+  BUBBLE_BUDGET,
+  HII_CAVITY_BUDGET,
+} from '../../../../src/data/galaxy/dustBubblePlacements';
+import {
   buildGalaxySfMapArmForcing,
   sfMapGridRadius,
   SF_MAP_AZ,
@@ -281,6 +287,7 @@ import sfMapStepWgsl from './shaders/milkyWayField/sfMapStep.wesl?static';
 import sfMapPackWgsl from './shaders/milkyWayField/sfMapPack.wesl?static';
 import sfMapPresentWgsl from './shaders/milkyWayField/sfMapPresent.wesl?static';
 import orientationPresentWgsl from './shaders/milkyWayField/orientationPresent.wesl?static';
+import bubblePresentWgsl from './shaders/milkyWayField/bubblePresent.wesl?static';
 import sfMapOrientationFieldWgsl from './shaders/milkyWayField/sfMapOrientationField.wesl?static';
 import sfMapOrientationTensorWgsl from './shaders/milkyWayField/sfMapOrientationTensor.wesl?static';
 import sfMapOrientationTensorBlurWgsl from './shaders/milkyWayField/sfMapOrientationTensorBlur.wesl?static';
@@ -406,6 +413,13 @@ const PASS_STALE_FRAMES = 30;
 
 /** How often the engine hands a `PerfReport` to the UI. */
 const PERF_REPORT_INTERVAL_MS = 500;
+
+/**
+ * Floats per instance of the bubble-view overlay's own buffer (see
+ * `bubbleBuf`): center.xyz + radius (a vec4) then a kind lane (0 = relic
+ * bubble, 1 = HII cavity) — bubblePresent.wesl's `@location(0)`/`@location(1)`.
+ */
+const BUBBLE_RECORD_FLOATS = 5;
 
 /**
  * How often the engine hands a `MilkyWayFadeReadout` to the UI. Five times the
@@ -541,6 +555,21 @@ export async function createGalaxyEngine(
     label: 'galaxy:hiiComps',
     size: hiiCompsCapacity * FIELD_COMPONENT_FLOATS * 4,
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+  });
+  // The bubble-view overlay's own instance buffer (bubblePresent.wesl): a
+  // plain VERTEX buffer, not a storage array like `fieldCompsBuf` — there is
+  // no per-fragment lookup by index, just one instance-stepped attribute
+  // pair per placement, so it needs no 'auto'-layout bind group of its own
+  // and growing it never forces a bind-group rebuild the way
+  // `fieldCompsBuf`'s regrow does. Capacity starts at
+  // BUBBLE_BUDGET + HII_CAVITY_BUDGET (both placement builders' own admission
+  // ceilings) so the overlay's first activation never regrows. Grown, never
+  // shrunk — same discipline as `fieldCompsBuf`, see `rebuildBubblePlacements`.
+  let bubbleCapacity = BUBBLE_BUDGET + HII_CAVITY_BUDGET;
+  let bubbleBuf = device.createBuffer({
+    label: 'galaxy:bubbleComps',
+    size: bubbleCapacity * BUBBLE_RECORD_FLOATS * 4,
+    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
   });
   // Tool-only grade trailer: [saturation, vignette, gammaEncode, 0]. The bloom
   // and compositor uniforms are owned by their shared factories below.
@@ -987,6 +1016,49 @@ export async function createGalaxyEngine(
       { binding: 2, resource: orientationSampler },
       { binding: 3, resource: { buffer: orientationGridUbo } },
     ],
+  });
+
+  // ---- bubble-view overlay: the SF-event catalog's own placements ----
+  // A SECOND, independent star-formation model (dustBubblePlacements.ts,
+  // resolved from sfEventCatalog.ts) drawn as its own debug layer so it can
+  // be compared directly against the SSPSF automaton's sfMap view — see
+  // `rebuildBubblePlacements` (below `rebuildDustMixture`) for how
+  // `bubbleBuf` is built and packed. One instanced camera-facing quad per
+  // placement, no storage buffer/comps lookup: bubblePresent.wesl reads its
+  // per-instance center/radius/kind straight off the vertex buffer, and
+  // `u` (fieldUbo) only for the camera basis + its own crossfade weight —
+  // so this bind group needs just binding 0, built once like
+  // `sfMapPresentBG`/`orientationPresentBG` (fieldUbo's OBJECT never
+  // changes, only its content, rewritten every `drawFrame`).
+  const bubblePresentMod = makeShader(bubblePresentWgsl, 'galaxy:bubblePresent');
+  const bubblePresentPipe = device.createRenderPipeline({
+    label: 'galaxy:bubblePresentPipe',
+    layout: 'auto',
+    vertex: {
+      module: bubblePresentMod,
+      entryPoint: 'vs',
+      buffers: [
+        {
+          arrayStride: BUBBLE_RECORD_FLOATS * 4,
+          stepMode: 'instance',
+          attributes: [
+            { shaderLocation: 0, offset: 0, format: 'float32x4' },
+            { shaderLocation: 1, offset: 16, format: 'float32' },
+          ],
+        },
+      ],
+    },
+    fragment: {
+      module: bubblePresentMod,
+      entryPoint: 'fs',
+      targets: [{ format: HDR, blend: ADDITIVE_BLEND }],
+    },
+    primitive: { topology: 'triangle-list' },
+  });
+  const bubblePresentBG = device.createBindGroup({
+    label: 'galaxy:bubblePresentBG',
+    layout: bubblePresentPipe.getBindGroupLayout(0),
+    entries: [{ binding: 0, resource: { buffer: fieldUbo } }],
   });
 
   // ---- the pass chain itself: field blur -> tensor -> tensor blur -> coherence ----
@@ -1724,6 +1796,12 @@ export async function createGalaxyEngine(
   // instances for the HII pass, and what gates whether that pass (and its
   // composite into HDR) runs at all this frame.
   let hiiEmissionCount = 0;
+  // The live total from the last `rebuildBubblePlacements` pack — relic
+  // bubbles plus HII cavities, concatenated. What `drawFrame` instances for
+  // the bubble-view overlay pass. Stays 0 (and `bubbleBuf` stale-but-unread)
+  // whenever `render.bubbleViewIntensity` is 0 — see that function's own
+  // early-return.
+  let bubbleInstanceCount = 0;
 
   /**
    * scheduleSfMapReadback — the ONE-PER-GENERATION CPU copy of `sfMapTex`
@@ -2079,6 +2157,78 @@ export async function createGalaxyEngine(
   }
 
   /**
+   * rebuildBubblePlacements — the SF-event catalog's own bubble/cavity
+   * placements (dustBubblePlacements.ts's `buildDustBubblePlacements` +
+   * `buildHiiCavityPlacements`), packed into `bubbleBuf` for the bubble-view
+   * debug overlay. A SECOND, independent star-formation model — both
+   * builders read the SAME `sfEventCatalog.ts` events the SSPSF automaton
+   * never sees — drawn so it can be compared directly against the
+   * automaton's own sfMap view. Central galaxy only, from the CACHED
+   * `fieldGeometry`/`currentDust`/`currentSeed` — same inputs
+   * `rebuildDustMixture` reads, and called from the same two sites
+   * (`setParams`, `setFieldTuning`), right after it.
+   *
+   * Gated on `render.bubbleViewIntensity > 0`, same early-return discipline
+   * as `rebuildSfMapOrientationIfNeeded` — with the overlay off, this call
+   * is one comparison and nothing else, so a debug layer nobody is looking
+   * at costs nothing. `setRender` calls this again, edge-triggered on the
+   * 0 -> nonzero crossing (see its own comment), so switching the overlay on
+   * populates it immediately rather than waiting for the next geometry
+   * change.
+   *
+   * Growing `bubbleBuf` needs no bind-group rebuild, unlike `fieldCompsBuf`
+   * — it is a plain VERTEX buffer, not part of an 'auto'-layout bind group
+   * (see `bubbleBuf`'s own declaration comment).
+   */
+  function rebuildBubblePlacements(): void {
+    if (render.bubbleViewIntensity <= 0) {
+      bubbleInstanceCount = 0;
+      return;
+    }
+    const relics = fieldGeometry
+      ? buildDustBubblePlacements(fieldGeometry, currentDust, currentSeed)
+      : [];
+    const cavities = fieldGeometry
+      ? buildHiiCavityPlacements(fieldGeometry, currentDust, fieldTuning, currentSeed)
+      : [];
+    const total = relics.length + cavities.length;
+    if (total > bubbleCapacity) {
+      bubbleCapacity = total;
+      bubbleBuf.destroy();
+      bubbleBuf = device.createBuffer({
+        label: 'galaxy:bubbleComps',
+        size: bubbleCapacity * BUBBLE_RECORD_FLOATS * 4,
+        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      });
+    }
+    bubbleInstanceCount = total;
+    if (total === 0) return;
+    const data = new Float32Array(total * BUBBLE_RECORD_FLOATS);
+    let i = 0;
+    // kind 0 = relic bubble, 1 = HII cavity — bubblePresent.wesl's own
+    // palette switch.
+    for (const p of relics) {
+      const base = i * BUBBLE_RECORD_FLOATS;
+      data[base] = p.center[0];
+      data[base + 1] = p.center[1];
+      data[base + 2] = p.center[2];
+      data[base + 3] = p.radius;
+      data[base + 4] = 0;
+      i++;
+    }
+    for (const p of cavities) {
+      const base = i * BUBBLE_RECORD_FLOATS;
+      data[base] = p.center[0];
+      data[base + 1] = p.center[1];
+      data[base + 2] = p.center[2];
+      data[base + 3] = p.radius;
+      data[base + 4] = 1;
+      i++;
+    }
+    device.queue.writeBuffer(bubbleBuf, 0, data);
+  }
+
+  /**
    * rebuildSfMap — reruns the SSPSF automaton from scratch: bakes the
    * arm-forcing texture (galaxySfMapArmForcing.ts, off the CACHED geometry —
    * same contract rebuildDustMixture follows) then dispatches
@@ -2421,6 +2571,7 @@ export async function createGalaxyEngine(
     // scalar the packer never round-trips into the UBO bytes.
     currentSeed = (p.seed ?? 0) | 0 || 1;
     rebuildDustMixture();
+    rebuildBubblePlacements();
     repackFieldComponents();
     repackHiiComponents();
     // Always — a new galaxy means new geometry/arms, so the automaton and
@@ -2458,6 +2609,7 @@ export async function createGalaxyEngine(
     const previousOrientationViewIntensity = render.orientationViewIntensity;
     const previousOrientationSigmaDeriv = render.orientationSigmaDerivTexels;
     const previousOrientationSigmaInteg = render.orientationSigmaIntegTexels;
+    const previousBubbleViewIntensity = render.bubbleViewIntensity;
     Object.assign(render, patch);
     if (render.aggregateDivisor !== previousDivisor) buildAggregateTarget();
     if (render.fieldDivisor !== previousFieldDivisor) buildFieldTarget();
@@ -2493,6 +2645,15 @@ export async function createGalaxyEngine(
         render.orientationSigmaIntegTexels !== previousOrientationSigmaInteg)
     ) {
       rebuildSfMapOrientationIfNeeded();
+    }
+    // Same 0 -> nonzero edge-trigger as the orientation chain just above,
+    // for the same reason: `rebuildBubblePlacements`'s own early return
+    // already makes every OTHER render-bag push a no-op, but the crossing
+    // itself has to force one rebuild so switching the overlay on shows
+    // something immediately rather than waiting for the next
+    // setParams/setFieldTuning.
+    if (previousBubbleViewIntensity <= 0 && render.bubbleViewIntensity > 0) {
+      rebuildBubblePlacements();
     }
   }
 
@@ -2545,6 +2706,7 @@ export async function createGalaxyEngine(
       ).map((c) => transformGalaxyFieldComponent(c, e.transform)),
     }));
     rebuildDustMixture();
+    rebuildBubblePlacements();
     repackFieldComponents();
     repackHiiComponents();
     if (sfMapTouched) {
@@ -3079,6 +3241,7 @@ export async function createGalaxyEngine(
           render.dustViewIntensity,
           render.sfMapViewIntensity,
           render.orientationViewIntensity,
+          render.bubbleViewIntensity,
         ),
     );
     const debugView: DebugViewWeights = {
@@ -3185,6 +3348,10 @@ export async function createGalaxyEngine(
       // The SF-map per-channel isolation weights, computed once above —
       // only sfMapPresent.wesl's fs reads this lane.
       sfMapChannels,
+      // The bubble-view overlay's own crossfade weight — only
+      // bubblePresent.wesl's fs reads this lane (via its own bind group,
+      // bound to THIS header's `fieldUbo`, not the HII one below).
+      render.bubbleViewIntensity,
       fieldData,
     );
     device.queue.writeBuffer(fieldUbo, 0, fieldData);
@@ -3215,6 +3382,10 @@ export async function createGalaxyEngine(
       // own draw (hiiBG never binds sfMapPresent.wesl), shared purely
       // because both calls write the same struct shape.
       sfMapChannels,
+      // Same scalar as the field header above — never read by this pass's
+      // own draw (hiiBG never binds bubblePresentPipe either), shared purely
+      // because both calls write the same struct shape.
+      render.bubbleViewIntensity,
       hiiData,
     );
     device.queue.writeBuffer(hiiUbo, 0, hiiData);
@@ -3452,6 +3623,20 @@ export async function createGalaxyEngine(
           pass.setBindGroup(0, orientationPresentBG);
           pass.draw(3);
         }
+        // The bubble-view overlay: an instanced draw, not a fullscreen
+        // triangle like the two presents just above (each placement is its
+        // own camera-facing quad, see bubblePresent.wesl). Additive, so it
+        // sums with whatever this pass has already drawn; independent of
+        // the other three — the SF-event catalog is a second, unrelated
+        // star-formation model, not another lens on the same automaton, so
+        // this is its own `if`, not an `else if` chained onto sfMap's or
+        // orientation's.
+        if (render.bubbleViewIntensity > 0 && bubbleInstanceCount > 0) {
+          pass.setPipeline(bubblePresentPipe);
+          pass.setBindGroup(0, bubblePresentBG);
+          pass.setVertexBuffer(0, bubbleBuf);
+          pass.draw(6, bubbleInstanceCount);
+        }
       }
       pass.setPipeline(dustPipe);
       pass.setBindGroup(0, dustBG);
@@ -3650,6 +3835,7 @@ export async function createGalaxyEngine(
       dustUbo.destroy();
       fieldUbo.destroy();
       fieldCompsBuf.destroy();
+      bubbleBuf.destroy();
       dustNoiseTex.destroy();
       sfMapArmForcingTex.destroy();
       sfMapStateA.destroy();
