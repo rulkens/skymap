@@ -70,11 +70,11 @@ function SfMapSection({ diagnostics }: SfMapSectionProps): ReactNode {
           label="Spread"
           value={sfMap.spread}
           min={0}
-          max={0.2}
+          max={0.5}
           step={0.002}
           format={(v) => v.toFixed(3)}
           onChange={(v) => patchSfMap({ spread: v })}
-          info="Added ignition probability per already-ignited neighbour. Mean offspring is (eligible neighbours)*spread, so 1/8 = 0.125 is a LOWER bound on criticality — the cells behind a front are refractory and gas-depleted, leaving only its leading edge eligible, which puts the real threshold higher. Above it the disc saturates exponentially."
+          info="Added ignition probability per already-ignited neighbour. Two thresholds, and the higher one is what governs whether SPURS form: 1/8 = 0.125 is where a cell with all eight neighbours lit becomes critical, but the cells behind a front are refractory and gas-depleted, so only its leading edge propagates — with ~3 live neighbours there, fronts need ~1/3 to survive and grow. Below that the disc only ever shows short-lived isolated blobs."
         />
         <ParamSlider
           label="Refractory steps"
@@ -155,7 +155,11 @@ function SfMapSection({ diagnostics }: SfMapSectionProps): ReactNode {
           <div className={styles.row}>
             <span className={styles.slot}>readback landed</span>
             <span className={styles.value}>
-              {diagnostics ? (diagnostics.hasData ? `yes (gen ${diagnostics.generation})` : 'no') : '—'}
+              {diagnostics
+                ? diagnostics.hasData
+                  ? `yes (gen ${diagnostics.generation})`
+                  : 'no'
+                : '—'}
             </span>
           </div>
           <div className={styles.row}>
