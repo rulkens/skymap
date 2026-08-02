@@ -19,12 +19,14 @@ const RINGS: u32 = 256u;
 // as sliders (baseIgnition/spread/...).
 const OLD_ACTIVITY_DECAY: f32 = 0.985;
 // Steady state for a cell igniting every T steps is GAIN/(1 - DECAY^T), and
-// sfMapPack clamps the channel to [0,1]. Refractory 7 plus gas recovery gives
-// T ~ 17, so the previous 0.35 settled at ~1.55 and pinned the channel FLAT
-// across the whole active disc. That is not cosmetic: buildSfMapOrientation
-// reads this channel, and a clamped-flat field has zero gradient, so the
-// structure tensor would report coherence 0 everywhere.
-const OLD_ACTIVITY_GAIN: f32 = 0.05;
+// sfMapPack clamps the channel to [0,1]. This has to survive BOTH ends: at
+// 0.35 a busy cell (T ~ 17) settled at ~1.55 and pinned the channel flat, but
+// too low and a cell that ignites once a run is invisible, since a single
+// ignition only ever reaches GAIN itself. 0.15 keeps one ignition legible and
+// only clamps below T ~ 10. Both failures matter beyond looks:
+// buildSfMapOrientation reads this channel, and flat OR black both mean zero
+// gradient and coherence 0 everywhere.
+const OLD_ACTIVITY_GAIN: f32 = 0.15;
 
 struct SfMapConstants {
   rMin: f32,

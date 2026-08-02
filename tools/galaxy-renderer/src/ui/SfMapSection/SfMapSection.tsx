@@ -48,27 +48,27 @@ function SfMapSection(): ReactNode {
           label="Base ignition"
           value={sfMap.baseIgnition}
           min={0}
-          max={0.02}
-          step={0.0005}
-          format={(v) => v.toFixed(4)}
+          max={0.002}
+          step={0.00005}
+          format={(v) => v.toFixed(5)}
           onChange={(v) => patchSfMap({ baseIgnition: v })}
-          info="Spontaneous ignition probability per cell per step, independent of neighbours — the seed that keeps a quiet disc from dying out."
+          info="Spontaneous ignition probability per cell per step, independent of neighbours — the seed that keeps a quiet disc from dying out. Seeds should be RARE: propagation does the work, and the whole grid rolls this every step."
         />
         <ParamSlider
           label="Spread"
           value={sfMap.spread}
           min={0}
-          max={0.6}
-          step={0.005}
+          max={0.2}
+          step={0.002}
           format={(v) => v.toFixed(3)}
           onChange={(v) => patchSfMap({ spread: v })}
-          info="Added ignition probability per already-ignited neighbour. Percolation knob: below threshold the structure dies, far above it the disc saturates — the useful band is narrow."
+          info="Added ignition probability per already-ignited neighbour. Mean offspring per active cell is 8*spread over the Moore neighbourhood, so criticality is exactly 1/8 = 0.125 — above it the disc saturates exponentially. The whole useful band is below that mark."
         />
         <ParamSlider
           label="Refractory steps"
           value={sfMap.refractorySteps}
           min={1}
-          max={40}
+          max={30}
           step={1}
           format={(v) => String(Math.round(v))}
           onChange={(v) => patchSfMap({ refractorySteps: Math.round(v) })}
@@ -78,21 +78,21 @@ function SfMapSection(): ReactNode {
           label="Gas regen"
           value={sfMap.gasRegen}
           min={0}
-          max={0.3}
-          step={0.01}
-          format={(v) => v.toFixed(2)}
+          max={0.2}
+          step={0.005}
+          format={(v) => v.toFixed(3)}
           onChange={(v) => patchSfMap({ gasRegen: v })}
-          info="Gas recovered per step as a fraction of full — the star/gas feedback the original stars-only model lacked."
+          info="Gas recovered per step as a fraction of full — the star/gas feedback the original stars-only model lacked. Recovery takes 1/gasRegen steps, so this is the CONTRAST knob: it sets how long a burnt void stays a void rather than simmering back."
         />
         <ParamSlider
           label="Arm forcing"
           value={sfMap.armForcing}
           min={0}
-          max={3}
-          step={0.05}
-          format={(v) => v.toFixed(2)}
+          max={0.1}
+          step={0.001}
+          format={(v) => v.toFixed(3)}
           onChange={(v) => patchSfMap({ armForcing: v })}
-          info="How much the spiral ridge raises local ignition probability. 0 makes the automaton blind to the arms and the output goes purely flocculent."
+          info="How much the spiral ridge raises local ignition probability, per step. 0 makes the automaton blind to the arms and the output goes purely flocculent. Past ~0.06 the arms IGNITE rather than bias — a forced cell then fires as often as its refractory window allows, whatever spread does."
         />
         <ParamSlider
           label="Corotation radius"
@@ -108,11 +108,11 @@ function SfMapSection(): ReactNode {
           label="Shear rate"
           value={sfMap.shearRate}
           min={0}
-          max={0.3}
+          max={0.5}
           step={0.005}
           format={(v) => v.toFixed(3)}
           onChange={(v) => patchSfMap({ shearRate: v })}
-          info="Angular offset scale per step, in radians at unit (1/r - 1/corotationRadius)."
+          info="Angular offset scale per step, in radians at unit (1/r - 1/corotationRadius). Total winding is shearRate * steps, so dropping steps to 100 cut the wind by 3x — expect to raise this to get the same pitch back."
         />
         {/* Lives on `fieldTuning` directly, not `sfMap`, since it gates a
             CONSUMER (the dust cloud) reading this tier's output rather than
