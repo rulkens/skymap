@@ -61,6 +61,8 @@ export type RenderSettings = {
   readonly fieldDivisor: number;
   /** Downsample divisor of the dust-column map's own offscreen. Separate from `fieldDivisor` because the dust splat is much higher-frequency than the smooth emission field it used to share a target with — see `defaultRenderSettings.ts`. Also reallocates rather than riding the uniform. */
   readonly dustDivisor: number;
+  /** Downsample divisor of the HII-region tier's own offscreen. Separate from `fieldDivisor` for the same reason `dustDivisor` is: a shell sprite is small and bright by construction, so sharing the smooth field's coarser target collapsed it under a texel and bloom promoted the spike into a firefly — see `defaultRenderSettings.ts`. Also reallocates rather than riding the uniform. */
+  readonly hiiDivisor: number;
 
   /** SPIKE, tool-only: draw the sprite star field. Off isolates the analytic field. */
   readonly spriteField: boolean;
@@ -74,6 +76,12 @@ export type RenderSettings = {
    * `analyticField` — it replaces that pass's own draw, not a separate one.
    */
   readonly dustView: boolean;
+  /**
+   * SF-map view mode: present the SSPSF automaton's log-polar output directly,
+   * same seam as `dustView`. Step 1's whole purpose — the automaton feeds
+   * nothing else yet, so this is the only way to see it.
+   */
+  readonly sfMapView: boolean;
   /**
    * DUST (LEGACY) header pill: off forces the sprite generator's dust knobs
    * (`spriteDust`, `dustRingStrength`) to 0 in the copy handed to the engine,

@@ -47,7 +47,9 @@ import DustSection from '../DustSection/DustSection';
 import DustCloudSection from '../DustCloudSection/DustCloudSection';
 import FadeSection from '../FadeSection/FadeSection';
 import FieldSection from '../FieldSection/FieldSection';
+import HiiSection from '../HiiSection/HiiSection';
 import ParamSlider from '../ParamSlider/ParamSlider';
+import SfMapSection from '../SfMapSection/SfMapSection';
 import TonemapSelect from '../TonemapSelect/TonemapSelect';
 import TypePicker from '../TypePicker/TypePicker';
 import MultiGalaxySection from '../MultiGalaxySection/MultiGalaxySection';
@@ -304,9 +306,25 @@ function ControlsPanel({ fade }: ControlsPanelProps): ReactNode {
           <span>Dust view (JWST)</span>
         </label>
 
+        {/* The SF-map view mode: same seam as the JWST toggle above, but
+            presents the SSPSF automaton's log-polar output in place of the
+            emission draw. Step 1's only way to see the automaton — it feeds
+            nothing else yet. */}
+        <label className={styles.legacyToggleRow}>
+          <input
+            type="checkbox"
+            className={styles.pillToggle}
+            checked={render.sfMapView}
+            onChange={(e) => dispatch(renderPatched({ sfMapView: e.target.checked }))}
+          />
+          <span>SF map view</span>
+        </label>
+
         <FieldSection />
         <ArmFieldSection />
         <ArmCloudSection />
+        <HiiSection />
+        <SfMapSection />
         <DustSection />
         <DustCloudSection />
 
@@ -578,6 +596,16 @@ function ControlsPanel({ fade }: ControlsPanelProps): ReactNode {
             format={(v) => String(Math.round(v))}
             onChange={(v) => dispatch(renderPatched({ dustDivisor: Math.round(v) }))}
             info="Its own divisor, separate from the field's: the dust splat is much higher-frequency than the smooth emission field, so it needs a finer target to avoid decimating thin lanes into beads."
+          />
+          <ParamSlider
+            label="HII target divisor"
+            value={render.hiiDivisor}
+            min={1}
+            max={8}
+            step={1}
+            format={(v) => String(Math.round(v))}
+            onChange={(v) => dispatch(renderPatched({ hiiDivisor: Math.round(v) }))}
+            info="Its own divisor, separate from the field's: an HII shell sprite is small and bright by construction, so sharing a coarser target collapses it under a texel and bloom turns the spike into a firefly. 1 (full canvas) is the default for exactly that reason."
           />
         </CollapsibleSection>
 

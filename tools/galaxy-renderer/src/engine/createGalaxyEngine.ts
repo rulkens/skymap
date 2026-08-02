@@ -229,6 +229,13 @@ import {
   DEFAULT_GALAXY_FIELD_TUNING,
   GALAXY_FIELD_MAX_COMPONENTS,
 } from '../../../../src/data/galaxy/galaxyFieldMixture';
+import { buildHiiRegions, HII_MAX_COUNT } from '../../../../src/data/galaxy/hiiRegions';
+import {
+  buildGalaxySfMapArmForcing,
+  sfMapGridRadius,
+  SF_MAP_AZ,
+  SF_MAP_RINGS,
+} from '../../../../src/data/galaxy/galaxySfMapArmForcing';
 import { DISC_SIGMA_RATIOS } from '../../../../src/data/galaxy/discSurfaceFit';
 import {
   buildGalaxyDustMixture,
@@ -262,6 +269,9 @@ import splatWgsl from './shaders/milkyWayField/splat.wesl?static';
 import dustMapWgsl from './shaders/milkyWayField/dustMap.wesl?static';
 import dustPresentWgsl from './shaders/milkyWayField/dustPresent.wesl?static';
 import dustNoiseBakeWgsl from './shaders/milkyWayField/dustNoiseBake.wesl?static';
+import sfMapStepWgsl from './shaders/milkyWayField/sfMapStep.wesl?static';
+import sfMapPackWgsl from './shaders/milkyWayField/sfMapPack.wesl?static';
+import sfMapPresentWgsl from './shaders/milkyWayField/sfMapPresent.wesl?static';
 import gradeWgsl from './shaders/grade.wesl?static';
 
 /** HDR working format for the scene + bloom pyramid — the runtime's `hdr` row. */
@@ -296,6 +306,9 @@ const DUST_NOISE_TEX_SIZE = 128;
 
 /** Matches dustNoiseBake.wesl's `@workgroup_size(4, 4, 4)`. */
 const DUST_NOISE_WORKGROUP_SIZE = 4;
+
+/** Matches sfMapStep.wesl's/sfMapPack.wesl's `@workgroup_size(16, 16)`; SF_MAP_AZ/SF_MAP_RINGS are both multiples of it. */
+const SF_MAP_WORKGROUP_SIZE = 16;
 
 /**
  * Resolution divisor for bloom level `n`, mirroring the runtime's `bloomN`
@@ -333,14 +346,25 @@ const bloomScale = (level: number): number => 2 ** (level + 1);
  *    comment). Both targets are cleared, not loaded — no tile-reload tax —
  *    so sharing one slot between the two answers the same question ("what
  *    did this pass cost") regardless of which one ran. Only encoded when the
- *    analytic field is on, so the slot self-drops.
- *  - `'scene'` is the full-res HDR pass: the aggregate's additive upsample
- *    followed by the dust billboards. Those two share an attachment and so
- *    share a pass; separating them would mean ending the HDR pass and
- *    reopening it with `loadOp: 'load'`, which on a tile-based GPU is a full
- *    tile store plus reload of the whole HDR target — more cost than the
- *    measurement is worth, and enough to corrupt the wall clock that outranks
- *    it.
+ *    analytic field is on, so the slot self-drops. Also self-drops while
+ *    `render.sfMapView` is on: that diagnostic presents straight into
+ *    `sceneTex` at full canvas resolution (see the `'scene'` bullet and
+ *    `sfMapPresent.wesl`'s header — a fieldDivisor-downsampled target would
+ *    bias the sharpness judgement the view exists to make), so it fills
+ *    neither `fieldTex` nor `dustViewTex` and has no pass of its own here.
+ *  - `'hii'` is the HII tier's own splat — the same `splatPipe`, a different
+ *    bind group and target (`hiiTex`, `render.hiiDivisor`) — see `hiiTex`'s
+ *    declaration comment for why it cannot share `'field'`'s slot or target.
+ *    Only encoded when there is at least one HII component to draw.
+ *  - `'scene'` is the full-res HDR pass: the aggregate's additive upsample,
+ *    the field's and the HII tier's own upsamples, then the dust billboards
+ *    — or, while `render.sfMapView` is on, the SSPSF diagnostic drawn
+ *    straight into this pass instead of any of those. All share one
+ *    attachment and so share a pass; separating them would mean ending the
+ *    HDR pass and reopening it with `loadOp: 'load'`, which on a tile-based
+ *    GPU is a full tile store plus reload of the whole HDR target — more
+ *    cost than the measurement is worth, and enough to corrupt the wall
+ *    clock that outranks it.
  *  - `'bloom'` is the whole pyramid as ONE span (begin on the bright pass, end
  *    on the fold), which is exactly how the app's frame program bills it (see
  *    `frameProgram.ts`'s `'bloom'` step and `runBloom`). Matching keeps a
@@ -353,6 +377,7 @@ const TIMING_SLOTS: readonly string[] = [
   'stars',
   'dustMap',
   'field',
+  'hii',
   'scene',
   'bloom',
   'composite',
@@ -404,6 +429,8 @@ type Extra = {
   fieldGeometry: GalaxyFieldGeometry;
   transform: Pick<ExtraGalaxySpec, 'pos' | 'scale' | 'rotY' | 'tiltX'>;
   fieldMixture: readonly GalaxyFieldComponent[];
+  /** This extra's own HII tier — see `hiiMixture`'s declaration below for why it rides a separate buffer from `fieldMixture`. */
+  hiiMixture: readonly GalaxyFieldComponent[];
 };
 
 export async function createGalaxyEngine(
@@ -486,6 +513,26 @@ export async function createGalaxyEngine(
   let fieldCompsBuf = device.createBuffer({
     label: 'galaxy:fieldComps',
     size: fieldCompsCapacity * FIELD_COMPONENT_FLOATS * 4,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+  });
+  // The HII tier's own header + storage buffer, byte-identical layout to
+  // `fieldUbo`/`fieldCompsBuf` (same `io.wesl` struct, same `splatPipe`) but
+  // never concatenated into `fieldCompsBuf` — see research doc §18.1: a
+  // shell sprite is small and bright by construction, so sharing the smooth
+  // field's coarser target collapsed it into a bloom firefly. Own buffer,
+  // own target (`hiiTex`), own divisor (`render.hiiDivisor`). Capacity starts
+  // at `HII_MAX_COUNT`, the tier's own per-galaxy admission ceiling
+  // (`hiiRegions.ts`), and grows the same never-shrink way `fieldCompsBuf`
+  // does once extras are added.
+  const hiiUbo = device.createBuffer({
+    label: 'galaxy:hiiUniforms',
+    size: FIELD_HEADER_BUFFER_SIZE,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  let hiiCompsCapacity = HII_MAX_COUNT;
+  let hiiCompsBuf = device.createBuffer({
+    label: 'galaxy:hiiComps',
+    size: hiiCompsCapacity * FIELD_COMPONENT_FLOATS * 4,
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
   });
   // Tool-only grade trailer: [saturation, vignette, gammaEncode, 0]. The bloom
@@ -714,6 +761,121 @@ export async function createGalaxyEngine(
     device.queue.submit([bakeEnc.finish()]);
   }
 
+  // ---- SSPSF star-formation automaton (sfMap): pipelines + persistent textures ----
+  // Grid is fixed (SF_MAP_AZ x SF_MAP_RINGS, galaxySfMapArmForcing.ts), so
+  // every texture here is allocated ONCE — unlike dustMapTex/fieldTex, none
+  // of them are canvas-size-dependent. See rebuildSfMap (below setParams)
+  // for the dispatch loop and its triggers.
+  const sfMapStepMod = makeShader(sfMapStepWgsl, 'galaxy:sfMapStep');
+  const sfMapStepPipe = device.createComputePipeline({
+    label: 'galaxy:sfMapStepPipe',
+    layout: 'auto',
+    compute: { module: sfMapStepMod, entryPoint: 'cs' },
+  });
+  const sfMapPackMod = makeShader(sfMapPackWgsl, 'galaxy:sfMapPack');
+  const sfMapPackPipe = device.createComputePipeline({
+    label: 'galaxy:sfMapPackPipe',
+    layout: 'auto',
+    compute: { module: sfMapPackMod, entryPoint: 'cs' },
+  });
+  const sfMapPresentMod = makeShader(sfMapPresentWgsl, 'galaxy:sfMapPresent');
+  const sfMapPresentPipe = device.createRenderPipeline({
+    label: 'galaxy:sfMapPresentPipe',
+    layout: 'auto',
+    vertex: { module: sfMapPresentMod, entryPoint: 'vs' },
+    // Additive, not a bare overwrite: this pass now draws straight into the
+    // scene pass's `sceneTex` (see `drawFrame`'s scene pass), which already
+    // carries any background extras' sprite glow by the time this draw runs
+    // — a replace blend would erase them under the diagnostic. Against a
+    // freshly-cleared target (this shader's ONLY other era, before this
+    // change) additive and replace are identical, since the destination
+    // starts at zero — so this is a strict fix, not a behaviour trade.
+    fragment: {
+      module: sfMapPresentMod,
+      entryPoint: 'fs',
+      targets: [{ format: HDR, blend: ADDITIVE_BLEND }],
+    },
+    primitive: { topology: 'triangle-list' },
+  });
+  // 'repeat' in U (azimuth wraps at theta=0/2*PI), 'clamp-to-edge' in V
+  // (radius does not) — sfMapPresent.wesl's fs resamples through this.
+  const sfMapPresentSampler = device.createSampler({
+    label: 'galaxy:sfMapPresentSampler',
+    addressModeU: 'repeat',
+    addressModeV: 'clamp-to-edge',
+    magFilter: 'linear',
+    minFilter: 'linear',
+  });
+  // The arm-forcing field, baked CPU-side (galaxySfMapArmForcing.ts) from the
+  // SAME ridge functions the sprite/analytic arms use — never re-derived in
+  // WGSL. Content rewritten every rebuildSfMap; the texture object itself
+  // never resizes.
+  const sfMapArmForcingTex = device.createTexture({
+    label: 'galaxy:sfMapArmForcingTex',
+    size: [SF_MAP_AZ, SF_MAP_RINGS],
+    format: 'r32float',
+    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+  });
+  // Ping-pong state: (gasFraction, ageSinceIgnition, refractoryTimer,
+  // oldActivityEma). Both need BOTH usages — each alternates between being
+  // the step's read source (texture_2d, TEXTURE_BINDING) and its write
+  // target (texture_storage_2d, STORAGE_BINDING) from one step to the next.
+  const makeSfMapStateTex = (label: string): GPUTexture =>
+    device.createTexture({
+      label,
+      size: [SF_MAP_AZ, SF_MAP_RINGS],
+      format: 'rgba16float',
+      usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
+    });
+  const sfMapStateA = makeSfMapStateTex('galaxy:sfMapStateA');
+  const sfMapStateB = makeSfMapStateTex('galaxy:sfMapStateB');
+  // The packed, presentable output (sfMapPack.wesl): gas / recent SF / older
+  // SF. Exposed on the engine handle (getSfMapTexture) for the sibling UI
+  // and future consumers — see the research doc §19's staging note.
+  const sfMapTex = device.createTexture({
+    label: 'galaxy:sfMapTex',
+    size: [SF_MAP_AZ, SF_MAP_RINGS],
+    format: 'rgba8unorm',
+    usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
+  });
+  // Constant-across-one-rebuild parameters (rMin/rMax + every sfMap tuning
+  // knob) — rewritten once per rebuildSfMap, unlike sfMapStepIndexBuf below.
+  const sfMapConstUbo = device.createBuffer({
+    label: 'galaxy:sfMapConstUbo',
+    size: 48, // 12 f32 lanes (10 used) — see SfMapConstants in sfMapStep.wesl
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  // rMin/rMax only — sfMapPresent.wesl's own small uniform, separate from
+  // io.wesl's per-frame 'u' (camera) since these two change on entirely
+  // different cadences (rebuild vs every frame).
+  const sfMapGridUbo = device.createBuffer({
+    label: 'galaxy:sfMapGridUbo',
+    size: 16,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  // Holds every step's own index, one SfMapStepIndex-sized (4-byte) slot per
+  // step, each padded out to the device's own uniform offset alignment — see
+  // rebuildSfMap for why a per-step BIND GROUP (static offset into this one
+  // buffer) replaces what would otherwise need `steps` separate
+  // writeBuffer+submit round trips. Reallocated in rebuildSfMap to match the
+  // live `steps` count; null until the first rebuild.
+  let sfMapStepIndexBuf: GPUBuffer | null = null;
+  // Presentation bind group: io.wesl's per-frame camera uniform (fieldUbo,
+  // already written every drawFrame) plus this pass's own three bindings.
+  // Built once — sfMapTex/sfMapGridUbo are the same GPU objects for the
+  // engine's whole lifetime, only their CONTENT changes per rebuild, and a
+  // bind group only needs rebuilding when the OBJECT it references does.
+  const sfMapPresentBG = device.createBindGroup({
+    label: 'galaxy:sfMapPresentBG',
+    layout: sfMapPresentPipe.getBindGroupLayout(0),
+    entries: [
+      { binding: 0, resource: { buffer: fieldUbo } },
+      { binding: 1, resource: sfMapTex.createView() },
+      { binding: 2, resource: sfMapPresentSampler },
+      { binding: 3, resource: { buffer: sfMapGridUbo } },
+    ],
+  });
+
   // ---- the aggregate composite: the RUNTIME's additive upsample ----
   // Fully generic — a covering-triangle 4-tap low-pass of whatever view it is
   // handed, additively blended into an `rgba16float` target. The star pass
@@ -801,6 +963,11 @@ export async function createGalaxyEngine(
   // the next `setParams` reads it and there is nothing yet to rebuild.
   let fieldGeometry: GalaxyFieldGeometry | null = null;
   let fieldTuning: GalaxyFieldTuning = DEFAULT_GALAXY_FIELD_TUNING;
+  // The CENTRAL galaxy's HII tier, built and cached the same way
+  // `fieldMixture` is — but never concatenated into it (see `hiiTex`'s
+  // declaration comment). Rebuilt on the same two triggers, packed into its
+  // own `hiiCompsBuf` by `repackHiiComponents`.
+  let hiiMixture: readonly GalaxyFieldComponent[] = [];
   // The analytic dust lane's mixture, CENTRAL galaxy only (grill session Q6:
   // extras get dust in a follow-up, zero rework — the packed layout already
   // carries per-galaxy dustOffset/dustCount). Cached like `fieldMixture` so
@@ -920,6 +1087,28 @@ export async function createGalaxyEngine(
       entries: [{ binding: 0, resource: dustMapTex.createView() }],
     });
   }
+  // The HII pass reuses `splatPipe` itself (same shader, same emission math),
+  // just against its own header/storage buffers and its own target — a
+  // second bind group for the SAME pipeline, exactly the `layout: 'auto'`
+  // pattern `starBG`/`dustBG` already establish for two passes sharing one
+  // pipeline object. `dustMapTex`/`dustMapSampler` are still bound (splat.wesl's
+  // fs imports both unconditionally), but `packFieldHeaderUniforms`'s
+  // `primaryCount` is always packed 0 for this header (see `drawFrame`), so
+  // the dust-attenuation branch never triggers — HII does not (yet) darken
+  // under the lane it may sit inside.
+  let hiiBG: GPUBindGroup;
+  function buildHiiBindGroup(): GPUBindGroup {
+    return device.createBindGroup({
+      label: 'galaxy:hiiBG',
+      layout: splatPipe.getBindGroupLayout(0),
+      entries: [
+        { binding: 0, resource: { buffer: hiiUbo } },
+        { binding: 1, resource: { buffer: hiiCompsBuf } },
+        { binding: 2, resource: dustMapTex.createView() },
+        { binding: 6, resource: dustMapSampler },
+      ],
+    });
+  }
 
   // ---- size-dependent targets: HDR scene + star aggregate + bloom mips + LDR ----
   //
@@ -963,6 +1152,18 @@ export async function createGalaxyEngine(
    * trade rather than an oversight.
    */
   let dustMapTex: GPUTexture;
+  /**
+   * The HII tier's own target, sized to ITS OWN divisor,
+   * `reducedSize(render.hiiDivisor)` — defaults to the canvas itself (1), not
+   * `fieldTex`'s coarser one. A shell sprite is small and bright by
+   * construction: sharing the field's target once collapsed a whole sprite's
+   * flux onto one texel and bloom promoted the spike into a firefly
+   * (research doc §18.1 — the SAME shape as the bug that split off
+   * `dustMapTex`, one tenant later). Drawn by `splatPipe` again (`hiiBG`),
+   * composited into HDR through the same `aggregateUpsample` the field and
+   * star aggregate use.
+   */
+  let hiiTex: GPUTexture;
   /**
    * Whether `dustMapTex` currently holds anything but zeros. `drawFrame` skips
    * the dust-map pass when there is no dust to draw, and a skipped pass leaves
@@ -1030,11 +1231,11 @@ export async function createGalaxyEngine(
   // Recreated on resize AND whenever `render.dustDivisor` moves (see
   // `setRender`) — its OWN divisor now, independent of `fieldTex`'s (see
   // `dustMapTex`'s declaration comment for why the dust splat outgrew
-  // sharing the field's coarser target). Both bind groups that reference
-  // `dustMapTex` are tied to the specific GPUTexture they were built against
+  // sharing the field's coarser target). Every bind group that references
+  // `dustMapTex` is tied to the specific GPUTexture it was built against
   // (same `layout: 'auto'` discipline as every other bind group here), so a
-  // recreation has to rebuild both immediately, not wait for the next
-  // `repackFieldComponents`.
+  // recreation has to rebuild all three immediately, not wait for the next
+  // `repackFieldComponents`/`repackHiiComponents`.
   function buildDustMapTarget(): void {
     const [w, h] = reducedSize(render.dustDivisor);
     if (dustMapTex) dustMapTex.destroy();
@@ -1045,6 +1246,7 @@ export async function createGalaxyEngine(
       usage: RA_TB,
     });
     splatBG = buildSplatBindGroup();
+    hiiBG = buildHiiBindGroup();
     dustPresentBG = buildDustPresentBindGroup();
     // A fresh texture is zero-initialised, so the stale-map latch resets with it.
     dustMapPopulated = false;
@@ -1059,6 +1261,23 @@ export async function createGalaxyEngine(
     if (dustViewTex) dustViewTex.destroy();
     dustViewTex = device.createTexture({
       label: 'galaxy:dustViewTex',
+      size: [w, h],
+      format: HDR,
+      usage: RA_TB,
+    });
+  }
+
+  // Split out for the same reason `buildAggregateTarget`/`buildFieldTarget`
+  // are: `render.hiiDivisor` is its own live slider, and moving it must
+  // reallocate only this target. Does not rebuild `hiiBG` — that bind group
+  // references `hiiUbo`/`hiiCompsBuf`/`dustMapTex`, none of which this
+  // function touches, not `hiiTex` itself (the render PASS binds `hiiTex` as
+  // its attachment view, freshly, every `drawFrame`).
+  function buildHiiTarget(): void {
+    const [w, h] = reducedSize(render.hiiDivisor);
+    if (hiiTex) hiiTex.destroy();
+    hiiTex = device.createTexture({
+      label: 'galaxy:hiiTex',
       size: [w, h],
       format: HDR,
       usage: RA_TB,
@@ -1087,6 +1306,7 @@ export async function createGalaxyEngine(
     buildFieldTarget();
     buildDustMapTarget();
     buildDustViewTarget();
+    buildHiiTarget();
     // Pyramid: level 0 = half-res, each further level halves again -> ever-wider
     // glow. `Math.floor(size / scale)` clamped to 1 px, matching the runtime's
     // `renderTargets.allocate`.
@@ -1140,7 +1360,21 @@ export async function createGalaxyEngine(
   // `makeCloudUniformBuffer`.)
   const cloudData = new Float32Array(CLOUD_UNIFORM_FLOATS);
   const fieldData = new Float32Array(FIELD_HEADER_FLOATS);
+  const hiiData = new Float32Array(FIELD_HEADER_FLOATS);
   const gradeData = new Float32Array(4);
+
+  // The HII header's dust lanes are always inert (see `hiiBG`'s comment:
+  // `primaryCount` below is packed 0, so splat.wesl's fs never takes the
+  // attenuation branch that would read them) — one shared zero value rather
+  // than a fresh object built every `drawFrame`.
+  const HII_INERT_DUST_NOISE: FieldDustNoise = {
+    tileUnits: 1,
+    amplitude: 0,
+    cloudOffset: 0,
+    contrastExp: 1,
+  };
+  const HII_INERT_DUST_SLICES: FieldDustSlices = { t1: 0, t2: 0, t3: 0 };
+  const HII_INERT_DUST_EXTINCTION: Vec3 = [0, 0, 0];
 
   /**
    * The tool's render bag, viewed as the app's `MilkyWayTuning` — the shape
@@ -1181,6 +1415,11 @@ export async function createGalaxyEngine(
   let fieldEmissionCount = 0;
   let fieldPrimaryCount = 0;
   let fieldDustCount = 0;
+  // The live total from the last `repackHiiComponents` concatenation — same
+  // "not the capacity" caveat as `fieldEmissionCount` above. What `drawFrame`
+  // instances for the HII pass, and what gates whether that pass (and its
+  // composite into HDR) runs at all this frame.
+  let hiiEmissionCount = 0;
 
   /**
    * rebuildDustMixture — the central galaxy's dust mixture from the CACHED
@@ -1228,7 +1467,12 @@ export async function createGalaxyEngine(
     }
     if (fieldGeometry && fieldTuning.dustEnabled) {
       const laneMixture = buildGalaxyDustMixture(fieldGeometry, currentDust);
-      const cloudMixture = buildDustParticleCloud(fieldGeometry, currentDust, currentSeed);
+      const cloudMixture = buildDustParticleCloud(
+        fieldGeometry,
+        currentDust,
+        fieldTuning,
+        currentSeed,
+      );
       dustMixture = [...laneMixture, ...cloudMixture];
       currentDustNoise = {
         tileUnits: dustNoiseTileUnits(currentDust.cloud.textureScale),
@@ -1245,6 +1489,143 @@ export async function createGalaxyEngine(
       dustMixture = [];
       currentDustNoise = { tileUnits: 1, amplitude: 0, cloudOffset: 0, contrastExp: 1 };
     }
+  }
+
+  /**
+   * rebuildSfMap — reruns the SSPSF automaton from scratch: bakes the
+   * arm-forcing texture (galaxySfMapArmForcing.ts, off the CACHED geometry —
+   * same contract rebuildDustMixture follows) then dispatches
+   * `fieldTuning.sfMap.steps` compute steps, all in ONE command encoder /
+   * ONE submit. Called from setParams (new galaxy, always) and
+   * setFieldTuning (only when the incoming patch actually touches `sfMap` —
+   * see its call site) — NEVER per frame, per the params contract.
+   *
+   * Per-step data (the step index sfMapStep.wesl's RNG salt needs) cannot
+   * ride one rewritten uniform: every `device.queue.writeBuffer` call here
+   * happens before this function's single `submit`, and queue operations
+   * apply in ISSUE order — N rewrites of one buffer location would all land
+   * before ANY of the N dispatches ran, so every step would see only the
+   * LAST write (the same landmine the star/dust UBO split guards against,
+   * see this file's own uniform-buffer docblock above). The fix used here:
+   * write every step's index ONCE, at its own (device-aligned) offset in one
+   * buffer, and give each step its OWN bind group with a STATIC offset into
+   * that slot — no rewrite between dispatches, so ordering can't collapse.
+   */
+  function rebuildSfMap(): void {
+    const sfMap = fieldTuning.sfMap;
+    const grid = fieldGeometry ? sfMapGridRadius(fieldGeometry) : { rMin: 1e-3, rMax: 1 };
+    device.queue.writeBuffer(sfMapGridUbo, 0, new Float32Array([grid.rMin, grid.rMax, 0, 0]));
+
+    if (!fieldGeometry || !sfMap.enabled || sfMap.steps <= 0) {
+      // Disabled (or no galaxy yet): leave nothing stale for sfMapView to
+      // show — same "a skipped pass leaves last frame's content" concern
+      // dustMapPopulated exists to avoid, just resolved by clearing once
+      // rather than latching, since this path is a rare toggle, not a
+      // per-frame branch.
+      device.queue.writeTexture(
+        { texture: sfMapArmForcingTex },
+        new Float32Array(SF_MAP_AZ * SF_MAP_RINGS),
+        { bytesPerRow: SF_MAP_AZ * 4 },
+        [SF_MAP_AZ, SF_MAP_RINGS],
+      );
+      device.queue.writeTexture(
+        { texture: sfMapTex },
+        new Uint8Array(SF_MAP_AZ * SF_MAP_RINGS * 4),
+        { bytesPerRow: SF_MAP_AZ * 4 },
+        [SF_MAP_AZ, SF_MAP_RINGS],
+      );
+      return;
+    }
+
+    const forcing = buildGalaxySfMapArmForcing(fieldGeometry, fieldTuning);
+    device.queue.writeTexture(
+      { texture: sfMapArmForcingTex },
+      forcing,
+      { bytesPerRow: SF_MAP_AZ * 4 },
+      [SF_MAP_AZ, SF_MAP_RINGS],
+    );
+
+    device.queue.writeBuffer(
+      sfMapConstUbo,
+      0,
+      new Float32Array([
+        grid.rMin,
+        grid.rMax,
+        sfMap.corotationRadius,
+        sfMap.shearRate,
+        sfMap.baseIgnition,
+        sfMap.spread,
+        sfMap.armForcing,
+        sfMap.gasRegen,
+        sfMap.refractorySteps,
+        currentSeed,
+        0,
+        0,
+      ]),
+    );
+
+    const steps = sfMap.steps;
+    const stride = device.limits.minUniformBufferOffsetAlignment;
+    if (sfMapStepIndexBuf) sfMapStepIndexBuf.destroy();
+    sfMapStepIndexBuf = device.createBuffer({
+      label: 'galaxy:sfMapStepIndexBuf',
+      size: steps * stride,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    const strideFloats = stride / 4;
+    const stepData = new Float32Array(steps * strideFloats);
+    for (let s = 0; s < steps; s++) stepData[s * strideFloats] = s;
+    device.queue.writeBuffer(sfMapStepIndexBuf, 0, stepData);
+
+    const stepBindGroups: GPUBindGroup[] = [];
+    for (let s = 0; s < steps; s++) {
+      const prev = s % 2 === 0 ? sfMapStateA : sfMapStateB;
+      const next = s % 2 === 0 ? sfMapStateB : sfMapStateA;
+      stepBindGroups.push(
+        device.createBindGroup({
+          label: `galaxy:sfMapStepBG${s}`,
+          layout: sfMapStepPipe.getBindGroupLayout(0),
+          entries: [
+            { binding: 0, resource: { buffer: sfMapConstUbo } },
+            { binding: 1, resource: sfMapArmForcingTex.createView() },
+            { binding: 2, resource: prev.createView() },
+            { binding: 3, resource: next.createView() },
+            { binding: 4, resource: { buffer: sfMapStepIndexBuf, offset: s * stride, size: 4 } },
+          ],
+        }),
+      );
+    }
+
+    const dispatchX = SF_MAP_AZ / SF_MAP_WORKGROUP_SIZE;
+    const dispatchY = SF_MAP_RINGS / SF_MAP_WORKGROUP_SIZE;
+    const enc = device.createCommandEncoder({ label: 'galaxy:sfMapRebuild' });
+    const stepPass = enc.beginComputePass({ label: 'galaxy:sfMapStepPass' });
+    stepPass.setPipeline(sfMapStepPipe);
+    for (let s = 0; s < steps; s++) {
+      stepPass.setBindGroup(0, stepBindGroups[s]!);
+      stepPass.dispatchWorkgroups(dispatchX, dispatchY);
+    }
+    stepPass.end();
+
+    // Parity of the LAST dispatched step (index steps-1) says which texture
+    // it wrote into: even index writes B, odd writes A (see the prev/next
+    // pick in the loop above).
+    const finalState = (steps - 1) % 2 === 0 ? sfMapStateB : sfMapStateA;
+    const packBG = device.createBindGroup({
+      label: 'galaxy:sfMapPackBG',
+      layout: sfMapPackPipe.getBindGroupLayout(0),
+      entries: [
+        { binding: 0, resource: finalState.createView() },
+        { binding: 1, resource: sfMapTex.createView() },
+      ],
+    });
+    const packPass = enc.beginComputePass({ label: 'galaxy:sfMapPackPass' });
+    packPass.setPipeline(sfMapPackPipe);
+    packPass.setBindGroup(0, packBG);
+    packPass.dispatchWorkgroups(dispatchX, dispatchY);
+    packPass.end();
+
+    device.queue.submit([enc.finish()]);
   }
 
   /**
@@ -1289,6 +1670,35 @@ export async function createGalaxyEngine(
     }
     if (total > 0) {
       device.queue.writeBuffer(fieldCompsBuf, 0, packFieldComponents(combined));
+    }
+  }
+
+  /**
+   * repackHiiComponents — `repackFieldComponents`'s exact counterpart for the
+   * HII tier: central galaxy's `hiiMixture` then every extra's, into
+   * `hiiCompsBuf`. A SEPARATE buffer rather than a fifth slice of
+   * `fieldCompsBuf` — see `hiiTex`'s declaration comment for why this tier
+   * cannot share the field's target, and a shared BUFFER with a separate
+   * TARGET would still mean one draw call painting into two attachments,
+   * which WebGPU has no way to do. Called at the same three call sites as
+   * `repackFieldComponents`, immediately after it.
+   */
+  function repackHiiComponents(): void {
+    const combined: GalaxyFieldComponent[] = [...hiiMixture];
+    for (const e of extras) combined.push(...e.hiiMixture);
+    hiiEmissionCount = combined.length;
+    if (hiiEmissionCount > hiiCompsCapacity) {
+      hiiCompsCapacity = hiiEmissionCount;
+      hiiCompsBuf.destroy();
+      hiiCompsBuf = device.createBuffer({
+        label: 'galaxy:hiiComps',
+        size: hiiCompsCapacity * FIELD_COMPONENT_FLOATS * 4,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+      });
+      hiiBG = buildHiiBindGroup();
+    }
+    if (hiiEmissionCount > 0) {
+      device.queue.writeBuffer(hiiCompsBuf, 0, packFieldComponents(combined));
     }
   }
 
@@ -1371,12 +1781,20 @@ export async function createGalaxyEngine(
     fieldGeometry = readGalaxyFieldGeometry(genUniforms, starLayout);
     fieldMixture = buildGalaxyFieldMixture(fieldGeometry, fieldTuning);
     currentDust = p.dust ?? DEFAULT_GALAXY_DUST_PARAMS;
+    // Same `geometry.seed` `buildHiiRegions` was called with when it still
+    // lived inside `buildGalaxyFieldMixture` — the field's own generated
+    // seed, not a re-derivation.
+    hiiMixture = buildHiiRegions(fieldGeometry, fieldTuning, currentDust, fieldGeometry.seed);
     // Same seed normalisation `packGenerationUniforms` applies internally —
     // duplicated rather than read back off `genUniforms` because it is a
     // scalar the packer never round-trips into the UBO bytes.
     currentSeed = (p.seed ?? 0) | 0 || 1;
     rebuildDustMixture();
     repackFieldComponents();
+    repackHiiComponents();
+    // Always — a new galaxy means new geometry/arms, so the automaton and
+    // the ridge it forces against are both stale otherwise.
+    rebuildSfMap();
 
     const enc = device.createCommandEncoder({ label: 'galaxy:generate' });
     encodeGeneration({
@@ -1405,6 +1823,7 @@ export async function createGalaxyEngine(
     const previousDivisor = render.aggregateDivisor;
     const previousFieldDivisor = render.fieldDivisor;
     const previousDustDivisor = render.dustDivisor;
+    const previousHiiDivisor = render.hiiDivisor;
     Object.assign(render, patch);
     if (render.aggregateDivisor !== previousDivisor) buildAggregateTarget();
     if (render.fieldDivisor !== previousFieldDivisor) buildFieldTarget();
@@ -1416,6 +1835,7 @@ export async function createGalaxyEngine(
       buildDustMapTarget();
       buildDustViewTarget();
     }
+    if (render.hiiDivisor !== previousHiiDivisor) buildHiiTarget();
   }
 
   // Rebuilds `fieldMixture` from the CACHED geometry rather than dispatching a
@@ -1433,18 +1853,42 @@ export async function createGalaxyEngine(
   //
   // Also rebuilds `dustMixture` (central galaxy only — see
   // `rebuildDustMixture`), which is how a `dustEnabled` toggle takes effect
-  // without a regenerate.
+  // without a regenerate, and `hiiMixture` (central + every extra), which is
+  // how `hiiEnabled`/`hiiBrightness`/etc. take effect the same way.
   function setFieldTuning(patch: Partial<GalaxyFieldTuning>): void {
+    // The automaton rebuild is N compute dispatches (rebuildSfMap's own
+    // docblock) — far more expensive than the CPU mixture rebuilds below, so
+    // it only reruns when the caller actually touched `sfMap`, not on every
+    // unrelated slider (armWidthScale etc. technically also feed the ridge
+    // the forcing field bakes, but re-triggering on every tuning field would
+    // make dragging any OTHER slider pay this pass's cost too — a follow-up
+    // if that dependency ever needs to be exact).
+    const sfMapTouched = patch.sfMap !== undefined;
     fieldTuning = { ...fieldTuning, ...patch };
-    if (fieldGeometry) fieldMixture = buildGalaxyFieldMixture(fieldGeometry, fieldTuning);
+    if (fieldGeometry) {
+      fieldMixture = buildGalaxyFieldMixture(fieldGeometry, fieldTuning);
+      hiiMixture = buildHiiRegions(fieldGeometry, fieldTuning, currentDust, fieldGeometry.seed);
+    }
     extras = extras.map((e) => ({
       ...e,
       fieldMixture: buildGalaxyFieldMixture(e.fieldGeometry, fieldTuning).map((c) =>
         transformGalaxyFieldComponent(c, e.transform),
       ),
+      // Extras carry no dust params of their own yet (see `rebuildDustMixture`'s
+      // docblock) — `DEFAULT_GALAXY_DUST_PARAMS` is the same implicit default
+      // `buildGalaxyFieldMixture(e.fieldGeometry, fieldTuning)` used to gate
+      // an extra's HII tier on before this tier owned its own buffer.
+      hiiMixture: buildHiiRegions(
+        e.fieldGeometry,
+        fieldTuning,
+        DEFAULT_GALAXY_DUST_PARAMS,
+        e.fieldGeometry.seed,
+      ).map((c) => transformGalaxyFieldComponent(c, e.transform)),
     }));
     rebuildDustMixture();
     repackFieldComponents();
+    repackHiiComponents();
+    if (sfMapTouched) rebuildSfMap();
   }
 
   // Replace the set of background galaxies. Each extra is generated GPU-side
@@ -1526,6 +1970,14 @@ export async function createGalaxyEngine(
       const extraFieldMixture = buildGalaxyFieldMixture(geometry, fieldTuning).map((c) =>
         transformGalaxyFieldComponent(c, transform),
       );
+      // Same implicit `DEFAULT_GALAXY_DUST_PARAMS` gate `setFieldTuning`'s
+      // extras branch uses — see its own comment for why.
+      const extraHiiMixture = buildHiiRegions(
+        geometry,
+        fieldTuning,
+        DEFAULT_GALAXY_DUST_PARAMS,
+        geometry.seed,
+      ).map((c) => transformGalaxyFieldComponent(c, transform));
 
       extras.push({
         starBuf: starBufExtra,
@@ -1536,10 +1988,12 @@ export async function createGalaxyEngine(
         fieldGeometry: geometry,
         transform,
         fieldMixture: extraFieldMixture,
+        hiiMixture: extraHiiMixture,
       });
     }
     device.queue.submit([enc.finish()]);
     repackFieldComponents();
+    repackHiiComponents();
   }
 
   function setView(pose: Partial<ViewPose>): void {
@@ -1969,26 +2423,24 @@ export async function createGalaxyEngine(
       t3: dustTNear * dustRatio ** 0.75,
     };
 
+    // The mixture is calibrated to the sprite field's total flux in record
+    // units (see `emissionScale`), which leaves the star pass's own two
+    // multipliers to apply here: its per-sprite `exposure`, and
+    // `starSizeScale` SQUARED because a sprite's light goes as its quad area.
+    // Multiplying them in is what keeps `analyticExposure` 1.0 meaning parity
+    // as those sliders move, rather than only at defaults. Shared by the HII
+    // header below: the HII tier's own flux calibration (`hiiRegions.ts`'s
+    // `tierFlux`) rides the same star-count x size^2 currency `emissionScale`
+    // does, so it owes the same live sliders.
+    const analyticExposure =
+      render.analyticExposure * render.starIntensity * render.sizeScale ** 2 * fade.alpha;
+
     // The analytic field's ray basis. `aspect` is the PROJECTION's (the
     // canvas's), not the aggregate's: the fullscreen triangle covers the
     // aggregate, but the frustum it must reconstruct is the one `proj` was
     // built with.
     packFieldHeaderUniforms(
-      {
-        eye,
-        view,
-        fov: cam.fov,
-        aspect,
-        lensShiftX: shiftX,
-        // The mixture is calibrated to the sprite field's total flux in
-        // record units (see `emissionScale`), which leaves the star pass's own
-        // two multipliers to apply here: its per-sprite `exposure`, and
-        // `starSizeScale` SQUARED because a sprite's light goes as its quad
-        // area. Multiplying them in is what keeps `analyticExposure` 1.0
-        // meaning parity as those sliders move, rather than only at defaults.
-        exposure:
-          render.analyticExposure * render.starIntensity * render.sizeScale ** 2 * fade.alpha,
-      },
+      { eye, view, fov: cam.fov, aspect, lensShiftX: shiftX, exposure: analyticExposure },
       fieldEmissionCount,
       fieldEmissionCount,
       fieldDustCount,
@@ -2015,6 +2467,26 @@ export async function createGalaxyEngine(
       fieldData,
     );
     device.queue.writeBuffer(fieldUbo, 0, fieldData);
+
+    // The HII tier's own header, same camera basis, its own target's pixel
+    // size, and every dust lane inert: `primaryCount` 0 means splat.wesl's fs
+    // gates its attenuation branch on `input.inst < 0`, which is never true,
+    // so it always takes the plain (unattenuated) emission path — HII does
+    // not (yet) darken under the dust lane it may physically sit inside.
+    packFieldHeaderUniforms(
+      { eye, view, fov: cam.fov, aspect, lensShiftX: shiftX, exposure: analyticExposure },
+      hiiEmissionCount,
+      hiiEmissionCount,
+      0,
+      0,
+      0,
+      reducedSize(render.hiiDivisor),
+      HII_INERT_DUST_EXTINCTION,
+      HII_INERT_DUST_NOISE,
+      HII_INERT_DUST_SLICES,
+      hiiData,
+    );
+    device.queue.writeBuffer(hiiUbo, 0, hiiData);
     // The post chain's uniforms are written by the shared factories at draw
     // time (bloom thresholds/texel sizes, compositor exposure + curve), so
     // there is nothing else to pack here.
@@ -2052,11 +2524,12 @@ export async function createGalaxyEngine(
         pass.setBindGroup(0, starBG);
         pass.setVertexBuffer(0, quad);
         // Skipped for the primary (not for extras) while the JWST dust view
-        // is on: that mode replaces the field pass's emission draw with a
-        // direct presentation of the dust map, and the primary's own sprite
-        // glow would otherwise wash additively over it in the scene pass
-        // below. Extras aren't the dust map's subject, so their sprites stay.
-        if (starBuf && !render.dustView) {
+        // OR the sfMap view is on: both replace the field pass's emission
+        // draw with a direct presentation of their own map, and the
+        // primary's own sprite glow would otherwise wash additively over it
+        // in the scene pass below. Extras aren't either map's subject, so
+        // their sprites stay.
+        if (starBuf && !render.dustView && !render.sfMapView) {
           pass.setVertexBuffer(1, starBuf);
           pass.draw(6, starCount);
         }
@@ -2110,7 +2583,19 @@ export async function createGalaxyEngine(
         dustMapPopulated = dustMapHasContent;
       }
 
-      if (render.dustView) {
+      if (render.sfMapView) {
+        // SF-map view: no pass here any more. It used to present into
+        // `fieldTex` at that target's `fieldDivisor`-reduced resolution, then
+        // ride the SAME 4-tap upsample reconstruction the smooth field does
+        // on its way into HDR — a double decimation of exactly the fine
+        // filamentary structure this diagnostic exists to let the user judge
+        // (research doc §17.1's rule, generalised: a shared/downsampled
+        // target biases the judgement toward discarding what it distorts).
+        // It is instead drawn straight into `sceneTex` at full canvas
+        // resolution, in the scene pass below — see that pass for why, and
+        // `sfMapPresent.wesl`'s header for the resample that makes a 1:1
+        // equal-extent contract unnecessary either way.
+      } else if (render.dustView) {
         // JWST view mode: present the dust map directly INSTEAD OF the
         // emission splat draw below, into `dustViewTex` — its OWN target,
         // divisor-matched to `dustMapTex` rather than to `fieldTex` (see
@@ -2164,6 +2649,36 @@ export async function createGalaxyEngine(
         // own quad, only read from inside a primary emission fragment.
         pass.draw(6, fieldEmissionCount);
         pass.end();
+
+        // The HII tier's own pass, same shape as the field pass just above
+        // (same `splatPipe`, a different bind group and target) — see
+        // `hiiTex`'s declaration comment for why it does not share either.
+        // Gated on this branch (never under `dustView`/`sfMapView`) for the
+        // same reason the star/dust sprite draws below are: those diagnostic
+        // views present their OWN map instead of the normal content, and an
+        // unattenuated HII glow washing additively over either would fight
+        // it. Skipped outright (not just cleared) when there is nothing to
+        // draw, so a stale frame's content is never composited below either
+        // — see the scene pass's own gate on `hiiEmissionCount`.
+        if (hiiEmissionCount > 0) {
+          const hiiWrites = timing.descriptorFor('hii');
+          const hiiPass = enc.beginRenderPass({
+            label: 'galaxy:hiiPass',
+            colorAttachments: [
+              {
+                view: hiiTex.createView(),
+                clearValue: { r: 0, g: 0, b: 0, a: 0 },
+                loadOp: 'clear',
+                storeOp: 'store',
+              },
+            ],
+            ...(hiiWrites ? { timestampWrites: hiiWrites } : {}),
+          });
+          hiiPass.setPipeline(splatPipe);
+          hiiPass.setBindGroup(0, hiiBG);
+          hiiPass.draw(6, hiiEmissionCount);
+          hiiPass.end();
+        }
       }
     }
     // Scene pass: the aggregate folded into HDR, then transmittance dust over
@@ -2195,15 +2710,42 @@ export async function createGalaxyEngine(
       // pass above), and the two are no longer the same texture now that
       // they ride independent divisors.
       if (render.analyticField) {
-        aggregateUpsample.draw(pass, (render.dustView ? dustViewTex : fieldTex).createView());
+        if (render.sfMapView) {
+          // Presented straight into `sceneTex` at full canvas resolution —
+          // see the field pass above for why a divisor-matched offscreen and
+          // this same upsample's 4-tap reconstruction were both wrong for
+          // this diagnostic. `sfMapPresentPipe` blends additively (see its
+          // own construction comment) so this draw sums with whatever the
+          // upsample just above already added — the central galaxy's own
+          // sprites are skipped while `sfMapView` is on (see the star pass),
+          // but background extras' are not, and must still show through.
+          pass.setPipeline(sfMapPresentPipe);
+          pass.setBindGroup(0, sfMapPresentBG);
+          pass.draw(3);
+        } else {
+          aggregateUpsample.draw(pass, (render.dustView ? dustViewTex : fieldTex).createView());
+          // The HII tier's own composite, same additive upsample as the
+          // field's own draw just above — see `hiiTex`'s declaration
+          // comment for why it rides a separate target rather than joining
+          // that draw. `!render.dustView`, not just `hiiEmissionCount > 0`:
+          // the field pass above skips the HII draw under `dustView` too
+          // (its own map replaces the normal content, and HII has no
+          // attenuation to register against it — see `hiiBG`'s comment), so
+          // `hiiTex` holds a STALE frame there even though the mixture
+          // itself is still nonzero.
+          if (!render.dustView && hiiEmissionCount > 0) {
+            aggregateUpsample.draw(pass, hiiTex.createView());
+          }
+        }
       }
       pass.setPipeline(dustPipe);
       pass.setBindGroup(0, dustBG);
       pass.setVertexBuffer(0, quad);
       // Same primary-only skip as the star pass above, same reason: the
-      // JWST view presents the dust MAP, so the legacy sprite dust's own
-      // multiplicative darkening over the primary would fight it.
-      if (dustBuf && !render.dustView) {
+      // JWST view (or the sfMap view) presents its own MAP, so the legacy
+      // sprite dust's own multiplicative darkening over the primary would
+      // fight it.
+      if (dustBuf && !render.dustView && !render.sfMapView) {
         pass.setVertexBuffer(1, dustBuf);
         pass.draw(6, dustCount);
       }
@@ -2303,6 +2845,12 @@ export async function createGalaxyEngine(
       };
     },
     getCamera: (): ViewPose => ({ az: cam.az, el: cam.el, dist: cam.dist }),
+    // The SSPSF automaton's packed output (sfMapPack.wesl) — a persistent
+    // GPU texture, always non-null, whose CONTENT is only meaningful once
+    // rebuildSfMap has run at least once (setParams). Consumed by nothing
+    // yet but sfMapPresent.wesl's own overlay; exposed here for the sibling
+    // UI and future consumers per the research doc §19's staging note.
+    getSfMapTexture: (): GPUTexture => sfMapTex,
     async grab(size?: number) {
       const S = size ?? 480;
       drawFrame(performance.now());
@@ -2384,6 +2932,13 @@ export async function createGalaxyEngine(
       fieldUbo.destroy();
       fieldCompsBuf.destroy();
       dustNoiseTex.destroy();
+      sfMapArmForcingTex.destroy();
+      sfMapStateA.destroy();
+      sfMapStateB.destroy();
+      sfMapTex.destroy();
+      sfMapConstUbo.destroy();
+      sfMapGridUbo.destroy();
+      sfMapStepIndexBuf?.destroy();
       gradeBuf.destroy();
       ro.disconnect();
       canvas.removeEventListener('pointerdown', onDown);

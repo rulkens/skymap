@@ -86,6 +86,13 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // square of the resolution exactly where the camera spends its time. 2 is
   // measurably too expensive there; the detail it buys is not worth it.
   dustDivisor: 5,
+  // 1 = full canvas resolution, deliberately not coarsened like `fieldDivisor`
+  // or `dustDivisor`: an HII shell sprite is small and bright by
+  // construction, so ANY shared or downsampled target collapses it under a
+  // texel and bloom promotes the spike into a firefly (research doc §18.1).
+  // The slider exists for the user to trade that away if they want to; the
+  // default does not.
+  hiiDivisor: 1,
   // Both legacy halves OFF at boot: the star bag and its sprite dust are
   // scheduled for deletion (research doc s12), so the analytic field alone is
   // now the subject rather than one side of a comparison — and an
@@ -97,6 +104,9 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // Off at boot: the JWST view replaces the emission draw with a debug
   // presentation of the dust map, which is not the default look.
   dustView: false,
+  // Off at boot, same rationale as `dustView`: it replaces the normal view
+  // with a debug presentation of the automaton's output.
+  sfMapView: false,
   legacyDustEnabled: false,
   dustCloudEnabled: true,
   // ON at boot, which costs nothing: at the boot camera both bands read 1, so
