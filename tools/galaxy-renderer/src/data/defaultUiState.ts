@@ -17,13 +17,11 @@ export const DEFAULT_UI_STATE: UiState = {
     // section delete instead of a surgical slider extraction.
     starBudget: false,
     arms: true,
-    // Expanded: this is the current work, same as `field` below.
-    armField: true,
-    // Expanded, same rationale as `armField`: its sprite count now derives
-    // from arm geometry and is the current work being visually tuned.
-    armCloud: true,
-    // Expanded, same rationale as `armCloud`: the HII tier is the current
-    // work being visually tuned.
+    // Collapsed: both are tuned and no longer the active work — the panel is
+    // long enough that only what is being calibrated right now earns a slot.
+    armField: false,
+    armCloud: false,
+    // Expanded: the HII tier is the current work being visually tuned.
     hii: true,
     // Expanded, same rationale as `hii`: step 1 of the SSPSF automaton is
     // the current work being visually tuned.
