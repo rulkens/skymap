@@ -100,6 +100,13 @@ corotation. So the automaton behaved correctly in one narrow annulus and was
 crippled everywhere else, which reads as a knob that half-works rather than
 as a bug.
 
+**MEASURED, and this is what confirms the diagnosis rather than leaving it
+merely plausible.** The mechanism above predicts, before the fix, structure
+concentrated in a RING at `corotationRadius`. The user reports seeing exactly
+that. Nothing else in the model singles out that one radius — the arm forcing
+is a spiral, the gas and refractory terms are radius-blind — so a ring at
+corotation has no other available cause.
+
 **The calibration above is therefore PRE-FIX and should not be restored.**
 `spread` is expected to fall back toward the classical value; `armForcing`
 0.15 is independent of the bug and still stands.
