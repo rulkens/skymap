@@ -8,28 +8,68 @@
  */
 import { armFadeEnvelope, armRidgeAngle, armRidgeCurvePoint } from './armRidgeGeometry';
 import { armAgeWeight, armLaneWidthAndAmplitude } from './dustLaneFeatures';
+import { HII_AGE_GATE, hiiLuminosityOf, hiiRadiusUnits } from './hiiRegionGeometry';
 import { buildSfEventCatalog } from './sfEventCatalog';
+import { pcToUnits } from '../../utils/galaxy/pcToUnits';
 import { warpSurfaceFrame } from '../../utils/galaxy/warpSurfaceFrame';
 import type { GalaxyDustParams } from '../../@types/galaxy/GalaxyDustParams';
+import type { GalaxyFieldArmRecord } from '../../@types/galaxy/GalaxyFieldArmRecord';
 import type { GalaxyFieldGeometry } from '../../@types/galaxy/GalaxyFieldGeometry';
+import type { GalaxyFieldTuning } from '../../@types/galaxy/GalaxyFieldTuning';
+import type { SfEvent } from '../../@types/galaxy/SfEvent';
 import type { Vec3 } from '../../@types/math/Vec3';
-
-/** age01 <= this gate are future HII knots (#20), not yet swept dust cavities — see `SfEvent.age01`'s own doc. */
-const BUBBLE_AGE_GATE = 0.35;
 
 /** Placement cap — bubbles are sparse, large-footprint features. */
 export const BUBBLE_BUDGET = 120;
 
-/** 1 generator unit = 1.6667 kpc — `galacticCenter.ts`'s own conversion, restated here to turn pc-scale literature radii into world units. */
-const KPC_PER_UNIT = 1.6667;
-export function pcToUnits(pc: number): number {
-  return pc / (KPC_PER_UNIT * 1000);
-}
+/** Same spirit as `BUBBLE_BUDGET`, kept separate since the young population's own count is independently tuned. */
+export const HII_CAVITY_BUDGET = 120;
 
 export type DustBubblePlacement = {
   readonly center: Vec3;
   readonly radius: number;
 };
+
+/**
+ * World centre of one SF event on its arm's warped surface — shared by the
+ * bubble and HII-cavity builders so a placement fix in one can't silently
+ * diverge from the other.
+ */
+function armEventCenter(
+  event: Pick<SfEvent, 'logR' | 'acrossOffset'>,
+  geometry: GalaxyFieldGeometry,
+  arm: GalaxyFieldArmRecord,
+): { readonly center: Vec3; readonly armRadius: number } {
+  const armRadius = geometry.armStartRadius * Math.exp(event.logR);
+  const angle = armRidgeAngle(event.logR, geometry, arm);
+  const ridge = armRidgeCurvePoint(event.logR, geometry, arm);
+  const frame = warpSurfaceFrame(armRadius, angle, geometry);
+  // ON the warp surface: `frame.across` is a tangent to the warped disc at
+  // this point (not a flat horizontal offset), the same technique
+  // `armOffsetFrameAt` uses for its own offset points.
+  const center: Vec3 = [
+    ridge[0] + frame.across[0] * event.acrossOffset,
+    ridge[1] + frame.across[1] * event.acrossOffset,
+    ridge[2] + frame.across[2] * event.acrossOffset,
+  ];
+  return { center, armRadius };
+}
+
+/**
+ * An event only carves where its arm actually carries dust to sweep: the
+ * lane amplitude folds in the arm's age weight and radial fade, so a zero
+ * here means an event past the arm's own reach, not a small one. Shared so
+ * both builders gate on the identical lane state.
+ */
+function armEventLaneAmplitude(
+  armRadius: number,
+  geometry: GalaxyFieldGeometry,
+  dust: GalaxyDustParams,
+  arm: GalaxyFieldArmRecord,
+): number {
+  const fade = armFadeEnvelope(armRadius, geometry, arm);
+  return armLaneWidthAndAmplitude(armRadius, geometry, dust, armAgeWeight(arm), fade).amplitude;
+}
 
 export function buildDustBubblePlacements(
   geometry: GalaxyFieldGeometry,
@@ -41,24 +81,13 @@ export function buildDustBubblePlacements(
   const events = buildSfEventCatalog(geometry, dust.cloud, seed);
   const out: DustBubblePlacement[] = [];
   for (const event of events) {
-    if (event.age01 <= BUBBLE_AGE_GATE) continue;
+    if (event.age01 <= HII_AGE_GATE) continue;
     const arm = geometry.arms[event.armIndex];
     if (!arm) continue;
 
-    const armRadius = geometry.armStartRadius * Math.exp(event.logR);
-    const angle = armRidgeAngle(event.logR, geometry, arm);
-    const ridge = armRidgeCurvePoint(event.logR, geometry, arm);
-    const frame = warpSurfaceFrame(armRadius, angle, geometry);
-    // ON the warp surface: `frame.across` is a tangent to the warped disc at
-    // this point (not a flat horizontal offset), the same technique
-    // `armOffsetFrameAt` uses for its own offset points.
-    const center: Vec3 = [
-      ridge[0] + frame.across[0] * event.acrossOffset,
-      ridge[1] + frame.across[1] * event.acrossOffset,
-      ridge[2] + frame.across[2] * event.acrossOffset,
-    ];
+    const { center, armRadius } = armEventCenter(event, geometry, arm);
 
-    const age01n = (event.age01 - BUBBLE_AGE_GATE) / (1 - BUBBLE_AGE_GATE);
+    const age01n = (event.age01 - HII_AGE_GATE) / (1 - HII_AGE_GATE);
     // Quadratic-plus bias approximating the measured -2.2 size power law's
     // many-small/few-big shape from the catalog's own UNIFORM age draws —
     // not a resampled power-law distribution.
@@ -66,18 +95,7 @@ export function buildDustBubblePlacements(
     const radius = pcToUnits(radiusPc) * dust.cloud.bubbleScale;
     if (radius <= 0) continue;
 
-    // A bubble only exists where the arm actually carries dust to sweep: the
-    // lane amplitude folds in this arm's age weight and its radial fade, so
-    // a zero there means an event past the arm's own reach, not a small one.
-    const fade = armFadeEnvelope(armRadius, geometry, arm);
-    const { amplitude: laneAmplitude } = armLaneWidthAndAmplitude(
-      armRadius,
-      geometry,
-      dust,
-      armAgeWeight(arm),
-      fade,
-    );
-    if (laneAmplitude <= 0) continue;
+    if (armEventLaneAmplitude(armRadius, geometry, dust, arm) <= 0) continue;
 
     out.push({ center, radius });
   }
@@ -88,6 +106,48 @@ export function buildDustBubblePlacements(
   if (out.length > BUBBLE_BUDGET) {
     out.sort((a, b) => b.radius - a.radius);
     return out.slice(0, BUBBLE_BUDGET);
+  }
+  return out;
+}
+
+/**
+ * The dust-side twin of the HII knots `hiiRegions.ts` draws for the same
+ * young events (`age01 <= HII_AGE_GATE`): the hole a still-forming region
+ * blows in the dust, sized off the SAME luminosity/radius law as its glow
+ * so the cavity and the shell that lights it agree. A separate list from
+ * `buildDustBubblePlacements` — old relic bubbles stay independently
+ * reachable and toggleable.
+ */
+export function buildHiiCavityPlacements(
+  geometry: GalaxyFieldGeometry,
+  dust: GalaxyDustParams,
+  tuning: GalaxyFieldTuning,
+  seed: number,
+): readonly DustBubblePlacement[] {
+  if (!tuning.hiiEnabled || tuning.hiiCavityScale <= 0) return [];
+  if (dust.tau <= 0 || geometry.numArms <= 0) return [];
+
+  const events = buildSfEventCatalog(geometry, dust.cloud, seed);
+  const out: DustBubblePlacement[] = [];
+  for (const event of events) {
+    if (event.age01 > HII_AGE_GATE) continue;
+    const arm = geometry.arms[event.armIndex];
+    if (!arm) continue;
+
+    const { center, armRadius } = armEventCenter(event, geometry, arm);
+
+    const radius =
+      hiiRadiusUnits(hiiLuminosityOf(event), tuning.hiiRadiusScale) * tuning.hiiCavityScale;
+    if (radius <= 0) continue;
+
+    if (armEventLaneAmplitude(armRadius, geometry, dust, arm) <= 0) continue;
+
+    out.push({ center, radius });
+  }
+
+  if (out.length > HII_CAVITY_BUDGET) {
+    out.sort((a, b) => b.radius - a.radius);
+    return out.slice(0, HII_CAVITY_BUDGET);
   }
   return out;
 }

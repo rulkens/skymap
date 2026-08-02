@@ -6,6 +6,8 @@
  * `buildGalaxyFieldMixture`; omitted, the mixture reproduces today's fixed
  * constants exactly (see `DEFAULT_GALAXY_FIELD_TUNING`).
  */
+import type { GalaxySfMapParams } from './GalaxySfMapParams';
+
 export type GalaxyFieldTuning = {
   /**
    * Master toggle for the 8 unconditional base pushes (inner disc, bulge,
@@ -77,4 +79,26 @@ export type GalaxyFieldTuning = {
   readonly armCloudElongation: number;
   /** Master toggle for the analytic dust lane's shader loop. */
   readonly dustEnabled: boolean;
+  /** Master toggle for the HII-region tier (`hiiRegions.ts`) — off skips the sprites, their cavities and their component-budget reservation. */
+  readonly hiiEnabled: boolean;
+  /**
+   * Whole-tier flux multiplier. Unlike `armCloudShare` this ADDS light: F98
+   * masked young features out of its fit, so HII emission was never inside
+   * the disc mixture and owes it no debit. 1 is the calibrated default.
+   */
+  readonly hiiBrightness: number;
+  /** Multiplies the Strömgren radius from `hiiRadiusUnits`; 1 is that law exactly. */
+  readonly hiiRadiusScale: number;
+  /** Radial scatter of a region's shell sprites, as a fraction of its radius. Small values give a thin, sharply limb-brightened front. */
+  readonly hiiShellThickness: number;
+  /** 0..1 brightness of the embedded OB cluster at each region's centre; 0 leaves a hollow shell. */
+  readonly hiiClusterStrength: number;
+  /**
+   * Radius of the dust cavity a young event carves, as a fraction of its
+   * HII radius. 0 leaves the dust undisturbed, which makes the glow read as
+   * a smudge behind a curtain rather than a hole with a lit wall.
+   */
+  readonly hiiCavityScale: number;
+  /** The SSPSF automaton that grows the ISM structure the dust and SF tiers will eventually be seeded from. Consumed by nothing yet — step 1 is the overlay. */
+  readonly sfMap: GalaxySfMapParams;
 };

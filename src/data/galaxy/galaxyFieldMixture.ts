@@ -24,6 +24,7 @@ import {
   armRidgeFrameAt,
   cross3,
 } from './armRidgeGeometry';
+import { DEFAULT_GALAXY_SF_MAP_PARAMS } from './defaultGalaxySfMapParams';
 import { DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './discSurfaceFit';
 import { discLightScaleLength } from '../../utils/galaxy/discLightScaleLength';
 import { discWarpShear } from '../../utils/galaxy/discWarpShear';
@@ -322,6 +323,17 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
   armCloudElongation: 3,
   // Gates the analytic dust lane's shader loop.
   dustEnabled: true,
+  hiiEnabled: true,
+  hiiBrightness: 1,
+  hiiRadiusScale: 1,
+  // Thin enough that the shell reads as a front rather than a fuzzy ball;
+  // the limb brightening is geometric, so this is the one knob that decides
+  // how sharp the rim can get.
+  hiiShellThickness: 0.25,
+  hiiClusterStrength: 0.6,
+  // Under 1 so the lit wall sits inside the swept dust rather than on it.
+  hiiCavityScale: 0.8,
+  sfMap: DEFAULT_GALAXY_SF_MAP_PARAMS,
 };
 
 /** The removed pair's share of the disc's flux budget — see DISC_SIGMA_RATIOS' fit note. */
@@ -803,7 +815,11 @@ const ARM_DISC_DEBIT_CLAMP_FRACTION = 0.5;
  * `armParticleCloud.ts`'s sprites share this same cap: `armCloudReserve`
  * below is computed BEFORE `pushArmRidges` runs and folded into its
  * `reservedComponents`, so the ridge chain's own budget shrinks to leave
- * room rather than the two tiers racing for the same slots.
+ * room rather than the two tiers racing for the same slots. HII regions
+ * (`hiiRegions.ts`) do NOT compete for this cap any more — they render into
+ * their own target off their own buffer (`createGalaxyEngine.ts`'s
+ * `hiiTex`/`hiiCompsBuf`, research doc §18.1), so they never reserve any of
+ * it.
  */
 export function buildGalaxyFieldMixture(
   geometry: GalaxyFieldGeometry,

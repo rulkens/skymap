@@ -22,6 +22,12 @@ export const DEFAULT_UI_STATE: UiState = {
     // Expanded, same rationale as `armField`: its sprite count now derives
     // from arm geometry and is the current work being visually tuned.
     armCloud: true,
+    // Expanded, same rationale as `armCloud`: the HII tier is the current
+    // work being visually tuned.
+    hii: true,
+    // Expanded, same rationale as `hii`: step 1 of the SSPSF automaton is
+    // the current work being visually tuned.
+    sfMap: true,
     pop: false,
     dust: false,
     // Expanded, same rationale as `armField`/`field`: the analytic dust lane

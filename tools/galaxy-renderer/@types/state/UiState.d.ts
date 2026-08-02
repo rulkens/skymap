@@ -15,6 +15,8 @@ export type UiState = {
       | 'arms'
       | 'armField'
       | 'armCloud'
+      | 'hii'
+      | 'sfMap'
       | 'pop'
       | 'dust'
       | 'analyticDust'

@@ -14,11 +14,16 @@
 import { armCrossSigma, armFadeEnvelope } from './armRidgeGeometry';
 import { buildClusteredDiscPlacement, type CloudFrame } from './clusteredDiscPlacement';
 import { DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './discSurfaceFit';
-import { buildDustBubblePlacements, pcToUnits } from './dustBubblePlacements';
+import {
+  buildDustBubblePlacements,
+  buildHiiCavityPlacements,
+  type DustBubblePlacement,
+} from './dustBubblePlacements';
 import { armOffsetFrameAt } from './dustLaneFeatures';
 import { clampedDustCloudShare, dustDiscShape, dustSigmaR } from './galaxyDustMixture';
 import { dustExtinctionRgb } from '../../utils/galaxy/dustExtinctionRgb';
 import { inverseCovarianceFromFrame } from '../../utils/galaxy/inverseCovarianceFromFrame';
+import { pcToUnits } from '../../utils/galaxy/pcToUnits';
 import { gaussian } from '../../utils/random/gaussian';
 import { mulberry32 } from '../../utils/random/mulberry32';
 import type { GalaxyDustParams } from '../../@types/galaxy/GalaxyDustParams';
@@ -79,8 +84,10 @@ const COMPLEX_SPREAD_PC = 250;
 /** Clouds are flattened relative to their in-plane extent. */
 const CLOUD_POLE_RATIO = 0.6;
 
-/** A cavity's swept rim lands just past its edge, not exactly on it. */
+/** A relic bubble's swept rim lands just past its edge, not exactly on it — an old, dispersed shell. */
 const RIM_OVERSHOOT = 0.15;
+/** An HII cavity's rim is still actively being swept: tighter than a relic bubble's, so the shell reads dense and sharp rather than diffuse. */
+const HII_RIM_OVERSHOOT = 0.05;
 /** Below this a particle-to-bubble-centre vector is too degenerate to normalise; fall back to a random direction. */
 const CARVE_EPSILON = 1e-6;
 
@@ -103,6 +110,7 @@ function randomDirection(rng: () => number): Vec3 {
 export function buildDustParticleCloud(
   geometry: GalaxyFieldGeometry,
   dust: GalaxyDustParams,
+  tuning: GalaxyFieldTuning,
   seed: number,
 ): readonly GalaxyFieldComponent[] {
   const { cloud } = dust;
@@ -153,11 +161,25 @@ export function buildDustParticleCloud(
     (childRng) => ({ radius: sampleRadius(childRng()) }),
   );
 
-  // ---- 4d: bubble carving — swept-up shells, not just holes -----------------
-  const bubbles = buildDustBubblePlacements(geometry, dust, seed);
-  if (bubbles.length > 0) {
+  // ---- 4d: cavity carving — swept-up shells, not just holes -----------------
+  // Bubbles first so the hiiCavityScale=0 / hiiEnabled=false case (cavities
+  // list empty) reproduces the pre-HII carve order exactly.
+  const cavities: ReadonlyArray<{
+    readonly placement: DustBubblePlacement;
+    readonly rimOvershoot: number;
+  }> = [
+    ...buildDustBubblePlacements(geometry, dust, seed).map((placement) => ({
+      placement,
+      rimOvershoot: RIM_OVERSHOOT,
+    })),
+    ...buildHiiCavityPlacements(geometry, dust, tuning, seed).map((placement) => ({
+      placement,
+      rimOvershoot: HII_RIM_OVERSHOOT,
+    })),
+  ];
+  if (cavities.length > 0) {
     for (const particle of particles) {
-      for (const bubble of bubbles) {
+      for (const { placement: bubble, rimOvershoot } of cavities) {
         const dx = particle.center[0] - bubble.center[0];
         const dy = particle.center[1] - bubble.center[1];
         const dz = particle.center[2] - bubble.center[2];
@@ -166,13 +188,13 @@ export function buildDustParticleCloud(
         if (rng() >= cloud.bubbleCarve) break;
         const d = Math.sqrt(d2);
         const dir: Vec3 = d > CARVE_EPSILON ? [dx / d, dy / d, dz / d] : randomDirection(rng);
-        const p = bubble.radius * (1 + RIM_OVERSHOOT * rng());
+        const p = bubble.radius * (1 + rimOvershoot * rng());
         particle.center = [
           bubble.center[0] + dir[0] * p,
           bubble.center[1] + dir[1] * p,
           bubble.center[2] + dir[2] * p,
         ];
-        break; // one carve per particle — bubbles rarely overlap
+        break; // one carve per particle — cavities rarely overlap
       }
     }
   }
