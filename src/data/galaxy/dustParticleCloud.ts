@@ -10,7 +10,16 @@
  * two-level complex/children placement — the SF map when usable, else a
  * plain smooth disc, no arm-lane machinery of its own (that stayed with
  * `armParticleCloud.ts`; see `buildDustParticleCloud`'s own placement
- * comment). Bubble carving (4d) sweeps particles onto SF-cavity rims.
+ * comment).
+ *
+ * No cavity carving here any more — the seeded SF-event catalog
+ * (`dustBubblePlacements.ts`) used to sweep particles onto bubble/HII rims,
+ * a second, independent star-formation model carving the same holes the
+ * SSPSF automaton's own gas depletion already produces (`sfMap`, read via
+ * `sfMapDustDensity` below). The map is now the only thing that shapes
+ * dust, so until the automaton's depletion is tuned to carve on its own,
+ * dust has no cavity holes and HII regions (still seeded from the event
+ * catalog) can sit inside dust that no longer has a hole for them.
  *
  * PURITY INVARIANT: pure `(geometry, dust, tuning, seed, sfMap,
  * sfMapOrientation) -> flat data`, no Math.random/Date/engine state — a
@@ -28,18 +37,12 @@ import {
   type OrientationDeltaStats,
 } from './clusteredDiscPlacement';
 import { DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './discSurfaceFit';
-import {
-  buildDustBubblePlacements,
-  buildHiiCavityPlacements,
-  type DustBubblePlacement,
-} from './dustBubblePlacements';
 import { dustDiscShape, dustSigmaR } from './galaxyDustMixture';
 import { dustExtinctionRgb } from '../../utils/galaxy/dustExtinctionRgb';
 import { inverseCovarianceFromFrame } from '../../utils/galaxy/inverseCovarianceFromFrame';
 import { pcToUnits } from '../../utils/galaxy/pcToUnits';
 import { sampleGalaxySfMap } from '../../utils/galaxy/sampleGalaxySfMap';
 import { sfMapDustDensity } from '../../utils/galaxy/sfMapDustDensity';
-import { gaussian } from '../../utils/random/gaussian';
 import { mulberry32 } from '../../utils/random/mulberry32';
 import type { GalaxyDustParams } from '../../@types/galaxy/GalaxyDustParams';
 import type { GalaxyFieldComponent } from '../../@types/galaxy/GalaxyFieldComponent';
@@ -101,17 +104,10 @@ const COMPLEX_SPREAD_PC = 250;
 /** Clouds are flattened relative to their in-plane extent. */
 const CLOUD_POLE_RATIO = 0.6;
 
-/** A relic bubble's swept rim lands just past its edge, not exactly on it — an old, dispersed shell. */
-const RIM_OVERSHOOT = 0.15;
-/** An HII cavity's rim is still actively being swept: tighter than a relic bubble's, so the shell reads dense and sharp rather than diffuse. */
-const HII_RIM_OVERSHOOT = 0.05;
-/** Below this a particle-to-bubble-centre vector is too degenerate to normalise; fall back to a random direction. */
-const CARVE_EPSILON = 1e-6;
-
 const TAU_ROOT3 = (2 * Math.PI) ** 1.5;
 
 type CloudParticle = {
-  center: Vec3;
+  readonly center: Vec3;
   readonly frame: CloudFrame;
   readonly radius: number;
 };
@@ -124,20 +120,14 @@ type CloudParticle = {
  * replaces, just quieter. Channel 2 (blue) is `oldActivity`; channel 1 is
  * `recentSf`, which this deliberately does NOT read (see `sfMapDustDensity`).
  */
-function maxSfMapDustDensity(map: GalaxySfMap, sfWeight: number): number {
+function maxSfMapDustDensity(map: GalaxySfMap): number {
   let max = 0;
   const { data } = map;
   for (let i = 0; i + 2 < data.length; i += 4) {
-    const density = sfMapDustDensity(data[i]! / 255, data[i + 2]! / 255, sfWeight);
+    const density = sfMapDustDensity(data[i]! / 255, data[i + 2]! / 255);
     if (density > max) max = density;
   }
   return max;
-}
-
-function randomDirection(rng: () => number): Vec3 {
-  const v: Vec3 = [gaussian(rng), gaussian(rng), gaussian(rng)];
-  const len = Math.hypot(v[0], v[1], v[2]) || 1;
-  return [v[0] / len, v[1] / len, v[2] / len];
 }
 
 export function buildDustParticleCloud(
@@ -185,15 +175,9 @@ export function buildDustParticleCloud(
   // density; `armParticleCloud.ts` still owns the one live `'analytic'`
   // caller. This is the intended consequence of the SF map leading, not a
   // regression.
-  //
-  // NOT wired to `buildDustBubblePlacements`/`buildHiiCavityPlacements`/
-  // `cloud.bubbleCarve` below — those already carve holes from the same gas
-  // depletion this reads, and running both would double-carve. Out of scope
-  // for this pass; left exactly as it was.
   let placement: ClusteredDiscPlacementMode = { kind: 'smoothDisc' };
   if (tuning.sfMapDustSeeding && sfMap) {
-    const sfWeight = cloud.sfMapSfWeight;
-    const maxDensity = maxSfMapDustDensity(sfMap, sfWeight);
+    const maxDensity = maxSfMapDustDensity(sfMap);
     if (maxDensity > 0) {
       placement = {
         kind: 'mapDensity',
@@ -206,7 +190,7 @@ export function buildDustParticleCloud(
           // collected in the central circle the overlay draws as black.
           if (radius < sfMap.rMin || radius > sfMap.rMax) return 0;
           const sample = sampleGalaxySfMap(sfMap, radius, angle);
-          return sfMapDustDensity(sample.gas, sample.oldActivity, sfWeight) / maxDensity;
+          return sfMapDustDensity(sample.gas, sample.oldActivity) / maxDensity;
         },
       };
     }
@@ -232,44 +216,6 @@ export function buildDustParticleCloud(
     },
     (childRng) => ({ radius: sampleRadius(childRng()) }),
   );
-
-  // ---- 4d: cavity carving — swept-up shells, not just holes -----------------
-  // Bubbles first so the hiiCavityScale=0 / hiiEnabled=false case (cavities
-  // list empty) reproduces the pre-HII carve order exactly.
-  const cavities: ReadonlyArray<{
-    readonly placement: DustBubblePlacement;
-    readonly rimOvershoot: number;
-  }> = [
-    ...buildDustBubblePlacements(geometry, dust, seed).map((placement) => ({
-      placement,
-      rimOvershoot: RIM_OVERSHOOT,
-    })),
-    ...buildHiiCavityPlacements(geometry, dust, tuning, seed).map((placement) => ({
-      placement,
-      rimOvershoot: HII_RIM_OVERSHOOT,
-    })),
-  ];
-  if (cavities.length > 0) {
-    for (const particle of particles) {
-      for (const { placement: bubble, rimOvershoot } of cavities) {
-        const dx = particle.center[0] - bubble.center[0];
-        const dy = particle.center[1] - bubble.center[1];
-        const dz = particle.center[2] - bubble.center[2];
-        const d2 = dx * dx + dy * dy + dz * dz;
-        if (d2 >= bubble.radius * bubble.radius) continue;
-        if (rng() >= cloud.bubbleCarve) break;
-        const d = Math.sqrt(d2);
-        const dir: Vec3 = d > CARVE_EPSILON ? [dx / d, dy / d, dz / d] : randomDirection(rng);
-        const p = bubble.radius * (1 + rimOvershoot * rng());
-        particle.center = [
-          bubble.center[0] + dir[0] * p,
-          bubble.center[1] + dir[1] * p,
-          bubble.center[2] + dir[2] * p,
-        ];
-        break; // one carve per particle — cavities rarely overlap
-      }
-    }
-  }
 
   // ---- 4b: Larson's third law — mass ~ R^2 (constant cloud surface density) -
   let weightedSigma2 = 0;

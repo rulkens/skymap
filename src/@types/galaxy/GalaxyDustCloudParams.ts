@@ -26,8 +26,6 @@ export type GalaxyDustCloudParams = {
   readonly elongation: number;
   /** Particle-centre vertical scatter as a fraction of the dust layer's own sigma_z. Clouds sit in a THINNER layer than the mean dust. */
   readonly heightRatio: number;
-  /** 0..1 probability that a particle inside an SF bubble is swept out to its rim. */
-  readonly bubbleCarve: number;
   /** 0..1+ ridged-noise erosion strength multiplying the cloud tier's tau (dustNoiseBake.wesl, dustMap.wesl). 0 = smooth analytic ellipsoids. */
   readonly texture: number;
   /** Multiplier on the noise volume's world-space tile size (dustParticleCloud.ts's DUST_NOISE_TILE_PC). */
@@ -40,15 +38,4 @@ export type GalaxyDustCloudParams = {
   readonly sfActivity: number;
   readonly laneWidth: number;
   readonly bubbleScale: number;
-  /**
-   * SF-map seeded placement density blend (only read while
-   * `GalaxyFieldTuning.sfMapDustSeeding` is on): 0 = pure gas channel, 1 =
-   * `gas * oldActivity`, the automaton's accumulated trace of every front
-   * that passed. Below 1 leaves a `(1 - sfWeight)` FLOOR that gas — near 1
-   * over most of a quiet disc — multiplies into a near-uniform pedestal, so
-   * the structure washes out fast: 0.7 gives only ~1.6:1 contrast against
-   * never-burnt disc. See `sfMapDustDensity` for why the channel is
-   * `oldActivity` and not `recentSf`.
-   */
-  readonly sfMapSfWeight: number;
 };

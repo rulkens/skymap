@@ -15,7 +15,6 @@ export const DEFAULT_GALAXY_DUST_CLOUD_PARAMS: GalaxyDustCloudParams = {
   sizeFloorPc: SIZE_MIN_PC,
   elongation: 2.5,
   heightRatio: 0.5,
-  bubbleCarve: 0.8,
   texture: 0.7,
   textureScale: 1,
   textureContrast: 1,
@@ -23,8 +22,4 @@ export const DEFAULT_GALAXY_DUST_CLOUD_PARAMS: GalaxyDustCloudParams = {
   sfActivity: 1,
   laneWidth: 1,
   bubbleScale: 1,
-  // 1, not a blend: anything below it leaves a (1 - w) pedestal that gas
-  // multiplies into near-uniform dust, and gas is ~1 over most of a quiet
-  // disc. At 0.7 the wake reads only ~1.6x the never-burnt background.
-  sfMapSfWeight: 1,
 };

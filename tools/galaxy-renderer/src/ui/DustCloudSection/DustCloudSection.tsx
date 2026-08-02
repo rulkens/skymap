@@ -102,16 +102,6 @@ function DustCloudSection(): ReactNode {
           info="Cloud layer sigma_z as a ratio of the flat dust layer's own sigma_z."
         />
         <ParamSlider
-          label="Bubble carve"
-          value={cloud.bubbleCarve}
-          min={0}
-          max={1}
-          step={0.05}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => patchCloud({ bubbleCarve: v })}
-          info="0 = clouds ignore star-forming bubbles, 1 = fully swept out of them."
-        />
-        <ParamSlider
           label="Texture erosion"
           value={cloud.texture}
           min={0}
@@ -180,16 +170,6 @@ function DustCloudSection(): ReactNode {
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchCloud({ bubbleScale: v })}
           info="× measured default. Radii 6-552 pc in NGC 628, size power law slope frozen (Watkins et al. 2023)."
-        />
-        <ParamSlider
-          label="SF map weight"
-          value={cloud.sfMapSfWeight}
-          min={0}
-          max={1}
-          step={0.05}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => patchCloud({ sfMapSfWeight: v })}
-          info="Only read while SF-map seeding is on. 0 = seed on gas alone, 1 = seed on gas × accumulated activity, the trace of every front that passed. Below 1 leaves a (1 − w) pedestal that gas — near 1 over most of a quiet disc — turns into near-uniform dust: at 0.7 a wake reads only ~1.6× the never-burnt background, which is why the coupling looked absent."
         />
       </div>
     </CollapsibleSection>

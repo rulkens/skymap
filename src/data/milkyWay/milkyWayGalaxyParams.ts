@@ -109,7 +109,6 @@ export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams = {
       sizeFloorPc: 15,
       elongation: 2.5,
       heightRatio: 0.5,
-      bubbleCarve: 0.8,
       texture: 0.7,
       textureScale: 1,
       textureContrast: 1,
@@ -117,7 +116,6 @@ export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams = {
       sfActivity: 1,
       laneWidth: 1,
       bubbleScale: 1,
-      sfMapSfWeight: 1,
     },
   },
 };

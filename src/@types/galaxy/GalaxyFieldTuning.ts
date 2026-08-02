@@ -103,12 +103,11 @@ export type GalaxyFieldTuning = {
   readonly sfMap: GalaxySfMapParams;
   /**
    * Gate for the dust particle cloud reading the automaton's output. ON
-   * makes the sampled map the cloud's ONLY placement density (a gas x
-   * recent-SF blend — see `sfMapDustDensity`/`GalaxyDustCloudParams.
-   * sfMapSfWeight`), replacing the analytic arm-lane/smooth-disc roll
-   * entirely, and still elongates each splat along the measured crest
-   * orientation. OFF leaves `buildDustParticleCloud` byte-identical to
-   * before the map existed.
+   * makes the sampled map the cloud's ONLY placement density (`gas *
+   * oldActivity` — see `sfMapDustDensity`), replacing the analytic
+   * arm-lane/smooth-disc roll entirely, and still elongates each splat
+   * along the measured crest orientation. OFF leaves `buildDustParticleCloud`
+   * byte-identical to before the map existed.
    *
    * Defaults ON, which is inert wherever no automaton runs: both consumers
    * need a sampled map handed in and fall back to the unseeded analytic path
