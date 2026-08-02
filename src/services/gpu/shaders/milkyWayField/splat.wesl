@@ -210,5 +210,10 @@ fn fs(input: SplatOut) -> @location(0) vec4<f32> {
   // above: the dust column is physical (a property of the galaxy's own
   // geometry), not a look knob that should brighten or dim with the field's
   // whole-frame exposure.
-  return vec4<f32>(emission * u.params.w, 0.0);
+  //
+  // debugView.w is the combined galaxy dimming weight (io.wesl's debugView
+  // doc) — 1 with every debug view off, so this multiply is a no-op at the
+  // default. This same fs also draws the HII tier (a second bind group over
+  // the same pipeline), so HII dims under an active debug view too.
+  return vec4<f32>(emission * u.params.w * u.debugView.w, 0.0);
 }

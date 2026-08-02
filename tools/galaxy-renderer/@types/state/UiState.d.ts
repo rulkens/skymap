@@ -17,6 +17,7 @@ export type UiState = {
       | 'armCloud'
       | 'hii'
       | 'sfMap'
+      | 'debugViews'
       | 'pop'
       | 'dust'
       | 'analyticDust'

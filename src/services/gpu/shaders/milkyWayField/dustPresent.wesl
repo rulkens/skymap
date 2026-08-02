@@ -1,15 +1,19 @@
 // milkyWayField/dustPresent.wesl — the "JWST" view mode: presents
 // dustMap.wesl's screen-space column map directly, through a hot MIRI-ish
-// palette, instead of using it to attenuate emission. Replaces the emission
-// splat draw when render.dustView is on (createGalaxyEngine.ts), writing into
-// dustViewTex — its OWN target, divisor-matched to dustMapTex rather than to
-// fieldTex (see io.wesl's DUST MAP doc), so the scene pass's aggregate-
-// upsample composite picks whichever of the two targets ran this frame.
+// palette, instead of using it to attenuate emission. Crossfaded with the
+// emission splat draw by weight render.dustViewIntensity (createGalaxyEngine.ts),
+// writing into dustViewTex — its OWN target, divisor-matched to dustMapTex
+// rather than to fieldTex (see io.wesl's DUST MAP doc), so the scene pass's
+// aggregate-upsample composite can sum both targets when both are live.
+//
+// Imports io.wesl's shared uniform 'u' (rather than declaring its own tiny
+// binding-0 module, as it used to) purely to reach debugView.x — this pass
+// otherwise has no use for the camera/params/counts lanes.
 
 import package::lib::fullscreenTri::fullscreenVertex;
 import package::lib::fullscreenTri::FullscreenOut;
-
-@group(0) @binding(0) var dustMapTex: texture_2d<f32>;
+import package::milkyWayField::io::u;
+import package::milkyWayField::io::dustMapTex;
 
 @vertex
 fn vs(@builtin(vertex_index) vi: u32) -> FullscreenOut {
@@ -49,5 +53,9 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   // Alpha 0, matching splat.wesl's fs: this target's alpha channel feeds
   // nothing downstream (the additive upsample folds RGB into HDR and the
   // compositor forces alpha 1.0).
-  return vec4<f32>(color, 0.0);
+  //
+  // debugView.x is this view's own crossfade weight (io.wesl's debugView
+  // doc) — 0 with the slider off, which keeps this pass's contribution to
+  // the additive composite at zero even on a frame where it still runs.
+  return vec4<f32>(color * u.debugView.x, 0.0);
 }

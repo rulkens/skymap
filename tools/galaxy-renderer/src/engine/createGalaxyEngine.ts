@@ -222,7 +222,7 @@ import {
   packFieldComponents,
   packFieldHeaderUniforms,
 } from './packFieldUniforms';
-import type { FieldDustNoise, FieldDustSlices } from './packFieldUniforms';
+import type { DebugViewWeights, FieldDustNoise, FieldDustSlices } from './packFieldUniforms';
 import { createGenerationPipelines } from '../../../../src/services/gpu/galaxy/createGenerationPipelines';
 import { encodeGeneration } from '../../../../src/services/gpu/galaxy/encodeGeneration';
 import { packGenerationUniforms } from '../../../../src/services/gpu/galaxy/packGenerationUniforms';
@@ -345,36 +345,32 @@ const bloomScale = (level: number): number => 2 ** (level + 1);
  *    component — into its OWN reduced-resolution `dustMapTex` (cleared, not
  *    loaded), sized to its own `dustDivisor` rather than the field's. Only
  *    encoded when there is dust to splat OR the JWST view needs a fresh map
- *    (see `drawFrame`'s gate), so the slot drops on a dustless galaxy
- *    exactly like `'field'` drops when the model is off.
- *  - `'field'` is whichever pass filled the field/dust-view target this
- *    frame: the analytic Gaussian-mixture splat into `fieldTex` normally, or
- *    the JWST dustPresent pass into its own `dustViewTex` when
- *    `render.dustView` is on (the two ride independent divisors now, so they
- *    are no longer the same texture — see `dustMapTex`'s declaration
- *    comment). Both targets are cleared, not loaded — no tile-reload tax —
- *    so sharing one slot between the two answers the same question ("what
- *    did this pass cost") regardless of which one ran. Only encoded when the
- *    analytic field is on, so the slot self-drops. Also self-drops while
- *    `render.sfMapView` OR `render.orientationView` is on: both diagnostics
- *    present straight into `sceneTex` at full canvas resolution (see the
- *    `'scene'` bullet and `sfMapPresent.wesl`'s header — a fieldDivisor-
- *    downsampled target would bias the sharpness judgement the view exists
- *    to make), so neither fills `fieldTex` or `dustViewTex` and neither has
- *    a pass of its own here.
+ *    (`render.dustViewIntensity > 0`, see `drawFrame`'s gate), so the slot
+ *    drops on a dustless galaxy exactly like `'field'` drops when the model
+ *    is off.
+ *  - `'field'` is the analytic Gaussian-mixture splat into `fieldTex` alone —
+ *    only encoded when the analytic field is on, so the slot self-drops with
+ *    it. The JWST dustPresent pass, into its own `dustViewTex`, now runs
+ *    ADDITIONALLY whenever `render.dustViewIntensity > 0` (the three debug
+ *    views crossfade rather than replace the normal draw — see
+ *    `RenderSettings`), so it carries no `timestampWrites` of its own: two
+ *    passes cannot share one timestamp-pair slot in a frame, and giving it a
+ *    second slot would grow this list for a presentation pass nobody bills
+ *    separately from the field it can now run alongside.
  *  - `'hii'` is the HII tier's own splat — the same `splatPipe`, a different
  *    bind group and target (`hiiTex`, `render.hiiDivisor`) — see `hiiTex`'s
  *    declaration comment for why it cannot share `'field'`'s slot or target.
  *    Only encoded when there is at least one HII component to draw.
  *  - `'scene'` is the full-res HDR pass: the aggregate's additive upsample,
- *    the field's and the HII tier's own upsamples, then the dust billboards
- *    — or, while `render.sfMapView` is on, the SSPSF diagnostic drawn
- *    straight into this pass instead of any of those. All share one
- *    attachment and so share a pass; separating them would mean ending the
- *    HDR pass and reopening it with `loadOp: 'load'`, which on a tile-based
- *    GPU is a full tile store plus reload of the whole HDR target — more
- *    cost than the measurement is worth, and enough to corrupt the wall
- *    clock that outranks it.
+ *    the field's and the HII tier's own upsamples, the dust billboards, and —
+ *    each independently, whenever its own crossfade weight is above 0 — the
+ *    JWST dust-view upsample, the SF-map diagnostic, and the orientation
+ *    diagnostic, all summed additively rather than any one replacing the
+ *    others. All share one attachment and so share a pass; separating them
+ *    would mean ending the HDR pass and reopening it with `loadOp: 'load'`,
+ *    which on a tile-based GPU is a full tile store plus reload of the whole
+ *    HDR target — more cost than the measurement is worth, and enough to
+ *    corrupt the wall clock that outranks it.
  *  - `'bloom'` is the whole pyramid as ONE span (begin on the bright pass, end
  *    on the fold), which is exactly how the app's frame program bills it (see
  *    `frameProgram.ts`'s `'bloom'` step and `runBloom`). Matching keeps a
@@ -698,10 +694,11 @@ export async function createGalaxyEngine(
 
   // ---- dust-map presentation pipeline ("JWST" view) ----
   // `milkyWayField/dustPresent.wesl`: a fullscreen triangle over `dustMapTex`,
-  // mapping its column to a hot palette. Drawn INSTEAD of `splatPipe`'s
-  // emission draw when `render.dustView` is on — see `drawFrame`'s field
-  // pass. No blend: it is the pass's only draw into a freshly cleared
-  // `dustViewTex`, so a straight overwrite is correct.
+  // mapping its column to a hot palette. Drawn ALONGSIDE `splatPipe`'s
+  // emission draw, gated on `render.dustViewIntensity > 0` — see `drawFrame`'s
+  // field pass. No blend: it is the pass's only draw into a freshly cleared
+  // `dustViewTex`, so a straight overwrite is correct; the crossfade itself
+  // happens later, in the scene pass's additive composite.
   const dustPresentMod = makeShader(dustPresentWgsl, 'galaxy:dustPresent');
   const dustPresentPipe = device.createRenderPipeline({
     label: 'galaxy:dustPresentPipe',
@@ -1005,7 +1002,10 @@ export async function createGalaxyEngine(
       format,
       usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING,
     });
-  const orientationFieldBlurTex = makeOrientationScratch('galaxy:orientationFieldBlurTex', 'r32float');
+  const orientationFieldBlurTex = makeOrientationScratch(
+    'galaxy:orientationFieldBlurTex',
+    'r32float',
+  );
   const orientationFieldSmoothTex = makeOrientationScratch(
     'galaxy:orientationFieldSmoothTex',
     'r32float',
@@ -1290,9 +1290,10 @@ export async function createGalaxyEngine(
   // `orientationTex`'s CPU-side readback (`scheduleOrientationReadback`),
   // same lifecycle as `sfMapData` above but its own token: the orientation
   // chain dispatches independently of the sfMap one (`setRender`'s
-  // `orientationView` toggle, or `setFieldTuning`'s `sfMapDustSeeding`
-  // toggle, neither of which touch `sfMapData`), so sharing one token would
-  // let an unrelated trigger wrongly supersede a still-pending readback.
+  // `orientationViewIntensity` crossing 0, or `setFieldTuning`'s
+  // `sfMapDustSeeding` toggle, neither of which touch `sfMapData`), so
+  // sharing one token would let an unrelated trigger wrongly supersede a
+  // still-pending readback.
   let orientationData: GalaxySfMapOrientation | null = null;
   let orientationReadbackToken = 0;
   // The three `OrientationDiagnostics` numbers `reportOrientationDiagnostics`
@@ -1340,12 +1341,14 @@ export async function createGalaxyEngine(
   // the one shader among the three that share io.wesl (splat/dustMap/
   // dustPresent) that actually imports them — `layout: 'auto'` derives each
   // pipeline's bind-group layout from what its OWN shader references.
-  // `dustPresentBG` doesn't even import io.wesl (its own tiny module
-  // declares `dustMapTex` at binding 0 directly), so it was never in
-  // scope for this either. Binding 6 (dustMapSmp) goes ONLY into `splatBG`
-  // below, for the mirror-image reason: splat.wesl's fs is the one reader
-  // that samples `dustMapTex` through a filtered UV rather than a 1:1 load —
-  // see `dustMapTex`'s own declaration comment.
+  // `dustPresentBG` now also imports `u` (binding 0) alongside `dustMapTex`
+  // (binding 2) — it needs `debugView.x`, the JWST view's own crossfade
+  // weight, now that this pass runs ALONGSIDE the emission splat rather than
+  // replacing it (see `drawFrame`'s field-pass region). Binding 6
+  // (dustMapSmp) goes ONLY into `splatBG` below, for the mirror-image
+  // reason: splat.wesl's fs is the one reader that samples `dustMapTex`
+  // through a filtered UV rather than a 1:1 load — see `dustMapTex`'s own
+  // declaration comment.
   let dustMapBG = buildDustMapBindGroup();
   function buildDustMapBindGroup(): GPUBindGroup {
     return device.createBindGroup({
@@ -1380,7 +1383,10 @@ export async function createGalaxyEngine(
     return device.createBindGroup({
       label: 'galaxy:dustPresentBG',
       layout: dustPresentPipe.getBindGroupLayout(0),
-      entries: [{ binding: 0, resource: dustMapTex.createView() }],
+      entries: [
+        { binding: 0, resource: { buffer: fieldUbo } },
+        { binding: 2, resource: dustMapTex.createView() },
+      ],
     });
   }
   // The HII pass reuses `splatPipe` itself (same shader, same emission math),
@@ -1471,9 +1477,9 @@ export async function createGalaxyEngine(
   /**
    * The JWST-view's own presentation target (dustPresent.wesl), divisor-
    * matched to `dustMapTex` rather than `fieldTex` — see `dustMapTex`'s own
-   * comment above. Only allocated/used while `render.dustView` is on; the
-   * scene pass picks whichever of `fieldTex`/`dustViewTex` this frame
-   * actually filled (see `drawFrame`).
+   * comment above. Only drawn into while `render.dustViewIntensity` is above
+   * 0; the scene pass sums it additively alongside `fieldTex` when it ran
+   * this frame (see `drawFrame`).
    */
   let dustViewTex: GPUTexture;
   let bloomMips: GPUTexture[] = [];
@@ -1857,7 +1863,13 @@ export async function createGalaxyEngine(
           orientationReadbackBuf.unmap();
         }
         if (token !== orientationReadbackToken) return;
-        orientationData = { az: SF_MAP_AZ, rings: SF_MAP_RINGS, rMin: grid.rMin, rMax: grid.rMax, data };
+        orientationData = {
+          az: SF_MAP_AZ,
+          rings: SF_MAP_RINGS,
+          rMin: grid.rMin,
+          rMax: grid.rMax,
+          data,
+        };
         // Coherence is the packed vector's own length (see
         // GalaxySfMapOrientation's doc: `data` is `(cos2theta, sin2theta)`
         // already SCALED by coherence) — computed once here, at the one
@@ -1907,36 +1919,43 @@ export async function createGalaxyEngine(
    * rebuildSfMapOrientationIfNeeded — dispatches the GPU structure-tensor
    * pass chain (sfMapOrientationField -> Tensor -> TensorBlur -> Coherence,
    * see that quartet's own headers) over the CURRENT `sfMapTex`, but ONLY
-   * while `render.orientationView` is on OR `fieldTuning.sfMapDustSeeding`
-   * is — the debug overlay and the dust placement's CPU readback
-   * (`scheduleOrientationReadback`, called below when seeding is on) are
-   * two independent consumers of the same six-pass chain, either one enough
-   * to justify running it. Unlike the deleted CPU build this needs no
-   * readback to run FROM — sfMapTex is a GPU texture already, and WebGPU
-   * zero-initialises it, so this is safe to call even before `rebuildSfMap`
-   * has ever populated it. Still edge-triggered rather than unconditional,
-   * from three places:
+   * while `render.orientationViewIntensity` is above 0 OR
+   * `fieldTuning.sfMapDustSeeding` is — the debug overlay and the dust
+   * placement's CPU readback (`scheduleOrientationReadback`, called below
+   * when seeding is on) are two independent consumers of the same six-pass
+   * chain, either one enough to justify running it. Unlike the deleted CPU
+   * build this needs no readback to run FROM — sfMapTex is a GPU texture
+   * already, and WebGPU zero-initialises it, so this is safe to call even
+   * before `rebuildSfMap` has ever populated it. Still edge-triggered rather
+   * than unconditional, from three places:
    *
    *  - `rebuildSfMap`'s own two exits, right after the compute submit that
    *    (re)writes `sfMapTex` — a new automaton state is a new field to
    *    dispatch this chain over, if either consumer wants it.
-   *  - `setRender`, only when the incoming patch actually flips
-   *    `orientationView` on or moves either sigma while it is already on —
-   *    see that function's own comment. `setRender` runs on every
-   *    render-bag change (the bridge re-pushes the whole bag on any knob),
-   *    so calling this unconditionally there would redispatch the chain on
-   *    an unrelated exposure drag.
+   *  - `setRender`, only when the incoming patch actually crosses
+   *    `orientationViewIntensity` from 0 to above 0, or moves either sigma
+   *    while a consumer is already live — see that function's own comment.
+   *    `setRender` runs on every render-bag change (the bridge re-pushes the
+   *    whole bag on any knob), so calling this unconditionally there would
+   *    redispatch the chain on an unrelated exposure drag, and firing on
+   *    every intensity step of an already-live slider would redispatch the
+   *    whole six-pass chain per frame of a drag.
    *  - `setFieldTuning`, only when the incoming patch flips
    *    `sfMapDustSeeding` on — see that function's own comment.
    */
   function rebuildSfMapOrientationIfNeeded(): void {
-    if (!render.orientationView && !fieldTuning.sfMapDustSeeding) return;
+    if (render.orientationViewIntensity <= 0 && !fieldTuning.sfMapDustSeeding) return;
     const grid = fieldGeometry ? sfMapGridRadius(fieldGeometry) : { rMin: 1e-3, rMax: 1 };
     device.queue.writeBuffer(orientationGridUbo, 0, new Float32Array([grid.rMin, grid.rMax, 0, 0]));
     device.queue.writeBuffer(
       sfMapOrientationSigmaUbo,
       0,
-      new Float32Array([render.orientationSigmaDerivTexels, render.orientationSigmaIntegTexels, 0, 0]),
+      new Float32Array([
+        render.orientationSigmaDerivTexels,
+        render.orientationSigmaIntegTexels,
+        0,
+        0,
+      ]),
     );
     const dispatchX = SF_MAP_AZ / SF_MAP_WORKGROUP_SIZE;
     const dispatchY = SF_MAP_RINGS / SF_MAP_WORKGROUP_SIZE;
@@ -2431,7 +2450,7 @@ export async function createGalaxyEngine(
     const previousFieldDivisor = render.fieldDivisor;
     const previousDustDivisor = render.dustDivisor;
     const previousHiiDivisor = render.hiiDivisor;
-    const previousOrientationView = render.orientationView;
+    const previousOrientationViewIntensity = render.orientationViewIntensity;
     const previousOrientationSigmaDeriv = render.orientationSigmaDerivTexels;
     const previousOrientationSigmaInteg = render.orientationSigmaIntegTexels;
     Object.assign(render, patch);
@@ -2446,21 +2465,25 @@ export async function createGalaxyEngine(
       buildDustViewTarget();
     }
     if (render.hiiDivisor !== previousHiiDivisor) buildHiiTarget();
-    // Edge-triggered, not "whenever orientationView is true": this function
-    // runs on every render-bag push, so the latter would redispatch the
-    // pass chain on an unrelated exposure drag. See
-    // rebuildSfMapOrientationIfNeeded's own docblock.
+    // Edge-triggered on the 0 -> nonzero CROSSING, not "whenever intensity is
+    // above 0": this function runs on every render-bag push, and the slider
+    // is now continuous, so the latter would redispatch the whole six-pass
+    // chain on every drag step instead of once when the overlay turns on.
+    // See rebuildSfMapOrientationIfNeeded's own docblock.
     //
-    // Gated on EITHER consumer being live, not just `orientationView`: with
-    // the overlay off and `sfMapDustSeeding` on, the old `render.orientationView
-    // &&` guard left the sigma sliders dead — no live consumer meant the
-    // condition never even reached the edge check, so a sigma drag redrew
-    // nothing and the dust never resampled the new orientation. Matches the
-    // early-return gate inside `rebuildSfMapOrientationIfNeeded` itself.
-    const orientationConsumerLive = render.orientationView || fieldTuning.sfMapDustSeeding;
+    // Gated on EITHER consumer being live, not just the intensity: with the
+    // overlay off and `sfMapDustSeeding` on, an intensity-only guard left the
+    // sigma sliders dead — no live consumer meant the condition never even
+    // reached the edge check, so a sigma drag redrew nothing and the dust
+    // never resampled the new orientation. Matches the early-return gate
+    // inside `rebuildSfMapOrientationIfNeeded` itself.
+    const orientationConsumerLive =
+      render.orientationViewIntensity > 0 || fieldTuning.sfMapDustSeeding;
+    const orientationViewJustTurnedOn =
+      previousOrientationViewIntensity <= 0 && render.orientationViewIntensity > 0;
     if (
       orientationConsumerLive &&
-      (render.orientationView !== previousOrientationView ||
+      (orientationViewJustTurnedOn ||
         render.orientationSigmaDerivTexels !== previousOrientationSigmaDeriv ||
         render.orientationSigmaIntegTexels !== previousOrientationSigmaInteg)
     ) {
@@ -2523,10 +2546,11 @@ export async function createGalaxyEngine(
       rebuildSfMap(); // its own two exits already dispatch+readback orientation
     } else if (fieldTuning.sfMapDustSeeding && !previousSfMapDustSeeding) {
       // sfMap itself wasn't touched, so rebuildSfMap won't run — but seeding
-      // just turned on and the chain may never have dispatched (orientationView
-      // could be, and usually is, off), so `orientationData` would otherwise
-      // stay null forever. `rebuildDustMixture` above already ran once against
-      // whatever `orientationData` was cached; this brings it current.
+      // just turned on and the chain may never have dispatched
+      // (`orientationViewIntensity` could be, and usually is, 0), so
+      // `orientationData` would otherwise stay null forever.
+      // `rebuildDustMixture` above already ran once against whatever
+      // `orientationData` was cached; this brings it current.
       rebuildSfMapOrientationIfNeeded();
     }
   }
@@ -3035,16 +3059,51 @@ export async function createGalaxyEngine(
     const fade = deriveMilkyWayFade(eye, cam.fov, canvas.height, render);
     lastFade = fade;
 
+    // The three debug views crossfade independently rather than replace the
+    // galaxy (RenderSettings's own docblock), so the galaxy's own dimming
+    // needs ONE combined weight — 1 minus the largest of the three, floored
+    // at 0 — rather than each view's slider darkening it separately, which
+    // would double-dim wherever two are live at once. Shared by the sprite
+    // fadeAlpha below AND every packFieldHeaderUniforms call this frame (the
+    // field header and the HII header), so the galaxy dims by exactly the
+    // same amount whichever representation is drawing it.
+    const debugGalaxyWeight = Math.max(
+      0,
+      1 -
+        Math.max(
+          render.dustViewIntensity,
+          render.sfMapViewIntensity,
+          render.orientationViewIntensity,
+        ),
+    );
+    const debugView: DebugViewWeights = {
+      dustViewIntensity: render.dustViewIntensity,
+      sfMapViewIntensity: render.sfMapViewIntensity,
+      orientationViewIntensity: render.orientationViewIntensity,
+      galaxyWeight: debugGalaxyWeight,
+    };
+
     // Two packs of the same struct, differing only in `viewportPx`: the star
     // pass gets the AGGREGATE's dimensions (what `stars.wesl` clamps sprite
     // half-extents against), the dust pass the canvas's. Both writes happen
     // before either pass is encoded, which is safe precisely because they
-    // target different buffers.
+    // target different buffers. `fadeAlpha` carries `debugGalaxyWeight` too —
+    // dimming the legacy sprites (primary AND extras) under an active debug
+    // view exactly like the analytic field's own splat.wesl multiply does,
+    // rather than the old suppression that hid the primary's sprites outright
+    // but deliberately left extras' alone (see the field/scene passes below).
     const tuning = cloudTuning();
     const aggregatePx = reducedSize(render.aggregateDivisor);
-    packCloudUniforms(vp, view, aggregatePx, tuning, fade.alpha, cloudData);
+    packCloudUniforms(vp, view, aggregatePx, tuning, fade.alpha * debugGalaxyWeight, cloudData);
     device.queue.writeBuffer(starUbo, 0, cloudData);
-    packCloudUniforms(vp, view, [canvas.width, canvas.height], tuning, fade.alpha, cloudData);
+    packCloudUniforms(
+      vp,
+      view,
+      [canvas.width, canvas.height],
+      tuning,
+      fade.alpha * debugGalaxyWeight,
+      cloudData,
+    );
     device.queue.writeBuffer(dustUbo, 0, cloudData);
     // Depth-slice edges for the dust map (io.wesl's dustSlices doc) — VIEW-
     // dependent, so recomputed every frame unlike `currentDustReachR`. D is
@@ -3104,6 +3163,9 @@ export async function createGalaxyEngine(
       // The dust-slice edges computed just above — VIEW-dependent, unlike
       // every other packFieldHeaderUniforms argument past `cam` itself.
       dustSlices,
+      // The three crossfade sliders + the combined galaxy weight, computed
+      // once above — splat.wesl's fs reads .w, dustPresent.wesl's fs .x.
+      debugView,
       fieldData,
     );
     device.queue.writeBuffer(fieldUbo, 0, fieldData);
@@ -3124,6 +3186,12 @@ export async function createGalaxyEngine(
       HII_INERT_DUST_EXTINCTION,
       HII_INERT_DUST_NOISE,
       HII_INERT_DUST_SLICES,
+      // Same object as the field header above: only .w (galaxyWeight) is
+      // read by this pass's own splat.wesl draw (hiiBG never binds the
+      // dustPresent/sfMapPresent/orientationPresent pipelines that read
+      // .x/.y/.z), but sharing it keeps HII's own dimming in lockstep with
+      // the rest of the galaxy under an active debug view.
+      debugView,
       hiiData,
     );
     device.queue.writeBuffer(hiiUbo, 0, hiiData);
@@ -3163,13 +3231,14 @@ export async function createGalaxyEngine(
         pass.setPipeline(starPipe);
         pass.setBindGroup(0, starBG);
         pass.setVertexBuffer(0, quad);
-        // Skipped for the primary (not for extras) while the JWST dust view,
-        // the sfMap view, OR the orientation view is on: all three replace
-        // the field pass's emission draw with a direct presentation of their
-        // own map, and the primary's own sprite glow would otherwise wash
-        // additively over it in the scene pass below. Extras aren't any
-        // map's subject, so their sprites stay.
-        if (starBuf && !render.dustView && !render.sfMapView && !render.orientationView) {
+        // Always drawn now, primary AND extras — the three debug views dim
+        // the galaxy through fadeAlpha's debugGalaxyWeight factor (packed
+        // above), not by suppressing this draw, which is what makes k=0.5
+        // read as half galaxy / half map instead of a hard cut. The old
+        // primary-only skip deliberately left extras' sprites visible under
+        // a boolean toggle; the crossfade contract (k=1 means galaxy at 0%)
+        // has no room for that exception any more.
+        if (starBuf) {
           pass.setVertexBuffer(1, starBuf);
           pass.draw(6, starCount);
         }
@@ -3188,10 +3257,10 @@ export async function createGalaxyEngine(
     if (render.analyticField) {
       // Dust-column map: splat the primary's dust slice into `dustMapTex`, at
       // its own divisor-matched resolution (`dustMapPipe`, additive). Feeds
-      // splat.wesl's fs (the grey/RGB split) when the JWST view is off, or
-      // IS the presented image when it's on — so it has to run whenever any
-      // consumer needs it: `dustView` (the image itself) or a nonzero dust
-      // slice.
+      // splat.wesl's fs (the grey/RGB split) always now, and IS the
+      // dustPresent pass's own source whenever the JWST view is live — so it
+      // has to run whenever either consumer needs it: `dustViewIntensity > 0`
+      // (the image itself) or a nonzero dust slice.
       //
       // `dustMapPopulated` is what makes skipping SAFE, and it is load-bearing:
       // a skipped pass leaves whatever the last frame wrote, and the texture is
@@ -3202,7 +3271,7 @@ export async function createGalaxyEngine(
       // exists. One clearing pass on the transition costs a clear; getting it
       // wrong reads as "the dust never regenerates".
       const dustMapHasContent = fieldDustCount > 0;
-      if (dustMapHasContent || render.dustView || dustMapPopulated) {
+      if (dustMapHasContent || render.dustViewIntensity > 0 || dustMapPopulated) {
         const dustMapWrites = timing.descriptorFor('dustMap');
         const dustMapPass = enc.beginRenderPass({
           label: 'galaxy:dustMapPass',
@@ -3223,37 +3292,14 @@ export async function createGalaxyEngine(
         dustMapPopulated = dustMapHasContent;
       }
 
-      if (render.orientationView) {
-        // Orientation overlay: same "no pass here" shape as the sfMapView
-        // branch just below, and the same reason — drawn straight into
-        // `sceneTex` at full canvas resolution in the scene pass, not
-        // through a fieldDivisor-reduced target and the 4-tap upsample.
-      } else if (render.sfMapView) {
-        // SF-map view: no pass here any more. It used to present into
-        // `fieldTex` at that target's `fieldDivisor`-reduced resolution, then
-        // ride the SAME 4-tap upsample reconstruction the smooth field does
-        // on its way into HDR — a double decimation of exactly the fine
-        // filamentary structure this diagnostic exists to let the user judge
-        // (research doc §17.1's rule, generalised: a shared/downsampled
-        // target biases the judgement toward discarding what it distorts).
-        // It is instead drawn straight into `sceneTex` at full canvas
-        // resolution, in the scene pass below — see that pass for why, and
-        // `sfMapPresent.wesl`'s header for the resample that makes a 1:1
-        // equal-extent contract unnecessary either way.
-      } else if (render.dustView) {
-        // JWST view mode: present the dust map directly INSTEAD OF the
-        // emission splat draw below, into `dustViewTex` — its OWN target,
-        // divisor-matched to `dustMapTex` rather than to `fieldTex` (see
-        // `dustMapTex`'s declaration comment), so its 1:1 texel read of the
-        // map stays valid at the map's now-finer resolution. The scene
-        // pass's upsample picks this texture over `fieldTex` for exactly
-        // this branch (see the scene pass below).
-        //
-        // Rides the 'field' timing slot (see TIMING_SLOTS): both this pass
-        // and the splat draw below fill whichever target is live this frame,
-        // so the slot answers "what did filling the field/dust-view target
-        // cost" regardless of which mode is active.
-        const fieldWrites = timing.descriptorFor('field');
+      // JWST dust-view presentation, into its OWN target — runs ADDITIONALLY
+      // alongside the emission splat below whenever `render.dustViewIntensity
+      // > 0`, rather than replacing it: the three debug views crossfade
+      // independently now (RenderSettings's own docblock), and the scene
+      // pass sums whichever of them are live. No `timestampWrites`: the
+      // 'field' slot belongs to the emission splat below, and two passes
+      // cannot share one timestamp pair in a frame (see TIMING_SLOTS).
+      if (render.dustViewIntensity > 0) {
         const pass = enc.beginRenderPass({
           label: 'galaxy:dustPresentPass',
           colorAttachments: [
@@ -3264,66 +3310,64 @@ export async function createGalaxyEngine(
               storeOp: 'store',
             },
           ],
-          ...(fieldWrites ? { timestampWrites: fieldWrites } : {}),
         });
         pass.setPipeline(dustPresentPipe);
         pass.setBindGroup(0, dustPresentBG);
         pass.draw(3);
         pass.end();
-      } else {
-        const fieldWrites = timing.descriptorFor('field');
-        const pass = enc.beginRenderPass({
-          label: 'galaxy:fieldPass',
+      }
+
+      const fieldWrites = timing.descriptorFor('field');
+      const fieldPass = enc.beginRenderPass({
+        label: 'galaxy:fieldPass',
+        colorAttachments: [
+          {
+            view: fieldTex.createView(),
+            clearValue: { r: 0, g: 0, b: 0, a: 0 },
+            loadOp: 'clear',
+            storeOp: 'store',
+          },
+        ],
+        ...(fieldWrites ? { timestampWrites: fieldWrites } : {}),
+      });
+      fieldPass.setPipeline(splatPipe);
+      fieldPass.setBindGroup(0, splatBG);
+      // One draw for the WHOLE emission list `repackFieldComponents` wrote —
+      // central galaxy's components then every extra's — so the field pass's
+      // timing slot honestly reports the analytic cost of everything on
+      // screen, not just the central galaxy's share. `fieldEmissionCount`,
+      // NOT the packed total: the trailing dust slice is never drawn as its
+      // own quad, only read from inside a primary emission fragment. Always
+      // runs now (no debug-view gate) — splat.wesl's fs dims its own output
+      // through debugView.w, the same combined weight the sprites dim by.
+      fieldPass.draw(6, fieldEmissionCount);
+      fieldPass.end();
+
+      // The HII tier's own pass, same shape as the field pass just above
+      // (same `splatPipe`, a different bind group and target) — see
+      // `hiiTex`'s declaration comment for why it does not share either.
+      // Gated only on `hiiEmissionCount > 0` now — the old `!render.dustView`
+      // half of this existed because the field pass used to skip entirely
+      // under the JWST view, leaving `hiiTex` stale; the field pass no longer
+      // skips, so that concern is gone.
+      if (hiiEmissionCount > 0) {
+        const hiiWrites = timing.descriptorFor('hii');
+        const hiiPass = enc.beginRenderPass({
+          label: 'galaxy:hiiPass',
           colorAttachments: [
             {
-              view: fieldTex.createView(),
+              view: hiiTex.createView(),
               clearValue: { r: 0, g: 0, b: 0, a: 0 },
               loadOp: 'clear',
               storeOp: 'store',
             },
           ],
-          ...(fieldWrites ? { timestampWrites: fieldWrites } : {}),
+          ...(hiiWrites ? { timestampWrites: hiiWrites } : {}),
         });
-        pass.setPipeline(splatPipe);
-        pass.setBindGroup(0, splatBG);
-        // One draw for the WHOLE emission list `repackFieldComponents` wrote —
-        // central galaxy's components then every extra's — so the field pass's
-        // timing slot honestly reports the analytic cost of everything on
-        // screen, not just the central galaxy's share. `fieldEmissionCount`,
-        // NOT the packed total: the trailing dust slice is never drawn as its
-        // own quad, only read from inside a primary emission fragment.
-        pass.draw(6, fieldEmissionCount);
-        pass.end();
-
-        // The HII tier's own pass, same shape as the field pass just above
-        // (same `splatPipe`, a different bind group and target) — see
-        // `hiiTex`'s declaration comment for why it does not share either.
-        // Gated on this branch (never under `dustView`/`sfMapView`) for the
-        // same reason the star/dust sprite draws below are: those diagnostic
-        // views present their OWN map instead of the normal content, and an
-        // unattenuated HII glow washing additively over either would fight
-        // it. Skipped outright (not just cleared) when there is nothing to
-        // draw, so a stale frame's content is never composited below either
-        // — see the scene pass's own gate on `hiiEmissionCount`.
-        if (hiiEmissionCount > 0) {
-          const hiiWrites = timing.descriptorFor('hii');
-          const hiiPass = enc.beginRenderPass({
-            label: 'galaxy:hiiPass',
-            colorAttachments: [
-              {
-                view: hiiTex.createView(),
-                clearValue: { r: 0, g: 0, b: 0, a: 0 },
-                loadOp: 'clear',
-                storeOp: 'store',
-              },
-            ],
-            ...(hiiWrites ? { timestampWrites: hiiWrites } : {}),
-          });
-          hiiPass.setPipeline(splatPipe);
-          hiiPass.setBindGroup(0, hiiBG);
-          hiiPass.draw(6, hiiEmissionCount);
-          hiiPass.end();
-        }
+        hiiPass.setPipeline(splatPipe);
+        hiiPass.setBindGroup(0, hiiBG);
+        hiiPass.draw(6, hiiEmissionCount);
+        hiiPass.end();
       }
     }
     // Scene pass: the aggregate folded into HDR, then transmittance dust over
@@ -3347,59 +3391,53 @@ export async function createGalaxyEngine(
         ...(sceneWrites ? { timestampWrites: sceneWrites } : {}),
       });
       aggregateUpsample.draw(pass, aggregateTex.createView());
-      // Second draw, same pipeline and same additive blend, so the two reduced
-      // targets sum in HDR exactly as they did when they shared one. A draw
-      // rather than a pass: the blend does the compositing, so no extra
-      // attachment switch. Picks `dustViewTex` over `fieldTex` while the JWST
-      // view is on — that mode fills `dustViewTex` instead (see the field
-      // pass above), and the two are no longer the same texture now that
-      // they ride independent divisors.
+      // Every representation below is additive into the SAME attachment, so
+      // the crossfade is just which of them ran this frame, each already
+      // carrying its own weight (splat.wesl's debugView.w, or a present
+      // shader's own debugView.x/.y/.z) — nothing here picks one exclusively
+      // any more.
       if (render.analyticField) {
-        if (render.orientationView) {
-          // Same shape as the sfMapView branch just below, same reason:
-          // full-canvas-resolution presentation, additive so it sums with
-          // whatever background extras' sprites the upsample above already
-          // added, and the primary's own sprites are skipped (see the star
-          // pass) while extras' are not.
-          pass.setPipeline(orientationPresentPipe);
-          pass.setBindGroup(0, orientationPresentBG);
-          pass.draw(3);
-        } else if (render.sfMapView) {
-          // Presented straight into `sceneTex` at full canvas resolution —
-          // see the field pass above for why a divisor-matched offscreen and
-          // this same upsample's 4-tap reconstruction were both wrong for
-          // this diagnostic. `sfMapPresentPipe` blends additively (see its
-          // own construction comment) so this draw sums with whatever the
-          // upsample just above already added — the central galaxy's own
-          // sprites are skipped while `sfMapView` is on (see the star pass),
-          // but background extras' are not, and must still show through.
+        aggregateUpsample.draw(pass, fieldTex.createView());
+        // The HII tier's own composite, same additive upsample as the
+        // field's own draw just above — see `hiiTex`'s declaration comment
+        // for why it rides a separate target rather than joining that draw.
+        if (hiiEmissionCount > 0) {
+          aggregateUpsample.draw(pass, hiiTex.createView());
+        }
+        // Picks up `dustViewTex` in ADDITION to `fieldTex` above — the two
+        // are no longer mutually exclusive now that the JWST view is a
+        // crossfade weight rather than a replacement (see the field pass).
+        if (render.dustViewIntensity > 0) {
+          aggregateUpsample.draw(pass, dustViewTex.createView());
+        }
+        // Presented straight into `sceneTex` at full canvas resolution — see
+        // the field pass above for why a divisor-matched offscreen and this
+        // same upsample's 4-tap reconstruction were both wrong for this
+        // diagnostic. `sfMapPresentPipe` blends additively (see its own
+        // construction comment) so this draw sums with whatever the upsample
+        // above already added.
+        if (render.sfMapViewIntensity > 0) {
           pass.setPipeline(sfMapPresentPipe);
           pass.setBindGroup(0, sfMapPresentBG);
           pass.draw(3);
-        } else {
-          aggregateUpsample.draw(pass, (render.dustView ? dustViewTex : fieldTex).createView());
-          // The HII tier's own composite, same additive upsample as the
-          // field's own draw just above — see `hiiTex`'s declaration
-          // comment for why it rides a separate target rather than joining
-          // that draw. `!render.dustView`, not just `hiiEmissionCount > 0`:
-          // the field pass above skips the HII draw under `dustView` too
-          // (its own map replaces the normal content, and HII has no
-          // attenuation to register against it — see `hiiBG`'s comment), so
-          // `hiiTex` holds a STALE frame there even though the mixture
-          // itself is still nonzero.
-          if (!render.dustView && hiiEmissionCount > 0) {
-            aggregateUpsample.draw(pass, hiiTex.createView());
-          }
+        }
+        // Same shape as the sfMap draw just above, same reason:
+        // full-canvas-resolution presentation, additive so it sums with
+        // whatever else this pass has already drawn.
+        if (render.orientationViewIntensity > 0) {
+          pass.setPipeline(orientationPresentPipe);
+          pass.setBindGroup(0, orientationPresentBG);
+          pass.draw(3);
         }
       }
       pass.setPipeline(dustPipe);
       pass.setBindGroup(0, dustBG);
       pass.setVertexBuffer(0, quad);
-      // Same primary-only skip as the star pass above, same reason: the
-      // JWST view, the sfMap view, or the orientation view presents its own
-      // MAP, so the legacy sprite dust's own multiplicative darkening over
-      // the primary would fight it.
-      if (dustBuf && !render.dustView && !render.sfMapView && !render.orientationView) {
+      // Always drawn now, primary AND extras — same "dim through
+      // debugGalaxyWeight, don't suppress" contract the star pass follows
+      // above (see its own comment for why the old primary-only skip is
+      // gone).
+      if (dustBuf) {
         pass.setVertexBuffer(1, dustBuf);
         pass.draw(6, dustCount);
       }

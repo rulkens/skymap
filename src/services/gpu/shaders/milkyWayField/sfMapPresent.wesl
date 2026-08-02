@@ -1,6 +1,6 @@
 // milkyWayField/sfMapPresent.wesl — presents the SSPSF automaton's packed
-// output (sfMapPack.wesl) in place of the analytic field's emission draw
-// when render.sfMapView is on, same seam as dustPresent.wesl.
+// output (sfMapPack.wesl), crossfaded with the analytic field's emission
+// draw by weight render.sfMapViewIntensity, same seam as dustPresent.wesl.
 //
 // Unlike dustPresent.wesl's 1:1 texel read (its map is already screen-space,
 // splatted there by dustMap.wesl), sfMapTex is GALAXY-FRAME log-polar: this
@@ -88,5 +88,7 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   let recentColor = vec3<f32>(1.0, 0.95, 0.85) * recent;
   let color = (gasColor + oldColor + recentColor) * edgeFade;
 
-  return vec4<f32>(color, 0.0);
+  // debugView.y is this view's own crossfade weight (io.wesl's debugView
+  // doc), same role as dustPresent.wesl's debugView.x multiply.
+  return vec4<f32>(color * u.debugView.y, 0.0);
 }

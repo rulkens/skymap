@@ -26,6 +26,9 @@ export const DEFAULT_UI_STATE: UiState = {
     // Expanded, same rationale as `hii`: step 1 of the SSPSF automaton is
     // the current work being visually tuned.
     sfMap: true,
+    // Collapsed: the crossfade sliders default to 0 (pure galaxy), so this
+    // section is an occasional A/B tool, not something tuned every session.
+    debugViews: false,
     pop: false,
     dust: false,
     // Expanded, same rationale as `armField`/`field`: the analytic dust lane

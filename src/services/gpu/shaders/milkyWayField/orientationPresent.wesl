@@ -1,8 +1,9 @@
 // milkyWayField/orientationPresent.wesl — presents the GPU structure-tensor
 // pass chain's crest orientation (sfMapOrientationField.wesl ->
 // sfMapOrientationTensor.wesl -> sfMapOrientationTensorBlur.wesl ->
-// sfMapOrientationCoherence.wesl) in place of the analytic field's emission
-// draw when render.orientationView is on, same seam as sfMapPresent.wesl.
+// sfMapOrientationCoherence.wesl), crossfaded with the analytic field's
+// emission draw by weight render.orientationViewIntensity, same seam as
+// sfMapPresent.wesl.
 //
 // The camera-ray -> (r, theta) log-polar resample below is
 // sfMapPresent.wesl's own disc-plane-intersection mapping, copied rather
@@ -97,5 +98,7 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   let hue = angle / PI + 0.5;
   let color = hueToRgb(hue) * coherence * edgeFade;
 
-  return vec4<f32>(color, 0.0);
+  // debugView.z is this view's own crossfade weight (io.wesl's debugView
+  // doc), same role as dustPresent.wesl's debugView.x multiply.
+  return vec4<f32>(color * u.debugView.z, 0.0);
 }

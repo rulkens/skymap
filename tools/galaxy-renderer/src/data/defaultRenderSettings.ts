@@ -101,15 +101,15 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   spriteField: false,
   analyticField: true,
   analyticExposure: 1.0,
-  // Off at boot: the JWST view replaces the emission draw with a debug
-  // presentation of the dust map, which is not the default look.
-  dustView: false,
-  // Off at boot, same rationale as `dustView`: it replaces the normal view
-  // with a debug presentation of the automaton's output.
-  sfMapView: false,
-  // Off at boot, same rationale — and the pass-chain gate: it only
-  // (re-)dispatches while this is on (see createGalaxyEngine.ts).
-  orientationView: false,
+  // 0 at boot: the JWST view crossfades in a debug presentation of the dust
+  // map, which is not the default look.
+  dustViewIntensity: 0,
+  // 0 at boot, same rationale as `dustViewIntensity`: it crossfades in a
+  // debug presentation of the automaton's output.
+  sfMapViewIntensity: 0,
+  // 0 at boot, same rationale — and the pass-chain gate: it only
+  // (re-)dispatches while this is above 0 (see createGalaxyEngine.ts).
+  orientationViewIntensity: 0,
   // Two sigmas, deliberately different: a small DERIVATIVE scale (noise
   // suppression before the central-difference gradient) and a larger
   // INTEGRATION scale (averaging orientations after the tensor is built,

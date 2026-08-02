@@ -24,7 +24,8 @@
 //   offset 112 : dustExtinction: vec4 (A_lambda/A_V per channel, w unused)
 //   offset 128 : dustNoise: vec4 (tileUnits, amplitude, cloudOffset, contrastExp)
 //   offset 144 : dustSlices: vec4 (t1, t2, t3, unused)
-//   total: 160 bytes.
+//   offset 160 : debugView: vec4 (dustViewIntensity, sfMapViewIntensity, orientationViewIntensity, galaxyWeight)
+//   total: 176 bytes.
 //
 // counts.x is the live EMISSION component count — the central galaxy's plus
 // every extra's, drawn one quad each (see splat.wesl). counts.y/.z locate
@@ -91,6 +92,17 @@
 // in the observer's own arm matters as much as dust 8 kpc away. Packed once
 // here so dustMap.wesl (which writes the slices) and splat.wesl (which reads
 // all four back) agree on the same edges.
+//
+// debugView (offset 160) carries the three debug-view crossfade sliders
+// (createGalaxyEngine.ts's render.dustViewIntensity/sfMapViewIntensity/
+// orientationViewIntensity, each in [0,1]) plus galaxyWeight, the ONE
+// combined dimming factor for the galaxy's own emission — 1 minus the
+// largest of the three, floored at 0, so two views live at once never
+// double-dim the galaxy. splat.wesl's fs multiplies its final colour by
+// .w; dustPresent.wesl/sfMapPresent.wesl/orientationPresent.wesl each
+// multiply by their own lane (.x/.y/.z) instead of gating a whole pass on
+// a boolean, which is what makes the three crossfade independently rather
+// than replace one another.
 //
 // COMPS (read-only storage, binding 1) — every mixture's components back to
 // back (the central galaxy's emission, then each background extra's,
@@ -181,6 +193,7 @@ struct FieldUniforms {
   dustExtinction: vec4<f32>,
   dustNoise: vec4<f32>,
   dustSlices: vec4<f32>,
+  debugView: vec4<f32>,
 };
 
 @group(0) @binding(0) var<uniform> u: FieldUniforms;

@@ -40,8 +40,8 @@ import type { GalaxyFieldComponent } from '../../../../src/@types/galaxy/GalaxyF
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
-/** Float count of `io.wesl`'s `FieldUniforms` header — 10 vec4, camera + params + counts + counts2 + dustExtinction + dustNoise + dustSlices. */
-export const FIELD_HEADER_FLOATS = 40;
+/** Float count of `io.wesl`'s `FieldUniforms` header — 11 vec4, camera + params + counts + counts2 + dustExtinction + dustNoise + dustSlices + debugView. */
+export const FIELD_HEADER_FLOATS = 44;
 
 /** Byte size of the header struct, for `createBuffer`. */
 export const FIELD_HEADER_BUFFER_SIZE = FIELD_HEADER_FLOATS * 4;
@@ -97,9 +97,25 @@ export type FieldDustSlices = {
 };
 
 /**
+ * The three debug-view crossfade weights (io.wesl's `debugView`) plus the
+ * combined galaxy dimming weight — packed as one object rather than four
+ * positional args, same precedent as `FieldDustNoise`/`FieldDustSlices`.
+ * `galaxyWeight` is `1 - max(the three intensities)` clamped to 0, computed
+ * once in `drawFrame` and shared by every `packFieldHeaderUniforms` call this
+ * frame (the field header AND the HII header) so two active views never
+ * double-dim the galaxy.
+ */
+export type DebugViewWeights = {
+  readonly dustViewIntensity: number;
+  readonly sfMapViewIntensity: number;
+  readonly orientationViewIntensity: number;
+  readonly galaxyWeight: number;
+};
+
+/**
  * packFieldHeaderUniforms — camera basis + params + the four live counts +
  * the dust extinction law + the dust-noise lane + the dust depth-slice edges,
- * into the 160-byte uniform. Called every `drawFrame`; all four counts are
+ * into the 176-byte uniform. Called every `drawFrame`; all four counts are
  * whatever `repackFieldComponents` (createGalaxyEngine.ts) last sized the
  * storage buffer to (the two packers are called from different sites, so the
  * counts travel as plain arguments rather than being re-derived here).
@@ -133,7 +149,9 @@ export type FieldDustSlices = {
  * `dustNoise` is `FieldDustNoise` above — cached by `rebuildDustMixture`,
  * not re-derived here, same discipline as `dustExtinctionRgb`. `dustSlices`
  * is `FieldDustSlices` above — recomputed every call, since it tracks the
- * live camera distance.
+ * live camera distance. `debugView` is `DebugViewWeights` above — the three
+ * crossfade sliders plus the combined galaxy weight, recomputed every call
+ * from `render`.
  */
 export function packFieldHeaderUniforms(
   cam: FieldCamera,
@@ -146,6 +164,7 @@ export function packFieldHeaderUniforms(
   dustExtinctionRgb: Vec3,
   dustNoise: FieldDustNoise,
   dustSlices: FieldDustSlices,
+  debugView: DebugViewWeights,
   dst?: Float32Array,
 ): Float32Array {
   const out = dst ?? new Float32Array(FIELD_HEADER_FLOATS);
@@ -209,6 +228,12 @@ export function packFieldHeaderUniforms(
   out[37] = dustSlices.t2;
   out[38] = dustSlices.t3;
   out[39] = 0;
+
+  // debugView 40..43 = (dustViewIntensity, sfMapViewIntensity, orientationViewIntensity, galaxyWeight).
+  out[40] = debugView.dustViewIntensity;
+  out[41] = debugView.sfMapViewIntensity;
+  out[42] = debugView.orientationViewIntensity;
+  out[43] = debugView.galaxyWeight;
 
   return out;
 }

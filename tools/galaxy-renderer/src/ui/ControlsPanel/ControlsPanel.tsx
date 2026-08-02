@@ -44,6 +44,7 @@ import { classifyHubbleType } from '../../../../../src/services/gpu/galaxy/class
 import ArmCloudSection from '../ArmCloudSection/ArmCloudSection';
 import ArmFieldSection from '../ArmFieldSection/ArmFieldSection';
 import CollapsibleSection from '../CollapsibleSection/CollapsibleSection';
+import DebugViewsSection from '../DebugViewsSection/DebugViewsSection';
 import DustSection from '../DustSection/DustSection';
 import DustCloudSection from '../DustCloudSection/DustCloudSection';
 import FadeSection from '../FadeSection/FadeSection';
@@ -294,71 +295,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
           />
         </div>
 
-        {/* The JWST view mode: replaces the field pass's emission draw with
-            a direct presentation of the primary's dust-column map (see
-            dustMap.wesl / dustPresent.wesl). Only has an effect while the
-            analytic model pill above is on — it swaps out THAT pass's own
-            draw, it doesn't add a separate one. */}
-        <label className={styles.legacyToggleRow}>
-          <input
-            type="checkbox"
-            className={styles.pillToggle}
-            checked={render.dustView}
-            onChange={(e) => dispatch(renderPatched({ dustView: e.target.checked }))}
-          />
-          <span>Dust view (JWST)</span>
-        </label>
-
-        {/* The SF-map view mode: same seam as the JWST toggle above, but
-            presents the SSPSF automaton's log-polar output in place of the
-            emission draw. Step 1's only way to see the automaton — it feeds
-            nothing else yet. */}
-        <label className={styles.legacyToggleRow}>
-          <input
-            type="checkbox"
-            className={styles.pillToggle}
-            checked={render.sfMapView}
-            onChange={(e) => dispatch(renderPatched({ sfMapView: e.target.checked }))}
-          />
-          <span>SF map view</span>
-        </label>
-
-        {/* Orientation overlay: same seam again, but presents the GPU
-            structure-tensor pass chain's crest orientation (hue) and
-            coherence (brightness) instead of the automaton's raw gas/SF
-            channels — the one way to see whether the automaton is
-            producing real sheared structure rather than inferring it from
-            RGB. Gates the pass chain itself (see createGalaxyEngine.ts's
-            rebuildSfMapOrientationIfNeeded), not just this draw. */}
-        <label className={styles.legacyToggleRow}>
-          <input
-            type="checkbox"
-            className={styles.pillToggle}
-            checked={render.orientationView}
-            onChange={(e) => dispatch(renderPatched({ orientationView: e.target.checked }))}
-          />
-          <span>Orientation view</span>
-        </label>
-        <ParamSlider
-          label="Orientation sigma (deriv)"
-          value={render.orientationSigmaDerivTexels}
-          min={0.5}
-          max={6}
-          step={0.1}
-          format={(v) => v.toFixed(1)}
-          onChange={(v) => dispatch(renderPatched({ orientationSigmaDerivTexels: v }))}
-          info="Gaussian sigma (sfMap grid texels) for the pass chain's field-smoothing stage, before the central-difference gradient. Only reachable while orientation view is on."
-        />
-        <ParamSlider
-          label="Orientation sigma (integ)"
-          value={render.orientationSigmaIntegTexels}
-          min={0.5}
-          max={12}
-          step={0.1}
-          format={(v) => v.toFixed(1)}
-          onChange={(v) => dispatch(renderPatched({ orientationSigmaIntegTexels: v }))}
-          info="Gaussian sigma (sfMap grid texels) for the tensor-smoothing stage, after Jxx/Jxy/Jyy are built. Conventionally 2-3x the derivative sigma. Only reachable while orientation view is on."
-        />
+        <DebugViewsSection />
 
         <FieldSection />
         <ArmFieldSection />

@@ -71,26 +71,29 @@ export type RenderSettings = {
   /** SPIKE, tool-only: whole-field intensity multiplier for the analytic pass, where 1.0 emits the sprite field's own total flux. */
   readonly analyticExposure: number;
   /**
-   * "JWST" view mode: present the primary galaxy's dust-column map directly
-   * (a hot MIRI-ish palette) in place of the emission splat draw. Requires
-   * `analyticField` — it replaces that pass's own draw, not a separate one.
+   * "JWST" view crossfade weight: 0 = pure galaxy, 1 = the primary galaxy's
+   * dust-column map alone (a hot MIRI-ish palette), values between blend the
+   * two additively. Requires `analyticField` — the map is presented by the
+   * same pass slot the emission splat draws into, not a separate one.
    */
-  readonly dustView: boolean;
+  readonly dustViewIntensity: number;
   /**
-   * SF-map view mode: present the SSPSF automaton's log-polar output directly,
-   * same seam as `dustView`. Step 1's whole purpose — the automaton feeds
-   * nothing else yet, so this is the only way to see it.
+   * SF-map crossfade weight: 0 = pure galaxy, 1 = the SSPSF automaton's
+   * log-polar output alone, same seam as `dustViewIntensity`. Step 1's whole
+   * purpose — the automaton feeds nothing else yet, so this is the only way
+   * to see it.
    */
-  readonly sfMapView: boolean;
+  readonly sfMapViewIntensity: number;
   /**
-   * Orientation overlay: present the GPU structure-tensor pass chain's
-   * coherence-scaled crest orientation directly, same seam as `sfMapView`.
-   * Hue is the pitch angle (period π, so it fills the full hue wheel — see
-   * `orientationPresent.wesl`), value is coherence. Also this pass chain's
-   * own gate — it only (re-)dispatches while this is on, see
-   * `createGalaxyEngine.ts`'s `rebuildSfMapOrientationIfNeeded`.
+   * Orientation-overlay crossfade weight: 0 = pure galaxy, 1 = the GPU
+   * structure-tensor pass chain's coherence-scaled crest orientation alone,
+   * same seam as `sfMapViewIntensity`. Hue is the pitch angle (period π, so
+   * it fills the full hue wheel — see `orientationPresent.wesl`), value is
+   * coherence. Also this pass chain's own gate — it only (re-)dispatches
+   * while this is above 0, see `createGalaxyEngine.ts`'s
+   * `rebuildSfMapOrientationIfNeeded`.
    */
-  readonly orientationView: boolean;
+  readonly orientationViewIntensity: number;
   /**
    * Gaussian sigma, in sfMap grid texels, for the GPU orientation pass
    * chain's field-smoothing stage (before the central-difference gradient).
@@ -98,8 +101,8 @@ export type RenderSettings = {
    * tensor wants a small derivative scale for noise suppression and a
    * larger integration scale for averaging orientations after the tensor is
    * built (conventionally 2-3x this one). Only reachable while
-   * `orientationView` is on; moving it re-dispatches the pass chain the
-   * same way toggling the view on does.
+   * `orientationViewIntensity` is above 0; moving it re-dispatches the pass
+   * chain the same way raising the intensity from 0 does.
    */
   readonly orientationSigmaDerivTexels: number;
   /**
