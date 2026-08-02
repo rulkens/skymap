@@ -7,8 +7,10 @@
  * (mass ~ R^2 at ~constant cloud surface density, so every cloud peaks at
  * roughly the same tau — sharp, separated clouds, not a haze); the R^-2.2
  * GMC size function (Watkins+2023); ISM hierarchical clustering, as a
- * two-level complex/children placement. Bubble carving (4d) sweeps
- * particles onto the rims of `dustBubblePlacements.ts`'s SF cavities.
+ * two-level complex/children placement — the SF map when usable, else a
+ * plain smooth disc, no arm-lane machinery of its own (that stayed with
+ * `armParticleCloud.ts`; see `buildDustParticleCloud`'s own placement
+ * comment). Bubble carving (4d) sweeps particles onto SF-cavity rims.
  *
  * PURITY INVARIANT: pure `(geometry, dust, tuning, seed, sfMap,
  * sfMapOrientation) -> flat data`, no Math.random/Date/engine state — a
@@ -19,10 +21,10 @@
  * supplying it does not change what this function computes, only what a
  * caller can read off it afterward.
  */
-import { armCrossSigma, armFadeEnvelope } from './armRidgeGeometry';
 import {
   buildClusteredDiscPlacement,
   type CloudFrame,
+  type ClusteredDiscPlacementMode,
   type OrientationDeltaStats,
 } from './clusteredDiscPlacement';
 import { DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './discSurfaceFit';
@@ -31,7 +33,6 @@ import {
   buildHiiCavityPlacements,
   type DustBubblePlacement,
 } from './dustBubblePlacements';
-import { armOffsetFrameAt } from './dustLaneFeatures';
 import { dustDiscShape, dustSigmaR } from './galaxyDustMixture';
 import { dustExtinctionRgb } from '../../utils/galaxy/dustExtinctionRgb';
 import { inverseCovarianceFromFrame } from '../../utils/galaxy/inverseCovarianceFromFrame';
@@ -108,8 +109,6 @@ const HII_RIM_OVERSHOOT = 0.05;
 const CARVE_EPSILON = 1e-6;
 
 const TAU_ROOT3 = (2 * Math.PI) ** 1.5;
-/** `armCrossSigma`/`armOffsetFrameAt` only read `.armWidthScale`; this builder has no field tuning of its own to hand them. */
-const ARM_WIDTH_TUNING = { armWidthScale: 1 } as GalaxyFieldTuning;
 
 type CloudParticle = {
   center: Vec3;
@@ -179,31 +178,36 @@ export function buildDustParticleCloud(
 
   // Seeding ON: the map IS the placement density (a gas x accumulated-activity
   // blend, `sfMapDustDensity`, normalised by its own grid MAXIMUM so a
-  // mostly-quiet grid doesn't rejection-sample down to nothing) and
-  // `armBias`/the analytic envelope play no part —
-  // `buildClusteredDiscPlacement` routes every complex through
-  // `mapDensityAt` instead. Seeding OFF: `mapDensityAt` stays null, and the
-  // placement is byte-identical to before the map existed.
+  // mostly-quiet grid doesn't rejection-sample down to nothing) — every
+  // complex is placed by `'mapDensity'` mode. Seeding OFF (or a quiet map):
+  // `'smoothDisc'` mode, no arm-lane concept at all — the dust tier's
+  // analytic lane machinery was cut once the map became the sole placement
+  // density; `armParticleCloud.ts` still owns the one live `'analytic'`
+  // caller. This is the intended consequence of the SF map leading, not a
+  // regression.
   //
   // NOT wired to `buildDustBubblePlacements`/`buildHiiCavityPlacements`/
   // `cloud.bubbleCarve` below — those already carve holes from the same gas
   // depletion this reads, and running both would double-carve. Out of scope
   // for this pass; left exactly as it was.
-  let mapDensityAt: ((radius: number, angle: number) => number) | null = null;
+  let placement: ClusteredDiscPlacementMode = { kind: 'smoothDisc' };
   if (tuning.sfMapDustSeeding && sfMap) {
     const sfWeight = cloud.sfMapSfWeight;
     const maxDensity = maxSfMapDustDensity(sfMap, sfWeight);
     if (maxDensity > 0) {
-      mapDensityAt = (radius, angle) => {
-        // Outside the grid's radial support the map has NO DATA, and
-        // `sampleGalaxySfMap` CLAMPS rather than reporting that — so every
-        // radius below rMin reads ring 0. Left to clamp, the centrally-peaked
-        // proposal distribution piles the whole cloud into the inner hole at
-        // ring 0's (unburnt, therefore high) density, which is why the dust
-        // collected in the central circle the overlay draws as black.
-        if (radius < sfMap.rMin || radius > sfMap.rMax) return 0;
-        const sample = sampleGalaxySfMap(sfMap, radius, angle);
-        return sfMapDustDensity(sample.gas, sample.oldActivity, sfWeight) / maxDensity;
+      placement = {
+        kind: 'mapDensity',
+        densityAt: (radius, angle) => {
+          // Outside the grid's radial support the map has NO DATA, and
+          // `sampleGalaxySfMap` CLAMPS rather than reporting that — so every
+          // radius below rMin reads ring 0. Left to clamp, the centrally-peaked
+          // proposal distribution piles the whole cloud into the inner hole at
+          // ring 0's (unburnt, therefore high) density, which is why the dust
+          // collected in the central circle the overlay draws as black.
+          if (radius < sfMap.rMin || radius > sfMap.rMax) return 0;
+          const sample = sampleGalaxySfMap(sfMap, radius, angle);
+          return sfMapDustDensity(sample.gas, sample.oldActivity, sfWeight) / maxDensity;
+        },
       };
     }
   }
@@ -213,23 +217,16 @@ export function buildDustParticleCloud(
       geometry,
       rng,
       count,
-      armBias: cloud.armBias,
       clumpiness: cloud.clumpiness,
       complexSpread,
       elongation: cloud.elongation,
       sigmaZComplex: sigmaZCloud,
-      laneFrameAt: (arm, logR) => armOffsetFrameAt(logR, geometry, dust, arm),
-      // Only ever consulted on the mapDensityAt-null (seeding OFF) path now
-      // — see the comment above.
-      laneAcceptance: (arm, radius) => armFadeEnvelope(radius, geometry, arm),
-      crossLaneSigma: (radius) =>
-        armCrossSigma(radius, geometry, ARM_WIDTH_TUNING) * 0.25 * dust.cloud.laneWidth,
       discSigmaR: (k) => dustSigmaR(k, shape),
       discWeights: DISC_SURFACE_WEIGHTS,
       discWeightSum: shape.sumW,
-      mapDensityAt,
-      // Same gate as `mapDensityAt` above: OFF (the default) is a no-op, so
-      // a caller with the map already sampled needn't re-check the flag.
+      placement,
+      // Gated with `placement` above: OFF (the default) is a no-op, so a
+      // caller with the map already sampled needn't re-check the flag.
       sfMapOrientation: tuning.sfMapDustSeeding ? sfMapOrientation : null,
       orientationDeltaStats,
     },

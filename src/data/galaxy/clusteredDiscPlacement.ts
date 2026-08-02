@@ -1,12 +1,13 @@
 /**
  * buildClusteredDiscPlacement — the two-level complex/children scatter
- * shared by every stochastic particle tier on the analytic field (dust GMCs
- * today, arm emission sprites next): pick a weighted arm lane or fall back
- * to the smooth disc profile, seed one "complex" there, then scatter its
- * children around it. Extracted out of `dustParticleCloud.ts` so a second
- * tier doesn't restate this sampler — the two axes consumers genuinely
- * differ on (the lane FRAME they place onto, and the cross-lane spread) are
- * callbacks; everything else is a plain config value.
+ * shared by every stochastic particle tier on the analytic field (dust GMCs,
+ * arm emission sprites): seed one "complex" via one of three modes —
+ * `'analytic'` (weighted arm lane, falling back to the smooth disc),
+ * `'mapDensity'` (the SSPSF automaton's measured density), or bare
+ * `'smoothDisc'` — then scatter its children around it. See
+ * `ClusteredDiscPlacementMode` for what each mode needs from its caller.
+ * Extracted out of `dustParticleCloud.ts` so a second tier doesn't restate
+ * this sampler.
  *
  * Per-child payload (a size draw, in both current consumers) is drawn via
  * `drawPayload`, called INLINE in the placement loop rather than in a
@@ -28,7 +29,7 @@ import type { Vec3 } from '../../@types/math/Vec3';
 /** Bounded rejection sampling against `armFadeEnvelope` when seeding a complex on an arm lane. */
 const ARM_FADE_REJECTION_TRIES = 24;
 
-/** Same idea as `ARM_FADE_REJECTION_TRIES`, own constant: bounded rejection sampling against `mapDensityAt` when it replaces the analytic placement entirely. */
+/** Same idea as `ARM_FADE_REJECTION_TRIES`, own constant: bounded rejection sampling against `'mapDensity'` mode's `densityAt`. */
 const MAP_DENSITY_REJECTION_TRIES = 24;
 
 /** Complex children are flattened relative to their in-plane extent — a fixed clustering-shape constant shared by every consumer, not exposed as a knob. */
@@ -53,13 +54,52 @@ export type OrientationDeltaStats = {
   maxAbsDeltaDeg: number;
 };
 
+/**
+ * How a complex picks its seed point — the one axis the two current
+ * consumers genuinely differ on. `'analytic'` is the arm-lane/smooth-disc
+ * roll (`armParticleCloud.ts`, which IS the arm feature and always passes
+ * `armBias: 1`); `'mapDensity'` replaces that roll entirely with the SSPSF
+ * automaton's measured density (`dustParticleCloud.ts`, once its SF map is
+ * usable); `'smoothDisc'` is the bare disc profile with no lane concept at
+ * all (`dustParticleCloud.ts`'s no-map fallback). A tagged union rather than
+ * three optional sibling fields: the dust caller has no lane callbacks to
+ * give in the latter two modes, so nullable siblings would only exist to
+ * satisfy the type.
+ */
+export type ClusteredDiscPlacementMode =
+  | {
+      readonly kind: 'analytic';
+      /** 0..1 probability a complex seeds on an arm lane rather than the smooth disc. */
+      readonly armBias: number;
+      /** The lane/ridge frame at one arm's log-radius, or null when this draw has no valid point there (falls back to the smooth disc). */
+      readonly laneFrameAt: (arm: GalaxyFieldArmRecord, logR: number) => LaneFrame | null;
+      /**
+       * Rejection-sampling acceptance for a complex proposed at this radius on
+       * this arm, in [0,1] — the along-arm placement density, up to a constant.
+       * MUST NOT exceed 1: rejection sampling silently flattens the excess into
+       * a uniform tail rather than erroring.
+       *
+       * A callback rather than the fade envelope it usually is, because a
+       * consumer may want to weight WHERE its particles land differently from
+       * how bright the arm is there (`armParticleCloud.ts` tilts its sprites
+       * outward and cancels the tilt in flux).
+       */
+      readonly laneAcceptance: (arm: GalaxyFieldArmRecord, radius: number) => number;
+      /** Cross-lane (across-arm) one-sigma spread at a radius — already whatever fraction of the arm's own width the caller wants. */
+      readonly crossLaneSigma: (radius: number) => number;
+    }
+  | {
+      readonly kind: 'mapDensity';
+      /** Normalised [0,1] placement density from the SF map — see `placeMapDensityComplex`. */
+      readonly densityAt: (radius: number, angle: number) => number;
+    }
+  | { readonly kind: 'smoothDisc' };
+
 export type ClusteredDiscPlacementConfig = {
   readonly geometry: GalaxyFieldGeometry;
   readonly rng: () => number;
   /** Total particle count across every complex. */
   readonly count: number;
-  /** 0..1 probability a complex seeds on an arm lane rather than the smooth disc. */
-  readonly armBias: number;
   /** 0..1 hierarchical clustering: 0 = every particle its own complex, 1 = ~16 children per complex. */
   readonly clumpiness: number;
   /** One-sigma child scatter around its complex centre, before `elongation`. */
@@ -68,22 +108,6 @@ export type ClusteredDiscPlacementConfig = {
   readonly elongation: number;
   /** Complex-level vertical (pole-axis) one-sigma scatter. */
   readonly sigmaZComplex: number;
-  /** The lane/ridge frame at one arm's log-radius, or null when this draw has no valid point there (falls back to the smooth disc). */
-  readonly laneFrameAt: (arm: GalaxyFieldArmRecord, logR: number) => LaneFrame | null;
-  /**
-   * Rejection-sampling acceptance for a complex proposed at this radius on
-   * this arm, in [0,1] — the along-arm placement density, up to a constant.
-   * MUST NOT exceed 1: rejection sampling silently flattens the excess into
-   * a uniform tail rather than erroring.
-   *
-   * A callback rather than the fade envelope it usually is, because a
-   * consumer may want to weight WHERE its particles land differently from
-   * how bright the arm is there (`armParticleCloud.ts` tilts its sprites
-   * outward and cancels the tilt in flux). Dust passes the bare envelope.
-   */
-  readonly laneAcceptance: (arm: GalaxyFieldArmRecord, radius: number) => number;
-  /** Cross-lane (across-arm) one-sigma spread at a radius — already whatever fraction of the arm's own width the caller wants. */
-  readonly crossLaneSigma: (radius: number) => number;
   /** Smooth-disc fallback: component k's radial sigma. */
   readonly discSigmaR: (k: number) => number;
   /** Smooth-disc fallback: DISC_SURFACE_WEIGHTS-shaped weights to pick k with, and their sum. */
@@ -99,15 +123,8 @@ export type ClusteredDiscPlacementConfig = {
   readonly sfMapOrientation?: GalaxySfMapOrientation | null;
   /** Out-param, mutated once per complex whenever `sfMapOrientation` is non-null — see `OrientationDeltaStats`'s own doc. Omitted (the default) does no extra work. */
   readonly orientationDeltaStats?: OrientationDeltaStats;
-  /**
-   * Normalised [0,1] placement density from the SF map, or null for the
-   * analytic path. Non-null REPLACES the arm-lane/smooth-disc roll entirely
-   * — every complex is placed by `placeMapDensityComplex`, and `armBias` is
-   * not consulted at all (see that function). Required rather than optional
-   * so a caller can't forget to gate it: `dustParticleCloud.ts`'s
-   * `sfMapDustSeeding`-off path always passes `null` explicitly.
-   */
-  readonly mapDensityAt: ((radius: number, angle: number) => number) | null;
+  /** Which of the three seeding modes this build uses — see `ClusteredDiscPlacementMode`. */
+  readonly placement: ClusteredDiscPlacementMode;
 };
 
 export type PlacedParticle<TPayload> = { center: Vec3; readonly frame: CloudFrame } & TPayload;
@@ -148,13 +165,13 @@ function recordOrientationDelta(
  *
  * The measured angle is relative to the AZIMUTHAL/RADIAL axes
  * (`warpSurfaceFrame`'s own `along`/`across` at this point), never to
- * `frame`'s own axes: `armOffsetFrameAt`'s `along` runs along the WOUND arm
- * tangent, not azimuthally, so `frame` and the reference frame generally
- * disagree about where angle zero is.
+ * `frame`'s own axes: a lane frame's `along` (e.g. `armRidgeFrameAt`'s) runs
+ * along the WOUND arm tangent, not azimuthally, so `frame` and the reference
+ * frame generally disagree about where angle zero is.
  *
- * `across`'s handedness relative to `pole x along` varies by caller
- * (`armOffsetFrameAt` flips it to point inward) — `s` below recovers
- * whichever sign is live so the frame turns the same physical direction the
+ * `across`'s handedness relative to `pole x along` is caller-defined, not
+ * fixed by this function — `s` below recovers whichever sign the passed-in
+ * frame actually uses so the frame turns the same physical direction the
  * measured angle was defined in, not its mirror image.
  *
  * `stats`, when supplied, records every |delta| this call actually applied
@@ -206,25 +223,26 @@ function rotateFrameToOrientation(
 }
 
 /**
- * Places `config.count` particles across complexes of
- * `1 + 15*clumpiness` children each, every complex either arm-lane- or
- * smooth-disc-seeded. `drawPayload` runs once per child, immediately after
- * its centre/frame are fixed, so a consumer's own per-particle randomness
- * lands in the same rng draw slot the sampler has always used it at.
+ * Places `config.count` particles across complexes of `1 + 15*clumpiness`
+ * children each, every complex seeded per `config.placement`'s mode.
+ * `drawPayload` runs once per child, immediately after its centre/frame are
+ * fixed, so a consumer's own per-particle randomness lands in the same rng
+ * draw slot the sampler has always used it at.
  */
 export function buildClusteredDiscPlacement<TPayload>(
   config: ClusteredDiscPlacementConfig,
   drawPayload: (rng: () => number, center: Vec3, frame: CloudFrame) => TPayload,
 ): PlacedParticle<TPayload>[] {
-  const { geometry, rng, count, armBias, clumpiness, complexSpread, elongation, sigmaZComplex } =
-    config;
+  const { geometry, rng, count, clumpiness, complexSpread, elongation, sigmaZComplex } = config;
   const childrenPerComplex = Math.max(1, Math.round(1 + 15 * clumpiness));
   const canUseArms = geometry.numArms > 0;
   const armWeights = geometry.arms.map((arm) => armAgeWeight(arm));
   const armWeightSum = armWeights.reduce((s, w) => s + w, 0);
 
   /** A complex seeded on an arm's lane, or null if this arm has no valid span (falls back to the smooth disc). */
-  function placeArmLaneComplex(): { center: Vec3; frame: CloudFrame } | null {
+  function placeArmLaneComplex(
+    mode: Extract<ClusteredDiscPlacementMode, { kind: 'analytic' }>,
+  ): { center: Vec3; frame: CloudFrame } | null {
     const armIndex = pickWeighted(rng, armWeights, armWeightSum);
     const arm = geometry.arms[armIndex]!;
     const logMin = Math.log(1.05);
@@ -236,12 +254,12 @@ export function buildClusteredDiscPlacement<TPayload>(
     for (let tries = 0; tries < ARM_FADE_REJECTION_TRIES; tries++) {
       logR = logMin + rng() * (logMax - logMin);
       radius = geometry.armStartRadius * Math.exp(logR);
-      if (rng() < config.laneAcceptance(arm, radius)) break;
+      if (rng() < mode.laneAcceptance(arm, radius)) break;
     }
 
-    const frame = config.laneFrameAt(arm, logR);
+    const frame = mode.laneFrameAt(arm, logR);
     if (!frame) return null;
-    const laneSpread = config.crossLaneSigma(radius);
+    const laneSpread = mode.crossLaneSigma(radius);
     // ONE scalar offset per axis, shared across x/y/z — not redrawn per component.
     const acrossOffset = gaussian(rng) * laneSpread;
     const poleOffset = gaussian(rng) * sigmaZComplex;
@@ -287,16 +305,15 @@ export function buildClusteredDiscPlacement<TPayload>(
   }
 
   /**
-   * Map-density-only placement: the SF map IS the density, `armBias` plays
-   * no role. Proposes `(x, z)` from the same radial distribution
+   * Map-density-only placement: the SF map IS the density, no arm-lane roll
+   * involved. Proposes `(x, z)` from the same radial distribution
    * `placeSmoothDiscComplex` draws from (so the exponential disc falloff and
    * scale height carry over unmodified), rejection-samples against
-   * `mapDensityAt`, and accepts the last proposal if the budget runs out —
-   * the requested particle count is always met. `y` doesn't feed the
-   * acceptance test, so it's drawn once after the loop rather than re-rolled
-   * per try.
+   * `densityAt`, and accepts the last proposal if the budget runs out — the
+   * requested particle count is always met. `y` doesn't feed the acceptance
+   * test, so it's drawn once after the loop rather than re-rolled per try.
    */
-  function placeMapDensityComplex(mapDensityAt: (radius: number, angle: number) => number): {
+  function placeMapDensityComplex(densityAt: (radius: number, angle: number) => number): {
     center: Vec3;
     frame: CloudFrame;
   } {
@@ -311,7 +328,7 @@ export function buildClusteredDiscPlacement<TPayload>(
       z = gaussian(rng) * sigmaR;
       radius = Math.hypot(x, z);
       angle = Math.atan2(z, x);
-      if (rng() < mapDensityAt(radius, angle)) break;
+      if (rng() < densityAt(radius, angle)) break;
     }
     const y = gaussian(rng) * sigmaZComplex;
     const frame = rotateFrameToOrientation(
@@ -325,23 +342,43 @@ export function buildClusteredDiscPlacement<TPayload>(
     return { center: [x, y, z], frame };
   }
 
-  /** OFF path (no map density): identical to before `mapDensityAt` existed — armRoll is always drawn, even when `canUseArms` is false, so the rng draw order never shifts. */
-  function placeAnalyticComplex(): { center: Vec3; frame: CloudFrame } {
+  /** `'analytic'` mode: armRoll is always drawn, even when `canUseArms` is false, so the rng draw order never shifts with geometry. */
+  function placeAnalyticComplex(mode: Extract<ClusteredDiscPlacementMode, { kind: 'analytic' }>): {
+    center: Vec3;
+    frame: CloudFrame;
+  } {
     // Arm bias re-rolled per complex, not per particle — a complex (and its
     // children) is the hierarchical unit real GMC/OB associations form at.
     const armRoll = rng();
     return (
-      (canUseArms && armRoll < armBias ? placeArmLaneComplex() : null) ?? placeSmoothDiscComplex()
+      (canUseArms && armRoll < mode.armBias ? placeArmLaneComplex(mode) : null) ??
+      placeSmoothDiscComplex()
     );
+  }
+
+  /**
+   * One dispatch per mode kind — a switch rather than a lookup table: unlike
+   * a uniform "call the function matching this key", the `'analytic'` branch
+   * carries its own extra logic (the arm-bias roll and lane/smooth-disc
+   * fallback) rather than a single 1:1 function call, so a table entry would
+   * just be this same function wrapped in an object literal.
+   */
+  function placeComplex(mode: ClusteredDiscPlacementMode): { center: Vec3; frame: CloudFrame } {
+    switch (mode.kind) {
+      case 'analytic':
+        return placeAnalyticComplex(mode);
+      case 'mapDensity':
+        return placeMapDensityComplex(mode.densityAt);
+      case 'smoothDisc':
+        return placeSmoothDiscComplex();
+    }
   }
 
   const particles: PlacedParticle<TPayload>[] = [];
   let placed = 0;
   while (placed < count) {
     const childCount = Math.min(childrenPerComplex, count - placed);
-    const placement = config.mapDensityAt
-      ? placeMapDensityComplex(config.mapDensityAt)
-      : placeAnalyticComplex();
+    const placement = placeComplex(config.placement);
 
     for (let c = 0; c < childCount; c++) {
       const along = gaussian(rng) * complexSpread * elongation;

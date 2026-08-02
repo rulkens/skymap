@@ -7,16 +7,15 @@
  * galaxy's FULL measured `tau`. See `dustParticleCloud.ts` for the
  * size/mass/placement model.
  *
- * The arm-lane group at the end (`armContrast` onward) describes the lane
- * the particles are SEEDED on rather than the particles themselves; they
- * live here because the cloud is their only client. Refiners are
- * ×measured-default scalers where 1.0 reproduces the literature value.
+ * `armContrast`/`laneWidth` feed `dustLaneFeatures.ts`'s lane ledger, which
+ * `dustBubblePlacements.ts` reads for its carving amplitude — not particle
+ * seeding, which is SF-map/smooth-disc only now (`dustParticleCloud.ts`'s
+ * header). They live here because the cloud is their only client. Refiners
+ * are ×measured-default scalers where 1.0 reproduces the literature value.
  */
 export type GalaxyDustCloudParams = {
   /** Particle budget. 0 disables the cloud entirely. */
   readonly count: number;
-  /** 0..1 share of particles seeded on the arm dust lanes; the rest follow the smooth disc profile. */
-  readonly armBias: number;
   /** 0..1 hierarchical clustering: 0 = every particle independent, 1 = ~16 children per cloud complex. */
   readonly clumpiness: number;
   /** Multiplier on the physical cloud-size range (GMC size function). */
@@ -40,8 +39,6 @@ export type GalaxyDustCloudParams = {
   /** Star-formation event rate scale; drives the bubble catalog now, HII knots later. */
   readonly sfActivity: number;
   readonly laneWidth: number;
-  /** Density-wave shock displacement from the stellar ridge. */
-  readonly laneOffset: number;
   readonly bubbleScale: number;
   /**
    * SF-map seeded placement density blend (only read while

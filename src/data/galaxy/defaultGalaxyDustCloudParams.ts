@@ -10,7 +10,6 @@ import type { GalaxyDustCloudParams } from '../../@types/galaxy/GalaxyDustCloudP
 // centred, and every refiner starts at its literature value (1.0).
 export const DEFAULT_GALAXY_DUST_CLOUD_PARAMS: GalaxyDustCloudParams = {
   count: 6000,
-  armBias: 0.75,
   clumpiness: 0.6,
   sizeScale: 1,
   sizeFloorPc: SIZE_MIN_PC,
@@ -23,7 +22,6 @@ export const DEFAULT_GALAXY_DUST_CLOUD_PARAMS: GalaxyDustCloudParams = {
   armContrast: 3,
   sfActivity: 1,
   laneWidth: 1,
-  laneOffset: 1,
   bubbleScale: 1,
   // 1, not a blend: anything below it leaves a (1 - w) pedestal that gas
   // multiplies into near-uniform dust, and gas is ~1 over most of a quiet

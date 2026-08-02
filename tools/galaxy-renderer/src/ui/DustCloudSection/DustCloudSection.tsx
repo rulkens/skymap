@@ -52,16 +52,6 @@ function DustCloudSection(): ReactNode {
           info="Particle budget for the volumetric dust cloud. 0 disables it."
         />
         <ParamSlider
-          label="Arm bias"
-          value={cloud.armBias}
-          min={0}
-          max={1}
-          step={0.02}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => patchCloud({ armBias: v })}
-          info="0 = seeded uniformly over the smooth disc, 1 = seeded on the arm lanes."
-        />
-        <ParamSlider
           label="Clumpiness"
           value={cloud.clumpiness}
           min={0}
@@ -180,16 +170,6 @@ function DustCloudSection(): ReactNode {
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchCloud({ laneWidth: v })}
           info="× measured default. No primary-verified width anchor exists — the default is an eyeball-vs-M74 call, flagged honest."
-        />
-        <ParamSlider
-          label="Lane offset x"
-          value={cloud.laneOffset}
-          min={0}
-          max={2.5}
-          step={0.05}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => patchCloud({ laneOffset: v })}
-          info="× measured default. Density-wave shock displacement from the stellar ridge (~150-315 pc, secondary source)."
         />
         <ParamSlider
           label="Bubble size x"

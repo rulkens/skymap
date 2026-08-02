@@ -99,13 +99,11 @@ export type ArmRidgeFrame = { readonly point: Vec3 } & {
 
 /**
  * The ridge's own orthonormal frame at a log-radius — `point` is
- * `armRidgeCurvePoint`, `along` its tangent (central difference, matching
- * `armOffsetFrameAt`'s in `dustLaneFeatures.ts`), `across`/`pole` the
- * surface-tangent pair Gram-Schmidt'd off it. Shared by `pushArmRidges`' own
- * per-blob placement and `armParticleCloud.ts`'s lane-frame provider, so
- * both agree on what "the ridge" is by construction rather than by staying
- * in sync across two copies. Unlike `armOffsetFrameAt`, there is no lane
- * offset here — this IS the ridge, not the dust lane hugging its inner edge.
+ * `armRidgeCurvePoint`, `along` its tangent (central difference), `across`/
+ * `pole` the surface-tangent pair Gram-Schmidt'd off it. Shared by
+ * `pushArmRidges`' own per-blob placement and `armParticleCloud.ts`'s
+ * lane-frame provider, so both agree on what "the ridge" is by construction
+ * rather than by staying in sync across two copies.
  */
 export function armRidgeFrameAt(
   logR: number,

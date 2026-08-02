@@ -45,8 +45,7 @@ function armEventCenter(
   const ridge = armRidgeCurvePoint(event.logR, geometry, arm);
   const frame = warpSurfaceFrame(armRadius, angle, geometry);
   // ON the warp surface: `frame.across` is a tangent to the warped disc at
-  // this point (not a flat horizontal offset), the same technique
-  // `armOffsetFrameAt` uses for its own offset points.
+  // this point, not a flat horizontal offset.
   const center: Vec3 = [
     ridge[0] + frame.across[0] * event.acrossOffset,
     ridge[1] + frame.across[1] * event.acrossOffset,

@@ -231,21 +231,25 @@ export function buildArmParticleCloud(
       geometry,
       rng,
       count,
-      armBias: 1, // this tier IS the arm feature — the smooth-disc fallback only fires when an arm has no valid span
       clumpiness: tuning.armCloudClumpiness,
       complexSpread,
       elongation: tuning.armCloudElongation,
       sigmaZComplex,
-      laneFrameAt: (arm, logR) => armRidgeFrameAt(logR, geometry, arm),
-      laneAcceptance: (arm, radius) =>
-        armFadeEnvelope(radius, geometry, arm) * radialTilt(radius, rTilt, bias),
-      crossLaneSigma: (radius) => armCrossSigma(radius, geometry, tuning),
       discSigmaR: (k) => DISC_SIGMA_RATIOS[k]! * hLight,
       discWeights: DISC_SURFACE_WEIGHTS,
       discWeightSum,
       // This tier has no SF-map placement mode of its own — it stays on the
-      // analytic arm-lane path unconditionally (`armBias: 1` above).
-      mapDensityAt: null,
+      // analytic arm-lane path unconditionally (`armBias: 1` — this tier IS
+      // the arm feature, the smooth-disc fallback only fires when an arm has
+      // no valid span).
+      placement: {
+        kind: 'analytic',
+        armBias: 1,
+        laneFrameAt: (arm, logR) => armRidgeFrameAt(logR, geometry, arm),
+        laneAcceptance: (arm, radius) =>
+          armFadeEnvelope(radius, geometry, arm) * radialTilt(radius, rTilt, bias),
+        crossLaneSigma: (radius) => armCrossSigma(radius, geometry, tuning),
+      },
     },
     (childRng, center) => {
       // The along-arm brightness shading is carried by the SAMPLING density
