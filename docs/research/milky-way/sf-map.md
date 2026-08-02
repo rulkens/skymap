@@ -181,6 +181,47 @@ drift ~6.6 texels apart over 300 steps (the real shear, tearing radial links
 into trailing spurs) while staying far below one texel per step, so the front
 stays connected instead of fragmenting.
 
+## The percolation threshold is 1/N, and the classical 0.18 is not our number
+
+**INFERRED (derivation), confirmed against the user's own saturation
+observations 2026-08-02.** `p = (baseIgnition + spread * ignitedNeighbours +
+armForcing * armF) * gas` is evaluated at the RECEIVER over a Moore
+8-neighbourhood. A just-ignited cell is seen as ignited by all 8 of its
+neighbours, each of which then ignites with probability ~`spread`. Mean
+offspring per active cell is therefore **8 * spread**, and criticality — one
+offspring per parent — sits at exactly **spread = 1/8 = 0.125**. Above it the
+field saturates exponentially; the whole useful band is below.
+
+**The correction that matters: Gerola & Seiden's classical ~0.18 is 1/6.** It
+is the SAME branching law for THEIR 6-cell equal-area neighbourhood, not a
+value to carry across to an 8-neighbourhood implementation. Quoting 0.18 as a
+target here sends a tuner toward a value that is 1.44x supercritical by
+construction. Measured: 0.16 saturates, and so did every larger value tried.
+
+**All three ignition terms are PER-STEP PROBABILITIES summed into one p**, so
+each is far smaller than intuition suggests. `armForcing` 0.15 meant an arm
+cell ignited with 15% probability per step from forcing ALONE — with
+`refractorySteps` 7 that is about as often as it physically can, so the arms
+saturated whatever `spread` did. It is a bias, not a driver; past ~0.06 it
+drives.
+
+**A display saturation hides behind the dynamical one, and it is not
+cosmetic.** `oldActivity` is an EMA, `w * DECAY + GAIN` on ignition, and
+`sfMapPack` clamps it to [0,1]. Steady state for a cell igniting every T steps
+is `GAIN/(1 - DECAY^T)`. At DECAY 0.985 and GAIN 0.35 that pins at 1.0 for any
+T below ~28, while refractory 7 plus gas recovery gives T ~ 17 — so the channel
+went flat white across the whole active disc at a perfectly healthy duty cycle.
+**`buildSfMapOrientation` reads exactly this channel**, and flat-white and
+black are identical to a structure tensor: both have zero gradient, so
+coherence goes to 0 everywhere. GAIN has to survive BOTH ends, since a cell
+that ignites once a run only ever reaches GAIN itself.
+
+`gasRegen` is the CONTRAST knob, not a rate detail: recovery takes `1/gasRegen`
+steps, which is how long a burnt void stays a void rather than simmering back.
+
+Total winding is `shearRate * steps`, so the two are not independent — cutting
+`steps` for rebuild latency cuts the spur pitch by the same factor.
+
 ## The corotation ring is ALSO a residence-time artifact, independently
 
 **INFERRED (derivation).** Even with the frame fixed, the arm forcing is a
