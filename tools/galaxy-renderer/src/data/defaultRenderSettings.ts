@@ -118,6 +118,12 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // without smearing distinct spurs together.
   orientationSigmaDerivTexels: 1.5,
   orientationSigmaIntegTexels: 4,
+  // All three at 1: the composite is unchanged from before these knobs
+  // existed until the user moves one — same "identity until touched"
+  // discipline as saturation/vignette above.
+  sfMapGasWeight: 1,
+  sfMapRecentWeight: 1,
+  sfMapActivityWeight: 1,
   legacyDustEnabled: false,
   dustCloudEnabled: true,
   // ON at boot, which costs nothing: at the boot camera both bands read 1, so

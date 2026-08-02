@@ -21,10 +21,10 @@ export const DEFAULT_UI_STATE: UiState = {
     // long enough that only what is being calibrated right now earns a slot.
     armField: false,
     armCloud: false,
-    // Expanded: the HII tier is the current work being visually tuned.
-    hii: true,
-    // Expanded, same rationale as `hii`: step 1 of the SSPSF automaton is
-    // the current work being visually tuned.
+    hii: false,
+    // The only section expanded by default: the SSPSF automaton is the
+    // current work, and everything else on the panel is either tuned or
+    // downstream of it.
     sfMap: true,
     // Collapsed: the crossfade sliders default to 0 (pure galaxy), so this
     // section is an occasional A/B tool, not something tuned every session.

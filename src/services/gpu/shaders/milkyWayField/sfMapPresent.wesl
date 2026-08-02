@@ -82,10 +82,14 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   let old = texel.z;
   // Presentation palette, NOT physics — chosen so the three channels stay
   // separable by eye: dim cool blue for unspent gas, warm amber for the
-  // decaying wake, hot white for a cell that ignited recently.
-  let gasColor = vec3<f32>(0.05, 0.08, 0.25) * gas;
-  let oldColor = vec3<f32>(0.9, 0.35, 0.05) * old;
-  let recentColor = vec3<f32>(1.0, 0.95, 0.85) * recent;
+  // decaying wake, hot white for a cell that ignited recently. The three
+  // peak colours are deliberately NOT equal-brightness (gas maxes at 0.25,
+  // recentSf at 1.0), so u.sfMapChannels is the only way to see the gas
+  // channel at all against the other two — zero the other weights to
+  // isolate one channel.
+  let gasColor = vec3<f32>(0.05, 0.08, 0.25) * gas * u.sfMapChannels.x;
+  let oldColor = vec3<f32>(0.9, 0.35, 0.05) * old * u.sfMapChannels.z;
+  let recentColor = vec3<f32>(1.0, 0.95, 0.85) * recent * u.sfMapChannels.y;
   let color = (gasColor + oldColor + recentColor) * edgeFade;
 
   // debugView.y is this view's own crossfade weight (io.wesl's debugView

@@ -222,7 +222,12 @@ import {
   packFieldComponents,
   packFieldHeaderUniforms,
 } from './packFieldUniforms';
-import type { DebugViewWeights, FieldDustNoise, FieldDustSlices } from './packFieldUniforms';
+import type {
+  DebugViewWeights,
+  FieldDustNoise,
+  FieldDustSlices,
+  SfMapChannelWeights,
+} from './packFieldUniforms';
 import { createGenerationPipelines } from '../../../../src/services/gpu/galaxy/createGenerationPipelines';
 import { encodeGeneration } from '../../../../src/services/gpu/galaxy/encodeGeneration';
 import { packGenerationUniforms } from '../../../../src/services/gpu/galaxy/packGenerationUniforms';
@@ -3090,6 +3095,17 @@ export async function createGalaxyEngine(
       orientationViewIntensity: render.orientationViewIntensity,
       galaxyWeight: debugGalaxyWeight,
     };
+    // Per-channel isolation for the SF-map view — orthogonal to
+    // debugView.sfMapViewIntensity (the whole view's crossfade weight), see
+    // io.wesl's sfMapChannels doc. Shared with the HII header below for the
+    // same reason debugView is: both packFieldHeaderUniforms calls write the
+    // same struct shape, even though only sfMapPresent.wesl's own draw
+    // (bound to the field pipeline, not HII's) ever reads this lane.
+    const sfMapChannels: SfMapChannelWeights = {
+      gasWeight: render.sfMapGasWeight,
+      recentSfWeight: render.sfMapRecentWeight,
+      activityWeight: render.sfMapActivityWeight,
+    };
 
     // Two packs of the same struct, differing only in `viewportPx`: the star
     // pass gets the AGGREGATE's dimensions (what `stars.wesl` clamps sprite
@@ -3174,6 +3190,9 @@ export async function createGalaxyEngine(
       // The three crossfade sliders + the combined galaxy weight, computed
       // once above — splat.wesl's fs reads .w, dustPresent.wesl's fs .x.
       debugView,
+      // The SF-map per-channel isolation weights, computed once above —
+      // only sfMapPresent.wesl's fs reads this lane.
+      sfMapChannels,
       fieldData,
     );
     device.queue.writeBuffer(fieldUbo, 0, fieldData);
@@ -3200,6 +3219,10 @@ export async function createGalaxyEngine(
       // .x/.y/.z), but sharing it keeps HII's own dimming in lockstep with
       // the rest of the galaxy under an active debug view.
       debugView,
+      // Same object as the field header above — never read by this pass's
+      // own draw (hiiBG never binds sfMapPresent.wesl), shared purely
+      // because both calls write the same struct shape.
+      sfMapChannels,
       hiiData,
     );
     device.queue.writeBuffer(hiiUbo, 0, hiiData);

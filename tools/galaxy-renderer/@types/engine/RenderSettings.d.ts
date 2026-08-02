@@ -114,6 +114,28 @@ export type RenderSettings = {
    */
   readonly orientationSigmaIntegTexels: number;
   /**
+   * SF-map channel weight, isolating `gas` (io.wesl's `sfMapChannels.x`):
+   * unspent ISM fuel, 1 nearly everywhere on a quiet disc, driven to 0 by an
+   * ignition and refilled over `1/gasRegen` steps. The palette's dimmest
+   * channel (maxes at colour 0.25 vs `recentSf`'s 1.0), so zeroing the other
+   * two is the only way to see it against them. Only reachable while
+   * `sfMapViewIntensity` is above 0.
+   */
+  readonly sfMapGasWeight: number;
+  /**
+   * SF-map channel weight, isolating `recentSf` (io.wesl's
+   * `sfMapChannels.y`): `exp(-age/12)`, a cell that fired within roughly the
+   * last dozen steps. Only reachable while `sfMapViewIntensity` is above 0.
+   */
+  readonly sfMapRecentWeight: number;
+  /**
+   * SF-map channel weight, isolating `oldActivity` (io.wesl's
+   * `sfMapChannels.z`): the accumulated trace of every front that passed,
+   * decayed per step by `activityDecay` — the channel dust placement
+   * actually reads. Only reachable while `sfMapViewIntensity` is above 0.
+   */
+  readonly sfMapActivityWeight: number;
+  /**
    * DUST (LEGACY) header pill: off forces the sprite generator's dust knobs
    * (`spriteDust`, `dustRingStrength`) to 0 in the copy handed to the engine,
    * leaving the stored `galaxy` params (and the sliders showing them)

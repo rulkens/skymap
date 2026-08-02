@@ -47,6 +47,36 @@ function DebugViewsSection(): ReactNode {
           info="Crossfades in the SSPSF automaton's log-polar output, same seam as the dust view. Step 1's only way to see the automaton — it feeds nothing else yet."
         />
         <ParamSlider
+          label="SF map · gas"
+          value={render.sfMapGasWeight}
+          min={0}
+          max={1}
+          step={0.05}
+          format={(v) => v.toFixed(2)}
+          onChange={(v) => dispatch(renderPatched({ sfMapGasWeight: v }))}
+          info="Isolates the gas channel: unspent ISM fuel, driven to 0 by an ignition and refilled over 1/gasRegen steps. The palette's dimmest colour by a wide margin — zero the other two to see it at all."
+        />
+        <ParamSlider
+          label="SF map · recent SF"
+          value={render.sfMapRecentWeight}
+          min={0}
+          max={1}
+          step={0.05}
+          format={(v) => v.toFixed(2)}
+          onChange={(v) => dispatch(renderPatched({ sfMapRecentWeight: v }))}
+          info="Isolates the recentSf channel: exp(-age/12), a cell that fired within roughly the last dozen steps. The hottest, brightest channel — usually what washes out the other two in the combined view."
+        />
+        <ParamSlider
+          label="SF map · activity"
+          value={render.sfMapActivityWeight}
+          min={0}
+          max={1}
+          step={0.05}
+          format={(v) => v.toFixed(2)}
+          onChange={(v) => dispatch(renderPatched({ sfMapActivityWeight: v }))}
+          info="Isolates the oldActivity channel: the accumulated trace of every front that passed, decayed per step by activityDecay. This is the channel dust placement actually reads."
+        />
+        <ParamSlider
           label="Orientation view"
           value={render.orientationViewIntensity}
           min={0}

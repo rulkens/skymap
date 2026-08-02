@@ -25,7 +25,8 @@
 //   offset 128 : dustNoise: vec4 (tileUnits, amplitude, cloudOffset, contrastExp)
 //   offset 144 : dustSlices: vec4 (t1, t2, t3, unused)
 //   offset 160 : debugView: vec4 (dustViewIntensity, sfMapViewIntensity, orientationViewIntensity, galaxyWeight)
-//   total: 176 bytes.
+//   offset 176 : sfMapChannels: vec4 (gasWeight, recentSfWeight, activityWeight, unused)
+//   total: 192 bytes.
 //
 // counts.x is the live EMISSION component count — the central galaxy's plus
 // every extra's, drawn one quad each (see splat.wesl). counts.y/.z locate
@@ -103,6 +104,13 @@
 // multiply by their own lane (.x/.y/.z) instead of gating a whole pass on
 // a boolean, which is what makes the three crossfade independently rather
 // than replace one another.
+//
+// sfMapChannels (offset 176) is sfMapPresent.wesl's own per-channel
+// isolation control, orthogonal to debugView.y (the whole view's crossfade
+// weight): the palette there sums gas+old+recent, and with all three always
+// visible there was no way to tell which one you were looking at. Each
+// weight independently scales its channel before the palette multiply, so
+// zeroing two isolates the third.
 //
 // COMPS (read-only storage, binding 1) — every mixture's components back to
 // back (the central galaxy's emission, then each background extra's,
@@ -194,6 +202,7 @@ struct FieldUniforms {
   dustNoise: vec4<f32>,
   dustSlices: vec4<f32>,
   debugView: vec4<f32>,
+  sfMapChannels: vec4<f32>,
 };
 
 @group(0) @binding(0) var<uniform> u: FieldUniforms;

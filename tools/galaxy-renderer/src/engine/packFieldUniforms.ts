@@ -40,8 +40,8 @@ import type { GalaxyFieldComponent } from '../../../../src/@types/galaxy/GalaxyF
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
-/** Float count of `io.wesl`'s `FieldUniforms` header — 11 vec4, camera + params + counts + counts2 + dustExtinction + dustNoise + dustSlices + debugView. */
-export const FIELD_HEADER_FLOATS = 44;
+/** Float count of `io.wesl`'s `FieldUniforms` header — 12 vec4, camera + params + counts + counts2 + dustExtinction + dustNoise + dustSlices + debugView + sfMapChannels. */
+export const FIELD_HEADER_FLOATS = 48;
 
 /** Byte size of the header struct, for `createBuffer`. */
 export const FIELD_HEADER_BUFFER_SIZE = FIELD_HEADER_FLOATS * 4;
@@ -113,9 +113,27 @@ export type DebugViewWeights = {
 };
 
 /**
+ * Per-channel isolation weights for the SF-map debug view (io.wesl's
+ * `sfMapChannels`), orthogonal to `DebugViewWeights.sfMapViewIntensity` (the
+ * whole view's crossfade weight) — sfMapPresent.wesl's palette sums all
+ * three channels, so with no per-channel control there was no way to tell
+ * gas from oldActivity from recentSf. Each field names what the automaton
+ * channel MEANS, not just that it's a weight — see `RenderSettings`'s own
+ * docblocks for the same three explained from the slider side.
+ */
+export type SfMapChannelWeights = {
+  /** Unspent ISM fuel — 1 nearly everywhere on a quiet disc, driven to 0 by an ignition, refilled over `1/gasRegen` steps. */
+  readonly gasWeight: number;
+  /** `exp(-age/12)` — a cell that fired within roughly the last dozen steps. */
+  readonly recentSfWeight: number;
+  /** The accumulated trace of every front that passed, decayed per step by `activityDecay` — the channel dust placement actually reads. */
+  readonly activityWeight: number;
+};
+
+/**
  * packFieldHeaderUniforms — camera basis + params + the four live counts +
  * the dust extinction law + the dust-noise lane + the dust depth-slice edges,
- * into the 176-byte uniform. Called every `drawFrame`; all four counts are
+ * into the 192-byte uniform. Called every `drawFrame`; all four counts are
  * whatever `repackFieldComponents` (createGalaxyEngine.ts) last sized the
  * storage buffer to (the two packers are called from different sites, so the
  * counts travel as plain arguments rather than being re-derived here).
@@ -151,7 +169,9 @@ export type DebugViewWeights = {
  * is `FieldDustSlices` above — recomputed every call, since it tracks the
  * live camera distance. `debugView` is `DebugViewWeights` above — the three
  * crossfade sliders plus the combined galaxy weight, recomputed every call
- * from `render`.
+ * from `render`. `sfMapChannels` is `SfMapChannelWeights` above — the three
+ * per-channel isolation sliders for the SF-map view specifically, same
+ * "recomputed every call from `render`" discipline as `debugView`.
  */
 export function packFieldHeaderUniforms(
   cam: FieldCamera,
@@ -165,6 +185,7 @@ export function packFieldHeaderUniforms(
   dustNoise: FieldDustNoise,
   dustSlices: FieldDustSlices,
   debugView: DebugViewWeights,
+  sfMapChannels: SfMapChannelWeights,
   dst?: Float32Array,
 ): Float32Array {
   const out = dst ?? new Float32Array(FIELD_HEADER_FLOATS);
@@ -234,6 +255,12 @@ export function packFieldHeaderUniforms(
   out[41] = debugView.sfMapViewIntensity;
   out[42] = debugView.orientationViewIntensity;
   out[43] = debugView.galaxyWeight;
+
+  // sfMapChannels 44..47 = (gasWeight, recentSfWeight, activityWeight, unused).
+  out[44] = sfMapChannels.gasWeight;
+  out[45] = sfMapChannels.recentSfWeight;
+  out[46] = sfMapChannels.activityWeight;
+  out[47] = 0;
 
   return out;
 }
