@@ -99,14 +99,19 @@ export type GalaxyFieldTuning = {
    * a smudge behind a curtain rather than a hole with a lit wall.
    */
   readonly hiiCavityScale: number;
-  /** The SSPSF automaton that grows the ISM structure the dust and SF tiers will eventually be seeded from. Consumed by nothing yet — step 1 is the overlay. */
+  /** The SSPSF automaton that grows the ISM structure the dust tier is seeded from. */
   readonly sfMap: GalaxySfMapParams;
   /**
-   * Gate for the dust particle cloud reading the automaton's gas channel:
-   * OFF (default) leaves `buildDustParticleCloud` byte-identical to before
-   * the map existed. ON multiplies the cloud's arm-lane placement acceptance
-   * by the sampled gas fraction — a modulation of the existing envelope, not
-   * a replacement (see `dustParticleCloud.ts`'s `laneAcceptance` callback).
+   * Gate for the dust particle cloud reading the automaton's gas channel. ON
+   * multiplies the cloud's arm-lane placement acceptance by the sampled gas
+   * fraction and elongates each splat along the measured crest orientation —
+   * a modulation of the existing envelope, not a replacement (see
+   * `dustParticleCloud.ts`'s `laneAcceptance` callback). OFF leaves
+   * `buildDustParticleCloud` byte-identical to before the map existed.
+   *
+   * Defaults ON, which is inert wherever no automaton runs: both consumers
+   * need a sampled map handed in and fall back to the unseeded envelope
+   * without one, so this only takes effect where a map is actually produced.
    */
   readonly sfMapDustSeeding: boolean;
 };

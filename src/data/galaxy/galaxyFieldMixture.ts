@@ -334,7 +334,9 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
   // Under 1 so the lit wall sits inside the swept dust rather than on it.
   hiiCavityScale: 0.8,
   sfMap: DEFAULT_GALAXY_SF_MAP_PARAMS,
-  sfMapDustSeeding: false,
+  // Inert wherever no automaton runs: seeding needs a sampled map handed in,
+  // and both consumers fall back to their unseeded envelope without one.
+  sfMapDustSeeding: true,
 };
 
 /** The removed pair's share of the disc's flux budget — see DISC_SIGMA_RATIOS' fit note. */
