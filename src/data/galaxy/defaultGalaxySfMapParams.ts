@@ -2,20 +2,21 @@
  * First hand-calibrated pass at the SSPSF automaton (user, 2026-08-02), not a
  * measurement — every value here was found by eye against the overlay.
  *
- * The one number that carries information beyond taste is `spread`. The
- * percolation threshold in THIS implementation sits far above the classical
- * ~0.18: below roughly 0.5 the structure dies within a few steps and nothing
- * visible happens. The suspect is gas starvation rather than the propagation
- * rule — a cell leaves `refractorySteps` with only `refractorySteps * gasRegen`
- * of its gas back (0.42 here), so ignition is competing against a floor the
- * classical model does not have. Tune `spread` against `gasRegen` and
- * `refractorySteps` together; moving one alone will look like the knob is dead.
+ * `spread` 0.56 is PRE-REFRAME and expected to fall toward the classical ~0.18.
+ * It was calibrated while the automaton resampled discrete state bilinearly, so
+ * a lone ignition was invisible to its neighbours and 0.56 was buying adjacent
+ * PAIRS by chance rather than buying propagation (research doc's sf-map.md).
+ * An earlier docblock here blamed gas starvation; the user's own test —
+ * `gasRegen` 1.0 with `spread` 0.18 — refuted that, so do not re-tune against it.
  */
 import type { GalaxySfMapParams } from '../../@types/galaxy/GalaxySfMapParams';
 
 export const DEFAULT_GALAXY_SF_MAP_PARAMS: GalaxySfMapParams = {
   enabled: true,
-  steps: 300,
+  // A 2D front covers ~n^2 cells in n steps where the old ring-trapped 1D one
+  // covered ~n, so the material-frame automaton reaches the same structure in
+  // far fewer iterations — and rebuild latency is linear in this.
+  steps: 100,
   baseIgnition: 0.002,
   spread: 0.56,
   refractorySteps: 7,

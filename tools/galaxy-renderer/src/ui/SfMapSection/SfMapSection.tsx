@@ -38,11 +38,11 @@ function SfMapSection(): ReactNode {
           label="Steps"
           value={sfMap.steps}
           min={1}
-          max={600}
+          max={200}
           step={1}
           format={(v) => String(Math.round(v))}
           onChange={(v) => patchSfMap({ steps: Math.round(v) })}
-          info="Automaton iterations per rebuild. Structure coarsens with more steps; the shear winds it."
+          info="Automaton iterations per rebuild. Structure coarsens with more steps; the shear winds it. Rebuild latency is linear in this — the dominant cost of a slider drag."
         />
         <ParamSlider
           label="Base ignition"
