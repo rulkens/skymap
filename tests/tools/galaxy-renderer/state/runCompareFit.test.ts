@@ -103,6 +103,7 @@ function makeFakeEngine(): {
     })),
     grab,
     getCamera: vi.fn<GalaxyEngineHandle['getCamera']>(() => ({ az: 0, el: 0, dist: 1 })),
+    getSfMapTexture: vi.fn<GalaxyEngineHandle['getSfMapTexture']>(),
     dispose: vi.fn<GalaxyEngineHandle['dispose']>(),
   };
 

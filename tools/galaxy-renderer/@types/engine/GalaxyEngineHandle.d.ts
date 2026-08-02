@@ -27,5 +27,10 @@ export type GalaxyEngineHandle = {
   sample(): Promise<{ mean: number; max: number; litPct: number; stars: number }>;
   grab(size?: number): Promise<{ S: number; data: Uint8ClampedArray }>; // default 480 — :366
   getCamera(): ViewPose;
+  // The SSPSF star-formation automaton's packed output (gas / recent SF /
+  // older SF, log-polar) — see createGalaxyEngine.ts's rebuildSfMap.
+  // Consumed by nothing but its own overlay yet; exposed for the sibling UI
+  // and future consumers.
+  getSfMapTexture(): GPUTexture;
   dispose(): void;
 };
