@@ -188,7 +188,6 @@ import { mat4 } from 'wgpu-matrix';
 import type { GalaxyEngineHandle } from '../../@types/engine/GalaxyEngineHandle';
 import type { GalaxyEngineOptions } from '../../@types/engine/GalaxyEngineOptions';
 import type { MilkyWayFadeReadout } from '../../@types/engine/MilkyWayFadeReadout';
-import type { OrientationDiagnostics } from '../../@types/engine/OrientationDiagnostics';
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import type { PassTiming } from '../../@types/engine/PassTiming';
 import type { RenderSettings } from '../../@types/engine/RenderSettings';
@@ -214,6 +213,15 @@ import { deriveMilkyWayFade } from './deriveMilkyWayFade';
 import { orbitEye } from './orbitEye';
 import { panAxes } from './panAxes';
 import { lensShift } from './lensShift';
+import { createPassTimingWindows } from './createPassTimingWindows';
+import { debugGalaxyWeight } from './debugGalaxyWeight';
+import { decodeOrientationTexels } from './decodeOrientationTexels';
+import { dustSliceEdges } from './dustSliceEdges';
+import { orientationCoherenceStats } from './orientationCoherenceStats';
+import { BUBBLE_RECORD_FLOATS, packBubbleInstances } from './packBubbleInstances';
+import { sampleLuminanceStats } from './sampleLuminanceStats';
+import { sfMapStepIndexData } from './sfMapStepIndexData';
+import { swizzleToRgba } from './swizzleToRgba';
 import { CLOUD_UNIFORM_FLOATS, packCloudUniforms } from './packCloudUniforms';
 import {
   FIELD_COMPONENT_FLOATS,
@@ -261,8 +269,10 @@ import {
 import type { OrientationDeltaStats } from '../../../../src/data/galaxy/clusteredDiscPlacement';
 import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../src/data/galaxy/defaultGalaxyDustParams';
 import { dustExtinctionRgb } from '../../../../src/utils/galaxy/dustExtinctionRgb';
+import { alignedBytesPerRow } from '../../../../src/utils/gpu/alignedBytesPerRow';
+import { reducedTargetSize } from '../../../../src/utils/gpu/reducedTargetSize';
+import { unpadRows } from '../../../../src/utils/gpu/unpadRows';
 import { transformGalaxyFieldComponent } from '../../../../src/utils/galaxy/transformGalaxyFieldComponent';
-import { f16ToFloat } from '../../../../src/utils/math/f16ToFloat';
 import { GENERATION_UBO } from '../../../../src/services/gpu/galaxy/generationUboLayout';
 import { GEN_RECORD_BYTES } from '../../../../src/services/gpu/galaxy/genRecordBytes';
 import { carveStarLayout } from '../../../../src/services/gpu/galaxy/carveStarLayout';
@@ -413,13 +423,6 @@ const PASS_STALE_FRAMES = 30;
 
 /** How often the engine hands a `PerfReport` to the UI. */
 const PERF_REPORT_INTERVAL_MS = 500;
-
-/**
- * Floats per instance of the bubble-view overlay's own buffer (see
- * `bubbleBuf`): center.xyz + radius (a vec4) then a kind lane (0 = relic
- * bubble, 1 = HII cavity) — bubblePresent.wesl's `@location(0)`/`@location(1)`.
- */
-const BUBBLE_RECORD_FLOATS = 5;
 
 /**
  * How often the engine hands a `MilkyWayFadeReadout` to the UI. Five times the
@@ -877,13 +880,11 @@ export async function createGalaxyEngine(
     usage:
       GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC,
   });
-  // `copyTextureToBuffer` requires `bytesPerRow` to be a multiple of 256.
-  // 768px * 4 bytes = 3072 already is, but this is computed rather than
-  // hard-coded so a future grid width that ISN'T a clean multiple doesn't
-  // silently corrupt the readback — `scheduleSfMapReadback` copies out only
-  // the first `SF_MAP_AZ * 4` bytes of each padded row, so the padding (if
-  // any) never leaks into `GalaxySfMap.data`.
-  const SF_MAP_READBACK_BYTES_PER_ROW = Math.ceil((SF_MAP_AZ * 4) / 256) * 256;
+  // `copyTextureToBuffer` forces `bytesPerRow` to a 256-byte multiple (see
+  // alignedBytesPerRow). `scheduleSfMapReadback` copies out only the first
+  // `SF_MAP_AZ * 4` bytes of each padded row, so the padding never leaks
+  // into `GalaxySfMap.data`.
+  const SF_MAP_READBACK_BYTES_PER_ROW = alignedBytesPerRow(SF_MAP_AZ * 4);
   const sfMapReadbackBuf = device.createBuffer({
     label: 'galaxy:sfMapReadbackBuf',
     size: SF_MAP_READBACK_BYTES_PER_ROW * SF_MAP_RINGS,
@@ -987,10 +988,8 @@ export async function createGalaxyEngine(
   });
   // rgba16float = 4 lanes * 2 bytes; only .xy (cos2theta, sin2theta) are
   // read back, .zw are copied along for free since a texture copy can't
-  // pick channels. Computed rather than hard-coded for the same reason
-  // `SF_MAP_READBACK_BYTES_PER_ROW` is: 768*8=6144 already is a multiple of
-  // 256, but a future grid width might not be.
-  const ORIENTATION_READBACK_BYTES_PER_ROW = Math.ceil((SF_MAP_AZ * 8) / 256) * 256;
+  // pick channels. See alignedBytesPerRow for the 256-byte alignment rule.
+  const ORIENTATION_READBACK_BYTES_PER_ROW = alignedBytesPerRow(SF_MAP_AZ * 8);
   const orientationReadbackBuf = device.createBuffer({
     label: 'galaxy:orientationReadbackBuf',
     size: ORIENTATION_READBACK_BYTES_PER_ROW * SF_MAP_RINGS,
@@ -1560,23 +1559,14 @@ export async function createGalaxyEngine(
   const RA_TB = GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING;
 
   /**
-   * Pixel size of the reduced-resolution star target — `floor(canvas / scale)`
-   * clamped to 1 px per axis, the SAME formula and the same clamp the runtime's
-   * `renderTargets.allocate` uses. `floor` (not `round`) is deliberate there:
-   * it is what the upsample shader's sample-at-uv semantics assume. The clamp
-   * guards a tiny canvas, where `floor` would otherwise ask for an illegal
-   * 0-dimension texture.
-   *
    * This is also the number the star pass writes into `viewportPx`, which is
    * why it is a function rather than two inline expressions — the allocation
    * and the uniform read it from the same place and so cannot disagree, the
-   * same discipline `milkyWayAggregateLayer` follows by reading the divisor off
-   * the shared spec row.
+   * same discipline `milkyWayAggregateLayer` follows by reading the divisor
+   * off the shared spec row. The sizing rule itself is `reducedTargetSize`.
    */
-  const reducedSize = (scale: number): Vec2 => [
-    Math.max(1, Math.floor(canvas.width / scale)),
-    Math.max(1, Math.floor(canvas.height / scale)),
-  ];
+  const reducedSize = (scale: number): Vec2 =>
+    reducedTargetSize(canvas.width, canvas.height, scale);
 
   // Split out of `buildTargets` because the divisor is a live slider: moving it
   // has to reallocate this one target without disturbing the scene, the LDR
@@ -1859,18 +1849,7 @@ export async function createGalaxyEngine(
         let packed: Uint8Array;
         try {
           const padded = new Uint8Array(sfMapReadbackBuf.getMappedRange());
-          // Strip the 256-byte row alignment back out into a tightly packed
-          // array — see SF_MAP_READBACK_BYTES_PER_ROW's own comment.
-          packed = new Uint8Array(SF_MAP_AZ * SF_MAP_RINGS * 4);
-          for (let row = 0; row < SF_MAP_RINGS; row++) {
-            packed.set(
-              padded.subarray(
-                row * SF_MAP_READBACK_BYTES_PER_ROW,
-                row * SF_MAP_READBACK_BYTES_PER_ROW + SF_MAP_AZ * 4,
-              ),
-              row * SF_MAP_AZ * 4,
-            );
-          }
+          packed = unpadRows(padded, SF_MAP_READBACK_BYTES_PER_ROW, SF_MAP_AZ * 4, SF_MAP_RINGS);
         } finally {
           sfMapReadbackBuf.unmap();
         }
@@ -1926,19 +1905,13 @@ export async function createGalaxyEngine(
         await orientationReadbackBuf.mapAsync(GPUMapMode.READ);
         let data: Float32Array;
         try {
-          // rgba16float, u16 lanes: only .xy (cos2theta, sin2theta) matter —
-          // see orientationTex's own comment on why .zw are unused.
           const padded = new Uint16Array(orientationReadbackBuf.getMappedRange());
-          const rowStrideU16 = ORIENTATION_READBACK_BYTES_PER_ROW / 2; // 2 bytes/u16
-          data = new Float32Array(SF_MAP_AZ * SF_MAP_RINGS * 2);
-          for (let row = 0; row < SF_MAP_RINGS; row++) {
-            for (let a = 0; a < SF_MAP_AZ; a++) {
-              const src = row * rowStrideU16 + a * 4; // 4 u16 lanes/texel
-              const dst = (row * SF_MAP_AZ + a) * 2;
-              data[dst] = f16ToFloat(padded[src]!);
-              data[dst + 1] = f16ToFloat(padded[src + 1]!);
-            }
-          }
+          data = decodeOrientationTexels(
+            padded,
+            ORIENTATION_READBACK_BYTES_PER_ROW,
+            SF_MAP_AZ,
+            SF_MAP_RINGS,
+          );
         } finally {
           orientationReadbackBuf.unmap();
         }
@@ -1950,20 +1923,11 @@ export async function createGalaxyEngine(
           rMax: grid.rMax,
           data,
         };
-        // Coherence is the packed vector's own length (see
-        // GalaxySfMapOrientation's doc: `data` is `(cos2theta, sin2theta)`
-        // already SCALED by coherence) — computed once here, at the one
-        // point a fresh grid exists, not per frame or per dust build.
-        let sumCoherence = 0;
-        let maxCoherence = 0;
-        const texelCount = SF_MAP_AZ * SF_MAP_RINGS;
-        for (let i = 0; i < texelCount; i++) {
-          const coherence = Math.hypot(data[i * 2]!, data[i * 2 + 1]!);
-          sumCoherence += coherence;
-          if (coherence > maxCoherence) maxCoherence = coherence;
-        }
-        orientationCoherenceMean = texelCount > 0 ? sumCoherence / texelCount : 0;
-        orientationCoherenceMax = maxCoherence;
+        // Computed once here, at the one point a fresh grid exists — not per
+        // frame or per dust build.
+        const coherenceStats = orientationCoherenceStats(data);
+        orientationCoherenceMean = coherenceStats.mean;
+        orientationCoherenceMax = coherenceStats.max;
         if (fieldTuning.sfMapDustSeeding) {
           rebuildDustMixture(); // also reports — see its own doc
           repackFieldComponents();
@@ -2203,28 +2167,7 @@ export async function createGalaxyEngine(
     }
     bubbleInstanceCount = total;
     if (total === 0) return;
-    const data = new Float32Array(total * BUBBLE_RECORD_FLOATS);
-    let i = 0;
-    // kind 0 = relic bubble, 1 = HII cavity — bubblePresent.wesl's own
-    // palette switch.
-    for (const p of relics) {
-      const base = i * BUBBLE_RECORD_FLOATS;
-      data[base] = p.center[0];
-      data[base + 1] = p.center[1];
-      data[base + 2] = p.center[2];
-      data[base + 3] = p.radius;
-      data[base + 4] = 0;
-      i++;
-    }
-    for (const p of cavities) {
-      const base = i * BUBBLE_RECORD_FLOATS;
-      data[base] = p.center[0];
-      data[base + 1] = p.center[1];
-      data[base + 2] = p.center[2];
-      data[base + 3] = p.radius;
-      data[base + 4] = 1;
-      i++;
-    }
+    const data = packBubbleInstances(relics, cavities);
     device.queue.writeBuffer(bubbleBuf, 0, data);
   }
 
@@ -2319,9 +2262,7 @@ export async function createGalaxyEngine(
       size: steps * stride,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
-    const strideFloats = stride / 4;
-    const stepData = new Float32Array(steps * strideFloats);
-    for (let s = 0; s < steps; s++) stepData[s * strideFloats] = s;
+    const stepData = sfMapStepIndexData(steps, stride);
     device.queue.writeBuffer(sfMapStepIndexBuf, 0, stepData);
 
     const stepBindGroups: GPUBindGroup[] = [];
@@ -2960,39 +2901,12 @@ export async function createGalaxyEngine(
   // allocates nothing when the gate is off or the adapter lacks the feature.
   const timing = createGpuTimingService(device, hasUrlGate('gpuTimings'), TIMING_SLOTS);
 
-  // Per-slot rolling means, accumulated off the service's subscription. The
-  // service delivers a frame's decoded spans 1-2 frames after its submit (the
-  // staging buffer maps asynchronously); nothing here waits on that, the next
-  // periodic report just picks up whatever has landed.
-  type PassWindow = { samples: number[]; lastSeenFrame: number };
-  const passWindows = new Map<string, PassWindow>();
-  const unsubscribeTiming = timing.subscribe((frame) => {
-    for (const [slot, ms] of frame.perPassMs) {
-      let window = passWindows.get(slot);
-      if (!window) {
-        window = { samples: [], lastSeenFrame: frame.frameIndex };
-        passWindows.set(slot, window);
-      }
-      window.samples.push(ms);
-      if (window.samples.length > PASS_WINDOW) window.samples.shift();
-      window.lastSeenFrame = frame.frameIndex;
-    }
-    for (const [slot, window] of passWindows) {
-      if (frame.frameIndex - window.lastSeenFrame > PASS_STALE_FRAMES) passWindows.delete(slot);
-    }
-  });
-
-  // Rows come out in `TIMING_SLOTS` order rather than Map-insertion order: a
-  // slot that only starts running later (the grade trailer) would otherwise
-  // insert at the end and pin itself there, shuffling the HUD's row order
-  // against the frame's actual pass order.
-  const passTimings = (): readonly PassTiming[] =>
-    TIMING_SLOTS.flatMap((slot) => {
-      const window = passWindows.get(slot);
-      if (!window || window.samples.length === 0) return [];
-      const mean = window.samples.reduce((sum, ms) => sum + ms, 0) / window.samples.length;
-      return [{ slot, ms: mean }];
-    });
+  // Per-slot rolling means, accumulated off the service's subscription. See
+  // createPassTimingWindows for why rows keep TIMING_SLOTS order and why a
+  // slot is dropped after PASS_STALE_FRAMES unreported frames.
+  const passTimingWindows = createPassTimingWindows(TIMING_SLOTS, PASS_WINDOW, PASS_STALE_FRAMES);
+  const unsubscribeTiming = timing.subscribe((frame) => passTimingWindows.record(frame));
+  const passTimings = (): readonly PassTiming[] => passTimingWindows.timings();
 
   // ---- post chain encoding ----
 
@@ -3226,29 +3140,17 @@ export async function createGalaxyEngine(
     const fade = deriveMilkyWayFade(eye, cam.fov, canvas.height, render);
     lastFade = fade;
 
-    // The three debug views crossfade independently rather than replace the
-    // galaxy (RenderSettings's own docblock), so the galaxy's own dimming
-    // needs ONE combined weight — 1 minus the largest of the three, floored
-    // at 0 — rather than each view's slider darkening it separately, which
-    // would double-dim wherever two are live at once. Shared by the sprite
-    // fadeAlpha below AND every packFieldHeaderUniforms call this frame (the
-    // field header and the HII header), so the galaxy dims by exactly the
-    // same amount whichever representation is drawing it.
-    const debugGalaxyWeight = Math.max(
-      0,
-      1 -
-        Math.max(
-          render.dustViewIntensity,
-          render.sfMapViewIntensity,
-          render.orientationViewIntensity,
-          render.bubbleViewIntensity,
-        ),
-    );
+    // Combined debug-view dimming weight — see debugGalaxyWeight.ts for why it
+    // is MAX not SUM. Shared by the sprite fadeAlpha below AND every
+    // packFieldHeaderUniforms call this frame (the field header and the HII
+    // header), so the galaxy dims by exactly the same amount whichever
+    // representation is drawing it.
+    const galaxyWeight = debugGalaxyWeight(render);
     const debugView: DebugViewWeights = {
       dustViewIntensity: render.dustViewIntensity,
       sfMapViewIntensity: render.sfMapViewIntensity,
       orientationViewIntensity: render.orientationViewIntensity,
-      galaxyWeight: debugGalaxyWeight,
+      galaxyWeight,
     };
     // Per-channel isolation for the SF-map view — orthogonal to
     // debugView.sfMapViewIntensity (the whole view's crossfade weight), see
@@ -3273,14 +3175,14 @@ export async function createGalaxyEngine(
     // but deliberately left extras' alone (see the field/scene passes below).
     const tuning = cloudTuning();
     const aggregatePx = reducedSize(render.aggregateDivisor);
-    packCloudUniforms(vp, view, aggregatePx, tuning, fade.alpha * debugGalaxyWeight, cloudData);
+    packCloudUniforms(vp, view, aggregatePx, tuning, fade.alpha * galaxyWeight, cloudData);
     device.queue.writeBuffer(starUbo, 0, cloudData);
     packCloudUniforms(
       vp,
       view,
       [canvas.width, canvas.height],
       tuning,
-      fade.alpha * debugGalaxyWeight,
+      fade.alpha * galaxyWeight,
       cloudData,
     );
     device.queue.writeBuffer(dustUbo, 0, cloudData);
@@ -3291,15 +3193,7 @@ export async function createGalaxyEngine(
     // spacing between tNear and tFar is what turns linear from outside the
     // galaxy and logarithmic from inside it — see io.wesl for the full
     // derivation of the 0.02*R floor.
-    const dustD = Math.hypot(eye[0], eye[1], eye[2]);
-    const dustTNear = Math.max(dustD - currentDustReachR, 0.02 * currentDustReachR);
-    const dustTFar = dustD + currentDustReachR;
-    const dustRatio = dustTFar / dustTNear;
-    const dustSlices: FieldDustSlices = {
-      t1: dustTNear * dustRatio ** 0.25,
-      t2: dustTNear * dustRatio ** 0.5,
-      t3: dustTNear * dustRatio ** 0.75,
-    };
+    const dustSlices = dustSliceEdges(Math.hypot(eye[0], eye[1], eye[2]), currentDustReachR);
 
     // The mixture is calibrated to the sprite field's total flux in record
     // units (see `emissionScale`), which leaves the star pass's own two
@@ -3727,22 +3621,7 @@ export async function createGalaxyEngine(
       await dbgBuf.mapAsync(GPUMapMode.READ);
       const a = new Uint8Array(dbgBuf.getMappedRange().slice(0));
       dbgBuf.unmap();
-      let s = 0;
-      let m = 0;
-      let nz = 0;
-      const n = a.length / 4;
-      for (let i = 0; i < a.length; i += 4) {
-        const l = (a[i]! + a[i + 1]! + a[i + 2]!) / 3;
-        s += l;
-        if (l > m) m = l;
-        if (l > 4) nz++;
-      }
-      return {
-        mean: +(s / n).toFixed(2),
-        max: m,
-        litPct: +((100 * nz) / n).toFixed(1),
-        stars: starCount,
-      };
+      return { ...sampleLuminanceStats(a), stars: starCount };
     },
     getCamera: (): ViewPose => ({ az: cam.az, el: cam.el, dist: cam.dist }),
     // The SSPSF automaton's packed output (sfMapPack.wesl) — a persistent
@@ -3783,7 +3662,7 @@ export async function createGalaxyEngine(
         format,
         usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
       });
-      const bpr = Math.ceil((S * 4) / 256) * 256;
+      const bpr = alignedBytesPerRow(S * 4);
       const buf = device.createBuffer({
         label: 'galaxy:grabBuf',
         size: bpr * S,
@@ -3799,24 +3678,7 @@ export async function createGalaxyEngine(
       device.queue.submit([enc.finish()]);
       await buf.mapAsync(GPUMapMode.READ);
       const src = new Uint8Array(buf.getMappedRange());
-      const out = new Uint8ClampedArray(S * S * 4);
-      const bgra = format.startsWith('bgra');
-      for (let y = 0; y < S; y++) {
-        for (let x = 0; x < S; x++) {
-          const si = y * bpr + x * 4;
-          const di = (y * S + x) * 4;
-          if (bgra) {
-            out[di] = src[si + 2]!;
-            out[di + 1] = src[si + 1]!;
-            out[di + 2] = src[si]!;
-          } else {
-            out[di] = src[si]!;
-            out[di + 1] = src[si + 1]!;
-            out[di + 2] = src[si + 2]!;
-          }
-          out[di + 3] = 255;
-        }
-      }
+      const out = swizzleToRgba(src, bpr, S, format.startsWith('bgra'));
       buf.unmap();
       buf.destroy();
       tex.destroy();
