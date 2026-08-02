@@ -6,11 +6,11 @@
 // compute pass, never per frame. See research doc §19 before changing the
 // step rule or the shear term.
 //
-// Grid is UNIFORM log-polar (512 az x 256 ring) — a step-1 simplification.
+// Grid is UNIFORM log-polar (768 az x 256 ring) — a step-1 simplification.
 // Gerola & Seiden's own rings are subdivided into EQUAL-AREA cells (cell
 // count growing with radius), which this grid does not attempt.
 
-const AZ: u32 = 512u;
+const AZ: u32 = 768u;
 const RINGS: u32 = 256u;
 const PI: f32 = 3.14159265358979;
 

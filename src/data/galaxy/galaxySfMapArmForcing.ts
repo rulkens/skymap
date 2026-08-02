@@ -1,6 +1,6 @@
 /**
  * galaxySfMapArmForcing — bakes the SSPSF automaton's arm-forcing field on
- * the CPU, onto the SAME 512x256 log-polar grid `sfMapStep.wesl` steps, from
+ * the CPU, onto the SAME 768x256 log-polar grid `sfMapStep.wesl` steps, from
  * the EXISTING ridge functions the sprite/analytic arms are placed against
  * (`armRidgeCurvePoint`/`armCrossSigma`/`armFadeEnvelope`) — never
  * re-derived in WGSL, per research doc §19's "shared ridge truth by import,
@@ -14,21 +14,22 @@ import { sfMapRingRadius } from '../../utils/galaxy/sfMapRingRadius';
 import type { GalaxyFieldGeometry } from '../../@types/galaxy/GalaxyFieldGeometry';
 import type { GalaxyFieldTuning } from '../../@types/galaxy/GalaxyFieldTuning';
 
-/** Grid extent — restated in sfMapStep.wesl/sfMapPack.wesl as WGSL consts (fixed, not user-tunable), same as DUST_NOISE_TEX_SIZE's own TS/WGSL split. */
-export const SF_MAP_AZ = 512;
+/** Grid extent — restated in sfMapStep.wesl as WGSL consts (fixed, not user-tunable), same as DUST_NOISE_TEX_SIZE's own TS/WGSL split. */
+export const SF_MAP_AZ = 768;
 export const SF_MAP_RINGS = 256;
 
 export type GalaxySfMapGridRadius = { readonly rMin: number; readonly rMax: number };
 
 /**
  * The radius bounds one generated galaxy's log-radial grid spans.
- * `armStartRadius` floors the inner edge (arms are absent below it anyway),
- * scaled well inward of it so the automaton still has room to run near the
- * centre; `outerRadius` caps the outer edge, matching the disc the sprites
- * themselves are drawn out to.
+ * `armStartRadius` floors the inner edge; forcing is identically zero below
+ * it (this file's own `r <= geometry.armStartRadius` skip), so the margin
+ * below it exists only so percolation can leak inward rather than hard-stop
+ * exactly at the arm start. `outerRadius` caps the outer edge, matching the
+ * disc the sprites themselves are drawn out to.
  */
 export function sfMapGridRadius(geometry: GalaxyFieldGeometry): GalaxySfMapGridRadius {
-  const rMin = Math.max(geometry.armStartRadius * 0.1, 1e-3);
+  const rMin = Math.max(geometry.armStartRadius * 0.6, 1e-3);
   const rMax = Math.max(geometry.outerRadius, rMin * 2);
   return { rMin, rMax };
 }

@@ -15,7 +15,7 @@ import type { GalaxySfMapParams } from '../../@types/galaxy/GalaxySfMapParams';
 
 export const DEFAULT_GALAXY_SF_MAP_PARAMS: GalaxySfMapParams = {
   enabled: true,
-  steps: 170,
+  steps: 300,
   baseIgnition: 0.002,
   spread: 0.56,
   refractorySteps: 7,
