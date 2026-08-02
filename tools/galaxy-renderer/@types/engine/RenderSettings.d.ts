@@ -83,22 +83,33 @@ export type RenderSettings = {
    */
   readonly sfMapView: boolean;
   /**
-   * Orientation overlay: present `buildSfMapOrientation`'s coherence-scaled
-   * crest orientation directly, same seam as `sfMapView`. Hue is the pitch
-   * angle (period π, so it fills the full hue wheel — see
-   * `orientationPresent.wesl`), value is coherence. This is also the CPU
-   * build's own gate: `buildSfMapOrientation` runs ~10 separable-blur passes
-   * over the sfMap grid and costs real JS time, so it only runs while this
-   * is on — see `createGalaxyEngine.ts`'s `rebuildSfMapOrientationIfNeeded`.
+   * Orientation overlay: present the GPU structure-tensor pass chain's
+   * coherence-scaled crest orientation directly, same seam as `sfMapView`.
+   * Hue is the pitch angle (period π, so it fills the full hue wheel — see
+   * `orientationPresent.wesl`), value is coherence. Also this pass chain's
+   * own gate — it only (re-)dispatches while this is on, see
+   * `createGalaxyEngine.ts`'s `rebuildSfMapOrientationIfNeeded`.
    */
   readonly orientationView: boolean;
   /**
-   * Gaussian sigma, in sfMap grid texels, for `buildSfMapOrientation`'s two
-   * blur stages (the field smoothing before the gradient and the tensor
-   * smoothing after it). Only reachable while `orientationView` is on;
-   * moving it re-runs the CPU build the same way toggling the view on does.
+   * Gaussian sigma, in sfMap grid texels, for the GPU orientation pass
+   * chain's field-smoothing stage (before the central-difference gradient).
+   * Deliberately SMALLER than `orientationSigmaIntegTexels` — a structure
+   * tensor wants a small derivative scale for noise suppression and a
+   * larger integration scale for averaging orientations after the tensor is
+   * built (conventionally 2-3x this one). Only reachable while
+   * `orientationView` is on; moving it re-dispatches the pass chain the
+   * same way toggling the view on does.
    */
-  readonly orientationSigmaTexels: number;
+  readonly orientationSigmaDerivTexels: number;
+  /**
+   * Gaussian sigma, in sfMap grid texels, for the tensor-smoothing stage
+   * (after Jxx/Jxy/Jyy are built, before the coherence readout). See
+   * `orientationSigmaDerivTexels` for why the two are separate knobs: one
+   * sigma for both (this pass chain's CPU predecessor) floors coherence
+   * near 0.5 on pure noise instead of near 0.
+   */
+  readonly orientationSigmaIntegTexels: number;
   /**
    * DUST (LEGACY) header pill: off forces the sprite generator's dust knobs
    * (`spriteDust`, `dustRingStrength`) to 0 in the copy handed to the engine,

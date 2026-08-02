@@ -1,7 +1,8 @@
-// milkyWayField/orientationPresent.wesl — presents buildSfMapOrientation's
-// CPU-built structure-tensor crest orientation (src/utils/galaxy/
-// buildSfMapOrientation.ts) in place of the analytic field's emission draw
-// when render.orientationView is on, same seam as sfMapPresent.wesl.
+// milkyWayField/orientationPresent.wesl — presents the GPU structure-tensor
+// pass chain's crest orientation (sfMapOrientationField.wesl ->
+// sfMapOrientationTensor.wesl -> sfMapOrientationTensorBlur.wesl ->
+// sfMapOrientationCoherence.wesl) in place of the analytic field's emission
+// draw when render.orientationView is on, same seam as sfMapPresent.wesl.
 //
 // The camera-ray -> (r, theta) log-polar resample below is
 // sfMapPresent.wesl's own disc-plane-intersection mapping, copied rather
@@ -9,10 +10,10 @@
 //
 // Display rule: hue = orientation angle, value = coherence. The angle
 // (0.5*atan2(sin2t, cos2t)) spans only (-pi/2, pi/2] — a filament has no
-// head/tail, see GalaxySfMapOrientation's own doc on the double-angle wrap
-// — so it is scaled by 1/PI, not 1/(2*PI), to still fill the FULL hue
-// wheel. That is what makes a genuine pitch reversal across corotation
-// read as a hue FLIP rather than a half-saturated smear.
+// head/tail, so the double-angle vector wraps at pi, not 2*pi — so it is
+// scaled by 1/PI, not 1/(2*PI), to still fill the FULL hue wheel. That is
+// what makes a genuine pitch reversal across corotation read as a hue FLIP
+// rather than a half-saturated smear.
 
 import package::lib::fullscreenTri::fullscreenVertex;
 import package::lib::fullscreenTri::FullscreenOut;
@@ -80,9 +81,9 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   let ringT = log(r / grid.rMin) / log(grid.rMax / grid.rMin);
   let azT = theta / (2.0 * PI) + select(0.0, 1.0, theta < 0.0);
   // Linear filtering is safe here specifically because the texture packs
-  // the (cos2t, sin2t) DOUBLE-ANGLE vector, not a bare angle — see
-  // GalaxySfMapOrientation's header on why only that form interpolates
-  // across the pi wrap without a false zero-crossing.
+  // the (cos2t, sin2t) DOUBLE-ANGLE vector, not a bare angle — only that
+  // form interpolates across the pi wrap without a false zero-crossing
+  // (see sfMapOrientationCoherence.wesl's own header).
   let texel = textureSampleLevel(orientationTex, orientationSmp, vec2<f32>(azT, ringT), 0.0);
 
   // Fade the last few percent toward each radial edge, same as

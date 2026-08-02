@@ -251,9 +251,6 @@ import {
 import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../src/data/galaxy/defaultGalaxyDustParams';
 import { dustExtinctionRgb } from '../../../../src/utils/galaxy/dustExtinctionRgb';
 import { transformGalaxyFieldComponent } from '../../../../src/utils/galaxy/transformGalaxyFieldComponent';
-import { buildSfMapOrientation } from '../../../../src/utils/galaxy/buildSfMapOrientation';
-import { floatToF16 } from '../../../../src/utils/math/floatToF16';
-import type { GalaxySfMapOrientation } from '../../../../src/@types/galaxy/GalaxySfMapOrientation';
 import { GENERATION_UBO } from '../../../../src/services/gpu/galaxy/generationUboLayout';
 import { GEN_RECORD_BYTES } from '../../../../src/services/gpu/galaxy/genRecordBytes';
 import { carveStarLayout } from '../../../../src/services/gpu/galaxy/carveStarLayout';
@@ -278,6 +275,10 @@ import sfMapStepWgsl from './shaders/milkyWayField/sfMapStep.wesl?static';
 import sfMapPackWgsl from './shaders/milkyWayField/sfMapPack.wesl?static';
 import sfMapPresentWgsl from './shaders/milkyWayField/sfMapPresent.wesl?static';
 import orientationPresentWgsl from './shaders/milkyWayField/orientationPresent.wesl?static';
+import sfMapOrientationFieldWgsl from './shaders/milkyWayField/sfMapOrientationField.wesl?static';
+import sfMapOrientationTensorWgsl from './shaders/milkyWayField/sfMapOrientationTensor.wesl?static';
+import sfMapOrientationTensorBlurWgsl from './shaders/milkyWayField/sfMapOrientationTensorBlur.wesl?static';
+import sfMapOrientationCoherenceWgsl from './shaders/milkyWayField/sfMapOrientationCoherence.wesl?static';
 import gradeWgsl from './shaders/grade.wesl?static';
 
 /** HDR working format for the scene + bloom pyramid — the runtime's `hdr` row. */
@@ -907,13 +908,15 @@ export async function createGalaxyEngine(
     ],
   });
 
-  // ---- orientation overlay: buildSfMapOrientation's crest field, CPU-built ----
-  // Unlike sfMapTex (the automaton's own GPU output), this texture's content
-  // comes from a CPU pure function over the readback — see
-  // rebuildSfMapOrientationIfNeeded (below scheduleSfMapReadback) for the
-  // perf gate that keeps it off by default. Pipeline/sampler/texture/bind
-  // group are all built unconditionally at construction, same as every
-  // other sfMap resource — only the CONTENT is gated, not the objects.
+  // ---- orientation overlay: GPU structure-tensor pass chain ----
+  // Unlike the old CPU build (buildSfMapOrientation.ts, deleted), this
+  // texture's content comes entirely from compute passes over sfMapTex — no
+  // readback, no JS blur, no upload back. rebuildSfMapOrientationIfNeeded
+  // (below scheduleSfMapReadback) is still the perf gate that keeps the
+  // chain off by default, cheap as it now is, so an unrelated render-bag
+  // push can't redispatch it. Pipeline/sampler/texture/bind group are all
+  // built unconditionally at construction, same as every other sfMap
+  // resource — only the DISPATCH is gated, not the objects.
   const orientationPresentMod = makeShader(orientationPresentWgsl, 'galaxy:orientationPresent');
   const orientationPresentPipe = device.createRenderPipeline({
     label: 'galaxy:orientationPresentPipe',
@@ -928,12 +931,10 @@ export async function createGalaxyEngine(
     },
     primitive: { topology: 'triangle-list' },
   });
-  // rg16float, not rg32float: filterable in WebGPU core with no optional
-  // feature (float32 formats need 'float32-filterable'), and bilinear
-  // sampling is safe here BECAUSE the two channels are the packed
-  // (cos2theta, sin2theta) double-angle vector, not a bare angle — see
-  // GalaxySfMapOrientation's header on why only that representation
-  // interpolates across the pi wrap without a false zero-crossing.
+  // Bilinear sampling is safe here BECAUSE the two channels are the packed
+  // (cos2theta, sin2theta) double-angle vector, not a bare angle — only that
+  // representation interpolates across the pi wrap without a false
+  // zero-crossing (a filament has no head/tail).
   const orientationSampler = device.createSampler({
     label: 'galaxy:orientationSampler',
     addressModeU: 'repeat',
@@ -941,14 +942,23 @@ export async function createGalaxyEngine(
     magFilter: 'linear',
     minFilter: 'linear',
   });
+  // rgba16float, not rg16float: WebGPU core only guarantees WRITE-access
+  // storage textures for r32/rgba8/rgba16/rgba32 formats, not 2-component
+  // ones, and sfMapOrientationCoherence.wesl's final pass writes this
+  // directly (no more CPU upload) — see that shader's own header. .zw sit
+  // unused; orientationPresent.wesl reads only .xy either way.
   const orientationTex = device.createTexture({
     label: 'galaxy:orientationTex',
     size: [SF_MAP_AZ, SF_MAP_RINGS],
-    format: 'rg16float',
-    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+    format: 'rgba16float',
+    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING,
   });
   // rMin/rMax only, same shape as sfMapGridUbo — written once per
-  // rebuildSfMapOrientationIfNeeded, not every frame.
+  // rebuildSfMapOrientationIfNeeded, not every frame. Doubles as
+  // sfMapOrientationTensorPipe's own grid uniform (the aspect weight needs
+  // the same rMin/rMax the present shader's ray-mapping does) — one buffer,
+  // bound into two different pipelines' bind groups, not two objects to
+  // keep in sync.
   const orientationGridUbo = device.createBuffer({
     label: 'galaxy:orientationGridUbo',
     size: 16,
@@ -962,6 +972,151 @@ export async function createGalaxyEngine(
       { binding: 1, resource: orientationTex.createView() },
       { binding: 2, resource: orientationSampler },
       { binding: 3, resource: { buffer: orientationGridUbo } },
+    ],
+  });
+
+  // ---- the pass chain itself: field blur -> tensor -> tensor blur -> coherence ----
+  // Every intermediate texture is SF_MAP_AZ x SF_MAP_RINGS, allocated once
+  // (never resized, same discipline as sfMapStateA/B) and given BOTH
+  // TEXTURE_BINDING (the next pass reads it) and STORAGE_BINDING (this
+  // pass writes it) usage. r32float for the single-channel field stage,
+  // rgba16float for the packed-tensor stage — both are core-guaranteed
+  // write-access storage formats (see orientationTex's own comment).
+  const makeOrientationScratch = (label: string, format: GPUTextureFormat): GPUTexture =>
+    device.createTexture({
+      label,
+      size: [SF_MAP_AZ, SF_MAP_RINGS],
+      format,
+      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING,
+    });
+  const orientationFieldBlurTex = makeOrientationScratch('galaxy:orientationFieldBlurTex', 'r32float');
+  const orientationFieldSmoothTex = makeOrientationScratch(
+    'galaxy:orientationFieldSmoothTex',
+    'r32float',
+  );
+  const orientationTensorRawTex = makeOrientationScratch(
+    'galaxy:orientationTensorRawTex',
+    'rgba16float',
+  );
+  const orientationTensorBlurTex = makeOrientationScratch(
+    'galaxy:orientationTensorBlurTex',
+    'rgba16float',
+  );
+  const orientationTensorFinalTex = makeOrientationScratch(
+    'galaxy:orientationTensorFinalTex',
+    'rgba16float',
+  );
+  // sigmaDeriv/sigmaInteg only — see RenderSettings's own doc on why the
+  // pass chain wants two, not one: a small derivative scale suppresses
+  // noise before the gradient, a larger integration scale (2-3x it,
+  // conventionally) averages orientations after the tensor is built.
+  const sfMapOrientationSigmaUbo = device.createBuffer({
+    label: 'galaxy:sfMapOrientationSigmaUbo',
+    size: 16,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+
+  const sfMapOrientationFieldMod = makeShader(
+    sfMapOrientationFieldWgsl,
+    'galaxy:sfMapOrientationField',
+  );
+  const sfMapOrientationFieldBlurAzimuthPipe = device.createComputePipeline({
+    label: 'galaxy:sfMapOrientationFieldBlurAzimuthPipe',
+    layout: 'auto',
+    compute: { module: sfMapOrientationFieldMod, entryPoint: 'csBlurAzimuth' },
+  });
+  const sfMapOrientationFieldBlurRingPipe = device.createComputePipeline({
+    label: 'galaxy:sfMapOrientationFieldBlurRingPipe',
+    layout: 'auto',
+    compute: { module: sfMapOrientationFieldMod, entryPoint: 'csBlurRing' },
+  });
+  const sfMapOrientationTensorMod = makeShader(
+    sfMapOrientationTensorWgsl,
+    'galaxy:sfMapOrientationTensor',
+  );
+  const sfMapOrientationTensorPipe = device.createComputePipeline({
+    label: 'galaxy:sfMapOrientationTensorPipe',
+    layout: 'auto',
+    compute: { module: sfMapOrientationTensorMod, entryPoint: 'cs' },
+  });
+  const sfMapOrientationTensorBlurMod = makeShader(
+    sfMapOrientationTensorBlurWgsl,
+    'galaxy:sfMapOrientationTensorBlur',
+  );
+  const sfMapOrientationTensorBlurAzimuthPipe = device.createComputePipeline({
+    label: 'galaxy:sfMapOrientationTensorBlurAzimuthPipe',
+    layout: 'auto',
+    compute: { module: sfMapOrientationTensorBlurMod, entryPoint: 'csBlurAzimuth' },
+  });
+  const sfMapOrientationTensorBlurRingPipe = device.createComputePipeline({
+    label: 'galaxy:sfMapOrientationTensorBlurRingPipe',
+    layout: 'auto',
+    compute: { module: sfMapOrientationTensorBlurMod, entryPoint: 'csBlurRing' },
+  });
+  const sfMapOrientationCoherenceMod = makeShader(
+    sfMapOrientationCoherenceWgsl,
+    'galaxy:sfMapOrientationCoherence',
+  );
+  const sfMapOrientationCoherencePipe = device.createComputePipeline({
+    label: 'galaxy:sfMapOrientationCoherencePipe',
+    layout: 'auto',
+    compute: { module: sfMapOrientationCoherenceMod, entryPoint: 'cs' },
+  });
+
+  // One bind group per pipeline ('auto' layouts never cross pipelines, even
+  // where the bindings are structurally identical) — built once, since
+  // every resource here is allocated for the engine's whole lifetime.
+  const sfMapOrientationFieldBlurAzimuthBG = device.createBindGroup({
+    label: 'galaxy:sfMapOrientationFieldBlurAzimuthBG',
+    layout: sfMapOrientationFieldBlurAzimuthPipe.getBindGroupLayout(0),
+    entries: [
+      { binding: 0, resource: sfMapTex.createView() },
+      { binding: 1, resource: orientationFieldBlurTex.createView() },
+      { binding: 2, resource: { buffer: sfMapOrientationSigmaUbo } },
+    ],
+  });
+  const sfMapOrientationFieldBlurRingBG = device.createBindGroup({
+    label: 'galaxy:sfMapOrientationFieldBlurRingBG',
+    layout: sfMapOrientationFieldBlurRingPipe.getBindGroupLayout(0),
+    entries: [
+      { binding: 0, resource: orientationFieldBlurTex.createView() },
+      { binding: 1, resource: orientationFieldSmoothTex.createView() },
+      { binding: 2, resource: { buffer: sfMapOrientationSigmaUbo } },
+    ],
+  });
+  const sfMapOrientationTensorBG = device.createBindGroup({
+    label: 'galaxy:sfMapOrientationTensorBG',
+    layout: sfMapOrientationTensorPipe.getBindGroupLayout(0),
+    entries: [
+      { binding: 0, resource: orientationFieldSmoothTex.createView() },
+      { binding: 1, resource: orientationTensorRawTex.createView() },
+      { binding: 2, resource: { buffer: orientationGridUbo } },
+    ],
+  });
+  const sfMapOrientationTensorBlurAzimuthBG = device.createBindGroup({
+    label: 'galaxy:sfMapOrientationTensorBlurAzimuthBG',
+    layout: sfMapOrientationTensorBlurAzimuthPipe.getBindGroupLayout(0),
+    entries: [
+      { binding: 0, resource: orientationTensorRawTex.createView() },
+      { binding: 1, resource: orientationTensorBlurTex.createView() },
+      { binding: 2, resource: { buffer: sfMapOrientationSigmaUbo } },
+    ],
+  });
+  const sfMapOrientationTensorBlurRingBG = device.createBindGroup({
+    label: 'galaxy:sfMapOrientationTensorBlurRingBG',
+    layout: sfMapOrientationTensorBlurRingPipe.getBindGroupLayout(0),
+    entries: [
+      { binding: 0, resource: orientationTensorBlurTex.createView() },
+      { binding: 1, resource: orientationTensorFinalTex.createView() },
+      { binding: 2, resource: { buffer: sfMapOrientationSigmaUbo } },
+    ],
+  });
+  const sfMapOrientationCoherenceBG = device.createBindGroup({
+    label: 'galaxy:sfMapOrientationCoherenceBG',
+    layout: sfMapOrientationCoherencePipe.getBindGroupLayout(0),
+    entries: [
+      { binding: 0, resource: orientationTensorFinalTex.createView() },
+      { binding: 1, resource: orientationTex.createView() },
     ],
   });
 
@@ -1101,11 +1256,6 @@ export async function createGalaxyEngine(
   // the previous readback's grid (rMin/rMax, tied to `fieldGeometry`) stale —
   // see setParams's own comment on why it nulls this before rebuilding dust.
   let sfMapData: GalaxySfMap | null = null;
-  // The overlay's CPU-built orientation field, kept in step with `sfMapData`
-  // — null whenever `sfMapData` is (no readback yet) or the overlay has
-  // never been on. See `rebuildSfMapOrientationIfNeeded`, below
-  // `scheduleSfMapReadback`, for what rebuilds it and why it is gated.
-  let sfMapOrientation: GalaxySfMapOrientation | null = null;
   // Bumped by every `scheduleSfMapReadback` call; a landing promise checks it
   // against its own captured value before touching `sfMapData`; a mismatch
   // means a LATER rebuild superseded this one, so the result is stale and
@@ -1619,11 +1769,6 @@ export async function createGalaxyEngine(
           rebuildDustMixture();
           repackFieldComponents();
         }
-        // Unconditional call, cheap gate inside: every landed readback is a
-        // NEW map, so this is the one place a fresh galaxy's orientation
-        // overlay actually gets rebuilt while the view is on — see the
-        // function's own docblock for why `setRender` alone cannot cover it.
-        rebuildSfMapOrientationIfNeeded();
       })
       .catch((err) => {
         console.error('galaxy: sfMap readback failed', err);
@@ -1631,52 +1776,63 @@ export async function createGalaxyEngine(
   }
 
   /**
-   * rebuildSfMapOrientationIfNeeded — runs `buildSfMapOrientation` over the
-   * latest `sfMapData` and uploads it to `orientationTex`, but ONLY while
-   * `render.orientationView` is on and a readback actually exists. The
-   * builder is ~10 separable-blur passes over the SF_MAP_AZ x SF_MAP_RINGS
-   * grid (see its own header) and costs real JS time — measured ~54ms at
-   * this tool's 768x256 grid, sigma=2 (Node, V8, steady state; a dropped
-   * frame's worth and then some), so this must never run on a frame or an
-   * unrelated settings tweak. So this is called from exactly two places,
-   * both edge-triggered:
+   * rebuildSfMapOrientationIfNeeded — dispatches the GPU structure-tensor
+   * pass chain (sfMapOrientationField -> Tensor -> TensorBlur -> Coherence,
+   * see that quartet's own headers) over the CURRENT `sfMapTex`, but ONLY
+   * while `render.orientationView` is on. Unlike the deleted CPU build this
+   * needs no readback to run FROM — sfMapTex is a GPU texture already, and
+   * WebGPU zero-initialises it, so this is safe to call even before
+   * `rebuildSfMap` has ever populated it. Still edge-triggered rather than
+   * unconditional, from exactly two places:
    *
-   *  - `scheduleSfMapReadback`'s landing promise, unconditionally (a new
-   *    readback is a new map to build FROM, if the view is on to consume it
-   *    — the gate below is what makes the call a no-op otherwise).
+   *  - `rebuildSfMap`'s own two exits, right after the compute submit that
+   *    (re)writes `sfMapTex` — a new automaton state is a new field to
+   *    dispatch this chain over, if the view is on to consume it.
    *  - `setRender`, only when the incoming patch actually flips
-   *    `orientationView` on or moves `orientationSigmaTexels` while it is
-   *    already on — see that function's own comment. `setRender` runs on
-   *    every render-bag change (the bridge re-pushes the whole bag on any
-   *    knob), so calling this unconditionally there would redo the blur on
+   *    `orientationView` on or moves either sigma while it is already on —
+   *    see that function's own comment. `setRender` runs on every
+   *    render-bag change (the bridge re-pushes the whole bag on any knob),
+   *    so calling this unconditionally there would redispatch the chain on
    *    an unrelated exposure drag.
    */
   function rebuildSfMapOrientationIfNeeded(): void {
-    if (!render.orientationView || !sfMapData) return;
-    const t0 = performance.now();
-    const orientation = buildSfMapOrientation(sfMapData, render.orientationSigmaTexels);
-    const elapsedMs = performance.now() - t0;
-    console.log(
-      `galaxy: sfMap orientation build ${elapsedMs.toFixed(2)}ms ` +
-        `(${orientation.az}x${orientation.rings}, sigma=${render.orientationSigmaTexels})`,
-    );
-    sfMapOrientation = orientation;
-    // f16-encode CPU-side: rg16float has no native JS typed-array form, so
-    // the raw IEEE-754 half bits go into a Uint16Array the GPU reads as
-    // rg16float texel data — see floatToF16's own header.
-    const packed = new Uint16Array(orientation.data.length);
-    for (let i = 0; i < orientation.data.length; i++) packed[i] = floatToF16(orientation.data[i]!);
-    device.queue.writeTexture(
-      { texture: orientationTex },
-      packed,
-      { bytesPerRow: SF_MAP_AZ * 4 },
-      [SF_MAP_AZ, SF_MAP_RINGS],
-    );
+    if (!render.orientationView) return;
+    const grid = fieldGeometry ? sfMapGridRadius(fieldGeometry) : { rMin: 1e-3, rMax: 1 };
+    device.queue.writeBuffer(orientationGridUbo, 0, new Float32Array([grid.rMin, grid.rMax, 0, 0]));
     device.queue.writeBuffer(
-      orientationGridUbo,
+      sfMapOrientationSigmaUbo,
       0,
-      new Float32Array([orientation.rMin, orientation.rMax, 0, 0]),
+      new Float32Array([render.orientationSigmaDerivTexels, render.orientationSigmaIntegTexels, 0, 0]),
     );
+    const dispatchX = SF_MAP_AZ / SF_MAP_WORKGROUP_SIZE;
+    const dispatchY = SF_MAP_RINGS / SF_MAP_WORKGROUP_SIZE;
+    const enc = device.createCommandEncoder({ label: 'galaxy:sfMapOrientation' });
+    // All six dispatches share ONE compute pass: each stage reads the
+    // previous stage's write, and WebGPU orders dispatchWorkgroups calls
+    // within a single pass exactly like rebuildSfMap's own step loop does
+    // for its ping-ponged automaton state — no extra pass boundary needed
+    // between stages just because the texture object changed.
+    const pass = enc.beginComputePass({ label: 'galaxy:sfMapOrientationPass' });
+    pass.setPipeline(sfMapOrientationFieldBlurAzimuthPipe);
+    pass.setBindGroup(0, sfMapOrientationFieldBlurAzimuthBG);
+    pass.dispatchWorkgroups(dispatchX, dispatchY);
+    pass.setPipeline(sfMapOrientationFieldBlurRingPipe);
+    pass.setBindGroup(0, sfMapOrientationFieldBlurRingBG);
+    pass.dispatchWorkgroups(dispatchX, dispatchY);
+    pass.setPipeline(sfMapOrientationTensorPipe);
+    pass.setBindGroup(0, sfMapOrientationTensorBG);
+    pass.dispatchWorkgroups(dispatchX, dispatchY);
+    pass.setPipeline(sfMapOrientationTensorBlurAzimuthPipe);
+    pass.setBindGroup(0, sfMapOrientationTensorBlurAzimuthBG);
+    pass.dispatchWorkgroups(dispatchX, dispatchY);
+    pass.setPipeline(sfMapOrientationTensorBlurRingPipe);
+    pass.setBindGroup(0, sfMapOrientationTensorBlurRingBG);
+    pass.dispatchWorkgroups(dispatchX, dispatchY);
+    pass.setPipeline(sfMapOrientationCoherencePipe);
+    pass.setBindGroup(0, sfMapOrientationCoherenceBG);
+    pass.dispatchWorkgroups(dispatchX, dispatchY);
+    pass.end();
+    device.queue.submit([enc.finish()]);
   }
 
   /**
@@ -1798,6 +1954,7 @@ export async function createGalaxyEngine(
         [SF_MAP_AZ, SF_MAP_RINGS],
       );
       scheduleSfMapReadback(grid);
+      rebuildSfMapOrientationIfNeeded();
       return;
     }
 
@@ -1909,6 +2066,7 @@ export async function createGalaxyEngine(
 
     device.queue.submit([enc.finish()]);
     scheduleSfMapReadback(grid);
+    rebuildSfMapOrientationIfNeeded();
   }
 
   /**
@@ -2070,10 +2228,6 @@ export async function createGalaxyEngine(
     // scheduleSfMapReadback's determinism comment for why that first,
     // unseeded dust build is the point, not a bug.
     sfMapData = null;
-    // Same staleness as `sfMapData` above, for the same grid mismatch —
-    // `rebuildSfMapOrientationIfNeeded` rebuilds this once the new galaxy's
-    // own readback lands (if the overlay is on).
-    sfMapOrientation = null;
     fieldMixture = buildGalaxyFieldMixture(fieldGeometry, fieldTuning);
     currentDust = p.dust ?? DEFAULT_GALAXY_DUST_PARAMS;
     // Same `geometry.seed` `buildHiiRegions` was called with when it still
@@ -2120,7 +2274,8 @@ export async function createGalaxyEngine(
     const previousDustDivisor = render.dustDivisor;
     const previousHiiDivisor = render.hiiDivisor;
     const previousOrientationView = render.orientationView;
-    const previousOrientationSigma = render.orientationSigmaTexels;
+    const previousOrientationSigmaDeriv = render.orientationSigmaDerivTexels;
+    const previousOrientationSigmaInteg = render.orientationSigmaIntegTexels;
     Object.assign(render, patch);
     if (render.aggregateDivisor !== previousDivisor) buildAggregateTarget();
     if (render.fieldDivisor !== previousFieldDivisor) buildFieldTarget();
@@ -2134,13 +2289,14 @@ export async function createGalaxyEngine(
     }
     if (render.hiiDivisor !== previousHiiDivisor) buildHiiTarget();
     // Edge-triggered, not "whenever orientationView is true": this function
-    // runs on every render-bag push, so the latter would redo
-    // buildSfMapOrientation's blur on an unrelated exposure drag. See
+    // runs on every render-bag push, so the latter would redispatch the
+    // pass chain on an unrelated exposure drag. See
     // rebuildSfMapOrientationIfNeeded's own docblock.
     if (
       render.orientationView &&
       (render.orientationView !== previousOrientationView ||
-        render.orientationSigmaTexels !== previousOrientationSigma)
+        render.orientationSigmaDerivTexels !== previousOrientationSigmaDeriv ||
+        render.orientationSigmaIntegTexels !== previousOrientationSigmaInteg)
     ) {
       rebuildSfMapOrientationIfNeeded();
     }

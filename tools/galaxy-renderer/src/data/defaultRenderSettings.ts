@@ -107,13 +107,17 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // Off at boot, same rationale as `dustView`: it replaces the normal view
   // with a debug presentation of the automaton's output.
   sfMapView: false,
-  // Off at boot, same rationale — and the CPU gate: buildSfMapOrientation
-  // only runs while this is on (see createGalaxyEngine.ts).
+  // Off at boot, same rationale — and the pass-chain gate: it only
+  // (re-)dispatches while this is on (see createGalaxyEngine.ts).
   orientationView: false,
-  // Grid-texel sigma for buildSfMapOrientation's two blur stages. 2 sits in
-  // the middle of the tool's 0.5-6 slider range — enough to average out
-  // single-cell automaton noise without smearing distinct spurs together.
-  orientationSigmaTexels: 2,
+  // Two sigmas, deliberately different: a small DERIVATIVE scale (noise
+  // suppression before the central-difference gradient) and a larger
+  // INTEGRATION scale (averaging orientations after the tensor is built,
+  // conventionally 2-3x the derivative one). 1.5/4 sit mid-range on the
+  // tool's sliders — enough to average out single-cell automaton noise
+  // without smearing distinct spurs together.
+  orientationSigmaDerivTexels: 1.5,
+  orientationSigmaIntegTexels: 4,
   legacyDustEnabled: false,
   dustCloudEnabled: true,
   // ON at boot, which costs nothing: at the boot camera both bands read 1, so

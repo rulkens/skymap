@@ -320,12 +320,12 @@ function ControlsPanel({ fade }: ControlsPanelProps): ReactNode {
           <span>SF map view</span>
         </label>
 
-        {/* Orientation overlay: same seam again, but presents
-            buildSfMapOrientation's crest orientation (hue) and coherence
-            (brightness) instead of the automaton's raw gas/SF channels —
-            the one way to see whether the automaton is producing real
-            sheared structure rather than inferring it from RGB. Gates the
-            CPU build itself (see createGalaxyEngine.ts's
+        {/* Orientation overlay: same seam again, but presents the GPU
+            structure-tensor pass chain's crest orientation (hue) and
+            coherence (brightness) instead of the automaton's raw gas/SF
+            channels — the one way to see whether the automaton is
+            producing real sheared structure rather than inferring it from
+            RGB. Gates the pass chain itself (see createGalaxyEngine.ts's
             rebuildSfMapOrientationIfNeeded), not just this draw. */}
         <label className={styles.legacyToggleRow}>
           <input
@@ -337,14 +337,24 @@ function ControlsPanel({ fade }: ControlsPanelProps): ReactNode {
           <span>Orientation view</span>
         </label>
         <ParamSlider
-          label="Orientation sigma"
-          value={render.orientationSigmaTexels}
+          label="Orientation sigma (deriv)"
+          value={render.orientationSigmaDerivTexels}
           min={0.5}
           max={6}
           step={0.1}
           format={(v) => v.toFixed(1)}
-          onChange={(v) => dispatch(renderPatched({ orientationSigmaTexels: v }))}
-          info="Gaussian sigma (sfMap grid texels) for buildSfMapOrientation's two blur stages. Only reachable while orientation view is on — moving it re-runs the CPU build."
+          onChange={(v) => dispatch(renderPatched({ orientationSigmaDerivTexels: v }))}
+          info="Gaussian sigma (sfMap grid texels) for the pass chain's field-smoothing stage, before the central-difference gradient. Only reachable while orientation view is on."
+        />
+        <ParamSlider
+          label="Orientation sigma (integ)"
+          value={render.orientationSigmaIntegTexels}
+          min={0.5}
+          max={12}
+          step={0.1}
+          format={(v) => v.toFixed(1)}
+          onChange={(v) => dispatch(renderPatched({ orientationSigmaIntegTexels: v }))}
+          info="Gaussian sigma (sfMap grid texels) for the tensor-smoothing stage, after Jxx/Jxy/Jyy are built. Conventionally 2-3x the derivative sigma. Only reachable while orientation view is on."
         />
 
         <FieldSection />

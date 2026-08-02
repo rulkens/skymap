@@ -24,8 +24,8 @@ const OLD_ACTIVITY_DECAY: f32 = 0.985;
 // too low and a cell that ignites once a run is invisible, since a single
 // ignition only ever reaches GAIN itself. 0.15 keeps one ignition legible and
 // only clamps below T ~ 10. Both failures matter beyond looks:
-// buildSfMapOrientation reads this channel, and flat OR black both mean zero
-// gradient and coherence 0 everywhere.
+// sfMapOrientationField.wesl reads this channel, and flat OR black both mean
+// zero gradient and coherence 0 everywhere.
 const OLD_ACTIVITY_GAIN: f32 = 0.15;
 
 struct SfMapConstants {
