@@ -120,6 +120,7 @@ export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams = {
       laneWidth: 1,
       laneOffset: 1,
       bubbleScale: 1,
+      sfMapSfWeight: 0.7,
     },
   },
 };

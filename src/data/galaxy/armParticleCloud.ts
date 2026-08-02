@@ -243,6 +243,9 @@ export function buildArmParticleCloud(
       discSigmaR: (k) => DISC_SIGMA_RATIOS[k]! * hLight,
       discWeights: DISC_SURFACE_WEIGHTS,
       discWeightSum,
+      // This tier has no SF-map placement mode of its own — it stays on the
+      // analytic arm-lane path unconditionally (`armBias: 1` above).
+      mapDensityAt: null,
     },
     (childRng, center) => {
       // The along-arm brightness shading is carried by the SAMPLING density

@@ -212,6 +212,16 @@ function DustCloudSection(): ReactNode {
           onChange={(v) => patchCloud({ bubbleScale: v })}
           info="× measured default. Radii 6-552 pc in NGC 628, size power law slope frozen (Watkins et al. 2023)."
         />
+        <ParamSlider
+          label="SF map weight"
+          value={cloud.sfMapSfWeight}
+          min={0}
+          max={1}
+          step={0.05}
+          format={(v) => v.toFixed(2)}
+          onChange={(v) => patchCloud({ sfMapSfWeight: v })}
+          info="Only read while SF-map seeding is on. 0 = seed on gas alone, 1 = seed on gas × recent SF — the active front's leading edge, where real dust lanes sit relative to HII regions."
+        />
       </div>
     </CollapsibleSection>
   );

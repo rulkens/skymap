@@ -17,7 +17,7 @@
  * supplying it does not change what this function computes, only what a
  * caller can read off it afterward.
  */
-import { armCrossSigma, armFadeEnvelope, armRidgeCurvePoint } from './armRidgeGeometry';
+import { armCrossSigma, armFadeEnvelope } from './armRidgeGeometry';
 import {
   buildClusteredDiscPlacement,
   type CloudFrame,
@@ -35,6 +35,7 @@ import { dustExtinctionRgb } from '../../utils/galaxy/dustExtinctionRgb';
 import { inverseCovarianceFromFrame } from '../../utils/galaxy/inverseCovarianceFromFrame';
 import { pcToUnits } from '../../utils/galaxy/pcToUnits';
 import { sampleGalaxySfMap } from '../../utils/galaxy/sampleGalaxySfMap';
+import { sfMapDustDensity } from '../../utils/galaxy/sfMapDustDensity';
 import { gaussian } from '../../utils/random/gaussian';
 import { mulberry32 } from '../../utils/random/mulberry32';
 import type { GalaxyDustParams } from '../../@types/galaxy/GalaxyDustParams';
@@ -114,6 +115,23 @@ type CloudParticle = {
   readonly radius: number;
 };
 
+/**
+ * Peak `sfMapDustDensity` over the whole sampled grid, once per map.
+ * Load-bearing: `recentSf` is small over most of the grid, so rejection
+ * sampling on the raw (unnormalised) product would reject nearly everything
+ * and silently degenerate to the analytic fallback — the bug this
+ * replaces, just quieter.
+ */
+function maxSfMapDustDensity(map: GalaxySfMap, sfWeight: number): number {
+  let max = 0;
+  const { data } = map;
+  for (let i = 0; i + 1 < data.length; i += 4) {
+    const density = sfMapDustDensity(data[i]! / 255, data[i + 1]! / 255, sfWeight);
+    if (density > max) max = density;
+  }
+  return max;
+}
+
 function randomDirection(rng: () => number): Vec3 {
   const v: Vec3 = [gaussian(rng), gaussian(rng), gaussian(rng)];
   const len = Math.hypot(v[0], v[1], v[2]) || 1;
@@ -156,6 +174,30 @@ export function buildDustParticleCloud(
 
   const rng = mulberry32(seed ^ 0x44555354); // "DUST"
 
+  // Seeding ON: the map IS the placement density (a gas x recent-SF blend,
+  // `sfMapDustDensity`, normalised by its own grid MAXIMUM so a mostly-quiet
+  // grid doesn't rejection-sample down to nothing) and `armBias`/the analytic
+  // envelope play no part — `buildClusteredDiscPlacement` routes every
+  // complex through `mapDensityAt` instead. Seeding OFF (the default):
+  // `mapDensityAt` stays null, and the placement is byte-identical to before
+  // the map existed.
+  //
+  // NOT wired to `buildDustBubblePlacements`/`buildHiiCavityPlacements`/
+  // `cloud.bubbleCarve` below — those already carve holes from the same gas
+  // depletion this reads, and running both would double-carve. Out of scope
+  // for this pass; left exactly as it was.
+  let mapDensityAt: ((radius: number, angle: number) => number) | null = null;
+  if (tuning.sfMapDustSeeding && sfMap) {
+    const sfWeight = cloud.sfMapSfWeight;
+    const maxDensity = maxSfMapDustDensity(sfMap, sfWeight);
+    if (maxDensity > 0) {
+      mapDensityAt = (radius, angle) => {
+        const sample = sampleGalaxySfMap(sfMap, radius, angle);
+        return sfMapDustDensity(sample.gas, sample.recentSf, sfWeight) / maxDensity;
+      };
+    }
+  }
+
   const particles: CloudParticle[] = buildClusteredDiscPlacement<{ radius: number }>(
     {
       geometry,
@@ -167,31 +209,17 @@ export function buildDustParticleCloud(
       elongation: cloud.elongation,
       sigmaZComplex: sigmaZCloud,
       laneFrameAt: (arm, logR) => armOffsetFrameAt(logR, geometry, dust, arm),
-      // Gas MODULATES the envelope, never replaces it (dust.md's settled
-      // point): the envelope still owns the exponential arm falloff, gas
-      // only thins it where the automaton shows a recently-emptied cavity.
-      // sfMapDustSeeding gates this so the OFF path (the default) is
-      // byte-identical to before the map existed.
-      //
-      // NOT wired to `buildDustBubblePlacements`/`buildHiiCavityPlacements`/
-      // `cloud.bubbleCarve` below — those already carve holes from the SAME
-      // gas depletion this reads, and running both would double-carve. Out
-      // of scope for this plumbing pass; left exactly as it was.
-      laneAcceptance: (arm, radius) => {
-        const envelope = armFadeEnvelope(radius, geometry, arm);
-        if (!tuning.sfMapDustSeeding || !sfMap) return envelope;
-        const logR = Math.log(radius / geometry.armStartRadius);
-        const ridgePoint = armRidgeCurvePoint(logR, geometry, arm);
-        const angle = Math.atan2(ridgePoint[2], ridgePoint[0]);
-        return envelope * sampleGalaxySfMap(sfMap, radius, angle).gas;
-      },
+      // Only ever consulted on the mapDensityAt-null (seeding OFF) path now
+      // — see the comment above.
+      laneAcceptance: (arm, radius) => armFadeEnvelope(radius, geometry, arm),
       crossLaneSigma: (radius) =>
         armCrossSigma(radius, geometry, ARM_WIDTH_TUNING) * 0.25 * dust.cloud.laneWidth,
       discSigmaR: (k) => dustSigmaR(k, shape),
       discWeights: DISC_SURFACE_WEIGHTS,
       discWeightSum: shape.sumW,
-      // Same gate as `laneAcceptance` above: OFF (the default) is a no-op,
-      // so a caller with the map already sampled needn't re-check the flag.
+      mapDensityAt,
+      // Same gate as `mapDensityAt` above: OFF (the default) is a no-op, so
+      // a caller with the map already sampled needn't re-check the flag.
       sfMapOrientation: tuning.sfMapDustSeeding ? sfMapOrientation : null,
       orientationDeltaStats,
     },

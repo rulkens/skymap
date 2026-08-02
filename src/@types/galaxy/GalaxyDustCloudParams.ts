@@ -43,4 +43,12 @@ export type GalaxyDustCloudParams = {
   /** Density-wave shock displacement from the stellar ridge. */
   readonly laneOffset: number;
   readonly bubbleScale: number;
+  /**
+   * SF-map seeded placement density blend (only read while
+   * `GalaxyFieldTuning.sfMapDustSeeding` is on): 0 = pure gas channel, 1 =
+   * `gas * recentSf`, which peaks at the leading edge of an active front —
+   * where real dust lanes sit relative to HII regions, not at `recentSf`'s
+   * own peak (the just-swept cavity).
+   */
+  readonly sfMapSfWeight: number;
 };

@@ -26,4 +26,5 @@ export const DEFAULT_GALAXY_DUST_CLOUD_PARAMS: GalaxyDustCloudParams = {
   laneWidth: 1,
   laneOffset: 1,
   bubbleScale: 1,
+  sfMapSfWeight: 0.7,
 };

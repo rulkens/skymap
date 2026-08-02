@@ -28,6 +28,9 @@ import type { Vec3 } from '../../@types/math/Vec3';
 /** Bounded rejection sampling against `armFadeEnvelope` when seeding a complex on an arm lane. */
 const ARM_FADE_REJECTION_TRIES = 24;
 
+/** Same idea as `ARM_FADE_REJECTION_TRIES`, own constant: bounded rejection sampling against `mapDensityAt` when it replaces the analytic placement entirely. */
+const MAP_DENSITY_REJECTION_TRIES = 24;
+
 /** Complex children are flattened relative to their in-plane extent — a fixed clustering-shape constant shared by every consumer, not exposed as a knob. */
 const CHILD_POLE_RATIO = 0.4;
 
@@ -96,6 +99,15 @@ export type ClusteredDiscPlacementConfig = {
   readonly sfMapOrientation?: GalaxySfMapOrientation | null;
   /** Out-param, mutated once per complex whenever `sfMapOrientation` is non-null — see `OrientationDeltaStats`'s own doc. Omitted (the default) does no extra work. */
   readonly orientationDeltaStats?: OrientationDeltaStats;
+  /**
+   * Normalised [0,1] placement density from the SF map, or null for the
+   * analytic path. Non-null REPLACES the arm-lane/smooth-disc roll entirely
+   * — every complex is placed by `placeMapDensityComplex`, and `armBias` is
+   * not consulted at all (see that function). Required rather than optional
+   * so a caller can't forget to gate it: `dustParticleCloud.ts`'s
+   * `sfMapDustSeeding`-off path always passes `null` explicitly.
+   */
+  readonly mapDensityAt: ((radius: number, angle: number) => number) | null;
 };
 
 export type PlacedParticle<TPayload> = { center: Vec3; readonly frame: CloudFrame } & TPayload;
@@ -118,7 +130,10 @@ function cross3(a: Vec3, b: Vec3): Vec3 {
   return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 }
 
-function recordOrientationDelta(stats: OrientationDeltaStats | undefined, absDeltaDeg: number): void {
+function recordOrientationDelta(
+  stats: OrientationDeltaStats | undefined,
+  absDeltaDeg: number,
+): void {
   if (!stats) return;
   stats.count++;
   stats.sumAbsDeltaDeg += absDeltaDeg;
@@ -271,15 +286,62 @@ export function buildClusteredDiscPlacement<TPayload>(
     return { center: [x, y, z], frame };
   }
 
+  /**
+   * Map-density-only placement: the SF map IS the density, `armBias` plays
+   * no role. Proposes `(x, z)` from the same radial distribution
+   * `placeSmoothDiscComplex` draws from (so the exponential disc falloff and
+   * scale height carry over unmodified), rejection-samples against
+   * `mapDensityAt`, and accepts the last proposal if the budget runs out —
+   * the requested particle count is always met. `y` doesn't feed the
+   * acceptance test, so it's drawn once after the loop rather than re-rolled
+   * per try.
+   */
+  function placeMapDensityComplex(mapDensityAt: (radius: number, angle: number) => number): {
+    center: Vec3;
+    frame: CloudFrame;
+  } {
+    let x = 0;
+    let z = 0;
+    let radius = 0;
+    let angle = 0;
+    for (let tries = 0; tries < MAP_DENSITY_REJECTION_TRIES; tries++) {
+      const k = pickWeighted(rng, config.discWeights, config.discWeightSum);
+      const sigmaR = config.discSigmaR(k);
+      x = gaussian(rng) * sigmaR;
+      z = gaussian(rng) * sigmaR;
+      radius = Math.hypot(x, z);
+      angle = Math.atan2(z, x);
+      if (rng() < mapDensityAt(radius, angle)) break;
+    }
+    const y = gaussian(rng) * sigmaZComplex;
+    const frame = rotateFrameToOrientation(
+      warpSurfaceFrame(radius, angle, geometry),
+      radius,
+      angle,
+      geometry,
+      config.sfMapOrientation,
+      config.orientationDeltaStats,
+    );
+    return { center: [x, y, z], frame };
+  }
+
+  /** OFF path (no map density): identical to before `mapDensityAt` existed — armRoll is always drawn, even when `canUseArms` is false, so the rng draw order never shifts. */
+  function placeAnalyticComplex(): { center: Vec3; frame: CloudFrame } {
+    // Arm bias re-rolled per complex, not per particle — a complex (and its
+    // children) is the hierarchical unit real GMC/OB associations form at.
+    const armRoll = rng();
+    return (
+      (canUseArms && armRoll < armBias ? placeArmLaneComplex() : null) ?? placeSmoothDiscComplex()
+    );
+  }
+
   const particles: PlacedParticle<TPayload>[] = [];
   let placed = 0;
   while (placed < count) {
     const childCount = Math.min(childrenPerComplex, count - placed);
-    // Arm bias re-rolled per complex, not per particle — a complex (and its
-    // children) is the hierarchical unit real GMC/OB associations form at.
-    const armRoll = rng();
-    const placement =
-      (canUseArms && armRoll < armBias ? placeArmLaneComplex() : null) ?? placeSmoothDiscComplex();
+    const placement = config.mapDensityAt
+      ? placeMapDensityComplex(config.mapDensityAt)
+      : placeAnalyticComplex();
 
     for (let c = 0; c < childCount; c++) {
       const along = gaussian(rng) * complexSpread * elongation;
