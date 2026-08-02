@@ -23,6 +23,8 @@ import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { paramsPatched } from '../../state/slices/galaxySlice';
 import { renderPatched } from '../../state/slices/renderSlice';
 import { lodPatched } from '../../state/slices/lodSlice';
+import { fieldTuningPatched } from '../../state/slices/fieldTuningSlice';
+import { extrasToggled, extrasCountSet } from '../../state/slices/extrasSlice';
 import { copyFeedbackSet } from '../../state/slices/uiSlice';
 import { serializeGalaxyPreset } from '../../presets/serializeGalaxyPreset';
 import { parseGalaxyPreset } from '../../presets/parseGalaxyPreset';
@@ -35,6 +37,8 @@ function PresetsSection(): ReactNode {
   const galaxy = useAppSelector((state) => state.galaxy);
   const render = useAppSelector((state) => state.render);
   const lod = useAppSelector((state) => state.lod);
+  const fieldTuning = useAppSelector((state) => state.fieldTuning);
+  const extras = useAppSelector((state) => state.extras);
   const copyFeedback = useAppSelector((state) => state.ui.copyFeedback);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -43,7 +47,7 @@ function PresetsSection(): ReactNode {
   };
 
   const handleDownload = (): void => {
-    const json = serializeGalaxyPreset(galaxy, render, lod);
+    const json = serializeGalaxyPreset(galaxy, render, lod, fieldTuning, extras);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -67,6 +71,12 @@ function PresetsSection(): ReactNode {
         dispatch(paramsPatched(parsed.p));
         dispatch(renderPatched(parsed.r));
         dispatch(lodPatched(parsed.lod));
+        dispatch(fieldTuningPatched(parsed.f));
+        // extrasSlice has no wholesale patch action (see its header) — set
+        // only the fields a v2 file actually carried; a v1 file (parsed.x
+        // always {}) leaves extras untouched rather than resetting it.
+        if (parsed.x.enabled !== undefined) dispatch(extrasToggled(parsed.x.enabled));
+        if (parsed.x.count !== undefined) dispatch(extrasCountSet(parsed.x.count));
         dispatch(copyFeedbackSet('loaded ✓'));
       } else {
         dispatch(copyFeedbackSet('invalid file'));
@@ -78,7 +88,9 @@ function PresetsSection(): ReactNode {
 
   const handleCopy = async (): Promise<void> => {
     try {
-      await navigator.clipboard.writeText(serializeGalaxyPreset(galaxy, render, lod));
+      await navigator.clipboard.writeText(
+        serializeGalaxyPreset(galaxy, render, lod, fieldTuning, extras),
+      );
       dispatch(copyFeedbackSet('copied ✓'));
     } catch {
       dispatch(copyFeedbackSet('failed'));

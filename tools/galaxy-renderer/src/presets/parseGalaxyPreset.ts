@@ -1,23 +1,25 @@
 /**
  * parseGalaxyPreset — the read side of the preset wire format (see
- * `serializeGalaxyPreset`'s header for the split-vs-flat rationale).
+ * `serializeGalaxyPreset`'s header for field meanings). Total, like the
+ * spike's `onUploadFile` (`Galaxy Renderer.dc.html:654`, `if (o && o.p)`):
+ * bad JSON or a non-object `p` yields `null`. `r`/`f`/`x` are each tolerated
+ * if missing or non-object (empty bag) — which is also the whole v1 fallback:
+ * a v1 file simply has no `f`/`x` keys, so no version branch is needed. Every
+ * section gets ONLY this "is it an object" check, never interior validation
+ * — a malformed nested value (bad `f.sfMap`, corrupt `r.exposure`) still
+ * reaches the store via the caller's patch dispatch. Deliberate: this file
+ * has never had a validation framework.
  *
- * Validation mirrors the spike's `onUploadFile` (`Galaxy Renderer.dc.html:654`,
- * `if (o && o.p)`), made total: unparseable JSON or a payload without an
- * object-shaped `p` yields `null` instead of throwing or silently producing
- * `undefined` fields. A missing `r` is tolerated (the spike merged
- * `o.r || {}`) and treated as an empty bag.
- *
- * The flat `r` bag is split back into `render` vs `lod` by key — `lodApparent`
- * is the only `LodSettings` field (see `LodSettings.d.ts`); everything else in
- * `r` is a `RenderSettings` field. A key belonging to neither (an older
- * preset's since-removed knob) lands in `render`, where the slice's shallow
- * merge simply carries it as an unread extra rather than throwing.
+ * `r` is split back into `render`/`lod` by key: `lodApparent` is the only
+ * `LodSettings` field, everything else goes to `render` (an unrecognized key
+ * lands there too, as an unread extra the slice's merge just carries along).
  */
 
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
+import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFieldTuning';
 import type { RenderSettings } from '../../@types/engine/RenderSettings';
 import type { LodSettings } from '../../@types/engine/LodSettings';
+import type { ExtrasState } from '../../@types/state/ExtrasState';
 
 const LOD_KEYS: readonly string[] = ['lodApparent'];
 
@@ -29,6 +31,8 @@ export function parseGalaxyPreset(json: string): {
   readonly p: Partial<GalaxyParams>;
   readonly r: Partial<RenderSettings>;
   readonly lod: Partial<LodSettings>;
+  readonly f: Partial<GalaxyFieldTuning>;
+  readonly x: Partial<Pick<ExtrasState, 'enabled' | 'count'>>;
 } | null {
   let parsed: unknown;
   try {
@@ -51,5 +55,7 @@ export function parseGalaxyPreset(json: string): {
     p: parsed.p as Partial<GalaxyParams>,
     r: render as Partial<RenderSettings>,
     lod: lod as Partial<LodSettings>,
+    f: (isPlainObject(parsed.f) ? parsed.f : {}) as Partial<GalaxyFieldTuning>,
+    x: (isPlainObject(parsed.x) ? parsed.x : {}) as Partial<Pick<ExtrasState, 'enabled' | 'count'>>,
   };
 }
