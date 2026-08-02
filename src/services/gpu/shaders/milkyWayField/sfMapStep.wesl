@@ -1,18 +1,18 @@
 // milkyWayField/sfMapStep.wesl — one generation of the SSPSF cellular
 // automaton (Gerola & Seiden 1978, ApJ 223, 129) on a fixed log-polar grid.
-// State (gas, age-since-ignition, refractory timer, an old-activity EMA) is
-// ping-ponged between two storage textures; createGalaxyEngine.ts's
-// rebuildSfMap dispatches one 'cs' invocation of this per step, all in ONE
-// compute pass, never per frame. See research doc §19 before changing the
-// step rule or the shear term.
-//
-// Grid is UNIFORM log-polar (768 az x 256 ring) — a step-1 simplification.
-// Gerola & Seiden's own rings are subdivided into EQUAL-AREA cells (cell
-// count growing with radius), which this grid does not attempt.
+// State (gas, age, refractory timer, an old-activity EMA) ping-pongs between
+// two storage textures; rebuildSfMap dispatches one 'cs' per step, in ONE
+// compute pass, never per frame. MATERIAL (Lagrangian) frame: a cell's state
+// lives at its own texel forever, never resampled (see selfState below) —
+// only the neighbour lookup and arm-forcing sample drift with shear.
+// sfMapPack.wesl un-shears back to world coordinates once, at the end. Grid
+// is UNIFORM log-polar (768 az x 256 ring), not Gerola & Seiden's own
+// equal-area cells.
+
+import package::milkyWayField::sfMapShear::sfMapShearTexels;
 
 const AZ: u32 = 768u;
 const RINGS: u32 = 256u;
-const PI: f32 = 3.14159265358979;
 
 // The trailing 'old activity' wake's own decay/gain — a look pair, tuned by
 // eye, distinct from the percolation parameters the params contract exposes
@@ -49,13 +49,15 @@ struct SfMapStepIndex {
 @group(0) @binding(3) var nextTex: texture_storage_2d<rgba16float, write>;
 @group(0) @binding(4) var<uniform> stepIdx: SfMapStepIndex;
 
-// Log-radial ring -> physical radius. Restated from
-// galaxySfMapArmForcing.ts's sfMapRingRadius (WGSL cannot import TS) — the
-// two MUST agree on what texel (ring, az) means, or the baked arm-forcing
-// texture silently misaligns with the automaton it drives.
-fn ringRadius(ring: u32) -> f32 {
-  let t = f32(ring) / f32(RINGS - 1u);
-  return u.rMin * pow(u.rMax / u.rMin, t);
+// Thin wrapper over the shared module: sfMapPack.wesl's un-shear imports the
+// SAME function, so the two passes cannot silently disagree on what a
+// texel of shear means.
+fn shearTexels(ring: u32) -> f32 {
+  return sfMapShearTexels(ring, RINGS, AZ, u.rMin, u.rMax, u.corotationRadius, u.shearRate);
+}
+
+fn wrapAz(azF: f32) -> f32 {
+  return (azF % f32(AZ) + f32(AZ)) % f32(AZ);
 }
 
 // integerHash4 — same Jenkins/Squirrel-family avalanche as
@@ -68,28 +70,27 @@ fn cellHash(ring: u32, az: u32, genStep: u32, seed: u32) -> f32 {
   return f32(h ^ (h >> 16u)) / 4294967295.0;
 }
 
-// Bilinear-in-azimuth read of the PREVIOUS state at a fractional texel
-// column, wrapping — this IS the shear: 'theta - dTheta(r)' as a per-row
-// angular offset, sub-texel so the sheared structure doesn't stair-step
-// (research doc §19).
-fn sampleSheared(ring: u32, azF: f32) -> vec4<f32> {
-  let wrapped = (azF % f32(AZ) + f32(AZ)) % f32(AZ);
+// Bilinear-in-azimuth read of armForcingTex. Bilinear is correct and
+// desirable here: the field is SMOOTH and WORLD-frame-static, so blurring it
+// is harmless — unlike blurring the discrete ignition state (neighbourAt,
+// below), which is exactly what a per-generation resample used to destroy.
+// Do not 'fix' one of these two to match the other; the asymmetry is the point.
+fn armForcingAt(ring: u32, azF: f32) -> f32 {
+  let wrapped = wrapAz(azF);
   let a0 = u32(floor(wrapped)) % AZ;
   let a1 = (a0 + 1u) % AZ;
   let frac = wrapped - floor(wrapped);
-  let c0 = textureLoad(prevTex, vec2<i32>(i32(a0), i32(ring)), 0);
-  let c1 = textureLoad(prevTex, vec2<i32>(i32(a1), i32(ring)), 0);
+  let c0 = textureLoad(armForcingTex, vec2<i32>(i32(a0), i32(ring)), 0).x;
+  let c1 = textureLoad(armForcingTex, vec2<i32>(i32(a1), i32(ring)), 0).x;
   return mix(c0, c1, frac);
 }
 
-// This ring's own per-step angular shear, in TEXELS (the params contract
-// states shearRate/corotationRadius in radians). Omega(r) - Omega_pattern,
-// NOT bare Omega — zero at corotation, opposite sign either side of it. See
-// this file's header.
-fn shearTexels(ring: u32) -> f32 {
-  let r = max(ringRadius(ring), 1e-4);
-  let dTheta = (1.0 / r - 1.0 / u.corotationRadius) * u.shearRate;
-  return dTheta * f32(AZ) / (2.0 * PI);
+// Exact texel read of a NEIGHBOUR, rounded to the nearest whole texel — no
+// bilinear blend of the (unbounded) age channel, which is what let a lone
+// ignited cell go invisible to its neighbours before (research doc).
+fn neighbourAt(nRing: u32, azF: f32) -> vec4<f32> {
+  let a = u32(round(wrapAz(azF))) % AZ;
+  return textureLoad(prevTex, vec2<i32>(i32(a), i32(nRing)), 0);
 }
 
 @compute @workgroup_size(16, 16)
@@ -114,19 +115,25 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
     return;
   }
 
-  let selfShear = shearTexels(ring);
-  let selfState = sampleSheared(ring, f32(az) - selfShear);
+  // MATERIAL FRAME: this texel's own state never moves (Gerola & Seiden
+  // never resample — see this file's header). No shear, no blend.
+  let selfState = textureLoad(prevTex, vec2<i32>(i32(az), i32(ring)), 0);
   let gas = selfState.x;
   let age = selfState.y;
   let refractory = selfState.z;
   let oldActivity = selfState.w;
 
-  // Moore (8-cell) neighbourhood — the uniform grid's stand-in for Gerola &
-  // Seiden's ring-adjacency on their equal-area cells (this file's header).
-  // A neighbour counts as 'ignited' if IT just ignited last generation
-  // (age == 0 after its own shear-advected read), which is the standard
-  // percolation trigger: this generation's fire spreads from last
-  // generation's.
+  // Moore (8-cell) neighbourhood, but adjacency is now a WORLD-frame
+  // relation: solving nextTex[x] = prevTex[x - shear] (the OLD Eulerian
+  // recursion this file used to run) for one tracked parcel's trajectory
+  // gives worldAz(materialAz, genStep) = materialAz + shear(ring) * genStep
+  // — a material cell drifts to increasingly higher world azimuth as
+  // genStep grows, at its own ring's shear rate. Two texels (ring, az) and
+  // (nRing, j) are WORLD-adjacent (offset da) when worldAz(nRing, j) ==
+  // worldAz(ring, az) + da; solving for j:
+  //   j = az + da + (shearTexels(ring) - shearTexels(nRing)) * genStep
+  // The offset ACCUMULATES with genStep, which is what makes the neighbour
+  // set evolve over time — the paper's actual mechanism (research doc §19).
   var ignitedNeighbours = 0.0;
   for (var dr = -1; dr <= 1; dr++) {
     let nRingI = i32(ring) + dr;
@@ -134,28 +141,23 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
       continue;
     }
     let nRing = u32(nRingI);
-    let nShear = shearTexels(nRing);
+    let relShear = (shearTexels(ring) - shearTexels(nRing)) * f32(genStep);
     for (var da = -1; da <= 1; da++) {
       if (dr == 0 && da == 0) {
         continue;
       }
-      let neighbour = sampleSheared(nRing, f32(i32(az) + da) - nShear);
-      // THRESHOLD, never 'age == 0.0': sampleSheared returns a bilinear BLEND
-      // of two texels, so an exact-zero test fires only when BOTH source
-      // texels ignited last generation — one ignited cell is invisible to its
-      // neighbours and percolation never starts. That bug cost a factor of
-      // three in the spread threshold (0.56 vs the classical ~0.18) and
-      // presented as a dead knob everywhere except the corotation ring, where
-      // the shear offset is exactly zero and the blend degenerates.
-      // 0.5 is one generation's age increment, so anything blended from a
-      // just-ignited cell still counts, weighted by how much of it is there.
-      if (neighbour.y < 0.5) {
+      // Exact equality is valid again (neighbourAt's own docstring).
+      let neighbour = neighbourAt(nRing, f32(i32(az) + da) + relShear);
+      if (neighbour.y == 0.0) {
         ignitedNeighbours += 1.0;
       }
     }
   }
 
-  let armF = textureLoad(armForcingTex, vec2<i32>(i32(az), i32(ring)), 0).x;
+  // Arm forcing is WORLD-frame and static; this material cell has drifted to
+  // world azimuth az + shearTexels(ring) * genStep (derived above), so
+  // that's where the forcing field must be sampled — not at its own texel.
+  let armF = armForcingAt(ring, f32(az) + shearTexels(ring) * f32(genStep));
   // Gas multiplies the raw percolation probability rather than gating it
   // with a threshold: the params contract carries no separate gas-floor
   // knob, and a continuous multiplier degrades smoothly as gas depletes

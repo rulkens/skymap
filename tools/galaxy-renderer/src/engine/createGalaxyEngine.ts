@@ -869,6 +869,16 @@ export async function createGalaxyEngine(
     size: 16,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
+  // sfMapPack.wesl's own un-shear parameters (SfMapUnshear) — rMin/rMax +
+  // the same corotation/shear knobs sfMapConstUbo carries, plus
+  // totalShiftSteps (steps - 1, see rebuildSfMap). A separate buffer from
+  // sfMapConstUbo because pack runs in its OWN bind group / pipeline, after
+  // every step dispatch has already used sfMapConstUbo's bind group layout.
+  const sfMapPackConstUbo = device.createBuffer({
+    label: 'galaxy:sfMapPackConstUbo',
+    size: 32, // 8 f32 lanes (5 used) — see SfMapUnshear in sfMapPack.wesl
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
   // Holds every step's own index, one SfMapStepIndex-sized (4-byte) slot per
   // step, each padded out to the device's own uniform offset alignment — see
   // rebuildSfMap for why a per-step BIND GROUP (static offset into this one
@@ -1722,14 +1732,32 @@ export async function createGalaxyEngine(
 
     // Parity of the LAST dispatched step (index steps-1) says which texture
     // it wrote into: even index writes B, odd writes A (see the prev/next
-    // pick in the loop above).
+    // pick in the loop above). That same steps-1 is also the number of
+    // shear-applying generations finalState has accumulated (step 0 only
+    // seeds — see sfMapStep.wesl), which is what sfMapPack.wesl's un-shear
+    // needs, NOT the raw `steps` count.
     const finalState = (steps - 1) % 2 === 0 ? sfMapStateB : sfMapStateA;
+    device.queue.writeBuffer(
+      sfMapPackConstUbo,
+      0,
+      new Float32Array([
+        grid.rMin,
+        grid.rMax,
+        sfMap.corotationRadius,
+        sfMap.shearRate,
+        steps - 1,
+        0,
+        0,
+        0,
+      ]),
+    );
     const packBG = device.createBindGroup({
       label: 'galaxy:sfMapPackBG',
       layout: sfMapPackPipe.getBindGroupLayout(0),
       entries: [
         { binding: 0, resource: finalState.createView() },
         { binding: 1, resource: sfMapTex.createView() },
+        { binding: 2, resource: { buffer: sfMapPackConstUbo } },
       ],
     });
     const packPass = enc.beginComputePass({ label: 'galaxy:sfMapPackPass' });
@@ -3065,6 +3093,7 @@ export async function createGalaxyEngine(
       sfMapReadbackBuf.destroy();
       sfMapConstUbo.destroy();
       sfMapGridUbo.destroy();
+      sfMapPackConstUbo.destroy();
       sfMapStepIndexBuf?.destroy();
       gradeBuf.destroy();
       ro.disconnect();
