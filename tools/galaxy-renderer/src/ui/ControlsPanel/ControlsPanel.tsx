@@ -320,6 +320,33 @@ function ControlsPanel({ fade }: ControlsPanelProps): ReactNode {
           <span>SF map view</span>
         </label>
 
+        {/* Orientation overlay: same seam again, but presents
+            buildSfMapOrientation's crest orientation (hue) and coherence
+            (brightness) instead of the automaton's raw gas/SF channels —
+            the one way to see whether the automaton is producing real
+            sheared structure rather than inferring it from RGB. Gates the
+            CPU build itself (see createGalaxyEngine.ts's
+            rebuildSfMapOrientationIfNeeded), not just this draw. */}
+        <label className={styles.legacyToggleRow}>
+          <input
+            type="checkbox"
+            className={styles.pillToggle}
+            checked={render.orientationView}
+            onChange={(e) => dispatch(renderPatched({ orientationView: e.target.checked }))}
+          />
+          <span>Orientation view</span>
+        </label>
+        <ParamSlider
+          label="Orientation sigma"
+          value={render.orientationSigmaTexels}
+          min={0.5}
+          max={6}
+          step={0.1}
+          format={(v) => v.toFixed(1)}
+          onChange={(v) => dispatch(renderPatched({ orientationSigmaTexels: v }))}
+          info="Gaussian sigma (sfMap grid texels) for buildSfMapOrientation's two blur stages. Only reachable while orientation view is on — moving it re-runs the CPU build."
+        />
+
         <FieldSection />
         <ArmFieldSection />
         <ArmCloudSection />

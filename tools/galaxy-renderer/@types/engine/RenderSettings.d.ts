@@ -83,6 +83,23 @@ export type RenderSettings = {
    */
   readonly sfMapView: boolean;
   /**
+   * Orientation overlay: present `buildSfMapOrientation`'s coherence-scaled
+   * crest orientation directly, same seam as `sfMapView`. Hue is the pitch
+   * angle (period π, so it fills the full hue wheel — see
+   * `orientationPresent.wesl`), value is coherence. This is also the CPU
+   * build's own gate: `buildSfMapOrientation` runs ~10 separable-blur passes
+   * over the sfMap grid and costs real JS time, so it only runs while this
+   * is on — see `createGalaxyEngine.ts`'s `rebuildSfMapOrientationIfNeeded`.
+   */
+  readonly orientationView: boolean;
+  /**
+   * Gaussian sigma, in sfMap grid texels, for `buildSfMapOrientation`'s two
+   * blur stages (the field smoothing before the gradient and the tensor
+   * smoothing after it). Only reachable while `orientationView` is on;
+   * moving it re-runs the CPU build the same way toggling the view on does.
+   */
+  readonly orientationSigmaTexels: number;
+  /**
    * DUST (LEGACY) header pill: off forces the sprite generator's dust knobs
    * (`spriteDust`, `dustRingStrength`) to 0 in the copy handed to the engine,
    * leaving the stored `galaxy` params (and the sliders showing them)

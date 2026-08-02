@@ -251,6 +251,9 @@ import {
 import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../src/data/galaxy/defaultGalaxyDustParams';
 import { dustExtinctionRgb } from '../../../../src/utils/galaxy/dustExtinctionRgb';
 import { transformGalaxyFieldComponent } from '../../../../src/utils/galaxy/transformGalaxyFieldComponent';
+import { buildSfMapOrientation } from '../../../../src/utils/galaxy/buildSfMapOrientation';
+import { floatToF16 } from '../../../../src/utils/math/floatToF16';
+import type { GalaxySfMapOrientation } from '../../../../src/@types/galaxy/GalaxySfMapOrientation';
 import { GENERATION_UBO } from '../../../../src/services/gpu/galaxy/generationUboLayout';
 import { GEN_RECORD_BYTES } from '../../../../src/services/gpu/galaxy/genRecordBytes';
 import { carveStarLayout } from '../../../../src/services/gpu/galaxy/carveStarLayout';
@@ -274,6 +277,7 @@ import dustNoiseBakeWgsl from './shaders/milkyWayField/dustNoiseBake.wesl?static
 import sfMapStepWgsl from './shaders/milkyWayField/sfMapStep.wesl?static';
 import sfMapPackWgsl from './shaders/milkyWayField/sfMapPack.wesl?static';
 import sfMapPresentWgsl from './shaders/milkyWayField/sfMapPresent.wesl?static';
+import orientationPresentWgsl from './shaders/milkyWayField/orientationPresent.wesl?static';
 import gradeWgsl from './shaders/grade.wesl?static';
 
 /** HDR working format for the scene + bloom pyramid — the runtime's `hdr` row. */
@@ -349,11 +353,12 @@ const bloomScale = (level: number): number => 2 ** (level + 1);
  *    so sharing one slot between the two answers the same question ("what
  *    did this pass cost") regardless of which one ran. Only encoded when the
  *    analytic field is on, so the slot self-drops. Also self-drops while
- *    `render.sfMapView` is on: that diagnostic presents straight into
- *    `sceneTex` at full canvas resolution (see the `'scene'` bullet and
- *    `sfMapPresent.wesl`'s header — a fieldDivisor-downsampled target would
- *    bias the sharpness judgement the view exists to make), so it fills
- *    neither `fieldTex` nor `dustViewTex` and has no pass of its own here.
+ *    `render.sfMapView` OR `render.orientationView` is on: both diagnostics
+ *    present straight into `sceneTex` at full canvas resolution (see the
+ *    `'scene'` bullet and `sfMapPresent.wesl`'s header — a fieldDivisor-
+ *    downsampled target would bias the sharpness judgement the view exists
+ *    to make), so neither fills `fieldTex` or `dustViewTex` and neither has
+ *    a pass of its own here.
  *  - `'hii'` is the HII tier's own splat — the same `splatPipe`, a different
  *    bind group and target (`hiiTex`, `render.hiiDivisor`) — see `hiiTex`'s
  *    declaration comment for why it cannot share `'field'`'s slot or target.
@@ -902,6 +907,64 @@ export async function createGalaxyEngine(
     ],
   });
 
+  // ---- orientation overlay: buildSfMapOrientation's crest field, CPU-built ----
+  // Unlike sfMapTex (the automaton's own GPU output), this texture's content
+  // comes from a CPU pure function over the readback — see
+  // rebuildSfMapOrientationIfNeeded (below scheduleSfMapReadback) for the
+  // perf gate that keeps it off by default. Pipeline/sampler/texture/bind
+  // group are all built unconditionally at construction, same as every
+  // other sfMap resource — only the CONTENT is gated, not the objects.
+  const orientationPresentMod = makeShader(orientationPresentWgsl, 'galaxy:orientationPresent');
+  const orientationPresentPipe = device.createRenderPipeline({
+    label: 'galaxy:orientationPresentPipe',
+    layout: 'auto',
+    vertex: { module: orientationPresentMod, entryPoint: 'vs' },
+    // Additive into sceneTex, same reasoning as sfMapPresentPipe: this draw
+    // must sum with whatever background extras' sprites already put there.
+    fragment: {
+      module: orientationPresentMod,
+      entryPoint: 'fs',
+      targets: [{ format: HDR, blend: ADDITIVE_BLEND }],
+    },
+    primitive: { topology: 'triangle-list' },
+  });
+  // rg16float, not rg32float: filterable in WebGPU core with no optional
+  // feature (float32 formats need 'float32-filterable'), and bilinear
+  // sampling is safe here BECAUSE the two channels are the packed
+  // (cos2theta, sin2theta) double-angle vector, not a bare angle — see
+  // GalaxySfMapOrientation's header on why only that representation
+  // interpolates across the pi wrap without a false zero-crossing.
+  const orientationSampler = device.createSampler({
+    label: 'galaxy:orientationSampler',
+    addressModeU: 'repeat',
+    addressModeV: 'clamp-to-edge',
+    magFilter: 'linear',
+    minFilter: 'linear',
+  });
+  const orientationTex = device.createTexture({
+    label: 'galaxy:orientationTex',
+    size: [SF_MAP_AZ, SF_MAP_RINGS],
+    format: 'rg16float',
+    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+  });
+  // rMin/rMax only, same shape as sfMapGridUbo — written once per
+  // rebuildSfMapOrientationIfNeeded, not every frame.
+  const orientationGridUbo = device.createBuffer({
+    label: 'galaxy:orientationGridUbo',
+    size: 16,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  const orientationPresentBG = device.createBindGroup({
+    label: 'galaxy:orientationPresentBG',
+    layout: orientationPresentPipe.getBindGroupLayout(0),
+    entries: [
+      { binding: 0, resource: { buffer: fieldUbo } },
+      { binding: 1, resource: orientationTex.createView() },
+      { binding: 2, resource: orientationSampler },
+      { binding: 3, resource: { buffer: orientationGridUbo } },
+    ],
+  });
+
   // ---- the aggregate composite: the RUNTIME's additive upsample ----
   // Fully generic — a covering-triangle 4-tap low-pass of whatever view it is
   // handed, additively blended into an `rgba16float` target. The star pass
@@ -1038,6 +1101,11 @@ export async function createGalaxyEngine(
   // the previous readback's grid (rMin/rMax, tied to `fieldGeometry`) stale —
   // see setParams's own comment on why it nulls this before rebuilding dust.
   let sfMapData: GalaxySfMap | null = null;
+  // The overlay's CPU-built orientation field, kept in step with `sfMapData`
+  // — null whenever `sfMapData` is (no readback yet) or the overlay has
+  // never been on. See `rebuildSfMapOrientationIfNeeded`, below
+  // `scheduleSfMapReadback`, for what rebuilds it and why it is gated.
+  let sfMapOrientation: GalaxySfMapOrientation | null = null;
   // Bumped by every `scheduleSfMapReadback` call; a landing promise checks it
   // against its own captured value before touching `sfMapData`; a mismatch
   // means a LATER rebuild superseded this one, so the result is stale and
@@ -1532,10 +1600,64 @@ export async function createGalaxyEngine(
           rebuildDustMixture();
           repackFieldComponents();
         }
+        // Unconditional call, cheap gate inside: every landed readback is a
+        // NEW map, so this is the one place a fresh galaxy's orientation
+        // overlay actually gets rebuilt while the view is on — see the
+        // function's own docblock for why `setRender` alone cannot cover it.
+        rebuildSfMapOrientationIfNeeded();
       })
       .catch((err) => {
         console.error('galaxy: sfMap readback failed', err);
       });
+  }
+
+  /**
+   * rebuildSfMapOrientationIfNeeded — runs `buildSfMapOrientation` over the
+   * latest `sfMapData` and uploads it to `orientationTex`, but ONLY while
+   * `render.orientationView` is on and a readback actually exists. The
+   * builder is ~10 separable-blur passes over the SF_MAP_AZ x SF_MAP_RINGS
+   * grid (see its own header) and costs real JS time — measured ~54ms at
+   * this tool's 768x256 grid, sigma=2 (Node, V8, steady state; a dropped
+   * frame's worth and then some), so this must never run on a frame or an
+   * unrelated settings tweak. So this is called from exactly two places,
+   * both edge-triggered:
+   *
+   *  - `scheduleSfMapReadback`'s landing promise, unconditionally (a new
+   *    readback is a new map to build FROM, if the view is on to consume it
+   *    — the gate below is what makes the call a no-op otherwise).
+   *  - `setRender`, only when the incoming patch actually flips
+   *    `orientationView` on or moves `orientationSigmaTexels` while it is
+   *    already on — see that function's own comment. `setRender` runs on
+   *    every render-bag change (the bridge re-pushes the whole bag on any
+   *    knob), so calling this unconditionally there would redo the blur on
+   *    an unrelated exposure drag.
+   */
+  function rebuildSfMapOrientationIfNeeded(): void {
+    if (!render.orientationView || !sfMapData) return;
+    const t0 = performance.now();
+    const orientation = buildSfMapOrientation(sfMapData, render.orientationSigmaTexels);
+    const elapsedMs = performance.now() - t0;
+    console.log(
+      `galaxy: sfMap orientation build ${elapsedMs.toFixed(2)}ms ` +
+        `(${orientation.az}x${orientation.rings}, sigma=${render.orientationSigmaTexels})`,
+    );
+    sfMapOrientation = orientation;
+    // f16-encode CPU-side: rg16float has no native JS typed-array form, so
+    // the raw IEEE-754 half bits go into a Uint16Array the GPU reads as
+    // rg16float texel data — see floatToF16's own header.
+    const packed = new Uint16Array(orientation.data.length);
+    for (let i = 0; i < orientation.data.length; i++) packed[i] = floatToF16(orientation.data[i]!);
+    device.queue.writeTexture(
+      { texture: orientationTex },
+      packed,
+      { bytesPerRow: SF_MAP_AZ * 4 },
+      [SF_MAP_AZ, SF_MAP_RINGS],
+    );
+    device.queue.writeBuffer(
+      orientationGridUbo,
+      0,
+      new Float32Array([orientation.rMin, orientation.rMax, 0, 0]),
+    );
   }
 
   /**
@@ -1929,6 +2051,10 @@ export async function createGalaxyEngine(
     // scheduleSfMapReadback's determinism comment for why that first,
     // unseeded dust build is the point, not a bug.
     sfMapData = null;
+    // Same staleness as `sfMapData` above, for the same grid mismatch —
+    // `rebuildSfMapOrientationIfNeeded` rebuilds this once the new galaxy's
+    // own readback lands (if the overlay is on).
+    sfMapOrientation = null;
     fieldMixture = buildGalaxyFieldMixture(fieldGeometry, fieldTuning);
     currentDust = p.dust ?? DEFAULT_GALAXY_DUST_PARAMS;
     // Same `geometry.seed` `buildHiiRegions` was called with when it still
@@ -1974,6 +2100,8 @@ export async function createGalaxyEngine(
     const previousFieldDivisor = render.fieldDivisor;
     const previousDustDivisor = render.dustDivisor;
     const previousHiiDivisor = render.hiiDivisor;
+    const previousOrientationView = render.orientationView;
+    const previousOrientationSigma = render.orientationSigmaTexels;
     Object.assign(render, patch);
     if (render.aggregateDivisor !== previousDivisor) buildAggregateTarget();
     if (render.fieldDivisor !== previousFieldDivisor) buildFieldTarget();
@@ -1986,6 +2114,17 @@ export async function createGalaxyEngine(
       buildDustViewTarget();
     }
     if (render.hiiDivisor !== previousHiiDivisor) buildHiiTarget();
+    // Edge-triggered, not "whenever orientationView is true": this function
+    // runs on every render-bag push, so the latter would redo
+    // buildSfMapOrientation's blur on an unrelated exposure drag. See
+    // rebuildSfMapOrientationIfNeeded's own docblock.
+    if (
+      render.orientationView &&
+      (render.orientationView !== previousOrientationView ||
+        render.orientationSigmaTexels !== previousOrientationSigma)
+    ) {
+      rebuildSfMapOrientationIfNeeded();
+    }
   }
 
   // Rebuilds `fieldMixture` from the CACHED geometry rather than dispatching a
@@ -2673,13 +2812,13 @@ export async function createGalaxyEngine(
         pass.setPipeline(starPipe);
         pass.setBindGroup(0, starBG);
         pass.setVertexBuffer(0, quad);
-        // Skipped for the primary (not for extras) while the JWST dust view
-        // OR the sfMap view is on: both replace the field pass's emission
-        // draw with a direct presentation of their own map, and the
-        // primary's own sprite glow would otherwise wash additively over it
-        // in the scene pass below. Extras aren't either map's subject, so
-        // their sprites stay.
-        if (starBuf && !render.dustView && !render.sfMapView) {
+        // Skipped for the primary (not for extras) while the JWST dust view,
+        // the sfMap view, OR the orientation view is on: all three replace
+        // the field pass's emission draw with a direct presentation of their
+        // own map, and the primary's own sprite glow would otherwise wash
+        // additively over it in the scene pass below. Extras aren't any
+        // map's subject, so their sprites stay.
+        if (starBuf && !render.dustView && !render.sfMapView && !render.orientationView) {
           pass.setVertexBuffer(1, starBuf);
           pass.draw(6, starCount);
         }
@@ -2733,7 +2872,12 @@ export async function createGalaxyEngine(
         dustMapPopulated = dustMapHasContent;
       }
 
-      if (render.sfMapView) {
+      if (render.orientationView) {
+        // Orientation overlay: same "no pass here" shape as the sfMapView
+        // branch just below, and the same reason — drawn straight into
+        // `sceneTex` at full canvas resolution in the scene pass, not
+        // through a fieldDivisor-reduced target and the 4-tap upsample.
+      } else if (render.sfMapView) {
         // SF-map view: no pass here any more. It used to present into
         // `fieldTex` at that target's `fieldDivisor`-reduced resolution, then
         // ride the SAME 4-tap upsample reconstruction the smooth field does
@@ -2860,7 +3004,16 @@ export async function createGalaxyEngine(
       // pass above), and the two are no longer the same texture now that
       // they ride independent divisors.
       if (render.analyticField) {
-        if (render.sfMapView) {
+        if (render.orientationView) {
+          // Same shape as the sfMapView branch just below, same reason:
+          // full-canvas-resolution presentation, additive so it sums with
+          // whatever background extras' sprites the upsample above already
+          // added, and the primary's own sprites are skipped (see the star
+          // pass) while extras' are not.
+          pass.setPipeline(orientationPresentPipe);
+          pass.setBindGroup(0, orientationPresentBG);
+          pass.draw(3);
+        } else if (render.sfMapView) {
           // Presented straight into `sceneTex` at full canvas resolution —
           // see the field pass above for why a divisor-matched offscreen and
           // this same upsample's 4-tap reconstruction were both wrong for
@@ -2892,10 +3045,10 @@ export async function createGalaxyEngine(
       pass.setBindGroup(0, dustBG);
       pass.setVertexBuffer(0, quad);
       // Same primary-only skip as the star pass above, same reason: the
-      // JWST view (or the sfMap view) presents its own MAP, so the legacy
-      // sprite dust's own multiplicative darkening over the primary would
-      // fight it.
-      if (dustBuf && !render.dustView && !render.sfMapView) {
+      // JWST view, the sfMap view, or the orientation view presents its own
+      // MAP, so the legacy sprite dust's own multiplicative darkening over
+      // the primary would fight it.
+      if (dustBuf && !render.dustView && !render.sfMapView && !render.orientationView) {
         pass.setVertexBuffer(1, dustBuf);
         pass.draw(6, dustCount);
       }
