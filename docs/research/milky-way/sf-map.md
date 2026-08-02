@@ -150,6 +150,37 @@ the end rather than N — so `sfMapPresent.wesl`, `sampleGalaxySfMap` and
 This is also what Gerola & Seiden actually describe: their rings shear by
 changing which cells are ADJACENT, and they never resample.
 
+### The front runs along rings and never branches — same bug, third symptom
+
+**MEASURED, user observation 2026-08-02.** The propagation wavefront only ever
+moves azimuthally. It never moves radially and never splits.
+
+**The mechanism, and it follows from the blend phase.** `sampleSheared` blends
+in azimuth at a fractional offset, and `az` is an integer, so a read in ring r
+has blend fraction `frac(-shearTexels(r))` — CONSTANT along a ring. The
+azimuthal neighbours (dr=0) are read in the SAME ring at the SAME phase as the
+cell's own state read; the radial neighbours (dr=+-1) are read in a different
+ring at a different phase. With age unbounded, the test only fires when the
+fraction is ~0 — so azimuthal propagation works in any ring that happens to
+land near-integer, while radial propagation needs TWO adjacent rings to be
+near-integer at once, which a continuously-varying `shearTexels` never
+delivers.
+
+Propagation is therefore trapped inside single rings. **A 1D front cannot
+branch** — branching, splitting and spiral waves all require 2D connectivity,
+so none of the flocculent behaviour the model exists for was reachable at any
+parameter setting.
+
+**The Lagrangian reframe fixes this for the right reason:** integer neighbour
+reads make radial and azimuthal symmetric.
+
+**Checked that the fix does not just relocate the problem.** Differential shear
+between adjacent rings is `shearRate * AZ * dlnr / (2*PI*r)` ~= **0.022 texels
+per ring per step** at r=8 with the calibrated settings — so adjacent rings
+drift ~6.6 texels apart over 300 steps (the real shear, tearing radial links
+into trailing spurs) while staying far below one texel per step, so the front
+stays connected instead of fragmenting.
+
 ## The corotation ring is ALSO a residence-time artifact, independently
 
 **INFERRED (derivation).** Even with the frame fixed, the arm forcing is a
