@@ -36,6 +36,20 @@ export type CloudFrame = { readonly along: Vec3; readonly across: Vec3; readonly
 /** A lane/ridge frame at one arm log-radius, offset already applied by the caller (dust offsets onto its lane; the arm cloud passes the ridge itself, offset 0). */
 export type LaneFrame = { readonly point: Vec3 } & CloudFrame;
 
+/**
+ * OrientationDeltaStats — an out-param `rotateFrameToOrientation` mutates in
+ * place, never reads: the diagnostic tool's engine wants "mean/max |delta|
+ * actually applied over the whole build" without either function losing its
+ * `(args) -> data` purity by returning a second shape or reaching for
+ * module-level state. Caller supplies a fresh `{ count: 0, sumAbsDeltaDeg:
+ * 0, maxAbsDeltaDeg: 0 }` and reads it back after the call returns.
+ */
+export type OrientationDeltaStats = {
+  count: number;
+  sumAbsDeltaDeg: number;
+  maxAbsDeltaDeg: number;
+};
+
 export type ClusteredDiscPlacementConfig = {
   readonly geometry: GalaxyFieldGeometry;
   readonly rng: () => number;
@@ -80,6 +94,8 @@ export type ClusteredDiscPlacementConfig = {
    * `rng` draw, so the gated-off placement stays byte-identical.
    */
   readonly sfMapOrientation?: GalaxySfMapOrientation | null;
+  /** Out-param, mutated once per complex whenever `sfMapOrientation` is non-null — see `OrientationDeltaStats`'s own doc. Omitted (the default) does no extra work. */
+  readonly orientationDeltaStats?: OrientationDeltaStats;
 };
 
 export type PlacedParticle<TPayload> = { center: Vec3; readonly frame: CloudFrame } & TPayload;
@@ -102,6 +118,13 @@ function cross3(a: Vec3, b: Vec3): Vec3 {
   return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 }
 
+function recordOrientationDelta(stats: OrientationDeltaStats | undefined, absDeltaDeg: number): void {
+  if (!stats) return;
+  stats.count++;
+  stats.sumAbsDeltaDeg += absDeltaDeg;
+  stats.maxAbsDeltaDeg = Math.max(stats.maxAbsDeltaDeg, absDeltaDeg);
+}
+
 /**
  * rotateFrameToOrientation — bends a lane/disc frame's in-plane axes
  * (`along`/`across`) toward the SF-map automaton's measured filament
@@ -118,6 +141,12 @@ function cross3(a: Vec3, b: Vec3): Vec3 {
  * (`armOffsetFrameAt` flips it to point inward) — `s` below recovers
  * whichever sign is live so the frame turns the same physical direction the
  * measured angle was defined in, not its mirror image.
+ *
+ * `stats`, when supplied, records every |delta| this call actually applied
+ * — INCLUDING the coherence-0 early return (delta 0, a real "no rotation
+ * here" data point, not a skip) — so `OrientationDeltaStats`'s mean stays
+ * honest about how much of the grid has no measured structure to turn
+ * toward, rather than only averaging over the texels that did.
  */
 function rotateFrameToOrientation(
   frame: CloudFrame,
@@ -125,10 +154,14 @@ function rotateFrameToOrientation(
   angle: number,
   geometry: GalaxyFieldGeometry,
   orientation: GalaxySfMapOrientation | null | undefined,
+  stats: OrientationDeltaStats | undefined,
 ): CloudFrame {
   if (!orientation) return frame;
   const sample = sampleSfMapOrientation(orientation, radius, angle);
-  if (sample.coherence <= 0) return frame;
+  if (sample.coherence <= 0) {
+    recordOrientationDelta(stats, 0);
+    return frame;
+  }
 
   const ref = warpSurfaceFrame(radius, angle, geometry);
   const currentAngle = Math.atan2(dot3(frame.along, ref.across), dot3(frame.along, ref.along));
@@ -138,6 +171,7 @@ function rotateFrameToOrientation(
   // lands on a bogus partial rotation instead of ~0.
   const rawDelta = sample.angle - currentAngle;
   const delta = sample.coherence * (rawDelta - Math.PI * Math.round(rawDelta / Math.PI));
+  recordOrientationDelta(stats, Math.abs(delta) * (180 / Math.PI));
 
   const rot90 = cross3(frame.pole, frame.along); // pole x along — see header
   const s = dot3(frame.across, rot90) >= 0 ? 1 : -1;
@@ -213,6 +247,7 @@ export function buildClusteredDiscPlacement<TPayload>(
       Math.atan2(frame.point[2], frame.point[0]),
       geometry,
       config.sfMapOrientation,
+      config.orientationDeltaStats,
     );
     return { center, frame: orientedFrame };
   }
@@ -231,6 +266,7 @@ export function buildClusteredDiscPlacement<TPayload>(
       angle,
       geometry,
       config.sfMapOrientation,
+      config.orientationDeltaStats,
     );
     return { center: [x, y, z], frame };
   }

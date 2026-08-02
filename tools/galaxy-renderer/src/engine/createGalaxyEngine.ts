@@ -188,6 +188,7 @@ import { mat4 } from 'wgpu-matrix';
 import type { GalaxyEngineHandle } from '../../@types/engine/GalaxyEngineHandle';
 import type { GalaxyEngineOptions } from '../../@types/engine/GalaxyEngineOptions';
 import type { MilkyWayFadeReadout } from '../../@types/engine/MilkyWayFadeReadout';
+import type { OrientationDiagnostics } from '../../@types/engine/OrientationDiagnostics';
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import type { PassTiming } from '../../@types/engine/PassTiming';
 import type { RenderSettings } from '../../@types/engine/RenderSettings';
@@ -250,6 +251,7 @@ import {
   buildDustParticleCloud,
   dustNoiseTileUnits,
 } from '../../../../src/data/galaxy/dustParticleCloud';
+import type { OrientationDeltaStats } from '../../../../src/data/galaxy/clusteredDiscPlacement';
 import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../src/data/galaxy/defaultGalaxyDustParams';
 import { dustExtinctionRgb } from '../../../../src/utils/galaxy/dustExtinctionRgb';
 import { transformGalaxyFieldComponent } from '../../../../src/utils/galaxy/transformGalaxyFieldComponent';
@@ -1293,6 +1295,14 @@ export async function createGalaxyEngine(
   // let an unrelated trigger wrongly supersede a still-pending readback.
   let orientationData: GalaxySfMapOrientation | null = null;
   let orientationReadbackToken = 0;
+  // The three `OrientationDiagnostics` numbers `reportOrientationDiagnostics`
+  // hands to `opts.onOrientationDiagnostics` — see that function's own
+  // comment for why coherence is computed once here (readback landing) while
+  // the delta pair is computed once per `rebuildDustMixture` instead.
+  let orientationCoherenceMean = 0;
+  let orientationCoherenceMax = 0;
+  let lastDustDeltaMeanDeg = 0;
+  let lastDustDeltaMaxDeg = 0;
 
   // Per-pipeline bind groups. `layout: 'auto'` groups are pipeline-specific
   // and never cross pipelines, so each pass needs its own group even where the
@@ -1848,14 +1858,49 @@ export async function createGalaxyEngine(
         }
         if (token !== orientationReadbackToken) return;
         orientationData = { az: SF_MAP_AZ, rings: SF_MAP_RINGS, rMin: grid.rMin, rMax: grid.rMax, data };
+        // Coherence is the packed vector's own length (see
+        // GalaxySfMapOrientation's doc: `data` is `(cos2theta, sin2theta)`
+        // already SCALED by coherence) — computed once here, at the one
+        // point a fresh grid exists, not per frame or per dust build.
+        let sumCoherence = 0;
+        let maxCoherence = 0;
+        const texelCount = SF_MAP_AZ * SF_MAP_RINGS;
+        for (let i = 0; i < texelCount; i++) {
+          const coherence = Math.hypot(data[i * 2]!, data[i * 2 + 1]!);
+          sumCoherence += coherence;
+          if (coherence > maxCoherence) maxCoherence = coherence;
+        }
+        orientationCoherenceMean = texelCount > 0 ? sumCoherence / texelCount : 0;
+        orientationCoherenceMax = maxCoherence;
         if (fieldTuning.sfMapDustSeeding) {
-          rebuildDustMixture();
+          rebuildDustMixture(); // also reports — see its own doc
           repackFieldComponents();
+        } else {
+          reportOrientationDiagnostics();
         }
       })
       .catch((err) => {
         console.error('galaxy: orientation readback failed', err);
       });
+  }
+
+  /**
+   * reportOrientationDiagnostics — hands `opts.onOrientationDiagnostics` the
+   * `OrientationDiagnostics` snapshot the SfMapSection debug readout renders.
+   * Event-driven off two independent producers, not a per-frame poll: a
+   * readback landing (coherence, `hasData`/`generation`) and a dust rebuild
+   * (the delta pair) — see those two functions' own comments for exactly
+   * when each fires this.
+   */
+  function reportOrientationDiagnostics(): void {
+    opts.onOrientationDiagnostics?.({
+      hasData: orientationData !== null,
+      generation: orientationReadbackToken,
+      meanCoherence: orientationCoherenceMean,
+      maxCoherence: orientationCoherenceMax,
+      meanDeltaDeg: lastDustDeltaMeanDeg,
+      maxDeltaDeg: lastDustDeltaMaxDeg,
+    });
   }
 
   /**
@@ -1956,6 +2001,14 @@ export async function createGalaxyEngine(
    * geometry `drawFrame` packs every frame regardless of whether any dust
    * component exists to populate it — an empty dust slice into degenerate
    * slice edges is still wrong header state, not a harmless no-op.
+   *
+   * Also refreshes `lastDustDeltaMeanDeg`/`lastDustDeltaMaxDeg` — the
+   * `OrientationDiagnostics` "delta actually applied" pair — from a fresh
+   * `OrientationDeltaStats` accumulator handed to `buildDustParticleCloud`
+   * as a pure out-param (see that type's own doc). The `else` branch below
+   * (dust off, or no geometry yet) leaves the accumulator untouched at its
+   * zeroed default, which is the honest answer: no placement ran, so no
+   * delta was applied.
    */
   function rebuildDustMixture(): void {
     currentDustExtinctionRgb = dustExtinctionRgb(currentDust.rV);
@@ -1969,6 +2022,11 @@ export async function createGalaxyEngine(
     } else {
       currentDustReachR = DUST_REACH_FLOOR;
     }
+    const orientationDeltaStats: OrientationDeltaStats = {
+      count: 0,
+      sumAbsDeltaDeg: 0,
+      maxAbsDeltaDeg: 0,
+    };
     if (fieldGeometry && fieldTuning.dustEnabled) {
       const laneMixture = buildGalaxyDustMixture(fieldGeometry, currentDust);
       const cloudMixture = buildDustParticleCloud(
@@ -1978,6 +2036,7 @@ export async function createGalaxyEngine(
         currentSeed,
         sfMapData,
         orientationData,
+        orientationDeltaStats,
       );
       dustMixture = [...laneMixture, ...cloudMixture];
       currentDustNoise = {
@@ -1995,6 +2054,12 @@ export async function createGalaxyEngine(
       dustMixture = [];
       currentDustNoise = { tileUnits: 1, amplitude: 0, cloudOffset: 0, contrastExp: 1 };
     }
+    lastDustDeltaMeanDeg =
+      orientationDeltaStats.count > 0
+        ? orientationDeltaStats.sumAbsDeltaDeg / orientationDeltaStats.count
+        : 0;
+    lastDustDeltaMaxDeg = orientationDeltaStats.maxAbsDeltaDeg;
+    reportOrientationDiagnostics();
   }
 
   /**
@@ -2385,8 +2450,16 @@ export async function createGalaxyEngine(
     // runs on every render-bag push, so the latter would redispatch the
     // pass chain on an unrelated exposure drag. See
     // rebuildSfMapOrientationIfNeeded's own docblock.
+    //
+    // Gated on EITHER consumer being live, not just `orientationView`: with
+    // the overlay off and `sfMapDustSeeding` on, the old `render.orientationView
+    // &&` guard left the sigma sliders dead — no live consumer meant the
+    // condition never even reached the edge check, so a sigma drag redrew
+    // nothing and the dust never resampled the new orientation. Matches the
+    // early-return gate inside `rebuildSfMapOrientationIfNeeded` itself.
+    const orientationConsumerLive = render.orientationView || fieldTuning.sfMapDustSeeding;
     if (
-      render.orientationView &&
+      orientationConsumerLive &&
       (render.orientationView !== previousOrientationView ||
         render.orientationSigmaDerivTexels !== previousOrientationSigmaDeriv ||
         render.orientationSigmaIntegTexels !== previousOrientationSigmaInteg)

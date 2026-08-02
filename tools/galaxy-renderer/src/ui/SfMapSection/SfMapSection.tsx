@@ -5,9 +5,16 @@
  * `patchDust`. Nobody has tuned this yet, so every range here is
  * deliberately wide — see the field docblocks for what each knob does and
  * `defaultGalaxySfMapParams.ts` for why `spread` alone gets a fine step.
+ *
+ * The COUPLING readout at the bottom is permanent, not a one-off debug
+ * print: "sliders don't move the dust" has three structurally different
+ * causes (readback never landed, automaton has no measurable structure,
+ * or the coupling works but the measured orientation already agrees with
+ * the arm tangent), and only these three numbers tell them apart.
  */
 import type { ReactNode } from 'react';
 import type { GalaxySfMapParams } from '../../../../../src/@types/galaxy/GalaxySfMapParams';
+import type { OrientationDiagnostics } from '../../../@types/engine/OrientationDiagnostics';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { fieldTuningPatched } from '../../state/slices/fieldTuningSlice';
 import { sectionToggled } from '../../state/slices/uiSlice';
@@ -15,7 +22,12 @@ import CollapsibleSection from '../CollapsibleSection/CollapsibleSection';
 import ParamSlider from '../ParamSlider/ParamSlider';
 import styles from './SfMapSection.module.css';
 
-function SfMapSection(): ReactNode {
+export type SfMapSectionProps = {
+  /** Null until the engine's first report — see `OrientationDiagnostics`'s own doc. */
+  readonly diagnostics: OrientationDiagnostics | null;
+};
+
+function SfMapSection({ diagnostics }: SfMapSectionProps): ReactNode {
   const dispatch = useAppDispatch();
   const fieldTuning = useAppSelector((state) => state.fieldTuning);
   const open = useAppSelector((state) => state.ui.openSections.sfMap);
@@ -137,6 +149,32 @@ function SfMapSection(): ReactNode {
             onChange={(e) => dispatch(fieldTuningPatched({ sfMapDustSeeding: e.target.checked }))}
           />
         </label>
+
+        <div className={styles.readout}>
+          <div className={styles.readoutHeader}>orientation coupling · live</div>
+          <div className={styles.row}>
+            <span className={styles.slot}>readback landed</span>
+            <span className={styles.value}>
+              {diagnostics ? (diagnostics.hasData ? `yes (gen ${diagnostics.generation})` : 'no') : '—'}
+            </span>
+          </div>
+          <div className={styles.row}>
+            <span className={styles.slot}>coherence mean / max</span>
+            <span className={styles.value}>
+              {diagnostics
+                ? `${diagnostics.meanCoherence.toFixed(3)} / ${diagnostics.maxCoherence.toFixed(3)}`
+                : '—'}
+            </span>
+          </div>
+          <div className={styles.row}>
+            <span className={styles.slot}>delta applied mean / max</span>
+            <span className={styles.value}>
+              {diagnostics
+                ? `${diagnostics.meanDeltaDeg.toFixed(2)}° / ${diagnostics.maxDeltaDeg.toFixed(2)}°`
+                : '—'}
+            </span>
+          </div>
+        </div>
       </div>
     </CollapsibleSection>
   );

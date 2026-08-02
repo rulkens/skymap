@@ -13,9 +13,16 @@
  * Worker/compute-pass candidate. `sfMap`/`sfMapOrientation` are plain
  * sampled arrays (see `GalaxySfMap`/`GalaxySfMapOrientation`), so both stay
  * data arguments like every other one, not an engine dependency.
+ * `orientationDeltaStats` is an optional out-param (see its own type doc) —
+ * supplying it does not change what this function computes, only what a
+ * caller can read off it afterward.
  */
 import { armCrossSigma, armFadeEnvelope, armRidgeCurvePoint } from './armRidgeGeometry';
-import { buildClusteredDiscPlacement, type CloudFrame } from './clusteredDiscPlacement';
+import {
+  buildClusteredDiscPlacement,
+  type CloudFrame,
+  type OrientationDeltaStats,
+} from './clusteredDiscPlacement';
 import { DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './discSurfaceFit';
 import {
   buildDustBubblePlacements,
@@ -120,6 +127,7 @@ export function buildDustParticleCloud(
   seed: number,
   sfMap: GalaxySfMap | null,
   sfMapOrientation: GalaxySfMapOrientation | null,
+  orientationDeltaStats?: OrientationDeltaStats,
 ): readonly GalaxyFieldComponent[] {
   const { cloud } = dust;
   if (geometry.discFraction <= 0 || dust.tau <= 0 || cloud.count <= 0 || cloud.share <= 0) {
@@ -185,6 +193,7 @@ export function buildDustParticleCloud(
       // Same gate as `laneAcceptance` above: OFF (the default) is a no-op,
       // so a caller with the map already sampled needn't re-check the flag.
       sfMapOrientation: tuning.sfMapDustSeeding ? sfMapOrientation : null,
+      orientationDeltaStats,
     },
     (childRng) => ({ radius: sampleRadius(childRng()) }),
   );

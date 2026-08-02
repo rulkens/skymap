@@ -27,6 +27,7 @@
 import { type ReactNode } from 'react';
 import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';
 import type { MilkyWayFadeReadout } from '../../../@types/engine/MilkyWayFadeReadout';
+import type { OrientationDiagnostics } from '../../../@types/engine/OrientationDiagnostics';
 import type { ParamSpecEntry } from '../../../@types/data/ParamSpecEntry';
 import { mulberry32 } from '../../../../../src/utils/random/mulberry32';
 import Button from '../../../../../src/components/common/Button/Button';
@@ -200,9 +201,11 @@ export type ControlsPanelProps = {
    * subtree reads.
    */
   readonly fade: MilkyWayFadeReadout | null;
+  /** Same treatment, event-driven rather than timed — see `SfMapSection`'s own readout. */
+  readonly orientationDiagnostics: OrientationDiagnostics | null;
 };
 
-function ControlsPanel({ fade }: ControlsPanelProps): ReactNode {
+function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): ReactNode {
   const dispatch = useAppDispatch();
   const galaxy = useAppSelector((state) => state.galaxy);
   const render = useAppSelector((state) => state.render);
@@ -361,7 +364,7 @@ function ControlsPanel({ fade }: ControlsPanelProps): ReactNode {
         <ArmFieldSection />
         <ArmCloudSection />
         <HiiSection />
-        <SfMapSection />
+        <SfMapSection diagnostics={orientationDiagnostics} />
         <DustSection />
         <DustCloudSection />
 
