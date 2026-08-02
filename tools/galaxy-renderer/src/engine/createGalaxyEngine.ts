@@ -200,6 +200,7 @@ import type { GalaxyFieldGeometry } from '../../../../src/@types/galaxy/GalaxyFi
 import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFieldTuning';
 import type { GalaxySfMap } from '../../../../src/@types/galaxy/GalaxySfMap';
 import type { GalaxySfMapOrientation } from '../../../../src/@types/galaxy/GalaxySfMapOrientation';
+import type { GalaxyStarFormationParams } from '../../../../src/@types/galaxy/GalaxyStarFormationParams';
 import type { MilkyWayTuning } from '../../../../src/@types/settings/MilkyWayTuning';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -268,6 +269,7 @@ import {
 } from '../../../../src/data/galaxy/dustParticleCloud';
 import type { OrientationDeltaStats } from '../../../../src/data/galaxy/clusteredDiscPlacement';
 import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../src/data/galaxy/defaultGalaxyDustParams';
+import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from '../../../../src/data/galaxy/defaultGalaxyStarFormationParams';
 import { dustExtinctionRgb } from '../../../../src/utils/galaxy/dustExtinctionRgb';
 import { alignedBytesPerRow } from '../../../../src/utils/gpu/alignedBytesPerRow';
 import { reducedTargetSize } from '../../../../src/utils/gpu/reducedTargetSize';
@@ -1309,6 +1311,10 @@ export async function createGalaxyEngine(
   // `GalaxyParams` of its own, so a dustEnabled toggle needs this cached copy
   // to rebuild `dustMixture` without a regenerate.
   let currentDust: GalaxyDustParams = DEFAULT_GALAXY_DUST_PARAMS;
+  // The SF-event knobs `setParams` was last handed, cached for the same
+  // reason `currentDust` is: `setFieldTuning` rebuilds the HII tier and the
+  // bubble placements without a `GalaxyParams` of its own to re-read.
+  let currentStarFormation: GalaxyStarFormationParams = DEFAULT_GALAXY_STAR_FORMATION_PARAMS;
   // The CCM89 law for `currentDust.rV`, cached alongside it (recomputed in
   // `rebuildDustMixture`, not per frame in `drawFrame`) — `packFieldHeaderUniforms`
   // needs this every frame now that the primary galaxy's attenuation reads
@@ -2128,8 +2134,8 @@ export async function createGalaxyEngine(
    * builders read the SAME `sfEventCatalog.ts` events the SSPSF automaton
    * never sees — drawn so it can be compared directly against the
    * automaton's own sfMap view. Central galaxy only, from the CACHED
-   * `fieldGeometry`/`currentDust`/`currentSeed` — same inputs
-   * `rebuildDustMixture` reads, and called from the same two sites
+   * `fieldGeometry`/`currentDust`/`currentStarFormation`/`currentSeed` — same
+   * inputs `rebuildDustMixture` reads, and called from the same two sites
    * (`setParams`, `setFieldTuning`), right after it.
    *
    * Gated on `render.bubbleViewIntensity > 0`, same early-return discipline
@@ -2150,10 +2156,16 @@ export async function createGalaxyEngine(
       return;
     }
     const relics = fieldGeometry
-      ? buildDustBubblePlacements(fieldGeometry, currentDust, currentSeed)
+      ? buildDustBubblePlacements(fieldGeometry, currentDust, currentStarFormation, currentSeed)
       : [];
     const cavities = fieldGeometry
-      ? buildHiiCavityPlacements(fieldGeometry, currentDust, fieldTuning, currentSeed)
+      ? buildHiiCavityPlacements(
+          fieldGeometry,
+          currentDust,
+          currentStarFormation,
+          fieldTuning,
+          currentSeed,
+        )
       : [];
     const total = relics.length + cavities.length;
     if (total > bubbleCapacity) {
@@ -2503,10 +2515,16 @@ export async function createGalaxyEngine(
     if (gridMoved(orientationData)) orientationData = null;
     fieldMixture = buildGalaxyFieldMixture(fieldGeometry, fieldTuning);
     currentDust = p.dust ?? DEFAULT_GALAXY_DUST_PARAMS;
+    currentStarFormation = p.starFormation ?? DEFAULT_GALAXY_STAR_FORMATION_PARAMS;
     // Same `geometry.seed` `buildHiiRegions` was called with when it still
     // lived inside `buildGalaxyFieldMixture` — the field's own generated
     // seed, not a re-derivation.
-    hiiMixture = buildHiiRegions(fieldGeometry, fieldTuning, currentDust, fieldGeometry.seed);
+    hiiMixture = buildHiiRegions(
+      fieldGeometry,
+      fieldTuning,
+      currentStarFormation,
+      fieldGeometry.seed,
+    );
     // Same seed normalisation `packGenerationUniforms` applies internally —
     // duplicated rather than read back off `genUniforms` because it is a
     // scalar the packer never round-trips into the UBO bytes.
@@ -2637,21 +2655,27 @@ export async function createGalaxyEngine(
     fieldTuning = { ...fieldTuning, ...patch };
     if (fieldGeometry) {
       fieldMixture = buildGalaxyFieldMixture(fieldGeometry, fieldTuning);
-      hiiMixture = buildHiiRegions(fieldGeometry, fieldTuning, currentDust, fieldGeometry.seed);
+      hiiMixture = buildHiiRegions(
+        fieldGeometry,
+        fieldTuning,
+        currentStarFormation,
+        fieldGeometry.seed,
+      );
     }
     extras = extras.map((e) => ({
       ...e,
       fieldMixture: buildGalaxyFieldMixture(e.fieldGeometry, fieldTuning).map((c) =>
         transformGalaxyFieldComponent(c, e.transform),
       ),
-      // Extras carry no dust params of their own yet (see `rebuildDustMixture`'s
-      // docblock) — `DEFAULT_GALAXY_DUST_PARAMS` is the same implicit default
-      // `buildGalaxyFieldMixture(e.fieldGeometry, fieldTuning)` used to gate
-      // an extra's HII tier on before this tier owned its own buffer.
+      // Extras carry no star-formation params of their own yet (see
+      // `rebuildDustMixture`'s docblock) — `DEFAULT_GALAXY_STAR_FORMATION_PARAMS`
+      // is the same implicit default `buildGalaxyFieldMixture(e.fieldGeometry,
+      // fieldTuning)` used to gate an extra's HII tier on before this tier
+      // owned its own buffer.
       hiiMixture: buildHiiRegions(
         e.fieldGeometry,
         fieldTuning,
-        DEFAULT_GALAXY_DUST_PARAMS,
+        DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
         e.fieldGeometry.seed,
       ).map((c) => transformGalaxyFieldComponent(c, e.transform)),
     }));
@@ -2751,12 +2775,12 @@ export async function createGalaxyEngine(
       const extraFieldMixture = buildGalaxyFieldMixture(geometry, fieldTuning).map((c) =>
         transformGalaxyFieldComponent(c, transform),
       );
-      // Same implicit `DEFAULT_GALAXY_DUST_PARAMS` gate `setFieldTuning`'s
-      // extras branch uses — see its own comment for why.
+      // Same implicit `DEFAULT_GALAXY_STAR_FORMATION_PARAMS` gate
+      // `setFieldTuning`'s extras branch uses — see its own comment for why.
       const extraHiiMixture = buildHiiRegions(
         geometry,
         fieldTuning,
-        DEFAULT_GALAXY_DUST_PARAMS,
+        DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
         geometry.seed,
       ).map((c) => transformGalaxyFieldComponent(c, transform));
 

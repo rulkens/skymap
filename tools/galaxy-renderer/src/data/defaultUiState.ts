@@ -22,6 +22,9 @@ export const DEFAULT_UI_STATE: UiState = {
     armField: false,
     armCloud: false,
     hii: false,
+    // Collapsed for the same reason `hii` is: two calibrated knobs, not the
+    // active work.
+    starFormation: false,
     // The only section expanded by default: the SSPSF automaton is the
     // current work, and everything else on the panel is either tuned or
     // downstream of it.

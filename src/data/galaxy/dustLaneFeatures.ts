@@ -61,7 +61,7 @@ export function armLaneWidthAndAmplitude(
   // width feeds the amplitude normalisation below — a `laneWidth` slider
   // dragged to 0 would otherwise divide by zero instead of reading as "no
   // lane".
-  const width = LANE_WIDTH_FRACTION * armWidth * dust.cloud.laneWidth;
+  const width = LANE_WIDTH_FRACTION * armWidth * dust.laneWidth;
   if (width <= 0) return { width: 0, amplitude: 0 };
 
   // Ledger: lane at contrast `armContrast` over an interarm occupying the
@@ -69,7 +69,7 @@ export function armLaneWidthAndAmplitude(
   // footprint (unscaled by LANE_WIDTH_FRACTION — see that constant's
   // comment), evaluated at THIS radius.
   const w = geometry.numArms * 2 * armWidth;
-  const fArm = armCarriedFraction(dust.cloud.armContrast, w, 2 * Math.PI * radius);
+  const fArm = armCarriedFraction(dust.armContrast, w, 2 * Math.PI * radius);
   const laneColumn = dustFaceOnColumn(radius, geometry, dust);
   // Peak tau such that integrating the across-lane profile (~sqrt(2*PI)*
   // width, treating the super-Gaussian as Gaussian-ish for this eyeball

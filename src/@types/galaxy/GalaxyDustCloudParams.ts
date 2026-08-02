@@ -5,13 +5,8 @@
  * galaxy's ONLY dust tier — the smooth analytic lane it used to be layered
  * on was deleted (`galaxyDustMixture.ts`'s header) — so it carries the
  * galaxy's FULL measured `tau`. See `dustParticleCloud.ts` for the
- * size/mass/placement model.
- *
- * `armContrast`/`laneWidth` feed `dustLaneFeatures.ts`'s lane ledger, which
- * `dustBubblePlacements.ts` reads for its carving amplitude — not particle
- * seeding, which is SF-map/smooth-disc only now (`dustParticleCloud.ts`'s
- * header). They live here because the cloud is their only client. Refiners
- * are ×measured-default scalers where 1.0 reproduces the literature value.
+ * size/mass/placement model. Refiners are ×measured-default scalers where
+ * 1.0 reproduces the literature value.
  */
 export type GalaxyDustCloudParams = {
   /** Particle budget. 0 disables the cloud entirely. */
@@ -32,10 +27,4 @@ export type GalaxyDustCloudParams = {
   readonly textureScale: number;
   /** Shapes the erosion noise about its own midpoint — 1 = identity, higher = harder filament edges (dustMap.wesl's `dustNoiseMultiplier`). */
   readonly textureContrast: number;
-  /** Molecular arm/interarm contrast (measured ~2–5); deliberately larger than the stellar K≈1.3. */
-  readonly armContrast: number;
-  /** Star-formation event rate scale; drives the bubble catalog now, HII knots later. */
-  readonly sfActivity: number;
-  readonly laneWidth: number;
-  readonly bubbleScale: number;
 };

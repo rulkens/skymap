@@ -6,8 +6,8 @@
  * density through a radially-jittered shell, the way a real thin shell does.
  *
  * Flux is ADDITIVE and split across regions by their own `hiiLuminosityOf`
- * draw. PURITY INVARIANT: pure `(geometry, tuning, dust, seed) -> flat data`,
- * same discipline as `sfEventCatalog.ts`. Drawn by `createGalaxyEngine.ts`
+ * draw. PURITY INVARIANT: pure `(geometry, tuning, starFormation, seed) ->
+ * flat data`, same discipline as `sfEventCatalog.ts`. Drawn by `createGalaxyEngine.ts`
  * into its OWN target (`hiiTex`), never folded into
  * `galaxyFieldMixture.ts`'s output — see research doc §18.1: a shell sprite
  * is small and bright by construction, so sharing the smooth field's
@@ -26,10 +26,10 @@ import { inverseCovarianceFromFrame } from '../../utils/galaxy/inverseCovariance
 import { warpSurfaceFrame } from '../../utils/galaxy/warpSurfaceFrame';
 import { gaussian } from '../../utils/random/gaussian';
 import { mulberry32 } from '../../utils/random/mulberry32';
-import type { GalaxyDustParams } from '../../@types/galaxy/GalaxyDustParams';
 import type { GalaxyFieldComponent } from '../../@types/galaxy/GalaxyFieldComponent';
 import type { GalaxyFieldGeometry } from '../../@types/galaxy/GalaxyFieldGeometry';
 import type { GalaxyFieldTuning } from '../../@types/galaxy/GalaxyFieldTuning';
+import type { GalaxyStarFormationParams } from '../../@types/galaxy/GalaxyStarFormationParams';
 import type { SfEvent } from '../../@types/galaxy/SfEvent';
 import type { Vec3 } from '../../@types/math/Vec3';
 
@@ -131,10 +131,10 @@ function eventCenter(event: SfEvent, geometry: GalaxyFieldGeometry): Vec3 | unde
 function planRegions(
   geometry: GalaxyFieldGeometry,
   tuning: GalaxyFieldTuning,
-  dust: GalaxyDustParams,
+  starFormation: GalaxyStarFormationParams,
   seed: number,
 ): readonly RegionPlan[] {
-  const events = buildSfEventCatalog(geometry, dust.cloud, seed);
+  const events = buildSfEventCatalog(geometry, starFormation, seed);
   const clusterOn = tuning.hiiClusterStrength > 0;
 
   const all: RegionPlan[] = [];
@@ -173,7 +173,7 @@ function planRegions(
 export function buildHiiRegions(
   geometry: GalaxyFieldGeometry,
   tuning: GalaxyFieldTuning,
-  dust: GalaxyDustParams,
+  starFormation: GalaxyStarFormationParams,
   seed: number,
 ): readonly GalaxyFieldComponent[] {
   if (
@@ -181,12 +181,12 @@ export function buildHiiRegions(
     tuning.hiiBrightness <= 0 ||
     tuning.hiiRadiusScale <= 0 ||
     geometry.numArms <= 0 ||
-    dust.cloud.sfActivity <= 0
+    starFormation.sfActivity <= 0
   ) {
     return [];
   }
 
-  const regions = planRegions(geometry, tuning, dust, seed);
+  const regions = planRegions(geometry, tuning, starFormation, seed);
   if (regions.length === 0) return [];
 
   let luminositySum = 0;

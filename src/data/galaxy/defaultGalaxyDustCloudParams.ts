@@ -6,8 +6,7 @@ import type { GalaxyDustCloudParams } from '../../@types/galaxy/GalaxyDustCloudP
 // <R^2> / A_disc relation these land near 3, where clouds still read
 // individually but overlap enough along an arm to mottle it.
 //
-// The arm-lane group sits mid-to-low in its measured range rather than
-// centred, and every refiner starts at its literature value (1.0).
+// Every refiner starts at its literature value (1.0).
 export const DEFAULT_GALAXY_DUST_CLOUD_PARAMS: GalaxyDustCloudParams = {
   count: 6000,
   clumpiness: 0.6,
@@ -18,8 +17,4 @@ export const DEFAULT_GALAXY_DUST_CLOUD_PARAMS: GalaxyDustCloudParams = {
   texture: 0.7,
   textureScale: 1,
   textureContrast: 1,
-  armContrast: 3,
-  sfActivity: 1,
-  laneWidth: 1,
-  bubbleScale: 1,
 };

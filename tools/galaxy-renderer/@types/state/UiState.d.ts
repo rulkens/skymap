@@ -16,6 +16,7 @@ export type UiState = {
       | 'armField'
       | 'armCloud'
       | 'hii'
+      | 'starFormation'
       | 'sfMap'
       | 'debugViews'
       | 'pop'

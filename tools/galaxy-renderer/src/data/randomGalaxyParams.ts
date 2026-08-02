@@ -13,7 +13,10 @@
 
 import type { GalaxyDustParams } from '../../../../src/@types/galaxy/GalaxyDustParams';
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
+import type { GalaxyStarFormationParams } from '../../../../src/@types/galaxy/GalaxyStarFormationParams';
 import { DEFAULT_GALAXY_DUST_CLOUD_PARAMS } from '../../../../src/data/galaxy/defaultGalaxyDustCloudParams';
+import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../src/data/galaxy/defaultGalaxyDustParams';
+import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from '../../../../src/data/galaxy/defaultGalaxyStarFormationParams';
 import { PARAM_SPEC } from './paramSpec';
 import { classifyHubbleType } from '../../../../src/services/gpu/galaxy/classifyHubbleType';
 
@@ -86,6 +89,7 @@ export function randomGalaxyParams(
   // docblock); the sliders' wider spans exist for exploration, not for this
   // draw.
   const dust: GalaxyDustParams = {
+    ...DEFAULT_GALAXY_DUST_PARAMS,
     tau: 0.2 + rng() * 0.8,
     scaleLenRatio: 1.4 + rng() * 0.35,
     heightRatio: 0.25 + rng() * 0.5,
@@ -97,17 +101,25 @@ export function randomGalaxyParams(
       ...DEFAULT_GALAXY_DUST_CLOUD_PARAMS,
       // Only the knobs that read as a galaxy's own ISM character get rolled:
       // how richly it is resolved into clouds, how hierarchically those
-      // cluster, how large its complexes run, how eroded their silhouettes
-      // are, and the arm lane's own contrast and star-formation rate. The
-      // rest are taste scalers, left at their calibrated value.
+      // cluster, how large its complexes run, and how eroded their
+      // silhouettes are. The rest are taste scalers, left at their
+      // calibrated value.
       count: Math.round(6000 + rng() * 12000),
       clumpiness: 0.35 + rng() * 0.55,
       sizeScale: 0.7 + rng() * 0.9,
       texture: 0.4 + rng() * 0.6,
-      armContrast: 2 + rng() * 3,
-      sfActivity: 0.3 + rng() * 1.7,
     },
+    // Out of field order on purpose: the rng DRAW sequence is what a seed
+    // reproduces (see PARAM_SPEC's own note), so the lane's contrast is drawn
+    // after the cloud's four and before `starFormation`'s one, whatever the
+    // declaration order of the types involved.
+    armContrast: 2 + rng() * 3,
   };
 
-  return { type, ...sampled, hii, seed, asymSeed, clumpSeed, waveSeed, dust };
+  const starFormation: GalaxyStarFormationParams = {
+    ...DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
+    sfActivity: 0.3 + rng() * 1.7,
+  };
+
+  return { type, ...sampled, hii, seed, asymSeed, clumpSeed, waveSeed, dust, starFormation };
 }

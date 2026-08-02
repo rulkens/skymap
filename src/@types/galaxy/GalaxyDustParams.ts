@@ -1,9 +1,9 @@
 /**
- * GalaxyDustParams — the dust disc's shape knobs, plus the volumetric
- * particle cloud that renders all of it (`cloud`, see
- * `GalaxyDustCloudParams`). No separate smooth analytic tier exists: `tau`
- * below is the galaxy's ENTIRE measured optical depth, carried in full by
- * the particle cloud.
+ * GalaxyDustParams — the dust disc's shape knobs and the arm lane's own
+ * width/contrast, plus the volumetric particle cloud that renders all of it
+ * (`cloud`, see `GalaxyDustCloudParams`). No separate smooth analytic tier
+ * exists: `tau` below is the galaxy's ENTIRE measured optical depth, carried
+ * in full by the particle cloud.
  *
  * `tau`: central face-on V-band optical depth (measured ~0.5–1 for spirals;
  * Xilouris et al. 1999, De Geyter et al. 2014 CALIFA mean 0.76±0.6).
@@ -22,6 +22,10 @@ export type GalaxyDustParams = {
   readonly scaleLenRatio: number;
   readonly heightRatio: number;
   readonly rV: number;
+  /** ×measured-default width of the arm dust lane (`dustLaneFeatures.ts`); 0 reads as "no lane" rather than dividing by zero. */
+  readonly laneWidth: number;
+  /** Molecular arm/interarm contrast (measured ~2–5), deliberately sharper than the STELLAR arm contrast — which is a separate knob, `GalaxyFieldTuning.armContrast` (K≈1.3), and never moves with this one. */
+  readonly armContrast: number;
   /** The 3D particle cloud that renders ALL of `tau` — see `GalaxyDustCloudParams`. */
   readonly cloud: GalaxyDustCloudParams;
 };

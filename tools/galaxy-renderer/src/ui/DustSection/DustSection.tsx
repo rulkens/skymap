@@ -1,7 +1,8 @@
 /**
- * DustSection — the analytic dust lane's four knobs (`GalaxyParams.dust`):
- * face-on optical depth, the CCM89 extinction law's R_V, and the scale-
- * length/thickness ratios to the stellar disc. Nested under `params.dust`
+ * DustSection — the analytic dust lane's own knobs (`GalaxyParams.dust`):
+ * face-on optical depth, the CCM89 extinction law's R_V, the scale-
+ * length/thickness ratios to the stellar disc, and the arm lane's width and
+ * arm/interarm contrast. Nested under `params.dust`
  * rather than a flat `GalaxyParams` field, so it can't ride the generic
  * `renderGalaxySlider` path (see `GalaxySliderKey`'s exclusion in
  * `ControlsPanel.tsx`) — each slider spreads the current dust object by hand
@@ -77,6 +78,26 @@ function DustSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchDust({ heightRatio: v })}
+        />
+        <ParamSlider
+          label="Lane width x"
+          value={dust.laneWidth}
+          min={0.3}
+          max={3}
+          step={0.05}
+          format={(v) => v.toFixed(2)}
+          onChange={(v) => patchDust({ laneWidth: v })}
+          info="× measured default. No primary-verified width anchor exists — the default is an eyeball-vs-M74 call, flagged honest."
+        />
+        <ParamSlider
+          label="Lane contrast"
+          value={dust.armContrast}
+          min={1}
+          max={6}
+          step={0.1}
+          format={(v) => v.toFixed(1)}
+          onChange={(v) => patchDust({ armContrast: v })}
+          info="Molecular arm/interarm contrast; measured ~2-5, deliberately sharper than the stellar K≈1.3."
         />
       </div>
     </CollapsibleSection>

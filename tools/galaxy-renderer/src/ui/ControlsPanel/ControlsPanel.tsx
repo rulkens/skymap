@@ -52,6 +52,7 @@ import FieldSection from '../FieldSection/FieldSection';
 import HiiSection from '../HiiSection/HiiSection';
 import ParamSlider from '../ParamSlider/ParamSlider';
 import SfMapSection from '../SfMapSection/SfMapSection';
+import StarFormationSection from '../StarFormationSection/StarFormationSection';
 import TonemapSelect from '../TonemapSelect/TonemapSelect';
 import TypePicker from '../TypePicker/TypePicker';
 import MultiGalaxySection from '../MultiGalaxySection/MultiGalaxySection';
@@ -59,13 +60,14 @@ import PresetsSection from '../PresetsSection/PresetsSection';
 import styles from './ControlsPanel.module.css';
 
 // Every GalaxyParams field except the Hubble-type string, the per-arm
-// `armAges` array, and the nested analytic `dust` section is a plain number
-// — this narrows `keyof GalaxyParams` down to the subset a single-value
+// `armAges` array, and the nested `dust`/`starFormation` sections is a plain
+// number — this narrows `keyof GalaxyParams` down to the subset a single-value
 // slider can actually drive. `armAges` has no UI surface (pin it in a preset
-// object instead, per barAngleDeg's pattern); `dust` gets its own component,
-// `DustSection`, since a nested object needs its own patch-spreading handlers
-// rather than the generic single-value `onChange` below.
-type GalaxySliderKey = Exclude<keyof GalaxyParams, 'type' | 'armAges' | 'dust'>;
+// object instead, per barAngleDeg's pattern); each nested group gets its own
+// component (`DustSection`, `StarFormationSection`), since a nested object
+// needs its own patch-spreading handlers rather than the generic single-value
+// `onChange` below.
+type GalaxySliderKey = Exclude<keyof GalaxyParams, 'type' | 'armAges' | 'dust' | 'starFormation'>;
 
 type SliderSpec = {
   readonly key: GalaxySliderKey;
@@ -301,6 +303,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
         <ArmFieldSection />
         <ArmCloudSection />
         <HiiSection />
+        <StarFormationSection />
         <SfMapSection diagnostics={orientationDiagnostics} />
         <DustSection />
         <DustCloudSection />

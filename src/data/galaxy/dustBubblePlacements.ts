@@ -3,8 +3,9 @@
  * to the world centres and physical radii the particle cloud carves its
  * cavities against.
  *
- * PURITY INVARIANT: pure `(geometry, dust, seed) -> flat data`, no engine
- * state, no Math.random — same discipline as `sfEventCatalog.ts`.
+ * PURITY INVARIANT: pure `(geometry, dust, starFormation, seed) -> flat
+ * data`, no engine state, no Math.random — same discipline as
+ * `sfEventCatalog.ts`.
  */
 import { armFadeEnvelope, armRidgeAngle, armRidgeCurvePoint } from './armRidgeGeometry';
 import { armAgeWeight, armLaneWidthAndAmplitude } from './dustLaneFeatures';
@@ -16,6 +17,7 @@ import type { GalaxyDustParams } from '../../@types/galaxy/GalaxyDustParams';
 import type { GalaxyFieldArmRecord } from '../../@types/galaxy/GalaxyFieldArmRecord';
 import type { GalaxyFieldGeometry } from '../../@types/galaxy/GalaxyFieldGeometry';
 import type { GalaxyFieldTuning } from '../../@types/galaxy/GalaxyFieldTuning';
+import type { GalaxyStarFormationParams } from '../../@types/galaxy/GalaxyStarFormationParams';
 import type { SfEvent } from '../../@types/galaxy/SfEvent';
 import type { Vec3 } from '../../@types/math/Vec3';
 
@@ -73,11 +75,12 @@ function armEventLaneAmplitude(
 export function buildDustBubblePlacements(
   geometry: GalaxyFieldGeometry,
   dust: GalaxyDustParams,
+  starFormation: GalaxyStarFormationParams,
   seed: number,
 ): readonly DustBubblePlacement[] {
-  if (dust.tau <= 0 || geometry.numArms <= 0 || dust.cloud.bubbleScale <= 0) return [];
+  if (dust.tau <= 0 || geometry.numArms <= 0 || starFormation.bubbleScale <= 0) return [];
 
-  const events = buildSfEventCatalog(geometry, dust.cloud, seed);
+  const events = buildSfEventCatalog(geometry, starFormation, seed);
   const out: DustBubblePlacement[] = [];
   for (const event of events) {
     if (event.age01 <= HII_AGE_GATE) continue;
@@ -91,7 +94,7 @@ export function buildDustBubblePlacements(
     // many-small/few-big shape from the catalog's own UNIFORM age draws —
     // not a resampled power-law distribution.
     const radiusPc = 6 + 546 * Math.pow(age01n, 2.5);
-    const radius = pcToUnits(radiusPc) * dust.cloud.bubbleScale;
+    const radius = pcToUnits(radiusPc) * starFormation.bubbleScale;
     if (radius <= 0) continue;
 
     if (armEventLaneAmplitude(armRadius, geometry, dust, arm) <= 0) continue;
@@ -120,13 +123,14 @@ export function buildDustBubblePlacements(
 export function buildHiiCavityPlacements(
   geometry: GalaxyFieldGeometry,
   dust: GalaxyDustParams,
+  starFormation: GalaxyStarFormationParams,
   tuning: GalaxyFieldTuning,
   seed: number,
 ): readonly DustBubblePlacement[] {
   if (!tuning.hiiEnabled || tuning.hiiCavityScale <= 0) return [];
   if (dust.tau <= 0 || geometry.numArms <= 0) return [];
 
-  const events = buildSfEventCatalog(geometry, dust.cloud, seed);
+  const events = buildSfEventCatalog(geometry, starFormation, seed);
   const out: DustBubblePlacement[] = [];
   for (const event of events) {
     if (event.age01 > HII_AGE_GATE) continue;

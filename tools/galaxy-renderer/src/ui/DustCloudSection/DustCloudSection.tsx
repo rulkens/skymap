@@ -1,8 +1,8 @@
 /**
  * DustCloudSection — the volumetric particle cloud (`GalaxyParams.dust.cloud`,
  * thousands of small GMC-scale Gaussians giving the dust clumpy, parallaxing
- * depth) — the galaxy's ONLY dust tier, plus the arm-lane knobs that place
- * it. Same nested-patch idiom as `DustSection`: `params.dust.cloud` needs
+ * depth) — the galaxy's ONLY dust tier. Same nested-patch idiom as
+ * `DustSection`: `params.dust.cloud` needs
  * its own spreading handler rather than the generic single-value slider
  * path. The header pill is `render.dustCloudEnabled` (`ControlsPanel` owns
  * the dispatch, `DustSection`'s `render.legacyDustEnabled` pattern) rather
@@ -130,46 +130,6 @@ function DustCloudSection(): ReactNode {
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchCloud({ textureContrast: v })}
           info="Shapes the noise about its midpoint, so higher values harden filament edges while leaving the mean — and the tier's share of the optical depth — unchanged."
-        />
-        <ParamSlider
-          label="Lane contrast"
-          value={cloud.armContrast}
-          min={1}
-          max={6}
-          step={0.1}
-          format={(v) => v.toFixed(1)}
-          onChange={(v) => patchCloud({ armContrast: v })}
-          info="Molecular arm/interarm contrast; measured ~2-5, deliberately sharper than the stellar K≈1.3."
-        />
-        <ParamSlider
-          label="SF activity"
-          value={cloud.sfActivity}
-          min={0}
-          max={2.5}
-          step={0.05}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => patchCloud({ sfActivity: v })}
-          info="Star-formation event-catalog rate; drives the bubble catalog now, HII knots later."
-        />
-        <ParamSlider
-          label="Lane width x"
-          value={cloud.laneWidth}
-          min={0.3}
-          max={3}
-          step={0.05}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => patchCloud({ laneWidth: v })}
-          info="× measured default. No primary-verified width anchor exists — the default is an eyeball-vs-M74 call, flagged honest."
-        />
-        <ParamSlider
-          label="Bubble size x"
-          value={cloud.bubbleScale}
-          min={0.3}
-          max={2.5}
-          step={0.05}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => patchCloud({ bubbleScale: v })}
-          info="× measured default. Radii 6-552 pc in NGC 628, size power law slope frozen (Watkins et al. 2023)."
         />
       </div>
     </CollapsibleSection>

@@ -48,11 +48,14 @@
  * | clumpSeed | 911 | model.js:296 |
  * | waveSeed | 777 | model.js:295 |
  *
- * `dust` (the analytic dust-lane section) has no row above: absent means the
- * point-of-use default, `DEFAULT_GALAXY_DUST_PARAMS`, not a spike knob.
+ * The nested groups — `dust` (the analytic dust-lane section) and
+ * `starFormation` — have no row above: absent means the point-of-use default,
+ * `DEFAULT_GALAXY_DUST_PARAMS` / `DEFAULT_GALAXY_STAR_FORMATION_PARAMS`, not
+ * a spike knob.
  */
 
 import type { GalaxyDustParams } from './GalaxyDustParams';
+import type { GalaxyStarFormationParams } from './GalaxyStarFormationParams';
 
 export type GalaxyParams = {
   /** Hubble type: 'Sa'..'Sc', 'SBa'..'SBc', 'E0'..'E7', 'S0', 'Irr'. */
@@ -111,6 +114,8 @@ export type GalaxyParams = {
   readonly dustRingStrength?: number;
   /** Analytic dust lane. Absent means `DEFAULT_GALAXY_DUST_PARAMS` (point of use). */
   readonly dust?: GalaxyDustParams;
+  /** Seeded SF-event model. Absent means `DEFAULT_GALAXY_STAR_FORMATION_PARAMS` (point of use). */
+  readonly starFormation?: GalaxyStarFormationParams;
   readonly globularCount?: number;
   readonly globularSize?: number;
   readonly globularBright?: number;

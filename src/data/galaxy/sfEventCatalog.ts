@@ -1,6 +1,6 @@
 /**
  * buildSfEventCatalog — the shared star-formation placement truth (design
- * doc N3): a pure function of (geometry, cloud, seed) → flat SF-event
+ * doc N3): a pure function of (geometry, starFormation, seed) → flat SF-event
  * data. No engine state, no clock, no global RNG — this module is destined
  * for a Worker or a GPU compute pass so galaxies can keep generating in real
  * time while the camera navigates. Dust bubbles (this pass) and HII
@@ -10,8 +10,8 @@
 import { mulberry32 } from '../../utils/random/mulberry32';
 import { armCrossSigma, armFadeEnvelope, armRidgeCurvePoint } from './armRidgeGeometry';
 import { DEFAULT_GALAXY_FIELD_TUNING } from './galaxyFieldMixture';
-import type { GalaxyDustCloudParams } from '../../@types/galaxy/GalaxyDustCloudParams';
 import type { GalaxyFieldGeometry } from '../../@types/galaxy/GalaxyFieldGeometry';
+import type { GalaxyStarFormationParams } from '../../@types/galaxy/GalaxyStarFormationParams';
 import type { SfEvent } from '../../@types/galaxy/SfEvent';
 
 /** Log-radius samples per arm, from `logStart = log(1.05)` to that arm's own fade radius. */
@@ -31,7 +31,7 @@ function distance3(a: readonly number[], b: readonly number[]): number {
 
 export function buildSfEventCatalog(
   geometry: GalaxyFieldGeometry,
-  cloud: GalaxyDustCloudParams,
+  starFormation: GalaxyStarFormationParams,
   seed: number,
 ): readonly SfEvent[] {
   const rng = mulberry32(seed);
@@ -55,7 +55,7 @@ export function buildSfEventCatalog(
 
       const rate =
         RATE_SCALE *
-        cloud.sfActivity *
+        starFormation.sfActivity *
         (1 - 0.75 * arm.age) *
         armFadeEnvelope(radius, geometry, arm) *
         arcLength;
