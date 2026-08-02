@@ -14,9 +14,23 @@ import { sfMapRingRadius } from '../../utils/galaxy/sfMapRingRadius';
 import type { GalaxyFieldGeometry } from '../../@types/galaxy/GalaxyFieldGeometry';
 import type { GalaxyFieldTuning } from '../../@types/galaxy/GalaxyFieldTuning';
 
-/** Grid extent — restated in sfMapStep.wesl as WGSL consts (fixed, not user-tunable), same as DUST_NOISE_TEX_SIZE's own TS/WGSL split. */
+/**
+ * Grid extent. Authoritative by construction: these size the sfMap textures
+ * (createGalaxyEngine.ts), and every WGSL pass reads its own bound texture's
+ * `textureDimensions` rather than a mirrored const, so there is no second
+ * copy to drift.
+ */
 export const SF_MAP_AZ = 768;
 export const SF_MAP_RINGS = 256;
+
+/**
+ * `@workgroup_size(16, 16)` is a genuine WGSL compile-time literal, hand-set
+ * in every sfMap compute entry point — unlike SF_MAP_AZ/SF_MAP_RINGS above,
+ * it cannot be threaded from `textureDimensions`, so it stays mirrored (see
+ * `tests/services/gpu/shaders/constants.parity.test.ts`'s sfMap block). TS
+ * needs its own copy for dispatch-count math (SF_MAP_AZ / this).
+ */
+export const SF_MAP_WORKGROUP_SIZE = 16;
 
 export type GalaxySfMapGridRadius = { readonly rMin: number; readonly rMax: number };
 

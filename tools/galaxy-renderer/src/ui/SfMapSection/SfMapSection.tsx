@@ -95,6 +95,16 @@ function SfMapSection(): ReactNode {
           info="How much the spiral ridge raises local ignition probability, per step. 0 makes the automaton blind to the arms and the output goes purely flocculent. Past ~0.06 the arms IGNITE rather than bias — a forced cell then fires as often as its refractory window allows, whatever spread does."
         />
         <ParamSlider
+          label="Arm flux ref"
+          value={sfMap.armFluxRef}
+          min={0.05}
+          max={2}
+          step={0.05}
+          format={(v) => v.toFixed(2)}
+          onChange={(v) => patchSfMap({ armFluxRef: v })}
+          info="Shear magnitude (texels/step) at which arm forcing saturates to full strength. Forcing weights by |shear|/armFluxRef, which sends corotation (shear = 0) to a DEFICIT instead of the residence-time ring the raw forcing term produces there — lower this to widen the deficit band, raise it to narrow it."
+        />
+        <ParamSlider
           label="Corotation radius"
           value={sfMap.corotationRadius}
           min={1}

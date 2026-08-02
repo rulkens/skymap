@@ -34,4 +34,11 @@ export type GalaxySfMapParams = {
   readonly corotationRadius: number;
   /** Angular offset scale per step, in radians at unit `(1/r - 1/corotationRadius)`. */
   readonly shearRate: number;
+  /**
+   * Shear magnitude (texels/step) at which the forcing term saturates to
+   * full strength. Forced ignitions weight by `|shear| / armFluxRef`, which
+   * cancels the residence-time divergence at corotation (shear -> 0) rather
+   * than rewarding it — see `sfMapStep.wesl`'s `armFactor` for the derivation.
+   */
+  readonly armFluxRef: number;
 };

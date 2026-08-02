@@ -236,6 +236,7 @@ import {
   sfMapGridRadius,
   SF_MAP_AZ,
   SF_MAP_RINGS,
+  SF_MAP_WORKGROUP_SIZE,
 } from '../../../../src/data/galaxy/galaxySfMapArmForcing';
 import type { GalaxySfMapGridRadius } from '../../../../src/data/galaxy/galaxySfMapArmForcing';
 import { DISC_SIGMA_RATIOS } from '../../../../src/data/galaxy/discSurfaceFit';
@@ -313,9 +314,6 @@ const DUST_NOISE_TEX_SIZE = 128;
 
 /** Matches dustNoiseBake.wesl's `@workgroup_size(4, 4, 4)`. */
 const DUST_NOISE_WORKGROUP_SIZE = 4;
-
-/** Matches sfMapStep.wesl's/sfMapPack.wesl's `@workgroup_size(16, 16)`; SF_MAP_AZ/SF_MAP_RINGS are both multiples of it. */
-const SF_MAP_WORKGROUP_SIZE = 16;
 
 /**
  * Resolution divisor for bloom level `n`, mirroring the runtime's `bloomN`
@@ -864,7 +862,7 @@ export async function createGalaxyEngine(
   // knob) — rewritten once per rebuildSfMap, unlike sfMapStepIndexBuf below.
   const sfMapConstUbo = device.createBuffer({
     label: 'galaxy:sfMapConstUbo',
-    size: 48, // 12 f32 lanes (10 used) — see SfMapConstants in sfMapStep.wesl
+    size: 48, // 12 f32 lanes (11 used) — see SfMapConstants in sfMapStep.wesl
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
   // rMin/rMax only — sfMapPresent.wesl's own small uniform, separate from
@@ -1980,7 +1978,7 @@ export async function createGalaxyEngine(
         sfMap.gasRegen,
         sfMap.refractorySteps,
         currentSeed,
-        0,
+        sfMap.armFluxRef,
         0,
       ]),
     );

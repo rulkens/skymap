@@ -9,8 +9,6 @@
 // must recover ~0deg, never ~90deg (sign finished in
 // sfMapOrientationCoherence.wesl).
 
-import package::milkyWayField::sfMapOrientationLib::SF_MAP_ORIENTATION_AZ;
-import package::milkyWayField::sfMapOrientationLib::SF_MAP_ORIENTATION_RINGS;
 import package::milkyWayField::sfMapOrientationLib::wrapIndex;
 import package::milkyWayField::sfMapOrientationLib::clampIndex;
 import package::milkyWayField::sfMapShear::sfMapRingRadius;
@@ -38,17 +36,17 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // ONE constant equalises the two derivative axes at every radius. Via
   // sfMapRingRadius (ratio of consecutive rings), the same shared module
   // sfMapStep.wesl/sfMapPack.wesl use for shear, never a restated formula.
-  let azTexelSize = 2.0 * PI / f32(SF_MAP_ORIENTATION_AZ);
+  let azTexelSize = 2.0 * PI / f32(dims.x);
   let ringTexelSize = log(
-    sfMapRingRadius(1u, SF_MAP_ORIENTATION_RINGS, grid.rMin, grid.rMax)
-      / sfMapRingRadius(0u, SF_MAP_ORIENTATION_RINGS, grid.rMin, grid.rMax),
+    sfMapRingRadius(1u, dims.y, grid.rMin, grid.rMax)
+      / sfMapRingRadius(0u, dims.y, grid.rMin, grid.rMax),
   );
   let aspect = ringTexelSize / azTexelSize;
 
-  let aPrev = wrapIndex(i32(gid.x) - 1, SF_MAP_ORIENTATION_AZ);
-  let aNext = wrapIndex(i32(gid.x) + 1, SF_MAP_ORIENTATION_AZ);
-  let rPrev = clampIndex(i32(gid.y) - 1, SF_MAP_ORIENTATION_RINGS);
-  let rNext = clampIndex(i32(gid.y) + 1, SF_MAP_ORIENTATION_RINGS);
+  let aPrev = wrapIndex(i32(gid.x) - 1, dims.x);
+  let aNext = wrapIndex(i32(gid.x) + 1, dims.x);
+  let rPrev = clampIndex(i32(gid.y) - 1, dims.y);
+  let rNext = clampIndex(i32(gid.y) + 1, dims.y);
   // Guards the degenerate 1-ring-grid divide-by-zero, matching the deleted
   // CPU builder's own rSpan fallback.
   let rSpan = f32(max(1, i32(rNext) - i32(rPrev)));

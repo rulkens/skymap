@@ -22,6 +22,7 @@ import {
   DENS_SCALE,
   SPEED_COLOR_MAX,
 } from '../../../../src/data/flow/flowFieldConstants';
+import { SF_MAP_WORKGROUP_SIZE } from '../../../../src/data/galaxy/galaxySfMapArmForcing';
 
 /**
  * Extract every `const NAME: (u32|f32) = <number>;` from flow/constants.wesl.
@@ -67,5 +68,43 @@ describe('flow/constants.wesl ↔ flowFieldConstants.ts parity', () => {
         true,
       );
     }
+  });
+});
+
+/**
+ * sfMap's grid dims (AZ/RINGS) size the texture and every pass reads them
+ * back via `textureDimensions` — no WGSL mirror, so no parity test for them.
+ * `@workgroup_size(16, 16)` is different: WGSL requires it as a compile-time
+ * literal, so it genuinely stays duplicated across every sfMap compute entry
+ * point rather than a single named const. This guards THAT duplication
+ * against `SF_MAP_WORKGROUP_SIZE` (`galaxySfMapArmForcing.ts`, which
+ * `createGalaxyEngine.ts` also uses for dispatch-count math).
+ */
+describe('sfMap @workgroup_size(N, N) ↔ SF_MAP_WORKGROUP_SIZE parity', () => {
+  const files = [
+    'src/services/gpu/shaders/milkyWayField/sfMapStep.wesl',
+    'src/services/gpu/shaders/milkyWayField/sfMapPack.wesl',
+    'src/services/gpu/shaders/milkyWayField/sfMapOrientationField.wesl',
+    'src/services/gpu/shaders/milkyWayField/sfMapOrientationTensor.wesl',
+    'src/services/gpu/shaders/milkyWayField/sfMapOrientationTensorBlur.wesl',
+    'src/services/gpu/shaders/milkyWayField/sfMapOrientationCoherence.wesl',
+  ];
+
+  it('every sfMap compute entry point declares a square workgroup matching SF_MAP_WORKGROUP_SIZE', () => {
+    const re = /@workgroup_size\((\d+),\s*(\d+)\)/g;
+    let matchCount = 0;
+    for (const file of files) {
+      const text = readFileSync(join(process.cwd(), file), 'utf-8');
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(text)) !== null) {
+        matchCount += 1;
+        expect(m[1], `${file}: workgroup_size(${m[1]}, ${m[2]}) is not square`).toBe(m[2]);
+        expect(
+          parseInt(m[1]!, 10),
+          `${file}: workgroup_size ${m[1]} does not match SF_MAP_WORKGROUP_SIZE (${SF_MAP_WORKGROUP_SIZE})`,
+        ).toBe(SF_MAP_WORKGROUP_SIZE);
+      }
+    }
+    expect(matchCount, 'no @workgroup_size(N, N) found in the sfMap shader chain').toBeGreaterThan(0);
   });
 });

@@ -7,8 +7,6 @@
 // without reading a texel another invocation in the same pass is still
 // writing.
 
-import package::milkyWayField::sfMapOrientationLib::SF_MAP_ORIENTATION_AZ;
-import package::milkyWayField::sfMapOrientationLib::SF_MAP_ORIENTATION_RINGS;
 import package::milkyWayField::sfMapOrientationLib::SfMapOrientationSigma;
 import package::milkyWayField::sfMapOrientationLib::wrapIndex;
 import package::milkyWayField::sfMapOrientationLib::clampIndex;
@@ -31,7 +29,7 @@ fn csBlurAzimuth(@builtin(global_invocation_id) gid: vec3<u32>) {
   var sum = 0.0;
   var wsum = 0.0;
   for (var k = -radius; k <= radius; k++) {
-    let a = wrapIndex(i32(gid.x) + k, SF_MAP_ORIENTATION_AZ);
+    let a = wrapIndex(i32(gid.x) + k, dims.x);
     let w = gaussianTap(k, sigma.sigmaDeriv);
     sum += textureLoad(srcTex, vec2<i32>(i32(a), i32(gid.y)), 0).z * w;
     wsum += w;
@@ -51,7 +49,7 @@ fn csBlurRing(@builtin(global_invocation_id) gid: vec3<u32>) {
   var sum = 0.0;
   var wsum = 0.0;
   for (var k = -radius; k <= radius; k++) {
-    let r = clampIndex(i32(gid.y) + k, SF_MAP_ORIENTATION_RINGS);
+    let r = clampIndex(i32(gid.y) + k, dims.y);
     let w = gaussianTap(k, sigma.sigmaDeriv);
     sum += textureLoad(srcTex, vec2<i32>(i32(gid.x), i32(r)), 0).x * w;
     wsum += w;

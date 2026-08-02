@@ -39,4 +39,10 @@ export const DEFAULT_GALAXY_SF_MAP_PARAMS: GalaxySfMapParams = {
   // beyond this precision; it is a knob, not a measurement.
   corotationRadius: 7.9,
   shearRate: 0.16,
+  // Forcing saturates to full strength once |shear| reaches this many
+  // texels/step. At the defaults above that puts the half-strength crossing
+  // at r ~ 7.2 and ~8.8 — a deficit band a couple units wide around
+  // corotationRadius, not the whole disc (a hard clamp at 1 texel/step
+  // would span r ~ 5.6-12.6).
+  armFluxRef: 0.5,
 };

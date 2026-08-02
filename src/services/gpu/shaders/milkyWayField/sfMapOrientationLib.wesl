@@ -1,10 +1,9 @@
-// milkyWayField/sfMapOrientationLib.wesl — shared grid size, sigma-uniform
-// shape and index wrap/clamp helpers for the GPU structure-tensor
-// orientation chain (sfMapOrientationField/Tensor/TensorBlur/Coherence.wesl),
-// so the four passes cannot disagree on AZ/RINGS or the uniform byte layout.
-
-const SF_MAP_ORIENTATION_AZ: u32 = 768u;
-const SF_MAP_ORIENTATION_RINGS: u32 = 256u;
+// milkyWayField/sfMapOrientationLib.wesl — shared sigma-uniform shape and
+// index wrap/clamp helpers for the GPU structure-tensor orientation chain
+// (sfMapOrientationField/Tensor/TensorBlur/Coherence.wesl), so the four
+// passes cannot disagree on the uniform byte layout. Grid size is NOT baked
+// in here: every pass already calls textureDimensions on its own target and
+// passes n through to wrapIndex/clampIndex — sfMapShear.wesl's precedent.
 
 // sigmaDeriv (small, pre-gradient noise suppression) vs sigmaInteg (larger,
 // post-tensor averaging, conventionally 2-3x sigmaDeriv) — one sigma for
