@@ -111,12 +111,69 @@ corotation has no other available cause.
 `spread` is expected to fall back toward the classical value; `armForcing`
 0.15 is independent of the bug and still stands.
 
-**INFERRED, still open.** The automaton re-reads its whole state through a
-bilinear blend every generation, so N steps is N successive blurs and sharp
-structure diffuses. Gerola & Seiden never resample: their rings shear by
-changing which cells are ADJACENT. Holding state in an unsheared frame and
-drifting the neighbour lookup instead would be diffusion-free and closer to
-the paper. Contained to `sampleSheared` and the neighbour loop.
+## The threshold fix did not work either, and the reason subsumes both bugs
+
+**MEASURED, 2026-08-02.** After the `< 0.5` change, `spread` STILL had to sit
+at 0.56. The mechanism above was right; the fix did not follow from it.
+
+**MEASURED, by reading the shader again.** `neighbour.y` is AGE, and age is
+UNBOUNDED — step 0 seeds it at `1.0e4` and every non-igniting step increments
+it. Blending a just-ignited cell (age 0) against a never-ignited one (age 1e4)
+at fraction f gives `f * 1e4`, so `< 0.5` fires only for f < 0.00005. The old
+test needed f exactly 0; the new one needs f < 0.00005. **Functionally the
+same test**, which is why the corotation ring survived the fix.
+
+**The general statement, worth more than either bug: you cannot threshold a
+bilinear blend of an unbounded quantity — and the discrete ignition state must
+not be resampled at all.** This subsumes the separately-recorded diffusion
+issue (N steps = N successive blurs): both are the same mistake, resampling a
+discrete field.
+
+**DECISION: move the automaton into the MATERIAL (Lagrangian) frame.** State
+stops moving — each cell keeps its own texel forever, so there is no
+resampling and no diffusion. The shear goes into the two places that can
+absorb it: the NEIGHBOUR lookup drifts by the accumulated differential shear
+`(shearTexels(r') - shearTexels(r)) * step`, read at a ROUNDED integer texel
+so the ignition test is exact; and the ARM FORCING is sampled at the material's
+drifted angular position, where bilinear is correct.
+
+**The load-bearing asymmetry, and the thing a future reader will be tempted to
+"fix": interpolate the smooth field, never the discrete state.** Blurring a
+smooth forcing field is harmless. Blurring discrete ignition state is what
+destroyed the automaton.
+
+Material texel azimuth then stops equalling world theta. `sfMapPack.wesl`
+absorbs that with ONE final resample back to world coordinates — one blur at
+the end rather than N — so `sfMapPresent.wesl`, `sampleGalaxySfMap` and
+`sampleSfMapOrientation` all keep their existing contract.
+
+This is also what Gerola & Seiden actually describe: their rings shear by
+changing which cells are ADJACENT, and they never resample.
+
+## The corotation ring is ALSO a residence-time artifact, independently
+
+**INFERRED (derivation).** Even with the frame fixed, the arm forcing is a
+static texture: away from corotation material shears THROUGH the ridge and
+spends a few steps in it, while at corotation it sits in the ridge permanently
+and takes an ignition roll every step. Total forced ignitions go as
+`p * (armWidth / |shear|)`, which diverges as shear -> 0. **The model rewards
+residence time; the physics rewards flux through the arm** — no relative motion
+means no shock, so the real thing should show a star-formation DEFICIT at
+corotation, not a ring.
+
+That last clause is a derivation from the same density-wave premise the shear
+term already encodes; it is NOT yet checked against a citation, and must not be
+promoted to LITERATURE without one.
+
+Fix: `armFactor = armF * saturate(abs(shearTexels(ring)) / armFluxRef)`, which
+makes ignitions per arm passage radius-independent and sends corotation to
+zero. A hard clamp at 1 texel/step puts the deficit band at r ~ 5.6-12.6 — far
+too wide — so `armFluxRef` is a tunable.
+
+**Open, literature-backed alternative:** Dobbs & Baba 2014's transient/dynamic
+spirals have a pattern speed that DECREASES with radius, so the arms roughly
+corotate everywhere and there is no single corotation ring to suppress. That
+would dissolve the artifact rather than damp it.
 
 **MEASURED.** `armForcing` wants to be LOW (0.15, against a seeded 0.5). Above
 that the arms stop biasing the automaton and start driving it, which washes out
