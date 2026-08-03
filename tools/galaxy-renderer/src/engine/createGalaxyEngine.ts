@@ -200,7 +200,6 @@ import type { GalaxyFieldGeometry } from '../../../../src/@types/galaxy/GalaxyFi
 import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFieldTuning';
 import type { GalaxySfMapParams } from '../../../../src/@types/galaxy/GalaxySfMapParams';
 import type { GalaxySfMap } from '../../../../src/@types/galaxy/GalaxySfMap';
-import type { GalaxySfMapOrientation } from '../../../../src/@types/galaxy/GalaxySfMapOrientation';
 import type { GalaxyStarFormationParams } from '../../../../src/@types/galaxy/GalaxyStarFormationParams';
 import type { MilkyWayTuning } from '../../../../src/@types/settings/MilkyWayTuning';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
@@ -224,13 +223,12 @@ import { encodeSplatPass } from './passes/encodeSplatPass';
 import { encodeStarPass } from './passes/encodeStarPass';
 import { encodeTransmittanceDust } from './passes/encodeTransmittanceDust';
 import { createOrientationDiagnostics } from './sfMap/createOrientationDiagnostics';
+import { createSfMapReadbacks } from './sfMap/createSfMapReadbacks';
 import { createSfMapAutomaton } from './sfMap/createSfMapAutomaton';
 import { createSfMapOrientation } from './sfMap/createSfMapOrientation';
 import { createGrowOnlyRecordBuffer } from './gpu/createGrowOnlyRecordBuffer';
-import { createReadbackQueue } from './gpu/createReadbackQueue';
 import { deriveDustHeaderLanes } from './frame/deriveDustHeaderLanes';
 import { deriveFrameView } from './frame/deriveFrameView';
-import { decodeOrientationTexels } from './sfMap/decodeOrientationTexels';
 import { BUBBLE_RECORD_FLOATS, packBubbleInstances } from './uniforms/packBubbleInstances';
 import { sampleLuminanceStats } from './probe/sampleLuminanceStats';
 import { swizzleToRgba } from './probe/swizzleToRgba';
@@ -264,8 +262,6 @@ import {
 import {
   sfMapGridRadius,
   sfMapGridRadiusOrDefault,
-  SF_MAP_AZ,
-  SF_MAP_RINGS,
 } from '../../../../src/data/galaxy/galaxySfMapArmForcing';
 import type { GalaxySfMapGridRadius } from '../../../../src/data/galaxy/galaxySfMapArmForcing';
 import { buildDustParticleCloud } from '../../../../src/data/galaxy/dustParticleCloud';
@@ -274,7 +270,6 @@ import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../src/data/galaxy/defaultG
 import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from '../../../../src/data/galaxy/defaultGalaxyStarFormationParams';
 import { normalizeGenerationSeed } from '../../../../src/utils/galaxy/normalizeGenerationSeed';
 import { alignedBytesPerRow } from '../../../../src/utils/gpu/alignedBytesPerRow';
-import { unpadRows } from '../../../../src/utils/gpu/unpadRows';
 import { transformGalaxyFieldComponent } from '../../../../src/utils/galaxy/transformGalaxyFieldComponent';
 import { GENERATION_UBO } from '../../../../src/services/gpu/galaxy/generationUboLayout';
 import { GEN_RECORD_BYTES } from '../../../../src/services/gpu/galaxy/genRecordBytes';
@@ -1005,48 +1000,12 @@ export async function createGalaxyEngine(
   // three every `drawFrame`, but they only change when `rebuildDustMixture`
   // runs. Seeded at the no-galaxy answer, which is what the first frames draw.
   let dustHeaderLanes = deriveDustHeaderLanes(null, DEFAULT_GALAXY_DUST_PARAMS, false);
-  // The SSPSF automaton's CPU-side readback (`scheduleSfMapReadback`), null
-  // until the first one lands OR whenever a NEW galaxy's `setParams` has made
-  // the previous readback's grid (rMin/rMax, tied to `fieldGeometry`) stale —
-  // see setParams's own comment on why it nulls this before rebuilding dust.
-  let sfMapData: GalaxySfMap | null = null;
-  // `orientationTex`'s CPU-side readback, same lifecycle as `sfMapData` above.
-  // Both streams share ONE queue (see `createReadbackQueue` for why a second
-  // chain would be unsafe) while keeping independent tokens: the orientation
-  // readback runs on triggers that never touch `sfMapData` (a sigma move,
-  // `sfMapDustSeeding` turning on), so one shared token would let an unrelated
-  // trigger wrongly supersede a still-pending readback.
-  let orientationData: GalaxySfMapOrientation | null = null;
-  const readbackQueue = createReadbackQueue(device);
-  const sfMapReadback = readbackQueue.stream({
-    label: 'galaxy:sfMapReadback',
-    texture: sfMapAutomaton.texture,
-    buffer: sfMapAutomaton.readbackBuffer,
-    bytesPerRow: sfMapAutomaton.readbackBytesPerRow,
-    width: SF_MAP_AZ,
-    height: SF_MAP_RINGS,
-    decode: (mapped) =>
-      unpadRows(
-        new Uint8Array(mapped),
-        sfMapAutomaton.readbackBytesPerRow,
-        SF_MAP_AZ * 4,
-        SF_MAP_RINGS,
-      ),
-  });
-  const orientationReadback = readbackQueue.stream({
-    label: 'galaxy:orientationReadback',
-    texture: sfMapOrientation.texture,
-    buffer: sfMapOrientation.readbackBuffer,
-    bytesPerRow: sfMapOrientation.readbackBytesPerRow,
-    width: SF_MAP_AZ,
-    height: SF_MAP_RINGS,
-    decode: (mapped) =>
-      decodeOrientationTexels(
-        new Uint16Array(mapped),
-        sfMapOrientation.readbackBytesPerRow,
-        SF_MAP_AZ,
-        SF_MAP_RINGS,
-      ),
+  // The SSPSF chain's two CPU-side copies and the single queue that fills
+  // them — see `createSfMapReadbacks`.
+  const readbacks = createSfMapReadbacks({
+    device,
+    automaton: sfMapAutomaton,
+    orientation: sfMapOrientation,
   });
   const orientationDiagnostics = createOrientationDiagnostics();
 
@@ -1254,16 +1213,12 @@ export async function createGalaxyEngine(
   let fieldCounts = { emission: 0, primary: 0, dust: 0 };
 
   /**
-   * scheduleSfMapReadback — the ONE-PER-GENERATION CPU copy of `sfMapTex`
-   * (research doc §19's staged architecture: never a per-frame readback,
-   * never a CPU mirror of the automaton). Called from `rebuildSfMap`'s own
-   * two exits with the grid it just wrote, so `GalaxySfMap.rMin/rMax` always
-   * matches the CONTENT being copied.
+   * scheduleSfMapReadback — what the engine does WHEN the one-per-generation
+   * copy of `sfMapTex` lands. Called from `rebuildSfMap`'s own two exits with
+   * the grid it just wrote, so `GalaxySfMap.rMin/rMax` always matches the
+   * CONTENT being copied.
    *
-   * Does not block the caller, and overlapping rebuilds (a dragged slider)
-   * coalesce rather than race — `createReadbackQueue` owns that discipline.
-   *
-   * DETERMINISM: `sfMapData` lands asynchronously, so the dust mixture built
+   * DETERMINISM: the copy lands asynchronously, so the dust mixture built
    * synchronously inside `setParams`/`setFieldTuning` (which both run BEFORE
    * this promise can resolve — a GPU readback always crosses at least one
    * frame) never sees the map from the rebuild that triggered it. Rather
@@ -1274,14 +1229,7 @@ export async function createGalaxyEngine(
    * this one keeps the tool always showing something.
    */
   function scheduleSfMapReadback(grid: GalaxySfMapGridRadius): void {
-    sfMapReadback.request((packed) => {
-      sfMapData = {
-        az: SF_MAP_AZ,
-        rings: SF_MAP_RINGS,
-        rMin: grid.rMin,
-        rMax: grid.rMax,
-        data: packed,
-      };
+    readbacks.requestSfMap(grid, () => {
       if (fieldTuning.sfMapDustSeeding) {
         rebuildDustMixture();
         repackFieldComponents();
@@ -1290,24 +1238,14 @@ export async function createGalaxyEngine(
   }
 
   /**
-   * scheduleOrientationReadback — the CPU copy of `orientationTex`, same
-   * one-per-dispatch discipline as `scheduleSfMapReadback` (whose own
-   * docblock explains why the copy/submit/map/unmap has to live INSIDE the
-   * chain rather than run eagerly). Shares the sfMap stream's queue — see
-   * `createReadbackQueue` for why a second, independent chain would be
-   * unsafe. Gated by `orientationDataRebuild` on
-   * `fieldTuning.sfMapDustSeeding`: this is the only consumer of the CPU
-   * copy, the debug overlay samples `orientationTex` on the GPU directly.
+   * scheduleOrientationReadback — the same, for the CPU copy of
+   * `orientationTex`. Gated by `orientationDataRebuild` on
+   * `fieldTuning.sfMapDustSeeding`: the dust placement is the only consumer of
+   * the CPU copy, the debug overlay samples `orientationTex` on the GPU
+   * directly.
    */
   function scheduleOrientationReadback(grid: GalaxySfMapGridRadius): void {
-    orientationReadback.request((data) => {
-      orientationData = {
-        az: SF_MAP_AZ,
-        rings: SF_MAP_RINGS,
-        rMin: grid.rMin,
-        rMax: grid.rMax,
-        data,
-      };
+    readbacks.requestOrientation(grid, ({ data }) => {
       // Folded in once here, at the one point a fresh grid exists — not per
       // frame or per dust build.
       orientationDiagnostics.noteCoherence(data);
@@ -1331,8 +1269,8 @@ export async function createGalaxyEngine(
   function reportOrientationDiagnostics(): void {
     opts.onOrientationDiagnostics?.(
       orientationDiagnostics.report({
-        hasData: orientationData !== null,
-        generation: orientationReadback.generation,
+        hasData: readbacks.orientationData !== null,
+        generation: readbacks.orientationGeneration,
       }),
     );
   }
@@ -1408,8 +1346,8 @@ export async function createGalaxyEngine(
         dust,
         fieldTuning,
         currentSeed(),
-        sfMapData,
-        orientationData,
+        readbacks.sfMapData,
+        readbacks.orientationData,
         orientationDeltaStats,
       );
       dustMixture = [...cloudMixture];
@@ -1603,20 +1541,10 @@ export async function createGalaxyEngine(
     // draws off the packer's streams, so this is the only way the analytic
     // field can be sure it is oriented like the sprites it sums with.
     fieldGeometry = readGalaxyFieldGeometry(genUniforms, starLayout);
-    // Discard the cached readbacks ONLY when the grid they were sampled over
-    // actually moved. `sfMapGridRadius` depends on `fieldGeometry` alone, so
-    // most params — dust `share`, cloud counts, colours — leave it untouched,
-    // and nulling on every `setParams` made a slider DRAG flip the dust
-    // between its map-seeded and unseeded builds once per frame: the
-    // synchronous rebuild below saw no map, then the async readback landed a
-    // frame or two later and rebuilt it again. Registration is what the map
-    // has to be right about (rMin/rMax ride the readback for exactly this
-    // check); one frame of stale CONTENT is invisible next to that flicker.
-    const nextGrid = sfMapGridRadius(fieldGeometry);
-    const gridMoved = (m: { rMin: number; rMax: number } | null): boolean =>
-      m !== null && (m.rMin !== nextGrid.rMin || m.rMax !== nextGrid.rMax);
-    if (gridMoved(sfMapData)) sfMapData = null;
-    if (gridMoved(orientationData)) orientationData = null;
+    // `sfMapGridRadius` depends on `fieldGeometry` alone, so most params —
+    // dust `share`, cloud counts, colours — leave the grid untouched and the
+    // cached readbacks usable; see `dropIfGridMoved`.
+    readbacks.dropIfGridMoved(sfMapGridRadius(fieldGeometry));
     fieldMixture = buildGalaxyFieldMixture(fieldGeometry, fieldTuning);
     // Same `geometry.seed` `buildHiiRegions` was called with when it still
     // lived inside `buildGalaxyFieldMixture` — the field's own generated
@@ -2483,7 +2411,7 @@ export async function createGalaxyEngine(
     // The CPU-side readback of the same output (`scheduleSfMapReadback`):
     // null until the first one lands. Consumed by `buildDustParticleCloud`
     // via `sfMapDustSeeding` today; exposed here for future consumers too.
-    getSfMapData: (): GalaxySfMap | null => sfMapData,
+    getSfMapData: (): GalaxySfMap | null => readbacks.sfMapData,
     async grab(size?: number) {
       const S = size ?? 480;
       drawFrame(performance.now());
