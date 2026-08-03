@@ -2175,18 +2175,13 @@ export async function createGalaxyEngine(
   ): void {
     const graded = gradeIsActive();
     const compositeWrites = timed ? timing.descriptorFor('composite') : undefined;
-    const tonePass = enc.beginRenderPass({
-      label: 'galaxy:compositePass',
-      colorAttachments: [
-        {
-          view: graded ? scratchView : dstView,
-          loadOp: 'clear',
-          storeOp: 'store',
-          clearValue: { r: 0, g: 0, b: 0, a: 1 },
-        },
-      ],
-      ...(compositeWrites ? { timestampWrites: compositeWrites } : {}),
-    });
+    const tonePass = beginClearPass(
+      enc,
+      'galaxy:compositePass',
+      graded ? scratchView : dstView,
+      compositeWrites,
+      1,
+    );
     compositor.draw(
       tonePass,
       targets.sceneTex.createView(),
@@ -2208,18 +2203,7 @@ export async function createGalaxyEngine(
     // exactly on the frames the pass runs — which is what makes the row vanish
     // from the HUD (rather than freeze) when the knobs return to identity.
     const gradeWrites = timed ? timing.descriptorFor('grade') : undefined;
-    const gradePass = enc.beginRenderPass({
-      label: 'galaxy:gradePass',
-      colorAttachments: [
-        {
-          view: dstView,
-          loadOp: 'clear',
-          storeOp: 'store',
-          clearValue: { r: 0, g: 0, b: 0, a: 1 },
-        },
-      ],
-      ...(gradeWrites ? { timestampWrites: gradeWrites } : {}),
-    });
+    const gradePass = beginClearPass(enc, 'galaxy:gradePass', dstView, gradeWrites, 1);
     gradePass.setPipeline(gradePipe);
     gradePass.setBindGroup(
       0,
@@ -2488,9 +2472,8 @@ export async function createGalaxyEngine(
       // through debugView.w, the same combined weight the sprites dim by.
       encodeSplatPass({
         enc,
-        timing,
         label: 'galaxy:fieldPass',
-        slot: 'field',
+        timestampWrites: timing.descriptorFor('field'),
         targetView: targets.fieldTex.createView(),
         pipeline: splatPipe,
         bindGroup: splatBG,
@@ -2506,9 +2489,8 @@ export async function createGalaxyEngine(
       if (hiiEmissionCount > 0) {
         encodeSplatPass({
           enc,
-          timing,
           label: 'galaxy:hiiPass',
-          slot: 'hii',
+          timestampWrites: timing.descriptorFor('hii'),
           targetView: targets.hiiTex.createView(),
           pipeline: splatPipe,
           bindGroup: hiiBG,

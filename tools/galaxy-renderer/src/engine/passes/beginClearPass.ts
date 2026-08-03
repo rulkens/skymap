@@ -1,12 +1,14 @@
 /**
  * beginClearPass — one colour attachment, cleared and stored: the descriptor
- * shape six of `drawFrame`'s passes share. `alpha` is the clear alpha (0 for
- * the offscreens an additive composite reads, 1 for the HDR scene).
+ * shape most of this engine's passes share. `alpha` is the clear alpha (0 for
+ * the offscreens an additive composite reads, 1 for the HDR scene and the
+ * post chain's LDR targets).
  *
- * `timestampWrites` arrives ALREADY RESOLVED: `gpuTimingService.descriptorFor`
- * marks its slot consumed as a side effect, so that call has to stay on the
- * branch that actually opens the pass — a slot consumed on a frame its pass
- * never ran makes the HUD decode stale ticks as live.
+ * `timestampWrites` arrives ALREADY RESOLVED, here and in every pass module:
+ * `gpuTimingService.descriptorFor` marks its slot consumed as a side effect,
+ * so that call has to stay on the branch that actually opens the pass — a slot
+ * consumed on a frame its pass never ran makes the HUD decode stale ticks as
+ * live.
  */
 export function beginClearPass(
   enc: GPUCommandEncoder,
