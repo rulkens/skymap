@@ -47,6 +47,7 @@
  * to get wrong, just the same formula the corresponding generation shader
  * population uses at its point of use.
  */
+import { lerp } from '../../../utils/math/lerp';
 import { mulberry32 } from '../../../utils/random/mulberry32';
 import { normalizeGenerationSeed } from '../../../utils/galaxy/normalizeGenerationSeed';
 import { gaussian } from '../../../../tools/utils/random/gaussian';
@@ -80,6 +81,21 @@ export const CATEGORY_CODE: Record<GalaxyCategory, number> = {
 const ARM_AGE_EVEN_BASE = 0.7;
 const ARM_AGE_ODD_BASE = 0.1;
 const ARM_AGE_JITTER_RANGE = 0.3;
+
+/**
+ * How far the arms reach, in units of `outerRadius`, lerped by `armFalloff`
+ * (0 = longest, 1 = shortest; the default 0.6 lands at 1.07). This is the
+ * ONLY knob that moves where an arm ends — `armExcessScaleRatio` shapes its
+ * brightness inside this extent and cannot lengthen it.
+ *
+ * The floor is unreachable from the 0..1 slider, whose shortest arm is 0.65:
+ * it guards the preset-JSON path, which `parseGalaxyPreset` deliberately
+ * leaves unvalidated, from an armFalloff past ~1.14 zeroing every radius the
+ * arm chain divides by.
+ */
+const ARM_EXTENT_AT_FALLOFF_0 = 1.7;
+const ARM_EXTENT_AT_FALLOFF_1 = 0.65;
+const ARM_EXTENT_FLOOR = 0.5;
 
 /** Write four consecutive floats starting at a vec4-aligned float index. */
 function writeVec4(
@@ -161,7 +177,12 @@ export function packGenerationUniforms(
 
   const pitchDegrees = 8 + 26 * (params.armWinding ?? 0.5);
   const windTightness = 1 / Math.tan((pitchDegrees * Math.PI) / 180);
-  const armFadeRadius = outerRadius * Math.max(0.5, 1.7 - 1.05 * (params.armFalloff ?? 0.6));
+  const armExtentFrac = lerp(
+    ARM_EXTENT_AT_FALLOFF_0,
+    ARM_EXTENT_AT_FALLOFF_1,
+    params.armFalloff ?? 0.6,
+  );
+  const armFadeRadius = outerRadius * Math.max(ARM_EXTENT_FLOOR, armExtentFrac);
   const armFullRadius = armFadeRadius * 0.42;
   const armLengthVar = params.armEdgeVar ?? 0;
 
