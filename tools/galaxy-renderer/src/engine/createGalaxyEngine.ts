@@ -214,6 +214,8 @@ import { deriveMilkyWayFade } from './deriveMilkyWayFade';
 import { createGalaxyRenderTargets } from './createGalaxyRenderTargets';
 import { createOrbitCameraInput } from './createOrbitCameraInput';
 import { createPassTimingWindows } from './createPassTimingWindows';
+import { createSfMapAutomaton } from './createSfMapAutomaton';
+import { createSfMapOrientation } from './createSfMapOrientation';
 import { createReadbackQueue } from './createReadbackQueue';
 import { debugGalaxyWeight } from './debugGalaxyWeight';
 import { decodeOrientationTexels } from './decodeOrientationTexels';
@@ -221,7 +223,6 @@ import { dustSliceEdges } from './dustSliceEdges';
 import { orientationCoherenceStats } from './orientationCoherenceStats';
 import { BUBBLE_RECORD_FLOATS, packBubbleInstances } from './packBubbleInstances';
 import { sampleLuminanceStats } from './sampleLuminanceStats';
-import { sfMapStepIndexData } from './sfMapStepIndexData';
 import { swizzleToRgba } from './swizzleToRgba';
 import { CLOUD_UNIFORM_FLOATS, packCloudUniforms } from './packCloudUniforms';
 import {
@@ -254,11 +255,9 @@ import {
   HII_CAVITY_BUDGET,
 } from '../../../../src/data/galaxy/dustBubblePlacements';
 import {
-  buildGalaxySfMapArmForcing,
   sfMapGridRadius,
   SF_MAP_AZ,
   SF_MAP_RINGS,
-  SF_MAP_WORKGROUP_SIZE,
 } from '../../../../src/data/galaxy/galaxySfMapArmForcing';
 import type { GalaxySfMapGridRadius } from '../../../../src/data/galaxy/galaxySfMapArmForcing';
 import { DISC_SIGMA_RATIOS } from '../../../../src/data/galaxy/discSurfaceFit';
@@ -294,15 +293,7 @@ import splatWgsl from './shaders/milkyWayField/splat.wesl?static';
 import dustMapWgsl from './shaders/milkyWayField/dustMap.wesl?static';
 import dustPresentWgsl from './shaders/milkyWayField/dustPresent.wesl?static';
 import dustNoiseBakeWgsl from './shaders/milkyWayField/dustNoiseBake.wesl?static';
-import sfMapStepWgsl from './shaders/milkyWayField/sfMapStep.wesl?static';
-import sfMapPackWgsl from './shaders/milkyWayField/sfMapPack.wesl?static';
-import sfMapPresentWgsl from './shaders/milkyWayField/sfMapPresent.wesl?static';
-import orientationPresentWgsl from './shaders/milkyWayField/orientationPresent.wesl?static';
 import bubblePresentWgsl from './shaders/milkyWayField/bubblePresent.wesl?static';
-import sfMapOrientationFieldWgsl from './shaders/milkyWayField/sfMapOrientationField.wesl?static';
-import sfMapOrientationTensorWgsl from './shaders/milkyWayField/sfMapOrientationTensor.wesl?static';
-import sfMapOrientationTensorBlurWgsl from './shaders/milkyWayField/sfMapOrientationTensorBlur.wesl?static';
-import sfMapOrientationCoherenceWgsl from './shaders/milkyWayField/sfMapOrientationCoherence.wesl?static';
 import gradeWgsl from './shaders/grade.wesl?static';
 
 /** HDR working format for the scene + bloom pyramid — the runtime's `hdr` row. */
@@ -792,220 +783,20 @@ export async function createGalaxyEngine(
     device.queue.submit([bakeEnc.finish()]);
   }
 
-  // ---- SSPSF star-formation automaton (sfMap): pipelines + persistent textures ----
-  // Grid is fixed (SF_MAP_AZ x SF_MAP_RINGS, galaxySfMapArmForcing.ts), so
-  // every texture here is allocated ONCE — unlike dustMapTex/fieldTex, none
-  // of them are canvas-size-dependent. See rebuildSfMap (below setParams)
-  // for the dispatch loop and its triggers.
-  const sfMapStepMod = makeShader(sfMapStepWgsl, 'galaxy:sfMapStep');
-  const sfMapStepPipe = device.createComputePipeline({
-    label: 'galaxy:sfMapStepPipe',
-    layout: 'auto',
-    compute: { module: sfMapStepMod, entryPoint: 'cs' },
+  // ---- SSPSF star-formation automaton + its orientation chain ----
+  // Both own every resource they touch, including their readback staging
+  // buffers; the engine keeps only the handles and the perf GATES (which read
+  // the render bag / field tuning, which those modules deliberately don't).
+  const sfMapAutomaton = createSfMapAutomaton(device, {
+    makeShader,
+    hdrFormat: HDR,
+    fieldUbo,
   });
-  const sfMapPackMod = makeShader(sfMapPackWgsl, 'galaxy:sfMapPack');
-  const sfMapPackPipe = device.createComputePipeline({
-    label: 'galaxy:sfMapPackPipe',
-    layout: 'auto',
-    compute: { module: sfMapPackMod, entryPoint: 'cs' },
-  });
-  const sfMapPresentMod = makeShader(sfMapPresentWgsl, 'galaxy:sfMapPresent');
-  const sfMapPresentPipe = device.createRenderPipeline({
-    label: 'galaxy:sfMapPresentPipe',
-    layout: 'auto',
-    vertex: { module: sfMapPresentMod, entryPoint: 'vs' },
-    // Additive, not a bare overwrite: this pass now draws straight into the
-    // scene pass's `sceneTex` (see `drawFrame`'s scene pass), which already
-    // carries any background extras' sprite glow by the time this draw runs
-    // — a replace blend would erase them under the diagnostic. Against a
-    // freshly-cleared target (this shader's ONLY other era, before this
-    // change) additive and replace are identical, since the destination
-    // starts at zero — so this is a strict fix, not a behaviour trade.
-    fragment: {
-      module: sfMapPresentMod,
-      entryPoint: 'fs',
-      targets: [{ format: HDR, blend: ADDITIVE_BLEND }],
-    },
-    primitive: { topology: 'triangle-list' },
-  });
-  // 'repeat' in U (azimuth wraps at theta=0/2*PI), 'clamp-to-edge' in V
-  // (radius does not) — sfMapPresent.wesl's fs resamples through this.
-  const sfMapPresentSampler = device.createSampler({
-    label: 'galaxy:sfMapPresentSampler',
-    addressModeU: 'repeat',
-    addressModeV: 'clamp-to-edge',
-    magFilter: 'linear',
-    minFilter: 'linear',
-  });
-  // The arm-forcing field, baked CPU-side (galaxySfMapArmForcing.ts) from the
-  // SAME ridge functions the sprite/analytic arms use — never re-derived in
-  // WGSL. Content rewritten every rebuildSfMap; the texture object itself
-  // never resizes.
-  const sfMapArmForcingTex = device.createTexture({
-    label: 'galaxy:sfMapArmForcingTex',
-    size: [SF_MAP_AZ, SF_MAP_RINGS],
-    format: 'r32float',
-    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
-  });
-  // Ping-pong state: (gasFraction, ageSinceIgnition, refractoryTimer,
-  // oldActivityEma). Both need BOTH usages — each alternates between being
-  // the step's read source (texture_2d, TEXTURE_BINDING) and its write
-  // target (texture_storage_2d, STORAGE_BINDING) from one step to the next.
-  const makeSfMapStateTex = (label: string): GPUTexture =>
-    device.createTexture({
-      label,
-      size: [SF_MAP_AZ, SF_MAP_RINGS],
-      format: 'rgba16float',
-      usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
-    });
-  const sfMapStateA = makeSfMapStateTex('galaxy:sfMapStateA');
-  const sfMapStateB = makeSfMapStateTex('galaxy:sfMapStateB');
-  // The packed, presentable output (sfMapPack.wesl): gas / recent SF / older
-  // SF. Exposed on the engine handle (getSfMapTexture) for the sibling UI
-  // and future consumers — see the research doc §19's staging note. COPY_SRC
-  // is for `scheduleSfMapReadback`'s CPU readback (getSfMapData) below.
-  const sfMapTex = device.createTexture({
-    label: 'galaxy:sfMapTex',
-    size: [SF_MAP_AZ, SF_MAP_RINGS],
-    format: 'rgba8unorm',
-    usage:
-      GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC,
-  });
-  // `copyTextureToBuffer` forces `bytesPerRow` to a 256-byte multiple (see
-  // alignedBytesPerRow). `scheduleSfMapReadback` copies out only the first
-  // `SF_MAP_AZ * 4` bytes of each padded row, so the padding never leaks
-  // into `GalaxySfMap.data`.
-  const SF_MAP_READBACK_BYTES_PER_ROW = alignedBytesPerRow(SF_MAP_AZ * 4);
-  const sfMapReadbackBuf = device.createBuffer({
-    label: 'galaxy:sfMapReadbackBuf',
-    size: SF_MAP_READBACK_BYTES_PER_ROW * SF_MAP_RINGS,
-    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-  });
-  // Constant-across-one-rebuild parameters (rMin/rMax + every sfMap tuning
-  // knob) — rewritten once per rebuildSfMap, unlike sfMapStepIndexBuf below.
-  const sfMapConstUbo = device.createBuffer({
-    label: 'galaxy:sfMapConstUbo',
-    size: 64, // 16 f32 lanes (13 used) — see SfMapConstants in sfMapStep.wesl
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-  // rMin/rMax only — sfMapPresent.wesl's own small uniform, separate from
-  // io.wesl's per-frame 'u' (camera) since these two change on entirely
-  // different cadences (rebuild vs every frame).
-  const sfMapGridUbo = device.createBuffer({
-    label: 'galaxy:sfMapGridUbo',
-    size: 16,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-  // sfMapPack.wesl's own un-shear parameters (SfMapUnshear) — rMin/rMax +
-  // the same corotation/shear knobs sfMapConstUbo carries, plus
-  // totalShiftSteps (steps - 1, see rebuildSfMap). A separate buffer from
-  // sfMapConstUbo because pack runs in its OWN bind group / pipeline, after
-  // every step dispatch has already used sfMapConstUbo's bind group layout.
-  const sfMapPackConstUbo = device.createBuffer({
-    label: 'galaxy:sfMapPackConstUbo',
-    size: 32, // 8 f32 lanes (5 used) — see SfMapUnshear in sfMapPack.wesl
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-  // Holds every step's own index, one SfMapStepIndex-sized (4-byte) slot per
-  // step, each padded out to the device's own uniform offset alignment — see
-  // rebuildSfMap for why a per-step BIND GROUP (static offset into this one
-  // buffer) replaces what would otherwise need `steps` separate
-  // writeBuffer+submit round trips. Reallocated in rebuildSfMap to match the
-  // live `steps` count; null until the first rebuild.
-  let sfMapStepIndexBuf: GPUBuffer | null = null;
-  // Presentation bind group: io.wesl's per-frame camera uniform (fieldUbo,
-  // already written every drawFrame) plus this pass's own three bindings.
-  // Built once — sfMapTex/sfMapGridUbo are the same GPU objects for the
-  // engine's whole lifetime, only their CONTENT changes per rebuild, and a
-  // bind group only needs rebuilding when the OBJECT it references does.
-  const sfMapPresentBG = device.createBindGroup({
-    label: 'galaxy:sfMapPresentBG',
-    layout: sfMapPresentPipe.getBindGroupLayout(0),
-    entries: [
-      { binding: 0, resource: { buffer: fieldUbo } },
-      { binding: 1, resource: sfMapTex.createView() },
-      { binding: 2, resource: sfMapPresentSampler },
-      { binding: 3, resource: { buffer: sfMapGridUbo } },
-    ],
-  });
-
-  // ---- orientation overlay: GPU structure-tensor pass chain ----
-  // Unlike the old CPU build (buildSfMapOrientation.ts, deleted), this
-  // texture's content comes entirely from compute passes over sfMapTex — no
-  // readback, no JS blur, no upload back. rebuildSfMapOrientationIfNeeded
-  // (below scheduleSfMapReadback) is still the perf gate that keeps the
-  // chain off by default, cheap as it now is, so an unrelated render-bag
-  // push can't redispatch it. Pipeline/sampler/texture/bind group are all
-  // built unconditionally at construction, same as every other sfMap
-  // resource — only the DISPATCH is gated, not the objects.
-  const orientationPresentMod = makeShader(orientationPresentWgsl, 'galaxy:orientationPresent');
-  const orientationPresentPipe = device.createRenderPipeline({
-    label: 'galaxy:orientationPresentPipe',
-    layout: 'auto',
-    vertex: { module: orientationPresentMod, entryPoint: 'vs' },
-    // Additive into sceneTex, same reasoning as sfMapPresentPipe: this draw
-    // must sum with whatever background extras' sprites already put there.
-    fragment: {
-      module: orientationPresentMod,
-      entryPoint: 'fs',
-      targets: [{ format: HDR, blend: ADDITIVE_BLEND }],
-    },
-    primitive: { topology: 'triangle-list' },
-  });
-  // Bilinear sampling is safe here BECAUSE the two channels are the packed
-  // (cos2theta, sin2theta) double-angle vector, not a bare angle — only that
-  // representation interpolates across the pi wrap without a false
-  // zero-crossing (a filament has no head/tail).
-  const orientationSampler = device.createSampler({
-    label: 'galaxy:orientationSampler',
-    addressModeU: 'repeat',
-    addressModeV: 'clamp-to-edge',
-    magFilter: 'linear',
-    minFilter: 'linear',
-  });
-  // rgba16float, not rg16float: WebGPU core only guarantees WRITE-access
-  // storage textures for r32/rgba8/rgba16/rgba32 formats, not 2-component
-  // ones, and sfMapOrientationCoherence.wesl's final pass writes this
-  // directly (no more CPU upload) — see that shader's own header. .zw sit
-  // unused; orientationPresent.wesl reads only .xy either way. COPY_SRC is
-  // for `scheduleOrientationReadback`'s CPU readback, same role
-  // `sfMapTex`'s own COPY_SRC plays for `scheduleSfMapReadback`.
-  const orientationTex = device.createTexture({
-    label: 'galaxy:orientationTex',
-    size: [SF_MAP_AZ, SF_MAP_RINGS],
-    format: 'rgba16float',
-    usage:
-      GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.COPY_SRC,
-  });
-  // rgba16float = 4 lanes * 2 bytes; only .xy (cos2theta, sin2theta) are
-  // read back, .zw are copied along for free since a texture copy can't
-  // pick channels. See alignedBytesPerRow for the 256-byte alignment rule.
-  const ORIENTATION_READBACK_BYTES_PER_ROW = alignedBytesPerRow(SF_MAP_AZ * 8);
-  const orientationReadbackBuf = device.createBuffer({
-    label: 'galaxy:orientationReadbackBuf',
-    size: ORIENTATION_READBACK_BYTES_PER_ROW * SF_MAP_RINGS,
-    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-  });
-  // rMin/rMax only, same shape as sfMapGridUbo — written once per
-  // rebuildSfMapOrientationIfNeeded, not every frame. Doubles as
-  // sfMapOrientationTensorPipe's own grid uniform (the aspect weight needs
-  // the same rMin/rMax the present shader's ray-mapping does) — one buffer,
-  // bound into two different pipelines' bind groups, not two objects to
-  // keep in sync.
-  const orientationGridUbo = device.createBuffer({
-    label: 'galaxy:orientationGridUbo',
-    size: 16,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-  const orientationPresentBG = device.createBindGroup({
-    label: 'galaxy:orientationPresentBG',
-    layout: orientationPresentPipe.getBindGroupLayout(0),
-    entries: [
-      { binding: 0, resource: { buffer: fieldUbo } },
-      { binding: 1, resource: orientationTex.createView() },
-      { binding: 2, resource: orientationSampler },
-      { binding: 3, resource: { buffer: orientationGridUbo } },
-    ],
+  const sfMapOrientation = createSfMapOrientation(device, {
+    makeShader,
+    hdrFormat: HDR,
+    fieldUbo,
+    sourceTexture: sfMapAutomaton.texture,
   });
 
   // ---- bubble-view overlay: the SF-event catalog's own placements ----
@@ -1049,154 +840,6 @@ export async function createGalaxyEngine(
     label: 'galaxy:bubblePresentBG',
     layout: bubblePresentPipe.getBindGroupLayout(0),
     entries: [{ binding: 0, resource: { buffer: fieldUbo } }],
-  });
-
-  // ---- the pass chain itself: field blur -> tensor -> tensor blur -> coherence ----
-  // Every intermediate texture is SF_MAP_AZ x SF_MAP_RINGS, allocated once
-  // (never resized, same discipline as sfMapStateA/B) and given BOTH
-  // TEXTURE_BINDING (the next pass reads it) and STORAGE_BINDING (this
-  // pass writes it) usage. r32float for the single-channel field stage,
-  // rgba16float for the packed-tensor stage — both are core-guaranteed
-  // write-access storage formats (see orientationTex's own comment).
-  const makeOrientationScratch = (label: string, format: GPUTextureFormat): GPUTexture =>
-    device.createTexture({
-      label,
-      size: [SF_MAP_AZ, SF_MAP_RINGS],
-      format,
-      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING,
-    });
-  const orientationFieldBlurTex = makeOrientationScratch(
-    'galaxy:orientationFieldBlurTex',
-    'r32float',
-  );
-  const orientationFieldSmoothTex = makeOrientationScratch(
-    'galaxy:orientationFieldSmoothTex',
-    'r32float',
-  );
-  const orientationTensorRawTex = makeOrientationScratch(
-    'galaxy:orientationTensorRawTex',
-    'rgba16float',
-  );
-  const orientationTensorBlurTex = makeOrientationScratch(
-    'galaxy:orientationTensorBlurTex',
-    'rgba16float',
-  );
-  const orientationTensorFinalTex = makeOrientationScratch(
-    'galaxy:orientationTensorFinalTex',
-    'rgba16float',
-  );
-  // sigmaDeriv/sigmaInteg only — see RenderSettings's own doc on why the
-  // pass chain wants two, not one: a small derivative scale suppresses
-  // noise before the gradient, a larger integration scale (2-3x it,
-  // conventionally) averages orientations after the tensor is built.
-  const sfMapOrientationSigmaUbo = device.createBuffer({
-    label: 'galaxy:sfMapOrientationSigmaUbo',
-    size: 16,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-
-  const sfMapOrientationFieldMod = makeShader(
-    sfMapOrientationFieldWgsl,
-    'galaxy:sfMapOrientationField',
-  );
-  const sfMapOrientationFieldBlurAzimuthPipe = device.createComputePipeline({
-    label: 'galaxy:sfMapOrientationFieldBlurAzimuthPipe',
-    layout: 'auto',
-    compute: { module: sfMapOrientationFieldMod, entryPoint: 'csBlurAzimuth' },
-  });
-  const sfMapOrientationFieldBlurRingPipe = device.createComputePipeline({
-    label: 'galaxy:sfMapOrientationFieldBlurRingPipe',
-    layout: 'auto',
-    compute: { module: sfMapOrientationFieldMod, entryPoint: 'csBlurRing' },
-  });
-  const sfMapOrientationTensorMod = makeShader(
-    sfMapOrientationTensorWgsl,
-    'galaxy:sfMapOrientationTensor',
-  );
-  const sfMapOrientationTensorPipe = device.createComputePipeline({
-    label: 'galaxy:sfMapOrientationTensorPipe',
-    layout: 'auto',
-    compute: { module: sfMapOrientationTensorMod, entryPoint: 'cs' },
-  });
-  const sfMapOrientationTensorBlurMod = makeShader(
-    sfMapOrientationTensorBlurWgsl,
-    'galaxy:sfMapOrientationTensorBlur',
-  );
-  const sfMapOrientationTensorBlurAzimuthPipe = device.createComputePipeline({
-    label: 'galaxy:sfMapOrientationTensorBlurAzimuthPipe',
-    layout: 'auto',
-    compute: { module: sfMapOrientationTensorBlurMod, entryPoint: 'csBlurAzimuth' },
-  });
-  const sfMapOrientationTensorBlurRingPipe = device.createComputePipeline({
-    label: 'galaxy:sfMapOrientationTensorBlurRingPipe',
-    layout: 'auto',
-    compute: { module: sfMapOrientationTensorBlurMod, entryPoint: 'csBlurRing' },
-  });
-  const sfMapOrientationCoherenceMod = makeShader(
-    sfMapOrientationCoherenceWgsl,
-    'galaxy:sfMapOrientationCoherence',
-  );
-  const sfMapOrientationCoherencePipe = device.createComputePipeline({
-    label: 'galaxy:sfMapOrientationCoherencePipe',
-    layout: 'auto',
-    compute: { module: sfMapOrientationCoherenceMod, entryPoint: 'cs' },
-  });
-
-  // One bind group per pipeline ('auto' layouts never cross pipelines, even
-  // where the bindings are structurally identical) — built once, since
-  // every resource here is allocated for the engine's whole lifetime.
-  const sfMapOrientationFieldBlurAzimuthBG = device.createBindGroup({
-    label: 'galaxy:sfMapOrientationFieldBlurAzimuthBG',
-    layout: sfMapOrientationFieldBlurAzimuthPipe.getBindGroupLayout(0),
-    entries: [
-      { binding: 0, resource: sfMapTex.createView() },
-      { binding: 1, resource: orientationFieldBlurTex.createView() },
-      { binding: 2, resource: { buffer: sfMapOrientationSigmaUbo } },
-    ],
-  });
-  const sfMapOrientationFieldBlurRingBG = device.createBindGroup({
-    label: 'galaxy:sfMapOrientationFieldBlurRingBG',
-    layout: sfMapOrientationFieldBlurRingPipe.getBindGroupLayout(0),
-    entries: [
-      { binding: 0, resource: orientationFieldBlurTex.createView() },
-      { binding: 1, resource: orientationFieldSmoothTex.createView() },
-      { binding: 2, resource: { buffer: sfMapOrientationSigmaUbo } },
-    ],
-  });
-  const sfMapOrientationTensorBG = device.createBindGroup({
-    label: 'galaxy:sfMapOrientationTensorBG',
-    layout: sfMapOrientationTensorPipe.getBindGroupLayout(0),
-    entries: [
-      { binding: 0, resource: orientationFieldSmoothTex.createView() },
-      { binding: 1, resource: orientationTensorRawTex.createView() },
-      { binding: 2, resource: { buffer: orientationGridUbo } },
-    ],
-  });
-  const sfMapOrientationTensorBlurAzimuthBG = device.createBindGroup({
-    label: 'galaxy:sfMapOrientationTensorBlurAzimuthBG',
-    layout: sfMapOrientationTensorBlurAzimuthPipe.getBindGroupLayout(0),
-    entries: [
-      { binding: 0, resource: orientationTensorRawTex.createView() },
-      { binding: 1, resource: orientationTensorBlurTex.createView() },
-      { binding: 2, resource: { buffer: sfMapOrientationSigmaUbo } },
-    ],
-  });
-  const sfMapOrientationTensorBlurRingBG = device.createBindGroup({
-    label: 'galaxy:sfMapOrientationTensorBlurRingBG',
-    layout: sfMapOrientationTensorBlurRingPipe.getBindGroupLayout(0),
-    entries: [
-      { binding: 0, resource: orientationTensorBlurTex.createView() },
-      { binding: 1, resource: orientationTensorFinalTex.createView() },
-      { binding: 2, resource: { buffer: sfMapOrientationSigmaUbo } },
-    ],
-  });
-  const sfMapOrientationCoherenceBG = device.createBindGroup({
-    label: 'galaxy:sfMapOrientationCoherenceBG',
-    layout: sfMapOrientationCoherencePipe.getBindGroupLayout(0),
-    entries: [
-      { binding: 0, resource: orientationTensorFinalTex.createView() },
-      { binding: 1, resource: orientationTex.createView() },
-    ],
   });
 
   // ---- the aggregate composite: the RUNTIME's additive upsample ----
@@ -1351,25 +994,30 @@ export async function createGalaxyEngine(
   const readbackQueue = createReadbackQueue(device);
   const sfMapReadback = readbackQueue.stream({
     label: 'galaxy:sfMapReadback',
-    texture: sfMapTex,
-    buffer: sfMapReadbackBuf,
-    bytesPerRow: SF_MAP_READBACK_BYTES_PER_ROW,
+    texture: sfMapAutomaton.texture,
+    buffer: sfMapAutomaton.readbackBuffer,
+    bytesPerRow: sfMapAutomaton.readbackBytesPerRow,
     width: SF_MAP_AZ,
     height: SF_MAP_RINGS,
     decode: (mapped) =>
-      unpadRows(new Uint8Array(mapped), SF_MAP_READBACK_BYTES_PER_ROW, SF_MAP_AZ * 4, SF_MAP_RINGS),
+      unpadRows(
+        new Uint8Array(mapped),
+        sfMapAutomaton.readbackBytesPerRow,
+        SF_MAP_AZ * 4,
+        SF_MAP_RINGS,
+      ),
   });
   const orientationReadback = readbackQueue.stream({
     label: 'galaxy:orientationReadback',
-    texture: orientationTex,
-    buffer: orientationReadbackBuf,
-    bytesPerRow: ORIENTATION_READBACK_BYTES_PER_ROW,
+    texture: sfMapOrientation.texture,
+    buffer: sfMapOrientation.readbackBuffer,
+    bytesPerRow: sfMapOrientation.readbackBytesPerRow,
     width: SF_MAP_AZ,
     height: SF_MAP_RINGS,
     decode: (mapped) =>
       decodeOrientationTexels(
         new Uint16Array(mapped),
-        ORIENTATION_READBACK_BYTES_PER_ROW,
+        sfMapOrientation.readbackBytesPerRow,
         SF_MAP_AZ,
         SF_MAP_RINGS,
       ),
@@ -1728,46 +1376,11 @@ export async function createGalaxyEngine(
   function rebuildSfMapOrientationIfNeeded(): void {
     if (render.orientationViewIntensity <= 0 && !fieldTuning.sfMapDustSeeding) return;
     const grid = fieldGeometry ? sfMapGridRadius(fieldGeometry) : { rMin: 1e-3, rMax: 1 };
-    device.queue.writeBuffer(orientationGridUbo, 0, new Float32Array([grid.rMin, grid.rMax, 0, 0]));
-    device.queue.writeBuffer(
-      sfMapOrientationSigmaUbo,
-      0,
-      new Float32Array([
-        render.orientationSigmaDerivTexels,
-        render.orientationSigmaIntegTexels,
-        0,
-        0,
-      ]),
-    );
-    const dispatchX = SF_MAP_AZ / SF_MAP_WORKGROUP_SIZE;
-    const dispatchY = SF_MAP_RINGS / SF_MAP_WORKGROUP_SIZE;
-    const enc = device.createCommandEncoder({ label: 'galaxy:sfMapOrientation' });
-    // All six dispatches share ONE compute pass: each stage reads the
-    // previous stage's write, and WebGPU orders dispatchWorkgroups calls
-    // within a single pass exactly like rebuildSfMap's own step loop does
-    // for its ping-ponged automaton state — no extra pass boundary needed
-    // between stages just because the texture object changed.
-    const pass = enc.beginComputePass({ label: 'galaxy:sfMapOrientationPass' });
-    pass.setPipeline(sfMapOrientationFieldBlurAzimuthPipe);
-    pass.setBindGroup(0, sfMapOrientationFieldBlurAzimuthBG);
-    pass.dispatchWorkgroups(dispatchX, dispatchY);
-    pass.setPipeline(sfMapOrientationFieldBlurRingPipe);
-    pass.setBindGroup(0, sfMapOrientationFieldBlurRingBG);
-    pass.dispatchWorkgroups(dispatchX, dispatchY);
-    pass.setPipeline(sfMapOrientationTensorPipe);
-    pass.setBindGroup(0, sfMapOrientationTensorBG);
-    pass.dispatchWorkgroups(dispatchX, dispatchY);
-    pass.setPipeline(sfMapOrientationTensorBlurAzimuthPipe);
-    pass.setBindGroup(0, sfMapOrientationTensorBlurAzimuthBG);
-    pass.dispatchWorkgroups(dispatchX, dispatchY);
-    pass.setPipeline(sfMapOrientationTensorBlurRingPipe);
-    pass.setBindGroup(0, sfMapOrientationTensorBlurRingBG);
-    pass.dispatchWorkgroups(dispatchX, dispatchY);
-    pass.setPipeline(sfMapOrientationCoherencePipe);
-    pass.setBindGroup(0, sfMapOrientationCoherenceBG);
-    pass.dispatchWorkgroups(dispatchX, dispatchY);
-    pass.end();
-    device.queue.submit([enc.finish()]);
+    sfMapOrientation.dispatch({
+      grid,
+      sigmaDerivTexels: render.orientationSigmaDerivTexels,
+      sigmaIntegTexels: render.orientationSigmaIntegTexels,
+    });
     if (fieldTuning.sfMapDustSeeding) scheduleOrientationReadback(grid);
   }
 
@@ -1918,164 +1531,22 @@ export async function createGalaxyEngine(
   /**
    * rebuildSfMap — reruns the SSPSF automaton from scratch: bakes the
    * arm-forcing texture (galaxySfMapArmForcing.ts, off the CACHED geometry —
-   * same contract rebuildDustMixture follows) then dispatches
-   * `fieldTuning.sfMap.steps` compute steps, all in ONE command encoder /
-   * ONE submit. Called from setParams (new galaxy, always) and
-   * setFieldTuning (only when the incoming patch actually touches `sfMap` —
-   * see its call site) — NEVER per frame, per the params contract.
+   * same contract rebuildDustMixture follows). Called from setParams (new
+   * galaxy, always) and setFieldTuning (only when the incoming patch actually
+   * touches `sfMap` — see its call site) — NEVER per frame, per the params
+   * contract. `createSfMapAutomaton` owns the dispatch; what stays here is the
+   * pair of things that follow it either way.
    *
-   * Per-step data (the step index sfMapStep.wesl's RNG salt needs) cannot
-   * ride one rewritten uniform: every `device.queue.writeBuffer` call here
-   * happens before this function's single `submit`, and queue operations
-   * apply in ISSUE order — N rewrites of one buffer location would all land
-   * before ANY of the N dispatches ran, so every step would see only the
-   * LAST write (the same landmine the star/dust UBO split guards against,
-   * see this file's own uniform-buffer docblock above). The fix used here:
-   * write every step's index ONCE, at its own (device-aligned) offset in one
-   * buffer, and give each step its OWN bind group with a STATIC offset into
-   * that slot — no rewrite between dispatches, so ordering can't collapse.
-   *
-   * Both exits schedule `scheduleSfMapReadback(grid)` — the disabled branch
-   * too, so `sfMapData` reflects the cleared (all-zero-gas) texture it just
-   * wrote rather than holding some earlier galaxy's map.
+   * The readback runs on BOTH of the automaton's exits — the disabled one too,
+   * so `sfMapData` reflects the cleared (all-zero-gas) texture it just wrote
+   * rather than holding some earlier galaxy's map.
    */
   function rebuildSfMap(): void {
-    const sfMap = fieldTuning.sfMap;
-    const grid = fieldGeometry ? sfMapGridRadius(fieldGeometry) : { rMin: 1e-3, rMax: 1 };
-    device.queue.writeBuffer(sfMapGridUbo, 0, new Float32Array([grid.rMin, grid.rMax, 0, 0]));
-
-    if (!fieldGeometry || !sfMap.enabled || sfMap.steps <= 0) {
-      // Disabled (or no galaxy yet): leave nothing stale for sfMapView to
-      // show — same "a skipped pass leaves last frame's content" concern
-      // dustMapPopulated exists to avoid, just resolved by clearing once
-      // rather than latching, since this path is a rare toggle, not a
-      // per-frame branch.
-      device.queue.writeTexture(
-        { texture: sfMapArmForcingTex },
-        new Float32Array(SF_MAP_AZ * SF_MAP_RINGS),
-        { bytesPerRow: SF_MAP_AZ * 4 },
-        [SF_MAP_AZ, SF_MAP_RINGS],
-      );
-      device.queue.writeTexture(
-        { texture: sfMapTex },
-        new Uint8Array(SF_MAP_AZ * SF_MAP_RINGS * 4),
-        { bytesPerRow: SF_MAP_AZ * 4 },
-        [SF_MAP_AZ, SF_MAP_RINGS],
-      );
-      scheduleSfMapReadback(grid);
-      rebuildSfMapOrientationIfNeeded();
-      return;
-    }
-
-    const forcing = buildGalaxySfMapArmForcing(fieldGeometry, fieldTuning);
-    device.queue.writeTexture(
-      { texture: sfMapArmForcingTex },
-      forcing,
-      { bytesPerRow: SF_MAP_AZ * 4 },
-      [SF_MAP_AZ, SF_MAP_RINGS],
-    );
-
-    device.queue.writeBuffer(
-      sfMapConstUbo,
-      0,
-      new Float32Array([
-        grid.rMin,
-        grid.rMax,
-        sfMap.corotationRadius,
-        sfMap.shearRate,
-        sfMap.baseIgnition,
-        sfMap.spread,
-        sfMap.armForcing,
-        sfMap.gasRegen,
-        sfMap.refractorySteps,
-        currentSeed,
-        sfMap.armFluxRef,
-        sfMap.activityDecay,
-        sfMap.activityGain,
-        0,
-        0,
-        0,
-      ]),
-    );
-
-    const steps = sfMap.steps;
-    const stride = device.limits.minUniformBufferOffsetAlignment;
-    if (sfMapStepIndexBuf) sfMapStepIndexBuf.destroy();
-    sfMapStepIndexBuf = device.createBuffer({
-      label: 'galaxy:sfMapStepIndexBuf',
-      size: steps * stride,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    const grid = sfMapAutomaton.rebuild({
+      geometry: fieldGeometry,
+      tuning: fieldTuning,
+      seed: currentSeed,
     });
-    const stepData = sfMapStepIndexData(steps, stride);
-    device.queue.writeBuffer(sfMapStepIndexBuf, 0, stepData);
-
-    const stepBindGroups: GPUBindGroup[] = [];
-    for (let s = 0; s < steps; s++) {
-      const prev = s % 2 === 0 ? sfMapStateA : sfMapStateB;
-      const next = s % 2 === 0 ? sfMapStateB : sfMapStateA;
-      stepBindGroups.push(
-        device.createBindGroup({
-          label: `galaxy:sfMapStepBG${s}`,
-          layout: sfMapStepPipe.getBindGroupLayout(0),
-          entries: [
-            { binding: 0, resource: { buffer: sfMapConstUbo } },
-            { binding: 1, resource: sfMapArmForcingTex.createView() },
-            { binding: 2, resource: prev.createView() },
-            { binding: 3, resource: next.createView() },
-            { binding: 4, resource: { buffer: sfMapStepIndexBuf, offset: s * stride, size: 4 } },
-          ],
-        }),
-      );
-    }
-
-    const dispatchX = SF_MAP_AZ / SF_MAP_WORKGROUP_SIZE;
-    const dispatchY = SF_MAP_RINGS / SF_MAP_WORKGROUP_SIZE;
-    const enc = device.createCommandEncoder({ label: 'galaxy:sfMapRebuild' });
-    const stepPass = enc.beginComputePass({ label: 'galaxy:sfMapStepPass' });
-    stepPass.setPipeline(sfMapStepPipe);
-    for (let s = 0; s < steps; s++) {
-      stepPass.setBindGroup(0, stepBindGroups[s]!);
-      stepPass.dispatchWorkgroups(dispatchX, dispatchY);
-    }
-    stepPass.end();
-
-    // Parity of the LAST dispatched step (index steps-1) says which texture
-    // it wrote into: even index writes B, odd writes A (see the prev/next
-    // pick in the loop above). That same steps-1 is also the number of
-    // shear-applying generations finalState has accumulated (step 0 only
-    // seeds — see sfMapStep.wesl), which is what sfMapPack.wesl's un-shear
-    // needs, NOT the raw `steps` count.
-    const finalState = (steps - 1) % 2 === 0 ? sfMapStateB : sfMapStateA;
-    device.queue.writeBuffer(
-      sfMapPackConstUbo,
-      0,
-      new Float32Array([
-        grid.rMin,
-        grid.rMax,
-        sfMap.corotationRadius,
-        sfMap.shearRate,
-        steps - 1,
-        0,
-        0,
-        0,
-      ]),
-    );
-    const packBG = device.createBindGroup({
-      label: 'galaxy:sfMapPackBG',
-      layout: sfMapPackPipe.getBindGroupLayout(0),
-      entries: [
-        { binding: 0, resource: finalState.createView() },
-        { binding: 1, resource: sfMapTex.createView() },
-        { binding: 2, resource: { buffer: sfMapPackConstUbo } },
-      ],
-    });
-    const packPass = enc.beginComputePass({ label: 'galaxy:sfMapPackPass' });
-    packPass.setPipeline(sfMapPackPipe);
-    packPass.setBindGroup(0, packBG);
-    packPass.dispatchWorkgroups(dispatchX, dispatchY);
-    packPass.end();
-
-    device.queue.submit([enc.finish()]);
     scheduleSfMapReadback(grid);
     rebuildSfMapOrientationIfNeeded();
   }
@@ -3177,16 +2648,16 @@ export async function createGalaxyEngine(
         // construction comment) so this draw sums with whatever the upsample
         // above already added.
         if (render.sfMapViewIntensity > 0) {
-          pass.setPipeline(sfMapPresentPipe);
-          pass.setBindGroup(0, sfMapPresentBG);
+          pass.setPipeline(sfMapAutomaton.presentPipeline);
+          pass.setBindGroup(0, sfMapAutomaton.presentBindGroup);
           pass.draw(3);
         }
         // Same shape as the sfMap draw just above, same reason:
         // full-canvas-resolution presentation, additive so it sums with
         // whatever else this pass has already drawn.
         if (render.orientationViewIntensity > 0) {
-          pass.setPipeline(orientationPresentPipe);
-          pass.setBindGroup(0, orientationPresentBG);
+          pass.setPipeline(sfMapOrientation.presentPipeline);
+          pass.setBindGroup(0, sfMapOrientation.presentBindGroup);
           pass.draw(3);
         }
         // The bubble-view overlay: an instanced draw, not a fullscreen
@@ -3301,7 +2772,7 @@ export async function createGalaxyEngine(
     // rebuildSfMap has run at least once (setParams). Consumed by nothing
     // yet but sfMapPresent.wesl's own overlay; exposed here for the sibling
     // UI and future consumers per the research doc §19's staging note.
-    getSfMapTexture: (): GPUTexture => sfMapTex,
+    getSfMapTexture: (): GPUTexture => sfMapAutomaton.texture,
     // The CPU-side readback of the same output (`scheduleSfMapReadback`):
     // null until the first one lands. Consumed by `buildDustParticleCloud`
     // via `sfMapDustSeeding` today; exposed here for future consumers too.
@@ -3371,15 +2842,8 @@ export async function createGalaxyEngine(
       fieldCompsBuf.destroy();
       bubbleBuf.destroy();
       dustNoiseTex.destroy();
-      sfMapArmForcingTex.destroy();
-      sfMapStateA.destroy();
-      sfMapStateB.destroy();
-      sfMapTex.destroy();
-      sfMapReadbackBuf.destroy();
-      sfMapConstUbo.destroy();
-      sfMapGridUbo.destroy();
-      sfMapPackConstUbo.destroy();
-      sfMapStepIndexBuf?.destroy();
+      sfMapAutomaton.dispose();
+      sfMapOrientation.dispose();
       gradeBuf.destroy();
       // The size-dependent targets outlive every other resource here — they
       // are the only ones reallocated on resize, so an engine torn down and
