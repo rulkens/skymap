@@ -238,6 +238,9 @@ import {
   packFieldHeaderUniforms,
 } from './uniforms/packFieldUniforms';
 import type { FieldCamera, FieldDustNoise } from './uniforms/packFieldUniforms';
+import { debugViewWeights } from './frame/debugViewWeights';
+import { DEBUG_VIEWS } from '../data/debugViews';
+import type { DebugViewKind } from '../../@types/data/DebugViewKind';
 import { createGenerationPipelines } from '../../../../src/services/gpu/galaxy/createGenerationPipelines';
 import { encodeGeneration } from '../../../../src/services/gpu/galaxy/encodeGeneration';
 import { packGenerationUniforms } from '../../../../src/services/gpu/galaxy/packGenerationUniforms';
@@ -1226,6 +1229,12 @@ export async function createGalaxyEngine(
   // them — and, through them, from the app's own defaults.
   const render = { ...DEFAULT_RENDER_SETTINGS, ...DEFAULT_LOD_SETTINGS };
 
+  // One debug view's live weight, through `DEBUG_VIEWS` rather than a named
+  // settings key — for the rebuild gates and `setRender`'s edge triggers,
+  // which run outside a frame. Inside `drawFrame` the whole record comes off
+  // `deriveFrameView` instead, so a pass and its own header agree.
+  const viewIntensity = (kind: DebugViewKind): number => render[DEBUG_VIEWS[kind].intensityKey];
+
   // Reused scratch for the per-frame uniform packs — no per-frame allocation.
   // One scratch serves both cloud passes: each pack writes every lane before
   // its `writeBuffer`, so nothing of the star pass's fill survives into the
@@ -1404,7 +1413,7 @@ export async function createGalaxyEngine(
    *    `sfMapDustSeeding` on — see that function's own comment.
    */
   function rebuildSfMapOrientationIfNeeded(): void {
-    if (render.orientationViewIntensity <= 0 && !fieldTuning.sfMapDustSeeding) return;
+    if (viewIntensity('orientation') <= 0 && !fieldTuning.sfMapDustSeeding) return;
     const grid = sfMapGridRadiusOrDefault(fieldGeometry);
     sfMapOrientation.dispatch({
       grid,
@@ -1526,7 +1535,7 @@ export async function createGalaxyEngine(
    * (see `bubbleBuf`'s own declaration comment).
    */
   function rebuildBubblePlacements(): void {
-    if (render.bubbleViewIntensity <= 0) {
+    if (viewIntensity('bubble') <= 0) {
       bubbleInstanceCount = 0;
       return;
     }
@@ -1798,11 +1807,16 @@ export async function createGalaxyEngine(
     const previousFieldDivisor = render.fieldDivisor;
     const previousDustDivisor = render.dustDivisor;
     const previousHiiDivisor = render.hiiDivisor;
-    const previousOrientationViewIntensity = render.orientationViewIntensity;
     const previousOrientationSigmaDeriv = render.orientationSigmaDerivTexels;
     const previousOrientationSigmaInteg = render.orientationSigmaIntegTexels;
-    const previousBubbleViewIntensity = render.bubbleViewIntensity;
+    const previousViewWeights = debugViewWeights(render);
     Object.assign(render, patch);
+    // The 0 -> nonzero CROSSING for one view, not "is it above 0": this runs
+    // on every render-bag push and the sliders are continuous, so the latter
+    // would redispatch a whole pass chain on every step of a drag instead of
+    // once, when the overlay turns on.
+    const turnedOn = (kind: DebugViewKind): boolean =>
+      previousViewWeights[kind] <= 0 && viewIntensity(kind) > 0;
     if (render.aggregateDivisor !== previousDivisor) {
       targets.rebuildAggregate(render.aggregateDivisor);
     }
@@ -1813,39 +1827,28 @@ export async function createGalaxyEngine(
     // contract exists to prevent.
     if (render.dustDivisor !== previousDustDivisor) targets.rebuildDust(render.dustDivisor);
     if (render.hiiDivisor !== previousHiiDivisor) targets.rebuildHii(render.hiiDivisor);
-    // Edge-triggered on the 0 -> nonzero CROSSING, not "whenever intensity is
-    // above 0": this function runs on every render-bag push, and the slider
-    // is now continuous, so the latter would redispatch the whole six-pass
-    // chain on every drag step instead of once when the overlay turns on.
-    // See rebuildSfMapOrientationIfNeeded's own docblock.
-    //
-    // Gated on EITHER consumer being live, not just the intensity: with the
-    // overlay off and `sfMapDustSeeding` on, an intensity-only guard left the
-    // sigma sliders dead — no live consumer meant the condition never even
-    // reached the edge check, so a sigma drag redrew nothing and the dust
+    // Not a plain edge: the sigma sliders are a second way in, and BOTH are
+    // gated on EITHER consumer being live rather than on the intensity alone.
+    // With the overlay off and `sfMapDustSeeding` on, an intensity-only guard
+    // left the sigma sliders dead — no live consumer meant the condition never
+    // even reached the edge check, so a sigma drag redrew nothing and the dust
     // never resampled the new orientation. Matches the early-return gate
     // inside `rebuildSfMapOrientationIfNeeded` itself.
     const orientationConsumerLive =
-      render.orientationViewIntensity > 0 || fieldTuning.sfMapDustSeeding;
-    const orientationViewJustTurnedOn =
-      previousOrientationViewIntensity <= 0 && render.orientationViewIntensity > 0;
+      viewIntensity('orientation') > 0 || fieldTuning.sfMapDustSeeding;
     if (
       orientationConsumerLive &&
-      (orientationViewJustTurnedOn ||
+      (turnedOn('orientation') ||
         render.orientationSigmaDerivTexels !== previousOrientationSigmaDeriv ||
         render.orientationSigmaIntegTexels !== previousOrientationSigmaInteg)
     ) {
       rebuildSfMapOrientationIfNeeded();
     }
-    // Same 0 -> nonzero edge-trigger as the orientation chain just above,
-    // for the same reason: `rebuildBubblePlacements`'s own early return
-    // already makes every OTHER render-bag push a no-op, but the crossing
-    // itself has to force one rebuild so switching the overlay on shows
-    // something immediately rather than waiting for the next
-    // setParams/setFieldTuning.
-    if (previousBubbleViewIntensity <= 0 && render.bubbleViewIntensity > 0) {
-      rebuildBubblePlacements();
-    }
+    // `rebuildBubblePlacements`'s own early return already makes every OTHER
+    // render-bag push a no-op, but the crossing itself has to force one
+    // rebuild so switching the overlay on shows something immediately rather
+    // than waiting for the next setParams/setFieldTuning.
+    if (turnedOn('bubble')) rebuildBubblePlacements();
   }
 
   // Rebuilds `fieldMixture` from the CACHED geometry rather than dispatching a
@@ -2293,7 +2296,7 @@ export async function createGalaxyEngine(
       aspect,
       fade,
       galaxyWeight,
-      debugView,
+      debugViews,
       sfMapChannels,
       dustSlices,
       analyticExposure,
@@ -2358,12 +2361,12 @@ export async function createGalaxyEngine(
           slices: dustSlices,
           mapHeightPx: targets.reducedSize(render.dustDivisor)[1],
         },
-        // splat.wesl's fs reads .w, dustPresent.wesl's fs .x.
-        debugView,
+        // Each present shader reads its own view's lane out of this; bubble's
+        // does so through its own bind group, bound to THIS header's
+        // `fieldUbo` and never to the HII one below.
+        debugViews,
+        galaxyWeight,
         sfMapChannels,
-        // bubblePresent.wesl reads this through its own bind group, bound to
-        // THIS header's `fieldUbo` and never to the HII one below.
-        bubbleViewIntensity: render.bubbleViewIntensity,
       },
       fieldData,
     );
@@ -2375,10 +2378,10 @@ export async function createGalaxyEngine(
     // always takes the plain (unattenuated) emission path — HII does not
     // (yet) darken under the dust lane it may physically sit inside.
     //
-    // `debugView`/`sfMapChannels`/`bubbleViewIntensity` are the same values
-    // as above. Only `debugView.w` is read by this pass's own draw (hiiBG
-    // binds none of the present pipelines), but sharing them keeps HII's
-    // dimming in lockstep with the rest of the galaxy under an active view.
+    // `debugViews`/`sfMapChannels` are the same values as above. Only
+    // `galaxyWeight` is read by this pass's own draw (hiiBG binds none of the
+    // present pipelines), but sharing them keeps HII's dimming in lockstep
+    // with the rest of the galaxy under an active view.
     packFieldHeaderUniforms(
       {
         camera: fieldCamera,
@@ -2386,9 +2389,9 @@ export async function createGalaxyEngine(
         dustCount: 0,
         primaryCount: 0,
         targetSizePx: targets.reducedSize(render.hiiDivisor),
-        debugView,
+        debugViews,
+        galaxyWeight,
         sfMapChannels,
-        bubbleViewIntensity: render.bubbleViewIntensity,
       },
       hiiData,
     );
@@ -2437,7 +2440,7 @@ export async function createGalaxyEngine(
     // sums the previous frame's content into HDR with nothing to catch it.
     const analytic = render.analyticField;
     const drawHii = hiiEmissionCount > 0;
-    const drawDustView = render.dustViewIntensity > 0;
+    const drawDustView = debugViews.dust > 0;
     if (analytic) {
       // Dust-column map: splat the primary's dust slice into `dustMapTex`, at
       // its own divisor-matched resolution (`dustMapPipe`, additive). Feeds
@@ -2547,14 +2550,14 @@ export async function createGalaxyEngine(
         // divisor-matched offscreen and the upsample's 4-tap reconstruction
         // were both wrong for them. Both pipelines blend additively, so each
         // sums with whatever the composites already added.
-        if (render.sfMapViewIntensity > 0) {
+        if (debugViews.sfMap > 0) {
           encodePresentOverlay(
             pass,
             sfMapAutomaton.presentPipeline,
             sfMapAutomaton.presentBindGroup,
           );
         }
-        if (render.orientationViewIntensity > 0) {
+        if (debugViews.orientation > 0) {
           encodePresentOverlay(
             pass,
             sfMapOrientation.presentPipeline,
@@ -2566,7 +2569,7 @@ export async function createGalaxyEngine(
         // independent of the other three: the SF-event catalog is a second,
         // unrelated star-formation model, not another lens on the same
         // automaton — hence its own `if`, never an `else if`.
-        if (render.bubbleViewIntensity > 0 && bubbleInstanceCount > 0) {
+        if (debugViews.bubble > 0 && bubbleInstanceCount > 0) {
           encodePresentOverlay(pass, bubblePresentPipe, bubblePresentBG, {
             buf: bubbleBuf,
             count: bubbleInstanceCount,

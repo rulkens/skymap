@@ -17,9 +17,14 @@ import type { MilkyWayFadeReadout } from '../../../@types/engine/MilkyWayFadeRea
 import type { RenderSettings } from '../../../@types/engine/RenderSettings';
 
 import { debugGalaxyWeight } from './debugGalaxyWeight';
+import { debugViewWeights } from './debugViewWeights';
 import { deriveMilkyWayFade } from './deriveMilkyWayFade';
 import { dustSliceEdges } from './dustSliceEdges';
-import type { DebugViewWeights, FieldDustSlices, SfMapChannelWeights } from '../uniforms/packFieldUniforms';
+import type {
+  DebugViewWeights,
+  FieldDustSlices,
+  SfMapChannelWeights,
+} from '../uniforms/packFieldUniforms';
 
 export type FrameView = {
   readonly view: Float32Array;
@@ -28,7 +33,7 @@ export type FrameView = {
   readonly aspect: number;
   readonly fade: MilkyWayFadeReadout;
   readonly galaxyWeight: number;
-  readonly debugView: DebugViewWeights;
+  readonly debugViews: DebugViewWeights;
   readonly sfMapChannels: SfMapChannelWeights;
   readonly dustSlices: FieldDustSlices;
   /** The star pass's own multipliers folded in, so `analyticExposure` 1.0 means sprite/field parity as the sliders move, not only at defaults. */
@@ -65,10 +70,13 @@ export function deriveFrameView(input: {
   // app passes `ctx.canvasSize.height`: the fade band asks how big the disc
   // looks to the USER.
   const fade = deriveMilkyWayFade(eye, fov, viewportPx[1], render);
+  // Read once here and shared by the uniform packs AND the per-pass gates, so
+  // a pass can never run at a weight its own header says is 0.
+  const debugViews = debugViewWeights(render);
   // MAX, not SUM — see debugGalaxyWeight. Shared by the sprite fadeAlpha and
   // every field header this frame, so the galaxy dims by exactly the same
   // amount whichever representation is drawing it.
-  const galaxyWeight = debugGalaxyWeight(render);
+  const galaxyWeight = debugGalaxyWeight(debugViews);
 
   return {
     view,
@@ -77,12 +85,7 @@ export function deriveFrameView(input: {
     aspect,
     fade,
     galaxyWeight,
-    debugView: {
-      dustViewIntensity: render.dustViewIntensity,
-      sfMapViewIntensity: render.sfMapViewIntensity,
-      orientationViewIntensity: render.orientationViewIntensity,
-      galaxyWeight,
-    },
+    debugViews,
     sfMapChannels: {
       gasWeight: render.sfMapGasWeight,
       recentSfWeight: render.sfMapRecentWeight,

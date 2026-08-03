@@ -39,6 +39,7 @@
 import type { GalaxyFieldComponent } from '../../../../../src/@types/galaxy/GalaxyFieldComponent';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { DebugViewKind } from '../../../@types/data/DebugViewKind';
 
 /** Float count of `io.wesl`'s `FieldUniforms` header — 13 vec4, camera + params + counts + counts2 + dustExtinction + dustNoise + dustSlices + debugView + sfMapChannels + bubbleView. */
 export const FIELD_HEADER_FLOATS = 52;
@@ -96,20 +97,12 @@ export type FieldDustSlices = {
 };
 
 /**
- * The three debug-view crossfade weights (io.wesl's `debugView`) plus the
- * combined galaxy dimming weight — packed as one object rather than four
- * positional args, same precedent as `FieldDustNoise`/`FieldDustSlices`.
- * `galaxyWeight` is `1 - max(the three intensities)` clamped to 0, computed
- * once in `drawFrame` and shared by every `packFieldHeaderUniforms` call this
- * frame (the field header AND the HII header) so two active views never
- * double-dim the galaxy.
+ * Every debug view's crossfade weight, keyed by kind — one value per
+ * `DEBUG_VIEWS` row, built by `debugViewWeights`. Which uniform lane each one
+ * lands in is the packer's business, not this record's: three ride
+ * io.wesl's `debugView` and the fourth `bubbleView`.
  */
-export type DebugViewWeights = {
-  readonly dustViewIntensity: number;
-  readonly sfMapViewIntensity: number;
-  readonly orientationViewIntensity: number;
-  readonly galaxyWeight: number;
-};
+export type DebugViewWeights = Readonly<Record<DebugViewKind, number>>;
 
 /**
  * Per-channel isolation weights for the SF-map debug view (io.wesl's
@@ -187,10 +180,14 @@ export type FieldHeaderInput = {
   readonly targetSizePx: Vec2;
   /** Absent means the pass has no dust; the lanes are still written, inert. */
   readonly dust?: FieldDust;
-  readonly debugView: DebugViewWeights;
+  readonly debugViews: DebugViewWeights;
+  /**
+   * `1 - max(every view weight)`, clamped to 0 — see `debugGalaxyWeight`. Not
+   * a member of `debugViews` because it is not a view; it is what the galaxy
+   * is left with once they have taken their share.
+   */
+  readonly galaxyWeight: number;
   readonly sfMapChannels: SfMapChannelWeights;
-  /** io.wesl's `bubbleView.x` — bubblePresent.wesl is the only reader. */
-  readonly bubbleViewIntensity: number;
 };
 
 /**
@@ -207,9 +204,9 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
     dustCount,
     primaryCount,
     targetSizePx,
-    debugView,
+    debugViews,
+    galaxyWeight,
     sfMapChannels,
-    bubbleViewIntensity,
   } = input;
   const dust = input.dust ?? INERT_DUST;
   const out = dst ?? new Float32Array(FIELD_HEADER_FLOATS);
@@ -276,11 +273,15 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
   out[38] = dust.slices.t3;
   out[39] = 0;
 
-  // debugView 40..43 = (dustViewIntensity, sfMapViewIntensity, orientationViewIntensity, galaxyWeight).
-  out[40] = debugView.dustViewIntensity;
-  out[41] = debugView.sfMapViewIntensity;
-  out[42] = debugView.orientationViewIntensity;
-  out[43] = debugView.galaxyWeight;
+  // debugView 40..43 = (dust, sfMap, orientation, galaxyWeight). Hand-written
+  // lane by lane, NOT iterated over `debugViews`: a loop would hang a GPU byte
+  // layout on JS object key order, so reordering two `DEBUG_VIEWS` rows would
+  // silently swap orientation with bubble. The four views do NOT share one
+  // vec4 — .w is the galaxy weight, so `bubble` gets a vec4 of its own below.
+  out[40] = debugViews.dust;
+  out[41] = debugViews.sfMap;
+  out[42] = debugViews.orientation;
+  out[43] = galaxyWeight;
 
   // sfMapChannels 44..47 = (gasWeight, recentSfWeight, activityWeight, unused).
   out[44] = sfMapChannels.gasWeight;
@@ -289,7 +290,7 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
   out[47] = 0;
 
   // bubbleView 48..51 = (intensity, unused, unused, unused).
-  out[48] = bubbleViewIntensity;
+  out[48] = debugViews.bubble;
   out[49] = 0;
   out[50] = 0;
   out[51] = 0;

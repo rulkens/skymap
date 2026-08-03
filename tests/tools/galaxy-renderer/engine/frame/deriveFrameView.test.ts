@@ -53,14 +53,6 @@ describe('deriveFrameView', () => {
     expect(v.analyticExposure).toBeCloseTo(2 * 3 * 16 * v.fade.alpha, 10);
   });
 
-  it('reports one galaxy weight, shared by the sprite fade and both field headers', () => {
-    const v = deriveFrameView({ ...base({ dustViewIntensity: 0.4, sfMapViewIntensity: 0.9 }) });
-    // MAX, not sum: two half-on debug views must not dim twice.
-    expect(v.galaxyWeight).toBe(v.debugView.galaxyWeight);
-    expect(v.debugView.dustViewIntensity).toBe(0.4);
-    expect(v.debugView.sfMapViewIntensity).toBe(0.9);
-  });
-
   it('measures the dust slices from the origin, not the orbit target', () => {
     // Panning moves `target` while the eye stays put; the slices are anchored
     // to the galaxy's centre, so they must not move with it.
