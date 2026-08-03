@@ -225,6 +225,7 @@ import { encodeStarPass } from './passes/encodeStarPass';
 import { encodeTransmittanceDust } from './passes/encodeTransmittanceDust';
 import { createSfMapAutomaton } from './sfMap/createSfMapAutomaton';
 import { createSfMapOrientation } from './sfMap/createSfMapOrientation';
+import { createGrowOnlyRecordBuffer } from './gpu/createGrowOnlyRecordBuffer';
 import { createReadbackQueue } from './gpu/createReadbackQueue';
 import { deriveFrameView } from './frame/deriveFrameView';
 import { decodeOrientationTexels } from './sfMap/decodeOrientationTexels';
@@ -534,7 +535,7 @@ export async function createGalaxyEngine(
   // The analytic field's own buffer, own struct — see `packFieldUniforms`.
   // It cannot share the cloud UBO: nothing in the 208-byte cloud layout is a
   // ray, and this pass reads none of the billboard lanes. Camera/params/dust-
-  // law only now — the mixture itself rides `fieldCompsBuf` below, a separate
+  // law only now — the mixture itself rides `fieldComps` below, a separate
   // storage binding, so this uniform stays `FIELD_HEADER_BUFFER_SIZE`
   // regardless of how many galaxies are on screen.
   const fieldUbo = own(
@@ -547,26 +548,30 @@ export async function createGalaxyEngine(
   // `comps` (io.wesl binding 1): every mixture's Gaussians, central galaxy
   // then each extra, already world-transformed — a read-only STORAGE array,
   // not a uniform, specifically so N background extras can push the total
-  // component count past a uniform's ~1000-component cap. Grown, never
-  // shrunk (see `repackFieldComponents`); starts at
+  // component count past a uniform's ~1000-component cap. Starts at
   // `GALAXY_FIELD_MAX_COMPONENTS` so a single central galaxy never forces a
   // regrow on its first `setParams`.
-  let fieldCompsCapacity = GALAXY_FIELD_MAX_COMPONENTS;
-  let fieldCompsBuf = device.createBuffer({
-    label: 'galaxy:fieldComps',
-    size: fieldCompsCapacity * FIELD_COMPONENT_FLOATS * 4,
-    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-  });
-  ownLatest(() => fieldCompsBuf);
+  const fieldComps = own(
+    createGrowOnlyRecordBuffer({
+      device,
+      label: 'galaxy:fieldComps',
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+      floatsPerRecord: FIELD_COMPONENT_FLOATS,
+      initialCapacity: GALAXY_FIELD_MAX_COMPONENTS,
+      onRegrow: () => {
+        splatBG = buildSplatBindGroup();
+        dustMapBG = buildDustMapBindGroup();
+      },
+    }),
+  );
   // The HII tier's own header + storage buffer, byte-identical layout to
-  // `fieldUbo`/`fieldCompsBuf` (same `io.wesl` struct, same `splatPipe`) but
-  // never concatenated into `fieldCompsBuf` — see research doc §18.1: a
+  // `fieldUbo`/`fieldComps` (same `io.wesl` struct, same `splatPipe`) but
+  // never concatenated into `fieldComps` — see research doc §18.1: a
   // shell sprite is small and bright by construction, so sharing the smooth
   // field's coarser target collapsed it into a bloom firefly. Own buffer,
   // own target (`hiiTex`), own divisor (`render.hiiDivisor`). Capacity starts
   // at `HII_MAX_COUNT`, the tier's own per-galaxy admission ceiling
-  // (`hiiRegions.ts`), and grows the same never-shrink way `fieldCompsBuf`
-  // does once extras are added.
+  // (`hiiRegions.ts`).
   const hiiUbo = own(
     device.createBuffer({
       label: 'galaxy:hiiUniforms',
@@ -574,29 +579,34 @@ export async function createGalaxyEngine(
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     }),
   );
-  let hiiCompsCapacity = HII_MAX_COUNT;
-  let hiiCompsBuf = device.createBuffer({
-    label: 'galaxy:hiiComps',
-    size: hiiCompsCapacity * FIELD_COMPONENT_FLOATS * 4,
-    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-  });
-  ownLatest(() => hiiCompsBuf);
+  const hiiComps = own(
+    createGrowOnlyRecordBuffer({
+      device,
+      label: 'galaxy:hiiComps',
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+      floatsPerRecord: FIELD_COMPONENT_FLOATS,
+      initialCapacity: HII_MAX_COUNT,
+      onRegrow: () => {
+        hiiBG = buildHiiBindGroup();
+      },
+    }),
+  );
   // The bubble-view overlay's own instance buffer (bubblePresent.wesl): a
-  // plain VERTEX buffer, not a storage array like `fieldCompsBuf` — there is
+  // plain VERTEX buffer, not a storage array like `fieldComps` — there is
   // no per-fragment lookup by index, just one instance-stepped attribute
-  // pair per placement, so it needs no 'auto'-layout bind group of its own
-  // and growing it never forces a bind-group rebuild the way
-  // `fieldCompsBuf`'s regrow does. Capacity starts at
-  // BUBBLE_BUDGET + HII_CAVITY_BUDGET (both placement builders' own admission
-  // ceilings) so the overlay's first activation never regrows. Grown, never
-  // shrunk — same discipline as `fieldCompsBuf`, see `rebuildBubblePlacements`.
-  let bubbleCapacity = BUBBLE_BUDGET + HII_CAVITY_BUDGET;
-  let bubbleBuf = device.createBuffer({
-    label: 'galaxy:bubbleComps',
-    size: bubbleCapacity * BUBBLE_RECORD_FLOATS * 4,
-    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-  });
-  ownLatest(() => bubbleBuf);
+  // pair per placement, so it binds into no 'auto'-layout bind group and
+  // needs no `onRegrow`. Capacity starts at BUBBLE_BUDGET + HII_CAVITY_BUDGET
+  // (both placement builders' own admission ceilings) so the overlay's first
+  // activation never regrows.
+  const bubbleComps = own(
+    createGrowOnlyRecordBuffer({
+      device,
+      label: 'galaxy:bubbleComps',
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      floatsPerRecord: BUBBLE_RECORD_FLOATS,
+      initialCapacity: BUBBLE_BUDGET + HII_CAVITY_BUDGET,
+    }),
+  );
   // Tool-only grade trailer: [saturation, vignette, gammaEncode, 0]. The bloom
   // and compositor uniforms are owned by their shared factories below.
   const gradeBuf = own(
@@ -849,7 +859,7 @@ export async function createGalaxyEngine(
   // resolved from sfEventCatalog.ts) drawn as its own debug layer so it can
   // be compared directly against the SSPSF automaton's sfMap view — see
   // `rebuildBubblePlacements` (below `rebuildDustMixture`) for how
-  // `bubbleBuf` is built and packed. One instanced camera-facing quad per
+  // `bubbleComps` is built and packed. One instanced camera-facing quad per
   // placement, no storage buffer/comps lookup: bubblePresent.wesl reads its
   // per-instance center/radius/kind straight off the vertex buffer, and
   // `u` (fieldUbo) only for the camera basis + its own crossfade weight —
@@ -989,7 +999,7 @@ export async function createGalaxyEngine(
   // The CENTRAL galaxy's HII tier, built and cached the same way
   // `fieldMixture` is — but never concatenated into it (see `hiiTex`'s
   // declaration comment). Rebuilt on the same two triggers, packed into its
-  // own `hiiCompsBuf` by `repackHiiComponents`.
+  // own `hiiComps` by `repackHiiComponents`.
   let hiiMixture: readonly GalaxyFieldComponent[] = [];
   // The analytic dust lane's mixture, CENTRAL galaxy only (grill session Q6:
   // extras get dust in a follow-up, zero rework — the packed layout already
@@ -1101,24 +1111,24 @@ export async function createGalaxyEngine(
     layout: dustPipe.getBindGroupLayout(0),
     entries: [{ binding: 0, resource: { buffer: dustUbo } }],
   });
-  // The auto-layout bind group reading `fieldUbo` + `fieldCompsBuf` (see
+  // The auto-layout bind group reading `fieldUbo` + `fieldComps` (see
   // `starBG`/`dustBG`'s comment just above: a bind group is built against
   // ONE pipeline's `layout: 'auto'` GPUBindGroupLayout and fails another
   // pipeline's draw-time compatibility check even for a byte-identical WGSL
-  // binding). `let`, not `const`: `fieldCompsBuf` grows (see
+  // binding). `let`, not `const`: `fieldComps`'s buffer grows (see
   // `repackFieldComponents`), and a bind group is bound to the specific
   // GPUBuffer it was built against — a resized buffer needs a new group.
   //
   // `dustMapBG` (dustMap.wesl's own pass — reads only `fieldUbo` +
-  // `fieldCompsBuf`, same two bindings, its own pipeline) can build eagerly
+  // `fieldComps`, same two bindings, its own pipeline) can build eagerly
   // right here, same as the old `splatBG` used to. `splatBG` itself cannot:
   // splat.wesl's fs now ALSO reads `dustMapTex` (binding 2), which does not
   // exist yet at this point in construction — its first build is deferred to
   // `targets`' `onDustMapRecreated` below, alongside `dustPresentBG`
-  // (dustMapTex is that bind group's ONLY binding). All three rebuild in
-  // `repackFieldComponents`'s regrow branch when `fieldCompsBuf` grows;
-  // `splatBG`/`dustPresentBG` rebuild again whenever `dustMapTex` itself is
-  // recreated (every resize, and every `dustDivisor` move).
+  // (dustMapTex is that bind group's ONLY binding). `splatBG`/`dustMapBG`
+  // rebuild from `fieldComps`'s own `onRegrow`; `splatBG`/`hiiBG`/
+  // `dustPresentBG` rebuild whenever `dustMapTex` itself is recreated (every
+  // resize, and every `dustDivisor` move).
   // Bindings 4/5 (dustNoiseTex/dustNoiseSmp) go ONLY here: dustMap.wesl is
   // the one shader among the three that share io.wesl (splat/dustMap/
   // dustPresent) that actually imports them — `layout: 'auto'` derives each
@@ -1138,7 +1148,7 @@ export async function createGalaxyEngine(
       layout: dustMapPipe.getBindGroupLayout(0),
       entries: [
         { binding: 0, resource: { buffer: fieldUbo } },
-        { binding: 1, resource: { buffer: fieldCompsBuf } },
+        { binding: 1, resource: { buffer: fieldComps.buffer } },
         { binding: 4, resource: dustNoiseTex.createView() },
         { binding: 5, resource: dustNoiseSampler },
       ],
@@ -1151,7 +1161,7 @@ export async function createGalaxyEngine(
       layout: splatPipe.getBindGroupLayout(0),
       entries: [
         { binding: 0, resource: { buffer: fieldUbo } },
-        { binding: 1, resource: { buffer: fieldCompsBuf } },
+        { binding: 1, resource: { buffer: fieldComps.buffer } },
         { binding: 2, resource: targets.dustMapTex.createView() },
         // Binding 6: dustMapSmp — splat.wesl's fs now samples dustMapTex
         // through a filtered UV rather than a 1:1 texel load (see
@@ -1187,7 +1197,7 @@ export async function createGalaxyEngine(
       layout: splatPipe.getBindGroupLayout(0),
       entries: [
         { binding: 0, resource: { buffer: hiiUbo } },
-        { binding: 1, resource: { buffer: hiiCompsBuf } },
+        { binding: 1, resource: { buffer: hiiComps.buffer } },
         { binding: 2, resource: targets.dustMapTex.createView() },
         { binding: 6, resource: dustMapSampler },
       ],
@@ -1291,26 +1301,13 @@ export async function createGalaxyEngine(
     starCount,
   });
 
-  // The live counts from the last `repackFieldComponents` concatenation —
-  // NOT `fieldCompsCapacity` (which only grows, and can outsize the current
-  // total after extras shrink). `fieldEmissionCount` is what `drawFrame`'s
-  // splat draw call instances (dust rides the same buffer but is never drawn
-  // as its own quad); `fieldPrimaryCount`/`fieldDustCount` locate the central
-  // galaxy's dust slice for the header pack's `counts` lanes.
-  let fieldEmissionCount = 0;
-  let fieldPrimaryCount = 0;
-  let fieldDustCount = 0;
-  // The live total from the last `repackHiiComponents` concatenation — same
-  // "not the capacity" caveat as `fieldEmissionCount` above. What `drawFrame`
-  // instances for the HII pass, and what gates whether that pass (and its
-  // composite into HDR) runs at all this frame.
-  let hiiEmissionCount = 0;
-  // The live total from the last `rebuildBubblePlacements` pack — relic
-  // bubbles plus HII cavities, concatenated. What `drawFrame` instances for
-  // the bubble-view overlay pass, PAIRED there with `bubblePlacements`'s own
-  // liveness: this count is only ever written by a rebuild, so switching the
-  // overlay off leaves it (and `bubbleBuf`) stale-but-unread.
-  let bubbleInstanceCount = 0;
+  // How the last `repackFieldComponents` concatenation sliced `fieldComps`:
+  // `emission` components then `dust` ones, of which the first `primary`
+  // belong to the central galaxy. `emission` is what `drawFrame`'s splat draw
+  // instances — the trailing dust slice is only ever read from inside an
+  // emission fragment, never drawn as its own quad — so it is deliberately
+  // NOT `fieldComps.count`, which counts both slices.
+  let fieldCounts = { emission: 0, primary: 0, dust: 0 };
 
   /**
    * scheduleSfMapReadback — the ONE-PER-GENERATION CPU copy of `sfMapTex`
@@ -1524,7 +1521,7 @@ export async function createGalaxyEngine(
   /**
    * rebuildBubblePlacements — the SF-event catalog's own bubble/cavity
    * placements (dustBubblePlacements.ts's `buildDustBubblePlacements` +
-   * `buildHiiCavityPlacements`), packed into `bubbleBuf` for the bubble-view
+   * `buildHiiCavityPlacements`), packed into `bubbleComps` for the bubble-view
    * debug overlay. A SECOND, independent star-formation model — both
    * builders read the SAME `sfEventCatalog.ts` events the SSPSF automaton
    * never sees — drawn so it can be compared directly against the
@@ -1534,10 +1531,6 @@ export async function createGalaxyEngine(
    * sites (`setParams`, `setFieldTuning`), right after it.
    *
    * Ungated: `bubblePlacements` owns whether this is worth running.
-   *
-   * Growing `bubbleBuf` needs no bind-group rebuild, unlike `fieldCompsBuf`
-   * — it is a plain VERTEX buffer, not part of an 'auto'-layout bind group
-   * (see `bubbleBuf`'s own declaration comment).
    */
   function rebuildBubblePlacements(): void {
     const relics = fieldGeometry
@@ -1552,20 +1545,7 @@ export async function createGalaxyEngine(
           currentSeed,
         )
       : [];
-    const total = relics.length + cavities.length;
-    if (total > bubbleCapacity) {
-      bubbleCapacity = total;
-      bubbleBuf.destroy();
-      bubbleBuf = device.createBuffer({
-        label: 'galaxy:bubbleComps',
-        size: bubbleCapacity * BUBBLE_RECORD_FLOATS * 4,
-        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-      });
-    }
-    bubbleInstanceCount = total;
-    if (total === 0) return;
-    const data = packBubbleInstances(relics, cavities);
-    device.queue.writeBuffer(bubbleBuf, 0, data);
+    bubbleComps.write(packBubbleInstances(relics, cavities));
   }
 
   /** Nothing here is worth building while the overlay nobody is looking at is off. */
@@ -1602,51 +1582,31 @@ export async function createGalaxyEngine(
    * every extra's (each already carried into world space by
    * `transformGalaxyFieldComponent` at the point it was built), then the
    * central galaxy's dust mixture LAST, into one list and rewrites
-   * `fieldCompsBuf`. Called whenever any mixture changes — `setParams`,
+   * `fieldComps`. Called whenever any mixture changes — `setParams`,
    * `setExtras`, `setFieldTuning` — never per frame, unlike the header (see
    * `packFieldUniforms`'s header for why the two are split).
    *
    * Dust trails every emission component (never interleaved) so
-   * `dustOffset == fieldEmissionCount` always holds without a separate
+   * `dustOffset == fieldCounts.emission` always holds without a separate
    * bookkeeping pass — see io.wesl's layout comment.
-   *
-   * Grows (and rebuilds `splatBG` + `dustMapBG`, since an 'auto'-layout bind
-   * group is tied to the specific GPUBuffer it was built against) only when
-   * the new total exceeds the current capacity, and never shrinks — the same
-   * grow-only discipline `instancedQuadRenderer` uses for its 'grow' capacity
-   * strategy, and for the same reason here: `setFieldTuning` fires on every
-   * frame a tuning slider is dragged, and recreating the buffer + bind groups
-   * that often would be pure churn.
    */
   function repackFieldComponents(): void {
     const emission: GalaxyFieldComponent[] = [...fieldMixture];
     for (const e of extras) emission.push(...e.fieldMixture);
-    fieldPrimaryCount = fieldMixture.length;
-    fieldEmissionCount = emission.length;
-    fieldDustCount = dustMixture.length;
-    const combined = fieldDustCount > 0 ? [...emission, ...dustMixture] : emission;
-    const total = combined.length;
-    if (total > fieldCompsCapacity) {
-      fieldCompsCapacity = total;
-      fieldCompsBuf.destroy();
-      fieldCompsBuf = device.createBuffer({
-        label: 'galaxy:fieldComps',
-        size: fieldCompsCapacity * FIELD_COMPONENT_FLOATS * 4,
-        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-      });
-      splatBG = buildSplatBindGroup();
-      dustMapBG = buildDustMapBindGroup();
-    }
-    if (total > 0) {
-      device.queue.writeBuffer(fieldCompsBuf, 0, packFieldComponents(combined));
-    }
+    fieldCounts = {
+      emission: emission.length,
+      primary: fieldMixture.length,
+      dust: dustMixture.length,
+    };
+    const combined = fieldCounts.dust > 0 ? [...emission, ...dustMixture] : emission;
+    fieldComps.write(packFieldComponents(combined));
   }
 
   /**
    * repackHiiComponents — `repackFieldComponents`'s exact counterpart for the
    * HII tier: central galaxy's `hiiMixture` then every extra's, into
-   * `hiiCompsBuf`. A SEPARATE buffer rather than a fifth slice of
-   * `fieldCompsBuf` — see `hiiTex`'s declaration comment for why this tier
+   * `hiiComps`. A SEPARATE buffer rather than a fifth slice of
+   * `fieldComps` — see `hiiTex`'s declaration comment for why this tier
    * cannot share the field's target, and a shared BUFFER with a separate
    * TARGET would still mean one draw call painting into two attachments,
    * which WebGPU has no way to do. Called at the same three call sites as
@@ -1655,20 +1615,7 @@ export async function createGalaxyEngine(
   function repackHiiComponents(): void {
     const combined: GalaxyFieldComponent[] = [...hiiMixture];
     for (const e of extras) combined.push(...e.hiiMixture);
-    hiiEmissionCount = combined.length;
-    if (hiiEmissionCount > hiiCompsCapacity) {
-      hiiCompsCapacity = hiiEmissionCount;
-      hiiCompsBuf.destroy();
-      hiiCompsBuf = device.createBuffer({
-        label: 'galaxy:hiiComps',
-        size: hiiCompsCapacity * FIELD_COMPONENT_FLOATS * 4,
-        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-      });
-      hiiBG = buildHiiBindGroup();
-    }
-    if (hiiEmissionCount > 0) {
-      device.queue.writeBuffer(hiiCompsBuf, 0, packFieldComponents(combined));
-    }
+    hiiComps.write(packFieldComponents(combined));
   }
 
   /**
@@ -2303,11 +2250,11 @@ export async function createGalaxyEngine(
     packFieldHeaderUniforms(
       {
         camera: fieldCamera,
-        emissionCount: fieldEmissionCount,
-        primaryCount: fieldPrimaryCount,
+        emissionCount: fieldCounts.emission,
+        primaryCount: fieldCounts.primary,
         targetSizePx: targets.reducedSize(render.fieldDivisor),
         dust: {
-          count: fieldDustCount,
+          count: fieldCounts.dust,
           // Both cached by rebuildDustMixture, not recomputed per frame.
           extinctionRgb: currentDustExtinctionRgb,
           noise: currentDustNoise,
@@ -2339,7 +2286,7 @@ export async function createGalaxyEngine(
     packFieldHeaderUniforms(
       {
         camera: fieldCamera,
-        emissionCount: hiiEmissionCount,
+        emissionCount: hiiComps.count,
         primaryCount: 0,
         targetSizePx: targets.reducedSize(render.hiiDivisor),
         debugViews,
@@ -2354,7 +2301,7 @@ export async function createGalaxyEngine(
     // there is nothing else to pack here.
 
     // Before the encoder exists, not after: a rebuild can destroy and replace
-    // `bubbleBuf`, which a recorded draw would already be holding, and the
+    // `bubbleComps`'s buffer, which a recorded draw would already be holding, and the
     // orientation chain submits an encoder of its own that must precede this
     // frame's. Texture before CPU copy — the first invalidates the second.
     const bubblesLive = bubblePlacements.ensureFresh();
@@ -2400,7 +2347,7 @@ export async function createGalaxyEngine(
     // cannot drift into compositing a target this frame never cleared, which
     // sums the previous frame's content into HDR with nothing to catch it.
     const analytic = render.analyticField;
-    const drawHii = hiiEmissionCount > 0;
+    const drawHii = hiiComps.count > 0;
     const drawDustView = debugViews.dust > 0;
     if (analytic) {
       // Dust-column map: splat the primary's dust slice into `dustMapTex`, at
@@ -2415,14 +2362,14 @@ export async function createGalaxyEngine(
       // has to run — as the clear that empties the map. Assigning the returned
       // latch is what carries that across; drop the assignment and the map
       // freezes at the previous galaxy's dust.
-      if (fieldDustCount > 0 || drawDustView || dustMapPopulated) {
+      if (fieldCounts.dust > 0 || drawDustView || dustMapPopulated) {
         dustMapPopulated = encodeDustMapPass({
           enc,
           timestampWrites: timing.descriptorFor('dustMap'),
           targetView: targets.dustMapTex.createView(),
           pipeline: dustMapPipe,
           bindGroup: dustMapBG,
-          instanceCount: fieldDustCount,
+          instanceCount: fieldCounts.dust,
         });
       }
 
@@ -2443,7 +2390,7 @@ export async function createGalaxyEngine(
       // One draw for the WHOLE emission list `repackFieldComponents` wrote —
       // central galaxy's components then every extra's — so the field pass's
       // timing slot honestly reports the analytic cost of everything on
-      // screen, not just the central galaxy's share. `fieldEmissionCount`,
+      // screen, not just the central galaxy's share. `fieldCounts.emission`,
       // NOT the packed total: the trailing dust slice is never drawn as its
       // own quad, only read from inside a primary emission fragment. Always
       // runs now (no debug-view gate) — splat.wesl's fs dims its own output
@@ -2455,12 +2402,12 @@ export async function createGalaxyEngine(
         targetView: targets.fieldTex.createView(),
         pipeline: splatPipe,
         bindGroup: splatBG,
-        instanceCount: fieldEmissionCount,
+        instanceCount: fieldCounts.emission,
       });
 
       // The HII tier's own pass — see `hiiTex`'s declaration comment for why
       // it shares neither the field's bind group nor its target.
-      // Gated only on `hiiEmissionCount > 0` now — the old `!render.dustView`
+      // Gated only on a nonempty HII tier now — the old `!render.dustView`
       // half of this existed because the field pass used to skip entirely
       // under the JWST view, leaving `hiiTex` stale; the field pass no longer
       // skips, so that concern is gone.
@@ -2472,7 +2419,7 @@ export async function createGalaxyEngine(
           targetView: targets.hiiTex.createView(),
           pipeline: splatPipe,
           bindGroup: hiiBG,
-          instanceCount: hiiEmissionCount,
+          instanceCount: hiiComps.count,
         });
       }
     }
@@ -2532,13 +2479,13 @@ export async function createGalaxyEngine(
         // automaton — hence its own `if`, never an `else if`.
         //
         // Both conjuncts, and neither is the other's duplicate: `bubblesLive`
-        // is "a consumer wants this", `bubbleInstanceCount` is "we have
+        // is "a consumer wants this", `bubbleComps.count` is "we have
         // geometry to draw". Nothing rebuilds on the falling edge, so the
         // count outlives the overlay being switched off.
-        if (bubblesLive && bubbleInstanceCount > 0) {
+        if (bubblesLive && bubbleComps.count > 0) {
           encodePresentOverlay(pass, bubblePresentPipe, bubblePresentBG, {
-            buf: bubbleBuf,
-            count: bubbleInstanceCount,
+            buf: bubbleComps.buffer,
+            count: bubbleComps.count,
           });
         }
       }
