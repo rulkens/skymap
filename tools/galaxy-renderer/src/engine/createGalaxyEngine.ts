@@ -209,6 +209,7 @@ import { createGpuTimingService } from '../../../../src/services/gpu/timing/gpuT
 import { hasUrlGate } from '../../../../src/utils/url/hasUrlGate';
 
 import { createFrameTimer } from './timing/createFrameTimer';
+import { createKeyedRebuild } from './createKeyedRebuild';
 import { createGalaxyRenderTargets } from './gpu/createGalaxyRenderTargets';
 import type { TargetDivisors } from './gpu/createGalaxyRenderTargets';
 import { createOrbitCameraInput } from './camera/createOrbitCameraInput';
@@ -1301,9 +1302,9 @@ export async function createGalaxyEngine(
   let hiiEmissionCount = 0;
   // The live total from the last `rebuildBubblePlacements` pack — relic
   // bubbles plus HII cavities, concatenated. What `drawFrame` instances for
-  // the bubble-view overlay pass. Stays 0 (and `bubbleBuf` stale-but-unread)
-  // whenever `render.bubbleViewIntensity` is 0 — see that function's own
-  // early-return.
+  // the bubble-view overlay pass, PAIRED there with `bubblePlacements`'s own
+  // liveness: this count is only ever written by a rebuild, so switching the
+  // overlay off leaves it (and `bubbleBuf`) stale-but-unread.
   let bubbleInstanceCount = 0;
 
   /**
@@ -1529,26 +1530,16 @@ export async function createGalaxyEngine(
    * never sees — drawn so it can be compared directly against the
    * automaton's own sfMap view. Central galaxy only, from the CACHED
    * `fieldGeometry`/`currentDust`/`currentStarFormation`/`currentSeed` — same
-   * inputs `rebuildDustMixture` reads, and called from the same two sites
-   * (`setParams`, `setFieldTuning`), right after it.
+   * inputs `rebuildDustMixture` reads, and invalidated from the same two
+   * sites (`setParams`, `setFieldTuning`), right after it.
    *
-   * Gated on `render.bubbleViewIntensity > 0`, same early-return discipline
-   * as `rebuildSfMapOrientationIfNeeded` — with the overlay off, this call
-   * is one comparison and nothing else, so a debug layer nobody is looking
-   * at costs nothing. `setRender` calls this again, edge-triggered on the
-   * 0 -> nonzero crossing (see its own comment), so switching the overlay on
-   * populates it immediately rather than waiting for the next geometry
-   * change.
+   * Ungated: `bubblePlacements` owns whether this is worth running.
    *
    * Growing `bubbleBuf` needs no bind-group rebuild, unlike `fieldCompsBuf`
    * — it is a plain VERTEX buffer, not part of an 'auto'-layout bind group
    * (see `bubbleBuf`'s own declaration comment).
    */
   function rebuildBubblePlacements(): void {
-    if (viewIntensity('bubble') <= 0) {
-      bubbleInstanceCount = 0;
-      return;
-    }
     const relics = fieldGeometry
       ? buildDustBubblePlacements(fieldGeometry, currentDust, currentStarFormation, currentSeed)
       : [];
@@ -1576,6 +1567,16 @@ export async function createGalaxyEngine(
     const data = packBubbleInstances(relics, cavities);
     device.queue.writeBuffer(bubbleBuf, 0, data);
   }
+
+  /**
+   * The bubble overlay's own liveness/staleness gate. Nothing here is worth
+   * building while the overlay is off, and nothing needs rebuilding while the
+   * inputs stand still — two axes the setters used to have to fuse.
+   */
+  const bubblePlacements = createKeyedRebuild({
+    wanted: () => viewIntensity('bubble') > 0,
+    build: rebuildBubblePlacements,
+  });
 
   /**
    * rebuildSfMap — reruns the SSPSF automaton from scratch: bakes the
@@ -1782,7 +1783,7 @@ export async function createGalaxyEngine(
     // scalar the packer never round-trips into the UBO bytes.
     currentSeed = (p.seed ?? 0) | 0 || 1;
     rebuildDustMixture();
-    rebuildBubblePlacements();
+    bubblePlacements.invalidate();
     repackFieldComponents();
     repackHiiComponents();
     // Always — a new galaxy means new geometry/arms, so the automaton and
@@ -1839,11 +1840,6 @@ export async function createGalaxyEngine(
     ) {
       rebuildSfMapOrientationIfNeeded();
     }
-    // `rebuildBubblePlacements`'s own early return already makes every OTHER
-    // render-bag push a no-op, but the crossing itself has to force one
-    // rebuild so switching the overlay on shows something immediately rather
-    // than waiting for the next setParams/setFieldTuning.
-    if (turnedOn('bubble')) rebuildBubblePlacements();
   }
 
   // Rebuilds `fieldMixture` from the CACHED geometry rather than dispatching a
@@ -1905,7 +1901,7 @@ export async function createGalaxyEngine(
       ).map((c) => transformGalaxyFieldComponent(c, e.transform)),
     }));
     rebuildDustMixture();
-    rebuildBubblePlacements();
+    bubblePlacements.invalidate();
     repackFieldComponents();
     repackHiiComponents();
     if (sfMapTouched) {
@@ -2386,6 +2382,10 @@ export async function createGalaxyEngine(
     // time (bloom thresholds/texel sizes, compositor exposure + curve), so
     // there is nothing else to pack here.
 
+    // Before the encoder exists, not after: a rebuild can destroy and replace
+    // `bubbleBuf`, which a recorded draw would already be holding.
+    const bubblesLive = bubblePlacements.ensureFresh();
+
     const timingCtx = timing.beginFrame();
     const enc = device.createCommandEncoder({ label: 'galaxy:frame' });
     // Star pass: additive billboards into the reduced-resolution aggregate,
@@ -2555,7 +2555,12 @@ export async function createGalaxyEngine(
         // independent of the other three: the SF-event catalog is a second,
         // unrelated star-formation model, not another lens on the same
         // automaton — hence its own `if`, never an `else if`.
-        if (debugViews.bubble > 0 && bubbleInstanceCount > 0) {
+        //
+        // Both conjuncts, and neither is the other's duplicate: `bubblesLive`
+        // is "a consumer wants this", `bubbleInstanceCount` is "we have
+        // geometry to draw". Nothing rebuilds on the falling edge, so the
+        // count outlives the overlay being switched off.
+        if (bubblesLive && bubbleInstanceCount > 0) {
           encodePresentOverlay(pass, bubblePresentPipe, bubblePresentBG, {
             buf: bubbleBuf,
             count: bubbleInstanceCount,
