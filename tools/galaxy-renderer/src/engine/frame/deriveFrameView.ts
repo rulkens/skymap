@@ -67,7 +67,14 @@ export function deriveFrameView(input: {
   // `viewportPx[1]`, not the aggregate target's height, for the same reason the
   // app passes `ctx.canvasSize.height`: the fade band asks how big the disc
   // looks to the USER.
-  const fade = deriveMilkyWayFade(eye, fov, viewportPx[1], render);
+  const fade = deriveMilkyWayFade(eye, fov, viewportPx[1], {
+    anchor: render.fadeAnchor,
+    enabled: render.fadeEnabled,
+    approachFullAt: render.fadeApproachFullAt,
+    approachGoneAt: render.fadeApproachGoneAt,
+    fullPx: render.fadeFullPx,
+    gonePx: render.fadeGonePx,
+  });
   // Read once here and shared by the uniform packs AND the per-pass gates, so
   // a pass can never run at a weight its own header says is 0.
   const debugViews = debugViewWeights(render);

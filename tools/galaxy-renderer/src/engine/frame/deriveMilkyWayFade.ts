@@ -27,7 +27,6 @@
 
 import type { FadeAnchor } from '../../../@types/engine/FadeAnchor';
 import type { MilkyWayFadeReadout } from '../../../@types/engine/MilkyWayFadeReadout';
-import type { RenderSettings } from '../../../@types/engine/RenderSettings';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { MILKY_WAY_CENTER_WORLD } from '../../../../../src/data/milkyWay/galacticCenter';
 import {
@@ -38,7 +37,7 @@ import { apparentDiameterPx } from '../../../../../src/utils/math/apparentDiamet
 import { fadeBand } from '../../../../../src/utils/math/fadeBand';
 
 /** Generator units → kpc, for the readout. `MILKY_WAY_MODEL_SCALE` is Mpc/unit. */
-export const UNITS_TO_KPC = MILKY_WAY_MODEL_SCALE * 1000;
+const UNITS_TO_KPC = MILKY_WAY_MODEL_SCALE * 1000;
 
 /**
  * The Sun in generator space: `|MILKY_WAY_CENTER_WORLD|` Mpc from the origin
@@ -63,15 +62,27 @@ function anchorDistUnits(eye: Readonly<Vec3>, anchor: FadeAnchor): number {
  *                          apparent-size band asks how big the disc looks to
  *                          the user, which is a canvas-relative fact (the same
  *                          reason the app passes `ctx.canvasSize.height`).
+ * @param fade              The six band controls, unbundled from the render bag
+ *                          they ride on so this module depends on the fade
+ *                          rather than on the tool's whole settings shape.
  */
 export function deriveMilkyWayFade(
   eye: Readonly<Vec3>,
   fovYRad: number,
   viewportHeightPx: number,
-  settings: RenderSettings,
+  fade: {
+    readonly anchor: FadeAnchor;
+    readonly enabled: boolean;
+    /** Near-side approach band edges, GENERATOR units. */
+    readonly approachFullAt: number;
+    readonly approachGoneAt: number;
+    /** Far-side apparent-size band edges, canvas px. */
+    readonly fullPx: number;
+    readonly gonePx: number;
+  },
 ): MilkyWayFadeReadout {
   const centreUnits = Math.hypot(eye[0], eye[1], eye[2]);
-  const distUnits = anchorDistUnits(eye, settings.fadeAnchor);
+  const distUnits = anchorDistUnits(eye, fade.anchor);
   const distMpc = distUnits * MILKY_WAY_MODEL_SCALE;
 
   // The same diameter `milkyWayFadeAlpha` measures, through the same helper.
@@ -85,19 +96,17 @@ export function deriveMilkyWayFade(
   // `'none'` is the in-section A/B: the readout keeps tracking while the cloud
   // holds full strength, so both anchors can be compared against no fade at all
   // without collapsing the section via the master toggle.
-  const live = settings.fadeEnabled && settings.fadeAnchor !== 'none';
+  const live = fade.enabled && fade.anchor !== 'none';
   const approach = live
     ? fadeBand(
         {
-          fullAt: settings.fadeApproachFullAt * MILKY_WAY_MODEL_SCALE,
-          goneAt: settings.fadeApproachGoneAt * MILKY_WAY_MODEL_SCALE,
+          fullAt: fade.approachFullAt * MILKY_WAY_MODEL_SCALE,
+          goneAt: fade.approachGoneAt * MILKY_WAY_MODEL_SCALE,
         },
         distMpc,
       )
     : 1;
-  const apparent = live
-    ? fadeBand({ fullAt: settings.fadeFullPx, goneAt: settings.fadeGonePx }, apparentPx)
-    : 1;
+  const apparent = live ? fadeBand({ fullAt: fade.fullPx, goneAt: fade.gonePx }, apparentPx) : 1;
 
   return {
     centreDistKpc: centreUnits * UNITS_TO_KPC,
