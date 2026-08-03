@@ -78,8 +78,7 @@ import { gradeIsActive } from './frame/gradeIsActive';
 import { toMilkyWayTuning } from './frame/toMilkyWayTuning';
 import { deriveFrameView } from './frame/deriveFrameView';
 import { BUBBLE_RECORD_FLOATS, packBubbleInstances } from './uniforms/packBubbleInstances';
-import { sampleLuminanceStats } from './probe/sampleLuminanceStats';
-import { swizzleToRgba } from './probe/swizzleToRgba';
+import { createOffscreenProbe } from './probe/createOffscreenProbe';
 import { CLOUD_UNIFORM_FLOATS, packCloudUniforms } from './uniforms/packCloudUniforms';
 import {
   GRADE_UNIFORM_BUFFER_SIZE,
@@ -122,7 +121,6 @@ import type { OrientationDeltaStats } from '../../../../src/services/engine/gala
 import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxyDustParams';
 import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from '../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxyStarFormationParams';
 import { normalizeGenerationSeed } from '../../../../src/utils/galaxy/normalizeGenerationSeed';
-import { alignedBytesPerRow } from '../../../../src/utils/gpu/alignedBytesPerRow';
 import { transformGalaxyFieldComponent } from '../../../../src/utils/galaxy/transformGalaxyFieldComponent';
 import { GENERATION_UBO } from '../../../../src/services/engine/galaxyGenerator/shared/generationUboLayout';
 import { GEN_RECORD_BYTES } from '../../../../src/services/engine/galaxyGenerator/v1/genRecordBytes';
@@ -714,34 +712,6 @@ export async function createGalaxyEngine(
       label: 'galaxy:genUbo',
       size: GENERATION_UBO.byteLength,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    }),
-  );
-
-  // ---- tiny readback target for headless verification ----
-  const debugTex = own(
-    device.createTexture({
-      label: 'galaxy:debugTex',
-      size: [64, 64],
-      format,
-      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
-    }),
-  );
-  // LDR scratch for `sample`'s readback, so the offscreen path runs the SAME
-  // `encodePost` as the on-screen frame — grade trailer included when it is
-  // active. Sized to match debugTex; unused (but harmless) at default settings.
-  const debugScratchTex = own(
-    device.createTexture({
-      label: 'galaxy:debugScratchTex',
-      size: [64, 64],
-      format,
-      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
-    }),
-  );
-  const dbgBuf = own(
-    device.createBuffer({
-      label: 'galaxy:debugBuf',
-      size: 64 * 256,
-      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
     }),
   );
 
@@ -2025,6 +1995,17 @@ export async function createGalaxyEngine(
     device.queue.submit([enc.finish()]);
   }
 
+  // ---- headless readback paths ----
+  // Owns its own allocations, so it is absent from the ownership ledger and
+  // `dispose` calls its `destroy` alongside the other self-owning modules.
+  const probe = createOffscreenProbe({
+    device,
+    format,
+    drawFrame,
+    encodePost,
+    starCount: () => starCount,
+  });
+
   // Both readouts drive React state, so a per-frame dispatch would put the
   // readout's own re-render inside the frame it is describing.
   const perfReport = createReportThrottle(PERF_REPORT_INTERVAL_MS);
@@ -2056,21 +2037,7 @@ export async function createGalaxyEngine(
     setInsets: camera.setInsets,
     setExtras,
     step: (now?: number): void => drawFrame(now ?? performance.now()),
-    async sample() {
-      drawFrame(performance.now());
-      const enc = device.createCommandEncoder({ label: 'galaxy:samplePass' });
-      encodePost(enc, debugTex.createView(), debugScratchTex.createView(), false);
-      enc.copyTextureToBuffer(
-        { texture: debugTex },
-        { buffer: dbgBuf, bytesPerRow: 256, rowsPerImage: 64 },
-        [64, 64, 1],
-      );
-      device.queue.submit([enc.finish()]);
-      await dbgBuf.mapAsync(GPUMapMode.READ);
-      const a = new Uint8Array(dbgBuf.getMappedRange().slice(0));
-      dbgBuf.unmap();
-      return { ...sampleLuminanceStats(a), stars: starCount };
-    },
+    sample: probe.sample,
     getCamera: camera.getCamera,
     // The SSPSF automaton's packed output (sfMapPack.wesl) — a persistent
     // GPU texture, always non-null, whose CONTENT is only meaningful once
@@ -2083,57 +2050,7 @@ export async function createGalaxyEngine(
     // null until the first one lands. Consumed by `buildDustParticleCloud`
     // via `sfMapDustSeeding` today; exposed here for future consumers too.
     getSfMapData: (): GalaxySfMap | null => readbacks.sfMapData,
-    async grab(size?: number) {
-      const S = size ?? 480;
-      drawFrame(performance.now());
-      const tex = device.createTexture({
-        label: 'galaxy:grabTex',
-        size: [S, S],
-        format,
-        usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
-      });
-      // LDR scratch so the grab runs the SAME `encodePost` as the on-screen
-      // frame; only bound when the grade trailer is active. The descriptor
-      // matcher compares grabs against reference photographs, so a grab that
-      // skipped a live grade would be scoring a different image than the one
-      // being tuned.
-      //
-      // Note the shared compositor samples NEAREST (correct for its own
-      // job — its source and dst are always the same size), so a grab into a
-      // smaller S point-samples the full-res scene rather than filtering it.
-      // The descriptor is a coarse radial/azimuthal summary and the previous
-      // bilinear tap was barely less aliased at these ratios, so this is left
-      // alone; if auto-fit ever gets noisy, a mip-chain downscale before the
-      // readback is the fix, not a second sampler in the shared pass.
-      const scratch = device.createTexture({
-        label: 'galaxy:grabScratchTex',
-        size: [S, S],
-        format,
-        usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
-      });
-      const bpr = alignedBytesPerRow(S * 4);
-      const buf = device.createBuffer({
-        label: 'galaxy:grabBuf',
-        size: bpr * S,
-        usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-      });
-      const enc = device.createCommandEncoder({ label: 'galaxy:grabPass' });
-      encodePost(enc, tex.createView(), scratch.createView(), false);
-      enc.copyTextureToBuffer(
-        { texture: tex },
-        { buffer: buf, bytesPerRow: bpr, rowsPerImage: S },
-        [S, S, 1],
-      );
-      device.queue.submit([enc.finish()]);
-      await buf.mapAsync(GPUMapMode.READ);
-      const src = new Uint8Array(buf.getMappedRange());
-      const out = swizzleToRgba(src, bpr, S, format.startsWith('bgra'));
-      buf.unmap();
-      buf.destroy();
-      tex.destroy();
-      scratch.destroy();
-      return { S, data: out };
-    },
+    grab: probe.grab,
     dispose(): void {
       rafLoop.stop();
       unsubscribeTiming();
@@ -2148,6 +2065,7 @@ export async function createGalaxyEngine(
       // rebuilt (an HMR remount hands the new engine the same canvas) leaked
       // a full set per remount until this call existed.
       targets.destroy();
+      probe.destroy();
       destroyExtras(extras);
       for (let i = owned.length - 1; i >= 0; i--) owned[i]!()?.destroy();
       ro.disconnect();

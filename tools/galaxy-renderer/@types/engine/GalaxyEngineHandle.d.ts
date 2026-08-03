@@ -26,7 +26,7 @@ export type GalaxyEngineHandle = {
   setExtras(specs: readonly ExtraGalaxySpec[]): Promise<void>; // replace all background galaxies
   step(now?: number): void; // one frame (headless / fit loop)
   sample(): Promise<{ mean: number; max: number; litPct: number; stars: number }>;
-  grab(size?: number): Promise<{ S: number; data: Uint8ClampedArray }>; // default 480 — :366
+  grab(size?: number): Promise<{ S: number; data: Uint8ClampedArray }>; // see createOffscreenProbe
   getCamera(): ViewPose;
   // The SSPSF star-formation automaton's packed output (gas / recent SF /
   // older SF, log-polar) — see createGalaxyEngine.ts's rebuildSfMap.
