@@ -9,7 +9,13 @@
  * itself complained about. It judges NOTHING about the picture — errors only.
  */
 
-import { chromium, type Browser, type Page, type ConsoleMessage } from '@playwright/test';
+import {
+  chromium,
+  type Browser,
+  type Locator,
+  type Page,
+  type ConsoleMessage,
+} from '@playwright/test';
 import { createServer, type ViteDevServer } from 'vite';
 import { createServer as createNetServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
@@ -18,7 +24,19 @@ const VIEWPORT = { width: 1400, height: 900 };
 // A control change reaches the GPU through store → engineBridge → the next rAF,
 // so every step lets a few frames encode before its errors are drained.
 const SETTLE_FRAMES = 6;
+// Between two sliders of the same section, where the step's own settle at the
+// end is the backstop — a section holds up to six of them.
+const NUDGE_FRAMES = 2;
 const BOOT_TIMEOUT_MS = 60_000;
+
+/**
+ * CollapsibleSection UNMOUNTS its body when closed, so a section left folded
+ * is a section this probe has never run. Its header button is the only
+ * disclosure control in the panel, and `aria-expanded` is what marks it —
+ * enumerating that instead of a list of titles is what keeps a section added
+ * next month from being silently uncovered.
+ */
+const SECTION_HEADER = 'button[aria-expanded]';
 
 /** One `uncapturederror` / device-loss entry, tagged with the step that provoked it. */
 type GpuErrorEntry = { kind: string; message: string; step: string };
@@ -35,7 +53,11 @@ type PageProbe = {
   }[];
 };
 
-type ExerciseStep = { name: string; run: (page: Page) => Promise<void> };
+/** A step may DISCOVER further steps; they run next, each with its own error tag. */
+type ExerciseStep = { name: string; run: (page: Page) => Promise<readonly ExerciseStep[] | void> };
+
+/** One collapsible section the sweep found. `sliders` stays null if its step never got there. */
+type SectionRow = { title: string; sliders: number | null };
 
 type ProbeOptions = {
   /** Escape hatch only. Empty = self-host, which is the point (see startDevServer). */
@@ -213,12 +235,83 @@ async function pressSlider(page: Page, label: string, keys: readonly string[]): 
 }
 
 /**
+ * Every section header, in DOM order, with the fold state it is in right now.
+ * The chevron glyph is part of the button's text and is stripped here — the
+ * one place titles are parsed, so a re-read compares like with like.
+ */
+async function readSections(page: Page): Promise<{ title: string; open: boolean }[]> {
+  return page.evaluate(
+    (selector) =>
+      [...document.querySelectorAll(selector)].map((header) => ({
+        title: (header.textContent ?? '').replace(/[▾▸]/g, '').replace(/\s+/g, ' ').trim(),
+        open: header.getAttribute('aria-expanded') === 'true',
+      })),
+    SECTION_HEADER,
+  );
+}
+
+/**
+ * One step up and back down, so the sweep leaves the parameters where it found
+ * them (to within the step grid). The direction flips at the maximum, where an
+ * ArrowRight is a no-op and the pair would not cancel.
+ */
+async function nudgeSlider(page: Page, slider: Locator): Promise<void> {
+  const value = Number(await slider.getAttribute('aria-valuenow'));
+  const max = Number(await slider.getAttribute('aria-valuemax'));
+  const up = !(value >= max);
+  await slider.press(up ? 'ArrowRight' : 'ArrowLeft');
+  await settleFrames(page, NUDGE_FRAMES);
+  await slider.press(up ? 'ArrowLeft' : 'ArrowRight');
+}
+
+/**
+ * Expand every collapsible section and drive whatever sliders appear, one
+ * step per section so a fault keeps the section's name. `rows` is filled as
+ * the sweep goes, and is what the coverage report is printed from.
+ */
+function sweepSections(rows: SectionRow[]): ExerciseStep {
+  return {
+    name: 'sections:discover',
+    run: async (page) => {
+      const found = await readSections(page);
+      return found.map((section, index) => {
+        const row: SectionRow = { title: section.title, sliders: null };
+        rows.push(row);
+        return {
+          name: `section:${section.title}`,
+          run: async (page: Page) => {
+            const header = page.locator(SECTION_HEADER).nth(index);
+            // Positional, so re-read and compare: a section appearing or
+            // vanishing mid-sweep would otherwise silently shift the whole
+            // sweep onto the wrong headers and still report full coverage.
+            const current = (await readSections(page))[index];
+            if (current === undefined || current.title !== section.title) {
+              throw new Error(
+                `section ${index} is now '${current?.title ?? 'gone'}', not '${section.title}' — the panel changed shape mid-sweep`,
+              );
+            }
+            if (!current.open) {
+              await header.click();
+              await settleFrames(page, SETTLE_FRAMES);
+            }
+            const sliders = header.locator('xpath=..').getByRole('slider');
+            const count = await sliders.count();
+            row.sliders = count;
+            for (let i = 0; i < count; i++) await nudgeSlider(page, sliders.nth(i));
+          },
+        };
+      });
+    },
+  };
+}
+
+/**
  * The exercise. Booting alone would have missed most of what the field
  * refactor touches: the debug views, the reduced-resolution targets and the
  * extras path only encode passes (and only rebuild bind groups) once switched
  * on, so each is switched on AND back off here.
  */
-function buildSteps(url: string): readonly ExerciseStep[] {
+function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[] {
   const debugViews = ['Dust view', 'SF map view', 'Orientation view', 'Bubble view'];
   const steps: ExerciseStep[] = [
     {
@@ -279,6 +372,32 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       name: 'param-nudge:arm-width',
       run: (page) => pressSlider(page, 'Arm width', ['ArrowRight', 'ArrowRight', 'ArrowLeft']),
     },
+    // Ahead of `regenerate:randomize` on purpose: the Hubble category decides
+    // which sections exist at all (no SPIRAL ARMS on an elliptical), so a
+    // randomized type would make the coverage count differ run to run.
+    sweepSections(sections),
+    {
+      // The one surface with no React between the event and the engine —
+      // orbit and zoom run through createOrbitCameraInput's own listeners,
+      // and the apparent-size LOD gate keys off what they produce.
+      name: 'camera:orbit-zoom',
+      run: async (page) => {
+        const box = await page.locator('canvas').boundingBox();
+        if (box === null) throw new Error('canvas has no box — the viewport never laid out');
+        const x = box.x + box.width * 0.25;
+        const y = box.y + box.height * 0.5;
+        await page.mouse.move(x, y);
+        await page.mouse.down();
+        for (const dx of [40, 80, 120]) {
+          await page.mouse.move(x + dx, y + dx * 0.5);
+          await settleFrames(page, NUDGE_FRAMES);
+        }
+        await page.mouse.up();
+        await page.mouse.wheel(0, -240);
+        await settleFrames(page, SETTLE_FRAMES);
+        await page.mouse.wheel(0, 240);
+      },
+    },
     {
       // Every divisor drag reallocates its target and orphans the bind groups
       // built against the old texture — the exact damage class this exists for.
@@ -305,6 +424,21 @@ function buildSteps(url: string): readonly ExerciseStep[] {
         await page.getByRole('button', { name: /Regenerate distant galaxies/ }).click();
         await settleFrames(page, SETTLE_FRAMES);
         await toggle.uncheck();
+      },
+    },
+    {
+      // The panel's only other mount/unmount boundary. Auto-fit is left
+      // alone deliberately: it is a multi-second hill-climb, and a probe step
+      // that can time out on a slow machine teaches everyone to ignore it.
+      name: 'compare:panel',
+      run: async (page) => {
+        await page.getByRole('button', { name: /Compare vs\. real/ }).click();
+        await settleFrames(page, SETTLE_FRAMES);
+        await page.getByRole('button', { name: /Load preset/ }).click();
+        await settleFrames(page, SETTLE_FRAMES);
+        await page.getByRole('button', { name: 'Match view' }).click();
+        await settleFrames(page, SETTLE_FRAMES);
+        await page.getByRole('button', { name: /Hide reference/ }).click();
       },
     },
     {
@@ -356,6 +490,7 @@ async function main(): Promise<void> {
   const consoleErrors: string[] = [];
   const consoleWarnings: string[] = [];
   const failedSteps: string[] = [];
+  const sections: SectionRow[] = [];
   // Fatal, not cosmetic: the adapter record and the error record come from the
   // SAME init script, so a missing adapter line is how a silently uninstalled
   // hook announces itself instead of reporting a serene zero errors.
@@ -381,10 +516,14 @@ async function main(): Promise<void> {
       else if (message.type() === 'warning') consoleWarnings.push(formatConsole(message));
     });
 
-    for (const step of buildSteps(url)) {
+    const queue = [...buildSteps(url, sections)];
+    while (queue.length > 0) {
+      const step = queue.shift();
+      if (step === undefined) break;
       let ran = true;
       try {
-        await step.run(page);
+        const discovered = await step.run(page);
+        if (discovered) queue.unshift(...discovered);
         await settleFrames(page, SETTLE_FRAMES);
       } catch (err) {
         // A step that can no longer find its control is itself a finding: the
@@ -418,8 +557,23 @@ async function main(): Promise<void> {
   console.log(`  url:     ${url}`);
   console.log(`  adapter: ${adapterLine}`);
 
+  // Coverage, spelled out: a probe that quietly exercises less than the reader
+  // assumes is the defect this sweep exists to fix, so the count and the
+  // sections it could do nothing with are part of the verdict, not a footnote.
+  const noSlider = sections.filter((section) => section.sliders === 0);
+  const unreached = sections.filter((section) => section.sliders === null);
+  const nudges = sections.reduce((sum, section) => sum + (section.sliders ?? 0), 0);
+  const names = (rows: readonly SectionRow[]): string => rows.map((row) => row.title).join(', ');
+  console.log(
+    `  sections: ${sections.length} found, ${sections.length - unreached.length} expanded, ` +
+      `${nudges} slider(s) nudged`,
+  );
+  if (noSlider.length > 0) console.log(`  no drivable slider: ${names(noSlider)}`);
+  if (unreached.length > 0) console.log(`  never reached: ${names(unreached)}`);
+
   const fatal =
     noAdapter ||
+    sections.length === 0 ||
     gpuErrors.length + pageErrors.length + consoleErrors.length + failedSteps.length > 0;
   for (const [heading, entries] of [
     ['GPU errors', gpuErrors.map((e) => `[${e.kind}] during '${e.step}': ${e.message}`)],
@@ -438,7 +592,8 @@ async function main(): Promise<void> {
   console.log(
     fatal
       ? `\nFAIL — ${gpuErrors.length} GPU, ${pageErrors.length} page, ${consoleErrors.length} console error(s), ` +
-          `${failedSteps.length} unrunnable step(s)${noAdapter ? ', NO ADAPTER' : ''}`
+          `${failedSteps.length} unrunnable step(s)${noAdapter ? ', NO ADAPTER' : ''}` +
+          `${sections.length === 0 ? ', NO SECTIONS FOUND' : ''}`
       : `\nPASS — no GPU, page or console errors (${consoleWarnings.length} warning(s))`,
   );
   if (fatal) process.exitCode = 1;
