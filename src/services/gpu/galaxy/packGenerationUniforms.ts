@@ -34,7 +34,7 @@
  *    streams so dialling one doesn't perturb the other or the asymmetry
  *    family.
  *  - `mainStream` (seeded by `seed`): the bar-tilt angle via
- *    `computeBarGeometry` (always, every category — model.js:229), then the
+ *    `computeBarGeometry` (always, every category, per the spike), then the
  *    seven irregular clump centres when `category === 'irregular'`, then
  *    the 34 lenticular cloud centres when `category === 'lenticular'`. A
  *    galaxy is only ever one category, so at most one of those two blocks

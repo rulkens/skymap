@@ -4,49 +4,50 @@
  * spike's hand-dialled defaults at the point of use (not here, so this type
  * stays a pure description of the input shape, not a merged/defaulted one).
  *
- * The spike's `background` flag is deliberately dropped: galaxy-model.js:117
- * hardcodes the background field to 0 regardless of the param, so the knob
- * was dead in the source this was ported from.
+ * The spike's `background` flag is deliberately dropped: the spike hardcodes
+ * the background field to 0 regardless of the param, so the knob was dead in
+ * the source this was ported from.
  *
- * Defaults (applied at point of use, exactly as the spike does):
+ * Defaults (applied at point of use, exactly as the spike does — the spike
+ * is external prior art, not a file in this repo):
  *
- * | param | default | spike cite |
- * | --- | --- | --- |
- * | starCount | 400000, floored, min 20000 | model.js:89 |
- * | radius / bulgeSize / diskThickness | 1 | model.js:86-88 |
- * | diskScaleLenFrac | unset = 1/3.2 of `outerRadius` | not a spike knob |
- * | bulgeFalloff / irregularity | 0.5 | model.js:192 / 179 |
- * | armCount | 2 | model.js:288 |
- * | armWinding | 0.5 | model.js:289 |
- * | armWidth | 1 | model.js:292 |
- * | armStrength | 1 | model.js:111 |
- * | subArms | 0 | model.js:293 |
- * | armFalloff | 0.6 | model.js:298 |
- * | armEdgeVar | 0 | model.js:300 |
- * | armClump | 0.5 | model.js:302 |
- * | armWave | 0 | model.js:294 |
- * | barStrength | 1 | model.js:228 |
- * | barAngleDeg | unset = drawn from the main stream | model.js:229 |
- * | armAges | unset = alternating derived from the asym stream | not a spike knob |
- * | youngStars | 0.5 | model.js:167 |
- * | hii | 1 | model.js:303 |
- * | metallicity | 0.5 | model.js:131 |
- * | spriteDust | 1 | model.js:488 |
- * | dustNoise | 0.6 | model.js:505 |
- * | dustNoiseScale | 1 | model.js:506 |
- * | dustRing | 0.72 | model.js:572 |
- * | dustRingWidth | 0.12 | model.js:573 |
- * | dustRingStrength | 0 | model.js:571 |
- * | globularCount | 0 | model.js:118 |
- * | globularSize | 1 | model.js:453 |
- * | globularBright | 0.6 | model.js:454 |
- * | warpStrength | 0 | model.js:141 |
- * | warpTwist | 0 | model.js:142 |
- * | warpStart | 0.3 | model.js:146 |
- * | seed | `(seed\|0) \|\| 1` | model.js:79 |
- * | asymSeed | `((asymSeed\|0) \|\| 331) >>> 0` | model.js:180 |
- * | clumpSeed | 911 | model.js:296 |
- * | waveSeed | 777 | model.js:295 |
+ * | param | default |
+ * | --- | --- |
+ * | starCount | 400000, floored, min 20000 |
+ * | radius / bulgeSize / diskThickness | 1 |
+ * | diskScaleLenFrac | unset = 1/3.2 of `outerRadius` (not a spike knob) |
+ * | bulgeFalloff / irregularity | 0.5 |
+ * | armCount | 2 |
+ * | armWinding | 0.5 |
+ * | armWidth | 1 |
+ * | armStrength | 1 |
+ * | subArms | 0 |
+ * | armFalloff | 0.6 |
+ * | armEdgeVar | 0 |
+ * | armClump | 0.5 |
+ * | armWave | 0 |
+ * | barStrength | 1 |
+ * | barAngleDeg | unset = drawn from the main stream |
+ * | armAges | unset = alternating derived from the asym stream (not a spike knob) |
+ * | youngStars | 0.5 |
+ * | hii | 1 |
+ * | metallicity | 0.5 |
+ * | spriteDust | 1 |
+ * | dustNoise | 0.6 |
+ * | dustNoiseScale | 1 |
+ * | dustRing | 0.72 |
+ * | dustRingWidth | 0.12 |
+ * | dustRingStrength | 0 |
+ * | globularCount | 0 |
+ * | globularSize | 1 |
+ * | globularBright | 0.6 |
+ * | warpStrength | 0 |
+ * | warpTwist | 0 |
+ * | warpStart | 0.3 |
+ * | seed | `(seed\|0) \|\| 1` |
+ * | asymSeed | `((asymSeed\|0) \|\| 331) >>> 0` |
+ * | clumpSeed | 911 |
+ * | waveSeed | 777 |
  *
  * The nested groups — `dust` (the analytic dust-lane section) and
  * `starFormation` — have no row above: absent means the point-of-use default,
@@ -103,8 +104,8 @@ export type GalaxyParams = {
   readonly metallicity?: number;
   readonly hii?: number;
   /**
-   * Legacy sprite-generator dust density (model.js:488). Renamed off the bare
-   * `dust` name so the analytic dust-lane section below can own it instead.
+   * Legacy sprite-generator dust density. Renamed off the bare `dust` name
+   * so the analytic dust-lane section below can own it instead.
    */
   readonly spriteDust?: number;
   readonly dustNoise?: number;

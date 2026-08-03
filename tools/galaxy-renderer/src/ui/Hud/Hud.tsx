@@ -1,5 +1,5 @@
 /**
- * Hud — top-left title block + live telemetry badges (html:44-54).
+ * Hud — top-left title block + live telemetry badges.
  *
  * Purely presentational. `perf`/`stars`/`dust` are engine telemetry `App`
  * samples off `Viewport`'s `onPerf`/`onStats` callbacks and keeps in local
@@ -25,7 +25,7 @@ export type HudProps = {
   readonly dust: number;
 };
 
-const FRAME_MS_GOOD_THRESHOLD = 1000 / 55; // html:815 — the old 55 fps line, in ms
+const FRAME_MS_GOOD_THRESHOLD = 1000 / 55; // matches the spike's fps-good threshold (55 fps), in ms
 
 function formatCount(n: number): string {
   return n >= 1000 ? `${Math.round(n / 1000)}k` : String(n);
