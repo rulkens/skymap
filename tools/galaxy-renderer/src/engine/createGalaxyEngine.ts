@@ -72,6 +72,7 @@ import { createSfMapReadbacks } from './sfMap/createSfMapReadbacks';
 import { createSfMapAutomaton } from './sfMap/createSfMapAutomaton';
 import { createSfMapOrientation } from './sfMap/createSfMapOrientation';
 import { createGrowOnlyRecordBuffer } from './gpu/createGrowOnlyRecordBuffer';
+import { generateGalaxy } from './gpu/generateGalaxy';
 import { deriveDustHeaderLanes } from './frame/deriveDustHeaderLanes';
 import { gradeIsActive } from './frame/gradeIsActive';
 import { toMilkyWayTuning } from './frame/toMilkyWayTuning';
@@ -96,9 +97,6 @@ import type { FieldCamera } from '../../@types/engine/FieldCamera';
 import { DEBUG_VIEWS } from '../data/debugViews';
 import type { DebugViewKind } from '../../@types/data/DebugViewKind';
 import { createGenerationPipelines } from '../../../../src/services/engine/galaxyGenerator/v1/createGenerationPipelines';
-import { encodeGeneration } from '../../../../src/services/engine/galaxyGenerator/v1/encodeGeneration';
-import { packGenerationUniforms } from '../../../../src/services/engine/galaxyGenerator/shared/packGenerationUniforms';
-import { readGalaxyFieldGeometry } from '../../../../src/services/engine/galaxyGenerator/shared/readGalaxyFieldGeometry';
 import {
   buildGalaxyFieldMixture,
   DEFAULT_GALAXY_FIELD_TUNING,
@@ -128,10 +126,6 @@ import { alignedBytesPerRow } from '../../../../src/utils/gpu/alignedBytesPerRow
 import { transformGalaxyFieldComponent } from '../../../../src/utils/galaxy/transformGalaxyFieldComponent';
 import { GENERATION_UBO } from '../../../../src/services/engine/galaxyGenerator/shared/generationUboLayout';
 import { GEN_RECORD_BYTES } from '../../../../src/services/engine/galaxyGenerator/v1/genRecordBytes';
-import { carveStarLayout } from '../../../../src/services/engine/galaxyGenerator/shared/carveStarLayout';
-import { carveDustLayout } from '../../../../src/services/engine/galaxyGenerator/shared/carveDustLayout';
-import { classifyHubbleType } from '../../../../src/services/engine/galaxyGenerator/shared/classifyHubbleType';
-import { splitStarBudget } from '../../../../src/services/engine/galaxyGenerator/shared/splitStarBudget';
 import { createBloomPyramid } from '../../../../src/services/gpu/passes/bloomPyramid';
 import { createCompositor } from '../../../../src/services/gpu/passes/compositor';
 import { createAdditiveUpsample } from '../../../../src/services/gpu/passes/additiveUpsample';
@@ -1259,96 +1253,6 @@ export async function createGalaxyEngine(
   }
 
   /**
-   * generateGalaxy — the GPU generation sequence, for the central galaxy
-   * (`spec` null) and for one background extra alike. Carving the layouts is
-   * cheap pure arithmetic (`splitStarBudget`/`carveStarLayout`/
-   * `carveDustLayout`), so it runs on the caller's thread; the star/dust MATH
-   * (bulge/disk/arm placement, colour, HII knots, ...) happens on the GPU in
-   * `encodeGeneration`'s two compute passes.
-   *
-   * The caller owns every lifetime: which UBO to write, which encoder to
-   * record into and when to submit it, destroying the buffers this returns and
-   * registering them wherever they are tracked. `spec` also picks the buffer
-   * labels, so a validation error names which galaxy it came from.
-   *
-   * The buffers are sized to the carved CAPACITY (`GenerationLayout.capacity`),
-   * not a "how many stars will actually be visible" count — a population's
-   * `iterations` is its CPU builder's loop bound, and some iterations write a
-   * zero-brightness/opacity record (an arm star past its fade radius, say)
-   * without shrinking the layout. The compute pass fills every capacity slot
-   * (dead ones included) and the render pipelines draw all of them: a dead slot
-   * rasterizes nothing, so nothing is drawn wrong — it just costs a few
-   * zero-alpha billboards. `starCount`/`dustCount` are therefore the capacities.
-   *
-   * `plannedStars` is the sum of each population's `iterations` (not
-   * `iterations * stride` — that would double-count the worst-case HII-bonus
-   * slots most iterations never use); with the dust capacity, that is what the
-   * HUD bills. Actual live counts differ by a few percent, the same slack
-   * `iterations` always carried against its builder's real output (see
-   * `PopulationRange`'s docblock) — an estimate, not an exact tally.
-   */
-  function generateGalaxy(
-    params: GalaxyParams,
-    spec: ExtraGalaxySpec | null,
-    ubo: GPUBuffer,
-    encoder: GPUCommandEncoder,
-  ): {
-    starBuf: GPUBuffer;
-    starCount: number;
-    dustBuf: GPUBuffer | null;
-    dustCount: number;
-    plannedStars: number;
-    geometry: GalaxyFieldGeometry;
-  } {
-    const category = classifyHubbleType(params.type);
-    const budget = splitStarBudget(category, params);
-    const starLayout = carveStarLayout(category, params, budget);
-    const dustLayout = carveDustLayout(category, params, budget);
-
-    // A zero-capacity star layout is not expected in practice (every
-    // category's split puts at least some stars in bulge/disk/halo), but a
-    // zero-size GPUBuffer is invalid, so clamp to one record just in case.
-    const starBuffer = device.createBuffer({
-      label: spec ? 'galaxy:extraStarVB' : 'galaxy:starVB',
-      size: Math.max(1, starLayout.capacity) * GEN_RECORD_BYTES,
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.STORAGE,
-    });
-    const dustBuffer =
-      dustLayout.capacity > 0
-        ? device.createBuffer({
-            label: spec ? 'galaxy:extraDustVB' : 'galaxy:dustVB',
-            size: dustLayout.capacity * GEN_RECORD_BYTES,
-            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.STORAGE,
-          })
-        : null;
-
-    const genUniforms = packGenerationUniforms(params, budget, spec);
-    device.queue.writeBuffer(ubo, 0, genUniforms);
-    encodeGeneration({
-      device,
-      encoder,
-      pipelines: genPipelines,
-      ubo,
-      starBuf: starBuffer,
-      starLayout,
-      dustBuf: dustBuffer,
-      dustLayout,
-    });
-
-    return {
-      starBuf: starBuffer,
-      starCount: starLayout.capacity,
-      dustBuf: dustBuffer,
-      dustCount: dustLayout.capacity,
-      plannedStars: starLayout.ranges.reduce((sum, r) => sum + r.iterations, 0),
-      // Read back rather than re-derive: the bar and bulge tilts are single RNG
-      // draws off the packer's streams, so this is the only way the analytic
-      // field can be sure it is oriented like the sprites it sums with.
-      geometry: readGalaxyFieldGeometry(genUniforms, starLayout),
-    };
-  }
-
-  /**
    * setParams — regenerate the central galaxy, then rebuild everything derived
    * from its geometry (both analytic tiers, the dust cloud, the SSPSF map).
    *
@@ -1372,7 +1276,14 @@ export async function createGalaxyEngine(
     const enc = device.createCommandEncoder({ label: 'galaxy:generate' });
     if (starBuf) starBuf.destroy();
     if (dustBuf) dustBuf.destroy();
-    const generated = generateGalaxy(p, null, genUbo, enc);
+    const generated = generateGalaxy({
+      device,
+      pipelines: genPipelines,
+      params: p,
+      spec: null,
+      ubo: genUbo,
+      encoder: enc,
+    });
     // Assigned back into the `let`s the ownership ledger's `ownLatest` readers
     // close over, so `dispose` destroys these and not the pair just destroyed.
     starBuf = generated.starBuf;
@@ -1511,7 +1422,14 @@ export async function createGalaxyEngine(
         size: GENERATION_UBO.byteLength,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
       });
-      const generated = generateGalaxy(spec.params, spec, ubo, enc);
+      const generated = generateGalaxy({
+        device,
+        pipelines: genPipelines,
+        params: spec.params,
+        spec,
+        ubo,
+        encoder: enc,
+      });
 
       // The mixtures land in world space through the SAME rigid transform
       // `applyExtraTransform` bakes into the sprites (see
