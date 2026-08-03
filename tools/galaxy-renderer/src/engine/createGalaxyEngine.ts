@@ -201,7 +201,6 @@ import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFiel
 import type { GalaxySfMapParams } from '../../../../src/@types/galaxy/GalaxySfMapParams';
 import type { GalaxySfMap } from '../../../../src/@types/galaxy/GalaxySfMap';
 import type { GalaxyStarFormationParams } from '../../../../src/@types/galaxy/GalaxyStarFormationParams';
-import type { MilkyWayTuning } from '../../../../src/@types/settings/MilkyWayTuning';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 
 import { createShaderModuleWithDevLog } from '../../../../src/services/gpu/shaderCompileLogger';
@@ -230,6 +229,8 @@ import { createSfMapAutomaton } from './sfMap/createSfMapAutomaton';
 import { createSfMapOrientation } from './sfMap/createSfMapOrientation';
 import { createGrowOnlyRecordBuffer } from './gpu/createGrowOnlyRecordBuffer';
 import { deriveDustHeaderLanes } from './frame/deriveDustHeaderLanes';
+import { gradeIsActive } from './frame/gradeIsActive';
+import { toMilkyWayTuning } from './frame/toMilkyWayTuning';
 import { deriveFrameView } from './frame/deriveFrameView';
 import { BUBBLE_RECORD_FLOATS, packBubbleInstances } from './uniforms/packBubbleInstances';
 import { sampleLuminanceStats } from './probe/sampleLuminanceStats';
@@ -1181,36 +1182,6 @@ export async function createGalaxyEngine(
   const hiiData = new Float32Array(FIELD_HEADER_FLOATS);
   const gradeData = new Float32Array(GRADE_UNIFORM_FLOATS);
 
-  /**
-   * The tool's render bag, viewed as the app's `MilkyWayTuning` — the shape
-   * `packCloudUniforms` and the shared shaders speak. Only two knobs are
-   * renamed rather than shared outright: the tool's `starIntensity` is the
-   * app's per-sprite `exposure` (the tool already spells `exposure` for the
-   * post chain's whole-frame multiplier, a different quantity at a different
-   * stage), and `sizeScale` is `starSizeScale`. `aggregateDivisor` and
-   * `starCount` ride along for completeness even though the uniform ignores
-   * both — the divisor reaches the frame by sizing `aggregateTex`, and the
-   * count by carving the layouts, neither through `params0`/`params1`.
-   *
-   * The count supplied is the carved CAPACITY rather than the number the
-   * generator was asked for. In the app those are the same field, because the
-   * request lives on `MilkyWayTuning` itself; here the request is a
-   * `GalaxyParams` knob (`PARAM_SPEC.starCount`, its own slider) and only the
-   * realised capacity is retained past `setParams`. Since no consumer of this
-   * view reads the field, the honest available number beats retaining a second
-   * copy of the request to satisfy a shape.
-   */
-  const cloudTuning = (): MilkyWayTuning => ({
-    starSizeScale: render.sizeScale,
-    exposure: render.starIntensity,
-    starPxMin: render.starPxMin,
-    starPxMax: render.starPxMax,
-    softness: render.softness,
-    lodApparent: render.lodApparent,
-    aggregateDivisor: render.aggregateDivisor,
-    starCount,
-  });
-
   // How the last `repackFieldComponents` concatenation sliced `fieldComps`:
   // `emission` components then `dust` ones, of which the first `primary`
   // belong to the central galaxy. `emission` is what `drawFrame`'s splat draw
@@ -1931,14 +1902,6 @@ export async function createGalaxyEngine(
   }
 
   /**
-   * Is the tool-only grade trailer doing anything? At its identity defaults it
-   * is not, and the whole pass is then skipped so the chain is the app's chain
-   * exactly — one composite from HDR straight to the destination.
-   */
-  const gradeIsActive = (): boolean =>
-    render.saturation !== 1 || render.vignette !== 0 || render.gammaEncode;
-
-  /**
    * encodePost — sceneTex through the shared compositor (exposure + one tone
    * curve) into `dstView`, then, only if a tool-only grade knob is off
    * identity, through the local grade trailer. `scratchView` is the LDR
@@ -1957,7 +1920,7 @@ export async function createGalaxyEngine(
     scratchView: GPUTextureView,
     timed: boolean,
   ): void {
-    const graded = gradeIsActive();
+    const graded = gradeIsActive(render);
     const compositeWrites = timed ? timing.descriptorFor('composite') : undefined;
     const tonePass = beginClearPass(
       enc,
@@ -2057,7 +2020,7 @@ export async function createGalaxyEngine(
     // view exactly like the analytic field's own splat.wesl multiply does,
     // rather than the old suppression that hid the primary's sprites outright
     // but deliberately left extras' alone (see the field/scene passes below).
-    const tuning = cloudTuning();
+    const tuning = toMilkyWayTuning(render, starCount);
     const aggregatePx = targets.reducedSize(render.aggregateDivisor);
     packCloudUniforms(vp, view, aggregatePx, tuning, fade.alpha * galaxyWeight, cloudData);
     device.queue.writeBuffer(starUbo, 0, cloudData);
