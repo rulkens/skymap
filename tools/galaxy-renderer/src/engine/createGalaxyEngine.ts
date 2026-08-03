@@ -1111,36 +1111,22 @@ export async function createGalaxyEngine(
     layout: dustPipe.getBindGroupLayout(0),
     entries: [{ binding: 0, resource: { buffer: dustUbo } }],
   });
-  // The auto-layout bind group reading `fieldUbo` + `fieldComps` (see
-  // `starBG`/`dustBG`'s comment just above: a bind group is built against
-  // ONE pipeline's `layout: 'auto'` GPUBindGroupLayout and fails another
-  // pipeline's draw-time compatibility check even for a byte-identical WGSL
-  // binding). `let`, not `const`: `fieldComps`'s buffer grows (see
-  // `repackFieldComponents`), and a bind group is bound to the specific
-  // GPUBuffer it was built against — a resized buffer needs a new group.
+  // The analytic field's four groups. Two `layout: 'auto'` rules shape all of
+  // them:
   //
-  // `dustMapBG` (dustMap.wesl's own pass — reads only `fieldUbo` +
-  // `fieldComps`, same two bindings, its own pipeline) can build eagerly
-  // right here, same as the old `splatBG` used to. `splatBG` itself cannot:
-  // splat.wesl's fs now ALSO reads `dustMapTex` (binding 2), which does not
-  // exist yet at this point in construction — its first build is deferred to
-  // `targets`' `onDustMapRecreated` below, alongside `dustPresentBG`
-  // (dustMapTex is that bind group's ONLY binding). `splatBG`/`dustMapBG`
-  // rebuild from `fieldComps`'s own `onRegrow`; `splatBG`/`hiiBG`/
-  // `dustPresentBG` rebuild whenever `dustMapTex` itself is recreated (every
-  // resize, and every `dustDivisor` move).
-  // Bindings 4/5 (dustNoiseTex/dustNoiseSmp) go ONLY here: dustMap.wesl is
-  // the one shader among the three that share io.wesl (splat/dustMap/
-  // dustPresent) that actually imports them — `layout: 'auto'` derives each
-  // pipeline's bind-group layout from what its OWN shader references.
-  // `dustPresentBG` now also imports `u` (binding 0) alongside `dustMapTex`
-  // (binding 2) — it needs `debugView.x`, the JWST view's own crossfade
-  // weight, now that this pass runs ALONGSIDE the emission splat rather than
-  // replacing it (see `drawFrame`'s field-pass region). Binding 6
-  // (dustMapSmp) goes ONLY into `splatBG` below, for the mirror-image
-  // reason: splat.wesl's fs is the one reader that samples `dustMapTex`
-  // through a filtered UV rather than a 1:1 load — see `dustMapTex`'s own
-  // declaration comment.
+  //  - The layout is derived from what a pipeline's OWN shader references, and
+  //    a group built from one pipeline's layout fails another's draw-time
+  //    compatibility check even for byte-identical WGSL. Hence four groups for
+  //    three pipelines, with different binding sets: dustNoiseTex/Smp (4/5)
+  //    only where dustMap.wesl imports them, dustMapSmp (6) only where
+  //    splat.wesl samples `dustMapTex` through a filtered UV.
+  //  - A group holds the EXACT GPUBuffer/GPUTexture objects it names. So each
+  //    is a `let` + a builder, and the resource owns the rebuild: the two
+  //    `createGrowOnlyRecordBuffer` `onRegrow` hooks above, and
+  //    `rebuildDustMapDependents` below for `dustMapTex`.
+  //
+  // Only `dustMapBG` can build here. The other three bind `dustMapTex`, which
+  // `targets` has not allocated yet.
   let dustMapBG = buildDustMapBindGroup();
   function buildDustMapBindGroup(): GPUBindGroup {
     return device.createBindGroup({
@@ -1181,15 +1167,13 @@ export async function createGalaxyEngine(
       ],
     });
   }
-  // The HII pass reuses `splatPipe` itself (same shader, same emission math),
-  // just against its own header/storage buffers and its own target — a
-  // second bind group for the SAME pipeline, exactly the `layout: 'auto'`
-  // pattern `starBG`/`dustBG` already establish for two passes sharing one
-  // pipeline object. `dustMapTex`/`dustMapSampler` are still bound (splat.wesl's
-  // fs imports both unconditionally), but `packFieldHeaderUniforms`'s
-  // `primaryCount` is always packed 0 for this header (see `drawFrame`), so
-  // the dust-attenuation branch never triggers — HII does not (yet) darken
-  // under the lane it may sit inside.
+  // The HII pass reuses `splatPipe` itself (same shader, same emission math)
+  // against its own header/storage buffers and its own target.
+  // `dustMapTex`/`dustMapSampler` are bound because splat.wesl's fs imports
+  // both unconditionally, but `packFieldHeaderUniforms`'s `primaryCount` is
+  // always packed 0 for this header (see `drawFrame`), so the dust-attenuation
+  // branch never triggers — HII does not (yet) darken under the lane it may
+  // sit inside.
   let hiiBG: GPUBindGroup;
   function buildHiiBindGroup(): GPUBindGroup {
     return device.createBindGroup({
@@ -1213,25 +1197,32 @@ export async function createGalaxyEngine(
    */
   let dustMapPopulated = false;
 
+  /**
+   * Everything downstream of a `dustMapTex` recreation (every resize, every
+   * `dustDivisor` move): the three bind groups holding a view of it, plus the
+   * stale-map latch — a fresh texture is zero-initialised, so the latch resets
+   * with it. Also the FIRST build of those three, which is why `targets` must
+   * fire this once during `rebuildAll`.
+   */
+  function rebuildDustMapDependents(): void {
+    splatBG = buildSplatBindGroup();
+    hiiBG = buildHiiBindGroup();
+    dustPresentBG = buildDustPresentBindGroup();
+    dustMapPopulated = false;
+  }
+
   // ---- size-dependent targets: HDR scene + star aggregate + bloom mips + LDR ----
   //
   // Allocates nothing yet — the first `rebuildAll` is the unconditional one
   // below the ResizeObserver, once the canvas has adopted its backing size.
-  // The callback is the engine's half of a `dustMapTex` recreation: three
-  // `layout: 'auto'` bind groups are tied to the specific GPUTexture they were
-  // built against, and they also read `fieldUbo`/`hiiUbo`/the comps buffers,
-  // which the target module has no business knowing about.
+  // The callback stays on this side because the groups also read
+  // `fieldUbo`/`hiiUbo`/the comps buffers, which the target module has no
+  // business knowing about.
   const targets = createGalaxyRenderTargets(
     device,
     canvas,
     { hdr: HDR, swap: format, dustMap: DUST_MAP_FORMAT },
-    () => {
-      splatBG = buildSplatBindGroup();
-      hiiBG = buildHiiBindGroup();
-      dustPresentBG = buildDustPresentBindGroup();
-      // A fresh texture is zero-initialised, so the stale-map latch resets with it.
-      dustMapPopulated = false;
-    },
+    rebuildDustMapDependents,
   );
 
   // ---- camera state (orbit) — galaxy-engine.js:159-166 ----
