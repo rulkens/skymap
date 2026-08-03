@@ -11,16 +11,8 @@
  */
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 
-import { BLOOM_LEVELS } from '../../../../../src/data/bloomConstants';
+import { BLOOM_LEVELS, bloomScale } from '../../../../../src/data/bloomConstants';
 import { reducedTargetSize } from '../../../../../src/utils/gpu/reducedTargetSize';
-
-/**
- * Resolution divisor for bloom level `n`, mirroring the runtime's `bloomN`
- * render-target rows (`renderTargets.ts`: `scale: 2 ** (n + 1)`). Restated
- * rather than imported because the rows drag in the whole table; the KERNELS
- * and pipelines that consume it are shared.
- */
-const bloomScale = (level: number): number => 2 ** (level + 1);
 
 /** The four reduced targets' divisors, each its own live slider. */
 export type TargetDivisors = {
