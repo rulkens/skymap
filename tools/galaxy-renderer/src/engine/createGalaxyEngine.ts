@@ -187,6 +187,7 @@
 
 import type { GalaxyEngineHandle } from '../../@types/engine/GalaxyEngineHandle';
 import type { GalaxyEngineOptions } from '../../@types/engine/GalaxyEngineOptions';
+import type { InstanceDraw } from '../../@types/engine/InstanceDraw';
 import type { MilkyWayFadeReadout } from '../../@types/engine/MilkyWayFadeReadout';
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import type { PassTiming } from '../../@types/engine/PassTiming';
@@ -215,6 +216,7 @@ import { createPassTimingWindows } from './timing/createPassTimingWindows';
 import { beginClearPass } from './passes/beginClearPass';
 import { encodeDustPresentPass } from './passes/encodeDustPresentPass';
 import { encodeSplatPass } from './passes/encodeSplatPass';
+import { encodeStarPass } from './passes/encodeStarPass';
 import { createSfMapAutomaton } from './sfMap/createSfMapAutomaton';
 import { createSfMapOrientation } from './sfMap/createSfMapOrientation';
 import { createReadbackQueue } from './gpu/createReadbackQueue';
@@ -2369,48 +2371,32 @@ export async function createGalaxyEngine(
 
     const timingCtx = timing.beginFrame();
     const enc = device.createCommandEncoder({ label: 'galaxy:frame' });
-    // Star pass: additive billboards (central + extras) into the reduced-
-    // resolution aggregate. Cleared to a=0 like the app's `mw-aggregate` row —
-    // the additive composite below must treat an untouched texel as "no light",
-    // and an opaque clear would inject a full alpha into the sum.
+    // Star pass: additive billboards into the reduced-resolution aggregate,
+    // like the app's `mw-aggregate` row. The primary AND every extra are
+    // always in the list — the three debug views dim the galaxy through
+    // fadeAlpha's debugGalaxyWeight factor (packed above), not by suppressing
+    // draws, which is what makes k=0.5 read as half galaxy / half map instead
+    // of a hard cut. Built here, per frame, because every buffer in it is
+    // reallocated by `setParams`/`setExtras`.
     //
-    // No `setViewport` call: the pass's only attachment IS `aggregateTex`, and
-    // a pass's default viewport is its attachment's full size, which is the
-    // same `floor(canvas / divisor)` the uniform above was packed with.
-    {
-      const starWrites = timing.descriptorFor('stars');
-      const pass = beginClearPass(
-        enc,
-        'galaxy:starPass',
-        targets.aggregateTex.createView(),
-        starWrites,
-      );
-      // The sprite half of the comparison. Skipping the draws (rather than
-      // zeroing an intensity) is what makes "sprites off" also mean "sprite
-      // cost off", so the two representations can be timed as well as looked
-      // at.
-      if (render.spriteField) {
-        pass.setPipeline(starPipe);
-        pass.setBindGroup(0, starBG);
-        pass.setVertexBuffer(0, quad);
-        // Always drawn now, primary AND extras — the three debug views dim
-        // the galaxy through fadeAlpha's debugGalaxyWeight factor (packed
-        // above), not by suppressing this draw, which is what makes k=0.5
-        // read as half galaxy / half map instead of a hard cut. The old
-        // primary-only skip deliberately left extras' sprites visible under
-        // a boolean toggle; the crossfade contract (k=1 means galaxy at 0%)
-        // has no room for that exception any more.
-        if (starBuf) {
-          pass.setVertexBuffer(1, starBuf);
-          pass.draw(6, starCount);
-        }
-        for (const e of extras) {
-          pass.setVertexBuffer(1, e.starBuf);
-          pass.draw(6, e.starCount);
-        }
-      }
-      pass.end();
+    // No `setViewport` anywhere below: the pass's only attachment IS
+    // `aggregateTex`, and a pass's default viewport is its attachment's full
+    // size — the same `floor(canvas / divisor)` the uniform above was packed
+    // with.
+    const starInstances: InstanceDraw[] = [];
+    if (render.spriteField) {
+      if (starBuf) starInstances.push({ buf: starBuf, count: starCount });
+      for (const e of extras) starInstances.push({ buf: e.starBuf, count: e.starCount });
     }
+    encodeStarPass({
+      enc,
+      timestampWrites: timing.descriptorFor('stars'),
+      targetView: targets.aggregateTex.createView(),
+      pipeline: starPipe,
+      bindGroup: starBG,
+      quad,
+      instances: starInstances,
+    });
     // The analytic half, into its OWN target at its OWN divisor. Both halves
     // are still additive glow summed into the same HDR scene below, so drawing
     // both still gives exactly what either alone would at double weight — the
