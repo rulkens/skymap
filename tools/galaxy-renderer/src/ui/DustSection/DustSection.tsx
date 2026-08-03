@@ -1,8 +1,7 @@
 /**
- * DustSection — the analytic dust lane's own knobs (`GalaxyParams.dust`):
- * face-on optical depth, the CCM89 extinction law's R_V, the scale-
- * length/thickness ratios to the stellar disc, and the arm lane's width and
- * arm/interarm contrast. Nested under `params.dust`
+ * DustSection — the dust disc's own knobs (`GalaxyParams.dust`): face-on
+ * optical depth, the CCM89 extinction law's R_V, and the scale-length and
+ * thickness ratios to the stellar disc. Nested under `params.dust`
  * rather than a flat `GalaxyParams` field, so it can't ride the generic
  * `renderGalaxySlider` path (see `GalaxySliderKey`'s exclusion in
  * `ControlsPanel.tsx`) — each slider spreads the current dust object by hand
@@ -69,6 +68,7 @@ function DustSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchDust({ scaleLenRatio: v })}
+          info="Dust/stellar radial scale-length ratio — the dust disc is more extended than the light it reddens. Measured 1.4-1.75 (Xilouris et al. 1999). With SF-map seeding on, this sets the total column and how far the dust slices reach, not where the clouds land."
         />
         <ParamSlider
           label="Layer thickness × disc"
@@ -78,6 +78,7 @@ function DustSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchDust({ heightRatio: v })}
+          info="Dust/stellar vertical sigma ratio — the dust layer is thinner than the stellar disc it sits in. Measured 0.25-0.75 across spirals; the Milky Way's own is ~0.35."
         />
       </div>
     </CollapsibleSection>
