@@ -131,6 +131,8 @@ export type SfMapChannelWeights = {
  * comment), so the law has to arrive once per frame for the whole galaxy.
  */
 export type FieldDust = {
+  /** Length of the dust slice `comps` appends after the emission components. */
+  readonly count: number;
   /** The CCM89 law's A_lambda/A_V per channel, for `currentDust.rV`. */
   readonly extinctionRgb: Vec3;
   readonly noise: FieldDustNoise;
@@ -151,6 +153,7 @@ export type FieldDust = {
  * `pow` to the second.
  */
 const INERT_DUST: FieldDust = {
+  count: 0,
   extinctionRgb: [0, 0, 0],
   noise: { tileUnits: 1, amplitude: 0, cloudOffset: 0, contrastExp: 1 },
   slices: { t1: 0, t2: 0, t3: 0 },
@@ -162,8 +165,6 @@ export type FieldHeaderInput = {
   readonly camera: FieldCamera;
   /** The draw call's own instance count — dust components are never drawn as quads. */
   readonly emissionCount: number;
-  /** Length of the dust slice `comps` appends after the emission components. */
-  readonly dustCount: number;
   /**
    * The CENTRAL galaxy's share of `emissionCount` (its components pack
    * first). splat.wesl gates dust application on it, so an extra's emission
@@ -201,7 +202,6 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
   const {
     camera: cam,
     emissionCount,
-    dustCount,
     primaryCount,
     targetSizePx,
     debugViews,
@@ -246,7 +246,7 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
   // component, so the slice starts exactly at `emissionCount` (io.wesl).
   out[20] = emissionCount;
   out[21] = emissionCount;
-  out[22] = dustCount;
+  out[22] = dust.count;
   out[23] = primaryCount;
 
   // counts2 24..27 = (unused, dustMapHeightPx, targetWidthPx, targetHeightPx).

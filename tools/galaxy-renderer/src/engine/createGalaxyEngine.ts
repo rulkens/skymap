@@ -2350,10 +2350,10 @@ export async function createGalaxyEngine(
       {
         camera: fieldCamera,
         emissionCount: fieldEmissionCount,
-        dustCount: fieldDustCount,
         primaryCount: fieldPrimaryCount,
         targetSizePx: targets.reducedSize(render.fieldDivisor),
         dust: {
+          count: fieldDustCount,
           // Both cached by rebuildDustMixture, not recomputed per frame.
           extinctionRgb: currentDustExtinctionRgb,
           noise: currentDustNoise,
@@ -2386,7 +2386,6 @@ export async function createGalaxyEngine(
       {
         camera: fieldCamera,
         emissionCount: hiiEmissionCount,
-        dustCount: 0,
         primaryCount: 0,
         targetSizePx: targets.reducedSize(render.hiiDivisor),
         debugViews,

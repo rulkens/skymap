@@ -54,10 +54,10 @@ const input: FieldHeaderInput = {
     exposure: 13002,
   },
   emissionCount: EMISSION_COUNT,
-  dustCount: 14001,
   primaryCount: 14002,
   targetSizePx: [15000, 15001],
   dust: {
+    count: 14001,
     extinctionRgb: [17000, 17001, 17002],
     noise: { tileUnits: 18000, amplitude: 18001, cloudOffset: 18002, contrastExp: 18003 },
     slices: { t1: 19000, t2: 19001, t3: 19002 },
@@ -95,8 +95,9 @@ describe('packFieldHeaderUniforms ↔ milkyWayField/io.wesl FieldUniforms', () =
     // params.x is tan(fov/2), a transformed value with no sentinel; aspect
     // rides lane 1.
     expect(observed(13000)).toBe(at('params') + 4);
-    // counts.x/.y are both emissionCount, so primaryCount (lane 3) is the
-    // uniquely-locatable one.
+    // counts.x/.y are both emissionCount, so only lanes 2 and 3 are uniquely
+    // locatable.
+    expect(observed(14001)).toBe(at('counts') + 8);
     expect(observed(14002)).toBe(at('counts') + 12);
     // counts2.x is unused; dustMapHeightPx rides lane 1.
     expect(observed(16000)).toBe(at('counts2') + 4);
@@ -123,6 +124,7 @@ describe('packFieldHeaderUniforms ↔ milkyWayField/io.wesl FieldUniforms', () =
     packFieldHeaderUniforms(noDust, dst);
     const four = (byteOffset: number) => [...dst.slice(byteOffset / 4, byteOffset / 4 + 4)];
 
+    expect(dst[at('counts') / 4 + 2]).toBe(0); // dustCount
     expect(dst[at('counts2') / 4 + 1]).toBe(0); // dustMapHeightPx
     expect(four(at('dustExtinction'))).toEqual([0, 0, 0, 0]);
     // tileUnits and contrastExp are 1, not 0: dustMap.wesl divides by the
