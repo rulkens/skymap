@@ -306,9 +306,11 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
   // arms that stop before the disc does. Not a measured ratio; see
   // `armExcessSurfaceShape`.
   armExcessScaleRatio: 1.8,
-  // The remaining 40% of the arm's span is ~2x the arm excess's own scale
-  // length on every shipped preset, so the taper never falls faster than the
-  // brightness law it multiplies. NOT `armFullRadius` (0.42 * fadeRadius),
+  // The taper spans the outer 40% of the arm: 2.0 of the arm excess's own
+  // scale lengths on the Milky Way preset, 1.2 on every gallery one (the MW
+  // is the only preset overriding `diskScaleLenFrac`, which is the whole
+  // difference) — comparable to the brightness law it multiplies rather than
+  // swamping it. NOT `armFullRadius` (0.42 * fadeRadius),
   // which `generate.wesl`'s sprite copy of this envelope still uses: at 0.42
   // the smoothstep is a SECOND radial brightness law on top of
   // `armExcessSurfaceShape` — it alone cost the Milky Way preset's arms a
