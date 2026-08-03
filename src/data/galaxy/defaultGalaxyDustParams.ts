@@ -18,10 +18,5 @@ export const DEFAULT_GALAXY_DUST_PARAMS: GalaxyDustParams = {
   scaleLenRatio: 1.5,
   heightRatio: 0.4,
   rV: 2.3,
-  // The arm lane sits mid-to-low in its measured contrast range rather than
-  // centred; `laneWidth` starts at its literature value (1.0), which for this
-  // one knob is an eyeball-vs-M74 call — no primary width anchor exists.
-  laneWidth: 1,
-  armContrast: 3,
   cloud: DEFAULT_GALAXY_DUST_CLOUD_PARAMS,
 };

@@ -22,10 +22,6 @@ export type GalaxyDustParams = {
   readonly scaleLenRatio: number;
   readonly heightRatio: number;
   readonly rV: number;
-  /** ×measured-default width of the arm dust lane (`dustLaneFeatures.ts`); 0 reads as "no lane" rather than dividing by zero. */
-  readonly laneWidth: number;
-  /** Molecular arm/interarm contrast (measured ~2–5), deliberately sharper than the STELLAR arm contrast — which is a separate knob, `GalaxyFieldTuning.armContrast` (K≈1.3), and never moves with this one. */
-  readonly armContrast: number;
   /** The 3D particle cloud that renders ALL of `tau` — see `GalaxyDustCloudParams`. */
   readonly cloud: GalaxyDustCloudParams;
 };

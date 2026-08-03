@@ -109,11 +109,6 @@ export function randomGalaxyParams(
       sizeScale: 0.7 + rng() * 0.9,
       texture: 0.4 + rng() * 0.6,
     },
-    // Out of field order on purpose: the rng DRAW sequence is what a seed
-    // reproduces (see PARAM_SPEC's own note), so the lane's contrast is drawn
-    // after the cloud's four and before `starFormation`'s one, whatever the
-    // declaration order of the types involved.
-    armContrast: 2 + rng() * 3,
   };
 
   const starFormation: GalaxyStarFormationParams = {

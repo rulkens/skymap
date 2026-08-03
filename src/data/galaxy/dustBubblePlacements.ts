@@ -8,7 +8,6 @@
  * `sfEventCatalog.ts`.
  */
 import { armFadeEnvelope, armRidgeAngle, armRidgeCurvePoint } from './armRidgeGeometry';
-import { armAgeWeight, armLaneWidthAndAmplitude } from './dustLaneFeatures';
 import { HII_AGE_GATE, hiiLuminosityOf, hiiRadiusUnits } from './hiiRegionGeometry';
 import { buildSfEventCatalog } from './sfEventCatalog';
 import { pcToUnits } from '../../utils/galaxy/pcToUnits';
@@ -57,19 +56,18 @@ function armEventCenter(
 }
 
 /**
- * An event only carves where its arm actually carries dust to sweep: the
- * lane amplitude folds in the arm's age weight and radial fade, so a zero
- * here means an event past the arm's own reach, not a small one. Shared so
- * both builders gate on the identical lane state.
+ * An event only carves where its arm actually reaches: past the fade envelope
+ * there is no arm to sweep dust out of. This used to route through the lane
+ * ledger's amplitude, but every other factor in that product (age weight, lane
+ * width, carried column) is strictly positive wherever tau is — so the fade
+ * was the only thing the gate ever tested.
  */
-function armEventLaneAmplitude(
+function armReaches(
   armRadius: number,
   geometry: GalaxyFieldGeometry,
-  dust: GalaxyDustParams,
   arm: GalaxyFieldArmRecord,
-): number {
-  const fade = armFadeEnvelope(armRadius, geometry, arm);
-  return armLaneWidthAndAmplitude(armRadius, geometry, dust, armAgeWeight(arm), fade).amplitude;
+): boolean {
+  return armFadeEnvelope(armRadius, geometry, arm) > 0;
 }
 
 export function buildDustBubblePlacements(
@@ -97,7 +95,7 @@ export function buildDustBubblePlacements(
     const radius = pcToUnits(radiusPc) * starFormation.bubbleScale;
     if (radius <= 0) continue;
 
-    if (armEventLaneAmplitude(armRadius, geometry, dust, arm) <= 0) continue;
+    if (!armReaches(armRadius, geometry, arm)) continue;
 
     out.push({ center, radius });
   }
@@ -143,7 +141,7 @@ export function buildHiiCavityPlacements(
       hiiRadiusUnits(hiiLuminosityOf(event), tuning.hiiRadiusScale) * tuning.hiiCavityScale;
     if (radius <= 0) continue;
 
-    if (armEventLaneAmplitude(armRadius, geometry, dust, arm) <= 0) continue;
+    if (!armReaches(armRadius, geometry, arm)) continue;
 
     out.push({ center, radius });
   }

@@ -101,8 +101,6 @@ export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams = {
     scaleLenRatio: 1.5,
     heightRatio: 0.35,
     rV: 2.3,
-    laneWidth: 1,
-    armContrast: 3,
     // Not yet visually calibrated — same values as DEFAULT_GALAXY_DUST_CLOUD_PARAMS.
     cloud: {
       count: 6000,
