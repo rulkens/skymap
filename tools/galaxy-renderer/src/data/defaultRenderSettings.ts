@@ -99,7 +99,8 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // alone is now the subject rather than one side of a comparison — and an
   // unattenuated sprite field sitting in front of the dust map actively
   // misreads what the dust is doing. The pill stays for the A/B. It gates the
-  // STAR draws only; sprite dust still draws (see `drawFrame`'s scene pass).
+  // STAR draws only — the legacy sprite DUST is a separate pill,
+  // `legacyDustEnabled` below, and is off at boot too.
   spriteField: false,
   analyticField: true,
   analyticExposure: 1.0,

@@ -2133,7 +2133,14 @@ export async function createGalaxyEngine(
         }
       }
       // Primary AND extras, and — unlike the star list above — under no
-      // `spriteField` gate: sprite dust draws whenever a dust buffer exists.
+      // `spriteField` gate, which looks like the missing half of that pill and
+      // is not: `spriteField` is the legacy STAR half, and the legacy DUST half
+      // gates UPSTREAM of generation instead. `legacyDustEnabled` off (the boot
+      // state) makes `engineBridge`'s `paramsForEngine` hand the engine
+      // `spriteDust: 0`, `carveDustLayout` then carves capacity 0 and
+      // `generateGalaxy` allocates no dust buffer — so this list is empty at
+      // boot with no gate here at all. Adding one would double-gate the dust
+      // pill behind the star pill.
       // The debug views only dim it, through the same debugGalaxyWeight factor
       // the sprites carry.
       const dustInstances: InstanceDraw[] = [];
