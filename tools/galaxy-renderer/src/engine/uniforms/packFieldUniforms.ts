@@ -106,8 +106,8 @@ export type DebugViewWeights = Readonly<Record<DebugViewKind, number>>;
 
 /**
  * Per-channel isolation weights for the SF-map debug view (io.wesl's
- * `sfMapChannels`), orthogonal to `DebugViewWeights.sfMapViewIntensity` (the
- * whole view's crossfade weight) — sfMapPresent.wesl's palette sums all
+ * `sfMapChannels`), orthogonal to `debugViews.sfMap` (the whole view's
+ * crossfade weight) — sfMapPresent.wesl's palette sums all
  * three channels, so with no per-channel control there was no way to tell
  * gas from oldActivity from recentSf. Each field names what the automaton
  * channel MEANS, not just that it's a weight — see `RenderSettings`'s own
