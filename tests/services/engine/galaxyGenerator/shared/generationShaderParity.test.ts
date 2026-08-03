@@ -7,10 +7,11 @@
  * `.wesl` sources as raw text (`readFileSync`) and asserts each mirror against
  * its authoritative TS export.
  *
- * Three mirrors are covered:
+ * Four mirrors are covered:
  *   a) the `GenUniforms` struct ↔ `GENERATION_UBO` (field order + byte total);
  *   b) the population-id `case NNu:` switch labels ↔ `POPULATION_IDS`;
- *   c) the `gen.category == Nu` literals ↔ `CATEGORY_CODE`.
+ *   c) the `gen.category == Nu` literals ↔ `CATEGORY_CODE`;
+ *   d) each builder's `randomLuminosity(...) * K` ↔ `SPRITE_POPULATION_BRIGHTNESS`.
  *
  * Follows the runtime's `tests/services/gpu/shaders/constants.parity.test.ts`
  * pattern (read the `.wesl` as text, regex-extract structure, assert equality)
@@ -26,6 +27,7 @@ import { describe, expect, it } from 'vitest';
 import { GENERATION_UBO } from '../../../../../src/services/engine/galaxyGenerator/shared/generationUboLayout';
 import { CATEGORY_CODE } from '../../../../../src/services/engine/galaxyGenerator/shared/packGenerationUniforms';
 import { POPULATION_IDS } from '../../../../../src/services/engine/galaxyGenerator/shared/populationIds';
+import { SPRITE_POPULATION_BRIGHTNESS } from '../../../../../src/services/engine/galaxyGenerator/shared/spritePopulationBrightness';
 
 const SHADERS = 'src/services/gpu/shaders/galaxyGen';
 
@@ -173,5 +175,46 @@ describe('gen.category literals ↔ CATEGORY_CODE parity', () => {
     expect(CATEGORY_CODE.barred).toBe(3);
     expect(literals).toContain(CATEGORY_CODE.elliptical);
     expect(literals).toContain(CATEGORY_CODE.barred);
+  });
+});
+
+// --- (d) randomLuminosity multipliers ↔ SPRITE_POPULATION_BRIGHTNESS --------
+
+/** The builder that draws each population's stars, by the population it feeds. */
+const POPULATION_BY_BUILDER: Readonly<Record<string, string>> = {
+  buildBulge: 'bulge',
+  buildBar: 'bar',
+  buildDisk: 'disk',
+  buildArmSlot: 'arm',
+  buildIrregularSlot: 'irregularClump',
+  buildHalo: 'halo',
+};
+
+/**
+ * Every `fn build*` that draws a luminosity, keyed by the population it feeds
+ * and valued at its `* K` multiplier (1 where the call carries none). A
+ * builder outside `POPULATION_BY_BUILDER` keys on its own name, so a NEW
+ * luminous builder fails the comparison below rather than passing unnoticed.
+ */
+function scrapeLuminosityMultipliers(): Record<string, number> {
+  const text = readShader('generate.wesl');
+  const chunks = text.split(/\nfn\s+/).slice(1);
+  const out: Record<string, number> = {};
+  for (const chunk of chunks) {
+    const name = /^(\w+)/.exec(chunk)![1]!;
+    if (!name.startsWith('build')) continue;
+    const draw = /randomLuminosity\([^)]*\)(?:\s*\*\s*(\d+(?:\.\d+)?))?/.exec(chunk);
+    if (!draw) continue;
+    out[POPULATION_BY_BUILDER[name] ?? name] = draw[1] === undefined ? 1 : parseFloat(draw[1]);
+  }
+  return out;
+}
+
+describe('randomLuminosity multipliers ↔ SPRITE_POPULATION_BRIGHTNESS parity', () => {
+  // The only guard on this pair: nothing links a retuned WESL constant to the
+  // TS table the analytic field weights its amplitudes with, so drift here is
+  // silent — one tier of the same galaxy simply gets brighter than the other.
+  it('every builder that draws a luminosity matches its TS brightness entry', () => {
+    expect(scrapeLuminosityMultipliers()).toEqual({ ...SPRITE_POPULATION_BRIGHTNESS });
   });
 });

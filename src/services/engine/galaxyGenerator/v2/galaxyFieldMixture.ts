@@ -27,6 +27,7 @@ import {
 } from './armRidgeGeometry';
 import { DEFAULT_GALAXY_SF_MAP_PARAMS } from './defaultGalaxySfMapParams';
 import { DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './discSurfaceFit';
+import { SPRITE_POPULATION_BRIGHTNESS } from '../shared/spritePopulationBrightness';
 import { discLightScaleLength } from '../../../../utils/galaxy/discLightScaleLength';
 import { discWarpShear } from '../../../../utils/galaxy/discWarpShear';
 import { galaxyFieldInverseCovariance } from '../../../../utils/galaxy/galaxyFieldInverseCovariance';
@@ -141,12 +142,12 @@ const HALO_COLOR = [1.0, 0.92, 0.78] as const;
 const BAR_COLOR = [1.0, 0.84, 0.62] as const;
 const BULGE_COLOR = [1.0, 0.8, 0.55] as const;
 
-// Population brightness multipliers, straight off each builder's
-// `randomLuminosity(...) * K` line in generate.wesl.
-const DISC_BRIGHTNESS = 1.35;
-const BULGE_BRIGHTNESS = 0.85;
-const BAR_BRIGHTNESS = 0.9;
-const HALO_BRIGHTNESS = 0.5;
+// Four of generate.wesl's six per-star multipliers; see
+// `spritePopulationBrightness.ts` for why the arm lane is not among them.
+const DISC_BRIGHTNESS = SPRITE_POPULATION_BRIGHTNESS.disk;
+const BULGE_BRIGHTNESS = SPRITE_POPULATION_BRIGHTNESS.bulge;
+const BAR_BRIGHTNESS = SPRITE_POPULATION_BRIGHTNESS.bar;
+const HALO_BRIGHTNESS = SPRITE_POPULATION_BRIGHTNESS.halo;
 
 /** `buildDisk`'s vertical flare: diskHeight * (0.6 + bulgeRadius/(R + bulgeRadius)). */
 const DISC_FLARE_FLOOR = 0.6;
