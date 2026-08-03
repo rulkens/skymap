@@ -5,7 +5,7 @@
  * the target translates the eye rigidly.
  */
 import { describe, expect, it } from 'vitest';
-import { orbitEye } from '../../../../tools/galaxy-renderer/src/engine/orbitEye';
+import { orbitEye } from '../../../../tools/galaxy-renderer/src/engine/camera/orbitEye';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 const ORIGIN: Vec3 = [0, 0, 0];

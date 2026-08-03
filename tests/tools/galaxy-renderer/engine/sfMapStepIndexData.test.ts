@@ -3,7 +3,7 @@
  * at device-aligned offsets (see tools/galaxy-renderer/src/engine/sfMapStepIndexData.ts).
  */
 import { describe, expect, it } from 'vitest';
-import { sfMapStepIndexData } from '../../../../tools/galaxy-renderer/src/engine/sfMapStepIndexData';
+import { sfMapStepIndexData } from '../../../../tools/galaxy-renderer/src/engine/sfMap/sfMapStepIndexData';
 
 describe('sfMapStepIndexData', () => {
   it('places each step index at its own strideBytes-aligned float offset, padding left zero', () => {

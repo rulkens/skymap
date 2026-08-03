@@ -11,15 +11,15 @@
  */
 import { mat4 } from 'wgpu-matrix';
 
-import type { Vec2 } from '../../../../src/@types/math/Vec2';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { MilkyWayFadeReadout } from '../../@types/engine/MilkyWayFadeReadout';
-import type { RenderSettings } from '../../@types/engine/RenderSettings';
+import type { Vec2 } from '../../../../../src/@types/math/Vec2';
+import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { MilkyWayFadeReadout } from '../../../@types/engine/MilkyWayFadeReadout';
+import type { RenderSettings } from '../../../@types/engine/RenderSettings';
 
 import { debugGalaxyWeight } from './debugGalaxyWeight';
 import { deriveMilkyWayFade } from './deriveMilkyWayFade';
 import { dustSliceEdges } from './dustSliceEdges';
-import type { DebugViewWeights, FieldDustSlices, SfMapChannelWeights } from './packFieldUniforms';
+import type { DebugViewWeights, FieldDustSlices, SfMapChannelWeights } from '../uniforms/packFieldUniforms';
 
 export type FrameView = {
   readonly view: Float32Array;

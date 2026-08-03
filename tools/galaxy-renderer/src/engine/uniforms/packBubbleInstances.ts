@@ -13,7 +13,7 @@
  * `createGalaxyEngine.ts`'s `rebuildBubblePlacements`) size their buffer to
  * `relics.length + cavities.length` and expect that contiguous layout.
  */
-import type { DustBubblePlacement } from '../../../../src/data/galaxy/dustBubblePlacements';
+import type { DustBubblePlacement } from '../../../../../src/data/galaxy/dustBubblePlacements';
 
 /** Floats per instance: a vec4 (center.xyz, radius) then a kind lane. */
 export const BUBBLE_RECORD_FLOATS = 5;

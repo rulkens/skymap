@@ -11,20 +11,20 @@
  * render bag and the field tuning, neither of which this module should know
  * about. What lives here is every resource and the pass order.
  */
-import { ADDITIVE_BLEND } from '../../../../src/services/gpu/lib/blendStates';
+import { ADDITIVE_BLEND } from '../../../../../src/services/gpu/lib/blendStates';
 import {
   SF_MAP_AZ,
   SF_MAP_RINGS,
   SF_MAP_WORKGROUP_SIZE,
-} from '../../../../src/data/galaxy/galaxySfMapArmForcing';
-import type { GalaxySfMapGridRadius } from '../../../../src/data/galaxy/galaxySfMapArmForcing';
-import { alignedBytesPerRow } from '../../../../src/utils/gpu/alignedBytesPerRow';
+} from '../../../../../src/data/galaxy/galaxySfMapArmForcing';
+import type { GalaxySfMapGridRadius } from '../../../../../src/data/galaxy/galaxySfMapArmForcing';
+import { alignedBytesPerRow } from '../../../../../src/utils/gpu/alignedBytesPerRow';
 
-import orientationPresentWgsl from './shaders/milkyWayField/orientationPresent.wesl?static';
-import sfMapOrientationFieldWgsl from './shaders/milkyWayField/sfMapOrientationField.wesl?static';
-import sfMapOrientationTensorWgsl from './shaders/milkyWayField/sfMapOrientationTensor.wesl?static';
-import sfMapOrientationTensorBlurWgsl from './shaders/milkyWayField/sfMapOrientationTensorBlur.wesl?static';
-import sfMapOrientationCoherenceWgsl from './shaders/milkyWayField/sfMapOrientationCoherence.wesl?static';
+import orientationPresentWgsl from '../shaders/milkyWayField/orientationPresent.wesl?static';
+import sfMapOrientationFieldWgsl from '../shaders/milkyWayField/sfMapOrientationField.wesl?static';
+import sfMapOrientationTensorWgsl from '../shaders/milkyWayField/sfMapOrientationTensor.wesl?static';
+import sfMapOrientationTensorBlurWgsl from '../shaders/milkyWayField/sfMapOrientationTensorBlur.wesl?static';
+import sfMapOrientationCoherenceWgsl from '../shaders/milkyWayField/sfMapOrientationCoherence.wesl?static';
 
 export type SfMapOrientation = {
   readonly texture: GPUTexture;

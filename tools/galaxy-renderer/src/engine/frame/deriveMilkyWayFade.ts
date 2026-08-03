@@ -25,17 +25,17 @@
  * and `apparentPx` in hand.
  */
 
-import type { FadeAnchor } from '../../@types/engine/FadeAnchor';
-import type { MilkyWayFadeReadout } from '../../@types/engine/MilkyWayFadeReadout';
-import type { RenderSettings } from '../../@types/engine/RenderSettings';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import { MILKY_WAY_CENTER_WORLD } from '../../../../src/data/milkyWay/galacticCenter';
+import type { FadeAnchor } from '../../../@types/engine/FadeAnchor';
+import type { MilkyWayFadeReadout } from '../../../@types/engine/MilkyWayFadeReadout';
+import type { RenderSettings } from '../../../@types/engine/RenderSettings';
+import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import { MILKY_WAY_CENTER_WORLD } from '../../../../../src/data/milkyWay/galacticCenter';
 import {
   MILKY_WAY_MODEL_SCALE,
   MILKY_WAY_RADIUS_MPC,
-} from '../../../../src/services/gpu/galaxy/milkyWayCalibration';
-import { apparentDiameterPx } from '../../../../src/utils/math/apparentDiameterPx';
-import { fadeBand } from '../../../../src/utils/math/fadeBand';
+} from '../../../../../src/services/gpu/galaxy/milkyWayCalibration';
+import { apparentDiameterPx } from '../../../../../src/utils/math/apparentDiameterPx';
+import { fadeBand } from '../../../../../src/utils/math/fadeBand';
 
 /** Generator units → kpc, for the readout. `MILKY_WAY_MODEL_SCALE` is Mpc/unit. */
 export const UNITS_TO_KPC = MILKY_WAY_MODEL_SCALE * 1000;

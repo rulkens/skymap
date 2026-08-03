@@ -13,7 +13,7 @@
  * `orbitEye`'s az/el parameterization, so they stay orthonormal by
  * construction rather than needing a runtime normalize.
  */
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 /**
  * Compute the orbit camera's right/up basis for a given azimuth/elevation.

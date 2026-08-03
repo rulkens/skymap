@@ -6,7 +6,7 @@
  * spike relies on.
  */
 import { describe, expect, it } from 'vitest';
-import { panAxes } from '../../../../tools/galaxy-renderer/src/engine/panAxes';
+import { panAxes } from '../../../../tools/galaxy-renderer/src/engine/camera/panAxes';
 
 const PROBES: ReadonlyArray<readonly [number, number]> = [
   [0, 0],

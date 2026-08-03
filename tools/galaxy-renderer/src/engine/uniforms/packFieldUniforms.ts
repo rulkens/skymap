@@ -36,9 +36,9 @@
  * opens — a divergence that looks like a projection bug, not a framing one.
  */
 
-import type { GalaxyFieldComponent } from '../../../../src/@types/galaxy/GalaxyFieldComponent';
-import type { Vec2 } from '../../../../src/@types/math/Vec2';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { GalaxyFieldComponent } from '../../../../../src/@types/galaxy/GalaxyFieldComponent';
+import type { Vec2 } from '../../../../../src/@types/math/Vec2';
+import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 /** Float count of `io.wesl`'s `FieldUniforms` header — 13 vec4, camera + params + counts + counts2 + dustExtinction + dustNoise + dustSlices + debugView + sfMapChannels + bubbleView. */
 export const FIELD_HEADER_FLOATS = 52;

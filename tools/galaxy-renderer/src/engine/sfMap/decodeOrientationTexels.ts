@@ -7,7 +7,7 @@
  * The double-angle packing (not (cos theta, sin theta)) is what lets the
  * pair be interpolated across the pi wrap — a filament has no head/tail.
  */
-import { f16ToFloat } from '../../../../src/utils/math/f16ToFloat';
+import { f16ToFloat } from '../../../../../src/utils/math/f16ToFloat';
 
 export function decodeOrientationTexels(
   padded: Uint16Array,

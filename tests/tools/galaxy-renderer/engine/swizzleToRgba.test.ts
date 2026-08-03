@@ -4,7 +4,7 @@
  * silently: BGRA channel order and stripped row padding.
  */
 import { describe, expect, it } from 'vitest';
-import { swizzleToRgba } from '../../../../tools/galaxy-renderer/src/engine/swizzleToRgba';
+import { swizzleToRgba } from '../../../../tools/galaxy-renderer/src/engine/probe/swizzleToRgba';
 
 describe('swizzleToRgba', () => {
   it('swaps R and B under bgra, and strips row padding', () => {

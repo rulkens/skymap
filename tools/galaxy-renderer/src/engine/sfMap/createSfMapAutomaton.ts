@@ -11,24 +11,24 @@
  * schedules the readback: the caller owns both, so a stale-capture bug has no
  * surface to appear on.
  */
-import { ADDITIVE_BLEND } from '../../../../src/services/gpu/lib/blendStates';
+import { ADDITIVE_BLEND } from '../../../../../src/services/gpu/lib/blendStates';
 import {
   buildGalaxySfMapArmForcing,
   sfMapGridRadius,
   SF_MAP_AZ,
   SF_MAP_RINGS,
   SF_MAP_WORKGROUP_SIZE,
-} from '../../../../src/data/galaxy/galaxySfMapArmForcing';
-import type { GalaxySfMapGridRadius } from '../../../../src/data/galaxy/galaxySfMapArmForcing';
-import { alignedBytesPerRow } from '../../../../src/utils/gpu/alignedBytesPerRow';
-import type { GalaxyFieldGeometry } from '../../../../src/@types/galaxy/GalaxyFieldGeometry';
-import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFieldTuning';
+} from '../../../../../src/data/galaxy/galaxySfMapArmForcing';
+import type { GalaxySfMapGridRadius } from '../../../../../src/data/galaxy/galaxySfMapArmForcing';
+import { alignedBytesPerRow } from '../../../../../src/utils/gpu/alignedBytesPerRow';
+import type { GalaxyFieldGeometry } from '../../../../../src/@types/galaxy/GalaxyFieldGeometry';
+import type { GalaxyFieldTuning } from '../../../../../src/@types/galaxy/GalaxyFieldTuning';
 
 import { sfMapStepIndexData } from './sfMapStepIndexData';
 
-import sfMapStepWgsl from './shaders/milkyWayField/sfMapStep.wesl?static';
-import sfMapPackWgsl from './shaders/milkyWayField/sfMapPack.wesl?static';
-import sfMapPresentWgsl from './shaders/milkyWayField/sfMapPresent.wesl?static';
+import sfMapStepWgsl from '../shaders/milkyWayField/sfMapStep.wesl?static';
+import sfMapPackWgsl from '../shaders/milkyWayField/sfMapPack.wesl?static';
+import sfMapPresentWgsl from '../shaders/milkyWayField/sfMapPresent.wesl?static';
 
 export type SfMapAutomaton = {
   /** The packed, presentable output (gas / recent SF / older SF) the orientation chain and the CPU readback both read. */

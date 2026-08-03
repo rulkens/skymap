@@ -208,28 +208,28 @@ import { createShaderModuleWithDevLog } from '../../../../src/services/gpu/shade
 import { createGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { hasUrlGate } from '../../../../src/utils/url/hasUrlGate';
 
-import { createFrameTimer } from './createFrameTimer';
-import { createGalaxyRenderTargets } from './createGalaxyRenderTargets';
-import { createOrbitCameraInput } from './createOrbitCameraInput';
-import { createPassTimingWindows } from './createPassTimingWindows';
-import { createSfMapAutomaton } from './createSfMapAutomaton';
-import { createSfMapOrientation } from './createSfMapOrientation';
-import { createReadbackQueue } from './createReadbackQueue';
-import { deriveFrameView } from './deriveFrameView';
-import { decodeOrientationTexels } from './decodeOrientationTexels';
-import { orientationCoherenceStats } from './orientationCoherenceStats';
-import { BUBBLE_RECORD_FLOATS, packBubbleInstances } from './packBubbleInstances';
-import { sampleLuminanceStats } from './sampleLuminanceStats';
-import { swizzleToRgba } from './swizzleToRgba';
-import { CLOUD_UNIFORM_FLOATS, packCloudUniforms } from './packCloudUniforms';
+import { createFrameTimer } from './timing/createFrameTimer';
+import { createGalaxyRenderTargets } from './gpu/createGalaxyRenderTargets';
+import { createOrbitCameraInput } from './camera/createOrbitCameraInput';
+import { createPassTimingWindows } from './timing/createPassTimingWindows';
+import { createSfMapAutomaton } from './sfMap/createSfMapAutomaton';
+import { createSfMapOrientation } from './sfMap/createSfMapOrientation';
+import { createReadbackQueue } from './gpu/createReadbackQueue';
+import { deriveFrameView } from './frame/deriveFrameView';
+import { decodeOrientationTexels } from './sfMap/decodeOrientationTexels';
+import { orientationCoherenceStats } from './sfMap/orientationCoherenceStats';
+import { BUBBLE_RECORD_FLOATS, packBubbleInstances } from './uniforms/packBubbleInstances';
+import { sampleLuminanceStats } from './probe/sampleLuminanceStats';
+import { swizzleToRgba } from './probe/swizzleToRgba';
+import { CLOUD_UNIFORM_FLOATS, packCloudUniforms } from './uniforms/packCloudUniforms';
 import {
   FIELD_COMPONENT_FLOATS,
   FIELD_HEADER_BUFFER_SIZE,
   FIELD_HEADER_FLOATS,
   packFieldComponents,
   packFieldHeaderUniforms,
-} from './packFieldUniforms';
-import type { FieldDustNoise, FieldDustSlices } from './packFieldUniforms';
+} from './uniforms/packFieldUniforms';
+import type { FieldDustNoise, FieldDustSlices } from './uniforms/packFieldUniforms';
 import { createGenerationPipelines } from '../../../../src/services/gpu/galaxy/createGenerationPipelines';
 import { encodeGeneration } from '../../../../src/services/gpu/galaxy/encodeGeneration';
 import { packGenerationUniforms } from '../../../../src/services/gpu/galaxy/packGenerationUniforms';

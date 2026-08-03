@@ -8,7 +8,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { deriveFrameView } from '../../../../tools/galaxy-renderer/src/engine/deriveFrameView';
+import { deriveFrameView } from '../../../../tools/galaxy-renderer/src/engine/frame/deriveFrameView';
 import type { RenderSettings } from '../../../../tools/galaxy-renderer/@types/engine/RenderSettings';
 import { DEFAULT_RENDER_SETTINGS } from '../../../../tools/galaxy-renderer/src/data/defaultRenderSettings';
 

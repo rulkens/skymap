@@ -12,7 +12,7 @@
  * parameterized the usual way: azimuth sweeps around the world Y axis,
  * elevation tilts up out of the XZ plane.
  */
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 /**
  * Compute the eye position for an orbit camera looking at `target`.

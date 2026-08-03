@@ -13,8 +13,8 @@
  *    has to disappear rather than freeze at a stale-but-plausible number.
  */
 
-import type { GpuTimingFrame } from '../../../../src/@types/gpu/timing/GpuTimingFrame';
-import type { PassTiming } from '../../@types/engine/PassTiming';
+import type { GpuTimingFrame } from '../../../../../src/@types/gpu/timing/GpuTimingFrame';
+import type { PassTiming } from '../../../@types/engine/PassTiming';
 
 type PassWindow = { samples: number[]; lastSeenFrame: number };
 

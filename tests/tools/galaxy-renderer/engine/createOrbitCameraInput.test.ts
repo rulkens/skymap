@@ -10,8 +10,8 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createOrbitCameraInput } from '../../../../tools/galaxy-renderer/src/engine/createOrbitCameraInput';
-import { orbitEye } from '../../../../tools/galaxy-renderer/src/engine/orbitEye';
+import { createOrbitCameraInput } from '../../../../tools/galaxy-renderer/src/engine/camera/createOrbitCameraInput';
+import { orbitEye } from '../../../../tools/galaxy-renderer/src/engine/camera/orbitEye';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 type Listener = (e: unknown) => void;

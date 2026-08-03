@@ -7,7 +7,7 @@
  * Adding a fifth debug view means adding its intensity to the `Math.max`
  * call below too — skip that and the galaxy will not dim under it.
  */
-import type { RenderSettings } from '../../@types/engine/RenderSettings';
+import type { RenderSettings } from '../../../@types/engine/RenderSettings';
 
 export function debugGalaxyWeight(render: RenderSettings): number {
   return Math.max(

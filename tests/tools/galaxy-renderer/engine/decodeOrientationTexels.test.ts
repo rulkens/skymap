@@ -6,7 +6,7 @@
  * a distinguishable extra texel that a stride mix-up would land on.
  */
 import { describe, expect, it } from 'vitest';
-import { decodeOrientationTexels } from '../../../../tools/galaxy-renderer/src/engine/decodeOrientationTexels';
+import { decodeOrientationTexels } from '../../../../tools/galaxy-renderer/src/engine/sfMap/decodeOrientationTexels';
 import { floatToF16 } from '../../../../src/utils/math/floatToF16';
 
 describe('decodeOrientationTexels', () => {

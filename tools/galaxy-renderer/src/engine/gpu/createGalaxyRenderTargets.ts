@@ -9,10 +9,10 @@
  * Bind groups are not cached here — the shared pass factories rebuild theirs
  * per draw. The engine's three that bind `dustMapTex` can't; hence the callback.
  */
-import type { Vec2 } from '../../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 
-import { BLOOM_LEVELS } from '../../../../src/data/bloomConstants';
-import { reducedTargetSize } from '../../../../src/utils/gpu/reducedTargetSize';
+import { BLOOM_LEVELS } from '../../../../../src/data/bloomConstants';
+import { reducedTargetSize } from '../../../../../src/utils/gpu/reducedTargetSize';
 
 /**
  * Resolution divisor for bloom level `n`, mirroring the runtime's `bloomN`

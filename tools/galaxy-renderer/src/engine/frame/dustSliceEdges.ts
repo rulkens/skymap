@@ -8,7 +8,7 @@
  * logarithmic once the eye is inside it and the 0.02*R floor engages (it
  * keeps tNear off zero, since a zero tNear makes tFar/tNear diverge).
  */
-import type { FieldDustSlices } from './packFieldUniforms';
+import type { FieldDustSlices } from '../uniforms/packFieldUniforms';
 
 /**
  * @param eyeDistance  Distance from the eye to the dust's own origin (D).
