@@ -240,7 +240,8 @@ import {
   packFieldComponents,
   packFieldHeaderUniforms,
 } from './uniforms/packFieldUniforms';
-import type { FieldCamera, FieldDustNoise } from './uniforms/packFieldUniforms';
+import type { FieldCamera } from '../../@types/engine/FieldCamera';
+import type { FieldDustNoise } from '../../@types/engine/FieldDustNoise';
 import { DEBUG_VIEWS } from '../data/debugViews';
 import type { DebugViewKind } from '../../@types/data/DebugViewKind';
 import { createGenerationPipelines } from '../../../../src/services/gpu/galaxy/createGenerationPipelines';

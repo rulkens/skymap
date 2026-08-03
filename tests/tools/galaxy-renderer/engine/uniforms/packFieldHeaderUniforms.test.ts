@@ -13,7 +13,7 @@ import {
   FIELD_HEADER_FLOATS,
   packFieldHeaderUniforms,
 } from '../../../../../tools/galaxy-renderer/src/engine/uniforms/packFieldUniforms';
-import type { FieldHeaderInput } from '../../../../../tools/galaxy-renderer/src/engine/uniforms/packFieldUniforms';
+import type { FieldHeaderInput } from '../../../../../tools/galaxy-renderer/@types/engine/FieldHeaderInput';
 import { layoutWgslStruct } from '../../../../../tools/utils/wgsl/layoutWgslStruct';
 import { parseWgslStructFields } from '../../../../../tools/utils/wgsl/parseWgslStructFields';
 import { readShaderSource } from '../../../../../tools/utils/wgsl/readShaderSource';

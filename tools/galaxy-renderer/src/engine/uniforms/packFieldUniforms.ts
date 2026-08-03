@@ -37,9 +37,8 @@
  */
 
 import type { GalaxyFieldComponent } from '../../../../../src/@types/galaxy/GalaxyFieldComponent';
-import type { Vec2 } from '../../../../../src/@types/math/Vec2';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
-import type { DebugViewKind } from '../../../@types/data/DebugViewKind';
+import type { FieldDust } from '../../../@types/engine/FieldDust';
+import type { FieldHeaderInput } from '../../../@types/engine/FieldHeaderInput';
 
 /** Float count of `io.wesl`'s `FieldUniforms` header — 13 vec4, camera + params + counts + counts2 + dustExtinction + dustNoise + dustSlices + debugView + sfMapChannels + bubbleView. */
 export const FIELD_HEADER_FLOATS = 52;
@@ -49,102 +48,6 @@ export const FIELD_HEADER_BUFFER_SIZE = FIELD_HEADER_FLOATS * 4;
 
 /** Floats per `comps` entry — four vec4, as `io.wesl`'s layout comment documents. */
 export const FIELD_COMPONENT_FLOATS = 16;
-
-export type FieldCamera = {
-  /** Camera world position — the ray origin. */
-  readonly eye: Vec3;
-  /** View matrix, 16 floats column-major; the basis is read off its rotation rows. */
-  readonly view: Float32Array;
-  /** Vertical field of view in radians, as handed to `mat4.perspective`. */
-  readonly fov: number;
-  /** Viewport aspect the PROJECTION was built with, not the pass's own target. */
-  readonly aspect: number;
-  /** The value written into `proj[8]`. */
-  readonly lensShiftX: number;
-  /** Whole-field intensity multiplier — the tool's one look knob for this pass. */
-  readonly exposure: number;
-};
-
-/**
- * The dust-noise erosion lane (io.wesl's `dustNoise`). Unlike the
- * camera/exposure lanes these are cached in `createGalaxyEngine.ts`'s
- * `rebuildDustMixture` — they only change when the dust params or geometry
- * do, not every `drawFrame`.
- */
-export type FieldDustNoise = {
-  /** World units spanned by one full wrap of the baked noise volume (dustParticleCloud.ts's `dustNoiseTileUnits`). */
-  readonly tileUnits: number;
-  /** Erosion strength — 0 disables the multiplier and the shader branches out entirely (`GalaxyDustCloudParams.texture`). */
-  readonly amplitude: number;
-  /** Index WITHIN the dust slice (relative to `dustOffset`) where the particle-cloud components start. Always 0 now — the smooth lane tier this used to skip past was deleted, so the particle cloud IS the dust slice. */
-  readonly cloudOffset: number;
-  /** Signed-power exponent shaping the noise about its midpoint (dustMap.wesl's `dustNoiseMultiplier`) — `1 / GalaxyDustCloudParams.textureContrast`, inverted here so a higher slider value hardens filament edges. */
-  readonly contrastExp: number;
-};
-
-/**
- * The dust map's depth-slice edges (io.wesl's `dustSlices`) — VIEW-dependent
- * (a function of the eye's distance to the origin), so unlike `FieldDustNoise`
- * this is recomputed every `drawFrame` rather than cached by
- * `rebuildDustMixture`; only `R`, the dust's own reach, is cached there. See
- * io.wesl's `dustSlices` doc for the geometric-spacing derivation and why it
- * degenerates to linear from outside the galaxy and logarithmic from inside.
- */
-export type FieldDustSlices = {
-  readonly t1: number;
-  readonly t2: number;
-  readonly t3: number;
-};
-
-/**
- * Every debug view's crossfade weight, keyed by kind — one value per
- * `DEBUG_VIEWS` row, built by `debugViewWeights`. Which uniform lane each one
- * lands in is the packer's business, not this record's: three ride
- * io.wesl's `debugView` and the fourth `bubbleView`.
- */
-export type DebugViewWeights = Readonly<Record<DebugViewKind, number>>;
-
-/**
- * Per-channel isolation weights for the SF-map debug view (io.wesl's
- * `sfMapChannels`), orthogonal to `debugViews.sfMap` (the whole view's
- * crossfade weight) — sfMapPresent.wesl's palette sums all
- * three channels, so with no per-channel control there was no way to tell
- * gas from oldActivity from recentSf. Each field names what the automaton
- * channel MEANS, not just that it's a weight — see `RenderSettings`'s own
- * docblocks for the same three explained from the slider side.
- */
-export type SfMapChannelWeights = {
-  /** Unspent ISM fuel — 1 nearly everywhere on a quiet disc, driven to 0 by an ignition, refilled over `1/gasRegen` steps. */
-  readonly gasWeight: number;
-  /** `exp(-age/12)` — a cell that fired within roughly the last dozen steps. */
-  readonly recentSfWeight: number;
-  /** The accumulated trace of every front that passed, decayed per step by `activityDecay` — the channel dust placement actually reads. */
-  readonly activityWeight: number;
-};
-
-/**
- * The dust lanes as one bundle, because a pass either has a dust slice or it
- * has none — the HII header is the "none" case for all four at once.
- * `extinctionRgb` rides the header rather than a per-component colour lane
- * because dustMap.wesl collapses every dust component into four depth-sliced
- * tau columns before splat.wesl ever sees one (io.wesl's dust-component
- * comment), so the law has to arrive once per frame for the whole galaxy.
- */
-export type FieldDust = {
-  /** Length of the dust slice `comps` appends after the emission components. */
-  readonly count: number;
-  /** The CCM89 law's A_lambda/A_V per channel, for `currentDust.rV`. */
-  readonly extinctionRgb: Vec3;
-  readonly noise: FieldDustNoise;
-  readonly slices: FieldDustSlices;
-  /**
-   * `dustMapTex`'s OWN pixel height — it carries a divisor independent of
-   * every other target's (`createGalaxyRenderTargets`). dustMap.wesl
-   * band-limits its four baked octaves against the fragment's world-space
-   * pixel footprint with it (io.wesl's counts2.y doc).
-   */
-  readonly mapHeightPx: number;
-};
 
 /**
  * "This pass has no dust", as a VALUE rather than a skipped write — see the
@@ -158,37 +61,6 @@ const INERT_DUST: FieldDust = {
   noise: { tileUnits: 1, amplitude: 0, cloudOffset: 0, contrastExp: 1 },
   slices: { t1: 0, t2: 0, t3: 0 },
   mapHeightPx: 0,
-};
-
-/** Everything one `FieldUniforms` header needs, all of it per-pass. */
-export type FieldHeaderInput = {
-  readonly camera: FieldCamera;
-  /** The draw call's own instance count — dust components are never drawn as quads. */
-  readonly emissionCount: number;
-  /**
-   * The CENTRAL galaxy's share of `emissionCount` (its components pack
-   * first). splat.wesl gates dust application on it, so an extra's emission
-   * can never read the primary's dust; 0 keeps a whole pass out of the
-   * attenuation branch.
-   */
-  readonly primaryCount: number;
-  /**
-   * The pixel size of THIS pass's own target (fieldTex for the field header,
-   * hiiTex for the HII one) — not the canvas, and not dustMapTex, which
-   * carries its own divisor. splat.wesl's fs turns a fragment position into a
-   * normalized dustMapTex UV with it (io.wesl's DUST MAP doc).
-   */
-  readonly targetSizePx: Vec2;
-  /** Absent means the pass has no dust; the lanes are still written, inert. */
-  readonly dust?: FieldDust;
-  readonly debugViews: DebugViewWeights;
-  /**
-   * `1 - max(every view weight)`, clamped to 0 — see `debugGalaxyWeight`. Not
-   * a member of `debugViews` because it is not a view; it is what the galaxy
-   * is left with once they have taken their share.
-   */
-  readonly galaxyWeight: number;
-  readonly sfMapChannels: SfMapChannelWeights;
 };
 
 /**

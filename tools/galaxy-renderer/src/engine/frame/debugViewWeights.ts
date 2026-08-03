@@ -6,9 +6,9 @@
  * exist.
  */
 import type { DebugViewKind } from '../../../@types/data/DebugViewKind';
+import type { DebugViewWeights } from '../../../@types/engine/DebugViewWeights';
 import type { RenderSettings } from '../../../@types/engine/RenderSettings';
 import { DEBUG_VIEWS, DEBUG_VIEW_KINDS } from '../../data/debugViews';
-import type { DebugViewWeights } from '../uniforms/packFieldUniforms';
 
 export function debugViewWeights(render: RenderSettings): DebugViewWeights {
   // Accumulated as a Partial and asserted at the end: a loop cannot prove
