@@ -227,6 +227,7 @@ import { createSfMapAutomaton } from './sfMap/createSfMapAutomaton';
 import { createSfMapOrientation } from './sfMap/createSfMapOrientation';
 import { createGrowOnlyRecordBuffer } from './gpu/createGrowOnlyRecordBuffer';
 import { createReadbackQueue } from './gpu/createReadbackQueue';
+import { deriveDustHeaderLanes } from './frame/deriveDustHeaderLanes';
 import { deriveFrameView } from './frame/deriveFrameView';
 import { decodeOrientationTexels } from './sfMap/decodeOrientationTexels';
 import { orientationCoherenceStats } from './sfMap/orientationCoherenceStats';
@@ -242,7 +243,6 @@ import {
   packFieldHeaderUniforms,
 } from './uniforms/packFieldUniforms';
 import type { FieldCamera } from '../../@types/engine/FieldCamera';
-import type { FieldDustNoise } from '../../@types/engine/FieldDustNoise';
 import { DEBUG_VIEWS } from '../data/debugViews';
 import type { DebugViewKind } from '../../@types/data/DebugViewKind';
 import { createGenerationPipelines } from '../../../../src/services/gpu/galaxy/createGenerationPipelines';
@@ -268,16 +268,10 @@ import {
   SF_MAP_RINGS,
 } from '../../../../src/data/galaxy/galaxySfMapArmForcing';
 import type { GalaxySfMapGridRadius } from '../../../../src/data/galaxy/galaxySfMapArmForcing';
-import { DISC_SIGMA_RATIOS } from '../../../../src/data/galaxy/discSurfaceFit';
-import { dustDiscShape, dustSigmaR } from '../../../../src/data/galaxy/galaxyDustMixture';
-import {
-  buildDustParticleCloud,
-  dustNoiseTileUnits,
-} from '../../../../src/data/galaxy/dustParticleCloud';
+import { buildDustParticleCloud } from '../../../../src/data/galaxy/dustParticleCloud';
 import type { OrientationDeltaStats } from '../../../../src/data/galaxy/clusteredDiscPlacement';
 import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../src/data/galaxy/defaultGalaxyDustParams';
 import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from '../../../../src/data/galaxy/defaultGalaxyStarFormationParams';
-import { dustExtinctionRgb } from '../../../../src/utils/galaxy/dustExtinctionRgb';
 import { normalizeGenerationSeed } from '../../../../src/utils/galaxy/normalizeGenerationSeed';
 import { alignedBytesPerRow } from '../../../../src/utils/gpu/alignedBytesPerRow';
 import { unpadRows } from '../../../../src/utils/gpu/unpadRows';
@@ -318,15 +312,6 @@ const HDR: GPUTextureFormat = 'rgba16float';
  * tau-weighted mean depth put a hard 50% floor on obscuration.
  */
 const DUST_MAP_FORMAT: GPUTextureFormat = 'rgba16float';
-
-/**
- * Floor for the dust's own reach R (io.wesl's dustSlices doc) — small next
- * to any real galaxy's scale (generator units where the orbit distance ranges
- * 0.02..8000), just enough to keep `tNear = max(D-R, 0.02*R)` and
- * `tFar = D+R` from collapsing to the same value when R itself is ~0 (a
- * disc-less category, or dust tuned to a vanishing scale length).
- */
-const DUST_REACH_FLOOR = 1e-3;
 
 /**
  * Edge length of the baked ridged-noise volume (dustNoiseBake.wesl) —
@@ -1016,33 +1001,10 @@ export async function createGalaxyEngine(
   const currentStarFormation = (): GalaxyStarFormationParams =>
     lastParams?.starFormation ?? DEFAULT_GALAXY_STAR_FORMATION_PARAMS;
   const currentSeed = (): number => normalizeGenerationSeed(lastParams?.seed);
-  // The CCM89 law for `currentDust.rV`, cached alongside it (recomputed in
-  // `rebuildDustMixture`, not per frame in `drawFrame`) — `packFieldHeaderUniforms`
-  // needs this every frame now that the primary galaxy's attenuation reads
-  // it from the header rather than a per-component colour lane (see
-  // io.wesl's dust-component comment).
-  let currentDustExtinctionRgb = dustExtinctionRgb(DEFAULT_GALAXY_DUST_PARAMS.rV);
-  // The dust-noise erosion lane (io.wesl's `dustNoise`), cached alongside
-  // `currentDustExtinctionRgb` for the same reason — `packFieldHeaderUniforms`
-  // needs it every `drawFrame` but it only changes when `rebuildDustMixture`
-  // runs. `cloudOffset` is always 0 now: it used to be the smooth lane
-  // tier's own length (deleted — see `galaxyDustMixture.ts`'s header), the
-  // index within the dust slice where the particle cloud started; with the
-  // cloud as the only tier it starts at index 0.
-  let currentDustNoise: FieldDustNoise = {
-    tileUnits: 1,
-    amplitude: 0,
-    cloudOffset: 0,
-    contrastExp: 1,
-  };
-  // The dust's own reach R (io.wesl's dustSlices doc): 3x the widest smooth
-  // disc component's radial sigma, cached here for the same reason
-  // `currentDustNoise` is — `drawFrame` needs it every frame (it feeds the
-  // VIEW-dependent slice edges, which DO change every frame with the
-  // camera), but R itself only changes when `rebuildDustMixture` runs.
-  // Floored well above 0 so a disc-less galaxy (diskScaleLen 0) can't
-  // collapse the geometric slice spacing below to a degenerate 0-width band.
-  let currentDustReachR = DUST_REACH_FLOOR;
+  // Cached, not recomputed per frame: `packFieldHeaderUniforms` reads all
+  // three every `drawFrame`, but they only change when `rebuildDustMixture`
+  // runs. Seeded at the no-galaxy answer, which is what the first frames draw.
+  let dustHeaderLanes = deriveDustHeaderLanes(null, DEFAULT_GALAXY_DUST_PARAMS, false);
   // The SSPSF automaton's CPU-side readback (`scheduleSfMapReadback`), null
   // until the first one lands OR whenever a NEW galaxy's `setParams` has made
   // the previous readback's grid (rMin/rMax, tied to `fieldGeometry`) stale —
@@ -1435,20 +1397,8 @@ export async function createGalaxyEngine(
    * a literal, so this galaxy's particle placement is reproducible from
    * `setParams`'s params alone.
    *
-   * Also rebuilds `currentDustNoise` (io.wesl's `dustNoise` lane):
-   * `cloudOffset` is always 0 now (see its own declaration comment above).
-   *
-   * And `currentDustReachR` (io.wesl's dustSlices doc): computed from
-   * `dustDiscShape`/`dustSigmaR` — the same disc shape the particle cloud's
-   * mass budget is anchored to — rather than from `dustMixture` after the
-   * fact, since the particle cloud's own components don't carry a
-   * comparable radial sigma to max over. Computed unconditionally (even with
-   * `dustEnabled` off, or `dust.tau` at 0) because R sizes the SLICE
-   * geometry `drawFrame` packs every frame regardless of whether any dust
-   * component exists to populate it — an empty dust slice into degenerate
-   * slice edges is still wrong header state, not a harmless no-op.
-   *
-   * Also refreshes `lastDustDeltaMeanDeg`/`lastDustDeltaMaxDeg` — the
+   * Also refreshes `dustHeaderLanes` off the same inputs — see
+   * `deriveDustHeaderLanes` — and `lastDustDeltaMeanDeg`/`lastDustDeltaMaxDeg`, the
    * `OrientationDiagnostics` "delta actually applied" pair — from a fresh
    * `OrientationDeltaStats` accumulator handed to `buildDustParticleCloud`
    * as a pure out-param (see that type's own doc). The `else` branch below
@@ -1458,17 +1408,7 @@ export async function createGalaxyEngine(
    */
   function rebuildDustMixture(): void {
     const dust = currentDust();
-    currentDustExtinctionRgb = dustExtinctionRgb(dust.rV);
-    if (fieldGeometry) {
-      const shape = dustDiscShape(fieldGeometry, dust);
-      let maxSigmaR = 0;
-      for (let i = 0; i < DISC_SIGMA_RATIOS.length; i++) {
-        maxSigmaR = Math.max(maxSigmaR, dustSigmaR(i, shape));
-      }
-      currentDustReachR = Math.max(3 * maxSigmaR, DUST_REACH_FLOOR);
-    } else {
-      currentDustReachR = DUST_REACH_FLOOR;
-    }
+    dustHeaderLanes = deriveDustHeaderLanes(fieldGeometry, dust, fieldTuning.dustEnabled);
     const orientationDeltaStats: OrientationDeltaStats = {
       count: 0,
       sumAbsDeltaDeg: 0,
@@ -1485,20 +1425,8 @@ export async function createGalaxyEngine(
         orientationDeltaStats,
       );
       dustMixture = [...cloudMixture];
-      currentDustNoise = {
-        tileUnits: dustNoiseTileUnits(dust.cloud.textureScale),
-        amplitude: dust.cloud.texture,
-        cloudOffset: 0,
-        // Inverted here, not in the shader, so dustMap.wesl stays one plain
-        // pow(): a higher slider value means a SMALLER exponent (pushes
-        // |s| toward 1, hardening filament edges). Floored well above 0 —
-        // the slider's own range never reaches it, but 1/0 would still be
-        // an infinite exponent reaching this uniform.
-        contrastExp: 1 / Math.max(dust.cloud.textureContrast, 1e-3),
-      };
     } else {
       dustMixture = [];
-      currentDustNoise = { tileUnits: 1, amplitude: 0, cloudOffset: 0, contrastExp: 1 };
     }
     lastDustDeltaMeanDeg =
       orientationDeltaStats.count > 0
@@ -2199,7 +2127,7 @@ export async function createGalaxyEngine(
       shiftX,
       viewportPx: [canvas.width, canvas.height],
       render,
-      dustReachR: currentDustReachR,
+      dustReachR: dustHeaderLanes.reachR,
     });
     lastFade = fade;
 
@@ -2246,8 +2174,8 @@ export async function createGalaxyEngine(
         dust: {
           count: fieldCounts.dust,
           // Both cached by rebuildDustMixture, not recomputed per frame.
-          extinctionRgb: currentDustExtinctionRgb,
-          noise: currentDustNoise,
+          extinctionRgb: dustHeaderLanes.extinctionRgb,
+          noise: dustHeaderLanes.noise,
           // VIEW-dependent, unlike every other lane in this bag.
           slices: dustSlices,
           mapHeightPx: targets.reducedSize(render.dustDivisor)[1],

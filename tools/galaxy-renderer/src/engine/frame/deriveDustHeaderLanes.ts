@@ -1,0 +1,69 @@
+/**
+ * deriveDustHeaderLanes — the galaxy-dependent dust lanes of the field header,
+ * as one pure function over the same inputs `rebuildDustMixture` builds the
+ * mixture from. `drawFrame` reads the result every frame; it changes only when
+ * the dust params, the geometry or the `dustEnabled` pill do.
+ */
+import type { GalaxyDustParams } from '../../../../../src/@types/galaxy/GalaxyDustParams';
+import type { GalaxyFieldGeometry } from '../../../../../src/@types/galaxy/GalaxyFieldGeometry';
+import { DISC_SIGMA_RATIOS } from '../../../../../src/data/galaxy/discSurfaceFit';
+import { dustDiscShape, dustSigmaR } from '../../../../../src/data/galaxy/galaxyDustMixture';
+import { dustNoiseTileUnits } from '../../../../../src/data/galaxy/dustParticleCloud';
+import { dustExtinctionRgb } from '../../../../../src/utils/galaxy/dustExtinctionRgb';
+
+import type { DustHeaderLanes } from '../../../@types/engine/DustHeaderLanes';
+import type { FieldDustNoise } from '../../../@types/engine/FieldDustNoise';
+
+/**
+ * Floor for R — small next to any real galaxy's scale (generator units where
+ * the orbit distance ranges 0.02..8000), just enough to keep
+ * `tNear = max(D-R, 0.02*R)` and `tFar = D+R` from collapsing to the same
+ * value when R itself is ~0 (a disc-less category, or dust tuned to a
+ * vanishing scale length).
+ */
+const DUST_REACH_FLOOR = 1e-3;
+
+/** `amplitude: 0` is what makes dustMap.wesl branch out of the erosion multiply entirely. */
+const NO_NOISE: FieldDustNoise = { tileUnits: 1, amplitude: 0, cloudOffset: 0, contrastExp: 1 };
+
+export function deriveDustHeaderLanes(
+  geometry: GalaxyFieldGeometry | null,
+  dust: GalaxyDustParams,
+  dustEnabled: boolean,
+): DustHeaderLanes {
+  // R comes from the disc shape the particle cloud's mass budget is anchored
+  // to, not from the built mixture: the cloud's own components carry no
+  // comparable radial sigma to max over. Computed even with dust off, because
+  // R sizes the slice geometry `drawFrame` packs regardless — degenerate slice
+  // edges are wrong header state, not a harmless no-op.
+  let reachR = DUST_REACH_FLOOR;
+  if (geometry) {
+    const shape = dustDiscShape(geometry, dust);
+    let maxSigmaR = 0;
+    for (let i = 0; i < DISC_SIGMA_RATIOS.length; i++) {
+      maxSigmaR = Math.max(maxSigmaR, dustSigmaR(i, shape));
+    }
+    reachR = Math.max(3 * maxSigmaR, DUST_REACH_FLOOR);
+  }
+
+  const live = geometry !== null && dustEnabled;
+  return {
+    extinctionRgb: dustExtinctionRgb(dust.rV),
+    reachR,
+    noise: live
+      ? {
+          tileUnits: dustNoiseTileUnits(dust.cloud.textureScale),
+          amplitude: dust.cloud.texture,
+          // The smooth lane this used to skip past was deleted, so the
+          // particle cloud starts at index 0 of the dust slice.
+          cloudOffset: 0,
+          // Inverted here, not in the shader, so dustMap.wesl stays one plain
+          // pow(): a higher slider value means a SMALLER exponent (pushes |s|
+          // toward 1, hardening filament edges). Floored well above 0 — the
+          // slider's own range never reaches it, but 1/0 would still be an
+          // infinite exponent reaching this uniform.
+          contrastExp: 1 / Math.max(dust.cloud.textureContrast, 1e-3),
+        }
+      : NO_NOISE,
+  };
+}
