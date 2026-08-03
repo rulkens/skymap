@@ -2,8 +2,8 @@
  * createGalaxyEngine — the one GPU-orchestration module: it owns the WebGPU
  * device, every pipeline, buffer and bind group, and the per-frame encode. The
  * orbit camera lives in `createOrbitCameraInput`, driven once per frame from
- * here. `TIMING_SLOTS` below is this file's one account of the pass chain — a
- * second copy up here would be the copy that drifts.
+ * here. `timing/timingSlots.ts` is the one account of the pass chain — a
+ * second copy here would be the copy that drifts.
  *
  * ## The whole chain is the APP's, not this tool's
  *
@@ -52,6 +52,7 @@ import { hasUrlGate } from '../../../../src/utils/url/hasUrlGate';
 
 import { createFrameTimer } from './timing/createFrameTimer';
 import { createReportThrottle } from './timing/createReportThrottle';
+import { TIMING_SLOTS } from './timing/timingSlots';
 import { createKeyedRebuild } from './createKeyedRebuild';
 import { createRafLoop } from './createRafLoop';
 import { createGalaxyRenderTargets } from './gpu/createGalaxyRenderTargets';
@@ -172,67 +173,6 @@ const DUST_NOISE_TEX_SIZE = 128;
 
 /** Matches dustNoiseBake.wesl's `@workgroup_size(4, 4, 4)`. */
 const DUST_NOISE_WORKGROUP_SIZE = 4;
-
-/**
- * The GPU-timing slots this tool bills, in frame-encode order — the order the
- * HUD lists them in, and the order `gpuTimingService` allocates query-set index
- * pairs in.
- *
- * A timestamp pair can only bracket a whole pass, so the split between slots
- * is the split between passes — not a choice:
- *
- *  - `'stars'` is the additive SPRITE pass alone, because the reduced-resolution
- *    `aggregateTex` is its own attachment and therefore its own pass. This is
- *    the fill-bound half and the number the divisor / sprite-size knobs move,
- *    so having it isolated is most of the point of the split.
- *  - `'dustMap'` is the dust-column splat — one quad per Gaussian dust
- *    component — into its OWN reduced-resolution `dustMapTex` (cleared, not
- *    loaded), sized to its own `dustDivisor` rather than the field's. Encoded
- *    when there is dust to splat, when the JWST view needs a fresh map, or on
- *    the one frame that clears a map the last galaxy populated (see
- *    `drawFrame`'s three-disjunct gate), so the slot drops on a dustless
- *    galaxy the way `'field'` drops when the model is off.
- *  - `'field'` is the analytic Gaussian-mixture splat into `fieldTex` alone —
- *    only encoded when the analytic field is on, so the slot self-drops with
- *    it. The JWST dustPresent pass, into its own `dustViewTex`, now runs
- *    ADDITIONALLY whenever `render.dustViewIntensity > 0` (the four debug
- *    views crossfade rather than replace the normal draw — see
- *    `RenderSettings`), so it carries no `timestampWrites` of its own: two
- *    passes cannot share one timestamp-pair slot in a frame, and giving it a
- *    second slot would grow this list for a presentation pass nobody bills
- *    separately from the field it can now run alongside.
- *  - `'hii'` is the HII tier's own splat — the same `splatPipe`, a different
- *    bind group and target (`hiiTex`, `render.hiiDivisor`) — see `hiiTex`'s
- *    declaration comment for why it cannot share `'field'`'s slot or target.
- *    Only encoded when there is at least one HII component to draw.
- *  - `'scene'` is the full-res HDR pass: the aggregate's additive upsample,
- *    the field's and the HII tier's own upsamples, the dust billboards, and —
- *    each independently, whenever its own crossfade weight is above 0 — the
- *    JWST dust-view upsample, the SF-map diagnostic, and the orientation
- *    diagnostic, all summed additively rather than any one replacing the
- *    others. All share one attachment and so share a pass; separating them
- *    would mean ending the HDR pass and reopening it with `loadOp: 'load'`,
- *    which on a tile-based GPU is a full tile store plus reload of the whole
- *    HDR target — more cost than the measurement is worth, and enough to
- *    corrupt the wall clock that outranks it.
- *  - `'bloom'` is the whole pyramid as ONE span (begin on the bright pass, end
- *    on the fold), which is exactly how the app's frame program bills it (see
- *    `frameProgram.ts`'s `'bloom'` step and `runBloom`). Matching keeps a
- *    number read here comparable to the same number read in the app.
- *
- * `'grade'` only appears on frames where the tool-only grade trailer actually
- * ran; the timing service drops slots whose `descriptorFor` went unconsumed.
- */
-const TIMING_SLOTS: readonly string[] = [
-  'stars',
-  'dustMap',
-  'field',
-  'hii',
-  'scene',
-  'bloom',
-  'composite',
-  'grade',
-];
 
 /** rAF deltas kept for the median — one second at 60 Hz. */
 const FRAME_WINDOW = 60;
