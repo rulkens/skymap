@@ -1,20 +1,22 @@
 /**
  * readGalaxyFieldGeometry — reads the analytic field's inputs back out of the
- * bytes `packGenerationUniforms` just produced, plus the carved star layout.
+ * bytes `packGenerationUniforms` just produced.
  *
  * Reading the PACKED buffer rather than re-deriving from `GalaxyParams` is the
  * whole point: `cosBar`/`sinBar` and `cosBulge`/`sinBulge` are single draws off
  * the packer's `mainStream`/`asymStream`, so any second derivation would need
  * to replay those streams in order and would misalign the field's bar against
- * the sprites' the moment the draw order moved.
+ * the sprites' the moment the draw order moved. The population weights are the
+ * exception — they are a table, not a draw, so they come from `params`.
  */
 import { CATEGORY_CODE } from './packGenerationUniforms';
+import { galaxyPopulationFractions } from './galaxyPopulationFractions';
 import { GENERATION_UBO } from './generationUboLayout';
-import { POPULATION_IDS } from './populationIds';
+import { totalStarBudget } from './totalStarBudget';
 import type { GalaxyCategory } from '../../../../@types/galaxy/GalaxyCategory';
 import type { GalaxyFieldArmRecord } from '../../../../@types/galaxy/GalaxyFieldArmRecord';
 import type { GalaxyFieldGeometry } from '../../../../@types/galaxy/GalaxyFieldGeometry';
-import type { GenerationLayout } from '../../../../@types/galaxy/GenerationLayout';
+import type { GalaxyParams } from '../../../../@types/galaxy/GalaxyParams';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 
 const CATEGORY_BY_CODE: readonly GalaxyCategory[] = (
@@ -51,30 +53,19 @@ function readArmRecord(f32: Float32Array, armBase: number, arm: number): GalaxyF
 
 export function readGalaxyFieldGeometry(
   genUniforms: ArrayBuffer,
-  starLayout: GenerationLayout,
+  params: GalaxyParams,
 ): GalaxyFieldGeometry {
   const f32 = new Float32Array(genUniforms);
   const u32 = new Uint32Array(genUniforms);
   const F = GENERATION_UBO.f32;
 
-  const iterations = (popId: number): number =>
-    starLayout.ranges.find((range) => range.popId === popId)?.iterations ?? 0;
-
-  // Globular-cluster stars are left out of the denominator as well as the
-  // mixture: they are 90-star knots at random radii, not a smooth field.
-  const bulge = iterations(POPULATION_IDS.bulge);
-  const bar = iterations(POPULATION_IDS.bar);
-  const halo = iterations(POPULATION_IDS.halo);
-  // Arms' iterations stay folded into disc: the ridge's flux is now derived
-  // from measured arm/interarm contrast against the disc profile (see
-  // `pushArmRidges` in galaxyFieldMixture.ts), not from a share of the star
-  // budget, so there is no separate arm numerator to un-fold any more.
-  const disc =
-    iterations(POPULATION_IDS.disk) +
-    iterations(POPULATION_IDS.irregularClumps) +
-    iterations(POPULATION_IDS.spiralArms);
-  const modelled = bulge + bar + halo + disc;
-  const share = (count: number): number => (modelled > 0 ? count / modelled : 0);
+  const category = CATEGORY_BY_CODE[u32[GENERATION_UBO.u32.category]!] ?? 'spiral';
+  // Arms fold into the disc: the ridge's flux is derived from measured
+  // arm/interarm contrast against the disc profile (see `pushArmRidges` in
+  // galaxyFieldMixture.ts), so there is no separate arm weight to carry.
+  // Globular clusters are outside the mixture entirely — 90-star knots at
+  // random radii are not a smooth field — and outside these shares with it.
+  const fractions = galaxyPopulationFractions(category, params);
 
   // The packer stores a colour in a vec4's xyz with w unused, so the tint is
   // the first three lanes — `GalaxyFieldComponent.color` and `gen.hiiCore`
@@ -91,7 +82,7 @@ export function readGalaxyFieldGeometry(
   for (let a = 0; a < numArms; a++) arms.push(readArmRecord(f32, armBase, a));
 
   return {
-    category: CATEGORY_BY_CODE[u32[GENERATION_UBO.u32.category]!] ?? 'spiral',
+    category,
     outerRadius: f32[F.outerRadius]!,
     diskScaleLen: f32[F.diskScaleLen]!,
     bulgeRadius: f32[F.bulgeRadius]!,
@@ -105,10 +96,10 @@ export function readGalaxyFieldGeometry(
     warpStrength: f32[F.warpStrength]!,
     warpTwist: f32[F.warpTwist]!,
     warpStartRadius: f32[F.warpStartRadius]!,
-    discFraction: share(disc),
-    bulgeFraction: share(bulge),
-    barFraction: share(bar),
-    haloFraction: share(halo),
+    discFraction: fractions.disk + fractions.arm,
+    bulgeFraction: fractions.bulge,
+    barFraction: fractions.bar,
+    haloFraction: fractions.halo,
     numArms,
     armStartRadius: f32[F.armStartRadius]!,
     armInnerRampW: f32[F.armInnerRampW]!,
@@ -123,7 +114,7 @@ export function readGalaxyFieldGeometry(
     },
     arms,
     starSize: f32[F.starSize]!,
-    modelledStars: modelled,
+    modelledStars: totalStarBudget(params),
     seed: u32[GENERATION_UBO.u32.seed]!,
   };
 }

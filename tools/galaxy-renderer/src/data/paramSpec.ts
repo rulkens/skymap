@@ -23,7 +23,7 @@ import type { ParamSpecEntry } from '../../@types/data/ParamSpecEntry';
 
 export const PARAM_SPEC: Readonly<Partial<Record<keyof GalaxyParams & string, ParamSpecEntry>>> = {
   radius: { min: 0.4, max: 1.8, step: 0.05 },
-  // The floor is `splitStarBudget`'s own `Math.max(20000, ...)`, which this
+  // The floor is `totalStarBudget`'s own `Math.max(20000, ...)`, which this
   // tool shares with the runtime — below it the slider would show a count the
   // generator does not honour. The spike's 100k floor sat well clear of that,
   // so the clamp never showed; reaching the few-thousand-splat regime the

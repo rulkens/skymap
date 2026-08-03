@@ -104,6 +104,6 @@ export function generateGalaxy(input: {
     // Read back rather than re-derive: the bar and bulge tilts are single RNG
     // draws off the packer's streams, so this is the only way the analytic
     // field can be sure it is oriented like the sprites it sums with.
-    geometry: readGalaxyFieldGeometry(genUniforms, starLayout),
+    geometry: readGalaxyFieldGeometry(genUniforms, params),
   };
 }

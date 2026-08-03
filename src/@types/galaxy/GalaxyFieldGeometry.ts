@@ -1,8 +1,8 @@
 /**
  * GalaxyFieldGeometry — everything the analytic field mixture needs about one
  * generated galaxy: the derived lengths the generation shader reads out of its
- * UBO, the orientations its RNG already drew, and each modelled population's
- * share of the star budget.
+ * UBO, the orientations its RNG already drew, and each population's share of
+ * the galaxy's light.
  *
  * It exists so the mixture is a function of what generation ACTUALLY ran with
  * rather than of `GalaxyParams` re-derived a second time — the bar and bulge
@@ -66,7 +66,7 @@ export type GalaxyFieldGeometry = {
   readonly arms: readonly GalaxyFieldArmRecord[];
   /** Base sprite half-extent in generator units, before each star's size jitter. */
   readonly starSize: number;
-  /** What the fractions above are shares OF — globular members excluded, dead slots included. */
+  /** The sprite tier's star budget, which the mixture's absolute flux is calibrated AGAINST (`emissionScale`, `hiiRegions`' `tierFlux`) so analytic exposure 1.0 means sprite-flux parity. Not what the fractions above are shares of — those are weights in their own right. */
   readonly modelledStars: number;
   /** The generation UBO's own `seed` (`packGenerationUniforms`'s `params.seed`), for field-side stochastic tiers (e.g. the arm particle cloud) that need the SAME seed the sprites were drawn with, not a re-derivation. */
   readonly seed: number;

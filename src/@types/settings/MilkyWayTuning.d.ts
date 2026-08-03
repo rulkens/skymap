@@ -88,7 +88,7 @@ export type MilkyWayTuning = {
    * `aggregateDivisor`'s render-target rebuild but for generated data instead
    * of a texture.
    *
-   * `splitStarBudget` floors the total at 20,000 stars — not a taste choice,
+   * `totalStarBudget` floors the total at 20,000 stars — not a taste choice,
    * a hard floor the renderer always honours regardless of what's requested —
    * so `MILKY_WAY_SLIDER_FIELDS`'s `starCount` row sets its `min` to that same
    * floor. Lowering the row's `min` below 20,000 would let the slider display

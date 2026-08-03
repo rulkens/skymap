@@ -124,10 +124,10 @@ export const MILKY_WAY_SLIDER_FIELDS: readonly MilkyWaySliderField[] = [
   {
     key: 'starCount',
     label: 'count',
-    // `splitStarBudget` floors the TOTAL at 20,000 stars regardless of what's
+    // `totalStarBudget` floors the TOTAL at 20,000 stars regardless of what's
     // requested — this IS that floor, not a taste choice. A lower `min` would
     // let the slider display a number the renderer silently ignores; if the
-    // floor in `splitStarBudget` ever moves, this must move with it.
+    // floor in `totalStarBudget` ever moves, this must move with it.
     min: 20000,
     // 4x the medium tier's default budget is already a heavy regenerate (see
     // the runFrame branch's cost note); past that the count/size trade this
@@ -137,7 +137,7 @@ export const MILKY_WAY_SLIDER_FIELDS: readonly MilkyWaySliderField[] = [
     step: 5000,
     format: (v) => Math.round(v).toLocaleString(),
     title:
-      'Absolute star count — regenerates the cloud (destroy + allocate + compute dispatch), not a uniform write. splitStarBudget floors the total at 20,000 stars.',
+      'Absolute star count — regenerates the cloud (destroy + allocate + compute dispatch), not a uniform write. totalStarBudget floors the total at 20,000 stars.',
   },
 ];
 

@@ -13,8 +13,8 @@
  * (`galaxyGen/generate.wesl`):
  *  - bulge: `budget.bulgeCount`, an exact count — out-of-range draws are
  *    *resampled*, not skipped.
- *  - bar: barred galaxies spend `floor(diskCount*0.35)` of the disk budget on
- *    the bar; every other category gets none.
+ *  - bar: barred galaxies spend `BAR_SHARE_OF_DISK` of the disk budget on the
+ *    bar; every other category gets none.
  *  - disk: the remainder of `diskCount` after the bar's share for barred
  *    galaxies, or the full `diskCount` otherwise.
  *  - spiralArms (stride 5): `budget.armStarCount` iterations for every
@@ -33,6 +33,7 @@
  *    per-cluster loop itself (`POPULATION_IDS.globularCluster`) owns no
  *    output slots and never appears in this layout.
  */
+import { BAR_SHARE_OF_DISK } from './galaxyPopulationFractions';
 import { POPULATION_IDS } from './populationIds';
 import type { GalaxyCategory } from '../../../../@types/galaxy/GalaxyCategory';
 import type { GalaxyParams } from '../../../../@types/galaxy/GalaxyParams';
@@ -48,7 +49,8 @@ type StarRangeSpec = {
   readonly iterations: IterationsFn;
 };
 
-const barStarCount = (budget: StarBudget): number => Math.floor(budget.diskCount * 0.35);
+const barStarCount = (budget: StarBudget): number =>
+  Math.floor(budget.diskCount * BAR_SHARE_OF_DISK);
 
 const STAR_RANGE_SPECS: readonly StarRangeSpec[] = [
   {

@@ -9,14 +9,15 @@ whole reason this folder exists: **one galaxy, one geometry, two renderings.**
 
 ```
 GalaxyParams
-  │  classifyHubbleType     params.type ("SBb") → GalaxyCategory ("barred")
-  │  splitStarBudget        category → bulge/disk/arm/halo counts (StarBudget)
-  │  carveStarLayout        category+budget → GenerationLayout (popId ranges, strides)
-  │  carveDustLayout        ditto for dust; empty for ellipticals
+  │  classifyHubbleType          params.type ("SBb") → GalaxyCategory ("barred")
+  │  galaxyPopulationFractions   category → bulge/bar/disk/arm/halo shares of the light
+  │  splitStarBudget             shares × totalStarBudget → StarBudget (v1's counts)
+  │  carveStarLayout             category+budget → GenerationLayout (popId ranges, strides)
+  │  carveDustLayout             ditto for dust; empty for ellipticals
   ▼
 packGenerationUniforms(params, budget, extra) → ArrayBuffer, GENERATION_UBO-shaped
   ├──────────────────────────────► v1: queue.writeBuffer → generate.wesl
-  └── readGalaxyFieldGeometry(bytes, starLayout) → GalaxyFieldGeometry
+  └── readGalaxyFieldGeometry(bytes, params) → GalaxyFieldGeometry
                                   └───────────► v2: buildGalaxyFieldMixture(geometry, …)
 ```
 
@@ -42,14 +43,24 @@ Grepping the import graph alone will tell you this folder is v1-only. It is not.
 `v1/README.md`); an edge in that direction takes v2 down with it. The dependency
 runs `v1 → shared` and `v2 ← shared` (by data), never back.
 
-**The field's population fractions come from the sprite budget.**
-`readGalaxyFieldGeometry` derives `discFraction`/`bulgeFraction`/`barFraction`/
-`haloFraction` from `starLayout.ranges[].iterations` — i.e. from
-`splitStarBudget`, which `docs/research/milky-way/goal-and-history.md` calls
-scaffolding for a bag being removed. Deleting v1 does not delete that dependency;
-it has to be replaced with a real emissivity normalisation first.
-Globular-cluster stars are deliberately excluded from both the numerator and the
-denominator — 90-star knots at random radii are not a smooth field.
+**The population weights are a table, not a star count.**
+`galaxyPopulationFractions` is the one source; `splitStarBudget` multiplies it by
+the sprite budget and `readGalaxyFieldGeometry` reads it as-is, so `starCount`
+cannot move the field's mixture. The bar's share is carved out of the disk's by
+`BAR_SHARE_OF_DISK`, which `carveStarLayout` spends on the sprite side — change
+one and you have changed both, which is the point. Globular-cluster stars are
+outside the table entirely: 90-star knots at random radii are not a smooth field.
+
+**`modelledStars` is still a star count, deliberately.** It is what v2's
+`emissionScale` and `hiiRegions`' `tierFlux` calibrate absolute flux against, so
+that analytic exposure 1.0 means sprite-flux parity. Deleting v1 does not delete
+that dependency — it has to be replaced with a real emissivity normalisation
+first (`docs/research/milky-way/goal-and-history.md`).
+
+**`splitStarBudget`/`carveStarLayout` are NOT v1-only.** `packGenerationUniforms`
+carves the star layout itself and derives `grainScale`/`starSize` from
+`budget.totalStars`, and `budget.armStarCount` is what gates the arm table into
+the UBO — both of which v2 then reads back. They stay here.
 
 **Arm-table lane 7 (`age`) is analytic-field-only.** The sprite shader never
 reads it. Lanes 0-6 are what `armStarSample` consumes.

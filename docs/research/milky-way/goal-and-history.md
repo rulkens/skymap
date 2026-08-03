@@ -48,15 +48,15 @@ Population facts behind this, all **MEASURED** from source:
   (`carveStarLayout.ts:89`) = 2,700 sprites, **1.8%** of a 150k budget. Thirty tight knots
   bilinearly upsampled from half res is thirty smudges. Moving them to full res costs 4x per
   sprite ≈ 7% of the budget.
-- There are **no halo stars**. `SBb` → barred → `splitSpiralLike`, which returns `haloCount: 0`
-  (`splitStarBudget.ts:72`).
+- There are **no halo stars**. `SBb` → barred → `spiralLike`, whose halo share is 0
+  (`galaxyPopulationFractions.ts:53`).
 - HII knots live inside the arm population at stride 5 — a halo glow, a core, and up to 3
   newborns per iteration (`carveStarLayout.ts:19-24`). They carry **colour** contrast, which blur
   destroys as surely as it destroys sharpness.
 
-**CORRECTION to the working note.** The bulge is **not** 55% of the budget. `splitSpiralLike`
-computes `bulgeFraction = 0.12 + 0.35 * bulgeSize * 0.8` for a barred galaxy
-(`splitStarBudget.ts:66`); at the preset's `bulgeSize: 0.45` that is **0.246**, and the
+**CORRECTION to the working note.** The bulge is **not** 55% of the budget. `spiralLike`
+computes `bulge = 0.12 + 0.35 * bulgeSize * 0.8` for a barred galaxy
+(`galaxyPopulationFractions.ts:48`); at the preset's `bulgeSize: 0.45` that is **0.246**, and the
 `Math.min(0.55, …)` cap never binds. The bulge is **24.6%** of the budget, ~36,900 sprites.
 Anything reading as a halo is the bulge or the globulars, but the bulge is a quarter of the
 budget, not over half.
