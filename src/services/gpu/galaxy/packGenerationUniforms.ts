@@ -48,6 +48,7 @@
  * population uses at its point of use.
  */
 import { mulberry32 } from '../../../utils/random/mulberry32';
+import { normalizeGenerationSeed } from '../../../utils/galaxy/normalizeGenerationSeed';
 import { gaussian } from '../../../../tools/utils/random/gaussian';
 import { carveDustLayout } from './carveDustLayout';
 import { carveStarLayout } from './carveStarLayout';
@@ -123,7 +124,7 @@ export function packGenerationUniforms(
   const bulgeConcentration = params.bulgeFalloff ?? 0.5;
 
   // --- Main stream: bar angle unconditionally, then category-gated centres
-  const mainStream = mulberry32((params.seed ?? 0) | 0 || 1);
+  const mainStream = mulberry32(normalizeGenerationSeed(params.seed));
   const bar = computeBarGeometry(
     mainStream,
     category,
@@ -252,7 +253,7 @@ export function packGenerationUniforms(
   const warpStartRadius = outerRadius * (params.warpStart ?? 0.3);
 
   // --- u32 group --------------------------------------------------------------
-  const seed = ((params.seed ?? 0) | 0 || 1) >>> 0;
+  const seed = normalizeGenerationSeed(params.seed) >>> 0;
   const noiseSeed = (((params.seed ?? 0) | 0) ^ 0x9e3779b9) >>> 0;
 
   // --- Carved layouts (Task 1) -------------------------------------------------

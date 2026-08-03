@@ -278,6 +278,7 @@ import type { OrientationDeltaStats } from '../../../../src/data/galaxy/clustere
 import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../src/data/galaxy/defaultGalaxyDustParams';
 import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from '../../../../src/data/galaxy/defaultGalaxyStarFormationParams';
 import { dustExtinctionRgb } from '../../../../src/utils/galaxy/dustExtinctionRgb';
+import { normalizeGenerationSeed } from '../../../../src/utils/galaxy/normalizeGenerationSeed';
 import { alignedBytesPerRow } from '../../../../src/utils/gpu/alignedBytesPerRow';
 import { unpadRows } from '../../../../src/utils/gpu/unpadRows';
 import { transformGalaxyFieldComponent } from '../../../../src/utils/galaxy/transformGalaxyFieldComponent';
@@ -431,7 +432,7 @@ const FADE_REPORT_INTERVAL_MS = 100;
  * down together on the next `setExtras`.
  *
  * `fieldGeometry` + `transform` + `starFormation` are cached (like the central
- * galaxy's `fieldGeometry`/`currentStarFormation`) so `setFieldTuning` can
+ * galaxy's `fieldGeometry`/`lastParams`) so `setFieldTuning` can
  * rebuild `fieldMixture`/`hiiMixture` — this extra's world-space analytic
  * mixtures, already carried through `transformGalaxyFieldComponent` — without
  * a regenerate.
@@ -1006,14 +1007,15 @@ export async function createGalaxyEngine(
   // carries per-galaxy dustOffset/dustCount). Cached like `fieldMixture` so
   // `setFieldTuning` can rebuild it without a regenerate.
   let dustMixture: readonly GalaxyFieldComponent[] = [];
-  // The dust params `setParams` was last handed — `setFieldTuning` has no
-  // `GalaxyParams` of its own, so a dustEnabled toggle needs this cached copy
-  // to rebuild `dustMixture` without a regenerate.
-  let currentDust: GalaxyDustParams = DEFAULT_GALAXY_DUST_PARAMS;
-  // The SF-event knobs `setParams` was last handed, cached for the same
-  // reason `currentDust` is: `setFieldTuning` rebuilds the HII tier and the
-  // bubble placements without a `GalaxyParams` of its own to re-read.
-  let currentStarFormation: GalaxyStarFormationParams = DEFAULT_GALAXY_STAR_FORMATION_PARAMS;
+  // What `setParams` was last handed. `setFieldTuning`, `rebuildDustMixture`,
+  // `rebuildBubblePlacements` and `rebuildSfMap` all re-read it to rebuild
+  // without a regenerate; each reads through the accessor below rather than a
+  // field of its own, so none can go stale against this one.
+  let lastParams: GalaxyParams | null = null;
+  const currentDust = (): GalaxyDustParams => lastParams?.dust ?? DEFAULT_GALAXY_DUST_PARAMS;
+  const currentStarFormation = (): GalaxyStarFormationParams =>
+    lastParams?.starFormation ?? DEFAULT_GALAXY_STAR_FORMATION_PARAMS;
+  const currentSeed = (): number => normalizeGenerationSeed(lastParams?.seed);
   // The CCM89 law for `currentDust.rV`, cached alongside it (recomputed in
   // `rebuildDustMixture`, not per frame in `drawFrame`) — `packFieldHeaderUniforms`
   // needs this every frame now that the primary galaxy's attenuation reads
@@ -1041,10 +1043,6 @@ export async function createGalaxyEngine(
   // Floored well above 0 so a disc-less galaxy (diskScaleLen 0) can't
   // collapse the geometric slice spacing below to a degenerate 0-width band.
   let currentDustReachR = DUST_REACH_FLOOR;
-  // `(params.seed ?? 0) | 0 || 1` is `packGenerationUniforms`'s own seed
-  // normalisation; cached here for the same reason `currentDust` is — a
-  // `setFieldTuning` rebuild has no `GalaxyParams` of its own to re-read it from.
-  let currentSeed = 1;
   // The SSPSF automaton's CPU-side readback (`scheduleSfMapReadback`), null
   // until the first one lands OR whenever a NEW galaxy's `setParams` has made
   // the previous readback's grid (rMin/rMax, tied to `fieldGeometry`) stale —
@@ -1433,8 +1431,8 @@ export async function createGalaxyEngine(
    *
    * `buildDustParticleCloud` is the ONLY dust tier (the smooth analytic lane
    * it used to be layered on was deleted — see `galaxyDustMixture.ts`'s
-   * header), drawn through the dustMap splat pipeline. `currentSeed`, not a
-   * literal, so this galaxy's particle placement is reproducible from
+   * header), drawn through the dustMap splat pipeline. `currentSeed()`, not
+   * a literal, so this galaxy's particle placement is reproducible from
    * `setParams`'s params alone.
    *
    * Also rebuilds `currentDustNoise` (io.wesl's `dustNoise` lane):
@@ -1459,9 +1457,10 @@ export async function createGalaxyEngine(
    * delta was applied.
    */
   function rebuildDustMixture(): void {
-    currentDustExtinctionRgb = dustExtinctionRgb(currentDust.rV);
+    const dust = currentDust();
+    currentDustExtinctionRgb = dustExtinctionRgb(dust.rV);
     if (fieldGeometry) {
-      const shape = dustDiscShape(fieldGeometry, currentDust);
+      const shape = dustDiscShape(fieldGeometry, dust);
       let maxSigmaR = 0;
       for (let i = 0; i < DISC_SIGMA_RATIOS.length; i++) {
         maxSigmaR = Math.max(maxSigmaR, dustSigmaR(i, shape));
@@ -1478,24 +1477,24 @@ export async function createGalaxyEngine(
     if (fieldGeometry && fieldTuning.dustEnabled) {
       const cloudMixture = buildDustParticleCloud(
         fieldGeometry,
-        currentDust,
+        dust,
         fieldTuning,
-        currentSeed,
+        currentSeed(),
         sfMapData,
         orientationData,
         orientationDeltaStats,
       );
       dustMixture = [...cloudMixture];
       currentDustNoise = {
-        tileUnits: dustNoiseTileUnits(currentDust.cloud.textureScale),
-        amplitude: currentDust.cloud.texture,
+        tileUnits: dustNoiseTileUnits(dust.cloud.textureScale),
+        amplitude: dust.cloud.texture,
         cloudOffset: 0,
         // Inverted here, not in the shader, so dustMap.wesl stays one plain
         // pow(): a higher slider value means a SMALLER exponent (pushes
         // |s| toward 1, hardening filament edges). Floored well above 0 —
         // the slider's own range never reaches it, but 1/0 would still be
         // an infinite exponent reaching this uniform.
-        contrastExp: 1 / Math.max(currentDust.cloud.textureContrast, 1e-3),
+        contrastExp: 1 / Math.max(dust.cloud.textureContrast, 1e-3),
       };
     } else {
       dustMixture = [];
@@ -1516,24 +1515,29 @@ export async function createGalaxyEngine(
    * debug overlay. A SECOND, independent star-formation model — both
    * builders read the SAME `sfEventCatalog.ts` events the SSPSF automaton
    * never sees — drawn so it can be compared directly against the
-   * automaton's own sfMap view. Central galaxy only, from the CACHED
-   * `fieldGeometry`/`currentDust`/`currentStarFormation`/`currentSeed` — same
-   * inputs `rebuildDustMixture` reads, and invalidated from the same two
-   * sites (`setParams`, `setFieldTuning`), right after it.
+   * automaton's own sfMap view. Central galaxy only, from the cached
+   * `fieldGeometry` + `lastParams` — the same inputs `rebuildDustMixture`
+   * reads, and invalidated from the same two sites (`setParams`,
+   * `setFieldTuning`), right after it.
    *
    * Ungated: `bubblePlacements` owns whether this is worth running.
    */
   function rebuildBubblePlacements(): void {
     const relics = fieldGeometry
-      ? buildDustBubblePlacements(fieldGeometry, currentDust, currentStarFormation, currentSeed)
+      ? buildDustBubblePlacements(
+          fieldGeometry,
+          currentDust(),
+          currentStarFormation(),
+          currentSeed(),
+        )
       : [];
     const cavities = fieldGeometry
       ? buildHiiCavityPlacements(
           fieldGeometry,
-          currentDust,
-          currentStarFormation,
+          currentDust(),
+          currentStarFormation(),
           fieldTuning,
-          currentSeed,
+          currentSeed(),
         )
       : [];
     bubbleComps.write(packBubbleInstances(relics, cavities));
@@ -1562,7 +1566,7 @@ export async function createGalaxyEngine(
     const grid = sfMapAutomaton.rebuild({
       geometry: fieldGeometry,
       tuning: fieldTuning,
-      seed: currentSeed,
+      seed: currentSeed(),
     });
     scheduleSfMapReadback(grid);
     orientationTexRebuild.invalidate();
@@ -1652,6 +1656,7 @@ export async function createGalaxyEngine(
    * (see `PopulationRange`'s docblock) — a HUD estimate, not an exact tally.
    */
   async function setParams(p: GalaxyParams): Promise<void> {
+    lastParams = p;
     const category = classifyHubbleType(p.type);
     const budget = splitStarBudget(category, p);
     const starLayout = carveStarLayout(category, p, budget);
@@ -1701,21 +1706,15 @@ export async function createGalaxyEngine(
     if (gridMoved(sfMapData)) sfMapData = null;
     if (gridMoved(orientationData)) orientationData = null;
     fieldMixture = buildGalaxyFieldMixture(fieldGeometry, fieldTuning);
-    currentDust = p.dust ?? DEFAULT_GALAXY_DUST_PARAMS;
-    currentStarFormation = p.starFormation ?? DEFAULT_GALAXY_STAR_FORMATION_PARAMS;
     // Same `geometry.seed` `buildHiiRegions` was called with when it still
     // lived inside `buildGalaxyFieldMixture` — the field's own generated
     // seed, not a re-derivation.
     hiiMixture = buildHiiRegions(
       fieldGeometry,
       fieldTuning,
-      currentStarFormation,
+      currentStarFormation(),
       fieldGeometry.seed,
     );
-    // Same seed normalisation `packGenerationUniforms` applies internally —
-    // duplicated rather than read back off `genUniforms` because it is a
-    // scalar the packer never round-trips into the UBO bytes.
-    currentSeed = (p.seed ?? 0) | 0 || 1;
     rebuildDustMixture();
     bubblePlacements.invalidate();
     repackFieldComponents();
@@ -1789,7 +1788,7 @@ export async function createGalaxyEngine(
       hiiMixture = buildHiiRegions(
         fieldGeometry,
         fieldTuning,
-        currentStarFormation,
+        currentStarFormation(),
         fieldGeometry.seed,
       );
     }
