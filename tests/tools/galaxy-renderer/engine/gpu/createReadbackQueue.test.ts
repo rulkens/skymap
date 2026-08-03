@@ -6,7 +6,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createReadbackQueue } from '../../../../tools/galaxy-renderer/src/engine/gpu/createReadbackQueue';
+import { createReadbackQueue } from '../../../../../tools/galaxy-renderer/src/engine/gpu/createReadbackQueue';
 
 type Fake = {
   device: GPUDevice;

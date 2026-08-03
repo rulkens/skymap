@@ -3,8 +3,8 @@
  * live at once must not double-dim the galaxy.
  */
 import { describe, expect, it } from 'vitest';
-import { debugGalaxyWeight } from '../../../../tools/galaxy-renderer/src/engine/frame/debugGalaxyWeight';
-import { DEFAULT_RENDER_SETTINGS } from '../../../../tools/galaxy-renderer/src/data/defaultRenderSettings';
+import { debugGalaxyWeight } from '../../../../../tools/galaxy-renderer/src/engine/frame/debugGalaxyWeight';
+import { DEFAULT_RENDER_SETTINGS } from '../../../../../tools/galaxy-renderer/src/data/defaultRenderSettings';
 
 describe('debugGalaxyWeight', () => {
   it('two views live at 0.6 each yield 0.4, not the sum-implied 0', () => {

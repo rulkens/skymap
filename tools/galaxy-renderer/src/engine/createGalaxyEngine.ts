@@ -120,7 +120,7 @@
  * There is no depth attachment: stars are additive (order-independent) and
  * dust is order-independent transmittance, so nothing needs a Z buffer. That
  * is also why the projection's [0,1] vs [-1,1] depth convention is
- * cosmetic here — see the `proj` construction below.
+ * cosmetic here — see `deriveFrameView`.
  *
  * ## Measuring it: wall clock leads, timestamps follow
  *
@@ -2262,7 +2262,6 @@ export async function createGalaxyEngine(
     // to the same image as they fade and dim.
     const {
       view,
-      proj,
       viewProj: vp,
       aspect,
       fade,

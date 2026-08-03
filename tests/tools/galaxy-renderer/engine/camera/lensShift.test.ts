@@ -3,7 +3,7 @@
  * in the un-panelled screen area, extracted from galaxy-engine.js:285.
  */
 import { describe, expect, it } from 'vitest';
-import { lensShift } from '../../../../tools/galaxy-renderer/src/engine/camera/lensShift';
+import { lensShift } from '../../../../../tools/galaxy-renderer/src/engine/camera/lensShift';
 
 describe('lensShift', () => {
   it('symmetric insets give zero shift', () => {

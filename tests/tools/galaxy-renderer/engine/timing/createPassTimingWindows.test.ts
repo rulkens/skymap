@@ -5,7 +5,7 @@
  * is arithmetic, not worth a test.
  */
 import { describe, expect, it } from 'vitest';
-import { createPassTimingWindows } from '../../../../tools/galaxy-renderer/src/engine/timing/createPassTimingWindows';
+import { createPassTimingWindows } from '../../../../../tools/galaxy-renderer/src/engine/timing/createPassTimingWindows';
 
 const frame = (frameIndex: number, perPassMs: ReadonlyMap<string, number>) => ({
   frameIndex,

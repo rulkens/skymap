@@ -8,9 +8,9 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { deriveFrameView } from '../../../../tools/galaxy-renderer/src/engine/frame/deriveFrameView';
-import type { RenderSettings } from '../../../../tools/galaxy-renderer/@types/engine/RenderSettings';
-import { DEFAULT_RENDER_SETTINGS } from '../../../../tools/galaxy-renderer/src/data/defaultRenderSettings';
+import { deriveFrameView } from '../../../../../tools/galaxy-renderer/src/engine/frame/deriveFrameView';
+import type { RenderSettings } from '../../../../../tools/galaxy-renderer/@types/engine/RenderSettings';
+import { DEFAULT_RENDER_SETTINGS } from '../../../../../tools/galaxy-renderer/src/data/defaultRenderSettings';
 
 const base = (render: Partial<RenderSettings> = {}) => ({
   eye: [0, 0, 30] as [number, number, number],

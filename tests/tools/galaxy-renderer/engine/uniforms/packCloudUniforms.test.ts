@@ -15,8 +15,8 @@ import { mat4 } from 'wgpu-matrix';
 import {
   CLOUD_UNIFORM_FLOATS,
   packCloudUniforms,
-} from '../../../../tools/galaxy-renderer/src/engine/uniforms/packCloudUniforms';
-import type { MilkyWayTuning } from '../../../../src/@types/settings/MilkyWayTuning';
+} from '../../../../../tools/galaxy-renderer/src/engine/uniforms/packCloudUniforms';
+import type { MilkyWayTuning } from '../../../../../src/@types/settings/MilkyWayTuning';
 
 const TUNING: MilkyWayTuning = {
   starSizeScale: 1.5,
