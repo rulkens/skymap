@@ -66,9 +66,8 @@ function armReaches(
   armRadius: number,
   geometry: GalaxyFieldGeometry,
   arm: GalaxyFieldArmRecord,
-  tuning: GalaxyFieldTuning,
 ): boolean {
-  return armFadeEnvelope(armRadius, geometry, arm, tuning) > 0;
+  return armFadeEnvelope(armRadius, geometry, arm) > 0;
 }
 
 export function buildDustBubblePlacements(
@@ -97,7 +96,7 @@ export function buildDustBubblePlacements(
     const radius = pcToUnits(radiusPc) * starFormation.bubbleScale;
     if (radius <= 0) continue;
 
-    if (!armReaches(armRadius, geometry, arm, tuning)) continue;
+    if (!armReaches(armRadius, geometry, arm)) continue;
 
     out.push({ center, radius });
   }
@@ -143,7 +142,7 @@ export function buildHiiCavityPlacements(
       hiiRadiusUnits(hiiLuminosityOf(event), tuning.hiiRadiusScale) * tuning.hiiCavityScale;
     if (radius <= 0) continue;
 
-    if (!armReaches(armRadius, geometry, arm, tuning)) continue;
+    if (!armReaches(armRadius, geometry, arm)) continue;
 
     out.push({ center, radius });
   }

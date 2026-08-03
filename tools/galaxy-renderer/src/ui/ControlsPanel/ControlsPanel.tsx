@@ -145,7 +145,7 @@ function buildArmSliders(category: ReturnType<typeof classifyHubbleType>): Slide
     {
       key: 'armFalloff',
       label: 'Arm edge falloff',
-      info: "Sets HOW FAR the arms extend — the only knob that does. 0 reaches 1.7x the disc radius, 1 stops at 0.65x. It is a generation knob, so moving it regenerates; the field's 'Taper end' slider trims or trails the same extent live.",
+      info: 'Sets HOW FAR the arms extend — the only knob that does. 0 reaches 1.7x the disc radius, 1 stops at 0.65x. It is a generation knob, so moving it regenerates.',
     },
     { key: 'armEdgeVar', label: 'Arm length variation', seedKey: 'asymSeed' },
     { key: 'armClump', label: 'Arm clumpiness', seedKey: 'clumpSeed' },

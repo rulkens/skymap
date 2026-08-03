@@ -13,7 +13,6 @@ import {
   armCrossSigma,
   armFadeEnvelope,
   armRidgeCurvePoint,
-  armSpanEnd,
 } from './armRidgeGeometry';
 import type { GalaxyFieldGeometry } from '../../@types/galaxy/GalaxyFieldGeometry';
 import type { GalaxyFieldTuning } from '../../@types/galaxy/GalaxyFieldTuning';
@@ -46,7 +45,7 @@ export function buildSfEventCatalog(
 
   geometry.arms.forEach((arm, armIndex) => {
     const logStart = Math.log(ARM_SPAN_START_FRAC);
-    const logEnd = Math.log(armSpanEnd(arm, tuning) / geometry.armStartRadius);
+    const logEnd = Math.log(arm.fadeRadius / geometry.armStartRadius);
     if (logEnd <= logStart) return;
     const step = (logEnd - logStart) / STEPS_PER_ARM;
     // Midpoint sample per step; arc length between consecutive step edges
@@ -64,7 +63,7 @@ export function buildSfEventCatalog(
         RATE_SCALE *
         starFormation.sfActivity *
         (1 - 0.75 * arm.age) *
-        armFadeEnvelope(radius, geometry, arm, tuning) *
+        armFadeEnvelope(radius, geometry, arm) *
         arcLength;
 
       if (rng() >= rate) continue;

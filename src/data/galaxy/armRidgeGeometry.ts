@@ -132,32 +132,36 @@ export function armRidgeFrameAt(
 export const ARM_SPAN_START_FRAC = 1.05;
 
 /**
- * Where this arm's features stop — the radius its taper reaches zero at, a
- * multiple of its own `fadeRadius` (rec0.w). THE canonical outer bound: every
- * tier's placement span ends here, so a knob that moves the envelope moves
- * where the blobs, sprites and SF events are too, rather than fading a
- * population that was never placed.
+ * Where the outer taper begins, as a fraction of this arm's own `fadeRadius`.
+ * The taper spans the outer 40% of the arm: 2.0 of the arm excess's own
+ * scale lengths on the Milky Way preset, 1.2 on every gallery one (the MW
+ * is the only preset overriding `diskScaleLenFrac`, which is the whole
+ * difference) — comparable to the brightness law it multiplies rather than
+ * swamping it.
+ *
+ * NOT `armFullRadius` (0.42 * fadeRadius), which `generate.wesl`'s sprite copy
+ * of this envelope still uses: at 0.42 the smoothstep is a SECOND radial
+ * brightness law on top of `armExcessSurfaceShape`, and one no knob can reach
+ * past — it alone cost the Milky Way preset's arms a factor ~2 by the disc
+ * edge and drove them to exactly zero half a disc radius later, so the arms
+ * died while the disc's own light ran on to ~1.3 * outerRadius.
  */
-export function armSpanEnd(arm: GalaxyFieldArmRecord, tuning: GalaxyFieldTuning): number {
-  return arm.fadeRadius * tuning.armTaperEndFrac;
-}
+const ARM_TAPER_START_FRAC = 0.6;
 
 /**
  * The analytic arms' radial extent: `armStarSample`'s inner ramp, and an
- * outer taper to zero at `armSpanEnd`. The arm's BRIGHTNESS along that
- * extent is `armExcessSurfaceShape`'s job, not this one's — see
- * `DEFAULT_GALAXY_FIELD_TUNING.armTaperStartFrac` for why the taper starts
- * where it does.
+ * outer taper to zero at this arm's own fadeRadius (rec0.w). The arm's
+ * BRIGHTNESS along that extent is `armExcessSurfaceShape`'s job, not this
+ * one's — see ARM_TAPER_START_FRAC.
  */
 export function armFadeEnvelope(
   radius: number,
   geometry: GalaxyFieldGeometry,
   arm: GalaxyFieldArmRecord,
-  tuning: GalaxyFieldTuning,
 ): number {
   const innerT = (radius - geometry.armStartRadius) / geometry.armInnerRampW;
-  const taperStart = arm.fadeRadius * tuning.armTaperStartFrac;
-  const outerT = (radius - taperStart) / Math.max(0.001, armSpanEnd(arm, tuning) - taperStart);
+  const taperStart = arm.fadeRadius * ARM_TAPER_START_FRAC;
+  const outerT = (radius - taperStart) / Math.max(0.001, arm.fadeRadius - taperStart);
   return smoothstep01(innerT) * (1 - smoothstep01(outerT));
 }
 
