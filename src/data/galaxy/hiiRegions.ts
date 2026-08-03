@@ -16,7 +16,6 @@
 import {
   HII_AGE_GATE,
   HII_CLUSTER_COLOR,
-  HII_SHELL_COLOR,
   hiiLuminosityOf,
   hiiRadiusUnits,
 } from './hiiRegionGeometry';
@@ -196,6 +195,13 @@ export function buildHiiRegions(
   const totalFlux = tierFlux(geometry, tuning);
   if (!(totalFlux > 0)) return [];
 
+  // The shell IS the ionized gas, so it takes the palette's CORE lane —
+  // metallicity sets the [OIII]/Ha balance that decides teal vs crimson, and
+  // `hiiPalette` is the one place that law lives. No conversion: `gen.hiiCore`
+  // and `GalaxyFieldComponent.color` are both linear RGB in 0..1. The halo lane
+  // has no counterpart here — this tier resolves the shell instead of glowing it.
+  const shellColor = geometry.hiiPalette.core;
+
   const rng = mulberry32(seed ^ 0x48494920); // "HII "
   const clusterShare = Math.min(1, Math.max(0, tuning.hiiClusterStrength)) * CLUSTER_FLUX_SHARE_MAX;
   const out: GalaxyFieldComponent[] = [];
@@ -215,7 +221,7 @@ export function buildHiiRegions(
         out.push({
           amplitude,
           ...inverseCovarianceFromFrame(ISO_FRAME, { along: sigma, across: sigma, pole: sigma }),
-          color: HII_SHELL_COLOR,
+          color: shellColor,
           center: [
             region.center[0] + dir[0] * r,
             region.center[1] + dir[1] * r,

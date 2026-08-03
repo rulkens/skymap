@@ -39,6 +39,7 @@ const GEOMETRY: GalaxyFieldGeometry = {
   waveAmount: 0,
   clumpAmount: 0,
   youngFraction: 0.5,
+  hiiPalette: { core: [1, 0.42, 0.56], halo: [0.71, 0.52, 0.51] },
   arms: [],
   starSize: 0.02,
   modelledStars: 100000,

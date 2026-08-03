@@ -11,6 +11,7 @@
  */
 import type { GalaxyCategory } from './GalaxyCategory';
 import type { GalaxyFieldArmRecord } from './GalaxyFieldArmRecord';
+import type { HiiPalette } from './HiiPalette';
 
 export type GalaxyFieldGeometry = {
   readonly category: GalaxyCategory;
@@ -59,6 +60,8 @@ export type GalaxyFieldGeometry = {
   readonly clumpAmount: number;
   /** Blue-star fraction, also nudges the ridge blobs' colour young/old. */
   readonly youngFraction: number;
+  /** `hiiPalette(params.metallicity)`, read back from the SAME UBO lanes the sprite tier shades its HII knots from — metallicity itself is never packed, so this is how both tiers share one palette instead of two. */
+  readonly hiiPalette: HiiPalette;
   /** Per-arm phase/pitch/weight/meander/clump/wave records, `numArms` long. */
   readonly arms: readonly GalaxyFieldArmRecord[];
   /** Base sprite half-extent in generator units, before each star's size jitter. */

@@ -15,6 +15,7 @@ import type { GalaxyCategory } from '../../../@types/galaxy/GalaxyCategory';
 import type { GalaxyFieldArmRecord } from '../../../@types/galaxy/GalaxyFieldArmRecord';
 import type { GalaxyFieldGeometry } from '../../../@types/galaxy/GalaxyFieldGeometry';
 import type { GenerationLayout } from '../../../@types/galaxy/GenerationLayout';
+import type { Vec3 } from '../../../@types/math/Vec3';
 
 const CATEGORY_BY_CODE: readonly GalaxyCategory[] = (
   Object.keys(CATEGORY_CODE) as GalaxyCategory[]
@@ -75,6 +76,15 @@ export function readGalaxyFieldGeometry(
   const modelled = bulge + bar + halo + disc;
   const share = (count: number): number => (modelled > 0 ? count / modelled : 0);
 
+  // The packer stores a colour in a vec4's xyz with w unused, so the tint is
+  // the first three lanes — `GalaxyFieldComponent.color` and `gen.hiiCore`
+  // are the same convention (linear RGB, 0..1, unpremultiplied), which is why
+  // the analytic field can take these bytes untouched.
+  const readColor = (offsetVec4: number): Vec3 => {
+    const base = offsetVec4 * 4;
+    return [f32[base]!, f32[base + 1]!, f32[base + 2]!];
+  };
+
   const numArms = u32[GENERATION_UBO.u32.numArms]!;
   const armBase = GENERATION_UBO.arrays.armTable.offsetVec4 * 4;
   const arms: GalaxyFieldArmRecord[] = [];
@@ -107,6 +117,10 @@ export function readGalaxyFieldGeometry(
     waveAmount: f32[F.waveAmount]!,
     clumpAmount: f32[F.clumpAmount]!,
     youngFraction: f32[F.youngFraction]!,
+    hiiPalette: {
+      core: readColor(GENERATION_UBO.arrays.hiiCore.offsetVec4),
+      halo: readColor(GENERATION_UBO.arrays.hiiHalo.offsetVec4),
+    },
     arms,
     starSize: f32[F.starSize]!,
     modelledStars: modelled,

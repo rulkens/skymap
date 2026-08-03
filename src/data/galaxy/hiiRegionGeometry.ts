@@ -51,8 +51,10 @@ export function hiiRadiusUnits(luminosity: number, radiusScale: number): number 
   return pcToUnits(RADIUS_MIN_PC) * Math.cbrt(luminosity) * radiusScale;
 }
 
-/** Ha-dominated with the Hb/[OIII] blue-green that lifts real nebulae off pure red. */
-export const HII_SHELL_COLOR: Readonly<Vec3> = [1.0, 0.32, 0.42];
-
-/** The embedded OB association — hotter and bluer than `ARM_COLOR_YOUNG`. */
+/**
+ * The embedded OB association — hotter and bluer than `ARM_COLOR_YOUNG`. NOT on
+ * `hiiPalette`, deliberately: this is stellar continuum, and the sprite tier
+ * colours its counterpart (`buildArmSlot`'s newborn stars) off `tempColorRamp`
+ * rather than `gen.hiiCore`/`gen.hiiHalo` for the same reason.
+ */
 export const HII_CLUSTER_COLOR: Readonly<Vec3> = [0.62, 0.75, 1.0];
