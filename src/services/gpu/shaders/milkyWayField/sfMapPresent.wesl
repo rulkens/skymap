@@ -81,14 +81,20 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   let recent = texel.y;
   let old = texel.z;
   // Presentation palette, NOT physics — chosen so the three channels stay
-  // separable by eye: dim cool blue for unspent gas, warm amber for the
-  // decaying wake, hot white for a cell that ignited recently. The three
-  // peak colours are deliberately NOT equal-brightness (gas maxes at 0.25,
-  // recentSf at 1.0), so u.sfMapChannels is the only way to see the gas
-  // channel at all against the other two — zero the other weights to
-  // isolate one channel.
+  // separable by eye: dim cool navy for unspent gas, bright magenta-violet
+  // for the decaying activity wake, warm near-white for a cell that ignited
+  // recently. Activity used to be amber, but that sat right next to
+  // recentSf's warm near-white (the two blended into one warm smear) and
+  // duplicated dustPresent.wesl's own red-orange-white band; magenta-violet
+  // is the one hue nothing else in the debug-view set (dust, bubble's amber/
+  // cyan, the other two sfMap channels) claims. The three peak colours are
+  // still deliberately NOT equal-brightness — gas maxes at 0.25, recentSf at
+  // 1.0, activity's red/blue channels at 1.3 (above the Reinhard whitepoint's
+  // linear range, spending some of the HDR target's real headroom) — so
+  // u.sfMapChannels is the only way to see the gas channel at all against
+  // the other two, and zeroing two weights isolates the third.
   let gasColor = vec3<f32>(0.05, 0.08, 0.25) * gas * u.sfMapChannels.x;
-  let oldColor = vec3<f32>(0.9, 0.35, 0.05) * old * u.sfMapChannels.z;
+  let oldColor = vec3<f32>(1.3, 0.25, 1.15) * old * u.sfMapChannels.z;
   let recentColor = vec3<f32>(1.0, 0.95, 0.85) * recent * u.sfMapChannels.y;
   let color = (gasColor + oldColor + recentColor) * edgeFade;
 

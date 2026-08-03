@@ -68,7 +68,7 @@ function DebugViewsSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => dispatch(renderPatched({ sfMapRecentWeight: v }))}
-          info="Isolates the recentSf channel: exp(-age/12), a cell that fired within roughly the last dozen steps. The hottest, brightest channel — usually what washes out the other two in the combined view."
+          info="Isolates the recentSf channel: exp(-age/12), a cell that fired within roughly the last dozen steps. Warm near-white and usually what washes out the gas channel in the combined view."
         />
         <ParamSlider
           label="SF map · activity"
@@ -78,7 +78,7 @@ function DebugViewsSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => dispatch(renderPatched({ sfMapActivityWeight: v }))}
-          info="Isolates the oldActivity channel: the accumulated trace of every front that passed, decayed per step by activityDecay. This is the channel dust placement actually reads."
+          info="Isolates the oldActivity channel: the accumulated trace of every front that passed, decayed per step by activityDecay. This is the channel dust placement actually reads. Bright magenta-violet, the single brightest channel in the combined view — zero the other two to isolate it, though it rarely needs isolating."
         />
         <ParamSlider
           label={DEBUG_VIEWS.orientation.label}
