@@ -1,188 +1,31 @@
 /**
- * createGalaxyEngine — the one GPU-orchestration module. Owns the WebGPU
- * device, every pipeline and buffer, and the per-frame render loop; the orbit
- * camera and its input belong to `createOrbitCameraInput`, which this drives
- * once per frame. A straight port of the spike's `galaxy-engine.js`
- * (`createGalaxyRenderer`), with all math delegated to the five tested pure
- * helpers and every shader pulled in as a build-time-linked WESL string.
+ * createGalaxyEngine — the one GPU-orchestration module: it owns the WebGPU
+ * device, every pipeline, buffer and bind group, and the per-frame encode. The
+ * orbit camera lives in `createOrbitCameraInput`, driven once per frame from
+ * here. `TIMING_SLOTS` below is this file's one account of the pass chain — a
+ * second copy up here would be the copy that drifts.
  *
  * ## The whole chain is the APP's, not this tool's
  *
- * This tool only earns its keep if a look tuned here survives the trip into
- * the runtime, and that only holds while the two chains are the same chain.
- * So they are the same chain, by construction rather than by hand-matching:
+ * A look tuned here only transfers while the two chains ARE one chain, so
+ * nothing about the image is hand-matched: the sprite draws are the runtime's
+ * `milkyWayCloud/` shaders over its `io.wesl` struct, the analytic field's are
+ * its `milkyWayField/`, and the post chain is the runtime's
+ * `createAdditiveUpsample` / `createBloomPyramid` / `createCompositor` — all
+ * symlinked into this tool's WESL root (`wesl.toml`). Editing any of those
+ * shaders changes both apps.
  *
- *  - The STAR and DUST passes are the runtime's `milkyWayCloud/stars.wesl` and
- *    `milkyWayCloud/dust.wesl`, over the runtime's `milkyWayCloud/io.wesl`
- *    uniform struct — the whole family symlinked into this tool's WESL root
- *    (see `wesl.toml`). All eight `MILKY_WAY_TUNING_DEFAULTS` knobs therefore
- *    mean here exactly what they mean in the app.
- *  - The reduced-resolution star target and its additive composite back into
- *    HDR are the app's split too, down to the shared
- *    `createAdditiveUpsample` (see "Why the stars render small" below).
- *  - The bloom pyramid is the runtime's `createBloomPyramid`, the tone-map
- *    composite is the runtime's `createCompositor`, and the shaders behind
- *    both are the runtime's `shaders/bloom/` and `shaders/compositor/` trees.
+ * What could NOT be shared is the ORCHESTRATION: `runBloom` and
+ * `createMilkyWayCloudRenderer` each need engine-side context this tool has no
+ * equivalent of (a `ReadyFrameContext`; one uniform buffer per draw, where this
+ * tool draws N extras through one pipeline). So `encodeBloom` below duplicates
+ * `runBloom`'s pass ORDER and the cloud pipelines are built here — a change to
+ * either runtime SEQUENCE has to be mirrored, a change to any shared SHADER
+ * arrives for free.
  *
- * Editing any of those shaders changes both apps. The swap chain is configured
- * with the same format + `alphaMode` as `services/gpu/device.ts`, and no
- * gamma encode is applied — matching the runtime, which writes tone-mapped
- * linear light straight into a non-sRGB `bgra8unorm` surface.
- *
- * What could NOT be shared is the ORCHESTRATION. The runtime's `runBloom`
- * takes a `ReadyFrameContext` and drives a `renderTargets` table and a GPU
- * timing service that exist only inside the engine's frame executor; this
- * tool has neither. So `encodeBloom` below is a deliberate ~25-line duplicate
- * of `runBloom`'s pass sequence (bright -> descending downsample -> ascending
- * additive upsample -> strength-scaled fold back into HDR), calling the same
- * shared pyramid object. Keep the two in step: a change to the runtime's pass
- * ORDER has to be mirrored here, while a change to any bloom/compositor
- * SHADER or pipeline arrives here for free. The same split applies to the
- * cloud: `createMilkyWayCloudRenderer` could not be reused because it bakes
- * `MILKY_WAY_MODEL_SCALE` into the uniform and writes one uniform buffer per
- * draw (this tool draws N background extras through the same pipeline), so
- * the pipelines are built here against the shared modules and the uniforms
- * packed by `packCloudUniforms` — see its header.
- *
- * ## Why the stars render small
- *
- * The star pass draws into `aggregateTex`, an offscreen at
- * `floor(canvas / aggregateDivisor)`, which is then bilinearly upsampled and
- * ADDED into the HDR scene. That is the app's `mw-aggregate` row, for the
- * app's reason: a summed additive glow field is low-frequency, so it
- * reconstructs from a coarser target for free while its fragment cost — the
- * actual wall, measured — drops by the square of the divisor.
- *
- * DUST stays full-res in `sceneTex`, also matching the app: its multiplicative
- * transmittance has to land on the real accumulation, and it is not the
- * fill-bound half.
- *
- * The load-bearing detail is `viewportPx`. `stars.wesl` clamps each sprite's
- * on-screen half-extent to `[starPxMin, starPxMax]` PIXELS, converted from NDC
- * through the uniform's `viewportPx` — pixels of the TARGET. The star pass
- * therefore packs the aggregate's dimensions there while the dust pass packs
- * the canvas's, which is also why the two passes need two uniform BUFFERS:
- * `queue.writeBuffer` is ordered against `queue.submit`, not against the
- * passes encoded in between, so two writes to one buffer in a frame would both
- * land before either pass ran and the second would win for both.
- *
- * ## The pass chain
- *
- * Generation is no longer a per-frame step. `setParams` dispatches it ONCE,
- * whenever the caller changes the central galaxy's params — not on every
- * `requestAnimationFrame` — as a pair of compute passes
- * (`createGenerationPipelines.ts` builds the pipelines, `encodeGeneration.ts`
- * records the dispatches) that write directly into the star/dust vertex
- * buffers the frame loop already draws from. It shares this module's one
- * `GPUQueue` with every subsequent `drawFrame`, so "the new galaxy is ready
- * before it's drawn" is a queue-ordering guarantee, not something the render
- * loop waits on — see `setParams`'s docblock for why no readback is needed.
- * Background extras (`setExtras`) dispatch the same way: one compute pair per
- * extra, each with its own params AND its own world transform folded into its
- * UBO — see "Why extras fold their transform into generation" below.
- *
- *   setParams(p) ──► genStars / genDust compute passes ──► star VB / dust VB
- *                     (one queue.submit, no CPU readback)
- *                              │
- *                              ▼ (every later drawFrame, same queue)
- *   ┌─ star pass (aggregateTex, clear a=0) ────────────────────────────┐
- *   │   star pipe  (additive one/one) : central galaxy + every extra   │
- *   └──────────────────────────────────────────────────────────────────┘
- *                              │ aggregateTex (rgba16float, 1/divisor)
- *                              ▼
- *   ┌─ scene pass (HDR, clear black) ──────────────────────────────────┐
- *   │   additive upsample : aggregateTex ──► sceneTex, 4-tap, one/one  │
- *   │   dust pipe  (transmittance)    : central galaxy + every extra   │
- *   └──────────────────────────────────────────────────────────────────┘
- *                              │ sceneTex (rgba16float)
- *                              ▼
- *   bright pass  ──► bloom mip 0 (half-res, thresholded, Karis-flagged)
- *                              │
- *   downsample 1..4  ──► ever-coarser mips (progressively wider glow)
- *                              │
- *   upsample 3..0  (loadOp 'load', additive) ──► fold each coarse mip
- *                              │                  back onto the finer one
- *                              ▼
- *   fold pass  ──► sceneTex : += bloomMip0 * strength, additive, loadOp
- *                              │  'load'. The glow rejoins the HDR scene
- *                              │  BEFORE the tone curve, so it rides that
- *                              ▼  one curve instead of being added after it.
- *   compositor ──► swap chain : exposure → one tone curve. Nothing else —
- *                              │  no grade, no gamma encode. This is the
- *                              │  runtime's compositor pass verbatim.
- *                              ▼
- *   grade pass (SKIPPED at default settings) ──► swap chain : saturation,
- *                                 vignette, optional gamma encode. Only
- *                                 present when a tool-only knob is off
- *                                 identity; then the compositor writes an
- *                                 LDR intermediate and this pass finishes.
- *
- * There is no depth attachment: stars are additive (order-independent) and
- * dust is order-independent transmittance, so nothing needs a Z buffer. That
- * is also why the projection's [0,1] vs [-1,1] depth convention is
- * cosmetic here — see `deriveFrameView`.
- *
- * ## Measuring it: wall clock leads, timestamps follow
- *
- * Two independent instruments feed one `PerfReport`, and their ORDER of
- * authority is the point. `createFrameTimer` holds a median of recent
- * rAF-to-rAF deltas: total wall time per displayed frame, everything included,
- * additive, and the only number that answers "did this change make it faster".
- * The GPU timestamp slots below are the second instrument and are ordinal only
- * — this is a tile-based deferred GPU, the driver overlaps passes, and a
- * per-pass begin/end pair therefore measures a window in which other passes
- * were also running. Summing them over-counts (roughly 3x on Apple Silicon in
- * the app's own harness, and the handful of passes here gives the effect MORE
- * room, not less). They rank passes; they do not total a frame.
- *
- * The timestamp half rides the runtime's `gpuTimingService` unmodified — it has
- * no engine coupling, slot names are plain strings, and it degrades to a stub
- * that hands back `undefined` descriptors when `timestamp-query` is missing, so
- * every `descriptorFor` call below is unconditional. It is gated behind
- * `?gpuTimings` (the app's spelling) because attaching `timestampWrites` to a
- * pass is not free on a TBDR driver, and the default frame has to leave the
- * wall clock unperturbed.
- *
- * ## Why extras fold their transform into generation
- *
- * Each background galaxy folds its full world transform into generation: its
- * per-extra UBO carries the rigid transform + size scale in the extra lanes
- * (`packGenerationUniforms`), and the compute passes place every star/dust
- * record in world space as their final write step (`applyExtraTransform` in
- * `galaxyGen/generate.wesl`). The vertex buffer that comes out is already
- * world-placed, so drawing an extra is a plain instanced `draw` against its
- * own buffers — no per-draw model-matrix uniform, and nothing rewritten after
- * the generation submit.
- *
- * The alternative — one shared subject buffer plus a per-draw model matrix
- * mutated between draw calls — is the standing writeBuffer-vs-submit ordering
- * trap: interleaving `queue.writeBuffer` with `queue.submit` in a frame does
- * not guarantee the write lands before the matching draw reads it, so the
- * first extra to draw would read stale bytes and paint on top of the wrong
- * galaxy. Folding the transform in at generation time is even further from
- * that trap than a post-generation bake would be: the transform is applied
- * once, inline, as the record is first written, so the world-space bytes are
- * never rewritten at all — there is no second write for a draw to race.
- *
- * ## Deviations from the spike, sanctioned by the plan
- *
- *  - `mat4.perspective` (wgpu-matrix) maps depth to [0, 1] (WebGPU
- *    convention) where the spike's hand-rolled matrix used GL's [-1, 1].
- *    With no depth attachment, z only affects near/far clipping — visually
- *    identical, and [0,1] is the correct convention for this API. Do not
- *    "restore" the spike matrix.
- *  - The loop is a continuous `requestAnimationFrame`, not render-on-demand:
- *    this is a visual-tuning instrument that always animates (idle
- *    auto-rotate, damped camera), so gating renders on dirty state would buy
- *    nothing.
- *  - `starCount`/`dustCount` are the carved layouts' CAPACITIES
- *    (`GenerationLayout.capacity`), not a count of "live" (visibly nonzero)
- *    records — see `setParams`'s docblock.
- *  - There is no serial-RNG replay: every star/dust draw comes from a
- *    stateless per-invocation hash (see `galaxyGen/generate.wesl`'s header), not a
- *    single-threaded generator stepping through one draw at a time. The
- *    determinism contract that DOES hold is CPU-free: same params in, same
- *    GPU buffer contents out, every time.
+ * Design provenance: `docs/research/milky-way/` (its README indexes the files)
+ * and `docs/superpowers/specs/completed/2026-07-02-galaxy-renderer-tool-design.md`;
+ * `tools/galaxy-renderer/README.md` covers the controls and the perf HUD.
  */
 
 import type { GalaxyEngineHandle } from '../../@types/engine/GalaxyEngineHandle';
