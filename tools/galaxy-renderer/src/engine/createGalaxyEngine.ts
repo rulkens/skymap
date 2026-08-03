@@ -257,6 +257,7 @@ import {
 } from '../../../../src/data/galaxy/dustBubblePlacements';
 import {
   sfMapGridRadius,
+  sfMapGridRadiusOrDefault,
   SF_MAP_AZ,
   SF_MAP_RINGS,
 } from '../../../../src/data/galaxy/galaxySfMapArmForcing';
@@ -287,6 +288,7 @@ import { ADDITIVE_BLEND } from '../../../../src/services/gpu/lib/blendStates';
 import { MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE } from '../../../../src/services/gpu/renderers/milkyWay/milkyWayCloudRenderer';
 import { BLOOM_LEVELS } from '../../../../src/data/bloomConstants';
 import { DEFAULT_RENDER_SETTINGS } from '../data/defaultRenderSettings';
+import { DEFAULT_LOD_SETTINGS } from '../data/defaultLodSettings';
 
 import starWgsl from './shaders/milkyWayCloud/stars.wesl?static';
 import dustWgsl from './shaders/milkyWayCloud/dust.wesl?static';
@@ -1220,16 +1222,10 @@ export async function createGalaxyEngine(
   const camera = createOrbitCameraInput(canvas, { autoRotate: opts.autoRotate !== false });
 
   // One internal render bag merged by setRender (the spike's Object.assign).
-  // Seeded from DEFAULT_RENDER_SETTINGS so this bag can't drift from the store
-  // slice + preset envelope that also seed from it — and, through it, from the
-  // app's own defaults. `sizeScale` is the one exception: the engine's spike
-  // default is 1.0 where the UI seeds 0.3, and the bridge pushes the UI value
-  // on its first sync anyway.
-  const render = {
-    ...DEFAULT_RENDER_SETTINGS,
-    sizeScale: 1.0,
-    lodApparent: 0,
-  };
+  // Seeded from the same two constants the UI pushes on its first sync, so this
+  // bag can't drift from the store slice + preset envelope that also seed from
+  // them — and, through them, from the app's own defaults.
+  const render = { ...DEFAULT_RENDER_SETTINGS, ...DEFAULT_LOD_SETTINGS };
 
   // Reused scratch for the per-frame uniform packs — no per-frame allocation.
   // One scratch serves both cloud passes: each pack writes every lane before
@@ -1423,7 +1419,7 @@ export async function createGalaxyEngine(
    */
   function rebuildSfMapOrientationIfNeeded(): void {
     if (render.orientationViewIntensity <= 0 && !fieldTuning.sfMapDustSeeding) return;
-    const grid = fieldGeometry ? sfMapGridRadius(fieldGeometry) : { rMin: 1e-3, rMax: 1 };
+    const grid = sfMapGridRadiusOrDefault(fieldGeometry);
     sfMapOrientation.dispatch({
       grid,
       sigmaDerivTexels: render.orientationSigmaDerivTexels,

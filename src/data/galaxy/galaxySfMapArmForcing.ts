@@ -64,6 +64,19 @@ export function sfMapGridRadius(geometry: GalaxyFieldGeometry): GalaxySfMapGridR
 }
 
 /**
+ * The same bounds for a galaxy that may not be generated yet. The sfMap chain
+ * dispatches before the first geometry exists, and the automaton's grid must
+ * agree with the orientation chain's texel for texel or the two silently
+ * sample different rings — so the placeholder lives here, once, rather than
+ * being written out at each site.
+ */
+export function sfMapGridRadiusOrDefault(
+  geometry: GalaxyFieldGeometry | null,
+): GalaxySfMapGridRadius {
+  return geometry ? sfMapGridRadius(geometry) : { rMin: 1e-3, rMax: 1 };
+}
+
+/**
  * Cross-track distance from a grid cell to an arm's ridge, in the disc
  * PLANE only (the warp's small vertical offset is ignored — a step-1
  * simplification the forcing field shares with `sfMapPresent.wesl`'s own

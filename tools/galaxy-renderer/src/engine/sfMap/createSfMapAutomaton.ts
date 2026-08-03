@@ -14,7 +14,7 @@
 import { ADDITIVE_BLEND } from '../../../../../src/services/gpu/lib/blendStates';
 import {
   buildGalaxySfMapArmForcing,
-  sfMapGridRadius,
+  sfMapGridRadiusOrDefault,
   SF_MAP_AZ,
   SF_MAP_RINGS,
   SF_MAP_WORKGROUP_SIZE,
@@ -187,7 +187,7 @@ export function createSfMapAutomaton(
 
     rebuild({ geometry, tuning, seed }): GalaxySfMapGridRadius {
       const sfMap = tuning.sfMap;
-      const grid = geometry ? sfMapGridRadius(geometry) : { rMin: 1e-3, rMax: 1 };
+      const grid = sfMapGridRadiusOrDefault(geometry);
       device.queue.writeBuffer(gridUbo, 0, new Float32Array([grid.rMin, grid.rMax, 0, 0]));
 
       if (!geometry || !sfMap.enabled || sfMap.steps <= 0) {
