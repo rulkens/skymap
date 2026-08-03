@@ -74,6 +74,8 @@ type SliderSpec = {
   readonly label: string;
   readonly format?: (value: number) => string;
   readonly seedKey?: 'asymSeed' | 'clumpSeed' | 'waveSeed';
+  /** Hover explainer, for the knobs whose label alone gets misread. */
+  readonly info?: string;
 };
 
 // html:511 — the three fields whose range input still emits fractional
@@ -140,7 +142,11 @@ function buildArmSliders(category: ReturnType<typeof classifyHubbleType>): Slide
     { key: 'armWidth', label: 'Arm width' },
     { key: 'armStrength', label: 'Arm definition' },
     { key: 'subArms', label: 'Sub-arms / spurs' },
-    { key: 'armFalloff', label: 'Arm edge falloff' },
+    {
+      key: 'armFalloff',
+      label: 'Arm edge falloff',
+      info: "Sets HOW FAR the arms extend — the only knob that does. 0 reaches 1.7x the disc radius, 1 stops at 0.65x. It is a generation knob, so moving it regenerates; the field's 'Taper end' slider trims or trails the same extent live.",
+    },
     { key: 'armEdgeVar', label: 'Arm length variation', seedKey: 'asymSeed' },
     { key: 'armClump', label: 'Arm clumpiness', seedKey: 'clumpSeed' },
     { key: 'armWave', label: 'Arm waviness', seedKey: 'waveSeed' },
@@ -244,6 +250,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
           )
         }
         onReseed={spec.seedKey ? () => handleReseed(spec.seedKey!) : undefined}
+        info={spec.info}
       />
     );
   };

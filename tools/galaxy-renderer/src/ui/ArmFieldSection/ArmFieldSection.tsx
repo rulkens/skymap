@@ -48,14 +48,14 @@ function ArmFieldSection(): ReactNode {
           info="Arm/interarm surface-brightness ratio in old stellar light. The Milky Way measures ~1.3 (Drimmel & Spergel 2001, GLIMPSE); strong grand designs reach ~2 (Rix & Zaritsky 1995). Per-arm age scales it: old arms carry the full contrast, young arms fade toward 1."
         />
         <ParamSlider
-          label="Arm reach"
+          label="Light scale × disc"
           value={fieldTuning.armExcessScaleRatio}
           min={1}
           max={4}
           step={0.05}
           format={(v) => `${v.toFixed(2)}x`}
           onChange={(v) => dispatch(fieldTuningPatched({ armExcessScaleRatio: v }))}
-          info="The arms' own exponential scale length, in units of the disc's. 1 holds contrast K flat with radius, so the arms fade exactly as fast as the disc and stop before it does. Above 1 the arms outrun the disc and K grows outward, which is the observed direction — arm light is gas and young stars, whose discs are the more extended ones. Governs the ridge chain and the sprite cloud together."
+          info="How fast the arms' light falls off, as a multiple of the disc's own exponential scale length. This is BRIGHTNESS only — it cannot move where an arm ends; 'Taper end' below and the 'Arm edge falloff' generation knob do that. 1 holds contrast K flat with radius; above 1 the arms outrun the disc and K grows outward, which is the observed direction — arm light is gas and young stars, whose discs are the more extended ones. Governs the ridge chain and the sprite cloud together."
         />
         <ParamSlider
           label="Taper start"
