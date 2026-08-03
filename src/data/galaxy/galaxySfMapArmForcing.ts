@@ -35,18 +35,25 @@ export const SF_MAP_WORKGROUP_SIZE = 16;
 export type GalaxySfMapGridRadius = { readonly rMin: number; readonly rMax: number };
 
 /**
- * The radius bounds one generated galaxy's log-radial grid spans.
- * `armStartRadius` floors the inner edge; forcing is identically zero below
- * it (this file's own `r <= geometry.armStartRadius` skip), so the margin
- * below it exists only so percolation can leak inward rather than hard-stop
- * exactly at the arm start. The outer edge covers the OUTERMOST arm's own
- * `fadeRadius` (falling back to `outerRadius` when there are no arms) rather
- * than stopping at `outerRadius` itself: with dust now SF-map-seeded only
- * where this grid has data (the smooth analytic tier that used to cover the
- * rest was deleted — see `galaxyDustMixture.ts`'s header), a truncation at
- * `outerRadius` was a visible hard edge mid-arm (`outerRadius` ~10.5 vs
- * per-arm `fadeRadius` 11.3-15.5, `armFadeEnvelope` still 20-97% of peak
- * there, per arm).
+ * How far inside `armStartRadius` the grid's inner edge sits. Forcing is
+ * identically zero below the arm start (this file's own
+ * `r <= geometry.armStartRadius` skip), so this margin exists only so
+ * percolation can leak inward rather than hard-stop exactly there.
+ */
+const SF_MAP_INNER_MARGIN_FRAC = 0.6;
+
+/** Degenerate-galaxy guard: `sfMapRingRadius`'s log spacing needs rMax clear of rMin. */
+const SF_MAP_MIN_SPAN_RATIO = 2;
+
+/**
+ * The radius bounds one generated galaxy's log-radial grid spans. The outer
+ * edge covers the OUTERMOST arm's own `fadeRadius` (falling back to
+ * `outerRadius` when there are no arms) rather than stopping at `outerRadius`
+ * itself: with dust now SF-map-seeded only where this grid has data (the
+ * smooth analytic tier that used to cover the rest was deleted — see
+ * `galaxyDustMixture.ts`'s header), a truncation at `outerRadius` was a
+ * visible hard edge mid-arm (`outerRadius` ~10.5 vs per-arm `fadeRadius`
+ * 11.3-15.5, `armFadeEnvelope` still 20-97% of peak there, per arm).
  *
  * COST: rings are log-spaced over [rMin, rMax] at a fixed `SF_MAP_RINGS`, so
  * widening rMax spends radial resolution on the newly-covered outer arm —
@@ -54,12 +61,12 @@ export type GalaxySfMapGridRadius = { readonly rMin: number; readonly rMax: numb
  * Raise `SF_MAP_RINGS` if inner detail starts to suffer.
  */
 export function sfMapGridRadius(geometry: GalaxyFieldGeometry): GalaxySfMapGridRadius {
-  const rMin = Math.max(geometry.armStartRadius * 0.6, 1e-3);
+  const rMin = Math.max(geometry.armStartRadius * SF_MAP_INNER_MARGIN_FRAC, 1e-3);
   const outerArmRadius =
     geometry.numArms > 0 && geometry.arms.length > 0
       ? Math.max(...geometry.arms.map((arm) => arm.fadeRadius))
       : geometry.outerRadius;
-  const rMax = Math.max(outerArmRadius, rMin * 2);
+  const rMax = Math.max(outerArmRadius, rMin * SF_MAP_MIN_SPAN_RATIO);
   return { rMin, rMax };
 }
 
@@ -104,7 +111,6 @@ export function buildGalaxySfMapArmForcing(
     const sigmaAcross = Math.max(armCrossSigma(r, geometry, tuning), 1e-4);
 
     for (const arm of geometry.arms) {
-      if (r > arm.fadeRadius * 1.05) continue;
       const envelope = armFadeEnvelope(r, geometry, arm);
       if (envelope <= 0) continue;
       const point = armRidgeCurvePoint(logR, geometry, arm);

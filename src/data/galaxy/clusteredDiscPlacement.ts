@@ -17,6 +17,7 @@
  *
  * PURITY INVARIANT: pure given its `rng`, no Math.random/Date/engine state.
  */
+import { ARM_SPAN_START_FRAC } from './armRidgeGeometry';
 import { armAgeWeight } from './dustLaneFeatures';
 import { sampleSfMapOrientation } from '../../utils/galaxy/sampleSfMapOrientation';
 import { warpSurfaceFrame } from '../../utils/galaxy/warpSurfaceFrame';
@@ -248,7 +249,7 @@ export function buildClusteredDiscPlacement<TPayload>(
   ): { center: Vec3; frame: CloudFrame } | null {
     const armIndex = pickWeighted(rng, armWeights, armWeightSum);
     const arm = geometry.arms[armIndex]!;
-    const logMin = Math.log(1.05);
+    const logMin = Math.log(ARM_SPAN_START_FRAC);
     const logMax = Math.log(arm.fadeRadius / geometry.armStartRadius);
     if (!(logMax > logMin)) return null;
 

@@ -123,6 +123,15 @@ export function armRidgeFrameAt(
 }
 
 /**
+ * Where every arm tier starts placing, as a fraction of `armStartRadius` —
+ * the ridge chain, the sprite cloud, the SF-event catalog and the lane
+ * sampler share it so their arms begin together rather than at four
+ * independently-drifting radii. Unrelated to the outer margins below, which
+ * are fractions of `fadeRadius`.
+ */
+export const ARM_SPAN_START_FRAC = 1.05;
+
+/**
  * Where the outer taper begins, as a fraction of this arm's own `fadeRadius`.
  * The remaining 40% of the arm's span is ~2x the arm excess's own scale
  * length on every shipped preset, so the taper never falls faster than the

@@ -8,13 +8,18 @@
  * their glow correlate instead of being two independent sprinkles.
  */
 import { mulberry32 } from '../../utils/random/mulberry32';
-import { armCrossSigma, armFadeEnvelope, armRidgeCurvePoint } from './armRidgeGeometry';
+import {
+  ARM_SPAN_START_FRAC,
+  armCrossSigma,
+  armFadeEnvelope,
+  armRidgeCurvePoint,
+} from './armRidgeGeometry';
 import { DEFAULT_GALAXY_FIELD_TUNING } from './galaxyFieldMixture';
 import type { GalaxyFieldGeometry } from '../../@types/galaxy/GalaxyFieldGeometry';
 import type { GalaxyStarFormationParams } from '../../@types/galaxy/GalaxyStarFormationParams';
 import type { SfEvent } from '../../@types/galaxy/SfEvent';
 
-/** Log-radius samples per arm, from `logStart = log(1.05)` to that arm's own fade radius. */
+/** Log-radius samples per arm, across that arm's whole span. */
 const STEPS_PER_ARM = 64;
 
 /** Runaway-sfActivity guard: never hand the shader more than this many events. */
@@ -38,7 +43,7 @@ export function buildSfEventCatalog(
   const events: SfEvent[] = [];
 
   geometry.arms.forEach((arm, armIndex) => {
-    const logStart = Math.log(1.05);
+    const logStart = Math.log(ARM_SPAN_START_FRAC);
     const logEnd = Math.log(arm.fadeRadius / geometry.armStartRadius);
     if (logEnd <= logStart) return;
     const step = (logEnd - logStart) / STEPS_PER_ARM;
