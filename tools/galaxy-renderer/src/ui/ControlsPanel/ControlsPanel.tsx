@@ -101,8 +101,8 @@ function specFor(key: GalaxySliderKey): ParamSpecEntry {
 
 /**
  * The sprite budget, alone in its own section rather than under SHAPE & SIZE:
- * the star bag is scheduled for deletion (research doc §12), and a section
- * holding nothing else deletes with it.
+ * the star bag is scheduled for deletion (`docs/research/milky-way/
+ * goal-and-history.md`), and a section holding nothing else deletes with it.
  */
 const STAR_BUDGET_SLIDERS: SliderSpec[] = [
   { key: 'starCount', label: 'Star density', format: (v) => `${Math.round(v / 1000)}k` },
@@ -263,9 +263,10 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
 
         {/* At the very top, outside any section: the one-click A/B against the
             sprite path the flux field is replacing. "Legacy" in the label is
-            the point — the star bag is scheduled for deletion (research doc
-            s12), and this switch is how its remaining usefulness (a reference
-            to compare against) is reached without scrolling. */}
+            the point — the star bag is scheduled for deletion (see
+            `docs/research/milky-way/goal-and-history.md`), and this switch is
+            how its remaining usefulness (a reference to compare against) is
+            reached without scrolling. */}
         <label className={styles.legacyToggleRow}>
           <input
             type="checkbox"

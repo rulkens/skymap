@@ -184,15 +184,15 @@ const DUST_NOISE_WORKGROUP_SIZE = 4;
  *    so having it isolated is most of the point of the split.
  *  - `'dustMap'` is the dust-column splat — one quad per Gaussian dust
  *    component — into its OWN reduced-resolution `dustMapTex` (cleared, not
- *    loaded), sized to its own `dustDivisor` rather than the field's. Only
- *    encoded when there is dust to splat OR the JWST view needs a fresh map
- *    (`render.dustViewIntensity > 0`, see `drawFrame`'s gate), so the slot
- *    drops on a dustless galaxy exactly like `'field'` drops when the model
- *    is off.
+ *    loaded), sized to its own `dustDivisor` rather than the field's. Encoded
+ *    when there is dust to splat, when the JWST view needs a fresh map, or on
+ *    the one frame that clears a map the last galaxy populated (see
+ *    `drawFrame`'s three-disjunct gate), so the slot drops on a dustless
+ *    galaxy the way `'field'` drops when the model is off.
  *  - `'field'` is the analytic Gaussian-mixture splat into `fieldTex` alone —
  *    only encoded when the analytic field is on, so the slot self-drops with
  *    it. The JWST dustPresent pass, into its own `dustViewTex`, now runs
- *    ADDITIONALLY whenever `render.dustViewIntensity > 0` (the three debug
+ *    ADDITIONALLY whenever `render.dustViewIntensity > 0` (the four debug
  *    views crossfade rather than replace the normal draw — see
  *    `RenderSettings`), so it carries no `timestampWrites` of its own: two
  *    passes cannot share one timestamp-pair slot in a frame, and giving it a
@@ -286,7 +286,7 @@ export async function createGalaxyEngine(
   canvas: HTMLCanvasElement,
   opts: GalaxyEngineOptions = {},
 ): Promise<GalaxyEngineHandle> {
-  // ---- device + canvas (galaxy-engine.js:10-17) ----
+  // ---- device + canvas ----
   if (!navigator.gpu) throw new Error('no-webgpu');
   const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
   if (!adapter) throw new Error('no-adapter');
@@ -333,7 +333,7 @@ export async function createGalaxyEngine(
     owned.push(current);
   };
 
-  // ---- static fullscreen-billboard quad (galaxy-engine.js:20-22) ----
+  // ---- static fullscreen-billboard quad ----
   const quad = own(
     device.createBuffer({
       label: 'galaxy:quad',
@@ -381,8 +381,10 @@ export async function createGalaxyEngine(
   // then each extra, already world-transformed — a read-only STORAGE array,
   // not a uniform, specifically so N background extras can push the total
   // component count past a uniform's ~1000-component cap. Starts at
-  // `GALAXY_FIELD_MAX_COMPONENTS` so a single central galaxy never forces a
-  // regrow on its first `setParams`.
+  // `GALAXY_FIELD_MAX_COMPONENTS`, one galaxy's EMISSION ceiling — the
+  // trailing dust slice is a particle cloud thousands of components deep
+  // (`DEFAULT_GALAXY_DUST_CLOUD_PARAMS.count`), so the first `setParams` with
+  // dust on regrows this regardless.
   const fieldComps = own(
     createGrowOnlyRecordBuffer({
       device,
@@ -398,12 +400,12 @@ export async function createGalaxyEngine(
   );
   // The HII tier's own header + storage buffer, byte-identical layout to
   // `fieldUbo`/`fieldComps` (same `io.wesl` struct, same `splatPipe`) but
-  // never concatenated into `fieldComps` — see research doc §18.1: a
-  // shell sprite is small and bright by construction, so sharing the smooth
-  // field's coarser target collapsed it into a bloom firefly. Own buffer,
-  // own target (`hiiTex`), own divisor (`render.hiiDivisor`). Capacity starts
-  // at `HII_MAX_COUNT`, the tier's own per-galaxy admission ceiling
-  // (`hiiRegions.ts`).
+  // never concatenated into `fieldComps` — see `docs/research/milky-way/
+  // hii-regions.md`: a shell sprite is small and bright by construction, so
+  // sharing the smooth field's coarser target collapsed it into a bloom
+  // firefly. Own buffer, own target (`hiiTex`), own divisor
+  // (`render.hiiDivisor`). Capacity starts at `HII_MAX_COUNT`, the tier's own
+  // per-galaxy admission ceiling (`hiiRegions.ts`).
   const hiiUbo = own(
     device.createBuffer({
       label: 'galaxy:hiiUniforms',
@@ -778,7 +780,7 @@ export async function createGalaxyEngine(
     }),
   );
 
-  // ---- tiny readback target for headless verification (galaxy-engine.js:96-97) ----
+  // ---- tiny readback target for headless verification ----
   const debugTex = own(
     device.createTexture({
       label: 'galaxy:debugTex',
@@ -806,7 +808,7 @@ export async function createGalaxyEngine(
     }),
   );
 
-  // ---- instance buffers (recreated on setParams) — galaxy-engine.js:100-102 ----
+  // ---- instance buffers (recreated on setParams) ----
   let starBuf: GPUBuffer | null = null;
   let starCount = 0;
   let dustBuf: GPUBuffer | null = null;
@@ -988,7 +990,7 @@ export async function createGalaxyEngine(
     rebuildDustMapDependents,
   );
 
-  // ---- camera state (orbit) — galaxy-engine.js:159-166 ----
+  // ---- camera state (orbit) ----
   const camera = createOrbitCameraInput(canvas, { autoRotate: opts.autoRotate !== false });
 
   // One internal render bag merged by setRender (the spike's Object.assign).
@@ -1110,7 +1112,7 @@ export async function createGalaxyEngine(
    * TensorBlur -> Coherence, see that quartet's own headers) over the CURRENT
    * `sfMapTex`. Two independent consumers — the debug overlay reads the
    * texture on the GPU, the dust placement reads the CPU copy above — either
-   * one enough to justify the six passes. Unlike the deleted CPU build this
+   * one enough to justify the six dispatches. Unlike the deleted CPU build this
    * needs no readback to run FROM: sfMapTex is a GPU texture already and
    * WebGPU zero-initialises it, so dispatching before `rebuildSfMap` has ever
    * populated it is safe.
@@ -1136,8 +1138,10 @@ export async function createGalaxyEngine(
    * `discEnabled`/`armsEnabled` gate their own shader loops (an off pill
    * skips the shader work entirely, not just zeroes tau). Called from
    * `setParams` (new geometry or dust params arrived) and `setFieldTuning`
-   * (toggle, or any tuning-driven geometry that later feeds dust) — the same
-   * two repack triggers `fieldMixture` itself uses.
+   * (toggle, or any tuning-driven geometry that later feeds dust) — the two
+   * repack triggers `fieldMixture` itself uses — and again from each readback
+   * landing above, which is the only way a map the placement seeds from can
+   * arrive after the build that asked for it.
    *
    * `buildDustParticleCloud` is the ONLY dust tier (the smooth analytic lane
    * it used to be layered on was deleted — see `galaxyDustMixture.ts`'s
@@ -1249,7 +1253,8 @@ export async function createGalaxyEngine(
    * `transformGalaxyFieldComponent` at the point it was built), then the
    * central galaxy's dust mixture LAST, into one list and rewrites
    * `fieldComps`. Called whenever any mixture changes — `setParams`,
-   * `setExtras`, `setFieldTuning` — never per frame, unlike the header (see
+   * `setExtras`, `setFieldTuning`, and each readback landing that rebuilds
+   * the dust mixture — never per frame, unlike the header (see
    * `packFieldUniforms`'s header for why the two are split).
    *
    * Dust trails every emission component (never interleaved) so
@@ -1275,8 +1280,10 @@ export async function createGalaxyEngine(
    * `fieldComps` — see `hiiTex`'s declaration comment for why this tier
    * cannot share the field's target, and a shared BUFFER with a separate
    * TARGET would still mean one draw call painting into two attachments,
-   * which WebGPU has no way to do. Called at the same three call sites as
-   * `repackFieldComponents`, immediately after it.
+   * which WebGPU has no way to do. Called from the three sites that can change
+   * an HII mixture (`setParams`, `setFieldTuning`, `setExtras`), immediately
+   * after `repackFieldComponents`; the readback landings rebuild dust alone
+   * and leave this tier untouched.
    */
   function repackHiiComponents(): void {
     const combined: GalaxyFieldComponent[] = [...hiiMixture];
@@ -1309,14 +1316,14 @@ export async function createGalaxyEngine(
    * everything enqueued on a queue in submission order, so by the time this
    * submit's compute passes run on the GPU, the preceding `writeBuffer` has
    * already landed. That is NOT the same shape as the standing
-   * writeBuffer-vs-submit trap documented in the module header ("Why extras
-   * are baked") — that trap is multiple writeBuffer/submit pairs racing to
-   * mutate ONE shared buffer read by draws recorded at different times; here
-   * there is exactly one write, one encoder, one submit, for a buffer
-   * nothing else touches concurrently. The same ordering guarantee is why the
-   * promise can resolve right after `submit`, with no `mapAsync` wait: any
-   * `drawFrame` encoded afterwards shares this queue too, so its draws are
-   * guaranteed to run after this submit's writes land.
+   * writeBuffer-vs-submit trap (`makeCloudUniformBuffer` above, and
+   * `generate.wesl`'s `writeStar`) — that trap is multiple writeBuffer/submit
+   * pairs racing to mutate ONE shared buffer read by draws recorded at
+   * different times; here there is exactly one write, one encoder, one submit,
+   * for a buffer nothing else touches concurrently. The same ordering
+   * guarantee is why the promise can resolve right after `submit`, with no
+   * `mapAsync` wait: any `drawFrame` encoded afterwards shares this queue too,
+   * so its draws are guaranteed to run after this submit's writes land.
    *
    * `opts.onStats` reports PLANNED counts, not live ones: the sum of each
    * star population's `iterations` (not `iterations * stride` — that would
@@ -1410,7 +1417,7 @@ export async function createGalaxyEngine(
     targets.setDivisors(allDivisors());
     // The two sigmas are the only lanes in this bag the orientation chain
     // reads, and the bridge re-pushes the WHOLE bag on any knob — so an
-    // unconditional invalidate here would redispatch the six passes, and with
+    // unconditional invalidate here would redispatch the six stages, and with
     // `sfMapDustSeeding` on (the default) the readback and dust rebuild behind
     // them, on every frame of an unrelated exposure drag. No crossing to catch
     // alongside them: an invalidation raised while nothing wanted the value is
@@ -1604,8 +1611,8 @@ export async function createGalaxyEngine(
     repackHiiComponents();
   }
 
-  // ---- resize (galaxy-engine.js:253-264) ----
-  const dpr = Math.min(window.devicePixelRatio || 1, 2); // full native resolution
+  // ---- resize ----
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const backingSize = (): Vec2 => [
     Math.max(1, Math.floor(canvas.clientWidth * dpr)),
     Math.max(1, Math.floor(canvas.clientHeight * dpr)),
@@ -1809,7 +1816,7 @@ export async function createGalaxyEngine(
     gradePass.end();
   }
 
-  // ---- frame loop (galaxy-engine.js:266-345) ----
+  // ---- frame loop ----
   // `drawFrame`'s own clock, and NOT the perf median's. This one is clamped
   // and advances on the offscreen paths too (`step`, `sample`, `grab`);
   // `createFrameTimer`'s is unclamped and advances only on rAF callbacks.
@@ -1952,12 +1959,15 @@ export async function createGalaxyEngine(
     const timingCtx = timing.beginFrame();
     const enc = device.createCommandEncoder({ label: 'galaxy:frame' });
     // Star pass: additive billboards into the reduced-resolution aggregate,
-    // like the app's `mw-aggregate` row. The primary AND every extra are
-    // always in the list — the three debug views dim the galaxy through
-    // fadeAlpha's debugGalaxyWeight factor (packed above), not by suppressing
-    // draws, which is what makes k=0.5 read as half galaxy / half map instead
-    // of a hard cut. Built here, per frame, because every buffer in it is
-    // reallocated by `setParams`/`setExtras`.
+    // like the app's `mw-aggregate` row. `spriteField` (OFF at boot — see
+    // `defaultRenderSettings.ts`) is the one thing that empties this list, and
+    // it empties it wholesale: sprites off has to mean sprite COST off, which
+    // an empty list gives (`encodeStarPass` then issues only its clear). The
+    // four debug views never suppress a draw — they dim the galaxy through
+    // fadeAlpha's debugGalaxyWeight factor (packed above), which is what makes
+    // k=0.5 read as half galaxy / half map instead of a hard cut. Built here,
+    // per frame, because every buffer in it is reallocated by
+    // `setParams`/`setExtras`.
     //
     // No `setViewport` anywhere below: the pass's only attachment IS
     // `aggregateTex`, and a pass's default viewport is its attachment's full
@@ -1983,10 +1993,10 @@ export async function createGalaxyEngine(
     // point of the side-by-side. Clearing (not loading) is what a private
     // target buys: no tile reload, and the timing slot is then honest.
     //
-    // Each of these three gates TWO sites — the pass that fills a target, and
-    // the scene pass's composite that reads it. Read once, here, so the pair
-    // cannot drift into compositing a target this frame never cleared, which
-    // sums the previous frame's content into HDR with nothing to catch it.
+    // Each of these three gates the pass that fills a target AND the scene
+    // pass's composite that reads it. Read once, here, so the two cannot drift
+    // into compositing a target this frame never cleared, which sums the
+    // previous frame's content into HDR with nothing to catch it.
     const analytic = render.analyticField;
     const drawHii = hiiComps.count > 0;
     const drawDustView = debugViews.dust > 0;
@@ -2016,9 +2026,9 @@ export async function createGalaxyEngine(
 
       // JWST dust-view presentation, into its OWN target — runs ADDITIONALLY
       // alongside the emission splat below whenever `render.dustViewIntensity
-      // > 0`, rather than replacing it: the three debug views crossfade
-      // independently now (RenderSettings's own docblock), and the scene
-      // pass sums whichever of them are live.
+      // > 0`, rather than replacing it: the four debug views crossfade
+      // independently (RenderSettings's own docblock), and the scene pass sums
+      // whichever of them are live.
       if (drawDustView) {
         encodeDustPresentPass({
           enc,
@@ -2130,8 +2140,10 @@ export async function createGalaxyEngine(
           });
         }
       }
-      // Primary AND extras, always — same "dim through debugGalaxyWeight,
-      // don't suppress" contract the star pass follows above.
+      // Primary AND extras, and — unlike the star list above — under no
+      // `spriteField` gate: sprite dust draws whenever a dust buffer exists.
+      // The debug views only dim it, through the same debugGalaxyWeight factor
+      // the sprites carry.
       const dustInstances: InstanceDraw[] = [];
       if (dustBuf) dustInstances.push({ buf: dustBuf, count: dustCount });
       for (const e of extras) {
@@ -2203,7 +2215,8 @@ export async function createGalaxyEngine(
     // GPU texture, always non-null, whose CONTENT is only meaningful once
     // rebuildSfMap has run at least once (setParams). Consumed by nothing
     // yet but sfMapPresent.wesl's own overlay; exposed here for the sibling
-    // UI and future consumers per the research doc §19's staging note.
+    // UI and future consumers, per `docs/research/milky-way/sf-map.md`'s
+    // staging note (overlay first, consumed by nothing).
     getSfMapTexture: (): GPUTexture => sfMapAutomaton.texture,
     // The CPU-side readback of the same output (`scheduleSfMapReadback`):
     // null until the first one lands. Consumed by `buildDustParticleCloud`

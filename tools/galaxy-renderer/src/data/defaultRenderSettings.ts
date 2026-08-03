@@ -89,15 +89,17 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // 1 = full canvas resolution, deliberately not coarsened like `fieldDivisor`
   // or `dustDivisor`: an HII shell sprite is small and bright by
   // construction, so ANY shared or downsampled target collapses it under a
-  // texel and bloom promotes the spike into a firefly (research doc §18.1).
+  // texel and bloom promotes the spike into a firefly
+  // (`docs/research/milky-way/hii-regions.md`).
   // The slider exists for the user to trade that away if they want to; the
   // default does not.
   hiiDivisor: 1,
-  // Both legacy halves OFF at boot: the star bag and its sprite dust are
-  // scheduled for deletion (research doc s12), so the analytic field alone is
-  // now the subject rather than one side of a comparison — and an
+  // The legacy star bag OFF at boot: it is scheduled for deletion
+  // (`docs/research/milky-way/goal-and-history.md`), so the analytic field
+  // alone is now the subject rather than one side of a comparison — and an
   // unattenuated sprite field sitting in front of the dust map actively
-  // misreads what the dust is doing. Their pills stay for the A/B.
+  // misreads what the dust is doing. The pill stays for the A/B. It gates the
+  // STAR draws only; sprite dust still draws (see `drawFrame`'s scene pass).
   spriteField: false,
   analyticField: true,
   analyticExposure: 1.0,

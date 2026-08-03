@@ -95,8 +95,8 @@ export function createGalaxyRenderTargets(
    * `fieldTex`'s coarser one. A shell sprite is small and bright by
    * construction: sharing the field's target once collapsed a whole sprite's
    * flux onto one texel and bloom promoted the spike into a firefly
-   * (research doc §18.1 — the SAME shape as the bug that split off
-   * `dustMapTex`, one tenant later). Drawn by `splatPipe` again (`hiiBG`),
+   * (`docs/research/milky-way/hii-regions.md` — the SAME shape as the bug that
+   * split off `dustMapTex`, one tenant later). Drawn by `splatPipe` again (`hiiBG`),
    * composited into HDR through the same `aggregateUpsample` the field and
    * star aggregate use.
    */
