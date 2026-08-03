@@ -214,6 +214,7 @@ import { deriveMilkyWayFade } from './deriveMilkyWayFade';
 import { createGalaxyRenderTargets } from './createGalaxyRenderTargets';
 import { createOrbitCameraInput } from './createOrbitCameraInput';
 import { createPassTimingWindows } from './createPassTimingWindows';
+import { createReadbackQueue } from './createReadbackQueue';
 import { debugGalaxyWeight } from './debugGalaxyWeight';
 import { decodeOrientationTexels } from './decodeOrientationTexels';
 import { dustSliceEdges } from './dustSliceEdges';
@@ -1339,30 +1340,40 @@ export async function createGalaxyEngine(
   // the previous readback's grid (rMin/rMax, tied to `fieldGeometry`) stale —
   // see setParams's own comment on why it nulls this before rebuilding dust.
   let sfMapData: GalaxySfMap | null = null;
-  // Bumped by every `scheduleSfMapReadback` call; a landing promise checks it
-  // against its own captured value before touching `sfMapData`; a mismatch
-  // means a LATER rebuild superseded this one, so the result is stale and
-  // dropped rather than clobbering data a still-pending later readback is
-  // about to overwrite anyway.
-  let sfMapReadbackToken = 0;
-  // Serializes readbacks: `sfMapReadbackBuf.mapAsync` throws if called while
-  // the buffer is still mapped from a PREVIOUS readback, and a fast
-  // setFieldTuning slider drag on `sfMap.*` can call rebuildSfMap again
-  // before the last one's map lands. Each call chains onto this promise
-  // instead of racing it. `scheduleOrientationReadback` chains onto this
-  // SAME promise (not a second chain of its own) — both copy operations
-  // then serialize through one queue, which is what keeps an overlapping
-  // sfMap rebuild from submitting into a buffer either one still has mapped.
-  let sfMapReadbackChain: Promise<void> = Promise.resolve();
-  // `orientationTex`'s CPU-side readback (`scheduleOrientationReadback`),
-  // same lifecycle as `sfMapData` above but its own token: the orientation
-  // chain dispatches independently of the sfMap one (`setRender`'s
-  // `orientationViewIntensity` crossing 0, or `setFieldTuning`'s
-  // `sfMapDustSeeding` toggle, neither of which touch `sfMapData`), so
-  // sharing one token would let an unrelated trigger wrongly supersede a
-  // still-pending readback.
+  // `orientationTex`'s CPU-side readback, same lifecycle as `sfMapData` above.
+  // Both streams share ONE queue (see `createReadbackQueue` for why a second
+  // chain would be unsafe) while keeping independent tokens: the orientation
+  // readback dispatches on triggers that never touch `sfMapData` (`setRender`'s
+  // `orientationViewIntensity` crossing 0, `setFieldTuning`'s `sfMapDustSeeding`
+  // toggle), so one shared token would let an unrelated trigger wrongly
+  // supersede a still-pending readback.
   let orientationData: GalaxySfMapOrientation | null = null;
-  let orientationReadbackToken = 0;
+  const readbackQueue = createReadbackQueue(device);
+  const sfMapReadback = readbackQueue.stream({
+    label: 'galaxy:sfMapReadback',
+    texture: sfMapTex,
+    buffer: sfMapReadbackBuf,
+    bytesPerRow: SF_MAP_READBACK_BYTES_PER_ROW,
+    width: SF_MAP_AZ,
+    height: SF_MAP_RINGS,
+    decode: (mapped) =>
+      unpadRows(new Uint8Array(mapped), SF_MAP_READBACK_BYTES_PER_ROW, SF_MAP_AZ * 4, SF_MAP_RINGS),
+  });
+  const orientationReadback = readbackQueue.stream({
+    label: 'galaxy:orientationReadback',
+    texture: orientationTex,
+    buffer: orientationReadbackBuf,
+    bytesPerRow: ORIENTATION_READBACK_BYTES_PER_ROW,
+    width: SF_MAP_AZ,
+    height: SF_MAP_RINGS,
+    decode: (mapped) =>
+      decodeOrientationTexels(
+        new Uint16Array(mapped),
+        ORIENTATION_READBACK_BYTES_PER_ROW,
+        SF_MAP_AZ,
+        SF_MAP_RINGS,
+      ),
+  });
   // The three `OrientationDiagnostics` numbers `reportOrientationDiagnostics`
   // hands to `opts.onOrientationDiagnostics` — see that function's own
   // comment for why coherence is computed once here (readback landing) while
@@ -1605,10 +1616,8 @@ export async function createGalaxyEngine(
    * two exits with the grid it just wrote, so `GalaxySfMap.rMin/rMax` always
    * matches the CONTENT being copied.
    *
-   * Does not block the caller: the ENTIRE copy/submit/map/unmap sequence is
-   * chained onto `sfMapReadbackChain`, so overlapping rebuilds (a dragged
-   * slider) can neither submit into nor map a buffer another readback still
-   * holds. Chaining only `mapAsync` is not enough and was the original bug.
+   * Does not block the caller, and overlapping rebuilds (a dragged slider)
+   * coalesce rather than race — `createReadbackQueue` owns that discipline.
    *
    * DETERMINISM: `sfMapData` lands asynchronously, so the dust mixture built
    * synchronously inside `setParams`/`setFieldTuning` (which both run BEFORE
@@ -1621,128 +1630,52 @@ export async function createGalaxyEngine(
    * this one keeps the tool always showing something.
    */
   function scheduleSfMapReadback(grid: GalaxySfMapGridRadius): void {
-    const token = ++sfMapReadbackToken;
-    sfMapReadbackChain = sfMapReadbackChain
-      .then(async () => {
-        // The copy and the submit belong INSIDE the chain. Running them
-        // eagerly serialized the mapping but not the submitting, so a second
-        // rebuild (a dragged slider) submitted into a buffer the first had
-        // mapped and not yet unmapped — 'used in submit while mapped'.
-        //
-        // Returning here rather than submitting also coalesces a drag down to
-        // one readback instead of one per dragged frame: every superseded
-        // rebuild skips the GPU work entirely. Grid/content stay paired
-        // because the copy now happens immediately before its own map, and
-        // rebuildSfMap always re-tokens when it re-renders the texture.
-        if (token !== sfMapReadbackToken) return;
-        const enc = device.createCommandEncoder({ label: 'galaxy:sfMapReadback' });
-        enc.copyTextureToBuffer(
-          { texture: sfMapTex },
-          {
-            buffer: sfMapReadbackBuf,
-            bytesPerRow: SF_MAP_READBACK_BYTES_PER_ROW,
-            rowsPerImage: SF_MAP_RINGS,
-          },
-          [SF_MAP_AZ, SF_MAP_RINGS, 1],
-        );
-        device.queue.submit([enc.finish()]);
-
-        await sfMapReadbackBuf.mapAsync(GPUMapMode.READ);
-        // try/finally, not a bare unmap: anything thrown between the map and
-        // the unmap strands the buffer mapped forever, turning a one-shot
-        // error into a permanently dead readback.
-        let packed: Uint8Array;
-        try {
-          const padded = new Uint8Array(sfMapReadbackBuf.getMappedRange());
-          packed = unpadRows(padded, SF_MAP_READBACK_BYTES_PER_ROW, SF_MAP_AZ * 4, SF_MAP_RINGS);
-        } finally {
-          sfMapReadbackBuf.unmap();
-        }
-        // A later rebuildSfMap re-tokened while this map was pending; its own
-        // readback is already chained behind this one, so this result is
-        // superseded — drop it rather than clobber sfMapData with data a
-        // still-pending later readback is about to overwrite anyway.
-        if (token !== sfMapReadbackToken) return;
-        sfMapData = {
-          az: SF_MAP_AZ,
-          rings: SF_MAP_RINGS,
-          rMin: grid.rMin,
-          rMax: grid.rMax,
-          data: packed,
-        };
-        if (fieldTuning.sfMapDustSeeding) {
-          rebuildDustMixture();
-          repackFieldComponents();
-        }
-      })
-      .catch((err) => {
-        console.error('galaxy: sfMap readback failed', err);
-      });
+    sfMapReadback.request((packed) => {
+      sfMapData = {
+        az: SF_MAP_AZ,
+        rings: SF_MAP_RINGS,
+        rMin: grid.rMin,
+        rMax: grid.rMax,
+        data: packed,
+      };
+      if (fieldTuning.sfMapDustSeeding) {
+        rebuildDustMixture();
+        repackFieldComponents();
+      }
+    });
   }
 
   /**
    * scheduleOrientationReadback — the CPU copy of `orientationTex`, same
    * one-per-dispatch discipline as `scheduleSfMapReadback` (whose own
    * docblock explains why the copy/submit/map/unmap has to live INSIDE the
-   * chain rather than run eagerly). Chained onto `sfMapReadbackChain` —
+   * chain rather than run eagerly). Shares the sfMap stream's queue —
    * `rebuildSfMapOrientationIfNeeded`'s own docblock explains why a second,
    * independent chain would be unsafe here. Gated by its caller on
    * `fieldTuning.sfMapDustSeeding`: this is the only consumer of the CPU
    * copy, the debug overlay samples `orientationTex` on the GPU directly.
    */
   function scheduleOrientationReadback(grid: GalaxySfMapGridRadius): void {
-    const token = ++orientationReadbackToken;
-    sfMapReadbackChain = sfMapReadbackChain
-      .then(async () => {
-        if (token !== orientationReadbackToken) return;
-        const enc = device.createCommandEncoder({ label: 'galaxy:orientationReadback' });
-        enc.copyTextureToBuffer(
-          { texture: orientationTex },
-          {
-            buffer: orientationReadbackBuf,
-            bytesPerRow: ORIENTATION_READBACK_BYTES_PER_ROW,
-            rowsPerImage: SF_MAP_RINGS,
-          },
-          [SF_MAP_AZ, SF_MAP_RINGS, 1],
-        );
-        device.queue.submit([enc.finish()]);
-
-        await orientationReadbackBuf.mapAsync(GPUMapMode.READ);
-        let data: Float32Array;
-        try {
-          const padded = new Uint16Array(orientationReadbackBuf.getMappedRange());
-          data = decodeOrientationTexels(
-            padded,
-            ORIENTATION_READBACK_BYTES_PER_ROW,
-            SF_MAP_AZ,
-            SF_MAP_RINGS,
-          );
-        } finally {
-          orientationReadbackBuf.unmap();
-        }
-        if (token !== orientationReadbackToken) return;
-        orientationData = {
-          az: SF_MAP_AZ,
-          rings: SF_MAP_RINGS,
-          rMin: grid.rMin,
-          rMax: grid.rMax,
-          data,
-        };
-        // Computed once here, at the one point a fresh grid exists — not per
-        // frame or per dust build.
-        const coherenceStats = orientationCoherenceStats(data);
-        orientationCoherenceMean = coherenceStats.mean;
-        orientationCoherenceMax = coherenceStats.max;
-        if (fieldTuning.sfMapDustSeeding) {
-          rebuildDustMixture(); // also reports — see its own doc
-          repackFieldComponents();
-        } else {
-          reportOrientationDiagnostics();
-        }
-      })
-      .catch((err) => {
-        console.error('galaxy: orientation readback failed', err);
-      });
+    orientationReadback.request((data) => {
+      orientationData = {
+        az: SF_MAP_AZ,
+        rings: SF_MAP_RINGS,
+        rMin: grid.rMin,
+        rMax: grid.rMax,
+        data,
+      };
+      // Computed once here, at the one point a fresh grid exists — not per
+      // frame or per dust build.
+      const coherenceStats = orientationCoherenceStats(data);
+      orientationCoherenceMean = coherenceStats.mean;
+      orientationCoherenceMax = coherenceStats.max;
+      if (fieldTuning.sfMapDustSeeding) {
+        rebuildDustMixture(); // also reports — see its own doc
+        repackFieldComponents();
+      } else {
+        reportOrientationDiagnostics();
+      }
+    });
   }
 
   /**
@@ -1756,7 +1689,7 @@ export async function createGalaxyEngine(
   function reportOrientationDiagnostics(): void {
     opts.onOrientationDiagnostics?.({
       hasData: orientationData !== null,
-      generation: orientationReadbackToken,
+      generation: orientationReadback.generation,
       meanCoherence: orientationCoherenceMean,
       maxCoherence: orientationCoherenceMax,
       meanDeltaDeg: lastDustDeltaMeanDeg,
