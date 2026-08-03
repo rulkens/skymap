@@ -473,13 +473,35 @@ export async function createGalaxyEngine(
   const format = navigator.gpu.getPreferredCanvasFormat();
   ctx.configure({ device, format, alphaMode: 'premultiplied' });
 
+  // ---- ownership ledger ----
+  // Every engine-scope GPU allocation registers at its own allocation site and
+  // `dispose` walks this in reverse. It replaces a hand-maintained destroy list
+  // that had drifted by ten resources; an HMR remount hands the next engine the
+  // same canvas, so each miss leaked a full set per remount. Resources that own
+  // their own teardown (`targets`, `sfMapAutomaton`, `sfMapOrientation`,
+  // `bloomPyramid`, `compositor`, `aggregateUpsample`) keep delegating and are
+  // deliberately absent here.
+  const owned: (() => { destroy(): void } | null)[] = [];
+  const own = <T extends { destroy(): void }>(resource: T): T => {
+    owned.push(() => resource);
+    return resource;
+  };
+  // Buffers reassigned at runtime (a regrow, or a new galaxy) register a READER
+  // rather than a reference: the ledger has to destroy whatever is live at
+  // dispose, not the instance the reassignment already destroyed.
+  const ownLatest = (current: () => { destroy(): void } | null): void => {
+    owned.push(current);
+  };
+
   // ---- static fullscreen-billboard quad (galaxy-engine.js:20-22) ----
-  const quad = device.createBuffer({
-    label: 'galaxy:quad',
-    size: 6 * 2 * 4,
-    usage: GPUBufferUsage.VERTEX,
-    mappedAtCreation: true,
-  });
+  const quad = own(
+    device.createBuffer({
+      label: 'galaxy:quad',
+      size: 6 * 2 * 4,
+      usage: GPUBufferUsage.VERTEX,
+      mappedAtCreation: true,
+    }),
+  );
   new Float32Array(quad.getMappedRange()).set([-1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1]);
   quad.unmap();
 
@@ -493,11 +515,13 @@ export async function createGalaxyEngine(
   // BOTH, silently handing the star pass the canvas viewport and scaling every
   // px-clamped sprite by the divisor. The app splits them for the same reason.
   const makeCloudUniformBuffer = (label: string): GPUBuffer =>
-    device.createBuffer({
-      label,
-      size: MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    });
+    own(
+      device.createBuffer({
+        label,
+        size: MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      }),
+    );
   const starUbo = makeCloudUniformBuffer('galaxy:starUniforms');
   const dustUbo = makeCloudUniformBuffer('galaxy:dustUniforms');
   // The analytic field's own buffer, own struct — see `packFieldUniforms`.
@@ -506,11 +530,13 @@ export async function createGalaxyEngine(
   // law only now — the mixture itself rides `fieldCompsBuf` below, a separate
   // storage binding, so this uniform stays `FIELD_HEADER_BUFFER_SIZE`
   // regardless of how many galaxies are on screen.
-  const fieldUbo = device.createBuffer({
-    label: 'galaxy:fieldUniforms',
-    size: FIELD_HEADER_BUFFER_SIZE,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
+  const fieldUbo = own(
+    device.createBuffer({
+      label: 'galaxy:fieldUniforms',
+      size: FIELD_HEADER_BUFFER_SIZE,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    }),
+  );
   // `comps` (io.wesl binding 1): every mixture's Gaussians, central galaxy
   // then each extra, already world-transformed — a read-only STORAGE array,
   // not a uniform, specifically so N background extras can push the total
@@ -524,6 +550,7 @@ export async function createGalaxyEngine(
     size: fieldCompsCapacity * FIELD_COMPONENT_FLOATS * 4,
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
   });
+  ownLatest(() => fieldCompsBuf);
   // The HII tier's own header + storage buffer, byte-identical layout to
   // `fieldUbo`/`fieldCompsBuf` (same `io.wesl` struct, same `splatPipe`) but
   // never concatenated into `fieldCompsBuf` — see research doc §18.1: a
@@ -533,17 +560,20 @@ export async function createGalaxyEngine(
   // at `HII_MAX_COUNT`, the tier's own per-galaxy admission ceiling
   // (`hiiRegions.ts`), and grows the same never-shrink way `fieldCompsBuf`
   // does once extras are added.
-  const hiiUbo = device.createBuffer({
-    label: 'galaxy:hiiUniforms',
-    size: FIELD_HEADER_BUFFER_SIZE,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
+  const hiiUbo = own(
+    device.createBuffer({
+      label: 'galaxy:hiiUniforms',
+      size: FIELD_HEADER_BUFFER_SIZE,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    }),
+  );
   let hiiCompsCapacity = HII_MAX_COUNT;
   let hiiCompsBuf = device.createBuffer({
     label: 'galaxy:hiiComps',
     size: hiiCompsCapacity * FIELD_COMPONENT_FLOATS * 4,
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
   });
+  ownLatest(() => hiiCompsBuf);
   // The bubble-view overlay's own instance buffer (bubblePresent.wesl): a
   // plain VERTEX buffer, not a storage array like `fieldCompsBuf` — there is
   // no per-fragment lookup by index, just one instance-stepped attribute
@@ -559,13 +589,16 @@ export async function createGalaxyEngine(
     size: bubbleCapacity * BUBBLE_RECORD_FLOATS * 4,
     usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
   });
+  ownLatest(() => bubbleBuf);
   // Tool-only grade trailer: [saturation, vignette, gammaEncode, 0]. The bloom
   // and compositor uniforms are owned by their shared factories below.
-  const gradeBuf = device.createBuffer({
-    label: 'galaxy:grade',
-    size: 16,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
+  const gradeBuf = own(
+    device.createBuffer({
+      label: 'galaxy:grade',
+      size: 16,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    }),
+  );
 
   const makeShader = (code: string, label: string): GPUShaderModule =>
     createShaderModuleWithDevLog(device, code, label);
@@ -741,13 +774,15 @@ export async function createGalaxyEngine(
     layout: 'auto',
     compute: { module: dustNoiseBakeMod, entryPoint: 'cs' },
   });
-  const dustNoiseTex = device.createTexture({
-    label: 'galaxy:dustNoiseTex',
-    size: [DUST_NOISE_TEX_SIZE, DUST_NOISE_TEX_SIZE, DUST_NOISE_TEX_SIZE],
-    dimension: '3d',
-    format: 'rgba8unorm',
-    usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
-  });
+  const dustNoiseTex = own(
+    device.createTexture({
+      label: 'galaxy:dustNoiseTex',
+      size: [DUST_NOISE_TEX_SIZE, DUST_NOISE_TEX_SIZE, DUST_NOISE_TEX_SIZE],
+      dimension: '3d',
+      format: 'rgba8unorm',
+      usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
+    }),
+  );
   // 'repeat' on all three axes is what makes the bake tile seamlessly in
   // world space: dustMap.wesl samples at world-position / tileUnits with no
   // manual wrap, relying entirely on this addressing mode.
@@ -886,39 +921,49 @@ export async function createGalaxyEngine(
   // built in `setExtras` — one shared buffer can't serve them, since packing N
   // extras into one submit would need N distinct UBO contents live at once.
   const genPipelines = createGenerationPipelines(device);
-  const genUbo = device.createBuffer({
-    label: 'galaxy:genUbo',
-    size: GENERATION_UBO.byteLength,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
+  const genUbo = own(
+    device.createBuffer({
+      label: 'galaxy:genUbo',
+      size: GENERATION_UBO.byteLength,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    }),
+  );
 
   // ---- tiny readback target for headless verification (galaxy-engine.js:96-97) ----
-  const debugTex = device.createTexture({
-    label: 'galaxy:debugTex',
-    size: [64, 64],
-    format,
-    usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
-  });
+  const debugTex = own(
+    device.createTexture({
+      label: 'galaxy:debugTex',
+      size: [64, 64],
+      format,
+      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
+    }),
+  );
   // LDR scratch for `sample`'s readback, so the offscreen path runs the SAME
   // `encodePost` as the on-screen frame — grade trailer included when it is
   // active. Sized to match debugTex; unused (but harmless) at default settings.
-  const debugScratchTex = device.createTexture({
-    label: 'galaxy:debugScratchTex',
-    size: [64, 64],
-    format,
-    usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
-  });
-  const dbgBuf = device.createBuffer({
-    label: 'galaxy:debugBuf',
-    size: 64 * 256,
-    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-  });
+  const debugScratchTex = own(
+    device.createTexture({
+      label: 'galaxy:debugScratchTex',
+      size: [64, 64],
+      format,
+      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+    }),
+  );
+  const dbgBuf = own(
+    device.createBuffer({
+      label: 'galaxy:debugBuf',
+      size: 64 * 256,
+      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+    }),
+  );
 
   // ---- instance buffers (recreated on setParams) — galaxy-engine.js:100-102 ----
   let starBuf: GPUBuffer | null = null;
   let starCount = 0;
   let dustBuf: GPUBuffer | null = null;
   let dustCount = 0;
+  ownLatest(() => starBuf);
+  ownLatest(() => dustBuf);
   let extras: Extra[] = []; // background galaxies, each GPU-generated in world space
   // The analytic field's Gaussian mixture for the CENTRAL galaxy — rebuilt in
   // `setParams` from the same derived geometry generation just ran with, so it
@@ -1896,6 +1941,20 @@ export async function createGalaxyEngine(
     }
   }
 
+  /**
+   * The three GPU allocations one extra owns. Its own function because the
+   * list is torn down from two places — `setExtras` replacing it, and
+   * `dispose` — and the ownership ledger cannot hold a list whose length
+   * changes.
+   */
+  function destroyExtras(list: readonly Extra[]): void {
+    for (const e of list) {
+      e.starBuf.destroy();
+      e.dustBuf?.destroy();
+      e.ubo.destroy();
+    }
+  }
+
   // Replace the set of background galaxies. Each extra is generated GPU-side
   // exactly like the central galaxy in `setParams`, but with its own params
   // and its own rigid world transform folded into its per-extra UBO: carve the
@@ -1911,11 +1970,7 @@ export async function createGalaxyEngine(
   // new ones built with nothing able to run in between. The `async` signature
   // is kept only because `GalaxyEngineHandle` declares it; nothing is awaited.
   async function setExtras(specs: readonly ExtraGalaxySpec[]): Promise<void> {
-    for (const e of extras) {
-      e.starBuf.destroy();
-      e.dustBuf?.destroy();
-      e.ubo.destroy();
-    }
+    destroyExtras(extras);
     extras = [];
 
     const enc = device.createCommandEncoder({ label: 'galaxy:generateExtras' });
@@ -2701,20 +2756,15 @@ export async function createGalaxyEngine(
       bloomPyramid.destroy();
       compositor.destroy();
       aggregateUpsample.destroy();
-      starUbo.destroy();
-      dustUbo.destroy();
-      fieldUbo.destroy();
-      fieldCompsBuf.destroy();
-      bubbleBuf.destroy();
-      dustNoiseTex.destroy();
       sfMapAutomaton.dispose();
       sfMapOrientation.dispose();
-      gradeBuf.destroy();
       // The size-dependent targets outlive every other resource here — they
       // are the only ones reallocated on resize, so an engine torn down and
       // rebuilt (an HMR remount hands the new engine the same canvas) leaked
       // a full set per remount until this call existed.
       targets.destroy();
+      destroyExtras(extras);
+      for (let i = owned.length - 1; i >= 0; i--) owned[i]!()?.destroy();
       ro.disconnect();
       camera.dispose();
     },
