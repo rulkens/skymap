@@ -39,7 +39,7 @@ type GalaxyRenderTargets = {
   /** Pixel size of a target at `divisor` — also what the passes pack as `viewportPx`. */
   reducedSize(divisor: number): Vec2;
   bloomTexelSize(level: number): Vec2;
-  /** Full (re)allocation against the canvas's current backing size. */
+  /** Recreate the canvas-sized targets, then bring the reduced ones up to date. */
   rebuildAll(divisors: TargetDivisors): void;
   /**
    * Reallocate whichever reduced targets these divisors no longer describe.
@@ -126,11 +126,6 @@ export function createGalaxyRenderTargets(
   // on its own: moving one must not disturb the scene, the LDR scratch or the
   // bloom pyramid. Reallocating outright (rather than pooling a few sizes) is
   // the right trade for a 1..6 integer knob dragged by hand.
-  //
-  // The `allocate*` half is UNCONDITIONAL and is what `rebuildAll` calls: a
-  // resize must recreate every texture even where the new reduced size floors
-  // to the same pixels, because `allocateDust` also fires `onDustMapRecreated`.
-  // `setDivisors` goes through the guarded half instead.
   function allocateAggregate(w: number, h: number): void {
     if (aggregateTex) aggregateTex.destroy();
     aggregateTex = device.createTexture({
@@ -155,11 +150,13 @@ export function createGalaxyRenderTargets(
   // 1:1 into `dustViewTex`, so leaving either behind reintroduces the
   // resolution mismatch the shared divisor exists to prevent.
   //
-  // Every bind group that references `dustMapTex` is tied to the specific
-  // GPUTexture it was built against (`layout: 'auto'` discipline), so a
-  // recreation has to rebuild all three immediately, not wait for the next
-  // `repackFieldComponents`/`repackHiiComponents` — that is `onDustMapRecreated`,
-  // which also owns the stale-map latch: a fresh texture is zero-initialised.
+  // `onDustMapRecreated` is the engine's half of that recreation: three
+  // `layout: 'auto'` bind groups are tied to the specific GPUTexture they were
+  // built against, and the engine's "dust map holds nonzero texels" latch
+  // resets alongside them. That reset asserts the map is zeroed, which is true
+  // ONLY of a texture this function just created — so the callback fires from
+  // the allocation itself and must never be hoisted to a caller that may skip
+  // it.
   function allocateDust(w: number, h: number): void {
     if (dustMapTex) dustMapTex.destroy();
     dustMapTex = device.createTexture({
@@ -192,13 +189,14 @@ export function createGalaxyRenderTargets(
   }
 
   /**
-   * The divisor comparison lives HERE, keyed on the pixel size already on the
-   * live texture, rather than in the caller against a remembered divisor: the
-   * texture is the authoritative record of what it was built at, and two
-   * divisors that floor to the same size genuinely need no reallocation. It
-   * also makes the check resize-correct for free — after `rebuildAll` the
-   * sizes are the canvas's, so a divisor that "did not move" still rebuilds if
-   * the canvas did.
+   * The ONE allocation path for the four reduced targets, keyed on the pixel
+   * size already on the live texture rather than on a remembered divisor: the
+   * texture is the authoritative record of what it was built at, so a divisor
+   * drag and a canvas resize both reduce to the same question, and `rebuildAll`
+   * delegates here. Two divisors that floor to the same size — or a resize that
+   * floors to the same pixels — genuinely need no reallocation: the surviving
+   * texture is the same object every bind group already holds a view of, and
+   * the stale-map latch stays at its truthful value (see `allocateDust`).
    */
   function setDivisors(divisors: TargetDivisors): void {
     const reallocateIfResized = (
@@ -238,13 +236,9 @@ export function createGalaxyRenderTargets(
       format: formats.swap,
       usage: RA_TB,
     });
-    // The unguarded half, deliberately: at a new canvas size a reduced target
-    // whose pixels happen to floor to the same numbers still has to be
-    // recreated, and `allocateDust` is also what fires `onDustMapRecreated`.
-    allocateAggregate(...reducedSize(divisors.aggregate));
-    allocateField(...reducedSize(divisors.field));
-    allocateDust(...reducedSize(divisors.dust));
-    allocateHii(...reducedSize(divisors.hii));
+    // The reduced targets go through the same size comparison as a divisor
+    // drag — on boot they are all `undefined`, so it allocates every one.
+    setDivisors(divisors);
     // Pyramid: level 0 = half-res, each further level halves again -> ever-wider
     // glow. `Math.floor(size / scale)` clamped to 1 px, matching the runtime's
     // `renderTargets.allocate`.
