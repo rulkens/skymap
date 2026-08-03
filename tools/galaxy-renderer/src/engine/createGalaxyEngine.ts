@@ -214,6 +214,7 @@ import { createGalaxyRenderTargets } from './gpu/createGalaxyRenderTargets';
 import { createOrbitCameraInput } from './camera/createOrbitCameraInput';
 import { createPassTimingWindows } from './timing/createPassTimingWindows';
 import { beginClearPass } from './passes/beginClearPass';
+import { encodeDustMapPass } from './passes/encodeDustMapPass';
 import { encodeDustPresentPass } from './passes/encodeDustPresentPass';
 import { encodeSplatPass } from './passes/encodeSplatPass';
 import { encodeStarPass } from './passes/encodeStarPass';
@@ -2410,28 +2411,20 @@ export async function createGalaxyEngine(
       // has to run whenever either consumer needs it: `dustViewIntensity > 0`
       // (the image itself) or a nonzero dust slice.
       //
-      // `dustMapPopulated` is what makes skipping SAFE, and it is load-bearing:
-      // a skipped pass leaves whatever the last frame wrote, and the texture is
-      // only all-zero while it has never been drawn into. Without the latch, a
-      // galaxy whose dust count drops to zero — switch the category to
-      // elliptical, or pull tau to 0 — keeps the PREVIOUS galaxy's dust map
-      // bound, and splat.wesl goes on attenuating with dust that no longer
-      // exists. One clearing pass on the transition costs a clear; getting it
-      // wrong reads as "the dust never regenerates".
-      const dustMapHasContent = fieldDustCount > 0;
-      if (dustMapHasContent || render.dustViewIntensity > 0 || dustMapPopulated) {
-        const dustMapWrites = timing.descriptorFor('dustMap');
-        const dustMapPass = beginClearPass(
+      // The third disjunct is `dustMapPopulated`: a skipped pass leaves the
+      // last frame's contents, so the frame the dust count drops to zero still
+      // has to run — as the clear that empties the map. Assigning the returned
+      // latch is what carries that across; drop the assignment and the map
+      // freezes at the previous galaxy's dust.
+      if (fieldDustCount > 0 || render.dustViewIntensity > 0 || dustMapPopulated) {
+        dustMapPopulated = encodeDustMapPass({
           enc,
-          'galaxy:dustMapPass',
-          targets.dustMapTex.createView(),
-          dustMapWrites,
-        );
-        dustMapPass.setPipeline(dustMapPipe);
-        dustMapPass.setBindGroup(0, dustMapBG);
-        dustMapPass.draw(6, fieldDustCount);
-        dustMapPass.end();
-        dustMapPopulated = dustMapHasContent;
+          timestampWrites: timing.descriptorFor('dustMap'),
+          targetView: targets.dustMapTex.createView(),
+          pipeline: dustMapPipe,
+          bindGroup: dustMapBG,
+          instanceCount: fieldDustCount,
+        });
       }
 
       // JWST dust-view presentation, into its OWN target — runs ADDITIONALLY
