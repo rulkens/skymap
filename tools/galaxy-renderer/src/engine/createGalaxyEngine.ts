@@ -422,10 +422,11 @@ const FADE_REPORT_INTERVAL_MS = 100;
  * lifetime brackets the vertex buffers it produced — the whole triple is torn
  * down together on the next `setExtras`.
  *
- * `fieldGeometry` + `transform` are cached (like the central galaxy's
- * `fieldGeometry`) so `setFieldTuning` can rebuild `fieldMixture` — this
- * extra's world-space analytic mixture, already carried through
- * `transformGalaxyFieldComponent` — without a regenerate.
+ * `fieldGeometry` + `transform` + `starFormation` are cached (like the central
+ * galaxy's `fieldGeometry`/`currentStarFormation`) so `setFieldTuning` can
+ * rebuild `fieldMixture`/`hiiMixture` — this extra's world-space analytic
+ * mixtures, already carried through `transformGalaxyFieldComponent` — without
+ * a regenerate.
  */
 type Extra = {
   starBuf: GPUBuffer;
@@ -435,6 +436,7 @@ type Extra = {
   ubo: GPUBuffer;
   fieldGeometry: GalaxyFieldGeometry;
   transform: Pick<ExtraGalaxySpec, 'pos' | 'scale' | 'rotY' | 'tiltX'>;
+  starFormation: GalaxyStarFormationParams;
   fieldMixture: readonly GalaxyFieldComponent[];
   /** This extra's own HII tier — see `hiiMixture`'s declaration below for why it rides a separate buffer from `fieldMixture`. */
   hiiMixture: readonly GalaxyFieldComponent[];
@@ -1870,15 +1872,10 @@ export async function createGalaxyEngine(
       fieldMixture: buildGalaxyFieldMixture(e.fieldGeometry, fieldTuning).map((c) =>
         transformGalaxyFieldComponent(c, e.transform),
       ),
-      // Extras carry no star-formation params of their own yet (see
-      // `rebuildDustMixture`'s docblock) — `DEFAULT_GALAXY_STAR_FORMATION_PARAMS`
-      // is the same implicit default `buildGalaxyFieldMixture(e.fieldGeometry,
-      // fieldTuning)` used to gate an extra's HII tier on before this tier
-      // owned its own buffer.
       hiiMixture: buildHiiRegions(
         e.fieldGeometry,
         fieldTuning,
-        DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
+        e.starFormation,
         e.fieldGeometry.seed,
       ).map((c) => transformGalaxyFieldComponent(c, e.transform)),
     }));
@@ -1978,12 +1975,14 @@ export async function createGalaxyEngine(
       const extraFieldMixture = buildGalaxyFieldMixture(geometry, fieldTuning).map((c) =>
         transformGalaxyFieldComponent(c, transform),
       );
-      // Same implicit `DEFAULT_GALAXY_STAR_FORMATION_PARAMS` gate
-      // `setFieldTuning`'s extras branch uses — see its own comment for why.
+      // This extra's OWN draw (`randomGalaxyParams` rolls `sfActivity` per
+      // galaxy), never the shared default — the tier is what makes one
+      // background galaxy read as more actively star-forming than the next.
+      const starFormation = spec.params.starFormation ?? DEFAULT_GALAXY_STAR_FORMATION_PARAMS;
       const extraHiiMixture = buildHiiRegions(
         geometry,
         fieldTuning,
-        DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
+        starFormation,
         geometry.seed,
       ).map((c) => transformGalaxyFieldComponent(c, transform));
 
@@ -1995,6 +1994,7 @@ export async function createGalaxyEngine(
         ubo,
         fieldGeometry: geometry,
         transform,
+        starFormation,
         fieldMixture: extraFieldMixture,
         hiiMixture: extraHiiMixture,
       });
