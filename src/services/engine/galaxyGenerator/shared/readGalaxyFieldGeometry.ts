@@ -10,7 +10,7 @@
  * exception — they are a table, not a draw, so they come from `params`.
  */
 import { CATEGORY_CODE } from './packGenerationUniforms';
-import { galaxyPopulationFractions } from './galaxyPopulationFractions';
+import { galaxyPopulationCountShares } from './galaxyPopulationCountShares';
 import { GENERATION_UBO } from './generationUboLayout';
 import { totalStarBudget } from './totalStarBudget';
 import type { GalaxyCategory } from '../../../../@types/galaxy/GalaxyCategory';
@@ -65,7 +65,7 @@ export function readGalaxyFieldGeometry(
   // galaxyFieldMixture.ts), so there is no separate arm weight to carry.
   // Globular clusters are outside the mixture entirely — 90-star knots at
   // random radii are not a smooth field — and outside these shares with it.
-  const fractions = galaxyPopulationFractions(category, params);
+  const fractions = galaxyPopulationCountShares(category, params);
 
   // The packer stores a colour in a vec4's xyz with w unused, so the tint is
   // the first three lanes — `GalaxyFieldComponent.color` and `gen.hiiCore`

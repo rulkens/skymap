@@ -1,5 +1,5 @@
 /**
- * splitStarBudget — turns `galaxyPopulationFractions` into the integer star
+ * splitStarBudget — turns `galaxyPopulationCountShares` into the integer star
  * counts the sprite tier draws. The per-category shares live in that table;
  * all this file adds is the quantisation, which is the one thing a star bag
  * needs and the analytic field must not inherit.
@@ -7,7 +7,7 @@
  * `diskCount` still carries the bar's stars: `carveStarLayout` is what splits
  * them off, and the shader's loop bounds are written against that pair.
  */
-import { galaxyPopulationFractions } from './galaxyPopulationFractions';
+import { galaxyPopulationCountShares } from './galaxyPopulationCountShares';
 import { totalStarBudget } from './totalStarBudget';
 import type { GalaxyCategory } from '../../../../@types/galaxy/GalaxyCategory';
 import type { GalaxyParams } from '../../../../@types/galaxy/GalaxyParams';
@@ -30,7 +30,7 @@ const CUT_ORDER = ['bulgeCount', 'armStarCount', 'diskCount', 'haloCount'] as co
 
 export function splitStarBudget(category: GalaxyCategory, params: GalaxyParams): StarBudget {
   const totalStars = totalStarBudget(params);
-  const fractions = galaxyPopulationFractions(category, params);
+  const fractions = galaxyPopulationCountShares(category, params);
   const shares: ByPopulation = {
     bulgeCount: fractions.bulge,
     armStarCount: fractions.arm,

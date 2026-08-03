@@ -33,7 +33,7 @@
  *    per-cluster loop itself (`POPULATION_IDS.globularCluster`) owns no
  *    output slots and never appears in this layout.
  */
-import { BAR_SHARE_OF_DISK } from './galaxyPopulationFractions';
+import { BAR_SHARE_OF_DISK } from './galaxyPopulationCountShares';
 import { POPULATION_IDS } from './populationIds';
 import type { GalaxyCategory } from '../../../../@types/galaxy/GalaxyCategory';
 import type { GalaxyParams } from '../../../../@types/galaxy/GalaxyParams';

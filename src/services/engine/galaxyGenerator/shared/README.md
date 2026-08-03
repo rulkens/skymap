@@ -10,7 +10,7 @@ whole reason this folder exists: **one galaxy, one geometry, two renderings.**
 ```
 GalaxyParams
   │  classifyHubbleType          params.type ("SBb") → GalaxyCategory ("barred")
-  │  galaxyPopulationFractions   category → bulge/bar/disk/arm/halo shares of the light
+  │  galaxyPopulationCountShares category → bulge/bar/disk/arm/halo shares of star COUNT
   │  splitStarBudget             shares × totalStarBudget → StarBudget (v1's counts)
   │  carveStarLayout             category+budget → GenerationLayout (popId ranges, strides)
   │  carveDustLayout             ditto for dust; empty for ellipticals
@@ -43,13 +43,15 @@ Grepping the import graph alone will tell you this folder is v1-only. It is not.
 `v1/README.md`); an edge in that direction takes v2 down with it. The dependency
 runs `v1 → shared` and `v2 ← shared` (by data), never back.
 
-**The population weights are a table, not a star count.**
-`galaxyPopulationFractions` is the one source; `splitStarBudget` multiplies it by
-the sprite budget and `readGalaxyFieldGeometry` reads it as-is, so `starCount`
-cannot move the field's mixture. The bar's share is carved out of the disk's by
-`BAR_SHARE_OF_DISK`, which `carveStarLayout` spends on the sprite side — change
-one and you have changed both, which is the point. Globular-cluster stars are
-outside the table entirely: 90-star knots at random radii are not a smooth field.
+**The population weights are a count-share table, not a star count — and not
+light either.** `galaxyPopulationCountShares` is the one source; `splitStarBudget`
+multiplies it by the sprite budget and `readGalaxyFieldGeometry` reads it as-is,
+so `starCount` cannot move the field's mixture. The bar's share is carved out of
+the disk's by `BAR_SHARE_OF_DISK`, which `carveStarLayout` spends on the sprite
+side — change one and you have changed both, which is the point. Globular-cluster
+stars are outside the table entirely: 90-star knots at random radii are not a
+smooth field. Turning a count share into a LIGHT share takes a second, separate
+multiply — see `galaxyPopulationCountShares.ts`'s docblock for that pair.
 
 **`modelledStars` is still a star count, deliberately.** It is what v2's
 `emissionScale` and `hiiRegions`' `tierFlux` calibrate absolute flux against, so

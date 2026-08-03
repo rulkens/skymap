@@ -56,7 +56,7 @@ describe('readGalaxyFieldGeometry', () => {
   });
 
   // The field's weights and the sprite tier's counts are two readings of one
-  // table (`galaxyPopulationFractions`). Nothing in the type system says so —
+  // table (`galaxyPopulationCountShares`). Nothing in the type system says so —
   // a bar carve or a category share changed on one side only would drift the
   // two apart silently, and the field's mixture would stop matching the bag it
   // is calibrated against.

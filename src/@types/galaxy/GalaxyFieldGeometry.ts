@@ -2,7 +2,7 @@
  * GalaxyFieldGeometry — everything the analytic field mixture needs about one
  * generated galaxy: the derived lengths the generation shader reads out of its
  * UBO, the orientations its RNG already drew, and each population's share of
- * the galaxy's light.
+ * the modelled star COUNT (not light — see `GalaxyPopulationCountShares`).
  *
  * It exists so the mixture is a function of what generation ACTUALLY ran with
  * rather than of `GalaxyParams` re-derived a second time — the bar and bulge
