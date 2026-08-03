@@ -55,6 +55,12 @@ const SF_MAP_MIN_SPAN_RATIO = 2;
  * visible hard edge mid-arm (`outerRadius` ~10.5 vs per-arm `fadeRadius`
  * 11.3-15.5, `armFadeEnvelope` still 20-97% of peak there, per arm).
  *
+ * `fadeRadius`, NOT `armSpanEnd`: the grid is a texel contract the automaton
+ * bake, the orientation readback and the unshear pack all resolve
+ * independently, and only an `sfMap` change rebuilds them — a live
+ * `armTaperEndFrac` drag would leave them disagreeing silently. An arm
+ * trailing past `fadeRadius` therefore carries no map-seeded dust.
+ *
  * COST: rings are log-spaced over [rMin, rMax] at a fixed `SF_MAP_RINGS`, so
  * widening rMax spends radial resolution on the newly-covered outer arm —
  * roughly 20% fewer rings across the inner disc for ~43% more coverage.
@@ -111,7 +117,7 @@ export function buildGalaxySfMapArmForcing(
     const sigmaAcross = Math.max(armCrossSigma(r, geometry, tuning), 1e-4);
 
     for (const arm of geometry.arms) {
-      const envelope = armFadeEnvelope(r, geometry, arm);
+      const envelope = armFadeEnvelope(r, geometry, arm, tuning);
       if (envelope <= 0) continue;
       const point = armRidgeCurvePoint(logR, geometry, arm);
       const ridgeAngle = Math.atan2(point[2], point[0]);

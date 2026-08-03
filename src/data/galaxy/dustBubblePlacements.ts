@@ -66,19 +66,21 @@ function armReaches(
   armRadius: number,
   geometry: GalaxyFieldGeometry,
   arm: GalaxyFieldArmRecord,
+  tuning: GalaxyFieldTuning,
 ): boolean {
-  return armFadeEnvelope(armRadius, geometry, arm) > 0;
+  return armFadeEnvelope(armRadius, geometry, arm, tuning) > 0;
 }
 
 export function buildDustBubblePlacements(
   geometry: GalaxyFieldGeometry,
   dust: GalaxyDustParams,
   starFormation: GalaxyStarFormationParams,
+  tuning: GalaxyFieldTuning,
   seed: number,
 ): readonly DustBubblePlacement[] {
   if (dust.tau <= 0 || geometry.numArms <= 0 || starFormation.bubbleScale <= 0) return [];
 
-  const events = buildSfEventCatalog(geometry, starFormation, seed);
+  const events = buildSfEventCatalog(geometry, starFormation, tuning, seed);
   const out: DustBubblePlacement[] = [];
   for (const event of events) {
     if (event.age01 <= HII_AGE_GATE) continue;
@@ -95,7 +97,7 @@ export function buildDustBubblePlacements(
     const radius = pcToUnits(radiusPc) * starFormation.bubbleScale;
     if (radius <= 0) continue;
 
-    if (!armReaches(armRadius, geometry, arm)) continue;
+    if (!armReaches(armRadius, geometry, arm, tuning)) continue;
 
     out.push({ center, radius });
   }
@@ -128,7 +130,7 @@ export function buildHiiCavityPlacements(
   if (!tuning.hiiEnabled || tuning.hiiCavityScale <= 0) return [];
   if (dust.tau <= 0 || geometry.numArms <= 0) return [];
 
-  const events = buildSfEventCatalog(geometry, starFormation, seed);
+  const events = buildSfEventCatalog(geometry, starFormation, tuning, seed);
   const out: DustBubblePlacement[] = [];
   for (const event of events) {
     if (event.age01 > HII_AGE_GATE) continue;
@@ -141,7 +143,7 @@ export function buildHiiCavityPlacements(
       hiiRadiusUnits(hiiLuminosityOf(event), tuning.hiiRadiusScale) * tuning.hiiCavityScale;
     if (radius <= 0) continue;
 
-    if (!armReaches(armRadius, geometry, arm)) continue;
+    if (!armReaches(armRadius, geometry, arm, tuning)) continue;
 
     out.push({ center, radius });
   }

@@ -1203,6 +1203,7 @@ export async function createGalaxyEngine(
           fieldGeometry,
           currentDust(),
           currentStarFormation(),
+          fieldTuning,
           currentSeed(),
         )
       : [];

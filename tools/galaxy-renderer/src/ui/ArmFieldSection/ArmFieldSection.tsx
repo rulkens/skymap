@@ -58,6 +58,26 @@ function ArmFieldSection(): ReactNode {
           info="The arms' own exponential scale length, in units of the disc's. 1 holds contrast K flat with radius, so the arms fade exactly as fast as the disc and stop before it does. Above 1 the arms outrun the disc and K grows outward, which is the observed direction — arm light is gas and young stars, whose discs are the more extended ones. Governs the ridge chain and the sprite cloud together."
         />
         <ParamSlider
+          label="Taper start"
+          value={fieldTuning.armTaperStartFrac}
+          min={0.1}
+          max={1.2}
+          step={0.05}
+          format={(v) => `${v.toFixed(2)}x`}
+          onChange={(v) => dispatch(fieldTuningPatched({ armTaperStartFrac: v }))}
+          info="Where each arm's outer taper begins, as a multiple of that arm's own fade radius. Below ~0.6 the taper starts falling faster than the brightness law it multiplies and becomes a second radial dimming no other knob can reach past."
+        />
+        <ParamSlider
+          label="Taper end"
+          value={fieldTuning.armTaperEndFrac}
+          min={0.5}
+          max={2}
+          step={0.05}
+          format={(v) => `${v.toFixed(2)}x`}
+          onChange={(v) => dispatch(fieldTuningPatched({ armTaperEndFrac: v }))}
+          info="Where each arm ends, as a multiple of the fade radius the 'Arm edge falloff' generation knob sizes. Blobs, sprites and SF events are all placed out to here, so above 1 the arms genuinely trail further — but the SF map's grid stops at the fade radius, so the trail carries no map-seeded dust."
+        />
+        <ParamSlider
           label="Blob sharpness"
           value={fieldTuning.armBlobSharpness}
           min={1}

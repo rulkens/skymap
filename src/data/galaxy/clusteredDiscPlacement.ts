@@ -75,6 +75,14 @@ export type ClusteredDiscPlacementMode =
       /** The lane/ridge frame at one arm's log-radius, or null when this draw has no valid point there (falls back to the smooth disc). */
       readonly laneFrameAt: (arm: GalaxyFieldArmRecord, logR: number) => LaneFrame | null;
       /**
+       * Outer radius of this arm's lane — proposals are drawn over
+       * `[ARM_SPAN_START_FRAC * armStartRadius, this]`. A callback, and the
+       * same `armSpanEnd` the acceptance callback's envelope tapers to: a
+       * sampler bounded short of the envelope would fade a population it
+       * never placed out there.
+       */
+      readonly laneEndRadius: (arm: GalaxyFieldArmRecord) => number;
+      /**
        * Rejection-sampling acceptance for a complex proposed at this radius on
        * this arm, in [0,1] — the along-arm placement density, up to a constant.
        * MUST NOT exceed 1: rejection sampling silently flattens the excess into
@@ -250,7 +258,7 @@ export function buildClusteredDiscPlacement<TPayload>(
     const armIndex = pickWeighted(rng, armWeights, armWeightSum);
     const arm = geometry.arms[armIndex]!;
     const logMin = Math.log(ARM_SPAN_START_FRAC);
-    const logMax = Math.log(arm.fadeRadius / geometry.armStartRadius);
+    const logMax = Math.log(mode.laneEndRadius(arm) / geometry.armStartRadius);
     if (!(logMax > logMin)) return null;
 
     let logR = logMin;

@@ -35,6 +35,15 @@ export type GalaxyFieldTuning = {
    */
   readonly armExcessScaleRatio: number;
   /**
+   * Where an arm's outer taper begins and reaches zero, each as a fraction of
+   * that arm's own `fadeRadius`. The END is the arm's radial extent: every
+   * tier places over `[ARM_SPAN_START_FRAC * armStartRadius, armSpanEnd]`, so
+   * above 1 the whole arm system trails past `fadeRadius` rather than
+   * terminating there. See `armFadeEnvelope`.
+   */
+  readonly armTaperStartFrac: number;
+  readonly armTaperEndFrac: number;
+  /**
    * Debug knob: divides all three of an arm blob's sigmas, holding its flux,
    * so the ridge breaks into countable oriented blobs. 1 is the real field.
    */
@@ -60,7 +69,7 @@ export type GalaxyFieldTuning = {
   readonly armCloudCoverage: number;
   /**
    * Tilts the arm cloud's sprites outward along the arm: the placement
-   * density gains a `(radius / outermost fadeRadius) ** bias` factor, so 0
+   * density gains a `(radius / outermost armSpanEnd) ** bias` factor, so 0
    * is pure coverage-demand placement and larger values starve the inner
    * arm, where sprites are small, crowded, and lost under the bulge anyway.
    *

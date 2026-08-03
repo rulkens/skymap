@@ -133,7 +133,7 @@ function planRegions(
   starFormation: GalaxyStarFormationParams,
   seed: number,
 ): readonly RegionPlan[] {
-  const events = buildSfEventCatalog(geometry, starFormation, seed);
+  const events = buildSfEventCatalog(geometry, starFormation, tuning, seed);
   const clusterOn = tuning.hiiClusterStrength > 0;
 
   const all: RegionPlan[] = [];

@@ -23,6 +23,7 @@ import {
   armFadeEnvelope,
   armRidgeCurvePoint,
   armRidgeFrameAt,
+  armSpanEnd,
   cross3,
 } from './armRidgeGeometry';
 import { DEFAULT_GALAXY_SF_MAP_PARAMS } from './defaultGalaxySfMapParams';
@@ -305,6 +306,19 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
   // arms that stop before the disc does. Not a measured ratio; see
   // `armExcessSurfaceShape`.
   armExcessScaleRatio: 1.8,
+  // The remaining 40% of the arm's span is ~2x the arm excess's own scale
+  // length on every shipped preset, so the taper never falls faster than the
+  // brightness law it multiplies. NOT `armFullRadius` (0.42 * fadeRadius),
+  // which `generate.wesl`'s sprite copy of this envelope still uses: at 0.42
+  // the smoothstep is a SECOND radial brightness law on top of
+  // `armExcessSurfaceShape` — it alone cost the Milky Way preset's arms a
+  // factor ~2 by the disc edge and drove them to exactly zero half a disc
+  // radius later, while the disc's own light ran on to ~1.3 * outerRadius.
+  armTaperStartFrac: 0.6,
+  // 1 = the arm ends at its own `fadeRadius`, which is what `armFalloff`
+  // sizes. Above 1 trails it further out; the sfMap grid does NOT follow (see
+  // `sfMapGridRadius`), so the trail carries no SF-map-seeded dust.
+  armTaperEndFrac: 1,
   armBlobSharpness: 1,
   armCloudEnabled: true,
   // The tier is under active tuning, so it defaults ON at a visible share
@@ -616,7 +630,7 @@ function pushArmRidges(
 
   for (const arm of geometry.arms) {
     const rStart = armStartRadius * ARM_SPAN_START_FRAC;
-    const rEnd = arm.fadeRadius;
+    const rEnd = armSpanEnd(arm, tuning);
     if (rEnd <= rStart) continue;
     const logStart = Math.log(rStart / armStartRadius);
     const logEnd = Math.log(rEnd / armStartRadius);
@@ -647,7 +661,7 @@ function pushArmRidges(
           ? distance3(centers[k]!, centers[k + 1]!)
           : distance3(centers[k - 1]!, centers[k]!);
       spacings.push(spacing);
-      const fade = armFadeEnvelope(radii[k]!, geometry, arm);
+      const fade = armFadeEnvelope(radii[k]!, geometry, arm, tuning);
       const clump = armClumpMod(logRs[k]!, geometry, arm);
       const survival = armSurvival(clump, geometry);
       const mod = fade * clump * survival;

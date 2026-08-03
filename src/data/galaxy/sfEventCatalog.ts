@@ -13,9 +13,10 @@ import {
   armCrossSigma,
   armFadeEnvelope,
   armRidgeCurvePoint,
+  armSpanEnd,
 } from './armRidgeGeometry';
-import { DEFAULT_GALAXY_FIELD_TUNING } from './galaxyFieldMixture';
 import type { GalaxyFieldGeometry } from '../../@types/galaxy/GalaxyFieldGeometry';
+import type { GalaxyFieldTuning } from '../../@types/galaxy/GalaxyFieldTuning';
 import type { GalaxyStarFormationParams } from '../../@types/galaxy/GalaxyStarFormationParams';
 import type { SfEvent } from '../../@types/galaxy/SfEvent';
 
@@ -37,6 +38,7 @@ function distance3(a: readonly number[], b: readonly number[]): number {
 export function buildSfEventCatalog(
   geometry: GalaxyFieldGeometry,
   starFormation: GalaxyStarFormationParams,
+  tuning: GalaxyFieldTuning,
   seed: number,
 ): readonly SfEvent[] {
   const rng = mulberry32(seed);
@@ -44,7 +46,7 @@ export function buildSfEventCatalog(
 
   geometry.arms.forEach((arm, armIndex) => {
     const logStart = Math.log(ARM_SPAN_START_FRAC);
-    const logEnd = Math.log(arm.fadeRadius / geometry.armStartRadius);
+    const logEnd = Math.log(armSpanEnd(arm, tuning) / geometry.armStartRadius);
     if (logEnd <= logStart) return;
     const step = (logEnd - logStart) / STEPS_PER_ARM;
     // Midpoint sample per step; arc length between consecutive step edges
@@ -62,14 +64,13 @@ export function buildSfEventCatalog(
         RATE_SCALE *
         starFormation.sfActivity *
         (1 - 0.75 * arm.age) *
-        armFadeEnvelope(radius, geometry, arm) *
+        armFadeEnvelope(radius, geometry, arm, tuning) *
         arcLength;
 
       if (rng() >= rate) continue;
       // Sum-of-2-uniforms is a cheap gaussian-ish draw (triangular, mean 0)
       // that keeps events inside the arm rather than at its sigma edge.
-      const acrossOffset =
-        (rng() + rng() - 1) * armCrossSigma(radius, geometry, DEFAULT_GALAXY_FIELD_TUNING);
+      const acrossOffset = (rng() + rng() - 1) * armCrossSigma(radius, geometry, tuning);
       events.push({ armIndex, logR, acrossOffset, age01: rng(), strength: 0.5 + rng() });
     }
   });

@@ -30,6 +30,7 @@ import {
   armFadeEnvelope,
   armRidgeCurvePoint,
   armRidgeFrameAt,
+  armSpanEnd,
 } from './armRidgeGeometry';
 import { buildClusteredDiscPlacement, type CloudFrame } from './clusteredDiscPlacement';
 import { DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './discSurfaceFit';
@@ -135,7 +136,7 @@ export function deriveArmCloudCount(
   let total = 0;
   for (const arm of geometry.arms) {
     const rStart = geometry.armStartRadius * ARM_SPAN_START_FRAC;
-    const rEnd = arm.fadeRadius;
+    const rEnd = armSpanEnd(arm, tuning);
     if (rEnd <= rStart) continue;
     const logStart = Math.log(rStart / geometry.armStartRadius);
     const logEnd = Math.log(rEnd / geometry.armStartRadius);
@@ -143,14 +144,14 @@ export function deriveArmCloudCount(
 
     let prevPoint = armRidgeCurvePoint(logStart, geometry, arm);
     let prevIntegrand =
-      armFadeEnvelope(rStart, geometry, arm) / armCrossSigma(rStart, geometry, tuning);
+      armFadeEnvelope(rStart, geometry, arm, tuning) / armCrossSigma(rStart, geometry, tuning);
     let armIntegral = 0;
     for (let i = 1; i < ARM_COVERAGE_SAMPLES; i++) {
       const logR = logStart + duSample * i;
       const radius = geometry.armStartRadius * Math.exp(logR);
       const point = armRidgeCurvePoint(logR, geometry, arm);
       const integrand =
-        armFadeEnvelope(radius, geometry, arm) / armCrossSigma(radius, geometry, tuning);
+        armFadeEnvelope(radius, geometry, arm, tuning) / armCrossSigma(radius, geometry, tuning);
       armIntegral += 0.5 * (prevIntegrand + integrand) * distance3(prevPoint, point);
       prevPoint = point;
       prevIntegrand = integrand;
@@ -163,20 +164,21 @@ export function deriveArmCloudCount(
 type CloudParticle = { center: Vec3; readonly frame: CloudFrame; readonly radius: number };
 
 /**
- * Reference radius for the radial tilt: the outermost arm's own fade radius,
- * so `(radius / this) ** bias` never exceeds 1 anywhere a complex can be
+ * Reference radius for the radial tilt: the outermost arm's own span end, so
+ * `(radius / this) ** bias` never exceeds 1 anywhere a complex can be
  * proposed. That bound is load-bearing — the sampler rejection-tests against
  * this weight, and a weight above 1 silently flattens into a uniform tail
- * instead of erroring.
+ * instead of erroring, which is why it reads `armSpanEnd` rather than
+ * `fadeRadius`: the two part company once `armTaperEndFrac` goes above 1.
  *
- * ONE reference across all arms, not each arm's own fadeRadius, so the tilt
- * cannot redistribute light BETWEEN arms of different lengths: a per-arm
- * reference would normalise each arm's tilt separately and hand the short
- * arms a brightness offset that grows with `bias`.
+ * ONE reference across all arms, not each arm's own end, so the tilt cannot
+ * redistribute light BETWEEN arms of different lengths: a per-arm reference
+ * would normalise each arm's tilt separately and hand the short arms a
+ * brightness offset that grows with `bias`.
  */
-function tiltReferenceRadius(geometry: GalaxyFieldGeometry): number {
+function tiltReferenceRadius(geometry: GalaxyFieldGeometry, tuning: GalaxyFieldTuning): number {
   let max = 0;
-  for (const arm of geometry.arms) max = Math.max(max, arm.fadeRadius);
+  for (const arm of geometry.arms) max = Math.max(max, armSpanEnd(arm, tuning));
   return max > 0 ? max : geometry.armStartRadius;
 }
 
@@ -225,7 +227,7 @@ export function buildArmParticleCloud(
 
   const rng = mulberry32(seed ^ 0x41524d43); // "ARMC"
   const bias = Math.max(0, tuning.armCloudRadialBias);
-  const rTilt = tiltReferenceRadius(geometry);
+  const rTilt = tiltReferenceRadius(geometry, tuning);
 
   const particles: CloudParticle[] = buildClusteredDiscPlacement<{ radius: number }>(
     {
@@ -247,8 +249,9 @@ export function buildArmParticleCloud(
         kind: 'analytic',
         armBias: 1,
         laneFrameAt: (arm, logR) => armRidgeFrameAt(logR, geometry, arm),
+        laneEndRadius: (arm) => armSpanEnd(arm, tuning),
         laneAcceptance: (arm, radius) =>
-          armFadeEnvelope(radius, geometry, arm) * radialTilt(radius, rTilt, bias),
+          armFadeEnvelope(radius, geometry, arm, tuning) * radialTilt(radius, rTilt, bias),
         crossLaneSigma: (radius) => armCrossSigma(radius, geometry, tuning),
       },
     },
