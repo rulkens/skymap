@@ -184,7 +184,6 @@
  *    determinism contract that DOES hold is CPU-free: same params in, same
  *    GPU buffer contents out, every time.
  */
-import { mat4 } from 'wgpu-matrix';
 
 import type { GalaxyEngineHandle } from '../../@types/engine/GalaxyEngineHandle';
 import type { GalaxyEngineOptions } from '../../@types/engine/GalaxyEngineOptions';
@@ -210,16 +209,14 @@ import { createGpuTimingService } from '../../../../src/services/gpu/timing/gpuT
 import { hasUrlGate } from '../../../../src/utils/url/hasUrlGate';
 
 import { createFrameTimer } from './createFrameTimer';
-import { deriveMilkyWayFade } from './deriveMilkyWayFade';
 import { createGalaxyRenderTargets } from './createGalaxyRenderTargets';
 import { createOrbitCameraInput } from './createOrbitCameraInput';
 import { createPassTimingWindows } from './createPassTimingWindows';
 import { createSfMapAutomaton } from './createSfMapAutomaton';
 import { createSfMapOrientation } from './createSfMapOrientation';
 import { createReadbackQueue } from './createReadbackQueue';
-import { debugGalaxyWeight } from './debugGalaxyWeight';
+import { deriveFrameView } from './deriveFrameView';
 import { decodeOrientationTexels } from './decodeOrientationTexels';
-import { dustSliceEdges } from './dustSliceEdges';
 import { orientationCoherenceStats } from './orientationCoherenceStats';
 import { BUBBLE_RECORD_FLOATS, packBubbleInstances } from './packBubbleInstances';
 import { sampleLuminanceStats } from './sampleLuminanceStats';
@@ -232,12 +229,7 @@ import {
   packFieldComponents,
   packFieldHeaderUniforms,
 } from './packFieldUniforms';
-import type {
-  DebugViewWeights,
-  FieldDustNoise,
-  FieldDustSlices,
-  SfMapChannelWeights,
-} from './packFieldUniforms';
+import type { FieldDustNoise, FieldDustSlices } from './packFieldUniforms';
 import { createGenerationPipelines } from '../../../../src/services/gpu/galaxy/createGenerationPipelines';
 import { encodeGeneration } from '../../../../src/services/gpu/galaxy/encodeGeneration';
 import { packGenerationUniforms } from '../../../../src/services/gpu/galaxy/packGenerationUniforms';
@@ -2260,53 +2252,33 @@ export async function createGalaxyEngine(
     prev = now;
 
     const { eye, target, fov, dist } = camera.update(dt, now);
-    const view = mat4.lookAt(eye, target, [0, 1, 0]);
-    // Near/far track orbit distance, the same adaptation the app's NEAR0 slab
-    // makes and for the same reason: a fixed near plane slices through the disc
-    // once you descend into it. There is no depth attachment, so the usual
-    // precision cost of a tiny near plane does not apply — these only clip.
-    // Far keeps the whole cloud in view from inside the disc as well as from
-    // outside it; the sprite shaders clamp clip-z against exactly this hazard.
-    const near = Math.max(1e-4, dist * 0.002);
-    const far = dist * 2 + 200;
-    const aspect = canvas.width / canvas.height;
-    const proj = mat4.perspective(fov, aspect, near, far);
     const shiftX = camera.shiftX(canvas.clientWidth);
-    proj[8] = shiftX; // lens shift to centre in the visible area
-    const vp = mat4.multiply(proj, view);
-
-    // The app's visibility fade, against this frame's camera. It multiplies
-    // into BOTH representations of the cloud below, so the two keep summing to
-    // the same image as they fade — the comparison the spike exists for has to
-    // survive the fade, not be interrupted by it. `canvas.height`, not the
-    // aggregate's, for the same reason the app passes `ctx.canvasSize.height`:
-    // the band asks how big the disc looks to the USER.
-    const fade = deriveMilkyWayFade(eye, fov, canvas.height, render);
-    lastFade = fade;
-
-    // Combined debug-view dimming weight — see debugGalaxyWeight.ts for why it
-    // is MAX not SUM. Shared by the sprite fadeAlpha below AND every
-    // packFieldHeaderUniforms call this frame (the field header and the HII
-    // header), so the galaxy dims by exactly the same amount whichever
-    // representation is drawing it.
-    const galaxyWeight = debugGalaxyWeight(render);
-    const debugView: DebugViewWeights = {
-      dustViewIntensity: render.dustViewIntensity,
-      sfMapViewIntensity: render.sfMapViewIntensity,
-      orientationViewIntensity: render.orientationViewIntensity,
+    // Every camera-and-settings derivation for this frame, in one pure call —
+    // the sprite passes and BOTH field headers below read the same objects out
+    // of it, which is what keeps the two representations of the cloud summing
+    // to the same image as they fade and dim.
+    const {
+      view,
+      proj,
+      viewProj: vp,
+      aspect,
+      fade,
       galaxyWeight,
-    };
-    // Per-channel isolation for the SF-map view — orthogonal to
-    // debugView.sfMapViewIntensity (the whole view's crossfade weight), see
-    // io.wesl's sfMapChannels doc. Shared with the HII header below for the
-    // same reason debugView is: both packFieldHeaderUniforms calls write the
-    // same struct shape, even though only sfMapPresent.wesl's own draw
-    // (bound to the field pipeline, not HII's) ever reads this lane.
-    const sfMapChannels: SfMapChannelWeights = {
-      gasWeight: render.sfMapGasWeight,
-      recentSfWeight: render.sfMapRecentWeight,
-      activityWeight: render.sfMapActivityWeight,
-    };
+      debugView,
+      sfMapChannels,
+      dustSlices,
+      analyticExposure,
+    } = deriveFrameView({
+      eye,
+      target,
+      fov,
+      dist,
+      shiftX,
+      viewportPx: [canvas.width, canvas.height],
+      render,
+      dustReachR: currentDustReachR,
+    });
+    lastFade = fade;
 
     // Two packs of the same struct, differing only in `viewportPx`: the star
     // pass gets the AGGREGATE's dimensions (what `stars.wesl` clamps sprite
@@ -2330,27 +2302,6 @@ export async function createGalaxyEngine(
       cloudData,
     );
     device.queue.writeBuffer(dustUbo, 0, cloudData);
-    // Depth-slice edges for the dust map (io.wesl's dustSlices doc) — VIEW-
-    // dependent, so recomputed every frame unlike `currentDustReachR`. D is
-    // the eye's distance to the primary galaxy's centre (the tool's origin,
-    // not the orbit `target` — the two differ once the camera pans); the
-    // geometric spacing between tNear and tFar is what turns linear from the
-    // outside of the galaxy and logarithmic from inside it — see io.wesl for
-    // the full derivation of the 0.02*R floor.
-    const dustSlices = dustSliceEdges(Math.hypot(eye[0], eye[1], eye[2]), currentDustReachR);
-
-    // The mixture is calibrated to the sprite field's total flux in record
-    // units (see `emissionScale`), which leaves the star pass's own two
-    // multipliers to apply here: its per-sprite `exposure`, and
-    // `starSizeScale` SQUARED because a sprite's light goes as its quad area.
-    // Multiplying them in is what keeps `analyticExposure` 1.0 meaning parity
-    // as those sliders move, rather than only at defaults. Shared by the HII
-    // header below: the HII tier's own flux calibration (`hiiRegions.ts`'s
-    // `tierFlux`) rides the same star-count x size^2 currency `emissionScale`
-    // does, so it owes the same live sliders.
-    const analyticExposure =
-      render.analyticExposure * render.starIntensity * render.sizeScale ** 2 * fade.alpha;
-
     // The analytic field's ray basis. `aspect` is the PROJECTION's (the
     // canvas's), not the aggregate's: the fullscreen triangle covers the
     // aggregate, but the frustum it must reconstruct is the one `proj` was
