@@ -214,6 +214,7 @@ import { createOrbitCameraInput } from './camera/createOrbitCameraInput';
 import { createPassTimingWindows } from './timing/createPassTimingWindows';
 import { beginClearPass } from './passes/beginClearPass';
 import { encodeDustPresentPass } from './passes/encodeDustPresentPass';
+import { encodeSplatPass } from './passes/encodeSplatPass';
 import { createSfMapAutomaton } from './sfMap/createSfMapAutomaton';
 import { createSfMapOrientation } from './sfMap/createSfMapOrientation';
 import { createReadbackQueue } from './gpu/createReadbackQueue';
@@ -2478,15 +2479,6 @@ export async function createGalaxyEngine(
         });
       }
 
-      const fieldWrites = timing.descriptorFor('field');
-      const fieldPass = beginClearPass(
-        enc,
-        'galaxy:fieldPass',
-        targets.fieldTex.createView(),
-        fieldWrites,
-      );
-      fieldPass.setPipeline(splatPipe);
-      fieldPass.setBindGroup(0, splatBG);
       // One draw for the WHOLE emission list `repackFieldComponents` wrote —
       // central galaxy's components then every extra's — so the field pass's
       // timing slot honestly reports the analytic cost of everything on
@@ -2495,28 +2487,34 @@ export async function createGalaxyEngine(
       // own quad, only read from inside a primary emission fragment. Always
       // runs now (no debug-view gate) — splat.wesl's fs dims its own output
       // through debugView.w, the same combined weight the sprites dim by.
-      fieldPass.draw(6, fieldEmissionCount);
-      fieldPass.end();
+      encodeSplatPass({
+        enc,
+        timing,
+        label: 'galaxy:fieldPass',
+        slot: 'field',
+        targetView: targets.fieldTex.createView(),
+        pipeline: splatPipe,
+        bindGroup: splatBG,
+        instanceCount: fieldEmissionCount,
+      });
 
-      // The HII tier's own pass, same shape as the field pass just above
-      // (same `splatPipe`, a different bind group and target) — see
-      // `hiiTex`'s declaration comment for why it does not share either.
+      // The HII tier's own pass — see `hiiTex`'s declaration comment for why
+      // it shares neither the field's bind group nor its target.
       // Gated only on `hiiEmissionCount > 0` now — the old `!render.dustView`
       // half of this existed because the field pass used to skip entirely
       // under the JWST view, leaving `hiiTex` stale; the field pass no longer
       // skips, so that concern is gone.
       if (hiiEmissionCount > 0) {
-        const hiiWrites = timing.descriptorFor('hii');
-        const hiiPass = beginClearPass(
+        encodeSplatPass({
           enc,
-          'galaxy:hiiPass',
-          targets.hiiTex.createView(),
-          hiiWrites,
-        );
-        hiiPass.setPipeline(splatPipe);
-        hiiPass.setBindGroup(0, hiiBG);
-        hiiPass.draw(6, hiiEmissionCount);
-        hiiPass.end();
+          timing,
+          label: 'galaxy:hiiPass',
+          slot: 'hii',
+          targetView: targets.hiiTex.createView(),
+          pipeline: splatPipe,
+          bindGroup: hiiBG,
+          instanceCount: hiiEmissionCount,
+        });
       }
     }
     // Scene pass: the aggregate folded into HDR, then transmittance dust over
