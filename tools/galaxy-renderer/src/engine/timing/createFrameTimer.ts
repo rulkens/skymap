@@ -1,6 +1,9 @@
 /**
  * createFrameTimer — a fixed-length ring of recent frame deltas, read as a
- * median.
+ * median. Fed timestamps rather than deltas, so the previous-callback clock
+ * lives here: the engine's OTHER now-difference (`drawFrame`'s clamped camera
+ * dt) must stay separate, and the two are easier to conflate side by side than
+ * one field apart.
  *
  * ### Why a median and not the latest delta
  *
@@ -28,15 +31,23 @@
  * @param windowFrames how many recent deltas the median is taken over.
  */
 export function createFrameTimer(windowFrames: number): {
-  push(deltaMs: number): void;
+  mark(nowMs: number): void;
   medianMs(): number;
 } {
   const samples: number[] = [];
+  // 0 marks "no previous callback": the first mark has nothing to subtract
+  // from, and seeding from `performance.now()` at construction would instead
+  // enter engine boot into the window as a frame.
+  let lastMs = 0;
 
   return {
-    push(deltaMs: number): void {
-      samples.push(deltaMs);
-      if (samples.length > windowFrames) samples.shift();
+    /** One frame callback's timestamp. Deltas are UNCLAMPED — an outlier belongs in the window; the median is what rejects it. */
+    mark(nowMs: number): void {
+      if (lastMs !== 0) {
+        samples.push(nowMs - lastMs);
+        if (samples.length > windowFrames) samples.shift();
+      }
+      lastMs = nowMs;
     },
     /** 0 until at least one delta has been recorded. */
     medianMs(): number {

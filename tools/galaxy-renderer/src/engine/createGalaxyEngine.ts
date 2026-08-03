@@ -209,7 +209,9 @@ import { createGpuTimingService } from '../../../../src/services/gpu/timing/gpuT
 import { hasUrlGate } from '../../../../src/utils/url/hasUrlGate';
 
 import { createFrameTimer } from './timing/createFrameTimer';
+import { createReportThrottle } from './timing/createReportThrottle';
 import { createKeyedRebuild } from './createKeyedRebuild';
+import { createRafLoop } from './createRafLoop';
 import { createGalaxyRenderTargets } from './gpu/createGalaxyRenderTargets';
 import type { TargetDivisors } from './gpu/createGalaxyRenderTargets';
 import { createOrbitCameraInput } from './camera/createOrbitCameraInput';
@@ -1813,8 +1815,8 @@ export async function createGalaxyEngine(
 
   // ---- perf instrumentation (see "Measuring it" in the header) ----
 
-  // The honest instrument: wall time between consecutive rAF callbacks. Fed
-  // from `loop` rather than `drawFrame`, so the matcher's offscreen frames
+  // The honest instrument: wall time between consecutive rAF callbacks. Marked
+  // from `rafLoop` rather than `drawFrame`, so the matcher's offscreen frames
   // (`sample`, `grab`, `step`) never enter the window — those render off the
   // rAF cadence and would read as impossibly fast frames.
   const frameTimer = createFrameTimer(FRAME_WINDOW);
@@ -1999,19 +2001,19 @@ export async function createGalaxyEngine(
   }
 
   // ---- frame loop (galaxy-engine.js:266-345) ----
-  let raf = 0;
-  let running = true;
+  // `drawFrame`'s own clock, and NOT the perf median's. This one is clamped
+  // and advances on the offscreen paths too (`step`, `sample`, `grab`);
+  // `createFrameTimer`'s is unclamped and advances only on rAF callbacks.
+  // Folding them would silently change animation timing under a frame hitch.
   let prev = performance.now();
-  // Last frame's fade, published by `loop` on its own cadence. Null until the
-  // first `drawFrame`; the offscreen paths (`sample`, `grab`, `step`) write it
-  // too, which is harmless — they render the same camera the on-screen frame
-  // does.
+  // Last frame's fade, published by `rafLoop` on its own cadence. Null until the
+  // first `drawFrame`; the offscreen paths write it too, which is harmless —
+  // they render the same camera the on-screen frame does.
   let lastFade: MilkyWayFadeReadout | null = null;
 
   function drawFrame(now: number): void {
     // Clamped so a long stall (tab restore, shader recompile) can't teleport
-    // the damped camera. The perf median deliberately reads the UNCLAMPED rAF
-    // delta instead — see `loop`.
+    // the damped camera.
     const dt = Math.min(0.05, (now - prev) / 1000);
     prev = now;
 
@@ -2341,30 +2343,17 @@ export async function createGalaxyEngine(
     device.queue.submit([enc.finish()]);
   }
 
-  // The rAF-delta clock. `lastRafMs` starts at 0 to mark "no previous
-  // callback": the first tick has nothing to subtract from, and `performance
-  // .now()` at construction would instead measure engine boot as a frame.
-  let lastRafMs = 0;
-  let lastPerfReportMs = 0;
-  let lastFadeReportMs = 0;
+  // Both readouts drive React state, so a per-frame dispatch would put the
+  // readout's own re-render inside the frame it is describing.
+  const perfReport = createReportThrottle(PERF_REPORT_INTERVAL_MS);
+  const fadeReport = createReportThrottle(FADE_REPORT_INTERVAL_MS);
 
-  function loop(now: number): void {
-    if (!running) return;
-    if (lastRafMs !== 0) frameTimer.push(now - lastRafMs);
-    lastRafMs = now;
+  const rafLoop = createRafLoop((now) => {
+    frameTimer.mark(now);
     drawFrame(now);
-    // Same reason `onPerf` is throttled: this drives React state, and a
-    // per-frame dispatch would put the readout's own re-render inside the frame
-    // it is describing.
-    if (lastFade && now - lastFadeReportMs >= FADE_REPORT_INTERVAL_MS) {
-      lastFadeReportMs = now;
-      opts.onFade?.(lastFade);
-    }
-    // Report on a timer, not per frame: `onPerf` drives React state, and a
-    // per-frame dispatch would have the readout's own re-render inside the
-    // number it is reporting.
-    if (now - lastPerfReportMs >= PERF_REPORT_INTERVAL_MS) {
-      lastPerfReportMs = now;
+    // `lastFade` first: nothing to publish yet must not consume the interval.
+    if (lastFade && fadeReport.due(now)) opts.onFade?.(lastFade);
+    if (perfReport.due(now)) {
       const frameMs = frameTimer.medianMs();
       opts.onPerf?.({
         frameMs,
@@ -2373,9 +2362,8 @@ export async function createGalaxyEngine(
         timingEnabled: timing.enabled,
       });
     }
-    raf = requestAnimationFrame(loop);
-  }
-  raf = requestAnimationFrame(loop);
+  });
+  rafLoop.start();
 
   return {
     setParams,
@@ -2464,8 +2452,7 @@ export async function createGalaxyEngine(
       return { S, data: out };
     },
     dispose(): void {
-      running = false;
-      cancelAnimationFrame(raf);
+      rafLoop.stop();
       unsubscribeTiming();
       timing.destroy();
       bloomPyramid.destroy();
