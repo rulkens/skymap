@@ -45,8 +45,8 @@ export type GalaxySfMapGridRadius = { readonly rMin: number; readonly rMax: numb
  * where this grid has data (the smooth analytic tier that used to cover the
  * rest was deleted — see `galaxyDustMixture.ts`'s header), a truncation at
  * `outerRadius` was a visible hard edge mid-arm (`outerRadius` ~10.5 vs
- * per-arm `fadeRadius` 9.24-15.87, `armFadeEnvelope` still ~19% of peak at
- * `outerRadius`).
+ * per-arm `fadeRadius` 11.3-15.5, `armFadeEnvelope` still 20-97% of peak
+ * there, per arm).
  *
  * COST: rings are log-spaced over [rMin, rMax] at a fixed `SF_MAP_RINGS`, so
  * widening rMax spends radial resolution on the newly-covered outer arm —

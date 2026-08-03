@@ -122,15 +122,35 @@ export function armRidgeFrameAt(
   return { point, along, across, pole };
 }
 
-/** armStarSample's inner/outer smoothstep brightness envelope, this arm's own fadeRadius (rec0.w). */
+/**
+ * Where the outer taper begins, as a fraction of this arm's own `fadeRadius`.
+ * The remaining 40% of the arm's span is ~2x the arm excess's own scale
+ * length on every shipped preset, so the taper never falls faster than the
+ * brightness law it multiplies.
+ *
+ * NOT `armFullRadius` (0.42 * fadeRadius), which `generate.wesl`'s sprite copy
+ * of this envelope still uses: at 0.42 the smoothstep is a SECOND radial
+ * brightness law on top of `armExcessSurfaceShape`, and one no knob can reach
+ * past — it alone cost the Milky Way preset's arms a factor ~2 by the disc
+ * edge and drove them to exactly zero half a disc radius later, so the arms
+ * died while the disc's own light ran on to ~1.3 * outerRadius.
+ */
+const ARM_TAPER_START_FRAC = 0.6;
+
+/**
+ * The analytic arms' radial extent: `armStarSample`'s inner ramp, and an
+ * outer taper to zero at this arm's own fadeRadius (rec0.w). The arm's
+ * BRIGHTNESS along that extent is `armExcessSurfaceShape`'s job, not this
+ * one's — see ARM_TAPER_START_FRAC.
+ */
 export function armFadeEnvelope(
   radius: number,
   geometry: GalaxyFieldGeometry,
   arm: GalaxyFieldArmRecord,
 ): number {
   const innerT = (radius - geometry.armStartRadius) / geometry.armInnerRampW;
-  const outerT =
-    (radius - geometry.armFullRadius) / Math.max(0.001, arm.fadeRadius - geometry.armFullRadius);
+  const taperStart = arm.fadeRadius * ARM_TAPER_START_FRAC;
+  const outerT = (radius - taperStart) / Math.max(0.001, arm.fadeRadius - taperStart);
   return smoothstep01(innerT) * (1 - smoothstep01(outerT));
 }
 
@@ -147,10 +167,11 @@ const ARM_WIDTH_SLOPE = 0.036;
 
 /**
  * The arm excess's own radial surface-brightness shape, exp(-(R - R_full) /
- * (hLight * scaleRatio)), normalised to 1 at `armFullRadius` — the radius
- * where the fade envelope first reaches full strength, chosen as the pivot so
- * that turning the knob brightens the outer arm instead of rescaling the
- * whole arm system against the disc it is measured out of.
+ * (hLight * scaleRatio)), normalised to 1 at `armFullRadius`. That pivot is
+ * inside every arm's taper start, so turning the knob brightens the outer arm
+ * instead of rescaling the whole arm system against the disc it is measured
+ * out of — moving it outward would divide the excess by the disc's own
+ * exp(-R/h) at the new pivot and dim every arm.
  *
  * `scaleRatio` is the arm excess's exponential scale length in units of the
  * DISC's, and is the one place the two arm tiers' radial profiles are
