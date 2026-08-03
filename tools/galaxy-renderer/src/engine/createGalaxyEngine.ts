@@ -213,6 +213,7 @@ import { createGalaxyRenderTargets } from './gpu/createGalaxyRenderTargets';
 import { createOrbitCameraInput } from './camera/createOrbitCameraInput';
 import { createPassTimingWindows } from './timing/createPassTimingWindows';
 import { beginClearPass } from './passes/beginClearPass';
+import { encodeDustPresentPass } from './passes/encodeDustPresentPass';
 import { createSfMapAutomaton } from './sfMap/createSfMapAutomaton';
 import { createSfMapOrientation } from './sfMap/createSfMapOrientation';
 import { createReadbackQueue } from './gpu/createReadbackQueue';
@@ -2467,19 +2468,14 @@ export async function createGalaxyEngine(
       // alongside the emission splat below whenever `render.dustViewIntensity
       // > 0`, rather than replacing it: the three debug views crossfade
       // independently now (RenderSettings's own docblock), and the scene
-      // pass sums whichever of them are live. No `timestampWrites`: the
-      // 'field' slot belongs to the emission splat below, and two passes
-      // cannot share one timestamp pair in a frame (see TIMING_SLOTS).
+      // pass sums whichever of them are live.
       if (render.dustViewIntensity > 0) {
-        const pass = beginClearPass(
+        encodeDustPresentPass({
           enc,
-          'galaxy:dustPresentPass',
-          targets.dustViewTex.createView(),
-        );
-        pass.setPipeline(dustPresentPipe);
-        pass.setBindGroup(0, dustPresentBG);
-        pass.draw(3);
-        pass.end();
+          targetView: targets.dustViewTex.createView(),
+          pipeline: dustPresentPipe,
+          bindGroup: dustPresentBG,
+        });
       }
 
       const fieldWrites = timing.descriptorFor('field');
