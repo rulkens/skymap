@@ -1292,27 +1292,125 @@ export async function createGalaxyEngine(
   }
 
   /**
-   * setParams — regenerate the central galaxy as a GPU compute dispatch
-   * instead of an awaited worker round-trip. Carving the layouts is cheap
-   * pure arithmetic (`splitStarBudget`/`carveStarLayout`/`carveDustLayout`),
-   * so it runs directly on the caller's thread; the actual star/dust MATH
-   * (bulge/disk/arm placement, colour, HII knots, ...) happens on the GPU
-   * inside `encodeGeneration`'s two compute passes, ported in plan 01.
+   * galaxyMixtures — one galaxy's two analytic tiers off ONE geometry: the
+   * emission field and the HII shells, both against the live `fieldTuning`,
+   * and both carried into world space when a `transform` is given (an extra;
+   * the central galaxy passes none and stays in its own frame).
    *
-   * `starBuf`/`dustBuf` are sized to the carved CAPACITY
-   * (`GenerationLayout.capacity`), not a "how many stars will actually be
-   * visible" count — a population's `iterations` is its CPU builder's loop
-   * bound, and some iterations write a zero-brightness/opacity record (an
-   * arm star past its fade radius, say) without shrinking the layout. The
-   * compute pass fills every capacity slot (dead ones included), and the
-   * render pipelines below draw all of them: a dead slot rasterizes nothing,
-   * so nothing is drawn wrong — it just costs a few zero-alpha billboards.
-   * `starCount`/`dustCount` (the instance counts every `draw` call below
-   * uses) are therefore set to the capacities.
+   * `geometry.seed` is what `buildHiiRegions` was called with when it still
+   * lived inside `buildGalaxyFieldMixture` — the field's own generated seed,
+   * not a re-derivation.
+   */
+  function galaxyMixtures(
+    geometry: GalaxyFieldGeometry,
+    starFormation: GalaxyStarFormationParams,
+    transform?: Pick<ExtraGalaxySpec, 'pos' | 'scale' | 'rotY' | 'tiltX'>,
+  ): { field: readonly GalaxyFieldComponent[]; hii: readonly GalaxyFieldComponent[] } {
+    const place = (components: readonly GalaxyFieldComponent[]): readonly GalaxyFieldComponent[] =>
+      transform ? components.map((c) => transformGalaxyFieldComponent(c, transform)) : components;
+    return {
+      field: place(buildGalaxyFieldMixture(geometry, fieldTuning)),
+      hii: place(buildHiiRegions(geometry, fieldTuning, starFormation, geometry.seed)),
+    };
+  }
+
+  /**
+   * generateGalaxy — the GPU generation sequence, for the central galaxy
+   * (`spec` null) and for one background extra alike. Carving the layouts is
+   * cheap pure arithmetic (`splitStarBudget`/`carveStarLayout`/
+   * `carveDustLayout`), so it runs on the caller's thread; the star/dust MATH
+   * (bulge/disk/arm placement, colour, HII knots, ...) happens on the GPU in
+   * `encodeGeneration`'s two compute passes.
    *
-   * The write order — `queue.writeBuffer(genUbo, ...)`, THEN record the
-   * compute passes into a fresh encoder, THEN `queue.submit` — is what makes
-   * this safe on one shared `GPUQueue` without a readback: WebGPU processes
+   * The caller owns every lifetime: which UBO to write, which encoder to
+   * record into and when to submit it, destroying the buffers this returns and
+   * registering them wherever they are tracked. `spec` also picks the buffer
+   * labels, so a validation error names which galaxy it came from.
+   *
+   * The buffers are sized to the carved CAPACITY (`GenerationLayout.capacity`),
+   * not a "how many stars will actually be visible" count — a population's
+   * `iterations` is its CPU builder's loop bound, and some iterations write a
+   * zero-brightness/opacity record (an arm star past its fade radius, say)
+   * without shrinking the layout. The compute pass fills every capacity slot
+   * (dead ones included) and the render pipelines draw all of them: a dead slot
+   * rasterizes nothing, so nothing is drawn wrong — it just costs a few
+   * zero-alpha billboards. `starCount`/`dustCount` are therefore the capacities.
+   *
+   * `plannedStars` is the sum of each population's `iterations` (not
+   * `iterations * stride` — that would double-count the worst-case HII-bonus
+   * slots most iterations never use); with the dust capacity, that is what the
+   * HUD bills. Actual live counts differ by a few percent, the same slack
+   * `iterations` always carried against its builder's real output (see
+   * `PopulationRange`'s docblock) — an estimate, not an exact tally.
+   */
+  function generateGalaxy(
+    params: GalaxyParams,
+    spec: ExtraGalaxySpec | null,
+    ubo: GPUBuffer,
+    encoder: GPUCommandEncoder,
+  ): {
+    starBuf: GPUBuffer;
+    starCount: number;
+    dustBuf: GPUBuffer | null;
+    dustCount: number;
+    plannedStars: number;
+    geometry: GalaxyFieldGeometry;
+  } {
+    const category = classifyHubbleType(params.type);
+    const budget = splitStarBudget(category, params);
+    const starLayout = carveStarLayout(category, params, budget);
+    const dustLayout = carveDustLayout(category, params, budget);
+
+    // A zero-capacity star layout is not expected in practice (every
+    // category's split puts at least some stars in bulge/disk/halo), but a
+    // zero-size GPUBuffer is invalid, so clamp to one record just in case.
+    const starBuffer = device.createBuffer({
+      label: spec ? 'galaxy:extraStarVB' : 'galaxy:starVB',
+      size: Math.max(1, starLayout.capacity) * GEN_RECORD_BYTES,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.STORAGE,
+    });
+    const dustBuffer =
+      dustLayout.capacity > 0
+        ? device.createBuffer({
+            label: spec ? 'galaxy:extraDustVB' : 'galaxy:dustVB',
+            size: dustLayout.capacity * GEN_RECORD_BYTES,
+            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.STORAGE,
+          })
+        : null;
+
+    const genUniforms = packGenerationUniforms(params, budget, spec);
+    device.queue.writeBuffer(ubo, 0, genUniforms);
+    encodeGeneration({
+      device,
+      encoder,
+      pipelines: genPipelines,
+      ubo,
+      starBuf: starBuffer,
+      starLayout,
+      dustBuf: dustBuffer,
+      dustLayout,
+    });
+
+    return {
+      starBuf: starBuffer,
+      starCount: starLayout.capacity,
+      dustBuf: dustBuffer,
+      dustCount: dustLayout.capacity,
+      plannedStars: starLayout.ranges.reduce((sum, r) => sum + r.iterations, 0),
+      // Read back rather than re-derive: the bar and bulge tilts are single RNG
+      // draws off the packer's streams, so this is the only way the analytic
+      // field can be sure it is oriented like the sprites it sums with.
+      geometry: readGalaxyFieldGeometry(genUniforms, starLayout),
+    };
+  }
+
+  /**
+   * setParams — regenerate the central galaxy, then rebuild everything derived
+   * from its geometry (both analytic tiers, the dust cloud, the SSPSF map).
+   *
+   * The write order — `queue.writeBuffer(genUbo, ...)`, THEN the compute passes
+   * recorded into a fresh encoder, THEN `queue.submit` — is what makes this
+   * safe on one shared `GPUQueue` without a readback: WebGPU processes
    * everything enqueued on a queue in submission order, so by the time this
    * submit's compute passes run on the GPU, the preceding `writeBuffer` has
    * already landed. That is NOT the same shape as the standing
@@ -1324,65 +1422,28 @@ export async function createGalaxyEngine(
    * guarantee is why the promise can resolve right after `submit`, with no
    * `mapAsync` wait: any `drawFrame` encoded afterwards shares this queue too,
    * so its draws are guaranteed to run after this submit's writes land.
-   *
-   * `opts.onStats` reports PLANNED counts, not live ones: the sum of each
-   * star population's `iterations` (not `iterations * stride` — that would
-   * double-count the worst-case HII-bonus slots most iterations never use),
-   * plus the full dust capacity (dust ranges are all stride 1, so capacity
-   * IS its planned count). Actual live counts differ by a few percent, the
-   * same slack `iterations` always carried against its builder's real output
-   * (see `PopulationRange`'s docblock) — a HUD estimate, not an exact tally.
    */
   async function setParams(p: GalaxyParams): Promise<void> {
     lastParams = p;
-    const category = classifyHubbleType(p.type);
-    const budget = splitStarBudget(category, p);
-    const starLayout = carveStarLayout(category, p, budget);
-    const dustLayout = carveDustLayout(category, p, budget);
-
+    const enc = device.createCommandEncoder({ label: 'galaxy:generate' });
     if (starBuf) starBuf.destroy();
-    // A zero-capacity star layout is not expected in practice (every
-    // category's split puts at least some stars in bulge/disk/halo), but a
-    // zero-size GPUBuffer is invalid, so clamp to one record just in case.
-    starBuf = device.createBuffer({
-      label: 'galaxy:starVB',
-      size: Math.max(1, starLayout.capacity) * GEN_RECORD_BYTES,
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.STORAGE,
-    });
-    starCount = starLayout.capacity;
-
     if (dustBuf) dustBuf.destroy();
-    if (dustLayout.capacity > 0) {
-      dustBuf = device.createBuffer({
-        label: 'galaxy:dustVB',
-        size: dustLayout.capacity * GEN_RECORD_BYTES,
-        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.STORAGE,
-      });
-    } else {
-      dustBuf = null;
-    }
-    dustCount = dustLayout.capacity;
+    const generated = generateGalaxy(p, null, genUbo, enc);
+    // Assigned back into the `let`s the ownership ledger's `ownLatest` readers
+    // close over, so `dispose` destroys these and not the pair just destroyed.
+    starBuf = generated.starBuf;
+    starCount = generated.starCount;
+    dustBuf = generated.dustBuf;
+    dustCount = generated.dustCount;
 
-    const genUniforms = packGenerationUniforms(p, budget, null);
-    device.queue.writeBuffer(genUbo, 0, genUniforms);
-    // Read back rather than re-derive: the bar and bulge tilts are single RNG
-    // draws off the packer's streams, so this is the only way the analytic
-    // field can be sure it is oriented like the sprites it sums with.
-    fieldGeometry = readGalaxyFieldGeometry(genUniforms, starLayout);
+    fieldGeometry = generated.geometry;
     // `sfMapGridRadius` depends on `fieldGeometry` alone, so most params —
     // dust `share`, cloud counts, colours — leave the grid untouched and the
     // cached readbacks usable; see `dropIfGridMoved`.
     readbacks.dropIfGridMoved(sfMapGridRadius(fieldGeometry));
-    fieldMixture = buildGalaxyFieldMixture(fieldGeometry, fieldTuning);
-    // Same `geometry.seed` `buildHiiRegions` was called with when it still
-    // lived inside `buildGalaxyFieldMixture` — the field's own generated
-    // seed, not a re-derivation.
-    hiiMixture = buildHiiRegions(
-      fieldGeometry,
-      fieldTuning,
-      currentStarFormation(),
-      fieldGeometry.seed,
-    );
+    const mixtures = galaxyMixtures(fieldGeometry, currentStarFormation());
+    fieldMixture = mixtures.field;
+    hiiMixture = mixtures.hii;
     rebuildDustMixture();
     bubblePlacements.invalidate();
     repackFieldComponents();
@@ -1391,21 +1452,8 @@ export async function createGalaxyEngine(
     // the ridge it forces against are both stale otherwise.
     rebuildSfMap();
 
-    const enc = device.createCommandEncoder({ label: 'galaxy:generate' });
-    encodeGeneration({
-      device,
-      encoder: enc,
-      pipelines: genPipelines,
-      ubo: genUbo,
-      starBuf,
-      starLayout,
-      dustBuf,
-      dustLayout,
-    });
     device.queue.submit([enc.finish()]);
-
-    const plannedStars = starLayout.ranges.reduce((sum, r) => sum + r.iterations, 0);
-    opts.onStats?.({ stars: plannedStars, dust: dustLayout.capacity });
+    opts.onStats?.({ stars: generated.plannedStars, dust: generated.dustCount });
   }
 
   // Every knob here reaches the next frame through the uniform pack, so a
@@ -1452,26 +1500,14 @@ export async function createGalaxyEngine(
   function setFieldTuning(patch: Partial<GalaxyFieldTuning>): void {
     fieldTuning = { ...fieldTuning, ...patch };
     if (fieldGeometry) {
-      fieldMixture = buildGalaxyFieldMixture(fieldGeometry, fieldTuning);
-      hiiMixture = buildHiiRegions(
-        fieldGeometry,
-        fieldTuning,
-        currentStarFormation(),
-        fieldGeometry.seed,
-      );
+      const mixtures = galaxyMixtures(fieldGeometry, currentStarFormation());
+      fieldMixture = mixtures.field;
+      hiiMixture = mixtures.hii;
     }
-    extras = extras.map((e) => ({
-      ...e,
-      fieldMixture: buildGalaxyFieldMixture(e.fieldGeometry, fieldTuning).map((c) =>
-        transformGalaxyFieldComponent(c, e.transform),
-      ),
-      hiiMixture: buildHiiRegions(
-        e.fieldGeometry,
-        fieldTuning,
-        e.starFormation,
-        e.fieldGeometry.seed,
-      ).map((c) => transformGalaxyFieldComponent(c, e.transform)),
-    }));
+    extras = extras.map((e) => {
+      const mixtures = galaxyMixtures(e.fieldGeometry, e.starFormation, e.transform);
+      return { ...e, fieldMixture: mixtures.field, hiiMixture: mixtures.hii };
+    });
     rebuildDustMixture();
     bubblePlacements.invalidate();
     repackFieldComponents();
@@ -1507,14 +1543,11 @@ export async function createGalaxyEngine(
     }
   }
 
-  // Replace the set of background galaxies. Each extra is generated GPU-side
-  // exactly like the central galaxy in `setParams`, but with its own params
-  // and its own rigid world transform folded into its per-extra UBO: carve the
-  // layouts from `spec.params`, allocate that extra's `VERTEX | STORAGE`
-  // star/dust buffers, pack `packGenerationUniforms(spec.params, budget, spec)`
-  // (the transform + size scale ride the UBO's extra lanes, so the compute
-  // passes emit records already placed in the scene), then `encodeGeneration`
-  // into ONE shared encoder for every extra and submit once.
+  // Replace the set of background galaxies. Each runs the same
+  // `generateGalaxy` the central one does, differing only in the `spec` it
+  // passes: the transform + size scale ride that spec into the UBO's extra
+  // lanes, so the compute passes emit records already placed in the scene.
+  // ONE shared encoder for every extra, submitted once.
   //
   // The whole body is synchronous up to that single submit — no `await` splits
   // the destroy-old / build-new sequence, so replacing the extras is atomic per
@@ -1527,83 +1560,42 @@ export async function createGalaxyEngine(
 
     const enc = device.createCommandEncoder({ label: 'galaxy:generateExtras' });
     for (const spec of specs) {
-      const category = classifyHubbleType(spec.params.type);
-      const budget = splitStarBudget(category, spec.params);
-      const starLayout = carveStarLayout(category, spec.params, budget);
-      const dustLayout = carveDustLayout(category, spec.params, budget);
-
-      // Same clamp as `setParams`: a zero-capacity star layout isn't expected,
-      // but a zero-size GPUBuffer is invalid, so floor the size at one record.
-      const starBufExtra = device.createBuffer({
-        label: 'galaxy:extraStarVB',
-        size: Math.max(1, starLayout.capacity) * GEN_RECORD_BYTES,
-        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.STORAGE,
-      });
-      let dustBufExtra: GPUBuffer | null = null;
-      if (dustLayout.capacity > 0) {
-        dustBufExtra = device.createBuffer({
-          label: 'galaxy:extraDustVB',
-          size: dustLayout.capacity * GEN_RECORD_BYTES,
-          usage: GPUBufferUsage.VERTEX | GPUBufferUsage.STORAGE,
-        });
-      }
-
+      // Its own UBO, retained with the buffers it produced — one shared buffer
+      // can't serve N extras in one submit (see `genUbo`'s declaration).
       const ubo = device.createBuffer({
         label: 'galaxy:extraGenUbo',
         size: GENERATION_UBO.byteLength,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
       });
-      const genUniforms = packGenerationUniforms(spec.params, budget, spec);
-      device.queue.writeBuffer(ubo, 0, genUniforms);
+      const generated = generateGalaxy(spec.params, spec, ubo, enc);
 
-      encodeGeneration({
-        device,
-        encoder: enc,
-        pipelines: genPipelines,
-        ubo,
-        starBuf: starBufExtra,
-        starLayout,
-        dustBuf: dustBufExtra,
-        dustLayout,
-      });
-
-      // Same analytic mixture the central galaxy gets in `setParams`, built
-      // from this extra's OWN geometry then carried into world space with
-      // the SAME rigid transform `applyExtraTransform` bakes into the
-      // sprites (see `transformGalaxyFieldComponent`'s header) — so the two
-      // representations of this background galaxy register with each other.
-      const geometry = readGalaxyFieldGeometry(genUniforms, starLayout);
+      // The mixtures land in world space through the SAME rigid transform
+      // `applyExtraTransform` bakes into the sprites (see
+      // `transformGalaxyFieldComponent`'s header), so the two representations
+      // of this background galaxy register with each other.
       const transform: Pick<ExtraGalaxySpec, 'pos' | 'scale' | 'rotY' | 'tiltX'> = {
         pos: spec.pos,
         scale: spec.scale,
         rotY: spec.rotY,
         tiltX: spec.tiltX,
       };
-      const extraFieldMixture = buildGalaxyFieldMixture(geometry, fieldTuning).map((c) =>
-        transformGalaxyFieldComponent(c, transform),
-      );
       // This extra's OWN draw (`randomGalaxyParams` rolls `sfActivity` per
       // galaxy), never the shared default — the tier is what makes one
       // background galaxy read as more actively star-forming than the next.
       const starFormation = spec.params.starFormation ?? DEFAULT_GALAXY_STAR_FORMATION_PARAMS;
-      const extraHiiMixture = buildHiiRegions(
-        geometry,
-        fieldTuning,
-        starFormation,
-        geometry.seed,
-      ).map((c) => transformGalaxyFieldComponent(c, transform));
+      const mixtures = galaxyMixtures(generated.geometry, starFormation, transform);
 
       extras.push({
-        starBuf: starBufExtra,
-        starCount: starLayout.capacity,
-        dustBuf: dustBufExtra,
-        dustCount: dustLayout.capacity,
+        starBuf: generated.starBuf,
+        starCount: generated.starCount,
+        dustBuf: generated.dustBuf,
+        dustCount: generated.dustCount,
         ubo,
-        fieldGeometry: geometry,
+        fieldGeometry: generated.geometry,
         transform,
         starFormation,
-        fieldMixture: extraFieldMixture,
-        hiiMixture: extraHiiMixture,
+        fieldMixture: mixtures.field,
+        hiiMixture: mixtures.hii,
       });
     }
     device.queue.submit([enc.finish()]);
