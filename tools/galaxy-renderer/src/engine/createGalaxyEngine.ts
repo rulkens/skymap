@@ -94,40 +94,43 @@ import {
 import type { FieldCamera } from '../../@types/engine/FieldCamera';
 import { DEBUG_VIEWS } from '../data/debugViews';
 import type { DebugViewKind } from '../../@types/data/DebugViewKind';
-import { createGenerationPipelines } from '../../../../src/services/gpu/galaxy/createGenerationPipelines';
-import { encodeGeneration } from '../../../../src/services/gpu/galaxy/encodeGeneration';
-import { packGenerationUniforms } from '../../../../src/services/gpu/galaxy/packGenerationUniforms';
-import { readGalaxyFieldGeometry } from '../../../../src/services/gpu/galaxy/readGalaxyFieldGeometry';
+import { createGenerationPipelines } from '../../../../src/services/engine/galaxyGenerator/v1/createGenerationPipelines';
+import { encodeGeneration } from '../../../../src/services/engine/galaxyGenerator/v1/encodeGeneration';
+import { packGenerationUniforms } from '../../../../src/services/engine/galaxyGenerator/shared/packGenerationUniforms';
+import { readGalaxyFieldGeometry } from '../../../../src/services/engine/galaxyGenerator/shared/readGalaxyFieldGeometry';
 import {
   buildGalaxyFieldMixture,
   DEFAULT_GALAXY_FIELD_TUNING,
   GALAXY_FIELD_MAX_COMPONENTS,
-} from '../../../../src/data/galaxy/galaxyFieldMixture';
-import { buildHiiRegions, HII_MAX_COUNT } from '../../../../src/data/galaxy/hiiRegions';
+} from '../../../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
+import {
+  buildHiiRegions,
+  HII_MAX_COUNT,
+} from '../../../../src/services/engine/galaxyGenerator/v2/hiiRegions';
 import {
   buildDustBubblePlacements,
   buildHiiCavityPlacements,
   BUBBLE_BUDGET,
   HII_CAVITY_BUDGET,
-} from '../../../../src/data/galaxy/dustBubblePlacements';
+} from '../../../../src/services/engine/galaxyGenerator/v2/dustBubblePlacements';
 import {
   sfMapGridRadius,
   sfMapGridRadiusOrDefault,
-} from '../../../../src/data/galaxy/galaxySfMapArmForcing';
-import type { GalaxySfMapGridRadius } from '../../../../src/data/galaxy/galaxySfMapArmForcing';
-import { buildDustParticleCloud } from '../../../../src/data/galaxy/dustParticleCloud';
-import type { OrientationDeltaStats } from '../../../../src/data/galaxy/clusteredDiscPlacement';
-import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../src/data/galaxy/defaultGalaxyDustParams';
-import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from '../../../../src/data/galaxy/defaultGalaxyStarFormationParams';
+} from '../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
+import type { GalaxySfMapGridRadius } from '../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
+import { buildDustParticleCloud } from '../../../../src/services/engine/galaxyGenerator/v2/dustParticleCloud';
+import type { OrientationDeltaStats } from '../../../../src/services/engine/galaxyGenerator/v2/clusteredDiscPlacement';
+import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxyDustParams';
+import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from '../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxyStarFormationParams';
 import { normalizeGenerationSeed } from '../../../../src/utils/galaxy/normalizeGenerationSeed';
 import { alignedBytesPerRow } from '../../../../src/utils/gpu/alignedBytesPerRow';
 import { transformGalaxyFieldComponent } from '../../../../src/utils/galaxy/transformGalaxyFieldComponent';
-import { GENERATION_UBO } from '../../../../src/services/gpu/galaxy/generationUboLayout';
-import { GEN_RECORD_BYTES } from '../../../../src/services/gpu/galaxy/genRecordBytes';
-import { carveStarLayout } from '../../../../src/services/gpu/galaxy/carveStarLayout';
-import { carveDustLayout } from '../../../../src/services/gpu/galaxy/carveDustLayout';
-import { classifyHubbleType } from '../../../../src/services/gpu/galaxy/classifyHubbleType';
-import { splitStarBudget } from '../../../../src/services/gpu/galaxy/splitStarBudget';
+import { GENERATION_UBO } from '../../../../src/services/engine/galaxyGenerator/shared/generationUboLayout';
+import { GEN_RECORD_BYTES } from '../../../../src/services/engine/galaxyGenerator/v1/genRecordBytes';
+import { carveStarLayout } from '../../../../src/services/engine/galaxyGenerator/shared/carveStarLayout';
+import { carveDustLayout } from '../../../../src/services/engine/galaxyGenerator/shared/carveDustLayout';
+import { classifyHubbleType } from '../../../../src/services/engine/galaxyGenerator/shared/classifyHubbleType';
+import { splitStarBudget } from '../../../../src/services/engine/galaxyGenerator/shared/splitStarBudget';
 import { createBloomPyramid } from '../../../../src/services/gpu/passes/bloomPyramid';
 import { createCompositor } from '../../../../src/services/gpu/passes/compositor';
 import { createAdditiveUpsample } from '../../../../src/services/gpu/passes/additiveUpsample';

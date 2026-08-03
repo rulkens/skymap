@@ -22,7 +22,7 @@ import {
   DENS_SCALE,
   SPEED_COLOR_MAX,
 } from '../../../../src/data/flow/flowFieldConstants';
-import { SF_MAP_WORKGROUP_SIZE } from '../../../../src/data/galaxy/galaxySfMapArmForcing';
+import { SF_MAP_WORKGROUP_SIZE } from '../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
 
 /**
  * Extract every `const NAME: (u32|f32) = <number>;` from flow/constants.wesl.
@@ -105,6 +105,8 @@ describe('sfMap @workgroup_size(N, N) ↔ SF_MAP_WORKGROUP_SIZE parity', () => {
         ).toBe(SF_MAP_WORKGROUP_SIZE);
       }
     }
-    expect(matchCount, 'no @workgroup_size(N, N) found in the sfMap shader chain').toBeGreaterThan(0);
+    expect(matchCount, 'no @workgroup_size(N, N) found in the sfMap shader chain').toBeGreaterThan(
+      0,
+    );
   });
 });

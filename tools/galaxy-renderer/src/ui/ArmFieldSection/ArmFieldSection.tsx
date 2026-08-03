@@ -1,7 +1,7 @@
 /**
  * ArmFieldSection — the analytic field's own arm ridge: Gaussian blobs
  * placed along the SAME log-spiral curve `armStarSample` draws sprite stars
- * around (`pushArmRidges` in `src/data/galaxy/galaxyFieldMixture.ts`), so
+ * around (`pushArmRidges` in `src/services/engine/galaxyGenerator/v2/galaxyFieldMixture.ts`), so
  * the two renderings' arms land on top of each other. On/off lives in the
  * header, same master-toggle idiom as the FLUX FIELD group above it.
  */

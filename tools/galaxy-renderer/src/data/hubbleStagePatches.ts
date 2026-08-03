@@ -10,7 +10,7 @@
  */
 
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
-import { classifyHubbleType } from '../../../../src/services/gpu/galaxy/classifyHubbleType';
+import { classifyHubbleType } from '../../../../src/services/engine/galaxyGenerator/shared/classifyHubbleType';
 
 export function hubbleTypePatch(type: string): Partial<GalaxyParams> {
   const category = classifyHubbleType(type);

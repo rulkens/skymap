@@ -49,7 +49,7 @@
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import { milkyWayVisible } from '../helpers/milkyWayVisible';
-import { milkyWayFadeAlpha } from '../../gpu/galaxy/milkyWayFadeAlpha';
+import { milkyWayFadeAlpha } from '../galaxyGenerator/v1/milkyWayFadeAlpha';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from '../presentation/scaleFadeBands';
 

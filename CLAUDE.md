@@ -17,6 +17,8 @@ src/
   services/
     camera/  OrbitCamera, OrbitControls, tweens
     engine/  engine orchestrator, autoLod, cloud loader
+      galaxyGenerator/  galaxy generation: v1/ sprite stars (to be deleted),
+                        v2/ analytic field, shared/ — READMEs in each
     gpu/  renderers, texture atlas, image queue/fetcher, WGSL shaders
     input/  SpaceMouse + raw input → camera deltas
   state/  RTK slices/selectors/sagas per domain; forbids react-redux (see store/)

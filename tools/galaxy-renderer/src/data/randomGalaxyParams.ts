@@ -14,11 +14,11 @@
 import type { GalaxyDustParams } from '../../../../src/@types/galaxy/GalaxyDustParams';
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import type { GalaxyStarFormationParams } from '../../../../src/@types/galaxy/GalaxyStarFormationParams';
-import { DEFAULT_GALAXY_DUST_CLOUD_PARAMS } from '../../../../src/data/galaxy/defaultGalaxyDustCloudParams';
-import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../src/data/galaxy/defaultGalaxyDustParams';
-import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from '../../../../src/data/galaxy/defaultGalaxyStarFormationParams';
+import { DEFAULT_GALAXY_DUST_CLOUD_PARAMS } from '../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxyDustCloudParams';
+import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxyDustParams';
+import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from '../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxyStarFormationParams';
 import { PARAM_SPEC } from './paramSpec';
-import { classifyHubbleType } from '../../../../src/services/gpu/galaxy/classifyHubbleType';
+import { classifyHubbleType } from '../../../../src/services/engine/galaxyGenerator/shared/classifyHubbleType';
 
 // The spike's fixed 14-entry type roster (html:541) — every Hubble stage the
 // generator knows how to shape, verbatim.

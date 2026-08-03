@@ -38,7 +38,7 @@
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import { milkyWayFadeAlpha } from '../../gpu/galaxy/milkyWayFadeAlpha';
+import { milkyWayFadeAlpha } from '../galaxyGenerator/v1/milkyWayFadeAlpha';
 
 export function milkyWayVisible(
   state: EngineState,

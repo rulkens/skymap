@@ -37,7 +37,7 @@ import type { ExtraGalaxySpec } from '../../../../src/@types/galaxy/ExtraGalaxyS
 import type { GalaxyEngineHandle } from '../../@types/engine/GalaxyEngineHandle';
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import type { RenderSettings } from '../../@types/engine/RenderSettings';
-import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../src/data/galaxy/defaultGalaxyDustParams';
+import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxyDustParams';
 import { buildExtraSpecs } from '../data/buildExtraSpecs';
 
 const COMPARE_OPEN_INSET_PX = 390; // html:493

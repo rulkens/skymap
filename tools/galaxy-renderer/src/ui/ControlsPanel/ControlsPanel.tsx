@@ -40,7 +40,7 @@ import { sectionToggled } from '../../state/slices/uiSlice';
 import { PARAM_SPEC } from '../../data/paramSpec';
 import { hubbleTypePatch } from '../../data/hubbleStagePatches';
 import { randomGalaxyParams } from '../../data/randomGalaxyParams';
-import { classifyHubbleType } from '../../../../../src/services/gpu/galaxy/classifyHubbleType';
+import { classifyHubbleType } from '../../../../../src/services/engine/galaxyGenerator/shared/classifyHubbleType';
 import ArmCloudSection from '../ArmCloudSection/ArmCloudSection';
 import ArmFieldSection from '../ArmFieldSection/ArmFieldSection';
 import CollapsibleSection from '../CollapsibleSection/CollapsibleSection';

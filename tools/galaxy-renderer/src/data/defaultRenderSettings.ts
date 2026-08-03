@@ -14,7 +14,7 @@
  * moving one is then a visible, deliberate departure from app parity.
  *
  * The star-pass block is the whole of `MILKY_WAY_TUNING_DEFAULTS`
- * (`src/services/gpu/galaxy/milkyWayCalibration.ts`) minus two knobs that live
+ * (`src/services/engine/galaxyGenerator/v1/milkyWayCalibration.ts`) minus two knobs that live
  * elsewhere: `lodApparent`, which lives in `DEFAULT_LOD_SETTINGS` instead, and
  * `starCount`, which feeds generation rather than compositing and so lives on
  * `DEFAULT_GALAXY_PARAMS` (the re-exported `MILKY_WAY_GALAXY_PARAMS`) instead.
@@ -48,7 +48,7 @@ import {
   MILKY_WAY_FADE_FULL_PX,
   MILKY_WAY_FADE_GONE_PX,
   MILKY_WAY_TUNING_DEFAULTS,
-} from '../../../../src/services/gpu/galaxy/milkyWayCalibration';
+} from '../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 
 export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   exposure: DEFAULT_EXPOSURE,

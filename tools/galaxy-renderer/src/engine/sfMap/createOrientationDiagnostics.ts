@@ -8,7 +8,7 @@
  * they are facts about the readback stream, which has its own home.
  */
 
-import type { OrientationDeltaStats } from '../../../../../src/data/galaxy/clusteredDiscPlacement';
+import type { OrientationDeltaStats } from '../../../../../src/services/engine/galaxyGenerator/v2/clusteredDiscPlacement';
 import type { OrientationDiagnostics } from '../../../@types/engine/OrientationDiagnostics';
 
 import { orientationCoherenceStats } from './orientationCoherenceStats';

@@ -18,8 +18,8 @@ import {
   SF_MAP_AZ,
   SF_MAP_RINGS,
   SF_MAP_WORKGROUP_SIZE,
-} from '../../../../../src/data/galaxy/galaxySfMapArmForcing';
-import type { GalaxySfMapGridRadius } from '../../../../../src/data/galaxy/galaxySfMapArmForcing';
+} from '../../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
+import type { GalaxySfMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
 import { alignedBytesPerRow } from '../../../../../src/utils/gpu/alignedBytesPerRow';
 import type { GalaxyFieldGeometry } from '../../../../../src/@types/galaxy/GalaxyFieldGeometry';
 import type { GalaxyFieldTuning } from '../../../../../src/@types/galaxy/GalaxyFieldTuning';

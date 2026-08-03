@@ -15,7 +15,7 @@ import { parseGalaxyPreset } from '../../../../tools/galaxy-renderer/src/presets
 import { DEFAULT_GALAXY_PARAMS } from '../../../../tools/galaxy-renderer/src/data/defaultGalaxyParams';
 import { DEFAULT_RENDER_SETTINGS } from '../../../../tools/galaxy-renderer/src/data/defaultRenderSettings';
 import { DEFAULT_LOD_SETTINGS } from '../../../../tools/galaxy-renderer/src/data/defaultLodSettings';
-import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../src/data/galaxy/galaxyFieldMixture';
+import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
 import { DEFAULT_EXTRAS_STATE } from '../../../../tools/galaxy-renderer/src/data/defaultExtrasState';
 
 describe('serializeGalaxyPreset / parseGalaxyPreset', () => {

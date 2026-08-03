@@ -59,7 +59,7 @@ import { DEFAULT_REFINE_THRESHOLD } from '../../services/gpu/renderers/starCatal
 // Same relationship: the Milky-Way star-cloud look knobs are owned by the
 // renderer's calibration module, so seed them from there rather than restating
 // six numbers here.
-import { MILKY_WAY_TUNING_DEFAULTS } from '../../services/gpu/galaxy/milkyWayCalibration';
+import { MILKY_WAY_TUNING_DEFAULTS } from '../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import {
   DEFAULT_ALIGN_SEC,
   DEFAULT_RAMP_SEC,

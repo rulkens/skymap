@@ -1,5 +1,5 @@
 /**
- * HiiSection — the analytic field's HII-region tier (`src/data/galaxy/hiiRegions.ts`):
+ * HiiSection — the analytic field's HII-region tier (`src/services/engine/galaxyGenerator/v2/hiiRegions.ts`):
  * discrete emission sprites with a limb-brightened shell, an embedded OB
  * cluster core, and a dust cavity they carve into the analytic dust lane.
  * Own section, own header pill (`fieldTuning.hiiEnabled`), same idiom as

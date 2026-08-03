@@ -79,7 +79,7 @@ import { updateSelectionHover } from '../selection/selectionSlice';
 import { setMilkyWayTuning } from '../settings/settingsSlice';
 import { resolveFocusId } from '../../services/url/resolveFocusId';
 import { catalogLoaded } from '../catalog/catalogLoaded';
-import { MILKY_WAY_STARS_PER_TIER } from '../../services/gpu/galaxy/milkyWayCalibration';
+import { MILKY_WAY_STARS_PER_TIER } from '../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import type { RootState, RunTierTransition, SagaContext } from '../../store/types';
 
 export function* watchTierSaga() {

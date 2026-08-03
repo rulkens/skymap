@@ -49,7 +49,7 @@ import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer'
 import { NEAR0 } from '../slabs';
 import { deriveMilkyWayCloudAlpha } from '../milkyWayCloudLiveness';
 import { cameraBillboardBasis } from '../../../../utils/camera/cameraBillboardBasis';
-import { milkyWayModelCached } from '../../../gpu/galaxy/milkyWayModelCached';
+import { milkyWayModelCached } from '../../galaxyGenerator/v1/milkyWayModelCached';
 
 export const milkyWayAggregateLayer: ContentLayer = {
   name: 'milky-way-aggregate',

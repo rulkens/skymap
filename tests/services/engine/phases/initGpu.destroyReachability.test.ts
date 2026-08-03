@@ -169,7 +169,7 @@ vi.mock('../../../../src/services/gpu/renderers/constellations/constellationRend
   createConstellationRenderer: vi.fn(() => makeStub('constellationRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/galaxy/milkyWayCloud', () => ({
+vi.mock('../../../../src/services/engine/galaxyGenerator/v1/milkyWayCloud', () => ({
   createMilkyWayCloud: vi.fn(() => makeStub('milkyWayCloud')),
 }));
 

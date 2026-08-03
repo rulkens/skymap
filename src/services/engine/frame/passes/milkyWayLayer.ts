@@ -37,7 +37,7 @@
  *      nonzero toggle fade (`fades.opacityOf`), which keeps the layer
  *      alive through the ~100 ms fade-out tail.
  *   2. `milkyWayFadeAlpha` — the far-side apparent-size fade band defined in
- *      `services/gpu/galaxy/milkyWayFadeAlpha.ts` (full strength while the
+ *      `services/engine/galaxyGenerator/v1/milkyWayFadeAlpha.ts` (full strength while the
  *      disc spans at least `MILKY_WAY_FADE_FULL_PX` on screen, gone once it
  *      shrinks to `MILKY_WAY_FADE_GONE_PX`).
  *   3. `fadeBand(SCALE_FADE_BANDS.milkyWayApproach, camDist)` — the
@@ -104,7 +104,7 @@ import { NEAR0 } from '../slabs';
 import { pickUniformBytesOf } from '../../helpers/pickUniformBytesOf';
 import { deriveMilkyWayCloudAlpha } from '../milkyWayCloudLiveness';
 import { cameraBillboardBasis } from '../../../../utils/camera/cameraBillboardBasis';
-import { milkyWayModelCached } from '../../../gpu/galaxy/milkyWayModelCached';
+import { milkyWayModelCached } from '../../galaxyGenerator/v1/milkyWayModelCached';
 
 export const milkyWayLayer: ContentLayer = {
   name: 'milky-way',

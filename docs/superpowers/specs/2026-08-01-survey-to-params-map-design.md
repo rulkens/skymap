@@ -42,7 +42,7 @@ Three stages, one seed:
 3. **Seeded draw.** Seed = hash of the stable identity string from
    `encodeGalaxyId` (`sdss-<objID>` / `pgc-<objID>` / `pos@ra,dec`) →
    `mulberry32`. Same idiom as `fallbackOrientation`'s build-time hash seeding.
-   Constraint: the draw must respect observables the catalog *measures* —
+   Constraint: the draw must respect observables the catalog _measures_ —
    axisRatio (inclination) and diameterKpc are inputs, never rolled.
 
 ## Parameter range table (v0)
@@ -50,16 +50,16 @@ Three stages, one seed:
 Confidence: V = verified primary text, S = secondary, GAP = number not yet
 recovered — do not ship a constant from a GAP cell without the full-text pull.
 
-| Parameter | Early spiral (Sa–Sb) | Late spiral (Sc–Sm) | Elliptical/S0 | Basis |
-| --- | --- | --- | --- | --- |
-| Pitch angle | bimodal low peak ~12° (S) | high peak ~23° (S); trend earlier=tighter (V, Yu & Ho 2019) | — | per-stage means GAP |
-| Arm count | 2 dominant (64% of massive spirals 2-armed, S, Hart/GZ2: 5/64/18/6/7% for 1/2/3/4/5+) | multi-arm/flocculent rises toward latest types (V trend) | — | per-type split GAP |
-| Arm–interarm contrast K | up to ~2 grand design (V, Rix & Zaritsky) | ~1.2–1.4 flocculent-leaning (S, MW anchor 1.32) | — | feeds `armContrast` |
-| Per-arm age mix | mixed old/young (MW verified two-armed in old light) | younger overall | — | drives flux weight + future SFR/colour |
-| B/T | 0.24 median Sa–Sb (V, Graham & Worley K-band) | 0.04 median Scd–Sm (V) | high / n/a | factor ~2 scatter at fixed type (V) |
-| Disc scale length | R ∝ L^0.25–0.5, type-dependent slope (V, Courteau); R ∝ M^0.22 late types (V, van der Wel) | same law | — | **zero-point GAP** — needs Table 1 pull; interim: calibrate on diameterKpc, which we have per galaxy |
-| h_z/h_R | thicker at earlier type (S) | ~0.12–0.14 typical (S, Kregel) | — | absolute per-stage value GAP |
-| Colour → class cut | u−r ≥ 2.22 early (V, Strateva) | u−r < 2.22 late (V) | u−r ≥ 2.22 | SDSS only; 2MRS/GLADE adapters GAP |
+| Parameter               | Early spiral (Sa–Sb)                                                                       | Late spiral (Sc–Sm)                                         | Elliptical/S0 | Basis                                                                                                |
+| ----------------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------- | ------------- | ---------------------------------------------------------------------------------------------------- |
+| Pitch angle             | bimodal low peak ~12° (S)                                                                  | high peak ~23° (S); trend earlier=tighter (V, Yu & Ho 2019) | —             | per-stage means GAP                                                                                  |
+| Arm count               | 2 dominant (64% of massive spirals 2-armed, S, Hart/GZ2: 5/64/18/6/7% for 1/2/3/4/5+)      | multi-arm/flocculent rises toward latest types (V trend)    | —             | per-type split GAP                                                                                   |
+| Arm–interarm contrast K | up to ~2 grand design (V, Rix & Zaritsky)                                                  | ~1.2–1.4 flocculent-leaning (S, MW anchor 1.32)             | —             | feeds `armContrast`                                                                                  |
+| Per-arm age mix         | mixed old/young (MW verified two-armed in old light)                                       | younger overall                                             | —             | drives flux weight + future SFR/colour                                                               |
+| B/T                     | 0.24 median Sa–Sb (V, Graham & Worley K-band)                                              | 0.04 median Scd–Sm (V)                                      | high / n/a    | factor ~2 scatter at fixed type (V)                                                                  |
+| Disc scale length       | R ∝ L^0.25–0.5, type-dependent slope (V, Courteau); R ∝ M^0.22 late types (V, van der Wel) | same law                                                    | —             | **zero-point GAP** — needs Table 1 pull; interim: calibrate on diameterKpc, which we have per galaxy |
+| h_z/h_R                 | thicker at earlier type (S)                                                                | ~0.12–0.14 typical (S, Kregel)                              | —             | absolute per-stage value GAP                                                                         |
+| Colour → class cut      | u−r ≥ 2.22 early (V, Strateva)                                                             | u−r < 2.22 late (V)                                         | u−r ≥ 2.22    | SDSS only; 2MRS/GLADE adapters GAP                                                                   |
 
 Interim rule for GAP normalizations: where the catalog measures the quantity
 directly (scale length via diameterKpc), the measurement wins and the law is
@@ -68,7 +68,7 @@ only used for the parameters the catalog can't see.
 ## Module shape (sketch)
 
 ```ts
-// src/data/galaxy/paramMap/  (new)
+// src/services/engine/galaxyGenerator/shared/paramMap/  (new)
 export type GalaxyObservables = {
   readonly source: Source;
   readonly colourIndex: number;      // per-source ramp position

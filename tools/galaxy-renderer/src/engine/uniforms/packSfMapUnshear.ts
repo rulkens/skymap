@@ -7,7 +7,7 @@
  * 8 lanes for 5 members: the struct is 20 bytes, which is all Dawn's minimum
  * binding size demands — the tail is slack, not required padding.
  */
-import type { GalaxySfMapGridRadius } from '../../../../../src/data/galaxy/galaxySfMapArmForcing';
+import type { GalaxySfMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
 import type { GalaxySfMapParams } from '../../../../../src/@types/galaxy/GalaxySfMapParams';
 
 /** Float count of `sfMapPack.wesl`'s `SfMapUnshear` — 5 members, rounded up to whole 16-byte rows. */

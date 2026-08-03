@@ -10,7 +10,7 @@ import {
   BUBBLE_RECORD_FLOATS,
   packBubbleInstances,
 } from '../../../../../tools/galaxy-renderer/src/engine/uniforms/packBubbleInstances';
-import type { DustBubblePlacement } from '../../../../../src/data/galaxy/dustBubblePlacements';
+import type { DustBubblePlacement } from '../../../../../src/services/engine/galaxyGenerator/v2/dustBubblePlacements';
 
 describe('packBubbleInstances', () => {
   it('packs relics then cavities contiguously, at stride BUBBLE_RECORD_FLOATS, with kind 0 then 1', () => {

@@ -18,7 +18,10 @@
  * this readout states only the static, still-honest smooth-field part.
  */
 import type { ReactNode } from 'react';
-import { RING_BLOBS_PER_RING, WARP_RING_COUNT } from '../../../../../src/data/galaxy/galaxyFieldMixture';
+import {
+  RING_BLOBS_PER_RING,
+  WARP_RING_COUNT,
+} from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { fieldTuningPatched } from '../../state/slices/fieldTuningSlice';
 import { renderPatched } from '../../state/slices/renderSlice';

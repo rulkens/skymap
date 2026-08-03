@@ -44,7 +44,7 @@ import { COSMO } from '../../../../src/services/engine/frame/slabs';
 import {
   MILKY_WAY_FADE_FULL_PX,
   MILKY_WAY_RADIUS_MPC,
-} from '../../../../src/services/gpu/galaxy/milkyWayCalibration';
+} from '../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import type { RenderFrameInput } from '../../../../src/@types/engine/frame/RenderFrameInput';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { GpuTimingService } from '../../../../src/@types/gpu/timing/GpuTimingService';

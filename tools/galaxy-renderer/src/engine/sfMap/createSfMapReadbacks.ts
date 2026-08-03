@@ -14,8 +14,11 @@
 
 import type { GalaxySfMap } from '../../../../../src/@types/galaxy/GalaxySfMap';
 import type { GalaxySfMapOrientation } from '../../../../../src/@types/galaxy/GalaxySfMapOrientation';
-import type { GalaxySfMapGridRadius } from '../../../../../src/data/galaxy/galaxySfMapArmForcing';
-import { SF_MAP_AZ, SF_MAP_RINGS } from '../../../../../src/data/galaxy/galaxySfMapArmForcing';
+import type { GalaxySfMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
+import {
+  SF_MAP_AZ,
+  SF_MAP_RINGS,
+} from '../../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
 import { unpadRows } from '../../../../../src/utils/gpu/unpadRows';
 
 import { createReadbackQueue } from '../gpu/createReadbackQueue';

@@ -21,7 +21,7 @@
  * A copy-to-clipboard button sits under the sliders for promoting a tuned
  * session to code: `formatMilkyWayTuningDefaults` diffs the live values
  * against `MILKY_WAY_TUNING_DEFAULTS` and the button copies the paste-ready
- * lines. Imported straight from `services/gpu/galaxy/` rather than routed
+ * lines. Imported straight from `services/engine/galaxyGenerator/v1/` rather than routed
  * through the container — it's a module constant, not store state, and the
  * established precedent here (`AssetLoadingSection`, `GpuTimingsSection`,
  * `RenderTogglesSection`) is that presentational DebugPanel sections import
@@ -36,7 +36,7 @@ import {
   MILKY_WAY_SLIDER_FIELDS,
   milkyWaySliderPatch,
 } from '../../data/milkyWay/milkyWaySliderFields';
-import { MILKY_WAY_TUNING_DEFAULTS } from '../../services/gpu/galaxy/milkyWayCalibration';
+import { MILKY_WAY_TUNING_DEFAULTS } from '../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { formatMilkyWayTuningDefaults } from '../../utils/format/formatMilkyWayTuningDefaults';
 import CopyButton from '../common/CopyButton/CopyButton';
 import DebugSection from './DebugSection';

@@ -1,6 +1,6 @@
 /**
  * StarFormationSection — the seeded SF-event model's own knobs
- * (`GalaxyParams.starFormation`, built by `src/data/galaxy/sfEventCatalog.ts`):
+ * (`GalaxyParams.starFormation`, built by `src/services/engine/galaxyGenerator/v2/sfEventCatalog.ts`):
  * the event rate and the relic-bubble radius scaler. A different model from
  * the SSPSF automaton `SfMapSection` drives — the two share no state, so they
  * get separate sections rather than one "star formation" drawer. Nested
@@ -9,7 +9,7 @@
  */
 import type { ReactNode } from 'react';
 import type { GalaxyStarFormationParams } from '../../../../../src/@types/galaxy/GalaxyStarFormationParams';
-import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from '../../../../../src/data/galaxy/defaultGalaxyStarFormationParams';
+import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from '../../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxyStarFormationParams';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { paramsPatched } from '../../state/slices/galaxySlice';
 import { sectionToggled } from '../../state/slices/uiSlice';

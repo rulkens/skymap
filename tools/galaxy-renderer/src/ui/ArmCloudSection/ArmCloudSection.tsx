@@ -1,6 +1,6 @@
 /**
  * ArmCloudSection — the arm ridge's stochastic sprite twin
- * (`src/data/galaxy/armParticleCloud.ts`): thousands of small Gaussian
+ * (`src/services/engine/galaxyGenerator/v2/armParticleCloud.ts`): thousands of small Gaussian
  * sprites scattered along the same log-spiral ridge `ArmFieldSection`'s
  * deterministic blobs sit on. Its own section, own header pill
  * (`fieldTuning.armCloudEnabled`), same idiom as `DustCloudSection` — the

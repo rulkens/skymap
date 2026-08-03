@@ -11,7 +11,7 @@
  */
 import type { ReactNode } from 'react';
 import type { GalaxyDustCloudParams } from '../../../../../src/@types/galaxy/GalaxyDustCloudParams';
-import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../../src/data/galaxy/defaultGalaxyDustParams';
+import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxyDustParams';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { paramsPatched } from '../../state/slices/galaxySlice';
 import { renderPatched } from '../../state/slices/renderSlice';

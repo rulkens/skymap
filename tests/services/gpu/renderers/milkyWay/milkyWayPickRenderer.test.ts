@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createMilkyWayPickRenderer } from '../../../../../src/services/gpu/renderers/milkyWay/milkyWayPickRenderer';
 import { MILKY_WAY_CENTER_WORLD } from '../../../../../src/data/milkyWay/galacticCenter';
-import { MILKY_WAY_RADIUS_MPC } from '../../../../../src/services/gpu/galaxy/milkyWayCalibration';
+import { MILKY_WAY_RADIUS_MPC } from '../../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { Source } from '../../../../../src/data/sources';
 import type { FadeUniformsBgl } from '../../../../../src/@types/rendering/FadeUniformsBgl';
 

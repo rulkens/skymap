@@ -41,7 +41,7 @@ import {
 import { catalogLoaded } from '../../../src/state/catalog/catalogLoaded';
 import { selectionRoute } from '../../../src/store/constants';
 import { Source } from '../../../src/data/sources';
-import { MILKY_WAY_STARS_PER_TIER } from '../../../src/services/gpu/galaxy/milkyWayCalibration';
+import { MILKY_WAY_STARS_PER_TIER } from '../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import type { RunTierTransition } from '../../../src/store/types';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';

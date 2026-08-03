@@ -8,7 +8,7 @@
  * minimum binding size Dawn demands (measured, not the 16-byte round-up you
  * might expect) — the tail is slack, not padding the layout requires.
  */
-import type { GalaxySfMapGridRadius } from '../../../../../src/data/galaxy/galaxySfMapArmForcing';
+import type { GalaxySfMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
 import type { GalaxySfMapParams } from '../../../../../src/@types/galaxy/GalaxySfMapParams';
 
 /** Float count of `sfMapStep.wesl`'s `SfMapConstants` — 13 members, rounded up to a whole 16-byte row. */

@@ -6,9 +6,12 @@
  */
 import type { GalaxyDustParams } from '../../../../../src/@types/galaxy/GalaxyDustParams';
 import type { GalaxyFieldGeometry } from '../../../../../src/@types/galaxy/GalaxyFieldGeometry';
-import { DISC_SIGMA_RATIOS } from '../../../../../src/data/galaxy/discSurfaceFit';
-import { dustDiscShape, dustSigmaR } from '../../../../../src/data/galaxy/galaxyDustMixture';
-import { dustNoiseTileUnits } from '../../../../../src/data/galaxy/dustParticleCloud';
+import { DISC_SIGMA_RATIOS } from '../../../../../src/services/engine/galaxyGenerator/v2/discSurfaceFit';
+import {
+  dustDiscShape,
+  dustSigmaR,
+} from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyDustMixture';
+import { dustNoiseTileUnits } from '../../../../../src/services/engine/galaxyGenerator/v2/dustParticleCloud';
 import { dustExtinctionRgb } from '../../../../../src/utils/galaxy/dustExtinctionRgb';
 
 import type { DustHeaderLanes } from '../../../@types/engine/DustHeaderLanes';
