@@ -30,9 +30,6 @@ describe('deriveFrameView', () => {
     // proj[10]/proj[14] encode near/far; comparing the two frames' projections
     // is enough to catch a near plane pinned to a constant.
     expect(far.proj[14]).not.toBeCloseTo(near.proj[14]!, 6);
-    // A fixed 0.1 near would clip everything at dist 0.05; the floor must be
-    // well below the camera's own distance.
-    expect(Math.max(1e-4, 0.05 * 0.002)).toBeLessThan(0.05);
   });
 
   it('puts the lens shift in the projection, not the view', () => {
