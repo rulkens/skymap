@@ -210,6 +210,7 @@ import { hasUrlGate } from '../../../../src/utils/url/hasUrlGate';
 
 import { createFrameTimer } from './timing/createFrameTimer';
 import { createGalaxyRenderTargets } from './gpu/createGalaxyRenderTargets';
+import type { TargetDivisors } from './gpu/createGalaxyRenderTargets';
 import { createOrbitCameraInput } from './camera/createOrbitCameraInput';
 import { createPassTimingWindows } from './timing/createPassTimingWindows';
 import { beginClearPass } from './passes/beginClearPass';
@@ -1235,6 +1236,15 @@ export async function createGalaxyEngine(
   // `deriveFrameView` instead, so a pass and its own header agree.
   const viewIntensity = (kind: DebugViewKind): number => render[DEBUG_VIEWS[kind].intensityKey];
 
+  // The targets module never reads the render bag, so both of its entry points
+  // are handed all four divisors at once.
+  const allDivisors = (): TargetDivisors => ({
+    aggregate: render.aggregateDivisor,
+    field: render.fieldDivisor,
+    dust: render.dustDivisor,
+    hii: render.hiiDivisor,
+  });
+
   // Reused scratch for the per-frame uniform packs — no per-frame allocation.
   // One scratch serves both cloud passes: each pack writes every lane before
   // its `writeBuffer`, so nothing of the star pass's fill survives into the
@@ -1797,16 +1807,10 @@ export async function createGalaxyEngine(
   }
 
   // Every knob here reaches the next frame through the uniform pack, so a
-  // merge is all that is needed — except `aggregateDivisor`, which sizes the
-  // star pass's own render target. That one has to reallocate, and only when
-  // it actually moved: the bridge re-pushes the whole bag on any render/lod
-  // change, so an unconditional rebuild would churn a texture on every
-  // exposure tick.
+  // merge is all that is needed — except the four divisors, which size render
+  // targets. `setDivisors` owns that comparison (it keys on the live
+  // textures' pixel sizes), so this can hand it the whole bag on every push.
   function setRender(patch: Partial<RenderSettings & LodSettings>): void {
-    const previousDivisor = render.aggregateDivisor;
-    const previousFieldDivisor = render.fieldDivisor;
-    const previousDustDivisor = render.dustDivisor;
-    const previousHiiDivisor = render.hiiDivisor;
     const previousOrientationSigmaDeriv = render.orientationSigmaDerivTexels;
     const previousOrientationSigmaInteg = render.orientationSigmaIntegTexels;
     const previousViewWeights = debugViewWeights(render);
@@ -1817,16 +1821,7 @@ export async function createGalaxyEngine(
     // once, when the overlay turns on.
     const turnedOn = (kind: DebugViewKind): boolean =>
       previousViewWeights[kind] <= 0 && viewIntensity(kind) > 0;
-    if (render.aggregateDivisor !== previousDivisor) {
-      targets.rebuildAggregate(render.aggregateDivisor);
-    }
-    if (render.fieldDivisor !== previousFieldDivisor) targets.rebuildField(render.fieldDivisor);
-    // `rebuildDust` covers dustMapTex AND dustViewTex — they share dustDivisor
-    // (see dustMapTex's declaration comment), and rebuilding one without the
-    // other reintroduces the resolution-mismatch bug the divisor-matched
-    // contract exists to prevent.
-    if (render.dustDivisor !== previousDustDivisor) targets.rebuildDust(render.dustDivisor);
-    if (render.hiiDivisor !== previousHiiDivisor) targets.rebuildHii(render.hiiDivisor);
+    targets.setDivisors(allDivisors());
     // Not a plain edge: the sigma sliders are a second way in, and BOTH are
     // gated on EITHER consumer being live rather than on the intensity alone.
     // With the overlay off and `sfMapDustSeeding` on, an intensity-only guard
@@ -2050,14 +2045,6 @@ export async function createGalaxyEngine(
     Math.max(1, Math.floor(canvas.clientWidth * dpr)),
     Math.max(1, Math.floor(canvas.clientHeight * dpr)),
   ];
-  // The targets module never reads the render bag, so a full reallocation has
-  // to be handed all four divisors at once.
-  const allDivisors = (): { aggregate: number; field: number; dust: number; hii: number } => ({
-    aggregate: render.aggregateDivisor,
-    field: render.fieldDivisor,
-    dust: render.dustDivisor,
-    hii: render.hiiDivisor,
-  });
   function resize(): void {
     const [w, h] = backingSize();
     if (w === canvas.width && h === canvas.height) return;

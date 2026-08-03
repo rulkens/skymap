@@ -23,7 +23,7 @@ import { reducedTargetSize } from '../../../../../src/utils/gpu/reducedTargetSiz
 const bloomScale = (level: number): number => 2 ** (level + 1);
 
 /** The four reduced targets' divisors, each its own live slider. */
-type TargetDivisors = {
+export type TargetDivisors = {
   readonly aggregate: number;
   readonly field: number;
   readonly dust: number;
@@ -49,11 +49,12 @@ type GalaxyRenderTargets = {
   bloomTexelSize(level: number): Vec2;
   /** Full (re)allocation against the canvas's current backing size. */
   rebuildAll(divisors: TargetDivisors): void;
-  rebuildAggregate(divisor: number): void;
-  rebuildField(divisor: number): void;
-  /** Both dust targets — they share one divisor, see `dustMapTex` above. */
-  rebuildDust(divisor: number): void;
-  rebuildHii(divisor: number): void;
+  /**
+   * Reallocate whichever reduced targets these divisors no longer describe.
+   * Safe to call on every render-bag push: the comparison is against the live
+   * textures' pixel sizes, so an unmoved divisor is a no-op.
+   */
+  setDivisors(divisors: TargetDivisors): void;
   destroy(): void;
 };
 
@@ -87,7 +88,7 @@ export function createGalaxyRenderTargets(
    * `reducedSize(render.dustDivisor)` — much finer than fieldTex's, because
    * the dust splat carries far higher-frequency structure than the smooth
    * emission field it used to share a target with (that sharing once
-   * decimated thin lanes into beads — see `rebuildDust`). dustPresent.wesl
+   * decimated thin lanes into beads — see `allocateDust`). dustPresent.wesl
    * (the JWST view) still reads it via a 1:1 `input.pos.xy` texel lookup, but
    * into its OWN divisor-matched target (`dustViewTex`, not `fieldTex`);
    * splat.wesl's fs, which runs at fieldTex's coarser resolution, instead
@@ -129,12 +130,16 @@ export function createGalaxyRenderTargets(
   const reducedSize = (scale: number): Vec2 =>
     reducedTargetSize(canvas.width, canvas.height, scale);
 
-  // Every divisor is a live slider, which is why each reduced target has its
-  // own entry point: moving one must not disturb the scene, the LDR scratch or
-  // the bloom pyramid. Reallocating outright (rather than pooling a few sizes)
-  // is the right trade for a 1..6 integer knob dragged by hand.
-  function rebuildAggregate(divisor: number): void {
-    const [w, h] = reducedSize(divisor);
+  // Every divisor is a live slider, which is why each reduced target allocates
+  // on its own: moving one must not disturb the scene, the LDR scratch or the
+  // bloom pyramid. Reallocating outright (rather than pooling a few sizes) is
+  // the right trade for a 1..6 integer knob dragged by hand.
+  //
+  // The `allocate*` half is UNCONDITIONAL and is what `rebuildAll` calls: a
+  // resize must recreate every texture even where the new reduced size floors
+  // to the same pixels, because `allocateDust` also fires `onDustMapRecreated`.
+  // `setDivisors` goes through the guarded half instead.
+  function allocateAggregate(w: number, h: number): void {
     if (aggregateTex) aggregateTex.destroy();
     aggregateTex = device.createTexture({
       label: 'galaxy:aggregateTex',
@@ -144,8 +149,7 @@ export function createGalaxyRenderTargets(
     });
   }
 
-  function rebuildField(divisor: number): void {
-    const [w, h] = reducedSize(divisor);
+  function allocateField(w: number, h: number): void {
     if (fieldTex) fieldTex.destroy();
     fieldTex = device.createTexture({
       label: 'galaxy:fieldTex',
@@ -164,8 +168,7 @@ export function createGalaxyRenderTargets(
   // recreation has to rebuild all three immediately, not wait for the next
   // `repackFieldComponents`/`repackHiiComponents` — that is `onDustMapRecreated`,
   // which also owns the stale-map latch: a fresh texture is zero-initialised.
-  function rebuildDust(divisor: number): void {
-    const [w, h] = reducedSize(divisor);
+  function allocateDust(w: number, h: number): void {
     if (dustMapTex) dustMapTex.destroy();
     dustMapTex = device.createTexture({
       label: 'galaxy:dustMapTex',
@@ -186,8 +189,7 @@ export function createGalaxyRenderTargets(
   // Rebuilds no bind group — `hiiBG` references `hiiUbo`/`hiiCompsBuf`/
   // `dustMapTex`, none of which this touches, not `hiiTex` itself (the render
   // PASS binds `hiiTex` as its attachment view, freshly, every `drawFrame`).
-  function rebuildHii(divisor: number): void {
-    const [w, h] = reducedSize(divisor);
+  function allocateHii(w: number, h: number): void {
     if (hiiTex) hiiTex.destroy();
     hiiTex = device.createTexture({
       label: 'galaxy:hiiTex',
@@ -195,6 +197,35 @@ export function createGalaxyRenderTargets(
       format: formats.hdr,
       usage: RA_TB,
     });
+  }
+
+  /**
+   * The divisor comparison lives HERE, keyed on the pixel size already on the
+   * live texture, rather than in the caller against a remembered divisor: the
+   * texture is the authoritative record of what it was built at, and two
+   * divisors that floor to the same size genuinely need no reallocation. It
+   * also makes the check resize-correct for free — after `rebuildAll` the
+   * sizes are the canvas's, so a divisor that "did not move" still rebuilds if
+   * the canvas did.
+   */
+  function setDivisors(divisors: TargetDivisors): void {
+    const reallocateIfResized = (
+      tex: GPUTexture | undefined,
+      divisor: number,
+      allocate: (w: number, h: number) => void,
+    ): void => {
+      const [w, h] = reducedSize(divisor);
+      if (tex && tex.width === w && tex.height === h) return;
+      allocate(w, h);
+    };
+    reallocateIfResized(aggregateTex, divisors.aggregate, allocateAggregate);
+    reallocateIfResized(fieldTex, divisors.field, allocateField);
+    // `allocateDust` covers dustMapTex AND dustViewTex — they share one
+    // divisor (see dustMapTex's declaration comment), and rebuilding one
+    // without the other reintroduces the resolution-mismatch bug the
+    // divisor-matched contract exists to prevent.
+    reallocateIfResized(dustMapTex, divisors.dust, allocateDust);
+    reallocateIfResized(hiiTex, divisors.hii, allocateHii);
   }
 
   function rebuildAll(divisors: TargetDivisors): void {
@@ -215,10 +246,13 @@ export function createGalaxyRenderTargets(
       format: formats.swap,
       usage: RA_TB,
     });
-    rebuildAggregate(divisors.aggregate);
-    rebuildField(divisors.field);
-    rebuildDust(divisors.dust);
-    rebuildHii(divisors.hii);
+    // The unguarded half, deliberately: at a new canvas size a reduced target
+    // whose pixels happen to floor to the same numbers still has to be
+    // recreated, and `allocateDust` is also what fires `onDustMapRecreated`.
+    allocateAggregate(...reducedSize(divisors.aggregate));
+    allocateField(...reducedSize(divisors.field));
+    allocateDust(...reducedSize(divisors.dust));
+    allocateHii(...reducedSize(divisors.hii));
     // Pyramid: level 0 = half-res, each further level halves again -> ever-wider
     // glow. `Math.floor(size / scale)` clamped to 1 px, matching the runtime's
     // `renderTargets.allocate`.
@@ -274,10 +308,7 @@ export function createGalaxyRenderTargets(
     ],
 
     rebuildAll,
-    rebuildAggregate,
-    rebuildField,
-    rebuildDust,
-    rebuildHii,
+    setDivisors,
 
     destroy(): void {
       if (sceneTex) sceneTex.destroy();
