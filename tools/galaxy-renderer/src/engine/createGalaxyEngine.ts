@@ -236,6 +236,11 @@ import { sampleLuminanceStats } from './probe/sampleLuminanceStats';
 import { swizzleToRgba } from './probe/swizzleToRgba';
 import { CLOUD_UNIFORM_FLOATS, packCloudUniforms } from './uniforms/packCloudUniforms';
 import {
+  GRADE_UNIFORM_BUFFER_SIZE,
+  GRADE_UNIFORM_FLOATS,
+  packGradeUniforms,
+} from './uniforms/packGradeUniforms';
+import {
   FIELD_COMPONENT_FLOATS,
   FIELD_HEADER_BUFFER_SIZE,
   FIELD_HEADER_FLOATS,
@@ -590,12 +595,12 @@ export async function createGalaxyEngine(
       initialCapacity: BUBBLE_BUDGET + HII_CAVITY_BUDGET,
     }),
   );
-  // Tool-only grade trailer: [saturation, vignette, gammaEncode, 0]. The bloom
+  // Tool-only grade trailer — see `packGradeUniforms` for the lanes. The bloom
   // and compositor uniforms are owned by their shared factories below.
   const gradeBuf = own(
     device.createBuffer({
       label: 'galaxy:grade',
-      size: 16,
+      size: GRADE_UNIFORM_BUFFER_SIZE,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     }),
   );
@@ -1174,7 +1179,7 @@ export async function createGalaxyEngine(
   const cloudData = new Float32Array(CLOUD_UNIFORM_FLOATS);
   const fieldData = new Float32Array(FIELD_HEADER_FLOATS);
   const hiiData = new Float32Array(FIELD_HEADER_FLOATS);
-  const gradeData = new Float32Array(4);
+  const gradeData = new Float32Array(GRADE_UNIFORM_FLOATS);
 
   /**
    * The tool's render bag, viewed as the app's `MilkyWayTuning` — the shape
@@ -1974,9 +1979,7 @@ export async function createGalaxyEngine(
     tonePass.end();
     if (!graded) return;
 
-    gradeData[0] = render.saturation;
-    gradeData[1] = render.vignette;
-    gradeData[2] = render.gammaEncode ? 1 : 0;
+    packGradeUniforms(render, gradeData);
     device.queue.writeBuffer(gradeBuf, 0, gradeData);
     // Reached only when the trailer is live, so the `'grade'` slot is consumed
     // exactly on the frames the pass runs — which is what makes the row vanish
