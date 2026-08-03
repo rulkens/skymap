@@ -211,6 +211,7 @@ import { hasUrlGate } from '../../../../src/utils/url/hasUrlGate';
 
 import { createFrameTimer } from './createFrameTimer';
 import { deriveMilkyWayFade } from './deriveMilkyWayFade';
+import { createGalaxyRenderTargets } from './createGalaxyRenderTargets';
 import { createOrbitCameraInput } from './createOrbitCameraInput';
 import { createPassTimingWindows } from './createPassTimingWindows';
 import { debugGalaxyWeight } from './debugGalaxyWeight';
@@ -270,7 +271,6 @@ import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../src/data/galaxy/defaultG
 import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from '../../../../src/data/galaxy/defaultGalaxyStarFormationParams';
 import { dustExtinctionRgb } from '../../../../src/utils/galaxy/dustExtinctionRgb';
 import { alignedBytesPerRow } from '../../../../src/utils/gpu/alignedBytesPerRow';
-import { reducedTargetSize } from '../../../../src/utils/gpu/reducedTargetSize';
 import { unpadRows } from '../../../../src/utils/gpu/unpadRows';
 import { transformGalaxyFieldComponent } from '../../../../src/utils/galaxy/transformGalaxyFieldComponent';
 import { GENERATION_UBO } from '../../../../src/services/gpu/galaxy/generationUboLayout';
@@ -336,16 +336,6 @@ const DUST_NOISE_TEX_SIZE = 128;
 
 /** Matches dustNoiseBake.wesl's `@workgroup_size(4, 4, 4)`. */
 const DUST_NOISE_WORKGROUP_SIZE = 4;
-
-/**
- * Resolution divisor for bloom level `n`, mirroring the runtime's `bloomN`
- * render-target rows (`renderTargets.ts`: `scale: 2 ** (n + 1)` — level 0 at
- * half-res, halving again each level). The rows themselves can't be reused
- * here without dragging in the whole `renderTargets` table (volume, aggregate,
- * and foreground rows this tool has no use for), so the one-line divisor is
- * restated; the KERNELS and pipelines that consume it are shared.
- */
-const bloomScale = (level: number): number => 2 ** (level + 1);
 
 /**
  * The GPU-timing slots this tool bills, in frame-encode order — the order the
@@ -1409,11 +1399,11 @@ export async function createGalaxyEngine(
   // right here, same as the old `splatBG` used to. `splatBG` itself cannot:
   // splat.wesl's fs now ALSO reads `dustMapTex` (binding 2), which does not
   // exist yet at this point in construction — its first build is deferred to
-  // `buildDustMapTarget()` below, alongside `dustPresentBG` (dustMapTex is
-  // that bind group's ONLY binding). All three rebuild in
+  // `targets`' `onDustMapRecreated` below, alongside `dustPresentBG`
+  // (dustMapTex is that bind group's ONLY binding). All three rebuild in
   // `repackFieldComponents`'s regrow branch when `fieldCompsBuf` grows;
   // `splatBG`/`dustPresentBG` rebuild again whenever `dustMapTex` itself is
-  // recreated (`buildDustMapTarget`, on every resize).
+  // recreated (every resize, and every `dustDivisor` move).
   // Bindings 4/5 (dustNoiseTex/dustNoiseSmp) go ONLY here: dustMap.wesl is
   // the one shader among the three that share io.wesl (splat/dustMap/
   // dustPresent) that actually imports them — `layout: 'auto'` derives each
@@ -1447,7 +1437,7 @@ export async function createGalaxyEngine(
       entries: [
         { binding: 0, resource: { buffer: fieldUbo } },
         { binding: 1, resource: { buffer: fieldCompsBuf } },
-        { binding: 2, resource: dustMapTex.createView() },
+        { binding: 2, resource: targets.dustMapTex.createView() },
         // Binding 6: dustMapSmp — splat.wesl's fs now samples dustMapTex
         // through a filtered UV rather than a 1:1 texel load (see
         // dustMapTex's own declaration comment for why the divisors split).
@@ -1462,7 +1452,7 @@ export async function createGalaxyEngine(
       layout: dustPresentPipe.getBindGroupLayout(0),
       entries: [
         { binding: 0, resource: { buffer: fieldUbo } },
-        { binding: 2, resource: dustMapTex.createView() },
+        { binding: 2, resource: targets.dustMapTex.createView() },
       ],
     });
   }
@@ -1483,66 +1473,12 @@ export async function createGalaxyEngine(
       entries: [
         { binding: 0, resource: { buffer: hiiUbo } },
         { binding: 1, resource: { buffer: hiiCompsBuf } },
-        { binding: 2, resource: dustMapTex.createView() },
+        { binding: 2, resource: targets.dustMapTex.createView() },
         { binding: 6, resource: dustMapSampler },
       ],
     });
   }
 
-  // ---- size-dependent targets: HDR scene + star aggregate + bloom mips + LDR ----
-  //
-  // The runtime keeps these in its `renderTargets` table, which also carries
-  // volume / foreground rows this tool never draws — so the tool allocates its
-  // own equivalents of the `hdr`, `mw-aggregate` and `bloom0..4` rows, at the
-  // same formats and the same divisors. `ldrTex` has no runtime counterpart at
-  // all: it only exists as the intermediate the tool-only grade trailer reads,
-  // and is allocated lazily-by-configuration (every resize) but bound only on
-  // frames the trailer actually runs.
-  //
-  // Bind groups are NOT cached here: every shared factory rebuilds its own per
-  // draw from the source view it is handed, which is exactly what makes a
-  // resize (or an aggregate reallocation) need no bookkeeping in this function.
-  let sceneTex: GPUTexture;
-  let ldrTex: GPUTexture;
-  let aggregateTex: GPUTexture;
-  /**
-   * The analytic field's OWN reduced-resolution target, deliberately not the
-   * star aggregate. Both are additive glow folded into HDR by the same
-   * upsample, but their spatial frequency is not the same: sprites carry
-   * point-like detail that a coarse divisor destroys, while the field is a
-   * sum of wide Gaussians that survives 5x downsampling with no visible
-   * change. Sharing one target forced the field to pay the sprites' pixel
-   * rate — and it is FILL-bound, so that was most of its cost.
-   */
-  let fieldTex: GPUTexture;
-  /**
-   * The dust-column map (see dustMap.wesl): screen-space, four depth-sliced
-   * optical-depth channels (io.wesl's dustSlices doc) accumulated for the
-   * primary galaxy's dust slice. Sized to ITS OWN divisor,
-   * `reducedSize(render.dustDivisor)` — much finer than fieldTex's, because
-   * the dust splat carries far higher-frequency structure than the smooth
-   * emission field it used to share a target with (that sharing once
-   * decimated thin lanes into beads — see `buildDustMapTarget`). dustPresent.wesl (the JWST view) still reads
-   * it via a 1:1 `input.pos.xy` texel lookup, but into its OWN divisor-
-   * matched target (`dustViewTex`, not `fieldTex` — see `buildDustViewTarget`);
-   * splat.wesl's fs, which runs at fieldTex's coarser resolution, instead
-   * samples it through a linear sampler (`dustMapSmp`) at a normalized UV —
-   * see splat.wesl's fs comment for why that is a deliberate, imperfect
-   * trade rather than an oversight.
-   */
-  let dustMapTex: GPUTexture;
-  /**
-   * The HII tier's own target, sized to ITS OWN divisor,
-   * `reducedSize(render.hiiDivisor)` — defaults to the canvas itself (1), not
-   * `fieldTex`'s coarser one. A shell sprite is small and bright by
-   * construction: sharing the field's target once collapsed a whole sprite's
-   * flux onto one texel and bloom promoted the spike into a firefly
-   * (research doc §18.1 — the SAME shape as the bug that split off
-   * `dustMapTex`, one tenant later). Drawn by `splatPipe` again (`hiiBG`),
-   * composited into HDR through the same `aggregateUpsample` the field and
-   * star aggregate use.
-   */
-  let hiiTex: GPUTexture;
   /**
    * Whether `dustMapTex` currently holds anything but zeros. `drawFrame` skips
    * the dust-map pass when there is no dust to draw, and a skipped pass leaves
@@ -1551,157 +1487,27 @@ export async function createGalaxyEngine(
    * instead of stranding the previous galaxy's dust in front of the new one.
    */
   let dustMapPopulated = false;
-  /**
-   * The JWST-view's own presentation target (dustPresent.wesl), divisor-
-   * matched to `dustMapTex` rather than `fieldTex` — see `dustMapTex`'s own
-   * comment above. Only drawn into while `render.dustViewIntensity` is above
-   * 0; the scene pass sums it additively alongside `fieldTex` when it ran
-   * this frame (see `drawFrame`).
-   */
-  let dustViewTex: GPUTexture;
-  let bloomMips: GPUTexture[] = [];
-  const RA_TB = GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING;
 
-  /**
-   * This is also the number the star pass writes into `viewportPx`, which is
-   * why it is a function rather than two inline expressions — the allocation
-   * and the uniform read it from the same place and so cannot disagree, the
-   * same discipline `milkyWayAggregateLayer` follows by reading the divisor
-   * off the shared spec row. The sizing rule itself is `reducedTargetSize`.
-   */
-  const reducedSize = (scale: number): Vec2 =>
-    reducedTargetSize(canvas.width, canvas.height, scale);
-
-  // Split out of `buildTargets` because the divisor is a live slider: moving it
-  // has to reallocate this one target without disturbing the scene, the LDR
-  // scratch, or the bloom pyramid. Reallocating outright (rather than pooling a
-  // few sizes) is the right trade for a 1..6 integer knob dragged by hand.
-  function buildAggregateTarget(): void {
-    const [w, h] = reducedSize(render.aggregateDivisor);
-    if (aggregateTex) aggregateTex.destroy();
-    aggregateTex = device.createTexture({
-      label: 'galaxy:aggregateTex',
-      size: [w, h],
-      format: HDR,
-      usage: RA_TB,
-    });
-  }
-
-  function buildFieldTarget(): void {
-    const [w, h] = reducedSize(render.fieldDivisor);
-    if (fieldTex) fieldTex.destroy();
-    fieldTex = device.createTexture({
-      label: 'galaxy:fieldTex',
-      size: [w, h],
-      format: HDR,
-      usage: RA_TB,
-    });
-  }
-
-  // Recreated on resize AND whenever `render.dustDivisor` moves (see
-  // `setRender`) — its OWN divisor now, independent of `fieldTex`'s (see
-  // `dustMapTex`'s declaration comment for why the dust splat outgrew
-  // sharing the field's coarser target). Every bind group that references
-  // `dustMapTex` is tied to the specific GPUTexture it was built against
-  // (same `layout: 'auto'` discipline as every other bind group here), so a
-  // recreation has to rebuild all three immediately, not wait for the next
-  // `repackFieldComponents`/`repackHiiComponents`.
-  function buildDustMapTarget(): void {
-    const [w, h] = reducedSize(render.dustDivisor);
-    if (dustMapTex) dustMapTex.destroy();
-    dustMapTex = device.createTexture({
-      label: 'galaxy:dustMapTex',
-      size: [w, h],
-      format: DUST_MAP_FORMAT,
-      usage: RA_TB,
-    });
-    splatBG = buildSplatBindGroup();
-    hiiBG = buildHiiBindGroup();
-    dustPresentBG = buildDustPresentBindGroup();
-    // A fresh texture is zero-initialised, so the stale-map latch resets with it.
-    dustMapPopulated = false;
-  }
-
-  // dustPresent.wesl's own target, sized like `dustMapTex` (same divisor) so
-  // its 1:1 texel read stays valid now that `dustMapTex` no longer shares
-  // `fieldTex`'s extent — see `dustMapTex`'s declaration comment. Rebuilt on
-  // the same two triggers as `dustMapTex`: resize and `render.dustDivisor`.
-  function buildDustViewTarget(): void {
-    const [w, h] = reducedSize(render.dustDivisor);
-    if (dustViewTex) dustViewTex.destroy();
-    dustViewTex = device.createTexture({
-      label: 'galaxy:dustViewTex',
-      size: [w, h],
-      format: HDR,
-      usage: RA_TB,
-    });
-  }
-
-  // Split out for the same reason `buildAggregateTarget`/`buildFieldTarget`
-  // are: `render.hiiDivisor` is its own live slider, and moving it must
-  // reallocate only this target. Does not rebuild `hiiBG` — that bind group
-  // references `hiiUbo`/`hiiCompsBuf`/`dustMapTex`, none of which this
-  // function touches, not `hiiTex` itself (the render PASS binds `hiiTex` as
-  // its attachment view, freshly, every `drawFrame`).
-  function buildHiiTarget(): void {
-    const [w, h] = reducedSize(render.hiiDivisor);
-    if (hiiTex) hiiTex.destroy();
-    hiiTex = device.createTexture({
-      label: 'galaxy:hiiTex',
-      size: [w, h],
-      format: HDR,
-      usage: RA_TB,
-    });
-  }
-
-  function buildTargets(): void {
-    const w = canvas.width;
-    const h = canvas.height;
-    if (sceneTex) sceneTex.destroy();
-    if (ldrTex) ldrTex.destroy();
-    for (const m of bloomMips) m.destroy();
-    sceneTex = device.createTexture({
-      label: 'galaxy:sceneTex',
-      size: [w, h],
-      format: HDR,
-      usage: RA_TB,
-    });
-    ldrTex = device.createTexture({
-      label: 'galaxy:ldrTex',
-      size: [w, h],
-      format,
-      usage: RA_TB,
-    });
-    buildAggregateTarget();
-    buildFieldTarget();
-    buildDustMapTarget();
-    buildDustViewTarget();
-    buildHiiTarget();
-    // Pyramid: level 0 = half-res, each further level halves again -> ever-wider
-    // glow. `Math.floor(size / scale)` clamped to 1 px, matching the runtime's
-    // `renderTargets.allocate`.
-    bloomMips = Array.from({ length: BLOOM_LEVELS }, (_unused, level) => {
-      const scale = bloomScale(level);
-      return device.createTexture({
-        label: `galaxy:bloomMip${level}`,
-        size: [Math.max(1, Math.floor(w / scale)), Math.max(1, Math.floor(h / scale))],
-        format: HDR,
-        usage: RA_TB,
-      });
-    });
-  }
-
-  /**
-   * Texel size of bloom level `level` — `1 / source-pixel-size` per axis, which
-   * is `scale / viewportPx` because every level is a sub-scale of the one
-   * viewport. Mirrors the runtime's `bloomSrcTexelSize`, which can't be reused
-   * directly: it reads the divisor off a `ReadyFrameContext`'s render-target
-   * specs, and this tool has no frame context.
-   */
-  const bloomTexelSize = (level: number): Vec2 => [
-    bloomScale(level) / canvas.width,
-    bloomScale(level) / canvas.height,
-  ];
+  // ---- size-dependent targets: HDR scene + star aggregate + bloom mips + LDR ----
+  //
+  // Allocates nothing yet — the first `rebuildAll` is the unconditional one
+  // below the ResizeObserver, once the canvas has adopted its backing size.
+  // The callback is the engine's half of a `dustMapTex` recreation: three
+  // `layout: 'auto'` bind groups are tied to the specific GPUTexture they were
+  // built against, and they also read `fieldUbo`/`hiiUbo`/the comps buffers,
+  // which the target module has no business knowing about.
+  const targets = createGalaxyRenderTargets(
+    device,
+    canvas,
+    { hdr: HDR, swap: format, dustMap: DUST_MAP_FORMAT },
+    () => {
+      splatBG = buildSplatBindGroup();
+      hiiBG = buildHiiBindGroup();
+      dustPresentBG = buildDustPresentBindGroup();
+      // A fresh texture is zero-initialised, so the stale-map latch resets with it.
+      dustMapPopulated = false;
+    },
+  );
 
   // ---- camera state (orbit) — galaxy-engine.js:159-166 ----
   const camera = createOrbitCameraInput(canvas, { autoRotate: opts.autoRotate !== false });
@@ -2563,17 +2369,16 @@ export async function createGalaxyEngine(
     const previousOrientationSigmaInteg = render.orientationSigmaIntegTexels;
     const previousBubbleViewIntensity = render.bubbleViewIntensity;
     Object.assign(render, patch);
-    if (render.aggregateDivisor !== previousDivisor) buildAggregateTarget();
-    if (render.fieldDivisor !== previousFieldDivisor) buildFieldTarget();
-    // dustMapTex and dustViewTex share dustDivisor (see dustMapTex's
-    // declaration comment), so the two rebuild together — leaving either
-    // behind here would silently reintroduce the resolution-mismatch bug the
-    // divisor-matched contract exists to prevent.
-    if (render.dustDivisor !== previousDustDivisor) {
-      buildDustMapTarget();
-      buildDustViewTarget();
+    if (render.aggregateDivisor !== previousDivisor) {
+      targets.rebuildAggregate(render.aggregateDivisor);
     }
-    if (render.hiiDivisor !== previousHiiDivisor) buildHiiTarget();
+    if (render.fieldDivisor !== previousFieldDivisor) targets.rebuildField(render.fieldDivisor);
+    // `rebuildDust` covers dustMapTex AND dustViewTex — they share dustDivisor
+    // (see dustMapTex's declaration comment), and rebuilding one without the
+    // other reintroduces the resolution-mismatch bug the divisor-matched
+    // contract exists to prevent.
+    if (render.dustDivisor !== previousDustDivisor) targets.rebuildDust(render.dustDivisor);
+    if (render.hiiDivisor !== previousHiiDivisor) targets.rebuildHii(render.hiiDivisor);
     // Edge-triggered on the 0 -> nonzero CROSSING, not "whenever intensity is
     // above 0": this function runs on every render-bag push, and the slider
     // is now continuous, so the latter would redispatch the whole six-pass
@@ -2800,12 +2605,20 @@ export async function createGalaxyEngine(
     Math.max(1, Math.floor(canvas.clientWidth * dpr)),
     Math.max(1, Math.floor(canvas.clientHeight * dpr)),
   ];
+  // The targets module never reads the render bag, so a full reallocation has
+  // to be handed all four divisors at once.
+  const allDivisors = (): { aggregate: number; field: number; dust: number; hii: number } => ({
+    aggregate: render.aggregateDivisor,
+    field: render.fieldDivisor,
+    dust: render.dustDivisor,
+    hii: render.hiiDivisor,
+  });
   function resize(): void {
     const [w, h] = backingSize();
     if (w === canvas.width && h === canvas.height) return;
     canvas.width = w;
     canvas.height = h;
-    buildTargets();
+    targets.rebuildAll(allDivisors());
   }
   const ro = new ResizeObserver(resize);
   ro.observe(canvas);
@@ -2813,14 +2626,14 @@ export async function createGalaxyEngine(
   // `resize` to do it as a side effect: an HMR remount hands the new engine the
   // SAME canvas node, already at the right size, so `resize`'s early return
   // would leave this engine with no targets at all and the first `drawFrame`
-  // would throw on `aggregateTex`. Every input `buildTargets` reads — the
-  // device, the backing size, `render.aggregateDivisor` — is live by here.
+  // would throw on `aggregateTex`. Every input `rebuildAll` reads — the
+  // device, the backing size, the four divisors — is live by here.
   // `resize` keeps its early return, which stays correct: it now guards only a
   // genuine no-op, and cannot double-allocate against this call.
   const [initialW, initialH] = backingSize();
   canvas.width = initialW;
   canvas.height = initialH;
-  buildTargets();
+  targets.rebuildAll(allDivisors());
 
   // ---- perf instrumentation (see "Measuring it" in the header) ----
 
@@ -2867,7 +2680,8 @@ export async function createGalaxyEngine(
    * exactly the divergence that made the shared shader unusable here.
    */
   function encodeBloom(enc: GPUCommandEncoder): void {
-    const hdrView = sceneTex.createView();
+    const hdrView = targets.sceneTex.createView();
+    const mips = targets.bloomMips;
     const clear = { r: 0, g: 0, b: 0, a: 0 };
     const open = (
       level: number,
@@ -2878,8 +2692,8 @@ export async function createGalaxyEngine(
         label: `galaxy:bloom${level}`,
         colorAttachments: [
           loadOp === 'clear'
-            ? { view: bloomMips[level]!.createView(), loadOp, storeOp: 'store', clearValue: clear }
-            : { view: bloomMips[level]!.createView(), loadOp, storeOp: 'store' },
+            ? { view: mips[level]!.createView(), loadOp, storeOp: 'store', clearValue: clear }
+            : { view: mips[level]!.createView(), loadOp, storeOp: 'store' },
         ],
         ...(timestampWrites ? { timestampWrites } : {}),
       });
@@ -2905,9 +2719,9 @@ export async function createGalaxyEngine(
       const pass = open(level, 'clear');
       bloomPyramid.downsample(
         pass,
-        bloomMips[level - 1]!.createView(),
+        mips[level - 1]!.createView(),
         level,
-        bloomTexelSize(level - 1),
+        targets.bloomTexelSize(level - 1),
         level === 1,
       );
       pass.end();
@@ -2917,9 +2731,9 @@ export async function createGalaxyEngine(
       const pass = open(level, 'load');
       bloomPyramid.upsample(
         pass,
-        bloomMips[level + 1]!.createView(),
+        mips[level + 1]!.createView(),
         level,
-        bloomTexelSize(level + 1),
+        targets.bloomTexelSize(level + 1),
       );
       pass.end();
     }
@@ -2929,7 +2743,7 @@ export async function createGalaxyEngine(
       colorAttachments: [{ view: hdrView, loadOp: 'load', storeOp: 'store' }],
       ...(endWrites ? { timestampWrites: endWrites } : {}),
     });
-    bloomPyramid.fold(foldPass, bloomMips[0]!.createView(), render.bloom);
+    bloomPyramid.fold(foldPass, mips[0]!.createView(), render.bloom);
     foldPass.end();
   }
 
@@ -2976,7 +2790,7 @@ export async function createGalaxyEngine(
     });
     compositor.draw(
       tonePass,
-      sceneTex.createView(),
+      targets.sceneTex.createView(),
       'replace',
       // Both HDR fields zero: the tool configures an SDR swap chain, where
       // spilled over-white energy would just clamp back to 1.0. The app's own
@@ -3100,7 +2914,7 @@ export async function createGalaxyEngine(
     // rather than the old suppression that hid the primary's sprites outright
     // but deliberately left extras' alone (see the field/scene passes below).
     const tuning = cloudTuning();
-    const aggregatePx = reducedSize(render.aggregateDivisor);
+    const aggregatePx = targets.reducedSize(render.aggregateDivisor);
     packCloudUniforms(vp, view, aggregatePx, tuning, fade.alpha * galaxyWeight, cloudData);
     device.queue.writeBuffer(starUbo, 0, cloudData);
     packCloudUniforms(
@@ -3143,17 +2957,16 @@ export async function createGalaxyEngine(
       fieldEmissionCount,
       fieldDustCount,
       fieldPrimaryCount,
-      // dustMapTex's own pixel height — reducedSize(render.dustDivisor)[1],
-      // the extent buildDustMapTarget now sizes the texture to (its own
-      // divisor, independent of fieldTex's). Read by dustMap.wesl's dust-noise
-      // multiplier to band-limit its four baked octaves against the
-      // fragment's own world-space pixel footprint — see io.wesl's counts2.y
-      // doc.
-      reducedSize(render.dustDivisor)[1],
+      // dustMapTex's own pixel height — the same `reducedSize` call that sized
+      // the texture, at its own divisor, independent of fieldTex's. Read by
+      // dustMap.wesl's dust-noise multiplier to band-limit its four baked
+      // octaves against the fragment's own world-space pixel footprint — see
+      // io.wesl's counts2.y doc.
+      targets.reducedSize(render.dustDivisor)[1],
       // fieldTex's own pixel size — splat.wesl's fs needs this to build the
       // normalized UV it now samples dustMapTex through, since the two maps
       // no longer share a resolution (see io.wesl's counts2.zw doc).
-      reducedSize(render.fieldDivisor),
+      targets.reducedSize(render.fieldDivisor),
       // The CCM89 extinction law for currentDust.rV — cached by
       // rebuildDustMixture, not recomputed here every frame.
       currentDustExtinctionRgb,
@@ -3188,7 +3001,7 @@ export async function createGalaxyEngine(
       0,
       0,
       0,
-      reducedSize(render.hiiDivisor),
+      targets.reducedSize(render.hiiDivisor),
       HII_INERT_DUST_EXTINCTION,
       HII_INERT_DUST_NOISE,
       HII_INERT_DUST_SLICES,
@@ -3229,7 +3042,7 @@ export async function createGalaxyEngine(
         label: 'galaxy:starPass',
         colorAttachments: [
           {
-            view: aggregateTex.createView(),
+            view: targets.aggregateTex.createView(),
             clearValue: { r: 0, g: 0, b: 0, a: 0 },
             loadOp: 'clear',
             storeOp: 'store',
@@ -3291,7 +3104,7 @@ export async function createGalaxyEngine(
           label: 'galaxy:dustMapPass',
           colorAttachments: [
             {
-              view: dustMapTex.createView(),
+              view: targets.dustMapTex.createView(),
               clearValue: { r: 0, g: 0, b: 0, a: 0 },
               loadOp: 'clear',
               storeOp: 'store',
@@ -3318,7 +3131,7 @@ export async function createGalaxyEngine(
           label: 'galaxy:dustPresentPass',
           colorAttachments: [
             {
-              view: dustViewTex.createView(),
+              view: targets.dustViewTex.createView(),
               clearValue: { r: 0, g: 0, b: 0, a: 0 },
               loadOp: 'clear',
               storeOp: 'store',
@@ -3336,7 +3149,7 @@ export async function createGalaxyEngine(
         label: 'galaxy:fieldPass',
         colorAttachments: [
           {
-            view: fieldTex.createView(),
+            view: targets.fieldTex.createView(),
             clearValue: { r: 0, g: 0, b: 0, a: 0 },
             loadOp: 'clear',
             storeOp: 'store',
@@ -3370,7 +3183,7 @@ export async function createGalaxyEngine(
           label: 'galaxy:hiiPass',
           colorAttachments: [
             {
-              view: hiiTex.createView(),
+              view: targets.hiiTex.createView(),
               clearValue: { r: 0, g: 0, b: 0, a: 0 },
               loadOp: 'clear',
               storeOp: 'store',
@@ -3396,7 +3209,7 @@ export async function createGalaxyEngine(
         label: 'galaxy:scenePass',
         colorAttachments: [
           {
-            view: sceneTex.createView(),
+            view: targets.sceneTex.createView(),
             clearValue: { r: 0, g: 0, b: 0, a: 1 },
             loadOp: 'clear',
             storeOp: 'store',
@@ -3404,25 +3217,25 @@ export async function createGalaxyEngine(
         ],
         ...(sceneWrites ? { timestampWrites: sceneWrites } : {}),
       });
-      aggregateUpsample.draw(pass, aggregateTex.createView());
+      aggregateUpsample.draw(pass, targets.aggregateTex.createView());
       // Every representation below is additive into the SAME attachment, so
       // the crossfade is just which of them ran this frame, each already
       // carrying its own weight (splat.wesl's debugView.w, or a present
       // shader's own debugView.x/.y/.z) — nothing here picks one exclusively
       // any more.
       if (render.analyticField) {
-        aggregateUpsample.draw(pass, fieldTex.createView());
+        aggregateUpsample.draw(pass, targets.fieldTex.createView());
         // The HII tier's own composite, same additive upsample as the
         // field's own draw just above — see `hiiTex`'s declaration comment
         // for why it rides a separate target rather than joining that draw.
         if (hiiEmissionCount > 0) {
-          aggregateUpsample.draw(pass, hiiTex.createView());
+          aggregateUpsample.draw(pass, targets.hiiTex.createView());
         }
         // Picks up `dustViewTex` in ADDITION to `fieldTex` above — the two
         // are no longer mutually exclusive now that the JWST view is a
         // crossfade weight rather than a replacement (see the field pass).
         if (render.dustViewIntensity > 0) {
-          aggregateUpsample.draw(pass, dustViewTex.createView());
+          aggregateUpsample.draw(pass, targets.dustViewTex.createView());
         }
         // Presented straight into `sceneTex` at full canvas resolution — see
         // the field pass above for why a divisor-matched offscreen and this
@@ -3480,7 +3293,7 @@ export async function createGalaxyEngine(
     // bloom pyramid, folded back into sceneTex before the tone curve
     encodeBloom(enc);
     // tone-map composite -> canvas (+ the tool-only grade trailer, if active)
-    encodePost(enc, ctx.getCurrentTexture().createView(), ldrTex.createView(), true);
+    encodePost(enc, ctx.getCurrentTexture().createView(), targets.ldrTex.createView(), true);
     // Resolve + copy the query set into this frame's staging buffer. Must be
     // recorded into the encoder before it is finished, and the service's own
     // `mapAsync` is deferred to a microtask so it lands after this submit —
@@ -3635,6 +3448,11 @@ export async function createGalaxyEngine(
       sfMapPackConstUbo.destroy();
       sfMapStepIndexBuf?.destroy();
       gradeBuf.destroy();
+      // The size-dependent targets outlive every other resource here — they
+      // are the only ones reallocated on resize, so an engine torn down and
+      // rebuilt (an HMR remount hands the new engine the same canvas) leaked
+      // a full set per remount until this call existed.
+      targets.destroy();
       ro.disconnect();
       camera.dispose();
     },

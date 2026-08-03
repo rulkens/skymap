@@ -43,7 +43,7 @@
 // counts2.x is unused; it stays a lane rather than shrinking the header so
 // the offsets below it (and packFieldUniforms.ts's FIELD_HEADER_FLOATS) do
 // not move. counts2.y is dustMapHeightPx, dustMapTex's own pixel height
-// (createGalaxyEngine.ts's buildDustMapTarget sizes it to
+// (createGalaxyRenderTargets.ts's rebuildDust sizes it to
 // reducedSize(render.dustDivisor) — see the DUST MAP entry below; dustMapTex
 // no longer shares fieldTex's extent) — read by dustMap.wesl's dust-noise
 // multiplier below, to band-limit the baked volume's four octaves against
@@ -174,14 +174,14 @@
 // order-independent like the single-column map it replaced — each channel is
 // still just an optical-depth sum, only partitioned by depth now instead of
 // collapsed to one mean. Sized to reducedSize(render.dustDivisor) — its OWN
-// divisor (createGalaxyEngine.ts's buildDustMapTarget), independent of
+// divisor (createGalaxyRenderTargets.ts's rebuildDust), independent of
 // fieldTex's: the dust splat is far higher-frequency than the smooth
 // emission field, and sharing fieldTex's coarser target decimated thin lanes
 // into beads — the bug that motivated giving it a divisor of its own.
 //
 // dustPresent.wesl (the JWST view) renders into its OWN target, dustViewTex,
-// ALSO sized to reducedSize(render.dustDivisor) (createGalaxyEngine.ts's
-// buildDustViewTarget) — so its 1:1 framebuffer-coord texel load stays valid
+// ALSO sized to reducedSize(render.dustDivisor) by that same rebuildDust
+// call — so its 1:1 framebuffer-coord texel load stays valid
 // despite the two maps no longer sharing fieldTex's extent. A resolution
 // mismatch there is still invisible in types: it silently decimates any lane
 // thinner than the mismatch into beads, or misregisters the whole map toward

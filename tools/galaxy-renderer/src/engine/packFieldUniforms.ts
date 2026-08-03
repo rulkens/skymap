@@ -153,7 +153,7 @@ export type SfMapChannelWeights = {
  * packed first), which the shader gates dust application on: an extra's
  * emission must never read the primary's dust.
  * `dustMapHeightPx` is `dustMapTex`'s own pixel height (see
- * `buildDustMapTarget`, which sizes it to `reducedSize(render.dustDivisor)`,
+ * `createGalaxyRenderTargets`, which sizes it to `reducedSize(render.dustDivisor)`,
  * its own divisor, independent of `fieldTex`'s) — read by dustMap.wesl's
  * dust-noise multiplier to band-limit its four baked octaves against the
  * fragment's own world-space pixel footprint (see io.wesl's counts2.y doc).
