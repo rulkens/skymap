@@ -89,9 +89,9 @@ export type RenderSettings = {
    * structure-tensor pass chain's coherence-scaled crest orientation alone,
    * same seam as `sfMapViewIntensity`. Hue is the pitch angle (period π, so
    * it fills the full hue wheel — see `orientationPresent.wesl`), value is
-   * coherence. Also this pass chain's own gate — it only (re-)dispatches
-   * while this is above 0, see `createGalaxyEngine.ts`'s
-   * `rebuildSfMapOrientationIfNeeded`.
+   * coherence. One of the two things that keep the pass chain alive — see
+   * `createGalaxyEngine.ts`'s `orientationTexRebuild`; the other is
+   * `sfMapDustSeeding`.
    */
   readonly orientationViewIntensity: number;
   /**

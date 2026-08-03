@@ -23,8 +23,8 @@ import package::milkyWayField::io::u;
 const PI: f32 = 3.14159265358979;
 
 // This galaxy's log-radial grid bounds — same shape as sfMapPresent.wesl's
-// SfMapGrid, written once per rebuildSfMapOrientationIfNeeded rather than
-// every frame like io.wesl's 'u' above.
+// SfMapGrid, written once per orientation-chain dispatch rather than every
+// frame like io.wesl's 'u' above.
 struct OrientationGrid {
   rMin: f32,
   rMax: f32,

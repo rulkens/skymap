@@ -198,6 +198,7 @@ import type { GalaxyDustParams } from '../../../../src/@types/galaxy/GalaxyDustP
 import type { GalaxyFieldComponent } from '../../../../src/@types/galaxy/GalaxyFieldComponent';
 import type { GalaxyFieldGeometry } from '../../../../src/@types/galaxy/GalaxyFieldGeometry';
 import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFieldTuning';
+import type { GalaxySfMapParams } from '../../../../src/@types/galaxy/GalaxySfMapParams';
 import type { GalaxySfMap } from '../../../../src/@types/galaxy/GalaxySfMap';
 import type { GalaxySfMapOrientation } from '../../../../src/@types/galaxy/GalaxySfMapOrientation';
 import type { GalaxyStarFormationParams } from '../../../../src/@types/galaxy/GalaxyStarFormationParams';
@@ -240,7 +241,6 @@ import {
   packFieldHeaderUniforms,
 } from './uniforms/packFieldUniforms';
 import type { FieldCamera, FieldDustNoise } from './uniforms/packFieldUniforms';
-import { debugViewWeights } from './frame/debugViewWeights';
 import { DEBUG_VIEWS } from '../data/debugViews';
 import type { DebugViewKind } from '../../@types/data/DebugViewKind';
 import { createGenerationPipelines } from '../../../../src/services/gpu/galaxy/createGenerationPipelines';
@@ -983,6 +983,8 @@ export async function createGalaxyEngine(
   // the next `setParams` reads it and there is nothing yet to rebuild.
   let fieldGeometry: GalaxyFieldGeometry | null = null;
   let fieldTuning: GalaxyFieldTuning = DEFAULT_GALAXY_FIELD_TUNING;
+  // What the automaton was last rebuilt against — see `setFieldTuning`.
+  let sfMapKey: GalaxySfMapParams = fieldTuning.sfMap;
   // The CENTRAL galaxy's HII tier, built and cached the same way
   // `fieldMixture` is — but never concatenated into it (see `hiiTex`'s
   // declaration comment). Rebuilt on the same two triggers, packed into its
@@ -1040,10 +1042,9 @@ export async function createGalaxyEngine(
   // `orientationTex`'s CPU-side readback, same lifecycle as `sfMapData` above.
   // Both streams share ONE queue (see `createReadbackQueue` for why a second
   // chain would be unsafe) while keeping independent tokens: the orientation
-  // readback dispatches on triggers that never touch `sfMapData` (`setRender`'s
-  // `orientationViewIntensity` crossing 0, `setFieldTuning`'s `sfMapDustSeeding`
-  // toggle), so one shared token would let an unrelated trigger wrongly
-  // supersede a still-pending readback.
+  // readback runs on triggers that never touch `sfMapData` (a sigma move,
+  // `sfMapDustSeeding` turning on), so one shared token would let an unrelated
+  // trigger wrongly supersede a still-pending readback.
   let orientationData: GalaxySfMapOrientation | null = null;
   const readbackQueue = createReadbackQueue(device);
   const sfMapReadback = readbackQueue.stream({
@@ -1230,11 +1231,14 @@ export async function createGalaxyEngine(
   // bag can't drift from the store slice + preset envelope that also seed from
   // them — and, through them, from the app's own defaults.
   const render = { ...DEFAULT_RENDER_SETTINGS, ...DEFAULT_LOD_SETTINGS };
+  // What the orientation chain was last invalidated at — see `setRender`.
+  let orientationSigmaDerivKey = render.orientationSigmaDerivTexels;
+  let orientationSigmaIntegKey = render.orientationSigmaIntegTexels;
 
   // One debug view's live weight, through `DEBUG_VIEWS` rather than a named
-  // settings key — for the rebuild gates and `setRender`'s edge triggers,
-  // which run outside a frame. Inside `drawFrame` the whole record comes off
-  // `deriveFrameView` instead, so a pass and its own header agree.
+  // settings key — what the rebuild gates' `wanted` predicates read. Passes
+  // and uniform packs take the whole record off `deriveFrameView` instead, so
+  // a pass and its own header agree; both read the same `render` bag.
   const viewIntensity = (kind: DebugViewKind): number => render[DEBUG_VIEWS[kind].intensityKey];
 
   // The targets module never reads the render bag, so both of its entry points
@@ -1347,9 +1351,9 @@ export async function createGalaxyEngine(
    * scheduleOrientationReadback — the CPU copy of `orientationTex`, same
    * one-per-dispatch discipline as `scheduleSfMapReadback` (whose own
    * docblock explains why the copy/submit/map/unmap has to live INSIDE the
-   * chain rather than run eagerly). Shares the sfMap stream's queue —
-   * `rebuildSfMapOrientationIfNeeded`'s own docblock explains why a second,
-   * independent chain would be unsafe here. Gated by its caller on
+   * chain rather than run eagerly). Shares the sfMap stream's queue — see
+   * `createReadbackQueue` for why a second, independent chain would be
+   * unsafe. Gated by `orientationDataRebuild` on
    * `fieldTuning.sfMapDustSeeding`: this is the only consumer of the CPU
    * copy, the debug overlay samples `orientationTex` on the GPU directly.
    */
@@ -1396,43 +1400,38 @@ export async function createGalaxyEngine(
   }
 
   /**
-   * rebuildSfMapOrientationIfNeeded — dispatches the GPU structure-tensor
-   * pass chain (sfMapOrientationField -> Tensor -> TensorBlur -> Coherence,
-   * see that quartet's own headers) over the CURRENT `sfMapTex`, but ONLY
-   * while `render.orientationViewIntensity` is above 0 OR
-   * `fieldTuning.sfMapDustSeeding` is — the debug overlay and the dust
-   * placement's CPU readback (`scheduleOrientationReadback`, called below
-   * when seeding is on) are two independent consumers of the same six-pass
-   * chain, either one enough to justify running it. Unlike the deleted CPU
-   * build this needs no readback to run FROM — sfMapTex is a GPU texture
-   * already, and WebGPU zero-initialises it, so this is safe to call even
-   * before `rebuildSfMap` has ever populated it. Still edge-triggered rather
-   * than unconditional, from three places:
-   *
-   *  - `rebuildSfMap`'s own two exits, right after the compute submit that
-   *    (re)writes `sfMapTex` — a new automaton state is a new field to
-   *    dispatch this chain over, if either consumer wants it.
-   *  - `setRender`, only when the incoming patch actually crosses
-   *    `orientationViewIntensity` from 0 to above 0, or moves either sigma
-   *    while a consumer is already live — see that function's own comment.
-   *    `setRender` runs on every render-bag change (the bridge re-pushes the
-   *    whole bag on any knob), so calling this unconditionally there would
-   *    redispatch the chain on an unrelated exposure drag, and firing on
-   *    every intensity step of an already-live slider would redispatch the
-   *    whole six-pass chain per frame of a drag.
-   *  - `setFieldTuning`, only when the incoming patch flips
-   *    `sfMapDustSeeding` on — see that function's own comment.
+   * The CPU copy of the orientation field. Only the dust placement reads it,
+   * so seeding alone decides whether a readback is worth scheduling.
    */
-  function rebuildSfMapOrientationIfNeeded(): void {
-    if (viewIntensity('orientation') <= 0 && !fieldTuning.sfMapDustSeeding) return;
-    const grid = sfMapGridRadiusOrDefault(fieldGeometry);
-    sfMapOrientation.dispatch({
-      grid,
-      sigmaDerivTexels: render.orientationSigmaDerivTexels,
-      sigmaIntegTexels: render.orientationSigmaIntegTexels,
-    });
-    if (fieldTuning.sfMapDustSeeding) scheduleOrientationReadback(grid);
-  }
+  const orientationDataRebuild = createKeyedRebuild({
+    wanted: () => fieldTuning.sfMapDustSeeding,
+    build: () => scheduleOrientationReadback(sfMapGridRadiusOrDefault(fieldGeometry)),
+  });
+
+  /**
+   * The GPU structure-tensor chain (sfMapOrientationField -> Tensor ->
+   * TensorBlur -> Coherence, see that quartet's own headers) over the CURRENT
+   * `sfMapTex`. Two independent consumers — the debug overlay reads the
+   * texture on the GPU, the dust placement reads the CPU copy above — either
+   * one enough to justify the six passes. Unlike the deleted CPU build this
+   * needs no readback to run FROM: sfMapTex is a GPU texture already and
+   * WebGPU zero-initialises it, so dispatching before `rebuildSfMap` has ever
+   * populated it is safe.
+   *
+   * Invalidated by `rebuildSfMap` (a new automaton state is a new field) and
+   * by a sigma move in `setRender`.
+   */
+  const orientationTexRebuild = createKeyedRebuild({
+    wanted: () => viewIntensity('orientation') > 0 || fieldTuning.sfMapDustSeeding,
+    build: () => {
+      sfMapOrientation.dispatch({
+        grid: sfMapGridRadiusOrDefault(fieldGeometry),
+        sigmaDerivTexels: render.orientationSigmaDerivTexels,
+        sigmaIntegTexels: render.orientationSigmaIntegTexels,
+      });
+      orientationDataRebuild.invalidate();
+    },
+  });
 
   /**
    * rebuildDustMixture — the central galaxy's dust mixture from the CACHED
@@ -1568,11 +1567,7 @@ export async function createGalaxyEngine(
     device.queue.writeBuffer(bubbleBuf, 0, data);
   }
 
-  /**
-   * The bubble overlay's own liveness/staleness gate. Nothing here is worth
-   * building while the overlay is off, and nothing needs rebuilding while the
-   * inputs stand still — two axes the setters used to have to fuse.
-   */
+  /** Nothing here is worth building while the overlay nobody is looking at is off. */
   const bubblePlacements = createKeyedRebuild({
     wanted: () => viewIntensity('bubble') > 0,
     build: rebuildBubblePlacements,
@@ -1598,7 +1593,7 @@ export async function createGalaxyEngine(
       seed: currentSeed,
     });
     scheduleSfMapReadback(grid);
-    rebuildSfMapOrientationIfNeeded();
+    orientationTexRebuild.invalidate();
   }
 
   /**
@@ -1812,33 +1807,22 @@ export async function createGalaxyEngine(
   // targets. `setDivisors` owns that comparison (it keys on the live
   // textures' pixel sizes), so this can hand it the whole bag on every push.
   function setRender(patch: Partial<RenderSettings & LodSettings>): void {
-    const previousOrientationSigmaDeriv = render.orientationSigmaDerivTexels;
-    const previousOrientationSigmaInteg = render.orientationSigmaIntegTexels;
-    const previousViewWeights = debugViewWeights(render);
     Object.assign(render, patch);
-    // The 0 -> nonzero CROSSING for one view, not "is it above 0": this runs
-    // on every render-bag push and the sliders are continuous, so the latter
-    // would redispatch a whole pass chain on every step of a drag instead of
-    // once, when the overlay turns on.
-    const turnedOn = (kind: DebugViewKind): boolean =>
-      previousViewWeights[kind] <= 0 && viewIntensity(kind) > 0;
     targets.setDivisors(allDivisors());
-    // Not a plain edge: the sigma sliders are a second way in, and BOTH are
-    // gated on EITHER consumer being live rather than on the intensity alone.
-    // With the overlay off and `sfMapDustSeeding` on, an intensity-only guard
-    // left the sigma sliders dead — no live consumer meant the condition never
-    // even reached the edge check, so a sigma drag redrew nothing and the dust
-    // never resampled the new orientation. Matches the early-return gate
-    // inside `rebuildSfMapOrientationIfNeeded` itself.
-    const orientationConsumerLive =
-      viewIntensity('orientation') > 0 || fieldTuning.sfMapDustSeeding;
+    // The two sigmas are the only lanes in this bag the orientation chain
+    // reads, and the bridge re-pushes the WHOLE bag on any knob — so an
+    // unconditional invalidate here would redispatch the six passes, and with
+    // `sfMapDustSeeding` on (the default) the readback and dust rebuild behind
+    // them, on every frame of an unrelated exposure drag. No crossing to catch
+    // alongside them: an invalidation raised while nothing wanted the value is
+    // retained, so the overlay turning on rebuilds by itself.
     if (
-      orientationConsumerLive &&
-      (turnedOn('orientation') ||
-        render.orientationSigmaDerivTexels !== previousOrientationSigmaDeriv ||
-        render.orientationSigmaIntegTexels !== previousOrientationSigmaInteg)
+      orientationSigmaDerivKey !== render.orientationSigmaDerivTexels ||
+      orientationSigmaIntegKey !== render.orientationSigmaIntegTexels
     ) {
-      rebuildSfMapOrientationIfNeeded();
+      orientationSigmaDerivKey = render.orientationSigmaDerivTexels;
+      orientationSigmaIntegKey = render.orientationSigmaIntegTexels;
+      orientationTexRebuild.invalidate();
     }
   }
 
@@ -1860,24 +1844,6 @@ export async function createGalaxyEngine(
   // without a regenerate, and `hiiMixture` (central + every extra), which is
   // how `hiiEnabled`/`hiiBrightness`/etc. take effect the same way.
   function setFieldTuning(patch: Partial<GalaxyFieldTuning>): void {
-    // The automaton rebuild is N compute dispatches (rebuildSfMap's own
-    // docblock) — far more expensive than the CPU mixture rebuilds below, so
-    // it only reruns when `sfMap` itself changed, not on every unrelated
-    // slider (armWidthScale etc. technically also feed the ridge the forcing
-    // field bakes, but re-triggering on every tuning field would make
-    // dragging any OTHER slider pay this pass's cost too — a follow-up if
-    // that dependency ever needs to be exact).
-    //
-    // The bridge (`connectEngineBridge`) pushes the WHOLE `fieldTuning` slice
-    // on every change, so `patch.sfMap !== undefined` is true unconditionally
-    // and can't gate anything — identity is the only signal `sfMap` changed.
-    // That identity is trustworthy because the sole writer
-    // (`fieldTuningSlice`'s `Object.assign` under RTK/immer) only replaces
-    // `sfMap` when a patch supplies it, and the sole UI producer
-    // (`SfMapSection`'s `patchSfMap`) always builds a fresh `{ ...sfMap,
-    // ...patch }` object — so the reference changes exactly when a value did.
-    const sfMapTouched = patch.sfMap !== undefined && patch.sfMap !== fieldTuning.sfMap;
-    const previousSfMapDustSeeding = fieldTuning.sfMapDustSeeding;
     fieldTuning = { ...fieldTuning, ...patch };
     if (fieldGeometry) {
       fieldMixture = buildGalaxyFieldMixture(fieldGeometry, fieldTuning);
@@ -1904,16 +1870,20 @@ export async function createGalaxyEngine(
     bubblePlacements.invalidate();
     repackFieldComponents();
     repackHiiComponents();
-    if (sfMapTouched) {
-      rebuildSfMap(); // its own two exits already dispatch+readback orientation
-    } else if (fieldTuning.sfMapDustSeeding && !previousSfMapDustSeeding) {
-      // sfMap itself wasn't touched, so rebuildSfMap won't run — but seeding
-      // just turned on and the chain may never have dispatched
-      // (`orientationViewIntensity` could be, and usually is, 0), so
-      // `orientationData` would otherwise stay null forever.
-      // `rebuildDustMixture` above already ran once against whatever
-      // `orientationData` was cached; this brings it current.
-      rebuildSfMapOrientationIfNeeded();
+    // The automaton rebuild is N compute dispatches (rebuildSfMap's own
+    // docblock) — far more expensive than the CPU mixture rebuilds above, so
+    // it only reruns when `sfMap` itself changed, not on every unrelated
+    // slider (armWidthScale etc. technically also feed the ridge the forcing
+    // field bakes, but re-triggering on every tuning field would make dragging
+    // any OTHER slider pay this pass's cost too — a follow-up if that
+    // dependency ever needs to be exact).
+    //
+    // Reference identity IS the change signal: `sfMap` is only ever replaced
+    // wholesale, by the UI's `patchSfMap` building a fresh `{ ...sfMap,
+    // ...patch }` and by immer keeping the old object otherwise.
+    if (sfMapKey !== fieldTuning.sfMap) {
+      sfMapKey = fieldTuning.sfMap;
+      rebuildSfMap();
     }
   }
 
@@ -2383,8 +2353,12 @@ export async function createGalaxyEngine(
     // there is nothing else to pack here.
 
     // Before the encoder exists, not after: a rebuild can destroy and replace
-    // `bubbleBuf`, which a recorded draw would already be holding.
+    // `bubbleBuf`, which a recorded draw would already be holding, and the
+    // orientation chain submits an encoder of its own that must precede this
+    // frame's. Texture before CPU copy — the first invalidates the second.
     const bubblesLive = bubblePlacements.ensureFresh();
+    orientationTexRebuild.ensureFresh();
+    orientationDataRebuild.ensureFresh();
 
     const timingCtx = timing.beginFrame();
     const enc = device.createCommandEncoder({ label: 'galaxy:frame' });
