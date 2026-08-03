@@ -212,6 +212,7 @@ import { createFrameTimer } from './timing/createFrameTimer';
 import { createGalaxyRenderTargets } from './gpu/createGalaxyRenderTargets';
 import { createOrbitCameraInput } from './camera/createOrbitCameraInput';
 import { createPassTimingWindows } from './timing/createPassTimingWindows';
+import { beginClearPass } from './passes/beginClearPass';
 import { createSfMapAutomaton } from './sfMap/createSfMapAutomaton';
 import { createSfMapOrientation } from './sfMap/createSfMapOrientation';
 import { createReadbackQueue } from './gpu/createReadbackQueue';
@@ -2393,18 +2394,12 @@ export async function createGalaxyEngine(
     // same `floor(canvas / divisor)` the uniform above was packed with.
     {
       const starWrites = timing.descriptorFor('stars');
-      const pass = enc.beginRenderPass({
-        label: 'galaxy:starPass',
-        colorAttachments: [
-          {
-            view: targets.aggregateTex.createView(),
-            clearValue: { r: 0, g: 0, b: 0, a: 0 },
-            loadOp: 'clear',
-            storeOp: 'store',
-          },
-        ],
-        ...(starWrites ? { timestampWrites: starWrites } : {}),
-      });
+      const pass = beginClearPass(
+        enc,
+        'galaxy:starPass',
+        targets.aggregateTex.createView(),
+        starWrites,
+      );
       // The sprite half of the comparison. Skipping the draws (rather than
       // zeroing an intensity) is what makes "sprites off" also mean "sprite
       // cost off", so the two representations can be timed as well as looked
@@ -2455,18 +2450,12 @@ export async function createGalaxyEngine(
       const dustMapHasContent = fieldDustCount > 0;
       if (dustMapHasContent || render.dustViewIntensity > 0 || dustMapPopulated) {
         const dustMapWrites = timing.descriptorFor('dustMap');
-        const dustMapPass = enc.beginRenderPass({
-          label: 'galaxy:dustMapPass',
-          colorAttachments: [
-            {
-              view: targets.dustMapTex.createView(),
-              clearValue: { r: 0, g: 0, b: 0, a: 0 },
-              loadOp: 'clear',
-              storeOp: 'store',
-            },
-          ],
-          ...(dustMapWrites ? { timestampWrites: dustMapWrites } : {}),
-        });
+        const dustMapPass = beginClearPass(
+          enc,
+          'galaxy:dustMapPass',
+          targets.dustMapTex.createView(),
+          dustMapWrites,
+        );
         dustMapPass.setPipeline(dustMapPipe);
         dustMapPass.setBindGroup(0, dustMapBG);
         dustMapPass.draw(6, fieldDustCount);
@@ -2482,17 +2471,11 @@ export async function createGalaxyEngine(
       // 'field' slot belongs to the emission splat below, and two passes
       // cannot share one timestamp pair in a frame (see TIMING_SLOTS).
       if (render.dustViewIntensity > 0) {
-        const pass = enc.beginRenderPass({
-          label: 'galaxy:dustPresentPass',
-          colorAttachments: [
-            {
-              view: targets.dustViewTex.createView(),
-              clearValue: { r: 0, g: 0, b: 0, a: 0 },
-              loadOp: 'clear',
-              storeOp: 'store',
-            },
-          ],
-        });
+        const pass = beginClearPass(
+          enc,
+          'galaxy:dustPresentPass',
+          targets.dustViewTex.createView(),
+        );
         pass.setPipeline(dustPresentPipe);
         pass.setBindGroup(0, dustPresentBG);
         pass.draw(3);
@@ -2500,18 +2483,12 @@ export async function createGalaxyEngine(
       }
 
       const fieldWrites = timing.descriptorFor('field');
-      const fieldPass = enc.beginRenderPass({
-        label: 'galaxy:fieldPass',
-        colorAttachments: [
-          {
-            view: targets.fieldTex.createView(),
-            clearValue: { r: 0, g: 0, b: 0, a: 0 },
-            loadOp: 'clear',
-            storeOp: 'store',
-          },
-        ],
-        ...(fieldWrites ? { timestampWrites: fieldWrites } : {}),
-      });
+      const fieldPass = beginClearPass(
+        enc,
+        'galaxy:fieldPass',
+        targets.fieldTex.createView(),
+        fieldWrites,
+      );
       fieldPass.setPipeline(splatPipe);
       fieldPass.setBindGroup(0, splatBG);
       // One draw for the WHOLE emission list `repackFieldComponents` wrote —
@@ -2534,18 +2511,12 @@ export async function createGalaxyEngine(
       // skips, so that concern is gone.
       if (hiiEmissionCount > 0) {
         const hiiWrites = timing.descriptorFor('hii');
-        const hiiPass = enc.beginRenderPass({
-          label: 'galaxy:hiiPass',
-          colorAttachments: [
-            {
-              view: targets.hiiTex.createView(),
-              clearValue: { r: 0, g: 0, b: 0, a: 0 },
-              loadOp: 'clear',
-              storeOp: 'store',
-            },
-          ],
-          ...(hiiWrites ? { timestampWrites: hiiWrites } : {}),
-        });
+        const hiiPass = beginClearPass(
+          enc,
+          'galaxy:hiiPass',
+          targets.hiiTex.createView(),
+          hiiWrites,
+        );
         hiiPass.setPipeline(splatPipe);
         hiiPass.setBindGroup(0, hiiBG);
         hiiPass.draw(6, hiiEmissionCount);
@@ -2560,18 +2531,13 @@ export async function createGalaxyEngine(
       // One `'scene'` slot for the upsample AND dust — they share this pass,
       // and a timestamp pair brackets a pass. See TIMING_SLOTS.
       const sceneWrites = timing.descriptorFor('scene');
-      const pass = enc.beginRenderPass({
-        label: 'galaxy:scenePass',
-        colorAttachments: [
-          {
-            view: targets.sceneTex.createView(),
-            clearValue: { r: 0, g: 0, b: 0, a: 1 },
-            loadOp: 'clear',
-            storeOp: 'store',
-          },
-        ],
-        ...(sceneWrites ? { timestampWrites: sceneWrites } : {}),
-      });
+      const pass = beginClearPass(
+        enc,
+        'galaxy:scenePass',
+        targets.sceneTex.createView(),
+        sceneWrites,
+        1,
+      );
       aggregateUpsample.draw(pass, targets.aggregateTex.createView());
       // Every representation below is additive into the SAME attachment, so
       // the crossfade is just which of them ran this frame, each already
