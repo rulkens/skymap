@@ -18,7 +18,7 @@
  * What could NOT be shared is the ORCHESTRATION: `runBloom` and
  * `createMilkyWayCloudRenderer` each need engine-side context this tool has no
  * equivalent of (a `ReadyFrameContext`; one uniform buffer per draw, where this
- * tool draws N extras through one pipeline). So `encodeBloom` below duplicates
+ * tool draws N extras through one pipeline). So `encodeBloomPyramid` duplicates
  * `runBloom`'s pass ORDER and the cloud pipelines are built here — a change to
  * either runtime SEQUENCE has to be mirrored, a change to any shared SHADER
  * arrives for free.
@@ -60,6 +60,7 @@ import type { TargetDivisors } from './gpu/createGalaxyRenderTargets';
 import { createOrbitCameraInput } from './camera/createOrbitCameraInput';
 import { createPassTimingWindows } from './timing/createPassTimingWindows';
 import { beginClearPass } from './passes/beginClearPass';
+import { encodeBloomPyramid } from './passes/encodeBloomPyramid';
 import { encodeDustMapPass } from './passes/encodeDustMapPass';
 import { encodeDustPresentPass } from './passes/encodeDustPresentPass';
 import { encodePresentOverlay } from './passes/encodePresentOverlay';
@@ -129,7 +130,6 @@ import { createCompositor } from '../../../../src/services/gpu/passes/compositor
 import { createAdditiveUpsample } from '../../../../src/services/gpu/passes/additiveUpsample';
 import { ADDITIVE_BLEND } from '../../../../src/services/gpu/lib/blendStates';
 import { MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE } from '../../../../src/services/gpu/renderers/milkyWay/milkyWayCloudRenderer';
-import { BLOOM_LEVELS } from '../../../../src/data/bloomConstants';
 import { DEFAULT_RENDER_SETTINGS } from '../data/defaultRenderSettings';
 import { DEFAULT_LOD_SETTINGS } from '../data/defaultLodSettings';
 
@@ -1485,97 +1485,6 @@ export async function createGalaxyEngine(
   // ---- post chain encoding ----
 
   /**
-   * encodeBloom — a deliberate duplicate of the runtime's `runBloom` pass
-   * sequence, calling the SAME shared `bloomPyramid`. Only the orchestration is
-   * copied: `runBloom` reads its targets off a `ReadyFrameContext`'s
-   * `renderTargets` table and brackets the sequence in a GPU-timing slot,
-   * neither of which exists in this tool. The pass ORDER is the load-bearing
-   * part and must stay in step with `runBloom` — every pass reads a level
-   * written earlier in this same sequence, which is what keeps a level from
-   * ever sampling last frame's stored contents (the cross-frame feedback that
-   * ramps the whole screen to white).
-   *
-   *   bright        hdr      -> bloom0          (clear)
-   *   downsample L  bloomL-1 -> bloomL          (clear), Karis on L=1 only
-   *   upsample   L  bloomL+1 -> bloomL          (load, additive)
-   *   fold          bloom0   -> hdr             (load, additive, x strength)
-   *
-   * The fold is what puts the glow back into the HDR scene BEFORE the tone
-   * curve, so bloom rides that one curve. Adding it inside the composite
-   * instead — as this tool used to — puts the same sum through the same curve
-   * arithmetically, but leaves the composite carrying a second texture bind and
-   * a strength knob that the shared compositor has no slot for, which is
-   * exactly the divergence that made the shared shader unusable here.
-   */
-  function encodeBloom(enc: GPUCommandEncoder): void {
-    const hdrView = targets.sceneTex.createView();
-    const mips = targets.bloomMips;
-    const clear = { r: 0, g: 0, b: 0, a: 0 };
-    const open = (
-      level: number,
-      loadOp: 'clear' | 'load',
-      timestampWrites?: GPURenderPassTimestampWrites,
-    ): GPURenderPassEncoder =>
-      enc.beginRenderPass({
-        label: `galaxy:bloom${level}`,
-        colorAttachments: [
-          loadOp === 'clear'
-            ? { view: mips[level]!.createView(), loadOp, storeOp: 'store', clearValue: clear }
-            : { view: mips[level]!.createView(), loadOp, storeOp: 'store' },
-        ],
-        ...(timestampWrites ? { timestampWrites } : {}),
-      });
-
-    // One `'bloom'` span across the whole pyramid, the app's billing: the begin
-    // timestamp rides the bright pass and the end rides the fold, both writing
-    // the same query pair. The decoder reads two absolute tick values at fixed
-    // indices and subtracts, so splitting the pair across passes yields the
-    // honest cross-pass span.
-    const ts = timing.descriptorFor('bloom');
-    const beginWrites = ts
-      ? { querySet: ts.querySet, beginningOfPassWriteIndex: ts.beginningOfPassWriteIndex }
-      : undefined;
-    const endWrites = ts
-      ? { querySet: ts.querySet, endOfPassWriteIndex: ts.endOfPassWriteIndex }
-      : undefined;
-
-    const brightPass = open(0, 'clear', beginWrites);
-    bloomPyramid.bright(brightPass, hdrView, render.bloomThreshold);
-    brightPass.end();
-
-    for (let level = 1; level < BLOOM_LEVELS; level++) {
-      const pass = open(level, 'clear');
-      bloomPyramid.downsample(
-        pass,
-        mips[level - 1]!.createView(),
-        level,
-        targets.bloomTexelSize(level - 1),
-        level === 1,
-      );
-      pass.end();
-    }
-
-    for (let level = BLOOM_LEVELS - 2; level >= 0; level--) {
-      const pass = open(level, 'load');
-      bloomPyramid.upsample(
-        pass,
-        mips[level + 1]!.createView(),
-        level,
-        targets.bloomTexelSize(level + 1),
-      );
-      pass.end();
-    }
-
-    const foldPass = enc.beginRenderPass({
-      label: 'galaxy:bloomFold',
-      colorAttachments: [{ view: hdrView, loadOp: 'load', storeOp: 'store' }],
-      ...(endWrites ? { timestampWrites: endWrites } : {}),
-    });
-    bloomPyramid.fold(foldPass, mips[0]!.createView(), render.bloom);
-    foldPass.end();
-  }
-
-  /**
    * encodePost — sceneTex through the shared compositor (exposure + one tone
    * curve) into `dstView`, then, only if a tool-only grade knob is off
    * identity, through the local grade trailer. `scratchView` is the LDR
@@ -1983,8 +1892,17 @@ export async function createGalaxyEngine(
       encodeTransmittanceDust(pass, dustPipe, dustBG, quad, dustInstances);
       pass.end();
     }
-    // bloom pyramid, folded back into sceneTex before the tone curve
-    encodeBloom(enc);
+    // bloom pyramid, folded back into sceneTex before the tone curve.
+    // `bloomMips` is read HERE, not captured once: a resize reallocates them.
+    encodeBloomPyramid(enc, {
+      pyramid: bloomPyramid,
+      hdrView: targets.sceneTex.createView(),
+      mips: targets.bloomMips,
+      texelSize: targets.bloomTexelSize,
+      threshold: render.bloomThreshold,
+      strength: render.bloom,
+      timestamps: timing.descriptorFor('bloom'),
+    });
     // tone-map composite -> canvas (+ the tool-only grade trailer, if active)
     encodePost(enc, ctx.getCurrentTexture().createView(), targets.ldrTex.createView(), true);
     // Resolve + copy the query set into this frame's staging buffer. Must be
