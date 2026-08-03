@@ -25,6 +25,8 @@ import type { GalaxyFieldGeometry } from '../../../../../src/@types/galaxy/Galax
 import type { GalaxyFieldTuning } from '../../../../../src/@types/galaxy/GalaxyFieldTuning';
 
 import { sfMapStepIndexData } from './sfMapStepIndexData';
+import { packSfMapConstants, SF_MAP_CONSTANTS_BUFFER_SIZE } from '../uniforms/packSfMapConstants';
+import { packSfMapUnshear, SF_MAP_UNSHEAR_BUFFER_SIZE } from '../uniforms/packSfMapUnshear';
 
 import sfMapStepWgsl from '../shaders/milkyWayField/sfMapStep.wesl?static';
 import sfMapPackWgsl from '../shaders/milkyWayField/sfMapPack.wesl?static';
@@ -138,7 +140,7 @@ export function createSfMapAutomaton(
   // Constant across one rebuild (rMin/rMax + every sfMap tuning knob).
   const constUbo = device.createBuffer({
     label: 'galaxy:sfMapConstUbo',
-    size: 64, // 16 f32 lanes (13 used) — see SfMapConstants in sfMapStep.wesl
+    size: SF_MAP_CONSTANTS_BUFFER_SIZE,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
   // rMin/rMax only — sfMapPresent.wesl's own small uniform, separate from
@@ -154,7 +156,7 @@ export function createSfMapAutomaton(
   // dispatch has already used constUbo's bind group layout.
   const packConstUbo = device.createBuffer({
     label: 'galaxy:sfMapPackConstUbo',
-    size: 32, // 8 f32 lanes (5 used) — see SfMapUnshear in sfMapPack.wesl
+    size: SF_MAP_UNSHEAR_BUFFER_SIZE,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
   // One SfMapStepIndex-sized slot per step, each padded to the device's uniform
@@ -217,28 +219,7 @@ export function createSfMapAutomaton(
         [SF_MAP_AZ, SF_MAP_RINGS],
       );
 
-      device.queue.writeBuffer(
-        constUbo,
-        0,
-        new Float32Array([
-          grid.rMin,
-          grid.rMax,
-          sfMap.corotationRadius,
-          sfMap.shearRate,
-          sfMap.baseIgnition,
-          sfMap.spread,
-          sfMap.armForcing,
-          sfMap.gasRegen,
-          sfMap.refractorySteps,
-          seed,
-          sfMap.armFluxRef,
-          sfMap.activityDecay,
-          sfMap.activityGain,
-          0,
-          0,
-          0,
-        ]),
-      );
+      device.queue.writeBuffer(constUbo, 0, packSfMapConstants({ grid, sfMap, seed }));
 
       // Per-step data cannot ride one rewritten uniform: every writeBuffer here
       // happens before this function's single submit, and queue operations
@@ -293,16 +274,7 @@ export function createSfMapAutomaton(
       device.queue.writeBuffer(
         packConstUbo,
         0,
-        new Float32Array([
-          grid.rMin,
-          grid.rMax,
-          sfMap.corotationRadius,
-          sfMap.shearRate,
-          steps - 1,
-          0,
-          0,
-          0,
-        ]),
+        packSfMapUnshear({ grid, sfMap, totalShiftSteps: steps - 1 }),
       );
       const packBG = device.createBindGroup({
         label: 'galaxy:sfMapPackBG',
