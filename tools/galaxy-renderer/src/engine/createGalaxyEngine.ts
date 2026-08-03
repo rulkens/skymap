@@ -1,7 +1,8 @@
 /**
  * createGalaxyEngine — the one GPU-orchestration module. Owns the WebGPU
- * device, every pipeline and buffer, the orbit camera + input, and the
- * per-frame render loop. A straight port of the spike's `galaxy-engine.js`
+ * device, every pipeline and buffer, and the per-frame render loop; the orbit
+ * camera and its input belong to `createOrbitCameraInput`, which this drives
+ * once per frame. A straight port of the spike's `galaxy-engine.js`
  * (`createGalaxyRenderer`), with all math delegated to the five tested pure
  * helpers and every shader pulled in as a build-time-linked WESL string.
  *
@@ -192,7 +193,6 @@ import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import type { PassTiming } from '../../@types/engine/PassTiming';
 import type { RenderSettings } from '../../@types/engine/RenderSettings';
 import type { LodSettings } from '../../@types/engine/LodSettings';
-import type { ViewPose } from '../../@types/engine/ViewPose';
 import type { ExtraGalaxySpec } from '../../../../src/@types/galaxy/ExtraGalaxySpec';
 import type { GalaxyDustParams } from '../../../../src/@types/galaxy/GalaxyDustParams';
 import type { GalaxyFieldComponent } from '../../../../src/@types/galaxy/GalaxyFieldComponent';
@@ -211,9 +211,7 @@ import { hasUrlGate } from '../../../../src/utils/url/hasUrlGate';
 
 import { createFrameTimer } from './createFrameTimer';
 import { deriveMilkyWayFade } from './deriveMilkyWayFade';
-import { orbitEye } from './orbitEye';
-import { panAxes } from './panAxes';
-import { lensShift } from './lensShift';
+import { createOrbitCameraInput } from './createOrbitCameraInput';
 import { createPassTimingWindows } from './createPassTimingWindows';
 import { debugGalaxyWeight } from './debugGalaxyWeight';
 import { decodeOrientationTexels } from './decodeOrientationTexels';
@@ -321,7 +319,7 @@ const DUST_MAP_FORMAT: GPUTextureFormat = 'rgba16float';
 
 /**
  * Floor for the dust's own reach R (io.wesl's dustSlices doc) — small next
- * to any real galaxy's scale (generator units where `cam.dist` alone ranges
+ * to any real galaxy's scale (generator units where the orbit distance ranges
  * 0.02..8000), just enough to keep `tNear = max(D-R, 0.02*R)` and
  * `tFar = D+R` from collapsing to the same value when R itself is ~0 (a
  * disc-less category, or dust tuned to a vanishing scale length).
@@ -1706,12 +1704,7 @@ export async function createGalaxyEngine(
   ];
 
   // ---- camera state (orbit) — galaxy-engine.js:159-166 ----
-  const cam = { az: 0.5, el: 1.05, dist: 31, target: [0, 0, 0] as Vec3, fov: (45 * Math.PI) / 180 };
-  const camAnim = { az: cam.az, el: cam.el, dist: cam.dist }; // damped shadow copy
-  let autoRotate = opts.autoRotate !== false;
-  let insetL = 0;
-  let insetR = 0; // CSS px occupied by side panels (for off-center framing)
-  let lastInteract = performance.now();
+  const camera = createOrbitCameraInput(canvas, { autoRotate: opts.autoRotate !== false });
 
   // One internal render bag merged by setRender (the spike's Object.assign).
   // Seeded from DEFAULT_RENDER_SETTINGS so this bag can't drift from the store
@@ -2801,99 +2794,6 @@ export async function createGalaxyEngine(
     repackHiiComponents();
   }
 
-  function setView(pose: Partial<ViewPose>): void {
-    if (pose.az != null) cam.az = pose.az;
-    if (pose.el != null) cam.el = pose.el;
-    if (pose.dist != null) cam.dist = pose.dist;
-    lastInteract = performance.now();
-  }
-
-  function setAutoRotate(on: boolean): void {
-    autoRotate = on;
-    // Both halves make the toggle immediate. Starting clears the idle gate in
-    // `drawFrame`: that gate exists so the spin does not fight a live drag, not
-    // to delay a deliberate button press, and a press right after a drag would
-    // otherwise sit still for 2.5 s. Stopping snaps the damped shadow onto the
-    // live angle — while rotating, `camAnim.az` trails `cam.az` by a constant
-    // offset, and letting that offset unwind reads as a coast after the button
-    // already said stop.
-    if (on) lastInteract = Number.NEGATIVE_INFINITY;
-    else camAnim.az = cam.az;
-  }
-
-  function setInsets(left: number, right: number): void {
-    insetL = left || 0;
-    insetR = right || 0;
-  }
-
-  // ---- input (galaxy-engine.js:225-250) ----
-  let dragging = false;
-  let panning = false;
-  let lx = 0;
-  let ly = 0;
-  const onDown = (e: PointerEvent): void => {
-    dragging = true;
-    panning = e.button === 2 || e.button === 1;
-    lx = e.clientX;
-    ly = e.clientY;
-    lastInteract = performance.now();
-    canvas.setPointerCapture?.(e.pointerId);
-  };
-  const onMove = (e: PointerEvent): void => {
-    if (!dragging) return;
-    if (panning) {
-      // Right/middle-drag pans: shift the orbit target along the camera's right & up axes.
-      const { right, up } = panAxes(camAnim.az, camAnim.el);
-      const s = camAnim.dist * 0.0016; // screen-constant pan speed
-      const dx = (e.clientX - lx) * s;
-      const dy = (e.clientY - ly) * s;
-      for (let i = 0; i < 3; i++) cam.target[i] = cam.target[i]! + (-right[i]! * dx + up[i]! * dy);
-    } else {
-      cam.az += (e.clientX - lx) * 0.006;
-      cam.el += (e.clientY - ly) * 0.006;
-      cam.el = Math.max(-1.5, Math.min(1.5, cam.el));
-    }
-    lx = e.clientX;
-    ly = e.clientY;
-    lastInteract = performance.now();
-  };
-  const onUp = (): void => {
-    dragging = false;
-    panning = false;
-    lastInteract = performance.now();
-  };
-  const onWheel = (e: WheelEvent): void => {
-    e.preventDefault();
-    // Exponential, so a notch is a constant RATIO — the only zoom that behaves
-    // the same at 3000 units out and at 0.02. The rate is up from the old
-    // short-range value to keep a full traverse a similar number of notches now
-    // that the range spans five decades instead of two.
-    cam.dist *= Math.exp(e.deltaY * 0.0018);
-    // The floor is deep inside the disc, where sprites resolve into individual
-    // billboards — the regime the app hits on descent and the one worth tuning
-    // against. It works only because the near plane tracks `dist` below.
-    //
-    // The CEILING is set by the apparent-size fade band, not by taste: the disc
-    // is 21 generator units across, so at 400 it still spans tens of pixels and
-    // the band (edges at 12 / 8 px) could not fire at any reachable zoom. 3000
-    // puts both edges inside the range, which is what makes the FADE section
-    // testable. The far plane below still contains the cloud there.
-    // The ceiling exists so the apparent-size fade band is reachable, and that
-    // band is keyed on PIXELS: apparent diameter is ~25.35 * viewportHeight /
-    // dist, so a taller canvas needs a further camera to reach the same px. At
-    // dpr 2 an 8 px disc is ~5700 units, so a 3000 ceiling would leave the band
-    // never firing on a retina display. 8000 clears it with margin, and the far
-    // plane (dist * 2 + 200) still contains the cloud there.
-    cam.dist = Math.max(0.02, Math.min(8000, cam.dist));
-    lastInteract = performance.now();
-  };
-  const onContextMenu = (e: Event): void => e.preventDefault(); // allow right-drag to pan
-  canvas.addEventListener('pointerdown', onDown);
-  canvas.addEventListener('pointermove', onMove);
-  window.addEventListener('pointerup', onUp);
-  canvas.addEventListener('wheel', onWheel, { passive: false });
-  canvas.addEventListener('contextmenu', onContextMenu);
-
   // ---- resize (galaxy-engine.js:253-264) ----
   const dpr = Math.min(window.devicePixelRatio || 1, 2); // full native resolution
   const backingSize = (): Vec2 => [
@@ -3140,27 +3040,20 @@ export async function createGalaxyEngine(
     // delta instead — see `loop`.
     const dt = Math.min(0.05, (now - prev) / 1000);
     prev = now;
-    // idle auto-rotate
-    if (autoRotate && now - lastInteract > 2500 && !dragging) cam.az += dt * 0.12;
-    // damping
-    const k = Math.min(1, dt * 10);
-    camAnim.az += (cam.az - camAnim.az) * k;
-    camAnim.el += (cam.el - camAnim.el) * k;
-    camAnim.dist += (cam.dist - camAnim.dist) * k;
 
-    const eye = orbitEye(camAnim.az, camAnim.el, camAnim.dist, cam.target);
-    const view = mat4.lookAt(eye, cam.target, [0, 1, 0]);
+    const { eye, target, fov, dist } = camera.update(dt, now);
+    const view = mat4.lookAt(eye, target, [0, 1, 0]);
     // Near/far track orbit distance, the same adaptation the app's NEAR0 slab
     // makes and for the same reason: a fixed near plane slices through the disc
     // once you descend into it. There is no depth attachment, so the usual
     // precision cost of a tiny near plane does not apply — these only clip.
     // Far keeps the whole cloud in view from inside the disc as well as from
     // outside it; the sprite shaders clamp clip-z against exactly this hazard.
-    const near = Math.max(1e-4, camAnim.dist * 0.002);
-    const far = camAnim.dist * 2 + 200;
+    const near = Math.max(1e-4, dist * 0.002);
+    const far = dist * 2 + 200;
     const aspect = canvas.width / canvas.height;
-    const proj = mat4.perspective(cam.fov, aspect, near, far);
-    const shiftX = lensShift(insetL, insetR, canvas.clientWidth);
+    const proj = mat4.perspective(fov, aspect, near, far);
+    const shiftX = camera.shiftX(canvas.clientWidth);
     proj[8] = shiftX; // lens shift to centre in the visible area
     const vp = mat4.multiply(proj, view);
 
@@ -3170,7 +3063,7 @@ export async function createGalaxyEngine(
     // survive the fade, not be interrupted by it. `canvas.height`, not the
     // aggregate's, for the same reason the app passes `ctx.canvasSize.height`:
     // the band asks how big the disc looks to the USER.
-    const fade = deriveMilkyWayFade(eye, cam.fov, canvas.height, render);
+    const fade = deriveMilkyWayFade(eye, fov, canvas.height, render);
     lastFade = fade;
 
     // Combined debug-view dimming weight — see debugGalaxyWeight.ts for why it
@@ -3222,10 +3115,10 @@ export async function createGalaxyEngine(
     // Depth-slice edges for the dust map (io.wesl's dustSlices doc) — VIEW-
     // dependent, so recomputed every frame unlike `currentDustReachR`. D is
     // the eye's distance to the primary galaxy's centre (the tool's origin,
-    // not `cam.target` — the two differ once the camera pans); the geometric
-    // spacing between tNear and tFar is what turns linear from outside the
-    // galaxy and logarithmic from inside it — see io.wesl for the full
-    // derivation of the 0.02*R floor.
+    // not the orbit `target` — the two differ once the camera pans); the
+    // geometric spacing between tNear and tFar is what turns linear from the
+    // outside of the galaxy and logarithmic from inside it — see io.wesl for
+    // the full derivation of the 0.02*R floor.
     const dustSlices = dustSliceEdges(Math.hypot(eye[0], eye[1], eye[2]), currentDustReachR);
 
     // The mixture is calibrated to the sprite field's total flux in record
@@ -3245,7 +3138,7 @@ export async function createGalaxyEngine(
     // aggregate, but the frustum it must reconstruct is the one `proj` was
     // built with.
     packFieldHeaderUniforms(
-      { eye, view, fov: cam.fov, aspect, lensShiftX: shiftX, exposure: analyticExposure },
+      { eye, view, fov, aspect, lensShiftX: shiftX, exposure: analyticExposure },
       fieldEmissionCount,
       fieldEmissionCount,
       fieldDustCount,
@@ -3267,7 +3160,7 @@ export async function createGalaxyEngine(
       // The dust-noise erosion lane — also cached by rebuildDustMixture.
       currentDustNoise,
       // The dust-slice edges computed just above — VIEW-dependent, unlike
-      // every other packFieldHeaderUniforms argument past `cam` itself.
+      // every other packFieldHeaderUniforms argument past the camera basis.
       dustSlices,
       // The three crossfade sliders + the combined galaxy weight, computed
       // once above — splat.wesl's fs reads .w, dustPresent.wesl's fs .x.
@@ -3289,7 +3182,7 @@ export async function createGalaxyEngine(
     // so it always takes the plain (unattenuated) emission path — HII does
     // not (yet) darken under the dust lane it may physically sit inside.
     packFieldHeaderUniforms(
-      { eye, view, fov: cam.fov, aspect, lensShiftX: shiftX, exposure: analyticExposure },
+      { eye, view, fov, aspect, lensShiftX: shiftX, exposure: analyticExposure },
       hiiEmissionCount,
       hiiEmissionCount,
       0,
@@ -3636,9 +3529,9 @@ export async function createGalaxyEngine(
     setParams,
     setRender,
     setFieldTuning,
-    setView,
-    setAutoRotate,
-    setInsets,
+    setView: camera.setView,
+    setAutoRotate: camera.setAutoRotate,
+    setInsets: camera.setInsets,
     setExtras,
     step: (now?: number): void => drawFrame(now ?? performance.now()),
     async sample() {
@@ -3656,7 +3549,7 @@ export async function createGalaxyEngine(
       dbgBuf.unmap();
       return { ...sampleLuminanceStats(a), stars: starCount };
     },
-    getCamera: (): ViewPose => ({ az: cam.az, el: cam.el, dist: cam.dist }),
+    getCamera: camera.getCamera,
     // The SSPSF automaton's packed output (sfMapPack.wesl) — a persistent
     // GPU texture, always non-null, whose CONTENT is only meaningful once
     // rebuildSfMap has run at least once (setParams). Consumed by nothing
@@ -3743,11 +3636,7 @@ export async function createGalaxyEngine(
       sfMapStepIndexBuf?.destroy();
       gradeBuf.destroy();
       ro.disconnect();
-      canvas.removeEventListener('pointerdown', onDown);
-      canvas.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-      canvas.removeEventListener('wheel', onWheel);
-      canvas.removeEventListener('contextmenu', onContextMenu);
+      camera.dispose();
     },
   };
 }
