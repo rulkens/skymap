@@ -65,11 +65,10 @@ export type FieldCamera = {
 };
 
 /**
- * The dust-noise erosion lane (io.wesl's `dustNoise`), packed as its own
- * argument rather than folded into `FieldCamera`: unlike the camera/exposure
- * lanes, these three values are cached in `createGalaxyEngine.ts`'s
- * `rebuildDustMixture` (they only change when the dust params or geometry
- * do), not re-derived every `drawFrame`.
+ * The dust-noise erosion lane (io.wesl's `dustNoise`). Unlike the
+ * camera/exposure lanes these are cached in `createGalaxyEngine.ts`'s
+ * `rebuildDustMixture` — they only change when the dust params or geometry
+ * do, not every `drawFrame`.
  */
 export type FieldDustNoise = {
   /** World units spanned by one full wrap of the baked noise volume (dustParticleCloud.ts's `dustNoiseTileUnits`). */
@@ -131,68 +130,88 @@ export type SfMapChannelWeights = {
 };
 
 /**
- * packFieldHeaderUniforms — camera basis + params + the four live counts +
- * the dust extinction law + the dust-noise lane + the dust depth-slice edges,
- * into the 192-byte uniform. Called every `drawFrame`; all four counts are
- * whatever `repackFieldComponents` (createGalaxyEngine.ts) last sized the
- * storage buffer to (the two packers are called from different sites, so the
- * counts travel as plain arguments rather than being re-derived here).
- *
- * `dustExtinctionRgb` rides the header, not the per-component colour lane,
- * because the primary galaxy's attenuation no longer reads per-component
- * colour at all — dustMap.wesl collapses every dust component to four
- * depth-sliced tau columns before splat.wesl ever sees it (see io.wesl's
- * dust-component comment), so the law has to arrive some other way, once
- * per frame, for the whole primary galaxy.
- *
- * `emissionCount` (the former `componentCount`) is the draw call's own
- * instance count — dust components are never drawn as quads. `dustOffset`
- * locates the dust slice within `comps` (always `emissionCount`, since dust
- * is appended last — see io.wesl); `dustCount` its length. `primaryCount` is
- * the CENTRAL galaxy's own share of `emissionCount` (its components are
- * packed first), which the shader gates dust application on: an extra's
- * emission must never read the primary's dust.
- * `dustMapHeightPx` is `dustMapTex`'s own pixel height (see
- * `createGalaxyRenderTargets`, which sizes it to `reducedSize(render.dustDivisor)`,
- * its own divisor, independent of `fieldTex`'s) — read by dustMap.wesl's
- * dust-noise multiplier to band-limit its four baked octaves against the
- * fragment's own world-space pixel footprint (see io.wesl's counts2.y doc).
- *
- * `fieldSizePx` is fieldTex's own pixel size (`reducedSize(render.fieldDivisor)`)
- * — splat.wesl's fs is the one reader: it runs at fieldTex's resolution but
- * samples dustMapTex at the dust map's own (now independently-divisored)
- * resolution, so it needs its own target's extent to build a normalized UV
- * rather than a direct texel index (see io.wesl's DUST MAP doc).
- *
- * `dustNoise` is `FieldDustNoise` above — cached by `rebuildDustMixture`,
- * not re-derived here, same discipline as `dustExtinctionRgb`. `dustSlices`
- * is `FieldDustSlices` above — recomputed every call, since it tracks the
- * live camera distance. `debugView` is `DebugViewWeights` above — the three
- * crossfade sliders plus the combined galaxy weight, recomputed every call
- * from `render`. `sfMapChannels` is `SfMapChannelWeights` above — the three
- * per-channel isolation sliders for the SF-map view specifically, same
- * "recomputed every call from `render`" discipline as `debugView`.
- * `bubbleViewIntensity` is the SF-event bubble/cavity overlay's own
- * crossfade weight (io.wesl's `bubbleView.x`) — a single scalar, not an
- * object like `debugView`/`sfMapChannels`, since it has no per-channel
- * split. bubblePresent.wesl is the only reader.
+ * The dust lanes as one bundle, because a pass either has a dust slice or it
+ * has none — the HII header is the "none" case for all four at once.
+ * `extinctionRgb` rides the header rather than a per-component colour lane
+ * because dustMap.wesl collapses every dust component into four depth-sliced
+ * tau columns before splat.wesl ever sees one (io.wesl's dust-component
+ * comment), so the law has to arrive once per frame for the whole galaxy.
  */
-export function packFieldHeaderUniforms(
-  cam: FieldCamera,
-  emissionCount: number,
-  dustOffset: number,
-  dustCount: number,
-  primaryCount: number,
-  dustMapHeightPx: number,
-  fieldSizePx: Vec2,
-  dustExtinctionRgb: Vec3,
-  dustNoise: FieldDustNoise,
-  dustSlices: FieldDustSlices,
-  debugView: DebugViewWeights,
-  sfMapChannels: SfMapChannelWeights,
-  bubbleViewIntensity: number,
-  dst?: Float32Array,
-): Float32Array {
+export type FieldDust = {
+  /** The CCM89 law's A_lambda/A_V per channel, for `currentDust.rV`. */
+  readonly extinctionRgb: Vec3;
+  readonly noise: FieldDustNoise;
+  readonly slices: FieldDustSlices;
+  /**
+   * `dustMapTex`'s OWN pixel height — it carries a divisor independent of
+   * every other target's (`createGalaxyRenderTargets`). dustMap.wesl
+   * band-limits its four baked octaves against the fragment's world-space
+   * pixel footprint with it (io.wesl's counts2.y doc).
+   */
+  readonly mapHeightPx: number;
+};
+
+/**
+ * "This pass has no dust", as a VALUE rather than a skipped write — see the
+ * pack below for why skipping is a stale-bytes bug. `tileUnits` and
+ * `contrastExp` are 1, not 0: dustMap.wesl divides by the first and raises
+ * `pow` to the second.
+ */
+const INERT_DUST: FieldDust = {
+  extinctionRgb: [0, 0, 0],
+  noise: { tileUnits: 1, amplitude: 0, cloudOffset: 0, contrastExp: 1 },
+  slices: { t1: 0, t2: 0, t3: 0 },
+  mapHeightPx: 0,
+};
+
+/** Everything one `FieldUniforms` header needs, all of it per-pass. */
+export type FieldHeaderInput = {
+  readonly camera: FieldCamera;
+  /** The draw call's own instance count — dust components are never drawn as quads. */
+  readonly emissionCount: number;
+  /** Length of the dust slice `comps` appends after the emission components. */
+  readonly dustCount: number;
+  /**
+   * The CENTRAL galaxy's share of `emissionCount` (its components pack
+   * first). splat.wesl gates dust application on it, so an extra's emission
+   * can never read the primary's dust; 0 keeps a whole pass out of the
+   * attenuation branch.
+   */
+  readonly primaryCount: number;
+  /**
+   * The pixel size of THIS pass's own target (fieldTex for the field header,
+   * hiiTex for the HII one) — not the canvas, and not dustMapTex, which
+   * carries its own divisor. splat.wesl's fs turns a fragment position into a
+   * normalized dustMapTex UV with it (io.wesl's DUST MAP doc).
+   */
+  readonly targetSizePx: Vec2;
+  /** Absent means the pass has no dust; the lanes are still written, inert. */
+  readonly dust?: FieldDust;
+  readonly debugView: DebugViewWeights;
+  readonly sfMapChannels: SfMapChannelWeights;
+  /** io.wesl's `bubbleView.x` — bubblePresent.wesl is the only reader. */
+  readonly bubbleViewIntensity: number;
+};
+
+/**
+ * packFieldHeaderUniforms — one 208-byte `FieldUniforms` header, every lane
+ * written every call. `dst` is a per-frame scratch shared across headers
+ * (createGalaxyEngine's `fieldData`/`hiiData`), so a lane left unwritten
+ * silently ships the previous pass's bytes to the GPU — which is why an
+ * absent `dust` falls back to `INERT_DUST` instead of skipping its writes.
+ */
+export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Array): Float32Array {
+  const {
+    camera: cam,
+    emissionCount,
+    dustCount,
+    primaryCount,
+    targetSizePx,
+    debugView,
+    sfMapChannels,
+    bubbleViewIntensity,
+  } = input;
+  const dust = input.dust ?? INERT_DUST;
   const out = dst ?? new Float32Array(FIELD_HEADER_FLOATS);
   const { view } = cam;
 
@@ -226,33 +245,35 @@ export function packFieldHeaderUniforms(
   out[19] = cam.exposure;
 
   // counts 20..23 = (emissionCount, dustOffset, dustCount, primaryCount).
+  // dustOffset is not an input: dust is always appended AFTER every emission
+  // component, so the slice starts exactly at `emissionCount` (io.wesl).
   out[20] = emissionCount;
-  out[21] = dustOffset;
+  out[21] = emissionCount;
   out[22] = dustCount;
   out[23] = primaryCount;
 
-  // counts2 24..27 = (unused, dustMapHeightPx, fieldWidthPx, fieldHeightPx).
+  // counts2 24..27 = (unused, dustMapHeightPx, targetWidthPx, targetHeightPx).
   out[24] = 0;
-  out[25] = dustMapHeightPx;
-  out[26] = fieldSizePx[0];
-  out[27] = fieldSizePx[1];
+  out[25] = dust.mapHeightPx;
+  out[26] = targetSizePx[0];
+  out[27] = targetSizePx[1];
 
   // dustExtinction 28..31 = (A_lambda/A_V per channel, unused).
-  out[28] = dustExtinctionRgb[0];
-  out[29] = dustExtinctionRgb[1];
-  out[30] = dustExtinctionRgb[2];
+  out[28] = dust.extinctionRgb[0];
+  out[29] = dust.extinctionRgb[1];
+  out[30] = dust.extinctionRgb[2];
   out[31] = 0;
 
   // dustNoise 32..35 = (tileUnits, amplitude, cloudOffset, contrastExp).
-  out[32] = dustNoise.tileUnits;
-  out[33] = dustNoise.amplitude;
-  out[34] = dustNoise.cloudOffset;
-  out[35] = dustNoise.contrastExp;
+  out[32] = dust.noise.tileUnits;
+  out[33] = dust.noise.amplitude;
+  out[34] = dust.noise.cloudOffset;
+  out[35] = dust.noise.contrastExp;
 
   // dustSlices 36..39 = (t1, t2, t3, unused).
-  out[36] = dustSlices.t1;
-  out[37] = dustSlices.t2;
-  out[38] = dustSlices.t3;
+  out[36] = dust.slices.t1;
+  out[37] = dust.slices.t2;
+  out[38] = dust.slices.t3;
   out[39] = 0;
 
   // debugView 40..43 = (dustViewIntensity, sfMapViewIntensity, orientationViewIntensity, galaxyWeight).

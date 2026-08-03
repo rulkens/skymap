@@ -203,7 +203,6 @@ import type { GalaxySfMapOrientation } from '../../../../src/@types/galaxy/Galax
 import type { GalaxyStarFormationParams } from '../../../../src/@types/galaxy/GalaxyStarFormationParams';
 import type { MilkyWayTuning } from '../../../../src/@types/settings/MilkyWayTuning';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 import { createShaderModuleWithDevLog } from '../../../../src/services/gpu/shaderCompileLogger';
 import { createGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
@@ -238,7 +237,7 @@ import {
   packFieldComponents,
   packFieldHeaderUniforms,
 } from './uniforms/packFieldUniforms';
-import type { FieldDustNoise, FieldDustSlices } from './uniforms/packFieldUniforms';
+import type { FieldCamera, FieldDustNoise } from './uniforms/packFieldUniforms';
 import { createGenerationPipelines } from '../../../../src/services/gpu/galaxy/createGenerationPipelines';
 import { encodeGeneration } from '../../../../src/services/gpu/galaxy/encodeGeneration';
 import { packGenerationUniforms } from '../../../../src/services/gpu/galaxy/packGenerationUniforms';
@@ -1236,19 +1235,6 @@ export async function createGalaxyEngine(
   const fieldData = new Float32Array(FIELD_HEADER_FLOATS);
   const hiiData = new Float32Array(FIELD_HEADER_FLOATS);
   const gradeData = new Float32Array(4);
-
-  // The HII header's dust lanes are always inert (see `hiiBG`'s comment:
-  // `primaryCount` below is packed 0, so splat.wesl's fs never takes the
-  // attenuation branch that would read them) — one shared zero value rather
-  // than a fresh object built every `drawFrame`.
-  const HII_INERT_DUST_NOISE: FieldDustNoise = {
-    tileUnits: 1,
-    amplitude: 0,
-    cloudOffset: 0,
-    contrastExp: 1,
-  };
-  const HII_INERT_DUST_SLICES: FieldDustSlices = { t1: 0, t2: 0, t3: 0 };
-  const HII_INERT_DUST_EXTINCTION: Vec3 = [0, 0, 0];
 
   /**
    * The tool's render bag, viewed as the app's `MilkyWayTuning` — the shape
@@ -2345,78 +2331,65 @@ export async function createGalaxyEngine(
       cloudData,
     );
     device.queue.writeBuffer(dustUbo, 0, cloudData);
-    // The analytic field's ray basis. `aspect` is the PROJECTION's (the
-    // canvas's), not the aggregate's: the fullscreen triangle covers the
-    // aggregate, but the frustum it must reconstruct is the one `proj` was
-    // built with.
+    // The analytic field's ray basis, shared by both headers below. `aspect`
+    // is the PROJECTION's (the canvas's), not the aggregate's: the fullscreen
+    // triangle covers the aggregate, but the frustum it must reconstruct is
+    // the one `proj` was built with.
+    const fieldCamera: FieldCamera = {
+      eye,
+      view,
+      fov,
+      aspect,
+      lensShiftX: shiftX,
+      exposure: analyticExposure,
+    };
     packFieldHeaderUniforms(
-      { eye, view, fov, aspect, lensShiftX: shiftX, exposure: analyticExposure },
-      fieldEmissionCount,
-      fieldEmissionCount,
-      fieldDustCount,
-      fieldPrimaryCount,
-      // dustMapTex's own pixel height — the same `reducedSize` call that sized
-      // the texture, at its own divisor, independent of fieldTex's. Read by
-      // dustMap.wesl's dust-noise multiplier to band-limit its four baked
-      // octaves against the fragment's own world-space pixel footprint — see
-      // io.wesl's counts2.y doc.
-      targets.reducedSize(render.dustDivisor)[1],
-      // fieldTex's own pixel size — splat.wesl's fs needs this to build the
-      // normalized UV it now samples dustMapTex through, since the two maps
-      // no longer share a resolution (see io.wesl's counts2.zw doc).
-      targets.reducedSize(render.fieldDivisor),
-      // The CCM89 extinction law for currentDust.rV — cached by
-      // rebuildDustMixture, not recomputed here every frame.
-      currentDustExtinctionRgb,
-      // The dust-noise erosion lane — also cached by rebuildDustMixture.
-      currentDustNoise,
-      // The dust-slice edges computed just above — VIEW-dependent, unlike
-      // every other packFieldHeaderUniforms argument past the camera basis.
-      dustSlices,
-      // The three crossfade sliders + the combined galaxy weight, computed
-      // once above — splat.wesl's fs reads .w, dustPresent.wesl's fs .x.
-      debugView,
-      // The SF-map per-channel isolation weights, computed once above —
-      // only sfMapPresent.wesl's fs reads this lane.
-      sfMapChannels,
-      // The bubble-view overlay's own crossfade weight — only
-      // bubblePresent.wesl's fs reads this lane (via its own bind group,
-      // bound to THIS header's `fieldUbo`, not the HII one below).
-      render.bubbleViewIntensity,
+      {
+        camera: fieldCamera,
+        emissionCount: fieldEmissionCount,
+        dustCount: fieldDustCount,
+        primaryCount: fieldPrimaryCount,
+        targetSizePx: targets.reducedSize(render.fieldDivisor),
+        dust: {
+          // Both cached by rebuildDustMixture, not recomputed per frame.
+          extinctionRgb: currentDustExtinctionRgb,
+          noise: currentDustNoise,
+          // VIEW-dependent, unlike every other lane in this bag.
+          slices: dustSlices,
+          mapHeightPx: targets.reducedSize(render.dustDivisor)[1],
+        },
+        // splat.wesl's fs reads .w, dustPresent.wesl's fs .x.
+        debugView,
+        sfMapChannels,
+        // bubblePresent.wesl reads this through its own bind group, bound to
+        // THIS header's `fieldUbo` and never to the HII one below.
+        bubbleViewIntensity: render.bubbleViewIntensity,
+      },
       fieldData,
     );
     device.queue.writeBuffer(fieldUbo, 0, fieldData);
 
     // The HII tier's own header, same camera basis, its own target's pixel
-    // size, and every dust lane inert: `primaryCount` 0 means splat.wesl's fs
-    // gates its attenuation branch on `input.inst < 0`, which is never true,
-    // so it always takes the plain (unattenuated) emission path — HII does
-    // not (yet) darken under the dust lane it may physically sit inside.
+    // size, and no dust: `primaryCount` 0 means splat.wesl's fs gates its
+    // attenuation branch on `input.inst < 0`, which is never true, so it
+    // always takes the plain (unattenuated) emission path — HII does not
+    // (yet) darken under the dust lane it may physically sit inside.
+    //
+    // `debugView`/`sfMapChannels`/`bubbleViewIntensity` are the same values
+    // as above. Only `debugView.w` is read by this pass's own draw (hiiBG
+    // binds none of the present pipelines), but sharing them keeps HII's
+    // dimming in lockstep with the rest of the galaxy under an active view.
     packFieldHeaderUniforms(
-      { eye, view, fov, aspect, lensShiftX: shiftX, exposure: analyticExposure },
-      hiiEmissionCount,
-      hiiEmissionCount,
-      0,
-      0,
-      0,
-      targets.reducedSize(render.hiiDivisor),
-      HII_INERT_DUST_EXTINCTION,
-      HII_INERT_DUST_NOISE,
-      HII_INERT_DUST_SLICES,
-      // Same object as the field header above: only .w (galaxyWeight) is
-      // read by this pass's own splat.wesl draw (hiiBG never binds the
-      // dustPresent/sfMapPresent/orientationPresent pipelines that read
-      // .x/.y/.z), but sharing it keeps HII's own dimming in lockstep with
-      // the rest of the galaxy under an active debug view.
-      debugView,
-      // Same object as the field header above — never read by this pass's
-      // own draw (hiiBG never binds sfMapPresent.wesl), shared purely
-      // because both calls write the same struct shape.
-      sfMapChannels,
-      // Same scalar as the field header above — never read by this pass's
-      // own draw (hiiBG never binds bubblePresentPipe either), shared purely
-      // because both calls write the same struct shape.
-      render.bubbleViewIntensity,
+      {
+        camera: fieldCamera,
+        emissionCount: hiiEmissionCount,
+        dustCount: 0,
+        primaryCount: 0,
+        targetSizePx: targets.reducedSize(render.hiiDivisor),
+        debugView,
+        sfMapChannels,
+        bubbleViewIntensity: render.bubbleViewIntensity,
+      },
       hiiData,
     );
     device.queue.writeBuffer(hiiUbo, 0, hiiData);
