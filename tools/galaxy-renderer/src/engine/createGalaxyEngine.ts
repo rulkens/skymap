@@ -216,8 +216,11 @@ import { createPassTimingWindows } from './timing/createPassTimingWindows';
 import { beginClearPass } from './passes/beginClearPass';
 import { encodeDustMapPass } from './passes/encodeDustMapPass';
 import { encodeDustPresentPass } from './passes/encodeDustPresentPass';
+import { encodePresentOverlay } from './passes/encodePresentOverlay';
+import { encodeSceneComposites } from './passes/encodeSceneComposites';
 import { encodeSplatPass } from './passes/encodeSplatPass';
 import { encodeStarPass } from './passes/encodeStarPass';
+import { encodeTransmittanceDust } from './passes/encodeTransmittanceDust';
 import { createSfMapAutomaton } from './sfMap/createSfMapAutomaton';
 import { createSfMapOrientation } from './sfMap/createSfMapOrientation';
 import { createReadbackQueue } from './gpu/createReadbackQueue';
@@ -2403,7 +2406,15 @@ export async function createGalaxyEngine(
     // both still gives exactly what either alone would at double weight — the
     // point of the side-by-side. Clearing (not loading) is what a private
     // target buys: no tile reload, and the timing slot is then honest.
-    if (render.analyticField) {
+    //
+    // Each of these three gates TWO sites — the pass that fills a target, and
+    // the scene pass's composite that reads it. Read once, here, so the pair
+    // cannot drift into compositing a target this frame never cleared, which
+    // sums the previous frame's content into HDR with nothing to catch it.
+    const analytic = render.analyticField;
+    const drawHii = hiiEmissionCount > 0;
+    const drawDustView = render.dustViewIntensity > 0;
+    if (analytic) {
       // Dust-column map: splat the primary's dust slice into `dustMapTex`, at
       // its own divisor-matched resolution (`dustMapPipe`, additive). Feeds
       // splat.wesl's fs (the grey/RGB split) always now, and IS the
@@ -2416,7 +2427,7 @@ export async function createGalaxyEngine(
       // has to run — as the clear that empties the map. Assigning the returned
       // latch is what carries that across; drop the assignment and the map
       // freezes at the previous galaxy's dust.
-      if (fieldDustCount > 0 || render.dustViewIntensity > 0 || dustMapPopulated) {
+      if (fieldDustCount > 0 || drawDustView || dustMapPopulated) {
         dustMapPopulated = encodeDustMapPass({
           enc,
           timestampWrites: timing.descriptorFor('dustMap'),
@@ -2432,7 +2443,7 @@ export async function createGalaxyEngine(
       // > 0`, rather than replacing it: the three debug views crossfade
       // independently now (RenderSettings's own docblock), and the scene
       // pass sums whichever of them are live.
-      if (render.dustViewIntensity > 0) {
+      if (drawDustView) {
         encodeDustPresentPass({
           enc,
           targetView: targets.dustViewTex.createView(),
@@ -2465,7 +2476,7 @@ export async function createGalaxyEngine(
       // half of this existed because the field pass used to skip entirely
       // under the JWST view, leaving `hiiTex` stale; the field pass no longer
       // skips, so that concern is gone.
-      if (hiiEmissionCount > 0) {
+      if (drawHii) {
         encodeSplatPass({
           enc,
           label: 'galaxy:hiiPass',
@@ -2492,77 +2503,60 @@ export async function createGalaxyEngine(
         sceneWrites,
         1,
       );
-      aggregateUpsample.draw(pass, targets.aggregateTex.createView());
-      // Every representation below is additive into the SAME attachment, so
-      // the crossfade is just which of them ran this frame, each already
-      // carrying its own weight (splat.wesl's debugView.w, or a present
-      // shader's own debugView.x/.y/.z) — nothing here picks one exclusively
-      // any more.
-      if (render.analyticField) {
-        aggregateUpsample.draw(pass, targets.fieldTex.createView());
-        // The HII tier's own composite, same additive upsample as the
-        // field's own draw just above — see `hiiTex`'s declaration comment
-        // for why it rides a separate target rather than joining that draw.
-        if (hiiEmissionCount > 0) {
-          aggregateUpsample.draw(pass, targets.hiiTex.createView());
-        }
-        // Picks up `dustViewTex` in ADDITION to `fieldTex` above — the two
-        // are no longer mutually exclusive now that the JWST view is a
-        // crossfade weight rather than a replacement (see the field pass).
-        if (render.dustViewIntensity > 0) {
-          aggregateUpsample.draw(pass, targets.dustViewTex.createView());
-        }
-        // Presented straight into `sceneTex` at full canvas resolution — see
-        // the field pass above for why a divisor-matched offscreen and this
-        // same upsample's 4-tap reconstruction were both wrong for this
-        // diagnostic. `sfMapPresentPipe` blends additively (see its own
-        // construction comment) so this draw sums with whatever the upsample
-        // above already added.
+      // Every representation here is additive into the SAME attachment, so the
+      // crossfade is just which of them ran this frame, each already carrying
+      // its own weight (splat.wesl's debugView.w, or a present shader's own
+      // debugView.x/.y/.z) — nothing picks one exclusively any more. The list
+      // order is the composite order: aggregate, analytic field, HII tier,
+      // JWST view. See `hiiTex`'s declaration comment for why HII rides its
+      // own target rather than joining the field's draw.
+      const compositeViews = [targets.aggregateTex.createView()];
+      if (analytic) {
+        compositeViews.push(targets.fieldTex.createView());
+        if (drawHii) compositeViews.push(targets.hiiTex.createView());
+        if (drawDustView) compositeViews.push(targets.dustViewTex.createView());
+      }
+      encodeSceneComposites(pass, aggregateUpsample, compositeViews);
+      if (analytic) {
+        // The two diagnostics below present straight into `sceneTex` at full
+        // canvas resolution — see the field pass above for why a
+        // divisor-matched offscreen and the upsample's 4-tap reconstruction
+        // were both wrong for them. Both pipelines blend additively, so each
+        // sums with whatever the composites already added.
         if (render.sfMapViewIntensity > 0) {
-          pass.setPipeline(sfMapAutomaton.presentPipeline);
-          pass.setBindGroup(0, sfMapAutomaton.presentBindGroup);
-          pass.draw(3);
+          encodePresentOverlay(
+            pass,
+            sfMapAutomaton.presentPipeline,
+            sfMapAutomaton.presentBindGroup,
+          );
         }
-        // Same shape as the sfMap draw just above, same reason:
-        // full-canvas-resolution presentation, additive so it sums with
-        // whatever else this pass has already drawn.
         if (render.orientationViewIntensity > 0) {
-          pass.setPipeline(sfMapOrientation.presentPipeline);
-          pass.setBindGroup(0, sfMapOrientation.presentBindGroup);
-          pass.draw(3);
+          encodePresentOverlay(
+            pass,
+            sfMapOrientation.presentPipeline,
+            sfMapOrientation.presentBindGroup,
+          );
         }
-        // The bubble-view overlay: an instanced draw, not a fullscreen
-        // triangle like the two presents just above (each placement is its
-        // own camera-facing quad, see bubblePresent.wesl). Additive, so it
-        // sums with whatever this pass has already drawn; independent of
-        // the other three — the SF-event catalog is a second, unrelated
-        // star-formation model, not another lens on the same automaton, so
-        // this is its own `if`, not an `else if` chained onto sfMap's or
-        // orientation's.
+        // The bubble-view overlay is instanced rather than a covering triangle
+        // (one camera-facing quad per placement, see bubblePresent.wesl), and
+        // independent of the other three: the SF-event catalog is a second,
+        // unrelated star-formation model, not another lens on the same
+        // automaton — hence its own `if`, never an `else if`.
         if (render.bubbleViewIntensity > 0 && bubbleInstanceCount > 0) {
-          pass.setPipeline(bubblePresentPipe);
-          pass.setBindGroup(0, bubblePresentBG);
-          pass.setVertexBuffer(0, bubbleBuf);
-          pass.draw(6, bubbleInstanceCount);
+          encodePresentOverlay(pass, bubblePresentPipe, bubblePresentBG, {
+            buf: bubbleBuf,
+            count: bubbleInstanceCount,
+          });
         }
       }
-      pass.setPipeline(dustPipe);
-      pass.setBindGroup(0, dustBG);
-      pass.setVertexBuffer(0, quad);
-      // Always drawn now, primary AND extras — same "dim through
-      // debugGalaxyWeight, don't suppress" contract the star pass follows
-      // above (see its own comment for why the old primary-only skip is
-      // gone).
-      if (dustBuf) {
-        pass.setVertexBuffer(1, dustBuf);
-        pass.draw(6, dustCount);
-      }
+      // Primary AND extras, always — same "dim through debugGalaxyWeight,
+      // don't suppress" contract the star pass follows above.
+      const dustInstances: InstanceDraw[] = [];
+      if (dustBuf) dustInstances.push({ buf: dustBuf, count: dustCount });
       for (const e of extras) {
-        if (e.dustBuf) {
-          pass.setVertexBuffer(1, e.dustBuf);
-          pass.draw(6, e.dustCount);
-        }
+        if (e.dustBuf) dustInstances.push({ buf: e.dustBuf, count: e.dustCount });
       }
+      encodeTransmittanceDust(pass, dustPipe, dustBG, quad, dustInstances);
       pass.end();
     }
     // bloom pyramid, folded back into sceneTex before the tone curve

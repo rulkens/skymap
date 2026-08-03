@@ -1,6 +1,6 @@
 /**
- * InstanceDraw — one instanced billboard draw: a `generate.wesl`-written record
- * buffer bound at vertex slot 1, and how many of its records to instance.
+ * InstanceDraw — one instanced billboard draw: a record buffer, and how many of
+ * its records to instance. Which vertex slot it binds to is the pass's business.
  *
  * The star and dust passes each draw the central galaxy followed by every
  * extra, off buffers that are reallocated on `setParams`/`setExtras`. Projecting
