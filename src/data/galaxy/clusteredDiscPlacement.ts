@@ -92,6 +92,9 @@ export type ClusteredDiscPlacementMode =
       readonly kind: 'mapDensity';
       /** Normalised [0,1] placement density from the SF map — see `placeMapDensityComplex`. */
       readonly densityAt: (radius: number, angle: number) => number;
+      /** The map grid's own radial support. Proposals are drawn over exactly this annulus, so it must be the grid `densityAt` samples, not a disc-derived radius. */
+      readonly rMin: number;
+      readonly rMax: number;
     }
   | { readonly kind: 'smoothDisc' };
 
@@ -306,30 +309,53 @@ export function buildClusteredDiscPlacement<TPayload>(
 
   /**
    * Map-density-only placement: the SF map IS the density, no arm-lane roll
-   * involved. Proposes `(x, z)` from the same radial distribution
-   * `placeSmoothDiscComplex` draws from (so the exponential disc falloff and
-   * scale height carry over unmodified), rejection-samples against
-   * `densityAt`, and accepts the last proposal if the budget runs out — the
-   * requested particle count is always met. `y` doesn't feed the acceptance
-   * test, so it's drawn once after the loop rather than re-rolled per try.
+   * involved. Proposes uniformly over the map's own annulus — area-weighted in
+   * radius (`sqrt` of a uniform in r^2), uniform in angle — and rejection-samples
+   * against `densityAt`.
+   *
+   * The proposal deliberately does NOT reuse `placeSmoothDiscComplex`'s disc
+   * Gaussians. Drawing from those made the map a radial MODULATION of the
+   * exponential disc rather than the density itself: nothing could be accepted
+   * past the disc's support however bright the map was there (dust stopped short
+   * of the grid), and the centrally-peaked proposal drove most of the budget
+   * exhaustion, so the accept-last fallback deposited those draws in the very
+   * inner hole the map reports as empty. Uniform-over-the-annulus makes both
+   * unreachable by construction.
+   *
+   * Falling back to the BEST proposal rather than the last keeps that fallback
+   * from being an arbitrary draw; the requested particle count is always met.
+   * `y` doesn't feed the acceptance test, so it's drawn once after the loop.
    */
-  function placeMapDensityComplex(densityAt: (radius: number, angle: number) => number): {
+  function placeMapDensityComplex(mode: {
+    densityAt: (radius: number, angle: number) => number;
+    rMin: number;
+    rMax: number;
+  }): {
     center: Vec3;
     frame: CloudFrame;
   } {
-    let x = 0;
-    let z = 0;
-    let radius = 0;
+    const r2Min = mode.rMin * mode.rMin;
+    const r2Span = mode.rMax * mode.rMax - r2Min;
+    let radius = mode.rMin;
     let angle = 0;
+    let bestDensity = -1;
+    let bestRadius = radius;
+    let bestAngle = angle;
     for (let tries = 0; tries < MAP_DENSITY_REJECTION_TRIES; tries++) {
-      const k = pickWeighted(rng, config.discWeights, config.discWeightSum);
-      const sigmaR = config.discSigmaR(k);
-      x = gaussian(rng) * sigmaR;
-      z = gaussian(rng) * sigmaR;
-      radius = Math.hypot(x, z);
-      angle = Math.atan2(z, x);
-      if (rng() < densityAt(radius, angle)) break;
+      radius = Math.sqrt(r2Min + rng() * r2Span);
+      angle = (rng() * 2 - 1) * Math.PI;
+      const density = mode.densityAt(radius, angle);
+      if (density > bestDensity) {
+        bestDensity = density;
+        bestRadius = radius;
+        bestAngle = angle;
+      }
+      if (rng() < density) break;
     }
+    radius = bestRadius;
+    angle = bestAngle;
+    const x = Math.cos(angle) * radius;
+    const z = Math.sin(angle) * radius;
     const y = gaussian(rng) * sigmaZComplex;
     const frame = rotateFrameToOrientation(
       warpSurfaceFrame(radius, angle, geometry),
@@ -368,7 +394,7 @@ export function buildClusteredDiscPlacement<TPayload>(
       case 'analytic':
         return placeAnalyticComplex(mode);
       case 'mapDensity':
-        return placeMapDensityComplex(mode.densityAt);
+        return placeMapDensityComplex(mode);
       case 'smoothDisc':
         return placeSmoothDiscComplex();
     }

@@ -181,6 +181,8 @@ export function buildDustParticleCloud(
     if (maxDensity > 0) {
       placement = {
         kind: 'mapDensity',
+        rMin: sfMap.rMin,
+        rMax: sfMap.rMax,
         densityAt: (radius, angle) => {
           // Outside the grid's radial support the map has NO DATA, and
           // `sampleGalaxySfMap` CLAMPS rather than reporting that — so every
