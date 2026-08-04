@@ -29,8 +29,8 @@
  * `stars.wesl` clamps each sprite's on-screen half-extent to
  * `[starPxMin, starPxMax]` PIXELS, converting from NDC via the uniform's
  * `viewportPx`. Those are pixels OF THE TARGET BEING RENDERED. Handing it the
- * canvas size while drawing into a half-res target would make every clamped
- * sprite come out at twice its intended size once upsampled. So the viewport is
+ * canvas size while drawing into a downscaled target would make every clamped
+ * sprite come out `scale` times its intended size once upsampled. So the viewport is
  * computed from the same `floor(canvas / scale)`, min-1-px formula
  * `renderTargets` allocates with, reading the SAME `scale` off the
  * `'mw-aggregate'` spec row — the identical discipline `scalarVolumeLayer`
