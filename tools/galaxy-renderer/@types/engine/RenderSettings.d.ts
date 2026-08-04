@@ -70,9 +70,11 @@ export type RenderSettings = {
   readonly analyticField: boolean;
   /**
    * SPIKE, tool-only: whole-field intensity multiplier for the analytic pass.
-   * The shipped default is hand-calibrated by eye, NOT a parity point with the
-   * sprite field — absolute flux is anchored on `GalaxyDescription.luminosity`,
-   * and the gauge that fixes it was pinned so this setting kept its meaning.
+   * 1.0 is the calibration point the field was tuned at by eye against the
+   * reference gallery, NOT a parity point with the sprite field — the sprite
+   * pass's own `starIntensity`/`sizeScale` no longer factor in at all (see
+   * `deriveFrameView.ts`'s `FIELD_EXPOSURE_GAUGE`); absolute
+   * flux is anchored on `GalaxyDescription.luminosity` instead.
    */
   readonly analyticExposure: number;
   /**

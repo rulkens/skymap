@@ -60,7 +60,7 @@ function FieldSection(): ReactNode {
           step={0.01}
           format={(v) => v.toFixed(2)}
           onChange={(v) => dispatch(renderPatched({ analyticExposure: v }))}
-          info="Whole-field multiplier on the integrated mixture. The star pass's own exposure and size sliders are folded in, so the ratio between the two representations holds as they move. The shipped default is hand-calibrated by eye, not a parity point."
+          info="Whole-field multiplier on the integrated mixture, independent of the star pass's own exposure and size sliders. 1.0 is the calibration point tuned by eye against the reference gallery, not a parity point with the sprite field."
         />
         <p className={styles.readout}>
           smooth field {smoothFieldBlobs} (base {OTHER_COMPONENTS} + warped outer disc{' '}

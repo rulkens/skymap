@@ -42,12 +42,17 @@ describe('deriveFrameView', () => {
     expect([...shifted.view]).toEqual([...centred.view]);
   });
 
-  it('folds the star pass multipliers into analyticExposure so parity survives the sliders', () => {
-    const v = deriveFrameView({
+  it("keeps the field's exposure independent of the sprite pass's starIntensity/sizeScale", () => {
+    // Regression for the fold this replaced: `analyticExposure` used to be
+    // multiplied by the sprite pass's own knobs, so retuning a SPRITE slider
+    // (#541) silently moved the FIELD's brightness with it. The two passes
+    // are separate representations of the same cloud and must be tunable
+    // independently.
+    const reference = deriveFrameView(base({ analyticExposure: 2 }));
+    const movedSprites = deriveFrameView({
       ...base({ analyticExposure: 2, starIntensity: 3, sizeScale: 4 }),
     });
-    // size enters SQUARED — a sprite's light goes as its quad area.
-    expect(v.analyticExposure).toBeCloseTo(2 * 3 * 16 * v.fade.alpha, 10);
+    expect(movedSprites.analyticExposure).toBeCloseTo(reference.analyticExposure, 10);
   });
 
   it('measures the dust slices from the origin, not the orbit target', () => {

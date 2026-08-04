@@ -103,9 +103,9 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // `legacyDustEnabled` below, and is off at boot too.
   spriteField: false,
   analyticField: true,
-  // Hand-calibrated by eye against the reference gallery. Not a parity point
-  // with the sprite field — see `RenderSettings.analyticExposure`.
-  analyticExposure: 0.35,
+  // 1.0 is the calibration point itself — see `RenderSettings.analyticExposure`
+  // and `deriveFrameView.ts`'s `FIELD_EXPOSURE_GAUGE`.
+  analyticExposure: 1.0,
   // 0 at boot: the JWST view crossfades in a debug presentation of the dust
   // map, which is not the default look.
   dustViewIntensity: 0,

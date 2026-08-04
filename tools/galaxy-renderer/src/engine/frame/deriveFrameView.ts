@@ -24,6 +24,20 @@ import { debugViewWeights } from './debugViewWeights';
 import { deriveMilkyWayFade } from './deriveMilkyWayFade';
 import { dustSliceEdges } from '../field/dustSliceEdges';
 
+/**
+ * The gauge for the analytic field's arbitrary flux units: the scalar at which
+ * `analyticExposure = 1.0` is the calibrated look. Hand-pinned by eye, so it
+ * carries no derivation — only a landmine.
+ *
+ * It must not be reconstituted from the sprite pass's `starIntensity` and
+ * `sizeScale`, which is what it was until the field's exposure drifted x2.4446
+ * behind a retune of those two SPRITE knobs. That coupling cannot buy
+ * sprite/field parity anyway: the sprite pass's light also carries its `count`,
+ * so matching the other two terms tracks nothing. The field's exposure is
+ * `analyticExposure` alone, as the slider's label promises.
+ */
+const FIELD_EXPOSURE_GAUGE = 0.0539;
+
 export type FrameView = {
   readonly view: Float32Array;
   readonly proj: Float32Array;
@@ -34,7 +48,7 @@ export type FrameView = {
   readonly debugViews: DebugViewWeights;
   readonly sfMapChannels: SfMapChannelWeights;
   readonly dustSlices: FieldDustSlices;
-  /** The star pass's own multipliers folded in, so `analyticExposure` 1.0 means sprite/field parity as the sliders move, not only at defaults. */
+  /** `render.analyticExposure` against `FIELD_EXPOSURE_GAUGE`, scaled by the fade. Independent of the sprite pass's `starIntensity`/`sizeScale`. */
   readonly analyticExposure: number;
 };
 
@@ -99,7 +113,6 @@ export function deriveFrameView(input: {
     // D is the eye's distance to the primary galaxy's centre (the tool's
     // origin, NOT the orbit target — the two differ once the camera pans).
     dustSlices: dustSliceEdges(Math.hypot(eye[0], eye[1], eye[2]), input.dustReachR),
-    analyticExposure:
-      render.analyticExposure * render.starIntensity * render.sizeScale ** 2 * fade.alpha,
+    analyticExposure: render.analyticExposure * FIELD_EXPOSURE_GAUGE * fade.alpha,
   };
 }
