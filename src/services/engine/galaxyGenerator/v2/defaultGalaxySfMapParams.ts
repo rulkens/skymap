@@ -5,14 +5,6 @@
  * The three ignition terms are all PER-STEP PROBABILITIES summed into one `p`,
  * so each is far smaller than intuition suggests.
  *
- * `spread` has a derivable LOWER bound, not a derivable value: `p` is evaluated
- * at the RECEIVER over a Moore 8-neighbourhood, so mean offspring is
- * `N_eligible * spread`. With all eight eligible that puts criticality at 1/8 =
- * 0.125 — but the refractory gate and gas depletion make the cells behind a
- * front ineligible, so only its leading edge propagates and the true threshold
- * is higher. Gerola & Seiden's ~0.18 is 1/6, the same law for their 6-cell
- * equal-area neighbourhood, NOT a value to copy across.
- *
  * `armForcing` is a bias, not a driver: at 0.15 an arm cell ignited with 15%
  * probability per step from forcing ALONE, saturating the arms whatever
  * `spread` did.
@@ -26,11 +18,10 @@ export const DEFAULT_GALAXY_SF_MAP_PARAMS: GalaxySfMapParams = {
   // far fewer iterations — and rebuild latency is linear in this.
   steps: 100,
   baseIgnition: 0.0002,
-  // 1/8 is a LOWER BOUND on criticality, not the value: it assumes all eight
-  // neighbours are eligible, but in a real front the cells behind it are
-  // refractory and gas-depleted, so only the leading edge can ignite and the
-  // effective branching ratio is roughly half. Found by eye at 0.164, which is
-  // consistent with an eligible neighbourhood of ~4-5 rather than 8.
+  // Found by eye, and measured since to sit ~30% BELOW the automaton's
+  // percolation threshold of 0.231 — the disc is lit by `baseIgnition`
+  // amplified ~12x, not by self-sustaining propagation. `GalaxySfMapParams`'s
+  // own field carries the sweep.
   spread: 0.164,
   refractorySteps: 7,
   gasRegen: 0.06,

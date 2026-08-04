@@ -13,11 +13,61 @@ export type GalaxySfMapParams = {
   readonly steps: number;
   /** Spontaneous ignition probability per cell per step, independent of neighbours — the seed that keeps a quiet disc from dying out. */
   readonly baseIgnition: number;
-  /** Added ignition probability per already-ignited neighbour. This is the percolation knob: below threshold the structure dies, far above it the disc saturates. */
+  /**
+   * Added ignition probability per already-ignited neighbour — the percolation
+   * knob.
+   *
+   * MEASURED (`npm run galaxy-renderer:percolation`: one seeded ignition, no
+   * `baseIgnition` and no arm forcing so activity can reach exactly zero, 96
+   * runs per point; the threshold is where half of them are still igniting at
+   * the end, and it does not move between 200 and 600 steps). Propagation
+   * sustains itself above **0.231 +-0.002** at the shipped `refractorySteps` /
+   * `gasRegen`. The shipped 0.164 is SUBCRITICAL by ~30%: this automaton is a
+   * driven amplifier, not a self-sustaining fire. Its activity is
+   * `baseIgnition` times a gain that this knob sets — x11.8 at 0.164, x40 at
+   * 0.20, x83 at 0.22 over the no-propagation floor — which is why the picture
+   * responds smoothly to it with no threshold to fall off.
+   *
+   * The threshold is `refractorySteps`' doing, not gas: 0.2314 -> 0.2288 (1%)
+   * for gas fully replenished, against 0.2288 -> 0.1850 (19%) for the
+   * refractory wake removed. `shearRate` does not enter it at all (0.2295 at
+   * zero shear). The 0.185 left with neither term is lattice correlation — a
+   * cluster's frontier cells share neighbours, so eight offspring rolls are
+   * never eight independent ones, and no 2D automaton reaches the mean-field
+   * 1/8 = 0.125 its receiver-side Moore neighbourhood suggests.
+   *
+   * Gerola & Seiden's ~0.18 is that same mean-field 1/N for their 6-cell
+   * equal-area neighbourhood. It is not a target to tune toward here.
+   */
   readonly spread: number;
-  /** Steps a cell stays spent before its gas can ignite again. Sets the width of the trailing wake behind a propagating front. */
+  /**
+   * Steps a cell stays spent before its gas can ignite again. Sets the width of
+   * the trailing wake behind a propagating front — and, measured, it is the one
+   * term that moves `spread`'s percolation threshold: 0.185 at 0 or 1 step,
+   * 0.213 at 3, 0.229 at 7, 0.237 at 15 (see `spread`).
+   *
+   * 0 and 1 are the same automaton, because the gas channel imposes its own
+   * one-step lockout: a cell that just ignited has zero gas, and `p` is
+   * multiplied by gas, so it cannot re-ignite on the next step whatever this
+   * says.
+   */
   readonly refractorySteps: number;
-  /** Gas recovered per step as a fraction of full. The star/gas feedback the original stars-only model was criticised for lacking. */
+  /**
+   * Gas recovered per step as a fraction of full — the star/gas feedback the
+   * original stars-only model was criticised for lacking, and the CONTRAST
+   * knob: recovery takes `1/gasRegen` steps, which is how long a burnt void
+   * stays a void rather than simmering back.
+   *
+   * It is NOT a percolation term. Gas only ever binds cells BEHIND a front;
+   * the virgin cells ahead of it are at full gas, and those are the ones that
+   * decide whether the front propagates — so replenishing gas fully moves
+   * `spread`'s threshold by 1% and its gain at the shipped `spread` by 5%.
+   *
+   * Above `1/refractorySteps` it stops doing anything at all: gas is back to
+   * full before the refractory lock clears, which is why 0.3 and 1.0 are
+   * bit-identical at `refractorySteps` 7. The shipped 0.06 leaves a re-igniting
+   * cell at 0.42 gas, so this end of the range is live.
+   */
   readonly gasRegen: number;
   /** How much the spiral ridge raises local ignition probability. 0 makes the automaton blind to the arms and the output goes purely flocculent. */
   readonly armForcing: number;

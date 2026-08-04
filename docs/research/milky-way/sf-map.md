@@ -196,9 +196,8 @@ multiplied by `gas`, which a just-ignited cell has spent. In a propagating
 front the cells BEHIND it are both refractory and gas-poor, so only the leading
 edge can ignite and `N_eligible` is roughly half of 8.
 
-**MEASURED.** The user settled on `spread` **0.164** by eye — consistent with
-`N_eligible ~ 4-5`, and comfortably above the 0.125 bound the mean-field form
-predicts. Do not "correct" the default back down to it.
+**MEASURED.** The user settled on `spread` **0.164** by eye. Do not "correct"
+the default back down to the bound.
 
 The bound is still the useful object: it says saturation is IMPOSSIBLE below
 0.125 and possible above, which brackets the search. It does not name the edge.
@@ -206,8 +205,76 @@ The bound is still the useful object: it says saturation is IMPOSSIBLE below
 **The correction that matters: Gerola & Seiden's classical ~0.18 is 1/6.** It
 is the SAME branching law for THEIR 6-cell equal-area neighbourhood, not a
 value to carry across to an 8-neighbourhood implementation. Quoting 0.18 as a
-target here sends a tuner toward a value that is 1.44x supercritical by
-construction. Measured: 0.16 saturates, and so did every larger value tried.
+target here sends a tuner toward a value that mean-field theory calls 1.44x
+supercritical — and the measurement below says even that is optimistic, since
+the real edge sits at 0.231.
+
+**MEASURED, and it retires "0.16 saturates" as a statement about the
+DYNAMICS.** The automaton's own activity at 0.164 is 2.4e-3 of cells per step,
+a twentieth of the 4.6e-2 it reaches at 0.30 — nothing is saturated. INFERRED,
+from the display saturation recorded further down this section: what the tuner
+saw was `oldActivity` pinning to flat white at a healthy duty cycle under the
+then-current GAIN of 0.35. That is the one mechanism already on record which
+produces "saturated" at a `spread` the dynamics are nowhere near.
+
+## Where the percolation threshold really is, and what sets it
+
+**MEASURED 2026-08-04, `npm run galaxy-renderer:percolation`.** The harness
+dispatches `sfMapStep.wesl` itself — same shader, same ping-pong parity, same
+`packSfMapConstants` — from a compute-only page, so there is no second
+implementation of the automaton to drift. Threshold, operationally: with
+`baseIgnition` and `armForcing` both zero, activity CAN reach exactly zero, so
+seed ONE ignited cell and call the run surviving if any cell is still igniting
+at the end. `p_c` is where survival probability over 96 independent hash seeds
+crosses 0.5. It is identical at 200 and at 600 steps — above threshold a
+cluster that survives its first few generations survives indefinitely — so this
+is a threshold, not a finite-time artifact. Precision +-0.002 from the run
+count and the local slope.
+
+| held (everything else shipped)    | `p_c` |
+| --------------------------------- | ----- |
+| shipped: refractory 7, gas 0.06   | 0.231 |
+| `gasRegen` 0.3                    | 0.229 |
+| `gasRegen` 1.0 (no starvation)    | 0.229 |
+| `refractorySteps` 15              | 0.237 |
+| `refractorySteps` 3, gas 1.0      | 0.213 |
+| `refractorySteps` 1 or 0, gas 1.0 | 0.185 |
+| `shearRate` 0                     | 0.230 |
+
+**REFUTED: gas starvation was never holding `spread` up.** Driving `gasRegen`
+from 0.06 to 1.0 moves the threshold by 1% (0.2314 -> 0.2288) and the gain at
+the shipped `spread` by 5%. The reason is structural rather than numerical: gas
+binds only the cells BEHIND a front, and those are refractory anyway. The cells
+that decide whether a front propagates are the virgin ones ahead of it, and
+they are at full gas at every `gasRegen`. Above `1/refractorySteps` the channel
+goes completely inert — 0.3 and 1.0 are bit-identical at `refractorySteps` 7,
+because gas is back to full before the refractory lock clears.
+
+**MEASURED, the real driver: `refractorySteps`.** It carries 0.185 -> 0.229,
+nineteen times gas's contribution, and saturates past ~7. `shearRate` does not
+enter the threshold at all. `refractorySteps` 0 and 1 are the same automaton:
+a cell that just ignited has zero gas and `p` is multiplied by gas, so the gas
+channel imposes a one-step lockout of its own regardless.
+
+**The residual, and it is not a defect.** With no refractory wake and no gas
+limit the threshold is still 0.185, half again the mean-field 1/8. Mean field
+assumes eight INDEPENDENT offspring rolls; on a lattice a growing cluster's
+frontier cells share neighbours, and that correlation costs branching ratio.
+Reaching 0.125 would require a tree, not a grid. So the useful reading of the
+bound is that `1/p_c` names an EFFECTIVE neighbourhood — 4.3 cells at the
+shipped settings, which is what the `N_eligible ~ 4-5` guess was reaching for.
+
+**The consequence for tuning, and it reframes the whole knob.** The shipped
+0.164 is subcritical by ~30%. The disc is not lit by self-sustaining
+propagation; it is lit by `baseIgnition` amplified by a gain `spread` sets
+(x11.8 at 0.164, x40 at 0.20, x83 at 0.22, against the no-propagation floor).
+That is a benign regime to tune in — the response is smooth and there is no
+edge to fall off — but it means `baseIgnition` is a co-equal brightness
+control, not a seed that only matters on a quiet disc, and that
+`refractorySteps` moves `spread`'s effect as much as `spread` does. Whether the
+tier WANTS to run near 0.231, where clusters are scale-free and flocculent
+structure is at its most correlated, is a look call for whoever tunes it next;
+nothing here argues for moving the shipped value.
 
 **All three ignition terms are PER-STEP PROBABILITIES summed into one p**, so
 each is far smaller than intuition suggests. `armForcing` 0.15 meant an arm

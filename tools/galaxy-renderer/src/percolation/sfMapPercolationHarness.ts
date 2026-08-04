@@ -1,0 +1,386 @@
+/**
+ * sfMapPercolationHarness — measures the SSPSF automaton's percolation
+ * threshold by running `sfMapStep.wesl` ITSELF, on a real GPU, with no CPU
+ * re-implementation of the update rule. A second copy of the automaton would
+ * drift within a week (research doc's own standing rule), and a threshold read
+ * off the update rule instead of measured is not a measurement at all.
+ *
+ * Two modes, because the two answer different questions:
+ *  - 'seeded'      one ignited cell, `baseIgnition` 0, so activity CAN reach
+ *                  exactly zero — the textbook survival probability.
+ *  - 'spontaneous' the shipped `baseIgnition`, which never dies; the order
+ *                  parameter is steady-state activity against its p=0 floor.
+ *
+ * The page half of `sweepSfMapPercolation.ts`; it owns its own GPUDevice and
+ * touches no engine state.
+ */
+import { DEFAULT_GALAXY_SF_MAP_PARAMS } from '../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxySfMapParams';
+import {
+  SF_MAP_AZ,
+  SF_MAP_RINGS,
+  SF_MAP_WORKGROUP_SIZE,
+} from '../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
+import type { GalaxySfMapParams } from '../../../../src/@types/galaxy/GalaxySfMapParams';
+import {
+  packSfMapConstants,
+  SF_MAP_CONSTANTS_BUFFER_SIZE,
+} from '../engine/sfMap/packSfMapConstants';
+import { sfMapStepIndexData } from '../engine/sfMap/sfMapStepIndexData';
+
+import sfMapStepWgsl from '../engine/shaders/milkyWay/sfMap/sfMapStep.wesl?static';
+
+const CELL_COUNT = SF_MAP_AZ * SF_MAP_RINGS;
+
+/**
+ * Per-step census of the state texture: how many cells carry age 0, i.e.
+ * ignited on that step. Reduced within the workgroup first — 196k atomic adds
+ * to one address serialise, 768 do not.
+ */
+const COUNT_ACTIVE_WGSL = /* wgsl */ `
+struct CountSlot { index: f32 }
+
+@group(0) @binding(0) var stateTex: texture_2d<f32>;
+@group(0) @binding(1) var<storage, read_write> counts: array<atomic<u32>>;
+@group(0) @binding(2) var<uniform> slot: CountSlot;
+
+var<workgroup> wgActive: atomic<u32>;
+
+@compute @workgroup_size(${SF_MAP_WORKGROUP_SIZE}, ${SF_MAP_WORKGROUP_SIZE})
+fn cs(
+  @builtin(global_invocation_id) gid: vec3<u32>,
+  @builtin(local_invocation_index) lid: u32,
+) {
+  if (lid == 0u) {
+    atomicStore(&wgActive, 0u);
+  }
+  workgroupBarrier();
+  // No early return: the barriers above and below must be reached uniformly.
+  let dims = textureDimensions(stateTex);
+  if (all(gid.xy < dims)) {
+    let state = textureLoad(stateTex, vec2<i32>(gid.xy), 0);
+    if (state.y == 0.0) {
+      atomicAdd(&wgActive, 1u);
+    }
+  }
+  workgroupBarrier();
+  if (lid == 0u) {
+    atomicAdd(&counts[u32(slot.index)], atomicLoad(&wgActive));
+  }
+}
+`;
+
+/**
+ * Overwrite ONE texel with a just-ignited cell, between the automaton's own
+ * step-0 seeding pass and step 1. A write-only storage texture leaves every
+ * other texel as it stands, which is what makes a single-cell initial
+ * condition reachable without forking `sfMapStep.wesl`.
+ */
+const SEED_CELL_WGSL = /* wgsl */ `
+struct SeedCell { az: f32, ring: f32, refractory: f32, pad: f32 }
+
+@group(0) @binding(0) var stateOut: texture_storage_2d<rgba16float, write>;
+@group(0) @binding(1) var<uniform> seed: SeedCell;
+
+@compute @workgroup_size(1)
+fn cs() {
+  textureStore(
+    stateOut,
+    vec2<i32>(i32(seed.az), i32(seed.ring)),
+    vec4<f32>(0.0, 0.0, seed.refractory, 0.0),
+  );
+}
+`;
+
+export type SfMapPercolationCase = {
+  readonly label: string;
+  /** Merged over `DEFAULT_GALAXY_SF_MAP_PARAMS`; `steps` is taken from the request instead. */
+  readonly params: Partial<GalaxySfMapParams>;
+};
+
+export type SfMapPercolationRequest = {
+  readonly mode: 'seeded' | 'spontaneous';
+  readonly steps: number;
+  /** Independent hash seeds per case. Survival probability's whole precision comes from this. */
+  readonly runs: number;
+  /**
+   * The radial span the log-polar grid covers. It reaches the automaton only
+   * through `sfMapShear.wesl`'s per-ring radius, so it matters exactly as much
+   * as `shearRate` does and not at all when that is zero.
+   */
+  readonly rMin: number;
+  readonly rMax: number;
+  /** Ring index the single ignition is planted on ('seeded' mode). */
+  readonly seedRing: number;
+  /**
+   * Value the whole arm-forcing texture is filled with. 0 isolates pure
+   * percolation; 1 is the ridge crest, which bounds what the arm term can
+   * contribute without standing up a real GalaxyDescription.
+   */
+  readonly armForcingLevel: number;
+  readonly cases: readonly SfMapPercolationCase[];
+};
+
+export type SfMapPercolationResult = {
+  readonly label: string;
+  readonly params: GalaxySfMapParams;
+  readonly runs: number;
+  /** Runs whose active-cell count is still non-zero on the final step. */
+  readonly survived: number;
+  /** Mean active-cell COUNT per step across runs, index = step. */
+  readonly activePerStep: readonly number[];
+  /** Mean active fraction over the last fifth of the run — the steady-state order parameter. */
+  readonly tailActiveFraction: number;
+  readonly peakActiveFraction: number;
+};
+
+export type SfMapPercolationReport = {
+  readonly adapter: string;
+  readonly cellCount: number;
+  readonly results: readonly SfMapPercolationResult[];
+  /**
+   * Anything the device complained about. A rejected encoder makes every
+   * census read zero, which is indistinguishable from a subcritical
+   * automaton — so this is the difference between a measurement and a lie.
+   */
+  readonly gpuErrors: readonly string[];
+};
+
+function assertNoDeviceError(device: GPUDevice, what: string): Promise<void> {
+  return device.popErrorScope().then((error) => {
+    if (error) throw new Error(`${what}: ${error.message}`);
+  });
+}
+
+export async function runSfMapPercolation(
+  request: SfMapPercolationRequest,
+): Promise<SfMapPercolationReport> {
+  const adapter = await navigator.gpu?.requestAdapter();
+  if (!adapter) throw new Error('no WebGPU adapter');
+  const device = await adapter.requestDevice();
+  const info = adapter.info ?? ({} as GPUAdapterInfo);
+  const gpuErrors: string[] = [];
+  device.addEventListener('uncapturederror', (event) => {
+    gpuErrors.push((event as GPUUncapturedErrorEvent).error.message);
+  });
+
+  device.pushErrorScope('validation');
+  const stepPipe = device.createComputePipeline({
+    label: 'sfMapPercolation:stepPipe',
+    layout: 'auto',
+    compute: {
+      module: device.createShaderModule({ label: 'sfMapPercolation:step', code: sfMapStepWgsl }),
+      entryPoint: 'cs',
+    },
+  });
+  const countPipe = device.createComputePipeline({
+    label: 'sfMapPercolation:countPipe',
+    layout: 'auto',
+    compute: {
+      module: device.createShaderModule({
+        label: 'sfMapPercolation:countActive',
+        code: COUNT_ACTIVE_WGSL,
+      }),
+      entryPoint: 'cs',
+    },
+  });
+  const seedPipe = device.createComputePipeline({
+    label: 'sfMapPercolation:seedPipe',
+    layout: 'auto',
+    compute: {
+      module: device.createShaderModule({
+        label: 'sfMapPercolation:seedCell',
+        code: SEED_CELL_WGSL,
+      }),
+      entryPoint: 'cs',
+    },
+  });
+  await assertNoDeviceError(device, 'pipeline creation');
+
+  const makeStateTex = (label: string): GPUTexture =>
+    device.createTexture({
+      label,
+      size: [SF_MAP_AZ, SF_MAP_RINGS],
+      format: 'rgba16float',
+      usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
+    });
+  const stateA = makeStateTex('sfMapPercolation:stateA');
+  const stateB = makeStateTex('sfMapPercolation:stateB');
+
+  const armForcingTex = device.createTexture({
+    label: 'sfMapPercolation:armForcingTex',
+    size: [SF_MAP_AZ, SF_MAP_RINGS],
+    format: 'r32float',
+    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+  });
+  device.queue.writeTexture(
+    { texture: armForcingTex },
+    new Float32Array(CELL_COUNT).fill(request.armForcingLevel),
+    { bytesPerRow: SF_MAP_AZ * 4 },
+    [SF_MAP_AZ, SF_MAP_RINGS],
+  );
+
+  const constUbo = device.createBuffer({
+    label: 'sfMapPercolation:constUbo',
+    size: SF_MAP_CONSTANTS_BUFFER_SIZE,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  const stride = device.limits.minUniformBufferOffsetAlignment;
+  const stepIndexBuf = device.createBuffer({
+    label: 'sfMapPercolation:stepIndexBuf',
+    size: request.steps * stride,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  device.queue.writeBuffer(stepIndexBuf, 0, sfMapStepIndexData(request.steps, stride));
+
+  const seedUbo = device.createBuffer({
+    label: 'sfMapPercolation:seedUbo',
+    size: 16,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  const countsBuf = device.createBuffer({
+    label: 'sfMapPercolation:countsBuf',
+    size: request.steps * 4,
+    // COPY_DST is for `clearBuffer`, not for any copy: without it every
+    // encoder is rejected at finish() and the whole sweep reads zero — which
+    // looks exactly like a subcritical automaton.
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
+  });
+  const countsStaging = device.createBuffer({
+    label: 'sfMapPercolation:countsStaging',
+    size: request.steps * 4,
+    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+  });
+
+  // Even step index writes stateB, odd writes stateA — the same parity
+  // createSfMapAutomaton's dispatch loop runs, and what the census pass has to
+  // agree with to read the state a step just wrote.
+  const nextTexAt = (step: number): GPUTexture => (step % 2 === 0 ? stateB : stateA);
+  const prevTexAt = (step: number): GPUTexture => (step % 2 === 0 ? stateA : stateB);
+
+  // Built once for the whole sweep: every resource they name is stable across
+  // cases and runs, only buffer CONTENT changes.
+  const stepBindGroups: GPUBindGroup[] = [];
+  const countBindGroups: GPUBindGroup[] = [];
+  for (let step = 0; step < request.steps; step++) {
+    stepBindGroups.push(
+      device.createBindGroup({
+        label: `sfMapPercolation:stepBG${step}`,
+        layout: stepPipe.getBindGroupLayout(0),
+        entries: [
+          { binding: 0, resource: { buffer: constUbo } },
+          { binding: 1, resource: armForcingTex.createView() },
+          { binding: 2, resource: prevTexAt(step).createView() },
+          { binding: 3, resource: nextTexAt(step).createView() },
+          { binding: 4, resource: { buffer: stepIndexBuf, offset: step * stride, size: 4 } },
+        ],
+      }),
+    );
+    countBindGroups.push(
+      device.createBindGroup({
+        label: `sfMapPercolation:countBG${step}`,
+        layout: countPipe.getBindGroupLayout(0),
+        entries: [
+          { binding: 0, resource: nextTexAt(step).createView() },
+          { binding: 1, resource: { buffer: countsBuf } },
+          { binding: 2, resource: { buffer: stepIndexBuf, offset: step * stride, size: 4 } },
+        ],
+      }),
+    );
+  }
+  // Step 0 writes stateB, so that is the texture the single ignition lands in.
+  const seedBindGroup = device.createBindGroup({
+    label: 'sfMapPercolation:seedBG',
+    layout: seedPipe.getBindGroupLayout(0),
+    entries: [
+      { binding: 0, resource: nextTexAt(0).createView() },
+      { binding: 1, resource: { buffer: seedUbo } },
+    ],
+  });
+
+  const dispatchX = SF_MAP_AZ / SF_MAP_WORKGROUP_SIZE;
+  const dispatchY = SF_MAP_RINGS / SF_MAP_WORKGROUP_SIZE;
+  const grid = { rMin: request.rMin, rMax: request.rMax };
+
+  const results: SfMapPercolationResult[] = [];
+  for (const testCase of request.cases) {
+    const params: GalaxySfMapParams = {
+      ...DEFAULT_GALAXY_SF_MAP_PARAMS,
+      ...testCase.params,
+      steps: request.steps,
+    };
+    device.queue.writeBuffer(
+      seedUbo,
+      0,
+      new Float32Array([Math.floor(SF_MAP_AZ / 2), request.seedRing, params.refractorySteps, 0]),
+    );
+
+    const activeSum = new Float64Array(request.steps);
+    let survived = 0;
+    for (let run = 0; run < request.runs; run++) {
+      // Seeds start at 1: 0 is a legitimate hash input but makes the first run
+      // look special in a log, and nothing here needs it.
+      device.queue.writeBuffer(
+        constUbo,
+        0,
+        packSfMapConstants({ grid, sfMap: params, seed: run + 1 }),
+      );
+
+      const enc = device.createCommandEncoder({
+        label: `sfMapPercolation:${testCase.label}:${run}`,
+      });
+      enc.clearBuffer(countsBuf);
+      const seedPass = enc.beginComputePass({ label: 'sfMapPercolation:step0' });
+      seedPass.setPipeline(stepPipe);
+      seedPass.setBindGroup(0, stepBindGroups[0]!);
+      seedPass.dispatchWorkgroups(dispatchX, dispatchY);
+      seedPass.end();
+      if (request.mode === 'seeded') {
+        const injectPass = enc.beginComputePass({ label: 'sfMapPercolation:injectSeed' });
+        injectPass.setPipeline(seedPipe);
+        injectPass.setBindGroup(0, seedBindGroup);
+        injectPass.dispatchWorkgroups(1);
+        injectPass.end();
+      }
+      const runPass = enc.beginComputePass({ label: 'sfMapPercolation:steps' });
+      for (let step = 1; step < request.steps; step++) {
+        runPass.setPipeline(stepPipe);
+        runPass.setBindGroup(0, stepBindGroups[step]!);
+        runPass.dispatchWorkgroups(dispatchX, dispatchY);
+        runPass.setPipeline(countPipe);
+        runPass.setBindGroup(0, countBindGroups[step]!);
+        runPass.dispatchWorkgroups(dispatchX, dispatchY);
+      }
+      runPass.end();
+      enc.copyBufferToBuffer(countsBuf, 0, countsStaging, 0, request.steps * 4);
+      device.queue.submit([enc.finish()]);
+
+      await countsStaging.mapAsync(GPUMapMode.READ);
+      const counts = new Uint32Array(countsStaging.getMappedRange()).slice();
+      countsStaging.unmap();
+      for (let step = 0; step < request.steps; step++) activeSum[step]! += counts[step]!;
+      if (counts[request.steps - 1]! > 0) survived++;
+    }
+
+    const activePerStep = [...activeSum].map((sum) => sum / request.runs);
+    const tailFrom = Math.floor(request.steps * 0.8);
+    const tail = activePerStep.slice(tailFrom);
+    results.push({
+      label: testCase.label,
+      params,
+      runs: request.runs,
+      survived,
+      activePerStep,
+      tailActiveFraction: tail.reduce((a, b) => a + b, 0) / tail.length / CELL_COUNT,
+      peakActiveFraction: Math.max(...activePerStep) / CELL_COUNT,
+    });
+  }
+
+  device.destroy();
+  return {
+    adapter:
+      `${info.vendor ?? '?'}/${info.architecture ?? '?'} ${info.device ?? ''} ${info.description ?? ''}`.trim(),
+    cellCount: CELL_COUNT,
+    results,
+    gpuErrors: [...new Set(gpuErrors)],
+  };
+}

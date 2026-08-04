@@ -204,6 +204,18 @@ this tool's pass chain is the app's pass chain exactly; moving one of those
 three knobs is a visible departure from parity, kept available because
 matching reference astrophotography sometimes wants it.
 
+## Measuring the SF map's percolation threshold
+
+`npm run galaxy-renderer:percolation` drives `sfMapStep.wesl` itself — same
+shader, same ping-pong parity, same constants packing as `createSfMapAutomaton`
+— on its own compute-only page, with `baseIgnition` and the arm forcing zeroed
+so a single seeded ignition can die out. It sweeps `spread` at several
+`gasRegen` / `refractorySteps` / `shearRate` settings and reports the survival
+probability, the steady-state active fraction, and the interpolated threshold.
+Flags: `--runs N` (single-seed runs per point), `--steps N`, `--json`,
+`--headed`. Findings live on `GalaxySfMapParams`'s own fields and in
+[`docs/research/milky-way/sf-map.md`](../../docs/research/milky-way/sf-map.md).
+
 ## Measuring performance
 
 The HUD's first badge is **ms per frame, with fps second** — a rolling median
