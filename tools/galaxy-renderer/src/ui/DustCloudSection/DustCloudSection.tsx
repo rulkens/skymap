@@ -57,17 +57,6 @@ function DustCloudSection(): ReactNode {
           info="Particle budget for the volumetric dust cloud. 0 disables it."
         />
         <ParamSlider
-          label="Clumpiness"
-          value={cloud.clumpiness}
-          min={0}
-          max={1}
-          step={0.02}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => patchCloud({ clumpiness: v })}
-          path="galaxy.dust.cloud.clumpiness"
-          info="Hierarchical clustering amplitude — 0 = Poisson-scattered, 1 = strongly hierarchical."
-        />
-        <ParamSlider
           label="Size floor (pc)"
           value={cloud.sizeFloorPc}
           min={15}
@@ -98,7 +87,7 @@ function DustCloudSection(): ReactNode {
           format={(v) => v.toFixed(1)}
           onChange={(v) => patchCloud({ elongation: v })}
           path="galaxy.dust.cloud.elongation"
-          info="sigma_along / sigma_across — how stretched each cloud is along its lane."
+          info="sigma_along / sigma_across at full filament coherence — map-seeded clouds run round (coherence 0) up to this aspect (coherence 1), area-preserving."
         />
         <ParamSlider
           label="Height ratio"
