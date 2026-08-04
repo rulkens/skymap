@@ -20,6 +20,20 @@ These were checked. **Add no others to this table without checking them.**
 | **Rix & Zaritsky 1995**, ApJ 447, 82, [arXiv:astro-ph/9505111](https://arxiv.org/abs/astro-ph/9505111) | K′-band, 18 face-on spirals: ~half have strong two-armed spirals with arm/interarm contrast **"of order unity"** (≈ factor 2) — the grand-design ceiling for the contrast dial. |
 | **Antoja et al. 2011**, MNRAS 418, 1423, [10.1111/j.1365-2966.2011.19190.x](https://doi.org/10.1111/j.1365-2966.2011.19190.x) | **SECONDARY carrier** for two numbers whose primaries resisted fetching: Drimmel & Spergel 2001's MW K-band arm–interarm ratio **K = 1.32 (A₂ = 0.14)** (D&S themselves flag it as possibly a lower limit), and GLIMPSE/Benjamin et al. 2005's **20–30% stellar count excess** at arm maxima (K ≈ 1.3, independent corroboration). D&S's _two-armed old-star structure_ claim is primary-verified from their abstract. |
 
+### The population light decomposition (B/T, Bar/T, halo)
+
+Shipped as `galaxyLightDecomposition`'s stage table; the caveats sit on the
+`GalaxyLightDecomposition` type, not here.
+
+| Source                                                                                           | What it gives                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Laurikainen et al. 2010**, MNRAS 405, 1089, [arXiv:1002.4370](https://arxiv.org/abs/1002.4370) | **B/T by Hubble stage, Table 2, verified from the PDF.** Two samples in two bands with the seam at T=1\|2: NIRS0S (Ks) T=−3…1, OSUBSGS (H) T=2…9; Galactic **and** internal extinction corrected. Per-stage N: 35 / 26 / 20 / 38 / 30 / 13 / 6 for T = −2 / 1 / 3 / 4 / 5 / 6 / 7. §1: fitting the bar moved the sample mean B/T 0.55 → 0.30 → 0.25 (nuclear bars), and barred vs unbarred S0s have the **same** B/T (0.29 ± 0.02 vs 0.33 ± 0.03).         |
+| **Salo et al. 2015**, ApJS 219, 4                                                                | **Bar/T, Table 7 (S⁴G Pipeline 4).** 3.6 µm, human-supervised bulge/disc/bar/nucleus fits, 2352 galaxies; the published column is already a component's fraction of total model flux, so Bar/T is read off, not derived. Values are **conditional on a bar being fitted** — the bin's fitted fraction is S0 0.43, Sa 0.59, Sb 0.44, Sbc 0.16, Sc 0.31, Sd 0.51/0.47. **The binning by stage is ours**, joined through Buta et al. 2015 (ApJS 217, 32) ⟨T⟩. |
+| **Gao et al. 2019**, ApJS 244, 34                                                                | R band, CGS, N=320. Binned the same way gives a smooth Bar/T of 0.13/0.11/0.10/0.09/0.06/0.05 — the **documented fallback** if S⁴G's T=4 dip (0.04, below both neighbours, bar fitted in only 16% of the bin) shows on screen.                                                                                                                                                                                                                             |
+| **Weinzirl et al. 2009**, ApJ 696, 411                                                           | Bar/T 0.25/0.18/0.17/0.12/0.09 at T = 1/3/4/5/6 — **1.7× S⁴G throughout**, on the same OSUBSGS H-band images. Three components and no lens, so his bar absorbs oval and lens light S⁴G assigns elsewhere. Not used. **Gadotti 2009** (MNRAS 393, 1531; pooled median 0.095 in i) sides with S⁴G.                                                                                                                                                           |
+| **Kormendy, Drory, Bender & Cornell 2010**, ApJ 723, 54                                          | Milky Way, near-IR: **no classical bulge**; 0.19 of the light sits in the bar/pseudobulge. A cross-check on the SBb row, not a table entry — this model has no per-galaxy override.                                                                                                                                                                                                                                                                        |
+| **Peters et al. 2017**, MNRAS 470, 427                                                           | The one study listing stellar-halo light fraction alongside morphology. Finds **no correlation** — which is why the halo column is flat.                                                                                                                                                                                                                                                                                                                   |
+
 **LITERATURE, attribution incomplete — flagged deliberately.** Gaia red-clump work (~8.4M stars)
 finds a **broken** disc profile: steep inside R ~ 3 kpc, a near-flat plateau 3–7 kpc, exponential
 decline past the solar radius to ~13 kpc, sharper drop beyond ~13 kpc. **We do not have a precise
@@ -36,6 +50,15 @@ BH&G's 2.6 ± 0.5 with an honest 1.8–6.0 range. **Do not present any single va
 
 - **The Gaia red-clump broken-profile result** (in [the citation table above](literature.md#literature--verified-citations)) — reported as literature, attribution
   incomplete.
+- **A halo light fraction by Hubble type — no such measurement exists.** Peters et al. 2017 is
+  the only paper listing halo fraction alongside morphology and finds no correlation, so the
+  shipped column is a flat 2% (3% at the late end), sourced and flagged. Do **not** convert the
+  better-measured _mass_ fractions instead: Peters puts halo M/L at ~3× the disc's while Harmsen
+  corrects light→mass the other way by 0.2 dex. They point in opposite directions and must not be
+  averaged.
+- **An irregular's bar.** The `irregular` category builds no bar geometry, so the Magellanic bar
+  that carries an Im's central light has nowhere to go but the disc — the LMC preset's
+  `barStrength: 0.6` is inert. A modelling gap, not a decomposition one.
 - **The claim that an early hardcoded field used F98's 13.79°** (see [the bar-angle finding](preset-calibration.md#the-bar-angle-was-three-different-numbers-none-agreeing)) — no such literal exists
   in the tree.
 - **`warpStrength: 0.15`** ≈ 1.05 kpc of edge bend — the preset flags it UNVERIFIED itself; no

@@ -1,14 +1,14 @@
 /**
  * GalaxyPopulationCountShares — each structural population's share of one
- * galaxy's STAR COUNT, summing to 1. Not light: the sprite tier multiplies
- * these by its star budget, and the analytic field uses them unscaled as its
- * mixture weights — the per-population brightness constant that turns a
- * count share into a light share lives separately (`generate.wesl`'s
- * per-population `* K` lines, mirrored in `galaxyFieldMixture.ts`).
+ * galaxy's STAR COUNT, summing to 1. A sprite-tier rendering budget, derived
+ * FROM `GalaxyLightDecomposition` by dividing each lane's light by what one of
+ * its stars emits (`SPRITE_POPULATION_BRIGHTNESS`) — never the source of it.
  *
- * The bar's share is already carved out of `disk` (it is a fraction of the
- * whole galaxy, not of the disk), and `arm` is the spiral-arm/irregular-clump
- * population — the analytic field folds it back into its disc term.
+ * `bar` is its own share here, not a slice of `disk`: the two populations have
+ * their own light and their own per-star brightness, so a fixed disk-to-bar
+ * ratio would have been a third, unrelated number. `arm` is the spiral-arm /
+ * irregular-clump population, drawn out of the disc's light rather than a lane
+ * of its own — see `GalaxyLightDecomposition.disc`.
  */
 export type GalaxyPopulationCountShares = {
   readonly bulge: number;

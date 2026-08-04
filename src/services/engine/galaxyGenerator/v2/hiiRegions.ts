@@ -74,12 +74,14 @@ const ISO_FRAME = { along: [1, 0, 0] as Vec3, across: [0, 1, 0] as Vec3, pole: [
  * this ADDITIVE tier the same order of magnitude as the disc it sits on top
  * of (it owes the disc no debit, so a comparable scale is all it needs).
  * Eyeballed to land the Milky Way's HII-to-disc flux ratio around 1:10, then
- * carried across from the retired star-count anchor exactly: 0.01 per unit
- * star-area over the 0.9294 * 0.2392 * 0.57 the disc's anchor also carried
- * and this one did not. A starting point for visual calibration, not a
- * measurement.
+ * carried across each re-anchoring exactly rather than re-eyeballed: 0.078915
+ * against the pre-decomposition scale, divided by the 1.155747 that scale
+ * absorbed when the population multipliers folded into `luminosity`. A
+ * starting point for visual calibration, not a measurement — but now a
+ * readable one, since `luminosity` is the galaxy's whole emitted light: HII
+ * regions add 6.8% of it back on top.
  */
-const HII_LUMINOSITY_SHARE = 0.078915316;
+const HII_LUMINOSITY_SHARE = 0.068280788;
 
 function tierFlux(geometry: GalaxyDescription, tuning: GalaxyFieldTuning): number {
   return geometry.luminosity * HII_LUMINOSITY_SHARE * Math.max(0, tuning.hii.brightness);

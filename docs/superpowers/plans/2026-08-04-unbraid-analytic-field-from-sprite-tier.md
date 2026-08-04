@@ -23,9 +23,11 @@ Branch `milky-way-analytic-field`, one PR. Steps land as distinct commits.
 
 3. **Absolute brightness ∝ cbrt(starCount).** Exact closed form, verified to 1 part in 10⁸ on all
    eight presets:
+
    ```
    emissionScale = C · outerRadius² · modelledStars^(1/3),  C = 0.17611053
    ```
+
    MW amplitude sum 1881.75 / 2370.86 / 2987.09 at starCount 75k / 150k / 300k — and
    `v1/milkyWayCalibration.ts:55-59` sets the tiers at exactly ×0.5 / ×1 / ×2. **Switching LOD tier
    changes how bright the analytic Milky Way is, by ±26% per step.** The `R²` is physics (Freeman
@@ -94,11 +96,25 @@ Delete `emissionScale`, `GLOW_DISC_INTEGRAL`, `MEAN_STAR_LUMINOSITY`, `MEAN_FALL
 `HII_LUMINOSITY_SHARE = 0.01 / 0.126724 = 0.078911` against a measured `hiiFlux/emissionScale` of
 0.078915.
 
-**5 — The luminosity decomposition. CHANGES THE IMAGE, substantially.** `hubbleStageOf(type)` →
-RC3 T-type; `galaxyLightDecomposition(params, category)` as a stage-keyed table;
+**5 — The luminosity decomposition. DONE. CHANGES THE IMAGE, substantially.** `hubbleStageOf(type)`
+→ RC3 T-type; `galaxyLightDecomposition(category, params)` as a stage-keyed table;
 `galaxyPopulationCountShares` **inverted** to derive counts from light
 (`share / SPRITE_POPULATION_BRIGHTNESS[pop]`, renormalised). `bulgeSize` keeps driving bulge
 **size**, stops driving bulge **light**. `armStrength` stops touching the light budget.
+As shipped:
+
+- **A galaxy emits exactly `luminosity`.** The four lanes sum to 1 and v2 applies no per-population
+  multiplier, so `GALAXY_LUMINOSITY_PER_AREA` was re-pinned 7.4268687 → **8.5835812**
+  (× 1.155747, the MW's old `Σ(count share × SPRITE_POPULATION_BRIGHTNESS)`) and
+  `HII_LUMINOSITY_SHARE` 0.078915316 → **0.068280788** (÷ the same). MW total flux and MW HII flux
+  are unchanged; every other preset moves by `1.155747 / Σ_preset` — ell ×1.42 is the extreme.
+- **A category is only lit for geometry it builds.** The bar lane is gated on
+  `barLengthOf(...) > 0` — so `barred` takes the CONDITIONAL (bar-fitted) Bar/T and every other
+  category takes zero, never the population average. The unsourced Irr Bar/T is deleted, not
+  shipped, because no irregular can spend it. The elliptical's disc remainder folds into its bulge.
+- **`StarBudget` gained `barCount`**; `BAR_SHARE_OF_DISK` is gone. Bar and disc have their own
+  light and their own per-star brightness, so a fixed 0.35 of the disk was a third unrelated number.
+- **Spirals now have a halo** (2% flat) — a population they previously had none of, in both tiers.
 
 **6 — Move the budget words into `v1/`.** `splitStarBudget`, `carveStarLayout`, `totalStarBudget`,
 `grainScale`. **Blocked on step 4, not just on 2 and 3** — `describeGalaxy` lives in `shared/` and
@@ -110,21 +126,21 @@ disappear when step 4 deletes the `emissionScale` anchor that reads them. Sequen
 
 **The spread between studies at fixed Hubble type exceeds the trend along the sequence** (B/T at
 T=0 spans 0.27–0.49; at T=5, 0.05–0.19). The dominant cause is whether a bar was fitted: doing so
-**halves** B/T (Salo+2015 S⁴G: *"ignoring the bar increases the estimated B/T ratios by a factor of
-2-3"*).
+**halves** B/T (Salo+2015 S⁴G: _"ignoring the bar increases the estimated B/T ratios by a factor of
+2-3"_).
 
 Near-IR, bars fitted — the low end of the published range. Disc = remainder.
 
-| Type | B/T | source | N | Bar/T | Halo/T |
-| --- | --- | --- | --- | --- | --- |
-| S0 | 0.33 ± 0.14 (med 0.33) | Laurikainen+2010 T=−2, Ks | 35 | 0.13 ± 0.07 (med 0.12), N=16 | 0.02 |
-| Sa | 0.25 ± 0.12 (med 0.26) | Laurikainen T=1, Ks | 26 | 0.17 ± 0.10 (med 0.14), N=47 | 0.02 |
-| Sb | 0.14 ± 0.09 (med 0.12) | Laurikainen T=3, H | 20 | 0.10 ± 0.08 (med 0.07), N=38 | 0.02 |
-| Sbc | 0.11 ± 0.08 (med 0.09) | Laurikainen T=4, H (best-constrained) | 38 | 0.04 ± 0.04 (med 0.03), N=14 — weak | 0.02 |
-| Sc | 0.11 ± 0.13 (med 0.06) | Laurikainen T=5, H | 30 | 0.06 ± 0.07 (med 0.04), N=40 | 0.02 |
-| Sd | 0.05 / 0.09 | Laurikainen T=6 / T=7, H — weak | 13 / 6 | 0.05 ± 0.04 / 0.07 ± 0.06, N=45 / 96 | 0.03 |
-| Irr | 0.00 | **ASSUMPTION — no source** | — | 0.05 **assumption** | 0.03 |
-| MW | **0.19 as bar/pseudobulge, classical bulge 0** | Kormendy+2010 Table 2, near-IR | — | folded in | 0.01 |
+| Type | B/T                                            | source                                | N      | Bar/T                                | Halo/T |
+| ---- | ---------------------------------------------- | ------------------------------------- | ------ | ------------------------------------ | ------ |
+| S0   | 0.33 ± 0.14 (med 0.33)                         | Laurikainen+2010 T=−2, Ks             | 35     | 0.13 ± 0.07 (med 0.12), N=16         | 0.02   |
+| Sa   | 0.25 ± 0.12 (med 0.26)                         | Laurikainen T=1, Ks                   | 26     | 0.17 ± 0.10 (med 0.14), N=47         | 0.02   |
+| Sb   | 0.14 ± 0.09 (med 0.12)                         | Laurikainen T=3, H                    | 20     | 0.10 ± 0.08 (med 0.07), N=38         | 0.02   |
+| Sbc  | 0.11 ± 0.08 (med 0.09)                         | Laurikainen T=4, H (best-constrained) | 38     | 0.04 ± 0.04 (med 0.03), N=14 — weak  | 0.02   |
+| Sc   | 0.11 ± 0.13 (med 0.06)                         | Laurikainen T=5, H                    | 30     | 0.06 ± 0.07 (med 0.04), N=40         | 0.02   |
+| Sd   | 0.05 / 0.09                                    | Laurikainen T=6 / T=7, H — weak       | 13 / 6 | 0.05 ± 0.04 / 0.07 ± 0.06, N=45 / 96 | 0.03   |
+| Irr  | 0.00                                           | **ASSUMPTION — no source**            | —      | 0.05 **assumption**                  | 0.03   |
+| MW   | **0.19 as bar/pseudobulge, classical bulge 0** | Kormendy+2010 Table 2, near-IR        | —      | folded in                            | 0.01   |
 
 Sources: Graham & Worley 2008 (MNRAS 388, 1708; K-band, dust+inclination corrected),
 Laurikainen et al. 2010 (MNRAS 405, 1089; multi-component with bars), Salo et al. 2015
@@ -134,25 +150,25 @@ Laurikainen et al. 2010 (MNRAS 405, 1089; multi-component with bars), Salo et al
 
 **Caveats the code comment must carry:** these are near-IR fractions (roughly half in B for Sb and
 later); B/T and Bar/T come from different samples and bands and are renormalised to 1 by us;
-Bar/T is for a *barred* galaxy; and per-galaxy scatter exceeds the trend.
+Bar/T is for a _barred_ galaxy; and per-galaxy scatter exceeds the trend.
 
 **B/T column VERIFIED 2026-08-04** against the primary source — arXiv:1002.4370, Table 2 (p. 31),
 read from the PDF, not second-hand. Every value matches. Three things the verification added:
 
 - **The table is TWO samples in TWO bands, and the seam is T=1|2** — NIRS0S (Ks) supplies T=−3…1,
   OSUBSGS (H) supplies T=2…9. So the Ks/H change falls exactly between Sa and Sab, inside the range
-  we interpolate across. Values are corrected for Galactic *and* internal extinction.
+  we interpolate across. Values are corrected for Galactic _and_ internal extinction.
 - **`N` is now in the table** and kills the Sd row: T=6 rests on 13 galaxies, T=7 on 6, and the
   paper's own T=8/T=9 bins have N=2 and N=3. Treat Sd as "small, poorly measured", not as 0.05.
 - **The bar-fitting effect is confirmed from this paper directly** (§1): mean B/T went 0.55 → 0.30
   when bars were fitted, → 0.25 including nuclear bars. Also worth knowing, because it cuts against
   the obvious inference: within this sample **barred and non-barred S0s have the same B/T**
-  (0.29±0.02 vs 0.33±0.03). Fitting a bar changes the *measurement*, not the *galaxy*.
+  (0.29±0.02 vs 0.33±0.03). Fitting a bar changes the _measurement_, not the _galaxy_.
 
 **Bar/T column: Salo et al. 2015, Table 7 (S⁴G Pipeline 4).** Laurikainen+2010 reports no
 bar-to-total flux ratio at all — the string "Bar/T" does not occur in it, nor in the Oulu group's
-other decomposition papers (2005, 2007, 2013). S⁴G Table 7 publishes a per-component *fraction of
-the total model flux*, so Bar/T is read off, not derived; 3.6 μm, human-supervised
+other decomposition papers (2005, 2007, 2013). S⁴G Table 7 publishes a per-component _fraction of
+the total model flux_, so Bar/T is read off, not derived; 3.6 μm, human-supervised
 bulge/disc/bar/nucleus fits, 2352 galaxies. The binning by stage is ours, joining Buta et al. 2015
 ⟨T⟩ (ApJS 217, 32). Three things that column carries:
 
@@ -171,7 +187,7 @@ bulge/disc/bar/nucleus fits, 2352 galaxies. The binning by stage is ours, joinin
 
 **No halo light fraction by Hubble type exists.** The one paper listing η alongside morphology
 (Peters 2017) finds no correlation. Use a flat 2%, sourced and flagged. Do **not** convert the
-better-measured *mass* fractions: Peters puts halo M/L at ~3× the disc's while Harmsen corrects
+better-measured _mass_ fractions: Peters puts halo M/L at ~3× the disc's while Harmsen corrects
 light→mass the other way by 0.2 dex — they point opposite ways and must not be averaged.
 
 ## Do not
@@ -202,7 +218,7 @@ light→mass the other way by 0.2 dex — they point opposite ways and must not 
 - The three READMEs describe the new flow; the "read back, not re-derived" landmine is **deleted**,
   not amended.
 - `docs/research/milky-way/literature.md` carries the sources above plus a "no halo light fraction
-  by Hubble type exists" entry under *What we could not support*.
+  by Hubble type exists" entry under _What we could not support_.
 
 **Manual smoke pass (owed — nothing here has been seen on a GPU beyond the validation probe):**
 MW before/after step 4 indistinguishable; app tier small→medium→large shows no brightness step;

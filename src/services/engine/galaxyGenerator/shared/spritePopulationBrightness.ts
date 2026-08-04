@@ -3,10 +3,11 @@
  * population: one entry per `randomLuminosity(...) * K` site in
  * `milkyWay/sprites/generate.wesl`, where `irregularClump` (the builder the
  * irregular category's `arm` count share runs through) has no `* K`.
- * v2 applies only four: `describeGalaxy` folds `disk + arm` into one
- * `light.disc` weighted by `disk`, and the arm ridge chain then
- * debits the disc by exactly the excess it adds, so it carries no net flux
- * — a fifth `arm` lane would double-count rather than close that gap.
+ *
+ * v1-only, and the flux path reads it BACKWARDS: it is what
+ * `galaxyPopulationCountShares` divides a population's light by to learn how
+ * many sprites buy that much of it. The analytic field applies none of them —
+ * its amplitudes are light fractions already.
  */
 export const SPRITE_POPULATION_BRIGHTNESS: Readonly<
   Record<'bulge' | 'bar' | 'disk' | 'arm' | 'irregularClump' | 'halo', number>

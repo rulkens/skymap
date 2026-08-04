@@ -5,9 +5,10 @@
  * construction and every preset gets its own field.
  *
  * Each sigma mirrors a `milkyWay/sprites/generate.wesl` builder, cited on the line;
- * each amplitude is an emission share over the component's own Gaussian
- * volume, scaled by the galaxy's own `luminosity` — a physical quantity, so
- * an LOD tier change cannot move it. Colours stay eyeball values.
+ * each amplitude is its population's `light` fraction over the component's own
+ * Gaussian volume, times the galaxy's `luminosity`. Both are physical, so
+ * neither an LOD tier nor a sprite constant can move them. Colours stay
+ * eyeball values.
  * Imports `armParticleCloud.ts` to reserve the
  * arm cloud's component budget before the ridge chain spends it, with no
  * third caller (the engine) to reserve it for them instead — the shared
@@ -28,7 +29,6 @@ import {
 } from './armRidgeGeometry';
 import { DEFAULT_GALAXY_SF_MAP_PARAMS } from './defaultGalaxySfMapParams';
 import { DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './discSurfaceFit';
-import { SPRITE_POPULATION_BRIGHTNESS } from '../shared/spritePopulationBrightness';
 import { discLightScaleLength } from '../../../../utils/galaxy/discLightScaleLength';
 import { discWarpShear } from '../../../../utils/galaxy/discWarpShear';
 import { galaxyFieldInverseCovariance } from '../../../../utils/galaxy/galaxyFieldInverseCovariance';
@@ -115,13 +115,6 @@ const HALO_COLOR = [1.0, 0.92, 0.78] as const;
 const BAR_COLOR = [1.0, 0.84, 0.62] as const;
 const BULGE_COLOR = [1.0, 0.8, 0.55] as const;
 
-// Four of generate.wesl's six per-star multipliers; see
-// `spritePopulationBrightness.ts` for why the arm lane is not among them.
-const DISC_BRIGHTNESS = SPRITE_POPULATION_BRIGHTNESS.disk;
-const BULGE_BRIGHTNESS = SPRITE_POPULATION_BRIGHTNESS.bulge;
-const BAR_BRIGHTNESS = SPRITE_POPULATION_BRIGHTNESS.bar;
-const HALO_BRIGHTNESS = SPRITE_POPULATION_BRIGHTNESS.halo;
-
 /** `buildDisk`'s vertical flare: diskHeight * (0.6 + bulgeRadius/(R + bulgeRadius)). */
 const DISC_FLARE_FLOOR = 0.6;
 
@@ -182,7 +175,7 @@ function pushDisc(
 ): number {
   if (!tuning.disc.enabled || geometry.light.disc <= 0) return 0;
   const scaleLen = discLightScaleLength(geometry);
-  const central = (geometry.light.disc * DISC_BRIGHTNESS) / (2 * Math.PI * scaleLen * scaleLen);
+  const central = geometry.light.disc / (2 * Math.PI * scaleLen * scaleLen);
   let fluxTotal = 0;
   for (let i = 0; i < DISC_SIGMA_RATIOS.length; i++) {
     const sigmaR = DISC_SIGMA_RATIOS[i]! * scaleLen;
@@ -372,8 +365,7 @@ function pushWarpedOuterDisc(
   if (!tuning.disc.enabled || geometry.light.disc <= 0) return 0;
   const { outerRadius, bulgeRadius, diskHeight, diskScaleLen } = geometry;
   const blobsPerRing = RING_BLOBS_PER_RING;
-  const totalFlux =
-    geometry.luminosity * geometry.light.disc * DISC_BRIGHTNESS * REMOVED_OUTER_DISC_WEIGHT;
+  const totalFlux = geometry.luminosity * geometry.light.disc * REMOVED_OUTER_DISC_WEIGHT;
 
   // One spacing drives both the radial sigma and the annulus weights below —
   // the band split N-1 ways across the WARP_RING_COUNT rings.
@@ -692,7 +684,7 @@ function pushBulge(
           falloffLength: bulgeRadius * (1.5 - bulgeConcentration),
         },
   );
-  const emission = geometry.luminosity * geometry.light.bulge * BULGE_BRIGHTNESS;
+  const emission = geometry.luminosity * geometry.light.bulge;
   const shells = [
     [BULGE_CORE_WEIGHT, BULGE_CORE_SIGMA_RATIO],
     [1 - BULGE_CORE_WEIGHT, BULGE_BODY_SIGMA_RATIO],
@@ -728,7 +720,7 @@ function pushBar(
   const sigmaPole = BAR_HEIGHT_FACTOR * geometry.diskHeight;
   out.push({
     amplitude:
-      (geometry.luminosity * geometry.light.bar * BAR_BRIGHTNESS) /
+      (geometry.luminosity * geometry.light.bar) /
       (TAU_ROOT3 * sigmaAlong * sigmaAcross * sigmaPole),
     ...shapeOf(geometry, sigmaAlong, sigmaPole, sigmaAcross, geometry.barTiltRad),
     color: BAR_COLOR,
@@ -754,8 +746,7 @@ function pushHalo(
   const sigmaPole = sigma * geometry.flattening;
   out.push({
     amplitude:
-      (geometry.luminosity * geometry.light.halo * HALO_BRIGHTNESS) /
-      (TAU_ROOT3 * sigma * sigma * sigmaPole),
+      (geometry.luminosity * geometry.light.halo) / (TAU_ROOT3 * sigma * sigma * sigmaPole),
     ...shapeOf(geometry, sigma, sigmaPole, sigma, 0),
     color: HALO_COLOR,
     center: ORIGIN,

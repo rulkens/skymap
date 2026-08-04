@@ -5,11 +5,11 @@
  * stream-isolation tests catch a value leaking BETWEEN streams, not a reorder
  * within one.
  *
- * The other tests pin the seam to the sprite tier — the light split is read
- * off the description but spent by `carveStarLayout`, and no type says the two
- * must agree; and the arm gate, which must stay a category, because a star
- * budget deciding it strips the analytic field's arm ridges, SF events and HII
- * regions along with the sprites.
+ * The other tests pin the seam to the sprite tier — the sprite counts are
+ * DERIVED from the light split and no type says the round trip closes; and the
+ * arm gate, which must stay a category, because a star budget deciding it
+ * strips the analytic field's arm ridges, SF events and HII regions along with
+ * the sprites.
  */
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
@@ -17,6 +17,7 @@ import { carveStarLayout } from '../../../../../src/services/engine/galaxyGenera
 import { classifyHubbleType } from '../../../../../src/services/engine/galaxyGenerator/shared/classifyHubbleType';
 import { describeGalaxy } from '../../../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
 import { POPULATION_IDS } from '../../../../../src/services/engine/galaxyGenerator/shared/populationIds';
+import { SPRITE_POPULATION_BRIGHTNESS } from '../../../../../src/services/engine/galaxyGenerator/shared/spritePopulationBrightness';
 import { splitStarBudget } from '../../../../../src/services/engine/galaxyGenerator/shared/splitStarBudget';
 import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';
 
@@ -84,32 +85,38 @@ describe('describeGalaxy', () => {
     expect(drawDigest({ type, starCount: 100000 })).toBe(expected);
   });
 
-  it.each(BY_CATEGORY)('splits $type light as the carved star layout divides it', (params) => {
+  // The inversion, closed: what the GPU will actually draw, weighted by what
+  // one of its stars emits, has to come back to the light the analytic field
+  // renders. Fails on a lost population, a lane read at the wrong brightness,
+  // or `carveStarLayout` and the split disagreeing about who holds the bar.
+  const LANE_OF_POPULATION: Readonly<Record<number, keyof typeof SPRITE_POPULATION_BRIGHTNESS>> = {
+    [POPULATION_IDS.bulge]: 'bulge',
+    [POPULATION_IDS.bar]: 'bar',
+    [POPULATION_IDS.disk]: 'disk',
+    [POPULATION_IDS.spiralArms]: 'arm',
+    [POPULATION_IDS.irregularClumps]: 'irregularClump',
+    [POPULATION_IDS.halo]: 'halo',
+  };
+
+  it.each(BY_CATEGORY)('carves $type sprites back into its own light split', (params) => {
     const category = classifyHubbleType(params.type);
     const budget = splitStarBudget(category, params);
     const layout = carveStarLayout(category, params, budget);
-    const description = describeGalaxy(params);
-    const iterations = (popId: number): number =>
-      layout.ranges.find((range) => range.popId === popId)?.iterations ?? 0;
-    const modelled = budget.totalStars;
-    const carved = {
-      bulge: iterations(POPULATION_IDS.bulge) / modelled,
-      bar: iterations(POPULATION_IDS.bar) / modelled,
-      halo: iterations(POPULATION_IDS.halo) / modelled,
-      disc:
-        (iterations(POPULATION_IDS.disk) +
-          iterations(POPULATION_IDS.spiralArms) +
-          iterations(POPULATION_IDS.irregularClumps)) /
-        modelled,
-    };
-    // One star's worth of slack per share: the layout quantises, the light
-    // split does not, and that difference is the whole point of them being
-    // separate.
-    const slack = 1 / modelled;
-    expect(Math.abs(description.light.bulge - carved.bulge)).toBeLessThanOrEqual(slack);
-    expect(Math.abs(description.light.bar - carved.bar)).toBeLessThanOrEqual(slack);
-    expect(Math.abs(description.light.halo - carved.halo)).toBeLessThanOrEqual(slack);
-    expect(Math.abs(description.light.disc - carved.disc)).toBeLessThanOrEqual(2 * slack);
+    const emitted = { bulge: 0, bar: 0, disc: 0, halo: 0 };
+    for (const range of layout.ranges) {
+      const lane = LANE_OF_POPULATION[range.popId];
+      if (lane === undefined) continue; // globular stars sit outside the split
+      const light = range.iterations * SPRITE_POPULATION_BRIGHTNESS[lane];
+      if (lane === 'bulge' || lane === 'bar' || lane === 'halo') emitted[lane] += light;
+      else emitted.disc += light; // disk, arms and clumps are all disc light
+    }
+    const total = emitted.bulge + emitted.bar + emitted.disc + emitted.halo;
+    const light = describeGalaxy(params).light;
+    // Quantisation only: five populations, at most one star each, against a
+    // 100 000-star budget.
+    for (const lane of ['bulge', 'bar', 'disc', 'halo'] as const) {
+      expect(emitted[lane] / total).toBeCloseTo(light[lane], 4);
+    }
   });
 
   // A spiral at armStrength 0 still HAS arms; it just spends no sprites on

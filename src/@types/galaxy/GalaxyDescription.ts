@@ -29,9 +29,13 @@ export type GalaxyDescription = {
    * Deliberately not a function of the sprite budget: that is an LOD number,
    * and while flux was anchored on it (`modelledStars * starSize^2`, which
    * goes as N^(1/3)) switching tier changed how bright a galaxy is by 26% a
-   * step. The population multipliers still ride on top, so what a galaxy
-   * emits is this times sum(light share x SPRITE_POPULATION_BRIGHTNESS) —
-   * the last sprite term in the flux path, and the one step 5 folds in.
+   * step. Nor of any per-population sprite multiplier: `light`'s lanes are
+   * light fractions summing to 1, so this IS the galaxy's total emitted light
+   * and every preset now emits strictly what its disc area says it does.
+   *
+   * The additive HII tier rides on top of it rather than inside it
+   * (`hiiRegions.ts`'s `HII_LUMINOSITY_SHARE`), because those regions are
+   * young-star light the smooth populations were never fit to carry.
    */
   readonly luminosity: number;
   readonly outerRadius: number;

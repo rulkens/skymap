@@ -10,7 +10,9 @@ reason this folder exists: **one galaxy, one description, two renderings.**
 ```
 GalaxyParams
   │  classifyHubbleType          params.type ("SBb") → GalaxyCategory ("barred")
-  │  galaxyPopulationCountShares category → bulge/bar/disk/arm/halo shares of star COUNT
+  │  hubbleStageOf               params.type ("SBb") → RC3 stage T (3)
+  │  galaxyLightDecomposition    stage+category → bulge/bar/disc/halo shares of LIGHT
+  │  galaxyPopulationCountShares light ÷ SPRITE_POPULATION_BRIGHTNESS → star-COUNT shares
   │  splitStarBudget             shares × totalStarBudget → StarBudget (v1's counts)
   ▼
 describeGalaxy(params) → GalaxyDescription   ← every construction-time RNG draw
@@ -43,15 +45,21 @@ Grepping the import graph alone will tell you this folder is v1-only. It is not.
 `v1/README.md`); an edge in that direction takes v2 down with it. The dependency
 runs `v1 → shared` and `v2 ← shared` (by data), never back.
 
-**The population weights are a count-share table, not a star count — and not
-light either.** `galaxyPopulationCountShares` is the one source; `splitStarBudget`
-multiplies it by the sprite budget and `GalaxyDescription.light` carries it as-is,
-so `starCount` cannot move the field's mixture. The bar's share is carved out of
-the disk's by `BAR_SHARE_OF_DISK`, which `carveStarLayout` spends on the sprite
-side — change one and you have changed both, which is the point. Globular-cluster
-stars are outside the table entirely: 90-star knots at random radii are not a
-smooth field. Turning a count share into a LIGHT share takes a second, separate
-multiply — see `galaxyPopulationCountShares.ts`'s docblock for that pair.
+**Light is the source, star counts are derived — never the reverse.**
+`galaxyLightDecomposition` is a Hubble-stage table from the literature (sources
+on `GalaxyLightDecomposition`), and its lanes sum to 1, so `luminosity` times a
+lane IS what that population emits and the analytic field applies no
+per-population multiplier at all. `galaxyPopulationCountShares` runs the same
+lanes BACKWARDS through `SPRITE_POPULATION_BRIGHTNESS` — light divided by what
+one of its stars emits — to size v1's populations. Globular-cluster stars are
+outside the table entirely: 90-star knots at random radii are not a smooth field.
+
+**A category may only be lit for geometry it actually builds.** Only `barred`
+gets a bar out of `barLengthOf`, and only a non-elliptical gets a disc, so
+`galaxyLightDecomposition` zeroes those lanes and hands the light to the
+population that does exist. A lane whose builder never runs is light nothing
+emits — invisible in the mixture's own flux ledger, which measures what was
+pushed.
 
 **The field's brightness must never read the star budget.** A budget is an LOD
 number; while `emissionScale` and `hiiRegions`' `tierFlux` anchored absolute

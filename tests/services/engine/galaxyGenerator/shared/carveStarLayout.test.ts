@@ -31,6 +31,7 @@ describe('carveStarLayout', () => {
       POPULATION_IDS.bulge,
       POPULATION_IDS.disk,
       POPULATION_IDS.spiralArms,
+      POPULATION_IDS.halo,
     ]);
 
     let cursor = 0;
@@ -44,7 +45,7 @@ describe('carveStarLayout', () => {
     expect(arms.iterations).toBe(budget.armStarCount);
   });
 
-  it('SBb: bar takes floor(diskCount*0.35) iterations and disk shrinks by the same amount', () => {
+  it("SBb: the bar range is the budget's own bar count, and the disk keeps all of its", () => {
     const category: GalaxyCategory = 'barred';
     const params: GalaxyParams = { type: 'SBb', starCount: 400000 };
     const budget = splitStarBudget(category, params);
@@ -52,10 +53,9 @@ describe('carveStarLayout', () => {
 
     const bar = layout.ranges.find((r) => r.popId === POPULATION_IDS.bar)!;
     const disk = layout.ranges.find((r) => r.popId === POPULATION_IDS.disk)!;
-    const barStars = Math.floor(budget.diskCount * 0.35);
 
-    expect(bar.iterations).toBe(barStars);
-    expect(disk.iterations).toBe(budget.diskCount - barStars);
+    expect(bar.iterations).toBe(budget.barCount);
+    expect(disk.iterations).toBe(budget.diskCount);
   });
 
   it('Irr: clumps range has stride 2 and there is no disk or arms range', () => {

@@ -14,7 +14,7 @@ import { normalizeGenerationSeed } from '../../../../utils/galaxy/normalizeGener
 import { gaussian } from '../../../../../tools/utils/random/gaussian';
 import { classifyHubbleType } from './classifyHubbleType';
 import { computeBarGeometry } from './computeBarGeometry';
-import { galaxyPopulationCountShares } from './galaxyPopulationCountShares';
+import { galaxyLightDecomposition } from './galaxyLightDecomposition';
 import { grainScale } from './grainScale';
 import { hiiPalette } from './hiiPalette';
 import { outerRadiusOf } from './outerRadiusOf';
@@ -37,12 +37,16 @@ const ARM_AGE_JITTER_RANGE = 0.3;
 /**
  * Total emitted light per unit disc area — a GAUGE for the field's arbitrary
  * flux units, not a measurement. Pinned so the Milky Way preset emits exactly
- * what it did while the anchor was still the sprite budget, i.e.
- * `0.016^2 * 400000^(2/3) * 0.9294 * 0.2392 * 0.57 * cbrt(75000)`; repin it
- * and every tuned `analyticExposure` moves with it. What the number MEANS is
- * on `GalaxyDescription.luminosity`.
+ * what it did before either sprite term left the flux path; repin it and every
+ * tuned `analyticExposure` moves with it. What the number MEANS is on
+ * `GalaxyDescription.luminosity`.
+ *
+ * 7.4268687 (the sprite-budget anchor's own value) x 1.155747, the MW's old
+ * sum(count share x SPRITE_POPULATION_BRIGHTNESS) — 0.246x0.85 + 0.15834x0.9 +
+ * 0.59566x1.35 — which is the per-galaxy factor the population multipliers
+ * used to contribute and the decomposition now leaves at exactly 1.
  */
-const GALAXY_LUMINOSITY_PER_AREA = 7.4268687;
+const GALAXY_LUMINOSITY_PER_AREA = 8.5835812;
 
 /**
  * How far the arms reach, in units of `outerRadius`, lerped by `armFalloff`
@@ -209,20 +213,11 @@ export function describeGalaxy(params: GalaxyParams): GalaxyDescription {
     }
   }
 
-  const shares = galaxyPopulationCountShares(category, params);
-
   return {
     category,
-    // Arms fold into the disc: the ridge chain's flux is derived from measured
-    // arm/interarm contrast against the disc profile, not from a share of its
-    // own. Globular clusters are outside the split entirely — 90-star knots at
+    // Globular clusters are outside the split entirely — 90-star knots at
     // random radii are not a smooth field.
-    light: {
-      bulge: shares.bulge,
-      bar: shares.bar,
-      disc: shares.disk + shares.arm,
-      halo: shares.halo,
-    },
+    light: galaxyLightDecomposition(category, params),
     luminosity: GALAXY_LUMINOSITY_PER_AREA * outerRadius * outerRadius,
     outerRadius,
     diskScaleLen,

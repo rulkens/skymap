@@ -13,10 +13,9 @@
  * (`milkyWay/sprites/generate.wesl`):
  *  - bulge: `budget.bulgeCount`, an exact count — out-of-range draws are
  *    *resampled*, not skipped.
- *  - bar: barred galaxies spend `BAR_SHARE_OF_DISK` of the disk budget on the
- *    bar; every other category gets none.
- *  - disk: the remainder of `diskCount` after the bar's share for barred
- *    galaxies, or the full `diskCount` otherwise.
+ *  - bar: `budget.barCount`, already zero for every category
+ *    `galaxyLightDecomposition` gives no bar light — no category test here.
+ *  - disk: `budget.diskCount`, the smooth disk alone.
  *  - spiralArms (stride 5): `budget.armStarCount` iterations for every
  *    non-irregular category with a nonzero arm budget; stride 5 reserves the
  *    worst case an HII knot can write in one iteration — a halo glow, a
@@ -33,7 +32,6 @@
  *    per-cluster loop itself (`POPULATION_IDS.globularCluster`) owns no
  *    output slots and never appears in this layout.
  */
-import { BAR_SHARE_OF_DISK } from './galaxyPopulationCountShares';
 import { POPULATION_IDS } from './populationIds';
 import type { GalaxyCategory } from '../../../../@types/galaxy/GalaxyCategory';
 import type { GalaxyParams } from '../../../../@types/galaxy/GalaxyParams';
@@ -49,9 +47,6 @@ type StarRangeSpec = {
   readonly iterations: IterationsFn;
 };
 
-const barStarCount = (budget: StarBudget): number =>
-  Math.floor(budget.diskCount * BAR_SHARE_OF_DISK);
-
 const STAR_RANGE_SPECS: readonly StarRangeSpec[] = [
   {
     popId: POPULATION_IDS.bulge,
@@ -61,13 +56,12 @@ const STAR_RANGE_SPECS: readonly StarRangeSpec[] = [
   {
     popId: POPULATION_IDS.bar,
     stride: 1,
-    iterations: (category, _params, budget) => (category === 'barred' ? barStarCount(budget) : 0),
+    iterations: (_category, _params, budget) => budget.barCount,
   },
   {
     popId: POPULATION_IDS.disk,
     stride: 1,
-    iterations: (category, _params, budget) =>
-      category === 'barred' ? budget.diskCount - barStarCount(budget) : budget.diskCount,
+    iterations: (_category, _params, budget) => budget.diskCount,
   },
   {
     popId: POPULATION_IDS.spiralArms,

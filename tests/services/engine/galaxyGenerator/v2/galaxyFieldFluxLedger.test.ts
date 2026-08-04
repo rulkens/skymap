@@ -1,18 +1,17 @@
 /**
- * The analytic field's flux ledger: total emitted light is a sum over
- * populations, and the arm ridge chain adds none of its own. Both hold across
+ * The analytic field's flux ledger: a galaxy emits exactly its own
+ * `luminosity`, and the arm ridge chain adds none of its own. Both hold across
  * the whole mixture — five push sites, an arm/disc debit and a particle-cloud
  * split — so they fail on a lane counted twice or a debit skipped, which
  * nothing else reaches `buildGalaxyFieldMixture` to notice.
  *
- * The first test PINS what that sum is a share OF: the galaxy's own
- * `luminosity` and nothing else, so a lane that quietly re-acquires a
- * dependency on the sprite budget fails here as well as in
- * `galaxyFieldTierInvariance.test.ts`.
+ * The first test needs no per-population multiplier to state, which is the
+ * property step 5 bought: `light`'s lanes sum to 1, so a lane that quietly
+ * re-acquires a sprite constant or a dependency on the star budget fails here
+ * as well as in `galaxyFieldTierInvariance.test.ts`.
  */
 import { describe, expect, it } from 'vitest';
 import { describeGalaxy } from '../../../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
-import { SPRITE_POPULATION_BRIGHTNESS } from '../../../../../src/services/engine/galaxyGenerator/shared/spritePopulationBrightness';
 import {
   DEFAULT_GALAXY_FIELD_TUNING,
   buildGalaxyFieldMixture,
@@ -46,25 +45,30 @@ function geometryOf(ref: ReferenceGalaxy): GalaxyDescription {
   return describeGalaxy({ ...ref.params, type: ref.params.type! });
 }
 
-/** What the mixture claims to emit: the galaxy's luminosity times its light shares. */
-function predictedFlux(geometry: GalaxyDescription): number {
-  return (
-    geometry.luminosity *
-    (geometry.light.disc * SPRITE_POPULATION_BRIGHTNESS.disk +
-      geometry.light.bulge * SPRITE_POPULATION_BRIGHTNESS.bulge +
-      geometry.light.bar * SPRITE_POPULATION_BRIGHTNESS.bar +
-      geometry.light.halo * SPRITE_POPULATION_BRIGHTNESS.halo)
-  );
-}
-
 /** Wide enough for the disc fit's own residual, far short of one whole lane. */
 const LEDGER_TOLERANCE = 0.003;
 
+/**
+ * The Milky Way's total emitted light, in the field's own units. Every tuned
+ * `analyticExposure` on disk was calibrated against this number, and it has
+ * survived two re-anchorings unchanged (the sprite budget leaving the flux
+ * path, then the population multipliers) because each one re-pinned
+ * `GALAXY_LUMINOSITY_PER_AREA` to hold it. Moving it is a legitimate decision
+ * and a loud one: it re-exposes every preset.
+ */
+const MILKY_WAY_TOTAL_FLUX = 945.4514;
+
 describe('galaxy field flux ledger', () => {
-  it.each(REFERENCE_GALAXIES)('$id emits one scale times its population light shares', (ref) => {
+  it.each(REFERENCE_GALAXIES)('$id emits exactly its own luminosity', (ref) => {
     const geometry = geometryOf(ref);
     const measured = totalFlux(buildGalaxyFieldMixture(geometry));
-    expect(Math.abs(measured / predictedFlux(geometry) - 1)).toBeLessThan(LEDGER_TOLERANCE);
+    expect(Math.abs(measured / geometry.luminosity - 1)).toBeLessThan(LEDGER_TOLERANCE);
+  });
+
+  it('the Milky Way emits what every analyticExposure was tuned against', () => {
+    const geometry = geometryOf(REFERENCE_GALAXIES.find((ref) => ref.id === 'mw')!);
+    const measured = totalFlux(buildGalaxyFieldMixture(geometry));
+    expect(Math.abs(measured / MILKY_WAY_TOTAL_FLUX - 1)).toBeLessThan(0.001);
   });
 
   // The ridge chain's blobs are an EXCESS over the azimuthally averaged disc
