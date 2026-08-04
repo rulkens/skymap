@@ -1,7 +1,7 @@
 /**
  * parseGalaxyPreset — the read side of the preset wire format (see
  * `serializeGalaxyPreset`'s header for field meanings). Total, like the
- * spike's `onUploadFile` (`Galaxy Renderer.dc.html:654`, `if (o && o.p)`):
+ * spike's `onUploadFile` (`Galaxy Renderer.dc.html`, `if (o && o.p)`):
  * bad JSON or a non-object `p` yields `null`. `r`/`f`/`x` are each tolerated
  * if missing or non-object (empty bag) — which is also the whole v1 fallback:
  * a v1 file simply has no `f`/`x` keys, so no version branch is needed. Every

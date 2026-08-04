@@ -38,7 +38,7 @@ export type ViewportProps = {
   readonly onOrientationDiagnostics?: (diagnostics: OrientationDiagnostics) => void;
 };
 
-// `createGalaxyEngine` throws these two bare messages (galaxy-engine.ts:107,109);
+// `createGalaxyEngine` throws these two bare messages;
 // anything else is an unexpected failure and gets shown verbatim.
 type BootStatus = 'loading' | 'live' | 'no-webgpu' | 'no-adapter' | 'error';
 

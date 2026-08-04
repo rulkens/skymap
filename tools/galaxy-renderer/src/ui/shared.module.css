@@ -70,7 +70,7 @@
   cursor: pointer;
 }
 
-/* ── Section headers — uppercase, letter-spaced (html:196) ───────────────── */
+/* ── Section headers — uppercase, letter-spaced ──────────────────────────── */
 
 .sectionHeader {
   font-size: var(--font-size-md);

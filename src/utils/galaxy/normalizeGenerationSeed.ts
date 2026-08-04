@@ -1,5 +1,5 @@
 /**
- * The generation chain's seed rule, from the spike's `model.js:79`. Anything
+ * The generation chain's seed rule, from the spike's `model.js`. Anything
  * that has to reproduce a galaxy's placement — `packGenerationUniforms`'s two
  * streams, and the CPU-side dust/bubble/automaton builders — must agree on it
  * exactly, since the same params must yield the same galaxy on both sides.

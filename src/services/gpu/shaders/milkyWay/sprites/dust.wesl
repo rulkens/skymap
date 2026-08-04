@@ -14,18 +14,18 @@
 // is invisible, which is correct — you only see dust silhouetted against the
 // glow it is blocking.
 //
-// ## Shared with the tool's dust.wesl via lib/cloudSprite.wesl
+// ## Why the clamp is NDC here and pixels in stars.wesl
 //
-//   - The fragment transmittance math (edge falloff + per-channel
-//     extinction) is single-homed in lib/cloudSprite.wesl's
-//     dustTransmittance, imported by both this pass and the tool's.
-//   - The 0.16-NDC screen-size clamp, KEPT verbatim per-pass: dust lanes are broader
-//     features than stars and tolerate a larger foreground extent before they
-//     need reining in. The spec's pixel clamp is a star-only calibration
-//     lever (anti-sparkle), so dust deliberately keeps the fixed NDC cap with
-//     no starPxMin/starPxMax knob.
+// Dust lanes are broader features than stars and tolerate a larger foreground
+// extent before they need reining in. The pixel clamp is a star-only
+// calibration lever (anti-sparkle), so dust keeps a fixed 0.16-NDC cap with no
+// starPxMin/starPxMax knob.
 //
-// ## What changed vs the tool source, and why
+// ## What changed vs the tool's own dust.wesl, since deleted
+//
+// The galaxy-renderer tool draws THIS pass now — its shader root symlinks
+// milkyWay/sprites/ (see the tool's wesl.toml). 'The tool' below means the
+// deleted predecessor this file grew out of and replaced.
 //
 //   1. Model-matrix placement — identical to stars.wesl: the particle CENTER
 //      is 'model * vec4(inPos, 1)', the billboard corner is added in world
@@ -102,7 +102,7 @@ fn fs(i: VSOut) -> @location(0) vec4<f32> {
   let r2 = dot(i.uv, i.uv);
   if (r2 > 1.0) { discard; }
   // Extinction math (edge falloff + per-channel transmittance) lives in
-  // lib/cloudSprite.wesl, shared with the galaxy-renderer tool's dust pass.
+  // lib/cloudSprite.wesl.
   let T = dustTransmittance(r2, i.op);
   // fadeAlpha mixes T toward vec3(1) (the multiplicative identity): at
   // fadeAlpha 0 the dust stops darkening the scene entirely.

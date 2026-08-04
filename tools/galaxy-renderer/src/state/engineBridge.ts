@@ -40,9 +40,9 @@ import type { RenderSettings } from '../../@types/engine/RenderSettings';
 import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxyDustParams';
 import { buildExtraSpecs } from '../data/buildExtraSpecs';
 
-const COMPARE_OPEN_INSET_PX = 390; // html:493
+const COMPARE_OPEN_INSET_PX = 390;
 const COMPARE_CLOSED_INSET_PX = 0;
-const REFERENCE_INSET_PX = 340; // html:597 — the reference thumbnail strip, constant regardless of open/closed
+const REFERENCE_INSET_PX = 340; // the reference thumbnail strip, constant regardless of open/closed
 
 // DUST (LEGACY) / DUST CLOUD pill gates: both patch the OUTGOING copy handed
 // to the engine, never the stored `galaxy` params — toggling a pill back on

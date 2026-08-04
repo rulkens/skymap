@@ -1,6 +1,6 @@
 /**
  * ReferenceGalaxy — one entry of the spike's REFS gallery
- * (`Galaxy Renderer.dc.html:389-438`): prose + a param preset + a camera
+ * (`Galaxy Renderer.dc.html`): prose + a param preset + a camera
  * pose for a real named galaxy the generator can be dialled toward.
  *
  * The spike's object literal declares `view` twice — once as a display

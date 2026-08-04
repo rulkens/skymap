@@ -1,14 +1,14 @@
 /**
  * MultiGalaxySection — the background-scatter perf test: an enable
- * checkbox, a 1–200 satellite-count slider, and a regenerate button
- * (html:329-346). Section-collapse chrome (the "MULTIPLE GALAXIES" header
- * + chevron) is the caller's concern — ControlsPanel wraps this in a
+ * checkbox, a 1–200 satellite-count slider, and a regenerate button.
+ * Section-collapse chrome (the "MULTIPLE GALAXIES" header + chevron) is the
+ * caller's concern — ControlsPanel wraps this in a
  * `CollapsibleSection` the same way it wraps every slider group, so this
  * component only owns what's inside the body.
  *
  * Reads/writes the `extras` slice directly rather than taking props: the
  * count slider fires on every drag tick, and debouncing that into a single
- * `setExtras` call is `engineBridge`'s job (html:581's 220ms timer), not
+ * `setExtras` call is `engineBridge`'s job (its 220 ms timer), not
  * this component's — dispatching the raw value on every change keeps this
  * component dumb.
  */

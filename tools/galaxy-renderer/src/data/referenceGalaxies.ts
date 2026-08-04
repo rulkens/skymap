@@ -1,6 +1,6 @@
 /**
  * REFERENCE_GALAXIES — verbatim port of the spike's `REFS` gallery
- * (`Galaxy Renderer.dc.html:389-438`): eight real named galaxies with a
+ * (`Galaxy Renderer.dc.html`): eight real named galaxies with a
  * param preset, a camera pose, and prose, used to seed the generator toward
  * something recognisable and to eyeball how close the model gets.
  *

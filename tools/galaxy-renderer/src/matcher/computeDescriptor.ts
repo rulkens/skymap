@@ -1,7 +1,7 @@
 /**
  * computeDescriptor — extract a rotation- and scale-invariant `GalaxyDescriptor`
  * from an RGBA buffer (a real photo or one of our renders). Ported verbatim
- * from galaxy-matcher.js:10-121; the numeric constants and the exact order of
+ * from the spike's `galaxy-matcher.js`; the numeric constants and the exact order of
  * operations are load-bearing, since the fit loop compares descriptors of the
  * reference and the render and any drift here shifts the optimum.
  *

@@ -32,7 +32,7 @@ export type UiState = {
       | 'multi',
       boolean
     >
-  >; // all true — html:470
+  >; // all true, as in the spike
   readonly copyFeedback: string; // '' | 'copied ✓' | 'failed' | 'loaded ✓' | 'invalid'
   readonly autoRotate: boolean; // default true; engine toggle intent (not pose) so it lives in the store
 };

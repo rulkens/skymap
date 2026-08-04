@@ -1,6 +1,6 @@
 /**
  * lensShift — the projection-matrix horizontal lens shift, extracted from
- * the spike's frame loop at `galaxy-engine.js:285`.
+ * the spike's frame loop in `galaxy-engine.js`.
  *
  * The UI overlays fixed-width panels on the left/right edges of the
  * canvas without resizing the canvas itself, so the galaxy's true centre

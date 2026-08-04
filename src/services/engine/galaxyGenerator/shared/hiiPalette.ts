@@ -1,7 +1,7 @@
 /**
  * hiiPalette — the metallicity-driven HII (ionized hydrogen) emission
- * palette. Extracted from the spike's inline computation at
- * `galaxy-model.js:131-136`.
+ * palette. Extracted from the spike's inline computation in
+ * `galaxy-model.js`.
  *
  * Real HII colour is set by metallicity/ionization state: low-metallicity
  * regions run teal ([OIII]-strong), typical ones pink (H-alpha plus blue

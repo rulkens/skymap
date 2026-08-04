@@ -1,6 +1,6 @@
 /**
  * panAxes — the orbit camera's screen-space right/up basis, extracted from
- * the spike's right/middle-drag handler at `galaxy-engine.js:231-234`.
+ * the spike's right/middle-drag handler in `galaxy-engine.js`.
  *
  * A pan drag needs to shift the orbit target along "what the camera
  * currently sees as sideways and up," not along a fixed world axis —

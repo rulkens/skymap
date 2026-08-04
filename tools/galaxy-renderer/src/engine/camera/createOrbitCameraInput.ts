@@ -43,7 +43,7 @@ export function createOrbitCameraInput(
   canvas: HTMLCanvasElement,
   options: { readonly autoRotate: boolean },
 ): OrbitCameraInput {
-  // ---- camera state (orbit) — galaxy-engine.js:159-166 ----
+  // ---- camera state (orbit) ----
   const cam = { az: 0.5, el: 1.05, dist: 31, target: [0, 0, 0] as Vec3, fov: (45 * Math.PI) / 180 };
   const camAnim = { az: cam.az, el: cam.el, dist: cam.dist }; // damped shadow copy
   let autoRotate = options.autoRotate;
@@ -51,7 +51,7 @@ export function createOrbitCameraInput(
   let insetR = 0; // CSS px occupied by side panels (for off-center framing)
   let lastInteract = performance.now();
 
-  // ---- input (galaxy-engine.js:225-250) ----
+  // ---- input ----
   let dragging = false;
   let panning = false;
   let lx = 0;

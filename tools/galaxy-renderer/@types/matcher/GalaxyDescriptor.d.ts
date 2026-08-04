@@ -6,8 +6,8 @@
  * lets `descriptorLoss` hill-climb the generator's parameters toward a
  * reference photo without first solving for pose.
  *
- * See `computeDescriptor` for how each field is measured; ported from
- * galaxy-matcher.js:10-121.
+ * See `computeDescriptor` for how each field is measured; ported from the
+ * spike's `galaxy-matcher.js`.
  */
 
 export type GalaxyDescriptor = {

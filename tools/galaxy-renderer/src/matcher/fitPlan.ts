@@ -1,6 +1,6 @@
 /**
  * fitPlan — per-category descriptor-loss weights + optimisable param ranges
- * for `autoFit`. Ported verbatim from galaxy-matcher.js:141-157; the weight
+ * for `autoFit`. Ported verbatim from the spike's `galaxy-matcher.js`; the weight
  * values, param bounds, and their order are load-bearing (they set the
  * coordinate-descent's step sizes via `(hi - lo)`), so this is a straight
  * transcription rather than a "cleaned up" table.

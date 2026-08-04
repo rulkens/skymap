@@ -4,18 +4,13 @@
 // overlapping stars sum their light — the physically-correct model for
 // unresolved point sources.
 //
-// ## Shared with the tool's star.wesl via lib/cloudSprite.wesl
+// The galaxy-renderer tool draws THIS pass — its shader root symlinks
+// milkyWay/sprites/ (see the tool's wesl.toml), so an edit here changes both.
 //
-//   - The fragment core+glow radial falloff (starGlowAlpha) and the
-//     flux-conserving LOD (fluxConservingLod) are single-homed in
-//     lib/cloudSprite.wesl and imported by both this pass and the
-//     galaxy-renderer tool's star pass.
-//   - The billboard corner expansion (center + right*corner.x + up*corner.y)
-//     and the project-center-and-corner-then-measure-the-delta structure of
-//     the screen-size clamp remain per-pass (see below for why the clamp
-//     differs).
+// ## What changed vs the tool's own star.wesl, since deleted
 //
-// ## What changed vs the tool source, and why
+// 'The tool' below means that deleted predecessor, which this file grew out
+// of and replaced.
 //
 //   1. Model-matrix placement. The tool projected 'inPos' directly; here the
 //      particle CENTER is 'model * vec4(inPos, 1)' first, so one generated
@@ -150,11 +145,11 @@ fn vs(@location(0) corner: vec2<f32>,
   kClip.z = min(kClip.z, kClip.w * (1.0 - CLIP_Z_EPS));
 
   // Flux-conserving LOD — the band math and its tuning rationale live in
-  // lib/cloudSprite.wesl, shared with the galaxy-renderer tool's passes. It is
-  // independent of the clamp correction above and does not double-count it: it
-  // keys off 'apparent', the NDC size captured BEFORE the rescale, and answers
-  // a different question (how many sprites survive, and by how much the
-  // survivors stand in for the culled). The two factors multiply onto bright.
+  // lib/cloudSprite.wesl. It is independent of the clamp correction above and
+  // does not double-count it: it keys off 'apparent', the NDC size captured
+  // BEFORE the rescale, and answers a different question (how many sprites
+  // survive, and by how much the survivors stand in for the culled). The two
+  // factors multiply onto bright.
   let lod = fluxConservingLod(inPos, apparent, u.params1.w);
 
   // A culled star parks its quad outside clip space — all four corners land

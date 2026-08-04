@@ -1,6 +1,6 @@
 /**
  * orbitEye — the orbit camera's eye position, extracted from the spike's
- * inline frame-loop computation at `galaxy-engine.js:277-282`.
+ * inline frame-loop computation in `galaxy-engine.js`.
  *
  * The orbit camera is authored as target + azimuth/elevation/distance
  * rather than as an eye position directly, because the thing a user drags

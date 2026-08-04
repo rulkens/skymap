@@ -1,5 +1,5 @@
 /**
- * ControlsPanel — the 340px right column (html:149): every galaxy-shape,
+ * ControlsPanel — the 340px right column: every galaxy-shape,
  * rendering, and perf-test knob in one scrollable rail. A layout/dispatch
  * shell — the actual domain logic (what a Hubble-type pick nudges,
  * what a "randomize everything" draw looks like, what range each slider
@@ -8,12 +8,11 @@
  * category and wires their `onChange` to a `paramsPatched` dispatch.
  *
  * Slider visibility per Hubble category mirrors the spike's `renderVals`
- * (html:749-789) exactly, including `hii` (POPULATIONS, html:781-782) and
- * the lenticular-only dust-ring trio (DUST, html:776-779). Those four had
- * no `SPEC` entry in the spike, so their range came from `mk()`'s inline
- * fallback args instead — live, not dead, for exactly these keys (see
- * `paramSpec.ts`'s docblock). `PARAM_SPEC` now carries those four ranges
- * too, so it stays this tool's ONLY range table.
+ * exactly, including `hii` (POPULATIONS) and the lenticular-only dust-ring
+ * trio (DUST). Those four had no `SPEC` entry in the spike, so their range
+ * came from `mk()`'s inline fallback args instead — live, not dead, for
+ * exactly these keys (see `paramSpec.ts`'s docblock). `PARAM_SPEC` now
+ * carries those four ranges too, so it stays this tool's ONLY range table.
  *
  * Every entropy-consuming click (randomize-all, new-seed, reseed-one-die)
  * seeds a fresh `mulberry32` from `Math.random()` at the click site — the
@@ -78,7 +77,7 @@ type SliderSpec = {
   readonly info?: string;
 };
 
-// html:511 — the three fields whose range input still emits fractional
+// The three fields whose range input still emits fractional
 // values at the resolution a `<input type=range step=1>` can drift to;
 // the spike rounds these three defensively on every change.
 const INTEGER_KEYS: ReadonlySet<GalaxySliderKey> = new Set([
@@ -110,7 +109,7 @@ const STAR_BUDGET_SLIDERS: SliderSpec[] = [
   { key: 'starCount', label: 'Star density', format: (v) => `${Math.round(v / 1000)}k` },
 ];
 
-// html:749-758 — always radius/irregularity; bulge/disk/warp
+// Always radius/irregularity; bulge/disk/warp
 // knobs drop out one by one as the category loses that structure.
 function buildShapeSliders(category: ReturnType<typeof classifyHubbleType>): SliderSpec[] {
   const specs: SliderSpec[] = [
@@ -133,7 +132,7 @@ function buildShapeSliders(category: ReturnType<typeof classifyHubbleType>): Sli
   return specs;
 }
 
-// html:760-771 — the whole group only exists for spiral/barred galaxies.
+// The whole group only exists for spiral/barred galaxies.
 function buildArmSliders(category: ReturnType<typeof classifyHubbleType>): SliderSpec[] {
   if (category !== 'spiral' && category !== 'barred') return [];
   const specs: SliderSpec[] = [
@@ -155,9 +154,9 @@ function buildArmSliders(category: ReturnType<typeof classifyHubbleType>): Slide
   return specs;
 }
 
-// html:781-784 — hii/youngStars/metallicity for star-forming categories.
+// hii/youngStars/metallicity for star-forming categories.
 // The spike gave irregular's hii slider a narrower [0, 0.5] display range
-// (html:782) than spiral/barred's [0, 2] (html:781); PARAM_SPEC has one
+// than spiral/barred's [0, 2]; PARAM_SPEC has one
 // `hii` entry, so this port uses [0, 2] for every category — a cosmetic
 // widening only, since `randomGalaxyParams` already caps irregular's
 // *sampled* hii at 0.5 behaviourally (its own docblock).
@@ -174,7 +173,7 @@ function buildPopSliders(category: ReturnType<typeof classifyHubbleType>): Slide
   return specs;
 }
 
-// html:773-779 — every category except elliptical; lenticular additionally
+// Every category except elliptical; lenticular additionally
 // gets the dust-ring trio (strength/radius/width, in that order).
 function buildDustSliders(category: ReturnType<typeof classifyHubbleType>): SliderSpec[] {
   if (category === 'elliptical') return [];
@@ -191,7 +190,7 @@ function buildDustSliders(category: ReturnType<typeof classifyHubbleType>): Slid
   return specs;
 }
 
-// html:785-789 — unconditional, every category gets a cluster count/size/brightness triplet.
+// Unconditional: every category gets a cluster count/size/brightness triplet.
 const GLOB_SLIDERS: readonly SliderSpec[] = [
   { key: 'globularCount', label: 'Cluster count', format: (v) => String(v) },
   { key: 'globularSize', label: 'Cluster size' },

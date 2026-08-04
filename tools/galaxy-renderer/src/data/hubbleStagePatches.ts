@@ -1,6 +1,6 @@
 /**
  * hubbleTypePatch — port of the spike's `onType` handler
- * (`Galaxy Renderer.dc.html:519-533`): picking a Hubble type in the UI
+ * (`Galaxy Renderer.dc.html`): picking a Hubble type in the UI
  * doesn't just set `type`, it also nudges a handful of correlated params
  * toward what that morphology actually looks like (ellipticals have no
  * dust, later-stage spirals have looser arms and more star formation, …).

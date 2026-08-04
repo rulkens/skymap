@@ -1,7 +1,7 @@
 /**
  * galaxyPopulationCountShares — how one galaxy's STAR COUNT (not light)
  * divides across bulge, bar, disk, arms and halo. Inherited from the legacy
- * sprite-placement model (galaxy-model.js:89-116), tuned by eye — not
+ * sprite-placement model (the spike's `galaxy-model.js`), tuned by eye — not
  * photometry. Table dispatch keyed by category; 'spiral'/'barred' share one
  * parameterised entry.
  *

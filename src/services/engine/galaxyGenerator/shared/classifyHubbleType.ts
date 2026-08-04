@@ -1,10 +1,9 @@
 /**
  * classifyHubbleType — maps a raw Hubble-sequence type string to the
  * generative family the model actually shapes stars for. Extracted from
- * `classify()` at galaxy-model.js:58-65 (also duplicated as `CAT` in the
- * spike's HTML at `Galaxy Renderer.dc.html:381-387`). This is now the single
- * source of truth — plans 02/03 import it rather than re-implementing the
- * mapping.
+ * `classify()` in the spike's `galaxy-model.js` (also duplicated as `CAT` in
+ * its `Galaxy Renderer.dc.html`). This is now the single source of truth —
+ * plans 02/03 import it rather than re-implementing the mapping.
  *
  * The five families ('elliptical', 'lenticular', 'irregular', 'barred',
  * 'spiral') don't line up one-to-one with Hubble's own tuning-fork labels —

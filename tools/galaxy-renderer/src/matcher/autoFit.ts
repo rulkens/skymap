@@ -1,11 +1,11 @@
 /**
  * autoFit — coordinate-descent optimiser that drives a `GalaxyEngineHandle`
- * toward a reference `GalaxyDescriptor`. Ported from galaxy-matcher.js:166-227:
- * for spirals/barred it first sweeps the discrete arm count (1..6), accepting
- * strictly-better counts as it goes, then runs `passes` rounds of ±1D descent
- * over `fitPlan`'s param ranges with a shrinking step (`(hi-lo)·0.32·0.5^pass`
- * per pass), accepting any trial that beats the current loss by more than
- * `1e-6`.
+ * toward a reference `GalaxyDescriptor`. Ported from the spike's
+ * `galaxy-matcher.js`: for spirals/barred it first sweeps the discrete arm
+ * count (1..6), accepting strictly-better counts as it goes, then runs
+ * `passes` rounds of ±1D descent over `fitPlan`'s param ranges with a
+ * shrinking step (`(hi-lo)·0.32·0.5^pass` per pass), accepting any trial that
+ * beats the current loss by more than `1e-6`.
  *
  * One deliberate deviation from the spike: `engine.setParams` is awaited
  * before `grab` reads the frame. The spike's bespoke engine updated its

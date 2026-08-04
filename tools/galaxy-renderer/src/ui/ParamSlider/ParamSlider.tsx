@@ -5,7 +5,7 @@
  * The 20 px die slot always renders, even when `onReseed` is absent, so a
  * column of sliders — some seed-linked (irregularity, arm clumping), most
  * not — keeps its pills flush-left instead of the seeded rows jogging
- * narrower than their neighbours (html:199-208's `hasSeed` slot).
+ * narrower than their neighbours (the spike's `hasSeed` slot).
  *
  * Label + value used to be a row this component drew itself; `Slider`
  * already folds both into the pill, so drawing them again here would

@@ -1,6 +1,6 @@
 /**
  * randomGalaxyParams — port of the spike's `randomParams` method
- * (`Galaxy Renderer.dc.html:539-554`): draws a full random `GalaxyParams` by
+ * (`Galaxy Renderer.dc.html`): draws a full random `GalaxyParams` by
  * picking a Hubble type uniformly, then sampling every `PARAM_SPEC` key
  * uniformly in its `[min, max]` range and snapping to `step`.
  *
@@ -20,7 +20,7 @@ import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from '../../../../src/services/e
 import { PARAM_SPEC } from './paramSpec';
 import { classifyHubbleType } from '../../../../src/services/engine/galaxyGenerator/shared/classifyHubbleType';
 
-// The spike's fixed 14-entry type roster (html:541) — every Hubble stage the
+// The spike's fixed 14-entry type roster — every Hubble stage the
 // generator knows how to shape, verbatim.
 const TYPES: readonly string[] = [
   'Sa',
@@ -41,7 +41,7 @@ const TYPES: readonly string[] = [
 
 // PARAM_SPEC carries four keys — hii, dustRing, dustRingWidth,
 // dustRingStrength — solely to give their sliders a range; the spike's own
-// randomizer looped over its 26-key `SPEC` table (html:539-554) and never
+// randomizer looped over its 26-key `SPEC` table and never
 // touched any of the four. Skipping them here keeps the draw sequence for
 // the original 26 keys identical to before PARAM_SPEC grew these entries,
 // and leaves dustRing/dustRingWidth/dustRingStrength undefined in randomized
@@ -76,7 +76,7 @@ export function randomGalaxyParams(
   }
 
   // hii is a slider-only PARAM_SPEC key (skipped above), so this explicit,
-  // unstepped draw — matching the spike's randomizer (html:551) — is the
+  // unstepped draw — matching the spike's randomizer — is the
   // only place hii gets a value, with the irregular category's tighter
   // [0, 0.5] cap that PARAM_SPEC's single [0, 2] range can't express.
   const hii = classifyHubbleType(type) === 'irregular' ? rng() * 0.5 : rng() * 2;

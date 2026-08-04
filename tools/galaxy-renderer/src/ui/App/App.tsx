@@ -1,7 +1,7 @@
 /**
- * App — the Galaxy Renderer's outer shell (html:13-146, 599-611): the
- * fullscreen `Viewport`, the always-on `Hud` + `ControlsPanel`, and the
- * toggleable `ComparePanel` validation panel.
+ * App — the Galaxy Renderer's outer shell: the fullscreen `Viewport`, the
+ * always-on `Hud` + `ControlsPanel`, and the toggleable `ComparePanel`
+ * validation panel.
  *
  * The one imperative wire this component owns: `Viewport.onEngine` hands
  * back the live `GalaxyEngineHandle`, and `connectEngineBridge` is the

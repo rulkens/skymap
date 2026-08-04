@@ -111,7 +111,7 @@ const DEBUG_VOLUME_FIELD_IDS: ReadonlySet<VolumeFieldId> = new Set(
 );
 
 export const FADE_LAYERS = [
-  // milkyWay disk — absorbs registerOverlayFades.ts:64-67
+  // milkyWay disk
   layer({
     key: 'milkyWayDisk',
     expand: () => [undefined],
@@ -119,21 +119,21 @@ export const FADE_LAYERS = [
     seed: (s) => (s.milkyWay.enabled ? 1 : 0),
     intent: (s) => s.milkyWay.enabled,
   }),
-  // procedural disks — registerOverlayFades.ts:70 (always-on)
+  // procedural disks (always-on)
   layer({
     key: 'proceduralDisks',
     expand: () => [undefined],
     handle: () => ({ kind: 'overlay', id: 'proceduralDisks' }),
     seed: () => 1,
   }),
-  // textured disks — registerOverlayFades.ts:71 (always-on)
+  // textured disks (always-on)
   layer({
     key: 'texturedDisks',
     expand: () => [undefined],
     handle: () => ({ kind: 'overlay', id: 'texturedDisks' }),
     seed: () => 1,
   }),
-  // volumes master gate — registerOverlayFades.ts:80-83
+  // volumes master gate
   layer({
     key: 'volumesMaster',
     expand: () => [undefined],
@@ -141,7 +141,7 @@ export const FADE_LAYERS = [
     seed: (s) => (s.volumes.enabled ? 1 : 0),
     intent: (s) => s.volumes.enabled,
   }),
-  // milkyWay label — registerOverlayFades.ts:95-98
+  // milkyWay label
   layer({
     key: 'milkyWayLabel',
     expand: () => [undefined],
@@ -149,7 +149,7 @@ export const FADE_LAYERS = [
     seed: (s) => (s.milkyWay.labelEnabled ? 1 : 0),
     intent: (s) => s.milkyWay.labelEnabled,
   }),
-  // survey/galaxy names label — registerOverlayFades.ts:99. The famous-galaxy
+  // survey/galaxy names label. The famous-galaxy
   // label fade reuses the galaxy handle and is driven by the famous-galaxy
   // "Labels" toggle, so this row is settings-derived (intent + seed both read
   // famousGalaxy.labelEnabled) — matching milkyWayLabel/structureLabel.
@@ -202,14 +202,14 @@ export const FADE_LAYERS = [
     seed: (s, id) => (s.bodies.items[id].labelEnabled ? 1 : 0),
     intent: (s, id) => s.bodies.items[id].labelEnabled,
   }),
-  // scale bar — registerOverlayFades.ts:100 (React-side, tour-addressable)
+  // scale bar (React-side, tour-addressable)
   layer({
     key: 'scaleBar',
     expand: () => [undefined],
     handle: () => ({ kind: 'labelLayer', layer: 'scaleBar' }),
     seed: () => 1,
   }),
-  // structure rings — registerOverlayFades.ts:109-113 (per StructureId)
+  // structure rings (per StructureId)
   layer({
     key: 'structureRing',
     expand: () => STRUCTURE_IDS,
@@ -217,7 +217,7 @@ export const FADE_LAYERS = [
     seed: (s, id) => (s.structures.items[id].enabled ? 1 : 0),
     intent: (s, id) => s.structures.items[id].enabled,
   }),
-  // structure labels — registerOverlayFades.ts:114-117 (per StructureId)
+  // structure labels (per StructureId)
   layer({
     key: 'structureLabel',
     expand: () => STRUCTURE_IDS,

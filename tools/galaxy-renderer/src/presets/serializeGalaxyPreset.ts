@@ -3,7 +3,7 @@
  * preset: `{ type, version, p, r, f, x }`. `r` flattens `RenderSettings` +
  * `LodSettings` (two GPU-uniform slices in the store, one bag on the wire —
  * `parseGalaxyPreset` splits it back apart). v1 (spike-compatible,
- * `Galaxy Renderer.dc.html:640`) had only `p`/`r`. v2 adds `f`
+ * `Galaxy Renderer.dc.html`) had only `p`/`r`. v2 adds `f`
  * (`GalaxyFieldTuning`, sfMap included — now most of a "look") and `x`
  * (extras' `enabled`/`count`; `regenNonce` is dropped — it's a re-roll
  * trigger, not even a seed, since the scatter's randomness lives in the
