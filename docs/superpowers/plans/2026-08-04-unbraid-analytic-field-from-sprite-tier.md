@@ -117,18 +117,19 @@ Near-IR, bars fitted — the low end of the published range. Disc = remainder.
 
 | Type | B/T | source | N | Bar/T | Halo/T |
 | --- | --- | --- | --- | --- | --- |
-| S0 | 0.33 ± 0.14 (med 0.33) | Laurikainen+2010 T=−2, Ks | 35 | 0.10 **unsourced** | 0.02 |
-| Sa | 0.25 ± 0.12 (med 0.26) | Laurikainen T=1, Ks | 26 | 0.15 **unsourced** | 0.02 |
-| Sb | 0.14 ± 0.09 (med 0.12) | Laurikainen T=3, H | 20 | 0.15 **unsourced** | 0.02 |
-| Sbc | 0.11 ± 0.08 (med 0.09) | Laurikainen T=4, H (best-constrained) | 38 | 0.15 **unsourced** | 0.02 |
-| Sc | 0.11 ± 0.13 (med 0.06) | Laurikainen T=5, H | 30 | 0.12 **unsourced** | 0.02 |
-| Sd | 0.05 / 0.09 | Laurikainen T=6 / T=7, H — weak | 13 / 6 | 0.09 **unsourced** | 0.03 |
+| S0 | 0.33 ± 0.14 (med 0.33) | Laurikainen+2010 T=−2, Ks | 35 | 0.13 ± 0.07 (med 0.12), N=16 | 0.02 |
+| Sa | 0.25 ± 0.12 (med 0.26) | Laurikainen T=1, Ks | 26 | 0.17 ± 0.10 (med 0.14), N=47 | 0.02 |
+| Sb | 0.14 ± 0.09 (med 0.12) | Laurikainen T=3, H | 20 | 0.10 ± 0.08 (med 0.07), N=38 | 0.02 |
+| Sbc | 0.11 ± 0.08 (med 0.09) | Laurikainen T=4, H (best-constrained) | 38 | 0.04 ± 0.04 (med 0.03), N=14 — weak | 0.02 |
+| Sc | 0.11 ± 0.13 (med 0.06) | Laurikainen T=5, H | 30 | 0.06 ± 0.07 (med 0.04), N=40 | 0.02 |
+| Sd | 0.05 / 0.09 | Laurikainen T=6 / T=7, H — weak | 13 / 6 | 0.05 ± 0.04 / 0.07 ± 0.06, N=45 / 96 | 0.03 |
 | Irr | 0.00 | **ASSUMPTION — no source** | — | 0.05 **assumption** | 0.03 |
 | MW | **0.19 as bar/pseudobulge, classical bulge 0** | Kormendy+2010 Table 2, near-IR | — | folded in | 0.01 |
 
 Sources: Graham & Worley 2008 (MNRAS 388, 1708; K-band, dust+inclination corrected),
-Laurikainen et al. 2010 (MNRAS 405, 1089; multi-component with bars), Weinzirl et al. 2009,
-Gadotti 2009, Kormendy, Drory, Bender & Cornell 2010 (ApJ 723, 54), Peters et al. 2017
+Laurikainen et al. 2010 (MNRAS 405, 1089; multi-component with bars), Salo et al. 2015
+(ApJS 219, 4; S⁴G Pipeline 4, 3.6 μm), Weinzirl et al. 2009 (ApJ 696, 411), Gadotti 2009
+(MNRAS 393, 1531), Kormendy, Drory, Bender & Cornell 2010 (ApJ 723, 54), Peters et al. 2017
 (MNRAS 470, 427), Freeman 1970 (ApJ 160, 811) as modified by de Jong 1995.
 
 **Caveats the code comment must carry:** these are near-IR fractions (roughly half in B for Sb and
@@ -148,11 +149,25 @@ read from the PDF, not second-hand. Every value matches. Three things the verifi
   the obvious inference: within this sample **barred and non-barred S0s have the same B/T**
   (0.29±0.02 vs 0.33±0.03). Fitting a bar changes the *measurement*, not the *galaxy*.
 
-**STILL UNSOURCED — the Bar/T column.** Laurikainen+2010 reports **no bar-to-total flux ratio at
-all**; the string "Bar/T" does not occur in the paper. Those six numbers are attributed to a source
-that does not contain them. **Do not pin them into code.** Either find a real source (Salo+2015 S⁴G
-and Gadotti 2009 both fit bars explicitly and are the likely candidates), or fold the bar into the
-bulge as Kormendy does for the MW row and drop the column. Until then step 5 cannot use it.
+**Bar/T column: Salo et al. 2015, Table 7 (S⁴G Pipeline 4).** Laurikainen+2010 reports no
+bar-to-total flux ratio at all — the string "Bar/T" does not occur in it, nor in the Oulu group's
+other decomposition papers (2005, 2007, 2013). S⁴G Table 7 publishes a per-component *fraction of
+the total model flux*, so Bar/T is read off, not derived; 3.6 μm, human-supervised
+bulge/disc/bar/nucleus fits, 2352 galaxies. The binning by stage is ours, joining Buta et al. 2015
+⟨T⟩ (ApJS 217, 32). Three things that column carries:
+
+- **The values are conditional on a bar having been fitted**, matching the caveat above. The
+  fraction of the bin that was, per row: S0 0.43, Sa 0.59, Sb 0.44, Sbc 0.16, Sc 0.31, Sd 0.51/0.47.
+  Multiply through by that to get a population average instead.
+- **The Sbc row is the weak one now.** T=4 is where S⁴G fitted a bar in 16% of the bin while Buta
+  classified 33% as SAB or SB, and 0.04 sits below both its neighbours. Gao et al. 2019
+  (ApJS 244, 34; R band, CGS, N=320) binned the same way gives a smooth
+  0.13/0.11/0.10/0.09/0.06/0.05 across these six rows and is the alternative if the Sbc dip shows
+  on screen.
+- **Weinzirl et al. 2009 Table 2 is the high outlier**, at 0.25/0.18/0.17/0.12/0.09 for T=1/3/4/5/6
+  — 1.7× throughout, on the same OSUBSGS H-band images the Laurikainen T≥2 rows come from. He fits
+  three components and no lens, so his bar absorbs oval and lens light that S⁴G and Gao assign
+  elsewhere. Gadotti 2009 §4.7 (pooled median 0.095 in i) sides with S⁴G.
 
 **No halo light fraction by Hubble type exists.** The one paper listing η alongside morphology
 (Peters 2017) finds no correlation. Use a flat 2%, sourced and flagged. Do **not** convert the
