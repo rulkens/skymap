@@ -1,23 +1,23 @@
-import { SIZE_MIN_PC } from './dustParticleCloud';
 import type { GalaxyDustCloudParams } from '../../../../@types/galaxy/GalaxyDustCloudParams';
 
-// `count` and `elongation` are set against the covering factor, not by eye:
-// see `dustParticleCloud.ts`'s size constants for the f = N*2*PI*elongation*
-// <R^2> / A_disc relation these land near 3, where clouds still read
-// individually but overlap enough along an arm to mottle it.
+// Tuned by eye against the S1/S3 map-seeded placement (2026-08-05 visual
+// pass). The covering factor that matters is count x <R^2> over the map's
+// OCCUPIED area, not the whole disc, and `elongation` no longer buys
+// coverage — it is the aspect at full filament coherence, area-preserving
+// per particle (see dustParticleCloud.ts).
 //
 // Every refiner starts at its literature value (1.0).
 export const DEFAULT_GALAXY_DUST_CLOUD_PARAMS: GalaxyDustCloudParams = {
-  count: 6000,
-  // 0 = independent scattering. The covering factor above is solved for
-  // exactly that; clustering piles the same `count` into fewer complexes and
-  // leaves the gaps between them uncovered.
+  count: 5000,
+  // 0 = independent scattering: child scatter around a CDF-placed seed
+  // re-blurs the map-exact placement, so the tool no longer exposes a
+  // slider for it (see DustCloudSection).
   clumpiness: 0,
-  sizeScale: 1,
-  sizeFloorPc: SIZE_MIN_PC,
-  elongation: 2.5,
+  sizeScale: 1.8,
+  sizeFloorPc: 30,
+  elongation: 4.3,
   heightRatio: 0.5,
-  texture: 0.7,
+  texture: 0.45,
   textureScale: 1,
   textureContrast: 1,
 };
