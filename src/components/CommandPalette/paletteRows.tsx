@@ -17,7 +17,8 @@
 import type { ReactNode } from 'react';
 import { SOURCE_REGISTRY } from '../../data/sources';
 import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
-import { FAMOUS_STAR_SEARCH } from '../../data/bodies/famousStarsIndex';
+import { BODY_SEARCH_NAMES } from '../../data/bodies/bodySearchNames';
+import { bodyRowChip } from './utils/bodyRowChip';
 import { MILKY_WAY_NAMES } from './paletteRowModel';
 import type { ScoredRow } from './paletteRowModel';
 import styles from './ResultsList.module.css';
@@ -100,15 +101,15 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
     };
   },
   // Scene-body row — letter glyph like the Milky Way (no atlas thumb for a
-  // procedurally-rendered sphere). A famous star (in FAMOUS_STAR_SEARCH) shows
-  // its alias names in the secondary slot and its constellation as the chip
-  // (e.g. "Alpha Canis Majoris · … · Canis Major"); Earth and the planets, which
-  // aren't in the index, keep the 'Solar System' chip so the row reads as "not a
-  // galaxy" at a glance.
+  // procedurally-rendered sphere). Aliases come from the same lookup the ranker
+  // scores over, so a row shows exactly the names it can be found by; the chip
+  // is the body's constellation or, failing that, its scale regime (e.g.
+  // "Alpha Canis Majoris · … · Canis Major", or "Sagittarius A* · Galactic
+  // Centre").
   body: (m) => {
     if (m.kind !== 'body') return EMPTY_ROW_VIEW;
-    const star = FAMOUS_STAR_SEARCH.get(m.body.id);
-    const aliases = star ? star.names.slice(1) : [];
+    const aliases = (BODY_SEARCH_NAMES.get(m.body.id) ?? []).slice(1);
+    const chip = bodyRowChip(m.body.id, m.body.label);
     return {
       key: `body:${m.body.id}`,
       testid: `body-row-${m.body.id}`,
@@ -121,7 +122,7 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
       secondary: (
         <>
           {aliases.length > 0 && <span className={styles.secondary}>{aliases.join(' · ')}</span>}
-          <span className={styles.source}>{star ? star.constellation : 'Solar System'}</span>
+          {chip && <span className={styles.source}>{chip}</span>}
         </>
       ),
     };

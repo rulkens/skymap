@@ -26,17 +26,19 @@ import { updatePosition } from '../../../utils/camera/updatePosition';
  * and a fresh target array — it does NOT alias any field of the (potentially
  * frozen) store pose.
  *
- * `frameBasis` is the frame-local → world orientation basis this frame resolved
- * (which pole the camera treats as "up"). It is written onto the camera BEFORE
- * `updatePosition`, so the derived `position` decodes through the same basis the
- * draw uses. Callers pass the resolved per-frame basis (or the steady
- * `ORIENTATION_FRAMES[orientation]` for demand reads at rest), guaranteeing
- * demand-time and draw-time positions never diverge.
+ * `poseBasis` and `upBasis` are the two halves of the former single
+ * `frameBasis` field (see `OrbitCameraInit.d.ts`): `poseBasis` is what
+ * `updatePosition` decodes yaw/pitch through, `upBasis` is what draw-time
+ * screen-up reads. At rest they're equal; during an orientation-frame roll
+ * `runFrame` feeds the committed `poseBasis` (holds still) and the live
+ * mid-slerp `upBasis` (rotates), which is what makes a roll turn the horizon
+ * without moving the eye.
  */
 export function assembleOrbitCamera(
   pose: CameraPose,
   projection: CameraProjection,
-  frameBasis: Mat3,
+  poseBasis: Mat3,
+  upBasis: Mat3,
 ): OrbitCamera {
   const cam: OrbitCamera = {
     // Fresh target copy — never alias the store's frozen pose array.
@@ -48,13 +50,14 @@ export function assembleOrbitCamera(
     aspect: projection.aspect,
     near: projection.near,
     far: projection.far,
-    // The orientation basis is set before updatePosition so the derived position
-    // decodes through it (dir_world = frameBasis · dir_local).
-    frameBasis,
+    // Set before updatePosition so the derived position decodes through
+    // poseBasis (dir_world = poseBasis · dir_local).
+    poseBasis,
+    upBasis,
     // Writable position tuple; updatePosition fills it before we return.
     position: [0, 0, 0],
   };
-  // Derive position = target + distance * frameBasis · spherical(yaw, pitch).
+  // Derive position = target + distance * poseBasis · spherical(yaw, pitch).
   updatePosition(cam);
   return cam;
 }

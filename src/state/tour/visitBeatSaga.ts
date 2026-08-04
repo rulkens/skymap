@@ -93,8 +93,10 @@ export function* visitBeatSaga(beat: BeatData, index: number): Generator<unknown
   if (beat.enterClip !== undefined) {
     const rt = cameraRuntime()!;
     // Steady orientation basis so authored lookAt bearings encode through the
-    // committed frame (see resolveClipFoci / orbitAnglesLookingAlong).
-    const frameBasis = ORIENTATION_FRAMES[yield* select(selectOrientation)];
+    // committed frame (see resolveClipFoci / orbitAnglesLookingAlong). The same
+    // id pins the clip's frame for its whole run (see playClip's `frame` arg).
+    const orientation = yield* select(selectOrientation);
+    const frameBasis = ORIENTATION_FRAMES[orientation];
     const enterClip = resolveClipFoci(
       beat.enterClip,
       resolveDeps(),
@@ -103,7 +105,7 @@ export function* visitBeatSaga(beat: BeatData, index: number): Generator<unknown
       frameBasis,
     );
     const winner = yield* race({
-      landed: call(playClip, enterClip),
+      landed: call(playClip, enterClip, orientation),
       next: take(advanceTour),
       prev: take(prevBeat),
     });
@@ -117,11 +119,12 @@ export function* visitBeatSaga(beat: BeatData, index: number): Generator<unknown
   // runtime is re-read here: the enter clip just moved the camera, and a
   // lookAt in the dwell must bear from where it LANDED, not where it began.
   const rt = cameraRuntime()!;
-  const dwellBasis = ORIENTATION_FRAMES[yield* select(selectOrientation)];
+  const dwellOrientation = yield* select(selectOrientation);
+  const dwellBasis = ORIENTATION_FRAMES[dwellOrientation];
   const dwellClip = resolveClipFoci(beat.dwellClip, resolveDeps(), rt.fovYRad, rt.from, dwellBasis);
   const dwellSec = compileClip(dwellClip).durationSec;
   yield* put(dwellStarted({ dwellSec }));
 
   // (5) Hold interactively until the viewer advances / steps back / the timer fires.
-  return yield* pausableDwellSaga(dwellClip, dwellSec);
+  return yield* pausableDwellSaga(dwellClip, dwellSec, dwellOrientation);
 }

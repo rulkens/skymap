@@ -13,6 +13,7 @@ import {
   lookAtId,
   moveTargetId,
   seq,
+  spinToId,
   strafeId,
 } from '../../../../src/services/engine/animation/effectHelpers';
 import { focusId } from '../../../../src/utils/animation/focusId';
@@ -40,6 +41,14 @@ describe('stubResolveClipFoci', () => {
       ],
     };
     expect(compileClip(stubResolveClipFoci(clip)).durationSec).toBe(9);
+  });
+
+  it('rewrites spinToId duration-neutrally too', () => {
+    // Without a spinToId case, stubEffect's pass-through default leaves the
+    // id-bearing leaf in place and compileClip throws (unresolved spinToId) —
+    // the exact regression this pins.
+    const clip: ClipData = { timeline: [spinToId(M31, { over: 4 })] };
+    expect(compileClip(stubResolveClipFoci(clip)).durationSec).toBe(4);
   });
 
   it('substitutes id-form flyPath waypoints so the path compiles, dwell included', () => {

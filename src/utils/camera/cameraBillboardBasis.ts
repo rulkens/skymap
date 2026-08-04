@@ -58,11 +58,13 @@ export function cameraBillboardBasis(cam: OrbitCamera): { right: Vec3; up: Vec3 
   const flen = Math.hypot(fx, fy, fz) || 1;
   const forward: Vec3 = [fx / flen, fy / flen, fz / flen];
 
-  // `imagePlaneBasis` rolls the frame pole (`frameUp(cam.frameBasis)`; world +Y
-  // absent a basis) about `forward` and derives the screen right/up axes. We
-  // omit its `out` argument so it allocates a fresh basis — the returned
-  // `right`/`up` are freshly-allocated vectors callers may retain, matching this
-  // function's long-standing contract.
-  const basis = imagePlaneBasis(forward, cam.roll ?? 0, frameUp(cam.frameBasis, upRefScratch));
+  // `imagePlaneBasis` rolls the frame pole (`frameUp(cam.upBasis)`; world +Y
+  // absent a basis) about `forward` and derives the screen right/up axes. Reads
+  // `upBasis`, not `poseBasis` — this is a draw-time up-vector, free to track a
+  // transient mid-slerp basis (see `OrbitCameraInit.d.ts`). We omit its `out`
+  // argument so it allocates a fresh basis — the returned `right`/`up` are
+  // freshly-allocated vectors callers may retain, matching this function's
+  // long-standing contract.
+  const basis = imagePlaneBasis(forward, cam.roll ?? 0, frameUp(cam.upBasis, upRefScratch));
   return { right: basis.right, up: basis.up };
 }

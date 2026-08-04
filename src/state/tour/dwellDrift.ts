@@ -40,6 +40,12 @@
  * default speed with a near-zero fade. The pitch fade is clamped to half the
  * window so a short dwell still fades symmetrically in and out.
  *
+ * `spinTo` swaps the yaw layer for an unresolved `spinToId` — a bearing (a
+ * sightline to a subject) rather than a raw radian delta pinned to one
+ * orientation frame. It replaces `cruiseRate` rather than composing with it,
+ * so the two together is an authoring error caught at clip-build time: same
+ * "named knob, not a silent pick" stance as the ramp/cruise mixup above.
+ *
  * ### Finite, and that's fine
  *
  * The clip ends (at `durationSec`) rather than looping forever. The dwell saga
@@ -49,7 +55,8 @@
  */
 
 import type { ClipData } from '../../@types/animation/ClipData';
-import { all, oscillate, spin } from '../../services/engine/animation/effectHelpers';
+import type { FocusId } from '../../@types/animation/FocusId';
+import { all, oscillate, spin, spinToId } from '../../services/engine/animation/effectHelpers';
 
 // Yaw's average orbit speed (rad/s — 2π over 45s) and the pitch-bob fade length
 // (s), both overridable. Pitch is a gentle bob: PITCH_AMP radians peak,
@@ -61,8 +68,14 @@ const PITCH_PERIOD = 14;
 
 export function dwellDrift(
   durationSec: number,
-  opts?: { rampSec?: number; cruiseRate?: number },
+  opts?: { rampSec?: number; cruiseRate?: number; spinTo?: FocusId; turns?: number },
 ): ClipData {
+  if (opts?.spinTo !== undefined && opts?.cruiseRate !== undefined) {
+    throw new Error(
+      'dwellDrift: spinTo and cruiseRate are mutually exclusive — spinTo replaces the yaw ' +
+        'layer cruiseRate would have sized. Drop one.',
+    );
+  }
   const rampSec = opts?.rampSec ?? DEFAULT_RAMP_SEC;
   const cruiseRate = opts?.cruiseRate ?? DEFAULT_CRUISE_RATE;
   const fade = Math.min(rampSec, durationSec / 2);
@@ -75,13 +88,20 @@ export function dwellDrift(
   const cycles = Math.max(1, Math.round(durationSec / PITCH_PERIOD));
   const period = durationSec / cycles;
 
+  // Yaw: either a raw eased orbit (`by = cruiseRate × durationSec` makes the
+  // AVERAGE angular speed `cruiseRate`) or, with `spinTo`, an unresolved
+  // bearing-to-subject spin left for resolveClipFoci to size at play time.
+  // Same ease and duration either way — only the source of `by` differs.
+  const yaw =
+    opts?.spinTo !== undefined
+      ? spinToId(opts.spinTo, { over: durationSec, turns: opts.turns, ease: 'easeInOutCubic' })
+      : spin('yaw', { by: cruiseRate * durationSec, over: durationSec, ease: 'easeInOutCubic' });
+
   return {
     start: 'live',
     timeline: [
       all([
-        // Yaw: one eased orbit. `by = cruiseRate × durationSec` makes the AVERAGE
-        // angular speed `cruiseRate`; easeInOutCubic eases in and out and ends at rest.
-        spin('yaw', { by: cruiseRate * durationSec, over: durationSec, ease: 'easeInOutCubic' }),
+        yaw,
         // Pitch: eased oscillation — a bob whose amplitude fades in/out over the
         // window, zero-mean and cycle-fitted so it returns to centre on the cut.
         oscillate('pitch', { amp: PITCH_AMP, period, over: durationSec, fade }),

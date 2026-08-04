@@ -1,80 +1,97 @@
 // orbitTrail/vertex.wesl — vertex stage for the instanced screen-space conic
-// orbit trail.
+// orbit trail. One entry point, 'vsRibbon', consuming one 'OrbitInstance'
+// (io.wesl) and forwarding one 'VSOut' to the shared fragment module.
 //
-// This stage emits a fullscreen triangle from '@builtin(vertex_index)' rather
-// than projecting plane geometry: it draws a single oversized triangle in clip
-// space that covers the whole viewport, and forwards the per-orbit conic
-// constants unchanged. All the real geometry lives in the fragment, which
-// back-projects each pixel through 'Ginv' (spec 3.3).
-//
-// ## Why a fullscreen triangle, not a projected bounding quad
-//
-// A Keplerian ellipse under perspective is a general conic, and when the orbit
-// plane passes near the camera the projected conic becomes a hyperbola open to
-// infinity — a finite screen-space bounding box is then either wrong or needs a
-// special case exactly at that degeneracy (spec 2 rejected the bounding quad).
-// A fullscreen triangle is robust for every conic type: the fragment discards
-// pixels off the stroke, so covering the whole viewport costs only fragment
-// work, and with a handful of additive orbits over a near-field scene that is
-// cheap. The classic three-vertex oversized triangle (corners at (-1,-1),
-// (3,-1), (-1,3)) covers the [-1,1] NDC square with a single primitive and no
-// index buffer.
-//
-// ## Why per-instance attributes, not a per-draw uniform
-//
-// One renderer draws every orbit in a SINGLE instanced 'draw(3, n)'. Each
-// orbit's 'Ginv' columns + colour + eccentricity + mean anomaly arrive as
-// instance-step vertex attributes (one record per '@builtin(instance_index)'),
-// not a uniform mutated between draws. That is the house idiom
-// ('planetRenderer'): one 'writeBuffer' + one draw beats
-// N per-orbit binds, and it dodges the writeBuffer-vs-submit race by
-// construction, since every instance reads its own baked record. WESL has no
-// mat3 vertex-attribute type, so 'Ginv' streams as three vec4<f32> (the padded
-// mat3x3 columns) and only the .xyz of each carries data.
-//
-// ## Attribute layout (matches the TS pipeline descriptor byte-for-byte)
-//
-//   @location(1) ginv0: vec4<f32>  — Ginv column 0 (.xyz used, .w pad)  } per-
-//   @location(2) ginv1: vec4<f32>  — Ginv column 1                       } instance
-//   @location(3) ginv2: vec4<f32>  — Ginv column 2                       } record,
-//   @location(4) params: vec4<f32> — color.rgb in .xyz, eccentricity .w  } stride
-//   @location(5) phase: vec4<f32>  — meanAnomalyRad .x, fade alpha .y, .zw pad } 112 B
-//   @location(6) minorS: vec4<f32> — gradient minors M1/M2/M3 in .xyz, .w pad
-//   @location(7) minorT: vec4<f32> — gradient minors M4/M5/M6 in .xyz, .w pad
+// The CPU hands every instance its in-front-of-camera arc [eStart, eSpan]
+// (composeOrbitConic, closed-form near-plane clip), so every sample here has
+// clip.w > 0 by construction. A closed orbit (eSpan == TAU) wraps its strip
+// exactly; an open arc runs end to end with one-sided tangents at its ends.
+// Ribbon widening is bounded by clamping each neighbour's reach before use,
+// not by any fold/clamp on the samples themselves — see clampReach below.
 
+import package::bodies::orbitTrail::constants::CLOSED_SPAN_EPS;
+import package::bodies::orbitTrail::constants::MARGIN_PX;
+import package::bodies::orbitTrail::constants::SEGMENTS;
+import package::bodies::orbitTrail::constants::STROKE_PX;
+import package::bodies::orbitTrail::io::OrbitInstance;
 import package::bodies::orbitTrail::io::VSOut;
+import package::lib::math::TAU;
 
+// The padded vec4 stores clip.w in its THIRD slot - (x, y, w, 0) - so the
+// swizzle is .xyz, never .xyw: the .w lane is the zero pad, and reading it
+// makes p.z zero, which silently collapses every vertex to (0,0,0,0).
+fn ribbonClip(inst: OrbitInstance, si: u32) -> vec3<f32> {
+  let e = inst.arc.x + inst.arc.y * f32(si) / f32(SEGMENTS);
+  return inst.cc.xyz + cos(e) * inst.ac.xyz + sin(e) * inst.bc.xyz; // clip (x, y, w)
+}
+
+// Perspective divide; valid everywhere here — the CPU arc clip guarantees
+// clip.z (== clip.w) > 0 for every sample index. Pixels here are centre-
+// origin, y-up, unlike the fragment's top-left, y-down framebuffer (V) —
+// an isometry apart, so widths agree; never add a directional quantity here.
+fn clipToPixel(clip: vec3<f32>, viewportPx: vec2<f32>) -> vec2<f32> {
+  return (clip.xy / clip.z) * 0.5 * viewportPx;
+}
+
+// Bounded neighbour reach — only bites at an open arc's end, far off-screen.
+fn clampReach(neighbourPx: vec2<f32>, ownPx: vec2<f32>, maxPx: f32) -> vec2<f32> {
+  let d = neighbourPx - ownPx;
+  let len = length(d);
+  return select(neighbourPx, ownPx + d * (maxPx / len), len > maxPx);
+}
+
+// Rasterizes each orbit arc as a screen-space ribbon. Two triangles per quad,
+// keyed by (sample offset 0|1, side -1|+1); winding is irrelevant
+// ('cullMode: none'). Corner positions are a pure function of the sample
+// index, so the two quads sharing a sample abut exactly — no additive seam.
 @vertex
-fn vs(
-  @builtin(vertex_index) vid: u32,
-  @location(1) ginv0: vec4<f32>,
-  @location(2) ginv1: vec4<f32>,
-  @location(3) ginv2: vec4<f32>,
-  @location(4) params: vec4<f32>,
-  @location(5) phase: vec4<f32>,
-  @location(6) minorS: vec4<f32>,
-  @location(7) minorT: vec4<f32>,
-) -> VSOut {
+fn vsRibbon(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
   var out: VSOut;
-  // Oversized triangle covering the whole NDC square in one primitive.
-  var p = array<vec2<f32>, 3>(
-    vec2<f32>(-1.0, -1.0),
-    vec2<f32>(3.0, -1.0),
-    vec2<f32>(-1.0, 3.0),
-  );
-  out.clip = vec4<f32>(p[vid], 0.0, 1.0);
 
-  // Forward the per-orbit conic constants flat (the .xyz of each padded Ginv
-  // column is the real data; the .w lanes are alignment pad).
-  out.ginv0 = ginv0.xyz;
-  out.ginv1 = ginv1.xyz;
-  out.ginv2 = ginv2.xyz;
-  out.color = params.xyz;
-  out.eccentricity = params.w;
-  out.meanAnomaly = phase.x;
-  out.alpha = phase.y;
-  // The affine Sampson-gradient minors (padded vec4, .xyz is the real data).
-  out.minorS = minorS.xyz;
-  out.minorT = minorT.xyz;
+  let segment = vid / 6u;
+  let corner = vid % 6u;
+  var cornerOffset = array<u32, 6>(0u, 0u, 1u, 1u, 0u, 1u);
+  var cornerSide = array<f32, 6>(-1.0, 1.0, -1.0, -1.0, 1.0, 1.0);
+  let offset = cornerOffset[corner];
+  let side = cornerSide[corner];
+
+  let viewportPx = vec2<f32>(inst.phase.z, inst.phase.w);
+  let closed = inst.arc.y >= TAU - CLOSED_SPAN_EPS;
+
+  // Own sample and its true neighbours. Closed strips index modulo SEGMENTS
+  // (sample SEGMENTS is then BIT-IDENTICAL to sample 0, keeping the seam
+  // exact); open arcs clamp, degenerating the end tangents to the one-sided
+  // chord along the arc itself.
+  let siRaw = segment + offset;
+  let si = select(siRaw, siRaw % SEGMENTS, closed);
+  let prevIdx = select(max(si, 1u) - 1u, (si + SEGMENTS - 1u) % SEGMENTS, closed);
+  let nextIdx = select(min(si + 1u, SEGMENTS), (si + 1u) % SEGMENTS, closed);
+
+  let ownRaw = ribbonClip(inst, si);
+  let ownPx = clipToPixel(ownRaw, viewportPx);
+  var prevPx = clipToPixel(ribbonClip(inst, prevIdx), viewportPx);
+  var nextPx = clipToPixel(ribbonClip(inst, nextIdx), viewportPx);
+  let maxReachPx = 4.0 * length(viewportPx);
+  prevPx = clampReach(prevPx, ownPx, maxReachPx);
+  nextPx = clampReach(nextPx, ownPx, maxReachPx);
+
+  let chord = nextPx - prevPx;
+  let tangent = chord / max(length(chord), 1e-20);
+  let normal = vec2<f32>(-tangent.y, tangent.x);
+  // sag is the second difference of the chord: a segment turning faster than
+  // the sampling tracks widens its own band, so the curve stays inside it.
+  let sag = abs(dot(0.5 * (prevPx + nextPx) - ownPx, normal));
+  let halfWidth = STROKE_PX + MARGIN_PX + sag;
+  let outPx = ownPx + side * halfWidth * normal;
+
+  out.clip = vec4<f32>((outPx / (0.5 * viewportPx)) * ownRaw.z, 0.0, ownRaw.z);
+
+  out.ginv0 = inst.ginv0.xyz;
+  out.ginv1 = inst.ginv1.xyz;
+  out.ginv2 = inst.ginv2.xyz;
+  out.color = inst.params.xyz;
+  out.eccentricity = inst.params.w;
+  out.meanAnomaly = inst.phase.x;
+  out.alpha = inst.phase.y;
   return out;
 }

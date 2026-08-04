@@ -10,7 +10,7 @@ const len = (v: Vec3) => Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
 // Colour / ids / parent are irrelevant to the geometry under test.
 const base: OrbitalElements = {
   id: 'test',
-  parentId: null,
+  focusId: 'sun',
   semiMajorMpc: 2,
   eccentricity: 0.5,
   inclinationRad: 0.4,

@@ -7,6 +7,8 @@ import { FAMOUS_LABEL_STYLE } from '../../../../src/services/engine/presentation
 import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
+import { SCENE_S_STARS } from '../../../../src/data/bodies/sceneSStars';
+import { SGR_A_STAR_ENTRY } from '../../../../src/data/sources/sgr-a-star';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 
@@ -18,9 +20,26 @@ const EARTH_POS = J2000_STATES.get('earth')!.positionMpc;
 describe('sceneBodyLabels', () => {
   const labels = sceneBodyLabels(J2000_STATES);
 
-  it('emits one label per seeded scene body (Earth + stars + planets)', () => {
-    expect(labels).toHaveLength(SCENE_BODIES.length);
-    expect(labels).toHaveLength(1 + SCENE_STARS.length + SCENE_PLANETS.length);
+  it('emits one label per CAPTION-BEARING scene body (Earth + stars + planets + Sgr A*)', () => {
+    // Not one per SCENE_BODIES row: the S-stars are drawn scene bodies that
+    // caption nothing (39 names inside a few arcseconds would be a smear), so
+    // the registry is deliberately wider than the emission. Spelled out per
+    // producer as well, so a body that joins SCENE_BODIES and DOES want a name
+    // still fails here rather than agreeing with itself.
+    expect(labels).toHaveLength(SCENE_BODIES.length - SCENE_S_STARS.length);
+    expect(labels).toHaveLength(1 + SCENE_STARS.length + SCENE_PLANETS.length + 1);
+  });
+
+  it("gives the Galactic Centre its own caption kind, not the star map's", () => {
+    // It draws nothing, so this caption is the whole object on screen — and
+    // riding `'star'` would route it through the famous-star catalog's gates and
+    // a 2.3 kpc band it sits 8 kpc outside. The text is the PLACE name, which is
+    // the whole point of the caption for a reader who has not met "Sgr A*";
+    // read off the registry row so a rename carries rather than fails here.
+    const sgrA = labels.find((label) => label.id === 'sceneBody-sgr-a-star')!;
+    expect(sgrA.kind).toBe('sgrAStar');
+    expect(sgrA.text).toBe(SGR_A_STAR_ENTRY.label);
+    expect(sgrA.text).not.toContain('Sgr');
   });
 
   it('fits inside the foreground label renderer capacity (no silent caption drop)', () => {

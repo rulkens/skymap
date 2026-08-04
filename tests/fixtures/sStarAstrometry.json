@@ -1,0 +1,805 @@
+{
+  "_readme": [
+    "Real astrometric observations of three S-stars orbiting Sgr A*, for testing the",
+    "left-handed-to-right-handed frame conversion in the S-star orbits feature.",
+    "",
+    "WHY THIS EXISTS: propagating Gillessen+2017's published orbital elements",
+    "(table3) through the wrong-handed rotation produces a mirrored ellipse that is",
+    "geometrically indistinguishable from the correct one under every analytic",
+    "invariant (pericentre distance, period, closure onto the star's own trail).",
+    "Only a comparison against real observed sky positions catches a mirror. See",
+    "docs/superpowers/specs/2026-07-30-s-star-orbits-design.md, section",
+    "'The reference frame and the angle conversions'.",
+    "",
+    "STAR CHOICE: S2 is the best-measured benchmark orbit. S12 (i=33.56 deg) and",
+    "S38 (i=171.1 deg) sit on opposite sides of i=90 deg, both far from the",
+    "degenerate edge-on case, so a sign error in the i-conversion flips the sense",
+    "of motion visibly for at least one of them. Inclinations are quoted here only",
+    "to explain the choice; they are read from table3 for context, not transcribed",
+    "as orbital elements -- the elements themselves are owned by src/data/bodies/.",
+    "All three have 100+ imaging epochs in table5; each star below keeps ~34,",
+    "evenly sampled across its full observed baseline (not consecutive epochs),",
+    "including the fast swing through pericentre where phase coverage matters most."
+  ],
+  "provenance": {
+    "catalogue": "Gillessen, Plewa, Eisenhauer, Sari, Waisberg, Habibi, Pfuhl, George, Dexter, von Fellenberg, Ott & Genzel, 2017, ApJ 837, 30 (2017ApJ...837...30G)",
+    "vizierTable": "J/ApJ/837/30/table5 -- the astrometric+RV measurement table (table3 is the fitted orbital elements; a different agent owns that transcription)",
+    "fetchedDate": "2026-07-31",
+    "fetchedVia": "VizieR TAP sync endpoint via curl. Plain WebFetch to vizier.cds.unistra.fr is blocked by an anti-bot challenge; the TAP endpoint at tapvizier.cds.unistra.fr is not.",
+    "readmeUrl": "https://cdsarc.cds.unistra.fr/ftp/J/ApJ/837/30/ReadMe",
+    "queries": {
+      "schemaProbe": "curl -s --get 'https://tapvizier.cds.unistra.fr/TAPVizieR/tap/sync' --data-urlencode 'REQUEST=doQuery' --data-urlencode 'LANG=ADQL' --data-urlencode 'FORMAT=csv' --data-urlencode 'QUERY=SELECT TOP 5 * FROM \"J/ApJ/837/30/table5\"'",
+      "perStarAstrometry": "curl -s --get 'https://tapvizier.cds.unistra.fr/TAPVizieR/tap/sync' --data-urlencode 'REQUEST=doQuery' --data-urlencode 'LANG=ADQL' --data-urlencode 'FORMAT=csv' --data-urlencode 'QUERY=SELECT Date, Flag, \"oRA-<STAR>\", \"e_oRA-<STAR>\", \"oDE-<STAR>\", \"e_oDE-<STAR>\" FROM \"J/ApJ/837/30/table5\" WHERE \"oRA-<STAR>\" IS NOT NULL' -- run once per star with <STAR> substituted for S2, S12, S38",
+      "table3ForStarSelection": "curl -s --get 'https://tapvizier.cds.unistra.fr/TAPVizieR/tap/sync' --data-urlencode 'REQUEST=doQuery' --data-urlencode 'LANG=ADQL' --data-urlencode 'FORMAT=csv' --data-urlencode 'QUERY=SELECT Star, a, e, i, Omega, w, Tp, Per, SpT, Kmag FROM \"J/ApJ/837/30/table3\"' -- read-only, to pick the i<90 / i>90 pair; not used for any transcribed element"
+    },
+    "note": "table5 rows are filtered to Flag='a' (astrometric) implicitly: RV-flagged rows carry null oRA/oDE and are dropped by the WHERE clause. Radial-velocity columns exist in table5 but were not fetched -- this fixture is sky-position only."
+  },
+  "units": {
+    "epochYr": "Fractional Julian year (365.25-day years) since J2000.0 -- VizieR ReadMe Note (G1). NOT a calendar year or a Besselian year.",
+    "offsetEastMas": "Milliarcsec (mas), NOT arcsec. Tangent-plane sky offset of the star from Sgr A*'s astrometric reference position, positive to the East.",
+    "offsetNorthMas": "Milliarcsec (mas). Tangent-plane sky offset, positive to the North.",
+    "uncertaintyEastMas": "1-sigma uncertainty on offsetEastMas, same units and axis.",
+    "uncertaintyNorthMas": "1-sigma uncertainty on offsetNorthMas, same units and axis."
+  },
+  "signConvention": {
+    "statement": "offsetEastMas/offsetNorthMas are the proper angular (already cos(dec)-corrected) tangent-plane projection, East-positive and North-positive respectively -- NOT a raw right-ascension coordinate difference. No further cos(dec) scaling or axis negation is needed to use them as (East, North) offsets.",
+    "howDetermined": [
+      "The VizieR ReadMe (table5 byte-by-byte section) labels the columns 'Offset in Right Ascension' / 'Offset in Declination' without stating explicitly whether a cos(dec) factor is baked in -- this is exactly the kind of ambiguity the task called out, so it was resolved empirically rather than assumed.",
+      "Cross-check: propagated S2's table3 elements (a=0.1255as, e=0.8839, i=134.18deg, Omega=226.94deg, w=65.51deg, Tp=2002.33, Per=16.0yr) through the standard visual-binary/direct-imaging sky-projection formula (as used by e.g. the orbitize! exoplanet-astrometry package): with true anomaly nu at each observation epoch, East = r*(cos(nu+w)*sin(Omega) + sin(nu+w)*cos(i)*cos(Omega)), North = r*(cos(nu+w)*cos(Omega) - sin(nu+w)*cos(i)*sin(Omega)), Omega and i used exactly as tabulated (no swap, no flip).",
+      "Result: predicted vs. observed match to ~1 sigma across the entire observed baseline for all three stars (S2: mean 1.0 sigma over 145 epochs; S12: mean 0.9 sigma over 158; S38: mean 0.8 sigma over 114) -- confirming oRA/oDE need no cos(dec) correction and no sign flip against the astronomical (North-through-East PA, i<90=counterclockwise) convention that table3's Omega and i already use.",
+      "Control: deliberately using the WRONG-handed inclination (180deg - i, the mirror this fixture exists to catch) in the same formula for S2 inflates the mean residual from ~1 sigma to ~200 sigma -- a catastrophic, unmistakable failure, which is the discriminating power this fixture is meant to exercise."
+    ],
+    "residualCaveat": "table5's own note: the coordinate origin is only a best estimate of Sgr A*'s radio position (+/-0.2 mas at reference epoch 2009.0, Plewa+2015), not the true point mass, so even a perfect Keplerian fit does not close exactly onto repeated epochs. A fixture-based test should allow residuals of a few sigma, not require bit-exact closure."
+  },
+  "starsIncluded": [
+    {
+      "id": "s2",
+      "label": "S2",
+      "inclinationDegTable3": 134.18,
+      "why": "benchmark: best-sampled orbit (16 yr period, 145 astrometric epochs spanning more than one full revolution, dense coverage through the 2002 pericentre passage)"
+    },
+    {
+      "id": "s12",
+      "label": "S12",
+      "inclinationDegTable3": 33.56,
+      "why": "i < 90 deg, far from the edge-on degeneracy at i=90; 158 astrometric epochs"
+    },
+    {
+      "id": "s38",
+      "label": "S38",
+      "inclinationDegTable3": 171.1,
+      "why": "i > 90 deg, far from the edge-on degeneracy on the other side of it; 114 astrometric epochs. Paired with S12, this is the pair that pins the sense of the i-conversion: a mirror error flips one or both of these visibly, which a single benchmark star cannot guarantee."
+    }
+  ],
+  "stars": {
+    "s2": {
+      "label": "S2",
+      "observations": [
+        {
+          "epochYr": 1992.224,
+          "offsetEastMas": -9.9,
+          "uncertaintyEastMas": 3.7,
+          "offsetNorthMas": 170.2,
+          "uncertaintyNorthMas": 3.8
+        },
+        {
+          "epochYr": 1996.427,
+          "offsetEastMas": -50.3,
+          "uncertaintyEastMas": 1.7,
+          "offsetNorthMas": 160.2,
+          "uncertaintyNorthMas": 4.4
+        },
+        {
+          "epochYr": 2000.523,
+          "offsetEastMas": -67,
+          "uncertaintyEastMas": 2.5,
+          "offsetNorthMas": 56.5,
+          "uncertaintyNorthMas": 2.5
+        },
+        {
+          "epochYr": 2002.393,
+          "offsetEastMas": 13.7,
+          "uncertaintyEastMas": 4.3,
+          "offsetNorthMas": -2.1,
+          "uncertaintyNorthMas": 4.3
+        },
+        {
+          "epochYr": 2002.488,
+          "offsetEastMas": 24.9,
+          "uncertaintyEastMas": 9,
+          "offsetNorthMas": 12.9,
+          "uncertaintyNorthMas": 8.4
+        },
+        {
+          "epochYr": 2003.214,
+          "offsetEastMas": 38.6,
+          "uncertaintyEastMas": 0.4,
+          "offsetNorthMas": 64.5,
+          "uncertaintyNorthMas": 0.4
+        },
+        {
+          "epochYr": 2003.452,
+          "offsetEastMas": 39.1,
+          "uncertaintyEastMas": 0.4,
+          "offsetNorthMas": 78.4,
+          "uncertaintyNorthMas": 0.4
+        },
+        {
+          "epochYr": 2003.676,
+          "offsetEastMas": 38.3,
+          "uncertaintyEastMas": 0.4,
+          "offsetNorthMas": 89.7,
+          "uncertaintyNorthMas": 0.4
+        },
+        {
+          "epochYr": 2004.325,
+          "offsetEastMas": 34.7,
+          "uncertaintyEastMas": 0.3,
+          "offsetNorthMas": 114.1,
+          "uncertaintyNorthMas": 0.3
+        },
+        {
+          "epochYr": 2004.513,
+          "offsetEastMas": 33.2,
+          "uncertaintyEastMas": 0.4,
+          "offsetNorthMas": 121,
+          "uncertaintyNorthMas": 0.4
+        },
+        {
+          "epochYr": 2004.664,
+          "offsetEastMas": 31.5,
+          "uncertaintyEastMas": 0.3,
+          "offsetNorthMas": 125.1,
+          "uncertaintyNorthMas": 0.3
+        },
+        {
+          "epochYr": 2005.27,
+          "offsetEastMas": 26,
+          "uncertaintyEastMas": 0.4,
+          "offsetNorthMas": 141,
+          "uncertaintyNorthMas": 0.4
+        },
+        {
+          "epochYr": 2005.467,
+          "offsetEastMas": 24.3,
+          "uncertaintyEastMas": 0.4,
+          "offsetNorthMas": 144.9,
+          "uncertaintyNorthMas": 0.4
+        },
+        {
+          "epochYr": 2007.545,
+          "offsetEastMas": 1.3,
+          "uncertaintyEastMas": 1,
+          "offsetNorthMas": 173.6,
+          "uncertaintyNorthMas": 0.8
+        },
+        {
+          "epochYr": 2008.197,
+          "offsetEastMas": -6.5,
+          "uncertaintyEastMas": 0.4,
+          "offsetNorthMas": 177,
+          "uncertaintyNorthMas": 0.4
+        },
+        {
+          "epochYr": 2008.473,
+          "offsetEastMas": -9,
+          "uncertaintyEastMas": 0.5,
+          "offsetNorthMas": 178.2,
+          "uncertaintyNorthMas": 0.5
+        },
+        {
+          "epochYr": 2009.185,
+          "offsetEastMas": -18.4,
+          "uncertaintyEastMas": 0.8,
+          "offsetNorthMas": 179.1,
+          "uncertaintyNorthMas": 0.8
+        },
+        {
+          "epochYr": 2009.336,
+          "offsetEastMas": -19.5,
+          "uncertaintyEastMas": 0.4,
+          "offsetNorthMas": 179.2,
+          "uncertaintyNorthMas": 0.4
+        },
+        {
+          "epochYr": 2009.557,
+          "offsetEastMas": -21.9,
+          "uncertaintyEastMas": 0.4,
+          "offsetNorthMas": 179.5,
+          "uncertaintyNorthMas": 0.4
+        },
+        {
+          "epochYr": 2009.776,
+          "offsetEastMas": -24.1,
+          "uncertaintyEastMas": 0.4,
+          "offsetNorthMas": 179,
+          "uncertaintyNorthMas": 0.4
+        },
+        {
+          "epochYr": 2010.245,
+          "offsetEastMas": -29.3,
+          "uncertaintyEastMas": 0.4,
+          "offsetNorthMas": 176.8,
+          "uncertaintyNorthMas": 0.4
+        },
+        {
+          "epochYr": 2010.455,
+          "offsetEastMas": -31.2,
+          "uncertaintyEastMas": 0.5,
+          "offsetNorthMas": 175.4,
+          "uncertaintyNorthMas": 0.5
+        },
+        {
+          "epochYr": 2010.622,
+          "offsetEastMas": -33.3,
+          "uncertaintyEastMas": 0.4,
+          "offsetNorthMas": 175.1,
+          "uncertaintyNorthMas": 0.4
+        },
+        {
+          "epochYr": 2010.679,
+          "offsetEastMas": -34.2,
+          "uncertaintyEastMas": 0.4,
+          "offsetNorthMas": 174.4,
+          "uncertaintyNorthMas": 0.4
+        },
+        {
+          "epochYr": 2011.249,
+          "offsetEastMas": -39.5,
+          "uncertaintyEastMas": 0.5,
+          "offsetNorthMas": 170.3,
+          "uncertaintyNorthMas": 0.5
+        },
+        {
+          "epochYr": 2011.443,
+          "offsetEastMas": -41.4,
+          "uncertaintyEastMas": 0.4,
+          "offsetNorthMas": 168.4,
+          "uncertaintyNorthMas": 0.4
+        },
+        {
+          "epochYr": 2011.695,
+          "offsetEastMas": -43.9,
+          "uncertaintyEastMas": 0.4,
+          "offsetNorthMas": 166.1,
+          "uncertaintyNorthMas": 0.4
+        },
+        {
+          "epochYr": 2012.202,
+          "offsetEastMas": -48,
+          "uncertaintyEastMas": 0.7,
+          "offsetNorthMas": 159.8,
+          "uncertaintyNorthMas": 0.7
+        },
+        {
+          "epochYr": 2012.544,
+          "offsetEastMas": -51.1,
+          "uncertaintyEastMas": 0.4,
+          "offsetNorthMas": 156.1,
+          "uncertaintyNorthMas": 0.4
+        },
+        {
+          "epochYr": 2013.161,
+          "offsetEastMas": -55.3,
+          "uncertaintyEastMas": 0.4,
+          "offsetNorthMas": 147.1,
+          "uncertaintyNorthMas": 0.4
+        },
+        {
+          "epochYr": 2013.42,
+          "offsetEastMas": -56.7,
+          "uncertaintyEastMas": 0.5,
+          "offsetNorthMas": 142.7,
+          "uncertaintyNorthMas": 0.5
+        },
+        {
+          "epochYr": 2013.587,
+          "offsetEastMas": -57.9,
+          "uncertaintyEastMas": 0.4,
+          "offsetNorthMas": 139.5,
+          "uncertaintyNorthMas": 0.4
+        },
+        {
+          "epochYr": 2015.517,
+          "offsetEastMas": -66.7,
+          "uncertaintyEastMas": 0.4,
+          "offsetNorthMas": 95.3,
+          "uncertaintyNorthMas": 0.4
+        },
+        {
+          "epochYr": 2016.325,
+          "offsetEastMas": -66,
+          "uncertaintyEastMas": 0.8,
+          "offsetNorthMas": 69.7,
+          "uncertaintyNorthMas": 0.8
+        }
+      ]
+    },
+    "s12": {
+      "label": "S12",
+      "observations": [
+        {
+          "epochYr": 1995.534,
+          "offsetEastMas": 8.8,
+          "uncertaintyEastMas": 7.8,
+          "offsetNorthMas": -32,
+          "uncertaintyNorthMas": 3.4
+        },
+        {
+          "epochYr": 2001.502,
+          "offsetEastMas": -71.3,
+          "uncertaintyEastMas": 3.3,
+          "offsetNorthMas": 233,
+          "uncertaintyNorthMas": 2.5
+        },
+        {
+          "epochYr": 2002.409,
+          "offsetEastMas": -65.8,
+          "uncertaintyEastMas": 1.2,
+          "offsetNorthMas": 257.2,
+          "uncertaintyNorthMas": 1.2
+        },
+        {
+          "epochYr": 2002.66,
+          "offsetEastMas": -64.5,
+          "uncertaintyEastMas": 1,
+          "offsetNorthMas": 263.2,
+          "uncertaintyNorthMas": 1
+        },
+        {
+          "epochYr": 2003.451,
+          "offsetEastMas": -58.3,
+          "uncertaintyEastMas": 1.3,
+          "offsetNorthMas": 284.7,
+          "uncertaintyNorthMas": 1.3
+        },
+        {
+          "epochYr": 2003.55,
+          "offsetEastMas": -57.6,
+          "uncertaintyEastMas": 0.9,
+          "offsetNorthMas": 288,
+          "uncertaintyNorthMas": 0.9
+        },
+        {
+          "epochYr": 2004.325,
+          "offsetEastMas": -52,
+          "uncertaintyEastMas": 0.9,
+          "offsetNorthMas": 306.1,
+          "uncertaintyNorthMas": 0.9
+        },
+        {
+          "epochYr": 2004.516,
+          "offsetEastMas": -50.2,
+          "uncertaintyEastMas": 1.1,
+          "offsetNorthMas": 310,
+          "uncertaintyNorthMas": 1.1
+        },
+        {
+          "epochYr": 2004.67,
+          "offsetEastMas": -49,
+          "uncertaintyEastMas": 1.1,
+          "offsetNorthMas": 313.2,
+          "uncertaintyNorthMas": 1.1
+        },
+        {
+          "epochYr": 2005.371,
+          "offsetEastMas": -43.6,
+          "uncertaintyEastMas": 1,
+          "offsetNorthMas": 329.5,
+          "uncertaintyNorthMas": 1
+        },
+        {
+          "epochYr": 2005.576,
+          "offsetEastMas": -40.6,
+          "uncertaintyEastMas": 0.9,
+          "offsetNorthMas": 331.5,
+          "uncertaintyNorthMas": 0.9
+        },
+        {
+          "epochYr": 2006.491,
+          "offsetEastMas": -33.1,
+          "uncertaintyEastMas": 1.1,
+          "offsetNorthMas": 349.9,
+          "uncertaintyNorthMas": 1.1
+        },
+        {
+          "epochYr": 2006.753,
+          "offsetEastMas": -30.2,
+          "uncertaintyEastMas": 1.2,
+          "offsetNorthMas": 356.6,
+          "uncertaintyNorthMas": 1.2
+        },
+        {
+          "epochYr": 2007.206,
+          "offsetEastMas": -28.3,
+          "uncertaintyEastMas": 1,
+          "offsetNorthMas": 364,
+          "uncertaintyNorthMas": 1
+        },
+        {
+          "epochYr": 2007.255,
+          "offsetEastMas": -27.7,
+          "uncertaintyEastMas": 1.5,
+          "offsetNorthMas": 366,
+          "uncertaintyNorthMas": 1.5
+        },
+        {
+          "epochYr": 2007.55,
+          "offsetEastMas": -24.9,
+          "uncertaintyEastMas": 1.1,
+          "offsetNorthMas": 371,
+          "uncertaintyNorthMas": 1.1
+        },
+        {
+          "epochYr": 2008.148,
+          "offsetEastMas": -20.4,
+          "uncertaintyEastMas": 0.9,
+          "offsetNorthMas": 381.2,
+          "uncertaintyNorthMas": 0.9
+        },
+        {
+          "epochYr": 2008.473,
+          "offsetEastMas": -15.7,
+          "uncertaintyEastMas": 1.7,
+          "offsetNorthMas": 387.7,
+          "uncertaintyNorthMas": 1.7
+        },
+        {
+          "epochYr": 2009.273,
+          "offsetEastMas": -11.1,
+          "uncertaintyEastMas": 0.8,
+          "offsetNorthMas": 400.6,
+          "uncertaintyNorthMas": 0.8
+        },
+        {
+          "epochYr": 2009.336,
+          "offsetEastMas": -10.1,
+          "uncertaintyEastMas": 0.9,
+          "offsetNorthMas": 401.4,
+          "uncertaintyNorthMas": 0.9
+        },
+        {
+          "epochYr": 2009.557,
+          "offsetEastMas": -7.7,
+          "uncertaintyEastMas": 1.3,
+          "offsetNorthMas": 404.2,
+          "uncertaintyNorthMas": 1.5
+        },
+        {
+          "epochYr": 2010.239,
+          "offsetEastMas": -2.6,
+          "uncertaintyEastMas": 1,
+          "offsetNorthMas": 414.6,
+          "uncertaintyNorthMas": 0.9
+        },
+        {
+          "epochYr": 2010.444,
+          "offsetEastMas": -0.5,
+          "uncertaintyEastMas": 1.1,
+          "offsetNorthMas": 417.8,
+          "uncertaintyNorthMas": 1.1
+        },
+        {
+          "epochYr": 2010.616,
+          "offsetEastMas": 2.1,
+          "uncertaintyEastMas": 1.1,
+          "offsetNorthMas": 419.8,
+          "uncertaintyNorthMas": 1.1
+        },
+        {
+          "epochYr": 2010.676,
+          "offsetEastMas": 1.5,
+          "uncertaintyEastMas": 2.5,
+          "offsetNorthMas": 423.3,
+          "uncertaintyNorthMas": 2.5
+        },
+        {
+          "epochYr": 2011.244,
+          "offsetEastMas": 8,
+          "uncertaintyEastMas": 1.2,
+          "offsetNorthMas": 428.9,
+          "uncertaintyNorthMas": 1.2
+        },
+        {
+          "epochYr": 2011.337,
+          "offsetEastMas": 7.6,
+          "uncertaintyEastMas": 1.7,
+          "offsetNorthMas": 429.7,
+          "uncertaintyNorthMas": 1.7
+        },
+        {
+          "epochYr": 2011.695,
+          "offsetEastMas": 11.5,
+          "uncertaintyEastMas": 2.6,
+          "offsetNorthMas": 435.4,
+          "uncertaintyNorthMas": 2.6
+        },
+        {
+          "epochYr": 2012.339,
+          "offsetEastMas": 18.4,
+          "uncertaintyEastMas": 1.1,
+          "offsetNorthMas": 444.6,
+          "uncertaintyNorthMas": 1.1
+        },
+        {
+          "epochYr": 2012.552,
+          "offsetEastMas": 20.6,
+          "uncertaintyEastMas": 2,
+          "offsetNorthMas": 446.2,
+          "uncertaintyNorthMas": 2
+        },
+        {
+          "epochYr": 2013.24,
+          "offsetEastMas": 27.3,
+          "uncertaintyEastMas": 0.9,
+          "offsetNorthMas": 455.2,
+          "uncertaintyNorthMas": 0.9
+        },
+        {
+          "epochYr": 2013.494,
+          "offsetEastMas": 29.2,
+          "uncertaintyEastMas": 2.1,
+          "offsetNorthMas": 457.3,
+          "uncertaintyNorthMas": 2.1
+        },
+        {
+          "epochYr": 2015.432,
+          "offsetEastMas": 45.2,
+          "uncertaintyEastMas": 0.9,
+          "offsetNorthMas": 471.4,
+          "uncertaintyNorthMas": 0.9
+        },
+        {
+          "epochYr": 2016.221,
+          "offsetEastMas": 50,
+          "uncertaintyEastMas": 1.3,
+          "offsetNorthMas": 476.5,
+          "uncertaintyNorthMas": 1.4
+        }
+      ]
+    },
+    "s38": {
+      "label": "S38",
+      "observations": [
+        {
+          "epochYr": 2004.24,
+          "offsetEastMas": -54.6,
+          "uncertaintyEastMas": 6.1,
+          "offsetNorthMas": 61,
+          "uncertaintyNorthMas": 8
+        },
+        {
+          "epochYr": 2004.513,
+          "offsetEastMas": -63,
+          "uncertaintyEastMas": 8.9,
+          "offsetNorthMas": 65.8,
+          "uncertaintyNorthMas": 8
+        },
+        {
+          "epochYr": 2005.371,
+          "offsetEastMas": -126.3,
+          "uncertaintyEastMas": 3.8,
+          "offsetNorthMas": 60,
+          "uncertaintyNorthMas": 4.6
+        },
+        {
+          "epochYr": 2005.57,
+          "offsetEastMas": -132,
+          "uncertaintyEastMas": 2.1,
+          "offsetNorthMas": 57.9,
+          "uncertaintyNorthMas": 2.1
+        },
+        {
+          "epochYr": 2006.411,
+          "offsetEastMas": -156.8,
+          "uncertaintyEastMas": 5.5,
+          "offsetNorthMas": 55.9,
+          "uncertaintyNorthMas": 5.5
+        },
+        {
+          "epochYr": 2006.728,
+          "offsetEastMas": -168.3,
+          "uncertaintyEastMas": 4.7,
+          "offsetNorthMas": 57.9,
+          "uncertaintyNorthMas": 4.7
+        },
+        {
+          "epochYr": 2006.802,
+          "offsetEastMas": -181.4,
+          "uncertaintyEastMas": 7,
+          "offsetNorthMas": 50.3,
+          "uncertaintyNorthMas": 7
+        },
+        {
+          "epochYr": 2007.206,
+          "offsetEastMas": -187.5,
+          "uncertaintyEastMas": 2.3,
+          "offsetNorthMas": 47.7,
+          "uncertaintyNorthMas": 2.3
+        },
+        {
+          "epochYr": 2007.255,
+          "offsetEastMas": -190.2,
+          "uncertaintyEastMas": 3.4,
+          "offsetNorthMas": 50.3,
+          "uncertaintyNorthMas": 3.5
+        },
+        {
+          "epochYr": 2007.46,
+          "offsetEastMas": -196,
+          "uncertaintyEastMas": 2.2,
+          "offsetNorthMas": 46.6,
+          "uncertaintyNorthMas": 2.3
+        },
+        {
+          "epochYr": 2007.687,
+          "offsetEastMas": -200,
+          "uncertaintyEastMas": 2.5,
+          "offsetNorthMas": 42.5,
+          "uncertaintyNorthMas": 3.4
+        },
+        {
+          "epochYr": 2008.197,
+          "offsetEastMas": -208.4,
+          "uncertaintyEastMas": 1.2,
+          "offsetNorthMas": 32.2,
+          "uncertaintyNorthMas": 1.3
+        },
+        {
+          "epochYr": 2008.472,
+          "offsetEastMas": -215.3,
+          "uncertaintyEastMas": 7.5,
+          "offsetNorthMas": 32,
+          "uncertaintyNorthMas": 7.5
+        },
+        {
+          "epochYr": 2008.708,
+          "offsetEastMas": -222,
+          "uncertaintyEastMas": 1.6,
+          "offsetNorthMas": 30.5,
+          "uncertaintyNorthMas": 1.2
+        },
+        {
+          "epochYr": 2009.3,
+          "offsetEastMas": -235.3,
+          "uncertaintyEastMas": 1.6,
+          "offsetNorthMas": 22.8,
+          "uncertaintyNorthMas": 1.5
+        },
+        {
+          "epochYr": 2009.336,
+          "offsetEastMas": -235,
+          "uncertaintyEastMas": 1.9,
+          "offsetNorthMas": 21.1,
+          "uncertaintyNorthMas": 1.9
+        },
+        {
+          "epochYr": 2009.557,
+          "offsetEastMas": -238.6,
+          "uncertaintyEastMas": 2.1,
+          "offsetNorthMas": 16.5,
+          "uncertaintyNorthMas": 2.1
+        },
+        {
+          "epochYr": 2009.718,
+          "offsetEastMas": -239.5,
+          "uncertaintyEastMas": 1.5,
+          "offsetNorthMas": 17.4,
+          "uncertaintyNorthMas": 1.5
+        },
+        {
+          "epochYr": 2010.239,
+          "offsetEastMas": -244.7,
+          "uncertaintyEastMas": 1.6,
+          "offsetNorthMas": 10,
+          "uncertaintyNorthMas": 1.5
+        },
+        {
+          "epochYr": 2010.444,
+          "offsetEastMas": -246.4,
+          "uncertaintyEastMas": 3.6,
+          "offsetNorthMas": 4.6,
+          "uncertaintyNorthMas": 3.7
+        },
+        {
+          "epochYr": 2010.455,
+          "offsetEastMas": -248,
+          "uncertaintyEastMas": 4.4,
+          "offsetNorthMas": 3,
+          "uncertaintyNorthMas": 4.4
+        },
+        {
+          "epochYr": 2010.619,
+          "offsetEastMas": -248.4,
+          "uncertaintyEastMas": 1.4,
+          "offsetNorthMas": 3.3,
+          "uncertaintyNorthMas": 1.5
+        },
+        {
+          "epochYr": 2010.676,
+          "offsetEastMas": -244.8,
+          "uncertaintyEastMas": 13.7,
+          "offsetNorthMas": 6.1,
+          "uncertaintyNorthMas": 13.7
+        },
+        {
+          "epochYr": 2011.241,
+          "offsetEastMas": -250.2,
+          "uncertaintyEastMas": 5.4,
+          "offsetNorthMas": -5.9,
+          "uncertaintyNorthMas": 5.4
+        },
+        {
+          "epochYr": 2011.312,
+          "offsetEastMas": -252.8,
+          "uncertaintyEastMas": 1.9,
+          "offsetNorthMas": -8.8,
+          "uncertaintyNorthMas": 1.9
+        },
+        {
+          "epochYr": 2011.443,
+          "offsetEastMas": -254.1,
+          "uncertaintyEastMas": 1.9,
+          "offsetNorthMas": -11.3,
+          "uncertaintyNorthMas": 1.7
+        },
+        {
+          "epochYr": 2011.695,
+          "offsetEastMas": -254.9,
+          "uncertaintyEastMas": 2.5,
+          "offsetNorthMas": -17.2,
+          "uncertaintyNorthMas": 2.5
+        },
+        {
+          "epochYr": 2012.202,
+          "offsetEastMas": -249.7,
+          "uncertaintyEastMas": 6.3,
+          "offsetNorthMas": -31.7,
+          "uncertaintyNorthMas": 6.3
+        },
+        {
+          "epochYr": 2012.533,
+          "offsetEastMas": -255.5,
+          "uncertaintyEastMas": 2.8,
+          "offsetNorthMas": -31.8,
+          "uncertaintyNorthMas": 2.8
+        },
+        {
+          "epochYr": 2012.552,
+          "offsetEastMas": -247.6,
+          "uncertaintyEastMas": 5.2,
+          "offsetNorthMas": -31.2,
+          "uncertaintyNorthMas": 5.3
+        },
+        {
+          "epochYr": 2013.24,
+          "offsetEastMas": -251.9,
+          "uncertaintyEastMas": 2,
+          "offsetNorthMas": -39.4,
+          "uncertaintyNorthMas": 2
+        },
+        {
+          "epochYr": 2013.42,
+          "offsetEastMas": -251.7,
+          "uncertaintyEastMas": 7.7,
+          "offsetNorthMas": -46.6,
+          "uncertaintyNorthMas": 7.7
+        },
+        {
+          "epochYr": 2013.502,
+          "offsetEastMas": -250.7,
+          "uncertaintyEastMas": 2.6,
+          "offsetNorthMas": -42.8,
+          "uncertaintyNorthMas": 2.6
+        },
+        {
+          "epochYr": 2015.432,
+          "offsetEastMas": -234.4,
+          "uncertaintyEastMas": 2.8,
+          "offsetNorthMas": -66.3,
+          "uncertaintyNorthMas": 1.8
+        }
+      ]
+    }
+  }
+}

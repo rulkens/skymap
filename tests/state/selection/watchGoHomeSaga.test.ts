@@ -21,6 +21,7 @@ import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFra
 import { selectOrientation } from '../../../src/state/settings/selectors';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { setSimDays, pause } from '../../../src/state/time/timeSlice';
+import { setOrientation } from '../../../src/state/settings/settingsSlice';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { cameraRoute, selectionRoute, timeRoute } from '../../../src/store/constants';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
@@ -42,7 +43,7 @@ describe('watchGoHomeSaga', () => {
     const mw = createSagaMiddleware();
     const s = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(mw) });
     mw.run(watchGoHomeSaga);
-    cameraRuntime = () => ({ from: FROM, fovYRad: FOV, frameBasisQuat: [0, 0, 0, 1] });
+    cameraRuntime = () => ({ from: FROM, fovYRad: FOV, upBasisQuat: [0, 0, 0, 1] });
     mw.setContext({ cameraRuntime: () => cameraRuntime() });
     return s;
   }
@@ -58,6 +59,11 @@ describe('watchGoHomeSaga', () => {
     store.dispatch(setSimDays({ simDays: CONST_J2000 + 300, nowMs: now }));
     store.dispatch(pause({ nowMs: now }));
 
+    // Off the default orientation, dispatched BEFORE goHome — so the `frame`
+    // assertion below can only pass if the saga actually captures the live
+    // setting rather than a hardcoded default.
+    store.dispatch(setOrientation('galactic'));
+
     store.dispatch(goHome());
     await flush();
 
@@ -72,8 +78,14 @@ describe('watchGoHomeSaga', () => {
     // The pose is encoded through the store's committed orientation basis (not
     // legacy identity) — recomputing with that basis proves the saga threads it.
     const simDays = deriveSimDays(store.getState()[timeRoute], performance.now());
-    const frameBasis = ORIENTATION_FRAMES[selectOrientation(store.getState())];
+    const orientation = selectOrientation(store.getState());
+    const frameBasis = ORIENTATION_FRAMES[orientation];
     expect(tween!.to).toEqual(earthHomePose(simDays, FOV, frameBasis));
+
+    // The descriptor pins the orientation live at dispatch time, mirroring
+    // `clip.frame` and `focusTweenDescriptor`'s `frame` — the driver re-expresses
+    // the pose against it on a later switch.
+    expect(tween!.frame).toBe(orientation);
   });
 
   it('goHome is a no-op when the camera runtime is null', async () => {

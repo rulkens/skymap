@@ -1,10 +1,17 @@
 /**
- * recordTour — the offline tour recorder: play a skymap tour under CDP
- * virtual time in headless Chromium and encode the captured frames straight
- * to an mp4.
+ * record — the offline take recorder: play one skymap take (a tour, optionally
+ * windowed to beats, or a standalone clip) under CDP virtual time in headless
+ * Chromium and encode the captured frames straight to an mp4.
  *
  *   npm run record-tour -- --beats 1..1 --size 640x360 --fps 10
  *   npm run record-tour                       # full grand tour, 4K/60
+ *   npm run record-clip -- flyout             # one standalone clip
+ *
+ * Two independent clocks, both pinned on every take: `#t=<ISO>` in the capture
+ * URL fixes the SIM clock (the instant the solar system is drawn at), while
+ * the CDP budget drives the FRAME clock (page time per captured frame).
+ * Pinning `t` freezes no animation — tweens, fades and clip timelines all run
+ * on the frame clock.
  *
  * ### Why a harness outside the app
  *
@@ -13,7 +20,7 @@
  * drop frames and tie output quality to the host GPU's mood. Instead the
  * page's clock is handed to this Node process via CDP virtual time — each
  * loop iteration grants exactly 1000/fps ms, waits for the page to consume
- * it, and only then captures, so the tour plays frame-perfect no matter how
+ * it, and only then captures, so the take plays frame-perfect no matter how
  * long each frame takes to render or encode. That loop needs a CDP session,
  * a spawned ffmpeg, and the host filesystem, none of which can live in the
  * app; the app's entire contribution is the `window.__skymapRecorder` seam
@@ -43,18 +50,18 @@
  * write's flush callback before capturing the next frame, so a slow encoder
  * throttles capture instead of ballooning this process's heap.
  *
- * ### How tour completion is observed (the promise bridge)
+ * ### How take completion is observed (the promise bridge)
  *
- * `hook.startTour(...)` resolves when the tour ends, but awaiting it inline
+ * The hook's start verb resolves when the take ends, but awaiting it inline
  * would deadlock: the evaluate would block while the loop that grants the
- * virtual time the tour needs never runs. The kick evaluate instead attaches
- * .then/.catch handlers that write a `window.__recorderTourStatus` flag, and
+ * virtual time the take needs never runs. The kick evaluate instead attaches
+ * .then/.catch handlers that write a `window.__recorderTakeStatus` flag, and
  * the frame loop polls that flag at each frame boundary. The alternative —
  * bridging the resolution out via `page.exposeFunction` — would deliver it as
  * an out-of-band CDP message racing the frame loop in real time, making a
  * take's frame count depend on wire timing; sampling a flag at frame
  * boundaries keeps the stop frame a pure function of the virtual clock, the
- * same determinism the Task 1 spike asserted for pixels. (The tour's final
+ * same determinism the Task 1 spike asserted for pixels. (The take's final
  * state lands inside some budget grant, and promise `.then` microtasks run
  * with that same JS turn, so the flag is already set by the time that grant's
  * `virtualTimeBudgetExpired` fires — no extra frame of lag.)
@@ -64,10 +71,9 @@
  * Boot runs in REAL time: `?cinema` skips the splash, and the hook's `ready`
  * promise already debounces "engine ready + loads settled" over a ~1 s
  * stability window, so the harness just awaits it. Virtual time is paused
- * BEFORE `startTour` is dispatched, so the tour's very first frame runs under
- * the virtual clock — dispatching first would let a nondeterministic sliver
- * of real time leak into the opening pose (same reasoning as the spike's
- * auto-rotate ordering).
+ * BEFORE the take is kicked, so its very first frame runs under the virtual
+ * clock — kicking first would let a nondeterministic sliver of real time leak
+ * into the opening pose (same reasoning as the spike's auto-rotate ordering).
  *
  * Prerequisites: `npm run dev` serving --url (default http://localhost:5173),
  * ffmpeg + ffprobe on PATH (macOS: brew install ffmpeg), and the Playwright
@@ -80,17 +86,22 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type { Writable } from 'node:stream';
 import { tourRegistry } from '../../src/data/animation/tours/tourRegistry';
+import { clipRegistry } from '../../src/data/animation/clips/clipRegistry';
 import { FOLD_SETTLE_MS } from '../../src/state/tour/foldSettleMs';
 import type { Tour } from '../../src/@types/animation/tour/Tour';
 import type { TourId } from '../../src/@types/animation/tour/TourId';
 import type { BeatRange } from '../../src/@types/animation/tour/BeatRange';
+import type { Clip } from '../../src/@types/animation/Clip';
+import type { ClipId } from '../../src/@types/animation/ClipId';
 import type { RecorderWindow } from '../../src/@types/recorder/RecorderWindow';
 import { grantAndAwaitExpiry } from './grantAndAwaitExpiry';
 import { parseBeatRange } from '../utils/record/parseBeatRange';
 import { parseSize } from '../utils/record/parseSize';
 import { buildFfmpegArgs } from '../utils/record/buildFfmpegArgs';
+import { buildCaptureUrl } from '../utils/record/buildCaptureUrl';
 import { defaultOutName } from '../utils/record/defaultOutName';
 import { tourFrameCap } from '../utils/record/tourFrameCap';
+import { clipFrameCap } from '../utils/record/clipFrameCap';
 
 // How long to wait for window.__skymapRecorder to appear after load — it is
 // installed synchronously during app bootstrap, so a miss means the wrong
@@ -108,25 +119,31 @@ const FFMPEG_STDERR_TAIL_LINES = 40;
 
 type RecordOptions = {
   tourId: string;
+  /** --clip; set = the take is a clip, and the tour flags are rejected. */
+  clipId: string | undefined;
   beats: BeatRange | undefined;
   fps: number;
-  /** OUTPUT film resolution — the page viewport is size/dpr (see captureTour). */
+  /** OUTPUT film resolution — the page viewport is size/dpr (see captureTake). */
   size: { width: number; height: number };
   /** deviceScaleFactor for the page; --size stays the output resolution. */
   dpr: number;
   /** Explicit --out, used verbatim; absent = timestamped default (see main). */
   out: string | undefined;
   url: string;
+  /** --sim-time override; absent = resolved at take start (always pinned). */
+  simTime: Date | undefined;
 };
+
+type Take = { kind: 'tour'; id: TourId; beats: BeatRange } | { kind: 'clip'; id: ClipId };
 
 /**
  * The in-page flag the kick evaluate writes and the frame loop polls — see
  * the module header's "promise bridge" section for why this exists instead
  * of awaiting startTour inline or bridging via exposeFunction.
  */
-type TourStatus = { done: boolean; error: string | null };
+type TakeStatus = { done: boolean; error: string | null };
 
-type RecorderPageWindow = RecorderWindow & { __recorderTourStatus?: TourStatus };
+type RecorderPageWindow = RecorderWindow & { __recorderTakeStatus?: TakeStatus };
 
 /**
  * Bespoke argv loop rather than tools/utils/cli/args.ts: parseFlags is
@@ -137,18 +154,20 @@ type RecorderPageWindow = RecorderWindow & { __recorderTourStatus?: TourStatus }
 function parseArgs(argv: readonly string[]): RecordOptions {
   const options: RecordOptions = {
     tourId: 'grandTour',
+    clipId: undefined,
     beats: undefined,
     fps: 60,
     size: parseSize('3840x2160'),
     // Default 2, not 1: DOM captions are authored in CSS pixels, and a
     // designer judges them on a 2x display — see the didactic block at the
-    // viewport derivation in captureTour for the full proportion argument.
+    // viewport derivation in captureTake for the full proportion argument.
     dpr: 2,
     // No fixed default name: main derives a timestamped one via
     // defaultOutName so successive default-flag takes never overwrite each
     // other (buildFfmpegArgs passes -y). An explicit --out is used verbatim.
     out: undefined,
     url: 'http://localhost:5173',
+    simTime: undefined,
   };
   let positionalSeen = false;
   for (let i = 0; i < argv.length; i++) {
@@ -156,6 +175,8 @@ function parseArgs(argv: readonly string[]): RecordOptions {
     if (arg === undefined) continue;
     if (
       arg === '--beats' ||
+      arg === '--clip' ||
+      arg === '--sim-time' ||
       arg === '--fps' ||
       arg === '--size' ||
       arg === '--dpr' ||
@@ -165,6 +186,17 @@ function parseArgs(argv: readonly string[]): RecordOptions {
       const value = argv[++i];
       if (value === undefined) throw new Error(`${arg} requires a value`);
       if (arg === '--beats') options.beats = parseBeatRange(value);
+      if (arg === '--clip') options.clipId = value;
+      if (arg === '--sim-time') {
+        const parsed = Date.parse(value);
+        if (Number.isNaN(parsed)) {
+          throw new Error(
+            "--sim-time must be an ISO 8601 instant like '2026-07-31T12:00:00.000Z', " +
+              `got '${value}'`,
+          );
+        }
+        options.simTime = new Date(parsed);
+      }
       if (arg === '--fps') {
         options.fps = Number(value);
         if (!Number.isInteger(options.fps) || options.fps < 1) {
@@ -186,7 +218,8 @@ function parseArgs(argv: readonly string[]): RecordOptions {
     } else if (arg.startsWith('--')) {
       throw new Error(
         `unknown flag '${arg}' ` +
-          '(known: --beats, --fps, --size, --dpr, --out, --url; positional: tour id)',
+          '(known: --clip, --beats, --sim-time, --fps, --size, --dpr, --out, --url; ' +
+          'positional: tour id)',
       );
     } else if (!positionalSeen) {
       options.tourId = arg;
@@ -194,6 +227,15 @@ function parseArgs(argv: readonly string[]): RecordOptions {
     } else {
       throw new Error(`unexpected extra positional '${arg}' — only one tour id is accepted`);
     }
+  }
+  if (options.clipId !== undefined && positionalSeen) {
+    throw new Error(
+      `a take is either a tour or a clip, not both — got tour '${options.tourId}' ` +
+        `and --clip ${options.clipId}`,
+    );
+  }
+  if (options.clipId !== undefined && options.beats !== undefined) {
+    throw new Error('--beats windows a tour take; a clip take is played whole');
   }
   // The viewport is size/dpr in CSS pixels, and Playwright viewports are
   // integral — a 4K output divides cleanly by 2, but an odd custom size
@@ -331,7 +373,7 @@ function isNavigationInterruption(err: unknown): boolean {
  * caller unwrapped (the hook-timeout rewrite below is only for genuine
  * timeouts) so the retry loop can recognize it.
  */
-async function awaitCaptureReady(page: Page, url: string): Promise<void> {
+async function awaitCaptureReady(page: Page, captureUrl: string): Promise<void> {
   try {
     await page.waitForFunction(
       () => (window as unknown as RecorderWindow).__skymapRecorder !== undefined,
@@ -342,7 +384,7 @@ async function awaitCaptureReady(page: Page, url: string): Promise<void> {
     if (isNavigationInterruption(err)) throw err;
     throw new Error(
       `window.__skymapRecorder never appeared within ${HOOK_TIMEOUT_MS} ms at ` +
-        `${url}/?cinema — the hook installs only in cinema mode, on a build that ` +
+        `${captureUrl} — the hook installs only in cinema mode, on a build that ` +
         'includes installRecorderHook. Is the dev server running this branch?',
     );
   }
@@ -356,15 +398,17 @@ async function awaitCaptureReady(page: Page, url: string): Promise<void> {
 
 /**
  * The capture side of the pipeline, decoupled from encoding: boot the cinema
- * page in real time, pause virtual time, kick the tour, then step
+ * page in real time, pause virtual time, kick the take, then step
  * grant → captureScreenshot → writePng until the in-page status flag reports
- * the tour ended. Returns the number of frames captured. Encoding enters only
+ * the take ended. Returns the number of frames captured. Encoding enters only
  * through the injected writePng, so this function knows nothing about ffmpeg.
  */
-async function captureTour(
+async function captureTake(
   browser: Browser,
   options: RecordOptions,
-  range: BeatRange,
+  take: Take,
+  /** Composed by main (cinema gate + sim pin) so a bad --url fails before ffmpeg spawns. */
+  captureUrl: string,
   frameCap: number,
   writePng: (png: Buffer) => Promise<void>,
 ): Promise<number> {
@@ -406,17 +450,17 @@ async function captureTour(
     if (msg.type() === 'error') console.warn(`[page] console.error: ${msg.text()}`);
   });
 
-  console.log(`loading ${options.url}/?cinema ...`);
-  await page.goto(`${options.url}/?cinema`, { waitUntil: 'load' });
+  console.log(`loading ${captureUrl} ...`);
+  await page.goto(captureUrl, { waitUntil: 'load' });
 
   // Bounded retry around the boot wait: safe ONLY here, in real time before
   // the pause — the reloaded page reinstalls the hook and boots again, and no
-  // virtual-time or tour state exists yet to lose. Once virtual time is
+  // virtual-time or take state exists yet to lose. Once virtual time is
   // paused (below), a navigation destroys the virtual clock and the running
-  // tour with it, so the capture loop deliberately has no such tolerance.
+  // take with it, so the capture loop deliberately has no such tolerance.
   for (let navigations = 0; ; navigations++) {
     try {
-      await awaitCaptureReady(page, options.url);
+      await awaitCaptureReady(page, captureUrl);
       break;
     } catch (err) {
       if (!isNavigationInterruption(err) || navigations >= MAX_BOOT_NAVIGATIONS) throw err;
@@ -427,22 +471,26 @@ async function captureTour(
     }
   }
 
-  // Pause BEFORE dispatching the tour — see the module header's choreography
+  // Pause BEFORE kicking the take — see the module header's choreography
   // section. From here on, page time advances only by explicit grants.
   const session = await context.newCDPSession(page);
   await session.send('Emulation.setVirtualTimePolicy', { policy: 'pause' });
 
-  // Kick the tour under paused virtual time (finding 3: evaluate, never a
-  // locator action). The evaluate returns immediately — the startTour promise
-  // is deliberately NOT awaited; its outcome lands in __recorderTourStatus.
+  // Kick the take under paused virtual time (finding 3: evaluate, never a
+  // locator action). The evaluate returns immediately — the start promise is
+  // deliberately NOT awaited; its outcome lands in __recorderTakeStatus.
   await page.evaluate(
-    ({ id, from, to }) => {
+    ({ take: subject }) => {
       const w = window as unknown as RecorderPageWindow;
       const hook = w.__skymapRecorder;
       if (hook === undefined) throw new Error('__skymapRecorder missing');
-      const status: TourStatus = { done: false, error: null };
-      w.__recorderTourStatus = status;
-      hook.startTour(id as TourId, { from, to }).then(
+      const status: TakeStatus = { done: false, error: null };
+      w.__recorderTakeStatus = status;
+      const started =
+        subject.kind === 'tour'
+          ? hook.startTour(subject.id, subject.beats)
+          : hook.startClip(subject.id);
+      started.then(
         () => {
           status.done = true;
         },
@@ -452,7 +500,7 @@ async function captureTour(
         },
       );
     },
-    { id: options.tourId, from: range.from, to: range.to },
+    { take },
   );
 
   // A windowed take (from > 0) opens with the saga's reconstruction fold plus
@@ -463,7 +511,9 @@ async function captureTour(
   // film's first frame is the settled scene, not the reconstruction dissolve.
   // Full takes skip this: beat 0's fold equals the live baseline. The frame
   // cap below applies to CAPTURED frames only; these discards sit outside it.
-  if (range.from > 0) {
+  // A clip take has no analogue — its scene cues sit on its own timeline, so
+  // burning virtual time here would burn the clip's opening (tools/record/README.md).
+  if (take.kind === 'tour' && take.beats.from > 0) {
     const settleFrames = Math.ceil((FOLD_SETTLE_MS / 1000) * options.fps);
     console.log(`settling scene reconstruction: discarding ${settleFrames} frames`);
     for (let settle = 0; settle < settleFrames; settle++) {
@@ -478,21 +528,23 @@ async function captureTour(
   let frame = 0;
   while (true) {
     // Poll the bridge at the frame boundary (module header: deterministic
-    // stop frame). Checked BEFORE granting so a tour that ends inside grant N
+    // stop frame). Checked BEFORE granting so a take that ends inside grant N
     // yields exactly N captured frames, the last one showing the final pose.
     const status = await page.evaluate(
-      () => (window as unknown as RecorderPageWindow).__recorderTourStatus,
+      () => (window as unknown as RecorderPageWindow).__recorderTakeStatus,
     );
     if (status === undefined) {
-      throw new Error('__recorderTourStatus vanished — did the page reload mid-take?');
+      throw new Error('__recorderTakeStatus vanished — did the page reload mid-take?');
     }
-    if (status.error !== null) throw new Error(`startTour rejected in-page: ${status.error}`);
+    if (status.error !== null) {
+      throw new Error(`the take's start promise rejected in-page: ${status.error}`);
+    }
     if (status.done) break;
     if (frame >= frameCap) {
       throw new Error(
-        `aborting at frame ${frame}: cap ${frameCap} exceeded and the tour has not ended — ` +
-          'likely a beat stuck on a waitUntil readiness gate (catalog focus never loaded?). ' +
-          'Check the [page] warnings above.',
+        `aborting at frame ${frame}: cap ${frameCap} exceeded and '${take.kind} ${take.id}' ` +
+          'has not ended — likely something stuck on a waitUntil readiness gate (catalog focus ' +
+          'never loaded?). Check the [page] warnings above.',
       );
     }
     await grantAndAwaitExpiry(session, 1000 / options.fps, `frame ${frame}`);
@@ -560,28 +612,54 @@ async function ffprobeReport(
 async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
 
-  // Resolve the tour up front so an id typo fails before any process spawns.
-  const tour = (tourRegistry as Record<string, Tour>)[options.tourId];
-  if (tour === undefined) {
-    throw new Error(
-      `unknown tour '${options.tourId}' — known: ${Object.keys(tourRegistry).join(', ')}`,
-    );
-  }
-  const range: BeatRange = options.beats ?? { from: 0, to: tour.beats.length - 1 };
-  // The cap helper sums whatever slice it is given; slicing to the requested
-  // range here is the caller contract its docstring names. Beat indices are
-  // the 0-based '#' column of `npm run tour-length`.
-  const slicedBeats = tour.beats.slice(range.from, range.to + 1);
-  if (slicedBeats.length === 0) {
-    throw new Error(
-      `--beats ${range.from}..${range.to} selects no beats — '${tour.id}' has ` +
-        `${tour.beats.length} beats (indices 0..${tour.beats.length - 1}; ` +
-        "see 'npm run tour-length')",
-    );
-  }
-  const frameCap = tourFrameCap(slicedBeats, options.fps);
+  // The pin is the SIM clock, resolved once before anything spawns so the URL
+  // and the banner name the same instant (module header: two clocks).
+  const simTime = options.simTime ?? new Date();
+  const captureUrl = buildCaptureUrl({ base: options.url, simTime });
 
-  // Default output name = tour + size + fps + timestamp, so successive
+  // Resolve the subject up front so an id typo fails before any process spawns.
+  let take: Take;
+  let frameCap: number;
+  let subjectLine: string;
+  if (options.clipId !== undefined) {
+    const clip = (clipRegistry as Record<string, Clip>)[options.clipId];
+    if (clip === undefined) {
+      throw new Error(
+        `unknown clip '${options.clipId}' — known: ${Object.keys(clipRegistry).join(', ')}`,
+      );
+    }
+    take = { kind: 'clip', id: clip.id };
+    // The J2000 snapshot is the right source for the cap: only a clip's START
+    // POSE depends on the instant, its authored durations do not.
+    frameCap = clipFrameCap(clip.data, options.fps);
+    subjectLine = `clip '${clip.id}' — ${clip.label}`;
+  } else {
+    const tour = (tourRegistry as Record<string, Tour>)[options.tourId];
+    if (tour === undefined) {
+      throw new Error(
+        `unknown tour '${options.tourId}' — known: ${Object.keys(tourRegistry).join(', ')}`,
+      );
+    }
+    const beats: BeatRange = options.beats ?? { from: 0, to: tour.beats.length - 1 };
+    // The cap helper sums whatever slice it is given; slicing to the requested
+    // range here is the caller contract its docstring names. Beat indices are
+    // the 0-based '#' column of `npm run tour-length`.
+    const slicedBeats = tour.beats.slice(beats.from, beats.to + 1);
+    if (slicedBeats.length === 0) {
+      throw new Error(
+        `--beats ${beats.from}..${beats.to} selects no beats — '${tour.id}' has ` +
+          `${tour.beats.length} beats (indices 0..${tour.beats.length - 1}; ` +
+          "see 'npm run tour-length')",
+      );
+    }
+    take = { kind: 'tour', id: tour.id, beats };
+    frameCap = tourFrameCap(slicedBeats, options.fps);
+    subjectLine =
+      `tour '${tour.id}' beats ${beats.from}..${beats.to} ` +
+      `(${slicedBeats.length} of ${tour.beats.length})`;
+  }
+
+  // Default output name = take + size + fps + timestamp, so successive
   // default-flag takes (or a smoke against a different tour) never silently
   // overwrite a previous film — ffmpeg runs -y. An explicit --out is exact
   // and CAN overwrite: a fixed name is then the operator's stated intent.
@@ -589,21 +667,22 @@ async function main(): Promise<void> {
   const out =
     options.out ??
     defaultOutName({
-      tourId: tour.id,
+      takeId: take.id,
       width: options.size.width,
       height: options.size.height,
       fps: options.fps,
       now: new Date(),
     });
 
-  console.log(
-    `record-tour — '${tour.id}' beats ${range.from}..${range.to} ` +
-      `(${slicedBeats.length} of ${tour.beats.length})`,
-  );
+  console.log(`record — ${subjectLine}`);
   console.log(
     `  ${options.size.width}x${options.size.height} @ ${options.fps} fps ` +
       `(viewport ${options.size.width / options.dpr}x${options.size.height / options.dpr} ` +
       `@ dpr ${options.dpr}) → ${out}`,
+  );
+  console.log(
+    `  sim time pinned: ${simTime.toISOString()}  ` +
+      `(re-take with --sim-time ${simTime.toISOString()})`,
   );
 
   // ffmpeg first: a missing binary should fail in milliseconds, not after a
@@ -613,7 +692,7 @@ async function main(): Promise<void> {
   try {
     const browser = await launchChromium();
     try {
-      frames = await captureTour(browser, options, range, frameCap, (png) =>
+      frames = await captureTake(browser, options, take, captureUrl, frameCap, (png) =>
         writeFrame(ffmpeg.stdin, png),
       );
     } finally {

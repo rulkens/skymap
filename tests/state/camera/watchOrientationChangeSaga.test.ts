@@ -8,11 +8,20 @@ import {
   FRAME_TWEEN_MS,
 } from '../../../src/state/camera/watchOrientationChangeSaga';
 import { requestOrientationChange } from '../../../src/state/camera/orientationActions';
+import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
 import { setOrientation } from '../../../src/state/settings/settingsSlice';
-import { ORIENTATION_FRAME_QUATERNIONS } from '../../../src/data/orientation/orientationFrames';
+import {
+  ORIENTATION_FRAMES,
+  ORIENTATION_FRAME_QUATERNIONS,
+} from '../../../src/data/orientation/orientationFrames';
+import { yawPitchToDir } from '../../../src/utils/camera/yawPitchToDir';
+import { rotateVec3ByTightMat3 } from '../../../src/utils/math/rotateVec3ByTightMat3';
+import { mat3FromColumns } from '../../../src/utils/math/mat3FromColumns';
 import { cameraRoute, settingsRoute } from '../../../src/store/constants';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { Vec4 } from '../../../src/@types/math/Vec4';
+import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -29,6 +38,16 @@ const LIVE_QUAT: Vec4 = ((): Vec4 => {
   return [q[0] / n, q[1] / n, q[2] / n, q[3] / n];
 })();
 
+// A stand-in for "the live up-basis mid-slerp", used ONLY to compute what a
+// WRONG re-encode (one that reaches for the live basis instead of the outgoing
+// registry frame) would have produced — never fed into the saga itself, since
+// the fix reads `ORIENTATION_FRAMES[previous]`, not any live Mat3.
+const LIVE_BASIS: Mat3 = mat3FromColumns([0, 1, 0], [0, 0, 1], [1, 0, 0]);
+
+function worldEyeDir(pose: CameraPose, basis: Mat3): Vec3 {
+  return rotateVec3ByTightMat3(yawPitchToDir(pose.yaw, pose.pitch), basis);
+}
+
 describe('watchOrientationChangeSaga', () => {
   let store: ReturnType<typeof build>;
   let cameraRuntime: () => LiveCameraRuntime | null;
@@ -40,7 +59,7 @@ describe('watchOrientationChangeSaga', () => {
       middleware: (getDefault) => getDefault().concat(middleware),
     });
     middleware.run(watchOrientationChangeSaga);
-    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, frameBasisQuat: LIVE_QUAT });
+    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, upBasisQuat: LIVE_QUAT });
     middleware.setContext({ cameraRuntime: () => cameraRuntime() });
     return created;
   }
@@ -73,6 +92,62 @@ describe('watchOrientationChangeSaga', () => {
     const frameTween = store.getState()[cameraRoute].frameTween;
     expect(frameTween!.fromQuat).toEqual(LIVE_QUAT);
     expect(frameTween!.fromQuat).not.toEqual(ORIENTATION_FRAME_QUATERNIONS.galactic);
+  });
+
+  it('a steady switch commits a pose whose eye position is unchanged', async () => {
+    const from: CameraPose = { target: [1, 2, 3], yaw: 0.4, pitch: -0.2, distance: 7 };
+    store.dispatch(commitCameraPose(from));
+    // Default orientation (see `initialState.ts`) is 'ecliptic' — no prior
+    // switch, so this is the outgoing registry frame `base` actually lives in.
+    const expectedDir = worldEyeDir(from, ORIENTATION_FRAMES.ecliptic);
+
+    store.dispatch(requestOrientationChange('galactic'));
+    await flush();
+
+    const committed = store.getState()[cameraRoute].base;
+    const actualDir = worldEyeDir(committed, ORIENTATION_FRAMES.galactic);
+    expect(actualDir[0]).toBeCloseTo(expectedDir[0], 6);
+    expect(actualDir[1]).toBeCloseTo(expectedDir[1], 6);
+    expect(actualDir[2]).toBeCloseTo(expectedDir[2], 6);
+  });
+
+  it('a switch fired mid-roll re-expresses from the PREVIOUS committed frame, not the live up-basis', async () => {
+    // First switch (ecliptic default -> galactic): steady, lands `base` in the
+    // galactic basis and `settings.orientation` at 'galactic'.
+    const from: CameraPose = { target: [0, 0, 0], yaw: 1.1, pitch: 0.3, distance: 2 };
+    store.dispatch(commitCameraPose(from));
+    store.dispatch(requestOrientationChange('galactic'));
+    await flush();
+    const afterFirstSwitch = store.getState()[cameraRoute].base;
+
+    // Simulate the up-basis still mid-slerp toward galactic when a SECOND
+    // switch fires: `cameraRuntime` reports a live basis that is neither the
+    // now-committed frame (galactic) nor the next destination (supergalactic)
+    // — the shape a real interrupted roll produces. This must NOT be what the
+    // re-encode reads; if it were, the eye would jump (see task-6-report.md).
+    expect(LIVE_BASIS).not.toEqual(ORIENTATION_FRAMES.galactic);
+    expect(LIVE_BASIS).not.toEqual(ORIENTATION_FRAMES.supergalactic);
+    cameraRuntime = () => ({ from: afterFirstSwitch, fovYRad: 0.8, upBasisQuat: LIVE_QUAT });
+
+    const correctDir = worldEyeDir(afterFirstSwitch, ORIENTATION_FRAMES.galactic);
+    const wrongDir = worldEyeDir(afterFirstSwitch, LIVE_BASIS);
+    // Regression guard: the two candidate `from` bases must actually decode
+    // differently, or this test can't tell a correct implementation (reads the
+    // committed frame) from a wrong one (reads the live up-basis) below.
+    const divergesFromLiveBasis =
+      Math.abs(correctDir[0] - wrongDir[0]) > 1e-6 ||
+      Math.abs(correctDir[1] - wrongDir[1]) > 1e-6 ||
+      Math.abs(correctDir[2] - wrongDir[2]) > 1e-6;
+    expect(divergesFromLiveBasis).toBe(true);
+
+    store.dispatch(requestOrientationChange('supergalactic'));
+    await flush();
+
+    const committed = store.getState()[cameraRoute].base;
+    const actualDir = worldEyeDir(committed, ORIENTATION_FRAMES.supergalactic);
+    expect(actualDir[0]).toBeCloseTo(correctDir[0], 6);
+    expect(actualDir[1]).toBeCloseTo(correctDir[1], 6);
+    expect(actualDir[2]).toBeCloseTo(correctDir[2], 6);
   });
 
   it('a boot setOrientation never starts a frameTween', async () => {

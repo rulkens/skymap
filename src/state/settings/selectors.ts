@@ -221,6 +221,9 @@ export const selectShowPickBuffer = (state: RootState): boolean =>
 export const selectShowDiskRadiusRing = (state: RootState): boolean =>
   selectSettings(state).debug.showDiskRadiusRing;
 
+export const selectShowOrbitTrailImpostor = (state: RootState): boolean =>
+  selectSettings(state).debug.showOrbitTrailImpostor;
+
 export const selectDisabledPasses = (state: RootState): Record<string, boolean> =>
   selectSettings(state).debug.disabledPasses;
 

@@ -1,9 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { rankPaletteMatches } from '../../../../src/components/CommandPalette/utils/rankPaletteMatches';
+import { focusIdForRow } from '../../../../src/components/CommandPalette/utils/focusIdForRow';
+import { resolveFocusId } from '../../../../src/services/url/resolveFocusId';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { Source } from '../../../../src/data/sources';
 import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../../../src/@types/engine/AliasIndexEntry';
+import type { ResolveDeps } from '../../../../src/@types/engine/ResolveDeps';
 import type { StructureSearchEntry } from '../../../../src/@types/engine/StructureSearchEntry';
 
 const M31: FamousGalaxyMetaEntry = {
@@ -19,6 +22,15 @@ const COMA: StructureSearchEntry = {
   category: 'cluster',
   abell: 'A1656',
   description: 'X-ray cluster · z = 0.023',
+};
+
+// The body branch of the focus-id decoder reads SCENE_BODIES (a static import)
+// and nothing else, so an all-empty deps object is enough to resolve one.
+const EMPTY_RESOLVE_DEPS: ResolveDeps = {
+  catalogs: { get: () => undefined },
+  famousGalaxiesMeta: [],
+  structures: { byId: () => null },
+  stars: { current: () => null },
 };
 
 function alias(names: readonly string[], localIdx: number): AliasIndexEntry {
@@ -138,5 +150,26 @@ describe('rankPaletteMatches — scene-body rows', () => {
     const rows = rankPaletteMatches([M31], [], [], 'Alpha Canis Majoris');
     const hit = rows.find((r) => r.kind === 'body');
     expect(hit?.kind === 'body' && hit.body.id).toBe('sirius');
+  });
+
+  it('finds Sgr A* by its Sagittarius alias', () => {
+    // Sgr A* has no famous-star row, so before the alias lookup widened it was
+    // scored on its label 'Sgr A*' alone and this query matched nothing — its id
+    // ('sgr-a-star') does not contain 'sagittarius' either.
+    const rows = rankPaletteMatches([M31], [], [], 'sagittarius');
+    expect(rows.some((r) => r.kind === 'body' && r.body.id === 'sgr-a-star')).toBe(true);
+  });
+
+  it('resolves the Sgr A* row to a body focus id', () => {
+    // The palette only names the thing; the decoder returns null for any id
+    // absent from SCENE_BODIES, so this is what a registration gap would break.
+    const rows = rankPaletteMatches([M31], [], [], 'sagittarius');
+    const row = rows.find((r) => r.kind === 'body' && r.body.id === 'sgr-a-star')!;
+    const focusId = focusIdForRow(row);
+    expect(focusId).toBe('body-sgr-a-star');
+    expect(resolveFocusId(focusId, EMPTY_RESOLVE_DEPS)).toEqual({
+      type: 'body',
+      id: 'sgr-a-star',
+    });
   });
 });

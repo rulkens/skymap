@@ -264,9 +264,10 @@ vi.mock('../../../../src/services/gpu/renderers/bodies/cloudShellRenderer', () =
 vi.mock('../../../../src/services/gpu/renderers/atmosphere/atmosphereShellRenderer', () => ({
   createAtmosphereShellRenderer: vi.fn(() => makeStub('atmosphereShellRenderer')),
 }));
-// Partial mock: planetsLayer.ts imports the real MAX_PLANETS/INSTANCE_FLOATS
-// constants at module scope to size its staging buffer, so only the factory
-// is stubbed — passing those constants through keeps that sizing real.
+// Partial mock: planetsLayer.ts imports the real INSTANCE_FLOATS constant at
+// module scope to size its staging buffer (against SCENE_PLANETS.length —
+// no fixed cap), so only the factory is stubbed — passing INSTANCE_FLOATS
+// through keeps that sizing real.
 vi.mock('../../../../src/services/gpu/renderers/bodies/planetRenderer', async (importOriginal) => ({
   ...(await importOriginal<
     typeof import('../../../../src/services/gpu/renderers/bodies/planetRenderer')
@@ -311,8 +312,9 @@ vi.mock('../../../../src/services/gpu/renderers/bodies/bodyPickRenderer', () => 
 }));
 // Partial mock, same rationale as planetRenderer's above: orbitTrailsLayer.ts
 // (loaded transitively via the frame program's registry import) reads the
-// real MAX_ORBITS / INSTANCE_FLOATS constants at module scope to size its
-// staging buffer, so only the factory is stubbed.
+// real INSTANCE_FLOATS constant at module scope to size its staging buffer
+// (against ORBITAL_ELEMENTS.length — no fixed cap), so only the factory is
+// stubbed.
 vi.mock(
   '../../../../src/services/gpu/renderers/bodies/orbitTrailRenderer',
   async (importOriginal) => ({
@@ -364,7 +366,6 @@ import { createPlanetRenderer } from '../../../../src/services/gpu/renderers/bod
 // partition for setStars; the seeded planet list drives planetsLayer), so the
 // state fixture carries the real construction-time seeds.
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
-import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 
 /**
  * Build a minimal `EngineState` covering the slices `initGpu` reads and
@@ -545,8 +546,11 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     const uploaded = stubs.starPointRenderer!.setStars.mock.calls[0]![0] as ReadonlyArray<{
       id: string;
     }>;
-    expect(uploaded).toHaveLength(SCENE_STARS.length);
-    expect(uploaded.map((star) => star.id)).toContain('sun');
+    // Compared against the SEEDED list rather than one seed table, so the claim
+    // stays "the whole star set" as more tables land in the store.
+    const seededIds = state.data.bodies.stars.map((star) => star.id);
+    expect(uploaded.map((star) => star.id)).toEqual(seededIds);
+    expect(seededIds).toContain('sun');
     // Both label renderers come from the same createLabelRenderer factory,
     // so index its call results ordinally: call 0 built the main
     // `labelRenderer`, call 1 the foreground caption renderer.  Asserting

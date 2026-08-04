@@ -8,11 +8,11 @@
  * neighbourhood — something to aim at.
  *
  * Sourced from the full seed set (`SCENE_EARTH` + `SCENE_STARS` +
- * `SCENE_PLANETS`, 28 bodies), each tinted by its own authored colour: a
- * star's spectral-class `color`, a planet's `albedo`, and a fixed blue for
- * Earth (whose record carries a texture, not a colour). Deriving the tints
- * from the body records keeps this file free of a parallel colour table
- * that would drift from the seeds.
+ * `SCENE_PLANETS` + `SGR_A_STAR`), each tinted by its own authored colour: a
+ * star's spectral-class `color`, a planet's `albedo`, and fixed tints for the
+ * two records that carry no colour (Earth, which has a texture instead, and
+ * Sgr A*, which has no light). Deriving the tints from the body records keeps
+ * this file free of a parallel colour table that would drift from the seeds.
  *
  * ### Why the foreground projection, not the main one
  *
@@ -41,6 +41,7 @@ import type { ForegroundCaption } from './foregroundCaption';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import { SCENE_STARS } from '../../../data/bodies/sceneStars';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
+import { SGR_A_STAR } from '../../../data/bodies/sceneSgrAStar';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { SUN_ENTRY } from '../../../data/sources/sun';
@@ -73,6 +74,14 @@ export const FOREGROUND_LABEL_CAPACITY =
  * the captions have always used.
  */
 const EARTH_TINT: Readonly<Vec3> = [0.5, 0.72, 1];
+
+/**
+ * Sgr A*'s caption tint. An `AnchorPointBody` carries no photometry — there is
+ * no light to take a colour from — so this is authored: a warm accretion amber,
+ * distinct from every blue-to-white star tint so the Galactic Centre reads as a
+ * landmark rather than one more name in the star map.
+ */
+const SGR_A_STAR_TINT: Readonly<Vec3> = [1, 0.66, 0.32];
 
 /**
  * Vertical stagger so captions of bodies that share a sub-pixel screen spot
@@ -111,11 +120,9 @@ export const SCENE_STAR_LABEL_IDS: ReadonlySet<string> = new Set(
 );
 
 /**
- * Build the common label shape for one body. The position is the caller's —
- * an orbital body's derived snapshot position, a star's record position — so
- * this reads it as a parameter rather than off `body.positionMpc` (the baked
- * record field the orbital bodies no longer position from). The colour is the
- * caller's per-type derivation (spectral colour / albedo / Earth blue), widened
+ * Build the common label shape for one body. The position is the caller's — no
+ * `SceneBody` arm carries one — so this reads it as a parameter. The colour is
+ * the caller's per-type derivation (spectral colour / albedo / Earth blue), widened
  * to straight RGBA at full alpha; `kind` is the caller's structural knowledge of
  * which seed table the body came from.
  */
@@ -159,13 +166,13 @@ function bodyLabel(
  * Build one name label per seeded scene body, positioned relative to
  * `RENDER_ORIGIN_MPC` for the foreground view-projection.
  *
- * Earth + planets read their position from the caller's `bodyStates` snapshot
- * (the per-frame `deriveBodyStates(simDays)` map), so their captions FOLLOW the
- * bodies as the sim clock advances. The caller re-invokes this only when the
- * snapshot actually changes — a paused clock returns the same map by reference,
- * so a fresh instant is the only thing that rebuilds the handful of captions
- * (see `foregroundLabelsLayer`'s memo). Stars are not orbital bodies, so they
- * keep their authored record position regardless of the instant.
+ * Every body reads its position from the caller's `bodyStates` snapshot (the
+ * per-frame `deriveBodyStates(simDays)` map), so Earth's and the planets'
+ * captions FOLLOW them as the sim clock advances; a star's anchor is authored,
+ * so its caption sits still at every instant. The caller re-invokes this only
+ * when the snapshot actually changes — a paused clock returns the same map by
+ * reference, so a fresh instant is the only thing that rebuilds the captions
+ * (see `foregroundLabelsLayer`'s memo).
  */
 export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): ForegroundCaption[] {
   return [
@@ -175,13 +182,20 @@ export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): For
     // label gate, and it must out-rank every other caption in a declutter
     // collision (CAPTION_PRIORITY). The seed table carries no per-star source
     // tag, so the row's `id` is the lookup key that tells the two apart.
-    // Stars sit at their authored record position (no orbital element), so they
-    // read `star.positionMpc` directly rather than the snapshot.
     ...SCENE_STARS.map((star) =>
-      bodyLabel(star, star.positionMpc, star.color, star.id === SUN_ENTRY.id ? 'sun' : 'star'),
+      bodyLabel(
+        star,
+        bodyStates.get(star.id)!.positionMpc,
+        star.color,
+        star.id === SUN_ENTRY.id ? 'sun' : 'star',
+      ),
     ),
     ...SCENE_PLANETS.map((planet) =>
       bodyLabel(planet, bodyStates.get(planet.id)!.positionMpc, planet.albedo, 'planet'),
     ),
+    // Sgr A* draws no geometry, so this caption is its ENTIRE on-screen
+    // presence: omitted here it is invisible with nothing to diagnose, which is
+    // why it is emitted from the seed record rather than from a drawn set.
+    bodyLabel(SGR_A_STAR, bodyStates.get(SGR_A_STAR.id)!.positionMpc, SGR_A_STAR_TINT, 'sgrAStar'),
   ];
 }

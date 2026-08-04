@@ -14,9 +14,9 @@
  * 10+ kpc the same field becomes the Milky Way's diffuse SURFACE brightness —
  * millions of faint dots whose summed light the un-adapting monitor renders far
  * too dim unless the whole field is lifted. The user eye-tunes this need at
- * THREE anchors: a baseline exposure (`nearX`, default 15x) at solar-system
- * scale (1 pc), a middle one (`midX`, default 57x) at the intermediate few-kpc
- * scale (3 kpc), and a larger one (`farX`, default 70x) at whole-galaxy scale
+ * THREE anchors: a baseline exposure (`nearX`, default 6x) at solar-system
+ * scale (1 pc), a middle one (`midX`, default 23x) at the intermediate few-kpc
+ * scale (3 kpc), and a larger one (`farX`, default 28x) at whole-galaxy scale
  * (10 kpc). This ramp interpolates piecewise between adjacent anchors — all
  * three live, so they can be dialled against the running renderer as the star
  * bins' local flux changes.
@@ -24,7 +24,7 @@
  * ── Why a middle anchor: the two ends were right, the middle wasn't ──────────
  *
  * The near and far anchors alone leave the intermediate zone (~1–6 kpc) with no
- * lever: `farX` must stay high (~70) for whole-galaxy legibility at ≥10 kpc, but
+ * lever: `farX` must stay high (~28) for whole-galaxy legibility at ≥10 kpc, but
  * a single log-linear ramp forced by that far value over-exposes the dense
  * central clump on the way there. A third anchor at 3 kpc splits the ramp into
  * two independent segments (near→mid, mid→far), so pulling `midX` down darkens
@@ -42,14 +42,14 @@
  * ── Why the near anchor is a DIVISION, not a return of 1.0 ──────────────────
  *
  * The near-anchor exposure is already folded into STAR_FLUX_EXPOSURE in the
- * shader (SHADER_BAKED_NEAR_EXPOSURE = 15). So at the SHIPPED near anchor the
+ * shader (SHADER_BAKED_NEAR_EXPOSURE = 6). So at the SHIPPED near anchor the
  * ramp returns exactly 1.0 — the shader carries the whole near exposure. But the
- * moment the user moves `nearX` off 15, the CPU ramp must hand the DIFFERENCE
+ * moment the user moves `nearX` off 6, the CPU ramp must hand the DIFFERENCE
  * back out: its near-end multiplier is `nearX / SHADER_BAKED_NEAR_EXPOSURE`, so
- * `nearX = 30` doubles the near end (the shader still bakes 15, the ramp lifts
- * the remaining 2×). Likewise the far end returns `farX / 15`. At the defaults
- * (15, 70) this is bit-for-bit the previous fixed ramp: 1.0 at/inside the near
- * anchor rising to RAMP_FAR_SCALE = 70/15 at/beyond the far anchor.
+ * `nearX = 12` doubles the near end (the shader still bakes 6, the ramp lifts
+ * the remaining 2×). Likewise the far end returns `farX / 6`. At the defaults
+ * (6, 28) this is bit-for-bit the previous fixed ramp: 1.0 at/inside the near
+ * anchor rising to RAMP_FAR_SCALE = 28/6 at/beyond the far anchor.
  *
  * ── The alternative considered, and why not ────────────────────────────────
  *
@@ -74,15 +74,15 @@
  */
 
 // The near-anchor exposure the SHADER already bakes into STAR_FLUX_EXPOSURE
-// (6000 = 400 × 15 in `shaders/lib/starPhotometry.wesl`). The CPU ramp divides
+// (2400 = 400 × 6 in `shaders/lib/starPhotometry.wesl`). The CPU ramp divides
 // the live `nearX` by this baked constant so that at the shipped default
-// (nearX = 15) the near end returns exactly 1.0 — the shader carries the whole
+// (nearX = 6) the near end returns exactly 1.0 — the shader carries the whole
 // near exposure — and a user-dialled nearX hands the DIFFERENCE back out.
-export const SHADER_BAKED_NEAR_EXPOSURE = 15;
+export const SHADER_BAKED_NEAR_EXPOSURE = 6;
 
 // Near anchor: 1 pc in Mpc. At or inside this the camera is effectively AT the
 // starfield (solar-system scale); the ramp holds at its near-end multiplier
-// (`nearX / SHADER_BAKED_NEAR_EXPOSURE`, = 1.0 at the default nearX = 15).
+// (`nearX / SHADER_BAKED_NEAR_EXPOSURE`, = 1.0 at the default nearX = 6).
 export const RAMP_NEAR_MPC = 1e-6;
 
 // Middle anchor: 3 kpc in Mpc — the intermediate zone where a single near→far
@@ -96,15 +96,15 @@ export const RAMP_MID_MPC = 3e-3;
 export const RAMP_FAR_MPC = 1e-2;
 
 // The DEFAULT far exposure relative to the baked near baseline: the ratio of the
-// two shipped anchors, 70x (far) over 15x (near). This is what the ramp returns
+// two shipped anchors, 28x (far) over 6x (near). This is what the ramp returns
 // at/beyond the far anchor when `farX` is left at its default; retained as the
 // regression constant the ramp's tests pin the default behaviour against.
-export const RAMP_FAR_SCALE = 70 / 15;
+export const RAMP_FAR_SCALE = 28 / 6;
 
 /**
  * The display-exposure multiplier at a given camera distance (Mpc). `nearX` /
  * `midX` / `farX` are the ABSOLUTE eye-tuned exposures at the three distance
- * anchors (defaults 15 / 57 / 70); internally the ramp works in multiples of the
+ * anchors (defaults 6 / 23 / 28); internally the ramp works in multiples of the
  * shader-baked near exposure, so it returns `nearX / SHADER_BAKED_NEAR_EXPOSURE`
  * at/inside the near anchor, `farX / SHADER_BAKED_NEAR_EXPOSURE` at/beyond the
  * far anchor, and a PIECEWISE geometric (log-exposure-vs-log-distance linear)
@@ -115,11 +115,11 @@ export const RAMP_FAR_SCALE = 70 / 15;
 export function starExposureRamp(
   camDistMpc: number,
   nearX: number = SHADER_BAKED_NEAR_EXPOSURE,
-  midX: number = 57,
-  farX: number = 70,
+  midX: number = 23,
+  farX: number = 28,
 ): number {
   // The anchor multipliers, each expressed relative to the shader-baked near
-  // exposure so the shipped default (15) returns 1.0 at the near end.
+  // exposure so the shipped default (6) returns 1.0 at the near end.
   const nearScale = nearX / SHADER_BAKED_NEAR_EXPOSURE;
   const midScale = midX / SHADER_BAKED_NEAR_EXPOSURE;
   if (camDistMpc <= RAMP_NEAR_MPC) return nearScale;

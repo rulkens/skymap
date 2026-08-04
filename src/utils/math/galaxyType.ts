@@ -94,6 +94,8 @@ export function galaxyType(source: SourceType, mags: GalaxyTypeMags): GalaxyType
     case Source.Planet:
     case Source.Earth:
     case Source.Sun:
+    case Source.SgrAStar:
+    case Source.SStar:
     case Source.GaiaStars:
     case Source.Constellations:
       // Non-galaxy catalog sources have no galaxy type. Most (structure

@@ -485,6 +485,24 @@ export function lookAtId(
 }
 
 /**
+ * aimAlong — swing the view to face a FIXED WORLD-space direction, resolved
+ * through whichever orientation frame is live at clip start
+ * (`orbitAnglesLookingAlong`, same mechanism `lookAtId` uses).
+ *
+ * Unlike `lookAtId`, the bearing is NOT measured from the live orbit
+ * target — there is no subject to look up, so `forward` alone determines the
+ * aim. That makes it the right primitive for a pose that must be
+ * reproducible regardless of where the camera happened to be before the clip
+ * started (a cold-open snap, or a return-to-opening-framing beat): `lookAtId`
+ * would silently depend on that unknown prior pose, `aimAlong` does not.
+ *
+ * `over: 0` is a legal snap, same as `aimAt`.
+ */
+export function aimAlong(forward: Vec3, over: number, ease?: Ease): Effect & { kind: 'aimAlong' } {
+  return { kind: 'aimAlong', forward, over, ease: ease ?? 'easeInOutCubic' };
+}
+
+/**
  * strafeId — slide the camera rig sideways relative to the bearing toward the
  * subject identified by `id`, WITHOUT turning. The lateral tracking move.
  *
@@ -512,6 +530,35 @@ export function strafeId(
   ease?: Ease,
 ): FocusBoundEffect & { kind: 'strafeId' } {
   return { kind: 'strafeId', id, byDeg, over, ease: ease ?? 'easeInOutCubic' };
+}
+
+/**
+ * spinToId — orbit the yaw channel until it faces the structure or galaxy
+ * identified by `id`, touching only yaw (pitch/target/distance untouched).
+ *
+ * The bearing-aware counterpart to a raw `spin('yaw', { by, ... })`: instead
+ * of an author-supplied radian delta pinned to one orientation frame,
+ * `resolveClipFoci` derives `by` from the LIVE yaw to the subject's world
+ * sightline at resolve time, through whichever frame basis is steady at that
+ * clip boundary. The same authored effect therefore lands on the same
+ * subject regardless of which frame is active — a bearing is a sightline,
+ * not a frame-local number.
+ *
+ * `opts.turns` (default 0) adds extra full revolutions on top of the
+ * shortest-arc delta: negative takes the long way round, the idiom
+ * `approachM31.ts`'s `NET_YAW_RAD` established with a literal `- Math.PI * 2`.
+ */
+export function spinToId(
+  id: FocusId,
+  opts: { over: number; turns?: number; ease?: Ease },
+): FocusBoundEffect & { kind: 'spinToId' } {
+  return {
+    kind: 'spinToId',
+    id,
+    over: opts.over,
+    ease: opts.ease ?? 'easeInOutCubic',
+    ...(opts.turns !== undefined ? { turns: opts.turns } : {}),
+  };
 }
 
 // ---------------------------------------------------------------------------

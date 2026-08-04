@@ -62,9 +62,10 @@
  *   - A per-slot BUFFER POOL (one buffer + bind group per draw, grown on demand)
  *     also works and grows safely mid-pass, but costs N buffers + N bind groups;
  *     dynamic offsets need exactly ONE buffer + ONE bind group. The sphere-draw
- *     count is small and statically bounded (Earth 1 + planets <=`MAX_PLANETS` +
- *     scene-star spheres <=`SCENE_STARS.length`, well under `MAX_SPHERE_DRAWS`),
- *     so the single fixed-size buffer never needs to grow — the pool's only
+ *     count in practice stays well under `MAX_SPHERE_DRAWS` (Earth + the seeded
+ *     planets + however many scene-star spheres are RESOLVED this frame — most
+ *     of the roster stays point billboards via `drawPoints`), so the single
+ *     fixed-size buffer never needs to grow — the pool's only
  *     advantage does not arise here.
  *
  * `drawPoints` is instanced (per-instance posRelCamMpc + packedId baked into an
@@ -137,12 +138,14 @@ const SPHERE_CAM_POS_LOCAL_F32_INDEX = 16;
 const SPHERE_PACKED_ID_U32_INDEX = 19;
 
 /**
- * Upper bound on sphere pick draws recorded into one pass. The real bound is
- * Earth (1) + planets (<=`MAX_PLANETS` = 24) + resolved scene-star spheres
- * (<=`SCENE_STARS.length` ~= 25) ~= 50; 64 leaves headroom so the fixed-size
- * dynamic-offset buffer never needs to grow. A hypothetical over-count draws the
- * first 64 and silently drops the tail (a dropped-tail pick beats a GPU
- * validation error) — but the seed roster keeps the count well under the cap.
+ * Upper bound on sphere pick draws recorded into one pass. Earth (1) +
+ * `SCENE_PLANETS` (21 today) leave comfortable headroom under this cap, but
+ * `SCENE_STARS.length` (119, the full famous-star roster — not "≈25": only a
+ * FEW of those resolve to sphere-pick draws at once, the rest stay point
+ * billboards via `drawPoints`) means the real bound is data-dependent, not a
+ * fixed sum. A hypothetical over-count draws the first `MAX_SPHERE_DRAWS` and
+ * silently drops the tail (a dropped-tail pick beats a GPU validation error)
+ * — raise this constant if a future roster ever approaches it.
  */
 const MAX_SPHERE_DRAWS = 64;
 

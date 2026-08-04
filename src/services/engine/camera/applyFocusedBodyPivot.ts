@@ -12,6 +12,11 @@
  * target). clip and tween keyframe a full path including the target, so they
  * opt out and keep their own target term.
  *
+ * Only a MOVING focus is pinned (`bodyMovesThisFrame`). A static focus — the
+ * Sun, a famous star — has a snapshot position but no orbit to chase, so
+ * gating on presence instead would hand it the pin, and with it `panOffset`,
+ * for a body that never needed re-centring.
+ *
  * The pin is IDEMPOTENT and ABSOLUTE — it SETS the target to `bodyPosition +
  * panOffset`, never adds a delta to the existing target — so it can never
  * double-apply across a commit-on-edge boundary. A one-frame-stale `base.target`
@@ -27,6 +32,7 @@
  */
 
 import { liveBodyPosition } from './liveBodyPosition';
+import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { Vec3 } from '../../../@types/math/Vec3';
@@ -39,7 +45,9 @@ export function applyFocusedBodyPivot(
   panOffset: Vec3,
 ): CameraPose {
   if (!pivotsOnFocusedBody) return pose;
+  if (!bodyMovesThisFrame(focusRow)) return pose;
   const pivot = liveBodyPosition(focusRow, simDays);
+  // A moving body is in the snapshot by construction; the guard is the narrowing.
   if (pivot === null) return pose;
   return {
     target: [pivot[0] + panOffset[0], pivot[1] + panOffset[1], pivot[2] + panOffset[2]],

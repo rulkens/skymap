@@ -35,7 +35,12 @@ function camAtPcVec(pc: Readonly<Vec3>): Vec3 {
 }
 
 function makeCtx(camPos: Readonly<Vec3>, nowMs = 0): ReadyFrameContext {
-  return { drawCamPos: camPos, nowMs } as unknown as ReadyFrameContext;
+  return {
+    drawCamPos: camPos,
+    nowMs,
+    canvasSize: { width: 1280, height: 720 },
+    renderTargets: { specs: [{ id: 'star-aggregates', scale: 2 }] },
+  } as unknown as ReadyFrameContext;
 }
 
 /** A dense level-0 leaf (3 stars) under a level-1 aggregate root. */
@@ -116,6 +121,20 @@ describe('starAggregatesLayer', () => {
     expect(args.drawCount).toBeGreaterThan(0);
     // The flat arrays are reused grow-only buffers, so scan only `[0, drawCount)`.
     expect(args.isAggregate.subarray(0, args.drawCount).every((v) => v === 1)).toBe(true);
+  });
+
+  it('sizes sprites against the half-res offscreen, not the canvas', () => {
+    const renderer = makeRenderer([{ source: Source.GaiaStars, catalog: makeAggregateCatalog() }]);
+    const camPos = camAtPcVec(FAR_PC);
+    const view = makeNear0View(camPos);
+    starAggregatesLayer.draw(PASS_STUB, view, makeCtx(camPos), makeState(renderer));
+
+    const args = renderer.draw.mock.calls[0]![1];
+    expect(args.viewportPx).toEqual([640, 360]);
+    // The SlabView is one object shared by every layer in the render step;
+    // this layer must copy it, not mutate it, or siblings drawing after it
+    // would inherit the halved viewport.
+    expect(view.viewportPx).toEqual([1280, 720]);
   });
 
   it('is a no-op when the renderer handle is null (pre-bootstrap)', () => {

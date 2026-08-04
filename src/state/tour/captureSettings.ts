@@ -21,6 +21,13 @@
  * user), so a whole-cluster capture is what keeps a body's dot and its
  * caption restoring in lockstep rather than one outliving the other.
  *
+ * `orientation` does NOT ride along, despite being captured at the same time
+ * `captureScene` calls this function: it is a bare scalar, not one of the ten
+ * clusters, and a tour's `frameTo` cue can switch it mid-run through the
+ * SAME `mergeSnapshot` write path the clusters here restore through — see
+ * `SceneSnapshot`'s header for why that makes it unsafe to fold into this
+ * type. `captureScene` captures it separately, alongside `focus`.
+ *
  * Reads `RootState`, not `EngineState`: this is a pure store read with no
  * engine dependency, so it lives in `state/tour/` beside `captureScene`
  * (its only caller) rather than in the engine wiring layer.

@@ -63,7 +63,7 @@ const EMPTY_DEPS: ResolveDeps = {
 const RUNTIME: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 },
   fovYRad: 0.8,
-  frameBasisQuat: [0, 0, 0, 1],
+  upBasisQuat: [0, 0, 0, 1],
 };
 
 function buildHarness(seam: PlayClipStub, resolveDeps: ResolveDeps = EMPTY_DEPS) {

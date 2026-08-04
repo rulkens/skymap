@@ -17,6 +17,7 @@ import type { StructureInfo } from '../../../src/@types/data/structure/Structure
 // (focus keeps the user's orientation; only target + distance change).
 const FROM: CameraPose = { target: [9, 9, 9], yaw: 1.23, pitch: -0.4, distance: 5 };
 const FOVY = 0.8;
+const FRAME = 'galactic';
 
 const galaxyRow = (over: Partial<GalaxyRow> = {}): GalaxyRow =>
   makeGalaxyRow({
@@ -42,15 +43,21 @@ const structureRow = (over: Partial<StructureInfo> = {}): StructureInfo =>
   }) as StructureInfo;
 
 describe('focusTweenDescriptor', () => {
-  it('carries the live from-pose, FOCUS_TWEEN_MS, and easeOutCubic on every arm', () => {
-    const d = focusTweenDescriptor(galaxyRow(), FROM, FOVY);
+  it('carries the live from-pose, FOCUS_TWEEN_MS, easeOutCubic, and the caller-stamped frame', () => {
+    const d = focusTweenDescriptor(galaxyRow(), FROM, FOVY, FRAME);
     expect(d.from).toBe(FROM);
     expect(d.durationMs).toBe(FOCUS_TWEEN_MS);
     expect(d.easing).toBe('easeOutCubic');
+    expect(d.frame).toBe(FRAME);
   });
 
   it('a galaxy row targets its position and frames on its diameter, keeping yaw/pitch', () => {
-    const d = focusTweenDescriptor(galaxyRow({ x: 1, y: 2, z: 3, diameterKpc: 40 }), FROM, FOVY);
+    const d = focusTweenDescriptor(
+      galaxyRow({ x: 1, y: 2, z: 3, diameterKpc: 40 }),
+      FROM,
+      FOVY,
+      FRAME,
+    );
     expect(d.to.target).toEqual([1, 2, 3]);
     expect(d.to.distance).toBe(galaxyFocusDistance(40));
     expect(d.to.yaw).toBe(FROM.yaw);
@@ -58,7 +65,7 @@ describe('focusTweenDescriptor', () => {
   });
 
   it('a structure row frames on its apparent radius via the lens FOV', () => {
-    const d = focusTweenDescriptor(structureRow({ apparentRadiusMpc: 5 }), FROM, FOVY);
+    const d = focusTweenDescriptor(structureRow({ apparentRadiusMpc: 5 }), FROM, FOVY, FRAME);
     expect(d.to.target).toEqual([10, -20, 30]);
     expect(d.to.distance).toBe(structureFocusDistance(5, FOVY));
   });
@@ -68,12 +75,13 @@ describe('focusTweenDescriptor', () => {
       structureRow({ apparentRadiusMpc: undefined, physicalRadiusMpc: 2 }),
       FROM,
       FOVY,
+      FRAME,
     );
     expect(d.to.distance).toBe(structureFocusDistance(2, FOVY));
   });
 
   it('the Milky Way arm targets the galactic centre at the fixed view distance', () => {
-    const d = focusTweenDescriptor({ type: 'milkyWay' }, FROM, FOVY);
+    const d = focusTweenDescriptor({ type: 'milkyWay' }, FROM, FOVY, FRAME);
     expect(d.to.target).toEqual([
       MILKY_WAY_CENTER_WORLD[0],
       MILKY_WAY_CENTER_WORLD[1],
@@ -85,7 +93,7 @@ describe('focusTweenDescriptor', () => {
 
   it('copies the target into a fresh array — never aliases the source Vec3', () => {
     const struct = structureRow({ worldPos: [10, -20, 30] });
-    const d = focusTweenDescriptor(struct, FROM, FOVY);
+    const d = focusTweenDescriptor(struct, FROM, FOVY, FRAME);
     expect(d.to.target).not.toBe(struct.worldPos);
   });
 });

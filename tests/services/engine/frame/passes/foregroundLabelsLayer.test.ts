@@ -39,6 +39,8 @@ import { SCALE_FADE_BANDS } from '../../../../../src/services/engine/presentatio
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
+import { makeBodyItems } from '../../../../fixtures/makeBodyItems';
+import { SGR_A_STAR_ENTRY } from '../../../../../src/data/sources/sgr-a-star';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 
 // The layer derives its caption set from the frame's body snapshot
@@ -152,35 +154,36 @@ function makeLineRenderer(): MarkerLineRenderer {
 /**
  * `bodyLabels` seeds ALL body rows from one flag by default, so a test that
  * only cares whether body captions are on at all passes a bare boolean; the
- * per-row cases pass the bits separately, which is the axis those rows buy.
+ * per-row cases pass the bits separately, which is the axis those rows buy. A
+ * row the object form does not name stays on — only the boolean form means
+ * "every body caption off", which is what the demand-gate tests assert against.
  */
 function makeState(
   renderer: LabelRenderer | null,
   lineRenderer: MarkerLineRenderer | null = makeLineRenderer(),
   starMapLabelsEnabled = true,
-  bodyLabels: boolean | { earth: boolean; planet: boolean; sun?: boolean } = true,
+  // `true`/`false` sets every row at once; a record names the rows that deviate
+  // from an all-on baseline (the Sun included, which defaults on).
+  bodyLabels: boolean | Readonly<Record<string, boolean>> = true,
   starMapEnabled = true,
   sunVisible = true,
   starCatalogsMasterEnabled = true,
 ): EngineState {
-  const bodies =
-    typeof bodyLabels === 'boolean'
-      ? { earth: bodyLabels, planet: bodyLabels, sun: bodyLabels }
-      : { ...bodyLabels, sun: bodyLabels.sun ?? true };
+  const named: Record<string, boolean> =
+    typeof bodyLabels === 'boolean' ? {} : { ...bodyLabels, sun: bodyLabels.sun ?? true };
+  const unnamed = typeof bodyLabels === 'boolean' ? bodyLabels : true;
   return {
     gpu: { foregroundLabelRenderer: renderer, foregroundMarkerLineRenderer: lineRenderer },
     settings: {
       labels: { focusedOnly: false },
-      // Each caption reads its OWN source's label gate, so the body rows carry
-      // the Earth / planet / Sun caption bits. `sunVisible` is the Sun's
-      // separate VISIBILITY axis (`bodies.items.sun.enabled`) — the same flag
-      // `visibleStars` reads to hide its dot — independent of `labelEnabled`.
+      // `sunVisible` is the Sun's separate VISIBILITY axis (`items.sun.enabled`)
+      // — the same flag `visibleStars` reads to hide its dot — independent of
+      // `labelEnabled`. Every other row keeps the fixture's all-on baseline.
       bodies: {
-        items: {
-          earth: { enabled: true, labelEnabled: bodies.earth },
-          planet: { enabled: true, labelEnabled: bodies.planet },
-          sun: { enabled: sunVisible, labelEnabled: bodies.sun },
-        },
+        items: makeBodyItems((id) => ({
+          ...(id === 'sun' ? { enabled: sunVisible } : {}),
+          labelEnabled: named[id] ?? unnamed,
+        })),
       },
       // The cluster master defaults on: the caption's visibility gate requires
       // it AND the row's own bit, matching how `visibleStars` composes the
@@ -225,6 +228,15 @@ const CONSTELLATION_IDS = new Set(CONSTELLATION_ARTIFACT.constellations.map((c) 
 // A state whose constellation slot is READY, with the fade-registry opacity
 // under test control. The body-caption toggles are all on so those captions
 // coexist; the constellation-specific assertions filter by CONSTELLATION_IDS.
+/**
+ * `makeBodyItems` deviation muting the Galactic Centre's caption. It is the one
+ * body caption whose reach extends past `SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC`,
+ * so any test asserting "the row is off out here" has to silence it or it is
+ * asserting against a caption that is legitimately still on.
+ */
+const GALACTIC_CENTRE_LABEL_OFF = (id: string) =>
+  id === SGR_A_STAR_ENTRY.id ? { labelEnabled: false } : {};
+
 function makeConstellationState(opts: { layerFade: number; ready?: boolean }): EngineState {
   return {
     gpu: {
@@ -233,13 +245,10 @@ function makeConstellationState(opts: { layerFade: number; ready?: boolean }): E
     },
     settings: {
       labels: { focusedOnly: false },
-      bodies: {
-        items: {
-          earth: { enabled: true, labelEnabled: true },
-          planet: { enabled: true, labelEnabled: true },
-          sun: { enabled: true, labelEnabled: true },
-        },
-      },
+      // The Galactic Centre's caption reaches past the body gate on its own
+      // (`captionFadeRules`), so these tests — which isolate the CONSTELLATION
+      // demand term out there — must mute it or they measure both at once.
+      bodies: { items: makeBodyItems(GALACTIC_CENTRE_LABEL_OFF) },
       starCatalogs: { enabled: true, items: { famousStar: { enabled: true, labelEnabled: true } } },
       constellations: {},
     },
@@ -294,11 +303,13 @@ function makeSpreadVp(): Float64Array {
 // genuinely empty rather than carrying a settled `1` left by an unrelated
 // earlier test (the map is a module singleton — see the layer's own header —
 // so it persists across every test in this file). Driving every caption's
-// target to 0 (both body toggles off) with NO constellation slot and a
-// full-clock-advance `makeCtx` settles every currently-tracked id EXACTLY to 0
-// in one draw: `draw`'s own end-of-frame prune deletes any id outside this
-// frame's entry universe (which, with no constellation slot, is body captions
-// only), so a stray constellation id from an earlier test is dropped too.
+// target to 0 (the star map's label gate and EVERY body row's off — the boolean
+// `bodyLabels` form, which is why that form has to reach rows no test names)
+// with NO constellation slot and a full-clock-advance `makeCtx` settles every
+// currently-tracked id EXACTLY to 0 in one draw: `draw`'s own end-of-frame prune
+// deletes any id outside this frame's entry universe (which, with no
+// constellation slot, is body captions only), so a stray constellation id from
+// an earlier test is dropped too.
 function settleAllCaptions(): void {
   foregroundLabelsLayer.draw(
     PASS_STUB,
@@ -315,7 +326,13 @@ beforeEach(() => {
 describe('foregroundLabelsLayer.enabled', () => {
   it('respects the kiloparsec distance gate', () => {
     const renderer = makeRenderer(6);
-    const state = makeState(renderer);
+    // Every body label on EXCEPT the Galactic Centre's: its caption reaches past
+    // this gate by design (see `captionFadeRules`), so leaving it on would keep
+    // the row alive out here for a reason that has nothing to do with the
+    // solar-system gate under test.
+    const state = makeState(renderer, makeLineRenderer(), true, {
+      [SGR_A_STAR_ENTRY.id]: false,
+    });
 
     // Well inside a kiloparsec with body-caption toggles on → captions show.
     expect(foregroundLabelsLayer.enabled(state, makeCtx(5e-4))).toBe(true);
@@ -325,6 +342,11 @@ describe('foregroundLabelsLayer.enabled', () => {
       false,
     );
     expect(foregroundLabelsLayer.enabled(state, makeCtx(1e-2))).toBe(false);
+
+    // …and the Galactic Centre's own caption is exactly what carries the row
+    // past that gate, which is the whole point of its separate reach.
+    const withGalacticCentre = makeState(renderer);
+    expect(foregroundLabelsLayer.enabled(withGalacticCentre, makeCtx(1e-2))).toBe(true);
 
     // The two distance gates compose, and the caption gate is the TIGHTER
     // one: between them (bodies/backdrop already on, captions not yet) the
@@ -1053,10 +1075,15 @@ describe('foregroundLabelsLayer — constellation captions', () => {
   it('runs the row past the body-caption gate while a figure name could show', () => {
     expect(pastBodyGate).toBeGreaterThan(SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC);
 
-    // Body-only state (no constellation slot): past the body gate the row is off.
-    expect(foregroundLabelsLayer.enabled(makeState(makeRenderer(6)), makeCtx(pastBodyGate))).toBe(
-      false,
-    );
+    // Body-only state (no constellation slot): past the body gate the row is
+    // off. The Galactic Centre's caption is muted here for the reason
+    // `GALACTIC_CENTRE_LABEL_OFF` records — it reaches past this gate by design.
+    expect(
+      foregroundLabelsLayer.enabled(
+        makeState(makeRenderer(6), makeLineRenderer(), true, { [SGR_A_STAR_ENTRY.id]: false }),
+        makeCtx(pastBodyGate),
+      ),
+    ).toBe(false);
 
     // Artifact ready: the constellation gate keeps the row alive at the same
     // distance — the fix's core.

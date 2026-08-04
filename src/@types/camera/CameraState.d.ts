@@ -8,7 +8,9 @@
  * `clip` carries the active animation clip's serializable descriptor while
  * a clip is playing. Pose during the clip is DERIVED per frame by the
  * driver table (clip@95 wins), not written here — same principle as `tween`.
- * Null when no clip is active.
+ * `frame` pins the frame the clip started under, so a mid-clip orientation
+ * switch re-expresses the pose rather than reinterpreting every authored yaw
+ * against a new pole. Null when no clip is active.
  *
  * `frameTween` carries the in-flight orientation-frame roll's serializable
  * descriptor while the up-basis slerps to a new frame. The basis during the
@@ -20,12 +22,13 @@ import type { CameraPose } from './CameraPose';
 import type { CameraTweenDescriptor } from './CameraTweenDescriptor';
 import type { ClipData } from '../animation/ClipData';
 import type { FrameTween } from './FrameTween';
+import type { OrientationFrameId } from './OrientationFrameId';
 
 export type CameraState = {
   base: CameraPose;
   tween: CameraTweenDescriptor | null;
   autoRotate: { active: boolean; rate: number };
   dragging: boolean;
-  clip: { data: ClipData } | null;
+  clip: { data: ClipData; frame: OrientationFrameId } | null;
   frameTween: FrameTween | null;
 };

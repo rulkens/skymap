@@ -63,11 +63,13 @@ import { tweenToClip } from './tweenToClip';
 import { spinAutoRotate } from './spinAutoRotate';
 import { tweenElapsed, autoRotateElapsed, clipElapsed, followElapsed } from './cameraClock';
 import { evaluateClip } from './evaluateClip';
+import { reencodePose } from '../../../utils/camera/reencodePose';
 import { bodyFocusDistance } from './bodyFocusDistance';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { FOCUS_TWEEN_MS } from './focusTweenDuration';
 import { liveBodyPosition } from './liveBodyPosition';
+import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { easeOutCubic } from '../../../utils/math/easeOutCubic';
 import { lerp } from '../../../utils/math/lerp';
 
@@ -179,8 +181,8 @@ export function runCameraDrivers(
  *     (no drift) rather than a frozen point.
  *
  *   - `followBody` (10) — a focus on a moving scene body. Active while
- *     `s.selectionRows.focus` is a body present in this frame's body snapshot
- *     (resolved via the shared `liveBodyPosition` site). Sits BELOW autoRotate
+ *     `s.selectionRows.focus` is a body the sim clock propagates (the shared
+ *     `bodyMovesThisFrame` predicate). Sits BELOW autoRotate
  *     so it only wins when the scene is otherwise idle: its remaining job is the
  *     initial approach ease + the steady hold. On activation it eases the distance
  *     from the captured on-screen pose into the `bodyFocusDistance` framing
@@ -197,7 +199,9 @@ export function runCameraDrivers(
  *
  *   - `tween` (60) — an in-flight focus tween. Active while `s.camera.tween`
  *     is non-null. Pure: reads `s.camera.tween` + `elapsedMs` from the clock,
- *     converts descriptor via `tweenToClip`, calls `evaluateClip(data, elapsed/1000)`.
+ *     converts descriptor via `tweenToClip`, calls `evaluateClip(data, elapsed/1000)`
+ *     against `tween.frame` (the pinned start frame), then re-encodes forward
+ *     into the current `settings.orientation` — same pinning contract as `clip`.
  *
  *   - `autoRotate` (20) — the idle drift. Active while
  *     `s.camera.autoRotate.active` is true. Pure: returns
@@ -223,12 +227,22 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
       commitsOnEdge: true,
       isActive: (s) => s.camera.clip !== null,
       // elapsed here is SECONDS from clipElapsed (not ms) — evaluateClip
-      // takes elapsedSec. See the UNIT NOTE in elapsedForWinner. The STEADY
-      // orientation basis is passed so a flyPath's world tangents encode to
-      // (yaw, pitch) through the committed frame the render path decodes with —
-      // a world-invariant aim (see buildPathTrack / orbitAnglesLookingAlong).
-      pose: (s, _cam, elapsed) =>
-        evaluateClip(s.camera.clip!.data, elapsed, ORIENTATION_FRAMES[s.settings.orientation]),
+      // takes elapsedSec. See the UNIT NOTE in elapsedForWinner. `clip.frame`
+      // (pinned at dispatch time, never the live setting) is the STEADY basis
+      // a flyPath's world tangents encode through — a fixed reference is what
+      // makes `evaluateClip`'s compile cache stable across an in-flight
+      // orientation switch (see evaluateClip's Cached type). The evaluated pose
+      // is then re-encoded forward into the CURRENT frame — reencodePose returns
+      // it by reference when the two bases match, the overwhelmingly common case.
+      pose: (s, _cam, elapsed) => {
+        const clip = s.camera.clip!;
+        const evaluated = evaluateClip(clip.data, elapsed, ORIENTATION_FRAMES[clip.frame]);
+        return reencodePose(
+          evaluated,
+          ORIENTATION_FRAMES[clip.frame],
+          ORIENTATION_FRAMES[s.settings.orientation],
+        );
+      },
     },
     {
       id: 'orbitDrag',
@@ -257,24 +271,16 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
       // is idempotent — but it keeps the pin's rule uniform across every orbit
       // driver rather than special-casing followBody out of it).
       pivotsOnFocusedBody: true,
-      // Active when the focus resolves to a scene body present in THIS frame's
-      // body snapshot (resolved through the shared `liveBodyPosition` site).
-      // The snapshot is the memoized `deriveBodyStates` map at the instant
-      // `runFrame` derived this frame's bodies (`lastRenderedSimDays.current`,
-      // written before produce) — a same-instant call returns the cached Map for
-      // free. A star / structure / galaxy focus is not a body, so this stays
-      // false. Priority 10 (below autoRotate 20) means followBody only wins when
-      // idle: autoRotate or a drag takes the orbit terms while the pivot-pin
-      // keeps the body centred, so the autoRotate button spins AROUND a focused
-      // body instead of being blocked by follow.
-      // Short-circuit on a non-body focus BEFORE touching the snapshot resource,
-      // so this stays cheap (and null-safe pre-bootstrap) for the common
-      // no-body-focus frame; only a body focus resolves the live position.
-      isActive: (s) => {
-        const focus = s.selectionRows.focus;
-        if (focus === null || focus.type !== 'body') return false;
-        return liveBodyPosition(focus, state.cameraRuntime.lastRenderedSimDays.current) !== null;
-      },
+      // Active when the focus resolves to a scene body the sim clock MOVES
+      // (`bodyMovesThisFrame` — an `ORBITAL_ELEMENTS` row). Following is a
+      // response to motion, so a static focus (a famous star, the Sun) does not
+      // activate it even though the body snapshot carries its position; a star /
+      // structure / galaxy focus is not a body at all. Priority 10 (below
+      // autoRotate 20) means followBody only wins when idle: autoRotate or a
+      // drag takes the orbit terms while the pivot-pin keeps the body centred,
+      // so the autoRotate button spins AROUND a focused body instead of being
+      // blocked by follow.
+      isActive: (s) => bodyMovesThisFrame(s.selectionRows.focus),
       // The follow pose. `elapsed` is ms since the approach started (from
       // `followElapsed`, keyed on the focus row reference). The target term is
       // always the LIVE body position, so the camera tracks the body the sim
@@ -291,9 +297,10 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
         const focus = s.selectionRows.focus;
         const clock = state.cameraRuntime.clock;
         // Defensive: pose only runs for the winner, so isActive already proved a
-        // body focus present in the snapshot this same frame — but a null-guard
-        // keeps the arm total, falling back to the resting pose. Resolved through
-        // the shared `liveBodyPosition` site (same call `isActive` uses).
+        // moving body focus this same frame, and a moving body is in the snapshot
+        // by construction — but a null-guard keeps the arm total, falling back to
+        // the resting pose. The position itself comes from the shared
+        // `liveBodyPosition` site.
         const livePos = liveBodyPosition(focus, state.cameraRuntime.lastRenderedSimDays.current);
         if (focus === null || focus.type !== 'body' || livePos === null) return s.camera.base;
 
@@ -354,12 +361,29 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
       priority: 60,
       // Bake the tween's final pose into `base` on deactivation so that a
       // tween-to-focus lands cleanly rather than snapping to the pre-tween base.
+      // The baked pose is already re-encoded into the CURRENT frame below, so
+      // commit-on-edge never bakes a stale pinned-frame reading.
       commitsOnEdge: true,
       isActive: (s) => s.camera.tween !== null,
-      // `tweenToClip` converts the descriptor to a ClipData (memoised by
-      // reference) so `evaluateClip`'s compile cache reuses tracks across frames.
-      // `elapsedMs / 1000` converts to the seconds unit `evaluateClip` expects.
-      pose: (s, _cam, elapsedMs) => evaluateClip(tweenToClip(s.camera.tween!), elapsedMs / 1000),
+      // `tween.frame` (pinned at dispatch time, same contract as `clip.frame`)
+      // is the STEADY basis `from`/`to` were captured through. `tweenToClip`
+      // converts the descriptor to a ClipData (memoised by reference) so
+      // `evaluateClip`'s compile cache reuses tracks across frames; the result
+      // is then re-encoded forward into the CURRENT frame — reencodePose
+      // returns it by reference when the two bases match, the common case.
+      pose: (s, _cam, elapsedMs) => {
+        const tween = s.camera.tween!;
+        const evaluated = evaluateClip(
+          tweenToClip(tween),
+          elapsedMs / 1000,
+          ORIENTATION_FRAMES[tween.frame],
+        );
+        return reencodePose(
+          evaluated,
+          ORIENTATION_FRAMES[tween.frame],
+          ORIENTATION_FRAMES[s.settings.orientation],
+        );
+      },
     },
     {
       id: 'autoRotate',

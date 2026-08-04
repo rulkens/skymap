@@ -4,7 +4,7 @@
  *
  * The no-basis cases pin the pre-feature contract: position = target +
  * distance·yawPitchToDir(yaw, pitch), with local +Y as the pole. The frame case
- * proves `frameBasis` is actually composed over the decode AND that the MIDDLE
+ * proves `poseBasis` is actually composed over the decode AND that the MIDDLE
  * column is the pole: with `ORIENTATION_FRAMES.equatorial` (whose pole is world
  * +z), a local-pole pose (pitch=+π/2) must land the eye along +z, not +y. If the
  * basis were ignored, or the wrong column read as the pole, the eye would sit on
@@ -40,7 +40,7 @@ describe('updatePosition', () => {
     expect(cam.position[2]).toBeCloseTo(3, 6);
   });
 
-  it('a non-identity frameBasis rotates the derived position into the frame', () => {
+  it('a non-identity poseBasis rotates the derived position into the frame', () => {
     // Equatorial frame: pole (middle column) is world +z. A pose at yaw=0,
     // pitch=π/2 aims straight up the frame's local pole, so the world eye must
     // be along +z — NOT +y (which would mean the basis was never applied).
@@ -49,7 +49,7 @@ describe('updatePosition', () => {
       pitch: Math.PI / 2,
       distance: 10,
       target: [0, 0, 0],
-      frameBasis: ORIENTATION_FRAMES.equatorial,
+      poseBasis: ORIENTATION_FRAMES.equatorial,
     });
     updatePosition(cam);
     expect(cam.position[0]).toBeCloseTo(0, 6);

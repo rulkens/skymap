@@ -153,12 +153,12 @@ export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
     // Built from the camera directly rather than by inverting the
     // view-projection (which is numerically unstable at the shell's huge
     // near:far ratio).  The right/up axes come from the shared
-    // `imagePlaneBasis`, which rolls the frame pole (`frameUp(cam.frameBasis)`;
+    // `imagePlaneBasis`, which rolls the frame pole (`frameUp(cam.upBasis)`;
     // world +Y absent a basis) about the view direction — so the shell rolls in
-    // lockstep with `computeViewProj`.
+    // lockstep with `computeViewProj` (both read the same draw-time `upBasis`).
     vec3.subtract(cam.target, cam.position, fwd);
     vec3.normalize(fwd, fwd);
-    imagePlaneBasis(fwd, cam.roll ?? 0, frameUp(cam.frameBasis, upRefScratch), basis);
+    imagePlaneBasis(fwd, cam.roll ?? 0, frameUp(cam.upBasis, upRefScratch), basis);
     const right = basis.right;
     const up = basis.up;
 

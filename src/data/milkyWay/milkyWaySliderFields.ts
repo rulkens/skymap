@@ -40,8 +40,8 @@ export const MILKY_WAY_SLIDER_FIELDS: readonly MilkyWaySliderField[] = [
     key: 'starSizeScale',
     label: 'starSize',
     min: 0,
-    // Up to ~28x the 0.7 default. The count/size trade only becomes visible
-    // once sprites are big enough to overlap several per pixel, which is an
+    // ~11x the default. The count/size trade only becomes visible once
+    // sprites are big enough to overlap several per pixel, which is an
     // order-of-magnitude move, not a trim.
     max: 20,
     step: 0.05,
@@ -55,8 +55,8 @@ export const MILKY_WAY_SLIDER_FIELDS: readonly MilkyWaySliderField[] = [
     // Absolute, with no auto-compensation for size: under additive blending
     // total light goes as roughly count * exposure * size^2, so a 20x size
     // needs ~1/400th the exposure to hold brightness. The fine step is what
-    // makes that bottom end reachable; the 0.5 ceiling still allows ~4.5x
-    // brighter than the 0.11 default.
+    // makes that bottom end reachable; the 0.5 ceiling still allows ~13x
+    // brighter than the default.
     max: 0.5,
     step: 0.0005,
     format: (v) => v.toFixed(4),
@@ -69,20 +69,20 @@ export const MILKY_WAY_SLIDER_FIELDS: readonly MilkyWaySliderField[] = [
     max: 8,
     step: 0.25,
     format: (v) => v.toFixed(2),
-    title: 'Sprite half-extent floor, in mw-aggregate pixels (= 2 screen px).',
+    title: 'Sprite half-extent floor, in mw-aggregate pixels (x divisor = screen px).',
   },
   {
     key: 'starPxMax',
     label: 'pxMax',
     min: 1,
-    // The star pass renders into the HALF-RES `mw-aggregate` target and the
-    // shader clamps in TARGET pixels, so this ceiling is 512 SCREEN px — a
-    // sprite covering most of the viewport. Anything much past it is a frame
-    // rate in the single digits rather than a look worth seeing.
+    // The star pass renders into the REDUCED-RES `mw-aggregate` target and the
+    // shader clamps in TARGET pixels, so this ceiling is 256 x `aggregateDivisor`
+    // SCREEN px — a sprite covering most of the viewport. Anything much past it
+    // is a frame rate in the single digits rather than a look worth seeing.
     max: 256,
     step: 1,
     format: (v) => String(Math.round(v)),
-    title: 'Sprite half-extent cap, in mw-aggregate pixels (= 2 screen px).',
+    title: 'Sprite half-extent cap, in mw-aggregate pixels (x divisor = screen px).',
   },
   {
     key: 'softness',

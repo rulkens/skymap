@@ -19,45 +19,27 @@
  * famous seed would also enroll it as a regular point in `famous.bin`
  * and double-render it next to the point cloud.
  *
- * Single-purpose file → single source of truth for the constant, no
- * type machinery needed.  Per-galaxy disk impostors (e.g. M31) read
- * THEIR center from the famous bin's positions array via the existing
- * meta lookup; only the Milky Way needs this special case.
+ * Per-galaxy disk impostors (e.g. M31) read THEIR center from the
+ * famous bin's positions array via the existing meta lookup; only the
+ * Milky Way needs this special case.
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
-import { raDecDistToCartesian } from '../../utils/math/raDecDistToCartesian';
-
-/** Sagittarius A\* RA (J2000) in degrees: 17h 45m 40.04s. */
-const SGR_A_RA_DEG = 266.4168;
-
-/** Sagittarius A\* Dec (J2000) in degrees: −29° 00′ 28.1″. */
-const SGR_A_DEC_DEG = -29.0078;
+import { SGR_A_STAR_ANCHOR } from '../bodies/sceneSgrAStar';
 
 /**
- * Distance from the Sun to Sagittarius A\* in megaparsecs (~8.0 kpc).
+ * World-space position of the Milky Way's center: the SAME seed the black hole
+ * and every S-star orbit hang off (`sceneSgrAStar`), not a second transcription
+ * of the sky coordinates.
  *
- * This is the canonical short-form figure used widely in the
- * literature; the GRAVITY collaboration's 2019 trigonometric-orbit
- * measurement gives R₀ = 8.178 ± 0.013 (stat) ± 0.022 (sys) kpc,
- * which we round to 8.0 kpc here for simplicity.  The 2% precision
- * gap is invisible at any zoom that shows the point cloud.
+ * This file once carried its own rounded pair — 266.4168 / −29.0078 at a
+ * round-numbers 8.0 kpc — on the argument that placing a spiral impostor is a
+ * 2%-tolerant use. It is, in isolation; but the impostor and the black hole are
+ * BOTH on screen at the Galactic Centre, and 2% of R₀ is 178 pc of visible
+ * offset between the disc's hub and the object it is the hub of. Two spellings
+ * of one position is the whole bug: there is no tolerance at which they line up.
  */
-const SGR_A_DIST_MPC = 0.008;
-
-/**
- * World-space position of the Milky Way's center, derived from
- * Sgr A\*'s sky coordinates and distance.  Same right-handed
- * equatorial frame as everything else in the engine
- * (`raDecDistToCartesian` documents the convention).
- *
- * Approximate value: (-0.000476, -0.006982, -0.003879) Mpc.
- */
-export const MILKY_WAY_CENTER_WORLD: Vec3 = raDecDistToCartesian(
-  SGR_A_RA_DEG,
-  SGR_A_DEC_DEG,
-  SGR_A_DIST_MPC,
-);
+export const MILKY_WAY_CENTER_WORLD: Vec3 = SGR_A_STAR_ANCHOR.positionMpc as Vec3;
 
 /**
  * Camera distance (Mpc) used by the Milky Way focus tween to land the
@@ -86,8 +68,8 @@ export const MILKY_WAY_VIEW_DISTANCE_MPC = 0.15;
  * user sees, the area that takes the click, and the ring drawn around it
  * all agree on ONE physical radius.
  *
- * 17.5 kpc = a ~35 kpc stellar disk, chosen so the Sun's 8 kpc offset
- * (`SGR_A_DIST_MPC`) sits mid-disk at ~46% of the radius — in the arm
- * region where it belongs, not on the bulge's edge.
+ * 17.5 kpc = a ~35 kpc stellar disk, chosen so the Sun's R₀ = 8.178 kpc
+ * offset sits mid-disk at ~47% of the radius — in the arm region where
+ * it belongs, not on the bulge's edge.
  */
 export const MILKY_WAY_DISC_RADIUS_KPC = 17.5;

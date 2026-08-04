@@ -80,7 +80,7 @@ function collectTimelineNodes<T>(
 const CAMERA_RUNTIME: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 },
   fovYRad: 0.8,
-  frameBasisQuat: [0, 0, 0, 1],
+  upBasisQuat: [0, 0, 0, 1],
 };
 
 // Structure resolved by id immediately — no catalog needed.

@@ -18,6 +18,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { foregroundLabelsLayer } from '../../../../../src/services/engine/frame/passes/foregroundLabelsLayer';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
+import { makeBodyItems } from '../../../../fixtures/makeBodyItems';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -77,13 +78,7 @@ function makeState(
     gpu: { foregroundLabelRenderer: renderer, foregroundMarkerLineRenderer: lineRenderer },
     settings: {
       labels: { focusedOnly: false },
-      bodies: {
-        items: {
-          earth: { enabled: true, labelEnabled: true },
-          planet: { enabled: true, labelEnabled: true },
-          sun: { enabled: true, labelEnabled: true },
-        },
-      },
+      bodies: { items: makeBodyItems() },
       starCatalogs: { enabled: true, items: { famousStar: { enabled: true, labelEnabled: true } } },
     },
     // No constellation slot: these occlusion tests exercise only the body

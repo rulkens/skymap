@@ -107,6 +107,63 @@ is © Alexander Rulkens, MIT-licensed. See [LICENSE](LICENSE).
 - **Licence:** Publicly released via the Gaia archive; cite the paper above.
   The Gaia mission acknowledgment under **Gaia DR3** applies to this table as well.
 
+### Gillessen et al. 2017 — Galactic-Centre S-star orbits
+
+- **Use:** The 39 bound S-star orbits drawn around Sagittarius A\*. Two
+  different tables, both hand-transcribed into the repository rather than
+  fetched at build time (they are 39 and ~100 rows, not a catalogue):
+  - `J/ApJ/837/30/table3` — the fitted orbital elements (semi-major axis,
+    eccentricity, inclination, node, argument of pericentre, pericentre
+    epoch, period), plus the K magnitude and early/late spectral flag that
+    set each star's colour and size. Transcribed to
+    `src/data/bodies/sStarElements.ts`, one verbatim source line per row.
+    The 40th published row, S111, is excluded as unbound (e = 1.092).
+  - `J/ApJ/837/30/table5` — the astrometric measurements. ~34 epochs each
+    for S2, S12 and S38 are held as a test fixture
+    (`tests/fixtures/sStarAstrometry.json`) and used as the acceptance
+    oracle for the sky-frame conversion; they are never rendered.
+- **Reference:** Gillessen, Plewa, Eisenhauer, Sari, Waisberg, Habibi,
+  Pfuhl, George, Dexter, von Fellenberg, Ott & Genzel 2017, ApJ 837, 30
+  (ads: [2017ApJ...837...30G](https://ui.adsabs.harvard.edu/abs/2017ApJ...837...30G)).
+- **Licence:** Publicly released via CDS VizieR; cite the paper above.
+- **Related:** table5's coordinate origin is a best estimate of Sgr A\*'s
+  radio position (±0.2 mas at epoch 2009.0), per **Plewa et al. 2015,
+  MNRAS 453, 3234** — the floor on the fixture's residuals, and the reason
+  the acceptance test allows a few sigma rather than exact closure.
+
+### GRAVITY Collaboration — the Galactic-Centre distance and black-hole mass
+
+- **Use:** R₀ = 8178 pc, which sets the angular-to-linear scale for every
+  S-star orbit (1″ = 8178 AU) and places Sgr A\* — and with it the Milky Way
+  impostor's hub — in the scene. The same source's M = 4.297 × 10⁶ M☉ gives
+  the Schwarzschild radius the InfoCard quotes pericentres against.
+- **Reference:** GRAVITY Collaboration (Abuter et al.) 2019, A&A 625, L10.
+- **Licence:** Publicly released; cite the paper above.
+
+### Pecaut & Mamajek 2013 — main-sequence temperature/radius scale
+
+- **Use:** The representative effective temperatures and radii assigned to
+  S-stars by brightness and spectral class (`src/data/bodies/sStarAppearance.ts`).
+  Gillessen's table carries neither, so each class is a small
+  brightness-ordered table spot-checked against this scale — a
+  representative appearance, not a measurement.
+- **Reference:** Pecaut & Mamajek 2013, ApJS 208, 9.
+- **Licence:** Publicly released; cite the paper above.
+
+### JPL Solar System Dynamics — planetary and satellite mean elements
+
+- **Use:** The J2000 Keplerian element table (`src/data/bodies/orbitalElements.ts`)
+  that positions every solar-system body AND draws its orbit trail: the eight
+  major planets from "Keplerian Elements for Approximate Positions of the Major
+  Planets" (<https://ssd.jpl.nasa.gov/planets/approx_pos.html>), each with its
+  per-Julian-century rates; the Moon and thirteen planetary satellites from
+  "Planetary Satellite Mean Orbital Parameters"
+  (<https://ssd.jpl.nasa.gov/sats/elem/>), each with its own Laplace-plane pole.
+- **Reference:** JPL Solar System Dynamics group, NASA/Caltech. The planetary
+  fit is Standish's; see the approximate-positions page above for its stated
+  validity interval and residuals.
+- **Licence:** Public domain (US Government work). Credit: "NASA/JPL-Caltech".
+
 ### Hipparcos-2 — the re-reduced Hipparcos catalogue
 
 - **Use:** The `hip2.dat` bright-star table (VizieR I/311), cross-matched to
@@ -339,8 +396,13 @@ flows from skymap to them.
 - **DESI Legacy viewer cutouts**
   (`https://www.legacysurvey.org/viewer/cutout.jpg`) — used by
   `tools/fetchFamousImages.ts` for the thumbnail fallback path.
-- **Vizier TAP** (`https://tapvizier.cds.unistra.fr/TAPVizieR/tap/sync`) —
-  used by `tools/fetch2massXsc.ts` to fetch 2MASS XSC shape data via ADQL.
+- **VizieR TAP** (`https://tapvizier.cds.unistra.fr/TAPVizieR/tap/sync`) —
+  used by `tools/fetch2massXsc.ts` to fetch 2MASS XSC shape data via ADQL, and
+  as the one-off source for the hand-transcribed Gillessen S-star tables (and
+  the check that verified that transcription). CDS asks that use of VizieR be
+  acknowledged: "This research has made use of the VizieR catalogue access
+  tool, CDS, Strasbourg, France (DOI: 10.26093/cds/vizier)." The original
+  description of the service is Ochsenbein, Bauer & Marcout 2000, A&AS 143, 23.
 - **NED — NASA/IPAC Extragalactic Database**
   (`https://ned.ipac.caltech.edu/byname?objname=…`) — linked from the
   InfoCard "Catalogues" row for famous galaxies. Read-only; no programmatic

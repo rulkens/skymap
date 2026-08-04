@@ -18,9 +18,9 @@
  *
  * Two independent frame choices per row:
  *
- * - **Focus** (`parentId`): the eight major planets (Mercury through Neptune,
- *   Earth as the EMB) are **heliocentric** — `parentId: null`, focus at the Sun
- *   (the render origin). A moon is **geocentric** to its planet — `parentId`
+ * - **Focus** (`focusId`): the eight major planets (Mercury through Neptune,
+ *   Earth as the EMB) are **heliocentric** — `focusId: 'sun'`, focus at the Sun
+ *   (the render origin). A moon is **geocentric** to its planet — `focusId`
  *   names it — so its focus resolves to that planet's own derived world position
  *   and its trail follows the planet by construction.
  * - **Reference plane** (`plane`, see `orbitPlaneFrames.ts`): the planets AND
@@ -73,6 +73,8 @@
 
 import { SCALE_UNITS } from '../scaleUnits';
 import { satellite } from './makers/satellite';
+import { sStar } from './makers/sStar';
+import { S_STAR_SEEDS } from './sStarElements';
 import { moonRatesFromSiderealPeriods } from '../../utils/orbit/moonRatesFromSiderealPeriods';
 import {
   MERCURY_GREY,
@@ -120,7 +122,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     // Mercury, heliocentric. JPL: L = 252.25032350°, ϖ = 77.45779628°,
     // Ω = 48.33076593°.
     id: 'mercury',
-    parentId: null,
+    focusId: 'sun',
     semiMajorMpc: 0.38709927 * SCALE_UNITS.AU_TO_MPC,
     eccentricity: 0.20563593,
     inclinationRad: degToRad(7.00497902),
@@ -145,7 +147,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     // Venus, heliocentric. JPL: L = 181.97909950°, ϖ = 131.60246718°,
     // Ω = 76.67984255°.
     id: 'venus',
-    parentId: null,
+    focusId: 'sun',
     semiMajorMpc: 0.72333566 * SCALE_UNITS.AU_TO_MPC,
     eccentricity: 0.00677672,
     inclinationRad: degToRad(3.39467605),
@@ -170,7 +172,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     // Earth–Moon barycenter, heliocentric. JPL: L = 100.46457166°,
     // ϖ = 102.93768193°, Ω = 0.0°.
     id: 'earth',
-    parentId: null,
+    focusId: 'sun',
     semiMajorMpc: 1.00000261 * SCALE_UNITS.AU_TO_MPC,
     eccentricity: 0.01671123,
     inclinationRad: degToRad(-0.00001531),
@@ -195,7 +197,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     // Mars, heliocentric. JPL: L = −4.55343205°, ϖ = −23.94362959°,
     // Ω = 49.55953891°.
     id: 'mars',
-    parentId: null,
+    focusId: 'sun',
     semiMajorMpc: 1.52371034 * SCALE_UNITS.AU_TO_MPC,
     eccentricity: 0.0933941,
     inclinationRad: degToRad(1.84969142),
@@ -220,7 +222,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     // Jupiter, heliocentric. JPL: L = 34.39644051°, ϖ = 14.72847983°,
     // Ω = 100.47390909°.
     id: 'jupiter',
-    parentId: null,
+    focusId: 'sun',
     semiMajorMpc: 5.202887 * SCALE_UNITS.AU_TO_MPC,
     eccentricity: 0.04838624,
     inclinationRad: degToRad(1.30439695),
@@ -245,7 +247,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     // Saturn, heliocentric. JPL: L = 49.95424423°, ϖ = 92.59887831°,
     // Ω = 113.66242448°.
     id: 'saturn',
-    parentId: null,
+    focusId: 'sun',
     semiMajorMpc: 9.53667594 * SCALE_UNITS.AU_TO_MPC,
     eccentricity: 0.05386179,
     inclinationRad: degToRad(2.48599187),
@@ -270,7 +272,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     // Uranus, heliocentric. JPL: L = 313.23810451°, ϖ = 170.95427630°,
     // Ω = 74.01692503°.
     id: 'uranus',
-    parentId: null,
+    focusId: 'sun',
     semiMajorMpc: 19.18916464 * SCALE_UNITS.AU_TO_MPC,
     eccentricity: 0.04725744,
     inclinationRad: degToRad(0.77263783),
@@ -295,7 +297,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     // Neptune, heliocentric. JPL: L = −55.12002969°, ϖ = 44.96476227°,
     // Ω = 131.78422574°.
     id: 'neptune',
-    parentId: null,
+    focusId: 'sun',
     semiMajorMpc: 30.06992276 * SCALE_UNITS.AU_TO_MPC,
     eccentricity: 0.00859048,
     inclinationRad: degToRad(1.77004347),
@@ -336,7 +338,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     // 18.6 yr node — 360/(360/8.85 + 360/18.6) = 5.997. Prograde: apsis
     // advances (+), node regresses (−). Ecliptic-framed, so `plane` is omitted.
     id: 'moon',
-    parentId: 'earth',
+    focusId: 'earth',
     semiMajorMpc: 384400 * SCALE_UNITS.KM_TO_MPC,
     eccentricity: 0.0554,
     inclinationRad: degToRad(5.16),
@@ -358,7 +360,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     // Phobos: a=9375 e=0.015 ω=216.3 M=189.7 i=1.1 node=169.2 P=0.3187
     // Papsis=1.1 Pnode=2.3; pole RA=317.7 Dec=52.9 (tilt 0.0°). Prograde.
     id: 'phobos',
-    parentId: 'mars',
+    focusId: 'mars',
     semiMajorKm: 9375,
     eccentricity: 0.015,
     inclinationDeg: 1.1,
@@ -377,7 +379,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     // Papsis=0.0 Pnode=56.2; pole RA=316.6 Dec=53.5 (tilt 0.9°). Prograde.
     // Papsis=0.0 (circular orbit → apsis undefined) ⇒ ω-rate frozen to 0.
     id: 'deimos',
-    parentId: 'mars',
+    focusId: 'mars',
     semiMajorKm: 23457,
     eccentricity: 0.0,
     inclinationDeg: 1.8,
@@ -401,7 +403,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     // Papsis=1.333 Pnode=0.000; pole RA=268.1 Dec=64.5 (tilt 0.0°). Prograde.
     // i≈0 ⇒ node undefined, Pnode=0.000 ⇒ Ω-rate frozen to 0.
     id: 'io',
-    parentId: 'jupiter',
+    focusId: 'jupiter',
     semiMajorKm: 421800,
     eccentricity: 0.004,
     inclinationDeg: 0.0,
@@ -419,7 +421,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     // Europa: a=671100 e=0.009 ω=45.0 M=345.4 i=0.5 node=184.0 P=3.525463
     // Papsis=1.394 Pnode=30.202; pole RA=268.1 Dec=64.5 (tilt 0.0°). Prograde.
     id: 'europa',
-    parentId: 'jupiter',
+    focusId: 'jupiter',
     semiMajorKm: 671100,
     eccentricity: 0.009,
     inclinationDeg: 0.5,
@@ -437,7 +439,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     // Ganymede: a=1070400 e=0.001 ω=198.3 M=324.8 i=0.2 node=58.5 P=7.155588
     // Papsis=68.301 Pnode=137.812; pole RA=268.2 Dec=64.6 (tilt 0.1°). Prograde.
     id: 'ganymede',
-    parentId: 'jupiter',
+    focusId: 'jupiter',
     semiMajorKm: 1070400,
     eccentricity: 0.001,
     inclinationDeg: 0.2,
@@ -455,7 +457,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     // Callisto: a=1882700 e=0.007 ω=43.8 M=87.4 i=0.3 node=309.1 P=16.690440
     // Papsis=277.921 Pnode=577.264; pole RA=268.7 Dec=64.8 (tilt 0.4°). Prograde.
     id: 'callisto',
-    parentId: 'jupiter',
+    focusId: 'jupiter',
     semiMajorKm: 1882700,
     eccentricity: 0.007,
     inclinationDeg: 0.3,
@@ -480,7 +482,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     // Mimas: a=186000 e=0.020 ω=160.4 M=275.3 i=1.6 node=66.2 P=0.942422
     // Papsis=0.493 Pnode=0.986; pole RA=40.6 Dec=83.5 (tilt 0.0°). Prograde.
     id: 'mimas',
-    parentId: 'saturn',
+    focusId: 'saturn',
     semiMajorKm: 186000,
     eccentricity: 0.02,
     inclinationDeg: 1.6,
@@ -499,7 +501,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     // Papsis=2.916 Pnode=0.000; pole RA=40.6 Dec=83.5 (tilt 0.0°). Prograde.
     // i≈0 ⇒ node undefined, Pnode=0.000 ⇒ Ω-rate frozen to 0.
     id: 'enceladus',
-    parentId: 'saturn',
+    focusId: 'saturn',
     semiMajorKm: 238400,
     eccentricity: 0.005,
     inclinationDeg: 0.0,
@@ -519,7 +521,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     // Papsis=0.005 yr is a near-circular-orbit table artifact (72000°/yr taken
     // literally) ⇒ ω-rate frozen to 0 (degenerate periapsis; error ≤ e·a).
     id: 'tethys',
-    parentId: 'saturn',
+    focusId: 'saturn',
     semiMajorKm: 295000,
     eccentricity: 0.001,
     inclinationDeg: 1.1,
@@ -538,7 +540,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     // Papsis=11.698 Pnode=0.000; pole RA=40.6 Dec=83.5 (tilt 0.0°). Prograde.
     // i≈0 ⇒ node undefined, Pnode=0.000 ⇒ Ω-rate frozen to 0.
     id: 'dione',
-    parentId: 'saturn',
+    focusId: 'saturn',
     semiMajorKm: 377700,
     eccentricity: 0.002,
     inclinationDeg: 0.0,
@@ -556,7 +558,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     // Rhea: a=527200 e=0.001 ω=44.3 M=31.5 i=0.3 node=133.7 P=4.517503
     // Papsis=33.939 Pnode=35.775; pole RA=40.6 Dec=83.5 (tilt 0.0°). Prograde.
     id: 'rhea',
-    parentId: 'saturn',
+    focusId: 'saturn',
     semiMajorKm: 527200,
     eccentricity: 0.001,
     inclinationDeg: 0.3,
@@ -574,7 +576,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     // Titan: a=1221900 e=0.029 ω=78.3 M=11.7 i=0.3 node=78.6 P=15.945448
     // Papsis=346.680 Pnode=687.370; pole RA=36.4 Dec=84.0 (tilt 0.6°). Prograde.
     id: 'titan',
-    parentId: 'saturn',
+    focusId: 'saturn',
     semiMajorKm: 1221900,
     eccentricity: 0.029,
     inclinationDeg: 0.3,
@@ -594,7 +596,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     // Laplace plane is pulled well off Saturn's equator, so it rides its OWN
     // pole, and i is 7.6° relative to THAT plane). Prograde.
     id: 'iapetus',
-    parentId: 'saturn',
+    focusId: 'saturn',
     semiMajorKm: 3561700,
     eccentricity: 0.028,
     inclinationDeg: 7.6,
@@ -608,4 +610,10 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     poleDecDeg: 78.9,
     color: SAT_ROCK,
   }),
+  // The 39 bound S-stars arrive mapped rather than written out: one publication,
+  // one uniform row shape, so the per-row facts stay in `sStarElements.ts` beside
+  // their verbatim Gillessen lines and the conversions stay in the `sStar` maker.
+  // Spelling them here would repeat that maker 39 times. Their focus is
+  // `sgr-a-star`, so they join the `galactic-centre` region by existing.
+  ...S_STAR_SEEDS.map(sStar),
 ];

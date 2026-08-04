@@ -6,7 +6,9 @@
  * that make that round-trip sound:
  *
  *   1. *Scope* — exactly the ten tour-owned clusters are captured, and
- *      excluded clusters (e.g. `tonemap`) never leak into the snapshot.
+ *      excluded fields (e.g. `tonemap`, `orientation`) never leak into the
+ *      snapshot. `orientation` is captured separately by `captureScene` onto
+ *      `SceneSnapshot` — see that type's header for why it must not ride here.
  *   2. *Detachment* — the snapshot is a deep, independent copy; a later
  *      mutation of the live `state.settings` (top-level or nested) must
  *      not change the captured value.
@@ -54,6 +56,7 @@ function makeState() {
       starCatalogs: { enabled: true, items: {} },
       bodies: { items: {} },
       labels: { focusedOnly: false },
+      orientation: 'galactic',
       // Excluded — must NOT appear in the snapshot.
       tonemap: { exposure: 1.2, curve: 'aces' },
     },
@@ -68,6 +71,11 @@ describe('captureSettings', () => {
     expect(Object.keys(snap).sort()).toEqual(SNAPSHOT_KEYS);
     // Excluded cluster dropped.
     expect(snap).not.toHaveProperty('tonemap');
+    // `orientation` must never reach this snapshot — it rides `SceneSnapshot`
+    // instead, precisely so a beat-boundary `mergeSnapshot` dispatch built from
+    // this type cannot revert the tour's live-authored pole (see
+    // `SceneSnapshot`'s header).
+    expect(snap).not.toHaveProperty('orientation');
     // The ten captured clusters deep-equal their source.
     for (const key of SNAPSHOT_KEYS) {
       expect((snap as Record<string, unknown>)[key]).toEqual(

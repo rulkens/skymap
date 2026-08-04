@@ -48,6 +48,7 @@ import {
   clipStarted,
   clipEnded,
 } from '../../../../src/state/camera/cameraSlice';
+import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import {
   buildCameraDrivers,
@@ -92,7 +93,7 @@ function makeEngineState(): {
       lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 } as CameraPose },
       prevActiveId: { current: 'resting' as string },
       lastRenderedSimDays: { current: 0 },
-      frameBasis: { current: ORIENTATION_FRAMES.ecliptic },
+      upBasis: { current: ORIENTATION_FRAMES.ecliptic },
     },
   };
 
@@ -168,6 +169,7 @@ describe('commitOnEdge — tween settles', () => {
         to: { target: [10, 0, 0], yaw: 1, pitch: 0, distance: 50 },
         durationMs: 1000,
         easing: 'easeOutCubic',
+        frame: DEFAULT_ORIENTATION,
       }),
     );
     // Seed prevActiveId to 'tween' so the tween is treated as already active
@@ -196,6 +198,7 @@ describe('commitOnEdge — tween settles', () => {
         to: { target: [0, 0, 0], yaw: 1, pitch: 0, distance: 50 },
         durationMs: 200,
         easing: 'easeOutCubic',
+        frame: DEFAULT_ORIENTATION,
       }),
     );
     state.cameraRuntime.prevActiveId.current = 'tween';
@@ -227,6 +230,7 @@ describe('commitOnEdge — tween settles', () => {
         to: { target: [0, 0, 0], yaw: 1, pitch: 0, distance: 50 },
         durationMs: 200,
         easing: 'easeOutCubic',
+        frame: DEFAULT_ORIENTATION,
       }),
     );
     state.cameraRuntime.prevActiveId.current = 'tween';
@@ -255,6 +259,7 @@ describe('commitOnEdge — tween settles', () => {
         to: TO,
         durationMs: 200,
         easing: 'easeOutCubic',
+        frame: DEFAULT_ORIENTATION,
       }),
     );
     state.cameraRuntime.prevActiveId.current = 'tween';
@@ -283,7 +288,13 @@ describe('commitOnEdge — tween settles', () => {
 
     store.dispatch(commitCameraPose(PRE));
     store.dispatch(
-      startCameraTween({ from: PRE, to: TO, durationMs: 200, easing: 'easeOutCubic' }),
+      startCameraTween({
+        from: PRE,
+        to: TO,
+        durationMs: 200,
+        easing: 'easeOutCubic',
+        frame: DEFAULT_ORIENTATION,
+      }),
     );
     state.cameraRuntime.prevActiveId.current = 'tween';
 
@@ -345,6 +356,7 @@ describe('commitOnEdge — no-jump-on-grab', () => {
         to: { target: [10, 0, 0], yaw: 1, pitch: 0, distance: 50 },
         durationMs: 1000,
         easing: 'easeOutCubic',
+        frame: DEFAULT_ORIENTATION,
       }),
     );
     state.cameraRuntime.prevActiveId.current = 'tween';
@@ -376,6 +388,7 @@ describe('commitOnEdge — no-jump-on-grab', () => {
         to: { target: [10, 0, 0], yaw: 1, pitch: 0, distance: 50 },
         durationMs: 1000,
         easing: 'easeOutCubic',
+        frame: DEFAULT_ORIENTATION,
       }),
     );
     state.cameraRuntime.prevActiveId.current = 'tween';
@@ -411,8 +424,10 @@ describe('commitOnEdge — clip deactivation', () => {
     const START_POSE: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 80 };
     const clip: ClipData = { start: START_POSE, timeline: [] };
 
-    // Activate the clip driver.
-    store.dispatch(clipStarted(clip));
+    // Activate the clip driver. `frame` matches the store's default orientation
+    // so the driver's re-encode is a no-op — this test only cares about the
+    // commit-on-edge boolean, not the pose value.
+    store.dispatch(clipStarted({ data: clip, frame: DEFAULT_ORIENTATION }));
     // Seed prevActiveId so there's no spurious commit on the first frame.
     state.cameraRuntime.prevActiveId.current = 'clip';
 

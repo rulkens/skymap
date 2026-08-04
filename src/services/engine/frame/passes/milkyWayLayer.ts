@@ -54,6 +54,13 @@
  * A null result skips the whole layer: no `beginRenderPass`, no tile-RAM
  * round-trip on M1, and no idle timestamp slot in the GPU-timings panel.
  *
+ * ### The one place draw and pick DO diverge: `pickEnabled` closes earlier
+ *
+ * `pickEnabled` is `enabled` AND a floor on the camera's origin distance — the
+ * ONE gate in the registry where the pick set is NARROWER than the draw set
+ * (see `MILKY_WAY_PICK_MIN_DISTANCE_MPC`, and `ContentLayer.pickEnabled` on why
+ * that direction needs its own justification).
+ *
  * ### Why NEAR0, not COSMO (the fifth layer to hit the near-plane trap)
  *
  * COSMO's near plane is FIXED at 10 kpc (`COSMO_NEAR_MPC`, slabs.ts) — but the
@@ -106,6 +113,25 @@ import { deriveMilkyWayCloudAlpha } from '../milkyWayCloudLiveness';
 import { cameraBillboardBasis } from '../../../../utils/camera/cameraBillboardBasis';
 import { milkyWayModelCached } from '../../galaxyGenerator/v1/milkyWayModelCached';
 
+/**
+ * Camera origin distance (Mpc) below which the impostor stops taking clicks —
+ * the camera is inside the galaxy and its hit target has swallowed the view.
+ *
+ * The pick billboard is ONE disc sized from `MILKY_WAY_RADIUS_MPC` (17.5 kpc),
+ * so its screen radius grows as the camera closes: by ~27 kpc it already spans
+ * more than the viewport height and every click that isn't a star lands on the
+ * Milky Way. Worse, the impostor is on NEAR0 and the cross-slab fold
+ * (`frontmostPick`) is SLAB-ordered, not depth-ordered — so a NEAR0 hit beats
+ * every COSMO galaxy and structure marker outright, and the backdrop's
+ * "ultimate fallback" depth band (`lib/pickDepthBands.wesl`) only ranks it
+ * within its own slab. Inside this distance the impostor is scenery you are
+ * flying through, not a target, so pick reverts to the content in front of it.
+ *
+ * Eye-tuned by the user, not derived: this is where the disc's click target
+ * stopped being useful in practice.
+ */
+const MILKY_WAY_PICK_MIN_DISTANCE_MPC = 0.0271;
+
 export const milkyWayLayer: ContentLayer = {
   name: 'milky-way',
   // NEAR0, not COSMO: the fixed 10 kpc cosmological near plane clips the disc
@@ -118,6 +144,18 @@ export const milkyWayLayer: ContentLayer = {
   // `milkyWayCloudLiveness` on why all three must answer identically.
   enabled(state, ctx) {
     return deriveMilkyWayCloudAlpha(state, ctx) !== null;
+  },
+
+  // Pick gate — NARROWER than `enabled`, the only row in the registry that way
+  // round (see `ContentLayer.pickEnabled`). The disc stays DRAWN all the way
+  // down to the 200 pc approach fade, but stops taking clicks once the camera
+  // is inside it: `MILKY_WAY_PICK_MIN_DISTANCE_MPC` above carries the why.
+  // Composed over `enabled` rather than restating its three terms, so the
+  // shared gates cannot drift and pick stays a strict subset of draw.
+  pickEnabled(state, ctx) {
+    if (!milkyWayLayer.enabled(state, ctx)) return false;
+    const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
+    return camDistMpc >= MILKY_WAY_PICK_MIN_DISTANCE_MPC;
   },
 
   draw(pass, view, ctx, state) {
@@ -174,11 +212,11 @@ export const milkyWayLayer: ContentLayer = {
   // the MW pick a stale camera); the COSMO pickables keep the inherit pattern
   // because their shared prefix is re-bound by point-sprites every pass.
   //
-  // Visibility is NOT re-checked here: the pick program filters by this
-  // row's `enabled`, evaluated against the pick-time camera — the SAME
-  // gate the draw program runs. Draw and pick share ONE gate, so the pick
-  // answer can't drift from the draw answer for a given camera. The
-  // renderer-null guard follows `draw`'s pre-bootstrap pattern.
+  // Visibility is NOT re-checked here: the pick program filters by this row's
+  // `pickEnabled`, evaluated against the pick-time camera. That gate composes
+  // over `enabled` — the same derivation the draw program runs — so the pick
+  // answer can only ever be a SUBSET of the draw answer, never a drift from it.
+  // The renderer-null guard follows `draw`'s pre-bootstrap pattern.
   drawPick(pass, view, ctx, state) {
     const pickRenderer = state.gpu.milkyWayPickRenderer;
     if (pickRenderer === null) return;

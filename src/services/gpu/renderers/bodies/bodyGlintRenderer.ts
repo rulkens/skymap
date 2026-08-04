@@ -61,7 +61,10 @@ import { ADDITIVE_BLEND } from '../../lib/blendStates';
  * Upper bound on body glints drawn per frame. The glints branch is a subset of
  * the seeded bodies (the flat/textured branches take the rest), so it never
  * exceeds the ~21 seeded planets/moons; this caps the instance buffer with
- * headroom, matching `planetRenderer`'s `MAX_PLANETS`.
+ * headroom. `planetRenderer` and `orbitTrailRenderer` retired their own fixed
+ * caps for a grow-on-demand buffer (their tables can outgrow a headroom
+ * number); this renderer keeps a fixed cap deliberately — see "Why draw takes
+ * the batch" above, its instance buffer is a single fixed-capacity allocation.
  */
 export const MAX_GLINTS = 24;
 

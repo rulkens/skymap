@@ -80,40 +80,37 @@ export const MILKY_WAY_MODEL_SCALE = MILKY_WAY_RADIUS_MPC / outerRadiusOf(MILKY_
  * a hop between the number and the field it seeds.
  */
 export const MILKY_WAY_TUNING_DEFAULTS: MilkyWayTuning = {
-  // The generation records carry the galaxy-renderer tool's own sprite sizes,
-  // tuned against that tool's reference gallery; the app draws the same cloud
-  // against a busier background (the full point-cloud sky), so sprites read
-  // fatter here. 0.7 shrinks them back without touching the generated data.
-  starSizeScale: 0.7,
-  // The tool's tuned starIntensity default (`createGalaxyEngine.ts`'s render
-  // defaults), and it transfers as-is: the tool drives the app's own
-  // `createBloomPyramid` + `createCompositor` over the same shaders, so the
-  // same value meets the same tone curve on both sides. What can still pull it
-  // is scene context, not post — the app draws this cloud against the full
-  // point-cloud sky where the tool draws it against black.
-  exposure: 0.11,
+  // starSizeScale / exposure / softness / starPxMax below were dialled as ONE
+  // visual-gate pass toward the smooth-field end of the count/size trade (the
+  // "Celestia end" note in `MILKY_WAY_SLIDER_FIELDS`): half the star budget,
+  // fatter and softer splats, exposure cut to hold total light. Under additive
+  // blending that light goes as roughly count * exposure * size^2, so moving
+  // any one of them alone changes brightness rather than only shape.
+  starSizeScale: 1.85,
+  exposure: 0.0385,
   // A 1 px floor is the mildest anti-sparkle setting that still stops a
   // distant star from vanishing entirely between frames.
   starPxMin: 1.0,
-  // 48 target px (96 screen px through the half-res aggregate) bounds the
-  // foreground swell on a close flythrough without visibly flattening the
-  // near disc into equal-sized discs.
-  starPxMax: 48.0,
-  // Off by default: the tight core+glow profile is what the generation preset
-  // was tuned against. Raising it is the "few large soft splats" experiment.
-  softness: 0,
+  // 119 target px — 357 screen px at the divisor below — bounds the foreground
+  // swell on a close flythrough without visibly flattening the near disc into
+  // equal-sized discs.
+  starPxMax: 119.0,
+  // Full broad Gaussian. At this sprite size the tight core+glow profile the
+  // generation preset was tuned against reads as visible particles; the
+  // Gaussian carries the same integral, so this is shape only.
+  softness: 1,
   // The first perf lever. At mid/far views the full star budget of additive
   // subpixel sprites collapses onto a handful of pixels, and additive
   // blending serializes the blender per pixel. In NDC (not px) because the
   // hash band was tuned in NDC units in the tool.
   lodApparent: 0.02,
-  // Half resolution for the `mw-aggregate` offscreen — the same halving the
-  // survey's `star-aggregates` row settled on, and for the same reason: it
-  // quarters the star pass's fragments at a reconstruction blur the smooth
-  // summed-glow field hides completely. `starPxMin` / `starPxMax` above are
+  // Third resolution for the `mw-aggregate` offscreen: 1/9th of the star
+  // pass's fragments, at a reconstruction blur the broad Gaussian profile
+  // above hides completely (the survey's `star-aggregates` row only halves,
+  // because its sprites stay tight). `starPxMin` / `starPxMax` above are
   // stated in pixels OF THAT TARGET, so this number and those two are one
   // trade — change it and they move with it.
-  aggregateDivisor: 2,
+  aggregateDivisor: 3,
   // By reference to `MILKY_WAY_STARS_PER_TIER.medium`, never a copied
   // literal: medium IS the tier the preset was tuned against, and the tier
   // slice always boots at 'medium' (see `tierSlice.ts`), so this reproduces

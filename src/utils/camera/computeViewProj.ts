@@ -77,8 +77,10 @@ export function computeViewProj(cam: OrbitCamera): Mat4 {
   // the pitch-clamp in the controls module).  When `cam.roll` is non-zero the
   // up-vector is rotated about the view direction; `imagePlaneBasis` owns that
   // roll convention (Rodrigues' formula), and we hand its `rolledUp` result to
-  // `lookAt`. The base up is the frame pole (`frameUp` reads `cam.frameBasis`);
-  // absent a basis that is world +Y, so the pre-frame camera is unchanged.
+  // `lookAt`. The base up is the frame pole (`frameUp` reads `cam.upBasis` —
+  // draw-time, so it may be a transient mid-slerp basis, unlike the decode's
+  // `poseBasis`); absent a basis that is world +Y, so the pre-frame camera is
+  // unchanged.
   //
   // `forward` is the unit view direction (target − position). `imagePlaneBasis`
   // needs it as a required argument even when roll is zero (it also determines
@@ -95,7 +97,7 @@ export function computeViewProj(cam: OrbitCamera): Mat4 {
   const basis = imagePlaneBasis(
     forwardScratch,
     cam.roll ?? 0,
-    frameUp(cam.frameBasis, upRefScratch),
+    frameUp(cam.upBasis, upRefScratch),
     basisScratch,
   );
 

@@ -105,17 +105,16 @@ describe('extractSelectionRow', () => {
     });
   });
 
-  it('star body row position is copied, not aliased to the shared SCENE_BODIES seed', () => {
-    // Stars (unlike planets/Earth) are not in the derived J2000 snapshot, so the
-    // body arm falls back to the star's authored SCENE_BODIES `positionMpc`. That
-    // fallback must COPY the Vec3: the row lands in the RTK store, whose
-    // immutability middleware freezes state — an aliased Vec3 would freeze the
-    // shared star seed in place, poisoning every other consumer of the constant.
-    const seed = SCENE_BODIES.find((b) => b.id === 'sirius');
-    if (!seed || !('positionMpc' in seed)) throw new Error('expected a sirius star seed');
+  it('star body row position is copied, not aliased to the shared anchor', () => {
+    // A star's snapshot position IS its `SCENE_ANCHORS` array, shared by
+    // reference (an anchor never moves, so the derive never copies it). The row
+    // must COPY that Vec3: it lands in the RTK store, whose immutability
+    // middleware freezes state — an aliased Vec3 would freeze the shared anchor
+    // in place, poisoning every other consumer of the constant.
+    const anchor = deriveBodyStates(CONST_J2000).get('sirius')!.positionMpc;
     const row = extractSelectionRow({ type: 'body', id: 'sirius' }, deps);
-    expect(row !== null && row.type === 'body' && row.positionMpc).toEqual(seed.positionMpc);
-    expect(row !== null && row.type === 'body' && row.positionMpc).not.toBe(seed.positionMpc);
+    expect(row !== null && row.type === 'body' && row.positionMpc).toEqual([...anchor]);
+    expect(row !== null && row.type === 'body' && row.positionMpc).not.toBe(anchor);
   });
 
   it('body ref with an unknown seed id → null (garbage, not "loading")', () => {

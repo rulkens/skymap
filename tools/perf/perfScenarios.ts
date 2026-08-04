@@ -55,6 +55,12 @@ const EARTH_TARGET: Vec3 = [-8.5895045e-13, 4.3022234e-12, 1.865304e-12];
 // once rather than risking the target drifting between them.
 const GALACTIC_CENTRE_TARGET: Vec3 = [-0.00043726202, -0.0069827522, -0.0038794295];
 
+// The look-at point for `galactic-centre`: SGR_A_STAR_ANCHOR.positionMpc,
+// printed via tsx (not the hand-flown GALACTIC_CENTRE_TARGET above, which is
+// ~178 pc off Sgr A* — ~550× the whole 0.325 pc S-star envelope, so reusing it
+// would frame empty space at this scale).
+const SGR_A_STAR_TARGET: Vec3 = [-0.0004469860712, -0.007138118108, -0.003965748015];
+
 export const PERF_SCENARIOS: readonly PerfScenario[] = [
   {
     name: 'earth-surface',
@@ -72,6 +78,10 @@ export const PERF_SCENARIOS: readonly PerfScenario[] = [
     name: 'milky-way',
     pose: { target: EARTH_TARGET, distance: 0.011100341, yaw: 5.9423, pitch: 0.7802 },
   },
+  // `clearFocus` on both galactic-centre-target poses: without it the boot
+  // Earth focus pivot-pins the target back to Earth (~8 kpc off), so these
+  // scenarios silently measured an Earth-centred framing until 2026-07-31.
+  // Baselines before that date are not comparable for these two.
   {
     name: 'milky-way-outside',
     pose: {
@@ -79,6 +89,7 @@ export const PERF_SCENARIOS: readonly PerfScenario[] = [
       distance: 0.022368088,
       yaw: 4.4046,
       pitch: 0.4705,
+      clearFocus: true,
     },
   },
   // Same look-at, yaw and pitch as `milky-way-outside`, dollied in from ~22
@@ -97,6 +108,22 @@ export const PERF_SCENARIOS: readonly PerfScenario[] = [
       distance: 0.017838132,
       yaw: 4.4046,
       pitch: 0.4705,
+      clearFocus: true,
+    },
+  },
+  // Inside the S-star cluster: at 5e-7 Mpc every one of the 39 S-star orbits
+  // clears the orbit-trails CULL_PX gate (all pass below 6.66e-7 Mpc at this
+  // viewport), so this pose is the max-instance-count regime for the
+  // ribbon-impostor trail renderer. `clearFocus` because the boot Earth
+  // focus would otherwise pivot-pin the target back to Earth.
+  {
+    name: 'galactic-centre',
+    pose: {
+      target: SGR_A_STAR_TARGET,
+      distance: 5e-7,
+      yaw: 4.4046,
+      pitch: 0.4705,
+      clearFocus: true,
     },
   },
   {

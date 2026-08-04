@@ -75,6 +75,7 @@ import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookin
 import { yawPitchToDir } from '../../../utils/camera/yawPitchToDir';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/frameUp';
+import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
 import { lerp } from '../../../utils/math/lerp';
 import { trapezoidEase } from '../../../utils/math/trapezoidEase';
 import { buildDwellWarp } from './buildDwellWarp';
@@ -253,8 +254,10 @@ export function buildPathTrack(params: BuildParams): PathTrack {
   // The CAMERA flies this spline (not a target it orbits). Knot 0 is where the
   // camera actually is right now — derived from the start pose via the orbit
   // convention eye = target + distance · dir(yaw, pitch) — so t=0 is pinned to
-  // the live camera with no positional pop.
-  const liveDir = yawPitchToDir(start.yaw, start.pitch);
+  // the live camera with no positional pop. `dir` decodes frame-LOCAL; rotate
+  // into world by `frameBasis` (tight column-major product, mirroring
+  // `updatePosition.ts`) so this knot lands where the renderer's eye actually is.
+  const liveDir = rotateVec3ByTightMat3(yawPitchToDir(start.yaw, start.pitch), frameBasis);
   const liveEye: Vec3 = [
     start.target[0] + start.distance * liveDir[0],
     start.target[1] + start.distance * liveDir[1],
@@ -614,10 +617,11 @@ export function buildPathTrack(params: BuildParams): PathTrack {
     const pitchV = livePitch + (aim.pitch - livePitch) * w;
 
     // The spline IS the eye path. Derive the look-at target the renderer needs:
-    // updatePosition sets eye = target + distance · dir(yaw, pitch), so to land
-    // the eye on (tx,ty,tz) we set target = eye − distance · dir.
+    // updatePosition sets eye = target + distance · dir(yaw, pitch) — rotated
+    // into world by `frameBasis` — so to land the eye on (tx,ty,tz) we set
+    // target = eye − distance · dir, through the same rotation.
     const dist = Math.exp(pose.ld);
-    const dir = yawPitchToDir(yawV, pitchV);
+    const dir = rotateVec3ByTightMat3(yawPitchToDir(yawV, pitchV), frameBasis);
     return {
       target: [pose.tx - dist * dir[0], pose.ty - dist * dir[1], pose.tz - dist * dir[2]],
       distance: dist,

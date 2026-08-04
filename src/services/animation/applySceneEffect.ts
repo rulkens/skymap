@@ -50,10 +50,18 @@
  * Dispatches `setOrientation(effect.frame)` then `startFrameTween`, in that order
  * — the same pair, and the same live-basis capture, the interactive
  * `watchOrientationChangeSaga` performs. The roll's `fromQuat` is the live basis
- * `B(t)` resolved this frame (`liveFrameBasisQuat(cameraRuntime)`), so a switch
+ * `B(t)` resolved this frame (`liveUpBasisQuat(cameraRuntime)`), so a switch
  * firing mid-roll composes continuously instead of snapping back to a steady
  * pole. Unlike the interactive saga there is no null-runtime bail: inside a
  * running clip the frame loop has already resolved `frameBasis.current`.
+ *
+ * Deliberately NOT a third dispatch: `watchOrientationChangeSaga` also
+ * re-encodes `camera.base` (`commitCameraPose(reencodePose(...))`); this cue
+ * does not need to, because the clip driver that is necessarily active
+ * whenever a `frameTo` fires re-derives its pose from scratch every frame
+ * against the CURRENT `settings.orientation` (see `SceneEffect`'s `frameTo`
+ * doc and `cameraDrivers.ts`'s `clip` row) — `base` is never what's rendered
+ * nor what commit-on-edge bakes while a clip is winning.
  */
 
 import type { SceneEffect } from '../../@types/animation/SceneEffect';
@@ -62,7 +70,7 @@ import type { AppDispatch } from '../../store/types';
 import { updateSelectionFocus } from '../../state/selection/selectionSlice';
 import { setOrientation } from '../../state/settings/settingsSlice';
 import { startFrameTween } from '../../state/camera/cameraSlice';
-import { liveFrameBasisQuat } from '../engine/camera/liveFrameBasisQuat';
+import { liveUpBasisQuat } from '../engine/camera/liveUpBasisQuat';
 import { syncVisibilityFades } from '../engine/wiring/syncVisibilityFades';
 import { VISIBILITY_ACTION_ROW } from './visibilityActionRow';
 import { scopedVisibilityActions } from './scopedVisibilityActions';
@@ -141,7 +149,7 @@ export function applySceneEffect(
       // slerp the resolved basis sits between two frames, so a frameTo firing
       // mid-roll must compose continuously from wherever the pole is now rather
       // than snapping back.
-      const fromQuat = liveFrameBasisQuat(state.cameraRuntime);
+      const fromQuat = liveUpBasisQuat(state.cameraRuntime);
       store.dispatch(setOrientation(effect.frame));
       store.dispatch(
         startFrameTween({

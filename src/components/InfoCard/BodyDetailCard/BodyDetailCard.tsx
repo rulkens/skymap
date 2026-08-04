@@ -1,6 +1,6 @@
 /**
- * BodyDetailCard — rich panel for a focused scene body (a famous star, Earth, or
- * a planet/moon).
+ * BodyDetailCard — rich panel for a focused scene body (a famous star, Earth, a
+ * planet/moon, an S-star).
  *
  * The engine hands React a lean `BodyInfo` (id + label + position + radius) so a
  * body is always immediately selectable.  The card then branches on the body's
@@ -19,7 +19,9 @@
  *     compiled-in `BODY_FACTS` table (a tiny fixed set — no fetch, unlike the
  *     star sidecar), keyed by the same `id`.  With an entry it shows the full
  *     planetary fact sheet (radius first, then mass, gravity, day, year, …);
- *     without one it falls back to the lean panel (radius alone).
+ *     without one it falls back to the lean panel (radius alone).  A body
+ *     carrying orbital elements (an S-star) adds `BodyInfo.orbit`'s block after
+ *     that panel — synchronous, so it needs no loading branch of its own.
  *
  * The non-star body's **camera distance** is time-dependent (it swings as the
  * body orbits), so it is NOT baked into the identity `BodyInfo`; it arrives as
@@ -46,6 +48,7 @@ import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
 import type { FamousStarMetaEntry } from '../../../@types/loading/FamousStarMetaEntry';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { formatDistance } from '../../../utils/format/formatDistance';
+import { formatScalar } from '../../../utils/format/formatScalar';
 import { FAMOUS_STAR_IDS } from '../../../data/bodies/famousStarsIndex';
 import { BODY_FACTS } from '../../../data/bodies/bodyFacts.generated';
 import { starWikipediaTitle } from '../../../utils/format/starWikipediaTitle';
@@ -188,6 +191,30 @@ function BodyDetailCard({
               />
             )}
           </div>
+          {/*
+            Orbital block — present only for a body carrying elements (the
+            S-stars today), absent for Earth, the planets and the moons, whose
+            orbits are the fact sheet's business.  The pericentre prints both
+            units on one row because the Schwarzschild figure is legible only
+            beside the AU it restates.
+          */}
+          {target.orbit && (
+            <div className={styles.cardSection}>
+              <CardRow label="Orbits" value={target.orbit.focusLabel} />
+              <CardRow label="Orbital period" value={`${formatScalar(target.orbit.periodYr)} yr`} />
+              <CardRow label="Eccentricity" value={target.orbit.eccentricity.toFixed(3)} />
+              <CardRow
+                label="Pericentre"
+                value={`${formatScalar(target.orbit.pericentreAu)} AU (${formatScalar(
+                  target.orbit.pericentreSchwarzschildRadii,
+                )} Schwarzschild radii)`}
+              />
+              <CardRow
+                label="Pericentre speed"
+                value={`${formatScalar(target.orbit.pericentreSpeedKmS)} km/s`}
+              />
+            </div>
+          )}
           {facts && (
             <div className={styles.cardSection}>
               <WikipediaRow title={facts.wikiTitle} />

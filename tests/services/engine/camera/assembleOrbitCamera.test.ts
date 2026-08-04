@@ -29,7 +29,12 @@ const originPose: CameraPose = {
 
 describe('assembleOrbitCamera', () => {
   it('merges pose + projection and derives position (known geometry)', () => {
-    const result = assembleOrbitCamera(originPose, defaultProjection, IDENTITY_BASIS);
+    const result = assembleOrbitCamera(
+      originPose,
+      defaultProjection,
+      IDENTITY_BASIS,
+      IDENTITY_BASIS,
+    );
 
     // Projection fields are forwarded unchanged.
     expect(result.fovYRad).toBe(defaultProjection.fovYRad);
@@ -60,10 +65,11 @@ describe('assembleOrbitCamera', () => {
     // basis written onto the camera.
     const polePose: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: Math.PI / 2, distance: 5 };
     const equatorial = ORIENTATION_FRAMES.equatorial;
-    const result = assembleOrbitCamera(polePose, defaultProjection, equatorial);
+    const result = assembleOrbitCamera(polePose, defaultProjection, equatorial, equatorial);
 
     // The returned camera carries the basis it was assembled with.
-    expect(result.frameBasis).toBe(equatorial);
+    expect(result.poseBasis).toBe(equatorial);
+    expect(result.upBasis).toBe(equatorial);
 
     // Position reflects the basis: local zenith rotates to the equatorial pole +z.
     expect(result.position[0]).toBeCloseTo(0, 5);
@@ -73,7 +79,7 @@ describe('assembleOrbitCamera', () => {
 
   it('target is a fresh array — does not alias the input pose target', () => {
     const pose: CameraPose = { target: [1, 2, 3], yaw: 0, pitch: 0, distance: 10 };
-    const result = assembleOrbitCamera(pose, defaultProjection, IDENTITY_BASIS);
+    const result = assembleOrbitCamera(pose, defaultProjection, IDENTITY_BASIS, IDENTITY_BASIS);
 
     // Different reference.
     expect(result.target).not.toBe(pose.target);
@@ -90,7 +96,7 @@ describe('assembleOrbitCamera', () => {
     const poseSnap = { ...pose, target: [...pose.target] };
     const projSnap = { ...projection };
 
-    assembleOrbitCamera(pose, projection, IDENTITY_BASIS);
+    assembleOrbitCamera(pose, projection, IDENTITY_BASIS, IDENTITY_BASIS);
 
     // Pose is unchanged.
     expect(pose.target).toEqual(poseSnap.target);
@@ -106,8 +112,18 @@ describe('assembleOrbitCamera', () => {
   });
 
   it('calling twice with the same inputs yields equivalent cameras', () => {
-    const result1 = assembleOrbitCamera(originPose, defaultProjection, IDENTITY_BASIS);
-    const result2 = assembleOrbitCamera(originPose, defaultProjection, IDENTITY_BASIS);
+    const result1 = assembleOrbitCamera(
+      originPose,
+      defaultProjection,
+      IDENTITY_BASIS,
+      IDENTITY_BASIS,
+    );
+    const result2 = assembleOrbitCamera(
+      originPose,
+      defaultProjection,
+      IDENTITY_BASIS,
+      IDENTITY_BASIS,
+    );
 
     expect(result1.target).toEqual(result2.target);
     expect(result1.yaw).toBe(result2.yaw);

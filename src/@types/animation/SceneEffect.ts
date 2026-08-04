@@ -40,8 +40,26 @@
  *     the roll sequences a `wait(over)` after it. The alternative — an awaited
  *     camera-track writer — was rejected: the roll composes over the LIVE basis
  *     `B(t)` captured at fire time (symmetric with the interactive
- *     `watchOrientationChangeSaga`), so a `frameTo` firing mid-roll continues
- *     from wherever the pole is rather than snapping back to a steady pole.
+ *     `watchOrientationChangeSaga`'s roll), so a `frameTo` firing mid-roll
+ *     continues from wherever the pole is rather than snapping back to a
+ *     steady pole.
+ *
+ *     Only TWO of the interactive switch's three effects fire here —
+ *     `watchOrientationChangeSaga` also re-encodes `camera.base` into the new
+ *     frame (`commitCameraPose(reencodePose(...))`); this cue does not. That
+ *     is not a missing step: `frameTo` only ever fires while the clip driver
+ *     (priority 95, `cameraDrivers.ts`) is the active pose author, and that
+ *     driver re-derives its pose from scratch EVERY frame — `evaluateClip`
+ *     against the pinned `clip.frame`, re-encoded into the CURRENT
+ *     `settings.orientation` — so `base` is not what's on screen and is not
+ *     what commit-on-edge reads either: it bakes the driver's own
+ *     already-current-frame pose (`lastPose`) when the clip ends, never a
+ *     stale `base`. The interactive path needs the explicit re-encode because
+ *     THERE `base` (or a driver derived from it) is what renders immediately;
+ *     inside a clip it never is until the clip is already gone. Re-derive
+ *     this from `cameraDrivers.ts`'s `clip` row before assuming a
+ *     `commitCameraPose` belongs here — it would double-write nothing, but it
+ *     would be motivated by a symmetry that doesn't hold in this direction.
  *
  * ### `layers` are `VisibilityLayerKey`s; `scoped` are per-item entries
  *

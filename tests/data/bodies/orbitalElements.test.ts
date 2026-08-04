@@ -9,7 +9,7 @@ import type { Vec3 } from '../../../src/@types/math/Vec3';
  * Invariants only (per testing.md). The seeded element VALUES are verified
  * against JPL in the spec, not re-asserted here — a value restatement would
  * only mirror the source. What CAN break silently is the table's structure:
- * a duplicate id, a dangling parentId, or an out-of-range element that the
+ * a duplicate id, a dangling focusId, or an out-of-range element that the
  * Keplerian math downstream would consume as garbage. Those are pinned.
  */
 describe('ORBITAL_ELEMENTS has a valid structure', () => {
@@ -18,16 +18,24 @@ describe('ORBITAL_ELEMENTS has a valid structure', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('resolves every non-null parentId to a real body', () => {
-    // A parent focus is either another orbit in this table or a seeded scene
-    // body (the Moon orbits Earth). A dangling parentId would leave a trail
-    // orbiting nothing.
+  it('resolves every focusId to a real body', () => {
+    // A focus is either another orbit in this table, the Sun (a seeded scene
+    // body), or another seeded scene body (the Moon orbits Earth). A dangling
+    // focusId would leave a trail orbiting nothing.
     const known = new Set<string>([
       ...ORBITAL_ELEMENTS.map((e) => e.id),
       ...SCENE_BODIES.map((b) => b.id),
     ]);
     for (const e of ORBITAL_ELEMENTS) {
-      if (e.parentId !== null) expect(known.has(e.parentId)).toBe(true);
+      expect(known.has(e.focusId)).toBe(true);
+    }
+  });
+
+  it('every orbital element row names a focus', () => {
+    // `focusId` has no null case any more — an empty string would silently
+    // resolve to nothing in `deriveBodyStates`'s map lookup.
+    for (const e of ORBITAL_ELEMENTS) {
+      expect(e.focusId.length).toBeGreaterThan(0);
     }
   });
 

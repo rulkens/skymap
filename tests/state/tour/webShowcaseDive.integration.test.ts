@@ -48,6 +48,7 @@ import { updateSelectionFocus } from '../../../src/state/selection/selectionSlic
 import { watchFocusTweenSaga } from '../../../src/state/selection/watchFocusTweenSaga';
 
 import { Source } from '../../../src/data/source';
+import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
@@ -127,7 +128,7 @@ const DIVE_DEPS: ResolveDeps = {
 const CAMERA_RUNTIME: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 },
   fovYRad: 0.8,
-  frameBasisQuat: [0, 0, 0, 1],
+  upBasisQuat: [0, 0, 0, 1],
 };
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -211,7 +212,7 @@ describe('webShowcase dive invariants', () => {
 
     // Activate a clip so camera.clip !== null.
     const beat2Clip = webShowcase.beats[1]!.enterClip!;
-    store.dispatch(clipStarted(beat2Clip));
+    store.dispatch(clipStarted({ data: beat2Clip, frame: DEFAULT_ORIENTATION }));
     expect(store.getState().camera.clip).not.toBeNull(); // guard: clip is active
 
     // Dispatch a focus update — this is what an in-clip focus() cue would

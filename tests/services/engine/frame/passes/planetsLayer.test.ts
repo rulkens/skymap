@@ -354,6 +354,38 @@ describe('planetsLayer.draw', () => {
     const state = { gpu: { planetRenderer: null } } as unknown as EngineState;
     expect(() => planetsLayer.draw(PASS_STUB, view, CTX_STUB, state)).not.toThrow();
   });
+
+  it('pick and draw agree on the planet count — no body is picked without being drawn', () => {
+    // Regression coverage for the "draw caps, pick does not" asymmetry the
+    // backlog item named: `draw` used to clamp its instanced batch to
+    // MAX_PLANETS while `drawPick` walked the SAME partition uncapped, so a
+    // roster past the cap left the tail bodies invisible yet still
+    // clickable — an InfoCard for a body nothing drew. Neither path carries
+    // a cap anymore, so the two counts — one instanced draw's `count` and
+    // the number of per-body `drawSphere` pick stamps — must agree for the
+    // WHOLE roster, not just whatever happened to fit under the old ceiling.
+    // Deliberately asserted with no literal count on either side: the moment
+    // the seeded table crosses the retired MAX_PLANETS = 24 (the S-star
+    // feature brings it there), this stops being a same-answer-either-way
+    // check and starts actually exercising the divergence the old clamp
+    // caused.
+    composeMock.mockClear();
+    const view = makeNear0View();
+
+    const renderer = makeRendererSpy();
+    planetsLayer.draw(PASS_STUB, view, DRAW_CTX, makeState(renderer, SEEDED_PLANETS));
+    expect(renderer.draw).toHaveBeenCalledTimes(1);
+    const drawnCount = renderer.draw.mock.calls[0]![2];
+
+    const drawSphere = vi.fn();
+    const pickCtx = { ...DRAW_CTX, drawPxPerRad: 1e9 } as unknown as ReadyFrameContext;
+    const pickState = {
+      gpu: { bodyPickRenderer: { drawSphere } },
+      data: { bodies: { planets: SEEDED_PLANETS } },
+    } as unknown as EngineState;
+    planetsLayer.drawPick!(PASS_STUB, view, pickCtx, pickState);
+    expect(drawSphere).toHaveBeenCalledTimes(drawnCount);
+  });
 });
 
 describe('planetsLayer.pickEnabled (Bug A — textured-only frame stays pickable)', () => {

@@ -47,7 +47,8 @@ export type MilkyWayTuning = {
   /**
    * Screen-space sprite half-extent CAP, in pixels of the render target.
    * Bounds foreground swell on close flythroughs. The star pass renders into
-   * the half-res `mw-aggregate` target, so one unit here is two screen pixels.
+   * the reduced-res `mw-aggregate` target, so one unit here is
+   * `aggregateDivisor` screen pixels.
    */
   starPxMax: number;
   /**

@@ -93,7 +93,7 @@ export const SLAB_REVERSED_Z: Readonly<Record<number, boolean>> = {
 };
 
 // The near-field lookAt derives its image-plane up through the shared
-// `imagePlaneBasis` seam. The base up is the frame pole (`frameUp(cam.frameBasis)`;
+// `imagePlaneBasis` seam. The base up is the frame pole (`frameUp(cam.upBasis)`;
 // world +Y absent a basis). Roll is 0 here — roll parity with the cosmological
 // slab's `computeViewProj` is deferred alongside the zoom-to-earth series.
 
@@ -141,7 +141,7 @@ export function deriveSlabs(cam: OrbitCamera, cosmoVp: Mat4): readonly Slab[] {
   // change as the user zooms, only the near-field's does.
   const { near: nearMpc, far: farMpc } = foregroundFrustum(cam.distance);
   // The image-plane up comes from the shared basis seam. At roll 0 `rolledUp`
-  // is exactly the frame pole (`frameUp(cam.frameBasis)`; world +Y absent a
+  // is exactly the frame pole (`frameUp(cam.upBasis)`; world +Y absent a
   // basis), so this tracks the cosmological slab's up through the one seam.
   const fx = cam.target[0] - cam.position[0];
   const fy = cam.target[1] - cam.position[1];
@@ -153,7 +153,7 @@ export function deriveSlabs(cam: OrbitCamera, cosmoVp: Mat4): readonly Slab[] {
   const { rolledUp } = imagePlaneBasis(
     forwardScratch,
     0,
-    frameUp(cam.frameBasis, upRefScratch),
+    frameUp(cam.upBasis, upRefScratch),
     basisScratch,
   );
   const nearFieldVp = computeForegroundViewProj({

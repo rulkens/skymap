@@ -69,7 +69,7 @@ import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { EngineState } from '../../@types/engine/state/EngineState';
 
 import { createCameraClock } from './camera/cameraClock';
-import { liveFrameBasisQuat } from './camera/liveFrameBasisQuat';
+import { liveUpBasisQuat } from './camera/liveUpBasisQuat';
 import type { CameraRuntime } from '../../@types/engine/state/CameraRuntime';
 import { CONST_J2000 } from '../../data/time/constJ2000';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
@@ -219,7 +219,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // Seeded with the default frame's steady basis so a pre-first-frame read is
     // valid; `runFrame` overwrites it with the resolved B(t) each frame. Copied
     // so the seed never aliases the shared registry entry.
-    frameBasis: { current: [...ORIENTATION_FRAMES[DEFAULT_ORIENTATION]] },
+    upBasis: { current: [...ORIENTATION_FRAMES[DEFAULT_ORIENTATION]] },
   };
 
   // ── Settings — the injected Redux store ──────────────────────────
@@ -707,7 +707,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // The live camera Resources the focus and orientation sagas read off the
     // frame loop: the visible from-pose (so a re-focus hands off from what the
     // user sees), the lens FOV (for structure screen-fill framing), and the
-    // up-basis quaternion resolved THIS frame via `liveFrameBasisQuat`, so a
+    // up-basis quaternion resolved THIS frame via `liveUpBasisQuat`, so a
     // mid-slerp re-switch captures the live pole rather than snapping to the
     // committed frame. Null when `state.cam` is absent — pre-bootstrap or
     // post-destroy — so both sagas no-op rather than seed from a stale pose.
@@ -716,7 +716,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         ? {
             from: state.cameraRuntime.lastPose.current,
             fovYRad: state.cameraRuntime.projection.fovYRad,
-            frameBasisQuat: liveFrameBasisQuat(state.cameraRuntime),
+            upBasisQuat: liveUpBasisQuat(state.cameraRuntime),
           }
         : null,
     playClip,

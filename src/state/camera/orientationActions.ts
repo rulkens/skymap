@@ -3,11 +3,15 @@
  * switch from the UI.
  *
  * `requestOrientationChange(frame)` asks to make `frame` the camera's "up" pole.
- * A switch is two effects: persist the target frame (settings) AND animate the
- * up-basis roll toward it (the camera slice's `frameTween`). It is reducer-less —
- * orientation STATE lives in the settings slice (`setOrientation`) and the roll
- * descriptor in the camera slice (`startFrameTween`); this is the higher-level
- * intent the saga translates into that pair.
+ * A switch is THREE effects (`watchOrientationChangeSaga`): persist the target
+ * frame (settings, `setOrientation`), re-express `camera.base` into it so the
+ * eye holds still the instant the up-basis flips (`commitCameraPose` +
+ * `reencodePose` — the load-bearing one: skip it and the pose stays expressed
+ * in the OUTGOING basis while the pole rolls out from under it), AND animate
+ * the up-basis roll toward the new frame (the camera slice's `frameTween`). It
+ * is reducer-less — orientation STATE lives in the settings slice and the roll
+ * descriptor in the camera slice; this is the higher-level intent the saga
+ * translates into that triple.
  *
  * The saga owns the capture the UI cannot do: the roll's start quaternion must be
  * the LIVE up-basis resolved this frame (read off the engine's frame-loop

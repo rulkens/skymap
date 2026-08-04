@@ -9,11 +9,13 @@ import {
   updateSelectionSelect,
 } from '../../../src/state/selection/selectionSlice';
 import { clipStarted } from '../../../src/state/camera/cameraSlice';
+import { setOrientation } from '../../../src/state/settings/settingsSlice';
 import {
   engineStatusChanged,
   engineSourceCountReported,
 } from '../../../src/state/engine/engineSlice';
 import { Source } from '../../../src/data/sources';
+import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { cameraRoute } from '../../../src/store/constants';
 import { MILKY_WAY_VIEW_DISTANCE_MPC } from '../../../src/data/milkyWay/galacticCenter';
 import { buildStarOctree } from '../../../tools/stars/buildStarOctree';
@@ -71,7 +73,7 @@ describe('watchFocusTweenSaga', () => {
     const mw = createSagaMiddleware();
     const s = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(mw) });
     mw.run(watchFocusTweenSaga);
-    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, frameBasisQuat: [0, 0, 0, 1] });
+    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, upBasisQuat: [0, 0, 0, 1] });
     mw.setContext({ resolveDeps, cameraRuntime: () => cameraRuntime() });
     return s;
   }
@@ -119,7 +121,7 @@ describe('watchFocusTweenSaga', () => {
 
     // The camera comes online during wireInput; the engine then emits a status
     // pulse as the first catalog arrives (or the synthetic fallback fires).
-    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, frameBasisQuat: [0, 0, 0, 1] });
+    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, upBasisQuat: [0, 0, 0, 1] });
     store.dispatch(engineStatusChanged({ kind: 'ready', count: 1, source: Source.SDSS }));
     await flush();
 
@@ -188,16 +190,15 @@ describe('watchFocusTweenSaga', () => {
     expect(store.getState()[cameraRoute].tween).not.toBeNull();
   });
 
-  // Regression: famous stars are scene BODIES (star-body presence) but are absent
-  // from the orbital body-state snapshot the follow driver activates on — and they
-  // do not move — so they must TWEEN, not be swallowed by the body no-op. The saga
-  // now gates on the follow driver's actual membership (liveBodyPosition), so a
-  // star body falls through to the tween. The PLANET-body-no-tween half is the
-  // 'earth' case above (earth IS in the snapshot).
+  // Regression: famous stars are scene BODIES (star-body presence) but do not
+  // move, so the follow driver leaves them and they must TWEEN rather than being
+  // swallowed by the body no-op. The saga gates on the follow driver's own
+  // predicate (bodyMovesThisFrame), so a star body falls through to the tween.
+  // The PLANET-body-no-tween half is the 'earth' case above.
   it('a famous-star body focus DOES plant a tween (falls through the follow-membership gate)', async () => {
-    // 'sirius' is a StarBody in SCENE_BODIES, absent from deriveBodyStates, so
-    // liveBodyPosition returns null and the saga builds the tween. Its `to` is
-    // framed on the star's fixed world position (stars don't move → a tween is right).
+    // 'sirius' is a StarBody in SCENE_BODIES with no ORBITAL_ELEMENTS row, so the
+    // saga builds the tween. Its `to` is framed on the star's fixed world position
+    // (stars don't move → a tween is right).
     store.dispatch(updateSelectionFocus({ type: 'body', id: 'sirius' }));
     await flush();
     expect(store.getState()[cameraRoute].tween).not.toBeNull();
@@ -209,7 +210,7 @@ describe('watchFocusTweenSaga', () => {
   const MINIMAL_CLIP: ClipData = { start: 'live', timeline: [] };
 
   it('watchFocusTweenSaga plants no tween while a clip is active', async () => {
-    store.dispatch(clipStarted(MINIMAL_CLIP));
+    store.dispatch(clipStarted({ data: MINIMAL_CLIP, frame: DEFAULT_ORIENTATION }));
     store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
     await flush();
     expect(store.getState()[cameraRoute].tween).toBeNull();
@@ -225,5 +226,17 @@ describe('watchFocusTweenSaga', () => {
     expect(tween!.from).toEqual(FROM);
     expect(tween!.to.distance).toBe(MILKY_WAY_VIEW_DISTANCE_MPC);
     expect(tween!.to.yaw).toBe(FROM.yaw);
+  });
+
+  // The descriptor must carry the orientation live AT DISPATCH TIME (not
+  // DEFAULT_ORIENTATION, not whatever it later becomes) — the tween driver
+  // re-expresses the pose against this pinned frame on a later switch.
+  it('stamps the descriptor with settings.orientation live at dispatch time', async () => {
+    store.dispatch(setOrientation('galactic'));
+    store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
+    await flush();
+
+    const tween = store.getState()[cameraRoute].tween;
+    expect(tween!.frame).toBe('galactic');
   });
 });

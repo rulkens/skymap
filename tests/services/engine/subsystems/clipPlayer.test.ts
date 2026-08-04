@@ -31,6 +31,7 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../../src/store/rootReducer';
 import { clipStarted, clipEnded, resolveClipStart } from '../../../../src/state/camera/cameraSlice';
+import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
 import { createClipPlayer } from '../../../../src/services/engine/subsystems/clipPlayer';
 import { applySceneEffect } from '../../../../src/services/animation/applySceneEffect';
@@ -73,7 +74,7 @@ function makeStore() {
 /** Install a clip into the store at the given start time. */
 function installClip(store: TestStore, data: ClipData): ClipData {
   const resolved = resolveClipStart(data, LIVE_POSE);
-  store.dispatch(clipStarted(resolved));
+  store.dispatch(clipStarted({ data: resolved, frame: DEFAULT_ORIENTATION }));
   return resolved;
 }
 

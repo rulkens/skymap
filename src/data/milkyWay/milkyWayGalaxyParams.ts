@@ -88,7 +88,7 @@ export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams = {
   irregularity: 0.6,
   globularCount: 30,
   radius: 1.05,
-  starCount: 150000,
+  starCount: 75000,
   seed: MILKY_WAY_GENERATION_SEED,
   // tau above the measured 0.5–1 face-on range, and R_V below the diffuse-ISM
   // 3.1 (Cardelli, Clayton & Mathis 1989) — both departures are deliberate and

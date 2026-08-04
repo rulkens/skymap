@@ -108,13 +108,13 @@ export const DEFAULT_STAR_GLOW_OVERLAP = 3.0;
 /**
  * Default near-anchor star display exposure — seeds
  * `settings.starCatalogs.exposureNearX`. The ABSOLUTE exposure multiplier the
- * scale-dependent `starExposureRamp` targets at solar-system scale (1 pc). 15 is
+ * scale-dependent `starExposureRamp` targets at solar-system scale (1 pc). 6 is
  * the shipped near anchor that the shader already bakes into STAR_FLUX_EXPOSURE
- * (6000 = 400 × 15), so at this default the CPU ramp returns exactly 1.0 there.
+ * (2400 = 400 × 6), so at this default the CPU ramp returns exactly 1.0 there.
  * Live-tunable (UI range 1–60) so the near end can be re-eye-tuned against the
  * current star bins' local flux without a rebuild.
  */
-export const DEFAULT_STAR_EXPOSURE_NEAR_X = 15;
+export const DEFAULT_STAR_EXPOSURE_NEAR_X = 6;
 
 /**
  * Default middle-anchor star display exposure — seeds
@@ -123,25 +123,25 @@ export const DEFAULT_STAR_EXPOSURE_NEAR_X = 15;
  * (3 kpc), the knot that splits the ramp so the dense central clump can be
  * darkened without touching either end.
  *
- * 57 is the OLD two-point (near→far) curve's own value at 3 kpc:
- * 15·(70/15)^(log₁₀(3000)/4) = 57.23 (the 3 kpc anchor sits at log-fraction
+ * 23 is the OLD two-point (near→far) curve's own value at 3 kpc:
+ * 6·(28/6)^(log₁₀(3000)/4) = 22.9 (the 3 kpc anchor sits at log-fraction
  * log₁₀(3000)/4 ≈ 0.869 of the way from 1 pc to 10 kpc). Seeding the mid anchor
  * ON that continuation makes the three-anchor ramp reproduce today's look at the
- * defaults — a knot on a straight line doesn't bend it. 57 vs the exact 57.23 is
+ * defaults — a knot on a straight line doesn't bend it. 23 vs the exact 22.9 is
  * visually indistinguishable. Live-tunable (UI range 5–150) so the middle can be
  * pulled down against the running renderer.
  */
-export const DEFAULT_STAR_EXPOSURE_MID_X = 57;
+export const DEFAULT_STAR_EXPOSURE_MID_X = 23;
 
 /**
  * Default far-anchor star display exposure — seeds
  * `settings.starCatalogs.exposureFarX`. The ABSOLUTE exposure multiplier
  * `starExposureRamp` targets at whole-galaxy scale (10 kpc), where the star bin
  * reads as the Milky Way's diffuse surface brightness and the un-adapting
- * monitor needs the field lifted. 70 is the shipped far anchor; live-tunable (UI
+ * monitor needs the field lifted. 28 is the shipped far anchor; live-tunable (UI
  * range 5–300) alongside the near anchor.
  */
-export const DEFAULT_STAR_EXPOSURE_FAR_X = 70;
+export const DEFAULT_STAR_EXPOSURE_FAR_X = 28;
 
 /**
  * Default aggregate surface-brightness cap — seeds
@@ -488,6 +488,9 @@ export const DEFAULT_SHOW_PICK_BUFFER = false;
 
 /** Disk-radius debug ring starts off.  See `EngineSettingsState.debug.showDiskRadiusRing`. */
 export const DEFAULT_SHOW_DISK_RADIUS_RING = false;
+
+/** Orbit-trail impostor overlay starts off.  See `EngineSettingsState.debug.showOrbitTrailImpostor`. */
+export const DEFAULT_SHOW_ORBIT_TRAIL_IMPOSTOR = false;
 
 // ── Camera orientation frame ─────────────────────────────────────────────────
 

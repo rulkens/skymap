@@ -19,9 +19,16 @@
  * Cues are collected in tree order (a `seq`/`all`/`fork` nesting walk), which
  * matches compile order. Only `show` / `hide` / `scene` participate: `focus`
  * is beat-local (each beat's enter clip establishes its own subject), `fade`
- * is transient clip opacity that resets at clip end, and camera effects don't
- * touch settings. Dwell-clip cues count too — a dwell that reveals a layer is
- * part of the beat's contribution.
+ * is transient clip opacity that resets at clip end, and the camera-motion
+ * arms don't touch settings at all. `frameTo` is deliberately excluded too,
+ * even though it DOES write a setting (`orientation`, via `setOrientation`):
+ * `orientation` lives on `SceneSnapshot`, not `SettingsSnapshot` (this
+ * function's return type — see that type's header for why), so nothing this
+ * fold could produce would ever fit the return shape. The tour's authored
+ * pole is carried forward live instead — a beat's `frameTo` cue sets it once
+ * when it actually plays, and no later beat-entry reconstruction touches it
+ * again. Dwell-clip cues count too — a dwell that reveals a layer is part of
+ * the beat's contribution.
  *
  * `base` is a FULL settings state (the guided tour builds it by merging its
  * captured baseline onto the live state) because the reducer operates on full

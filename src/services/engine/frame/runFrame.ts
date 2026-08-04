@@ -60,9 +60,10 @@ import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { runCameraDrivers } from '../camera/cameraDrivers';
 import { activeDriverId } from '../camera/activeDriverId';
 import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
-import { liveBodyPosition } from '../camera/liveBodyPosition';
+import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { tweenElapsed, accumulateFollowPan, frameTweenElapsed } from '../camera/cameraClock';
 import { resolveFrameBasis } from '../camera/resolveFrameBasis';
+import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { resizeCanvasToDisplay } from '../../gpu/device';
 import { createRenderTargets } from '../../gpu/renderTargets';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
@@ -336,31 +337,35 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   );
   const activeId = activeDriverId(deps.drivers, rootState);
 
-  // ── Orientation basis B(t): resolve ONCE, feed every reader ───────────────
+  // ── Orientation basis: two readers, two different values ─────────────────
   //
-  // `resolveFrameBasis` is the single authority for 'which way is up this frame'.
-  // At rest it returns the steady registry basis for the current orientation;
-  // during an orientation-frame switch it returns the mid-slerp basis between the
-  // switch's captured `fromQuat` and the destination frame. Called exactly once
-  // here so no two consumers can drift on how a frame roll is interpolated — the
-  // resolved value flows to three readers: the boxed `frameBasis` Resource (read
-  // by the saga context + `applySceneEffect` to seed the next switch's `fromQuat`),
-  // the drag register `state.cam.frameBasis` (so a grab THIS frame decodes through
-  // the same pole), and `deriveFrameContext` below (the draw + demand decode).
+  // `poseBasis` is the COMMITTED frame (`ORIENTATION_FRAMES[orientation]`).
+  // `watchOrientationChangeSaga` writes the DESTINATION into `settings.orientation`
+  // the instant a switch starts, so this never moves during a roll — the eye,
+  // decoded through it via `updatePosition`, holds still; only up rotates.
   //
-  // `frameTweenElapsed` (inside `resolveFrameBasis`) is the single per-frame tick
-  // of the frame-roll clock — reference-identity reset, exactly like `tweenElapsed`.
-  const frameBasis = resolveFrameBasis(
+  // `upBasis` is `resolveFrameBasis`'s live B(t), resolved exactly once here.
+  //
+  // `state.cameraRuntime.upBasis.current` gets `upBasis`, NOT `poseBasis`: it
+  // seeds the NEXT switch's `fromQuat` (`watchOrientationChangeSaga`), and a
+  // re-switch mid-roll must compose from the live pole, not the committed one.
+  //
+  // `state.cam` and `deriveFrameContext` below both take the same split —
+  // committed basis for position decode, live basis for up — see
+  // `OrbitCameraInit.d.ts` for why the two camera fields exist.
+  const poseBasis = ORIENTATION_FRAMES[rootState.settings.orientation];
+  const upBasis = resolveFrameBasis(
     rootState.settings.orientation,
     rootState.camera.frameTween,
     state.cameraRuntime.clock,
     nowMs,
   );
-  state.cameraRuntime.frameBasis.current = frameBasis;
+  state.cameraRuntime.upBasis.current = upBasis;
   if (state.cam) {
     // Pre-bootstrap `cam` is null; a grab is impossible until wireInput attaches
     // controls, so there is no decode to keep in sync until then.
-    state.cam.frameBasis = frameBasis;
+    state.cam.poseBasis = poseBasis;
+    state.cam.upBasis = upBasis;
   }
 
   // Clear a finished frame roll exactly once, mirroring the camera-tween
@@ -466,7 +471,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // mirror for the structure-focus / time-report sections.
   const pivotFocus = rootState.selectionRows.focus;
   const clock = state.cameraRuntime.clock;
-  const followingBody = liveBodyPosition(pivotFocus, simDays) !== null;
+  const followingBody = bodyMovesThisFrame(pivotFocus);
   if (state.cam) {
     accumulateFollowPan(clock, activeId === 'orbitDrag' && followingBody, state.cam.target);
   } else {
@@ -522,10 +527,11 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     deps.canvas,
     renderPose,
     state.cameraRuntime.projection,
-    // This frame's resolved orientation basis B(t) — the same value written to the
-    // `frameBasis` Resource and the drag register above, so the draw/demand decode
-    // shares one pole with the switch surfaces.
-    frameBasis,
+    // The committed pose basis (holds still through a roll) and the live up
+    // basis (rolls) — the same split fed to the drag register above, so the
+    // draw decode shares both poles with the switch surfaces.
+    poseBasis,
+    upBasis,
     masks.draw,
     nowMs,
     simDays,

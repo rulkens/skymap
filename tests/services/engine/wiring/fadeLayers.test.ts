@@ -27,6 +27,8 @@ import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCat
 import { STAR_CATALOG_IDS } from '../../../../src/data/starCatalog/starCatalogIds';
 import { BODY_IDS } from '../../../../src/data/bodies/bodyIds';
 import { SOURCE_REGISTRY } from '../../../../src/data/sources';
+import { SOURCE_ENTRIES } from '../../../../src/data/sourceEntries';
+import { expandVisibilityLayers } from '../../../../src/utils/animation/expandVisibilityLayers';
 import type { VisibilityLayerKey } from '../../../../src/@types/animation/VisibilityLayerKey';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import type { FadeLayer } from '../../../../src/@types/animation/FadeLayer';
@@ -99,8 +101,8 @@ function makeState(
       // every star-catalog row is populated for the same reason the structure
       // items are.
       starCatalogs: { enabled: true, items: starCatalogItems() },
-      // The bodyLabel fade row seeds per BodyId, so every body row is populated
-      // for the same reason the structure items are.
+      // The bodyLabel fade row seeds per CAPTION-BEARING BodyId; every body row
+      // is populated anyway, for the same reason the structure items are.
       bodies: { items: bodyItems() },
       structures: { enabled: true, items },
     },
@@ -231,6 +233,29 @@ describe('seedFades', () => {
   });
 
   // ── per-structure ring + label handles ───────────────────────────
+
+  // ── the body caption domain ──────────────────────────────────────
+
+  it("`hide(['labels'])` reaches every caption-bearing body and no other", () => {
+    // Two totalities in one assertion, both of which fail SILENTLY. Under-reach:
+    // a body that captions itself but has no handle survives a cue that claims to
+    // have hidden every label — the gap `LAYER_GROUPS.labels` exists to close.
+    // Over-reach: the S-stars draw 39 dots and no names, so a handle for them
+    // would be a controller with no caption to move, and its `item` is not even a
+    // `LabelCategory`. The expected set is derived from the registry's
+    // `bearsLabel` capability, never hand-listed.
+    expect(expandVisibilityLayers(['labels'])).toContain('bodyLabel');
+
+    const captionBearingBodyIds = SOURCE_ENTRIES.filter(
+      (entry) => entry.type === 'body' && entry.bearsLabel,
+    ).map((entry) => entry.id);
+    const state = makeState();
+    seedFades(state);
+    const reached = rowFor('bodyLabel').expand(state);
+
+    expect([...reached].sort()).toEqual([...captionBearingBodyIds].sort());
+    expect(reached).not.toContain('s-star');
+  });
 
   it('seeds a ring + label handle per structure source, defaulting to 1', () => {
     const state = makeState();

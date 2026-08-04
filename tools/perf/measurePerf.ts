@@ -22,7 +22,7 @@
  *
  * ### Unlike the recorder: real wall-time, no virtual clock
  *
- * `recordTour.ts` pauses page time via CDP virtual time so a slow 4K frame
+ * `record.ts` pauses page time via CDP virtual time so a slow 4K frame
  * never drops a recorded frame. This harness does the OPPOSITE on purpose: it
  * measures REAL GPU wall-time, so it must let the page run at its natural pace
  * and read the timestamp queries the driver fills. Hence no `Emulation
@@ -186,7 +186,7 @@ function parseArgs(argv: readonly string[]): PerfOptions {
 }
 
 /**
- * Launch pattern mirrored from recordTour: the 'chromium' channel first (full
+ * Launch pattern mirrored from record.ts: the 'chromium' channel first (full
  * build, WebGPU with no flags), falling back to the headless shell with the
  * WebGPU flags only if the channel is not installed.
  */
@@ -217,7 +217,7 @@ async function launchChromium(): Promise<Browser> {
  *
  * Page errors are collected rather than warned inline: a noisy page would spam
  * stderr and (in --json mode) risk leaking onto stdout. The formatters collapse
- * them to a ⚠ summary; JSON mode surfaces them raw. Mirrors recordTour's
+ * them to a ⚠ summary; JSON mode surfaces them raw. Mirrors record.ts's
  * handlers, but stores instead of printing. The returned `pageErrors` array is
  * live — it keeps filling as the page runs, so callers read it AFTER sampling.
  */

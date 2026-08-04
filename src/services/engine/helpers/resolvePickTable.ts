@@ -9,6 +9,8 @@ import { resolveStructureFromPick } from './resolveStructureFromPick';
 import { SCENE_STARS } from '../../../data/bodies/sceneStars';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
+import { SGR_A_STAR } from '../../../data/bodies/sceneSgrAStar';
+import { SCENE_S_STARS } from '../../../data/bodies/sceneSStars';
 import type { SourceEntry } from '../../../@types/data/SourceEntry';
 import type { PickResult } from '../../../@types/data/PickResult';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';
@@ -35,6 +37,15 @@ const PICK_SEEDS_BY_BODY_ID: Readonly<Record<BodyId, readonly { readonly id: str
   earth: [SCENE_EARTH],
   planet: SCENE_PLANETS,
   sun: SCENE_STARS,
+  // Sgr A* draws nothing at any zoom, so its pick coverage is a caption-range
+  // stamp `starPointsLayer` emits at the anchor — that is what reaches this arm.
+  // Only index 0 names it; any other localIdx falls off the end.
+  'sgr-a-star': [SGR_A_STAR],
+  // The one body row whose arm is genuinely REACHABLE: the star layers stamp
+  // `Source.SStar` for any star drawn out of `SCENE_S_STARS` (`starPickId`), so
+  // a click on an S-star decodes here rather than through the `starCatalog` arm
+  // — which indexes `SCENE_STARS` and would name the wrong star.
+  's-star': SCENE_S_STARS,
 };
 
 export const RESOLVE_PICK: Partial<

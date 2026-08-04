@@ -2,23 +2,65 @@ import { describe, it, expect } from 'vitest';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { ORBITAL_ELEMENTS, elementsById } from '../../../../src/data/bodies/orbitalElements';
+import { SCENE_ANCHORS } from '../../../../src/data/bodies/sceneAnchors';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
 import { propagateElements } from '../../../../src/utils/orbit/propagateElements';
 import { keplerianPositionMpc } from '../../../../src/utils/orbit/keplerianPositionMpc';
+import BODY_STATES_J2000 from '../../../fixtures/bodyStatesJ2000.json';
 
 const states = deriveBodyStates(CONST_J2000);
+const ANCHOR_IDS = new Set(SCENE_ANCHORS.map((anchor) => anchor.id));
 
 describe('deriveBodyStates', () => {
-  it('returns a state for every ORBITAL_ELEMENTS id and no star id', () => {
-    // Structural: catches a dropped moon (short map) or an accidentally-included
-    // star (stars are OUT — a body's clock-driven state, not the local star map).
-    expect(states.size).toBe(ORBITAL_ELEMENTS.length);
+  it('returns a state for every anchor and every ORBITAL_ELEMENTS id, and nothing else', () => {
+    // Structural: catches a dropped moon (short map) or a star that is not an
+    // anchor drifting in — the local star map is not clock-driven state.
+    expect(states.size).toBe(SCENE_ANCHORS.length + ORBITAL_ELEMENTS.length);
     for (const el of ORBITAL_ELEMENTS) {
       expect(states.has(el.id)).toBe(true);
     }
+    for (const anchor of SCENE_ANCHORS) {
+      expect(states.has(anchor.id)).toBe(true);
+    }
     for (const s of SCENE_STARS) {
-      expect(states.has(s.id)).toBe(false);
+      expect(states.has(s.id)).toBe(ANCHOR_IDS.has(s.id));
+    }
+  });
+
+  it('every element row derives a body state', () => {
+    // The truncation gate for the table crossing the old MAX_ORBITS = 24, which
+    // prep-01 made dynamic: asserted against ORBITAL_ELEMENTS.length so it stays
+    // a check rather than a restatement of today's roster. The finiteness half is
+    // what presence alone misses — a row whose unit/frame conversion produced NaN
+    // still lands in the map under its own id, so `has` goes green on garbage.
+    expect(ORBITAL_ELEMENTS.filter((el) => states.has(el.id))).toHaveLength(
+      ORBITAL_ELEMENTS.length,
+    );
+    for (const el of ORBITAL_ELEMENTS) {
+      const { positionMpc } = states.get(el.id)!;
+      expect(positionMpc.every(Number.isFinite), `position for '${el.id}'`).toBe(true);
+    }
+  });
+
+  it('J2000 snapshot is unchanged after the anchor rewrite', () => {
+    // The fixture holds the J2000 body snapshot at full f64 precision, and the
+    // comparison is exact — a tolerance would hide the very drift this exists to
+    // catch, since reordering the focus composition must not change a single
+    // term. Anchors are deliberately absent from it: their position is authored
+    // rather than propagated, so the size check above is what pins their
+    // presence while this pins every propagated body's value. The second loop
+    // keeps the fixture total against the element table, so a body cannot escape
+    // the pin by being added without a fixture row.
+    for (const [id, expected] of Object.entries(BODY_STATES_J2000)) {
+      const actual = states.get(id);
+      expect(actual, `state for '${id}'`).toBeDefined();
+      expect(actual!.positionMpc, id).toEqual(expected.positionMpc);
+      expect(actual!.orientation, id).toEqual(expected.orientation);
+      expect(actual!.meanAnomalyRad, id).toBe(expected.meanAnomalyRad);
+    }
+    for (const el of ORBITAL_ELEMENTS) {
+      expect(Object.hasOwn(BODY_STATES_J2000, el.id), `'${el.id}' is in the fixture`).toBe(true);
     }
   });
 

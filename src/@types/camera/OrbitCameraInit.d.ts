@@ -65,23 +65,42 @@ export type OrbitCameraInit = {
   roll?: number;
 
   /**
-   * Frame-local → world orientation basis (column-major 3×3).
+   * Frame-local → world orientation basis (column-major 3×3) the (yaw, pitch)
+   * DECODE runs through: `dir_world = poseBasis · dir_local`, where the
+   * frame-local zenith (elevation +π/2) is local +Y. `updatePosition` and
+   * `orbitAnglesLookingAlong` (its inverse) are the two consumers — both
+   * compile-time / decode-time reads, never draw-time.
    *
-   * The (yaw, pitch) decode produces a direction in the camera's *frame-local*
-   * space, whose zenith (elevation +π/2) is local +Y. `frameBasis` rotates that
-   * direction into world equatorial-J2000 before the eye is placed, so the pole
-   * the camera treats as "up" is the frame's north pole. The MIDDLE column is
-   * that pole (per `ORIENTATION_FRAMES`).
+   * `poseBasis` and `upBasis` (below) used to be one field (`frameBasis`).
+   * They are split because they answer different questions: `poseBasis` is
+   * "which pole does yaw/pitch orbit around" (the committed frame — jumps once
+   * at a switch, never mid-slerp), `upBasis` is "which pole does screen-up
+   * follow" (the live, possibly mid-slerp `B(t)`). A pose baked mid-roll off a
+   * transient `upBasis` would decode wrong the instant the roll finished, so
+   * `updatePosition` must stay pinned to the steady `poseBasis`.
    *
    * Optional: absent ⇒ identity, i.e. the pre-feature decode where local +Y is
    * world +Y. Every non-engine caller (synthetic clouds, focus tween, dev-tool
    * cameras) omits it and is byte-for-byte unchanged — mirrors `roll?`.
    *
    * Mutable (like `roll`, `yaw`, `pitch`): the engine's drag register
-   * (`state.cam`) has its `frameBasis` overwritten once per frame with the
-   * resolved B(t), so a grab decodes through the current pole.
+   * (`state.cam`) has this overwritten once per frame (alongside `upBasis`)
+   * with the resolved B(t), so a grab decodes through the current pole.
    */
-  frameBasis?: Mat3;
+  poseBasis?: Mat3;
+
+  /**
+   * Frame-local → world orientation basis screen-up is derived from:
+   * `frameUp(upBasis)` (the middle column) feeds `imagePlaneBasis`, which
+   * `computeViewProj`, `cameraBillboardBasis`, `horizonShellRenderer`, `slabs`,
+   * and `orbitControls`' pan drag all read. These are draw-time / per-frame
+   * reads, so `upBasis` is free to be the transient mid-slerp basis during an
+   * orientation-frame switch — see `poseBasis` above for why the decode can't
+   * share that transience.
+   *
+   * Optional, same identity-absent convention as `poseBasis`.
+   */
+  upBasis?: Mat3;
 
   /**
    * Vertical field of view in **radians**.

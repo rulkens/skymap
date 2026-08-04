@@ -111,7 +111,10 @@ export function* watchClipSaga() {
           const rt = cameraRuntime()!;
           // The STEADY orientation basis so a lookAtId bearing encodes through
           // the same frame the render path decodes with (world-invariant aim).
-          const frameBasis = ORIENTATION_FRAMES[yield* select(selectOrientation)];
+          // The same id pins the clip's frame for its whole run (see playClip's
+          // `frame` arg).
+          const orientation = yield* select(selectOrientation);
+          const frameBasis = ORIENTATION_FRAMES[orientation];
           const resolved = resolveClipFoci(
             clip.data,
             resolveDeps(),
@@ -119,7 +122,7 @@ export function* watchClipSaga() {
             rt.from,
             frameBasis,
           );
-          yield* call(playClipSeam, resolved);
+          yield* call(playClipSeam, resolved, orientation);
         }),
         stop: take(stopClip),
       });

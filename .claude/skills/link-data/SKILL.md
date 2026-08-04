@@ -94,11 +94,15 @@ there before a sync-r2). So the cheapest path is to symlink the worktree's
   This skill is about reusing the output. The raw catalog files live in
   the main checkout via the raw-data registry already
   (`feedback_raw_data_registry`).
-- **Don't** *silently* auto-run `/link-data` on worktree creation. Some
-  sessions are pure doc / planning work, some are explicitly rebuilding
-  the data pipeline, and some are inspecting stale data on purpose. `/wt`
-  may **offer** to run it (a fresh worktree has no `public/data/` at all),
-  but the user confirms — never link without asking.
+- **Don't** ask the user whether to link on worktree creation. `/wt` decides
+  from the task description and links when the work could touch the render
+  (see its step 5); a fresh worktree has no `public/data/` at all, so the
+  default for anything visual is to link. Announce it, don't prompt for it.
+  The judgement is only about *which* of the three cases applies — visual
+  work (link), doc/planning (skip), deliberate pipeline rebuild (skip, it
+  wants its own directory). Note that this skill still asks before
+  **clobbering** an existing `public/data/` with unique content — that guard
+  is about data loss and stays.
 - **Don't** kill the dev server before symlinking. Vite watches the
   filesystem and will pick up the new contents at the next HTTP request
   (the browser may need a hard refresh, but the server doesn't).

@@ -341,6 +341,9 @@ const settingsSlice = createSlice({
     setShowDiskRadiusRing: (settings, action: PayloadAction<boolean>) => {
       settings.debug.showDiskRadiusRing = action.payload;
     },
+    setShowOrbitTrailImpostor: (settings, action: PayloadAction<boolean>) => {
+      settings.debug.showOrbitTrailImpostor = action.payload;
+    },
     setPassDisabled: (settings, action: PayloadAction<{ pass: string; disabled: boolean }>) => {
       // Open-world membership record (any pass name): `[name] === true` disables.
       settings.debug.disabledPasses[action.payload.pass] = action.payload.disabled;
@@ -518,6 +521,7 @@ export const {
   setFlow,
   setShowPickBuffer,
   setShowDiskRadiusRing,
+  setShowOrbitTrailImpostor,
   setPassDisabled,
   setRenderStrategy,
   inspectClipPath,

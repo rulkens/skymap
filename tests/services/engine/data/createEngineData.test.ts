@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
+import { SCENE_S_STARS } from '../../../../src/data/bodies/sceneSStars';
 
 describe('createEngineData', () => {
   it('still exposes galaxies + structures stores', () => {
@@ -15,12 +16,14 @@ describe('createEngineData', () => {
     expect(d.bodies.earth?.id).toBe('earth');
   });
 
-  it('seeds the local star map (SCENE_STARS) and Moon + Jupiter as planets at construction', () => {
+  it('seeds both star tables (local map + S-stars) and the planets at construction', () => {
     // Seed-data-early: the body store is filled the moment it exists, not at a
     // later wiring phase. Stars and planets flow in from their authored seed
-    // tables alongside Earth.
+    // tables alongside Earth. The two star tables stay separate seeds — the
+    // packed pick id indexes one of them — but land in the ONE store list the
+    // star layers iterate, which `visibleStars` then gates apart.
     const d = createEngineData();
-    expect(d.bodies.stars).toEqual(SCENE_STARS);
+    expect(d.bodies.stars).toEqual([...SCENE_STARS, ...SCENE_S_STARS]);
     expect(d.bodies.planets).toEqual(SCENE_PLANETS);
     expect(d.bodies.planets.map((p) => p.id)).toEqual([
       'mercury',

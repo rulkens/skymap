@@ -37,7 +37,7 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 
 export function satellite(spec: {
   id: string;
-  parentId: string;
+  focusId: string;
   semiMajorKm: number;
   eccentricity: number;
   inclinationDeg: number;
@@ -53,7 +53,7 @@ export function satellite(spec: {
 }): OrbitalElements {
   return {
     id: spec.id,
-    parentId: spec.parentId,
+    focusId: spec.focusId,
     semiMajorMpc: spec.semiMajorKm * SCALE_UNITS.KM_TO_MPC,
     eccentricity: spec.eccentricity,
     inclinationRad: degToRad(spec.inclinationDeg),

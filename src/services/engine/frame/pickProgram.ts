@@ -13,8 +13,8 @@
  * cursor?" into "draw the next frame" — two concerns that vary independently.
  * So this program is a sibling of the FRAME executor: it shares only the same
  * `ContentLayer` registry, filters it by `drawPick` presence + the pick gate
- * `(pickEnabled ?? enabled)` — a layer's own pick gate when its pick set is
- * wider than its draw set, else `enabled` (see `ContentLayer.pickEnabled`) —
+ * `(pickEnabled ?? enabled)` — a layer's own pick gate wherever its pick set
+ * differs from its draw set, else `enabled` (see `ContentLayer.pickEnabled`) —
  * groups the survivors by slab, and re-rasterises each slab's pickable geometry
  * through the r32uint pick pipeline into its own pick target. See the
  * renderer-unification design's "Pick" section.
@@ -230,9 +230,9 @@ export function createPickProgram(deps: {
     ctx: ReadyFrameContext,
   ): { slabIndex: number; layers: ContentLayer[] }[] {
     // Filter by the PICK gate: `pickEnabled` when a layer declares one (its pick
-    // set is wider than its draw set — planetsLayer's flat ∪ textured, the Earth
-    // caption stamp), else `enabled` (pick set == draw set, the common case). See
-    // `ContentLayer.pickEnabled`.
+    // set differs from its draw set — planetsLayer's flat ∪ textured, the caption
+    // stamps, the Milky Way's narrower close-range gate), else `enabled` (pick
+    // set == draw set, the common case). See `ContentLayer.pickEnabled`.
     const pickable = layers.filter((l) => l.drawPick && (l.pickEnabled ?? l.enabled)(state, ctx));
     const slabIndices = [...new Set(pickable.map((l) => l.slab))].sort((a, b) => a - b);
     return slabIndices.map((slabIndex) => ({
