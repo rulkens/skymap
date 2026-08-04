@@ -26,9 +26,8 @@ a hurry: read 05, it links back into everything before it.
    landmines).
 7. [07-sprite-seeding.md](07-sprite-seeding.md) — why the map-seeded dust
    sprites lose high frequencies (5 mechanisms) and a perf-neutral seeding
-   redesign (inverse-CDF placement, streamline children, map-modulated
-   size/aspect, fragment-side map detail, 3D lift, orientation-tensor
-   verdict).
+   redesign (inverse-CDF placement, map-modulated size/aspect, fragment-side
+   map detail, 3D lift, orientation-tensor verdict).
 8. [08-realism-notes.md](08-realism-notes.md) — beyond the foam: asymmetry,
    bar dust lanes, across-arm age sequence, scattering floor, DIG, chromatic
    arm contrast, instrument signature, and a statistics-based tuning

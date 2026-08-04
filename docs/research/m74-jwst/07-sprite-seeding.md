@@ -29,6 +29,10 @@ Constraint from the user: whatever changes, per-frame cost must not grow.
 then lands wherever a fixed isotropic-ish Gaussian says, walls or cavities
 alike. A 1–2-texel wall convolved with a 250 pc σ blob is gone; a cavity
 straddled by a complex gets bridged. This is the dominant loss.
+(2026-08-05: dead at DEFAULTS on tip `19eb238e` — the tier ships
+`clumpiness: 0` and `clusteredDiscPlacement` forces `childSpread` to 0 for
+one-child complexes, so every particle sits exactly on its seed point. The
+loss returns the moment clustering is re-enabled.)
 
 **M2 — the rejection sampler is biased against exactly the structures that
 matter.** Thin walls are high-density but tiny-area, so 24 uniform proposals
@@ -87,14 +91,15 @@ u·(r1²−r0²))`) — reconstructs the map piecewise-constant at its own
 - Accumulate the sum in f64 (plain JS number), store Float32Array (~768 KB,
   rebuilt per readback, not per frame).
 
-**S2 — children trace the filament instead of a blind Gaussian.** Walk
-children from the complex centre in arc steps along the locally RE-SAMPLED
-orientation (±along the double-angle direction, one orientation read per
-child — nearest-texel, trivial), with across-jitter σ tied to wall width
-(small, or ∝ (1 − coherence)). Complexes become short streamline segments —
-beads strung along walls, following curvature — instead of blobs straddling
-them. Kills M1 and M4. Cost: one extra map read per child (~40k reads,
-microseconds against the gaussians already drawn).
+**S2 — children trace the filament: DEAD at current defaults (2026-08-05).**
+The mechanism it fixed no longer runs: the tier ships `clumpiness: 0`, and
+`clusteredDiscPlacement` forces `childSpread` to 0 for one-child complexes
+(tip `19eb238e`) — no children, no blind Gaussian, and M1/M4 die with it.
+Beads-along-walls comes from S1's exact placement plus S3's orientation
+instead. Revisit only if clumpiness returns as a look knob (hierarchical
+clumping WITHIN walls); the sketch was: walk children in arc steps along the
+locally re-sampled orientation with across-jitter tied to wall width — one
+extra map read per child.
 
 **S3 — let the map set child size, aspect, and survival.** Per child, read
 density + coherence at its own position: density below a floor (cavity) →
@@ -215,13 +220,12 @@ Perf: one `warpHeight` call + one modified σ per particle, build-time only.
 
 ## Sequencing and how this meets the dust-channel sketch
 
-S1→S2→S3 are self-contained CPU changes, individually toggleable, testable in
+S1 and S3 are self-contained CPU changes, individually toggleable, testable in
 the tool's debug-view crossfade against the map overlay; S4 is a shader
 change with a natural first home in the JWST view; S5/S6 are gated
 follow-ups. When the CA grows the conserved dust channel
 ([06-ca-dust-channel-sketch.md](06-ca-dust-channel-sketch.md)), only the density
 callback changes (`dust` channel instead of `gas × oldActivity`) — the CDF
-sampler, streamline children and per-child modulation all carry over
-unchanged. That decoupling is the argument for doing the seeding work first:
+sampler and per-child modulation carry over unchanged. That decoupling is the argument for doing the seeding work first:
 it improves fidelity now and becomes the delivery mechanism for the rims and
 cavities later.
