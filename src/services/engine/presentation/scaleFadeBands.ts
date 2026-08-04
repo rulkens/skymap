@@ -30,7 +30,7 @@ import { BODY_GLINT_MAX_PX } from '../frame/partitionBodiesByPresentation';
 import { regionById } from '../../../utils/scene/regionById';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { SGR_A_STAR_ANCHOR } from '../../../data/bodies/sceneSgrAStar';
-import { MILKY_WAY_RADIUS_MPC } from '../../gpu/galaxy/milkyWayCalibration';
+import { MILKY_WAY_RADIUS_MPC } from '../galaxyGenerator/v1/milkyWayCalibration';
 
 // The two extents this table's near-field rows scale off — each read from the
 // region whose content the row gates, so a band cannot end up keyed on a scale
