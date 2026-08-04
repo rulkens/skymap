@@ -1,6 +1,7 @@
 /**
- * Cross-language parity guard for the three tables the GPU generation shaders
- * hand-mirror from CPU-side TypeScript. `?static` WESL linking does pure
+ * Cross-language parity guard for the four tables the GPU generation shaders
+ * hand-mirror from CPU-side TypeScript — two owned by `shared/`, two by `v1/`;
+ * it is one seam, so it stays one file. `?static` WESL linking does pure
  * build-time linking with NO value injection, so a shader can't import a TS
  * constant — the mirror is hand-written and a test, not the compiler, is what
  * keeps the two sides from drifting. This file IS that seam: it reads the
@@ -27,7 +28,7 @@ import { describe, expect, it } from 'vitest';
 import { GENERATION_UBO } from '../../../../../src/services/engine/galaxyGenerator/shared/generationUboLayout';
 import { CATEGORY_CODE } from '../../../../../src/services/engine/galaxyGenerator/v1/packGenerationUniforms';
 import { POPULATION_IDS } from '../../../../../src/services/engine/galaxyGenerator/shared/populationIds';
-import { SPRITE_POPULATION_BRIGHTNESS } from '../../../../../src/services/engine/galaxyGenerator/shared/spritePopulationBrightness';
+import { SPRITE_POPULATION_BRIGHTNESS } from '../../../../../src/services/engine/galaxyGenerator/v1/spritePopulationBrightness';
 
 const SHADERS = 'src/services/gpu/shaders/milkyWay/sprites';
 
@@ -212,8 +213,9 @@ function scrapeLuminosityMultipliers(): Record<string, number> {
 
 describe('randomLuminosity multipliers ↔ SPRITE_POPULATION_BRIGHTNESS parity', () => {
   // The only guard on this pair: nothing links a retuned WESL constant to the
-  // TS table the analytic field weights its amplitudes with, so drift here is
-  // silent — one tier of the same galaxy simply gets brighter than the other.
+  // TS table `galaxyPopulationCountShares` divides light by, so drift here is
+  // silent — the sprite bag simply stops adding up to the light split it was
+  // sized from.
   it('every builder that draws a luminosity matches its TS brightness entry', () => {
     expect(scrapeLuminosityMultipliers()).toEqual({ ...SPRITE_POPULATION_BRIGHTNESS });
   });

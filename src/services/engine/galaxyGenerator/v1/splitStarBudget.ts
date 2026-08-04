@@ -4,7 +4,7 @@
  * adds is the quantisation, which is the one thing a star bag needs and the
  * analytic field must not inherit.
  */
-import { galaxyPopulationCountShares } from '../shared/galaxyPopulationCountShares';
+import { galaxyPopulationCountShares } from './galaxyPopulationCountShares';
 import { totalStarBudget } from './totalStarBudget';
 import type { GalaxyCategory } from '../../../../@types/galaxy/GalaxyCategory';
 import type { GalaxyParams } from '../../../../@types/galaxy/GalaxyParams';
