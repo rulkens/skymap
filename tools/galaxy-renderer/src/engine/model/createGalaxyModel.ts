@@ -471,23 +471,41 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   }
 
   /**
-   * One galaxy's two analytic tiers off ONE geometry, both carried into world
-   * space when a `transform` is given (an extra; the central galaxy passes none
-   * and stays in its own frame). `geometry.seed` is what `buildHiiRegions` was
-   * called with when it still lived inside `buildGalaxyFieldMixture` — the
-   * field's own generated seed, not a re-derivation.
+   * Into world space when a `transform` is given (an extra); the central galaxy
+   * passes none and stays in its own frame.
    */
-  function galaxyMixtures(
+  function place(
+    components: readonly GalaxyFieldComponent[],
+    transform?: Pick<ExtraGalaxySpec, 'pos' | 'scale' | 'rotY' | 'tiltX'>,
+  ): readonly GalaxyFieldComponent[] {
+    return transform
+      ? components.map((c) => transformGalaxyFieldComponent(c, transform))
+      : components;
+  }
+
+  /**
+   * The two analytic tiers are built SEPARATELY rather than as one pair: they
+   * answer to different tuning sections, so `setFieldTuning` rebuilds only the
+   * one whose inputs moved.
+   */
+  function fieldMixtureOf(
+    geometry: GalaxyDescription,
+    transform?: Pick<ExtraGalaxySpec, 'pos' | 'scale' | 'rotY' | 'tiltX'>,
+  ): readonly GalaxyFieldComponent[] {
+    return place(buildGalaxyFieldMixture(geometry, fieldTuning), transform);
+  }
+
+  /**
+   * `geometry.seed` is what `buildHiiRegions` was called with when it still
+   * lived inside `buildGalaxyFieldMixture` — the field's own generated seed,
+   * not a re-derivation.
+   */
+  function hiiMixtureOf(
     geometry: GalaxyDescription,
     starFormation: GalaxyStarFormationParams,
     transform?: Pick<ExtraGalaxySpec, 'pos' | 'scale' | 'rotY' | 'tiltX'>,
-  ): { field: readonly GalaxyFieldComponent[]; hii: readonly GalaxyFieldComponent[] } {
-    const place = (components: readonly GalaxyFieldComponent[]): readonly GalaxyFieldComponent[] =>
-      transform ? components.map((c) => transformGalaxyFieldComponent(c, transform)) : components;
-    return {
-      field: place(buildGalaxyFieldMixture(geometry, fieldTuning)),
-      hii: place(buildHiiRegions(geometry, fieldTuning, starFormation, geometry.seed)),
-    };
+  ): readonly GalaxyFieldComponent[] {
+    return place(buildHiiRegions(geometry, fieldTuning, starFormation, geometry.seed), transform);
   }
 
   /**
@@ -524,9 +542,8 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     // dust `share`, cloud counts, colours — leave the grid untouched and the
     // cached readbacks usable; see `dropIfGridMoved`.
     readbacks.dropIfGridMoved(sfMapGridRadius(fieldGeometry));
-    const mixtures = galaxyMixtures(fieldGeometry, currentStarFormation());
-    fieldMixture = mixtures.field;
-    hiiMixture = mixtures.hii;
+    fieldMixture = fieldMixtureOf(fieldGeometry);
+    hiiMixture = hiiMixtureOf(fieldGeometry, currentStarFormation());
     rebuildDustMixture();
     bubblePlacements.invalidate();
     repackFieldComponents();
@@ -539,38 +556,60 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     deps.onStats?.({ stars: generated.plannedStars, dust: generated.dustCount });
   }
 
-  // Rebuilds every mixture from CACHED geometry rather than dispatching a
-  // regenerate: the ring layout is a pure function of geometry + tuning, so a
-  // slider drag is CPU-only work the next frame's header pack picks up. No
-  // cached geometry yet (before the first `setParams`) just leaves the merged
-  // `fieldTuning` for that first `setParams` to read.
+  // Rebuilds from CACHED geometry rather than dispatching a regenerate: every
+  // mixture is a pure function of geometry + tuning, so a slider drag is
+  // CPU-only work the next frame's header pack picks up. No cached geometry yet
+  // (before the first `setParams`) just leaves the merged `fieldTuning` for that
+  // first `setParams` to read. Extras follow the central galaxy's flags — a
+  // tuning change is a global look knob — then land back in world space.
   //
-  // EXTRAS too: a tuning change is a global look knob, so a background galaxy's
-  // ring structure tracks it exactly like the central one's, then lands back in
-  // world space before `comps` is repacked.
+  // Reference identity per SECTION is the change signal: sections are replaced
+  // wholesale (`GalaxyFieldTuning`'s contract) and the merge below is shallow,
+  // so an untouched section arrives as the same object. What each one feeds:
+  //
+  //   disc  -> field mixture
+  //   arms  -> field mixture, HII tier, bubble overlay
+  //   hii   -> HII tier, bubble overlay
+  //   dust  -> dust mixture + the header's dust lanes
+  //   sfMap -> the automaton
   function setFieldTuning(patch: Partial<GalaxyFieldTuning>): void {
+    const prev = fieldTuning;
     fieldTuning = { ...fieldTuning, ...patch };
-    if (fieldGeometry) {
-      const mixtures = galaxyMixtures(fieldGeometry, currentStarFormation());
-      fieldMixture = mixtures.field;
-      hiiMixture = mixtures.hii;
+
+    // `arms.widthScale` reaches further than the arms: `armCrossSigma` sizes
+    // the cross-arm scatter `buildSfEventCatalog` draws every SF event from, so
+    // both consumers of that catalog move with it. `arms.cloud` shares this
+    // flag by construction — the UI cannot replace the cloud without replacing
+    // the `arms` object around it, and both feed the field mixture anyway.
+    const armsMoved = prev.arms !== fieldTuning.arms;
+    const fieldMoved = armsMoved || prev.disc !== fieldTuning.disc;
+    // The HII tier and the bubble/cavity overlay read the same two sections.
+    const hiiMoved = armsMoved || prev.hii !== fieldTuning.hii;
+    const dustMoved = prev.dust !== fieldTuning.dust;
+
+    if (fieldMoved || hiiMoved) {
+      if (fieldGeometry) {
+        if (fieldMoved) fieldMixture = fieldMixtureOf(fieldGeometry);
+        if (hiiMoved) hiiMixture = hiiMixtureOf(fieldGeometry, currentStarFormation());
+      }
+      extras = extras.map((e) => ({
+        ...e,
+        fieldMixture: fieldMoved ? fieldMixtureOf(e.fieldGeometry, e.transform) : e.fieldMixture,
+        hiiMixture: hiiMoved
+          ? hiiMixtureOf(e.fieldGeometry, e.starFormation, e.transform)
+          : e.hiiMixture,
+      }));
     }
-    extras = extras.map((e) => {
-      const mixtures = galaxyMixtures(e.fieldGeometry, e.starFormation, e.transform);
-      return { ...e, fieldMixture: mixtures.field, hiiMixture: mixtures.hii };
-    });
-    rebuildDustMixture();
-    bubblePlacements.invalidate();
-    repackFieldComponents();
-    repackHiiComponents();
+    if (dustMoved) rebuildDustMixture();
+    if (hiiMoved) bubblePlacements.invalidate();
+    // The dust mixture is the trailing slice of the SAME buffer the emission
+    // mixtures pack into, so either moving needs the one repack.
+    if (fieldMoved || dustMoved) repackFieldComponents();
+    if (hiiMoved) repackHiiComponents();
     // The automaton rebuild is N compute dispatches, far more expensive than
-    // the CPU mixture rebuilds above, so it only reruns when `sfMap` itself
-    // changed. (armWidthScale etc. also feed the ridge the forcing field bakes,
-    // but re-triggering on every tuning field would make dragging any OTHER
-    // slider pay this cost — a follow-up if that has to be exact.)
-    //
-    // Reference identity IS the change signal: `sfMap` is only ever replaced
-    // wholesale, by the UI's `patchSfMap` and by immer keeping the old object.
+    // the CPU mixture rebuilds above. `arms.widthScale` feeds the ridge its
+    // forcing field bakes, but re-triggering on it would make an arm-width drag
+    // pay this cost per frame — deliberately left stale until `sfMap` moves.
     if (sfMapKey !== fieldTuning.sfMap) {
       sfMapKey = fieldTuning.sfMap;
       rebuildSfMap();
@@ -632,7 +671,6 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       // galaxy), never the shared default — the tier is what makes one
       // background galaxy read as more actively star-forming than the next.
       const starFormation = spec.params.starFormation ?? DEFAULT_GALAXY_STAR_FORMATION_PARAMS;
-      const mixtures = galaxyMixtures(generated.geometry, starFormation, transform);
 
       extras.push({
         starBuf: generated.starBuf,
@@ -643,8 +681,8 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
         fieldGeometry: generated.geometry,
         transform,
         starFormation,
-        fieldMixture: mixtures.field,
-        hiiMixture: mixtures.hii,
+        fieldMixture: fieldMixtureOf(generated.geometry, transform),
+        hiiMixture: hiiMixtureOf(generated.geometry, starFormation, transform),
       });
     }
     device.queue.submit([enc.finish()]);
