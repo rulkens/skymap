@@ -38,10 +38,13 @@ import {
 } from './clusteredDiscPlacement';
 import { DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './discSurfaceFit';
 import { dustDiscShape, dustSigmaR } from './galaxyDustMixture';
+import { buildSfMapDustCdf } from '../../../../utils/galaxy/buildSfMapDustCdf';
 import { dustExtinctionRgb } from '../../../../utils/galaxy/dustExtinctionRgb';
 import { inverseCovarianceFromFrame } from '../../../../utils/galaxy/inverseCovarianceFromFrame';
 import { pcToUnits } from '../../../../utils/galaxy/pcToUnits';
 import { sampleGalaxySfMap } from '../../../../utils/galaxy/sampleGalaxySfMap';
+import { sampleSfMapDustCdf } from '../../../../utils/galaxy/sampleSfMapDustCdf';
+import { sampleSfMapOrientation } from '../../../../utils/galaxy/sampleSfMapOrientation';
 import { sfMapDustDensity } from '../../../../utils/galaxy/sfMapDustDensity';
 import { mulberry32 } from '../../../../utils/random/mulberry32';
 import type { GalaxyDustParams } from '../../../../@types/galaxy/GalaxyDustParams';
@@ -114,29 +117,23 @@ const CLOUD_POLE_RATIO = 0.6;
 
 const TAU_ROOT3 = (2 * Math.PI) ** 1.5;
 
+/**
+ * S3 cavity floor: a map-seeded particle whose own `sfMapDustDensity` (gas x
+ * oldActivity, already in [0,1]) sits below this is dropped AFTER placement
+ * — a post-filter, not a rejection, so it never touches the rng stream S1's
+ * CDF sampler consumed.
+ */
+const DUST_SURVIVAL_DENSITY_FLOOR = 0.01;
+
 type CloudParticle = {
   readonly center: Vec3;
   readonly frame: CloudFrame;
   readonly radius: number;
+  /** sigma_along / sigma_across — `cloud.elongation` off the map path; coherence-scaled toward it on the map path (S3). */
+  readonly aspect: number;
+  /** Always true off the map path; on it, false below `DUST_SURVIVAL_DENSITY_FLOOR` (S3). */
+  readonly alive: boolean;
 };
-
-/**
- * Peak `sfMapDustDensity` over the whole sampled grid, once per map.
- * Load-bearing: `oldActivity` is small over most of the grid, so rejection
- * sampling on the raw (unnormalised) product would reject nearly everything
- * and silently degenerate to the analytic fallback — the bug this
- * replaces, just quieter. Channel 2 (blue) is `oldActivity`; channel 1 is
- * `recentSf`, which this deliberately does NOT read (see `sfMapDustDensity`).
- */
-function maxSfMapDustDensity(map: GalaxySfMap): number {
-  let max = 0;
-  const { data } = map;
-  for (let i = 0; i + 2 < data.length; i += 4) {
-    const density = sfMapDustDensity(data[i]! / 255, data[i + 2]! / 255);
-    if (density > max) max = density;
-  }
-  return max;
-}
 
 export function buildDustParticleCloud(
   geometry: GalaxyDescription,
@@ -175,38 +172,43 @@ export function buildDustParticleCloud(
   const rng = mulberry32(seed ^ 0x44555354); // "DUST"
 
   // Seeding ON: the map IS the placement density (a gas x accumulated-activity
-  // blend, `sfMapDustDensity`, normalised by its own grid MAXIMUM so a
-  // mostly-quiet grid doesn't rejection-sample down to nothing) — every
-  // complex is placed by `'mapDensity'` mode. Seeding OFF (or a quiet map):
-  // `'smoothDisc'` mode, no arm-lane concept at all — the dust tier's
-  // analytic lane machinery was cut once the map became the sole placement
-  // density; `armParticleCloud.ts` still owns the one live `'analytic'`
-  // caller. This is the intended consequence of the SF map leading, not a
-  // regression.
+  // blend, `sfMapDustDensity`) — every complex is placed by `'mapDensity'`
+  // mode, its centre drawn from S1's inverse-CDF sampler (`buildSfMapDustCdf`).
+  // Seeding OFF (or a quiet map): `'smoothDisc'` mode, no arm-lane concept at
+  // all — the dust tier's analytic lane machinery was cut once the map became
+  // the sole placement density; `armParticleCloud.ts` still owns the one live
+  // `'analytic'` caller. This is the intended consequence of the SF map
+  // leading, not a regression.
   let placement: ClusteredDiscPlacementMode = { kind: 'smoothDisc' };
+  // S3's per-particle aspect/survival, non-null only on the map-seeded path —
+  // `null` keeps `drawPayload` below byte-identical to the pre-S3 smoothDisc
+  // behaviour, same gating shape as `sfMapOrientation` just below.
+  let sampleMapTraits:
+    | ((radius: number, angle: number) => { aspect: number; alive: boolean })
+    | null = null;
   if (tuning.dust.sfMapSeeding && sfMap) {
-    const maxDensity = maxSfMapDustDensity(sfMap);
-    if (maxDensity > 0) {
-      placement = {
-        kind: 'mapDensity',
-        rMin: sfMap.rMin,
-        rMax: sfMap.rMax,
-        densityAt: (radius, angle) => {
-          // Outside the grid's radial support the map has NO DATA, and
-          // `sampleGalaxySfMap` CLAMPS rather than reporting that — so every
-          // radius below rMin reads ring 0. Left to clamp, the centrally-peaked
-          // proposal distribution piles the whole cloud into the inner hole at
-          // ring 0's (unburnt, therefore high) density, which is why the dust
-          // collected in the central circle the overlay draws as black.
-          if (radius < sfMap.rMin || radius > sfMap.rMax) return 0;
-          const sample = sampleGalaxySfMap(sfMap, radius, angle);
-          return sfMapDustDensity(sample.gas, sample.oldActivity) / maxDensity;
-        },
+    const map = sfMap; // narrowed alias so the closures below don't re-null-check
+    const cdf = buildSfMapDustCdf(map);
+    if (cdf.total > 0) {
+      placement = { kind: 'mapDensity', samplePoint: (mapRng) => sampleSfMapDustCdf(cdf, mapRng) };
+      sampleMapTraits = (radius, angle) => {
+        const coherence = sfMapOrientation
+          ? sampleSfMapOrientation(sfMapOrientation, radius, angle).coherence
+          : 0;
+        const sample = sampleGalaxySfMap(map, radius, angle);
+        return {
+          aspect: 1 + (cloud.elongation - 1) * coherence,
+          alive: sfMapDustDensity(sample.gas, sample.oldActivity) >= DUST_SURVIVAL_DENSITY_FLOOR,
+        };
       };
     }
   }
 
-  const particles: CloudParticle[] = buildClusteredDiscPlacement<{ radius: number }>(
+  const rawParticles: CloudParticle[] = buildClusteredDiscPlacement<{
+    radius: number;
+    aspect: number;
+    alive: boolean;
+  }>(
     {
       geometry,
       rng,
@@ -224,8 +226,21 @@ export function buildDustParticleCloud(
       sfMapOrientation: tuning.dust.sfMapSeeding ? sfMapOrientation : null,
       orientationDeltaStats,
     },
-    (childRng) => ({ radius: sampleRadius(childRng()) }),
+    (childRng, center) => {
+      const radius = sampleRadius(childRng());
+      if (!sampleMapTraits) return { radius, aspect: cloud.elongation, alive: true };
+      // Deterministic lookup, no rng draw — S3's survival filter runs AFTER
+      // placement (below), so this never disturbs the CDF sampler's stream.
+      const traits = sampleMapTraits(
+        Math.hypot(center[0], center[2]),
+        Math.atan2(center[2], center[0]),
+      );
+      return { radius, ...traits };
+    },
   );
+  // S3 cavity filter — a post-filter (see `DUST_SURVIVAL_DENSITY_FLOOR`), a
+  // no-op off the map path since `alive` is always true there.
+  const particles = rawParticles.filter((p) => p.alive);
 
   // ---- 4b: Larson's third law — mass ~ R^2 (constant cloud surface density) -
   let weightedSigma2 = 0;
@@ -236,17 +251,31 @@ export function buildDustParticleCloud(
   // (see galaxyDustMixture.ts's header), so the cloud reads heavier than it
   // did when this was one of two tiers splitting the same measured column.
   const totalMass = dust.tau * 2 * Math.PI * weightedSigma2;
+  // Summed AFTER the S3 filter above, so a cavity-dropped particle's R^2
+  // share is redistributed onto the survivors and `dust.tau` stays exact.
   let sumR2 = 0;
   for (const p of particles) sumR2 += p.radius * p.radius;
   if (!(totalMass > 0) || !(sumR2 > 0)) return [];
   const massPerR2 = totalMass / sumR2;
 
   return particles.map((p) => {
-    const sigmas = {
-      along: p.radius * cloud.elongation,
-      across: p.radius,
-      pole: p.radius * CLOUD_POLE_RATIO,
-    };
+    // Map path: AREA-PRESERVING aspect (along x across = R^2 always) so the
+    // Larson mass ~ R^2 renormalisation above stays exact per particle, not
+    // just in aggregate. Off it: the pre-S3 formula, unchanged (`p.aspect`
+    // is `cloud.elongation` there, but plugged into THIS formula it would
+    // move every splat's footprint — see 07-sprite-seeding.md S3).
+    const sigmas =
+      placement.kind === 'mapDensity'
+        ? {
+            along: p.radius * Math.sqrt(p.aspect),
+            across: p.radius / Math.sqrt(p.aspect),
+            pole: p.radius * CLOUD_POLE_RATIO,
+          }
+        : {
+            along: p.radius * cloud.elongation,
+            across: p.radius,
+            pole: p.radius * CLOUD_POLE_RATIO,
+          };
     const mass = massPerR2 * p.radius * p.radius;
     const amplitude = mass / (TAU_ROOT3 * sigmas.along * sigmas.across * sigmas.pole);
     return {

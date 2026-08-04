@@ -18,7 +18,7 @@ import { mulberry32 } from '../../../../../src/utils/random/mulberry32';
 
 const geometry = describeGalaxy(MILKY_WAY_GALAXY_PARAMS);
 
-/** A narrow annulus of uniform density: every proposal is accepted on its first try, so a seed point CANNOT land outside it. */
+/** A stubbed `samplePoint` drawing uniformly over a narrow annulus, so a seed point CANNOT land outside it. */
 const R_MIN = 2;
 const R_MAX = 2.05;
 
@@ -36,7 +36,13 @@ function place(clumpiness: number) {
       discSigmaR: (k) => DISC_SIGMA_RATIOS[k]! * geometry.diskScaleLen,
       discWeights: DISC_SURFACE_WEIGHTS,
       discWeightSum: DISC_SURFACE_WEIGHTS.reduce((sum, w) => sum + w, 0),
-      placement: { kind: 'mapDensity', densityAt: () => 1, rMin: R_MIN, rMax: R_MAX },
+      placement: {
+        kind: 'mapDensity',
+        samplePoint: (sampleRng) => ({
+          radius: R_MIN + sampleRng() * (R_MAX - R_MIN),
+          angle: sampleRng() * 2 * Math.PI,
+        }),
+      },
     },
     () => ({}),
   );

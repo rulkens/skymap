@@ -18,8 +18,10 @@
  * that only vanished once the weight was pushed all the way to 1. The blend
  * has one correct value, so there is no knob.
  *
- * Unnormalised: callers rejection-sample against this divided by its own grid
- * maximum, never against the raw value (see `buildDustParticleCloud`).
+ * Unnormalised: `buildSfMapDustCdf` weights raw texel mass with this value
+ * directly (a CDF integrates to its own total, no grid-max scan needed), and
+ * `buildDustParticleCloud`'s S3 survival filter compares it to a small
+ * absolute floor, not a fraction of the grid max.
  */
 export function sfMapDustDensity(gas: number, activity: number): number {
   return gas * activity;

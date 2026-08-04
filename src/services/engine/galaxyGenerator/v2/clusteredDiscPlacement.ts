@@ -36,9 +36,6 @@ import type { Vec3 } from '../../../../@types/math/Vec3';
  */
 const ARM_FADE_REJECTION_TRIES = 24;
 
-/** Same idea as `ARM_FADE_REJECTION_TRIES`, own constant: bounded rejection sampling against `'mapDensity'` mode's `densityAt`. */
-const MAP_DENSITY_REJECTION_TRIES = 24;
-
 /** Complex children are flattened relative to their in-plane extent — a fixed clustering-shape constant shared by every consumer, not exposed as a knob. */
 const CHILD_POLE_RATIO = 0.4;
 
@@ -97,11 +94,17 @@ export type ClusteredDiscPlacementMode =
     }
   | {
       readonly kind: 'mapDensity';
-      /** Normalised [0,1] placement density from the SF map — see `placeMapDensityComplex`. */
-      readonly densityAt: (radius: number, angle: number) => number;
-      /** The map grid's own radial support. Proposals are drawn over exactly this annulus, so it must be the grid `densityAt` samples, not a disc-derived radius. */
-      readonly rMin: number;
-      readonly rMax: number;
+      /**
+       * Draws one (radius, angle) exactly proportional to the SF map's
+       * placement density — S1's inverse-CDF sampler
+       * (`buildSfMapDustCdf`/`sampleSfMapDustCdf`), built once per cloud by
+       * the caller. Fixed THREE rng draws every call regardless of map
+       * contrast — see `sampleSfMapDustCdf`'s own header.
+       */
+      readonly samplePoint: (rng: () => number) => {
+        readonly radius: number;
+        readonly angle: number;
+      };
     }
   | { readonly kind: 'smoothDisc' };
 
@@ -325,51 +328,19 @@ export function buildClusteredDiscPlacement<TPayload>(
 
   /**
    * Map-density-only placement: the SF map IS the density, no arm-lane roll
-   * involved. Proposes uniformly over the map's own annulus — area-weighted in
-   * radius (`sqrt` of a uniform in r^2), uniform in angle — and rejection-samples
-   * against `densityAt`.
-   *
-   * The proposal deliberately does NOT reuse `placeSmoothDiscComplex`'s disc
-   * Gaussians. Drawing from those made the map a radial MODULATION of the
-   * exponential disc rather than the density itself: nothing could be accepted
-   * past the disc's support however bright the map was there (dust stopped short
-   * of the grid), and the centrally-peaked proposal drove most of the budget
-   * exhaustion, so the accept-last fallback deposited those draws in the very
-   * inner hole the map reports as empty. Uniform-over-the-annulus makes both
-   * unreachable by construction.
-   *
-   * Falling back to the BEST proposal rather than the last keeps that fallback
-   * from being an arbitrary draw; the requested particle count is always met.
-   * `y` doesn't feed the acceptance test, so it's drawn once after the loop.
+   * involved. `mode.samplePoint` (S1's inverse-CDF sampler, built once per
+   * cloud by the caller) draws the centre exactly proportional to the map's
+   * accumulated density x area — no rejection, no fallback, so unlike the
+   * old rejection loop this mode's rng draw count never varies with map
+   * contrast. `y` isn't part of that draw, so it's drawn once after.
    */
-  function placeMapDensityComplex(mode: {
-    densityAt: (radius: number, angle: number) => number;
-    rMin: number;
-    rMax: number;
-  }): {
+  function placeMapDensityComplex(
+    mode: Extract<ClusteredDiscPlacementMode, { kind: 'mapDensity' }>,
+  ): {
     center: Vec3;
     frame: CloudFrame;
   } {
-    const r2Min = mode.rMin * mode.rMin;
-    const r2Span = mode.rMax * mode.rMax - r2Min;
-    let radius = mode.rMin;
-    let angle = 0;
-    let bestDensity = -1;
-    let bestRadius = radius;
-    let bestAngle = angle;
-    for (let tries = 0; tries < MAP_DENSITY_REJECTION_TRIES; tries++) {
-      radius = Math.sqrt(r2Min + rng() * r2Span);
-      angle = (rng() * 2 - 1) * Math.PI;
-      const density = mode.densityAt(radius, angle);
-      if (density > bestDensity) {
-        bestDensity = density;
-        bestRadius = radius;
-        bestAngle = angle;
-      }
-      if (rng() < density) break;
-    }
-    radius = bestRadius;
-    angle = bestAngle;
+    const { radius, angle } = mode.samplePoint(rng);
     const x = Math.cos(angle) * radius;
     const z = Math.sin(angle) * radius;
     const y = gaussian(rng) * sigmaZComplex;
