@@ -85,6 +85,12 @@ export type RenderSettings = {
    */
   readonly dustViewIntensity: number;
   /**
+   * S4 strength for the JWST view's SF-map high-pass (0 = splat column
+   * alone, 1 = full detail ratio, >1 extrapolates); only visible while
+   * `dustViewIntensity` is above 0.
+   */
+  readonly dustDetailStrength: number;
+  /**
    * SF-map crossfade weight: 0 = pure galaxy, 1 = the SSPSF automaton's
    * log-polar output alone, same seam as `dustViewIntensity`. The automaton
    * seeds the dust placement and the orientation field, so this is the view

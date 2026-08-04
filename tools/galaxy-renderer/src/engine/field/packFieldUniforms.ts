@@ -40,8 +40,8 @@ import type { GalaxyFieldComponent } from '../../../../../src/@types/galaxy/Gala
 import type { FieldDust } from '../../../@types/engine/FieldDust';
 import type { FieldHeaderInput } from '../../../@types/engine/FieldHeaderInput';
 
-/** Float count of `io.wesl`'s `FieldUniforms` header — 13 vec4, camera + params + counts + counts2 + dustExtinction + dustNoise + dustSlices + debugView + sfMapChannels + bubbleView. */
-export const FIELD_HEADER_FLOATS = 52;
+/** Float count of `io.wesl`'s `FieldUniforms` header — 14 vec4, camera + params + counts + counts2 + dustExtinction + dustNoise + dustSlices + debugView + sfMapChannels + bubbleView + dustDetail. */
+export const FIELD_HEADER_FLOATS = 56;
 
 /** Byte size of the header struct, for `createBuffer`. */
 export const FIELD_HEADER_BUFFER_SIZE = FIELD_HEADER_FLOATS * 4;
@@ -64,7 +64,7 @@ const INERT_DUST: FieldDust = {
 };
 
 /**
- * packFieldHeaderUniforms — one 208-byte `FieldUniforms` header, every lane
+ * packFieldHeaderUniforms — one 224-byte `FieldUniforms` header, every lane
  * written every call. `dst` is a per-frame scratch shared across headers
  * (createGalaxyEngine's `fieldData`/`hiiData`), so a lane left unwritten
  * silently ships the previous pass's bytes to the GPU — which is why an
@@ -79,6 +79,7 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
     debugViews,
     galaxyWeight,
     sfMapChannels,
+    dustDetail,
   } = input;
   const dust = input.dust ?? INERT_DUST;
   const out = dst ?? new Float32Array(FIELD_HEADER_FLOATS);
@@ -166,6 +167,12 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
   out[49] = 0;
   out[50] = 0;
   out[51] = 0;
+
+  // dustDetail 52..55 = (strength, unused, unused, unused).
+  out[52] = dustDetail;
+  out[53] = 0;
+  out[54] = 0;
+  out[55] = 0;
 
   return out;
 }

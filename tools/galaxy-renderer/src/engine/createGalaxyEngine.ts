@@ -666,6 +666,11 @@ export async function createGalaxyEngine(
       entries: [
         { binding: 0, resource: { buffer: fieldUbo } },
         { binding: 2, resource: targets.dustMapTex.createView() },
+        // S4's per-fragment map read — see dustPresent.wesl.
+        { binding: 1, resource: sfMapAutomaton.texture.createView() },
+        { binding: 3, resource: { buffer: sfMapAutomaton.gridBuffer } },
+        { binding: 7, resource: sfMapAutomaton.mapSampler },
+        { binding: 8, resource: sfMapAutomaton.dustBlurTexture.createView() },
       ],
     });
   }
@@ -974,6 +979,7 @@ export async function createGalaxyEngine(
         debugViews,
         galaxyWeight,
         sfMapChannels,
+        dustDetail: render.dustDetailStrength,
       },
       fieldData,
     );
@@ -998,6 +1004,7 @@ export async function createGalaxyEngine(
         debugViews,
         galaxyWeight,
         sfMapChannels,
+        dustDetail: 0,
       },
       hiiData,
     );

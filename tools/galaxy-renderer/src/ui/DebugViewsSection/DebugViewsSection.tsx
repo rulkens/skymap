@@ -42,6 +42,17 @@ function DebugViewsSection(): ReactNode {
           info={DEBUG_VIEWS.dust.info}
         />
         <ParamSlider
+          label="JWST · map detail"
+          value={render.dustDetailStrength}
+          min={0}
+          max={2}
+          step={0.05}
+          format={(v) => v.toFixed(2)}
+          onChange={(v) => dispatch(renderPatched({ dustDetailStrength: v }))}
+          path="render.dustDetailStrength"
+          info="S4 high-pass: multiplies the JWST column by the SF map's detail ratio (map density / 8-texel blur) at each fragment's disc intersection, restoring the top octave 40k splats can't carry. 0 = splats alone; 1 = full ratio. Only visible while the JWST view is up."
+        />
+        <ParamSlider
           label={DEBUG_VIEWS.sfMap.label}
           value={render.sfMapViewIntensity}
           min={0}

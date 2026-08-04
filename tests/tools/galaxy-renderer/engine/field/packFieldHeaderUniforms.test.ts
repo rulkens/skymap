@@ -66,6 +66,7 @@ const input: FieldHeaderInput = {
   debugViews: { dust: 21000, sfMap: 21001, orientation: 21002, bubble: 21003 },
   galaxyWeight: 22000,
   sfMapChannels: { gasWeight: 23000, recentSfWeight: 23001, activityWeight: 23002 },
+  dustDetail: 24000,
 };
 
 const packed = packFieldHeaderUniforms(input);
@@ -110,6 +111,7 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
     expect(observed(22000)).toBe(at('debugView') + 12);
     expect(observed(21003)).toBe(at('bubbleView'));
     expect(observed(23000)).toBe(at('sfMapChannels'));
+    expect(observed(24000)).toBe(at('dustDetail'));
   });
 
   it('derives dustOffset as emissionCount, since dust is appended last', () => {

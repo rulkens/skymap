@@ -31,6 +31,10 @@ import { packSfMapUnshear, SF_MAP_UNSHEAR_BUFFER_SIZE } from './packSfMapUnshear
 import sfMapStepWgsl from '../shaders/milkyWay/sfMap/sfMapStep.wesl?static';
 import sfMapPackWgsl from '../shaders/milkyWay/sfMap/sfMapPack.wesl?static';
 import sfMapPresentWgsl from '../shaders/milkyWay/sfMap/sfMapPresent.wesl?static';
+import sfMapDustBlurWgsl from '../shaders/milkyWay/sfMap/sfMapDustBlur.wesl?static';
+
+/** Mirrored by BLUR_FACTOR in sfMapDustBlur.wesl; also sets the S4 high-pass crossover (~8 texels, roughly the scale the dust splats stop resolving). */
+const DUST_BLUR_FACTOR = 8;
 
 export type SfMapAutomaton = {
   /** The packed, presentable output (gas / recent SF / older SF) the orientation chain and the CPU readback both read. */
@@ -39,6 +43,11 @@ export type SfMapAutomaton = {
   readonly readbackBytesPerRow: number;
   readonly presentPipeline: GPURenderPipeline;
   readonly presentBindGroup: GPUBindGroup;
+  /** 8x-downsampled gas x oldActivity density, S4's low-pass divisor — see sfMapDustBlur.wesl. */
+  readonly dustBlurTexture: GPUTexture;
+  /** rMin/rMax — dustPresent.wesl's S4 read needs the same log-polar mapping the present pass uses. */
+  readonly gridBuffer: GPUBuffer;
+  readonly mapSampler: GPUSampler;
   /**
    * Rerun the automaton over `geometry`, or clear it when there is no geometry
    * / the tuning has it disabled. Returns the grid it wrote, so the caller's
@@ -76,6 +85,12 @@ export function createSfMapAutomaton(
     layout: 'auto',
     compute: { module: packMod, entryPoint: 'cs' },
   });
+  const dustBlurMod = makeShader(sfMapDustBlurWgsl, 'galaxy:sfMapDustBlur');
+  const dustBlurPipe = device.createComputePipeline({
+    label: 'galaxy:sfMapDustBlurPipe',
+    layout: 'auto',
+    compute: { module: dustBlurMod, entryPoint: 'cs' },
+  });
   const presentMod = makeShader(sfMapPresentWgsl, 'galaxy:sfMapPresent');
   const presentPipe = device.createRenderPipeline({
     label: 'galaxy:sfMapPresentPipe',
@@ -94,8 +109,9 @@ export function createSfMapAutomaton(
     primitive: { topology: 'triangle-list' },
   });
   // 'repeat' in U (azimuth wraps at theta=0/2*PI), 'clamp-to-edge' in V
-  // (radius does not) — sfMapPresent.wesl's fs resamples through this.
-  const presentSampler = device.createSampler({
+  // (radius does not) — sfMapPresent.wesl's fs resamples through this, and
+  // dustPresent.wesl's S4 read shares it for the same wrap semantics.
+  const mapSampler = device.createSampler({
     label: 'galaxy:sfMapPresentSampler',
     addressModeU: 'repeat',
     addressModeV: 'clamp-to-edge',
@@ -128,6 +144,15 @@ export function createSfMapAutomaton(
     format: 'rgba8unorm',
     usage:
       GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC,
+  });
+  // S4's low-pass divisor — one texel per BLUR_FACTOR x BLUR_FACTOR src
+  // block (96x32 at the current grid). rgba16float for the same
+  // filterable-storage-format reason sfMapDustBlur.wesl documents.
+  const sfMapDustBlurTex = device.createTexture({
+    label: 'galaxy:sfMapDustBlurTex',
+    size: [SF_MAP_AZ / DUST_BLUR_FACTOR, SF_MAP_RINGS / DUST_BLUR_FACTOR],
+    format: 'rgba16float',
+    usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
   });
   // `copyTextureToBuffer` forces `bytesPerRow` to a 256-byte multiple; the
   // readback's decode strips the padding so it never reaches `GalaxySfMap.data`.
@@ -172,7 +197,7 @@ export function createSfMapAutomaton(
     entries: [
       { binding: 0, resource: { buffer: deps.fieldUbo } },
       { binding: 1, resource: texture.createView() },
-      { binding: 2, resource: presentSampler },
+      { binding: 2, resource: mapSampler },
       { binding: 3, resource: { buffer: gridUbo } },
     ],
   });
@@ -186,6 +211,9 @@ export function createSfMapAutomaton(
     readbackBytesPerRow,
     presentPipeline: presentPipe,
     presentBindGroup,
+    dustBlurTexture: sfMapDustBlurTex,
+    gridBuffer: gridUbo,
+    mapSampler,
 
     rebuild({ geometry, tuning, seed }): GalaxySfMapGridRadius {
       const sfMap = tuning.sfMap;
@@ -207,6 +235,15 @@ export function createSfMapAutomaton(
           new Uint8Array(SF_MAP_AZ * SF_MAP_RINGS * 4),
           { bytesPerRow: SF_MAP_AZ * 4 },
           [SF_MAP_AZ, SF_MAP_RINGS],
+        );
+        // A stale blur under a cleared map would read as detail everywhere
+        // (D=0 over Dblur>0 darkens the whole column); zeros make the ratio
+        // degrade to 1.
+        device.queue.writeTexture(
+          { texture: sfMapDustBlurTex },
+          new Uint8Array((SF_MAP_AZ / DUST_BLUR_FACTOR) * (SF_MAP_RINGS / DUST_BLUR_FACTOR) * 8),
+          { bytesPerRow: (SF_MAP_AZ / DUST_BLUR_FACTOR) * 8 },
+          [SF_MAP_AZ / DUST_BLUR_FACTOR, SF_MAP_RINGS / DUST_BLUR_FACTOR],
         );
         return grid;
       }
@@ -291,6 +328,25 @@ export function createSfMapAutomaton(
       packPass.dispatchWorkgroups(dispatchX, dispatchY);
       packPass.end();
 
+      // S4's low-pass, in the same encoder right after the pack pass writes
+      // `texture` — the blur reads exactly what pack just produced.
+      const dustBlurBG = device.createBindGroup({
+        label: 'galaxy:sfMapDustBlurBG',
+        layout: dustBlurPipe.getBindGroupLayout(0),
+        entries: [
+          { binding: 0, resource: texture.createView() },
+          { binding: 1, resource: sfMapDustBlurTex.createView() },
+        ],
+      });
+      const dustBlurPass = enc.beginComputePass({ label: 'galaxy:sfMapDustBlurPass' });
+      dustBlurPass.setPipeline(dustBlurPipe);
+      dustBlurPass.setBindGroup(0, dustBlurBG);
+      dustBlurPass.dispatchWorkgroups(
+        SF_MAP_AZ / DUST_BLUR_FACTOR / 8,
+        SF_MAP_RINGS / DUST_BLUR_FACTOR / 8,
+      );
+      dustBlurPass.end();
+
       device.queue.submit([enc.finish()]);
       return grid;
     },
@@ -301,6 +357,7 @@ export function createSfMapAutomaton(
       stateA.destroy();
       stateB.destroy();
       texture.destroy();
+      sfMapDustBlurTex.destroy();
       readbackBuffer.destroy();
       constUbo.destroy();
       gridUbo.destroy();

@@ -27,7 +27,8 @@
 //   offset 160 : debugView: vec4 (dustViewIntensity, sfMapViewIntensity, orientationViewIntensity, galaxyWeight)
 //   offset 176 : sfMapChannels: vec4 (gasWeight, recentSfWeight, activityWeight, unused)
 //   offset 192 : bubbleView: vec4 (intensity, unused, unused, unused)
-//   total: 208 bytes.
+//   offset 208 : dustDetail: vec4 (strength, unused, unused, unused)
+//   total: 224 bytes.
 //
 // counts.x is the live EMISSION component count — the central galaxy's plus
 // every extra's, drawn one quad each (see splat.wesl). counts.y/.z locate
@@ -122,6 +123,13 @@
 // sfMapChannels.w would name a bubble weight after an unrelated automaton
 // channel. Only .x is live; .yzw are reserved the same way counts2.x is.
 //
+// dustDetail (offset 208) is S4's high-pass strength for the JWST dust view —
+// dustPresent.wesl multiplies its presented column by the SF map's detail
+// ratio (map density over an 8-texel-blurred copy, sfMapDustBlur.wesl) at
+// the fragment's disc intersection; 0 disables. JWST-view-only for now —
+// deliberately NOT wired into splat.wesl's attenuation read until the
+// prototype is judged. .yzw reserved like counts2.x.
+//
 // COMPS (read-only storage, binding 1) — every mixture's components back to
 // back (the central galaxy's emission, then each background extra's,
 // already carried into world space — see transformGalaxyFieldComponent.ts —
@@ -214,6 +222,7 @@ struct FieldUniforms {
   debugView: vec4<f32>,
   sfMapChannels: vec4<f32>,
   bubbleView: vec4<f32>,
+  dustDetail: vec4<f32>,
 };
 
 @group(0) @binding(0) var<uniform> u: FieldUniforms;

@@ -109,6 +109,10 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // 0 at boot: the JWST view crossfades in a debug presentation of the dust
   // map, which is not the default look.
   dustViewIntensity: 0,
+  // Full-strength by default — the knob only shows inside the (boot-off)
+  // JWST view, and the prototype exists to be seen; 0 recovers the pre-S4
+  // view for A/B.
+  dustDetailStrength: 1,
   // 0 at boot, same rationale as `dustViewIntensity`: it crossfades in a
   // debug presentation of the automaton's output.
   sfMapViewIntensity: 0,

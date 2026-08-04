@@ -37,4 +37,10 @@ export type FieldHeaderInput = {
    */
   readonly galaxyWeight: number;
   readonly sfMapChannels: SfMapChannelWeights;
+  /**
+   * S4 high-pass strength for the JWST dust view (io.wesl's `dustDetail.x`).
+   * Passes whose shaders never read it (HII) state 0 rather than omitting —
+   * every lane is written every pack.
+   */
+  readonly dustDetail: number;
 };
