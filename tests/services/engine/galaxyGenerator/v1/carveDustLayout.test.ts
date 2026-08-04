@@ -8,9 +8,9 @@
  * frozen snapshot of them.
  */
 import { describe, expect, it } from 'vitest';
-import { carveDustLayout } from '../../../../../src/services/engine/galaxyGenerator/shared/carveDustLayout';
-import { splitStarBudget } from '../../../../../src/services/engine/galaxyGenerator/shared/splitStarBudget';
-import { grainScale } from '../../../../../src/services/engine/galaxyGenerator/shared/grainScale';
+import { carveDustLayout } from '../../../../../src/services/engine/galaxyGenerator/v1/carveDustLayout';
+import { splitStarBudget } from '../../../../../src/services/engine/galaxyGenerator/v1/splitStarBudget';
+import { grainScale } from '../../../../../src/services/engine/galaxyGenerator/v1/grainScale';
 import { POPULATION_IDS } from '../../../../../src/services/engine/galaxyGenerator/shared/populationIds';
 import type { GalaxyCategory } from '../../../../../src/@types/galaxy/GalaxyCategory';
 import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';

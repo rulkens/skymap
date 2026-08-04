@@ -23,13 +23,24 @@ particles.
 createMilkyWayCloud(device, starCount)          ← src/services/engine/phases/initGpu.ts
   createGenerationPipelines(device)             once: two compute pipelines
   regenerate(count):
-    shared/{splitStarBudget, carveStarLayout, carveDustLayout}   pure CPU
+    galaxyPopulationCountShares, splitStarBudget,
+    carveStarLayout, carveDustLayout                             pure CPU
     device.createBuffer starVB / dustVB         size = capacity × GEN_RECORD_BYTES
-    queue.writeBuffer(ubo, shared/packGenerationUniforms(shared/describeGalaxy(params), ...))
+    queue.writeBuffer(ubo, packGenerationUniforms(shared/describeGalaxy(params), ...))
     encodeGeneration(...)                       two compute passes
     queue.submit
       → MilkyWayCloudBuffers → gpu/renderers/milkyWay/milkyWayCloudRenderer.ts
 ```
+
+Every word in that pure-CPU step is a sprite-allocation word, and all of it is
+folder-local: `SPRITE_POPULATION_BRIGHTNESS` → `galaxyPopulationCountShares` →
+`totalStarBudget` → `splitStarBudget` → `StarBudget` → the two carves →
+`packGenerationUniforms`, plus `grainScale`, the per-star size/jitter factor the
+carve and the shader must agree on. `shared/` hands over a light split and a
+`GalaxyDescription` that names no sprite quantity at all; the division that
+turns light into a count — and the per-sprite brightness it divides by, scraped
+straight out of `generate.wesl` — lives here. Deleting this folder takes the
+whole notion of a star, and of a star budget, with it.
 
 Shaders: `gpu/shaders/milkyWay/sprites/{generate,generateStars,generateDust}.wesl`
 (compute, the placement maths) and `gpu/shaders/milkyWay/sprites/{stars,dust}.wesl`

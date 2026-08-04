@@ -32,7 +32,7 @@
  *    per-cluster loop itself (`POPULATION_IDS.globularCluster`) owns no
  *    output slots and never appears in this layout.
  */
-import { POPULATION_IDS } from './populationIds';
+import { POPULATION_IDS } from '../shared/populationIds';
 import type { GalaxyCategory } from '../../../../@types/galaxy/GalaxyCategory';
 import type { GalaxyParams } from '../../../../@types/galaxy/GalaxyParams';
 import type { GenerationLayout } from '../../../../@types/galaxy/GenerationLayout';

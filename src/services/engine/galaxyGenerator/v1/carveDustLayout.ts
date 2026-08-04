@@ -36,10 +36,10 @@
  *    `armStarCount > 0` gate as armDust above (the clump seeds live in the
  *    irregularClumps star range, sized by `armStarCount`).
  */
-import { barLengthOf } from './barLengthOf';
+import { barLengthOf } from '../shared/barLengthOf';
 import { grainScale } from './grainScale';
-import { outerRadiusOf } from './outerRadiusOf';
-import { POPULATION_IDS } from './populationIds';
+import { outerRadiusOf } from '../shared/outerRadiusOf';
+import { POPULATION_IDS } from '../shared/populationIds';
 import type { GalaxyCategory } from '../../../../@types/galaxy/GalaxyCategory';
 import type { GalaxyParams } from '../../../../@types/galaxy/GalaxyParams';
 import type { GenerationLayout } from '../../../../@types/galaxy/GenerationLayout';

@@ -14,12 +14,12 @@ import type { GalaxyDescription } from '../../../../../src/@types/galaxy/GalaxyD
 import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';
 import type { GenerationPipelines } from '../../../../../src/@types/galaxy/GenerationPipelines';
 
-import { carveDustLayout } from '../../../../../src/services/engine/galaxyGenerator/shared/carveDustLayout';
-import { carveStarLayout } from '../../../../../src/services/engine/galaxyGenerator/shared/carveStarLayout';
+import { carveDustLayout } from '../../../../../src/services/engine/galaxyGenerator/v1/carveDustLayout';
+import { carveStarLayout } from '../../../../../src/services/engine/galaxyGenerator/v1/carveStarLayout';
 import { classifyHubbleType } from '../../../../../src/services/engine/galaxyGenerator/shared/classifyHubbleType';
 import { describeGalaxy } from '../../../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
-import { packGenerationUniforms } from '../../../../../src/services/engine/galaxyGenerator/shared/packGenerationUniforms';
-import { splitStarBudget } from '../../../../../src/services/engine/galaxyGenerator/shared/splitStarBudget';
+import { packGenerationUniforms } from '../../../../../src/services/engine/galaxyGenerator/v1/packGenerationUniforms';
+import { splitStarBudget } from '../../../../../src/services/engine/galaxyGenerator/v1/splitStarBudget';
 import { encodeGeneration } from '../../../../../src/services/engine/galaxyGenerator/v1/encodeGeneration';
 import { GEN_RECORD_BYTES } from '../../../../../src/services/engine/galaxyGenerator/v1/genRecordBytes';
 

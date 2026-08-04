@@ -10,14 +10,14 @@
  */
 import { describe, expect, it } from 'vitest';
 import { GENERATION_UBO } from '../../../../../src/services/engine/galaxyGenerator/shared/generationUboLayout';
-import { packGenerationUniforms } from '../../../../../src/services/engine/galaxyGenerator/shared/packGenerationUniforms';
-import { carveDustLayout } from '../../../../../src/services/engine/galaxyGenerator/shared/carveDustLayout';
-import { carveStarLayout } from '../../../../../src/services/engine/galaxyGenerator/shared/carveStarLayout';
+import { packGenerationUniforms } from '../../../../../src/services/engine/galaxyGenerator/v1/packGenerationUniforms';
+import { carveDustLayout } from '../../../../../src/services/engine/galaxyGenerator/v1/carveDustLayout';
+import { carveStarLayout } from '../../../../../src/services/engine/galaxyGenerator/v1/carveStarLayout';
 import { classifyHubbleType } from '../../../../../src/services/engine/galaxyGenerator/shared/classifyHubbleType';
 import { describeGalaxy } from '../../../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
-import { grainScale } from '../../../../../src/services/engine/galaxyGenerator/shared/grainScale';
+import { grainScale } from '../../../../../src/services/engine/galaxyGenerator/v1/grainScale';
 import { hiiPalette } from '../../../../../src/services/engine/galaxyGenerator/shared/hiiPalette';
-import { splitStarBudget } from '../../../../../src/services/engine/galaxyGenerator/shared/splitStarBudget';
+import { splitStarBudget } from '../../../../../src/services/engine/galaxyGenerator/v1/splitStarBudget';
 import type { ExtraGalaxySpec } from '../../../../../src/@types/galaxy/ExtraGalaxySpec';
 import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';
 

@@ -1,15 +1,14 @@
 /**
  * galaxyPopulationCountShares — how many STARS the sprite tier spends per
- * population, derived from how much LIGHT each population has
- * (`galaxyLightDecomposition`) divided by what one of its stars emits
- * (`SPRITE_POPULATION_BRIGHTNESS`), renormalised to a budget of 1.
+ * population: each population's LIGHT (`galaxyLightDecomposition`) divided by
+ * what one of its stars emits (`SPRITE_POPULATION_BRIGHTNESS`), renormalised.
  *
- * That direction is the point: light is the physical quantity and a star count
- * is a rendering budget, so the budget follows the light and never the reverse.
- * The one thing the light table cannot say is where inside the disc the sprites
- * go, which is `ARM_LIGHT_SHARE_OF_DISC` below.
+ * Light is the physical quantity, a count is a rendering budget, and `shared/`
+ * stops at the light — this division is where a count first exists. What the
+ * light table cannot say is where inside the disc the sprites go, which is
+ * `ARM_LIGHT_SHARE_OF_DISC` below.
  */
-import { galaxyLightDecomposition } from './galaxyLightDecomposition';
+import { galaxyLightDecomposition } from '../shared/galaxyLightDecomposition';
 import { SPRITE_POPULATION_BRIGHTNESS } from './spritePopulationBrightness';
 import type { GalaxyCategory } from '../../../../@types/galaxy/GalaxyCategory';
 import type { GalaxyParams } from '../../../../@types/galaxy/GalaxyParams';

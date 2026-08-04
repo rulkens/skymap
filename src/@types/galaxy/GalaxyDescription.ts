@@ -26,12 +26,13 @@ export type GalaxyDescription = {
    * (Freeman 1970) and this model holds that brightness fixed across presets,
    * so SIZE carries all of it.
    *
-   * Deliberately not a function of the sprite budget: that is an LOD number,
-   * and while flux was anchored on it (`modelledStars * starSize^2`, which
-   * goes as N^(1/3)) switching tier changed how bright a galaxy is by 26% a
-   * step. Nor of any per-population sprite multiplier: `light`'s lanes are
-   * light fractions summing to 1, so this IS the galaxy's total emitted light
-   * and every preset now emits strictly what its disc area says it does.
+   * Deliberately not a function of v1's star budget: that is an LOD number,
+   * and while flux was anchored on it the anchor went as N^(1/3), so switching
+   * tier changed how bright a galaxy is by 26% a step. This type no longer
+   * names a sprite quantity at all — `StarBudget` lives under `v1/` and never
+   * reaches here. Nor of any per-population sprite multiplier: `light`'s lanes
+   * are light fractions summing to 1, so this IS the galaxy's total emitted
+   * light and every preset now emits strictly what its disc area says it does.
    *
    * The additive HII tier rides on top of it rather than inside it
    * (`hiiRegions.ts`'s `HII_LUMINOSITY_SHARE`), because those regions are
@@ -97,14 +98,6 @@ export type GalaxyDescription = {
    * category.
    */
   readonly lenticularCloudCenters: readonly Vec3[];
-  /**
-   * v1's base sprite half-extent, `0.016 * outerRadius * grainScale(budget)`.
-   * A sprite quantity on a shared type, and the last one: no field reads it.
-   * It stays only until `packGenerationUniforms` derives it from the
-   * `StarBudget` it is already handed, which is when `splitStarBudget` and
-   * `grainScale` move under `v1/`.
-   */
-  readonly starSize: number;
   /** The generation seed, for field-side stochastic tiers (e.g. the arm particle cloud) that need the SAME seed the sprites were drawn with, not a re-derivation. */
   readonly seed: number;
 };
