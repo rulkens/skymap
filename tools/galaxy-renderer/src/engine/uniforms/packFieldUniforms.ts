@@ -14,7 +14,7 @@
  * reader. The split also drops the component cap a uniform array forced: the
  * old layout's 64 KiB uniform held at most ~1000 components (~3 galaxies'
  * worth); `comps` is now a read-only storage array with no such ceiling, so
- * N background extras can outgrow it (`createGalaxyEngine.ts` sizes and
+ * N background extras can outgrow it (`createGalaxyModel.ts` sizes and
  * grows the backing GPUBuffer; `GALAXY_FIELD_MAX_COMPONENTS` remains only
  * the PER-GALAXY cap `buildGalaxyFieldMixture` enforces).
  *

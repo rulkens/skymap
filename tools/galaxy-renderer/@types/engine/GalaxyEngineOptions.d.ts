@@ -17,6 +17,6 @@ export type GalaxyEngineOptions = {
   readonly onFade?: (readout: MilkyWayFadeReadout) => void; // every 0.1 s from the rAF loop
   // Event-driven, not timed: fires once per `rebuildDustMixture` (a sigma/
   // elongation drag) and once per orientation readback landing — see
-  // createGalaxyEngine.ts's `reportOrientationDiagnostics`.
+  // createGalaxyModel.ts's `reportOrientationDiagnostics`.
   readonly onOrientationDiagnostics?: (diagnostics: OrientationDiagnostics) => void;
 };

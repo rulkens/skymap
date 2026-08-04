@@ -29,13 +29,13 @@ export type GalaxyEngineHandle = {
   grab(size?: number): Promise<{ S: number; data: Uint8ClampedArray }>; // see createOffscreenProbe
   getCamera(): ViewPose;
   // The SSPSF star-formation automaton's packed output (gas / recent SF /
-  // older SF, log-polar) — see createGalaxyEngine.ts's rebuildSfMap.
+  // older SF, log-polar) — see createGalaxyModel.ts's rebuildSfMap.
   // Consumed by nothing but its own overlay yet; exposed for the sibling UI
   // and future consumers.
   getSfMapTexture(): GPUTexture;
   // The same output read back to the CPU, once per generation — null until
   // the first readback lands. Feeds `sfMapDustSeeding` in
-  // `buildDustParticleCloud` (createGalaxyEngine.ts's `scheduleSfMapReadback`).
+  // `buildDustParticleCloud` (createGalaxyModel.ts's `scheduleSfMapReadback`).
   getSfMapData(): GalaxySfMap | null;
   dispose(): void;
 };

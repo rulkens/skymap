@@ -1,9 +1,11 @@
 /**
- * createGalaxyEngine — the one GPU-orchestration module: it owns the WebGPU
- * device, every pipeline, buffer and bind group, and the per-frame encode. The
- * orbit camera lives in `createOrbitCameraInput`, driven once per frame from
- * here. `timing/timingSlots.ts` is the one account of the pass chain — a
- * second copy here would be the copy that drifts.
+ * createGalaxyEngine — GPU orchestration: the WebGPU device, every pipeline,
+ * render target and bind group, and the per-frame encode. What a galaxy IS —
+ * geometry, mixtures, generated buffers, the SSPSF map — lives in
+ * `model/createGalaxyModel.ts`, and the orbit camera in
+ * `createOrbitCameraInput`; both are driven from here.
+ * `timing/timingSlots.ts` is the one account of the pass chain — a second copy
+ * here would be the copy that drifts.
  *
  * ## The whole chain is the APP's, not this tool's
  *
@@ -32,18 +34,10 @@ import type { GalaxyEngineHandle } from '../../@types/engine/GalaxyEngineHandle'
 import type { GalaxyEngineOptions } from '../../@types/engine/GalaxyEngineOptions';
 import type { InstanceDraw } from '../../@types/engine/InstanceDraw';
 import type { MilkyWayFadeReadout } from '../../@types/engine/MilkyWayFadeReadout';
-import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import type { PassTiming } from '../../@types/engine/PassTiming';
 import type { RenderSettings } from '../../@types/engine/RenderSettings';
 import type { LodSettings } from '../../@types/engine/LodSettings';
-import type { ExtraGalaxySpec } from '../../../../src/@types/galaxy/ExtraGalaxySpec';
-import type { GalaxyDustParams } from '../../../../src/@types/galaxy/GalaxyDustParams';
-import type { GalaxyFieldComponent } from '../../../../src/@types/galaxy/GalaxyFieldComponent';
-import type { GalaxyDescription } from '../../../../src/@types/galaxy/GalaxyDescription';
-import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFieldTuning';
-import type { GalaxySfMapParams } from '../../../../src/@types/galaxy/GalaxySfMapParams';
 import type { GalaxySfMap } from '../../../../src/@types/galaxy/GalaxySfMap';
-import type { GalaxyStarFormationParams } from '../../../../src/@types/galaxy/GalaxyStarFormationParams';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 
 import { createShaderModuleWithDevLog } from '../../../../src/services/gpu/shaderCompileLogger';
@@ -53,7 +47,6 @@ import { hasUrlGate } from '../../../../src/utils/url/hasUrlGate';
 import { createFrameTimer } from './timing/createFrameTimer';
 import { createReportThrottle } from './timing/createReportThrottle';
 import { TIMING_SLOTS } from './timing/timingSlots';
-import { createKeyedRebuild } from './createKeyedRebuild';
 import { createRafLoop } from './createRafLoop';
 import { createGalaxyRenderTargets } from './gpu/createGalaxyRenderTargets';
 import type { TargetDivisors } from './gpu/createGalaxyRenderTargets';
@@ -68,17 +61,13 @@ import { encodeSceneComposites } from './passes/encodeSceneComposites';
 import { encodeSplatPass } from './passes/encodeSplatPass';
 import { encodeStarPass } from './passes/encodeStarPass';
 import { encodeTransmittanceDust } from './passes/encodeTransmittanceDust';
-import { createOrientationDiagnostics } from './sfMap/createOrientationDiagnostics';
-import { createSfMapReadbacks } from './sfMap/createSfMapReadbacks';
 import { createSfMapAutomaton } from './sfMap/createSfMapAutomaton';
 import { createSfMapOrientation } from './sfMap/createSfMapOrientation';
-import { createGrowOnlyRecordBuffer } from './gpu/createGrowOnlyRecordBuffer';
-import { generateGalaxy } from './gpu/generateGalaxy';
-import { deriveDustHeaderLanes } from './frame/deriveDustHeaderLanes';
+import { createGalaxyModel } from './model/createGalaxyModel';
 import { gradeIsActive } from './frame/gradeIsActive';
 import { toMilkyWayTuning } from './frame/toMilkyWayTuning';
 import { deriveFrameView } from './frame/deriveFrameView';
-import { BUBBLE_RECORD_FLOATS, packBubbleInstances } from './uniforms/packBubbleInstances';
+import { BUBBLE_RECORD_FLOATS } from './uniforms/packBubbleInstances';
 import { createOffscreenProbe } from './probe/createOffscreenProbe';
 import { CLOUD_UNIFORM_FLOATS, packCloudUniforms } from './uniforms/packCloudUniforms';
 import {
@@ -87,43 +76,11 @@ import {
   packGradeUniforms,
 } from './uniforms/packGradeUniforms';
 import {
-  FIELD_COMPONENT_FLOATS,
   FIELD_HEADER_BUFFER_SIZE,
   FIELD_HEADER_FLOATS,
-  packFieldComponents,
   packFieldHeaderUniforms,
 } from './uniforms/packFieldUniforms';
 import type { FieldCamera } from '../../@types/engine/FieldCamera';
-import { DEBUG_VIEWS } from '../data/debugViews';
-import type { DebugViewKind } from '../../@types/data/DebugViewKind';
-import { createGenerationPipelines } from '../../../../src/services/engine/galaxyGenerator/v1/createGenerationPipelines';
-import {
-  buildGalaxyFieldMixture,
-  DEFAULT_GALAXY_FIELD_TUNING,
-  GALAXY_FIELD_MAX_COMPONENTS,
-} from '../../../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
-import {
-  buildHiiRegions,
-  HII_MAX_COUNT,
-} from '../../../../src/services/engine/galaxyGenerator/v2/hiiRegions';
-import {
-  buildDustBubblePlacements,
-  buildHiiCavityPlacements,
-  BUBBLE_BUDGET,
-  HII_CAVITY_BUDGET,
-} from '../../../../src/services/engine/galaxyGenerator/v2/dustBubblePlacements';
-import {
-  sfMapGridRadius,
-  sfMapGridRadiusOrDefault,
-} from '../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
-import type { GalaxySfMapGridRadius } from '../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
-import { buildDustParticleCloud } from '../../../../src/services/engine/galaxyGenerator/v2/dustParticleCloud';
-import type { OrientationDeltaStats } from '../../../../src/services/engine/galaxyGenerator/v2/clusteredDiscPlacement';
-import { DEFAULT_GALAXY_DUST_PARAMS } from '../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxyDustParams';
-import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from '../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxyStarFormationParams';
-import { normalizeGenerationSeed } from '../../../../src/utils/galaxy/normalizeGenerationSeed';
-import { transformGalaxyFieldComponent } from '../../../../src/utils/galaxy/transformGalaxyFieldComponent';
-import { GENERATION_UBO } from '../../../../src/services/engine/galaxyGenerator/shared/generationUboLayout';
 import { GEN_RECORD_BYTES } from '../../../../src/services/engine/galaxyGenerator/v1/genRecordBytes';
 import { createBloomPyramid } from '../../../../src/services/gpu/passes/bloomPyramid';
 import { createCompositor } from '../../../../src/services/gpu/passes/compositor';
@@ -190,33 +147,6 @@ const PERF_REPORT_INTERVAL_MS = 500;
  */
 const FADE_REPORT_INTERVAL_MS = 100;
 
-/**
- * A single generated extra galaxy: its GPU-filled star/dust vertex buffers,
- * their instance counts, and the per-extra UBO the generation passes read.
- * The UBO is retained (not destroyed right after the generation submit) so its
- * lifetime brackets the vertex buffers it produced — the whole triple is torn
- * down together on the next `setExtras`.
- *
- * `fieldGeometry` + `transform` + `starFormation` are cached (like the central
- * galaxy's `fieldGeometry`/`lastParams`) so `setFieldTuning` can
- * rebuild `fieldMixture`/`hiiMixture` — this extra's world-space analytic
- * mixtures, already carried through `transformGalaxyFieldComponent` — without
- * a regenerate.
- */
-type Extra = {
-  starBuf: GPUBuffer;
-  starCount: number;
-  dustBuf: GPUBuffer | null;
-  dustCount: number;
-  ubo: GPUBuffer;
-  fieldGeometry: GalaxyDescription;
-  transform: Pick<ExtraGalaxySpec, 'pos' | 'scale' | 'rotY' | 'tiltX'>;
-  starFormation: GalaxyStarFormationParams;
-  fieldMixture: readonly GalaxyFieldComponent[];
-  /** This extra's own HII tier — see `hiiMixture`'s declaration below for why it rides a separate buffer from `fieldMixture`. */
-  hiiMixture: readonly GalaxyFieldComponent[];
-};
-
 export async function createGalaxyEngine(
   canvas: HTMLCanvasElement,
   opts: GalaxyEngineOptions = {},
@@ -253,19 +183,14 @@ export async function createGalaxyEngine(
   // `dispose` walks this in reverse. It replaces a hand-maintained destroy list
   // that had drifted by ten resources; an HMR remount hands the next engine the
   // same canvas, so each miss leaked a full set per remount. Resources that own
-  // their own teardown (`targets`, `sfMapAutomaton`, `sfMapOrientation`,
-  // `bloomPyramid`, `compositor`, `aggregateUpsample`) keep delegating and are
-  // deliberately absent here.
-  const owned: (() => { destroy(): void } | null)[] = [];
+  // their own teardown (`targets`, `model`, `sfMapAutomaton`,
+  // `sfMapOrientation`, `bloomPyramid`, `compositor`, `aggregateUpsample`) keep
+  // delegating and are deliberately absent here — which is also why nothing
+  // registered here is ever reassigned.
+  const owned: { destroy(): void }[] = [];
   const own = <T extends { destroy(): void }>(resource: T): T => {
-    owned.push(() => resource);
+    owned.push(resource);
     return resource;
-  };
-  // Buffers reassigned at runtime (a regrow, or a new galaxy) register a READER
-  // rather than a reference: the ledger has to destroy whatever is live at
-  // dispose, not the instance the reassignment already destroyed.
-  const ownLatest = (current: () => { destroy(): void } | null): void => {
-    owned.push(current);
   };
 
   // ---- static fullscreen-billboard quad ----
@@ -302,7 +227,7 @@ export async function createGalaxyEngine(
   // The analytic field's own buffer, own struct — see `packFieldUniforms`.
   // It cannot share the cloud UBO: nothing in the 208-byte cloud layout is a
   // ray, and this pass reads none of the billboard lanes. Camera/params/dust-
-  // law only now — the mixture itself rides `fieldComps` below, a separate
+  // law only now — the mixture itself rides `model.fieldComps`, a separate
   // storage binding, so this uniform stays `FIELD_HEADER_BUFFER_SIZE`
   // regardless of how many galaxies are on screen.
   const fieldUbo = own(
@@ -312,68 +237,15 @@ export async function createGalaxyEngine(
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     }),
   );
-  // `comps` (io.wesl binding 1): every mixture's Gaussians, central galaxy
-  // then each extra, already world-transformed — a read-only STORAGE array,
-  // not a uniform, specifically so N background extras can push the total
-  // component count past a uniform's ~1000-component cap. Starts at
-  // `GALAXY_FIELD_MAX_COMPONENTS`, one galaxy's EMISSION ceiling — the
-  // trailing dust slice is a particle cloud thousands of components deep
-  // (`DEFAULT_GALAXY_DUST_CLOUD_PARAMS.count`), so the first `setParams` with
-  // dust on regrows this regardless.
-  const fieldComps = own(
-    createGrowOnlyRecordBuffer({
-      device,
-      label: 'galaxy:fieldComps',
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-      floatsPerRecord: FIELD_COMPONENT_FLOATS,
-      initialCapacity: GALAXY_FIELD_MAX_COMPONENTS,
-      onRegrow: () => {
-        splatBG = buildSplatBindGroup();
-        dustMapBG = buildDustMapBindGroup();
-      },
-    }),
-  );
-  // The HII tier's own header + storage buffer, byte-identical layout to
-  // `fieldUbo`/`fieldComps` (same `io.wesl` struct, same `splatPipe`) but
-  // never concatenated into `fieldComps` — see `docs/research/milky-way/
-  // hii-regions.md`: a shell sprite is small and bright by construction, so
-  // sharing the smooth field's coarser target collapsed it into a bloom
-  // firefly. Own buffer, own target (`hiiTex`), own divisor
-  // (`render.hiiDivisor`). Capacity starts at `HII_MAX_COUNT`, the tier's own
-  // per-galaxy admission ceiling (`hiiRegions.ts`).
+  // The HII tier's own header, byte-identical layout to `fieldUbo` (same
+  // `io.wesl` struct, same `splatPipe`) — see `model.hiiComps` for why the tier
+  // gets its own buffers, its own target (`hiiTex`) and its own divisor
+  // (`render.hiiDivisor`) rather than a slice of the field's.
   const hiiUbo = own(
     device.createBuffer({
       label: 'galaxy:hiiUniforms',
       size: FIELD_HEADER_BUFFER_SIZE,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    }),
-  );
-  const hiiComps = own(
-    createGrowOnlyRecordBuffer({
-      device,
-      label: 'galaxy:hiiComps',
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-      floatsPerRecord: FIELD_COMPONENT_FLOATS,
-      initialCapacity: HII_MAX_COUNT,
-      onRegrow: () => {
-        hiiBG = buildHiiBindGroup();
-      },
-    }),
-  );
-  // The bubble-view overlay's own instance buffer (bubblePresent.wesl): a
-  // plain VERTEX buffer, not a storage array like `fieldComps` — there is
-  // no per-fragment lookup by index, just one instance-stepped attribute
-  // pair per placement, so it binds into no 'auto'-layout bind group and
-  // needs no `onRegrow`. Capacity starts at BUBBLE_BUDGET + HII_CAVITY_BUDGET
-  // (both placement builders' own admission ceilings) so the overlay's first
-  // activation never regrows.
-  const bubbleComps = own(
-    createGrowOnlyRecordBuffer({
-      device,
-      label: 'galaxy:bubbleComps',
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-      floatsPerRecord: BUBBLE_RECORD_FLOATS,
-      initialCapacity: BUBBLE_BUDGET + HII_CAVITY_BUDGET,
     }),
   );
   // Tool-only grade trailer — see `packGradeUniforms` for the lanes. The bloom
@@ -626,9 +498,9 @@ export async function createGalaxyEngine(
   // ---- bubble-view overlay: the SF-event catalog's own placements ----
   // A SECOND, independent star-formation model (dustBubblePlacements.ts,
   // resolved from sfEventCatalog.ts) drawn as its own debug layer so it can
-  // be compared directly against the SSPSF automaton's sfMap view — see
-  // `rebuildBubblePlacements` (below `rebuildDustMixture`) for how
-  // `bubbleComps` is built and packed. One instanced camera-facing quad per
+  // be compared directly against the SSPSF automaton's sfMap view — see the
+  // model's `rebuildBubblePlacements` for how `model.bubbleComps` is built and
+  // packed. One instanced camera-facing quad per
   // placement, no storage buffer/comps lookup: bubblePresent.wesl reads its
   // per-instance center/radius/kind straight off the vertex buffer, and
   // `u` (fieldUbo) only for the camera basis + its own crossfade weight —
@@ -700,74 +572,32 @@ export async function createGalaxyEngine(
     minFilter: 'nearest',
   });
 
-  // ---- generation pipelines + UBO (compute dispatch — see setParams below) ----
-  // One `genUbo` buffer for the CENTRAL galaxy only: `setParams` rewrites it
-  // in place on every regeneration. Each extra (background galaxy) dispatches
-  // with its OWN params and world transform, so it gets its own per-extra UBO
-  // built in `setExtras` — one shared buffer can't serve them, since packing N
-  // extras into one submit would need N distinct UBO contents live at once.
-  const genPipelines = createGenerationPipelines(device);
-  const genUbo = own(
-    device.createBuffer({
-      label: 'galaxy:genUbo',
-      size: GENERATION_UBO.byteLength,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    }),
-  );
+  // One internal render bag merged by setRender (the spike's Object.assign).
+  // Seeded from the same two constants the UI pushes on its first sync, so this
+  // bag can't drift from the store slice + preset envelope that also seed from
+  // them — and, through them, from the app's own defaults. Declared before the
+  // model because the model's rebuild gates read three of its lanes live.
+  const render = { ...DEFAULT_RENDER_SETTINGS, ...DEFAULT_LOD_SETTINGS };
 
-  // ---- instance buffers (recreated on setParams) ----
-  let starBuf: GPUBuffer | null = null;
-  let starCount = 0;
-  let dustBuf: GPUBuffer | null = null;
-  let dustCount = 0;
-  ownLatest(() => starBuf);
-  ownLatest(() => dustBuf);
-  let extras: Extra[] = []; // background galaxies, each GPU-generated in world space
-  // The analytic field's Gaussian mixture for the CENTRAL galaxy — rebuilt in
-  // `setParams` from the same derived geometry generation just ran with, so it
-  // tracks every preset/knob change the sprites do. Empty until the first
-  // `setParams`, which draws a field of zero components: nothing, not stale.
-  let fieldMixture: readonly GalaxyFieldComponent[] = [];
-  // Cached alongside the mixture so `setFieldTuning` can rebuild it without a
-  // regenerate: null until the first `setParams`, at which point every later
-  // `setFieldTuning` call rebuilds from this same geometry. A tuning change
-  // that arrives before any `setParams` just updates `fieldTuning` below —
-  // the next `setParams` reads it and there is nothing yet to rebuild.
-  let fieldGeometry: GalaxyDescription | null = null;
-  let fieldTuning: GalaxyFieldTuning = DEFAULT_GALAXY_FIELD_TUNING;
-  // What the automaton was last rebuilt against — see `setFieldTuning`.
-  let sfMapKey: GalaxySfMapParams = fieldTuning.sfMap;
-  // The CENTRAL galaxy's HII tier, built and cached the same way
-  // `fieldMixture` is — but never concatenated into it (see `hiiTex`'s
-  // declaration comment). Rebuilt on the same two triggers, packed into its
-  // own `hiiComps` by `repackHiiComponents`.
-  let hiiMixture: readonly GalaxyFieldComponent[] = [];
-  // The analytic dust lane's mixture, CENTRAL galaxy only (grill session Q6:
-  // extras get dust in a follow-up, zero rework — the packed layout already
-  // carries per-galaxy dustOffset/dustCount). Cached like `fieldMixture` so
-  // `setFieldTuning` can rebuild it without a regenerate.
-  let dustMixture: readonly GalaxyFieldComponent[] = [];
-  // What `setParams` was last handed. `setFieldTuning`, `rebuildDustMixture`,
-  // `rebuildBubblePlacements` and `rebuildSfMap` all re-read it to rebuild
-  // without a regenerate; each reads through the accessor below rather than a
-  // field of its own, so none can go stale against this one.
-  let lastParams: GalaxyParams | null = null;
-  const currentDust = (): GalaxyDustParams => lastParams?.dust ?? DEFAULT_GALAXY_DUST_PARAMS;
-  const currentStarFormation = (): GalaxyStarFormationParams =>
-    lastParams?.starFormation ?? DEFAULT_GALAXY_STAR_FORMATION_PARAMS;
-  const currentSeed = (): number => normalizeGenerationSeed(lastParams?.seed);
-  // Cached, not recomputed per frame: `packFieldHeaderUniforms` reads all
-  // three every `drawFrame`, but they only change when `rebuildDustMixture`
-  // runs. Seeded at the no-galaxy answer, which is what the first frames draw.
-  let dustHeaderLanes = deriveDustHeaderLanes(null, DEFAULT_GALAXY_DUST_PARAMS, false);
-  // The SSPSF chain's two CPU-side copies and the single queue that fills
-  // them — see `createSfMapReadbacks`.
-  const readbacks = createSfMapReadbacks({
+  // ---- the galaxy itself: geometry, mixtures, generated buffers ----
+  // Everything derived from (params, tuning, seed) lives in the model; this
+  // file keeps the pipelines, the targets and the per-frame headers. The two
+  // regrow hooks are the `layout: 'auto'` contract — see the bind groups below.
+  const model = createGalaxyModel({
     device,
     automaton: sfMapAutomaton,
     orientation: sfMapOrientation,
+    render,
+    onFieldCompsRegrow: () => {
+      splatBG = buildSplatBindGroup();
+      dustMapBG = buildDustMapBindGroup();
+    },
+    onHiiCompsRegrow: () => {
+      hiiBG = buildHiiBindGroup();
+    },
+    onStats: opts.onStats,
+    onOrientationDiagnostics: opts.onOrientationDiagnostics,
   });
-  const orientationDiagnostics = createOrientationDiagnostics();
 
   // Per-pipeline bind groups. `layout: 'auto'` groups are pipeline-specific
   // and never cross pipelines, so each pass needs its own group even where the
@@ -793,8 +623,8 @@ export async function createGalaxyEngine(
   //    only where dustMap.wesl imports them, dustMapSmp (6) only where
   //    splat.wesl samples `dustMapTex` through a filtered UV.
   //  - A group holds the EXACT GPUBuffer/GPUTexture objects it names. So each
-  //    is a `let` + a builder, and the resource owns the rebuild: the two
-  //    `createGrowOnlyRecordBuffer` `onRegrow` hooks above, and
+  //    is a `let` + a builder, and the resource owns the rebuild: the model's
+  //    two `onRegrow` hooks above for the comps buffers, and
   //    `rebuildDustMapDependents` below for `dustMapTex`.
   //
   // Only `dustMapBG` can build here. The other three bind `dustMapTex`, which
@@ -806,7 +636,7 @@ export async function createGalaxyEngine(
       layout: dustMapPipe.getBindGroupLayout(0),
       entries: [
         { binding: 0, resource: { buffer: fieldUbo } },
-        { binding: 1, resource: { buffer: fieldComps.buffer } },
+        { binding: 1, resource: { buffer: model.fieldComps.buffer } },
         { binding: 4, resource: dustNoiseTex.createView() },
         { binding: 5, resource: dustNoiseSampler },
       ],
@@ -819,7 +649,7 @@ export async function createGalaxyEngine(
       layout: splatPipe.getBindGroupLayout(0),
       entries: [
         { binding: 0, resource: { buffer: fieldUbo } },
-        { binding: 1, resource: { buffer: fieldComps.buffer } },
+        { binding: 1, resource: { buffer: model.fieldComps.buffer } },
         { binding: 2, resource: targets.dustMapTex.createView() },
         // Binding 6: dustMapSmp — splat.wesl's fs now samples dustMapTex
         // through a filtered UV rather than a 1:1 texel load (see
@@ -853,7 +683,7 @@ export async function createGalaxyEngine(
       layout: splatPipe.getBindGroupLayout(0),
       entries: [
         { binding: 0, resource: { buffer: hiiUbo } },
-        { binding: 1, resource: { buffer: hiiComps.buffer } },
+        { binding: 1, resource: { buffer: model.hiiComps.buffer } },
         { binding: 2, resource: targets.dustMapTex.createView() },
         { binding: 6, resource: dustMapSampler },
       ],
@@ -900,21 +730,6 @@ export async function createGalaxyEngine(
   // ---- camera state (orbit) ----
   const camera = createOrbitCameraInput(canvas, { autoRotate: opts.autoRotate !== false });
 
-  // One internal render bag merged by setRender (the spike's Object.assign).
-  // Seeded from the same two constants the UI pushes on its first sync, so this
-  // bag can't drift from the store slice + preset envelope that also seed from
-  // them — and, through them, from the app's own defaults.
-  const render = { ...DEFAULT_RENDER_SETTINGS, ...DEFAULT_LOD_SETTINGS };
-  // What the orientation chain was last invalidated at — see `setRender`.
-  let orientationSigmaDerivKey = render.orientationSigmaDerivTexels;
-  let orientationSigmaIntegKey = render.orientationSigmaIntegTexels;
-
-  // One debug view's live weight, through `DEBUG_VIEWS` rather than a named
-  // settings key — what the rebuild gates' `wanted` predicates read. Passes
-  // and uniform packs take the whole record off `deriveFrameView` instead, so
-  // a pass and its own header agree; both read the same `render` bag.
-  const viewIntensity = (kind: DebugViewKind): number => render[DEBUG_VIEWS[kind].intensityKey];
-
   // The targets module never reads the render bag, so both of its entry points
   // are handed all four divisors at once.
   const allDivisors = (): TargetDivisors => ({
@@ -934,505 +749,15 @@ export async function createGalaxyEngine(
   const hiiData = new Float32Array(FIELD_HEADER_FLOATS);
   const gradeData = new Float32Array(GRADE_UNIFORM_FLOATS);
 
-  // How the last `repackFieldComponents` concatenation sliced `fieldComps`:
-  // `emission` components then `dust` ones, of which the first `primary`
-  // belong to the central galaxy. `emission` is what `drawFrame`'s splat draw
-  // instances — the trailing dust slice is only ever read from inside an
-  // emission fragment, never drawn as its own quad — so it is deliberately
-  // NOT `fieldComps.count`, which counts both slices.
-  let fieldCounts = { emission: 0, primary: 0, dust: 0 };
-
-  /**
-   * scheduleSfMapReadback — what the engine does WHEN the one-per-generation
-   * copy of `sfMapTex` lands. Called from `rebuildSfMap`'s own two exits with
-   * the grid it just wrote, so `GalaxySfMap.rMin/rMax` always matches the
-   * CONTENT being copied.
-   *
-   * DETERMINISM: the copy lands asynchronously, so the dust mixture built
-   * synchronously inside `setParams`/`setFieldTuning` (which both run BEFORE
-   * this promise can resolve — a GPU readback always crosses at least one
-   * frame) never sees the map from the rebuild that triggered it. Rather
-   * than defer the dust build until a map is ready (which would leave a
-   * blank tool on first load), this REBUILDS the dust mixture a second time
-   * once the map lands, gated on the same `sfMapDustSeeding` flag. Either
-   * choice reaches the same final state for a given (params, tuning, seed);
-   * this one keeps the tool always showing something.
-   */
-  function scheduleSfMapReadback(grid: GalaxySfMapGridRadius): void {
-    readbacks.requestSfMap(grid, () => {
-      if (fieldTuning.sfMapDustSeeding) {
-        rebuildDustMixture();
-        repackFieldComponents();
-      }
-    });
-  }
-
-  /**
-   * scheduleOrientationReadback — the same, for the CPU copy of
-   * `orientationTex`. Gated by `orientationDataRebuild` on
-   * `fieldTuning.sfMapDustSeeding`: the dust placement is the only consumer of
-   * the CPU copy, the debug overlay samples `orientationTex` on the GPU
-   * directly.
-   */
-  function scheduleOrientationReadback(grid: GalaxySfMapGridRadius): void {
-    readbacks.requestOrientation(grid, ({ data }) => {
-      // Folded in once here, at the one point a fresh grid exists — not per
-      // frame or per dust build.
-      orientationDiagnostics.noteCoherence(data);
-      if (fieldTuning.sfMapDustSeeding) {
-        rebuildDustMixture(); // also reports — see its own doc
-        repackFieldComponents();
-      } else {
-        reportOrientationDiagnostics();
-      }
-    });
-  }
-
-  /**
-   * reportOrientationDiagnostics — hands `opts.onOrientationDiagnostics` the
-   * `OrientationDiagnostics` snapshot the SfMapSection debug readout renders.
-   * Event-driven off two independent producers, not a per-frame poll: a
-   * readback landing (coherence, `hasData`/`generation`) and a dust rebuild
-   * (the delta pair) — see those two functions' own comments for exactly
-   * when each fires this.
-   */
-  function reportOrientationDiagnostics(): void {
-    opts.onOrientationDiagnostics?.(
-      orientationDiagnostics.report({
-        hasData: readbacks.orientationData !== null,
-        generation: readbacks.orientationGeneration,
-      }),
-    );
-  }
-
-  /**
-   * The CPU copy of the orientation field. Only the dust placement reads it,
-   * so seeding alone decides whether a readback is worth scheduling.
-   */
-  const orientationDataRebuild = createKeyedRebuild({
-    wanted: () => fieldTuning.sfMapDustSeeding,
-    build: () => scheduleOrientationReadback(sfMapGridRadiusOrDefault(fieldGeometry)),
-  });
-
-  /**
-   * The GPU structure-tensor chain (sfMapOrientationField -> Tensor ->
-   * TensorBlur -> Coherence, see that quartet's own headers) over the CURRENT
-   * `sfMapTex`. Two independent consumers — the debug overlay reads the
-   * texture on the GPU, the dust placement reads the CPU copy above — either
-   * one enough to justify the six dispatches. Unlike the deleted CPU build this
-   * needs no readback to run FROM: sfMapTex is a GPU texture already and
-   * WebGPU zero-initialises it, so dispatching before `rebuildSfMap` has ever
-   * populated it is safe.
-   *
-   * Invalidated by `rebuildSfMap` (a new automaton state is a new field) and
-   * by a sigma move in `setRender`.
-   */
-  const orientationTexRebuild = createKeyedRebuild({
-    wanted: () => viewIntensity('orientation') > 0 || fieldTuning.sfMapDustSeeding,
-    build: () => {
-      sfMapOrientation.dispatch({
-        grid: sfMapGridRadiusOrDefault(fieldGeometry),
-        sigmaDerivTexels: render.orientationSigmaDerivTexels,
-        sigmaIntegTexels: render.orientationSigmaIntegTexels,
-      });
-      orientationDataRebuild.invalidate();
-    },
-  });
-
-  /**
-   * rebuildDustMixture — the central galaxy's dust mixture from the CACHED
-   * geometry + dust params, gated on `fieldTuning.dustEnabled` the same way
-   * `discEnabled`/`armsEnabled` gate their own shader loops (an off pill
-   * skips the shader work entirely, not just zeroes tau). Called from
-   * `setParams` (new geometry or dust params arrived) and `setFieldTuning`
-   * (toggle, or any tuning-driven geometry that later feeds dust) — the two
-   * repack triggers `fieldMixture` itself uses — and again from each readback
-   * landing above, which is the only way a map the placement seeds from can
-   * arrive after the build that asked for it.
-   *
-   * `buildDustParticleCloud` is the ONLY dust tier (the smooth analytic lane
-   * it used to be layered on was deleted — see `galaxyDustMixture.ts`'s
-   * header), drawn through the dustMap splat pipeline. `currentSeed()`, not
-   * a literal, so this galaxy's particle placement is reproducible from
-   * `setParams`'s params alone.
-   *
-   * Also refreshes `dustHeaderLanes` off the same inputs — see
-   * `deriveDustHeaderLanes` — and folds the "delta actually applied" pair
-   * into `orientationDiagnostics` from a fresh `OrientationDeltaStats`
-   * accumulator handed to `buildDustParticleCloud` as a pure out-param (see
-   * that type's own doc). The `else` branch below (dust off, or no geometry
-   * yet) leaves the accumulator untouched at its zeroed default, which is the
-   * honest answer: no placement ran, so no delta was applied.
-   */
-  function rebuildDustMixture(): void {
-    const dust = currentDust();
-    dustHeaderLanes = deriveDustHeaderLanes(fieldGeometry, dust, fieldTuning.dustEnabled);
-    const orientationDeltaStats: OrientationDeltaStats = {
-      count: 0,
-      sumAbsDeltaDeg: 0,
-      maxAbsDeltaDeg: 0,
-    };
-    if (fieldGeometry && fieldTuning.dustEnabled) {
-      const cloudMixture = buildDustParticleCloud(
-        fieldGeometry,
-        dust,
-        fieldTuning,
-        currentSeed(),
-        readbacks.sfMapData,
-        readbacks.orientationData,
-        orientationDeltaStats,
-      );
-      dustMixture = [...cloudMixture];
-    } else {
-      dustMixture = [];
-    }
-    orientationDiagnostics.noteDelta(orientationDeltaStats);
-    reportOrientationDiagnostics();
-  }
-
-  /**
-   * rebuildBubblePlacements — the SF-event catalog's own bubble/cavity
-   * placements (dustBubblePlacements.ts's `buildDustBubblePlacements` +
-   * `buildHiiCavityPlacements`), packed into `bubbleComps` for the bubble-view
-   * debug overlay. A SECOND, independent star-formation model — both
-   * builders read the SAME `sfEventCatalog.ts` events the SSPSF automaton
-   * never sees — drawn so it can be compared directly against the
-   * automaton's own sfMap view. Central galaxy only, from the cached
-   * `fieldGeometry` + `lastParams` — the same inputs `rebuildDustMixture`
-   * reads, and invalidated from the same two sites (`setParams`,
-   * `setFieldTuning`), right after it.
-   *
-   * Ungated: `bubblePlacements` owns whether this is worth running.
-   */
-  function rebuildBubblePlacements(): void {
-    const relics = fieldGeometry
-      ? buildDustBubblePlacements(
-          fieldGeometry,
-          currentDust(),
-          currentStarFormation(),
-          fieldTuning,
-          currentSeed(),
-        )
-      : [];
-    const cavities = fieldGeometry
-      ? buildHiiCavityPlacements(
-          fieldGeometry,
-          currentDust(),
-          currentStarFormation(),
-          fieldTuning,
-          currentSeed(),
-        )
-      : [];
-    bubbleComps.write(packBubbleInstances(relics, cavities));
-  }
-
-  /** Nothing here is worth building while the overlay nobody is looking at is off. */
-  const bubblePlacements = createKeyedRebuild({
-    wanted: () => viewIntensity('bubble') > 0,
-    build: rebuildBubblePlacements,
-  });
-
-  /**
-   * rebuildSfMap — reruns the SSPSF automaton from scratch: bakes the
-   * arm-forcing texture (galaxySfMapArmForcing.ts, off the CACHED geometry —
-   * same contract rebuildDustMixture follows). Called from setParams (new
-   * galaxy, always) and setFieldTuning (only when the incoming patch actually
-   * touches `sfMap` — see its call site) — NEVER per frame, per the params
-   * contract. `createSfMapAutomaton` owns the dispatch; what stays here is the
-   * pair of things that follow it either way.
-   *
-   * The readback runs on BOTH of the automaton's exits — the disabled one too,
-   * so `sfMapData` reflects the cleared (all-zero-gas) texture it just wrote
-   * rather than holding some earlier galaxy's map.
-   */
-  function rebuildSfMap(): void {
-    const grid = sfMapAutomaton.rebuild({
-      geometry: fieldGeometry,
-      tuning: fieldTuning,
-      seed: currentSeed(),
-    });
-    scheduleSfMapReadback(grid);
-    orientationTexRebuild.invalidate();
-  }
-
-  /**
-   * repackFieldComponents — flattens the central galaxy's emission mixture,
-   * every extra's (each already carried into world space by
-   * `transformGalaxyFieldComponent` at the point it was built), then the
-   * central galaxy's dust mixture LAST, into one list and rewrites
-   * `fieldComps`. Called whenever any mixture changes — `setParams`,
-   * `setExtras`, `setFieldTuning`, and each readback landing that rebuilds
-   * the dust mixture — never per frame, unlike the header (see
-   * `packFieldUniforms`'s header for why the two are split).
-   *
-   * Dust trails every emission component (never interleaved) so
-   * `dustOffset == fieldCounts.emission` always holds without a separate
-   * bookkeeping pass — see io.wesl's layout comment.
-   */
-  function repackFieldComponents(): void {
-    const emission: GalaxyFieldComponent[] = [...fieldMixture];
-    for (const e of extras) emission.push(...e.fieldMixture);
-    fieldCounts = {
-      emission: emission.length,
-      primary: fieldMixture.length,
-      dust: dustMixture.length,
-    };
-    const combined = fieldCounts.dust > 0 ? [...emission, ...dustMixture] : emission;
-    fieldComps.write(packFieldComponents(combined));
-  }
-
-  /**
-   * repackHiiComponents — `repackFieldComponents`'s exact counterpart for the
-   * HII tier: central galaxy's `hiiMixture` then every extra's, into
-   * `hiiComps`. A SEPARATE buffer rather than a fifth slice of
-   * `fieldComps` — see `hiiTex`'s declaration comment for why this tier
-   * cannot share the field's target, and a shared BUFFER with a separate
-   * TARGET would still mean one draw call painting into two attachments,
-   * which WebGPU has no way to do. Called from the three sites that can change
-   * an HII mixture (`setParams`, `setFieldTuning`, `setExtras`), immediately
-   * after `repackFieldComponents`; the readback landings rebuild dust alone
-   * and leave this tier untouched.
-   */
-  function repackHiiComponents(): void {
-    const combined: GalaxyFieldComponent[] = [...hiiMixture];
-    for (const e of extras) combined.push(...e.hiiMixture);
-    hiiComps.write(packFieldComponents(combined));
-  }
-
-  /**
-   * galaxyMixtures — one galaxy's two analytic tiers off ONE geometry: the
-   * emission field and the HII shells, both against the live `fieldTuning`,
-   * and both carried into world space when a `transform` is given (an extra;
-   * the central galaxy passes none and stays in its own frame).
-   *
-   * `geometry.seed` is what `buildHiiRegions` was called with when it still
-   * lived inside `buildGalaxyFieldMixture` — the field's own generated seed,
-   * not a re-derivation.
-   */
-  function galaxyMixtures(
-    geometry: GalaxyDescription,
-    starFormation: GalaxyStarFormationParams,
-    transform?: Pick<ExtraGalaxySpec, 'pos' | 'scale' | 'rotY' | 'tiltX'>,
-  ): { field: readonly GalaxyFieldComponent[]; hii: readonly GalaxyFieldComponent[] } {
-    const place = (components: readonly GalaxyFieldComponent[]): readonly GalaxyFieldComponent[] =>
-      transform ? components.map((c) => transformGalaxyFieldComponent(c, transform)) : components;
-    return {
-      field: place(buildGalaxyFieldMixture(geometry, fieldTuning)),
-      hii: place(buildHiiRegions(geometry, fieldTuning, starFormation, geometry.seed)),
-    };
-  }
-
-  /**
-   * setParams — regenerate the central galaxy, then rebuild everything derived
-   * from its geometry (both analytic tiers, the dust cloud, the SSPSF map).
-   *
-   * The write order — `queue.writeBuffer(genUbo, ...)`, THEN the compute passes
-   * recorded into a fresh encoder, THEN `queue.submit` — is what makes this
-   * safe on one shared `GPUQueue` without a readback: WebGPU processes
-   * everything enqueued on a queue in submission order, so by the time this
-   * submit's compute passes run on the GPU, the preceding `writeBuffer` has
-   * already landed. That is NOT the same shape as the standing
-   * writeBuffer-vs-submit trap (`makeCloudUniformBuffer` above, and
-   * `generate.wesl`'s `writeStar`) — that trap is multiple writeBuffer/submit
-   * pairs racing to mutate ONE shared buffer read by draws recorded at
-   * different times; here there is exactly one write, one encoder, one submit,
-   * for a buffer nothing else touches concurrently. The same ordering
-   * guarantee is why the promise can resolve right after `submit`, with no
-   * `mapAsync` wait: any `drawFrame` encoded afterwards shares this queue too,
-   * so its draws are guaranteed to run after this submit's writes land.
-   */
-  async function setParams(p: GalaxyParams): Promise<void> {
-    lastParams = p;
-    const enc = device.createCommandEncoder({ label: 'galaxy:generate' });
-    if (starBuf) starBuf.destroy();
-    if (dustBuf) dustBuf.destroy();
-    const generated = generateGalaxy({
-      device,
-      pipelines: genPipelines,
-      params: p,
-      spec: null,
-      ubo: genUbo,
-      encoder: enc,
-    });
-    // Assigned back into the `let`s the ownership ledger's `ownLatest` readers
-    // close over, so `dispose` destroys these and not the pair just destroyed.
-    starBuf = generated.starBuf;
-    starCount = generated.starCount;
-    dustBuf = generated.dustBuf;
-    dustCount = generated.dustCount;
-
-    fieldGeometry = generated.geometry;
-    // `sfMapGridRadius` depends on `fieldGeometry` alone, so most params —
-    // dust `share`, cloud counts, colours — leave the grid untouched and the
-    // cached readbacks usable; see `dropIfGridMoved`.
-    readbacks.dropIfGridMoved(sfMapGridRadius(fieldGeometry));
-    const mixtures = galaxyMixtures(fieldGeometry, currentStarFormation());
-    fieldMixture = mixtures.field;
-    hiiMixture = mixtures.hii;
-    rebuildDustMixture();
-    bubblePlacements.invalidate();
-    repackFieldComponents();
-    repackHiiComponents();
-    // Always — a new galaxy means new geometry/arms, so the automaton and
-    // the ridge it forces against are both stale otherwise.
-    rebuildSfMap();
-
-    device.queue.submit([enc.finish()]);
-    opts.onStats?.({ stars: generated.plannedStars, dust: generated.dustCount });
-  }
-
-  // Every knob here reaches the next frame through the uniform pack, so a
-  // merge is all that is needed — except the four divisors, which size render
-  // targets. `setDivisors` owns that comparison (it keys on the live
-  // textures' pixel sizes), so this can hand it the whole bag on every push.
+  // Every knob here reaches the next frame through the uniform pack, so a merge
+  // is all that is needed — except the four divisors, which size render targets,
+  // and the two orientation sigmas, which key a rebuild the model gates. Both
+  // exceptions own their own comparison (`setDivisors` keys on the live
+  // textures' pixel sizes), so this hands each the whole bag on every push.
   function setRender(patch: Partial<RenderSettings & LodSettings>): void {
     Object.assign(render, patch);
     targets.setDivisors(allDivisors());
-    // The two sigmas are the only lanes in this bag the orientation chain
-    // reads, and the bridge re-pushes the WHOLE bag on any knob — so an
-    // unconditional invalidate here would redispatch the six stages, and with
-    // `sfMapDustSeeding` on (the default) the readback and dust rebuild behind
-    // them, on every frame of an unrelated exposure drag. No crossing to catch
-    // alongside them: an invalidation raised while nothing wanted the value is
-    // retained, so the overlay turning on rebuilds by itself.
-    if (
-      orientationSigmaDerivKey !== render.orientationSigmaDerivTexels ||
-      orientationSigmaIntegKey !== render.orientationSigmaIntegTexels
-    ) {
-      orientationSigmaDerivKey = render.orientationSigmaDerivTexels;
-      orientationSigmaIntegKey = render.orientationSigmaIntegTexels;
-      orientationTexRebuild.invalidate();
-    }
-  }
-
-  // Rebuilds `fieldMixture` from the CACHED geometry rather than dispatching a
-  // regenerate: the ring layout is a pure function of geometry + tuning, so a
-  // slider drag is a CPU-only mixture rebuild picked up by next frame's
-  // `packFieldUniforms`, same as every other render knob above. No cached
-  // geometry yet (before the first `setParams`) just leaves the merged
-  // `fieldTuning` for that first `setParams` to read.
-  //
-  // Rebuilds every EXTRA's mixture too, from ITS cached geometry + transform
-  // — a tuning change is a global look knob, so a background galaxy's ring
-  // structure has to track it exactly like the central one's, then land back
-  // in world space via `transformGalaxyFieldComponent` before `comps` is
-  // repacked.
-  //
-  // Also rebuilds `dustMixture` (central galaxy only — see
-  // `rebuildDustMixture`), which is how a `dustEnabled` toggle takes effect
-  // without a regenerate, and `hiiMixture` (central + every extra), which is
-  // how `hiiEnabled`/`hiiBrightness`/etc. take effect the same way.
-  function setFieldTuning(patch: Partial<GalaxyFieldTuning>): void {
-    fieldTuning = { ...fieldTuning, ...patch };
-    if (fieldGeometry) {
-      const mixtures = galaxyMixtures(fieldGeometry, currentStarFormation());
-      fieldMixture = mixtures.field;
-      hiiMixture = mixtures.hii;
-    }
-    extras = extras.map((e) => {
-      const mixtures = galaxyMixtures(e.fieldGeometry, e.starFormation, e.transform);
-      return { ...e, fieldMixture: mixtures.field, hiiMixture: mixtures.hii };
-    });
-    rebuildDustMixture();
-    bubblePlacements.invalidate();
-    repackFieldComponents();
-    repackHiiComponents();
-    // The automaton rebuild is N compute dispatches (rebuildSfMap's own
-    // docblock) — far more expensive than the CPU mixture rebuilds above, so
-    // it only reruns when `sfMap` itself changed, not on every unrelated
-    // slider (armWidthScale etc. technically also feed the ridge the forcing
-    // field bakes, but re-triggering on every tuning field would make dragging
-    // any OTHER slider pay this pass's cost too — a follow-up if that
-    // dependency ever needs to be exact).
-    //
-    // Reference identity IS the change signal: `sfMap` is only ever replaced
-    // wholesale, by the UI's `patchSfMap` building a fresh `{ ...sfMap,
-    // ...patch }` and by immer keeping the old object otherwise.
-    if (sfMapKey !== fieldTuning.sfMap) {
-      sfMapKey = fieldTuning.sfMap;
-      rebuildSfMap();
-    }
-  }
-
-  /**
-   * The three GPU allocations one extra owns. Its own function because the
-   * list is torn down from two places — `setExtras` replacing it, and
-   * `dispose` — and the ownership ledger cannot hold a list whose length
-   * changes.
-   */
-  function destroyExtras(list: readonly Extra[]): void {
-    for (const e of list) {
-      e.starBuf.destroy();
-      e.dustBuf?.destroy();
-      e.ubo.destroy();
-    }
-  }
-
-  // Replace the set of background galaxies. Each runs the same
-  // `generateGalaxy` the central one does, differing only in the `spec` it
-  // passes: the transform + size scale ride that spec into the UBO's extra
-  // lanes, so the compute passes emit records already placed in the scene.
-  // ONE shared encoder for every extra, submitted once.
-  //
-  // The whole body is synchronous up to that single submit — no `await` splits
-  // the destroy-old / build-new sequence, so replacing the extras is atomic per
-  // call and needs no interleaving guard: the old buffers are torn down and the
-  // new ones built with nothing able to run in between. The `async` signature
-  // is kept only because `GalaxyEngineHandle` declares it; nothing is awaited.
-  async function setExtras(specs: readonly ExtraGalaxySpec[]): Promise<void> {
-    destroyExtras(extras);
-    extras = [];
-
-    const enc = device.createCommandEncoder({ label: 'galaxy:generateExtras' });
-    for (const spec of specs) {
-      // Its own UBO, retained with the buffers it produced — one shared buffer
-      // can't serve N extras in one submit (see `genUbo`'s declaration).
-      const ubo = device.createBuffer({
-        label: 'galaxy:extraGenUbo',
-        size: GENERATION_UBO.byteLength,
-        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-      });
-      const generated = generateGalaxy({
-        device,
-        pipelines: genPipelines,
-        params: spec.params,
-        spec,
-        ubo,
-        encoder: enc,
-      });
-
-      // The mixtures land in world space through the SAME rigid transform
-      // `applyExtraTransform` bakes into the sprites (see
-      // `transformGalaxyFieldComponent`'s header), so the two representations
-      // of this background galaxy register with each other.
-      const transform: Pick<ExtraGalaxySpec, 'pos' | 'scale' | 'rotY' | 'tiltX'> = {
-        pos: spec.pos,
-        scale: spec.scale,
-        rotY: spec.rotY,
-        tiltX: spec.tiltX,
-      };
-      // This extra's OWN draw (`randomGalaxyParams` rolls `sfActivity` per
-      // galaxy), never the shared default — the tier is what makes one
-      // background galaxy read as more actively star-forming than the next.
-      const starFormation = spec.params.starFormation ?? DEFAULT_GALAXY_STAR_FORMATION_PARAMS;
-      const mixtures = galaxyMixtures(generated.geometry, starFormation, transform);
-
-      extras.push({
-        starBuf: generated.starBuf,
-        starCount: generated.starCount,
-        dustBuf: generated.dustBuf,
-        dustCount: generated.dustCount,
-        ubo,
-        fieldGeometry: generated.geometry,
-        transform,
-        starFormation,
-        fieldMixture: mixtures.field,
-        hiiMixture: mixtures.hii,
-      });
-    }
-    device.queue.submit([enc.finish()]);
-    repackFieldComponents();
-    repackHiiComponents();
+    model.noteRenderChanged();
   }
 
   // ---- resize ----
@@ -1590,7 +915,7 @@ export async function createGalaxyEngine(
       shiftX,
       viewportPx: [canvas.width, canvas.height],
       render,
-      dustReachR: dustHeaderLanes.reachR,
+      dustReachR: model.dustHeaderLanes.reachR,
     });
     lastFade = fade;
 
@@ -1603,7 +928,7 @@ export async function createGalaxyEngine(
     // view exactly like the analytic field's own splat.wesl multiply does,
     // rather than the old suppression that hid the primary's sprites outright
     // but deliberately left extras' alone (see the field/scene passes below).
-    const tuning = toMilkyWayTuning(render, starCount);
+    const tuning = toMilkyWayTuning(render, model.starCount);
     const aggregatePx = targets.reducedSize(render.aggregateDivisor);
     packCloudUniforms(vp, view, aggregatePx, tuning, fade.alpha * galaxyWeight, cloudData);
     device.queue.writeBuffer(starUbo, 0, cloudData);
@@ -1631,14 +956,14 @@ export async function createGalaxyEngine(
     packFieldHeaderUniforms(
       {
         camera: fieldCamera,
-        emissionCount: fieldCounts.emission,
-        primaryCount: fieldCounts.primary,
+        emissionCount: model.fieldCounts.emission,
+        primaryCount: model.fieldCounts.primary,
         targetSizePx: targets.reducedSize(render.fieldDivisor),
         dust: {
-          count: fieldCounts.dust,
+          count: model.fieldCounts.dust,
           // Both cached by rebuildDustMixture, not recomputed per frame.
-          extinctionRgb: dustHeaderLanes.extinctionRgb,
-          noise: dustHeaderLanes.noise,
+          extinctionRgb: model.dustHeaderLanes.extinctionRgb,
+          noise: model.dustHeaderLanes.noise,
           // VIEW-dependent, unlike every other lane in this bag.
           slices: dustSlices,
           mapHeightPx: targets.reducedSize(render.dustDivisor)[1],
@@ -1667,7 +992,7 @@ export async function createGalaxyEngine(
     packFieldHeaderUniforms(
       {
         camera: fieldCamera,
-        emissionCount: hiiComps.count,
+        emissionCount: model.hiiComps.count,
         primaryCount: 0,
         targetSizePx: targets.reducedSize(render.hiiDivisor),
         debugViews,
@@ -1682,12 +1007,10 @@ export async function createGalaxyEngine(
     // there is nothing else to pack here.
 
     // Before the encoder exists, not after: a rebuild can destroy and replace
-    // `bubbleComps`'s buffer, which a recorded draw would already be holding, and the
-    // orientation chain submits an encoder of its own that must precede this
-    // frame's. Texture before CPU copy — the first invalidates the second.
-    const bubblesLive = bubblePlacements.ensureFresh();
-    orientationTexRebuild.ensureFresh();
-    orientationDataRebuild.ensureFresh();
+    // `bubbleComps`'s buffer, which a recorded draw would already be holding,
+    // and the orientation chain submits an encoder of its own that must precede
+    // this frame's.
+    const { bubblesLive } = model.ensureFresh();
 
     const timingCtx = timing.beginFrame();
     const enc = device.createCommandEncoder({ label: 'galaxy:frame' });
@@ -1698,19 +1021,13 @@ export async function createGalaxyEngine(
     // an empty list gives (`encodeStarPass` then issues only its clear). The
     // four debug views never suppress a draw — they dim the galaxy through
     // fadeAlpha's debugGalaxyWeight factor (packed above), which is what makes
-    // k=0.5 read as half galaxy / half map instead of a hard cut. Built here,
-    // per frame, because every buffer in it is reallocated by
-    // `setParams`/`setExtras`.
+    // k=0.5 read as half galaxy / half map instead of a hard cut.
     //
     // No `setViewport` anywhere below: the pass's only attachment IS
     // `aggregateTex`, and a pass's default viewport is its attachment's full
     // size — the same `floor(canvas / divisor)` the uniform above was packed
     // with.
-    const starInstances: InstanceDraw[] = [];
-    if (render.spriteField) {
-      if (starBuf) starInstances.push({ buf: starBuf, count: starCount });
-      for (const e of extras) starInstances.push({ buf: e.starBuf, count: e.starCount });
-    }
+    const starInstances: InstanceDraw[] = render.spriteField ? model.starInstances() : [];
     encodeStarPass({
       enc,
       timestampWrites: timing.descriptorFor('stars'),
@@ -1731,7 +1048,7 @@ export async function createGalaxyEngine(
     // into compositing a target this frame never cleared, which sums the
     // previous frame's content into HDR with nothing to catch it.
     const analytic = render.analyticField;
-    const drawHii = hiiComps.count > 0;
+    const drawHii = model.hiiComps.count > 0;
     const drawDustView = debugViews.dust > 0;
     if (analytic) {
       // Dust-column map: splat the primary's dust slice into `dustMapTex`, at
@@ -1746,14 +1063,14 @@ export async function createGalaxyEngine(
       // has to run — as the clear that empties the map. Assigning the returned
       // latch is what carries that across; drop the assignment and the map
       // freezes at the previous galaxy's dust.
-      if (fieldCounts.dust > 0 || drawDustView || dustMapPopulated) {
+      if (model.fieldCounts.dust > 0 || drawDustView || dustMapPopulated) {
         dustMapPopulated = encodeDustMapPass({
           enc,
           timestampWrites: timing.descriptorFor('dustMap'),
           targetView: targets.dustMapTex.createView(),
           pipeline: dustMapPipe,
           bindGroup: dustMapBG,
-          instanceCount: fieldCounts.dust,
+          instanceCount: model.fieldCounts.dust,
         });
       }
 
@@ -1786,7 +1103,7 @@ export async function createGalaxyEngine(
         targetView: targets.fieldTex.createView(),
         pipeline: splatPipe,
         bindGroup: splatBG,
-        instanceCount: fieldCounts.emission,
+        instanceCount: model.fieldCounts.emission,
       });
 
       // The HII tier's own pass — see `hiiTex`'s declaration comment for why
@@ -1803,7 +1120,7 @@ export async function createGalaxyEngine(
           targetView: targets.hiiTex.createView(),
           pipeline: splatPipe,
           bindGroup: hiiBG,
-          instanceCount: hiiComps.count,
+          instanceCount: model.hiiComps.count,
         });
       }
     }
@@ -1866,10 +1183,10 @@ export async function createGalaxyEngine(
         // is "a consumer wants this", `bubbleComps.count` is "we have
         // geometry to draw". Nothing rebuilds on the falling edge, so the
         // count outlives the overlay being switched off.
-        if (bubblesLive && bubbleComps.count > 0) {
+        if (bubblesLive && model.bubbleComps.count > 0) {
           encodePresentOverlay(pass, bubblePresentPipe, bubblePresentBG, {
-            buf: bubbleComps.buffer,
-            count: bubbleComps.count,
+            buf: model.bubbleComps.buffer,
+            count: model.bubbleComps.count,
           });
         }
       }
@@ -1884,11 +1201,7 @@ export async function createGalaxyEngine(
       // pill behind the star pill.
       // The debug views only dim it, through the same debugGalaxyWeight factor
       // the sprites carry.
-      const dustInstances: InstanceDraw[] = [];
-      if (dustBuf) dustInstances.push({ buf: dustBuf, count: dustCount });
-      for (const e of extras) {
-        if (e.dustBuf) dustInstances.push({ buf: e.dustBuf, count: e.dustCount });
-      }
+      const dustInstances = model.dustInstances();
       encodeTransmittanceDust(pass, dustPipe, dustBG, quad, dustInstances);
       pass.end();
     }
@@ -1921,7 +1234,7 @@ export async function createGalaxyEngine(
     format,
     drawFrame,
     encodePost,
-    starCount: () => starCount,
+    starCount: () => model.starCount,
   });
 
   // Both readouts drive React state, so a per-frame dispatch would put the
@@ -1947,13 +1260,13 @@ export async function createGalaxyEngine(
   rafLoop.start();
 
   return {
-    setParams,
+    setParams: model.setParams,
     setRender,
-    setFieldTuning,
+    setFieldTuning: model.setFieldTuning,
     setView: camera.setView,
     setAutoRotate: camera.setAutoRotate,
     setInsets: camera.setInsets,
-    setExtras,
+    setExtras: model.setExtras,
     step: (now?: number): void => drawFrame(now ?? performance.now()),
     sample: probe.sample,
     getCamera: camera.getCamera,
@@ -1967,7 +1280,7 @@ export async function createGalaxyEngine(
     // The CPU-side readback of the same output (`scheduleSfMapReadback`):
     // null until the first one lands. Consumed by `buildDustParticleCloud`
     // via `sfMapDustSeeding` today; exposed here for future consumers too.
-    getSfMapData: (): GalaxySfMap | null => readbacks.sfMapData,
+    getSfMapData: (): GalaxySfMap | null => model.sfMapData,
     grab: probe.grab,
     dispose(): void {
       rafLoop.stop();
@@ -1984,8 +1297,8 @@ export async function createGalaxyEngine(
       // a full set per remount until this call existed.
       targets.destroy();
       probe.destroy();
-      destroyExtras(extras);
-      for (let i = owned.length - 1; i >= 0; i--) owned[i]!()?.destroy();
+      model.destroy();
+      for (let i = owned.length - 1; i >= 0; i--) owned[i]!.destroy();
       ro.disconnect();
       camera.dispose();
     },

@@ -111,7 +111,7 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // debug presentation of the automaton's output.
   sfMapViewIntensity: 0,
   // 0 at boot, same rationale — and the pass-chain gate: it only
-  // (re-)dispatches while this is above 0 (see createGalaxyEngine.ts).
+  // (re-)dispatches while this is above 0 (see createGalaxyModel.ts).
   orientationViewIntensity: 0,
   // Two sigmas, deliberately different: a small DERIVATIVE scale (noise
   // suppression before the central-difference gradient) and a larger
@@ -129,7 +129,7 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   sfMapActivityWeight: 1,
   // 0 at boot, same rationale as the other two debug-view crossfades — and
   // the pass gate: the placement rebuild only runs while this is above 0
-  // (see createGalaxyEngine.ts's rebuildBubblePlacements).
+  // (see createGalaxyModel.ts's rebuildBubblePlacements).
   bubbleViewIntensity: 0,
   legacyDustEnabled: false,
   dustCloudEnabled: true,

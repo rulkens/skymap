@@ -57,7 +57,7 @@ same JSON on the clipboard for pasting elsewhere.
 Each galaxy is built by two GPU compute passes — `generateStars.wesl` and
 `generateDust.wesl`, both linked from the shared `galaxyGen/generate.wesl` (bind
 group, population builders, RNG). Changing a galaxy's params triggers exactly
-one dispatch of this pair (`createGalaxyEngine`'s `setParams`), not a
+one dispatch of this pair (`createGalaxyModel`'s `setParams`), not a
 per-frame step: the CPU side carves _layouts_ — for every star and dust
 population, a `(start, iterations, stride, populationId)` range — with cheap
 pure arithmetic (`carveStarLayout` / `carveDustLayout`), packs one

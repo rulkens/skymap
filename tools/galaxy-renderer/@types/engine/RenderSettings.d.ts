@@ -90,7 +90,7 @@ export type RenderSettings = {
    * same seam as `sfMapViewIntensity`. Hue is the pitch angle (period π, so
    * it fills the full hue wheel — see `orientationPresent.wesl`), value is
    * coherence. One of the two things that keep the pass chain alive — see
-   * `createGalaxyEngine.ts`'s `orientationTexRebuild`; the other is
+   * `createGalaxyModel.ts`'s `orientationTexRebuild`; the other is
    * `sfMapDustSeeding`.
    */
   readonly orientationViewIntensity: number;
@@ -143,7 +143,7 @@ export type RenderSettings = {
    * the same `sfEventCatalog.ts` events the SSPSF automaton never sees —
    * and this is the only way to compare the two side by side. Also this
    * layer's own gate: the placement rebuild only runs while this is above
-   * 0, see `createGalaxyEngine.ts`'s `rebuildBubblePlacements`.
+   * 0, see `createGalaxyModel.ts`'s `rebuildBubblePlacements`.
    */
   readonly bubbleViewIntensity: number;
   /**
