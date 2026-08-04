@@ -4,15 +4,9 @@
  * into one `GENERATION_UBO`-shaped `ArrayBuffer` a compute shader binds
  * directly.
  *
- * It draws nothing. Every shared quantity a serial RNG produced — bar and
- * bulge tilt, lopsidedness, clump/cloud centres, per-arm personality — arrives
- * in the description, because the analytic field has to read the same values
- * and a second draw sequence would misalign the two tiers (`describeGalaxy`).
- *
- * The generation shaders do NOT replay a per-star draw sequence: they seed a
- * stateless per-invocation hash from `seed` plus the invocation index (see
- * `galaxyGen/generate.wesl`'s header). Only the shared, drawn-once quantities
- * above need a serial stream, which is exactly what the description carries.
+ * It draws nothing: every shared quantity a serial RNG produced arrives in the
+ * description, whose docblock says why. The shaders draw the per-STAR values
+ * themselves from a stateless hash (`galaxyGen/generate.wesl`'s header).
  */
 import { carveDustLayout } from './carveDustLayout';
 import { carveStarLayout } from './carveStarLayout';
