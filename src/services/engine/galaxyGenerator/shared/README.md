@@ -13,20 +13,22 @@ GalaxyParams
   │  hubbleStageOf               params.type ("SBb") → RC3 stage T (3)
   │  galaxyLightDecomposition    stage+category → bulge/bar/disc/halo shares of LIGHT
   │  galaxyPopulationCountShares light ÷ SPRITE_POPULATION_BRIGHTNESS → star-COUNT shares
-  │  splitStarBudget             shares × totalStarBudget → StarBudget (v1's counts)
   ▼
 describeGalaxy(params) → GalaxyDescription   ← every construction-time RNG draw
-  ├── packGenerationUniforms(description, params, budget, extra) → ArrayBuffer
-  │     │  carveStarLayout       category+budget → GenerationLayout (popId ranges, strides)
-  │     │  carveDustLayout       ditto for dust; empty for ellipticals
-  │     └──────────────────────► v1: queue.writeBuffer → generate.wesl
-  └──────────────────────────────► v2: buildGalaxyFieldMixture(description, …)
+  ├──► v1: splitStarBudget → carveStarLayout/carveDustLayout →
+  │        packGenerationUniforms → queue.writeBuffer → generate.wesl
+  └──► v2: buildGalaxyFieldMixture(description, …)
 ```
+
+The whole right-hand branch — how many sprites, carved into which slots, packed
+at which offset — lives under `v1/`. This folder stops at the shares.
 
 `generationUboLayout.ts` (`GENERATION_UBO`) is the offset authority for every
 lane; `populationIds.ts` names the population codes the shader switches on. Both
 are hand-mirrored into `gpu/shaders/milkyWay/sprites/generate.wesl`, guarded by
 `tests/…/shared/generationShaderParity.test.ts` — no compiler enforces that seam.
+They stay here because `describeGalaxy` sizes its own arm/clump/cloud loops off
+`GENERATION_UBO`; nothing else here reads them.
 
 ## Landmines
 
@@ -61,17 +63,15 @@ population that does exist. A lane whose builder never runs is light nothing
 emits — invisible in the mixture's own flux ledger, which measures what was
 pushed.
 
-**The field's brightness must never read the star budget.** A budget is an LOD
-number; while `emissionScale` and `hiiRegions`' `tierFlux` anchored absolute
-flux on `modelledStars * starSize^2` it went as N^(1/3), so switching tier
-changed how bright a galaxy is by 26% a step — with the structure untouched and
-the sprite bag drifting by the same factor, which is why it never showed. Both
-now scale off `GalaxyDescription.luminosity`, a function of size alone.
-
-**`splitStarBudget`/`carveStarLayout` are still here, for one reason.**
-`describeGalaxy` derives `starSize` from `budget.totalStars`, and nothing else
-in the description touches the budget. That last thread is what keeps the pair
-out of `v1/`.
+**Nothing here may read a star budget.** A budget is an LOD number, and it is
+not reachable from this folder by design: `StarBudget` is produced under `v1/`
+and `GalaxyDescription` carries no sprite quantity, so a re-introduction has to
+add the import edge the landmine above forbids. It is worth the guard —
+`emissionScale` and `hiiRegions`' `tierFlux` once anchored absolute flux on the
+sprite count, which goes as N^(1/3), so switching tier changed how bright a
+galaxy is by 26% a step, with the structure untouched and the sprite bag
+drifting by the same factor, which is why it never showed. Both now scale off
+`GalaxyDescription.luminosity`, a function of size alone.
 
 **Arm-table lane 7 (`age`) is analytic-field-only.** The sprite shader never
 reads it. Lanes 0-6 are what `armStarSample` consumes.

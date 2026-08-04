@@ -44,7 +44,6 @@ const GEOMETRY: GalaxyDescription = {
   arms: [],
   irregularClumpCenters: [],
   lenticularCloudCenters: [],
-  starSize: 0.02,
   seed: 1,
 };
 

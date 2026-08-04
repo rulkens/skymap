@@ -11,12 +11,19 @@
 import { carveDustLayout } from './carveDustLayout';
 import { carveStarLayout } from './carveStarLayout';
 import { grainScale } from './grainScale';
-import { GENERATION_UBO } from './generationUboLayout';
+import { GENERATION_UBO } from '../shared/generationUboLayout';
 import type { ExtraGalaxySpec } from '../../../../@types/galaxy/ExtraGalaxySpec';
 import type { GalaxyCategory } from '../../../../@types/galaxy/GalaxyCategory';
 import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyParams } from '../../../../@types/galaxy/GalaxyParams';
 import type { StarBudget } from '../../../../@types/galaxy/StarBudget';
+
+/**
+ * A sprite's base half-extent as a fraction of `outerRadius`, before the grain
+ * scale. Sized against the sprite bag, so it is derived here from the
+ * `StarBudget` — `GalaxyDescription` carries no sprite quantity at all.
+ */
+const SPRITE_HALF_EXTENT_PER_RADIUS = 0.016;
 
 /** `category` u32 encoding — append-only, mirrors the brief's field table. */
 export const CATEGORY_CODE: Record<GalaxyCategory, number> = {
@@ -61,8 +68,9 @@ export function packGenerationUniforms(
   f32[F.diskScaleLen] = description.diskScaleLen;
   f32[F.bulgeRadius] = description.bulgeRadius;
   f32[F.diskHeight] = description.diskHeight;
-  f32[F.grainScale] = grainScale(budget.totalStars);
-  f32[F.starSize] = description.starSize;
+  const grain = grainScale(budget.totalStars);
+  f32[F.grainScale] = grain;
+  f32[F.starSize] = SPRITE_HALF_EXTENT_PER_RADIUS * outerRadius * grain;
 
   f32[F.flattening] = description.flattening;
   f32[F.asymmetry] = description.asymmetry;

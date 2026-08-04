@@ -9,8 +9,8 @@
  * this carving mirrors.
  */
 import { describe, expect, it } from 'vitest';
-import { carveStarLayout } from '../../../../../src/services/engine/galaxyGenerator/shared/carveStarLayout';
-import { splitStarBudget } from '../../../../../src/services/engine/galaxyGenerator/shared/splitStarBudget';
+import { carveStarLayout } from '../../../../../src/services/engine/galaxyGenerator/v1/carveStarLayout';
+import { splitStarBudget } from '../../../../../src/services/engine/galaxyGenerator/v1/splitStarBudget';
 import { POPULATION_IDS } from '../../../../../src/services/engine/galaxyGenerator/shared/populationIds';
 import type { GalaxyCategory } from '../../../../../src/@types/galaxy/GalaxyCategory';
 import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';

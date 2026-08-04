@@ -25,7 +25,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { GENERATION_UBO } from '../../../../../src/services/engine/galaxyGenerator/shared/generationUboLayout';
-import { CATEGORY_CODE } from '../../../../../src/services/engine/galaxyGenerator/shared/packGenerationUniforms';
+import { CATEGORY_CODE } from '../../../../../src/services/engine/galaxyGenerator/v1/packGenerationUniforms';
 import { POPULATION_IDS } from '../../../../../src/services/engine/galaxyGenerator/shared/populationIds';
 import { SPRITE_POPULATION_BRIGHTNESS } from '../../../../../src/services/engine/galaxyGenerator/shared/spritePopulationBrightness';
 

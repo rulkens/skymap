@@ -15,10 +15,8 @@ import { gaussian } from '../../../../../tools/utils/random/gaussian';
 import { classifyHubbleType } from './classifyHubbleType';
 import { computeBarGeometry } from './computeBarGeometry';
 import { galaxyLightDecomposition } from './galaxyLightDecomposition';
-import { grainScale } from './grainScale';
 import { hiiPalette } from './hiiPalette';
 import { outerRadiusOf } from './outerRadiusOf';
-import { splitStarBudget } from './splitStarBudget';
 import { GENERATION_UBO } from './generationUboLayout';
 import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldArmRecord } from '../../../../@types/galaxy/GalaxyFieldArmRecord';
@@ -94,7 +92,6 @@ const ZERO_ARM = (): GalaxyFieldArmRecord => ({
 
 export function describeGalaxy(params: GalaxyParams): GalaxyDescription {
   const category = classifyHubbleType(params.type);
-  const budget = splitStarBudget(category, params);
 
   const outerRadius = outerRadiusOf(params);
   // 1/3.2 is the ratio every galaxy type shares; a preset that has a measured
@@ -250,7 +247,6 @@ export function describeGalaxy(params: GalaxyParams): GalaxyDescription {
     arms,
     irregularClumpCenters,
     lenticularCloudCenters,
-    starSize: 0.016 * outerRadius * grainScale(budget.totalStars),
     seed: normalizeGenerationSeed(params.seed) >>> 0,
   };
 }

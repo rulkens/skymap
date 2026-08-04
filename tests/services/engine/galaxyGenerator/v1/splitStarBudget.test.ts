@@ -7,7 +7,7 @@
  * shares themselves are `galaxyPopulationCountShares`' business.
  */
 import { describe, expect, it } from 'vitest';
-import { splitStarBudget } from '../../../../../src/services/engine/galaxyGenerator/shared/splitStarBudget';
+import { splitStarBudget } from '../../../../../src/services/engine/galaxyGenerator/v1/splitStarBudget';
 import type { GalaxyCategory } from '../../../../../src/@types/galaxy/GalaxyCategory';
 import type { StarBudget } from '../../../../../src/@types/galaxy/StarBudget';
 
