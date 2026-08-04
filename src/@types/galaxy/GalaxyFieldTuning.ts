@@ -39,7 +39,13 @@ export type GalaxyFieldTuning = {
    * so the ridge breaks into countable oriented blobs. 1 is the real field.
    */
   readonly armBlobSharpness: number;
-  /** Master toggle for the arm particle-cloud tier (`armParticleCloud.ts`) — same role `dustEnabled` plays for the dust cloud. Off skips both the sprites and their component-budget reservation. */
+  /**
+   * Master toggle for the arm particle-cloud tier (`armParticleCloud.ts`) —
+   * same role `dustEnabled` plays for the dust cloud. Off skips the sprites
+   * and their component-budget reservation, and hands `armCloudShare` back to
+   * the ridge chain: the arms' total light is the disc's either way, so this
+   * changes the arms' GRAIN, never how much of the disc they borrow.
+   */
   readonly armCloudEnabled: boolean;
   /**
    * 0..1 share of the arm excess (`pushArmRidges`'s `armExcessFlux`) carried

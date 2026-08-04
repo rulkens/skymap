@@ -544,10 +544,9 @@ const ARM_AGE_CONTRAST_FLOOR = 0.25;
 const ARM_AGE_CONTRAST_SPAN = 0.75;
 
 /**
- * `tuning.armCloudShare`, clamped to a valid probability: `pushArmRidges`
- * and `armParticleCloud.ts` split one arm-excess budget two ways and the
- * two shares must never sum past the measured total — see `pushArmRidges`'
- * docblock for the ledger this feeds.
+ * `tuning.armCloudShare`, clamped to a valid probability — the share the
+ * tuning ASKS for. What the cloud actually carries is `buildGalaxyFieldMixture`'s
+ * `cloudShare`, which is this only when a cloud will really be built.
  */
 export function clampedArmCloudShare(tuning: GalaxyFieldTuning): number {
   return Math.min(1, Math.max(0, tuning.armCloudShare));
@@ -575,12 +574,14 @@ export function clampedArmCloudShare(tuning: GalaxyFieldTuning): number {
  * brightness. `buildGalaxyFieldMixture` debits the returned total back out
  * of the disc components so the two don't double-count the same light.
  *
- * The returned total is the FULL excess regardless of `armCloudShare`: this
- * function renders only `1 - clampedArmCloudShare(tuning)` of it (see
- * `renderedShare` below), and `buildGalaxyFieldMixture` hands the rest to
- * `armParticleCloud.ts` as that tier's own flux budget — the two rendered
- * totals still sum to this return value, so the disc debit (which uses the
- * full value) stays correct either way.
+ * The returned total is the FULL excess regardless of `cloudShare`: this
+ * function renders only `1 - cloudShare` of it, and `buildGalaxyFieldMixture`
+ * hands the rest to `armParticleCloud.ts` as that tier's own flux budget — the
+ * two rendered totals still sum to this return value, so the disc debit (which
+ * uses the full value) stays correct either way. The caller passes the share
+ * the cloud will REALLY carry, never the raw tuning: deriving it here instead
+ * let the ridge chain give away a share to a cloud the caller had already
+ * decided not to build.
  */
 function pushArmRidges(
   geometry: GalaxyDescription,
@@ -588,6 +589,7 @@ function pushArmRidges(
   tuning: GalaxyFieldTuning,
   discFlux: number,
   reservedComponents: number,
+  cloudShare: number,
 ): number {
   if (!tuning.armsEnabled || geometry.numArms <= 0 || discFlux <= 0) return 0;
   const { armStartRadius, diskHeight } = geometry;
@@ -598,7 +600,7 @@ function pushArmRidges(
   // The RENDERED share of each blob's flux — `armExcessFlux` below stays the
   // FULL, unscaled excess (the disc debit and the particle cloud's own share
   // both key off that full total; see `buildGalaxyFieldMixture`'s docblock).
-  const renderedShare = 1 - clampedArmCloudShare(tuning);
+  const renderedShare = 1 - cloudShare;
 
   // Components already pushed PLUS the caller's reservation (the disc is
   // built in a local array and appended after the arms — see
@@ -855,19 +857,24 @@ export function buildGalaxyFieldMixture(
   // rather than the cloud starving the ridge chain (or vice versa) via a
   // silent `packFieldUniforms` clamp. `deriveArmCloudCount` is also what
   // `buildArmParticleCloud` itself calls to size the cloud it actually
-  // builds below, so the reservation and the build can never disagree. 0
-  // whenever the cloud is disabled or its share is 0, leaving the ridge
-  // budget untouched.
-  const armCloudReserve =
+  // builds below, so the reservation and the build can never disagree.
+  const armCloudCount =
     tuning.armsEnabled && tuning.armCloudEnabled && clampedArmCloudShare(tuning) > 0
       ? deriveArmCloudCount(geometry, tuning)
       : 0;
+  // That SAME count decides the flux split, so a cloud that will not be built
+  // — pill off, share 0, or a coverage integral rounding to no sprites — hands
+  // its share back to the ridge chain. The disc is debited the whole excess
+  // either way, so a share promised to a tier that never runs is light nothing
+  // emits.
+  const cloudShare = armCloudCount > 0 ? clampedArmCloudShare(tuning) : 0;
   const armExcessFlux = pushArmRidges(
     geometry,
     out,
     tuning,
     discFlux,
-    (tuning.discEnabled ? discOut.length : 0) + armCloudReserve,
+    (tuning.discEnabled ? discOut.length : 0) + armCloudCount,
+    cloudShare,
   );
   if (discFlux > 0 && armExcessFlux > 0) {
     const debit = Math.min(armExcessFlux, discFlux * ARM_DISC_DEBIT_CLAMP_FRACTION);
@@ -878,11 +885,9 @@ export function buildGalaxyFieldMixture(
   }
   if (tuning.discEnabled) out.push(...discOut);
 
-  if (armCloudReserve > 0) {
-    const cloudFlux = armExcessFlux * clampedArmCloudShare(tuning);
-    if (cloudFlux > 0) {
-      out.push(...buildArmParticleCloud(geometry, tuning, cloudFlux, geometry.seed));
-    }
+  const cloudFlux = armExcessFlux * cloudShare;
+  if (cloudFlux > 0) {
+    out.push(...buildArmParticleCloud(geometry, tuning, cloudFlux, geometry.seed));
   }
 
   pushBulge(geometry, out, tuning);

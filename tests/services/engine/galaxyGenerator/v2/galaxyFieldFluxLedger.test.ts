@@ -20,6 +20,7 @@ import { REFERENCE_GALAXIES } from '../../../../../tools/galaxy-renderer/src/dat
 import type { ReferenceGalaxy } from '../../../../../tools/galaxy-renderer/@types/data/ReferenceGalaxy';
 import type { GalaxyFieldComponent } from '../../../../../src/@types/galaxy/GalaxyFieldComponent';
 import type { GalaxyDescription } from '../../../../../src/@types/galaxy/GalaxyDescription';
+import type { GalaxyFieldTuning } from '../../../../../src/@types/galaxy/GalaxyFieldTuning';
 import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';
 
 /**
@@ -77,16 +78,47 @@ describe('galaxy field flux ledger', () => {
   });
 
   // The ridge chain's blobs are an EXCESS over the azimuthally averaged disc
-  // the mixture was fit to, debited back out of the disc components — so
-  // switching the arms off may redistribute light but must not change how
-  // much there is. m100 (grand-design, two strong arms) and mw (four weaker
-  // ones) bracket the contrast law's range.
-  it.each(['m100', 'mw'])('%s arms redistribute disc light rather than add to it', (id) => {
-    const geometry = geometryOf(REFERENCE_GALAXIES.find((ref) => ref.id === id)!);
-    const withArms = totalFlux(buildGalaxyFieldMixture(geometry, DEFAULT_GALAXY_FIELD_TUNING));
-    const without = totalFlux(
-      buildGalaxyFieldMixture(geometry, { ...DEFAULT_GALAXY_FIELD_TUNING, armsEnabled: false }),
+  // the mixture was fit to, debited back out of the disc components IN FULL —
+  // so an arm knob may move light between the two arm tiers, or drop the arms
+  // entirely, but never change how much light there is. Every row below is a
+  // tuning that renders a different arm grain; the two that render NO sprite
+  // are the ones that regressed, because the cloud's share of the excess was
+  // debited from the disc and then emitted by nobody.
+  const ARM_GRAIN_TUNINGS: Record<string, Partial<GalaxyFieldTuning>> = {
+    'arms off': { armsEnabled: false },
+    'cloud off': { armCloudEnabled: false },
+    'cloud share 0': { armCloudShare: 0 },
+    'cloud share 1': { armCloudShare: 1 },
+    // Coverage at its slider floor with the largest sprites the sliders
+    // allow: on some presets the derived sprite count rounds to zero, which
+    // is the same leak with the cloud's own pill still on.
+    'cloud starved': { armCloudCoverage: 0.2, armCloudSizeScale: 4, armCloudElongation: 8 },
+  };
+
+  // m100 (grand-design, two strong arms) and mw (four weaker ones) bracket
+  // the contrast law's range.
+  const ARM_LEDGER_CASES = ['m100', 'mw'].flatMap((id) =>
+    Object.entries(ARM_GRAIN_TUNINGS).map(([label, tuning]) => ({ id, label, tuning })),
+  );
+
+  it.each(ARM_LEDGER_CASES)('$id emits the same total light under "$label"', (testCase) => {
+    const geometry = geometryOf(REFERENCE_GALAXIES.find((ref) => ref.id === testCase.id)!);
+    const measured = totalFlux(
+      buildGalaxyFieldMixture(geometry, { ...DEFAULT_GALAXY_FIELD_TUNING, ...testCase.tuning }),
     );
-    expect(Math.abs(withArms / without - 1)).toBeLessThan(LEDGER_TOLERANCE);
+    const base = totalFlux(buildGalaxyFieldMixture(geometry, DEFAULT_GALAXY_FIELD_TUNING));
+    expect(Math.abs(measured / base - 1)).toBeLessThan(LEDGER_TOLERANCE);
+  });
+
+  // The ledger above is vacuous unless the arms are actually rendering: a
+  // mixture with no arm components conserves flux trivially.
+  it.each(['m100', 'mw'])('%s renders arm components for that ledger to be about', (id) => {
+    const geometry = geometryOf(REFERENCE_GALAXIES.find((ref) => ref.id === id)!);
+    const withArms = buildGalaxyFieldMixture(geometry, DEFAULT_GALAXY_FIELD_TUNING).length;
+    const without = buildGalaxyFieldMixture(geometry, {
+      ...DEFAULT_GALAXY_FIELD_TUNING,
+      armsEnabled: false,
+    }).length;
+    expect(withArms).toBeGreaterThan(without);
   });
 });
