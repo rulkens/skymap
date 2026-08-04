@@ -266,6 +266,9 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
         }
         onReseed={spec.seedKey ? () => handleReseed(spec.seedKey!) : undefined}
         info={spec.info}
+        // Derived from the same `spec.key` `galaxyValues` keys its copy payload
+        // by, so the tip and the copy block can only ever name the same field.
+        path={`galaxy.${spec.key}`}
       />
     );
   };
@@ -447,6 +450,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             max={4}
             step={0.02}
             onChange={(v) => dispatch(renderPatched({ exposure: v }))}
+            path="render.exposure"
           />
           <ParamSlider
             label="Bloom glow"
@@ -455,6 +459,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             max={2}
             step={0.02}
             onChange={(v) => dispatch(renderPatched({ bloom: v }))}
+            path="render.bloom"
           />
           <ParamSlider
             label="Bloom threshold"
@@ -463,6 +468,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             max={6}
             step={0.05}
             onChange={(v) => dispatch(renderPatched({ bloomThreshold: v }))}
+            path="render.bloomThreshold"
           />
           {/* The star-pass block. These are the app's `MilkyWayTuning` knobs,
               over the app's own ranges (`src/data/milkyWay/milkyWaySliderFields.ts`),
@@ -478,6 +484,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             max={1.1}
             step={0.05}
             onChange={(v) => dispatch(renderPatched({ sizeScale: v }))}
+            path="render.sizeScale"
           />
           <ParamSlider
             label="Star intensity"
@@ -486,6 +493,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             max={0.4}
             step={0.01}
             onChange={(v) => dispatch(renderPatched({ starIntensity: v }))}
+            path="render.starIntensity"
           />
           <ParamSlider
             label="Star px floor"
@@ -495,6 +503,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             step={0.25}
             format={(v) => v.toFixed(2)}
             onChange={(v) => dispatch(renderPatched({ starPxMin: v }))}
+            path="render.starPxMin"
             info="The two px knobs clamp a sprite's on-screen half-extent in pixels of the star target, which the divisor below shrinks — at divisor 2 one unit here is two screen pixels. Softness blends the tight core+glow profile toward a broad Gaussian at equal integral, changing shape without changing emitted light."
           />
           <ParamSlider
@@ -505,6 +514,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             step={1}
             format={(v) => String(Math.round(v))}
             onChange={(v) => dispatch(renderPatched({ starPxMax: v }))}
+            path="render.starPxMax"
           />
           <ParamSlider
             label="Star softness"
@@ -514,6 +524,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             step={0.01}
             format={(v) => v.toFixed(2)}
             onChange={(v) => dispatch(renderPatched({ softness: v }))}
+            path="render.softness"
           />
           <div className={styles.toneWrap}>
             <div className={styles.toneLabel}>Tone mapping</div>
@@ -555,6 +566,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             max={1.6}
             step={0.02}
             onChange={(v) => dispatch(renderPatched({ saturation: v }))}
+            path="render.saturation"
           />
           <ParamSlider
             label="Vignette"
@@ -563,6 +575,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             max={1}
             step={0.02}
             onChange={(v) => dispatch(renderPatched({ vignette: v }))}
+            path="render.vignette"
           />
           <div className={styles.toggleRow}>
             <CompactInfoTip
@@ -607,6 +620,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             step={0.001}
             format={(v) => v.toFixed(3)}
             onChange={(v) => dispatch(lodPatched({ lodApparent: v }))}
+            path="lod.lodApparent"
             info="View-dependent: hides sprites smaller than the threshold on screen right now, and brightens the survivors so the field's total light holds. Higher = faster, especially with many galaxies. Fly in and they reappear. 0 disables the cull."
           />
           <ParamSlider
@@ -617,6 +631,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             step={1}
             format={(v) => String(Math.round(v))}
             onChange={(v) => dispatch(renderPatched({ aggregateDivisor: Math.round(v) }))}
+            path="render.aggregateDivisor"
             info="Stars render into an offscreen at 1/N the canvas and are bilinearly added back into HDR, so their fragment cost — the actual wall — falls as N². 1 is full resolution, the reference the reconstruction has to be judged against. Moving it reallocates that target and rescales the two px knobs above, which clamp in its pixels."
           />
           <ParamSlider
@@ -627,6 +642,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             step={1}
             format={(v) => String(Math.round(v))}
             onChange={(v) => dispatch(renderPatched({ fieldDivisor: Math.round(v) }))}
+            path="render.fieldDivisor"
             info="The same trade for the ANALYTIC field, on its own target. It goes coarser than the sprites can: the field is a sum of wide Gaussians with no point-like detail to lose, and it is fill-bound, so cost falls as N². The ceiling is bloom fireflies zoomed out, not blur — the ray integral is a POINT sample with no pixel-footprint filtering, so a core narrower than a texel aliases into a value that crosses the bloom threshold."
           />
           <ParamSlider
@@ -637,6 +653,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             step={1}
             format={(v) => String(Math.round(v))}
             onChange={(v) => dispatch(renderPatched({ dustDivisor: Math.round(v) }))}
+            path="render.dustDivisor"
             info="Its own divisor, separate from the field's: the dust splat is much higher-frequency than the smooth emission field, so it needs a finer target to avoid decimating thin lanes into beads."
           />
           <ParamSlider
@@ -647,6 +664,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             step={1}
             format={(v) => String(Math.round(v))}
             onChange={(v) => dispatch(renderPatched({ hiiDivisor: Math.round(v) }))}
+            path="render.hiiDivisor"
             info="Its own divisor, separate from the field's: an HII shell sprite is small and bright by construction, so sharing a coarser target collapses it under a texel and bloom turns the spike into a firefly. 1 (full canvas) is the default for exactly that reason."
           />
         </CollapsibleSection>

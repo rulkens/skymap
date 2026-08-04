@@ -57,6 +57,7 @@ function DustSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchDust({ tau: v })}
+          path="galaxy.dust.tau"
           info="Central face-on tau_V; measured 0.5-1 for spirals (Xilouris et al. 1999, De Geyter et al. 2014). The range above that is deliberate exploration headroom, not a measured span."
         />
         <ParamSlider
@@ -67,6 +68,7 @@ function DustSection(): ReactNode {
           step={0.1}
           format={(v) => v.toFixed(1)}
           onChange={(v) => patchDust({ rV: v })}
+          path="galaxy.dust.rV"
           info="Total-to-selective extinction A_V/E(B-V); sets how much bluer light dims relative to red. Milky Way diffuse ISM 3.1 (greyer above, more reddening below)."
         />
         <ParamSlider
@@ -77,6 +79,7 @@ function DustSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchDust({ scaleLenRatio: v })}
+          path="galaxy.dust.scaleLenRatio"
           info="Dust/stellar radial scale-length ratio — the dust disc is more extended than the light it reddens. Measured 1.4-1.75 (Xilouris et al. 1999). With SF-map seeding on, this sets the total column and how far the dust slices reach, not where the clouds land."
         />
         <ParamSlider
@@ -87,6 +90,7 @@ function DustSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchDust({ heightRatio: v })}
+          path="galaxy.dust.heightRatio"
           info="Dust/stellar vertical sigma ratio — the dust layer is thinner than the stellar disc it sits in. Measured 0.25-0.75 across spirals; the Milky Way's own is ~0.35."
         />
       </div>

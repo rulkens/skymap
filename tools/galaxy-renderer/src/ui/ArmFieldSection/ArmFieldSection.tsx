@@ -45,6 +45,7 @@ function ArmFieldSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchArms({ widthScale: v })}
+          path="fieldTuning.arms.widthScale"
           info="1.0 is the Milky Way's measured maser-arm width. Higher = wider arms, more overlap; old stellar arms are plausibly broader, so above 1 is physical."
         />
         <ParamSlider
@@ -55,6 +56,7 @@ function ArmFieldSection(): ReactNode {
           step={0.01}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchArms({ contrast: v })}
+          path="fieldTuning.arms.contrast"
           info="Arm/interarm surface-brightness ratio in old stellar light: the Milky Way measures ~1.3, strong grand designs ~2. Each arm's age scales it — old arms carry the full contrast, young ones fade toward 1. The light comes out of the disc, so raising it never brightens the galaxy."
         />
         <ParamSlider
@@ -65,6 +67,7 @@ function ArmFieldSection(): ReactNode {
           step={0.05}
           format={(v) => `${v.toFixed(2)}x`}
           onChange={(v) => patchArms({ excessScaleRatio: v })}
+          path="fieldTuning.arms.excessScaleRatio"
           info="How fast the arms' light falls off, as a multiple of the disc's own scale length. BRIGHTNESS only — it cannot move where an arm ends; the 'Arm edge falloff' generation knob does that. 1 holds contrast K flat with radius; above 1 the arms outrun the disc and the outer arm brightens. Governs the ridge chain and the sprite cloud together."
         />
         <ParamSlider
@@ -75,6 +78,7 @@ function ArmFieldSection(): ReactNode {
           step={0.5}
           format={(v) => v.toFixed(1)}
           onChange={(v) => patchArms({ blobSharpness: v })}
+          path="fieldTuning.arms.blobSharpness"
           info="Debug only: shrinks every blob's three sigmas together at constant flux, so the ridge breaks into countable blobs whose tilt shows the surface frame they were placed on. 1 is the real field."
         />
       </div>

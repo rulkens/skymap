@@ -98,6 +98,7 @@ function FadeSection({ readout }: FadeSectionProps): ReactNode {
           step={0.05}
           format={units}
           onChange={(v) => dispatch(renderPatched({ fadeApproachFullAt: v }))}
+          path="render.fadeApproachFullAt"
           info="The near-side band: the cloud dissolves as the camera dives in, handing off to the real Gaia star catalog. Sliders are in generator units — one unit is 1.67 kpc — and seed from the app's own 2 kpc / 200 pc edges."
         />
         <ParamSlider
@@ -108,6 +109,7 @@ function FadeSection({ readout }: FadeSectionProps): ReactNode {
           step={0.01}
           format={units}
           onChange={(v) => dispatch(renderPatched({ fadeApproachGoneAt: v }))}
+          path="render.fadeApproachGoneAt"
         />
         <ParamSlider
           label="Apparent size · full at"
@@ -117,6 +119,7 @@ function FadeSection({ readout }: FadeSectionProps): ReactNode {
           step={0.5}
           format={(v) => `${v.toFixed(1)} px`}
           onChange={(v) => dispatch(renderPatched({ fadeFullPx: v }))}
+          path="render.fadeFullPx"
           info="The far-side band: below a few pixels of on-screen diameter the sprites collapse into an aliased shimmer, so the cloud fades out. Keyed on apparent size rather than distance so it adapts to fov and window height for free."
         />
         <ParamSlider
@@ -127,6 +130,7 @@ function FadeSection({ readout }: FadeSectionProps): ReactNode {
           step={0.5}
           format={(v) => `${v.toFixed(1)} px`}
           onChange={(v) => dispatch(renderPatched({ fadeGonePx: v }))}
+          path="render.fadeGonePx"
         />
 
         <div className={styles.readout}>

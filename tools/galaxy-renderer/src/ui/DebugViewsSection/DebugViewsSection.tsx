@@ -38,6 +38,7 @@ function DebugViewsSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => dispatch(renderPatched({ dustViewIntensity: v }))}
+          path="render.dustViewIntensity"
           info={DEBUG_VIEWS.dust.info}
         />
         <ParamSlider
@@ -48,6 +49,7 @@ function DebugViewsSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => dispatch(renderPatched({ sfMapViewIntensity: v }))}
+          path="render.sfMapViewIntensity"
           info={DEBUG_VIEWS.sfMap.info}
         />
         <ParamSlider
@@ -58,6 +60,7 @@ function DebugViewsSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => dispatch(renderPatched({ sfMapGasWeight: v }))}
+          path="render.sfMapGasWeight"
           info="Isolates the gas channel: unspent ISM fuel, driven to 0 by an ignition and refilled over 1/gasRegen steps. The palette's dimmest colour by a wide margin — zero the other two to see it at all."
         />
         <ParamSlider
@@ -68,6 +71,7 @@ function DebugViewsSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => dispatch(renderPatched({ sfMapRecentWeight: v }))}
+          path="render.sfMapRecentWeight"
           info="Isolates the recentSf channel: exp(-age/12), a cell that fired within roughly the last dozen steps. Warm near-white and usually what washes out the gas channel in the combined view."
         />
         <ParamSlider
@@ -78,6 +82,7 @@ function DebugViewsSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => dispatch(renderPatched({ sfMapActivityWeight: v }))}
+          path="render.sfMapActivityWeight"
           info="Isolates the oldActivity channel: the accumulated trace of every front that passed, decayed per step by activityDecay. This is the channel dust placement actually reads. Bright magenta-violet, the single brightest channel in the combined view — zero the other two to isolate it, though it rarely needs isolating."
         />
         <ParamSlider
@@ -88,6 +93,7 @@ function DebugViewsSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => dispatch(renderPatched({ orientationViewIntensity: v }))}
+          path="render.orientationViewIntensity"
           info={DEBUG_VIEWS.orientation.info}
         />
         <ParamSlider
@@ -98,6 +104,7 @@ function DebugViewsSection(): ReactNode {
           step={0.1}
           format={(v) => v.toFixed(1)}
           onChange={(v) => dispatch(renderPatched({ orientationSigmaDerivTexels: v }))}
+          path="render.orientationSigmaDerivTexels"
           info="Gaussian sigma (sfMap grid texels) for the pass chain's field-smoothing stage, before the central-difference gradient. Moving it re-runs the pass chain — and the dust rebuild, if seeding is on."
         />
         <ParamSlider
@@ -108,6 +115,7 @@ function DebugViewsSection(): ReactNode {
           step={0.1}
           format={(v) => v.toFixed(1)}
           onChange={(v) => dispatch(renderPatched({ orientationSigmaIntegTexels: v }))}
+          path="render.orientationSigmaIntegTexels"
           info="Gaussian sigma (sfMap grid texels) for the tensor-smoothing stage, after Jxx/Jxy/Jyy are built. Conventionally 2-3x the derivative sigma. Moving it re-runs the pass chain — and the dust rebuild, if seeding is on."
         />
         <ParamSlider
@@ -118,6 +126,7 @@ function DebugViewsSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => dispatch(renderPatched({ bubbleViewIntensity: v }))}
+          path="render.bubbleViewIntensity"
           info={DEBUG_VIEWS.bubble.info}
         />
       </div>

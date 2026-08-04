@@ -53,6 +53,7 @@ function DustCloudSection(): ReactNode {
           step={500}
           format={(v) => String(Math.round(v))}
           onChange={(v) => patchCloud({ count: Math.round(v) })}
+          path="galaxy.dust.cloud.count"
           info="Particle budget for the volumetric dust cloud. 0 disables it."
         />
         <ParamSlider
@@ -63,6 +64,7 @@ function DustCloudSection(): ReactNode {
           step={0.02}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchCloud({ clumpiness: v })}
+          path="galaxy.dust.cloud.clumpiness"
           info="Hierarchical clustering amplitude — 0 = Poisson-scattered, 1 = strongly hierarchical."
         />
         <ParamSlider
@@ -73,6 +75,7 @@ function DustCloudSection(): ReactNode {
           step={5}
           format={(v) => v.toFixed(0)}
           onChange={(v) => patchCloud({ sizeFloorPc: v })}
+          path="galaxy.dust.cloud.sizeFloorPc"
           info="Low end of the GMC size sampler. Measured clouds start at 15 pc; raising it trades per-cloud darkness for coverage, since the total column is renormalised."
         />
         <ParamSlider
@@ -83,6 +86,7 @@ function DustCloudSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchCloud({ sizeScale: v })}
+          path="galaxy.dust.cloud.sizeScale"
           info="Multiplier on the GMC size range each particle is drawn from."
         />
         <ParamSlider
@@ -93,6 +97,7 @@ function DustCloudSection(): ReactNode {
           step={0.1}
           format={(v) => v.toFixed(1)}
           onChange={(v) => patchCloud({ elongation: v })}
+          path="galaxy.dust.cloud.elongation"
           info="sigma_along / sigma_across — how stretched each cloud is along its lane."
         />
         <ParamSlider
@@ -103,6 +108,7 @@ function DustCloudSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchCloud({ heightRatio: v })}
+          path="galaxy.dust.cloud.heightRatio"
           info="Cloud layer sigma_z as a ratio of the flat dust layer's own sigma_z."
         />
         <ParamSlider
@@ -113,6 +119,7 @@ function DustCloudSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchCloud({ texture: v })}
+          path="galaxy.dust.cloud.texture"
           info="0 = smooth analytic ellipsoids, higher = clouds eroded into wispy filaments by the baked noise volume."
         />
         <ParamSlider
@@ -123,6 +130,7 @@ function DustCloudSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchCloud({ textureScale: v })}
+          path="galaxy.dust.cloud.textureScale"
           info="Multiplier on the noise volume's world-space tile size."
         />
         <ParamSlider
@@ -133,6 +141,7 @@ function DustCloudSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchCloud({ textureContrast: v })}
+          path="galaxy.dust.cloud.textureContrast"
           info="Shapes the noise about its midpoint, so higher values harden filament edges while leaving the mean — and the tier's share of the optical depth — unchanged."
         />
       </div>

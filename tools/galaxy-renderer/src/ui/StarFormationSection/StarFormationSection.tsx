@@ -43,6 +43,7 @@ function StarFormationSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchStarFormation({ sfActivity: v })}
+          path="galaxy.starFormation.sfActivity"
           info="Star-formation event-catalog rate; drives the bubble catalog now, HII knots later."
         />
         <ParamSlider
@@ -53,6 +54,7 @@ function StarFormationSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchStarFormation({ bubbleScale: v })}
+          path="galaxy.starFormation.bubbleScale"
           info="× measured default. Radii 6-552 pc in NGC 628, size power law slope frozen (Watkins et al. 2023)."
         />
       </div>

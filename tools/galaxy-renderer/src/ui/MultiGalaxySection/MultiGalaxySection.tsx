@@ -47,6 +47,7 @@ function MultiGalaxySection(): ReactNode {
             step={1}
             format={(v) => String(Math.round(v))}
             onChange={(v) => dispatch(extrasCountSet(Math.round(v)))}
+            path="extras.count"
           />
           <Button className={styles.regenButton} onClick={() => dispatch(extrasRegenerated())}>
             ⟲ Regenerate distant galaxies

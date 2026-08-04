@@ -42,6 +42,7 @@ function HiiSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchHii({ brightness: v })}
+          path="fieldTuning.hii.brightness"
           info="Whole-tier flux multiplier. Unlike the arm cloud's share knob this ADDS light on top of the disc mixture, which never contained HII emission to begin with. 1 is the calibrated default."
         />
         <ParamSlider
@@ -52,6 +53,7 @@ function HiiSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchHii({ radiusScale: v })}
+          path="fieldTuning.hii.radiusScale"
           info="Multiplies the Strömgren radius each region is drawn at: bigger, softer shells above 1, smaller and more concentrated below. 1 is the law exactly."
         />
         <ParamSlider
@@ -62,6 +64,7 @@ function HiiSection(): ReactNode {
           step={0.02}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchHii({ shellThickness: v })}
+          path="fieldTuning.hii.shellThickness"
           info="Radial scatter of a region's shell sprites, as a fraction of its radius. Small values give a thin, sharply limb-brightened front."
         />
         <ParamSlider
@@ -72,6 +75,7 @@ function HiiSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchHii({ clusterStrength: v })}
+          path="fieldTuning.hii.clusterStrength"
           info="Brightness of the embedded OB cluster at each region's centre; 0 leaves a hollow shell."
         />
         <ParamSlider
@@ -82,6 +86,7 @@ function HiiSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchHii({ cavityScale: v })}
+          path="fieldTuning.hii.cavityScale"
           info="Radius of the dust cavity a young event carves, as a fraction of its own HII radius. 0 leaves the dust undisturbed."
         />
       </div>

@@ -28,7 +28,11 @@ import cx from 'classnames';
 import styles from './CompactInfoTip.module.css';
 
 export type CompactInfoTipProps = {
-  readonly label: string;
+  /**
+   * Tip content. A node, not a string: consumers compose multi-part tips —
+   * `ParamSlider` follows its prose with the store path the slider writes.
+   */
+  readonly label: ReactNode;
   readonly placement?: 'top' | 'bottom';
   readonly align?: 'center' | 'start' | 'end';
   readonly children?: ReactNode;

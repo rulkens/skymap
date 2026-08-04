@@ -46,3 +46,24 @@
 .infoIcon:focus-visible {
   opacity: 0.85;
 }
+
+/* Margin on the PROSE, not the path: the path is the one part every tip has,
+ * so hanging the gap off the optional half keeps a path-only tip from opening
+ * with a blank line. */
+.tipProse {
+  display: block;
+  margin-bottom: var(--space-6);
+}
+
+.tipPath {
+  display: block;
+  /* The tip is already mono; restating it stops <code>'s UA monospace default
+   * from dragging the font size down with it. */
+  font-family: var(--font-family-mono);
+  font-size: inherit;
+  font-weight: 700;
+  color: var(--color-fg);
+  /* A dotted path gives the line breaker nothing to work with, and the tip
+   * caps at 260px. */
+  overflow-wrap: anywhere;
+}

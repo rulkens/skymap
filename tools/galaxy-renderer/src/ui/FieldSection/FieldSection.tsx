@@ -60,6 +60,7 @@ function FieldSection(): ReactNode {
           step={0.01}
           format={(v) => v.toFixed(2)}
           onChange={(v) => dispatch(renderPatched({ analyticExposure: v }))}
+          path="render.analyticExposure"
           info="Whole-field multiplier on the integrated mixture, independent of the star pass's own exposure and size sliders. 1.0 is the calibration point tuned by eye against the reference gallery, not a parity point with the sprite field."
         />
         <p className={styles.readout}>
