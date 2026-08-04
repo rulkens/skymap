@@ -9,7 +9,10 @@ import type { GalaxyDustCloudParams } from '../../../../@types/galaxy/GalaxyDust
 // Every refiner starts at its literature value (1.0).
 export const DEFAULT_GALAXY_DUST_CLOUD_PARAMS: GalaxyDustCloudParams = {
   count: 6000,
-  clumpiness: 0.6,
+  // 0 = independent scattering. The covering factor above is solved for
+  // exactly that; clustering piles the same `count` into fewer complexes and
+  // leaves the gaps between them uncovered.
+  clumpiness: 0,
   sizeScale: 1,
   sizeFloorPc: SIZE_MIN_PC,
   elongation: 2.5,

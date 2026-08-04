@@ -322,7 +322,11 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
       // buries them. The tilt spends them further out instead, at no cost to
       // the arm's light profile (see `GalaxyArmCloudTuning.radialBias`).
       radialBias: 1.5,
-      clumpiness: 0.4,
+      // 0 = independent scattering, which is the only setting at which
+      // `coverage` means literally what it says: `clusteredDiscPlacement`
+      // huddles `1 + 15*clumpiness` sprites per complex, so any non-zero value
+      // makes the derived count cover less arm than it solved for.
+      clumpiness: 0,
       sizeScale: 1,
       elongation: 3,
     },
