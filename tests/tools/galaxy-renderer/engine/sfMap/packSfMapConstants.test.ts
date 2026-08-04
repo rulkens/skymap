@@ -12,8 +12,8 @@ import { describe, expect, it } from 'vitest';
 import {
   packSfMapConstants,
   SF_MAP_CONSTANTS_FLOATS,
-} from '../../../../../tools/galaxy-renderer/src/engine/uniforms/packSfMapConstants';
-import type { SfMapConstantsInput } from '../../../../../tools/galaxy-renderer/src/engine/uniforms/packSfMapConstants';
+} from '../../../../../tools/galaxy-renderer/src/engine/sfMap/packSfMapConstants';
+import type { SfMapConstantsInput } from '../../../../../tools/galaxy-renderer/src/engine/sfMap/packSfMapConstants';
 import { layoutWgslStruct } from '../../../../../tools/utils/wgsl/layoutWgslStruct';
 import { parseWgslStructFields } from '../../../../../tools/utils/wgsl/parseWgslStructFields';
 import { readShaderSource } from '../../../../../tools/utils/wgsl/readShaderSource';

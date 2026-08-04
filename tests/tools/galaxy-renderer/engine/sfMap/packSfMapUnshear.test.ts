@@ -12,8 +12,8 @@ import { describe, expect, it } from 'vitest';
 import {
   packSfMapUnshear,
   SF_MAP_UNSHEAR_FLOATS,
-} from '../../../../../tools/galaxy-renderer/src/engine/uniforms/packSfMapUnshear';
-import type { SfMapUnshearInput } from '../../../../../tools/galaxy-renderer/src/engine/uniforms/packSfMapUnshear';
+} from '../../../../../tools/galaxy-renderer/src/engine/sfMap/packSfMapUnshear';
+import type { SfMapUnshearInput } from '../../../../../tools/galaxy-renderer/src/engine/sfMap/packSfMapUnshear';
 import { layoutWgslStruct } from '../../../../../tools/utils/wgsl/layoutWgslStruct';
 import { parseWgslStructFields } from '../../../../../tools/utils/wgsl/parseWgslStructFields';
 import { readShaderSource } from '../../../../../tools/utils/wgsl/readShaderSource';

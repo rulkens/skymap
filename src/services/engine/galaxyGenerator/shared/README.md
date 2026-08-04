@@ -36,7 +36,7 @@ still consumes its draw for exactly that reason.
 
 **`v2` depends on this folder through DATA, not imports.** Nothing under `v2/`
 imports anything here; the wiring happens in the caller
-(`tools/galaxy-renderer/src/engine/createGalaxyEngine.ts`'s `generateGalaxy`).
+(`tools/galaxy-renderer/src/engine/sprites/generateGalaxy.ts`).
 Grepping the import graph alone will tell you this folder is v1-only. It is not.
 
 **`shared/` must never import `v1/`.** v1 is scheduled for deletion (see

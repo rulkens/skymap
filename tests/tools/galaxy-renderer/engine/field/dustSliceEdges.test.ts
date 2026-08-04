@@ -3,7 +3,7 @@
  * from drawFrame's per-frame block (see tools/galaxy-renderer/src/engine/dustSliceEdges.ts).
  */
 import { describe, expect, it } from 'vitest';
-import { dustSliceEdges } from '../../../../../tools/galaxy-renderer/src/engine/frame/dustSliceEdges';
+import { dustSliceEdges } from '../../../../../tools/galaxy-renderer/src/engine/field/dustSliceEdges';
 
 describe('dustSliceEdges', () => {
   it('edges are geometrically spaced between tNear and tFar', () => {

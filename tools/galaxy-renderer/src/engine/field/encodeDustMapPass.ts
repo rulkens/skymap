@@ -9,7 +9,7 @@
  * -> zero transition (see `dustMapPopulated`'s declaration). Returned rather
  * than written through a box, so the write stays visible in `drawFrame`.
  */
-import { beginClearPass } from './beginClearPass';
+import { beginClearPass } from '../passes/beginClearPass';
 
 export function encodeDustMapPass({
   enc,

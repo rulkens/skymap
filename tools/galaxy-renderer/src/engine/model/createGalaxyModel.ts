@@ -61,16 +61,16 @@ import { transformGalaxyFieldComponent } from '../../../../../src/utils/galaxy/t
 
 import { DEBUG_VIEWS } from '../../data/debugViews';
 import { createKeyedRebuild } from '../createKeyedRebuild';
-import { deriveDustHeaderLanes } from '../frame/deriveDustHeaderLanes';
+import { deriveDustHeaderLanes } from '../field/deriveDustHeaderLanes';
 import { createGrowOnlyRecordBuffer } from '../gpu/createGrowOnlyRecordBuffer';
 import type { GrowOnlyRecordBuffer } from '../gpu/createGrowOnlyRecordBuffer';
-import { generateGalaxy } from '../gpu/generateGalaxy';
+import { generateGalaxy } from '../sprites/generateGalaxy';
 import { createOrientationDiagnostics } from '../sfMap/createOrientationDiagnostics';
 import type { SfMapAutomaton } from '../sfMap/createSfMapAutomaton';
 import type { SfMapOrientation } from '../sfMap/createSfMapOrientation';
 import { createSfMapReadbacks } from '../sfMap/createSfMapReadbacks';
-import { BUBBLE_RECORD_FLOATS, packBubbleInstances } from '../uniforms/packBubbleInstances';
-import { FIELD_COMPONENT_FLOATS, packFieldComponents } from '../uniforms/packFieldUniforms';
+import { BUBBLE_RECORD_FLOATS, packBubbleInstances } from '../field/packBubbleInstances';
+import { FIELD_COMPONENT_FLOATS, packFieldComponents } from '../field/packFieldUniforms';
 
 /**
  * A single generated extra galaxy. The UBO is retained rather than destroyed

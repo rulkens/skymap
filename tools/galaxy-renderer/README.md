@@ -162,6 +162,9 @@ WESL root (see `wesl.toml`), and the post passes that drive them are the
 runtime's `createAdditiveUpsample`, `createBloomPyramid` and
 `createCompositor`. Editing any of those shaders changes both apps.
 
+`src/engine/`'s own [README](src/engine/README.md) maps that tree: which folders
+are the sprite tier (v1), which the analytic field (v2), and which are neither.
+
 The pass chain itself is `createGalaxyEngine.ts`'s `TIMING_SLOTS` docblock —
 its one account, and the one that stays current; read it there rather than a
 copy here. The shape: each tier splats into its OWN reduced-resolution

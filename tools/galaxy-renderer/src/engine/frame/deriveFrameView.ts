@@ -22,7 +22,7 @@ import type { SfMapChannelWeights } from '../../../@types/engine/SfMapChannelWei
 import { debugGalaxyWeight } from './debugGalaxyWeight';
 import { debugViewWeights } from './debugViewWeights';
 import { deriveMilkyWayFade } from './deriveMilkyWayFade';
-import { dustSliceEdges } from './dustSliceEdges';
+import { dustSliceEdges } from '../field/dustSliceEdges';
 
 export type FrameView = {
   readonly view: Float32Array;

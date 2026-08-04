@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest';
 import {
   FIELD_HEADER_FLOATS,
   packFieldHeaderUniforms,
-} from '../../../../../tools/galaxy-renderer/src/engine/uniforms/packFieldUniforms';
+} from '../../../../../tools/galaxy-renderer/src/engine/field/packFieldUniforms';
 import type { FieldHeaderInput } from '../../../../../tools/galaxy-renderer/@types/engine/FieldHeaderInput';
 import { layoutWgslStruct } from '../../../../../tools/utils/wgsl/layoutWgslStruct';
 import { parseWgslStructFields } from '../../../../../tools/utils/wgsl/parseWgslStructFields';

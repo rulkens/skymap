@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { encodeDustMapPass } from '../../../../../tools/galaxy-renderer/src/engine/passes/encodeDustMapPass';
+import { encodeDustMapPass } from '../../../../../tools/galaxy-renderer/src/engine/field/encodeDustMapPass';
 
 type Fake = {
   enc: GPUCommandEncoder;

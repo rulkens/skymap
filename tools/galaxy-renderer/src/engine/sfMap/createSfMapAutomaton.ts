@@ -25,8 +25,8 @@ import type { GalaxyDescription } from '../../../../../src/@types/galaxy/GalaxyD
 import type { GalaxyFieldTuning } from '../../../../../src/@types/galaxy/GalaxyFieldTuning';
 
 import { sfMapStepIndexData } from './sfMapStepIndexData';
-import { packSfMapConstants, SF_MAP_CONSTANTS_BUFFER_SIZE } from '../uniforms/packSfMapConstants';
-import { packSfMapUnshear, SF_MAP_UNSHEAR_BUFFER_SIZE } from '../uniforms/packSfMapUnshear';
+import { packSfMapConstants, SF_MAP_CONSTANTS_BUFFER_SIZE } from './packSfMapConstants';
+import { packSfMapUnshear, SF_MAP_UNSHEAR_BUFFER_SIZE } from './packSfMapUnshear';
 
 import sfMapStepWgsl from '../shaders/milkyWayField/sfMapStep.wesl?static';
 import sfMapPackWgsl from '../shaders/milkyWayField/sfMapPack.wesl?static';

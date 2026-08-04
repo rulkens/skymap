@@ -7,7 +7,7 @@
  * `timestampWrites` arrives already resolved — see `beginClearPass` for why
  * the `descriptorFor` call has to stay on the caller's branch.
  */
-import { beginClearPass } from './beginClearPass';
+import { beginClearPass } from '../passes/beginClearPass';
 
 export function encodeSplatPass({
   enc,

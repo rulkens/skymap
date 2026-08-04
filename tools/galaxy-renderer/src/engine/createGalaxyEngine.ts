@@ -53,33 +53,33 @@ import type { TargetDivisors } from './gpu/createGalaxyRenderTargets';
 import { createOrbitCameraInput } from './camera/createOrbitCameraInput';
 import { createPassTimingWindows } from './timing/createPassTimingWindows';
 import { beginClearPass } from './passes/beginClearPass';
-import { encodeBloomPyramid } from './passes/encodeBloomPyramid';
-import { encodeDustMapPass } from './passes/encodeDustMapPass';
-import { encodeDustPresentPass } from './passes/encodeDustPresentPass';
+import { encodeBloomPyramid } from './post/encodeBloomPyramid';
+import { encodeDustMapPass } from './field/encodeDustMapPass';
+import { encodeDustPresentPass } from './field/encodeDustPresentPass';
 import { encodePresentOverlay } from './passes/encodePresentOverlay';
 import { encodeSceneComposites } from './passes/encodeSceneComposites';
-import { encodeSplatPass } from './passes/encodeSplatPass';
-import { encodeStarPass } from './passes/encodeStarPass';
-import { encodeTransmittanceDust } from './passes/encodeTransmittanceDust';
+import { encodeSplatPass } from './field/encodeSplatPass';
+import { encodeStarPass } from './sprites/encodeStarPass';
+import { encodeTransmittanceDust } from './sprites/encodeTransmittanceDust';
 import { createSfMapAutomaton } from './sfMap/createSfMapAutomaton';
 import { createSfMapOrientation } from './sfMap/createSfMapOrientation';
 import { createGalaxyModel } from './model/createGalaxyModel';
-import { gradeIsActive } from './frame/gradeIsActive';
-import { toMilkyWayTuning } from './frame/toMilkyWayTuning';
+import { gradeIsActive } from './post/gradeIsActive';
+import { toMilkyWayTuning } from './sprites/toMilkyWayTuning';
 import { deriveFrameView } from './frame/deriveFrameView';
-import { BUBBLE_RECORD_FLOATS } from './uniforms/packBubbleInstances';
+import { BUBBLE_RECORD_FLOATS } from './field/packBubbleInstances';
 import { createOffscreenProbe } from './probe/createOffscreenProbe';
-import { CLOUD_UNIFORM_FLOATS, packCloudUniforms } from './uniforms/packCloudUniforms';
+import { CLOUD_UNIFORM_FLOATS, packCloudUniforms } from './sprites/packCloudUniforms';
 import {
   GRADE_UNIFORM_BUFFER_SIZE,
   GRADE_UNIFORM_FLOATS,
   packGradeUniforms,
-} from './uniforms/packGradeUniforms';
+} from './post/packGradeUniforms';
 import {
   FIELD_HEADER_BUFFER_SIZE,
   FIELD_HEADER_FLOATS,
   packFieldHeaderUniforms,
-} from './uniforms/packFieldUniforms';
+} from './field/packFieldUniforms';
 import type { FieldCamera } from '../../@types/engine/FieldCamera';
 import { GEN_RECORD_BYTES } from '../../../../src/services/engine/galaxyGenerator/v1/genRecordBytes';
 import { createBloomPyramid } from '../../../../src/services/gpu/passes/bloomPyramid';

@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 import {
   BUBBLE_RECORD_FLOATS,
   packBubbleInstances,
-} from '../../../../../tools/galaxy-renderer/src/engine/uniforms/packBubbleInstances';
+} from '../../../../../tools/galaxy-renderer/src/engine/field/packBubbleInstances';
 import type { DustBubblePlacement } from '../../../../../src/services/engine/galaxyGenerator/v2/dustBubblePlacements';
 
 describe('packBubbleInstances', () => {

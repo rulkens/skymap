@@ -5,7 +5,7 @@
  * belongs to the emission splat this pass shares a frame with, and one
  * timestamp pair cannot bracket two passes (see TIMING_SLOTS).
  */
-import { beginClearPass } from './beginClearPass';
+import { beginClearPass } from '../passes/beginClearPass';
 
 export function encodeDustPresentPass({
   enc,
