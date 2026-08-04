@@ -35,19 +35,19 @@ const WARPED_DISC_BLOBS = WARP_RING_COUNT * RING_BLOBS_PER_RING;
 
 function FieldSection(): ReactNode {
   const dispatch = useAppDispatch();
-  const tuning = useAppSelector((state) => state.fieldTuning);
+  const disc = useAppSelector((state) => state.fieldTuning.disc);
   const render = useAppSelector((state) => state.render);
   const open = useAppSelector((state) => state.ui.openSections.field);
-  const smoothFieldBlobs = tuning.disc.enabled ? OTHER_COMPONENTS + WARPED_DISC_BLOBS : 0;
+  const smoothFieldBlobs = disc.enabled ? OTHER_COMPONENTS + WARPED_DISC_BLOBS : 0;
 
   return (
     <CollapsibleSection
       title="FLUX FIELD"
       open={open}
       onToggle={() => dispatch(sectionToggled('field'))}
-      headerToggle={tuning.disc.enabled}
+      headerToggle={disc.enabled}
       onHeaderToggleChange={(value) =>
-        dispatch(fieldTuningPatched({ disc: { ...tuning.disc, enabled: value } }))
+        dispatch(fieldTuningPatched({ disc: { ...disc, enabled: value } }))
       }
     >
       <div className={styles.root}>

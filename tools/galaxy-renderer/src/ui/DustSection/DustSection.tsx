@@ -23,7 +23,7 @@ import styles from './DustSection.module.css';
 function DustSection(): ReactNode {
   const dispatch = useAppDispatch();
   const galaxy = useAppSelector((state) => state.galaxy);
-  const fieldTuning = useAppSelector((state) => state.fieldTuning);
+  const dustTuning = useAppSelector((state) => state.fieldTuning.dust);
   const open = useAppSelector((state) => state.ui.openSections.analyticDust);
   const dust = galaxy.dust ?? DEFAULT_GALAXY_DUST_PARAMS;
 
@@ -36,9 +36,9 @@ function DustSection(): ReactNode {
       title="DUST"
       open={open}
       onToggle={() => dispatch(sectionToggled('analyticDust'))}
-      headerToggle={fieldTuning.dust.enabled}
+      headerToggle={dustTuning.enabled}
       onHeaderToggleChange={(value) =>
-        dispatch(fieldTuningPatched({ dust: { ...fieldTuning.dust, enabled: value } }))
+        dispatch(fieldTuningPatched({ dust: { ...dustTuning, enabled: value } }))
       }
     >
       <div className={styles.root}>

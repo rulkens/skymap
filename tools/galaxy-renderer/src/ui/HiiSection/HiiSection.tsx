@@ -17,9 +17,8 @@ import styles from './HiiSection.module.css';
 
 function HiiSection(): ReactNode {
   const dispatch = useAppDispatch();
-  const fieldTuning = useAppSelector((state) => state.fieldTuning);
+  const hii = useAppSelector((state) => state.fieldTuning.hii);
   const open = useAppSelector((state) => state.ui.openSections.hii);
-  const hii = fieldTuning.hii;
 
   const patchHii = (patch: Partial<GalaxyHiiTuning>): void => {
     dispatch(fieldTuningPatched({ hii: { ...hii, ...patch } }));

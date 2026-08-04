@@ -18,9 +18,8 @@ import styles from './ArmCloudSection.module.css';
 
 function ArmCloudSection(): ReactNode {
   const dispatch = useAppDispatch();
-  const fieldTuning = useAppSelector((state) => state.fieldTuning);
+  const arms = useAppSelector((state) => state.fieldTuning.arms);
   const open = useAppSelector((state) => state.ui.openSections.armCloud);
-  const arms = fieldTuning.arms;
   const cloud = arms.cloud;
 
   const patchCloud = (patch: Partial<GalaxyArmCloudTuning>): void => {

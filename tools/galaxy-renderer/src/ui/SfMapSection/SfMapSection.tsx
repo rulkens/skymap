@@ -29,9 +29,9 @@ export type SfMapSectionProps = {
 
 function SfMapSection({ diagnostics }: SfMapSectionProps): ReactNode {
   const dispatch = useAppDispatch();
-  const fieldTuning = useAppSelector((state) => state.fieldTuning);
+  const sfMap = useAppSelector((state) => state.fieldTuning.sfMap);
+  const dust = useAppSelector((state) => state.fieldTuning.dust);
   const open = useAppSelector((state) => state.ui.openSections.sfMap);
-  const sfMap = fieldTuning.sfMap;
 
   const patchSfMap = (patch: Partial<GalaxySfMapParams>): void => {
     dispatch(fieldTuningPatched({ sfMap: { ...sfMap, ...patch } }));
@@ -165,11 +165,11 @@ function SfMapSection({ diagnostics }: SfMapSectionProps): ReactNode {
           <input
             type="checkbox"
             className={styles.checkbox}
-            checked={fieldTuning.dust.sfMapSeeding}
+            checked={dust.sfMapSeeding}
             onChange={(e) =>
               dispatch(
                 fieldTuningPatched({
-                  dust: { ...fieldTuning.dust, sfMapSeeding: e.target.checked },
+                  dust: { ...dust, sfMapSeeding: e.target.checked },
                 }),
               )
             }
