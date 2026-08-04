@@ -115,16 +115,16 @@ T=0 spans 0.27–0.49; at T=5, 0.05–0.19). The dominant cause is whether a bar
 
 Near-IR, bars fitted — the low end of the published range. Disc = remainder.
 
-| Type | B/T | source | Bar/T | Halo/T |
-| --- | --- | --- | --- | --- |
-| S0 | 0.33 | Laurikainen+2010 T=−2, Ks | 0.10 | 0.02 |
-| Sa | 0.25 | Laurikainen T=1 | 0.15 | 0.02 |
-| Sb | 0.14 | Laurikainen T=3, H | 0.15 | 0.02 |
-| Sbc | 0.11 | Laurikainen T=4 (best-constrained) | 0.15 | 0.02 |
-| Sc | 0.11 (median 0.06) | Laurikainen T=5 | 0.12 | 0.02 |
-| Sd | 0.05–0.09 | Laurikainen T=6/7, weak | 0.09 | 0.03 |
-| Irr | 0.00 | **ASSUMPTION — no source** | 0.05 **assumption** | 0.03 |
-| MW | **0.19 as bar/pseudobulge, classical bulge 0** | Kormendy+2010 Table 2, near-IR | folded in | 0.01 |
+| Type | B/T | source | N | Bar/T | Halo/T |
+| --- | --- | --- | --- | --- | --- |
+| S0 | 0.33 ± 0.14 (med 0.33) | Laurikainen+2010 T=−2, Ks | 35 | 0.10 **unsourced** | 0.02 |
+| Sa | 0.25 ± 0.12 (med 0.26) | Laurikainen T=1, Ks | 26 | 0.15 **unsourced** | 0.02 |
+| Sb | 0.14 ± 0.09 (med 0.12) | Laurikainen T=3, H | 20 | 0.15 **unsourced** | 0.02 |
+| Sbc | 0.11 ± 0.08 (med 0.09) | Laurikainen T=4, H (best-constrained) | 38 | 0.15 **unsourced** | 0.02 |
+| Sc | 0.11 ± 0.13 (med 0.06) | Laurikainen T=5, H | 30 | 0.12 **unsourced** | 0.02 |
+| Sd | 0.05 / 0.09 | Laurikainen T=6 / T=7, H — weak | 13 / 6 | 0.09 **unsourced** | 0.03 |
+| Irr | 0.00 | **ASSUMPTION — no source** | — | 0.05 **assumption** | 0.03 |
+| MW | **0.19 as bar/pseudobulge, classical bulge 0** | Kormendy+2010 Table 2, near-IR | — | folded in | 0.01 |
 
 Sources: Graham & Worley 2008 (MNRAS 388, 1708; K-band, dust+inclination corrected),
 Laurikainen et al. 2010 (MNRAS 405, 1089; multi-component with bars), Weinzirl et al. 2009,
@@ -135,8 +135,24 @@ Gadotti 2009, Kormendy, Drory, Bender & Cornell 2010 (ApJ 723, 54), Peters et al
 later); B/T and Bar/T come from different samples and bands and are renormalised to 1 by us;
 Bar/T is for a *barred* galaxy; and per-galaxy scatter exceeds the trend.
 
-**Unverified:** Laurikainen Table 2 did not render in the fetched page — the per-T column is a
-second-hand read. **Open it by hand before pinning it into code.**
+**B/T column VERIFIED 2026-08-04** against the primary source — arXiv:1002.4370, Table 2 (p. 31),
+read from the PDF, not second-hand. Every value matches. Three things the verification added:
+
+- **The table is TWO samples in TWO bands, and the seam is T=1|2** — NIRS0S (Ks) supplies T=−3…1,
+  OSUBSGS (H) supplies T=2…9. So the Ks/H change falls exactly between Sa and Sab, inside the range
+  we interpolate across. Values are corrected for Galactic *and* internal extinction.
+- **`N` is now in the table** and kills the Sd row: T=6 rests on 13 galaxies, T=7 on 6, and the
+  paper's own T=8/T=9 bins have N=2 and N=3. Treat Sd as "small, poorly measured", not as 0.05.
+- **The bar-fitting effect is confirmed from this paper directly** (§1): mean B/T went 0.55 → 0.30
+  when bars were fitted, → 0.25 including nuclear bars. Also worth knowing, because it cuts against
+  the obvious inference: within this sample **barred and non-barred S0s have the same B/T**
+  (0.29±0.02 vs 0.33±0.03). Fitting a bar changes the *measurement*, not the *galaxy*.
+
+**STILL UNSOURCED — the Bar/T column.** Laurikainen+2010 reports **no bar-to-total flux ratio at
+all**; the string "Bar/T" does not occur in the paper. Those six numbers are attributed to a source
+that does not contain them. **Do not pin them into code.** Either find a real source (Salo+2015 S⁴G
+and Gadotti 2009 both fit bars explicitly and are the likely candidates), or fold the bar into the
+bulge as Kormendy does for the MW row and drop the column. Until then step 5 cannot use it.
 
 **No halo light fraction by Hubble type exists.** The one paper listing η alongside morphology
 (Peters 2017) finds no correlation. Use a flat 2%, sourced and flagged. Do **not** convert the
