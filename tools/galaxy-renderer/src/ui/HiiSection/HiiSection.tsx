@@ -41,7 +41,7 @@ function HiiSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchHii({ brightness: v })}
-          info="Whole-tier flux multiplier. Unlike the arm cloud's share knob this ADDS light on top of the disc mixture — F98 masked young features out of its fit, so HII emission was never inside it. 1 is the calibrated default."
+          info="Whole-tier flux multiplier. Unlike the arm cloud's share knob this ADDS light on top of the disc mixture, which never contained HII emission to begin with. 1 is the calibrated default."
         />
         <ParamSlider
           label="Radius scale"
@@ -51,7 +51,7 @@ function HiiSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchHii({ radiusScale: v })}
-          info="Multiplies the Strömgren radius law. 1 is that law exactly."
+          info="Multiplies the Strömgren radius each region is drawn at: bigger, softer shells above 1, smaller and more concentrated below. 1 is the law exactly."
         />
         <ParamSlider
           label="Shell thickness"

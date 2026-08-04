@@ -11,7 +11,11 @@ export type GalaxyHiiTuning = {
    * inside the disc mixture and owes it no debit. 1 is the calibrated default.
    */
   readonly brightness: number;
-  /** Multiplies the Strömgren radius from `hiiRadiusUnits`; 1 is that law exactly. */
+  /**
+   * Multiplies each region's Strömgren radius — R_s ~ L^(1/3) off the same
+   * Kennicutt luminosity draw that sets its brightness, anchored at 10 pc for
+   * the faintest (`hiiRadiusUnits`). 1 is that law exactly.
+   */
   readonly radiusScale: number;
   /** Radial scatter of a region's shell sprites, as a fraction of its radius. Small values give a thin, sharply limb-brightened front. */
   readonly shellThickness: number;

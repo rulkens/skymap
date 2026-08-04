@@ -265,20 +265,12 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
   disc: { enabled: true },
   arms: {
     enabled: true,
-    // 1 = Reid et al. 2019's measured Milky Way maser-arm width law exactly
-    // (see `armCrossSigma`); old stellar arms are plausibly broader, so >1 is
-    // physical, not a fudge.
     widthScale: 1,
-    // K, the arm/interarm surface-brightness ratio in old stellar light. 1.3
-    // is the Milky Way's measured value (Drimmel & Spergel 2001 via Antoja et
-    // al. 2011; corroborated by GLIMPSE's 20-30% count excess) — see
-    // `pushArmRidges`.
     contrast: 1.3,
-    // Arms outrun the disc: their light is gas-and-young-star light, and those
-    // discs are the more extended ones. 1 (contrast flat with radius) left the
-    // ridge chain with 3% of its flux beyond r=8 on the Milky Way preset —
-    // arms that stop before the disc does. Not a measured ratio; see
-    // `armExcessSurfaceShape`.
+    // Calibration of the value, not of the law (`GalaxyArmTuning.excessScaleRatio`):
+    // at 1, contrast flat with radius, the Milky Way preset's ridge chain puts
+    // only 5% of its flux beyond r=8 of a 10.5-unit disc — arms that stop
+    // before the disc does. 1.8 lifts that to 15%.
     excessScaleRatio: 1.8,
     blobSharpness: 1,
     cloud: {
@@ -289,16 +281,12 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
       // boot-image change, not a neutral default.
       share: 0.35,
       coverage: 1,
-      // Coverage-demand placement alone puts ~80% of the sprites inside the
-      // arm's inner half: sprites there are small (the width law's floor), so
-      // it takes many to cover a strip, and that is also where the bulge glare
-      // buries them. The tilt spends them further out instead, at no cost to
-      // the arm's light profile (see `GalaxyArmCloudTuning.radialBias`).
+      // Pulls the sprites out of the bulge glare while the placement sampler
+      // still accepts 99% of its complexes, so the tilt's flux cancellation
+      // holds here (`GalaxyArmCloudTuning.radialBias`).
       radialBias: 1.5,
-      // 0 = independent scattering, which is the only setting at which
-      // `coverage` means literally what it says: `clusteredDiscPlacement`
-      // huddles `1 + 15*clumpiness` sprites per complex, so any non-zero value
-      // makes the derived count cover less arm than it solved for.
+      // Independent scattering: the one setting at which `coverage` means
+      // literally what it says (`GalaxyArmCloudTuning.coverage`).
       clumpiness: 0,
       sizeScale: 1,
       elongation: 3,
@@ -519,10 +507,9 @@ function deriveArmBlobCount(
 }
 
 /**
- * Per arm i, the contrast law scales K by that arm's own `age` (0 = young
- * gas arm, 1 = old stellar arm): the floor (0.25) keeps young arms faintly
- * present in old-star light rather than absent, and the full contrast only
- * applies at age 1.
+ * The `age` scaling of `GalaxyArmTuning.contrast`, 0 = young gas arm, 1 = old
+ * stellar arm: the floor keeps a young arm faintly present in old-star light
+ * rather than absent, and the span puts the full contrast at age 1.
  */
 const ARM_AGE_CONTRAST_FLOOR = 0.25;
 const ARM_AGE_CONTRAST_SPAN = 0.75;
@@ -551,12 +538,11 @@ export function clampedArmCloudShare(tuning: GalaxyFieldTuning): number {
  * ALONG the arm rather than across it — fold it into `across`'s sigma in a
  * later pass, not this one.
  *
- * Flux bookkeeping: the disc mixture was fit to the AZIMUTHALLY AVERAGED
- * profile, which already contains the arm light, so an arm's flux here is
- * not a separate budget but an EXCESS over that average — K_i (this arm's
- * contrast, scaled by its own age) times the disc's own local surface
- * brightness. `buildGalaxyFieldMixture` debits the returned total back out
- * of the disc components so the two don't double-count the same light.
+ * Flux bookkeeping: an arm's flux here is not a budget of its own but an
+ * EXCESS over the azimuthally averaged disc — K_i (this arm's contrast, scaled
+ * by its own age) times the disc's own local surface brightness, which
+ * `buildGalaxyFieldMixture` then debits back out of the disc components. Why
+ * the excess is defined that way: `GalaxyArmTuning.contrast`.
  *
  * The returned total is the FULL excess regardless of `cloudShare`: this
  * function renders only `1 - cloudShare` of it, and `buildGalaxyFieldMixture`
@@ -656,12 +642,9 @@ function pushArmRidges(
       };
       // Sigma_disc: the interarm floor this arm's excess is measured against,
       // read at the PIVOT radius and carried outward by the arm's own radial
-      // shape rather than the disc's. At excessScaleRatio 1 the shape IS
-      // the disc's exponential, so this is identical to sampling Sigma_disc
-      // at `radius` directly — the form only differs once the arms are
-      // allowed their own scale length. lambda_i(R): the Gaussian tube's
-      // cross-section integral of that excess (sqrt(2*pi)*sigmaAcross is a 1D
-      // Gaussian's own integral).
+      // shape rather than the disc's (`GalaxyArmTuning.excessScaleRatio`).
+      // lambda_i(R) is then the Gaussian tube's cross-section integral of that
+      // excess — sqrt(2*pi)*sigmaAcross is a 1D Gaussian's own integral.
       const sigmaDisc =
         discSurfaceBrightness(geometry.armFullRadius, discFlux, hLight) *
         armExcessSurfaceShape(radius, geometry, hLight, tuning.arms.excessScaleRatio);
@@ -828,12 +811,9 @@ export function buildGalaxyFieldMixture(
   const discFlux =
     pushDisc(geometry, discOut, discTuning) + pushWarpedOuterDisc(geometry, discOut, discTuning);
 
-  // The disc mixture was fit to the azimuthally averaged profile, which
-  // already contains the arm light, so the arm excess has to be debited back
-  // out of the disc components just pushed — otherwise the two double-count
-  // the same light (see `pushArmRidges`'s docblock). Measured against the
-  // disc the galaxy WOULD have, arms keep their calibrated flux even with
-  // the disc itself hidden.
+  // The arm excess is debited back out of the disc components just pushed
+  // (`GalaxyArmTuning.contrast`). Measured against the disc the galaxy WOULD
+  // have, arms keep their calibrated flux even with the disc itself hidden.
   // Reservation only when the disc will actually land in `out` — with the
   // disc hidden its components never spend the cap, so arms may use it all.
   // The particle cloud's own budget is reserved the SAME way: computed

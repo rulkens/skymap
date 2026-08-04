@@ -53,7 +53,7 @@ function ArmCloudSection(): ReactNode {
           step={0.1}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchCloud({ coverage: v })}
-          info="Sprite count is DERIVED from arm length, width and pitch, not a fixed budget — this scales that derived count. 1 is one sprite-footprint per unit arm area if the sprites were scattered independently; clumpiness piles them into complexes instead, so the setting that actually FILLS an arm is several times higher."
+          info="Sprite count is DERIVED from arm length, width and pitch, not a fixed budget — this scales that derived count. 1 is one sprite-footprint per unit arm area. Clumpiness piles the sprites into complexes, so with it above 0 the setting that actually FILLS an arm is several times higher."
         />
         <ParamSlider
           label="Radial bias"
@@ -63,7 +63,7 @@ function ArmCloudSection(): ReactNode {
           step={0.1}
           format={(v) => v.toFixed(1)}
           onChange={(v) => patchCloud({ radialBias: v })}
-          info="Pushes sprites outward along the arm — 0 spends them by coverage demand, which crowds the inner arm where they are small and lost under the bulge. Brightness-neutral: the tier's radial light profile does not move, so the extra outer sprites split the same light and stay dim."
+          info="Pushes sprites outward along the arm — 0 spends them by coverage demand, which crowds the inner arm where they are small and lost under the bulge. Brightness-neutral: the extra outer sprites split the same light and stay dim. At the top of the slider that neutrality frays and the tier's light creeps back inward."
         />
         <ParamSlider
           label="Clumpiness"

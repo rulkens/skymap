@@ -27,7 +27,13 @@ import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescript
 import type { GalaxySfMapOrientation } from '../../../../@types/galaxy/GalaxySfMapOrientation';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 
-/** Bounded rejection sampling against `armFadeEnvelope` when seeding a complex on an arm lane. */
+/**
+ * Bounded rejection sampling against `armFadeEnvelope` when seeding a complex
+ * on an arm lane. Exhausting it keeps the LAST draw — an unweighted sample,
+ * not `placeMapDensityComplex`'s best-so-far — so an acceptance that runs low
+ * over much of the arm leaks a uniform tail into the placement density
+ * (`GalaxyArmCloudTuning.radialBias` measures what that costs at high tilt).
+ */
 const ARM_FADE_REJECTION_TRIES = 24;
 
 /** Same idea as `ARM_FADE_REJECTION_TRIES`, own constant: bounded rejection sampling against `'mapDensity'` mode's `densityAt`. */

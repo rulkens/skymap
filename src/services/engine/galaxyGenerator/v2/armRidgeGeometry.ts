@@ -162,42 +162,21 @@ export function armFadeEnvelope(
 }
 
 /**
- * Reid et al. 2019's measured Milky Way maser-arm width law, w(R) = 336 pc +
- * 36 pc/kpc x (R - 8.15 kpc), re-expressed in units of the disc scale length
- * (h = 2.605 kpc for the MW) so it scales to any galaxy: w/h = FLOOR_H +
- * SLOPE*(R/h), i.e. w = FLOOR_H*h + SLOPE*R. This is the width of the YOUNG
- * maser arm — a verified floor for old-star arms, with `tuning.arms.widthScale`
- * carrying any old-population broadening (1 = the measured law exactly).
+ * Reid et al. 2019's maser-arm width law re-expressed in units of the disc
+ * scale length (h = 2.605 kpc for the MW) so it scales to any galaxy: w/h =
+ * FLOOR_H + SLOPE*(R/h), i.e. w = FLOOR_H*h + SLOPE*R. The law and what
+ * `tuning.arms.widthScale` means against it: `GalaxyArmTuning.widthScale`.
  */
 const ARM_WIDTH_FLOOR_H = 0.017;
 const ARM_WIDTH_SLOPE = 0.036;
 
 /**
  * The arm excess's own radial surface-brightness shape, exp(-(R - R_full) /
- * (hLight * scaleRatio)), normalised to 1 at `armFullRadius`. That pivot is
- * inside every arm's taper start, so turning the knob brightens the outer arm
- * instead of rescaling the whole arm system against the disc it is measured
- * out of — moving it outward would divide the excess by the disc's own
- * exp(-R/h) at the new pivot and dim every arm.
- *
- * `scaleRatio` is the arm excess's exponential scale length in units of the
- * DISC's, and is the one place the two arm tiers' radial profiles are
- * decided. At 1 the excess tracks the disc exactly, which is the same thing
- * as holding the arm/interarm contrast K constant with radius. Above 1 the
- * excess falls off more slowly than the disc, i.e. K GROWS outward.
- *
- * Growth is the observed direction: arm/interarm contrast rising with radius
- * is a common result in resolved spiral photometry, and the mechanism is not
- * subtle — the arms are traced by gas and young stars, whose discs are
- * measurably more extended than the old stellar disc (UV and HI discs
- * routinely outrun the optical one). The specific ratio here is NOT measured
- * and is a look knob; only its direction is defended.
- *
- * Shared by both arm tiers (`pushArmRidges` and `armParticleCloud.ts`) so
- * that `cloud.share` redistributes GRAIN at a fixed radial profile. It used
- * to redistribute the profile too — the ridge carried this exponential and
- * the cloud carried none, so the same excess was shaped two different ways
- * and the share slider slid the arms' light outward as a side effect.
+ * (hLight * scaleRatio)), normalised to 1 at `armFullRadius`. Read by BOTH arm
+ * tiers (`pushArmRidges` and `armParticleCloud.ts`), which is what leaves
+ * `cloud.share` a grain knob (`GalaxyArmCloudTuning.share` for the residual it
+ * still moves). What `scaleRatio` means physically, and why the pivot is where
+ * it is: `GalaxyArmTuning.excessScaleRatio`.
  */
 export function armExcessSurfaceShape(
   radius: number,

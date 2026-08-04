@@ -40,7 +40,7 @@ function ArmFieldSection(): ReactNode {
           step={0.05}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchArms({ widthScale: v })}
-          info="1.0 is Reid et al. 2019's maser-arm width law (336 pc at the solar circle, widening 36 pc/kpc). Old stellar arms are plausibly broader, so >1 is physical, not a fudge."
+          info="1.0 is the Milky Way's measured maser-arm width. Higher = wider arms, more overlap; old stellar arms are plausibly broader, so above 1 is physical."
         />
         <ParamSlider
           label="Arm contrast K"
@@ -50,7 +50,7 @@ function ArmFieldSection(): ReactNode {
           step={0.01}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchArms({ contrast: v })}
-          info="Arm/interarm surface-brightness ratio in old stellar light. The Milky Way measures ~1.3 (Drimmel & Spergel 2001, GLIMPSE); strong grand designs reach ~2 (Rix & Zaritsky 1995). Per-arm age scales it: old arms carry the full contrast, young arms fade toward 1."
+          info="Arm/interarm surface-brightness ratio in old stellar light: the Milky Way measures ~1.3, strong grand designs ~2. Each arm's age scales it — old arms carry the full contrast, young ones fade toward 1. The light comes out of the disc, so raising it never brightens the galaxy."
         />
         <ParamSlider
           label="Light scale × disc"
@@ -60,7 +60,7 @@ function ArmFieldSection(): ReactNode {
           step={0.05}
           format={(v) => `${v.toFixed(2)}x`}
           onChange={(v) => patchArms({ excessScaleRatio: v })}
-          info="How fast the arms' light falls off, as a multiple of the disc's own exponential scale length. This is BRIGHTNESS only — it cannot move where an arm ends; the 'Arm edge falloff' generation knob does that. 1 holds contrast K flat with radius; above 1 the arms outrun the disc and K grows outward, which is the observed direction — arm light is gas and young stars, whose discs are the more extended ones. Governs the ridge chain and the sprite cloud together."
+          info="How fast the arms' light falls off, as a multiple of the disc's own scale length. BRIGHTNESS only — it cannot move where an arm ends; the 'Arm edge falloff' generation knob does that. 1 holds contrast K flat with radius; above 1 the arms outrun the disc and the outer arm brightens. Governs the ridge chain and the sprite cloud together."
         />
         <ParamSlider
           label="Blob sharpness"

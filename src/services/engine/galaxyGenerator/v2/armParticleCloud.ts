@@ -8,10 +8,9 @@
  *
  * Sprite SIZE tracks the LOCAL arm cross-section (`armCrossSigma`), not an
  * absolute parsec span: GMC sizes are near-universal ISM physics, but arm
- * WIDTH is a galaxy-scale property that flares with radius (Reid et al.
- * 2019's measured law), so sizing off the arm's own width reproduces that
- * flare at every radius instead of fattening the inner arm relative to it
- * and starving the outer one.
+ * WIDTH flares with radius (`GalaxyArmTuning.widthScale`), so sizing off the
+ * arm's own width reproduces that flare at every radius instead of fattening
+ * the inner arm relative to it and starving the outer one.
  *
  * Flux ledger: `totalFlux` is this tier's share of `pushArmRidges`'
  * `armExcessFlux`, already split out by the caller
@@ -51,10 +50,8 @@ import type { Vec3 } from '../../../../@types/math/Vec3';
  * Sized so the COVERAGE knob leads and this stays a backstop across the
  * slider's range — at 400 the Milky Way preset saturated at coverage ~2.7,
  * which read as the slider going dead rather than as a budget being hit.
- * Clustered placement is why coverage has to reach so high: the sampler
- * huddles `1 + 15*clumpiness` sprites into one complex, so the sprites
- * `deriveArmCloudCount` counts overlap heavily instead of tiling the arm,
- * and the covering factor it solves for is only literal at clumpiness 0.
+ * Coverage has to reach that high at all because of clustered placement; see
+ * `GalaxyArmCloudTuning.coverage`.
  */
 export const ARM_CLOUD_MAX_COUNT = 2000;
 
@@ -90,32 +87,21 @@ function distance3(a: Vec3, b: Vec3): number {
 }
 
 /**
- * Derives the arm cloud's sprite count from arm GEOMETRY instead of a fixed
- * knob, so a preset's pitch/width/length/arm-count moves the count without a
- * re-tune. The governing criterion is COVERAGE, not `deriveArmBlobCount`'s
- * chord sag: sag bounds a polyline of blobs approximating a curve, but this
- * tier is a scattered sprite cloud, so what matters is how many sprites it
- * takes to fill the arm's own area at a target overlap — the same
- * covering-factor argument `dustParticleCloud.ts` documents for the dust tier
- * (f = N * <sprite footprint> / area).
+ * The covering-factor integral behind `GalaxyArmCloudTuning.coverage` — the
+ * same f = N * <sprite footprint> / area argument `dustParticleCloud.ts`
+ * documents for the dust tier, not `deriveArmBlobCount`'s chord sag (which
+ * bounds a polyline approximating a curve, where this is a scattered cloud).
  *
- * Per arc-length element ds at radius r, the strip area is `2 *
- * armCrossSigma(r) * ds` (fade-weighted, so a faded outer arm doesn't demand
- * sprites nothing will see), and a sprite drawn there has mean footprint `PI
- * * elongation * armCrossSigma(r)^2 * sizeScale^2 * MEAN_SIZE_FRAC_SQ` (the
- * sprite radius is `armCrossSigma(r) * U(SIZE_MIN_RATIO, SIZE_MAX_RATIO) *
- * sizeScale`, so its square's mean is `armCrossSigma(r)^2 * sizeScale^2 *
- * E[U^2]`). Dividing area by footprint cancels one power of armCrossSigma(r),
- * leaving `2 * coverage * fade(r) / (PI * elongation * sizeScale^2 *
- * MEAN_SIZE_FRAC_SQ * armCrossSigma(r)) ds`, evaluated by trapezoid over a
- * dense log-radius ridge sample and summed across arms.
+ * Per arc-length element ds at radius r the strip area is `2 * armCrossSigma(r)
+ * * ds`, fade-weighted so a faded outer arm doesn't demand sprites nothing will
+ * see; a sprite drawn there has mean footprint `PI * elongation *
+ * armCrossSigma(r)^2 * sizeScale^2 * MEAN_SIZE_FRAC_SQ`. Dividing cancels one
+ * power of armCrossSigma(r), leaving `2 * coverage * fade(r) / (PI * elongation
+ * * sizeScale^2 * MEAN_SIZE_FRAC_SQ * armCrossSigma(r)) ds`, evaluated by
+ * trapezoid over a log-radius ridge sample and summed across arms.
  *
- * `cloud.radialBias` is deliberately NOT in this integral: it redistributes
- * the sprites rather than resizing the arm, so the whole-arm demand this
- * solves for is the same. The practical consequence is that raising the bias
- * over-covers the outer arm and under-covers the inner one at a fixed
- * `coverage` — which is the point, and is why a tilted cloud needs a LOWER
- * coverage setting to read as filled where it counts.
+ * `cloud.radialBias` is deliberately absent: it moves sprites without resizing
+ * the arm, so the whole-arm demand is unchanged.
  */
 export function deriveArmCloudCount(
   geometry: GalaxyDescription,
@@ -269,21 +255,11 @@ export function buildArmParticleCloud(
   // Per-particle flux weight. The R^2 term holds SURFACE brightness constant
   // across the size draw (flux/R^2 fixed, so amplitude ~ 1/R) — a big sprite
   // is a wider cloud, not a brighter one, which is what stops the size draw
-  // from reading as a brightness lottery.
-  //
-  // Dividing by `radialTilt` cancels exactly the factor `laneAcceptance`
-  // multiplied into the placement density, so the tier's radial LIGHT
-  // profile is whatever it was at bias 0 however far the tilt pushes the
-  // sprites. Without it the tilt would drag the arm's light outward with its
-  // grain: the outer arm would gain both more sprites AND each of them
-  // brighter, which is the failure the knob exists to avoid.
-  //
-  // `armExcessSurfaceShape` is what sets that profile, and is the SAME
-  // function the ridge chain's `lambda` uses. Without it this tier had no
-  // radial law at all: the placement density's fade/width terms cancelled to
-  // near-flat surface brightness along the arm, so the cloud kept shining
-  // where the ridge had already faded and `cloud.share` moved the arms'
-  // light outward instead of just re-graining it.
+  // from reading as a brightness lottery. Dividing by `radialTilt` cancels the
+  // factor `laneAcceptance` multiplied into the placement density
+  // (`GalaxyArmCloudTuning.radialBias`), and `armExcessSurfaceShape` — the SAME
+  // function the ridge chain's `lambda` uses — is what leaves a radial law
+  // behind once that cancels.
   const shape = (p: CloudParticle): number =>
     armExcessSurfaceShape(
       Math.hypot(p.center[0], p.center[2]),
