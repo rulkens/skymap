@@ -106,7 +106,7 @@ export type ClusteredDiscPlacementConfig = {
   readonly count: number;
   /** 0..1 hierarchical clustering: 0 = every particle its own complex, 1 = ~16 children per complex. */
   readonly clumpiness: number;
-  /** One-sigma child scatter around its complex centre, before `elongation`. */
+  /** One-sigma child scatter around its complex centre, before `elongation`. Unused at `clumpiness` low enough to give one child per complex — see `childSpread`. */
   readonly complexSpread: number;
   /** sigma_along / sigma_across for the child scatter. */
   readonly elongation: number;
@@ -239,6 +239,15 @@ export function buildClusteredDiscPlacement<TPayload>(
 ): PlacedParticle<TPayload>[] {
   const { geometry, rng, count, clumpiness, complexSpread, elongation, sigmaZComplex } = config;
   const childrenPerComplex = Math.max(1, Math.round(1 + 15 * clumpiness));
+  // A one-member complex has no siblings to scatter AROUND anything: the child
+  // IS the complex, so it belongs at the seed point `placeComplex` drew from
+  // the placement density. Scattering it anyway convolves that density with a
+  // ~complexSpread kernel — at clumpiness 0, where every complex is a lone
+  // child, that blurs the SF map the `'mapDensity'` mode exists to follow.
+  // Keyed on the CONFIGURED children per complex, not the per-complex
+  // `childCount` below, which the count budget can truncate to 1 on the tail
+  // complex of a genuinely clustered build.
+  const childSpread = childrenPerComplex > 1 ? complexSpread : 0;
   const canUseArms = geometry.numArms > 0;
   const armWeights = geometry.arms.map((arm) => armAgeWeight(arm));
   const armWeightSum = armWeights.reduce((s, w) => s + w, 0);
@@ -408,9 +417,12 @@ export function buildClusteredDiscPlacement<TPayload>(
     const placement = placeComplex(config.placement);
 
     for (let c = 0; c < childCount; c++) {
-      const along = gaussian(rng) * complexSpread * elongation;
-      const across = gaussian(rng) * complexSpread;
-      const pole = gaussian(rng) * complexSpread * CHILD_POLE_RATIO;
+      // Drawn even when `childSpread` is 0: the rng ORDER is load-bearing (see
+      // header), so a lone child must consume the same stream a clustered one
+      // would, leaving every later complex's seed point where it was.
+      const along = gaussian(rng) * childSpread * elongation;
+      const across = gaussian(rng) * childSpread;
+      const pole = gaussian(rng) * childSpread * CHILD_POLE_RATIO;
       const center: Vec3 = [
         placement.center[0] +
           placement.frame.along[0] * along +

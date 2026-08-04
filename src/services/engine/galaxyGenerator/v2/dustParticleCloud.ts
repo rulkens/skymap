@@ -98,7 +98,15 @@ export function dustNoiseTileUnits(textureScale: number): number {
   return pcToUnits(DUST_NOISE_TILE_PC) * textureScale;
 }
 
-/** GMC associations run 300-800 pc (the same scale as the measured spur spacing); this is the child scatter's one-sigma, before elongation. */
+/**
+ * GMC associations run 300-800 pc (the same scale as the measured spur
+ * spacing); this is the child scatter's one-sigma, before elongation.
+ *
+ * NOT scaled by `sizeScale`, unlike the size draw below: that knob's contract
+ * is the cloud SIZE range, and a scatter that tracked it would translate every
+ * particle away from its complex's seed point in proportion to the knob — the
+ * whole tier scaling about its seeds instead of each cloud growing in place.
+ */
 const COMPLEX_SPREAD_PC = 250;
 
 /** Clouds are flattened relative to their in-plane extent. */
@@ -158,7 +166,7 @@ export function buildDustParticleCloud(
   const sizeMaxPow = sizeMax ** sizeExp;
   const sampleRadius = (u: number): number =>
     (u * (sizeMaxPow - sizeMinPow) + sizeMinPow) ** (1 / sizeExp);
-  const complexSpread = pcToUnits(COMPLEX_SPREAD_PC) * cloud.sizeScale;
+  const complexSpread = pcToUnits(COMPLEX_SPREAD_PC);
 
   const shape = dustDiscShape(geometry, dust);
   const extinctionRgb = dustExtinctionRgb(dust.rV);
