@@ -1,18 +1,12 @@
 /**
  * parseGalaxyPreset — the read side of the preset wire format (see
- * `serializeGalaxyPreset`'s header for field meanings). Total, like the
- * spike's `onUploadFile` (`Galaxy Renderer.dc.html`, `if (o && o.p)`):
- * bad JSON or a non-object `p` yields `null`. `r`/`f`/`x` are each tolerated
- * if missing or non-object (empty bag) — which is also the whole v1 fallback:
- * a v1 file simply has no `f`/`x` keys, so no version branch is needed. Every
- * section gets ONLY this "is it an object" check, never interior validation
- * — a malformed nested value (bad `f.sfMap`, corrupt `r.exposure`) still
- * reaches the store via the caller's patch dispatch. Deliberate: this file
- * has never had a validation framework.
- *
- * `r` is split back into `render`/`lod` by key: `lodApparent` is the only
- * `LodSettings` field, everything else goes to `render` (an unrecognized key
- * lands there too, as an unread extra the slice's merge just carries along).
+ * `serializeGalaxyPreset`'s header). Total, like the spike's `onUploadFile`:
+ * bad JSON or a non-object `p` yields `null`; `r`/`f`/`x` tolerate missing or
+ * non-object (empty bag) — deliberate, this file has never had a validation
+ * framework, so a malformed nested value still reaches the store as-is. `f`
+ * is additionally routed through `migrateGalaxyFieldTuningWire` to lift a v2
+ * file's flat keys into v3's nested-by-section shape. `r` splits back into
+ * `render`/`lod` by key: `lodApparent` is the only `LodSettings` field.
  */
 
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
@@ -20,6 +14,7 @@ import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFiel
 import type { RenderSettings } from '../../@types/engine/RenderSettings';
 import type { LodSettings } from '../../@types/engine/LodSettings';
 import type { ExtrasState } from '../../@types/state/ExtrasState';
+import { migrateGalaxyFieldTuningWire } from './migrateGalaxyFieldTuningWire';
 
 const LOD_KEYS: readonly string[] = ['lodApparent'];
 
@@ -55,7 +50,7 @@ export function parseGalaxyPreset(json: string): {
     p: parsed.p as Partial<GalaxyParams>,
     r: render as Partial<RenderSettings>,
     lod: lod as Partial<LodSettings>,
-    f: (isPlainObject(parsed.f) ? parsed.f : {}) as Partial<GalaxyFieldTuning>,
+    f: isPlainObject(parsed.f) ? migrateGalaxyFieldTuningWire(parsed.f) : {},
     x: (isPlainObject(parsed.x) ? parsed.x : {}) as Partial<Pick<ExtrasState, 'enabled' | 'count'>>,
   };
 }

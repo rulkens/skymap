@@ -126,7 +126,7 @@ export function buildHiiCavityPlacements(
   tuning: GalaxyFieldTuning,
   seed: number,
 ): readonly DustBubblePlacement[] {
-  if (!tuning.hiiEnabled || tuning.hiiCavityScale <= 0) return [];
+  if (!tuning.hii.enabled || tuning.hii.cavityScale <= 0) return [];
   if (dust.tau <= 0 || geometry.numArms <= 0) return [];
 
   const events = buildSfEventCatalog(geometry, starFormation, tuning, seed);
@@ -139,7 +139,7 @@ export function buildHiiCavityPlacements(
     const { center, armRadius } = armEventCenter(event, geometry, arm);
 
     const radius =
-      hiiRadiusUnits(hiiLuminosityOf(event), tuning.hiiRadiusScale) * tuning.hiiCavityScale;
+      hiiRadiusUnits(hiiLuminosityOf(event), tuning.hii.radiusScale) * tuning.hii.cavityScale;
     if (radius <= 0) continue;
 
     if (!armReaches(armRadius, geometry, arm)) continue;

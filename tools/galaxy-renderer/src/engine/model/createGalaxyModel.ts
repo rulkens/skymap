@@ -267,7 +267,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
    */
   function scheduleSfMapReadback(grid: GalaxySfMapGridRadius): void {
     readbacks.requestSfMap(grid, () => {
-      if (fieldTuning.sfMapDustSeeding) {
+      if (fieldTuning.dust.sfMapSeeding) {
         rebuildDustMixture();
         repackFieldComponents();
       }
@@ -276,7 +276,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
 
   /**
    * The same, for the CPU copy of `orientationTex`. Gated on
-   * `sfMapDustSeeding`: the dust placement is the only consumer of the CPU copy
+   * `dust.sfMapSeeding`: the dust placement is the only consumer of the CPU copy
    * — the debug overlay samples the texture on the GPU directly.
    */
   function scheduleOrientationReadback(grid: GalaxySfMapGridRadius): void {
@@ -284,7 +284,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       // Folded in once here, at the one point a fresh grid exists — not per
       // frame or per dust build.
       orientationDiagnostics.noteCoherence(data);
-      if (fieldTuning.sfMapDustSeeding) {
+      if (fieldTuning.dust.sfMapSeeding) {
         rebuildDustMixture(); // also reports — see its own doc
         repackFieldComponents();
       } else {
@@ -312,7 +312,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
    * so seeding alone decides whether a readback is worth scheduling.
    */
   const orientationDataRebuild = createKeyedRebuild({
-    wanted: () => fieldTuning.sfMapDustSeeding,
+    wanted: () => fieldTuning.dust.sfMapSeeding,
     build: () => scheduleOrientationReadback(sfMapGridRadiusOrDefault(fieldGeometry)),
   });
 
@@ -325,7 +325,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
    * is safe. Invalidated by `rebuildSfMap` and by a sigma move.
    */
   const orientationTexRebuild = createKeyedRebuild({
-    wanted: () => viewIntensity('orientation') > 0 || fieldTuning.sfMapDustSeeding,
+    wanted: () => viewIntensity('orientation') > 0 || fieldTuning.dust.sfMapSeeding,
     build: () => {
       orientation.dispatch({
         grid: sfMapGridRadiusOrDefault(fieldGeometry),
@@ -338,8 +338,8 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
 
   /**
    * rebuildDustMixture — the central galaxy's dust mixture from the CACHED
-   * geometry + dust params, gated on `fieldTuning.dustEnabled` the same way
-   * `discEnabled`/`armsEnabled` gate their shader loops (an off pill skips the
+   * geometry + dust params, gated on `fieldTuning.dust.enabled` the same way
+   * `disc.enabled`/`arms.enabled` gate their shader loops (an off pill skips the
    * work entirely, not just zeroes tau). Called from the two repack triggers
    * `fieldMixture` uses, and again from each readback landing above — the only
    * way a map the placement seeds from can arrive after the build that asked
@@ -352,13 +352,13 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
    */
   function rebuildDustMixture(): void {
     const dust = currentDust();
-    dustHeaderLanes = deriveDustHeaderLanes(fieldGeometry, dust, fieldTuning.dustEnabled);
+    dustHeaderLanes = deriveDustHeaderLanes(fieldGeometry, dust, fieldTuning.dust.enabled);
     const orientationDeltaStats: OrientationDeltaStats = {
       count: 0,
       sumAbsDeltaDeg: 0,
       maxAbsDeltaDeg: 0,
     };
-    if (fieldGeometry && fieldTuning.dustEnabled) {
+    if (fieldGeometry && fieldTuning.dust.enabled) {
       const cloudMixture = buildDustParticleCloud(
         fieldGeometry,
         dust,
@@ -661,7 +661,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       // The two sigmas are the only lanes of the render bag the orientation
       // chain reads, and the bridge re-pushes the WHOLE bag on any knob — so an
       // unconditional invalidate here would redispatch the six stages, and with
-      // `sfMapDustSeeding` on (the default) the readback and dust rebuild behind
+      // `dust.sfMapSeeding` on (the default) the readback and dust rebuild behind
       // them, on every frame of an unrelated exposure drag. No crossing to catch
       // alongside them: an invalidation raised while nothing wanted the value is
       // retained, so the overlay turning on rebuilds by itself.

@@ -20,7 +20,7 @@ import { REFERENCE_GALAXIES } from '../../../../../tools/galaxy-renderer/src/dat
 import type { ReferenceGalaxy } from '../../../../../tools/galaxy-renderer/@types/data/ReferenceGalaxy';
 import type { GalaxyFieldComponent } from '../../../../../src/@types/galaxy/GalaxyFieldComponent';
 import type { GalaxyDescription } from '../../../../../src/@types/galaxy/GalaxyDescription';
-import type { GalaxyFieldTuning } from '../../../../../src/@types/galaxy/GalaxyFieldTuning';
+import type { GalaxyArmTuning } from '../../../../../src/@types/galaxy/GalaxyArmTuning';
 import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';
 
 /**
@@ -84,27 +84,29 @@ describe('galaxy field flux ledger', () => {
   // tuning that renders a different arm grain; the two that render NO sprite
   // are the ones that regressed, because the cloud's share of the excess was
   // debited from the disc and then emitted by nobody.
-  const ARM_GRAIN_TUNINGS: Record<string, Partial<GalaxyFieldTuning>> = {
-    'arms off': { armsEnabled: false },
-    'cloud off': { armCloudEnabled: false },
-    'cloud share 0': { armCloudShare: 0 },
-    'cloud share 1': { armCloudShare: 1 },
+  const ARMS = DEFAULT_GALAXY_FIELD_TUNING.arms;
+  const CLOUD = ARMS.cloud;
+  const ARM_GRAIN_TUNINGS: Record<string, GalaxyArmTuning> = {
+    'arms off': { ...ARMS, enabled: false },
+    'cloud off': { ...ARMS, cloud: { ...CLOUD, enabled: false } },
+    'cloud share 0': { ...ARMS, cloud: { ...CLOUD, share: 0 } },
+    'cloud share 1': { ...ARMS, cloud: { ...CLOUD, share: 1 } },
     // Coverage at its slider floor with the largest sprites the sliders
     // allow: on some presets the derived sprite count rounds to zero, which
     // is the same leak with the cloud's own pill still on.
-    'cloud starved': { armCloudCoverage: 0.2, armCloudSizeScale: 4, armCloudElongation: 8 },
+    'cloud starved': { ...ARMS, cloud: { ...CLOUD, coverage: 0.2, sizeScale: 4, elongation: 8 } },
   };
 
   // m100 (grand-design, two strong arms) and mw (four weaker ones) bracket
   // the contrast law's range.
   const ARM_LEDGER_CASES = ['m100', 'mw'].flatMap((id) =>
-    Object.entries(ARM_GRAIN_TUNINGS).map(([label, tuning]) => ({ id, label, tuning })),
+    Object.entries(ARM_GRAIN_TUNINGS).map(([label, arms]) => ({ id, label, arms })),
   );
 
   it.each(ARM_LEDGER_CASES)('$id emits the same total light under "$label"', (testCase) => {
     const geometry = geometryOf(REFERENCE_GALAXIES.find((ref) => ref.id === testCase.id)!);
     const measured = totalFlux(
-      buildGalaxyFieldMixture(geometry, { ...DEFAULT_GALAXY_FIELD_TUNING, ...testCase.tuning }),
+      buildGalaxyFieldMixture(geometry, { ...DEFAULT_GALAXY_FIELD_TUNING, arms: testCase.arms }),
     );
     const base = totalFlux(buildGalaxyFieldMixture(geometry, DEFAULT_GALAXY_FIELD_TUNING));
     expect(Math.abs(measured / base - 1)).toBeLessThan(LEDGER_TOLERANCE);
@@ -117,7 +119,7 @@ describe('galaxy field flux ledger', () => {
     const withArms = buildGalaxyFieldMixture(geometry, DEFAULT_GALAXY_FIELD_TUNING).length;
     const without = buildGalaxyFieldMixture(geometry, {
       ...DEFAULT_GALAXY_FIELD_TUNING,
-      armsEnabled: false,
+      arms: { ...ARMS, enabled: false },
     }).length;
     expect(withArms).toBeGreaterThan(without);
   });

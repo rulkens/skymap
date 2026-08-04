@@ -110,7 +110,7 @@ function distance3(a: Vec3, b: Vec3): number {
  * MEAN_SIZE_FRAC_SQ * armCrossSigma(r)) ds`, evaluated by trapezoid over a
  * dense log-radius ridge sample and summed across arms.
  *
- * `armCloudRadialBias` is deliberately NOT in this integral: it redistributes
+ * `cloud.radialBias` is deliberately NOT in this integral: it redistributes
  * the sprites rather than resizing the arm, so the whole-arm demand this
  * solves for is the same. The practical consequence is that raising the bias
  * over-covers the outer arm and under-covers the inner one at a fixed
@@ -123,14 +123,14 @@ export function deriveArmCloudCount(
 ): number {
   if (
     geometry.numArms <= 0 ||
-    tuning.armCloudElongation <= 0 ||
-    tuning.armCloudSizeScale <= 0 ||
-    tuning.armCloudCoverage <= 0
+    tuning.arms.cloud.elongation <= 0 ||
+    tuning.arms.cloud.sizeScale <= 0 ||
+    tuning.arms.cloud.coverage <= 0
   ) {
     return 0;
   }
   const footprintFactor =
-    Math.PI * tuning.armCloudElongation * tuning.armCloudSizeScale ** 2 * MEAN_SIZE_FRAC_SQ;
+    Math.PI * tuning.arms.cloud.elongation * tuning.arms.cloud.sizeScale ** 2 * MEAN_SIZE_FRAC_SQ;
 
   let total = 0;
   for (const arm of geometry.arms) {
@@ -157,7 +157,7 @@ export function deriveArmCloudCount(
     }
     total += (2 * armIntegral) / footprintFactor;
   }
-  return Math.min(ARM_CLOUD_MAX_COUNT, Math.max(0, Math.round(tuning.armCloudCoverage * total)));
+  return Math.min(ARM_CLOUD_MAX_COUNT, Math.max(0, Math.round(tuning.arms.cloud.coverage * total)));
 }
 
 type CloudParticle = { center: Vec3; readonly frame: CloudFrame; readonly radius: number };
@@ -224,7 +224,7 @@ export function buildArmParticleCloud(
   const discWeightSum = DISC_SURFACE_WEIGHTS.reduce((s, w) => s + w, 0);
 
   const rng = mulberry32(seed ^ 0x41524d43); // "ARMC"
-  const bias = Math.max(0, tuning.armCloudRadialBias);
+  const bias = Math.max(0, tuning.arms.cloud.radialBias);
   const rTilt = tiltReferenceRadius(geometry);
 
   const particles: CloudParticle[] = buildClusteredDiscPlacement<{ radius: number }>(
@@ -232,9 +232,9 @@ export function buildArmParticleCloud(
       geometry,
       rng,
       count,
-      clumpiness: tuning.armCloudClumpiness,
+      clumpiness: tuning.arms.cloud.clumpiness,
       complexSpread,
-      elongation: tuning.armCloudElongation,
+      elongation: tuning.arms.cloud.elongation,
       sigmaZComplex,
       discSigmaR: (k) => DISC_SIGMA_RATIOS[k]! * hLight,
       discWeights: DISC_SURFACE_WEIGHTS,
@@ -261,7 +261,7 @@ export function buildArmParticleCloud(
       const radiusAtParticle = Math.hypot(center[0], center[2]);
       const sizeFrac = SIZE_MIN_RATIO + childRng() * (SIZE_MAX_RATIO - SIZE_MIN_RATIO);
       const radius =
-        armCrossSigma(radiusAtParticle, geometry, tuning) * sizeFrac * tuning.armCloudSizeScale;
+        armCrossSigma(radiusAtParticle, geometry, tuning) * sizeFrac * tuning.arms.cloud.sizeScale;
       return { radius };
     },
   );
@@ -282,14 +282,14 @@ export function buildArmParticleCloud(
   // function the ridge chain's `lambda` uses. Without it this tier had no
   // radial law at all: the placement density's fade/width terms cancelled to
   // near-flat surface brightness along the arm, so the cloud kept shining
-  // where the ridge had already faded and `armCloudShare` moved the arms'
+  // where the ridge had already faded and `cloud.share` moved the arms'
   // light outward instead of just re-graining it.
   const shape = (p: CloudParticle): number =>
     armExcessSurfaceShape(
       Math.hypot(p.center[0], p.center[2]),
       geometry,
       hLight,
-      tuning.armExcessScaleRatio,
+      tuning.arms.excessScaleRatio,
     );
   const weights = particles.map(
     (p) =>
@@ -303,7 +303,7 @@ export function buildArmParticleCloud(
 
   return particles.map((p, i) => {
     const sigmas = {
-      along: p.radius * tuning.armCloudElongation,
+      along: p.radius * tuning.arms.cloud.elongation,
       across: p.radius,
       pole: p.radius * SPRITE_POLE_RATIO,
     };

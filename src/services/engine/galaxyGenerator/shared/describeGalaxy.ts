@@ -37,7 +37,7 @@ const ARM_AGE_JITTER_RANGE = 0.3;
 /**
  * How far the arms reach, in units of `outerRadius`, lerped by `armFalloff`
  * (0 = longest, 1 = shortest; the default 0.6 lands at 1.07). This is the
- * ONLY knob that moves where an arm ends — `armExcessScaleRatio` shapes its
+ * ONLY knob that moves where an arm ends — `arms.excessScaleRatio` shapes its
  * brightness inside this extent and cannot lengthen it.
  *
  * The floor is unreachable from the 0..1 slider, whose shortest arm is 0.65:

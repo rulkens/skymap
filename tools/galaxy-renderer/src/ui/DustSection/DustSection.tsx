@@ -7,7 +7,7 @@
  * `ControlsPanel.tsx`) — each slider spreads the current dust object by hand
  * instead. Same fold/pill idiom as
  * `ArmFieldSection`: `ui.openSections.analyticDust` for the fold,
- * `fieldTuning.dustEnabled` for the header pill.
+ * `fieldTuning.dust.enabled` for the header pill.
  */
 import type { ReactNode } from 'react';
 import type { GalaxyDustParams } from '../../../../../src/@types/galaxy/GalaxyDustParams';
@@ -36,8 +36,10 @@ function DustSection(): ReactNode {
       title="DUST"
       open={open}
       onToggle={() => dispatch(sectionToggled('analyticDust'))}
-      headerToggle={fieldTuning.dustEnabled}
-      onHeaderToggleChange={(value) => dispatch(fieldTuningPatched({ dustEnabled: value }))}
+      headerToggle={fieldTuning.dust.enabled}
+      onHeaderToggleChange={(value) =>
+        dispatch(fieldTuningPatched({ dust: { ...fieldTuning.dust, enabled: value } }))
+      }
     >
       <div className={styles.root}>
         <ParamSlider

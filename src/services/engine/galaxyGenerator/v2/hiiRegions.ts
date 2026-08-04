@@ -60,7 +60,7 @@ const CLUSTER_SPRITE_SIGMA_RATIO = 0.05;
 /** Cluster sprites jitter within this fraction of the region radius around its centre. */
 const CLUSTER_SPREAD_RATIO = 0.12;
 
-/** Cluster's ceiling share of a region's own flux at `hiiClusterStrength` 1 — a bright core, not a rival to the shell. */
+/** Cluster's ceiling share of a region's own flux at `clusterStrength` 1 — a bright core, not a rival to the shell. */
 const CLUSTER_FLUX_SHARE_MAX = 0.2;
 
 const TAU_ROOT3 = (2 * Math.PI) ** 1.5;
@@ -69,13 +69,13 @@ const TAU_ROOT3 = (2 * Math.PI) ** 1.5;
 const ISO_FRAME = { along: [1, 0, 0] as Vec3, across: [0, 1, 0] as Vec3, pole: [0, 0, 1] as Vec3 };
 
 /**
- * Base per-star emission this tier's `hiiBrightness` multiplies, in the same
+ * Base per-star emission this tier's `brightness` multiplies, in the same
  * star-count x size^2 currency `galaxyFieldMixture.ts`'s (private, unexported)
  * `emissionScale` uses for every other tier — reusing that anchor keeps this
  * ADDITIVE tier the same order of magnitude as the disc it sits on top of,
  * without needing the exact function (this tier owes the disc no debit, so
  * only a comparable scale matters, not an identical one). 0.01 lands the
- * Milky Way preset's HII-to-disc flux ratio around 1:10 at `hiiBrightness`
+ * Milky Way preset's HII-to-disc flux ratio around 1:10 at `brightness`
  * 1 — a starting point for visual calibration, not a measurement.
  */
 const HII_FLUX_PER_STAR_AREA = 0.01;
@@ -86,7 +86,7 @@ function tierFlux(geometry: GalaxyDescription, tuning: GalaxyFieldTuning): numbe
     geometry.starSize *
     geometry.starSize *
     HII_FLUX_PER_STAR_AREA *
-    Math.max(0, tuning.hiiBrightness)
+    Math.max(0, tuning.hii.brightness)
   );
 }
 
@@ -134,13 +134,13 @@ function planRegions(
   seed: number,
 ): readonly RegionPlan[] {
   const events = buildSfEventCatalog(geometry, starFormation, tuning, seed);
-  const clusterOn = tuning.hiiClusterStrength > 0;
+  const clusterOn = tuning.hii.clusterStrength > 0;
 
   const all: RegionPlan[] = [];
   for (const event of events) {
     if (event.age01 > HII_AGE_GATE) continue;
     const luminosity = hiiLuminosityOf(event);
-    const radius = hiiRadiusUnits(luminosity, tuning.hiiRadiusScale);
+    const radius = hiiRadiusUnits(luminosity, tuning.hii.radiusScale);
     if (radius <= 0) continue;
     const center = eventCenter(event, geometry);
     if (!center) continue;
@@ -176,9 +176,9 @@ export function buildHiiRegions(
   seed: number,
 ): readonly GalaxyFieldComponent[] {
   if (
-    !tuning.hiiEnabled ||
-    tuning.hiiBrightness <= 0 ||
-    tuning.hiiRadiusScale <= 0 ||
+    !tuning.hii.enabled ||
+    tuning.hii.brightness <= 0 ||
+    tuning.hii.radiusScale <= 0 ||
     geometry.numArms <= 0 ||
     starFormation.sfActivity <= 0
   ) {
@@ -203,7 +203,8 @@ export function buildHiiRegions(
   const shellColor = geometry.hiiPalette.core;
 
   const rng = mulberry32(seed ^ 0x48494920); // "HII "
-  const clusterShare = Math.min(1, Math.max(0, tuning.hiiClusterStrength)) * CLUSTER_FLUX_SHARE_MAX;
+  const clusterShare =
+    Math.min(1, Math.max(0, tuning.hii.clusterStrength)) * CLUSTER_FLUX_SHARE_MAX;
   const out: GalaxyFieldComponent[] = [];
 
   for (const region of regions) {
@@ -214,7 +215,7 @@ export function buildHiiRegions(
     if (region.shellCount > 0 && shellFlux > 0) {
       const sigma = region.radius * SHELL_SPRITE_SIGMA_RATIO;
       const amplitude = shellFlux / region.shellCount / (TAU_ROOT3 * sigma * sigma * sigma);
-      const thickness = Math.max(0, tuning.hiiShellThickness);
+      const thickness = Math.max(0, tuning.hii.shellThickness);
       for (let i = 0; i < region.shellCount; i++) {
         const dir = randomDirection(rng);
         const r = region.radius * Math.max(0, 1 + thickness * (rng() * 2 - 1));

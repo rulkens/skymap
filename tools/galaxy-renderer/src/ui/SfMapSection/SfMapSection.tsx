@@ -156,17 +156,23 @@ function SfMapSection({ diagnostics }: SfMapSectionProps): ReactNode {
           onChange={(v) => patchSfMap({ shearRate: v })}
           info="Angular offset scale per step, in radians at unit (1/r - 1/corotationRadius). Total winding is shearRate * steps, so dropping steps to 100 cut the wind by 3x — expect to raise this to get the same pitch back."
         />
-        {/* Lives on `fieldTuning` directly, not `sfMap`, since it gates a
-            CONSUMER (the dust cloud) reading this tier's output rather than
-            a parameter of the automaton itself — see GalaxyFieldTuning's
-            own docblock. */}
+        {/* Lives on `fieldTuning.dust`, not `sfMap`, since it gates the DUST
+            tier's consumption of this automaton's output rather than a
+            parameter of the automaton itself — shown here anyway, beside
+            the map it reads. */}
         <label className={styles.toggleRow}>
           <span>Seed dust from gas</span>
           <input
             type="checkbox"
             className={styles.checkbox}
-            checked={fieldTuning.sfMapDustSeeding}
-            onChange={(e) => dispatch(fieldTuningPatched({ sfMapDustSeeding: e.target.checked }))}
+            checked={fieldTuning.dust.sfMapSeeding}
+            onChange={(e) =>
+              dispatch(
+                fieldTuningPatched({
+                  dust: { ...fieldTuning.dust, sfMapSeeding: e.target.checked },
+                }),
+              )
+            }
           />
         </label>
 

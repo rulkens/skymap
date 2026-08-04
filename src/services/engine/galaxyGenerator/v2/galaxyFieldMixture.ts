@@ -207,7 +207,7 @@ function pushDisc(
   out: GalaxyFieldComponent[],
   tuning: GalaxyFieldTuning,
 ): number {
-  if (!tuning.discEnabled || geometry.light.disc <= 0) return 0;
+  if (!tuning.disc.enabled || geometry.light.disc <= 0) return 0;
   const scale = emissionScale(geometry);
   const scaleLen = discLightScaleLength(geometry);
   const central = (geometry.light.disc * DISC_BRIGHTNESS) / (2 * Math.PI * scaleLen * scaleLen);
@@ -285,60 +285,67 @@ export const WARP_RING_COUNT = 2;
 
 /**
  * `buildGalaxyFieldMixture`'s default when no tuning is supplied.
- * `galaxy-renderer`'s FieldSection is the only other producer of a
- * `GalaxyFieldTuning`, built by patching this object.
+ * `galaxy-renderer`'s control panel is the only other producer of a
+ * `GalaxyFieldTuning`, built by patching one section of this object.
  */
 export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
-  discEnabled: true,
-  armsEnabled: true,
-  // 1 = Reid et al. 2019's measured Milky Way maser-arm width law exactly
-  // (see `armCrossSigma`); old stellar arms are plausibly broader, so >1 is
-  // physical, not a fudge.
-  armWidthScale: 1,
-  // K, the arm/interarm surface-brightness ratio in old stellar light. 1.3
-  // is the Milky Way's measured value (Drimmel & Spergel 2001 via Antoja et
-  // al. 2011; corroborated by GLIMPSE's 20-30% count excess) — see
-  // `pushArmRidges`.
-  armContrast: 1.3,
-  // Arms outrun the disc: their light is gas-and-young-star light, and those
-  // discs are the more extended ones. 1 (contrast flat with radius) left the
-  // ridge chain with 3% of its flux beyond r=8 on the Milky Way preset —
-  // arms that stop before the disc does. Not a measured ratio; see
-  // `armExcessSurfaceShape`.
-  armExcessScaleRatio: 1.8,
-  armBlobSharpness: 1,
-  armCloudEnabled: true,
-  // The tier is under active tuning, so it defaults ON at a visible share
-  // rather than 0 — a new section whose every slider does nothing until
-  // some OTHER slider is raised first reads as broken. This is a deliberate
-  // boot-image change, not a neutral default.
-  armCloudShare: 0.35,
-  armCloudCoverage: 1,
-  // Coverage-demand placement alone puts ~80% of the sprites inside the
-  // arm's inner half: sprites there are small (the width law's floor), so
-  // it takes many to cover a strip, and that is also where the bulge glare
-  // buries them. The tilt spends them further out instead, at no cost to
-  // the arm's light profile (see `armCloudRadialBias`'s docblock).
-  armCloudRadialBias: 1.5,
-  armCloudClumpiness: 0.4,
-  armCloudSizeScale: 1,
-  armCloudElongation: 3,
-  // Gates the whole analytic dust tier's shader loop.
-  dustEnabled: true,
-  hiiEnabled: true,
-  hiiBrightness: 1,
-  hiiRadiusScale: 1,
-  // Thin enough that the shell reads as a front rather than a fuzzy ball;
-  // the limb brightening is geometric, so this is the one knob that decides
-  // how sharp the rim can get.
-  hiiShellThickness: 0.25,
-  hiiClusterStrength: 0.6,
-  // Under 1 so the lit wall sits inside the swept dust rather than on it.
-  hiiCavityScale: 0.8,
+  disc: { enabled: true },
+  arms: {
+    enabled: true,
+    // 1 = Reid et al. 2019's measured Milky Way maser-arm width law exactly
+    // (see `armCrossSigma`); old stellar arms are plausibly broader, so >1 is
+    // physical, not a fudge.
+    widthScale: 1,
+    // K, the arm/interarm surface-brightness ratio in old stellar light. 1.3
+    // is the Milky Way's measured value (Drimmel & Spergel 2001 via Antoja et
+    // al. 2011; corroborated by GLIMPSE's 20-30% count excess) — see
+    // `pushArmRidges`.
+    contrast: 1.3,
+    // Arms outrun the disc: their light is gas-and-young-star light, and those
+    // discs are the more extended ones. 1 (contrast flat with radius) left the
+    // ridge chain with 3% of its flux beyond r=8 on the Milky Way preset —
+    // arms that stop before the disc does. Not a measured ratio; see
+    // `armExcessSurfaceShape`.
+    excessScaleRatio: 1.8,
+    blobSharpness: 1,
+    cloud: {
+      enabled: true,
+      // The tier is under active tuning, so it defaults ON at a visible share
+      // rather than 0 — a new section whose every slider does nothing until
+      // some OTHER slider is raised first reads as broken. This is a deliberate
+      // boot-image change, not a neutral default.
+      share: 0.35,
+      coverage: 1,
+      // Coverage-demand placement alone puts ~80% of the sprites inside the
+      // arm's inner half: sprites there are small (the width law's floor), so
+      // it takes many to cover a strip, and that is also where the bulge glare
+      // buries them. The tilt spends them further out instead, at no cost to
+      // the arm's light profile (see `GalaxyArmCloudTuning.radialBias`).
+      radialBias: 1.5,
+      clumpiness: 0.4,
+      sizeScale: 1,
+      elongation: 3,
+    },
+  },
+  dust: {
+    enabled: true,
+    // Inert wherever no automaton runs: seeding needs a sampled map handed in,
+    // and both consumers fall back to their unseeded envelope without one.
+    sfMapSeeding: true,
+  },
+  hii: {
+    enabled: true,
+    brightness: 1,
+    radiusScale: 1,
+    // Thin enough that the shell reads as a front rather than a fuzzy ball;
+    // the limb brightening is geometric, so this is the one knob that decides
+    // how sharp the rim can get.
+    shellThickness: 0.25,
+    clusterStrength: 0.6,
+    // Under 1 so the lit wall sits inside the swept dust rather than on it.
+    cavityScale: 0.8,
+  },
   sfMap: DEFAULT_GALAXY_SF_MAP_PARAMS,
-  // Inert wherever no automaton runs: seeding needs a sampled map handed in,
-  // and both consumers fall back to their unseeded envelope without one.
-  sfMapDustSeeding: true,
 };
 
 /** The removed pair's share of the disc's flux budget — see DISC_SIGMA_RATIOS' fit note. */
@@ -397,7 +404,7 @@ function pushWarpedOuterDisc(
   out: GalaxyFieldComponent[],
   tuning: GalaxyFieldTuning,
 ): number {
-  if (!tuning.discEnabled || geometry.light.disc <= 0) return 0;
+  if (!tuning.disc.enabled || geometry.light.disc <= 0) return 0;
   const { outerRadius, bulgeRadius, diskHeight, diskScaleLen } = geometry;
   const blobsPerRing = RING_BLOBS_PER_RING;
   const totalFlux =
@@ -544,12 +551,12 @@ const ARM_AGE_CONTRAST_FLOOR = 0.25;
 const ARM_AGE_CONTRAST_SPAN = 0.75;
 
 /**
- * `tuning.armCloudShare`, clamped to a valid probability — the share the
+ * `tuning.arms.cloud.share`, clamped to a valid probability — the share the
  * tuning ASKS for. What the cloud actually carries is `buildGalaxyFieldMixture`'s
  * `cloudShare`, which is this only when a cloud will really be built.
  */
 export function clampedArmCloudShare(tuning: GalaxyFieldTuning): number {
-  return Math.min(1, Math.max(0, tuning.armCloudShare));
+  return Math.min(1, Math.max(0, tuning.arms.cloud.share));
 }
 
 /**
@@ -591,12 +598,12 @@ function pushArmRidges(
   reservedComponents: number,
   cloudShare: number,
 ): number {
-  if (!tuning.armsEnabled || geometry.numArms <= 0 || discFlux <= 0) return 0;
+  if (!tuning.arms.enabled || geometry.numArms <= 0 || discFlux <= 0) return 0;
   const { armStartRadius, diskHeight } = geometry;
-  const sharpness = Math.max(1, tuning.armBlobSharpness);
+  const sharpness = Math.max(1, tuning.arms.blobSharpness);
   const color = armColor(geometry.youngFraction);
   const hLight = discLightScaleLength(geometry);
-  const K = tuning.armContrast;
+  const K = tuning.arms.contrast;
   // The RENDERED share of each blob's flux — `armExcessFlux` below stays the
   // FULL, unscaled excess (the disc debit and the particle cloud's own share
   // both key off that full total; see `buildGalaxyFieldMixture`'s docblock).
@@ -672,7 +679,7 @@ function pushArmRidges(
       };
       // Sigma_disc: the interarm floor this arm's excess is measured against,
       // read at the PIVOT radius and carried outward by the arm's own radial
-      // shape rather than the disc's. At armExcessScaleRatio 1 the shape IS
+      // shape rather than the disc's. At excessScaleRatio 1 the shape IS
       // the disc's exponential, so this is identical to sampling Sigma_disc
       // at `radius` directly — the form only differs once the arms are
       // allowed their own scale length. lambda_i(R): the Gaussian tube's
@@ -680,7 +687,7 @@ function pushArmRidges(
       // Gaussian's own integral).
       const sigmaDisc =
         discSurfaceBrightness(geometry.armFullRadius, discFlux, hLight) *
-        armExcessSurfaceShape(radius, geometry, hLight, tuning.armExcessScaleRatio);
+        armExcessSurfaceShape(radius, geometry, hLight, tuning.arms.excessScaleRatio);
       const lambda = (Ki - 1) * sigmaDisc * TAU_ROOT * sigmaAcross;
       const blobFlux = lambda * spacings[k]! * (mods[k]! / modMean);
       armExcessFlux += blobFlux; // full excess — see `renderedShare`'s comment above
@@ -706,7 +713,7 @@ function pushBulge(
   out: GalaxyFieldComponent[],
   tuning: GalaxyFieldTuning,
 ): void {
-  if (!tuning.discEnabled || geometry.light.bulge <= 0) return;
+  if (!tuning.disc.enabled || geometry.light.bulge <= 0) return;
   const { outerRadius, bulgeRadius, bulgeConcentration } = geometry;
   const sigma = spheroidEmissionSigma(
     geometry.category === 'elliptical'
@@ -755,7 +762,7 @@ function pushBar(
   out: GalaxyFieldComponent[],
   tuning: GalaxyFieldTuning,
 ): void {
-  if (!tuning.discEnabled || geometry.light.bar <= 0 || geometry.barLength <= 0) return;
+  if (!tuning.disc.enabled || geometry.light.bar <= 0 || geometry.barLength <= 0) return;
   const sigmaAlong = BAR_ALONG_RATIO * geometry.barLength;
   const sigmaAcross = BAR_ACROSS_RATIO * geometry.barLength;
   const sigmaPole = BAR_HEIGHT_FACTOR * geometry.diskHeight;
@@ -775,7 +782,7 @@ function pushHalo(
   out: GalaxyFieldComponent[],
   tuning: GalaxyFieldTuning,
 ): void {
-  if (!tuning.discEnabled || geometry.light.halo <= 0) return;
+  if (!tuning.disc.enabled || geometry.light.halo <= 0) return;
   const { outerRadius } = geometry;
   const sigma = spheroidEmissionSigma({
     scale: outerRadius * 0.3,
@@ -832,15 +839,15 @@ export function buildGalaxyFieldMixture(
 
   // `pushArmRidges`' contrast law needs a disc to measure its excess against
   // even when the FLUX FIELD pill has hidden the disc itself — the disc
-  // components go into a LOCAL array, built with discEnabled forced on, and
+  // components go into a LOCAL array, built with the disc pill forced on, and
   // only land in `out` (below) when the pill says so. Bulge/bar/halo have no
-  // such independent pill and stay gated on `tuning.discEnabled` directly:
+  // such independent pill and stay gated on `tuning.disc.enabled` directly:
   // the FLUX FIELD pill is the smooth-field master for them; arms are the
   // only layer with a pill of their own.
   const discOut: GalaxyFieldComponent[] = [];
-  const discTuning: GalaxyFieldTuning = tuning.discEnabled
+  const discTuning: GalaxyFieldTuning = tuning.disc.enabled
     ? tuning
-    : { ...tuning, discEnabled: true };
+    : { ...tuning, disc: { ...tuning.disc, enabled: true } };
   const discFlux =
     pushDisc(geometry, discOut, discTuning) + pushWarpedOuterDisc(geometry, discOut, discTuning);
 
@@ -859,7 +866,7 @@ export function buildGalaxyFieldMixture(
   // `buildArmParticleCloud` itself calls to size the cloud it actually
   // builds below, so the reservation and the build can never disagree.
   const armCloudCount =
-    tuning.armsEnabled && tuning.armCloudEnabled && clampedArmCloudShare(tuning) > 0
+    tuning.arms.enabled && tuning.arms.cloud.enabled && clampedArmCloudShare(tuning) > 0
       ? deriveArmCloudCount(geometry, tuning)
       : 0;
   // That SAME count decides the flux split, so a cloud that will not be built
@@ -873,7 +880,7 @@ export function buildGalaxyFieldMixture(
     out,
     tuning,
     discFlux,
-    (tuning.discEnabled ? discOut.length : 0) + armCloudCount,
+    (tuning.disc.enabled ? discOut.length : 0) + armCloudCount,
     cloudShare,
   );
   if (discFlux > 0 && armExcessFlux > 0) {
@@ -883,7 +890,7 @@ export function buildGalaxyFieldMixture(
       discOut[i] = { ...discOut[i]!, amplitude: discOut[i]!.amplitude * scale };
     }
   }
-  if (tuning.discEnabled) out.push(...discOut);
+  if (tuning.disc.enabled) out.push(...discOut);
 
   const cloudFlux = armExcessFlux * cloudShare;
   if (cloudFlux > 0) {

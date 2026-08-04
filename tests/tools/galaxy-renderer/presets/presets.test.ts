@@ -5,9 +5,9 @@
  * is a flat merge of render + LOD knobs. `serializeGalaxyPreset` does the
  * fold; `parseGalaxyPreset` does the split, and is total over malformed input.
  *
- * v2 adds `f` (fieldTuning) and `x` (extras' enabled/count) — see both
- * files' headers for why a v1 payload (neither key present) still parses
- * cleanly instead of needing a version branch.
+ * v2 adds `f` (fieldTuning) and `x` (extras' enabled/count); v3 nests `f` by
+ * UI section instead of v2's flat keys — see `migrateGalaxyFieldTuningWire`
+ * for the lift and both preset files' headers for the v1 fallback.
  */
 import { describe, expect, it } from 'vitest';
 import { serializeGalaxyPreset } from '../../../../tools/galaxy-renderer/src/presets/serializeGalaxyPreset';
@@ -59,6 +59,29 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
     expect(parsed?.f?.sfMap).toEqual(tunedSfMap);
   });
 
+  it('migrates a v2 flat fieldTuning payload to the v3 nested shape', () => {
+    const v2Wire = JSON.stringify({
+      type: 'galaxy-preset',
+      version: 2,
+      p: DEFAULT_GALAXY_PARAMS,
+      f: {
+        discEnabled: false,
+        armCloudShare: 0.42,
+        sfMapDustSeeding: false,
+        hiiCavityScale: 0.7,
+        sfMap: DEFAULT_GALAXY_FIELD_TUNING.sfMap,
+      },
+    });
+
+    const parsed = parseGalaxyPreset(v2Wire);
+
+    expect(parsed?.f?.disc?.enabled).toBe(false);
+    expect(parsed?.f?.arms?.cloud?.share).toBe(0.42);
+    expect(parsed?.f?.dust?.sfMapSeeding).toBe(false);
+    expect(parsed?.f?.hii?.cavityScale).toBe(0.7);
+    expect(parsed?.f?.sfMap).toEqual(DEFAULT_GALAXY_FIELD_TUNING.sfMap);
+  });
+
   it('matches the v2 envelope shape, with LOD knobs flattened into r', () => {
     const wire = serializeGalaxyPreset(
       DEFAULT_GALAXY_PARAMS,
@@ -70,7 +93,7 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
     const raw = JSON.parse(wire);
 
     expect(raw.type).toBe('galaxy-preset');
-    expect(raw.version).toBe(2);
+    expect(raw.version).toBe(3);
     expect(raw.p).toEqual(DEFAULT_GALAXY_PARAMS);
     expect(raw.r).toMatchObject({
       exposure: DEFAULT_RENDER_SETTINGS.exposure,

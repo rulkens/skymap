@@ -121,7 +121,7 @@ export type ClusteredDiscPlacementConfig = {
    * The SSPSF automaton's measured filament orientation, coherence-weighted
    * so a texel with no measured structure reproduces today's frame exactly —
    * see `rotateFrameToOrientation`. `null` (the default, and every caller's
-   * `sfMapDustSeeding`-off path) is a pure no-op: no extra work, no extra
+   * `dust.sfMapSeeding`-off path) is a pure no-op: no extra work, no extra
    * `rng` draw, so the gated-off placement stays byte-identical.
    */
   readonly sfMapOrientation?: GalaxySfMapOrientation | null;

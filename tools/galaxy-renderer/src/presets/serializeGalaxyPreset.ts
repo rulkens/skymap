@@ -1,13 +1,11 @@
 /**
  * serializeGalaxyPreset — the JSON wire format for a saved/shared galaxy
  * preset: `{ type, version, p, r, f, x }`. `r` flattens `RenderSettings` +
- * `LodSettings` (two GPU-uniform slices in the store, one bag on the wire —
- * `parseGalaxyPreset` splits it back apart). v1 (spike-compatible,
- * `Galaxy Renderer.dc.html`) had only `p`/`r`. v2 adds `f`
- * (`GalaxyFieldTuning`, sfMap included — now most of a "look") and `x`
- * (extras' `enabled`/`count`; `regenNonce` is dropped — it's a re-roll
- * trigger, not even a seed, since the scatter's randomness lives in the
- * engine's own RNG). See `parseGalaxyPreset`'s header for the v1 fallback.
+ * `LodSettings` into one wire bag; `parseGalaxyPreset` splits it back apart.
+ * `x` carries extras' `enabled`/`count` (`regenNonce` dropped — a re-roll
+ * trigger, not a seed). v3 nests `f` (`GalaxyFieldTuning`) by UI section
+ * instead of v2's flat keys — see `parseGalaxyPreset`'s header for the v1/v2
+ * fallback and `migrateGalaxyFieldTuningWire`'s header for the lift.
  */
 
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
@@ -26,7 +24,7 @@ export function serializeGalaxyPreset(
   return JSON.stringify(
     {
       type: 'galaxy-preset',
-      version: 2,
+      version: 3,
       p: galaxy,
       r: { ...render, ...lod },
       f: fieldTuning,

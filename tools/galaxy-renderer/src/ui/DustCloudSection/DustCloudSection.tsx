@@ -6,7 +6,7 @@
  * its own spreading handler rather than the generic single-value slider
  * path. The header pill is `render.dustCloudEnabled` (`ControlsPanel` owns
  * the dispatch, `DustSection`'s `render.legacyDustEnabled` pattern) rather
- * than `fieldTuning.dustEnabled` — the cloud is an A/B lever against the
+ * than `fieldTuning.dust.enabled` — the cloud is an A/B lever against the
  * legacy sprite dust, not a sub-toggle of the master dust pill.
  */
 import type { ReactNode } from 'react';

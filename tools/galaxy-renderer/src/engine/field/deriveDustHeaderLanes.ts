@@ -2,7 +2,7 @@
  * deriveDustHeaderLanes — the galaxy-dependent dust lanes of the field header,
  * as one pure function over the same inputs `rebuildDustMixture` builds the
  * mixture from. `drawFrame` reads the result every frame; it changes only when
- * the dust params, the geometry or the `dustEnabled` pill do.
+ * the dust params, the geometry or the `dust.enabled` pill do.
  */
 import type { GalaxyDustParams } from '../../../../../src/@types/galaxy/GalaxyDustParams';
 import type { GalaxyDescription } from '../../../../../src/@types/galaxy/GalaxyDescription';

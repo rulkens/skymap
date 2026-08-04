@@ -91,7 +91,7 @@ export type RenderSettings = {
    * it fills the full hue wheel — see `orientationPresent.wesl`), value is
    * coherence. One of the two things that keep the pass chain alive — see
    * `createGalaxyModel.ts`'s `orientationTexRebuild`; the other is
-   * `sfMapDustSeeding`.
+   * `GalaxyDustTuning.sfMapSeeding`.
    */
   readonly orientationViewIntensity: number;
   /**

@@ -32,14 +32,14 @@ keeping beyond the git log:
 **Width.** Reid 2019's law re-expresses dimensionlessly as **σ(R) = 0.017·h + 0.036·R** (h = disc
 scale length; 2.605 kpc for the MW reproduces 336 pc at R₀ exactly). A positive intercept — arms
 do not taper to zero at the centre — and a scale-free slope (~2° wedge), so the same law serves
-any galaxy the survey map draws. The measured law is the _young_ arm; `armWidthScale` (default 1)
+any galaxy the survey map draws. The measured law is the _young_ arm; `arms.widthScale` (default 1)
 carries old-population broadening as an explicit, honest modelling choice, not a fudge.
 
 **Flux.** Arm light now derives from contrast, not from a share of the sprite budget:
-λ(R) = (K−1)·Σ_disc(R)·√(2π)·σ(R) along the ridge, with the disc debited by exactly the added
+λ(R) = (K−1)·Σ*disc(R)·√(2π)·σ(R) along the ridge, with the disc debited by exactly the added
 excess (both sides of the [arms-are-a-flux-field-term](arms.md#arms-are-a-flux-field-term-not-a-star-population) double-counting ledger analytic). At K = 1.3 with two young arms
 the excess is **3.3% of disc flux** — verified independently of the code's own bookkeeping.
-Thin arms at real contrast are a small _disc-integrated_ term even when locally prominent; if
+Thin arms at real contrast are a small \_disc-integrated* term even when locally prominent; if
 that reads as "too subtle," the honest dials are K (→ 2.2 grand-design) and age, not a boost.
 
 **The double-count the user's eye found.** Sprite-parity calibration landed at flux ×0.5 against

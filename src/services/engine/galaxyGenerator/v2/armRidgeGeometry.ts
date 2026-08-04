@@ -83,11 +83,7 @@ export function armRidgeCurvePoint(
 }
 
 /** The arm's true warped centre at a given radius — see `armRidgeCurvePoint`. */
-function armCurvePos(
-  radius: number,
-  geometry: GalaxyDescription,
-  arm: GalaxyFieldArmRecord,
-): Vec3 {
+function armCurvePos(radius: number, geometry: GalaxyDescription, arm: GalaxyFieldArmRecord): Vec3 {
   return armRidgeCurvePoint(Math.log(radius / geometry.armStartRadius), geometry, arm);
 }
 
@@ -170,7 +166,7 @@ export function armFadeEnvelope(
  * 36 pc/kpc x (R - 8.15 kpc), re-expressed in units of the disc scale length
  * (h = 2.605 kpc for the MW) so it scales to any galaxy: w/h = FLOOR_H +
  * SLOPE*(R/h), i.e. w = FLOOR_H*h + SLOPE*R. This is the width of the YOUNG
- * maser arm — a verified floor for old-star arms, with `tuning.armWidthScale`
+ * maser arm — a verified floor for old-star arms, with `tuning.arms.widthScale`
  * carrying any old-population broadening (1 = the measured law exactly).
  */
 const ARM_WIDTH_FLOOR_H = 0.017;
@@ -198,7 +194,7 @@ const ARM_WIDTH_SLOPE = 0.036;
  * and is a look knob; only its direction is defended.
  *
  * Shared by both arm tiers (`pushArmRidges` and `armParticleCloud.ts`) so
- * that `armCloudShare` redistributes GRAIN at a fixed radial profile. It used
+ * that `cloud.share` redistributes GRAIN at a fixed radial profile. It used
  * to redistribute the profile too — the ridge carried this exponential and
  * the cloud carried none, so the same excess was shaped two different ways
  * and the share slider slid the arms' light outward as a side effect.
@@ -219,6 +215,6 @@ export function armCrossSigma(
   tuning: GalaxyFieldTuning,
 ): number {
   return (
-    (ARM_WIDTH_FLOOR_H * geometry.diskScaleLen + ARM_WIDTH_SLOPE * radius) * tuning.armWidthScale
+    (ARM_WIDTH_FLOOR_H * geometry.diskScaleLen + ARM_WIDTH_SLOPE * radius) * tuning.arms.widthScale
   );
 }

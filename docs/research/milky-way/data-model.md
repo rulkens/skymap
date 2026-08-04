@@ -19,7 +19,7 @@ settings) and stays open; what transfers is its prediction, that "a new
 contributor brings its own group rather than widening a shared struct".
 
 **DECISION.** Group both types by the contributor that reads them, one group
-per UI section: `GalaxyFieldTuning` into disc/arms/armCloud/dust/hii/sfMap;
+per UI section: `GalaxyFieldTuning` into disc/arms (with armCloud nested inside it)/dust/hii/sfMap;
 `GalaxyDustParams` into tau+rV at top with disc/cloud/texture/armLane below.
 
 **DECISION, the substantive one: star formation leaves dust entirely.**

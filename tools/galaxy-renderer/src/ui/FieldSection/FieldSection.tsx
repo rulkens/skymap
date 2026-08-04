@@ -38,15 +38,17 @@ function FieldSection(): ReactNode {
   const tuning = useAppSelector((state) => state.fieldTuning);
   const render = useAppSelector((state) => state.render);
   const open = useAppSelector((state) => state.ui.openSections.field);
-  const smoothFieldBlobs = tuning.discEnabled ? OTHER_COMPONENTS + WARPED_DISC_BLOBS : 0;
+  const smoothFieldBlobs = tuning.disc.enabled ? OTHER_COMPONENTS + WARPED_DISC_BLOBS : 0;
 
   return (
     <CollapsibleSection
       title="FLUX FIELD"
       open={open}
       onToggle={() => dispatch(sectionToggled('field'))}
-      headerToggle={tuning.discEnabled}
-      onHeaderToggleChange={(value) => dispatch(fieldTuningPatched({ discEnabled: value }))}
+      headerToggle={tuning.disc.enabled}
+      onHeaderToggleChange={(value) =>
+        dispatch(fieldTuningPatched({ disc: { ...tuning.disc, enabled: value } }))
+      }
     >
       <div className={styles.root}>
         <ParamSlider

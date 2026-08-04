@@ -176,7 +176,7 @@ export function buildDustParticleCloud(
   // caller. This is the intended consequence of the SF map leading, not a
   // regression.
   let placement: ClusteredDiscPlacementMode = { kind: 'smoothDisc' };
-  if (tuning.sfMapDustSeeding && sfMap) {
+  if (tuning.dust.sfMapSeeding && sfMap) {
     const maxDensity = maxSfMapDustDensity(sfMap);
     if (maxDensity > 0) {
       placement = {
@@ -213,7 +213,7 @@ export function buildDustParticleCloud(
       placement,
       // Gated with `placement` above: OFF (the default) is a no-op, so a
       // caller with the map already sampled needn't re-check the flag.
-      sfMapOrientation: tuning.sfMapDustSeeding ? sfMapOrientation : null,
+      sfMapOrientation: tuning.dust.sfMapSeeding ? sfMapOrientation : null,
       orientationDeltaStats,
     },
     (childRng) => ({ radius: sampleRadius(childRng()) }),
