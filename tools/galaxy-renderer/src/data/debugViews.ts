@@ -23,12 +23,12 @@ export const DEBUG_VIEWS: Readonly<Record<DebugViewKind, DebugViewSpec>> = {
   sfMap: {
     intensityKey: 'sfMapViewIntensity',
     label: 'SF map view',
-    info: "Crossfades in the SSPSF automaton's log-polar output, same seam as the dust view. Step 1's only way to see the automaton — it feeds nothing else yet.",
+    info: "Crossfades in the SSPSF automaton's log-polar output, same seam as the dust view. The automaton also seeds the dust and the orientation field, so this is where to look when either of those reads wrong.",
   },
   orientation: {
     intensityKey: 'orientationViewIntensity',
     label: 'Orientation view',
-    info: "Crossfades in the GPU structure-tensor pass chain's crest orientation (hue) and coherence (brightness), same seam again. Also gates the pass chain itself — it only (re-)dispatches while this is above 0.",
+    info: "Crossfades in the direction the SF map's activity runs at each point: hue is the direction, brightness is how strongly it runs that way. Long ribbons of one hue tracing an arm or a spur mean the direction is real; fine rainbow speckle, or black, means there is none to measure there — black is also what a saturated activity channel looks like. Dust sprites are stretched along this direction whenever 'Seed dust from gas' is on, so what looks wrong here shows up as misaligned dust.",
   },
   bubble: {
     intensityKey: 'bubbleViewIntensity',

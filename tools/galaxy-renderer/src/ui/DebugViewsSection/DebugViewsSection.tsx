@@ -98,7 +98,7 @@ function DebugViewsSection(): ReactNode {
           step={0.1}
           format={(v) => v.toFixed(1)}
           onChange={(v) => dispatch(renderPatched({ orientationSigmaDerivTexels: v }))}
-          info="Gaussian sigma (sfMap grid texels) for the pass chain's field-smoothing stage, before the central-difference gradient. Only reachable while the orientation view is above 0."
+          info="Gaussian sigma (sfMap grid texels) for the pass chain's field-smoothing stage, before the central-difference gradient. Moving it re-runs the pass chain — and the dust rebuild, if seeding is on."
         />
         <ParamSlider
           label="Orientation sigma (integ)"
@@ -108,7 +108,7 @@ function DebugViewsSection(): ReactNode {
           step={0.1}
           format={(v) => v.toFixed(1)}
           onChange={(v) => dispatch(renderPatched({ orientationSigmaIntegTexels: v }))}
-          info="Gaussian sigma (sfMap grid texels) for the tensor-smoothing stage, after Jxx/Jxy/Jyy are built. Conventionally 2-3x the derivative sigma. Only reachable while the orientation view is above 0."
+          info="Gaussian sigma (sfMap grid texels) for the tensor-smoothing stage, after Jxx/Jxy/Jyy are built. Conventionally 2-3x the derivative sigma. Moving it re-runs the pass chain — and the dust rebuild, if seeding is on."
         />
         <ParamSlider
           label={DEBUG_VIEWS.bubble.label}

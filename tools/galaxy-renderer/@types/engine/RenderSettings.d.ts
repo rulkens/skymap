@@ -86,9 +86,9 @@ export type RenderSettings = {
   readonly dustViewIntensity: number;
   /**
    * SF-map crossfade weight: 0 = pure galaxy, 1 = the SSPSF automaton's
-   * log-polar output alone, same seam as `dustViewIntensity`. Step 1's whole
-   * purpose — the automaton feeds nothing else yet, so this is the only way
-   * to see it.
+   * log-polar output alone, same seam as `dustViewIntensity`. The automaton
+   * seeds the dust placement and the orientation field, so this is the view
+   * that says whether a fault in either starts here.
    */
   readonly sfMapViewIntensity: number;
   /**
