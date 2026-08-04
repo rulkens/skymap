@@ -10,6 +10,7 @@
  * the ones measured against the real Galaxy carry their derivation inline.
  */
 import type { GalaxyParams } from '../../@types/galaxy/GalaxyParams';
+import { DEFAULT_GALAXY_DUST_CLOUD_PARAMS } from '../../services/engine/galaxyGenerator/v2/defaultGalaxyDustCloudParams';
 import { MILKY_WAY_DISC_RADIUS_KPC } from './galacticCenter';
 
 /**
@@ -104,18 +105,13 @@ export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams = {
     scaleLenRatio: 1.5,
     heightRatio: 0.35,
     rV: 2.3,
-    // Not yet visually calibrated — same values as DEFAULT_GALAXY_DUST_CLOUD_PARAMS.
-    cloud: {
-      count: 6000,
-      clumpiness: 0.6,
-      sizeScale: 1,
-      sizeFloorPc: 15,
-      elongation: 2.5,
-      heightRatio: 0.5,
-      texture: 0.7,
-      textureScale: 1,
-      textureContrast: 1,
-    },
+    // The shared defaults BY REFERENCE, not a restated copy: this block once
+    // said "same values as the defaults" while silently drifting from them
+    // (clumpiness 0.6 after the defaults went 0), and the tool boots into
+    // this preset — so the drift masqueraded as the defaults themselves.
+    // Replace with a literal block only when a MW-specific calibration
+    // deliberately diverges.
+    cloud: DEFAULT_GALAXY_DUST_CLOUD_PARAMS,
   },
   // Not yet visually calibrated — same values as
   // DEFAULT_GALAXY_STAR_FORMATION_PARAMS.
