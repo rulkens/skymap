@@ -100,12 +100,12 @@ export function randomGalaxyParams(
     cloud: {
       ...DEFAULT_GALAXY_DUST_CLOUD_PARAMS,
       // Only the knobs that read as a galaxy's own ISM character get rolled:
-      // how richly it is resolved into clouds, how hierarchically those
-      // cluster, how large its complexes run, and how eroded their
-      // silhouettes are. The rest are taste scalers, left at their
-      // calibrated value.
+      // how richly it is resolved into clouds, how large its complexes run,
+      // and how eroded their silhouettes are. The rest are taste scalers,
+      // left at their calibrated value. Clumpiness stays at the default 0 —
+      // any scatter around the seed points re-blurs the map-exact placement
+      // (see dustParticleCloud.ts's mapDensity comment).
       count: Math.round(6000 + rng() * 12000),
-      clumpiness: 0.35 + rng() * 0.55,
       sizeScale: 0.7 + rng() * 0.9,
       texture: 0.4 + rng() * 0.6,
     },
