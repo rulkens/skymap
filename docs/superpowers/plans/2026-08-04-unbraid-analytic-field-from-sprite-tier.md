@@ -66,7 +66,7 @@ one segment.
 (six entries), a WESL scraper parity test, and `tests/…/v2/galaxyFieldFluxLedger.test.ts` — the
 first tests the analytic field has ever had. Both mutation-verified.
 
-**2 — `describeGalaxy`: invert the arrow, delete the readback.** New `GalaxyDescription` +
+**2 — `describeGalaxy`: invert the arrow, delete the readback. DONE (`a0b5d611`).** New `GalaxyDescription` +
 `GalaxyLightDecomposition`; `describeGalaxy(params)` takes over the four RNG streams
 (`packGenerationUniforms` ~:129-241) **in the same order**; the packer writes out what it is handed.
 Delete `readGalaxyFieldGeometry.ts` and `GalaxyFieldGeometry`. Behaviour-neutral: byte-identical UBO,
@@ -85,16 +85,26 @@ bit-identical mixtures for the eight presets, 12 seeded extras and every `starCo
 `scratchpad/armGate.ts`'s three rows now agree: 332 field components, 141 SF events, 556 HII
 components each.
 
-**4 — The flux anchor. CHANGES THE IMAGE.**
-`luminosity = GALAXY_LUMINOSITY_PER_AREA · outerRadius²`, anchored on the **Milky Way @ 150 000**
-(user's choice): Σ₀ = 9.3573 pre-fold, **0.504358** after folding in the `0.11 × 0.7² = 0.0539`
-that `deriveFrameView.ts:103` currently supplies. Per-preset flux then changes by exactly
-`cbrt(150000/N)`: **mw ×1.000**, ell ×0.669, lmc ×0.693, the five 600k presets ×0.630.
-Delete `emissionScale`, `GLOW_DISC_INTEGRAL`, `MEAN_STAR_LUMINOSITY`, `MEAN_FALLOFF_AND_JITTER`
-(`galaxyFieldMixture.ts:122-134`) — all four exist only to chase a parity that does not hold.
-`HII_FLUX_PER_STAR_AREA` becomes **exactly neutral**:
-`HII_LUMINOSITY_SHARE = 0.01 / 0.126724 = 0.078911` against a measured `hiiFlux/emissionScale` of
-0.078915.
+**4 — The flux anchor. DONE (`8bfdac9c`). CHANGES THE IMAGE.**
+`luminosity = GALAXY_LUMINOSITY_PER_AREA · outerRadius²`. The four constants went as planned:
+`emissionScale`, `GLOW_DISC_INTEGRAL`, `MEAN_STAR_LUMINOSITY`, `MEAN_FALLOFF_AND_JITTER` all
+existed only to chase a parity that does not hold. `HII_FLUX_PER_STAR_AREA` became exactly neutral
+at `HII_LUMINOSITY_SHARE = 0.01 / 0.1267181136 = 0.078915316`, and because both sites divide the
+same anchor the HII-to-disc ratio holds at every budget rather than only at the anchor point.
+
+Two numbers above were authored against a stale tree and are recorded here because the difference
+is instructive:
+
+- **The anchor is the Milky Way @ 75 000, not 150 000.** #541 halved the preset (`a402c303`), so the
+  tier ladder is 37.5k / 75k / 150k and 150 000 is the LARGE tier. Anchoring on the literal figure
+  would have made the default Milky Way 26% brighter. Per-preset flux therefore moves by
+  `cbrt(75000/N)`: **mw ×1.000**, ell ×0.531, lmc ×0.550, the five 600k presets ×0.500.
+- **Σ₀ = 7.4268687, not 9.3573, and there is no fold.** The plan's pre-fold figure assumed
+  `deriveFrameView.ts:103`'s `0.11 × 0.7² = 0.0539` would be folded in. That product had already
+  become `0.0385 × 1.85² = 0.131766` at the same merge, silently brightening the field ×2.4446 —
+  which is what the overexposed core turned out to be. The lane is deleted in `19eb238e` and
+  replaced by `FIELD_EXPOSURE_GAUGE = 0.0539`, so `analyticExposure` alone sets the field's
+  exposure. Step 5 then re-pinned Σ₀ to **8.5835812**.
 
 **5 — The luminosity decomposition. DONE. CHANGES THE IMAGE, substantially.** `hubbleStageOf(type)`
 → RC3 T-type; `galaxyLightDecomposition(category, params)` as a stage-keyed table;
@@ -116,11 +126,20 @@ As shipped:
   light and their own per-star brightness, so a fixed 0.35 of the disk was a third unrelated number.
 - **Spirals now have a halo** (2% flat) — a population they previously had none of, in both tiers.
 
-**6 — Move the budget words into `v1/`.** `splitStarBudget`, `carveStarLayout`, `totalStarBudget`,
-`grainScale`. **Blocked on step 4, not just on 2 and 3** — `describeGalaxy` lives in `shared/` and
-still calls `splitStarBudget` for `starSize` and `modelledStars`, so moving it to `v1/` today would
-point `shared/` at `v1/`, which is the coupling this plan exists to remove. Those two fields
-disappear when step 4 deletes the `emissionScale` anchor that reads them. Sequence it LAST.
+**6 — Move the budget words into `v1/`. DONE (`3352ce21`, `84a5c65c`).** `splitStarBudget`,
+`carveStarLayout`, `totalStarBudget`, `grainScale` — plus `carveDustLayout` and
+`packGenerationUniforms`, which import them, so leaving those behind would have created the
+`shared/` → `v1/` edge this plan exists to remove. `packGenerationUniforms` derives `starSize` from
+the `StarBudget` it is already handed, so `GalaxyDescription` carries no sprite quantity at all and
+`shared/` has no PATH to a budget — the guard is structural, not a promise, and its "still here,
+for one reason" landmine is deleted rather than amended. UBO byte-identical: the `starSize` lane
+matches the old expression on 8 presets × 8 star counts, mutation-verified.
+
+`84a5c65c` finishes the seam by moving `galaxyPopulationCountShares` and
+`spritePopulationBrightness` too — both produce a count currency, and after step 5 nothing in `v2/`
+reads either. **`shared/` stops at the light.** The round-trip test moves with them, since what it
+asserts is that v1's division inverts. The `generate.wesl` parity test stays: it covers four
+hand-mirrors, two owned by each folder, and it is one seam so it stays one file.
 
 ## Literature (step 5)
 
