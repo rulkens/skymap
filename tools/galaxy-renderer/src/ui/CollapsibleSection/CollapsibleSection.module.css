@@ -4,17 +4,31 @@
 .header {
   composes: sectionHeader from '../shared.module.css';
   display: flex;
-  justify-content: space-between;
   align-items: center;
   width: 100%;
   margin: 4px 0 14px;
   padding: 16px 0 0;
-  border: none;
   border-top: 1px solid var(--border-divider);
-  background: transparent;
   font-family: var(--font-family-mono);
-  cursor: pointer;
   user-select: none;
+}
+
+/* The fold affordance. A button's UA style resets font, letter-spacing,
+ * colour and text-transform — none of which this one wants, since the header
+ * row above already composes all four. */
+.foldButton {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  cursor: pointer;
   text-align: left;
 }
 
@@ -27,8 +41,8 @@
   margin-right: 8px;
 }
 
-/* Pushes the chevron to the far edge now that the header can hold three
- * children; with no checkbox present it changes nothing. */
+/* Pushes the chevron to the fold button's far edge; with no copy button
+ * present that is the header's far edge too. */
 .headerTitle {
   flex: 1;
 }
@@ -36,6 +50,16 @@
 .chevron {
   font-size: var(--font-size-xs);
   opacity: 0.7;
+}
+
+/* Descendant selector on purpose: it has to outrank the shared `Button`
+ * primitive's own padding whichever order the bundler emits the two modules
+ * in. Width is pinned so the "copied ✓" feedback doesn't shove the chevron. */
+.header .copyButton {
+  margin-left: 8px;
+  padding: 2px 4px;
+  min-width: 9ch;
+  font-size: var(--font-size-xs);
 }
 
 .body {

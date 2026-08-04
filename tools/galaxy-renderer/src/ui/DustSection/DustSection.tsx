@@ -31,6 +31,9 @@ function DustSection(): ReactNode {
     dispatch(paramsPatched({ dust: { ...dust, ...patch } }));
   };
 
+  // `cloud` is DUST CLOUD's own section and copies from there.
+  const { cloud: _cloud, ...smoothDust } = dust;
+
   return (
     <CollapsibleSection
       title="DUST"
@@ -40,6 +43,10 @@ function DustSection(): ReactNode {
       onHeaderToggleChange={(value) =>
         dispatch(fieldTuningPatched({ dust: { ...dustTuning, enabled: value } }))
       }
+      copyPayload={{
+        galaxy: { dust: smoothDust },
+        fieldTuning: { dust: { enabled: dustTuning.enabled } },
+      }}
     >
       <div className={styles.root}>
         <ParamSlider

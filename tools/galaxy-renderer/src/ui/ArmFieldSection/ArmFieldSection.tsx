@@ -23,6 +23,10 @@ function ArmFieldSection(): ReactNode {
     dispatch(fieldTuningPatched({ arms: { ...arms, ...patch } }));
   };
 
+  // `cloud` is ARM CLOUD's own section and copies from there — this one offers
+  // only the ridge knobs its own sliders drive.
+  const { cloud: _cloud, ...ridge } = arms;
+
   return (
     <CollapsibleSection
       title="ARM OVERDENSITIES"
@@ -30,6 +34,7 @@ function ArmFieldSection(): ReactNode {
       onToggle={() => dispatch(sectionToggled('armField'))}
       headerToggle={arms.enabled}
       onHeaderToggleChange={(value) => patchArms({ enabled: value })}
+      copyPayload={{ fieldTuning: { arms: ridge } }}
     >
       <div className={styles.root}>
         <ParamSlider
@@ -46,7 +51,7 @@ function ArmFieldSection(): ReactNode {
           label="Arm contrast K"
           value={arms.contrast}
           min={1.05}
-          max={2.2}
+          max={4}
           step={0.01}
           format={(v) => v.toFixed(2)}
           onChange={(v) => patchArms({ contrast: v })}

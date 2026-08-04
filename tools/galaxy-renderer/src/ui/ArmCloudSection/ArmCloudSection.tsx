@@ -33,6 +33,7 @@ function ArmCloudSection(): ReactNode {
       onToggle={() => dispatch(sectionToggled('armCloud'))}
       headerToggle={cloud.enabled}
       onHeaderToggleChange={(value) => patchCloud({ enabled: value })}
+      copyPayload={{ fieldTuning: { arms: { cloud } } }}
     >
       <div className={styles.root}>
         <ParamSlider

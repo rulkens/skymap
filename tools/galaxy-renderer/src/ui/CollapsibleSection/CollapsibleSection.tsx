@@ -2,20 +2,17 @@
  * CollapsibleSection — a foldable HUD group (SHAPE & SIZE, SPIRAL ARMS, …).
  *
  * Controlled, not self-managed: the caller owns `open` and flips it via
- * `onToggle`. The spike's panel keeps every section's open/closed flag in
- * one `state.open` map so a "collapse all" affordance and persisted layout
- * are one-line additions later — a component-local `useState` here would
- * put that state behind a wall the caller can't reach.
+ * `onToggle`, so a "collapse all" affordance stays a one-line addition —
+ * a component-local `useState` would wall that state off from the caller.
  *
- * The optional header checkbox is the app SettingsPanel's master-toggle
- * idiom (`src/components/SettingsPanel/CollapsibleSection.tsx`): it enables
- * or disables the section's FEATURE, independently of the fold — clicking
- * the checkbox never collapses, clicking the header never flips the
- * checkbox. stopPropagation on the checkbox's pointer events is what keeps
- * the two affordances apart; both halves of the pair must be wired for the
- * slot to render at all.
+ * The header is a ROW of independent controls rather than one big button: the
+ * fold sits in its own `<button>` beside the optional master-toggle checkbox
+ * (the app SettingsPanel's idiom) and the optional copy button. Nesting them
+ * inside the fold would be invalid HTML and would need stopPropagation on
+ * every pointer event to keep the affordances apart.
  */
 import type { ReactNode } from 'react';
+import CopyButton from '../../../../../src/components/common/CopyButton/CopyButton';
 import styles from './CollapsibleSection.module.css';
 
 export type CollapsibleSectionProps = {
@@ -24,6 +21,21 @@ export type CollapsibleSectionProps = {
   readonly onToggle: () => void;
   readonly headerToggle?: boolean;
   readonly onHeaderToggleChange?: (value: boolean) => void;
+  /**
+   * This section's live values keyed by their own path in the store —
+   * `{ fieldTuning: { arms: { widthScale: 2.3, … } } }`. The path is the whole
+   * point: pasted back, the block says which state it patches, so a value
+   * tuned by eye reaches its default site without a label-to-field guess.
+   * Omit it where a section drives no tuning state (DEBUG VIEWS) — an empty
+   * object is worse than no button.
+   *
+   * Partial by design: two sections may split one state node (ARM OVERDENSITIES
+   * and ARM CLOUD both sit under `fieldTuning.arms`), and each carries only its
+   * own half. That makes a payload a transcription target, NOT something to
+   * dispatch — `fieldTuningPatched` replaces a node wholesale, so feeding it
+   * half a node drops the other half.
+   */
+  readonly copyPayload?: Record<string, unknown>;
   readonly children: ReactNode;
 };
 
@@ -33,32 +45,37 @@ function CollapsibleSection({
   onToggle,
   headerToggle,
   onHeaderToggleChange,
+  copyPayload,
   children,
 }: CollapsibleSectionProps): ReactNode {
   const hasHeaderToggle = headerToggle !== undefined && onHeaderToggleChange !== undefined;
   return (
     <div className={styles.root}>
-      <button type="button" className={styles.header} onClick={onToggle} aria-expanded={open}>
+      <div className={styles.header}>
         {hasHeaderToggle && (
           <input
             type="checkbox"
             className={styles.headerToggle}
             checked={headerToggle}
-            onChange={(e) => {
-              e.stopPropagation();
-              onHeaderToggleChange(e.target.checked);
-            }}
-            onClick={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
+            onChange={(e) => onHeaderToggleChange(e.target.checked)}
             aria-label={`Toggle ${title}`}
           />
         )}
-        <span className={styles.headerTitle}>{title}</span>
-        <span className={styles.chevron} aria-hidden>
-          {open ? '▾' : '▸'}
-        </span>
-      </button>
+        <button type="button" className={styles.foldButton} onClick={onToggle} aria-expanded={open}>
+          <span className={styles.headerTitle}>{title}</span>
+          <span className={styles.chevron} aria-hidden>
+            {open ? '▾' : '▸'}
+          </span>
+        </button>
+        {copyPayload && (
+          <CopyButton
+            className={styles.copyButton}
+            text={JSON.stringify(copyPayload, null, 2)}
+            label="⧉"
+            title={`Copy ${title} values as JSON`}
+          />
+        )}
+      </div>
       {open && <div className={styles.body}>{children}</div>}
     </div>
   );

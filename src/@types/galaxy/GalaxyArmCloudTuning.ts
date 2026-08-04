@@ -55,8 +55,9 @@ export type GalaxyArmCloudTuning = {
    * realization's flux-weighted mean radius scatters ~3%, and high bias breaks
    * it outright — the sampler's bounded rejection gives up and keeps an
    * untilted draw whose flux is still divided by the inner tilt, which at bias
-   * 3 is 17% of complexes and drags the tier's light ~4% inward. Under 1% of
-   * complexes at the shipped 1.5, where the drift is inside the noise.
+   * 3 is 17% of complexes and drags the tier's light ~4% inward. The shipped
+   * default sits at 2.9, so those figures describe it rather than bound it:
+   * the drift is accepted, not avoided.
    */
   readonly radialBias: number;
   /** 0..1 hierarchical clustering — see `coverage` for what it costs the covering factor, and `GalaxyDustCloudParams.clumpiness` for the same knob on the dust tier. */

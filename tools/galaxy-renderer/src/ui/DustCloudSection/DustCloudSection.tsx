@@ -39,6 +39,10 @@ function DustCloudSection(): ReactNode {
       onToggle={() => dispatch(sectionToggled('dustCloud'))}
       headerToggle={render.dustCloudEnabled}
       onHeaderToggleChange={(value) => dispatch(renderPatched({ dustCloudEnabled: value }))}
+      copyPayload={{
+        galaxy: { dust: { cloud } },
+        render: { dustCloudEnabled: render.dustCloudEnabled },
+      }}
     >
       <div className={styles.root}>
         <ParamSlider

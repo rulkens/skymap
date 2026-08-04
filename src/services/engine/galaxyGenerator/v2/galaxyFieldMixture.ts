@@ -256,15 +256,19 @@ export const WARP_RING_COUNT = 2;
  */
 export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
   disc: { enabled: true },
+  // Hand-calibrated by eye in the galaxy-renderer tool, above the measured
+  // Milky Way figures each knob's own docblock quotes (widthScale 1 = Reid+19's
+  // maser law, contrast 1.3 = the MW's measured K). The measurements bound what
+  // is PHYSICAL, not what the shipped image uses.
   arms: {
     enabled: true,
-    widthScale: 1,
-    contrast: 1.3,
+    widthScale: 2.3,
+    contrast: 2.2,
     // Calibration of the value, not of the law (`GalaxyArmTuning.excessScaleRatio`):
     // at 1, contrast flat with radius, the Milky Way preset's ridge chain puts
     // only 5% of its flux beyond r=8 of a 10.5-unit disc — arms that stop
-    // before the disc does. 1.8 lifts that to 15%.
-    excessScaleRatio: 1.8,
+    // before the disc does. Above 1 lifts that; how far is a look call.
+    excessScaleRatio: 1.3,
     blobSharpness: 1,
     cloud: {
       enabled: true,
@@ -272,16 +276,17 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
       // rather than 0 — a new section whose every slider does nothing until
       // some OTHER slider is raised first reads as broken. This is a deliberate
       // boot-image change, not a neutral default.
-      share: 0.35,
-      coverage: 1,
-      // Pulls the sprites out of the bulge glare while the placement sampler
-      // still accepts 99% of its complexes, so the tilt's flux cancellation
-      // holds here (`GalaxyArmCloudTuning.radialBias`).
-      radialBias: 1.5,
+      share: 0.8,
+      coverage: 3.5,
+      // Near the top of the 0..3 range, where the placement sampler's bounded
+      // rejection starts giving up: this ships WITH the ~17%-exhausted,
+      // ~4%-inward drift `GalaxyArmCloudTuning.radialBias` documents, as the
+      // price of pulling the sprites clear of the bulge glare.
+      radialBias: 2.9,
       // Independent scattering: the one setting at which `coverage` means
       // literally what it says (`GalaxyArmCloudTuning.coverage`).
       clumpiness: 0,
-      sizeScale: 1,
+      sizeScale: 0.65,
       elongation: 3,
     },
   },
@@ -754,12 +759,18 @@ function pushHalo(
 }
 
 /**
- * A contrast that would consume over half the disc means the parameterization
- * is being driven outside its meaning (K way past the ~2 grand-design
- * ceiling, or a preset with an implausibly narrow disc) — clamp the debit and
- * carry on rather than let the disc go negative or inverted.
+ * Whatever the debit cannot take out of the disc, the arms emit anyway — so
+ * this fraction is the point past which the mixture stops conserving flux
+ * (`galaxyFieldFluxLedger.test.ts`), not a soft limiter. It is set high enough
+ * that only a broken parameterization (an excess several times the disc) can
+ * reach it, and no higher: the residual disc must stay clearly positive rather
+ * than going to zero or inverting.
+ *
+ * It was 0.5 while the arm defaults sat at the MW's measured K; the shipped
+ * contrast is now well past that, and ngc6946's excess reaches 0.57 of its
+ * disc, which leaked 5.8% of the galaxy's light before this moved.
  */
-const ARM_DISC_DEBIT_CLAMP_FRACTION = 0.5;
+const ARM_DISC_DEBIT_CLAMP_FRACTION = 0.9;
 
 /**
  * Component count is `WARP_RING_COUNT * RING_BLOBS_PER_RING` (192, fixed)

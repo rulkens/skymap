@@ -51,6 +51,16 @@ function FadeSection({ readout }: FadeSectionProps): ReactNode {
       title="MILKY WAY FADE (APP PARITY)"
       open={open}
       onToggle={() => dispatch(sectionToggled('fade'))}
+      copyPayload={{
+        render: {
+          fadeEnabled: render.fadeEnabled,
+          fadeAnchor: render.fadeAnchor,
+          fadeApproachFullAt: render.fadeApproachFullAt,
+          fadeApproachGoneAt: render.fadeApproachGoneAt,
+          fadeFullPx: render.fadeFullPx,
+          fadeGonePx: render.fadeGonePx,
+        },
+      }}
     >
       <div className={styles.root}>
         <div className={styles.toggleRow}>

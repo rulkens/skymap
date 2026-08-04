@@ -24,6 +24,7 @@
  */
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import cx from 'classnames';
 import Button from '../Button/Button';
 import styles from './CopyButton.module.css';
 
@@ -36,9 +37,11 @@ export type CopyButtonProps = {
   readonly label: string;
   /** Passed through to the underlying `<button title>` — consumer-specific. */
   readonly title?: string;
+  /** Composed onto the underlying `Button` for LAYOUT only — chrome stays the primitive's. */
+  readonly className?: string;
 };
 
-function CopyButton({ text, label, title }: CopyButtonProps): ReactNode {
+function CopyButton({ text, label, title, className }: CopyButtonProps): ReactNode {
   const [feedback, setFeedback] = useState<string | null>(null);
   const clearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -64,7 +67,7 @@ function CopyButton({ text, label, title }: CopyButtonProps): ReactNode {
 
   return (
     <Button
-      className={styles.root}
+      className={cx(styles.root, className)}
       disabled={text.length === 0}
       title={title}
       onClick={() => void handleClick()}

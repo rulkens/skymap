@@ -201,6 +201,21 @@ function freshRng(): () => number {
   return mulberry32((Math.random() * 1e9) | 0);
 }
 
+/**
+ * A section's own galaxy values, read off the slider list that renders it, so
+ * the copy payload can never drift from what the section actually shows. Each
+ * reseed button's seed comes along: it is as much a value of that section as
+ * the slider it sits under, and the look is not reproducible without it.
+ */
+function galaxyValues(galaxy: GalaxyParams, specs: readonly SliderSpec[]): Record<string, unknown> {
+  const values: Record<string, unknown> = {};
+  for (const spec of specs) {
+    values[spec.key] = galaxy[spec.key];
+    if (spec.seedKey) values[spec.seedKey] = galaxy[spec.seedKey];
+  }
+  return values;
+}
+
 export type ControlsPanelProps = {
   /**
    * Live fade telemetry, prop-drilled from `App` rather than dispatched into
@@ -219,6 +234,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
   const render = useAppSelector((state) => state.render);
   const lod = useAppSelector((state) => state.lod);
   const ui = useAppSelector((state) => state.ui);
+  const extras = useAppSelector((state) => state.extras);
 
   const category = classifyHubbleType(galaxy.type);
   const shapeSliders = buildShapeSliders(category);
@@ -319,6 +335,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
           title="MORPHOLOGY · HUBBLE SEQUENCE"
           open={ui.openSections.morphology}
           onToggle={() => dispatch(sectionToggled('morphology'))}
+          copyPayload={{ galaxy: { type: galaxy.type } }}
         >
           <TypePicker
             activeType={galaxy.type}
@@ -330,6 +347,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
           title="SHAPE & SIZE"
           open={ui.openSections.shape}
           onToggle={() => dispatch(sectionToggled('shape'))}
+          copyPayload={{ galaxy: { ...galaxyValues(galaxy, shapeSliders), seed: galaxy.seed } }}
         >
           {shapeSliders.map(renderGalaxySlider)}
           <Button
@@ -347,6 +365,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
           title="STAR BUDGET (TO BE DELETED)"
           open={ui.openSections.starBudget}
           onToggle={() => dispatch(sectionToggled('starBudget'))}
+          copyPayload={{ galaxy: galaxyValues(galaxy, STAR_BUDGET_SLIDERS) }}
         >
           {STAR_BUDGET_SLIDERS.map(renderGalaxySlider)}
         </CollapsibleSection>
@@ -356,6 +375,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             title="SPIRAL ARMS"
             open={ui.openSections.arms}
             onToggle={() => dispatch(sectionToggled('arms'))}
+            copyPayload={{ galaxy: galaxyValues(galaxy, armSliders) }}
           >
             {armSliders.map(renderGalaxySlider)}
           </CollapsibleSection>
@@ -365,6 +385,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
           title="POPULATIONS"
           open={ui.openSections.pop}
           onToggle={() => dispatch(sectionToggled('pop'))}
+          copyPayload={{ galaxy: galaxyValues(galaxy, popSliders) }}
         >
           {popSliders.map(renderGalaxySlider)}
         </CollapsibleSection>
@@ -379,6 +400,10 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             onToggle={() => dispatch(sectionToggled('dust'))}
             headerToggle={render.legacyDustEnabled}
             onHeaderToggleChange={(value) => dispatch(renderPatched({ legacyDustEnabled: value }))}
+            copyPayload={{
+              galaxy: galaxyValues(galaxy, dustSliders),
+              render: { legacyDustEnabled: render.legacyDustEnabled },
+            }}
           >
             {dustSliders.map(renderGalaxySlider)}
           </CollapsibleSection>
@@ -388,6 +413,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
           title="GLOBULAR CLUSTERS"
           open={ui.openSections.glob}
           onToggle={() => dispatch(sectionToggled('glob'))}
+          copyPayload={{ galaxy: galaxyValues(galaxy, GLOB_SLIDERS) }}
         >
           {GLOB_SLIDERS.map(renderGalaxySlider)}
         </CollapsibleSection>
@@ -396,6 +422,19 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
           title="RENDERING"
           open={ui.openSections.render}
           onToggle={() => dispatch(sectionToggled('render'))}
+          copyPayload={{
+            render: {
+              exposure: render.exposure,
+              bloom: render.bloom,
+              bloomThreshold: render.bloomThreshold,
+              sizeScale: render.sizeScale,
+              starIntensity: render.starIntensity,
+              starPxMin: render.starPxMin,
+              starPxMax: render.starPxMax,
+              softness: render.softness,
+              tonemap: render.tonemap,
+            },
+          }}
         >
           {/* Exposure / bloom / tone curve mirror the app's own knobs, over the
               app's own ranges (exposure 0.1–4.0, per DEFAULT_EXPOSURE's
@@ -501,6 +540,13 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
           title="TOOL-ONLY GRADE (NOT IN THE APP)"
           open={ui.openSections.grade}
           onToggle={() => dispatch(sectionToggled('grade'))}
+          copyPayload={{
+            render: {
+              saturation: render.saturation,
+              vignette: render.vignette,
+              gammaEncode: render.gammaEncode,
+            },
+          }}
         >
           <ParamSlider
             label="Saturation"
@@ -543,6 +589,15 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
           title="PERFORMANCE (LOD)"
           open={ui.openSections.perf}
           onToggle={() => dispatch(sectionToggled('perf'))}
+          copyPayload={{
+            lod: { lodApparent: lod.lodApparent },
+            render: {
+              aggregateDivisor: render.aggregateDivisor,
+              fieldDivisor: render.fieldDivisor,
+              dustDivisor: render.dustDivisor,
+              hiiDivisor: render.hiiDivisor,
+            },
+          }}
         >
           <ParamSlider
             label="LOD · min on-screen size"
@@ -600,6 +655,9 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
           title="MULTIPLE GALAXIES"
           open={ui.openSections.multi}
           onToggle={() => dispatch(sectionToggled('multi'))}
+          // `regenNonce` is a reroll trigger, not a value — same exclusion the
+          // preset wire format makes.
+          copyPayload={{ extras: { enabled: extras.enabled, count: extras.count } }}
         >
           <MultiGalaxySection />
         </CollapsibleSection>

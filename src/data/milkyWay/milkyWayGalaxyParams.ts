@@ -43,7 +43,10 @@ export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams = {
   armWidth: 1.5,
   armStrength: 1.0,
   subArms: 0.66,
-  armFalloff: 0.48,
+  // Hand-calibrated by eye, not measured: arm extent has no published Milky Way
+  // value to pin it to. Lands the arms at 1.07 x outerRadius (see
+  // `describeGalaxy.ts`'s ARM_EXTENT lerp).
+  armFalloff: 0.6,
   armEdgeVar: 0.48,
   armClump: 0.62,
   armWave: 0.94,

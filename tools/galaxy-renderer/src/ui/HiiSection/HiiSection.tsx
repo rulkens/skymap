@@ -31,6 +31,7 @@ function HiiSection(): ReactNode {
       onToggle={() => dispatch(sectionToggled('hii'))}
       headerToggle={hii.enabled}
       onHeaderToggleChange={(value) => patchHii({ enabled: value })}
+      copyPayload={{ fieldTuning: { hii } }}
     >
       <div className={styles.root}>
         <ParamSlider

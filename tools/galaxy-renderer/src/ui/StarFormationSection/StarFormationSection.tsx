@@ -32,6 +32,7 @@ function StarFormationSection(): ReactNode {
       title="STAR FORMATION"
       open={open}
       onToggle={() => dispatch(sectionToggled('starFormation'))}
+      copyPayload={{ galaxy: { starFormation } }}
     >
       <div className={styles.root}>
         <ParamSlider

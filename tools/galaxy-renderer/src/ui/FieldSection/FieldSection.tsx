@@ -49,6 +49,7 @@ function FieldSection(): ReactNode {
       onHeaderToggleChange={(value) =>
         dispatch(fieldTuningPatched({ disc: { ...disc, enabled: value } }))
       }
+      copyPayload={{ fieldTuning: { disc }, render: { analyticExposure: render.analyticExposure } }}
     >
       <div className={styles.root}>
         <ParamSlider
@@ -59,7 +60,7 @@ function FieldSection(): ReactNode {
           step={0.01}
           format={(v) => v.toFixed(2)}
           onChange={(v) => dispatch(renderPatched({ analyticExposure: v }))}
-          info="Whole-field multiplier on the integrated mixture. 1.0 is parity: the mixture is calibrated to emit the same total light as the sprite population it stands in for, at whatever the sprite exposure and size sliders are set to."
+          info="Whole-field multiplier on the integrated mixture. The star pass's own exposure and size sliders are folded in, so the ratio between the two representations holds as they move. The shipped default is hand-calibrated by eye, not a parity point."
         />
         <p className={styles.readout}>
           smooth field {smoothFieldBlobs} (base {OTHER_COMPONENTS} + warped outer disc{' '}

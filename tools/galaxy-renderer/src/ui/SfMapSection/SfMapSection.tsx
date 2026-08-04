@@ -44,6 +44,9 @@ function SfMapSection({ diagnostics }: SfMapSectionProps): ReactNode {
       onToggle={() => dispatch(sectionToggled('sfMap'))}
       headerToggle={sfMap.enabled}
       onHeaderToggleChange={(value) => patchSfMap({ enabled: value })}
+      // `dust.sfMapSeeding` rides along because this section's checkbox writes
+      // it, even though it lives on the dust tier — see that control's comment.
+      copyPayload={{ fieldTuning: { sfMap, dust: { sfMapSeeding: dust.sfMapSeeding } } }}
     >
       <div className={styles.root}>
         <ParamSlider
