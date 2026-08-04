@@ -101,7 +101,10 @@ RC3 T-type; `galaxyLightDecomposition(params, category)` as a stage-keyed table;
 **size**, stops driving bulge **light**. `armStrength` stops touching the light budget.
 
 **6 — Move the budget words into `v1/`.** `splitStarBudget`, `carveStarLayout`, `totalStarBudget`,
-`grainScale`. Only possible once steps 2 and 3 remove the three blockers `shared/README.md` names.
+`grainScale`. **Blocked on step 4, not just on 2 and 3** — `describeGalaxy` lives in `shared/` and
+still calls `splitStarBudget` for `starSize` and `modelledStars`, so moving it to `v1/` today would
+point `shared/` at `v1/`, which is the coupling this plan exists to remove. Those two fields
+disappear when step 4 deletes the `emissionScale` anchor that reads them. Sequence it LAST.
 
 ## Literature (step 5)
 
