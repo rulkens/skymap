@@ -268,7 +268,14 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
     // at 1, contrast flat with radius, the Milky Way preset's ridge chain puts
     // only 5% of its flux beyond r=8 of a 10.5-unit disc — arms that stop
     // before the disc does. Above 1 lifts that; how far is a look call.
-    excessScaleRatio: 1.3,
+    //
+    // 2 is that look call answered against a measured obstacle rather than by
+    // taste alone: `pushWarpedOuterDisc` banks 7.4% of the disc's light into a
+    // 0.75-0.98 R_out annulus, so the interarm floor the eye divides by runs
+    // 2.2x the exponential the contrast law is written against, and K delivers
+    // under half its nominal contrast out there. This buys the reach back from
+    // the numerator. Widening that band is the fix that treats the cause.
+    excessScaleRatio: 2,
     blobSharpness: 1,
     cloud: {
       enabled: true,
