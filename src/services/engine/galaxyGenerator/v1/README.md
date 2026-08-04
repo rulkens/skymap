@@ -25,7 +25,7 @@ createMilkyWayCloud(device, starCount)          ← src/services/engine/phases/i
   regenerate(count):
     shared/{splitStarBudget, carveStarLayout, carveDustLayout}   pure CPU
     device.createBuffer starVB / dustVB         size = capacity × GEN_RECORD_BYTES
-    queue.writeBuffer(ubo, shared/packGenerationUniforms(...))
+    queue.writeBuffer(ubo, shared/packGenerationUniforms(shared/describeGalaxy(params), ...))
     encodeGeneration(...)                       two compute passes
     queue.submit
       → MilkyWayCloudBuffers → gpu/renderers/milkyWay/milkyWayCloudRenderer.ts

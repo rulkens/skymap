@@ -8,7 +8,7 @@
  * angle-sum rule rewrites it as (A(R)/R) * (z*cos n - x*sin n), LINEAR in x and
  * z once R is fixed — a shear, which is affine and integrates exactly.
  */
-import type { GalaxyFieldGeometry } from '../../@types/galaxy/GalaxyFieldGeometry';
+import type { GalaxyDescription } from '../../@types/galaxy/GalaxyDescription';
 import type { Vec2 } from '../../@types/math/Vec2';
 
 /**
@@ -20,7 +20,7 @@ import type { Vec2 } from '../../@types/math/Vec2';
  * either, and a component whose radius sits past `outerRadius` must bend as
  * hard as the stars out there do.
  */
-export function discWarpShear(radius: number, geometry: GalaxyFieldGeometry): Vec2 {
+export function discWarpShear(radius: number, geometry: GalaxyDescription): Vec2 {
   const { warpStrength, warpTwist, warpStartRadius, outerRadius } = geometry;
   if (warpStrength <= 0 || radius <= warpStartRadius) return [0, 0];
   const rel = (radius - warpStartRadius) / Math.max(1e-4, outerRadius - warpStartRadius);

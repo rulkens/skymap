@@ -10,7 +10,7 @@
 import { warpHeight } from '../../../../utils/galaxy/warpHeight';
 import { warpSurfaceFrame } from '../../../../utils/galaxy/warpSurfaceFrame';
 import type { GalaxyFieldArmRecord } from '../../../../@types/galaxy/GalaxyFieldArmRecord';
-import type { GalaxyFieldGeometry } from '../../../../@types/galaxy/GalaxyFieldGeometry';
+import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../../../../@types/galaxy/GalaxyFieldTuning';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 
@@ -48,7 +48,7 @@ function smoothstep01(t: number): number {
 /** armStarSample's ridge angle: log-spiral phase + meander + (gated) high-frequency wave. */
 export function armRidgeAngle(
   logR: number,
-  geometry: GalaxyFieldGeometry,
+  geometry: GalaxyDescription,
   arm: GalaxyFieldArmRecord,
 ): number {
   const angle =
@@ -74,7 +74,7 @@ export function armRidgeAngle(
  */
 export function armRidgeCurvePoint(
   logR: number,
-  geometry: GalaxyFieldGeometry,
+  geometry: GalaxyDescription,
   arm: GalaxyFieldArmRecord,
 ): Vec3 {
   const radius = geometry.armStartRadius * Math.exp(logR);
@@ -85,7 +85,7 @@ export function armRidgeCurvePoint(
 /** The arm's true warped centre at a given radius — see `armRidgeCurvePoint`. */
 function armCurvePos(
   radius: number,
-  geometry: GalaxyFieldGeometry,
+  geometry: GalaxyDescription,
   arm: GalaxyFieldArmRecord,
 ): Vec3 {
   return armRidgeCurvePoint(Math.log(radius / geometry.armStartRadius), geometry, arm);
@@ -107,7 +107,7 @@ export type ArmRidgeFrame = { readonly point: Vec3 } & {
  */
 export function armRidgeFrameAt(
   logR: number,
-  geometry: GalaxyFieldGeometry,
+  geometry: GalaxyDescription,
   arm: GalaxyFieldArmRecord,
 ): ArmRidgeFrame {
   const radius = geometry.armStartRadius * Math.exp(logR);
@@ -156,7 +156,7 @@ const ARM_TAPER_START_FRAC = 0.6;
  */
 export function armFadeEnvelope(
   radius: number,
-  geometry: GalaxyFieldGeometry,
+  geometry: GalaxyDescription,
   arm: GalaxyFieldArmRecord,
 ): number {
   const innerT = (radius - geometry.armStartRadius) / geometry.armInnerRampW;
@@ -205,7 +205,7 @@ const ARM_WIDTH_SLOPE = 0.036;
  */
 export function armExcessSurfaceShape(
   radius: number,
-  geometry: GalaxyFieldGeometry,
+  geometry: GalaxyDescription,
   hLight: number,
   scaleRatio: number,
 ): number {
@@ -215,7 +215,7 @@ export function armExcessSurfaceShape(
 /** This arm's cross-section sigma at a radius — same formula the blob placement's `sigmas.across` uses. */
 export function armCrossSigma(
   radius: number,
-  geometry: GalaxyFieldGeometry,
+  geometry: GalaxyDescription,
   tuning: GalaxyFieldTuning,
 ): number {
   return (

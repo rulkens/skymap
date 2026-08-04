@@ -1,66 +1,26 @@
 /**
- * packGenerationUniforms — the CPU->GPU seam for galaxy generation: packs
- * one galaxy's derived scale constants, carved star/dust layouts, and every
- * value the CPU model's construction-time RNG draws would have produced,
- * into one `GENERATION_UBO`-shaped `ArrayBuffer` a compute shader (Task 3)
- * can bind directly.
+ * packGenerationUniforms — the CPU->GPU seam for galaxy generation: writes one
+ * `GalaxyDescription`, the carved star/dust layouts, and v1's own sprite knobs
+ * into one `GENERATION_UBO`-shaped `ArrayBuffer` a compute shader binds
+ * directly.
  *
- * What this function does NOT do is replay a full per-star draw sequence —
- * the spike's original model drew millions of `rand()`/`randNormal()` calls
- * per galaxy (one bulge/disk/arm/halo star at a time), and a GPU compute
- * pass can't share one serial RNG stream across billions of parallel
- * invocations the way a single-threaded CPU loop can. The generation compute
- * shaders instead seed a per-invocation stateless hash from `seed` plus the
- * invocation index (see `galaxyGen/generate.wesl`'s header for the determinism
- * contract this gives up in exchange). What DOES need to come from one
- * serial draw sequence — because the spike computes them once, up front,
- * not per star — are the handful of *shared* quantities every invocation
- * reads: the bar's tilt angle, the irregular-galaxy clump centres, the
- * lenticular dust-cloud centres, and each arm's
- * phase/pitch/weight/meander/clump/wave personality. Those are exactly the
- * draws this function replicates here, CPU-side, in the spike's exact order,
- * so every invocation of the compute shaders reads the same shared geometry
- * a single serial draw sequence would have produced:
+ * It draws nothing. Every shared quantity a serial RNG produced — bar and
+ * bulge tilt, lopsidedness, clump/cloud centres, per-arm personality — arrives
+ * in the description, because the analytic field has to read the same values
+ * and a second draw sequence would misalign the two tiers (`describeGalaxy`).
  *
- *  - `asymStream` (seeded by `asymSeed`): the four asymmetry values, then —
- *    only when arms would be built (`armStarCount > 0 && category !==
- *    'irregular'`) — eight more draws per arm (phase, pitch, weight,
- *    meanderAmp, meanderFreq, meanderPhase, fadeRadius, age). The `weightSum`
- *    field (stored in the arms scalar group) accumulates the weight draws
- *    from this stream, making it part of the asymmetry family even though
- *    it lives in a different field group.
- *  - `clumpStream`/`waveStream` (seeded by `clumpSeed`/`waveSeed`): four
- *    draws per arm each, under the same arms guard — scoped to their own
- *    streams so dialling one doesn't perturb the other or the asymmetry
- *    family.
- *  - `mainStream` (seeded by `seed`): the bar-tilt angle via
- *    `computeBarGeometry` (always, every category, per the spike), then the
- *    seven irregular clump centres when `category === 'irregular'`, then
- *    the 34 lenticular cloud centres when `category === 'lenticular'`. A
- *    galaxy is only ever one category, so at most one of those two blocks
- *    actually draws; the other's array stays zero-filled, matching every
- *    other ineligible field in this packer (a population that doesn't run
- *    for this galaxy contributes no draws and no non-zero bytes, not a
- *    placeholder value).
- *
- * Every other field is a pure function of `params`/`budget` — no draw order
- * to get wrong, just the same formula the corresponding generation shader
- * population uses at its point of use.
+ * The generation shaders do NOT replay a per-star draw sequence: they seed a
+ * stateless per-invocation hash from `seed` plus the invocation index (see
+ * `galaxyGen/generate.wesl`'s header). Only the shared, drawn-once quantities
+ * above need a serial stream, which is exactly what the description carries.
  */
-import { lerp } from '../../../../utils/math/lerp';
-import { mulberry32 } from '../../../../utils/random/mulberry32';
-import { normalizeGenerationSeed } from '../../../../utils/galaxy/normalizeGenerationSeed';
-import { gaussian } from '../../../../../tools/utils/random/gaussian';
 import { carveDustLayout } from './carveDustLayout';
 import { carveStarLayout } from './carveStarLayout';
-import { classifyHubbleType } from './classifyHubbleType';
-import { computeBarGeometry } from './computeBarGeometry';
 import { grainScale } from './grainScale';
-import { hiiPalette } from './hiiPalette';
-import { outerRadiusOf } from './outerRadiusOf';
 import { GENERATION_UBO } from './generationUboLayout';
 import type { ExtraGalaxySpec } from '../../../../@types/galaxy/ExtraGalaxySpec';
 import type { GalaxyCategory } from '../../../../@types/galaxy/GalaxyCategory';
+import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyParams } from '../../../../@types/galaxy/GalaxyParams';
 import type { StarBudget } from '../../../../@types/galaxy/StarBudget';
 
@@ -72,30 +32,6 @@ export const CATEGORY_CODE: Record<GalaxyCategory, number> = {
   barred: 3,
   irregular: 4,
 };
-
-/**
- * Per-arm age bands: alternating old/young by parity, each with its own
- * jitter range, so a 4-arm galaxy naturally lands two old arms roughly
- * opposite two young ones rather than a uniform contrast on every arm.
- */
-const ARM_AGE_EVEN_BASE = 0.7;
-const ARM_AGE_ODD_BASE = 0.1;
-const ARM_AGE_JITTER_RANGE = 0.3;
-
-/**
- * How far the arms reach, in units of `outerRadius`, lerped by `armFalloff`
- * (0 = longest, 1 = shortest; the default 0.6 lands at 1.07). This is the
- * ONLY knob that moves where an arm ends — `armExcessScaleRatio` shapes its
- * brightness inside this extent and cannot lengthen it.
- *
- * The floor is unreachable from the 0..1 slider, whose shortest arm is 0.65:
- * it guards the preset-JSON path, which `parseGalaxyPreset` deliberately
- * leaves unvalidated, from an armFalloff past ~1.14 zeroing every radius the
- * arm chain divides by.
- */
-const ARM_EXTENT_AT_FALLOFF_0 = 1.7;
-const ARM_EXTENT_AT_FALLOFF_1 = 0.65;
-const ARM_EXTENT_FLOOR = 0.5;
 
 /** Write four consecutive floats starting at a vec4-aligned float index. */
 function writeVec4(
@@ -110,178 +46,16 @@ function writeVec4(
 }
 
 export function packGenerationUniforms(
+  description: GalaxyDescription,
+  /** v1-only knobs the description deliberately does not carry: dust ring/noise, globulars, extraScale. */
   params: GalaxyParams,
   budget: StarBudget,
   extra: ExtraGalaxySpec | null,
 ): ArrayBuffer {
-  const category = classifyHubbleType(params.type);
-
-  // --- Scale constants, per the spike's fixed geometry ratios -------------
-  const outerRadius = outerRadiusOf(params);
-  // 1/3.2 is the ratio every galaxy type shares; a preset that has a measured
-  // radial light profile to match overrides it via `diskScaleLenFrac`.
-  const diskScaleLen = outerRadius * (params.diskScaleLenFrac ?? 1 / 3.2);
-  const bulgeRadius = outerRadius * 0.34 * (params.bulgeSize || 1);
-  const diskHeight = 0.055 * outerRadius * (params.diskThickness || 1);
-  const grain = grainScale(budget.totalStars);
-  const starSize = 0.016 * outerRadius * grain;
-
-  // --- Asymmetry stream: four construction draws, then per-arm personality
-  const asymmetry = params.irregularity ?? 0.5;
-  const asymStream = mulberry32(((params.asymSeed ?? 0) | 0 || 331) >>> 0);
-  const flattening =
-    category === 'elliptical' ? 1 - 0.09 * (parseInt(params.type.slice(1), 10) || 0) : 0.62;
-  const lopsidedAmp = asymmetry * (0.06 + 0.22 * asymStream());
-  const lopsidedAngle = asymStream() * Math.PI * 2;
-  const bulgeAxisZ = 1 - asymmetry * (0.05 + 0.3 * asymStream());
-  const bulgeAngle = asymStream() * Math.PI * 2;
-  const cosBulge = Math.cos(bulgeAngle);
-  const sinBulge = Math.sin(bulgeAngle);
-  const bulgeConcentration = params.bulgeFalloff ?? 0.5;
-
-  // --- Main stream: bar angle unconditionally, then category-gated centres
-  const mainStream = mulberry32(normalizeGenerationSeed(params.seed));
-  const bar = computeBarGeometry(
-    mainStream,
-    category,
-    outerRadius,
-    asymmetry,
-    params.barStrength,
-    params.barAngleDeg,
-  );
-
-  const NUM_IRR_CLUMPS = GENERATION_UBO.arrays.clumpCenters.countVec4;
-  const clumpCenters: number[][] = Array.from({ length: NUM_IRR_CLUMPS }, () => [0, 0, 0, 0]);
-  if (category === 'irregular') {
-    for (let c = 0; c < NUM_IRR_CLUMPS; c++) {
-      const a = mainStream() * Math.PI * 2;
-      const dist = outerRadius * (0.15 + 0.7 * mainStream());
-      const y = gaussian(mainStream) * diskHeight * 3;
-      clumpCenters[c] = [Math.cos(a) * dist * 1.1, y, Math.sin(a) * dist, 0];
-    }
-  }
-
-  const LENT_CLOUDS = GENERATION_UBO.arrays.cloudCenters.countVec4;
-  const cloudCenters: number[][] = Array.from({ length: LENT_CLOUDS }, () => [0, 0, 0, 0]);
-  if (category === 'lenticular') {
-    for (let c = 0; c < LENT_CLOUDS; c++) {
-      const a = mainStream() * Math.PI * 2;
-      const rr = bulgeRadius * (0.25 + 1.5 * mainStream() * mainStream());
-      cloudCenters[c] = [Math.cos(a) * rr, Math.sin(a) * rr, rr, 0];
-    }
-  }
-
-  // --- Arm personality: asymStream continues, clump/wave get their own ----
-  const MAX_ARMS = GENERATION_UBO.arrays.armTable.countVec4 / 4;
-  const numArms = Math.min(Math.max(1, Math.round(params.armCount || 2)), MAX_ARMS);
-
-  const pitchDegrees = 8 + 26 * (params.armWinding ?? 0.5);
-  const windTightness = 1 / Math.tan((pitchDegrees * Math.PI) / 180);
-  const armExtentFrac = lerp(
-    ARM_EXTENT_AT_FALLOFF_0,
-    ARM_EXTENT_AT_FALLOFF_1,
-    params.armFalloff ?? 0.6,
-  );
-  const armFadeRadius = outerRadius * Math.max(ARM_EXTENT_FLOOR, armExtentFrac);
-  const armFullRadius = armFadeRadius * 0.42;
-  const armLengthVar = params.armEdgeVar ?? 0;
-
-  const drawArms = budget.armStarCount > 0 && category !== 'irregular';
-  const armTable: number[][] = Array.from({ length: MAX_ARMS }, () => new Array(16).fill(0));
-  let weightSum = 0;
-
-  if (drawArms) {
-    const clumpStream = mulberry32(((params.clumpSeed ?? 0) | 0 || 911) >>> 0);
-    const waveStream = mulberry32(((params.waveSeed ?? 0) | 0 || 777) >>> 0);
-    for (let a = 0; a < numArms; a++) {
-      const phase = (a / numArms) * Math.PI * 2 + (asymStream() * 2 - 1) * 0.38 * asymmetry;
-      const pitch = windTightness * (1 + (asymStream() * 2 - 1) * 0.3 * asymmetry);
-      const weight = 1 + (asymStream() * 2 - 1) * 0.9 * asymmetry;
-      weightSum += weight;
-      const meanderAmp = asymmetry * (0.05 + 0.14 * asymStream());
-      const meanderFreq = 1.2 + 1.6 * asymStream();
-      const meanderPhase = asymStream() * Math.PI * 2;
-      const clumpF1 = 2 + 4 * clumpStream();
-      const clumpP1 = clumpStream() * Math.PI * 2;
-      const clumpF2 = 5 + 6 * clumpStream();
-      const clumpP2 = clumpStream() * Math.PI * 2;
-      const waveF1 = 3 + 4 * waveStream();
-      const waveP1 = waveStream() * Math.PI * 2;
-      const waveF2 = 8 + 8 * waveStream();
-      const waveP2 = waveStream() * Math.PI * 2;
-      const fadeRadius = Math.max(
-        armFullRadius * 1.3,
-        armFadeRadius * (1 + (asymStream() * 2 - 1) * 0.55 * armLengthVar),
-      );
-      // Pinning still consumes the draw (see GalaxyParams.armAges doc) so a
-      // later arm's phase/pitch/weight never shifts depending on whether
-      // THIS arm's age happened to be pinned.
-      const ageJitter = asymStream();
-      const ageBase = a % 2 === 0 ? ARM_AGE_EVEN_BASE : ARM_AGE_ODD_BASE;
-      const age = params.armAges?.[a] ?? ageBase + ARM_AGE_JITTER_RANGE * ageJitter;
-      armTable[a] = [
-        phase,
-        pitch,
-        weight,
-        fadeRadius,
-        meanderAmp,
-        meanderFreq,
-        meanderPhase,
-        age,
-        clumpF1,
-        clumpP1,
-        clumpF2,
-        clumpP2,
-        waveF1,
-        waveP1,
-        waveF2,
-        waveP2,
-      ];
-    }
-  }
-
-  // --- Arms scalar group, shared by every arm the shader draws -------------
-  const armStartRadius = Math.max(
-    category === 'barred' ? bar.barLength * 0.9 : bulgeRadius * 0.55,
-    bulgeRadius * 0.4,
-  );
-  const armWidthFactor = 0.1 * (params.armWidth ?? 1);
-  const armInnerRampW = Math.max(bulgeRadius * 0.6, outerRadius * 0.14);
-
-  // --- Dust scalar group, shared by every dust population the shader draws
-  const dustAmount = params.spriteDust ?? 1;
-  const dustNoiseAmt = params.dustNoise ?? 0.6;
-  const noiseFreq = (2.4 * (params.dustNoiseScale ?? 1)) / outerRadius;
-  const clumpAmount = params.armClump ?? 0.5;
-  const ringRadius = outerRadius * (params.dustRing ?? 0.72);
-  const ringWidth = outerRadius * (params.dustRingWidth ?? 0.12);
-  const ringStrength = params.dustRingStrength ?? 0;
-
-  // --- Misc scalar group ----------------------------------------------------
-  const globularSize = params.globularSize ?? 1;
-  const globularBright = params.globularBright ?? 0.6;
-  const youngFraction = params.youngStars ?? 0.5;
-  const hiiIntensity = params.hii ?? 1;
-  const irrBarOffset = outerRadius * 0.18;
-  const extraScale = extra?.scale ?? 1;
-
-  // --- Palette ---------------------------------------------------------------
-  const hii = hiiPalette(params.metallicity ?? 0.5);
-
-  // --- Warp ------------------------------------------------------------------
-  const warpStrength = params.warpStrength ?? 0;
-  const warpTwist = params.warpTwist ?? 0;
-  const warpStartRadius = outerRadius * (params.warpStart ?? 0.3);
-
-  // --- u32 group --------------------------------------------------------------
-  const seed = normalizeGenerationSeed(params.seed) >>> 0;
-  const noiseSeed = (((params.seed ?? 0) | 0) ^ 0x9e3779b9) >>> 0;
-
-  // --- Carved layouts (Task 1) -------------------------------------------------
+  const { category, outerRadius } = description;
   const starLayout = carveStarLayout(category, params, budget);
   const dustLayout = carveDustLayout(category, params, budget);
 
-  // --- Write ---------------------------------------------------------------
   const buf = new ArrayBuffer(GENERATION_UBO.byteLength);
   const f32 = new Float32Array(buf);
   const u32 = new Uint32Array(buf);
@@ -290,52 +64,54 @@ export function packGenerationUniforms(
   const A = GENERATION_UBO.arrays;
 
   f32[F.outerRadius] = outerRadius;
-  f32[F.diskScaleLen] = diskScaleLen;
-  f32[F.bulgeRadius] = bulgeRadius;
-  f32[F.diskHeight] = diskHeight;
-  f32[F.grainScale] = grain;
-  f32[F.starSize] = starSize;
+  f32[F.diskScaleLen] = description.diskScaleLen;
+  f32[F.bulgeRadius] = description.bulgeRadius;
+  f32[F.diskHeight] = description.diskHeight;
+  f32[F.grainScale] = grainScale(budget.totalStars);
+  f32[F.starSize] = description.starSize;
 
-  f32[F.flattening] = flattening;
-  f32[F.asymmetry] = asymmetry;
-  f32[F.lopsidedAmp] = lopsidedAmp;
-  f32[F.lopsidedAngle] = lopsidedAngle;
-  f32[F.bulgeAxisZ] = bulgeAxisZ;
-  f32[F.cosBulge] = cosBulge;
-  f32[F.sinBulge] = sinBulge;
-  f32[F.bulgeConcentration] = bulgeConcentration;
+  f32[F.flattening] = description.flattening;
+  f32[F.asymmetry] = description.asymmetry;
+  f32[F.lopsidedAmp] = description.lopsidedAmp;
+  f32[F.lopsidedAngle] = description.lopsidedAngle;
+  f32[F.bulgeAxisZ] = description.bulgeAxisZ;
+  f32[F.cosBulge] = Math.cos(description.bulgeTiltRad);
+  f32[F.sinBulge] = Math.sin(description.bulgeTiltRad);
+  f32[F.bulgeConcentration] = description.bulgeConcentration;
 
-  f32[F.barLength] = bar.barLength;
-  f32[F.cosBar] = bar.cosBar;
-  f32[F.sinBar] = bar.sinBar;
+  f32[F.barLength] = description.barLength;
+  f32[F.cosBar] = Math.cos(description.barTiltRad);
+  f32[F.sinBar] = Math.sin(description.barTiltRad);
 
-  f32[F.warpStrength] = warpStrength;
-  f32[F.warpTwist] = warpTwist;
-  f32[F.warpStartRadius] = warpStartRadius;
+  f32[F.warpStrength] = description.warpStrength;
+  f32[F.warpTwist] = description.warpTwist;
+  f32[F.warpStartRadius] = description.warpStartRadius;
 
-  f32[F.dustAmount] = dustAmount;
-  f32[F.dustNoiseAmt] = dustNoiseAmt;
-  f32[F.noiseFreq] = noiseFreq;
-  f32[F.clumpAmount] = clumpAmount;
-  f32[F.ringRadius] = ringRadius;
-  f32[F.ringWidth] = ringWidth;
-  f32[F.ringStrength] = ringStrength;
+  // --- Dust: shape shared with the description, amounts v1's alone ---------
+  f32[F.dustAmount] = params.spriteDust ?? 1;
+  f32[F.dustNoiseAmt] = params.dustNoise ?? 0.6;
+  f32[F.noiseFreq] = (2.4 * (params.dustNoiseScale ?? 1)) / outerRadius;
+  f32[F.clumpAmount] = description.clumpAmount;
+  f32[F.ringRadius] = outerRadius * (params.dustRing ?? 0.72);
+  f32[F.ringWidth] = outerRadius * (params.dustRingWidth ?? 0.12);
+  f32[F.ringStrength] = params.dustRingStrength ?? 0;
 
   f32[F.subArmAmount] = params.subArms ?? 0;
-  f32[F.waveAmount] = params.armWave ?? 0;
-  f32[F.armStartRadius] = armStartRadius;
-  f32[F.armWidthFactor] = armWidthFactor;
-  f32[F.armFullRadius] = armFullRadius;
-  f32[F.armInnerRampW] = armInnerRampW;
-  f32[F.weightSum] = weightSum;
+  f32[F.waveAmount] = description.waveAmount;
+  f32[F.armStartRadius] = description.armStartRadius;
+  f32[F.armWidthFactor] = description.armWidthFactor;
+  f32[F.armFullRadius] = description.armFullRadius;
+  f32[F.armInnerRampW] = description.armInnerRampW;
+  f32[F.weightSum] = description.arms.reduce((sum, arm) => sum + arm.weight, 0);
 
-  f32[F.globularSize] = globularSize;
-  f32[F.globularBright] = globularBright;
-  f32[F.youngFraction] = youngFraction;
-  f32[F.hiiIntensity] = hiiIntensity;
-  f32[F.irrBarOffset] = irrBarOffset;
-  f32[F.extraScale] = extraScale;
+  f32[F.globularSize] = params.globularSize ?? 1;
+  f32[F.globularBright] = params.globularBright ?? 0.6;
+  f32[F.youngFraction] = description.youngFraction;
+  f32[F.hiiIntensity] = params.hii ?? 1;
+  f32[F.irrBarOffset] = outerRadius * 0.18;
+  f32[F.extraScale] = extra?.scale ?? 1;
 
+  const hii = description.hiiPalette;
   writeVec4(f32, A.hiiCore.offsetVec4, hii.core[0], hii.core[1], hii.core[2], 0);
   writeVec4(f32, A.hiiHalo.offsetVec4, hii.halo[0], hii.halo[1], hii.halo[2], 0);
 
@@ -352,23 +128,51 @@ export function packGenerationUniforms(
     Math.sin(tiltX),
   );
 
-  u32[U.seed] = seed;
-  u32[U.noiseSeed] = noiseSeed;
+  u32[U.seed] = description.seed;
+  u32[U.noiseSeed] = (((params.seed ?? 0) | 0) ^ 0x9e3779b9) >>> 0;
   u32[U.category] = CATEGORY_CODE[category];
-  u32[U.numArms] = numArms;
+  u32[U.numArms] = description.numArms;
   u32[U.starCapacity] = starLayout.capacity;
   u32[U.dustCapacity] = dustLayout.capacity;
   u32[U.starRangeCount] = starLayout.ranges.length;
   u32[U.dustRangeCount] = dustLayout.ranges.length;
 
+  // Lane order below is hand-mirrored into `generate.wesl`'s ArmRec — a
+  // reorder here lands a float in the wrong lane with no error anywhere.
   const armBase = A.armTable.offsetVec4 * 4;
-  for (let a = 0; a < MAX_ARMS; a++) f32.set(armTable[a]!, armBase + a * 16);
+  description.arms.forEach((arm, index) => {
+    f32.set(
+      [
+        arm.phase,
+        arm.pitch,
+        arm.weight,
+        arm.fadeRadius,
+        arm.meanderAmp,
+        arm.meanderFreq,
+        arm.meanderPhase,
+        arm.age,
+        arm.clumpF1,
+        arm.clumpP1,
+        arm.clumpF2,
+        arm.clumpP2,
+        arm.waveF1,
+        arm.waveP1,
+        arm.waveF2,
+        arm.waveP2,
+      ],
+      armBase + index * 16,
+    );
+  });
 
   const clumpBase = A.clumpCenters.offsetVec4 * 4;
-  for (let c = 0; c < NUM_IRR_CLUMPS; c++) f32.set(clumpCenters[c]!, clumpBase + c * 4);
+  description.irregularClumpCenters.forEach((c, index) => {
+    f32.set([c[0], c[1], c[2], 0], clumpBase + index * 4);
+  });
 
   const cloudBase = A.cloudCenters.offsetVec4 * 4;
-  for (let c = 0; c < LENT_CLOUDS; c++) f32.set(cloudCenters[c]!, cloudBase + c * 4);
+  description.lenticularCloudCenters.forEach((c, index) => {
+    f32.set([c[0], c[1], c[2], 0], cloudBase + index * 4);
+  });
 
   const starRangesBase = A.starRanges.offsetVec4 * 4;
   for (let i = 0; i < A.starRanges.countVec4; i++) {

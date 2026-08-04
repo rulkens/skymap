@@ -37,7 +37,7 @@ import { discLightScaleLength } from '../../../../utils/galaxy/discLightScaleLen
 import { inverseCovarianceFromFrame } from '../../../../utils/galaxy/inverseCovarianceFromFrame';
 import { mulberry32 } from '../../../../utils/random/mulberry32';
 import type { GalaxyFieldComponent } from '../../../../@types/galaxy/GalaxyFieldComponent';
-import type { GalaxyFieldGeometry } from '../../../../@types/galaxy/GalaxyFieldGeometry';
+import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../../../../@types/galaxy/GalaxyFieldTuning';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 
@@ -118,7 +118,7 @@ function distance3(a: Vec3, b: Vec3): number {
  * coverage setting to read as filled where it counts.
  */
 export function deriveArmCloudCount(
-  geometry: GalaxyFieldGeometry,
+  geometry: GalaxyDescription,
   tuning: GalaxyFieldTuning,
 ): number {
   if (
@@ -174,7 +174,7 @@ type CloudParticle = { center: Vec3; readonly frame: CloudFrame; readonly radius
  * reference would normalise each arm's tilt separately and hand the short
  * arms a brightness offset that grows with `bias`.
  */
-function tiltReferenceRadius(geometry: GalaxyFieldGeometry): number {
+function tiltReferenceRadius(geometry: GalaxyDescription): number {
   let max = 0;
   for (const arm of geometry.arms) max = Math.max(max, arm.fadeRadius);
   return max > 0 ? max : geometry.armStartRadius;
@@ -202,7 +202,7 @@ function radialTilt(radius: number, referenceRadius: number, bias: number): numb
 }
 
 export function buildArmParticleCloud(
-  geometry: GalaxyFieldGeometry,
+  geometry: GalaxyDescription,
   tuning: GalaxyFieldTuning,
   totalFlux: number,
   seed: number,

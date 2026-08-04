@@ -10,10 +10,7 @@
  * claim has to be a deliberate edit rather than silent drift.
  */
 import { describe, expect, it } from 'vitest';
-import { classifyHubbleType } from '../../../../../src/services/engine/galaxyGenerator/shared/classifyHubbleType';
-import { packGenerationUniforms } from '../../../../../src/services/engine/galaxyGenerator/shared/packGenerationUniforms';
-import { readGalaxyFieldGeometry } from '../../../../../src/services/engine/galaxyGenerator/shared/readGalaxyFieldGeometry';
-import { splitStarBudget } from '../../../../../src/services/engine/galaxyGenerator/shared/splitStarBudget';
+import { describeGalaxy } from '../../../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
 import { SPRITE_POPULATION_BRIGHTNESS } from '../../../../../src/services/engine/galaxyGenerator/shared/spritePopulationBrightness';
 import {
   DEFAULT_GALAXY_FIELD_TUNING,
@@ -22,7 +19,7 @@ import {
 import { REFERENCE_GALAXIES } from '../../../../../tools/galaxy-renderer/src/data/referenceGalaxies';
 import type { ReferenceGalaxy } from '../../../../../tools/galaxy-renderer/@types/data/ReferenceGalaxy';
 import type { GalaxyFieldComponent } from '../../../../../src/@types/galaxy/GalaxyFieldComponent';
-import type { GalaxyFieldGeometry } from '../../../../../src/@types/galaxy/GalaxyFieldGeometry';
+import type { GalaxyDescription } from '../../../../../src/@types/galaxy/GalaxyDescription';
 import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';
 
 /**
@@ -41,13 +38,10 @@ function totalFlux(components: readonly GalaxyFieldComponent[]): number {
   return components.reduce((sum, component) => sum + componentFlux(component), 0);
 }
 
-function geometryOf(ref: ReferenceGalaxy): GalaxyFieldGeometry {
+function geometryOf(ref: ReferenceGalaxy): GalaxyDescription {
   // The gallery types its presets Partial, but `type` is GalaxyParams' one
   // required field and every entry carries it (pinned by referenceGalaxies.test).
-  const params: GalaxyParams = { ...ref.params, type: ref.params.type! };
-  const category = classifyHubbleType(params.type);
-  const budget = splitStarBudget(category, params);
-  return readGalaxyFieldGeometry(packGenerationUniforms(params, budget, null), params);
+  return describeGalaxy({ ...ref.params, type: ref.params.type! });
 }
 
 // `emissionScale`'s three anchor constants — see this file's docblock.
@@ -56,7 +50,7 @@ const MEAN_STAR_LUMINOSITY = 0.2392;
 const MEAN_FALLOFF_AND_JITTER = 0.57;
 
 /** What the mixture claims to emit: one scale times the population light shares. */
-function predictedFlux(geometry: GalaxyFieldGeometry): number {
+function predictedFlux(geometry: GalaxyDescription): number {
   const scale =
     geometry.modelledStars *
     geometry.starSize ** 2 *
@@ -65,10 +59,10 @@ function predictedFlux(geometry: GalaxyFieldGeometry): number {
     MEAN_FALLOFF_AND_JITTER;
   return (
     scale *
-    (geometry.discFraction * SPRITE_POPULATION_BRIGHTNESS.disk +
-      geometry.bulgeFraction * SPRITE_POPULATION_BRIGHTNESS.bulge +
-      geometry.barFraction * SPRITE_POPULATION_BRIGHTNESS.bar +
-      geometry.haloFraction * SPRITE_POPULATION_BRIGHTNESS.halo)
+    (geometry.light.disc * SPRITE_POPULATION_BRIGHTNESS.disk +
+      geometry.light.bulge * SPRITE_POPULATION_BRIGHTNESS.bulge +
+      geometry.light.bar * SPRITE_POPULATION_BRIGHTNESS.bar +
+      geometry.light.halo * SPRITE_POPULATION_BRIGHTNESS.halo)
   );
 }
 

@@ -23,7 +23,7 @@ import { sampleSfMapOrientation } from '../../../../utils/galaxy/sampleSfMapOrie
 import { warpSurfaceFrame } from '../../../../utils/galaxy/warpSurfaceFrame';
 import { gaussian } from '../../../../utils/random/gaussian';
 import type { GalaxyFieldArmRecord } from '../../../../@types/galaxy/GalaxyFieldArmRecord';
-import type { GalaxyFieldGeometry } from '../../../../@types/galaxy/GalaxyFieldGeometry';
+import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxySfMapOrientation } from '../../../../@types/galaxy/GalaxySfMapOrientation';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 
@@ -100,7 +100,7 @@ export type ClusteredDiscPlacementMode =
   | { readonly kind: 'smoothDisc' };
 
 export type ClusteredDiscPlacementConfig = {
-  readonly geometry: GalaxyFieldGeometry;
+  readonly geometry: GalaxyDescription;
   readonly rng: () => number;
   /** Total particle count across every complex. */
   readonly count: number;
@@ -188,7 +188,7 @@ function rotateFrameToOrientation(
   frame: CloudFrame,
   radius: number,
   angle: number,
-  geometry: GalaxyFieldGeometry,
+  geometry: GalaxyDescription,
   orientation: GalaxySfMapOrientation | null | undefined,
   stats: OrientationDeltaStats | undefined,
 ): CloudFrame {

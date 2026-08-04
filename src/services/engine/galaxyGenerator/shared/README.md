@@ -1,9 +1,9 @@
 # `shared/` — the generation front-end both tiers read
 
-Turns one `GalaxyParams` preset into the packed `GENERATION_UBO` bytes, and reads
-the galaxy's geometry back out of those same bytes. `v1/` binds the buffer to its
-compute shaders; `v2/` consumes the read-back `GalaxyFieldGeometry`. That is the
-whole reason this folder exists: **one galaxy, one geometry, two renderings.**
+Turns one `GalaxyParams` preset into one `GalaxyDescription`, then hands that to
+each tier: `v1/` packs it into `GENERATION_UBO` bytes and binds them to its
+compute shaders; `v2/` builds its Gaussian mixtures from it. That is the whole
+reason this folder exists: **one galaxy, one description, two renderings.**
 
 ## Flow
 
@@ -12,13 +12,13 @@ GalaxyParams
   │  classifyHubbleType          params.type ("SBb") → GalaxyCategory ("barred")
   │  galaxyPopulationCountShares category → bulge/bar/disk/arm/halo shares of star COUNT
   │  splitStarBudget             shares × totalStarBudget → StarBudget (v1's counts)
-  │  carveStarLayout             category+budget → GenerationLayout (popId ranges, strides)
-  │  carveDustLayout             ditto for dust; empty for ellipticals
   ▼
-packGenerationUniforms(params, budget, extra) → ArrayBuffer, GENERATION_UBO-shaped
-  ├──────────────────────────────► v1: queue.writeBuffer → generate.wesl
-  └── readGalaxyFieldGeometry(bytes, params) → GalaxyFieldGeometry
-                                  └───────────► v2: buildGalaxyFieldMixture(geometry, …)
+describeGalaxy(params) → GalaxyDescription   ← every construction-time RNG draw
+  ├── packGenerationUniforms(description, params, budget, extra) → ArrayBuffer
+  │     │  carveStarLayout       category+budget → GenerationLayout (popId ranges, strides)
+  │     │  carveDustLayout       ditto for dust; empty for ellipticals
+  │     └──────────────────────► v1: queue.writeBuffer → generate.wesl
+  └──────────────────────────────► v2: buildGalaxyFieldMixture(description, …)
 ```
 
 `generationUboLayout.ts` (`GENERATION_UBO`) is the offset authority for every
@@ -28,11 +28,11 @@ are hand-mirrored into `gpu/shaders/galaxyGen/generate.wesl`, guarded by
 
 ## Landmines
 
-**The geometry is READ BACK, not re-derived.** `readGalaxyFieldGeometry` parses
-the packed bytes because `cosBar`/`sinBar` and `cosBulge`/`sinBulge` are single
-draws off `packGenerationUniforms`' `mainStream`/`asymStream`. A second
-derivation would have to replay those streams in order and would silently
-misalign the field's bar against the sprites' the moment a draw moved.
+**`describeGalaxy` owns every shared RNG draw; nothing else may draw.** The four
+streams are consumed in one fixed order, and `randomGalaxyParams` plus every
+seeded preset are pinned to it — reorder a draw, add one, or skip one and every
+galaxy in the gallery rerolls. A pinned value (`barAngleDeg`, `armAges[a]`)
+still consumes its draw for exactly that reason.
 
 **`v2` depends on this folder through DATA, not imports.** Nothing under `v2/`
 imports anything here; the wiring happens in the caller
@@ -45,7 +45,7 @@ runs `v1 → shared` and `v2 ← shared` (by data), never back.
 
 **The population weights are a count-share table, not a star count — and not
 light either.** `galaxyPopulationCountShares` is the one source; `splitStarBudget`
-multiplies it by the sprite budget and `readGalaxyFieldGeometry` reads it as-is,
+multiplies it by the sprite budget and `GalaxyDescription.light` carries it as-is,
 so `starCount` cannot move the field's mixture. The bar's share is carved out of
 the disk's by `BAR_SHARE_OF_DISK`, which `carveStarLayout` spends on the sprite
 side — change one and you have changed both, which is the point. Globular-cluster
@@ -59,10 +59,10 @@ that analytic exposure 1.0 means sprite-flux parity. Deleting v1 does not delete
 that dependency — it has to be replaced with a real emissivity normalisation
 first (`docs/research/milky-way/goal-and-history.md`).
 
-**`splitStarBudget`/`carveStarLayout` are NOT v1-only.** `packGenerationUniforms`
-carves the star layout itself and derives `grainScale`/`starSize` from
-`budget.totalStars`, and `budget.armStarCount` is what gates the arm table into
-the UBO — both of which v2 then reads back. They stay here.
+**`splitStarBudget`/`carveStarLayout` are NOT v1-only.** `describeGalaxy` derives
+`starSize` from `budget.totalStars` and gates its arm draws on
+`budget.armStarCount` — both of which v2 then reads off the description. They
+stay here.
 
 **Arm-table lane 7 (`age`) is analytic-field-only.** The sprite shader never
 reads it. Lanes 0-6 are what `armStarSample` consumes.

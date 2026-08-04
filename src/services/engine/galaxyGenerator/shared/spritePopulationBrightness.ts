@@ -3,8 +3,8 @@
  * population: one entry per `randomLuminosity(...) * K` site in
  * `galaxyGen/generate.wesl`, where `irregularClump` (the builder the
  * irregular category's `arm` count share runs through) has no `* K`.
- * v2 applies only four: `readGalaxyFieldGeometry` folds `disk + arm` into
- * one `discFraction` weighted by `disk`, and the arm ridge chain then
+ * v2 applies only four: `describeGalaxy` folds `disk + arm` into one
+ * `light.disc` weighted by `disk`, and the arm ridge chain then
  * debits the disc by exactly the excess it adds, so it carries no net flux
  * — a fifth `arm` lane would double-count rather than close that gap.
  */

@@ -12,7 +12,7 @@
 import { DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from './discSurfaceFit';
 import { discLightScaleLength } from '../../../../utils/galaxy/discLightScaleLength';
 import type { GalaxyDustParams } from '../../../../@types/galaxy/GalaxyDustParams';
-import type { GalaxyFieldGeometry } from '../../../../@types/galaxy/GalaxyFieldGeometry';
+import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
 
 /** Exported so `dustParticleCloud.ts` sizes its mass budget off the SAME disc profile rather than re-deriving it. */
 export type DustDiscShape = {
@@ -30,10 +30,7 @@ export type DustDiscShape = {
  * deferred to the particle-cloud tier, where ring-placed clouds are affordable.
  * sigmaZ (and so the face-on central tau, which depends only on sigmaZ) is untouched.
  */
-export function dustDiscShape(
-  geometry: GalaxyFieldGeometry,
-  dust: GalaxyDustParams,
-): DustDiscShape {
+export function dustDiscShape(geometry: GalaxyDescription, dust: GalaxyDustParams): DustDiscShape {
   return {
     hDust: dust.scaleLenRatio * discLightScaleLength(geometry),
     sigmaZ: dust.heightRatio * geometry.diskHeight,
@@ -59,10 +56,10 @@ export function dustSigmaR(i: number, shape: DustDiscShape): number {
  */
 export function dustFaceOnColumn(
   radius: number,
-  geometry: GalaxyFieldGeometry,
+  geometry: GalaxyDescription,
   dust: GalaxyDustParams,
 ): number {
-  if (geometry.discFraction <= 0 || dust.tau <= 0) return 0;
+  if (geometry.light.disc <= 0 || dust.tau <= 0) return 0;
   const shape = dustDiscShape(geometry, dust);
   let sigma = 0;
   for (let i = 0; i < DISC_SIGMA_RATIOS.length; i++) {

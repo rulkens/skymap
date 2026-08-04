@@ -37,7 +37,7 @@ import { warpHeight } from '../../../../utils/galaxy/warpHeight';
 import { warpSurfaceFrame } from '../../../../utils/galaxy/warpSurfaceFrame';
 import type { GalaxyFieldArmRecord } from '../../../../@types/galaxy/GalaxyFieldArmRecord';
 import type { GalaxyFieldComponent } from '../../../../@types/galaxy/GalaxyFieldComponent';
-import type { GalaxyFieldGeometry } from '../../../../@types/galaxy/GalaxyFieldGeometry';
+import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../../../../@types/galaxy/GalaxyFieldTuning';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 
@@ -80,7 +80,7 @@ const MEAN_RADIUS_PER_SIGMA = Math.sqrt(Math.PI / 2);
  * components; that is the lever, not a richer per-component warp.
  */
 function shapeOf(
-  geometry: GalaxyFieldGeometry,
+  geometry: GalaxyDescription,
   sigmaAlong: number,
   sigmaPole: number,
   sigmaAcross: number,
@@ -124,7 +124,7 @@ const GLOW_DISC_INTEGRAL = 0.9294; // PI*(0.19865 + 0.17459 - 0.0774), over the 
 const MEAN_STAR_LUMINOSITY = 0.2392; // 0.12 + 0.4*E[u^3] + P(flare)*3.2*E[flare]
 const MEAN_FALLOFF_AND_JITTER = 0.57;
 
-function emissionScale(geometry: GalaxyFieldGeometry): number {
+function emissionScale(geometry: GalaxyDescription): number {
   return (
     geometry.modelledStars *
     geometry.starSize ** 2 *
@@ -203,14 +203,14 @@ const BULGE_BODY_SIGMA_RATIO = Math.sqrt(
  * numbers back in here.
  */
 function pushDisc(
-  geometry: GalaxyFieldGeometry,
+  geometry: GalaxyDescription,
   out: GalaxyFieldComponent[],
   tuning: GalaxyFieldTuning,
 ): number {
-  if (!tuning.discEnabled || geometry.discFraction <= 0) return 0;
+  if (!tuning.discEnabled || geometry.light.disc <= 0) return 0;
   const scale = emissionScale(geometry);
   const scaleLen = discLightScaleLength(geometry);
-  const central = (geometry.discFraction * DISC_BRIGHTNESS) / (2 * Math.PI * scaleLen * scaleLen);
+  const central = (geometry.light.disc * DISC_BRIGHTNESS) / (2 * Math.PI * scaleLen * scaleLen);
   let fluxTotal = 0;
   for (let i = 0; i < DISC_SIGMA_RATIOS.length; i++) {
     const sigmaR = DISC_SIGMA_RATIOS[i]! * scaleLen;
@@ -227,7 +227,7 @@ function pushDisc(
       center: ORIGIN,
     });
     // This component's own 3D integral — summed rather than hand-derived
-    // from `discFraction`, so `pushArmRidges`' contrast ledger tracks
+    // from `light.disc`, so `pushArmRidges`' contrast ledger tracks
     // whatever flux actually landed in `out`, not a recomputation of it.
     fluxTotal += amplitude * TAU_ROOT3 * sigmaR * sigmaR * sigmaPole;
   }
@@ -393,15 +393,15 @@ function ringAnnulusWeights(radii: readonly number[], spacing: number, h: number
  * follows the disc's real profile rather than a hand-picked ratio.
  */
 function pushWarpedOuterDisc(
-  geometry: GalaxyFieldGeometry,
+  geometry: GalaxyDescription,
   out: GalaxyFieldComponent[],
   tuning: GalaxyFieldTuning,
 ): number {
-  if (!tuning.discEnabled || geometry.discFraction <= 0) return 0;
+  if (!tuning.discEnabled || geometry.light.disc <= 0) return 0;
   const { outerRadius, bulgeRadius, diskHeight, diskScaleLen } = geometry;
   const blobsPerRing = RING_BLOBS_PER_RING;
   const totalFlux =
-    emissionScale(geometry) * geometry.discFraction * DISC_BRIGHTNESS * REMOVED_OUTER_DISC_WEIGHT;
+    emissionScale(geometry) * geometry.light.disc * DISC_BRIGHTNESS * REMOVED_OUTER_DISC_WEIGHT;
 
   // One spacing drives both the radial sigma and the annulus weights below —
   // the band split N-1 ways across the WARP_RING_COUNT rings.
@@ -446,11 +446,7 @@ function distance3(a: Vec3, b: Vec3): number {
 }
 
 /** armStarSample's along-arm low-frequency modulation; 1 (no modulation) when clumpAmount is 0. */
-function armClumpMod(
-  logR: number,
-  geometry: GalaxyFieldGeometry,
-  arm: GalaxyFieldArmRecord,
-): number {
+function armClumpMod(logR: number, geometry: GalaxyDescription, arm: GalaxyFieldArmRecord): number {
   if (geometry.clumpAmount <= 0) return 1;
   const noise =
     Math.sin(logR * arm.clumpF1 + arm.clumpP1) * 0.6 +
@@ -459,7 +455,7 @@ function armClumpMod(
 }
 
 /** armStarSample's gap-survival fraction for non-HII stars — the smooth stand-in for the WGSL gate's coin flip. */
-function armSurvival(clumpMod: number, geometry: GalaxyFieldGeometry): number {
+function armSurvival(clumpMod: number, geometry: GalaxyDescription): number {
   return geometry.clumpAmount > 0 ? Math.min(1, 0.4 + 0.6 * clumpMod) : 1;
 }
 
@@ -493,7 +489,7 @@ const ARM_BLOBS_MIN = 12;
 function deriveArmBlobCount(
   logStart: number,
   logEnd: number,
-  geometry: GalaxyFieldGeometry,
+  geometry: GalaxyDescription,
   arm: GalaxyFieldArmRecord,
   tuning: GalaxyFieldTuning,
   perArmBudget: number,
@@ -587,7 +583,7 @@ export function clampedArmCloudShare(tuning: GalaxyFieldTuning): number {
  * full value) stays correct either way.
  */
 function pushArmRidges(
-  geometry: GalaxyFieldGeometry,
+  geometry: GalaxyDescription,
   out: GalaxyFieldComponent[],
   tuning: GalaxyFieldTuning,
   discFlux: number,
@@ -704,11 +700,11 @@ function pushArmRidges(
 
 /** buildBulge's two radial branches, squashed by flattening / bulgeAxisZ and rotated. */
 function pushBulge(
-  geometry: GalaxyFieldGeometry,
+  geometry: GalaxyDescription,
   out: GalaxyFieldComponent[],
   tuning: GalaxyFieldTuning,
 ): void {
-  if (!tuning.discEnabled || geometry.bulgeFraction <= 0) return;
+  if (!tuning.discEnabled || geometry.light.bulge <= 0) return;
   const { outerRadius, bulgeRadius, bulgeConcentration } = geometry;
   const sigma = spheroidEmissionSigma(
     geometry.category === 'elliptical'
@@ -727,7 +723,7 @@ function pushBulge(
           falloffLength: bulgeRadius * (1.5 - bulgeConcentration),
         },
   );
-  const emission = emissionScale(geometry) * geometry.bulgeFraction * BULGE_BRIGHTNESS;
+  const emission = emissionScale(geometry) * geometry.light.bulge * BULGE_BRIGHTNESS;
   const shells = [
     [BULGE_CORE_WEIGHT, BULGE_CORE_SIGMA_RATIO],
     [1 - BULGE_CORE_WEIGHT, BULGE_BODY_SIGMA_RATIO],
@@ -753,17 +749,17 @@ function pushBulge(
 
 /** buildBar — absent for every category whose barLength is zero. */
 function pushBar(
-  geometry: GalaxyFieldGeometry,
+  geometry: GalaxyDescription,
   out: GalaxyFieldComponent[],
   tuning: GalaxyFieldTuning,
 ): void {
-  if (!tuning.discEnabled || geometry.barFraction <= 0 || geometry.barLength <= 0) return;
+  if (!tuning.discEnabled || geometry.light.bar <= 0 || geometry.barLength <= 0) return;
   const sigmaAlong = BAR_ALONG_RATIO * geometry.barLength;
   const sigmaAcross = BAR_ACROSS_RATIO * geometry.barLength;
   const sigmaPole = BAR_HEIGHT_FACTOR * geometry.diskHeight;
   out.push({
     amplitude:
-      (emissionScale(geometry) * geometry.barFraction * BAR_BRIGHTNESS) /
+      (emissionScale(geometry) * geometry.light.bar * BAR_BRIGHTNESS) /
       (TAU_ROOT3 * sigmaAlong * sigmaAcross * sigmaPole),
     ...shapeOf(geometry, sigmaAlong, sigmaPole, sigmaAcross, geometry.barTiltRad),
     color: BAR_COLOR,
@@ -773,11 +769,11 @@ function pushBar(
 
 /** buildHalo — the faint envelope, squashed along the pole by the same flattening. */
 function pushHalo(
-  geometry: GalaxyFieldGeometry,
+  geometry: GalaxyDescription,
   out: GalaxyFieldComponent[],
   tuning: GalaxyFieldTuning,
 ): void {
-  if (!tuning.discEnabled || geometry.haloFraction <= 0) return;
+  if (!tuning.discEnabled || geometry.light.halo <= 0) return;
   const { outerRadius } = geometry;
   const sigma = spheroidEmissionSigma({
     scale: outerRadius * 0.3,
@@ -789,7 +785,7 @@ function pushHalo(
   const sigmaPole = sigma * geometry.flattening;
   out.push({
     amplitude:
-      (emissionScale(geometry) * geometry.haloFraction * HALO_BRIGHTNESS) /
+      (emissionScale(geometry) * geometry.light.halo * HALO_BRIGHTNESS) /
       (TAU_ROOT3 * sigma * sigma * sigmaPole),
     ...shapeOf(geometry, sigma, sigmaPole, sigma, 0),
     color: HALO_COLOR,
@@ -827,7 +823,7 @@ const ARM_DISC_DEBIT_CLAMP_FRACTION = 0.5;
  * it.
  */
 export function buildGalaxyFieldMixture(
-  geometry: GalaxyFieldGeometry,
+  geometry: GalaxyDescription,
   tuning: GalaxyFieldTuning = DEFAULT_GALAXY_FIELD_TUNING,
 ): readonly GalaxyFieldComponent[] {
   const out: GalaxyFieldComponent[] = [];

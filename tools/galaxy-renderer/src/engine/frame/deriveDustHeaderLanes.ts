@@ -5,7 +5,7 @@
  * the dust params, the geometry or the `dustEnabled` pill do.
  */
 import type { GalaxyDustParams } from '../../../../../src/@types/galaxy/GalaxyDustParams';
-import type { GalaxyFieldGeometry } from '../../../../../src/@types/galaxy/GalaxyFieldGeometry';
+import type { GalaxyDescription } from '../../../../../src/@types/galaxy/GalaxyDescription';
 import { DISC_SIGMA_RATIOS } from '../../../../../src/services/engine/galaxyGenerator/v2/discSurfaceFit';
 import {
   dustDiscShape,
@@ -30,7 +30,7 @@ const DUST_REACH_FLOOR = 1e-3;
 const NO_NOISE: FieldDustNoise = { tileUnits: 1, amplitude: 0, cloudOffset: 0, contrastExp: 1 };
 
 export function deriveDustHeaderLanes(
-  geometry: GalaxyFieldGeometry | null,
+  geometry: GalaxyDescription | null,
   dust: GalaxyDustParams,
   dustEnabled: boolean,
 ): DustHeaderLanes {

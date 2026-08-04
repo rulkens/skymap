@@ -14,7 +14,7 @@ import {
   armFadeEnvelope,
   armRidgeCurvePoint,
 } from './armRidgeGeometry';
-import type { GalaxyFieldGeometry } from '../../../../@types/galaxy/GalaxyFieldGeometry';
+import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../../../../@types/galaxy/GalaxyFieldTuning';
 import type { GalaxyStarFormationParams } from '../../../../@types/galaxy/GalaxyStarFormationParams';
 import type { SfEvent } from '../../../../@types/galaxy/SfEvent';
@@ -35,7 +35,7 @@ function distance3(a: readonly number[], b: readonly number[]): number {
 }
 
 export function buildSfEventCatalog(
-  geometry: GalaxyFieldGeometry,
+  geometry: GalaxyDescription,
   starFormation: GalaxyStarFormationParams,
   tuning: GalaxyFieldTuning,
   seed: number,

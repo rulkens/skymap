@@ -39,7 +39,7 @@ import type { LodSettings } from '../../@types/engine/LodSettings';
 import type { ExtraGalaxySpec } from '../../../../src/@types/galaxy/ExtraGalaxySpec';
 import type { GalaxyDustParams } from '../../../../src/@types/galaxy/GalaxyDustParams';
 import type { GalaxyFieldComponent } from '../../../../src/@types/galaxy/GalaxyFieldComponent';
-import type { GalaxyFieldGeometry } from '../../../../src/@types/galaxy/GalaxyFieldGeometry';
+import type { GalaxyDescription } from '../../../../src/@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFieldTuning';
 import type { GalaxySfMapParams } from '../../../../src/@types/galaxy/GalaxySfMapParams';
 import type { GalaxySfMap } from '../../../../src/@types/galaxy/GalaxySfMap';
@@ -209,7 +209,7 @@ type Extra = {
   dustBuf: GPUBuffer | null;
   dustCount: number;
   ubo: GPUBuffer;
-  fieldGeometry: GalaxyFieldGeometry;
+  fieldGeometry: GalaxyDescription;
   transform: Pick<ExtraGalaxySpec, 'pos' | 'scale' | 'rotY' | 'tiltX'>;
   starFormation: GalaxyStarFormationParams;
   fieldMixture: readonly GalaxyFieldComponent[];
@@ -733,7 +733,7 @@ export async function createGalaxyEngine(
   // `setFieldTuning` call rebuilds from this same geometry. A tuning change
   // that arrives before any `setParams` just updates `fieldTuning` below —
   // the next `setParams` reads it and there is nothing yet to rebuild.
-  let fieldGeometry: GalaxyFieldGeometry | null = null;
+  let fieldGeometry: GalaxyDescription | null = null;
   let fieldTuning: GalaxyFieldTuning = DEFAULT_GALAXY_FIELD_TUNING;
   // What the automaton was last rebuilt against — see `setFieldTuning`.
   let sfMapKey: GalaxySfMapParams = fieldTuning.sfMap;
@@ -1210,7 +1210,7 @@ export async function createGalaxyEngine(
    * not a re-derivation.
    */
   function galaxyMixtures(
-    geometry: GalaxyFieldGeometry,
+    geometry: GalaxyDescription,
     starFormation: GalaxyStarFormationParams,
     transform?: Pick<ExtraGalaxySpec, 'pos' | 'scale' | 'rotY' | 'tiltX'>,
   ): { field: readonly GalaxyFieldComponent[]; hii: readonly GalaxyFieldComponent[] } {

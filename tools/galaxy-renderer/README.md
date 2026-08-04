@@ -95,24 +95,23 @@ own draw stream so dialling one never perturbs another:
 | `waveSeed`  | each arm's high-frequency waviness                                   | a real `mulberry32` stream, CPU-side |
 
 The three family seeds don't feed the per-invocation hash — they seed genuine
-`mulberry32` generators that run once, CPU-side, inside
-`packGenerationUniforms`, producing the handful of _shared_ values every GPU
-invocation reads (arm phase, pitch, weight, meander amplitude/frequency/phase,
-...). Those values ride the UBO as plain floats; the GPU never draws them
-itself.
+`mulberry32` generators that run once, CPU-side, inside `describeGalaxy`,
+producing the handful of _shared_ values every GPU invocation reads (arm phase,
+pitch, weight, meander amplitude/frequency/phase, ...). Those values ride the
+UBO as plain floats; the GPU never draws them itself.
 
 ### Re-derived main-seed values
 
 A few more galaxy-level values also come from a CPU-side serial draw rather
 than the per-invocation hash — from `seed` itself, not a family seed.
-`packGenerationUniforms` runs a fresh `mulberry32(seed)` stream and draws, in
-fixed order: the bar tilt angle (via `computeBarGeometry`, unconditionally
-for every category), then the seven irregular-galaxy clump centres if the
-category is `'irregular'`, then the 34 lenticular dust-cloud centres if the
-category is `'lenticular'`. A galaxy is only ever one category, so at most
-one of the two centre blocks actually draws. Reproducing this draw order
-CPU-side, once per galaxy, is what lets every GPU invocation read the same
-shared geometry instead of each needing to re-derive it independently.
+`describeGalaxy` runs a fresh `mulberry32(seed)` stream and draws, in fixed
+order: the bar tilt angle (via `computeBarGeometry`, unconditionally for every
+category), then the seven irregular-galaxy clump centres if the category is
+`'irregular'`, then the 34 lenticular dust-cloud centres if the category is
+`'lenticular'`. A galaxy is only ever one category, so at most one of the two
+centre blocks actually draws. Reproducing this draw order CPU-side, once per
+galaxy, is what lets every GPU invocation read the same shared geometry instead
+of each needing to re-derive it independently.
 
 ### Over-allocation and dead points
 

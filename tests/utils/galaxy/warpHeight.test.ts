@@ -10,15 +10,19 @@
 import { describe, it, expect } from 'vitest';
 import { warpHeight } from '../../../src/utils/galaxy/warpHeight';
 import { discWarpShear } from '../../../src/utils/galaxy/discWarpShear';
-import type { GalaxyFieldGeometry } from '../../../src/@types/galaxy/GalaxyFieldGeometry';
+import type { GalaxyDescription } from '../../../src/@types/galaxy/GalaxyDescription';
 
-const GEOMETRY: GalaxyFieldGeometry = {
+const GEOMETRY: GalaxyDescription = {
   category: 'spiral',
+  light: { disc: 0.7, bulge: 0.2, bar: 0, halo: 0.1 },
   outerRadius: 10,
   diskScaleLen: 3,
   bulgeRadius: 1,
   diskHeight: 0.5,
   flattening: 0.62,
+  asymmetry: 0.5,
+  lopsidedAmp: 0,
+  lopsidedAngle: 0,
   bulgeAxisZ: 1,
   bulgeTiltRad: 0,
   bulgeConcentration: 0.5,
@@ -27,10 +31,6 @@ const GEOMETRY: GalaxyFieldGeometry = {
   warpTwist: 0.35,
   warpStartRadius: 5,
   barTiltRad: 0,
-  discFraction: 0.7,
-  bulgeFraction: 0.2,
-  barFraction: 0,
-  haloFraction: 0.1,
   numArms: 0,
   armStartRadius: 1,
   armInnerRampW: 1,
@@ -41,6 +41,8 @@ const GEOMETRY: GalaxyFieldGeometry = {
   youngFraction: 0.5,
   hiiPalette: { core: [1, 0.42, 0.56], halo: [0.71, 0.52, 0.51] },
   arms: [],
+  irregularClumpCenters: [],
+  lenticularCloudCenters: [],
   starSize: 0.02,
   modelledStars: 100000,
   seed: 1,

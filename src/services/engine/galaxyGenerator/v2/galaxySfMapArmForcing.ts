@@ -11,7 +11,7 @@
  */
 import { armRidgeCurvePoint, armCrossSigma, armFadeEnvelope } from './armRidgeGeometry';
 import { sfMapRingRadius } from '../../../../utils/galaxy/sfMapRingRadius';
-import type { GalaxyFieldGeometry } from '../../../../@types/galaxy/GalaxyFieldGeometry';
+import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../../../../@types/galaxy/GalaxyFieldTuning';
 
 /**
@@ -60,7 +60,7 @@ const SF_MAP_MIN_SPAN_RATIO = 2;
  * roughly 20% fewer rings across the inner disc for ~43% more coverage.
  * Raise `SF_MAP_RINGS` if inner detail starts to suffer.
  */
-export function sfMapGridRadius(geometry: GalaxyFieldGeometry): GalaxySfMapGridRadius {
+export function sfMapGridRadius(geometry: GalaxyDescription): GalaxySfMapGridRadius {
   const rMin = Math.max(geometry.armStartRadius * SF_MAP_INNER_MARGIN_FRAC, 1e-3);
   const outerArmRadius =
     geometry.numArms > 0 && geometry.arms.length > 0
@@ -78,7 +78,7 @@ export function sfMapGridRadius(geometry: GalaxyFieldGeometry): GalaxySfMapGridR
  * being written out at each site.
  */
 export function sfMapGridRadiusOrDefault(
-  geometry: GalaxyFieldGeometry | null,
+  geometry: GalaxyDescription | null,
 ): GalaxySfMapGridRadius {
   return geometry ? sfMapGridRadius(geometry) : { rMin: 1e-3, rMax: 1 };
 }
@@ -97,7 +97,7 @@ function wrapAngle(a: number): number {
 }
 
 export function buildGalaxySfMapArmForcing(
-  geometry: GalaxyFieldGeometry,
+  geometry: GalaxyDescription,
   tuning: GalaxyFieldTuning,
 ): Float32Array {
   const { rMin, rMax } = sfMapGridRadius(geometry);

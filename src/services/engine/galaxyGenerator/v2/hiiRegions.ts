@@ -26,7 +26,7 @@ import { warpSurfaceFrame } from '../../../../utils/galaxy/warpSurfaceFrame';
 import { gaussian } from '../../../../utils/random/gaussian';
 import { mulberry32 } from '../../../../utils/random/mulberry32';
 import type { GalaxyFieldComponent } from '../../../../@types/galaxy/GalaxyFieldComponent';
-import type { GalaxyFieldGeometry } from '../../../../@types/galaxy/GalaxyFieldGeometry';
+import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../../../../@types/galaxy/GalaxyFieldTuning';
 import type { GalaxyStarFormationParams } from '../../../../@types/galaxy/GalaxyStarFormationParams';
 import type { SfEvent } from '../../../../@types/galaxy/SfEvent';
@@ -80,7 +80,7 @@ const ISO_FRAME = { along: [1, 0, 0] as Vec3, across: [0, 1, 0] as Vec3, pole: [
  */
 const HII_FLUX_PER_STAR_AREA = 0.01;
 
-function tierFlux(geometry: GalaxyFieldGeometry, tuning: GalaxyFieldTuning): number {
+function tierFlux(geometry: GalaxyDescription, tuning: GalaxyFieldTuning): number {
   return (
     geometry.modelledStars *
     geometry.starSize *
@@ -113,7 +113,7 @@ type RegionPlan = {
 };
 
 /** World centre of one SF event, resolved on the warp surface — identical technique to `dustBubblePlacements.ts`, not re-derived. */
-function eventCenter(event: SfEvent, geometry: GalaxyFieldGeometry): Vec3 | undefined {
+function eventCenter(event: SfEvent, geometry: GalaxyDescription): Vec3 | undefined {
   const arm = geometry.arms[event.armIndex];
   if (!arm) return undefined;
   const armRadius = geometry.armStartRadius * Math.exp(event.logR);
@@ -128,7 +128,7 @@ function eventCenter(event: SfEvent, geometry: GalaxyFieldGeometry): Vec3 | unde
 }
 
 function planRegions(
-  geometry: GalaxyFieldGeometry,
+  geometry: GalaxyDescription,
   tuning: GalaxyFieldTuning,
   starFormation: GalaxyStarFormationParams,
   seed: number,
@@ -170,7 +170,7 @@ function planRegions(
 }
 
 export function buildHiiRegions(
-  geometry: GalaxyFieldGeometry,
+  geometry: GalaxyDescription,
   tuning: GalaxyFieldTuning,
   starFormation: GalaxyStarFormationParams,
   seed: number,

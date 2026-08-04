@@ -10,15 +10,15 @@
  * from.
  */
 import type { ExtraGalaxySpec } from '../../../../../src/@types/galaxy/ExtraGalaxySpec';
-import type { GalaxyFieldGeometry } from '../../../../../src/@types/galaxy/GalaxyFieldGeometry';
+import type { GalaxyDescription } from '../../../../../src/@types/galaxy/GalaxyDescription';
 import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';
 import type { GenerationPipelines } from '../../../../../src/@types/galaxy/GenerationPipelines';
 
 import { carveDustLayout } from '../../../../../src/services/engine/galaxyGenerator/shared/carveDustLayout';
 import { carveStarLayout } from '../../../../../src/services/engine/galaxyGenerator/shared/carveStarLayout';
 import { classifyHubbleType } from '../../../../../src/services/engine/galaxyGenerator/shared/classifyHubbleType';
+import { describeGalaxy } from '../../../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
 import { packGenerationUniforms } from '../../../../../src/services/engine/galaxyGenerator/shared/packGenerationUniforms';
-import { readGalaxyFieldGeometry } from '../../../../../src/services/engine/galaxyGenerator/shared/readGalaxyFieldGeometry';
 import { splitStarBudget } from '../../../../../src/services/engine/galaxyGenerator/shared/splitStarBudget';
 import { encodeGeneration } from '../../../../../src/services/engine/galaxyGenerator/v1/encodeGeneration';
 import { GEN_RECORD_BYTES } from '../../../../../src/services/engine/galaxyGenerator/v1/genRecordBytes';
@@ -46,7 +46,7 @@ export type GeneratedGalaxy = {
    * `PopulationRange`'s docblock).
    */
   readonly plannedStars: number;
-  readonly geometry: GalaxyFieldGeometry;
+  readonly geometry: GalaxyDescription;
 };
 
 export function generateGalaxy(input: {
@@ -62,6 +62,7 @@ export function generateGalaxy(input: {
 
   const category = classifyHubbleType(params.type);
   const budget = splitStarBudget(category, params);
+  const description = describeGalaxy(params);
   const starLayout = carveStarLayout(category, params, budget);
   const dustLayout = carveDustLayout(category, params, budget);
 
@@ -82,7 +83,7 @@ export function generateGalaxy(input: {
         })
       : null;
 
-  const genUniforms = packGenerationUniforms(params, budget, spec);
+  const genUniforms = packGenerationUniforms(description, params, budget, spec);
   device.queue.writeBuffer(ubo, 0, genUniforms);
   encodeGeneration({
     device,
@@ -101,9 +102,6 @@ export function generateGalaxy(input: {
     dustBuf,
     dustCount: dustLayout.capacity,
     plannedStars: starLayout.ranges.reduce((sum, r) => sum + r.iterations, 0),
-    // Read back rather than re-derive: the bar and bulge tilts are single RNG
-    // draws off the packer's streams, so this is the only way the analytic
-    // field can be sure it is oriented like the sprites it sums with.
-    geometry: readGalaxyFieldGeometry(genUniforms, params),
+    geometry: description,
   };
 }

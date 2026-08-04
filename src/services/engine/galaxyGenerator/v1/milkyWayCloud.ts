@@ -57,6 +57,7 @@ import { carveDustLayout } from '../shared/carveDustLayout';
 import { carveStarLayout } from '../shared/carveStarLayout';
 import { classifyHubbleType } from '../shared/classifyHubbleType';
 import { createGenerationPipelines } from './createGenerationPipelines';
+import { describeGalaxy } from '../shared/describeGalaxy';
 import { encodeGeneration } from './encodeGeneration';
 import { GEN_RECORD_BYTES } from './genRecordBytes';
 import { GENERATION_UBO } from '../shared/generationUboLayout';
@@ -109,7 +110,11 @@ export function createMilkyWayCloud(device: GPUDevice, starCount: number): Milky
         : null;
 
     // Local frame: `extra = null`, placement is the draw-side model matrix.
-    device.queue.writeBuffer(ubo, 0, packGenerationUniforms(params, budget, null));
+    device.queue.writeBuffer(
+      ubo,
+      0,
+      packGenerationUniforms(describeGalaxy(params), params, budget, null),
+    );
 
     const encoder = device.createCommandEncoder({ label: 'galaxy:mwGenerate' });
     encodeGeneration({ device, encoder, pipelines, ubo, starBuf, starLayout, dustBuf, dustLayout });

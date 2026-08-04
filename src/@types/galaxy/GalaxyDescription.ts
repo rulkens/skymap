@@ -1,20 +1,23 @@
 /**
- * GalaxyFieldGeometry — everything the analytic field mixture needs about one
- * generated galaxy: the derived lengths the generation shader reads out of its
- * UBO, the orientations its RNG already drew, and each population's share of
- * the modelled star COUNT (not light — see `GalaxyPopulationCountShares`).
+ * GalaxyDescription — what one galaxy IS, independent of how it gets drawn:
+ * the derived lengths, the orientations and per-arm personalities its
+ * construction-time RNG drew, and how its light divides across populations.
  *
- * It exists so the mixture is a function of what generation ACTUALLY ran with
- * rather than of `GalaxyParams` re-derived a second time — the bar and bulge
- * tilts are single RNG draws, and re-drawing them would silently misalign the
- * field against the sprites.
+ * `describeGalaxy` is its only producer, and it owns every shared RNG draw a
+ * galaxy has. Both tiers are then readers: `packGenerationUniforms` writes
+ * this out as v1's generation UBO, and `buildGalaxyFieldMixture` builds v2's
+ * Gaussians from it. Neither re-derives — a second draw sequence would
+ * silently misalign the field's bar and bulge against the sprites'.
  */
 import type { GalaxyCategory } from './GalaxyCategory';
 import type { GalaxyFieldArmRecord } from './GalaxyFieldArmRecord';
+import type { GalaxyLightDecomposition } from './GalaxyLightDecomposition';
 import type { HiiPalette } from './HiiPalette';
+import type { Vec3 } from '../math/Vec3';
 
-export type GalaxyFieldGeometry = {
+export type GalaxyDescription = {
   readonly category: GalaxyCategory;
+  readonly light: GalaxyLightDecomposition;
   readonly outerRadius: number;
   /** Surface-density scale length of the sampled disc, before its brightness taper. */
   readonly diskScaleLen: number;
@@ -23,6 +26,12 @@ export type GalaxyFieldGeometry = {
   readonly diskHeight: number;
   /** Bulge/halo squash along the pole (`buildBulge`'s bulgeAxisY). */
   readonly flattening: number;
+  /** How lopsided the whole galaxy is (`params.irregularity`); the amplitudes below scale off it. */
+  readonly asymmetry: number;
+  /** Fractional radius modulation of the m=1 lopsided mode — an RNG draw. */
+  readonly lopsidedAmp: number;
+  /** In-plane angle the lopsided mode peaks at, radians — an RNG draw. */
+  readonly lopsidedAngle: number;
   /** Bulge squash along its own in-plane +Z. */
   readonly bulgeAxisZ: number;
   /** Bulge in-plane rotation about the pole, radians — an RNG draw, not a formula. */
@@ -39,11 +48,6 @@ export type GalaxyFieldGeometry = {
   readonly warpStartRadius: number;
   /** Bar in-plane rotation about the pole, radians — an RNG draw, not a formula. */
   readonly barTiltRad: number;
-  /** Fraction of the modelled star budget in the smooth disc (clumps AND spiral arms folded in — the arm ridge's flux is derived from disc contrast, not a star-budget share). */
-  readonly discFraction: number;
-  readonly bulgeFraction: number;
-  readonly barFraction: number;
-  readonly haloFraction: number;
   /** Number of arms the generator drew, `gen.armTable`'s live prefix (max 8). */
   readonly numArms: number;
   /** Radius below which every arm is flat/absent — `armStarSample`'s smooth-start floor. */
@@ -60,14 +64,28 @@ export type GalaxyFieldGeometry = {
   readonly clumpAmount: number;
   /** Blue-star fraction, also nudges the ridge blobs' colour young/old. */
   readonly youngFraction: number;
-  /** `hiiPalette(params.metallicity)`, read back from the SAME UBO lanes the sprite tier shades its HII knots from — metallicity itself is never packed, so this is how both tiers share one palette instead of two. */
+  /** `hiiPalette(params.metallicity)` — one palette both tiers shade their HII knots from. */
   readonly hiiPalette: HiiPalette;
-  /** Per-arm phase/pitch/weight/meander/clump/wave records, `numArms` long. */
+  /** Per-arm phase/pitch/weight/meander/clump/wave records, always `numArms` long — zeroed for a category that draws no arms. */
   readonly arms: readonly GalaxyFieldArmRecord[];
-  /** Base sprite half-extent in generator units, before each star's size jitter. */
+  /** Where an irregular's star-forming clumps sit, model units — RNG draws. Empty for every other category. */
+  readonly irregularClumpCenters: readonly Vec3[];
+  /**
+   * A lenticular's nuclear dust clouds as `[x, z, radius]` — RNG draws, and
+   * note the pair is IN-PLANE (the shader reads `.y` as its z), with the third
+   * lane the cloud's own radius rather than a height. Empty for every other
+   * category.
+   */
+  readonly lenticularCloudCenters: readonly Vec3[];
+  /**
+   * Sprite artifact, scheduled for removal: the base sprite half-extent. It is
+   * here only because `emissionScale`/`tierFlux` anchor the field's absolute
+   * flux to `modelledStars * starSize^2`. Not physics — a real emissivity
+   * normalisation replaces the pair.
+   */
   readonly starSize: number;
-  /** The sprite tier's star budget, which the mixture's absolute flux is calibrated AGAINST (`emissionScale`, `hiiRegions`' `tierFlux`) so analytic exposure 1.0 means sprite-flux parity. Not what the fractions above are shares of — those are weights in their own right. */
+  /** Sprite artifact, scheduled for removal — see `starSize`. */
   readonly modelledStars: number;
-  /** The generation UBO's own `seed` (`packGenerationUniforms`'s `params.seed`), for field-side stochastic tiers (e.g. the arm particle cloud) that need the SAME seed the sprites were drawn with, not a re-derivation. */
+  /** The generation seed, for field-side stochastic tiers (e.g. the arm particle cloud) that need the SAME seed the sprites were drawn with, not a re-derivation. */
   readonly seed: number;
 };

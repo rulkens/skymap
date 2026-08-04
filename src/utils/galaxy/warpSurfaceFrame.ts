@@ -7,7 +7,7 @@
  * `warpHeight`. Its two tangents and their normal ARE the blob's three axes:
  * long azimuthally, narrow radially, thin along the normal.
  */
-import type { GalaxyFieldGeometry } from '../../@types/galaxy/GalaxyFieldGeometry';
+import type { GalaxyDescription } from '../../@types/galaxy/GalaxyDescription';
 import type { Vec3 } from '../../@types/math/Vec3';
 
 /**
@@ -19,7 +19,7 @@ import type { Vec3 } from '../../@types/math/Vec3';
 export function warpSurfaceFrame(
   radius: number,
   azimuth: number,
-  geometry: GalaxyFieldGeometry,
+  geometry: GalaxyDescription,
 ): { readonly along: Vec3; readonly across: Vec3; readonly pole: Vec3 } {
   const { warpStrength, warpTwist, warpStartRadius, outerRadius } = geometry;
   const cosPhi = Math.cos(azimuth);

@@ -14,7 +14,7 @@ import { pcToUnits } from '../../../../utils/galaxy/pcToUnits';
 import { warpSurfaceFrame } from '../../../../utils/galaxy/warpSurfaceFrame';
 import type { GalaxyDustParams } from '../../../../@types/galaxy/GalaxyDustParams';
 import type { GalaxyFieldArmRecord } from '../../../../@types/galaxy/GalaxyFieldArmRecord';
-import type { GalaxyFieldGeometry } from '../../../../@types/galaxy/GalaxyFieldGeometry';
+import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../../../../@types/galaxy/GalaxyFieldTuning';
 import type { GalaxyStarFormationParams } from '../../../../@types/galaxy/GalaxyStarFormationParams';
 import type { SfEvent } from '../../../../@types/galaxy/SfEvent';
@@ -38,7 +38,7 @@ export type DustBubblePlacement = {
  */
 function armEventCenter(
   event: Pick<SfEvent, 'logR' | 'acrossOffset'>,
-  geometry: GalaxyFieldGeometry,
+  geometry: GalaxyDescription,
   arm: GalaxyFieldArmRecord,
 ): { readonly center: Vec3; readonly armRadius: number } {
   const armRadius = geometry.armStartRadius * Math.exp(event.logR);
@@ -64,14 +64,14 @@ function armEventCenter(
  */
 function armReaches(
   armRadius: number,
-  geometry: GalaxyFieldGeometry,
+  geometry: GalaxyDescription,
   arm: GalaxyFieldArmRecord,
 ): boolean {
   return armFadeEnvelope(armRadius, geometry, arm) > 0;
 }
 
 export function buildDustBubblePlacements(
-  geometry: GalaxyFieldGeometry,
+  geometry: GalaxyDescription,
   dust: GalaxyDustParams,
   starFormation: GalaxyStarFormationParams,
   tuning: GalaxyFieldTuning,
@@ -120,7 +120,7 @@ export function buildDustBubblePlacements(
  * reachable and toggleable.
  */
 export function buildHiiCavityPlacements(
-  geometry: GalaxyFieldGeometry,
+  geometry: GalaxyDescription,
   dust: GalaxyDustParams,
   starFormation: GalaxyStarFormationParams,
   tuning: GalaxyFieldTuning,

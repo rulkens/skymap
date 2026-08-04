@@ -46,7 +46,7 @@ import { sfMapDustDensity } from '../../../../utils/galaxy/sfMapDustDensity';
 import { mulberry32 } from '../../../../utils/random/mulberry32';
 import type { GalaxyDustParams } from '../../../../@types/galaxy/GalaxyDustParams';
 import type { GalaxyFieldComponent } from '../../../../@types/galaxy/GalaxyFieldComponent';
-import type { GalaxyFieldGeometry } from '../../../../@types/galaxy/GalaxyFieldGeometry';
+import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../../../../@types/galaxy/GalaxyFieldTuning';
 import type { GalaxySfMap } from '../../../../@types/galaxy/GalaxySfMap';
 import type { GalaxySfMapOrientation } from '../../../../@types/galaxy/GalaxySfMapOrientation';
@@ -131,7 +131,7 @@ function maxSfMapDustDensity(map: GalaxySfMap): number {
 }
 
 export function buildDustParticleCloud(
-  geometry: GalaxyFieldGeometry,
+  geometry: GalaxyDescription,
   dust: GalaxyDustParams,
   tuning: GalaxyFieldTuning,
   seed: number,
@@ -140,7 +140,7 @@ export function buildDustParticleCloud(
   orientationDeltaStats?: OrientationDeltaStats,
 ): readonly GalaxyFieldComponent[] {
   const { cloud } = dust;
-  if (geometry.discFraction <= 0 || dust.tau <= 0 || cloud.count <= 0) {
+  if (geometry.light.disc <= 0 || dust.tau <= 0 || cloud.count <= 0) {
     return [];
   }
   const count = Math.min(cloud.count, MAX_PARTICLE_COUNT);

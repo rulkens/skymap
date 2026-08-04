@@ -20,9 +20,10 @@ Worker or compute-pass port open, and it is worth preserving.
 | `buildDustParticleCloud`                                                 | GMC-scale dust Gaussians               | `milkyWayField/dustMap.wesl`           |
 | `buildGalaxySfMapArmForcing` + `sfEventCatalog` / `dustBubblePlacements` | SSPSF forcing grid, SF events, bubbles | `sfMapStep.wesl`, `bubblePresent.wesl` |
 
-All four take the same `GalaxyFieldGeometry` that `shared/readGalaxyFieldGeometry`
-read back out of the packed generation uniforms — which is what makes the field
-and the sprites two renderings of one galaxy rather than two galaxies.
+All four take the same `GalaxyDescription` that `shared/describeGalaxy` produced
+and `shared/packGenerationUniforms` wrote into v1's generation UBO — which is
+what makes the field and the sprites two renderings of one galaxy rather than
+two galaxies.
 `armRidgeGeometry.ts` holds the ridge curve/width/colour vocabulary every arm
 consumer shares; re-deriving a ridge anywhere else is the mistake it exists to
 prevent.

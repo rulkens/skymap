@@ -14,6 +14,7 @@ import { packGenerationUniforms } from '../../../../../src/services/engine/galax
 import { carveDustLayout } from '../../../../../src/services/engine/galaxyGenerator/shared/carveDustLayout';
 import { carveStarLayout } from '../../../../../src/services/engine/galaxyGenerator/shared/carveStarLayout';
 import { classifyHubbleType } from '../../../../../src/services/engine/galaxyGenerator/shared/classifyHubbleType';
+import { describeGalaxy } from '../../../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
 import { grainScale } from '../../../../../src/services/engine/galaxyGenerator/shared/grainScale';
 import { hiiPalette } from '../../../../../src/services/engine/galaxyGenerator/shared/hiiPalette';
 import { splitStarBudget } from '../../../../../src/services/engine/galaxyGenerator/shared/splitStarBudget';
@@ -46,6 +47,12 @@ function diffIndices(a: Float32Array, b: Float32Array): number[] {
   return changed;
 }
 
+/** The whole front-end in one call, since every case below packs a preset. */
+function pack(params: GalaxyParams, extra: ExtraGalaxySpec | null = null): ArrayBuffer {
+  const budget = splitStarBudget(classifyHubbleType(params.type), params);
+  return packGenerationUniforms(describeGalaxy(params), params, budget, extra);
+}
+
 const SPIRAL_PARAMS: GalaxyParams = {
   type: 'Sb',
   starCount: 100000,
@@ -57,18 +64,15 @@ const SPIRAL_PARAMS: GalaxyParams = {
 
 describe('packGenerationUniforms', () => {
   it('byteLength is 16-aligned and matches the layout const', () => {
-    const category = classifyHubbleType(SPIRAL_PARAMS.type);
-    const budget = splitStarBudget(category, SPIRAL_PARAMS);
-    const buf = packGenerationUniforms(SPIRAL_PARAMS, budget, null);
+    const buf = pack(SPIRAL_PARAMS);
     expect(buf.byteLength).toBe(GENERATION_UBO.byteLength);
     expect(buf.byteLength % 16).toBe(0);
   });
 
   it('derived scale constants land at their offsets', () => {
     const params: GalaxyParams = { type: 'Sb', starCount: 100000, radius: 2 };
-    const category = classifyHubbleType(params.type);
-    const budget = splitStarBudget(category, params);
-    const f32 = new Float32Array(packGenerationUniforms(params, budget, null));
+    const budget = splitStarBudget(classifyHubbleType(params.type), params);
+    const f32 = new Float32Array(pack(params));
 
     // radius: 2 -> outerRadius = 10 * 2 = 20; diskScaleLen = 20 / 3.2 = 6.25.
     expect(f32[GENERATION_UBO.f32.outerRadius]).toBeCloseTo(20, 6);
@@ -82,20 +86,14 @@ describe('packGenerationUniforms', () => {
   });
 
   it('same params produce identical bytes', () => {
-    const category = classifyHubbleType(SPIRAL_PARAMS.type);
-    const budget = splitStarBudget(category, SPIRAL_PARAMS);
-    const a = packGenerationUniforms(SPIRAL_PARAMS, budget, null);
-    const b = packGenerationUniforms({ ...SPIRAL_PARAMS }, budget, null);
+    const a = pack(SPIRAL_PARAMS);
+    const b = pack({ ...SPIRAL_PARAMS });
     expect(new Uint8Array(a)).toEqual(new Uint8Array(b));
   });
 
   it('asymSeed reroll changes only asymmetry-family fields', () => {
-    const category = classifyHubbleType(SPIRAL_PARAMS.type);
-    const budget = splitStarBudget(category, SPIRAL_PARAMS);
-    const a = new Float32Array(packGenerationUniforms(SPIRAL_PARAMS, budget, null));
-    const b = new Float32Array(
-      packGenerationUniforms({ ...SPIRAL_PARAMS, asymSeed: 99 }, budget, null),
-    );
+    const a = new Float32Array(pack(SPIRAL_PARAMS));
+    const b = new Float32Array(pack({ ...SPIRAL_PARAMS, asymSeed: 99 }));
 
     const allowed = new Set<number>([
       ...armTableIndices(ARM_ASYM_LANES),
@@ -119,12 +117,8 @@ describe('packGenerationUniforms', () => {
   });
 
   it('clumpSeed reroll changes only the armTable clump lanes', () => {
-    const category = classifyHubbleType(SPIRAL_PARAMS.type);
-    const budget = splitStarBudget(category, SPIRAL_PARAMS);
-    const a = new Float32Array(packGenerationUniforms(SPIRAL_PARAMS, budget, null));
-    const b = new Float32Array(
-      packGenerationUniforms({ ...SPIRAL_PARAMS, clumpSeed: 777 }, budget, null),
-    );
+    const a = new Float32Array(pack(SPIRAL_PARAMS));
+    const b = new Float32Array(pack({ ...SPIRAL_PARAMS, clumpSeed: 777 }));
 
     const allowed = armTableIndices(ARM_CLUMP_LANES);
     const changed = diffIndices(a, b);
@@ -133,12 +127,8 @@ describe('packGenerationUniforms', () => {
   });
 
   it('waveSeed reroll changes only the armTable wave lanes', () => {
-    const category = classifyHubbleType(SPIRAL_PARAMS.type);
-    const budget = splitStarBudget(category, SPIRAL_PARAMS);
-    const a = new Float32Array(packGenerationUniforms(SPIRAL_PARAMS, budget, null));
-    const b = new Float32Array(
-      packGenerationUniforms({ ...SPIRAL_PARAMS, waveSeed: 888 }, budget, null),
-    );
+    const a = new Float32Array(pack(SPIRAL_PARAMS));
+    const b = new Float32Array(pack({ ...SPIRAL_PARAMS, waveSeed: 888 }));
 
     const allowed = armTableIndices(ARM_WAVE_LANES);
     const changed = diffIndices(a, b);
@@ -147,9 +137,7 @@ describe('packGenerationUniforms', () => {
   });
 
   it('null extra packs the identity transform', () => {
-    const category = classifyHubbleType(SPIRAL_PARAMS.type);
-    const budget = splitStarBudget(category, SPIRAL_PARAMS);
-    const f32 = new Float32Array(packGenerationUniforms(SPIRAL_PARAMS, budget, null));
+    const f32 = new Float32Array(pack(SPIRAL_PARAMS));
 
     const posBase = GENERATION_UBO.arrays.extraPos.offsetVec4 * 4;
     expect(Array.from(f32.slice(posBase, posBase + 4))).toEqual([0, 0, 0, 0]);
@@ -160,8 +148,6 @@ describe('packGenerationUniforms', () => {
   });
 
   it('an ExtraGalaxySpec packs pos, scale and the cos/sin of rotY and tiltX', () => {
-    const category = classifyHubbleType(SPIRAL_PARAMS.type);
-    const budget = splitStarBudget(category, SPIRAL_PARAMS);
     const extra: ExtraGalaxySpec = {
       params: SPIRAL_PARAMS,
       pos: [3, 4, 5],
@@ -169,7 +155,7 @@ describe('packGenerationUniforms', () => {
       rotY: Math.PI / 6,
       tiltX: Math.PI / 4,
     };
-    const f32 = new Float32Array(packGenerationUniforms(SPIRAL_PARAMS, budget, extra));
+    const f32 = new Float32Array(pack(SPIRAL_PARAMS, extra));
 
     const posBase = GENERATION_UBO.arrays.extraPos.offsetVec4 * 4;
     expect(f32[posBase]).toBeCloseTo(3, 6);
@@ -190,7 +176,7 @@ describe('packGenerationUniforms', () => {
     const budget = splitStarBudget(category, params);
     const starLayout = carveStarLayout(category, params, budget);
     const dustLayout = carveDustLayout(category, params, budget);
-    const u32 = new Uint32Array(packGenerationUniforms(params, budget, null));
+    const u32 = new Uint32Array(pack(params));
 
     const starBase = GENERATION_UBO.arrays.starRanges.offsetVec4 * 4;
     for (let i = 0; i < GENERATION_UBO.arrays.starRanges.countVec4; i++) {
@@ -213,9 +199,7 @@ describe('packGenerationUniforms', () => {
 
   it('hii palette lanes equal hiiPalette(metallicity)', () => {
     const params: GalaxyParams = { type: 'Sb', starCount: 100000, metallicity: 0.8 };
-    const category = classifyHubbleType(params.type);
-    const budget = splitStarBudget(category, params);
-    const f32 = new Float32Array(packGenerationUniforms(params, budget, null));
+    const f32 = new Float32Array(pack(params));
     const expected = hiiPalette(0.8);
 
     const coreBase = GENERATION_UBO.arrays.hiiCore.offsetVec4 * 4;
@@ -233,9 +217,7 @@ describe('packGenerationUniforms', () => {
 
   it('category and numArms u32s are correct for SBb (3, clamped arm count)', () => {
     const params: GalaxyParams = { type: 'SBb', starCount: 100000, armCount: 12 };
-    const category = classifyHubbleType(params.type);
-    const budget = splitStarBudget(category, params);
-    const u32 = new Uint32Array(packGenerationUniforms(params, budget, null));
+    const u32 = new Uint32Array(pack(params));
 
     expect(u32[GENERATION_UBO.u32.category]).toBe(3);
     expect(u32[GENERATION_UBO.u32.numArms]).toBe(8); // round(12) clamped to MAX_ARMS

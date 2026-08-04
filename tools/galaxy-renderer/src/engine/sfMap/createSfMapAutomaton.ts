@@ -21,7 +21,7 @@ import {
 } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
 import type { GalaxySfMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
 import { alignedBytesPerRow } from '../../../../../src/utils/gpu/alignedBytesPerRow';
-import type { GalaxyFieldGeometry } from '../../../../../src/@types/galaxy/GalaxyFieldGeometry';
+import type { GalaxyDescription } from '../../../../../src/@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../../../../../src/@types/galaxy/GalaxyFieldTuning';
 
 import { sfMapStepIndexData } from './sfMapStepIndexData';
@@ -46,7 +46,7 @@ export type SfMapAutomaton = {
    * a grid that may have moved since.
    */
   rebuild(input: {
-    readonly geometry: GalaxyFieldGeometry | null;
+    readonly geometry: GalaxyDescription | null;
     readonly tuning: GalaxyFieldTuning;
     readonly seed: number;
   }): GalaxySfMapGridRadius;
