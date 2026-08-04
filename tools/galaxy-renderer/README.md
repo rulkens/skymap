@@ -55,7 +55,7 @@ same JSON on the clipboard for pasting elsewhere.
 ## Generation
 
 Each galaxy is built by two GPU compute passes — `generateStars.wesl` and
-`generateDust.wesl`, both linked from the shared `galaxyGen/generate.wesl` (bind
+`generateDust.wesl`, both linked from the shared `milkyWay/sprites/generate.wesl` (bind
 group, population builders, RNG). Changing a galaxy's params triggers exactly
 one dispatch of this pair (`createGalaxyModel`'s `setParams`), not a
 per-frame step: the CPU side carves _layouts_ — for every star and dust
@@ -146,7 +146,7 @@ intended behaviour.
 barred-spiral morphology (NGC 1300 / NGC 1365) rather than as straight
 parallel rails: each lane hugs its bar half's leading edge, then the pair
 swaps sides through the nucleus via a tanh S-curve (`BAR_LANE_S_STEEP` in
-`galaxyGen/generate.wesl` sets how sharply the lanes cross), while an antisymmetric
+`milkyWay/sprites/generate.wesl` sets how sharply the lanes cross), while an antisymmetric
 cubic bow (`BAR_LANE_BOW`) peels the lane ends outward toward the arm roots,
 in the spiral's own rotational sense. Both are live-tuned knobs at the top of
 `buildBarDust`.
@@ -155,8 +155,8 @@ in the spiral's own rotational sense. Both are live-tuned knobs at the top of
 
 **The whole chain is the main app's, not this tool's.** The tool is only
 useful if a look tuned here transfers, so nothing about the image is
-hand-matched: the shaders are the runtime's `shaders/milkyWayCloud/`,
-`shaders/milkyWayField/`, `shaders/galaxyGen/`, `shaders/additiveUpsample/`,
+hand-matched: the shaders are the runtime's `shaders/milkyWay/sprites/`,
+`shaders/milkyWay/{sprites,field,sfMap}/`, `shaders/additiveUpsample/`,
 `shaders/bloom/` and `shaders/compositor/` trees, symlinked into this tool's
 WESL root (see `wesl.toml`), and the post passes that drive them are the
 runtime's `createAdditiveUpsample`, `createBloomPyramid` and
@@ -239,7 +239,7 @@ files are not findable here; the plan that ported it carries the full
 line-cited port map
 ([`docs/superpowers/plans/completed/2026-07-02-galaxy-renderer-02-engine-and-shaders.md`](../../docs/superpowers/plans/completed/2026-07-02-galaxy-renderer-02-engine-and-shaders.md)).
 The spike's draw shaders came over as a local `star.wesl` / `dust.wesl` pair
-and have since been deleted, superseded by the runtime's `milkyWayCloud/`
+and have since been deleted, superseded by the runtime's `milkyWay/sprites/`
 shaders that grew out of them.
 
 ## Status

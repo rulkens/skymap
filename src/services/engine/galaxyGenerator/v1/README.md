@@ -31,8 +31,8 @@ createMilkyWayCloud(device, starCount)          ← src/services/engine/phases/i
       → MilkyWayCloudBuffers → gpu/renderers/milkyWay/milkyWayCloudRenderer.ts
 ```
 
-Shaders: `gpu/shaders/galaxyGen/{generate,generateStars,generateDust}.wesl`
-(compute, the placement maths) and `gpu/shaders/milkyWayCloud/{stars,dust}.wesl`
+Shaders: `gpu/shaders/milkyWay/sprites/{generate,generateStars,generateDust}.wesl`
+(compute, the placement maths) and `gpu/shaders/milkyWay/sprites/{stars,dust}.wesl`
 (the billboard draw). Neither moves with this folder.
 
 `milkyWayCalibration.ts` is the placement/LOD/look side rather than generation:

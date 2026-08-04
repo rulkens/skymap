@@ -1,5 +1,5 @@
 /**
- * packCloudUniforms — the tool's packer for `milkyWayCloud/io.wesl`'s
+ * packCloudUniforms — the tool's packer for `milkyWay/sprites/io.wesl`'s
  * 208-byte `Uniforms`. The app's `milkyWayCloudRenderer` packs the same struct
  * from its own copy of the offset table, so the one thing worth pinning here
  * is that the tool's copy still agrees with io.wesl's byte layout: every field

@@ -28,9 +28,9 @@ import { sfMapStepIndexData } from './sfMapStepIndexData';
 import { packSfMapConstants, SF_MAP_CONSTANTS_BUFFER_SIZE } from './packSfMapConstants';
 import { packSfMapUnshear, SF_MAP_UNSHEAR_BUFFER_SIZE } from './packSfMapUnshear';
 
-import sfMapStepWgsl from '../shaders/milkyWayField/sfMapStep.wesl?static';
-import sfMapPackWgsl from '../shaders/milkyWayField/sfMapPack.wesl?static';
-import sfMapPresentWgsl from '../shaders/milkyWayField/sfMapPresent.wesl?static';
+import sfMapStepWgsl from '../shaders/milkyWay/sfMap/sfMapStep.wesl?static';
+import sfMapPackWgsl from '../shaders/milkyWay/sfMap/sfMapPack.wesl?static';
+import sfMapPresentWgsl from '../shaders/milkyWay/sfMap/sfMapPresent.wesl?static';
 
 export type SfMapAutomaton = {
   /** The packed, presentable output (gas / recent SF / older SF) the orientation chain and the CPU readback both read. */

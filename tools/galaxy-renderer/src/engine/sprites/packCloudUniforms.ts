@@ -1,11 +1,11 @@
 /**
  * packCloudUniforms — the 208-byte uniform packer for the star + dust
- * billboard passes, matching `milkyWayCloud/io.wesl`'s `Uniforms` struct
+ * billboard passes, matching `milkyWay/sprites/io.wesl`'s `Uniforms` struct
  * byte-for-byte.
  *
  * ## Why the tool packs the APP's struct
  *
- * The two passes are now literally the app's shaders (`milkyWayCloud/`,
+ * The two passes are now literally the app's shaders (`milkyWay/sprites/`,
  * symlinked into this tool's WESL root — see `wesl.toml`), so the uniform
  * layout is not a choice this tool gets to make: `io.wesl` declares the single
  * `@group(0) @binding(0)` binding both passes read, and its module header

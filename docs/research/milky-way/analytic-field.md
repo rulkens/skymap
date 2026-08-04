@@ -59,7 +59,7 @@ type FluxField = { readonly integrate: (o: Vec3, d: Vec3) => RaySegment };
 ```
 
 **MEASURED, current limitation.** The analytic field pass does not model the warp:
-`milkyWayField/field.wesl:10-13` states it, and the reason is that the generator applies the warp
+`milkyWay/field/field.wesl:10-13` states it, and the reason is that the generator applies the warp
 as a per-star `y` offset **after** placement, which a closed-form integral of an unwarped mixture
 cannot carry. Edge-on views show the analytic field straight where the sprites bend. [The shear analysis below](analytic-field.md#a-shear-preserves-the-closed-form--but-not-on-an-origin-centred-gaussian) was
 written expecting a per-component shear to close this; it has since been implemented and

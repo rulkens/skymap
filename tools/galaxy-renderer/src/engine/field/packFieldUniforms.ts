@@ -1,6 +1,6 @@
 /**
  * packFieldUniforms — the packers for the analytic Milky Way field pass,
- * matching `milkyWayField/io.wesl`'s `FieldUniforms` header and `comps`
+ * matching `milkyWay/field/io.wesl`'s `FieldUniforms` header and `comps`
  * storage array byte-for-byte. THAT FILE'S HEADER IS THE OFFSET AUTHORITY; a
  * wrong index here produces no error, just silently garbage uniforms.
  *

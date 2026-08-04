@@ -53,8 +53,8 @@ import { Source } from '../../../../data/sources';
 import { MILKY_WAY_CENTER_WORLD } from '../../../../data/milkyWay/galacticCenter';
 import { MILKY_WAY_RADIUS_MPC } from '../../../engine/galaxyGenerator/v1/milkyWayCalibration';
 import { UNIFORM_BYTES } from '../galaxyCatalog/pointVertexLayout';
-import vsCode from '../../shaders/milkyWayPick/vertex.wesl?static';
-import pickFsCode from '../../shaders/milkyWayPick/pick.wesl?static';
+import vsCode from '../../shaders/milkyWay/pick/vertex.wesl?static';
+import pickFsCode from '../../shaders/milkyWay/pick/pick.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 

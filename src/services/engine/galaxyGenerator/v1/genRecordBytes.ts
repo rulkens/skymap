@@ -5,7 +5,7 @@
  * stride). Both the tool's star/dust render pipelines and plan 02's cloud
  * renderer read their instance `arrayStride` from here, so a stride change
  * is one edit in one place rather than a hunt through every buffer-layout
- * call site. It must still match `galaxyGen/generate.wesl`'s stride-8 output
+ * call site. It must still match `milkyWay/sprites/generate.wesl`'s stride-8 output
  * storage array, which lives across the CPU/GPU seam and so stays a
  * hand-mirror no compiler enforces.
  */

@@ -20,11 +20,11 @@ import {
 import type { GalaxySfMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
 import { alignedBytesPerRow } from '../../../../../src/utils/gpu/alignedBytesPerRow';
 
-import orientationPresentWgsl from '../shaders/milkyWayField/orientationPresent.wesl?static';
-import sfMapOrientationFieldWgsl from '../shaders/milkyWayField/sfMapOrientationField.wesl?static';
-import sfMapOrientationTensorWgsl from '../shaders/milkyWayField/sfMapOrientationTensor.wesl?static';
-import sfMapOrientationTensorBlurWgsl from '../shaders/milkyWayField/sfMapOrientationTensorBlur.wesl?static';
-import sfMapOrientationCoherenceWgsl from '../shaders/milkyWayField/sfMapOrientationCoherence.wesl?static';
+import orientationPresentWgsl from '../shaders/milkyWay/sfMap/orientationPresent.wesl?static';
+import sfMapOrientationFieldWgsl from '../shaders/milkyWay/sfMap/sfMapOrientationField.wesl?static';
+import sfMapOrientationTensorWgsl from '../shaders/milkyWay/sfMap/sfMapOrientationTensor.wesl?static';
+import sfMapOrientationTensorBlurWgsl from '../shaders/milkyWay/sfMap/sfMapOrientationTensorBlur.wesl?static';
+import sfMapOrientationCoherenceWgsl from '../shaders/milkyWay/sfMap/sfMapOrientationCoherence.wesl?static';
 
 export type SfMapOrientation = {
   readonly texture: GPUTexture;

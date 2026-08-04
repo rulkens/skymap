@@ -20,7 +20,7 @@
  * `DEFAULT_GALAXY_PARAMS` (the re-exported `MILKY_WAY_GALAXY_PARAMS`) instead.
  * Since the tool's boot state became the app's actual Milky Way
  * (`defaultGalaxyParams.ts`) and its star path became the app's star path
- * (the shared `milkyWayCloud/` shaders, the reduced-resolution star target),
+ * (the shared `milkyWay/sprites/` shaders, the reduced-resolution star target),
  * those are not merely similar knobs — they are the same knobs, so every one
  * is seeded rather than hand-copied.
  *

@@ -13,7 +13,7 @@
  * What unites the set is that moving any of them changes the NEXT frame — not
  * that the frame loop reacts by the SAME mechanism. Most get there via
  * `milkyWayCloudRenderer.writeUniforms`, landing in the `params0` / `params1`
- * lanes of `milkyWayCloud/io.wesl`'s `Uniforms` — a uniform write.
+ * lanes of `milkyWay/sprites/io.wesl`'s `Uniforms` — a uniform write.
  * `aggregateDivisor` gets there by sizing the offscreen the star pass draws
  * into, which the frame loop reallocates when the number moves — a render-
  * target rebuild. `starCount` gets there the heaviest way of the three: it

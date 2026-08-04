@@ -8,7 +8,7 @@
  *
  * Re-exported from `MILKY_WAY_GALAXY_PARAMS`
  * (`src/data/milkyWay/milkyWayGalaxyParams.ts`), NOT copied — that constant
- * is already the single source of truth shared by the app's `milkyWayCloud`
+ * is already the single source of truth shared by the app's `milkyWay/sprites`
  * generation and this tool's reference gallery (see that file's header and
  * `referenceGalaxies.ts`'s `mw` entry). Pointing the boot state at the same
  * object means the tool's default render and the gallery's "Milky Way

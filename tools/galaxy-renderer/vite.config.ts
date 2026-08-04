@@ -18,8 +18,9 @@
  *    `/images/famous-curated/...` for descriptor-based auto-fit — one asset
  *    source, no copy to keep in sync.
  *
- * Almost every shader it draws with belongs to the runtime: the `galaxyGen/`,
- * `milkyWayCloud/`, `additiveUpsample/`, `bloom/` and `compositor/` trees plus
+ * Almost every shader it draws with belongs to the runtime: the
+ * `milkyWay/{sprites,field,sfMap}/`, `additiveUpsample/`, `bloom/` and
+ * `compositor/` trees plus
  * `lib/camera.wesl`, `lib/cloudSprite.wesl` and `lib/tonemap.wesl` all live in
  * `src/services/gpu/shaders/` and reach this build through symlinks — see the
  * `resolve:` block below and `wesl.toml`. Only the tool-only grade trailer
@@ -62,13 +63,15 @@ export default defineConfig({
     // imports by its own relative path is already inside the root and needs no
     // alias — that is why `lib/camera.wesl` and `lib/tonemap.wesl`, reached
     // only through the linker's `package::lib::…`, have no entry here.
+    //
+    // `milkyWay` is one family entry covering all three tier dirs: the trailing
+    // capture takes the rest of the path, so `sprites/`, `field/` and `sfMap/`
+    // ride the same rewrite.
     preserveSymlinks: true,
-    alias: ['galaxyGen', 'milkyWayCloud', 'additiveUpsample', 'bloom', 'compositor'].map(
-      (family) => ({
-        find: new RegExp(`^(.*)/shaders/${family}/(.+\\.wesl(\\?.+)?)$`),
-        replacement: `${resolve(__dirname, `src/engine/shaders/${family}`)}/$2`,
-      }),
-    ),
+    alias: ['milkyWay', 'additiveUpsample', 'bloom', 'compositor'].map((family) => ({
+      find: new RegExp(`^(.*)/shaders/${family}/(.+\\.wesl(\\?.+)?)$`),
+      replacement: `${resolve(__dirname, `src/engine/shaders/${family}`)}/$2`,
+    })),
   },
   plugins: [
     viteWesl({

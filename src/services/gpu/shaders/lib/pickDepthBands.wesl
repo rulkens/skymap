@@ -85,7 +85,7 @@
 //                                per-instance glint CLASS band (earth / planet /
 //                                moon eps below) so importance, not nearness,
 //                                decides among glints.
-//   - milkyWayPick/vertex.wesl — FORCES clip.z to PICK_BAND_BACKDROP_EPS (the
+//   - milkyWay/pick/vertex.wesl — FORCES clip.z to PICK_BAND_BACKDROP_EPS (the
 //                                impostor is the ultimate fallback).
 //
 // The constants live here, not in any one consumer, so the bands can never drift

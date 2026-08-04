@@ -1,8 +1,8 @@
 /**
  * GalaxyFieldComponent — one Gaussian blob of the analytic galaxy emission
- * field (`milkyWayField/splat.wesl`).
+ * field (`milkyWay/field/splat.wesl`).
  *
- * All lengths are GENERATOR units, the space `galaxyGen/generate.wesl` places
+ * All lengths are GENERATOR units, the space `milkyWay/sprites/generate.wesl` places
  * stars in (for the Milky Way preset 1 unit = 1.6667 kpc). The disc plane is
  * XZ and the pole is +Y.
  *

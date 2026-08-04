@@ -8,9 +8,9 @@
 # written, so DRAW and POST shaders alike are the RUNTIME's, reached through
 # symlinks that make them appear inside this root:
 #
-#   src/engine/shaders/galaxyGen        -> src/services/gpu/shaders/galaxyGen
-#   src/engine/shaders/milkyWayCloud    -> .../shaders/milkyWayCloud
-#   src/engine/shaders/milkyWayField    -> .../shaders/milkyWayField
+#   src/engine/shaders/milkyWay/sprites -> src/services/gpu/shaders/milkyWay/sprites
+#   src/engine/shaders/milkyWay/field   -> .../shaders/milkyWay/field
+#   src/engine/shaders/milkyWay/sfMap   -> .../shaders/milkyWay/sfMap
 #   src/engine/shaders/additiveUpsample -> .../shaders/additiveUpsample
 #   src/engine/shaders/bloom            -> src/services/gpu/shaders/bloom
 #   src/engine/shaders/compositor       -> src/services/gpu/shaders/compositor
@@ -22,22 +22,28 @@
 #   src/engine/shaders/lib/gaussianIntegral.wesl -> .../lib/gaussianIntegral.wesl
 #   src/engine/shaders/lib/splatSilhouette.wesl  -> .../lib/splatSilhouette.wesl
 #
-# milkyWayCloud is the star + dust billboard pair, shared as a WHOLE DIRECTORY
-# rather than file by file: stars.wesl and dust.wesl both read the single
-# '@group(0) @binding(0)' uniform declared in io.wesl, so sharing one pass
-# without the other would mean packing the app's 208-byte struct for it and a
-# different struct for its sibling. lib/camera.wesl comes along because that
-# struct embeds CameraUniforms, and additiveUpsample because the reduced-
-# resolution star target has to be composited back into HDR the same way the
-# app composites it.
+# milkyWay/ is a REAL directory here holding three leaf symlinks, not one
+# symlink to the runtime's milkyWay/. The include glob below descends INTO a
+# symlinked directory but not into a real subdirectory of one, so a single
+# parent symlink makes package::milkyWay::field::io unresolvable — 'module not
+# found', at link time, in the tool's build only. Symlink the leaves.
+#
+# Each leaf is shared as a WHOLE DIRECTORY rather than file by file, because a
+# tier's passes share one io.wesl: sprites/stars.wesl and sprites/dust.wesl
+# both read the single '@group(0) @binding(0)' uniform declared in
+# sprites/io.wesl, so taking one pass without the other would mean packing the
+# app's 208-byte struct for it and a different struct for its sibling.
+# lib/camera.wesl comes along because that struct embeds CameraUniforms, and
+# additiveUpsample because the reduced-resolution star target has to be
+# composited back into HDR the same way the app composites it.
 #
 # WESL package binding is root-driven, so a shared file must appear inside the
-# root to be addressable as package::milkyWayCloud:: / package::bloom:: /
+# root to be addressable as package::milkyWay::sprites:: / package::bloom:: /
 # package::compositor:: / package::lib::camera (see vite.config.ts's resolve
 # block for the aliases + preserveSymlinks that keep those ids inside this
 # root). The symlinked families' own internal imports — bloom's
 # package::bloom::io, the compositor's package::compositor::io and
-# package::lib::tonemap, milkyWayCloud's package::milkyWayCloud::io and
+# package::lib::tonemap, the sprite tier's package::milkyWay::sprites::io and
 # package::lib::cloudSprite — resolve against this root exactly as they do
 # against the runtime's, which is what makes the sharing work with no per-tool
 # shims.

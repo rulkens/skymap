@@ -1,5 +1,5 @@
 /**
- * Parity guard: `milkyWayPick/io.wesl`'s `Uniforms` struct is a hand-written
+ * Parity guard: `milkyWay/pick/io.wesl`'s `Uniforms` struct is a hand-written
  * prefix MIRROR of the points pick uniform buffer — the MW pick draw reuses
  * the caller's bound @group(0) (the full 176-byte points pick buffer), so
  * every field the mirror declares must sit at the exact byte offset the
@@ -55,7 +55,7 @@ const cameraFields = parseWgslStructFields(
 const camera = layoutWgslStruct(cameraFields, primitive('CameraUniforms'));
 
 const mirrorFields = parseWgslStructFields(
-  readShaderSource('src/services/gpu/shaders/milkyWayPick/io.wesl'),
+  readShaderSource('src/services/gpu/shaders/milkyWay/pick/io.wesl'),
   'Uniforms',
 );
 const mirror = layoutWgslStruct(mirrorFields, (t) =>
@@ -114,7 +114,7 @@ function observedF32Offset(buf: ArrayBuffer, value: number): number {
 
 // ─── The parity assertions ───────────────────────────────────────────────────
 
-describe('milkyWayPick/io.wesl Uniforms ↔ packPointUniforms layout parity', () => {
+describe('milkyWay/pick/io.wesl Uniforms ↔ packPointUniforms layout parity', () => {
   const buf = packSentinels();
   const at = (name: string): number => {
     const o = mirror.offsets.get(name);

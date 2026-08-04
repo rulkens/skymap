@@ -1,7 +1,7 @@
 /**
  * SPRITE_POPULATION_BRIGHTNESS — v1's per-star luminosity multiplier per
  * population: one entry per `randomLuminosity(...) * K` site in
- * `galaxyGen/generate.wesl`, where `irregularClump` (the builder the
+ * `milkyWay/sprites/generate.wesl`, where `irregularClump` (the builder the
  * irregular category's `arm` count share runs through) has no `* K`.
  * v2 applies only four: `describeGalaxy` folds `disk + arm` into one
  * `light.disc` weighted by `disk`, and the arm ridge chain then

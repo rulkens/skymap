@@ -2,7 +2,7 @@
  * transformGalaxyFieldComponent — carries one analytic-field Gaussian from a
  * galaxy's own local space into world space, using EXACTLY the rigid
  * transform the sprite path bakes into generation: `applyExtraTransform` in
- * `galaxyGen/generate.wesl` scales, then Y-spins (disk axis), then X-tilts
+ * `milkyWay/sprites/generate.wesl` scales, then Y-spins (disk axis), then X-tilts
  * (inclination), then translates. Reusing that same composition (not a
  * generic rotation) is what keeps a background galaxy's analytic mixture
  * registered with its own sprites.

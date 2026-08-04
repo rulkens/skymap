@@ -36,7 +36,9 @@ gpu/       render targets, grow-only record buffer, readback queue
 camera/    orbit input
 timing/    the frame median + the per-pass GPU spans (`timingSlots.ts`)
 probe/     the headless readback paths the matcher drives
-shaders/   WESL — mostly symlinks into the runtime's trees (`wesl.toml`)
+shaders/   WESL — mostly symlinks into the runtime's trees (`wesl.toml`).
+           `milkyWay/{sprites,field,sfMap}/` there mirrors the three tier
+           folders above, so a folder means the same thing on both sides.
 ```
 
 ## Deleting v1

@@ -1,5 +1,5 @@
 /**
- * Parity guard: `milkyWayField/sfMapPack.wesl`'s `SfMapUnshear` is the offset
+ * Parity guard: `milkyWay/sfMap/sfMapPack.wesl`'s `SfMapUnshear` is the offset
  * authority, and `packSfMapUnshear` writes raw indices into a Float32Array — a
  * wrong index throws nothing, it just ships garbage, and on WebKit a mislaid
  * uniform drops the frame with no error at all. Neither home is restated here:
@@ -21,7 +21,7 @@ import { wgslPrimitiveLayout } from '../../../../../tools/utils/wgsl/wgslPrimiti
 
 const struct = layoutWgslStruct(
   parseWgslStructFields(
-    readShaderSource('src/services/gpu/shaders/milkyWayField/sfMapPack.wesl'),
+    readShaderSource('src/services/gpu/shaders/milkyWay/sfMap/sfMapPack.wesl'),
     'SfMapUnshear',
   ),
   (type) => {
@@ -62,7 +62,7 @@ function observed(value: number): number {
   return i * 4;
 }
 
-describe('packSfMapUnshear ↔ milkyWayField/sfMapPack.wesl SfMapUnshear', () => {
+describe('packSfMapUnshear ↔ milkyWay/sfMap/sfMapPack.wesl SfMapUnshear', () => {
   it('packs a buffer the shader can bind', () => {
     // The floor is the struct's own size, which is what Dawn reports as this
     // binding's minBindingSize (20 for the 5 f32 today — measured with

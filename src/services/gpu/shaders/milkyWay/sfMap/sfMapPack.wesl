@@ -1,0 +1,65 @@
+// milkyWay/sfMap/sfMapPack.wesl — packs the SSPSF automaton's final
+// ping-pong state into one presentable RGBA texture: gas column, recent SF
+// (age's own decay), older SF (the activity EMA sfMapStep.wesl already
+// carries in state.w). One dispatch, run once per rebuildSfMap after the
+// last step — never per frame. finalTex is still in sfMapStep.wesl's
+// MATERIAL (Lagrangian) frame; every consumer of THIS pass's output expects
+// WORLD coordinates, so this is the one place that un-shears — a single
+// resample instead of sfMapStep.wesl's old per-generation one (see that
+// file's header for why the difference matters).
+
+import package::milkyWay::sfMap::sfMapShear::sfMapShearTexels;
+
+const RECENT_SF_TAU: f32 = 12.0; // steps; a look constant, not a measured decay time
+
+struct SfMapUnshear {
+  rMin: f32,
+  rMax: f32,
+  corotationRadius: f32,
+  shearRate: f32,
+  totalShiftSteps: f32,
+}
+
+@group(0) @binding(0) var finalTex: texture_2d<f32>;
+@group(0) @binding(1) var dst: texture_storage_2d<rgba8unorm, write>;
+@group(0) @binding(2) var<uniform> u: SfMapUnshear;
+
+// Bilinear-in-azimuth read of the material state — the ONE resample this
+// design allows (this file's header); unlike sfMapStep.wesl's per-generation
+// self read, this runs once, so a single blur here cannot compound like N did.
+// azCount comes from textureDimensions(dst) in cs() below, same as
+// sfMapStep.wesl (no baked-in grid size — sfMapShear.wesl's own precedent).
+fn sampleMaterial(ring: u32, azF: f32, azCount: u32) -> vec4<f32> {
+  let wrapped = (azF % f32(azCount) + f32(azCount)) % f32(azCount);
+  let a0 = u32(floor(wrapped)) % azCount;
+  let a1 = (a0 + 1u) % azCount;
+  let frac = wrapped - floor(wrapped);
+  let c0 = textureLoad(finalTex, vec2<i32>(i32(a0), i32(ring)), 0);
+  let c1 = textureLoad(finalTex, vec2<i32>(i32(a1), i32(ring)), 0);
+  return mix(c0, c1, frac);
+}
+
+@compute @workgroup_size(16, 16)
+fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
+  let dims = textureDimensions(dst);
+  if (any(gid.xy >= dims)) {
+    return;
+  }
+  let ring = gid.y;
+  // sfMapStep.wesl's armForcingAt derives the FORWARD transform: world =
+  // material + shear * genStep (a material cell drifts to higher world
+  // azimuth as steps accumulate). This output texel IS a world azimuth
+  // (gid.x); inverting that transform to find which material azimuth to
+  // read gives the MINUS here — the opposite sign from the forward lookup,
+  // by construction, not a typo. totalShiftSteps is the number of
+  // shear-applying generations that actually ran (steps - 1: step 0 only
+  // seeds, see rebuildSfMap), not the raw step count.
+  let shear = sfMapShearTexels(ring, dims.y, dims.x, u.rMin, u.rMax, u.corotationRadius, u.shearRate);
+  let materialAz = f32(gid.x) - shear * u.totalShiftSteps;
+  let state = sampleMaterial(ring, materialAz, dims.x);
+  let gas = state.x;
+  let age = state.y;
+  let oldActivity = clamp(state.w, 0.0, 1.0);
+  let recentSf = exp(-age / RECENT_SF_TAU);
+  textureStore(dst, vec2<i32>(gid.xy), vec4<f32>(gas, recentSf, oldActivity, 0.0));
+}

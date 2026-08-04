@@ -82,12 +82,12 @@ describe('flow/constants.wesl ↔ flowFieldConstants.ts parity', () => {
  */
 describe('sfMap @workgroup_size(N, N) ↔ SF_MAP_WORKGROUP_SIZE parity', () => {
   const files = [
-    'src/services/gpu/shaders/milkyWayField/sfMapStep.wesl',
-    'src/services/gpu/shaders/milkyWayField/sfMapPack.wesl',
-    'src/services/gpu/shaders/milkyWayField/sfMapOrientationField.wesl',
-    'src/services/gpu/shaders/milkyWayField/sfMapOrientationTensor.wesl',
-    'src/services/gpu/shaders/milkyWayField/sfMapOrientationTensorBlur.wesl',
-    'src/services/gpu/shaders/milkyWayField/sfMapOrientationCoherence.wesl',
+    'src/services/gpu/shaders/milkyWay/sfMap/sfMapStep.wesl',
+    'src/services/gpu/shaders/milkyWay/sfMap/sfMapPack.wesl',
+    'src/services/gpu/shaders/milkyWay/sfMap/sfMapOrientationField.wesl',
+    'src/services/gpu/shaders/milkyWay/sfMap/sfMapOrientationTensor.wesl',
+    'src/services/gpu/shaders/milkyWay/sfMap/sfMapOrientationTensorBlur.wesl',
+    'src/services/gpu/shaders/milkyWay/sfMap/sfMapOrientationCoherence.wesl',
   ];
 
   it('every sfMap compute entry point declares a square workgroup matching SF_MAP_WORKGROUP_SIZE', () => {

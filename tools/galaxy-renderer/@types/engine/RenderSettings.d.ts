@@ -15,7 +15,7 @@
  *
  * The star-pass block at the bottom is the compositing half of the app's
  * `MilkyWayTuning` under this bag's own names: the tool draws with the app's
- * `milkyWayCloud/` shaders into the app's reduced-resolution star target, so
+ * `milkyWay/sprites/` shaders into the app's reduced-resolution star target, so
  * every knob it does carry means the same thing here. Two of that type's eight
  * are absent, both because they belong to a different stage — `lodApparent` is
  * view-dependent and so rides `LodSettings`, and `starCount` feeds generation

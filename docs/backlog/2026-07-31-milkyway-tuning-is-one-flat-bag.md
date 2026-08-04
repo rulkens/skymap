@@ -8,7 +8,7 @@ are knobs of the _sprite_ implementation: `starSizeScale`, `exposure`, `starPxMi
 `starPxMax`, `softness`, `lodApparent`, `aggregateDivisor`, `starCount`.
 
 Two consumers read that one bag today, and one of them ignores nearly all of it.
-`milkyWayCloud/io.wesl` records the tell in its own prose — _"Dust ignores all
+`milkyWay/sprites/io.wesl` records the tell in its own prose — _"Dust ignores all
 four"_ — and `milkyWayLayer` packs the whole struct anyway because the layout is
 shared. The dust pass carries eight star knobs to reach two fields.
 
@@ -35,7 +35,7 @@ already the right mechanism — the open question is whether the grouping lives 
 settings shape, in the registry rows, or only in the panel.
 
 Not urgent for the analytic field itself: that pass gets its own uniform module
-rather than extending `milkyWayCloud/io.wesl`'s `params0`/`params1` lanes, and needs
+rather than extending `milkyWay/sprites/io.wesl`'s `params0`/`params1` lanes, and needs
 few enough knobs to fit the existing registry cleanly. This is the thing that breaks
 after it.
 

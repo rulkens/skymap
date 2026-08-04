@@ -1,5 +1,5 @@
 /**
- * Parity guard: `milkyWayField/io.wesl`'s `FieldUniforms` is the offset
+ * Parity guard: `milkyWay/field/io.wesl`'s `FieldUniforms` is the offset
  * authority, and `packFieldHeaderUniforms` writes raw indices into a
  * Float32Array — a wrong index throws nothing, it just ships garbage, and on
  * WebKit a mislaid uniform drops the frame with no error at all. Neither home
@@ -21,7 +21,7 @@ import { wgslPrimitiveLayout } from '../../../../../tools/utils/wgsl/wgslPrimiti
 
 const struct = layoutWgslStruct(
   parseWgslStructFields(
-    readShaderSource('src/services/gpu/shaders/milkyWayField/io.wesl'),
+    readShaderSource('src/services/gpu/shaders/milkyWay/field/io.wesl'),
     'FieldUniforms',
   ),
   (type) => {
@@ -80,7 +80,7 @@ function observed(value: number): number {
 
 const lane = (byteOffset: number): number => packed[byteOffset / 4]!;
 
-describe('packFieldHeaderUniforms ↔ milkyWayField/io.wesl FieldUniforms', () => {
+describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () => {
   it('packs exactly the struct FieldUniforms declares', () => {
     expect(FIELD_HEADER_FLOATS * 4).toBe(struct.layout.size);
   });

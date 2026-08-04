@@ -2,7 +2,7 @@
  * packBubbleInstances — packs the bubble-view overlay's two independent
  * placement lists (relic bubbles, HII cavities — dustBubblePlacements.ts)
  * into one instance buffer, byte-for-byte matching
- * `milkyWayField/bubblePresent.wesl`'s vertex attributes: `@location(0)`
+ * `milkyWay/field/bubblePresent.wesl`'s vertex attributes: `@location(0)`
  * `vec4<f32>` (center.xyz, radius) and `@location(1)` `f32` kind, at an
  * instance-stepped `arrayStride` of `BUBBLE_RECORD_FLOATS * 4`. A mismatch
  * here is silent garbage on screen, not a crash.

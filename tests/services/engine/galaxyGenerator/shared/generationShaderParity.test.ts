@@ -29,7 +29,7 @@ import { CATEGORY_CODE } from '../../../../../src/services/engine/galaxyGenerato
 import { POPULATION_IDS } from '../../../../../src/services/engine/galaxyGenerator/shared/populationIds';
 import { SPRITE_POPULATION_BRIGHTNESS } from '../../../../../src/services/engine/galaxyGenerator/shared/spritePopulationBrightness';
 
-const SHADERS = 'src/services/gpu/shaders/galaxyGen';
+const SHADERS = 'src/services/gpu/shaders/milkyWay/sprites';
 
 function readShader(rel: string): string {
   return readFileSync(join(process.cwd(), SHADERS, rel), 'utf-8');

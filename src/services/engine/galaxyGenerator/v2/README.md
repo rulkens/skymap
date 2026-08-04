@@ -15,9 +15,9 @@ Worker or compute-pass port open, and it is worth preserving.
 
 | entry point                                                              | output                                 | drawn by                               |
 | ------------------------------------------------------------------------ | -------------------------------------- | -------------------------------------- |
-| `buildGalaxyFieldMixture` (emission)                                     | disc, bulge, bar, arm ridges           | `milkyWayField/splat.wesl`             |
+| `buildGalaxyFieldMixture` (emission)                                     | disc, bulge, bar, arm ridges           | `milkyWay/field/splat.wesl`            |
 | `buildHiiRegions`                                                        | Strömgren shells + OB cores            | `splat.wesl`, own target               |
-| `buildDustParticleCloud`                                                 | GMC-scale dust Gaussians               | `milkyWayField/dustMap.wesl`           |
+| `buildDustParticleCloud`                                                 | GMC-scale dust Gaussians               | `milkyWay/field/dustMap.wesl`          |
 | `buildGalaxySfMapArmForcing` + `sfEventCatalog` / `dustBubblePlacements` | SSPSF forcing grid, SF events, bubbles | `sfMapStep.wesl`, `bubblePresent.wesl` |
 
 All four take the same `GalaxyDescription` that `shared/describeGalaxy` produced

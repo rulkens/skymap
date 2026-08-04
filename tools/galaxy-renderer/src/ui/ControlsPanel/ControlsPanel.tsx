@@ -428,7 +428,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
           />
           {/* The star-pass block. These are the app's `MilkyWayTuning` knobs,
               over the app's own ranges (`src/data/milkyWay/milkyWaySliderFields.ts`),
-              driving the app's own `milkyWayCloud/` shaders — so a number read
+              driving the app's own `milkyWay/sprites/` shaders — so a number read
               off this panel can be typed straight into the app's DebugPanel.
               `Star size` and `Star intensity` keep this tool's narrower spike
               ranges: they predate the shared shaders and are the two knobs the

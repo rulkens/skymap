@@ -6,7 +6,7 @@
  *
  * One field, deliberately. The bag also carried a `cullBright` hard brightness
  * floor for as long as the tool ran its own star shader; the shared
- * `milkyWayCloud/stars.wesl` has no such lever (the app's Milky Way tuning
+ * `milkyWay/sprites/stars.wesl` has no such lever (the app's Milky Way tuning
  * culls only through the flux-conserving LOD), and a slider that moves nothing
  * is worse in a parity instrument than no slider at all.
  */

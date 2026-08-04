@@ -11,8 +11,8 @@
  *
  * A look tuned here only transfers while the two chains ARE one chain, so
  * nothing about the image is hand-matched: the sprite draws are the runtime's
- * `milkyWayCloud/` shaders over its `io.wesl` struct, the analytic field's are
- * its `milkyWayField/`, and the post chain is the runtime's
+ * `milkyWay/sprites/` shaders over its `io.wesl` struct, the analytic field's are
+ * its `milkyWay/{field,sfMap}/`, and the post chain is the runtime's
  * `createAdditiveUpsample` / `createBloomPyramid` / `createCompositor` — all
  * symlinked into this tool's WESL root (`wesl.toml`). Editing any of those
  * shaders changes both apps.
@@ -90,13 +90,13 @@ import { MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE } from '../../../../src/services/gp
 import { DEFAULT_RENDER_SETTINGS } from '../data/defaultRenderSettings';
 import { DEFAULT_LOD_SETTINGS } from '../data/defaultLodSettings';
 
-import starWgsl from './shaders/milkyWayCloud/stars.wesl?static';
-import dustWgsl from './shaders/milkyWayCloud/dust.wesl?static';
-import splatWgsl from './shaders/milkyWayField/splat.wesl?static';
-import dustMapWgsl from './shaders/milkyWayField/dustMap.wesl?static';
-import dustPresentWgsl from './shaders/milkyWayField/dustPresent.wesl?static';
-import dustNoiseBakeWgsl from './shaders/milkyWayField/dustNoiseBake.wesl?static';
-import bubblePresentWgsl from './shaders/milkyWayField/bubblePresent.wesl?static';
+import starWgsl from './shaders/milkyWay/sprites/stars.wesl?static';
+import dustWgsl from './shaders/milkyWay/sprites/dust.wesl?static';
+import splatWgsl from './shaders/milkyWay/field/splat.wesl?static';
+import dustMapWgsl from './shaders/milkyWay/field/dustMap.wesl?static';
+import dustPresentWgsl from './shaders/milkyWay/field/dustPresent.wesl?static';
+import dustNoiseBakeWgsl from './shaders/milkyWay/field/dustNoiseBake.wesl?static';
+import bubblePresentWgsl from './shaders/milkyWay/field/bubblePresent.wesl?static';
 import gradeWgsl from './shaders/grade.wesl?static';
 
 /** HDR working format for the scene + bloom pyramid — the runtime's `hdr` row. */
@@ -206,7 +206,7 @@ export async function createGalaxyEngine(
   quad.unmap();
 
   // ---- cloud uniform buffers: ONE PER PASS ----
-  // Both hold `milkyWayCloud/io.wesl`'s `Uniforms`, and every lane but
+  // Both hold `milkyWay/sprites/io.wesl`'s `Uniforms`, and every lane but
   // `viewportPx` is identical between them — but that one lane differs (the
   // star pass renders into the reduced-resolution aggregate, the dust pass
   // full-res) and `queue.writeBuffer` is ordered against `queue.submit`, not
@@ -262,7 +262,7 @@ export async function createGalaxyEngine(
     createShaderModuleWithDevLog(device, code, label);
 
   // ---- star pipeline (additive billboards) ----
-  // The module is the runtime's `milkyWayCloud/stars.wesl`. It must stay a
+  // The module is the runtime's `milkyWay/sprites/stars.wesl`. It must stay a
   // SEPARATE GPUShaderModule from the dust pass even though the two share
   // `io.wesl`: WebGPU's `auto` pipeline layout derives its bind-group layout
   // from the entry points a module exposes, and two pipelines sharing a module
@@ -336,7 +336,7 @@ export async function createGalaxyEngine(
   });
 
   // ---- dust pipeline (transmittance billboards) ----
-  // The runtime's `milkyWayCloud/dust.wesl`, drawn FULL-RES into `sceneTex`
+  // The runtime's `milkyWay/sprites/dust.wesl`, drawn FULL-RES into `sceneTex`
   // (not the aggregate) — the app's split, because multiplicative
   // transmittance has to land on the real accumulation.
   const dustMod = makeShader(dustWgsl, 'galaxy:dust');
@@ -377,7 +377,7 @@ export async function createGalaxyEngine(
   });
 
   // ---- dust-column map pipeline (screen-space dust splat) ----
-  // `milkyWayField/dustMap.wesl`: one instanced quad per PRIMARY dust
+  // `milkyWay/field/dustMap.wesl`: one instanced quad per PRIMARY dust
   // component (splat.wesl's own silhouette math via `lib/splatSilhouette`),
   // additively accumulating four depth-sliced optical depths into
   // `dustMapTex`, at its own divisor-matched resolution (see `dustMapTex`'s
@@ -402,7 +402,7 @@ export async function createGalaxyEngine(
   });
 
   // ---- dust-map presentation pipeline ("JWST" view) ----
-  // `milkyWayField/dustPresent.wesl`: a fullscreen triangle over `dustMapTex`,
+  // `milkyWay/field/dustPresent.wesl`: a fullscreen triangle over `dustMapTex`,
   // mapping its column to a hot palette. Drawn ALONGSIDE `splatPipe`'s
   // emission draw, gated on `render.dustViewIntensity > 0` — see `drawFrame`'s
   // field pass. No blend: it is the pass's only draw into a freshly cleared

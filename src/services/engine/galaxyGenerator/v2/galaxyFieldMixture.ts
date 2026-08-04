@@ -4,7 +4,7 @@
  * generator ran with, so the two renderings of one galaxy agree by
  * construction and every preset gets its own field.
  *
- * Each sigma mirrors a `galaxyGen/generate.wesl` builder, cited on the line;
+ * Each sigma mirrors a `milkyWay/sprites/generate.wesl` builder, cited on the line;
  * each amplitude is an emission share over the component's own Gaussian
  * volume, scaled to the sprite field's total flux (see `emissionScale`).
  * Colours stay eyeball values. Imports `armParticleCloud.ts` to reserve the
@@ -112,7 +112,7 @@ function shapeOf(
  * 1/distance^2, so the match is one equation —
  *   sum_k A_k (2*PI)^1.5 sigmaAlong sigmaAcross sigmaPole
  *     = GLOW_DISC_INTEGRAL * sum_i brightness_i * size_i^2
- * — whose right side is `milkyWayCloud/stars.wesl`: brightness x quad AREA x
+ * — whose right side is `milkyWay/sprites/stars.wesl`: brightness x quad AREA x
  * the profile's integral, the px clamp cancelling its own area change. Over
  * populations that leaves `sum_pop share * multiplier` (what the amplitudes
  * below already are) times the three factors here, of which only

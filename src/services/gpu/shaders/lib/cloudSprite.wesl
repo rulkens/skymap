@@ -1,7 +1,7 @@
 // lib/cloudSprite.wesl — shared shading math for the generated-galaxy sprite
 // passes (star + dust billboards). These functions are the SINGLE HOME for
 // tuned constants that previously lived, verbatim, in both the main app's
-// milkyWayCloud shaders and the galaxy-renderer tool's draw shaders — the
+// milkyWay/sprites shaders and the galaxy-renderer tool's draw shaders — the
 // duplication was tolerated at port time ("adaptations, not copies") with a
 // consolidate-on-second-retune rule, and the fade-band fix below was that
 // second retune.
@@ -10,7 +10,7 @@
 // tools/galaxy-renderer/src/engine/shaders/lib/cloudSprite.wesl — WESL
 // package binding is root-driven, so the file must appear inside the tool's
 // own shader root to be addressable as package::lib::cloudSprite (same
-// mechanism as the galaxyGen/ directory symlink; see the tool's wesl.toml).
+// mechanism as the milkyWay/sprites/ directory symlink; see the tool's wesl.toml).
 //
 // What deliberately STAYS per-pass (adaptation points, not shared):
 //   - The screen-size clamp: the app's star pass clamps in PIXELS (the

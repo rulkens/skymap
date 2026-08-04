@@ -4,7 +4,7 @@
  *
  * `lodApparent` is seeded from the app's `MILKY_WAY_TUNING_DEFAULTS.lodApparent`
  * (`src/services/engine/galaxyGenerator/v1/milkyWayCalibration.ts`), and the two now share the
- * star shader outright (`milkyWayCloud/stars.wesl`, symlinked into this tool's
+ * star shader outright (`milkyWay/sprites/stars.wesl`, symlinked into this tool's
  * WESL root), so the same number drives the same `fluxConservingLod` against an
  * NDC apparent size captured the same way in both places.
  */

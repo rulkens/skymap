@@ -12,7 +12,7 @@
  * (a GPU-free value packer). Homing the constant here lets that pure helper
  * read it without importing a renderer module (which would drag WESL shader
  * imports into the helper's plain-value world). The `structureMarker/ringPick`
- * and `milkyWayPick` shaders bake the same padding into their pick-widened
+ * and `milkyWay/pick` shaders bake the same padding into their pick-widened
  * floors; this is the one TS home the comments over there point back to.
  *
  * @module

@@ -6,7 +6,7 @@
  * up front and reused: `layout: 'auto'` (`createGenerationPipelines.ts`)
  * derives a bind-group layout that is specific to the pipeline it came from,
  * even when — as here — the star and dust shaders declare byte-identical
- * `@group(0)` bindings (`galaxyGen/generate.wesl`'s `gen` uniform and `outBuf`
+ * `@group(0)` bindings (`milkyWay/sprites/generate.wesl`'s `gen` uniform and `outBuf`
  * storage array). A bind group made against one pipeline's derived layout is
  * not valid on the other, so each pass needs its own, built against its own
  * pipeline's `getBindGroupLayout(0)` — the same rule `createGalaxyEngine.ts`

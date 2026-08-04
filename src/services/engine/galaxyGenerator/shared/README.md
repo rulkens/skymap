@@ -23,7 +23,7 @@ describeGalaxy(params) → GalaxyDescription   ← every construction-time RNG d
 
 `generationUboLayout.ts` (`GENERATION_UBO`) is the offset authority for every
 lane; `populationIds.ts` names the population codes the shader switches on. Both
-are hand-mirrored into `gpu/shaders/galaxyGen/generate.wesl`, guarded by
+are hand-mirrored into `gpu/shaders/milkyWay/sprites/generate.wesl`, guarded by
 `tests/…/shared/generationShaderParity.test.ts` — no compiler enforces that seam.
 
 ## Landmines

@@ -6,7 +6,7 @@
  *
  * It draws nothing: every shared quantity a serial RNG produced arrives in the
  * description, whose docblock says why. The shaders draw the per-STAR values
- * themselves from a stateless hash (`galaxyGen/generate.wesl`'s header).
+ * themselves from a stateless hash (`milkyWay/sprites/generate.wesl`'s header).
  */
 import { carveDustLayout } from './carveDustLayout';
 import { carveStarLayout } from './carveStarLayout';
