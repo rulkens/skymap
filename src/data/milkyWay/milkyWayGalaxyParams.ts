@@ -60,6 +60,6 @@ export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams = {
   irregularity: 0.6,
   globularCount: 30,
   radius: 1.05,
-  starCount: 150000,
+  starCount: 75000,
   seed: MILKY_WAY_GENERATION_SEED,
 };
