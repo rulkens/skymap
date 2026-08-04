@@ -70,9 +70,18 @@ first tests the analytic field has ever had. Both mutation-verified.
 Delete `readGalaxyFieldGeometry.ts` and `GalaxyFieldGeometry`. Behaviour-neutral: byte-identical UBO,
 bit-identical mixtures. Defer `luminosity` to step 4 if it fights neutrality.
 
-**3 — Gate arms on geometry.** `drawArms` becomes `numArms > 0 && category !== 'irregular'`.
-Neutral for all eight shipped presets. Verify by re-running `scratchpad/armGate.ts`: the
-`armStrength 0` row must match the others.
+**3 — Gate arms on the category. DONE.** The gate is `category === 'spiral' || category ===
+'barred'` — the categories that have a spiral arm pattern, and nothing about how many stars get
+spent on it. **Not** `numArms > 0 && category !== 'irregular'`: `numArms` is clamped to at least 1,
+so that collapses to `category !== 'irregular'` and grows arms on every elliptical and lenticular
+(measured: m104 55 → 106 field components, `ell` 0 → 207 HII regions and 0 → 64 SF events; 88 of
+206 probe rows move, and it fails `describeGalaxy.test.ts`'s pinned E1/S0 draw order). **Not** the
+`galaxyPopulationCountShares(…).arm > 0` share either: neutral, but the same star-count currency
+one step earlier, so `armStrength 0` still deletes the field's arms. Byte-identical UBO and
+bit-identical mixtures for the eight presets, 12 seeded extras and every `starCount` from 20 000 to
+1 200 000; the one row that moves is the `armStrength 0` spiral, which is the point.
+`scratchpad/armGate.ts`'s three rows now agree: 332 field components, 141 SF events, 556 HII
+components each.
 
 **4 — The flux anchor. CHANGES THE IMAGE.**
 `luminosity = GALAXY_LUMINOSITY_PER_AREA · outerRadius²`, anchored on the **Milky Way @ 150 000**

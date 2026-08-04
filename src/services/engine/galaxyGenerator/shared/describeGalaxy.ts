@@ -147,8 +147,13 @@ export function describeGalaxy(params: GalaxyParams): GalaxyDescription {
   // elliptical and lenticular, and every irregular — gets zeroed records
   // rather than a short array, because a zero-weight arm is what v1's
   // arm table and v2's ridge chain both already read for it.
+  //
+  // The category alone decides. `armStrength` spends STARS on arms a spiral
+  // already has, so gating on its count lets a sprite budget of zero delete
+  // the field's arm ridges, its SF events and its HII regions along with the
+  // sprites.
   const arms: GalaxyFieldArmRecord[] = Array.from({ length: numArms }, () => ZERO_ARM());
-  if (budget.armStarCount > 0 && category !== 'irregular') {
+  if (category === 'spiral' || category === 'barred') {
     const clumpStream = mulberry32(((params.clumpSeed ?? 0) | 0 || 911) >>> 0);
     const waveStream = mulberry32(((params.waveSeed ?? 0) | 0 || 777) >>> 0);
     for (let a = 0; a < numArms; a++) {

@@ -5,9 +5,11 @@
  * stream-isolation tests catch a value leaking BETWEEN streams, not a reorder
  * within one.
  *
- * The other two tests pin the seam to the sprite tier — the light split and the
+ * The other tests pin the seam to the sprite tier — the light split and the
  * flux anchor are read off the description but spent by `carveStarLayout`, and
- * no type says the two must agree.
+ * no type says the two must agree; and the arm gate, which must stay a
+ * category, because a star budget deciding it strips the analytic field's arm
+ * ridges, SF events and HII regions along with the sprites.
  */
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
@@ -118,5 +120,22 @@ describe('describeGalaxy', () => {
       .filter((range) => range.popId !== POPULATION_IDS.globularStar)
       .reduce((sum, range) => sum + range.iterations, 0);
     expect(describeGalaxy(params).modelledStars).toBe(carved);
+  });
+
+  // A spiral at armStrength 0 still HAS arms; it just spends no sprites on
+  // them. v2 reads these records and nothing else in the suite would notice
+  // them going to zero.
+  it.each(['Sb', 'SBb'])('%s keeps its arms when no stars are budgeted for them', (type) => {
+    const params = { type, starCount: 100000 };
+    expect(describeGalaxy({ ...params, armStrength: 0 }).arms).toEqual(
+      describeGalaxy({ ...params, armStrength: 1 }).arms,
+    );
+  });
+
+  // The complement: the three armless categories. `numArms` is clamped to at
+  // least 1 for every galaxy, so only the category keeps their records zeroed.
+  it.each(['E1', 'S0', 'Irr'])('%s has no arms whatever its arm knobs say', (type) => {
+    const arms = describeGalaxy({ type, starCount: 100000, armCount: 4, armStrength: 1.5 }).arms;
+    expect(arms.map((arm) => arm.weight)).toEqual(arms.map(() => 0));
   });
 });
