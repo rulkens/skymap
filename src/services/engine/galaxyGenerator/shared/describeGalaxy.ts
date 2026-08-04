@@ -35,6 +35,16 @@ const ARM_AGE_ODD_BASE = 0.1;
 const ARM_AGE_JITTER_RANGE = 0.3;
 
 /**
+ * Total emitted light per unit disc area — a GAUGE for the field's arbitrary
+ * flux units, not a measurement. Pinned so the Milky Way preset emits exactly
+ * what it did while the anchor was still the sprite budget, i.e.
+ * `0.016^2 * 400000^(2/3) * 0.9294 * 0.2392 * 0.57 * cbrt(75000)`; repin it
+ * and every tuned `analyticExposure` moves with it. What the number MEANS is
+ * on `GalaxyDescription.luminosity`.
+ */
+const GALAXY_LUMINOSITY_PER_AREA = 7.4268687;
+
+/**
  * How far the arms reach, in units of `outerRadius`, lerped by `armFalloff`
  * (0 = longest, 1 = shortest; the default 0.6 lands at 1.07). This is the
  * ONLY knob that moves where an arm ends — `arms.excessScaleRatio` shapes its
@@ -213,6 +223,7 @@ export function describeGalaxy(params: GalaxyParams): GalaxyDescription {
       disc: shares.disk + shares.arm,
       halo: shares.halo,
     },
+    luminosity: GALAXY_LUMINOSITY_PER_AREA * outerRadius * outerRadius,
     outerRadius,
     diskScaleLen,
     bulgeRadius,
@@ -245,7 +256,6 @@ export function describeGalaxy(params: GalaxyParams): GalaxyDescription {
     irregularClumpCenters,
     lenticularCloudCenters,
     starSize: 0.016 * outerRadius * grainScale(budget.totalStars),
-    modelledStars: budget.totalStars,
     seed: normalizeGenerationSeed(params.seed) >>> 0,
   };
 }

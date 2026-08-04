@@ -18,6 +18,22 @@ import type { Vec3 } from '../math/Vec3';
 export type GalaxyDescription = {
   readonly category: GalaxyCategory;
   readonly light: GalaxyLightDecomposition;
+  /**
+   * Total emitted light, in the analytic field's own arbitrary units — the
+   * scale every mixture amplitude and the HII tier's flux are shares of.
+   * `GALAXY_LUMINOSITY_PER_AREA * outerRadius^2`, because an exponential
+   * disc's flux is its central surface brightness times scale length squared
+   * (Freeman 1970) and this model holds that brightness fixed across presets,
+   * so SIZE carries all of it.
+   *
+   * Deliberately not a function of the sprite budget: that is an LOD number,
+   * and while flux was anchored on it (`modelledStars * starSize^2`, which
+   * goes as N^(1/3)) switching tier changed how bright a galaxy is by 26% a
+   * step. The population multipliers still ride on top, so what a galaxy
+   * emits is this times sum(light share x SPRITE_POPULATION_BRIGHTNESS) —
+   * the last sprite term in the flux path, and the one step 5 folds in.
+   */
+  readonly luminosity: number;
   readonly outerRadius: number;
   /** Surface-density scale length of the sampled disc, before its brightness taper. */
   readonly diskScaleLen: number;
@@ -78,14 +94,13 @@ export type GalaxyDescription = {
    */
   readonly lenticularCloudCenters: readonly Vec3[];
   /**
-   * Sprite artifact, scheduled for removal: the base sprite half-extent. It is
-   * here only because `emissionScale`/`tierFlux` anchor the field's absolute
-   * flux to `modelledStars * starSize^2`. Not physics — a real emissivity
-   * normalisation replaces the pair.
+   * v1's base sprite half-extent, `0.016 * outerRadius * grainScale(budget)`.
+   * A sprite quantity on a shared type, and the last one: no field reads it.
+   * It stays only until `packGenerationUniforms` derives it from the
+   * `StarBudget` it is already handed, which is when `splitStarBudget` and
+   * `grainScale` move under `v1/`.
    */
   readonly starSize: number;
-  /** Sprite artifact, scheduled for removal — see `starSize`. */
-  readonly modelledStars: number;
   /** The generation seed, for field-side stochastic tiers (e.g. the arm particle cloud) that need the SAME seed the sprites were drawn with, not a re-derivation. */
   readonly seed: number;
 };

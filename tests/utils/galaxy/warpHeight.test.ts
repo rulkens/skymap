@@ -15,6 +15,7 @@ import type { GalaxyDescription } from '../../../src/@types/galaxy/GalaxyDescrip
 const GEOMETRY: GalaxyDescription = {
   category: 'spiral',
   light: { disc: 0.7, bulge: 0.2, bar: 0, halo: 0.1 },
+  luminosity: 100,
   outerRadius: 10,
   diskScaleLen: 3,
   bulgeRadius: 1,
@@ -44,7 +45,6 @@ const GEOMETRY: GalaxyDescription = {
   irregularClumpCenters: [],
   lenticularCloudCenters: [],
   starSize: 0.02,
-  modelledStars: 100000,
   seed: 1,
 };
 

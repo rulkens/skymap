@@ -5,9 +5,10 @@
  * split — so they fail on a lane counted twice or a debit skipped, which
  * nothing else reaches `buildGalaxyFieldMixture` to notice.
  *
- * The first test PINS the sprite-flux-parity claim (`emissionScale`'s
- * docblock); its anchor constants are restated here so that retiring the
- * claim has to be a deliberate edit rather than silent drift.
+ * The first test PINS what that sum is a share OF: the galaxy's own
+ * `luminosity` and nothing else, so a lane that quietly re-acquires a
+ * dependency on the sprite budget fails here as well as in
+ * `galaxyFieldTierInvariance.test.ts`.
  */
 import { describe, expect, it } from 'vitest';
 import { describeGalaxy } from '../../../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
@@ -45,21 +46,10 @@ function geometryOf(ref: ReferenceGalaxy): GalaxyDescription {
   return describeGalaxy({ ...ref.params, type: ref.params.type! });
 }
 
-// `emissionScale`'s three anchor constants — see this file's docblock.
-const GLOW_DISC_INTEGRAL = 0.9294;
-const MEAN_STAR_LUMINOSITY = 0.2392;
-const MEAN_FALLOFF_AND_JITTER = 0.57;
-
-/** What the mixture claims to emit: one scale times the population light shares. */
+/** What the mixture claims to emit: the galaxy's luminosity times its light shares. */
 function predictedFlux(geometry: GalaxyDescription): number {
-  const scale =
-    geometry.modelledStars *
-    geometry.starSize ** 2 *
-    GLOW_DISC_INTEGRAL *
-    MEAN_STAR_LUMINOSITY *
-    MEAN_FALLOFF_AND_JITTER;
   return (
-    scale *
+    geometry.luminosity *
     (geometry.light.disc * SPRITE_POPULATION_BRIGHTNESS.disk +
       geometry.light.bulge * SPRITE_POPULATION_BRIGHTNESS.bulge +
       geometry.light.bar * SPRITE_POPULATION_BRIGHTNESS.bar +

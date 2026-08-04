@@ -5,11 +5,11 @@
  * stream-isolation tests catch a value leaking BETWEEN streams, not a reorder
  * within one.
  *
- * The other tests pin the seam to the sprite tier — the light split and the
- * flux anchor are read off the description but spent by `carveStarLayout`, and
- * no type says the two must agree; and the arm gate, which must stay a
- * category, because a star budget deciding it strips the analytic field's arm
- * ridges, SF events and HII regions along with the sprites.
+ * The other tests pin the seam to the sprite tier — the light split is read
+ * off the description but spent by `carveStarLayout`, and no type says the two
+ * must agree; and the arm gate, which must stay a category, because a star
+ * budget deciding it strips the analytic field's arm ridges, SF events and HII
+ * regions along with the sprites.
  */
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
@@ -86,11 +86,12 @@ describe('describeGalaxy', () => {
 
   it.each(BY_CATEGORY)('splits $type light as the carved star layout divides it', (params) => {
     const category = classifyHubbleType(params.type);
-    const layout = carveStarLayout(category, params, splitStarBudget(category, params));
+    const budget = splitStarBudget(category, params);
+    const layout = carveStarLayout(category, params, budget);
     const description = describeGalaxy(params);
     const iterations = (popId: number): number =>
       layout.ranges.find((range) => range.popId === popId)?.iterations ?? 0;
-    const modelled = description.modelledStars;
+    const modelled = budget.totalStars;
     const carved = {
       bulge: iterations(POPULATION_IDS.bulge) / modelled,
       bar: iterations(POPULATION_IDS.bar) / modelled,
@@ -109,17 +110,6 @@ describe('describeGalaxy', () => {
     expect(Math.abs(description.light.bar - carved.bar)).toBeLessThanOrEqual(slack);
     expect(Math.abs(description.light.halo - carved.halo)).toBeLessThanOrEqual(slack);
     expect(Math.abs(description.light.disc - carved.disc)).toBeLessThanOrEqual(2 * slack);
-  });
-
-  // `modelledStars` is the flux-parity anchor, and it is only honest while the
-  // carved layout really does spend the whole budget on modelled populations.
-  it.each(BY_CATEGORY)('anchors $type flux to every star the layout carves', (params) => {
-    const category = classifyHubbleType(params.type);
-    const layout = carveStarLayout(category, params, splitStarBudget(category, params));
-    const carved = layout.ranges
-      .filter((range) => range.popId !== POPULATION_IDS.globularStar)
-      .reduce((sum, range) => sum + range.iterations, 0);
-    expect(describeGalaxy(params).modelledStars).toBe(carved);
   });
 
   // A spiral at armStrength 0 still HAS arms; it just spends no sprites on

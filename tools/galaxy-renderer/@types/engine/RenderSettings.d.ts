@@ -68,7 +68,12 @@ export type RenderSettings = {
   readonly spriteField: boolean;
   /** SPIKE, tool-only: draw the analytic Gaussian-mixture field into the same target. */
   readonly analyticField: boolean;
-  /** SPIKE, tool-only: whole-field intensity multiplier for the analytic pass, where 1.0 emits the sprite field's own total flux. */
+  /**
+   * SPIKE, tool-only: whole-field intensity multiplier for the analytic pass.
+   * 1.0 is the calibrated default, NOT a parity point with the sprite field —
+   * absolute flux is anchored on `GalaxyDescription.luminosity`, and the
+   * gauge that fixes it was pinned so this setting kept its meaning.
+   */
   readonly analyticExposure: number;
   /**
    * "JWST" view crossfade weight: 0 = pure galaxy, 1 = the primary galaxy's

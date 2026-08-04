@@ -53,16 +53,17 @@ stars are outside the table entirely: 90-star knots at random radii are not a
 smooth field. Turning a count share into a LIGHT share takes a second, separate
 multiply — see `galaxyPopulationCountShares.ts`'s docblock for that pair.
 
-**`modelledStars` is still a star count, deliberately.** It is what v2's
-`emissionScale` and `hiiRegions`' `tierFlux` calibrate absolute flux against, so
-that analytic exposure 1.0 means sprite-flux parity. Deleting v1 does not delete
-that dependency — it has to be replaced with a real emissivity normalisation
-first (`docs/research/milky-way/goal-and-history.md`).
+**The field's brightness must never read the star budget.** A budget is an LOD
+number; while `emissionScale` and `hiiRegions`' `tierFlux` anchored absolute
+flux on `modelledStars * starSize^2` it went as N^(1/3), so switching tier
+changed how bright a galaxy is by 26% a step — with the structure untouched and
+the sprite bag drifting by the same factor, which is why it never showed. Both
+now scale off `GalaxyDescription.luminosity`, a function of size alone.
 
-**`splitStarBudget`/`carveStarLayout` are NOT v1-only.** `describeGalaxy` derives
-`starSize` from `budget.totalStars` and gates its arm draws on
-`budget.armStarCount` — both of which v2 then reads off the description. They
-stay here.
+**`splitStarBudget`/`carveStarLayout` are still here, for one reason.**
+`describeGalaxy` derives `starSize` from `budget.totalStars`, and nothing else
+in the description touches the budget. That last thread is what keeps the pair
+out of `v1/`.
 
 **Arm-table lane 7 (`age`) is analytic-field-only.** The sprite shader never
 reads it. Lanes 0-6 are what `armStarSample` consumes.

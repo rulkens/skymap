@@ -69,25 +69,20 @@ const TAU_ROOT3 = (2 * Math.PI) ** 1.5;
 const ISO_FRAME = { along: [1, 0, 0] as Vec3, across: [0, 1, 0] as Vec3, pole: [0, 0, 1] as Vec3 };
 
 /**
- * Base per-star emission this tier's `brightness` multiplies, in the same
- * star-count x size^2 currency `galaxyFieldMixture.ts`'s (private, unexported)
- * `emissionScale` uses for every other tier — reusing that anchor keeps this
- * ADDITIVE tier the same order of magnitude as the disc it sits on top of,
- * without needing the exact function (this tier owes the disc no debit, so
- * only a comparable scale matters, not an identical one). 0.01 lands the
- * Milky Way preset's HII-to-disc flux ratio around 1:10 at `brightness`
- * 1 — a starting point for visual calibration, not a measurement.
+ * This tier's share of the galaxy's total `luminosity` at `brightness` 1 —
+ * the same anchor every smooth-field tier scales off, which is what keeps
+ * this ADDITIVE tier the same order of magnitude as the disc it sits on top
+ * of (it owes the disc no debit, so a comparable scale is all it needs).
+ * Eyeballed to land the Milky Way's HII-to-disc flux ratio around 1:10, then
+ * carried across from the retired star-count anchor exactly: 0.01 per unit
+ * star-area over the 0.9294 * 0.2392 * 0.57 the disc's anchor also carried
+ * and this one did not. A starting point for visual calibration, not a
+ * measurement.
  */
-const HII_FLUX_PER_STAR_AREA = 0.01;
+const HII_LUMINOSITY_SHARE = 0.078915316;
 
 function tierFlux(geometry: GalaxyDescription, tuning: GalaxyFieldTuning): number {
-  return (
-    geometry.modelledStars *
-    geometry.starSize *
-    geometry.starSize *
-    HII_FLUX_PER_STAR_AREA *
-    Math.max(0, tuning.hii.brightness)
-  );
+  return geometry.luminosity * HII_LUMINOSITY_SHARE * Math.max(0, tuning.hii.brightness);
 }
 
 function shellSpriteCount(luminosity: number): number {

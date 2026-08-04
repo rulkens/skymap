@@ -6,8 +6,9 @@
  *
  * Each sigma mirrors a `milkyWay/sprites/generate.wesl` builder, cited on the line;
  * each amplitude is an emission share over the component's own Gaussian
- * volume, scaled to the sprite field's total flux (see `emissionScale`).
- * Colours stay eyeball values. Imports `armParticleCloud.ts` to reserve the
+ * volume, scaled by the galaxy's own `luminosity` — a physical quantity, so
+ * an LOD tier change cannot move it. Colours stay eyeball values.
+ * Imports `armParticleCloud.ts` to reserve the
  * arm cloud's component budget before the ridge chain spends it, with no
  * third caller (the engine) to reserve it for them instead — the shared
  * ridge-curve/width/colour vocabulary both sides need lives in
@@ -106,34 +107,6 @@ function shapeOf(
   };
 }
 
-/**
- * Sprite-flux parity, which `emissionScale` implements and analytic exposure
- * 1.0 therefore means. Integrated over the image both fields are a sum over
- * 1/distance^2, so the match is one equation —
- *   sum_k A_k (2*PI)^1.5 sigmaAlong sigmaAcross sigmaPole
- *     = GLOW_DISC_INTEGRAL * sum_i brightness_i * size_i^2
- * — whose right side is `milkyWay/sprites/stars.wesl`: brightness x quad AREA x
- * the profile's integral, the px clamp cancelling its own area change. Over
- * populations that leaves `sum_pop share * multiplier` (what the amplitudes
- * below already are) times the three factors here, of which only
- * MEAN_FALLOFF_AND_JITTER lacks a closed form: mean falloff x size jitter
- * squared, 0.57 for the Milky Way and 0.55..0.78 across the gallery. The star
- * pass's `exposure` and `starSizeScale^2` ride the field exposure lane instead.
- */
-const GLOW_DISC_INTEGRAL = 0.9294; // PI*(0.19865 + 0.17459 - 0.0774), over the unit disc
-const MEAN_STAR_LUMINOSITY = 0.2392; // 0.12 + 0.4*E[u^3] + P(flare)*3.2*E[flare]
-const MEAN_FALLOFF_AND_JITTER = 0.57;
-
-function emissionScale(geometry: GalaxyDescription): number {
-  return (
-    geometry.modelledStars *
-    geometry.starSize ** 2 *
-    GLOW_DISC_INTEGRAL *
-    MEAN_STAR_LUMINOSITY *
-    MEAN_FALLOFF_AND_JITTER
-  );
-}
-
 const TAU_ROOT = Math.sqrt(2 * Math.PI);
 const TAU_ROOT3 = (2 * Math.PI) ** 1.5;
 
@@ -208,7 +181,6 @@ function pushDisc(
   tuning: GalaxyFieldTuning,
 ): number {
   if (!tuning.disc.enabled || geometry.light.disc <= 0) return 0;
-  const scale = emissionScale(geometry);
   const scaleLen = discLightScaleLength(geometry);
   const central = (geometry.light.disc * DISC_BRIGHTNESS) / (2 * Math.PI * scaleLen * scaleLen);
   let fluxTotal = 0;
@@ -219,7 +191,8 @@ function pushDisc(
       (DISC_FLARE_FLOOR + geometry.bulgeRadius / (sigmaR + geometry.bulgeRadius));
     // Divided by sigmaPole alone: the fitted weights are SURFACE densities,
     // and it is the surface density the flare must leave untouched.
-    const amplitude = (scale * DISC_SURFACE_WEIGHTS[i]! * central) / (sigmaPole * TAU_ROOT);
+    const amplitude =
+      (geometry.luminosity * DISC_SURFACE_WEIGHTS[i]! * central) / (sigmaPole * TAU_ROOT);
     out.push({
       amplitude,
       ...shapeOf(geometry, sigmaR, sigmaPole, sigmaR, 0),
@@ -412,7 +385,7 @@ function pushWarpedOuterDisc(
   const { outerRadius, bulgeRadius, diskHeight, diskScaleLen } = geometry;
   const blobsPerRing = RING_BLOBS_PER_RING;
   const totalFlux =
-    emissionScale(geometry) * geometry.light.disc * DISC_BRIGHTNESS * REMOVED_OUTER_DISC_WEIGHT;
+    geometry.luminosity * geometry.light.disc * DISC_BRIGHTNESS * REMOVED_OUTER_DISC_WEIGHT;
 
   // One spacing drives both the radial sigma and the annulus weights below —
   // the band split N-1 ways across the WARP_RING_COUNT rings.
@@ -736,7 +709,7 @@ function pushBulge(
           falloffLength: bulgeRadius * (1.5 - bulgeConcentration),
         },
   );
-  const emission = emissionScale(geometry) * geometry.light.bulge * BULGE_BRIGHTNESS;
+  const emission = geometry.luminosity * geometry.light.bulge * BULGE_BRIGHTNESS;
   const shells = [
     [BULGE_CORE_WEIGHT, BULGE_CORE_SIGMA_RATIO],
     [1 - BULGE_CORE_WEIGHT, BULGE_BODY_SIGMA_RATIO],
@@ -772,7 +745,7 @@ function pushBar(
   const sigmaPole = BAR_HEIGHT_FACTOR * geometry.diskHeight;
   out.push({
     amplitude:
-      (emissionScale(geometry) * geometry.light.bar * BAR_BRIGHTNESS) /
+      (geometry.luminosity * geometry.light.bar * BAR_BRIGHTNESS) /
       (TAU_ROOT3 * sigmaAlong * sigmaAcross * sigmaPole),
     ...shapeOf(geometry, sigmaAlong, sigmaPole, sigmaAcross, geometry.barTiltRad),
     color: BAR_COLOR,
@@ -798,7 +771,7 @@ function pushHalo(
   const sigmaPole = sigma * geometry.flattening;
   out.push({
     amplitude:
-      (emissionScale(geometry) * geometry.light.halo * HALO_BRIGHTNESS) /
+      (geometry.luminosity * geometry.light.halo * HALO_BRIGHTNESS) /
       (TAU_ROOT3 * sigma * sigma * sigmaPole),
     ...shapeOf(geometry, sigma, sigmaPole, sigma, 0),
     color: HALO_COLOR,
