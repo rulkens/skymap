@@ -25,6 +25,7 @@ import {
 import { sfMapDustDensity } from '../../../../../src/utils/galaxy/sfMapDustDensity';
 import { sfMapDustRingEdges } from '../../../../../src/utils/galaxy/sfMapDustRingEdges';
 import { createShaderModuleWithDevLog } from '../../../../../src/services/gpu/shaderCompileLogger';
+import type { GalaxySfMapParams } from '../../../../../src/@types/galaxy/GalaxySfMapParams';
 import { FIELD_HEADER_BUFFER_SIZE } from '../field/packFieldUniforms';
 import { createSfMapAutomaton } from './createSfMapAutomaton';
 import { decodeSfMapTexels } from './decodeSfMapTexels';
@@ -111,13 +112,70 @@ function formatRow(s: PopulationStat): string {
   );
 }
 
+type DustStat = {
+  readonly label: string;
+  readonly count: number;
+  readonly p50: number;
+  readonly p90: number;
+  readonly max: number;
+  /** Share of texels whose dust value exceeds ambient (1.0) — the rim/filament population. */
+  readonly overshootFrac: number;
+  /** sum(v - 1) over texels > 1, as a fraction of this population's total dust mass (sum of v). */
+  readonly rimMassShare: number;
+  readonly zeroFrac: number;
+};
+
+function computeDustStat(label: string, dust: readonly number[]): DustStat {
+  const n = dust.length;
+  const sorted = Float64Array.from(dust).sort();
+  let overshootCount = 0;
+  let zeroCount = 0;
+  let rimMass = 0;
+  let totalMass = 0;
+  for (const v of dust) {
+    if (v > 1) {
+      overshootCount++;
+      rimMass += v - 1;
+    }
+    if (v === 0) zeroCount++;
+    totalMass += v;
+  }
+  return {
+    label,
+    count: n,
+    p50: percentileOf(sorted, 0.5),
+    p90: percentileOf(sorted, 0.9),
+    max: n > 0 ? sorted[n - 1]! : NaN,
+    overshootFrac: n > 0 ? overshootCount / n : NaN,
+    rimMassShare: totalMass > 0 ? rimMass / totalMass : NaN,
+    zeroFrac: n > 0 ? zeroCount / n : NaN,
+  };
+}
+
+function formatDustRow(s: DustStat): string {
+  const num = (v: number, w: number): string =>
+    Number.isNaN(v) ? '-'.padStart(w) : v.toFixed(3).padStart(w);
+  return (
+    s.label.padEnd(10) +
+    String(s.count).padStart(9) +
+    num(s.p50, 8) +
+    num(s.p90, 8) +
+    num(s.max, 8) +
+    num(s.overshootFrac, 12) +
+    num(s.rimMassShare, 13) +
+    num(s.zeroFrac, 9)
+  );
+}
+
 function assertNoDeviceError(device: GPUDevice, what: string): Promise<void> {
   return device.popErrorScope().then((error) => {
     if (error) throw new Error(`${what}: ${error.message}`);
   });
 }
 
-export async function runSfMapActivityHistogram(): Promise<string> {
+export async function runSfMapActivityHistogram(
+  overrides?: Partial<GalaxySfMapParams>,
+): Promise<string> {
   const adapter = await navigator.gpu?.requestAdapter();
   if (!adapter) throw new Error('no WebGPU adapter');
   const device = await adapter.requestDevice();
@@ -153,7 +211,16 @@ export async function runSfMapActivityHistogram(): Promise<string> {
   // with `params` defaulting to `DEFAULT_GALAXY_PARAMS` (`MILKY_WAY_GALAXY_PARAMS`
   // re-exported, tools/galaxy-renderer/src/data/defaultGalaxyParams.ts).
   const geometry = describeGalaxy(MILKY_WAY_GALAXY_PARAMS);
-  const tuning = DEFAULT_GALAXY_FIELD_TUNING;
+  // No overrides -> the exact same object DEFAULT_GALAXY_FIELD_TUNING as before
+  // this param existed, so a flagless run is behaviour-identical, not just
+  // numerically equal.
+  const tuning =
+    overrides === undefined
+      ? DEFAULT_GALAXY_FIELD_TUNING
+      : {
+          ...DEFAULT_GALAXY_FIELD_TUNING,
+          sfMap: { ...DEFAULT_GALAXY_FIELD_TUNING.sfMap, ...overrides },
+        };
 
   device.pushErrorScope('validation');
   const grid = automaton.rebuild({ geometry, tuning, seed: SEED });
@@ -202,10 +269,14 @@ export async function runSfMapActivityHistogram(): Promise<string> {
 
   const oldActivityAll: number[] = new Array(CELL_COUNT);
   const gasAll: number[] = new Array(CELL_COUNT);
-  const byPop: Record<Population, { oldActivity: number[]; gas: number[]; mass: number }> = {
-    crest: { oldActivity: [], gas: [], mass: 0 },
-    interarm: { oldActivity: [], gas: [], mass: 0 },
-    other: { oldActivity: [], gas: [], mass: 0 },
+  const dustAll: number[] = new Array(CELL_COUNT);
+  const byPop: Record<
+    Population,
+    { oldActivity: number[]; gas: number[]; dust: number[]; mass: number }
+  > = {
+    crest: { oldActivity: [], gas: [], dust: [], mass: 0 },
+    interarm: { oldActivity: [], gas: [], dust: [], mass: 0 },
+    other: { oldActivity: [], gas: [], dust: [], mass: 0 },
   };
   let totalMass = 0;
 
@@ -216,13 +287,16 @@ export async function runSfMapActivityHistogram(): Promise<string> {
       const i = rowBase + az;
       const gas = packed[i * 4]!;
       const oldActivity = packed[i * 4 + 2]!;
+      const dust = packed[i * 4 + 3]!;
       oldActivityAll[i] = oldActivity;
       gasAll[i] = gas;
+      dustAll[i] = dust;
       const mass = sfMapDustDensity(gas, oldActivity) * area;
       totalMass += mass;
       const pop = classify(forcing[i]!);
       byPop[pop].oldActivity.push(oldActivity);
       byPop[pop].gas.push(gas);
+      byPop[pop].dust.push(dust);
       byPop[pop].mass += mass;
     }
   }
@@ -240,6 +314,13 @@ export async function runSfMapActivityHistogram(): Promise<string> {
     computeStat('other', byPop.other.oldActivity, byPop.other.gas, byPop.other.mass, totalMass),
   ];
 
+  const dustStats = [
+    computeDustStat('all', dustAll),
+    computeDustStat('crest', byPop.crest.dust),
+    computeDustStat('interarm', byPop.interarm.dust),
+    computeDustStat('other', byPop.other.dust),
+  ];
+
   const lines: string[] = [];
   lines.push('SF-map oldActivity / dust-mass histogram');
   lines.push(
@@ -248,6 +329,9 @@ export async function runSfMapActivityHistogram(): Promise<string> {
   lines.push(
     `  grid: ${SF_MAP_AZ}x${SF_MAP_RINGS}, rMin=${grid.rMin.toFixed(3)} rMax=${grid.rMax.toFixed(3)}, steps=${tuning.sfMap.steps}, armForcing=${tuning.sfMap.armForcing}, seed=${SEED}`,
   );
+  // Full effective sfMap param set, not just the two named above — makes a
+  // sweep log self-describing without cross-referencing the CLI invocation.
+  lines.push(`  params: ${JSON.stringify(tuning.sfMap)}`);
   lines.push(
     `  population thresholds on the CPU armForcing field: crest >= p90 = ${crestThreshold.toFixed(4)}, interarm <= p50 = ${interarmThreshold.toFixed(4)}`,
   );
@@ -273,16 +357,42 @@ export async function runSfMapActivityHistogram(): Promise<string> {
     `  CDF mass split: crest ${(stats[1]!.massShare * 100).toFixed(1)}% / interarm ${(stats[2]!.massShare * 100).toFixed(1)}% / other ${(stats[3]!.massShare * 100).toFixed(1)}%  (total mass ${totalMass.toExponential(3)})`,
   );
 
+  lines.push('');
+  lines.push('dust channel (texel .w — ambient 1.0, snowplough rim overshoot, ceiling 8)');
+  lines.push(
+    'pop'.padEnd(10) +
+      'n'.padStart(9) +
+      'p50'.padStart(8) +
+      'p90'.padStart(8) +
+      'max'.padStart(8) +
+      'overshoot%'.padStart(12) +
+      'rimMass%'.padStart(13) +
+      'zero%'.padStart(9),
+  );
+  for (const s of dustStats) lines.push(formatDustRow(s));
+
   if (gpuErrors.length > 0) {
     throw new Error(`GPU rejected work:\n  ${[...new Set(gpuErrors)].join('\n  ')}`);
   }
 
   device.destroy();
+
+  // Single-line tail so a shell sweep loop can `grep '^RESULT '` and collect
+  // every run's params + stats without parsing the tables above.
+  const result = {
+    tool: 'sfMapActivityHistogram',
+    params: tuning.sfMap,
+    activity: Object.fromEntries(stats.map((s) => [s.label, s])),
+    dust: Object.fromEntries(dustStats.map((s) => [s.label, s])),
+  };
+  lines.push('');
+  lines.push(`RESULT ${JSON.stringify(result)}`);
+
   return lines.join('\n');
 }
 
 declare global {
-  var __sfMapActivityHistogram: () => Promise<string>;
+  var __sfMapActivityHistogram: (overrides?: Partial<GalaxySfMapParams>) => Promise<string>;
 }
 
 globalThis.__sfMapActivityHistogram = runSfMapActivityHistogram;

@@ -4,6 +4,15 @@
  *
  *   npx tsx tools/galaxy-renderer/sweepSfMapPercolation.ts [--runs N] [--steps N] [--json]
  *
+ * With no override flag this runs the full built-in 11-sweep x 15-spread
+ * matrix below, unchanged. Passing any of `--spread`/`--gasRegen`/
+ * `--refractorySteps`/`--dustFloorFraction` instead runs ONE 'seeded' case at
+ * that single parameter point (omitted knobs keep `DEFAULT_GALAXY_SF_MAP_PARAMS`)
+ * — the ad-hoc-point mode a shell sweep loop drives:
+ *
+ *   npx tsx tools/galaxy-renderer/sweepSfMapPercolation.ts \
+ *     --spread 0.23 --gasRegen 0.06 --refractorySteps 7 --dustFloorFraction 0.2 --steps 200 --runs 48
+ *
  * Drives the REAL `sfMapStep.wesl` compute pass in headless Chromium (the
  * page half is `src/percolation/sfMapPercolationHarness.ts`) rather than a CPU
  * port of the update rule — a percolation threshold is emergent and cannot be
@@ -31,6 +40,10 @@ import type {
   SfMapPercolationRequest,
   SfMapPercolationResult,
 } from './src/percolation/sfMapPercolationHarness';
+import type { GalaxySfMapParams } from '../../src/@types/galaxy/GalaxySfMapParams';
+
+/** `GalaxySfMapParams`'s own fields are readonly (the params contract); this driver's CLI parse needs to build one up field-by-field. */
+type MutableSfMapOverrides = { -readonly [K in keyof GalaxySfMapParams]?: GalaxySfMapParams[K] };
 
 /**
  * A Milky-Way-shaped grid span (`sfMapGridRadius`: rMin = 0.6 * armStartRadius,
@@ -42,17 +55,30 @@ const GRID = { rMin: 1.8, rMax: 15.5 };
 /** Mid-grid, r ~ 5.3 — well off `corotationRadius` 7.9, where shear vanishes. */
 const SEED_RING = 128;
 
-type Options = { runs: number; steps: number; json: boolean; headed: boolean };
+type Options = {
+  runs: number;
+  steps: number;
+  json: boolean;
+  headed: boolean;
+  overrides: MutableSfMapOverrides;
+};
 
 function parseArgs(argv: readonly string[]): Options {
-  const options: Options = { runs: 48, steps: 200, json: false, headed: false };
+  const options: Options = { runs: 48, steps: 200, json: false, headed: false, overrides: {} };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--json') options.json = true;
     else if (arg === '--headed') options.headed = true;
     else if (arg === '--runs') options.runs = Number(argv[++i]);
     else if (arg === '--steps') options.steps = Number(argv[++i]);
-    else throw new Error(`unknown flag '${arg}' (known: --runs, --steps, --json, --headed)`);
+    else if (arg === '--spread') options.overrides.spread = Number(argv[++i]);
+    else if (arg === '--gasRegen') options.overrides.gasRegen = Number(argv[++i]);
+    else if (arg === '--refractorySteps') options.overrides.refractorySteps = Number(argv[++i]);
+    else if (arg === '--dustFloorFraction') options.overrides.dustFloorFraction = Number(argv[++i]);
+    else
+      throw new Error(
+        `unknown flag '${arg}' (known: --runs, --steps, --spread, --gasRegen, --refractorySteps, --dustFloorFraction, --json, --headed)`,
+      );
   }
   return options;
 }
@@ -142,7 +168,9 @@ function formatSweep(sweep: Sweep, results: readonly SfMapPercolationResult[]): 
   const lines: string[] = [];
   const floor = results[0]?.tailActiveFraction ?? 0;
   lines.push(`\n${sweep.name}  (${sweep.mode}, held: ${JSON.stringify(sweep.held)})`);
-  lines.push('  spread   survival   tail active frac   x floor   peak active frac');
+  lines.push(
+    '  spread   survival   tail active frac   x floor   peak active frac   clusters   largest%',
+  );
   for (const result of results) {
     const amplification = floor > 0 ? (result.tailActiveFraction / floor).toFixed(1) : '—';
     lines.push(
@@ -150,7 +178,9 @@ function formatSweep(sweep: Sweep, results: readonly SfMapPercolationResult[]): 
         `${(result.survived / result.runs).toFixed(2).padStart(5)}      ` +
         `${result.tailActiveFraction.toExponential(2).padStart(10)}   ` +
         `${amplification.padStart(7)}       ` +
-        `${result.peakActiveFraction.toExponential(2).padStart(10)}`,
+        `${result.peakActiveFraction.toExponential(2).padStart(10)}   ` +
+        `${String(result.clusterCount).padStart(8)}   ` +
+        `${(result.largestClusterShare * 100).toFixed(1).padStart(7)}%`,
     );
   }
   if (sweep.mode === 'spontaneous') {
@@ -173,8 +203,99 @@ function formatSweep(sweep: Sweep, results: readonly SfMapPercolationResult[]): 
   return lines;
 }
 
+/**
+ * One 'seeded' case at exactly the CLI-given point (omitted knobs keep
+ * `DEFAULT_GALAXY_SF_MAP_PARAMS` — `runSfMapPercolation` does that merge
+ * itself, see its own `params` line). This is the ad-hoc-point path a shell
+ * sweep loop drives, as opposed to `main`'s own fixed 11-sweep matrix.
+ */
+async function runSingleCase(options: Options): Promise<void> {
+  const request: SfMapPercolationRequest = {
+    mode: 'seeded',
+    steps: options.steps,
+    runs: options.runs,
+    rMin: GRID.rMin,
+    rMax: GRID.rMax,
+    seedRing: SEED_RING,
+    armForcingLevel: 0,
+    cases: [
+      {
+        label: 'cli-override',
+        // Same 'seeded' convention sweepCases uses: no spontaneous ignition,
+        // no arm term, so only neighbourhood propagation is measured.
+        params: { ...options.overrides, baseIgnition: 0, armForcing: 0 },
+      },
+    ],
+  };
+
+  const hosted = await startDevServer();
+  const server: ViteDevServer = hosted.server;
+  const browser = await launchChromium(options.headed);
+  let report: SfMapPercolationReport;
+
+  try {
+    const context = await browser.newContext({ viewport: { width: 400, height: 300 } });
+    const page = await context.newPage();
+    page.setDefaultTimeout(600_000);
+    page.on('pageerror', (err) => console.error(`page error: ${err.message}`));
+    page.on('console', (message) => {
+      if (message.type() === 'error') console.error(`console: ${message.text()}`);
+    });
+    await page.goto(`${hosted.url}/sfMapPercolation.html`, { waitUntil: 'load' });
+    await page.waitForFunction(() => '__sfMapPercolation' in globalThis);
+
+    report = (await page.evaluate(
+      (arg) =>
+        (
+          globalThis as unknown as { __sfMapPercolation: (r: unknown) => Promise<unknown> }
+        ).__sfMapPercolation(arg),
+      request,
+    )) as SfMapPercolationReport;
+    if (report.gpuErrors.length > 0) {
+      throw new Error(`GPU rejected work:\n  ${report.gpuErrors.join('\n  ')}`);
+    }
+    await context.close();
+  } finally {
+    await browser.close();
+    await server.close();
+  }
+
+  const result = report.results[0]!;
+  console.log('\nSSPSF percolation — single point (CLI override)');
+  console.log(`  adapter: ${report.adapter}`);
+  console.log(`  ${options.steps} steps, ${options.runs} runs, grid ${JSON.stringify(GRID)}`);
+  console.log(`  effective params: ${JSON.stringify(result.params)}`);
+  console.log(
+    `  survival ${(result.survived / result.runs).toFixed(2)}   ` +
+      `tail active frac ${result.tailActiveFraction.toExponential(3)}   ` +
+      `peak active frac ${result.peakActiveFraction.toExponential(3)}`,
+  );
+  console.log(
+    `  clusters ${result.clusterCount}   largest-cluster share ${(result.largestClusterShare * 100).toFixed(1)}%`,
+  );
+  console.log(
+    `RESULT ${JSON.stringify({
+      mode: 'single',
+      params: result.params,
+      steps: options.steps,
+      runs: options.runs,
+      survived: result.survived,
+      survivalFraction: result.survived / result.runs,
+      tailActiveFraction: result.tailActiveFraction,
+      peakActiveFraction: result.peakActiveFraction,
+      clusterCount: result.clusterCount,
+      largestClusterShare: result.largestClusterShare,
+    })}`,
+  );
+}
+
 async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
+
+  if (Object.keys(options.overrides).length > 0) {
+    await runSingleCase(options);
+    return;
+  }
 
   const sweeps: Sweep[] = [
     // The question: does gas starvation hold the threshold up?
@@ -256,8 +377,32 @@ async function main(): Promise<void> {
     await server.close();
   }
 
+  // One record for the whole matrix, not one per case: a shell loop sweeping
+  // this driver already gets one line per invocation from `runSingleCase`,
+  // and 165 nested-object cases fit in a single JSON line just fine.
+  const resultRecord = {
+    mode: 'matrix',
+    steps: options.steps,
+    runs: options.runs,
+    sweeps: reports.map(({ sweep, report }) => ({
+      name: sweep.name,
+      sweepMode: sweep.mode,
+      held: sweep.held,
+      results: report.results.map((r) => ({
+        params: r.params,
+        survived: r.survived,
+        runs: r.runs,
+        tailActiveFraction: r.tailActiveFraction,
+        peakActiveFraction: r.peakActiveFraction,
+        clusterCount: r.clusterCount,
+        largestClusterShare: r.largestClusterShare,
+      })),
+    })),
+  };
+
   if (options.json) {
     console.log(JSON.stringify({ adapter: adapterLine, options, reports }, null, 2));
+    console.log(`RESULT ${JSON.stringify(resultRecord)}`);
     return;
   }
 
@@ -268,6 +413,7 @@ async function main(): Promise<void> {
   for (const { sweep, report } of reports) {
     for (const line of formatSweep(sweep, report.results)) console.log(line);
   }
+  console.log(`\nRESULT ${JSON.stringify(resultRecord)}`);
 }
 
 main().catch((err) => {

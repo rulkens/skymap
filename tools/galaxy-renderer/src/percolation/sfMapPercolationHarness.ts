@@ -36,12 +36,20 @@ const CELL_COUNT = SF_MAP_AZ * SF_MAP_RINGS;
  * ignited on that step. Reduced within the workgroup first — 196k atomic adds
  * to one address serialise, 768 do not.
  */
+/**
+ * `everIgnited` is a per-cell latch (0/1), cleared once per RUN and set the
+ * first time a cell ignites during that run — unlike `counts` (a per-step
+ * scalar total), this is the spatial record `computeClusters` below needs to
+ * tell a single spanning burn from many isolated cavities. Each invocation
+ * owns exactly one cell's slot, so the write races with nothing.
+ */
 const COUNT_ACTIVE_WGSL = /* wgsl */ `
 struct CountSlot { index: f32 }
 
 @group(0) @binding(0) var stateTex: texture_2d<f32>;
 @group(0) @binding(1) var<storage, read_write> counts: array<atomic<u32>>;
 @group(0) @binding(2) var<uniform> slot: CountSlot;
+@group(0) @binding(3) var<storage, read_write> everIgnited: array<u32>;
 
 var<workgroup> wgActive: atomic<u32>;
 
@@ -60,6 +68,7 @@ fn cs(
     let state = textureLoad(stateTex, vec2<i32>(gid.xy), 0);
     if (state.y == 0.0) {
       atomicAdd(&wgActive, 1u);
+      everIgnited[gid.y * dims.x + gid.x] = 1u;
     }
   }
   workgroupBarrier();
@@ -137,6 +146,17 @@ export type SfMapPercolationResult = {
   /** Mean active fraction over the last fifth of the run — the steady-state order parameter. */
   readonly tailActiveFraction: number;
   readonly peakActiveFraction: number;
+  /**
+   * Connected components (Moore-8, azimuth wraps) of the "ever ignited this
+   * run" mask, measured on the LAST of `runs` only — one extra buffer
+   * readback per CASE, not per run, since this is a regime snapshot, not
+   * something worth averaging. `largestClusterShare` near 1 is a single
+   * spanning burn (supercritical); many small clusters is isolated cavities
+   * (subcritical) — the two numbers `spread`'s p_c docstring predicts but
+   * never actually measures.
+   */
+  readonly clusterCount: number;
+  readonly largestClusterShare: number;
 };
 
 export type SfMapPercolationReport = {
@@ -150,6 +170,58 @@ export type SfMapPercolationReport = {
    */
   readonly gpuErrors: readonly string[];
 };
+
+/**
+ * Flood fill over the "ever ignited" mask, Moore-8 adjacency with azimuth
+ * wraparound (radius does not wrap) — the same neighbourhood `sfMapStep.wesl`
+ * itself uses. Runs on the MATERIAL-frame grid with no shear un-rotation:
+ * shear only rotates which world azimuth a material cell corresponds to, it
+ * never changes which cells are lit, so material-frame adjacency answers the
+ * same connectivity question un-shearing would, for a fraction of the cost.
+ */
+function computeClusters(
+  everIgnited: Uint32Array,
+  azCount: number,
+  ringCount: number,
+): { readonly clusterCount: number; readonly largestClusterSize: number; readonly totalMarked: number } {
+  const cellCount = azCount * ringCount;
+  const visited = new Uint8Array(cellCount);
+  let clusterCount = 0;
+  let largestClusterSize = 0;
+  let totalMarked = 0;
+  const stack: number[] = [];
+
+  for (let start = 0; start < cellCount; start++) {
+    if (everIgnited[start] === 0 || visited[start] === 1) continue;
+    clusterCount++;
+    let size = 0;
+    stack.push(start);
+    visited[start] = 1;
+    while (stack.length > 0) {
+      const idx = stack.pop()!;
+      size++;
+      totalMarked++;
+      const ring = (idx / azCount) | 0;
+      const az = idx % azCount;
+      for (let dr = -1; dr <= 1; dr++) {
+        const nRing = ring + dr;
+        if (nRing < 0 || nRing >= ringCount) continue;
+        for (let da = -1; da <= 1; da++) {
+          if (dr === 0 && da === 0) continue;
+          const nAz = (az + da + azCount) % azCount;
+          const nIdx = nRing * azCount + nAz;
+          if (everIgnited[nIdx] !== 0 && visited[nIdx] === 0) {
+            visited[nIdx] = 1;
+            stack.push(nIdx);
+          }
+        }
+      }
+    }
+    if (size > largestClusterSize) largestClusterSize = size;
+  }
+
+  return { clusterCount, largestClusterSize, totalMarked };
+}
 
 function assertNoDeviceError(device: GPUDevice, what: string): Promise<void> {
   return device.popErrorScope().then((error) => {
@@ -256,6 +328,19 @@ export async function runSfMapPercolation(
     size: request.steps * 4,
     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
   });
+  // Per-cell "ignited at some point THIS run" latch — see COUNT_ACTIVE_WGSL's
+  // own comment. Cleared every run; only copied to staging on the last run of
+  // each case (computeClusters's cost is one readback per case, not per run).
+  const everIgnitedBuf = device.createBuffer({
+    label: 'sfMapPercolation:everIgnitedBuf',
+    size: CELL_COUNT * 4,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
+  });
+  const everIgnitedStaging = device.createBuffer({
+    label: 'sfMapPercolation:everIgnitedStaging',
+    size: CELL_COUNT * 4,
+    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+  });
 
   // Even step index writes stateB, odd writes stateA — the same parity
   // createSfMapAutomaton's dispatch loop runs, and what the census pass has to
@@ -289,6 +374,7 @@ export async function runSfMapPercolation(
           { binding: 0, resource: nextTexAt(step).createView() },
           { binding: 1, resource: { buffer: countsBuf } },
           { binding: 2, resource: { buffer: stepIndexBuf, offset: step * stride, size: 4 } },
+          { binding: 3, resource: { buffer: everIgnitedBuf } },
         ],
       }),
     );
@@ -322,6 +408,8 @@ export async function runSfMapPercolation(
 
     const activeSum = new Float64Array(request.steps);
     let survived = 0;
+    let clusterCount = 0;
+    let largestClusterShare = 0;
     for (let run = 0; run < request.runs; run++) {
       // Seeds start at 1: 0 is a legitimate hash input but makes the first run
       // look special in a log, and nothing here needs it.
@@ -331,10 +419,12 @@ export async function runSfMapPercolation(
         packSfMapConstants({ grid, sfMap: params, seed: run + 1 }),
       );
 
+      const isLastRun = run === request.runs - 1;
       const enc = device.createCommandEncoder({
         label: `sfMapPercolation:${testCase.label}:${run}`,
       });
       enc.clearBuffer(countsBuf);
+      enc.clearBuffer(everIgnitedBuf);
       const seedPass = enc.beginComputePass({ label: 'sfMapPercolation:step0' });
       seedPass.setPipeline(stepPipe);
       seedPass.setBindGroup(0, stepBindGroups[0]!);
@@ -358,6 +448,9 @@ export async function runSfMapPercolation(
       }
       runPass.end();
       enc.copyBufferToBuffer(countsBuf, 0, countsStaging, 0, request.steps * 4);
+      if (isLastRun) {
+        enc.copyBufferToBuffer(everIgnitedBuf, 0, everIgnitedStaging, 0, CELL_COUNT * 4);
+      }
       device.queue.submit([enc.finish()]);
 
       await countsStaging.mapAsync(GPUMapMode.READ);
@@ -365,6 +458,16 @@ export async function runSfMapPercolation(
       countsStaging.unmap();
       for (let step = 0; step < request.steps; step++) activeSum[step]! += counts[step]!;
       if (counts[request.steps - 1]! > 0) survived++;
+
+      if (isLastRun) {
+        await everIgnitedStaging.mapAsync(GPUMapMode.READ);
+        const everIgnited = new Uint32Array(everIgnitedStaging.getMappedRange()).slice();
+        everIgnitedStaging.unmap();
+        const clusters = computeClusters(everIgnited, SF_MAP_AZ, SF_MAP_RINGS);
+        clusterCount = clusters.clusterCount;
+        largestClusterShare =
+          clusters.totalMarked > 0 ? clusters.largestClusterSize / clusters.totalMarked : 0;
+      }
     }
 
     const activePerStep = [...activeSum].map((sum) => sum / request.runs);
@@ -376,6 +479,8 @@ export async function runSfMapPercolation(
       runs: request.runs,
       survived,
       activePerStep,
+      clusterCount,
+      largestClusterShare,
       tailActiveFraction: tail.reduce((a, b) => a + b, 0) / tail.length / CELL_COUNT,
       peakActiveFraction: Math.max(...activePerStep) / CELL_COUNT,
     });
