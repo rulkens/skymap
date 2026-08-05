@@ -49,9 +49,9 @@ export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams = {
   // value to pin it to. Lands the arms at 1.07 x outerRadius (see
   // `describeGalaxy.ts`'s ARM_EXTENT lerp).
   armFalloff: 0.6,
-  armEdgeVar: 0.48,
+  armEdgeVar: 0.26,
   armClump: 0.62,
-  armWave: 0.94,
+  armWave: 0.18,
   barStrength: 0.6,
   // The long bar's angle to the Sun–centre line (Wegg & Gerhard 2013; Wegg,
   // Gerhard & Portail 2015), NOT Freudenreich 1998's 13.79°, which describes
