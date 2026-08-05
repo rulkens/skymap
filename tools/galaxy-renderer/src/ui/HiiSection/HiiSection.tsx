@@ -7,6 +7,7 @@
  * a settings drawer folded into FLUX FIELD.
  */
 import type { ReactNode } from 'react';
+import type { GalaxyHiiDigTuning } from '../../../../../src/@types/galaxy/GalaxyHiiDigTuning';
 import type { GalaxyHiiTuning } from '../../../../../src/@types/galaxy/GalaxyHiiTuning';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { fieldTuningPatched } from '../../state/slices/fieldTuningSlice';
@@ -22,6 +23,10 @@ function HiiSection(): ReactNode {
 
   const patchHii = (patch: Partial<GalaxyHiiTuning>): void => {
     dispatch(fieldTuningPatched({ hii: { ...hii, ...patch } }));
+  };
+
+  const patchDig = (patch: Partial<GalaxyHiiDigTuning>): void => {
+    patchHii({ dig: { ...hii.dig, ...patch } });
   };
 
   return (
@@ -101,15 +106,70 @@ function HiiSection(): ReactNode {
           info="Fraction of HII events placed from the SF-map automaton's recentSf channel instead of the arm-ridge catalog. Ignition zeroes gas and age together, so map-seeded knots sit in dust-free pockets (the observed decorrelation). 0 = catalog placement exactly."
         />
         <ParamSlider
-          label="Diffuse glow"
-          value={hii.diffuse}
+          label="DIG · flux fraction"
+          value={hii.dig.fraction}
           min={0}
           max={1}
           step={0.05}
           format={(v) => v.toFixed(2)}
-          onChange={(v) => patchHii({ diffuse: v })}
-          path="fieldTuning.hii.diffuse"
+          onChange={(v) => patchDig({ fraction: v })}
+          path="fieldTuning.hii.dig.fraction"
           info="Diffuse ionized gas (DIG) veil's fraction of this tier's total Hα — observationally 30-50% of a galaxy's Hα sits outside HII regions entirely, a faint haze tracing the arms around the knots. Needs an SF map; 0 skips the veil."
+        />
+        <ParamSlider
+          label="DIG · complexes"
+          value={hii.dig.complexes}
+          min={0}
+          max={120}
+          step={1}
+          format={(v) => v.toFixed(0)}
+          onChange={(v) => patchDig({ complexes: v })}
+          path="fieldTuning.hii.dig.complexes"
+          info="Number of DIG complex seeds. Total blob count is complexes x children."
+        />
+        <ParamSlider
+          label="DIG · children"
+          value={hii.dig.childrenPerComplex}
+          min={1}
+          max={12}
+          step={1}
+          format={(v) => v.toFixed(0)}
+          onChange={(v) => patchDig({ childrenPerComplex: v })}
+          path="fieldTuning.hii.dig.childrenPerComplex"
+          info="Blobs scattered around each DIG complex seed."
+        />
+        <ParamSlider
+          label="DIG · arm bias"
+          value={hii.dig.armBias}
+          min={0}
+          max={1}
+          step={0.05}
+          format={(v) => v.toFixed(2)}
+          onChange={(v) => patchDig({ armBias: v })}
+          path="fieldTuning.hii.dig.armBias"
+          info="Fraction of DIG complexes seeded on an arm's lane (following the arm's own flux) rather than CDF-sampled from the SF map's oldActivity channel."
+        />
+        <ParamSlider
+          label="DIG · elongation"
+          value={hii.dig.elongation}
+          min={1}
+          max={8}
+          step={0.1}
+          format={(v) => v.toFixed(1)}
+          onChange={(v) => patchDig({ elongation: v })}
+          path="fieldTuning.hii.dig.elongation"
+          info="Aspect ratio of a complex's child scatter along vs. across its local flow direction, area-preserving so the complex stretches without also inflating."
+        />
+        <ParamSlider
+          label="DIG · coherence"
+          value={hii.dig.coherence}
+          min={0}
+          max={1}
+          step={0.05}
+          format={(v) => v.toFixed(2)}
+          onChange={(v) => patchDig({ coherence: v })}
+          path="fieldTuning.hii.dig.coherence"
+          info="How strictly a complex's scatter axis follows its local flow direction — 1 follows it exactly, 0 rotates it to a fresh random direction per complex."
         />
       </div>
     </CollapsibleSection>

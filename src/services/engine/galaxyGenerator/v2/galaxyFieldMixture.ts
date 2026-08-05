@@ -279,20 +279,20 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
   // is PHYSICAL, not what the shipped image uses.
   arms: {
     enabled: true,
-    widthScale: 2.3,
-    contrast: 2.2,
+    widthScale: 1.8,
+    contrast: 2.04,
     // Calibration of the value, not of the law (`GalaxyArmTuning.excessScaleRatio`):
     // at 1, contrast flat with radius, the Milky Way preset's ridge chain puts
     // only 5% of its flux beyond r=8 of a 10.5-unit disc — arms that stop
     // before the disc does. Above 1 lifts that; how far is a look call.
     //
-    // 2 is that look call answered against a measured obstacle rather than by
-    // taste alone: `pushWarpedOuterDisc` banks 7.4% of the disc's light into a
-    // 0.75-0.98 R_out annulus, so the interarm floor the eye divides by runs
-    // 2.2x the exponential the contrast law is written against, and K delivers
-    // under half its nominal contrast out there. This buys the reach back from
-    // the numerator. Widening that band is the fix that treats the cause.
-    excessScaleRatio: 2,
+    // The default is that look call answered against a measured obstacle rather
+    // than by taste alone: `pushWarpedOuterDisc` banks 7.4% of the disc's light
+    // into a 0.75-0.98 R_out annulus, so the interarm floor the eye divides by
+    // runs 2.2x the exponential the contrast law is written against, and K
+    // delivers under half its nominal contrast out there. This buys the reach
+    // back from the numerator. Widening that band is the fix treating the cause.
+    excessScaleRatio: 2.7,
     blobSharpness: 1,
     cloud: {
       enabled: true,
@@ -301,7 +301,7 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
       // some OTHER slider is raised first reads as broken. This is a deliberate
       // boot-image change, not a neutral default.
       share: 0.8,
-      coverage: 3.5,
+      coverage: 6.2,
       // Near the top of the 0..3 range, where the placement sampler's bounded
       // rejection starts giving up: this ships WITH the ~17%-exhausted,
       // ~4%-inward drift `GalaxyArmCloudTuning.radialBias` documents, as the
@@ -335,9 +335,16 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
     // and knots driven by the same automaton run. 0 recovers the arm-ridge
     // catalog byte-identically.
     sfMapSeeding: 1,
-    // Mid-range of the observed 30-50% split (docs/research/m74-jwst/
-    // 08-realism-notes.md S:B3).
-    diffuse: 0.35,
+    dig: {
+      // Mid-range of the observed 30-50% split (docs/research/m74-jwst/
+      // 08-realism-notes.md S:B3).
+      fraction: 0.35,
+      complexes: 40,
+      childrenPerComplex: 4,
+      armBias: 0.6,
+      elongation: 3,
+      coherence: 0.7,
+    },
   },
   sfMap: DEFAULT_GALAXY_SF_MAP_PARAMS,
 };

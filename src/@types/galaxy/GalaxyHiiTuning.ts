@@ -1,3 +1,5 @@
+import type { GalaxyHiiDigTuning } from './GalaxyHiiDigTuning';
+
 /**
  * GalaxyHiiTuning — the HII-region tier (`hiiRegions.ts`): discrete emission
  * shells, their OB cluster cores, and the dust cavities they carve.
@@ -36,10 +38,9 @@ export type GalaxyHiiTuning = {
    */
   readonly sfMapSeeding: number;
   /**
-   * Diffuse ionized gas (DIG) veil's fraction of this tier's total Hα —
-   * observationally 30–50% of a galaxy's Hα sits outside HII regions
-   * entirely (Haffner+2009 review), leaking around the knots and tracing the
-   * arms; without it the knots read as LEDs on black. 0 skips the veil.
+   * The DIG veil's own tuning — see `GalaxyHiiDigTuning`. Without it the
+   * knots read as LEDs on black; leaking around them and tracing the arms is
+   * the whole point.
    */
-  readonly diffuse: number;
+  readonly dig: GalaxyHiiDigTuning;
 };

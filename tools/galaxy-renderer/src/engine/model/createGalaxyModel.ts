@@ -54,7 +54,7 @@ import {
 import type { GalaxySfMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
 import {
   buildHiiRegions,
-  DIG_SPRITE_COUNT,
+  DIG_MAX_COUNT,
   HII_MAX_COUNT,
 } from '../../../../../src/services/engine/galaxyGenerator/v2/hiiRegions';
 import { normalizeGenerationSeed } from '../../../../../src/utils/galaxy/normalizeGenerationSeed';
@@ -187,11 +187,11 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     label: 'galaxy:hiiComps',
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     floatsPerRecord: FIELD_COMPONENT_FLOATS,
-    // + DIG_SPRITE_COUNT: the DIG veil (`hiiRegions.ts`) rides this SAME
-    // buffer as a fixed-count group pushed after `HII_MAX_COUNT`'s
+    // + DIG_MAX_COUNT: the DIG veil (`hiiRegions.ts`) rides this SAME
+    // buffer as a bounded group pushed after `HII_MAX_COUNT`'s
     // admission, not a reservation carved out of it — so the common case
-    // (diffuse on, its default) never regrows on first activation.
-    initialCapacity: HII_MAX_COUNT + DIG_SPRITE_COUNT,
+    // (dig.fraction on, its default) never regrows on first activation.
+    initialCapacity: HII_MAX_COUNT + DIG_MAX_COUNT,
     onRegrow: deps.onHiiCompsRegrow,
   });
   // The bubble-view overlay's own instance buffer (bubblePresent.wesl): a plain
@@ -279,7 +279,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       // Same "map landed after the synchronous build that asked for it"
       // determinism problem `rebuildDustMixture` above solves, for the HII
       // tier's own map-seeded positions AND its DIG veil (also map-seeded).
-      if (fieldGeometry && (fieldTuning.hii.sfMapSeeding > 0 || fieldTuning.hii.diffuse > 0)) {
+      if (fieldGeometry && (fieldTuning.hii.sfMapSeeding > 0 || (fieldTuning.hii.dig?.fraction ?? 0) > 0)) {
         hiiMixture = hiiMixtureOf(fieldGeometry, currentStarFormation(), readbacks.sfMapData);
         repackHiiComponents();
       }
@@ -305,7 +305,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       } else {
         reportOrientationDiagnostics();
       }
-      if (fieldGeometry && (fieldTuning.hii.sfMapSeeding > 0 || fieldTuning.hii.diffuse > 0)) {
+      if (fieldGeometry && (fieldTuning.hii.sfMapSeeding > 0 || (fieldTuning.hii.dig?.fraction ?? 0) > 0)) {
         hiiMixture = hiiMixtureOf(fieldGeometry, currentStarFormation(), readbacks.sfMapData);
         repackHiiComponents();
       }

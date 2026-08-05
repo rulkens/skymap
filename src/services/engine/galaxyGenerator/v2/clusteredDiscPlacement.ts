@@ -143,7 +143,8 @@ export type ClusteredDiscPlacementConfig = {
 
 export type PlacedParticle<TPayload> = { center: Vec3; readonly frame: CloudFrame } & TPayload;
 
-function pickWeighted(rng: () => number, weights: readonly number[], sum: number): number {
+/** Exported so `hiiRegions.ts`'s bespoke DIG complex loop can pick a weighted arm the same way this sampler does, rather than restate it. */
+export function pickWeighted(rng: () => number, weights: readonly number[], sum: number): number {
   const r = rng() * sum;
   let acc = 0;
   for (let i = 0; i < weights.length; i++) {
@@ -379,9 +380,11 @@ export function buildClusteredDiscPlacement<TPayload>(
    * fallback) rather than a single 1:1 function call, so a table entry would
    * just be this same function wrapped in an object literal.
    */
-  function placeComplex(
-    mode: ClusteredDiscPlacementMode,
-  ): { center: Vec3; frame: CloudFrame; warped: boolean } {
+  function placeComplex(mode: ClusteredDiscPlacementMode): {
+    center: Vec3;
+    frame: CloudFrame;
+    warped: boolean;
+  } {
     switch (mode.kind) {
       case 'analytic':
         return placeAnalyticComplex(mode);

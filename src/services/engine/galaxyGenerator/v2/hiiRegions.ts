@@ -19,12 +19,22 @@ import {
   hiiLuminosityOf,
   hiiRadiusUnits,
 } from './hiiRegionGeometry';
-import { armRidgeAngle, armRidgeCurvePoint } from './armRidgeGeometry';
+import {
+  ARM_SPAN_START_FRAC,
+  armFadeEnvelope,
+  armRidgeAngle,
+  armRidgeCurvePoint,
+  armRidgeFrameAt,
+} from './armRidgeGeometry';
+import { pickWeighted } from './clusteredDiscPlacement';
+import { armAgeWeight } from './dustLaneFeatures';
 import { buildSfEventCatalog } from './sfEventCatalog';
 import { buildSfMapDustCdf } from '../../../../utils/galaxy/buildSfMapDustCdf';
 import { inverseCovarianceFromFrame } from '../../../../utils/galaxy/inverseCovarianceFromFrame';
 import { pcToUnits } from '../../../../utils/galaxy/pcToUnits';
+import { sampleSfMapDustCdf } from '../../../../utils/galaxy/sampleSfMapDustCdf';
 import { sampleSfMapEventPosition } from '../../../../utils/galaxy/sampleSfMapEventPosition';
+import { warpHeight } from '../../../../utils/galaxy/warpHeight';
 import { warpSurfaceFrame } from '../../../../utils/galaxy/warpSurfaceFrame';
 import { gaussian } from '../../../../utils/random/gaussian';
 import { mulberry32 } from '../../../../utils/random/mulberry32';
@@ -32,6 +42,7 @@ import type { GalaxyFieldComponent } from '../../../../@types/galaxy/GalaxyField
 import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../../../../@types/galaxy/GalaxyFieldTuning';
 import type { GalaxySfMap } from '../../../../@types/galaxy/GalaxySfMap';
+import type { GalaxySfMapDustCdf } from '../../../../@types/galaxy/GalaxySfMapDustCdf';
 import type { GalaxyStarFormationParams } from '../../../../@types/galaxy/GalaxyStarFormationParams';
 import type { SfEvent } from '../../../../@types/galaxy/SfEvent';
 import type { Vec3 } from '../../../../@types/math/Vec3';
@@ -68,21 +79,38 @@ const CLUSTER_SPREAD_RATIO = 0.12;
 const CLUSTER_FLUX_SHARE_MAX = 0.2;
 
 /**
- * Diffuse ionized gas (DIG) veil — see `GalaxyHiiTuning.diffuse`'s doc for
- * the observational anchor. A fixed-count group pushed AFTER the catalog
- * regions, not a per-region add-on: DIG isn't tied to any one HII event, it
- * is a separate haze the arms and knots sit inside.
+ * Diffuse ionized gas (DIG) veil — see `GalaxyHiiDigTuning`'s doc for the
+ * observational anchor. A complex/children group (`buildDigVeil`) pushed
+ * AFTER the catalog regions, not a per-region add-on: DIG isn't tied to any
+ * one HII event, it is a separate haze the arms and knots sit inside.
  */
-export const DIG_SPRITE_COUNT = 150;
-/** Per-blob sigma range, parsecs — wide enough that 150 blobs read as a continuous wash rather than a second population of dots (no blur pass; this range IS the smoothing). */
+/** Per-blob sigma range, parsecs — wide enough that a complex's blobs read as a continuous wash rather than a second population of dots (no blur pass; this range IS the smoothing). */
 const DIG_SIGMA_MIN_PC = 100;
 const DIG_SIGMA_MAX_PC = 300;
 /** Extraplanar DIG stands well above the disc a razor-thin HII shell sits in (Haffner+2009 review). */
 const DIG_SCALE_HEIGHT_PC = 300;
-/** Ceiling on `diffuse / (1 - diffuse)` so a `diffuse` near 1 saturates the veil instead of diverging it. */
+/** Ceiling on `fraction / (1 - fraction)` so a `dig.fraction` near 1 saturates the veil instead of diverging it. */
 const DIG_FLUX_RATIO_MAX = 4;
 /** Dedicated rng stream salt for the DIG veil draws — distinct from "SFMP"/"HII "/"DUST"/"ARMC". */
 const DIG_SALT = 0x44494720; // "DIG "
+/**
+ * Component-budget ceiling for the DIG veil, exported so a caller sizing a
+ * fixed-capacity buffer (`createGalaxyModel.ts`'s `HII_MAX_COUNT +
+ * DIG_MAX_COUNT`) has a worst case to reserve against: `dig.complexes` and
+ * `dig.childrenPerComplex` are now live-tunable rather than the fixed
+ * `150 = complexes*childrenPerComplex` this tier used to hard-code, so their
+ * product needs a ceiling the way `HII_MAX_COUNT`/`ARM_CLOUD_MAX_COUNT`
+ * already ceiling their own tiers. Sized to the UI's own slider ceilings
+ * (120 complexes x 12 children = 1440), not derived from them, so a future
+ * slider-range change doesn't silently resize a GPU buffer.
+ */
+export const DIG_MAX_COUNT = 1440;
+/** A complex's child scatter before `dig.elongation` stretches/squeezes it — GMC-association scale, mirroring `dustParticleCloud.ts`'s own `COMPLEX_SPREAD_PC`; an eyeballed starting point, not a measurement. */
+const DIG_COMPLEX_SPREAD_PC = 250;
+/** Children flatten relative to their complex's in-plane extent — same ratio `clusteredDiscPlacement.ts`'s (private) `CHILD_POLE_RATIO` uses. */
+const DIG_CHILD_POLE_RATIO = 0.4;
+/** Bounded rejection-sampling tries for an arm-lane complex, mirroring `clusteredDiscPlacement.ts`'s (private) `ARM_FADE_REJECTION_TRIES`. */
+const DIG_ARM_FADE_REJECTION_TRIES = 24;
 
 const TAU_ROOT3 = (2 * Math.PI) ** 1.5;
 
@@ -230,6 +258,228 @@ function applySfMapSeeding(
   });
 }
 
+/**
+ * A DIG complex's local flow-direction frame — the arm tangent on the
+ * arm-lane path, the azimuthal tangent (`warpSurfaceFrame`) on the map-CDF
+ * path, DIG's default "flow direction" since it shears azimuthally. `warped`
+ * mirrors `clusteredDiscPlacement.ts`'s own flag: true only on the arm-lane
+ * path, whose `point` already sits at its true warped height
+ * (`armRidgeCurvePoint` bakes it in) — children must NOT be lifted a second
+ * time, the same contract that sampler's own children honour.
+ */
+type DigSeedFrame = {
+  readonly point: Vec3;
+  readonly along: Vec3;
+  readonly across: Vec3;
+  readonly pole: Vec3;
+  readonly warped: boolean;
+};
+
+/**
+ * A DIG complex seeded on an arm's lane, following the arm's own flux the
+ * way `armParticleCloud.ts`'s sprites do — bounded rejection sampling
+ * against `armFadeEnvelope`, keeping the LAST draw on exhaustion (see
+ * `clusteredDiscPlacement.ts`'s own `ARM_FADE_REJECTION_TRIES` doc for what
+ * that costs at high tilt; DIG has no radial-bias knob, so this never runs
+ * hot). NOT routed through `buildClusteredDiscPlacement`'s `'analytic'`
+ * mode: that mode's non-arm fallback is hardwired to the smooth DISC
+ * profile, where DIG's own fallback is the map's `oldActivity` CDF — a
+ * third mode the tagged union doesn't express. Returns null when the picked
+ * arm has no valid span (the arm-lane path is skipped for this complex).
+ */
+function placeDigArmComplex(
+  rng: () => number,
+  geometry: GalaxyDescription,
+  armWeights: readonly number[],
+  armWeightSum: number,
+): DigSeedFrame | null {
+  const armIndex = pickWeighted(rng, armWeights, armWeightSum);
+  const arm = geometry.arms[armIndex]!;
+  const logMin = Math.log(ARM_SPAN_START_FRAC);
+  const logMax = Math.log(arm.fadeRadius / geometry.armStartRadius);
+  if (!(logMax > logMin)) return null;
+
+  let logR = logMin;
+  for (let tries = 0; tries < DIG_ARM_FADE_REJECTION_TRIES; tries++) {
+    logR = logMin + rng() * (logMax - logMin);
+    const radius = geometry.armStartRadius * Math.exp(logR);
+    if (rng() < armFadeEnvelope(radius, geometry, arm)) break;
+  }
+  const frame = armRidgeFrameAt(logR, geometry, arm);
+  return {
+    point: frame.point,
+    along: frame.along,
+    across: frame.across,
+    pole: frame.pole,
+    warped: true,
+  };
+}
+
+/**
+ * A DIG complex CDF-sampled from the map's `oldActivity` channel — the
+ * fallback for complexes that don't land on an arm lane. Flat reference
+ * height (`point[1] = 0`), like `clusteredDiscPlacement.ts`'s own
+ * `'mapDensity'` mode: the true warp lift is applied per CHILD below, at
+ * that child's own (x, z), not baked into the seed.
+ */
+function placeDigMapComplex(
+  rng: () => number,
+  geometry: GalaxyDescription,
+  cdf: GalaxySfMapDustCdf,
+): DigSeedFrame {
+  const { radius, angle } = sampleSfMapDustCdf(cdf, rng);
+  const point: Vec3 = [radius * Math.cos(angle), 0, radius * Math.sin(angle)];
+  const surf = warpSurfaceFrame(radius, angle, geometry);
+  return { point, along: surf.along, across: surf.across, pole: surf.pole, warped: false };
+}
+
+/**
+ * Blends a seed's in-plane scatter axes toward a fresh random direction —
+ * `dig.coherence` 1 keeps them exactly as `placeDigArmComplex`/
+ * `placeDigMapComplex` returned them, 0 rotates them to a uniformly random
+ * angle. The same in-plane 2D rotation `clusteredDiscPlacement.ts`'s
+ * `rotateFrameToOrientation` applies for ITS coherence blend (toward a
+ * map-MEASURED angle, not a random one) — `pole` never moves there either.
+ * `rng` is drawn unconditionally so the draw order never shifts with the
+ * coherence knob.
+ */
+function scatterAxesForCoherence(
+  frame: DigSeedFrame,
+  coherence: number,
+  rng: () => number,
+): { readonly along: Vec3; readonly across: Vec3 } {
+  const theta = (1 - coherence) * (rng() * 2 * Math.PI - Math.PI);
+  const cos = Math.cos(theta);
+  const sin = Math.sin(theta);
+  return {
+    along: [
+      frame.along[0] * cos + frame.across[0] * sin,
+      frame.along[1] * cos + frame.across[1] * sin,
+      frame.along[2] * cos + frame.across[2] * sin,
+    ],
+    across: [
+      frame.across[0] * cos - frame.along[0] * sin,
+      frame.across[1] * cos - frame.along[1] * sin,
+      frame.across[2] * cos - frame.along[2] * sin,
+    ],
+  };
+}
+
+/**
+ * buildDigVeil — the DIG tier's own complex/children placement (see
+ * `GalaxyHiiDigTuning`): `dig.complexes` seeds, `dig.armBias` of them on an
+ * arm lane and the rest CDF-sampled from the map's `oldActivity`, each
+ * scattering `dig.childrenPerComplex` blobs area-preservingly along/across
+ * its local flow direction (`dig.elongation`, `dig.coherence`) — mirrors
+ * `dustParticleCloud.ts`'s S3 aspect convention (`along = spread*sqrt(e)`,
+ * `across = spread/sqrt(e)`).
+ *
+ * Gated (and its rng stream only consulted) when `dig.fraction > 0`, a map
+ * is handed in, and that map's `oldActivity` CDF has nonzero mass — same
+ * discipline `buildHiiRegions`' old inline block used. Total flux is
+ * anchored to `shellFluxSum` (the shell tier's own flux, not `totalFlux`),
+ * because the cluster share folded into `totalFlux` is stellar continuum,
+ * not Hα — see that binding's own comment at the call site.
+ */
+function buildDigVeil(
+  geometry: GalaxyDescription,
+  tuning: GalaxyFieldTuning,
+  sfMap: GalaxySfMap | null,
+  shellFluxSum: number,
+  seed: number,
+): readonly GalaxyFieldComponent[] {
+  // Stale-stored-tuning guard: a preset saved before this knob existed
+  // carries an `hii` section with no `dig` object at all — missing means
+  // DIG OFF, the same "undefined = pre-feature stored tuning" discipline
+  // `applySfMapSeeding` uses for `sfMapSeeding` just above.
+  const dig = tuning.hii.dig;
+  if (!dig || !sfMap) return [];
+  const fraction = Math.min(0.999, Math.max(0, dig.fraction));
+  if (fraction <= 0 || !(dig.elongation > 0)) return [];
+
+  const cdf = buildSfMapDustCdf(sfMap, (_gas, _recentSf, oldActivity) => oldActivity);
+  if (!(cdf.total > 0)) return [];
+
+  const digRatio = Math.min(DIG_FLUX_RATIO_MAX, fraction / (1 - fraction));
+  const digTotalFlux = digRatio * shellFluxSum;
+  if (!(digTotalFlux > 0)) return [];
+
+  const childrenPerComplex = Math.max(0, Math.round(dig.childrenPerComplex));
+  if (childrenPerComplex <= 0 || dig.complexes <= 0) return [];
+  // Complex count clamped to DIG_MAX_COUNT's own budget rather than
+  // truncating a partial trailing complex: fewer, smaller complexes read as
+  // a thinner veil, not a veil with one oddly-stunted complex.
+  const complexes = Math.min(
+    Math.max(0, Math.round(dig.complexes)),
+    Math.floor(DIG_MAX_COUNT / childrenPerComplex),
+  );
+  if (complexes <= 0) return [];
+  const totalChildren = complexes * childrenPerComplex;
+
+  const armBias = Math.min(1, Math.max(0, dig.armBias));
+  const elongation = dig.elongation;
+  const coherence = Math.min(1, Math.max(0, dig.coherence));
+  const canUseArms = geometry.numArms > 0;
+  const armWeights = geometry.arms.map((arm) => armAgeWeight(arm));
+  const armWeightSum = armWeights.reduce((s, w) => s + w, 0);
+  const complexSpread = pcToUnits(DIG_COMPLEX_SPREAD_PC);
+
+  const rng = mulberry32(seed ^ DIG_SALT);
+  const digAmplitudeBase = digTotalFlux / totalChildren;
+  const digColor = geometry.hiiPalette.halo;
+
+  const out: GalaxyFieldComponent[] = [];
+  for (let c = 0; c < complexes; c++) {
+    // Arm bias re-rolled per COMPLEX, not per child — a complex is the
+    // clustering unit, same discipline `placeAnalyticComplex`'s own armRoll
+    // uses in `clusteredDiscPlacement.ts`.
+    const armRoll = rng();
+    const seedFrame =
+      (canUseArms && armRoll < armBias
+        ? placeDigArmComplex(rng, geometry, armWeights, armWeightSum)
+        : null) ?? placeDigMapComplex(rng, geometry, cdf);
+    const axes = scatterAxesForCoherence(seedFrame, coherence, rng);
+
+    for (let ch = 0; ch < childrenPerComplex; ch++) {
+      const offAlong = gaussian(rng) * complexSpread * Math.sqrt(elongation);
+      const offAcross = (gaussian(rng) * complexSpread) / Math.sqrt(elongation);
+      const offPole = gaussian(rng) * complexSpread * DIG_CHILD_POLE_RATIO;
+      const x =
+        seedFrame.point[0] +
+        axes.along[0] * offAlong +
+        axes.across[0] * offAcross +
+        seedFrame.pole[0] * offPole;
+      const z =
+        seedFrame.point[2] +
+        axes.along[2] * offAlong +
+        axes.across[2] * offAcross +
+        seedFrame.pole[2] * offPole;
+      const yFlat =
+        seedFrame.point[1] +
+        axes.along[1] * offAlong +
+        axes.across[1] * offAcross +
+        seedFrame.pole[1] * offPole;
+      // Warp lift at THIS CHILD's own (x, z) — see `DigSeedFrame`'s `warped`
+      // doc: an arm-lane seed is already lifted, a map-CDF one is not.
+      const y = seedFrame.warped
+        ? yFlat
+        : yFlat + warpHeight(Math.hypot(x, z), Math.atan2(z, x), geometry);
+      // Extraplanar scatter on top of the in-plane placement above — DIG
+      // stands thicker off the disc than a single HII shell (Haffner+2009).
+      const height = y + gaussian(rng) * pcToUnits(DIG_SCALE_HEIGHT_PC);
+      const sigma = pcToUnits(DIG_SIGMA_MIN_PC + (DIG_SIGMA_MAX_PC - DIG_SIGMA_MIN_PC) * rng());
+      out.push({
+        amplitude: digAmplitudeBase / (TAU_ROOT3 * sigma * sigma * sigma),
+        ...inverseCovarianceFromFrame(ISO_FRAME, { along: sigma, across: sigma, pole: sigma }),
+        color: digColor,
+        center: [x, height, z],
+        boundRadius: sigma,
+      });
+    }
+  }
+  return out;
+}
+
 export function buildHiiRegions(
   geometry: GalaxyDescription,
   tuning: GalaxyFieldTuning,
@@ -324,42 +574,12 @@ export function buildHiiRegions(
     }
   }
 
-  // DIG veil — a fixed-count group placed independently of the catalog
-  // regions above, so `diffuse` never perturbs which regions were admitted
-  // or where they sit. The SF map is the substrate this tier reads from
-  // (`oldActivity`, the automaton's long-run occupancy channel); without one
-  // handed in, the veil would decorrelate from every other map-seeded
-  // feature, so it pushes nothing rather than fall back to some other
-  // placement law. `diffuse ?? 0` mirrors `applySfMapSeeding`'s guard for
-  // stale stored tuning that predates this field.
-  const diffuse = Math.min(0.999, Math.max(0, tuning.hii.diffuse ?? 0));
-  if (diffuse > 0 && sfMap) {
-    const cdf = buildSfMapDustCdf(sfMap, (_gas, _recentSf, oldActivity) => oldActivity);
-    if (cdf.total > 0) {
-      const digRatio = Math.min(DIG_FLUX_RATIO_MAX, diffuse / (1 - diffuse));
-      const digTotalFlux = digRatio * shellFluxSum;
-      if (digTotalFlux > 0) {
-        const digRng = mulberry32(seed ^ DIG_SALT);
-        const digAmplitudeBase = digTotalFlux / DIG_SPRITE_COUNT;
-        const digColor = geometry.hiiPalette.halo;
-        for (let i = 0; i < DIG_SPRITE_COUNT; i++) {
-          const center = sampleSfMapEventPosition(cdf, geometry, digRng);
-          const sigma = pcToUnits(
-            DIG_SIGMA_MIN_PC + (DIG_SIGMA_MAX_PC - DIG_SIGMA_MIN_PC) * digRng(),
-          );
-          // On top of the warp lift `sampleSfMapEventPosition` already applied —
-          // extraplanar DIG stands thicker off the disc than a single HII shell.
-          const height = center[1] + gaussian(digRng) * pcToUnits(DIG_SCALE_HEIGHT_PC);
-          out.push({
-            amplitude: digAmplitudeBase / (TAU_ROOT3 * sigma * sigma * sigma),
-            ...inverseCovarianceFromFrame(ISO_FRAME, { along: sigma, across: sigma, pole: sigma }),
-            color: digColor,
-            center: [center[0], height, center[2]],
-            boundRadius: sigma,
-          });
-        }
-      }
-    }
+  // DIG veil — placed independently of the catalog regions above (its own
+  // complex/children structure, own rng stream), so `dig` never perturbs
+  // which regions were admitted or where they sit. See `buildDigVeil`'s own
+  // header for the gating and flux-anchoring discipline.
+  for (const component of buildDigVeil(geometry, tuning, sfMap, shellFluxSum, seed)) {
+    out.push(component);
   }
 
   return out;
