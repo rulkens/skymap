@@ -33,6 +33,7 @@ import package::milkyWay::field::io::u;
 import package::milkyWay::field::io::comps;
 import package::milkyWay::field::io::dustMapTex;
 import package::milkyWay::field::io::dustMapSmp;
+import package::milkyWay::field::dustDetail::dustDetailMultiplier;
 
 // sliceTransmitRatio — (1 - exp(-x)) / x per channel, the exact closed form
 // for emission spread UNIFORMLY through a homogeneous slab of per-channel
@@ -139,10 +140,18 @@ fn fs(input: SplatOut) -> @location(0) vec4<f32> {
   if (input.inst < primaryCount) {
     let dustUv = input.pos.xy / u.counts2.zw;
     let texel = textureSampleLevel(dustMapTex, dustMapSmp, dustUv, 0.0);
-    let tau0 = texel.x;
-    let tau1 = texel.y;
-    let tau2 = texel.z;
-    let tau3 = texel.w;
+    // S4: the shared high-pass term (dustDetail.wesl) lands on this same
+    // COLUMN the JWST view's own presentation multiplies, so the two can
+    // never drift — one term, two consumers. Computed once and applied to
+    // the whole slice vector before the cumulative attenuation math below.
+    // Its disc-hit approximation means an edge-on or interior camera can
+    // mis-attribute detail along the ray; accepted here for the tool's
+    // external, orbit-camera views.
+    let detailMul = dustDetailMultiplier(o, d);
+    let tau0 = texel.x * detailMul;
+    let tau1 = texel.y * detailMul;
+    let tau2 = texel.z * detailMul;
+    let tau3 = texel.w * detailMul;
     dustApplies = (tau0 + tau1 + tau2 + tau3) > 1e-6;
     if (dustApplies) {
       let K = u.dustExtinction.xyz;

@@ -6,88 +6,19 @@
 //
 // S4 (docs/research/m74-jwst/07-sprite-seeding.md): the presented column is
 // further modulated by dustDetailMultiplier, a per-fragment high-pass read
-// of the SF map at the ray's disc intersection — the top octave 40k dust
-// splats cannot reconstruct from the map they were seeded from.
+// of the SF map at the ray's disc intersection. The term itself now lives in
+// dustDetail.wesl, shared with splat.wesl's dust attenuation — see that
+// module's header for why the two views must agree.
 
 import package::lib::fullscreenTri::fullscreenVertex;
 import package::lib::fullscreenTri::FullscreenOut;
 import package::milkyWay::field::io::u;
 import package::milkyWay::field::io::dustMapTex;
-
-const PI: f32 = 3.14159265358979;
-// Absolute density floor: where both terms sit under it (quiet disc, cleared
-// map) the ratio degrades to 1 = no information, and it also keeps a
-// cleared/disabled map from dividing by zero. Slightly above the CPU
-// seeding survival floor 0.01 (sampleSfMapDustCdf.ts).
-const DETAIL_EPS: f32 = 0.02;
-// One hot texel over a dead 8x8 block ratios near 30; uncapped that turns a
-// texel into a beacon rather than texture.
-const DETAIL_MAX: f32 = 8.0;
-
-// rMin/rMax: same grid sfMapPresent.wesl's fs resolves through — written once
-// per rebuildSfMap, not every frame like io.wesl's 'u'.
-struct SfMapGrid {
-  rMin: f32,
-  rMax: f32,
-}
-
-@group(0) @binding(1) var sfMapTex: texture_2d<f32>;
-@group(0) @binding(3) var<uniform> grid: SfMapGrid;
-// Bindings 4/5/6 are skipped deliberately — io.wesl reserves them for the
-// dust-noise volume (4/5) and dustMapSmp (6); this pass has no use for either.
-@group(0) @binding(7) var sfMapSmp: sampler;
-@group(0) @binding(8) var sfMapBlurTex: texture_2d<f32>;
+import package::milkyWay::field::dustDetail::dustDetailMultiplier;
 
 @vertex
 fn vs(@builtin(vertex_index) vi: u32) -> FullscreenOut {
   return fullscreenVertex(vi);
-}
-
-// The high-pass term: (map density) / (8-texel-blurred map density) at the
-// fragment's own disc-plane hit — mirrors sfMapPresent.wesl's ray
-// reconstruction and log-polar lookup exactly, since both resample the same
-// grid. Thin-disc approximation (y=0), same simplification sfMapPresent
-// already claims — the column is 3D but pierces the disc at essentially one
-// (r, theta).
-fn dustDetailMultiplier(input: FullscreenOut) -> f32 {
-  if (u.dustDetail.x <= 0.0) {
-    return 1.0;
-  }
-  let tanHalfFov = u.params.x;
-  let aspect = u.params.y;
-  let shift = u.params.z;
-  let ndcX = input.uv.x * 2.0 - 1.0;
-  let ndcY = 1.0 - input.uv.y * 2.0;
-  let dir = normalize(
-    u.camRight.xyz * ((ndcX + shift) * tanHalfFov * aspect)
-      + u.camUp.xyz * (ndcY * tanHalfFov)
-      + u.camFwd.xyz,
-  );
-  let o = u.eye.xyz;
-  if (abs(dir.y) < 1e-6) {
-    return 1.0;
-  }
-  let t = -o.y / dir.y;
-  if (t <= 0.0) {
-    return 1.0;
-  }
-  let hit = o + dir * t;
-  let r = length(hit.xz);
-  if (r < grid.rMin || r > grid.rMax) {
-    return 1.0;
-  }
-  let theta = atan2(hit.z, hit.x);
-  let ringT = log(r / grid.rMin) / log(grid.rMax / grid.rMin);
-  let azT = theta / (2.0 * PI) + select(0.0, 1.0, theta < 0.0);
-  let uv = vec2<f32>(azT, ringT);
-  // sfMapDustDensity's gas x oldActivity (src/utils/galaxy/sfMapDustDensity.ts)
-  // — the density the splats were SEEDED from, so the ratio below is
-  // structure the splats should carry but blurred away.
-  let mapTexel = textureSampleLevel(sfMapTex, sfMapSmp, uv, 0.0);
-  let density = mapTexel.x * mapTexel.z;
-  let densityBlur = textureSampleLevel(sfMapBlurTex, sfMapSmp, uv, 0.0).x;
-  let detail = (density + DETAIL_EPS) / (densityBlur + DETAIL_EPS);
-  return clamp(1.0 + u.dustDetail.x * (detail - 1.0), 0.0, DETAIL_MAX);
 }
 
 @fragment
@@ -107,11 +38,27 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   // would have held.
   let texel = textureLoad(dustMapTex, coord, 0);
   let tau = texel.x + texel.y + texel.z + texel.w;
+
+  // dustDetailMultiplier needs its own ray, reconstructed here from the
+  // fullscreen-triangle uv — mirrors splat.wesl's own NDC-based
+  // reconstruction, just fed from a different varying since this pass has
+  // no per-instance NDC to interpolate.
+  let tanHalfFov = u.params.x;
+  let aspect = u.params.y;
+  let shift = u.params.z;
+  let ndcX = input.uv.x * 2.0 - 1.0;
+  let ndcY = 1.0 - input.uv.y * 2.0;
+  let d = normalize(
+    u.camRight.xyz * ((ndcX + shift) * tanHalfFov * aspect)
+      + u.camUp.xyz * (ndcY * tanHalfFov)
+      + u.camFwd.xyz,
+  );
+  let o = u.eye.xyz;
   // S4: modulate the splat-accumulated column by the SF map's own high-pass
   // ratio at this fragment's disc intersection, BEFORE the palette — the
   // splats keep the low/mid frequencies, the map contributes only what the
   // blur removed.
-  let tau2 = tau * dustDetailMultiplier(input);
+  let tau2 = tau * dustDetailMultiplier(o, d);
 
   // Presentation palette, NOT physics: intensity saturates smoothly with
   // column depth, then ramps black -> deep red -> orange -> white. Tuned by

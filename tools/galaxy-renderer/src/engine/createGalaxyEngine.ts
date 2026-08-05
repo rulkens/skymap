@@ -655,6 +655,13 @@ export async function createGalaxyEngine(
         // through a filtered UV rather than a 1:1 texel load (see
         // dustMapTex's own declaration comment for why the divisors split).
         { binding: 6, resource: dustMapSampler },
+        // S4's per-fragment SF-map read (dustDetail.wesl) — splat.wesl now
+        // multiplies its own dust attenuation by the same term
+        // dustPresent.wesl applies to the JWST column.
+        { binding: 3, resource: { buffer: sfMapAutomaton.gridBuffer } },
+        { binding: 7, resource: sfMapAutomaton.mapSampler },
+        { binding: 8, resource: sfMapAutomaton.texture.createView() },
+        { binding: 9, resource: sfMapAutomaton.dustBlurTexture.createView() },
       ],
     });
   }
@@ -666,11 +673,13 @@ export async function createGalaxyEngine(
       entries: [
         { binding: 0, resource: { buffer: fieldUbo } },
         { binding: 2, resource: targets.dustMapTex.createView() },
-        // S4's per-fragment map read — see dustPresent.wesl.
-        { binding: 1, resource: sfMapAutomaton.texture.createView() },
+        // S4's per-fragment map read (dustDetail.wesl) — binding numbers
+        // match splat.wesl's own dustDetail entries above, since both link
+        // the same module and its auto layout must resolve identically.
         { binding: 3, resource: { buffer: sfMapAutomaton.gridBuffer } },
         { binding: 7, resource: sfMapAutomaton.mapSampler },
-        { binding: 8, resource: sfMapAutomaton.dustBlurTexture.createView() },
+        { binding: 8, resource: sfMapAutomaton.texture.createView() },
+        { binding: 9, resource: sfMapAutomaton.dustBlurTexture.createView() },
       ],
     });
   }
@@ -680,7 +689,9 @@ export async function createGalaxyEngine(
   // both unconditionally, but `packFieldHeaderUniforms`'s `primaryCount` is
   // always packed 0 for this header (see `drawFrame`), so the dust-attenuation
   // branch never triggers — HII does not (yet) darken under the lane it may
-  // sit inside.
+  // sit inside. The dustDetail entries below satisfy the same shared
+  // `splatPipe` layout as `splatBG`; the term stays inert here since the
+  // branch that would apply it never runs.
   let hiiBG: GPUBindGroup;
   function buildHiiBindGroup(): GPUBindGroup {
     return device.createBindGroup({
@@ -691,6 +702,10 @@ export async function createGalaxyEngine(
         { binding: 1, resource: { buffer: model.hiiComps.buffer } },
         { binding: 2, resource: targets.dustMapTex.createView() },
         { binding: 6, resource: dustMapSampler },
+        { binding: 3, resource: { buffer: sfMapAutomaton.gridBuffer } },
+        { binding: 7, resource: sfMapAutomaton.mapSampler },
+        { binding: 8, resource: sfMapAutomaton.texture.createView() },
+        { binding: 9, resource: sfMapAutomaton.dustBlurTexture.createView() },
       ],
     });
   }
