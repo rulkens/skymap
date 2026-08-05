@@ -7,11 +7,12 @@ export type GalaxyDustTuning = {
   readonly enabled: boolean;
   /**
    * Gate for the dust particle cloud reading the SSPSF automaton's output. ON
-   * makes the sampled map the cloud's ONLY placement density (`gas *
-   * oldActivity` — see `sfMapDustDensity`), replacing the analytic
-   * arm-lane/smooth-disc roll entirely, and still elongates each splat along
-   * the measured crest orientation. OFF leaves `buildDustParticleCloud`
-   * byte-identical to before the map existed.
+   * makes the sampled map the cloud's ONLY placement density — the swept-dust
+   * channel's overshoot above the automaton's ambient pedestal (see
+   * `sweptDustOvershoot`) — replacing the analytic arm-lane/smooth-disc roll
+   * entirely, and still elongates each splat along the measured crest
+   * orientation. OFF leaves `buildDustParticleCloud` byte-identical to before
+   * the map existed.
    *
    * Lives here rather than on `GalaxyFieldTuning.sfMap` because it gates a
    * CONSUMER of that tier's output, not a parameter of the automaton — the
@@ -23,22 +24,4 @@ export type GalaxyDustTuning = {
    * without one, so this only takes effect where a map is actually produced.
    */
   readonly sfMapSeeding: boolean;
-  /**
-   * Blend between the two dust-placement channels the automaton now carries:
-   * 0 reads the legacy `gas x oldActivity` product (today's image), 1 reads
-   * the conserved swept-dust channel (`docs/research/m74-jwst/
-   * 06-ca-dust-channel-sketch.md`) every consumer decodes from `texel.dust`.
-   * The legacy product time-integrates the swept AREA (activity accumulates
-   * over the whole run), while the swept channel is a short-memory front
-   * tracer (reset by each front's own floor/collision rule) — 0 is the
-   * broad-smear image already shipped, 1 = clouds on the swept filament
-   * walls (overshoot-keyed): CPU seeding (`buildDustParticleCloud`) places
-   * off `texel.dust`'s excess above the automaton's ambient pedestal, not
-   * the absolute value — raw dust is almost all pedestal (ambient ~1,
-   * cavities ~0.36), so only the overshoot carries placement signal; see
-   * `sweptDustOvershoot`. Defaults 0: every consumer (CPU seeding, the S4
-   * blur, the detail ratio) must read this identically or the three would
-   * disagree about what a "wall" looks like.
-   */
-  readonly sweptMix: number;
 };

@@ -8,10 +8,10 @@
  * placement-worthy — ambient AND cavities alike clamp to zero here.
  *
  * `SF_MAP_AMBIENT_DUST` mirrors sfMapAutomatonStep.wesl's (and
- * sfMapFluidStep.wesl's) step-0 seed, and is also what the two GPU sweptMix
- * consumers (sfMapDustBlur.wesl, dustDetail.wesl) subtract off before
- * blending — all five WESL mirrors are parity-tested against this export in
- * constants.parity.test.ts.
+ * sfMapFluidStep.wesl's) step-0 seed, and is also what every GPU consumer of
+ * the swept channel (sfMapDustBlur.wesl, dustDetail.wesl, sfMapPresent.wesl)
+ * subtracts off — all five WESL mirrors are parity-tested against this
+ * export in constants.parity.test.ts.
  */
 import type { SfMapDensityTexel } from './buildSfMapDustCdf';
 

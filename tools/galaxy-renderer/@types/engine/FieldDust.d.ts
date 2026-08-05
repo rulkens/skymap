@@ -28,6 +28,4 @@ export type FieldDust = {
   readonly mapHeightPx: number;
   /** The cloud's `mapDetail`, packed to the header's dustDetail lane. */
   readonly detail: number;
-  /** `GalaxyDustTuning.sweptMix`, packed to the header's dustDetail.w lane — see `DustHeaderLanes.sweptMix`. */
-  readonly sweptMix: number;
 };

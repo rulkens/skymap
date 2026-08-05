@@ -198,10 +198,7 @@ export function createSfMapAutomatonRunner(
 
       // S4's low-pass, in the same encoder right after the pack pass writes
       // `output.texture` — the blur reads exactly what pack just produced.
-      // Lives on `tuning.dust`, not `sfMapAutomaton` (`sweptMix` gates a
-      // CONSUMER of this generator's output, not a parameter of the
-      // generator itself).
-      output.encodeDustBlurPass(enc, tuning.dust.sweptMix ?? 0);
+      output.encodeDustBlurPass(enc);
 
       device.queue.submit([enc.finish()]);
     },

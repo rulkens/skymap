@@ -997,7 +997,6 @@ export async function createGalaxyEngine(
           extinctionRgb: model.dustHeaderLanes.extinctionRgb,
           noise: model.dustHeaderLanes.noise,
           detail: model.dustHeaderLanes.detail,
-          sweptMix: model.dustHeaderLanes.sweptMix,
           // VIEW-dependent, unlike every other lane in this bag.
           slices: dustSlices,
           mapHeightPx: targets.reducedSize(render.dustDivisor)[1],
@@ -1028,7 +1027,7 @@ export async function createGalaxyEngine(
     // `dust.extinctionRgb`/`.slices` carry the field header's own live values
     // — the only two lanes splat.wesl's attenuation branch reads. Everything
     // else in the bag stays INERT (matching the previous no-dust default):
-    // `noise`/`detail`/`sweptMix`/`count`/`mapHeightPx` feed dustMap.wesl's
+    // `noise`/`detail`/`count`/`mapHeightPx` feed dustMap.wesl's
     // accumulation pass, which this draw never runs — carrying the field's
     // real `dust.noise` here would silently retune `hiiNoiseTerm`'s sampling
     // frequency (`u.dustNoise.x`, splat.wesl's OWN reader of that lane) as a
@@ -1049,7 +1048,6 @@ export async function createGalaxyEngine(
           extinctionRgb: model.dustHeaderLanes.extinctionRgb,
           noise: { tileUnits: 1, amplitude: 0, cloudOffset: 0, contrastExp: 1 },
           detail: 0,
-          sweptMix: 0,
           slices: dustSlices,
           mapHeightPx: 0,
         },

@@ -121,9 +121,9 @@ describe('sfMap @workgroup_size(N, N) ↔ SF_MAP_WORKGROUP_SIZE parity', () => {
  * named const per file rather than sweeping each for orphans.
  * sfMapAutomatonStep.wesl/sfMapFluidStep.wesl seed every texel to this
  * pedestal at step 0; sfMapDustBlur.wesl and dustDetail.wesl must subtract
- * the SAME pedestal before blending sweptMix, or S4's detail ratio
- * (dustDetail.wesl) drifts against its own blur divisor;
- * sfMapPresent.wesl subtracts it too, to reconstruct the seeding view's
+ * the SAME pedestal, or S4's detail ratio (dustDetail.wesl) drifts against
+ * its own blur divisor; sfMapPresent.wesl subtracts it too, to reconstruct
+ * the seeding view's
  * overshoot term from the raw dust channel it already reads. sfMapFluidStep.wesl
  * seeds the same pedestal at its own step 0 — the two generators must agree
  * on what an unrun map looks like.

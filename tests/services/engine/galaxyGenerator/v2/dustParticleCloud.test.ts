@@ -55,24 +55,7 @@ describe('buildDustParticleCloud', () => {
     }
   });
 
-  it('sweptMix 0 is byte-identical no matter what the swept dust channel carries', () => {
-    const dust = {
-      ...DEFAULT_GALAXY_DUST_PARAMS,
-      cloud: { ...DEFAULT_GALAXY_DUST_PARAMS.cloud, count: 500, clumpiness: 0.3 },
-    };
-    const tuning = {
-      ...DEFAULT_GALAXY_FIELD_TUNING,
-      dust: { ...DEFAULT_GALAXY_FIELD_TUNING.dust, sweptMix: 0 },
-    };
-    const quietSwept = makeMap(0.05);
-    const busySwept = makeMap(5000); // would swamp the CDF at any sweptMix > 0
-    const withQuiet = buildDustParticleCloud(geometry, dust, tuning, 1, quietSwept, null);
-    const withBusy = buildDustParticleCloud(geometry, dust, tuning, 1, busySwept, null);
-    expect(withQuiet.length).toBeGreaterThan(0); // sanity: the map-seeded path really ran
-    expect(withBusy).toEqual(withQuiet);
-  });
-
-  it('sweptMix 1 shifts seeded mass onto the swept channel’s hot texel, off the legacy product’s', () => {
+  it('seeds mass onto the swept channel’s hot texel, off the legacy product’s', () => {
     // Two well-separated texels, one hot per channel, everything else at a
     // shared baseline that clears the S3 survival floor (DUST_SURVIVAL_
     // DENSITY_FLOOR = 0.01) so the filter can't confound the placement test.
@@ -127,37 +110,35 @@ describe('buildDustParticleCloud', () => {
       ...DEFAULT_GALAXY_DUST_PARAMS,
       cloud: { ...DEFAULT_GALAXY_DUST_PARAMS.cloud, count: 2000, clumpiness: 0 },
     };
-    const tuning = {
-      ...DEFAULT_GALAXY_FIELD_TUNING,
-      dust: { ...DEFAULT_GALAXY_FIELD_TUNING.dust, sweptMix: 1 },
-    };
-    const swept = buildDustParticleCloud(geometry, dust, tuning, 1, map, null);
+    const swept = buildDustParticleCloud(geometry, dust, DEFAULT_GALAXY_FIELD_TUNING, 1, map, null);
     expect(swept.length).toBeGreaterThan(0);
 
     // Overwhelmingly placed near A (the swept channel's hot texel), not B.
     expect(meanDistTo(swept, a)).toBeLessThan(meanDistTo(swept, b) * 0.1);
   });
 
-  it('sweptMix 1 with zero overshoot everywhere degrades to the smoothDisc fallback, not NaN', () => {
+  it('zero overshoot everywhere degrades to the smoothDisc fallback, not NaN', () => {
     // makeMap's legacy channel (gas x oldActivity) is busy/non-degenerate,
     // but its dust channel is a flat SF_MAP_AMBIENT_DUST (1.0) — no texel
-    // has swept past ambient, so meanOvershoot is exactly 0. At sweptMix 1
-    // legacy's own share of the blend is also 0 (1 - sweptMix), so density
-    // is 0 for every texel: `buildSfMapDustCdf`'s total comes out 0, and
+    // has swept past ambient, so meanOvershoot is exactly 0 and density is 0
+    // for every texel: `buildSfMapDustCdf`'s total comes out 0, and
     // `buildDustParticleCloud` leaves `placement` at its `smoothDisc`
     // default — the same code path an absent map takes (see the guard's own
-    // comment on the `sweptMix > 0` branch in dustParticleCloud.ts).
+    // comment in dustParticleCloud.ts).
     const ambientMap = makeMap(1.0);
     const dust = {
       ...DEFAULT_GALAXY_DUST_PARAMS,
       cloud: { ...DEFAULT_GALAXY_DUST_PARAMS.cloud, count: 400, clumpiness: 0.5 },
     };
-    const tuning = {
-      ...DEFAULT_GALAXY_FIELD_TUNING,
-      dust: { ...DEFAULT_GALAXY_FIELD_TUNING.dust, sweptMix: 1 },
-    };
-    const seeded = buildDustParticleCloud(geometry, dust, tuning, 1, ambientMap, null);
-    const unseeded = buildDustParticleCloud(geometry, dust, tuning, 1, null, null);
+    const seeded = buildDustParticleCloud(
+      geometry,
+      dust,
+      DEFAULT_GALAXY_FIELD_TUNING,
+      1,
+      ambientMap,
+      null,
+    );
+    const unseeded = buildDustParticleCloud(geometry, dust, DEFAULT_GALAXY_FIELD_TUNING, 1, null, null);
     expect(seeded.length).toBeGreaterThan(0);
     for (const p of seeded) {
       expect(Number.isFinite(p.amplitude)).toBe(true);

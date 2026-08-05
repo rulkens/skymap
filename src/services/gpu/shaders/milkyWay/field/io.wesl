@@ -26,8 +26,8 @@
 //   offset 144 : dustSlices: vec4 (t1, t2, t3, unused)
 //   offset 160 : debugView: vec4 (dustViewIntensity, sfMapViewIntensity, orientationViewIntensity, galaxyWeight)
 //   offset 176 : sfMapChannels: vec4 (gasWeight, recentSfWeight, activityWeight, dustWeight)
-//   offset 192 : bubbleView: vec4 (intensity, sfMapSeedingWeight, sfMapSeedingMeanLegacy, sfMapSeedingMeanOvershoot)
-//   offset 208 : dustDetail: vec4 (strength, hiiTextureScale, hiiTextureContrast, sweptMix)
+//   offset 192 : bubbleView: vec4 (intensity, sfMapSeedingWeight, spare, sfMapSeedingMeanOvershoot)
+//   offset 208 : dustDetail: vec4 (strength, hiiTextureScale, hiiTextureContrast, spare)
 //   total: 224 bytes.
 //
 // counts.x is the live EMISSION component count — the central galaxy's plus
@@ -123,14 +123,17 @@
 // so the two can be compared directly. Not folded into debugView: that vec4
 // is full (dust/sfMap/orientation/galaxyWeight), and reusing
 // sfMapChannels.w would name a bubble weight after an unrelated automaton
-// channel. Only .x is bubblePresent.wesl's own; .yzw are sfMapPresent.wesl's
+// channel. Only .x is bubblePresent.wesl's own; .y/.w are sfMapPresent.wesl's
 // "seeding" debug view (dust-seeding spike) — the exact composite density
 // dustParticleCloud.ts's S1 CDF sampler consumes, not another raw channel:
 // .y is the view's own weight (CPU-forced to 0, view dark, when there is no
-// map or both means below are 0 — createGalaxyModel.ts's sfMapSeedingView),
-// .z/.w are meanSfMapChannel's legacy/overshoot means, computed off the SAME
-// functions (sfMapDustDensity, sweptDustOvershoot) the placement CDF uses, so
-// this view cannot drift from what placement actually consumes.
+// map or the mean below is 0 — createGalaxyModel.ts's sfMapSeedingView), .w
+// is meanSfMapChannel's overshoot mean, computed off the SAME function
+// (sweptDustOvershoot) the placement CDF uses, so this view cannot drift from
+// what placement actually consumes. .z is SPARE — freed when the seeding
+// view's legacy term (and the CPU/GPU sweptMix blend it belonged to) was
+// deleted; still written every frame (packFieldHeaderUniforms's no-stale-
+// lanes contract), just always 0.
 //
 // dustDetail (offset 208) is S4's high-pass strength: dustMap.wesl's fs
 // (dustDetail.wesl) multiplies each dust splat's own slices by the SF map's
@@ -153,11 +156,13 @@
 // lets the shader skip the noise sample entirely via a uniform branch — the
 // primary field pass packs 0 here always, since its own components never
 // carry a nonzero textureWeight, so the far larger disc/arms fragment count
-// never pays for a sample it would just multiply by zero. .w (sweptMix) is
-// dustDetail.wesl's own free lane, the last one in this vec4 — 0 (default)
-// reads the legacy gas x oldActivity product, 1 the conserved swept-dust
-// channel (GalaxyDustTuning.sweptMix); sfMapDustBlur.wesl blends its own
-// low-pass by the same value, through its own tiny uniform, not this header.
+// never pays for a sample it would just multiply by zero. .w is SPARE —
+// freed when dustDetail.wesl's legacy/swept blend weight
+// (GalaxyDustTuning.sweptMix) was deleted: every dust consumer now commits
+// fully to the swept channel, so there is nothing left to blend and
+// sfMapDustBlur.wesl's own low-pass needs no matching uniform either. Still
+// written every frame (packFieldHeaderUniforms's no-stale-lanes contract),
+// just always 0.
 //
 // COMPS (read-only storage, binding 1) — every mixture's components back to
 // back (the central galaxy's emission, then each background extra's,

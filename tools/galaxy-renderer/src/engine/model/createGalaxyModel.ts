@@ -64,7 +64,6 @@ import {
 } from '../../../../../src/services/engine/galaxyGenerator/v2/hiiRegions';
 import { meanSfMapChannel } from '../../../../../src/utils/galaxy/meanSfMapChannel';
 import { normalizeGenerationSeed } from '../../../../../src/utils/galaxy/normalizeGenerationSeed';
-import { sfMapDustDensity } from '../../../../../src/utils/galaxy/sfMapDustDensity';
 import { sweptDustOvershoot } from '../../../../../src/utils/galaxy/sweptDustOvershoot';
 import { transformGalaxyFieldComponent } from '../../../../../src/utils/galaxy/transformGalaxyFieldComponent';
 
@@ -146,11 +145,10 @@ export type GalaxyModel = {
   /** Null until the first SSPSF readback lands. */
   readonly sfMapData: GalaxySfMap | null;
   /**
-   * The SF-map "seeding" debug view's three lanes — `weight` reads
+   * The SF-map "seeding" debug view's two lanes — `weight` reads
    * `render.sfMapSeedingViewWeight` live (forced to 0 while `sfMapData` is
-   * null or both means are 0), `meanLegacy`/`meanOvershoot` are cached at the
-   * sfMap readback landing, not recomputed per frame — same cadence as
-   * `dustHeaderLanes`.
+   * null or the mean is 0), `meanOvershoot` is cached at the sfMap readback
+   * landing, not recomputed per frame — same cadence as `dustHeaderLanes`.
    */
   readonly sfMapSeedingView: SfMapSeedingLanes;
   /**
@@ -269,15 +267,14 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   // Cached, not recomputed per frame: the field header reads all three every
   // frame, but they only change when `rebuildDustMixture` runs. Seeded at the
   // no-galaxy answer, which is what the first frames draw.
-  let dustHeaderLanes = deriveDustHeaderLanes(null, DEFAULT_GALAXY_DUST_PARAMS, false, 0);
+  let dustHeaderLanes = deriveDustHeaderLanes(null, DEFAULT_GALAXY_DUST_PARAMS, false);
   // How the last `repackFieldComponents` concatenation sliced `fieldComps`.
   let fieldCounts: FieldSliceCounts = { emission: 0, primary: 0, dust: 0 };
-  // The seeding debug view's own two means, cached at the sfMap readback
-  // landing (recomputeSfMapSeedingMeans below) — never per frame, and never
-  // reset back to 0 on a grid move: the `sfMapSeedingView` getter gates on
-  // `readbacks.sfMapData` being non-null instead, so a stale pair sitting
+  // The seeding debug view's own mean, cached at the sfMap readback landing
+  // (recomputeSfMapSeedingMeans below) — never per frame, and never reset
+  // back to 0 on a grid move: the `sfMapSeedingView` getter gates on
+  // `readbacks.sfMapData` being non-null instead, so a stale value sitting
   // here between a drop and the next landing is simply never read.
-  let sfMapMeanLegacy = 0;
   let sfMapMeanOvershoot = 0;
   // What the orientation chain was last dispatched at — see `noteRenderChanged`.
   let orientationSigmaDerivKey = render.orientationSigmaDerivTexels;
@@ -289,15 +286,12 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   const orientationDiagnostics = createOrientationDiagnostics();
 
   /**
-   * The seeding debug view's placement density means, off the SAME two
-   * functions (`sfMapDustDensity`, `sweptDustOvershoot`) `buildDustParticleCloud`
-   * normalises its own CDF terms by — load-bearing: computing these any other
-   * way would let the view drift from what placement actually consumes.
+   * The seeding debug view's placement density mean, off the SAME function
+   * (`sweptDustOvershoot`) `buildDustParticleCloud` normalises its own CDF
+   * term by — load-bearing: computing this any other way would let the view
+   * drift from what placement actually consumes.
    */
   function recomputeSfMapSeedingMeans(map: GalaxySfMap): void {
-    sfMapMeanLegacy = meanSfMapChannel(map, (texel) =>
-      sfMapDustDensity(texel.gas, texel.oldActivity),
-    );
     sfMapMeanOvershoot = meanSfMapChannel(map, sweptDustOvershoot);
   }
 
@@ -426,12 +420,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
    */
   function rebuildDustMixture(): void {
     const dust = currentDust();
-    dustHeaderLanes = deriveDustHeaderLanes(
-      fieldGeometry,
-      dust,
-      fieldTuning.dust.enabled,
-      fieldTuning.dust.sweptMix ?? 0, // stale stored tuning predates this knob
-    );
+    dustHeaderLanes = deriveDustHeaderLanes(fieldGeometry, dust, fieldTuning.dust.enabled);
     const orientationDeltaStats: OrientationDeltaStats = {
       count: 0,
       sumAbsDeltaDeg: 0,
@@ -719,17 +708,11 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       sfMapKey = fieldTuning.sfMap;
       sfMapAutomatonKey = fieldTuning.sfMapAutomaton;
       sfMapFluidKey = fieldTuning.sfMapFluid;
-      rebuildSfMap(); // also refreshes the S4 blur, off the tuning it reads there
-    } else if (dustMoved) {
-      // `rebuildSfMap` above already re-derives the blur from `tuning.dust`
-      // when it runs; this is the ELSE — a `dust`-only drag (sweptMix, most
-      // often) never touches `sfMap`, so nothing else would re-dispatch S4
-      // and it would keep blending the last-built `sweptMix` forever. One
-      // compute pass over a 24x8 target, not the N-step generator run, so
-      // this costs nothing next to the CPU rebuild `dustMoved` already
-      // triggered (192x64 texels, dispatched as 24x8 workgroups).
-      sfMapGenerator.refreshDustBlur(fieldTuning.dust.sweptMix ?? 0);
+      rebuildSfMap(); // also re-dispatches the S4 blur, which now reads no dust tuning of its own
     }
+    // No `else if (dustMoved)` branch any more: the S4 blur (sfMapDustBlur.wesl)
+    // is a pure function of `texture` since `sweptMix` was deleted, so a
+    // dust-only drag has nothing left for it to re-dispatch over.
   }
 
   /** Torn down from two places — `setExtras` replacing the list, and `destroy`. */
@@ -863,16 +846,15 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       return readbacks.sfMapData;
     },
     get sfMapSeedingView(): SfMapSeedingLanes {
-      // Gated on the LIVE readback, not on the cached means: a grid move can
-      // null `sfMapData` while the means above still hold the previous
-      // grid's numbers, and reading them here would flash a stale view for
-      // one frame instead of going dark.
-      if (!readbacks.sfMapData || (sfMapMeanLegacy <= 0 && sfMapMeanOvershoot <= 0)) {
-        return { weight: 0, meanLegacy: 0, meanOvershoot: 0 };
+      // Gated on the LIVE readback, not the cached mean: a grid move can null
+      // `sfMapData` while the mean above still holds the previous grid's
+      // number, and reading it here would flash a stale view for one frame
+      // instead of going dark.
+      if (!readbacks.sfMapData || sfMapMeanOvershoot <= 0) {
+        return { weight: 0, meanOvershoot: 0 };
       }
       return {
         weight: render.sfMapSeedingViewWeight,
-        meanLegacy: sfMapMeanLegacy,
         meanOvershoot: sfMapMeanOvershoot,
       };
     },

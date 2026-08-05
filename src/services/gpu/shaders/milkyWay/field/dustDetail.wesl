@@ -20,7 +20,7 @@ const DETAIL_EPS: f32 = 0.02;
 const DETAIL_MAX: f32 = 8.0;
 // Mirrors SF_MAP_AMBIENT_DUST (sweptDustOvershoot.ts) — parity-tested in
 // constants.parity.test.ts. CONTRACT: sfMapDustBlur.wesl's blur divisor must
-// blend the identical overshoot term, or the detail ratio drifts with sweptMix.
+// subtract the identical pedestal, or the detail ratio drifts against it.
 const SF_MAP_AMBIENT_DUST: f32 = 1.0;
 
 // rMin/rMax: same grid sfMapPresent.wesl's fs resolves through — written once
@@ -60,11 +60,11 @@ fn dustDetailMultiplier(p: vec3<f32>, breakup: f32) -> f32 {
   let azT = theta / (2.0 * PI) + select(0.0, 1.0, theta < 0.0);
   let uv = vec2<f32>(azT, ringT);
   // The density the splats were SEEDED from, so the ratio below is structure
-  // the splats should carry but blurred away — u.dustDetail.w blends the same
-  // legacy/swept pair the CPU seeding and sfMapDustBlur.wesl blend, and needs
-  // no mean-normalization here since a RATIO of two mixes is scale-invariant.
+  // the splats should carry but blurred away — the same swept-overshoot term
+  // the CPU seeding and sfMapDustBlur.wesl read, needing no mean-normalization
+  // here since a RATIO of two overshoot reads is scale-invariant.
   let mapTexel = textureSampleLevel(sfMapTex, sfMapSmp, uv, 0.0);
-  let density = mix(mapTexel.x * mapTexel.z, max(mapTexel.w - SF_MAP_AMBIENT_DUST, 0.0), u.dustDetail.w);
+  let density = max(mapTexel.w - SF_MAP_AMBIENT_DUST, 0.0);
   let densityBlur = textureSampleLevel(sfMapBlurTex, sfMapSmp, uv, 0.0).x;
   let detail = (density + DETAIL_EPS) / (densityBlur + DETAIL_EPS);
   return clamp(1.0 + u.dustDetail.x * (detail - 1.0) * breakup, 0.0, DETAIL_MAX);

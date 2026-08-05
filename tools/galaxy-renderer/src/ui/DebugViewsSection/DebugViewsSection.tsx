@@ -105,7 +105,7 @@ function DebugViewsSection(): ReactNode {
           format={(v) => v.toFixed(2)}
           onChange={(v) => dispatch(renderPatched({ sfMapSeedingViewWeight: v }))}
           path="render.sfMapSeedingViewWeight"
-          info="NOT a channel isolation like the four above — this is the exact composite density dust placement consumes: mix(legacy/meanLegacy, overshoot/meanOvershoot, sweptMix). Shows what the raw channels can't: an ambient pedestal glows teal in the dust channel above without contributing any placement mass. Warm-white. Shows the density BEFORE texel-area weighting — the CDF multiplies by area, so outer texels weigh more in placement than they glow here."
+          info="NOT a channel isolation like the four above — this is the exact composite density dust placement consumes: overshoot/meanOvershoot, the swept-dust channel's excess above the automaton's ambient pedestal. Shows what the raw channels can't: an ambient pedestal glows teal in the dust channel above without contributing any placement mass. Warm-white. Shows the density BEFORE texel-area weighting — the CDF multiplies by area, so outer texels weigh more in placement than they glow here."
         />
         <ParamSlider
           label={DEBUG_VIEWS.orientation.label}

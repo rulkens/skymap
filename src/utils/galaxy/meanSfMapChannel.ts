@@ -1,13 +1,10 @@
 /**
  * meanSfMapChannel — the plain (unweighted) mean of one extracted quantity
- * over every texel of an `GalaxySfMap`. Used to bring the legacy `gas x
- * oldActivity` product and the swept dust channel (its overshoot above
- * ambient — see `sweptDustOvershoot`) onto a common scale before `sweptMix`
- * blends them: the two have unrelated
- * magnitudes (one is a bounded [0,1] product, the other an unclamped
- * conserved quantity that overshoots past 8), so blending raw values would
- * let whichever term happens to be bigger dominate at any mix short of the
- * endpoints.
+ * over every texel of an `GalaxySfMap`. `dustParticleCloud.ts` normalises the
+ * swept dust channel's overshoot (`sweptDustOvershoot`) by its own map-wide
+ * mean before building the placement CDF from it, so the CDF sampler's guard
+ * (`SWEPT_OVERSHOOT_MEAN_EPS`) reads a scale-free quantity rather than the
+ * unclamped, rim-overshooting-past-8 raw value.
  */
 import type { GalaxySfMap } from '../../@types/galaxy/GalaxySfMap';
 import type { SfMapDensityTexel } from './buildSfMapDustCdf';

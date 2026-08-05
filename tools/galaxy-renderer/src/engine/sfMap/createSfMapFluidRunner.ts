@@ -201,7 +201,7 @@ export function createSfMapFluidRunner(
       packPass.dispatchWorkgroups(dispatchX, dispatchY);
       packPass.end();
 
-      output.encodeDustBlurPass(enc, tuning.dust.sweptMix ?? 0);
+      output.encodeDustBlurPass(enc);
 
       device.queue.submit([enc.finish()]);
     },

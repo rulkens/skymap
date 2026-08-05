@@ -40,8 +40,6 @@ export type SfMapGenerator = {
     readonly tuning: GalaxyFieldTuning;
     readonly seed: number;
   }): GalaxySfMapGridRadius;
-  /** Re-dispatch ONLY the S4 low-pass against whatever `texture` currently holds — see `SfMapOutput.refreshDustBlur`'s own doc. */
-  refreshDustBlur(sweptMix: number): void;
   dispose(): void;
 };
 
@@ -94,10 +92,6 @@ export function createSfMapGenerator(
         automatonRunner.rebuild({ geometry, tuning, seed, grid });
       }
       return grid;
-    },
-
-    refreshDustBlur(sweptMix: number): void {
-      output.refreshDustBlur(sweptMix);
     },
 
     dispose(): void {

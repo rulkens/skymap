@@ -46,16 +46,7 @@ export type SfMapOutput = {
    * submit here) — a rebuild's own dispatch shares one encoder/submit with
    * its generator's step+pack passes.
    */
-  encodeDustBlurPass(enc: GPUCommandEncoder, sweptMix: number): void;
-  /**
-   * Standalone submit variant — the cheap refresh a `fieldTuning.dust`-only
-   * change needs (a plain field-tuning drag never re-triggers a generator
-   * rebuild, so left alone the blur target would go stale the moment
-   * `sweptMix` moved without also moving `sfMap`). Safe to call before the
-   * first rebuild: `texture` starts zero-initialised, so this just re-blurs
-   * zeros.
-   */
-  refreshDustBlur(sweptMix: number): void;
+  encodeDustBlurPass(enc: GPUCommandEncoder): void;
   dispose(): void;
 };
 
@@ -142,18 +133,6 @@ export function createSfMapOutput(
     size: 16,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
-  // sfMapDustBlur.wesl's own blend weight — a separate tiny uniform rather
-  // than riding io.wesl's per-frame header, because the blur pass's bind
-  // group has no binding to that header at all (see the header's own
-  // `sweptMix` doc for the split). 16 bytes: WebGPU has no problem with a
-  // 4-byte uniform, but every other small uniform in this module pads to a
-  // vec4, and matching that saves a reader from wondering if 4 was deliberate.
-  const dustBlurParamsUbo = device.createBuffer({
-    label: 'galaxy:sfMapDustBlurParamsUbo',
-    size: 16,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-
   // Built once — `texture`/`gridUbo` are the same GPU objects for this
   // module's whole lifetime, only their CONTENT changes per rebuild, and a
   // bind group only needs rebuilding when the OBJECT it references does.
@@ -175,12 +154,10 @@ export function createSfMapOutput(
     entries: [
       { binding: 0, resource: texture.createView() },
       { binding: 1, resource: sfMapDustBlurTex.createView() },
-      { binding: 2, resource: { buffer: dustBlurParamsUbo } },
     ],
   });
 
-  function encodeDustBlurPass(enc: GPUCommandEncoder, sweptMix: number): void {
-    device.queue.writeBuffer(dustBlurParamsUbo, 0, new Float32Array([sweptMix, 0, 0, 0]));
+  function encodeDustBlurPass(enc: GPUCommandEncoder): void {
     const pass = enc.beginComputePass({ label: 'galaxy:sfMapDustBlurPass' });
     pass.setPipeline(dustBlurPipe);
     pass.setBindGroup(0, dustBlurBindGroup);
@@ -224,18 +201,11 @@ export function createSfMapOutput(
 
     encodeDustBlurPass,
 
-    refreshDustBlur(sweptMix: number): void {
-      const enc = device.createCommandEncoder({ label: 'galaxy:sfMapDustBlurRefresh' });
-      encodeDustBlurPass(enc, sweptMix);
-      device.queue.submit([enc.finish()]);
-    },
-
     dispose(): void {
       texture.destroy();
       sfMapDustBlurTex.destroy();
       readbackBuffer.destroy();
       gridUbo.destroy();
-      dustBlurParamsUbo.destroy();
     },
   };
 }

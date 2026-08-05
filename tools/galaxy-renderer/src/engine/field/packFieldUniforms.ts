@@ -65,8 +65,6 @@ const INERT_DUST: FieldDust = {
   mapHeightPx: 0,
   // A pass with no dust has nothing for the map to modulate.
   detail: 0,
-  // 0 = legacy product, same default as a live pass — see `DustHeaderLanes.sweptMix`.
-  sweptMix: 0,
 };
 
 /**
@@ -78,7 +76,7 @@ const INERT_DUST: FieldDust = {
 const NO_HII_TEXTURE: HiiTextureLanes = { scale: 0, contrast: 1 };
 
 /** "This pass has no seeding overlay" — the HII header packs this; only the field header (sfMapPresent.wesl's own bind group) ever passes real lanes. */
-const INERT_SF_MAP_SEEDING: SfMapSeedingLanes = { weight: 0, meanLegacy: 0, meanOvershoot: 0 };
+const INERT_SF_MAP_SEEDING: SfMapSeedingLanes = { weight: 0, meanOvershoot: 0 };
 
 /**
  * packFieldHeaderUniforms — one 224-byte `FieldUniforms` header, every lane
@@ -180,25 +178,28 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
   out[46] = sfMapChannels.activityWeight;
   out[47] = sfMapChannels.dustWeight;
 
-  // bubbleView 48..51 = (intensity, sfMapSeedingWeight, sfMapSeedingMeanLegacy,
-  // sfMapSeedingMeanOvershoot). .yzw ride bubbleView's free lanes for the same
-  // reason dustDetail's .yz do (io.wesl's doc) — sfMapPresent.wesl's "seeding"
-  // debug view, dust-seeding spike.
+  // bubbleView 48..51 = (intensity, sfMapSeedingWeight, spare,
+  // sfMapSeedingMeanOvershoot). .y/.w ride bubbleView's free lanes for the
+  // same reason dustDetail's .yz do (io.wesl's doc) — sfMapPresent.wesl's
+  // "seeding" debug view, dust-seeding spike. .z was sfMapSeedingMeanLegacy,
+  // freed when the seeding view's legacy term was deleted; still written
+  // every frame (this scratch's no-stale-lanes contract), just always 0.
   out[48] = debugViews.bubble;
   out[49] = sfMapSeeding.weight;
-  out[50] = sfMapSeeding.meanLegacy;
+  out[50] = 0;
   out[51] = sfMapSeeding.meanOvershoot;
 
   // dustDetail 52..55 = (strength, hiiTextureScale, hiiTextureContrast,
-  // sweptMix). .y/.z are unrelated to S4's own strength lane — they ride this
+  // spare). .y/.z are unrelated to S4's own strength lane — they ride this
   // vec4's two free lanes for the HII tier's tier-global texture modulation
   // (io.wesl's dustDetail doc); NO_HII_TEXTURE's scale 0 is what lets
   // splat.wesl's fs skip the noise sample on a uniform branch for every pass
-  // but the HII one. .w is dustDetail.wesl's own legacy/swept blend weight.
+  // but the HII one. .w was dustDetail.wesl's legacy/swept blend weight,
+  // freed now that every dust consumer commits fully to the swept channel.
   out[52] = dust.detail;
   out[53] = hiiTexture.scale;
   out[54] = hiiTexture.contrast;
-  out[55] = dust.sweptMix;
+  out[55] = 0;
 
   return out;
 }

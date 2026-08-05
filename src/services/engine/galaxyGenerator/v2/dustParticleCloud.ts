@@ -131,9 +131,9 @@ const DUST_SURVIVAL_DENSITY_FLOOR = 0.01;
 /**
  * Below this mean overshoot, the swept channel is transport-off/early-run
  * noise (every texel near ambient, see `sweptDustOvershoot`'s header) — too
- * close to zero to divide by without blowing the swept term up toward
- * Infinity/NaN. The blend below treats it as exactly zero instead, which
- * degrades smoothly rather than crashing: see the guard's own comment.
+ * close to zero to divide by without blowing the density up toward
+ * Infinity/NaN. Below the floor, placement stays at its `smoothDisc`
+ * default instead — the same fallback an absent map takes, not a crash.
  */
 const SWEPT_OVERSHOOT_MEAN_EPS = 1e-6;
 
@@ -183,14 +183,15 @@ export function buildDustParticleCloud(
 
   const rng = mulberry32(seed ^ 0x44555354); // "DUST"
 
-  // Seeding ON: the map IS the placement density (a gas x accumulated-activity
-  // blend, `sfMapDustDensity`) — every complex is placed by `'mapDensity'`
-  // mode, its centre drawn from S1's inverse-CDF sampler (`buildSfMapDustCdf`).
-  // Seeding OFF (or a quiet map): `'smoothDisc'` mode, no arm-lane concept at
-  // all — the dust tier's analytic lane machinery was cut once the map became
-  // the sole placement density; `armParticleCloud.ts` still owns the one live
-  // `'analytic'` caller. This is the intended consequence of the SF map
-  // leading, not a regression.
+  // Seeding ON: the map IS the placement density — the swept-dust channel's
+  // overshoot above the automaton's ambient pedestal (`sweptDustOvershoot`,
+  // mean-normalised so the CDF reads as a pure shape) — every complex is
+  // placed by `'mapDensity'` mode, its centre drawn from S1's inverse-CDF
+  // sampler (`buildSfMapDustCdf`). Seeding OFF (or a quiet map): `'smoothDisc'`
+  // mode, no arm-lane concept at all — the dust tier's analytic lane machinery
+  // was cut once the map became the sole placement density; `armParticleCloud.ts`
+  // still owns the one live `'analytic'` caller. This is the intended
+  // consequence of the SF map leading, not a regression.
   let placement: ClusteredDiscPlacementMode = { kind: 'smoothDisc' };
   // S3's per-particle aspect/survival, non-null only on the map-seeded path —
   // `null` keeps `drawPayload` below byte-identical to the pre-S3 smoothDisc
@@ -200,52 +201,28 @@ export function buildDustParticleCloud(
     | null = null;
   if (tuning.dust.sfMapSeeding && sfMap) {
     const map = sfMap; // narrowed alias so the closures below don't re-null-check
-    // Stale stored tuning predates this knob.
-    const sweptMix = tuning.dust.sweptMix ?? 0;
-    const legacyOf = (texel: SfMapDensityTexel): number =>
-      sfMapDustDensity(texel.gas, texel.oldActivity);
-    // 0 (the default) stays the exact pre-existing expression — no mean pass,
-    // no division — so placement is byte-identical to before `sweptMix`
-    // existed. Above 0, the CDF only cares about relative SHAPE, but the two
-    // channels have unrelated magnitudes (see `meanSfMapChannel`'s header),
-    // so each is normalised by its own map-wide mean before blending.
-    let density: (texel: SfMapDensityTexel) => number = legacyOf;
-    if (sweptMix > 0) {
-      const meanLegacy = meanSfMapChannel(map, legacyOf);
-      // Overshoot, not raw dust — see `sweptDustOvershoot`'s header for why
-      // the swept term has to be keyed off the pedestal, not the absolute
-      // value, to mean anything as a placement density.
-      const meanOvershoot = meanSfMapChannel(map, sweptDustOvershoot);
-      // Guard: an all-ambient/all-cavity map (no shell has swept past
-      // ambient anywhere — true whenever transport is off, or the automaton
-      // hasn't run long enough yet, see `SWEPT_OVERSHOOT_MEAN_EPS`) makes
-      // the swept term contribute nothing rather than divide by ~0. At
-      // sweptMix < 1 the legacy term still carries its own (1 - sweptMix)
-      // share, so placement degrades smoothly toward the legacy-only image
-      // as the guard engages. At sweptMix == 1 legacy's share is also 0, so
-      // `density` comes out 0 for every texel, `cdf.total` below is 0, and
-      // `placement` is left at its `smoothDisc` default — the SAME fallback
-      // an absent map takes, not a crash or an empty result.
-      const sweptGuardOk = meanOvershoot >= SWEPT_OVERSHOOT_MEAN_EPS;
-      density = (texel) => {
-        const legacy = meanLegacy > 0 ? legacyOf(texel) / meanLegacy : 0;
-        const swept = sweptGuardOk ? sweptDustOvershoot(texel) / meanOvershoot : 0;
-        return (1 - sweptMix) * legacy + sweptMix * swept;
-      };
-    }
-    const cdf = buildSfMapDustCdf(map, density);
-    if (cdf.total > 0) {
-      placement = { kind: 'mapDensity', samplePoint: (mapRng) => sampleSfMapDustCdf(cdf, mapRng) };
-      sampleMapTraits = (radius, angle) => {
-        const coherence = sfMapOrientation
-          ? sampleSfMapOrientation(sfMapOrientation, radius, angle).coherence
-          : 0;
-        const sample = sampleGalaxySfMap(map, radius, angle);
-        return {
-          aspect: 1 + (cloud.elongation - 1) * coherence,
-          alive: sfMapDustDensity(sample.gas, sample.oldActivity) >= DUST_SURVIVAL_DENSITY_FLOOR,
+    const meanOvershoot = meanSfMapChannel(map, sweptDustOvershoot);
+    // Guard: an all-ambient/all-cavity map (no shell has swept past ambient
+    // anywhere — true whenever transport is off, or the automaton hasn't run
+    // long enough yet) leaves `placement` at its `smoothDisc` default instead
+    // of dividing by ~0 — the SAME fallback an absent map takes, not a crash.
+    if (meanOvershoot >= SWEPT_OVERSHOOT_MEAN_EPS) {
+      const density = (texel: SfMapDensityTexel): number =>
+        sweptDustOvershoot(texel) / meanOvershoot;
+      const cdf = buildSfMapDustCdf(map, density);
+      if (cdf.total > 0) {
+        placement = { kind: 'mapDensity', samplePoint: (mapRng) => sampleSfMapDustCdf(cdf, mapRng) };
+        sampleMapTraits = (radius, angle) => {
+          const coherence = sfMapOrientation
+            ? sampleSfMapOrientation(sfMapOrientation, radius, angle).coherence
+            : 0;
+          const sample = sampleGalaxySfMap(map, radius, angle);
+          return {
+            aspect: 1 + (cloud.elongation - 1) * coherence,
+            alive: sfMapDustDensity(sample.gas, sample.oldActivity) >= DUST_SURVIVAL_DENSITY_FLOOR,
+          };
         };
-      };
+      }
     }
   }
 

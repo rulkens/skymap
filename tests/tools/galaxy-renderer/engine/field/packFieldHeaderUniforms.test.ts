@@ -63,7 +63,6 @@ const input: FieldHeaderInput = {
     slices: { t1: 19000, t2: 19001, t3: 19002 },
     mapHeightPx: 16000,
     detail: 24000,
-    sweptMix: 26000,
   },
   debugViews: { dust: 21000, sfMap: 21001, orientation: 21002, bubble: 21003 },
   galaxyWeight: 22000,
@@ -74,7 +73,7 @@ const input: FieldHeaderInput = {
     dustWeight: 23003,
   },
   hiiTexture: { scale: 25000, contrast: 25001 },
-  sfMapSeeding: { weight: 27000, meanLegacy: 27001, meanOvershoot: 27002 },
+  sfMapSeeding: { weight: 27000, meanOvershoot: 27002 },
 };
 
 const packed = packFieldHeaderUniforms(input);
@@ -118,11 +117,11 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
     // bubble view needs a vec4 of its own.
     expect(observed(22000)).toBe(at('debugView') + 12);
     expect(observed(21003)).toBe(at('bubbleView'));
-    // bubbleView.yzw are the seeding view's own weight/meanLegacy/
-    // meanOvershoot (io.wesl's bubbleView doc) — free lanes claimed
-    // alongside the bubble intensity at .x, not a fourth debug view.
+    // bubbleView.y/.w are the seeding view's own weight/meanOvershoot
+    // (io.wesl's bubbleView doc) — free lanes claimed alongside the bubble
+    // intensity at .x, not a fourth debug view. .z is spare (freed when the
+    // seeding view's legacy term was deleted).
     expect(observed(27000)).toBe(at('bubbleView') + 4);
-    expect(observed(27001)).toBe(at('bubbleView') + 8);
     expect(observed(27002)).toBe(at('bubbleView') + 12);
     expect(observed(23000)).toBe(at('sfMapChannels'));
     // sfMapChannels.w was the header's one slack scalar — dustWeight now
@@ -132,12 +131,10 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
     expect(observed(24000)).toBe(at('dustDetail'));
     // dustDetail.y/.z are the HII tier's own tier-global texture scale/
     // contrast, unrelated to S4's own strength lane at .x — they ride this
-    // vec4's two free lanes (io.wesl's dustDetail doc).
+    // vec4's two free lanes (io.wesl's dustDetail doc). .w is spare (freed
+    // when dustDetail.wesl's legacy/swept blend weight was deleted).
     expect(observed(25000)).toBe(at('dustDetail') + 4);
     expect(observed(25001)).toBe(at('dustDetail') + 8);
-    // .w is dustDetail.wesl's own legacy/swept blend weight (sweptMix) — the
-    // last free lane in this vec4.
-    expect(observed(26000)).toBe(at('dustDetail') + 12);
   });
 
   it('derives dustOffset as emissionCount, since dust is appended last', () => {
@@ -173,8 +170,8 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
     // "the neutral value, not zero" reasoning `dustNoise`'s tileUnits/
     // contrastExp lanes use just above.
     expect(four(at('dustDetail'))).toEqual([0, 0, 1, 0]);
-    // .x (bubble intensity, from `debugViews`, still supplied) stays;
-    // .yzw (the seeding lanes) are inert.
+    // .x (bubble intensity, from `debugViews`, still supplied) stays; .y/.w
+    // (the seeding lanes) are inert, .z is spare (always 0).
     expect(four(at('bubbleView'))).toEqual([21003, 0, 0, 0]);
   });
 });

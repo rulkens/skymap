@@ -1,30 +1,20 @@
 // milkyWay/sfMap/sfMapDustBlur.wesl — S4's low-pass divisor: an 8x-downsampled
-// copy of the PLACEMENT density, blurred by box-averaging the density rather
-// than the product of two blurs — those differ, and only the former is the
-// density field's own low-pass. dustDetail.wesl divides the full-res density
-// by this to isolate the octave the dust splats can't carry
-// (docs/research/m74-jwst/07-sprite-seeding.md, S4).
-//
-// 'sweptMix' blends the same two channels 'GalaxyDustTuning.sweptMix' blends
-// CPU-side (src/@types/galaxy/GalaxyDustTuning.ts): the legacy gas x
-// oldActivity product at 0, the conserved swept-dust channel (w) at 1. No
-// mean-normalization here, unlike the CPU seeding blend — dustDetail.wesl
-// only ever reads this as a RATIO against the full-res density, and a ratio
-// is scale-invariant.
+// copy of the PLACEMENT density (the swept-dust channel's overshoot above the
+// automaton's ambient pedestal — see sweptDustOvershoot.ts), blurred by
+// box-averaging the density rather than the product of two blurs — those
+// differ, and only the former is the density field's own low-pass.
+// dustDetail.wesl divides the full-res density by this to isolate the octave
+// the dust splats can't carry (docs/research/m74-jwst/07-sprite-seeding.md, S4).
 
 const BLUR_FACTOR: u32 = 8u; // mirrors DUST_BLUR_FACTOR in createSfMapOutput.ts (TS is authoritative)
 // Mirrors SF_MAP_AMBIENT_DUST (sweptDustOvershoot.ts) — parity-tested in
-// constants.parity.test.ts. CONTRACT: dustDetail.wesl's numerator must blend
-// the identical overshoot term, or the detail ratio drifts with sweptMix.
+// constants.parity.test.ts. CONTRACT: dustDetail.wesl's numerator must
+// subtract the identical pedestal, or the detail ratio drifts against its
+// own blur divisor.
 const SF_MAP_AMBIENT_DUST: f32 = 1.0;
-
-struct DustBlurParams {
-  sweptMix: f32,
-};
 
 @group(0) @binding(0) var srcTex: texture_2d<f32>; // packed sfMap: x=gas, y=recentSf, z=oldActivity, w=dust
 @group(0) @binding(1) var dstTex: texture_storage_2d<rgba16float, write>;
-@group(0) @binding(2) var<uniform> params: DustBlurParams;
 
 @compute @workgroup_size(8, 8)
 fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
@@ -42,7 +32,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
         vec2<i32>(i32(gid.x * BLUR_FACTOR + i), i32(gid.y * BLUR_FACTOR + j)),
         0,
       );
-      sum += mix(t.x * t.z, max(t.w - SF_MAP_AMBIENT_DUST, 0.0), params.sweptMix);
+      sum += max(t.w - SF_MAP_AMBIENT_DUST, 0.0);
     }
   }
   // rgba16float: the one storage format that is ALSO filterable, which

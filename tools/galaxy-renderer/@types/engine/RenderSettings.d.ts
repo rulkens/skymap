@@ -155,14 +155,14 @@ export type RenderSettings = {
   /**
    * SF-map SEEDING view weight — NOT a channel isolation like the four
    * above: it renders the exact composite density `dustParticleCloud.ts`'s
-   * S1 CDF sampler consumes, `mix(legacy/meanLegacy, overshoot/meanOvershoot,
-   * sweptMix)`, so placement can be judged directly instead of inferred from
-   * raw channels — an ambient pedestal glows teal in the dust channel above
-   * without contributing any placement mass. A composite overlay, not a raw
-   * channel, which is why it defaults to 0 (off) while the other four default
-   * to 1. The view shows the density BEFORE texel-area weighting: the CDF
-   * multiplies by area, so outer texels weigh more than they glow here. Only
-   * reachable while `sfMapViewIntensity` is above 0.
+   * S1 CDF sampler consumes, `overshoot/meanOvershoot`, so placement can be
+   * judged directly instead of inferred from raw channels — an ambient
+   * pedestal glows teal in the dust channel above without contributing any
+   * placement mass. A composite overlay, not a raw channel, which is why it
+   * defaults to 0 (off) while the other four default to 1. The view shows
+   * the density BEFORE texel-area weighting: the CDF multiplies by area, so
+   * outer texels weigh more than they glow here. Only reachable while
+   * `sfMapViewIntensity` is above 0.
    */
   readonly sfMapSeedingViewWeight: number;
   /**
