@@ -12,8 +12,8 @@
  * (`sfMapRingRadius`), so a linear-width approximation would under-weight
  * the geometrically-wider outer rings and over-seed the centre.
  *
- * Accumulated in a plain JS number (f64) so ~196k adds don't drift; only the
- * STORED prefix entries round to f32 (~768 KB for the 768x256 grid).
+ * Accumulated in a plain JS number (f64) so ~786k adds don't drift; only the
+ * STORED prefix entries round to f32 (~3 MB for the 1536x512 grid).
  */
 import { sfMapDustDensity } from './sfMapDustDensity';
 import { sfMapDustRingEdges } from './sfMapDustRingEdges';

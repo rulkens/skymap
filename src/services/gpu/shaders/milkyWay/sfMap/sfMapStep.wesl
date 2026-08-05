@@ -6,7 +6,7 @@
 // lives at its own texel forever, never resampled (see selfState below) —
 // only the neighbour lookup and arm-forcing sample drift with shear.
 // sfMapPack.wesl un-shears back to world coordinates once, at the end. Grid
-// is UNIFORM log-polar (768 az x 256 ring), not Gerola & Seiden's own
+// is UNIFORM log-polar (1536 az x 512 ring), not Gerola & Seiden's own
 // equal-area cells.
 
 import package::milkyWay::sfMap::sfMapShear::sfMapShearTexels;

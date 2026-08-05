@@ -146,7 +146,7 @@ export function createSfMapAutomaton(
       GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC,
   });
   // S4's low-pass divisor — one texel per BLUR_FACTOR x BLUR_FACTOR src
-  // block (96x32 at the current grid). rgba16float for the same
+  // block (192x64 at the current grid). rgba16float for the same
   // filterable-storage-format reason sfMapDustBlur.wesl documents.
   const sfMapDustBlurTex = device.createTexture({
     label: 'galaxy:sfMapDustBlurTex',

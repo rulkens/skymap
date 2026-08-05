@@ -1,6 +1,6 @@
 /**
  * galaxySfMapArmForcing — bakes the SSPSF automaton's arm-forcing field on
- * the CPU, onto the SAME 768x256 log-polar grid `sfMapStep.wesl` steps, from
+ * the CPU, onto the SAME 1536x512 log-polar grid `sfMapStep.wesl` steps, from
  * the EXISTING ridge functions the sprite/analytic arms are placed against
  * (`armRidgeCurvePoint`/`armCrossSigma`/`armFadeEnvelope`) — never
  * re-derived in WGSL, per research doc §19's "shared ridge truth by import,
@@ -20,8 +20,8 @@ import type { GalaxyFieldTuning } from '../../../../@types/galaxy/GalaxyFieldTun
  * `textureDimensions` rather than a mirrored const, so there is no second
  * copy to drift.
  */
-export const SF_MAP_AZ = 768;
-export const SF_MAP_RINGS = 256;
+export const SF_MAP_AZ = 1536;
+export const SF_MAP_RINGS = 512;
 
 /**
  * `@workgroup_size(16, 16)` is a genuine WGSL compile-time literal, hand-set
