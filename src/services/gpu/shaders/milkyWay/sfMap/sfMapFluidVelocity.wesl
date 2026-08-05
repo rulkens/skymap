@@ -80,26 +80,42 @@ const TILE_EVENT_CAP: u32 = 128u;
 var<workgroup> sharedEventIdx: array<u32, TILE_EVENT_CAP>;
 var<workgroup> sharedEventCount: atomic<u32>;
 
-// Verbatim from sfMapFluidStep.wesl — see that file if this ever needs a
-// second WESL caller (lib/raySphere's own graduation rule).
-fn valueNoiseRaw(p: vec2<f32>) -> f32 {
+// Non-negative wrap of a lattice x-coordinate into [0, period) — period is
+// an INTEGER so the corner hashed at x=period-1+1=period is the same corner
+// hashed at x=0 (see valueNoiseRaw below); this is what makes the noise
+// seamless across the az wrap.
+fn wrapLatticeX(x: f32, period: f32) -> f32 {
+  return x - period * floor(x / period);
+}
+
+// Diverged from sfMapFluidStep.wesl's history (see git log) by the addition
+// of xPeriod: wraps both lattice corners' x BEFORE hashing so x and
+// x + xPeriod hash identically. y is left unwrapped — the ring axis never
+// wraps.
+fn valueNoiseRaw(p: vec2<f32>, xPeriod: f32) -> f32 {
   let i = floor(p);
   let f = fract(p);
-  let a = hash21(i);
-  let b = hash21(i + vec2<f32>(1.0, 0.0));
-  let c = hash21(i + vec2<f32>(0.0, 1.0));
-  let d = hash21(i + vec2<f32>(1.0, 1.0));
+  let x0 = wrapLatticeX(i.x, xPeriod);
+  let x1 = wrapLatticeX(i.x + 1.0, xPeriod);
+  let a = hash21(vec2<f32>(x0, i.y));
+  let b = hash21(vec2<f32>(x1, i.y));
+  let c = hash21(vec2<f32>(x0, i.y + 1.0));
+  let d = hash21(vec2<f32>(x1, i.y + 1.0));
   let s = f * f * (3.0 - 2.0 * f);
   return mix(mix(a, b, s.x), mix(c, d, s.x), s.y);
 }
 
-fn fbm2(p: vec2<f32>) -> f32 {
+// Doubling frequency per octave must double xPeriod alongside it — an
+// octave's lattice runs at freq*p, so its wrap period scales the same way.
+fn fbm2(p: vec2<f32>, xPeriod: f32) -> f32 {
   var v = 0.0;
   var amp = 0.5;
   var freq = 1.0;
+  var period = xPeriod;
   for (var i = 0; i < 3; i++) {
-    v += amp * valueNoiseRaw(p * freq);
+    v += amp * valueNoiseRaw(p * freq, period);
     freq *= 2.0;
+    period *= 2.0;
     amp *= 0.5;
   }
   return v;
@@ -107,12 +123,21 @@ fn fbm2(p: vec2<f32>) -> f32 {
 
 // Divergence-free by construction: v = (dPsi/dy, -dPsi/dx) for a scalar
 // potential Psi. gridPos is already metric-corrected by the caller.
-fn curlVelocity(gridPos: vec2<f32>, curlScale: f32, genStep: f32) -> vec2<f32> {
-  let p = gridPos * curlScale + vec2<f32>(genStep * CURL_PHASE_SPEED, 0.0);
-  let n1 = fbm2(p + vec2<f32>(0.0, CURL_FD_EPS));
-  let n2 = fbm2(p - vec2<f32>(0.0, CURL_FD_EPS));
-  let n3 = fbm2(p + vec2<f32>(CURL_FD_EPS, 0.0));
-  let n4 = fbm2(p - vec2<f32>(CURL_FD_EPS, 0.0));
+//
+// x is quantized to an integer lattice period (azPeriod) because only an
+// integer period wraps seamlessly through valueNoiseRaw's hashing — az is
+// periodic (this IS the wrap seam). y keeps curlScale unquantized because
+// ring never wraps, so there's no seam to protect there. The quantization
+// snaps the effective az frequency by <1% at current defaults.
+fn curlVelocity(gridPos: vec2<f32>, azCount: u32, curlScale: f32, genStep: f32) -> vec2<f32> {
+  let azCountF = f32(azCount);
+  let azPeriod = max(1.0, round(azCountF * curlScale));
+  let xScale = azPeriod / azCountF;
+  let p = vec2<f32>(gridPos.x * xScale, gridPos.y * curlScale) + vec2<f32>(genStep * CURL_PHASE_SPEED, 0.0);
+  let n1 = fbm2(p + vec2<f32>(0.0, CURL_FD_EPS), azPeriod);
+  let n2 = fbm2(p - vec2<f32>(0.0, CURL_FD_EPS), azPeriod);
+  let n3 = fbm2(p + vec2<f32>(CURL_FD_EPS, 0.0), azPeriod);
+  let n4 = fbm2(p - vec2<f32>(CURL_FD_EPS, 0.0), azPeriod);
   let dPsiDy = (n1 - n2) / (2.0 * CURL_FD_EPS);
   let dPsiDx = (n3 - n4) / (2.0 * CURL_FD_EPS);
   return vec2<f32>(dPsiDy, -dPsiDx);
@@ -172,7 +197,7 @@ fn composedVelocity(
   let localDust = textureLoad(prevTex, vec2<i32>(az, ring), 0).z;
 
   let shearVelAz = sfMapShearTexels(u32(ring), ringCount, azCount, u.rMin, u.rMax, u.corotationRadius, u.shearStrength);
-  let curl = curlVelocity(vec2<f32>(f32(az), f32(ring) / azToRingMetric), u.curlScale, f32(genStep));
+  let curl = curlVelocity(vec2<f32>(f32(az), f32(ring) / azToRingMetric), azCount, u.curlScale, f32(genStep));
   let grad = forcingGradient(az, ring, azCountI, ringCountI, azToRingMetric);
   // Counterweight so 120 steps of convergent gathering can't run the local
   // dust pile past its own overshoot ceiling unchecked — see ARM_GATHER_SAT.
