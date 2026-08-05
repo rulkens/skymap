@@ -20,6 +20,7 @@
 import { ARM_SPAN_START_FRAC } from './armRidgeGeometry';
 import { armAgeWeight } from './dustLaneFeatures';
 import { sampleSfMapOrientation } from '../../../../utils/galaxy/sampleSfMapOrientation';
+import { warpHeight } from '../../../../utils/galaxy/warpHeight';
 import { warpSurfaceFrame } from '../../../../utils/galaxy/warpSurfaceFrame';
 import { gaussian } from '../../../../utils/random/gaussian';
 import type { GalaxyFieldArmRecord } from '../../../../@types/galaxy/GalaxyFieldArmRecord';
@@ -264,7 +265,7 @@ export function buildClusteredDiscPlacement<TPayload>(
   /** A complex seeded on an arm's lane, or null if this arm has no valid span (falls back to the smooth disc). */
   function placeArmLaneComplex(
     mode: Extract<ClusteredDiscPlacementMode, { kind: 'analytic' }>,
-  ): { center: Vec3; frame: CloudFrame } | null {
+  ): { center: Vec3; frame: CloudFrame; warped: boolean } | null {
     const armIndex = pickWeighted(rng, armWeights, armWeightSum);
     const arm = geometry.arms[armIndex]!;
     const logMin = Math.log(ARM_SPAN_START_FRAC);
@@ -304,10 +305,10 @@ export function buildClusteredDiscPlacement<TPayload>(
       config.sfMapOrientation,
       config.orientationDeltaStats,
     );
-    return { center, frame: orientedFrame };
+    return { center, frame: orientedFrame, warped: true };
   }
 
-  function placeSmoothDiscComplex(): { center: Vec3; frame: CloudFrame } {
+  function placeSmoothDiscComplex(): { center: Vec3; frame: CloudFrame; warped: boolean } {
     const k = pickWeighted(rng, config.discWeights, config.discWeightSum);
     const sigmaR = config.discSigmaR(k);
     const x = gaussian(rng) * sigmaR;
@@ -323,7 +324,7 @@ export function buildClusteredDiscPlacement<TPayload>(
       config.sfMapOrientation,
       config.orientationDeltaStats,
     );
-    return { center: [x, y, z], frame };
+    return { center: [x, y, z], frame, warped: false };
   }
 
   /**
@@ -339,6 +340,7 @@ export function buildClusteredDiscPlacement<TPayload>(
   ): {
     center: Vec3;
     frame: CloudFrame;
+    warped: boolean;
   } {
     const { radius, angle } = mode.samplePoint(rng);
     const x = Math.cos(angle) * radius;
@@ -352,13 +354,14 @@ export function buildClusteredDiscPlacement<TPayload>(
       config.sfMapOrientation,
       config.orientationDeltaStats,
     );
-    return { center: [x, y, z], frame };
+    return { center: [x, y, z], frame, warped: false };
   }
 
   /** `'analytic'` mode: armRoll is always drawn, even when `canUseArms` is false, so the rng draw order never shifts with geometry. */
   function placeAnalyticComplex(mode: Extract<ClusteredDiscPlacementMode, { kind: 'analytic' }>): {
     center: Vec3;
     frame: CloudFrame;
+    warped: boolean;
   } {
     // Arm bias re-rolled per complex, not per particle — a complex (and its
     // children) is the hierarchical unit real GMC/OB associations form at.
@@ -376,7 +379,9 @@ export function buildClusteredDiscPlacement<TPayload>(
    * fallback) rather than a single 1:1 function call, so a table entry would
    * just be this same function wrapped in an object literal.
    */
-  function placeComplex(mode: ClusteredDiscPlacementMode): { center: Vec3; frame: CloudFrame } {
+  function placeComplex(
+    mode: ClusteredDiscPlacementMode,
+  ): { center: Vec3; frame: CloudFrame; warped: boolean } {
     switch (mode.kind) {
       case 'analytic':
         return placeAnalyticComplex(mode);
@@ -400,20 +405,33 @@ export function buildClusteredDiscPlacement<TPayload>(
       const along = gaussian(rng) * childSpread * elongation;
       const across = gaussian(rng) * childSpread;
       const pole = gaussian(rng) * childSpread * CHILD_POLE_RATIO;
-      const center: Vec3 = [
+      const x =
         placement.center[0] +
-          placement.frame.along[0] * along +
-          placement.frame.across[0] * across +
-          placement.frame.pole[0] * pole,
-        placement.center[1] +
-          placement.frame.along[1] * along +
-          placement.frame.across[1] * across +
-          placement.frame.pole[1] * pole,
+        placement.frame.along[0] * along +
+        placement.frame.across[0] * across +
+        placement.frame.pole[0] * pole;
+      const z =
         placement.center[2] +
-          placement.frame.along[2] * along +
-          placement.frame.across[2] * across +
-          placement.frame.pole[2] * pole,
-      ];
+        placement.frame.along[2] * along +
+        placement.frame.across[2] * across +
+        placement.frame.pole[2] * pole;
+      const yFlat =
+        placement.center[1] +
+        placement.frame.along[1] * along +
+        placement.frame.across[1] * across +
+        placement.frame.pole[1] * pole;
+      // `placement.warped` is false for `smoothDisc`/`mapDensity` complexes
+      // (and the arm-lane fallback): those seed at y=0, tilted but never
+      // lifted (`armRidgeCurvePoint` bakes the lift in for the arm-lane path
+      // already). Cross-tier contract: a cloud must warp like the analytic
+      // components it renders alongside (`pushWarpedOuterDisc`, the ridge
+      // blobs) or the tiers split at the rim. Lifted at THIS child's own
+      // (x, z), not the complex's, so a spread-out child bends with the disc
+      // — no rng draw, so draw order is unaffected.
+      const y = placement.warped
+        ? yFlat
+        : yFlat + warpHeight(Math.hypot(x, z), Math.atan2(z, x), geometry);
+      const center: Vec3 = [x, y, z];
       const payload = drawPayload(rng, center, placement.frame);
       particles.push({ center, frame: placement.frame, ...payload });
     }
