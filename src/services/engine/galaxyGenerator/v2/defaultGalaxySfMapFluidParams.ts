@@ -65,4 +65,14 @@ export const DEFAULT_GALAXY_SF_MAP_FLUID_PARAMS: GalaxySfMapFluidParams = {
   // Off by default: this 2026-08-05 calibration predates the term, and must
   // stay byte-identical until the user pushes the slider.
   armDrag: 0,
+  // gasFloor=1 makes gasProfile identically 1.0 everywhere, so this
+  // calibration stays byte-identical to the pre-profile seed/regen until the
+  // user dials gasFloor down. Value is inert at that default; picked as
+  // roughly a third of this app's own Milky Way preset's rMax (~10.5-15.5,
+  // per galaxySfMapArmForcing.ts's own comment on outerRadius vs per-arm
+  // fadeRadius) so a future dial-in has a plausible starting scale.
+  gasScaleLength: 4.5,
+  // See gasScaleLength above — 1 keeps gasProfile === 1.0, this 2026-08-05
+  // calibration's implicit profile before this param existed.
+  gasFloor: 1,
 };

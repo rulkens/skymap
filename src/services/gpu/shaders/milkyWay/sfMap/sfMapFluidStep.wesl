@@ -11,6 +11,8 @@
 // eventAge/activity are EULERIAN (read from this texel's own previous
 // value, never resampled).
 
+import package::milkyWay::sfMap::sfMapShear::sfMapRingRadius;
+
 struct SfMapFluidConstants {
   rMin: f32,
   rMax: f32,
@@ -29,6 +31,12 @@ struct SfMapFluidConstants {
   // Pass-A-consumed only (sfMapFluidVelocity.wesl's composedVelocity) — kept
   // here for byte-identical layout, same discipline as diffusion above.
   armDrag: f32,
+  // gasProfile's exponential decline length, grid-radius units (same as
+  // rMin/rMax/corotationRadius) — see gasProfile below.
+  gasScaleLength: f32,
+  // gasProfile's r->infinity floor fraction [0,1] (the flat HI component);
+  // 1 makes the profile identically 1.0, the pre-profile calibration.
+  gasFloor: f32,
 }
 
 // Same layout as sfMapFluidVelocity.wesl's own copy (packSfMapFluidStepIndex.ts
@@ -63,6 +71,13 @@ const CONTINUITY_MULT_MAX: f32 = 1.4;
 @group(0) @binding(2) var nextTex: texture_storage_2d<rgba16float, write>;
 @group(0) @binding(3) var<uniform> stepIdx: SfMapFluidStepIndex;
 @group(0) @binding(4) var velocityTex: texture_2d<f32>;
+
+// Radial gas equilibrium: an exponential H2-like disc on top of a flat
+// gasFloor "HI" pedestal — both the step-0 seed and the regen relaxation
+// target below converge to this, not to a bare 1.0.
+fn gasProfile(r: f32) -> f32 {
+  return u.gasFloor + (1.0 - u.gasFloor) * exp(-r / u.gasScaleLength);
+}
 
 // Periodic az wrap, shared by divVelocity's own neighbour lookups — the
 // grid is periodic in az the same way everywhere it is read.
@@ -162,12 +177,18 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let az = gid.x;
   let ring = gid.y;
   let genStep = u32(stepIdx.step);
+  let r = sfMapRingRadius(ring, ringCount, u.rMin, u.rMax);
 
-  // Same seed as the automaton's own step 0 — the two generators must agree
-  // on what an unrun map looks like. Pass A is not dispatched for step 0
-  // (velocity is unused), so velocityTex is dead here.
+  // Dust seed still matches the automaton's own step 0 (SF_MAP_AMBIENT_DUST)
+  // — the two generators must agree on dust's unrun map. Gas now seeds at
+  // gasProfile(r) instead of a bare 1.0: identical to the automaton's
+  // uniform seed at the default gasFloor=1 (profile === 1 everywhere), and
+  // deliberately diverging once this generator's own radial profile is
+  // dialed in — the automaton has no such knob and stays uniform. Pass A is
+  // not dispatched for step 0 (velocity is unused), so velocityTex is dead
+  // here.
   if (genStep == 0u) {
-    textureStore(nextTex, vec2<i32>(i32(az), i32(ring)), vec4<f32>(1.0, 1.0e4, 0.0, SF_MAP_AMBIENT_DUST));
+    textureStore(nextTex, vec2<i32>(i32(az), i32(ring)), vec4<f32>(gasProfile(r), 1.0e4, 0.0, SF_MAP_AMBIENT_DUST));
     return;
   }
 
@@ -219,7 +240,12 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let selfEventAge = selfState.y;
   let selfActivity = selfState.z;
 
-  let gas = min(GAS_CEILING, diffusedGas + u.gasRegen);
+  // gasRegen is now a relaxation RATE toward gasProfile(r), not a flat
+  // refill: at the default profile (gasFloor=1, profile===1) it is close in
+  // scale to the old term (0.028*(1-gas) vs the old flat +0.028) but not
+  // identical, and it no longer pushes gas toward GAS_CEILING unconditionally
+  // — it relaxes toward the profile, the physically-meaningful equilibrium.
+  let gas = min(GAS_CEILING, max(0.0, diffusedGas + u.gasRegen * (gasProfile(r) - diffusedGas)));
   var eventAge = selfEventAge + 1.0;
   // "Core" threshold: an event only just born here dominates the intensity
   // sum, so this fires exactly at its birth texel/step, not its whole tail.

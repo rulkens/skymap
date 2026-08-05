@@ -360,7 +360,29 @@ function SfMapSection({ diagnostics }: SfMapSectionProps): ReactNode {
               format={(v) => v.toFixed(3)}
               onChange={(v) => patchFluid({ gasRegen: v })}
               path="fieldTuning.sfMapFluid.gasRegen"
-              info="Gas relaxation rate toward 1.0 per step, applied after advection — this generator's own contrast knob."
+              info="Gas relaxation rate toward gasProfile(r) per step, applied after advection — this generator's own contrast knob. At the default gas floor (1) the profile is flat 1.0 everywhere, so this reads as before."
+            />
+            <ParamSlider
+              label="Gas scale length"
+              value={fluid.gasScaleLength}
+              min={0.5}
+              max={20}
+              step={0.25}
+              format={(v) => v.toFixed(2)}
+              onChange={(v) => patchFluid({ gasScaleLength: v })}
+              path="fieldTuning.sfMapFluid.gasScaleLength"
+              info="Exponential decline length of the radial gas profile gasRegen relaxes toward, in grid-radius units (same as rMin/rMax/corotationRadius). Range spans roughly 0.5 to 1.5x this app's own Milky Way preset's typical rMax (~13). Inert while gas floor is 1."
+            />
+            <ParamSlider
+              label="Gas floor"
+              value={fluid.gasFloor}
+              min={0}
+              max={1}
+              step={0.01}
+              format={(v) => v.toFixed(2)}
+              onChange={(v) => patchFluid({ gasFloor: v })}
+              path="fieldTuning.sfMapFluid.gasFloor"
+              info="Flat HI floor the radial gas profile approaches at large r, as a fraction of the disc-centre value. 1 (default) makes the profile identically 1.0 everywhere — byte-identical to this calibration before the profile existed. Lower to let gas thin toward the outer disc."
             />
             <ParamSlider
               label="EMA rate"
@@ -377,12 +399,12 @@ function SfMapSection({ diagnostics }: SfMapSectionProps): ReactNode {
               label="Arm gather"
               value={fluid.armGather}
               min={0}
-              max={180}
-              step={1}
-              format={(v) => String(Math.round(v))}
+              max={15}
+              step={0.1}
+              format={(v) => v.toFixed(1)}
               onChange={(v) => patchFluid({ armGather: v })}
               path="fieldTuning.sfMapFluid.armGather"
-              info="Velocity pointing up the arm-forcing field's gradient, toward a ridge — the same baked field the automaton samples, read here as a texture. Damped as local dust piles up so it can't run away over a full rebuild."
+              info="Velocity pointing up the arm-forcing field's gradient, toward a ridge — the same baked field the automaton samples, read here as a texture. Damped as local dust piles up so it can't run away over a full rebuild. Above ~15 gather speed exceeds a texel/step at ridge gradients and spikes."
             />
             <ParamSlider
               label="Arm drag"

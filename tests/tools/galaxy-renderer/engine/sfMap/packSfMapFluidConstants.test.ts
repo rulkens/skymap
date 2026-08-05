@@ -40,6 +40,8 @@ const SENTINEL = {
   armGather: 4110,
   diffusion: 4111,
   armDrag: 4112,
+  gasScaleLength: 4113,
+  gasFloor: 4114,
 } as const;
 
 const input: SfMapFluidConstantsInput = {
@@ -59,6 +61,8 @@ const input: SfMapFluidConstantsInput = {
     armGather: SENTINEL.armGather,
     diffusion: SENTINEL.diffusion,
     armDrag: SENTINEL.armDrag,
+    gasScaleLength: SENTINEL.gasScaleLength,
+    gasFloor: SENTINEL.gasFloor,
   },
 };
 

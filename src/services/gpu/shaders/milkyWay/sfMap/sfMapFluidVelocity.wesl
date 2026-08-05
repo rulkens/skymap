@@ -32,6 +32,11 @@ struct SfMapFluidConstants {
   // below. Forcing peaks at 1 (galaxySfMapArmForcing.ts's clamp), so full
   // stall at a ridge crest needs armDrag >= 1.
   armDrag: f32,
+  // Pass-B-consumed only (sfMapFluidStep.wesl's gasProfile) — kept here for
+  // byte-identical layout, same discipline as diffusion above.
+  gasScaleLength: f32,
+  // Pass-B-consumed only — see gasScaleLength above.
+  gasFloor: f32,
 }
 
 // Same layout as sfMapFluidStep.wesl's own copy (packSfMapFluidStepIndex.ts
