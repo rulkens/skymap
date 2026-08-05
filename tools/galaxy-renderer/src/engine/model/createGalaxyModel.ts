@@ -627,8 +627,14 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     // the `arms` object around it, and both feed the field mixture anyway.
     const armsMoved = prev.arms !== fieldTuning.arms;
     const fieldMoved = armsMoved || prev.disc !== fieldTuning.disc;
-    // The HII tier and the bubble/cavity overlay read the same two sections.
-    const hiiMoved = armsMoved || prev.hii !== fieldTuning.hii;
+    // HII/the bubble overlay read `tuning.arms` ONLY through `armCrossSigma`'s
+    // `widthScale` (via `buildSfEventCatalog`/`buildArmProximityEnvelope`) —
+    // `contrast`/`excessScaleRatio`/`blobSharpness`/`cloud.*` feed ONLY the
+    // ridge chain above (`fieldMoved`), so a whole-section identity check here
+    // would rebuild HII's ~O(rings x az x arms) CDF sweep on an arm-cloud drag
+    // that cannot change its output.
+    const armsWidthMoved = prev.arms.widthScale !== fieldTuning.arms.widthScale;
+    const hiiMoved = armsWidthMoved || prev.hii !== fieldTuning.hii;
     const dustMoved = prev.dust !== fieldTuning.dust;
 
     if (fieldMoved || hiiMoved) {

@@ -215,6 +215,35 @@ function planRegions(
 const SF_MAP_POSITION_SALT = 0x53464d50; // "SFMP"
 
 /**
+ * Last-value memo for one of the three per-call `buildSfMapDustCdf` builds
+ * below — each is an O(rings x az [x arms]) pass that a tuning drag outside
+ * that tier's own discriminant (map identity, `armBias`, `arms.widthScale`)
+ * leaves byte-identical, since `buildSfMapDustCdf` is a pure function of
+ * exactly those inputs. `createGalaxyModel.ts` keeps `sfMap`/`geometry`
+ * reference-stable across a `setFieldTuning` call that doesn't touch them,
+ * so a single slot per tier is enough: only the CENTRAL galaxy's call ever
+ * hands in a non-null `sfMap` (extras pass `null` and never reach these three
+ * builders), so nothing else contends for the slot within one rebuild. Sound
+ * under ANY interleaving regardless — a key miss just rebuilds — so this can
+ * only cost performance, never correctness.
+ */
+type CachedCdf = { readonly key: readonly unknown[]; readonly cdf: GalaxySfMapDustCdf };
+
+function sameCdfKey(a: readonly unknown[], b: readonly unknown[]): boolean {
+  return a.length === b.length && a.every((v, i) => Object.is(v, b[i]));
+}
+
+function cachedCdf(
+  cache: CachedCdf | null,
+  key: readonly unknown[],
+  build: () => GalaxySfMapDustCdf,
+): CachedCdf {
+  return cache && sameCdfKey(cache.key, key) ? cache : { key, cdf: build() };
+}
+
+let seedingCdfCache: CachedCdf | null = null;
+
+/**
  * applySfMapSeeding — a POST-PASS over `planRegions`' output rather than a
  * resolver threaded into it: admission (which events survive `HII_MAX_COUNT`)
  * depends only on luminosity, never on where an event ends up, so replacing
@@ -243,7 +272,12 @@ function applySfMapSeeding(
   const weight = tuning.hii.sfMapSeeding ?? 0; // undefined (pre-feature stored tuning) means OFF
   if (weight <= 0 || !sfMap || regions.length === 0) return regions;
 
-  const cdf = buildSfMapDustCdf(sfMap, (texel) => texel.recentSf);
+  // `recentSf` alone, no tuning input at all — this CDF's only discriminant
+  // is the map itself, so the cache key is just `sfMap`.
+  seedingCdfCache = cachedCdf(seedingCdfCache, [sfMap], () =>
+    buildSfMapDustCdf(sfMap, (texel) => texel.recentSf),
+  );
+  const cdf = seedingCdfCache.cdf;
   if (!(cdf.total > 0)) return regions;
 
   const rng = mulberry32(seed ^ SF_MAP_POSITION_SALT);
@@ -412,6 +446,8 @@ function scatterAxesForCoherence(
  * because the cluster share folded into `totalFlux` is stellar continuum,
  * not Hα — see that binding's own comment at the call site.
  */
+let digCdfCache: CachedCdf | null = null;
+
 function buildDigVeil(
   geometry: GalaxyDescription,
   tuning: GalaxyFieldTuning,
@@ -429,10 +465,19 @@ function buildDigVeil(
   if (fraction <= 0 || !(dig.elongation > 0)) return [];
 
   const armBias = Math.min(1, Math.max(0, dig.armBias));
-  const envelope = buildArmProximityEnvelope(geometry, tuning);
-  const cdf = buildSfMapDustCdf(sfMap, (texel, radius, angle) =>
-    armBiasedDensity(texel.oldActivity, armBias, envelope, radius, angle),
-  );
+  // Discriminant is (map, geometry [proxy for `arms`], `arms.widthScale`,
+  // `armBias`) — everything else `buildArmProximityEnvelope`/`armBiasedDensity`
+  // read is baked into one of those four. `envelope` only gets built on a
+  // cache miss, so a `complexes`/`elongation`/`coherence`/`texture` drag
+  // (this tier's actually-common sliders) skips both the envelope setup AND
+  // the CDF's O(rings x az x arms) sweep.
+  digCdfCache = cachedCdf(digCdfCache, [sfMap, geometry, tuning.arms.widthScale, armBias], () => {
+    const envelope = buildArmProximityEnvelope(geometry, tuning);
+    return buildSfMapDustCdf(sfMap, (texel, radius, angle) =>
+      armBiasedDensity(texel.oldActivity, armBias, envelope, radius, angle),
+    );
+  });
+  const cdf = digCdfCache.cdf;
   if (!(cdf.total > 0)) return [];
 
   const digRatio = Math.min(DIG_FLUX_RATIO_MAX, fraction / (1 - fraction));
@@ -545,6 +590,8 @@ function associationChildColor(rng: () => number): Vec3 {
   ];
 }
 
+let assnCdfCache: CachedCdf | null = null;
+
 function buildBlueAssociations(
   geometry: GalaxyDescription,
   tuning: GalaxyFieldTuning,
@@ -559,16 +606,20 @@ function buildBlueAssociations(
   if (brightness <= 0) return [];
 
   const armBias = Math.min(1, Math.max(0, assn.armBias));
-  const envelope = buildArmProximityEnvelope(geometry, tuning);
-  const cdf = buildSfMapDustCdf(sfMap, (texel, radius, angle) =>
-    armBiasedDensity(
-      associationDensity(texel.gas, texel.recentSf, texel.oldActivity),
-      armBias,
-      envelope,
-      radius,
-      angle,
-    ),
-  );
+  // Same memoization `buildDigVeil` applies, own cache slot — see its comment.
+  assnCdfCache = cachedCdf(assnCdfCache, [sfMap, geometry, tuning.arms.widthScale, armBias], () => {
+    const envelope = buildArmProximityEnvelope(geometry, tuning);
+    return buildSfMapDustCdf(sfMap, (texel, radius, angle) =>
+      armBiasedDensity(
+        associationDensity(texel.gas, texel.recentSf, texel.oldActivity),
+        armBias,
+        envelope,
+        radius,
+        angle,
+      ),
+    );
+  });
+  const cdf = assnCdfCache.cdf;
   if (!(cdf.total > 0)) return [];
 
   // Stellar continuum like the embedded cluster core, not Hα like the

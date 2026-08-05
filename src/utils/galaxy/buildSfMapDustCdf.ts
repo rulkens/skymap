@@ -28,12 +28,19 @@ import { sfMapRingRadius } from './sfMapRingRadius';
 import type { GalaxySfMap } from '../../@types/galaxy/GalaxySfMap';
 import type { GalaxySfMapDustCdf } from '../../@types/galaxy/GalaxySfMapDustCdf';
 
-/** One texel's four decoded channels — see `GalaxySfMap`'s header for what each lane means and the rgba16float packing it comes from. */
+/**
+ * One texel's four decoded channels — see `GalaxySfMap`'s header for what
+ * each lane means and the rgba16float packing it comes from.
+ * CONTRACT: `buildSfMapDustCdf` hands its `density` callback ONE reused
+ * record, mutated per texel — a callback may read it freely but must never
+ * retain the reference past its own call, since the next texel overwrites it
+ * in place.
+ */
 export type SfMapDensityTexel = {
-  readonly gas: number;
-  readonly recentSf: number;
-  readonly oldActivity: number;
-  readonly dust: number;
+  gas: number;
+  recentSf: number;
+  oldActivity: number;
+  dust: number;
 };
 
 export function buildSfMapDustCdf(
@@ -44,6 +51,13 @@ export function buildSfMapDustCdf(
   const dTheta = (2 * Math.PI) / az;
   const prefix = new Float32Array(rings * az);
 
+  // Reused across all ~786k texels rather than a fresh object literal per
+  // texel — every call site (`hiiRegions.ts` x3, `dustParticleCloud.ts`)
+  // only reads these fields synchronously inside its `density` callback and
+  // never stores the record itself, so mutating it in place is safe; see the
+  // type's own doc for the contract this relies on.
+  const texel: SfMapDensityTexel = { gas: 0, recentSf: 0, oldActivity: 0, dust: 0 };
+
   let total = 0;
   for (let ring = 0; ring < rings; ring++) {
     const { rInner, rOuter } = sfMapDustRingEdges(ring, rings, rMin, rMax);
@@ -52,11 +66,11 @@ export function buildSfMapDustCdf(
     for (let azIdx = 0; azIdx < az; azIdx++) {
       const i = (ring * az + azIdx) * 4;
       const angle = (azIdx + 0.5) * dTheta;
-      const d = density(
-        { gas: data[i]!, recentSf: data[i + 1]!, oldActivity: data[i + 2]!, dust: data[i + 3]! },
-        radius,
-        angle,
-      );
+      texel.gas = data[i]!;
+      texel.recentSf = data[i + 1]!;
+      texel.oldActivity = data[i + 2]!;
+      texel.dust = data[i + 3]!;
+      const d = density(texel, radius, angle);
       total += d * texelArea;
       prefix[ring * az + azIdx] = total;
     }
