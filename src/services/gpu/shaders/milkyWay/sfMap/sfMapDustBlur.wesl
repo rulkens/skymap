@@ -13,6 +13,10 @@
 // is scale-invariant.
 
 const BLUR_FACTOR: u32 = 8u; // mirrors DUST_BLUR_FACTOR in createSfMapAutomaton.ts (TS is authoritative)
+// Mirrors SF_MAP_AMBIENT_DUST (sweptDustOvershoot.ts) — parity-tested in
+// constants.parity.test.ts. CONTRACT: dustDetail.wesl's numerator must blend
+// the identical overshoot term, or the detail ratio drifts with sweptMix.
+const SF_MAP_AMBIENT_DUST: f32 = 1.0;
 
 struct DustBlurParams {
   sweptMix: f32,
@@ -38,7 +42,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
         vec2<i32>(i32(gid.x * BLUR_FACTOR + i), i32(gid.y * BLUR_FACTOR + j)),
         0,
       );
-      sum += mix(t.x * t.z, t.w, params.sweptMix);
+      sum += mix(t.x * t.z, max(t.w - SF_MAP_AMBIENT_DUST, 0.0), params.sweptMix);
     }
   }
   // rgba16float: the one storage format that is ALSO filterable, which

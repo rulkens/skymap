@@ -7,10 +7,10 @@
  * should not get. Clouds are clumped/swept matter, so only the overshoot is
  * placement-worthy — ambient AND cavities alike clamp to zero here.
  *
- * `SF_MAP_AMBIENT_DUST` mirrors sfMapStep.wesl's step-0 seed
- * (`vec4<f32>(1.0, 1.0e4, 1.0, 0.0)`), an inline literal there rather than a
- * named WESL const (unlike `DUST_OVERSHOOT_CEILING`), so there is no live
- * TS<->WESL parity guard for this value today.
+ * `SF_MAP_AMBIENT_DUST` mirrors sfMapStep.wesl's step-0 seed, and is also
+ * what the two GPU sweptMix consumers (sfMapDustBlur.wesl, dustDetail.wesl)
+ * subtract off before blending — all three WESL mirrors are parity-tested
+ * against this export in constants.parity.test.ts.
  */
 import type { SfMapDensityTexel } from './buildSfMapDustCdf';
 

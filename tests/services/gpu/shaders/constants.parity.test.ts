@@ -23,6 +23,7 @@ import {
   SPEED_COLOR_MAX,
 } from '../../../../src/data/flow/flowFieldConstants';
 import { SF_MAP_WORKGROUP_SIZE } from '../../../../src/services/engine/galaxyGenerator/v2/galaxySfMapArmForcing';
+import { SF_MAP_AMBIENT_DUST } from '../../../../src/utils/galaxy/sweptDustOvershoot';
 
 /**
  * Extract every `const NAME: (u32|f32) = <number>;` from flow/constants.wesl.
@@ -108,5 +109,43 @@ describe('sfMap @workgroup_size(N, N) ↔ SF_MAP_WORKGROUP_SIZE parity', () => {
     expect(matchCount, 'no @workgroup_size(N, N) found in the sfMap shader chain').toBeGreaterThan(
       0,
     );
+  });
+});
+
+/**
+ * SF_MAP_AMBIENT_DUST (sweptDustOvershoot.ts) is mirrored into three WESL
+ * files that are not dedicated constant-mirror files, so — same idiom as
+ * bloomSeedingConstants.parity.test.ts's readWeslConst — this reads one
+ * named const per file rather than sweeping each for orphans. sfMapStep.wesl
+ * seeds every texel to this pedestal at step 0; sfMapDustBlur.wesl and
+ * dustDetail.wesl must subtract the SAME pedestal before blending sweptMix,
+ * or S4's detail ratio (dustDetail.wesl) drifts against its own blur divisor.
+ */
+function readWeslConst(relPath: string, name: string): number | undefined {
+  const text = readFileSync(join(process.cwd(), relPath), 'utf-8');
+  const re = /const\s+(\w+)\s*:\s*f32\s*=\s*([0-9]+(?:\.[0-9]+)?)[uf]?\s*;/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (m[1] === name) return parseFloat(m[2]!);
+  }
+  return undefined;
+}
+
+describe('SF_MAP_AMBIENT_DUST parity (sweptDustOvershoot.ts ↔ its WESL mirrors)', () => {
+  const files = [
+    'src/services/gpu/shaders/milkyWay/sfMap/sfMapStep.wesl',
+    'src/services/gpu/shaders/milkyWay/sfMap/sfMapDustBlur.wesl',
+    'src/services/gpu/shaders/milkyWay/field/dustDetail.wesl',
+  ];
+
+  it('each file\'s SF_MAP_AMBIENT_DUST equals the TS export', () => {
+    for (const file of files) {
+      const weslValue = readWeslConst(file, 'SF_MAP_AMBIENT_DUST');
+      expect(weslValue, `SF_MAP_AMBIENT_DUST is missing from ${file}`).toBeDefined();
+      expect(
+        weslValue,
+        `${file}: WESL SF_MAP_AMBIENT_DUST (${weslValue}) does not match TS SF_MAP_AMBIENT_DUST (${SF_MAP_AMBIENT_DUST})`,
+      ).toBe(SF_MAP_AMBIENT_DUST);
+    }
   });
 });

@@ -45,6 +45,11 @@ struct SfMapConstants {
 // overshoot itself. Never tighten this to flatten a bright rim.
 const DUST_OVERSHOOT_CEILING: f32 = 8.0;
 
+// The ambient dust pedestal every texel is seeded to at step 0 (see the
+// genStep == 0 branch below) — mirrors SF_MAP_AMBIENT_DUST in
+// sweptDustOvershoot.ts, parity-tested in constants.parity.test.ts.
+const SF_MAP_AMBIENT_DUST: f32 = 1.0;
+
 // A single scalar, but its own struct/binding: it is the one uniform that
 // varies per dispatch, given a STATIC (non-dynamic) offset into a buffer
 // holding every step's index — rebuildSfMap writes that buffer ONCE, before
@@ -129,7 +134,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // simplification as the flat gas seed; a radial disc profile is future
   // work, see 06-ca-dust-channel-sketch.md landmine 4).
   if (genStep == 0u) {
-    textureStore(nextTex, vec2<i32>(i32(az), i32(ring)), vec4<f32>(1.0, 1.0e4, 1.0, 0.0));
+    textureStore(nextTex, vec2<i32>(i32(az), i32(ring)), vec4<f32>(1.0, 1.0e4, SF_MAP_AMBIENT_DUST, 0.0));
     return;
   }
 

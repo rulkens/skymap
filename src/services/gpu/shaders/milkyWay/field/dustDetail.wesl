@@ -18,6 +18,10 @@ const DETAIL_EPS: f32 = 0.02;
 // One hot texel over a dead 8x8 block ratios near 30; uncapped that turns a
 // texel into a beacon rather than texture.
 const DETAIL_MAX: f32 = 8.0;
+// Mirrors SF_MAP_AMBIENT_DUST (sweptDustOvershoot.ts) — parity-tested in
+// constants.parity.test.ts. CONTRACT: sfMapDustBlur.wesl's blur divisor must
+// blend the identical overshoot term, or the detail ratio drifts with sweptMix.
+const SF_MAP_AMBIENT_DUST: f32 = 1.0;
 
 // rMin/rMax: same grid sfMapPresent.wesl's fs resolves through — written once
 // per rebuildSfMap, not every frame like io.wesl's 'u'.
@@ -60,7 +64,7 @@ fn dustDetailMultiplier(p: vec3<f32>, breakup: f32) -> f32 {
   // legacy/swept pair the CPU seeding and sfMapDustBlur.wesl blend, and needs
   // no mean-normalization here since a RATIO of two mixes is scale-invariant.
   let mapTexel = textureSampleLevel(sfMapTex, sfMapSmp, uv, 0.0);
-  let density = mix(mapTexel.x * mapTexel.z, mapTexel.w, u.dustDetail.w);
+  let density = mix(mapTexel.x * mapTexel.z, max(mapTexel.w - SF_MAP_AMBIENT_DUST, 0.0), u.dustDetail.w);
   let densityBlur = textureSampleLevel(sfMapBlurTex, sfMapSmp, uv, 0.0).x;
   let detail = (density + DETAIL_EPS) / (densityBlur + DETAIL_EPS);
   return clamp(1.0 + u.dustDetail.x * (detail - 1.0) * breakup, 0.0, DETAIL_MAX);
