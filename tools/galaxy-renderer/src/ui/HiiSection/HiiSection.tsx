@@ -89,6 +89,17 @@ function HiiSection(): ReactNode {
           path="fieldTuning.hii.cavityScale"
           info="Radius of the dust cavity a young event carves, as a fraction of its own HII radius. 0 leaves the dust undisturbed."
         />
+        <ParamSlider
+          label="Map seeding"
+          value={hii.sfMapSeeding}
+          min={0}
+          max={1}
+          step={0.05}
+          format={(v) => v.toFixed(2)}
+          onChange={(v) => patchHii({ sfMapSeeding: v })}
+          path="fieldTuning.hii.sfMapSeeding"
+          info="Fraction of HII events placed from the SF-map automaton's recentSf channel instead of the arm-ridge catalog. Ignition zeroes gas and age together, so map-seeded knots sit in dust-free pockets (the observed decorrelation). 0 = catalog placement exactly."
+        />
       </div>
     </CollapsibleSection>
   );

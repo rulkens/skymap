@@ -314,6 +314,10 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
     clusterStrength: 0.6,
     // Under 1 so the lit wall sits inside the swept dust rather than on it.
     cavityScale: 0.8,
+    // Map-seeded by default on this branch — the whole point is seeing dust
+    // and knots driven by the same automaton run. 0 recovers the arm-ridge
+    // catalog byte-identically.
+    sfMapSeeding: 1,
   },
   sfMap: DEFAULT_GALAXY_SF_MAP_PARAMS,
 };

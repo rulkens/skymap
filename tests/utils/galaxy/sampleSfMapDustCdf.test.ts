@@ -8,9 +8,14 @@
 import { describe, expect, it } from 'vitest';
 import { buildSfMapDustCdf } from '../../../src/utils/galaxy/buildSfMapDustCdf';
 import { sampleSfMapDustCdf } from '../../../src/utils/galaxy/sampleSfMapDustCdf';
+import { sfMapDustDensity } from '../../../src/utils/galaxy/sfMapDustDensity';
 import { sfMapDustRingEdges } from '../../../src/utils/galaxy/sfMapDustRingEdges';
 import { mulberry32 } from '../../../src/utils/random/mulberry32';
 import type { GalaxySfMap } from '../../../src/@types/galaxy/GalaxySfMap';
+
+/** Every fixture here only fills gas/oldActivity, so this is dust's own density exactly. */
+const buildCdf = (map: GalaxySfMap) =>
+  buildSfMapDustCdf(map, (gas, _recentSf, oldActivity) => sfMapDustDensity(gas, oldActivity));
 
 const AZ = 4;
 const RINGS = 4;
@@ -36,7 +41,7 @@ describe('sampleSfMapDustCdf', () => {
     const ring = 2;
     const azIdx = 1;
     const map = makeMap((data) => setDensity(data, ring, azIdx, 1));
-    const cdf = buildSfMapDustCdf(map);
+    const cdf = buildCdf(map);
     const rng = mulberry32(7);
 
     const { rInner, rOuter } = sfMapDustRingEdges(ring, RINGS, R_MIN, R_MAX);
@@ -61,7 +66,7 @@ describe('sampleSfMapDustCdf', () => {
       setDensity(data, 0, 0, 1);
       setDensity(data, 3, 0, 1);
     });
-    const cdf = buildSfMapDustCdf(map);
+    const cdf = buildCdf(map);
     const rng = mulberry32(11);
 
     const edgesA = sfMapDustRingEdges(0, RINGS, R_MIN, R_MAX);

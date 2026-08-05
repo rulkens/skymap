@@ -188,7 +188,10 @@ export function buildDustParticleCloud(
     | null = null;
   if (tuning.dust.sfMapSeeding && sfMap) {
     const map = sfMap; // narrowed alias so the closures below don't re-null-check
-    const cdf = buildSfMapDustCdf(map);
+    // (gas, oldActivity) — recentSf unused, see sfMapDustDensity's own header.
+    const cdf = buildSfMapDustCdf(map, (gas, _recentSf, oldActivity) =>
+      sfMapDustDensity(gas, oldActivity),
+    );
     if (cdf.total > 0) {
       placement = { kind: 'mapDensity', samplePoint: (mapRng) => sampleSfMapDustCdf(cdf, mapRng) };
       sampleMapTraits = (radius, angle) => {

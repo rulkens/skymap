@@ -27,4 +27,12 @@ export type GalaxyHiiTuning = {
    * a smudge behind a curtain rather than a hole with a lit wall.
    */
   readonly cavityScale: number;
+  /**
+   * Fraction of HII events placed from the SF map's `recentSf` channel
+   * instead of the arm-ridge catalog (0 = catalog exactly, 1 = fully
+   * map-seeded). `recentSf`, not `gas x oldActivity`, deliberately: ignition
+   * zeroes gas and age together, so knots avoid the dust the same way M74's
+   * do (Chevance decorrelation).
+   */
+  readonly sfMapSeeding: number;
 };

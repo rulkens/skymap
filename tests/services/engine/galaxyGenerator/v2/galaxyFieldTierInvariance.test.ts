@@ -56,6 +56,7 @@ function signatureOf(params: Record<string, unknown>, starCount: number): Signat
     DEFAULT_GALAXY_FIELD_TUNING,
     DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
     description.seed,
+    null,
   );
   return {
     components: mixture.length,

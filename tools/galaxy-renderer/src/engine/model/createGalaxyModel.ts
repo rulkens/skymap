@@ -271,13 +271,23 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
         rebuildDustMixture();
         repackFieldComponents();
       }
+      // Same "map landed after the synchronous build that asked for it"
+      // determinism problem `rebuildDustMixture` above solves, for the HII
+      // tier's own map-seeded positions.
+      if (fieldGeometry && fieldTuning.hii.sfMapSeeding > 0) {
+        hiiMixture = hiiMixtureOf(fieldGeometry, currentStarFormation(), readbacks.sfMapData);
+        repackHiiComponents();
+      }
     });
   }
 
   /**
-   * The same, for the CPU copy of `orientationTex`. Gated on
-   * `dust.sfMapSeeding`: the dust placement is the only consumer of the CPU copy
-   * — the debug overlay samples the texture on the GPU directly.
+   * The same, for the CPU copy of `orientationTex`. Dust-gated because the
+   * dust placement is the only consumer of the CPU copy — the debug overlay
+   * samples the texture on the GPU directly. Mirrors the HII re-run above:
+   * `orientationDataRebuild` only runs while `dust.sfMapSeeding` is on (see
+   * its own `wanted`), so this landing is the SAME opportunity
+   * `scheduleSfMapReadback`'s already took, not a second independent one.
    */
   function scheduleOrientationReadback(grid: GalaxySfMapGridRadius): void {
     readbacks.requestOrientation(grid, ({ data }) => {
@@ -289,6 +299,10 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
         repackFieldComponents();
       } else {
         reportOrientationDiagnostics();
+      }
+      if (fieldGeometry && fieldTuning.hii.sfMapSeeding > 0) {
+        hiiMixture = hiiMixtureOf(fieldGeometry, currentStarFormation(), readbacks.sfMapData);
+        repackHiiComponents();
       }
     });
   }
@@ -498,14 +512,20 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   /**
    * `geometry.seed` is what `buildHiiRegions` was called with when it still
    * lived inside `buildGalaxyFieldMixture` — the field's own generated seed,
-   * not a re-derivation.
+   * not a re-derivation. `sfMap` is null for every extra (same asymmetry as
+   * `rebuildDustMixture`'s central-only readback below) — extras have no
+   * automaton of their own.
    */
   function hiiMixtureOf(
     geometry: GalaxyDescription,
     starFormation: GalaxyStarFormationParams,
+    sfMap: GalaxySfMap | null,
     transform?: Pick<ExtraGalaxySpec, 'pos' | 'scale' | 'rotY' | 'tiltX'>,
   ): readonly GalaxyFieldComponent[] {
-    return place(buildHiiRegions(geometry, fieldTuning, starFormation, geometry.seed), transform);
+    return place(
+      buildHiiRegions(geometry, fieldTuning, starFormation, geometry.seed, sfMap),
+      transform,
+    );
   }
 
   /**
@@ -543,7 +563,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     // cached readbacks usable; see `dropIfGridMoved`.
     readbacks.dropIfGridMoved(sfMapGridRadius(fieldGeometry));
     fieldMixture = fieldMixtureOf(fieldGeometry);
-    hiiMixture = hiiMixtureOf(fieldGeometry, currentStarFormation());
+    hiiMixture = hiiMixtureOf(fieldGeometry, currentStarFormation(), readbacks.sfMapData);
     rebuildDustMixture();
     bubblePlacements.invalidate();
     repackFieldComponents();
@@ -590,13 +610,15 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     if (fieldMoved || hiiMoved) {
       if (fieldGeometry) {
         if (fieldMoved) fieldMixture = fieldMixtureOf(fieldGeometry);
-        if (hiiMoved) hiiMixture = hiiMixtureOf(fieldGeometry, currentStarFormation());
+        if (hiiMoved) {
+          hiiMixture = hiiMixtureOf(fieldGeometry, currentStarFormation(), readbacks.sfMapData);
+        }
       }
       extras = extras.map((e) => ({
         ...e,
         fieldMixture: fieldMoved ? fieldMixtureOf(e.fieldGeometry, e.transform) : e.fieldMixture,
         hiiMixture: hiiMoved
-          ? hiiMixtureOf(e.fieldGeometry, e.starFormation, e.transform)
+          ? hiiMixtureOf(e.fieldGeometry, e.starFormation, null, e.transform)
           : e.hiiMixture,
       }));
     }
@@ -682,7 +704,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
         transform,
         starFormation,
         fieldMixture: fieldMixtureOf(generated.geometry, transform),
-        hiiMixture: hiiMixtureOf(generated.geometry, starFormation, transform),
+        hiiMixture: hiiMixtureOf(generated.geometry, starFormation, null, transform),
       });
     }
     device.queue.submit([enc.finish()]);

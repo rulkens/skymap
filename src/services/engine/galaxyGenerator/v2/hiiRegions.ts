@@ -6,9 +6,9 @@
  * density through a radially-jittered shell, the way a real thin shell does.
  *
  * Flux is ADDITIVE and split across regions by their own `hiiLuminosityOf`
- * draw. PURITY INVARIANT: pure `(geometry, tuning, starFormation, seed) ->
- * flat data`, same discipline as `sfEventCatalog.ts`. Drawn by `createGalaxyEngine.ts`
- * into its OWN target (`hiiTex`), never folded into
+ * draw. PURITY INVARIANT: pure `(geometry, tuning, starFormation, seed,
+ * sfMap) -> flat data`, same discipline as `sfEventCatalog.ts`. Drawn by
+ * `createGalaxyEngine.ts` into its OWN target (`hiiTex`), never folded into
  * `galaxyFieldMixture.ts`'s output — see research doc §18.1: a shell sprite
  * is small and bright by construction, so sharing the smooth field's
  * downsampled target collapsed it into a bloom firefly.
@@ -21,13 +21,16 @@ import {
 } from './hiiRegionGeometry';
 import { armRidgeAngle, armRidgeCurvePoint } from './armRidgeGeometry';
 import { buildSfEventCatalog } from './sfEventCatalog';
+import { buildSfMapDustCdf } from '../../../../utils/galaxy/buildSfMapDustCdf';
 import { inverseCovarianceFromFrame } from '../../../../utils/galaxy/inverseCovarianceFromFrame';
+import { sampleSfMapEventPosition } from '../../../../utils/galaxy/sampleSfMapEventPosition';
 import { warpSurfaceFrame } from '../../../../utils/galaxy/warpSurfaceFrame';
 import { gaussian } from '../../../../utils/random/gaussian';
 import { mulberry32 } from '../../../../utils/random/mulberry32';
 import type { GalaxyFieldComponent } from '../../../../@types/galaxy/GalaxyFieldComponent';
 import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../../../../@types/galaxy/GalaxyFieldTuning';
+import type { GalaxySfMap } from '../../../../@types/galaxy/GalaxySfMap';
 import type { GalaxyStarFormationParams } from '../../../../@types/galaxy/GalaxyStarFormationParams';
 import type { SfEvent } from '../../../../@types/galaxy/SfEvent';
 import type { Vec3 } from '../../../../@types/math/Vec3';
@@ -166,11 +169,55 @@ function planRegions(
   return kept;
 }
 
+/** Dedicated rng stream salt for the map-position draws — distinct from "HII " (sprite scatter) and "DUST"/"ARMC". */
+const SF_MAP_POSITION_SALT = 0x53464d50; // "SFMP"
+
+/**
+ * applySfMapSeeding — a POST-PASS over `planRegions`' output rather than a
+ * resolver threaded into it: admission (which events survive `HII_MAX_COUNT`)
+ * depends only on luminosity, never on where an event ends up, so replacing
+ * `center` afterward changes nothing about which regions exist — it keeps
+ * `planRegions` pure and the `sfMapSeeding === 0` path byte-identical, with
+ * no seeding-aware branch inside the admission logic itself.
+ *
+ * FIXED 4 draws per kept region (1 blend decision + 3 from
+ * `sampleSfMapEventPosition`'s CDF sample) whether or not that region takes
+ * the map path — `sampleSfMapEventPosition` runs unconditionally below — so
+ * moving the `sfMapSeeding` slider only ever changes which regions swap
+ * centres, never the rng draws (and hence positions) of the ones that don't.
+ *
+ * Weighted by `recentSf` alone, not `sfMapDustDensity`'s `gas x oldActivity`:
+ * ignition zeroes gas and age in the same cell, so this is anti-correlated
+ * with the dust CDF by construction — knots avoid the dust the automaton
+ * just cleared, the same decorrelation M74 shows (Chevance+2020).
+ */
+function applySfMapSeeding(
+  regions: readonly RegionPlan[],
+  geometry: GalaxyDescription,
+  tuning: GalaxyFieldTuning,
+  sfMap: GalaxySfMap | null,
+  seed: number,
+): readonly RegionPlan[] {
+  const weight = tuning.hii.sfMapSeeding ?? 0; // undefined (pre-feature stored tuning) means OFF
+  if (weight <= 0 || !sfMap || regions.length === 0) return regions;
+
+  const cdf = buildSfMapDustCdf(sfMap, (_gas, recentSf) => recentSf);
+  if (!(cdf.total > 0)) return regions;
+
+  const rng = mulberry32(seed ^ SF_MAP_POSITION_SALT);
+  return regions.map((region) => {
+    const takeMap = rng() < weight;
+    const mapCenter = sampleSfMapEventPosition(cdf, geometry, rng);
+    return takeMap ? { ...region, center: mapCenter } : region;
+  });
+}
+
 export function buildHiiRegions(
   geometry: GalaxyDescription,
   tuning: GalaxyFieldTuning,
   starFormation: GalaxyStarFormationParams,
   seed: number,
+  sfMap: GalaxySfMap | null,
 ): readonly GalaxyFieldComponent[] {
   if (
     !tuning.hii.enabled ||
@@ -182,8 +229,9 @@ export function buildHiiRegions(
     return [];
   }
 
-  const regions = planRegions(geometry, tuning, starFormation, seed);
-  if (regions.length === 0) return [];
+  const catalogRegions = planRegions(geometry, tuning, starFormation, seed);
+  if (catalogRegions.length === 0) return [];
+  const regions = applySfMapSeeding(catalogRegions, geometry, tuning, sfMap, seed);
 
   let luminositySum = 0;
   for (const region of regions) luminositySum += region.luminosity;
