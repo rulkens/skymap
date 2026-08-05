@@ -694,11 +694,13 @@ export async function createGalaxyEngine(
   }
   // The HII pass reuses `splatPipe` itself (same shader, same emission math)
   // against its own header/storage buffers and its own target.
-  // `dustMapTex`/`dustMapSampler` are bound because splat.wesl's fs imports
-  // both unconditionally, but `packFieldHeaderUniforms`'s `primaryCount` is
-  // always packed 0 for this header (see `drawFrame`), so the dust-attenuation
-  // branch never triggers — HII does not (yet) darken under the lane it may
-  // sit inside. No 3/7/8/9 here either, for the same reason `splatBG` has
+  // `dustMapTex`/`dustMapSampler` are bound because splat.wesl's fs samples
+  // them for this pass too now: `packFieldHeaderUniforms`'s `primaryCount` is
+  // packed to this pass's OWN instance count for this header (see
+  // `drawFrame`), so `instanceIndex < primaryCount` is true for every HII
+  // sprite and the dust-attenuation branch fires across the whole tier — the
+  // same dust law the primary disc reads, so a shell embedded in a lane
+  // darkens with it. No 3/7/8/9 here either, for the same reason `splatBG` has
   // none: `splatPipe`'s shader (splat.wesl) no longer references dustDetail.
   // Bindings 4/5 (dustNoiseTex/dustNoiseSampler) ARE bound and DO get
   // sampled here — this header's own `dustDetail.y`/`.z` carry the real
@@ -1016,10 +1018,21 @@ export async function createGalaxyEngine(
     device.queue.writeBuffer(fieldUbo, 0, fieldData);
 
     // The HII tier's own header, same camera basis, its own target's pixel
-    // size, and no dust: `primaryCount` 0 means splat.wesl's fs gates its
-    // attenuation branch on `input.inst < 0`, which is never true, so it
-    // always takes the plain (unattenuated) emission path — HII does not
-    // (yet) darken under the dust lane it may physically sit inside.
+    // size. `primaryCount` is packed to this pass's OWN instance count
+    // (`emissionCount` below), not the primary galaxy's — splat.wesl's fs
+    // gates its attenuation branch on `input.inst < primaryCount`, which is
+    // then true for every HII sprite, so the whole tier darkens under the
+    // same dust law the disc reads (an embedded shell/DIG/association is not
+    // exempt just because its sprite lives on its own target).
+    //
+    // `dust.extinctionRgb`/`.slices` carry the field header's own live values
+    // — the only two lanes splat.wesl's attenuation branch reads. Everything
+    // else in the bag stays INERT (matching the previous no-dust default):
+    // `noise`/`detail`/`sweptMix`/`count`/`mapHeightPx` feed dustMap.wesl's
+    // accumulation pass, which this draw never runs — carrying the field's
+    // real `dust.noise` here would silently retune `hiiNoiseTerm`'s sampling
+    // frequency (`u.dustNoise.x`, splat.wesl's OWN reader of that lane) as a
+    // side effect of a fix that is only about attenuation.
     //
     // `debugViews`/`sfMapChannels` are the same values as above. Only
     // `galaxyWeight` is read by this pass's own draw (hiiBG binds none of the
@@ -1029,8 +1042,17 @@ export async function createGalaxyEngine(
       {
         camera: fieldCamera,
         emissionCount: model.hiiComps.count,
-        primaryCount: 0,
+        primaryCount: model.hiiComps.count,
         targetSizePx: targets.reducedSize(render.hiiDivisor),
+        dust: {
+          count: 0,
+          extinctionRgb: model.dustHeaderLanes.extinctionRgb,
+          noise: { tileUnits: 1, amplitude: 0, cloudOffset: 0, contrastExp: 1 },
+          detail: 0,
+          sweptMix: 0,
+          slices: dustSlices,
+          mapHeightPx: 0,
+        },
         // The tier-global texture scale/contrast — see `hiiTexture`'s own
         // doc for why only THIS header (never the field one above) carries
         // real values.
