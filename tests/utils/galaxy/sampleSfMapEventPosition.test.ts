@@ -68,7 +68,7 @@ describe('sampleSfMapEventPosition', () => {
     const ring = 3;
     const azIdx = 1;
     const map = makeSingleHotMap(ring, azIdx);
-    const cdf = buildSfMapDustCdf(map, (_gas, recentSf) => recentSf);
+    const cdf = buildSfMapDustCdf(map, (texel) => texel.recentSf);
     const rng = mulberry32(7);
 
     const { rInner, rOuter } = sfMapDustRingEdges(ring, RINGS, R_MIN, R_MAX);

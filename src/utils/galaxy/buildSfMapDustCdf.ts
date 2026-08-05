@@ -1,15 +1,19 @@
 /**
  * buildSfMapDustCdf — S1: replaces rejection sampling of the SF map's
  * placement density with an exact inverse-CDF. One pass over every (ring,
- * az) texel accumulates `density(gas, recentSf, oldActivity) x texelArea`
- * into a running prefix sum; `sampleSfMapDustCdf` then draws exactly
- * proportional to that mass with a single binary search — no rejection, no
- * grid-max normalisation (a CDF needs neither; see
+ * az) texel accumulates `density(texel, radius, angle) x texelArea` into a
+ * running prefix sum; `sampleSfMapDustCdf` then draws exactly proportional
+ * to that mass with a single binary search — no rejection, no grid-max
+ * normalisation (a CDF needs neither; see
  * docs/research/m74-jwst/07-sprite-seeding.md S1).
  *
  * `density` is a caller-supplied channel blend, not fixed to dust's own
- * `sfMapDustDensity` — HII event placement (`hiiRegions.ts`) weights by
- * `recentSf` alone instead, see that call site for why.
+ * `sfMapDustDensity` — every tier that seeds off the map (dust, HII catalog,
+ * DIG, associations) weights differently, see each call site. `radius`/
+ * `angle` are the texel's own centre, in the same units the ring/az geometry
+ * below uses internally (ring-centre radius via `sfMapRingRadius`, bin-centre
+ * angle) — a caller reweighting by arm proximity (`hiiRegions.ts`'s
+ * `armBias`) needs them; one that doesn't just ignores the extra args.
  *
  * texelArea is an annular-SECTOR area (`0.5 x dTheta x (rOuter^2 -
  * rInner^2)`), not a bare `dr x r x dTheta`: the grid's rings are LOG-spaced
@@ -20,12 +24,21 @@
  * STORED prefix entries round to f32 (~3 MB for the 1536x512 grid).
  */
 import { sfMapDustRingEdges } from './sfMapDustRingEdges';
+import { sfMapRingRadius } from './sfMapRingRadius';
 import type { GalaxySfMap } from '../../@types/galaxy/GalaxySfMap';
 import type { GalaxySfMapDustCdf } from '../../@types/galaxy/GalaxySfMapDustCdf';
 
+/** One texel's four decoded channels — see `GalaxySfMap`'s header for what each lane means and the rgba16float packing it comes from. */
+export type SfMapDensityTexel = {
+  readonly gas: number;
+  readonly recentSf: number;
+  readonly oldActivity: number;
+  readonly dust: number;
+};
+
 export function buildSfMapDustCdf(
   map: GalaxySfMap,
-  density: (gas: number, recentSf: number, oldActivity: number) => number,
+  density: (texel: SfMapDensityTexel, radius: number, angle: number) => number,
 ): GalaxySfMapDustCdf {
   const { az, rings, rMin, rMax, data } = map;
   const dTheta = (2 * Math.PI) / az;
@@ -35,9 +48,15 @@ export function buildSfMapDustCdf(
   for (let ring = 0; ring < rings; ring++) {
     const { rInner, rOuter } = sfMapDustRingEdges(ring, rings, rMin, rMax);
     const texelArea = 0.5 * dTheta * (rOuter * rOuter - rInner * rInner);
+    const radius = sfMapRingRadius(ring, rings, rMin, rMax);
     for (let azIdx = 0; azIdx < az; azIdx++) {
       const i = (ring * az + azIdx) * 4;
-      const d = density(data[i]!, data[i + 1]!, data[i + 2]!);
+      const angle = (azIdx + 0.5) * dTheta;
+      const d = density(
+        { gas: data[i]!, recentSf: data[i + 1]!, oldActivity: data[i + 2]!, dust: data[i + 3]! },
+        radius,
+        angle,
+      );
       total += d * texelArea;
       prefix[ring * az + azIdx] = total;
     }

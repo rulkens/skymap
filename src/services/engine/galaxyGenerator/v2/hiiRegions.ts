@@ -20,14 +20,11 @@ import {
   hiiRadiusUnits,
 } from './hiiRegionGeometry';
 import {
-  ARM_SPAN_START_FRAC,
   armCrossSigma,
   armFadeEnvelope,
   armRidgeAngle,
   armRidgeCurvePoint,
-  armRidgeFrameAt,
 } from './armRidgeGeometry';
-import { pickWeighted } from './clusteredDiscPlacement';
 import { armAgeWeight } from './dustLaneFeatures';
 import { buildSfEventCatalog } from './sfEventCatalog';
 import { buildSfMapDustCdf } from '../../../../utils/galaxy/buildSfMapDustCdf';
@@ -110,8 +107,6 @@ export const DIG_MAX_COUNT = 1440;
 const DIG_COMPLEX_SPREAD_PC = 250;
 /** Children flatten relative to their complex's in-plane extent — same ratio `clusteredDiscPlacement.ts`'s (private) `CHILD_POLE_RATIO` uses. */
 const DIG_CHILD_POLE_RATIO = 0.4;
-/** Bounded rejection-sampling tries for an arm-lane complex, mirroring `clusteredDiscPlacement.ts`'s (private) `ARM_FADE_REJECTION_TRIES`. */
-const DIG_ARM_FADE_REJECTION_TRIES = 24;
 
 const TAU_ROOT3 = (2 * Math.PI) ** 1.5;
 
@@ -248,7 +243,7 @@ function applySfMapSeeding(
   const weight = tuning.hii.sfMapSeeding ?? 0; // undefined (pre-feature stored tuning) means OFF
   if (weight <= 0 || !sfMap || regions.length === 0) return regions;
 
-  const cdf = buildSfMapDustCdf(sfMap, (_gas, recentSf) => recentSf);
+  const cdf = buildSfMapDustCdf(sfMap, (texel) => texel.recentSf);
   if (!(cdf.total > 0)) return regions;
 
   const rng = mulberry32(seed ^ SF_MAP_POSITION_SALT);
@@ -260,68 +255,26 @@ function applySfMapSeeding(
 }
 
 /**
- * A DIG complex's local flow-direction frame — the arm tangent on the
- * arm-lane path, the azimuthal tangent (`warpSurfaceFrame`) on the map-CDF
- * path, DIG's default "flow direction" since it shears azimuthally. `warped`
- * mirrors `clusteredDiscPlacement.ts`'s own flag: true only on the arm-lane
- * path, whose `point` already sits at its true warped height
- * (`armRidgeCurvePoint` bakes it in) — children must NOT be lifted a second
- * time, the same contract that sampler's own children honour.
+ * A DIG/association complex's local flow-direction frame — the azimuthal
+ * tangent (`warpSurfaceFrame`), the default "flow direction" since both
+ * tiers shear azimuthally. Flat reference height (`point[1] = 0`); the true
+ * warp lift is applied per CHILD below, at that child's own (x, z), not
+ * baked into the seed.
  */
 type DigSeedFrame = {
   readonly point: Vec3;
   readonly along: Vec3;
   readonly across: Vec3;
   readonly pole: Vec3;
-  readonly warped: boolean;
 };
 
 /**
- * A DIG complex seeded on an arm's lane, following the arm's own flux the
- * way `armParticleCloud.ts`'s sprites do — bounded rejection sampling
- * against `armFadeEnvelope`, keeping the LAST draw on exhaustion (see
- * `clusteredDiscPlacement.ts`'s own `ARM_FADE_REJECTION_TRIES` doc for what
- * that costs at high tilt; DIG has no radial-bias knob, so this never runs
- * hot). NOT routed through `buildClusteredDiscPlacement`'s `'analytic'`
- * mode: that mode's non-arm fallback is hardwired to the smooth DISC
- * profile, where DIG's own fallback is the map's `oldActivity` CDF — a
- * third mode the tagged union doesn't express. Returns null when the picked
- * arm has no valid span (the arm-lane path is skipped for this complex).
- */
-function placeDigArmComplex(
-  rng: () => number,
-  geometry: GalaxyDescription,
-  armWeights: readonly number[],
-  armWeightSum: number,
-): DigSeedFrame | null {
-  const armIndex = pickWeighted(rng, armWeights, armWeightSum);
-  const arm = geometry.arms[armIndex]!;
-  const logMin = Math.log(ARM_SPAN_START_FRAC);
-  const logMax = Math.log(arm.fadeRadius / geometry.armStartRadius);
-  if (!(logMax > logMin)) return null;
-
-  let logR = logMin;
-  for (let tries = 0; tries < DIG_ARM_FADE_REJECTION_TRIES; tries++) {
-    logR = logMin + rng() * (logMax - logMin);
-    const radius = geometry.armStartRadius * Math.exp(logR);
-    if (rng() < armFadeEnvelope(radius, geometry, arm)) break;
-  }
-  const frame = armRidgeFrameAt(logR, geometry, arm);
-  return {
-    point: frame.point,
-    along: frame.along,
-    across: frame.across,
-    pole: frame.pole,
-    warped: true,
-  };
-}
-
-/**
- * A DIG complex CDF-sampled from the map's `oldActivity` channel — the
- * fallback for complexes that don't land on an arm lane. Flat reference
- * height (`point[1] = 0`), like `clusteredDiscPlacement.ts`'s own
- * `'mapDensity'` mode: the true warp lift is applied per CHILD below, at
- * that child's own (x, z), not baked into the seed.
+ * A DIG or association complex CDF-sampled from its tier's own map density
+ * (`buildDigVeil`'s `oldActivity` CDF, `buildBlueAssociations`'s
+ * `associationDensity` one) — the ONE substrate every complex draws from.
+ * `armBias` no longer forks this into a second, arm-lane placement path (see
+ * `buildArmProximityEnvelope`): it reweights the CDF itself before this ever
+ * runs, so a caller doesn't need to know it exists.
  */
 function placeDigMapComplex(
   rng: () => number,
@@ -331,18 +284,94 @@ function placeDigMapComplex(
   const { radius, angle } = sampleSfMapDustCdf(cdf, rng);
   const point: Vec3 = [radius * Math.cos(angle), 0, radius * Math.sin(angle)];
   const surf = warpSurfaceFrame(radius, angle, geometry);
-  return { point, along: surf.along, across: surf.across, pole: surf.pole, warped: false };
+  return { point, along: surf.along, across: surf.across, pole: surf.pole };
+}
+
+/**
+ * arm-proximity reweighting kernel for `armBias` — how close a (radius,
+ * angle) point sits to ANY arm's ridge, age-weighted the way the arm-lane
+ * picker this replaced used to weight WHICH arm to draw from
+ * (`armAgeWeight`). Radius-keyed memo rather than a caller-driven per-ring
+ * table: `buildSfMapDustCdf`'s own loop is ring-major (the same radius
+ * repeats `az` times before the next ring), so caching on "radius changed
+ * since the last call" gets the one-recompute-per-ring cost without this
+ * function needing to know a ring loop drives it.
+ *
+ * Cross-arm distance is the small-angle arc length `radius * deltaAngle`
+ * against `armCrossSigma`'s own Gaussian width (matches `pushArmRidges`'s
+ * blob sigma in `galaxyFieldMixture.ts`) — a 2D approximation in the texel's
+ * own (radius, angle) plane, not the 3D warped ridge `armRidgeCurvePoint`
+ * traces, which this density-only reweighting doesn't need.
+ */
+function buildArmProximityEnvelope(
+  geometry: GalaxyDescription,
+  tuning: GalaxyFieldTuning,
+): (radius: number, angle: number) => number {
+  const arms = geometry.arms;
+  if (arms.length === 0) return () => 0;
+  const ageWeights = arms.map((arm) => armAgeWeight(arm));
+  const maxAgeWeight = Math.max(...ageWeights);
+
+  let cachedRadius = NaN;
+  let invSigma = 0;
+  const ridgeAngles = new Array<number>(arms.length);
+  const weights = new Array<number>(arms.length);
+
+  function refresh(radius: number): void {
+    cachedRadius = radius;
+    const logR = Math.log(radius / geometry.armStartRadius);
+    const sigma = armCrossSigma(radius, geometry, tuning);
+    invSigma = sigma > 0 ? 1 / sigma : 0;
+    for (let i = 0; i < arms.length; i++) {
+      const arm = arms[i]!;
+      ridgeAngles[i] = armRidgeAngle(logR, geometry, arm);
+      weights[i] = (ageWeights[i]! / maxAgeWeight) * armFadeEnvelope(radius, geometry, arm);
+    }
+  }
+
+  return (radius: number, angle: number): number => {
+    if (radius !== cachedRadius) refresh(radius);
+    if (invSigma <= 0) return 0;
+    let acc = 0;
+    for (let i = 0; i < arms.length; i++) {
+      const w = weights[i]!;
+      if (w <= 0) continue;
+      const raw = angle - ridgeAngles[i]!;
+      const wrapped = raw - 2 * Math.PI * Math.round(raw / (2 * Math.PI));
+      const z = radius * wrapped * invSigma;
+      acc += w * Math.exp(-0.5 * z * z);
+    }
+    return Math.min(1, acc);
+  };
+}
+
+/**
+ * `mix(1, envelope(radius, angle), armBias)` applied multiplicatively to a
+ * tier's own channel density — 0 leaves `base` untouched (this is what keeps
+ * `armBias` a pure reweighting rather than a second placement density), 1
+ * replaces it with the arm-proximity weight outright. `armBias <= 0` skips
+ * the envelope call entirely, so the off setting never pays for the `exp()`
+ * this runs per texel at `armBias > 0`.
+ */
+function armBiasedDensity(
+  base: number,
+  armBias: number,
+  envelope: (radius: number, angle: number) => number,
+  radius: number,
+  angle: number,
+): number {
+  if (armBias <= 0) return base;
+  return base * (1 + armBias * (envelope(radius, angle) - 1));
 }
 
 /**
  * Blends a seed's in-plane scatter axes toward a fresh random direction —
- * `dig.coherence` 1 keeps them exactly as `placeDigArmComplex`/
- * `placeDigMapComplex` returned them, 0 rotates them to a uniformly random
- * angle. The same in-plane 2D rotation `clusteredDiscPlacement.ts`'s
- * `rotateFrameToOrientation` applies for ITS coherence blend (toward a
- * map-MEASURED angle, not a random one) — `pole` never moves there either.
- * `rng` is drawn unconditionally so the draw order never shifts with the
- * coherence knob.
+ * `dig.coherence` 1 keeps them exactly as `placeDigMapComplex` returned
+ * them, 0 rotates them to a uniformly random angle. The same in-plane 2D
+ * rotation `clusteredDiscPlacement.ts`'s `rotateFrameToOrientation` applies
+ * for ITS coherence blend (toward a map-MEASURED angle, not a random one) —
+ * `pole` never moves there either. `rng` is drawn unconditionally so the
+ * draw order never shifts with the coherence knob.
  */
 function scatterAxesForCoherence(
   frame: DigSeedFrame,
@@ -368,12 +397,13 @@ function scatterAxesForCoherence(
 
 /**
  * buildDigVeil — the DIG tier's own complex/children placement (see
- * `GalaxyHiiDigTuning`): `dig.complexes` seeds, `dig.armBias` of them on an
- * arm lane and the rest CDF-sampled from the map's `oldActivity`, each
- * scattering `dig.childrenPerComplex` blobs area-preservingly along/across
- * its local flow direction (`dig.elongation`, `dig.coherence`) — mirrors
- * `dustParticleCloud.ts`'s S3 aspect convention (`along = spread*sqrt(e)`,
- * `across = spread/sqrt(e)`).
+ * `GalaxyHiiDigTuning`): `dig.complexes` seeds CDF-sampled from the map's
+ * `oldActivity` channel (`armBias` reweights that SAME CDF toward the arm
+ * envelope rather than forking a second placement path — see
+ * `buildArmProximityEnvelope`), each scattering `dig.childrenPerComplex`
+ * blobs area-preservingly along/across its local flow direction
+ * (`dig.elongation`, `dig.coherence`) — mirrors `dustParticleCloud.ts`'s S3
+ * aspect convention (`along = spread*sqrt(e)`, `across = spread/sqrt(e)`).
  *
  * Gated (and its rng stream only consulted) when `dig.fraction > 0`, a map
  * is handed in, and that map's `oldActivity` CDF has nonzero mass — same
@@ -398,7 +428,11 @@ function buildDigVeil(
   const fraction = Math.min(0.999, Math.max(0, dig.fraction));
   if (fraction <= 0 || !(dig.elongation > 0)) return [];
 
-  const cdf = buildSfMapDustCdf(sfMap, (_gas, _recentSf, oldActivity) => oldActivity);
+  const armBias = Math.min(1, Math.max(0, dig.armBias));
+  const envelope = buildArmProximityEnvelope(geometry, tuning);
+  const cdf = buildSfMapDustCdf(sfMap, (texel, radius, angle) =>
+    armBiasedDensity(texel.oldActivity, armBias, envelope, radius, angle),
+  );
   if (!(cdf.total > 0)) return [];
 
   const digRatio = Math.min(DIG_FLUX_RATIO_MAX, fraction / (1 - fraction));
@@ -417,12 +451,8 @@ function buildDigVeil(
   if (complexes <= 0) return [];
   const totalChildren = complexes * childrenPerComplex;
 
-  const armBias = Math.min(1, Math.max(0, dig.armBias));
   const elongation = dig.elongation;
   const coherence = Math.min(1, Math.max(0, dig.coherence));
-  const canUseArms = geometry.numArms > 0;
-  const armWeights = geometry.arms.map((arm) => armAgeWeight(arm));
-  const armWeightSum = armWeights.reduce((s, w) => s + w, 0);
   const complexSpread = pcToUnits(DIG_COMPLEX_SPREAD_PC);
 
   const rng = mulberry32(seed ^ DIG_SALT);
@@ -431,14 +461,7 @@ function buildDigVeil(
 
   const out: GalaxyFieldComponent[] = [];
   for (let c = 0; c < complexes; c++) {
-    // Arm bias re-rolled per COMPLEX, not per child — a complex is the
-    // clustering unit, same discipline `placeAnalyticComplex`'s own armRoll
-    // uses in `clusteredDiscPlacement.ts`.
-    const armRoll = rng();
-    const seedFrame =
-      (canUseArms && armRoll < armBias
-        ? placeDigArmComplex(rng, geometry, armWeights, armWeightSum)
-        : null) ?? placeDigMapComplex(rng, geometry, cdf);
+    const seedFrame = placeDigMapComplex(rng, geometry, cdf);
     const axes = scatterAxesForCoherence(seedFrame, coherence, rng);
 
     for (let ch = 0; ch < childrenPerComplex; ch++) {
@@ -460,11 +483,9 @@ function buildDigVeil(
         axes.along[1] * offAlong +
         axes.across[1] * offAcross +
         seedFrame.pole[1] * offPole;
-      // Warp lift at THIS CHILD's own (x, z) — see `DigSeedFrame`'s `warped`
-      // doc: an arm-lane seed is already lifted, a map-CDF one is not.
-      const y = seedFrame.warped
-        ? yFlat
-        : yFlat + warpHeight(Math.hypot(x, z), Math.atan2(z, x), geometry);
+      // Warp lift at THIS CHILD's own (x, z) — `seedFrame.point` sits at the
+      // flat reference height, never lifted (`placeDigMapComplex`'s own doc).
+      const y = yFlat + warpHeight(Math.hypot(x, z), Math.atan2(z, x), geometry);
       // Extraplanar scatter on top of the in-plane placement above — DIG
       // stands thicker off the disc than a single HII shell (Haffner+2009).
       const height = y + gaussian(rng) * pcToUnits(DIG_SCALE_HEIGHT_PC);
@@ -486,9 +507,10 @@ function buildDigVeil(
  * phase-3 population left once an HII region's gas is expelled (~5 Myr) and
  * its shell fades — a naked cluster, visible ~50-100 Myr, several times more
  * numerous than the still-glowing knots that spawned it. Mirrors
- * `buildDigVeil`'s complex/children machinery (both `placeDigMapComplex` and
- * `scatterAxesForCoherence` are reused as-is); the phase-3 discriminant is
- * entirely in `associationDensity` and the arm-lane lag below.
+ * `buildDigVeil`'s complex/children machinery (`placeDigMapComplex`,
+ * `scatterAxesForCoherence` and the `armBias` reweighting are all reused
+ * as-is); the phase-3 discriminant is entirely in `associationDensity`
+ * below.
  */
 /** Compact strings, not DIG's diffuse wash — smaller per-blob sigma and complex footprint (ratio to sigma kept close to DIG's own 250/200). */
 const ASSN_SIGMA_MIN_PC = 30;
@@ -505,29 +527,6 @@ export const ASSOCIATIONS_MAX_COUNT = 1800;
 const ASSN_RECENT_SF_SUPPRESSION_K = 4;
 function associationDensity(_gas: number, recentSf: number, oldActivity: number): number {
   return oldActivity * (1 - Math.min(1, ASSN_RECENT_SF_SUPPRESSION_K * recentSf));
-}
-
-/** A complex's downstream drift since ignition, standing in for an un-integrated velocity-shear model — a fixed offset along the ridge tangent, scaled to the arm's own cross width rather than a bare parsec constant. */
-const ASSN_ARM_LAG_SIGMAS = 1.2;
-function placeAssnArmComplex(
-  rng: () => number,
-  geometry: GalaxyDescription,
-  tuning: GalaxyFieldTuning,
-  armWeights: readonly number[],
-  armWeightSum: number,
-): DigSeedFrame | null {
-  const seed = placeDigArmComplex(rng, geometry, armWeights, armWeightSum);
-  if (!seed) return null;
-  const radius = Math.hypot(seed.point[0], seed.point[2]);
-  const lag = armCrossSigma(radius, geometry, tuning) * ASSN_ARM_LAG_SIGMAS;
-  return {
-    ...seed,
-    point: [
-      seed.point[0] + seed.along[0] * lag,
-      seed.point[1] + seed.along[1] * lag,
-      seed.point[2] + seed.along[2] * lag,
-    ],
-  };
 }
 
 /** Subtle cool/hot spread around the cluster's own stellar-continuum colour — `hiiCorePerturbed`'s nudge-and-clamp mechanism (`generate.wesl`), blue-anchored instead of `gen.hiiCore`. */
@@ -554,7 +553,17 @@ function buildBlueAssociations(
   const brightness = Math.max(0, assn.brightness);
   if (brightness <= 0) return [];
 
-  const cdf = buildSfMapDustCdf(sfMap, associationDensity);
+  const armBias = Math.min(1, Math.max(0, assn.armBias));
+  const envelope = buildArmProximityEnvelope(geometry, tuning);
+  const cdf = buildSfMapDustCdf(sfMap, (texel, radius, angle) =>
+    armBiasedDensity(
+      associationDensity(texel.gas, texel.recentSf, texel.oldActivity),
+      armBias,
+      envelope,
+      radius,
+      angle,
+    ),
+  );
   if (!(cdf.total > 0)) return [];
 
   // Stellar continuum like the embedded cluster core, not Hα like the
@@ -572,13 +581,9 @@ function buildBlueAssociations(
   if (complexes <= 0) return [];
   const totalChildren = complexes * childrenPerComplex;
 
-  const armBias = Math.min(1, Math.max(0, assn.armBias));
   const elongation = assn.elongation;
   if (!(elongation > 0)) return [];
   const coherence = Math.min(1, Math.max(0, assn.coherence));
-  const canUseArms = geometry.numArms > 0;
-  const armWeights = geometry.arms.map((arm) => armAgeWeight(arm));
-  const armWeightSum = armWeights.reduce((s, w) => s + w, 0);
   const complexSpread = pcToUnits(ASSN_COMPLEX_SPREAD_PC);
 
   const rng = mulberry32(seed ^ ASSN_SALT);
@@ -586,11 +591,7 @@ function buildBlueAssociations(
 
   const out: GalaxyFieldComponent[] = [];
   for (let c = 0; c < complexes; c++) {
-    const armRoll = rng();
-    const seedFrame =
-      (canUseArms && armRoll < armBias
-        ? placeAssnArmComplex(rng, geometry, tuning, armWeights, armWeightSum)
-        : null) ?? placeDigMapComplex(rng, geometry, cdf);
+    const seedFrame = placeDigMapComplex(rng, geometry, cdf);
     const axes = scatterAxesForCoherence(seedFrame, coherence, rng);
 
     for (let ch = 0; ch < childrenPerComplex; ch++) {
@@ -612,9 +613,7 @@ function buildBlueAssociations(
         axes.along[1] * offAlong +
         axes.across[1] * offAcross +
         seedFrame.pole[1] * offPole;
-      const y = seedFrame.warped
-        ? yFlat
-        : yFlat + warpHeight(Math.hypot(x, z), Math.atan2(z, x), geometry);
+      const y = yFlat + warpHeight(Math.hypot(x, z), Math.atan2(z, x), geometry);
       const height = y + gaussian(rng) * pcToUnits(ASSN_SCALE_HEIGHT_PC);
       const sigma = pcToUnits(
         ASSN_SIGMA_MIN_PC + (ASSN_SIGMA_MAX_PC - ASSN_SIGMA_MIN_PC) * rng(),

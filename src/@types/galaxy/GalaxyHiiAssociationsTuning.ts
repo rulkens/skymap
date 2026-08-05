@@ -19,9 +19,10 @@ export type GalaxyHiiAssociationsTuning = {
   /** Children per complex — total count is `complexes * childrenPerComplex`. */
   readonly childrenPerComplex: number;
   /**
-   * 0..1 fraction of complexes seeded on an arm's lane, offset downstream of
-   * the ridge (see `hiiRegions.ts`'s arm-lane placer), rather than CDF-sampled
-   * from the SF map's swept-past density.
+   * 0..1: concentrates map-seeded complexes toward the analytic arm
+   * envelope — same reweighting `GalaxyHiiDigTuning.armBias` applies, over
+   * this tier's own `associationDensity` CDF instead of DIG's `oldActivity`
+   * one.
    */
   readonly armBias: number;
   /** sigma_along / sigma_across of a complex's own child scatter, area-preserving — same convention `GalaxyHiiDigTuning.elongation` uses. */

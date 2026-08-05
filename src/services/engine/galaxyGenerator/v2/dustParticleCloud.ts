@@ -188,10 +188,9 @@ export function buildDustParticleCloud(
     | null = null;
   if (tuning.dust.sfMapSeeding && sfMap) {
     const map = sfMap; // narrowed alias so the closures below don't re-null-check
-    // (gas, oldActivity) — recentSf unused, see sfMapDustDensity's own header.
-    const cdf = buildSfMapDustCdf(map, (gas, _recentSf, oldActivity) =>
-      sfMapDustDensity(gas, oldActivity),
-    );
+    // (gas, oldActivity) — recentSf and the texel's own position unused, see
+    // sfMapDustDensity's own header (the position re-key is a separate task).
+    const cdf = buildSfMapDustCdf(map, (texel) => sfMapDustDensity(texel.gas, texel.oldActivity));
     if (cdf.total > 0) {
       placement = { kind: 'mapDensity', samplePoint: (mapRng) => sampleSfMapDustCdf(cdf, mapRng) };
       sampleMapTraits = (radius, angle) => {

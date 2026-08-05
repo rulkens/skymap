@@ -15,7 +15,7 @@ import type { GalaxySfMap } from '../../../src/@types/galaxy/GalaxySfMap';
 
 /** Every fixture here only fills gas/oldActivity, so this is dust's own density exactly. */
 const buildCdf = (map: GalaxySfMap) =>
-  buildSfMapDustCdf(map, (gas, _recentSf, oldActivity) => sfMapDustDensity(gas, oldActivity));
+  buildSfMapDustCdf(map, (texel) => sfMapDustDensity(texel.gas, texel.oldActivity));
 
 const AZ = 4;
 const RINGS = 4;

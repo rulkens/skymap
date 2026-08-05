@@ -17,10 +17,10 @@ export type GalaxyHiiDigTuning = {
   /** Blobs per complex — total blob count is `complexes * childrenPerComplex`. */
   readonly childrenPerComplex: number;
   /**
-   * 0..1 fraction of complexes seeded on an arm's lane (the same weighted
-   * arm-flux placement `armParticleCloud.ts` uses) rather than CDF-sampled
-   * from the SF map's `oldActivity` channel — "follow the arm flux" vs.
-   * "follow where the map says gas has recently sat".
+   * 0..1: concentrates map-seeded complexes toward the analytic arm
+   * envelope (`hiiRegions.ts`'s `buildArmProximityEnvelope`) — a
+   * reweighting of the SAME `oldActivity` CDF every complex draws from, not
+   * a second placement path. 0 = pure map density.
    */
   readonly armBias: number;
   /**
@@ -33,9 +33,9 @@ export type GalaxyHiiDigTuning = {
   readonly elongation: number;
   /**
    * 0..1 how strictly a complex's scatter axis follows its local flow
-   * direction (the arm tangent on the arm-lane path, the azimuthal tangent
-   * on the map-CDF path) — 1 follows it exactly, 0 rotates it to a fresh
-   * random direction per complex.
+   * direction (the azimuthal tangent every complex seeds against) — 1
+   * follows it exactly, 0 rotates it to a fresh random direction per
+   * complex.
    */
   readonly coherence: number;
 };

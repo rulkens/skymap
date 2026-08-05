@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { MILKY_WAY_GALAXY_PARAMS } from '../../../../../src/data/milkyWay/milkyWayGalaxyParams';
 import { describeGalaxy } from '../../../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
+import { armRidgeAngle } from '../../../../../src/services/engine/galaxyGenerator/v2/armRidgeGeometry';
 import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from '../../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxyStarFormationParams';
 import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
 import { buildHiiRegions } from '../../../../../src/services/engine/galaxyGenerator/v2/hiiRegions';
@@ -126,63 +127,76 @@ describe('buildHiiRegions', () => {
     expect(meanRadius).toBeLessThanOrEqual(map.rMax);
   });
 
-  it('armBias 1 seeds every DIG complex on an arm lane, pulling components toward the arm angles', () => {
-    // At armBias 1 every complex takes the arm-lane path (`canUseArms` is
-    // true on the MW preset), so each blob's azimuth should sit near SOME
-    // arm's ridge angle at that radius rather than uniformly around the
-    // ring the way a pure map-CDF placement would scatter it.
-    const tuningArmBiased = {
-      ...DEFAULT_GALAXY_FIELD_TUNING,
-      hii: {
-        ...DEFAULT_GALAXY_FIELD_TUNING.hii,
-        dig: {
-          ...DEFAULT_GALAXY_FIELD_TUNING.hii.dig,
-          fraction: 0.35,
-          armBias: 1,
-          coherence: 1,
-          childrenPerComplex: 1,
-        },
-      },
-    };
+  it('armBias 1 pulls DIG complexes onto the arm envelope, closer than armBias 0 on the identical map', () => {
+    // armBias no longer forks a second, analytic arm-lane placement — it
+    // reweights the SAME `oldActivity` CDF every complex draws from toward
+    // `buildArmProximityEnvelope`'s arm-proximity kernel (`hiiRegions.ts`'s
+    // `armBiasedDensity`). `makeBusyMap` is uniform, so any difference in
+    // cross-arm distance between armBias 0/1 comes from that reweighting
+    // alone, not from the map's own (flat, here) shape.
     const map = makeBusyMap();
-    const withoutDig = buildHiiRegions(
-      geometry,
-      {
-        ...tuningArmBiased,
-        hii: { ...tuningArmBiased.hii, dig: { ...tuningArmBiased.hii.dig, fraction: 0 } },
-      },
-      DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
-      geometry.seed,
-      map,
-    );
-    const withDig = buildHiiRegions(
-      geometry,
-      tuningArmBiased,
-      DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
-      geometry.seed,
-      map,
-    );
-    const dig = withDig.slice(withoutDig.length);
-    expect(dig.length).toBeGreaterThan(0);
+    const baseDig = {
+      ...DEFAULT_GALAXY_FIELD_TUNING.hii.dig,
+      fraction: 0.35,
+      coherence: 1,
+      childrenPerComplex: 1,
+      complexes: 60, // enough draws for the mean below to be a stable signal
+    };
 
-    for (const component of dig) {
-      const [x, , z] = component.center;
-      const radius = Math.hypot(x, z);
-      const angle = Math.atan2(z, x);
-      // Nearest arm's ridge angle at this radius, wrapped to [-PI, PI].
-      let minDelta = Infinity;
-      for (const arm of geometry.arms) {
-        const logR = Math.log(radius / geometry.armStartRadius);
-        const ridgeAngle = arm.phase + arm.pitch * logR;
-        const raw = angle - ridgeAngle;
-        const wrapped = Math.abs(raw - 2 * Math.PI * Math.round(raw / (2 * Math.PI)));
-        minDelta = Math.min(minDelta, wrapped);
-      }
-      // A generous band — the ridge angle here ignores meander/wave terms
-      // and the complex's own cross-lane offset, so this only pins "landed
-      // near an arm", not an exact match.
-      expect(minDelta).toBeLessThan(0.6);
+    function digComponentsFor(armBias: number) {
+      const tuning = {
+        ...DEFAULT_GALAXY_FIELD_TUNING,
+        hii: { ...DEFAULT_GALAXY_FIELD_TUNING.hii, dig: { ...baseDig, armBias } },
+      };
+      const withoutDig = buildHiiRegions(
+        geometry,
+        { ...tuning, hii: { ...tuning.hii, dig: { ...tuning.hii.dig, fraction: 0 } } },
+        DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
+        geometry.seed,
+        map,
+      );
+      const withDig = buildHiiRegions(
+        geometry,
+        tuning,
+        DEFAULT_GALAXY_STAR_FORMATION_PARAMS,
+        geometry.seed,
+        map,
+      );
+      return withDig.slice(withoutDig.length);
     }
+
+    // Mean distance (world units) from each component to the NEAREST arm's
+    // ridge at its own radius — the same ridge angle `buildArmProximityEnvelope`
+    // itself reweights against (`armRidgeAngle`, meander/wave terms included),
+    // not the simplified `phase + pitch*logR` a validation-only formula would
+    // silently drift from.
+    function meanCrossArmDistance(components: ReturnType<typeof digComponentsFor>): number {
+      let sum = 0;
+      for (const component of components) {
+        const [x, , z] = component.center;
+        const radius = Math.hypot(x, z);
+        const angle = Math.atan2(z, x);
+        const logR = Math.log(radius / geometry.armStartRadius);
+        let minDist = Infinity;
+        for (const arm of geometry.arms) {
+          const ridgeAngle = armRidgeAngle(logR, geometry, arm);
+          const raw = angle - ridgeAngle;
+          const wrapped = raw - 2 * Math.PI * Math.round(raw / (2 * Math.PI));
+          minDist = Math.min(minDist, Math.abs(radius * wrapped));
+        }
+        sum += minDist;
+      }
+      return sum / components.length;
+    }
+
+    const biased = digComponentsFor(1);
+    const unbiased = digComponentsFor(0);
+    expect(biased.length).toBeGreaterThan(0);
+    expect(unbiased.length).toBeGreaterThan(0);
+
+    const meanBiased = meanCrossArmDistance(biased);
+    const meanUnbiased = meanCrossArmDistance(unbiased);
+    expect(meanBiased).toBeLessThan(meanUnbiased * 0.5);
   });
 
   it('associations.brightness 0 is byte-identical whether or not a map is handed in', () => {
