@@ -183,15 +183,16 @@ export function buildDustParticleCloud(
 
   const rng = mulberry32(seed ^ 0x44555354); // "DUST"
 
-  // Seeding ON: the map IS the placement density — the swept-dust channel's
-  // overshoot above the automaton's ambient pedestal (`sweptDustOvershoot`,
-  // mean-normalised so the CDF reads as a pure shape) — every complex is
-  // placed by `'mapDensity'` mode, its centre drawn from S1's inverse-CDF
-  // sampler (`buildSfMapDustCdf`). Seeding OFF (or a quiet map): `'smoothDisc'`
-  // mode, no arm-lane concept at all — the dust tier's analytic lane machinery
-  // was cut once the map became the sole placement density; `armParticleCloud.ts`
-  // still owns the one live `'analytic'` caller. This is the intended
-  // consequence of the SF map leading, not a regression.
+  // A generator running: the map IS the placement density — the swept-dust
+  // channel's overshoot above the automaton's ambient pedestal
+  // (`sweptDustOvershoot`, mean-normalised so the CDF reads as a pure shape) —
+  // every complex is placed by `'mapDensity'` mode, its centre drawn from S1's
+  // inverse-CDF sampler (`buildSfMapDustCdf`). `generator === 'none'` (or a
+  // quiet map): `'smoothDisc'` mode, no arm-lane concept at all — the dust
+  // tier's analytic lane machinery was cut once the map became the sole
+  // placement density; `armParticleCloud.ts` still owns the one live
+  // `'analytic'` caller. This is the intended consequence of the SF map
+  // leading, not a regression.
   let placement: ClusteredDiscPlacementMode = { kind: 'smoothDisc' };
   // S3's per-particle aspect/survival, non-null only on the map-seeded path —
   // `null` keeps `drawPayload` below byte-identical to the pre-S3 smoothDisc
@@ -199,7 +200,7 @@ export function buildDustParticleCloud(
   let sampleMapTraits:
     | ((radius: number, angle: number) => { aspect: number; alive: boolean })
     | null = null;
-  if (tuning.dust.sfMapSeeding && sfMap) {
+  if (tuning.sfMap.generator !== 'none' && sfMap) {
     const map = sfMap; // narrowed alias so the closures below don't re-null-check
     const meanOvershoot = meanSfMapChannel(map, sweptDustOvershoot);
     // Guard: an all-ambient/all-cavity map (no shell has swept past ambient
@@ -243,9 +244,9 @@ export function buildDustParticleCloud(
       discWeights: DISC_SURFACE_WEIGHTS,
       discWeightSum: shape.sumW,
       placement,
-      // Gated with `placement` above: OFF (the default) is a no-op, so a
-      // caller with the map already sampled needn't re-check the flag.
-      sfMapOrientation: tuning.dust.sfMapSeeding ? sfMapOrientation : null,
+      // Gated with `placement` above: `generator === 'none'` is a no-op, so a
+      // caller with the map already sampled needn't re-check it.
+      sfMapOrientation: tuning.sfMap.generator !== 'none' ? sfMapOrientation : null,
       orientationDeltaStats,
     },
     (childRng, center) => {

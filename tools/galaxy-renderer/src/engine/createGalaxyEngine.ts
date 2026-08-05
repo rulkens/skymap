@@ -1339,7 +1339,8 @@ export async function createGalaxyEngine(
     getSfMapTexture: (): GPUTexture => sfMapGenerator.texture,
     // The CPU-side readback of the same output (`scheduleSfMapReadback`):
     // null until the first one lands. Consumed by `buildDustParticleCloud`
-    // via `dust.sfMapSeeding` today; exposed here for future consumers too.
+    // whenever `sfMap.generator !== 'none'` today; exposed here for future
+    // consumers too.
     getSfMapData: (): GalaxySfMap | null => model.sfMapData,
     grab: probe.grab,
     dispose(): void {

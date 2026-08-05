@@ -5,10 +5,6 @@
   composes: toggleRow from '../shared.module.css';
 }
 
-.checkbox {
-  composes: checkbox from '../shared.module.css';
-}
-
 /* Generator picker — same control surface as TonemapSelect's own .root, sized to sit inline in a .toggleRow rather than filling the panel width. */
 .select {
   composes: control from '../shared.module.css';

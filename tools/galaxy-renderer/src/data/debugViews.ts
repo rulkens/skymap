@@ -28,7 +28,7 @@ export const DEBUG_VIEWS: Readonly<Record<DebugViewKind, DebugViewSpec>> = {
   orientation: {
     intensityKey: 'orientationViewIntensity',
     label: 'Orientation view',
-    info: "Crossfades in the direction the SF map's activity runs at each point: hue is the direction, brightness is how strongly it runs that way. Long ribbons of one hue tracing an arm or a spur mean the direction is real; fine rainbow speckle, or black, means there is none to measure there — black is also what a saturated activity channel looks like. Dust sprites are stretched along this direction whenever 'Seed dust from gas' is on, so what looks wrong here shows up as misaligned dust.",
+    info: "Crossfades in the direction the SF map's activity runs at each point: hue is the direction, brightness is how strongly it runs that way. Long ribbons of one hue tracing an arm or a spur mean the direction is real; fine rainbow speckle, or black, means there is none to measure there — black is also what a saturated activity channel looks like. Dust sprites are stretched along this direction whenever a generator is running, so what looks wrong here shows up as misaligned dust.",
   },
   bubble: {
     intensityKey: 'bubbleViewIntensity',

@@ -21,7 +21,7 @@ export type GalaxyFieldTuning = {
   readonly arms: GalaxyArmTuning;
   readonly dust: GalaxyDustTuning;
   readonly hii: GalaxyHiiTuning;
-  /** Shared switch: whether the SF map runs, and which of the two generators below writes it (`sfMap.generator`) — the ONLY branch point. */
+  /** Shared switch: which generator writes the SF map, if any (`sfMap.generator`, `'none'` | `'automaton'` | `'fluid'`) — the ONLY branch point. */
   readonly sfMap: GalaxySfMapParams;
   /** The SSPSF automaton that grows the ISM structure the dust tier is seeded from — live only while `sfMap.generator === 'automaton'`. */
   readonly sfMapAutomaton: GalaxySfMapAutomatonParams;

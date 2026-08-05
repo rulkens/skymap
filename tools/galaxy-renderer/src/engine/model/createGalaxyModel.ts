@@ -311,7 +311,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   function scheduleSfMapReadback(grid: GalaxySfMapGridRadius): void {
     readbacks.requestSfMap(grid, (map) => {
       recomputeSfMapSeedingMeans(map);
-      if (fieldTuning.dust.sfMapSeeding) {
+      if (fieldTuning.sfMap.generator !== 'none') {
         rebuildDustMixture();
         repackFieldComponents();
       }
@@ -334,8 +334,8 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
    * The same, for the CPU copy of `orientationTex`. Dust-gated because the
    * dust placement is the only consumer of the CPU copy — the debug overlay
    * samples the texture on the GPU directly. Mirrors the HII re-run above:
-   * `orientationDataRebuild` only runs while `dust.sfMapSeeding` is on (see
-   * its own `wanted`), so this landing is the SAME opportunity
+   * `orientationDataRebuild` only runs while a generator is active (see its
+   * own `wanted`), so this landing is the SAME opportunity
    * `scheduleSfMapReadback`'s already took, not a second independent one.
    */
   function scheduleOrientationReadback(grid: GalaxySfMapGridRadius): void {
@@ -343,7 +343,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       // Folded in once here, at the one point a fresh grid exists — not per
       // frame or per dust build.
       orientationDiagnostics.noteCoherence(data);
-      if (fieldTuning.dust.sfMapSeeding) {
+      if (fieldTuning.sfMap.generator !== 'none') {
         rebuildDustMixture(); // also reports — see its own doc
         repackFieldComponents();
       } else {
@@ -380,7 +380,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
    * so seeding alone decides whether a readback is worth scheduling.
    */
   const orientationDataRebuild = createKeyedRebuild({
-    wanted: () => fieldTuning.dust.sfMapSeeding,
+    wanted: () => fieldTuning.sfMap.generator !== 'none',
     build: () => scheduleOrientationReadback(sfMapGridRadiusOrDefault(fieldGeometry)),
   });
 
@@ -393,7 +393,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
    * is safe. Invalidated by `rebuildSfMap` and by a sigma move.
    */
   const orientationTexRebuild = createKeyedRebuild({
-    wanted: () => viewIntensity('orientation') > 0 || fieldTuning.dust.sfMapSeeding,
+    wanted: () => viewIntensity('orientation') > 0 || fieldTuning.sfMap.generator !== 'none',
     build: () => {
       orientation.dispatch({
         grid: sfMapGridRadiusOrDefault(fieldGeometry),
@@ -798,7 +798,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       // The two sigmas are the only lanes of the render bag the orientation
       // chain reads, and the bridge re-pushes the WHOLE bag on any knob — so an
       // unconditional invalidate here would redispatch the six stages, and with
-      // `dust.sfMapSeeding` on (the default) the readback and dust rebuild behind
+      // a generator active (the default) the readback and dust rebuild behind
       // them, on every frame of an unrelated exposure drag. No crossing to catch
       // alongside them: an invalidation raised while nothing wanted the value is
       // retained, so the overlay turning on rebuilds by itself.

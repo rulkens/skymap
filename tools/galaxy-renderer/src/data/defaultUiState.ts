@@ -36,11 +36,12 @@ export const DEFAULT_UI_STATE: UiState = {
     sfMap: true,
     // Nested under SF MAP (CollapsibleSection's `nested` prop), own open
     // state so folding the parent doesn't fight these for the same key —
-    // the `hiiDig`/`hiiAssociations` precedent. Automaton expanded (the
-    // shipped, calibrated generator and the default `sfMap.generator`);
-    // fluid collapsed (the new comparison spike, not the active default).
-    sfMapAutomaton: true,
-    sfMapFluid: false,
+    // the `hiiDig`/`hiiAssociations` precedent. Only one of the two ever
+    // renders at a time (the generator dropdown is now exclusive), but each
+    // keeps its own fold state for whenever it's the one showing. Fluid
+    // expanded, since it's the default `sfMap.generator`; automaton collapsed.
+    sfMapAutomaton: false,
+    sfMapFluid: true,
     // Collapsed: the crossfade sliders default to 0 (pure galaxy), so this
     // section is an occasional A/B tool, not something tuned every session.
     debugViews: false,

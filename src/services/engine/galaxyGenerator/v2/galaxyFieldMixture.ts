@@ -318,9 +318,6 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
   },
   dust: {
     enabled: true,
-    // Inert wherever no automaton runs: seeding needs a sampled map handed in,
-    // and both consumers fall back to their unseeded envelope without one.
-    sfMapSeeding: true,
   },
   hii: {
     enabled: true,

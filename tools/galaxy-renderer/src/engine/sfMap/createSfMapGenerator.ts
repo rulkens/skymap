@@ -77,10 +77,10 @@ export function createSfMapGenerator(
       const activeSteps =
         generator === 'fluid' ? tuning.sfMapFluid.steps : tuning.sfMapAutomaton.steps;
 
-      if (!geometry || !tuning.sfMap.enabled || activeSteps <= 0) {
-        // Disabled (or no galaxy yet): leave nothing stale for the sfMap view
-        // to show. Cleared once rather than latched, since this path is a rare
-        // toggle, not a per-frame branch.
+      if (!geometry || generator === 'none' || activeSteps <= 0) {
+        // No generator selected (or no galaxy yet): leave nothing stale for
+        // the sfMap view to show. Cleared once rather than latched, since
+        // this path is a rare toggle, not a per-frame branch.
         output.clear();
         return grid;
       }

@@ -34,8 +34,9 @@ export type GalaxyEngineHandle = {
   // and future consumers.
   getSfMapTexture(): GPUTexture;
   // The same output read back to the CPU, once per generation — null until
-  // the first readback lands. Feeds `dust.sfMapSeeding` in
-  // `buildDustParticleCloud` (createGalaxyModel.ts's `scheduleSfMapReadback`).
+  // the first readback lands. Feeds the map-seeded placement path in
+  // `buildDustParticleCloud` (createGalaxyModel.ts's `scheduleSfMapReadback`),
+  // live whenever `sfMap.generator !== 'none'`.
   getSfMapData(): GalaxySfMap | null;
   dispose(): void;
 };

@@ -67,7 +67,6 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
       f: {
         discEnabled: false,
         armCloudShare: 0.42,
-        sfMapDustSeeding: false,
         hiiCavityScale: 0.7,
         sfMap: DEFAULT_GALAXY_FIELD_TUNING.sfMap,
       },
@@ -77,9 +76,64 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
 
     expect(parsed?.f?.disc?.enabled).toBe(false);
     expect(parsed?.f?.arms?.cloud?.share).toBe(0.42);
-    expect(parsed?.f?.dust?.sfMapSeeding).toBe(false);
     expect(parsed?.f?.hii?.cavityScale).toBe(0.7);
     expect(parsed?.f?.sfMap).toEqual(DEFAULT_GALAXY_FIELD_TUNING.sfMap);
+  });
+
+  // The three-state generator dropdown retired two booleans it used to take
+  // separate presets through: `sfMap.enabled` and `dust.sfMapSeeding`. Old
+  // files on disk still carry both — `migrateGalaxyFieldTuningWire` folds the
+  // first into `generator` and drops the second outright (see its header).
+  it('migrates a disabled sfMap section to generator "none", dropping `enabled`', () => {
+    const wire = JSON.stringify({
+      type: 'galaxy-preset',
+      version: 3,
+      p: DEFAULT_GALAXY_PARAMS,
+      f: { sfMap: { enabled: false, generator: 'automaton' } },
+    });
+
+    const parsed = parseGalaxyPreset(wire);
+
+    expect(parsed?.f?.sfMap).toEqual({ generator: 'none' });
+  });
+
+  it("keeps an enabled preset's own generator, dropping the now-redundant `enabled`", () => {
+    const wire = JSON.stringify({
+      type: 'galaxy-preset',
+      version: 3,
+      p: DEFAULT_GALAXY_PARAMS,
+      f: { sfMap: { enabled: true, generator: 'automaton' } },
+    });
+
+    const parsed = parseGalaxyPreset(wire);
+
+    expect(parsed?.f?.sfMap).toEqual({ generator: 'automaton' });
+  });
+
+  it('defaults the generator when an old section named only `enabled`', () => {
+    const wire = JSON.stringify({
+      type: 'galaxy-preset',
+      version: 3,
+      p: DEFAULT_GALAXY_PARAMS,
+      f: { sfMap: { enabled: true } },
+    });
+
+    const parsed = parseGalaxyPreset(wire);
+
+    expect(parsed?.f?.sfMap).toEqual(DEFAULT_GALAXY_FIELD_TUNING.sfMap);
+  });
+
+  it('drops the retired `dust.sfMapSeeding`, keeping the rest of the section', () => {
+    const wire = JSON.stringify({
+      type: 'galaxy-preset',
+      version: 3,
+      p: DEFAULT_GALAXY_PARAMS,
+      f: { dust: { enabled: false, sfMapSeeding: true } },
+    });
+
+    const parsed = parseGalaxyPreset(wire);
+
+    expect(parsed?.f?.dust).toEqual({ enabled: false });
   });
 
   it('matches the v2 envelope shape, with LOD knobs flattened into r', () => {
