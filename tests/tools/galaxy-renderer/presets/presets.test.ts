@@ -40,13 +40,13 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
     });
   });
 
-  it('preserves fieldTuning.sfMap — the nested automaton sub-object, not just top-level scalars', () => {
-    const tunedSfMap = {
-      ...DEFAULT_GALAXY_FIELD_TUNING.sfMap,
+  it('preserves fieldTuning.sfMapAutomaton — a nested sub-object, not just top-level scalars', () => {
+    const tunedAutomaton = {
+      ...DEFAULT_GALAXY_FIELD_TUNING.sfMapAutomaton,
       steps: 123,
       armForcing: 0.42,
     };
-    const tuning = { ...DEFAULT_GALAXY_FIELD_TUNING, sfMap: tunedSfMap };
+    const tuning = { ...DEFAULT_GALAXY_FIELD_TUNING, sfMapAutomaton: tunedAutomaton };
     const wire = serializeGalaxyPreset(
       DEFAULT_GALAXY_PARAMS,
       DEFAULT_RENDER_SETTINGS,
@@ -56,7 +56,7 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
     );
     const parsed = parseGalaxyPreset(wire);
 
-    expect(parsed?.f?.sfMap).toEqual(tunedSfMap);
+    expect(parsed?.f?.sfMapAutomaton).toEqual(tunedAutomaton);
   });
 
   it('migrates a v2 flat fieldTuning payload to the v3 nested shape', () => {
@@ -121,6 +121,51 @@ describe('serializeGalaxyPreset / parseGalaxyPreset', () => {
     const parsed = parseGalaxyPreset(wire);
 
     expect(parsed?.f?.sfMap).toEqual(DEFAULT_GALAXY_FIELD_TUNING.sfMap);
+  });
+
+  // The reducer that applies an uploaded fieldTuning patch does a SHALLOW
+  // Object.assign per section, so a hole here would upload as `undefined`
+  // and end up NaN in the fluid sim's UBO (packSfMapFluidConstants writes
+  // every field straight into a Float32Array slot) — see
+  // `migrateGalaxyFieldTuningWire`'s defaults-fill pass.
+  it('fills a hole left by a field added after the preset was saved, and drops the retired key it replaced', () => {
+    const wire = JSON.stringify({
+      type: 'galaxy-preset',
+      version: 3,
+      p: DEFAULT_GALAXY_PARAMS,
+      f: {
+        sfMapFluid: {
+          ...DEFAULT_GALAXY_FIELD_TUNING.sfMapFluid,
+          diffusion: undefined,
+          pressureStrength: 0.4,
+        },
+      },
+    });
+
+    const parsed = parseGalaxyPreset(wire);
+
+    expect(parsed?.f?.sfMapFluid).toEqual({
+      ...DEFAULT_GALAXY_FIELD_TUNING.sfMapFluid,
+      diffusion: DEFAULT_GALAXY_FIELD_TUNING.sfMapFluid.diffusion,
+    });
+    expect(parsed?.f?.sfMapFluid).not.toHaveProperty('pressureStrength');
+  });
+
+  // Proves the per-key migrator has to run BEFORE the generic defaults-fill:
+  // `enabled` isn't a field of `GalaxySfMapParams` any more, so a fill-first
+  // ordering would drop it as an unknown key and lose the "force generator to
+  // 'none'" signal it carries, defaulting to 'fluid' instead.
+  it("runs sfMap's own migrator before the defaults-fill, so a bare `enabled: false` still forces generator 'none'", () => {
+    const wire = JSON.stringify({
+      type: 'galaxy-preset',
+      version: 3,
+      p: DEFAULT_GALAXY_PARAMS,
+      f: { sfMap: { enabled: false } },
+    });
+
+    const parsed = parseGalaxyPreset(wire);
+
+    expect(parsed?.f?.sfMap).toEqual({ generator: 'none' });
   });
 
   it('drops the retired `dust.sfMapSeeding`, keeping the rest of the section', () => {

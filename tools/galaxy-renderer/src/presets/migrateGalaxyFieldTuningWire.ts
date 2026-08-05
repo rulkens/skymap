@@ -11,7 +11,7 @@
  * the rest of the tuning alone.
  */
 import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFieldTuning';
-import { DEFAULT_GALAXY_SF_MAP_PARAMS } from '../../../../src/services/engine/galaxyGenerator/v2/defaultGalaxySfMapParams';
+import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
 
 const SECTION_KEYS = [
   'disc',
@@ -59,7 +59,7 @@ function migrateSfMap(sfMap: Record<string, unknown>): Record<string, unknown> {
   if (enabled === false) return { ...rest, generator: 'none' };
   return 'generator' in rest
     ? rest
-    : { ...rest, generator: DEFAULT_GALAXY_SF_MAP_PARAMS.generator };
+    : { ...rest, generator: DEFAULT_GALAXY_FIELD_TUNING.sfMap.generator };
 }
 
 /** Drops the retired `dust.sfMapSeeding` gate — seeding is now implied by `sfMap.generator !== 'none'`. */
@@ -89,6 +89,22 @@ export function migrateGalaxyFieldTuningWire(
 
   if (out.sfMap) out.sfMap = migrateSfMap(out.sfMap as Record<string, unknown>);
   if (out.dust) out.dust = migrateDust(out.dust as Record<string, unknown>);
+
+  // `fieldTuningPatched` Object.assigns a whole section over the store's
+  // tuning (cheap, live-slider path too — no deep merge there). A preset
+  // saved before a field existed would upload it `undefined`, and
+  // `packSfMapFluidConstants` writes that straight into a Float32Array slot
+  // as NaN. Fill every hole from defaults; drop stale/retired keys.
+  for (const key of SECTION_KEYS) {
+    if (!(key in out)) continue;
+    const defaults = DEFAULT_GALAXY_FIELD_TUNING[key] as Record<string, unknown>;
+    const migrated = out[key] as Record<string, unknown>;
+    const known: Record<string, unknown> = {};
+    for (const field of Object.keys(migrated)) {
+      if (field in defaults) known[field] = migrated[field];
+    }
+    out[key] = { ...defaults, ...known };
+  }
 
   return out as Partial<GalaxyFieldTuning>;
 }
